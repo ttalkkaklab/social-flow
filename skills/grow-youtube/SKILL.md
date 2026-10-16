@@ -33,6 +33,8 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
   "mcp__social-flow__veo_img2video",
   "mcp__social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate"]
 ---
+**Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
+
 
 # YouTube growth loop — one autonomous tick
 
@@ -255,7 +257,7 @@ a nested-comment id and the tool re-targets the thread root.
 
 **Both gates run before the reply goes out** — the machine style check
 (`check-style.py --surface reply`) and then the growth-post-reviewer agent, batched once
-per tick. Only copy with score ≥95 and p0=0 gets sent, fixes are by deletion only, and a
+per tick. Use concrete copy findings to revise within the existing reply authorization; a
 reply that hasn't cleared in 3 rounds is skipped and logged. The contract, the exact
 command, and what to attach per platform: [reply-gate.md](../platform-guide/references/reply-gate.md).
 
@@ -403,7 +405,7 @@ within the same tick**.
 On failure, it depends on where it fell. Failed at the research gate: drop the
 topic (leave no files) and move to the next candidate, but after two drops give
 up authoring for this tick. Built the video and then failed a quality gate:
-leave it at `queue: hold` and **never rebuild the same topic** — repeated
+leave it at `queue: hold` and preserve the failed attempt so an intentional retry does not duplicate paid work — repeated
 failure just burns money.
 
 **However it ends, record the cost spent so far in `autoproduce.json`.** Count

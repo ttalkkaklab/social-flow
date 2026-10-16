@@ -45,10 +45,10 @@ test('malformed trajectories, mismatched slots, and stale previz bindings fail',
  assert.ok(checkScene(s).some(e=>/trajectoryBinding/.test(e)));
 });
 test('drone eligibility does not turn every place or every wide shot into an exception',()=>{
- const {s}=planned();s.shot.render.whyNotStill='';assert.ok(checkScene(s,{draft:true}).some(e=>/whyNotStill/.test(e)));
+ const {s}=planned();s.shot.render.whyNotStill='';const advice=[];assert.deepEqual(checkScene(s,{draft:true,advice}),[]);assert.ok(advice.some(e=>/whyNotStill/.test(e)));
  const ordinary=shot();delete ordinary.visual.camera.preset;delete ordinary.visual.camera.trajectory;
- assert.ok(checkScene(ordinary,{draft:true}).some(e=>/requires still_camera/.test(e)));
- const flat=planned().s;flat.shot.videoDesign.look='arcade';assert.ok(checkScene(flat).some(e=>/volumetric/.test(e)));
+ const ordinaryAdvice=[];checkScene(ordinary,{draft:true,advice:ordinaryAdvice});assert.ok(ordinaryAdvice.some(e=>/requires still_camera/.test(e)));
+ const flat=planned().s;flat.shot.videoDesign.look='arcade';const flatAdvice=[];assert.deepEqual(checkScene(flat,{advice:flatAdvice}),[]);assert.ok(flatAdvice.some(e=>/volumetric/.test(e)));
 });
 test('browser contract and prompt assembly consume the same authored camera',()=>{
  const {s,p}=planned(), win={PRODUCTION:{mode:'video_30',style:{preset:'photoreal',world:'A forest valley.',materials:'Stone and trees.',palette:'Green and grey.',lighting:'Daylight.',camera:'Continuous aerial travel.'}},SCENES:[s]};

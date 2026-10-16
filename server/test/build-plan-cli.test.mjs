@@ -12,7 +12,7 @@ const {verifyManifest}=require(cli);
 const video=require('../../skills/produce/references/assembly-video-gate.js');
 const groups=require('../../skills/produce/references/video-groups.js');
 
-test('grouped manifest import and direct build-plan CLI both run, retaining HITL and input errors',()=>{
+test('grouped manifest import and direct build-plan CLI both run, continuing quality warnings while retaining input errors',()=>{
  const dir=mkdtempSync(path.join(tmpdir(),'build-plan-cli-'));
  const board=path.join(dir,'storyboard'),work=path.join(dir,'.work');
  mkdirSync(board);mkdirSync(work);
@@ -34,22 +34,13 @@ test('grouped manifest import and direct build-plan CLI both run, retaining HITL
   // The old implementation passes this API check but fails in the fresh CLI process.
   assert.equal(Object.keys(verifyManifest(work,board,[s],'youtube-long-16x9')).length,1);
   let result=run();
-  assert.equal(result.status,1);
-  assert.match(result.stderr,/Video checks need HITL/);
-  assert.doesNotMatch(result.stderr,/is not a function|circular dependency/);
-  const warnings=JSON.parse(readFileSync(path.join(work,'assembly-video-warnings.json'))).warnings;
-  assert.ok(warnings.length);
-  video.approve(work,'Synthetic CLI fixture: user approved the displayed video warnings');
-  const approval=readFileSync(path.join(work,'assembly-video-approval.json'));
-  result=run();
-  assert.equal(result.status,0,result.stdout+result.stderr);
-  assert.match(result.stdout,/Assembly preflight complete/);
-  assert.doesNotMatch(result.stderr,/is not a function|circular dependency/);
+  assert.equal(result.status,0,result.stderr);
+  assert.doesNotMatch(result.stderr,/is not a function|circular dependency|Video checks need HITL/);
   const report=JSON.parse(readFileSync(path.join(work,'build-plan-check.json')));
-  assert.equal(report.videoGate.approved,true);
-  assert.deepEqual(report.videoGate.warnings,warnings);
+  assert.equal(report.videoGate.approved,false);
+  assert.equal(report.videoGate.continueWithWarnings,true);
   assert.equal(report.groupPlans[0].groups.length,2);
-  assert.deepEqual(readFileSync(path.join(work,'assembly-video-approval.json')),approval);
+
   assert.deepEqual(readFileSync(path.join(board,'scenes.js')),source);
   writeFileSync(path.join(work,'segs.tsv'),rows.replace('0\t1\t','0\t0\t'));
   result=run();

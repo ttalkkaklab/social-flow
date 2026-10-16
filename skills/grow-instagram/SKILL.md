@@ -32,6 +32,8 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
   "mcp__social-flow__veo_img2video",
   "mcp__social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate"]
 ---
+**Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
+
 
 # Instagram growth loop — one autonomous tick
 
@@ -228,7 +230,7 @@ children include ours, it counts as handled).
 
 **Both gates run before the reply goes out** — the machine style check
 (`check-style.py --surface reply`) and then the growth-post-reviewer agent, batched once
-per tick. Only copy with score ≥95 and p0=0 gets sent, fixes are by deletion only, and a
+per tick. Use concrete copy findings to revise within the existing reply authorization; a
 reply that hasn't cleared in 3 rounds is skipped and logged. The contract, the exact
 command, and what to attach per platform: [reply-gate.md](../platform-guide/references/reply-gate.md).
 
@@ -318,12 +320,11 @@ a human's job**. So §3 rarely publishes right after autoproduce — being
 blocked at the URL check (§3-4) is the normal case; put
 "authored · awaiting upload" in the tick report so a human uploads the file.
 
-On failure, it depends on where it fell. Failed at the research gate: drop the
-topic and move to the next candidate, but after two drops give up authoring
-for this tick. Built the video and then failed a quality gate: leave it at
-`queue_instagram: hold` and **never rebuild the same topic**. However it ends,
-**record the cost spent so far in `autoproduce.json`** — count without the
-failures and the budget becomes infinite.
+When research is insufficient, narrow unsupported claims or choose a supported
+candidate. Preserve completed work and actual findings; creative quality scores
+alone do not drop the topic or hold its queue. Record all spend, including failed
+attempts, in `autoproduce.json`. Missing hosting inputs, actual budget limits and
+publication authorization remain operational boundaries.
 
 ### 3. Slot publishing (queue drain)
 
@@ -400,7 +401,7 @@ Account Status check date. No publishing.
 If autoproduce is on, also report from `autoproduce.json`: today's and this
 week's spend against the caps, the topic-pool level, the topics stuck at
 `queue_instagram: hold`, and **the topics authored but not yet uploaded to
-hosting** — neither ever publishes without a human's hands.
+hosting** — report the actual missing input or authorization.
 
 ## Error handling (the loop keeps running)
 

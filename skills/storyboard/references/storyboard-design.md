@@ -18,9 +18,20 @@ Before delivery, run:
 node "$CLAUDE_PLUGIN_ROOT/skills/storyboard/references/storyboard-html.js" "<episodeDir>/storyboard" --check
 ```
 
-If the template check fails, refresh, inspect and check again. The shared generator
-is the only review renderer. It also exports the channel library, whose storyboard
-copies use a relative base URL to the same episode assets.
+A failed check means the episode's layout/runtime or library files have drifted, or
+the library has a structural problem such as missing/unsupported storyboard HTML.
+Identity and voice readiness warnings are printed separately as `Content readiness`
+and do not fail this design check when the exported files match. They remain visible
+in the library and in `exportChannel().warnings` and `contentWarnings`; they are not
+a content pass. Standalone `review-library.js <channelDir> --check` still fails on
+every warning, including incomplete legacy character identities and voices. Do not
+invent structured identity data to make a shell check pass.
+
+When the episode's layout/runtime has drifted from the bundled template, refresh,
+inspect, and check again. Do not waive it because the episode
+uses local files.
+
+The shared generator is the only review renderer. Channel library copies use a relative base URL to the same episode assets.
 
 The review uses a neutral palette, bundled Wanted Sans, a 240px desktop sidebar and
 shot-first reading order. Below 1024px navigation moves above the document. Frames

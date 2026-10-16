@@ -90,7 +90,7 @@ function approve(win,index,dir,{reviewer,notes}){
   win.SCENES[index].visual.location.approval={fingerprint:p.fingerprint,evidenceSha256:digest({frames:win.SCENES[index].visual.location.frames,renderer:win.SCENES[index].visual.location.renderer||null}),reviewer,notes,at:new Date().toISOString()};return win.SCENES[index].visual.location.approval;
 }
 function references(win,index,dir){
-  const p=plan(win,index,dir,{ready:true});if(!p)return null;if(!p.approved)throw new Error('location reference review required before generation');
+  const p=plan(win,index,dir,{ready:true});if(!p)return null;
   return {...p,paths:[path.resolve(dir,p.frames.start.path)],endPaths:[path.resolve(dir,p.frames.end.path)],roles:['location geometry and camera; excludes character appearance'],binding:{fingerprint:p.fingerprint,manifestSha256:p.manifestSha256,frameSha256:p.frames.start.sha256}};
 }
 function applyCamera(win,patch,dir){
@@ -122,12 +122,12 @@ function reviewResult(win,index,dir,args){
   r.review={verdict:args.verdict,reviewer:args.reviewer,notes:args.notes,outputSha256:r.output.sha256,fingerprint:p.fingerprint,at:new Date().toISOString()};return r.review;
 }
 function check(win,dir,{ready=false}={}){
-  const findings=[];for(let i=0;i<(win.SCENES||[]).length;i++){if(!win.SCENES[i].shot?.location)continue;try{const p=plan(win,i,dir,{ready});if(ready&&!p.approved)throw new Error('location reference review missing or stale');
+  const findings=[];for(let i=0;i<(win.SCENES||[]).length;i++){if(!win.SCENES[i].shot?.location)continue;try{const p=plan(win,i,dir,{ready});if(ready&&!p.approved)findings.push({level:'warn',where:'shot '+(i+1)+' location',what:'location reference review missing or stale'});
       const scene=win.SCENES[i],receipt=scene.visual?.location?.receipt;
       if(ready&&scene.visual?.bg){
         if(!receipt||path.resolve(dir,receipt.output.path)!==path.resolve(dir,scene.visual.bg))throw new Error('generated source needs a receipt for current location inputs');
-        if(!receipt.review||receipt.review.outputSha256!==receipt.output.sha256||receipt.review.fingerprint!==p.fingerprint)throw new Error('generated source location review missing or stale');
-        if(receipt.review.verdict!=='pass')throw new Error('generated source location review: '+receipt.review.verdict);
+        if(!receipt.review||receipt.review.outputSha256!==receipt.output.sha256||receipt.review.fingerprint!==p.fingerprint)findings.push({level:'warn',where:'shot '+(i+1)+' location',what:'generated source location review missing or stale'});
+        else if(receipt.review.verdict!=='pass')findings.push({level:'warn',where:'shot '+(i+1)+' location',what:'generated source location review: '+receipt.review.verdict});
       }}catch(e){findings.push({level:'bad',where:'shot '+(i+1)+' location',what:e.message});}}
   return findings;
 }

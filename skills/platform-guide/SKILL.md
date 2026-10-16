@@ -7,6 +7,8 @@ description: >
   another social-flow skill needs the posting limits, caption rules, video specs or
   safe-zone numbers. The source of truth is references/platform-playbook.md.
 ---
+**Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
+
 
 # Platform guide — the SoT for grammar and specs
 
@@ -86,38 +88,22 @@ reviewer's blind read. A short whose cover opens on the result
 and the description still withhold it (playbook §2). Only long-form answer-first
 episodes skip it.
 
-## Adversarial review gate — the shared contract for outgoing copy
+## Editorial review guidance for outgoing copy
 
-Every piece of Korean copy the plugin authors for the outside world publishes
-only after passing two stages. Stage 1 is the style checker above (the machine
-verdict is the source of truth); stage 2 is an adversarial reviewer agent — it
-tries to refute the copy: does it sound AI-written, and can a first-time reader
-follow the vocabulary. **Publish only at score ≥95 with P0=0**; if the copy
-can't clear that within 3 rounds, don't publish —
-not posting beats posting copy that falls short.
-
-**Storyboard copy is read differently** — as the narration alone, before any
-shot exists, twice: the story read (storyboard §4.4) and the vocabulary read
-(§4.5), each looped to 95 in at most three reads with the sentences handed to
-the reviewer inline. The board itself is not delegated (0.50.0 — the six board
-reads of 0.49 were measured at 2–8 million tokens a call); the checkers and the
-author's own read stand there, and the human approval step in storyboard §7 is
-what blocks. Everything else in the table below keeps the 95 bar.
+Read outgoing copy for factual support, natural language and fit with the channel
+and conversation. A style checker or independent reviewer can help when a concrete
+issue needs another look. Findings and scores inform revisions; no threshold,
+review count or intermediate approval blocks already-authorized work. Record
+missing reviews honestly. Publication and replies still require actual user or
+standing authorization for that external action.
 
 | Outgoing copy | Authored by | Reviewer | Verdict tail |
 |---|---|---|---|
-| Storyboard narration (the spoken sentences alone) | storyboard · autoproduce | storyboard-reviewer narration mode, then vocabulary mode — **looped to 95, cap 3 reads each, sentences inline** | `STORYBOARD_REVIEW` |
+| Storyboard narration (the spoken sentences alone) | storyboard · autoproduce | storyboard-reviewer narration mode, then vocabulary mode — optional reads with the actual actions and attributed speech | `STORYBOARD_REVIEW` |
 | Platform copy (threads · ig · fb · yt) | produce · autoproduce | content-reviewer copy axis | `CONTENT_REVIEW` |
 | Growth copy (new posts · search-driven engagement · inbox replies) | grow-threads · grow-instagram · grow-youtube | growth-post-reviewer | `GROWTH_POST_REVIEW` |
 | Post-publish replies | publish | growth-post-reviewer | `GROWTH_POST_REVIEW` |
 | bio · channel description · tagline | channel · intro | growth-post-reviewer `standalone` | `GROWTH_POST_REVIEW` |
-
-The 95 bar is a user directive from 2026-08-13 (growth copy was lowered to 90
-on 2026-08-12, then restored to 95 by that directive). The storyboard row
-changed shape twice — single board reads on 2026-08-22, then the two narration
-loops with the board reads removed on 2026-09-03 (0.50.0). Don't build a new skill
-with an outgoing-copy path that bypasses the reviewer — when a new surface
-appears, add a row to this table and extend an existing reviewer.
 
 ## Additional Resources
 
@@ -131,6 +117,6 @@ appears, add a row to this table and extend an existing reviewer.
 - **`references/pipeline-lint.js`** — checks the SKILL.md gate prose against `pipeline.js` (9 rules, read-only; `--list` · `--selftest`)
 - **`references/extract-text.js`** — scenes.js → per-surface text extraction (narration · subtitle · screen; handles the `window.SCENES` global contract)
 - **`references/safezone-landscape.md`** — the 16:9 safe-zone measurements (2026-08-17): x 96/1920 · top 96/1080 · bottom 285/1080, and which surfaces stay provisional. `formats.js`, the video template and the storyboard template all cite it
-- **`references/reply-gate.md`** — the two gates every growth-loop reply passes: `check-style.py --surface reply`, then the growth-post-reviewer agent at ≥95 with p0=0, plus what to attach per platform
+- **`references/reply-gate.md`** — reply context and optional editing diagnostics, with actual sending authorization kept separate
 - **`references/formats.js`** / **`references/format-resolve.js`** / **`references/format-lint.js`** — the format presets, the resolver the builders call, and the linter that holds the inline mirrors to them
 - **`references/skill-lint.js`** — the skill-surface check: routing descriptions, tool lanes, reference links and orphans, manifest parity, the tool count in prose (12 rules; `--list` · `--selftest`)

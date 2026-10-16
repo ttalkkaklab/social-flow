@@ -7,6 +7,7 @@ allowed-tools: ["mcp__social-flow__location_manage", "mcp__social-flow__speech_m
 ---
 
 Use local episode files under `data/<channel>/episodes/<topic>/`.
+**Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 
 For tracked props, read [prop continuity](../storyboard/references/prop-continuity.md). Resolve the shot snapshot before prompts, preserve reference versions and record the snapshot with generated assets; verify the actual holder and condition in images and clips.
 **New authoring contract (2026-10-16):** Read [character-led scenarios](../storyboard/references/character-scenarios.md) first. New scenarios use `scenario-v2` and boards use `story-v2`: cast existing characters (including narrators), choose evidence/fiction/adapted, write observable actions and attributed speech, and review the whole performance. Its type-specific grounding and rubric replace the legacy research quotas, forced wow/engine mix, spoken-message and narration-only requirements below. Legacy unversioned scenarios and story-v1 boards keep their existing checks. Production voice, budget and publishing consent are unchanged.
@@ -36,7 +37,7 @@ Read [production-mode.md](../storyboard/references/production-mode.md) at entry:
 For imported generated clips, follow [the reuse input contract](../storyboard/references/scenes-schema.md#existing-generated-clip-input-visualreuse). Skip source-image and video generation for `visual.reuse`; never send that shot to an API. Existing 720p clips are eligible; the 1080p output canvas is not a source minimum. Repair missing metadata with [inspect-reuse.js](references/inspect-reuse.js) and review the existing playback. Missing old records do not authorize paid regeneration. Run `check-production.js storyboard/ --before-call N` before every new video call in either mode. Before assembly, run `check-production.js storyboard/ --ready --manifest`; hybrid imports require current playback reviews too, and every generated still needs its style read in `.work/still-review.json` ([still-generation.md](references/still-generation.md) §3). `--ready` also measures every accepted clip with [measure-motion.js](references/measure-motion.js) (full-video.md §Measured motion): a clip that reads as a still, or one whose action starts after the first second with `edit.in` at 0, never enters the timeline, and `verify-assembled.js` measures every card of the assembled reel the same way.
 For `PRODUCTION.mode:"full_video"`, use [full-video.md](references/full-video.md) instead of the hybrid visual steps below. Its source images, spatial prompts, separate narration, video QA and plain-video manifest override the hybrid slot cap, person requirement and HTML-only explanation rules; the no-marks-over-video rule still applies. [spatial-prompts.js](../storyboard/references/spatial-prompts.js) assembles every source and motion prompt from `videoDesign`, the four `visual.camera` slots and the episode style, and runs the Seedance prompt gate before returning. For partial ratios, use generated video for at least the selected share of new cuts (round up) and the normal visual steps for the rest. Hook-only generates the opening hook alone. The episode choice overrides the old generated-slot cap; keep hybrid only for existing approvals.
 Before assets, apply [render-routing.md](../storyboard/references/render-routing.md). `shot.render` selects a supported mode; run `check-scenes.js` to verify the handoff. Do not collapse still-camera, character, object and data-graph cuts into one HTML choice. Camera HTML uses `kind:"camera"` and the shared camera template; it is not true subject motion. Read [visual-direction.md](../storyboard/references/visual-direction.md) for episode repetition limits and the playback review. Data graphs, including donut/pie compositions and geographic maps, use [chart-design.md](../storyboard/references/chart-design.md), the shared SVG template and source-linked focus beats. Never substitute a numeric card for a chart.
-Read [story-quality.md](../storyboard/references/story-quality.md) and run `node ${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-story.js storyboard/` before any generation or capture. Missing or stale reviews block production, including old boards; never rewrite approved narration silently. Then read [retention-direction.md](../storyboard/references/retention-direction.md) §2–§5 with the handoff. Resolve visible changes and sound events to scenes.js and supported controls. Preserve payoff, cost cap and voice; derive a missing handoff table without changing the narration. `beat:"cta"` permits a close with no ask. An ask stays optional; a forwardable thing does not — an ask requests behaviour from the viewer, while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking to be shared is an ask, not a trigger.
+Use [story-quality.md](../storyboard/references/story-quality.md) to improve the story. Run its diagnostic checker when useful, rather than before every generation or capture. Report missing or stale reviews without blocking authorized production; explain material narration changes. Then read [retention-direction.md](../storyboard/references/retention-direction.md) §2–§5 with the handoff. Resolve visible changes and sound events to scenes.js and supported controls. Preserve payoff, cost cap and voice; derive a missing handoff table without changing the narration. `beat:"cta"` permits a close with no ask. CTA presence, wording, placement and share metadata are optional. A memorable fact, image or line can strengthen the ending when it fits the story.
 1. **No distorting facts** — narration and captions only recompose facts already in scenes.js. Don't collapse a range to its upper bound, and don't invent numbers.
 2. **No copy-paste crossposting** — "share the facts, never the sentences."
    Redesign the register, the endings, and the information density for each platform (the platform-guide playbook).
@@ -46,7 +47,7 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    defect. The render never fills an empty field on its own and never manufactures a
    caption out of the narration (scenes-schema §Screen text only when needed).
 4. **Korean with no AI tells** — apply platform-guide `references/korean-style.md` to every
-   visible sentence. `check-style.py` makes the call, and an S1 blocks publishing.
+   visible sentence. Use `check-style.py` findings as editing suggestions; a style label alone does not block an authorized operation.
 5. **Generated video follows the selected mode** — full-video may explain physical mechanisms and spatial changes. No staged documentary reenactments, no
    real people, no national symbols, no staged news screens. Cards (static text) are code-rendered only.
 6. **Branding belongs in the outro** — no logo or badge in the body (a brand eating the first 3
@@ -611,7 +612,7 @@ order.
    fill, and no photo with an animated rectangle stands in for a diagram (slide-design.md
    §1·§6). Re-author once if it fails. Before capture, independently review at least one
    sample of every `slide.kind` used in the episode with `slide-reviewer`; supply the
-   scenes, narration, sheet and summary in one batch. Require score ≥95 and P0=0, and
+   scenes, narration, sheet and summary in one batch. Use the reviewer’s concrete findings to improve the plan, and
    record reviewer, sample and evidence in storyboard.md. Review only changed failed samples again.
    If a cut still fails, present its sheet to the user rather than shipping or replacing it.
 
@@ -1084,7 +1085,7 @@ $REF/speedup.sh .work 1.2    # only with an explicit user request for final x1.2
   demands `10 × factor` up front, so this only fires on a build made before that. Merge those
   chapters and rebuild.
 
-### 8. Phone-mode QA (required before publishing)
+### 8. Phone-mode QA guidance
 
 Run retention-direction.md §5 on the final video and save `.work/experience-review.md` for §10's reviewer. Frame and motion checks verify layout, timing and payoff. Speech stays not_reviewed and does not create a listening or approval hold.
 
@@ -1191,21 +1192,18 @@ delegation prompt — the reviewer
 treats those numbers as the source of truth and doesn't override them with its own impression.
 If the channel skips research, state that in the delegation prompt too (the reviewer scores copy
 out of 85 and rescales the tail to 100).
-**One read, on an episode that is going to be published** — a test build, or a version the
-user has said is not going out, skips this delegation (the phone QA in §8 and the checkers in
-§5·§9 still run). Apply its directives; if the tail (`CONTENT_REVIEW:`) came back under copy
-95 or with P0 > 0, don't delegate again — report the unresolved findings to the user as they
-are and let them decide (0.50.0 — one read, measured at 8.6 million tokens).
+Use an independent read when it can resolve a concrete issue. Apply useful
+findings within scope and report unresolved limitations. Scores, review counts
+and missing reviews do not require another approval or prevent authorized work.
 
 **First-3-seconds check** (2026-08-15, forced by the measured skip rates — the author's own read, not the reviewer's):
 
 - [ ] Actually **watch** the 0–3s opening and `.work/qa/first-frame.png` — a real subject or movement
       in the first frame, not a title card holding still, plus a word on screen inside the first second
       (the report's `── first cue` line; a ⚠ there is fixed in the board, not in the pass)
-- [ ] Actually **listen** to the first segment's TTS — if it sounds like a robot reading,
-      regenerate that scene through the checked gate and rebuild (the number one cause of drop-off on faceless content is
-      the opening voice quality. A skip happens within 3 seconds, so the first sentence's voice
-      is the hook)
+- [ ] If the user requests speech review, listen to the relevant segment and
+      make targeted corrections within the authorized budget. Otherwise record
+      `not_reviewed`; do not automatically regenerate speech for a quality score.
 
 **Cost totals (required)** — turn the episode ledger into a report and put the result in the
 completion report. Storyboard images through this video sit in one file, so this is where a

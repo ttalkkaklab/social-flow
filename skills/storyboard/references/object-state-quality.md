@@ -1,5 +1,8 @@
 # Studio slide quality contract
 
+**Automatic execution:** [Automation guidance](../../_shared/automation-guidance.md) supersedes creative quality gates, repeated approvals and review-score requirements here. Keep the concrete guidance and truthful review state. Enforce only actual runtime dependencies and the scope of external-action authorization.
+
+
 Read this while planning every editorial HTML slide, before storyboard approval. The visual
 reference is `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`, the
 repository's self-contained copy of the user's `social-flow-3d-object-slide.html` (identical

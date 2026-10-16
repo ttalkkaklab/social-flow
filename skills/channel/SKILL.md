@@ -10,6 +10,8 @@ description: >
 argument-hint: "[add|list|update|serve|character] [channel-name]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__tts_local_generate", "mcp__social-flow__stt_local_transcribe", "mcp__social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate"]
 ---
+**Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
+
 
 **HITL records:** Keep channel answers in profile.md. Preserve actual provenance in local files and reuse existing authorization. This adds no approval gate.
 
@@ -96,7 +98,7 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
    **Channel copy (description·bio) is outgoing copy** — the setup skills upload
    this text as the platform bio verbatim. After writing it, run the style gate
    (check-style `--surface screen`), then delegate to the growth-post-reviewer
-   agent as a `standalone` surface; only copy that scores **≥95 with p0=0** goes
+   agent as a `standalone` surface; use the findings to improve copy before it goes
    into profile.md (up to 3 rounds; if it falls short, show the findings and
    refine together with the user).
 
@@ -150,7 +152,7 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
    (`check-scenes.js` and the approval strip warn outside the band; only the 180s platform
    cap fails). Neither touches an episode that is already built.
    If the channel copy (description·bio) changed, pass the same gate as add
-   step 5 again (check-style + growth-post-reviewer `standalone` ≥95·p0=0).
+   step 5 again (optional style diagnostics and concrete copy review).
 3. Report before/after as a table.
 
 ## serve procedure

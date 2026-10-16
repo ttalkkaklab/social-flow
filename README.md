@@ -570,6 +570,7 @@ social-flow/
 │   ├── grow-instagram/          # /social-flow:grow-instagram — one autonomous Instagram growth tick (comment replies · skip/watch metrics · queue refill authoring · queue publishing — Reels go out only with queue_instagram: ready + a public URL)
 │   │   └── references/          #   growth-playbook.md (two gates · disqualification SoT) · growth-plan-template.md
 │   ├── review-recent/           # /social-flow:review-recent — feedback HTML for the last 5 episodes across YouTube/Instagram (funnel · bars · problem→hypothesis→next episode)
+│   ├── inspect-content/         # read-only review of existing characters, backgrounds, props, scenarios and shot flow
 │   ├── topic-scout/             # /social-flow:topic-scout — market-validated YouTube topics (5× channel median · chart HTML) + an SNS issues section (Threads/X/Instagram mentions · trending searches)
 │   └── platform-guide/          # knowledge skill — platform grammar · video specs · Korean style SoT
 │       └── references/          #   platform-playbook.md · korean-style.md · check-style.py (style gate) · check-meta.js (YouTube meta gate) · extract-text.js · formats.js + format-lint.js · pipeline.js + pipeline-lint.js · skill-lint.js · reply-gate.md · safezone-landscape.md
@@ -939,3 +940,14 @@ outputs are marked `not_reviewed`. File, voice and timing provenance remain requ
 See [the speech contract](skills/produce/references/shot-speech.md). Video models are
 replaceable: audio-conditioned generation, post lip-sync and off-screen voiceover are separate
 routes; LTX is one adapter, not the common data model.
+
+### Inspect existing content
+
+`inspect-content` reviews existing characters, backgrounds, props, scenarios, individual shots
+and whole-story flow without editing or generating. `storyboard_read` includes silent actions,
+attributed speech, stable shot IDs and optional full context; `shotId` selects a shot with its
+neighbours. Returned metadata and prior review records are explicitly unverified until read.
+
+Creative quality guidance lives in [the shared automation guide](skills/_shared/automation-guidance.md).
+CTA checks are removed. Missing review scores and creative metadata are advice;
+invalid references, unusable media and actual spending authorization remain execution contracts.

@@ -1,5 +1,8 @@
 # Still generation — the images the storyboard planned
 
+**Automatic execution:** [Automation guidance](../../_shared/automation-guidance.md) supersedes creative quality gates, repeated approvals and review-score requirements here. Keep the concrete guidance and truthful review state. Enforce only actual runtime dependencies and the scope of external-action authorization.
+
+
 The procedure for produce §1.5. The storyboard decided every still's prompt, engine and size
 and generated nothing (storyboard §5, owner directive 2026-09-04 — a plan the user rejects
 must cost nothing). This file is the execution half: which engine each still goes to, how the

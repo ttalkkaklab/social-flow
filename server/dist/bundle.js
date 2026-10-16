@@ -64614,15 +64614,18 @@ var require_story_performance = __commonJS({
       const scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
       const order = [];
       scenes.forEach((s2, i2) => {
-        if (s2.type === "outro" || s2.type === "broll") return;
+        if (!object4(s2) || s2.type === "outro" || s2.type === "broll") return;
         order.push(i2);
         scenes.forEach((b, j) => {
-          if (b.type === "broll" && b.after === i2) order.push(j);
+          if (object4(b) && b.type === "broll" && b.after === i2) order.push(j);
         });
       });
       return order.flatMap((i2) => (Array.isArray(scenes[i2].performance) ? scenes[i2].performance : []).map((e2, j) => {
-        const s2 = scenes[i2], n = s2.narration?.[e2?.group - 1];
-        const transcript = (Array.isArray(win.STORY?.transcripts) ? win.STORY.transcripts : []).find((t2) => t2?.shot === i2 + 1)?.groups?.[e2?.group - 1];
+        const s2 = scenes[i2], validGroup = Number.isInteger(e2?.group) && e2.group > 0;
+        const n = validGroup && Array.isArray(s2.narration) ? s2.narration[e2.group - 1] : void 0;
+        const transcriptGroups = (Array.isArray(win.STORY?.transcripts) ? win.STORY.transcripts : []).find((t2) => t2?.shot === i2 + 1)?.groups;
+        const transcript = validGroup && Array.isArray(transcriptGroups) ? transcriptGroups[e2.group - 1] : void 0;
+        const quote = e2?.kind === "action" ? text2(e2.text) ? e2.text : "" : ["dialogue", "narration"].includes(e2?.kind) ? [n?.sub, n?.tts, transcript?.text].find(text2) || "" : "";
         return {
           shot: i2 + 1,
           event: j + 1,
@@ -64630,11 +64633,12 @@ var require_story_performance = __commonJS({
           character: e2?.character,
           to: e2?.to,
           group: e2?.group,
-          quote: e2?.kind === "action" ? e2.text : n?.sub || n?.tts || transcript?.text || ""
+          quote,
+          ...!quote ? { unresolved: true } : {}
         };
       }));
     }
-    function checkPerformanceStory(win, { requireReview = true, hash: hash3 } = {}) {
+    function checkPerformanceStory(win, { requireReview = false, hash: hash3 } = {}) {
       const errors = [], fail5 = (s2) => errors.push(s2), story = win.STORY;
       const scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
       if (!["evidence", "fiction", "adapted"].includes(story.kind)) fail5("STORY.kind must be evidence, fiction or adapted");
@@ -64656,6 +64660,10 @@ var require_story_performance = __commonJS({
         if (!Number.isInteger(t2?.shot) || !scenes[t2.shot - 1] || scenes[t2.shot - 1].type === "outro") fail5("transcript references an invalid shot");
       const used = /* @__PURE__ */ new Set();
       scenes.forEach((s2, i2) => {
+        if (!object4(s2)) {
+          fail5("shot " + (i2 + 1) + " must be an object");
+          return;
+        }
         if (s2.type === "outro") return;
         const events2 = Array.isArray(s2.performance) ? s2.performance : [];
         if (!events2.length) fail5("shot " + (i2 + 1) + " requires performance events");
@@ -64717,18 +64725,13 @@ var require_story_performance = __commonJS({
       if (payoff >= 0 && (payoff < opening || payoff > ending)) fail5("STORY.payoff must fall between opening and ending");
       if (payoff === opening && story.reveal !== "upfront") fail5("opening payoff requires reveal upfront");
       if (!["held", "upfront", "none"].includes(story.reveal)) fail5("STORY.reveal is required");
-      if (!["none", "question", "action", "next"].includes(story.cta)) fail5("invalid STORY.cta");
-      if (story.cta !== "none") {
-        const ask = ref(story.ask, "STORY.ask");
-        if (ask <= payoff || !text2(story.ctaReason)) fail5("CTA must follow payoff and have a reason");
-      } else if (story.ask != null) fail5("CTA none must not declare ask");
       const shots = [...new Set(events.map((e2) => e2.shot))], beats = Array.isArray(story.beats) ? story.beats : [];
       if (beats.length !== shots.length || new Set(beats.map((b) => b?.shot)).size !== shots.length || beats.some((b) => !shots.includes(b?.shot) || !text2(b.change) || !text2(b.necessity))) fail5("STORY.beats must cover every performance shot with change and necessity");
       if (!requireReview) return errors;
       const review = story.review;
-      if (!object4(review)) return [...errors, "STORY.review is required before production"];
+      if (!object4(review)) return [...errors, "STORY.review is absent; no prior review evidence is available"];
       if (review.hash !== hash3) fail5("STORY.review is stale; reread the current performance");
-      if (review.verdict !== "pass" || !Array.isArray(review.unresolved) || review.unresolved.length) fail5("STORY.review must pass without unresolved findings");
+      if (review.verdict !== "pass" || !Array.isArray(review.unresolved) || review.unresolved.length) fail5("STORY.review reports an unresolved or non-pass result");
       for (const key of ["meaning", "progression", "payoff", "grounding", "character"]) {
         const item = review[key];
         if (!object4(item) || !text2(item.reason) || !Array.isArray(item.refs) || !item.refs.length) {
@@ -64758,10 +64761,10 @@ var require_story_contract = __commonJS({
       const transcripts = Array.isArray(win.STORY?.transcripts) ? win.STORY.transcripts : [];
       const ordered = [];
       scenes.forEach((s2, i2) => {
-        if (s2.type === "outro" || s2.type === "broll") return;
+        if (!object4(s2) || s2.type === "outro" || s2.type === "broll") return;
         ordered.push({ s: s2, shot: i2 + 1 });
         scenes.forEach((b, j) => {
-          if (b.type === "broll" && Number(b.after) === i2) ordered.push({ s: b, shot: j + 1 });
+          if (object4(b) && b.type === "broll" && Number(b.after) === i2) ordered.push({ s: b, shot: j + 1 });
         });
       });
       return ordered.flatMap(({ s: s2, shot }) => {
@@ -64773,7 +64776,7 @@ var require_story_contract = __commonJS({
     function storyHash(win) {
       const story = object4(win.STORY) ? { ...win.STORY } : null;
       if (story) delete story.review;
-      const scenes = (win.SCENES || []).map((s2) => ({
+      const scenes = (Array.isArray(win.SCENES) ? win.SCENES : []).map((s2) => !object4(s2) ? s2 : {
         type: s2.type,
         beat: s2.beat,
         arc: s2.arc,
@@ -64796,7 +64799,7 @@ var require_story_contract = __commonJS({
         slideSubject: s2.visual?.slide?.subject,
         ...s2.visual?.reuse !== void 0 ? { reuse: s2.visual.reuse } : {},
         recording: s2.visual?.source === "recording" ? s2.visual.clip : void 0
-      }));
+      });
       return crypto2.createHash("sha256").update(JSON.stringify(canonical({
         ...win.STORY?.version === "story-v2" ? { cast: win.SB_DOC?.characters, narrator: win.SB_DOC?.narratorCharacterId } : {},
         comprehension: win.COMPREHENSION,
@@ -64804,7 +64807,7 @@ var require_story_contract = __commonJS({
         scenes
       }))).digest("hex");
     }
-    function checkStory(win, { requireReview = true } = {}) {
+    function checkStory(win, { requireReview = false } = {}) {
       const errors = [], fail5 = (message) => errors.push(message);
       const story = win.STORY, scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
       if (story?.version === "story-v2") return require_story_performance().checkPerformanceStory(win, { requireReview, hash: storyHash(win) });
@@ -64813,7 +64816,6 @@ var require_story_contract = __commonJS({
       for (const key of ["viewerNeed", "thesis", "basis", "endingReason"])
         if (!text2(story[key])) fail5(`STORY.${key} must explain a concrete editorial decision`);
       if (!["evidence", "fiction"].includes(story.kind)) fail5("STORY.kind must be evidence or fiction");
-      if (!["none", "question", "action", "next"].includes(story.cta)) fail5("STORY.cta must be none, question, action or next");
       const live = /* @__PURE__ */ new Map();
       if (story.transcripts !== void 0 && !Array.isArray(story.transcripts)) fail5("STORY.transcripts must be an array");
       (Array.isArray(story.transcripts) ? story.transcripts : []).forEach((t2, i2) => {
@@ -64919,11 +64921,6 @@ var require_story_contract = __commonJS({
           });
         }
       }
-      if (story.cta !== "none") {
-        const ask = ref(story.ask, "STORY.ask");
-        if (ask && payoff && !before(payoff, ask)) fail5("STORY.ask must follow the paid promise");
-        if (!text2(story.ctaReason)) fail5("STORY.ctaReason must explain why the ask helps this episode");
-      } else if (story.ask != null) fail5("STORY.cta none must not declare an ask");
       const beats = Array.isArray(story.beats) ? story.beats : [];
       if (beats.length !== narrated.length) fail5("STORY.beats requires one row per narrated shot");
       const seen = /* @__PURE__ */ new Set();
@@ -64940,10 +64937,10 @@ var require_story_contract = __commonJS({
       });
       if (!requireReview) return errors;
       const review = story.review;
-      if (!object4(review)) return [...errors, "STORY.review is required before production; a score alone is not evidence"];
+      if (!object4(review)) return [...errors, "STORY.review is absent; no prior review evidence is available"];
       if (review.hash !== storyHash(win)) fail5("STORY.review is stale; review the current narration and contract again");
       if (review.verdict !== "pass" || !Array.isArray(review.unresolved) || review.unresolved.length)
-        fail5("STORY.review must pass with an empty unresolved list");
+        fail5("STORY.review reports an unresolved or non-pass result");
       for (const key of ["meaning", "progression", "payoff", "grounding"]) {
         const item = review[key];
         if (!object4(item) || !text2(item.reason) || !Array.isArray(item.refs) || !item.refs.length) {
@@ -76936,34 +76933,31 @@ var STRUCTURE_VERSION = (() => {
 })();
 var sceneSchema = external_exports.object({
   no: external_exports.number().int().positive().describe("Scene number \u2014 the value shots point at with `scene`"),
-  place: nonEmpty.describe("One place \u2014 the slugline location"),
-  time: nonEmpty.describe("One continuous stretch of time \u2014 \uB0AE \xB7 \uBC24 \xB7 \uC0C8\uBCBD \xB7 10\uB144 \uB4A4"),
-  event: nonEmpty.describe("The one thing that happens in this scene"),
-  charge: external_exports.object({
-    open: tuple(V.CHARGES_OPEN).describe('Value at the open: "+" or "-"'),
-    close: tuple(V.CHARGES_CLOSE).describe('Value at the close: "+", "-", or deeper into the same pole "++" / "--"')
-  }),
-  turn: nonEmpty.describe("What flipped between the open and the close"),
+  place: external_exports.string().optional().describe("One place \u2014 the slugline location"),
+  time: external_exports.string().optional().describe("One continuous stretch of time \u2014 \uB0AE \xB7 \uBC24 \xB7 \uC0C8\uBCBD \xB7 10\uB144 \uB4A4"),
+  event: external_exports.string().optional().describe("The one thing that happens in this scene"),
+  charge: external_exports.record(external_exports.unknown()).optional(),
+  turn: external_exports.string().optional().describe("What flipped between the open and the close"),
   out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene")
 }).strict();
 var sequenceSchema = external_exports.object({
   id: nonEmpty.describe('Stable id, e.g. "q1"'),
-  title: nonEmpty.describe("The heading the approval page draws"),
-  purpose: nonEmpty.describe("The one purpose that binds these scenes \u2014 two purposes are two sequences"),
+  title: external_exports.string().optional().describe("The heading the approval page draws"),
+  purpose: external_exports.string().optional().describe("The one purpose that binds these scenes \u2014 two purposes are two sequences"),
   question: nonEmpty.optional().describe("The dramatic question this stretch opens"),
   payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question"),
-  scenes: external_exports.array(external_exports.number().int().positive()).min(1).describe("Scene numbers in playback order")
+  scenes: external_exports.array(external_exports.number().int().positive()).describe("Scene numbers in playback order")
 }).strict();
 var structureSchema = external_exports.object({
   version: external_exports.literal(STRUCTURE_VERSION),
   nextShotId: external_exports.number().int().positive().optional(),
-  sequences: external_exports.array(sequenceSchema).min(1),
-  scenes: external_exports.array(sceneSchema).min(1)
+  sequences: external_exports.array(sequenceSchema),
+  scenes: external_exports.array(sceneSchema)
 }).strict();
 var coverageSchema = external_exports.object({
-  azimuth: external_exports.number().finite().min(0).max(180).optional().describe("Horizontal camera bearing, 0\u2013180\xB0 inside the selected side of the axis"),
+  azimuth: external_exports.number().finite().optional().describe("Horizontal camera bearing, 0\u2013180\xB0 inside the selected side of the axis"),
   action: external_exports.string().trim().min(1).optional().describe("Visible action that carries this cut when no 30\xB0 or two-step change is used")
-}).strict().refine((value) => value.azimuth !== void 0 || value.action !== void 0, "coverage names an azimuth or the action that carries the cut");
+}).passthrough();
 var lineCrossingSchema = external_exports.object({
   method: external_exports.enum(["camera_move", "subject_move", "neutral", "intentional"]),
   from: nonEmpty.describe("The previous space.line value"),
@@ -76971,15 +76965,9 @@ var lineCrossingSchema = external_exports.object({
   reason: nonEmpty.describe("What the viewer sees that makes the new side legible"),
   bridgeShot: external_exports.number().int().positive().optional().describe('Earlier neutral shot number; required only for method "neutral"')
 }).strict();
-var compositionSchema = external_exports.record(external_exports.unknown()).superRefine((value, ctx) => {
-  for (const message of contract().validateComposition(value)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-});
-var eyelineSchema = external_exports.record(external_exports.unknown()).superRefine((value, ctx) => {
-  for (const message of contract().validateEyeline(value)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-});
-var depthSchema = external_exports.record(external_exports.unknown()).superRefine((value, ctx) => {
-  for (const message of contract().validateDepth(value)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-});
+var compositionSchema = external_exports.record(external_exports.unknown());
+var eyelineSchema = external_exports.object({ matchShot: external_exports.number().int().positive().optional() }).passthrough();
+var depthSchema = external_exports.record(external_exports.unknown());
 var cameraSchema = external_exports.record(external_exports.unknown()).superRefine((value, ctx) => {
   for (const message of cameraContract().cameraInputErrors(value))
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
@@ -76997,28 +76985,28 @@ var shotSchema = external_exports.object({
   sceneSlug: external_exports.string().optional(),
   sequence: external_exports.string().optional(),
   transition: external_exports.string().regex(V.TRANSITION_RE, "not a join from scenes-schema \xA7scene transition").optional(),
-  beat: tuple(V.BEATS).optional(),
-  arc: tuple(V.ARCS).optional(),
-  hookType: tuple(V.HOOK_TYPES).optional(),
-  hookForm: tuple(V.HOOK_FORMS).optional(),
+  beat: external_exports.string().optional(),
+  arc: external_exports.string().optional(),
+  hookType: external_exports.string().optional(),
+  hookForm: external_exports.string().optional(),
   chapter: external_exports.string().optional(),
-  after: external_exports.number().int().positive().optional(),
+  after: external_exports.number().int().nonnegative().optional(),
   shot: external_exports.object({
     feel: external_exports.string().optional(),
-    size: tuple(V.SIZES).optional(),
-    angle: tuple(V.ANGLES).optional(),
+    size: external_exports.string().optional(),
+    angle: external_exports.string().optional(),
     why: external_exports.string().optional(),
     info: external_exports.string().optional(),
-    infoType: tuple(V.INFO_TYPES).optional(),
+    infoType: external_exports.string().optional(),
     share: external_exports.string().optional(),
-    shareType: tuple(V.SHARE_TYPES).optional(),
+    shareType: external_exports.string().optional(),
     space: external_exports.record(external_exports.unknown()).optional(),
     eyeline: eyelineSchema.optional(),
     composition: compositionSchema.optional(),
     depth: depthSchema.optional(),
     coverage: coverageSchema.optional(),
     lineNeutral: external_exports.literal(true).optional(),
-    lineCrossing: lineCrossingSchema.optional(),
+    lineCrossing: external_exports.record(external_exports.unknown()).optional(),
     render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: external_exports.string().optional(), reason: external_exports.string().optional() }).passthrough().optional()
   }).passthrough().optional(),
   sound: external_exports.record(external_exports.unknown()).optional()
@@ -77026,8 +77014,48 @@ var shotSchema = external_exports.object({
 var readLevelSchema = external_exports.enum(["outline", "scenes", "shots", "full"]);
 var storyboardReadSchema = external_exports.object({
   path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
-  level: readLevelSchema.default("shots").describe("outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots = every shot summarised under its scene \xB7 full = the raw shot objects too")
+  level: readLevelSchema.default("shots").describe("outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots = every shot summarised under its scene \xB7 full = the raw shot objects too"),
+  shotId: external_exports.string().min(1).optional().describe("Stable shot ID to inspect, with its raw plan and neighboring shot IDs"),
+  includeContext: external_exports.boolean().default(true).describe("Include STORY, PRODUCTION and SB_DOC as unverified review context")
 });
+function readStoryboard(args) {
+  const { win, file, sha256: sha2562 } = readBoard(args.path);
+  const result = contract().outline(win, args.level);
+  result.file = file;
+  result.mediaBaseDirectory = dirname(file);
+  result.sha256 = sha2562;
+  const doc = win.SB_DOC;
+  if (doc?.props || doc?.propContinuity) result.propSheet = { props: doc.props, continuity: doc.propContinuity };
+  result.inspection = {
+    mediaViewed: false,
+    evidenceStatus: "not_verified",
+    note: "This response reads plans and recorded reviews only. Open referenced assets and verify current evidence before reporting visual quality or review validity."
+  };
+  if (args.includeContext) result.reviewContext = {
+    story: win.STORY || null,
+    production: win.PRODUCTION || null,
+    document: doc || null,
+    evidenceStatus: "not_verified"
+  };
+  if (args.shotId) {
+    const shots = win.SCENES || [];
+    const matches = shots.map((shot2, index2) => ({ shot: shot2, index: index2 })).filter((item) => item.shot.id === args.shotId);
+    if (matches.length !== 1) throw new Error(`shotId ${args.shotId}: expected one match, found ${matches.length}`);
+    const { shot, index } = matches[0];
+    const playback = result.playback;
+    const position = playback.findIndex((row) => row.no === index + 1);
+    const neighbor = (i2) => i2 >= 0 && playback[i2] ? { id: playback[i2].id, no: playback[i2].no } : null;
+    result.selectedShot = {
+      no: index + 1,
+      shot,
+      scene: win.STRUCTURE?.scenes?.find((scene) => scene.no === shot.scene) || null,
+      playbackPosition: position < 0 ? null : position + 1,
+      previous: position < 0 ? null : neighbor(position - 1),
+      next: position < 0 ? null : neighbor(position + 1)
+    };
+  }
+  return result;
+}
 var storyboardCheckSchema = external_exports.object({
   path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
   draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 machine-layer absences are deferred, not violations")
@@ -77071,7 +77099,7 @@ var transitionPatchSchema = external_exports.object({
 var storyboardApplySchema = external_exports.object({
   path: external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing), or its scenes.js"),
   draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 camera-continuity records (lineCrossing, coverage) are deferred, not violations"),
-  set: external_exports.object({ structure: structureSchema, shots: external_exports.array(shotSchema).min(1) }).optional().describe("Replace the whole board \u2014 the structure and every shot. The way a new board is written"),
+  set: external_exports.object({ structure: structureSchema.optional(), shots: external_exports.array(shotSchema).min(1) }).optional().describe("Replace the whole board \u2014 the structure and every shot. The way a new board is written"),
   structure: structureSchema.optional().describe("Replace window.STRUCTURE only"),
   sequences: external_exports.array(sequenceSchema).optional().describe("Upsert sequences by id"),
   scenes: external_exports.array(sceneSchema).optional().describe("Upsert scenes by no"),
@@ -77117,7 +77145,7 @@ function readBoard(target) {
     throw new Error(`failed to evaluate ${file}: ${e2.message}`);
   }
   if (!Array.isArray(win.SCENES)) throw new Error(`${file} has no window.SCENES array`);
-  return { file, header, win };
+  return { file, header, win, sha256: createHash("sha256").update(src).digest("hex") };
 }
 var GLOBAL_ORDER = ["FORMAT", "VOICE", "THEME", "COMPREHENSION", "STORY", "PRODUCTION", "MOTION_POLICY", "MUSIC", "SFX", "STRUCTURE", "SCENES"];
 function serializeBoard(win, header = []) {
@@ -77150,7 +77178,7 @@ function validateShots(shots) {
   shots.forEach((s2, i2) => {
     const parsed = shotSchema.safeParse(s2);
     if (!parsed.success) {
-      for (const issue2 of parsed.error.issues) out.push({ level: "bad", where: `shot ${i2 + 1}`, what: `${issue2.path.join(".") || "(root)"}: ${issue2.message}` });
+      for (const issue2 of parsed.error.issues) out.push({ level: "bad", where: `shot ${i2 + 1}`, what: issue2.path.length === 1 && issue2.path[0] === "id" ? "id: expected s followed by at least four digits (for example s0001)" : `${issue2.path.join(".") || "(root)"}: ${issue2.message}` });
     }
     const id = s2 && typeof s2 === "object" ? s2.id : void 0;
     if (typeof id !== "string") return;
@@ -77177,7 +77205,7 @@ function applyPatch(win, patch) {
     propContinuity: patch.propSheet.continuity
   };
   if (patch.set) {
-    next.STRUCTURE = patch.set.structure;
+    if (patch.set.structure) next.STRUCTURE = patch.set.structure;
     next.SCENES = patch.set.shots.slice();
   }
   if (patch.structure) next.STRUCTURE = patch.structure;
@@ -77299,13 +77327,12 @@ function applyPatch(win, patch) {
   next.SCENES = shots.map((shot) => ({ ...shot }));
   const findings = [];
   if (!shots.length) findings.push({ level: "bad", where: "board", what: "the board has no shots" });
-  if (next.STRUCTURE === void 0) findings.push({ level: "bad", where: "structure", what: "no window.STRUCTURE \u2014 write the sequences and scenes (set, structure, sequences + scenes)" });
-  else findings.push(...validateStructure(next.STRUCTURE));
+  if (next.STRUCTURE !== void 0) findings.push(...validateStructure(next.STRUCTURE));
   findings.push(...validateShots(shots));
   let synced = 0;
   if (!findings.some((f3) => f3.level === "bad")) {
     synced = contract().sync(next);
-    findings.push(...contract().check(next, { draft: patch.draft }));
+    findings.push(...contract().guidedCheck(next, { draft: patch.draft }));
   }
   findings.push(...propContract().check(next));
   return { win: next, findings, synced };
@@ -77398,7 +77425,13 @@ function checkScenario(args, checkFile = CHECK_SCENARIO_FILE) {
 }
 function checkStoryboard(args) {
   const { file, win } = readBoard(args.path);
-  const structure = contract().check(win, { draft: args.draft }).concat(validateShots(win.SCENES ?? []));
+  const seen = /* @__PURE__ */ new Set();
+  const structure = contract().guidedCheck(win, { draft: args.draft }).concat(validateShots(win.SCENES ?? [])).filter((f3) => {
+    const key = f3.level + "\0" + f3.where + "\0" + f3.what;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
   const argv = [CHECK_SCENES_FILE, file, "--json"];
   if (args.draft) argv.push("--draft");
   let raw = "";
@@ -77439,7 +77472,7 @@ function renderApply(r2) {
   const bad = r2.findings.filter((f3) => f3.level === "bad");
   const head = r2.written ? `${r2.created ? "Created" : "Wrote"} ${r2.file}` : bad.length ? `NOT written \u2014 ${bad.length} violation(s) in ${r2.file}` : `Dry run \u2014 ${r2.file} untouched`;
   const lines = [head, `  ${r2.sequences} sequence(s) \xB7 ${r2.scenes} scene(s) \xB7 ${r2.shots} shot(s) \xB7 ${r2.synced} shot label(s) synced from the structure`];
-  if (r2.approvalDropped && r2.written) lines.push("  the `// approved:` line was dropped \u2014 an edited board is approved again at the HITL gate");
+  if (r2.approvalDropped && r2.written) lines.push("  the stale `// approved:` line was dropped; existing task authorization is unchanged");
   lines.push("Findings:", renderFindings(r2.findings));
   return lines.join("\n");
 }
@@ -85685,21 +85718,21 @@ var THREADS_SEARCH_OUTPUT = {
 };
 var eyelineInput = (() => {
   try {
-    return contract().EYELINE_SCHEMA;
+    return { type: "object", additionalProperties: true, description: "Optional gaze plan. Use the directing skill for recommended fields; only a supplied shot reference must resolve.", properties: { matchShot: { type: "integer", minimum: 1, description: "Referenced shot position, one-based; must resolve when supplied" } } };
   } catch {
     return { type: "object", description: "Eyeline contract unavailable: restore skills/storyboard/references/structure-contract.js" };
   }
 })();
 var compositionInput = (() => {
   try {
-    return contract().COMPOSITION_SCHEMA;
+    return { type: "object", additionalProperties: true, description: "Optional composition notes. Follow the directing skill; no rationale worksheet is required to author a shot." };
   } catch {
     return { type: "object", description: "Composition contract unavailable: restore skills/storyboard/references/structure-contract.js" };
   }
 })();
 var depthInput = (() => {
   try {
-    return contract().DEPTH_SCHEMA;
+    return { type: "object", additionalProperties: true, description: "Optional depth and readable-plane plan. The skill guides artistic choices." };
   } catch {
     return { type: "object", description: "Depth contract unavailable: restore skills/storyboard/references/structure-contract.js" };
   }
@@ -85736,7 +85769,7 @@ var stillCameraEffects = (() => {
 var stillCameraInput = {
   type: "object",
   additionalProperties: true,
-  required: ["effect", "target", "reason"],
+  required: ["effect"],
   description: "Required on still_camera. The eased window move the builder drives over the photograph: push (slow zoom-in, the default) \xB7 pull \xB7 approach \xB7 focus-in \xB7 rack-focus \xB7 pan \xB7 tilt (L13: a pan or tilt travels from focusFrom to focusTo, the vertical tilt being the scale-by-time move) \xB7 reveal \xB7 parallax (prepared layers). The ease holds the opening and closing pictures on its own.",
   properties: {
     effect: enumInput(stillCameraEffects, "The window move. Choose from the cut's meaning (directing-grammar \xA75 Still column), never repeat one on every cut."),
@@ -85766,15 +85799,15 @@ var storyboardShotInput = {
     duration: { type: "number", exclusiveMinimum: 0, description: "Shot duration in seconds; model duration may round up." },
     title: { type: "string", description: "Visible title where the shot treatment permits it." },
     narration: { type: "array", description: "Approved speech and optional subtitle text, in order.", items: { type: "object", additionalProperties: true, required: ["tts"], properties: { tts: { type: "string", description: "Text to speak." }, sub: { type: "string", description: "Subtitle text; omit to use the speech text." } } } },
-    beat: enumInput(storyboardVocabulary?.BEATS, "Narrative beat in playback order."),
+    beat: { type: "string", description: "Narrative beat in playback order. Recommended vocabulary is in the directing skill." },
     shot: {
       type: "object",
       additionalProperties: true,
       description: "Shot grammar and production route. Render mode chooses how to build the shot; visual.camera chooses how it is filmed; shot.depth chooses how many planes the viewer may read at once (L11).",
       properties: {
-        size: enumInput(storyboardVocabulary?.SIZES, "Framing size."),
-        angle: enumInput(storyboardVocabulary?.ANGLES, "Camera angle."),
-        infoType: enumInput(storyboardVocabulary?.INFO_TYPES, "Information carried by the shot; must agree with its purpose."),
+        size: { type: "string", description: "Framing size. Recommended vocabulary is in the directing skill." },
+        angle: { type: "string", description: "Camera angle. Recommended vocabulary is in the directing skill." },
+        infoType: { type: "string", description: "Information carried by the shot; must agree with its purpose. Recommended vocabulary is in the directing skill." },
         feel: { type: "string", description: "What the viewer should feel before choosing framing and movement." },
         eyeline: eyelineInput,
         composition: compositionInput,
@@ -85783,14 +85816,14 @@ var storyboardShotInput = {
           type: "object",
           additionalProperties: true,
           required: ["mode"],
-          description: "Production route. A drone spatial reveal uses generated_video with purpose place or live_action, motionEssential:true and whyNotStill, including full_video.",
+          description: "Production route. Select a supported route; explain artistic choices when useful. The skill guides medium and movement decisions.",
           properties: {
             mode: enumInput(storyboardVocabulary?.RENDER_MODES, "still_camera, generated_video, stock_video, or the supported HTML/data route. This is not the shot camera preset."),
-            purpose: enumInput(purposes, "Why this shot exists. Route compatibility is checked by storyboard_check."),
+            purpose: { type: "string", description: "Optional purpose for review. The skill guides route selection." },
             reason: { type: "string", description: "Why this route conveys the intended information." },
             action: { type: "string", description: "Visible action or spatial reveal." },
-            motionEssential: { type: "boolean", description: "true when continuous movement is essential. Required true for drone-flythrough." },
-            whyNotStill: { type: "string", description: "What travel reveals that a still cannot. Required for drone-flythrough." },
+            motionEssential: { type: "boolean", description: "Optional note that continuous movement is essential." },
+            whyNotStill: { type: "string", description: "Optional explanation of what travel reveals." },
             camera: stillCameraInput
           }
         },
@@ -89581,17 +89614,21 @@ Returns: integer credit balance.`,
     name: "storyboard_read",
     title: "Read a storyboard as sequences \u2192 scenes \u2192 shots",
     annotations: HINT.local,
-    description: `Read an episode's scenes.js and return it as a tree: sequences (purpose \xB7 question \xB7 payoff) \u2192 scenes (place \xB7 time \xB7 event \xB7 charge \xB7 turn \xB7 out) \u2192 shots (feel \xB7 info \xB7 size \xB7 angle \xB7 render \xB7 narration). Reads the file only; no API call.
+    description: `Read an episode's scenes.js and return it as a tree: sequences (purpose \xB7 question \xB7 payoff) \u2192 scenes (place \xB7 time \xB7 event \xB7 charge \xB7 turn \xB7 out) \u2192 shots (stable id \xB7 ordered actions and attributed speech \xB7 feel \xB7 info \xB7 render \xB7 character/location/prop references \xB7 media plan). Reads the file only; no API call.
 
 Use it before editing an existing board, and after storyboard_apply to see the board the way the approval page groups it. level=outline is enough to plan a change; level=full carries every raw shot object (large \u2014 one shot is ~40 fields).
 Do NOT use it to validate \u2014 storyboard_check runs the contract. A board with no window.STRUCTURE comes back with every shot under unplacedShots; write the structure with storyboard_apply.
 
-Returns: JSON \u2014 { version, format, shots, sequences[\u2026scenes[\u2026shots]], unplacedShots, splicedShots (broll \xB7 outro) }.`,
+For inspection, the default includeContext:true adds reviewContext.story (STORY), production (PRODUCTION) and document (SB_DOC: characters, props, setting and recorded reviews). shotId adds selectedShot with the raw shot, scene and previous/next shot IDs while preserving the whole flow. Referenced asset paths are authored locators, not proof the files exist or have been viewed. inspection.mediaViewed is always false; evidenceStatus is not_verified. Read assets and run their contract checks before declaring continuity or a current review pass.
+
+Returns: JSON \u2014 { file, mediaBaseDirectory, sha256, version, format, shots, sequences[\u2026scenes[\u2026shots]], unplacedShots, splicedShots (broll \xB7 outro), playback (actual insertion order), unscheduledShots, propSheet?, inspection, reviewContext?, selectedShot? }.`,
     inputSchema: {
       type: "object",
       properties: {
         path: { type: "string", description: "The storyboard directory (data/<channel>/episodes/<topic>/storyboard/) or its scenes.js" },
-        level: { type: "string", enum: ["outline", "scenes", "shots", "full"], description: "outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots (default) = every shot summarised under its scene \xB7 full = raw shot objects too" }
+        level: { type: "string", enum: ["outline", "scenes", "shots", "full"], description: "outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots (default) = every shot summarised under its scene \xB7 full = raw shot objects too" },
+        shotId: { type: "string", description: "Stable shot ID; adds raw selectedShot with scene and neighboring IDs without removing the overall flow. Unknown or duplicate IDs fail." },
+        includeContext: { type: "boolean", description: "Default true: return STORY, PRODUCTION and SB_DOC for character, background, prop and scenario inspection. Recorded evidence is not verified by this read." }
       },
       required: ["path"]
     }
@@ -89621,7 +89658,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
             structure: { type: "object", description: '{ version: "structure-v1", sequences: [...], scenes: [...] }' },
             shots: { type: "array", items: storyboardShotInput, description: "Every shot in playback order \u2014 the scenes-schema.md shot object; each playback shot carries `scene`" }
           },
-          required: ["structure", "shots"]
+          required: ["shots"]
         },
         structure: { type: "object", description: "Replace window.STRUCTURE only" },
         sequences: { type: "array", items: { type: "object", description: "{ id, title, purpose, question?, payoff?, scenes }" }, description: "Upsert sequences by id" },
@@ -97758,12 +97795,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
   storyboard_read: async (args) => {
     contract();
     const a = parseArgs(storyboardReadSchema, args);
-    const { win, file } = readBoard(a.path);
-    const outline = contract().outline(win, a.level);
-    outline.sha256 = (await import("node:crypto")).createHash("sha256").update((await import("node:fs")).readFileSync(file)).digest("hex");
-    const doc = win.SB_DOC;
-    if (doc?.props || doc?.propContinuity) outline.propSheet = { props: doc.props, continuity: doc.propContinuity };
-    return text(JSON.stringify(outline, null, 2));
+    return text(JSON.stringify(readStoryboard(a), null, 2));
   },
   storyboard_apply: async (args) => {
     contract();
@@ -97773,11 +97805,11 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
   storyboard_check: async (args) => {
     contract();
     const r2 = checkStoryboard(parseArgs(storyboardCheckSchema, args));
-    return text(renderCheck(r2), r2.violations > 0);
+    return text(renderCheck(r2));
   },
   scenario_check: async (args) => {
     const r2 = checkScenario(parseArgs(scenarioCheckSchema, args));
-    return text(JSON.stringify(r2, null, 2), r2.violations > 0);
+    return text(JSON.stringify(r2, null, 2));
   }
 };
 

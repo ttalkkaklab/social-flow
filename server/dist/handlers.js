@@ -1356,13 +1356,7 @@ export const ROUTES = {
     storyboard_read: async (args) => {
         storyboard.contract(); // a missing structure-contract.js reports itself here, before the argument schema does
         const a = parseArgs(storyboard.storyboardReadSchema, args);
-        const { win, file } = storyboard.readBoard(a.path);
-        const outline = storyboard.contract().outline(win, a.level);
-        outline.sha256 = (await import('node:crypto')).createHash('sha256').update((await import('node:fs')).readFileSync(file)).digest('hex');
-        const doc = win.SB_DOC;
-        if (doc?.props || doc?.propContinuity)
-            outline.propSheet = { props: doc.props, continuity: doc.propContinuity };
-        return text(JSON.stringify(outline, null, 2));
+        return text(JSON.stringify(storyboard.readStoryboard(a), null, 2));
     },
     storyboard_apply: async (args) => {
         storyboard.contract();
@@ -1372,10 +1366,10 @@ export const ROUTES = {
     storyboard_check: async (args) => {
         storyboard.contract();
         const r = storyboard.checkStoryboard(parseArgs(storyboard.storyboardCheckSchema, args));
-        return text(storyboard.renderCheck(r), r.violations > 0);
+        return text(storyboard.renderCheck(r));
     },
     scenario_check: async (args) => {
         const r = storyboard.checkScenario(parseArgs(storyboard.scenarioCheckSchema, args));
-        return text(JSON.stringify(r, null, 2), r.violations > 0);
+        return text(JSON.stringify(r, null, 2));
     },
 };

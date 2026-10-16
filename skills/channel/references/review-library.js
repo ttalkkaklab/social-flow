@@ -104,6 +104,12 @@ function exportChannel(channelDirectory, { check = false } = {}) {
   const boards = listStoryboards(root, slug);
   const outputs = new Map();
   const warnings = [];
+  const contentWarnings = [], structuralWarnings = [];
+  const contentWarning = (characterId, domain, detail) => {
+    const message = characterId + ': ' + detail;
+    warnings.push(message);
+    contentWarnings.push({ characterId, domain, message });
+  };
   const put = (file, body) => outputs.set(file, Buffer.from(body));
   const render = (file, title, section, body) => put(file, shell({ file, channelDir: dir, channel: channel.name, title, section, body }));
   for (const name of ASSET_NAMES) put(path.join(dir, 'assets', 'review', name), fs.readFileSync(path.join(ASSETS, name)));
@@ -122,10 +128,10 @@ function exportChannel(channelDirectory, { check = false } = {}) {
     let voice = null;
     let voiceError = '';
     try { voice = require('../../_shared/character-voice.js').identityVoice(source); }
-    catch (error) { voiceError = error.message; warnings.push(character.id + ': ' + voiceError); }
+    catch (error) { voiceError = error.message; contentWarning(character.id, 'voice', voiceError); }
     let characterIdentity = null, identityError = '';
-    try { characterIdentity = identityCharacter(source, { ready: false }); identityError = identityErrors(characterIdentity).join("; "); if (identityError) warnings.push(character.id + ": " + identityError); }
-    catch (error) { identityError = error.message; warnings.push(character.id + ': ' + identityError); }
+    try { characterIdentity = identityCharacter(source, { ready: false }); identityError = identityErrors(characterIdentity).join("; "); if (identityError) contentWarning(character.id, 'identity', identityError); }
+    catch (error) { identityError = error.message; contentWarning(character.id, 'identity', identityError); }
     if (characterIdentity) { role = characterIdentity.identity.role.value || role; appearance = characterIdentity.physical.appearance.value || appearance; }
     const review = `<p class="review-status">${identityError ? t('캐릭터 설정 보완 필요', 'Character settings incomplete') : voiceError ? t('음성 설정 필요', 'Voice settings required') : reviewStatus(dir, folder)}</p>`;
     let body = `<a class="review-crumb" href="../index.html">${t('캐릭터 목록', 'Characters')}</a>` + heading(esc(character.name), t('여러 에피소드에서 같은 모습과 목소리를 유지합니다.', 'Keep the same appearance and voice across episodes.'));
@@ -167,7 +173,10 @@ function exportChannel(channelDirectory, { check = false } = {}) {
       // scenes.js, helper files and media. Works with both file:// and HTTP.
       const base = rel(file, path.join(folder, 'index.html')).replace(/index\.html$/, '');
       put(file, source.replace(/<head([^>]*)>/i, `<head$1>\n${MARKER}\n<base href="${esc(base)}">`));
-    } else warnings.push(board.topic + ': missing/unsupported storyboard.html; run storyboard-html.js first');
+    } else {
+      const message = board.topic + ': missing/unsupported storyboard.html; run storyboard-html.js first';
+      warnings.push(message); structuralWarnings.push(message);
+    }
     const cover = board.cover ? path.join(root, decodeURIComponent(board.cover.replace(/^\/files\//, ''))) : null;
     cards += `<article class="review-card" data-card data-series="${esc(board.series || '')}" data-search="${esc((board.title + ' ' + board.topic + ' ' + (board.series || '')).toLocaleLowerCase())}">${available ? `<a href="${rel(boardIndex, file)}">` : '<div>'}${cover && regular(dir, cover) ? image(boardIndex, cover, board.title, true) : empty('커버 없음', 'No cover')}<div class="review-card-body"><h2>${esc(board.title)}</h2><p>${esc(board.series || '')}</p><div class="review-status"><span>${esc(board.status || 'draft')}</span><span>${esc(board.format || '')}</span></div>${available ? '' : `<p>${t('검토 HTML을 먼저 생성하세요.', 'Generate the review HTML first.')}</p>`}</div>${available ? '</a>' : '</div>'}</article>`;
   }
@@ -203,7 +212,7 @@ function exportChannel(channelDirectory, { check = false } = {}) {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, outputs.get(file));
   }
-  return { changed, warnings, characters: chars.length, episodes: boards.length };
+  return { changed, warnings, contentWarnings, structuralWarnings, characters: chars.length, episodes: boards.length };
 }
 
 if (require.main === module) {
@@ -212,7 +221,7 @@ if (require.main === module) {
     if (!args[0] || args[0].startsWith('--') || args.length > 2 || (args[1] && args[1] !== '--check')) throw new Error('Usage: review-library.js <channel directory> [--check]');
     const result = exportChannel(args[0], { check: args[1] === '--check' });
     console.log(JSON.stringify(result, null, 2));
-    if (args[1] === '--check' && (result.changed.length || result.warnings.length)) process.exitCode = 1;
+    if (args[1] === '--check' && (result.changed.length || result.structuralWarnings.length)) process.exitCode = 1;
   } catch (error) { console.error(error.message); process.exitCode = 1; }
 }
 function libraryHub(channels) {

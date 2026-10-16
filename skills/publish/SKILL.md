@@ -13,6 +13,8 @@ argument-hint: "<channel> <topic> [platformCSV|auto]"
 # defense, separate from the HITL approval gate.
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check", "mcp__social-flow__capability_status"]
 ---
+**Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
+
 
 Use local episode files under `data/<channel>/episodes/<topic>/`.
 
@@ -484,11 +486,10 @@ printf '%s\n' "$reply_copy" | \
   python3 ${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-style.py --surface reply -
 ```
 
-Copy that clears the checker goes to the growth-post-reviewer agent (the `inbox_reply`
-surface, with the original comment and our post body attached) — **publish only copy
-that scores ≥95 with p0=0.** If it falls short, fix it by removing only what the
-correction directs, up to three rounds; if it still falls short, don't send it and
-write the reason into the publish log.
+Use a growth-post-reviewer read when it helps resolve wording or context concerns.
+Keep the original comment and post body available. A score or fixed review-round count
+does not decide whether to send; the actual reply authorization and runtime inputs do.
+Record unresolved findings without claiming a passing review.
 
 - Record in `data/<channel>/episodes/<topic>/output/publish-log.md`: a table of
   timestamp, platform, post id, permalink, caption summary, and the approver's decision.

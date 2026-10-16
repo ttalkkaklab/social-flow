@@ -69,8 +69,10 @@ if (require.main === module) {
       const { exportChannel } = require('../../channel/references/review-library.js');
       const result = exportChannel(path.resolve(directory, '../../..'), { check });
       console.log(`Library: ${result.characters} characters, ${result.episodes} episodes, ${result.changed.length} changed files`);
-      for (const warning of result.warnings) console.warn(warning);
-      if (check && (result.changed.length || result.warnings.length)) process.exitCode = 1;
+      for (const warning of result.structuralWarnings) console.warn('Library structure: ' + warning);
+      for (const warning of result.contentWarnings) console.warn('Content readiness [' + warning.domain + ']: ' + warning.message);
+      if (result.contentWarnings.length) console.warn('Design check does not certify content readiness; identity/voice findings guide the next review without blocking authoring.');
+      if (check && (result.changed.length || result.structuralWarnings.length)) process.exitCode = 1;
     }
     if (check && changed.length) process.exitCode = 1;
   } catch (error) {

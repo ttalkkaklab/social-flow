@@ -6,7 +6,11 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 const require=createRequire(import.meta.url),ref=path.resolve(import.meta.dirname,'../../skills/storyboard/references');
-const {recommend,checkScene,checkEpisode}=require(path.join(ref,'render-routing.js'));
+const routing=require(path.join(ref,'render-routing.js'));
+const {recommend}=routing;
+// This suite inspects all diagnostics; automatic blocking is tested separately.
+const checkScene=(scene,options={})=>{const advice=[];return routing.checkScene(scene,{...options,advice}).concat(advice);};
+const checkEpisode=win=>{const advice=[];return routing.checkEpisode(win,{advice}).concat(advice);};
 const still=()=>({type:'points',duration:8,narration:[{tts:'A portrait.',sub:'A portrait.'}],shot:{infoType:'other',render:{mode:'still_camera',purpose:'portrait',reason:'Introduce the inventor.',camera:{effect:'push',target:'face',reason:'Make the identity clear.'}}},visual:{bg:'images/portrait.png',camera:{movement:'dolly in'},slide:{kind:'camera',motion:true,file:'slides/s1-camera.html'}}});
 const physical=(character=false)=>({type:'points',duration:8,shot:{infoType:'principle',render:{mode:character?'character_html':'object_html',purpose:character?'human_process':'mechanism',reason:'Show the causal action.',action:character?'The worker lifts the load onto the cart.':'The valve opens and admits water.',...(character?{actors:['worker']}:{})}},visual:{slide:{kind:'diagram',motion:true,treatment:'editorial',subject:{kind:'object'},object:{renderer:'mesh'}}}});
 const graph=()=>({type:'points',duration:8,narration:[{tts:'Compare the two values.'}],shot:{infoType:'statistic',render:{mode:'data_graph',purpose:'comparison',reason:'Compare measured counts.',data:{title:'Measured counts',source:'research.md#counts',unit:'units',chart:'bar',baseline:0,beats:[{group:1,focus:['B'],insight:'B is twice A.'}],values:[{label:'A',value:16},{label:'B',value:32}]}}},visual:{slide:{kind:'diagram',motion:true,treatment:'editorial',subject:{kind:'data'},chartRenderer:'svg-v1'}}});
@@ -65,11 +69,12 @@ test('existing recordings and shared outro retain their source; false recording 
  assert.deepEqual(checkScene({type:'broll',visual:{source:'recording',clip:'footage/evidence.mp4'}}),[]);
  assert.ok(checkScene({type:'broll',visual:{source:'recording',video:{engine:'seedance'}}}).length);
 });
-test('normal CLI enforces routing even for a board without a new policy marker',()=>{
+test('draft CLI reports missing routing as planning advice',()=>{
  const dir=mkdtempSync(path.join(tmpdir(),'routing-plan-'));
  try{const s=still();delete s.shot.render;writeFileSync(path.join(dir,'scenes.js'),'window.SCENES='+JSON.stringify([s])+';');
  const r=spawnSync(process.execPath,[path.join(ref,'check-scenes.js'),dir,'--draft','--json'],{encoding:'utf8'});
- assert.notEqual(r.status,0);assert.match(r.stdout,/shot.render: choose a supported mode/);
+ assert.equal(r.status,0);assert.match(r.stdout,/shot.render: choose a supported mode/);
+ assert.ok(JSON.parse(r.stdout).findings.some(f=>f.level==='warn'&&f.what.includes('choose a supported mode')));
  }finally{rmSync(dir,{recursive:true,force:true})}
 });
 test('shared camera template passes the production HTML contract',()=>{
@@ -83,12 +88,12 @@ test('shared camera template passes the production HTML contract',()=>{
  }finally{rmSync(dir,{recursive:true,force:true})}
 });
 
-test('every generated_video cut pre-renders in 3D: a missing previz is refused after the draft',()=>{
+test('generated video diagnostics recommend optional previz after the draft',()=>{
  const s=video();delete s.visual.video.previz;delete s.visual.video.modelPurpose;delete s.visual.video.referenceImagePaths;s.visual.video.prompt='A courtyard at dusk. The porter stays consistent with the input frame.';
- assert.match(checkScene(s).join(),/pre-renders its camera and blocking in 3D/);
- assert.doesNotMatch(checkScene(s,{draft:true}).join(),/pre-renders/);
+ assert.match(checkScene(s).join(),/previz can guide camera and blocking/);
+ assert.doesNotMatch(checkScene(s,{draft:true}).join(),/previz can guide/);
  // An imported clip (visual.reuse) is not generated here and carries no previz.
- const r=video();delete r.visual.video.previz;r.visual.reuse={};assert.doesNotMatch(checkScene(r).join(),/pre-renders/);
+ const r=video();delete r.visual.video.previz;r.visual.reuse={};assert.doesNotMatch(checkScene(r).join(),/previz can guide/);
 });
 test('a previz on the host video lane shapes the still and the prompt, never a Video 1 the tool cannot take',()=>{
  const {checkPreviz,previzHandoff}=require(path.join(ref,'render-routing.js'));
@@ -101,7 +106,7 @@ test('a previz on the host video lane shapes the still and the prompt, never a V
  assert.equal(previzHandoff(video()),'reference_video');
 });
 test('a previz clip is bound by hash, rendered at whole seconds, and named in the prompt',()=>{
- const {checkPreviz}=require(path.join(ref,'render-routing.js'));
+ const checkPreviz=(scene,options={})=>{const advice=[];return routing.checkPreviz(scene,{...options,advice}).concat(advice);};
  const good=video;
  assert.deepEqual(checkScene(good()),[]);
  assert.deepEqual(checkPreviz(video()),[]);
@@ -138,7 +143,7 @@ test('a previz clip is bound by hash, rendered at whole seconds, and named in th
  const t=good();t.visual.video.previz.renderer='threejs';assert.deepEqual(checkPreviz(t),[]);
 });
 test('ASTRA previz keeps the exact frame duration instead of rounding up',()=>{
- const {checkPreviz}=require(path.join(ref,'render-routing.js'));
+ const checkPreviz=(scene,options={})=>{const advice=[];return routing.checkPreviz(scene,{...options,advice}).concat(advice);};
  const s=video();s.visual.video.engine='astra';s.visual.video.numFrames=185;s.visual.video.frameRate=24;
  s.visual.video.previz.handoff='frame_and_prompt';s.visual.video.previz.fps=24;s.visual.video.previz.seconds=185/24;
  assert.deepEqual(checkPreviz(s),[]);
@@ -149,7 +154,7 @@ test('ASTRA previz keeps the exact frame duration instead of rounding up',()=>{
  delete s.visual.video.numFrames;assert.match(checkPreviz(s).join(),/fractional seconds require numFrames/);
 });
 // ── free stock material (scenes-schema §stock material) ──
-const routing=require(path.join(ref,'render-routing.js'));
+
 const stockLicense=()=>({provider:'nasa',url:'https://images.nasa.gov/details/A11',license:'NASA media usage guidelines',licenseUrl:'https://www.nasa.gov/nasa-brand-center/images-and-media/',attributionRequired:false,commercial:true,modify:true,retrievedAt:'2026-09-07'});
 const stockVideo=(purpose='archive')=>({type:'points',duration:6,narration:[{tts:'The launch.'}],shot:{infoType:'other',render:{mode:'stock_video',purpose,reason:'The actual 1969 launch is the sentence.',action:'The rocket clears the tower.'}},visual:{source:'stock',clip:'footage/s3-nasa-a11.mp4',license:stockLicense()}});
 test('a stock clip is a route of its own: archive only, live_action/atmosphere/place as an alternative',()=>{

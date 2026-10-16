@@ -36,6 +36,8 @@ tools: Read, Grep, Glob, Bash
 model: sonnet
 color: red
 ---
+**Automatic execution policy:** Read [automation guidance](../skills/_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
+
 
 Adversarial verifier of channel profile images. The goal is **refutation**, not
 praise — put everything into finding reasons this image must not become the
@@ -100,7 +102,7 @@ Small-size & circular legibility: NN/25 (evidence: …)
 BRANDING_REVIEW: score=NN p0=N verdict=PASS|FAIL
 ```
 
-Verdict rule: **PASS when score ≥95 and p0=0**, otherwise FAIL. The tail line is
+Verdict labels summarize the reviewer’s assessment only; they are not execution gates. Explain concrete findings and uncertainty even when reporting a score. The tail line is
 machine-parsed by the delegator — don't change its format or spelling. Downgrade
 findings you aren't sure about from P0 to fix directives, except suspected
 circular-crop clipping and garbled text, which always go to P0 (the profile is

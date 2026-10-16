@@ -36,13 +36,13 @@
   const v=scene.visual||{}, f=v.frames||{}, end=f.end||v.video?.lastImagePath||v.lastImagePath||v.imagePair?.end||'';
   return {mode:f.mode||(end?'first_last':'first'),start:v.bg||v.src||v.imagePair?.start||'',end,reason:f.reason||'',endState:f.endState||''};
  }
- function checkFrames(scene,{draft=false}={}){
+ function checkFrames(scene,{draft=false,advice=[]}={}){
   const v=scene.visual||{},f=v.frames,p=framePlan(scene),errors=[];
   const bad=s=>errors.push('visual.frames: '+s);
   if(f){
    if(!['first','first_last'].includes(f.mode))bad('mode must be first or first_last');
-   if(!text(f.reason))bad('record why this shot needs one or two frames');
-   if(f.mode==='first_last'&&!text(f.endState))bad('describe the visible final state');
+   if(!text(f.reason))advice.push('visual.frames: record why this shot needs one or two frames');
+   if(f.mode==='first_last'&&!text(f.endState))advice.push('visual.frames: describe the visible final state');
   }
   const ends=[v.frames?.end,v.video?.lastImagePath,v.lastImagePath,v.imagePair?.end].filter(Boolean);
   if(new Set(ends).size>1)bad('the displayed end frame and generation lastImagePath disagree');
@@ -68,7 +68,7 @@
   const engine=video.engine||v.engine||'seedance';
   return p.handoff||(engine==='host'||/^seedance-1-/.test(video.model||'')?'frame_and_prompt':'reference_video');
  }
- function checkPreviz(scene,{draft=false,production=null}={}){
+ function checkPreviz(scene,{draft=false,production=null,advice=[]}={}){
   const v=scene.visual||{},video=v.video,p=video&&video.previz,errors=[];
   if(p===undefined)return errors;
   const bad=s=>errors.push('visual.video.previz: '+s);
@@ -105,16 +105,17 @@
   if(framePlan(scene).end)bad('no end frame — the reference route cannot carry last_frame');
   if(!draft){
    const prompt=String(video.prompt||'');
-   if(!/\bvideo\s*1\b/i.test(prompt))bad('the prompt binds the clip as "Video 1" (2.5: "@Video 1")');
-   if(!/\bimage\s*1\b.{0,40}first frame|first frame.{0,40}\bimage\s*1\b/i.test(prompt))bad('the prompt says "Image 1 is the first frame"');
-   if(!/camera (movement|path|motion)|blocking|trajectory/i.test(prompt))bad('the prompt says what Video 1 supplies — camera movement, shot rhythm, subject trajectory, blocking');
-   if(!/(do not|don't|never) reference (its|the) visual content/i.test(prompt))bad('the prompt closes the clay read with "Do not reference its visual content"');
+   if(!/\bvideo\s*1\b/i.test(prompt))advice.push('the prompt binds the clip as "Video 1" (2.5: "@Video 1")');
+   if(!/\bimage\s*1\b.{0,40}first frame|first frame.{0,40}\bimage\s*1\b/i.test(prompt))advice.push('the prompt says "Image 1 is the first frame"');
+   if(!/camera (movement|path|motion)|blocking|trajectory/i.test(prompt))advice.push('the prompt says what Video 1 supplies — camera movement, shot rhythm, subject trajectory, blocking');
+   if(!/(do not|don't|never) reference (its|the) visual content/i.test(prompt))advice.push('the prompt closes the clay read with "Do not reference its visual content"');
   }
   return errors;
  }
- function checkScene(scene,{draft=false,production=null,format=root.FORMAT}={}){
+ function checkScene(scene,{draft=false,production=null,format=root.FORMAT,advice=[]}={}){
   if(exempt(scene))return [];
-  const r=scene.shot?.render,v=scene.visual||{},errors=checkFrames(scene,{draft}).concat(checkPreviz(scene,{draft,production})),bad=s=>errors.push('shot.render: '+s);
+  const warn=s=>advice.push('shot.render: '+s);
+  const r=scene.shot?.render,v=scene.visual||{},errors=checkFrames(scene,{draft,advice}).concat(checkPreviz(scene,{draft,production,advice})),bad=s=>errors.push('shot.render: '+s);
   if(v.source==='stock'){
    checkLicense(v).forEach(m=>errors.push(m));
    if(text(v.bgPrompt))errors.push('visual.bgPrompt: a stock photo is a supplied file, not a generated one; drop bgPrompt');
@@ -122,46 +123,47 @@
   if(!r||typeof r!=='object')return errors.concat(['shot.render: choose a supported mode and record purpose and reason before assets']);
   const pm=productionMode(), drone=pm?.isDrone(v.camera);
   if (v.camera?.preset==='drone-flythrough' && !pm) bad('drone-flythrough requires production-mode.js');
-  if (pm) pm.droneSceneErrors(scene,{draft}).forEach(bad);
+  if (pm) pm.droneSceneErrors(scene,{draft,advice}).forEach(bad);
   const fullVideo=production?.mode==='full_video';
   const options=modesFor(r.purpose);
-  if(!options.length)bad('unknown purpose; use '+Object.keys(PURPOSES).join(', '));
+  if(!options.length)warn('unknown purpose; use '+Object.keys(PURPOSES).join(', '));
 
   if(!LABELS[r.mode])bad('unknown mode; use '+Object.keys(LABELS).join(', '));
-  else if(fullVideo&&r.mode!=='stock_video'){if(r.mode!=='generated_video')bad(r.purpose+' requires generated_video, not '+r.mode)}
-  else if(options.length&&!options.includes(r.mode)&&!(drone&&r.purpose==='place'&&r.mode==='generated_video'))bad(r.purpose+' requires '+options.join(' or ')+', not '+r.mode);
-  if(!text(r.reason))bad('reason must explain why this treatment conveys the cut');
+  else if(fullVideo&&r.mode!=='stock_video'){if(r.mode!=='generated_video')warn(r.purpose+' requires generated_video, not '+r.mode)}
+  else if(options.length&&!options.includes(r.mode)&&!(drone&&r.purpose==='place'&&r.mode==='generated_video'))warn(r.purpose+' requires '+options.join(' or ')+', not '+r.mode);
+  if(!text(r.reason))warn('reason must explain why this treatment conveys the cut');
   const info=scene.shot?.infoType;
-  if(info==='statistic'&&!['comparison','trend','share','distribution','geographic'].includes(r.purpose))bad('statistic needs a quantitative purpose');
-  if(info==='timeline'&&r.purpose!=='timeline')bad('timeline needs a timeline purpose');
-  if(info==='principle'&&!['human_process','mechanism','physical_state'].includes(r.purpose))bad('principle needs a human process or a physical mechanism/state');
-  if(['human_process','mechanism','physical_state'].includes(r.purpose)&&info!=='principle')bad('explanation purposes require infoType principle');
-  if(CHARTS[r.purpose]&&info!==(r.purpose==='timeline'?'timeline':'statistic'))bad('chart purpose and infoType disagree');
+  if(info==='statistic'&&!['comparison','trend','share','distribution','geographic'].includes(r.purpose))warn('statistic needs a quantitative purpose');
+  if(info==='timeline'&&r.purpose!=='timeline')warn('timeline needs a timeline purpose');
+  if(info==='principle'&&!['human_process','mechanism','physical_state'].includes(r.purpose))warn('principle needs a human process or a physical mechanism/state');
+  if(['human_process','mechanism','physical_state'].includes(r.purpose)&&info!=='principle')warn('explanation purposes require infoType principle');
+  if(CHARTS[r.purpose]&&info!==(r.purpose==='timeline'?'timeline':'statistic'))warn('chart purpose and infoType disagree');
   if(r.mode==='still_camera'){
    const camera=r.camera,speed=scene.visual?.camera?.speed;
    if(speed!==undefined&&!['very slow','slow','fast','very fast'].includes(speed))bad('still camera speed must be very slow, slow, fast or very fast');
-   if(speed==='fast'&&scene.duration>6)bad('fast still camera requires duration <= 6 seconds');
-   if(speed==='very fast'&&scene.duration>5)bad('very fast still camera requires duration <= 5 seconds');
+   if(speed==='fast'&&scene.duration>6)warn('fast still camera requires duration <= 6 seconds');
+   if(speed==='very fast'&&scene.duration>5)warn('very fast still camera requires duration <= 5 seconds');
    const region=p=>Array.isArray(p)&&p.length===4&&p.every(Number.isFinite)&&p[0]>=0&&p[0]<=1&&p[1]>=0&&p[1]<=1&&p[2]>0&&p[2]<=1&&p[3]>0&&p[3]<=1;
-   if(!camera||!STILL_CAMERA_EFFECTS.includes(camera.effect)||!text(camera.target)||!text(camera.reason))bad('still camera needs effect, target and a content-based reason');
+   if(!camera||!STILL_CAMERA_EFFECTS.includes(camera.effect))bad('still camera needs a supported effect');
+   if(!text(camera?.target)||!text(camera?.reason))warn('describe the camera target and content-based reason');
    // L13 — a pan or tilt is a sentence from A to B: both ends are regions of the actual picture, and they differ.
    // A `tilt` is new and always names its two regions; a `pan` approved before 0.81.0 keeps the runtime's diagonal default, so it is held to the regions only once it names either.
    if(!draft&&(camera?.effect==='tilt'||(camera?.effect==='pan'&&(camera.focusFrom!==undefined||camera.focusTo!==undefined)))&&(!region(camera.focusFrom)||!region(camera.focusTo)))bad(camera.effect+' needs focusFrom and focusTo — the picture it starts on and the picture it settles on, as normalized x,y,rx,ry from the actual image');
    if(['pan','tilt'].includes(camera?.effect)&&region(camera.focusFrom)&&region(camera.focusTo)&&camera.focusFrom[0]===camera.focusTo[0]&&camera.focusFrom[1]===camera.focusTo[1])bad(camera.effect+' starts and ends on the same region; write where the window settles');
-   if(['reveal','parallax'].includes(camera?.effect)&&!text(camera.layersPlan))bad('layered camera needs a prepared foreground and clean-background plan');
+   if(['reveal','parallax'].includes(camera?.effect)&&!text(camera.layersPlan))warn('layered camera needs a prepared foreground and clean-background plan');
    if(!draft&&['focus-in','rack-focus','approach'].includes(camera?.effect)&&!region(camera.focusTo))bad('focusTo needs normalized x,y,rx,ry from the actual image');
    if(!draft&&camera?.effect==='rack-focus'&&!region(camera.focusFrom))bad('rack-focus needs a source focus region');
    if(!draft&&['reveal','parallax'].includes(camera?.effect)&&(!Array.isArray(camera.layers)||!camera.layers.length))bad('layered camera needs actual layer assets before production');
   }
-  if(['character_html','object_html'].includes(r.mode)&&!text(r.action))bad('explanation needs a visible subject action, including before and after');
-  if(r.mode==='character_html'&&(!Array.isArray(r.actors)||!r.actors.length||r.actors.some(a=>!text(a))))bad('character explanation needs actors who perform the action');
-  if(r.mode==='object_html'&&Array.isArray(r.actors)&&r.actors.length)bad('object explanation must not add decorative actors');
+  if(['character_html','object_html'].includes(r.mode)&&!text(r.action))warn('explanation needs a visible subject action, including before and after');
+  if(r.mode==='character_html'&&(!Array.isArray(r.actors)||!r.actors.length||r.actors.some(a=>!text(a))))warn('character explanation needs actors who perform the action');
+  if(r.mode==='object_html'&&Array.isArray(r.actors)&&r.actors.length)warn('object explanation must not add decorative actors');
   if(r.mode==='generated_video'){
-   if(fullVideo){if(!text(r.action))bad('full video needs a visible action or a spatial camera reveal');}
-   else if(r.motionEssential!==true||!text(r.whyNotStill)||!text(r.action))bad('generated video needs essential continuous motion, action and whyNotStill');
+   if(fullVideo){if(!text(r.action))warn('full video needs a visible action or a spatial camera reveal');}
+   else if(r.motionEssential!==true||!text(r.whyNotStill)||!text(r.action))warn('generated video needs essential continuous motion, action and whyNotStill');
   }
   if(r.mode==='stock_video'){
-   if(!text(r.action))bad('stock video needs action: what the viewer sees happen in the clip');
+   if(!text(r.action))warn('stock video needs action: what the viewer sees happen in the clip');
    if(v.source!=='stock')bad('stock video needs visual.source "stock" with its license record');
    if(v.in!==undefined&&!(Number.isFinite(v.in)&&v.in>=0))bad('visual.in must be the trim start in seconds');
    if(!draft){
@@ -170,8 +172,9 @@
    }
   }
   if(r.mode==='editorial_html'){
-   if(info!=='other')bad('an editorial quote/verdict uses infoType other');
-   if(!Number.isFinite(scene.duration)||scene.duration<=0||scene.duration>8)bad('a text-led quote/verdict must last at most 8 seconds');
+   if(info!=='other')warn('an editorial quote/verdict uses infoType other');
+   if(!Number.isFinite(scene.duration)||scene.duration<=0)bad('editorial duration must be finite and positive');
+   else if(scene.duration>8)warn('a text-led quote/verdict usually needs at most 8 seconds');
    if(r.purpose==='evidence_quote'&&(!text(r.evidence?.source)||!text(r.evidence?.quote)))bad('evidence_quote needs evidence.source and the exact evidence.quote');
   }
 if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
@@ -184,7 +187,7 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
    if(['bar','histogram','stacked-bar','donut','pie'].includes(data?.chart)&&data.baseline!==0)bad('length/area charts need baseline 0');
    if(r.purpose==='share'&&Array.isArray(values)&&(!Number.isFinite(data.total)||data.total<=0||values.some(p=>p?.value<0)||Math.abs(values.reduce((sum,p)=>sum+(p?.value||0),0)-data.total)>Math.abs(data.total)*1e-9))bad('part-to-whole values must sum to the stated total');
    if(r.purpose==='share'&&data?.unit==='%'&&data.total!==100)bad('percentage shares need total 100');
-   checkData(data,(scene.narration||[]).length,{wide:format==='youtube-long-16x9'}).forEach(bad);
+   checkData(data,(scene.narration||[]).length,{wide:format==='youtube-long-16x9',advice}).forEach(bad);
   }
   // Draft validates meaning; production also validates the selected renderer's handoff.
   if(!draft){
@@ -202,14 +205,15 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
     if(r.mode==='data_graph'&&(slide?.subject?.kind!=='data'||slide?.object))bad('graph explanation needs a data subject without a physical 3D object');
     if(['character_html','object_html'].includes(r.mode)&&(slide?.subject?.kind!=='object'||slide?.object?.renderer!=='mesh'))bad('physical explanation needs a real mesh object subject');
    }
-   if(r.mode==='generated_video'&&(!generated||slide||!text(v.why)))bad('generated video needs a video handoff and visual.why, including the opening cut');
-   if(r.mode==='generated_video'&&v.video&&v.reuse===undefined&&v.video.previz===undefined)bad('every generated_video cut pre-renders its camera and blocking in 3D first — render a Blender or three.js previz at the cut length and store visual.video.previz (blender-previz.md §6, user directive 2026-09-11; b-roll and speech clips on the Veo sound lane are the documented exception)');
+   if(r.mode==='generated_video'&&(!generated||slide))bad('generated video needs a video handoff without a slide');
+   if(r.mode==='generated_video'&&!text(v.why))warn('visual.why can describe why video conveys the cut');
+   if(r.mode==='generated_video'&&v.video&&v.reuse===undefined&&v.video.previz===undefined)warn('A Blender or three.js previz can guide camera and blocking; record visual.video.previz when supplying that reference to the model');
    if(r.mode==='editorial_html'&&(generated||!slide||slide.kind!=='diagram'||slide.motion!==true||slide.treatment!=='editorial'||slide.subject?.kind!=='type'||slide.object))bad('editorial quote/verdict needs a text subject on an editorial motion diagram');
    if(r.mode==='data_graph'&&slide?.chartRenderer!=='svg-v1')bad('data graphs require chartRenderer svg-v1 and the shared chart template');
   }
   return errors;
  }
- function checkData(data,segments,{wide=false}={}){
+ function checkData(data,segments,{wide=false,advice=[]}={}){
   // Label budgets, circular radius and separator-share geometry must match chart-runtime.js.
 
   if(!data)return [];
@@ -228,13 +232,13 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
    if(line)rows.push(line);return rows.length;
   };
   const max=data.chart==='map'?(data.map?.mode==='symbol'?12:250):['line','histogram'].includes(data.chart)?12:data.chart==='timeline'?4:data.chart==='stacked-bar'?6:['bar','dot'].includes(data.chart)?4:5;
-  if(values.length>max)errors.push('chart exceeds '+max+' marks; split the comparison into readable cuts');
-  if(['bar','dot'].includes(data.chart)&&values.reduce((sum,v)=>sum+wrap(v?.label||'',16)*44*1.15+60.2,0)>496)errors.push('chart labels need more vertical space; shorten source-faithful labels or split the cut');
-  if(data.chart==='stacked-bar'&&values.some(v=>Array.from(String(v?.label||'')).length>12)&&values.length>4)errors.push('long share labels need at most four parts; shorten labels or split the cut');
+  if(values.length>max)advice.push('chart exceeds '+max+' marks; split the comparison into readable cuts');
+  if(['bar','dot'].includes(data.chart)&&values.reduce((sum,v)=>sum+wrap(v?.label||'',16)*44*1.15+60.2,0)>496)advice.push('chart labels need more vertical space; shorten source-faithful labels or split the cut');
+  if(data.chart==='stacked-bar'&&values.some(v=>Array.from(String(v?.label||'')).length>12)&&values.length>4)advice.push('long share labels need at most four parts; shorten labels or split the cut');
   if(['donut','pie'].includes(data.chart)){
-   if(values.reduce((sum,v)=>sum+wrap(v?.label||'',6)*44*1.15+50,0)>600)errors.push('circular chart labels exceed the phone-height budget; shorten source-faithful labels or split the composition');
+   if(values.reduce((sum,v)=>sum+wrap(v?.label||'',6)*44*1.15+50,0)>600)advice.push('circular chart labels exceed the phone-height budget; shorten source-faithful labels or split the composition');
    const minShare=wide?6/(2*Math.PI*Math.min(1158*.235,699*.32)):.0084;
-   if(values.some(v=>Number.isFinite(v?.value)&&v.value/data.total<minShare))errors.push('circular share below '+(minShare*100).toFixed(2)+'%; separators cover it: combine only with source support or split the cut');
+   if(values.some(v=>Number.isFinite(v?.value)&&v.value/data.total<minShare))advice.push('circular share below '+(minShare*100).toFixed(2)+'%; separators cover it: combine only with source support or split the cut');
   }
   if(data.domain!=null){
    const d=data.domain,finite=values.filter(v=>Number.isFinite(v?.value)).map(v=>v.value);
@@ -310,7 +314,7 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
   return [...new Set(errors)];
  }
  const normalize=s=>String(s||'').toLowerCase().replace(/[\s\p{P}\p{S}]/gu,'');
- function checkEpisode(win){
+ function checkEpisode(win,{advice=[]}={}){
   const scenes=win.SCENES||[],errors=[],reasons=new Map();
   if(win.PRELUDE!=null)errors.push('PRELUDE is outside the checked timeline; put the opening in SCENES with its route, duration and assets');
   let textCount=0,textSeconds=0,total=0;
@@ -329,7 +333,7 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
   for(const shots of reasons.values())if(shots.length>=3)errors.push('shots '+shots.join(', ')+': repeated render reason; choose each cut from its own subject and visible change');
   const long=win.FORMAT==='youtube-long-16x9';
   if((!long&&textCount>2)||(long&&total>0&&textSeconds/total>0.2))errors.push('text-led slides dominate: at most 2 per short, or 20% of generated duration in long-form; use source images, acted processes or actual charts where the content calls for them');
-  return errors;
+  advice.push(...errors); return [];
  }
  const api={PURPOSES,ALTERNATIVES,LABELS,STILL_CAMERA_EFFECTS,CHARTS,PREVIZ_RENDERERS,PREVIZ_HANDOFFS,recommend,modesFor,checkLicense,exempt,framePlan,checkFrames,checkPreviz,previzHandoff,checkScene,checkData,checkMap,checkEpisode};
 

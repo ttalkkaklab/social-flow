@@ -119,7 +119,7 @@ CHANNEL_DIR=$(node -e 'const p=require("path"), s=p.resolve(process.argv[1]), ep
 # values. Removing a field must remove its previous row instead of reviving stale audio.
 node "$HERE/compile-sound-plan.js" "$STORYBOARD/scenes.js" "$WORKDIR" "$CHANNEL_DIR"
 cd "$WORKDIR"
-VIDEO_WARNINGS_APPROVED=$(node -e 'console.log(require(process.argv[1]).videoGate.approved ? 1 : 0)' "$PWD/build-plan-check.json")
+VIDEO_WARNINGS_APPROVED=$(node -e 'console.log(require(process.argv[1]).videoGate.continueWithWarnings ? 1 : 0)' "$PWD/build-plan-check.json")
 # verify-build-plan.js writes production-preflight.json after the video warning/HITL check.
 REUSED_VIDEO_SHOTS=$(node -e 'const p=require(process.argv[1]); console.log((p.reusedShots || []).join(" "))' "$PWD/production-preflight.json")
 

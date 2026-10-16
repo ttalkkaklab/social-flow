@@ -1,0 +1,15 @@
+{
+  "tests": 1848,
+  "failures": 0,
+  "checkCommand": "npm run check --prefix server",
+  "checkLogSha256": "5f3712a0e51c8bb4e79ee84e126a1347b9a1fa384039f2d1d00a7b133826247c",
+  "skillLint": "16 rules hold across 20 skills",
+  "sourcePreserved": true,
+  "sourceScenesSha256": "c352263296665cc1fe3dfbb098a1ed1d1aafcc797bce1ce3416b2e7244ab349b",
+  "sourceIdentityCount": 3,
+  "finalBoard": "/Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/data/review-lab-melusine-20261016/final-guided/gate-webtoon/episodes/gate-beyond-rewrite/storyboard",
+  "scenesSha256": "cf947db47b894d43220ddef555121d8b35f59e63149ad04040c5807ed3892a36",
+  "bundleSha256": "114ec9ebf8e995344b3345567df18819adde2eb613d8711ee7cafc22d617bf5c",
+  "storyHash": "4cf2b7445645f0e86b81c775662b30617d4fa1aa0d915b48981564e2264d10c0",
+  "mediaGenerated": false
+}

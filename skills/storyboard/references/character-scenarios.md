@@ -6,6 +6,15 @@ review and mandatory narrator speech in scenario-stage, scenario-craft, story-qu
 storyboard, autoproduce and their reviewer instructions. Existing unversioned scenarios and
 story-v1 boards retain their checks; do not silently migrate approved episodes.
 
+## Automation directive (2026-10-16)
+
+CTA is optional metadata in every story/scenario version. Its absence, wording, type,
+position, speech and share fields never block authoring or production. The suggestions
+below guide writing; they are not approval, score or freeze gates. Continue automatic
+work after reporting editorial findings. Missing/stale/non-pass review records mean
+unreviewed or unresolved, never an invented pass. Explicitly requested review diagnostics
+may inspect those records without turning them into production prerequisites.
+
 ## Contents
 
 - [Choose content and expression separately](#choose-content-and-expression-separately)
@@ -85,10 +94,35 @@ not required to speak. Keep existing narrator/default-voice metadata for product
 8. Remove repeated explanation. Preserve subtext: what the character wants is author metadata;
    what the viewer sees/hears is the evidence. Theme may be inferred rather than spoken aloud.
 
-Keep seven planning items: subject, hook, developments 1–3, ending, optional CTA. Store the
+Suggested planning items: subject, hook, developments 1–3, ending, optional CTA. Store the
 subject in `premise`, the other six in ordered `beats`. No camera, timing or generation prompts.
 A `difference` sentence states how each candidate differs in dramatic situation, choice or
 payoff; three paraphrases fail human/reviewer judgment even if the checker passes.
+
+Before scoring, compare the three **causal skeletons** from the events alone: opening
+situation → central choice → consequence → final observable change. Record that comparison
+in the candidate review. Shared cast, setting, historical facts or an initial incident are
+allowed. Changing engine labels, premise notes or the antagonist's last demand while keeping
+the same choices and consequences does not establish three different stories. The checker
+warns when any candidates copy the exact observable event sequences of the hook and all
+three developments (ignoring whitespace and author notes). This is a narrow warning, not a
+semantic similarity score: reviewers still judge the full stories, including legitimate
+branches from a shared setup and paraphrases that evade exact matching.
+
+When a decisive turn grants trust, access or responsibility after betrayal or exposed danger,
+make the reason observable **before** the assignment. Show what the decision-maker has
+actually learned, why help is needed and what risk they accept or control. A confession,
+apology or withheld destination does not by itself establish a safe or motivated decision.
+Where the character's established duties demand it, show the concrete safety response:
+notify affected allies, stop or change an exposed route, limit cargo/access, arrange an
+escort or confirm the next safe handoff. Choose controls that fit this story; these are not
+mandatory props or a requirement to make every fictional choice prudent. A reckless choice
+can work when its motivation and consequences are delivered on screen.
+
+Trace knowledge across scenes as carefully as physical props. If a costly refusal happens
+elsewhere, the person granting trust cannot silently know it happened. Show a witness,
+communication or directly observable evidence, or write their decision from the information
+they do have. Compare this chain with each selected identity's priorities and boundaries.
 
 ## Scenario file (scenario-v2)
 
@@ -96,15 +130,15 @@ Frontmatter: `version: scenario-v2`, `channel`, `topic`, `direction: D1 | D2 | D
 `frozen:` (empty until board authoring). One fenced `scenario-json` object is the canonical
 candidate. Present it as the seven readable items for the user; do not maintain another script.
 
-Required object fields:
+Recommended object fields (the checker still validates readable data shapes):
 
 - `kind`, `expression`, `engine`, `reveal: held | upfront | none`.
 - `premise`, `viewerExperience`, `message` (intended meaning, not a mandatory closing line),
-  `endingReason`, `difference`, `cta: none | question | action | next`.
+  `endingReason`, `difference`; optional `cta` can describe a desired ask.
 - `cast: [{id, role, want, voice, reason}]` from cast.json.
-- `beats: [{item, expectation, change, necessity, events}]`, with item exactly
-  `훅`, `전개 #1`, `전개 #2`, `전개 #3`, `마무리`, `CTA` in that order. CTA events may be empty
-  when cta is none; necessity explains why the ending is sufficient.
+- `beats: [{item, expectation, change, necessity, events}]`, with suggested items
+  `훅`, `전개 #1`, `전개 #2`, `전개 #3`, `마무리`. A CTA row is optional and may be empty
+  or appear where it serves the story; no CTA reason or prescribed position is required.
 - `events: [{kind, character, text, basis, to?, claims?}]`: kind is action, dialogue or
   narration; character is a cast ID; dialogue `to` is another ID, self or audience. `text`
   describes observable action or actual spoken words. `basis` is fact, interpretation or
@@ -119,11 +153,10 @@ General authored scenes need no minimum facts. Evidence/adapted candidates need 
 support; fiction needs none unless it makes real-world assertions. Record the selection in
 storyboard.md with its provenance. Keep all three candidates and the selected page.
 
-The attended user sees the full cast, events, ending and differences before picking. Unattended:
-one batched reviewer call, choose highest ≥95 with zero P0; one repair/re-read of the best at
-most. No winner means hold. Additional research changes that alter the chosen promise, cast or
-ending require showing the changed candidate on the attended path; unattended rechecks within
-the same review budget. Freeze before the board; subsequent edits live in scenes.js.
+Show the readable candidate choices when requested. In automatic work, compare their
+causal skeletons, choose the strongest available story and continue; scores and freeze
+stamps are diagnostics/provenance, not prerequisites. Keep original candidates and the
+selection reason when useful. Never fabricate a reviewer verdict or user approval.
 
 ## Board handoff and review (story-v2)
 
@@ -149,8 +182,18 @@ Speech events reference 1-based narration groups, exactly once in their playback
 action events carry text and no group. An all-visual shot has narration: [] and a planned
 finite duration. Transfer observable actions to visual.action and the corresponding video,
 still sequence, HTML motion or filming plan; never assume performance metadata animates itself.
-Keep a silent ending as beat:cta with shot.share as editorial metadata, not forced speech.
+A narrative ending may use beat:drip, including a silent action. CTA beats and share
+metadata remain available but are never required, prescribed speech or terminal-position gates.
 For live recordings use existing STORY.transcripts with speaker IDs and actual source/times.
+
+For story-v2, a scene may deliver its turn through ordered actions and attributed speech
+inside one shot. Do not add a second size solely to satisfy the legacy narrated-scene
+coverage warning or make a character speak the turn labels or COMPREHENSION.takeaway.
+The scene's out can be its final action event. Review implied meaning against the actual
+performance order; lexical absence of an abstract label does not prove absent meaning.
+Missing events, reversed explicit evidence, contradictory charge/feel, incorrect framing
+and unsupported event plans still need correction. Action metadata describes a plan, not
+proof that an image or animation renders it; preserve the production-plan and media checks.
 
 Set STORY.version to story-v2. Keep viewerNeed, thesis, basis, endingReason, kind, expression,
 reveal, cta, cast and beats (one change/necessity per performance shot). Opening, payoff, ending,
@@ -166,13 +209,12 @@ Use the existing narration reviewer call/budget (wire name `narration`, no extra
 meaning, progression, payoff, grounding and character. Grounding means real evidence for factual
 claims, internal rules and causality for invented events, both for adapted work. Quote actual
 events in all five STORY.review entries; do not substitute declared intent for delivered meaning.
-Scores ≥95 and zero P0, maximum three reads. Vocabulary follows on speech only, with character
+When review is requested, report the actual score and unresolved findings. Vocabulary follows on speech only, with character
 voice/context; no speech means vocabulary is not applicable, not a fabricated score. A word edit
-that changes meaning requires rechecking the whole performance. All substantive findings must
-close before production. Record the review hash; actions, cast, speech and story edits invalidate it.
+that changes meaning requires rechecking the whole performance. Use substantive findings to improve the next pass without stopping automatic production. Record the review hash; actions, cast, speech and story edits invalidate it.
 
-Attended approval shows the complete readable performance with speaker names and actions, followed
-by intent and review findings. Call it story approval. Preserve final storyboard/budget approval.
+A requested review shows the complete readable performance with speaker names and actions, followed
+by intent and review findings. Record actual consent separately when needed for spending or publishing.
 After generation verify that actual acting, timing and voices deliver the planned events; a plan
 review cannot establish that the rendered scene conveys them. Keep existing media HITL exceptions.
 
@@ -185,6 +227,15 @@ P0: unresolvable factual claim, undisclosed invention presented as fact, contrad
 unmotivated decisive choice, unearned ending, missing setup essential to a held reveal, unknown
 speaker, or an essential meaning present only in author notes. Cosmetic preferences are directives.
 This is editorial evaluation, not a prediction of retention or virality.
+
+For the causal and character scores, quote the event that motivates each decisive assignment
+of trust or authority and the event that supplies the decision-maker's knowledge. Treat a
+missing essential reason as the existing **unmotivated decisive choice** P0, not a cosmetic
+preference. Deduct for an established safety priority that exists only in identity/author
+notes while the performed events ignore it. Do not award credit merely because notes say
+"limited trust", "earned" or "the character decides". Apply this to candidate selection and
+again to the storyboard's actual performance order, where cuts can accidentally erase the
+evidence or place it after the decision.
 
 ## Craft sources and limits
 

@@ -24,6 +24,8 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
   "mcp__social-flow__threads_publish", "mcp__social-flow__sns_comment_reply",
   "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img"]
 ---
+**Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
+
 
 # Threads growth loop — one autonomous tick
 
@@ -77,15 +79,11 @@ account. Tactics and style rules live in `references/growth-playbook.md`
 4. **No plaintext token exposure** — tokens live only in files under
    `~/.config/social-flow/<channel-slug>/`. Don't store whole API responses in
    state.json or growth-log.md (only the fields you need).
-5. **No publishing without passing the review gate** — every outgoing piece of
-   copy (new post, search engagement, inbox reply) must pass the §Adversarial
-   review gate (each required axis meets `gate.json`, with P0=0).
-   Missing thresholds block publishing. The 3-round cap is unchanged.
-   If a draft can't clear it within 3 rounds, don't publish it — record it in
-   growth-log as skipped, with its score. There is no per-day or per-tick count
-   cap — the only remaining limits are the platform's own quotas (publish
-   250/24h, api-limits.md) and the qualitative rules (no re-engaging the
-   same post, no trailing the same account with back-to-back replies).
+5. **Use review findings as guidance** — read outgoing copy in context and fix
+   concrete problems. Missing thresholds, low scores and a fixed review-count limit
+   do not block an authorized post or reply. Preserve the plan's actual posting
+   scope, platform quotas, account identity and duplicate-post protection.
+
 6. **Every tool call specifies `channel: <channel-slug>`** — use only the
    channel's token, with no fallback to a default token (prevents
    wrong-account publishing).
@@ -133,19 +131,17 @@ The template and the state schema are in `references/growth-plan-template.md`.
    disclose without fail: *"This plan is the standing authorization — within its
    scope (topic pool, keywords, tone) the loop publishes publicly and
    immediately without per-post approval, and publishing frequency has no fixed
-   cap; the loop decides. Only copy that passes the adversarial review gate
-   (the owner-configured thresholds and zero P0) goes out. To stop, stop /loop; to change scope, edit the plan."*
+   cap; the loop decides within the authorized scope. Creative reviews guide editing and their scores do not grant or remove publishing permission. To stop, stop /loop; to change scope, edit the plan."*
 5. Initialize `state.json`, write the growth-log.md header.
 
-## Adversarial review gate (required before publishing — all copy)
+## Editorial review guidance for outgoing copy
 
-Every outgoing text (new post, search-engagement reply, inbox reply) gets
-published only after passing this gate. It checks two things — **does it read
+Use review when it helps improve outgoing text (new post, search-engagement reply,
+inbox reply), within existing publication or reply authorization. Consider two things — **does it read
 as written by a person** (no AI tells), and **does it fit the context**
 (consistent with the source post, the plan, and the channel identity).
 
-1. **Self style check (deterministic, immediate)** — run the checker on every
-   draft:
+1. **Optional style diagnostic** — inspect a draft when useful:
 
    ```bash
    CS=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-style.py
@@ -153,13 +149,10 @@ as written by a person** (no AI tells), and **does it fit the context**
    printf '%s\n' "$draft" | python3 $CS --surface reply -     # replies (search engagement · inbox)
    ```
 
-   On exit 2 (S1), fix and re-check. Even on exit 0, read the detection list —
-   S2 only deducts points and still passes, so "green means send" will kill you.
-   In particular, **never leave a new post where C7 (no long sentence) fired** —
-   it's a post of nothing but short sentences (channel measurement: posts
-   flagged C7 trailed 2.6x in reach at the same age). The machine verdict is the
-   source of truth — don't override it with your own judgment. The rules are in
-   platform-guide `references/korean-style.md`.
+   Read the findings in context and fix concrete language problems. S1, S2 and
+   C7 findings are suggestions, not automatic publication vetoes; do not rewrite
+   natural copy only to raise a score. See platform-guide
+   `references/korean-style.md` for examples.
 
    **Two orthographic issues the checker can't see get a manual sweep** — typos,
    and **a space between a digit/Latin token and the particle that follows it**.
@@ -297,19 +290,16 @@ as written by a person** (no AI tells), and **does it fit the context**
    Re-delegate only the fixed drafts, and include the previous round's
    findings so the reviewer rules on whether they're resolved.
 
-4. **Verdict** — **only drafts meeting every configured axis threshold and p0=0 get published.** Still
-   short after 3 rounds — don't publish; write `skipped (gate NN)` in
-   growth-log. Not posting beats posting a sub-par post. Also note each
-   published draft's final score in the growth-log memo — that's the window
-   through which the user observes whether the gate actually works.
+4. **Report the assessment** — record actual findings and any score as evidence.
+   Continue within the existing publishing authorization; do not skip solely because
+   a draft falls short of a numerical creative threshold.
 
 ## Server publishing gate — draft, independent review, publish
 
 Run from the project root containing `data/`. Before authoring, read
 `data/<channel>/growth/threads/gate.json`. The owner sets its numeric `voice`, `purpose`,
 and `flow` thresholds (0–100) after rubric calibration. Missing or malformed
-configuration blocks publication; never invent defaults to get a post out.
-Zero unresolved P0 findings remains mandatory.
+configuration means no numeric target was established. Do not invent a target or a passing review. Use the actual findings as guidance; preserve independent publishing authorization.
 
 1. Call `threads_draft_create(channel, body, readerMessage, comicElements,
    purpose, purposeEvidence, flow, submitter, submitterContext, selfReply?)`. Every required text must be nonempty,

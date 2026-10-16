@@ -1,5 +1,8 @@
 # Character identity contract (schemaVersion 1)
 
+**Automatic execution:** [Automation guidance](../../_shared/automation-guidance.md) supersedes creative quality gates, repeated approvals and review-score requirements here. Keep the concrete guidance and truthful review state. Enforce only actual runtime dependencies and the scope of external-action authorization.
+
+
 Use this contract for new characters and requested character updates. `identity.md`
 is the character source of truth; `profile.md` remains the channel source. Never
 silently populate an existing character with the example's biography or voice.

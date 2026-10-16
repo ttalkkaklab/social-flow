@@ -5,11 +5,10 @@ description: >
   만들어줘", "자동으로 쇼츠 만들어", "make a short about X end to end", or when a growth loop needs to
   refill its publish queue by itself. Researches, writes 3 seven-item scenario candidates and
   has them judged in one batched reviewer read, authors scenes.js, reviews actions and character speech
-  to 95, then checks wording (three reads each, handed inline), generates 9:16
+  and improves wording using relevant feedback, generates 9:16
   backgrounds, synthesizes narration, and builds the video plus per-platform text under
-  data/[channel]/episodes/[topic]/output/. Machine gates replace human approval: facts, the
-  batched scenario read, the two narration loops, the style and contract checkers, build
-  report, one content-reviewer read at 95 with zero P0, and a cost cap. Boundary — storyboard
+  data/[channel]/episodes/[topic]/output/. Uses factual research, optional concrete reviews and diagnostics, a build
+  report, and actual cost limits without intermediate quality approval gates. Boundary — storyboard
   plans and stops, produce builds an approved episode, autoproduce does both unattended.
 argument-hint: "<channel> \"<topic>\" [unattended]"
 allowed-tools: ["mcp__social-flow__capability_status", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
@@ -27,6 +26,8 @@ allowed-tools: ["mcp__social-flow__capability_status", "Read", "Write", "Edit", 
   "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference",
   "mcp__social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate"]
 ---
+**Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
+
 
 Save and read episode files locally under `data/<channel>/episodes/<topic>/`.
 Use [the local storyboard contract](../storyboard/references/storyboard-target.md).
@@ -43,7 +44,7 @@ Speech generation follows [shot-speech.md](../produce/references/shot-speech.md)
 listening, STT, scoring or human listening approval. Use raw TTS and provenance records;
 continue with `not_reviewed` audio. Later user corrections invoke edit-speech.
 
-Read [story-quality.md](../storyboard/references/story-quality.md) before candidate writing, including skip-research channels. It overrides mandatory closing questions and modern parallels. Write STORY with the story pass; use gate 6f's existing narration read for the four quoted findings. After vocabulary edits revalidate and run `check-story.js storyboard/` before any generation. Missing, failed or stale reviews stop production with queue hold, not merely publication. A closing beat may have `cta:"none"`. An ask stays optional; a forwardable thing does not — an ask requests behaviour from the viewer, while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking to be shared is an ask, not a trigger.
+Read [story-quality.md](../storyboard/references/story-quality.md) before candidate writing, including skip-research channels. It overrides mandatory closing questions and modern parallels. Write STORY with the story pass; use gate 6f's existing narration read for the four quoted findings. After vocabulary edits revalidate and run `check-story.js storyboard/` before any generation. Missing, failed or stale reviews are reported as review state; they do not stop production or hold the queue. A closing beat may have `cta:"none"`. CTA presence, wording, placement and share metadata are optional. A memorable fact, image or line can strengthen the ending when it fits the story.
 
 Runs `storyboard → produce` end to end without production approval. The input is a
 single topic string; the output is a publishable `output/` set.
@@ -65,34 +66,25 @@ judges when no human is present** and **which model to use**.
                                                                       # decides; the loop pastes the §2 insights it just read into the delegation
 ```
 
-## What stands in for the human gates
+## Automatic decisions and useful evidence
 
-The pipeline's safety used to hang on three HITL gates (the narration approval at storyboard
-§4.6, the storyboard approval at §7, the publish approval). Unattended mode puts **the machine verdicts** in
-their place. If even
-one fails, the video still gets made but **does not enter the queue** (`queue_*: hold`)
-— meaning it won't publish until a human looks at it.
+Follow [automation guidance](../_shared/automation-guidance.md). Reviewer feedback and
+checker diagnostics improve the work; they do not replace human authorization or
+create a new set of mandatory quality gates. Use a review when it resolves a real
+uncertainty or the user requested one. A numerical score, fixed read count, freeze
+stamp or creative metadata field does not decide whether the run continues.
 
-The reviewer reads are two, both on the narration alone (storyboard §4.4·§4.5): the story
-read and the vocabulary read, each looped to **≥95 · P0 = 0** with a cap of three reads and
-the sentences handed inline. The scenario candidates get one batched read before the pick
-(§2.2). The six board reads, the plan review and the slide review of 0.49 are not called on
-this path any more (0.50.0 — measured over 358 reviewer runs, the delegations were more than
-half of an episode's tokens and most of its wall time). `check-scenes.js`, `check-slide.js`
-and the author's own look at each image and sheet stand there. What stops the run is a
-chain still short at the third read, a topic with no candidate at 95 after the re-read, or
-a contract checker at exit 1.
-
-| What a human used to check | Unattended replacement | On failure |
+| Concern | Useful action | If unresolved |
 |---|---|---|
-| Are the facts right | Time-sensitive values cross-checked against 2 independent sources + **3 or more** verified facts | Topic discarded (§2) |
-| Does the copy read like a human wrote it | `check-style.py` exit ≤ 1 per surface (4 = not Korean, so unchecked — it needs a human, and unattended runs stop at it) | Fix and retry; abort after 2 failures (§4·§9) |
-| Is the story worth telling (both formats) | three seven-item candidates judged in one batched storyboard-reviewer read on the wow (a belief the viewer holds, overturned in a named 전개 item) and curiosity · fear · intrigue · comedy → the highest at **≥95 · P0 = 0** (one improving re-read of the best page at most) | Topic dropped (§2.2) |
-| Does the narration alone carry the episode | storyboard-reviewer narration mode on the inline sentences, looped → **≥95 · P0 = 0** (cap 3 reads) | Authoring aborted (§3.5) |
-| Is the wording what a person would say | storyboard-reviewer vocabulary mode on the same sentences, looped → **≥95 · P0 = 0** (cap 3 reads) | Authoring aborted (§3.6) |
-| Does the video hold together | `build-report.txt` drift 0 · 0 missing reveals · voice-to-bed separation ≥ 4 LU | Abort (§8) |
-| Is it fit to publish | content-reviewer **copy ≥95 · P0 = 0** (one read) | `queue_*: hold` (§10) |
-| Is the spend allowed | `cost-report.sh --cap` exit 0 | Escalation cancelled, back to economy baseline (§5) |
+| Factual claims | Verify the actual claims and distinguish invention | Remove or qualify unsupported claims; record uncertainty |
+| Story and wording | Read the observable actions and speech, then repair concrete weaknesses | Deliver the best justified draft with findings |
+| Visual continuity | Inspect available assets against character, place and prop references | Mark unviewed or mismatched assets honestly |
+| Executable inputs | Check file, schema, speaker, duration and renderer dependencies | Fix the dependency before the operation that needs it; continue independent work |
+| Spending and external actions | Match the requested action to actual prior authorization and remaining budget | Do not execute an unauthorized action; continue authorized local work |
+
+Do not set a queue item to hold solely because a creative reviewer or style checker
+reported a low score. Keep publication consent and real technical failures separate.
+
 
 ## Absolute rules
 
@@ -326,28 +318,10 @@ skill's §2 shape inside the quota — **two passes, a pick in between**:
    need 2 or more independent sources, and a question that ends unanswered is
    written off — it never becomes a claim or a caption.
 
-**Fewer than 3 verified facts after the first pass: drop the topic and move to
-the next candidate.** This is where a human would stop and say "there's no video
-in this." Push on short of facts and what you end up with is an empty video that
-only looks the part. Two dropped candidates and the run gives up and reports.
-
-Before offering the three directions, then again before the first scene, run the
-exit checks the storyboard skill runs — the agent that did the searching is the
-one writing the line that says the searching was enough:
-
-```bash
-SB=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
-node $SB/check-research.js storyboard/ --direction   # exit 1 = not enough to pick → drop the topic
-node $SB/check-research.js storyboard/               # exit 1 = the research does not close → drop the topic
-```
-
-**New episode branch:** Use [character-scenarios.md](../storyboard/references/character-scenarios.md)
-for kind selection, character pool, candidate writing and whole-story review. The v2 branch
-replaces §2's legacy fact/search/wow floors and §2.2–§3.6's speech-only requirements. Keep the
-same candidate and reviewer call budgets, locks, queue limits and production approvals. Fiction
-needs no research unless it asserts real facts. Read `check-story.js --text` for the story pass
-and `--text --speech` for wording. A silent story records lexicon as not applicable. Continue
-into visual planning and production only after the evidenced whole-story review passes.
+Use enough evidence for the claims actually made. A fictional story need not
+collect factual rows or perform a search quota. When a factual claim cannot be
+supported, omit it, qualify it or explain the uncertainty. `check-research.js` can
+help diagnose missing citations, but its legacy numeric quotas do not discard a topic.
 
 ### 2.2 Scenario candidates (gate 6a — storyboard-reviewer scenario mode, one batched read)
 
@@ -359,8 +333,7 @@ reversal is first said plainly — the 훅 stages the belief and withholds it), 
 episode is about and the question it answers; never "…는 알 수 없다") · 훅 (a
 dramatised scene that invents no fact) · 전개 #1 (what actually happened) · 전개 #2 (what it
 makes the next development necessary) · 전개 #3 (evidence, consequence or limit) · 마무리
-(earned resolution, naming the one forwardable thing — the fact, verdict, line or checklist
-a viewer could pass on as-is) · CTA (optional, otherwise 없음 with reason), per storyboard §2.2 and
+(earned resolution; a memorable fact, verdict or image may help) · CTA (optional; omit when unnecessary), per storyboard §2.2 and
 `../storyboard/references/scenario-stage.md`. A page that only explains, a wow the viewer
 already believed, a hook that is the
 start of the timeline, or a feel curve that never dips costs nothing to fix here and costs
@@ -381,12 +354,11 @@ and precise terms. A match alone never requires a rewrite. The rest of the verdi
 judges the three in one context and returns one tail per page:
 `STORYBOARD_REVIEW: mode=scenario candidate=d<n> score=NN p0=N primary=<engine> secondary=<engine|none>`.
 
-- **Pick the highest at ≥95 with `p0 = 0`.** Unattended does not ask. Copy it to
+- **Pick the strongest candidate using the actual findings and the user’s goal.** Unattended does not ask. Copy it to
   `scenario.md`, write `Chosen: D#`, then §2.3.
-- **None at the bar: apply the findings to the best page, P0 first, and read that one page
-  once more** — the second and last call. Still short: drop the topic, same counter as a
-  facts-floor drop. Write `storyboard.md` with `status: draft` · `queue_*: hold` and the
-  last tails in the body, then report. Nothing has been generated yet.
+- Apply useful findings to the chosen candidate and record the selection reason.
+  An unresolved creative concern does not discard the topic. Keep the current draft
+  and continue the user's requested artifact without inventing a passing score.
 
 ### 3. Authoring scenes.js
 
@@ -395,7 +367,7 @@ design rules follow storyboard skill §4 as-is, including its two passes — the
 layer first (`beat`·`shot.feel`·`shot.info`·`shot.infoType`·`shot.share`/`shot.shareType`·`narration`·`arc`·`hookType`/`hookForm`·`title`, checked
 with `check-scenes.js --draft`), the machine layer after §3.6 clears.
 **Write `storyboard/scenario.md` at §2.2** (the scored winner — storyboard
-`../storyboard/references/scenario-stage.md`) and freeze it before the board. Both
+`../storyboard/references/scenario-stage.md`) and record the selected version before the board; a freeze stamp is optional bookkeeping. Both
 formats. If §2.3 extra research breaks a beat, patch that page yourself before §4 — it is
 not read again.
 The rules automated authoring breaks most often:
@@ -477,14 +449,12 @@ The rules automated authoring breaks most often:
   episode closes — a cover riding `hookType:"spoiler"` or `hookForm:"payoff"` may speak
   `COMPREHENSION.answer` in the first line, any other cover reaches it no earlier than the
   last drip; each non-final drip pays one piece and opens the next gap; the closing beat is
-  spoken, carries `shot.share` and may have no ask. An ask stays optional; a forwardable
-  thing does not — an ask requests behaviour from the viewer, while a forwardable thing is
-  one sentence, figure or verdict they can pass on as-is. Asking to be shared is an ask, not
-  a trigger. An outro asset is not the spoken close.
+  chosen for the story. CTA and `shot.share` are optional; an effective quiet
+  ending needs neither. An outro asset need not carry a spoken close.
   Copy the approved anchor lines into the `scenes.js` header
-  comment: the opening, resolution, the share trigger and any chosen CTA. Lay
+  comment: the opening, resolution, any chosen share line or CTA. Lay
   the seven items onto beats with scenario-stage's item-to-beat map (a short:
-  hook · drip × 전개 · cta, with 마무리's forwardable line landing on the cta shot as
+  hook · drip × 전개 · cta, optionally recording a useful closing line as
   `shot.share`; long-form by the cover's arc — `story` puts 전개 #2 at the
   turn, `answer-first` plays its present answer as the result first).
   **Long-form still follows the cover's `arc`** — `answer-first` (default):
@@ -535,11 +505,10 @@ Read the tail `STORYBOARD_REVIEW: mode=narration score=NN p0=N`.
 - **Apply the directives as spoken sentences** — an antecedent, the present link,
   what the case has to do with the topic, the term's plain wording — never as a
   caption or a picture. Re-run `--draft`, extract again, re-delegate saying what you applied.
-- **Loop until ≥95 · P0 = 0. Cap 3 reads.** Still short at the cap: stop the run —
-  `storyboard.md` with `status: draft` · `queue_*: hold`, the last verdict in the body,
-  and report. Nothing has been generated yet.
+- **Improve the specific findings while useful.** A low score or review-count limit does not stop the run;
+  record the last verdict and unresolved findings in `storyboard.md`, then continue.
 
-### 3.6 Vocabulary gate (gate 6c — storyboard-reviewer vocabulary mode)
+### 3.6 Wording review (gate 6c — storyboard-reviewer vocabulary mode)
 
 Same sentences, one layer down — **are these the words this audience would use and understand**
 (korean-style §Eye level; no universal age target). The style checker catches only the
@@ -563,7 +532,7 @@ lowest sentence's score.
 - **Swap only the flagged words**, in `scenes.js`. Where a swap would rewrite the sentence,
   re-read that sentence against the §3.5 chain yourself before the next read. Don't touch
   figures, proper nouns, or `tts` spellings.
-- **Loop until ≥95 · P0 = 0. Cap 3 reads.** Still short at the cap: stop the run as in §3.5.
+- **Improve specific wording problems while useful.** Record unresolved findings and continue; no score or review-count gate applies.
 
 **The machine layer goes in after this gate** — camera, space, clip prompts, sound,
 `window.MOTION_POLICY` — and the full contract runs before anything is generated:
@@ -573,9 +542,8 @@ table under storyboard.md's "hand to produce" note. Use the unattended one-bed s
 design from the start, with supported drops and available SFX. Each middle beat must
 deliver evidence or change the viewer's expectation, and the main promise must have a
 specific payoff before the closing invite — spoken at the cover on a `spoiler` open,
-by the last drip otherwise. The cta shot's `shot.share` is that payoff made forwardable,
-not the invite: an ask requests behaviour from the viewer, a forwardable thing is one
-sentence, figure or verdict they can pass on as-is, and only the ask is optional.
+by the last drip otherwise. An optional `shot.share` can describe a memorable takeaway. Neither share metadata
+nor an invite is required; choose the ending that serves the story.
 Resolve missing essential assets before spending.
 
 ```bash
@@ -810,9 +778,9 @@ glyphs, a bright lower third that will drown the subtitles.
   actual ledger: at that point it's missing **spend that hasn't gone out yet** (BGM,
   narration), the total looks small, and a cap-busting regeneration passes. When the call
   finishes, write actual usage to `.work/cost-tally.tsv` (§6 as-is).
-- **A remake you still would not ship**: finish the video anyway, but at **§10 wrap-up
-  write `queue_*: hold`** with what is wrong with it. An off-context cover becomes the
-  thumbnail as-is, so a human has to see it.
+- **A remake with unresolved findings**: finish authorized work and report the
+  specific cover mismatch. Prefer an available suitable cover; do not impose a
+  quality-only queue hold or spend beyond the existing budget.
 
 ### 6.6 Authored motion-frame gate
 
@@ -842,9 +810,9 @@ For every `visual.slide` scene, follow storyboard
    outside the zone, or a figure that contradicts `labels` or research.md is re-authored
    once.
 
-This gate is mandatory in unattended mode. A failed slide is not replaced with a still and the
-motion policy is not lowered to get around it; still wrong after the re-author, abort before
-TTS and build.
+Use the visual findings to improve the slide within the chosen scope. Do not fake
+a passing review or silently replace the requested medium. Creative findings do not
+abort TTS or build; resolve only missing or incompatible inputs required by those operations.
 
 ### 7. Narration
 
@@ -963,23 +931,16 @@ one", and since the growth loops call this skill repeatedly, this is where
 channel homogenization piles up fastest. There's no verdict (rankings only) —
 if a recycled phrase shows up in this episode, fix that sentence and move on.
 
-### 10. Quality gate (gate 4) + wrap-up
+### 10. Review findings and wrap-up
 
-First run `../storyboard/references/retention-direction.md` §5 on the final `-fast` video.
-Save `.work/experience-review.md` and pass it to the content reviewer with build-report.txt
-and the storyboard's handoff table. An unresolved promise, missing essential sound or
-unverified motion check sets `queue_*: hold`; screenshots and numeric scores
-cannot stand in for those checks. Speech stays not_reviewed without a listening hold. Preserve visual holds through wrap-up even if copy scores 95.
-
-Delegate to the content-reviewer agent — **frames pulled from the burned-in
-copy** (the clean master has no subtitles, so typos and clipping don't show),
-the `t=0` frame and §8's first-cue start among them,
-the platform copy, scenes.js, and §4·§9's exit codes.
-If the channel skips research, state that too (copy is scored out of 85 and the
-tail rescaled to 100).
-**One read.** Apply its directives; if the tail (`CONTENT_REVIEW:`) came back under copy 95
-or with P0 > 0, don't delegate again — write `queue_*: hold` with the unresolved findings at
-wrap-up and let a human decide.
+When useful, inspect the final video with retention-direction.md §5 and save the
+actual findings in `.work/experience-review.md`. A reviewer can help investigate
+an unresolved promise, missing sound or confusing motion. Provide actual media,
+platform copy and source inputs; screenshots alone do not prove playback quality.
+Speech stays `not_reviewed` without an automatic listening gate. Scores, review
+counts and incomplete subjective reviews do not set a queue hold. Fix concrete
+issues within scope and report any limitations honestly. Real missing media,
+unsupported payloads, spending limits and publication authorization still apply.
 
 Wrap-up order:
 

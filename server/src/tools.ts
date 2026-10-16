@@ -889,15 +889,15 @@ const THREADS_SEARCH_OUTPUT: OutputSchema = {
 
 // Keep tool discovery available even when an install has lost its reference tree.
 const eyelineInput = (() => {
-  try { return storyboardContract().EYELINE_SCHEMA; }
+  try { return { type: 'object', additionalProperties: true, description: 'Optional gaze plan. Use the directing skill for recommended fields; only a supplied shot reference must resolve.', properties: { matchShot: { type: 'integer', minimum: 1, description: 'Referenced shot position, one-based; must resolve when supplied' } } }; }
   catch { return { type: 'object', description: 'Eyeline contract unavailable: restore skills/storyboard/references/structure-contract.js' }; }
 })();
 const compositionInput = (() => {
-  try { return storyboardContract().COMPOSITION_SCHEMA; }
+  try { return { type: 'object', additionalProperties: true, description: 'Optional composition notes. Follow the directing skill; no rationale worksheet is required to author a shot.' }; }
   catch { return { type: 'object', description: 'Composition contract unavailable: restore skills/storyboard/references/structure-contract.js' }; }
 })();
 const depthInput = (() => {
-  try { return storyboardContract().DEPTH_SCHEMA; }
+  try { return { type: 'object', additionalProperties: true, description: 'Optional depth and readable-plane plan. The skill guides artistic choices.' }; }
   catch { return { type: 'object', description: 'Depth contract unavailable: restore skills/storyboard/references/structure-contract.js' }; }
 })();
 const storyboardVocabulary = (() => {
@@ -912,7 +912,7 @@ const purposes = (() => { try { return renderPurposes(); } catch { return []; } 
 const stillCameraEffects = (() => { try { return stillCameraEffectList(); } catch { return []; } })();
 // The still lane's window move (render-routing.js, still-camera.js) — the camera a photograph gets.
 const stillCameraInput = {
-  type: 'object', additionalProperties: true, required: ['effect', 'target', 'reason'],
+  type: 'object', additionalProperties: true, required: ['effect'],
   description: 'Required on still_camera. The eased window move the builder drives over the photograph: push (slow zoom-in, the default) · pull · approach · focus-in · rack-focus · pan · tilt (L13: a pan or tilt travels from focusFrom to focusTo, the vertical tilt being the scale-by-time move) · reveal · parallax (prepared layers). The ease holds the opening and closing pictures on its own.',
   properties: {
     effect: enumInput(stillCameraEffects, 'The window move. Choose from the cut\'s meaning (directing-grammar §5 Still column), never repeat one on every cut.'),
@@ -934,26 +934,26 @@ const storyboardShotInput = {
     duration: { type: 'number', exclusiveMinimum: 0, description: 'Shot duration in seconds; model duration may round up.' },
     title: { type: 'string', description: 'Visible title where the shot treatment permits it.' },
     narration: { type: 'array', description: 'Approved speech and optional subtitle text, in order.', items: { type: 'object', additionalProperties: true, required: ['tts'], properties: { tts: { type: 'string', description: 'Text to speak.' }, sub: { type: 'string', description: 'Subtitle text; omit to use the speech text.' } } } },
-    beat: enumInput(storyboardVocabulary?.BEATS, 'Narrative beat in playback order.'),
+    beat: { type: 'string', description: 'Narrative beat in playback order. Recommended vocabulary is in the directing skill.' },
     shot: {
       type: 'object', additionalProperties: true,
       description: 'Shot grammar and production route. Render mode chooses how to build the shot; visual.camera chooses how it is filmed; shot.depth chooses how many planes the viewer may read at once (L11).',
       properties: {
-        size: enumInput(storyboardVocabulary?.SIZES, 'Framing size.'),
-        angle: enumInput(storyboardVocabulary?.ANGLES, 'Camera angle.'),
-        infoType: enumInput(storyboardVocabulary?.INFO_TYPES, 'Information carried by the shot; must agree with its purpose.'),
+        size: { type: 'string', description: 'Framing size. Recommended vocabulary is in the directing skill.' },
+        angle: { type: 'string', description: 'Camera angle. Recommended vocabulary is in the directing skill.' },
+        infoType: { type: 'string', description: 'Information carried by the shot; must agree with its purpose. Recommended vocabulary is in the directing skill.' },
         feel: { type: 'string', description: 'What the viewer should feel before choosing framing and movement.' },
         eyeline: eyelineInput, composition: compositionInput, depth: depthInput,
         render: {
           type: 'object', additionalProperties: true, required: ['mode'],
-          description: 'Production route. A drone spatial reveal uses generated_video with purpose place or live_action, motionEssential:true and whyNotStill, including full_video.',
+          description: 'Production route. Select a supported route; explain artistic choices when useful. The skill guides medium and movement decisions.',
           properties: {
             mode: enumInput(storyboardVocabulary?.RENDER_MODES, 'still_camera, generated_video, stock_video, or the supported HTML/data route. This is not the shot camera preset.'),
-            purpose: enumInput(purposes, 'Why this shot exists. Route compatibility is checked by storyboard_check.'),
+            purpose: { type: 'string', description: 'Optional purpose for review. The skill guides route selection.' },
             reason: { type: 'string', description: 'Why this route conveys the intended information.' },
             action: { type: 'string', description: 'Visible action or spatial reveal.' },
-            motionEssential: { type: 'boolean', description: 'true when continuous movement is essential. Required true for drone-flythrough.' },
-            whyNotStill: { type: 'string', description: 'What travel reveals that a still cannot. Required for drone-flythrough.' },
+            motionEssential: { type: 'boolean', description: 'Optional note that continuous movement is essential.' },
+            whyNotStill: { type: 'string', description: 'Optional explanation of what travel reveals.' },
             camera: stillCameraInput
           }
         },
@@ -4776,17 +4776,21 @@ Returns: integer credit balance.`,
     name: 'storyboard_read',
     title: 'Read a storyboard as sequences → scenes → shots',
     annotations: HINT.local,
-    description: `Read an episode's scenes.js and return it as a tree: sequences (purpose · question · payoff) → scenes (place · time · event · charge · turn · out) → shots (feel · info · size · angle · render · narration). Reads the file only; no API call.
+    description: `Read an episode's scenes.js and return it as a tree: sequences (purpose · question · payoff) → scenes (place · time · event · charge · turn · out) → shots (stable id · ordered actions and attributed speech · feel · info · render · character/location/prop references · media plan). Reads the file only; no API call.
 
 Use it before editing an existing board, and after storyboard_apply to see the board the way the approval page groups it. level=outline is enough to plan a change; level=full carries every raw shot object (large — one shot is ~40 fields).
 Do NOT use it to validate — storyboard_check runs the contract. A board with no window.STRUCTURE comes back with every shot under unplacedShots; write the structure with storyboard_apply.
 
-Returns: JSON — { version, format, shots, sequences[…scenes[…shots]], unplacedShots, splicedShots (broll · outro) }.`,
+For inspection, the default includeContext:true adds reviewContext.story (STORY), production (PRODUCTION) and document (SB_DOC: characters, props, setting and recorded reviews). shotId adds selectedShot with the raw shot, scene and previous/next shot IDs while preserving the whole flow. Referenced asset paths are authored locators, not proof the files exist or have been viewed. inspection.mediaViewed is always false; evidenceStatus is not_verified. Read assets and run their contract checks before declaring continuity or a current review pass.
+
+Returns: JSON — { file, mediaBaseDirectory, sha256, version, format, shots, sequences[…scenes[…shots]], unplacedShots, splicedShots (broll · outro), playback (actual insertion order), unscheduledShots, propSheet?, inspection, reviewContext?, selectedShot? }.`,
     inputSchema: {
       type: 'object',
       properties: {
         path: { type: 'string', description: 'The storyboard directory (data/<channel>/episodes/<topic>/storyboard/) or its scenes.js' },
         level: { type: 'string', enum: ['outline', 'scenes', 'shots', 'full'], description: 'outline = sequences with scene numbers · scenes = scene cards with shot numbers · shots (default) = every shot summarised under its scene · full = raw shot objects too' },
+        shotId: { type: 'string', description: 'Stable shot ID; adds raw selectedShot with scene and neighboring IDs without removing the overall flow. Unknown or duplicate IDs fail.' },
+        includeContext: { type: 'boolean', description: 'Default true: return STORY, PRODUCTION and SB_DOC for character, background, prop and scenario inspection. Recorded evidence is not verified by this read.' },
       },
       required: ['path'],
     },
@@ -4816,7 +4820,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
             structure: { type: 'object', description: '{ version: "structure-v1", sequences: [...], scenes: [...] }' },
             shots: { type: 'array', items: storyboardShotInput, description: 'Every shot in playback order — the scenes-schema.md shot object; each playback shot carries `scene`' },
           },
-          required: ['structure', 'shots'],
+          required: ['shots'],
         },
         structure: { type: 'object', description: 'Replace window.STRUCTURE only' },
         sequences: { type: 'array', items: { type: 'object', description: '{ id, title, purpose, question?, payoff?, scenes }' }, description: 'Upsert sequences by id' },

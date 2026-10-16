@@ -16,8 +16,20 @@ function readContract(body) {
   return data;
 }
 
+// Compare only delivered events, not declared premise, engine, intent or difference.
+// Exact normalized text catches copied openings without pretending to judge story similarity.
+function observableOpeningSignature(data) {
+  if (!Array.isArray(data?.beats) || data.beats.length < 4) return null;
+  const opening = data.beats.slice(0, 4);
+  if (opening.some((beat, i) => beat?.item !== ITEMS[i + 1] || !Array.isArray(beat.events) || !beat.events.length ||
+    beat.events.some(event => !object(event) || !text(event.text) || !text(event.character) || !['action', 'dialogue', 'narration'].includes(event.kind)))) return null;
+  return JSON.stringify(opening.map(beat => beat.events.map(event => [event.kind, event.character,
+    event.to || null, event.text.trim().replace(/\s+/g, ' ')])));
+}
+
 function checkScenarioV2(meta, body, research, opts = {}) {
   const findings = [], bad = what => findings.push({ level: 'bad', where: opts.where || 'scenario', what: 'V2 ' + what });
+  const warn = what => findings.push({ level: 'warn', where: opts.where || 'scenario', what: 'V2 ' + what });
   let data;
   try { data = readContract(body); } catch (e) { bad(e.message); return { meta, findings }; }
   if (!['evidence', 'fiction', 'adapted'].includes(data.kind)) bad('kind must be evidence, fiction or adapted');
@@ -51,14 +63,17 @@ function checkScenarioV2(meta, body, research, opts = {}) {
   }
   const verified = new Set(rows(section(research || '', /^##\s+(?:\d+[.)]\s*)?(?:[\w가-힣]{1,8}\s)?(?:Verified|검증\s*(?:표|통과))/i))
     .filter(r => /^\**\s*★?\s*\d+\s*★?\s*\**$/.test(r[0])).map(r => Number(r[0].replace(/\D/g, ''))));
+  if (!Array.isArray(data.beats)) bad('beats must be an array');
   const beats = Array.isArray(data.beats) ? data.beats : [];
-  if (beats.length !== 6 || beats.some((b, i) => b?.item !== ITEMS[i + 1])) bad('beats must cover hook, three developments, ending and optional CTA in order');
+  const narrativeBeats = beats.filter(b => b?.item !== 'CTA');
+  if (narrativeBeats.length !== 5 || narrativeBeats.some((b, i) => b?.item !== ITEMS[i + 1])) warn('Suggested structure: hook, three developments and ending in order; another readable narrative structure is allowed');
   const used = new Set(), factual = [];
   beats.forEach((b, i) => {
     if (!object(b)) { bad('beat must be an object'); return; }
-    for (const key of ['expectation', 'change', 'necessity']) if (!text(b[key])) bad(b.item + ' needs ' + key);
+    if (b.item !== 'CTA') for (const key of ['expectation', 'change', 'necessity']) if (!text(b[key])) warn(b.item + ' could explain ' + key);
+    if (b.item === 'CTA' && b.events === undefined) return;
     if (!Array.isArray(b.events)) { bad(b.item + ' needs events'); return; }
-    if (!b.events.length && !(b.item === 'CTA' && data.cta === 'none')) bad(b.item + ' needs an observable event');
+    if (!b.events.length && b.item !== 'CTA') warn(b.item + ' has no observable event; review whether the empty beat is useful');
     b.events.forEach(e => {
       if (!object(e) || !['action', 'dialogue', 'narration'].includes(e.kind) || !text(e.text)) { bad('events need kind and text'); return; }
       if (!ids.has(e.character)) bad('event character is not cast: ' + e.character);
@@ -76,7 +91,6 @@ function checkScenarioV2(meta, body, research, opts = {}) {
   for (const id of ids) if (!used.has(id)) bad('unused cast member: ' + id);
   if (data.kind !== 'fiction' && !factual.length) bad('evidence/adapted candidates need a factual basis');
   if (data.kind === 'adapted' && !text(data.adaptationBoundary)) bad('adapted stories require adaptationBoundary');
-  if (!['none', 'question', 'action', 'next'].includes(data.cta)) bad('invalid CTA');
   if (!Array.isArray(data.setups)) bad('setups must be an array (empty for stories without plants)');
   else data.setups.forEach(s => {
     if (!object(s) || !Number.isInteger(s.open) || !Number.isInteger(s.pay) || s.open < 1 || s.pay > 5 || s.pay <= s.open || !text(s.detail) || !text(s.reinterpretation)) bad('setup needs detail, reinterpretation and ordered 1-based beat open/pay');
@@ -85,9 +99,8 @@ function checkScenarioV2(meta, body, research, opts = {}) {
   if (data.expression === 'visual' && spoken.length) bad('visual expression must not contain speech');
   if (data.expression === 'dialogue' && spoken.some(e => e.kind === 'narration')) bad('dialogue expression must not contain narrator speech');
   if (data.expression === 'narration' && spoken.some(e => e.kind === 'dialogue')) bad('narration expression must not contain dialogue');
-  if (data.cta === 'none' && beats[5]?.events?.length) bad('CTA none must not contain an ask; put closing events in the ending');
   if (data.reveal === 'held' && !data.setups?.length) bad('held reveals need a planted detail and payoff');
-  if (opts.chosen && opts.hasScenes && !text(meta.frozen)) bad('selected scenario must freeze before board authoring');
+  if (opts.chosen && opts.hasScenes && !text(meta.frozen)) warn('selected scenario has no freeze stamp; record provenance when useful without blocking board authoring');
   return { meta: { ...meta, engine_primary: data.engine }, findings, data };
 }
-module.exports = { readContract, checkScenarioV2, ENGINES };
+module.exports = { readContract, checkScenarioV2, observableOpeningSignature, ENGINES };
