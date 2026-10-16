@@ -1183,9 +1183,24 @@ def op_pose(job):
     # another bone's, and only those keys (plus the clip key each window opens from) take
     # this call's interpolation
     per_bone = {}
+    location_frames = {}
     for k in job["keys"]:
-        for bname, _world, _offset in pose_to_bones(k["pose"]):
+        for bname, _world, offset in pose_to_bones(k["pose"]):
             per_bone.setdefault(bname, set()).add(int(k["frame"]))
+            if offset is not None:
+                location_frames.setdefault(bname, set()).add(int(k["frame"]))
+    if not layered:
+        # Blender extrapolates the first key backwards. Anchor a delayed channel at rest
+        # so a later gesture cannot overwrite the opening pose. Translation has its own
+        # clock: an earlier hips rotation does not anchor a later pelvis offset.
+        start = min(sc.frame_start, min(frames))
+        for channel, keyed in (("rotation_quaternion", per_bone), ("location", location_frames)):
+            for bname, fs in keyed.items():
+                if min(fs) > start:
+                    pb = rig.pose.bones[bname]
+                    pb.rotation_mode = "QUATERNION"
+                    pb.keyframe_insert(data_path=channel, frame=start, group=bname)
+                    frames.append(start)
     interp = {b: set(fs) for b, fs in per_bone.items()}
     touched = set()
     for k in job["keys"]:

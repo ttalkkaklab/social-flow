@@ -312,7 +312,34 @@ Load the plugin by pointing at your clone:
 claude --plugin-dir /path/to/social-flow
 ```
 
-### Codex CLI, Grok CLI, and Buzz
+### Claude desktop app — Cowork and the chat
+
+Cowork loads this same layout — the skills, the five agents and the local MCP server all
+load when the session runs on your computer (Anthropic's
+[platform-support table](https://claude.com/docs/plugins/platform-support)). In the desktop
+app open **Customize → Plugins**, select **Add marketplace** and enter the GitHub shorthand
+`ttalkkaklab/social-flow`, then install `social-flow`; or **Add → Upload plugin** with a zip
+of this checkout (200 MB and 5,000 files per plugin). A plugin on the account also reaches
+claude.ai chat and Claude Code as a synced plugin. The desktop app starts the server with no
+shell, so the keys come from `~/.config/social-flow/.env` (§ Environment variables) —
+`userConfig` would not do, since Cowork ignores a server that references an option without a
+default and never prompts. The layout settles the install; whether Cowork's sandbox carries
+ffmpeg and headless Chrome for the produce skill is unmeasured.
+
+The chat surface ignores a plugin's local MCP server, so the plain chat takes the tools
+through a desktop extension instead — MCP tools only, no skills:
+
+```bash
+npx -y @anthropic-ai/mcpb pack . social-flow.mcpb   # manifest.json + .mcpbignore choose the contents
+```
+
+Double-click `social-flow.mcpb`, or **Settings → Extensions → Advanced settings → Install
+Extension…**. The install dialog asks for the three production keys,
+the SerpApi key and the credentials directory (`manifest.json` `user_config`); every other
+variable comes from the `.env` file in that directory. The bundle validates and packs here;
+installing it is unmeasured.
+
+### ChatGPT desktop app, Codex CLI, Grok CLI, and Buzz
 
 The plugin layout is Claude-compatible across CLIs, so the same repo installs there too:
 
@@ -320,6 +347,14 @@ The plugin layout is Claude-compatible across CLIs, so the same repo installs th
 # Grok CLI — skills, agents, and the MCP tools all connect (measured on grok 1.0.5)
 grok plugin install https://github.com/ttalkkaklab/social-flow.git --trust
 
+# ChatGPT desktop app and Codex — one plugin directory since 2026-07-09. The portable manifest
+# is the root plugin.json + mcp.json (type: stdio) on the agent-plugins.org schema;
+# .codex-plugin/plugin.json stays as the compatibility overlay that spec names, carrying the
+# same requires_local_executor flag. A local MCP server makes it a desktop-only plugin, so it
+# installs in the desktop app's Plugins tab from this marketplace and in Codex — not in
+# ChatGPT on the web or mobile. The public directory takes local-MCP plugins from approved
+# partners only, so the marketplace is the route. Both files hold to their schemas; how
+# codex 0.162 and the desktop app load the pair is unmeasured.
 # Codex CLI — the 18 skills load; MCP tools don't wire up yet (measured on codex 0.147.0)
 codex plugin marketplace add ttalkkaklab/social-flow
 codex plugin add social-flow@social-flow
@@ -332,7 +367,8 @@ mkdir -p ~/.buzz/packs
 ln -sfn /path/to/social-flow ~/.buzz/packs/com.ttalkkaklab.social-flow
 ```
 
-API keys travel the same way as under Claude — shell environment variables.
+API keys travel the same way as under Claude — shell environment variables where there is
+a shell, and `~/.config/social-flow/.env` where there is none (the ChatGPT desktop app, Cowork).
 
 **Host media tools come first there.** Codex and Grok ship their own `image_gen` (Grok also `image_edit`), and Grok
 ships `image_to_video` and `reference_to_video`; a skill running under those CLIs sends every generated still to the
@@ -479,6 +515,9 @@ social-flow/
 ├── .codex-plugin/plugin.json    # Codex CLI plugin manifest
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
+├── plugin.json                  # ChatGPT desktop app · Codex portable manifest (agent-plugins.org)
+├── mcp.json                     #   its stdio server entry
+├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
 ├── server/                      # internal MCP server (TypeScript, stdio) — 303 tools
 │   └── src/
@@ -670,9 +709,12 @@ Findings from porting the voice/music modules:
 
 ## Environment variables & credentials
 
-`.mcp.json` passes these through from your shell environment. Secrets never go into
-committed files — with a variable unset, only the tools that need it return an
-explicit error and everything else works.
+`.mcp.json` passes these through from your shell environment, and the server fills
+whatever arrives unset or empty from `~/.config/social-flow/.env` (`<SNS_TOKEN_DIR>/.env`,
+`KEY=VALUE` lines, the shell value winning) — the path for hosts without a shell: Cowork,
+Claude Desktop, the ChatGPT desktop app. Secrets never go into committed files — with a
+variable unset, only the tools that need it return an explicit error and everything else
+works.
 
 | Variable | Required for | Default | Purpose |
 |---|---|---|---|
@@ -1080,3 +1122,19 @@ portal repository; the server suite also covers save/pull with a scripted portal
 `voice_lock_apply` converts single-speaker generated audio/video to the character’s
 ElevenLabs voice and checks blind transcripts and duration drift. It saves originals,
 new media and a per-shot result report. See the [produce contract](skills/produce/references/voice-lock.md).
+
+### Offline character and storyboard library
+
+`node skills/channel/references/review-library.js data/<channel>` saves a channel
+home, `assets/characters/index.html`, `assets/characters/<id>/index.html`,
+`storyboards/index.html` and `storyboards/<episode>/index.html`. All open directly
+with file://, with bundled Wanted Sans and no portal request. Character sheets
+show front/back/face, additional images, identity and voice. Episode pages use the
+same canonical review renderer; production inputs remain in `episodes/`.
+`--check` detects stale/missing exports without writing. Character and storyboard
+skills refresh these views before delivery. The optional channel HTTP browser now
+opens this library; its previous API browser is at `/legacy`.
+
+Portal reference: ttalkkak-story `d29f1a6`, DESIGN.md 1.2.0. See
+[local review design](skills/channel/references/local-review-design.md) for the
+reference, supported offline behavior and visual verification scope.

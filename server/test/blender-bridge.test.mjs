@@ -383,6 +383,35 @@ describe('blender round trip', { skip: !blenderBin() && 'no Blender on this mach
     assert.match(notRigged.error, /has no rig/);
   });
 
+  it('keeps delayed pose channels at rest on the opening frame', async () => {
+    const blend = join(dir, 'delayed-pose.blend');
+    const built = await buildScene(blenderSceneBuildSchema.parse({ blendPath: blend, fps: 24, frameEnd: 24, proxies: [{ name: 'actor', kind: 'person' }] }));
+    assert.ok(built.success, built.success ? '' : built.error);
+    const posed = await poseKey(blenderPoseKeySchema.parse({
+      blendPath: blend, object: 'actor', interpolation: 'LINEAR', keys: [
+        { frame: 1, pose: { head: { nod: 15 }, hips: { turn: 10 } } },
+        { frame: 24, pose: { armR: { raise: 70 }, hips: { offset: [0, 0, -0.2] } } },
+      ],
+    }));
+    assert.ok(posed.success, posed.success ? '' : posed.error);
+    const probe = [
+      'import bpy,json',
+      'rig=bpy.data.objects["actor.rig"]',
+      'rows=[]',
+      'for f in [1,12,24]:',
+      ' bpy.context.scene.frame_set(f)',
+      ' rows.append({"arm":rig.pose.bones["upper_arm.R"].rotation_quaternion.angle,"head":rig.pose.bones["head"].rotation_quaternion.angle,"hips":list(rig.pose.bones["hips"].location)})',
+      'print("POSE_PROBE="+json.dumps(rows))',
+    ].join('\n');
+    const stdout = execFileSync(blenderBin(), ['--background', '--factory-startup', blend, '--python-expr', probe], { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'] });
+    const rows = JSON.parse(stdout.match(/POSE_PROBE=(.*)/)[1]);
+    assert.ok(rows[0].arm < 1e-5, `a future arm key leaked into frame 1: ${rows[0].arm}`);
+    assert.ok(Math.hypot(...rows[0].hips) < 1e-5, 'a later pelvis offset must not affect its earlier rotation-only key');
+    assert.ok(rows[0].head > 0.05, 'the explicitly authored opening head pose stays intact');
+    assert.ok(rows[1].arm > rows[0].arm && rows[1].arm < rows[2].arm, 'the arm progresses toward its later pose');
+    assert.ok(Math.abs(Math.hypot(...rows[2].hips) - 0.2) < 1e-5, 'the authored final pelvis offset is preserved');
+  });
+
   it('retargets a Biovision clip onto the person, scaled, faced and floored', async () => {
     const blend = join(dir, 'motion.blend');
     const clip = join(dir, 'tpose-drop.bvh');

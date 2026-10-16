@@ -79,7 +79,14 @@
   if(!localFile(p.clip,/\.(mp4|mov)$/i))bad('clip must be a storyboard-relative mp4/mov path (no scheme, no absolute path, no ..) — the rendered previz');
   if(!localFile(p.firstFrame,/\.png$/i))bad('firstFrame must be the storyboard-relative png of frame 1 (no scheme, no absolute path, no ..) — the composition the source still is edited from');
   if(!draft&&!/^[a-f0-9]{64}$/.test(p.sha256||''))bad('sha256 must identify the rendered previz bytes');
-  if(!Number.isInteger(p.seconds)||p.seconds<2)bad('seconds must be a whole number — the cut length the clip was rendered at');
+  const astra=(video.engine||v.engine)==='astra';
+  if(astra&&video.numFrames!==undefined){
+   const frames=video.numFrames,rate=video.frameRate??24;
+   if(!Number.isInteger(frames)||frames<25||frames>193||(frames-1)%8!==0)
+    bad('ASTRA numFrames must be 8k+1, from 25 through 193');
+   if(!Number.isInteger(rate)||rate<24||rate>60||p.fps!==rate||!Number.isFinite(p.seconds)||Math.abs(p.seconds-frames/rate)>1e-6)
+    bad('ASTRA previz seconds and fps must match numFrames / frameRate exactly');
+  }else if(!Number.isInteger(p.seconds)||p.seconds<2)bad('seconds must be a whole number — the cut length the clip was rendered at; ASTRA fractional seconds require numFrames');
   if(!Number.isFinite(p.fps)||p.fps<24||p.fps>60)bad('fps must be 24–60 (24 for frame-for-frame QA)');
   const move=s=>String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
   if(!text(p.camera?.movement))bad('camera.movement records the move the clip performs, in the vocabulary of visual.camera.movement');

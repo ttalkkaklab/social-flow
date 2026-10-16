@@ -44,6 +44,59 @@ function fixture(n = 3) {
 }
 function approve(win) { win.PRODUCTION.approval = { kind: 'user', at: '2026-09-06T12:00:00+09:00',
   reference: 'User selected full video with the displayed budget.', quoteFingerprint: quote(win).quoteFingerprint }; }
+test('ASTRA prompt assembly uses its own image-to-video contract instead of Seedance wording gates', () => {
+  const win = fixture(1), scene = win.SCENES[0];
+  scene.visual.video = { engine: 'astra', numFrames: 185, frameRate: 24 };
+  scene.shot.videoDesign.action = 'The person taps the glasses; no readable interface appears.';
+  scene.shot.videoDesign.motion.beats[1].state = 'The person turns toward the courier.';
+  const result = assemble(win, 0);
+  assert.match(result.motionPrompt, /taps the glasses; no readable interface appears/);
+  assert.match(result.motionPrompt, /turns toward the courier/);
+  assert.match(result.motionPrompt, /static/);
+  assert.match(result.motionPrompt, /identity/i);
+  assert.match(result.motionPrompt, /keep their mouths closed/);
+  assert.match(result.motionPrompt, /No captions, subtitles, lettering/);
+  assert.ok(result.motionPrompt.length <= 2000);
+  assert.doesNotMatch(result.motionPrompt, /Video 1|silent; narration/);
+  scene.narration = [];
+  assert.doesNotMatch(assemble(win, 0).motionPrompt, /keep their mouths closed/);
+  scene.visual.video.engine = 'seedance';
+  assert.throws(() => assemble(win, 0), /Seedance prompt gate/);
+});
+test('ASTRA oversized motion plans fail before generation without truncating the action', () => {
+  const win = fixture(1);
+  win.SCENES[0].visual.video = { engine: 'astra' };
+  win.SCENES[0].shot.videoDesign.action = 'A person carefully moves a parcel. '.repeat(80);
+  assert.throws(() => assemble(win, 0), /ASTRA.*2000/);
+});
+test('ASTRA webtoon prompts hold drawn surfaces and avoid duplicating action and landing beats', () => {
+  const win = fixture(1), scene = win.SCENES[0];
+  win.PRODUCTION.style.preset = 'webtoon';
+  scene.shot.videoDesign.look = 'webtoon';
+  scene.visual.video = { engine: 'astra' };
+  scene.shot.videoDesign.action = scene.shot.videoDesign.motion.beats[1].state;
+  scene.visual.camera.end = scene.shot.videoDesign.motion.beats[1].state;
+  const prompt = assemble(win, 0).motionPrompt;
+  assert.match(prompt, /^A continuous shot of hand-drawn 2D cel animation/);
+  assert.match(prompt, /faces, hands, hair, clothing and the illustrated background in every frame/);
+  assert.equal(prompt.split(scene.shot.videoDesign.action).length - 1, 1);
+  assert.doesNotMatch(prompt, /Camera landing:/);
+});
+test('ASTRA forwards the selected character appearance locks without dialogue-like name labels', () => {
+  const win = fixture(1), scene = win.SCENES[0];
+  scene.visual.video = { engine: 'astra' };
+  scene.shot.cutType = 'reaction';
+  scene.visual.character = ['hero'];
+  win.PRODUCTION.cast = {
+    hero: { name: 'Named Hero', sheet: 'A young man with black rectangular smart glasses and a navy hoodie.' },
+    other: { name: 'Absent Person', sheet: 'A red silk robe.' }
+  };
+  const prompt = assemble(win, 0).motionPrompt;
+  assert.match(prompt, /Appearance to preserve in every frame: A young man with black rectangular smart glasses and a navy hoodie/);
+  assert.doesNotMatch(prompt, /Named Hero|Absent Person|red silk robe/);
+  win.PRODUCTION.cast.hero.sheet = 'Black rectangular smart glasses stay visible. '.repeat(60);
+  assert.throws(() => assemble(win, 0), /ASTRA.*2000/);
+});
 // A deterministic moving clip — a window panning over a testsrc2 field — validates media
 // contracts and clears the measured-motion gate; it is not claimed as a visual-quality sample.
 function movingClip(file, { seconds = 5, frozenHead = 0 } = {}) {

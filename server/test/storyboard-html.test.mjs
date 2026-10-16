@@ -11,7 +11,7 @@ test('HTML creation and refresh keep one design while preserving episode metadat
   const dir = mkdtempSync(join(tmpdir(), 'sf-board-html-'));
   try {
     // No scenes, credentials, or network are required to create the review shell.
-    assert.equal(storyboardHtml(dir).length, 5);
+    assert.equal(storyboardHtml(dir).length, 10);
     const file = join(dir, 'storyboard.html');
     const original = readFileSync(file, 'utf8');
     const title = '<title>Episode $& — 로컬 검토</title>';
@@ -20,7 +20,7 @@ test('HTML creation and refresh keep one design while preserving episode metadat
       .replace(/\/\* ✎ SB_DOC BEGIN[^]*?\/\* ✎ SB_DOC END \*\//, () => metadata);
     writeFileSync(file, edited);
     assert.deepEqual(storyboardHtml(dir, true), []);
-    writeFileSync(file, edited.replace('--bg: #f7f7f5', '--bg: #000000'));
+    writeFileSync(file, edited.replace('--bg: #fcfcfd', '--bg: #000000'));
     writeFileSync(join(dir, 'render-routing.js'), 'stale runtime');
     assert.deepEqual(storyboardHtml(dir, true), ['storyboard.html', 'render-routing.js']);
     storyboardHtml(dir);
@@ -39,7 +39,7 @@ test('check is read-only and malformed existing metadata is preserved for repair
   const root = mkdtempSync(join(tmpdir(), 'sf-board-html-check-'));
   try {
     const dir = join(root, 'storyboard');
-    assert.equal(storyboardHtml(dir, true).length, 5);
+    assert.equal(storyboardHtml(dir, true).length, 10);
     assert.equal(existsSync(dir), false);
     storyboardHtml(dir);
     const file = join(dir, 'storyboard.html');

@@ -21,9 +21,12 @@
  * entries survived several releases after those servers were gone from every
  * machine that runs this plugin, because nothing ever failed.
  *
- * **The numbers written into prose.** Four plugin manifests, the server package
- * and the README all state a version or a tool count. Duplicate bookkeeping
- * drifts — `.plugin/plugin.json` sat two releases behind before anyone looked.
+ * **The numbers written into prose.** Every plugin manifest (MANIFESTS below), the
+ * server package and the README all state a version or a tool count. Duplicate
+ * bookkeeping drifts — `.plugin/plugin.json` sat two releases behind before anyone
+ * looked. The MCP configs name the same server file four times over, and the OpenAI
+ * `interface` block lives in the portable manifest and the legacy overlay both, so
+ * those are held equal here too.
  */
 
 'use strict';
@@ -73,7 +76,17 @@ const MANIFESTS = [
   '.plugin/plugin.json',
   '.codex-plugin/plugin.json',
   '.grok-plugin/plugin.json',
+  'plugin.json', // ChatGPT desktop app · Codex (agent-plugins.org), with mcp.json
+  'manifest.json', // Claude Desktop extension (.mcpb)
 ];
+
+/** Every MCP registration and where its server entry sits — all of them must run the same bundle. */
+const MCP_CONFIGS = {
+  '.mcp.json': (j) => j.mcpServers['social-flow'],
+  'codex.mcp.json': (j) => j.mcpServers['social-flow'],
+  'mcp.json': (j) => j.mcpServers['social-flow'],
+  'manifest.json': (j) => j.server.mcp_config,
+};
 
 const read = (abs) => fs.readFileSync(abs, 'utf8');
 const exists = (abs) => fs.existsSync(abs);
@@ -405,6 +418,25 @@ const RULES = [
         ok: values.length === 1,
         detail: values.length === 1 ? [] : Object.entries(v).map(([k, x]) => `${k}: ${x}`),
       };
+    },
+  },
+  {
+    name: 'every MCP config runs server/dist/bundle.js, and the two OpenAI interface blocks agree',
+    run() {
+      const bad = [];
+      for (const [rel, pick] of Object.entries(MCP_CONFIGS)) {
+        const entry = pick(JSON.parse(read(path.join(ROOT, rel)))) || {};
+        const args = Array.isArray(entry.args) ? entry.args : [];
+        if (!args.some((a) => typeof a === 'string' && a.endsWith('server/dist/bundle.js'))) {
+          bad.push(`${rel}: args ${JSON.stringify(args)} do not run server/dist/bundle.js`);
+        }
+      }
+      const legacy = JSON.parse(read(path.join(ROOT, '.codex-plugin/plugin.json'))).interface;
+      const portable = JSON.parse(read(path.join(ROOT, 'plugin.json'))).extensions?.['com.openai']?.interface;
+      if (JSON.stringify(legacy) !== JSON.stringify(portable)) {
+        bad.push('plugin.json extensions.com.openai.interface differs from .codex-plugin/plugin.json interface');
+      }
+      return { ok: bad.length === 0, detail: bad };
     },
   },
   {

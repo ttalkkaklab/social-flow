@@ -921,16 +921,6 @@ async function awaitResult(jobId: string): Promise<{ bytes: Buffer; request?: Re
   }
 }
 
-function saveResult(bytes: Buffer, outputPath: string | undefined, filename: string | undefined): string {
-  const target = resolveOutputFile(
-    outputPath || process.cwd(),
-    filename || `astra_${Date.now()}.mp4`,
-    'video',
-  );
-  fs.writeFileSync(target, bytes);
-  return target;
-}
-
 async function runJob(
   mode: string,
   prompt: string,
@@ -938,10 +928,23 @@ async function runJob(
   outputPath: string | undefined,
   filename: string | undefined,
 ): Promise<AstraVideoResponse> {
+  // The host may stop waiting before this worker finishes. Keep the job identity and
+  // completed response on disk so a transport timeout never requires blind resubmission.
+  const videoPath = resolveOutputFile(outputPath || process.cwd(), filename || `astra_${Date.now()}.mp4`, 'video');
+  const receiptPath = `${videoPath}.astra-job.json`;
+  const writeReceipt = (value: Record<string, unknown>): void => {
+    const temp = `${receiptPath}.${process.pid}.tmp`;
+    fs.writeFileSync(temp, JSON.stringify(value, null, 2) + '\n', { mode: 0o600 });
+    fs.renameSync(temp, receiptPath);
+  };
   const jobId = await submitJob(body);
+  const submitted = { jobId, mode, prompt, videoPath, submittedAt: new Date().toISOString(), submittedRequest: body };
+  writeReceipt({ ...submitted, status: 'submitted' });
   const { bytes, request, elapsedSeconds } = await awaitResult(jobId);
-  const videoPath = saveResult(bytes, outputPath, filename);
-  return { videoPath, jobId, mode, prompt, bytes: bytes.length, elapsedSeconds, ...(request ? { request } : {}) };
+  fs.writeFileSync(videoPath, bytes);
+  const response = { videoPath, jobId, mode, prompt, bytes: bytes.length, elapsedSeconds, ...(request ? { request } : {}) };
+  writeReceipt({ ...submitted, ...response, status: 'completed', completedAt: new Date().toISOString() });
+  return response;
 }
 
 // ── the five entry points ────────────────────────────────────────────────────

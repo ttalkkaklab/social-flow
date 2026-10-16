@@ -628,6 +628,8 @@ fast/mini grades, 1080p otherwise) and audio false; only burned subtitles overla
 outro retains its source. Full-video quality evidence is in `.work/video-review.json`, tied to
 the actual source and clip hashes, checked before the build.
 
+ASTRA frame-based cuts record `visual.video.numFrames` and `frameRate`. Their previz `seconds` equals `numFrames / frameRate` exactly (185 / 24 is 7.708333 seconds), and its `fps` matches `frameRate`. Do not round the stored duration to a whole second. Other vendor routes keep their whole-second contract.
+
 ### Full-video sentence group sources
 
 Keep the card and its narration array intact. A `full_video` generated card may replace
