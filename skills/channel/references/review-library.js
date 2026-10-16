@@ -79,6 +79,28 @@ function searchBox() { return `<div class="review-tools"><label>${t('검색', 'S
 function zoomImage(file, target, alt) { return `<a data-image-preview href="${rel(file, target)}" aria-label="${esc(alt)} · 원본 보기 / View original">${image(file, target, alt)}<span class="review-image-action">${t("원본 보기", "View original")}</span></a>`; }
 function image(file, target, alt, cover = false) { return `<img class="review-image${cover ? ' review-cover' : ''}" src="${rel(file, target)}" alt="${esc(alt)}" loading="lazy">`; }
 
+// Reference artwork is a preview, never evidence of a completed panel set.
+function characterPreview(root, folder, character, slots) {
+  if (slots.front) return { file: slots.front, reference: false };
+  const references = character.images.map(im => im.file)
+    .filter(file => /^reference(?:-v\d+)?\.(png|jpe?g|webp)$/i.test(file))
+    .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+  const file = references.find(file => regular(root, path.join(folder, file)));
+  return file ? { file, reference: true } : null;
+}
+function voicePreview(root, file, folder, character) {
+  const voice = path.join(folder, 'voice.wav');
+  const available = regular(root, voice);
+  const id = 'voice-' + character.id;
+  return `<div class="review-voice">${available ? `<audio id="${esc(id)}" preload="none" src="${rel(file, voice)}"></audio>` : ''}<button class="review-play" type="button" data-voice-name="${esc(character.name)}"${available ? ` data-audio-toggle="${esc(id)}"` : ' disabled'} aria-label="${esc(character.name)} · ${available ? '음성 재생' : '음성 샘플 없음'}" title="${available ? '음성 재생' : '음성 샘플 없음'}"><svg class="review-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><svg class="review-pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg></button></div>`;
+}
+function boardMeta(board) {
+  const formats = { 'shorts-9x16': ['숏폼 · 9:16', 'Short form · 9:16'], 'youtube-long-16x9': ['롱폼 · 16:9', 'Long form · 16:9'] };
+  const status = board.status === 'draft' || !board.status ? t('초안', 'Draft') : esc(board.status);
+  const format = formats[board.format] ? t(...formats[board.format]) : esc(board.format || '');
+  return `<div class="review-status"><span>${status}</span>${format ? `<span>${format}</span>` : ''}</div>`;
+}
+
 // Guard every output component, including symlinked parents. Exporting must never
 // overwrite hand-authored HTML or follow a writable symlink outside the channel.
 function safeOutput(root, target) {
@@ -180,9 +202,10 @@ function exportChannel(channelDirectory, { check = false } = {}) {
     } else body += `<section class="review-section"><h2>${t('설정 보완 항목', 'Required corrections')}</h2><p>${esc(identityError)}</p></section>`;
     body += `<details class="review-detail"><summary>${t('캐릭터 설정 원문', 'Full character identity')}</summary><p>${t('원문에 적힌 검토 상태는 작성 당시 기록입니다. 현재 평가는 페이지 상단에서 확인하세요.', 'Review status in the source reflects when it was written. The current review appears at the top of this page.')}</p><pre class="review-source">${esc(source || '—')}</pre></details>`;
     render(file, character.name, 'characters', body);
-    cards += `<article data-card data-search="${esc((character.name + ' ' + character.id + ' ' + role).toLocaleLowerCase())}" class="review-card"><a href="${rel(charIndex, file)}">${slots.front ? image(charIndex, path.join(folder, slots.front), character.name) : empty('정면 이미지 없음', 'No front image')}<div class="review-card-body"><h2>${esc(character.name)}</h2><p>${esc(role)}</p>${review}${panelStatus(slots)}</div></a></article>`;
+    const preview = characterPreview(dir, folder, character, slots);
+    cards += `<article data-card data-search="${esc((character.name + ' ' + character.id + ' ' + role).toLocaleLowerCase())}" class="review-card review-character"><a class="review-card-art" href="${rel(charIndex, file)}" aria-label="${esc(character.name)}">${preview ? image(charIndex, path.join(folder, preview.file), character.name) : empty('이미지 없음', 'No image yet')}</a><div class="review-card-body"><div class="review-card-heading"><h2><a href="${rel(charIndex, file)}">${esc(character.name)}</a></h2>${voicePreview(dir, charIndex, folder, character)}</div>${preview?.reference ? `<span class="review-reference">${t('참고 이미지', 'Reference image')}</span>` : ''}<p class="review-role">${esc(role)}</p>${review}${panelStatus(slots)}</div></article>`;
   }
-  render(charIndex, 'Characters', 'characters', heading(t('캐릭터 시트', 'Character sheets'), `${chars.length} ${t('명의 캐릭터', 'characters')}`) + searchBox() + `<div class="review-grid">${cards}</div><div data-no-results${chars.length ? ' hidden' : ''}>${empty(chars.length ? '검색 조건에 맞는 캐릭터가 없습니다.' : '등록된 캐릭터가 없습니다.', chars.length ? 'No characters match your search.' : 'No characters yet.')}</div>`);
+  render(charIndex, 'Characters', 'characters', heading(t('캐릭터 시트', 'Character sheets'), `${chars.length} ${t('명의 캐릭터', 'characters')}`) + searchBox() + `<div class="review-grid review-catalog">${cards}</div><div data-no-results${chars.length ? ' hidden' : ''}>${empty(chars.length ? '검색 조건에 맞는 캐릭터가 없습니다.' : '등록된 캐릭터가 없습니다.', chars.length ? 'No characters match your search.' : 'No characters yet.')}</div>`);
   const boardIndex = path.join(dir, 'storyboards', 'index.html');
   cards = '';
   for (const board of boards) {
@@ -201,25 +224,26 @@ function exportChannel(channelDirectory, { check = false } = {}) {
       warnings.push(message); structuralWarnings.push(message);
     }
     const cover = board.cover ? path.join(root, decodeURIComponent(board.cover.replace(/^\/files\//, ''))) : null;
-    cards += `<article class="review-card" data-card data-series="${esc(board.series || '')}" data-search="${esc((board.title + ' ' + board.topic + ' ' + (board.series || '')).toLocaleLowerCase())}">${available ? `<a href="${rel(boardIndex, file)}">` : '<div>'}${cover && regular(dir, cover) ? image(boardIndex, cover, board.title, true) : empty('커버 없음', 'No cover')}<div class="review-card-body"><h2>${esc(board.title)}</h2><p>${esc(board.series || '')}</p><div class="review-status"><span>${esc(board.status || 'draft')}</span><span>${esc(board.format || '')}</span></div>${available ? '' : `<p>${t('검토 HTML을 먼저 생성하세요.', 'Generate the review HTML first.')}</p>`}</div>${available ? '</a>' : '</div>'}</article>`;
+    cards += `<article class="review-card" data-card data-series="${esc(board.series || '')}" data-search="${esc((board.title + ' ' + board.topic + ' ' + (board.series || '')).toLocaleLowerCase())}">${available ? `<a href="${rel(boardIndex, file)}">` : '<div>'}${cover && regular(dir, cover) ? image(boardIndex, cover, board.title, true) : empty('커버 없음', 'No cover')}<div class="review-card-body"><h2>${esc(board.title)}</h2>${board.series ? `<p>${esc(board.series)}</p>` : ''}${boardMeta(board)}${available ? '' : `<p>${t('검토 HTML을 먼저 생성하세요.', 'Generate the review HTML first.')}</p>`}</div>${available ? '</a>' : '</div>'}</article>`;
   }
   const series = [...new Set(boards.map(b => b.series).filter(Boolean))];
   const filter = series.length ? `<label>${t('재생목록', 'Playlist')} <select data-series-filter><option value="" data-ko="전체" data-en="All">전체</option>${series.map(s => `<option>${esc(s)}</option>`).join('')}</select></label>` : '';
-  render(boardIndex, 'Storyboards', 'storyboards', heading(t('스토리보드', 'Storyboards'), `${boards.length} ${t('편의 에피소드', 'episodes')}`) + searchBox().replace('</div>', filter + '</div>') + `<div class="review-grid">${cards}</div><div data-no-results${boards.length ? ' hidden' : ''}>${empty(boards.length ? '검색 조건에 맞는 에피소드가 없습니다.' : '등록된 에피소드가 없습니다.', boards.length ? 'No episodes match your search.' : 'No episodes yet.')}</div>`);
+  render(boardIndex, 'Storyboards', 'storyboards', heading(t('스토리보드', 'Storyboards'), `${boards.length} ${t('편의 에피소드', 'episodes')}`) + searchBox().replace('</div>', filter + '</div>') + `<div class="review-grid review-catalog">${cards}</div><div data-no-results${boards.length ? ' hidden' : ''}>${empty(boards.length ? '검색 조건에 맞는 에피소드가 없습니다.' : '등록된 에피소드가 없습니다.', boards.length ? 'No episodes match your search.' : 'No episodes yet.')}</div>`);
   const home = path.join(dir, 'index.html');
   const latest = boards.find(board => outputs.has(path.join(dir, 'storyboards', board.topic, 'index.html')));
   let featured = '';
   if (latest) {
     const file = path.join(dir, 'storyboards', latest.topic, 'index.html');
     const cover = latest.cover ? path.join(root, decodeURIComponent(latest.cover.replace(/^\/files\//, ''))) : null;
-    featured = `<section class="review-feature"><h2>${t('최근 에피소드', 'Latest episode')}</h2><a class="review-card" href="${rel(home, file)}">${cover && regular(dir, cover) ? image(home, cover, latest.title, true) : ''}<h3>${esc(latest.title)}</h3><p>${esc(latest.series || '')}</p><p>${esc(latest.status || 'draft')} · ${esc(latest.format || '')}</p><span class="review-primary-link">${t('스토리보드 검토', 'Review storyboard')}</span></a></section>`;
+    featured = `<section class="review-feature"><h2>${t('최근 에피소드', 'Latest episode')}</h2><a class="review-card" href="${rel(home, file)}">${cover && regular(dir, cover) ? image(home, cover, latest.title, true) : empty('커버 없음', 'No cover')}<div class="review-feature-copy"><h3>${esc(latest.title)}</h3>${latest.series ? `<p>${esc(latest.series)}</p>` : ''}${boardMeta(latest)}<span class="review-primary-link">${t('스토리보드 검토', 'Review storyboard')}</span></div></a></section>`;
   } else if (chars.length) {
     const character = chars[0];
     const folder = path.join(dir, 'assets', 'characters', character.id);
-    const front = characterSlots.get(character.id)?.front;
-    featured = `<section class="review-feature"><h2>${t('캐릭터 준비', 'Character preparation')}</h2><a class="review-card" href="${rel(home, path.join(folder, 'index.html'))}">${front && regular(dir, path.join(folder, front)) ? image(home, path.join(folder, front), character.name) : empty('캐릭터 이미지를 준비 중입니다.', 'Character images are not available yet.')}<h3>${esc(character.name)}</h3><p>${esc(character.summary || '')}</p><span class="review-primary-link">${t('캐릭터 시트 검토', 'Review character sheet')}</span></a></section>`;
+    const preview = characterPreview(dir, folder, character, characterSlots.get(character.id) || {});
+    const front = preview?.file;
+    featured = `<section class="review-feature"><h2>${t('캐릭터 준비', 'Character preparation')}</h2><a class="review-card" href="${rel(home, path.join(folder, 'index.html'))}">${front && regular(dir, path.join(folder, front)) ? image(home, path.join(folder, front), character.name) : empty('캐릭터 이미지를 준비 중입니다.', 'Character images are not available yet.')}<div class="review-feature-copy"><h3>${esc(character.name)}</h3><p>${esc(character.summary || '')}</p><span class="review-primary-link">${t('캐릭터 시트 검토', 'Review character sheet')}</span></div></a></section>`;
   }
-  render(home, channel.name, '', heading(esc(channel.name), t('캐릭터와 에피소드를 한곳에서 검토합니다.', 'Review characters and episodes in one place.')) + featured + `<div class="review-grid"><a class="review-card" href="${rel(home, charIndex)}"><h2>${t('캐릭터 시트', 'Character sheets')}</h2><p>${chars.length}</p></a><a class="review-card" href="${rel(home, boardIndex)}"><h2>${t('스토리보드', 'Storyboards')}</h2><p>${boards.length}</p></a></div>`);
+  render(home, channel.name, '', heading(esc(channel.name), t('캐릭터와 에피소드를 한곳에서 검토합니다.', 'Review characters and episodes in one place.')) + featured + `<div class="review-shortcuts"><a class="review-card" href="${rel(home, charIndex)}"><h2>${t('캐릭터 시트', 'Character sheets')}</h2><span class="review-total">${chars.length}</span></a><a class="review-card" href="${rel(home, boardIndex)}"><h2>${t('스토리보드', 'Storyboards')}</h2><span class="review-total">${boards.length}</span></a></div>`);
   const changed = [];
   // Preflight every target before any write. Preserve unowned files even on refresh.
   for (const [file, content] of outputs) {

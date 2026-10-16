@@ -12,6 +12,40 @@ const example = readFileSync(new URL('../../skills/channel/references/character-
 const identityBlock = example.match(/```json\s*\n([\s\S]*?)```/)[1];
 const { storyboardHtml } = require('../../skills/storyboard/references/storyboard-html.js');
 
+test('character catalogue uses reference artwork without claiming panel readiness and exposes separate voice controls', () => {
+  const f = fixture();
+  try {
+    for (const name of ['body.png', 'face.png', 'back.png']) rmSync(join(f.dir, 'assets/characters/hero', name));
+    f.write('assets/characters/hero/reference-v2.png', 'older');
+    f.write('assets/characters/hero/reference-v10.png', 'latest');
+    exportChannel(f.dir);
+    const index = join(f.dir, 'assets/characters/index.html');
+    let html = readFileSync(index, 'utf8');
+    assert.ok(html.includes('src="hero/reference-v10.png"'));
+    assert.ok(html.includes('Reference image'));
+    assert.ok(!html.includes('review-ok'));
+    assert.match(html, /class="review-play"[^>]* disabled/);
+    assert.ok(!html.includes('<audio'));
+    f.write('assets/characters/hero/voice.wav', 'sample');
+    exportChannel(f.dir);
+    html = readFileSync(index, 'utf8');
+    assert.match(html, /<audio[^>]+src="hero\/voice.wav"/);
+    assert.ok(html.includes('data-audio-toggle="voice-hero"'));
+    assert.ok(!/<a\b[^>]*>(?:(?!<\/a>)[\s\S])*<button/.test(html), 'play button must not navigate');
+    rmSync(join(f.dir, 'assets/characters/hero/voice.wav'));
+    symlinkSync(join(f.root, 'outside.wav'), join(f.dir, 'assets/characters/hero/voice.wav'));
+    writeFileSync(join(f.root, 'outside.wav'), 'outside');
+    exportChannel(f.dir);
+    html = readFileSync(index, 'utf8');
+    assert.ok(!html.includes('<audio'), 'out-of-channel audio must not be exposed');
+    f.write('assets/characters/hero/body.png', 'canonical');
+    exportChannel(f.dir);
+    html = readFileSync(index, 'utf8');
+    assert.ok(html.includes('src="hero/body.png"'));
+    assert.ok(!html.includes('Reference image'));
+  } finally { f.clean(); }
+});
+
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), 'sf-library-'));
   const dir = join(root, 'channel');
