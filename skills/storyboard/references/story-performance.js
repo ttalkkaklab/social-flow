@@ -51,7 +51,8 @@ function checkPerformanceStory(win, { requireReview = true, hash } = {}) {
         !(s.visual?.reuse || s.visual?.source === 'recording') || !Array.isArray(transcript.groups))) fail('transcript requires matching live recording and no generated speech');
     let end = 0;
     for (const g of Array.isArray(transcript?.groups) ? transcript.groups : []) {
-      if (!text(g?.text) || !Number.isFinite(g.start) || !Number.isFinite(g.end) || g.start < end || g.end <= g.start) fail('transcript requires ordered timed speech');
+      if (!text(g?.text) || !Number.isFinite(g.start) || !Number.isFinite(g.end) || g.start < end || g.end <= g.start ||
+          (s.visual?.reuse && g.end > s.duration)) fail('transcript requires ordered timed speech within the reused clip');
       end = g?.end;
     }
     const spoken = groups.length ? groups : Array.isArray(transcript?.groups) ? transcript.groups : [], seen = new Set();

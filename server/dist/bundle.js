@@ -64502,7 +64502,7 @@ var require_story_performance = __commonJS({
         if (transcript && (groups.length || !text2(transcript.source) || transcript.source !== (s2.visual?.reuse?.clip || s2.visual?.clip) || !(s2.visual?.reuse || s2.visual?.source === "recording") || !Array.isArray(transcript.groups))) fail6("transcript requires matching live recording and no generated speech");
         let end = 0;
         for (const g of Array.isArray(transcript?.groups) ? transcript.groups : []) {
-          if (!text2(g?.text) || !Number.isFinite(g.start) || !Number.isFinite(g.end) || g.start < end || g.end <= g.start) fail6("transcript requires ordered timed speech");
+          if (!text2(g?.text) || !Number.isFinite(g.start) || !Number.isFinite(g.end) || g.start < end || g.end <= g.start || s2.visual?.reuse && g.end > s2.duration) fail6("transcript requires ordered timed speech within the reused clip");
           end = g?.end;
         }
         const spoken = groups.length ? groups : Array.isArray(transcript?.groups) ? transcript.groups : [], seen = /* @__PURE__ */ new Set();

@@ -81,7 +81,7 @@ function checkScenarioV2(meta, body, research, opts = {}) {
   else data.setups.forEach(s => {
     if (!object(s) || !Number.isInteger(s.open) || !Number.isInteger(s.pay) || s.open < 1 || s.pay > 5 || s.pay <= s.open || !text(s.detail) || !text(s.reinterpretation)) bad('setup needs detail, reinterpretation and ordered 1-based beat open/pay');
   });
-  const spoken = beats.flatMap(b => Array.isArray(b?.events) ? b.events : []).filter(e => e?.kind !== 'action');
+  const spoken = beats.flatMap(b => Array.isArray(b?.events) ? b.events : []).filter(e => object(e) && e.kind !== 'action');
   if (data.expression === 'visual' && spoken.length) bad('visual expression must not contain speech');
   if (data.expression === 'dialogue' && spoken.some(e => e.kind === 'narration')) bad('dialogue expression must not contain narrator speech');
   if (data.expression === 'narration' && spoken.some(e => e.kind === 'dialogue')) bad('narration expression must not contain dialogue');

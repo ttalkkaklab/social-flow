@@ -115,11 +115,28 @@ test('all-visual fiction can be reviewed and live transcript errors fail cleanly
 });
 
 test('malformed event text and invalid expression fail without throwing', () => {
+  for (const expression of ['dialogue', 'narration']) {
+    const malformed = candidate(); malformed.expression = expression; malformed.beats[0].events = [null];
+    assert.match(JSON.stringify(run(malformed)), /events need kind and text/);
+  }
   const w = board(); w.SCENES[2].performance[0].text = 12;
   assert.match(checkStory(w).join(), /action requires|exact observable/);
   const c = candidate(); c.expression = 'visual';
   c.beats[0].events[0] = {kind:'dialogue',character:'father',to:'child',text:'Eat.',basis:'invented'};
   assert.match(JSON.stringify(run(c)), /must not contain speech/);
+});
+
+test('reused shot transcripts cannot cite speech beyond the clip duration', () => {
+  const w = board();
+  w.SCENES[0].duration = 3;
+  w.SCENES[0].visual = {reuse: {clip: 'recording.mp4'}};
+  w.SCENES[0].narration = [];
+  w.STORY.transcripts = [{shot: 1, source: 'recording.mp4', groups: [
+    {text: 'Have you eaten?', speaker: 'child', start: 0, end: 3}
+  ]}];
+  assert.deepEqual(checkStory(w, {requireReview: false}), []);
+  Object.assign(w.STORY.transcripts[0].groups[0], {start: 30, end: 35});
+  assert.match(checkStory(w, {requireReview: false}).join(), /within the reused clip/);
 });
 
 test('wording extraction preserves speaker and addressee while excluding actions', () => {
