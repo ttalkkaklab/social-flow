@@ -64343,6 +64343,103 @@ var require_scenes_vm = __commonJS({
   }
 });
 
+// ../skills/_shared/character-voice.js
+var require_character_voice = __commonJS({
+  "../skills/_shared/character-voice.js"(exports, module) {
+    "use strict";
+    var GEMINI_VOICES = new Set("Zephyr Puck Charon Kore Fenrir Leda Orus Aoede Callirrhoe Autonoe Enceladus Iapetus Umbriel Algieba Despina Erinome Algenib Rasalgethi Laomedeia Achernar Alnilam Schedar Gacrux Pulcherrima Achird Zubenelgenubi Vindemiatrix Sadachbia Sadaltager Sulafat".split(" "));
+    var SUPERTONIC_LANGUAGES2 = new Set("ko en ja ar bg cs da de el es et fi fr hi hr hu id it lt lv nl pl pt ro ru sk sl sv tr uk vi na".split(" "));
+    var GEMINI_MODELS = /* @__PURE__ */ new Set(["gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts", "gemini-3.1-flash-tts-preview", "gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts"]);
+    var ELEVENLABS_MODELS2 = /* @__PURE__ */ new Set(["eleven_multilingual_v2", "eleven_v3", "eleven_v3_conversational", "eleven_flash_v2_5", "eleven_turbo_v2_5"]);
+    function normalizeLanguage(value) {
+      const raw = typeof value === "string" ? value.trim().toLowerCase() : "";
+      return { korean: "ko", english: "en", japanese: "ja", chinese: "zh", spanish: "es", french: "fr", portuguese: "pt" }[raw] || raw;
+    }
+    function voiceErrors(tts) {
+      if (!tts || typeof tts !== "object" || Array.isArray(tts)) return ["tts is required"];
+      const errors = [];
+      tts = { ...tts };
+      for (const [field, max] of [["voiceId", 128], ["language", 32], ["model", 128], ["stylePrompt", 1e3]]) {
+        if (tts[field] === void 0 && ["model", "stylePrompt"].includes(field)) continue;
+        if (typeof tts[field] !== "string" || !tts[field].trim() || tts[field].trim().length > max) errors.push(`tts.${field} must be a non-empty string of at most ${max} characters`);
+        else tts[field] = tts[field].trim();
+      }
+      if (!["gemini", "supertonic", "elevenlabs", "mlx"].includes(tts.engine)) errors.push("tts.engine must name a supported engine");
+      if (typeof tts.voiceId !== "string" || !tts.voiceId.trim()) errors.push("tts.voiceId is required");
+      if (typeof tts.language !== "string" || !tts.language.trim()) errors.push("tts.language is required");
+      if (typeof tts.speed !== "number" || !Number.isFinite(tts.speed) || tts.speed < 0.7 || tts.speed > 1.2) errors.push("tts.speed must be between 0.7 and 1.2");
+      if (tts.engine === "supertonic" && !/^[MF][1-5]$/.test(tts.voiceId)) errors.push("Supertonic voiceId must be M1\u2013M5 or F1\u2013F5");
+      if (tts.engine === "gemini" && !GEMINI_VOICES.has(tts.voiceId)) errors.push("Unknown Gemini voiceId");
+      const language = normalizeLanguage(tts.language);
+      if (!/^[a-z]{2}$/.test(language)) errors.push("tts.language must be a two-letter language code or supported language name");
+      if (tts.engine === "supertonic" && !SUPERTONIC_LANGUAGES2.has(language)) errors.push("Unsupported Supertonic language");
+      if (["gemini", "mlx"].includes(tts.engine) && tts.speed !== 1) errors.push("This engine supports character speed 1 only");
+      if (tts.engine === "supertonic" && tts.model !== void 0) errors.push("Supertonic has no selectable model");
+      if (tts.engine === "gemini" && tts.model !== void 0 && !GEMINI_MODELS.has(tts.model)) errors.push("Unsupported Gemini model");
+      if (tts.engine === "elevenlabs" && tts.model !== void 0 && !ELEVENLABS_MODELS2.has(tts.model)) errors.push("Unsupported ElevenLabs model");
+      if (tts.engine === "elevenlabs" && !/^[A-Za-z0-9_-]{1,64}$/.test(tts.voiceId)) errors.push("Invalid ElevenLabs voiceId");
+      if (tts.stylePrompt !== void 0 && (tts.engine !== "gemini" || typeof tts.model === "string" && tts.model.startsWith("gemini-3.8-"))) errors.push("This engine does not accept stylePrompt");
+      return errors;
+    }
+    function identityVoice(source) {
+      const blocks = [...source.matchAll(/```json\s*\n([\s\S]*?)```/g)];
+      const voices = [];
+      for (const block of blocks) {
+        let value;
+        try {
+          value = JSON.parse(block[1]);
+        } catch {
+          throw new Error("Invalid JSON in character identity");
+        }
+        if (value && Object.hasOwn(value, "tts")) voices.push(value.tts);
+      }
+      if (voices.length !== 1) throw new Error("identity.md must contain exactly one JSON block with tts");
+      const errors = voiceErrors(voices[0]);
+      if (errors.length) throw new Error(errors.join("; "));
+      const result = { ...voices[0], language: normalizeLanguage(voices[0].language) };
+      for (const field of ["voiceId", "model", "stylePrompt"]) if (typeof result[field] === "string") result[field] = result[field].trim();
+      return result;
+    }
+    function boardVoiceErrors(win) {
+      if (!win || typeof win !== "object") return ["Storyboard must be an object"];
+      const errors = [];
+      const entries = win.SB_DOC?.characters;
+      if (entries != null && typeof entries !== "object") return ["SB_DOC.characters must be an array or object"];
+      if (win.SCENES != null && !Array.isArray(win.SCENES)) return ["SCENES must be an array"];
+      const characters = Array.isArray(entries) ? entries : Object.entries(entries || {}).map(([id, c]) => ({ ...c, id }));
+      const ids = new Set(Object.keys(win.PRODUCTION?.cast || {}));
+      for (const scene of win.SCENES || []) {
+        if (!scene || typeof scene !== "object") {
+          errors.push("Scene must be an object");
+          continue;
+        }
+        const raw = scene.visual?.character;
+        for (const c of raw ? Array.isArray(raw) ? raw : [raw] : []) ids.add(typeof c === "string" ? c : c?.id);
+        if (scene.narration != null && !Array.isArray(scene.narration)) {
+          errors.push("Scene narration must be an array");
+          continue;
+        }
+        for (const n of scene.narration || []) {
+          if (!n || typeof n !== "object") {
+            errors.push("Narration segment must be an object");
+            continue;
+          }
+          if (n.speaker) ids.add(n.speaker);
+        }
+      }
+      for (const c of characters) ids.add(c?.id);
+      if (win.SB_DOC?.narratorCharacterId) ids.add(win.SB_DOC.narratorCharacterId);
+      for (const id of ids) {
+        const matches = characters.filter((c) => c?.id === id);
+        if (!id || matches.length !== 1) errors.push(`Character ${id || "(missing id)"} needs exactly one SB_DOC.characters entry with its own tts`);
+        else errors.push(...voiceErrors(matches[0].tts).map((e2) => `Character ${id}: ${e2}`));
+      }
+      return errors;
+    }
+    module.exports = { normalizeLanguage, voiceErrors, identityVoice, boardVoiceErrors };
+  }
+});
+
 // ../skills/storyboard/references/story-contract.js
 var require_story_contract = __commonJS({
   "../skills/storyboard/references/story-contract.js"(exports, module) {
@@ -64591,6 +64688,31 @@ var require_check_tts_quality = __commonJS({
       for (const axis of ["accuracy", "pronunciation", "naturalness", "clarity"]) if (!Number.isFinite(r2[axis]) || r2[axis] < (axis === "accuracy" ? 98 : 95) || r2[axis] > 100) throw new Error(axis + " did not pass");
       return { [file]: audioHash, [proofFile]: hash4(fs10.readFileSync(proofFile)) };
     }
+    function characterVoice(win, scene, proof) {
+      const entries = win.SB_DOC?.characters;
+      const hasCast = entries != null || win.SB_DOC?.narratorCharacterId || Object.keys(win.PRODUCTION?.cast || {}).length;
+      if (!hasCast && !(scene.narration || []).some((n) => n.speaker)) return null;
+      const characters = Array.isArray(entries) ? entries : Object.entries(entries || {}).map(([id, c]) => ({ ...c, id }));
+      const ids = [...new Set((scene.narration || []).filter((n) => normalize2(n.tts || "")).map((n) => n.speaker || win.SB_DOC?.narratorCharacterId))];
+      if (ids.length !== 1) throw new Error("Character speech needs one speaker per scene; split dialogue into single-speaker scenes with separate audio proofs");
+      const matches = characters.filter((c) => c?.id === ids[0]);
+      if (!ids[0] || matches.length !== 1) throw new Error("Character speech has no uniquely resolved speaker or narrator");
+      const expected = matches[0].tts;
+      const errors = require_character_voice().voiceErrors(expected);
+      if (errors.length) throw new Error("Character speech: " + errors.join("; "));
+      const settings = proof?.voiceSettings;
+      if (!settings) throw new Error("Character speech requires recorded generation voiceSettings");
+      const engines = { tts_generate: "gemini", tts_gemini_38: "gemini", tts_local_generate: "supertonic", tts_elevenlabs_generate: "elevenlabs", mlx_tts_generate: "mlx" };
+      if (!engines[proof.generator] || settings.speakers || settings.inputs) throw new Error("Character speech requires a single-speaker generation proof");
+      const language = require_character_voice().normalizeLanguage;
+      const actual = { engine: engines[proof.generator], voiceId: settings.voiceId || settings.voiceName || settings.voice, language: language(settings.lang || settings.languageCode || proof.language), speed: settings.speed ?? 1 };
+      for (const key of ["engine", "voiceId", "language", "speed"]) {
+        const wanted = key === "language" ? language(expected[key]) : typeof expected[key] === "string" ? expected[key].trim() : expected[key];
+        if (actual[key] !== wanted) throw new Error(`Character ${ids[0]} ${key} differs from generated speech`);
+      }
+      for (const key of ["model", "stylePrompt"]) if (expected[key] !== void 0 && settings[key] !== expected[key].trim()) throw new Error(`Character ${ids[0]} ${key} differs from generated speech`);
+      return ids[0];
+    }
     var REPORT = "tts-warnings.json";
     var APPROVAL = "tts-approval.json";
     var read2 = (file) => fs10.existsSync(file) ? JSON.parse(fs10.readFileSync(file, "utf8")) : null;
@@ -64637,7 +64759,7 @@ var require_check_tts_quality = __commonJS({
       const speech = require_story_contract().storySpeech(win);
       const spoken = [...new Set(speech.map((g) => g.shot))].map((shot) => ({ i: shot - 1, text: speech.filter((g) => g.shot === shot).map((g) => g.n.tts || g.n.sub).join(". ") }));
       const texts = spoken.map((s2) => s2.text);
-      let episodeSettings;
+      const episodeSettings = /* @__PURE__ */ new Map();
       for (const [k, { s: s2, i: i2 }] of expected.entries()) {
         const file = path27.resolve(work, rows[k][1]);
         media[file] = hash4(fs10.readFileSync(file));
@@ -64648,6 +64770,7 @@ var require_check_tts_quality = __commonJS({
         inputs[file] = media[file];
         inputs[proofFile] = fs10.existsSync(proofFile) ? hash4(fs10.readFileSync(proofFile)) : null;
         inputs["text:" + i2] = normalize2(text2);
+        const speaker = characterVoice(win, s2, read2(proofFile));
         try {
           Object.assign(media, verifyProof(file, text2));
           const proof2 = JSON.parse(fs10.readFileSync(proofFile, "utf8"));
@@ -64657,8 +64780,8 @@ var require_check_tts_quality = __commonJS({
             if (!proof2.voiceSettings || proof2.voiceSettings.seed !== e2.seed || proof2.attempts.some((t2) => t2.seed !== e2.seed)) throw new Error("ElevenLabs episode seed drift");
             const { pronunciationDictionaryLocators, ...voiceIdentity } = proof2.voiceSettings;
             const settings = JSON.stringify(voiceIdentity);
-            if (episodeSettings && episodeSettings !== settings) throw new Error("ElevenLabs voice/settings changed between scenes");
-            episodeSettings = settings;
+            if (episodeSettings.has(speaker) && episodeSettings.get(speaker) !== settings) throw new Error("ElevenLabs voice/settings changed between scenes for the same speaker");
+            episodeSettings.set(speaker, settings);
           }
         } catch (e2) {
           if (fs10.existsSync(proofFile)) media[proofFile] = hash4(fs10.readFileSync(proofFile));
@@ -64686,7 +64809,7 @@ var require_check_tts_quality = __commonJS({
       });
       if (generated && [speed, min, max].some((n) => Number(n) !== 1)) throw new Error("ElevenLabs narration forbids post-synthesis tempo changes; set SPEED=1 and ATEMPO_MIN=ATEMPO_MAX=1, use generation.speed");
     }
-    module.exports = { check: check2, decide, approve, lastReport, findings, verifyProof, normalize: normalize2, cer, checkTempo };
+    module.exports = { characterVoice, check: check2, decide, approve, lastReport, findings, verifyProof, normalize: normalize2, cer, checkTempo };
     if (__require.main === module) {
       try {
         const [command, work, arg] = process.argv.slice(2);
@@ -89902,7 +90025,7 @@ async function generateCheckedSpeech(input, dependencies) {
     generator: request.generator,
     settingsSha256: sha256(JSON.stringify(settings)),
     ...request.episode ? { episode: request.episode } : {},
-    ...request.generator === "tts_elevenlabs_generate" ? { voiceSettings: Object.fromEntries(Object.entries(prepared.args).filter(([k]) => !["text", "previousText", "nextText", "outputPath", "filename", "timestamps"].includes(k))) } : {},
+    voiceSettings: Object.fromEntries(Object.entries(prepared.args).filter(([k]) => !["text", "input", "script", "previousText", "nextText", "outputPath", "filename", "timestamps", "turns"].includes(k))),
     model: REVIEW_MODEL,
     language: request.language,
     delivery: request.delivery
@@ -89917,7 +90040,7 @@ async function generateCheckedSpeech(input, dependencies) {
   try {
     if (existsSync10(proofFile)) {
       const old = JSON.parse(readFileSync9(proofFile, "utf8"));
-      if (Object.entries(base).every(([key, value]) => key === "model" || JSON.stringify(old[key]) === JSON.stringify(value))) {
+      if (Object.entries(base).every(([key, value]) => key === "model" || key === "voiceSettings" && old[key] === void 0 || JSON.stringify(old[key]) === JSON.stringify(value))) {
         if (!Array.isArray(old.attempts) || old.attempts.length > 3) throw new Error("Invalid attempt history");
         attempts.push(...old.attempts.map((take) => ({ ...take, model: take.model ?? old.model })));
         const last = attempts.at(-1);
@@ -89932,6 +90055,7 @@ async function generateCheckedSpeech(input, dependencies) {
           last.failures = [...Array.isArray(last.failures) ? last.failures : [], "Rejected during final listening: " + request.rejectTake.reason];
         }
         if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && transcriptSatisfied && existsSync10(output2) && old.audioSha256 === sha256(readFileSync9(output2)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, storedTranscript, reviewSchema.parse(last.review), last.signal.duration).length) {
+          if (old.voiceSettings === void 0) save2("pass", { audioSha256: old.audioSha256 });
           const lastSpacing = last.spacing;
           return {
             success: true,
@@ -92840,15 +92964,30 @@ var uuid2 = external_exports.string().uuid();
 var keyArg = external_exports.string().regex(/^[a-z0-9][a-z0-9-]{0,62}$/, "lowercase letters, digits or hyphens");
 var scope = { channel: channelArg, episodeDir: external_exports.string().optional() };
 var projectArg = external_exports.string().trim().min(1).max(100);
-var TTS_DEFAULTS = { engine: "elevenlabs", voiceId: "L4az9Gb378GIycFl2nAB", model: "eleven_multilingual_v2", speed: 1 };
-var ttsSchema = external_exports.object({
+function normalizeCharacterLanguage(value) {
+  const raw = value.trim().toLowerCase();
+  return { korean: "ko", english: "en", japanese: "ja", chinese: "zh", spanish: "es", french: "fr", portuguese: "pt" }[raw] || raw;
+}
+var ttsFields = {
   voiceLock: voiceLockConfigSchema.optional(),
   engine: external_exports.enum(["gemini", "supertonic", "elevenlabs", "mlx"]),
   voiceId: external_exports.string().trim().min(1).max(128),
   model: external_exports.string().trim().min(1).max(128).optional(),
-  speed: external_exports.number().min(0.7).max(1.2).optional(),
-  language: external_exports.string().trim().min(1).max(32).optional(),
+  speed: external_exports.number().min(0.7).max(1.2),
+  language: external_exports.string().trim().min(1).max(32).transform(normalizeCharacterLanguage).refine((v) => /^[a-z]{2}$/.test(v), "Use a two-letter language code or supported language name"),
   stylePrompt: external_exports.string().trim().min(1).max(1e3).optional()
+};
+var ttsSchema = external_exports.object(ttsFields).superRefine((tts, ctx) => {
+  if (tts.engine === "supertonic" && !/^[MF][1-5]$/.test(tts.voiceId)) ctx.addIssue({ code: "custom", path: ["voiceId"], message: "Supertonic voiceId must be M1\u2013M5 or F1\u2013F5" });
+  if (tts.engine === "gemini" && !Object.hasOwn(TTS_VOICES, tts.voiceId)) ctx.addIssue({ code: "custom", path: ["voiceId"], message: "Unknown Gemini voiceId" });
+  const issue2 = (field, message) => ctx.addIssue({ code: "custom", path: [field], message });
+  if (tts.engine === "supertonic" && !SUPERTONIC_LANGUAGES.includes(tts.language)) issue2("language", "Unsupported Supertonic language");
+  if (["gemini", "mlx"].includes(tts.engine) && tts.speed !== 1) issue2("speed", "This engine supports character speed 1 only");
+  if (tts.engine === "supertonic" && tts.model !== void 0) issue2("model", "Supertonic has no selectable model");
+  if (tts.engine === "gemini" && tts.model !== void 0 && ![...VALID_TTS_MODELS, ...GEMINI_38_TTS_MODELS].includes(tts.model)) issue2("model", "Unsupported Gemini model");
+  if (tts.engine === "elevenlabs" && tts.model !== void 0 && !ELEVENLABS_MODELS.includes(tts.model)) issue2("model", "Unsupported ElevenLabs model");
+  if (tts.engine === "elevenlabs" && !/^[A-Za-z0-9_-]{1,64}$/.test(tts.voiceId)) issue2("voiceId", "Invalid ElevenLabs voiceId");
+  if (tts.stylePrompt !== void 0 && (tts.engine !== "gemini" || tts.model?.startsWith("gemini-3.8-"))) issue2("stylePrompt", "This engine does not accept stylePrompt");
 });
 var fields = {
   key: keyArg.optional(),
@@ -92856,7 +92995,7 @@ var fields = {
   role: external_exports.string().trim().max(500).optional(),
   appearance: external_exports.string().trim().max(4e3).optional(),
   referenceImageUrl: external_exports.string().trim().max(2e3).optional(),
-  tts: ttsSchema.optional()
+  tts: ttsSchema
 };
 var characterListSchema = external_exports.object({ ...scope, project: projectArg.optional(), q: external_exports.string().trim().min(1).max(200).optional(), key: keyArg.optional(), page: external_exports.number().int().min(1).max(1e4).optional() });
 var characterGetSchema = external_exports.object({ ...scope, project: projectArg.optional(), id: uuid2.optional(), key: keyArg.optional() }).refine((a) => Number(Boolean(a.id)) + Number(Boolean(a.key)) === 1, "Pass exactly one of id or key").refine((a) => !(a.project && a.id), "project narrows a key lookup; an id is already exact. Drop one.");
@@ -92868,11 +93007,11 @@ var characterCreateSchema = external_exports.object({
   ...fields,
   name: fields.name.optional()
 }).refine((a) => a.name || a.identityDir, "Pass name, or identityDir with an identity.md heading");
-var characterUpdateSchema = external_exports.object({ ...scope, id: uuid2, key: keyArg.nullable().optional(), name: fields.name.optional(), role: fields.role.nullable(), appearance: fields.appearance.nullable(), referenceImageUrl: fields.referenceImageUrl.nullable(), tts: ttsSchema.nullable().optional() }).refine((a) => ["key", "name", "role", "appearance", "referenceImageUrl", "tts"].some((k) => a[k] !== void 0), "Nothing to change");
+var characterUpdateSchema = external_exports.object({ ...scope, id: uuid2, key: keyArg.nullable().optional(), name: fields.name.optional(), role: fields.role.nullable(), appearance: fields.appearance.nullable(), referenceImageUrl: fields.referenceImageUrl.nullable(), tts: ttsSchema.optional() }).refine((a) => ["key", "name", "role", "appearance", "referenceImageUrl", "tts"].some((k) => a[k] !== void 0), "Nothing to change");
 var characterDeleteSchema = external_exports.object({ ...scope, id: uuid2 });
 var characterImageUploadSchema = external_exports.object({ ...scope, id: uuid2, file: external_exports.string().min(1), view: external_exports.enum(["front", "back", "face", "extra"]).optional(), label: external_exports.string().max(100).optional(), sort: external_exports.number().int().min(0).max(2147483647).optional() });
 var characterExtraDeleteSchema = external_exports.object({ ...scope, id: uuid2, imageId: uuid2 });
-var characterTtsSetSchema = external_exports.object({ ...scope, id: uuid2, voiceLock: voiceLockConfigSchema.optional(), engine: ttsSchema.shape.engine.optional(), voiceId: ttsSchema.shape.voiceId.optional(), model: ttsSchema.shape.model, speed: ttsSchema.shape.speed, language: ttsSchema.shape.language, stylePrompt: ttsSchema.shape.stylePrompt });
+var characterTtsSetSchema = external_exports.object({ ...scope, id: uuid2, voiceLock: voiceLockConfigSchema.optional(), engine: ttsFields.engine.optional(), voiceId: ttsFields.voiceId.optional(), model: ttsFields.model, speed: ttsFields.speed.optional(), language: ttsFields.language.optional(), stylePrompt: ttsFields.stylePrompt });
 function readIdentity(dir) {
   const folder = path15.resolve(dir);
   const file = path15.join(folder, "identity.md");
@@ -92958,7 +93097,7 @@ async function createCharacter(client, args, channel) {
     role: args.role ?? identity?.role,
     appearance: args.appearance ?? identity?.appearance,
     referenceImageUrl: args.referenceImageUrl,
-    tts: args.tts
+    tts: ttsSchema.parse(args.tts)
   };
   if (!body.name) throw new Error(`${args.identityDir}/identity.md has no "# Name" heading \u2014 pass name. Nothing was sent.`);
   if (!body.project) throw new Error("No channel to file the character under \u2014 pass project (the channel name), channel, or episodeDir. Nothing was sent.");
@@ -92988,9 +93127,9 @@ async function uploadCharacterImage(client, args) {
 }
 async function setCharacterTts(client, args) {
   const { data: current } = await client.getCharacter(args.id);
-  const existing = current.tts ?? {};
+  const previous = current.tts;
+  const existing = previous && args.engine && args.engine !== previous.engine ? { language: previous.language, speed: previous.speed } : previous ?? {};
   const tts = ttsSchema.parse({
-    ...TTS_DEFAULTS,
     ...existing,
     ...args.voiceLock !== void 0 ? { voiceLock: args.voiceLock } : {},
     ...args.engine ? { engine: args.engine } : {},
@@ -93072,7 +93211,7 @@ async function applyVoiceLock(input, dependencies = defaults) {
     } else {
       if (request.tts.engine !== "elevenlabs") throw new Error("Voice lock requires character tts.engine=elevenlabs and its pinned voiceId");
       if (!/^[A-Za-z0-9_-]{1,64}$/.test(request.tts.voiceId)) throw new Error("Invalid ElevenLabs voiceId");
-      const language = qwen3AsrTranscribeSchema.parse({ audioPath: "source.wav", language: request.tts.language ?? "ko" }).language;
+      const language = qwen3AsrTranscribeSchema.parse({ audioPath: "source.wav", language: request.tts.language }).language;
       const sourceCopy = path16.join(dir, `source${path16.extname(result.sourcePath).toLowerCase()}`);
       copyFileSync(result.sourcePath, sourceCopy);
       const sourceAudio = path16.join(dir, "dialogue.wav");
@@ -93122,12 +93261,12 @@ var VOICE_LOCK_TOOLS = [{
     characterId: { type: "string", description: "Speaking character id from the board/portal" },
     expectedText: { type: "string", minLength: 1, maxLength: 4e3, description: "Approved dialogue for comparison; never supplied to blind ASR" },
     inputKind: { type: "string", enum: ["single_speaker", "dialogue_stem"], description: "Confirm one speaker without background music/effects to preserve; stems must be remixed externally" },
-    tts: { type: "object", required: ["engine", "voiceId"], description: "Pinned character voice block", properties: {
+    tts: { type: "object", required: ["engine", "voiceId", "language", "speed"], description: "Complete pinned character voice block from the character sheet", properties: {
       engine: { type: "string", enum: ["gemini", "supertonic", "elevenlabs", "mlx"], description: "Must be elevenlabs when enabled" },
       voiceId: { type: "string", description: "Pinned ElevenLabs voice_id" },
       model: { type: "string", description: "Existing TTS model, not used for STS" },
       speed: { type: "number", minimum: 0.7, maximum: 1.2, description: "Existing TTS speed, not applied to STS" },
-      language: { type: "string", description: "ASR language, default ko" },
+      language: { type: "string", description: "Pinned character language used for ASR" },
       stylePrompt: { type: "string", description: "Existing TTS style, not sent to STS" },
       voiceLock: VOICE_LOCK_PROPERTY
     } }
@@ -94256,7 +94395,7 @@ Returns: JSON \u2014 { candidate, chosen, findings[] }.`,
     name: "portal_character_create",
     title: "Create a portal character",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    description: "Create a character in the workspace. Never a project id: the portal files it under project = the channel name (default: the channel the key was read off, override with project) \u2014 the same rule the storyboard import uses, so the character is available to that channel's playlists. Pass name and fields directly, or identityDir (assets/characters/<id>) to read the key from the folder name and name/\uC5ED\uD560/\uC0DD\uAE40\uC0C8 from identity.md; explicit fields win. file sends one PNG/JPEG/WebP panel (5 MiB) as the front view right after creation; use image_upload for back and face. tts is optional here \u2014 portal_character_tts_set fills the owner defaults.",
+    description: "Create a character in the workspace. Never a project id: the portal files it under project = the channel name (default: the channel the key was read off, override with project) \u2014 the same rule the storyboard import uses, so the character is available to that channel's playlists. Pass name and fields directly, or identityDir (assets/characters/<id>) to read the key from the folder name and name/\uC5ED\uD560/\uC0DD\uAE40\uC0C8 from identity.md; explicit fields win. file sends one PNG/JPEG/WebP panel (5 MiB) as the front view right after creation; use image_upload for back and face. tts is required at creation; pass the character sheet voice explicitly.",
     inputSchema: { type: "object", properties: {
       channel: PORTAL_CHANNEL_ARG,
       episodeDir: PORTAL_EPISODE_DIR_ARG,
@@ -94268,14 +94407,14 @@ Returns: JSON \u2014 { candidate, chosen, findings[] }.`,
       role: { type: "string", maxLength: 500, description: "Role in the channel, e.g. \uC9C4\uD589\uC790" },
       appearance: { type: "string", maxLength: 4e3, description: "Look \u2014 the \uC0DD\uAE40\uC0C8 line" },
       referenceImageUrl: { type: "string", maxLength: 2e3, description: "External image URL; prefer file" },
-      tts: { type: "object", description: "Voice block; optional \u2014 portal_character_tts_set fills the defaults", properties: { voiceLock: VOICE_LOCK_PROPERTY, engine: { type: "string", enum: ["gemini", "supertonic", "elevenlabs", "mlx"], description: "TTS engine" }, voiceId: { type: "string", description: "Voice id on that engine" }, model: { type: "string", description: "Model name, e.g. eleven_multilingual_v2" }, speed: { type: "number", minimum: 0.7, maximum: 1.2, description: "Speaking rate" }, language: { type: "string", description: "Language code, e.g. ko" }, stylePrompt: { type: "string", description: "Style direction for engines that read one" } }, required: ["engine", "voiceId"] }
-    } }
+      tts: { type: "object", description: "Required character voice from identity.md; never substitute narrator defaults", properties: { voiceLock: VOICE_LOCK_PROPERTY, engine: { type: "string", enum: ["gemini", "supertonic", "elevenlabs", "mlx"], description: "TTS engine" }, voiceId: { type: "string", description: "Voice id on that engine" }, model: { type: "string", description: "Model name, e.g. eleven_multilingual_v2" }, speed: { type: "number", minimum: 0.7, maximum: 1.2, description: "Speaking rate 0.7\u20131.2; Gemini and MLX require 1" }, language: { type: "string", description: "Two-letter language code or supported name, e.g. ko or Korean; must be supported by the engine" }, stylePrompt: { type: "string", description: "Only Gemini 2.5/3.1 accepts stylePrompt" } }, required: ["engine", "voiceId", "language", "speed"] }
+    }, required: ["tts"] }
   },
   {
     name: "portal_character_update",
     title: "Update a portal character",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-    description: "Partial update by id \u2014 key, name, role, appearance, referenceImageUrl, tts. null clears a nullable field. Fields you leave out stay. For the voice block alone prefer portal_character_tts_set (it fills defaults); for the image prefer portal_character_image_upload.",
+    description: "Partial update by id \u2014 key, name, role, appearance, referenceImageUrl, tts. null clears a nullable field. Fields you leave out stay. For the voice block alone prefer portal_character_tts_set (it preserves existing fields); for the image prefer portal_character_image_upload.",
     inputSchema: { type: "object", required: ["id"], properties: {
       channel: PORTAL_CHANNEL_ARG,
       episodeDir: PORTAL_EPISODE_DIR_ARG,
@@ -94285,7 +94424,7 @@ Returns: JSON \u2014 { candidate, chosen, findings[] }.`,
       role: { type: ["string", "null"], maxLength: 500, description: "Role; null clears" },
       appearance: { type: ["string", "null"], maxLength: 4e3, description: "Look; null clears" },
       referenceImageUrl: { type: ["string", "null"], maxLength: 2e3, description: "External image URL; null clears (prefer portal_character_image_upload)" },
-      tts: { type: ["object", "null"], description: "Whole voice block; null clears (prefer portal_character_tts_set)", properties: { voiceLock: VOICE_LOCK_PROPERTY, engine: { type: "string", enum: ["gemini", "supertonic", "elevenlabs", "mlx"], description: "TTS engine" }, voiceId: { type: "string", description: "Voice id on that engine" }, model: { type: "string", description: "Model name" }, speed: { type: "number", description: "Speaking rate 0.7\u20131.2" }, language: { type: "string", description: "Language code" }, stylePrompt: { type: "string", description: "Style direction" } } }
+      tts: { type: "object", description: "Whole voice block; cannot be cleared (prefer portal_character_tts_set)", required: ["engine", "voiceId", "language", "speed"], properties: { voiceLock: VOICE_LOCK_PROPERTY, engine: { type: "string", enum: ["gemini", "supertonic", "elevenlabs", "mlx"], description: "TTS engine" }, voiceId: { type: "string", description: "Voice id on that engine" }, model: { type: "string", description: "Supported engine model; Supertonic has no model selector" }, speed: { type: "number", description: "Speaking rate 0.7\u20131.2; Gemini and MLX require 1" }, language: { type: "string", description: "Language code" }, stylePrompt: { type: "string", description: "Only Gemini 2.5/3.1 accepts stylePrompt" } } }
     } }
   },
   {
@@ -94326,18 +94465,18 @@ Returns: JSON \u2014 { candidate, chosen, findings[] }.`,
     name: "portal_character_tts_set",
     title: "Set a character's TTS voice",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-    description: "Write the tts block the narration lane reads \u2014 engine, voiceId, model, speed (0.7\u20131.2), language, stylePrompt. Whatever you leave out keeps its current value or falls back to the owner defaults: ElevenLabs voice L4az9Gb378GIycFl2nAB, model eleven_multilingual_v2, speed 1.0. Call with only id to apply the defaults.",
+    description: "Write the tts block the narration lane reads \u2014 engine, voiceId, model, speed (0.7\u20131.2), language, stylePrompt. Omitted fields keep their current values. A character without a complete voice must supply engine, voiceId, language and speed explicitly; no narrator defaults are substituted.",
     inputSchema: { type: "object", required: ["id"], properties: {
       channel: PORTAL_CHANNEL_ARG,
       episodeDir: PORTAL_EPISODE_DIR_ARG,
       id: { type: "string", format: "uuid", description: "Portal character id" },
       voiceLock: VOICE_LOCK_PROPERTY,
-      engine: { type: "string", enum: ["gemini", "supertonic", "elevenlabs", "mlx"], description: "TTS engine (default elevenlabs)" },
-      voiceId: { type: "string", maxLength: 128, description: "Voice id (default L4az9Gb378GIycFl2nAB)" },
-      model: { type: "string", maxLength: 128, description: "Model name (default eleven_multilingual_v2)" },
-      speed: { type: "number", minimum: 0.7, maximum: 1.2, description: "Speaking rate (default 1.0)" },
-      language: { type: "string", maxLength: 32, description: "Language code, e.g. ko" },
-      stylePrompt: { type: "string", maxLength: 1e3, description: "Style direction for engines that read one" }
+      engine: { type: "string", enum: ["gemini", "supertonic", "elevenlabs", "mlx"], description: "TTS engine; preserves current value when omitted" },
+      voiceId: { type: "string", maxLength: 128, description: "Character voice id; no implicit default" },
+      model: { type: "string", maxLength: 128, description: "Supported engine model; Supertonic has no model selector" },
+      speed: { type: "number", minimum: 0.7, maximum: 1.2, description: "Speaking rate; Gemini and MLX require 1" },
+      language: { type: "string", maxLength: 32, description: "Two-letter language code or supported name, e.g. ko or Korean; must be supported by the engine" },
+      stylePrompt: { type: "string", maxLength: 1e3, description: "Only Gemini 2.5/3.1 accepts stylePrompt" }
     } }
   }
 ];

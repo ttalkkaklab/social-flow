@@ -168,6 +168,10 @@ function blockers(ep, stage) {
   if (!sc || sc.broken) return out;
 
   if (stage === 'approved' || stage === 'produced') {
+    if (!ep.has.video && ep.has.generatedFootage)
+      out.push(ep.has.generatedFootage + ' generated clip(s) exist but no final video — resume narration, assembly and delivery; clip generation is not completion');
+    if (!ep.has.video && ep.pendingSpeechReview)
+      out.push('speech review allowance pending — resolve the review budget; local synthesis and independent preparation can continue');
     const missingFootage = req.footageFiles.filter((f) => !exists(path.join(ep.dir, f)));
     if (missingFootage.length)
       out.push(missingFootage.length + ' filmed scene file(s) not saved yet — ' +
@@ -242,6 +246,7 @@ function inspect(episodeDir) {
       images: lsCount(path.join(sbDir, 'images'), /^scene-\d+\.png$/i),
       slides: lsCount(path.join(sbDir, 'slides'), /\.html$/i),
       footage: lsCount(path.join(dir, 'footage'), /\.(mp4|mov|m4v)$/i),
+      generatedFootage: lsCount(path.join(sbDir, 'footage'), /\.(mp4|mov|m4v)$/i),
       video: exists(path.join(outDir, 'video', 'video.mp4')),
       subs: exists(path.join(outDir, 'video', 'subs.srt')),
       cover: exists(path.join(outDir, 'video', 'cover.jpg')),
@@ -257,6 +262,17 @@ function inspect(episodeDir) {
     }
   };
 
+  const pendingSpeech = path.join(work, 'tts-plan.pending.json');
+  ep.pendingSpeechReview = false;
+  if (exists(pendingSpeech)) {
+    try {
+      ep.pendingSpeechReview = JSON.parse(fs.readFileSync(pendingSpeech, 'utf8')).status === 'approval_pending';
+    } catch (e) {
+      // A malformed checkpoint cannot establish an approval or block unrelated work.
+      ep.checkpointError = 'Cannot read tts-plan.pending.json: ' + e.message;
+    }
+  }
+
   ep.frontmatter = frontmatter(path.join(sbDir, 'storyboard.md')) || {};
   ep.scenesData = readScenes(path.join(sbDir, 'scenes.js'));
   ep.req = ep.scenesData && !ep.scenesData.broken
@@ -266,6 +282,7 @@ function inspect(episodeDir) {
   ep.stage = stageOf(ep);
   ep.next = nextStep(ep, ep.stage);
   ep.blocked = blockers(ep, ep.stage);
+  if (ep.checkpointError) ep.blocked.push(ep.checkpointError);
   return ep;
 }
 
@@ -295,6 +312,7 @@ function render(ep) {
   if (ep.has.images) made.push(ep.has.images + ' image' + (ep.has.images > 1 ? 's' : ''));
   if (ep.has.slides) made.push(ep.has.slides + ' slide' + (ep.has.slides > 1 ? 's' : ''));
   if (ep.has.footage) made.push(ep.has.footage + ' footage file' + (ep.has.footage > 1 ? 's' : ''));
+  if (ep.has.generatedFootage) made.push(ep.has.generatedFootage + ' generated clips');
   if (ep.has.video) made.push('video.mp4');
   if (ep.has.platformText.length) made.push(ep.has.platformText.join('/'));
   if (made.length) L.push('  ' + made.join(' · '));
@@ -400,6 +418,23 @@ function selftest() {
   }), 'produced');
   ok('a ready queue marker with no video is a blocker',
      b.some((x) => /queue_threads/.test(x)));
+
+  {
+    const dir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'episode-resume-'));
+    fs.mkdirSync(path.join(dir, 'storyboard', 'footage'), { recursive: true });
+    fs.mkdirSync(path.join(dir, '.work'));
+    fs.writeFileSync(path.join(dir, 'storyboard', 'scenes.js'), 'window.SCENES=[];');
+    fs.writeFileSync(path.join(dir, 'storyboard', 'storyboard.md'), '---\nstatus: approved\n---\n');
+    fs.writeFileSync(path.join(dir, 'storyboard', 'footage', 'scene-1.mp4'), 'clip');
+    fs.writeFileSync(path.join(dir, '.work', 'tts-plan.pending.json'), '{"status":"approval_pending"}');
+    const ep = inspect(dir);
+    ok('generated clips are counted without promoting the episode to produced', ep.has.generatedFootage === 1 && ep.stage === 'approved');
+    ok('clip-only production reports the missing final assembly', ep.blocked.some(x => /no final video/.test(x)));
+    ok('pending speech allowance is visible on resume', ep.blocked.some(x => /speech review allowance/.test(x)));
+    fs.writeFileSync(path.join(dir, '.work', 'tts-plan.pending.json'), '{"status":"resolved"}');
+    ok('resolved allowance does not keep blocking', !inspect(dir).blocked.some(x => /speech review allowance/.test(x)));
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 
   const sped = (v) => blockers(Object.assign({}, base, {
     has: Object.assign({}, base.has, { video: true, spedUp: v })

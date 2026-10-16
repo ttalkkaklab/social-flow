@@ -66,6 +66,8 @@ function verify(work, board) {
   const file = path.join(board, 'scenes.js');
   if (!fs.existsSync(file)) throw new Error('source storyboard/scenes.js is required; pass the storyboard directory as build-reel.sh argument 2');
   const win = evaluateWindowScript(fs.readFileSync(file, 'utf8'), {filename:file});
+  const voiceErrors = require('../../_shared/character-voice.js').boardVoiceErrors(win);
+  if (voiceErrors.length) throw new Error(voiceErrors.join('; '));
   // Invalid subtitle inputs are not quality warnings and cannot be approved away.
   const subtitleMedia=require('./explicit-subtitles.js').media(work,win.SCENES);
   const videoGate = require('./assembly-video-gate.js').check(work, board);
