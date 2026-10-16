@@ -10,6 +10,7 @@
     document.documentElement.lang = value;
     document.querySelectorAll('[data-ko][data-en]').forEach(function (el) { el.textContent = el.dataset[value]; });
     if (picker) picker.value = value;
+    document.querySelectorAll('.review-play').forEach(updateVoiceLabel);
     try { localStorage.setItem('social-flow.lang', value); } catch (_) { /* file privacy */ }
   }
   translate(lang);
@@ -22,6 +23,7 @@
     var shown = 0;
     document.querySelectorAll('[data-card]').forEach(function (card) {
       card.hidden = !card.dataset.search.includes(q) || !!(selected && card.dataset.series !== selected);
+      if (card.hidden) card.querySelectorAll('audio').forEach(function (audio) { audio.pause(); });
       if (!card.hidden) shown++;
     });
     var empty = document.querySelector('[data-no-results]');
@@ -42,6 +44,36 @@
   window.addEventListener('afterprint', function () {
     (printState || []).forEach(function (state) { state.el.open = state.open; });
     printState = null;
+  });
+  function updateVoiceLabel(button) {
+    var ko = document.documentElement.lang === 'ko';
+    var label = button.disabled
+      ? (ko ? '음성 샘플 없음' : 'Voice sample unavailable')
+      : button.hasAttribute('data-playing')
+        ? (ko ? '음성 일시정지' : 'Pause voice')
+        : (ko ? '음성 재생' : 'Play voice');
+    button.title = label;
+    button.setAttribute('aria-label', button.dataset.voiceName + ' · ' + label);
+  }
+  document.querySelectorAll('[data-audio-toggle]').forEach(function (button) {
+    var audio = document.getElementById(button.dataset.audioToggle);
+    function sync() {
+      button.toggleAttribute('data-playing', !audio.paused && !audio.ended);
+      updateVoiceLabel(button);
+    }
+    button.addEventListener('click', function () {
+      if (!audio.paused) { audio.pause(); return; }
+      document.querySelectorAll('.review-voice audio').forEach(function (other) {
+        if (other !== audio) other.pause();
+      });
+      audio.play().catch(function () { sync(); });
+    });
+    ['play', 'pause', 'ended'].forEach(function (event) { audio.addEventListener(event, sync); });
+    audio.addEventListener('error', function () {
+      button.disabled = true;
+      button.removeAttribute('data-playing');
+      updateVoiceLabel(button);
+    });
   });
   // Native dialog supplies focus containment, Escape and focus restoration.
   var dialog = document.createElement('dialog');
