@@ -130,7 +130,9 @@ function assemble(win, index, dir) {
   const previzFrame = previz && typeof previz.firstFrame === 'string' ? (dir ? path.resolve(dir, previz.firstFrame) : previz.firstFrame) : null;
   const castReferenceImages = activeCast.filter(({ entry }) => text(entry.name) && text(entry.image))
     .map(({ id, entry }) => ({ id, name: entry.name, path: dir ? path.resolve(dir, entry.image) : entry.image }));
-  const sourceReferenceImages = [...(previzFrame ? [previzFrame] : []), ...(pack?.referenceImagePaths || []), ...castReferenceImages.map(ref => ref.path)];
+  const propSnapshot = require('./prop-continuity.js').snapshot(win, index);
+  const propReferenceImages = propSnapshot.filter(p => p.visible).flatMap(p => p.references.map(r => dir ? path.resolve(dir, r.path) : r.path));
+  const sourceReferenceImages = [...(previzFrame ? [previzFrame] : []), ...(pack?.referenceImagePaths || []), ...castReferenceImages.map(ref => ref.path), ...propReferenceImages];
   const castPromptLines = appliesCutLook ? castLines(cast, castIds, cutType) : [];
   const castImageLines = castReferenceImages.map(ref => {
     const imageNumber = sourceReferenceImages.indexOf(ref.path) + 1;
@@ -140,7 +142,8 @@ function assemble(win, index, dir) {
     .map(({ entry }) => `${entry.name.trim()} keeps this exact appearance: ${entry.sheet}`);
   const perCutTreatment = appliesCutLook ? cutTreatment(preset, cutType) : '';
   const world = style.worlds?.[d.worldId] ?? style.world;
-  const source = [canvas + ', edge-to-edge composition.',
+  const propPrompt = require('./prop-continuity.js').prompt(win, index);
+  const source = [...(propPrompt ? [propPrompt] : []), canvas + ', edge-to-edge composition.',
     'Narrated meaning this picture must convey: ' + spoken,
     'Opening state: ' + d.before,
     ...(previzFrame ? [PREVIZ_SOURCE_LOCK] : []),
@@ -153,13 +156,13 @@ function assemble(win, index, dir) {
     'Camera composition: ' + camera.framing,
     'Spatial continuity: ' + d.continuity,
     'Keep the physical subject legible at phone size. The image contains only the scene; subtitles are added in editing.'].join('\n');
-  const lock = lockText(d, style, treatment, castLocks) + (isDrone(camera) ? '. The flight keeps continuous terrain parallax and stable landmarks; the picture stays a clean aerial view with scenery at every frame edge' : '');
+  const lock = lockText(d, style, treatment, castLocks) + (propPrompt ? ". " + propPrompt : "") + (isDrone(camera) ? '. The flight keeps continuous terrain parallax and stable landmarks; the picture stays a clean aerial view with scenery at every frame edge' : '');
   let motionPrompt = null;
   const engine = v.video?.engine || v.engine || 'seedance';
   if (!missingSlots.length && engine === 'astra') {
     const astraAppearance = activeCast.filter(({ entry }) => text(entry.sheet))
       .map(({ entry }) => 'Appearance to preserve in every frame: ' + clause(entry.sheet) + '.');
-    motionPrompt = astraMotionPrompt(d, camera, style, treatment, !!spoken.trim(), astraAppearance);
+    motionPrompt = astraMotionPrompt(d, camera, style, treatment, !!spoken.trim(), [...astraAppearance, ...(propPrompt ? [propPrompt] : [])]);
   } else if (!missingSlots.length) {
     const onReferenceRoute = previz && (v.video.engine || v.engine || 'seedance') !== 'host' && previzHandoff(scene) === 'reference_video';
     const clip = PROMPT.clipAssemble({ engine: 'seedance', camera, motion: motionText(d), locks: lock,
@@ -171,7 +174,7 @@ function assemble(win, index, dir) {
       '. Rewrite videoDesign.action, motion.beats or continuity positively, in English, without seconds.');
     motionPrompt = clip.prompt;
   }
-  return { sourcePrompt: source, stylePreset: preset, cutType, castIds,
+  return { propSnapshot, propReferenceImages, sourcePrompt: source, stylePreset: preset, cutType, castIds,
     styleBinding: pack?.binding || null,
     styleGuidePath: pack?.guidePath || null,
     castReferenceImages,

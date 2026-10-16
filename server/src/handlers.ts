@@ -1524,8 +1524,12 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   storyboard_read: async (args) => {
     storyboard.contract();  // a missing structure-contract.js reports itself here, before the argument schema does
     const a = parseArgs(storyboard.storyboardReadSchema, args);
-    const { win } = storyboard.readBoard(a.path);
-    return text(JSON.stringify(storyboard.contract().outline(win, a.level), null, 2));
+    const { win, file } = storyboard.readBoard(a.path);
+    const outline = storyboard.contract().outline(win, a.level);
+    outline.sha256 = (await import('node:crypto')).createHash('sha256').update((await import('node:fs')).readFileSync(file)).digest('hex');
+    const doc = win.SB_DOC as Record<string, unknown> | undefined;
+    if (doc?.props || doc?.propContinuity) outline.propSheet = { props: doc.props, continuity: doc.propContinuity };
+    return text(JSON.stringify(outline, null, 2));
   },
   storyboard_apply: async (args) => {
     storyboard.contract();

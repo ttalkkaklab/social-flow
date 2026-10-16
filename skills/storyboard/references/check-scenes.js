@@ -631,6 +631,9 @@ function check(win, fmt, opts) {
     else if (f.level === 'later') machine(f.where, f.what);
     else warn(f.where, f.what);
   });
+  require('./prop-continuity.js').check(win).forEach(f => {
+    if (f.level === 'bad') bad(f.where, f.what); else warn(f.where, f.what);
+  });
   const motionPolicy = productionMode.policy(channelPolicy, win.PRODUCTION, scenes);
   const main = scenes.filter((s) => s.type !== 'broll' && s.type !== 'outro');
   const cover = scenes.find((s) => s.type === 'cover');

@@ -27846,7 +27846,7 @@ var require_websocket = __commonJS({
     var http4 = __require("http");
     var net = __require("net");
     var tls = __require("tls");
-    var { randomBytes: randomBytes2, createHash: createHash11 } = __require("crypto");
+    var { randomBytes: randomBytes2, createHash: createHash12 } = __require("crypto");
     var { Duplex, Readable: Readable2 } = __require("stream");
     var { URL: URL2 } = __require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -28514,7 +28514,7 @@ var require_websocket = __commonJS({
           abortHandshake(websocket, socket, "Invalid Upgrade header");
           return;
         }
-        const digest2 = createHash11("sha1").update(key + GUID).digest("base64");
+        const digest2 = createHash12("sha1").update(key + GUID).digest("base64");
         if (res.headers["sec-websocket-accept"] !== digest2) {
           abortHandshake(websocket, socket, "Invalid Sec-WebSocket-Accept header");
           return;
@@ -28883,7 +28883,7 @@ var require_websocket_server = __commonJS({
     var EventEmitter = __require("events");
     var http4 = __require("http");
     var { Duplex } = __require("stream");
-    var { createHash: createHash11 } = __require("crypto");
+    var { createHash: createHash12 } = __require("crypto");
     var extension2 = require_extension();
     var PerMessageDeflate2 = require_permessage_deflate();
     var subprotocol2 = require_subprotocol();
@@ -29190,7 +29190,7 @@ var require_websocket_server = __commonJS({
           );
         }
         if (this._state > RUNNING) return abortHandshake(socket, 503);
-        const digest2 = createHash11("sha1").update(key + GUID).digest("base64");
+        const digest2 = createHash12("sha1").update(key + GUID).digest("base64");
         const headers = [
           "HTTP/1.1 101 Switching Protocols",
           "Upgrade: websocket",
@@ -64655,9 +64655,9 @@ var require_check_tts_quality = __commonJS({
     var fs10 = __require("node:fs");
     var path27 = __require("node:path");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
-    var { createHash: createHash11 } = __require("node:crypto");
+    var { createHash: createHash12 } = __require("node:crypto");
     var { authorizeSpeed: authorizeSpeed4 } = require_tts_speed_policy();
-    var hash4 = (value) => createHash11("sha256").update(value).digest("hex");
+    var hash4 = (value) => createHash12("sha256").update(value).digest("hex");
     var normalize2 = (text2) => text2.normalize("NFKC").toLowerCase().replace(/[\p{P}\p{Z}\s]/gu, "");
     function cer(expected, heard) {
       const a = [...normalize2(expected)], b = [...normalize2(heard)];
@@ -64833,14 +64833,14 @@ var require_check_tts_quality = __commonJS({
 var require_final_speech_chapters = __commonJS({
   "../skills/produce/references/final-speech-chapters.js"(exports, module) {
     "use strict";
-    var { createHash: createHash11 } = __require("node:crypto");
+    var { createHash: createHash12 } = __require("node:crypto");
     var { spawnSync: spawnSync3 } = __require("node:child_process");
     var { normalize: normalize2, cer } = require_check_tts_quality();
     var RATE2 = 24e3;
     var BYTES2 = 4;
     var LIMIT3 = 14 * 1024 * 1024;
     var POLICY2 = "final-speech-chapters-v1";
-    var hash4 = (x2) => createHash11("sha256").update(x2).digest("hex");
+    var hash4 = (x2) => createHash12("sha256").update(x2).digest("hex");
     var digest2 = (x2) => hash4(JSON.stringify(x2));
     function decode2(media) {
       const encoded2 = spawnSync3("ffmpeg", ["-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", String(RATE2), "-c:a", "flac", "-f", "flac", "pipe:1"], { maxBuffer: RATE2 * BYTES2 * 1800 + 65536, timeout: 6e4 });
@@ -76983,7 +76983,7 @@ var properties = {
   shotId: { type: "string" },
   index: { type: "integer", minimum: 0, description: "Zero-based insertion position, or narration line index." },
   value: { type: "object", additionalProperties: true, description: "Field patch; nested objects merge, arrays replace. Transition: {transition,reason,transitionSeconds?,continuity?}. Sound: {sound?,effect?}. Background prompt: {bgPrompt}. Other settings use their direct object." },
-  key: { type: "string", description: "Episode meta key: THEME, COMPREHENSION, STORY, PRODUCTION, MOTION_POLICY, STRUCTURE, PREVIZ, SLIDE_OBJECTS, MUSIC, VOICE." },
+  key: { type: "string", description: "Episode meta key: THEME, COMPREHENSION, STORY, PRODUCTION, MOTION_POLICY, STRUCTURE, PREVIZ, SLIDE_OBJECTS, MUSIC, VOICE, SB_DOC (prop sheets and continuity)." },
   order: { type: "array", items: { anyOf: [{ type: "string" }, { type: "integer" }] }, description: "Every identifier exactly once; narration uses zero-based indexes." },
   targetSequenceId: { type: "string", description: "On sequence deletion, explicitly transfer its scenes to this sequence instead of deleting them." },
   targetSceneNo: { type: "integer", minimum: 1, description: "On scene deletion, explicitly transfer its shots to this scene instead of deleting them." },
@@ -84445,6 +84445,7 @@ var PORTAL_API_ROUTES = Object.fromEntries(
 );
 
 // src/storyboard.ts
+import { createHash as createHash2 } from "node:crypto";
 import { execFileSync } from "node:child_process";
 
 // src/scenes-vm.ts
@@ -84497,7 +84498,7 @@ function evaluateWindowScript(source, options = {}) {
 }
 
 // src/storyboard.ts
-import { existsSync as existsSync2, readFileSync as readFileSync3, renameSync, statSync as statSync3, unlinkSync as unlinkSync2, writeFileSync } from "node:fs";
+import { existsSync as existsSync2, mkdirSync, readFileSync as readFileSync3, renameSync, statSync as statSync3, unlinkSync as unlinkSync2, writeFileSync } from "node:fs";
 import * as nodeModule from "node:module";
 import { basename, dirname, join as join2, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -84522,6 +84523,9 @@ function renderPurposes() {
 function stillCameraEffectList() {
   const routing = loadFromHere(join2(REFERENCES_DIR, "render-routing.js"));
   return routing.STILL_CAMERA_EFFECTS;
+}
+function propContract() {
+  return loadFromHere(join2(REFERENCES_DIR, "prop-continuity.js"));
 }
 var tuple = (list2) => external_exports.enum(list2);
 var MISSING = ["__contract-missing__"];
@@ -84710,6 +84714,11 @@ var storyboardApplySchema = external_exports.object({
   removeScenes: external_exports.array(external_exports.number().int().positive()).optional(),
   removeSequences: external_exports.array(external_exports.string()).optional(),
   globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY"),
+  expectedSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional().describe("Required for propSheet file edits; use the hash from storyboard_read"),
+  propSheet: external_exports.object({
+    props: external_exports.array(external_exports.record(external_exports.unknown())),
+    continuity: external_exports.record(external_exports.unknown()).optional()
+  }).strict().optional().describe("Replace the prop registry and optional version:1 continuity ledger together. SB_DOC.characters must register every owner and holder. See prop-continuity.md"),
   dryRun: external_exports.boolean().default(false).describe("Validate and report, write nothing")
 });
 function scenesPath(target) {
@@ -84788,6 +84797,11 @@ function applyPatch(win, patch) {
     if (k === "SCENES" || k === "STRUCTURE") throw new Error(`set ${k} through the dedicated fields, not globals`);
     next[k] = v;
   }
+  if (patch.propSheet) next.SB_DOC = {
+    ...next.SB_DOC ?? {},
+    props: patch.propSheet.props,
+    propContinuity: patch.propSheet.continuity
+  };
   if (patch.set) {
     next.STRUCTURE = patch.set.structure;
     next.SCENES = patch.set.shots.slice();
@@ -84919,6 +84933,7 @@ function applyPatch(win, patch) {
     synced = contract().sync(next);
     findings.push(...contract().check(next, { draft: patch.draft }));
   }
+  findings.push(...propContract().check(next));
   return { win: next, findings, synced };
 }
 function applyStoryboard(args) {
@@ -84929,6 +84944,10 @@ function applyStoryboard(args) {
   if (exists) ({ header, win } = readBoard(file));
   else if (!args.set) throw new Error(`no scenes.js at ${file} \u2014 a new board is written with \`set\` (structure + shots)`);
   else if (!existsSync2(dirname(file))) throw new Error(`directory does not exist: ${dirname(file)}`);
+  const original = exists ? readFileSync3(file, "utf8") : "";
+  const originalHash = createHash2("sha256").update(original).digest("hex");
+  if (args.propSheet && exists && args.expectedSha256 !== originalHash)
+    throw new Error("head_moved: propSheet requires the current expectedSha256 from storyboard_read");
   const { win: next, findings, synced } = applyPatch(win, args);
   const bad = findings.some((f3) => f3.level === "bad");
   const st = next.STRUCTURE;
@@ -84946,6 +84965,13 @@ function applyStoryboard(args) {
   if (bad || args.dryRun) return result;
   const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
   try {
+    if (args.propSheet && exists) {
+      if (createHash2("sha256").update(readFileSync3(file)).digest("hex") !== originalHash) throw new Error("head_moved");
+      const history = join2(dirname(file), ".prop-history");
+      mkdirSync(history, { recursive: true });
+      const backup = join2(history, originalHash + ".js");
+      if (!existsSync2(backup)) writeFileSync(backup, original, { flag: "wx" });
+    }
     writeFileSync(tmp, serializeBoard(next, header), "utf8");
     renameSync(tmp, file);
   } catch (err4) {
@@ -87662,8 +87688,8 @@ async function generateGemini38Speech(request) {
 // src/tts-quality.ts
 var import_tts_speed_policy3 = __toESM(require_tts_speed_policy(), 1);
 import { execFile as execFile5 } from "node:child_process";
-import { createHash as createHash2, randomUUID } from "node:crypto";
-import { closeSync as closeSync2, existsSync as existsSync10, mkdirSync as mkdirSync4, openSync as openSync2, readFileSync as readFileSync9, renameSync as renameSync4, rmSync as rmSync4, writeFileSync as writeFileSync7 } from "node:fs";
+import { createHash as createHash3, randomUUID } from "node:crypto";
+import { closeSync as closeSync2, existsSync as existsSync10, mkdirSync as mkdirSync5, openSync as openSync2, readFileSync as readFileSync9, renameSync as renameSync4, rmSync as rmSync4, writeFileSync as writeFileSync7 } from "node:fs";
 import path11 from "node:path";
 import { promisify as promisify2 } from "node:util";
 
@@ -88911,7 +88937,7 @@ async function generateMlx3d(request) {
 
 // src/usage-ledger.ts
 import { execFileSync as execFileSync2 } from "node:child_process";
-import { appendFileSync, existsSync as existsSync7, mkdirSync as mkdirSync2 } from "node:fs";
+import { appendFileSync, existsSync as existsSync7, mkdirSync as mkdirSync3 } from "node:fs";
 import path9 from "node:path";
 var EPISODE_MARKER = path9.join("storyboard", "scenes.js");
 var MAX_WALK_UP = 6;
@@ -88948,7 +88974,7 @@ function recordUsage(outputPath, event) {
   const workDir = path9.join(episodeDir, ".work");
   const file = path9.join(workDir, "events.jsonl");
   try {
-    mkdirSync2(workDir, { recursive: true });
+    mkdirSync3(workDir, { recursive: true });
     appendFileSync(file, JSON.stringify(event) + "\n", { encoding: "utf8", flag: "a" });
     return file;
   } catch (error2) {
@@ -89331,7 +89357,7 @@ import path10 from "node:path";
 
 // src/qwen3-asr-client.ts
 import { execFile as execFile4 } from "node:child_process";
-import { existsSync as existsSync8, mkdirSync as mkdirSync3, mkdtempSync as mkdtempSync2, readFileSync as readFileSync8, renameSync as renameSync3, rmSync as rmSync2 } from "node:fs";
+import { existsSync as existsSync8, mkdirSync as mkdirSync4, mkdtempSync as mkdtempSync2, readFileSync as readFileSync8, renameSync as renameSync3, rmSync as rmSync2 } from "node:fs";
 import { homedir as homedir2 } from "node:os";
 import { basename as basename8, extname as extname6, join as join5 } from "node:path";
 var QWEN3_ASR_MODELS = ["Qwen/Qwen3-ASR-1.7B", "Qwen/Qwen3-ASR-0.6B"];
@@ -89500,7 +89526,7 @@ async function transcribeLocal(request) {
     "json"
   );
   const outDir = request.outputPath || process.cwd();
-  mkdirSync3(outDir, { recursive: true });
+  mkdirSync4(outDir, { recursive: true });
   const scratchDir = mkdtempSync2(join5(outDir, ".qwen3-asr-"));
   const firstCall = !existsSync8(weightCacheDir(request.model)) || request.timestamps && !existsSync8(alignerCacheDir());
   if (firstCall) {
@@ -89749,7 +89775,7 @@ var reviewSchema = external_exports.object({
   }).strict()).max(100)
 }).strict();
 var normalizeSpeech = (s2) => s2.normalize("NFKC").toLowerCase().replace(/[\p{P}\p{Z}\s]/gu, "");
-var sha256 = (s2) => createHash2("sha256").update(s2).digest("hex");
+var sha256 = (s2) => createHash3("sha256").update(s2).digest("hex");
 function characterErrorRate(expected, heard) {
   const a = [...normalizeSpeech(expected)], b = [...normalizeSpeech(heard)];
   if (!a.length || b.length > 12e3) return 1;
@@ -89998,7 +90024,7 @@ async function generateCheckedSpeech(input, dependencies) {
     final: (0, import_tts_speed_policy3.authorizeSpeed)(request.outputPath, "final", request.playbackSpeed)
   };
   const output2 = path11.resolve(request.outputPath, request.filename), proofFile = output2 + ".quality.json";
-  mkdirSync4(path11.dirname(output2), { recursive: true });
+  mkdirSync5(path11.dirname(output2), { recursive: true });
   const lockFile = proofFile + ".lock";
   let lock;
   try {
@@ -92577,7 +92603,7 @@ var VOICE_LOCK_PROPERTY = {
 // src/voice-lock.ts
 import { execFile as execFile8 } from "node:child_process";
 import { promisify as promisify3 } from "node:util";
-import { copyFileSync, mkdirSync as mkdirSync6, mkdtempSync as mkdtempSync5, readFileSync as readFileSync14, statSync as statSync8, writeFileSync as writeFileSync11 } from "node:fs";
+import { copyFileSync, mkdirSync as mkdirSync7, mkdtempSync as mkdtempSync5, readFileSync as readFileSync14, statSync as statSync8, writeFileSync as writeFileSync11 } from "node:fs";
 import path16 from "node:path";
 
 // src/portal-characters.ts
@@ -92585,9 +92611,60 @@ import { existsSync as existsSync15, readFileSync as readFileSync13 } from "node
 import path15 from "node:path";
 
 // src/portal-images.ts
-import { createHash as createHash3, randomUUID as randomUUID2 } from "node:crypto";
-import { closeSync as closeSync3, existsSync as existsSync14, fstatSync, mkdirSync as mkdirSync5, openSync as openSync3, readFileSync as readFileSync12, readSync, realpathSync, renameSync as renameSync5, rmSync as rmSync6, writeFileSync as writeFileSync10 } from "node:fs";
+import { createHash as createHash4, randomUUID as randomUUID2 } from "node:crypto";
+import { closeSync as closeSync3, existsSync as existsSync14, fstatSync, mkdirSync as mkdirSync6, openSync as openSync3, readFileSync as readFileSync12, readSync, realpathSync, renameSync as renameSync5, rmSync as rmSync6, writeFileSync as writeFileSync10 } from "node:fs";
 import path14 from "node:path";
+
+// src/prop-transport.ts
+function encodePropTransport(board) {
+  const doc = board.SB_DOC;
+  if (!doc?.propContinuity) return board;
+  const findings = propContract().check(board).filter((f3) => f3.level === "bad");
+  if (findings.length) throw new Error("Invalid prop continuity: " + findings.map((f3) => f3.what).join("; "));
+  const shots = board.SCENES ?? [];
+  if (shots.some((s2) => !s2.id)) throw new Error("Prop transport requires stable shot ids");
+  const bindings = shots.map((s2) => ({ shotId: s2.id, props: s2.visual?.props }));
+  return { ...board, SB_DOC: { ...doc, props: [], propSheetTransport: {
+    version: 1,
+    props: doc.props,
+    continuity: doc.propContinuity,
+    bindings
+  } }, SCENES: shots.map((s2) => {
+    if (!s2.visual) return s2;
+    const { props: _props, ...visual } = s2.visual;
+    return { ...s2, visual };
+  }) };
+}
+function decodePropTransport(board) {
+  const doc = board.SB_DOC;
+  const envelope = doc?.propSheetTransport;
+  if (!envelope) return board;
+  if (envelope.version !== 1 || !Array.isArray(envelope.props) || !Array.isArray(envelope.bindings))
+    throw new Error("Unsupported prop transport envelope; preserve the original before upgrading");
+  const { propSheetTransport: _transport, ...rest } = doc;
+  const bindings = new Map(envelope.bindings.map((b) => [b.shotId, b.props]));
+  return {
+    ...board,
+    SB_DOC: { ...rest, props: envelope.props, propContinuity: envelope.continuity },
+    SCENES: (board.SCENES ?? []).map((s2) => bindings.has(s2.id) ? {
+      ...s2,
+      visual: { ...s2.visual || {}, props: bindings.get(s2.id) }
+    } : s2)
+  };
+}
+function restorePropSource(source) {
+  if (!source.includes("propSheetTransport")) return source;
+  const board = evaluateWindowScript(source);
+  const decoded = decodePropTransport(board);
+  if (decoded === board) return source;
+  const failures = propContract().check(decoded).filter((f3) => f3.level === "bad");
+  if (failures.length) throw new Error("Invalid restored props: " + failures.map((f3) => f3.what).join("; "));
+  const header = source.match(/^(?:\s*\/\/[^\n]*\n)*/)?.[0] || "";
+  return header + "\n" + Object.entries(decoded).map(([key, value]) => {
+    if (!/^[A-Z][A-Z0-9_]*$/.test(key)) throw new Error("Invalid board global: " + key);
+    return `window.${key} = ${JSON.stringify(value, null, 2)};`;
+  }).join("\n") + "\n";
+}
 
 // src/portal-episode.ts
 import { existsSync as existsSync13, lstatSync, readFileSync as readFileSync11, writeFileSync as writeFileSync9 } from "node:fs";
@@ -92689,7 +92766,11 @@ function buildImportPayload(episodeDir, options = {}) {
   const scenesPath2 = path13.join(sb, "scenes.js");
   if (!existsSync13(scenesPath2)) throw new Error(`scenes.js not found: ${scenesPath2}`);
   const source = readFileSync11(scenesPath2, "utf8");
-  const { scenes, meta, sbDoc } = evaluateScenesJs(source);
+  const loaded = evaluateScenesJs(source);
+  const encoded2 = encodePropTransport({ ...loaded.meta, SB_DOC: loaded.sbDoc, SCENES: loaded.scenes });
+  const { SCENES: encodedScenes, SB_DOC: encodedDoc, ...meta } = encoded2;
+  const scenes = encodedScenes ?? [];
+  const sbDoc = encodedDoc;
   const mdPath = path13.join(sb, "storyboard.md");
   const md = existsSync13(mdPath) ? readStoryboardMd(readFileSync11(mdPath, "utf8")) : {};
   const slug = path13.basename(dir);
@@ -92827,7 +92908,7 @@ var imageUploadSchema = external_exports.object({
   }).refine((a) => Number(Boolean(a.shotId)) + Number(a.shotNo !== void 0) === 1, "Choose shotId or shotNo")).min(1).max(500).optional()
 });
 var MAX_BYTES = 5 * 1024 * 1024;
-var hash = (bytes) => createHash3("sha256").update(bytes).digest("hex");
+var hash = (bytes) => createHash4("sha256").update(bytes).digest("hex");
 function readImage(file) {
   const fd = openSync3(file, "r");
   try {
@@ -92912,7 +92993,7 @@ async function uploadEpisodeImages(client, args, base) {
     const documents = payload.documents.map((d) => d.filename === "scenes.js" ? { ...d, content: nextSource } : d);
     if (!unchanged()) throw new Error("Local board or portal state changed; uploaded blobs are not linked.");
     const backup = path14.join(sb, ".portal-local", `images-${randomUUID2()}`);
-    mkdirSync5(backup, { recursive: true });
+    mkdirSync6(backup, { recursive: true });
     writeFileSync10(path14.join(backup, "scenes.js"), source);
     recoveryFile = path14.join(backup, "uploaded-scenes.js");
     writeFileSync10(recoveryFile, nextSource);
@@ -93188,7 +93269,7 @@ async function applyVoiceLock(input, dependencies = defaults) {
   validateFilePath(request.sourcePath, { allowedExtensions: [".mp4", ".mov", ".wav", ".mp3", ".m4a", ".flac", ".ogg"] });
   validateFilePath(request.outputPath);
   const root = path16.resolve(request.outputPath);
-  mkdirSync6(root, { recursive: true });
+  mkdirSync7(root, { recursive: true });
   const dir = mkdtempSync5(path16.join(root, `${request.shotId}-`));
   const lock = voiceLockConfigSchema.parse(request.tts.voiceLock ?? {});
   const result = {
@@ -98295,6 +98376,23 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         removeScenes: { type: "array", items: { type: "number", description: "Scene number" }, description: "Scene numbers to drop from STRUCTURE.scenes and from every sequence" },
         removeSequences: { type: "array", items: { type: "string", description: "Sequence id" }, description: "Sequence ids to drop" },
         globals: { type: "object", description: "Other window.* blocks to set \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. MUSIC.$mix is optional sound-design metadata; SFX keeps logical asset ids only. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1." },
+        expectedSha256: { type: "string", pattern: "^[a-f0-9]{64}$", description: "Current scenes.js hash from storyboard_read; required when editing propSheet on an existing board." },
+        propSheet: { type: "object", additionalProperties: false, required: ["props"], description: "Replace the complete prop sheet atomically. Keep other editorial metadata. Changes validate story-time custody and invalidate approval; original file is backed up.", properties: {
+          props: { type: "array", description: "Complete prop registry for this board", items: { type: "object", additionalProperties: true, required: ["id"], properties: {
+            id: { type: "string", description: "Stable prop identity" },
+            name: { type: "string", description: "Display name" },
+            description: { type: "string", description: "Stable appearance, material and identifying features" },
+            tracking: { type: "string", description: "Appearance alone or time-dependent continuity", enum: ["appearance", "continuity"] },
+            appearanceVersion: { type: "string", description: "Pinned reference appearance revision" },
+            references: { type: "array", description: "Versioned appearance images, optionally specific to a condition", items: { type: "object", required: ["path", "version"], properties: { path: { type: "string", description: "Storyboard-relative image path" }, version: { type: "string", description: "Reference image version" }, condition: { type: "string", description: "State condition this reference depicts" } } } }
+          } } },
+          continuity: { type: "object", description: "Initial states and ordered story events; omitted for appearance-only registries", required: ["version", "timelineId", "initial", "events"], additionalProperties: true, properties: {
+            version: { type: "integer", enum: [1], description: "Contract version 1" },
+            timelineId: { type: "string", description: "Stable story timeline identity, independent of playback order" },
+            initial: { type: "array", items: { type: "object" }, description: "Each: {propId,at:{day,order},state:{ownerId,holderId,location,condition}}. owner/holder is a registered character id, null (none) or unknown." },
+            events: { type: "array", items: { type: "object" }, description: "Each: {id,propId,kind,at:{day,order},from,to,reason,recordedAt,recordedBy,shotIds?}. Kinds transfer/lend/return/pick_up/put_down/lose/damage/repair/move/correct. from asserts every changed field. Story time is independent of shot order." }
+          } }
+        } },
         dryRun: { type: "boolean", description: "Validate and report, write nothing" },
         draft: { type: "boolean", description: "The story pass (storyboard \xA74a): camera-continuity records \u2014 shot.lineCrossing, shot.coverage \u2014 are deferred (later), not violations; leave it off in \xA74b" }
       },
@@ -98366,12 +98464,12 @@ function canonicalPullPaths(episode, written = []) {
 }
 
 // src/portal-attachments.ts
-import { createHash as createHash4, randomUUID as randomUUID3 } from "node:crypto";
-import { constants as constants2, closeSync as closeSync4, existsSync as existsSync16, fstatSync as fstatSync2, lstatSync as lstatSync2, mkdirSync as mkdirSync7, openSync as openSync4, readFileSync as readFileSync15, readSync as readSync2, readdirSync as readdirSync2, renameSync as renameSync6, writeFileSync as writeFileSync12 } from "node:fs";
+import { createHash as createHash5, randomUUID as randomUUID3 } from "node:crypto";
+import { constants as constants2, closeSync as closeSync4, existsSync as existsSync16, fstatSync as fstatSync2, lstatSync as lstatSync2, mkdirSync as mkdirSync8, openSync as openSync4, readFileSync as readFileSync15, readSync as readSync2, readdirSync as readdirSync2, renameSync as renameSync6, writeFileSync as writeFileSync12 } from "node:fs";
 import path17 from "node:path";
 var LIMIT = 10 * 1024 * 1024;
 var MANIFEST = ".portal-attachments.json";
-var hash2 = (bytes) => createHash4("sha256").update(bytes).digest("hex");
+var hash2 = (bytes) => createHash5("sha256").update(bytes).digest("hex");
 var ignored = (part) => [".git", "node_modules", ".portal.json", MANIFEST, ".portal-head", ".portal-local", ".DS_Store"].includes(part) || part.toLowerCase() === ".storyboard-target.json" || part === ".env" || part.startsWith(".env.");
 function validateAttachmentPath(value) {
   if (!value || Buffer.byteLength(value) > 1024 || /[\\\x00-\x1f\x7f:]/.test(value) || value.startsWith("/") || value.split("/").some((p) => !p || p === "." || p === ".." || /[. ]$/.test(p) || ignored(p))) throw new Error(`Unsafe attachment path: ${value}`);
@@ -98484,13 +98582,13 @@ async function restoreAttachments(client, episodeId, root, snapshot) {
   const backup = `.portal-local/attachments-${randomUUID3()}`;
   for (const { item, bytes } of staged) {
     const target = safeAttachmentTarget(root, item.relativePath);
-    mkdirSync7(path17.dirname(target), { recursive: true });
+    mkdirSync8(path17.dirname(target), { recursive: true });
     if (existsSync16(target) && !readBounded(root, item.relativePath).equals(Buffer.from(bytes))) {
       const backupRoot = path17.join(root, backup);
       safeAttachmentTarget(root, ".attachment-backup-check");
       if (existsSync16(path17.join(root, ".portal-local")) && lstatSync2(path17.join(root, ".portal-local")).isSymbolicLink()) throw new Error("Unsafe backup directory");
       const backupFile = path17.join(backupRoot, item.relativePath);
-      mkdirSync7(path17.dirname(backupFile), { recursive: true });
+      mkdirSync8(path17.dirname(backupFile), { recursive: true });
       writeFileSync12(backupFile, readBounded(root, item.relativePath), { flag: "wx" });
     }
     const temporary = `${target}.${randomUUID3()}.tmp`;
@@ -98498,7 +98596,7 @@ async function restoreAttachments(client, episodeId, root, snapshot) {
     safeAttachmentTarget(root, item.relativePath);
     renameSync6(temporary, target);
   }
-  mkdirSync7(root, { recursive: true });
+  mkdirSync8(root, { recursive: true });
   const manifest2 = path17.join(root, MANIFEST);
   if (existsSync16(manifest2) && lstatSync2(manifest2).isSymbolicLink()) throw new Error("Unsafe attachment metadata file");
   writeFileSync12(manifest2, JSON.stringify(Object.fromEntries(items.map((item) => [item.relativePath, item])), null, 2));
@@ -98554,14 +98652,14 @@ function readDecisions(episodeDir) {
 }
 
 // src/portal-channel-sync.ts
-import { createHash as createHash5, randomUUID as randomUUID4 } from "node:crypto";
+import { createHash as createHash6, randomUUID as randomUUID4 } from "node:crypto";
 import {
   constants as constants4,
   closeSync as closeSync6,
   existsSync as existsSync17,
   fstatSync as fstatSync4,
   lstatSync as lstatSync3,
-  mkdirSync as mkdirSync8,
+  mkdirSync as mkdirSync9,
   openSync as openSync6,
   readFileSync as readFileSync16,
   readSync as readSync4,
@@ -98579,7 +98677,7 @@ var MAX_PROFILE_BYTES = 1024 * 1024;
 var MAX_FILE_BYTES2 = 100 * 1024 * 1024;
 var MAX_TOTAL_BYTES = 500 * 1024 * 1024;
 var ALLOWED_ROOTS = ["assets/intro", "assets/outro", "assets/branding", "assets/sfx"];
-var sha = (bytes) => createHash5("sha256").update(bytes).digest("hex");
+var sha = (bytes) => createHash6("sha256").update(bytes).digest("hex");
 var validUuid = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 function channelRoot(channel) {
   if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(channel)) throw new Error("channel must be a kebab-case slug");
@@ -98623,7 +98721,7 @@ function readState(root) {
   return value;
 }
 function writeState(root, state) {
-  mkdirSync8(root, { recursive: true });
+  mkdirSync9(root, { recursive: true });
   const target = inside(root, STATE_FILE);
   const temporary = `${target}.${randomUUID4()}.tmp`;
   writeFileSync13(temporary, `${JSON.stringify({ ...state, format: STATE_FORMAT, updatedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2)}
@@ -98718,10 +98816,10 @@ function conflict(kind, relative) {
 }
 function replaceFile(root, relative, bytes, backupRoot) {
   const target = inside(root, relative);
-  mkdirSync8(path18.dirname(target), { recursive: true });
+  mkdirSync9(path18.dirname(target), { recursive: true });
   if (existsSync17(target) && backupRoot) {
     const backup = inside(root, `${backupRoot}/${relative}`);
-    mkdirSync8(path18.dirname(backup), { recursive: true });
+    mkdirSync9(path18.dirname(backup), { recursive: true });
     writeFileSync13(backup, readBounded2(target), { flag: "wx" });
   }
   const temporary = `${target}.${randomUUID4()}.tmp`;
@@ -98730,7 +98828,7 @@ function replaceFile(root, relative, bytes, backupRoot) {
 }
 async function channelSync(client, args) {
   const root = channelRoot(args.channel);
-  mkdirSync8(root, { recursive: true });
+  mkdirSync9(root, { recursive: true });
   const { state, project } = await resolveProject(client, root, args.channel, args.projectId);
   const [profile, attachments] = await Promise.all([remoteProfile(client, project.id), remoteAttachments(client, project.id)]);
   if (profile && (!/^[a-f0-9]{64}$/.test(profile.sha256) || Buffer.byteLength(profile.content) > MAX_PROFILE_BYTES || sha(profile.content) !== profile.sha256)) throw new Error("Portal returned an invalid channel profile");
@@ -98753,7 +98851,7 @@ async function channelSync(client, args) {
   if (args.action === "pull") {
     const staged = /* @__PURE__ */ new Map();
     const temporaryRoot = path18.join(root, ".portal-local", `project-download-${randomUUID4()}`);
-    mkdirSync8(temporaryRoot, { recursive: true });
+    mkdirSync9(temporaryRoot, { recursive: true });
     try {
       for (const item of attachments) {
         const temporary = path18.join(temporaryRoot, `${randomUUID4()}.download`);
@@ -98832,12 +98930,12 @@ async function channelSync(client, args) {
 }
 
 // src/portal-tools.ts
-import { copyFileSync as copyFileSync2, existsSync as existsSync20, lstatSync as lstatSync4, mkdirSync as mkdirSync10, readdirSync as readdirSync4, readFileSync as readFileSync19, rmSync as rmSync9, writeFileSync as writeFileSync14 } from "node:fs";
+import { copyFileSync as copyFileSync2, existsSync as existsSync20, lstatSync as lstatSync4, mkdirSync as mkdirSync11, readdirSync as readdirSync4, readFileSync as readFileSync19, rmSync as rmSync9, writeFileSync as writeFileSync14 } from "node:fs";
 import path21 from "node:path";
 
 // src/portal-assets.ts
-import { createHash as createHash6 } from "node:crypto";
-import { closeSync as closeSync7, existsSync as existsSync18, mkdirSync as mkdirSync9, openSync as openSync7, readFileSync as readFileSync17, renameSync as renameSync8, rmSync as rmSync8, statSync as statSync9, writeSync as writeSync2 } from "node:fs";
+import { createHash as createHash7 } from "node:crypto";
+import { closeSync as closeSync7, existsSync as existsSync18, mkdirSync as mkdirSync10, openSync as openSync7, readFileSync as readFileSync17, renameSync as renameSync8, rmSync as rmSync8, statSync as statSync9, writeSync as writeSync2 } from "node:fs";
 import path19 from "node:path";
 var channelArg2 = external_exports.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/, "kebab-case channel slug").optional();
 var list = external_exports.array(external_exports.string().trim().min(1).max(64)).max(32).optional();
@@ -98945,7 +99043,7 @@ function assetLicense(client, a) {
   };
 }
 function sha256File(file) {
-  return createHash6("sha256").update(readFileSync17(file)).digest("hex");
+  return createHash7("sha256").update(readFileSync17(file)).digest("hex");
 }
 async function getAsset(client, args) {
   const { data: asset } = await client.assetsGet(args.id);
@@ -98977,10 +99075,10 @@ async function getAsset(client, args) {
     if (statSync9(file).size === asset.byteSize && sha256File(file) === asset.sha256) return { ...result, downloaded: false, note: "Same sha256 already on disk \u2014 not downloaded again." };
     throw new Error(`${target.relative} exists with different contents. Move it aside before downloading asset ${asset.id}.`);
   }
-  mkdirSync9(path19.dirname(file), { recursive: true });
+  mkdirSync10(path19.dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
   const fd = openSync7(tmp, "wx");
-  const hash4 = createHash6("sha256");
+  const hash4 = createHash7("sha256");
   let size = 0;
   try {
     size = await client.assetsDownload(asset.id, (chunk2) => {
@@ -99399,11 +99497,11 @@ function backupStamp() {
 }
 function reserveBackupDirectory(root, suffix) {
   if (existsSync20(root) && lstatSync4(root).isSymbolicLink()) throw new Error("Unsafe backup directory");
-  mkdirSync10(root, { recursive: true });
+  mkdirSync11(root, { recursive: true });
   for (let attempt = 0; attempt < 100; attempt++) {
     const directory2 = path21.join(root, `${backupStamp()}-${suffix}`);
     try {
-      mkdirSync10(directory2);
+      mkdirSync11(directory2);
       return directory2;
     } catch (error2) {
       if (error2.code !== "EEXIST") throw error2;
@@ -99743,7 +99841,7 @@ function portalHandlers(fetchImpl) {
         const dir = episodeDirOf(targetDir);
         const sb = path21.join(dir, "storyboard");
         const fileContents = /* @__PURE__ */ new Map();
-        fileContents.set("scenes.js", await c.scenesJs(episodeId, revision2));
+        fileContents.set("scenes.js", restorePropSource(await c.scenesJs(episodeId, revision2)));
         let decisions = portalDecisionsSchema.parse(revision2 ? [] : episode.decisions ?? []);
         if (revision2) {
           const { data: rev } = await c.getRevision(episodeId, revision2);
@@ -99794,10 +99892,10 @@ function portalHandlers(fetchImpl) {
         if (mode === "side") {
           sideDir = path21.join(sb, ".portal-head");
           rmSync9(sideDir, { recursive: true, force: true });
-          mkdirSync10(sideDir, { recursive: true });
+          mkdirSync11(sideDir, { recursive: true });
           for (const { filename, content } of files) writeFileSync14(path21.join(sideDir, filename), content);
         } else {
-          mkdirSync10(sb, { recursive: true });
+          mkdirSync11(sb, { recursive: true });
           const changed = files.filter(({ filename, content }) => {
             const target = path21.join(sb, filename);
             return existsSync20(target) && !readFileSync19(target).equals(Buffer.from(content));
@@ -99879,7 +99977,7 @@ function portalHandlers(fetchImpl) {
       try {
         const { data } = await r2.client.createEpisode(storyboardId, body);
         if (episodeDir) {
-          mkdirSync10(episodeDirOf(episodeDir), { recursive: true });
+          mkdirSync11(episodeDirOf(episodeDir), { recursive: true });
           writePortalState(episodeDir, { workspace: r2.client.workspace, storyboardId, episodeId: data.id, headRevisionNo: 0 });
         }
         return ok({ ...data, pageUrl: r2.client.pageUrl(data.url) });
@@ -100054,11 +100152,11 @@ function portalHandlers(fetchImpl) {
             backupDir = reserveBackupDirectory(backupRoot, "scenarios");
             for (const relative of replaced) {
               const backup = path21.join(backupDir, path21.relative("storyboard", relative));
-              mkdirSync10(path21.dirname(backup), { recursive: true });
+              mkdirSync11(path21.dirname(backup), { recursive: true });
               copyFileSync2(path21.join(dir, relative), backup);
             }
           }
-          mkdirSync10(candDir, { recursive: true });
+          mkdirSync11(candDir, { recursive: true });
           for (const [filename, content] of files) {
             writeFileSync14(path21.join(sb, filename), content);
             written.push(`storyboard/${filename}`);
@@ -100143,7 +100241,7 @@ function ordered(items, order, key) {
     throw new Error("order must contain every current identifier exactly once");
   return order.map((id) => items.find((v) => key(v) === id));
 }
-var META_KEYS = ["THEME", "COMPREHENSION", "STORY", "PRODUCTION", "MOTION_POLICY", "STRUCTURE", "PREVIZ", "SLIDE_OBJECTS", "MUSIC", "VOICE"];
+var META_KEYS = ["THEME", "COMPREHENSION", "STORY", "PRODUCTION", "MOTION_POLICY", "STRUCTURE", "PREVIZ", "SLIDE_OBJECTS", "MUSIC", "VOICE", "SB_DOC"];
 function editUnit(input, area, action, args) {
   const board = structuredClone(input);
   if (args.globals) {
@@ -100384,7 +100482,7 @@ async function boardOperation(client, name, args) {
   if (!read2 && args.baseRevisionNo !== head) throw new Error(`head_moved: expected ${args.baseRevisionNo}, current ${head}. Read and reconcile before retrying.`);
   const detail = episode;
   const meta = object3(detail.meta ?? {});
-  const board = { ...meta, SB_DOC: { ...object3(meta.SB_DOC ?? {}), backgrounds: detail.backgrounds, props: detail.props, characters: detail.characters, narratorCharacterId: detail.narratorCharacterId }, SCENES: detail.scenes.map((s2) => s2.extra) };
+  const board = decodePropTransport({ ...meta, SB_DOC: { ...object3(meta.SB_DOC ?? {}), backgrounds: detail.backgrounds, props: detail.props, characters: detail.characters, narratorCharacterId: detail.narratorCharacterId }, SCENES: detail.scenes.map((s2) => s2.extra) });
   const identified = (board.SCENES ?? []).some((shot) => !shot.id) ? applyPatch(board, { path: "", dryRun: false, draft: args.draft }).win : board;
   let filledFromProject = [];
   if (area === "episode_music" && !read2)
@@ -100406,7 +100504,7 @@ async function boardOperation(client, name, args) {
     if (chosen) writeFileSync15(join9(dir, "scenario.md"), await client.scenarioMd(args.episodeId, chosen.candidate));
     const check2 = checkStoryboard({ path: file, draft: args.draft });
     if (check2.violations) return { saved: false, headRevisionNo: head, check: check2, ...filledNote };
-    const { SCENES, SB_DOC, ...nextMeta } = checked;
+    const { SCENES, SB_DOC, ...nextMeta } = encodePropTransport(checked);
     const { data } = await client.checkpoint(args.episodeId, { stage: episode.stage ?? "board", baseRevisionNo: head, sourceHost: client.holder, note: args.note ?? name, scenes: SCENES, backgrounds: object3(SB_DOC).backgrounds, props: object3(SB_DOC).props, meta: { ...nextMeta, SB_DOC }, characters: object3(SB_DOC).characters, narratorCharacterId: object3(SB_DOC).narratorCharacterId });
     return { saved: true, ...data, check: check2, localCopy: { unchanged: true, syncRequired: true }, ...filledNote };
   } finally {
@@ -100458,8 +100556,8 @@ async function apiOperation(c, name, a) {
 var UNIT_ROUTES = Object.fromEntries(UNIT_TOOL_NAMES.map((name) => [name, (args) => runPortalUnit(name, args)]));
 
 // src/threads-gate.ts
-import { createHash as createHash7, randomUUID as randomUUID5 } from "node:crypto";
-import { appendFileSync as appendFileSync2, mkdirSync as mkdirSync11, readFileSync as readFileSync21, realpathSync as realpathSync3, renameSync as renameSync9, statSync as statSync10, writeFileSync as writeFileSync16 } from "node:fs";
+import { createHash as createHash8, randomUUID as randomUUID5 } from "node:crypto";
+import { appendFileSync as appendFileSync2, mkdirSync as mkdirSync12, readFileSync as readFileSync21, realpathSync as realpathSync3, renameSync as renameSync9, statSync as statSync10, writeFileSync as writeFileSync16 } from "node:fs";
 import { dirname as dirname5, join as join10, resolve as resolve5 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 import { spawnSync as spawnSync2 } from "node:child_process";
@@ -100495,7 +100593,7 @@ var reviewSchema2 = external_exports.object({
 });
 var normalize = (s2) => s2.normalize("NFC").replace(/\r\n?/g, "\n").trim();
 function threadsBodyHash(body, selfReply = "") {
-  return createHash7("sha256").update(JSON.stringify([normalize(body), normalize(selfReply)])).digest("hex");
+  return createHash8("sha256").update(JSON.stringify([normalize(body), normalize(selfReply)])).digest("hex");
 }
 function directory(channel) {
   return join10(process.cwd(), "data", channelSchema.parse(channel), "growth", "threads");
@@ -100507,12 +100605,12 @@ function draftLocation(id) {
 }
 function audit(channel, tool, result, details = {}) {
   const dir = directory(channel);
-  mkdirSync11(dir, { recursive: true });
+  mkdirSync12(dir, { recursive: true });
   appendFileSync2(join10(dir, "gate-log.jsonl"), JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool, result, ...details }) + "\n", { mode: 384 });
 }
 function save(draft) {
   const { file } = draftLocation(draft.draftId);
-  mkdirSync11(dirname5(file), { recursive: true });
+  mkdirSync12(dirname5(file), { recursive: true });
   const temp = `${file}.${randomUUID5()}.tmp`;
   writeFileSync16(temp, JSON.stringify(draft), { mode: 384 });
   renameSync9(temp, file);
@@ -100631,8 +100729,8 @@ function checkThreadsEpisode(input) {
 }
 
 // src/portal-media.ts
-import { createHash as createHash8, randomUUID as randomUUID6 } from "node:crypto";
-import { appendFileSync as appendFileSync3, closeSync as closeSync9, fstatSync as fstatSync6, statSync as statSync11, mkdirSync as mkdirSync12, openSync as openSync9, readFileSync as readFileSync22, readSync as readSync6, realpathSync as realpathSync4, renameSync as renameSync10, rmSync as rmSync11, writeFileSync as writeFileSync17 } from "node:fs";
+import { createHash as createHash9, randomUUID as randomUUID6 } from "node:crypto";
+import { appendFileSync as appendFileSync3, closeSync as closeSync9, fstatSync as fstatSync6, statSync as statSync11, mkdirSync as mkdirSync13, openSync as openSync9, readFileSync as readFileSync22, readSync as readSync6, realpathSync as realpathSync4, renameSync as renameSync10, rmSync as rmSync11, writeFileSync as writeFileSync17 } from "node:fs";
 import path22 from "node:path";
 var portalShotFields = {
   episodeDir: external_exports.string().min(1),
@@ -100682,7 +100780,7 @@ function readMedia(file, kind) {
     if (!size) throw new Error("Media is empty.");
     if (size > limit2) throw new MediaTooLarge(size);
     const bytes = buffer.subarray(0, size);
-    return { bytes, mime: mime3, sha256: createHash8("sha256").update(bytes).digest("hex") };
+    return { bytes, mime: mime3, sha256: createHash9("sha256").update(bytes).digest("hex") };
   } finally {
     closeSync9(fd);
   }
@@ -100739,7 +100837,7 @@ async function uploadShotMedia(args, fetchImpl) {
 ${assignment}
 `);
     const backup = path22.join(sb, ".portal-local", `media-${randomUUID6()}`);
-    mkdirSync12(backup, { recursive: true });
+    mkdirSync13(backup, { recursive: true });
     writeFileSync17(path22.join(backup, "scenes.js"), source);
     recoveryFile = path22.join(backup, "uploaded-scenes.js");
     writeFileSync17(recoveryFile, next);
@@ -102397,7 +102495,7 @@ async function stockSearch(input) {
 }
 
 // src/sns-client.ts
-import { createHash as createHash9, randomUUID as randomUUID7 } from "node:crypto";
+import { createHash as createHash10, randomUUID as randomUUID7 } from "node:crypto";
 import {
   existsSync as existsSync22,
   mkdirSync as nodeMkdirSync,
@@ -103110,7 +103208,7 @@ function parseResumeOffset(range) {
   return m2 ? Number(m2[1]) + 1 : 0;
 }
 function sessionStateFile(filePath) {
-  const key = createHash9("sha256").update(filePath).digest("hex").slice(0, 16);
+  const key = createHash10("sha256").update(filePath).digest("hex").slice(0, 16);
   return join12(snsTokenDir, ".yt-upload", `${key}.json`);
 }
 function readState2(filePath) {
@@ -105078,7 +105176,7 @@ async function generateWithReferences2(request) {
 }
 
 // src/content-feedback.ts
-import { mkdirSync as mkdirSync13, writeFileSync as writeFileSync21 } from "node:fs";
+import { mkdirSync as mkdirSync14, writeFileSync as writeFileSync21 } from "node:fs";
 import { dirname as dirname7, isAbsolute, join as join13, resolve as resolve6 } from "node:path";
 
 // src/content-feedback-html.ts
@@ -105710,7 +105808,7 @@ async function contentFeedback(input) {
     instagram
   };
   if (htmlPath) {
-    mkdirSync13(dirname7(htmlPath), { recursive: true });
+    mkdirSync14(dirname7(htmlPath), { recursive: true });
     writeFileSync21(htmlPath, renderFeedbackHtml(report), "utf8");
   }
   return { ok: true, status: 200, body: JSON.stringify(report) };
@@ -107023,7 +107121,7 @@ function renderCapabilityStatus(channel) {
 }
 
 // src/portal-backups.ts
-import { createHash as createHash10 } from "node:crypto";
+import { createHash as createHash11 } from "node:crypto";
 import { lstatSync as lstatSync5, readdirSync as readdirSync5, rmSync as rmSync13 } from "node:fs";
 import path26 from "node:path";
 var backupSchema = external_exports.object({
@@ -107097,7 +107195,7 @@ function manageBackups(input) {
     counts.set(entry.kind, n);
     return n > args.keep;
   });
-  const plan2 = createHash10("sha256").update(JSON.stringify({ dir, keep: args.keep, entries, ignored: ignored2, fingerprint })).digest("hex");
+  const plan2 = createHash11("sha256").update(JSON.stringify({ dir, keep: args.keep, entries, ignored: ignored2, fingerprint })).digest("hex");
   if (args.apply && args.confirm !== plan2) throw new Error("Backup inventory changed or confirmation does not match. Preview again; nothing was pruned.");
   const deleted = [];
   let error2;
@@ -108619,8 +108717,12 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
   storyboard_read: async (args) => {
     contract();
     const a = parseArgs(storyboardReadSchema, args);
-    const { win } = readBoard(a.path);
-    return text(JSON.stringify(contract().outline(win, a.level), null, 2));
+    const { win, file } = readBoard(a.path);
+    const outline = contract().outline(win, a.level);
+    outline.sha256 = (await import("node:crypto")).createHash("sha256").update((await import("node:fs")).readFileSync(file)).digest("hex");
+    const doc = win.SB_DOC;
+    if (doc?.props || doc?.propContinuity) outline.propSheet = { props: doc.props, continuity: doc.propContinuity };
+    return text(JSON.stringify(outline, null, 2));
   },
   storyboard_apply: async (args) => {
     contract();

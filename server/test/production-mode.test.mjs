@@ -1271,3 +1271,18 @@ test('a changed or unconfirmed ASTRA price cannot enter the free-call exclusion'
   assert.equal(readFileSync(ledger, 'utf8'), ep10cLedger);
   assert.equal(readFileSync(path.join(root, 'skills/autoproduce/references/prices.tsv'), 'utf8'), original);
 });
+
+test('prop appearance and custody reach source, motion, end frame and reference arguments', async () => {
+  const {fixture: propFixture} = await import('./fixtures/prop-board.mjs');
+  const props = propFixture(), win = fixture();
+  win.SB_DOC = props.SB_DOC;
+  win.SCENES[0].id = 's0001';
+  Object.assign(win.SCENES[0].visual, props.SCENES[0].visual);
+  win.SB_DOC.props[0].references = [{path:'images/watch.png',version:'v1'}];
+  const output = assemble(win, 0, '/board');
+  for (const key of ['sourcePrompt','motionPrompt','endFramePrompt']) assert.match(output[key], /right hand/);
+  win.SCENES[0].visual.video.engine = 'astra';
+  assert.match(assemble(win, 0, '/board').motionPrompt, /right hand/);
+  assert.equal(output.propSnapshot[0].after.holderId, 'b');
+  assert.ok(output.sourceImageArgs.referenced_image_paths.includes('/board/images/watch.png'));
+});

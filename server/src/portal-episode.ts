@@ -1,3 +1,5 @@
+import { encodePropTransport } from './prop-transport.js';
+import { type Board } from './storyboard.js';
 import { voiceLockConfigSchema, type VoiceLockConfig } from './voice-lock-config.js';
 /**
  * Local episode directory ⇄ portal — the file side of the `portal_*` tools.
@@ -205,7 +207,11 @@ export function buildImportPayload(episodeDir: string, options: ImportOptions = 
   const scenesPath = path.join(sb, 'scenes.js');
   if (!existsSync(scenesPath)) throw new Error(`scenes.js not found: ${scenesPath}`);
   const source = readFileSync(scenesPath, 'utf8');
-  const { scenes, meta, sbDoc } = evaluateScenesJs(source);
+  const loaded = evaluateScenesJs(source);
+  const encoded = encodePropTransport({ ...loaded.meta, SB_DOC: loaded.sbDoc, SCENES: loaded.scenes } as Board);
+  const { SCENES: encodedScenes, SB_DOC: encodedDoc, ...meta } = encoded;
+  const scenes = encodedScenes ?? [];
+  const sbDoc = encodedDoc as Record<string, unknown> | null;
 
   const mdPath = path.join(sb, 'storyboard.md');
   const md: Partial<StoryboardMdHead> = existsSync(mdPath) ? readStoryboardMd(readFileSync(mdPath, 'utf8')) : {};

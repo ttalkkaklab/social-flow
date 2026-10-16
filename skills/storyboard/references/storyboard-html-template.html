@@ -1029,6 +1029,8 @@
 
 <script src="./review-files.js"></script>
 <script src="./scenes.js"></script>
+<script>window.SCENE_SB_DOC = window.SB_DOC;</script>
+<script src="./prop-continuity.js"></script>
 <script src="./render-routing.js"></script>
 <script src="./production-mode.js"></script>
 <script src="./style-samples.js"></script>
@@ -1153,6 +1155,7 @@ window.SB_DOC = {
   recheck: []
 };
 /* ✎ SB_DOC END */
+window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
 </script>
 <script>
 /* ⚙ RENDERER — the shared part of the template. Off-limits (change styles and check logic in the template). */
@@ -4143,7 +4146,7 @@ window.SB_DOC = {
     // When one scene holds several shots, they attach to that scene's first shot only.
     var sceneKey = g.scene, firstOfScene = item === grp.items[0];
     var narr = s.narration || [];
-    h += '<article class="scene"><div class="scene-head">';
+    h += '<article class="scene" id="shot-' + no + '"><div class="scene-head">';
     h += '<span class="scene-no">' + esc(T.shotCap(no)) + " · " + esc(T.type[s.type] || s.type) + "</span>";
     // Shot grammar — size tile, angle and render tile — sits on its own row under the head so
     // the head keeps the number, title and beat tags. Icons only: the term, its meaning and
@@ -4698,5 +4701,6 @@ window.SB_DOC = {
 })();
 </script>
 <script src="./review-layout.js"></script>
+<script src="./prop-sheet.js"></script>
 </body>
 </html>
