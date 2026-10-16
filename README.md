@@ -9,6 +9,13 @@ SNS credentials stay in the external channel token directory; connecting later
 is supported. New episodes inherit a complete settings snapshot, so changing a
 default does not change work in progress. See [project setup](skills/project-init/SKILL.md).
 
+Before episode candidates, prepare shared identities and export the bundled
+**캐릭터 시트 / Character sheets** with `review-library.js`. The storyboard's
+**이번 편 출연진 / Episode cast** links back to those sheets. Missing images remain
+pending. [Panel diagnostics](skills/channel/references/character-panels.md) distinguish
+shared references from scene images and check 2:3 body / 1:1 face canvases and recorded
+subject size. Template freshness alone does not certify visual completion.
+
 `project_manage` provides the same initialization, status, revision-checked update
 and episode creation over MCP; `skills/_shared/project-settings.js` is its CLI.
 Claude Code's read-only SessionStart hook reports missing settings. Other hosts

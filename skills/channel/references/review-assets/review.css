@@ -479,7 +479,7 @@
   line-height: 1.2;
   letter-spacing: -0.035em;
 }
-.character-intro { max-width: 64ch; margin: var(--review-s12) 0 var(--review-s16); }
+.character-intro { word-break: keep-all; max-width: 64ch; margin: var(--review-s12) 0 var(--review-s16); }
 .character-meta {
   display: flex;
   flex-wrap: wrap;
@@ -619,3 +619,12 @@
   .character-sheet .character-nav { display: none; }
   .character-group { break-inside: avoid; }
 }
+/* Compare full bodies at the same scale; face slots stay square. */
+.review-panels .review-panel-front img, .review-panels .review-panel-back img { height: auto; aspect-ratio: 2 / 3; object-fit: contain; }
+.review-panels .review-panel-face img { height: auto; aspect-ratio: 1; object-fit: contain; }
+
+.review-media-findings { color: var(--review-muted); line-height: 1.7; }
+
+.character-media { margin: var(--review-s12) 0; padding-top: 0; border-top: 0; font-size: var(--review-s14); }
+.character-sheet .review-panel-front .review-empty, .character-sheet .review-panel-back .review-empty { aspect-ratio: 2 / 3; }
+.character-sheet .review-panel-face .review-empty { aspect-ratio: 1; }

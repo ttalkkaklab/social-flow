@@ -212,6 +212,8 @@ node "$CLAUDE_PLUGIN_ROOT/skills/channel/references/serve.js" data --port 8400
 
 For every new or updated character, follow [character-identity.md](references/character-identity.md). The structured identity is required in addition to the pinned voice below.
 
+Export the bundled sheet before any episode candidates or scene images, including drafts with pending media. Follow [panel specifications](references/character-panels.md) for purpose, canvas ratio and subject size. Never hand-author the review HTML.
+
 Every character sheet must include one fenced `json` block in `identity.md`:
 
 ```json
@@ -223,8 +225,8 @@ voice; include model/stylePrompt when the engine uses them. Silent characters st
 need a voice configuration for reuse. Narrator settings do not substitute for a
 character voice. Copy this exact `tts` into `SB_DOC.characters`.
 Keep dialogue speaker IDs attached to their characters; voice settings alone do not
-author dialogue or lip sync. Missing or invalid settings make `--check` fail and
-prevent the sheet from displaying a review pass. Existing sheets need migration,
+author dialogue or lip sync. Missing or invalid settings produce content diagnostics and
+prevent the sheet from displaying a review pass; template freshness is checked separately. Existing sheets need migration,
 not an invented voice.
 
 For a new character or a changed voice, generate `voice.wav` from a short Korean

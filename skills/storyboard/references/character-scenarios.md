@@ -49,6 +49,8 @@ Keep factual evidence distinct from fictional canon. Neither is a requirement fo
 
 ## Read the pool, then cast each candidate
 
+First follow [shared character preparation](../../channel/references/character-identity.md#prepare-the-shared-sheet-before-episode-authoring): create/reuse identities and export the bundled sheets before writing candidates. Images may remain pending; no generation or repeated approval is implied.
+
 Read the channel's catalog and character identity documents, including narration characters.
 Use `resolve-asset.py --list <channelDir>` and the current character library. Do not invent
 an existing character's voice, identity or ID. If no suitable character exists, use the channel

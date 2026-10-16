@@ -33,6 +33,8 @@ allowed-tools: ["mcp__social-flow__project_manage", "mcp__social-flow__capabilit
 Save and read episode files locally under `data/<channel>/episodes/<topic>/`.
 Use [the local storyboard contract](../storyboard/references/storyboard-target.md).
 
+**Character sheets before episode content:** Follow [shared character preparation](../channel/references/character-identity.md#prepare-the-shared-sheet-before-episode-authoring) before writing candidates or generating scene images. Create/reuse identity drafts and export the bundled shared sheet with `review-library.js`; then cast this episode from those identities. Missing media stays visibly pending. The episode's “이번 편 출연진” links to “캐릭터 시트” and does not replace it. Template checks alone never establish visual completion.
+
 **New authoring contract (2026-10-16):** Read [character-led scenarios](../storyboard/references/character-scenarios.md) first. New scenarios use `scenario-v2` and boards use `story-v2`: cast existing characters (including narrators), choose evidence/fiction/adapted, write observable actions and attributed speech, and review the whole performance. Its type-specific grounding and rubric replace the legacy research quotas, forced wow/engine mix, spoken-message and narration-only requirements below. Legacy unversioned scenarios and story-v1 boards keep their existing checks. Production voice, budget and publishing consent are unchanged.
 
 

@@ -63,7 +63,7 @@ the specification and voice. Existing storyboard type pictograms are preserved.
 Section icons are decorative SVGs paired with visible translated text.
 
 - Use a 1120px reading canvas with 16px body text and a 72ch maximum for values.
-  Keep all three references in uncropped 3:4 stages on desktop and tablet. Below
+  Keep references uncropped, with matching 2:3 body stages and a 1:1 face stage. Below
   640px the front reference spans the row; back and face share the next row.
 - Render every structured identity field once in the specification, using
   label/value rows instead of form-like boxes. Arrays are semantic lists. Native
@@ -79,3 +79,7 @@ Section icons are decorative SVGs paired with visible translated text.
   template, with the same offline assets and review freshness checks.
 
 Evaluation rubric and independent reports: [character detail review](../../../docs/loops/003-character-detail/loop.md).
+
+Upstream image diagnostics and episode links remain available beneath the gallery.
+Diagnostic details show their count when collapsed; they do not override the
+character content review or imply that matching the template certifies the art.
