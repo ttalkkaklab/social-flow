@@ -6,6 +6,18 @@ list; [CLAUDE.md](CLAUDE.md) holds the branch flow, the commit rules and the Kor
 prose rules. **Read CLAUDE.md before you write anything** — it is short, and the
 style rules there are enforced by a checker.
 
+## GitHub authentication — owner directive, 2026-10-16
+
+For this `ttalkkaklab/social-flow` repository, prefer the environment variable
+`TTALKKAKLAB_GITHUB_TOKEN` over generic `GITHUB_TOKEN` or `GH_TOKEN`. Before push,
+PR creation or merge, use it for both `GH_TOKEN` and `GITHUB_TOKEN` in the command's
+environment. This also lets Git's configured `gh auth git-credential` helper use
+the correct account. Verify the account with `gh api user --jq .login` and the
+repository's push permission; do not assume the generic token belongs to ttalkkaklab.
+Never print a token, put it in a remote URL, persist it in a file or change global
+authentication for this task. If the dedicated variable is absent or lacks access,
+report that specific blocker without revealing its value.
+
 ## Tool lanes — one lane each, no fallbacks
 
 These are the lanes the skills are allowed to name. A skill's `allowed-tools` may
