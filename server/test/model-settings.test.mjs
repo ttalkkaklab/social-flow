@@ -179,3 +179,31 @@ test('legacy settings request only the missing type and legacy episode snapshots
   assert.deepEqual(fixed.config.models, models);
   assert.equal(settings.snapshotSettings(root, existing).config.videoType, undefined);
 });
+
+
+test('speech settings allow Gemini and ElevenLabs v4 while local non-speech models remain available', () => {
+  for (const speech of [{ engine: 'supertonic' }, { engine: 'mlx', model: 'local' }, { engine: 'elevenlabs', model: 'eleven_v3' }, { engine: 'elevenlabs', model: 'eleven_multilingual_v2' }]) assert.throws(() => settings.validateModels({ ...models, speech }));
+  assert.doesNotThrow(() => settings.validateModels({ video: { engine: 'mlx', model: 'video-local' }, image: { engine: 'mlx', model: 'image-local' }, speech: { engine: 'elevenlabs', model: 'eleven_v4' } }));
+});
+
+
+test('retired saved speech choices require explicit migration and keep historical episode snapshots', t => {
+  for (const speech of [{ engine: 'supertonic' }, { engine: 'mlx', model: 'old-local' }, { engine: 'elevenlabs', model: 'eleven_v3' }]) {
+    const root = workspace(t), file = path.join(root, settings.SETTINGS_FILE);
+    fs.mkdirSync(path.dirname(file));
+    const config = { version: 1, models: { ...models, speech }, videoType, request: 'Previous selection', updatedAt: '2026-10-16' };
+    fs.writeFileSync(file, JSON.stringify(config));
+    const current = settings.readSettings(root);
+    assert.equal(current.status, 'migration_required');
+    assert.deepEqual(current.config.models.speech, speech);
+    assert.throws(() => settings.snapshotSettings(root, episode(root, 'new')), /migration_required/);
+    assert.throws(() => settings.saveSettings(root, { image: { engine: 'zimage' } }, { expectedRevision: current.revision, request: 'Only change images' }));
+    const prior = episode(root, 'prior'), priorFile = path.join(prior, settings.SNAPSHOT_FILE);
+    fs.mkdirSync(path.dirname(priorFile));
+    fs.writeFileSync(priorFile, JSON.stringify({ version: 1, source: file, revision: current.revision, config }));
+    const next = settings.saveSettings(root, { speech: { engine: 'elevenlabs', model: 'eleven_v4' } }, { expectedRevision: current.revision, request: 'Use ElevenLabs v4 from now on' });
+    assert.equal(next.status, 'configured');
+    assert.deepEqual(settings.snapshotSettings(root, prior).config.models.speech, speech);
+    assert.equal(settings.snapshotSettings(root, episode(root, 'after')).config.models.speech.model, 'eleven_v4');
+  }
+});

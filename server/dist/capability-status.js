@@ -24,12 +24,12 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { blenderBin, config, mfluxZImageBin, mlxServeConfigured, qwen3AsrBin, snsTokenDir, supertonicPython } from './config.js';
+import { blenderBin, config, mfluxZImageBin, mlxServeConfigured, qwen3AsrBin, snsTokenDir } from './config.js';
 import { enabledPlatforms } from './sns-client.js';
 const has = (v) => Boolean(v && v.length > 0);
 /**
  * True when the binary resolves. A path with a separator is checked where it points; a bare
- * name is looked up on PATH, because that is how it will be spawned — `supertonicPython()`
+ * name is looked up on PATH, because that is how it will be spawned — the configured binary
  * returns a plain `python3` unless SUPERTONIC_PYTHON says otherwise.
  */
 const binOk = (p) => {
@@ -76,15 +76,10 @@ export function capabilityStatus() {
         {
             capability: 'tts',
             providers: [
-                { provider: 'supertonic (local)', configured: binOk(supertonicPython()),
-                    needs: 'python3 on this machine (or SUPERTONIC_PYTHON pointing at a virtualenv)',
-                    note: 'tts_local_generate — free, offline, the default narration voice' },
                 { provider: 'gemini', configured: gemini, needs: 'GEMINI_API_KEY',
-                    note: 'tts_generate · tts_multi_speaker' },
+                    note: 'tts_generate · tts_multi_speaker · tts_gemini_38' },
                 { provider: 'elevenlabs', configured: has(config.elevenLabsApiKey), needs: 'ELEVENLABS_API_KEY',
-                    note: 'tts_elevenlabs_generate · tts_elevenlabs_dialogue · sfx_elevenlabs_generate' },
-                { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
-                    note: 'mlx_tts_generate — optional; never a silent fallback for profile §2' },
+                    note: 'tts_elevenlabs_generate · tts_elevenlabs_dialogue — eleven_v4 only' },
             ],
         },
         {

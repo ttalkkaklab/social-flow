@@ -13,7 +13,7 @@ const hook = require.resolve('../../hooks/project-context.js');
 const cli = require.resolve('../../skills/_shared/project-settings.js');
 const defaults = () => ({
   project: { name: 'History', channel: 'history' }, videoType: { id: 'documentary' },
-  models: { video: { engine: 'seedance', model: 'seedance-1-5-pro-251215', resolution: '720p' }, speech: { engine: 'supertonic' }, image: { engine: 'host', model: 'host-managed', host: 'codex' } },
+  models: { video: { engine: 'seedance', model: 'seedance-1-5-pro-251215', resolution: '720p' }, speech: { engine: 'elevenlabs', model: 'eleven_v4' }, image: { engine: 'host', model: 'host-managed', host: 'codex' } },
   style: { preset: 'webtoon', palette: 'ochre and blue' },
   production: { mode: 'video_50', renderRatioVersion: 1, format: 'shorts-9x16', previzRenderer: 'blender', episodeBudgetUsd: 5 },
   sns: Object.fromEntries(['threads', 'instagram', 'facebook', 'youtube'].map(p => [p, { enabled: p === 'youtube', status: p === 'youtube' ? 'pending' : 'disabled' }])),
@@ -197,4 +197,19 @@ test('MCP route exposes the same project operations and catches errors', async t
   assert.equal(JSON.parse(result.content[0].text).status, 'ready');
   const invalid = await ROUTES.project_manage({ action: 'episode', workspace: root, topic: '../bad' });
   assert.equal(invalid.isError, true);
+});
+
+test('project status exposes retired speech and explicit updates repair it without resetting other choices', t => {
+  const root = workspace(t), initial = init(root);
+  const old = initial.config;
+  old.models.speech = { engine: 'supertonic' };
+  fs.writeFileSync(initial.file, JSON.stringify(old));
+  const pending = call(root, 'status');
+  assert.equal(pending.status, 'migration_required');
+  assert.ok(pending.missing.includes('models.speech'));
+  assert.throws(() => call(root, 'episode', { topic: 'blocked' }), /models.speech/);
+  const fixed = call(root, 'update', { expectedRevision: pending.revision, request: 'Use ElevenLabs v4', settings: { models: { speech: { engine: 'elevenlabs', model: 'eleven_v4' } } } });
+  assert.equal(fixed.status, 'ready');
+  assert.deepEqual(fixed.config.sns, pending.config.sns);
+  assert.deepEqual(fixed.config.models.video, pending.config.models.video);
 });

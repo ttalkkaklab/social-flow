@@ -153,13 +153,7 @@ export const PRICED_VIDEO_KEYS = new Set([
     'seedance.2-0-video.1080p', 'seedance.2-5-video.720p', 'seedance.2-5-video.1080p',
     'seedance.2-0-fast-video.720p', 'seedance.2-0-mini-video.720p',
 ]);
-const ELEVENLABS_KEY = {
-    eleven_multilingual_v2: 'tts.elevenlabs',
-    eleven_v3: 'tts.elevenlabs',
-    eleven_v3_conversational: 'tts.elevenlabs-flash',
-    eleven_flash_v2_5: 'tts.elevenlabs-flash',
-    eleven_turbo_v2_5: 'tts.elevenlabs-flash',
-};
+const ELEVENLABS_KEY = { eleven_v4: 'tts.elevenlabs' };
 /** Whole seconds of a local media file via ffprobe — null when ffprobe or the file is missing. */
 function probeSeconds(file) {
     try {
@@ -267,19 +261,13 @@ export function priceOf(tool, args) {
     if (tool === 'mlx_image_generate' || tool === 'mlx_image_edit') {
         return { key: 'image.mlx', quantity: 1 };
     }
-    if (tool === 'tts_local_generate') {
-        return { key: 'tts.local', quantity: charUnits(args) };
-    }
-    if (tool === 'mlx_tts_generate') {
-        return { key: 'tts.mlx', quantity: charUnits(args) };
-    }
     if (tool === 'tts_generate' || tool === 'tts_multi_speaker') {
         const model = str(args.model, 'gemini-2.5-flash-preview-tts');
         const tier = model.includes('pro') ? 'pro' : 'flash';
         return { key: `tts.gemini-${tier}`, quantity: charUnits(args) };
     }
     if (tool.startsWith('tts_elevenlabs_')) {
-        const key = ELEVENLABS_KEY[str(args.model, 'eleven_multilingual_v2')] ?? null;
+        const key = ELEVENLABS_KEY[str(args.model, 'eleven_v4')] ?? null;
         return {
             key,
             quantity: null,
@@ -353,7 +341,7 @@ function charUnits(args) {
 /** True for the tools whose calls belong in an episode's cost ledger. */
 export function isBillableTool(tool) {
     // This wrapper records each synthesis and review itself, including rejected takes.
-    if (tool === 'tts_generate_checked')
+    if (['tts_generate_checked', 'character_voice_audition', 'tts_review_acting', 'tts_local_generate', 'mlx_tts_generate'].includes(tool))
         return false;
     // Catalogue reads cost nothing and belong in no ledger.
     if (tool === 'tts_list_voices' || tool === 'tts_elevenlabs_voices' || tool === 'music_list_options')

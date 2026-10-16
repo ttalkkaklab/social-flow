@@ -25,14 +25,12 @@ import {
   generateMlx3d,
   generateMlxImage,
   generateMlxMusic,
-  generateMlxTts,
   generateMlxVideo,
   mlx3dGenerateSchema,
   mlxDownHint,
   mlxImageEditSchema,
   mlxImageGenerateSchema,
   mlxMusicGenerateSchema,
-  mlxTtsGenerateSchema,
   mlxVideoGenerateSchema,
   parseGlbResponse,
   parseImageResponse,
@@ -113,12 +111,6 @@ describe('mlx schemas', () => {
       mlxMusicGenerateSchema.safeParse({ prompt: 'song', instrumental: false, lyrics: 'la la' }).success,
       true,
     );
-  });
-
-  it('tts uses input, not text, and caps length', () => {
-    assert.equal(mlxTtsGenerateSchema.safeParse({ text: 'hello' }).success, false);
-    assert.equal(mlxTtsGenerateSchema.safeParse({ input: 'hello' }).success, true);
-    assert.equal(mlxTtsGenerateSchema.safeParse({ input: 'x'.repeat(8_001) }).success, false);
   });
 
   it('video rejects 1080, 8s at 1088×1920, and under 9 frames', () => {
@@ -291,27 +283,6 @@ describe('mlx generate — mocked fetch', () => {
       assert.equal(result.success, true, result.error);
       assert.ok(urls.every((u) => !u.includes('/v1/images/edits')));
       assert.equal(readFileSync(join(dir, 'e.png')).toString(), 'edited');
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  it('tts reads raw WAV bytes, not res.text()', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'mlx-tts-'));
-    const wav = tinyWav();
-    globalThis.fetch = async (url) => {
-      const path = String(url);
-      if (path.endsWith('/health')) return jsonResponse(200, { ok: true });
-      if (path.endsWith('/v1/models')) {
-        return jsonResponse(200, { data: [{ id: 'tts', state: 'ready', capabilities: ['audio'] }] });
-      }
-      if (path.endsWith('/v1/audio/speech')) return bytesResponse(200, wav, 'audio/wav');
-      throw new Error(`unexpected ${path}`);
-    };
-    try {
-      const result = await generateMlxTts({ input: 'hello', outputPath: dir, filename: 'v.wav' });
-      assert.equal(result.success, true, result.error);
-      assert.equal(readFileSync(join(dir, 'v.wav')).subarray(0, 4).toString('ascii'), 'RIFF');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

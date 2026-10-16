@@ -20,8 +20,8 @@ allowed-tools: ["mcp__social-flow__project_manage", "mcp__social-flow__capabilit
   "mcp__social-flow__datago_api_call",
   "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img",
   "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit",
-  "mcp__social-flow__speech_manage", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__sfx_elevenlabs_generate",
-  "mcp__social-flow__tts_list_voices", "mcp__social-flow__mlx_tts_generate",
+  "mcp__social-flow__speech_manage", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__sfx_elevenlabs_generate",
+  "mcp__social-flow__tts_list_voices",
   "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference",
   "mcp__social-flow__astra_img2video", "mcp__social-flow__astra_keyframe_video", "mcp__social-flow__astra_audio2video", "mcp__social-flow__mlx_video_generate",
   "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference",
@@ -845,10 +845,9 @@ speech_manage and record any combined scene WAV's generation receipt and ordered
 Use WAV in `.work/pcm/`; align the edit to the generated duration. Continue with not_reviewed
 speech. Do not invoke automatic listening, STT, retry-to-pass or human listening approval.
 
-If the local engine fails with "Python interpreter not found" /
-"No module named 'supertonic'", **abort right there — do not switch to
-Gemini**. A video with a changed voice publishing automatically is this
-pipeline's worst possible accident.
+Use Gemini or ElevenLabs `eleven_v4` only; local TTS is removed. Follow
+[acting prompts](../produce/references/acting-prompts.md) for each line. If a selected
+model is unavailable, report the error without changing model or voice.
 
 ### 8. Render & build (gate 3)
 

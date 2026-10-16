@@ -172,8 +172,9 @@
     }
   },
   "tts": {
-    "engine": "supertonic",
-    "voiceId": "M1",
+    "engine": "gemini",
+    "model": "gemini-3.8-flash-tts",
+    "voiceId": "Charon",
     "language": "ko",
     "speed": 1
   }

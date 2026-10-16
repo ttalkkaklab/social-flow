@@ -38,7 +38,7 @@ native synthesis or `final` for final playback (including `playbackSpeed` used t
 subtitle pauses). Permission for one scope or factor does not authorize another.
 The existing provider limits and final speech-rate checks still apply.
 
-Direct local and ElevenLabs tools check before synthesis. The checked TTS tool checks
+Direct ElevenLabs tools check before synthesis. v4 does not support a speed slider; keep it at 1. The checked TTS tool checks
 before preflight, cache reuse or saving audio and records actual factors and approval
 in the audio quality proof. Assembly requires these speed records and checks the
 current request before reusing non-1 narration. Audio without recorded speed must be

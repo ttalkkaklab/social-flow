@@ -22,7 +22,6 @@ export const MLX_HEALTH_TIMEOUT_MS = 3_000;
 export const MLX_MODELS_TIMEOUT_MS = 10_000;
 export const MLX_LOAD_TIMEOUT_MS = 10 * 60_000;
 export const MLX_IMAGE_TIMEOUT_MS = 15 * 60_000;
-export const MLX_TTS_TIMEOUT_MS = 5 * 60_000;
 export const MLX_MUSIC_TIMEOUT_MS = 10 * 60_000;
 export const MLX_VIDEO_TIMEOUT_MS = 20 * 60_000;
 export const MLX_MESH_TIMEOUT_MS = 15 * 60_000;
@@ -48,7 +47,6 @@ export const MLX_VIDEO_FPS = 24;
 export const MIN_MLX_MUSIC_SECONDS = 10;
 export const MAX_MLX_MUSIC_SECONDS = 600;
 export const DEFAULT_MLX_MUSIC_SECONDS = 30;
-export const MAX_MLX_TTS_CHARS = 8_000;
 export const MAX_MLX_IMAGE_REFS = 3;
 function authHeaders() {
     const key = mlxServeApiKey();
@@ -114,14 +112,6 @@ export const mlxImageEditSchema = z.object({
     seed: z.number().int().min(0).optional(),
     outputPath: z.string().optional(),
     filename: bareFilenameSchema('image').optional(),
-});
-export const mlxTtsGenerateSchema = z.object({
-    input: z.string().min(1, 'input is required').max(MAX_MLX_TTS_CHARS),
-    model: z.string().min(1).optional(),
-    voice: z.string().min(1).optional(),
-    refAudioPath: z.string().min(1).optional(),
-    outputPath: z.string().optional(),
-    filename: bareFilenameSchema('audio').optional(),
 });
 export const mlxMusicGenerateSchema = z
     .object({
@@ -551,44 +541,6 @@ function jsonErrorFromBytes(bytes, contentType, status) {
     if (!bytes.length)
         return `HTTP ${status}: empty body`;
     return undefined;
-}
-export async function generateMlxTts(request) {
-    const health = await mlxHealth();
-    if (!health.ok)
-        return { success: false, error: health.error };
-    const resolved = await resolveModel('audio', request.model);
-    if (!resolved.ok)
-        return { success: false, error: resolved.error };
-    const body = { input: request.input, model: resolved.model };
-    if (request.voice)
-        body.voice = request.voice;
-    if (request.refAudioPath) {
-        const clip = fileToBase64(request.refAudioPath);
-        if (!clip.ok)
-            return { success: false, error: clip.error };
-        body.ref_audio = clip.b64;
-    }
-    const startedAt = Date.now();
-    const res = await requestBytes('post', `${mlxServeUrl()}/v1/audio/speech`, authHeaders(), body, MLX_TTS_TIMEOUT_MS);
-    if (!res.ok) {
-        const text = res.bytes.toString('utf8');
-        if (isUnreachable(res.status, text))
-            return { success: false, error: mlxDownHint(text) };
-        return { success: false, error: translateUpstream(`HTTP ${res.status}: ${text.slice(0, 1_000)}`) };
-    }
-    const jsonErr = jsonErrorFromBytes(res.bytes, res.contentType, res.status);
-    if (jsonErr)
-        return { success: false, error: jsonErr };
-    if (!wavLooksValid(res.bytes)) {
-        return { success: false, error: `TTS response is not a WAV (got ${res.contentType || 'unknown type'}, ${res.bytes.length} bytes)` };
-    }
-    const outFile = saveAudioFile(request.outputPath || process.cwd(), request.filename || `mlx_tts_${Date.now()}.wav`, res.bytes);
-    return {
-        success: true,
-        path: outFile,
-        model: resolved.model,
-        elapsedSeconds: Math.round((Date.now() - startedAt) / 1000),
-    };
 }
 export async function generateMlxMusic(request) {
     const health = await mlxHealth();

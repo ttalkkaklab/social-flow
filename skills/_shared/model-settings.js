@@ -10,9 +10,13 @@ const SNAPSHOT_FILE = '.work/model-settings.json';
 const VIDEO_TYPES = require('./video-types.json').types;
 const ENGINES = {
   video: ['host', 'seedance', 'veo', 'astra', 'mlx'],
-  speech: ['gemini', 'elevenlabs', 'supertonic', 'mlx'],
+  speech: ['gemini', 'elevenlabs'],
   image: ['host', 'gpt-image', 'zimage', 'mlx'],
 };
+const RETIRED_ELEVENLABS_MODELS = ['eleven_multilingual_v2', 'eleven_v3', 'eleven_v3_conversational', 'eleven_flash_v2_5', 'eleven_turbo_v2_5'];
+function retiredSpeech(choice) {
+  return choice && (['supertonic', 'mlx'].includes(choice.engine) || (choice.engine === 'elevenlabs' && RETIRED_ELEVENLABS_MODELS.includes(choice.model)));
+}
 const FIELDS = {
   video: ['engine', 'model', 'resolution', 'host'],
   speech: ['engine', 'model'],
@@ -40,7 +44,7 @@ function validateVideoType(choice) {
 
 // Model IDs and adapter-specific dimensions are checked by the actual generation tool.
 // Fixed-model tools omit model; host tools use "host-managed" if they expose no selector.
-function validateModels(models, partial = false) {
+function validateModels(models, partial = false, allowRetiredSpeech = false) {
   if (!object(models)) throw new Error('models must be an object');
   for (const key of Object.keys(models)) {
     if (!Object.hasOwn(ENGINES, key)) throw new Error(`Unknown model category: ${key}`);
@@ -49,15 +53,17 @@ function validateModels(models, partial = false) {
   for (const [kind, engines] of Object.entries(ENGINES)) {
     if (partial && !Object.hasOwn(models, kind)) continue;
     const choice = models[kind];
-    if (!object(choice) || !engines.includes(choice.engine)) throw new Error(`${kind}.engine must be one of ${engines.join(', ')}`);
+    const retired = allowRetiredSpeech && kind === 'speech' && retiredSpeech(choice);
+    if (!object(choice) || (!engines.includes(choice.engine) && !retired)) throw new Error(`${kind}.engine must be one of ${engines.join(', ')}`);
     for (const [key, value] of Object.entries(choice)) {
       if (!FIELDS[kind].includes(key) || !nonempty(value)) throw new Error(`Invalid ${kind}.${key}`);
     }
-    const fixed = ['supertonic', 'zimage', 'astra'].includes(choice.engine);
+    const fixed = ['zimage', 'astra'].includes(choice.engine) || (retired && choice.engine === 'supertonic');
     if (choice.engine === 'host' && !nonempty(choice.host)) throw new Error(`${kind}.host must identify the selected CLI, such as codex or grok`);
     if (choice.engine !== 'host' && choice.host !== undefined) throw new Error(`${kind}.host is only valid for a host engine`);
     if (!fixed && !nonempty(choice.model)) throw new Error(`${kind}.model is required`);
     if (fixed && choice.model !== undefined) throw new Error(`${kind}.${choice.engine} uses a fixed server model; omit model`);
+    if (kind === 'speech' && choice.engine === 'elevenlabs' && choice.model !== 'eleven_v4' && !retired) throw new Error('ElevenLabs speech requires eleven_v4');
   }
   return models;
 }
@@ -74,11 +80,11 @@ function readJson(file) {
   }
 }
 
-function validateConfig(config) {
+function validateConfig(config, allowRetiredSpeech = false) {
   if (!object(config) || config.version !== 1 || !nonempty(config.request) || !nonempty(config.updatedAt)) {
     throw new Error('Invalid model settings version or selection record; repair explicitly, do not reset');
   }
-  validateModels(config.models);
+  validateModels(config.models, false, allowRetiredSpeech);
   if (config.videoType !== undefined) validateVideoType(config.videoType);
   validateProjectFields(config);
   return config;
@@ -92,7 +98,9 @@ function readSettings(workspace) {
   const file = settingsPath(workspace);
   const config = readJson(file);
   if (config === undefined) return { status: 'setup_required', file };
-  validateConfig(config);
+  const migrationRequired = retiredSpeech(config?.models?.speech);
+  validateConfig(config, migrationRequired);
+  if (migrationRequired) return { status: 'migration_required', file, revision: revision(config), config, migration: 'Speech model is retired. Explicitly update speech to Gemini or ElevenLabs eleven_v4 before new generation; saved media and episode snapshots are preserved.' };
   return { status: config.videoType ? 'configured' : 'video_type_required', file, revision: revision(config), config };
 }
 
@@ -157,11 +165,12 @@ function snapshotSettings(workspace, episode) {
   const existing = readJson(file);
   if (existing !== undefined) {
     if (!object(existing) || existing.version !== 1 || !nonempty(existing.source)) throw new Error('Invalid episode model snapshot');
-    validateConfig(existing.config);
+    validateConfig(existing.config, true);
     if (existing.revision !== revision(existing.config)) throw new Error('Episode model snapshot is inconsistent; repair explicitly');
     return { ...existing, file, resumed: true };
   }
   const current = readSettings(root);
+  if (current.status === 'migration_required') throw new Error('migration_required: explicitly update the retired speech model before creating a new episode');
   if (current.status === 'video_type_required') throw new Error('video_type_required: select a video type before starting a new episode; keep saved models');
   if (current.status !== 'configured') throw new Error('Select video, speech and image models and a video type before creating an episode snapshot');
   const snapshot = { version: 1, source: current.file, revision: current.revision, config: current.config };

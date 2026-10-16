@@ -4,6 +4,7 @@
 const fs = require('node:fs'), path = require('node:path');
 const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
 const { createHash } = require('node:crypto');
+const { speechRevision } = require('../../_shared/speech-contract.js');
 const { authorizeSpeed } = require('./tts-speed-policy.js');
 const hash = value => createHash('sha256').update(value).digest('hex');
 const normalize = text => text.normalize('NFKC').toLowerCase().replace(/[\p{P}\p{Z}\s]/gu, '');
@@ -48,7 +49,7 @@ function characterVoice(win, scene, proof) {
   const matches=characters.filter(c=>c?.id===ids[0]);
   if(!ids[0] || matches.length!==1) throw new Error('Character speech has no uniquely resolved speaker or narrator');
   const expected=matches[0].tts;
-  const errors=require('../../_shared/character-voice.js').generationVoiceErrors(expected,proof);
+  const errors=require('../../_shared/character-voice.js').generationVoiceErrors(expected,proof,(scene.narration||[]).length===1?scene.narration[0]:undefined);
   if(errors.length) throw new Error('Character '+ids[0]+' '+errors.join('; '));
   return ids[0];
 }
@@ -173,7 +174,7 @@ function check(work, board) {
       if(win.SB_DOC?.speechPlanVersion===1 && (line.tts||'').trim() && !line.audio)throw new Error('Attach generated dialogue audio: '+line.id);
       if(line.audio) {
         const voice=cast.find(c=>c.id===line.speaker)?.tts;
-        const revision=hash(JSON.stringify({tts:line.tts,sub:line.sub,speaker:line.speaker,delivery:line.delivery,voice}));
+        const revision=speechRevision(line,{tts:voice});
         if(line.audio.revision!==revision)throw new Error('Dialogue or voice changed: '+line.id);
         const source=path.resolve(board,line.audio.path);
         if(hash(fs.readFileSync(source))!==line.audio.sha256)throw new Error('Dialogue audio changed: '+line.id);

@@ -27,7 +27,7 @@ Example `setup-input.json` (illustrative choices, never automatic defaults):
     "videoType": {"id":"documentary"},
     "models": {
       "video": {"engine":"seedance","model":"seedance-1-5-pro-251215","resolution":"720p"},
-      "speech": {"engine":"supertonic"},
+      "speech": {"engine":"gemini","model":"gemini-3.8-flash-tts"},
       "image": {"engine":"host","model":"host-managed","host":"codex"}
     },
     "style": {"preset":"webtoon","palette":"Muted ochre and blue"},

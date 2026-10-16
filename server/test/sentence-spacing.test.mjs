@@ -124,7 +124,7 @@ test('the checked ElevenLabs take is re-spaced before it is hashed, and a retake
   const dir = mkdtempSync(path.join(tmpdir(), 'spacing-'));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const work = path.join(dir, '.work'), pcmDir = path.join(work, 'pcm');
-  const request = checkedSpeechSchema.parse({ generator: 'tts_elevenlabs_generate', generation: { text: TEXT, voiceId: 'vsc8TcxQ3sXV07imIA0f', model: 'eleven_multilingual_v2', seed: 210836 },
+  const request = checkedSpeechSchema.parse({ generator: 'tts_elevenlabs_generate', generation: { text: TEXT, voiceId: 'vsc8TcxQ3sXV07imIA0f', model: 'eleven_v4', seed: 210836 },
     expectedText: TEXT, episode: {texts:[TEXT],index:0,seed:210836}, segments: SENTENCES, playbackSpeed: 1, language: 'Korean', delivery: 'Calm.', outputPath: pcmDir, filename: 'c0.wav' });
   const prepared = prepareGeneration(request);
   assert.equal(prepared.spacing, true); assert.equal(prepared.seed, 210836); assert.equal(prepared.args.timestamps, true);
@@ -179,7 +179,7 @@ test('a take without an alignment is kept and the reason recorded, so nothing is
   const dir = mkdtempSync(path.join(tmpdir(), 'spacing-'));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const pcmDir = path.join(dir, '.work/pcm');
-  const request = checkedSpeechSchema.parse({ generator: 'tts_elevenlabs_generate', generation: { text: TEXT, voiceId: 'vsc8TcxQ3sXV07imIA0f', model: 'eleven_multilingual_v2' },
+  const request = checkedSpeechSchema.parse({ generator: 'tts_elevenlabs_generate', generation: { text: TEXT, voiceId: 'vsc8TcxQ3sXV07imIA0f', model: 'eleven_v4' },
     expectedText: TEXT, language: 'Korean', delivery: 'Calm.', outputPath: pcmDir, filename: 'c0.wav' });
   const file = path.join(pcmDir, 'c0.wav');
   const deps = { preflight: async () => {}, measure: async () => ({ duration: 3, rmsDb: -18, clippedFraction: 0 }),
@@ -193,11 +193,11 @@ test('a take without an alignment is kept and the reason recorded, so nothing is
   assert.equal(checkedSpeechSchema.safeParse({ ...request, segments: ['다른 문장이에요.'] }).success, false);
 });
 
-test('a local take is aligned by the injected aligner, spaced like a vendor take, and re-aligned on every fresh take', async t => {
+test('a Gemini take is aligned by the injected aligner, spaced like a vendor take, and re-aligned on every fresh take', async t => {
   const dir = mkdtempSync(path.join(tmpdir(), 'spacing-'));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const pcmDir = path.join(dir, '.work/pcm');
-  const request = checkedSpeechSchema.parse({ generator: 'tts_local_generate', generation: { text: TEXT, voice: 'M5', lang: 'ko' },
+  const request = checkedSpeechSchema.parse({ generator: 'tts_generate', generation: { text: TEXT, voiceName: 'Kore' },
     expectedText: TEXT, segments: SENTENCES, language: 'Korean', delivery: 'Calm.', outputPath: pcmDir, filename: 'c0.wav' });
   assert.equal(prepareGeneration(request).spacing, true);
   const file = path.join(pcmDir, 'c0.wav');

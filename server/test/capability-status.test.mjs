@@ -72,3 +72,12 @@ test('3d_generation lists blender as a local provider with an install hint', asy
   // A local install is not a one-env-var offer, so it never appears in setupOffers.
   assert.ok(!capabilityStatus().setupOffers.some((o) => /Blender/i.test(o.env)));
 });
+
+
+test('speech capabilities expose only hosted Gemini and ElevenLabs v4', async () => {
+  const { capabilityStatus } = await import('../dist/capability-status.js');
+  const speech = capabilityStatus().capabilities.find(c => c.capability === 'tts');
+  assert.deepEqual(speech.providers.map(p => p.provider), ['gemini', 'elevenlabs']);
+  assert.match(speech.providers[0].note, /tts_gemini_38/);
+  assert.match(speech.providers[1].note, /eleven_v4 only/);
+});

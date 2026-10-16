@@ -1,13 +1,4 @@
-/**
- * ElevenLabs client — pure-function and schema tests. No network.
- *
- * The live contract (query-parameter output_format, RIFF wav_24000, romanized
- * normalized_alignment, v3 rejecting previous_text, voice_segments on dialogue
- * timestamps) was measured on 2026-08-23 against api.elevenlabs.io; what is
- * pinned here is everything the server decides BEFORE or AFTER that call —
- * error wording, file naming, the pre-call guards that keep a paid request
- * from being sent when the vendor would reject it anyway.
- */
+/** ElevenLabs v4 schema and payload contracts. No paid network calls. */
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
@@ -25,6 +16,7 @@ import {
   MAX_ELEVENLABS_INPUT_CHARS,
   describeElevenLabsError,
   elevenLabsDialogueSchema,
+  elevenLabsDialogueRequestBody,
   elevenLabsGenerateSchema,
   elevenLabsVoicesSchema,
   extensionForFormat,
@@ -45,10 +37,10 @@ import { pcmToWav } from '../dist/media-utils.js';
 const VOICE = '21m00Tcm4TlvDq8ikWAM';
 
 describe('ElevenLabs constants', () => {
-  it('the default model is the vendor convert default and its cap is the schema cap', () => {
-    assert.equal(DEFAULT_ELEVENLABS_MODEL, 'eleven_multilingual_v2');
+  it('the only model is v4 and its cap is the schema cap', () => {
+    assert.equal(DEFAULT_ELEVENLABS_MODEL, 'eleven_v4');
     assert.equal(MAX_ELEVENLABS_INPUT_CHARS, ELEVENLABS_MODEL_CHAR_CAPS[DEFAULT_ELEVENLABS_MODEL]);
-    assert.ok(ELEVENLABS_MODELS.includes('eleven_v3') && ELEVENLABS_MODELS.includes('eleven_flash_v2_5'));
+    assert.deepEqual(ELEVENLABS_MODELS, ['eleven_v4']);
   });
 
   it('the default output format is RIFF WAV at 24kHz — the builder sniffs RIFF and the Gemini lane is 24kHz', () => {
@@ -92,25 +84,27 @@ describe('ElevenLabs generate schema — guards that run before the paid call', 
     assert.ok(elevenLabsGenerateSchema.safeParse({ text: 'x', voiceId: 'eLDc7xhWxG2FElT3kUTj' }).success);
   });
 
-  it('enforces the per-model cap — v3 is lower than the schema cap', () => {
-    const atCap = 'x'.repeat(ELEVENLABS_MODEL_CHAR_CAPS.eleven_v3);
-    assert.ok(elevenLabsGenerateSchema.safeParse({ text: atCap, voiceId: VOICE, model: 'eleven_v3' }).success);
-    const over = elevenLabsGenerateSchema.safeParse({ text: `${atCap}x`, voiceId: VOICE, model: 'eleven_v3' });
-    assert.equal(over.success, false);
-    assert.match(over.error.issues[0].message, /eleven_v3 takes at most 5000/);
-    // the same text passes on the default model (10k cap)
-    assert.ok(elevenLabsGenerateSchema.safeParse({ text: `${atCap}x`, voiceId: VOICE }).success);
-    assert.equal(elevenLabsGenerateSchema.safeParse({ text: 'x'.repeat(MAX_ELEVENLABS_INPUT_CHARS + 1), voiceId: VOICE }).success, false);
+  it('accepts only v4 and checks its 10,000-character cap', () => {
+    assert.ok(elevenLabsGenerateSchema.safeParse({ text: 'x'.repeat(10_000), voiceId: VOICE }).success);
+    assert.equal(elevenLabsGenerateSchema.safeParse({ text: 'x'.repeat(10_001), voiceId: VOICE }).success, false);
+    for (const model of ['eleven_v3', 'eleven_multilingual_v2', 'eleven_flash_v2_5', 'eleven_v4_turbo']) {
+      assert.equal(elevenLabsGenerateSchema.safeParse({ text: 'x', voiceId: VOICE, model }).success, false, model);
+    }
   });
 
-  it('rejects previousText/nextText on eleven_v3 (measured 400 unsupported_model)', () => {
+  it('bounds continuity context to 100 characters', () => {
     for (const field of ['previousText', 'nextText']) {
-      const result = elevenLabsGenerateSchema.safeParse({ text: 'x', voiceId: VOICE, model: 'eleven_v3', [field]: '앞 문장.' });
-      assert.equal(result.success, false, `${field} accepted on v3`);
-      assert.deepEqual(result.error.issues[0].path, [field]);
-      assert.match(result.error.issues[0].message, /eleven_v3 does not accept/);
+      assert.ok(elevenLabsGenerateSchema.safeParse({ text: 'x', voiceId: VOICE, [field]: '앞 문장.' }).success);
+      assert.equal(elevenLabsGenerateSchema.safeParse({ text: 'x', voiceId: VOICE, [field]: 'x'.repeat(101) }).success, false);
     }
-    assert.ok(elevenLabsGenerateSchema.safeParse({ text: 'x', voiceId: VOICE, previousText: '앞 문장.', nextText: '뒷 문장.' }).success);
+  });
+
+  it('rejects SSML and unsupported controls instead of silently ignoring them', () => {
+    for (const extra of [{ style: 0 }, { useSpeakerBoost: false }, { speed: 1.2 }, { speed: 0.8 }, { similarity: 0.7, similarityBoost: 0.8 }]) {
+      assert.equal(elevenLabsGenerateSchema.safeParse({ text: 'x', voiceId: VOICE, ...extra }).success, false);
+    }
+    assert.equal(elevenLabsGenerateSchema.safeParse({ text: '<break time="1s"/>hi', voiceId: VOICE }).success, false);
+    assert.ok(elevenLabsGenerateSchema.safeParse({ text: '[whispers] 안녕.', voiceId: VOICE, speed: 1 }).success);
   });
 
   it('the filename extension has to match the format — a mislabeled file is misread by the builder', () => {
@@ -123,7 +117,7 @@ describe('ElevenLabs generate schema — guards that run before the paid call', 
   });
 
   it('voice settings, seed and language code keep the vendor ranges', () => {
-    assert.ok(elevenLabsGenerateSchema.safeParse({ text: 'x', voiceId: VOICE, stability: 0, similarityBoost: 1, style: 0.3, speed: 1.2, useSpeakerBoost: false, seed: 4_294_967_295, languageCode: 'ko' }).success);
+    assert.ok(elevenLabsGenerateSchema.safeParse({ text: 'x', voiceId: VOICE, stability: 0, similarity: 1, speed: 1, seed: 4_294_967_295, languageCode: 'ko' }).success);
     assert.equal(elevenLabsGenerateSchema.safeParse({ text: 'x', voiceId: VOICE, speed: 1.3 }).success, false);
     assert.equal(elevenLabsGenerateSchema.safeParse({ text: 'x', voiceId: VOICE, seed: -1 }).success, false);
     assert.equal(elevenLabsGenerateSchema.safeParse({ text: 'x', voiceId: VOICE, languageCode: 'kor' }).success, false);
@@ -134,7 +128,7 @@ describe('ElevenLabs generate schema — guards that run before the paid call', 
 describe('ElevenLabs dialogue schema', () => {
   const line = (voiceId, text = '한 줄.') => ({ text, voiceId });
 
-  it('caps lines, distinct voices and total characters at the v3 limits', () => {
+  it('caps lines, distinct voices and total characters at the plugin bounds', () => {
     assert.ok(elevenLabsDialogueSchema.safeParse({ inputs: [line(VOICE), line('JBFqnCBsd6RMkjVDRZzb')] }).success);
     const tooManyVoices = elevenLabsDialogueSchema.safeParse({
       inputs: Array.from({ length: ELEVENLABS_DIALOGUE_MAX_VOICES + 1 }, (_, i) => line(`voice${i}`)),
@@ -146,12 +140,13 @@ describe('ElevenLabs dialogue schema', () => {
     assert.equal(elevenLabsDialogueSchema.safeParse({ inputs: Array.from({ length: ELEVENLABS_DIALOGUE_MAX_INPUTS + 1 }, () => line(VOICE)) }).success, false);
     const tooLong = elevenLabsDialogueSchema.safeParse({ inputs: [line(VOICE, 'x'.repeat(MAX_ELEVENLABS_DIALOGUE_CHARS)), line(VOICE, 'x')] });
     assert.equal(tooLong.success, false);
-    assert.match(tooLong.error.issues[0].message, /at most 5000/);
+    assert.match(tooLong.error.issues[0].message, /at most 10000/);
   });
 
-  it('has no model argument — dialogue is eleven_v3 only', () => {
+  it('fixes dialogue to eleven_v4 and refuses legacy model arguments', () => {
     const parsed = elevenLabsDialogueSchema.parse({ inputs: [line(VOICE)] });
-    assert.ok(!('model' in parsed));
+    assert.equal(parsed.model, 'eleven_v4');
+    assert.equal(elevenLabsDialogueSchema.safeParse({ inputs: [line(VOICE)], model: 'eleven_v3' }).success, false);
     assert.equal(parsed.outputFormat, DEFAULT_ELEVENLABS_OUTPUT_FORMAT);
   });
 
@@ -179,18 +174,18 @@ describe('describeElevenLabsError — the three body shapes seen in the wild', (
     assert.match(current('missing_permissions', 'missing the permission voices_read', 401), /restricted key.*voices_read/);
     assert.match(current('quota_exceeded', 'quota', 401), /character allowance/);
     assert.match(current('payment_required', 'no credits', 402), /character allowance/);
-    assert.match(current('too_many_concurrent_requests', 'busy', 429), /concurrency\/rate limit.*Free 2/);
-    assert.match(current('concurrent_limit_exceeded', 'busy', 429), /Free 2/);
+    assert.match(current('too_many_concurrent_requests', 'busy', 429), /concurrency\/rate limit/);
+    assert.match(current('concurrent_limit_exceeded', 'busy', 429), /concurrency allowance/);
     assert.match(current('unauthorized', 'Invalid API key', 401), /ELEVENLABS_API_KEY/);
     assert.match(current('output_format_not_allowed', "Output format 'wav_44100' is only available on the Pro tier and above.", 403), /wav_24000 or wav_48000/);
     assert.match(current('voice_not_found', "A voice with voice_id 'NOPE' was not found.", 404), /tts_elevenlabs_voices/);
-    assert.match(current('model_does_not_support_dialogue', "Model 'eleven_multilingual_v2' does not support dialogue.", 400), /eleven_v3 only/);
+    assert.match(current('model_does_not_support_dialogue', "Model 'eleven_v4' does not support dialogue.", 400), /eleven_v4 only/);
   });
 
   it('legacy shape ({detail:{status,message}}) still maps — model_not_found uses it', () => {
     const message = describeElevenLabsError(400, JSON.stringify({ detail: { status: 'model_not_found', message: 'A model with model ID eleven_bogus does not exist' } }));
     assert.match(message, /does not exist/);
-    assert.match(message, /eleven_multilingual_v2, eleven_v3/);
+    assert.match(message, /eleven_v4/);
   });
 
   it('422 list shape joins the field paths without the "body" prefix', () => {

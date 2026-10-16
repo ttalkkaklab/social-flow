@@ -785,7 +785,7 @@ and `camera-slide-template.html`; its image and effect parameters come from scen
 | `type` | ✅ | `cover` \| `points` \| `quote` \| `broll` \| `outro` — the role (`hooking` is also accepted as a type, but write `beat: "hooking"` on a `points`/`quote` shot instead, §hooking) |
 | `narration` | ✅ (except `broll`, `outro`) | Segment array `[{tts, sub}, ...]` — one sentence = one segment = one reveal |
 | `visual` | ✅ | The visual plan object (below) |
-| `duration` | recommended | Target seconds — narration characters / the format's `pacing.rate` (4.5 by default; `check-scenes.js` estimates a missing duration as characters / rate + 0.85), 13s is planning guidance. The builder lays the card at the engine's own pace (5.3–6.4 chars/s measured on Supertonic 1.05, produce §7.5), so this is an estimate, not the audio length. A generated-video shot takes its length from what the cut is for instead (§cut length) |
+| `duration` | recommended | Target seconds — narration characters / the format's `pacing.rate` (4.5 by default; `check-scenes.js` estimates a missing duration as characters / rate + 0.85), 13s is planning guidance. The builder lays the card at the engine's own pace (measure the selected voice’s actual WAV), so this is an estimate, not the audio length. A generated-video shot takes its length from what the cut is for instead (§cut length) |
 | `scene` | recommended | Grammar scene number. Same value for the same place and time. Without it the renderer assumes one scene per entry |
 | `sceneSlug` | recommended when `scene` is set | `"place / time"` — e.g. `"salon chair / day"` |
 | `sequence` | optional | Sequence name. Only when one episode has two purposes |
@@ -877,6 +877,10 @@ shot: {
 
 ### narration segments
 
+Optional `acting: {direction?: string, tags?: string[]}` records per-line performance;
+keep its bare tags separate from spoken words and subtitles. See
+[acting prompts](../../produce/references/acting-prompts.md).
+
 New boards set `SB_DOC.speechPlanVersion:1`. The array includes both narration and character
 dialogue in spoken order. Each entry requires unique stable `id`, explicit character `speaker`
 and `delivery: "voiceover" | "on_screen" | "off_screen"`. Narrator is a character with pinned
@@ -885,7 +889,7 @@ TTS settings. Omitted speakers are a legacy import convention only. Example:
 ```js
 narration: [
   { id: "d-intro", speaker: "narrator", delivery: "voiceover", tts: "The door opened.", sub: "The door opened." },
-  { id: "d-warning", speaker: "mina", delivery: "on_screen", tts: "Stay here.", sub: "Stay here." }
+  { id: "d-warning", speaker: "mina", delivery: "on_screen", tts: "Stay here.", sub: "Stay here.", acting: { direction: "firm, reassuring", tags: [] } }
 ]
 ```
 

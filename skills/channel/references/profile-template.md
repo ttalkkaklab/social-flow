@@ -39,18 +39,17 @@ shortform_outro: on       # on | off (absent = on)
 - **Register**: <polite explanatory (존댓말) | casual punchy (반말) | documentary narration | ...>
 - **Narrator personality**: <e.g. a calm news-briefing anchor>
 - **TTS voice (fixed — do not change)**:
-  - Engine: `<local | gemini | elevenlabs>` — the default for narration is `local` (zero cost,
-    6.3x real time); use `gemini` only when acted emotion is the channel's identity, and
-    `elevenlabs` when the channel needs a specific cloned or Voice Library voice, inline
-    audio-tag acting (eleven_v3), or scenes with three or more speakers (paid — about 2.6x Gemini)
-  - With local → voice: `<F1~F5 | M1~M5>` · lang: `ko` · speed: `<0.7~1.2, default 1.0>` —
-    above 1.2 the model drops syllables (measured), so a faster cut comes from the playback speed below
-  - With gemini → voiceName: `<Gemini voice name>` ·
-    stylePrompt: `<the English style direction — reused without changing a character>`
-  - With elevenlabs → voiceId: `<the 20-character voice_id, not the display name>` ·
-    model: `<eleven_multilingual_v2 | eleven_v3 | eleven_flash_v2_5>` ·
-    stability: `<0–1; on eleven_v3 one of 0.0 / 0.5 / 1.0>` · seed: `<optional integer — once set, never changes>` ·
-    outputFormat stays `wav_24000` (the builder needs RIFF; mp3 is not narration input)
+  - Engine: `<gemini | elevenlabs>` — use the saved directory choice.
+  - With gemini → voiceName: `<Gemini voice name or supported custom voice ID>` ·
+    model: `<selected Gemini TTS model>`. Keep stable identity settings separate
+    from per-line acting. Gemini 3.8 uses turn-level style and inline vocal events.
+  - With elevenlabs → voiceId: `<account voice_id, not display name>` ·
+    model: `eleven_v4` (the only allowed ElevenLabs speech model) ·
+    stability: `<0–1>` · similarity: `<0–1>` · seed: `<optional pinned integer>`.
+    Use square-bracket acting tags; v4 does not accept style/speed sliders or SSML.
+    outputFormat stays `wav_24000` for assembly.
+  - Line performance: store `acting.direction` and optional bare `acting.tags` on
+    each spoken line. See [acting prompts](../../produce/references/acting-prompts.md).
   - Target speaking rate: <characters/sec, default 4.5> — the cards.tsv column; the build always
     preserves 1.0x and ignores this target and legacy `ATEMPO_MIN`/`ATEMPO_MAX` settings. The build's REGEN warning uses the
     ship gate's band [3.2, 6.2] ÷ playback factor, not this value
@@ -200,27 +199,9 @@ the tools trust.
 | approachable practitioner | Achird | Korean, hands-on field practitioner. Friendly, direct, practical, moderate pace. |
 | weighty senior | Sadaltager | Korean, authoritative senior advisor. Knowledgeable, deliberate, calm weight, moderate pace. |
 
-- stylePrompt is **standardized on "moderate pace"** — the pace is chosen once here and the build ships it as read; nothing time-stretches the voice inside the build.
-- The full voice list is available via `mcp__social-flow__tts_list_voices`.
-
-## Local TTS voices (Supertonic)
-
-Ten voices: `F1`~`F5` (female) and `M1`~`M5` (male). The vendor publishes no
-personality labels, so there's no tone table like the one above — **render the same
-sentence in two or three voices, listen, and pick.** Assigning one per channel and
-pinning it keeps the voice consistent, so being limited to ten fixed voices doesn't
-hurt in practice.
-
-How to audition — render one real narration sentence from that channel (a short
-greeting won't show the texture):
-
-```
-mcp__social-flow__tts_local_generate
-  text: "<two representative narration sentences>"  voice: "F1"  lang: "ko"
-  outputPath: "data/<slug>/assets/scratch"  filename: "voice-test-F1.wav"
-```
-
-Play them with `afplay` to compare, then write the chosen value into §2 above.
+- These examples describe legacy Gemini `stylePrompt`. For Gemini 3.8, choose the identity voice first and put concise delivery cues in each turn’s `style`. Assembly preserves the generated pace.
+- Use `mcp__social-flow__tts_list_voices source:curated` for the basic 30 voices,
+  or `source:library` for the live extended/custom catalog. Follow returned page tokens.
 
 ## ElevenLabs voices
 
@@ -230,14 +211,14 @@ filter for the language:
 
 ```
 mcp__social-flow__tts_elevenlabs_voices
-  search: "korean"   # or category: "premade" / "professional"
+  languages: ["ko"]   # optional search, category, gender, accent, nextPageToken
 ```
 
-Then audition exactly like the local lane, one real narration sentence per candidate:
+When the user requests auditions, generate one representative sentence per candidate:
 
 ```
 mcp__social-flow__tts_elevenlabs_generate
-  text: "<two representative narration sentences>"  voiceId: "<voice_id>"  model: "eleven_multilingual_v2"
+  text: "<two representative narration sentences>"  voiceId: "<voice_id>"  model: "eleven_v4"
   outputPath: "data/<slug>/assets/scratch"  filename: "voice-test-<name>.wav"
 ```
 
@@ -251,5 +232,5 @@ mcp__social-flow__tts_elevenlabs_generate
   needs Starter or above. If the listing call fails with `missing_permissions`, the key
   lacks `voices_read` — take the ID from the Voice Library page instead.
 
-There's no style-direction argument, so the tone comes **from the sentences
-themselves** — cut them short and punctuate properly and the delivery settles.
+Use v4 square-bracket audio tags for performance, for example `[reassuring]` or
+`[whispering]`. Keep tags out of subtitles. See the acting-prompt reference above.

@@ -6,13 +6,14 @@ import { z } from 'zod';
 import * as nodeModule from 'node:module';
 const voiceContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/character-voice.js');
 import { readBoard, serializeBoard } from './storyboard.js';
+import { actingSchema, compileActing } from './speech-acting.js';
 const delivery = z.enum(['voiceover', 'on_screen', 'off_screen']);
 export const speechManageSchema = z.object({
     path: z.string().min(1),
-    action: z.enum(['prepare', 'list', 'update', 'attach_audio', 'plan_video', 'attach_video']),
+    action: z.enum(['prepare', 'list', 'update', 'plan_audio', 'attach_audio', 'plan_video', 'attach_video']),
     shotId: z.string().optional(), lineId: z.string().optional(), speaker: z.string().optional(), query: z.string().optional(),
     expectedRevision: z.string().optional(),
-    patch: z.object({ tts: z.string().min(1).optional(), sub: z.string().optional(), speaker: z.string().min(1).optional(), delivery: delivery.optional() }).strict().optional(),
+    patch: z.object({ tts: z.string().min(1).optional(), sub: z.string().optional(), speaker: z.string().min(1).optional(), delivery: delivery.optional(), acting: actingSchema.nullable().optional() }).strict().optional(),
     audioPath: z.string().optional(), videoPath: z.string().optional(),
     generation: z.object({ generator: z.string().min(1), voiceSettings: z.record(z.unknown()), text: z.string().min(1), language: z.string().min(1).optional() }).strict().optional(),
     capabilities: z.object({ provider: z.string().min(1), model: z.string().min(1), audioConditioning: z.boolean(), lipSync: z.boolean(), postLipSync: z.boolean(), evidence: z.string().min(1) }).strict().optional(),
@@ -20,7 +21,8 @@ export const speechManageSchema = z.object({
 const hash = (s) => createHash('sha256').update(s).digest('hex');
 const object = (v) => v && typeof v === 'object' && !Array.isArray(v) ? v : {};
 export function speechRevision(line, character) {
-    return hash(JSON.stringify({ tts: line.tts, sub: line.sub, speaker: line.speaker, delivery: line.delivery, voice: character?.tts }));
+    const shared = nodeModule.createRequire(import.meta.url)('../../skills/_shared/speech-contract.js');
+    return shared.speechRevision(line, character);
 }
 export function speechVideoPlan(lines, capabilities) {
     if (!capabilities)
@@ -68,6 +70,11 @@ export function manageSpeech(args) {
     const selected = all.filter(({ scene, line }) => (!args.shotId || scene.id === args.shotId) && (!args.lineId || line.id === args.lineId) && (!args.speaker || line.speaker === args.speaker || character(line.speaker)?.name === args.speaker) && (!args.query || (line.tts + ' ' + (line.sub || '')).includes(args.query)));
     let invalidated;
     let plan;
+    const audioPlans = args.action === 'plan_audio' ? selected.map(({ line }) => ({ lineId: line.id,
+        expectedText: line.tts, language: character(line.speaker)?.tts?.language,
+        speechRevision: speechRevision(line, character(line.speaker)),
+        ...compileActing(line.tts, line.acting || undefined, character(line.speaker)?.tts || {}),
+    })) : undefined;
     if (args.action === 'update' || args.action === 'attach_audio') {
         if (!args.lineId || selected.length !== 1)
             throw new Error('Select exactly one stable lineId; list candidates for an ambiguous request');
@@ -107,7 +114,7 @@ export function manageSpeech(args) {
             if (!args.generation || args.generation.text !== line.tts)
                 throw new Error('Attach the actual generation arguments and exact line text');
             const voice = character(line.speaker)?.tts;
-            const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation);
+            const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation, line);
             if (voiceErrors.length)
                 throw new Error('Generation arguments do not match the pinned character voice: ' + voiceErrors.join('; '));
             const bytes = readFileSync(audioPath);
@@ -182,5 +189,5 @@ export function manageSpeech(args) {
         writeFileSync(tmp, nextSource);
         renameSync(tmp, file);
     }
-    return { revision: hash(readFileSync(file)), changed, invalidated, plan, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: !!line.audio && line.audio.revision === speechRevision(line, character(line.speaker)) && existsSync(line.audio.path) && hash(readFileSync(line.audio.path)) === line.audio.sha256 })) };
+    return { revision: hash(readFileSync(file)), changed, invalidated, plan, audioPlans, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: !!line.audio && line.audio.revision === speechRevision(line, character(line.speaker)) && existsSync(line.audio.path) && hash(readFileSync(line.audio.path)) === line.audio.sha256 })) };
 }

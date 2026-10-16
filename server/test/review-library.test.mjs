@@ -51,7 +51,7 @@ function fixture() {
   const dir = join(root, 'channel');
   const write = (file, value) => { const p = join(dir, file); mkdirSync(join(p, '..'), { recursive: true }); writeFileSync(p, value); };
   write('profile.md', '---\nname: Test channel\n---\n');
-  write('assets/characters/hero/identity.md', '# Hero\n\n**역할**: Guide <script>alert(1)</script>\n**생김새**: Blue coat\n**목소리**: M1\n\n```json\n{"tts":{"engine":"supertonic","voiceId":"M1","language":"ko","speed":1}}\n```');
+  write('assets/characters/hero/identity.md', '# Hero\n\n**역할**: Guide <script>alert(1)</script>\n**생김새**: Blue coat\n**목소리**: M1\n\n```json\n{"tts":{"engine":"gemini","voiceId":"Kore","language":"ko","speed":1}}\n```');
   const doc = JSON.parse(identityBlock);
   doc.character.identity.role.value = 'Guide <script>alert(1)</script>';
   doc.character.physical.appearance.value = 'Blue coat';

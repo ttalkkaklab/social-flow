@@ -1,3 +1,5 @@
+import { reviewActing, actingReviewSchema } from './acting-review.js';
+import { manageVoiceAudition, voiceAuditionSchema } from './voice-audition.js';
 import { manageLocation } from './location.js';
 import { manageProject } from './project.js';
 import { manageSpeech, speechManageSchema } from './speech.js';
@@ -14,7 +16,6 @@ import * as seedance from './seedance-client.js';
 import * as serp from './serp-client.js';
 import * as stock from './stock-client.js';
 import * as sns from './sns-client.js';
-import * as supertonic from './supertonic-client.js';
 import * as zimage from './zimage-client.js';
 import * as blender from './blender-bridge.js';
 import * as storyboard from './storyboard.js';
@@ -30,7 +31,6 @@ import { youtubeTopicScout } from './youtube-topic-scout.js';
 import * as snsScout from './sns-issue-scout.js';
 import { formatError, formatFileSize, saveBase64Image } from './media-utils.js';
 import { renderCapabilityStatus } from './capability-status.js';
-import { applyVoiceLock, voiceLockApplySchema } from './voice-lock.js';
 function text(message, isError = false) {
     return { content: [{ type: 'text', text: message }], isError };
 }
@@ -724,14 +724,6 @@ export const ROUTES = {
             `Steps: ${result.steps ?? 'model default'}\nSeed: ${result.seed ?? 'random'}\n` +
             `Generation time: ${result.elapsedSeconds}s`);
     },
-    mlx_tts_generate: async (args) => {
-        const request = parseArgs(mlx.mlxTtsGenerateSchema, args);
-        const result = await mlx.generateMlxTts(request);
-        if (!result.success)
-            return text(`MLX Core TTS failed:\n${result.error}`, true);
-        return text(`Audio generated via MLX Core.\n\nFile: ${result.path}\nModel: ${result.model}\n` +
-            `Synthesis time: ${result.elapsedSeconds}s\nText length: ${request.input.length} chars`);
-    },
     mlx_music_generate: async (args) => {
         const request = parseArgs(mlx.mlxMusicGenerateSchema, args);
         const result = await mlx.generateMlxMusic(request);
@@ -913,10 +905,6 @@ export const ROUTES = {
         const result = await reviewFinalSpeech(parseArgs(finalSpeechSchema, args));
         return text(JSON.stringify(result, null, 2), result.success !== true);
     },
-    voice_lock_apply: async (args) => {
-        const result = await applyVoiceLock(parseArgs(voiceLockApplySchema, args));
-        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], structuredContent: { ...result }, isError: result.status === 'failed' };
-    },
     tts_elevenlabs_dictionary: async (args) => {
         const result = await elevenlabs.createElevenLabsDictionary(parseArgs(elevenlabs.elevenLabsDictionarySchema, args));
         return text(JSON.stringify(result, null, 2));
@@ -953,40 +941,7 @@ export const ROUTES = {
         return text(`Multi-speaker audio generated successfully!\n\nFile: ${result.audioPath}\nModel: ${result.model}\nSpeakers:\n${speakerInfo}\nScript length: ${request.script.length} chars`);
     },
     // Local synthesis (Supertonic) — runs on-device as a subprocess. No key, network, or quota.
-    tts_local_generate: async (args) => {
-        const request = parseArgs(supertonic.supertonicGenerateSchema, args);
-        const result = await supertonic.generateLocalSpeech(request);
-        if (!result.success)
-            return text(`Local TTS generation failed: ${result.error}`, true);
-        return text(`Audio generated locally!\n\nFile: ${result.audioPath}\nEngine: Supertonic 3 (on-device)\n` +
-            `Voice: ${result.voice}\nLanguage: ${result.lang}\nSpeed: ${request.speed}\n` +
-            `Duration: ${result.durationSeconds}s\nSample rate: ${result.sampleRate} Hz\n` +
-            `Synthesis time: ${result.elapsedSeconds}s\nText length: ${request.text.length} chars`);
-    },
-    tts_list_voices: async () => {
-        const voiceList = Object.entries(tts.TTS_VOICES)
-            .map(([voice, characteristic]) => `  - ${voice}: ${characteristic}`)
-            .join('\n');
-        return text(`Gemini TTS — ${tts.TTS_VOICE_NAMES.length} voices (tts_generate / tts_multi_speaker):\n\n${voiceList}\n\n` +
-            `Tips for choosing a voice:\n` +
-            `- For professional/business: Kore, Charon, Rasalgethi, Alnilam\n` +
-            `- For friendly/casual: Achird, Puck, Zubenelgenubi, Sulafat\n` +
-            `- For calm/gentle: Achernar, Vindemiatrix, Umbriel\n` +
-            `- For energetic/lively: Fenrir, Sadachbia, Laomedeia\n` +
-            `- For clear narration: Iapetus, Erinome, Schedar\n\n` +
-            `Supertonic 3 — ${supertonic.SUPERTONIC_VOICE_NAMES.length} voices, on-device (tts_local_generate):\n\n` +
-            `  ${supertonic.SUPERTONIC_VOICE_NAMES.join(', ')}\n` +
-            `  Beyond F1–F5 being female and M1–M5 male, the vendor publishes no character labels.\n` +
-            `  Pick by listening — render the same sentence with two or three voices and compare.\n\n` +
-            `ElevenLabs — account-specific voices (tts_elevenlabs_generate / tts_elevenlabs_dialogue):\n\n` +
-            `  Not listed here: premade, cloned and Voice Library voices differ per account. Call tts_elevenlabs_voices ` +
-            `(needs the voices_read permission on the key) and pin the voice_id in the channel profile.\n\n` +
-            `Engine choice: narration bodies and long scripts go to tts_local_generate (zero cost, 6.3x realtime); ` +
-            `short cuts that need acting go to tts_generate (stylePrompt) or tts_elevenlabs_generate on eleven_v3 ` +
-            `(inline audio tags, the dearer of the two); scenes with 3+ speakers go to tts_elevenlabs_dialogue.\n` +
-            `If the channel profile (data/<slug>/profile.md) names a voice, use that value as-is — ` +
-            `a voice that changes every episode breaks the channel's identity.`);
-    },
+    tts_list_voices: async (args) => text(JSON.stringify(await tts.listTtsVoices(tts.ttsVoicesSchema.parse(args)), null, 2)),
     // ── speech synthesis (ElevenLabs) — REST, saves the file locally, returns path + measured cost ──
     // character-cost is the vendor's billing header, so it is reported as measured rather
     // than estimated from a price sheet (the same reasoning as Seedance's token count).
@@ -1041,7 +996,7 @@ export const ROUTES = {
                 .join(' ');
             const langs = voice.verifiedLanguages.length ? ` · languages: ${voice.verifiedLanguages.join(',')}` : '';
             const desc = voice.description ? ` — ${voice.description.slice(0, 120)}` : '';
-            return `  - ${voice.name} — ${voice.voiceId} · ${voice.category ?? 'unknown'}${labels ? ` · ${labels}` : ''}${langs}${desc}`;
+            return `  - ${voice.name} — ${voice.voiceId} · ${voice.category ?? 'unknown'}${labels ? ` · ${labels}` : ''}${langs}${desc}${voice.previewUrl ? ` · preview: ${voice.previewUrl}` : ''}`;
         });
         const filter = [request.search ? `search="${request.search}"` : '', request.category ? `category=${request.category}` : '']
             .filter(Boolean)
@@ -1053,7 +1008,7 @@ export const ROUTES = {
                 `${sub.tier === 'free' ? ' — FREE tier: output is non-commercial and needs attribution' : ''}\n`
             : 'Plan: not readable with this key (needs user_read) — check the tier at https://elevenlabs.io/app/subscription before publishing commercially\n';
         return text(`ElevenLabs voices — ${voices.length} shown${result.totalCount !== undefined ? ` of ${result.totalCount}` : ''}${filter ? ` (${filter})` : ''}` +
-            `${result.hasMore ? ', more pages exist — narrow with search/category' : ''}:\n\n${lines.join('\n') || '  (none)'}\n\n` +
+            `${result.hasMore ? `, nextPageToken: ${result.nextPageToken ?? '(missing token)'}` : ''}:\n\n${lines.join('\n') || '  (none)'}\n\n` +
             subLine +
             `Pin the chosen voice_id in data/<slug>/profile.md §2 — the legacy premade voices retire 2026-12-31.`);
     },
@@ -1361,6 +1316,8 @@ export const ROUTES = {
             return text(error instanceof Error ? error.message : String(error), true);
         }
     },
+    character_voice_audition: async (args) => text(JSON.stringify(await manageVoiceAudition(voiceAuditionSchema.parse(args)), null, 2)),
+    tts_review_acting: async (args) => text(JSON.stringify(await reviewActing(actingReviewSchema.parse(args)), null, 2)),
     speech_manage: async (args) => text(JSON.stringify(manageSpeech(parseArgs(speechManageSchema, args)), null, 2)),
     storyboard_read: async (args) => {
         storyboard.contract(); // a missing structure-contract.js reports itself here, before the argument schema does

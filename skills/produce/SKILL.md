@@ -3,7 +3,7 @@ name: produce
 description: >
   Builds the video and the per-platform text from an already-approved storyboard. Use when the user asks to "영상 만들어", "콘텐츠 제작", "produce the video", "플랫폼별 콘텐츠 만들어", or right after a storyboard is approved. Turns the approved scenes.js under data/[channel]/episodes/[topic]/storyboard/ into a narrated 9:16 video at 1080x1920/30fps — generated backgrounds, TTS narration, BGM with ducking, kinetic subtitles, brand outro — plus the Threads, Instagram, Facebook and YouTube text under the episode's output/, checked on a phone viewport before publishing. Where recording/alignment.json exists it cuts the user's own screen recording instead of generating scenes. Boundary — storyboard plans and stops for approval, produce starts after it, autoproduce runs both unattended.
 argument-hint: "<channel> <topic> [platformCSV|auto]"
-allowed-tools: ["mcp__social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__social-flow__voice_lock_apply", "mcp__social-flow__capability_status", "Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__music_generate_advanced", "mcp__social-flow__stock_search", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__astra_img2video", "mcp__social-flow__astra_keyframe_video", "mcp__social-flow__astra_audio2video", "mcp__social-flow__astra_video_retake", "mcp__social-flow__astra_video_list_uploads", "mcp__social-flow__astra_video_delete_upload", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_tts_generate", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
+allowed-tools: ["mcp__social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__social-flow__tts_review_acting", "mcp__social-flow__capability_status", "Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__music_generate_advanced", "mcp__social-flow__stock_search", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__astra_img2video", "mcp__social-flow__astra_keyframe_video", "mcp__social-flow__astra_audio2video", "mcp__social-flow__astra_video_retake", "mcp__social-flow__astra_video_list_uploads", "mcp__social-flow__astra_video_delete_upload", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
 ---
 
 Use local episode files under `data/<channel>/episodes/<topic>/`.
@@ -52,7 +52,7 @@ Use [story-quality.md](../storyboard/references/story-quality.md) to improve the
    real people, no national symbols, no staged news screens. Cards (static text) are code-rendered only.
 6. **Branding belongs in the outro** — no logo or badge in the body (a brand eating the first 3
    seconds is a skip signal). Under `shortform_outro: off` the episode carries no logo at all: the avatar and the handle do that job.
-7. **The TTS voice is fixed** — don't change a single character of profile.md §2's voiceName and stylePrompt.
+7. **The identity voice is fixed** — preserve profile.md §2's voice ID and model. Per-line `acting` may change without replacing the identity; use [acting prompts](references/acting-prompts.md).
 8. **Generated video comes from an image** — don't use `veo_text2video`. The order is always
    approved image provider → keep the PNG in `storyboard/images/` → the selected image-to-video engine.
    With `PRODUCTION.imageProvider:"host"` (Codex, Grok) the still comes from the host `image_gen`, and with `videoProvider:"host"` (Grok) the clip comes from the host `image_to_video` — the plugin's API tools are the fallback the user is asked about, never a silent one (still-generation §1, video-model-selection §The host video tool comes first).
@@ -751,31 +751,24 @@ Generate each stable line as a take; combine consecutive lines into the scene WA
 its ordered lineIds, expectedText and actual audioSha256. For single-line shots, use the bound
 WAV directly. Subtitle timing follows the actual WAV; file and timing checks do not listen.
 Keep ElevenLabs seed, stability and pronunciation dictionaries fixed across retakes when
-pinned. Never switch engines silently when the local runtime is unavailable.
+pinned. Never switch engines silently after an API failure.
 
 Once the whole scene is out, write a line to the ledger. **The quantity is chars÷1000, not
 the character count** — the unit price is per 1,000 characters, so writing 412 characters as
-`412` inflates it 1000×. It doesn't show on the local engine at price 0, but on a Gemini
-channel it becomes a wrong billing figure outright. A regenerated scene gets one more line
+`412` inflates it 1000×. An incorrect unit produces a wrong billing figure. A regenerated scene gets one more line
 for its share.
 
 ```bash
-# local (Supertonic) channel — 1,840 characters across all scenes
-printf 'tts.local\t1.840\tproduce: narration, 5 scenes, 1840 chars\n' >> .work/cost-tally.tsv
 # on a Gemini channel, use the key for the model (flash by default)
 printf 'tts.gemini-flash\t1.840\tproduce: narration, 5 scenes, 1840 chars\n' >> .work/cost-tally.tsv
 # on an ElevenLabs channel the quantity is the response's "Character cost" ÷ 1000 (the vendor's
 # metered count — it sits below the raw character count, measured), key by model family
 printf 'tts.elevenlabs\t1.120\tproduce: narration, 5 scenes, character cost 1120\n' >> .work/cost-tally.tsv
-# (flash_v2_5 / v3_conversational → tts.elevenlabs-flash)
 ```
 
-If the local engine fails with "Python interpreter not found" or
-"No module named 'supertonic'", **stop right there and ask the user to install it.** Don't
-quietly switch to Gemini — the video gets made with a changed voice, and the speaker differs
-from episode to episode. The same rule covers ElevenLabs: a key, permission, quota, or
-`output_format_not_allowed` error stops the run and goes to the user — no silent fallback to
-another engine.
+A Gemini or ElevenLabs key, permission, quota, or output-format error stops generation
+and reports the actual cause; never silently fall back to another engine or older model.
+ElevenLabs speech uses `eleven_v4` only. Local TTS engines are removed.
 
 ### 6. Write the manifest + build
 
@@ -1263,7 +1256,7 @@ Cost — what this episode ran to (stills → video)
 
 **Don't just report a total of $0.** If the images exist and the total is 0, they weren't made
 for free — someone skipped writing them into the ledger. An episode that used only local
-images and local TTS really can be 0, and then the report shows those lines — check whether
+local images really can be 0, and then the report shows those lines — check whether
 the 0 comes from lines that are there or lines that are missing, then report it.
 
 **Read the decision log back beside the cost.** The two answer one question together — what it

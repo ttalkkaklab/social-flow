@@ -63,7 +63,7 @@ export async function reviewFinalSpeech(input: FinalSpeechRequest, deps = { list
     const signal = await measureSignal(wav, 1800);
     const failures = signalFailures(signal, request.expectedText, 1800);
     if (failures.length) return save('fail', { signal, failures });
-    const reviewRequest = { ...checkedSpeechSchema.parse({ generator: 'tts_local_generate', generation: {}, expectedText: request.expectedText.slice(0,4000),
+    const reviewRequest = { ...checkedSpeechSchema.parse({ generator: 'tts_generate', generation: {}, expectedText: request.expectedText.slice(0,4000),
       language: request.language, delivery: request.delivery, outputPath: path.dirname(media), filename: 'final.wav' }),
       expectedText: request.expectedText, transcriptCheck };
     const result = await deps.listen(wav, reviewRequest, true);
@@ -121,7 +121,7 @@ async function reviewChapters(request: FinalSpeechRequest, media: string, wav: s
       evidence = cached;
     } else {
       const signal = await measureSignal(file, 120);
-      const reviewRequest = { ...checkedSpeechSchema.parse({ generator: 'tts_local_generate', generation: {}, expectedText: piece.expectedText,
+      const reviewRequest = { ...checkedSpeechSchema.parse({ generator: 'tts_generate', generation: {}, expectedText: piece.expectedText,
         language: request.language, delivery: request.delivery, outputPath: path.dirname(media), filename: 'final.wav' }), transcriptCheck: request.transcriptCheck };
       const result = await deps.listen(file, reviewRequest, true);
       reviewSchema.parse(result.review);

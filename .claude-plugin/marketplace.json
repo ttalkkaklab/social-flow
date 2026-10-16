@@ -5,7 +5,7 @@
     "email": "zeans@astratech.vn"
   },
   "metadata": {
-    "description": "social-flow marketplace \u2014 installs the channel-based short-form and long-form content pipeline plugin (built-in MCP server included)."
+    "description": "social-flow marketplace — installs the channel-based short-form and long-form content pipeline plugin (built-in MCP server included)."
   },
   "plugins": [
     {
@@ -31,7 +31,7 @@
         "mcp"
       ],
       "description": "Plan, produce, review, and publish channel-based social videos. Storyboard plans dialogue and stops for approval; produce builds approved episodes; autoproduce runs both unattended. Includes reusable characters, voice settings, media generation, research, and publishing tools in one bundled MCP server.",
-      "version": "0.113.0"
+      "version": "0.114.0"
     }
   ]
 }

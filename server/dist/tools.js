@@ -1,17 +1,15 @@
 import { cameraContract, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
-import { DEFAULT_SUPERTONIC_CHUNK_PAUSE, DEFAULT_SUPERTONIC_LANGUAGE, DEFAULT_SUPERTONIC_SPEED, DEFAULT_SUPERTONIC_STEPS, DEFAULT_SUPERTONIC_VOICE, MAX_SUPERTONIC_INPUT_CHARS, MAX_SUPERTONIC_SPEED, SUPERTONIC_LANGUAGES, SUPERTONIC_VOICE_NAMES, } from './supertonic-client.js';
 import { ASTRA_VIDEO_FAST_DIMENSION_STEP, ASTRA_VIDEO_LORAS, ASTRA_VIDEO_FRAME_LIMITS, ASTRA_VIDEO_MAX_PIXELS, ASTRA_VIDEO_MAX_SEED, ASTRA_VIDEO_MIN_FRAMES, } from './astra-video-client.js';
 import { DEFAULT_SEEDANCE_DURATION, DEFAULT_SEEDANCE_MODEL, DEFAULT_SEEDANCE_REFERENCE_MODEL, DEFAULT_SEEDANCE_RESOLUTION, SEEDANCE_FPS, SEEDANCE_REFERENCE_MODELS, VALID_SEEDANCE_MODELS, VALID_SEEDANCE_RATIOS, VALID_SEEDANCE_RESOLUTIONS, } from './seedance-client.js';
 import { DEFAULT_GEMINI_38_TTS_MODEL, DEFAULT_TTS_MODEL, DEFAULT_TTS_TEMPERATURE, DEFAULT_VOICE, GEMINI_38_TTS_MODELS, MAX_GEMINI_38_TTS_INPUT_CHARS, TTS_VOICE_NAMES, VALID_TTS_MODELS, } from './tts-client.js';
 import { GENERATORS, REVIEW_MODEL } from './tts-quality.js';
-import { DEFAULT_ELEVENLABS_MODEL, DEFAULT_ELEVENLABS_OUTPUT_FORMAT, ELEVENLABS_DIALOGUE_MAX_INPUTS, ELEVENLABS_DIALOGUE_MAX_VOICES, ELEVENLABS_DIALOGUE_MODEL, ELEVENLABS_MODELS, ELEVENLABS_MODEL_CHAR_CAPS, ELEVENLABS_OUTPUT_FORMATS, ELEVENLABS_TEXT_NORMALIZATION, ELEVENLABS_VOICE_CATEGORIES, MAX_ELEVENLABS_DIALOGUE_CHARS, MAX_ELEVENLABS_INPUT_CHARS, DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT, DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE, ELEVENLABS_SFX_MODEL, ELEVENLABS_SFX_OUTPUT_FORMATS, ELEVENLABS_SFX_SECONDS, ELEVENLABS_SFX_USD_PER_MINUTE, MAX_ELEVENLABS_SFX_TEXT_CHARS, } from './elevenlabs-client.js';
+import { DEFAULT_ELEVENLABS_MODEL, DEFAULT_ELEVENLABS_OUTPUT_FORMAT, ELEVENLABS_DIALOGUE_MAX_INPUTS, ELEVENLABS_MODELS, ELEVENLABS_OUTPUT_FORMATS, ELEVENLABS_TEXT_NORMALIZATION, ELEVENLABS_VOICE_CATEGORIES, MAX_ELEVENLABS_INPUT_CHARS, DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT, DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE, ELEVENLABS_SFX_MODEL, ELEVENLABS_SFX_OUTPUT_FORMATS, ELEVENLABS_SFX_SECONDS, ELEVENLABS_SFX_USD_PER_MINUTE, MAX_ELEVENLABS_SFX_TEXT_CHARS, } from './elevenlabs-client.js';
 import { DEFAULT_ZIMAGE_QUANTIZE, DEFAULT_ZIMAGE_STEPS, MAX_ZIMAGE_DIMENSION, MIN_ZIMAGE_DIMENSION, ZIMAGE_DIMENSION_STEP, ZIMAGE_QUANTIZE_OPTIONS, } from './zimage-client.js';
 import { DEFAULT_QWEN3_ASR_LANGUAGE, DEFAULT_QWEN3_ASR_MODEL, QWEN3_ASR_LANGUAGES, QWEN3_ASR_MODELS, } from './qwen3-asr-client.js';
 import { BLENDER_INTERPOLATIONS, BLENDER_PREVIZ_ENGINES, BLENDER_PROXY_KINDS, BLENDER_RIG_BONES, BLENDER_ROOT_MOTIONS, DEFAULT_FRAME_END, DEFAULT_FRAME_START, DEFAULT_PREVIZ_ENGINE, DEFAULT_PREVIZ_FILENAME, DEFAULT_PREVIZ_HEIGHT, DEFAULT_PREVIZ_WIDTH, DEFAULT_SCENE_FPS, MAX_PREVIZ_FRAMES, } from './blender-bridge.js';
 import { DEFAULT_SUNO_MODEL, SUNO_MODELS, SUNO_PERSONA_MODELS, SUNO_SOUND_KEYS, SUNO_VOCAL_GENDERS, } from './suno-client.js';
-import { DEFAULT_MLX_IMAGE_SIZE, DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FRAMES, DEFAULT_MLX_VIDEO_HEIGHT, DEFAULT_MLX_VIDEO_WIDTH, MAX_MLX_IMAGE_DIMENSION, MAX_MLX_IMAGE_REFS, MAX_MLX_MUSIC_SECONDS, MAX_MLX_TTS_CHARS, MAX_MLX_VIDEO_DIMENSION, MAX_MLX_VIDEO_FRAMES, MAX_VIDEO_RGB_BYTES, MIN_MLX_IMAGE_DIMENSION, MIN_MLX_MUSIC_SECONDS, MIN_MLX_VIDEO_DIMENSION, MIN_MLX_VIDEO_FRAMES, MLX_IMAGE_DIMENSION_STEP, MLX_VIDEO_DIMENSION_STEP, MLX_VIDEO_DIMENSION_STEP_ONE_STAGE, MLX_VIDEO_FRAME_STEP, MLX_VIDEO_FPS, } from './mlx-serve-client.js';
-import { VOICE_LOCK_TOOLS } from './voice-lock.js';
+import { DEFAULT_MLX_IMAGE_SIZE, DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FRAMES, DEFAULT_MLX_VIDEO_HEIGHT, DEFAULT_MLX_VIDEO_WIDTH, MAX_MLX_IMAGE_DIMENSION, MAX_MLX_IMAGE_REFS, MAX_MLX_MUSIC_SECONDS, MAX_MLX_VIDEO_DIMENSION, MAX_MLX_VIDEO_FRAMES, MAX_VIDEO_RGB_BYTES, MIN_MLX_IMAGE_DIMENSION, MIN_MLX_MUSIC_SECONDS, MIN_MLX_VIDEO_DIMENSION, MIN_MLX_VIDEO_FRAMES, MLX_IMAGE_DIMENSION_STEP, MLX_VIDEO_DIMENSION_STEP, MLX_VIDEO_DIMENSION_STEP_ONE_STAGE, MLX_VIDEO_FRAME_STEP, MLX_VIDEO_FPS, } from './mlx-serve-client.js';
 /**
  * Tool surface definitions (83 tools) — 9 research (incl. stock_search) + 5 open-data +
  * 40 generation (5 image + 12 video + 9 voice + 1 STT + 9 music + 1 mesh +
@@ -283,7 +281,7 @@ const ELEVENLABS_LANGUAGE_CODE_PROPERTY = {
 };
 const ELEVENLABS_SEED_PROPERTY = {
     type: 'number',
-    description: 'Deterministic seed 0–4294967295. The same seed, text, voice and settings reproduce the take — keep it when re-rendering one sentence of a finished scene.',
+    description: 'Best-effort seed 0–4294967295. Same inputs can still vary; preserve for comparison, never promise deterministic audio.',
     minimum: 0,
     maximum: 4294967295,
 };
@@ -789,7 +787,63 @@ const storyboardShotInput = {
         }
     },
 };
+const ELEVENLABS_V4_PROPERTIES = {
+    model: { type: 'string', enum: [...ELEVENLABS_MODELS], default: DEFAULT_ELEVENLABS_MODEL, description: 'Only eleven_v4 is accepted. Never fall back to a legacy model.' },
+    languageCode: { type: 'string', pattern: '^[a-z]{2}$', description: 'ISO 639-1 text language, e.g. ko.' },
+    stability: { type: 'number', minimum: 0, maximum: 1, description: 'Consistency of delivery; lower permits more expression.' },
+    similarity: { type: 'number', minimum: 0, maximum: 1, description: 'Similarity to the chosen voice; maps to settings.similarity.' },
+    similarityBoost: { type: 'number', minimum: 0, maximum: 1, description: 'Deprecated alias for similarity; do not supply both with different values.' },
+    speed: { type: 'number', enum: [1], description: 'Compatibility no-op only. v4 does not accept a numerical speed setting.' },
+    seed: ELEVENLABS_SEED_PROPERTY,
+    previousText: { type: 'string', maxLength: 100, description: 'Prior speech context; not synthesized.' },
+    nextText: { type: 'string', maxLength: 100, description: 'Following speech context; maps to future_text, not synthesized.' },
+    pronunciationDictionaryLocators: { type: 'array', minItems: 1, maxItems: 3, description: 'Pinned dictionary versions.', items: { type: 'object', additionalProperties: false, properties: { pronunciationDictionaryId: { type: 'string', description: 'Dictionary id.' }, versionId: { type: 'string', description: 'Version id.' } }, required: ['pronunciationDictionaryId', 'versionId'] } },
+    applyTextNormalization: ELEVENLABS_NORMALIZATION_PROPERTY,
+    outputFormat: ELEVENLABS_OUTPUT_FORMAT_PROPERTY, timestamps: ELEVENLABS_TIMESTAMPS_PROPERTY,
+    outputPath: { type: 'string', description: 'Output directory.' }, filename: { type: 'string', description: 'Output basename with matching extension.' }
+};
+const ACTING_PROPERTY = { type: 'object', additionalProperties: false, description: 'Per-line performance, separate from character identity. Empty object clears direction.', properties: {
+        direction: { type: 'string', maxLength: 500, description: 'Short plain delivery direction; no bracket markup.' },
+        tags: { type: 'array', maxItems: 6, items: { type: 'string', maxLength: 60 }, description: 'Bare English vocal events prepended to this line, e.g. sigh. Split the line for later changes.' }
+    } };
 export const TOOLS = [
+    {
+        name: 'tts_review_acting', title: 'Explicitly requested adversarial audio review', annotations: HINT.generate,
+        description: 'Send an actual WAV to the configured Gemini audio reviewer only when the user asks for listening/evaluation. Scores accuracy25, acting30, naturalness25, audio quality20. Returns model judgment, timestamped defects, audio hash and saved report. PASS requires >=95, complete listening, confidence>=0.9 and no major/critical issue. Never call automatically from normal production, invent listening evidence, or treat a model score as human approval. Does not generate speech or change the WAV.',
+        inputSchema: { type: 'object', additionalProperties: false, properties: {
+                audioPath: { type: 'string', description: 'Actual WAV path, under14MiB.' }, expectedText: { type: 'string', maxLength: 4000, description: 'Clean expected spoken words, without acting tags.' },
+                direction: { type: 'string', maxLength: 2000, description: 'Requested scene intent and audible performance changes.' }, language: { type: 'string', default: 'ko', description: 'Spoken language.' },
+                requestedBy: { type: 'string', maxLength: 1000, description: 'Actual user request authorizing paid audio evaluation.' }, outputPath: { type: 'string', description: 'Local directory for hash-bound review reports.' }
+            }, required: ['audioPath', 'expectedText', 'direction', 'requestedBy', 'outputPath'] }
+    },
+    {
+        name: 'character_voice_audition', title: 'Audition three character voices and save the user choice',
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+        description: 'create generates exactly three paid voice previews using the same sample and model, writes a local HTML page with audio players and an audition manifest, and leaves identity.md unchanged. Choose three distinct voices matching the character from the voice lookup tools. read loads the existing audition. select requires the actual user choice; it verifies identity and audio hashes, backs up identity.md, and writes only the chosen tts configuration and selection provenance. Never select on behalf of the user, invent a choice, or run creation again after a partial failure without inspecting the manifest. Returns auditionPath, previewPath, candidate audio files and selection state. No publishing or automatic scoring.',
+        inputSchema: { type: 'object', additionalProperties: false, properties: {
+                action: { type: 'string', enum: ['create', 'read', 'select'], description: 'Generate three choices, inspect them, or save an explicit user choice.' },
+                identityPath: { type: 'string', description: 'Existing character identity.md with one structured character JSON block. Draft tts may be absent before selection.' },
+                auditionPath: { type: 'string', description: 'Manifest path returned by create; required for read/select.' },
+                sampleText: { type: 'string', minLength: 5, maxLength: 300, description: 'Same natural spoken sample for all three candidates; no tag markup.' },
+                acting: ACTING_PROPERTY,
+                candidates: { type: 'array', minItems: 3, maxItems: 3, description: 'Exactly three distinct voice IDs on one selected engine/model/language.', items: { type: 'object', additionalProperties: false, required: ['label', 'reason', 'tts'], properties: {
+                            label: { type: 'string', maxLength: 100, description: 'Human-readable candidate label.' },
+                            reason: { type: 'string', maxLength: 500, description: 'Why this voice suits the character.' },
+                            tts: { type: 'object', description: 'Candidate voice settings saved unchanged only after user selection.', additionalProperties: false, required: ['engine', 'model', 'voiceId', 'language', 'speed'], properties: {
+                                    engine: { type: 'string', enum: ['gemini', 'elevenlabs'], description: 'Selected speech provider.' },
+                                    model: { type: 'string', description: 'Explicit supported Gemini model or eleven_v4.' },
+                                    voiceId: { type: 'string', description: 'Voice ID obtained from lookup; never invent it.' },
+                                    language: { type: 'string', description: 'Text language e.g. ko.' },
+                                    speed: { type: 'number', enum: [1], description: 'Neutral speed only.' },
+                                    stability: { type: 'number', minimum: 0, maximum: 1, description: 'Optional ElevenLabs v4 consistency.' },
+                                    similarity: { type: 'number', minimum: 0, maximum: 1, description: 'Optional ElevenLabs v4 voice similarity.' },
+                                    stylePrompt: { type: 'string', description: 'Only for pre-3.8 Gemini baseline style.' }
+                                } }
+                        } } },
+                candidateId: { type: 'string', enum: ['1', '2', '3'], description: 'Candidate selected by the user.' },
+                userSelection: { type: 'string', maxLength: 1000, description: 'Actual user response selecting the candidate. Required for select; never fabricate.' }
+            }, required: ['action'] }
+    },
     {
         name: 'location_manage', title: 'Build, bind and review a persistent 3D location',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
@@ -807,7 +861,6 @@ export const TOOLS = [
                 patch: { oneOf: [{ type: 'string' }, { type: 'object', additionalProperties: true }], description: 'Exported camera proposal file or object' }
             } }
     },
-    ...VOICE_LOCK_TOOLS,
     // ── Research & fact-checking ──────────────────────────────────────────
     {
         name: 'serp_web_search',
@@ -2862,7 +2915,7 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
     },
     {
         name: 'tts_elevenlabs_dictionary', title: 'Create pronunciation dictionary', annotations: HINT.generate,
-        description: 'Create a versioned ElevenLabs pronunciation dictionary. multilingual_v2 uses aliases; non-English IPA requires eleven_v3. Use for Korean proper names without inserting spaces or deleting the name from the script. Returns pronunciationDictionaryId and versionId to pin in generation.pronunciationDictionaryLocators. Keep aliases faithful to the approved pronunciation; verify actual audio. Requires ElevenLabs dictionary write permission; never changes the voice or existing dictionaries.',
+        description: 'Create a versioned ElevenLabs pronunciation dictionary. v4 supports versioned pronunciation dictionaries. Use for Korean proper names without inserting spaces or deleting the name from the script. Returns pronunciationDictionaryId and versionId to pin in generation.pronunciationDictionaryLocators. Keep aliases faithful to the approved pronunciation; verify actual audio. Requires ElevenLabs dictionary write permission; never changes the voice or existing dictionaries.',
         inputSchema: { type: 'object', additionalProperties: false, properties: {
                 name: { description: 'Descriptive name of the new dictionary.', type: 'string', minLength: 1, maxLength: 200 },
                 rules: { description: 'Approved source spelling and intended spoken aliases.', type: 'array', minItems: 1, maxItems: 100, items: { type: 'object', additionalProperties: false, properties: {
@@ -2879,7 +2932,7 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
         annotations: HINT.generate,
         description: `Generate one scene with the pinned TTS engine, review the actual WAV, and regenerate failed takes up to maxAttempts (1–3, including the first take).
 Legacy opt-in review tool: use only when the user explicitly requests automatic audio review. Never call from default produce/autoproduce; those flows use raw TTS and speech_manage provenance. Pass the existing generator's arguments in generation, the complete spoken expectedText (phonetic spelling; no acting tags or speaker labels), language, and the profile's intended delivery. Voice and generation settings stay unchanged across attempts; the episode seed stays fixed on every retake (vendor determinism is best-effort). An entire scene is one call; never split it into sentence calls.
-Every single-voice take has its sentences re-spaced before review: a fixed sentencePause of digital silence between sentences (stretched up to 1.0s where a subtitle cue would read faster than 6.0 chars/s after playbackSpeed), a 0.14s lead, speech samples copied as generated (the 12 ms fades stay on the natural gap). tts_elevenlabs_generate is fetched with timestamps and spaced from its own alignment; tts_local_generate, tts_generate and mlx_tts_generate are aligned by the local forced aligner (mlx-qwen3-asr --timestamps) first, so a multi-sentence scene on any engine ships with the same pauses. Pass segments (the scene's narration[].tts list) so the pauses land on the builder's segment boundaries; the wrapper writes <wav>.sentences.json and the .alignment.json for the shipped audio. Generate consecutive sentences in one call whenever they belong to one breath — the engine reads them as one utterance, where one call per sentence restarts the voice at every sentence.
+Every single-voice take has its sentences re-spaced before review: a fixed sentencePause of digital silence between sentences (stretched up to 1.0s where a subtitle cue would read faster than 6.0 chars/s after playbackSpeed), a 0.14s lead, speech samples copied as generated (the 12 ms fades stay on the natural gap). tts_elevenlabs_generate is fetched with timestamps and spaced from its own alignment; tts_generate and tts_gemini_38 are aligned by the local forced aligner (mlx-qwen3-asr --timestamps) first, so a multi-sentence scene on any engine ships with the same pauses. Pass segments (the scene's narration[].tts list) so the pauses land on the builder's segment boundaries; the wrapper writes <wav>.sentences.json and the .alignment.json for the shipped audio. Generate consecutive sentences in one call whenever they belong to one breath — the engine reads them as one utterance, where one call per sentence restarts the voice at every sentence.
 Checks signal/duration, then ${REVIEW_MODEL} listening scores: accuracy >=98, pronunciation/naturalness/clarity >=95, confidence >=0.9, no audible defects. The blind-transcription (STT) check and its CER <=2% gate do not run unless transcriptCheck carries a user request for them (owner directive 2026-10-04); the proof then records transcript: null. Returns an optional historical hash-bound .wav.quality.json review proof. Missing keys, unavailable reviewer or malformed responses hold production (unverified); exhausted attempts return fail, and that finding goes to the user as a warning they can accept for the current take (skills/produce/references/tts-hitl.md). Scores are operational thresholds, not a guarantee of human judgement.
 Requires ffmpeg and GEMINI_API_KEY even for local synthesis. One paid audio-review call per acoustically valid take (two with transcriptCheck), plus the selected generator's costs. Record the retry-inclusive allowance before calling; review tokens are logged as unpriced until reconciled with provider billing. Do not call again to reset an exhausted attempt budget. Do not use for recordings or native clip speech. Do not change engines/voices or lower thresholds to obtain PASS.`,
         inputSchema: {
@@ -2956,7 +3009,7 @@ Returns: a text block with the saved .wav file path, voice name, and text length
 
 Use for emotional acting, per-line delivery changes, vocal events, pauses, and two-person dialogue. Put lasting delivery in each turn's style field. Put point events directly in text with the documented English angle-bracket tags, such as <laugh>, <sigh>, <cough>, <breath>, <short pause>, or <long pause>. For listener backchannels and overlapping speech in two-speaker mode, put pipe segments such as |oh really?| inside the active speaker's text. The text is read verbatim, so never put stage directions in it unless they are a supported tag.
 Single voice accepts a curated name, an extended-library voice, or a voice_ / voicekey_ identifier. Two-speaker mode requires exactly two configured curated voices and every turn must name one configured speaker. Gemini 3.8 supports at most two speakers in one request.
-This is a supporting engine for acted cuts and two-person scenes. The Pundago narration default remains ElevenLabs L4az9Gb378GIycFl2nAB on eleven_multilingual_v2 at speed 1.0. Do not replace that channel default with this tool.
+This is a supporting engine for acted cuts and two-person scenes. The saved speech model stays authoritative; never replace an existing Gemini or ElevenLabs v4 selection automatically.
 
 Returns: a text block with the saved 24kHz mono RIFF WAV path, model, voice or speaker assignments, turn count, and total text length.`,
         inputSchema: {
@@ -3071,283 +3124,44 @@ Returns: a text block with the saved .wav file path, speaker/voice assignments, 
         },
     },
     {
-        name: 'tts_local_generate',
-        title: 'Speech synthesis (local · Supertonic)',
-        annotations: HINT.generateLocal,
-        description: `Convert text to speech **on this machine** using Supertonic 3 — no API key, no network, no quota, no per-character cost.
-
-Use for narration bodies and any bulk voice-over: scene narration in the produce pipeline, long scripts, and repeated takes where API cost or quota would add up. Measured at 6.3x realtime on CPU alone. 10 built-in voices (F1–F5 female, M1–M5 male) across 31 languages; output is 44.1kHz mono WAV and the response includes the exact audio duration, so no ffprobe round-trip is needed for length checks.
-Do NOT use when the line needs acted delivery — there is no style/emotion parameter here, so intro lines, character dialogue, and anything with a stylePrompt belong to tts_generate (Gemini). Do NOT mix both engines inside one video without resampling: this returns 44.1kHz and tts_generate returns 24kHz.
-Requires a local Python runtime with the \`supertonic\` package (pip install supertonic); set SUPERTONIC_PYTHON if it lives in a virtualenv. The first call downloads 385MB of weights to ~/.cache/supertonic3. Model weights are OpenRAIL-M licensed (code is MIT) — commercial use is permitted with use-based restrictions, so review the terms before shipping generated audio.
-
-Returns: a text block with the saved .wav path, voice, language, audio duration, sample rate, and synthesis time.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                text: {
-                    type: 'string',
-                    description: `The text to convert to speech (max ${MAX_SUPERTONIC_INPUT_CHARS} characters — split longer scripts by scene)`,
-                    maxLength: MAX_SUPERTONIC_INPUT_CHARS,
-                },
-                voice: {
-                    type: 'string',
-                    description: `Voice style (default: "${DEFAULT_SUPERTONIC_VOICE}"). F1–F5 are female, M1–M5 male; the vendor publishes no personality labels beyond that. Keep one voice per channel — see data/<slug>/profile.md.`,
-                    enum: [...SUPERTONIC_VOICE_NAMES],
-                    default: DEFAULT_SUPERTONIC_VOICE,
-                },
-                lang: {
-                    type: 'string',
-                    description: `Language code (default: "${DEFAULT_SUPERTONIC_LANGUAGE}"). Unlike tts_generate this is NOT auto-detected — set it, because the code also sets the sentence-group cap (120 characters for Korean, 300 otherwise). Use "na" only for text whose language is unsupported.`,
-                    enum: [...SUPERTONIC_LANGUAGES],
-                    default: DEFAULT_SUPERTONIC_LANGUAGE,
-                },
-                speed: {
-                    type: 'number',
-                    description: `Speech speed 0.7–${MAX_SUPERTONIC_SPEED} (default: ${DEFAULT_SUPERTONIC_SPEED}). Non-1 requires an explicit user request in outputPath/speed-authorization.json (generation scope and exact factor); a channel profile alone is not approval. Keep it identical across every cut of one video. Above 1.2 the model drops syllables (measured), so a faster delivery comes from the produce playback speed pass, not from this value.`,
-                    minimum: 0.7,
-                    maximum: MAX_SUPERTONIC_SPEED,
-                    default: DEFAULT_SUPERTONIC_SPEED,
-                },
-                steps: {
-                    type: 'number',
-                    description: `Quality steps 1–100 (default: ${DEFAULT_SUPERTONIC_STEPS}). Higher is slower with diminishing returns; the default is the vendor's recommended setting.`,
-                    minimum: 1,
-                    maximum: 100,
-                    default: DEFAULT_SUPERTONIC_STEPS,
-                },
-                chunkPause: {
-                    type: 'number',
-                    description: `Silence between sentence groups, seconds (default: ${DEFAULT_SUPERTONIC_CHUNK_PAUSE}). Sentences are grouped up to the language cap and each group is read as one utterance; the model's own 0.4–0.5s of leading and trailing quiet is trimmed off every group, so a join is this pause plus a short margin — not the 1.3s hole the package's chunking left (measured 2026-09-15). The checked lane pads every sentence gap to its sentencePause afterwards.`,
-                    minimum: 0,
-                    maximum: 1.5,
-                    default: DEFAULT_SUPERTONIC_CHUNK_PAUSE,
-                },
-                outputPath: {
-                    type: 'string',
-                    description: 'Directory path to save the audio file (default: current working directory)',
-                },
-                filename: {
-                    type: 'string',
-                    description: 'Filename for the audio file (default: supertonic_<timestamp>.wav)',
-                },
-            },
-            required: ['text'],
-        },
+        name: 'tts_list_voices', title: 'Gemini voice catalog', annotations: HINT.read,
+        description: 'List Gemini curated voices or query the live extended/custom voice library. source=curated returns the static 30-voice list without API usage. source=library queries GET /v1beta/voices with pageToken/limit and requires GEMINI_API_KEY. Returns voice IDs and metadata; choose by audition. For ElevenLabs use tts_elevenlabs_voices. This tool does not synthesize audio.',
+        inputSchema: { type: 'object', additionalProperties: false, properties: {
+                source: { type: 'string', enum: ['curated', 'library'], default: 'curated', description: 'Static basic catalog or live voice library.' },
+                pageToken: { type: 'string', description: 'Next page token from a prior library response.' },
+                limit: { type: 'integer', minimum: 1, maximum: 100, default: 30, description: 'Maximum library voices per request.' }
+            } }
     },
     {
-        name: 'mlx_tts_generate',
-        title: 'Speech synthesis (local · MLX Core)',
-        annotations: HINT.generateLocal,
-        description: `Convert text to speech on this machine via MLX Core / mlx-serve POST /v1/audio/speech. Returns raw WAV bytes (this tool does not decode the body as text). No vendor bill. This plugin never launches the app.
-
-Use as an optional local voice when MLX Core is running with an audio model. The OpenAI-compatible field is input (not text). Optional voice name or refAudioPath for a reference clip. Max ${MAX_MLX_TTS_CHARS} characters.
-Do NOT use this as a silent fallback for the channel profile §2 engine — if Supertonic, Gemini, or ElevenLabs is pinned, a missing runtime stops the run and asks the user. Mixing sample rates with tts_local_generate (44.1kHz) or tts_generate (24kHz) on one timeline needs a resample. Do NOT treat this as the default narration path.
-Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve (or MLX_SERVE_URL). brew install --cask mlx-core if :11234 is down.
-
-Returns: a text block with the saved .wav path, model, and generation time.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                input: {
-                    type: 'string',
-                    description: `Text to speak (max ${MAX_MLX_TTS_CHARS} characters). OpenAI-compatible name: input, not text.`,
-                    maxLength: MAX_MLX_TTS_CHARS,
-                },
-                model: {
-                    type: 'string',
-                    description: 'mlx-serve model id. Omit to pick a ready model that advertises capability "audio".',
-                },
-                voice: {
-                    type: 'string',
-                    description: 'Optional voice name the loaded model advertises. Omit for the model default.',
-                },
-                refAudioPath: {
-                    type: 'string',
-                    description: 'Optional reference clip (absolute path, sent as base64) for voice cloning on models that support it.',
-                },
-                outputPath: {
-                    type: 'string',
-                    description: 'Directory path to save the audio (default: current working directory)',
-                },
-                filename: {
-                    type: 'string',
-                    description: 'Filename for the audio (default: mlx_tts_<timestamp>.wav)',
-                },
-            },
-            required: ['input'],
-        },
-    },
-    {
-        name: 'tts_list_voices',
-        title: 'TTS voice list',
-        annotations: HINT.local,
-        description: `List the built-in voices of the two static TTS engines — 30 Gemini voices with personality traits, plus the 10 local Supertonic voices — and point at the third lane.
-
-Use before tts_generate, tts_multi_speaker, or tts_local_generate when the user has not specified a voice, or asks what voices are available (목소리 종류). Read-only; makes no API call. ElevenLabs voices are account-specific and NOT listed here — call tts_elevenlabs_voices for those.
-Do NOT use to generate audio — use tts_generate (acted delivery) or tts_local_generate (narration, free). The list is static; one call per session is enough. When the channel profile (data/<slug>/profile.md) already fixes a voice, use that instead of picking a new one.
-
-Returns: a text list of the 30 Gemini voice names with one-line personality descriptions (e.g. "Kore — Firm"), followed by the 10 Supertonic voice IDs (F1–F5, M1–M5 — no personality labels are published for these), and a note on which of the three engines to pick.`,
-        inputSchema: {
-            type: 'object',
-            properties: {},
-            required: [],
-        },
-    },
-    // ── Speech synthesis (ElevenLabs — REST, xi-api-key) ─────────────────────────
-    {
-        name: 'tts_elevenlabs_generate',
-        title: 'Speech synthesis (ElevenLabs · single voice)',
-        annotations: HINT.generate,
-        description: `Convert text to single-voice speech with ElevenLabs — the paid third lane for cuts that need acted delivery, a specific cloned or library voice, or per-character timestamps.
-
-Use when the channel profile names engine \`elevenlabs\`, when a line needs inline acting on eleven_v3 (audio tags in the text: "[whispers] 이건 비밀인데요", "[laughs]", "[sarcastic]", "[sighs]" — more precise than a Gemini stylePrompt because the tag sits exactly where the delivery changes), when the voice must be a Voice Library / cloned voice, or when subtitles need exact timing (timestamps: true). Korean is supported on every model here, but quality tracks the VOICE more than the model — an English-trained premade voice reads Korean with an accent; pick a Korean voice from the Voice Library (paid plans) and pin it in profile.md.
-Do NOT use for narration bodies by default — tts_local_generate is free and tts_generate is 1.3–2.6x cheaper; the API rate is $0.10 per 1,000 characters on multilingual_v2 and v3, $0.05 on flash_v2_5 and v3_conversational (the same on every plan; each plan includes a monthly character allowance). Do NOT use for a multi-voice scene — use tts_elevenlabs_dialogue. Do NOT switch voiceId, model, stability or seed between cuts of one video. Free-tier output is non-commercial and needs attribution — check the plan before publishing.
-Per-request caps: ${ELEVENLABS_MODEL_CHAR_CAPS.eleven_v3} characters on eleven_v3, ${ELEVENLABS_MODEL_CHAR_CAPS.eleven_multilingual_v2} on multilingual_v2, ${ELEVENLABS_MODEL_CHAR_CAPS.eleven_flash_v2_5} on flash_v2_5 — one scene per call. previousText/nextText carry the neighboring sentences so a re-rendered cut matches its neighbors' tone. The server retries 429/5xx 3x; a 403 output_format_not_allowed means the plan lacks that format — use wav_24000.
-
-Returns: a text block with the saved audio path (WAV by default — the builder needs RIFF), model, voice, format, duration, the vendor's metered character cost (the character-cost header, the billing quantity), request id, and the alignment sidecar path when timestamps were requested.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                text: {
-                    type: 'string',
-                    description: `The text to convert to speech (max ${MAX_ELEVENLABS_INPUT_CHARS} characters — ${ELEVENLABS_MODEL_CHAR_CAPS.eleven_v3} on eleven_v3; split the script by scene). On eleven_v3, square-bracket audio tags inside the text direct the delivery.`,
-                    maxLength: MAX_ELEVENLABS_INPUT_CHARS,
-                },
+        name: 'tts_elevenlabs_generate', title: 'ElevenLabs v4 single voice', annotations: HINT.generate,
+        description: 'Generate one voice with eleven_v4 through Text to Dialogue. Put short acting directions and vocal events in square brackets inside text. Returns RIFF WAV by default, measured character cost and optional timestamps. Only v4 is supported; old models and local TTS are removed. Use tts_elevenlabs_dialogue for multiple voices, or Gemini when selected. Keep identity voice pinned; scene acting may change. Free-tier output is non-commercial. No automatic listening review.',
+        inputSchema: { type: 'object', additionalProperties: false, properties: {
+                text: { type: 'string', minLength: 1, maxLength: MAX_ELEVENLABS_INPUT_CHARS, description: 'Spoken text with square-bracket acting tags. v4 supports up to 10000 characters; short coherent scenes are preferable. No SSML.' },
                 voiceId: ELEVENLABS_VOICE_ID_PROPERTY,
-                model: {
-                    type: 'string',
-                    description: `TTS model (default: "${DEFAULT_ELEVENLABS_MODEL}" — the vendor default, stable, 10k chars, $0.10/1K). eleven_v3: audio tags and the most expressive read, 5k chars, slow (not real-time), $0.10/1K. eleven_v3_conversational: the v3 family tuned for realtime at half price ($0.05/1K), 5k-char cap applied here; accepted by this tool but not by dialogue. eleven_flash_v2_5: fastest, $0.05/1K, 40k chars, honors languageCode, reads digits raw unless applyTextNormalization is "on". eleven_turbo_v2_5 is deprecated in favor of flash_v2_5 and kept only for existing profiles.`,
-                    enum: [...ELEVENLABS_MODELS],
-                    default: DEFAULT_ELEVENLABS_MODEL,
-                },
-                languageCode: ELEVENLABS_LANGUAGE_CODE_PROPERTY,
-                stability: ELEVENLABS_STABILITY_PROPERTY,
-                similarityBoost: {
-                    type: 'number',
-                    description: 'How closely to track the original voice, 0–1 (vendor default 0.75). Very high values can reproduce artifacts from the voice\'s training sample.',
-                    minimum: 0,
-                    maximum: 1,
-                },
-                style: {
-                    type: 'number',
-                    description: 'Style exaggeration 0–1 (vendor default 0). Raising it adds expressiveness and latency; 0 is the steady choice for narration. multilingual_v2 only — the per-model settings schemas give eleven_v3 {stability} and flash_v2_5 {stability, similarity_boost, speed}, so it is ignored there (use audio tags on v3).',
-                    minimum: 0,
-                    maximum: 1,
-                },
-                speed: {
-                    type: 'number',
-                    description: 'Speaking rate 0.7–1.2 (default 1.0). Non-1 requires an explicit user request in outputPath/speed-authorization.json (generation scope and exact factor); a channel profile alone is not approval. Keep it identical across every cut.',
-                    minimum: 0.7,
-                    maximum: 1.2,
-                },
-                useSpeakerBoost: {
-                    type: 'boolean',
-                    description: 'Boost similarity to the original speaker (vendor default true). Adds a little latency. multilingual_v2 only — ignored on eleven_v3 and flash_v2_5.',
-                },
-                seed: ELEVENLABS_SEED_PROPERTY,
-                pronunciationDictionaryLocators: { type: 'array', minItems: 1, maxItems: 3, description: 'Pinned dictionary IDs and versions from tts_elevenlabs_dictionary. Applied in order.', items: {
-                        type: 'object', additionalProperties: false, properties: { pronunciationDictionaryId: { description: 'Dictionary ID returned by the create tool.', type: 'string', minLength: 1 }, versionId: { description: 'Pinned dictionary version ID.', type: 'string', minLength: 1 } }, required: ['pronunciationDictionaryId', 'versionId'],
-                    } },
-                previousText: {
-                    type: 'string',
-                    description: 'The sentence(s) spoken right before this text in the finished audio — not synthesized, only used so the take continues the neighbor\'s tone. Use when re-rendering one cut of a scene. Not accepted by eleven_v3 (the vendor returns 400; the schema rejects it first).',
-                },
-                nextText: {
-                    type: 'string',
-                    description: 'The sentence(s) spoken right after this text — same purpose as previousText.',
-                },
-                applyTextNormalization: ELEVENLABS_NORMALIZATION_PROPERTY,
-                outputFormat: ELEVENLABS_OUTPUT_FORMAT_PROPERTY,
-                timestamps: ELEVENLABS_TIMESTAMPS_PROPERTY,
-                outputPath: {
-                    type: 'string',
-                    description: 'Directory path to save the audio file (default: current working directory)',
-                },
-                filename: {
-                    type: 'string',
-                    description: 'Filename for the audio file (default: elevenlabs_<timestamp>.wav — .mp3 when outputFormat is mp3_*). The extension must match outputFormat.',
-                },
-            },
-            required: ['text', 'voiceId'],
-        },
+                ...ELEVENLABS_V4_PROPERTIES
+            }, required: ['text', 'voiceId'] }
     },
     {
-        name: 'tts_elevenlabs_dialogue',
-        title: 'Speech synthesis (ElevenLabs · multi-voice dialogue)',
-        annotations: HINT.generate,
-        description: `Voice a multi-speaker scene in ONE request with ElevenLabs text-to-dialogue (eleven_v3, up to ${ELEVENLABS_DIALOGUE_MAX_VOICES} distinct voices) — the lines come out as one continuous take with natural turn-taking.
-
-Use when a scene has more than the 2 speakers tts_multi_speaker allows (the Gemini lane's 3-speaker workaround — one call per speaker plus 0.75s of silence between them — goes away), or when a 2-speaker scene should sound like one conversation rather than stitched cuts. Each line is {text, voiceId}; audio tags inside a line ("[laughs] 그게 말이 돼요?") direct that speaker. With timestamps: true the sidecar also carries voice_segments (which input/voice covers which span) — that is the subtitle speaker map for free.
-Do NOT use for a single narrator — tts_elevenlabs_generate (or the free local lane) is cheaper per call and steadier. Do NOT exceed ~2,000 characters per request even though the hard cap is ${MAX_ELEVENLABS_DIALOGUE_CHARS} — the vendor recommends short requests for quality; split long scenes. The model is fixed to ${ELEVENLABS_DIALOGUE_MODEL} (every other model, v3_conversational included, is rejected). $0.10 per 1,000 characters; free-tier output is non-commercial.
-
-Returns: a text block with the saved audio path (WAV by default), line and voice counts, duration, the vendor's measured character cost, request id, and the alignment sidecar path when timestamps were requested.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                inputs: {
-                    type: 'array',
-                    description: `Ordered dialogue lines. Each line is spoken by its voiceId; consecutive lines may share a voice. 1–${ELEVENLABS_DIALOGUE_MAX_INPUTS} lines, at most ${ELEVENLABS_DIALOGUE_MAX_VOICES} distinct voices, ${MAX_ELEVENLABS_DIALOGUE_CHARS} characters in total (≈2,000 recommended).`,
-                    items: {
-                        type: 'object',
-                        properties: {
-                            text: { type: 'string', description: 'What this speaker says (audio tags allowed, e.g. "[whispers] …")' },
-                            voiceId: ELEVENLABS_VOICE_ID_PROPERTY,
-                        },
-                        required: ['text', 'voiceId'],
-                    },
-                    minItems: 1,
-                    maxItems: ELEVENLABS_DIALOGUE_MAX_INPUTS,
-                },
-                stability: ELEVENLABS_STABILITY_PROPERTY,
-                seed: ELEVENLABS_SEED_PROPERTY,
-                languageCode: ELEVENLABS_LANGUAGE_CODE_PROPERTY,
-                applyTextNormalization: ELEVENLABS_NORMALIZATION_PROPERTY,
-                outputFormat: ELEVENLABS_OUTPUT_FORMAT_PROPERTY,
-                timestamps: ELEVENLABS_TIMESTAMPS_PROPERTY,
-                outputPath: {
-                    type: 'string',
-                    description: 'Directory path to save the audio file (default: current working directory)',
-                },
-                filename: {
-                    type: 'string',
-                    description: 'Filename for the audio file (default: elevenlabs_dialogue_<timestamp>.wav — .mp3 when outputFormat is mp3_*). The extension must match outputFormat.',
-                },
-            },
-            required: ['inputs'],
-        },
+        name: 'tts_elevenlabs_dialogue', title: 'ElevenLabs v4 multi-voice dialogue', annotations: HINT.generate,
+        description: 'Generate a continuous dialogue with eleven_v4. Each input contains text and voiceId; use square-bracket acting tags in that turn. Unlike tts_multi_speaker, this plugin accepts up to 10 distinct voices (plugin bound). Prefer <=2000 total characters for coherent performance; hard cap 10000. Optional timestamps preserve voice_segments. Mixed-speaker audio needs an explicit dialogue assembly route; do not pass it to a single-speaker scene builder. No automatic review or model fallback.',
+        inputSchema: { type: 'object', additionalProperties: false, properties: {
+                inputs: { type: 'array', minItems: 1, maxItems: ELEVENLABS_DIALOGUE_MAX_INPUTS, description: 'Ordered turns; at most 10 voices in this plugin.', items: { type: 'object', additionalProperties: false, properties: {
+                            text: { type: 'string', minLength: 1, description: 'Turn transcript, optionally with v4 audio tags.' }, voiceId: ELEVENLABS_VOICE_ID_PROPERTY
+                        }, required: ['text', 'voiceId'] } }, ...ELEVENLABS_V4_PROPERTIES
+            }, required: ['inputs'] }
     },
     {
-        name: 'tts_elevenlabs_voices',
-        title: 'ElevenLabs voice list',
-        annotations: HINT.read,
-        description: `List the ElevenLabs voices this account can use — premade, cloned, designed, and Voice Library picks — with IDs, category, labels (gender · age · accent · use case) and verified languages, plus the plan's character usage when the key allows.
-
-Use before tts_elevenlabs_generate / tts_elevenlabs_dialogue when no voiceId is pinned yet, or to find a Korean voice (search: "korean", or read the verified-languages column). Read-only; one GET per call. The Gemini and Supertonic voices are NOT here — tts_list_voices has those. Needs a key with the voices_read permission (a restricted key without it still synthesizes but returns missing_permissions here — then take the ID from the Voice Library page instead).
-Do NOT pick a new voice per episode — pin one in data/<slug>/profile.md §2. The legacy premade voices retire 2026-12-31; prefer the current premade set or a library voice.
-
-Returns: a text list "name — voice_id · category · labels · languages", the total count, whether more pages exist, and (when the key has user_read) the subscription tier with used/total characters and the reset date — Free tier output is non-commercial.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                search: {
-                    type: 'string',
-                    description: 'Substring filter on name, description and labels (e.g. "korean", "calm female"). Omit to list everything.',
-                },
-                category: {
-                    type: 'string',
-                    description: 'Restrict to one category: premade (vendor defaults), cloned (your IVC/PVC), generated (Voice Design), professional (library PVC).',
-                    enum: [...ELEVENLABS_VOICE_CATEGORIES],
-                },
-                limit: {
-                    type: 'number',
-                    description: 'Voices per page 1–100 (default: 30)',
-                    minimum: 1,
-                    maximum: 100,
-                    default: 30,
-                },
-            },
-            required: [],
-        },
+        name: 'tts_elevenlabs_voices', title: 'ElevenLabs voice search and previews', annotations: HINT.read,
+        description: 'Read account voices from /v2/voices, with IDs, descriptions, labels, verified languages and preview URLs. Needs voices_read; optional usage information needs user_read. This is an API lookup; Gemini voices are in tts_list_voices. Follow nextPageToken until hasMore is false. Search language/traits, then generate three matched character previews with character_voice_audition before the user selects their voice.',
+        inputSchema: { type: 'object', additionalProperties: false, properties: {
+                search: { type: 'string', description: 'Search name, description and labels.' },
+                category: { type: 'string', enum: [...ELEVENLABS_VOICE_CATEGORIES], description: 'Account voice category.' },
+                limit: { type: 'integer', minimum: 1, maximum: 100, default: 30, description: 'Page size.' },
+                nextPageToken: { type: 'string', description: 'Continuation token from the previous page.' },
+                languages: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 20, description: 'Language filters, e.g. ["ko"].' },
+                gender: { type: 'string', description: 'Voice gender label filter.' },
+                accent: { type: 'string', description: 'Voice accent label filter.' }
+            } }
     },
     // ── Sound effects (ElevenLabs — text → SFX) ──────────────────────────────
     {
@@ -3748,8 +3562,8 @@ Returns JSON: status, missing fields, canonical paths, config and revision; epis
                         models: { type: 'object', additionalProperties: false, description: 'Video, speech and image model selections; use capability_status and host schemas for actual availability.', properties: Object.fromEntries(['video', 'speech', 'image'].map(kind => [kind, {
                                     type: 'object', additionalProperties: false, description: `${kind} selection; fixed engines omit model, host uses host-managed.`,
                                     properties: {
-                                        engine: { type: 'string', enum: kind === 'video' ? ['host', 'seedance', 'veo', 'astra', 'mlx'] : kind === 'speech' ? ['gemini', 'elevenlabs', 'supertonic', 'mlx'] : ['host', 'gpt-image', 'zimage', 'mlx'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
-                                        model: { type: 'string', description: 'Supported model ID, e.g. host-managed. Omit for astra, supertonic and zimage.' },
+                                        engine: { type: 'string', enum: kind === 'video' ? ['host', 'seedance', 'veo', 'astra', 'mlx'] : kind === 'speech' ? ['gemini', 'elevenlabs'] : ['host', 'gpt-image', 'zimage', 'mlx'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
+                                        model: { type: 'string', description: 'Supported model ID, e.g. host-managed. Omit for astra and zimage.' },
                                         ...(kind !== 'speech' ? { host: { type: 'string', description: 'Host CLI when engine is host, e.g. codex.' } } : {}),
                                         ...(kind === 'video' ? { resolution: { type: 'string', description: 'Supported source resolution, e.g. 720p.' } } : {}),
                                         ...(kind === 'image' ? { quality: { type: 'string', description: 'Supported quality, e.g. high; a prompt preference on host tools without a quality parameter.' } } : {}),
@@ -4549,16 +4363,16 @@ Returns: integer credit balance.`,
         name: 'speech_manage',
         title: 'Find and revise shot dialogue and audio dependencies',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-        description: 'List dialogue by shot, character or text; prepare stable line ids with explicit narrator; update one line; attach generated audio; or plan a model-independent video route from adapter capabilities. Local files only, no generation, automatic listening or approval. Read first and pass expectedRevision for writes. Unknown speakers, ambiguous line targets, stale revisions and unsupported lip-sync routes fail. Returns revision, matching lines with voice/audio hashes, invalidated dependencies and optional video plan. Keeps source backups. Use existing generation tools and rebuild affected media after update; this tool never claims to regenerate assets.',
+        description: 'List dialogue by shot, character or text; prepare stable line ids with explicit narrator; update text or acting on one line; plan_audio compiles provider arguments; attach generated audio; or plan a model-independent video route from adapter capabilities. Local files only, no generation, automatic listening or approval. Read first and pass expectedRevision for writes. Unknown speakers, ambiguous line targets, stale revisions and unsupported lip-sync routes fail. Returns revision, matching lines with voice/audio hashes, invalidated dependencies and optional video plan. Keeps source backups. Use existing generation tools and rebuild affected media after update; this tool never claims to regenerate assets.',
         inputSchema: {
             type: 'object', properties: {
                 path: { type: 'string', description: 'Storyboard directory or scenes.js' },
-                action: { type: 'string', description: 'Local operation: list, prepare ids, update a line, attach generated audio/video, or plan the selected adapter', enum: ['prepare', 'list', 'update', 'attach_audio', 'plan_video', 'attach_video'] },
+                action: { type: 'string', description: 'Local operation: list, prepare ids, update a line, attach generated audio/video, or plan the selected adapter', enum: ['prepare', 'list', 'update', 'plan_audio', 'attach_audio', 'plan_video', 'attach_video'] },
                 shotId: { type: 'string', description: 'Stable shot id, not its display number' }, lineId: { type: 'string', description: 'Stable dialogue id; required for line writes' }, speaker: { type: 'string', description: 'Filter by character id or exact display name' }, query: { type: 'string', description: 'Exact substring of spoken or subtitle text to find' },
                 expectedRevision: { type: 'string', description: 'Current revision from list; required for writes' },
-                patch: { type: 'object', description: 'Only the requested line fields to replace; speaker uses its stable id', properties: { tts: { type: 'string', description: 'Spoken text with intended pronunciation' }, sub: { type: 'string', description: 'Subtitle display text' }, speaker: { type: 'string', description: 'Stable character id' }, delivery: { type: 'string', description: 'Narration, visible speech, or speech outside frame', enum: ['voiceover', 'on_screen', 'off_screen'] } }, additionalProperties: false },
+                patch: { type: 'object', description: 'Only the requested line fields to replace; speaker uses its stable id', properties: { tts: { type: 'string', description: 'Spoken text with intended pronunciation' }, sub: { type: 'string', description: 'Subtitle display text' }, speaker: { type: 'string', description: 'Stable character id' }, delivery: { type: 'string', description: 'Narration, visible speech, or speech outside frame', enum: ['voiceover', 'on_screen', 'off_screen'] }, acting: { ...ACTING_PROPERTY, type: ['object', 'null'] } }, additionalProperties: false },
                 audioPath: { type: 'string', description: 'Generated audio file; absolute or relative to storyboard directory' }, videoPath: { type: 'string', description: 'New video file to bind to the shot and current audio' },
-                generation: { type: 'object', description: 'Raw TTS request and declared text language; no listening score', properties: { generator: { type: 'string', description: 'Raw TTS tool that generated this file' }, voiceSettings: { type: 'object', description: 'Exact voice and language settings sent to the generator' }, text: { type: 'string', description: 'Exact spoken text sent to the generator' }, language: { type: 'string', description: 'Declared text language, e.g. ko; metadata for engines without a language argument, never an invented API parameter' } }, required: ['generator', 'voiceSettings', 'text'], additionalProperties: false },
+                generation: { type: 'object', description: 'Raw TTS request and declared text language; no listening score', properties: { generator: { type: 'string', description: 'Raw TTS tool that generated this file' }, voiceSettings: { type: 'object', description: 'Exact voice and language settings sent to the generator' }, text: { type: 'string', description: 'Exact clean line text; voiceSettings stores the actual tagged provider request from plan_audio' }, language: { type: 'string', description: 'Declared text language, e.g. ko; metadata for engines without a language argument, never an invented API parameter' } }, required: ['generator', 'voiceSettings', 'text'], additionalProperties: false },
                 capabilities: { type: 'object', description: 'Selected adapter capabilities from verified schema/documentation, with evidence', properties: { provider: { type: 'string', description: 'Selected video adapter provider id, matching the shot engine' }, model: { type: 'string', description: 'Selected model id, matching the shot model when set' }, audioConditioning: { type: 'boolean', description: 'Whether the adapter accepts supplied speech as conditioning' }, lipSync: { type: 'boolean', description: 'Whether supplied speech drives visible mouth motion' }, postLipSync: { type: 'boolean', description: 'Whether a separately selected post lip-sync adapter is available' }, evidence: { type: 'string', description: 'Documentation or verified capability record supporting these settings' } }, required: ['provider', 'model', 'audioConditioning', 'lipSync', 'postLipSync', 'evidence'], additionalProperties: false }
             }, required: ['path', 'action'], additionalProperties: false
         }
