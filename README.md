@@ -1138,3 +1138,12 @@ opens this library; its previous API browser is at `/legacy`.
 Portal reference: ttalkkak-story `d29f1a6`, DESIGN.md 1.2.0. See
 [local review design](skills/channel/references/local-review-design.md) for the
 reference, supported offline behavior and visual verification scope.
+
+### Structured character identity
+
+New and updated character sheets carry explicit personality, measurements, speech,
+acting, relationships and continuity fields, each confirmed, pending or not applicable.
+The local compiler generates lane-specific directions; review export refuses a pass
+for incomplete settings. Follow [the character contract](skills/channel/references/character-identity.md).
+Existing sheets need explicit migration; legacy storyboards remain readable.
+The portal currently stores only its existing role/appearance/TTS subset.

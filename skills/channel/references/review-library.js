@@ -12,6 +12,7 @@ const ASSET_NAMES = ['review.css', 'review.js', 'WantedSansVariable.woff2', 'OFL
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const t = (ko, en) => `<span data-ko="${esc(ko)}" data-en="${esc(en)}">${esc(ko)}</span>`;
 const rel = (from, to) => path.relative(path.dirname(from), to).split(path.sep).map(part => encodeURIComponent(part)).join('/') || './';
+const { GROUPS, identityCharacter, identityErrors } = require('../../_shared/character-identity.js');
 const label = { front: ['정면', 'Front'], back: ['후면', 'Back'], face: ['얼굴', 'Face'] };
 
 function regular(root, file) {
@@ -116,23 +117,38 @@ function exportChannel(channelDirectory, { check = false } = {}) {
     const slots = panels(character);
     // A symlinked image must not leak an out-of-channel file into an exported view.
     for (const key of Object.keys(slots)) if (slots[key] && !regular(dir, path.join(folder, slots[key]))) slots[key] = undefined;
-    const role = identityField(source, ['역할', '설명', 'role']) || character.note || character.summary || '';
-    const appearance = identityField(source, ['생김새', '외형', 'appearance']);
+    let role = identityField(source, ['역할', '설명', 'role']) || character.note || character.summary || '';
+    let appearance = identityField(source, ['생김새', '외형', 'appearance']);
     let voice = null;
     let voiceError = '';
     try { voice = require('../../_shared/character-voice.js').identityVoice(source); }
     catch (error) { voiceError = error.message; warnings.push(character.id + ': ' + voiceError); }
-    const review = `<p class="review-status">${voiceError ? t('음성 설정 필요', 'Voice settings required') : reviewStatus(dir, folder)}</p>`;
+    let characterIdentity = null, identityError = '';
+    try { characterIdentity = identityCharacter(source, { ready: false }); identityError = identityErrors(characterIdentity).join("; "); if (identityError) warnings.push(character.id + ": " + identityError); }
+    catch (error) { identityError = error.message; warnings.push(character.id + ': ' + identityError); }
+    if (characterIdentity) { role = characterIdentity.identity.role.value || role; appearance = characterIdentity.physical.appearance.value || appearance; }
+    const review = `<p class="review-status">${identityError ? t('캐릭터 설정 보완 필요', 'Character settings incomplete') : voiceError ? t('음성 설정 필요', 'Voice settings required') : reviewStatus(dir, folder)}</p>`;
     let body = `<a class="review-crumb" href="../index.html">${t('캐릭터 목록', 'Characters')}</a>` + heading(esc(character.name), t('여러 에피소드에서 같은 모습과 목소리를 유지합니다.', 'Keep the same appearance and voice across episodes.'));
     body += review;
-    body += `<nav class="review-steps"><a href="#appearance">${t('외형', 'Appearance')}</a><a href="#basics">${t('기본 정보', 'Basics')}</a><a href="#voice">${t('목소리', 'Voice')}</a></nav>`;
-    const basics = `<section class="review-section" id="basics"><h2>${t('기본 정보', 'Basic information')}</h2><dl class="review-fields">${field(t('이름', 'Name'), character.name)}${field(t('캐릭터 키', 'Character key'), character.id)}${field(t('설명 · 역할', 'Description / role'), role)}</dl></section>`;
+    body += `<nav class="review-steps"><a href="#appearance">${t('외형', 'Appearance')}</a><a href="#basics">${t('기본 정보', 'Basics')}</a><a href="#voice">${t('목소리', 'Voice')}</a><a href="#identity">${t('상세 설정', 'Specification')}</a></nav>`;
+    const basics = `<section class="review-section" id="basics"><h2>${t('기본 정보', 'Basic information')}</h2><dl class="review-fields">${field(t('이름', 'Name'), character.name)}${field(t('캐릭터 ID', 'Character ID'), character.id)}${field(t('설명 · 역할', 'Description / role'), role)}</dl></section>`;
     body += `<section class="review-section" id="appearance"><h2>${t('외형과 이미지', 'Appearance and images')}</h2><p>${t('정면·후면·얼굴을 함께 두어 장면이 바뀌어도 같은 모습을 유지합니다.', 'Front, back and face references keep the character consistent.')}</p>${panelStatus(slots)}<div class="review-panels">`;
     for (const [key, words] of Object.entries(label)) body += `<figure>${slots[key] ? zoomImage(file, path.join(folder, slots[key]), character.name + ' ' + words[0]) : empty('이미지 미등록', 'No image yet')}<figcaption>${t(...words)}</figcaption></figure>`;
     body += `</div>${appearance ? `<dl>${field(t('외형 프롬프트', 'Appearance prompt'), appearance)}</dl>` : ''}`;
     const extras = character.images.filter(im => !Object.values(slots).includes(im.file) && regular(dir, path.join(folder, im.file)));
     if (extras.length) body += `<h3>${t('추가 이미지', 'Additional images')}</h3><div class="review-panels">${extras.map(im => `<figure>${zoomImage(file, path.join(folder, im.file), im.file)}<figcaption>${esc(im.file)}</figcaption></figure>`).join('')}</div>`;
     body += `</section>${basics}<section class="review-section" id="voice"><h2>${t('캐릭터 목소리', 'Character voice')}</h2>${voice ? `<dl class="review-fields">${field(t('엔진', 'Engine'), voice.engine)}${field(t('음성 ID', 'Voice ID'), voice.voiceId)}${field(t('언어', 'Language'), voice.language)}${field(t('속도', 'Speed'), String(voice.speed))}</dl>` : `<p>${esc(voiceError)}</p>`}${regular(dir, path.join(folder, 'voice.wav')) ? `<audio controls preload="metadata" src="${rel(file, path.join(folder, 'voice.wav'))}"></audio>` : `<p class="review-status">${t('음성 샘플 미등록', 'Voice sample not supplied')}</p>`}</section>`;
+    if (characterIdentity) {
+      body += `<section class="review-section" id="identity"><h2>${t('캐릭터 상세 설정', 'Character specification')} · v${characterIdentity.version}</h2>`;
+      for (const [group, ko, en, fields] of GROUPS) {
+        body += `<h3>${t(ko, en)}</h3><dl class="review-fields">` + fields.map(([key, labelKo, labelEn]) => {
+          const f = characterIdentity[group][key];
+          const value = f.status === 'confirmed' ? (Array.isArray(f.value) ? f.value.join('\n') : String(f.value)) : `${f.status === 'pending' ? '미정 / Pending' : '해당 없음 / Not applicable'}: ${f.reason}`;
+          return field(t(labelKo, labelEn), value);
+        }).join('') + '</dl>';
+      }
+      body += '</section>';
+    } else body += `<section class="review-section"><h2>${t('설정 보완 항목', 'Required corrections')}</h2><p>${esc(identityError)}</p></section>`;
     body += `<details class="review-detail"><summary>${t('캐릭터 설정 원문', 'Full character identity')}</summary><p>${t('원문에 적힌 검토 상태는 작성 당시 기록입니다. 현재 평가는 페이지 상단에서 확인하세요.', 'Review status in the source reflects when it was written. The current review appears at the top of this page.')}</p><pre class="review-source">${esc(source || '—')}</pre></details>`;
     render(file, character.name, 'characters', body);
     cards += `<article data-card data-search="${esc((character.name + ' ' + character.id + ' ' + role).toLocaleLowerCase())}" class="review-card"><a href="${rel(charIndex, file)}">${slots.front ? image(charIndex, path.join(folder, slots.front), character.name) : empty('정면 이미지 없음', 'No front image')}<div class="review-card-body"><h2>${esc(character.name)}</h2><p>${esc(role)}</p>${review}${panelStatus(slots)}</div></a></article>`;

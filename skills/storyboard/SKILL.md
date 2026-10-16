@@ -1184,6 +1184,8 @@ The block carries a fingerprint of the video slots, and the check strip recomput
 live scenes — so a snapshot that no longer matches shows up as a violation instead of a stale
 number. Regenerate it after any §7 change that adds, retimes, reroutes or moves a video slot.
 
+New or updated casts follow [character-identity.md](../channel/references/character-identity.md): compile each identity, set `SB_DOC.characterSchemaVersion:1`, and copy the structured identity plus its generation directions into each cast entry.
+
 **Every storyboard has at least one character and one narrator.** Set `SB_DOC.narratorCharacterId` to a character `id`; `SB_DOC.characters` contains it and every id used by `visual.character` or `narration[].speaker`. Each entry has `id`, `name`, its character identity JSON `tts` (required `engine`, `voiceId`, `language`, `speed`; model/stylePrompt when applicable), identity `role`, existing `panels` paths, governing `note`, and `veo:"banned"` when applicable.
 A narration `speaker` uses that character id; absence uses the narrator. Import accepts names but saves ids, while unmatched non-empty values fail. Do not approve or call `portal_storyboard_save` until complete. `channel/references/resolve-asset.py --list <channel dir>` prints ids and paths.
 
