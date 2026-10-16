@@ -31,7 +31,7 @@ const sha = (b) => createHash('sha256').update(b).digest('hex');
 const NAMES = ['portal_character_list', 'portal_character_get', 'portal_character_create', 'portal_character_update', 'portal_character_delete', 'portal_character_image_upload', 'portal_character_extra_delete', 'portal_character_tts_set'];
 
 const record = (over = {}) => ({ id: ID, projectId: 'p1', key: 'mina', name: '미나', role: '진행자', appearance: '단발', referenceImageUrl: null,
-  tts: { engine: 'elevenlabs', voiceId: 'custom-voice', model: 'eleven_multilingual_v2', speed: 1 }, updatedAt: 'x', ...over });
+  tts: { engine: 'elevenlabs', voiceId: 'custom-voice', model: 'eleven_multilingual_v2', speed: 1, language: 'ko' }, updatedAt: 'x', ...over });
 
 /** A portal that remembers one character and echoes what it was sent. */
 function fakePortal(initial = record()) {
@@ -281,10 +281,10 @@ describe('one key in two projects', () => {
 describe('create', () => {
   it('reads key/name/역할/생김새 off identityDir, files it under project = the channel, then uploads the panel', async () => {
     const { impl, calls } = fakePortal();
-    const r = await portal.portalHandlers(impl).characterCreate({ episodeDir: EPISODE, identityDir: IDENTITY, file: join(IDENTITY, 'face.png') });
+    const r = await portal.portalHandlers(impl).characterCreate({ episodeDir: EPISODE, identityDir: IDENTITY, tts: chars.TTS_DEFAULTS, file: join(IDENTITY, 'face.png') });
     assert.equal(r.isError, false, r.text);
     const post = calls.find((c) => c.method === 'POST');
-    assert.deepEqual(post.body, { project: 'lab', key: 'mina', name: '미나', role: '진행자', appearance: '단발, 안경' });
+    assert.deepEqual(post.body, { project: 'lab', key: 'mina', name: '미나', role: '진행자', appearance: '단발, 안경', tts: chars.TTS_DEFAULTS });
     assert.equal('projectId' in post.body, false);
     const put = calls.find((c) => c.method === 'PUT');
     assert.equal(put.path, `/api/workspaces/lab/characters/${ID}/image`);
@@ -297,12 +297,12 @@ describe('create', () => {
   it('explicit fields win over identity.md, project overrides the channel, and a bad panel stops before any write', async () => {
     const { impl, calls } = fakePortal();
     const h = portal.portalHandlers(impl);
-    await h.characterCreate({ channel: 'lab', identityDir: IDENTITY, name: '미나 2', project: 'other-channel' });
+    await h.characterCreate({ channel: 'lab', identityDir: IDENTITY, tts: chars.TTS_DEFAULTS, name: '미나 2', project: 'other-channel' });
     const post = calls.find((c) => c.method === 'POST');
     assert.equal(post.body.name, '미나 2'); assert.equal(post.body.project, 'other-channel'); assert.equal(post.body.key, 'mina');
     const bad = join(ROOT, 'not-image.png'); writeFileSync(bad, 'nope');
     const before = calls.length;
-    const r = await h.characterCreate({ channel: 'lab', name: 'x', file: bad });
+    const r = await h.characterCreate({ channel: 'lab', name: 'x', tts: chars.TTS_DEFAULTS, file: bad });
     assert.equal(r.isError, true);
     assert.equal(calls.filter((c) => c.method === 'POST').length, calls.slice(0, before).filter((c) => c.method === 'POST').length, 'nothing was created');
   });
@@ -323,18 +323,20 @@ describe('update · tts_set · image · delete', () => {
     const r = await portal.portalHandlers(impl).characterTtsSet({ channel: 'lab', id: ID, speed: 0.9 });
     assert.equal(r.isError, false, r.text);
     const patch = calls.find((c) => c.method === 'PATCH');
-    assert.deepEqual(patch.body, { tts: { engine: 'elevenlabs', voiceId: 'custom-voice', model: 'eleven_multilingual_v2', speed: 0.9 } });
+    assert.deepEqual(patch.body, { tts: { engine: 'elevenlabs', voiceId: 'custom-voice', model: 'eleven_multilingual_v2', speed: 0.9, language: 'ko' } });
   });
 
-  it('tts_set on a character with no tts block applies the owner defaults, and id alone applies them too', async () => {
+  it('tts_set refuses incomplete new voices without sending a patch', async () => {
+    for (const partial of [{}, { language: 'ko' }, { engine: 'supertonic', voiceId: 'M1' }]) {
+      const { impl, calls } = fakePortal(record({ tts: null }));
+      const result = await portal.portalHandlers(impl).characterTtsSet({ channel: 'lab', id: ID, ...partial });
+      assert.equal(result.isError, true);
+      assert.equal(calls.some(c => c.method === 'PATCH'), false);
+    }
     const { impl, calls } = fakePortal(record({ tts: null }));
-    const h = portal.portalHandlers(impl);
-    await h.characterTtsSet({ channel: 'lab', id: ID, language: 'ko' });
-    assert.deepEqual(calls.find((c) => c.method === 'PATCH').body, { tts: { ...chars.TTS_DEFAULTS, language: 'ko' } });
-    assert.deepEqual(chars.TTS_DEFAULTS, { engine: 'elevenlabs', voiceId: 'L4az9Gb378GIycFl2nAB', model: 'eleven_multilingual_v2', speed: 1 });
-    const only = fakePortal(record({ tts: null }));
-    await portal.portalHandlers(only.impl).characterTtsSet({ channel: 'lab', id: ID });
-    assert.deepEqual(only.calls.find((c) => c.method === 'PATCH').body, { tts: chars.TTS_DEFAULTS });
+    const result = await portal.portalHandlers(impl).characterTtsSet({ channel: 'lab', id: ID, engine: 'supertonic', voiceId: 'F2', language: 'ko', speed: 1 });
+    assert.equal(result.isError, false, result.text);
+    assert.deepEqual(calls.find(c => c.method === 'PATCH').body.tts, { engine: 'supertonic', voiceId: 'F2', language: 'ko', speed: 1 });
   });
 
   it('image upload PUTs the bytes with the sniffed mime and verifies the returned sha256', async () => {
@@ -411,4 +413,27 @@ describe('character image slots #96', () => {
     }
     assert.throws(() => chars.characterExtraDeleteSchema.parse({ id: ID, imageId: 'invalid' }));
   });
+});
+
+ it('character creation requires a voice and updates cannot erase it', () => {
+  assert.equal(chars.characterCreateSchema.safeParse({channel:"lab",name:"Hero"}).success,false);
+  assert.equal(chars.characterUpdateSchema.safeParse({id:ID,tts:null}).success,false);
+});
+
+it('portal voice requires language, speed and a valid fixed-catalog voice', () => {
+  const valid = { engine: 'supertonic', voiceId: 'M1', language: 'ko', speed: 1 };
+  for (const bad of [{...valid,language:undefined},{...valid,speed:undefined},{...valid,voiceId:'garbage'},{...valid,engine:'gemini',voiceId:'garbage'}]) {
+    assert.equal(chars.characterCreateSchema.safeParse({name:'Hero',tts:bad}).success,false);
+    assert.equal(chars.characterUpdateSchema.safeParse({id:ID,tts:bad}).success,false);
+  }
+});
+
+it('changing engines cannot inherit incompatible models or voice identifiers', async () => {
+  const { impl, calls } = fakePortal();
+  const h=portal.portalHandlers(impl);
+  const missing=await h.characterTtsSet({channel:'lab',id:ID,engine:'supertonic'});
+  assert.equal(missing.isError,true);assert.equal(calls.some(c=>c.method==='PATCH'),false);
+  const result=await h.characterTtsSet({channel:'lab',id:ID,engine:'supertonic',voiceId:'F2'});
+  assert.equal(result.isError,false,result.text);
+  assert.deepEqual(calls.find(c=>c.method==='PATCH').body.tts,{engine:'supertonic',voiceId:'F2',language:'ko',speed:1});
 });

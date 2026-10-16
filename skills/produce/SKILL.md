@@ -148,6 +148,8 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
 
 ### 1. Check the inputs
 
+Follow [delivery preflight and continuation](references/delivery-continuation.md) before generating assets and on every resume. Clips alone are never completion.
+
 - Confirm `status: approved` in the `storyboard/storyboard.md` frontmatter — otherwise stop
   and point the user at `/social-flow:storyboard` for approval first.
 - Load `data/<channel>/profile.md` (voice, theme, platforms, `shortform_outro` — `on` if absent).
@@ -734,7 +736,7 @@ that ends `fail` after its attempts is not the end of the episode: present its f
 follow `references/tts-hitl.md` — the user decides whether it ships. The blind-transcription (STT) check and its 2% CER gate do not run (owner directive 2026-10-04): the proof records `transcript: null` and the listening review judges the take. Pass `transcriptCheck` only when the user actually asked for dictation on that call.
 
 Resolve every checked call from `window.SB_DOC`: `speaker` selects that character id and its absence selects `SB_DOC.narratorCharacterId`. The matched `tts` supplies `generator` and `generation`: map `voiceId` to Gemini `voiceName`, Supertonic/MLX `voice`, or ElevenLabs `voiceId`, and pass model, speed, language and stylePrompt only when accepted. Portal voice data overrides profile §2; unknown speakers, missing narrator/characters, or missing TTS stop production.
-One checked call per scene when all segments share a character — join their `tts` sentences with periods into `.work/pcm/c<n>.wav`. For changes, synthesize each contiguous speaker run with its character settings, join in order with the standard sentence pause, apply the same speech-quality gate, and resample differing engine rates before joining.
+One checked call per scene when all segments share a character — join their `tts` sentences with periods into `.work/pcm/c<n>.wav`. When the speaker changes, split into single-speaker scenes with separate voice proofs; the current builder rejects mixed-speaker scene audio without segment-bound proofs. Never join unbound voices or substitute the narrator.
 Don't split a scene into several calls by sentence (the voice varies between calls). Pass the
 same `tts` sentences as `segments`. Default `generation.speed` and `playbackSpeed` to 1.0;
 non-1 values require the episode's explicit user request under `references/tts-speed.md`.
@@ -775,11 +777,10 @@ ElevenLabs at `wav_24000` share a spec and can sit on one timeline; local can't 
 without resampling one side before the build. `mlx_tts_generate` is an optional local
 voice when MLX Core is up — never a silent fallback for the engine pinned in profile §2.
 
-**Mandatory speech quality gate.** The checked tool measures the WAV, transcribes without
-the script and separately reviews pronunciation, accuracy, naturalness and clarity. It retries
-failed takes at the same settings, at most three takes total. Only `status: pass` with a current
-`.wav.quality.json` may proceed. `fail` or `unverified` stops production. Include paid review
-even for local synthesis in the allowance; do not silently reset exhausted attempts.
+**Mandatory speech quality gate.** The checked tool measures the WAV and reviews
+pronunciation, accuracy, naturalness and clarity. Blind transcription runs only when
+requested. It retries failed takes at the same settings, at most three takes total.
+A current PASS proceeds; failed verdicts follow `references/tts-hitl.md`. Unverified reviews need resolution. Include paid review in the allowance; preserve attempt limits and continue independent preparation.
 
 Once the whole scene is out, write a line to the ledger. **The quantity is chars÷1000, not
 the character count** — the unit price is per 1,000 characters, so writing 412 characters as

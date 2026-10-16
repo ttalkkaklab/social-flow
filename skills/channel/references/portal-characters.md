@@ -29,25 +29,25 @@ quiet pick would return the same wrong record every time instead of failing once
    create-or-reuse, so it must not come from another channel's project: without `project`
    a key two projects share is refused, and reusing the wrong `id` would send step 3's
    panels and step 4's voice to that other channel's character.
-   Found → reuse its `id`; not found → `portal_character_create` with `identityDir`.
+   Found → reuse its `id`; not found → `portal_character_create` with `identityDir` and the identity JSON `tts` block.
    The legacy create `file` argument uploads to **front**, so never pass the face panel there.
 3. **Upload** with `portal_character_image_upload` three times, supplying `id`, `file`
    and `view`: `body.png` → `front`, `back.png` → `back`, `face.png` → `face`.
    Optional images use `view:"extra"`, `label` and optionally `sort`.
    Read `portal_character_get` by `id` (not by key — you have the id from step 2) and
    verify `imagesComplete:true`; false means the set is still incomplete. Legacy single images become front only and need back and face.
-4. **Voice** — `portal_character_tts_set` with the channel's engine·voiceId·model·speed·
-   language·stylePrompt from `profile.md`. Fields you leave out keep the character's current
-   value, and only then fall back to the owner defaults (ElevenLabs `L4az9Gb378GIycFl2nAB`,
-   `eleven_multilingual_v2`, speed 1.0). `speed` alone never touches `voiceId`. `id` alone
-   applies the defaults to a character with no voice block.
+4. **Voice** — verify the character-specific voice supplied at creation. Update it with
+   `portal_character_tts_set` using the identity's engine·voiceId·model·speed·
+   language·stylePrompt. Do not replace a character voice with the channel narrator. Fields you leave out keep the character's current
+   value. Initial settings must include engine, voiceId, language and speed; incomplete
+   settings are rejected. No channel narrator or global default is silently assigned.
 5. **Say what you registered** — id, key, name, `imagesComplete`, images, tts — in one line per
    character.
 
 ## Refreshing
 
 - Text fields → `portal_character_update` (`id` + only the fields that change; `null`
-  clears role/appearance/referenceImageUrl/tts). Prefer `tts_set` for the voice block.
+  clears role/appearance/referenceImageUrl; tts cannot be cleared). Prefer `tts_set` for the voice block.
 - A replacement panel → `portal_character_image_upload` (`id`, `file`, `view`). The default
   is front. Required slots replace only that view; identical bytes keep the image id.
   `extra` appends a new id on every POST, so inspect the list before retrying an ambiguous

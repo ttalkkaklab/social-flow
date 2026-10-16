@@ -366,7 +366,7 @@ export async function generateCheckedSpeech(input, dependencies) {
     // On a spacing lane the pauses are part of the shipped audio, so their inputs are part of the settings a PASS binds to.
     const settings = prepared.spacing ? { ...prepared.args, episode: request.episode ?? null, spacing: { segments: request.segments ?? null, sentencePause: request.sentencePause, playbackSpeed: request.playbackSpeed } } : prepared.args;
     const base = { version: 1, policy: QUALITY_POLICY, speedAuthorization, generationSpeed: Number(prepared.args.speed ?? 1), playbackSpeed: request.playbackSpeed, expectedText: request.expectedText, textSha256: sha256(normalizeSpeech(request.expectedText)), generator: request.generator,
-        settingsSha256: sha256(JSON.stringify(settings)), ...(request.episode ? { episode: request.episode } : {}), ...(request.generator === 'tts_elevenlabs_generate' ? { voiceSettings: Object.fromEntries(Object.entries(prepared.args).filter(([k]) => !['text', 'previousText', 'nextText', 'outputPath', 'filename', 'timestamps'].includes(k))) } : {}), model: REVIEW_MODEL, language: request.language, delivery: request.delivery };
+        settingsSha256: sha256(JSON.stringify(settings)), ...(request.episode ? { episode: request.episode } : {}), voiceSettings: Object.fromEntries(Object.entries(prepared.args).filter(([k]) => !['text', 'input', 'script', 'previousText', 'nextText', 'outputPath', 'filename', 'timestamps', 'turns'].includes(k))), model: REVIEW_MODEL, language: request.language, delivery: request.delivery };
     function save(status, extra = {}) {
         const report = { ...base, status, attempts, checkedAt: new Date().toISOString(), ...extra };
         const temporary = proofFile + '.' + randomUUID() + '.tmp';
@@ -378,7 +378,7 @@ export async function generateCheckedSpeech(input, dependencies) {
         if (existsSync(proofFile)) {
             const old = JSON.parse(readFileSync(proofFile, 'utf8'));
             // Reviewer changes must not reset paid synthesis attempts or discard a pending WAV.
-            if (Object.entries(base).every(([key, value]) => key === 'model' || JSON.stringify(old[key]) === JSON.stringify(value))) {
+            if (Object.entries(base).every(([key, value]) => key === 'model' || (key === 'voiceSettings' && old[key] === undefined) || JSON.stringify(old[key]) === JSON.stringify(value))) {
                 if (!Array.isArray(old.attempts) || old.attempts.length > 3)
                     throw new Error('Invalid attempt history');
                 attempts.push(...old.attempts.map((take) => ({ ...take, model: take.model ?? old.model })));
@@ -400,6 +400,9 @@ export async function generateCheckedSpeech(input, dependencies) {
                 }
                 if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === 'pass' && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && transcriptSatisfied && existsSync(output) && old.audioSha256 === sha256(readFileSync(output)) && last.audioSha256 === old.audioSha256 &&
                     !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, storedTranscript, reviewSchema.parse(last.review), last.signal.duration).length) {
+                    // The matching settings hash proves these parsed settings belong to the reused take.
+                    if (old.voiceSettings === undefined)
+                        save('pass', { audioSha256: old.audioSha256 });
                     const lastSpacing = last.spacing;
                     return { success: true, status: 'pass', audioPath: output, proofPath: proofFile, attempts: attempts.length, reused: true,
                         spacing: !prepared.spacing ? 'not applicable' : lastSpacing?.skipped ? 'skipped: ' + String(lastSpacing.skipped) : 'applied' };

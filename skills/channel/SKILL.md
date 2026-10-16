@@ -8,7 +8,7 @@ description: >
   platforms, fact-check policy — the source of truth every storyboard, produce and publish
   run opens before anything else.
 argument-hint: "[add|list|update|serve] [channel-name]"
-allowed-tools: ["mcp__social-flow__portal_channel_sync", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__portal_character_list", "mcp__social-flow__portal_character_get", "mcp__social-flow__portal_character_create", "mcp__social-flow__portal_character_update", "mcp__social-flow__portal_character_delete", "mcp__social-flow__portal_character_image_upload", "mcp__social-flow__portal_character_extra_delete", "mcp__social-flow__portal_character_tts_set"]
+allowed-tools: ["mcp__social-flow__portal_channel_sync", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__tts_local_generate", "mcp__social-flow__stt_local_transcribe", "mcp__social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__portal_character_list", "mcp__social-flow__portal_character_get", "mcp__social-flow__portal_character_create", "mcp__social-flow__portal_character_update", "mcp__social-flow__portal_character_delete", "mcp__social-flow__portal_character_image_upload", "mcp__social-flow__portal_character_extra_delete", "mcp__social-flow__portal_character_tts_set"]
 ---
 
 **HITL records:** Keep channel answers in profile.md and follow the existing channel-sync contract. Follow [the decision record contract](../storyboard/references/portal-decisions.md); preserve actual provenance and reuse existing authorization. This adds no approval gate.
@@ -202,6 +202,34 @@ node "$CLAUDE_PLUGIN_ROOT/skills/channel/references/serve.js" data --port 8400
 
 ## Local review HTML (required after character edits)
 
+Every character sheet must include one fenced `json` block in `identity.md`:
+
+```json
+{"tts":{"engine":"supertonic","voiceId":"M1","language":"ko","speed":1}}
+```
+
+This is an example, not a default for the cast. Choose and pin each character's
+voice; include model/stylePrompt when the engine uses them. Silent characters still
+need a voice configuration for reuse. Narrator settings do not substitute for a
+character voice. Copy this exact `tts` into `SB_DOC.characters` and portal creation.
+Keep dialogue speaker IDs attached to their characters; voice settings alone do not
+author dialogue or lip sync. Missing or invalid settings make `--check` fail and
+prevent the sheet from displaying a review pass. Existing sheets need migration,
+not an invented voice.
+
+For a new character or a changed voice, generate `voice.wav` from a short Korean
+sample (or the explicitly selected language) using that exact configuration. Save
+`sample.txt`, the generation request/result and the WAV SHA-256 next to the sheet.
+A failed or unavailable engine means the voice is pending, not ready. Do not silently
+substitute the channel narrator, another engine or a stock sample. Reuse an existing
+sample only when its text, voice settings and hash still match.
+When the user requests speech accuracy, run `stt_local_transcribe` without supplying
+the expected text as context, compare the transcript with `sample.txt`, and save the
+transcript, normalization method and character error rate. Fix omissions or incorrect
+words and rerun the check. Transcription checks wording; it does not establish acting,
+timbre or pronunciation quality. Report those limits and never invent a listening pass.
+A voice setting alone does not prove that the generated sample speaks correctly.
+
 After creating or updating character identity, panels or voice, run:
 
 ```bash
@@ -222,10 +250,12 @@ Keep changing scores, thresholds and pending/passed state in this record, not in
 can contradict a later review or user threshold change and invalidate its input hash.
 `score` (0–100), `iteration` (positive integer), `critical` (nonnegative integer),
 and `inputHashes` mapping identity.md/body.png/back.png/face.png to their reviewed
-SHA-256 values. Optional `threshold` (integer 1–100, legacy default 95) records the
+SHA-256 values. Include `voice.wav`, `sample.txt` and `voice-accuracy.json` whenever
+present; adding, removing or changing one invalidates the review. Record what the
+review actually assessed and any listening limitations. Optional `threshold` (integer 1–100, legacy default 95) records the
 user's chosen passing score; do not lower it without their instruction. Write only
 an actual review result. A score at or above that threshold with zero critical
-defects displays a pass only while all four hashes match. Changed inputs
+defects displays a pass only while all reviewed hashes match. Changed inputs
 display a request for re-review; missing/invalid records display draft status.
 
 The same export updates `storyboards/index.html` and
@@ -249,7 +279,8 @@ from `identity.md`), then generate and upload all three required views with
 (face close-up). Keep one view per file, the same clothing, proportions and visual style.
 Use `view:"extra"` and an explanatory `label` only for optional poses or details.
 Verify `portal_character_get.imagesComplete` (by `id`) before reporting the reference set ready,
-then use `portal_character_tts_set` with the channel's voice. Steps, field mapping and the update/delete rules:
+then verify its `tts` matches the character sheet exactly. Use
+`portal_character_tts_set` only with that character's pinned configuration. Steps, field mapping and the update/delete rules:
 `references/portal-characters.md`. No key → the tools answer one line; skip the step.
 
 ## Rules

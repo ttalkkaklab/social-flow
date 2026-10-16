@@ -14,7 +14,7 @@ function fixture() {
   const dir = join(root, 'channel');
   const write = (file, value) => { const p = join(dir, file); mkdirSync(join(p, '..'), { recursive: true }); writeFileSync(p, value); };
   write('profile.md', '---\nname: Test channel\n---\n');
-  write('assets/characters/hero/identity.md', '# Hero\n\n**역할**: Guide <script>alert(1)</script>\n**생김새**: Blue coat\n**목소리**: M1');
+  write('assets/characters/hero/identity.md', '# Hero\n\n**역할**: Guide <script>alert(1)</script>\n**생김새**: Blue coat\n**목소리**: M1\n\n```json\n{"tts":{"engine":"supertonic","voiceId":"M1","language":"ko","speed":1}}\n```');
   for (const name of ['body.png', 'face.png', 'back.png', 'extra.png']) write('assets/characters/hero/' + name, 'fixture');
   write('episodes/one/storyboard/storyboard.md', '---\nstatus: draft\nseries: Series (1/2)\n---\n# Episode one');
   write('episodes/one/storyboard/scenes.js', 'window.SCENES = [];');
@@ -109,5 +109,39 @@ test('review uses the recorded threshold while preserving the legacy threshold a
     assert.ok(render({}).includes('Revision required'));
     assert.ok(render({ threshold: 90, critical: 1 }).includes('Revision required'));
     assert.ok(render({ threshold: null }).includes('no independent review'));
+  } finally { f.clean(); }
+});
+
+test('missing character voice is visible and makes the delivery check fail even after export', () => {
+  const f = fixture();
+  try {
+    f.write('assets/characters/hero/identity.md', '# Hero\n**목소리**: use channel profile');
+    const result = exportChannel(f.dir);
+    assert.ok(result.warnings.some(w => /hero.*tts/.test(w)));
+    const html = readFileSync(join(f.dir, 'assets/characters/hero/index.html'), 'utf8');
+    assert.ok(html.includes('Voice settings required'));
+    assert.ok(!html.includes('Voice settings follow'));
+    assert.ok(exportChannel(f.dir, { check: true }).warnings.length);
+  } finally { f.clean(); }
+});
+
+
+test('voice sample, transcript evidence and their removal invalidate a character review', () => {
+  const f = fixture();
+  try {
+    const folder = join(f.dir, 'assets/characters/hero');
+    for (const name of ['voice.wav', 'sample.txt', 'voice-accuracy.json']) f.write('assets/characters/hero/' + name, 'reviewed fixture');
+    const names = ['identity.md', 'body.png', 'back.png', 'face.png', 'voice.wav', 'sample.txt', 'voice-accuracy.json'];
+    const inputHashes = Object.fromEntries(names.map(name => [name, createHash('sha256').update(readFileSync(join(folder, name))).digest('hex')]));
+    f.write('assets/characters/hero/review.json', JSON.stringify({ score: 95, iteration: 1, critical: 0, inputHashes }));
+    const html = () => { exportChannel(f.dir); return readFileSync(join(folder, 'index.html'), 'utf8'); };
+    assert.ok(html().includes('Review passed'));
+    for (const name of ['voice.wav', 'sample.txt', 'voice-accuracy.json']) {
+      f.write('assets/characters/hero/' + name, 'different speaker or text');
+      assert.ok(html().includes('independent review needed'), name);
+      f.write('assets/characters/hero/' + name, 'reviewed fixture');
+    }
+    rmSync(join(folder, 'voice.wav'));
+    assert.ok(html().includes('independent review needed'));
   } finally { f.clean(); }
 });
