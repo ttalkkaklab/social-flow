@@ -155,6 +155,11 @@ Use [story-quality.md](../storyboard/references/story-quality.md) to improve the
    (`treatment:"footage"`) is retired and the checkers reject it.
 ## Procedure
 ### 1. Check the inputs
+Read [model settings](../_shared/model-settings.md) before media calls. Reuse the
+episode's model snapshot and explicit overrides; for a new episode run directory
+setup only if missing. Preserve legacy approved choices rather than overwriting
+them. Use the selected video, speech and image models throughout production, even
+when later recipes recommend another engine. No repeated model question or silent fallback.
 Follow [delivery preflight and continuation](references/delivery-continuation.md) before generating assets and on every resume. Clips alone are never completion.
 - Confirm `status: approved` in the `storyboard/storyboard.md` frontmatter — otherwise stop
   and point the user at `/social-flow:storyboard` for approval first.
@@ -403,7 +408,7 @@ means generating something nobody approved.
   build record. Type on the picture never ships unflagged (video-generation §what the clip
   brought back).
 
-- **`visual.video.previz` — the 3D previz every generated cut carries** (user directive 2026-09-11; `check-scenes.js` refuses a cut without it). On the Seedance reference-video route pass the `generation` object's `referenceVideoPaths` to `seedance_reference` resolved from the storyboard directory like `referenceImagePaths` — never a re-rendered or substituted clip (its bytes are hash-bound to the approval; `check-production.js` refuses a mismatch); on Seedance 1.x or a host video tool (`handoff:"frame_and_prompt"`) the still edited from `previz.firstFrame` and the stored prompt carry it. Either way check the result against the previz — a contact sheet at 0/25/50/75/100 % and an edge overlay — before accepting it ([blender-previz.md](../storyboard/references/blender-previz.md) §6.4, §6.7). **The model is the user's choice, asked before any video call**: `PRODUCTION.videoModel` holds it (storyboard §1.7, production-mode.md §Two more questions); on an older board without the record, print `video-model-options.js storyboard/` and ask with AskUserQuestion, record the episode default or `model:"mixed"` and each cut's selected model and resolution, re-quote and re-approve before the first call — `check-production.js` refuses the call until then.
+- **`visual.video.previz` — the 3D previz every generated cut carries** (user directive 2026-09-11; `check-scenes.js` refuses a cut without it). On the Seedance reference-video route pass the `generation` object's `referenceVideoPaths` to `seedance_reference` resolved from the storyboard directory like `referenceImagePaths` — never a re-rendered or substituted clip (its bytes are hash-bound to the approval; `check-production.js` refuses a mismatch); on Seedance 1.x or a host video tool (`handoff:"frame_and_prompt"`) the still edited from `previz.firstFrame` and the stored prompt carry it. Either way check the result against the previz — a contact sheet at 0/25/50/75/100 % and an edge overlay — before accepting it ([blender-previz.md](../storyboard/references/blender-previz.md) §6.4, §6.7). **Reuse the user's saved model choice**: `PRODUCTION.videoModel` holds it (directory model settings and storyboard §1.7). Populate a new board from its snapshot without another model question; preserve older boards' actual approved choices. Use `video-model-options.js storyboard/` only during first setup or an explicit requested change. Record each cut's selected model/resolution and recalculate costs when the user changes them; retain actual spending authorization.
 
 **Use the Seedance `generation` arguments from `cost-preview.js --json`; resolve errors and re-estimate retries before spending. Which engine, prompt, and per-slot recipe** —
 [video-generation.md](references/video-generation.md). It carries the face → sound → grid

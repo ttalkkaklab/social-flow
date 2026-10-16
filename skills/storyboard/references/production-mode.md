@@ -146,8 +146,11 @@ first previz call (`capability_status` says whether Blender is installed; recomm
 Persist as `PRODUCTION.previz = { renderer, selection }`; every shot's `visual.video.previz.renderer`
 must equal it.
 
-**Before any video call — which model.** Ask before the §7 board approval (the quote is
-bound to the model) and again at produce entry when an older board has no record. Print the
+**Before any video call — reuse the selected model.** Follow
+[directory model settings](../../_shared/model-settings.md). Use the saved video
+choice without another question; only missing first-time settings or an explicit
+change request opens model selection. Preserve a legacy board's existing approved
+choices. Quotes still bind the actual episode models. During selection, print the
 table with real numbers first:
 
 ```bash
@@ -268,6 +271,11 @@ page shows all six choices, retries and the selected cap, and flags a stale comp
 The page displays a proposal; selection is recorded by the host's HITL, not a pretend HTML button.
 
 ## Autonomous callers
+
+Saved directory models satisfy the model-selection step below and take precedence
+over old growth-plan model defaults. A complete config is required for new
+unattended production; without it report `model_setup_required`. Keep existing
+standing budgets and renderer settings. Do not ask for models again on later ticks.
 
 A growth plan can explicitly authorize `production_mode`, `video_budget_usd`,
 `video_max_attempts`, and — for the two previz questions — `previz_renderer` and `video_model`
