@@ -1,0 +1,87 @@
+# Character identity contract (schemaVersion 1)
+
+Use this contract for new characters and requested character updates. `identity.md`
+is the character source of truth; `profile.md` remains the channel source. Never
+silently populate an existing character with the example's biography or voice.
+
+## Author and validate
+
+Use [character-identity-example.md](character-identity-example.md) as a complete
+worked example, not default values. Keep one `# Name` heading and one fenced JSON
+block with `character` and `tts`. The field catalog and validator are
+`../../_shared/character-identity.js`. All catalog fields must be present.
+
+Each field is `{ "status": "confirmed", "value": ... }`, or
+`{ "status": "pending", "value": null, "reason": "what is unresolved" }`.
+Optional fields can use `not_applicable` with null and a meaningful reason.
+Pending is an honest draft, never generation-ready. Do not invent measurements to
+clear validation. Height uses cm, weight uses kg; stylized subjects may leave weight
+not_applicable. Relative scale specifies what counts toward height (ears, hair, tail).
+Traits pair a tendency with observable behavior. Dialogue examples demonstrate the
+register and vocabulary; acting describes emotional reactions and movement.
+Relationships name the other character's id, address and attitude. No relationships
+is not_applicable, not a fake cast member. Record fixed landmarks with anatomical
+left/right when asymmetric. Review examples and numeric/visual consistency manually:
+a schema check cannot prove anatomy, personality, acting or voice quality.
+
+Run from the installed plugin:
+
+```bash
+node "$CLAUDE_PLUGIN_ROOT/skills/channel/references/character-sheet.js" \
+  "data/<channel>/assets/characters/<id>/identity.md" > /tmp/character-handoff.json
+node "$CLAUDE_PLUGIN_ROOT/skills/channel/references/review-library.js" "data/<channel>"
+node "$CLAUDE_PLUGIN_ROOT/skills/channel/references/review-library.js" "data/<channel>" --check
+```
+
+`character-sheet.js` is read-only and fails on incomplete identity or voice. It
+compiles the identity to `character`, `tts`, four `direction` strings, and a source
+SHA-256. Legacy sheets still render their original text, but must be explicitly
+migrated before a new review pass. Preserve all existing prose and media on migration.
+Resolve unknowns with the user, or retain pending; never retrofit a fabricated review.
+
+## Generate and use
+
+1. Author the identity before images. Use `direction.image` for the appearance prompt
+   plus the specific panel framing. Create separate front full-body, back full-body,
+   and face close-up images. The front includes the head and a neutral face; the back
+   faces away. Never erase a face from the front body. Match proportions, clothing,
+   colors and landmarks across all panels. Keep expressions/poses as optional extras.
+2. Use the host image tool where available. Generate the first panel, inspect it, then
+   use it as the reference for subsequent views. Keep each panel in a separate file;
+   do not feed a multi-view composite to an image/video generator.
+3. Generate the voice sample from the pinned `tts`, with `sample.txt` drawn from
+   `speech.examples`. `direction.voice` is acting guidance, not an API argument:
+   pass style only when the chosen engine supports it. Unsupported emotional controls
+   are documented limitations; never claim they were rendered by an engine without them.
+4. New storyboards set `SB_DOC.characterSchemaVersion = 1`. Copy each compiler result
+   into `SB_DOC.characters` (add panel paths separately). `direction.image` feeds still
+   prompts; `direction.video` feeds motion/acting prompts; `direction.dialogue` guides
+   script writing; `direction.voice` guides supported speech controls. Both board and
+   assembly checks reject altered identity with stale direction. Recompile from the
+   current local identity before production and compare `identitySha256`; a mismatch
+   requires updating the handoff and affected assets, not just editing the hash.
+5. Scene emotions, poses and temporary outfits belong to scene state, not baseline
+   identity. An allowed variant needs its own references before use. Neither a scene
+   state nor a prompt may contradict invariants.
+
+## Update without losing identity
+
+Read the current source first. Change only requested fields, increment `character.version`,
+and preserve every other field and the pinned TTS. If an update conflicts with an
+invariant, update the affected invariant explicitly as part of the same approved change.
+Do not leave contradictory instructions. Show before/after values.
+
+Recompile, regenerate affected panels/voice samples, and export both indexes and the
+sheet. Appearance changes require checking all three panels; speech/TTS changes require
+a new sample. Keep previous inputs and reviews in a sibling evidence folder. Existing
+hash-bound reviews become stale on any identity/media change; never carry their score
+forward. Obtain a fresh independent review on the actual revised files before recording
+new hashes. Test create and update paths as well as rejected incomplete updates.
+
+## Portal boundary
+
+The current portal API has role, appearance and TTS fields, not this full schema.
+Keep the complete character identity locally. When portal integration was authorized,
+map the confirmed `identity.role` and `physical.appearance` into the existing fields,
+pass exact TTS, and retain the complete local handoff for production. Do not claim the
+portal stored or returned the full specification. Do not add unsupported remote fields.

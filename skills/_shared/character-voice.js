@@ -37,6 +37,24 @@ function voiceErrors(tts) {
   return errors;
 }
 
+/** Compare actual generator arguments and declared text language, without listening. */
+function generationVoiceErrors(expected, proof) {
+  const errors = voiceErrors(expected);
+  if (errors.length) return errors;
+  const settings = proof?.voiceSettings;
+  if (!settings) return ['Character speech requires recorded generation voiceSettings'];
+  const engines = {tts_generate:'gemini',tts_gemini_38:'gemini',tts_local_generate:'supertonic',tts_elevenlabs_generate:'elevenlabs',mlx_tts_generate:'mlx'};
+  if (!engines[proof.generator] || settings.speakers || settings.inputs) return ['Character speech requires a single-speaker generation proof'];
+  const actual = {engine:engines[proof.generator],voiceId:settings.voiceId||settings.voiceName||settings.voice,language:normalizeLanguage(settings.lang||settings.languageCode||settings.language||proof.language),speed:settings.speed??1};
+  for (const key of ['engine','voiceId','language','speed']) {
+    const wanted = key==='language' ? normalizeLanguage(expected[key]) : typeof expected[key]==='string' ? expected[key].trim() : expected[key];
+    if (actual[key] !== wanted) errors.push(key+' differs from pinned character voice');
+  }
+  if (proof.language && normalizeLanguage(proof.language)!==normalizeLanguage(expected.language)) errors.push('Declared text language differs from pinned character voice');
+  for (const key of ['model','stylePrompt']) if (expected[key]!==undefined && settings[key]!==expected[key].trim()) errors.push(key+' differs from pinned character voice');
+  return errors;
+}
+
 function identityVoice(source) {
   const blocks = [...source.matchAll(/```json\s*\n([\s\S]*?)```/g)];
   const voices = [];
@@ -55,12 +73,14 @@ function identityVoice(source) {
 
 function boardVoiceErrors(win) {
   if (!win || typeof win !== 'object') return ['Storyboard must be an object'];
-  const errors = [];
+  const errors = require('./character-identity.js').boardIdentityErrors(win);
   const entries = win.SB_DOC?.characters;
   if (entries != null && (typeof entries !== 'object')) return ['SB_DOC.characters must be an array or object'];
   if (win.SCENES != null && !Array.isArray(win.SCENES)) return ['SCENES must be an array'];
   const characters = Array.isArray(entries) ? entries : Object.entries(entries || {}).map(([id, c]) => ({ ...c, id }));
   const ids = new Set(Object.keys(win.PRODUCTION?.cast || {}));
+  const lineIds = new Set();
+  if (win.SB_DOC?.speechPlanVersion === 1 && !win.SB_DOC.narratorCharacterId) errors.push('Speech plan needs narratorCharacterId');
   for (const scene of win.SCENES || []) {
     if (!scene || typeof scene !== 'object') { errors.push('Scene must be an object'); continue; }
     const raw = scene.visual?.character;
@@ -69,6 +89,12 @@ function boardVoiceErrors(win) {
     for (const n of scene.narration || []) {
       if (!n || typeof n !== 'object') { errors.push('Narration segment must be an object'); continue; }
       if (n.speaker) ids.add(n.speaker);
+      if (win.SB_DOC?.speechPlanVersion === 1) {
+        if (typeof n.id !== 'string' || !n.id.trim() || lineIds.has(n.id)) errors.push('Every speech line needs a unique stable id');
+        lineIds.add(n.id);
+        if (typeof n.speaker !== 'string' || !n.speaker.trim()) errors.push('Every speech line needs an explicit speaker, including narrator');
+        if (!['voiceover','on_screen','off_screen'].includes(n.delivery)) errors.push('Every speech line needs delivery: voiceover, on_screen or off_screen');
+      }
     }
   }
   for (const c of characters) ids.add(c?.id);
@@ -80,4 +106,4 @@ function boardVoiceErrors(win) {
   }
   return errors;
 }
-module.exports = { normalizeLanguage, voiceErrors, identityVoice, boardVoiceErrors };
+module.exports = { normalizeLanguage, voiceErrors, generationVoiceErrors, identityVoice, boardVoiceErrors };

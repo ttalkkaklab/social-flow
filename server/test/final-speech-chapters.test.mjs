@@ -8,7 +8,8 @@ import {createRequire} from 'node:module';
 import {reviewFinalSpeech} from '../dist/tts-final-quality.js';
 const require=createRequire(import.meta.url);
 const chapters=require('../../skills/produce/references/final-speech-chapters.js');
-const checker=require('../../skills/produce/references/check-final-tts.js');
+const sourceChecker=require('../../skills/produce/references/check-final-tts.js');
+const checker={...sourceChecker,evidence:sourceChecker.legacyEvidence}; // historical review artifacts
 const delivery=require('../../skills/produce/references/delivery-proof.js');
 const good={accuracy:100,pronunciation:98,naturalness:98,clarity:98,continuity:98,continuityEvidence:'At every sentence join the same pitch and breathing continue without a clipped ending.',confidence:.98,complete:true,evidence:'Every word throughout this payload is audible with clear endings and no noise or omissions.',issues:[]};
 const root=mkdtempSync(path.join(tmpdir(),'final-chapters-'));

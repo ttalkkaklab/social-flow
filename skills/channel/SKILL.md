@@ -1,13 +1,13 @@
 ---
 name: channel
 description: >
-  Creates and edits the per-channel profile.md that every other skill reads first. Use
+  Creates channel profiles and reusable character sheets; stops before episodes. Use
   when the user asks to "채널 만들어", "채널 추가", "채널 목록", "프로파일 수정", "add a channel", "set up a
-  content channel", or wants to create or update the channel directory under data/. Writes
+  content channel", "캐릭터 만들어", "캐릭터 시트 수정", or wants to create or update the channel directory under data/. Writes
   data/[slug]/profile.md — target audience, tone, TTS voice, visual theme, target
   platforms, fact-check policy — the source of truth every storyboard, produce and publish
   run opens before anything else.
-argument-hint: "[add|list|update|serve] [channel-name]"
+argument-hint: "[add|list|update|serve|character] [channel-name]"
 allowed-tools: ["mcp__social-flow__portal_channel_sync", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__tts_local_generate", "mcp__social-flow__stt_local_transcribe", "mcp__social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__portal_character_list", "mcp__social-flow__portal_character_get", "mcp__social-flow__portal_character_create", "mcp__social-flow__portal_character_update", "mcp__social-flow__portal_character_delete", "mcp__social-flow__portal_character_image_upload", "mcp__social-flow__portal_character_extra_delete", "mcp__social-flow__portal_character_tts_set"]
 ---
 
@@ -44,11 +44,12 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
 
 ## Argument parsing
 
-`[add|list|update|serve] [channel-name]`
+`[add|list|update|serve|character] [channel-name]`
 
 - `add <name>` — create a new channel (procedure below)
 - `list` — Glob for `data/*/profile.md` and report channel, description, and publish platforms as a table
 - `update <name>` — read the existing profile.md and edit only the fields the user specifies
+- `character <channel> <id>` — create or update the reusable character using [character-identity.md](references/character-identity.md); read existing identity first and preserve unspecified fields. Export and check the local review library after changes.
 - `serve` — open the channel browser in the browser (procedure below)
 - With no argument, show the current state via `list`, then ask what to do next
 
@@ -202,6 +203,8 @@ node "$CLAUDE_PLUGIN_ROOT/skills/channel/references/serve.js" data --port 8400
 
 ## Local review HTML (required after character edits)
 
+For every new or updated character, follow [character-identity.md](references/character-identity.md). The structured identity is required in addition to the pinned voice below.
+
 Every character sheet must include one fenced `json` block in `identity.md`:
 
 ```json
@@ -274,8 +277,8 @@ the record the storyboard import and the narration lane read. Register or refres
 with the `portal_character_*` tools after the local `assets/characters/<id>/` folder is
 final: `portal_character_create` with `identityDir` (key from the folder, name·역할·생김새
 from `identity.md`), then generate and upload all three required views with
-`portal_character_image_upload`: `body.png` → `view:"front"` (full body without a face),
-`back.png` → `view:"back"` (back full body without a face), and `face.png` → `view:"face"`
+`portal_character_image_upload`: `body.png` → `view:"front"` (full body including a neutral face),
+`back.png` → `view:"back"` (back full body including a neutral face), and `face.png` → `view:"face"`
 (face close-up). Keep one view per file, the same clothing, proportions and visual style.
 Use `view:"extra"` and an explanatory `label` only for optional poses or details.
 Verify `portal_character_get.imagesComplete` (by `id`) before reporting the reference set ready,

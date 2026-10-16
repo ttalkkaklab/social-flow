@@ -7,6 +7,8 @@ import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
 const require = createRequire(import.meta.url);
 const { exportChannel } = require('../../skills/channel/references/review-library.js');
+const example = readFileSync(new URL('../../skills/channel/references/character-identity-example.md', import.meta.url), 'utf8');
+const identityBlock = example.match(/```json\s*\n([\s\S]*?)```/)[1];
 const { storyboardHtml } = require('../../skills/storyboard/references/storyboard-html.js');
 
 function fixture() {
@@ -15,6 +17,10 @@ function fixture() {
   const write = (file, value) => { const p = join(dir, file); mkdirSync(join(p, '..'), { recursive: true }); writeFileSync(p, value); };
   write('profile.md', '---\nname: Test channel\n---\n');
   write('assets/characters/hero/identity.md', '# Hero\n\n**역할**: Guide <script>alert(1)</script>\n**생김새**: Blue coat\n**목소리**: M1\n\n```json\n{"tts":{"engine":"supertonic","voiceId":"M1","language":"ko","speed":1}}\n```');
+  const doc = JSON.parse(identityBlock);
+  doc.character.identity.role.value = 'Guide <script>alert(1)</script>';
+  doc.character.physical.appearance.value = 'Blue coat';
+  write('assets/characters/hero/identity.md', '# Hero\n\n```json\n' + JSON.stringify(doc) + '\n```');
   for (const name of ['body.png', 'face.png', 'back.png', 'extra.png']) write('assets/characters/hero/' + name, 'fixture');
   write('episodes/one/storyboard/storyboard.md', '---\nstatus: draft\nseries: Series (1/2)\n---\n# Episode one');
   write('episodes/one/storyboard/scenes.js', 'window.SCENES = [];');
@@ -119,7 +125,7 @@ test('missing character voice is visible and makes the delivery check fail even 
     const result = exportChannel(f.dir);
     assert.ok(result.warnings.some(w => /hero.*tts/.test(w)));
     const html = readFileSync(join(f.dir, 'assets/characters/hero/index.html'), 'utf8');
-    assert.ok(html.includes('Voice settings required'));
+    assert.ok(html.includes('Character settings incomplete'));
     assert.ok(!html.includes('Voice settings follow'));
     assert.ok(exportChannel(f.dir, { check: true }).warnings.length);
   } finally { f.clean(); }
@@ -144,4 +150,28 @@ test('voice sample, transcript evidence and their removal invalidate a character
     rmSync(join(folder, 'voice.wav'));
     assert.ok(html().includes('independent review needed'));
   } finally { f.clean(); }
+});
+
+test('structured updates render every field, escape values and make prior reviews stale', () => {
+  const f=fixture();
+  try {
+    const folder=join(f.dir,'assets/characters/hero');
+    const d=JSON.parse(identityBlock);
+    const writeDoc=()=>f.write('assets/characters/hero/identity.md','# Hero\n```json\n'+JSON.stringify(d)+'\n```');
+    writeDoc();
+    const names=['identity.md','body.png','back.png','face.png'];
+    const inputHashes=Object.fromEntries(names.map(n=>[n,createHash('sha256').update(readFileSync(join(folder,n))).digest('hex')]));
+    f.write('assets/characters/hero/review.json',JSON.stringify({score:96,iteration:1,critical:0,inputHashes}));
+    exportChannel(f.dir);assert.ok(readFileSync(join(folder,'index.html'),'utf8').includes('Review passed'));
+    d.character.version++;d.character.speech.habits.value='Changed <script>bad()</script>';writeDoc();exportChannel(f.dir);
+    let html=readFileSync(join(folder,'index.html'),'utf8');
+    assert.ok(html.includes('Changed &lt;script&gt;bad()&lt;/script&gt;'));
+    assert.ok(html.includes('independent review needed'));
+    for(const [,ko] of require('../../skills/_shared/character-identity.js').GROUPS)assert.ok(html.includes(ko));
+    d.character.physical.weightKg={status:'pending',value:null,reason:'Waiting on author'};writeDoc();
+    assert.ok(exportChannel(f.dir).warnings.some(x=>x.includes('weightKg')));
+    html=readFileSync(join(folder,'index.html'),'utf8');
+    assert.ok(html.includes('Pending: Waiting on author'));
+    assert.ok(!html.includes('Review passed'));
+  }finally{f.clean();}
 });

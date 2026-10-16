@@ -317,6 +317,7 @@ function collectCharacters(scenes: unknown[], sbDoc: Record<string, unknown> | n
       const look = /\*\*생김새\*\*:\s*(.+)/.exec(text)?.[1];
       if (role) detail.role = role.trim();
       if (look) detail.appearance = look.trim();
+      Object.assign(detail, portalIdentityFields(text));
     }
     return detail;
   });
@@ -349,3 +350,4 @@ export function normalizeNarrationSpeakers(scenes: unknown[], characters: Portal
     };
   });
 }
+import { portalIdentityFields } from '../../skills/_shared/character-identity.js';

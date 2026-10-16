@@ -10,7 +10,9 @@ import { pcmToWav } from '../dist/media-utils.js';
 import { TOOLS } from '../dist/tools.js';
 import { ROUTES } from '../dist/handlers.js';
 const require=createRequire(import.meta.url);
-const checker=require('../../skills/produce/references/check-tts-quality.js');
+// Historical proof validation remains covered; production uses the provenance-only check.
+const legacyChecker=require('../../skills/produce/references/check-tts-quality.js');
+const checker={...legacyChecker,check:legacyChecker.checkLegacy};
 const script='오늘은 맑고 따뜻한 날입니다.';
 const good=()=>({accuracy:100,pronunciation:98,naturalness:97,clarity:99,confidence:0.98,complete:true,evidence:'Every word and final syllable is clear, with smooth phrase breaks and no audible artifacts.',issues:[]});
 const signal={duration:2.4,rmsDb:-18,clippedFraction:0};
