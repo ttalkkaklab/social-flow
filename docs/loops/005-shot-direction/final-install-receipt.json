@@ -1,0 +1,17 @@
+{
+  "root": "/Users/zeans/.local/state/social-flow-direction/builds/0.115.2-direction.1",
+  "server": {
+    "name": "social-flow",
+    "version": "0.115.2-direction.1"
+  },
+  "toolCount": 86,
+  "ltxToolPresent": true,
+  "at": "2026-10-17T03:38:45.808Z",
+  "sourceCommit": "8115051",
+  "validation": {
+    "tests": 2018,
+    "fail": 0,
+    "skillLint": "16 rules across21skills"
+  },
+  "concurrentStoryFirstCommitIncluded": "7106600"
+}

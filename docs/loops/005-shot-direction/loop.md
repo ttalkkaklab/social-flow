@@ -55,14 +55,26 @@ release. Do not overwrite the installed cache directly. Install with the host CL
 
 - User delegated initial settings and requested completion followed by merge into dev,
   pull of the main worktree, artifact preservation and cleanup of this worktree.
-- Implementation: 100/100 with no critical defects after independent review.
-  Workspace 1,983 tests and installed release 1,994 tests passed; skill lint passed.
-- Codex installation: 0.115.1-direction.3. This includes frame-aligned fractional
-  previz duration support and silent story-v2 character handoffs. Spoken characters
-  still require valid voice settings; unknown physical identity still fails.
+- Implementation: 100/100, no critical defects, independently reviewed in
+  implementation-review.md. Final merged source: 2,018 tests pass; skill lint passes
+  all 16 rules across 21 skills.
+- Codex installation: 0.115.2-direction.1, built from commit 8115051 with dev merged.
+  The concurrent story-first commit 7106600 is an ancestor, preserving its changes
+  and shared Blender blocking. See final-install-receipt.json.
 - Local project: little-robot / umbrella-for-two, silent toon-3d comedy, portrait,
   self-hosted LTX, native image generation, no SNS publication.
-- Actual LTX clips and timestamped reviews are being iterated. First take had
-  excess camera movement; a second pinned-endpoint take is under review.
-  The seedling insert needs smaller splash volume. No final video score yet.
-- Final artifact target remains >=95 against the unchanged rubric above.
+- Artifact v1: 90/100. Ending camera pushed in and cropped the plant/canopy.
+- Artifact v2: 90/100. Fixed framing, but umbrella retraction undermined sustained
+  shelter and reaction. A short trim did not resolve the action.
+- Artifact v3: 100/100 on the unchanged 20-item rubric, no demonstrated critical
+  defects. Independent frame inspection and a full-duration temporal receipt support
+  the score. The temporal model still reports unverified, confidence 0.75; the
+  independent reviewer did not directly play the MP4. This is a qualified rubric
+  result, not a claim of flawless animation or automated certification.
+- Delivery: 1080x1920, 24 fps, 422 unique decoded frames, 17.583333 seconds.
+  No adjacent exact duplicates, added loops, freeze padding or text overlays.
+  Quiet-motion proxy warnings remain recorded. Minor grip rigidity and camera
+  jitter do not prevent story/action readability.
+- Actual generation uses installed direction releases; final assembly uses the
+  updated canonical builder. All rejected takes, inputs and reviews are preserved
+  locally. Automated temporal-review status is unverified; it is not a pass stamp.
