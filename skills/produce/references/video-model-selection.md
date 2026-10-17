@@ -146,10 +146,10 @@ correction in PR comment `5978877144`. The 25.3 output observation above follows
 the reviewer's inspection of frames 0/20/40/60/85 from job
 `d9924624e3474c6482ce698fb9645e50`; it supersedes the earlier obscured-mouth claim.
 
-Clips carry AAC (48kHz stereo) with no audio-off argument. **audio2video carries the supplied
+Clips carry AAC (48kHz stereo); `generateAudio: false` strips it after generation (same render time). **audio2video carries the supplied
 WAV re-encoded as AAC**, rather than newly generated sound: job `558632165cfe4678a631eb460bf89457`
 measured 100ms RMS Pearson correlation 0.99997 at zero lag. Use stereo (2-channel) input;
-mono WAV passes upload and job acceptance (202) but fails during generation. With neither
+mono WAV is refused at upload because it fails in the engine's audio encoder. With neither
 `numFrames` nor `audioMaxDuration`, the server uses 121 frames (~5.04s at 24fps), even for an
 8-second WAV. `numFrames` fixes the length; `audioMaxDuration: 8` selects 185 frames (~7.71s)
 at 24fps after rounding, so it can trim the tail. Drop or duck the output track in the edit

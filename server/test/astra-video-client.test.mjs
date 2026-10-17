@@ -22,22 +22,30 @@ import packageMetadata from '../package.json' with { type: 'json' };
 import {
   ASTRA_VIDEO_ALLOWED_FIELDS,
   ASTRA_VIDEO_FRAME_LIMITS,
+  ASTRA_VIDEO_IC_LORA_ADAPTERS,
+  ASTRA_VIDEO_MEASURED_FIELDS,
   ASTRA_VIDEO_LORAS,
   ASTRA_VIDEO_MAX_PIXELS,
   ASTRA_VIDEO_TIERS,
   ASTRA_VIDEO_USER_AGENT,
   astraVideoHeaders,
   astraAudio2VideoSchema,
+  astraIcLoraSchema,
   astraImg2VideoSchema,
   astraKeyframeVideoSchema,
   astraText2VideoSchema,
   astraVideoRetakeSchema,
   buildJobBody,
+  checkAudioCoversVideo,
   checkAudioSource,
   checkAutoDuration,
   checkDimensions,
   checkFrameIdx,
+  checkMaskSource,
+  checkReferenceSource,
   checkRetakeSource,
+  framesForSeconds,
+  icLoraMode,
   uploadContentType,
 } from '../dist/astra-video-client.js';
 
@@ -53,30 +61,46 @@ const parseOk = (schema, args) => {
   return result.data;
 };
 
-describe('the five tools cover six of the seven server modes', () => {
-  it('tier map resolves to generate/guided/guided_fast', () => {
-    assert.deepEqual(Object.values(ASTRA_VIDEO_TIERS), ['generate', 'guided', 'guided_fast']);
+describe('the tools cover the measured seven modes and the two designed ones', () => {
+  it('tier map resolves to generate/guided/guided_fast/guided_hq', () => {
+    assert.deepEqual(Object.values(ASTRA_VIDEO_TIERS), ['generate', 'guided', 'guided_fast', 'guided_hq']);
   });
 
-  it('every mode the server has is in the allow-list table', () => {
+  it('the measured table keeps exactly the seven live modes; the design adds guided_hq and ic_lora', () => {
+    assert.deepEqual(
+      Object.keys(ASTRA_VIDEO_MEASURED_FIELDS).sort(),
+      ['audio2video', 'generate', 'guided', 'guided_fast', 'ingredients', 'keyframe', 'retake'],
+    );
     assert.deepEqual(
       Object.keys(ASTRA_VIDEO_ALLOWED_FIELDS).sort(),
-      ['audio2video', 'generate', 'guided', 'guided_fast', 'ingredients', 'keyframe', 'retake'],
+      ['audio2video', 'generate', 'guided', 'guided_fast', 'guided_hq', 'ic_lora', 'ingredients', 'keyframe', 'retake'],
     );
   });
 
   // Re-probed 2026-10-17: the invalid-mode 400 names seven modes; ingredients' unknown-key 400 names these ten.
-  it('ingredients carries the measured allow-list, references included, and no tool sends it yet', () => {
+  it('ingredients keeps the measured allow-list; the design adds only conditioning_mask and skip_stage_2', () => {
     assert.deepEqual(
-      [...ASTRA_VIDEO_ALLOWED_FIELDS.ingredients].sort(),
+      [...ASTRA_VIDEO_MEASURED_FIELDS.ingredients].sort(),
       ['frame_rate', 'hdr', 'height', 'images', 'mode', 'num_frames', 'prompt', 'references', 'seed', 'width'],
     );
-    for (const field of ['lora', 'auto_duration', 'negative_prompt', 'num_inference_steps']) {
+    assert.deepEqual(
+      ASTRA_VIDEO_ALLOWED_FIELDS.ingredients.filter(f => !ASTRA_VIDEO_MEASURED_FIELDS.ingredients.includes(f)),
+      ['conditioning_mask', 'generate_audio', 'skip_stage_2'],
+    );
+    for (const field of ['lora', 'auto_duration', 'negative_prompt', 'num_inference_steps', 'adapter', 'guidance']) {
       assert.ok(!ASTRA_VIDEO_ALLOWED_FIELDS.ingredients.includes(field), field);
     }
     assert.deepEqual(buildJobBody('ingredients', { prompt: 'x', numFrames: 121 }), { mode: 'ingredients', prompt: 'x', num_frames: 121 });
     assert.throws(() => buildJobBody('ingredients', { prompt: 'x', lora: ['cinemagraph'] }), /mode ingredients does not accept lora/);
-    assert.ok(!TOOLS.some(t => t.name.startsWith('astra_') && JSON.stringify(t.inputSchema).includes('references')), 'no astra tool exposes references until its format is measured');
+    assert.throws(() => buildJobBody('ingredients', { prompt: 'x', adapter: 'deblur' }), /mode ingredients does not accept adapter/);
+  });
+
+  it('design additions are exactly DESIGN §2-3 plus generate_audio, which alone reaches generate and retake', () => {
+    const added = (mode) => ASTRA_VIDEO_ALLOWED_FIELDS[mode].filter(f => !(ASTRA_VIDEO_MEASURED_FIELDS[mode] ?? []).includes(f));
+    for (const mode of ['guided', 'guided_fast', 'keyframe', 'audio2video']) assert.deepEqual(added(mode), ['generate_audio', 'guidance'], mode);
+    for (const mode of ['generate', 'retake']) assert.deepEqual(added(mode), ['generate_audio'], mode);
+    assert.deepEqual(added('guided_hq'), [...ASTRA_VIDEO_MEASURED_FIELDS.guided, 'guidance', 'generate_audio'].sort());
+    assert.deepEqual(added('ic_lora'), [...ASTRA_VIDEO_MEASURED_FIELDS.ingredients, 'adapter', 'conditioning_mask', 'skip_stage_2', 'generate_audio'].sort());
   });
 
   // Measured 2026-09-29: the server names the whole allow-list when it rejects an unknown key.
@@ -84,7 +108,7 @@ describe('the five tools cover six of the seven server modes', () => {
     assert.ok(ASTRA_VIDEO_ALLOWED_FIELDS.generate.includes('lora'));
     assert.ok(!ASTRA_VIDEO_ALLOWED_FIELDS.generate.includes('negative_prompt'));
     assert.ok(!ASTRA_VIDEO_ALLOWED_FIELDS.generate.includes('num_inference_steps'));
-    for (const mode of ['guided', 'guided_fast', 'keyframe', 'audio2video', 'retake']) {
+    for (const mode of ['guided', 'guided_fast', 'guided_hq', 'keyframe', 'audio2video', 'ingredients', 'ic_lora', 'retake']) {
       assert.ok(!ASTRA_VIDEO_ALLOWED_FIELDS[mode].includes('lora'), `${mode} must not accept lora`);
     }
   });
@@ -99,7 +123,7 @@ describe('the five tools cover six of the seven server modes', () => {
   });
 
   it('auto_duration is absent from keyframe, audio2video and retake', () => {
-    for (const mode of ['keyframe', 'audio2video', 'retake']) {
+    for (const mode of ['keyframe', 'audio2video', 'ingredients', 'ic_lora', 'retake']) {
       assert.ok(!ASTRA_VIDEO_ALLOWED_FIELDS[mode].includes('auto_duration'), mode);
     }
   });
@@ -276,8 +300,8 @@ describe('tier-bound arguments are refused at the schema, not at the server', ()
 
   it('negativePrompt and numInferenceSteps never on tier default', () => {
     parseOk(astraText2VideoSchema, { prompt: 'x', tier: 'guided', negativePrompt: 'blurry', numInferenceSteps: 30 });
-    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', negativePrompt: 'blurry' }), /only on tier "guided" or "fast"/);
-    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', numInferenceSteps: 30 }), /only on tier "guided" or "fast"/);
+    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', negativePrompt: 'blurry' }), /only on tier "guided", "fast" or "hq"/);
+    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', numInferenceSteps: 30 }), /only on tier "guided", "fast" or "hq"/);
   });
 
   it('lora values are the two the server loads, and at most two of them', () => {
@@ -287,7 +311,7 @@ describe('tier-bound arguments are refused at the schema, not at the server', ()
     parseFails(astraText2VideoSchema, { prompt: 'x', lora: ['cinemagraph', 'slow-motion', 'cinemagraph'] });
     assert.match(
       parseFails(astraText2VideoSchema, { prompt: 'x', lora: ['slow-motion', 'slow-motion'] }),
-      /lora values must be unique/,
+      /lora names must be unique/,
     );
   });
 
@@ -433,7 +457,7 @@ describe('measured ASTRA guidance', () => {
     ['stereo input and mono generation failure', /Stereo \(2-channel\) input is required: mono WAV passes acceptance but fails generation/],
     ['default audio length', /With neither length argument, audio2video uses 121 frames \(~5\.04s\), not the source length/],
     ['rounded audio length', /`audioMaxDuration: 8` selects 185 frames \(~7\.71s\) at 24fps/],
-    ['no audio-off argument', /There is no audio-off argument/],
+    ['the generateAudio switch', /`generateAudio: false` strips the sound after generation/],
   ]) {
     it(`README ASTRA documents ${name}`, () => assert.match(readmeAstraRow(), pattern));
   }
@@ -480,13 +504,13 @@ describe('measured ASTRA guidance', () => {
     assert.doesNotMatch(tool('astra_text2video').description, /image-conditioned|failure frames|CUDA illegal memory access/);
   });
 
-  it('audio inputs warn that mono is accepted but fails generation', () => {
+  it('audio inputs warn that mono fails generation and is refused at upload', () => {
     const audio = tool('astra_audio2video');
-    assert.match(audio.description, /mono passes upload and job acceptance but fails during generation/);
+    assert.match(audio.description, /mono fails in the engine's audio encoder, so the server refuses it at upload/);
     for (const name of ['audioPath', 'audioUploadId']) {
       const description = audio.inputSchema.properties[name].description;
       assert.match(description, /Stereo \(2-channel\) input required/);
-      assert.match(description, /Mono WAV passes acceptance \(202\) but fails during generation/);
+      assert.match(description, /Mono is refused at upload \(it fails in the engine audio encoder\); an id uploaded before 2026-10-17 15:00Z can still be mono/);
     }
   });
 
@@ -552,15 +576,15 @@ describe('measured ASTRA guidance', () => {
 
 describe('mode-specific ceilings and new input contracts', () => {
   it('pins all five mode ceilings to the measured client and server limits', () => {
-    assert.deepEqual(ASTRA_VIDEO_FRAME_LIMITS, { generate: 193, guided: 121, guided_fast: 121, keyframe: 193, audio2video: 193 });
+    assert.deepEqual(ASTRA_VIDEO_FRAME_LIMITS, { generate: 193, guided: 121, guided_fast: 121, keyframe: 193, audio2video: 193, guided_hq: 121, ingredients: 121, ic_lora: 121 });
   });
 
   it('every text and image tier accepts its ceiling and refuses the next grid value', () => {
-    for (const [tier, max] of [['default', 193], ['guided', 121], ['fast', 121]]) {
+    for (const [tier, max] of [['default', 193], ['guided', 121], ['fast', 121], ['hq', 121]]) {
       parseOk(astraText2VideoSchema, { prompt: 'x', tier, numFrames: max });
       parseFails(astraText2VideoSchema, { prompt: 'x', tier, numFrames: max + 8 });
     }
-    for (const [tier, max] of [['default', 193], ['guided', 121]]) {
+    for (const [tier, max] of [['default', 193], ['guided', 121], ['hq', 121]]) {
       parseOk(astraImg2VideoSchema, { prompt: 'x', firstFramePath: 'a.png', tier, numFrames: max });
       parseFails(astraImg2VideoSchema, { prompt: 'x', firstFramePath: 'a.png', tier, numFrames: max + 8 });
     }
@@ -606,7 +630,7 @@ describe('mode-specific ceilings and new input contracts', () => {
       assert.match(property.description, /server rejects values above 193/);
     }
     const image = TOOLS.find(t => t.name === 'astra_img2video');
-    assert.deepEqual(image.inputSchema.properties.tier.enum, ['default', 'guided']);
+    assert.deepEqual(image.inputSchema.properties.tier.enum, ['default', 'guided', 'hq']);
     for (const key of ['autoDuration', 'negativePrompt', 'numInferenceSteps']) assert.ok(image.inputSchema.properties[key], key);
     assert.match(image.description, /negativePrompt and numInferenceSteps are guided-only/);
     const audio = TOOLS.find(t => t.name === 'astra_audio2video');
@@ -947,3 +971,271 @@ describe('ASTRA upload management', () => {
     });
   });
 });
+
+// Stage 2 (room 3b9a99e6 DESIGN §2-3): the contract the server PR ltx-api `247ad209` accepts.
+describe('stage 2 — ic_lora, guided_hq, guidance, lora strength', () => {
+  it('guidance: known keys inside the server ranges pass; unknown keys, bad ranges and bad blocks fail', () => {
+    const ok = parseOk(astraText2VideoSchema, { prompt: 'x', tier: 'hq', guidance: { videoCfgGuidanceScale: 3, videoSkipStep: 2, videoStgBlocks: [28, 29] } });
+    assert.deepEqual(buildJobBody('guided_hq', { prompt: 'x', guidance: ok.guidance }).guidance, { video_cfg_guidance_scale: 3, video_skip_step: 2, video_stg_blocks: [28, 29] });
+    // Every wire key is an engine name the server accepts (DESIGN §3).
+    assert.deepEqual(Object.keys(buildJobBody('guided', { prompt: 'x', guidance: { audioCfgGuidanceScale: 2, a2vGuidanceScale: 2, v2aGuidanceScale: 2, audioStgBlocks: [1] } }).guidance).sort(),
+      ['a2v_guidance_scale', 'audio_cfg_guidance_scale', 'audio_stg_blocks', 'v2a_guidance_scale']);
+    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', tier: 'guided', guidance: { foo: 1 } }), /guidance/);
+    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', tier: 'guided', guidance: { videoCfgGuidanceScale: 16 } }), /guidance\.videoCfgGuidanceScale/);
+    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', tier: 'guided', guidance: { videoSkipStep: 1.5 } }), /guidance\.videoSkipStep/);
+    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', tier: 'guided', guidance: { videoStgBlocks: [] } }), /videoStgBlocks/);
+    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', tier: 'guided', guidance: { videoStgBlocks: [48] } }), /videoStgBlocks/);
+    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', tier: 'guided', guidance: { audioStgBlocks: [1, 1] } }), /unique/);
+    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', guidance: { videoCfgGuidanceScale: 3 } }), /guidance is accepted only/);
+    assert.match(parseFails(astraImg2VideoSchema, { prompt: 'x', firstFramePath: 'a.png', guidance: { videoCfgGuidanceScale: 3 } }), /guidance is accepted only/);
+    // An empty object sends nothing — the body stays the measured one.
+    assert.equal(buildJobBody('guided', { prompt: 'x', guidance: {} }).guidance, undefined);
+    assert.throws(() => buildJobBody('generate', { prompt: 'x', guidance: { videoCfgGuidanceScale: 3 } }), /mode generate does not accept guidance/);
+  });
+
+  it('tier hq maps to guided_hq on text2video and img2video', () => {
+    assert.equal(ASTRA_VIDEO_TIERS.hq, 'guided_hq');
+    parseOk(astraImg2VideoSchema, { prompt: 'x', firstFramePath: 'a.png', tier: 'hq', negativePrompt: 'blur', numInferenceSteps: 15 });
+    assert.match(parseFails(astraImg2VideoSchema, { prompt: 'x', firstFramePath: 'a.png', tier: 'hq', width: 1024, height: 1024 }), /hq images require 1536x1024/);
+    // skipStage2 false is the engine default and never reaches the wire (live ingredients refuses the key).
+    assert.equal('skip_stage_2' in buildJobBody('ingredients', { prompt: 'x', skipStage2: false }), false);
+    assert.match(parseFails(astraImg2VideoSchema, { prompt: 'x', firstFramePath: 'a.png', tier: 'hq', lora: ['cinemagraph'] }), /lora is accepted only on tier "default"/);
+  });
+
+  it('lora entries: bare names stay bare on the wire; {name, strength} carries a 0-2 strength', () => {
+    const data = parseOk(astraText2VideoSchema, { prompt: 'x', lora: ['slow-motion', { name: 'cinemagraph', strength: 0.6 }] });
+    assert.deepEqual(buildJobBody('generate', { prompt: 'x', lora: data.lora }).lora, ['slow-motion', { name: 'cinemagraph', strength: 0.6 }]);
+    assert.deepEqual(buildJobBody('generate', { prompt: 'x', lora: ['cinemagraph'] }).lora, ['cinemagraph']);
+    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', lora: [{ name: 'cinemagraph', strength: 2.1 }] }), /lora/);
+    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', lora: [{ name: 'cinemagraph', strength: 1, extra: 1 }] }), /lora/);
+    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', lora: ['cinemagraph', { name: 'cinemagraph', strength: 1 }] }), /unique/);
+  });
+
+  it('astra_ic_lora schema: adapter catalog, reference kinds, mask needs a clip and a path', () => {
+    assert.deepEqual([...ASTRA_VIDEO_IC_LORA_ADAPTERS].sort(),
+      ['clean-plate', 'colorization', 'day-to-night', 'deblur', 'decompression', 'ingredients', 'pixel-upscaler-x2', 'water-simulation']);
+    assert.equal(icLoraMode('ingredients'), 'ingredients');
+    assert.equal(icLoraMode('deblur'), 'ic_lora');
+    parseOk(astraIcLoraSchema, { prompt: 'x', adapter: 'deblur', referencePath: 'r.mp4', conditioningMaskPath: 'm.mp4', conditioningMaskStrength: 0.5, skipStage2: true });
+    parseOk(astraIcLoraSchema, { prompt: 'x', adapter: 'ingredients', referencePath: 'r.png' });
+    assert.match(parseFails(astraIcLoraSchema, { prompt: 'x', adapter: 'nope', referencePath: 'r.mp4' }), /adapter/);
+    assert.match(parseFails(astraIcLoraSchema, { prompt: 'x', adapter: 'deblur' }), /referencePath/);
+    assert.match(parseFails(astraIcLoraSchema, { prompt: 'x', adapter: 'deblur', referencePath: 'r.wav' }), /referencePath/);
+    assert.match(parseFails(astraIcLoraSchema, { prompt: 'x', adapter: 'deblur', referencePath: 'r.mp4', conditioningMaskPath: 'm.png' }), /conditioningMaskPath must be video/);
+    assert.match(parseFails(astraIcLoraSchema, { prompt: 'x', adapter: 'deblur', referencePath: 'r.mp4', conditioningMaskStrength: 0.5 }), /needs conditioningMaskPath/);
+  });
+
+  it('checkReferenceSource follows the server: OUTPUT pixels, frames fed = min(clip, numFrames)', () => {
+    const clip = (frames, width = 640, height = 360) => ({ uploadId: 'u', kind: 'video', frames, width, height });
+    // 1536x1024 = 1,572,864 is under the ceiling whatever the clip size.
+    assert.equal(checkReferenceSource(clip(121, 3840, 2160)), null);
+    // 1536x1344 = 2,064,384 is over it with a moving reference …
+    assert.match(checkReferenceSource(clip(121), 121, 1536, 1344), /at most 1867776 pixels/);
+    // … but not with a still, nor with numFrames that feeds one frame.
+    assert.equal(checkReferenceSource({ uploadId: 'u', kind: 'image', width: 4000, height: 4000 }, 121, 1536, 1344), null);
+    assert.equal(checkReferenceSource(clip(121), 1, 1536, 1344), null);
+    assert.match(checkReferenceSource({ uploadId: 'u', kind: 'audio' }), /not image or video/);
+    // The ceiling itself passes: 1536x1216 = 1,867,776 is allowed, one grid step more is not.
+    assert.equal(checkReferenceSource(clip(121), 121, 1536, 1216), null);
+    assert.match(checkReferenceSource(clip(121), 121, 1536, 1280), /at most/);
+  });
+
+  it('checkMaskSource follows the server: same frames as the reference, 1 or 8k+1, both capped by numFrames', () => {
+    const clip = (frames) => ({ uploadId: 'u', kind: 'video', frames, width: 640, height: 360 });
+    const still = { uploadId: 'r', kind: 'image', width: 640, height: 360 };
+    assert.equal(checkMaskSource(clip(121), clip(121)), null);
+    assert.equal(checkMaskSource(clip(200), clip(150)), null); // both capped to 121
+    assert.equal(checkMaskSource(clip(1), still), null);
+    assert.equal(checkMaskSource(clip(49), clip(49), 121), null);
+    assert.match(checkMaskSource(clip(97), clip(121)), /mask 97 · reference 121/);
+    assert.match(checkMaskSource(clip(50), clip(50)), /8k\+1/);
+    assert.match(checkMaskSource(clip(121), still), /mask 121 · reference 1/);
+    assert.match(checkMaskSource({ uploadId: 'u', kind: 'image' }, clip(121)), /not video/);
+    assert.match(checkMaskSource({ uploadId: 'u', kind: 'video' }, clip(121)), /unreadable/);
+  });
+
+  it('the tool sends ingredients without adapter, and ic_lora with adapter, mask and skip_stage_2', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'astra-iclora-'));
+    const oldKey = config.astraVideoApiKey;
+    const oldFetch = globalThis.fetch;
+    config.astraVideoApiKey = 'test-only-key';
+    const jobs = [];
+    let n = 0;
+    globalThis.fetch = async (url, init = {}) => {
+      const pathname = new URL(url).pathname;
+      if (pathname === '/v1/uploads') {
+        const kind = init.headers['Content-Type'].startsWith('image/') ? 'image' : 'video';
+        return Response.json({ upload_id: `${kind}-${n++}`, kind, bytes: 4, frames: kind === 'video' ? 121 : 1, width: 640, height: 360, expires_at: '2026-10-18T00:00:00Z' }, { status: 201 });
+      }
+      if (pathname === '/v1/jobs') { jobs.push(JSON.parse(init.body)); return Response.json({ job_id: 'test-job' }, { status: 202 }); }
+      if (pathname === '/v1/jobs/test-job') return Response.json({ status: 'succeeded', request: jobs.at(-1) });
+      if (pathname === '/v1/jobs/test-job/result') return new Response('mock-mp4');
+      throw new Error(`Unexpected mocked route ${pathname}`);
+    };
+    for (const f of ['r.png', 'r.mp4', 'm.mp4']) fs.writeFileSync(path.join(dir, f), 'x');
+    try {
+      await ROUTES.astra_ic_lora({ prompt: 'x', adapter: 'ingredients', referencePath: path.join(dir, 'r.png'), outputPath: dir, filename: 'a.mp4' });
+      assert.deepEqual(jobs[0], { mode: 'ingredients', prompt: 'x', references: [{ upload_id: 'image-0' }] });
+      const result = await ROUTES.astra_ic_lora({
+        prompt: 'x', adapter: 'deblur', referencePath: path.join(dir, 'r.mp4'), referenceStrength: 0.8,
+        conditioningMaskPath: path.join(dir, 'm.mp4'), conditioningMaskStrength: 0.5, skipStage2: true, outputPath: dir, filename: 'b.mp4',
+      });
+      assert.deepEqual(jobs[1], {
+        mode: 'ic_lora', prompt: 'x', adapter: 'deblur',
+        references: [{ upload_id: 'video-1', strength: 0.8 }],
+        conditioning_mask: { upload_id: 'video-2', strength: 0.5 },
+        skip_stage_2: true,
+      });
+      assert.match(result.content[0].text, /Adapter: deblur/);
+      // A moving reference at an output over the ceiling never reaches /v1/jobs.
+      await assert.rejects(ROUTES.astra_ic_lora({ prompt: 'x', adapter: 'deblur', referencePath: path.join(dir, 'r.mp4'), width: 1536, height: 1344, outputPath: dir, filename: 'c.mp4' }), /reference refused/);
+      assert.equal(jobs.length, 2);
+      // A mask that would trip the engine assert never reaches /v1/jobs either (still reference, clip mask).
+      await assert.rejects(ROUTES.astra_ic_lora({ prompt: 'x', adapter: 'deblur', referencePath: path.join(dir, 'r.png'), conditioningMaskPath: path.join(dir, 'm.mp4'), outputPath: dir, filename: 'd.mp4' }), /conditioning mask refused/);
+      assert.equal(jobs.length, 2);
+    } finally { globalThis.fetch = oldFetch; config.astraVideoApiKey = oldKey; fs.rmSync(dir, { recursive: true, force: true }); }
+  });
+});
+
+// Stage 3 (leader 43da766d, server contract bc4ba45f): duration, generateAudio, capabilities.
+describe('stage 3 — duration, generateAudio, capabilities', () => {
+  it('framesForSeconds is the server rule: nearest 8k+1, the shorter on a tie', () => {
+    assert.deepEqual([5, 4, 2, 1, 15].map((s) => framesForSeconds(s)), [121, 97, 49, 25, 361]);
+    assert.equal(framesForSeconds(5, 30), 153); // 150 → 153 is nearer than 145
+    assert.equal(framesForSeconds(117 / 24), 113); // 117 sits halfway between 113 and 121 → shorter
+    assert.equal(framesForSeconds(117.1 / 24), 121);
+    // A float near-tie follows the server's epsilon (ltx-api duration_to_frames), not the raw float.
+    assert.equal(framesForSeconds(2.210543877210544, 23.976), 49);
+    assert.equal(framesForSeconds(4.36, 25), 105);
+  });
+
+  it('duration becomes numFrames, so the frame rules apply to it, and it excludes the other lengths', () => {
+    assert.equal(parseOk(astraText2VideoSchema, { prompt: 'x', duration: 4 }).numFrames, 97);
+    assert.equal('duration' in parseOk(astraText2VideoSchema, { prompt: 'x', duration: 4 }), false);
+    assert.equal(parseOk(astraText2VideoSchema, { prompt: 'x', duration: 5, frameRate: 30 }).numFrames, 153);
+    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', tier: 'guided', duration: 8 }), /duration 8s at 24fps is 193 frames; mode guided takes 25-121 frames, i\.e\. duration more than 0\.8750s and at most 5\.2083s/);
+    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', duration: 0.5 }), /duration 0.5s/);
+    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', duration: 4, numFrames: 97 }), /duration and numFrames are mutually exclusive/);
+    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', duration: 4, autoDuration: { minSeconds: 1, maxSeconds: 4 } }), /duration and autoDuration/);
+    assert.match(parseFails(astraAudio2VideoSchema, { prompt: 'x', audioPath: 'a.wav', duration: 4, audioMaxDuration: 4 }), /duration and audioMaxDuration/);
+    // keyframe indices are checked against the converted length: 2s = 49 frames = 0..48.
+    const images = [{ imagePath: 'a.png', frameIdx: 0 }, { imagePath: 'b.png', frameIdx: 60 }];
+    assert.match(parseFails(astraKeyframeVideoSchema, { prompt: 'x', images, duration: 2 }), /between 0 and 48/);
+    assert.equal(parseOk(astraKeyframeVideoSchema, { prompt: 'x', images, duration: 3 }).numFrames, 73);
+    assert.equal(parseOk(astraIcLoraSchema, { prompt: 'x', adapter: 'deblur', referencePath: 'r.mp4', duration: 2 }).numFrames, 49);
+  });
+
+  it('retake takes no duration: the route refuses it as an unknown argument before any upload', async () => {
+    await assert.rejects(ROUTES.astra_video_retake({ prompt: 'x', sourceVideoPath: 's.mp4', startTime: 0, endTime: 1, duration: 2 }), /unknown argument\(s\): duration/);
+  });
+
+  it('generateAudio false is the only value that reaches the wire, on every mode', () => {
+    for (const mode of ['generate', 'guided', 'guided_fast', 'guided_hq', 'keyframe', 'audio2video', 'ingredients', 'ic_lora', 'retake']) {
+      assert.ok(ASTRA_VIDEO_ALLOWED_FIELDS[mode].includes('generate_audio'), mode);
+    }
+    assert.equal(buildJobBody('generate', { prompt: 'x', generateAudio: false }).generate_audio, false);
+    assert.equal('generate_audio' in buildJobBody('generate', { prompt: 'x', generateAudio: true }), false);
+    assert.equal('generate_audio' in buildJobBody('retake', { prompt: 'x', videoUploadId: 'v', startTime: 0, endTime: 1 }), false);
+    assert.equal(parseOk(astraVideoRetakeSchema, { prompt: 'x', sourceVideoPath: 's.mp4', startTime: 0, endTime: 1, generateAudio: false }).generateAudio, false);
+  });
+
+  it('every astra generation tool exposes duration (not retake) and generateAudio; model is not a tool argument', () => {
+    for (const name of ['astra_text2video', 'astra_img2video', 'astra_keyframe_video', 'astra_audio2video', 'astra_ic_lora', 'astra_video_retake']) {
+      const props = TOOLS.find((t) => t.name === name).inputSchema.properties;
+      assert.ok(props.generateAudio, `${name} generateAudio`);
+      assert.equal(Boolean(props.duration), name !== 'astra_video_retake', `${name} duration`);
+      assert.equal(props.model, undefined, `${name} model`);
+    }
+  });
+
+  it('astra_video_capabilities returns the live report verbatim and fails loudly otherwise', async () => {
+    const oldKey = config.astraVideoApiKey;
+    const oldFetch = globalThis.fetch;
+    config.astraVideoApiKey = 'test-only-key';
+    const report = { modes: { generate: { fields: ['prompt'] } } };
+    let reply = () => Response.json(report);
+    const calls = [];
+    globalThis.fetch = async (url, init = {}) => { calls.push({ url, ...init }); return reply(); };
+    try {
+      const tool = TOOLS.find((t) => t.name === 'astra_video_capabilities');
+      assert.equal(tool.annotations.readOnlyHint, true);
+      const ok = await ROUTES.astra_video_capabilities({});
+      assert.notEqual(ok.isError, true);
+      assert.deepEqual(JSON.parse(ok.content[0].text), report);
+      assert.ok(calls[0].url.endsWith('/v1/models'));
+      assert.equal(calls[0].method, 'GET');
+      assert.equal(calls[0].headers.Authorization, 'Bearer test-only-key');
+      reply = () => Response.json([report]);
+      assert.match((await ROUTES.astra_video_capabilities({})).content[0].text, /did not return a JSON capability report/);
+      reply = () => new Response('<html>', { status: 200 });
+      assert.match((await ROUTES.astra_video_capabilities({})).content[0].text, /did not return a JSON capability report/);
+      reply = () => new Response('nope', { status: 429 });
+      const limited = await ROUTES.astra_video_capabilities({});
+      assert.equal(limited.isError, true);
+      assert.match(limited.content[0].text, /HTTP 429/);
+      await assert.rejects(() => ROUTES.astra_video_capabilities({ mode: 'generate' }));
+    } finally { globalThis.fetch = oldFetch; config.astraVideoApiKey = oldKey; }
+  });
+});
+
+// Server D6 (ltx-api 10e6e74, contract 3b893376): a WAV that surely cannot cover the video is refused before the job.
+describe('audio2video — audio must cover the video (D6)', () => {
+  it('matches the server rule and its fixes on the 12:22Z live failure', () => {
+    // 5.71s of audio against 145 frames = 6.0417s at 24fps: fails live; the server proposes 137 frames.
+    const message = checkAudioCoversVideo(5.71, 145, 24);
+    assert.match(message, /usable audio 5\.710s vs 145 frames = 6\.0417s at 24fps/);
+    assert.match(message, /\(1\) re-upload audio of at least 6\.0417s · \(2\) set numFrames to 137 or less \(duration 5\.7083s or less\) · \(3\) use audioMaxDuration/);
+    // The user's 12:27Z retry with 6.04s of audio rendered: inside the slack.
+    assert.equal(checkAudioCoversVideo(6.04, 145, 24), null);
+    // 0.08s is the edge: just inside passes, just past it is refused.
+    assert.equal(checkAudioCoversVideo(121 / 24 - 0.0799, 121, 24), null);
+    assert.notEqual(checkAudioCoversVideo(121 / 24 - 0.0801, 121, 24), null);
+    // ffprobe's six decimals must not cost a grid step: 137/24 = 5.708333 still fits 137.
+    assert.match(checkAudioCoversVideo(5.708333, 153, 24), /numFrames to 137 or less/);
+    // Too short for any 8k+1 of 25+: the numFrames fix is dropped.
+    assert.doesNotMatch(checkAudioCoversVideo(0.9, 121, 24), /set numFrames/);
+    // fit exactly 25 still offers the numFrames fix (24fps · 1.05s → 25.2 frames).
+    assert.match(checkAudioCoversVideo(1.05, 121, 24), /set numFrames to 25 or less/);
+  });
+
+  it('applies to wav without audioMaxDuration only, using numFrames (121 when omitted) after audioStartTime', () => {
+    const wav = { uploadId: 'a', kind: 'audio', duration: 4 };
+    assert.match(checkAudioSource(wav, { wav: true }), /121 frames = 5\.0417s/);
+    assert.equal(checkAudioSource(wav, { wav: true, numFrames: 97 }), null);
+    assert.match(checkAudioSource(wav, { wav: true, numFrames: 97, audioStartTime: 1 }), /usable audio 3\.000s \(after audioStartTime\)/);
+    assert.equal(checkAudioSource(wav, { wav: false }), null); // mp3: length may be an estimate
+    assert.equal(checkAudioSource(wav, { wav: true, audioMaxDuration: 4 }), null);
+    // frameRate is honoured: 121 frames at 30fps = 4.0333s is covered by 4s of audio, at 24fps it is not.
+    assert.equal(checkAudioSource(wav, { wav: true, frameRate: 30 }), null);
+    assert.match(checkAudioSource({ uploadId: 'a', kind: 'audio', duration: 3.5 }, { wav: true, frameRate: 30 }), /121 frames = 4\.0333s at 30fps/);
+  });
+
+  it('the tool refuses a short WAV after upload and before /v1/jobs', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'astra-d6-'));
+    const oldKey = config.astraVideoApiKey;
+    const oldFetch = globalThis.fetch;
+    config.astraVideoApiKey = 'test-only-key';
+    const jobs = [];
+    globalThis.fetch = async (url, init = {}) => {
+      const pathname = new URL(url).pathname;
+      if (pathname === '/v1/uploads') return Response.json({ upload_id: 'audio-id', kind: 'audio', bytes: 4, duration: 5.71, expires_at: '2026-10-18T00:00:00Z' }, { status: 201 });
+      if (pathname === '/v1/jobs') { jobs.push(JSON.parse(init.body)); return Response.json({ job_id: 'test-job' }, { status: 202 }); }
+      if (pathname === '/v1/jobs/test-job') return Response.json({ status: 'succeeded', request: jobs.at(-1) });
+      if (pathname === '/v1/jobs/test-job/result') return new Response('mock-mp4');
+      // An unknown route answers 404 instead of throwing, so a regression fails instead of hanging.
+      return new Response('unexpected route', { status: 404 });
+    };
+    fs.writeFileSync(path.join(dir, 'a.wav'), 'wave');
+    fs.writeFileSync(path.join(dir, 'a.mp3'), 'mp3');
+    try {
+      await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioPath: path.join(dir, 'a.wav'), numFrames: 145, outputPath: dir }), /audio is shorter than the video/);
+      await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioPath: path.join(dir, 'a.wav'), duration: 6, outputPath: dir }), /audio is shorter than the video/);
+      assert.equal(jobs.length, 0);
+      // The same short length as mp3 is not judged (its length may be an estimate): it reaches /v1/jobs.
+      await ROUTES.astra_audio2video({ prompt: 'x', audioPath: path.join(dir, 'a.mp3'), numFrames: 145, outputPath: dir, filename: 'mp3.mp4' });
+      assert.equal(jobs.length, 1);
+      assert.equal(jobs[0].num_frames, 145);
+    } finally { globalThis.fetch = oldFetch; config.astraVideoApiKey = oldKey; fs.rmSync(dir, { recursive: true, force: true }); }
+  });
+});
+
