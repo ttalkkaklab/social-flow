@@ -40,3 +40,9 @@ Regression comparisons live in `server/test/motion-contract.test.mjs`. They comp
 rendered frames with H.264 output and retain the background-only counterexample: a numeric
 pass cannot establish semantic motion. Actual HTML helper captures use the optional local
 fixture runner documented in that test. The tests do not replace watching the episode.
+
+Final assembly now resolves expectations with [motion-expectation.js](motion-expectation.js).
+Declared render modes and actual subcuts prevent a PNG-backed explanation from silently
+falling into the still-image exemption. Mixed cards are measured per subcut. Findings are
+warnings, and `semanticReview: not_reviewed` is independent of the proxy status. The supported
+production path is documented in [motion production](motion-production.md).

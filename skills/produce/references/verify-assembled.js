@@ -5,6 +5,7 @@ const {evaluateWindowScript}=require('../../_shared/scenes-vm.js');
 const {execFileSync}=require('node:child_process'),{createHash}=require('node:crypto');
 const hash=f=>createHash('sha256').update(fs.readFileSync(f)).digest('hex');
 const motion=require('./measure-motion.js');
+const expectation=require('./motion-expectation.js');
 // Measure every card, retaining proxy motion findings as quality warnings.
 // Read/decode/timing errors still fail; a low difference score is not proof of a freeze.
 function cardMotion(work,scenes,policy){
@@ -15,15 +16,18 @@ function cardMotion(work,scenes,policy){
   const rows=fs.readFileSync(path.join(work,'work/edit-timeline.tsv'),'utf8').trim().split('\n').map(l=>l.split('\t'));
   const stillLimit=motion.plateStillLimit(policy),cards=[],problems=[];
   for(const [id,start,frames] of rows){
-    const s=scenes[+id],v=s?.visual||{};
-    const kind=v.video||v.reuse!==undefined||['ai-video','recording'].includes(v.picture)?'video':v.slide?'card':null;
-    const m=motion.measure(master,{start:+start/fps,seconds:+frames/fps});
-    const findings=kind?motion.findings(m,kind,{stillLimit}):[];
-    cards.push({card:+id,kind:kind||'still',...m,findings});
-    findings.forEach(f=>problems.push('card '+id+': '+f));
+    const s=scenes[+id];
+    if(!s)throw new Error('timeline references an unknown card: '+id);
+    const assessed=expectation.assess(master,s,{start:+start/fps,seconds:+frames/fps,policy,fps});
+    const single=assessed.windows.length===1?assessed.windows[0]:null;
+    const kind=single?({video:'video',explanatory:'card',still_camera:'still',intentional_still:'still'}[single.kind]||'unknown'):'mixed';
+    // Keep legacy aggregate fields for report readers; findings always use cut windows.
+    const aggregate=single?single.measured:motion.measure(master,{start:+start/fps,seconds:+frames/fps});
+    cards.push({card:+id,kind,...aggregate,...assessed,findings:assessed.warnings});
+    assessed.warnings.forEach(f=>problems.push('card '+id+': '+f));
   }
   for(const problem of problems) console.error('Assembled motion warning: '+problem);
-  return {sampleFps:motion.SAMPLE_FPS,plateStillLimit:stillLimit,cards,warnings:problems,status:problems.length?'needs-review':'no-proxy-findings'};
+  return {sampleFps:motion.SAMPLE_FPS,plateStillLimit:stillLimit,cards,warnings:problems,semanticReview:'not_reviewed',status:problems.length?'needs-review':'no-proxy-findings'};
 }
 const duration=f=>{
   const n=Number(execFileSync('ffprobe',['-v','error','-select_streams','v:0','-show_entries','stream=duration','-of','csv=p=0',f],{encoding:'utf8'}).trim());

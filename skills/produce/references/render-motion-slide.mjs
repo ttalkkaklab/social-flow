@@ -5,7 +5,10 @@
  *
  *   node render-motion-slide.mjs <storyboard/slides/sN-slug.html> --out <dir> [--fps 30]
  *        [--jobs 4] [--sheet] [--png-only] [--group k] [--frame k:ms] [--keep-frames]
- *        [--segs auto|k:ms,...] [--word-cues k:path,...] [--grain 0..30] [--previz]
+ *        [--segs auto|k:ms,...] [--word-cues k:path,...] [--grain 0..30] [--previz] [--reuse]
+ *
+ * --reuse skips capture only when local dependencies, timing, runtime and output hashes match.
+ * Remote resources and PNG/debug modes always render. The default always renders.
  *
  * --previz renders a three.js previz page (storyboard previz-template.html, blender-previz.md §6.5):
  *   one clip for the whole cut at 24 fps, no grain, and none of the slide rules — the page has one
@@ -103,6 +106,7 @@
 // Keep this diagnostic ladder equal to still-camera.js RATE; the source-crosscheck test enforces it.
 const CAMERA_RATE={'very slow':.04,slow:.06,fast:.14,'very fast':.20};
 import { cameraGuard, readContrastFrame, rowContrast, contrastWarning } from './render-evidence.mjs';
+import { dependencyTracker, runtimeInputs, readCachedRender, writeRenderCache } from './motion-render-cache.mjs';
 import { parseWordCues } from './word-cue-map.mjs';
 import { measureSlideDOM, groupTextRows, roleFontFloor } from './slide-legibility.mjs';
 import { spawn, execFileSync } from "node:child_process";
@@ -117,7 +121,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const motion = require(path.join(HERE, 'measure-motion.js'));
 const { FORMATS, DEFAULT_FORMAT } = require(path.join(HERE, "../../platform-guide/references/formats.js"));
 
-const USAGE = "usage: render-motion-slide.mjs <slides/sN-slug.html> --out <dir> [--fps 30] [--jobs 4] [--sheet] [--png-only] [--group k] [--frame k:ms] [--keep-frames] [--segs auto|k:ms,...] [--word-cues k:path,...] [--grain 0..30] [--previz]";
+const USAGE = "usage: render-motion-slide.mjs <slides/sN-slug.html> --out <dir> [--fps 30] [--jobs 4] [--sheet] [--png-only] [--group k] [--frame k:ms] [--keep-frames] [--segs auto|k:ms,...] [--word-cues k:path,...] [--grain 0..30] [--previz] [--reuse]";
 const usage = msg => { console.error("✗ " + msg + "\n" + USAGE); process.exit(2); };
 const CDP_TIMEOUT_MS = 30000;
 
@@ -137,6 +141,7 @@ for (let i = 0; i < argv.length; i++) {
   const a = argv[i];
   if (a.startsWith("--")) given.add(a);
   if (a === "--out") opt.out = argv[++i];
+  else if (a === "--reuse") opt.reuse = true;
   else if (a === "--previz") opt.previz = true;
   else if (a === "--fps") opt.fps = intArg(argv[++i], "fps", 1, 120);
   else if (a === "--jobs") opt.jobs = intArg(argv[++i], "jobs", 1, 16);
@@ -174,7 +179,9 @@ const OUT = path.resolve(opt.out);
 fs.mkdirSync(OUT, { recursive: true });
 const renderProof = require(path.join(HERE, 'slide-render-proof.js'));
 const proofInputs = renderProof.inputs(htmlAbs);
-if (!opt.frame) fs.rmSync(path.join(OUT, 'render-proof.json'), {force:true});
+const dependencies = dependencyTracker();
+const cacheEnabled = !opt.frame && !opt.pngOnly && !opt.keep;
+const runtimeSource = cacheEnabled ? runtimeInputs(path.resolve(HERE, '../..')) : null;
 
 // ── format → canvas (scenes.js next to slides/ decides, like the page itself) ─
 const scenesPath = path.join(path.dirname(htmlAbs), "..", "scenes.js");
@@ -321,6 +328,8 @@ fromChrome.on("data", chunk => {
     if (msg.id && pending.has(msg.id)) {
       const { res, rej, timer } = pending.get(msg.id); pending.delete(msg.id); clearTimeout(timer);
       msg.error ? rej(new Error(msg.error.message + (msg.error.data ? " — " + msg.error.data : ""))) : res(msg.result);
+    } else if (msg.method === "Network.requestWillBeSent") {
+      dependencies.observe(msg.params.request.url);
     } else if (msg.method === "Runtime.exceptionThrown") {
       const d = msg.params && msg.params.exceptionDetails;
       pageErrors.push((d && d.exception && d.exception.description) || (d && d.text) || "unknown page error");
@@ -386,6 +395,7 @@ const openPage = async () => {
   const { targetId } = await send("Target.createTarget", { url: "about:blank", newWindow: true });
   const { sessionId: sid } = await send("Target.attachToTarget", { targetId, flatten: true });
   await send("Page.enable", {}, sid);
+  await send("Network.enable", {}, sid);
   await send("Runtime.enable", {}, sid);
   await send("Emulation.setDeviceMetricsOverride", { width: W, height: H, deviceScaleFactor: 1, mobile: false }, sid);
   const loaded = waitEvent("Page.loadEventFired", sid);
@@ -577,6 +587,8 @@ const openPage = async () => {
                 `${(c.want / 1000).toFixed(1)}s — the last ${((c.want - c.media) / 1000).toFixed(1)}s freeze on the clip's ` +
                 `final frame; generate the clip longer than the segment`);
   }
+  // Validate against effective measured timing, not the page's equal-length estimate.
+  await evalJS("typeof window.__validateTiming === 'function' ? window.__validateTiming() : null", true);
   const groups = await evalJS("window.__groups()");
   const N = groups.length - 1;
   if (N < 1) return die("no reveal groups — every moving element needs data-rg ≥ 1");
@@ -602,6 +614,25 @@ const openPage = async () => {
   if (!opt.previz && segCount != null && N > segCount) warn.push(`${N} reveal groups vs ${segCount} narration segments — fine only if produce §3.6 writes A|B sub-reveals for the extra clips`);
   if (opt.group != null && opt.group > N) return die(`--group ${opt.group} but the slide has ${N} groups`);
   if (opt.frame && opt.frame.g > N) return die(`--frame group ${opt.frame.g} but the slide has ${N} groups`);
+
+  // Reuse only after the live page has resolved its narration timing and reveal groups.
+  const cacheKey = cacheEnabled ? {
+    source: proofInputs, runtime: runtimeSource,
+    environment: {node: process.version, platform: process.platform, arch: process.arch,
+      browser: await send('Browser.getVersion'),
+      ffmpeg: execFileSync('ffmpeg', ['-version'], {encoding:'utf8'}).split('\n')[0]},
+    options: {...opt, reuse: undefined, out: OUT},
+    groups, segMap, segsApplied, wordCueMap, wordCueApplied, format: FORMAT,
+  } : null;
+  if (opt.reuse && cacheEnabled) {
+    const cached = readCachedRender({html:htmlAbs, out:OUT, key:cacheKey, dependencies});
+    if (cached) {
+      console.log(JSON.stringify({...cached, cache_reused:true}));
+      for (const warning of cached.warnings || []) console.error('⚠ ' + warning);
+      return shutdown(0);
+    }
+  }
+  if (!opt.frame) fs.rmSync(path.join(OUT, 'render-proof.json'), {force:true});
 
   // Async so an encode overlaps the capture of the next group — spawnSync would block the event
   // loop and every tab with it. One encode at a time: x264 already takes every core it is given.
@@ -861,6 +892,14 @@ const openPage = async () => {
   // slide-reviewer reads zone_fill_pct and the coverage warnings from this file — stdout
   // alone never reaches the delegation (slide-authoring step 4 hands the file over).
   fs.writeFileSync(path.join(OUT, "summary.json"), JSON.stringify(summary, null, 1) + "\n");
+  if (cacheEnabled) {
+    const artifacts = ['summary.json', 'manifest.tsv', 'r0.png'].map(file => path.join(OUT, file));
+    if (opt.sheet) for (let k = 1; k <= N; k++)
+      for (const phase of ['mid', 'end']) artifacts.push(path.join(OUT, 'sheet', `g${k}-${phase}.png`));
+    // Runtime edits during capture invalidate reuse just as changed slide sources do.
+    if (JSON.stringify(runtimeSource) === JSON.stringify(runtimeInputs(path.resolve(HERE, '../..'))))
+      writeRenderCache({out:OUT, key:cacheKey, dependencies, artifacts});
+  }
   console.log(JSON.stringify(summary));
   for (const w of warn) console.error("⚠ " + w);
   shutdown(0);
