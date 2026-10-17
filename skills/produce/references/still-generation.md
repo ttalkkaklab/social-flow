@@ -77,6 +77,14 @@ tool as the reference — Grok `image_edit` (`image` = the frame), Codex `image_
 subject positions of the clip's frame 1 are the still's. A still designed from the prompt
 alone and a previz that starts elsewhere hand the video model two different first frames.
 
+For a bound persistent location, prepare shared set/camera/actor blocking before image
+generation (storyboard §4b). `location_manage` action `previz` writes the location reference
+and previz first frame together. The source assembler puts that location composition first,
+deduplicates the shared image and assigns cast sheets to appearance only. Read returned
+`spatialWarnings` when a legacy standalone previz is also attached; compare or rebuild it
+from the shared plan. End-frame prompts use the closing actor and set state, not the opening
+one. These references guide the model; inspect actual generated images for layout and gaze.
+
 ### The API table (Claude Code, or `imageProvider:"api"`)
 
 The episode style chosen in [visual-style.md](../../storyboard/references/visual-style.md)

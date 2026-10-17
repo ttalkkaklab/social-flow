@@ -90,6 +90,8 @@
 #                         default) and the file is here (total length = feature + outro). OUTRO=0
 #                         muxes the feature alone; OUTRO=1 with no file stops the build
 #   <workdir>/fonts/    : (optional) subtitle fonts ttf/otf — libass can't read woff2
+# SILENT=1 with OUTRO=0 builds a silent film; narration and any bgm.wav must be zero-valued,
+# and no authored music/effect/ambience cues may be present.
 # Output: <workdir>/reel.mp4 (clean master without subtitles — for platforms that take a separate subtitle file)
 #         <workdir>/subs.srt (subtitle file handed to the publish tools as-is), subs.ass (optional sidecar)
 #         <workdir>/cover.jpg, build-report.txt
@@ -111,6 +113,7 @@ WORKDIR="${1:?usage: build-reel.sh <workdir>}"
 # Resolve the supplied board before changing directories; both gates inspect the same plan.
 STORYBOARD=$(node -e 'console.log(require("path").resolve(process.argv[1]))' "${2:-$WORKDIR/../storyboard}")
 [ -f "$STORYBOARD/scenes.js" ] || { echo "source storyboard/scenes.js is required; pass the storyboard directory as build-reel.sh argument 2" >&2; exit 1; }
+[ "${SILENT:-0}" != "1" ] || node "$HERE/silent-plan.js" "$STORYBOARD/scenes.js"
 node "$HERE/compose-speech.js" "$WORKDIR" "$STORYBOARD" >/dev/null
 node "$HERE/verify-build-plan.js" "$WORKDIR" "$STORYBOARD"
 # A normal board is <channel>/episodes/<topic>/storyboard. Proof fixtures may put storyboard/
@@ -271,7 +274,7 @@ autotimes() { node "$HERE/subtitle-clock.js" "$TOTF" "$FRAMES" "$FPS" "$(srttime
 
 [ -f cards.tsv ] || { echo "cards.tsv missing"; exit 1; }
 [ -f segs.tsv ] || { echo "segs.tsv missing"; exit 1; }
-[ -f bgm.wav ] || { echo "bgm.wav missing"; exit 1; }
+[ "${SILENT:-0}" = "1" ] || [ -f bgm.wav ] || { echo "bgm.wav missing"; exit 1; }
 
 say "── make-reels build v3 ($(basename "$WORKDIR"))"
 
@@ -661,7 +664,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   # ── 5) Fix the card duration + assemble sample-accurate audio (same as v2 — the source of zero drift)
   D0=$(awk -v p="$CPRE" -v l="$L" -v q="$CPOST" 'BEGIN{printf "%.6f", p+l+q}')
   D1=$(awk -v d="$D0" -v m="$CMIN" 'BEGIN{printf "%.6f", (d>m)?d:m}')
-  FRAMES=$(awk -v d="$D1" -v f="$FPS" 'BEGIN{n=d*f; printf "%d", (n==int(n))?n:int(n)+1}')
+  FRAMES=$(node "$HERE/frame-clock.js" "$D1" "$FPS")
   D=$(awk -v n="$FRAMES" -v f="$FPS" 'BEGIN{printf "%.6f", n/f}')
   # Subtitle inputs use this measured frame clock, not the storyboard's estimated
   # duration. Check and snapshot before encoding any card audio or video.
@@ -1221,7 +1224,20 @@ DRIFT=$(awk -v a="$VT" -v b="$NT" 'BEGIN{d=a-b; if(d<0)d=-d; printf "%.4f", d}')
 say "── main part: video ${VT}s / narration ${NT}s / drift ${DRIFT}s"
 awk -v d="$DRIFT" 'BEGIN{exit !(d<=0.002)}' || { say "✗ drift over the 2ms tolerance — build stopped"; exit 1; }
 
-# ── 9.5) The music bed — conditioned, cue-sequenced, seam-free, exactly as long as the feature.
+# ── 9.5) The music bed and explicit silent-film branch.
+# SILENT=1 is an explicit silent-film mix, not a loudness normalization target.
+if [ "${SILENT:-0}" = "1" ]; then
+  node "$HERE/silent-plan.js" "$STORYBOARD/scenes.js"
+  [ "$OUTRO" = "0" ] || { say "SILENT=1 requires OUTRO=0"; exit 1; }
+  for PLAN in bgm.tsv sfx.tsv amb.tsv; do
+    if [ -f "$PLAN" ] && awk 'NF && $0 !~ /^#/ {found=1} END {exit !found}' "$PLAN"; then
+      say "SILENT=1 conflicts with authored sound plan $PLAN"; exit 1
+    fi
+  done
+  bash "$HERE/silent-mix.sh" work/narration.wav work/mix.wav "${PWD}/bgm.wav"
+  say "── explicit silent mix: zero-valued narration, no music/effects, no loudness score"
+else
+# The music bed — conditioned, cue-sequenced, seam-free, exactly as long as the feature.
 #   The old mix multiplied whatever file the channel handed over by a fixed 0.28, so the gap
 #   between the voice and the music was whatever that file happened to be: across 11 episodes the
 #   source beds measured -4.2 to +1.0 dBTP. Here the speech is measured first and the bed is set
@@ -1434,6 +1450,8 @@ elif awk -v v="$SEP_S" -v d="$BGM_SEP" 'BEGIN{exit !(v < d + 1)}'; then
   # sidechain never fired — the key went silent, or the bed reached the mix around it.
   say "⚠ separation ${SEP_S} LU under speech is no wider than the ${BGM_SEP} LU resting distance — the ducking isn't firing"
   WARN=1
+fi
+
 fi
 
 # ── 11) ASS subtitle file — band y≈1380~1560 (a contract with the template's bottom safe zone,

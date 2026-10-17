@@ -1,5 +1,12 @@
 # 3D previz — camera, blocking and body timing as numbers, before any video call
 
+For recurring spaces and cross-shot blocking, use the shared location workflow first
+(storyboard §4b, location-assets.md). `mcp__social-flow__location_manage` action `previz`
+renders the same immutable set, numerical camera and actor start/end states used by the
+location source images. It avoids independently rebuilding the room for each cut.
+The bridge below remains the articulated acting path; its output should be compared
+with the bound location references. A standalone clip does not certify cross-shot geography.
+
 **Every `generated_video` cut is pre-rendered in 3D first** (user directive 2026-09-11): a
 Blender previz through the bridge tools below, or a three.js previz through
 `previz-template.html` (§6.5) where Blender is not installed. `check-scenes.js` refuses a

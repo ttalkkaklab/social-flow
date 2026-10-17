@@ -194,6 +194,19 @@ production, generalized here to per-channel operation.
 >   writes `script.md` — the page you read while filming — with Korean headings, and
 >   `check-research.js` finds a research.md's verification table by Korean heading words.
 
+Storyboards start with complete scenes: a character wants something, an event changes
+what is possible, and a visible choice produces a consequence. The author then divides
+those scenes into shots. There is no default runtime or shot-count quota; staging,
+dialogue and listener reactions determine the length. Actual model clip limits are
+production constraints, handled at natural action boundaries. Read
+[the storyboard workflow](skills/storyboard/SKILL.md) before authoring a new episode.
+
+Reviewers first read only the actions and dialogue the audience will see and hear.
+Private plot explanations cannot repair a missing screen cue. Production planning
+carries essential actions, reactions and object states into the video request, including
+silent beats and action that overlaps speech. Local diagnostics expose omissions; a
+clean schema result does not prove story comprehension or generated video quality.
+
 Independent visual review collections use the installed storyboard planner and production builder:
 [animation review workflow](skills/produce/references/animation-review.md). The JSON-driven collection
 compares still-camera portraits, contextual 3D character scenes and object mechanisms, and records the
@@ -202,7 +215,14 @@ publishable episodes. Improve reusable plugin templates and rebuild; do not hand
 
 ## Persistent 3D locations
 
-`location_manage` builds versioned Blender sets, exports GLB, renders multi-view sheets and shot references, binds them to stable shots, and rejects stale approval or changed asset bytes. The shared storyboard adds an offline 3D viewer with orbit, top view, wall visibility, object inspection, camera-path scrub and camera proposal export. Spatial image prompts include the approved location render as a scoped image input. See [location workflow](skills/storyboard/references/location-assets.md). Blender and a local HTTP server are needed for this workflow. Existing boards are unaffected until a shot binds a location; no paid generation is implicit.
+`location_manage` builds versioned Blender sets, exports GLB, renders multi-view sheets and shot references, binds them to stable shots, and rejects stale references or changed asset bytes. The shared storyboard adds an offline 3D viewer with orbit, top view, wall visibility, object inspection, camera-path scrub and camera proposal export. Spatial image prompts include the location render as a scoped image input; actual review status stays explicit. See [location workflow](skills/storyboard/references/location-assets.md). Blender and a local HTTP server are needed for this workflow. Existing boards are unaffected until a shot binds a location; no paid generation is implicit.
+
+Plan shared space before storyboard images: location bindings now carry actor start/end
+positions, body facing, gaze targets and set endpoint states. The `previz` action renders
+that same set/camera/blocking into both source references and a motion clip. Continuity
+diagnostics warn about position, direction, gaze, custody and action-axis changes across
+related cuts; intentional time skips carry a reason. Cast sheets supply appearance while
+the shared location controls composition. Actual generated images still need inspection.
 
 ## Requirements
 

@@ -1159,8 +1159,12 @@
         if (!e || !['action','dialogue','narration'].includes(e.kind)) { bad(where, 'invalid performance event ' + (j + 1)); return; }
         if (e.kind === 'action') {
           if (typeof e.text !== 'string') bad(where, 'action requires text');
-        } else if (!Number.isInteger(e.group) || e.group < 1 || !Array.isArray(s.narration) || !s.narration[e.group - 1])
-          bad(where, 'performance speech references a missing narration group');
+        } else {
+          const transcript = win.STORY?.transcripts?.find(item => item.shot === i + 1 && item.source === (s.visual?.reuse?.clip || s.visual?.clip));
+          const groups = (s.narration || []).length ? s.narration : transcript?.groups;
+          if (!Number.isInteger(e.group) || e.group < 1 || !Array.isArray(groups) || !groups[e.group - 1])
+            bad(where, 'performance speech references a missing narration group');
+        }
       });
       if (s.type === 'broll' && (!Number.isInteger(s.after) || s.after < 0 || !shots[s.after] || ['broll','outro'].includes(shots[s.after].type)))
         bad(where, 'broll.after must reference a main shot by zero-based index');

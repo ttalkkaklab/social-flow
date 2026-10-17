@@ -1105,6 +1105,7 @@ window.SB_DOC = {
     //   note: "no lettered wordmark · voice is profile §2 Leda", veo: "" }
   ],
   speechPlanVersion: 1, // explicit line ids, speakers and delivery on new boards
+  performanceTimingVersion: 1, // new boards time independent actions before production
   narratorCharacterId: "", // required — one id from characters above
 
   // Promise ledger — what the episode promises and the shot that keeps each promise
@@ -1203,6 +1204,7 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
   var FMT_KEY = FMT_MIRROR[window.FORMAT] ? window.FORMAT : "shorts-9x16";
   var FMT = FMT_MIRROR[FMT_KEY];
   var WIDE = FMT_KEY === "youtube-long-16x9";
+  var STORY_V2 = window.STORY && window.STORY.version === "story-v2";
 
   /* ══ Language ══
      This document is what a person reads before approving an episode, and the plugin is
@@ -1384,6 +1386,8 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
       arcDefault: "answer first (default)",
       draft: "draft",
       mainLen: function (v) { return "main body " + v + "s"; },
+      plannedLen: "Content-based estimated length", explicitLength: "Explicit length constraints",
+      minimum: "minimum ", maximum: "maximum ", contentTiming: "Time for speech, actions and reactions; estimates until media are measured",
       withOutro: function (v) { return "with the outro ≈" + v + "s"; },
 
       // ── production mode (window.PRODUCTION) and frame inputs ──
@@ -1724,6 +1728,8 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
       arcDefault: "결론 먼저 (기본)",
       draft: "초안",
       mainLen: function (v) { return "본편 " + v + "초"; },
+      plannedLen: "내용 기준 예상 길이", explicitLength: "지정한 길이 조건",
+      minimum: "최소 ", maximum: "최대 ", contentTiming: "말과 행동, 반응에 필요한 시간 · 실제 음성과 영상 측정 전에는 예상값",
       withOutro: function (v) { return "아웃트로 포함 ≈" + v + "초"; },
 
       // ── production mode (window.PRODUCTION) and frame inputs ──
@@ -2693,10 +2699,10 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
       // The long-form shooting lane has no scene cap (recSceneMax: null) — one continuous
       // recording arriving as one scene is the normal path, and a cap would force the user to
       // chop up a natural take.
-      if (FMT.recSceneMax !== null && s.duration > FMT.recSceneMax) {
+      if (!STORY_V2 && FMT.recSceneMax !== null && s.duration > FMT.recSceneMax) {
         chips.push(badge("bad", T.overSec(FMT.recSceneMax)));
         flag("bad", T.shotCap(no), "length " + s.duration + "s — the shooting-mode scene cap is " + FMT.recSceneMax + "s");
-      } else if (s.duration && s.duration < 8) {
+      } else if (!STORY_V2 && s.duration && s.duration < 8) {
         chips.push(badge("warn", T.underEightSec));
         flag("warn", T.shotCap(no), "length " + s.duration + "s — shooting-mode scenes target 8s or more");
       }
@@ -2798,7 +2804,7 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
         chips.push(badge("warn", T.sentence(sentBand)));
         flag("warn", T.shotCap(no), T.sentBandFlag(maxSent > FMT.sentMax, maxSent, FMT.sentMin, sentBand));
       }
-      if (s.duration > FMT.sceneMax) {
+      if (!STORY_V2 && s.duration > FMT.sceneMax) {
         chips.push(badge("warn", T.overSec(FMT.sceneMax)));
         flag("warn", T.shotCap(no), "length " + s.duration + "s — the generated-mode scene cap is " + FMT.sceneMax + "s");
       }
@@ -2912,28 +2918,32 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
       (videoType.detail ? ' · ' + esc(videoType.detail) : '') + '</p>';
   }
 
-  /* The channel may narrow the short-form band from either end (profile.md length_min_seconds /
-     length_max_seconds, copied into window.MOTION_POLICY). Long-form keeps the preset's own band,
-     the way check-scenes.js gates the same pair, so the page and the CLI give one verdict. The
-     format's hard cap is not a channel field — 180s is the platform limit and FMT keeps it. */
+  /* New stories derive length from performance. Only supplied constraints apply;
+     preset runtime and shot-count bands remain visible on legacy boards. */
   var lenOverride = function (v) {
-    return !WIDE && v !== null && v !== undefined && Number.isFinite(Number(v)) ? Number(v) : null; };
-  var lenMin = lenOverride(MP.lengthMin) !== null ? lenOverride(MP.lengthMin) : FMT.totalMin;
-  var lenMax = lenOverride(MP.lengthMax) !== null ? lenOverride(MP.lengthMax) : FMT.totalMax;
-  var lenChannel = lenMin !== FMT.totalMin || lenMax !== FMT.totalMax;
-  var lenCls = total >= lenMin && total <= lenMax ? "ok"
+    return v !== null && v !== undefined && Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : null; };
+  var rawMin = lenOverride(MP.length_min_seconds !== undefined ? MP.length_min_seconds : MP.lengthMin);
+  var rawMax = lenOverride(MP.length_max_seconds !== undefined ? MP.length_max_seconds : MP.lengthMax);
+  var lenMin = STORY_V2 ? rawMin : !WIDE && rawMin !== null ? rawMin : FMT.totalMin;
+  var lenMax = STORY_V2 ? rawMax : !WIDE && rawMax !== null ? rawMax : FMT.totalMax;
+  var lenChannel = STORY_V2 ? rawMin !== null || rawMax !== null : lenMin !== FMT.totalMin || lenMax !== FMT.totalMax;
+  var lenCls = STORY_V2 ? "" : total >= lenMin && total <= lenMax ? "ok"
              : total <= FMT.totalHard ? "warn" : "bad";
-  var lenBand = durTxt(lenMin) + "~" + durTxt(lenMax);
-  if (lenCls === "bad")
+  var lenBand = [lenMin !== null ? T.minimum + durTxt(lenMin) : "",
+                 lenMax !== null ? T.maximum + durTxt(lenMax) : ""].filter(Boolean).join(" · ");
+  if (STORY_V2) {
+    if ((!totalUnknown && lenMin !== null && total < lenMin) || (lenMax !== null && total > lenMax)) {
+      lenCls = "warn";
+      flag("warn", T.where.length, "Planned duration " + durTxt(total) + " — outside explicit length constraints: " + lenBand);
+    }
+  } else if (lenCls === "bad")
     flag("bad", T.where.length, "main body " + durTxt(total) + " — past the cap of " + durTxt(FMT.totalHard));
   else if (!totalUnknown && lenCls === "warn")
     flag("warn", T.where.length, "main body " + durTxt(total) + " — outside the " +
          (lenChannel ? "channel band " : "default ") + lenBand +
          " (going over needs a design reason; cap " + durTxt(FMT.totalHard) + ")");
 
-  // Shot count has a format band too — a long-form built on short-form shot counts stretches
-  // single scenes out to minutes.
-  if (main.length < FMT.sceneCountMin || main.length > FMT.sceneCountMax)
+  if (!STORY_V2 && (main.length < FMT.sceneCountMin || main.length > FMT.sceneCountMax))
     flag("warn", T.where.shotCount, "main body " + main.length + " shots — the " + (T.fmt[FMT_KEY] || FMT.label) + " band is " +
          FMT.sceneCountMin + "~" + FMT.sceneCountMax + " shots");
 
@@ -3923,7 +3933,7 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
           (cover.hookType ? T.outsideFour(cover.hookType) : T.strategyNotWritten))) : "") +
        badge((DOC.status || "draft") === "draft" ? "" : "ok", (DOC.status || "draft") === "draft" ? T.draft : DOC.status) +
        (DOC.created ? badge("", DOC.created) : "") +
-       badge(totalUnknown ? "warn" : lenCls, totalUnknown ? partialLength : T.mainLen(Math.round(total * 10) / 10)) +
+       badge(totalUnknown ? "warn" : lenCls, totalUnknown ? partialLength : (STORY_V2 ? T.plannedLen + " " + durTxt(total) : T.mainLen(Math.round(total * 10) / 10))) +
        (!totalUnknown && outroSec ? badge("", T.withOutro(total + outroSec)) : "") +
        badge("", T.shotsN(main.length)) +
        (hasSceneField ? badge("", (function () {
@@ -4569,13 +4579,20 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
        (FMT_KEY === "youtube-long-16x9"
          ? ' <span class="aside">' + esc(T.cWideNote) + "</span>" : "") +
        "</td></tr>";
-  h += "<tr><th>" + esc(T.cMainLen) + "</th><td>" + (totalUnknown ? esc(partialLength) : durTxt(total)) + esc(T.cRecommend) +
-       durTxt(lenMin) + "~" + durTxt(lenMax) +
-       (lenChannel ? ' <span class="aside">' + esc(T.cChannelBand) + "</span>" : "") +
-       esc(T.cCap) + durTxt(FMT.totalHard) +
-       (!totalUnknown && outroSec ? esc(T.cWithOutro) + durTxt(total + outroSec) : "") + "</td></tr>";
-  h += "<tr><th>" + esc(T.cShotCount) + "</th><td>" + esc(T.shotsN(main.length)) + esc(T.cShotsRecommend) +
-       esc(T.shotsN(FMT.sceneCountMin + "~" + FMT.sceneCountMax)) + "</td></tr>";
+  if (STORY_V2) {
+    h += "<tr><th>" + esc(T.plannedLen) + "</th><td>" + (totalUnknown ? esc(partialLength) : durTxt(total)) +
+         (!totalUnknown && outroSec ? esc(T.cWithOutro) + durTxt(total + outroSec) : "") + "</td></tr>";
+    if (lenChannel) h += "<tr><th>" + esc(T.explicitLength) + "</th><td>" + esc(lenBand) + "</td></tr>";
+    h += "<tr><th>" + esc(T.cShotCount) + "</th><td>" + esc(T.shotsN(main.length)) + "</td></tr>";
+  } else {
+    h += "<tr><th>" + esc(T.cMainLen) + "</th><td>" + (totalUnknown ? esc(partialLength) : durTxt(total)) + esc(T.cRecommend) +
+         durTxt(lenMin) + "~" + durTxt(lenMax) +
+         (lenChannel ? ' <span class="aside">' + esc(T.cChannelBand) + "</span>" : "") +
+         esc(T.cCap) + durTxt(FMT.totalHard) +
+         (!totalUnknown && outroSec ? esc(T.cWithOutro) + durTxt(total + outroSec) : "") + "</td></tr>";
+    h += "<tr><th>" + esc(T.cShotCount) + "</th><td>" + esc(T.shotsN(main.length)) + esc(T.cShotsRecommend) +
+         esc(T.shotsN(FMT.sceneCountMin + "~" + FMT.sceneCountMax)) + "</td></tr>";
+  }
   if (cover) {
     h += "<tr><th>" + esc(T.cCoverTitle) + "</th><td>" + mark(cover.title) + esc(T.onScreenOf(dispLen(cover.title), 16)) + "</td></tr>";
     h += "<tr><th>" + esc(T.cArc) + "</th><td>" + (!WIDE
@@ -4602,7 +4619,7 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
     if (cover.statLabel) h += "<tr><th>" + esc(T.cStatLabel) + "</th><td>" + esc(cover.statLabel) + esc(T.onScreenOf(dispLen(cover.statLabel), 18)) + "</td></tr>";
   }
   h += "<tr><th>" + esc(T.cRate) + "</th><td>" +
-     esc(allRec ? T.rateAllRec : hasRec ? T.rateMixed : T.rateGen(FMT.sceneMax)) + "</td></tr>";
+     esc(STORY_V2 ? T.contentTiming : allRec ? T.rateAllRec : hasRec ? T.rateMixed : T.rateGen(FMT.sceneMax)) + "</td></tr>";
   h += "<tr><th>" + esc(T.cTheme) + "</th><td>" + ["accent", "accent2", "ink"].map(function (k) {
     return '<span class="swatch" style="background:' + esc(THEME[k]) + '"></span><code>' + esc(THEME[k]) + "</code>"; }).join(" &nbsp; ") +
     " &nbsp; " + esc(T.cChannel) + "<code>" + esc(THEME.brand) + "</code></td></tr>";

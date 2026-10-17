@@ -71,10 +71,9 @@ const SELF_DIR = __dirname;
 const FORMAT_RESOLVE = path.resolve(SELF_DIR, '..', '..', 'platform-guide', 'references', 'format-resolve.js');
 
 /* ── The floors ──
-   The source of truth is the storyboard skill's §2 step 4: three verified claims is the floor
-   below which there is no video, a short normally leaves with five or more and a long-form
-   with twelve. --selftest reads those numbers back out of SKILL.md, so a change there fails
-   here rather than drifting silently. */
+   This compatibility checker retains the research floors from legacy-authoring.md.
+   Its selftest pins that archived contract, not the current story-first skill.
+   These legacy quotas do not govern new fiction or introduce execution gates. */
 const FLOOR_ABSOLUTE = 3;
 const FLOOR_SHORT = 5;
 const FLOOR_LONG = 12;
@@ -1020,21 +1019,25 @@ function selftest() {
      !has(analyse(good.replace('| D2 | M2 | b | number | y | 2 | — | not used |',
                                '| D2 | M2 | b | number | y | 2 | — | 미제로 남았다 |'), null), /report of ignorance/));
 
-  // Drift guard — the floors live in the skill, and this file has to agree with it.
-  const skill = path.resolve(SELF_DIR, '..', 'SKILL.md');
+  // The current entry point must keep the archived compatibility workflow reachable.
+  const entryPoint = path.resolve(SELF_DIR, '..', 'SKILL.md');
+  ok('Current skill links the legacy authoring workflow', fs.existsSync(entryPoint) &&
+     fs.readFileSync(entryPoint, 'utf8').includes('(references/legacy-authoring.md)'));
+  // Drift guard for the archived research workflow supported by this checker.
+  const skill = path.resolve(SELF_DIR, 'legacy-authoring.md');
   if (fs.existsSync(skill)) {
     const s = fs.readFileSync(skill, 'utf8');
-    ok('SKILL §2 still says three verified claims is the floor',
+    ok('Legacy authoring §2 still says three verified claims is the floor',
        /Three verified claims is the floor/i.test(s));
-    ok('SKILL §2 still aims a short at five or more', /\*\*five or more\*\*/.test(s));
-    ok('SKILL §2 still aims a long-form at twelve or more', /\*\*twelve or more\*\*/.test(s));
-    ok('SKILL §2.1 still writes three directions', /three honest directions/i.test(s));
-    ok('SKILL §2.1 still writes three messages first', /§Messages first/.test(s));
-    ok('SKILL §2.1 still writes the wow points before the messages', /§The wow first/.test(s));
-    ok('SKILL §2.1 still asks ten or more searches', /\*\*ten or more\*\*/.test(s));
-    ok('SKILL still names check-research.js --direction', /check-research\.js storyboard\/ --direction/.test(s));
+    ok('Legacy authoring §2 still aims a short at five or more', /\*\*five or more\*\*/.test(s));
+    ok('Legacy authoring §2 still aims a long-form at twelve or more', /\*\*twelve or more\*\*/.test(s));
+    ok('Legacy authoring §2.1 still writes three directions', /three honest directions/i.test(s));
+    ok('Legacy authoring §2.1 still writes three messages first', /§Messages first/.test(s));
+    ok('Legacy authoring §2.1 still writes the wow points before the messages', /§The wow first/.test(s));
+    ok('Legacy authoring §2.1 still asks ten or more searches', /\*\*ten or more\*\*/.test(s));
+    ok('Legacy authoring still names check-research.js --direction', /check-research\.js storyboard\/ --direction/.test(s));
   } else {
-    process.stderr.write('WARN storyboard SKILL.md not found — floor drift guard skipped\n');
+    process.stderr.write('WARN legacy-authoring.md not found — floor drift guard skipped\n');
   }
 
   if (failed) { process.stderr.write(failed + ' check(s) failed\n'); process.exit(1); }

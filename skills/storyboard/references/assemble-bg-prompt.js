@@ -345,7 +345,7 @@ function assemble(opts) {
 
   // The whole prompt is checked — a "left view of" in --scene ships to the model just the same.
   const hits = bannedHits(prompt);
-  return { prompt, space, hits, unknown, size, angle, layout: opts.layout, facing: opts.facing, ...(opts.propSnapshot?.length ? {propSnapshot:opts.propSnapshot}:{}), sourceImageArgs:{referenced_image_paths:[...(opts.sourceImageArgs?.referenced_image_paths || []), ...(opts.location?.paths || [])]}, ...(opts.location ? {locationBinding:opts.location.binding}:{}) };
+  return { prompt, space, hits, unknown, size, angle, layout: opts.layout, facing: opts.facing, ...(opts.propSnapshot?.length ? {propSnapshot:opts.propSnapshot}:{}), sourceImageArgs:{referenced_image_paths:[...new Set([...(opts.location?.paths || []), ...(opts.sourceImageArgs?.referenced_image_paths || [])])]}, ...(opts.location ? {locationBinding:opts.location.binding}:{}) };
 }
 
 function loadShot(file, index) {

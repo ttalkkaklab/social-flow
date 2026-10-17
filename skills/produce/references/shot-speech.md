@@ -21,7 +21,8 @@ Historical proof parsers remain for old artifacts; they are not new-production r
 
 ## Common data
 
-Set `SB_DOC.speechPlanVersion:1`. For story-v2, select a narrator only when the story needs one;
+Set `SB_DOC.speechPlanVersion:1` and, on newly authored boards,
+`SB_DOC.performanceTimingVersion:1`. For story-v2, select a narrator only when the story needs one;
 explicit character speakers and silent stories need no narrator. When selected, include the
 narrator in `SB_DOC.characters` with its own pinned `tts` and set narratorCharacterId. Legacy
 boards still need the narrator for their default speech routing. Each narration entry is one ordered spoken line:
@@ -48,9 +49,10 @@ beside each speaker's portrait and dialogue bubble.
 
 Stable shot ids and line ids survive reorder and model changes. `speech_manage` prepares,
 finds and updates them and attaches audio hashes. Per-line audio records are not scene WAVs:
-the current common builder takes one speaker per scene and one assembled WAV per card. Split
-speaker changes into consecutive shots before production; preserve the line ids. Do not feed
-a mixed-speaker WAV to the single-speaker builder. Its file/timing checks are not listening QA.
+the shared composer accepts several speakers in one shot and makes one timed WAV per card.
+Keep each line bound to its own speaker, voice and audio receipt. Split an exchange when
+staging or the selected adapter calls for a cut, not merely because the speaker changes.
+The composer's file/timing checks are not listening QA.
 
 ## Common voice layer
 
@@ -133,11 +135,33 @@ at audio-length boundaries. A deliberately continuous take needs ordered beat ti
 and observed cut points before reuse; a prompt does not establish where the model acted.
 The plans describe timing but do not render media. After attaching every line's current
 audio, `build-reel.sh` calls [compose-speech.js](compose-speech.js) for speechPlanVersion 1
-scenes with acting or multiple spoken lines. It reads cards.tsv, inserts each line's lead-in/tail-out, concatenates
-the speech into `c{index}-speech.wav`, updates the card audio path and records measured
-line intervals plus source hashes in `.generation.json`. The builder preserves that
-padding and uses speech intervals for subtitle timing. For preparation before an
-audio-conditioned video call, run the same composer explicitly:
+scenes with acting, multiple spoken lines or independent actions. It reads cards.tsv and
+the ordered `performance`, places measured speech with lead-in/tail-out and action intervals
+in `c{index}-speech.wav`, updates the card audio path and records measured line intervals
+plus source hashes in `.generation.json`. Optional subtitle sidecars use those speech
+intervals; they do not appear in the clean video.
+
+For a standalone action, `durationSeconds` is an authored estimate; `withGroup` optionally
+starts it with a 1-based speech group. Without a separate duration, that concurrent action
+spans the group; a longer action extends the interval instead of being added twice.
+Independent action time must be finite before composing new boards carrying
+`performanceTimingVersion:1`. Draft unknowns stay visible. Older boards without the marker
+retain the legacy speech clock with an unverified-action warning; do not silently migrate
+an approved episode. A silent shot needs a finite visual timeline and no invented speech WAV.
+For new timing-version boards, the supplied silent card WAV must cover the complete
+action timeline; extra provider padding is allowed. Its measured length drives assembly,
+so the checker does not require equality with the board's earlier duration estimate.
+
+Call `speech_manage` with `{path, action: "plan_video", shotId, capabilities}` to inspect
+the whole stored shot, including actions and addressees. Do not restrict that handoff to
+line IDs. A successful speech plan does not establish that the adapter can stage several
+visible speakers correctly; use its actual capabilities and inspect the resulting action.
+For `capabilities.provider: "astra"`, the plan reports `promptLength` with the actual and
+maximum character counts and warns when its `videoPrompt` exceeds the adapter's prompt
+limit. It preserves the full prompt and actions. Other adapters do not inherit that limit.
+Shorten redundant wording or split a take at a natural action boundary; do not discard the
+story's necessary action merely to fit the request.
+For preparation before an audio-conditioned video call, run the same composer explicitly:
 
 ```bash
 node "$PLUGIN_ROOT/skills/produce/references/compose-speech.js" "$WORKDIR" "$STORYBOARD_DIR"
@@ -187,6 +211,9 @@ bindings after edits and clear `speechStatus:stale` only after the new media is 
 bound. A provider switch changes video generation, never the approved character voice or the
 speech data model. The adapter owns endpoint names, upload format, channel count, frame limits
 and duration rounding. The common layer must not import provider-specific frame rules.
+Reattaching unchanged video bytes after a performance edit or a changed audio take preserves
+the original binding and reports stale provenance. It does not certify that the revised
+action or speech synchronization was generated.
 
 ## Current adapter examples, checked 2026-10-16
 

@@ -199,3 +199,64 @@ rubric: 40 functional, 25 objective checks, 15 coverage, 10 UI/conventions and 1
 regression control, with no critical defect. The reviewer did not inspect the
 production clip for this code review and makes no claim that 8 fps guarantees
 correct model observations or a passing video.
+
+## Merged development branch and silent assembly review: 0.115.2
+
+The reviewer compared the merged storyboard template with both the prior
+direction implementation and `origin/dev`. Story-v2 content-based timing and
+explicit length constraints coexist with original shot references, camera/join
+summaries, known outro metadata and unknown-length displays. Review found one
+integration defect: the explicit minimum warning treated a known subtotal as a
+complete duration. The repair suppresses that minimum comparison while lengths
+are unknown. Independent execution of the actual renderer verified three cases:
+unknown minimum suppressed, complete minimum violation retained, and a known
+subtotal already above the explicit maximum still reported.
+
+The new `frame-clock.js` recovers the integer 48 kHz audio sample count before
+rounding up to video frames. This prevents the six-decimal ffprobe representation
+of 145/24 seconds from acquiring an extra frame. Boundary tests cover
+25/121/145/193 frames at 24/25/30/48/50/60 fps, preserving a genuinely additional
+audio sample rather than discarding it.
+
+The explicit `SILENT=1`, `OUTRO=0` branch bypasses music loudness normalization,
+checks narration and optional music samples are zero, and writes 48 kHz stereo
+PCM without changing the sample clock. The default music mix remains in the
+unchanged non-silent branch. The reviewer identified that manifest-only cue
+checks missed legacy source `sound.cue`, `sound.sfx` and `sound.ambience` fields
+when the sound compiler did not emit TSVs. The new `silent-plan.js` checks the
+source before speech composition, rejecting those cues, extended effects and
+authored spoken text. Manifest and actual-audio checks remain in place.
+
+Independent targeted tests passed 28/28, including generated zero/tone WAV
+fixtures that verify 290,000 samples, stereo output, and rejection of nonzero
+narration/music. Shell syntax checks passed for the builder and silent mixer.
+
+The reviewer also checked the motion-proxy advisory change in
+`verify-assembled.js`. Low-difference findings now persist as warnings with
+`needs-review`, consistent with the repository's automatic-execution guidance.
+The patch does not suppress ffprobe/decoder exceptions, source/output hashes or
+edit/timing checks, and adds no frame padding or substitution. The targeted test
+with actual moving/still fixtures passed and retained the measured warnings.
+This changes whether a proxy measurement blocks assembly; it does not certify
+the footage or waive the separate user-requested artifact review.
+
+The extraction-based assembly fixtures were adapted to the new helper dependency
+without changing their asserted behavior: the audio fixture receives `HERE`, and
+the main-concat fixture's existing section boundary stays before the new silent
+branch. The reviewer inspected the fixture adjustment and the completed targeted
+assembly log: 14/14 tests passed.
+
+The reviewer inspected the completed merged full-check log at
+`/tmp/social-flow-direction-merged-final3-check.log`: **2,018/2,018** tests passed,
+with zero failures, cancellations or skipped tests. The implementing agent
+confirmed process exit zero. Independent lint passed: 16 rules across 21 skills,
+exit zero. Earlier failing extraction-fixture runs were repaired and are not
+represented as passes.
+
+No remaining substantive or critical implementation defect was found. The score
+is **100/100** for merged version `0.115.2-direction.1` under the unchanged rubric:
+functional completeness 40, objective checks 25, meaningful coverage 15,
+UI/conventions 10 and regression control 10. This assessment is of the merged
+implementation revision. It does not claim that the subsequent published or
+installed package has already been verified, and makes no final-film quality or
+actual production-playback claim.

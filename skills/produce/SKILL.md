@@ -10,6 +10,9 @@ Use local episode files under `data/<channel>/episodes/<topic>/`.
 For action-led episodes, carry the storyboard's [action direction](../storyboard/references/action-direction.md)
 into generation and editing. Compare the actual clip with the planned camera and
 action; camera icons and a successful API response do not verify footage quality.
+For an intentionally silent film, use `SILENT=1 OUTRO=0` with the canonical builder.
+Supply sample-exact zero-valued timing WAVs; omit music, effect and ambience cues.
+The builder verifies silence and preserves the frame clock without loudness scoring.
 **Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 
 For tracked props, read [prop continuity](../storyboard/references/prop-continuity.md). Resolve the shot snapshot before prompts, preserve reference versions and record the snapshot with generated assets; verify the actual holder and condition in images and clips.
@@ -764,15 +767,20 @@ voiceSettings; declare text language separately when the API auto-detects it. No
 listening, STT, scores, retry-to-pass loop or human listening approval runs by default;
 an explicitly requested review/improvement loop may inspect actual media and report findings.
 
-Use one speaker per scene. Split speaker changes into separate shots before synthesis.
+A shot may contain several speakers. Keep each line's speaker, pinned voice and receipt;
+use the shared composer to place their takes in performance order. Cut on the scene's
+staging or a real adapter constraint, not on every speaker change.
 Use WAV, preserve the selected voice and speed, and resample differing sample rates before
 assembly. The current builder cannot concatenate MP3 as PCM. Keep speech at speed 1 unless
 the user requested another speed under [tts-speed.md](references/tts-speed.md).
 Generate each stable line as a take; combine consecutive lines into the scene WAV and record
 its ordered lineIds, expectedText and actual audioSha256. For single-line shots, use the bound
-WAV directly when no reaction padding is planned. For directed or multi-line scenes, attach all line
-audio first; build-reel invokes [compose-speech.js](references/compose-speech.js) to add
-leadInSeconds/tailOutSeconds and align subtitles to measured speech intervals. Run that
+WAV directly when no reaction padding or independent action is planned. For directed,
+multi-line or action-bearing scenes, attach all line audio first; build-reel invokes
+[compose-speech.js](references/compose-speech.js) to place measured speech and ordered action
+intervals on one timeline. New boards carry `SB_DOC.performanceTimingVersion:1` and need
+finite independent-action timing before composition. Optional subtitle sidecars align to
+measured speech intervals; the video stays clean. Run that
 same composer before audio-conditioned video generation so video uses the padded WAV. Subtitle timing follows the
 actual WAV; file and timing checks do not listen.
 Keep ElevenLabs seed, stability and pronunciation dictionaries fixed across retakes when
@@ -1324,4 +1332,4 @@ length, platforms) together with the cost summary, and point the user at
 - **`../autoproduce/references/decision-log.md`** — the episode decision log (`.work/decisions.tsv`) storyboard starts and produce carries on: engine, voice, music and every fallback, with what each one replaced. `decisions.sh` reads it back for the §10 report
 - **`../autoproduce/references/cost-tally.md`** — the episode cost ledger convention (the file §3 and §5 write and §10 totals). The price source of truth `prices.tsv` and the calculator `cost-report.sh` sit in the same directory
 - **`../channel/references/resolve-asset.py`** — looks up the shared outro, BGM, sound effects, and character sheet (catalog + default path + the old `assets/outro.mp4`) All `still_camera` cuts use the unchanged shared camera HTML template and runtime, including push/pan. Non-slide video handoffs declare `visual.renderedFile` (or `visual.clip`) relative to the storyboard; assembly must use that exact file. Drone shots follow [drone-flythrough.md](../storyboard/references/drone-flythrough.md). Keep attachments and rights evidence locally.
-**Persistent locations:** For recurring places, follow [location assets](../storyboard/references/location-assets.md). Bind an immutable set/state/camera to each shot, render and review references, then pass the assembler's actual reference paths to generation. Never substitute a prose-only location description for a bound set. Camera changes invalidate its references.
+**Persistent locations:** Before source images, follow [location assets](../storyboard/references/location-assets.md). Render the bound set/camera and complete actor start/end blocking; inspect consecutive cuts and the advisory continuity findings. Use `mcp__social-flow__location_manage` action `previz` for motion so its clip and source composition share that same spatial plan. Forward the assembler's actual image inputs with the location composition first; cast sheets supply appearance. Read spatialWarnings for legacy independent previz. Camera, actor or endpoint changes require fresh references; actual reviews remain optional and honestly recorded.
