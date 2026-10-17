@@ -53,6 +53,9 @@ movement together is optional, not a quota or a quality score.
 Use `transition` for the join entering a shot. Use `edit.reason` for its purpose and
 `edit.continuity` for what crosses the boundary: action, screen direction, gaze,
 prop state or sound. Camera `whip pan` and edit `whip:left` are different operations.
+Use the shot-continuity workflow for concrete start/end poses, observed endpoint capture
+and reference-image handoff. A generic "before action" opening or a still showing the
+completed gesture cannot establish a continuous action across separately generated clips.
 Review adjacent outgoing/incoming frames together. Keep prop and eyeline references
 in their existing contracts; do not create a parallel continuity ledger.
 

@@ -140,7 +140,9 @@ function assemble(win, index, dir) {
   const locationRef = scene.shot?.location ? require('./location-assets.js').references(win, index, dir) : null;
   const propSnapshot = require('./prop-continuity.js').snapshot(win, index);
   const propReferenceImages = propSnapshot.filter(p => p.visible).flatMap(p => p.references.map(r => dir ? path.resolve(dir, r.path) : r.path));
-  const sourceReferenceImages = [...new Set([...(locationRef?.paths || []), ...(previzFrame ? [previzFrame] : []), ...(pack?.referenceImagePaths || []), ...castReferenceImages.map(ref => ref.path), ...propReferenceImages])];
+  const continuityContract = require('./shot-continuity.js');
+  const continuity = continuityContract.plan(win, index, dir);
+  const sourceReferenceImages = [...new Set([...(locationRef?.paths || []), ...(previzFrame ? [previzFrame] : []), ...(continuity?.referenceImages || []), ...(pack?.referenceImagePaths || []), ...castReferenceImages.map(ref => ref.path), ...propReferenceImages])];
   const spatialWarnings = locationRef && previz && !previz.locationBinding ? ['Standalone previz is not bound to this location. Compare its camera and blocking or rebuild with location_manage action previz; the location render controls source composition.'] : [];
   const compositionLock = locationRef
     ? 'Composition lock: the first attached image is the shared 3D location render. Keep its camera, architecture, framing and authored character placement and orientation. Render surfaces and visible characters in the episode style. Other references supply appearance or motion planning; keep the location composition when they differ.'
@@ -158,11 +160,12 @@ function assemble(win, index, dir) {
   const source = [...(propPrompt ? [propPrompt] : []), canvas + ', edge-to-edge composition.',
     'Narrated meaning this picture must convey: ' + spoken,
     'Opening state: ' + d.before,
+    ...continuityContract.sourceGuidance(continuity, sourceReferenceImages),
     ...(compositionLock ? [compositionLock] : []),
     'The image must make the narrated subject and action understandable; a beautiful but unrelated scene fails.',
     ...(pack ? [locationRef ? 'Attached image ' + (sourceReferenceImages.indexOf(pack.referenceImagePaths[0]) + 1) + ' is for STYLE ONLY. Preserve the first image composition.'
-                            : previzFrame ? 'The first attached image is the previz frame: its composition is kept exactly. The second attached image is for STYLE ONLY.'
-                            : 'Use the attached image for STYLE ONLY. Design a new scene for the narration.', ...Object.values(pack.rules)] : []),
+                            : previzFrame ? 'The first attached image is the previz frame: its composition is kept exactly. Attached image ' + (sourceReferenceImages.indexOf(pack.referenceImagePaths[0]) + 1) + ' is for STYLE ONLY.'
+                            : 'Attached image ' + (sourceReferenceImages.indexOf(pack.referenceImagePaths[0]) + 1) + ' is for STYLE ONLY. Design the opening composition for this shot, preserving the state supplied by continuity references.', ...Object.values(pack.rules)] : []),
     treatment, ...(perCutTreatment ? [perCutTreatment] : []), ...castPromptLines, ...castImageLines, world,
     'Materials: ' + style.materials, 'Palette: ' + style.palette, 'Lighting: ' + style.lighting,
     'Camera language: ' + style.camera,
@@ -213,7 +216,7 @@ function assemble(win, index, dir) {
   if (engine === 'astra' && motionPrompt?.length > 2000)
     throw new Error('ASTRA motion prompt including performance exceeds 2000 characters; shorten descriptions or split at a natural action boundary, preserving every action');
   const locationEndReady = !locationRef || !!(locationRef.resultImage && v.bg && path.resolve(dir,v.bg)===path.resolve(dir,locationRef.resultImage));
-  return { spatialWarnings, propSnapshot, propReferenceImages, endFrameImageArgs: locationRef && locationEndReady ? {referenced_image_paths: [path.resolve(dir,v.bg), ...locationRef.endPaths]} : {}, endFrameReady: locationEndReady, locationEndReferenceImages: locationRef?.endPaths || [], locationBinding: locationRef?.binding || null, locationReferenceRoles: locationRef?.roles || [], sourcePrompt: source, stylePreset: preset, cutType, castIds,
+  return { continuity, spatialWarnings, propSnapshot, propReferenceImages, endFrameImageArgs: locationRef && locationEndReady ? {referenced_image_paths: [path.resolve(dir,v.bg), ...locationRef.endPaths]} : {}, endFrameReady: locationEndReady, locationEndReferenceImages: locationRef?.endPaths || [], locationBinding: locationRef?.binding || null, locationReferenceRoles: locationRef?.roles || [], sourcePrompt: source, stylePreset: preset, cutType, castIds,
     styleBinding: pack?.binding || null,
     styleGuidePath: pack?.guidePath || null,
     castReferenceImages,

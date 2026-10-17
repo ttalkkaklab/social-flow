@@ -113,7 +113,10 @@ channel plate limit (ceiling 8 seconds), stops the build. Still cards with a Ken
 are not gated here; the builder already refuses a still without a move.
 
 Watch every file in `work/seams/`, which contains the final master's boundary excerpts with
-sound. Also watch the entire final clean and subtitled exports at normal speed. Record in
+sound and paired PNGs of the actual outgoing/incoming boundary frames. The image hashes,
+frame numbers and `not_reviewed` state are in `edit-check.json`; extraction is not visual
+approval. Revisit both neighbours after a crop, trim or replacement. Also watch the entire
+final clean export at normal speed. Record in
 `edit-review.md` the master hash, boundaries inspected, observed action continuity, voice
 spacing, visible defects and their resolution. Check:
 

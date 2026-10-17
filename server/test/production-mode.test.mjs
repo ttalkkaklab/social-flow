@@ -334,9 +334,11 @@ test('Seedance 2.5 integer-second performance directions pass assembly and the s
   assert.throws(()=>assemble(win,0),/digit seconds/);save(win);
   assert.match(checkPrompt().stdout,/digit seconds/);
 }));
-test('legacy prompts retain image bytes and include the shared camera and clean-output policies', () => {
+test('opening-state and static-camera guidance augment legacy prompts without changing end frames', () => {
   const p = assemble(fixture(1), 0);
-  assert.equal(digest(p.sourcePrompt), 'b51ee046763a9b03655f049d7119e9cd75fef489b7c75f8b0fa610db40973780');
+  assert.match(p.sourcePrompt, /opening instant BEFORE this shot's action/);
+  assert.match(p.sourcePrompt, /dialogue stays in audio, with no subtitles, captions or lettering/);
+  assert.equal(digest(p.sourcePrompt), '8455ccb1c518a88e7ae99192c715532728eb8247eb820b7c7d73736d5740a3ee');
   assert.equal(digest(p.endFramePrompt), 'ea5266c699957affead597eaf0c2a1cd4e60bf4e014136b27b6f0207612221a3');
   assert.match(p.motionPrompt, /Locked camera: preserve the opening framing/);
   assert.equal(digest(p.motionPrompt), '118bad971fe5fdf9f971828da1722f3fa61487259c72f6beafe62760998691e1');

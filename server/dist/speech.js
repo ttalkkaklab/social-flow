@@ -216,6 +216,8 @@ export function manageSpeech(args) {
         for (const { line } of selected)
             actingSchema.nullable().optional().parse(line.acting);
         plan = speechVideoPlan({ ...scene, narration: selected.map(({ line }) => ({ ...line, audio: currentAudio(line, character(line.speaker)) ? line.audio : undefined })) }, args.capabilities);
+        const continuityContract = nodeModule.createRequire(import.meta.url)('../../skills/storyboard/references/shot-continuity.js');
+        plan = { ...plan, continuity: continuityContract.plan(win, scenes.indexOf(scene), dirname(file)) };
         if (args.action === 'attach_video') {
             if (!args.videoPath)
                 throw new Error('videoPath is required');

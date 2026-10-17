@@ -15,6 +15,9 @@ allowed-tools: ["mcp__social-flow__project_manage", "mcp__social-flow__location_
 Save episode files under `data/<channel>/episodes/<topic>/`.
 For character action and camera planning, use [action direction](references/action-direction.md).
 The review derives camera icons, cut connections and planned length bars from existing shot fields.
+For related cuts, use [shot continuity](references/shot-continuity.md): stage concrete
+opening/closing poses and shared blocking before choosing source images. Keep dependent
+actions connected; a source still depicts the opening instant, not the completed action.
 
 Read [automation guidance](../_shared/automation-guidance.md) and
 [character-led scenarios](references/character-scenarios.md). They define the active

@@ -245,6 +245,11 @@ export function readStoryboard(args: z.infer<typeof storyboardReadSchema>): Reco
   if (doc?.props || doc?.propContinuity) result.propSheet = { props: doc.props, continuity: doc.propContinuity };
   result.inspection = { mediaViewed: false, evidenceStatus: 'not_verified',
     note: 'This response reads plans and recorded reviews only. Open referenced assets and verify current evidence before reporting visual quality or review validity.' };
+  const continuity = loadFromHere(join(REFERENCES_DIR, 'shot-continuity.js')) as {
+    check(board: Board, dir: string): Finding[];
+    plan(board: Board, index: number, dir: string): unknown;
+  };
+  result.continuityFindings = continuity.check(win, dirname(file));
   if (args.includeContext) result.reviewContext = {
     story: win.STORY || null, production: win.PRODUCTION || null, document: doc || null,
     evidenceStatus: 'not_verified',
@@ -257,7 +262,7 @@ export function readStoryboard(args: z.infer<typeof storyboardReadSchema>): Reco
     const playback = result.playback as Array<{ id: string | null; no: number }>;
     const position = playback.findIndex(row => row.no === index + 1);
     const neighbor = (i: number) => i >= 0 && playback[i] ? { id: playback[i].id, no: playback[i].no } : null;
-    result.selectedShot = { no: index + 1, shot,
+    result.selectedShot = { no: index + 1, shot, continuity: continuity.plan(win, index, dirname(file)),
       scene: win.STRUCTURE?.scenes?.find(scene => scene.no === shot.scene) || null,
       playbackPosition: position < 0 ? null : position + 1,
       previous: position < 0 ? null : neighbor(position - 1), next: position < 0 ? null : neighbor(position + 1) };
