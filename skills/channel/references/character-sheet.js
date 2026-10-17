@@ -6,7 +6,15 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { identityCharacter, direction, requiresSpeech } = require('../../_shared/character-identity.js');
-const { identityVoice } = require('../../_shared/character-voice.js');
+const { identityVoice, voiceErrors } = require('../../_shared/character-voice.js');
+
+function episodeVoiceOverride(win, tts) {
+  const override = win?.PRODUCTION?.modelSettings?.overrides?.speech;
+  return typeof override?.request === 'string' && override.request.trim().length > 0
+    && typeof override.model === 'string' && override.model.trim().length > 0
+    && override.engine === tts?.engine && override.model === tts?.model
+    && voiceErrors(tts).length === 0;
+}
 
 function handoff(file, { requireSpeech = true } = {}) {
   const source = fs.readFileSync(file, 'utf8');
@@ -37,7 +45,9 @@ function sourceErrors(win, boardDir) {
     const file = path.join(channel, 'assets', 'characters', c.id, 'identity.md');
     try {
       const current = handoff(file, { requireSpeech: requiresSpeech(win, c.id) });
-      if (current.identitySha256 !== c.identitySha256 || JSON.stringify(current.character) !== JSON.stringify(c.character) || JSON.stringify(current.tts) !== JSON.stringify(c.tts))
+      const voiceChanged = JSON.stringify(current.tts) !== JSON.stringify(c.tts);
+      if (current.identitySha256 !== c.identitySha256 || JSON.stringify(current.character) !== JSON.stringify(c.character)
+        || (voiceChanged && !episodeVoiceOverride(win, c.tts)))
         errors.push(`Character ${c.id}: local identity changed; regenerate handoff and affected assets`);
     } catch (error) { errors.push(`Character ${c.id}: ${error.message}`); }
   }

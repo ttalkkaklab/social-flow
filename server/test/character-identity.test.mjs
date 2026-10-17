@@ -106,3 +106,40 @@ test('silent story-v2 cast can keep speech pending without bypassing identity or
     assert.match(sourceErrors(board,root).join(),/physical.appearance/);
   }finally{rmSync(root,{recursive:true,force:true});}
 });
+
+test('an explicit episode speech override preserves the shared character identity', () => {
+  const {sourceErrors}=require('../../skills/channel/references/character-sheet.js');
+  const root=mkdtempSync(join(tmpdir(),'sf-episode-voice-'));
+  try {
+    const folder=join(root,'assets/characters/mori');mkdirSync(folder,{recursive:true});
+    const file=join(folder,'identity.md');writeFileSync(file,source);writeFileSync(join(root,'profile.md'),'# Channel');
+    const cast=handoff(file),originalCharacter=JSON.stringify(cast.character),originalHash=cast.identitySha256;
+    cast.tts={engine:'gemini',model:'gemini-3.8-flash-tts',voiceId:'Orus',language:'ko',speed:1};
+    const win={PRODUCTION:{modelSettings:{overrides:{speech:{engine:'gemini',model:'gemini-3.8-flash-tts',request:'User selected Gemini for this episode within USD 10.'}}}},SB_DOC:{characters:[cast]}};
+    assert.deepEqual(sourceErrors(win,root),[]);
+    assert.equal(JSON.stringify(cast.character),originalCharacter);
+    assert.equal(cast.identitySha256,originalHash);
+    assert.equal(readFileSync(file,'utf8'),source);
+  } finally {rmSync(root,{recursive:true,force:true});}
+});
+
+test('episode speech overrides cannot hide missing authorization, a different model or changed identity', () => {
+  const {sourceErrors}=require('../../skills/channel/references/character-sheet.js');
+  const root=mkdtempSync(join(tmpdir(),'sf-episode-voice-invalid-'));
+  try {
+    const folder=join(root,'assets/characters/mori');mkdirSync(folder,{recursive:true});
+    const file=join(folder,'identity.md');writeFileSync(file,source);writeFileSync(join(root,'profile.md'),'# Channel');
+    const cast=handoff(file);cast.tts={engine:'gemini',model:'gemini-3.8-flash-tts',voiceId:'Orus',language:'ko',speed:1};
+    const win={SB_DOC:{characters:[cast]}};
+    const rejected=()=>assert.match(sourceErrors(win,root).join(),/local identity changed/);
+    rejected();
+    const override={engine:'gemini',model:'gemini-3.8-flash-tts',request:''};
+    win.PRODUCTION={modelSettings:{overrides:{speech:override}}};rejected();
+    override.request='User chose Gemini';override.model='gemini-3.8-flash-lite-tts';rejected();
+    override.model='gemini-3.8-flash-tts';cast.tts.speed=1.1;rejected();cast.tts.speed=1;
+    assert.deepEqual(sourceErrors(win,root),[]);
+    cast.character.physical.heightCm.value+=1;rejected();
+    cast.character=handoff(file).character;
+    const changed=doc();changed.character.physical.heightCm.value+=1;writeFileSync(file,markdown(changed));rejected();
+  } finally {rmSync(root,{recursive:true,force:true});}
+});
