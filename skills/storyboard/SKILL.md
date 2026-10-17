@@ -116,6 +116,13 @@ A review is useful evidence, not a standing numerical gate.
 
 ## 4. Cut and stage the scenes without losing their events
 
+For narrated or mixed scenes, apply [narration and visual grounding](references/narration-visual-grounding.md)
+before writing any source-image prompt. Decide what the picture contributes to the line,
+then stage that contribution; shared character, prop and background sheets constrain
+appearance, not meaning. Use the existing shot info/reason and opening/action fields.
+Check pictured evidence separately from what the voice explains, including deliberate
+context or reaction shots. A coherent voice track cannot certify the storyboard images.
+
 Use [scenes schema](references/scenes-schema.md) for data shapes and supported renderer
 fields. For new v2 stories this workflow replaces the schema's historical writing quotas,
 mandatory spoken thesis/CTA and narration-only suggestions. Keep the actual runtime contracts.

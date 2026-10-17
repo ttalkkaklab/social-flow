@@ -12,6 +12,9 @@
 
 Read the narration as a sequence of things the viewer must see. Write the route and reason
 for each cut separately. A topic, a noun or an available tool is not a visual brief.
+For narrated scenes, first apply [narration and visual grounding](narration-visual-grounding.md).
+Separate information carried by the voice from the picture's specific contribution;
+abstract claims and historical uncertainty do not require invented literal illustrations.
 
 ## Plan a change the viewer can identify
 

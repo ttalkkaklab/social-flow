@@ -5,6 +5,7 @@ const { readScenes } = require('../../autoproduce/references/cost-preview.js');
 const { droneSceneErrors, isDrone, full, MODES, STYLES, packPresets, motionErrors, missingCameraSlots, finalState, shotStyle, shotStyleErrors } = require('./production-mode.js');
 const { resolveStylePack } = require('./style-pack.js');
 const PROMPT = require('./assemble-bg-prompt.js');
+const sourceContext = require('./source-context.js');
 const { previzHandoff } = require('./render-routing.js');
 const { cutTreatment, castLines, defaultStyleRole } = require('./cut-treatments.js');
 const { cameraLock } = require('../../_shared/scene-acting.js');
@@ -158,11 +159,10 @@ function assemble(win, index, dir) {
   const world = style.worlds?.[d.worldId] ?? style.world;
   const propPrompt = require('./prop-continuity.js').prompt(win, index);
   const source = [...(propPrompt ? [propPrompt] : []), canvas + ', edge-to-edge composition.',
-    'Narrated meaning this picture must convey: ' + spoken,
     'Opening state: ' + d.before,
+    sourceContext.guidance(sourceContext.context(scene, win.STORY)),
     ...continuityContract.sourceGuidance(continuity, sourceReferenceImages),
     ...(compositionLock ? [compositionLock] : []),
-    'The image must make the narrated subject and action understandable; a beautiful but unrelated scene fails.',
     ...(pack ? [locationRef ? 'Attached image ' + (sourceReferenceImages.indexOf(pack.referenceImagePaths[0]) + 1) + ' is for STYLE ONLY. Preserve the first image composition.'
                             : previzFrame ? 'The first attached image is the previz frame: its composition is kept exactly. Attached image ' + (sourceReferenceImages.indexOf(pack.referenceImagePaths[0]) + 1) + ' is for STYLE ONLY.'
                             : 'Attached image ' + (sourceReferenceImages.indexOf(pack.referenceImagePaths[0]) + 1) + ' is for STYLE ONLY. Design the opening composition for this shot, preserving the state supplied by continuity references.', ...Object.values(pack.rules)] : []),

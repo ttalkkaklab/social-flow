@@ -59,6 +59,15 @@ motivation and consequences are legible; do not require every fictional characte
 
 Compare performance with planned shots, source/end states and generation directions:
 
+For narrated or mixed scenes, use [narration and visual grounding](../skills/storyboard/references/narration-visual-grounding.md).
+First describe what the planned pictures communicate with the spoken lines set aside;
+then compare their contribution with the lines in scene order. Good narration can hide a
+generic or misleading conte. Do not demand a silent reconstruction of the entire argument:
+context, reaction, counterpoint and source evidence are valid when their role is specific.
+Distinguish missing visible support from an intentional fact conveyed only by the voice.
+Check actual source pixels when supplied; otherwise this is plan review, not image approval.
+Reject invented historical evidence as a repair for an abstract or uncertain statement.
+
 - Can the audience locate the people and see/hear the trigger from their positions?
 - Are dialogue targets and eyelines consistent? Is the listener's response actually framed
   or otherwise delivered, instead of existing only in performance metadata?

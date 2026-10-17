@@ -338,7 +338,9 @@ test('opening-state and static-camera guidance augment legacy prompts without ch
   const p = assemble(fixture(1), 0);
   assert.match(p.sourcePrompt, /opening instant BEFORE this shot's action/);
   assert.match(p.sourcePrompt, /dialogue stays in audio, with no subtitles, captions or lettering/);
-  assert.equal(digest(p.sourcePrompt), '8455ccb1c518a88e7ae99192c715532728eb8247eb820b7c7d73736d5740a3ee');
+  assert.match(p.sourcePrompt, /Speech may carry facts that the picture cannot show/);
+  assert.match(p.sourcePrompt, /subsequent action and completed result belong to later frames/);
+  assert.equal(digest(p.sourcePrompt), 'fec9382471ec454632c5791c0528761760c1bc477fe641f8bd05208c0004f562');
   assert.equal(digest(p.endFramePrompt), 'ea5266c699957affead597eaf0c2a1cd4e60bf4e014136b27b6f0207612221a3');
   assert.match(p.motionPrompt, /Locked camera: preserve the opening framing/);
   assert.equal(digest(p.motionPrompt), '118bad971fe5fdf9f971828da1722f3fa61487259c72f6beafe62760998691e1');
