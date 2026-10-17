@@ -79015,13 +79015,15 @@ var ASTRA_VIDEO_MEASURED_FIELDS = {
   retake: ["end_time", "hdr", "mode", "prompt", "seed", "start_time", "video_upload_id"]
 };
 var ASTRA_VIDEO_DESIGN_FIELDS = {
-  guided: ["guidance"],
-  guided_fast: ["guidance"],
-  keyframe: ["guidance"],
-  audio2video: ["guidance"],
-  guided_hq: [...ASTRA_VIDEO_MEASURED_FIELDS.guided, "guidance"],
-  ingredients: ["conditioning_mask", "skip_stage_2"],
-  ic_lora: [...ASTRA_VIDEO_MEASURED_FIELDS.ingredients, "adapter", "conditioning_mask", "skip_stage_2"]
+  generate: ["generate_audio"],
+  guided: ["guidance", "generate_audio"],
+  guided_fast: ["guidance", "generate_audio"],
+  keyframe: ["guidance", "generate_audio"],
+  audio2video: ["guidance", "generate_audio"],
+  guided_hq: [...ASTRA_VIDEO_MEASURED_FIELDS.guided, "guidance", "generate_audio"],
+  ingredients: ["conditioning_mask", "skip_stage_2", "generate_audio"],
+  ic_lora: [...ASTRA_VIDEO_MEASURED_FIELDS.ingredients, "adapter", "conditioning_mask", "skip_stage_2", "generate_audio"],
+  retake: ["generate_audio"]
 };
 var ASTRA_VIDEO_ALLOWED_FIELDS = Object.fromEntries(
   [.../* @__PURE__ */ new Set([...Object.keys(ASTRA_VIDEO_MEASURED_FIELDS), ...Object.keys(ASTRA_VIDEO_DESIGN_FIELDS)])].map((mode) => [
@@ -79071,6 +79073,7 @@ var SUBMIT_TIMEOUT_MS = 6e4;
 var STATUS_TIMEOUT_MS = 3e4;
 var TRANSFER_TIMEOUT_MS = 6e5;
 var astraVideoListUploadsSchema = external_exports.object({}).strict();
+var astraVideoCapabilitiesSchema = external_exports.object({}).strict();
 var astraVideoDeleteUploadSchema = external_exports.object({
   uploadId: external_exports.string().min(1).max(256).regex(/^[A-Za-z0-9_-]+$/, "uploadId must be a bare upload identifier")
 }).strict();
@@ -79099,6 +79102,20 @@ async function listUploads() {
     throw invalidUploadResponse("list uploads", result.status);
   }
 }
+async function getCapabilities() {
+  const result = await requestRaw("get", `${astraVideoBaseUrl()}/v1/models`, authHeaders(), void 0, STATUS_TIMEOUT_MS);
+  if (!result.ok || result.status !== 200) {
+    const reason = result.status === 401 || result.status === 403 ? "The server refused access. Check ASTRA_VIDEO." : result.status === 429 ? "The server rate limit was reached. Try again in a minute." : "The server could not answer. Check server availability before retrying.";
+    throw new Error(`ASTRA video capabilities failed (HTTP ${result.status}): ${reason}`);
+  }
+  try {
+    const parsed = JSON.parse(result.body);
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("not an object");
+    return parsed;
+  } catch {
+    throw new Error(`ASTRA video capabilities failed (HTTP ${result.status}): the server did not return a JSON capability report.`);
+  }
+}
 async function deleteUpload(args) {
   const { uploadId: upload_id } = astraVideoDeleteUploadSchema.parse(args);
   const result = await requestRaw("delete", `${astraVideoBaseUrl()}/v1/uploads/${encodeURIComponent(upload_id)}`, authHeaders(), void 0, STATUS_TIMEOUT_MS);
@@ -79116,6 +79133,34 @@ var promptSchema = external_exports.string().min(1, "prompt is required").max(AS
 var numFramesSchema = (mode) => external_exports.number().int().min(ASTRA_VIDEO_MIN_FRAMES).max(ASTRA_VIDEO_FRAME_LIMITS[mode]).refine((n) => (n - 1) % ASTRA_VIDEO_FRAME_STEP === 0, {
   message: `numFrames must be 8k+1 (25, 33, 41 \u2026 ${ASTRA_VIDEO_FRAME_LIMITS[mode]})`
 }).optional();
+function framesForSeconds(seconds, frameRate = 24) {
+  const frames = seconds * frameRate;
+  return 1 + ASTRA_VIDEO_FRAME_STEP * Math.ceil((frames - 1) / ASTRA_VIDEO_FRAME_STEP - 0.5 - 1e-9);
+}
+var durationSchema = external_exports.number().positive().finite().optional();
+function checkDuration(data, mode, ctx) {
+  if (data.duration === void 0) return;
+  for (const other of ["numFrames", "autoDuration", "audioMaxDuration"]) {
+    if (data[other] !== void 0) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["duration"], message: `duration and ${other} are mutually exclusive \u2014 give one length` });
+    }
+  }
+  const fps = data.frameRate ?? 24;
+  const frames = framesForSeconds(data.duration, fps);
+  const max = ASTRA_VIDEO_FRAME_LIMITS[mode];
+  if (frames < ASTRA_VIDEO_MIN_FRAMES || frames > max) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["duration"],
+      message: `duration ${data.duration}s at ${fps}fps is ${frames} frames; mode ${mode} takes ${ASTRA_VIDEO_MIN_FRAMES}-${max} frames, about ${(ASTRA_VIDEO_MIN_FRAMES / fps).toFixed(2)}-${(max / fps).toFixed(2)}s`
+    });
+  }
+}
+function resolveDuration(data) {
+  const { duration: duration3, ...rest } = data;
+  return duration3 === void 0 ? rest : { ...rest, numFrames: framesForSeconds(duration3, data.frameRate ?? 24) };
+}
+var generateAudioSchema = external_exports.boolean().optional();
 var seedSchema = external_exports.number().int().min(0).max(ASTRA_VIDEO_MAX_SEED).optional();
 var frameRateSchema = external_exports.number().min(1).max(60).optional();
 var negativePromptSchema = external_exports.string().max(ASTRA_VIDEO_MAX_PROMPT_CHARS).optional();
@@ -79203,6 +79248,8 @@ var astraText2VideoSchema = external_exports.object({
   height: heightSchema,
   frameRate: frameRateSchema,
   seed: seedSchema,
+  duration: durationSchema,
+  generateAudio: generateAudioSchema,
   lora: loraSchema,
   negativePrompt: negativePromptSchema,
   numInferenceSteps: numInferenceStepsSchema,
@@ -79210,6 +79257,7 @@ var astraText2VideoSchema = external_exports.object({
   guidance: guidanceSchema,
   ...outputFields
 }).superRefine((data, ctx) => {
+  checkDuration(data, ASTRA_VIDEO_TIERS[data.tier], ctx);
   const mode = ASTRA_VIDEO_TIERS[data.tier];
   if (data.numFrames !== void 0 && data.numFrames > ASTRA_VIDEO_FRAME_LIMITS[mode]) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["numFrames"], message: `numFrames must be at most ${ASTRA_VIDEO_FRAME_LIMITS[mode]} for mode ${mode}` });
@@ -79242,7 +79290,7 @@ var astraText2VideoSchema = external_exports.object({
       ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["autoDuration"], message: durationError });
     }
   }
-});
+}).transform(resolveDuration);
 var astraImg2VideoSchema = external_exports.object({
   prompt: promptSchema,
   tier: external_exports.enum(["default", "guided", "hq"]).optional().default("default"),
@@ -79255,6 +79303,8 @@ var astraImg2VideoSchema = external_exports.object({
   height: heightSchema,
   frameRate: frameRateSchema,
   seed: seedSchema,
+  duration: durationSchema,
+  generateAudio: generateAudioSchema,
   lora: loraSchema,
   negativePrompt: negativePromptSchema,
   numInferenceSteps: numInferenceStepsSchema,
@@ -79262,6 +79312,7 @@ var astraImg2VideoSchema = external_exports.object({
   guidance: guidanceSchema,
   ...outputFields
 }).superRefine((data, ctx) => {
+  checkDuration(data, ASTRA_VIDEO_TIERS[data.tier], ctx);
   const mode = ASTRA_VIDEO_TIERS[data.tier];
   if (data.numFrames !== void 0 && data.numFrames > ASTRA_VIDEO_FRAME_LIMITS[mode]) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["numFrames"], message: `numFrames must be at most ${ASTRA_VIDEO_FRAME_LIMITS[mode]} for mode ${mode}` });
@@ -79300,7 +79351,7 @@ var astraImg2VideoSchema = external_exports.object({
   if (dimensionError) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["width"], message: dimensionError });
   }
-});
+}).transform(resolveDuration);
 var astraKeyframeVideoSchema = external_exports.object({
   prompt: promptSchema,
   images: external_exports.array(
@@ -79316,22 +79367,25 @@ var astraKeyframeVideoSchema = external_exports.object({
   height: heightSchema,
   frameRate: frameRateSchema,
   seed: seedSchema,
+  duration: durationSchema,
+  generateAudio: generateAudioSchema,
   negativePrompt: negativePromptSchema,
   numInferenceSteps: numInferenceStepsSchema,
   guidance: guidanceSchema,
   ...outputFields
 }).superRefine((data, ctx) => {
+  checkDuration(data, "keyframe", ctx);
   const dimensionError = checkDimensions(data.width, data.height, "keyframe");
   if (dimensionError) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["width"], message: dimensionError });
   }
   data.images.forEach((image, index) => {
-    const frameError = checkFrameIdx(image.frameIdx, data.numFrames);
+    const frameError = checkFrameIdx(image.frameIdx, data.numFrames ?? (data.duration === void 0 ? void 0 : framesForSeconds(data.duration, data.frameRate ?? 24)));
     if (frameError) {
       ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["images", index, "frameIdx"], message: frameError });
     }
   });
-});
+}).transform(resolveDuration);
 var astraAudio2VideoSchema = external_exports.object({
   prompt: promptSchema,
   audioPath: external_exports.string().trim().min(1).optional(),
@@ -79345,11 +79399,14 @@ var astraAudio2VideoSchema = external_exports.object({
   height: heightSchema,
   frameRate: frameRateSchema,
   seed: seedSchema,
+  duration: durationSchema,
+  generateAudio: generateAudioSchema,
   negativePrompt: negativePromptSchema,
   numInferenceSteps: numInferenceStepsSchema,
   guidance: guidanceSchema,
   ...outputFields
 }).superRefine((data, ctx) => {
+  checkDuration(data, "audio2video", ctx);
   if (data.audioPath !== void 0 === (data.audioUploadId !== void 0)) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["audioPath"], message: "Provide exactly one of audioPath or audioUploadId" });
   }
@@ -79364,13 +79421,14 @@ var astraAudio2VideoSchema = external_exports.object({
       message: "audioMaxDuration and numFrames are mutually exclusive"
     });
   }
-});
+}).transform(resolveDuration);
 var astraVideoRetakeSchema = external_exports.object({
   prompt: promptSchema,
   sourceVideoPath: external_exports.string().min(1, "sourceVideoPath is required"),
   startTime: external_exports.number().min(0),
   endTime: external_exports.number().positive(),
   seed: seedSchema,
+  generateAudio: generateAudioSchema,
   ...outputFields
 }).superRefine((data, ctx) => {
   if (data.startTime >= data.endTime) {
@@ -79402,8 +79460,11 @@ var astraIcLoraSchema = external_exports.object({
   height: heightSchema,
   frameRate: frameRateSchema,
   seed: seedSchema,
+  duration: durationSchema,
+  generateAudio: generateAudioSchema,
   ...outputFields
 }).superRefine((data, ctx) => {
+  checkDuration(data, icLoraMode(data.adapter), ctx);
   const referenceIssue = uploadKindIssue(data.referencePath, ["image", "video"], "referencePath");
   if (referenceIssue) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["referencePath"], message: referenceIssue });
   if (data.conditioningMaskPath !== void 0) {
@@ -79416,7 +79477,7 @@ var astraIcLoraSchema = external_exports.object({
   if (dimensionError) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["width"], message: dimensionError });
   }
-});
+}).transform(resolveDuration);
 function icLoraMode(adapter) {
   return adapter === "ingredients" ? "ingredients" : "ic_lora";
 }
@@ -79516,6 +79577,7 @@ function buildJobBody(mode, args) {
     body.conditioning_mask = mask;
   }
   if (args.skipStage2) body.skip_stage_2 = true;
+  if (args.generateAudio === false) body.generate_audio = false;
   put(body, "negative_prompt", args.negativePrompt);
   put(body, "num_inference_steps", args.numInferenceSteps);
   put(body, "num_generated_keyframes", args.numGeneratedKeyframes);
@@ -81271,7 +81333,7 @@ var MUSIC_SCALES = [
   "SCALE_UNSPECIFIED"
 ];
 var MUSIC_GENERATION_MODES = ["QUALITY", "DIVERSITY", "VOCALIZATION"];
-var durationSchema = external_exports.number().min(5).max(300).default(30);
+var durationSchema2 = external_exports.number().min(5).max(300).default(30);
 var weightedPromptSchema = external_exports.object({
   text: external_exports.string().min(1, "Prompt text is required"),
   weight: external_exports.number().refine((v) => v !== 0, "Weight must be a non-zero value").default(1)
@@ -81297,14 +81359,14 @@ var musicGenerateSchema = external_exports.object({
   genre: external_exports.string().optional(),
   mood: external_exports.string().optional(),
   instruments: external_exports.array(external_exports.string()).optional(),
-  durationSeconds: durationSchema,
+  durationSeconds: durationSchema2,
   bpm: external_exports.number().min(60).max(200).optional(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("audio").optional()
 });
 var musicAdvancedSchema = external_exports.object({
   prompts: external_exports.array(weightedPromptSchema).min(1, "At least one prompt is required"),
-  durationSeconds: durationSchema,
+  durationSeconds: durationSchema2,
   config: musicConfigSchema.optional(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("audio").optional()
@@ -86196,23 +86258,44 @@ var ASTRA_LORA_PROPERTY = {
     ]
   }
 };
+var ASTRA_GUIDANCE_MEANING = {
+  video_cfg_guidance_scale: "Prompt adherence for the picture (CFG). Higher follows the prompt more literally but reduces variety; 1.0 = off.",
+  video_stg_guidance_scale: "Spatio-temporal guidance strength for the picture. Higher sharpens structure and motion coherence but can cost quality; 0.0 = off.",
+  video_rescale_scale: "Rescales the picture after guidance. Raise it when colours look oversaturated or burnt; 0.0 = off.",
+  video_skip_step: "Skip diffusion steps for the picture: 0 = none, 1 = every other step, 2 = two of every three. Faster, rougher.",
+  a2v_guidance_scale: "How strongly the audio drives the picture (audio-to-video cross-attention). Higher may tighten lip-sync; 1.0 = off.",
+  audio_cfg_guidance_scale: "Prompt adherence for the generated sound. Higher follows the prompt more literally; 1.0 = off.",
+  audio_stg_guidance_scale: "Spatio-temporal guidance strength for the sound; 0.0 = off.",
+  audio_rescale_scale: "Rescales the sound after guidance (experimental); 0.0 = off.",
+  audio_skip_step: "Skip diffusion steps for the sound, same scale as videoSkipStep.",
+  v2a_guidance_scale: "How strongly the picture drives the sound (video-to-audio cross-attention). Higher may tighten lip-sync; 1.0 = off."
+};
 var ASTRA_STG_BLOCKS_PROPERTY = {
   type: "array",
-  description: `Transformer blocks for spatio-temporal guidance: 1-${ASTRA_VIDEO_MAX_STG_BLOCKS} distinct integers 0-${ASTRA_VIDEO_MAX_STG_BLOCK} (engine default [28]).`,
+  description: `Transformer blocks perturbed by spatio-temporal guidance: 1-${ASTRA_VIDEO_MAX_STG_BLOCKS} distinct integers 0-${ASTRA_VIDEO_MAX_STG_BLOCK}. Only matters while the matching stg scale is above 0.`,
   minItems: 1,
   maxItems: ASTRA_VIDEO_MAX_STG_BLOCKS,
   uniqueItems: true,
   items: { type: "integer", minimum: 0, maximum: ASTRA_VIDEO_MAX_STG_BLOCK }
 };
+var ASTRA_DURATION_PROPERTY = {
+  type: "number",
+  exclusiveMinimum: 0,
+  description: "Clip length in seconds \u2014 the easy way to set length. Converted to the nearest 8k+1 frame count at frameRate (the shorter on a tie): at 24fps 1s\u219225, 2s\u219249, 4s\u219297, 5s\u2192121, 8s\u2192193 frames. Give only one of duration, numFrames and autoDuration (or audioMaxDuration); a length outside the mode's frame range is refused with the seconds it accepts."
+};
+var ASTRA_GENERATE_AUDIO_PROPERTY = {
+  type: "boolean",
+  description: "false = return a silent mp4 (the sound stream is stripped after generation; render time is the same). Default true. On audio2video false also removes the supplied sound. New in the 2026-10-17 server design: refused until that server change is live."
+};
 var ASTRA_GUIDANCE_PROPERTY = {
   type: "object",
-  description: `Engine guidance knobs, keyed by the engine's argument names in camelCase (videoCfgGuidanceScale = --video-cfg-guidance-scale). Every key is optional; an omitted key keeps the engine default. The ranges are the server's conservative bounds, not measured quality guidance. Accepted on the step-based modes only (tiers "guided", "fast", "hq", and the keyframe and audio2video tools) \u2014 never on tier "default". New in the 2026-10-17 server design: refused until that server change is live.`,
+  description: `Optional engine guidance knobs; leave it out unless a render needs correcting \u2014 every omitted key keeps the pipeline default, and the defaults are tuned. Typical fixes: ignores the prompt \u2192 raise videoCfgGuidanceScale (default 3.0) a little; oversaturated or burnt colours \u2192 raise videoRescaleScale or lower videoCfgGuidanceScale; lip-sync loose on audio2video \u2192 raise a2vGuidanceScale. Defaults for guided, fast, keyframe and audio2video: videoCfg 3.0 \xB7 videoStg 1.0 \xB7 videoRescale 0.7 \xB7 videoStgBlocks [28] \xB7 videoSkipStep 0 \xB7 a2v 3.0 \xB7 audioCfg 7.0 \xB7 audioStg 1.0 \xB7 audioRescale 0.7 \xB7 audioStgBlocks [28] \xB7 audioSkipStep 0 \xB7 v2a 3.0. tier "hq" differs: videoStg 0.0 \xB7 videoRescale 0.45 \xB7 videoStgBlocks [] \xB7 audioStg 0.0 \xB7 audioRescale 1.0. Ranges are the server's conservative bounds, not measured quality guidance. Accepted on the step-based modes only (tiers "guided", "fast", "hq", and the keyframe and audio2video tools). New in the 2026-10-17 server design: refused until that server change is live.`,
   properties: {
     ...Object.fromEntries(Object.entries(ASTRA_VIDEO_GUIDANCE_RANGES).map(([key, [minimum, maximum]]) => [guidanceToolKey(key), {
       type: key.endsWith("_skip_step") ? "integer" : "number",
       minimum,
       maximum,
-      description: `--${key.replaceAll("_", "-")} (${minimum}-${maximum}).`
+      description: `${ASTRA_GUIDANCE_MEANING[key]} Range ${minimum}-${maximum}. Engine flag --${key.replaceAll("_", "-")}.`
     }])),
     videoStgBlocks: ASTRA_STG_BLOCKS_PROPERTY,
     audioStgBlocks: ASTRA_STG_BLOCKS_PROPERTY
@@ -87941,7 +88024,7 @@ Do NOT use when someone is waiting: the box renders ONE job at a time and yours 
 tier picks the pipeline and also which arguments exist: lora only on "default", negativePrompt, numInferenceSteps and guidance only on "guided"/"fast"/"hq". "hq" is the two-stage high-quality pipeline (new in the 2026-10-17 server design, unmeasured and refused until that server change is live). "fast" means a draft that is faster than "guided"; it is not faster than the default pipeline. Passing one to the wrong tier is refused before the call.
 Length is frames, not seconds: numFrames must be 8k+1, minimum 25. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} 121 = about 5.0s at 24fps, the server default. Give autoDuration instead to let the server choose at most 121 frames; the rounded range must contain an 8k+1 value. numFrames wins if both are given.
 ${ASTRA_LIMITS_LINE}
-Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off \u2014 no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
+Every clip comes back with a generated AAC audio track (48kHz stereo, measured). Set generateAudio: false when the episode lays its own narration or BGM over the clip \u2014 the server strips the sound after generation (same render time). generateAudio is new in the 2026-10-17 server design and refused until that server change is live; until then drop or duck the track in the edit.
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
     inputSchema: {
@@ -87953,7 +88036,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         },
         tier: {
           type: "string",
-          description: 'Pipeline: "default" (generate \u2014 the only tier taking lora), "guided" (slower, takes negativePrompt, numInferenceSteps and guidance), "fast" (guided_fast \u2014 768x512 draft, 32-pixel grid, faster than guided but not faster than default), "hq" (guided_hq \u2014 two-stage high quality, unmeasured, refused until the server change is live).',
+          description: 'Pipeline \u2014 pick by what the shot needs. "default" (generate, ~66s for 121 frames): the fastest and the usual choice; the only tier taking lora. "guided" (~169s): slower, and the tier to use when the picture must follow a detailed prompt or avoid something (negativePrompt), or when you need numInferenceSteps or guidance. "fast" (guided_fast, ~121s): a 768x512 draft of guided on a 32-pixel grid \u2014 faster than guided but not faster than default; use it to preview a guided prompt. "hq" (guided_hq): the two-stage high-quality pipeline for a hero shot where render time does not matter; unmeasured, refused until the server change is live.',
           enum: ["default", "guided", "fast", "hq"],
           default: "default"
         },
@@ -87963,6 +88046,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         height: ASTRA_HEIGHT_PROPERTY,
         frameRate: ASTRA_FRAME_RATE_PROPERTY,
         seed: ASTRA_SEED_PROPERTY,
+        duration: ASTRA_DURATION_PROPERTY,
+        generateAudio: ASTRA_GENERATE_AUDIO_PROPERTY,
         lora: ASTRA_LORA_PROPERTY,
         negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
         numInferenceSteps: ASTRA_STEPS_PROPERTY,
@@ -87986,7 +88071,7 @@ tier accepts default (generate), guided, or hq (guided_hq \u2014 unmeasured, ref
 The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. autoDuration lets the server choose at most 121 frames from a first still alone; it is refused with lastFramePath unless numFrames is also given (numFrames wins). png, jpg and jpeg are accepted, up to 32 MiB each.
 Warning: image-conditioned generate (width 1280, measured at heights 704/768) failure frames: {121,129,137}; guided (width 1280, measured at height 704) failure frames: {121}. Guided 129/137 succeeded at 1280x704 in server probes (the only guided size probed), but the existing client guided ceiling is 121. The client requires 1536x1024 for guided images, so the guided 1280x704 probes are not client alternatives. Within current client limits use generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at 121 frames also succeeded. Text-only 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause. The server owns the failure-band acceptance gate; this warning adds no client-side block.
 ${ASTRA_LIMITS_LINE}
-Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off \u2014 no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
+Every clip comes back with a generated AAC audio track (48kHz stereo, measured). Set generateAudio: false when the episode lays its own narration or BGM over the clip \u2014 the server strips the sound after generation (same render time). generateAudio is new in the 2026-10-17 server design and refused until that server change is live; until then drop or duck the track in the edit.
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
     inputSchema: {
@@ -88020,6 +88105,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         height: ASTRA_HEIGHT_PROPERTY,
         frameRate: ASTRA_FRAME_RATE_PROPERTY,
         seed: ASTRA_SEED_PROPERTY,
+        duration: ASTRA_DURATION_PROPERTY,
+        generateAudio: ASTRA_GENERATE_AUDIO_PROPERTY,
         lora: ASTRA_LORA_PROPERTY,
         negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
         numInferenceSteps: ASTRA_STEPS_PROPERTY,
@@ -88041,7 +88128,7 @@ Use when the shot has to hit specific compositions in a specific order \u2014 a 
 Do NOT use for one or two stills (astra_img2video is simpler) or when the clip is driven by sound (astra_audio2video).
 frameIdx is 0-based and must be inside the clip: a 121-frame render accepts 0-120. This mode has no length-guessing and no adapters \u2014 autoDuration, numGeneratedKeyframes and lora do not exist here and are refused before the call. A measured 121-frame render took about 184s plus queue.
 ${ASTRA_LIMITS_LINE}
-Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off \u2014 no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
+Every clip comes back with a generated AAC audio track (48kHz stereo, measured). Set generateAudio: false when the episode lays its own narration or BGM over the clip \u2014 the server strips the sound after generation (same render time). generateAudio is new in the 2026-10-17 server design and refused until that server change is live; until then drop or duck the track in the edit.
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
     inputSchema: {
@@ -88085,6 +88172,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         height: ASTRA_HEIGHT_PROPERTY,
         frameRate: ASTRA_FRAME_RATE_PROPERTY,
         seed: ASTRA_SEED_PROPERTY,
+        duration: ASTRA_DURATION_PROPERTY,
+        generateAudio: ASTRA_GENERATE_AUDIO_PROPERTY,
         negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
         numInferenceSteps: ASTRA_STEPS_PROPERTY,
         guidance: ASTRA_GUIDANCE_PROPERTY,
@@ -88147,6 +88236,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         height: ASTRA_HEIGHT_PROPERTY,
         frameRate: ASTRA_FRAME_RATE_PROPERTY,
         seed: ASTRA_SEED_PROPERTY,
+        duration: ASTRA_DURATION_PROPERTY,
+        generateAudio: ASTRA_GENERATE_AUDIO_PROPERTY,
         negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
         numInferenceSteps: ASTRA_STEPS_PROPERTY,
         guidance: ASTRA_GUIDANCE_PROPERTY,
@@ -88180,7 +88271,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         adapter: {
           type: "string",
           enum: [...ASTRA_VIDEO_IC_LORA_ADAPTERS],
-          description: 'IC-LoRA adapter. "ingredients" runs as the existing ingredients mode; the rest run as mode ic_lora.'
+          description: 'What to do with the reference. "ingredients": generate a NEW clip conditioned on a reference sheet \u2014 one composite image laying out the characters, objects and look to use (runs today as the ingredients mode). "clean-plate": remove people, pedestrians and vehicles from a reference clip and rebuild the empty background (VFX plate). "colorization": restore natural colour to grayscale, monochrome or desaturated video. "day-to-night": re-render a daytime clip as the same shot at night. "deblur": remove blur from a reference clip. "decompression": remove compression artefacts from low-bit-rate or heavily compressed video. "water-simulation": add water to a clip \u2014 rivers, surf, rain, waterfalls, floods, splashes. "pixel-upscaler-x2": creatively upscale a low-resolution clip 2x \u2014 request width/height twice the reference size. Every adapter except ingredients runs as mode ic_lora and is refused until the server change is live; per-adapter quality and strengths are unmeasured.'
         },
         referencePath: {
           type: "string",
@@ -88211,6 +88302,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         height: ASTRA_HEIGHT_PROPERTY,
         frameRate: ASTRA_FRAME_RATE_PROPERTY,
         seed: ASTRA_SEED_PROPERTY,
+        duration: ASTRA_DURATION_PROPERTY,
+        generateAudio: ASTRA_GENERATE_AUDIO_PROPERTY,
         outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
         filename: ASTRA_FILENAME_PROPERTY
       },
@@ -88228,7 +88321,7 @@ Do NOT use to make a clip longer or to change its size: the output inherits the 
 The SOURCE has to be on the grid already \u2014 8k+1 frames, both sides a multiple of 32 \u2014 or the server refuses at acceptance. A clip this API produced always qualifies. A measured retake took about 80s plus queue.
 The tool checks the upload response before submission: endTime must not pass source frames/fps, so an invalid source or span does not consume a queue slot.
 ${ASTRA_LIMITS_LINE}
-Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off \u2014 no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
+Every clip comes back with a generated AAC audio track (48kHz stereo, measured). Set generateAudio: false when the episode lays its own narration or BGM over the clip \u2014 the server strips the sound after generation (same render time). generateAudio is new in the 2026-10-17 server design and refused until that server change is live; until then drop or duck the track in the edit.
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
     inputSchema: {
@@ -88251,11 +88344,24 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
           description: "Where the re-rolled span ends, in seconds. Must be greater than startTime and no later than the uploaded source duration."
         },
         seed: ASTRA_SEED_PROPERTY,
+        generateAudio: ASTRA_GENERATE_AUDIO_PROPERTY,
         outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
         filename: ASTRA_FILENAME_PROPERTY
       },
       required: ["prompt", "sourceVideoPath", "startTime", "endTime"]
     }
+  },
+  {
+    name: "astra_video_capabilities",
+    title: "ASTRA video capabilities (live limits)",
+    annotations: HINT.read,
+    description: `Read the live ASTRA video server's own capability report (GET /v1/models): for each mode the fields it accepts, frame and pixel ceilings, blocked width/frame combinations, the lora and IC-LoRA catalogs, and the rate limits \u2014 the values that process actually enforces right now.
+
+Use before an unusual request (a new adapter, guidance, hq, a large size, a long clip) when you are unsure the server accepts it: the tool descriptions record the 2026-10-17 design, and the live server can lag behind them or differ. A field missing from a mode in this report is refused with a 400.
+Do NOT call it before every render \u2014 the ordinary arguments are already checked locally, and the server rate-limits queries per minute.
+
+Returns: the server's JSON report verbatim. No arguments.`,
+    inputSchema: { type: "object", properties: {}, additionalProperties: false }
   },
   {
     name: "astra_video_list_uploads",
@@ -95530,14 +95636,14 @@ var VALID_OMNI_RESOLUTIONS = ["360p", "720p", "1080p", "4k"];
 var POLL_INTERVAL_MS4 = 5e3;
 var MAX_POLLS3 = 120;
 var FILES_API_HOST = "https://generativelanguage.googleapis.com";
-var durationSchema2 = external_exports.number().int().min(3).max(10).optional().default(8);
+var durationSchema3 = external_exports.number().int().min(3).max(10).optional().default(8);
 var resolutionSchema = external_exports.enum(VALID_OMNI_RESOLUTIONS).optional().default("720p");
 var aspectRatioSchema = external_exports.enum(VALID_OMNI_ASPECT_RATIOS).optional().default("16:9");
 var omniText2VideoSchema = external_exports.object({
   prompt: external_exports.string().min(1, "Prompt is required"),
   aspectRatio: aspectRatioSchema,
   resolution: resolutionSchema,
-  durationSeconds: durationSchema2,
+  durationSeconds: durationSchema3,
   seed: external_exports.number().int().optional(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("video").optional()
@@ -95548,7 +95654,7 @@ var omniImg2VideoSchema = external_exports.object({
   lastImagePath: external_exports.string().optional(),
   aspectRatio: aspectRatioSchema,
   resolution: resolutionSchema,
-  durationSeconds: durationSchema2,
+  durationSeconds: durationSchema3,
   seed: external_exports.number().int().optional(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("video").optional()
@@ -95572,7 +95678,7 @@ function requireOneSource(data, ctx) {
     });
   }
 }
-var omniExtendSchema = external_exports.object({ ...continuationFields, durationSeconds: durationSchema2 }).superRefine(requireOneSource);
+var omniExtendSchema = external_exports.object({ ...continuationFields, durationSeconds: durationSchema3 }).superRefine(requireOneSource);
 var omniEditSchema = external_exports.object(continuationFields).superRefine(requireOneSource);
 function sleep8(ms) {
   return new Promise((resolve11) => setTimeout(resolve11, ms));
@@ -97929,7 +98035,7 @@ function capabilityStatus() {
           provider: "astra video (self-hosted LTX-2.5)",
           configured: has2(config2.astraVideoApiKey),
           needs: "ASTRA_VIDEO",
-          note: "astra_text2video \xB7 astra_img2video \xB7 astra_keyframe_video \xB7 astra_audio2video \xB7 astra_ic_lora \xB7 astra_video_retake \xB7 astra_video_list_uploads \xB7 astra_video_delete_upload (upload management requires server endpoint support; configuration is not a live check) \u2014 our own box, no per-call bill, but ONE render at a time (66-184s each plus queue); the batch lane, not the interactive one"
+          note: "astra_text2video \xB7 astra_img2video \xB7 astra_keyframe_video \xB7 astra_audio2video \xB7 astra_ic_lora \xB7 astra_video_retake \xB7 astra_video_capabilities \xB7 astra_video_list_uploads \xB7 astra_video_delete_upload (upload management requires server endpoint support; configuration is not a live check) \u2014 our own box, no per-call bill, but ONE render at a time (66-184s each plus queue); the batch lane, not the interactive one"
         }
       ]
     },
@@ -98941,6 +99047,14 @@ Audio duration (seconds): ${result.audioDuration ?? "unknown (reused upload or m
       return text(JSON.stringify(await listUploads()));
     } catch (error2) {
       return text(error2 instanceof Error ? error2.message : "ASTRA upload listing failed", true);
+    }
+  },
+  astra_video_capabilities: async (args) => {
+    parseArgs(astraVideoCapabilitiesSchema, args);
+    try {
+      return text(JSON.stringify(await getCapabilities()));
+    } catch (error2) {
+      return text(error2 instanceof Error ? error2.message : "ASTRA capabilities lookup failed", true);
     }
   },
   astra_video_delete_upload: async (args) => {

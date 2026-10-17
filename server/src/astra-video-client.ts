@@ -124,13 +124,15 @@ export const ASTRA_VIDEO_MEASURED_FIELDS: Record<string, readonly string[]> = {
  * so re-probing after the deploy can fold them in — or strike them — in one place.
  */
 const ASTRA_VIDEO_DESIGN_FIELDS: Record<string, readonly string[]> = {
-  guided: ['guidance'],
-  guided_fast: ['guidance'],
-  keyframe: ['guidance'],
-  audio2video: ['guidance'],
-  guided_hq: [...ASTRA_VIDEO_MEASURED_FIELDS.guided, 'guidance'],
-  ingredients: ['conditioning_mask', 'skip_stage_2'],
-  ic_lora: [...ASTRA_VIDEO_MEASURED_FIELDS.ingredients, 'adapter', 'conditioning_mask', 'skip_stage_2'],
+  generate: ['generate_audio'],
+  guided: ['guidance', 'generate_audio'],
+  guided_fast: ['guidance', 'generate_audio'],
+  keyframe: ['guidance', 'generate_audio'],
+  audio2video: ['guidance', 'generate_audio'],
+  guided_hq: [...ASTRA_VIDEO_MEASURED_FIELDS.guided, 'guidance', 'generate_audio'],
+  ingredients: ['conditioning_mask', 'skip_stage_2', 'generate_audio'],
+  ic_lora: [...ASTRA_VIDEO_MEASURED_FIELDS.ingredients, 'adapter', 'conditioning_mask', 'skip_stage_2', 'generate_audio'],
+  retake: ['generate_audio'],
 };
 
 /** Every field the client may send per mode: measured allow-lists plus the design additions. */
@@ -198,6 +200,7 @@ const TRANSFER_TIMEOUT_MS = 600_000;
 // Upload management is a provisional client contract until the server endpoints ship.
 // Reject unknown input keys rather than silently deleting a different caller-selected item.
 export const astraVideoListUploadsSchema = z.object({}).strict();
+export const astraVideoCapabilitiesSchema = z.object({}).strict();
 export const astraVideoDeleteUploadSchema = z.object({
   uploadId: z.string().min(1).max(256).regex(/^[A-Za-z0-9_-]+$/, 'uploadId must be a bare upload identifier'),
 }).strict();
@@ -239,6 +242,28 @@ export async function listUploads(): Promise<z.infer<typeof uploadListingSchema>
   }
 }
 
+/**
+ * The live server's own capability report (`GET /v1/models`, behind the key): per-mode fields,
+ * ceilings, blocked combos and catalogs as this process enforces them. Read-only; the server
+ * rate-limits it like any query. The body is returned as parsed JSON, not re-shaped.
+ */
+export async function getCapabilities(): Promise<unknown> {
+  const result = await requestRaw('get', `${astraVideoBaseUrl()}/v1/models`, authHeaders(), undefined, STATUS_TIMEOUT_MS);
+  if (!result.ok || result.status !== 200) {
+    const reason = result.status === 401 || result.status === 403 ? 'The server refused access. Check ASTRA_VIDEO.'
+      : result.status === 429 ? 'The server rate limit was reached. Try again in a minute.'
+        : 'The server could not answer. Check server availability before retrying.';
+    throw new Error(`ASTRA video capabilities failed (HTTP ${result.status}): ${reason}`);
+  }
+  try {
+    const parsed: unknown = JSON.parse(result.body);
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('not an object');
+    return parsed;
+  } catch {
+    throw new Error(`ASTRA video capabilities failed (HTTP ${result.status}): the server did not return a JSON capability report.`);
+  }
+}
+
 export async function deleteUpload(args: z.infer<typeof astraVideoDeleteUploadSchema>): Promise<{ upload_id: string; deleted: true }> {
   const { uploadId: upload_id } = astraVideoDeleteUploadSchema.parse(args);
   const result = await requestRaw('delete', `${astraVideoBaseUrl()}/v1/uploads/${encodeURIComponent(upload_id)}`, authHeaders(), undefined, STATUS_TIMEOUT_MS);
@@ -269,6 +294,52 @@ const numFramesSchema = (mode: AstraFrameMode) => z
     message: `numFrames must be 8k+1 (25, 33, 41 … ${ASTRA_VIDEO_FRAME_LIMITS[mode]})`,
   })
   .optional();
+
+/**
+ * `duration` (seconds) → frames, the server's rule (ltx-api contract 2026-10-17): the nearest 8k+1
+ * to seconds × frameRate, the shorter one on a tie. 5s→121 · 4s→97 · 2s→49 · 1s→25 at 24fps.
+ */
+export function framesForSeconds(seconds: number, frameRate = 24): number {
+  // Same expression as the server's duration_to_frames, epsilon included, so a float near-tie
+  // (2.2105…s × 23.976 = 53.000000000000001) lands on the same frame count on both sides.
+  const frames = seconds * frameRate;
+  return 1 + ASTRA_VIDEO_FRAME_STEP * Math.ceil((frames - 1) / ASTRA_VIDEO_FRAME_STEP - 0.5 - 1e-9);
+}
+
+const durationSchema = z.number().positive().finite().optional();
+
+/** One length argument only, and the converted frame count must fit the mode. */
+function checkDuration(
+  data: { duration?: number; numFrames?: number; autoDuration?: unknown; audioMaxDuration?: number; frameRate?: number },
+  mode: AstraFrameMode,
+  ctx: z.RefinementCtx,
+): void {
+  if (data.duration === undefined) return;
+  for (const other of ['numFrames', 'autoDuration', 'audioMaxDuration'] as const) {
+    if (data[other] !== undefined) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['duration'], message: `duration and ${other} are mutually exclusive — give one length` });
+    }
+  }
+  const fps = data.frameRate ?? 24;
+  const frames = framesForSeconds(data.duration, fps);
+  const max = ASTRA_VIDEO_FRAME_LIMITS[mode];
+  if (frames < ASTRA_VIDEO_MIN_FRAMES || frames > max) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['duration'],
+      message: `duration ${data.duration}s at ${fps}fps is ${frames} frames; mode ${mode} takes ${ASTRA_VIDEO_MIN_FRAMES}-${max} frames, about ${(ASTRA_VIDEO_MIN_FRAMES / fps).toFixed(2)}-${(max / fps).toFixed(2)}s`,
+    });
+  }
+}
+
+/** The tool sends frames: `duration` becomes numFrames, so every frame check below applies to it. */
+function resolveDuration<T extends { duration?: number; numFrames?: number; frameRate?: number }>(data: T): Omit<T, 'duration'> {
+  const { duration, ...rest } = data;
+  return duration === undefined ? rest : { ...rest, numFrames: framesForSeconds(duration, data.frameRate ?? 24) };
+}
+
+/** `generateAudio: false` strips the sound stream after generation (same GPU time). */
+const generateAudioSchema = z.boolean().optional();
 
 const seedSchema = z.number().int().min(0).max(ASTRA_VIDEO_MAX_SEED).optional();
 const frameRateSchema = z.number().min(1).max(60).optional();
@@ -411,6 +482,8 @@ export const astraText2VideoSchema = z
     height: heightSchema,
     frameRate: frameRateSchema,
     seed: seedSchema,
+    duration: durationSchema,
+    generateAudio: generateAudioSchema,
     lora: loraSchema,
     negativePrompt: negativePromptSchema,
     numInferenceSteps: numInferenceStepsSchema,
@@ -419,6 +492,7 @@ export const astraText2VideoSchema = z
     ...outputFields,
   })
   .superRefine((data, ctx) => {
+    checkDuration(data, ASTRA_VIDEO_TIERS[data.tier], ctx);
     const mode = ASTRA_VIDEO_TIERS[data.tier];
     if (data.numFrames !== undefined && data.numFrames > ASTRA_VIDEO_FRAME_LIMITS[mode]) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['numFrames'], message: `numFrames must be at most ${ASTRA_VIDEO_FRAME_LIMITS[mode]} for mode ${mode}` });
@@ -453,7 +527,8 @@ export const astraText2VideoSchema = z
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['autoDuration'], message: durationError });
       }
     }
-  });
+  })
+  .transform(resolveDuration);
 
 /**
  * astra_img2video — generate or guided with one or two stills pinned to frames.
@@ -475,6 +550,8 @@ export const astraImg2VideoSchema = z
     height: heightSchema,
     frameRate: frameRateSchema,
     seed: seedSchema,
+    duration: durationSchema,
+    generateAudio: generateAudioSchema,
     lora: loraSchema,
     negativePrompt: negativePromptSchema,
     numInferenceSteps: numInferenceStepsSchema,
@@ -483,6 +560,7 @@ export const astraImg2VideoSchema = z
     ...outputFields,
   })
   .superRefine((data, ctx) => {
+    checkDuration(data, ASTRA_VIDEO_TIERS[data.tier], ctx);
     const mode = ASTRA_VIDEO_TIERS[data.tier];
     if (data.numFrames !== undefined && data.numFrames > ASTRA_VIDEO_FRAME_LIMITS[mode]) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['numFrames'], message: `numFrames must be at most ${ASTRA_VIDEO_FRAME_LIMITS[mode]} for mode ${mode}` });
@@ -523,7 +601,8 @@ export const astraImg2VideoSchema = z
     if (dimensionError) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['width'], message: dimensionError });
     }
-  });
+  })
+  .transform(resolveDuration);
 
 /** astra_keyframe_video — mode keyframe. 2-8 stills, each pinned to a frame index. */
 export const astraKeyframeVideoSchema = z
@@ -545,23 +624,27 @@ export const astraKeyframeVideoSchema = z
     height: heightSchema,
     frameRate: frameRateSchema,
     seed: seedSchema,
+    duration: durationSchema,
+    generateAudio: generateAudioSchema,
     negativePrompt: negativePromptSchema,
     numInferenceSteps: numInferenceStepsSchema,
     guidance: guidanceSchema,
     ...outputFields,
   })
   .superRefine((data, ctx) => {
+    checkDuration(data, 'keyframe', ctx);
     const dimensionError = checkDimensions(data.width, data.height, 'keyframe');
     if (dimensionError) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['width'], message: dimensionError });
     }
     data.images.forEach((image, index) => {
-      const frameError = checkFrameIdx(image.frameIdx, data.numFrames);
+      const frameError = checkFrameIdx(image.frameIdx, data.numFrames ?? (data.duration === undefined ? undefined : framesForSeconds(data.duration, data.frameRate ?? 24)));
       if (frameError) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['images', index, 'frameIdx'], message: frameError });
       }
     });
-  });
+  })
+  .transform(resolveDuration);
 
 /** astra_audio2video — mode audio2video. The clip is driven by an uploaded wav/mp3. */
 export const astraAudio2VideoSchema = z
@@ -579,12 +662,15 @@ export const astraAudio2VideoSchema = z
     height: heightSchema,
     frameRate: frameRateSchema,
     seed: seedSchema,
+    duration: durationSchema,
+    generateAudio: generateAudioSchema,
     negativePrompt: negativePromptSchema,
     numInferenceSteps: numInferenceStepsSchema,
     guidance: guidanceSchema,
     ...outputFields,
   })
   .superRefine((data, ctx) => {
+    checkDuration(data, 'audio2video', ctx);
     if ((data.audioPath !== undefined) === (data.audioUploadId !== undefined)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['audioPath'], message: 'Provide exactly one of audioPath or audioUploadId' });
     }
@@ -599,7 +685,8 @@ export const astraAudio2VideoSchema = z
         message: 'audioMaxDuration and numFrames are mutually exclusive',
       });
     }
-  });
+  })
+  .transform(resolveDuration);
 
 /**
  * astra_video_retake — mode retake. Re-rolls one time span of an existing clip.
@@ -615,6 +702,7 @@ export const astraVideoRetakeSchema = z
     startTime: z.number().min(0),
     endTime: z.number().positive(),
     seed: seedSchema,
+    generateAudio: generateAudioSchema,
     ...outputFields,
   })
   .superRefine((data, ctx) => {
@@ -659,9 +747,12 @@ export const astraIcLoraSchema = z
     height: heightSchema,
     frameRate: frameRateSchema,
     seed: seedSchema,
+    duration: durationSchema,
+    generateAudio: generateAudioSchema,
     ...outputFields,
   })
   .superRefine((data, ctx) => {
+    checkDuration(data, icLoraMode(data.adapter), ctx);
     const referenceIssue = uploadKindIssue(data.referencePath, ['image', 'video'], 'referencePath');
     if (referenceIssue) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['referencePath'], message: referenceIssue });
     if (data.conditioningMaskPath !== undefined) {
@@ -674,7 +765,8 @@ export const astraIcLoraSchema = z
     if (dimensionError) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['width'], message: dimensionError });
     }
-  });
+  })
+  .transform(resolveDuration);
 
 export function icLoraMode(adapter: AstraIcLoraAdapter): 'ingredients' | 'ic_lora' {
   return adapter === 'ingredients' ? 'ingredients' : 'ic_lora';
@@ -835,6 +927,7 @@ export function buildJobBody(
     references?: Array<{ uploadId: string; strength?: number }>;
     conditioningMask?: { uploadId: string; strength?: number };
     skipStage2?: boolean;
+    generateAudio?: boolean;
     negativePrompt?: string;
     numInferenceSteps?: number;
     numGeneratedKeyframes?: number;
@@ -884,6 +977,8 @@ export function buildJobBody(
   }
   // Only true is sent: false is the engine default, and omitting it keeps the measured body.
   if (args.skipStage2) body.skip_stage_2 = true;
+  // Only false is sent: true is the server default, and omitting it keeps the measured body.
+  if (args.generateAudio === false) body.generate_audio = false;
   put(body, 'negative_prompt', args.negativePrompt);
   put(body, 'num_inference_steps', args.numInferenceSteps);
   put(body, 'num_generated_keyframes', args.numGeneratedKeyframes);

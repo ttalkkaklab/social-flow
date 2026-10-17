@@ -180,23 +180,44 @@ const ASTRA_LORA_PROPERTY = {
         ],
     },
 };
+/** What each engine knob does (engine `--help`), so an agent can choose without the manual. */
+const ASTRA_GUIDANCE_MEANING = {
+    video_cfg_guidance_scale: 'Prompt adherence for the picture (CFG). Higher follows the prompt more literally but reduces variety; 1.0 = off.',
+    video_stg_guidance_scale: 'Spatio-temporal guidance strength for the picture. Higher sharpens structure and motion coherence but can cost quality; 0.0 = off.',
+    video_rescale_scale: 'Rescales the picture after guidance. Raise it when colours look oversaturated or burnt; 0.0 = off.',
+    video_skip_step: 'Skip diffusion steps for the picture: 0 = none, 1 = every other step, 2 = two of every three. Faster, rougher.',
+    a2v_guidance_scale: 'How strongly the audio drives the picture (audio-to-video cross-attention). Higher may tighten lip-sync; 1.0 = off.',
+    audio_cfg_guidance_scale: 'Prompt adherence for the generated sound. Higher follows the prompt more literally; 1.0 = off.',
+    audio_stg_guidance_scale: 'Spatio-temporal guidance strength for the sound; 0.0 = off.',
+    audio_rescale_scale: 'Rescales the sound after guidance (experimental); 0.0 = off.',
+    audio_skip_step: 'Skip diffusion steps for the sound, same scale as videoSkipStep.',
+    v2a_guidance_scale: 'How strongly the picture drives the sound (video-to-audio cross-attention). Higher may tighten lip-sync; 1.0 = off.',
+};
 const ASTRA_STG_BLOCKS_PROPERTY = {
     type: 'array',
-    description: `Transformer blocks for spatio-temporal guidance: 1-${ASTRA_VIDEO_MAX_STG_BLOCKS} distinct integers 0-${ASTRA_VIDEO_MAX_STG_BLOCK} (engine default [28]).`,
+    description: `Transformer blocks perturbed by spatio-temporal guidance: 1-${ASTRA_VIDEO_MAX_STG_BLOCKS} distinct integers 0-${ASTRA_VIDEO_MAX_STG_BLOCK}. Only matters while the matching stg scale is above 0.`,
     minItems: 1,
     maxItems: ASTRA_VIDEO_MAX_STG_BLOCKS,
     uniqueItems: true,
     items: { type: 'integer', minimum: 0, maximum: ASTRA_VIDEO_MAX_STG_BLOCK },
 };
+const ASTRA_DURATION_PROPERTY = {
+    type: 'number', exclusiveMinimum: 0,
+    description: 'Clip length in seconds — the easy way to set length. Converted to the nearest 8k+1 frame count at frameRate (the shorter on a tie): at 24fps 1s→25, 2s→49, 4s→97, 5s→121, 8s→193 frames. Give only one of duration, numFrames and autoDuration (or audioMaxDuration); a length outside the mode\'s frame range is refused with the seconds it accepts.',
+};
+const ASTRA_GENERATE_AUDIO_PROPERTY = {
+    type: 'boolean',
+    description: 'false = return a silent mp4 (the sound stream is stripped after generation; render time is the same). Default true. On audio2video false also removes the supplied sound. New in the 2026-10-17 server design: refused until that server change is live.',
+};
 const ASTRA_GUIDANCE_PROPERTY = {
     type: 'object',
-    description: 'Engine guidance knobs, keyed by the engine\'s argument names in camelCase (videoCfgGuidanceScale = --video-cfg-guidance-scale). Every key is optional; an omitted key keeps the engine default. The ranges are the server\'s conservative bounds, not measured quality guidance. Accepted on the step-based modes only (tiers "guided", "fast", "hq", and the keyframe and audio2video tools) — never on tier "default". New in the 2026-10-17 server design: refused until that server change is live.',
+    description: 'Optional engine guidance knobs; leave it out unless a render needs correcting — every omitted key keeps the pipeline default, and the defaults are tuned. Typical fixes: ignores the prompt → raise videoCfgGuidanceScale (default 3.0) a little; oversaturated or burnt colours → raise videoRescaleScale or lower videoCfgGuidanceScale; lip-sync loose on audio2video → raise a2vGuidanceScale. Defaults for guided, fast, keyframe and audio2video: videoCfg 3.0 · videoStg 1.0 · videoRescale 0.7 · videoStgBlocks [28] · videoSkipStep 0 · a2v 3.0 · audioCfg 7.0 · audioStg 1.0 · audioRescale 0.7 · audioStgBlocks [28] · audioSkipStep 0 · v2a 3.0. tier "hq" differs: videoStg 0.0 · videoRescale 0.45 · videoStgBlocks [] · audioStg 0.0 · audioRescale 1.0. Ranges are the server\'s conservative bounds, not measured quality guidance. Accepted on the step-based modes only (tiers "guided", "fast", "hq", and the keyframe and audio2video tools). New in the 2026-10-17 server design: refused until that server change is live.',
     properties: {
         ...Object.fromEntries(Object.entries(ASTRA_VIDEO_GUIDANCE_RANGES).map(([key, [minimum, maximum]]) => [guidanceToolKey(key), {
                 type: key.endsWith('_skip_step') ? 'integer' : 'number',
                 minimum,
                 maximum,
-                description: `--${key.replaceAll('_', '-')} (${minimum}-${maximum}).`,
+                description: `${ASTRA_GUIDANCE_MEANING[key]} Range ${minimum}-${maximum}. Engine flag --${key.replaceAll('_', '-')}.`,
             }])),
         videoStgBlocks: ASTRA_STG_BLOCKS_PROPERTY,
         audioStgBlocks: ASTRA_STG_BLOCKS_PROPERTY,
@@ -1920,7 +1941,7 @@ Do NOT use when someone is waiting: the box renders ONE job at a time and yours 
 tier picks the pipeline and also which arguments exist: lora only on "default", negativePrompt, numInferenceSteps and guidance only on "guided"/"fast"/"hq". "hq" is the two-stage high-quality pipeline (new in the 2026-10-17 server design, unmeasured and refused until that server change is live). "fast" means a draft that is faster than "guided"; it is not faster than the default pipeline. Passing one to the wrong tier is refused before the call.
 Length is frames, not seconds: numFrames must be 8k+1, minimum 25. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} 121 = about 5.0s at 24fps, the server default. Give autoDuration instead to let the server choose at most 121 frames; the rounded range must contain an 8k+1 value. numFrames wins if both are given.
 ${ASTRA_LIMITS_LINE}
-Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off — no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
+Every clip comes back with a generated AAC audio track (48kHz stereo, measured). Set generateAudio: false when the episode lays its own narration or BGM over the clip — the server strips the sound after generation (same render time). generateAudio is new in the 2026-10-17 server design and refused until that server change is live; until then drop or duck the track in the edit.
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
         inputSchema: {
@@ -1932,7 +1953,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                 },
                 tier: {
                     type: 'string',
-                    description: 'Pipeline: "default" (generate — the only tier taking lora), "guided" (slower, takes negativePrompt, numInferenceSteps and guidance), "fast" (guided_fast — 768x512 draft, 32-pixel grid, faster than guided but not faster than default), "hq" (guided_hq — two-stage high quality, unmeasured, refused until the server change is live).',
+                    description: 'Pipeline — pick by what the shot needs. "default" (generate, ~66s for 121 frames): the fastest and the usual choice; the only tier taking lora. "guided" (~169s): slower, and the tier to use when the picture must follow a detailed prompt or avoid something (negativePrompt), or when you need numInferenceSteps or guidance. "fast" (guided_fast, ~121s): a 768x512 draft of guided on a 32-pixel grid — faster than guided but not faster than default; use it to preview a guided prompt. "hq" (guided_hq): the two-stage high-quality pipeline for a hero shot where render time does not matter; unmeasured, refused until the server change is live.',
                     enum: ['default', 'guided', 'fast', 'hq'],
                     default: 'default',
                 },
@@ -1942,6 +1963,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                 height: ASTRA_HEIGHT_PROPERTY,
                 frameRate: ASTRA_FRAME_RATE_PROPERTY,
                 seed: ASTRA_SEED_PROPERTY,
+                duration: ASTRA_DURATION_PROPERTY,
+                generateAudio: ASTRA_GENERATE_AUDIO_PROPERTY,
                 lora: ASTRA_LORA_PROPERTY,
                 negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
                 numInferenceSteps: ASTRA_STEPS_PROPERTY,
@@ -1965,7 +1988,7 @@ tier accepts default (generate), guided, or hq (guided_hq — unmeasured, refuse
 The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. autoDuration lets the server choose at most 121 frames from a first still alone; it is refused with lastFramePath unless numFrames is also given (numFrames wins). png, jpg and jpeg are accepted, up to 32 MiB each.
 Warning: image-conditioned generate (width 1280, measured at heights 704/768) failure frames: {121,129,137}; guided (width 1280, measured at height 704) failure frames: {121}. Guided 129/137 succeeded at 1280x704 in server probes (the only guided size probed), but the existing client guided ceiling is 121. The client requires 1536x1024 for guided images, so the guided 1280x704 probes are not client alternatives. Within current client limits use generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at 121 frames also succeeded. Text-only 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause. The server owns the failure-band acceptance gate; this warning adds no client-side block.
 ${ASTRA_LIMITS_LINE}
-Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off — no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
+Every clip comes back with a generated AAC audio track (48kHz stereo, measured). Set generateAudio: false when the episode lays its own narration or BGM over the clip — the server strips the sound after generation (same render time). generateAudio is new in the 2026-10-17 server design and refused until that server change is live; until then drop or duck the track in the edit.
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
         inputSchema: {
@@ -1997,6 +2020,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                 height: ASTRA_HEIGHT_PROPERTY,
                 frameRate: ASTRA_FRAME_RATE_PROPERTY,
                 seed: ASTRA_SEED_PROPERTY,
+                duration: ASTRA_DURATION_PROPERTY,
+                generateAudio: ASTRA_GENERATE_AUDIO_PROPERTY,
                 lora: ASTRA_LORA_PROPERTY,
                 negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
                 numInferenceSteps: ASTRA_STEPS_PROPERTY,
@@ -2018,7 +2043,7 @@ Use when the shot has to hit specific compositions in a specific order — a sto
 Do NOT use for one or two stills (astra_img2video is simpler) or when the clip is driven by sound (astra_audio2video).
 frameIdx is 0-based and must be inside the clip: a 121-frame render accepts 0-120. This mode has no length-guessing and no adapters — autoDuration, numGeneratedKeyframes and lora do not exist here and are refused before the call. A measured 121-frame render took about 184s plus queue.
 ${ASTRA_LIMITS_LINE}
-Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off — no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
+Every clip comes back with a generated AAC audio track (48kHz stereo, measured). Set generateAudio: false when the episode lays its own narration or BGM over the clip — the server strips the sound after generation (same render time). generateAudio is new in the 2026-10-17 server design and refused until that server change is live; until then drop or duck the track in the edit.
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
         inputSchema: {
@@ -2062,6 +2087,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                 height: ASTRA_HEIGHT_PROPERTY,
                 frameRate: ASTRA_FRAME_RATE_PROPERTY,
                 seed: ASTRA_SEED_PROPERTY,
+                duration: ASTRA_DURATION_PROPERTY,
+                generateAudio: ASTRA_GENERATE_AUDIO_PROPERTY,
                 negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
                 numInferenceSteps: ASTRA_STEPS_PROPERTY,
                 guidance: ASTRA_GUIDANCE_PROPERTY,
@@ -2119,6 +2146,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                 height: ASTRA_HEIGHT_PROPERTY,
                 frameRate: ASTRA_FRAME_RATE_PROPERTY,
                 seed: ASTRA_SEED_PROPERTY,
+                duration: ASTRA_DURATION_PROPERTY,
+                generateAudio: ASTRA_GENERATE_AUDIO_PROPERTY,
                 negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
                 numInferenceSteps: ASTRA_STEPS_PROPERTY,
                 guidance: ASTRA_GUIDANCE_PROPERTY,
@@ -2152,7 +2181,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                 adapter: {
                     type: 'string',
                     enum: [...ASTRA_VIDEO_IC_LORA_ADAPTERS],
-                    description: 'IC-LoRA adapter. "ingredients" runs as the existing ingredients mode; the rest run as mode ic_lora.',
+                    description: 'What to do with the reference. "ingredients": generate a NEW clip conditioned on a reference sheet — one composite image laying out the characters, objects and look to use (runs today as the ingredients mode). "clean-plate": remove people, pedestrians and vehicles from a reference clip and rebuild the empty background (VFX plate). "colorization": restore natural colour to grayscale, monochrome or desaturated video. "day-to-night": re-render a daytime clip as the same shot at night. "deblur": remove blur from a reference clip. "decompression": remove compression artefacts from low-bit-rate or heavily compressed video. "water-simulation": add water to a clip — rivers, surf, rain, waterfalls, floods, splashes. "pixel-upscaler-x2": creatively upscale a low-resolution clip 2x — request width/height twice the reference size. Every adapter except ingredients runs as mode ic_lora and is refused until the server change is live; per-adapter quality and strengths are unmeasured.',
                 },
                 referencePath: {
                     type: 'string',
@@ -2179,6 +2208,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                 height: ASTRA_HEIGHT_PROPERTY,
                 frameRate: ASTRA_FRAME_RATE_PROPERTY,
                 seed: ASTRA_SEED_PROPERTY,
+                duration: ASTRA_DURATION_PROPERTY,
+                generateAudio: ASTRA_GENERATE_AUDIO_PROPERTY,
                 outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
                 filename: ASTRA_FILENAME_PROPERTY,
             },
@@ -2196,7 +2227,7 @@ Do NOT use to make a clip longer or to change its size: the output inherits the 
 The SOURCE has to be on the grid already — 8k+1 frames, both sides a multiple of 32 — or the server refuses at acceptance. A clip this API produced always qualifies. A measured retake took about 80s plus queue.
 The tool checks the upload response before submission: endTime must not pass source frames/fps, so an invalid source or span does not consume a queue slot.
 ${ASTRA_LIMITS_LINE}
-Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off — no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
+Every clip comes back with a generated AAC audio track (48kHz stereo, measured). Set generateAudio: false when the episode lays its own narration or BGM over the clip — the server strips the sound after generation (same render time). generateAudio is new in the 2026-10-17 server design and refused until that server change is live; until then drop or duck the track in the edit.
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
         inputSchema: {
@@ -2219,11 +2250,24 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                     description: 'Where the re-rolled span ends, in seconds. Must be greater than startTime and no later than the uploaded source duration.',
                 },
                 seed: ASTRA_SEED_PROPERTY,
+                generateAudio: ASTRA_GENERATE_AUDIO_PROPERTY,
                 outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
                 filename: ASTRA_FILENAME_PROPERTY,
             },
             required: ['prompt', 'sourceVideoPath', 'startTime', 'endTime'],
         },
+    },
+    {
+        name: 'astra_video_capabilities',
+        title: 'ASTRA video capabilities (live limits)',
+        annotations: HINT.read,
+        description: `Read the live ASTRA video server's own capability report (GET /v1/models): for each mode the fields it accepts, frame and pixel ceilings, blocked width/frame combinations, the lora and IC-LoRA catalogs, and the rate limits — the values that process actually enforces right now.
+
+Use before an unusual request (a new adapter, guidance, hq, a large size, a long clip) when you are unsure the server accepts it: the tool descriptions record the 2026-10-17 design, and the live server can lag behind them or differ. A field missing from a mode in this report is refused with a 400.
+Do NOT call it before every render — the ordinary arguments are already checked locally, and the server rate-limits queries per minute.
+
+Returns: the server's JSON report verbatim. No arguments.`,
+        inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     },
     {
         name: 'astra_video_list_uploads',

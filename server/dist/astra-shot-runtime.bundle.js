@@ -4676,13 +4676,15 @@ var ASTRA_VIDEO_MEASURED_FIELDS = {
   retake: ["end_time", "hdr", "mode", "prompt", "seed", "start_time", "video_upload_id"]
 };
 var ASTRA_VIDEO_DESIGN_FIELDS = {
-  guided: ["guidance"],
-  guided_fast: ["guidance"],
-  keyframe: ["guidance"],
-  audio2video: ["guidance"],
-  guided_hq: [...ASTRA_VIDEO_MEASURED_FIELDS.guided, "guidance"],
-  ingredients: ["conditioning_mask", "skip_stage_2"],
-  ic_lora: [...ASTRA_VIDEO_MEASURED_FIELDS.ingredients, "adapter", "conditioning_mask", "skip_stage_2"]
+  generate: ["generate_audio"],
+  guided: ["guidance", "generate_audio"],
+  guided_fast: ["guidance", "generate_audio"],
+  keyframe: ["guidance", "generate_audio"],
+  audio2video: ["guidance", "generate_audio"],
+  guided_hq: [...ASTRA_VIDEO_MEASURED_FIELDS.guided, "guidance", "generate_audio"],
+  ingredients: ["conditioning_mask", "skip_stage_2", "generate_audio"],
+  ic_lora: [...ASTRA_VIDEO_MEASURED_FIELDS.ingredients, "adapter", "conditioning_mask", "skip_stage_2", "generate_audio"],
+  retake: ["generate_audio"]
 };
 var ASTRA_VIDEO_ALLOWED_FIELDS = Object.fromEntries(
   [.../* @__PURE__ */ new Set([...Object.keys(ASTRA_VIDEO_MEASURED_FIELDS), ...Object.keys(ASTRA_VIDEO_DESIGN_FIELDS)])].map((mode) => [
@@ -4724,6 +4726,7 @@ var ASTRA_VIDEO_UPLOAD_LIMITS = {
 var ASTRA_VIDEO_MAX_JOB_BODY_BYTES = 1024 * 1024;
 var ASTRA_VIDEO_USER_AGENT = `social-flow/${package_default.version}`;
 var astraVideoListUploadsSchema = external_exports.object({}).strict();
+var astraVideoCapabilitiesSchema = external_exports.object({}).strict();
 var astraVideoDeleteUploadSchema = external_exports.object({
   uploadId: external_exports.string().min(1).max(256).regex(/^[A-Za-z0-9_-]+$/, "uploadId must be a bare upload identifier")
 }).strict();
@@ -4739,6 +4742,34 @@ var promptSchema = external_exports.string().min(1, "prompt is required").max(AS
 var numFramesSchema = (mode) => external_exports.number().int().min(ASTRA_VIDEO_MIN_FRAMES).max(ASTRA_VIDEO_FRAME_LIMITS[mode]).refine((n) => (n - 1) % ASTRA_VIDEO_FRAME_STEP === 0, {
   message: `numFrames must be 8k+1 (25, 33, 41 \u2026 ${ASTRA_VIDEO_FRAME_LIMITS[mode]})`
 }).optional();
+function framesForSeconds(seconds, frameRate = 24) {
+  const frames = seconds * frameRate;
+  return 1 + ASTRA_VIDEO_FRAME_STEP * Math.ceil((frames - 1) / ASTRA_VIDEO_FRAME_STEP - 0.5 - 1e-9);
+}
+var durationSchema = external_exports.number().positive().finite().optional();
+function checkDuration(data, mode, ctx) {
+  if (data.duration === void 0) return;
+  for (const other of ["numFrames", "autoDuration", "audioMaxDuration"]) {
+    if (data[other] !== void 0) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["duration"], message: `duration and ${other} are mutually exclusive \u2014 give one length` });
+    }
+  }
+  const fps = data.frameRate ?? 24;
+  const frames = framesForSeconds(data.duration, fps);
+  const max = ASTRA_VIDEO_FRAME_LIMITS[mode];
+  if (frames < ASTRA_VIDEO_MIN_FRAMES || frames > max) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["duration"],
+      message: `duration ${data.duration}s at ${fps}fps is ${frames} frames; mode ${mode} takes ${ASTRA_VIDEO_MIN_FRAMES}-${max} frames, about ${(ASTRA_VIDEO_MIN_FRAMES / fps).toFixed(2)}-${(max / fps).toFixed(2)}s`
+    });
+  }
+}
+function resolveDuration(data) {
+  const { duration, ...rest } = data;
+  return duration === void 0 ? rest : { ...rest, numFrames: framesForSeconds(duration, data.frameRate ?? 24) };
+}
+var generateAudioSchema = external_exports.boolean().optional();
 var seedSchema = external_exports.number().int().min(0).max(ASTRA_VIDEO_MAX_SEED).optional();
 var frameRateSchema = external_exports.number().min(1).max(60).optional();
 var negativePromptSchema = external_exports.string().max(ASTRA_VIDEO_MAX_PROMPT_CHARS).optional();
@@ -4826,6 +4857,8 @@ var astraText2VideoSchema = external_exports.object({
   height: heightSchema,
   frameRate: frameRateSchema,
   seed: seedSchema,
+  duration: durationSchema,
+  generateAudio: generateAudioSchema,
   lora: loraSchema,
   negativePrompt: negativePromptSchema,
   numInferenceSteps: numInferenceStepsSchema,
@@ -4833,6 +4866,7 @@ var astraText2VideoSchema = external_exports.object({
   guidance: guidanceSchema,
   ...outputFields
 }).superRefine((data, ctx) => {
+  checkDuration(data, ASTRA_VIDEO_TIERS[data.tier], ctx);
   const mode = ASTRA_VIDEO_TIERS[data.tier];
   if (data.numFrames !== void 0 && data.numFrames > ASTRA_VIDEO_FRAME_LIMITS[mode]) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["numFrames"], message: `numFrames must be at most ${ASTRA_VIDEO_FRAME_LIMITS[mode]} for mode ${mode}` });
@@ -4865,7 +4899,7 @@ var astraText2VideoSchema = external_exports.object({
       ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["autoDuration"], message: durationError });
     }
   }
-});
+}).transform(resolveDuration);
 var astraImg2VideoSchema = external_exports.object({
   prompt: promptSchema,
   tier: external_exports.enum(["default", "guided", "hq"]).optional().default("default"),
@@ -4878,6 +4912,8 @@ var astraImg2VideoSchema = external_exports.object({
   height: heightSchema,
   frameRate: frameRateSchema,
   seed: seedSchema,
+  duration: durationSchema,
+  generateAudio: generateAudioSchema,
   lora: loraSchema,
   negativePrompt: negativePromptSchema,
   numInferenceSteps: numInferenceStepsSchema,
@@ -4885,6 +4921,7 @@ var astraImg2VideoSchema = external_exports.object({
   guidance: guidanceSchema,
   ...outputFields
 }).superRefine((data, ctx) => {
+  checkDuration(data, ASTRA_VIDEO_TIERS[data.tier], ctx);
   const mode = ASTRA_VIDEO_TIERS[data.tier];
   if (data.numFrames !== void 0 && data.numFrames > ASTRA_VIDEO_FRAME_LIMITS[mode]) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["numFrames"], message: `numFrames must be at most ${ASTRA_VIDEO_FRAME_LIMITS[mode]} for mode ${mode}` });
@@ -4923,7 +4960,7 @@ var astraImg2VideoSchema = external_exports.object({
   if (dimensionError) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["width"], message: dimensionError });
   }
-});
+}).transform(resolveDuration);
 var astraKeyframeVideoSchema = external_exports.object({
   prompt: promptSchema,
   images: external_exports.array(
@@ -4939,22 +4976,25 @@ var astraKeyframeVideoSchema = external_exports.object({
   height: heightSchema,
   frameRate: frameRateSchema,
   seed: seedSchema,
+  duration: durationSchema,
+  generateAudio: generateAudioSchema,
   negativePrompt: negativePromptSchema,
   numInferenceSteps: numInferenceStepsSchema,
   guidance: guidanceSchema,
   ...outputFields
 }).superRefine((data, ctx) => {
+  checkDuration(data, "keyframe", ctx);
   const dimensionError = checkDimensions(data.width, data.height, "keyframe");
   if (dimensionError) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["width"], message: dimensionError });
   }
   data.images.forEach((image, index) => {
-    const frameError = checkFrameIdx(image.frameIdx, data.numFrames);
+    const frameError = checkFrameIdx(image.frameIdx, data.numFrames ?? (data.duration === void 0 ? void 0 : framesForSeconds(data.duration, data.frameRate ?? 24)));
     if (frameError) {
       ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["images", index, "frameIdx"], message: frameError });
     }
   });
-});
+}).transform(resolveDuration);
 var astraAudio2VideoSchema = external_exports.object({
   prompt: promptSchema,
   audioPath: external_exports.string().trim().min(1).optional(),
@@ -4968,11 +5008,14 @@ var astraAudio2VideoSchema = external_exports.object({
   height: heightSchema,
   frameRate: frameRateSchema,
   seed: seedSchema,
+  duration: durationSchema,
+  generateAudio: generateAudioSchema,
   negativePrompt: negativePromptSchema,
   numInferenceSteps: numInferenceStepsSchema,
   guidance: guidanceSchema,
   ...outputFields
 }).superRefine((data, ctx) => {
+  checkDuration(data, "audio2video", ctx);
   if (data.audioPath !== void 0 === (data.audioUploadId !== void 0)) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["audioPath"], message: "Provide exactly one of audioPath or audioUploadId" });
   }
@@ -4987,13 +5030,14 @@ var astraAudio2VideoSchema = external_exports.object({
       message: "audioMaxDuration and numFrames are mutually exclusive"
     });
   }
-});
+}).transform(resolveDuration);
 var astraVideoRetakeSchema = external_exports.object({
   prompt: promptSchema,
   sourceVideoPath: external_exports.string().min(1, "sourceVideoPath is required"),
   startTime: external_exports.number().min(0),
   endTime: external_exports.number().positive(),
   seed: seedSchema,
+  generateAudio: generateAudioSchema,
   ...outputFields
 }).superRefine((data, ctx) => {
   if (data.startTime >= data.endTime) {
@@ -5025,8 +5069,11 @@ var astraIcLoraSchema = external_exports.object({
   height: heightSchema,
   frameRate: frameRateSchema,
   seed: seedSchema,
+  duration: durationSchema,
+  generateAudio: generateAudioSchema,
   ...outputFields
 }).superRefine((data, ctx) => {
+  checkDuration(data, icLoraMode(data.adapter), ctx);
   const referenceIssue = uploadKindIssue(data.referencePath, ["image", "video"], "referencePath");
   if (referenceIssue) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["referencePath"], message: referenceIssue });
   if (data.conditioningMaskPath !== void 0) {
@@ -5039,7 +5086,7 @@ var astraIcLoraSchema = external_exports.object({
   if (dimensionError) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["width"], message: dimensionError });
   }
-});
+}).transform(resolveDuration);
 function icLoraMode(adapter) {
   return adapter === "ingredients" ? "ingredients" : "ic_lora";
 }

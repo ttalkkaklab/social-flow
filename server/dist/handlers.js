@@ -851,6 +851,15 @@ export const ROUTES = {
             return text(error instanceof Error ? error.message : 'ASTRA upload listing failed', true);
         }
     },
+    astra_video_capabilities: async (args) => {
+        parseArgs(astraVideo.astraVideoCapabilitiesSchema, args);
+        try {
+            return text(JSON.stringify(await astraVideo.getCapabilities()));
+        }
+        catch (error) {
+            return text(error instanceof Error ? error.message : 'ASTRA capabilities lookup failed', true);
+        }
+    },
     astra_video_delete_upload: async (args) => {
         const parsed = parseArgs(astraVideo.astraVideoDeleteUploadSchema, args);
         try {

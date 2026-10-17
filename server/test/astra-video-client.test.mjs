@@ -43,6 +43,7 @@ import {
   checkMaskSource,
   checkReferenceSource,
   checkRetakeSource,
+  framesForSeconds,
   icLoraMode,
   uploadContentType,
 } from '../dist/astra-video-client.js';
@@ -83,7 +84,7 @@ describe('the tools cover the measured seven modes and the two designed ones', (
     );
     assert.deepEqual(
       ASTRA_VIDEO_ALLOWED_FIELDS.ingredients.filter(f => !ASTRA_VIDEO_MEASURED_FIELDS.ingredients.includes(f)),
-      ['conditioning_mask', 'skip_stage_2'],
+      ['conditioning_mask', 'generate_audio', 'skip_stage_2'],
     );
     for (const field of ['lora', 'auto_duration', 'negative_prompt', 'num_inference_steps', 'adapter', 'guidance']) {
       assert.ok(!ASTRA_VIDEO_ALLOWED_FIELDS.ingredients.includes(field), field);
@@ -95,10 +96,10 @@ describe('the tools cover the measured seven modes and the two designed ones', (
 
   it('design additions are exactly DESIGN §2-3 and never touch generate or retake', () => {
     const added = (mode) => ASTRA_VIDEO_ALLOWED_FIELDS[mode].filter(f => !(ASTRA_VIDEO_MEASURED_FIELDS[mode] ?? []).includes(f));
-    for (const mode of ['guided', 'guided_fast', 'keyframe', 'audio2video']) assert.deepEqual(added(mode), ['guidance'], mode);
-    for (const mode of ['generate', 'retake']) assert.deepEqual(added(mode), [], mode);
-    assert.deepEqual(added('guided_hq'), [...ASTRA_VIDEO_MEASURED_FIELDS.guided, 'guidance'].sort());
-    assert.deepEqual(added('ic_lora'), [...ASTRA_VIDEO_MEASURED_FIELDS.ingredients, 'adapter', 'conditioning_mask', 'skip_stage_2'].sort());
+    for (const mode of ['guided', 'guided_fast', 'keyframe', 'audio2video']) assert.deepEqual(added(mode), ['generate_audio', 'guidance'], mode);
+    for (const mode of ['generate', 'retake']) assert.deepEqual(added(mode), ['generate_audio'], mode);
+    assert.deepEqual(added('guided_hq'), [...ASTRA_VIDEO_MEASURED_FIELDS.guided, 'guidance', 'generate_audio'].sort());
+    assert.deepEqual(added('ic_lora'), [...ASTRA_VIDEO_MEASURED_FIELDS.ingredients, 'adapter', 'conditioning_mask', 'skip_stage_2', 'generate_audio'].sort());
   });
 
   // Measured 2026-09-29: the server names the whole allow-list when it rejects an unknown key.
@@ -455,7 +456,7 @@ describe('measured ASTRA guidance', () => {
     ['stereo input and mono generation failure', /Stereo \(2-channel\) input is required: mono WAV passes acceptance but fails generation/],
     ['default audio length', /With neither length argument, audio2video uses 121 frames \(~5\.04s\), not the source length/],
     ['rounded audio length', /`audioMaxDuration: 8` selects 185 frames \(~7\.71s\) at 24fps/],
-    ['no audio-off argument', /There is no audio-off argument/],
+    ['the generateAudio switch', /`generateAudio: false` strips the sound after generation/],
   ]) {
     it(`README ASTRA documents ${name}`, () => assert.match(readmeAstraRow(), pattern));
   }
@@ -1092,3 +1093,83 @@ describe('stage 2 — ic_lora, guided_hq, guidance, lora strength', () => {
     } finally { globalThis.fetch = oldFetch; config.astraVideoApiKey = oldKey; fs.rmSync(dir, { recursive: true, force: true }); }
   });
 });
+
+// Stage 3 (leader 43da766d, server contract bc4ba45f): duration, generateAudio, capabilities.
+describe('stage 3 — duration, generateAudio, capabilities', () => {
+  it('framesForSeconds is the server rule: nearest 8k+1, the shorter on a tie', () => {
+    assert.deepEqual([5, 4, 2, 1, 15].map((s) => framesForSeconds(s)), [121, 97, 49, 25, 361]);
+    assert.equal(framesForSeconds(5, 30), 153); // 150 → 153 is nearer than 145
+    assert.equal(framesForSeconds(117 / 24), 113); // 117 sits halfway between 113 and 121 → shorter
+    assert.equal(framesForSeconds(117.1 / 24), 121);
+    // A float near-tie follows the server's epsilon (ltx-api duration_to_frames), not the raw float.
+    assert.equal(framesForSeconds(2.210543877210544, 23.976), 49);
+    assert.equal(framesForSeconds(4.36, 25), 105);
+  });
+
+  it('duration becomes numFrames, so the frame rules apply to it, and it excludes the other lengths', () => {
+    assert.equal(parseOk(astraText2VideoSchema, { prompt: 'x', duration: 4 }).numFrames, 97);
+    assert.equal('duration' in parseOk(astraText2VideoSchema, { prompt: 'x', duration: 4 }), false);
+    assert.equal(parseOk(astraText2VideoSchema, { prompt: 'x', duration: 5, frameRate: 30 }).numFrames, 153);
+    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', tier: 'guided', duration: 8 }), /duration 8s at 24fps is 193 frames; mode guided takes 25-121 frames/);
+    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', duration: 0.5 }), /duration 0.5s/);
+    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', duration: 4, numFrames: 97 }), /duration and numFrames are mutually exclusive/);
+    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', duration: 4, autoDuration: { minSeconds: 1, maxSeconds: 4 } }), /duration and autoDuration/);
+    assert.match(parseFails(astraAudio2VideoSchema, { prompt: 'x', audioPath: 'a.wav', duration: 4, audioMaxDuration: 4 }), /duration and audioMaxDuration/);
+    // keyframe indices are checked against the converted length: 2s = 49 frames = 0..48.
+    const images = [{ imagePath: 'a.png', frameIdx: 0 }, { imagePath: 'b.png', frameIdx: 60 }];
+    assert.match(parseFails(astraKeyframeVideoSchema, { prompt: 'x', images, duration: 2 }), /between 0 and 48/);
+    assert.equal(parseOk(astraKeyframeVideoSchema, { prompt: 'x', images, duration: 3 }).numFrames, 73);
+    assert.equal(parseOk(astraIcLoraSchema, { prompt: 'x', adapter: 'deblur', referencePath: 'r.mp4', duration: 2 }).numFrames, 49);
+  });
+
+  it('retake takes no duration: the route refuses it as an unknown argument before any upload', async () => {
+    await assert.rejects(ROUTES.astra_video_retake({ prompt: 'x', sourceVideoPath: 's.mp4', startTime: 0, endTime: 1, duration: 2 }), /unknown argument\(s\): duration/);
+  });
+
+  it('generateAudio false is the only value that reaches the wire, on every mode', () => {
+    for (const mode of ['generate', 'guided', 'guided_fast', 'guided_hq', 'keyframe', 'audio2video', 'ingredients', 'ic_lora', 'retake']) {
+      assert.ok(ASTRA_VIDEO_ALLOWED_FIELDS[mode].includes('generate_audio'), mode);
+    }
+    assert.equal(buildJobBody('generate', { prompt: 'x', generateAudio: false }).generate_audio, false);
+    assert.equal('generate_audio' in buildJobBody('generate', { prompt: 'x', generateAudio: true }), false);
+    assert.equal('generate_audio' in buildJobBody('retake', { prompt: 'x', videoUploadId: 'v', startTime: 0, endTime: 1 }), false);
+    assert.equal(parseOk(astraVideoRetakeSchema, { prompt: 'x', sourceVideoPath: 's.mp4', startTime: 0, endTime: 1, generateAudio: false }).generateAudio, false);
+  });
+
+  it('every astra generation tool exposes duration (not retake) and generateAudio; model is not a tool argument', () => {
+    for (const name of ['astra_text2video', 'astra_img2video', 'astra_keyframe_video', 'astra_audio2video', 'astra_ic_lora', 'astra_video_retake']) {
+      const props = TOOLS.find((t) => t.name === name).inputSchema.properties;
+      assert.ok(props.generateAudio, `${name} generateAudio`);
+      assert.equal(Boolean(props.duration), name !== 'astra_video_retake', `${name} duration`);
+      assert.equal(props.model, undefined, `${name} model`);
+    }
+  });
+
+  it('astra_video_capabilities returns the live report verbatim and fails loudly otherwise', async () => {
+    const oldKey = config.astraVideoApiKey;
+    const oldFetch = globalThis.fetch;
+    config.astraVideoApiKey = 'test-only-key';
+    const report = { modes: { generate: { fields: ['prompt'] } } };
+    let reply = () => Response.json(report);
+    const calls = [];
+    globalThis.fetch = async (url, init = {}) => { calls.push({ url, ...init }); return reply(); };
+    try {
+      const tool = TOOLS.find((t) => t.name === 'astra_video_capabilities');
+      assert.equal(tool.annotations.readOnlyHint, true);
+      const ok = await ROUTES.astra_video_capabilities({});
+      assert.notEqual(ok.isError, true);
+      assert.deepEqual(JSON.parse(ok.content[0].text), report);
+      assert.ok(calls[0].url.endsWith('/v1/models'));
+      assert.equal(calls[0].method, 'GET');
+      assert.equal(calls[0].headers.Authorization, 'Bearer test-only-key');
+      reply = () => new Response('<html>', { status: 200 });
+      assert.match((await ROUTES.astra_video_capabilities({})).content[0].text, /did not return a JSON capability report/);
+      reply = () => new Response('nope', { status: 429 });
+      const limited = await ROUTES.astra_video_capabilities({});
+      assert.equal(limited.isError, true);
+      assert.match(limited.content[0].text, /HTTP 429/);
+      await assert.rejects(() => ROUTES.astra_video_capabilities({ mode: 'generate' }));
+    } finally { globalThis.fetch = oldFetch; config.astraVideoApiKey = oldKey; }
+  });
+});
+
