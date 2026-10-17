@@ -134,6 +134,8 @@ describe('Gemini 3.8 TTS response and HTTP handling', () => {
       return new Response(JSON.stringify({
         object: 'interaction',
         status: 'completed',
+        id: 'fixture-interaction',
+        usage: { total_input_tokens: 12, total_output_tokens: 25 },
         steps: [{
           type: 'model_output',
           content: [{ type: 'audio', data: wav.toString('base64'), mime_type: 'audio/wav', sample_rate: 24000, channels: 1 }],
@@ -151,6 +153,11 @@ describe('Gemini 3.8 TTS response and HTTP handling', () => {
       assert.equal(result.success, true);
       assert.equal(result.audioPath, join(dir, 'acted.wav'));
       assert.deepEqual(readFileSync(result.audioPath), wav);
+      const usage = JSON.parse(readFileSync(result.usageReceiptPath, 'utf8'));
+      assert.deepEqual(usage.usage, { total_input_tokens: 12, total_output_tokens: 25 });
+      assert.equal(usage.interactionId, 'fixture-interaction');
+      assert.equal(usage.billingStatus, 'not_an_invoice');
+      assert.ok(!readFileSync(result.usageReceiptPath, 'utf8').includes('test-key'));
       assert.equal(observed.url, 'https://generativelanguage.googleapis.com/v1beta/interactions');
       assert.equal(observed.options.method, 'POST');
       assert.equal(observed.options.headers['x-goog-api-key'], 'test-key');

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, copyFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, copyFileSync, cpSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -168,6 +168,26 @@ test('capture refuses unusable selections and grouped footage without inventing 
   s.duration = .5; s.visual.video.groupPlan = {};
   assert.throws(() => C.capture(win, 0, dir), /one generated clip/);
   assert.equal(s.visual.video.observedEnd, undefined);
+});
+
+test('installed capture and ASTRA planning run without node_modules', t => {
+  const dir = fixture(t), install = path.join(dir, 'install'), board = path.join(dir, 'board');
+  mkdirSync(board);
+  for (const name of ['skills/_shared', 'skills/storyboard/references', 'skills/produce/references'])
+    cpSync(path.join(root, name), path.join(install, name), { recursive: true });
+  mkdirSync(path.join(install, 'server/dist'), { recursive: true });
+  copyFileSync(path.join(root, 'server/dist/astra-shot-runtime.bundle.js'), path.join(install, 'server/dist/astra-shot-runtime.bundle.js'));
+  writeFileSync(path.join(install, 'server/package.json'), '{"type":"module"}');
+  const a = shot('s0001'); a.visual.video.clip = clip(dir);
+  save(board, { STORY: { version: 'story-v2' }, SB_DOC: { characters: [] }, SCENES: [a] });
+  execFileSync(process.execPath, [path.join(install, 'skills/storyboard/references/shot-continuity.js'), board,
+    '--shot', '1', '--capture', '--apply'], { encoding: 'utf8' });
+  const saved = require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(path.join(board, 'scenes.js'), 'utf8'));
+  assert.equal(saved.SCENES[0].visual.video.observedEnd.frame, 11);
+  const planned = spawnSync(process.execPath, [path.join(install, 'skills/produce/references/prepare-astra-shot.js'),
+    board, '--shot', 's0001'], { encoding: 'utf8' });
+  assert.doesNotMatch(planned.stderr, /ERR_MODULE_NOT_FOUND|Cannot find package/);
+  assert.match(planned.stderr, /ENOENT/, 'missing authored image is an input error, not an install failure');
 });
 
 test('final cut proof exports the actual last/first master frames without aesthetic approval', t => {

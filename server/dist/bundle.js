@@ -65103,12 +65103,22 @@ var require_scene_acting = __commonJS({
     function cameraLock(camera = {}) {
       return require_production_mode().moveOf(camera)?.family === "static" ? "Locked camera: preserve the opening framing, camera angle, focal length and background scale throughout; animate the planned subject action." : "";
     }
-    function sceneDirection(scene = {}) {
+    function sceneDirection(scene = {}, performance = []) {
       const design = scene.shot?.videoDesign || {}, camera = scene.visual?.camera || {};
       const lock = cameraLock(camera);
+      const actions = new Set(performance.filter((event) => event.kind === "action").map((event) => event.videoDirection || event.text));
+      const keys = ["before", "action", "after", "continuity"].filter((key) => design[key] && !(key === "action" && actions.has(design[key])));
+      const seen = new Set(keys.map((key) => design[key]));
+      const states = [];
+      for (const beat of design.motion?.beats || []) {
+        if (beat.state && !seen.has(beat.state)) {
+          states.push(`Visible state: ${beat.state}`);
+          seen.add(beat.state);
+        }
+      }
       return [
-        ...["before", "action", "after", "continuity"].filter((key) => design[key]).map((key) => `${key}: ${design[key]}`),
-        ...(design.motion?.beats || []).map((beat) => `Visible state: ${beat.state}`),
+        ...keys.map((key) => `${key}: ${design[key]}`),
+        ...states,
         ...["framing", "movement", ...lock ? [] : ["speed"], "end"].filter((key) => camera[key]).map((key) => `Camera ${key}: ${camera[key]}`),
         ...lock ? [lock] : []
       ].join("\n");
@@ -65136,7 +65146,7 @@ var require_scene_acting = __commonJS({
         const timing = line.speechStartSeconds == null || line.speechEndSeconds == null ? "Use the measured speech interval once audio is attached." : `Speech interval ${line.speechStartSeconds}\u2013${line.speechEndSeconds} seconds.`;
         return `Beat ${index + 1} (speaker: ${visualDirection(line.speaker || "unspecified")}; delivery: ${delivery2}): ${mouth} ${line.to ? "Addressed to " + visualDirection(line.to) + ". Preserve this eyeline and the listener in the planned framing." : ""} ${fields.join(" ")} ${timing} Anticipation ${line.leadInSeconds || 0} seconds; reaction ${line.tailOutSeconds || 0} seconds.`;
       });
-      return ["A clean cinematic image with an unobstructed scene and text-free surfaces.", route, visualDirection(sceneDirection(scene)), ...beats, VIDEO_TEXT_POLICY].join("\n");
+      return ["A clean cinematic image with an unobstructed scene and text-free surfaces.", route, visualDirection(sceneDirection(scene, performance)), ...beats, VIDEO_TEXT_POLICY].join("\n");
     }
     module.exports = { actingErrors, resolvedStyle, directionSupport, speechRevisionPayload, VIDEO_TEXT_POLICY, sceneVideoPrompt, planScenePerformance, sceneDirection, scenePerformancePayload, cameraLock };
   }
@@ -78904,7 +78914,7 @@ import * as path3 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.115.2-direction.1",
+  version: "0.115.2-continuity.2",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -78913,12 +78923,13 @@ var package_default = {
     node: ">=20"
   },
   scripts: {
-    build: "tsc && npm run bundle && npm run bundle:mesh",
+    build: "tsc && npm run bundle && npm run bundle:shot && npm run bundle:mesh",
     start: "node dist/index.js",
     test: "node --test test/*.test.mjs",
     check: "npm run build && npm test",
     "check:dist": "npm run build && node check-dist.mjs",
     bundle: `esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/bundle.js --banner:js="import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);"`,
+    "bundle:shot": `esbuild src/astra-shot-runtime.ts --bundle --platform=node --format=esm --outfile=dist/astra-shot-runtime.bundle.js --banner:js="import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);"`,
     "bundle:mesh": "node build-mesh.mjs"
   },
   dependencies: {
@@ -80524,6 +80535,7 @@ async function generateWithReferences(request) {
 }
 
 // src/tts-client.ts
+import { writeFileSync as writeFileSync5 } from "node:fs";
 var TTS_VOICES = {
   Zephyr: "Bright",
   Puck: "Upbeat",
@@ -80943,13 +80955,25 @@ async function generateGemini38Speech(request) {
     }
     const audio = extractGemini38Audio(interaction);
     const audioPath = saveAudio(audio, request.outputPath, request.filename, "tts_gemini_38");
+    const metadata = interaction;
+    const usageReceiptPath = audioPath + ".provider-usage.json";
+    writeFileSync5(usageReceiptPath, JSON.stringify({
+      provider: "gemini",
+      model: request.model,
+      interactionId: typeof metadata.id === "string" ? metadata.id : null,
+      usage: metadata.usage ?? null,
+      usageStatus: metadata.usage == null ? "not_reported" : "provider_reported",
+      billingStatus: "not_an_invoice",
+      recordedAt: (/* @__PURE__ */ new Date()).toISOString()
+    }, null, 2) + "\n");
     const speakers = request.speakers?.map((speaker) => speaker.speaker).join(", ");
     return {
       success: true,
       audioPath,
       text: speakers ? `Gemini 3.8 conversation with: ${speakers}` : request.turns.map((turn) => turn.text).join("\n"),
       voiceName: speakers ? void 0 : request.voice,
-      model: request.model
+      model: request.model,
+      usageReceiptPath
     };
   } catch (error2) {
     const errorMessage = error2 instanceof Error ? error2.message : String(error2);
@@ -80962,7 +80986,7 @@ async function generateGemini38Speech(request) {
 var import_tts_speed_policy = __toESM(require_tts_speed_policy(), 1);
 import { execFile as execFile4 } from "node:child_process";
 import { createHash as createHash2, randomUUID } from "node:crypto";
-import { closeSync, existsSync as existsSync10, mkdirSync as mkdirSync5, openSync, readFileSync as readFileSync8, renameSync as renameSync4, rmSync as rmSync4, writeFileSync as writeFileSync7 } from "node:fs";
+import { closeSync, existsSync as existsSync10, mkdirSync as mkdirSync5, openSync, readFileSync as readFileSync8, renameSync as renameSync4, rmSync as rmSync4, writeFileSync as writeFileSync8 } from "node:fs";
 import path9 from "node:path";
 import { promisify as promisify2 } from "node:util";
 
@@ -81523,7 +81547,7 @@ import path7 from "node:path";
 
 // src/mlx-serve-client.ts
 import { execFile as execFile2 } from "node:child_process";
-import { existsSync as existsSync6, mkdtempSync, readFileSync as readFileSync6, rmSync, writeFileSync as writeFileSync6 } from "node:fs";
+import { existsSync as existsSync6, mkdtempSync, readFileSync as readFileSync6, rmSync, writeFileSync as writeFileSync7 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join as join4 } from "node:path";
 var MLX_HEALTH_TIMEOUT_MS = 3e3;
@@ -81839,7 +81863,7 @@ async function muxRgbToMp4(opts) {
   const rgbPath = join4(dir, "frames.rgb");
   const wavPath = join4(dir, "audio.wav");
   try {
-    writeFileSync6(rgbPath, opts.rgb);
+    writeFileSync7(rgbPath, opts.rgb);
     const args = [
       "-y",
       "-f",
@@ -81854,7 +81878,7 @@ async function muxRgbToMp4(opts) {
       rgbPath
     ];
     if (opts.audio) {
-      writeFileSync6(wavPath, pcmToWav(opts.audio.pcm, opts.audio.sampleRate, opts.audio.channels));
+      writeFileSync7(wavPath, pcmToWav(opts.audio.pcm, opts.audio.sampleRate, opts.audio.channels));
       args.push("-i", wavPath);
     }
     args.push(
@@ -81899,7 +81923,7 @@ async function postImage(body, outFile) {
   }
   const parsed = parseImageResponse(res.body);
   if ("error" in parsed) return { success: false, error: parsed.error };
-  writeFileSync6(outFile, Buffer.from(parsed.b64, "base64"));
+  writeFileSync7(outFile, Buffer.from(parsed.b64, "base64"));
   return {
     success: true,
     path: outFile,
@@ -83172,17 +83196,17 @@ async function applySentenceSpacing(output, request, align) {
       if (!align) return { skipped: "no alignment sidecar beside the take and no aligner" };
       const aligned = await align(output, request.expectedText, request.language);
       if (aligned.matched < aligned.letters * 0.8) throw new Error(`aligner matched ${aligned.matched}/${aligned.letters} script letters; transcript "${aligned.transcript.slice(0, 60)}"`);
-      writeFileSync7(alignmentPath, JSON.stringify({ engine: "asr-aligner", generator: request.generator, text: request.expectedText, transcript: aligned.transcript, matched: aligned.matched, letters: aligned.letters, alignment: aligned.alignment }, null, 2));
+      writeFileSync8(alignmentPath, JSON.stringify({ engine: "asr-aligner", generator: request.generator, text: request.expectedText, transcript: aligned.transcript, matched: aligned.matched, letters: aligned.letters, alignment: aligned.alignment }, null, 2));
     }
     const sidecar = JSON.parse(readFileSync8(alignmentPath, "utf8"));
     const alignment = sidecar.alignment;
     if (!alignment?.characters?.length) return { skipped: "alignment sidecar carries no characters" };
     const segments = request.segments ?? splitSentences(alignment.characters.join(""));
     const result = respace(readFileSync8(output), alignment, segments, { pause: request.sentencePause, playbackSpeed: request.playbackSpeed });
-    writeFileSync7(output, result.wav);
+    writeFileSync8(output, result.wav);
     const meta = { policy: SPACING_POLICY, source: sidecar.engine === "asr-aligner" ? "asr-aligner" : "vendor", pause: request.sentencePause, playbackSpeed: request.playbackSpeed, lead: result.lead, gaps: result.gaps, inserted: result.inserted, boundaries: result.boundaries, duration: result.duration, segmentsFrom: request.segments ? "request" : "sentence-final punctuation" };
-    writeFileSync7(alignmentPath, JSON.stringify({ ...sidecar, alignment: result.alignment, vendor_alignment: sidecar.vendor_alignment ?? sidecar.alignment, respaced: meta }, null, 2));
-    writeFileSync7(sentencesPathFor(output), JSON.stringify({ version: 1, ...meta, audio: path9.basename(output), audioSha256: sha256(result.wav), sentences: result.sentences }, null, 2) + "\n");
+    writeFileSync8(alignmentPath, JSON.stringify({ ...sidecar, alignment: result.alignment, vendor_alignment: sidecar.vendor_alignment ?? sidecar.alignment, respaced: meta }, null, 2));
+    writeFileSync8(sentencesPathFor(output), JSON.stringify({ version: 1, ...meta, audio: path9.basename(output), audioSha256: sha256(result.wav), sentences: result.sentences }, null, 2) + "\n");
     return meta;
   } catch (error2) {
     return { skipped: error2 instanceof Error ? error2.message : String(error2) };
@@ -83231,7 +83255,7 @@ async function generateCheckedSpeech(input, dependencies) {
   function save3(status, extra = {}) {
     const report = { ...base, status, attempts, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
     const temporary = proofFile + "." + randomUUID() + ".tmp";
-    writeFileSync7(temporary, JSON.stringify(report, null, 2) + "\n");
+    writeFileSync8(temporary, JSON.stringify(report, null, 2) + "\n");
     renameSync4(temporary, proofFile);
     return { success: status === "pass", status, audioPath: output, proofPath: proofFile, attempts: attempts.length, ...extra };
   }
@@ -83483,7 +83507,7 @@ ${tail}` : ""}`));
 
 // src/blender-bridge.ts
 import { execFile as execFile6 } from "node:child_process";
-import { existsSync as existsSync12, mkdtempSync as mkdtempSync4, readFileSync as readFileSync9, rmSync as rmSync5, writeFileSync as writeFileSync8 } from "node:fs";
+import { existsSync as existsSync12, mkdtempSync as mkdtempSync4, readFileSync as readFileSync9, rmSync as rmSync5, writeFileSync as writeFileSync9 } from "node:fs";
 import { tmpdir as tmpdir3 } from "node:os";
 import { dirname as dirname3, extname as extname7, join as join7, resolve as resolve4 } from "node:path";
 var BLENDER_PROXY_KINDS = ["person", "dog", "car", "box", "cylinder", "sphere"];
@@ -83789,8 +83813,8 @@ async function runBridgeUnlocked(job, timeoutMs) {
   const script = join7(dir, "bridge.py");
   const jobPath = join7(dir, "job.json");
   const resultPath = join7(dir, "result.json");
-  writeFileSync8(script, BRIDGE_PY, "utf-8");
-  writeFileSync8(jobPath, JSON.stringify({ ...job, resultPath }), "utf-8");
+  writeFileSync9(script, BRIDGE_PY, "utf-8");
+  writeFileSync9(jobPath, JSON.stringify({ ...job, resultPath }), "utf-8");
   try {
     const run = await new Promise((resolveRun) => {
       execFile6(
@@ -90311,7 +90335,7 @@ var SNS_PLATFORM_BY_TOOL = {
 };
 
 // src/tts-acting-review.ts
-import { appendFileSync as appendFileSync2, readFileSync as readFileSync10, writeFileSync as writeFileSync9, mkdirSync as mkdirSync6 } from "node:fs";
+import { appendFileSync as appendFileSync2, readFileSync as readFileSync10, writeFileSync as writeFileSync10, mkdirSync as mkdirSync6 } from "node:fs";
 import { resolve as resolve5, join as join9 } from "node:path";
 import { randomUUID as randomUUID2 } from "node:crypto";
 var actingReviewSchema = external_exports.object({
@@ -90392,7 +90416,7 @@ async function reviewActing(request) {
   }
   if (response.candidates?.[0]?.finishReason !== "STOP") throw new Error("Audio reviewer did not complete");
   const rawPath = join9(request.outputPath, `acting-response-${randomUUID2()}.json`);
-  writeFileSync9(rawPath, JSON.stringify({ evaluatorVersion: ACTING_EVALUATOR_VERSION, model: REVIEW_MODEL, text: response.text, inputs: request, audioSha256: sha256(bytes), usage: response.usageMetadata }, null, 2));
+  writeFileSync10(rawPath, JSON.stringify({ evaluatorVersion: ACTING_EVALUATOR_VERSION, model: REVIEW_MODEL, text: response.text, inputs: request, audioSha256: sha256(bytes), usage: response.usageMetadata }, null, 2));
   const review = actingVerdictSchema.parse(JSON.parse(response.text || ""));
   const result = { ...actingVerdict(review, signal.duration), evaluatorVersion: ACTING_EVALUATOR_VERSION, review, signal, audioPath: file, audioSha256: sha256(bytes), model: REVIEW_MODEL, requestedBy: request.requestedBy, inputs: { expectedText: request.expectedText, direction: request.direction, language: request.language }, at: (/* @__PURE__ */ new Date()).toISOString(), rubric: { accuracy: 25, acting: 30, naturalness: 25, audioQuality: 20 }, reviewType: "model_audio_judgment", usage: response.usageMetadata };
   if (signal.rmsDb < -45 || signal.clippedFraction > 1e-3 || signal.duration < 0.25) {
@@ -90402,13 +90426,13 @@ async function reviewActing(request) {
   if (sha256(readFileSync10(file)) !== result.audioSha256) throw new Error("Audio changed during review");
   mkdirSync6(request.outputPath, { recursive: true });
   const reportPath = join9(request.outputPath, `acting-review-${randomUUID2()}.json`);
-  writeFileSync9(reportPath, JSON.stringify({ ...result, rawPath }, null, 2));
+  writeFileSync10(reportPath, JSON.stringify({ ...result, rawPath }, null, 2));
   return { reportPath, rawPath, ...result };
 }
 
 // src/voice-audition.ts
 import { createHash as createHash3, randomUUID as randomUUID3 } from "node:crypto";
-import { appendFileSync as appendFileSync3, existsSync as existsSync13, mkdirSync as mkdirSync7, readFileSync as readFileSync11, writeFileSync as writeFileSync10, renameSync as renameSync5 } from "node:fs";
+import { appendFileSync as appendFileSync3, existsSync as existsSync13, mkdirSync as mkdirSync7, readFileSync as readFileSync11, writeFileSync as writeFileSync11, renameSync as renameSync5 } from "node:fs";
 import { dirname as dirname5, join as join10, resolve as resolve6 } from "node:path";
 
 // src/voice-lock-config.ts
@@ -90505,7 +90529,7 @@ var hash = (value) => createHash3("sha256").update(value).digest("hex");
 var escape2 = (s2) => s2.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 function save(file, value) {
   const temporary = file + "." + randomUUID3() + ".tmp";
-  writeFileSync10(temporary, JSON.stringify(value, null, 2));
+  writeFileSync11(temporary, JSON.stringify(value, null, 2));
   renameSync5(temporary, file);
 }
 function preview(audition) {
@@ -90555,7 +90579,7 @@ async function manageVoiceAudition(args) {
         save(auditionPath2, audition2);
       }
       audition2.status = "ready";
-      writeFileSync10(audition2.previewPath, preview(audition2));
+      writeFileSync11(audition2.previewPath, preview(audition2));
       save(auditionPath2, audition2);
       return { auditionPath: auditionPath2, ...audition2, instruction: "Present all three audio players. Wait for the user to choose a candidate, then call select with their actual response." };
     } catch (error2) {
@@ -90589,9 +90613,9 @@ async function manageVoiceAudition(args) {
     return "```json\n" + JSON.stringify({ ...value, tts: ttsSchema.parse(chosen.tts), voiceSelection: selection }, null, 2) + "\n```";
   });
   if (!replaced) throw new Error("Missing identity JSON");
-  writeFileSync10(join10(dirname5(auditionPath), "identity-before-selection.md"), source, { flag: "wx" });
+  writeFileSync11(join10(dirname5(auditionPath), "identity-before-selection.md"), source, { flag: "wx" });
   const temporary = audition.identityPath + "." + randomUUID3() + ".tmp";
-  writeFileSync10(temporary, next);
+  writeFileSync11(temporary, next);
   renameSync5(temporary, audition.identityPath);
   audition.status = "selected";
   audition.selected = { ...selection, identitySha256: hash(next) };
@@ -90664,7 +90688,7 @@ function manageProject(args) {
 
 // src/speech.ts
 import { createHash as createHash4, randomUUID as randomUUID4 } from "node:crypto";
-import { readFileSync as readFileSync12, writeFileSync as writeFileSync11, renameSync as renameSync6, mkdirSync as mkdirSync8, existsSync as existsSync14 } from "node:fs";
+import { readFileSync as readFileSync12, writeFileSync as writeFileSync12, renameSync as renameSync6, mkdirSync as mkdirSync8, existsSync as existsSync14 } from "node:fs";
 import { dirname as dirname7, resolve as resolve8, join as join12 } from "node:path";
 import * as nodeModule5 from "node:module";
 import { execFileSync as execFileSync3 } from "node:child_process";
@@ -90888,11 +90912,11 @@ function manageSpeech(args) {
     const work = resolve8(dirname7(file), "../.work/speech-history");
     mkdirSync8(work, { recursive: true });
     const backup = join12(work, revision + ".js");
-    if (!existsSync14(backup)) writeFileSync11(backup, before);
+    if (!existsSync14(backup)) writeFileSync12(backup, before);
     const nextSource = serializeBoard(win, header);
     if (hash2(readFileSync12(file)) !== revision) throw new Error("Storyboard changed during speech edit");
     const tmp = file + "." + randomUUID4() + ".tmp";
-    writeFileSync11(tmp, nextSource);
+    writeFileSync12(tmp, nextSource);
     renameSync6(tmp, file);
   }
   return { revision: hash2(readFileSync12(file)), changed, invalidated, plan: plan2, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
@@ -90901,7 +90925,7 @@ function manageSpeech(args) {
 // src/acting-review.ts
 import { execFile as execFile7 } from "node:child_process";
 import { createHash as createHash5, randomUUID as randomUUID5 } from "node:crypto";
-import { existsSync as existsSync15, mkdirSync as mkdirSync9, readFileSync as readFileSync13, realpathSync, renameSync as renameSync7, rmSync as rmSync6, statSync as statSync7, writeFileSync as writeFileSync12 } from "node:fs";
+import { existsSync as existsSync15, mkdirSync as mkdirSync9, readFileSync as readFileSync13, realpathSync, renameSync as renameSync7, rmSync as rmSync6, statSync as statSync7, writeFileSync as writeFileSync13 } from "node:fs";
 import path11 from "node:path";
 import { homedir as homedir4 } from "node:os";
 import { promisify as promisify3 } from "node:util";
@@ -91175,7 +91199,7 @@ async function reviewActing2(input, deps = { probe: probeActingMedia, evaluate }
   }
   const lock = `${receiptPath}.lock`;
   try {
-    writeFileSync12(lock, JSON.stringify({ pid: process.pid, startedAt: (/* @__PURE__ */ new Date()).toISOString() }), { flag: "wx" });
+    writeFileSync13(lock, JSON.stringify({ pid: process.pid, startedAt: (/* @__PURE__ */ new Date()).toISOString() }), { flag: "wx" });
   } catch {
     throw new Error("An identical review is running or was interrupted; inspect its lock instead of issuing another paid review");
   }
@@ -91233,8 +91257,8 @@ async function reviewActing2(input, deps = { probe: probeActingMedia, evaluate }
   };
   const temporary = `${receiptPath}.${randomUUID5()}.tmp`;
   try {
-    writeFileSync12(lock, JSON.stringify({ phase: "evaluated", receipt }), { flag: "w" });
-    writeFileSync12(temporary, JSON.stringify(receipt, null, 2) + "\n", { flag: "wx" });
+    writeFileSync13(lock, JSON.stringify({ phase: "evaluated", receipt }), { flag: "w" });
+    writeFileSync13(temporary, JSON.stringify(receipt, null, 2) + "\n", { flag: "wx" });
     renameSync7(temporary, receiptPath);
   } catch (error2) {
     try {
@@ -91253,7 +91277,7 @@ async function reviewActing2(input, deps = { probe: probeActingMedia, evaluate }
 
 // src/threads-gate.ts
 import { createHash as createHash6, randomUUID as randomUUID6 } from "node:crypto";
-import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync10, readFileSync as readFileSync14, realpathSync as realpathSync2, renameSync as renameSync8, statSync as statSync8, writeFileSync as writeFileSync13 } from "node:fs";
+import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync10, readFileSync as readFileSync14, realpathSync as realpathSync2, renameSync as renameSync8, statSync as statSync8, writeFileSync as writeFileSync14 } from "node:fs";
 import { dirname as dirname8, join as join13, resolve as resolve9 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 import { spawnSync as spawnSync2 } from "node:child_process";
@@ -91308,7 +91332,7 @@ function save2(draft) {
   const { file } = draftLocation(draft.draftId);
   mkdirSync10(dirname8(file), { recursive: true });
   const temp = `${file}.${randomUUID6()}.tmp`;
-  writeFileSync13(temp, JSON.stringify(draft), { mode: 384 });
+  writeFileSync14(temp, JSON.stringify(draft), { mode: 384 });
   renameSync8(temp, file);
 }
 function load(id) {
@@ -94853,7 +94877,7 @@ async function checkAccounts(channel) {
 
 // src/tts-final-quality.ts
 import { execFile as execFile8 } from "node:child_process";
-import { existsSync as existsSync18, mkdtempSync as mkdtempSync5, readFileSync as readFileSync15, rmSync as rmSync7, writeFileSync as writeFileSync14, renameSync as renameSync9, openSync as openSync2, closeSync as closeSync2 } from "node:fs";
+import { existsSync as existsSync18, mkdtempSync as mkdtempSync5, readFileSync as readFileSync15, rmSync as rmSync7, writeFileSync as writeFileSync15, renameSync as renameSync9, openSync as openSync2, closeSync as closeSync2 } from "node:fs";
 import { tmpdir as tmpdir5 } from "node:os";
 import path13 from "node:path";
 import { promisify as promisify4 } from "node:util";
@@ -94884,8 +94908,8 @@ async function reviewFinalSpeech(input, deps = { listen }) {
   function save3(status, extra) {
     const result = { ...base, status, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
     const staging = path13.join(temp, "proof.json");
-    writeFileSync14(staging, JSON.stringify(result, null, 2) + "\n");
-    writeFileSync14(proofPath + ".tmp", readFileSync15(staging));
+    writeFileSync15(staging, JSON.stringify(result, null, 2) + "\n");
+    writeFileSync15(proofPath + ".tmp", readFileSync15(staging));
     renameSync9(proofPath + ".tmp", proofPath);
     return { success: status === "pass", status, proofPath, ...extra };
   }
@@ -94961,7 +94985,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
     for (const piece of planned) {
       const samples = pcm.subarray(piece.startSample * chapters.BYTES, piece.endSample * chapters.BYTES);
       const raw = path13.join(temp, "piece.pcm"), file = path13.join(temp, "piece.flac");
-      writeFileSync14(raw, samples);
+      writeFileSync15(raw, samples);
       await exec3("ffmpeg", ["-y", "-v", "error", "-f", "s32le", "-ar", String(chapters.RATE), "-ac", "1", "-i", raw, "-map_metadata", "-1", "-c:a", "flac", file], { timeout: 6e4 });
       const payload = readFileSync15(file);
       if (payload.length > chapters.LIMIT || !chapters.decode(file).equals(samples)) throw new Error("Chapter encoding exceeded the limit or changed PCM samples");
@@ -95686,7 +95710,7 @@ async function generateWithReferences2(request) {
 }
 
 // src/content-feedback.ts
-import { mkdirSync as mkdirSync11, writeFileSync as writeFileSync17 } from "node:fs";
+import { mkdirSync as mkdirSync11, writeFileSync as writeFileSync18 } from "node:fs";
 import { dirname as dirname10, isAbsolute, join as join16, resolve as resolve10 } from "node:path";
 
 // src/content-feedback-html.ts
@@ -96319,7 +96343,7 @@ async function contentFeedback(input) {
   };
   if (htmlPath) {
     mkdirSync11(dirname10(htmlPath), { recursive: true });
-    writeFileSync17(htmlPath, renderFeedbackHtml(report), "utf8");
+    writeFileSync18(htmlPath, renderFeedbackHtml(report), "utf8");
   }
   return { ok: true, status: 200, body: JSON.stringify(report) };
 }
@@ -98534,7 +98558,8 @@ File: ${result.audioPath}
 Model: ${result.model}
 ${voiceInfo}
 Turns: ${request.turns.length}
-Text length: ${totalChars} chars`
+Text length: ${totalChars} chars
+Provider usage receipt: ${result.usageReceiptPath} (reported usage or explicit not_reported; not an invoice)`
     );
   },
   tts_multi_speaker: async (args) => {
@@ -99052,7 +99077,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.115.2-direction.1" },
+  { name: "social-flow", version: "0.115.2-continuity.2" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

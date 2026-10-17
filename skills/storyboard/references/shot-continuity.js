@@ -200,7 +200,7 @@ if (require.main === module) (async () => {
     const result = capture(win, index, dir);
     if (args.includes('--apply')) {
       const { pathToFileURL } = require('node:url');
-      const { serializeBoard } = await import(pathToFileURL(path.resolve(__dirname, '../../../server/dist/storyboard.js')).href);
+      const { serializeBoard } = await import(pathToFileURL(path.resolve(__dirname, '../../../server/dist/astra-shot-runtime.bundle.js')).href);
       if (fs.readFileSync(file, 'utf8') !== original) throw new Error('board changed during capture; refresh before applying');
       const header = (original.match(/^(?:\/\/[^\n]*\n)*/)?.[0] || '').split('\n').filter(Boolean);
       const temp = file + '.' + process.pid + '.tmp';

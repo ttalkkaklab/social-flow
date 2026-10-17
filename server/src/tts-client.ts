@@ -15,6 +15,7 @@
 
 import type { GenerateContentConfig, SpeechConfig } from '@google/genai';
 import { z } from 'zod';
+import { writeFileSync } from 'node:fs';
 import { requireGeminiKey } from './config.js';
 import { requestRaw } from './http.js';
 import { bareFilenameSchema, pcmToWav, saveAudioFile } from './media-utils.js';
@@ -245,6 +246,7 @@ export interface TtsResponse {
   text?: string;
   voiceName?: string;
   model?: string;
+  usageReceiptPath?: string;
 }
 
 // ── Internal helpers ─────────────────────────────────────────────
@@ -647,6 +649,12 @@ export async function generateGemini38Speech(request: Gemini38TtsRequest): Promi
     }
     const audio = extractGemini38Audio(interaction);
     const audioPath = saveAudio(audio, request.outputPath, request.filename, 'tts_gemini_38');
+    const metadata = interaction as { id?: unknown; usage?: unknown };
+    const usageReceiptPath = audioPath + '.provider-usage.json';
+    writeFileSync(usageReceiptPath, JSON.stringify({ provider: 'gemini', model: request.model,
+      interactionId: typeof metadata.id === 'string' ? metadata.id : null,
+      usage: metadata.usage ?? null, usageStatus: metadata.usage == null ? 'not_reported' : 'provider_reported',
+      billingStatus: 'not_an_invoice', recordedAt: new Date().toISOString() }, null, 2) + '\n');
     const speakers = request.speakers?.map((speaker) => speaker.speaker).join(', ');
     return {
       success: true,
@@ -654,6 +662,7 @@ export async function generateGemini38Speech(request: Gemini38TtsRequest): Promi
       text: speakers ? `Gemini 3.8 conversation with: ${speakers}` : request.turns.map((turn) => turn.text).join('\n'),
       voiceName: speakers ? undefined : request.voice,
       model: request.model,
+      usageReceiptPath,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

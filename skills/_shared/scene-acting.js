@@ -111,12 +111,19 @@ function cameraLock(camera = {}) {
     ? 'Locked camera: preserve the opening framing, camera angle, focal length and background scale throughout; animate the planned subject action.'
     : '';
 }
-function sceneDirection(scene = {}) {
+function sceneDirection(scene = {}, performance = []) {
   const design = scene.shot?.videoDesign || {}, camera = scene.visual?.camera || {};
   const lock = cameraLock(camera);
+  const actions = new Set(performance.filter(event => event.kind === 'action').map(event => event.videoDirection || event.text));
+  const keys = ['before','action','after','continuity'].filter(key => design[key] && !(key === 'action' && actions.has(design[key])));
+  const seen = new Set(keys.map(key => design[key]));
+  const states = [];
+  for (const beat of design.motion?.beats || []) {
+    if (beat.state && !seen.has(beat.state)) { states.push(`Visible state: ${beat.state}`); seen.add(beat.state); }
+  }
   return [
-    ...['before','action','after','continuity'].filter(key => design[key]).map(key => `${key}: ${design[key]}`),
-    ...(design.motion?.beats || []).map(beat => `Visible state: ${beat.state}`),
+    ...keys.map(key => `${key}: ${design[key]}`),
+    ...states,
     ...['framing','movement',...(lock ? [] : ['speed']),'end'].filter(key => camera[key]).map(key => `Camera ${key}: ${camera[key]}`),
     ...(lock ? [lock] : []),
   ].join('\n');
@@ -157,6 +164,6 @@ function sceneVideoPrompt(performance, mode, scene = {}) {
       : `Speech interval ${line.speechStartSeconds}–${line.speechEndSeconds} seconds.`;
     return `Beat ${index + 1} (speaker: ${visualDirection(line.speaker || 'unspecified')}; delivery: ${delivery}): ${mouth} ${line.to ? 'Addressed to '+visualDirection(line.to)+'. Preserve this eyeline and the listener in the planned framing.' : ''} ${fields.join(' ')} ${timing} Anticipation ${line.leadInSeconds || 0} seconds; reaction ${line.tailOutSeconds || 0} seconds.`;
   });
-  return ['A clean cinematic image with an unobstructed scene and text-free surfaces.', route, visualDirection(sceneDirection(scene)), ...beats, VIDEO_TEXT_POLICY].join('\n');
+  return ['A clean cinematic image with an unobstructed scene and text-free surfaces.', route, visualDirection(sceneDirection(scene, performance)), ...beats, VIDEO_TEXT_POLICY].join('\n');
 }
 module.exports={actingErrors,resolvedStyle,directionSupport,speechRevisionPayload,VIDEO_TEXT_POLICY,sceneVideoPrompt,planScenePerformance,sceneDirection,scenePerformancePayload,cameraLock};
