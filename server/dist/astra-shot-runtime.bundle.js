@@ -4481,7 +4481,7 @@ import * as path2 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.115.3",
+  version: "0.115.4",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -5660,6 +5660,15 @@ async function generateFromImage(args) {
   const body = buildJobBody(mode, { ...args, ...dimensions, images });
   return runJob(mode, args.prompt, body, args.outputPath, args.filename);
 }
+async function generateFromKeyframes(args) {
+  const images = [];
+  for (const image of args.images) {
+    const uploaded = await uploadFile(image.imagePath);
+    images.push({ uploadId: uploaded.uploadId, frameIdx: image.frameIdx, strength: image.strength ?? 1, crf: image.crf });
+  }
+  const body = buildJobBody("keyframe", { ...args, images });
+  return runJob("keyframe", args.prompt, body, args.outputPath, args.filename);
+}
 async function generateFromAudio(args) {
   if (args.imagePath && uploadContentType(args.imagePath).kind !== "image") {
     throw new Error("ASTRA video imagePath must be an image (.png/.jpg/.jpeg)");
@@ -6718,8 +6727,10 @@ function charUnits(args) {
 export {
   astraAudio2VideoSchema,
   astraImg2VideoSchema,
+  astraKeyframeVideoSchema,
   generateFromAudio,
   generateFromImage,
+  generateFromKeyframes,
   manageSpeech,
   priceOf,
   readBoard,

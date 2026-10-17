@@ -7,9 +7,12 @@ description: >
   Reviews scenario-v2 candidates or story-v2 boards; legacy episodes use the compatibility
   reference. Returns specific findings and a STORYBOARD_REVIEW tail; never edits stories.
 tools: Read, Grep, Glob, Bash
-model: sonnet
 color: red
 ---
+
+Use the current host model and native media capabilities. Follow
+[host evaluation](../skills/_shared/host-review.md); unsupported modalities stay unverified.
+
 
 # Review what the audience can actually follow
 

@@ -1,3 +1,4 @@
+import { hostReview } from './host-review.js';
 /** Reviews the assembled media, including transitions and the music mix. */
 import { execFile } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync, renameSync, openSync, closeSync } from 'node:fs';
@@ -6,7 +7,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { z } from 'zod';
 import * as chapters from '../../skills/produce/references/final-speech-chapters.js';
-import { checkedSpeechSchema, listen, measureSignal, normalizeSpeech, REVIEW_MODEL, reviewFailures, reviewSchema, sha256, signalFailures, transcriptCheckSchema } from './tts-quality.js';
+import { checkedSpeechSchema, measureSignal, normalizeSpeech, REVIEW_MODEL, reviewFailures, reviewSchema, sha256, signalFailures, transcriptCheckSchema } from './tts-quality.js';
 const exec = promisify(execFile);
 export const finalSpeechSchema = z.object({
     mediaPath: z.string().min(1), expectedText: z.string().trim().min(1).max(12000),
@@ -15,8 +16,12 @@ export const finalSpeechSchema = z.object({
     transcriptCheck: transcriptCheckSchema.optional(),
     segments: z.array(z.object({ startSeconds: z.number().finite().nonnegative(), expectedText: z.string().trim().min(1).max(1000) }).strict()).min(1).max(1000).optional(),
 }).strict();
-export async function reviewFinalSpeech(input, deps = { listen }) {
+export async function reviewFinalSpeech(input, deps) {
     const request = finalSpeechSchema.parse(input), media = path.resolve(request.mediaPath);
+    if (!deps) {
+        const { segments, mediaPath: _path, ...brief } = request;
+        return { ...await hostReview({ mediaPath: media, mode: 'audio', brief: JSON.stringify(brief) }), segments: segments ?? [] };
+    }
     // The handle stays out of the proof identity: putting it there would make every proof written
     // without it unreusable. Whether the check ran is recorded by the stored transcript. It is still
     // carried into every saved proof, reused ones included — a transcribed take whose request record

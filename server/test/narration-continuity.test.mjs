@@ -53,15 +53,10 @@ test('real ffmpeg final audio review rejects continuity-only defects and binds a
  const pcm=Buffer.alloc(24000*2*2);for(let i=0;i<pcm.length/2;i++)pcm.writeInt16LE(Math.round(5000*Math.sin(i*2*Math.PI*220/24000)),i*2);
  writeFileSync(file,pcmToWav(pcm,24000,1));
  const child=`
- import {reviewFinalSpeech} from './dist/tts-final-quality.js';
+ import {reviewFinalSpeech as legacyReview} from './dist/tts-final-quality.js';
  import {writeFileSync,readFileSync} from 'node:fs';
  let calls=0,blind=0;
- globalThis.fetch=async(input,init)=>{
-  let body='';try{body=typeof init?.body==='string'?init.body:(input&&typeof input.text==='function'?await input.text():'');}catch{body='';}
-  let value;
-  if(body.includes('Transcribe every audible spoken word')){blind++;value={transcript:${JSON.stringify(texts[1])}};}
-  else {calls++;value={...${JSON.stringify(good)},continuity:calls===1?70:98};}
-  return new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(value)}]}}]}),{headers:{'Content-Type':'application/json'}});};
+ const reviewFinalSpeech=req=>legacyReview(req,{listen:async()=>{calls++;return {transcript:null,review:{...${JSON.stringify(good)},continuity:calls===1?70:98}};}});
  const req=${JSON.stringify({mediaPath:file,expectedText:texts[1],language:'Korean',delivery:'One connected narrator.'})};
  const a=await reviewFinalSpeech(req);if(a.status!=='fail')throw new Error(JSON.stringify(a));
  const cosmetic=await reviewFinalSpeech({...req,expectedText:req.expectedText.replace(/.$/,'!'),delivery:'A slightly revised direction.'});if(cosmetic.status!=='fail'||calls!==1)throw new Error('cosmetic edits must not reroll scores');
@@ -104,16 +99,11 @@ test('the final review transcribes only on request and never drops the request r
  const tone=hz=>{const pcm=Buffer.alloc(24000*2*2);for(let i=0;i<pcm.length/2;i++)pcm.writeInt16LE(Math.round(5000*Math.sin(i*2*Math.PI*hz/24000)),i*2);return pcmToWav(pcm,24000,1);};
  writeFileSync(file,tone(220));writeFileSync(other,tone(300));
  const child=`
- import {reviewFinalSpeech} from './dist/tts-final-quality.js';
+ import {reviewFinalSpeech as legacyReview} from './dist/tts-final-quality.js';
  import {readFileSync} from 'node:fs';
  const TRANSCRIBE='Transcribe every audible spoken word';
  let review=0,blind=0,mode='pass';
- globalThis.fetch=async(input,init)=>{
-  let body='';try{body=typeof init?.body==='string'?init.body:(input&&typeof input.text==='function'?await input.text():'');}catch{body='';}
-  let value;
-  if(body.includes(TRANSCRIBE)){blind++;value={transcript:${JSON.stringify(texts[1])}};}
-  else {review++;value={...${JSON.stringify(good)},continuity:mode==='fail'?70:98};}
-  return new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(value)}]}}]}),{headers:{'Content-Type':'application/json'}});};
+ const reviewFinalSpeech=req=>legacyReview(req,{listen:async()=>{review++;if(req.transcriptCheck)blind++;return {transcript:req.transcriptCheck?${JSON.stringify(texts[1])}:null,review:{...${JSON.stringify(good)},continuity:mode==='fail'?70:98}};}});
  const req=${JSON.stringify({mediaPath:file,expectedText:texts[1],language:'Korean',delivery:'One connected narrator.'})};
  const bad={...req,mediaPath:${JSON.stringify(other)}};
  const ask={requestedBy:'user',reason:'오너가 이 회차의 내레이션만 받아쓰기로 대조해 달라고 요청했다.'};

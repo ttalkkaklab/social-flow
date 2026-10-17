@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { actingMediaPart, ACTING_RESPONSE_JSON_SCHEMA, actingObservationSchema, actingReviewSchema, actingReviewOutcome, probeActingMedia, reviewActing } from '../dist/acting-review.js';
+import { actingMediaPart, actingReviewTimeout, ACTING_RESPONSE_JSON_SCHEMA, actingObservationSchema, actingReviewSchema, actingReviewOutcome, probeActingMedia, reviewActing } from '../dist/acting-review.js';
 
 const media = { duration: 3, audio: true, video: true, mimeType: 'video/mp4' };
 const coverage = () => ({ observed: true, complete: true, start: 0, end: 3, evidence: 'At 0–3 seconds restrained hesitation resolves to a questioning rise.' });
@@ -308,4 +308,68 @@ test('unfavorable voice reviews remain advisory on fresh and cached responses', 
     assert.equal(result.selectionAuthority, 'user');
     assert.match(result.interpretation, /do not reject, replace or regenerate/);
   }
+});
+
+test('review transport timeout defaults preserve performance and allow validated cinema overrides', () => {
+  assert.equal(actingReviewTimeout('performance', ''), 180000);
+  assert.equal(actingReviewTimeout('cinematography', ''), 600000);
+  assert.equal(actingReviewTimeout('cinematography', '30000'), 30000);
+  assert.equal(actingReviewTimeout('performance', '900000'), 900000);
+  for (const value of ['29999', '900001', 'NaN', '40000.5']) assert.throws(() => actingReviewTimeout('cinematography', value));
+});
+
+test('authorized transport retry has one immutable child and preserves the failed original byte-for-byte', async t => {
+  const f = setup(t); let calls = 0;
+  f.deps.evaluate = async () => { calls++; if (calls === 1) throw new Error('This operation was aborted');
+    return { observation: good(), usage: { inputTokens: 1, outputTokens: 1, thoughtTokens: 0 } }; };
+  const original = await reviewActing(f.request, f.deps), bytes = readFileSync(original.receiptPath, 'utf8');
+  assert.equal(original.review, null); assert.equal(original.rejectedObservation, null);
+  const retry = await reviewActing({ ...f.request, retryTransportFailure: true }, f.deps);
+  assert.equal(retry.status, 'pass'); assert.equal(retry.retryOf, original.requestSha256);
+  assert.notEqual(retry.receiptPath, original.receiptPath);
+  assert.equal(readFileSync(original.receiptPath, 'utf8'), bytes);
+  assert.equal((await reviewActing({ ...f.request, retryTransportFailure: true }, f.deps)).reused, true);
+  assert.equal((await reviewActing(f.request, f.deps)).status, 'unverified'); assert.equal(calls, 2);
+});
+
+test('even a second transport failure cannot authorize a third attempt', async t => {
+  const f = setup(t); let calls = 0;
+  f.deps.evaluate = async () => { calls++; throw new Error('Request timed out'); };
+  const original = await reviewActing(f.request, f.deps);
+  const retry = await reviewActing({ ...f.request, retryTransportFailure: true }, f.deps);
+  assert.equal(retry.status, 'unverified'); assert.equal(retry.retryOf, original.requestSha256);
+  assert.equal((await reviewActing({ ...f.request, retryTransportFailure: true }, f.deps)).receiptPath, retry.receiptPath);
+  assert.equal(calls, 2);
+});
+
+test('pass, fail, low-confidence and rejected observations cannot use transport retry', async t => {
+  const f = setup(t); let calls = 0;
+  const observations = [good(), { ...good(), confidence: .5 },
+    { ...good(), scores: { ...good().scores, body: 70 }, findings: [defect('body')] },
+    { complete: true }];
+  for (let i = 0; i < observations.length; i++) {
+    const input = { ...f.request, direction: f.request.direction + ' Case ' + i };
+    f.deps.evaluate = async () => { calls++; return { observation: observations[i], usage: { inputTokens: 1, outputTokens: 1, thoughtTokens: 0 } }; };
+    await reviewActing(input, f.deps);
+    await assert.rejects(reviewActing({ ...input, retryTransportFailure: true }, f.deps), /cannot be rerolled/);
+  }
+  assert.equal(calls, observations.length);
+});
+
+test('retry cannot use missing, changed-media, changed-direction or tampered parent identity', async t => {
+  const f = setup(t); let calls = 0;
+  f.deps.evaluate = async () => { calls++; throw new Error('This operation was aborted'); };
+  await assert.rejects(reviewActing({ ...f.request, retryTransportFailure: true }, f.deps), /existing matching original/);
+  const original = await reviewActing(f.request, f.deps), saved = readFileSync(original.receiptPath, 'utf8');
+  await assert.rejects(reviewActing({ ...f.request, direction: f.request.direction + ' Changed.', retryTransportFailure: true }, f.deps), /existing matching original/);
+  writeFileSync(f.file, 'different media');
+  await assert.rejects(reviewActing({ ...f.request, retryTransportFailure: true }, f.deps), /existing matching original/);
+  writeFileSync(f.file, 'fixture media bytes');
+  for (const patch of [{ model: 'another-model' }, { policy: 'another-policy' }, { mediaSha256: 'wrong' },
+    { requestSha256: 'wrong' }, { currentMediaSha256: 'wrong' }, { sourceChanged: true },
+    { rejectedObservation: { json: 'partial model response', truncated: false } }, { failures: ['Invalid JSON'] }]) {
+    writeFileSync(original.receiptPath, JSON.stringify({ ...JSON.parse(saved), ...patch }));
+    await assert.rejects(reviewActing({ ...f.request, retryTransportFailure: true }, f.deps));
+  }
+  assert.equal(calls, 1);
 });

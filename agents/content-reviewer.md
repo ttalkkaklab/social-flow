@@ -30,9 +30,12 @@ description: >
   <commentary>Final pre-publish check — confirm P0 status with content-reviewer, then move on to publish.</commentary>
   </example>
 tools: Read, Grep, Glob, Bash
-model: sonnet
 color: red
 ---
+
+Use the current host model and native media capabilities. Follow
+[host evaluation](../skills/_shared/host-review.md); unsupported modalities stay unverified.
+
 **Automatic execution policy:** Read [automation guidance](../skills/_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 
 

@@ -1,3 +1,4 @@
+import { hostReview } from './host-review.js';
 import { designGeminiVoice, voiceDesignSchema } from './voice-design.js';
 import { reviewActing as reviewTtsActing, actingReviewSchema as ttsActingReviewSchema } from './tts-acting-review.js';
 
@@ -1508,6 +1509,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   character_voice_audition: async (args) => text(JSON.stringify(await manageVoiceAudition(voiceAuditionSchema.parse(args)), null, 2)),
   tts_review_acting: async (args) => text(JSON.stringify(await reviewTtsActing(ttsActingReviewSchema.parse(args)), null, 2)),
   speech_manage: async (args) => text(JSON.stringify(manageSpeech(parseArgs(speechManageSchema, args)), null, 2)),
+  host_review: async (args) => text(JSON.stringify(await hostReview(args), null, 2)),
   acting_review: async (args) => text(JSON.stringify(await reviewActing(parseArgs(actingReviewSchema, args)), null, 2)),
   storyboard_read: async (args) => {
     storyboard.contract();  // a missing structure-contract.js reports itself here, before the argument schema does

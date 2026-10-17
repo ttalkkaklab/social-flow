@@ -587,10 +587,10 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 98 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 99 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions — 98 tools, including voice auditions and opt-in acting review
+│       ├── tools.ts             # tool definitions — 99 tools, including voice auditions and opt-in acting review
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -657,7 +657,7 @@ Episodes are saved only under `data/<channel>/episodes/<topic>/`. Open
 media and publication logs stay in the local episode directory; no destination
 selection or workspace key is required.
 
-## MCP tool surface (98 tools)
+## MCP tool surface (99 tools)
 
 `project_manage`: options · status · init · update · episode. Local project setup
 with genre, models, style, ratio, format and SNS records; no generation or publishing.
@@ -693,9 +693,9 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Video generation | `mlx_video_generate` | MLX Core / mlx-serve (24fps rgb8 muxed to mp4 with ffmpeg. Default 768×1280, RAM-capped at 800MB decoded RGB. Not the default path and not on the Veo/Seedance face-policy table. Pack install, request grid and measured render times: [LTX 2.5 runbook](docs/mlx-ltx-2.5.md)) |
 | Video generation | `astra_text2video` / `astra_img2video` / `astra_keyframe_video` / `astra_audio2video` / `astra_ic_lora` / `astra_video_retake` | ASTRA video API (`ASTRA_VIDEO`, self-hosted LTX-2.5 — **our own box, so no per-call bill and no vendor policy**, but it renders ONE job at a time: 66–184s each plus queue, which makes it the batch lane rather than the interactive one. Six tools over the server modes; `tier` picks generate·guided·guided_fast·guided_hq, and `astra_ic_lora` runs one reference still or clip through an IC-LoRA adapter (adapters, `guidance`, `conditioning_mask`, `skip_stage_2`, `{name, strength}` lora entries and `generateAudio` are live since the 2026-10-17 server change). The only lane with `lora` adapters (`cinemagraph` · `slow-motion`, generate only), with a keyframe mode that passes through 2–8 supplied stills at chosen frame indices, and with a retake mode that re-rolls one time span of an existing clip. Length is frames (8k+1, 25–361 on every mode, the server's published ceiling); `duration` in seconds is converted to the nearest 8k+1 by the tool. `astra_video_capabilities` reads the live server's own limits; sizes sit on a 64-pixel grid with a 2,064,384-pixel ceiling, so 9:16 is **1024×1920** — 1088×1920 exceeds the area ceiling at every frame count, and 1080×1920 is off-grid. Clips carry 48kHz stereo AAC; `audio2video` carries the supplied sound re-encoded, rather than a newly generated track. Stereo (2-channel) input is required: mono is refused at upload because it fails in the engine audio encoder. With neither length argument, audio2video uses 121 frames (~5.04s), not the source length; `audioMaxDuration: 8` selects 185 frames (~7.71s) at 24fps. `generateAudio: false` strips the sound after generation (same GPU time). `expectLipSync: true` (on-screen speech only) measures with ffmpeg whether the picture moves with the supplied speech and re-renders with a new seed when it does not, up to `maxAttempts` (default 2); it never fails the call and leaves phoneme-level sync, the speaking person and voice identity `not_reviewed`. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | ASTRA upload management | `astra_video_list_uploads` / `astra_video_delete_upload` | List uploads with no arguments; delete one with `uploadId` after user approval. Requires `ASTRA_VIDEO` and server endpoint support. Uploads expire after 24h, with 20 uploads / 1 GiB per key. Unsupported endpoints and invalid responses return errors; live verification is pending. |
-| Optional checked narration | `tts_generate_checked` | Legacy/explicitly requested review workflow. New production uses raw Gemini tools or ElevenLabs v4 synthesis and records `not_reviewed`; review scores never gate unrelated assembly. |
+| Optional checked narration | `tts_generate_checked` | Legacy single-take synthesis wrapper with no automatic listening, scoring or retakes. New production uses raw generators and records `not_reviewed`. |
 | Optional final speech review | `tts_review_final` | Reviews actual media only when the user requests it. Keep file-bound evidence and honest findings; no automatic delivery gate. |
-| Requested acting review | `acting_review` | Optional paid Gemini evaluation of actual speech, expression, body action and lip sync against a scene direction. Requires an explicit review request and existing spending authorization; never runs as a default production gate. Records hashes, coverage, evidence and pass/fail/unverified status. Reuses unchanged receipts rather than rerolling scores. |
+| Host media review | `host_review`, `acting_review`, `tts_review_acting`, `tts_review_final` | Prepare local media and record the executing host LLM’s actual observations. No external evaluation API. Sampled frames support composition only; unsupported playback or listening stays unverified. |
 | Pronunciation dictionary | `tts_elevenlabs_dictionary` | Creates Korean alias rules and returns pinned dictionary/version IDs for `pronunciationDictionaryLocators`. Keep the source name intact and test the actual pronunciation. |
 | Voice identity design | `tts_voice_design` | Create a stored Gemini voice from age, timbre and accent, or remix `baseVoice`. Saves a WAV preview, reusable `voice_` ID and provider usage receipt. See [voice design](skills/_shared/gemini-voice-design.md). |
 | Character voice auditions | `character_voice_audition` | Plan acoustic targets from character identity, compare real voice metadata, generate three candidates with a stable Gemini voice baseline, and persist only the user-selected voice. |
@@ -1022,3 +1022,12 @@ invalid references, unusable media and actual spending authorization remain exec
 ### Clean video and optional subtitle tracks (2026-10-17)
 
 Videos contain no burned-in subtitles, even when they contain speech. The builders ignore legacy burn-in switches and never select an old `*-sub.mp4` as the publishing master. Generated performance prompts prohibit caption/text overlays. Optional SRT files stay separate; when requested, YouTube uploads them as viewer-selectable caption tracks. A missing SRT is not a production defect. This user directive replaces earlier subtitle burn-in guidance.
+
+## Host evaluation
+
+`host_review` prepares local media or records timestamped observations from the LLM
+running the plugin. No external evaluation model is called. Legacy `acting_review`,
+`tts_review_acting` and `tts_review_final` prepare the same handoff;
+`tts_generate_checked` generates one take without scoring or automatic retakes.
+Sampled frames support composition only; playback and listening require actual host
+capabilities. Unsupported checks stay unverified. See [the review contract](skills/_shared/host-review.md).

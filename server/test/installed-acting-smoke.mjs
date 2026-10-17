@@ -13,7 +13,7 @@ const root = resolve(process.argv[2]);
 const dir = mkdtempSync(join(tmpdir(), 'sf-acting-install-'));
 const client = new Client({ name:'installed-acting-regression', version:'1.0.0' });
 const transport = new StdioClientTransport({ command:process.execPath, args:[join(root,'server/dist/bundle.js')],
-  env:{PATH:process.env.PATH || '',HOME:process.env.HOME || '',SOCIAL_FLOW_TOOLS:'speech_manage,acting_review'}, stderr:'pipe' });
+  env:{PATH:process.env.PATH || '',HOME:process.env.HOME || '',SOCIAL_FLOW_TOOLS:'speech_manage,acting_review,host_review'}, stderr:'pipe' });
 const checks = [];
 async function call(args, errorPattern) {
   const result = await client.callTool({name:'speech_manage',arguments:{path:dir,...args}});
@@ -43,6 +43,12 @@ try {
   assert.match(plan.arguments.stylePrompt,/genuine puzzlement/);assert.doesNotMatch(plan.arguments.stylePrompt,/cheerful sales/);
   checks.push('installed direction changes affect plan while identity stays fixed');
   const audio=join(dir,'take.wav');execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=frequency=300:duration=1','-ac','1','-ar','24000',audio]);
+  assert.ok(listed.find(t=>t.name==='host_review'));
+  const handoff=await client.callTool({name:'host_review',arguments:{mediaPath:audio,mode:'audio',brief:'Inspect this exact voice only with native host audio capabilities.'}});
+  assert.ok(!handoff.isError);
+  const evidence=JSON.parse(handoff.content.find(c=>c.type==='text').text);
+  assert.equal(evidence.status,'not_reviewed');assert.equal(evidence.externalEvaluationCalls,0);assert.equal(evidence.score,null);
+  checks.push('installed host review prepares evidence without external judgment or invented score');
   const generation={generator:plan.generator,voiceSettings:plan.arguments,language:plan.language,text:'무슨 합격이요?'};
   await call({action:'attach_audio',lineId:'s021-line',expectedRevision:current.revision,audioPath:audio,generation:{...generation,voiceSettings:{...plan.arguments,stylePrompt:voice.stylePrompt}}},/style|direction/i);
   await call({action:'attach_audio',lineId:'s021-line',expectedRevision:current.revision,audioPath:audio,generation:{...generation,voiceSettings:{...plan.arguments,voiceName:'Charon'}}},/voice|pinned/i);

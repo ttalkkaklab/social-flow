@@ -8,7 +8,7 @@ import { execFileSync } from 'node:child_process';
 import { manageSpeech } from '../dist/speech.js';
 
 const require = createRequire(import.meta.url);
-const { prepare, motionPrompt } = require('../../skills/produce/references/prepare-astra-shot.js');
+const { prepare, motionPrompt, motionTimeline } = require('../../skills/produce/references/prepare-astra-shot.js');
 const { sceneVideoPrompt } = require('../../skills/_shared/scene-acting.js');
 const ff = args => execFileSync('ffmpeg', ['-nostdin', '-v', 'error', '-y', ...args], { timeout: 30000 });
 test('prompt compaction removes repeated endpoints and actions without losing intermediate states', () => {
@@ -29,10 +29,75 @@ test('ASTRA wording retains ordered motion and audio intervals without screenpla
       speechStartSeconds: 1.2, speechEndSeconds: 2.4, acting: { direction: 'Casual and guarded.', visual: 'She conceals alarm.' } },
   ] });
   for (const content of ['raises the tray once', '1.2 to 2.4 seconds', 'woman speaks naturally to uncle',
-    'Casual and guarded', 'conceals alarm', 'hand touches the tray', 'same door stays open', 'camera stays fixed',
-    'She keeps the door open', 'Keep the threshold visible'])
+    'Casual and guarded', 'conceals alarm', 'same door stays open', 'camera stays fixed', 'Keep the threshold visible'])
     assert.ok(prompt.includes(content), content);
   assert.doesNotMatch(prompt, /Beat \d|before:|speaker:|Exact dialogue/);
+  const warnings = motionTimeline(scene, { performance: [{ kind: 'action', text: 'She raises the tray once.' }] }).warnings;
+  assert.ok(warnings.some(message => message.includes('She keeps the door open')));
+  assert.ok(warnings.some(message => message.includes('Her hand touches the tray')));
+});
+
+test('resolved four-second action excludes stale eight-second design timing with visible warnings', () => {
+  const scene = { duration: 4, shot: { videoDesign: {
+    before: 'She holds a tray at the doorway.', action: 'Approach over the first four seconds, then lower the tray.',
+    after: 'The tray rests on the desk.', motion: { beats: [
+      { at: 4, state: 'She still holds the tray above the desktop.' },
+      { at: 6.5, state: 'She releases her hands.' }, { at: 8, state: 'The tray rests on the desk.' },
+    ] },
+  } } };
+  const plan = { performance: [{ kind: 'action', videoDirection: 'Walk for two seconds and release the tray by 3.5 seconds.',
+    startSeconds: 0, endSeconds: 4 }] };
+  const prompt = motionPrompt(scene, plan), timeline = motionTimeline(scene, plan);
+  assert.match(prompt, /From 0 to 4 seconds, Walk for two seconds/);
+  assert.match(prompt, /shot finishes with this state: The tray rests/);
+  assert.doesNotMatch(prompt, /first four|still holds|At 6.5|At 8/);
+  assert.ok(timeline.warnings.some(message => message.includes('6.5s falls outside')));
+  assert.ok(timeline.warnings.some(message => message.includes('8s falls outside')));
+  assert.ok(timeline.warnings.some(message => message.includes('still holds the tray')));
+});
+
+test('one fully concurrent audio-conditioned line omits redundant numeric spans without changing the plan', () => {
+  const scene = { visual: { camera: { movement: 'static' } } };
+  const plan = { mode: 'audio_conditioned', performance: [
+    { kind: 'action', text: 'He holds the receiver still.', startSeconds: .12, endSeconds: 2.76 },
+    { kind: 'dialogue', speaker: 'uncle', delivery: 'on_screen', text: 'Private script.',
+      speechStartSeconds: .12, speechEndSeconds: 2.76 },
+  ] };
+  const before = JSON.stringify(plan), prompt = motionPrompt(scene, plan);
+  assert.equal(prompt.split('During the supplied spoken line,').length - 1, 2);
+  assert.doesNotMatch(prompt, /0\.12|2\.76|From .*seconds|Private script/);
+  assert.match(prompt, /He holds the receiver still/);
+  assert.match(prompt, /Match visible lip movements to the supplied audio/);
+  assert.match(prompt, /All surfaces stay unlettered/);
+  assert.equal(JSON.stringify(plan), before);
+});
+
+test('sequential, partly overlapping, offscreen and multiple spoken intervals retain exact timing', () => {
+  const line = { kind: 'dialogue', speaker: 'uncle', delivery: 'on_screen', speechStartSeconds: .12, speechEndSeconds: 2.76 };
+  for (const performance of [
+    [{ kind: 'action', text: 'Look back first.', startSeconds: 0, endSeconds: .12 }, line],
+    [line, { kind: 'action', text: 'React after speaking.', startSeconds: 2.76, endSeconds: 3 }],
+    [{ kind: 'action', text: 'Hold a pose through the lead-in.', startSeconds: 0, endSeconds: 2.76 }, line],
+    [{ ...line, delivery: 'off_screen' }],
+    [line, { ...line, speechStartSeconds: 3, speechEndSeconds: 4 }],
+  ]) {
+    const prompt = motionPrompt({}, { mode: 'audio_conditioned', performance });
+    assert.match(prompt, /From 0.12 to 2.76 seconds/);
+    assert.doesNotMatch(prompt, /During the supplied spoken line/);
+    if (performance.length === 2 && performance[1].speechStartSeconds === 3)
+      assert.match(prompt, /From 3 to 4 seconds/);
+  }
+  assert.match(motionPrompt({}, { mode: 'voiceover', performance: [line] }), /From 0.12 to 2.76 seconds/);
+});
+
+test('design-only action keeps in-range intermediate states and reports impossible timestamps', () => {
+  const scene = { duration: 4, shot: { videoDesign: { action: 'Lower the tray once.', motion: { beats: [
+    { at: 2, state: 'Hands still support the tray.' }, { at: 6, state: 'Release the tray.' },
+  ] } } } };
+  const plan = { performance: [] };
+  assert.match(motionPrompt(scene, plan), /Lower the tray once.*At 2 seconds, Hands still support/);
+  assert.doesNotMatch(motionPrompt(scene, plan), /At 6 seconds/);
+  assert.ok(motionTimeline(scene, plan).warnings.some(message => message.includes('Release the tray')));
 });
 function fixture(t, onScreen = false) {
   const dir = mkdtempSync(path.join(tmpdir(), 'astra-shot-input-'));
@@ -120,11 +185,14 @@ test('new ASTRA requests discard oversized stored frames and include edit covera
   scene.duration = 3.2;
   scene.visual.video.numFrames = 193;
   scene.edit = { in: .5, pre: 0, post: .12 };
+  scene.shot.videoDesign.motion = { beats: [{ at: 8, state: 'A stale delayed action.' }] };
   save();
   const result = await prepare(dir, { shotId: 's0001' });
   assert.equal(result.arguments.numFrames, 89);
   assert.ok(result.requestedSeconds >= 3.7);
   assert.ok(result.warnings.some(message => message.includes('Stored numFrames')));
+  assert.ok(result.warnings.some(message => message.includes('8s falls outside')));
+  assert.doesNotMatch(result.arguments.prompt, /stale delayed action/);
   assert.equal(result.quote.quantity, result.requestedSeconds);
 });
 
@@ -145,4 +213,65 @@ test('measured planner returns final billing quantity after margins cross an int
   const result = await plan(dir, { shotId: 's0001', tool: 'seedance_img2video', audioPath: audio });
   assert.equal(result.arguments.durationSeconds, 5);
   assert.equal(result.quote.quantity, 5);
+});
+
+test('authored intermediate contact frame selects keyframe adapter and pins final optimized frame', async t => {
+  const { dir, scene, save } = fixture(t);
+  scene.duration = 3.2;
+  scene.edit = { in: .5, pre: 0, post: .12 };
+  scene.visual.frames = { mode: 'first_last', end: 'start.png', keyframes: [
+    { atSeconds: 1, image: 'start.png', state: 'Tray contacts desk while both hands still grip.', strength: .95 },
+    { atSeconds: 1.5, image: 'start.png', state: 'Hands begin release.' },
+  ] }; save();
+  const result = await prepare(dir, { shotId: 's0001' });
+  assert.equal(result.tool, 'astra_keyframe_video');
+  assert.equal(result.arguments.numFrames, 89);
+  assert.deepEqual(result.arguments.images.map(image => image.frameIdx), [0, 24, 36, 88]);
+  assert.equal(result.arguments.images[1].strength, .95);
+  assert.equal(result.arguments.generateAudio, false);
+  assert.equal(result.arguments.firstFramePath, undefined);
+  assert.equal(result.keyframes[1].state, 'Tray contacts desk while both hands still grip.');
+  assert.match(result.keyframes[1].sha256, /^[a-f0-9]{64}$/);
+  assert.equal(result.quote.quantity, result.requestedSeconds);
+});
+
+test('intermediate frames reject out-of-shot times, duplicate frame slots, missing files and excess count', async t => {
+  const { dir, scene, save } = fixture(t);
+  for (const keys of [
+    [{ atSeconds: 0, image: 'start.png' }], [{ atSeconds: 2, image: 'start.png' }],
+    [{ atSeconds: .001, image: 'start.png' }],
+    [{ atSeconds: .5, image: 'start.png' }, { atSeconds: .51, image: 'start.png' }],
+    [{ atSeconds: .7, image: 'start.png' }, { atSeconds: .5, image: 'start.png' }],
+    [{ atSeconds: .5, image: 'missing.png' }],
+    Array.from({length: 7}, (_, i) => ({ atSeconds: .1 + i / 10, image: 'start.png' })),
+  ]) {
+    scene.visual.frames = { mode: 'first_last', end: 'start.png', keyframes: keys }; save();
+    await assert.rejects(prepare(dir, { shotId: 's0001' }));
+  }
+});
+
+test('audio-conditioned shots refuse silently dropping authored intermediate constraints', async t => {
+  const { dir, audio } = fixture(t, true);
+  const file = path.join(dir, 'scenes.js');
+  const win = require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file, 'utf8'));
+  win.SCENES[0].visual.frames = { mode: 'first_last', end: 'start.png', keyframes: [{ atSeconds: .2, image: 'start.png' }] };
+  writeFileSync(file, Object.entries(win).map(([k, v]) => `window.${k}=${JSON.stringify(v)};`).join('\n'));
+  await assert.rejects(prepare(dir, { shotId: 's0001', audioPath: audio }), /does not support intermediate keyframes/);
+});
+
+test('renderer dispatches prepared keyframes to their own adapter and rejects unknown tools before generation', async () => {
+  const { submitPrepared } = require('../../skills/produce/references/render-astra-shot.js');
+  const calls = [];
+  const parse = args => ({ ...args, validated: true });
+  const client = {
+    astraKeyframeVideoSchema: { parse }, astraImg2VideoSchema: { parse }, astraAudio2VideoSchema: { parse },
+    generateFromKeyframes: args => { calls.push(['keyframe', args]); return 'candidate'; },
+    generateFromImage: args => { calls.push(['image', args]); },
+    generateFromAudio: args => { calls.push(['audio', args]); },
+  };
+  const args = { images: [{ frameIdx: 0 }, { frameIdx: 24 }, { frameIdx: 48 }] };
+  assert.equal(await submitPrepared(client, 'astra_keyframe_video', args), 'candidate');
+  assert.deepEqual(calls, [['keyframe', { ...args, validated: true }]]);
+  await assert.rejects(submitPrepared(client, 'unknown', args), /Unsupported prepared ASTRA tool/);
+  assert.equal(calls.length, 1);
 });

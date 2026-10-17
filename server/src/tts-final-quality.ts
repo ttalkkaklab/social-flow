@@ -1,3 +1,4 @@
+import { hostReview } from './host-review.js';
 /** Reviews the assembled media, including transitions and the music mix. */
 import { execFile } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync, renameSync, openSync, closeSync } from 'node:fs';
@@ -16,8 +17,12 @@ export const finalSpeechSchema = z.object({
   segments: z.array(z.object({ startSeconds: z.number().finite().nonnegative(), expectedText: z.string().trim().min(1).max(1000) }).strict()).min(1).max(1000).optional(),
 }).strict();
 export type FinalSpeechRequest = z.infer<typeof finalSpeechSchema>;
-export async function reviewFinalSpeech(input: FinalSpeechRequest, deps = { listen }): Promise<Record<string, unknown>> {
+export async function reviewFinalSpeech(input: FinalSpeechRequest, deps?: { listen: typeof listen }): Promise<Record<string, unknown>> {
   const request = finalSpeechSchema.parse(input), media = path.resolve(request.mediaPath);
+  if (!deps) {
+    const { segments, mediaPath: _path, ...brief } = request;
+    return { ...await hostReview({ mediaPath: media, mode: 'audio', brief: JSON.stringify(brief) }), segments: segments ?? [] };
+  }
   // The handle stays out of the proof identity: putting it there would make every proof written
   // without it unreusable. Whether the check ran is recorded by the stored transcript. It is still
   // carried into every saved proof, reused ones included — a transcribed take whose request record
