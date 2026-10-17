@@ -246,7 +246,7 @@ const OMNI_ASPECT_RATIO_PROPERTY = {
  * numeric levers appear on every generation tool but retake. astra_video_retake takes none of them —
  * a retake inherits the source exactly.
  */
-const ASTRA_FRAME_LIMITS_DESCRIPTION = `every mode: ${ASTRA_VIDEO_FRAME_LIMITS.generate} (the live server's published ceiling, about 15.0s at 24fps). Measured renders are mostly 121 frames or less — a long clip costs proportionally more box time, and the server refuses a length/size pair it knows fails.`;
+const ASTRA_FRAME_LIMITS_DESCRIPTION = `every mode: ${ASTRA_VIDEO_FRAME_LIMITS.generate} (the live server's published ceiling, about 15.0s at 24fps). Longest successful renders in the live job log (2026-10-17): generate 361 at 1280x704 and 193 at 1024x1920; audio2video and keyframe 185 at 1024x1920; ingredients 161 at 1536x1024; guided 193 at 1280x704 text-only; fast, hq and ic_lora never above 121. The server refuses only two known 1280-wide failure bands (see astra_img2video); every other pair outside those measurements is unmeasured — it may fail or run slowly and hold the one-at-a-time queue for up to 1800s.`;
 const astraNumFramesProperty = (mode: keyof typeof ASTRA_VIDEO_FRAME_LIMITS) => ({
   type: 'integer',
   description: `Clip length in FRAMES, not seconds: 8k+1, minimum ${ASTRA_VIDEO_MIN_FRAMES}. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} Server default: 121 (~5.0s at 24fps). Off-grid and over-limit values are refused before the call.`,

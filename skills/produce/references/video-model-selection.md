@@ -60,7 +60,7 @@ multiple of neither 64 nor 32. The edit may add padding instead of scaling when 
 
 For image-conditioned calls, the server blocks **generate: {121,129,137}** at
 width 1280 (measured at heights 704/768) and **guided: {121}** at width 1280 (measured at height 704). Guided 129 and 137 succeeded at 1280x704 in server probes (the only guided size probed);
-the client's existing guided ceiling is still 121. The client requires 1536x1024 for guided images,
+the guided client ceiling is now 361 like every mode. The client requires 1536x1024 for guided images,
 so the guided 1280x704 probes are not client alternatives. Within current client limits use
 generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at
 121 frames also succeeded. The image-conditioned warning does not apply to `astra_text2video`: text-only
