@@ -240,6 +240,12 @@ shots when the staging calls for a cut and update performance group references.
 
 Translate the dramatic situation into optional per-line `acting` before production:
 `context`, `intent`, `emotion`, `vocal`, `visual`, `leadInSeconds` and `tailOutSeconds`.
+Choose the line boundary by speech purpose as well as emotion. One calm speaker can identify
+themselves, listen, then question an offer. Preserve these as separate speech groups with
+their own context, intent and vocal contour in the same shot; place listening in the ordered
+performance. Do not describe the entire turn as a question when its opening identifies the
+speaker. A period alone does not scope a global acting cue. Conversely, several sentences
+with the same purpose and delivery may stay together; do not split mechanically at punctuation.
 Use the [speech contract](../../produce/references/shot-speech.md#direct-each-line-and-reaction)
 for field limits and generation planning. The character's identity voice stays fixed while
 confusion, restraint, celebration and other reactions follow the current beat. Write the

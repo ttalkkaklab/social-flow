@@ -105,7 +105,7 @@ const ROUTES = {
   /* The host lane (owner directive 2026-09-07): under Grok the CLI's own image_to_video takes
      the clip on the subscription allowance, so the row bills the requested seconds at $0 — the
      slot still shows on the approval page as a generated shot, with its 720p ceiling. A speech
-     clip goes through reference_to_video, which takes 6 or 10 seconds; the forecast books 10. */
+     clip goes through reference_to_video, which takes 6 or 10 seconds; choose the smallest covering option. */
   'broll/host': {
     key: 'video.host',
     why: 'host image_to_video — the CLI\'s own video tool on the subscription allowance · 720p ceiling'
@@ -115,8 +115,8 @@ const ROUTES = {
     why: 'host image_to_video · silent use — the builder keeps only the video track · 720p ceiling'
   },
   'quote/host': {
-    key: 'video.host', fixedSeconds: 10,
-    why: 'host reference_to_video · 6 or 10 s, the forecast books 10 · a preset voice, 720p ceiling'
+    key: 'video.host', supportedSeconds: [6, 10],
+    why: 'host reference_to_video · 6 or 10 s, round up to cover the shot · a preset voice, 720p ceiling'
   },
   'footage/host': {
     key: 'video.host',
@@ -229,7 +229,7 @@ function videoSlots(scenes) {
     if (s.type === 'outro' || (!v.video && (['recording', 'screencast'].includes(v.source) || v.picture === 'recording' ||
         (v.source === 'stock' && typeof v.clip === 'string')))) return;
     const plan = scenePlan(s);
-    if (plan && plan.engine === 'seedance') {
+    if (plan && plan.priceKey) {
       slots.push({ shot: shotNo, kind: plan.kind, engine: plan.engine, duration: Number(s.duration),
         plan, label: plan.kind === 'motion' ? 'motion background' : plan.kind === 'quote' ? 'speech clip' : 'b-roll' });
     } else if (s.type === 'broll') {
@@ -241,7 +241,7 @@ function videoSlots(scenes) {
       slots.push({ shot: shotNo, kind: 'motion', engine, duration: Number(s.duration) || 0,
                    label: 'motion background' });
     } else if (s.type === 'quote' && v.clip && typeof v.clip === 'object') {
-      slots.push({ shot: shotNo, kind: 'quote', engine: routeEngine(v.clip.engine || v.engine, 'veo'), duration: 8,
+      slots.push({ shot: shotNo, kind: 'quote', engine: routeEngine(v.clip.engine || v.engine, 'veo'), duration: Number(s.duration) || 0,
                    label: 'speech clip' + (s.speaker ? ' · ' + s.speaker : '') });
     }
     const sl = v.slide;
@@ -345,7 +345,8 @@ function forecastRows(slots) {
     const plan = slot.plan;
     const route = plan ? { key: plan.priceKey, fixedSeconds: plan.billedSeconds || plan.durationSeconds,
       why: plan.tool + ' · ' + plan.model + ' · ' + plan.reason } : ROUTES[slot.kind + '/' + slot.engine];
-    const qty = route.fixedQty !== undefined ? route.fixedQty
+    const qty = route.supportedSeconds ? require('../../_shared/video-duration.js').minimumDuration(slot.duration, { seconds: route.supportedSeconds }).requestedSeconds
+      : route.fixedQty !== undefined ? route.fixedQty
       : route.fixedSeconds !== undefined ? route.fixedSeconds : slot.duration;
     return {
       key: route.key,
@@ -484,7 +485,7 @@ function selftest() {
   const sample = [
     { type: 'cover', visual: { picture: 'still' } },
     { type: 'points', duration: 6, visual: { video: { prompt: 'x' } } },
-    { type: 'quote', visual: { clip: { prompt: 'x' } } },
+    { type: 'quote', duration: 5, visual: { clip: { prompt: 'x' } } },
     { type: 'points', duration: 5, visual: { clip: '.work/x.mp4' } },
     { type: 'broll', after: 0, duration: 4, visual: {} }
   ];
@@ -504,7 +505,7 @@ function selftest() {
     .forEach((r) => ok('route ' + r + ' has a price key', !!(ROUTES[r] && ROUTES[r].key)));
   const hostScenes = [
     { type: 'points', duration: 6, visual: { video: { engine: 'host', prompt: 'x' } } },
-    { type: 'quote', visual: { clip: { prompt: 'x', engine: 'host' } } },
+    { type: 'quote', duration: 5, visual: { clip: { prompt: 'x', engine: 'host' } } },
     { type: 'broll', after: 0, duration: 4, visual: { engine: 'host' } }
   ];
   const hostSlots = videoSlots(hostScenes);
@@ -513,7 +514,7 @@ function selftest() {
   const hostRows = forecastRows(hostSlots);
   ok('a host motion background is forecast at the requested seconds on video.host',
      hostRows[0].key === 'video.host' && hostRows[0].qty === 6);
-  ok('a host speech clip books 10 seconds', hostRows[1].qty === 10);
+  ok('a 5s host speech clip books the minimum 6 seconds', hostRows[1].qty === 6);
   ok('a host b-roll bills its used length, not Veo\'s 8', hostRows[2].qty === 4);
   ok('switching a slot to the host engine changes the fingerprint',
      costFingerprint(hostScenes) !== costFingerprint(sample) && /1:motion\/host\/6/.test(costFingerprint(hostScenes)));

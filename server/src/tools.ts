@@ -1,3 +1,4 @@
+import { DURATION_TOOLS } from './video-duration.js';
 import { CHANNEL_SLUG_RE } from './config.js';
 import { cameraContract, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
@@ -4862,6 +4863,19 @@ Returns: JSON — { files, violations, warnings, findings: [{ level, where, what
  * (default tokens ∪ channel directories). All handlers stay registered — calling
  * an unconfigured platform directly returns an explicit missing-token error.
  */
+// New generations can state the coverage needed; exact legacy requests keep their schema.
+for (const tool of TOOLS) {
+  if (!(DURATION_TOOLS as readonly string[]).includes(tool.name)) continue;
+  tool.inputSchema.properties = { ...tool.inputSchema.properties, requiredSeconds: {
+    type: 'number', exclusiveMinimum: 0,
+    description: 'Required source coverage in seconds, e.g. 3.2. Include the measured shot body, source trim and outgoing transition handle. Selects the shortest supported duration without changing model/resolution. Mutually exclusive with durationSeconds, numFrames, frames, autoDuration and audioMaxDuration. Use for new shots; exact legacy requests may retain their explicit length. Over-limit shots must be split; never truncated.',
+  } };
+  if (tool.name === 'seedance_text2video' || tool.name === 'seedance_img2video') tool.inputSchema.properties.frames = {
+    type: 'integer', minimum: 29, maximum: 289, description: 'Exact output frames, 1 mod 4 at 24 fps. Only Seedance 1.0 Pro/Fast. Mutually exclusive with durationSeconds and requiredSeconds. Use requiredSeconds to round upward automatically.',
+  };
+  tool.description += '\nFor shot-length optimization, pass requiredSeconds (e.g. 3.2) instead of a fixed duration/frame count. Returns the required/requested/excess seconds as a duration plan; these are not measured output seconds. Do NOT use this option for extending, editing or retaking existing footage.';
+}
+
 export const SNS_PLATFORM_BY_TOOL: Record<string, 'THREADS' | 'INSTAGRAM' | 'FACEBOOK' | 'YOUTUBE'> = {
   threads_publish: 'THREADS',
   threads_draft_create: 'THREADS',

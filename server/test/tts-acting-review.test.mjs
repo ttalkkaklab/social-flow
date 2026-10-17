@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { actingVerdict, actingVerdictSchema, reviewActing } from '../dist/tts-acting-review.js';
+import { actingVerdict, actingVerdictSchema, parseActingObservation, reviewActing } from '../dist/tts-acting-review.js';
 import { config } from '../dist/config.js';
 import { pcmToWav } from '../dist/media-utils.js';
 const review={accuracy:100,acting:90,naturalness:96,audioQuality:98,complete:true,confidence:.96,confidenceReason:'The entire recording was clearly audible.',heardText:'Hello',evidence:'Heard the entire clip; the second phrase is flat, phrasing is abrupt, and a quiet click is audible.',issues:[
@@ -36,17 +36,59 @@ test('unsupported live-style deductions invalidate the evaluation without changi
  assert.equal(actingVerdictSchema.safeParse({...review,issues:[{start:0,end:1,severity:'minor',observation:'Noise',correction:'Clean'}]}).success,false);
 });
 
+test('axis-bound observations preserve unfavorable numbers, scope and evidence without normalization',()=>{
+ const input={heardText:'Hello',complete:true,confidence:.96,confidenceReason:'Every word was clearly audible.',axes:{
+  accuracy:{evidence:'The words match the expected text with native pronunciation.',issues:[],score:100},
+  acting:{evidence:'The second phrase is flat instead of the intended reassurance.',issues:[{start:1,end:2,severity:'major',observation:'Flat reassurance.',correction:'Reassure the listener.'}],score:80},
+  naturalness:{evidence:'The phrasing and breath sound natural throughout.',issues:[],score:100},
+  audioQuality:{evidence:'The recording is clear without noise or clipping.',issues:[],score:100},
+ }};
+ const parsed=parseActingObservation(input);
+ assert.equal(parsed.acting,80);assert.equal(actingVerdict(parsed,5).score,94);
+ assert.equal(actingVerdict(parsed,5).verdict,'FAIL');assert.deepEqual(parsed.issues[0].axes,['acting']);
+ assert.match(parsed.evidence,/audioQuality: The recording is clear/);
+ input.axes.accuracy.score=75;
+ const inconsistent=parseActingObservation(input),outcome=actingVerdict(inconsistent,5);
+ assert.equal(inconsistent.accuracy,75);assert.equal(outcome.evaluationStatus,'invalid_evidence');
+ assert.equal(outcome.verdict,'FAIL');assert.equal(input.axes.accuracy.score,75);
+ input.axes.accuracy.score=101;assert.throws(()=>parseActingObservation(input));
+});
+
+test('concise per-axis observations retain the existing valid flat verdict contract',()=>{
+ const result=parseActingObservation({heardText:'Hello',complete:true,confidence:.95,confidenceReason:'The complete recording was clear.',axes:{
+  accuracy:{evidence:'All words match.',issues:[],score:100},
+  acting:{evidence:'Friendly greeting.',issues:[],score:100},
+  naturalness:{evidence:'Natural rhythm.',issues:[],score:100},
+  audioQuality:{evidence:'Clean recording.',issues:[],score:100},
+ }});
+ assert.equal(actingVerdict(result,1).verdict,'PASS');assert.equal(actingVerdict(result,1).score,100);
+ assert.equal(result.evidence,'accuracy: All words match.\nacting: Friendly greeting.\nnaturalness: Natural rhythm.\naudioQuality: Clean recording.');
+});
+
 test('failed dispatched acting reviews record usage locally and in the episode ledger', async () => {
  const dir=mkdtempSync(join(tmpdir(),'acting-review-ledger-'));
  const previousFetch=globalThis.fetch, previousKey=config.geminiApiKey;
- let calls=0;
+ let calls=0,dispatched;
  try {
   config.geminiApiKey='test-only-never-sent';
-  globalThis.fetch=async()=>{calls++;throw new Error('mock failure after dispatch');};
+  globalThis.fetch=async(resource,options)=>{
+   calls++;dispatched=JSON.parse(options?.body ?? await resource.text());
+   throw new Error('mock failure after dispatch');
+  };
   const audioPath=join(dir,'take.wav');
   writeFileSync(audioPath,pcmToWav(Buffer.alloc(24000*2,10),24000,1));
   const request={audioPath,expectedText:'Hello',direction:'Friendly',language:'en',requestedBy:'Please evaluate this audio',outputPath:dir};
   await assert.rejects(reviewActing(request),/mock failure after dispatch/);
+  const properties=dispatched.generationConfig.responseJsonSchema.properties;
+  for(const axis of ['accuracy','acting','naturalness','audioQuality']){
+   const fields=Object.keys(properties.axes.properties[axis].properties);
+   assert.ok(fields.indexOf('evidence')<fields.indexOf('score'));
+   assert.ok(fields.indexOf('issues')<fields.indexOf('score'));
+  }
+  assert.match(properties.axes.properties.accuracy.description,/Pacing.*do not reduce word accuracy/);
+  assert.match(properties.axes.properties.audioQuality.description,/unless the brief requests it/);
+  assert.match(JSON.stringify(dispatched.systemInstruction),/independent audio performance critic/);
+  assert.match(JSON.stringify(dispatched.systemInstruction),/never invent a defect/);
   const local=()=>readFileSync(join(dir,'review-events.jsonl'),'utf8').trim().split('\n').map(JSON.parse);
   assert.equal(local().length,1);
   assert.equal(local()[0].ok,false);
@@ -71,7 +113,7 @@ test('character audio review sends evidence policy as system instructions and bi
  let body;
  try {
   config.geminiApiKey='offline-test-never-sent';
-  const observation={accuracy:100,acting:100,naturalness:100,audioQuality:100,characterFit:100,observedVoice:'Adult female in a clear middle register.',complete:true,confidence:.96,confidenceReason:'The full recording is clear and audible.',heardText:'Hello',evidence:'The entire recording is audible, with clear words and no observed defect.',issues:[]};
+  const observation={observedVoice:'Adult female in a clear middle register.',complete:true,confidence:.96,confidenceReason:'The full recording is clear and audible.',heardText:'Hello',axes:Object.fromEntries(['accuracy','acting','naturalness','audioQuality','characterFit'].map(axis=>[axis,{evidence:'The full recording is clear, appropriate and has no observed defect.',issues:[],score:100}]))};
   globalThis.fetch=async(_url,init)=>{body=JSON.parse(init.body);return new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(observation)}]}}],usageMetadata:{promptTokenCount:100,candidatesTokenCount:100}}));};
   const audioPath=join(dir,'take.wav');writeFileSync(audioPath,pcmToWav(Buffer.alloc(48000,10),24000,1));
   const characterTarget={vocalGender:'female',perceivedAge:'24',timbre:'clear middle register',pace:null,register:null,traits:[],habits:null,emotionalRange:null};
@@ -80,9 +122,20 @@ test('character audio review sends evidence policy as system instructions and bi
   assert.match(policy,/untrusted data/);
   assert.match(policy,/Do not compress scores/);
   assert.match(policy,/Do not manufacture/);
+  const axisSchema=body.generationConfig.responseJsonSchema.properties.axes;
+  assert.ok(axisSchema.required.includes('characterFit'));
+  assert.ok(Object.keys(axisSchema.properties.characterFit.properties).indexOf('evidence')<Object.keys(axisSchema.properties.characterFit.properties).indexOf('score'));
   assert.equal(result.review.characterFit,100);
   assert.deepEqual(result.inputs.characterTarget,characterTarget);
   assert.ok(result.apiVersion);
   assert.equal(result.verdict,'PASS');
+  delete observation.axes.characterFit;
+  await assert.rejects(reviewActing({audioPath,expectedText:'Hello',direction:'Conversational',requestedBy:'Please evaluate character fit',outputPath:dir,characterTarget}),/omitted actual voice observations or characterFit/);
+  observation.axes.characterFit={evidence:'A contradictory vocal identity was heard throughout.',score:80,issues:[{start:0,end:.5,severity:'major',observation:'Young feminine voice contradicts an older masculine target.',correction:'Choose a matching voice.'}]};
+  const unfavorable=parseActingObservation(observation);
+  assert.equal(unfavorable.characterFit,80);
+  assert.deepEqual(unfavorable.issues[0].axes,['characterFit']);
+  assert.equal(actingVerdict(unfavorable,1).verdict,'FAIL');
+  await assert.rejects(reviewActing({audioPath,expectedText:'Hello',direction:'Conversational',requestedBy:'Please evaluate acting',outputPath:dir}),/unrequested character-fit rubric/);
  } finally {globalThis.fetch=previousFetch;config.geminiApiKey=previousKey;rmSync(dir,{recursive:true,force:true});}
 });

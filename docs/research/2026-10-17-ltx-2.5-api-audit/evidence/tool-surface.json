@@ -1,0 +1,400 @@
+{
+  "checkedDate": "2026-10-17",
+  "codeRevision": "b25423285988bfdf775ee7ea3f9e3d2f8bed050c",
+  "sourceFiles": [
+    "server/src/astra-video-client.ts",
+    "server/src/tools.ts",
+    "server/src/handlers.ts",
+    "server/test/astra-video-client.test.mjs"
+  ],
+  "tools": [
+    {
+      "name": "astra_text2video",
+      "required": [
+        "prompt"
+      ],
+      "exposedFields": [
+        "prompt",
+        "tier",
+        "numFrames",
+        "autoDuration",
+        "width",
+        "height",
+        "frameRate",
+        "seed",
+        "lora",
+        "negativePrompt",
+        "numInferenceSteps",
+        "numGeneratedKeyframes",
+        "outputPath",
+        "filename"
+      ]
+    },
+    {
+      "name": "astra_img2video",
+      "required": [
+        "prompt",
+        "firstFramePath"
+      ],
+      "exposedFields": [
+        "prompt",
+        "tier",
+        "firstFramePath",
+        "lastFramePath",
+        "strength",
+        "numFrames",
+        "width",
+        "height",
+        "frameRate",
+        "seed",
+        "lora",
+        "numGeneratedKeyframes",
+        "outputPath",
+        "filename"
+      ]
+    },
+    {
+      "name": "astra_keyframe_video",
+      "required": [
+        "prompt",
+        "images"
+      ],
+      "exposedFields": [
+        "prompt",
+        "images",
+        "numFrames",
+        "width",
+        "height",
+        "frameRate",
+        "seed",
+        "negativePrompt",
+        "numInferenceSteps",
+        "outputPath",
+        "filename"
+      ]
+    },
+    {
+      "name": "astra_audio2video",
+      "required": [
+        "prompt"
+      ],
+      "exposedFields": [
+        "prompt",
+        "audioPath",
+        "audioUploadId",
+        "imagePath",
+        "strength",
+        "audioStartTime",
+        "audioMaxDuration",
+        "numFrames",
+        "width",
+        "height",
+        "frameRate",
+        "seed",
+        "negativePrompt",
+        "numInferenceSteps",
+        "outputPath",
+        "filename"
+      ]
+    },
+    {
+      "name": "astra_video_retake",
+      "required": [
+        "prompt",
+        "sourceVideoPath",
+        "startTime",
+        "endTime"
+      ],
+      "exposedFields": [
+        "prompt",
+        "sourceVideoPath",
+        "startTime",
+        "endTime",
+        "seed",
+        "outputPath",
+        "filename"
+      ]
+    },
+    {
+      "name": "astra_video_list_uploads",
+      "required": [],
+      "exposedFields": []
+    },
+    {
+      "name": "astra_video_delete_upload",
+      "required": [
+        "uploadId"
+      ],
+      "exposedFields": [
+        "uploadId"
+      ]
+    }
+  ],
+  "liveComparison": [
+    {
+      "mode": "generate",
+      "status": 400,
+      "liveFields": [
+        "auto_duration",
+        "frame_rate",
+        "hdr",
+        "height",
+        "images",
+        "lora",
+        "mode",
+        "num_frames",
+        "num_generated_keyframes",
+        "prompt",
+        "seed",
+        "width"
+      ],
+      "localFields": [
+        "auto_duration",
+        "frame_rate",
+        "hdr",
+        "height",
+        "images",
+        "lora",
+        "mode",
+        "num_frames",
+        "num_generated_keyframes",
+        "prompt",
+        "seed",
+        "width"
+      ],
+      "onlyLive": [],
+      "onlyLocal": []
+    },
+    {
+      "mode": "guided",
+      "status": 400,
+      "liveFields": [
+        "auto_duration",
+        "frame_rate",
+        "hdr",
+        "height",
+        "images",
+        "mode",
+        "negative_prompt",
+        "num_frames",
+        "num_generated_keyframes",
+        "num_inference_steps",
+        "prompt",
+        "seed",
+        "width"
+      ],
+      "localFields": [
+        "auto_duration",
+        "frame_rate",
+        "hdr",
+        "height",
+        "images",
+        "mode",
+        "negative_prompt",
+        "num_frames",
+        "num_generated_keyframes",
+        "num_inference_steps",
+        "prompt",
+        "seed",
+        "width"
+      ],
+      "onlyLive": [],
+      "onlyLocal": []
+    },
+    {
+      "mode": "guided_fast",
+      "status": 400,
+      "liveFields": [
+        "auto_duration",
+        "frame_rate",
+        "hdr",
+        "height",
+        "images",
+        "mode",
+        "negative_prompt",
+        "num_frames",
+        "num_generated_keyframes",
+        "num_inference_steps",
+        "prompt",
+        "seed",
+        "width"
+      ],
+      "localFields": [
+        "auto_duration",
+        "frame_rate",
+        "hdr",
+        "height",
+        "images",
+        "mode",
+        "negative_prompt",
+        "num_frames",
+        "num_generated_keyframes",
+        "num_inference_steps",
+        "prompt",
+        "seed",
+        "width"
+      ],
+      "onlyLive": [],
+      "onlyLocal": []
+    },
+    {
+      "mode": "keyframe",
+      "status": 400,
+      "liveFields": [
+        "frame_rate",
+        "hdr",
+        "height",
+        "images",
+        "mode",
+        "negative_prompt",
+        "num_frames",
+        "num_inference_steps",
+        "prompt",
+        "seed",
+        "width"
+      ],
+      "localFields": [
+        "frame_rate",
+        "hdr",
+        "height",
+        "images",
+        "mode",
+        "negative_prompt",
+        "num_frames",
+        "num_inference_steps",
+        "prompt",
+        "seed",
+        "width"
+      ],
+      "onlyLive": [],
+      "onlyLocal": []
+    },
+    {
+      "mode": "audio2video",
+      "status": 400,
+      "liveFields": [
+        "audio_max_duration",
+        "audio_start_time",
+        "audio_upload_id",
+        "frame_rate",
+        "hdr",
+        "height",
+        "images",
+        "mode",
+        "negative_prompt",
+        "num_frames",
+        "num_inference_steps",
+        "prompt",
+        "seed",
+        "width"
+      ],
+      "localFields": [
+        "audio_max_duration",
+        "audio_start_time",
+        "audio_upload_id",
+        "frame_rate",
+        "hdr",
+        "height",
+        "images",
+        "mode",
+        "negative_prompt",
+        "num_frames",
+        "num_inference_steps",
+        "prompt",
+        "seed",
+        "width"
+      ],
+      "onlyLive": [],
+      "onlyLocal": []
+    },
+    {
+      "mode": "retake",
+      "status": 400,
+      "liveFields": [
+        "end_time",
+        "hdr",
+        "mode",
+        "prompt",
+        "seed",
+        "start_time",
+        "video_upload_id"
+      ],
+      "localFields": [
+        "end_time",
+        "hdr",
+        "mode",
+        "prompt",
+        "seed",
+        "start_time",
+        "video_upload_id"
+      ],
+      "onlyLive": [],
+      "onlyLocal": []
+    },
+    {
+      "mode": "ingredients",
+      "status": 400,
+      "liveFields": [
+        "frame_rate",
+        "hdr",
+        "height",
+        "images",
+        "mode",
+        "num_frames",
+        "prompt",
+        "references",
+        "seed",
+        "width"
+      ],
+      "localFields": [],
+      "onlyLive": [
+        "frame_rate",
+        "hdr",
+        "height",
+        "images",
+        "mode",
+        "num_frames",
+        "prompt",
+        "references",
+        "seed",
+        "width"
+      ],
+      "onlyLocal": [],
+      "classification": "missing_mode"
+    }
+  ],
+  "handlerProbes": [
+    {
+      "tool": "astra_img2video",
+      "error": "Invalid arguments — unknown argument(s): negativePrompt, numInferenceSteps, autoDuration, hdr. This tool accepts: prompt, tier, firstFramePath, lastFramePath, strength, numFrames, width, height, frameRate, seed, lora, numGeneratedKeyframes, outputPath, filename. Proceeding while ignoring an argument would make you believe a filter was applied when it was not, so the call is rejected."
+    },
+    {
+      "tool": "astra_text2video",
+      "error": "Invalid arguments — unknown argument(s): hdr, generateAudio, cameraMotion. This tool accepts: prompt, tier, numFrames, autoDuration, width, height, frameRate, seed, lora, negativePrompt, numInferenceSteps, numGeneratedKeyframes, outputPath, filename. Proceeding while ignoring an argument would make you believe a filter was applied when it was not, so the call is rejected."
+    }
+  ],
+  "handlerProbeNetwork": "fetch was replaced by a throwing stub; both requests were rejected by argument validation before any upload or network access",
+  "rawZodCaveat": "Raw Zod object parsing strips unknown fields, but actual ROUTES handlers call parseArgs and reject unknown top-level fields.",
+  "moduleComparison": [
+    {
+      "file": "server/dist/astra-video-client.js",
+      "repositorySha256": "62cdf8a16502a06af28fb26531fc15862c3638a36bedf8e5d4156bf1bf523936",
+      "installedSha256": "62cdf8a16502a06af28fb26531fc15862c3638a36bedf8e5d4156bf1bf523936",
+      "identical": true
+    },
+    {
+      "file": "server/dist/tools.js",
+      "repositorySha256": "6d7ea68dcc7d7cd236503bae9fee7caa1e81692b299ff79a0286a68897d6320a",
+      "installedSha256": "6d7ea68dcc7d7cd236503bae9fee7caa1e81692b299ff79a0286a68897d6320a",
+      "identical": true
+    }
+  ],
+  "contractTests": {
+    "command": "cd server && node --test --test-skip-pattern='mocked tool calls' --test-reporter=tap test/astra-video-client.test.mjs",
+    "pass": 92,
+    "fail": 0,
+    "excludedSuite": "mocked tool calls",
+    "liveGeneration": false,
+    "freshnessGap": "The test for all supported modes hard-codes the old six-mode list and does not detect live ingredients mode."
+  }
+}
