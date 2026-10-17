@@ -12,13 +12,18 @@ import { recordUsage } from './usage-ledger.js';
 const exec = promisify(execFile);
 export const ACTING_REVIEW_MODEL = process.env.SOCIAL_FLOW_ACTING_REVIEW_MODEL?.trim() || 'gemini-3.8-flash';
 const API_VERSION = process.env.SOCIAL_FLOW_TTS_REVIEW_API_VERSION?.trim() || 'v1';
-const VISUAL_POLICY = 'acting-review-v7';
-const AUDIO_POLICY = 'acting-review-v6';
+const VISUAL_POLICY = 'acting-review-v9';
+const AUDIO_POLICY = 'acting-review-v8';
 // Explicit temporal sampling avoids the SDK's 1 fps default missing brief gestures.
 export function actingMediaPart(bytes: Buffer, probe: MediaProbe, mode: ActingReviewRequest['mode']) {
   return { inlineData: { data: bytes.toString('base64'), mimeType: probe.mimeType },
     ...(probe.video && mode !== 'audio' ? { videoMetadata: { fps: 8 } } : {}) };
 }
+export const ACTING_REVIEW_ADVISORY = {
+  advisoryOnly: true,
+  selectionAuthority: 'user',
+  interpretation: 'Status and scores describe model judgment, not usability or permission. User preference decides voice casting; do not reject, replace or regenerate a preferred take because of a low score. Perceived age and naturalness are subjective impressions, not measured facts. Report concrete intelligibility defects separately.',
+} as const;
 const MAX_BYTES = 12 * 1024 * 1024;
 export const actingReviewSchema = z.object({
   mediaPath: z.string().min(1), expectedText: z.string().max(8000).default(''),
@@ -185,6 +190,7 @@ async function evaluate(bytes: Buffer, probe: MediaProbe, request: ActingReviewR
   const response = await client.models.generateContent({ model: ACTING_REVIEW_MODEL,
     contents: [{ role: 'user', parts: [actingMediaPart(bytes, probe, request.mode), { text:
       `Review the entire supplied media critically against this quoted production brief: ${JSON.stringify({ expectedText: request.expectedText, direction: request.direction, mode: request.mode, measuredDuration: probe.duration })}.
+This review is advisory. Voice age, naturalness and character appeal are subjective impressions, not objective defects or casting vetoes. A deliberately coarse, stylized or theatrical voice may be the intended aesthetic. Do not equate age with low pitch, rasp or vocal wear, and do not assert physiological causes such as laryngeal tension or exact age from listening alone. Describe audible qualities with uncertainty. Distinguish an actual word error or unintelligibility from a disliked timbre or rhythm; speechAccuracy must not penalize stylistic delivery alone. Preserve user-selected character qualities in proposed corrections; never optimize them away merely toward generic naturalness.
 Confidence must be a fraction from 0 to 1 (for example 0.95), never a 0–100 percentage. Scores use 0–100. Do not convert uncertainty into a performance deduction; lower confidence and explain the limitation in the coverage evidence.
 Explain confidenceReason with the actual observational basis: what was clearly heard/seen or what prevented reliable judgment. A short clip alone is not proof of poor delivery or uncertainty; identify the specific missing evidence if its brevity limits this judgment. Never manufacture a limitation or inflate confidence.
 Judge the precise brief without expanding its expectations. Mild puzzlement does not require deeper confusion, extra hesitation, slower speech, or exaggerated facial motion. Identify a concrete contradiction to the requested intent, rather than a stylistic preference.
@@ -233,10 +239,10 @@ export async function reviewActing(input: ActingReviewRequest, deps: ActingDepen
       const sourceChanged = cached.sourceChanged || currentMediaSha256 !== mediaSha256;
       const outcome = sourceChanged ? unverified(['Source media changed during or after review'])
         : cached.review ? actingReviewOutcome(cached.review, probe, request) : unverified(cached.failures);
-      return { ...cached, ...outcome, sourceChanged, currentMediaSha256, currentMediaPath: mediaPath, receiptPath, reused: true };
+      return { ...cached, ...outcome, ...ACTING_REVIEW_ADVISORY, sourceChanged, currentMediaSha256, currentMediaPath: mediaPath, receiptPath, reused: true };
     } catch (error) {
       // A corrupt receipt must not silently authorize another bill or a claimed pass.
-      return { ...unverified([`Invalid cached receipt: ${error instanceof Error ? error.message : String(error)}`]), receiptPath, reused: true };
+      return { ...ACTING_REVIEW_ADVISORY, ...unverified([`Invalid cached receipt: ${error instanceof Error ? error.message : String(error)}`]), receiptPath, reused: true };
     }
   }
   const lock = `${receiptPath}.lock`;
@@ -281,5 +287,5 @@ export async function reviewActing(input: ActingReviewRequest, deps: ActingDepen
   }
   try { rmSync(lock, { force: true }); }
   catch { console.error(`[acting_review] Receipt saved; stale lock can be removed: ${lock}`); }
-  return { ...receipt, receiptPath, reused: false };
+  return { ...receipt, ...ACTING_REVIEW_ADVISORY, receiptPath, reused: false };
 }

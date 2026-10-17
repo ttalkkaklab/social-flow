@@ -3064,7 +3064,7 @@ Returns: a text block with the saved .wav file path, voice name, and text length
         description: `Generate acted single-voice or two-speaker speech with Gemini 3.8 TTS through the Interactions API.
 
 Use for emotional acting, per-line delivery changes, vocal events, pauses, and two-person dialogue. Put lasting delivery in each turn's style field. Put point events directly in text with the documented English angle-bracket tags, such as <laugh>, <sigh>, <cough>, <breath>, <short pause>, or <long pause>. For listener backchannels and overlapping speech in two-speaker mode, put pipe segments such as |oh really?| inside the active speaker's text. The text is read verbatim, so never put stage directions in it unless they are a supported tag.
-Single voice accepts a curated name, an extended-library voice, or a voice_ / voicekey_ identifier. Two-speaker mode requires exactly two configured curated voices and every turn must name one configured speaker. Gemini 3.8 supports at most two speakers in one request.
+For a requested age or identity change, create/remix the voice with tts_voice_design first; changing turn style with the same ID is not an identity correction. Single voice accepts a curated name, an extended-library voice, or a voice_ / voicekey_ identifier. Two-speaker mode requires exactly two configured curated voices and every turn must name one configured speaker. Gemini 3.8 supports at most two speakers in one request.
 This is a supporting engine for acted cuts and two-person scenes. The saved speech model stays authoritative; never replace an existing Gemini or ElevenLabs v4 selection automatically.
 
 Returns: a text block with the saved 24kHz mono RIFF WAV path, model, voice or speaker assignments, turn count, and total text length.`,
@@ -3180,10 +3180,32 @@ Returns: a text block with the saved .wav file path, speaker/voice assignments, 
         },
     },
     {
+        name: 'tts_voice_design', title: 'Design a persistent Gemini character voice', annotations: HINT.generate,
+        description: 'Create a paid stored Gemini voice from character age, vocal gender, timbre and accent using POST /v1beta/voices. Use when casting a custom character or changing perceived age/identity; turn style only controls delivery. Optional baseVoice remixes an existing voice. Returns voiceId, local WAV preview, hash, usage and receipt; use that ID with tts_gemini_38. Does not edit character sheets or episodes and does not certify age by listening. Requires GEMINI_API_KEY and a new outputPath per creation; never blindly retry an uncertain call. For catalog discovery use tts_list_voices source:library with filters; for ordinary lines use speech_manage plan_audio.',
+        inputSchema: { type: 'object', additionalProperties: false, properties: {
+                model: { type: 'string', enum: ['gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts'], description: 'Explicit voice creation model.' },
+                displayName: { type: 'string', minLength: 1, maxLength: 100, description: 'Distinct name for later catalog reconciliation.' },
+                prompt: { type: 'string', minLength: 1, maxLength: 4000, description: 'Stable voice identity: perceived age, timbre, accent and baseline delivery; relative changes if baseVoice is supplied.' },
+                languageCode: { type: 'string', minLength: 1, description: 'BCP-47 primary language, e.g. ko-KR.' },
+                gender: { type: 'string', enum: ['male', 'female', 'neutral'], description: 'Perceived vocal gender from character identity.' },
+                baseVoice: { type: 'string', minLength: 1, maxLength: 300, description: 'Optional existing prebuilt voice name or accessible custom voice ID to remix.' },
+                outputPath: { type: 'string', minLength: 1, description: 'New local directory for voice-design.json and voice-preview.wav. Existing receipt prevents duplicate creation.' }
+            }, required: ['model', 'displayName', 'prompt', 'languageCode', 'gender', 'outputPath'] }
+    },
+    {
         name: 'tts_list_voices', title: 'Gemini voice catalog', annotations: HINT.read,
-        description: 'List Gemini curated voices or query the live extended/custom voice library. source=curated returns the static 30-voice list without API usage. source=library queries GET /v1beta/voices with pageToken/limit and requires GEMINI_API_KEY. Returns voice IDs and metadata; choose by audition. For ElevenLabs use tts_elevenlabs_voices. This tool does not synthesize audio.',
+        description: 'List Gemini curated voices or query the live extended/custom voice library. source=curated returns the static 30-voice list without API usage. source=library queries GET /v1beta/voices with pageToken/limit and requires GEMINI_API_KEY. Supports languageCode, gender, pitch, persona and description search; preserve filters across pages. There is no numeric age filter: search description text or use tts_voice_design to create/remix an age-appropriate voice. Returns voice IDs and metadata; metadata age is not listening evidence. For ElevenLabs use tts_elevenlabs_voices. This tool does not synthesize audio.',
         inputSchema: { type: 'object', additionalProperties: false, properties: {
                 source: { type: 'string', enum: ['curated', 'library'], default: 'curated', description: 'Static basic catalog or live voice library.' },
+                languageCode: { type: 'array', items: { type: 'string', minLength: 1 }, description: 'Library-only languageCode filter; multiple values match with OR.' },
+                regionCode: { type: 'array', items: { type: 'string', minLength: 1 }, description: 'Library-only regionCode filter; multiple values match with OR.' },
+                accent: { type: 'array', items: { type: 'string', minLength: 1 }, description: 'Library-only accent filter; multiple values match with OR.' },
+                persona: { type: 'array', items: { type: 'string', minLength: 1 }, description: 'Library-only persona filter; multiple values match with OR.' },
+                context: { type: 'array', items: { type: 'string', minLength: 1 }, description: 'Library-only context filter; multiple values match with OR.' },
+                gender: { type: 'array', items: { type: 'string', enum: ['male', 'female', 'neutral'] }, description: 'Library-only gender filter.' },
+                pitch: { type: 'array', items: { type: 'string', enum: ['low', 'medium', 'high'] }, description: 'Library-only pitch filter.' },
+                type: { type: 'array', items: { type: 'string', enum: ['prebuilt', 'prompted', 'replicated'] }, description: 'Library-only type filter.' },
+                search: { type: 'string', minLength: 1, description: 'Library-only case-insensitive substring search of name and description, at most 2048 UTF-8 bytes; not a numeric age range.' },
                 pageToken: { type: 'string', description: 'Next page token from a prior library response.' },
                 limit: { type: 'integer', minimum: 1, maximum: 100, default: 30, description: 'Maximum library voices per request.' }
             } }
@@ -4466,7 +4488,7 @@ Use when the user asks to listen/watch, adversarially evaluate, or improve expre
 
 Do NOT use for free provenance or generation planning: use speech_manage instead. Do NOT use metadata or still frames as proof that speech or continuous acting works.
 
-Returns status pass/fail/unverified, nullable score, failures, review with situation/expression/body/vocalEmotion/speechAccuracy/lipSync evidence, media/direction hashes, usage, receiptPath and reused. success requires verified score >=95 on all required axes, confidence >=0.9, complete required track coverage and no findings. Unobserved axes are null; audio-only review cannot certify visual acting.`,
+User preference decides voice casting; perceived age and naturalness are subjective. Never reject or regenerate a preferred take to satisfy this review. Returns advisoryOnly=true, selectionAuthority=user, interpretation, status pass/fail/unverified, nullable score, failures, review with situation/expression/body/vocalEmotion/speechAccuracy/lipSync evidence, media/direction hashes, usage, receiptPath and reused. success requires verified score >=95 on all required axes, confidence >=0.9, complete required track coverage and no findings. Unobserved axes are null; audio-only review cannot certify visual acting.`,
         inputSchema: {
             type: 'object', additionalProperties: false, properties: {
                 mediaPath: { type: 'string', minLength: 1, description: 'Local clip/audio file, e.g. /Volumes/data/story/meleon/test/shot-21.mp4.' },

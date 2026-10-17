@@ -2999,7 +2999,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve11.call(this, root, ref);
+      let _sch = resolve12.call(this, root, ref);
       if (_sch === void 0) {
         const schema = (_a4 = root.localRefs) === null || _a4 === void 0 ? void 0 : _a4[ref];
         const { schemaId } = this.opts;
@@ -3026,7 +3026,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve11(root, ref) {
+    function resolve12(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -3657,7 +3657,7 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve11(baseURI, relativeURI, options) {
+    function resolve12(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const { parsed: baseParsed, malformedAuthorityOrPort: baseMalformed } = parseWithStatus(baseURI, schemelessOptions);
       const { parsed: relativeParsed, malformedAuthorityOrPort: relativeMalformed } = parseWithStatus(relativeURI, schemelessOptions);
@@ -3941,7 +3941,7 @@ var require_fast_uri = __commonJS({
     var fastUri = {
       SCHEMES,
       normalize: normalize2,
-      resolve: resolve11,
+      resolve: resolve12,
       resolveComponent,
       equal,
       serialize,
@@ -7256,7 +7256,7 @@ var require_p_retry = __commonJS({
       return error2;
     };
     var isNetworkError = (errorMessage) => networkErrorMsgs.includes(errorMessage);
-    var pRetry2 = (input, options) => new Promise((resolve11, reject) => {
+    var pRetry2 = (input, options) => new Promise((resolve12, reject) => {
       options = {
         onFailedAttempt: () => {
         },
@@ -7266,7 +7266,7 @@ var require_p_retry = __commonJS({
       const operation = retry2.operation(options);
       operation.attempt(async (attemptNumber) => {
         try {
-          resolve11(await input(attemptNumber));
+          resolve12(await input(attemptNumber));
         } catch (error2) {
           if (!(error2 instanceof Error)) {
             reject(new TypeError(`Non-error was thrown: "${error2}". You should only throw errors.`));
@@ -7800,8 +7800,8 @@ var require_retry3 = __commonJS({
       }
       const delay2 = getNextRetryDelay(config3);
       err4.config.retryConfig.currentRetryAttempt += 1;
-      const backoff = config3.retryBackoff ? config3.retryBackoff(err4, delay2) : new Promise((resolve11) => {
-        setTimeout(resolve11, delay2);
+      const backoff = config3.retryBackoff ? config3.retryBackoff(err4, delay2) : new Promise((resolve12) => {
+        setTimeout(resolve12, delay2);
       });
       if (config3.onRetryAttempt) {
         await config3.onRetryAttempt(err4);
@@ -8577,8 +8577,8 @@ var require_helpers = __commonJS({
     function req(url, opts = {}) {
       const href = typeof url === "string" ? url : url.href;
       const req2 = (href.startsWith("https:") ? https2 : http4).request(url, opts);
-      const promise = new Promise((resolve11, reject) => {
-        req2.once("response", resolve11).once("error", reject).end();
+      const promise = new Promise((resolve12, reject) => {
+        req2.once("response", resolve12).once("error", reject).end();
       });
       req2.then = promise.then.bind(promise);
       return req2;
@@ -8755,7 +8755,7 @@ var require_parse_proxy_response = __commonJS({
     var debug_1 = __importDefault(require_src());
     var debug = (0, debug_1.default)("https-proxy-agent:parse-proxy-response");
     function parseProxyResponse(socket) {
-      return new Promise((resolve11, reject) => {
+      return new Promise((resolve12, reject) => {
         let buffersLength = 0;
         const buffers = [];
         function read2() {
@@ -8821,7 +8821,7 @@ var require_parse_proxy_response = __commonJS({
           }
           debug("got proxy server response: %o %o", firstLine, headers);
           cleanup();
-          resolve11({
+          resolve12({
             connect: {
               statusCode,
               statusText,
@@ -9063,7 +9063,7 @@ var require_ponyfill_es2018 = __commonJS({
         return new originalPromise(executor);
       }
       function promiseResolvedWith(value) {
-        return newPromise((resolve11) => resolve11(value));
+        return newPromise((resolve12) => resolve12(value));
       }
       function promiseRejectedWith(reason) {
         return originalPromiseReject(reason);
@@ -9233,8 +9233,8 @@ var require_ponyfill_es2018 = __commonJS({
         return new TypeError("Cannot " + name + " a stream using a released reader");
       }
       function defaultReaderClosedPromiseInitialize(reader) {
-        reader._closedPromise = newPromise((resolve11, reject) => {
-          reader._closedPromise_resolve = resolve11;
+        reader._closedPromise = newPromise((resolve12, reject) => {
+          reader._closedPromise_resolve = resolve12;
           reader._closedPromise_reject = reject;
         });
       }
@@ -9408,8 +9408,8 @@ var require_ponyfill_es2018 = __commonJS({
           }
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve11, reject) => {
-            resolvePromise = resolve11;
+          const promise = newPromise((resolve12, reject) => {
+            resolvePromise = resolve12;
             rejectPromise = reject;
           });
           const readRequest = {
@@ -9514,8 +9514,8 @@ var require_ponyfill_es2018 = __commonJS({
           const reader = this._reader;
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve11, reject) => {
-            resolvePromise = resolve11;
+          const promise = newPromise((resolve12, reject) => {
+            resolvePromise = resolve12;
             rejectPromise = reject;
           });
           const readRequest = {
@@ -10534,8 +10534,8 @@ var require_ponyfill_es2018 = __commonJS({
           }
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve11, reject) => {
-            resolvePromise = resolve11;
+          const promise = newPromise((resolve12, reject) => {
+            resolvePromise = resolve12;
             rejectPromise = reject;
           });
           const readIntoRequest = {
@@ -10847,10 +10847,10 @@ var require_ponyfill_es2018 = __commonJS({
           wasAlreadyErroring = true;
           reason = void 0;
         }
-        const promise = newPromise((resolve11, reject) => {
+        const promise = newPromise((resolve12, reject) => {
           stream._pendingAbortRequest = {
             _promise: void 0,
-            _resolve: resolve11,
+            _resolve: resolve12,
             _reject: reject,
             _reason: reason,
             _wasAlreadyErroring: wasAlreadyErroring
@@ -10867,9 +10867,9 @@ var require_ponyfill_es2018 = __commonJS({
         if (state === "closed" || state === "errored") {
           return promiseRejectedWith(new TypeError(`The stream (in ${state} state) is not in the writable state and cannot be closed`));
         }
-        const promise = newPromise((resolve11, reject) => {
+        const promise = newPromise((resolve12, reject) => {
           const closeRequest = {
-            _resolve: resolve11,
+            _resolve: resolve12,
             _reject: reject
           };
           stream._closeRequest = closeRequest;
@@ -10882,9 +10882,9 @@ var require_ponyfill_es2018 = __commonJS({
         return promise;
       }
       function WritableStreamAddWriteRequest(stream) {
-        const promise = newPromise((resolve11, reject) => {
+        const promise = newPromise((resolve12, reject) => {
           const writeRequest = {
-            _resolve: resolve11,
+            _resolve: resolve12,
             _reject: reject
           };
           stream._writeRequests.push(writeRequest);
@@ -11500,8 +11500,8 @@ var require_ponyfill_es2018 = __commonJS({
         return new TypeError("Cannot " + name + " a stream using a released writer");
       }
       function defaultWriterClosedPromiseInitialize(writer) {
-        writer._closedPromise = newPromise((resolve11, reject) => {
-          writer._closedPromise_resolve = resolve11;
+        writer._closedPromise = newPromise((resolve12, reject) => {
+          writer._closedPromise_resolve = resolve12;
           writer._closedPromise_reject = reject;
           writer._closedPromiseState = "pending";
         });
@@ -11537,8 +11537,8 @@ var require_ponyfill_es2018 = __commonJS({
         writer._closedPromiseState = "resolved";
       }
       function defaultWriterReadyPromiseInitialize(writer) {
-        writer._readyPromise = newPromise((resolve11, reject) => {
-          writer._readyPromise_resolve = resolve11;
+        writer._readyPromise = newPromise((resolve12, reject) => {
+          writer._readyPromise_resolve = resolve12;
           writer._readyPromise_reject = reject;
         });
         writer._readyPromiseState = "pending";
@@ -11625,7 +11625,7 @@ var require_ponyfill_es2018 = __commonJS({
         source._disturbed = true;
         let shuttingDown = false;
         let currentWrite = promiseResolvedWith(void 0);
-        return newPromise((resolve11, reject) => {
+        return newPromise((resolve12, reject) => {
           let abortAlgorithm;
           if (signal !== void 0) {
             abortAlgorithm = () => {
@@ -11770,7 +11770,7 @@ var require_ponyfill_es2018 = __commonJS({
             if (isError) {
               reject(error2);
             } else {
-              resolve11(void 0);
+              resolve12(void 0);
             }
             return null;
           }
@@ -12051,8 +12051,8 @@ var require_ponyfill_es2018 = __commonJS({
         let branch1;
         let branch2;
         let resolveCancelPromise;
-        const cancelPromise = newPromise((resolve11) => {
-          resolveCancelPromise = resolve11;
+        const cancelPromise = newPromise((resolve12) => {
+          resolveCancelPromise = resolve12;
         });
         function pullAlgorithm() {
           if (reading) {
@@ -12143,8 +12143,8 @@ var require_ponyfill_es2018 = __commonJS({
         let branch1;
         let branch2;
         let resolveCancelPromise;
-        const cancelPromise = newPromise((resolve11) => {
-          resolveCancelPromise = resolve11;
+        const cancelPromise = newPromise((resolve12) => {
+          resolveCancelPromise = resolve12;
         });
         function forwardReaderError(thisReader) {
           uponRejection(thisReader._closedPromise, (r2) => {
@@ -12924,8 +12924,8 @@ var require_ponyfill_es2018 = __commonJS({
           const writableHighWaterMark = ExtractHighWaterMark(writableStrategy, 1);
           const writableSizeAlgorithm = ExtractSizeAlgorithm(writableStrategy);
           let startPromise_resolve;
-          const startPromise = newPromise((resolve11) => {
-            startPromise_resolve = resolve11;
+          const startPromise = newPromise((resolve12) => {
+            startPromise_resolve = resolve12;
           });
           InitializeTransformStream(this, startPromise, writableHighWaterMark, writableSizeAlgorithm, readableHighWaterMark, readableSizeAlgorithm);
           SetUpTransformStreamDefaultControllerFromTransformer(this, transformer);
@@ -13018,8 +13018,8 @@ var require_ponyfill_es2018 = __commonJS({
         if (stream._backpressureChangePromise !== void 0) {
           stream._backpressureChangePromise_resolve();
         }
-        stream._backpressureChangePromise = newPromise((resolve11) => {
-          stream._backpressureChangePromise_resolve = resolve11;
+        stream._backpressureChangePromise = newPromise((resolve12) => {
+          stream._backpressureChangePromise_resolve = resolve12;
         });
         stream._backpressure = backpressure;
       }
@@ -13187,8 +13187,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const readable = stream._readable;
-        controller._finishPromise = newPromise((resolve11, reject) => {
-          controller._finishPromise_resolve = resolve11;
+        controller._finishPromise = newPromise((resolve12, reject) => {
+          controller._finishPromise_resolve = resolve12;
           controller._finishPromise_reject = reject;
         });
         const cancelPromise = controller._cancelAlgorithm(reason);
@@ -13214,8 +13214,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const readable = stream._readable;
-        controller._finishPromise = newPromise((resolve11, reject) => {
-          controller._finishPromise_resolve = resolve11;
+        controller._finishPromise = newPromise((resolve12, reject) => {
+          controller._finishPromise_resolve = resolve12;
           controller._finishPromise_reject = reject;
         });
         const flushPromise = controller._flushAlgorithm();
@@ -13245,8 +13245,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const writable = stream._writable;
-        controller._finishPromise = newPromise((resolve11, reject) => {
-          controller._finishPromise_resolve = resolve11;
+        controller._finishPromise = newPromise((resolve12, reject) => {
+          controller._finishPromise_resolve = resolve12;
           controller._finishPromise_reject = reject;
         });
         const cancelPromise = controller._cancelAlgorithm(reason);
@@ -15197,7 +15197,7 @@ import zlib from "node:zlib";
 import Stream2, { PassThrough as PassThrough2, pipeline as pump } from "node:stream";
 import { Buffer as Buffer3 } from "node:buffer";
 async function fetch2(url, options_) {
-  return new Promise((resolve11, reject) => {
+  return new Promise((resolve12, reject) => {
     const request = new Request2(url, options_);
     const { parsedURL, options } = getNodeRequestOptions(request);
     if (!supportedSchemas.has(parsedURL.protocol)) {
@@ -15206,7 +15206,7 @@ async function fetch2(url, options_) {
     if (parsedURL.protocol === "data:") {
       const data = dist_default(request.url);
       const response2 = new Response2(data, { headers: { "Content-Type": data.typeFull } });
-      resolve11(response2);
+      resolve12(response2);
       return;
     }
     const send = (parsedURL.protocol === "https:" ? https : http3).request;
@@ -15328,7 +15328,7 @@ async function fetch2(url, options_) {
             if (responseReferrerPolicy) {
               requestOptions2.referrerPolicy = responseReferrerPolicy;
             }
-            resolve11(fetch2(new Request2(locationURL, requestOptions2)));
+            resolve12(fetch2(new Request2(locationURL, requestOptions2)));
             finalize();
             return;
           }
@@ -15361,7 +15361,7 @@ async function fetch2(url, options_) {
       const codings = headers.get("Content-Encoding");
       if (!request.compress || request.method === "HEAD" || codings === null || response_.statusCode === 204 || response_.statusCode === 304) {
         response = new Response2(body, responseOptions);
-        resolve11(response);
+        resolve12(response);
         return;
       }
       const zlibOptions = {
@@ -15375,7 +15375,7 @@ async function fetch2(url, options_) {
           }
         });
         response = new Response2(body, responseOptions);
-        resolve11(response);
+        resolve12(response);
         return;
       }
       if (codings === "deflate" || codings === "x-deflate") {
@@ -15399,12 +15399,12 @@ async function fetch2(url, options_) {
             });
           }
           response = new Response2(body, responseOptions);
-          resolve11(response);
+          resolve12(response);
         });
         raw.once("end", () => {
           if (!response) {
             response = new Response2(body, responseOptions);
-            resolve11(response);
+            resolve12(response);
           }
         });
         return;
@@ -15416,11 +15416,11 @@ async function fetch2(url, options_) {
           }
         });
         response = new Response2(body, responseOptions);
-        resolve11(response);
+        resolve12(response);
         return;
       }
       response = new Response2(body, responseOptions);
-      resolve11(response);
+      resolve12(response);
     });
     writeToStream(request_, request).catch(reject);
   });
@@ -21488,7 +21488,7 @@ var require_jwtaccess = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve11, reject) => {
+        return new Promise((resolve12, reject) => {
           if (!inputStream) {
             reject(new Error("Must pass in a stream containing the service account auth settings."));
           }
@@ -21497,7 +21497,7 @@ var require_jwtaccess = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              resolve11();
+              resolve12();
             } catch (err4) {
               reject(err4);
             }
@@ -21736,7 +21736,7 @@ var require_jwtclient = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve11, reject) => {
+        return new Promise((resolve12, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the service account auth settings.");
           }
@@ -21745,7 +21745,7 @@ var require_jwtclient = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              resolve11();
+              resolve12();
             } catch (e2) {
               reject(e2);
             }
@@ -21878,7 +21878,7 @@ var require_refreshclient = __commonJS({
         }
       }
       async fromStreamAsync(inputStream) {
-        return new Promise((resolve11, reject) => {
+        return new Promise((resolve12, reject) => {
           if (!inputStream) {
             return reject(new Error("Must pass in a stream containing the user refresh token."));
           }
@@ -21887,7 +21887,7 @@ var require_refreshclient = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              return resolve11();
+              return resolve12();
             } catch (err4) {
               return reject(err4);
             }
@@ -23720,7 +23720,7 @@ var require_pluggable_auth_handler = __commonJS({
        * @return A promise that resolves with the executable response.
        */
       retrieveResponseFromExecutable(envMap) {
-        return new Promise((resolve11, reject) => {
+        return new Promise((resolve12, reject) => {
           const child = childProcess.spawn(this.commandComponents[0], this.commandComponents.slice(1), {
             env: { ...process.env, ...Object.fromEntries(envMap) }
           });
@@ -23742,7 +23742,7 @@ var require_pluggable_auth_handler = __commonJS({
               try {
                 const responseJson = JSON.parse(output);
                 const response = new executable_response_1.ExecutableResponse(responseJson);
-                return resolve11(response);
+                return resolve12(response);
               } catch (error2) {
                 if (error2 instanceof executable_response_1.ExecutableResponseError) {
                   return reject(error2);
@@ -24934,7 +24934,7 @@ var require_googleauth = __commonJS({
         }
       }
       fromStreamAsync(inputStream, options) {
-        return new Promise((resolve11, reject) => {
+        return new Promise((resolve12, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the Google auth settings.");
           }
@@ -24944,7 +24944,7 @@ var require_googleauth = __commonJS({
               try {
                 const data = JSON.parse(chunks.join(""));
                 const r2 = this._cacheClientFromJSON(data, options);
-                return resolve11(r2);
+                return resolve12(r2);
               } catch (err4) {
                 if (!this.keyFilename)
                   throw err4;
@@ -24954,7 +24954,7 @@ var require_googleauth = __commonJS({
                 });
                 this.cachedCredential = client;
                 this.setGapicJWTValues(client);
-                return resolve11(client);
+                return resolve12(client);
               }
             } catch (err4) {
               return reject(err4);
@@ -24990,17 +24990,17 @@ var require_googleauth = __commonJS({
        * Run the Google Cloud SDK command that prints the default project ID
        */
       async getDefaultServiceProjectId() {
-        return new Promise((resolve11) => {
+        return new Promise((resolve12) => {
           (0, child_process_1.exec)("gcloud config config-helper --format json", (err4, stdout) => {
             if (!err4 && stdout) {
               try {
                 const projectId = JSON.parse(stdout).configuration.properties.core.project;
-                resolve11(projectId);
+                resolve12(projectId);
                 return;
               } catch (e2) {
               }
             }
-            resolve11(null);
+            resolve12(null);
           });
         });
       }
@@ -27908,7 +27908,7 @@ var require_websocket = __commonJS({
     var http4 = __require("http");
     var net = __require("net");
     var tls = __require("tls");
-    var { randomBytes: randomBytes2, createHash: createHash9 } = __require("crypto");
+    var { randomBytes: randomBytes2, createHash: createHash10 } = __require("crypto");
     var { Duplex, Readable: Readable2 } = __require("stream");
     var { URL: URL2 } = __require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -28576,7 +28576,7 @@ var require_websocket = __commonJS({
           abortHandshake(websocket, socket, "Invalid Upgrade header");
           return;
         }
-        const digest2 = createHash9("sha1").update(key + GUID).digest("base64");
+        const digest2 = createHash10("sha1").update(key + GUID).digest("base64");
         if (res.headers["sec-websocket-accept"] !== digest2) {
           abortHandshake(websocket, socket, "Invalid Sec-WebSocket-Accept header");
           return;
@@ -28945,7 +28945,7 @@ var require_websocket_server = __commonJS({
     var EventEmitter = __require("events");
     var http4 = __require("http");
     var { Duplex } = __require("stream");
-    var { createHash: createHash9 } = __require("crypto");
+    var { createHash: createHash10 } = __require("crypto");
     var extension2 = require_extension();
     var PerMessageDeflate2 = require_permessage_deflate();
     var subprotocol2 = require_subprotocol();
@@ -29252,7 +29252,7 @@ var require_websocket_server = __commonJS({
           );
         }
         if (this._state > RUNNING) return abortHandshake(socket, 503);
-        const digest2 = createHash9("sha1").update(key + GUID).digest("base64");
+        const digest2 = createHash10("sha1").update(key + GUID).digest("base64");
         const headers = [
           "HTTP/1.1 101 Switching Protocols",
           "Upgrade: websocket",
@@ -33001,14 +33001,14 @@ function __asyncValues(o) {
   }, i2);
   function verb(n) {
     i2[n] = o[n] && function(v) {
-      return new Promise(function(resolve11, reject) {
-        v = o[n](v), settle(resolve11, reject, v.done, v.value);
+      return new Promise(function(resolve12, reject) {
+        v = o[n](v), settle(resolve12, reject, v.done, v.value);
       });
     };
   }
-  function settle(resolve11, reject, d, v) {
+  function settle(resolve12, reject, d, v) {
     Promise.resolve(v).then(function(v2) {
-      resolve11({ value: v2, done: d });
+      resolve12({ value: v2, done: d });
     }, reject);
   }
 }
@@ -39942,7 +39942,7 @@ function retryIntervalFromResponse(res) {
   return 0;
 }
 async function delay(delay2) {
-  return new Promise((resolve11) => setTimeout(resolve11, delay2));
+  return new Promise((resolve12) => setTimeout(resolve12, delay2));
 }
 async function logRequest(logger, req) {
   if (!logger) {
@@ -47385,8 +47385,8 @@ var init_node = __esm({
         const url = `${websocketBaseUrl}/ws/google.ai.generativelanguage.${apiVersion}.GenerativeService.BidiGenerateMusic?key=${apiKey}`;
         let onopenResolve = () => {
         };
-        const onopenPromise = new Promise((resolve11) => {
-          onopenResolve = resolve11;
+        const onopenPromise = new Promise((resolve12) => {
+          onopenResolve = resolve12;
         });
         const callbacks = params.callbacks;
         const onopenAwaitedCallback = function() {
@@ -47592,8 +47592,8 @@ var init_node = __esm({
         }
         let onopenResolve = () => {
         };
-        const onopenPromise = new Promise((resolve11) => {
-          onopenResolve = resolve11;
+        const onopenPromise = new Promise((resolve12) => {
+          onopenResolve = resolve12;
         });
         const callbacks = params.callbacks;
         const onopenAwaitedCallback = function() {
@@ -47606,8 +47606,8 @@ var init_node = __esm({
         const messageQueue = [];
         let setupCompleteResolve = () => {
         };
-        const setupCompletePromise = new Promise((resolve11) => {
-          setupCompleteResolve = resolve11;
+        const setupCompletePromise = new Promise((resolve12) => {
+          setupCompleteResolve = resolve12;
         });
         const websocketCallbacks = {
           onopen: onopenAwaitedCallback,
@@ -52175,7 +52175,7 @@ var init_values = __esm({
 var sleep6;
 var init_sleep = __esm({
   "node_modules/openai/internal/utils/sleep.mjs"() {
-    sleep6 = (ms) => new Promise((resolve11) => setTimeout(resolve11, ms));
+    sleep6 = (ms) => new Promise((resolve12) => setTimeout(resolve12, ms));
   }
 });
 
@@ -53368,8 +53368,8 @@ var init_api_promise = __esm({
     init_parse();
     APIPromise2 = class _APIPromise extends Promise {
       constructor(client, responsePromise, parseResponse2 = defaultParseResponse) {
-        super((resolve11) => {
-          resolve11(null);
+        super((resolve12) => {
+          resolve12(null);
         });
         this.responsePromise = responsePromise;
         this.parseResponse = parseResponse2;
@@ -54339,12 +54339,12 @@ var init_EventStream = __esm({
         _EventStream_errored.set(this, false);
         _EventStream_aborted.set(this, false);
         _EventStream_catchingPromiseCreated.set(this, false);
-        __classPrivateFieldSet(this, _EventStream_connectedPromise, new Promise((resolve11, reject) => {
-          __classPrivateFieldSet(this, _EventStream_resolveConnectedPromise, resolve11, "f");
+        __classPrivateFieldSet(this, _EventStream_connectedPromise, new Promise((resolve12, reject) => {
+          __classPrivateFieldSet(this, _EventStream_resolveConnectedPromise, resolve12, "f");
           __classPrivateFieldSet(this, _EventStream_rejectConnectedPromise, reject, "f");
         }), "f");
-        __classPrivateFieldSet(this, _EventStream_endPromise, new Promise((resolve11, reject) => {
-          __classPrivateFieldSet(this, _EventStream_resolveEndPromise, resolve11, "f");
+        __classPrivateFieldSet(this, _EventStream_endPromise, new Promise((resolve12, reject) => {
+          __classPrivateFieldSet(this, _EventStream_resolveEndPromise, resolve12, "f");
           __classPrivateFieldSet(this, _EventStream_rejectEndPromise, reject, "f");
         }), "f");
         __classPrivateFieldGet(this, _EventStream_connectedPromise, "f").catch(() => {
@@ -54444,11 +54444,11 @@ var init_EventStream = __esm({
        *   const message = await stream.emitted('message') // rejects if the stream errors
        */
       emitted(event) {
-        return new Promise((resolve11, reject) => {
+        return new Promise((resolve12, reject) => {
           __classPrivateFieldSet(this, _EventStream_catchingPromiseCreated, true, "f");
           if (event !== "error")
             this.once("error", reject);
-          this.once(event, resolve11);
+          this.once(event, resolve12);
         });
       }
       /**
@@ -54531,8 +54531,8 @@ var init_EventStream = __esm({
             }
             if (ended)
               return Promise.resolve(doneResult());
-            return new Promise((resolve11, reject) => {
-              readQueue.push({ resolve: resolve11, reject });
+            return new Promise((resolve12, reject) => {
+              readQueue.push({ resolve: resolve12, reject });
             });
           },
           return: () => {
@@ -55750,7 +55750,7 @@ var init_ChatCompletionStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve11, reject) => readQueue.push({ resolve: resolve11, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
+              return new Promise((resolve12, reject) => readQueue.push({ resolve: resolve12, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
             }
             const chunk2 = pushQueue.shift();
             return { value: chunk2, done: false };
@@ -55840,7 +55840,7 @@ var init_ChatCompletionStreamingRunner = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve11, reject) => readQueue.push({ resolve: resolve11, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
+              return new Promise((resolve12, reject) => readQueue.push({ resolve: resolve12, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
             }
             const event = pushQueue.shift();
             if (!event) {
@@ -59634,7 +59634,7 @@ var init_AssistantStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve11, reject) => readQueue.push({ resolve: resolve11, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
+              return new Promise((resolve12, reject) => readQueue.push({ resolve: resolve12, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
             }
             const chunk2 = pushQueue.shift();
             return { value: chunk2, done: false };
@@ -62298,7 +62298,7 @@ var init_ResponseStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve11, reject) => readQueue.push({ resolve: resolve11, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
+              return new Promise((resolve12, reject) => readQueue.push({ resolve: resolve12, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
             }
             const event = pushQueue.shift();
             return { value: event, done: false };
@@ -65519,9 +65519,9 @@ var require_character_voice = __commonJS({
 var require_speech_contract = __commonJS({
   "../skills/_shared/speech-contract.js"(exports, module) {
     "use strict";
-    var { createHash: createHash9 } = __require("node:crypto");
+    var { createHash: createHash10 } = __require("node:crypto");
     function speechRevision2(line, character) {
-      return createHash9("sha256").update(JSON.stringify(require_scene_acting().speechRevisionPayload(line, character?.tts))).digest("hex");
+      return createHash10("sha256").update(JSON.stringify(require_scene_acting().speechRevisionPayload(line, character?.tts))).digest("hex");
     }
     function compileActing2(text2, acting, voice) {
       voice = { ...voice };
@@ -65928,11 +65928,11 @@ var require_compose_speech = __commonJS({
     var fs10 = __require("node:fs");
     var path15 = __require("node:path");
     var { execFileSync: execFileSync4 } = __require("node:child_process");
-    var { createHash: createHash9 } = __require("node:crypto");
+    var { createHash: createHash10 } = __require("node:crypto");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
     var { actingErrors, speechRevisionPayload, planScenePerformance } = require_scene_acting();
     var { generationVoiceErrors } = require_character_voice();
-    var hash5 = (value) => createHash9("sha256").update(value).digest("hex");
+    var hash5 = (value) => createHash10("sha256").update(value).digest("hex");
     function duration3(file) {
       const seconds = Number(execFileSync4("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file], { encoding: "utf8", timeout: 1e4 }).trim());
       if (!Number.isFinite(seconds) || seconds <= 0) throw new Error("Unusable speech duration: " + file);
@@ -66026,10 +66026,10 @@ var require_check_tts_quality = __commonJS({
     var fs10 = __require("node:fs");
     var path15 = __require("node:path");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
-    var { createHash: createHash9 } = __require("node:crypto");
+    var { createHash: createHash10 } = __require("node:crypto");
     var { speechRevision: speechRevision2 } = require_speech_contract();
     var { authorizeSpeed: authorizeSpeed2 } = require_tts_speed_policy();
-    var hash5 = (value) => createHash9("sha256").update(value).digest("hex");
+    var hash5 = (value) => createHash10("sha256").update(value).digest("hex");
     var normalize2 = (text2) => text2.normalize("NFKC").toLowerCase().replace(/[\p{P}\p{Z}\s]/gu, "");
     function cer(expected, heard) {
       const a = [...normalize2(expected)], b = [...normalize2(heard)];
@@ -66264,14 +66264,14 @@ var require_check_tts_quality = __commonJS({
 var require_final_speech_chapters = __commonJS({
   "../skills/produce/references/final-speech-chapters.js"(exports, module) {
     "use strict";
-    var { createHash: createHash9 } = __require("node:crypto");
+    var { createHash: createHash10 } = __require("node:crypto");
     var { spawnSync: spawnSync4 } = __require("node:child_process");
     var { normalize: normalize2, cer } = require_check_tts_quality();
     var RATE2 = 24e3;
     var BYTES2 = 4;
     var LIMIT2 = 14 * 1024 * 1024;
     var POLICY2 = "final-speech-chapters-v1";
-    var hash5 = (x2) => createHash9("sha256").update(x2).digest("hex");
+    var hash5 = (x2) => createHash10("sha256").update(x2).digest("hex");
     var digest2 = (x2) => hash5(JSON.stringify(x2));
     function decode2(media) {
       const encoded = spawnSync4("ffmpeg", ["-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", String(RATE2), "-c:a", "flac", "-f", "flac", "pipe:1"], { maxBuffer: RATE2 * BYTES2 * 1800 + 65536, timeout: 6e4 });
@@ -76225,7 +76225,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve11) => setTimeout(resolve11, pollInterval));
+        await new Promise((resolve12) => setTimeout(resolve12, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -76242,7 +76242,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve11, reject) => {
+    return new Promise((resolve12, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -76320,7 +76320,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve11(parseResult.data);
+            resolve12(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -76581,12 +76581,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve11, reject) => {
+    return new Promise((resolve12, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve11, interval);
+      const timeoutId = setTimeout(resolve12, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -77462,12 +77462,12 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve11) => {
+    return new Promise((resolve12) => {
       const json2 = serializeMessage(message);
       if (this._stdout.write(json2)) {
-        resolve11();
+        resolve12();
       } else {
-        this._stdout.once("drain", resolve11);
+        this._stdout.once("drain", resolve12);
       }
     });
   }
@@ -77936,7 +77936,7 @@ async function assertReachable(url, attempts, waitMs) {
     } catch (error2) {
       last = error2 instanceof Error ? error2.message : String(error2);
     }
-    if (i2 < attempts - 1) await new Promise((resolve11) => setTimeout(resolve11, waitMs));
+    if (i2 < attempts - 1) await new Promise((resolve12) => setTimeout(resolve12, waitMs));
   }
   throw new Error(`public URL not reachable: ${url} (${last})`);
 }
@@ -78005,19 +78005,19 @@ function serveLocally(filePaths) {
     }
     fs.createReadStream(file, { start, end }).on("error", () => res.destroy()).pipe(res);
   });
-  return new Promise((resolve11, reject) => {
+  return new Promise((resolve12, reject) => {
     server2.once("error", reject);
     server2.listen(0, "127.0.0.1", () => {
       const address = server2.address();
       const port = typeof address === "object" && address ? address.port : 0;
-      resolve11({ server: server2, port, routes });
+      resolve12({ server: server2, port, routes });
     });
   });
 }
 function closeServer(server2) {
-  return new Promise((resolve11) => {
+  return new Promise((resolve12) => {
     server2.closeAllConnections?.();
-    server2.close(() => resolve11());
+    server2.close(() => resolve12());
   });
 }
 var liveTunnels = /* @__PURE__ */ new Set();
@@ -78050,7 +78050,7 @@ async function publishViaTunnel(filePaths, cloudflared = "cloudflared") {
   };
   killTunnelsOnExit();
   try {
-    const origin = await new Promise((resolve11, reject) => {
+    const origin = await new Promise((resolve12, reject) => {
       child = spawn(cloudflared, ["tunnel", "--url", `http://127.0.0.1:${port}`, "--no-autoupdate"], {
         stdio: ["ignore", "pipe", "pipe"]
       });
@@ -78063,7 +78063,7 @@ ${log.slice(-600)}`)), 6e4);
         const m2 = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/.exec(log);
         if (m2) {
           clearTimeout(timer);
-          resolve11(m2[0]);
+          resolve12(m2[0]);
         }
       };
       child.stdout?.on("data", onLine);
@@ -78079,7 +78079,7 @@ ${log.slice(-600)}`));
       });
     });
     const urls = routes.map((r2) => origin + r2);
-    await new Promise((resolve11) => setTimeout(resolve11, 5e3));
+    await new Promise((resolve12) => setTimeout(resolve12, 5e3));
     for (const url of urls) await assertReachable(url, 30, 3e3);
     console.error(`[media-publish] quick tunnel ${origin} serving ${filePaths.length} file(s)`);
     return { urls, how: "tunnel", close };
@@ -78517,7 +78517,7 @@ var seedanceReferenceSchema = external_exports.object({
   }
 }).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
 function sleep(ms) {
-  return new Promise((resolve11) => setTimeout(resolve11, ms));
+  return new Promise((resolve12) => setTimeout(resolve12, ms));
 }
 function describeHttpError(status, body) {
   try {
@@ -78619,23 +78619,23 @@ function loadReferenceAudio(filePaths) {
   });
 }
 function probeVideo(filePath) {
-  return new Promise((resolve11) => {
+  return new Promise((resolve12) => {
     execFile(
       "ffprobe",
       ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height,r_frame_rate:format=duration", "-of", "json", filePath],
       { timeout: 15e3 },
       (error2, out) => {
-        if (error2) return resolve11(null);
+        if (error2) return resolve12(null);
         try {
           const parsed = JSON.parse(String(out));
           const stream = parsed.streams?.[0];
           const [num5, den] = String(stream?.r_frame_rate || "").split("/").map(Number);
           const fps = num5 && den ? num5 / den : NaN;
           const seconds = Number.parseFloat(String(parsed.format?.duration ?? ""));
-          if (!stream?.width || !stream?.height || !Number.isFinite(fps) || !Number.isFinite(seconds) || seconds <= 0) return resolve11(null);
-          resolve11({ seconds, fps, width: stream.width, height: stream.height });
+          if (!stream?.width || !stream?.height || !Number.isFinite(fps) || !Number.isFinite(seconds) || seconds <= 0) return resolve12(null);
+          resolve12({ seconds, fps, width: stream.width, height: stream.height });
         } catch {
-          resolve11(null);
+          resolve12(null);
         }
       }
     );
@@ -78677,14 +78677,14 @@ async function checkReferenceVideos(filePaths, spec, model) {
   return total;
 }
 function probeAudioSeconds(filePath) {
-  return new Promise((resolve11) => {
+  return new Promise((resolve12) => {
     execFile(
       "ffprobe",
       ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", filePath],
       { timeout: 15e3 },
       (error2, out) => {
         const seconds = Number.parseFloat(String(out ?? "").trim());
-        resolve11(!error2 && Number.isFinite(seconds) && seconds > 0 ? seconds : null);
+        resolve12(!error2 && Number.isFinite(seconds) && seconds > 0 ? seconds : null);
       }
     );
   });
@@ -79591,7 +79591,7 @@ function buildJobBody(mode, args) {
   return body;
 }
 function sleep2(ms) {
-  return new Promise((resolve11) => setTimeout(resolve11, ms));
+  return new Promise((resolve12) => setTimeout(resolve12, ms));
 }
 var submitTimestamps = [];
 async function waitForSubmitSlot() {
@@ -80105,7 +80105,7 @@ async function loadModel(id) {
     if (!listed.ok) return listed;
     const found = listed.models?.find((m2) => m2.id === id);
     if (found?.state === "ready") return { ok: true };
-    await new Promise((resolve11) => setTimeout(resolve11, 2e3));
+    await new Promise((resolve12) => setTimeout(resolve12, 2e3));
   }
   return { ok: false, error: `Timed out waiting for model "${id}" to become ready.` };
 }
@@ -80230,7 +80230,7 @@ async function muxRgbToMp4(opts) {
     );
     if (opts.audio) args.push("-c:a", "aac");
     args.push(opts.outFile);
-    await new Promise((resolve11, reject) => {
+    await new Promise((resolve12, reject) => {
       execFile2("ffmpeg", args, { timeout: 12e4, maxBuffer: 2 * 1024 * 1024 }, (error2, _out, errOut) => {
         if (error2) {
           const code = error2.code;
@@ -80242,7 +80242,7 @@ async function muxRgbToMp4(opts) {
 ${String(errOut).slice(-500)}` : ""}`));
           return;
         }
-        resolve11();
+        resolve12();
       });
     });
     if (!existsSync5(opts.outFile)) return { ok: false, error: "ffmpeg exited 0 but the mp4 was not written" };
@@ -81499,7 +81499,7 @@ async function generateAdvanced(request) {
     const timeoutMs = targetDuration * 1e3 + REALTIME_TIMEOUT_MARGIN_MS;
     while (state.received < targetBytes && Date.now() - startTime < timeoutMs) {
       if (state.error) throw state.error;
-      await new Promise((resolve11) => setTimeout(resolve11, REALTIME_POLL_INTERVAL_MS));
+      await new Promise((resolve12) => setTimeout(resolve12, REALTIME_POLL_INTERVAL_MS));
     }
     state.done = true;
     closeQuietly(session);
@@ -81577,12 +81577,21 @@ var TTS_VOICES = {
 };
 var ttsVoicesSchema = external_exports.object({
   source: external_exports.enum(["curated", "library"]).optional().default("curated"),
+  languageCode: external_exports.array(external_exports.string().min(1)).optional(),
+  regionCode: external_exports.array(external_exports.string().min(1)).optional(),
+  gender: external_exports.array(external_exports.enum(["male", "female", "neutral"])).optional(),
+  pitch: external_exports.array(external_exports.enum(["low", "medium", "high"])).optional(),
+  accent: external_exports.array(external_exports.string().min(1)).optional(),
+  persona: external_exports.array(external_exports.string().min(1)).optional(),
+  context: external_exports.array(external_exports.string().min(1)).optional(),
+  type: external_exports.array(external_exports.enum(["prebuilt", "prompted", "replicated"])).optional(),
+  search: external_exports.string().min(1).refine((value) => Buffer.byteLength(value) <= 2048, "Search exceeds 2048 bytes").optional(),
   pageToken: external_exports.string().min(1).optional(),
   // A small tool response is deliberate; the provider itself permits up to 1,000.
   limit: external_exports.number().int().min(1).max(100).optional().default(30)
 }).strict().superRefine((value, ctx) => {
-  if (value.source === "curated" && value.pageToken) {
-    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["pageToken"], message: "pageToken is available only for source:library" });
+  if (value.source === "curated" && [value.pageToken, value.languageCode, value.regionCode, value.gender, value.pitch, value.accent, value.persona, value.context, value.type, value.search].some((v) => v !== void 0)) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["pageToken"], message: "Filters and pageToken are available only for source:library" });
   }
 });
 var geminiVoiceListBodySchema = external_exports.object({
@@ -81613,6 +81622,10 @@ async function listTtsVoices(request) {
     }
     const params = new URLSearchParams({ page_size: String(parsed.limit) });
     if (parsed.pageToken) params.set("page_token", parsed.pageToken);
+    for (const [field, values] of Object.entries({ language_code: parsed.languageCode, region_code: parsed.regionCode, gender: parsed.gender, pitch: parsed.pitch, accent: parsed.accent, persona: parsed.persona, context: parsed.context, type: parsed.type })) {
+      for (const value of values || []) params.append(field, value);
+    }
+    if (parsed.search) params.set("search", parsed.search);
     const response = await requestRaw("get", `https://generativelanguage.googleapis.com/v1beta/voices?${params}`, { "x-goog-api-key": requireGeminiKey() }, void 0, 3e4);
     if (!response.ok) return { success: false, source: "library", error: describeGemini38Error(response.status, response.body) };
     const body = geminiVoiceListBodySchema.parse(JSON.parse(response.body));
@@ -81740,7 +81753,7 @@ async function synthesizeWithRetry(model, contentText, speechConfig, temperature
     } catch (error2) {
       lastError = error2;
       if (attempt < MAX_ATTEMPTS - 1) {
-        await new Promise((resolve11) => setTimeout(resolve11, RETRY_BASE_DELAY_MS * (attempt + 1)));
+        await new Promise((resolve12) => setTimeout(resolve12, RETRY_BASE_DELAY_MS * (attempt + 1)));
       }
     }
   }
@@ -82251,7 +82264,7 @@ function isRetryable(httpStatus) {
   return httpStatus === 429 || httpStatus >= 500;
 }
 function sleep4(ms) {
-  return new Promise((resolve11) => setTimeout(resolve11, ms));
+  return new Promise((resolve12) => setTimeout(resolve12, ms));
 }
 function timeoutFor(textLength) {
   return Math.min(5 * 6e4, 6e4 + textLength * 40);
@@ -83096,7 +83109,7 @@ var qwen3AsrTranscribeSchema = external_exports.object({
   filename: bareFilenameSchema("json").optional()
 });
 function probeDurationSeconds(audioPath) {
-  return new Promise((resolve11) => {
+  return new Promise((resolve12) => {
     execFile3(
       "ffprobe",
       ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", audioPath],
@@ -83104,10 +83117,10 @@ function probeDurationSeconds(audioPath) {
       (error2, out) => {
         const seconds = Number.parseFloat((out || "").trim());
         if (error2 || !Number.isFinite(seconds) || seconds <= 0) {
-          resolve11(60);
+          resolve12(60);
           return;
         }
-        resolve11(seconds);
+        resolve12(seconds);
       }
     );
   });
@@ -83164,7 +83177,7 @@ async function transcribeLocal(request) {
   );
   const startedAt = Date.now();
   try {
-    await new Promise((resolve11, reject) => {
+    await new Promise((resolve12, reject) => {
       execFile3(
         bin,
         cliArgs,
@@ -83184,7 +83197,7 @@ async function transcribeLocal(request) {
 ${tail}` : ""}`));
             return;
           }
-          resolve11();
+          resolve12();
         }
       );
     });
@@ -83852,7 +83865,7 @@ async function generateLocalImage(request) {
   );
   const startedAt = Date.now();
   try {
-    await new Promise((resolve11, reject) => {
+    await new Promise((resolve12, reject) => {
       execFile5(
         bin,
         cliArgs,
@@ -83874,7 +83887,7 @@ async function generateLocalImage(request) {
 ${tail}` : ""}`));
             return;
           }
-          resolve11();
+          resolve12();
         }
       );
     });
@@ -85818,7 +85831,7 @@ var sunoLyricsSchema = external_exports.object({
   prompt: external_exports.string().min(1).max(200)
 });
 function sleep5(ms) {
-  return new Promise((resolve11) => setTimeout(resolve11, ms));
+  return new Promise((resolve12) => setTimeout(resolve12, ms));
 }
 function describeSunoError(code, msg, httpStatus) {
   const text2 = (msg || "").trim() || "(no message)";
@@ -89177,7 +89190,7 @@ Returns: a text block with the saved .wav file path, voice name, and text length
     description: `Generate acted single-voice or two-speaker speech with Gemini 3.8 TTS through the Interactions API.
 
 Use for emotional acting, per-line delivery changes, vocal events, pauses, and two-person dialogue. Put lasting delivery in each turn's style field. Put point events directly in text with the documented English angle-bracket tags, such as <laugh>, <sigh>, <cough>, <breath>, <short pause>, or <long pause>. For listener backchannels and overlapping speech in two-speaker mode, put pipe segments such as |oh really?| inside the active speaker's text. The text is read verbatim, so never put stage directions in it unless they are a supported tag.
-Single voice accepts a curated name, an extended-library voice, or a voice_ / voicekey_ identifier. Two-speaker mode requires exactly two configured curated voices and every turn must name one configured speaker. Gemini 3.8 supports at most two speakers in one request.
+For a requested age or identity change, create/remix the voice with tts_voice_design first; changing turn style with the same ID is not an identity correction. Single voice accepts a curated name, an extended-library voice, or a voice_ / voicekey_ identifier. Two-speaker mode requires exactly two configured curated voices and every turn must name one configured speaker. Gemini 3.8 supports at most two speakers in one request.
 This is a supporting engine for acted cuts and two-person scenes. The saved speech model stays authoritative; never replace an existing Gemini or ElevenLabs v4 selection automatically.
 
 Returns: a text block with the saved 24kHz mono RIFF WAV path, model, voice or speaker assignments, turn count, and total text length.`,
@@ -89293,12 +89306,36 @@ Returns: a text block with the saved .wav file path, speaker/voice assignments, 
     }
   },
   {
+    name: "tts_voice_design",
+    title: "Design a persistent Gemini character voice",
+    annotations: HINT.generate,
+    description: "Create a paid stored Gemini voice from character age, vocal gender, timbre and accent using POST /v1beta/voices. Use when casting a custom character or changing perceived age/identity; turn style only controls delivery. Optional baseVoice remixes an existing voice. Returns voiceId, local WAV preview, hash, usage and receipt; use that ID with tts_gemini_38. Does not edit character sheets or episodes and does not certify age by listening. Requires GEMINI_API_KEY and a new outputPath per creation; never blindly retry an uncertain call. For catalog discovery use tts_list_voices source:library with filters; for ordinary lines use speech_manage plan_audio.",
+    inputSchema: { type: "object", additionalProperties: false, properties: {
+      model: { type: "string", enum: ["gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts"], description: "Explicit voice creation model." },
+      displayName: { type: "string", minLength: 1, maxLength: 100, description: "Distinct name for later catalog reconciliation." },
+      prompt: { type: "string", minLength: 1, maxLength: 4e3, description: "Stable voice identity: perceived age, timbre, accent and baseline delivery; relative changes if baseVoice is supplied." },
+      languageCode: { type: "string", minLength: 1, description: "BCP-47 primary language, e.g. ko-KR." },
+      gender: { type: "string", enum: ["male", "female", "neutral"], description: "Perceived vocal gender from character identity." },
+      baseVoice: { type: "string", minLength: 1, maxLength: 300, description: "Optional existing prebuilt voice name or accessible custom voice ID to remix." },
+      outputPath: { type: "string", minLength: 1, description: "New local directory for voice-design.json and voice-preview.wav. Existing receipt prevents duplicate creation." }
+    }, required: ["model", "displayName", "prompt", "languageCode", "gender", "outputPath"] }
+  },
+  {
     name: "tts_list_voices",
     title: "Gemini voice catalog",
     annotations: HINT.read,
-    description: "List Gemini curated voices or query the live extended/custom voice library. source=curated returns the static 30-voice list without API usage. source=library queries GET /v1beta/voices with pageToken/limit and requires GEMINI_API_KEY. Returns voice IDs and metadata; choose by audition. For ElevenLabs use tts_elevenlabs_voices. This tool does not synthesize audio.",
+    description: "List Gemini curated voices or query the live extended/custom voice library. source=curated returns the static 30-voice list without API usage. source=library queries GET /v1beta/voices with pageToken/limit and requires GEMINI_API_KEY. Supports languageCode, gender, pitch, persona and description search; preserve filters across pages. There is no numeric age filter: search description text or use tts_voice_design to create/remix an age-appropriate voice. Returns voice IDs and metadata; metadata age is not listening evidence. For ElevenLabs use tts_elevenlabs_voices. This tool does not synthesize audio.",
     inputSchema: { type: "object", additionalProperties: false, properties: {
       source: { type: "string", enum: ["curated", "library"], default: "curated", description: "Static basic catalog or live voice library." },
+      languageCode: { type: "array", items: { type: "string", minLength: 1 }, description: "Library-only languageCode filter; multiple values match with OR." },
+      regionCode: { type: "array", items: { type: "string", minLength: 1 }, description: "Library-only regionCode filter; multiple values match with OR." },
+      accent: { type: "array", items: { type: "string", minLength: 1 }, description: "Library-only accent filter; multiple values match with OR." },
+      persona: { type: "array", items: { type: "string", minLength: 1 }, description: "Library-only persona filter; multiple values match with OR." },
+      context: { type: "array", items: { type: "string", minLength: 1 }, description: "Library-only context filter; multiple values match with OR." },
+      gender: { type: "array", items: { type: "string", enum: ["male", "female", "neutral"] }, description: "Library-only gender filter." },
+      pitch: { type: "array", items: { type: "string", enum: ["low", "medium", "high"] }, description: "Library-only pitch filter." },
+      type: { type: "array", items: { type: "string", enum: ["prebuilt", "prompted", "replicated"] }, description: "Library-only type filter." },
+      search: { type: "string", minLength: 1, description: "Library-only case-insensitive substring search of name and description, at most 2048 UTF-8 bytes; not a numeric age range." },
       pageToken: { type: "string", description: "Next page token from a prior library response." },
       limit: { type: "integer", minimum: 1, maximum: 100, default: 30, description: "Maximum library voices per request." }
     } }
@@ -90614,7 +90651,7 @@ Use when the user asks to listen/watch, adversarially evaluate, or improve expre
 
 Do NOT use for free provenance or generation planning: use speech_manage instead. Do NOT use metadata or still frames as proof that speech or continuous acting works.
 
-Returns status pass/fail/unverified, nullable score, failures, review with situation/expression/body/vocalEmotion/speechAccuracy/lipSync evidence, media/direction hashes, usage, receiptPath and reused. success requires verified score >=95 on all required axes, confidence >=0.9, complete required track coverage and no findings. Unobserved axes are null; audio-only review cannot certify visual acting.`,
+User preference decides voice casting; perceived age and naturalness are subjective. Never reject or regenerate a preferred take to satisfy this review. Returns advisoryOnly=true, selectionAuthority=user, interpretation, status pass/fail/unverified, nullable score, failures, review with situation/expression/body/vocalEmotion/speechAccuracy/lipSync evidence, media/direction hashes, usage, receiptPath and reused. success requires verified score >=95 on all required axes, confidence >=0.9, complete required track coverage and no findings. Unobserved axes are null; audio-only review cannot certify visual acting.`,
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -90792,9 +90829,86 @@ var SNS_PLATFORM_BY_TOOL = {
   youtube_insights: "YOUTUBE"
 };
 
+// src/voice-design.ts
+import { existsSync as existsSync13, mkdirSync as mkdirSync6, writeFileSync as writeFileSync10 } from "node:fs";
+import { resolve as resolve5 } from "node:path";
+import { createHash as createHash4 } from "node:crypto";
+var voiceDesignSchema = external_exports.object({
+  model: external_exports.enum(GEMINI_38_TTS_MODELS),
+  displayName: external_exports.string().trim().min(1).max(100),
+  prompt: external_exports.string().trim().min(1).max(4e3),
+  languageCode: external_exports.string().trim().min(1),
+  gender: external_exports.enum(["male", "female", "neutral"]),
+  baseVoice: external_exports.string().trim().min(1).max(300).optional(),
+  outputPath: external_exports.string().trim().min(1)
+}).strict();
+function buildVoiceDesignBody(args) {
+  return { store: true, voice: {
+    model: args.model,
+    type: "prompted",
+    display_name: args.displayName,
+    gender: args.gender,
+    language_code: args.languageCode,
+    prompted: { input: args.prompt, ...args.baseVoice ? { base_voice: args.baseVoice } : {} }
+  } };
+}
+async function designGeminiVoice(input) {
+  const args = voiceDesignSchema.parse(input);
+  const output = resolve5(args.outputPath);
+  const receiptPath = resolve5(output, "voice-design.json");
+  const samplePath = resolve5(output, "voice-preview.wav");
+  const body = buildVoiceDesignBody(args);
+  const apiKey = requireGeminiKey();
+  mkdirSync6(output, { recursive: true });
+  if (existsSync13(samplePath)) throw new Error("Preview already exists; use a new outputPath.");
+  writeFileSync10(receiptPath, JSON.stringify({ status: "submitted", request: body, submittedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2), { flag: "wx" });
+  const response = await requestRaw(
+    "post",
+    "https://generativelanguage.googleapis.com/v1beta/voices",
+    { "x-goog-api-key": apiKey },
+    body,
+    12e4
+  );
+  if (!response.ok) {
+    const error2 = describeGemini38Error(response.status, response.body);
+    writeFileSync10(receiptPath, JSON.stringify({ status: response.status >= 500 ? "uncertain" : "failed", request: body, error: error2 }, null, 2));
+    return { success: false, receiptPath, error: error2, instruction: "Do not blindly retry: inspect this receipt and list stored prompted voices first." };
+  }
+  let voice;
+  try {
+    voice = JSON.parse(response.body);
+  } catch {
+    writeFileSync10(receiptPath, JSON.stringify({ status: "uncertain", request: body, error: "Invalid JSON response" }, null, 2));
+    return { success: false, receiptPath, error: "Invalid JSON response; reconcile stored voices before retrying." };
+  }
+  const { sample_audio: sample, ...metadata } = voice;
+  const record2 = { status: "created", request: body, voice: metadata, reviewStatus: "not_reviewed", billingStatus: "provider_usage_not_invoice" };
+  writeFileSync10(receiptPath, JSON.stringify(record2, null, 2));
+  const audio = external_exports.object({ mime_type: external_exports.string(), data: external_exports.string().min(1) }).safeParse(sample);
+  const bytes = audio.success ? Buffer.from(audio.data.data, "base64") : Buffer.alloc(0);
+  if (typeof voice.id !== "string" || !voice.id.startsWith("voice_") || !audio.success || audio.data.mime_type !== "audio/wav" || bytes.length <= 44 || bytes.toString("ascii", 0, 4) !== "RIFF" || bytes.toString("ascii", 8, 12) !== "WAVE") {
+    return { success: false, voiceId: voice.id, receiptPath, error: "Voice response or WAV preview invalid; the remote voice may exist. Inspect the receipt before another paid creation." };
+  }
+  writeFileSync10(samplePath, bytes, { flag: "wx" });
+  const audioSha256 = createHash4("sha256").update(bytes).digest("hex");
+  writeFileSync10(receiptPath, JSON.stringify({ ...record2, samplePath, audioSha256 }, null, 2));
+  return {
+    success: true,
+    voiceId: voice.id,
+    model: args.model,
+    samplePath,
+    audioSha256,
+    receiptPath,
+    expireTime: voice.expire_time,
+    usage: voice.usage ?? null,
+    reviewStatus: "not_reviewed",
+    instruction: "Use this voiceId with tts_gemini_38 for the character sample and dialogue. A generated preview is not proof of perceived age. Preserve the receipt and previous identity; apply within the user-authorized scope."
+  };
+}
+
 // src/tts-acting-review.ts
-import { appendFileSync as appendFileSync2, readFileSync as readFileSync10, writeFileSync as writeFileSync10, mkdirSync as mkdirSync6 } from "node:fs";
-import { resolve as resolve5, join as join9 } from "node:path";
+import { appendFileSync as appendFileSync2, readFileSync as readFileSync10, writeFileSync as writeFileSync11, mkdirSync as mkdirSync7 } from "node:fs";
+import { resolve as resolve6, join as join9 } from "node:path";
 import { randomUUID as randomUUID2 } from "node:crypto";
 
 // src/voice-target.ts
@@ -90923,7 +91037,7 @@ function actingVerdict(review, seconds) {
   };
 }
 async function reviewActing(request) {
-  const file = resolve5(request.audioPath), bytes = readFileSync10(file);
+  const file = resolve6(request.audioPath), bytes = readFileSync10(file);
   if (bytes.length > 14 * 1024 * 1024 || bytes.subarray(0, 4).toString() !== "RIFF") throw new Error("Review requires a WAV smaller than 14 MiB");
   const signal = await measureSignal(file);
   const { GoogleGenAI: GoogleGenAI3 } = await Promise.resolve().then(() => (init_node(), node_exports));
@@ -90971,12 +91085,12 @@ async function reviewActing(request) {
     } });
   } finally {
     const event = { ts: (/* @__PURE__ */ new Date()).toISOString(), tool: "tts_review_acting", ok: response?.candidates?.[0]?.finishReason === "STOP", ms: Date.now() - started, key: null, quantity: null, note: "Explicit user-requested audio evaluation; reconcile actual provider token billing", detail: { model: REVIEW_MODEL, inputTokens: response?.usageMetadata?.promptTokenCount || 0, outputTokens: response?.usageMetadata?.candidatesTokenCount || 0 } };
-    mkdirSync6(request.outputPath, { recursive: true });
+    mkdirSync7(request.outputPath, { recursive: true });
     appendFileSync2(join9(request.outputPath, "review-events.jsonl"), JSON.stringify(event) + "\n");
     recordUsage(request.outputPath, event);
   }
   const rawPath = join9(request.outputPath, `acting-response-${randomUUID2()}.json`);
-  writeFileSync10(rawPath, JSON.stringify({ evaluatorVersion: ACTING_EVALUATOR_VERSION, model: REVIEW_MODEL, apiVersion: REVIEW_API_VERSION, finishReason: response.candidates?.[0]?.finishReason, text: response.text, inputs: request, audioSha256: sha256(bytes), usage: response.usageMetadata }, null, 2));
+  writeFileSync11(rawPath, JSON.stringify({ evaluatorVersion: ACTING_EVALUATOR_VERSION, model: REVIEW_MODEL, apiVersion: REVIEW_API_VERSION, finishReason: response.candidates?.[0]?.finishReason, text: response.text, inputs: request, audioSha256: sha256(bytes), usage: response.usageMetadata }, null, 2));
   if (response.candidates?.[0]?.finishReason !== "STOP") throw new Error("Audio reviewer did not complete; raw response saved at " + rawPath);
   const review = parseActingObservation(JSON.parse(response.text || ""));
   if (request.characterTarget && (review.characterFit === void 0 || !review.observedVoice)) throw new Error("Character voice review omitted actual voice observations or characterFit");
@@ -90987,16 +91101,16 @@ async function reviewActing(request) {
     result.p0++;
   }
   if (sha256(readFileSync10(file)) !== result.audioSha256) throw new Error("Audio changed during review");
-  mkdirSync6(request.outputPath, { recursive: true });
+  mkdirSync7(request.outputPath, { recursive: true });
   const reportPath = join9(request.outputPath, `acting-review-${randomUUID2()}.json`);
-  writeFileSync10(reportPath, JSON.stringify({ ...result, rawPath }, null, 2));
+  writeFileSync11(reportPath, JSON.stringify({ ...result, rawPath }, null, 2));
   return { reportPath, rawPath, ...result };
 }
 
 // src/voice-audition.ts
-import { createHash as createHash4, randomUUID as randomUUID3 } from "node:crypto";
-import { appendFileSync as appendFileSync3, existsSync as existsSync13, mkdirSync as mkdirSync7, readFileSync as readFileSync11, writeFileSync as writeFileSync11, renameSync as renameSync5 } from "node:fs";
-import { dirname as dirname5, join as join10, resolve as resolve6 } from "node:path";
+import { createHash as createHash5, randomUUID as randomUUID3 } from "node:crypto";
+import { appendFileSync as appendFileSync3, existsSync as existsSync14, mkdirSync as mkdirSync8, readFileSync as readFileSync11, writeFileSync as writeFileSync12, renameSync as renameSync5 } from "node:fs";
+import { dirname as dirname5, join as join10, resolve as resolve7 } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { createRequire as createRequire4 } from "node:module";
 
@@ -91106,7 +91220,7 @@ var voiceAuditionSchema = external_exports.object({
       ctx.addIssue({ code: "custom", path: ["sampleTurns"], message: "Per-turn sample acting requires Gemini 3.8 TTS" });
   }
 });
-var hash = (value) => createHash4("sha256").update(value).digest("hex");
+var hash = (value) => createHash5("sha256").update(value).digest("hex");
 var escape2 = (s2) => s2.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 function compileSample(text2, acting, voice, turns) {
   if (!turns) return compileActing(text2, acting, voice);
@@ -91121,7 +91235,7 @@ function compileSample(text2, acting, voice, turns) {
 }
 function save(file, value) {
   const temporary = file + "." + randomUUID3() + ".tmp";
-  writeFileSync11(temporary, JSON.stringify(value, null, 2));
+  writeFileSync12(temporary, JSON.stringify(value, null, 2));
   renameSync5(temporary, file);
 }
 function preview(audition) {
@@ -91129,7 +91243,7 @@ function preview(audition) {
 }
 async function manageVoiceAudition(args) {
   if (args.action === "create" || args.action === "plan") {
-    const identityPath = resolve6(args.identityPath);
+    const identityPath = resolve7(args.identityPath);
     const source2 = readFileSync11(identityPath, "utf8");
     const blocks = [...source2.matchAll(/```json\s*\n([\s\S]*?)```/g)].map((m2) => JSON.parse(m2[1]));
     if (blocks.filter((b) => b.character !== void 0).length !== 1) throw new Error("Create the character identity JSON before auditioning; tts may be absent until selection");
@@ -91146,7 +91260,7 @@ async function manageVoiceAudition(args) {
     });
     if (args.action === "plan") return { identityPath, identitySha256: hash(source2), target, candidates: planned, review: "not_reviewed", instruction: "Use provider metadata to choose candidates; unknown attributes require auditioning. No audio generated and identity is unchanged." };
     const outputPath = join10(dirname5(identityPath), "voice-auditions", randomUUID3());
-    mkdirSync7(outputPath, { recursive: true });
+    mkdirSync8(outputPath, { recursive: true });
     const auditionPath2 = join10(outputPath, "audition.json");
     const audition2 = { version: 1, status: "generating", identityPath, identitySha256: hash(source2), sampleText: args.sampleText, candidates: [], target, ...args.acting ? { acting: args.acting } : {}, ...args.sampleTurns ? { sampleTurns: args.sampleTurns } : {}, previewPath: join10(outputPath, "index.html") };
     save(auditionPath2, audition2);
@@ -91184,7 +91298,7 @@ async function manageVoiceAudition(args) {
         save(auditionPath2, audition2);
       }
       audition2.status = "ready";
-      writeFileSync11(audition2.previewPath, preview(audition2));
+      writeFileSync12(audition2.previewPath, preview(audition2));
       save(auditionPath2, audition2);
       return { auditionPath: auditionPath2, ...audition2, instruction: "Present all three audio players. Wait for the user to choose a candidate, then call select with their actual response." };
     } catch (error2) {
@@ -91193,7 +91307,7 @@ async function manageVoiceAudition(args) {
       throw new Error(`Audition incomplete; existing candidates are preserved at ${auditionPath2}. ${error2 instanceof Error ? error2.message : String(error2)}`);
     }
   }
-  const auditionPath = resolve6(args.auditionPath);
+  const auditionPath = resolve7(args.auditionPath);
   const audition = JSON.parse(readFileSync11(auditionPath, "utf8"));
   if (audition.version !== 1) throw new Error("Unsupported audition manifest");
   if (args.action === "read") return { auditionPath, ...audition };
@@ -91211,7 +91325,7 @@ async function manageVoiceAudition(args) {
   }
   if ((actual.voiceId || actual.voice || actual.voiceName) !== config3.voiceId || actual.model !== config3.model || config3.engine === "elevenlabs" && (recorded.generator !== "tts_elevenlabs_generate" || actual.languageCode !== config3.language || actual.stability !== config3.stability || actual.similarity !== config3.similarity) || config3.engine === "gemini" && !["tts_generate", "tts_gemini_38"].includes(recorded.generator || ""))
     throw new Error("Candidate voice settings differ from the recorded generation; create a new audition");
-  for (const c of audition.candidates) if (!existsSync13(c.audioPath) || hash(readFileSync11(c.audioPath)) !== c.audioSha256) throw new Error("Audition audio changed; regenerate or restore original audio before selection");
+  for (const c of audition.candidates) if (!existsSync14(c.audioPath) || hash(readFileSync11(c.audioPath)) !== c.audioSha256) throw new Error("Audition audio changed; regenerate or restore original audio before selection");
   const source = readFileSync11(audition.identityPath, "utf8");
   if (hash(source) !== audition.identitySha256) throw new Error("Character identity changed after audition; create a new audition for the current character");
   const selection = { candidateId: chosen.id, userSelection: args.userSelection, at: (/* @__PURE__ */ new Date()).toISOString(), auditionPath, audioSha256: chosen.audioSha256 };
@@ -91224,9 +91338,9 @@ async function manageVoiceAudition(args) {
     return "```json\n" + JSON.stringify({ ...value, tts: ttsSchema.parse(chosen.tts), voiceSelection: selection }, null, 2) + "\n```";
   });
   if (!replaced) throw new Error("Missing identity JSON");
-  writeFileSync11(join10(dirname5(auditionPath), "identity-before-selection.md"), source, { flag: "wx" });
+  writeFileSync12(join10(dirname5(auditionPath), "identity-before-selection.md"), source, { flag: "wx" });
   const temporary = audition.identityPath + "." + randomUUID3() + ".tmp";
-  writeFileSync11(temporary, next);
+  writeFileSync12(temporary, next);
   renameSync5(temporary, audition.identityPath);
   audition.status = "selected";
   audition.selected = { ...selection, identitySha256: hash(next) };
@@ -91288,19 +91402,19 @@ async function manageLocation(args) {
 
 // src/project.ts
 import * as nodeModule5 from "node:module";
-import { dirname as dirname6, resolve as resolve7 } from "node:path";
+import { dirname as dirname6, resolve as resolve8 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 var loadFromHere2 = nodeModule5.createRequire(import.meta.url);
-var helper = resolve7(dirname6(fileURLToPath2(import.meta.url)), "../../skills/_shared/project-settings.js");
+var helper = resolve8(dirname6(fileURLToPath2(import.meta.url)), "../../skills/_shared/project-settings.js");
 function manageProject(args) {
   const project = loadFromHere2(helper);
   return project.manageProject(args);
 }
 
 // src/speech.ts
-import { createHash as createHash5, randomUUID as randomUUID4 } from "node:crypto";
-import { readFileSync as readFileSync12, writeFileSync as writeFileSync12, renameSync as renameSync6, mkdirSync as mkdirSync8, existsSync as existsSync14 } from "node:fs";
-import { dirname as dirname7, resolve as resolve8, join as join12 } from "node:path";
+import { createHash as createHash6, randomUUID as randomUUID4 } from "node:crypto";
+import { readFileSync as readFileSync12, writeFileSync as writeFileSync13, renameSync as renameSync6, mkdirSync as mkdirSync9, existsSync as existsSync15 } from "node:fs";
+import { dirname as dirname7, resolve as resolve9, join as join12 } from "node:path";
 import * as nodeModule6 from "node:module";
 import { execFileSync as execFileSync3 } from "node:child_process";
 var voiceContract = () => nodeModule6.createRequire(import.meta.url)("../../skills/_shared/character-voice.js");
@@ -91322,14 +91436,14 @@ var speechManageSchema = external_exports.object({
   generation: external_exports.object({ generator: external_exports.string().min(1), voiceSettings: external_exports.record(external_exports.unknown()), text: external_exports.string().min(1), language: external_exports.string().min(1).optional() }).strict().optional(),
   capabilities: external_exports.object({ provider: external_exports.string().min(1), model: external_exports.string().min(1), audioConditioning: external_exports.boolean(), lipSync: external_exports.boolean(), postLipSync: external_exports.boolean(), evidence: external_exports.string().min(1) }).strict().optional()
 }).strict();
-var hash2 = (s2) => createHash5("sha256").update(s2).digest("hex");
+var hash2 = (s2) => createHash6("sha256").update(s2).digest("hex");
 var object3 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
 function speechRevision(line, character) {
   return hash2(JSON.stringify(actingContract().speechRevisionPayload(line, character?.tts)));
 }
 function currentAudio(line, character) {
   try {
-    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync14(line.audio.path) && hash2(readFileSync12(line.audio.path)) === line.audio.sha256;
+    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync15(line.audio.path) && hash2(readFileSync12(line.audio.path)) === line.audio.sha256;
   } catch {
     return false;
   }
@@ -91365,7 +91479,7 @@ function audioProvenanceStatus(line, character) {
   return "stale_or_missing";
 }
 function measuredDuration(line) {
-  if (!line.audio || !existsSync14(line.audio.path)) return null;
+  if (!line.audio || !existsSync15(line.audio.path)) return null;
   try {
     const value = Number(execFileSync3("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
     return Number.isFinite(value) && value > 0 ? value : null;
@@ -91457,7 +91571,7 @@ function manageSpeech(args) {
       }
     } else {
       if (!args.audioPath) throw new Error("audioPath is required");
-      const audioPath = resolve8(dirname7(file), args.audioPath);
+      const audioPath = resolve9(dirname7(file), args.audioPath);
       if (!args.generation || args.generation.text !== line.tts) throw new Error("Attach the actual generation arguments and exact line text");
       const voice = character(line.speaker)?.tts;
       const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation, line);
@@ -91522,7 +91636,7 @@ function manageSpeech(args) {
     plan2 = { ...plan2, continuity: continuityContract.plan(win, scenes.indexOf(scene), dirname7(file)) };
     if (args.action === "attach_video") {
       if (!args.videoPath) throw new Error("videoPath is required");
-      const videoPath = resolve8(dirname7(file), args.videoPath);
+      const videoPath = resolve9(dirname7(file), args.videoPath);
       const bytes = readFileSync12(videoPath);
       if (!bytes.length) throw new Error("Video file is empty");
       const audio = selected.map(({ line }) => {
@@ -91584,14 +91698,14 @@ function manageSpeech(args) {
       ids.add(line.id);
       if (!character(line.speaker)?.tts) throw new Error(`Missing pinned voice for ${line.speaker}`);
     }
-    const work = resolve8(dirname7(file), "../.work/speech-history");
-    mkdirSync8(work, { recursive: true });
+    const work = resolve9(dirname7(file), "../.work/speech-history");
+    mkdirSync9(work, { recursive: true });
     const backup = join12(work, revision + ".js");
-    if (!existsSync14(backup)) writeFileSync12(backup, before);
+    if (!existsSync15(backup)) writeFileSync13(backup, before);
     const nextSource = serializeBoard(win, header);
     if (hash2(readFileSync12(file)) !== revision) throw new Error("Storyboard changed during speech edit");
     const tmp = file + "." + randomUUID4() + ".tmp";
-    writeFileSync12(tmp, nextSource);
+    writeFileSync13(tmp, nextSource);
     renameSync6(tmp, file);
   }
   return { revision: hash2(readFileSync12(file)), changed, invalidated, plan: plan2, timing, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
@@ -91599,22 +91713,27 @@ function manageSpeech(args) {
 
 // src/acting-review.ts
 import { execFile as execFile7 } from "node:child_process";
-import { createHash as createHash6, randomUUID as randomUUID5 } from "node:crypto";
-import { existsSync as existsSync15, mkdirSync as mkdirSync9, readFileSync as readFileSync13, realpathSync, renameSync as renameSync7, rmSync as rmSync6, statSync as statSync7, writeFileSync as writeFileSync13 } from "node:fs";
+import { createHash as createHash7, randomUUID as randomUUID5 } from "node:crypto";
+import { existsSync as existsSync16, mkdirSync as mkdirSync10, readFileSync as readFileSync13, realpathSync, renameSync as renameSync7, rmSync as rmSync6, statSync as statSync7, writeFileSync as writeFileSync14 } from "node:fs";
 import path11 from "node:path";
 import { homedir as homedir4 } from "node:os";
 import { promisify as promisify3 } from "node:util";
 var exec2 = promisify3(execFile7);
 var ACTING_REVIEW_MODEL = process.env.SOCIAL_FLOW_ACTING_REVIEW_MODEL?.trim() || "gemini-3.8-flash";
 var API_VERSION = process.env.SOCIAL_FLOW_TTS_REVIEW_API_VERSION?.trim() || "v1";
-var VISUAL_POLICY = "acting-review-v7";
-var AUDIO_POLICY = "acting-review-v6";
+var VISUAL_POLICY = "acting-review-v9";
+var AUDIO_POLICY = "acting-review-v8";
 function actingMediaPart(bytes, probe2, mode) {
   return {
     inlineData: { data: bytes.toString("base64"), mimeType: probe2.mimeType },
     ...probe2.video && mode !== "audio" ? { videoMetadata: { fps: 8 } } : {}
   };
 }
+var ACTING_REVIEW_ADVISORY = {
+  advisoryOnly: true,
+  selectionAuthority: "user",
+  interpretation: "Status and scores describe model judgment, not usability or permission. User preference decides voice casting; do not reject, replace or regenerate a preferred take because of a low score. Perceived age and naturalness are subjective impressions, not measured facts. Report concrete intelligibility defects separately."
+};
 var MAX_BYTES = 12 * 1024 * 1024;
 var actingReviewSchema2 = external_exports.object({
   mediaPath: external_exports.string().min(1),
@@ -91652,7 +91771,7 @@ var actingObservationSchema = external_exports.object({
     correction: external_exports.string().trim().min(1).max(2e3)
   }).strict()).max(80)
 }).strict();
-var hash3 = (data) => createHash6("sha256").update(data).digest("hex");
+var hash3 = (data) => createHash7("sha256").update(data).digest("hex");
 var currentHash = (file) => {
   try {
     const stat4 = statSync7(file);
@@ -91816,6 +91935,7 @@ async function evaluate(bytes, probe2, request) {
     model: ACTING_REVIEW_MODEL,
     contents: [{ role: "user", parts: [actingMediaPart(bytes, probe2, request.mode), {
       text: `Review the entire supplied media critically against this quoted production brief: ${JSON.stringify({ expectedText: request.expectedText, direction: request.direction, mode: request.mode, measuredDuration: probe2.duration })}.
+This review is advisory. Voice age, naturalness and character appeal are subjective impressions, not objective defects or casting vetoes. A deliberately coarse, stylized or theatrical voice may be the intended aesthetic. Do not equate age with low pitch, rasp or vocal wear, and do not assert physiological causes such as laryngeal tension or exact age from listening alone. Describe audible qualities with uncertainty. Distinguish an actual word error or unintelligibility from a disliked timbre or rhythm; speechAccuracy must not penalize stylistic delivery alone. Preserve user-selected character qualities in proposed corrections; never optimize them away merely toward generic naturalness.
 Confidence must be a fraction from 0 to 1 (for example 0.95), never a 0\u2013100 percentage. Scores use 0\u2013100. Do not convert uncertainty into a performance deduction; lower confidence and explain the limitation in the coverage evidence.
 Explain confidenceReason with the actual observational basis: what was clearly heard/seen or what prevented reliable judgment. A short clip alone is not proof of poor delivery or uncertainty; identify the specific missing evidence if its brevity limits this judgment. Never manufacture a limitation or inflate confidence.
 Judge the precise brief without expanding its expectations. Mild puzzlement does not require deeper confusion, extra hesitation, slower speech, or exaggerated facial motion. Identify a concrete contradiction to the requested intent, rather than a stylistic preference.
@@ -91858,8 +91978,8 @@ async function reviewActing2(input, deps = { probe: probeActingMedia, evaluate }
   const requestSha256 = hash3(JSON.stringify({ mediaSha256, directionSha256, model: ACTING_REVIEW_MODEL, policy }));
   const directory2 = path11.resolve(deps.cacheDirectory || process.env.SOCIAL_FLOW_ACTING_REVIEW_CACHE_DIR?.trim() || path11.join(homedir4(), ".cache", "social-flow", "acting-reviews"));
   const receiptPath = path11.join(directory2, `${requestSha256}.json`);
-  mkdirSync9(directory2, { recursive: true, mode: 448 });
-  if (existsSync15(receiptPath)) {
+  mkdirSync10(directory2, { recursive: true, mode: 448 });
+  if (existsSync16(receiptPath)) {
     try {
       const cached2 = cachedReceiptSchema.parse(JSON.parse(readFileSync13(receiptPath, "utf8")));
       const cachedDirection = hash3(JSON.stringify({ direction: cached2.request.direction, expectedText: cached2.request.expectedText, mode: cached2.request.mode }));
@@ -91867,14 +91987,14 @@ async function reviewActing2(input, deps = { probe: probeActingMedia, evaluate }
       const currentMediaSha2562 = currentHash(mediaPath);
       const sourceChanged2 = cached2.sourceChanged || currentMediaSha2562 !== mediaSha256;
       const outcome = sourceChanged2 ? unverified(["Source media changed during or after review"]) : cached2.review ? actingReviewOutcome(cached2.review, probe2, request) : unverified(cached2.failures);
-      return { ...cached2, ...outcome, sourceChanged: sourceChanged2, currentMediaSha256: currentMediaSha2562, currentMediaPath: mediaPath, receiptPath, reused: true };
+      return { ...cached2, ...outcome, ...ACTING_REVIEW_ADVISORY, sourceChanged: sourceChanged2, currentMediaSha256: currentMediaSha2562, currentMediaPath: mediaPath, receiptPath, reused: true };
     } catch (error2) {
-      return { ...unverified([`Invalid cached receipt: ${error2 instanceof Error ? error2.message : String(error2)}`]), receiptPath, reused: true };
+      return { ...ACTING_REVIEW_ADVISORY, ...unverified([`Invalid cached receipt: ${error2 instanceof Error ? error2.message : String(error2)}`]), receiptPath, reused: true };
     }
   }
   const lock = `${receiptPath}.lock`;
   try {
-    writeFileSync13(lock, JSON.stringify({ pid: process.pid, startedAt: (/* @__PURE__ */ new Date()).toISOString() }), { flag: "wx" });
+    writeFileSync14(lock, JSON.stringify({ pid: process.pid, startedAt: (/* @__PURE__ */ new Date()).toISOString() }), { flag: "wx" });
   } catch {
     throw new Error("An identical review is running or was interrupted; inspect its lock instead of issuing another paid review");
   }
@@ -91932,8 +92052,8 @@ async function reviewActing2(input, deps = { probe: probeActingMedia, evaluate }
   };
   const temporary = `${receiptPath}.${randomUUID5()}.tmp`;
   try {
-    writeFileSync13(lock, JSON.stringify({ phase: "evaluated", receipt }), { flag: "w" });
-    writeFileSync13(temporary, JSON.stringify(receipt, null, 2) + "\n", { flag: "wx" });
+    writeFileSync14(lock, JSON.stringify({ phase: "evaluated", receipt }), { flag: "w" });
+    writeFileSync14(temporary, JSON.stringify(receipt, null, 2) + "\n", { flag: "wx" });
     renameSync7(temporary, receiptPath);
   } catch (error2) {
     try {
@@ -91947,13 +92067,13 @@ async function reviewActing2(input, deps = { probe: probeActingMedia, evaluate }
   } catch {
     console.error(`[acting_review] Receipt saved; stale lock can be removed: ${lock}`);
   }
-  return { ...receipt, receiptPath, reused: false };
+  return { ...receipt, ...ACTING_REVIEW_ADVISORY, receiptPath, reused: false };
 }
 
 // src/threads-gate.ts
-import { createHash as createHash7, randomUUID as randomUUID6 } from "node:crypto";
-import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync10, readFileSync as readFileSync14, realpathSync as realpathSync2, renameSync as renameSync8, statSync as statSync8, writeFileSync as writeFileSync14 } from "node:fs";
-import { dirname as dirname8, join as join13, resolve as resolve9 } from "node:path";
+import { createHash as createHash8, randomUUID as randomUUID6 } from "node:crypto";
+import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync11, readFileSync as readFileSync14, realpathSync as realpathSync2, renameSync as renameSync8, statSync as statSync8, writeFileSync as writeFileSync15 } from "node:fs";
+import { dirname as dirname8, join as join13, resolve as resolve10 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 import { spawnSync as spawnSync3 } from "node:child_process";
 var nonempty = external_exports.string().trim().min(1);
@@ -91988,7 +92108,7 @@ var reviewSchema2 = external_exports.object({
 });
 var normalize = (s2) => s2.normalize("NFC").replace(/\r\n?/g, "\n").trim();
 function threadsBodyHash(body, selfReply = "") {
-  return createHash7("sha256").update(JSON.stringify([normalize(body), normalize(selfReply)])).digest("hex");
+  return createHash8("sha256").update(JSON.stringify([normalize(body), normalize(selfReply)])).digest("hex");
 }
 function directory(channel) {
   return join13(process.cwd(), "data", channelSchema.parse(channel), "growth", "threads");
@@ -92000,14 +92120,14 @@ function draftLocation(id) {
 }
 function audit(channel, tool, result, details = {}) {
   const dir = directory(channel);
-  mkdirSync10(dir, { recursive: true });
+  mkdirSync11(dir, { recursive: true });
   appendFileSync4(join13(dir, "gate-log.jsonl"), JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool, result, ...details }) + "\n", { mode: 384 });
 }
 function save2(draft) {
   const { file } = draftLocation(draft.draftId);
-  mkdirSync10(dirname8(file), { recursive: true });
+  mkdirSync11(dirname8(file), { recursive: true });
   const temp = `${file}.${randomUUID6()}.tmp`;
-  writeFileSync14(temp, JSON.stringify(draft), { mode: 384 });
+  writeFileSync15(temp, JSON.stringify(draft), { mode: 384 });
   renameSync8(temp, file);
 }
 function load(id) {
@@ -92094,7 +92214,7 @@ function checkThreadsGate(input) {
       if (review.bodyHash !== bodyHash) throw new Error(`${axis} review hash mismatch`);
       if (review.score < limits[axis]) throw new Error(`${axis} score ${review.score} below ${limits[axis]}`);
     }
-    const checker = resolve9(dirname8(fileURLToPath3(import.meta.url)), "../../skills/platform-guide/references/check-style.py");
+    const checker = resolve10(dirname8(fileURLToPath3(import.meta.url)), "../../skills/platform-guide/references/check-style.py");
     for (const [body, surface] of [[input.caption, input.replyToId ? "reply" : "threads"], [input.selfReply, "reply"]]) {
       if (!body) continue;
       const run = spawnSync3("python3", [checker, "--surface", surface, "-"], { input: body, encoding: "utf8", timeout: 15e3, maxBuffer: 1024 * 1024 });
@@ -92125,7 +92245,7 @@ function checkThreadsEpisode(input) {
 
 // src/datago-client.ts
 import { mkdir, writeFile as writeFile2 } from "node:fs/promises";
-import { existsSync as existsSync16 } from "node:fs";
+import { existsSync as existsSync17 } from "node:fs";
 import { tmpdir as tmpdir4 } from "node:os";
 import { join as join14 } from "node:path";
 var PORTAL_BASE = "https://www.data.go.kr";
@@ -92369,7 +92489,7 @@ async function downloadFile2(input) {
   const saveDir = input.saveDir ?? join14(tmpdir4(), "social-flow-datago");
   await mkdir(saveDir, { recursive: true });
   let savedPath = join14(saveDir, filename);
-  for (let i2 = 1; existsSync16(savedPath); i2++) {
+  for (let i2 = 1; existsSync17(savedPath); i2++) {
     if (i2 >= 100) {
       return err(`there are already 100+ files with the same name in ${saveDir} \u2014 clean up saveDir or point at a different directory.`);
     }
@@ -93704,9 +93824,9 @@ async function stockSearch(input) {
 }
 
 // src/sns-client.ts
-import { createHash as createHash8, randomUUID as randomUUID7 } from "node:crypto";
+import { createHash as createHash9, randomUUID as randomUUID7 } from "node:crypto";
 import {
-  existsSync as existsSync17,
+  existsSync as existsSync18,
   mkdirSync as nodeMkdirSync,
   readFileSync as nodeReadFileSync,
   rmSync as nodeRmSync,
@@ -93717,11 +93837,11 @@ import { basename as basename9, dirname as dirname9, extname as extname9, join a
 function enabledPlatforms() {
   const channelDirs = listChannelDirs();
   return SNS_PLATFORMS.filter(
-    (platform) => existsSync17(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
+    (platform) => existsSync18(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
   );
 }
 function availablePlatformsFor(channel) {
-  return SNS_PLATFORMS.filter((platform) => existsSync17(snsCredentialFile(platform, channel)));
+  return SNS_PLATFORMS.filter((platform) => existsSync18(snsCredentialFile(platform, channel)));
 }
 var GRAPH_VERSION = "v23.0";
 var THREADS_BASE = "https://graph.threads.net/v1.0";
@@ -93729,7 +93849,7 @@ var IG_BASE = `https://graph.instagram.com/${GRAPH_VERSION}`;
 var FB_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 var DEFAULT_POLL_INTERVAL_MS = 2e3;
 var DEFAULT_POLL_MAX_TRIES = 60;
-var sleep7 = (ms) => new Promise((resolve11) => setTimeout(resolve11, ms));
+var sleep7 = (ms) => new Promise((resolve12) => setTimeout(resolve12, ms));
 function fail2(status, message) {
   return { ok: false, status, body: message };
 }
@@ -94417,7 +94537,7 @@ function parseResumeOffset(range) {
   return m2 ? Number(m2[1]) + 1 : 0;
 }
 function sessionStateFile(filePath) {
-  const key = createHash8("sha256").update(filePath).digest("hex").slice(0, 16);
+  const key = createHash9("sha256").update(filePath).digest("hex").slice(0, 16);
   return join15(snsTokenDir, ".yt-upload", `${key}.json`);
 }
 function readState(filePath) {
@@ -95552,7 +95672,7 @@ async function checkAccounts(channel) {
 
 // src/tts-final-quality.ts
 import { execFile as execFile8 } from "node:child_process";
-import { existsSync as existsSync18, mkdtempSync as mkdtempSync5, readFileSync as readFileSync15, rmSync as rmSync7, writeFileSync as writeFileSync15, renameSync as renameSync9, openSync as openSync2, closeSync as closeSync2 } from "node:fs";
+import { existsSync as existsSync19, mkdtempSync as mkdtempSync5, readFileSync as readFileSync15, rmSync as rmSync7, writeFileSync as writeFileSync16, renameSync as renameSync9, openSync as openSync2, closeSync as closeSync2 } from "node:fs";
 import { tmpdir as tmpdir5 } from "node:os";
 import path13 from "node:path";
 import { promisify as promisify4 } from "node:util";
@@ -95583,8 +95703,8 @@ async function reviewFinalSpeech(input, deps = { listen }) {
   function save3(status, extra) {
     const result = { ...base, status, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
     const staging = path13.join(temp, "proof.json");
-    writeFileSync15(staging, JSON.stringify(result, null, 2) + "\n");
-    writeFileSync15(proofPath + ".tmp", readFileSync15(staging));
+    writeFileSync16(staging, JSON.stringify(result, null, 2) + "\n");
+    writeFileSync16(proofPath + ".tmp", readFileSync15(staging));
     renameSync9(proofPath + ".tmp", proofPath);
     return { success: status === "pass", status, proofPath, ...extra };
   }
@@ -95598,7 +95718,7 @@ async function reviewFinalSpeech(input, deps = { listen }) {
       return await reviewChapters(request, media, wav, temp, base, proofPath, save3, deps);
     }
     if (sha256(readFileSync15(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
-    if (existsSync18(proofPath)) {
+    if (existsSync19(proofPath)) {
       const old = JSON.parse(readFileSync15(proofPath, "utf8"));
       const same = Object.entries(base).every(([k, v]) => ["mediaSha256", "expectedText"].includes(k) || old[k] === v);
       if (old.audioSha256 === base.audioSha256 && old.textSha256 === base.textSha256 && old.status === "fail") return save3("fail", { reused: true, signal: old.signal, transcript: old.transcript, transcriptCheck: transcriptCheck ?? old.transcriptCheck ?? null, failures: old.failures, review: old.review, error: "This exact final audio already failed; fix the audio before another listening review" });
@@ -95644,7 +95764,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
   const pcm = chapters.decode(wav), totalSamples = pcm.length / chapters.BYTES;
   const planned = chapters.plan(request.segments, totalSamples, request.expectedText);
   const identity = { policy: chapters.POLICY, sampleRate: chapters.RATE, totalSamples, pcmSha256: chapters.hash(pcm), segments: request.segments, transcriptCheck: request.transcriptCheck ?? null };
-  const old = existsSync18(proofPath) ? JSON.parse(readFileSync15(proofPath, "utf8")) : null;
+  const old = existsSync19(proofPath) ? JSON.parse(readFileSync15(proofPath, "utf8")) : null;
   const pieces = [];
   const commit = (status, extra = {}) => save3(status, { ...identity, pieces, manifestSha256: chapters.manifest({ ...identity, pieces }), ...extra });
   if (old?.pcmSha256 === identity.pcmSha256 && old.textSha256 === base.textSha256 && old.status === "fail") {
@@ -95660,7 +95780,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
     for (const piece of planned) {
       const samples = pcm.subarray(piece.startSample * chapters.BYTES, piece.endSample * chapters.BYTES);
       const raw = path13.join(temp, "piece.pcm"), file = path13.join(temp, "piece.flac");
-      writeFileSync15(raw, samples);
+      writeFileSync16(raw, samples);
       await exec3("ffmpeg", ["-y", "-v", "error", "-f", "s32le", "-ar", String(chapters.RATE), "-ac", "1", "-i", raw, "-map_metadata", "-1", "-c:a", "flac", file], { timeout: 6e4 });
       const payload = readFileSync15(file);
       if (payload.length > chapters.LIMIT || !chapters.decode(file).equals(samples)) throw new Error("Chapter encoding exceeded the limit or changed PCM samples");
@@ -95753,7 +95873,7 @@ function requireOneSource(data, ctx) {
 var omniExtendSchema = external_exports.object({ ...continuationFields, durationSeconds: durationSchema2 }).superRefine(requireOneSource);
 var omniEditSchema = external_exports.object(continuationFields).superRefine(requireOneSource);
 function sleep8(ms) {
-  return new Promise((resolve11) => setTimeout(resolve11, ms));
+  return new Promise((resolve12) => setTimeout(resolve12, ms));
 }
 function readInlineFile(filePath, kind) {
   const data = fs8.readFileSync(filePath).toString("base64");
@@ -96110,7 +96230,7 @@ async function downloadVideo2(apiKey, videoUri) {
   return Buffer.from(arrayBuffer);
 }
 function sleep9(ms) {
-  return new Promise((resolve11) => setTimeout(resolve11, ms));
+  return new Promise((resolve12) => setTimeout(resolve12, ms));
 }
 async function awaitVideoAndSave2(apiKey, operationName, outputPath, filename, label) {
   let pollCount = 0;
@@ -96385,8 +96505,8 @@ async function generateWithReferences2(request) {
 }
 
 // src/content-feedback.ts
-import { mkdirSync as mkdirSync11, writeFileSync as writeFileSync18 } from "node:fs";
-import { dirname as dirname10, isAbsolute, join as join16, resolve as resolve10 } from "node:path";
+import { mkdirSync as mkdirSync12, writeFileSync as writeFileSync19 } from "node:fs";
+import { dirname as dirname10, isAbsolute, join as join16, resolve as resolve11 } from "node:path";
 
 // src/content-feedback-html.ts
 function escapeHtml(value) {
@@ -96978,7 +97098,7 @@ function resolveHtmlPath(channel, outputPath) {
     if (outputPath.includes("..")) {
       throw new Error(`Path traversal detected: ${outputPath}`);
     }
-    const resolved = isAbsolute(outputPath) ? outputPath : resolve10(process.cwd(), outputPath);
+    const resolved = isAbsolute(outputPath) ? outputPath : resolve11(process.cwd(), outputPath);
     if (!resolved.toLowerCase().endsWith(".html")) {
       throw new Error(`outputPath must end in .html: ${outputPath}`);
     }
@@ -97017,8 +97137,8 @@ async function contentFeedback(input) {
     instagram
   };
   if (htmlPath) {
-    mkdirSync11(dirname10(htmlPath), { recursive: true });
-    writeFileSync18(htmlPath, renderFeedbackHtml(report), "utf8");
+    mkdirSync12(dirname10(htmlPath), { recursive: true });
+    writeFileSync19(htmlPath, renderFeedbackHtml(report), "utf8");
   }
   return { ok: true, status: 200, body: JSON.stringify(report) };
 }
@@ -98060,14 +98180,14 @@ ${errors.join("\n")}`);
 }
 
 // src/capability-status.ts
-import { existsSync as existsSync20 } from "node:fs";
+import { existsSync as existsSync21 } from "node:fs";
 import path14 from "node:path";
 import os from "node:os";
 var has2 = (v) => Boolean(v && v.length > 0);
 var binOk = (p) => {
   try {
-    if (p.includes(path14.sep)) return existsSync20(p);
-    return (process.env.PATH || "").split(path14.delimiter).some((dir) => dir && existsSync20(path14.join(dir, p)));
+    if (p.includes(path14.sep)) return existsSync21(p);
+    return (process.env.PATH || "").split(path14.delimiter).some((dir) => dir && existsSync21(path14.join(dir, p)));
   } catch {
     return false;
   }
@@ -99268,6 +99388,10 @@ Script length: ${request.script.length} chars`
     );
   },
   // Local synthesis (Supertonic) — runs on-device as a subprocess. No key, network, or quota.
+  tts_voice_design: async (args) => {
+    const result = await designGeminiVoice(voiceDesignSchema.parse(args));
+    return text(JSON.stringify(result, null, 2), !result.success);
+  },
   tts_list_voices: async (args) => text(JSON.stringify(await listTtsVoices(ttsVoicesSchema.parse(args)), null, 2)),
   // ── speech synthesis (ElevenLabs) — REST, saves the file locally, returns path + measured cost ──
   // character-cost is the vendor's billing header, so it is reported as measured rather
