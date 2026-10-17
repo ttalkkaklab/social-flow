@@ -195,7 +195,7 @@ const ASTRA_GUIDANCE_MEANING = {
 };
 const ASTRA_STG_BLOCKS_PROPERTY = {
     type: 'array',
-    description: `Transformer blocks perturbed by spatio-temporal guidance: 1-${ASTRA_VIDEO_MAX_STG_BLOCKS} distinct integers 0-${ASTRA_VIDEO_MAX_STG_BLOCK}. Only matters while the matching stg scale is above 0.`,
+    description: `Transformer blocks perturbed by spatio-temporal guidance: 1-${ASTRA_VIDEO_MAX_STG_BLOCKS} distinct integers 0-${ASTRA_VIDEO_MAX_STG_BLOCK}. Only matters while the matching stg scale is above 0 — and on tier "hq" the default list is empty, so turning stg on there also needs a block list (e.g. [28]).`,
     minItems: 1,
     maxItems: ASTRA_VIDEO_MAX_STG_BLOCKS,
     uniqueItems: true,
@@ -211,7 +211,7 @@ const ASTRA_GENERATE_AUDIO_PROPERTY = {
 };
 const ASTRA_GUIDANCE_PROPERTY = {
     type: 'object',
-    description: 'Optional engine guidance knobs; leave it out unless a render needs correcting — every omitted key keeps the pipeline default, and the defaults are tuned. Typical fixes: ignores the prompt → raise videoCfgGuidanceScale (default 3.0) a little; oversaturated or burnt colours → raise videoRescaleScale or lower videoCfgGuidanceScale; lip-sync loose on audio2video → raise a2vGuidanceScale. Defaults for guided, fast, keyframe and audio2video: videoCfg 3.0 · videoStg 1.0 · videoRescale 0.7 · videoStgBlocks [28] · videoSkipStep 0 · a2v 3.0 · audioCfg 7.0 · audioStg 1.0 · audioRescale 0.7 · audioStgBlocks [28] · audioSkipStep 0 · v2a 3.0. tier "hq" differs: videoStg 0.0 · videoRescale 0.45 · videoStgBlocks [] · audioStg 0.0 · audioRescale 1.0. Ranges are the server\'s conservative bounds, not measured quality guidance. Accepted on the step-based modes only (tiers "guided", "fast", "hq", and the keyframe and audio2video tools). New in the 2026-10-17 server design: refused until that server change is live.',
+    description: 'Optional engine guidance knobs; leave it out unless a render needs correcting — every omitted key keeps the pipeline default, and the defaults are tuned. Typical fixes: ignores the prompt → raise videoCfgGuidanceScale (default 3.0) a little; oversaturated or burnt colours → raise videoRescaleScale or lower videoCfgGuidanceScale; lip-sync loose on audio2video → raise a2vGuidanceScale. Defaults for guided, fast, keyframe and audio2video: videoCfg 3.0 · videoStg 1.0 · videoRescale 0.7 · videoStgBlocks [28] · videoSkipStep 0 · a2v 3.0 · audioCfg 7.0 · audioStg 1.0 · audioRescale 0.7 · audioStgBlocks [28] · audioSkipStep 0 · v2a 3.0. tier "hq" differs: videoStg 0.0 · videoRescale 0.45 · videoStgBlocks [] · audioStg 0.0 · audioRescale 1.0 — so on hq a stg scale does nothing unless you also give its block list. Ranges are the server\'s conservative bounds, not measured quality guidance. Accepted on the step-based modes only (tiers "guided", "fast", "hq", and the keyframe and audio2video tools). New in the 2026-10-17 server design: refused until that server change is live.',
     properties: {
         ...Object.fromEntries(Object.entries(ASTRA_VIDEO_GUIDANCE_RANGES).map(([key, [minimum, maximum]]) => [guidanceToolKey(key), {
                 type: key.endsWith('_skip_step') ? 'integer' : 'number',

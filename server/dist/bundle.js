@@ -79152,7 +79152,9 @@ function checkDuration(data, mode, ctx) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
       path: ["duration"],
-      message: `duration ${data.duration}s at ${fps}fps is ${frames} frames; mode ${mode} takes ${ASTRA_VIDEO_MIN_FRAMES}-${max} frames, about ${(ASTRA_VIDEO_MIN_FRAMES / fps).toFixed(2)}-${(max / fps).toFixed(2)}s`
+      // Nearest-grid rounding: frames f cover seconds×fps in (f-4, f+4], so the accepted span is
+      // more than (min-4)/fps and at most (max+4)/fps — the bounds the server states too.
+      message: `duration ${data.duration}s at ${fps}fps is ${frames} frames; mode ${mode} takes ${ASTRA_VIDEO_MIN_FRAMES}-${max} frames, i.e. duration more than ${((ASTRA_VIDEO_MIN_FRAMES - ASTRA_VIDEO_FRAME_STEP / 2) / fps).toFixed(4)}s and at most ${((max + ASTRA_VIDEO_FRAME_STEP / 2) / fps).toFixed(4)}s`
     });
   }
 }
@@ -86272,7 +86274,7 @@ var ASTRA_GUIDANCE_MEANING = {
 };
 var ASTRA_STG_BLOCKS_PROPERTY = {
   type: "array",
-  description: `Transformer blocks perturbed by spatio-temporal guidance: 1-${ASTRA_VIDEO_MAX_STG_BLOCKS} distinct integers 0-${ASTRA_VIDEO_MAX_STG_BLOCK}. Only matters while the matching stg scale is above 0.`,
+  description: `Transformer blocks perturbed by spatio-temporal guidance: 1-${ASTRA_VIDEO_MAX_STG_BLOCKS} distinct integers 0-${ASTRA_VIDEO_MAX_STG_BLOCK}. Only matters while the matching stg scale is above 0 \u2014 and on tier "hq" the default list is empty, so turning stg on there also needs a block list (e.g. [28]).`,
   minItems: 1,
   maxItems: ASTRA_VIDEO_MAX_STG_BLOCKS,
   uniqueItems: true,
@@ -86289,7 +86291,7 @@ var ASTRA_GENERATE_AUDIO_PROPERTY = {
 };
 var ASTRA_GUIDANCE_PROPERTY = {
   type: "object",
-  description: `Optional engine guidance knobs; leave it out unless a render needs correcting \u2014 every omitted key keeps the pipeline default, and the defaults are tuned. Typical fixes: ignores the prompt \u2192 raise videoCfgGuidanceScale (default 3.0) a little; oversaturated or burnt colours \u2192 raise videoRescaleScale or lower videoCfgGuidanceScale; lip-sync loose on audio2video \u2192 raise a2vGuidanceScale. Defaults for guided, fast, keyframe and audio2video: videoCfg 3.0 \xB7 videoStg 1.0 \xB7 videoRescale 0.7 \xB7 videoStgBlocks [28] \xB7 videoSkipStep 0 \xB7 a2v 3.0 \xB7 audioCfg 7.0 \xB7 audioStg 1.0 \xB7 audioRescale 0.7 \xB7 audioStgBlocks [28] \xB7 audioSkipStep 0 \xB7 v2a 3.0. tier "hq" differs: videoStg 0.0 \xB7 videoRescale 0.45 \xB7 videoStgBlocks [] \xB7 audioStg 0.0 \xB7 audioRescale 1.0. Ranges are the server's conservative bounds, not measured quality guidance. Accepted on the step-based modes only (tiers "guided", "fast", "hq", and the keyframe and audio2video tools). New in the 2026-10-17 server design: refused until that server change is live.`,
+  description: `Optional engine guidance knobs; leave it out unless a render needs correcting \u2014 every omitted key keeps the pipeline default, and the defaults are tuned. Typical fixes: ignores the prompt \u2192 raise videoCfgGuidanceScale (default 3.0) a little; oversaturated or burnt colours \u2192 raise videoRescaleScale or lower videoCfgGuidanceScale; lip-sync loose on audio2video \u2192 raise a2vGuidanceScale. Defaults for guided, fast, keyframe and audio2video: videoCfg 3.0 \xB7 videoStg 1.0 \xB7 videoRescale 0.7 \xB7 videoStgBlocks [28] \xB7 videoSkipStep 0 \xB7 a2v 3.0 \xB7 audioCfg 7.0 \xB7 audioStg 1.0 \xB7 audioRescale 0.7 \xB7 audioStgBlocks [28] \xB7 audioSkipStep 0 \xB7 v2a 3.0. tier "hq" differs: videoStg 0.0 \xB7 videoRescale 0.45 \xB7 videoStgBlocks [] \xB7 audioStg 0.0 \xB7 audioRescale 1.0 \u2014 so on hq a stg scale does nothing unless you also give its block list. Ranges are the server's conservative bounds, not measured quality guidance. Accepted on the step-based modes only (tiers "guided", "fast", "hq", and the keyframe and audio2video tools). New in the 2026-10-17 server design: refused until that server change is live.`,
   properties: {
     ...Object.fromEntries(Object.entries(ASTRA_VIDEO_GUIDANCE_RANGES).map(([key, [minimum, maximum]]) => [guidanceToolKey(key), {
       type: key.endsWith("_skip_step") ? "integer" : "number",

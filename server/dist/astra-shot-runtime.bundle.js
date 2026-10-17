@@ -4761,7 +4761,9 @@ function checkDuration(data, mode, ctx) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
       path: ["duration"],
-      message: `duration ${data.duration}s at ${fps}fps is ${frames} frames; mode ${mode} takes ${ASTRA_VIDEO_MIN_FRAMES}-${max} frames, about ${(ASTRA_VIDEO_MIN_FRAMES / fps).toFixed(2)}-${(max / fps).toFixed(2)}s`
+      // Nearest-grid rounding: frames f cover seconds×fps in (f-4, f+4], so the accepted span is
+      // more than (min-4)/fps and at most (max+4)/fps — the bounds the server states too.
+      message: `duration ${data.duration}s at ${fps}fps is ${frames} frames; mode ${mode} takes ${ASTRA_VIDEO_MIN_FRAMES}-${max} frames, i.e. duration more than ${((ASTRA_VIDEO_MIN_FRAMES - ASTRA_VIDEO_FRAME_STEP / 2) / fps).toFixed(4)}s and at most ${((max + ASTRA_VIDEO_FRAME_STEP / 2) / fps).toFixed(4)}s`
     });
   }
 }

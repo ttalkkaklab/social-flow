@@ -94,7 +94,7 @@ describe('the tools cover the measured seven modes and the two designed ones', (
     assert.throws(() => buildJobBody('ingredients', { prompt: 'x', adapter: 'deblur' }), /mode ingredients does not accept adapter/);
   });
 
-  it('design additions are exactly DESIGN §2-3 and never touch generate or retake', () => {
+  it('design additions are exactly DESIGN §2-3 plus generate_audio, which alone reaches generate and retake', () => {
     const added = (mode) => ASTRA_VIDEO_ALLOWED_FIELDS[mode].filter(f => !(ASTRA_VIDEO_MEASURED_FIELDS[mode] ?? []).includes(f));
     for (const mode of ['guided', 'guided_fast', 'keyframe', 'audio2video']) assert.deepEqual(added(mode), ['generate_audio', 'guidance'], mode);
     for (const mode of ['generate', 'retake']) assert.deepEqual(added(mode), ['generate_audio'], mode);
@@ -1110,7 +1110,7 @@ describe('stage 3 — duration, generateAudio, capabilities', () => {
     assert.equal(parseOk(astraText2VideoSchema, { prompt: 'x', duration: 4 }).numFrames, 97);
     assert.equal('duration' in parseOk(astraText2VideoSchema, { prompt: 'x', duration: 4 }), false);
     assert.equal(parseOk(astraText2VideoSchema, { prompt: 'x', duration: 5, frameRate: 30 }).numFrames, 153);
-    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', tier: 'guided', duration: 8 }), /duration 8s at 24fps is 193 frames; mode guided takes 25-121 frames/);
+    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', tier: 'guided', duration: 8 }), /duration 8s at 24fps is 193 frames; mode guided takes 25-121 frames, i\.e\. duration more than 0\.8750s and at most 5\.2083s/);
     assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', duration: 0.5 }), /duration 0.5s/);
     assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', duration: 4, numFrames: 97 }), /duration and numFrames are mutually exclusive/);
     assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', duration: 4, autoDuration: { minSeconds: 1, maxSeconds: 4 } }), /duration and autoDuration/);
@@ -1162,6 +1162,8 @@ describe('stage 3 — duration, generateAudio, capabilities', () => {
       assert.ok(calls[0].url.endsWith('/v1/models'));
       assert.equal(calls[0].method, 'GET');
       assert.equal(calls[0].headers.Authorization, 'Bearer test-only-key');
+      reply = () => Response.json([report]);
+      assert.match((await ROUTES.astra_video_capabilities({})).content[0].text, /did not return a JSON capability report/);
       reply = () => new Response('<html>', { status: 200 });
       assert.match((await ROUTES.astra_video_capabilities({})).content[0].text, /did not return a JSON capability report/);
       reply = () => new Response('nope', { status: 429 });
