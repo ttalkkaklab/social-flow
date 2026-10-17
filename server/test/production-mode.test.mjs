@@ -472,7 +472,7 @@ test('measure-motion summarises samples into frozen share, longest still run and
   assert.equal(motion.plateStillLimit({ maxStaticGroundSeconds: 4 }), 4);
   assert.equal(motion.plateStillLimit(undefined), 8);
 });
-test('the assembled reel is measured card by card: a still-like slide fails, a still card is not gated', () => withBoard(({ work }) => {
+test('the assembled reel records motion warnings without turning proxies into quality gates', () => withBoard(({ work }) => {
   const { cardMotion } = require('../../skills/produce/references/verify-assembled.js');
   const moving = movingClip(path.join(work, 'a.mp4'), { seconds: 4 }), still = stillClip(path.join(work, 'b.mp4'), 4);
   mkdirSync(path.join(work, 'work'));
@@ -481,7 +481,7 @@ test('the assembled reel is measured card by card: a still-like slide fails, a s
   assert.equal(concat.status, 0, concat.stderr);
   writeFileSync(path.join(work, 'work/edit-timeline.tsv'), '0\t0\t120\tcut\t0\t0\t0\n1\t120\t120\tcut\t0\t0\t0\n');
   const scenes = [{ visual: { video: { clip: 'a.mp4' } } }, { visual: { slide: { kind: 'diagram', motion: true, file: 'slides/s2.html' } } }];
-  assert.throws(() => cardMotion(work, scenes, { max_static_ground_seconds: 'off' }), /card 1: .*repeat the previous picture/);
+  assert.match(cardMotion(work, scenes, { max_static_ground_seconds: 'off' }).warnings.join('; '), /card 1: .*repeat the previous picture/);
   scenes[1] = { visual: { bg: 'images/still.png', camera: { movement: 'dolly in' } } };
   const result = cardMotion(work, scenes, { max_static_ground_seconds: 'off' });
   assert.equal(result.plateStillLimit, 8);
@@ -489,7 +489,7 @@ test('the assembled reel is measured card by card: a still-like slide fails, a s
   assert.ok(result.cards[0].frozenShare < .1 && result.cards[1].frozenShare > .9);
   scenes[0] = { visual: { slide: { kind: 'camera', motion: true, file: 'slides/s1.html' } } };
   scenes[1] = { visual: { video: { clip: 'b.mp4' } } };
-  assert.throws(() => cardMotion(work, scenes, {}), /card 1: .*stands still/);
+  assert.match(cardMotion(work, scenes, {}).warnings.join('; '), /card 1: .*stands still/);
 }));
 test('browser and CLI share signatures and the template loads a cost comparison', () => {
   const sandbox = { window: {} };

@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { ACTING_RESPONSE_JSON_SCHEMA, actingObservationSchema, actingReviewSchema, actingReviewOutcome, probeActingMedia, reviewActing } from '../dist/acting-review.js';
+import { actingMediaPart, ACTING_RESPONSE_JSON_SCHEMA, actingObservationSchema, actingReviewSchema, actingReviewOutcome, probeActingMedia, reviewActing } from '../dist/acting-review.js';
 
 const media = { duration: 3, audio: true, video: true, mimeType: 'video/mp4' };
 const coverage = () => ({ observed: true, complete: true, start: 0, end: 3, evidence: 'At 0–3 seconds restrained hesitation resolves to a questioning rise.' });
@@ -260,4 +260,33 @@ test('rendered captions fail and unknown caption coverage remains unverified', t
   assert.equal(actingReviewOutcome({ ...good(), visibleCaptions: null }, media, f.request).status, 'unverified');
   assert.equal(actingObservationSchema.safeParse({ ...good(), visibleCaptions: undefined }).success, false);
   assert.equal(actingReviewOutcome(good(), media, f.request).status, 'pass');
+});
+
+
+test('visual reviews request temporal samples; audio-only reviews retain their modality', () => {
+  const bytes = Buffer.from('media');
+  for (const mode of ['video', 'audiovisual']) {
+    const part = actingMediaPart(bytes, media, mode);
+    assert.equal(part.videoMetadata.fps, 8);
+    assert.equal(part.inlineData.data, bytes.toString('base64'));
+    assert.equal(part.inlineData.mimeType, 'video/mp4');
+  }
+  assert.equal(actingMediaPart(bytes, media, 'audio').videoMetadata, undefined);
+  assert.equal(actingMediaPart(bytes, {...media, video:false, mimeType:'audio/wav'}, 'audio').videoMetadata, undefined);
+});
+
+
+test('unchanged audio policy keeps v6 paid receipts reusable', async t => {
+  const f = setup(t);
+  const audio = {...f.request, mode:'audio'};
+  const first = await reviewActing(audio, f.deps);
+  assert.equal(first.policy, 'acting-review-v6');
+  const repeated = await reviewActing(audio, f.deps);
+  assert.equal(repeated.reused, true);
+  assert.equal(repeated.receiptPath, first.receiptPath);
+  assert.equal(f.calls(), 1);
+  const visual = await reviewActing({...f.request, mode:'video'}, f.deps);
+  assert.equal(visual.policy, 'acting-review-v7');
+  assert.notEqual(visual.receiptPath, first.receiptPath);
+  assert.equal(f.calls(), 2);
 });

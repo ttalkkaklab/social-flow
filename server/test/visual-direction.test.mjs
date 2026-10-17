@@ -17,14 +17,15 @@ const quote=()=>({type:'points',duration:5,narration:[{tts:'The quoted evidence.
 test('approval renderer recognizes camera photographs without hiding unsupported slides',()=>{
  const template=readFileSync(path.join(ref,'storyboard-html-template.html'),'utf8');
  const script=template.slice(template.indexOf('/* ⚙ RENDERER')).split('</script>')[0];
- function preview(kind){
+ function preview(kind, scenes, doc){
   const app={},audit={},style={setProperty(){}};
   const document={getElementById:id=>({app,audit}[id]||null),documentElement:{style},body:{appendChild(){}},
    createElement:()=>({style,firstChild:{querySelector:()=>null}})};
-  const window={THEME:{},FORMAT:'shorts-9x16',SB_DOC:{},SCENES:[{
+  const window={THEME:{},FORMAT:'shorts-9x16',SB_DOC:doc || {},SCENES:scenes || [{
    type:'points',duration:5,title:'Rider',narration:[{tts:'Look at the rider.'}],
    visual:{bg:'images/rider.png',picture:'still',overlay:'none',slide:{kind,motion:true,file:'slides/s1-rider.html',plan:'Approach the rider.'}}
   }]};
+  window.SHOT_DIRECTION=require(path.join(ref,'shot-direction.js'));
   runInNewContext(script,{window,document,URLSearchParams,location:{search:'?lang=en'},navigator:{languages:['en']},console},{timeout:5000});
   return {html:app.innerHTML,audit:audit.innerHTML};
  }
@@ -32,6 +33,12 @@ test('approval renderer recognizes camera photographs without hiding unsupported
  assert.doesNotMatch(camera.audit,/slide.kind.*outside|structure says slide|also carrying bg/);
  assert.match(preview('unknown').audit,/slide.kind.*outside/);
  assert.match(preview('diagram').audit,/also carrying bg/);
+ const partial=preview('camera',[{type:'cover',duration:3},{type:'points'}]).html;
+ assert.match(partial,/Known planned 3s · unknown 1/);
+ assert.doesNotMatch(partial,/Main body · 3s/);
+ const outro=preview('camera',[{type:'cover',duration:3},{type:'outro'}],{outro:{seconds:9}}).html;
+ assert.match(outro,/Planned total 12s/);
+ assert.match(outro,/Shot 2: 9s/);
 });
 test('text-led plans have an explicit route, a source and an episode limit',()=>{
  const s=quote();assert.deepEqual(checkScene(s),[]);

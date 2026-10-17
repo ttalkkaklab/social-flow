@@ -37,6 +37,7 @@
   // Keep production grammar available without putting it ahead of the picture.
   Array.from(app.querySelectorAll('.scene')).forEach(function (scene) {
     var detail = disclosure(words('연출·카메라 상세', 'Direction / camera details'));
+    detail.id = 'direction-' + scene.id;
     Array.from(scene.children).forEach(function (child) {
       if (child.matches('.shot-grammar, .shot-meta, .cmeta, .transition')) detail.appendChild(child);
     });
@@ -87,6 +88,9 @@
     if (hint && keys.length) { hint.className = 'review-guide-copy'; legend.appendChild(hint); }
   });
   app.appendChild(shotSection);
+  // The planned rhythm belongs beside the shots, not hidden in planning notes.
+  var rhythm = notes.querySelector('.direction-rhythm');
+  if (rhythm) shots.insertAdjacentElement('afterend', rhythm);
   if (style) app.appendChild(style);
   app.appendChild(checks); app.appendChild(notes);
   checks.id = 'review-checks'; notes.id = 'review-notes';

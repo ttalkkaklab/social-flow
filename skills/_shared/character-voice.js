@@ -78,7 +78,7 @@ function generationVoiceErrors(expected, proof, line) {
   return errors;
 }
 
-function identityVoice(source) {
+function identityVoice(source, { optional = false } = {}) {
   const blocks = [...source.matchAll(/```json\s*\n([\s\S]*?)```/g)];
   const voices = [];
   for (const block of blocks) {
@@ -87,6 +87,7 @@ function identityVoice(source) {
     if (value && Object.hasOwn(value, 'tts')) voices.push(value.tts);
   }
   if (voices.length !== 1) throw new Error('identity.md must contain exactly one JSON block with tts');
+  if (optional && voices[0] === null) return null;
   const errors = voiceErrors(voices[0]);
   if (errors.length) throw new Error(errors.join('; '));
   const result = { ...voices[0], language: normalizeLanguage(voices[0].language) };
@@ -126,7 +127,8 @@ function boardVoiceErrors(win) {
   for (const id of ids) {
     const matches = characters.filter(c => c?.id === id);
     if (!id || matches.length !== 1) errors.push(`Character ${id || '(missing id)'} needs exactly one SB_DOC.characters entry with its own tts`);
-    else errors.push(...voiceErrors(matches[0].tts).map(e => `Character ${id}: ${e}`));
+    else if (require('./character-identity.js').requiresSpeech(win, id) || matches[0].tts != null)
+      errors.push(...voiceErrors(matches[0].tts).map(e => `Character ${id}: ${e}`));
   }
   return errors;
 }

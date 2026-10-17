@@ -143,6 +143,63 @@
 .review-steps b { color: var(--review-primary); }
 .review-page audio { width: 100%; max-width: var(--review-s600); }
 
+/* Compact direction plans stay beside the image; details remain expandable. */
+.direction-summary, .direction-camera, .direction-join {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--review-s8) var(--review-s12);
+}
+.direction-summary {
+  padding: var(--review-s8) 0;
+  color: var(--review-fg);
+}
+.direction-camera {
+  min-height: var(--review-s44);
+  color: inherit;
+  text-decoration: none;
+}
+.direction-camera svg {
+  flex: none;
+  width: var(--review-s28);
+  height: var(--review-s28);
+}
+.direction-camera small, .direction-rhythm small {
+  color: var(--review-muted);
+}
+.direction-join {
+  padding-bottom: var(--review-s12);
+  color: var(--review-muted);
+  font-size: var(--review-s12);
+}
+.direction-join a { color: inherit; }
+.direction-rhythm {
+  margin: var(--review-s16) 0 var(--review-s24);
+  padding: var(--review-s16) 0;
+  border-block: var(--review-s1) solid var(--review-line);
+}
+.direction-rhythm p { margin: 0 0 var(--review-s12); }
+.direction-rhythm-track {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: var(--review-s8) var(--review-s16);
+}
+.direction-rhythm-shot {
+  display: grid;
+  grid-template-columns: var(--review-s24) 1fr var(--review-s44);
+  align-items: center;
+  gap: var(--review-s6);
+  min-height: var(--review-s44);
+  color: var(--review-fg);
+  font-size: var(--review-s12);
+  text-decoration: none;
+}
+.direction-rhythm-shot i {
+  display: block;
+  height: var(--review-s6);
+  background: var(--review-primary);
+}
+
 /* Dialogue stays beside its speaker, outside the video preview. */
 .speech-turn {
   display: flex;

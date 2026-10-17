@@ -12,7 +12,13 @@ import { recordUsage } from './usage-ledger.js';
 const exec = promisify(execFile);
 export const ACTING_REVIEW_MODEL = process.env.SOCIAL_FLOW_ACTING_REVIEW_MODEL?.trim() || 'gemini-3.8-flash';
 const API_VERSION = process.env.SOCIAL_FLOW_TTS_REVIEW_API_VERSION?.trim() || 'v1';
-const POLICY = 'acting-review-v6';
+const VISUAL_POLICY = 'acting-review-v7';
+const AUDIO_POLICY = 'acting-review-v6';
+// Explicit temporal sampling avoids the SDK's 1 fps default missing brief gestures.
+export function actingMediaPart(bytes: Buffer, probe: MediaProbe, mode: ActingReviewRequest['mode']) {
+  return { inlineData: { data: bytes.toString('base64'), mimeType: probe.mimeType },
+    ...(probe.video && mode !== 'audio' ? { videoMetadata: { fps: 8 } } : {}) };
+}
 const MAX_BYTES = 12 * 1024 * 1024;
 export const actingReviewSchema = z.object({
   mediaPath: z.string().min(1), expectedText: z.string().max(8000).default(''),
@@ -177,7 +183,7 @@ async function evaluate(bytes: Buffer, probe: MediaProbe, request: ActingReviewR
   const { GoogleGenAI } = await import('@google/genai');
   const client = new GoogleGenAI({ apiKey: requireGeminiKey(), httpOptions: { apiVersion: API_VERSION, timeout: 180000 } });
   const response = await client.models.generateContent({ model: ACTING_REVIEW_MODEL,
-    contents: [{ role: 'user', parts: [{ inlineData: { data: bytes.toString('base64'), mimeType: probe.mimeType } }, { text:
+    contents: [{ role: 'user', parts: [actingMediaPart(bytes, probe, request.mode), { text:
       `Review the entire supplied media critically against this quoted production brief: ${JSON.stringify({ expectedText: request.expectedText, direction: request.direction, mode: request.mode, measuredDuration: probe.duration })}.
 Confidence must be a fraction from 0 to 1 (for example 0.95), never a 0–100 percentage. Scores use 0–100. Do not convert uncertainty into a performance deduction; lower confidence and explain the limitation in the coverage evidence.
 Explain confidenceReason with the actual observational basis: what was clearly heard/seen or what prevented reliable judgment. A short clip alone is not proof of poor delivery or uncertainty; identify the specific missing evidence if its brevity limits this judgment. Never manufacture a limitation or inflate confidence.
@@ -200,6 +206,7 @@ Score situation alignment, facial expression, body acting, vocal emotion, speech
 /** Receipts are immutable, including failures: repeat calls cannot fish for a passing score. */
 export async function reviewActing(input: ActingReviewRequest, deps: ActingDependencies = { probe: probeActingMedia, evaluate }) {
   const request = actingReviewSchema.parse(input);
+  const policy = request.mode === 'audio' ? AUDIO_POLICY : VISUAL_POLICY;
   const mediaPath = realpathSync(request.mediaPath);
   const stat = statSync(mediaPath);
   if (!stat.isFile() || stat.size === 0 || stat.size > MAX_BYTES) throw new Error('Review requires a nonempty media file no larger than 12 MiB');
@@ -211,7 +218,7 @@ export async function reviewActing(input: ActingReviewRequest, deps: ActingDepen
   const mediaSha256 = hash(bytes);
   if (currentHash(mediaPath) !== mediaSha256) throw new Error('Source media changed during probe; review was not sent');
   const directionSha256 = hash(JSON.stringify({ direction: request.direction, expectedText: request.expectedText, mode: request.mode }));
-  const requestSha256 = hash(JSON.stringify({ mediaSha256, directionSha256, model: ACTING_REVIEW_MODEL, policy: POLICY }));
+  const requestSha256 = hash(JSON.stringify({ mediaSha256, directionSha256, model: ACTING_REVIEW_MODEL, policy }));
   const directory = path.resolve(deps.cacheDirectory || process.env.SOCIAL_FLOW_ACTING_REVIEW_CACHE_DIR?.trim() || path.join(homedir(), '.cache', 'social-flow', 'acting-reviews'));
   const receiptPath = path.join(directory, `${requestSha256}.json`);
   mkdirSync(directory, { recursive: true, mode: 0o700 });
@@ -219,7 +226,7 @@ export async function reviewActing(input: ActingReviewRequest, deps: ActingDepen
     try {
       const cached = cachedReceiptSchema.parse(JSON.parse(readFileSync(receiptPath, 'utf8')));
       const cachedDirection = hash(JSON.stringify({ direction: cached.request.direction, expectedText: cached.request.expectedText, mode: cached.request.mode }));
-      if (cached.policy !== POLICY || cached.model !== ACTING_REVIEW_MODEL || cached.mediaSha256 !== mediaSha256 ||
+      if (cached.policy !== policy || cached.model !== ACTING_REVIEW_MODEL || cached.mediaSha256 !== mediaSha256 ||
           cached.directionSha256 !== directionSha256 || cached.requestSha256 !== requestSha256 || cachedDirection !== directionSha256 ||
           JSON.stringify(cached.media) !== JSON.stringify(probe)) throw new Error('Cached receipt identity does not match this review');
       const currentMediaSha256 = currentHash(mediaPath);
@@ -259,7 +266,7 @@ export async function reviewActing(input: ActingReviewRequest, deps: ActingDepen
     recordUsage(path.dirname(mediaPath), { ts: new Date().toISOString(), tool: 'acting_review', ok: review !== null, ms: Date.now() - started,
       key: null, quantity: null, note: 'Paid Gemini media review; reconcile token billing; unknown cost is not zero', detail: { model: ACTING_REVIEW_MODEL, ...usage } });
   } catch (error) { console.error('[acting_review] Usage ledger failed; preserving paid review receipt:', error instanceof Error ? error.message : String(error)); }
-  const receipt = { ...result, policy: POLICY, model: ACTING_REVIEW_MODEL, createdAt: new Date().toISOString(), mediaPath, mediaSha256, directionSha256, requestSha256,
+  const receipt = { ...result, policy, model: ACTING_REVIEW_MODEL, createdAt: new Date().toISOString(), mediaPath, mediaSha256, directionSha256, requestSha256,
     request: { ...request, mediaPath }, media: probe, review, rejectedObservation, usage, costUsd: null, sourceChanged, currentMediaSha256 };
   const temporary = `${receiptPath}.${randomUUID()}.tmp`;
   try {

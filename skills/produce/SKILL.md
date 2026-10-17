@@ -7,6 +7,12 @@ allowed-tools: ["mcp__social-flow__project_manage", "mcp__social-flow__location_
 ---
 
 Use local episode files under `data/<channel>/episodes/<topic>/`.
+For action-led episodes, carry the storyboard's [action direction](../storyboard/references/action-direction.md)
+into generation and editing. Compare the actual clip with the planned camera and
+action; camera icons and a successful API response do not verify footage quality.
+For an intentionally silent film, use `SILENT=1 OUTRO=0` with the canonical builder.
+Supply sample-exact zero-valued timing WAVs; omit music, effect and ambience cues.
+The builder verifies silence and preserves the frame clock without loudness scoring.
 **Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 
 For tracked props, read [prop continuity](../storyboard/references/prop-continuity.md). Resolve the shot snapshot before prompts, preserve reference versions and record the snapshot with generated assets; verify the actual holder and condition in images and clips.

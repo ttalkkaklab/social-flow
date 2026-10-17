@@ -112,7 +112,7 @@ test('short narration uses authored breathing room and remains sample-exact',()=
 say(){ echo "$1"; }
 CPRE=0; CPOST=0.12; CMIN=0; L=1.5; FPS=30; SPF=1600; HANDLE=0.24; JOIN=0; MAX_DUR=13; IDX=0
 `+block);
-  const r=spawnSync('bash',['audio.sh'],{cwd:dir,encoding:'utf8'});assert.equal(r.status,0,r.stdout+r.stderr);
+  const r=spawnSync('bash',['audio.sh'],{cwd:dir,encoding:'utf8',env:{...process.env,HERE:path.join(root,'skills/produce/references')}});assert.equal(r.status,0,r.stdout+r.stderr);
   const samples=Number(execFileSync('ffprobe',['-v','error','-show_entries','stream=duration_ts','-of','csv=p=0',path.join(dir,'work/n0.wav')],{encoding:'utf8'}).trim());
   assert.equal(samples,49*1600);assert.ok(samples/48000<2,'no forced four-second hold or 0.4-second pre-roll');
  }finally{rmSync(dir,{recursive:true,force:true});}

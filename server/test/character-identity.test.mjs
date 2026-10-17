@@ -80,3 +80,29 @@ test('production verifies the current on-disk identity, not a copied hash alone'
     win.SB_DOC.characters[0].id='../escape';assert.match(sourceErrors(win,root).join(),/Invalid character id/);
   }finally{rmSync(root,{recursive:true,force:true});}
 });
+
+test('silent story-v2 cast can keep speech pending without bypassing identity or spoken-line checks', () => {
+  const root=mkdtempSync(join(tmpdir(),'silent-cast-'));
+  try {
+    const dir=join(root,'assets/characters/mori');mkdirSync(dir,{recursive:true});
+    writeFileSync(join(root,'profile.md'),'# Channel');
+    const d=doc();d.tts=null;
+    for(const key of Object.keys(d.character.speech))d.character.speech[key]={status:'pending',value:null,reason:'Silent character; voice not selected'};
+    const file=join(dir,'identity.md');writeFileSync(file,markdown(d));
+    assert.throws(()=>handoff(file),/pending/);
+    const cast=handoff(file,{requireSpeech:false});
+    assert.equal(cast.tts,null);assert.equal(cast.direction.voice,'');
+    const board={STORY:{version:'story-v2'},SB_DOC:{characterSchemaVersion:1,speechPlanVersion:1,characters:[cast]},SCENES:[{visual:{character:'mori'},narration:[]}]};
+    const {boardVoiceErrors}=require('../../skills/_shared/character-voice.js');
+    const {sourceErrors}=require('../../skills/channel/references/character-sheet.js');
+    assert.deepEqual(boardVoiceErrors(board),[]);assert.deepEqual(sourceErrors(board,root),[]);
+    board.SCENES[0].narration=[{id:'line-1',speaker:'mori',delivery:'on_screen',tts:'Hello'}];
+    assert.match(boardVoiceErrors(board).join(),/pending|tts is required/);
+    assert.match(sourceErrors(board,root).join(),/pending/);
+    board.SCENES[0].narration=[];
+    cast.tts={engine:'invalid'};assert.match(boardVoiceErrors(board).join(),/tts/);cast.tts=null;
+    d.character.physical.appearance={status:'pending',value:null,reason:'Appearance not chosen'};
+    writeFileSync(file,markdown(d));assert.throws(()=>handoff(file,{requireSpeech:false}),/physical.appearance/);
+    assert.match(sourceErrors(board,root).join(),/physical.appearance/);
+  }finally{rmSync(root,{recursive:true,force:true});}
+});

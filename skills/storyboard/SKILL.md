@@ -12,6 +12,10 @@ allowed-tools: ["mcp__social-flow__project_manage", "mcp__social-flow__location_
 
 # Storyboard: make the story understandable, then plan its images
 
+Save episode files under `data/<channel>/episodes/<topic>/`.
+For character action and camera planning, use [action direction](references/action-direction.md).
+The review derives camera icons, cut connections and planned length bars from existing shot fields.
+
 Read [automation guidance](../_shared/automation-guidance.md) and
 [character-led scenarios](references/character-scenarios.md). They define the active
 new-episode workflow below. Use `scenario-v2` and `story-v2` for new work.

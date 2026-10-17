@@ -64543,7 +64543,7 @@ var require_character_identity = __commonJS({
     var object4 = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
     var text2 = (v) => typeof v === "string" && v.trim().length > 0 && v.length <= 2e3;
     var placeholder = (v) => typeof v === "string" && /^(?:tbd|todo|unknown|미정|추후|<[^>]+>|\{\{.*\}\})$/i.test(v.trim());
-    function identityErrors(character, { ready = true } = {}) {
+    function identityErrors(character, { ready = true, requireSpeech = true } = {}) {
       if (!object4(character)) return ["character: structured identity is required (migrate legacy identity.md explicitly)"];
       const errors = [];
       if (character.schemaVersion !== 1) errors.push("character.schemaVersion must be 1");
@@ -64568,7 +64568,7 @@ var require_character_identity = __commonJS({
           }
           if (f3.status !== "confirmed") {
             if (f3.value !== null || !text2(f3.reason)) errors.push(`${p}: unresolved or inapplicable fields need value:null and a reason`);
-            if (f3.status === "pending" && ready) errors.push(`${p}: pending`);
+            if (f3.status === "pending" && ready && (group !== "speech" || requireSpeech)) errors.push(`${p}: pending`);
             if (f3.status === "not_applicable" && !optional2) errors.push(`${p}: cannot be not_applicable`);
             continue;
           }
@@ -64595,8 +64595,8 @@ var require_character_identity = __commonJS({
       if (errors.length) throw new Error(errors.join("; "));
       return values[0];
     }
-    function direction(character) {
-      const errors = identityErrors(character);
+    function direction(character, options) {
+      const errors = identityErrors(character, options);
       if (errors.length) throw new Error(errors.join("; "));
       const lines = (groups) => GROUPS.filter((g) => groups.includes(g[0])).flatMap(([group, , , fields]) => fields.flatMap(([key, , label]) => {
         const field = character[group][key];
@@ -64609,6 +64609,10 @@ var require_character_identity = __commonJS({
         voice: lines(["speech"])
       };
     }
+    function requiresSpeech(win, id) {
+      if (win?.STORY?.version !== "story-v2" || !Array.isArray(win.SCENES)) return true;
+      return win.SCENES.some((s2) => Array.isArray(s2?.narration) && s2.narration.some((n) => typeof n?.tts === "string" && n.tts.trim() && (!n.speaker || n.speaker === id)));
+    }
     function boardIdentityErrors(win) {
       const entries = win?.SB_DOC?.characters;
       const chars = Array.isArray(entries) ? entries : Object.entries(entries || {}).map(([id, c]) => ({ ...c, id }));
@@ -64617,14 +64621,15 @@ var require_character_identity = __commonJS({
       if (win?.SB_DOC?.characterSchemaVersion !== void 0 && !required2) errors.push("Unsupported SB_DOC.characterSchemaVersion");
       for (const c of chars) {
         if (!required2 && c?.character === void 0) continue;
-        const issues = identityErrors(c?.character);
+        const options = { requireSpeech: requiresSpeech(win, c?.id) };
+        const issues = identityErrors(c?.character, options);
         errors.push(...issues.map((e2) => `Character ${c?.id}: ${e2}`));
-        if (!issues.length && Object.entries(direction(c.character)).some(([key, value]) => c.direction?.[key] !== value)) errors.push(`Character ${c.id}: direction does not match structured identity; regenerate handoff`);
+        if (!issues.length && Object.entries(direction(c.character, options)).some(([key, value]) => c.direction?.[key] !== value)) errors.push(`Character ${c.id}: direction does not match structured identity; regenerate handoff`);
         if (!/^[a-f0-9]{64}$/.test(c?.identitySha256 || "")) errors.push(`Character ${c?.id}: identitySha256 is required`);
       }
       return errors;
     }
-    module.exports = { GROUPS, identityErrors, identityCharacter, direction, boardIdentityErrors };
+    module.exports = { GROUPS, identityErrors, identityCharacter, direction, boardIdentityErrors, requiresSpeech };
   }
 });
 
@@ -64708,7 +64713,7 @@ var require_character_voice = __commonJS({
       for (const key of ["stability", "similarity"]) if (expected[key] !== void 0 && settings[key] !== expected[key]) errors.push(key + " differs from pinned character voice");
       return errors;
     }
-    function identityVoice(source) {
+    function identityVoice(source, { optional: optional2 = false } = {}) {
       const blocks = [...source.matchAll(/```json\s*\n([\s\S]*?)```/g)];
       const voices = [];
       for (const block of blocks) {
@@ -64721,6 +64726,7 @@ var require_character_voice = __commonJS({
         if (value && Object.hasOwn(value, "tts")) voices.push(value.tts);
       }
       if (voices.length !== 1) throw new Error("identity.md must contain exactly one JSON block with tts");
+      if (optional2 && voices[0] === null) return null;
       const errors = voiceErrors(voices[0]);
       if (errors.length) throw new Error(errors.join("; "));
       const result = { ...voices[0], language: normalizeLanguage(voices[0].language) };
@@ -64768,7 +64774,8 @@ var require_character_voice = __commonJS({
       for (const id of ids) {
         const matches = characters.filter((c) => c?.id === id);
         if (!id || matches.length !== 1) errors.push(`Character ${id || "(missing id)"} needs exactly one SB_DOC.characters entry with its own tts`);
-        else errors.push(...voiceErrors(matches[0].tts).map((e2) => `Character ${id}: ${e2}`));
+        else if (require_character_identity().requiresSpeech(win, id) || matches[0].tts != null)
+          errors.push(...voiceErrors(matches[0].tts).map((e2) => `Character ${id}: ${e2}`));
       }
       return errors;
     }
@@ -65530,7 +65537,7 @@ var require_final_speech_chapters = __commonJS({
     var RATE2 = 24e3;
     var BYTES2 = 4;
     var LIMIT2 = 14 * 1024 * 1024;
-    var POLICY3 = "final-speech-chapters-v1";
+    var POLICY2 = "final-speech-chapters-v1";
     var hash5 = (x2) => createHash8("sha256").update(x2).digest("hex");
     var digest2 = (x2) => hash5(JSON.stringify(x2));
     function decode2(media) {
@@ -65583,7 +65590,7 @@ var require_final_speech_chapters = __commonJS({
       return f3;
     }
     function validate2(p, pcm, text2, requirePass = true) {
-      if (p.policy !== POLICY3 || p.version !== 1 || p.sampleRate !== RATE2 || p.totalSamples !== pcm.length / BYTES2 || p.pcmSha256 !== hash5(pcm) || normalize2(p.expectedText) !== normalize2(text2) || p.textSha256 !== hash5(normalize2(text2))) throw new Error("Chapter proof describes other audio or narration");
+      if (p.policy !== POLICY2 || p.version !== 1 || p.sampleRate !== RATE2 || p.totalSamples !== pcm.length / BYTES2 || p.pcmSha256 !== hash5(pcm) || normalize2(p.expectedText) !== normalize2(text2) || p.textSha256 !== hash5(normalize2(text2))) throw new Error("Chapter proof describes other audio or narration");
       const expected = plan2(p.segments, p.totalSamples, text2);
       if (!Array.isArray(p.pieces) || p.pieces.length !== expected.length || p.manifestSha256 !== manifest2(p)) throw new Error("Missing, duplicated or altered chapter/boundary evidence");
       const failures = [];
@@ -65600,7 +65607,7 @@ var require_final_speech_chapters = __commonJS({
       if (requirePass && failures.length) throw new Error(failures.join("; "));
       return failures;
     }
-    module.exports = { RATE: RATE2, BYTES: BYTES2, LIMIT: LIMIT2, POLICY: POLICY3, hash: hash5, digest: digest2, decode: decode2, plan: plan2, manifest: manifest2, listeningFailures: listeningFailures2, validate: validate2 };
+    module.exports = { RATE: RATE2, BYTES: BYTES2, LIMIT: LIMIT2, POLICY: POLICY2, hash: hash5, digest: digest2, decode: decode2, plan: plan2, manifest: manifest2, listeningFailures: listeningFailures2, validate: validate2 };
   }
 });
 
@@ -78240,7 +78247,7 @@ import * as path3 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.115.0-story-first.4",
+  version: "0.115.2-direction.1",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -90242,7 +90249,14 @@ import { promisify as promisify3 } from "node:util";
 var exec2 = promisify3(execFile7);
 var ACTING_REVIEW_MODEL = process.env.SOCIAL_FLOW_ACTING_REVIEW_MODEL?.trim() || "gemini-3.8-flash";
 var API_VERSION = process.env.SOCIAL_FLOW_TTS_REVIEW_API_VERSION?.trim() || "v1";
-var POLICY = "acting-review-v6";
+var VISUAL_POLICY = "acting-review-v7";
+var AUDIO_POLICY = "acting-review-v6";
+function actingMediaPart(bytes, probe, mode) {
+  return {
+    inlineData: { data: bytes.toString("base64"), mimeType: probe.mimeType },
+    ...probe.video && mode !== "audio" ? { videoMetadata: { fps: 8 } } : {}
+  };
+}
 var MAX_BYTES = 12 * 1024 * 1024;
 var actingReviewSchema2 = external_exports.object({
   mediaPath: external_exports.string().min(1),
@@ -90442,7 +90456,7 @@ async function evaluate(bytes, probe, request) {
   const client = new GoogleGenAI3({ apiKey: requireGeminiKey(), httpOptions: { apiVersion: API_VERSION, timeout: 18e4 } });
   const response = await client.models.generateContent({
     model: ACTING_REVIEW_MODEL,
-    contents: [{ role: "user", parts: [{ inlineData: { data: bytes.toString("base64"), mimeType: probe.mimeType } }, {
+    contents: [{ role: "user", parts: [actingMediaPart(bytes, probe, request.mode), {
       text: `Review the entire supplied media critically against this quoted production brief: ${JSON.stringify({ expectedText: request.expectedText, direction: request.direction, mode: request.mode, measuredDuration: probe.duration })}.
 Confidence must be a fraction from 0 to 1 (for example 0.95), never a 0\u2013100 percentage. Scores use 0\u2013100. Do not convert uncertainty into a performance deduction; lower confidence and explain the limitation in the coverage evidence.
 Explain confidenceReason with the actual observational basis: what was clearly heard/seen or what prevented reliable judgment. A short clip alone is not proof of poor delivery or uncertainty; identify the specific missing evidence if its brevity limits this judgment. Never manufacture a limitation or inflate confidence.
@@ -90471,6 +90485,7 @@ Score situation alignment, facial expression, body acting, vocal emotion, speech
 }
 async function reviewActing2(input, deps = { probe: probeActingMedia, evaluate }) {
   const request = actingReviewSchema2.parse(input);
+  const policy = request.mode === "audio" ? AUDIO_POLICY : VISUAL_POLICY;
   const mediaPath = realpathSync(request.mediaPath);
   const stat4 = statSync7(mediaPath);
   if (!stat4.isFile() || stat4.size === 0 || stat4.size > MAX_BYTES) throw new Error("Review requires a nonempty media file no larger than 12 MiB");
@@ -90482,7 +90497,7 @@ async function reviewActing2(input, deps = { probe: probeActingMedia, evaluate }
   const mediaSha256 = hash3(bytes);
   if (currentHash(mediaPath) !== mediaSha256) throw new Error("Source media changed during probe; review was not sent");
   const directionSha256 = hash3(JSON.stringify({ direction: request.direction, expectedText: request.expectedText, mode: request.mode }));
-  const requestSha256 = hash3(JSON.stringify({ mediaSha256, directionSha256, model: ACTING_REVIEW_MODEL, policy: POLICY }));
+  const requestSha256 = hash3(JSON.stringify({ mediaSha256, directionSha256, model: ACTING_REVIEW_MODEL, policy }));
   const directory2 = path11.resolve(deps.cacheDirectory || process.env.SOCIAL_FLOW_ACTING_REVIEW_CACHE_DIR?.trim() || path11.join(homedir4(), ".cache", "social-flow", "acting-reviews"));
   const receiptPath = path11.join(directory2, `${requestSha256}.json`);
   mkdirSync9(directory2, { recursive: true, mode: 448 });
@@ -90490,7 +90505,7 @@ async function reviewActing2(input, deps = { probe: probeActingMedia, evaluate }
     try {
       const cached2 = cachedReceiptSchema.parse(JSON.parse(readFileSync13(receiptPath, "utf8")));
       const cachedDirection = hash3(JSON.stringify({ direction: cached2.request.direction, expectedText: cached2.request.expectedText, mode: cached2.request.mode }));
-      if (cached2.policy !== POLICY || cached2.model !== ACTING_REVIEW_MODEL || cached2.mediaSha256 !== mediaSha256 || cached2.directionSha256 !== directionSha256 || cached2.requestSha256 !== requestSha256 || cachedDirection !== directionSha256 || JSON.stringify(cached2.media) !== JSON.stringify(probe)) throw new Error("Cached receipt identity does not match this review");
+      if (cached2.policy !== policy || cached2.model !== ACTING_REVIEW_MODEL || cached2.mediaSha256 !== mediaSha256 || cached2.directionSha256 !== directionSha256 || cached2.requestSha256 !== requestSha256 || cachedDirection !== directionSha256 || JSON.stringify(cached2.media) !== JSON.stringify(probe)) throw new Error("Cached receipt identity does not match this review");
       const currentMediaSha2562 = currentHash(mediaPath);
       const sourceChanged2 = cached2.sourceChanged || currentMediaSha2562 !== mediaSha256;
       const outcome = sourceChanged2 ? unverified(["Source media changed during or after review"]) : cached2.review ? actingReviewOutcome(cached2.review, probe, request) : unverified(cached2.failures);
@@ -90541,7 +90556,7 @@ async function reviewActing2(input, deps = { probe: probeActingMedia, evaluate }
   }
   const receipt = {
     ...result,
-    policy: POLICY,
+    policy,
     model: ACTING_REVIEW_MODEL,
     createdAt: (/* @__PURE__ */ new Date()).toISOString(),
     mediaPath,
@@ -98378,7 +98393,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.115.0-story-first.4" },
+  { name: "social-flow", version: "0.115.2-direction.1" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {
