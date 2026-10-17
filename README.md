@@ -208,7 +208,14 @@ publishable episodes. Improve reusable plugin templates and rebuild; do not hand
 
 ## Persistent 3D locations
 
-`location_manage` builds versioned Blender sets, exports GLB, renders multi-view sheets and shot references, binds them to stable shots, and rejects stale approval or changed asset bytes. The shared storyboard adds an offline 3D viewer with orbit, top view, wall visibility, object inspection, camera-path scrub and camera proposal export. Spatial image prompts include the approved location render as a scoped image input. See [location workflow](skills/storyboard/references/location-assets.md). Blender and a local HTTP server are needed for this workflow. Existing boards are unaffected until a shot binds a location; no paid generation is implicit.
+`location_manage` builds versioned Blender sets, exports GLB, renders multi-view sheets and shot references, binds them to stable shots, and rejects stale references or changed asset bytes. The shared storyboard adds an offline 3D viewer with orbit, top view, wall visibility, object inspection, camera-path scrub and camera proposal export. Spatial image prompts include the location render as a scoped image input; actual review status stays explicit. See [location workflow](skills/storyboard/references/location-assets.md). Blender and a local HTTP server are needed for this workflow. Existing boards are unaffected until a shot binds a location; no paid generation is implicit.
+
+Plan shared space before storyboard images: location bindings now carry actor start/end
+positions, body facing, gaze targets and set endpoint states. The `previz` action renders
+that same set/camera/blocking into both source references and a motion clip. Continuity
+diagnostics warn about position, direction, gaze, custody and action-axis changes across
+related cuts; intentional time skips carry a reason. Cast sheets supply appearance while
+the shared location controls composition. Actual generated images still need inspection.
 
 ## Requirements
 

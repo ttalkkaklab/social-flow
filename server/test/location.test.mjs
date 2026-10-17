@@ -4,6 +4,8 @@ import {createRequire} from 'node:module';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import {execFileSync} from 'node:child_process';
+import {locationSchema} from '../dist/location.js';
 const require=createRequire(import.meta.url);
 const L=require('../../skills/storyboard/references/location-assets.js');
 const C=require('../../skills/storyboard/references/location-contract.js');
@@ -73,3 +75,145 @@ test('end frame uses valid opening receipt without review and rejects changed so
   f.win.SCENES[0].visual.bg='generated.png';fs.appendFileSync(out,'changed');
   assert.throws(()=>assemble(f.win,0,f.boardDir),/output is stale/);
 }));
+
+function blocking(){return {axis:['A','B'],actors:[
+  {id:'A',height:1.7,color:'#d0342c',start:{position:[-1,0,0],rotationZDeg:90,gazeTarget:'B'},end:{position:[-.5,0,0],rotationZDeg:90,gazeTarget:'B',holds:['toolbox']}},
+  {id:'B',height:1.7,color:'#346cbe',start:{position:[1,0,0],rotationZDeg:-90,gazeTarget:'A'}}
+]};}
+test('MCP location schema accepts shared blocking/previz and refuses malformed endpoint poses',()=>{
+  assert.ok(locationSchema.safeParse({action:'bind',blocking:blocking(),endStateId:'open',continuityGroup:'conversation'}).success);
+  assert.ok(locationSchema.safeParse({action:'previz',seconds:2,fps:24}).success);
+  const b=blocking();b.actors[0].end.position=[0,1];
+  assert.equal(locationSchema.safeParse({action:'bind',blocking:b}).success,false);
+  assert.equal(locationSchema.safeParse({action:'previz',seconds:Infinity}).success,false);
+});
+function pair(f){
+  const b=blocking();f.win.SCENES[0].shot.location.blocking=b;
+  f.win.SCENES[0].shot.location.continuityGroup='conversation';
+  f.win.SCENES[1].shot.location=structuredClone(f.win.SCENES[0].shot.location);
+  for(const a of f.win.SCENES[1].shot.location.blocking.actors){a.start=a.end||a.start;delete a.end;}
+  return [L.context(f.win,0,f.boardDir),L.context(f.win,1,f.boardDir)];
+}
+test('blocking validates actor identity, floor poses, gaze targets and held object IDs',()=>{
+  assert.deepEqual(C.blockingErrors(blocking(),spec),[]);
+  for(const mutate of [b=>b.actors.push(b.actors[0]),b=>b.actors[0].start.position=[NaN,0,0],b=>b.actors[0].height=0,b=>b.actors[0].start.gazeTarget='missing',b=>b.actors[0].start.gazeTarget='A',b=>b.actors[0].start.holds=['missing'],b=>b.axis=['A','A'],b=>b.actors[0].id='door']){
+    const b=blocking();mutate(b);assert.ok(C.blockingErrors(b,spec).length);
+  }
+});
+test('end states are complete and omitted endpoints hold the actor start pose',()=>{
+  const b=blocking();assert.equal(C.actorsAt(b,'end')[0].position[0],-.5);
+  assert.deepEqual(C.actorsAt(b,'end')[1],C.actorsAt(b,'start')[1]);
+  b.actors[0].end={rotationZDeg:0};assert.ok(C.blockingErrors(b,spec).some(x=>/end needs/.test(x)));
+});
+test('reverse camera changes preserve world blocking and endpoint state without a direction false positive',()=>fixture(f=>{
+  const [a,b]=pair(f);b.camera={...a.camera,position:[2,-4,2]};
+  b.b.blocking.actors[0].start.rotationZDeg+=360;
+  assert.deepEqual(C.continuityIssues(a,b),[]);
+}));
+test('cross-cut diagnostics identify teleports, facing flips, gaze and prop custody changes',()=>fixture(f=>{
+  const [a,b]=pair(f),actor=b.b.blocking.actors[0];
+  actor.start.position=[2,0,0];actor.start.rotationZDeg=-90;delete actor.start.gazeTarget;actor.start.holds=[];
+  const issues=C.continuityIssues(a,b).join('\n');
+  for(const pattern of [/position jumps/,/body direction jumps/,/gaze target changes/,/held objects change/])assert.match(issues,pattern);
+  assert.ok(L.check(f.win,f.boardDir).filter(x=>/jumps|target changes|held objects/.test(x.what)).every(x=>x.level==='warn'));
+}));
+test('shared action-axis crossings warn and accept planned bridges or story time skips',()=>fixture(f=>{
+  const [a,b]=pair(f);b.camera={...a.camera,position:[0,4,2]};
+  assert.match(C.continuityIssues(a,b).join(),/crosses.*axis/);
+  b.s.shot.lineCrossing={method:'neutral',reason:'A front-on bridge resets direction'};
+  assert.deepEqual(C.continuityIssues(a,b),[]);
+  delete b.s.shot.lineCrossing;b.b.continuityBreak='The next morning';
+  assert.deepEqual(C.continuityIssues(a,b),[]);
+}));
+test('location endpoint state feeds the next shot instead of resetting the door',()=>fixture(f=>{
+  const [a,b]=pair(f);a.b.endStateId='open';
+  assert.match(C.continuityIssues(a,b).join(),/door: set object state jumps/);
+  b.b.stateId='open';assert.deepEqual(C.continuityIssues(a,b),[]);
+}));
+test('changing actor facing or gaze invalidates rendered references before image generation',()=>fixture(f=>{
+  f.win.SCENES[0].shot.location.blocking=blocking();ready(f);
+  assert.match(L.references(f.win,0,f.boardDir).prompt,/Proxy #d0342c is A/);
+  f.win.SCENES[0].shot.location.blocking.actors[0].start.gazeTarget='door';
+  assert.throws(()=>L.references(f.win,0,f.boardDir),/stale/);
+}));
+test('endpoint prompts describe the closing gaze and inventory without copying the opening state',()=>fixture(f=>{
+  const b=blocking();b.actors[0].start.gazeTarget='door';b.actors[0].end.gazeTarget='B';
+  Object.assign(f.win.SCENES[0].shot.location,{blocking:b,endStateId:'open'});ready(f);
+  const {assemble}=require('../../skills/storyboard/references/spatial-prompts.js');
+  const result=assemble(f.win,0,f.boardDir);
+  assert.match(result.sourcePrompt,/eyes look at door/);
+  assert.match(result.endFramePrompt,/eyes look at B/);
+  assert.doesNotMatch(result.endFramePrompt,/eyes look at door/);
+  assert.match(result.endFramePrompt,/holds toolbox/);
+  assert.doesNotMatch(result.endFramePrompt,/Visible set inventory:[^.]*Ochre door/);
+}));
+test('location composition precedes standalone previz and reports the missing shared binding',()=>fixture(f=>{
+  ready(f);f.win.SCENES[0].visual.video={engine:'host',previz:{firstFrame:'legacy.png'}};
+  f.win.SCENES[0].shot.videoDesign.motion={kind:'spatial_reveal',subject:'workshop',visibleChange:'The doorway becomes visible',reason:'The shot reveals the workshop entrance'};
+  const {assemble}=require('../../skills/storyboard/references/spatial-prompts.js');
+  const result=assemble(f.win,0,f.boardDir);
+  assert.equal(result.sourceImageArgs.referenced_image_paths[0],path.join(f.boardDir,'locations/start.png'));
+  assert.match(result.sourcePrompt,/first attached image is the shared 3D location/);
+  assert.doesNotMatch(result.sourcePrompt,/first attached image is frame 1/);
+  assert.equal(result.spatialWarnings.length,1);
+}));
+test('stale or modified shared previz cannot enter source generation',()=>fixture(f=>{
+  ready(f);const first=f.win.SCENES[0];fs.writeFileSync(path.join(f.boardDir,'clip.mp4'),'synthetic clip');
+  first.visual.video={previz:{firstFrame:'locations/start.png',clip:'clip.mp4',sha256:L.fileHash(path.join(f.boardDir,'clip.mp4')),locationBinding:{fingerprint:first.visual.location.fingerprint,frameSha256:first.visual.location.frames.start.sha256}}};
+  assert.ok(L.references(f.win,0,f.boardDir));
+  fs.appendFileSync(path.join(f.boardDir,'clip.mp4'),'tampered');assert.throws(()=>L.references(f.win,0,f.boardDir),/previz bytes/);
+  first.visual.video.previz.locationBinding.fingerprint='stale';assert.throws(()=>L.references(f.win,0,f.boardDir),/previz is stale/);
+  assert.doesNotThrow(()=>L.plan(f.win,0,f.boardDir));
+  assert.ok(L.check(f.win,f.boardDir).some(x=>x.level==='warn'&&/previz is stale/.test(x.what)));
+  assert.ok(!L.check(f.win,f.boardDir).some(x=>x.level==='bad'));
+  const p=L.plan(f.win,0,f.boardDir);
+  assert.doesNotThrow(()=>L.applyCamera(f.win,{version:1,type:'location-camera',shotId:'s0001',baseFingerprint:p.fingerprint,camera:{...p.camera,lensMm:40}},f.boardDir));
+}));
+test('previz timing and saved renderer are checked before launching Blender',()=>fixture(f=>{
+  f.win.SCENES[0].visual.video={engine:'host'};
+  assert.throws(()=>L.previz(f.win,0,f.boardDir,{seconds:Infinity}),/finite/);
+  assert.throws(()=>L.previz(f.win,0,f.boardDir,{seconds:2.5}),/whole/);
+  f.win.PRODUCTION.previz={renderer:'threejs'};
+  assert.throws(()=>L.previz(f.win,0,f.boardDir,{seconds:2}),/saved renderer/);
+}));
+
+const blenderBin=process.env.BLENDER||'/Applications/Blender.app/Contents/MacOS/Blender';
+test('real Blender renders one shared set, moving actors, gaze and matching previz endpoints',
+  {skip:!fs.existsSync(blenderBin),timeout:120000},()=>{
+    const kept=process.env.SOCIAL_FLOW_LOCATION_TEST_OUTPUT;
+    if(kept)fs.mkdirSync(kept,{recursive:true});
+    const dir=fs.mkdtempSync(kept?path.join(kept,'run-'):path.join(os.tmpdir(),'sf-location-render-'));
+    try{
+      const m=structuredClone(spec);
+      m.objects=m.objects.filter(o=>['floor','door','door-handle','desk-top','toolbox'].includes(o.id));
+      m.states.day.objects.toolbox={position:[-4,1.15,1.12]};
+      m.states.open.objects.toolbox={position:[4,1.15,1.12]};
+      m.cameras={wide:{position:[3,-5,3],target:[0,.5,.9],lensMm:35,width:480,height:270,end:{position:[2.5,-4.5,2.8],target:[.2,.5,.9]}}};
+      const built=L.build({spec:m,root:path.join(dir,'sets')}),boardDir=path.join(dir,'storyboard');fs.mkdirSync(boardDir);
+      const win={FORMAT:'youtube-long-16x9',PRODUCTION:{previz:{renderer:'blender'}},SCENES:[{id:'s0001',visual:{video:{engine:'host'},camera:{movement:'dolly in'}}}]};
+      const actors=blocking();actors.actors[0].end.holds=[];
+      actors.actors[1].start.gazeTarget='toolbox';
+      L.bind(win,0,boardDir,{manifest:built.manifest,stateId:'day',endStateId:'open',cameraId:'wide',blocking:actors,continuityGroup:'conversation'});
+      const sourceHash=L.fileHash(path.join(path.dirname(built.manifest),'source.blend'));
+      const stills=L.render(win,0,boardDir);
+      for(const f of Object.values(stills.frames))assert.ok(fs.statSync(path.join(boardDir,f.path)).size>1000);
+      const record=L.previz(win,0,boardDir,{seconds:2,fps:24});
+      assert.equal(record.firstFrame,win.SCENES[0].visual.location.frames.start.path);
+      assert.equal(record.locationBinding.fingerprint,win.SCENES[0].visual.location.fingerprint);
+      assert.equal(L.fileHash(path.join(path.dirname(built.manifest),'source.blend')),sourceHash);
+      assert.equal(L.references(win,0,boardDir).paths[0],path.join(boardDir,record.firstFrame));
+      const probe=JSON.parse(execFileSync('ffprobe',['-v','error','-count_frames','-show_streams','-of','json',path.join(boardDir,record.clip)],{encoding:'utf8'}));
+      assert.equal(probe.streams.length,1);assert.equal(probe.streams[0].codec_name,'h264');
+      assert.equal(Number(probe.streams[0].nb_read_frames),48);assert.equal(Number(probe.streams[0].duration),2);
+      assert.equal(probe.streams[0].width,480);assert.equal(probe.streams[0].height,270);
+      const py="import bpy,json; from mathutils import Vector; rows=[]\nfor f in [1,13,48]:\n bpy.context.scene.frame_set(f); a=bpy.data.objects['actor-A']; h=bpy.data.objects['head-A']; b=bpy.data.objects['head-B']; prop=bpy.data.objects['toolbox']; direction=(b.matrix_world.translation-h.matrix_world.translation).normalized(); forward=h.matrix_world.to_quaternion()@Vector((0,-1,0)); prop_direction=(prop.matrix_world.translation-b.matrix_world.translation).normalized(); prop_forward=b.matrix_world.to_quaternion()@Vector((0,-1,0)); rows.append({'position':list(a.location),'yaw':a.rotation_euler.z,'gaze':forward.dot(direction),'propGaze':prop_forward.dot(prop_direction),'propX':prop.location.x,'door':bpy.data.objects['door'].hide_render})\nprint('SPATIAL_RESULT:'+json.dumps(rows))";
+      const result=execFileSync(blenderBin,['--background',path.join(boardDir,record.blend),'--python-expr',py],{encoding:'utf8',timeout:30000});
+      const rows=JSON.parse(result.match(/SPATIAL_RESULT:(.+)/)[1]);
+      assert.equal(rows[0].position[0],-1);assert.equal(rows[2].position[0],-.5);
+      assert.ok(rows.every(row=>row.gaze>.99));assert.ok(rows.every(row=>row.propGaze>.9999));
+      assert.ok(Math.abs(rows[1].propX-(-4+8*12/47))<1e-5);
+      assert.equal(rows[0].door,false);assert.equal(rows[2].door,true);
+      L.saveBoard(path.join(boardDir,'scenes.js'),win);
+      if(kept)console.log('Spatial render evidence: '+boardDir);
+    }finally{if(!kept)fs.rmSync(dir,{recursive:true,force:true});}
+  });

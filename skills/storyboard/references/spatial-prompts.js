@@ -137,7 +137,11 @@ function assemble(win, index, dir) {
   const locationRef = scene.shot?.location ? require('./location-assets.js').references(win, index, dir) : null;
   const propSnapshot = require('./prop-continuity.js').snapshot(win, index);
   const propReferenceImages = propSnapshot.filter(p => p.visible).flatMap(p => p.references.map(r => dir ? path.resolve(dir, r.path) : r.path));
-  const sourceReferenceImages = [...(previzFrame ? [previzFrame] : []), ...(pack?.referenceImagePaths || []), ...castReferenceImages.map(ref => ref.path), ...propReferenceImages, ...(locationRef?.paths || [])];
+  const sourceReferenceImages = [...new Set([...(locationRef?.paths || []), ...(previzFrame ? [previzFrame] : []), ...(pack?.referenceImagePaths || []), ...castReferenceImages.map(ref => ref.path), ...propReferenceImages])];
+  const spatialWarnings = locationRef && previz && !previz.locationBinding ? ['Standalone previz is not bound to this location. Compare its camera and blocking or rebuild with location_manage action previz; the location render controls source composition.'] : [];
+  const compositionLock = locationRef
+    ? 'Composition lock: the first attached image is the shared 3D location render. Keep its camera, architecture, framing and authored character placement and orientation. Render surfaces and visible characters in the episode style. Other references supply appearance or motion planning; keep the location composition when they differ.'
+    : previzFrame ? PREVIZ_SOURCE_LOCK : null;
   const castPromptLines = appliesCutLook ? castLines(cast, castIds, cutType) : [];
   const castImageLines = castReferenceImages.map(ref => {
     const imageNumber = sourceReferenceImages.indexOf(ref.path) + 1;
@@ -151,9 +155,10 @@ function assemble(win, index, dir) {
   const source = [...(propPrompt ? [propPrompt] : []), canvas + ', edge-to-edge composition.',
     'Narrated meaning this picture must convey: ' + spoken,
     'Opening state: ' + d.before,
-    ...(previzFrame ? [PREVIZ_SOURCE_LOCK] : []),
+    ...(compositionLock ? [compositionLock] : []),
     'The image must make the narrated subject and action understandable; a beautiful but unrelated scene fails.',
-    ...(pack ? [previzFrame ? 'The first attached image is the previz frame: its composition is kept exactly. The second attached image is for STYLE ONLY.'
+    ...(pack ? [locationRef ? 'Attached image ' + (sourceReferenceImages.indexOf(pack.referenceImagePaths[0]) + 1) + ' is for STYLE ONLY. Preserve the first image composition.'
+                            : previzFrame ? 'The first attached image is the previz frame: its composition is kept exactly. The second attached image is for STYLE ONLY.'
                             : 'Use the attached image for STYLE ONLY. Design a new scene for the narration.', ...Object.values(pack.rules)] : []),
     treatment, ...(perCutTreatment ? [perCutTreatment] : []), ...castPromptLines, ...castImageLines, world,
     'Materials: ' + style.materials, 'Palette: ' + style.palette, 'Lighting: ' + style.lighting,
@@ -164,6 +169,10 @@ function assemble(win, index, dir) {
     ...(perCutTreatment || activeCast.length ? ['Framing priority: the shot camera composition controls crop, angle, subject scale and visible body parts. Cast sheets, cut-type notes and episode camera language supply appearance and intent only; keep off-frame body parts outside the image.' + (previzFrame ? ' The previz first frame must already match this composition; correct a conflicting previz before generating the source image.' : '')] : []),
     'Spatial continuity: ' + d.continuity,
     ...(locationRef ? [locationRef.prompt, 'Attached image ' + (sourceReferenceImages.indexOf(locationRef.paths[0]) + 1) + ' is the LOCATION reference (reference review: ' + (locationRef.approved ? 'reviewed' : 'not_reviewed or stale') + '). Preserve its camera and architecture.'] : []),
+    ...(locationRef?.startActors || []).flatMap(actor => {
+      const ref = castReferenceImages.find(item => item.id === actor.id);
+      return ref ? ['The ' + actor.color + ' proxy is ' + ref.name + ' from attached image ' + (sourceReferenceImages.indexOf(ref.path) + 1) + '; that image supplies appearance only.'] : [];
+    }),
     'Keep the physical subject legible at phone size. The image contains only a text-free scene; dialogue stays in audio, with no subtitles, captions or lettering in the image or final video.'].join('\n');
   const locationLock = locationRef ? '. The location holds the approved reference architecture and fixed object inventory: ' + locationRef.invariants.join('; ') : '';
   const lock = lockText(d, style, treatment, castLocks) + locationLock + (propPrompt ? ". " + propPrompt : "") + (isDrone(camera) ? '. The flight keeps continuous terrain parallax and stable landmarks; the picture stays a clean aerial view with scenery at every frame edge' : '');
@@ -201,7 +210,7 @@ function assemble(win, index, dir) {
   if (engine === 'astra' && motionPrompt?.length > 2000)
     throw new Error('ASTRA motion prompt including performance exceeds 2000 characters; shorten descriptions or split at a natural action boundary, preserving every action');
   const locationEndReady = !locationRef || !!(locationRef.resultImage && v.bg && path.resolve(dir,v.bg)===path.resolve(dir,locationRef.resultImage));
-  return { propSnapshot, propReferenceImages, endFrameImageArgs: locationRef && locationEndReady ? {referenced_image_paths: [path.resolve(dir,v.bg), ...locationRef.endPaths]} : {}, endFrameReady: locationEndReady, locationEndReferenceImages: locationRef?.endPaths || [], locationBinding: locationRef?.binding || null, locationReferenceRoles: locationRef?.roles || [], sourcePrompt: source, stylePreset: preset, cutType, castIds,
+  return { spatialWarnings, propSnapshot, propReferenceImages, endFrameImageArgs: locationRef && locationEndReady ? {referenced_image_paths: [path.resolve(dir,v.bg), ...locationRef.endPaths]} : {}, endFrameReady: locationEndReady, locationEndReferenceImages: locationRef?.endPaths || [], locationBinding: locationRef?.binding || null, locationReferenceRoles: locationRef?.roles || [], sourcePrompt: source, stylePreset: preset, cutType, castIds,
     styleBinding: pack?.binding || null,
     styleGuidePath: pack?.guidePath || null,
     castReferenceImages,
@@ -209,7 +218,7 @@ function assemble(win, index, dir) {
     // The previz frame goes first, followed by the pack image and the episode cast images.
     sourceImageArgs: sourceReferenceImages.length ? { referenced_image_paths: sourceReferenceImages } : {},
     previzFirstFrame: previzFrame,
-    endFramePrompt: (locationRef ? 'Image 1 is the generated opening frame; image 2 is the location endpoint render. Preserve image 1 appearance while using image 2 for the final camera and architecture. ' + locationRef.prompt + '\n' : '') + 'Edit the supplied opening image into this final state: ' + after + '\n' + treatment + '\n' + lock +
+    endFramePrompt: (locationRef ? 'Image 1 is the generated opening frame; image 2 is the location endpoint render. Preserve image 1 appearance while using image 2 for the final camera, architecture and authored character state. ' + locationRef.endPrompt + '\n' : '') + 'Edit the supplied opening image into this final state: ' + after + '\n' + treatment + '\n' + lock +
       '\nPreserve lighting. Follow the planned camera endpoint: ' + (camera.end || camera.framing),
     motionPrompt };
 }

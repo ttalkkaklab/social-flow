@@ -128,6 +128,16 @@ A listener's off-screen reaction is not delivered unless another planned shot sh
 or its sound conveys the intended information. A prop cannot already be received in the
 source image when the shot needs to show its handoff.
 
+For recurring places, dialogue, entrances, travel or prop handoffs, plan one shared
+Blender set with [location assets](references/location-assets.md). Bind each shot's camera
+and complete actor start/end blocking, including off-camera actors, body facing and gaze.
+Within a `continuityGroup`, carry the previous cut's end state into the next start; explain
+time skips with `continuityBreak` and axis crossings with `lineCrossing`. Before generated
+images, render and inspect the shared space in cut order; produce uses `location_manage`
+action `previz` so motion shares the same set, camera and blocking. Camera, actor or endpoint
+changes invalidate those references. Continuity findings guide corrections without a new
+approval gate; record only actual image reviews. Local spatial renders make no paid calls.
+
 Read [render routing](references/render-routing.md) and
 [visual direction](references/visual-direction.md) for relevant rendering choices, not old
 quotas. Choose the medium that can deliver the event. Maintain the saved visual style with

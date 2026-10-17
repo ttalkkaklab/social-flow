@@ -85838,9 +85838,13 @@ var TOOLS = [
     name: "location_manage",
     title: "Build, bind and review a persistent 3D location",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: "Manage local versioned location assets with installed Blender. build reads spec (JSON path or object) and writes root/id/vN without overwriting; read verifies manifest/assets; sheet renders cameras into a NEW output folder; bind connects manifest/stateId/cameraId to board scenes.js and shotId; render writes clean start/end references; approve requires actual reviewer and observed notes; references returns approved image paths/roles/hashes, refusing stale files; camera applies an exported proposal with a base fingerprint; check returns findings (ready requires approved renders). No paid generation or publishing. Coordinates: metres, Z up. See skills/storyboard/references/location-assets.md.",
+    description: `Create and update local Blender sets, shot blocking and spatial previz.
+
+Use for recurring locations, floor plans, actor facing/gaze and shot continuity before storyboard images. build writes root/id/vN; bind stores manifest/stateId/cameraId plus optional blocking/endStateId/continuityGroup on board/shotId; render writes clean start/end images; previz uses the same set, camera and actors to write a silent H.264 clip, first/middle/last PNGs and a shot previz record (seconds required, fps defaults to 24). No paid calls.
+Returns: build {manifest,sha256}; render {fingerprint,frames}; previz {clip,blend,firstFrame,sha256,fps,seconds,locationBinding}; references absolute image paths/roles/hashes; check ordered findings with level/where/what. ready requires fresh files; actual reviews remain optional. Coordinates: metres, Z up, actors face -Y at zero rotation.
+Do NOT use for independent body posing or to read an arbitrary .blend \u2014 use blender_pose_key or blender_scene_read. Read an existing location with action read; see skills/storyboard/references/location-assets.md for camera proposals and generation receipts.`,
     inputSchema: { type: "object", required: ["action"], additionalProperties: false, properties: {
-      action: { type: "string", description: "Operation; build/sheet/render write local assets, bind/camera/approve/receipt update the board, read/references/check are read-only", enum: ["build", "read", "sheet", "bind", "render", "approve", "references", "camera", "check", "receipt", "review"] },
+      action: { type: "string", description: "Operation; build/sheet/render/previz write local assets, bind/camera/approve/receipt update the board, read/references/check are read-only", enum: ["build", "read", "sheet", "bind", "render", "previz", "approve", "references", "camera", "check", "receipt", "review"] },
       verdict: { type: "string", enum: ["pass", "warning", "fail"], description: "Observed generation result verdict; review never certifies unseen images" },
       provider: { type: "string", description: "Actual output provider for receipt", enum: ["host", "api", "blender"] },
       callId: { type: "string", description: "Actual tool call or render job identifier" },
@@ -85855,9 +85859,33 @@ var TOOLS = [
       cameraId: { description: "Registered numerical camera id", type: "string" },
       mustShow: { description: "Object IDs that must be visible; review actual images", type: "array", items: { type: "string" } },
       continuityGroup: { description: "Related shots sharing location continuity", type: "string" },
+      endStateId: { type: "string", description: "Optional registered end state for moving props or doors, e.g. open; omitted holds stateId" },
+      continuityBreak: { type: "string", minLength: 1, description: "Reason for a deliberate discontinuity, e.g. time skip to next morning; warnings remain advisory" },
+      seconds: { type: "number", exclusiveMinimum: 0, description: "Required previz duration in seconds, e.g. 4; use the billed video length, ASTRA numFrames/frameRate may be fractional" },
+      fps: { type: "integer", minimum: 24, maximum: 60, description: "Previz frames per second, e.g. 24 (default); at most 3000 frames" },
+      blocking: { type: "object", additionalProperties: false, required: ["actors"], description: "Shared world-space actor states; keep off-camera actors in the set. End omitted holds the complete start pose.", properties: {
+        axis: { type: "array", minItems: 2, maxItems: 2, items: { type: "string" }, description: "Ordered action-axis endpoints, e.g. [A,B]; actor or set-object IDs" },
+        actors: { type: "array", maxItems: 32, description: "Persistent actor IDs matching cast IDs, e.g. A; body proxies and head gaze, without limb acting", items: { type: "object", additionalProperties: false, required: ["id", "height", "color", "start"], properties: {
+          id: { type: "string", description: "Stable cast ID distinct from set object IDs, e.g. A" },
+          height: { type: "number", minimum: 0.1, maximum: 10, description: "Height in metres, e.g. 1.7" },
+          color: { type: "string", pattern: "^#[a-fA-F0-9]{6}$", description: "Proxy colour, e.g. #d0342c; appearance comes from cast sheets" },
+          start: { type: "object", additionalProperties: false, required: ["position", "rotationZDeg"], description: "Opening world pose, e.g. position [0,0,0], rotationZDeg 90, gazeTarget B", properties: {
+            position: { type: "array", minItems: 3, maxItems: 3, items: { type: "number" }, description: "Floor point XYZ in metres, e.g. [0,0,0]" },
+            rotationZDeg: { type: "number", description: "Body yaw in degrees; 0 faces -Y, 90 faces +X" },
+            gazeTarget: { type: "string", description: "Actor or set-object ID, e.g. B; omitted follows body facing" },
+            holds: { type: "array", items: { type: "string" }, description: "Held set-object IDs, e.g. [toolbox]; author their physical positions in location states" }
+          } },
+          end: { type: "object", additionalProperties: false, required: ["position", "rotationZDeg"], description: "Complete closing pose with the same fields as start, e.g. position [1,0,0], rotationZDeg 90; omitted holds start", properties: {
+            position: { type: "array", minItems: 3, maxItems: 3, items: { type: "number" }, description: "Floor point XYZ in metres, e.g. [1,0,0]" },
+            rotationZDeg: { type: "number", description: "Body yaw in degrees, e.g. 90" },
+            gazeTarget: { type: "string", description: "Actor or set-object ID, e.g. B" },
+            holds: { type: "array", items: { type: "string" }, description: "Held set-object IDs, e.g. [toolbox]" }
+          } }
+        } } }
+      } },
       reviewer: { description: "Identity of the actual visual reviewer", type: "string" },
       notes: { description: "Observed visual findings, not an assumed pass", type: "string" },
-      ready: { description: "Require fresh reviewed image evidence", type: "boolean" },
+      ready: { description: "Require fresh image files; missing reviews produce warnings", type: "boolean" },
       patch: { oneOf: [{ type: "string" }, { type: "object", additionalProperties: true }], description: "Exported camera proposal file or object" }
     } }
   },
@@ -89911,8 +89939,24 @@ async function manageVoiceAudition(args) {
 import * as nodeModule3 from "node:module";
 import { join as join11 } from "node:path";
 var loader = nodeModule3.createRequire(import.meta.url);
+var actorPoseSchema = external_exports.object({
+  position: external_exports.tuple([external_exports.number().finite(), external_exports.number().finite(), external_exports.number().finite()]),
+  rotationZDeg: external_exports.number().finite(),
+  gazeTarget: external_exports.string().min(1).optional(),
+  holds: external_exports.array(external_exports.string().min(1)).optional()
+}).strict();
+var blockingSchema = external_exports.object({
+  actors: external_exports.array(external_exports.object({
+    id: external_exports.string().min(1),
+    height: external_exports.number().min(0.1).max(10),
+    color: external_exports.string().regex(/^#[a-f0-9]{6}$/i),
+    start: actorPoseSchema,
+    end: actorPoseSchema.optional()
+  }).strict()).max(32),
+  axis: external_exports.tuple([external_exports.string().min(1), external_exports.string().min(1)]).optional()
+}).strict();
 var locationSchema = external_exports.object({
-  action: external_exports.enum(["build", "read", "sheet", "bind", "render", "approve", "references", "camera", "check", "receipt", "review"]),
+  action: external_exports.enum(["build", "read", "sheet", "bind", "render", "previz", "approve", "references", "camera", "check", "receipt", "review"]),
   verdict: external_exports.enum(["pass", "warning", "fail"]).optional(),
   provider: external_exports.enum(["host", "api", "blender"]).optional(),
   callId: external_exports.string().optional(),
@@ -89922,11 +89966,16 @@ var locationSchema = external_exports.object({
   manifest: external_exports.string().optional(),
   output: external_exports.string().optional(),
   stateId: external_exports.string().optional(),
+  endStateId: external_exports.string().optional(),
   cameraId: external_exports.string().optional(),
   board: external_exports.string().optional(),
   shotId: external_exports.string().optional(),
   mustShow: external_exports.array(external_exports.string()).optional(),
   continuityGroup: external_exports.string().optional(),
+  blocking: blockingSchema.optional(),
+  continuityBreak: external_exports.string().trim().min(1).optional(),
+  seconds: external_exports.number().finite().positive().optional(),
+  fps: external_exports.number().int().min(24).max(60).optional(),
   reviewer: external_exports.string().optional(),
   notes: external_exports.string().optional(),
   ready: external_exports.boolean().optional(),

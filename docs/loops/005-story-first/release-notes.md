@@ -89,3 +89,10 @@ zero critical, high, medium or low findings after the focused fixes. The researc
 checker now pins its archived authoring contract and verifies that the current
 skill links it, without restoring old research quotas to new story authoring.
 Installation evidence is recorded separately with the benchmark artifacts.
+
+
+Before merge, the latest dev branch added shared Blender location sets and actor
+blocking. Integration preserves that spatial handoff alongside story-first planning,
+text-free source images and performance provenance. The integrated build passed
+2,005 tests across 188 suites, and the conflict-focused independent review reported
+zero findings. Storyboard benchmark boards and scores are unchanged.
