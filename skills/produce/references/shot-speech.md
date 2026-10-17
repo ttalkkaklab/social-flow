@@ -319,6 +319,33 @@ re-encodes the supplied audio as AAC; do not claim byte-for-byte waveform preser
 Generate speech first, then animate the source image from that speech. Audio consistency
 comes from reusing the pinned voice audio, not a promise that lip synchronization is perfect.
 
+LTX 2.5 sometimes renders the character without following the voice, and which seeds do
+this is luck (research 2026-10-17: HF LTX-2.5 discussion #44, Wan2GP #2200). When every
+line in the composed WAV is `on_screen`, pass `expectLipSync: true`; `prepare-astra-shot.js`
+sets it. After each render the tool correlates picture motion with the speech loudness
+(ffmpeg only, any OS, no upload). When no region moves with the speech, it renders again
+with the same audio, image and prompt and a new seed, up to `maxAttempts` (default 2).
+It keeps the best clip and writes every attempt's seed and measurement into the attempt's
+`.astra-job.json`. Speech cut off by the frame count and a clip track that differs from the
+WAV are reported without a retry, because another seed fixes neither. Mixed on-screen and
+off-screen lines in one track keep the check off, since the visible mouth should be still
+during the off-screen voice. The measurement shows that something moves with the voice.
+Phoneme-level sync, which visible person spoke and voice identity remain `not_reviewed`.
+A clip still failing after the cap ships with its finding, never as an error.
+
+Calibration, 2026-10-17. Five real ASTRA LTX 2.5 audio2video close-ups whose mouths
+stayed closed through the line (a chipmunk at two seeds, gate-webtoon scene-6, 8 and 11)
+scored margins from −0.23 to −0.08. A synthetic mouth opening with the speech scored +0.45,
+one that never moved +0.06; the pass threshold is 0.1. No real LTX clip that did follow the
+voice was available, so the passing side is shown only on synthetic footage. In medium and
+wide shots the mouth covers a few proxy pixels and body motion dominates; read a finding
+there as unverified. Reseeding rarely fixed the refusal: the chipmunk's second seed and
+the gate-webtoon takes 1–3 of the same shot all stayed closed. When the second attempt
+also fails, change the opening image (a larger, open-mouthed face), the prompt or
+`strength` rather than spending more seeds. Three of the day's six audio2video requests
+failed server-side with `생성기 rc=1` (1024×1536×169, 704×1024×169 and a 916×1717 source
+image at 1280×704×121); 1280×704×121 with a 1024×1536 source image succeeded three times.
+
 Other models may support reference voices, audio-conditioned animation, or only silent video.
 A reference-voice imitation is not guaranteed preservation of the original audio. Record the
 actual adapter capability and preserve the source WAV; use an explicit synchronization route
