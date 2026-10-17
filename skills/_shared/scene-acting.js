@@ -51,6 +51,7 @@ function planScenePerformance(input, measureAudio = () => null) {
     : lines.map((line, index) => ({kind:line.delivery === 'voiceover' ? 'narration' : 'dialogue', character:line.speaker, group:index + 1}));
   const groups = new Set();
   for (const event of events) {
+    if (event.videoDirection !== undefined && (typeof event.videoDirection !== 'string' || !event.videoDirection.trim())) throw new Error('performance.videoDirection must be non-empty text');
     if (event.kind === 'action') {
       if (typeof event.text !== 'string' || !event.text.trim()) throw new Error('Performance action needs visible action text');
       if (event.durationSeconds !== undefined && (!Number.isFinite(event.durationSeconds) || event.durationSeconds <= 0)) throw new Error('Action durationSeconds must be finite and positive');
@@ -132,9 +133,9 @@ function sceneVideoPrompt(performance, mode, scene = {}) {
     if (line.kind === 'action') {
       const relation = line.withGroup === undefined ? 'in this event order' : `concurrently with speech group ${line.withGroup}; do not add a separate pause`;
       const timing = line.startSeconds === null || line.endSeconds === null ? 'Timing unresolved; preserve this action when timing is planned.' : `Action interval ${line.startSeconds}–${line.endSeconds} seconds.`;
-      return `Beat ${index + 1} (action by ${visualDirection(line.character || 'unspecified')}): ${visualDirection(line.text)}; ${relation}. ${timing}`;
+      return `Beat ${index + 1} (action by ${visualDirection(line.character || 'unspecified')}): ${visualDirection(line.videoDirection || line.text)}; ${relation}. ${timing}`;
     }
-    const acting = line.acting || {};
+    const acting = {...line.acting, ...(line.videoDirection ? {visual:line.videoDirection} : {})};
     const delivery = line.delivery || 'voiceover';
     const mouth = delivery === 'on_screen'
       ? 'Show this speaker physically speaking; synchronize only this speaker\'s mouth to their supplied audio during this interval using the selected synchronization route.'

@@ -148,6 +148,9 @@ Independent action time must be finite before composing new boards carrying
 `performanceTimingVersion:1`. Draft unknowns stay visible. Older boards without the marker
 retain the legacy speech clock with an unverified-action warning; do not silently migrate
 an approved episode. A silent shot needs a finite visual timeline and no invented speech WAV.
+For new timing-version boards, the supplied silent card WAV must cover the complete
+action timeline; extra provider padding is allowed. Its measured length drives assembly,
+so the checker does not require equality with the board's earlier duration estimate.
 
 Call `speech_manage` with `{path, action: "plan_video", shotId, capabilities}` to inspect
 the whole stored shot, including actions and addressees. Do not restrict that handoff to
@@ -208,6 +211,9 @@ bindings after edits and clear `speechStatus:stale` only after the new media is 
 bound. A provider switch changes video generation, never the approved character voice or the
 speech data model. The adapter owns endpoint names, upload format, channel count, frame limits
 and duration rounding. The common layer must not import provider-specific frame rules.
+Reattaching unchanged video bytes after a performance edit or a changed audio take preserves
+the original binding and reports stale provenance. It does not certify that the revised
+action or speech synchronization was generated.
 
 ## Current adapter examples, checked 2026-10-16
 

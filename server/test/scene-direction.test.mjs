@@ -299,3 +299,71 @@ test('other video adapters do not inherit ASTRA prompt limits or lose existing t
   assert.deepEqual(plan.warnings,baseline.warnings);
  }
 });
+
+test('reattaching unchanged video preserves stale performance evidence until footage changes',t=>{
+ const {board,work}=fixture(t,[]),file=path.join(board,'scenes.js'),video=path.join(work,'clip.mp4');
+ const read=()=>{const w={};new Function('window',readFileSync(file,'utf8'))(w);return w;};
+ const save=w=>writeFileSync(file,Object.entries(w).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+ const w=read(),shotId=w.SCENES[0].id;
+ w.SCENES[0].performance=[{kind:'action',character:'host',text:'Opens the parcel.',durationSeconds:1}];save(w);
+ writeFileSync(video,'first clip');
+ const attach=()=>manageSpeech({path:board,action:'attach_video',shotId,expectedRevision:manageSpeech({path:board,action:'list'}).revision,videoPath:video,capabilities:caps});
+ attach();const original=read().SCENES[0].visual.video.speechBinding;
+ assert.equal(attach().invalidated,undefined);
+ const revised=read();revised.SCENES[0].performance[0].text='Throws the parcel away.';save(revised);
+ const result=attach(),stale=read().SCENES[0].visual.video;
+ assert.equal(stale.speechStatus,'stale');assert.deepEqual(stale.speechBinding,original);
+ assert.match(result.plan.warnings.join(),/Unchanged video bytes/);
+ writeFileSync(video,'new action clip');attach();
+ const current=read().SCENES[0].visual.video;
+ assert.equal(current.speechStatus,'current');assert.notEqual(current.speechBinding.performanceRevision,original.performanceRevision);
+});
+
+test('public video attachment cannot rebind unchanged lip sync to a regenerated same-line audio take',t=>{
+ const {board,work,r}=fixture(t),line=r.lines[0],audio=path.join(work,'take.wav'),video=path.join(work,'clip.mp4');
+ const read=()=>{const w={};new Function('window',readFileSync(path.join(board,'scenes.js'),'utf8'))(w);return w.SCENES[0].visual.video;};
+ const revision=()=>manageSpeech({path:board,action:'list'}).revision;
+ const attachAudio=()=>manageSpeech({path:board,action:'attach_audio',lineId:line.id,expectedRevision:revision(),audioPath:audio,generation:proof(line)});
+ const attachVideo=()=>manageSpeech({path:board,action:'attach_video',shotId:line.shotId,expectedRevision:revision(),videoPath:video,capabilities:caps});
+ writeFileSync(audio,wav(1));writeFileSync(video,'original synchronized clip');attachAudio();attachVideo();
+ const original=read().speechBinding;
+ writeFileSync(audio,wav(2));attachAudio();assert.equal(read().speechStatus,'stale');
+ const result=attachVideo();
+ assert.equal(read().speechStatus,'stale');assert.deepEqual(read().speechBinding,original);
+ assert.equal(result.plan.performanceRevision,original.performanceRevision);
+ assert.match(result.plan.warnings.join(),/Unchanged video bytes.*audio binding/);
+ writeFileSync(video,'new synchronized clip');attachVideo();
+ assert.equal(read().speechStatus,'current');assert.notDeepEqual(read().speechBinding.audio,original.audio);
+ assert.equal(read().speechBinding.durationSeconds,2);
+});
+
+test('silent action execution needs finite timing and enough audio time but allows padding and legacy clocks',t=>{
+ const {board,work}=fixture(t,[]),file=path.join(board,'scenes.js'),w={};new Function('window',readFileSync(file,'utf8'))(w);
+ const save=()=>writeFileSync(file,Object.entries(w).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+ w.SB_DOC.performanceTimingVersion=1;w.SCENES[0].duration=0.5;
+ w.SCENES[0].performance=[{kind:'action',character:'host',text:'Opens the door.'}];save();
+ writeFileSync(path.join(work,'silent.wav'),wav(1));writeFileSync(path.join(work,'cards.tsv'),'0\tsilent.wav\t1\n');
+ const {compose}=require('../../skills/produce/references/compose-speech.js'),checker=require('../../skills/produce/references/check-tts-quality.js');
+ for(const run of [()=>compose(work,board),()=>checker.check(work,board)])assert.throws(run,/finite action timing/);
+ w.SCENES[0].performance[0].durationSeconds=2;save();
+ for(const run of [()=>compose(work,board),()=>checker.check(work,board)])assert.throws(run,/shorter than planned action timing/);
+ writeFileSync(path.join(work,'silent.wav'),wav(3));assert.deepEqual(compose(work,board),[]);assert.ok(checker.check(work,board));
+ delete w.SB_DOC.performanceTimingVersion;delete w.SCENES[0].performance[0].durationSeconds;save();
+ assert.deepEqual(compose(work,board),[]);assert.ok(checker.check(work,board));
+ w.SB_DOC.performanceTimingVersion=1;
+ w.SCENES[0].performance.push({kind:'dialogue',character:'host',group:1});
+ w.STORY.transcripts=[{shot:1,source:'recording.mp4',groups:[{speaker:'host',text:'Hello',start:0,end:1}]}];save();
+ assert.deepEqual(compose(work,board),[]);assert.ok(checker.check(work,board));
+});
+
+test('video direction translates only adapter visuals and participates in performance provenance',()=>{
+ const scene={narration:[{id:'a',speaker:'host',delivery:'off_screen',tts:'Hello',acting:{visual:'문 쪽을 본다.'}}],performance:[
+  {kind:'action',character:'host',text:'소포를 내려놓는다.',durationSeconds:1,videoDirection:'Places the parcel down.'},
+  {kind:'dialogue',character:'host',to:'self',group:1,videoDirection:'Looks toward the door.'}]};
+ const plan=speechVideoPlan(scene,caps);
+ assert.match(plan.videoPrompt,/Places the parcel down/);assert.match(plan.videoPrompt,/Looks toward the door/);
+ assert.doesNotMatch(plan.videoPrompt,/소포|문 쪽/);assert.equal(plan.performance[0].text,'소포를 내려놓는다.');
+ scene.performance[0].videoDirection='Sets the parcel on the floor.';
+ assert.notEqual(speechVideoPlan(scene,caps).performanceRevision,plan.performanceRevision);
+ scene.performance[0].videoDirection=' ';assert.throws(()=>speechVideoPlan(scene,caps),/non-empty text/);
+});

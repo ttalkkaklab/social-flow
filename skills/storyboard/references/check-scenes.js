@@ -455,18 +455,19 @@ function engineOf(scene) {
    never a directive, because this engine has no negativePrompt argument; and it closes with
    a consistency lock. The checks are assemble-bg-prompt.js's own, so a prompt that clears
    this checker is one the assembler would have written. */
-function seedancePromptFindings(prompt, engine) {
+function seedancePromptFindings(prompt, engine, model) {
   const text = String(prompt || '').trim();
   if (engine !== 'seedance' || !text) return [];
   const out = [];
   // The Audio: sentence is exempt from the negative check — "no music, no speech" is a state.
   const audioAt = text.search(/Audio\s*:/i);
   const body = audioAt >= 0 ? text.slice(0, audioAt) : text;
-  PROMPT.hangulHits(text, 'seedance').forEach((h) => out.push(
+  const promptEngine = model === 'dreamina-seedance-2-5-260628' ? 'seedance-2.5' : 'seedance';
+  PROMPT.hangulHits(text, promptEngine).forEach((h) => out.push(
     `the stored clip prompt carries Korean ("${h}") — a seedance body reads Chinese or English; Korean goes inside the quotes of a dialogue line`));
   PROMPT.negDirectiveHits(body, 'seedance').forEach((h) => out.push(
     `the stored clip prompt gives a negative directive ("${h}") — Seedance has no negativePrompt argument: re-describe the scene and put what must hold into the consistency lock`));
-  PROMPT.timingHits(body, 'seedance').forEach((h) => out.push(`the stored clip prompt carries ${h}`));
+  PROMPT.timingHits(body, promptEngine).forEach((h) => out.push(`the stored clip prompt carries ${h}`));
   if (PROMPT.lockMissing(text, 'seedance')) out.push(
     'the stored clip prompt has no consistency lock — a seedance clip closes with the sentence that says what holds in every frame ' +
     '("the subject stays exactly consistent with the input frame; appearance, proportions and materials hold"), ' +
@@ -1327,7 +1328,7 @@ function check(win, fmt, opts) {
       const prompt = v.prompt || (v.video && v.video.prompt) ||
                      (v.clip && typeof v.clip === 'object' && v.clip.prompt);
       if (!prompt) machine(where, 'no stored clip prompt — produce sends this verbatim (scenes-schema §clip prompt)');
-      else seedancePromptFindings(prompt, engineOf(s)).forEach((f) => machine(where, f));
+      else seedancePromptFindings(prompt, engineOf(s), s.visual?.video?.model).forEach((f) => machine(where, f));
       // A clip planned silent (generateAudio:false — every full-video cut) has nothing to describe.
       if (!v.audio && s.type !== 'quote' && !(v.video && v.video.generateAudio === false))
         warn(where, 'no visual.audio — the engine invents a soundtrack under the narration');
@@ -2890,6 +2891,9 @@ function selftest() {
      engineOf({ type: 'broll', visual: { engine: 'astra' } }) === 'astra');
   ok('an astra clip prompt is not held to the Seedance grammar',
      seedancePromptFindings('she turns to the window', 'astra').length === 0);
+  ok('stored Seedance 2.5 prompts preserve its Korean direction support',
+     seedancePromptFindings('소포를 내려놓는다. The subject stays consistent.', 'seedance', 'dreamina-seedance-2-5-260628').length === 0 &&
+     seedancePromptFindings('소포를 내려놓는다. The subject stays consistent.', 'seedance', 'seedance-1-5-pro-251215').some(f => f.includes('Korean')));
   ok('a board that names the model instead of the lane still falls back to the type default',
      engineOf({ type: 'points', visual: { video: { engine: 'ltx' } } }) === 'seedance');
 

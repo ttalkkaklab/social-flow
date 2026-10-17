@@ -165,6 +165,7 @@ function check(work, board) {
     const audio=path.resolve(work,rows[k][1]);
     const bytes=fs.readFileSync(audio);
     if(!bytes.length)throw new Error('Empty audio for card '+i);
+    require('./compose-speech.js').checkSilentTiming(s,board,win.SB_DOC?.performanceTimingVersion,audio);
     media[audio]=hash(bytes);
     if(s.visual?.video?.speechStatus==='stale')throw new Error('Dialogue-dependent video is stale for card '+i);
     const characters=win.SB_DOC?.characters||[];

@@ -196,9 +196,20 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
       const visual = object(scene.visual);
       const video = object(visual.video);
       if ((video.engine && video.engine !== plan.provider) || (video.model && video.model !== plan.model)) throw new Error('Adapter does not match the selected shot model');
-      video.clip = args.videoPath;
-      video.speechBinding = {...plan,audio,videoPath,videoSha256:hash(bytes)};
-      video.speechStatus = 'current'; visual.video=video; scene.visual=visual;
+      const priorBinding = object(video.speechBinding);
+      const videoSha256 = hash(bytes);
+      const performanceChanged = priorBinding.performanceRevision && priorBinding.performanceRevision !== plan.performanceRevision;
+      const audioChanged = Array.isArray(priorBinding.audio) && JSON.stringify(priorBinding.audio) !== JSON.stringify(audio);
+      if (priorBinding.videoSha256 === videoSha256 && (performanceChanged || audioChanged)) {
+        plan.warnings.push('Unchanged video bytes retain their original performance and audio binding; the revised performance or speech has not been generated in this footage.');
+        video.speechStatus = 'stale';
+        invalidated = {video, edit:true};
+      } else {
+        video.clip = args.videoPath;
+        video.speechBinding = {...plan,audio,videoPath,videoSha256};
+        video.speechStatus = 'current';
+      }
+      visual.video=video; scene.visual=visual;
       changed = true;
     }
   }

@@ -1,6 +1,6 @@
 # Story-first authoring — local release record
 
-Current local candidate: `0.115.0-story-first.3` (supersedes `.2`). This is a local development update for the
+Current local candidate: `0.115.0-story-first.4` (supersedes `.3`). This is a local development update for the
 Mac's installed Codex and Claude Code plugins, not a remote release.
 
 The earlier workflow could produce isolated spoken lines whose causal connections
@@ -68,3 +68,24 @@ Case B's .2 storyboard received 97/100 with no critical defects. Case C's .1
 a separate copy of its .1 37-shot draft after the .3 native local update.
 The local installation receipts record actual host versions, loaded skill paths
 and bundle hashes; they are the source for installation completion status.
+
+
+## Local candidate 0.115.0-story-first.4
+
+Fresh code review reproduced three production handoff gaps: unchanged video bytes
+could acquire a new performance revision, silent shots skipped action timing,
+and performance text could be appended after the Seedance prompt validation.
+The follow-up preserves stale provenance, validates new silent timelines against
+supplied audio duration, and validates the complete adapter prompt. Legacy untimed
+boards retain their existing path. Optional event `videoDirection` carries an
+adapter-language rendering while preserving the original authored action.
+
+The four frozen storyboard cases completed independent plan reviews: A 96,
+B 97, C 96 and D 96, each with zero critical findings. These scores apply to the
+reviewed boards and do not certify generated media. The follow-up changes neither
+the frozen boards nor their scores. The final build and contract suite passed 1,992 tests across 188 suites; skill
+lint passed all 16 rules across 21 skills. Independent code re-review reported
+zero critical, high, medium or low findings after the focused fixes. The research
+checker now pins its archived authoring contract and verifies that the current
+skill links it, without restoring old research quotas to new story authoring.
+Installation evidence is recorded separately with the benchmark artifacts.

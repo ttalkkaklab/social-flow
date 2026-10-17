@@ -28,6 +28,13 @@ function sceneTiming(scene, board, performanceTimingVersion) {
   });
   return {...plan,intervals};
 }
+function checkSilentTiming(scene, board, performanceTimingVersion, audio) {
+  if (performanceTimingVersion !== 1 || (scene.narration || []).length || !scene.performance?.length || scene.performance.some(event => event.kind !== 'action')) return;
+  const timing=sceneTiming(scene,board,performanceTimingVersion);
+  // Speechless cards use the supplied WAV clock. Extra silence may reserve a
+  // provider's frame padding; the board's duration can still be a draft estimate.
+  if (duration(audio)+0.03 < timing.durationSeconds) throw new Error('Silent scene audio is shorter than planned action timing');
+}
 function compose(work,board) {
   work=path.resolve(work);board=path.resolve(board);
   const file=path.join(board,'scenes.js'),win=evaluateWindowScript(fs.readFileSync(file,'utf8'),{filename:file});
@@ -39,6 +46,7 @@ function compose(work,board) {
     if(!rows[row].trim()||rows[row].startsWith('#'))continue;
     const fields=rows[row].split('\t'),scene=win.SCENES[Number(fields[0])];
     const lines=(scene?.narration||[]).filter(n=>(n.tts||'').trim());
+    if(scene)checkSilentTiming(scene,board,win.SB_DOC?.performanceTimingVersion,path.resolve(work,fields[1]));
     if(!lines.length||(lines.length===1&&!lines.some(n=>n.acting!=null)&&!scene.performance?.some(event=>event.kind==='action')))continue;
     const inputs=[],filters=[];
     lines.forEach((line,i)=>{
@@ -65,5 +73,5 @@ function compose(work,board) {
   if(outputs.length)fs.writeFileSync(cards,rows.join('\n'));
   return outputs;
 }
-module.exports={compose,lineSources,duration,sceneTiming};
+module.exports={compose,lineSources,duration,sceneTiming,checkSilentTiming};
 if(require.main===module){try{console.log(JSON.stringify(compose(process.argv[2],process.argv[3]),null,2));}catch(e){console.error(e.message);process.exitCode=1;}}

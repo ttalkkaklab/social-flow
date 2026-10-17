@@ -64396,6 +64396,7 @@ var require_scene_acting = __commonJS({
       const events = explicit ? scene.performance.map((event) => ({ ...event })) : lines.map((line, index) => ({ kind: line.delivery === "voiceover" ? "narration" : "dialogue", character: line.speaker, group: index + 1 }));
       const groups = /* @__PURE__ */ new Set();
       for (const event of events) {
+        if (event.videoDirection !== void 0 && (typeof event.videoDirection !== "string" || !event.videoDirection.trim())) throw new Error("performance.videoDirection must be non-empty text");
         if (event.kind === "action") {
           if (typeof event.text !== "string" || !event.text.trim()) throw new Error("Performance action needs visible action text");
           if (event.durationSeconds !== void 0 && (!Number.isFinite(event.durationSeconds) || event.durationSeconds <= 0)) throw new Error("Action durationSeconds must be finite and positive");
@@ -64471,9 +64472,9 @@ var require_scene_acting = __commonJS({
         if (line.kind === "action") {
           const relation = line.withGroup === void 0 ? "in this event order" : `concurrently with speech group ${line.withGroup}; do not add a separate pause`;
           const timing2 = line.startSeconds === null || line.endSeconds === null ? "Timing unresolved; preserve this action when timing is planned." : `Action interval ${line.startSeconds}\u2013${line.endSeconds} seconds.`;
-          return `Beat ${index + 1} (action by ${visualDirection(line.character || "unspecified")}): ${visualDirection(line.text)}; ${relation}. ${timing2}`;
+          return `Beat ${index + 1} (action by ${visualDirection(line.character || "unspecified")}): ${visualDirection(line.videoDirection || line.text)}; ${relation}. ${timing2}`;
         }
-        const acting = line.acting || {};
+        const acting = { ...line.acting, ...line.videoDirection ? { visual: line.videoDirection } : {} };
         const delivery2 = line.delivery || "voiceover";
         const mouth = delivery2 === "on_screen" ? "Show this speaker physically speaking; synchronize only this speaker's mouth to their supplied audio during this interval using the selected synchronization route." : delivery2 === "off_screen" ? "This speaker stays off screen. All visible mouths stay closed during this interval; show the planned listener reaction or action." : "This is voiceover or narration, not visible physical speech. All visible mouths stay closed during this interval; show the planned action.";
         const fields = ["direction", "context", "intent", "emotion", "vocal", "visual"].filter((key) => acting[key]).map((key) => `${key}: ${visualDirection(acting[key])}`);
@@ -65215,6 +65216,11 @@ var require_compose_speech = __commonJS({
       });
       return { ...plan2, intervals };
     }
+    function checkSilentTiming(scene, board, performanceTimingVersion, audio) {
+      if (performanceTimingVersion !== 1 || (scene.narration || []).length || !scene.performance?.length || scene.performance.some((event) => event.kind !== "action")) return;
+      const timing = sceneTiming(scene, board, performanceTimingVersion);
+      if (duration3(audio) + 0.03 < timing.durationSeconds) throw new Error("Silent scene audio is shorter than planned action timing");
+    }
     function compose(work, board) {
       work = path15.resolve(work);
       board = path15.resolve(board);
@@ -65227,6 +65233,7 @@ var require_compose_speech = __commonJS({
         if (!rows[row].trim() || rows[row].startsWith("#")) continue;
         const fields = rows[row].split("	"), scene = win.SCENES[Number(fields[0])];
         const lines = (scene?.narration || []).filter((n) => (n.tts || "").trim());
+        if (scene) checkSilentTiming(scene, board, win.SB_DOC?.performanceTimingVersion, path15.resolve(work, fields[1]));
         if (!lines.length || lines.length === 1 && !lines.some((n) => n.acting != null) && !scene.performance?.some((event) => event.kind === "action")) continue;
         const inputs = [], filters = [];
         lines.forEach((line, i2) => {
@@ -65260,7 +65267,7 @@ var require_compose_speech = __commonJS({
       if (outputs.length) fs10.writeFileSync(cards, rows.join("\n"));
       return outputs;
     }
-    module.exports = { compose, lineSources, duration: duration3, sceneTiming };
+    module.exports = { compose, lineSources, duration: duration3, sceneTiming, checkSilentTiming };
     if (__require.main === module) {
       try {
         console.log(JSON.stringify(compose(process.argv[2], process.argv[3]), null, 2));
@@ -65426,6 +65433,7 @@ var require_check_tts_quality = __commonJS({
         const audio = path15.resolve(work, rows[k][1]);
         const bytes = fs10.readFileSync(audio);
         if (!bytes.length) throw new Error("Empty audio for card " + i2);
+        require_compose_speech().checkSilentTiming(s2, board, win.SB_DOC?.performanceTimingVersion, audio);
         media[audio] = hash5(bytes);
         if (s2.visual?.video?.speechStatus === "stale") throw new Error("Dialogue-dependent video is stale for card " + i2);
         const characters = win.SB_DOC?.characters || [];
@@ -78232,7 +78240,7 @@ import * as path3 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.115.0-story-first.3",
+  version: "0.115.0-story-first.4",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -90136,9 +90144,19 @@ function manageSpeech(args) {
       const visual = object3(scene.visual);
       const video = object3(visual.video);
       if (video.engine && video.engine !== plan2.provider || video.model && video.model !== plan2.model) throw new Error("Adapter does not match the selected shot model");
-      video.clip = args.videoPath;
-      video.speechBinding = { ...plan2, audio, videoPath, videoSha256: hash2(bytes) };
-      video.speechStatus = "current";
+      const priorBinding = object3(video.speechBinding);
+      const videoSha256 = hash2(bytes);
+      const performanceChanged = priorBinding.performanceRevision && priorBinding.performanceRevision !== plan2.performanceRevision;
+      const audioChanged = Array.isArray(priorBinding.audio) && JSON.stringify(priorBinding.audio) !== JSON.stringify(audio);
+      if (priorBinding.videoSha256 === videoSha256 && (performanceChanged || audioChanged)) {
+        plan2.warnings.push("Unchanged video bytes retain their original performance and audio binding; the revised performance or speech has not been generated in this footage.");
+        video.speechStatus = "stale";
+        invalidated = { video, edit: true };
+      } else {
+        video.clip = args.videoPath;
+        video.speechBinding = { ...plan2, audio, videoPath, videoSha256 };
+        video.speechStatus = "current";
+      }
       visual.video = video;
       scene.visual = visual;
       changed = true;
@@ -98311,7 +98329,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.115.0-story-first.3" },
+  { name: "social-flow", version: "0.115.0-story-first.4" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

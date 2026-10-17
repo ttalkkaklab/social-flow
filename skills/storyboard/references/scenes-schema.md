@@ -30,6 +30,15 @@ interval, or its own authored duration may extend it. Concurrent action and spee
 use the longer interval rather than adding both. An independent action without
 a duration keeps the total unknown until production timing is planned.
 
+An event may add `videoDirection`, an adapter-language rendering of its action text
+or speech group's `acting.visual`. Preserve the original text, event order, character
+and addressee; translate every necessary action without adding or omitting events.
+Use this only when the adapter needs different wording: Seedance 1.5/2.0 require
+English or Chinese directions, while Seedance 2.5 accepts Korean. Both spatial and
+speech video planners consume this field; it is included in performance provenance.
+After changing the original action, update its translation too. No automatic
+translation or truncation occurs.
+
 Use `shot.videoDesign.before/action/after`, motion states and `visual.camera` for
 the source frame, visible change and ending composition. These accompany the whole
 performance in the video plan. Do not duplicate actions into a second script or

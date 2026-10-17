@@ -31,7 +31,7 @@
         "mcp"
       ],
       "description": "Plan, produce, review, and publish channel-based social videos. Storyboard plans dialogue and stops for approval; produce builds approved episodes; autoproduce runs both unattended. Includes reusable characters, voice settings, media generation, research, and publishing tools in one bundled MCP server.",
-      "version": "0.115.0-story-first.3"
+      "version": "0.115.0-story-first.4"
     }
   ]
 }
