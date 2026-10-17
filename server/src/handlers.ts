@@ -201,7 +201,7 @@ function knownKeys(schema: z.ZodTypeAny): Set<string> | undefined {
 }
 
 /**
- * One report shape for all five astra_* routes.
+ * One report shape for every astra_* generation route.
  *
  * The server echoes back the request it actually recorded, defaults filled in — that echo is
  * the only place a caller can see what 121 frames at 24fps became, so it is reported verbatim
@@ -971,10 +971,24 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     try { return text(JSON.stringify(await astraVideo.listUploads())); }
     catch (error) { return text(error instanceof Error ? error.message : 'ASTRA upload listing failed', true); }
   },
+  astra_video_capabilities: async (args) => {
+    parseArgs(astraVideo.astraVideoCapabilitiesSchema, args);
+    try { return text(JSON.stringify(await astraVideo.getCapabilities())); }
+    catch (error) { return text(error instanceof Error ? error.message : 'ASTRA capabilities lookup failed', true); }
+  },
   astra_video_delete_upload: async (args) => {
     const parsed = parseArgs(astraVideo.astraVideoDeleteUploadSchema, args);
     try { return text(JSON.stringify(await astraVideo.deleteUpload(parsed))); }
     catch (error) { return text(error instanceof Error ? error.message : 'ASTRA upload deletion failed', true); }
+  },
+  astra_ic_lora: async (args) => {
+    const parsed = parseArgs(astraVideo.astraIcLoraSchema, args);
+    const result = await astraVideo.generateIcLora(parsed);
+    return text(
+      `${astraVideoReport('Video generated through an IC-LoRA adapter on the ASTRA video API', result)}` +
+        `\nAdapter: ${parsed.adapter}\nReference: ${parsed.referencePath}` +
+        (parsed.conditioningMaskPath ? `\nConditioning mask: ${parsed.conditioningMaskPath}` : ''),
+    );
   },
   astra_video_retake: async (args) => {
     const parsed = parseArgs(astraVideo.astraVideoRetakeSchema, args);
