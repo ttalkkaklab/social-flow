@@ -92,6 +92,9 @@ change the event. Decide the initial situation, pressure, character's choice and
 change. Keep the scene readable without its synopsis or character goals.
 
 A scene can contain multiple speakers and silent stretches. A line does not create a shot.
+Keep one speech purpose and vocal contour per line: self-identification followed by a
+question can need two lines from the same speaker in the same shot. Preserve the intervening
+listening/reaction in `performance`; follow the [speech intent example](../produce/references/shot-speech.md#speech-purpose-boundaries).
 Do not give every speech event `to: audience`: a character addresses the other character,
 self or the audience according to the actual situation. For narration-led material the
 viewer may be the addressee; narrator-only and fully visual stories are both valid.

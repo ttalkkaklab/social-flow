@@ -46,6 +46,8 @@ Later corrections use edit-speech and `speech_manage`.
 For scene emotion, use each line's `acting` and `speech_manage action:plan_audio`; preserve
 voice identity while passing the resolved line direction to the raw generator. The same
 direction and reaction timing inform `plan_video`, its prompt and the scene's starting image.
+Before TTS, separate declaration/question speech purposes and compare each compiled request with its line; preserve listening/reaction order inside the shot.
+See [speech purpose boundaries](references/shot-speech.md#speech-purpose-boundaries) and [speech intent evaluations](references/speech-intent-evals.md).
 Do not group different emotions or nonconsecutive shots by source image and cut the result
 into arbitrary audio-length slices. See shot-speech.md for timing and continuity details.
 Turn the approved storyboard (`storyboard/scenes.js`) into a narrated video and per-platform text. **Assembly video warnings use HITL:** follow [assembly-video-hitl.md](references/assembly-video-hitl.md). Show failed video/visual-plan checks to the user; their explicit approval permits assembly of the current inputs. This exception overrides pre-assembly quality holds below. Preserve warnings and resume without asking again.
