@@ -29,8 +29,13 @@ This supersedes older burned-subtitle exceptions and rendering recipes below. Us
 master on every platform. No subtitle/caption typography may be generated into clips or
 burned during editing. Keep exact dialogue for audio checks and optional separate YouTube
 subtitle files only when requested; existing subtitle files do not authorize uploading them.
-Use plan_video.videoPrompt and its no-visible-text policy. Do not paste literal dialogue
-into an audio-conditioned video prompt; the supplied WAV carries the exact spoken words.
+Use the selected adapter's prepared request and its no-visible-text policy. For ASTRA,
+run [prepare-astra-shot.js](references/prepare-astra-shot.js) after composing speech and
+submit its returned `tool` and `arguments` unchanged. It carries the performance timing
+into a motion prompt without literal dialogue or screenplay labels. `plan_video` remains
+the performance plan; its structured `videoPrompt` is not ASTRA's final provider prompt.
+Do not paste literal dialogue into an audio-conditioned video prompt; the supplied WAV
+carries the exact spoken words.
 Inspect actual clips for accidental text; a no-text prompt alone does not prove clean frames.
 **Speech production override (2026-10-16):** Read [shot-speech.md](references/shot-speech.md).
 Generate with raw TTS tools; do not run automatic speech reviews, dictation, voice-lock ASR,

@@ -88,6 +88,35 @@ video argument. Use a correctly staged opening and inspect the returned action. 
 claim endpoint control from a prompt or invent unsupported arguments. Other selected
 adapters follow their own real schemas and capability evidence; do not switch engines.
 
+Prepare each ASTRA submission with the bundled
+`skills/produce/references/prepare-astra-shot.js` helper. It resolves the whole-shot
+performance plan, actual opening file/hash, selected adapter and measured audio into
+supported tool arguments. Its ASTRA prompt uses camera/action sentences and measured
+intervals without screenplay field/beat labels or literal dialogue; the complete generic
+performance prompt remains in the handoff record. It makes no media calls and does not
+approve the picture:
+
+```bash
+node "$CLAUDE_PLUGIN_ROOT/skills/produce/references/prepare-astra-shot.js" \
+  /episode/storyboard --shot s0009 --audio /episode/.work/c8-speech-stereo.wav \
+  --output /episode/.work/clips --filename s0009.mp4
+```
+
+Call the returned `tool` with its `arguments`, retaining the returned record beside the
+generation receipt. Do not replace the resolved prompt with an older `visual.video.prompt`
+or rebuild it from the dialogue alone. A source image shared by several cuts is not
+evidence that their opening poses agree. Compare the actual preceding endpoint with the
+source before submitting; correct an inconsistent source using the selected image lane.
+The helper never silently substitutes an endpoint for an authored image. For off-screen
+dialogue or silent action, omit `--audio`; its sound remains on the separate edit clock.
+Frame coverage and stereo requirements are execution checks. Missing continuity evidence
+is advice, not an approval gate or permission to generate extra attempts.
+
+During a TTS change, retain the selected visual action phase, not simply the first new
+audio-length slice of every old clip. A shorter line may finish before the old clip reaches
+its intended closing pose. Choose a usable source interval, recut at an action boundary or
+regenerate within authorization; never accelerate, reverse, loop or freeze an action to fit.
+
 ## Review the assembled connection
 
 After trimming, cropping or replacing a clip, compare its new opening/closing frames

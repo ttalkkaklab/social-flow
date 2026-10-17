@@ -13,6 +13,11 @@ capture helper records the actual source frame and detects stale trims or replac
 clips; the image prompt assembler attaches a current endpoint as a state reference.
 Legacy boards expose missing blocking and inferred connections as advice. Assembly
 exports paired boundary PNGs beside playback excerpts, without claiming visual approval.
+The bundled `skills/produce/references/prepare-astra-shot.js` prepares each real ASTRA
+request from the whole shot, its authored opening and composed speech. It preserves the
+resolved performance prompt in its receipt, uses unlabelled camera/action prose for LTX,
+checks duration coverage and records the actual image hash;
+audio2video still conditions on one opening image, not the preceding clip or an entire board.
 
 Start a reusable video project with `/social-flow:project-init <directory>`.
 It saves SNS targets and connection records, video genre, video/speech/image

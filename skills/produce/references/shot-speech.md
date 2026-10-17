@@ -175,6 +175,26 @@ speed up speech. Silence reserves reaction time; it does not animate a gesture o
 the generated character reacts correctly. Do not count provider padding as an acted
 reaction or stretch speech to cover a missing pause.
 
+For ASTRA, prepare the real request with `prepare-astra-shot.js` after composition:
+
+```bash
+node "$PLUGIN_ROOT/skills/produce/references/prepare-astra-shot.js" "$STORYBOARD_DIR" \
+  --shot "$SHOT_ID" --audio "$COMPOSED_STEREO_WAV" --output "$CLIP_DIR" --filename "$CLIP_NAME"
+```
+
+Submit the returned `tool` and `arguments` unchanged. This installed helper resolves the
+whole-shot plan, source image and supported adapter schema, then writes natural motion
+prose without spoken words or screenplay labels. Keep the structured performance prompt
+as provenance rather than submitting it as ASTRA's final prompt. Audio2video receives one
+authored opening image at frame zero, not the previous clip or every continuity reference.
+Capture the selected preceding endpoint and stage the next opening from its actual state.
+Silent and off-screen shots use the image-to-video route and retain authored end images.
+An explicit episode voice exception belongs in
+`PRODUCTION.modelSettings.overrides.speech` with `engine`, `model` and the user's
+`request`. Keep the selected voice in each cast entry's `tts`. Assembly accepts that
+matching voice exception while still checking the shared identity hash and character
+fields; do not rewrite the shared identity just to change this episode's speech engine.
+
 No new listening or score gate applies. If the user requests a review loop, inspect
 the actual audio and video against these line directions and report evidence and unresolved
 differences. Code checks, prompts and still frames cannot certify prosody or continuous

@@ -1037,7 +1037,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
       ? `Speakers:\n${request.speakers.map((speaker) => `  - ${speaker.speaker}: ${speaker.voice}`).join('\n')}`
       : `Voice: ${request.voice}`;
     return text(
-      `Gemini 3.8 audio generated successfully!\n\nFile: ${result.audioPath}\nModel: ${result.model}\n${voiceInfo}\nTurns: ${request.turns.length}\nText length: ${totalChars} chars`,
+      `Gemini 3.8 audio generated successfully!\n\nFile: ${result.audioPath}\nModel: ${result.model}\n${voiceInfo}\nTurns: ${request.turns.length}\nText length: ${totalChars} chars\nProvider usage receipt: ${result.usageReceiptPath} (reported usage or explicit not_reported; not an invoice)`,
     );
   },
   tts_multi_speaker: async (args) => {
