@@ -7,6 +7,7 @@ import {createRequire} from 'node:module';
 import {manageSpeech,speechAudioPlan,speechVideoPlan,speechManageSchema,speechRevision} from '../dist/speech.js';
 import {ttsGenerateSchema,gemini38TtsSchema} from '../dist/tts-client.js';
 import {elevenLabsGenerateSchema} from '../dist/elevenlabs-client.js';
+import {ASTRA_VIDEO_MAX_PROMPT_CHARS} from '../dist/astra-video-client.js';
 const require=createRequire(import.meta.url),voice={engine:'gemini',voiceId:'Kore',model:'gemini-2.5-flash-preview-tts',language:'ko',speed:1,stylePrompt:'Bright confident sales smile.'};
 const caps={provider:'fixture',model:'acting',audioConditioning:true,lipSync:true,postLipSync:false,evidence:'test adapter'};
 function wav(seconds){const b=Buffer.alloc(44+48000*seconds*2);b.write('RIFF');b.writeUInt32LE(b.length-8,4);b.write('WAVEfmt ',8);b.writeUInt32LE(16,16);b.writeUInt16LE(1,20);b.writeUInt16LE(1,22);b.writeUInt32LE(48000,24);b.writeUInt32LE(96000,28);b.writeUInt16LE(2,32);b.writeUInt16LE(16,34);b.write('data',36);b.writeUInt32LE(b.length-44,40);return b;}
@@ -167,4 +168,134 @@ test('mixed video speech preserves speaker identities and confines mouth sync to
  assert.match(beats[2],/voiceover or narration.*visible mouths stay closed/);
  assert.deepEqual(plan.performance.map(line=>line.text),lines.map(line=>line.tts));
  assert.ok(lines.every(line=>!plan.videoPrompt.includes(line.tts)));
+});
+
+test('whole-shot plan preserves decisive actions, listeners and start/end state with unknown draft timing',()=>{
+ const scene={narration:[{id:'a',speaker:'courier',delivery:'on_screen',tts:'I know you.'}],performance:[
+  {kind:'dialogue',character:'courier',to:'bride',group:1},
+  {kind:'action',character:'uncle',text:'Uncle turns toward the bride.'},
+  {kind:'action',character:'bride',text:'The bride freezes and drops the parcel.'}],
+  shot:{videoDesign:{before:'Courier alone at the open door; bride holds parcel.',action:'Courier points toward bride.',after:'Parcel lies at bride feet.'}},
+  visual:{camera:{framing:'Courier foreground, uncle and bride behind.',end:'Hold both listeners and parcel.'}}};
+ const plan=speechVideoPlan(scene,caps);
+ assert.equal(plan.performance.length,3);assert.equal(plan.durationSeconds,null);assert.equal(plan.timing,'needs_action_timing');
+ for(const text of ['Uncle turns toward the bride','bride freezes','Addressed to bride','Courier alone','Parcel lies','Hold both listeners'])assert.ok(plan.videoPrompt.includes(text),text);
+ assert.equal(plan.videoPrompt.includes('I know you.'),false);
+ assert.equal(plan.review,'not_reviewed');
+});
+
+test('silent actions are plannable through the public tool without lip sync or fabricated duration',t=>{
+ const {board}=fixture(t,[]),file=path.join(board,'scenes.js'),win={};
+ new Function('window',readFileSync(file,'utf8'))(win);
+ win.SCENES[0].performance=[{kind:'action',character:'host',text:'Places the key under the cup.'}];
+ writeFileSync(file,Object.entries(win).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+ const plan=manageSpeech({path:board,action:'plan_video',shotId:win.SCENES[0].id,capabilities:{...caps,audioConditioning:false,lipSync:false}}).plan;
+ assert.match(plan.videoPrompt,/Places the key/);assert.equal(plan.durationSeconds,null);assert.equal(plan.audioFirst,false);
+});
+
+test('concurrent action shares speech time, longer action delays next speaker, and composition preserves silent reaction',t=>{
+ const {board,work,r}=fixture(t,[{tts:'First',speaker:'host',delivery:'off_screen'},{tts:'Second',speaker:'host',delivery:'off_screen'}]);
+ let state=r;
+ for(const [i,line] of r.lines.entries()){const audio=path.join(work,`raw${i}.wav`);writeFileSync(audio,wav(1));state=manageSpeech({path:board,action:'attach_audio',lineId:line.id,expectedRevision:state.revision,audioPath:audio,generation:proof(line)});}
+ const file=path.join(board,'scenes.js'),win={};new Function('window',readFileSync(file,'utf8'))(win);
+ win.SCENES[0].performance=[{kind:'action',character:'host',text:'Opens the door.',durationSeconds:0.5},
+  {kind:'action',character:'host',text:'Slides parcel across table while speaking.',withGroup:1,durationSeconds:2},
+  {kind:'dialogue',character:'host',to:'self',group:1},
+  {kind:'dialogue',character:'host',to:'self',group:2},
+  {kind:'action',character:'host',text:'Recoils from the parcel.',durationSeconds:0.75}];
+ writeFileSync(file,Object.entries(win).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+ const plan=manageSpeech({path:board,action:'plan_video',shotId:r.lines[0].shotId,capabilities:caps}).plan;
+ assert.equal(plan.durationSeconds,4.25);assert.equal(plan.timing,'planned_actions_with_measured_audio');
+ assert.equal(plan.performance[2].speechStartSeconds,0.5);assert.equal(plan.performance[3].speechStartSeconds,2.5);
+ assert.equal(plan.performance[1].startSeconds,0.5);assert.equal(plan.performance[1].endSeconds,2.5);
+ writeFileSync(path.join(work,'cards.tsv'),'0\traw0.wav\t1\n');
+ const {compose,duration}=require('../../skills/produce/references/compose-speech.js'),checker=require('../../skills/produce/references/check-tts-quality.js');
+ const result=compose(work,board);assert.ok(Math.abs(duration(result[0].audioPath)-4.25)<0.001);assert.ok(checker.check(work,board)[result[0].audioPath]);
+ win.SCENES[0].performance[4].durationSeconds=1;
+ writeFileSync(file,Object.entries(win).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+ assert.throws(()=>checker.check(work,board),/preserve planned acting timing/);
+});
+
+test('performance references fail clearly and unplaced speech is exposed rather than dropped',()=>{
+ const {planScenePerformance}=require('../../skills/_shared/scene-acting.js');
+ const narration=[{speaker:'a',tts:'One'},{speaker:'b',tts:'Two'}];
+ assert.throws(()=>planScenePerformance({narration,performance:[{kind:'dialogue',character:'b',group:1}]}),/differs/);
+ assert.throws(()=>planScenePerformance({narration,performance:[{kind:'action',character:'a',text:'Moves',withGroup:3}]}),/reference/);
+ const result=planScenePerformance({narration,performance:[{kind:'dialogue',character:'a',to:'b',group:1}]},()=>1);
+ assert.equal(result.performance.length,2);assert.match(result.warnings.join(),/group 2 is absent/);assert.equal(result.durationSeconds,2);
+});
+
+test('legacy untimed story-v2 actions keep the existing speech clock and disclose unverified action timing',t=>{
+ const {board,work,r}=fixture(t,[{tts:'First',speaker:'host',delivery:'voiceover'}]);
+ const audio=path.join(work,'raw0.wav');writeFileSync(audio,wav(1));
+ manageSpeech({path:board,action:'attach_audio',lineId:r.lines[0].id,expectedRevision:r.revision,audioPath:audio,generation:proof(r.lines[0])});
+ const file=path.join(board,'scenes.js'),win={};new Function('window',readFileSync(file,'utf8'))(win);
+ win.SCENES[0].performance=[{kind:'action',character:'host',text:'Opens the parcel.'},{kind:'narration',character:'host',group:1}];
+ writeFileSync(file,Object.entries(win).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+ writeFileSync(path.join(work,'cards.tsv'),'0\traw0.wav\t1\n');
+ const {compose,duration}=require('../../skills/produce/references/compose-speech.js'),checker=require('../../skills/produce/references/check-tts-quality.js');
+ const result=compose(work,board);assert.equal(duration(result[0].audioPath),1);assert.equal(result[0].timing,'legacy_speech_only');assert.match(result[0].warnings.join(),/unverified/);
+ assert.ok(checker.check(work,board)[result[0].audioPath]);
+ const plan=manageSpeech({path:board,action:'plan_video',shotId:r.lines[0].shotId,capabilities:caps}).plan;
+ assert.equal(plan.durationSeconds,null);assert.match(plan.videoPrompt,/Opens the parcel/);
+});
+
+test('new scene timing version refuses unresolved independent actions while silent plans stay truthful',()=>{
+ const {sceneTiming}=require('../../skills/produce/references/compose-speech.js');
+ const scene={narration:[],performance:[{kind:'action',character:'host',text:'Opens the door.'}]};
+ assert.throws(()=>sceneTiming(scene,'.',1),/finite action timing/);
+ scene.performance[0].durationSeconds=2;
+ const plan=speechVideoPlan(scene,caps);assert.equal(plan.durationSeconds,2);assert.equal(plan.timing,'planned_actions');
+ assert.match(plan.videoPrompt,/silent scene/);assert.doesNotMatch(plan.videoPrompt,/separately supplied voiceover plays/);
+});
+
+test('bound video becomes stale when action, addressee, timing or source composition changes',t=>{
+ const {board,work,r}=fixture(t,[{tts:'First',speaker:'host',delivery:'on_screen'}]);
+ const audio=path.join(work,'raw0.wav'),video=path.join(work,'clip.mp4');writeFileSync(audio,wav(1));writeFileSync(video,'fixture clip');
+ let state=manageSpeech({path:board,action:'attach_audio',lineId:r.lines[0].id,expectedRevision:r.revision,audioPath:audio,generation:proof(r.lines[0])});
+ const file=path.join(board,'scenes.js'),win={};new Function('window',readFileSync(file,'utf8'))(win);
+ win.SCENES[0].performance=[{kind:'dialogue',character:'host',to:'self',group:1},{kind:'action',character:'host',text:'Opens parcel.',durationSeconds:1}];
+ const save=value=>writeFileSync(file,Object.entries(value).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+ save(win);state=manageSpeech({path:board,action:'list'});
+ manageSpeech({path:board,action:'attach_video',shotId:r.lines[0].shotId,expectedRevision:state.revision,videoPath:video,capabilities:caps});
+ const bound={};new Function('window',readFileSync(file,'utf8'))(bound);
+ writeFileSync(path.join(work,'cards.tsv'),'0\traw0.wav\t1\n');
+ const {compose}=require('../../skills/produce/references/compose-speech.js'),checker=require('../../skills/produce/references/check-tts-quality.js');
+ compose(work,board);assert.ok(checker.check(work,board));
+ for(const change of [s=>s.performance[1].text='Drops parcel.',s=>s.performance[0].to='audience',s=>s.performance[1].durationSeconds=2,s=>s.visual.camera={framing:'Close on parcel.'}]) {
+  const changed=JSON.parse(JSON.stringify(bound));change(changed.SCENES[0]);save(changed);compose(work,board);
+  assert.throws(()=>checker.check(work,board),/Video performance binding is stale/);
+ }
+});
+
+
+test('ASTRA video plans diagnose the exact adapter prompt limit without truncating performance',()=>{
+ const scene={narration:[],performance:[{kind:'action',character:'host',text:'x',durationSeconds:2}]};
+ const astra={...caps,provider:'astra'};
+ const base=speechVideoPlan(scene,astra).videoPrompt.length;
+ for(const length of [ASTRA_VIDEO_MAX_PROMPT_CHARS-1,ASTRA_VIDEO_MAX_PROMPT_CHARS,ASTRA_VIDEO_MAX_PROMPT_CHARS+1]){
+  scene.performance[0].text='x'.repeat(length-base+1);
+  const before=JSON.stringify(scene),plan=speechVideoPlan(scene,astra);
+  assert.equal(plan.videoPrompt.length,length);
+  assert.deepEqual(plan.promptLength,{characters:length,maxCharacters:ASTRA_VIDEO_MAX_PROMPT_CHARS,exceeded:length>ASTRA_VIDEO_MAX_PROMPT_CHARS});
+  assert.equal(plan.warnings.some(message=>message.includes('adapter limit')),length>ASTRA_VIDEO_MAX_PROMPT_CHARS);
+  assert.equal(plan.performance[0].text,scene.performance[0].text);
+  assert.equal(JSON.stringify(scene),before);
+  assert.equal(plan.review,'not_reviewed');
+ }
+});
+
+test('other video adapters do not inherit ASTRA prompt limits or lose existing timing warnings',()=>{
+ const scene={narration:[],performance:[{kind:'action',character:'host',text:'x'.repeat(ASTRA_VIDEO_MAX_PROMPT_CHARS)}]};
+ const baseline=speechVideoPlan(scene,caps),astra=speechVideoPlan(scene,{...caps,provider:'astra'});
+ assert.equal(astra.promptLength.exceeded,true);
+ assert.ok(baseline.warnings.length>0);
+ assert.deepEqual(astra.warnings.filter(message=>!message.includes('adapter limit')),baseline.warnings);
+ for(const provider of ['seedance','veo','fixture']){
+  const plan=speechVideoPlan(scene,{...caps,provider,model:'astra'});
+  assert.equal(plan.promptLength,undefined);
+  assert.equal(plan.videoPrompt,astra.videoPrompt);
+  assert.equal(plan.warnings.some(message=>message.includes('adapter limit')),false);
+  assert.deepEqual(plan.warnings,baseline.warnings);
+ }
 });

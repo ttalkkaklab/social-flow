@@ -9,6 +9,33 @@
 consumes after storyboard approval. `video-template.html` loads it with
 `<script src="./scenes.js">`.
 
+## Content-led authoring (story-v2)
+
+Write the observable story and complete scenes before splitting shots or estimating
+length. Format bands and historical shot counts below are legacy guidance, not
+new-board quotas. Preserve actual provider/platform limits and explicitly selected
+user constraints. Unknown draft duration is not zero or a reason to rush speech.
+
+New boards set `SB_DOC.performanceTimingVersion:1`. At production this requires
+finite timing for independent actions. Legacy boards without this marker or action
+timing fields can retain their speech-only clock, recorded as unverified action
+timing; this compatibility path does not certify that actions fit the old video.
+
+`performance` is the ordered source for `speech_manage plan_video` and audio
+composition. Speech events reference the existing 1-based `narration` group and
+retain their `character` and `to`. An action uses `{kind:"action", character, text}`.
+Optionally add `durationSeconds` (finite and positive) after staging it. An action
+with `withGroup:1` starts with speech group 1: its duration defaults to that speech
+interval, or its own authored duration may extend it. Concurrent action and speech
+use the longer interval rather than adding both. An independent action without
+a duration keeps the total unknown until production timing is planned.
+
+Use `shot.videoDesign.before/action/after`, motion states and `visual.camera` for
+the source frame, visible change and ending composition. These accompany the whole
+performance in the video plan. Do not duplicate actions into a second script or
+replace a listener reaction with a close-up of the speaker. Runtime diagnostics
+report missing mappings; they do not certify the scene's artistic quality.
+
 ## Contents
 
 - [Overall structure](#overall-structure)

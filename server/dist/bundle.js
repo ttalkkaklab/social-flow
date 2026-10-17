@@ -64389,27 +64389,101 @@ var require_scene_acting = __commonJS({
     function speechRevisionPayload(line, voice) {
       return { tts: line.tts, sub: line.sub, speaker: line.speaker, delivery: line.delivery, voice, ...line.acting != null ? { acting: line.acting } : {} };
     }
+    function planScenePerformance(input, measureAudio = () => null) {
+      const scene = Array.isArray(input) ? { narration: input } : input;
+      const lines = scene.narration || [], warnings = [];
+      const explicit = Array.isArray(scene.performance) && scene.performance.length > 0;
+      const events = explicit ? scene.performance.map((event) => ({ ...event })) : lines.map((line, index) => ({ kind: line.delivery === "voiceover" ? "narration" : "dialogue", character: line.speaker, group: index + 1 }));
+      const groups = /* @__PURE__ */ new Set();
+      for (const event of events) {
+        if (event.kind === "action") {
+          if (typeof event.text !== "string" || !event.text.trim()) throw new Error("Performance action needs visible action text");
+          if (event.durationSeconds !== void 0 && (!Number.isFinite(event.durationSeconds) || event.durationSeconds <= 0)) throw new Error("Action durationSeconds must be finite and positive");
+          if (event.withGroup !== void 0 && (!Number.isInteger(event.withGroup) || !lines[event.withGroup - 1])) throw new Error("Action withGroup must reference a speech group");
+          continue;
+        }
+        if (!["dialogue", "narration"].includes(event.kind) || !Number.isInteger(event.group) || !lines[event.group - 1] || groups.has(event.group)) throw new Error("Performance needs valid unique speech group references");
+        if (event.character !== lines[event.group - 1].speaker) throw new Error("Performance character differs from speech speaker");
+        groups.add(event.group);
+      }
+      for (const [index, line] of lines.entries()) if (!groups.has(index + 1)) {
+        warnings.push("Speech group " + (index + 1) + " is absent from performance; appended for planning. Place it in the intended event order.");
+        events.push({ kind: line.delivery === "voiceover" ? "narration" : "dialogue", character: line.speaker, group: index + 1 });
+      }
+      let cursor = 0;
+      const speech = /* @__PURE__ */ new Map();
+      const add = (a, b) => a === null || b === null ? null : a + b;
+      const performance = events.map((event) => {
+        if (event.kind === "action") {
+          if (event.withGroup !== void 0) return { ...event, startSeconds: null, endSeconds: null };
+          const startSeconds2 = cursor;
+          cursor = add(cursor, event.durationSeconds ?? null);
+          if (event.durationSeconds === void 0) warnings.push("Action timing unresolved: " + event.text);
+          return { ...event, startSeconds: startSeconds2, endSeconds: cursor };
+        }
+        const line = lines[event.group - 1], acting = line.acting || {};
+        const errors = actingErrors(acting);
+        if (errors.length) throw new Error(errors.join("; "));
+        const leadInSeconds = acting.leadInSeconds ?? 0, tailOutSeconds = acting.tailOutSeconds ?? 0;
+        const measured = measureAudio(line);
+        const audioSeconds = Number.isFinite(measured) && measured > 0 ? measured : null;
+        const startSeconds = cursor, speechStartSeconds = add(cursor, leadInSeconds);
+        const speechEndSeconds = add(speechStartSeconds, audioSeconds);
+        cursor = add(speechEndSeconds, tailOutSeconds);
+        for (const action of events.filter((item) => item.kind === "action" && item.withGroup === event.group)) {
+          const end = action.durationSeconds === void 0 ? speechEndSeconds : add(speechStartSeconds, action.durationSeconds);
+          cursor = cursor === null || end === null ? null : Math.max(cursor, end);
+        }
+        const beat = { ...event, lineId: line.id, speaker: line.speaker, text: line.tts, delivery: line.delivery, acting, resolvedVocal: resolvedStyle(void 0, acting), leadInSeconds, tailOutSeconds, audioSeconds, startSeconds, speechStartSeconds, speechEndSeconds, endSeconds: cursor };
+        speech.set(event.group, beat);
+        return beat;
+      });
+      for (const event of performance) if (event.kind === "action" && event.withGroup !== void 0) {
+        const anchor = speech.get(event.withGroup);
+        event.startSeconds = anchor.speechStartSeconds;
+        event.endSeconds = event.durationSeconds === void 0 ? anchor.speechEndSeconds : add(event.startSeconds, event.durationSeconds);
+      }
+      const hasActions = performance.some((event) => event.kind === "action");
+      const timing = cursor === null ? warnings.some((item) => item.startsWith("Action timing")) ? "needs_action_timing" : "needs_audio_duration" : hasActions ? speech.size ? "planned_actions_with_measured_audio" : "planned_actions" : "measured";
+      return { performance, durationSeconds: cursor, timing, warnings };
+    }
+    function scenePerformancePayload(scene) {
+      return { performance: scene.performance, narration: (scene.narration || []).map((line) => ({ id: line.id, speaker: line.speaker, tts: line.tts, delivery: line.delivery, acting: line.acting })), videoDesign: scene.shot?.videoDesign, camera: scene.visual?.camera, source: { bg: scene.visual?.bg, character: scene.visual?.character, location: scene.shot?.location } };
+    }
+    function sceneDirection(scene = {}) {
+      const design = scene.shot?.videoDesign || {}, camera = scene.visual?.camera || {};
+      return [
+        ...["before", "action", "after", "continuity"].filter((key) => design[key]).map((key) => `${key}: ${design[key]}`),
+        ...(design.motion?.beats || []).map((beat) => `Visible state: ${beat.state}`),
+        ...["framing", "movement", "speed", "end"].filter((key) => camera[key]).map((key) => `Camera ${key}: ${camera[key]}`)
+      ].join("\n");
+    }
     var VIDEO_TEXT_POLICY = "Keep the entire video image text-free: no subtitles, captions, dialogue text, typography, letters, logos or watermarks, including during speech.";
-    function sceneVideoPrompt(performance, mode) {
-      const route = mode === "audio_conditioned" ? "Use the supplied audio as the sole source of spoken words. Synchronize visible mouths only during each on_screen speech interval; follow the delivery instruction for every beat. Do not transcribe speech into the image." : mode === "post_lipsync" ? "Animate the planned action; the selected post lip-sync adapter supplies mouth synchronization from the original audio." : "Perform the planned action while the separately supplied voiceover plays; do not turn narration into visible writing.";
-      const dialogue = performance.map((line) => line.text).filter((text2) => typeof text2 === "string" && text2.length);
+    function sceneVideoPrompt(performance, mode, scene = {}) {
+      const route = !performance.some((event) => event.kind !== "action") ? "This is a silent scene. Perform the ordered visible actions without invented speech or voiceover." : mode === "audio_conditioned" ? "Use the supplied audio as the sole source of spoken words. Synchronize visible mouths only during each on_screen speech interval; follow the delivery instruction for every beat. Do not transcribe speech into the image." : mode === "post_lipsync" ? "Animate the planned action; the selected post lip-sync adapter supplies mouth synchronization from the original audio." : "Perform the planned action while the separately supplied voiceover plays; do not turn narration into visible writing.";
+      const dialogue = performance.filter((line) => line.kind !== "action").map((line) => line.text).filter((text2) => typeof text2 === "string" && text2.length);
       const visualDirection = (value) => {
         let text2 = String(value);
         for (const words of dialogue) text2 = text2.split(words).join("the supplied speech");
         return text2;
       };
       const beats = performance.map((line, index) => {
+        if (line.kind === "action") {
+          const relation = line.withGroup === void 0 ? "in this event order" : `concurrently with speech group ${line.withGroup}; do not add a separate pause`;
+          const timing2 = line.startSeconds === null || line.endSeconds === null ? "Timing unresolved; preserve this action when timing is planned." : `Action interval ${line.startSeconds}\u2013${line.endSeconds} seconds.`;
+          return `Beat ${index + 1} (action by ${visualDirection(line.character || "unspecified")}): ${visualDirection(line.text)}; ${relation}. ${timing2}`;
+        }
         const acting = line.acting || {};
         const delivery2 = line.delivery || "voiceover";
         const mouth = delivery2 === "on_screen" ? "Show this speaker physically speaking; synchronize only this speaker's mouth to their supplied audio during this interval using the selected synchronization route." : delivery2 === "off_screen" ? "This speaker stays off screen. All visible mouths stay closed during this interval; show the planned listener reaction or action." : "This is voiceover or narration, not visible physical speech. All visible mouths stay closed during this interval; show the planned action.";
         const fields = ["direction", "context", "intent", "emotion", "vocal", "visual"].filter((key) => acting[key]).map((key) => `${key}: ${visualDirection(acting[key])}`);
         if (acting.tags?.length) fields.push(`vocal events: ${acting.tags.map(visualDirection).join(", ")}`);
         const timing = line.speechStartSeconds == null || line.speechEndSeconds == null ? "Use the measured speech interval once audio is attached." : `Speech interval ${line.speechStartSeconds}\u2013${line.speechEndSeconds} seconds.`;
-        return `Beat ${index + 1} (speaker: ${visualDirection(line.speaker || "unspecified")}; delivery: ${delivery2}): ${mouth} ${fields.join(" ")} ${timing} Anticipation ${line.leadInSeconds || 0} seconds; reaction ${line.tailOutSeconds || 0} seconds.`;
+        return `Beat ${index + 1} (speaker: ${visualDirection(line.speaker || "unspecified")}; delivery: ${delivery2}): ${mouth} ${line.to ? "Addressed to " + visualDirection(line.to) + ". Preserve this eyeline and the listener in the planned framing." : ""} ${fields.join(" ")} ${timing} Anticipation ${line.leadInSeconds || 0} seconds; reaction ${line.tailOutSeconds || 0} seconds.`;
       });
-      return ["A clean cinematic image with an unobstructed scene and text-free surfaces.", route, ...beats, VIDEO_TEXT_POLICY].join("\n");
+      return ["A clean cinematic image with an unobstructed scene and text-free surfaces.", route, visualDirection(sceneDirection(scene)), ...beats, VIDEO_TEXT_POLICY].join("\n");
     }
-    module.exports = { actingErrors, resolvedStyle, directionSupport, speechRevisionPayload, VIDEO_TEXT_POLICY, sceneVideoPrompt };
+    module.exports = { actingErrors, resolvedStyle, directionSupport, speechRevisionPayload, VIDEO_TEXT_POLICY, sceneVideoPrompt, planScenePerformance, sceneDirection, scenePerformancePayload };
   }
 });
 
@@ -65115,7 +65189,7 @@ var require_compose_speech = __commonJS({
     var { execFileSync: execFileSync4 } = __require("node:child_process");
     var { createHash: createHash8 } = __require("node:crypto");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
-    var { actingErrors, speechRevisionPayload } = require_scene_acting();
+    var { actingErrors, speechRevisionPayload, planScenePerformance } = require_scene_acting();
     var { generationVoiceErrors } = require_character_voice();
     var hash5 = (value) => createHash8("sha256").update(value).digest("hex");
     function duration3(file) {
@@ -65125,6 +65199,21 @@ var require_compose_speech = __commonJS({
     }
     function lineSources(lines) {
       return lines.map((n) => ({ lineId: n.id, sha256: n.audio?.sha256, revision: n.audio?.revision, leadInSeconds: n.acting?.leadInSeconds ?? 0, tailOutSeconds: n.acting?.tailOutSeconds ?? 0 }));
+    }
+    function sceneTiming(scene, board, performanceTimingVersion) {
+      const actions = (scene.performance || []).filter((event) => event.kind === "action");
+      const legacy = performanceTimingVersion !== 1 && actions.length > 0 && !actions.some((event) => event.durationSeconds !== void 0 || event.withGroup !== void 0);
+      const plan2 = planScenePerformance(legacy ? scene.narration : scene, (line) => duration3(path15.resolve(board, line.audio.path)));
+      if (legacy) {
+        plan2.timing = "legacy_speech_only";
+        plan2.warnings.push("Legacy speech clock preserved; independent action timing is unverified. Stage actions and set durationSeconds/withGroup before adopting scene timing.");
+      }
+      if (plan2.durationSeconds === null) throw new Error("Plan finite action timing before composing speech: " + plan2.warnings.join("; "));
+      const intervals = plan2.performance.filter((event) => event.kind !== "action").map((event) => {
+        const { lineId, startSeconds, speechStartSeconds, speechEndSeconds, endSeconds } = event;
+        return { lineId, startSeconds, speechStartSeconds, speechEndSeconds, endSeconds };
+      });
+      return { ...plan2, intervals };
     }
     function compose(work, board) {
       work = path15.resolve(work);
@@ -65138,9 +65227,8 @@ var require_compose_speech = __commonJS({
         if (!rows[row].trim() || rows[row].startsWith("#")) continue;
         const fields = rows[row].split("	"), scene = win.SCENES[Number(fields[0])];
         const lines = (scene?.narration || []).filter((n) => (n.tts || "").trim());
-        if (!lines.length || lines.length === 1 && !lines.some((n) => n.acting != null)) continue;
-        const inputs = [], filters = [], intervals = [];
-        let cursor = 0;
+        if (!lines.length || lines.length === 1 && !lines.some((n) => n.acting != null) && !scene.performance?.some((event) => event.kind === "action")) continue;
+        const inputs = [], filters = [];
         lines.forEach((line, i2) => {
           const errors = actingErrors(line.acting), voice = cast.find((c) => c.id === line.speaker)?.tts;
           errors.push(...generationVoiceErrors(voice, line.audio?.generation, line));
@@ -65148,13 +65236,14 @@ var require_compose_speech = __commonJS({
           if (!line.audio || line.audio.generation.text !== line.tts || line.audio.revision !== hash5(JSON.stringify(speechRevisionPayload(line, voice)))) throw new Error("Attach current audio for " + line.id);
           const source = path15.resolve(board, line.audio.path);
           if (hash5(fs10.readFileSync(source)) !== line.audio.sha256) throw new Error("Audio changed for " + line.id);
-          const seconds = duration3(source), lead = line.acting?.leadInSeconds ?? 0, tail = line.acting?.tailOutSeconds ?? 0;
           inputs.push("-i", source);
-          filters.push(`[${i2}:a]aresample=48000,aformat=sample_fmts=s16:channel_layouts=mono,adelay=${Math.round(lead * 48e3)}S:all=1,apad=pad_len=${Math.round(tail * 48e3)}[a${i2}]`);
-          intervals.push({ lineId: line.id, startSeconds: cursor, speechStartSeconds: cursor + lead, speechEndSeconds: cursor + lead + seconds, endSeconds: cursor + lead + seconds + tail });
-          cursor += lead + seconds + tail;
         });
-        filters.push(lines.map((_, i2) => `[a${i2}]`).join("") + `concat=n=${lines.length}:v=0:a=1[out]`);
+        const timing = sceneTiming(scene, board, win.SB_DOC?.performanceTimingVersion), intervals = timing.intervals;
+        lines.forEach((line, i2) => {
+          const interval = intervals.find((item) => item.lineId === line.id);
+          filters.push(`[${i2}:a]aresample=48000,aformat=sample_fmts=s16:channel_layouts=mono,adelay=${Math.round(interval.speechStartSeconds * 48e3)}S:all=1[a${i2}]`);
+        });
+        filters.push(lines.map((_, i2) => `[a${i2}]`).join("") + `amix=inputs=${lines.length}:normalize=0,apad,atrim=duration=${timing.durationSeconds}[out]`);
         const output = path15.join(work, `c${fields[0]}-speech.wav`), tmp = output + ".tmp.wav";
         try {
           execFileSync4("ffmpeg", ["-y", "-v", "error", ...inputs, "-filter_complex", filters.join(";"), "-map", "[out]", "-c:a", "pcm_s16le", tmp], { timeout: 12e4 });
@@ -65162,7 +65251,7 @@ var require_compose_speech = __commonJS({
         } finally {
           if (fs10.existsSync(tmp)) fs10.unlinkSync(tmp);
         }
-        const receipt = { generator: "speech_compose", audioSha256: hash5(fs10.readFileSync(output)), lineIds: lines.map((n) => n.id), lineSources: lineSources(lines), expectedText: lines.map((n) => n.tts).join(". "), durationSeconds: duration3(output), intervals, status: "not_reviewed" };
+        const receipt = { generator: "speech_compose", audioSha256: hash5(fs10.readFileSync(output)), lineIds: lines.map((n) => n.id), lineSources: lineSources(lines), expectedText: lines.map((n) => n.tts).join(". "), durationSeconds: duration3(output), intervals, timing: timing.timing, warnings: timing.warnings, status: "not_reviewed" };
         fs10.writeFileSync(output + ".generation.json", JSON.stringify(receipt, null, 2) + "\n");
         fields[1] = path15.basename(output);
         rows[row] = fields.join("	");
@@ -65171,7 +65260,7 @@ var require_compose_speech = __commonJS({
       if (outputs.length) fs10.writeFileSync(cards, rows.join("\n"));
       return outputs;
     }
-    module.exports = { compose, lineSources, duration: duration3 };
+    module.exports = { compose, lineSources, duration: duration3, sceneTiming };
     if (__require.main === module) {
       try {
         console.log(JSON.stringify(compose(process.argv[2], process.argv[3]), null, 2));
@@ -65332,7 +65421,7 @@ var require_check_tts_quality = __commonJS({
       const rows = fs10.readFileSync(path15.join(work, "cards.tsv"), "utf8").split(/\r?\n/).filter((l) => l.trim() && !l.startsWith("#")).map((l) => l.split("	"));
       const expected = win.SCENES.map((s2, i2) => ({ s: s2, i: i2 })).filter(({ s: s2 }) => !["broll", "outro"].includes(s2.type));
       if (JSON.stringify(rows.map((r2) => r2[0])) !== JSON.stringify(expected.map(({ i: i2 }) => String(i2)))) throw new Error("card order differs from SCENES");
-      const media = {};
+      const media = {}, warnings = [];
       for (const [k, { s: s2, i: i2 }] of expected.entries()) {
         const audio = path15.resolve(work, rows[k][1]);
         const bytes = fs10.readFileSync(audio);
@@ -65361,6 +65450,9 @@ var require_check_tts_quality = __commonJS({
           if (path15.resolve(board, s2.visual.video.clip || "") !== path15.resolve(binding.videoPath) || hash5(fs10.readFileSync(binding.videoPath)) !== binding.videoSha256) throw new Error("Bound video changed for card " + i2);
           const audio2 = (s2.narration || []).map((n) => ({ lineId: n.id, sha256: n.audio?.sha256, revision: n.audio?.revision }));
           if (JSON.stringify(binding.audio) !== JSON.stringify(audio2)) throw new Error("Video speech binding is stale for card " + i2);
+          const payload = require_scene_acting().scenePerformancePayload(s2);
+          if (binding.performanceRevision && binding.performanceRevision !== hash5(JSON.stringify(payload))) throw new Error("Video performance binding is stale for card " + i2);
+          if (!binding.performanceRevision) warnings.push("card " + i2 + ": legacy video performance binding is unverified");
           media[binding.videoPath] = binding.videoSha256;
         }
         if (win.SB_DOC?.speechPlanVersion === 1 && (s2.narration || []).some((n) => n.delivery === "on_screen") && s2.visual?.video && !binding) throw new Error("On-screen dialogue needs a video speech binding for card " + i2);
@@ -65368,7 +65460,7 @@ var require_check_tts_quality = __commonJS({
         const receipt = read2(audio + ".generation.json") || read2(audio + ".quality.json");
         if (win.SB_DOC?.speechPlanVersion === 1 && lines.length && win.VOICE !== "user") {
           if (new Set(lines.map((n) => n.speaker)).size !== 1 && receipt?.generator !== "speech_compose") throw new Error("Multi-speaker shots need separately attached lines and speech_compose receipt");
-          const padded = lines.some((n) => (n.acting?.leadInSeconds ?? 0) > 0 || (n.acting?.tailOutSeconds ?? 0) > 0);
+          const padded = lines.some((n) => (n.acting?.leadInSeconds ?? 0) > 0 || (n.acting?.tailOutSeconds ?? 0) > 0) || s2.performance?.some((event) => event.kind === "action" && (win.SB_DOC?.performanceTimingVersion === 1 || event.durationSeconds !== void 0 || event.withGroup !== void 0));
           const direct = !padded && lines.length === 1 && lines[0].audio?.sha256 === media[audio];
           if (!direct && (!receipt || receipt.audioSha256 !== media[audio] || JSON.stringify(receipt.lineIds) !== JSON.stringify(lines.map((n) => n.id)) || receipt.expectedText !== lines.map((n) => n.tts).join(". "))) throw new Error("Scene WAV has no current line-bound generation receipt for card " + i2);
         }
@@ -65376,13 +65468,7 @@ var require_check_tts_quality = __commonJS({
           const composition = require_compose_speech();
           if (JSON.stringify(receipt.lineSources) !== JSON.stringify(composition.lineSources(lines))) throw new Error("Scene audio composition is stale for card " + i2);
           if (receipt.audioSha256 !== media[audio]) throw new Error("Scene audio composition changed for card " + i2);
-          let duration3 = 0;
-          const intervals = lines.map((n) => {
-            const startSeconds = duration3, lead = n.acting?.leadInSeconds ?? 0, tail = n.acting?.tailOutSeconds ?? 0;
-            const speechStartSeconds = duration3 + lead, speechEndSeconds = speechStartSeconds + composition.duration(path15.resolve(board, n.audio.path));
-            duration3 = speechEndSeconds + tail;
-            return { lineId: n.id, startSeconds, speechStartSeconds, speechEndSeconds, endSeconds: duration3 };
-          });
+          const { intervals, durationSeconds: duration3 } = composition.sceneTiming(s2, board, win.SB_DOC?.performanceTimingVersion);
           if (JSON.stringify(receipt.intervals) !== JSON.stringify(intervals)) throw new Error("Scene audio timing intervals are stale for card " + i2);
           if (Math.abs(composition.duration(audio) - duration3) > 0.03) throw new Error("Scene audio does not preserve planned acting timing for card " + i2);
         } else if (receipt) {
@@ -65392,7 +65478,7 @@ var require_check_tts_quality = __commonJS({
           authorizeSpeed2(work, "final", receipt.playbackSpeed ?? 1);
         }
       }
-      fs10.writeFileSync(path15.join(work, REPORT), JSON.stringify({ status: "not_reviewed", policy: "speech-provenance-v1", warnings: [], inputs: media, approved: false }, null, 2) + "\n");
+      fs10.writeFileSync(path15.join(work, REPORT), JSON.stringify({ status: "not_reviewed", policy: "speech-provenance-v1", warnings, inputs: media, approved: false }, null, 2) + "\n");
       return media;
     }
     function checkTempo(work, speed, min = 1, max = 1) {
@@ -65416,7 +65502,7 @@ var require_check_tts_quality = __commonJS({
           if (!dir) throw new Error("usage: check-tts-quality.js check <workdir> [storyboard] | approve <workdir> <user approval reference>");
           check2(dir, board);
           const report = lastReport(dir);
-          console.log(report.warnings.length ? `Generated narration proceeds with ${report.warnings.length} user-approved warning(s); see ${REPORT}` : "Speech media recorded; listening not performed and no approval required");
+          console.log(report.warnings.length ? `Generated narration proceeds with ${report.warnings.length} unverified provenance warning(s); see ${REPORT}` : "Speech media recorded; listening not performed and no approval required");
         }
       } catch (e2) {
         console.error("TTS quality: " + e2.message);
@@ -78146,7 +78232,7 @@ import * as path3 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.114.1-acting.6",
+  version: "0.115.0-story-first.3",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -89929,23 +90015,19 @@ function measuredDuration(line) {
     return null;
   }
 }
-function speechVideoPlan(lines, capabilities) {
+function speechVideoPlan(input, capabilities) {
   if (!capabilities) throw new Error("Supply the selected adapter capabilities and their evidence; never infer support from the model name");
+  const scene = Array.isArray(input) ? { narration: input } : input;
+  const lines = scene.narration || [];
   const onScreen = lines.some((line) => line.delivery === "on_screen");
   const mode = !onScreen ? "voiceover" : capabilities.audioConditioning && capabilities.lipSync ? "audio_conditioned" : capabilities.postLipSync ? "post_lipsync" : null;
   if (!mode) throw new Error("Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting");
-  let cursor = 0;
-  const performance = lines.map((line) => {
-    const acting = actingSchema.nullable().optional().parse(line.acting) || {};
-    const leadInSeconds = acting.leadInSeconds ?? 0, tailOutSeconds = acting.tailOutSeconds ?? 0;
-    const audioSeconds = measuredDuration(line);
-    const startSeconds = cursor;
-    const speechStartSeconds = cursor === null ? null : cursor + leadInSeconds;
-    const speechEndSeconds = speechStartSeconds === null || audioSeconds === null ? null : speechStartSeconds + audioSeconds;
-    cursor = speechEndSeconds === null ? null : speechEndSeconds + tailOutSeconds;
-    return { lineId: line.id, speaker: line.speaker, text: line.tts, delivery: line.delivery, acting, resolvedVocal: actingContract().resolvedStyle(void 0, acting), leadInSeconds, tailOutSeconds, audioSeconds, startSeconds, speechStartSeconds, speechEndSeconds, endSeconds: cursor };
-  });
-  return { performance, videoPrompt: actingContract().sceneVideoPrompt(performance, mode), textPolicy: "no_visible_text", durationSeconds: cursor, boundary: "one_shot_per_generation", timing: cursor === null ? "needs_audio_duration" : "measured", instructions: "Generate only this shot. Apply each line acting to its own speech interval, including anticipation and reaction time. Match the source frame expression to the opening acting; do not concatenate other shots sharing a reference image. " + actingContract().VIDEO_TEXT_POLICY, mode, provider: capabilities.provider, model: capabilities.model, capabilities, audioFirst: onScreen, lineIds: lines.map((line) => line.id), review: "not_reviewed" };
+  const timeline = actingContract().planScenePerformance(scene, measuredDuration);
+  const videoPrompt = actingContract().sceneVideoPrompt(timeline.performance, mode, scene);
+  const promptLength = capabilities.provider.trim().toLowerCase() === "astra" ? { characters: videoPrompt.length, maxCharacters: ASTRA_VIDEO_MAX_PROMPT_CHARS, exceeded: videoPrompt.length > ASTRA_VIDEO_MAX_PROMPT_CHARS } : void 0;
+  const warnings = [...timeline.warnings];
+  if (promptLength?.exceeded) warnings.push(`ASTRA video prompt has ${promptLength.characters} characters; the adapter limit is ${promptLength.maxCharacters}. Shorten repeated descriptions or split at a natural action boundary while preserving necessary actions. The plan is unchanged.`);
+  return { ...timeline, warnings, promptLength, performanceRevision: hash2(JSON.stringify(actingContract().scenePerformancePayload(scene))), videoPrompt, textPolicy: "no_visible_text", boundary: "one_shot_per_generation", instructions: "Generate only this shot. Preserve the ordered actions, addressees and reactions, including silent events. Concurrent actions share their speech interval. Match the source frame to the opening state; do not concatenate other shots sharing a reference image. " + actingContract().VIDEO_TEXT_POLICY, mode, provider: capabilities.provider, model: capabilities.model, capabilities, audioFirst: onScreen, lineIds: lines.map((line) => line.id), review: "not_reviewed" };
 }
 function manageSpeech(args) {
   args = speechManageSchema.parse(args);
@@ -90034,11 +90116,12 @@ function manageSpeech(args) {
     changed = true;
   }
   if (args.action === "plan_video" || args.action === "attach_video") {
-    if (!args.shotId || !selected.length) throw new Error("Select one shot with speech");
+    const scene = scenes.find((item) => item.id === args.shotId);
+    if (!args.shotId || !scene) throw new Error("Select one existing shot");
     if (selected.some(({ line }) => !line.id || !line.speaker || !line.delivery)) throw new Error("Prepare explicit speech before planning video");
     if (args.lineId || args.speaker || args.query) throw new Error("Video planning uses all lines in the shot; remove line filters");
     for (const { line } of selected) actingSchema.nullable().optional().parse(line.acting);
-    plan2 = speechVideoPlan(selected.map(({ line }) => ({ ...line, audio: currentAudio(line, character(line.speaker)) ? line.audio : void 0 })), args.capabilities);
+    plan2 = speechVideoPlan({ ...scene, narration: selected.map(({ line }) => ({ ...line, audio: currentAudio(line, character(line.speaker)) ? line.audio : void 0 })) }, args.capabilities);
     if (args.action === "attach_video") {
       if (!args.videoPath) throw new Error("videoPath is required");
       const videoPath = resolve8(dirname7(file), args.videoPath);
@@ -90050,14 +90133,14 @@ function manageSpeech(args) {
         if (line.audio.generation.text !== line.tts || errors.length) throw new Error("Speech generation evidence changed: " + errors.join("; "));
         return { lineId: line.id, sha256: line.audio.sha256, revision: line.audio.revision };
       });
-      const visual = object3(selected[0].scene.visual);
+      const visual = object3(scene.visual);
       const video = object3(visual.video);
       if (video.engine && video.engine !== plan2.provider || video.model && video.model !== plan2.model) throw new Error("Adapter does not match the selected shot model");
       video.clip = args.videoPath;
       video.speechBinding = { ...plan2, audio, videoPath, videoSha256: hash2(bytes) };
       video.speechStatus = "current";
       visual.video = video;
-      selected[0].scene.visual = visual;
+      scene.visual = visual;
       changed = true;
     }
   }
@@ -98228,7 +98311,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.114.1-acting.6" },
+  { name: "social-flow", version: "0.115.0-story-first.3" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

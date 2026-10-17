@@ -8,8 +8,9 @@ import { execFileSync } from 'node:child_process';
 const voiceContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/character-voice.js') as { generationVoiceErrors(voice: unknown, proof: unknown, line?: unknown): string[] };
 import { readBoard, serializeBoard } from './storyboard.js';
 import { actingSchema, compileActing, type SpeechActing } from './speech-acting.js';
+import { ASTRA_VIDEO_MAX_PROMPT_CHARS } from './astra-video-client.js';
 
-const actingContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/scene-acting.js') as { resolvedStyle(voice: unknown, acting: unknown): string | undefined; directionSupport(voice: unknown, acting: unknown): { stylePrompt?: string; supported: boolean; warnings: string[] }; speechRevisionPayload(line: unknown, voice: unknown): unknown; VIDEO_TEXT_POLICY: string; sceneVideoPrompt(performance: unknown[], mode: string): string };
+const actingContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/scene-acting.js') as { resolvedStyle(voice: unknown, acting: unknown): string | undefined; directionSupport(voice: unknown, acting: unknown): { stylePrompt?: string; supported: boolean; warnings: string[] }; speechRevisionPayload(line: unknown, voice: unknown): unknown; scenePerformancePayload(scene: unknown): unknown; VIDEO_TEXT_POLICY: string; sceneVideoPrompt(performance: unknown[], mode: string, scene?: unknown): string; planScenePerformance(scene: unknown, measureAudio: (line: Line) => number | null): {performance: Record<string, unknown>[]; durationSeconds: number | null; timing: string; warnings: string[]} };
 export { actingSchema } from './speech-acting.js';
 const delivery = z.enum(['voiceover', 'on_screen', 'off_screen']);
 export const speechManageSchema = z.object({
@@ -71,24 +72,23 @@ function measuredDuration(line: Line): number | null {
     return Number.isFinite(value) && value > 0 ? value : null;
   } catch { return null; }
 }
-export function speechVideoPlan(lines: Line[], capabilities: z.infer<typeof speechManageSchema>['capabilities']) {
+export function speechVideoPlan(input: Line[] | {narration?: Line[]; [key: string]: unknown}, capabilities: z.infer<typeof speechManageSchema>['capabilities']) {
   if (!capabilities) throw new Error('Supply the selected adapter capabilities and their evidence; never infer support from the model name');
+  const scene = Array.isArray(input) ? {narration:input} : input;
+  const lines = scene.narration || [];
   const onScreen = lines.some(line => line.delivery === 'on_screen');
   const mode = !onScreen ? 'voiceover' : capabilities.audioConditioning && capabilities.lipSync ? 'audio_conditioned' : capabilities.postLipSync ? 'post_lipsync' : null;
   if (!mode) throw new Error('Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting');
-  let cursor: number | null = 0;
-  const performance = lines.map(line => {
-    const acting = actingSchema.nullable().optional().parse(line.acting) || {};
-    const leadInSeconds = acting.leadInSeconds ?? 0, tailOutSeconds = acting.tailOutSeconds ?? 0;
-    const audioSeconds = measuredDuration(line);
-    const startSeconds: number | null = cursor;
-    const speechStartSeconds: number | null = cursor === null ? null : cursor + leadInSeconds;
-    const speechEndSeconds: number | null = speechStartSeconds === null || audioSeconds === null ? null : speechStartSeconds + audioSeconds;
-    cursor = speechEndSeconds === null ? null : speechEndSeconds + tailOutSeconds;
-    return {lineId:line.id,speaker:line.speaker,text:line.tts,delivery:line.delivery,acting,resolvedVocal:actingContract().resolvedStyle(undefined,acting),leadInSeconds,tailOutSeconds,audioSeconds,startSeconds,speechStartSeconds,speechEndSeconds,endSeconds:cursor};
-  });
-  return { performance, videoPrompt:actingContract().sceneVideoPrompt(performance,mode), textPolicy:'no_visible_text', durationSeconds:cursor, boundary:'one_shot_per_generation', timing:cursor===null?'needs_audio_duration':'measured', instructions:'Generate only this shot. Apply each line acting to its own speech interval, including anticipation and reaction time. Match the source frame expression to the opening acting; do not concatenate other shots sharing a reference image. '+actingContract().VIDEO_TEXT_POLICY, mode, provider: capabilities.provider, model: capabilities.model, capabilities, audioFirst: onScreen, lineIds: lines.map(line => line.id), review: 'not_reviewed' };
+  const timeline = actingContract().planScenePerformance(scene,measuredDuration);
+  const videoPrompt = actingContract().sceneVideoPrompt(timeline.performance,mode,scene);
+  const promptLength = capabilities.provider.trim().toLowerCase() === 'astra'
+    ? {characters:videoPrompt.length,maxCharacters:ASTRA_VIDEO_MAX_PROMPT_CHARS,exceeded:videoPrompt.length > ASTRA_VIDEO_MAX_PROMPT_CHARS}
+    : undefined;
+  const warnings = [...timeline.warnings];
+  if (promptLength?.exceeded) warnings.push(`ASTRA video prompt has ${promptLength.characters} characters; the adapter limit is ${promptLength.maxCharacters}. Shorten repeated descriptions or split at a natural action boundary while preserving necessary actions. The plan is unchanged.`);
+  return { ...timeline, warnings, promptLength, performanceRevision:hash(JSON.stringify(actingContract().scenePerformancePayload(scene))), videoPrompt, textPolicy:'no_visible_text', boundary:'one_shot_per_generation', instructions:'Generate only this shot. Preserve the ordered actions, addressees and reactions, including silent events. Concurrent actions share their speech interval. Match the source frame to the opening state; do not concatenate other shots sharing a reference image. '+actingContract().VIDEO_TEXT_POLICY, mode, provider: capabilities.provider, model: capabilities.model, capabilities, audioFirst: onScreen, lineIds: lines.map(line => line.id), review: 'not_reviewed' };
 }
+
 export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
   args = speechManageSchema.parse(args);
   const { file, win, header } = readBoard(args.path);
@@ -176,11 +176,12 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
     changed = true;
   }
   if (args.action === 'plan_video' || args.action === 'attach_video') {
-    if (!args.shotId || !selected.length) throw new Error('Select one shot with speech');
+    const scene = scenes.find(item => item.id === args.shotId);
+    if (!args.shotId || !scene) throw new Error('Select one existing shot');
     if (selected.some(({line}) => !line.id || !line.speaker || !line.delivery)) throw new Error('Prepare explicit speech before planning video');
     if (args.lineId || args.speaker || args.query) throw new Error('Video planning uses all lines in the shot; remove line filters');
     for (const {line} of selected) actingSchema.nullable().optional().parse(line.acting);
-    plan = speechVideoPlan(selected.map(({line}) => ({...line,audio:currentAudio(line,character(line.speaker))?line.audio:undefined})), args.capabilities);
+    plan = speechVideoPlan({...scene,narration:selected.map(({line}) => ({...line,audio:currentAudio(line,character(line.speaker))?line.audio:undefined}))}, args.capabilities);
     if (args.action === 'attach_video') {
       if (!args.videoPath) throw new Error('videoPath is required');
       const videoPath = resolve(dirname(file), args.videoPath);
@@ -192,12 +193,12 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
         if (line.audio.generation.text!==line.tts || errors.length) throw new Error('Speech generation evidence changed: '+errors.join('; '));
         return {lineId:line.id,sha256:line.audio.sha256,revision:line.audio.revision};
       });
-      const visual = object(selected[0].scene.visual);
+      const visual = object(scene.visual);
       const video = object(visual.video);
       if ((video.engine && video.engine !== plan.provider) || (video.model && video.model !== plan.model)) throw new Error('Adapter does not match the selected shot model');
       video.clip = args.videoPath;
       video.speechBinding = {...plan,audio,videoPath,videoSha256:hash(bytes)};
-      video.speechStatus = 'current'; visual.video=video; selected[0].scene.visual=visual;
+      video.speechStatus = 'current'; visual.video=video; scene.visual=visual;
       changed = true;
     }
   }

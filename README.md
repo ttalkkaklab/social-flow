@@ -187,6 +187,19 @@ production, generalized here to per-channel operation.
 >   writes `script.md` — the page you read while filming — with Korean headings, and
 >   `check-research.js` finds a research.md's verification table by Korean heading words.
 
+Storyboards start with complete scenes: a character wants something, an event changes
+what is possible, and a visible choice produces a consequence. The author then divides
+those scenes into shots. There is no default runtime or shot-count quota; staging,
+dialogue and listener reactions determine the length. Actual model clip limits are
+production constraints, handled at natural action boundaries. Read
+[the storyboard workflow](skills/storyboard/SKILL.md) before authoring a new episode.
+
+Reviewers first read only the actions and dialogue the audience will see and hear.
+Private plot explanations cannot repair a missing screen cue. Production planning
+carries essential actions, reactions and object states into the video request, including
+silent beats and action that overlaps speech. Local diagnostics expose omissions; a
+clean schema result does not prove story comprehension or generated video quality.
+
 Independent visual review collections use the installed storyboard planner and production builder:
 [animation review workflow](skills/produce/references/animation-review.md). The JSON-driven collection
 compares still-camera portraits, contextual 3D character scenes and object mechanisms, and records the

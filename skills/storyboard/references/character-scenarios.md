@@ -1,10 +1,11 @@
 # Character-led scenarios and whole-story review
 
-Owner directive, 2026-10-16. **Use this contract for every newly authored scenario.** It
-supersedes the legacy research quotas, mandatory wow/engine mix, spoken thesis, speech-only
-review and mandatory narrator speech in scenario-stage, scenario-craft, story-quality,
-storyboard, autoproduce and their reviewer instructions. Existing unversioned scenarios and
-story-v1 boards retain their checks; do not silently migrate approved episodes.
+**Use this contract for every newly authored scenario.** The new authoring path is
+causal story → complete acted scenes → blind comprehension → shots/staging → derived timing.
+Legacy authoring and reviewer instructions are separate references for existing unversioned
+or story-v1 episodes only. Do not load them for new work or migrate an approved episode
+silently. No runtime, shot-count, research-count, engine-mix or spoken-thesis quota defines
+story quality. Explicit user constraints, actual adapter limits and budgets still apply.
 
 ## Automation directive (2026-10-16)
 
@@ -19,7 +20,8 @@ may inspect those records without turning them into production prerequisites.
 
 - [Choose content and expression separately](#choose-content-and-expression-separately)
 - [Read the pool, then cast each candidate](#read-the-pool-then-cast-each-candidate)
-- [Write three different stories](#write-three-different-stories-not-three-engine-labels)
+- [Resolve the story direction](#resolve-the-story-direction)
+- [Complete scenes before shots](#complete-scenes-before-shots)
 - [Scenario file](#scenario-file-scenario-v2)
 - [Board handoff and review](#board-handoff-and-review-story-v2)
 - [Reviewer rubric](#reviewer-rubric)
@@ -70,7 +72,12 @@ configuration) and `reason` (why this person belongs). Stable identity and episo
 a character may narrate here and act in another episode. A narrator is selected when needed,
 not required to speak. Keep existing narrator/default-voice metadata for production compatibility.
 
-## Write three different stories, not three engine labels
+## Resolve the story direction
+
+Start with one scenario for settled material or an existing draft. Explore alternatives
+only when a material choice is unresolved or the user requests them. Their number follows
+the decision, not a three-candidate quota. A targeted revision need not restart selection. Preserve the requested genre and its
+particular audience experience; the points below are craft options, not a universal formula.
 
 1. Decide the audience experience and the ending: understanding, amusement, tenderness,
    suspense, awe or another concrete response. Choose an engine that fits the material:
@@ -96,16 +103,18 @@ not required to speak. Keep existing narrator/default-voice metadata for product
 8. Remove repeated explanation. Preserve subtext: what the character wants is author metadata;
    what the viewer sees/hears is the evidence. Theme may be inferred rather than spoken aloud.
 
-Suggested planning items: subject, hook, developments 1–3, ending, optional CTA. Store the
-subject in `premise`, the other six in ordered `beats`. No camera, timing or generation prompts.
+Store the subject in `premise` and group the story into ordered `beats`. Existing hook,
+development and ending labels remain compatible, but the actual events decide how many
+scenes or shots they need. Do not invent three developments to fill labels. No camera,
+timing or generation prompts yet.
 A `difference` sentence states how each candidate differs in dramatic situation, choice or
-payoff; three paraphrases fail human/reviewer judgment even if the checker passes.
+payoff; paraphrases do not resolve a real choice even if the checker passes.
 
-Before scoring, compare the three **causal skeletons** from the events alone: opening
+When comparing alternatives, read their **causal skeletons** from the events alone: opening
 situation → central choice → consequence → final observable change. Record that comparison
 in the candidate review. Shared cast, setting, historical facts or an initial incident are
 allowed. Changing engine labels, premise notes or the antagonist's last demand while keeping
-the same choices and consequences does not establish three different stories. The checker
+the same choices and consequences does not establish distinct story directions. The checker
 warns when any candidates copy the exact observable event sequences of the hook and all
 three developments (ignoring whitespace and author notes). This is a narrow warning, not a
 semantic similarity score: reviewers still judge the full stories, including legitimate
@@ -126,11 +135,56 @@ elsewhere, the person granting trust cannot silently know it happened. Show a wi
 communication or directly observable evidence, or write their decision from the information
 they do have. Compare this chain with each selected identity's priorities and boundaries.
 
+## Complete scenes before shots
+
+After selecting the causal direction, write the scene sequence as observable performance.
+For each scene establish enough place/time and starting situation to follow who wants what,
+what interferes, the choice they make and what changes. Keep the audience's necessary
+information in actions, actual speech or available sounds; identity sheets are not on screen.
+Use existing `STRUCTURE.scenes` fields for the scene handoff rather than a new required form.
+
+Allow a scene to hold multiple lines, multiple speakers and silence. Cut only after the
+scene reads coherently. The first speaker's line, second speaker's answer and listener's
+response can share a shot. Set dialogue `to` to the actual addressee; `audience` means a real
+address to the viewer, not a placeholder for unknown blocking. A narrator-only explanation
+and a silent visual story are valid expressions.
+
+Test important transitions with concrete questions: what caused this next choice; how did
+this character learn the information; what can they see/hear from their position; who holds
+the object now; what does the last action make the other person do? `necessity` should answer
+what becomes unclear or unearned if an event disappears. Trope names and generic goals do
+not answer it. Do not make characters speak that metadata aloud.
+
+Give an independent reader only the complete actions and actual words first. Ask them to
+reconstruct the event and consequence, including uncertainty. Only after this blind read
+show character wants, plot intent or the synopsis. Distinguish intentionally withheld answers
+from missing prerequisites. A mystery can be ambiguous and fair; a joke can be unstated and
+clear. Repair the event that caused the misunderstanding rather than its author explanation.
+
+When converting scenes to shots, preserve spatial relations, eyelines, prop custody and
+reaction. An opening image must show the state before the essential action; it cannot start
+after a handoff and still promise to show that handoff. Put the receiver or listener in a
+readable frame, or plan the cut/sound that delivers their response. Generic head motion and
+a camera push do not perform an object transfer, discovery or changed decision.
+
+Keep actor-relative left/right separate from camera-relative screen position. A reverse
+angle changes what appears at the frame edge, not which arm carries a bag. Match each
+shot's final body pose, object custody and location to the next opening. Before estimating
+time, trace the source pose, necessary travel, contact, handling and response in order.
+Only overlap actions that are physically compatible and explicitly staged together. One
+compound action entry may still need several sequential movements and enough time to read
+them; it is not automatically one quick gesture. Use existing direction/timing fields.
+For eating or drinking, stage the bite/sip, chewing or swallowing, breath and speech in a
+physically plausible order. Do not schedule clear dialogue through an occupied mouth merely
+to overlap events. If an interrupted or muffled line is intentional, describe that delivery.
+Keep consequential object contact and handling inside the chosen framing; a face-only shot
+cannot convey an unseen hand action just because the performance text names it.
+
 ## Scenario file (scenario-v2)
 
 Frontmatter: `version: scenario-v2`, `channel`, `topic`, `direction: D1 | D2 | D3`, and
 `frozen:` (empty until board authoring). One fenced `scenario-json` object is the canonical
-candidate. Present it as the seven readable items for the user; do not maintain another script.
+candidate. Render its actual beats and events for the user; do not maintain another script.
 
 Recommended object fields (the checker still validates readable data shapes):
 
@@ -146,14 +200,14 @@ Recommended object fields (the checker still validates readable data shapes):
   describes observable action or actual spoken words. `basis` is fact, interpretation or
   invented; fact/interpretation requires `claims: [N]` pointing to Verified rows.
 - `setups: [{open, pay, detail, reinterpretation}]`, 1-based beat indices, open before pay
-  (pay at most 5, before CTA). Empty is valid without a held reveal.
+  (use the actual beat positions). Empty is valid without a held reveal.
 - `adaptationBoundary` for adapted stories.
 
-Run `node check-scenario.js storyboard/candidates/` before showing/scoring all three, then
+Run `node check-scenario.js storyboard/candidates/` when comparing alternatives, then
 `node check-scenario.js storyboard/scenario.md` after selecting and freezing the winner.
 General authored scenes need no minimum facts. Evidence/adapted candidates need actual factual
 support; fiction needs none unless it makes real-world assertions. Record the selection in
-storyboard.md with its provenance. Keep all three candidates and the selected page.
+storyboard.md with its provenance. Keep the alternatives actually considered and the selected page.
 
 Show the readable candidate choices when requested. In automatic work, compare their
 causal skeletons, choose the strongest available story and continue; scores and freeze
@@ -176,9 +230,12 @@ has an explicit `speaker` ID, including the narrator. Do not rename the producti
 Copy selected identities and their actual TTS settings into the existing SB_DOC cast contract.
 `STORY.cast` holds the selected role/want/voice/source records, not a second TTS configuration.
 Follow [shot speech](../../produce/references/shot-speech.md): assign stable shot/line IDs,
-delivery and `SB_DOC.speechPlanVersion:1` before review. Keep each speaker’s lines and audio
+delivery and `SB_DOC.speechPlanVersion:1` before review. Set
+`SB_DOC.performanceTimingVersion:1` on new boards so production requires finite timing for
+independent actions. Unknown action durations are valid draft findings; older unversioned
+timing retains its compatibility path and an explicit warning, not a fabricated duration. Keep each speaker’s lines and audio
 receipts separate. A shot may contain several speakers: the speech composer joins their
-attached takes in line order, including each line’s anticipation and reaction time. Split
+attached takes in performance order, including anticipation, independent actions and reactions. Split
 shots when the staging calls for a cut and update performance group references.
 
 Translate the dramatic situation into optional per-line `acting` before production:
@@ -204,9 +261,28 @@ performance: [
 ```
 
 Speech events reference 1-based narration groups, exactly once in their playback order;
-action events carry text and no group. An all-visual shot has narration: [] and a planned
-finite duration. Transfer observable actions to visual.action and the corresponding video,
+action events carry text and no speech-reference `group`. Optional `durationSeconds` gives
+an authored action estimate. Optional `withGroup: 1` starts it with that 1-based speech
+group; without its own duration it spans that group, and a longer duration extends the
+interval by the maximum, not by adding two simultaneous events. An independent action
+without a duration has unknown timing, not zero. An all-visual shot has narration: [] and
+a planned finite duration. Transfer observable actions to visual.action and the corresponding video,
 still sequence, HTML motion or filming plan; never assume performance metadata animates itself.
+Call `speech_manage` with `{path, action: "plan_video", shotId, capabilities}`; it reads
+the whole stored scene, including performance. Do not restrict this handoff review to line
+IDs or invent an inline shot argument. Compare the returned event order, source state,
+visual action, listener reactions and warnings against the
+scene. `shot.videoDesign` before/action/after/motion and camera directions must agree with
+the performance; a text field alone is not proof of an executable or rendered action.
+
+Estimate shot time only after laying out words and actions. Per-line `acting.visual`
+happens with speech; an independent action or response may need its own interval. Do not
+use a universal speech-plus-padding formula. Match later measured audio and clip timing to
+this plan. If the take exceeds an adapter limit, split at an action boundary while keeping
+the necessary setup and consequence. If a user duration limit cannot fit the story, simplify
+or split the episode; do not silently omit causal events. 9:16 and 16:9 describe canvas,
+not how long the story must run.
+
 A narrative ending may use beat:drip, including a silent action. CTA beats and share
 metadata remain available but are never required, prescribed speech or terminal-position gates.
 For live recordings use existing STORY.transcripts with speaker IDs and actual source/times.
@@ -230,7 +306,7 @@ in playback order. `--map` maps findings to shot/event; `--text --speech` extrac
 for vocabulary review. No author intention, thesis or expectation goes in the first blind read.
 Then compare what the reviewer understood with STORY, character identities and relevant evidence.
 
-Use the existing narration reviewer call/budget (wire name `narration`, no extra loop) to assess:
+Use the existing reviewer wire name `narration` for the whole-performance read. Assess:
 meaning, progression, payoff, grounding and character. Grounding means real evidence for factual
 claims, internal rules and causality for invented events, both for adapted work. Quote actual
 events in all five STORY.review entries; do not substitute declared intent for delivered meaning.
@@ -245,9 +321,18 @@ review cannot establish that the rendered scene conveys them. Keep existing medi
 
 ## Reviewer rubric
 
-Meaning and audience investment 20; causal progression/necessary developments 20; character
-motivation and distinctive speech 20; setup/payoff or earned discovery/relationship change 25;
-clarity, economy and ending 15. No secondary-engine bonus and no compulsory fear/twist/moral.
+When scoring is requested, use the rubric agreed before the read. Default plan axes are
+meaning and causality 25; character knowledge/motivation 20; setup/payoff 15; visual staging
+and action continuity 25; rhythm/economy 15. Cite performed events and the relevant visual
+handoff, and subtract concrete defects rather than awarding metadata. No secondary-engine
+bonus and no compulsory fear/twist/moral. If only an early scenario is available, describe
+staging as provisional instead of pretending a full production plan was reviewed.
+
+Ordinary authoring has no numerical pass threshold. A user-requested improvement loop keeps
+their exact criterion; “over 95” is strictly >95 for each requested story with zero P0.
+Do not show the target score to the blind reader before their initial reconstruction.
+A reviewer must not edit the artifact they score, and prior scores do not constrain their
+new verdict. No plan score establishes that generated video will perform the planned action.
 P0: unresolvable factual claim, undisclosed invention presented as fact, contradictory world rule,
 unmotivated decisive choice, unearned ending, missing setup essential to a held reveal, unknown
 speaker, or an essential meaning present only in author notes. Cosmetic preferences are directives.

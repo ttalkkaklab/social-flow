@@ -265,7 +265,7 @@ test('wording extraction preserves speaker and addressee while excluding actions
   } finally { rmSync(dir, {recursive:true,force:true}); }
 });
 
-test('scene checker permits a visual close but requires the action in the production plan', () => {
+test('scene checker uses canonical performance and reports untimed actions without requiring duplicate visual text', () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'visual-close-'));
   try {
     const w = board();
@@ -274,7 +274,8 @@ test('scene checker permits a visual close but requires the action in the produc
     save(); let result = cli();
     assert.notEqual(result.status, 3, result.stderr);
     assert.doesNotMatch(result.stdout, /last narrated shot has no narration/);
-    assert.match(result.stdout, /performance action is missing/);
+    assert.doesNotMatch(result.stdout, /performance action is missing/);
+    assert.match(result.stdout, /Action timing unresolved/);
     w.SCENES.forEach(s => {s.visual = {action:s.performance.filter(e=>e.kind==='action').map(e=>e.text).join(' ')};});
     save(); result = cli();
     assert.doesNotMatch(result.stdout, /performance action is missing/);
@@ -321,4 +322,36 @@ test('CLI and browser never require CTA presence, speech, metadata or terminal p
     assert.doesNotMatch(checkCli(), /spoken CTA|after the cta|share trigger/);
     assert.equal(checkBrowser(w), '');
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+
+test('scene checker preserves imported transcript groups and content-led lengths', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'transcript-timing-'));
+  try {
+    const w = board();
+    w.SCENES[0].duration = 3;
+    w.SCENES[0].visual = {reuse:{clip:'recording.mp4'}};
+    w.SCENES[0].narration = [];
+    w.STORY.transcripts = [{shot:1,source:'recording.mp4',groups:[{text:'Have you eaten?',speaker:'child',start:0,end:3}]}];
+    const cli = () => {
+      writeFileSync(path.join(dir,'scenes.js'),Object.entries(w).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+      return spawnSync(process.execPath,[path.join(root,'check-scenes.js'),dir,'--json'],{encoding:'utf8'});
+    };
+    let result = cli();
+    assert.doesNotMatch(result.stdout,/Performance needs valid unique speech group references|main shots.*band/);
+    w.FORMAT = 'youtube-long-16x9';
+    w.SCENES[1].duration = 1300;
+    result = cli();
+    assert.doesNotMatch(result.stdout,/past the cap of 1200s|outside the default|duration 1300s.*band/);
+    w.FORMAT = 'shorts-9x16';
+    result = cli();
+    assert.doesNotMatch(result.stdout,/past the cap of 180s/);
+    w.MOTION_POLICY = {length_max_seconds:180};
+    result = cli();
+    assert.match(result.stdout,/outside the explicitly selected length constraint/);
+    delete w.STORY;
+    w.SCENES[0].narration = board().SCENES[0].narration;
+    result = cli();
+    assert.match(result.stdout,/past the cap of 180s/);
+  } finally { rmSync(dir,{recursive:true,force:true}); }
 });

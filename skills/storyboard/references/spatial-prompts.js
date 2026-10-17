@@ -164,7 +164,7 @@ function assemble(win, index, dir) {
     ...(perCutTreatment || activeCast.length ? ['Framing priority: the shot camera composition controls crop, angle, subject scale and visible body parts. Cast sheets, cut-type notes and episode camera language supply appearance and intent only; keep off-frame body parts outside the image.' + (previzFrame ? ' The previz first frame must already match this composition; correct a conflicting previz before generating the source image.' : '')] : []),
     'Spatial continuity: ' + d.continuity,
     ...(locationRef ? [locationRef.prompt, 'Attached image ' + (sourceReferenceImages.indexOf(locationRef.paths[0]) + 1) + ' is the LOCATION reference (reference review: ' + (locationRef.approved ? 'reviewed' : 'not_reviewed or stale') + '). Preserve its camera and architecture.'] : []),
-    'Keep the physical subject legible at phone size. The image contains only the scene; subtitles are added in editing.'].join('\n');
+    'Keep the physical subject legible at phone size. The image contains only a text-free scene; dialogue stays in audio, with no subtitles, captions or lettering in the image or final video.'].join('\n');
   const locationLock = locationRef ? '. The location holds the approved reference architecture and fixed object inventory: ' + locationRef.invariants.join('; ') : '';
   const lock = lockText(d, style, treatment, castLocks) + locationLock + (propPrompt ? ". " + propPrompt : "") + (isDrone(camera) ? '. The flight keeps continuous terrain parallax and stable landmarks; the picture stays a clean aerial view with scenery at every frame edge' : '');
   let motionPrompt = null;
@@ -185,6 +185,19 @@ function assemble(win, index, dir) {
       '. Rewrite videoDesign.action, motion.beats or continuity positively, in English, without seconds.');
     motionPrompt = clip.prompt;
   }
+  // Carry the authored performance into every model prompt, including listener
+  // actions omitted from an older videoDesign summary. Never silently truncate it.
+  const performanceDirection = (scene.performance || []).map((event, index) => {
+    if (event.kind === 'action') return `Event ${index + 1}: ${event.character}: ${event.text}` +
+      (event.withGroup ? ` (concurrent with speech group ${event.withGroup})` : '');
+    const line = scene.narration?.[event.group - 1];
+    return `Event ${index + 1}: ${event.character} ${line?.delivery || 'voiceover'}` +
+      (event.to ? ` addressed to ${event.to}; preserve the listener and eyeline` : '') +
+      (line?.acting?.visual ? `; ${line.acting.visual}` : '');
+  }).join('. ');
+  if (motionPrompt && performanceDirection) motionPrompt += '\nOrdered performance: ' + performanceDirection;
+  if (engine === 'astra' && motionPrompt?.length > 2000)
+    throw new Error('ASTRA motion prompt including performance exceeds 2000 characters; shorten descriptions or split at a natural action boundary, preserving every action');
   const locationEndReady = !locationRef || !!(locationRef.resultImage && v.bg && path.resolve(dir,v.bg)===path.resolve(dir,locationRef.resultImage));
   return { propSnapshot, propReferenceImages, endFrameImageArgs: locationRef && locationEndReady ? {referenced_image_paths: [path.resolve(dir,v.bg), ...locationRef.endPaths]} : {}, endFrameReady: locationEndReady, locationEndReferenceImages: locationRef?.endPaths || [], locationBinding: locationRef?.binding || null, locationReferenceRoles: locationRef?.roles || [], sourcePrompt: source, stylePreset: preset, cutType, castIds,
     styleBinding: pack?.binding || null,
