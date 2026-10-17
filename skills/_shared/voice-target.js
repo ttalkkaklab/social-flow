@@ -30,7 +30,7 @@ function characterVoiceTarget(source, override = {}) {
       perceivedAge: profile.perceivedAge ? 'voiceProfile.perceivedAge' : age ? 'character.identity.age' : null,
       baselineDirection: profile.baselineDirection ? 'voiceProfile.baselineDirection' : 'confirmed speech pace, register and habits' },
     warnings: [
-      'Age, vocal gender and stable timbre are casting constraints. Match the base voice; Gemini 3.8 style cannot change immutable speaker traits.',
+      'Age, vocal gender and stable timbre are casting constraints. Match the base voice or use tts_voice_design to create/remix it; Gemini 3.8 turn style cannot change immutable speaker traits; Voice Design is a separate identity creation API.',
       ...(vocalGender === 'unspecified' ? ['Vocal gender is unspecified; do not infer it from a name, role or appearance.'] : []),
       ...(!age ? ['Perceived voice age is unspecified.'] : []),
       ...(!timbre ? ['Vocal timbre is unspecified.'] : []),

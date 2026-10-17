@@ -119,3 +119,8 @@ new hashes. Test create and update paths as well as rejected incomplete updates.
 For Gemini3.8, age, vocal gender and stable timbre guide base-voice selection and
 actual audition. They cannot be changed with turn style. The derived baseline sends
 only confirmed speech pace, register and habits; keep explicit delivery overrides short.
+
+For an authorized voice identity change, use [Gemini voice design](../../_shared/gemini-voice-design.md).
+Voice Design can create or remix the identity itself; the turn-style limitation above
+does not prohibit that separate API. Preserve explicit authorization to apply a new
+voice directly; a request to regenerate all samples need not become a three-choice audition.

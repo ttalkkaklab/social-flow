@@ -1,3 +1,4 @@
+import { designGeminiVoice, voiceDesignSchema } from './voice-design.js';
 import { reviewActing as reviewTtsActing, actingReviewSchema as ttsActingReviewSchema } from './tts-acting-review.js';
 
 import { manageVoiceAudition, voiceAuditionSchema } from './voice-audition.js';
@@ -1068,6 +1069,11 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     );
   },
   // Local synthesis (Supertonic) — runs on-device as a subprocess. No key, network, or quota.
+
+  tts_voice_design: async (args) => {
+    const result = await designGeminiVoice(voiceDesignSchema.parse(args));
+    return text(JSON.stringify(result, null, 2), !result.success);
+  },
 
   tts_list_voices: async (args) => text(JSON.stringify(await tts.listTtsVoices(tts.ttsVoicesSchema.parse(args)), null, 2)),
 

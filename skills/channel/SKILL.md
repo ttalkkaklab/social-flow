@@ -8,7 +8,7 @@ description: >
   platforms, fact-check policy — the source of truth every storyboard, produce and publish
   run opens before anything else.
 argument-hint: "[add|list|update|serve|character] [channel-name]"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__stt_local_transcribe", "mcp__social-flow__character_voice_audition", "mcp__social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate"]
+allowed-tools: ["mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_voice_design", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__stt_local_transcribe", "mcp__social-flow__character_voice_audition", "mcp__social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate"]
 ---
 **Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 
@@ -305,3 +305,10 @@ when copying it to another machine. Design source and limits:
 - **`references/resolve-asset.py`** — resolve shared assets via catalog + well-known paths (`--ensure` adds a row, `--selftest`)
 - **`references/review-library.js`** — exports offline character sheets, both indexes and episode review pages; `--check` detects stale output
 - **`references/serve.js`** — the channel browser over HTTP: `/api/channels`, `/api/channels/<slug>/storyboards`, `/api/channels/<slug>/characters[/<id>]`, and `/files/<slug>/…` static from `data/` (dot segments refused, Range for audio/video). Zero dependencies, `--selftest`
+
+## Character voice age and identity changes
+
+For character samples or a request to sound older/younger, follow
+[Gemini voice design](../_shared/gemini-voice-design.md). Route sample-only edits
+to the character identity and sheet; do not rebuild episode media unless requested.
+Do not claim an age correction after changing only turn style with the same voice ID.

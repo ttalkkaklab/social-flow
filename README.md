@@ -587,10 +587,10 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 95 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 96 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions — 95 tools, including voice auditions and opt-in acting review
+│       ├── tools.ts             # tool definitions — 96 tools, including voice auditions and opt-in acting review
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -657,7 +657,7 @@ Episodes are saved only under `data/<channel>/episodes/<topic>/`. Open
 media and publication logs stay in the local episode directory; no destination
 selection or workspace key is required.
 
-## MCP tool surface (95 tools)
+## MCP tool surface (96 tools)
 
 `project_manage`: options · status · init · update · episode. Local project setup
 with genre, models, style, ratio, format and SNS records; no generation or publishing.
@@ -697,6 +697,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Optional final speech review | `tts_review_final` | Reviews actual media only when the user requests it. Keep file-bound evidence and honest findings; no automatic delivery gate. |
 | Requested acting review | `acting_review` | Optional paid Gemini evaluation of actual speech, expression, body action and lip sync against a scene direction. Requires an explicit review request and existing spending authorization; never runs as a default production gate. Records hashes, coverage, evidence and pass/fail/unverified status. Reuses unchanged receipts rather than rerolling scores. |
 | Pronunciation dictionary | `tts_elevenlabs_dictionary` | Creates Korean alias rules and returns pinned dictionary/version IDs for `pronunciationDictionaryLocators`. Keep the source name intact and test the actual pronunciation. |
+| Voice identity design | `tts_voice_design` | Create a stored Gemini voice from age, timbre and accent, or remix `baseVoice`. Saves a WAV preview, reusable `voice_` ID and provider usage receipt. See [voice design](skills/_shared/gemini-voice-design.md). |
 | Character voice auditions | `character_voice_audition` | Plan acoustic targets from character identity, compare real voice metadata, generate three candidates with a stable Gemini voice baseline, and persist only the user-selected voice. |
 | Requested acting evaluation | `tts_review_acting` | Explicit user request only. Evaluates actual WAV bytes with a fixed acting rubric and records timestamps, model judgment and audio hash. No default production gate. |
 | Voice generation | `tts_generate` / `tts_multi_speaker` / `tts_gemini_38` / `tts_list_voices` | Gemini TTS (GEMINI_API_KEY — curated and live library voice lookup, automatic language detection, saves mono 24kHz wav). `tts_gemini_38` uses the Interactions API for turn-level style, inline vocal events, and two-speaker backchannels. |

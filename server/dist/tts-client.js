@@ -60,12 +60,21 @@ export const TTS_VOICES = {
 /** Curated is offline; library uses the caller's live Gemini Voices API catalog. */
 export const ttsVoicesSchema = z.object({
     source: z.enum(['curated', 'library']).optional().default('curated'),
+    languageCode: z.array(z.string().min(1)).optional(),
+    regionCode: z.array(z.string().min(1)).optional(),
+    gender: z.array(z.enum(['male', 'female', 'neutral'])).optional(),
+    pitch: z.array(z.enum(['low', 'medium', 'high'])).optional(),
+    accent: z.array(z.string().min(1)).optional(),
+    persona: z.array(z.string().min(1)).optional(),
+    context: z.array(z.string().min(1)).optional(),
+    type: z.array(z.enum(['prebuilt', 'prompted', 'replicated'])).optional(),
+    search: z.string().min(1).refine(value => Buffer.byteLength(value) <= 2048, 'Search exceeds 2048 bytes').optional(),
     pageToken: z.string().min(1).optional(),
     // A small tool response is deliberate; the provider itself permits up to 1,000.
     limit: z.number().int().min(1).max(100).optional().default(30),
 }).strict().superRefine((value, ctx) => {
-    if (value.source === 'curated' && value.pageToken) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['pageToken'], message: 'pageToken is available only for source:library' });
+    if (value.source === 'curated' && [value.pageToken, value.languageCode, value.regionCode, value.gender, value.pitch, value.accent, value.persona, value.context, value.type, value.search].some(v => v !== undefined)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['pageToken'], message: 'Filters and pageToken are available only for source:library' });
     }
 });
 const geminiVoiceListBodySchema = z.object({
@@ -98,6 +107,12 @@ export async function listTtsVoices(request) {
         const params = new URLSearchParams({ page_size: String(parsed.limit) });
         if (parsed.pageToken)
             params.set('page_token', parsed.pageToken);
+        for (const [field, values] of Object.entries({ language_code: parsed.languageCode, region_code: parsed.regionCode, gender: parsed.gender, pitch: parsed.pitch, accent: parsed.accent, persona: parsed.persona, context: parsed.context, type: parsed.type })) {
+            for (const value of values || [])
+                params.append(field, value);
+        }
+        if (parsed.search)
+            params.set('search', parsed.search);
         const response = await requestRaw('get', `https://generativelanguage.googleapis.com/v1beta/voices?${params}`, { 'x-goog-api-key': requireGeminiKey() }, undefined, 30_000);
         if (!response.ok)
             return { success: false, source: 'library', error: describeGemini38Error(response.status, response.body) };

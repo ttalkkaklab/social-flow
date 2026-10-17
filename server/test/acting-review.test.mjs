@@ -283,13 +283,29 @@ test('unchanged audio policy keeps v6 paid receipts reusable', async t => {
   const f = setup(t);
   const audio = {...f.request, mode:'audio'};
   const first = await reviewActing(audio, f.deps);
-  assert.equal(first.policy, 'acting-review-v6');
+  assert.equal(first.policy, 'acting-review-v8');
   const repeated = await reviewActing(audio, f.deps);
   assert.equal(repeated.reused, true);
   assert.equal(repeated.receiptPath, first.receiptPath);
   assert.equal(f.calls(), 1);
   const visual = await reviewActing({...f.request, mode:'video'}, f.deps);
-  assert.equal(visual.policy, 'acting-review-v7');
+  assert.equal(visual.policy, 'acting-review-v9');
   assert.notEqual(visual.receiptPath, first.receiptPath);
   assert.equal(f.calls(), 2);
+});
+
+// Model rejection must not become a casting decision, including on cache reuse.
+test('unfavorable voice reviews remain advisory on fresh and cached responses', async t => {
+  const f = setup(t);
+  f.deps.evaluate = async () => {
+    const observation = good(); observation.scores.vocalEmotion = 70;
+    observation.findings.push(defect('vocalEmotion'));
+    return { observation, usage: { inputTokens: 1, outputTokens: 1, thoughtTokens: 0 } };
+  };
+  for (const result of [await reviewActing(f.request, f.deps), await reviewActing(f.request, f.deps)]) {
+    assert.equal(result.status, 'fail');
+    assert.equal(result.advisoryOnly, true);
+    assert.equal(result.selectionAuthority, 'user');
+    assert.match(result.interpretation, /do not reject, replace or regenerate/);
+  }
 });
