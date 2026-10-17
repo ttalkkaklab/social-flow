@@ -17,6 +17,7 @@ const ttsFields = {
     stability: z.number().min(0).max(1).optional(),
     similarity: z.number().min(0).max(1).optional(),
     stylePrompt: z.string().trim().min(1).max(1000).optional(),
+    voiceDirection: z.string().trim().min(1).max(400).optional(),
 };
 export const ttsSchema = z.object(ttsFields).superRefine((tts, ctx) => {
     if (tts.engine === 'gemini' && !Object.hasOwn(TTS_VOICES, tts.voiceId) && !(tts.model?.startsWith('gemini-3.8-') && /^[A-Za-z][A-Za-z0-9_-]*$/.test(tts.voiceId)))
@@ -36,4 +37,6 @@ export const ttsSchema = z.object(ttsFields).superRefine((tts, ctx) => {
                 issue(key, 'This setting is only supported by ElevenLabs');
     if (tts.stylePrompt !== undefined && (tts.engine !== 'gemini' || tts.model?.startsWith('gemini-3.8-')))
         issue('stylePrompt', 'This engine does not accept stylePrompt');
+    if (tts.voiceDirection !== undefined && tts.engine !== 'gemini')
+        issue('voiceDirection', 'Stable free-text voice direction is supported by Gemini only; match other engines by voice ID');
 });

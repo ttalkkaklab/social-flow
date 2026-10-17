@@ -34,6 +34,7 @@
  * - **The key never leaves this file.** Errors quote the server's message and the HTTP status,
  *   never the request headers — see redactedFailure().
  */
+import { createHash, randomInt } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { z } from 'zod';
@@ -41,6 +42,7 @@ import packageMetadata from '../package.json' with { type: 'json' };
 import { astraVideoBaseUrl, requireAstraVideoKey } from './config.js';
 import { requestRaw } from './http.js';
 import { bareFilenameSchema, resolveOutputFile } from './media-utils.js';
+import { checkSpeechSync } from './speech-sync-check.js';
 // ── constants measured against the live server ───────────────────────────────
 /** The three text-driven modes, exposed as one `tier` argument on astra_text2video. */
 export const ASTRA_VIDEO_TIERS = {
@@ -612,6 +614,8 @@ export const astraAudio2VideoSchema = z
     negativePrompt: negativePromptSchema,
     numInferenceSteps: numInferenceStepsSchema,
     guidance: guidanceSchema,
+    expectLipSync: z.boolean().default(false),
+    maxAttempts: z.number().int().min(1).max(3).default(2),
     ...outputFields,
 })
     .superRefine((data, ctx) => {
@@ -1135,7 +1139,7 @@ async function runJob(mode, prompt, body, outputPath, filename) {
     const { bytes, request, elapsedSeconds } = await awaitResult(jobId);
     fs.writeFileSync(videoPath, bytes);
     const response = { videoPath, jobId, mode, prompt, bytes: bytes.length, elapsedSeconds, ...(request ? { request } : {}) };
-    writeReceipt({ ...submitted, ...response, status: 'completed', completedAt: new Date().toISOString() });
+    writeReceipt({ ...submitted, ...response, sha256: createHash('sha256').update(bytes).digest('hex'), status: 'completed', completedAt: new Date().toISOString() });
     return response;
 }
 // ── the five entry points ────────────────────────────────────────────────────
@@ -1181,9 +1185,54 @@ export async function generateFromAudio(args) {
     if (image && image.kind !== 'image')
         throw new Error('ASTRA video imagePath must upload as image');
     const images = image ? [{ uploadId: image.uploadId, frameIdx: 0, strength: args.strength }] : undefined;
-    const body = buildJobBody('audio2video', { ...args, audioUploadId, images });
-    const result = await runJob('audio2video', args.prompt, body, args.outputPath, args.filename);
-    return { ...result, audioUploadId, audioExpiresAt: audio?.expiresAt, audioDuration: audio?.duration };
+    const uploaded = { audioUploadId, audioExpiresAt: audio?.expiresAt, audioDuration: audio?.duration };
+    if (!args.expectLipSync) {
+        const body = buildJobBody('audio2video', { ...args, audioUploadId, images });
+        return { ...await runJob('audio2video', args.prompt, body, args.outputPath, args.filename), ...uploaded };
+    }
+    // LTX 2.5 sometimes ignores the voice, and which seeds do is luck: same audio, image and
+    // prompt, a new seed only. Never an error — the best clip ships with its findings.
+    const results = [];
+    const attempts = [];
+    let retryError;
+    for (let attempt = 1; attempt <= args.maxAttempts; attempt += 1) {
+        const seed = attempt === 1 ? args.seed : randomInt(ASTRA_VIDEO_MAX_SEED);
+        const filename = attempt === 1 || !args.filename ? args.filename : args.filename.replace(/(\.[^.]+)?$/, (ext) => `-attempt${attempt}${ext}`);
+        const body = buildJobBody('audio2video', { ...args, seed, audioUploadId, images });
+        let result;
+        try {
+            result = await runJob('audio2video', args.prompt, body, args.outputPath, filename);
+        }
+        catch (error) {
+            if (attempt === 1)
+                throw error;
+            // A failed retry must not cost the clip already on disk.
+            retryError = `attempt ${attempt} failed: ${error instanceof Error ? error.message : String(error)}`;
+            break;
+        }
+        const check = checkSpeechSync({ videoPath: result.videoPath, audioPath: args.audioPath, audioStartTime: args.audioStartTime, audioMaxDuration: args.audioMaxDuration });
+        annotateReceipt(result.videoPath, { speechSync: { attempt, seed: seed ?? null, ...check } });
+        results.push(result);
+        attempts.push({ videoPath: result.videoPath, jobId: result.jobId, seed, check });
+        if (!check.findings.some((finding) => finding.reseed))
+            break;
+    }
+    const last = attempts.length - 1;
+    const chosen = attempts[last].check.findings.some((finding) => finding.reseed)
+        ? attempts.reduce((best, a, i) => ((a.check.sync?.margin ?? -Infinity) > (attempts[best].check.sync?.margin ?? -Infinity) ? i : best), 0)
+        : last;
+    // This selects a transport candidate, never an accepted performance. Carry that
+    // distinction in the persisted receipt so attachment and assembly cannot lose it.
+    annotateReceipt(results[chosen].videoPath, { selection: { status: 'provisional',
+            basis: 'picture_motion_audio_correlation', candidate: chosen,
+            review: { camera: 'not_reviewed', blocking: 'not_reviewed', phonemeLipSync: 'not_reviewed' } } });
+    return { ...results[chosen], ...uploaded, speechSync: { attempts, chosen, ...(retryError ? { retryError } : {}) } };
+}
+function annotateReceipt(videoPath, extra) {
+    const receiptPath = `${videoPath}.astra-job.json`;
+    const temp = `${receiptPath}.${process.pid}.tmp`;
+    fs.writeFileSync(temp, JSON.stringify({ ...JSON.parse(fs.readFileSync(receiptPath, 'utf8')), ...extra }, null, 2) + '\n', { mode: 0o600 });
+    fs.renameSync(temp, receiptPath);
 }
 export async function generateIcLora(args) {
     const reference = await uploadFile(args.referencePath);

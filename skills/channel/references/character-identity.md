@@ -84,6 +84,13 @@ Resolve unknowns with the user, or retain pending; never retrofit a fabricated r
    reference audio in the identity/sheet. A pending draft must not claim a confirmed voice.
    Follow [acting prompts and auditions](../../produce/references/acting-prompts.md).
    `direction.voice` guides performance; per-line `acting` does not replace voice identity.
+   Use the audition tool's read-only `plan` to extract acoustic targets and compare
+   real voice-library metadata first. An optional `voiceProfile` beside `character`
+   and `tts` stores explicit vocalGender, perceivedAge and a compact baselineDirection.
+   Unknown voice traits stay unknown; do not infer them from names or appearance.
+   Gemini audition candidates carry the derived stable `tts.voiceDirection` into
+   production after selection. Keep personality as casting/review context and scene
+   emotion as per-line acting; never feed the full biography to a speech model.
 4. New storyboards set `SB_DOC.characterSchemaVersion = 1`. Copy each compiler result
    into `SB_DOC.characters` (add shared panel paths separately, never scene images). `direction.image` feeds still
    prompts; `direction.video` feeds motion/acting prompts; `direction.dialogue` guides
@@ -108,3 +115,12 @@ a new sample. Keep previous inputs and reviews in a sibling evidence folder. Exi
 hash-bound reviews become stale on any identity/media change; never carry their score
 forward. Obtain a fresh independent review on the actual revised files before recording
 new hashes. Test create and update paths as well as rejected incomplete updates.
+
+For Gemini3.8, age, vocal gender and stable timbre guide base-voice selection and
+actual audition. They cannot be changed with turn style. The derived baseline sends
+only confirmed speech pace, register and habits; keep explicit delivery overrides short.
+
+For an authorized voice identity change, use [Gemini voice design](../../_shared/gemini-voice-design.md).
+Voice Design can create or remix the identity itself; the turn-style limitation above
+does not prohibit that separate API. Preserve explicit authorization to apply a new
+voice directly; a request to regenerate all samples need not become a three-choice audition.

@@ -1067,30 +1067,48 @@ const ACTING_PROPERTY = { type: 'object', additionalProperties: false, descripti
   direction: { type: 'string', maxLength: 500, description: 'Short plain delivery direction; no bracket markup.' },
   tags: { type: 'array', maxItems: 6, items: { type: 'string', maxLength: 60 }, description: 'Bare English vocal events prepended to this line, e.g. sigh. Split the line for later changes.' }
 } };
+const VOICE_PROFILE_PROPERTY = { type: 'object', additionalProperties: false, description: 'Explicit acoustic targets; never infer voice gender from names or roles.', properties: {
+  vocalGender: { type: 'string', enum: ['female','male','neutral','unspecified'], description: 'Desired audible gender, e.g. female; unspecified preserves uncertainty.' },
+  perceivedAge: { type: 'string', maxLength: 100, description: 'Desired age impression, e.g. adult in her fifties; defaults to confirmed character age.' },
+  baselineDirection: { type: 'string', maxLength: 400, description: 'Short habitual delivery, e.g. dry measured phrasing. For Gemini3.8 use the base voice for age/gender/timbre; style cannot change immutable traits. No biography or changing scene emotion.' }
+} };
+const CHARACTER_TARGET_PROPERTY = { type: 'object', additionalProperties: false, description: 'Acoustic target from character_voice_audition plan. Metadata is intent, never proof of the voice heard.', properties: {
+  vocalGender: {type:'string',enum:['female','male','neutral','unspecified'],description:'Requested audible gender, e.g. female; unspecified skips gender comparison.'},
+  perceivedAge: {type:['string','null'],maxLength:100,description:'Plausible perceived age, e.g. 52 years old; null means unknown.'},
+  ...Object.fromEntries(['timbre','pace','register','habits','emotionalRange'].map(key=>[key,{type:['string','null'],maxLength:2000,description:`Confirmed character ${key}, e.g. low clear voice or measured phrasing; null means unknown.`}])),
+  traits: {type:'array',maxItems:20,description:'Character tendencies as context, e.g. ["restrained and precise"]. Do not demand every trait in one short line.',items:{type:'string',maxLength:2000}}
+}, required:['vocalGender','perceivedAge','timbre','pace','register','habits','emotionalRange','traits'] };
 
 export const TOOLS: Tool[] = [
   {
     name: 'tts_review_acting', title: 'Explicitly requested adversarial audio review', annotations: HINT.generate,
-    description: 'Send an actual WAV to the configured Gemini audio reviewer only when the user asks for listening/evaluation. Scores accuracy25, acting30, naturalness25, audio quality20. Returns model judgment, timestamped defects, audio hash and saved report. PASS requires >=95, complete listening, confidence>=0.9 and no major/critical issue. Never call automatically from normal production, invent listening evidence, or treat a model score as human approval. Does not generate speech or change the WAV.',
+    description: 'Create an adversarial review of actual speech audio.\n\nUse for explicitly requested listening, voice-fit evaluation or acting review. Optional characterTarget scores characterFit40/accuracy20/acting15/naturalness15/audioQuality10 and independently describes the voice heard; otherwise uses the existing acting rubric. Returns score (0-100), timestamped defects, observed voice, hashes and immutable reports. PASS needs >=95, characterFit>=95 when requested, complete listening, confidence>=0.9 and no major/critical issue. Do NOT use for synthesis — use the planned raw TTS tool. Never run as a default production gate or equate model judgment with user approval.',
     inputSchema: { type: 'object', additionalProperties: false, properties: {
       audioPath: { type: 'string', description: 'Actual WAV path, under14MiB.' }, expectedText: { type: 'string', maxLength: 4000, description: 'Clean expected spoken words, without acting tags.' },
       direction: { type: 'string', maxLength: 2000, description: 'Requested scene intent and audible performance changes.' }, language: { type: 'string', default: 'ko', description: 'Spoken language.' },
-      requestedBy: { type: 'string', maxLength: 1000, description: 'Actual user request authorizing paid audio evaluation.' }, outputPath: { type: 'string', description: 'Local directory for hash-bound review reports.' }
+      requestedBy: { type: 'string', maxLength: 1000, description: 'Actual user request authorizing paid audio evaluation.' }, outputPath: { type: 'string', description: 'Local directory for hash-bound review reports.' }, characterTarget: CHARACTER_TARGET_PROPERTY
     }, required: ['audioPath','expectedText','direction','requestedBy','outputPath'] }
   },
   {
     name: 'character_voice_audition', title: 'Audition three character voices and save the user choice',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    description: 'create generates exactly three paid voice previews using the same sample and model, writes a local HTML page with audio players and an audition manifest, and leaves identity.md unchanged. Choose three distinct voices matching the character from the voice lookup tools. read loads the existing audition. select requires the actual user choice; it verifies identity and audio hashes, backs up identity.md, and writes only the chosen tts configuration and selection provenance. Never select on behalf of the user, invent a choice, or run creation again after a partial failure without inspecting the manifest. Returns auditionPath, previewPath, candidate audio files and selection state. No publishing or automatic scoring.',
+    description: 'Create character voice auditions or plan acoustic targets.\n\nUse for casting, sample voices or character voice matching. plan reads confirmed age, timbre, speech and personality without synthesis; compare real provider metadata and expose unknowns. create generates three paid previews, composes a compact Gemini voiceDirection with acting and saves target/metadata/request/hash evidence without changing identity. select requires the actual user choice and verifies hashes before saving its voice settings. Returns target, candidate comparisons, auditionPath, previewPath and selection state. Do NOT use for ordinary dialogue — use speech_manage plan_audio and its raw TTS tool. Never auto-select or score without a requested audio review; inspect partial failures before retrying.',
     inputSchema: { type: 'object', additionalProperties: false, properties: {
-      action: { type: 'string', enum: ['create','read','select'], description: 'Generate three choices, inspect them, or save an explicit user choice.' },
+      action: { type: 'string', enum: ['plan','create','read','select'], description: 'plan reads identity without generating; create generates three choices; read inspects; select saves an explicit user choice.' },
       identityPath: { type: 'string', description: 'Existing character identity.md with one structured character JSON block. Draft tts may be absent before selection.' },
       auditionPath: { type: 'string', description: 'Manifest path returned by create; required for read/select.' },
       sampleText: { type: 'string', minLength: 5, maxLength: 300, description: 'Same natural spoken sample for all three candidates; no tag markup.' },
+      sampleTurns: {type:'array',minItems:2,maxItems:10,description:'Optional Gemini 3.8 sample excerpts with separate acting. Texts joined with spaces must reproduce sampleText exactly; omit top-level acting. Each turn retains the same candidate voice and stable baseline.',items:{type:'object',additionalProperties:false,required:['text'],properties:{text:{type:'string',minLength:1,maxLength:300,description:'Exact spoken excerpt in sample order, e.g. I will help you.'},acting:ACTING_PROPERTY}}},
       acting: ACTING_PROPERTY,
+      voiceProfile: VOICE_PROFILE_PROPERTY,
       candidates: { type: 'array', minItems: 3, maxItems: 3, description: 'Exactly three distinct voice IDs on one selected engine/model/language.', items: { type: 'object', additionalProperties: false, required: ['label','reason','tts'], properties: {
         label: { type: 'string', maxLength: 100, description: 'Human-readable candidate label.' },
         reason: { type: 'string', maxLength: 500, description: 'Why this voice suits the character.' },
+        metadata: {type:'object',additionalProperties:false,description:'Actual voice lookup evidence, e.g. Gemini library metadata; omitted fields stay unknown.',properties:{
+          voiceId:{type:'string',maxLength:300,description:'Exact candidate voice ID, e.g. ko-kr-theatrical-1.'},
+          source:{type:'string',enum:['gemini-library','gemini-curated','elevenlabs'],description:'Voice lookup source, e.g. gemini-library; never label inferred facts as provider metadata.'},retrievedAt:{type:'string',format:'date-time',description:'Actual lookup time, e.g. 2026-10-17T10:00:00Z.'},
+          gender:{type:'string',maxLength:100,description:'Provider-reported vocal gender, e.g. female; omit when absent.'},age:{type:'string',maxLength:200,description:'Provider age label, e.g. 35-year-old; omit when absent.'},pitch:{type:'string',maxLength:100,description:'Provider pitch label, e.g. low; omit when absent.'},description:{type:'string',maxLength:2000,description:'Exact provider voice description, e.g. warm low voice; no invented attributes.'}
+        },required:['voiceId','source','retrievedAt']},
         tts: { type: 'object', description: 'Candidate voice settings saved unchanged only after user selection.', additionalProperties: false, required: ['engine','model','voiceId','language','speed'], properties: {
           engine: { type: 'string', enum: ['gemini','elevenlabs'], description: 'Selected speech provider.' },
           model: { type: 'string', description: 'Explicit supported Gemini model or eleven_v4.' },
@@ -1099,7 +1117,8 @@ export const TOOLS: Tool[] = [
           speed: { type: 'number', enum: [1], description: 'Neutral speed only.' },
           stability: { type: 'number', minimum: 0, maximum: 1, description: 'Optional ElevenLabs v4 consistency.' },
           similarity: { type: 'number', minimum: 0, maximum: 1, description: 'Optional ElevenLabs v4 voice similarity.' },
-          stylePrompt: { type: 'string', description: 'Only for pre-3.8 Gemini baseline style.' }
+          stylePrompt: { type: 'string', description: 'Only for pre-3.8 Gemini baseline style.' },
+          voiceDirection: { type: 'string', maxLength:400, description:'Short habitual Gemini delivery; plan/create derives speech pace, register and habits when omitted. Base voice selection carries age, gender and timbre. Preserved alongside scene acting.' }
         } }
       } } },
       candidateId: { type: 'string', enum: ['1','2','3'], description: 'Candidate selected by the user.' },
@@ -2329,9 +2348,10 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 Use when the picture has to follow a sound you already have — a narration take, a music bed, a recorded effect — instead of the picture being cut to it afterwards. Provide exactly one of audioPath (local .wav/.mp3) or audioUploadId (reuse an existing upload without uploading again). Reused ids have unknown expiry/duration locally, so the server checks them. Optionally give imagePath to pin one portrait to frame 0.
 Do NOT use to add sound to a finished clip: this generates new picture from the audio, it does not mux. The rendered video carries the supplied WAV re-encoded as AAC (48kHz stereo): a measured upload-to-output 100ms RMS Pearson correlation was 0.99997 at zero lag. Input audio must have two channels: mono fails in the engine's audio encoder, and the 2026-10-17 server design refuses it at upload (re-encode with ffmpeg -ac 2). The audio after audioStartTime must also cover the video: a WAV more than 0.08s shorter than numFrames/frameRate (121 frames when omitted) dies on a latent shape mismatch, so it is refused after upload and before the job with the length to fix — or pass audioMaxDuration to follow the audio.
 Choose either numFrames or audioMaxDuration, never both. numFrames fixes the clip length. audioMaxDuration uses the shorter of that value and the audio remaining after audioStartTime, floors seconds × frameRate, then rounds down to 8k+1; more than ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} frames is refused when upload duration is known. audioStartTime must be before the uploaded audio ends. With neither length field, the default is 121 frames (about 5.04s at 24fps), not the source audio length: an 8.000s WAV produced 5.041s of audio. Set numFrames or audioMaxDuration to request a longer span; audioMaxDuration=8.0 at 24fps rounds down to 185 frames (about 7.708s), so grid rounding can still trim the tail. A measured 121-frame render took about 170s plus queue.
+Set expectLipSync:true when every spoken line in the audio belongs to a visible speaker (on_screen). LTX 2.5 sometimes ignores the voice, so after each render ffmpeg compares the picture's motion with the speech loudness; when no region moves with the speech, the same audio, image and prompt render again with a new seed, up to maxAttempts (default 2, each a full render). It never fails the call: the best clip is returned with its findings, and every attempt's seed and measurement are written into its .astra-job.json. It also reports speech cut off by the frame count and a clip audio track that differs from the supplied WAV; another seed fixes neither, so those are reported, not retried. It does not judge phoneme-level lip sync, which visible person spoke, or voice identity, and in medium or wide shots the mouth is too small to measure reliably. Calibrated 2026-10-17 on five real close-ups whose mouths stayed closed (margins −0.23 to −0.08, threshold 0.1); no real clip that followed the voice was available, and a new seed rarely fixed a refusal, so a second failure points at the opening image, prompt or strength. Leave it off for music, effects or off-screen voice.
 ${ASTRA_LIMITS_LINE}
 
-Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
+Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, the request the server recorded and, with expectLipSync, each attempt's speech sync result.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -2373,6 +2393,14 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
         numInferenceSteps: ASTRA_STEPS_PROPERTY,
         guidance: ASTRA_GUIDANCE_PROPERTY,
+        expectLipSync: {
+          type: 'boolean', default: false,
+          description: 'true when every spoken line in the audio is said by a visible person. Checks that the picture moves with the speech after each render and re-renders with a new seed when it does not. Off for music, effects or off-screen voice.',
+        },
+        maxAttempts: {
+          type: 'integer', minimum: 1, maximum: 3, default: 2,
+          description: 'expectLipSync only: total renders including the first (default 2). Each one is a full render (~170s plus queue) on the one-at-a-time ASTRA box.',
+        },
         outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
         filename: ASTRA_FILENAME_PROPERTY,
       },
@@ -3407,7 +3435,7 @@ Returns: a text block with the saved .wav file path, voice name, and text length
     description: `Generate acted single-voice or two-speaker speech with Gemini 3.8 TTS through the Interactions API.
 
 Use for emotional acting, per-line delivery changes, vocal events, pauses, and two-person dialogue. Put lasting delivery in each turn's style field. Put point events directly in text with the documented English angle-bracket tags, such as <laugh>, <sigh>, <cough>, <breath>, <short pause>, or <long pause>. For listener backchannels and overlapping speech in two-speaker mode, put pipe segments such as |oh really?| inside the active speaker's text. The text is read verbatim, so never put stage directions in it unless they are a supported tag.
-Single voice accepts a curated name, an extended-library voice, or a voice_ / voicekey_ identifier. Two-speaker mode requires exactly two configured curated voices and every turn must name one configured speaker. Gemini 3.8 supports at most two speakers in one request.
+For a requested age or identity change, create/remix the voice with tts_voice_design first; changing turn style with the same ID is not an identity correction. Single voice accepts a curated name, an extended-library voice, or a voice_ / voicekey_ identifier. Two-speaker mode requires exactly two configured curated voices and every turn must name one configured speaker. Gemini 3.8 supports at most two speakers in one request.
 This is a supporting engine for acted cuts and two-person scenes. The saved speech model stays authoritative; never replace an existing Gemini or ElevenLabs v4 selection automatically.
 
 Returns: a text block with the saved 24kHz mono RIFF WAV path, model, voice or speaker assignments, turn count, and total text length.`,
@@ -3523,10 +3551,32 @@ Returns: a text block with the saved .wav file path, speaker/voice assignments, 
     },
   },
   {
+    name: 'tts_voice_design', title: 'Design a persistent Gemini character voice', annotations: HINT.generate,
+    description: 'Create a paid stored Gemini voice from character age, vocal gender, timbre and accent using POST /v1beta/voices. Use when casting a custom character or changing perceived age/identity; turn style only controls delivery. Optional baseVoice remixes an existing voice. Returns voiceId, local WAV preview, hash, usage and receipt; use that ID with tts_gemini_38. Does not edit character sheets or episodes and does not certify age by listening. Requires GEMINI_API_KEY and a new outputPath per creation; never blindly retry an uncertain call. For catalog discovery use tts_list_voices source:library with filters; for ordinary lines use speech_manage plan_audio.',
+    inputSchema: { type: 'object', additionalProperties: false, properties: {
+      model: { type: 'string', enum: ['gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts'], description: 'Explicit voice creation model.' },
+      displayName: { type: 'string', minLength: 1, maxLength: 100, description: 'Distinct name for later catalog reconciliation.' },
+      prompt: { type: 'string', minLength: 1, maxLength: 4000, description: 'Stable voice identity: perceived age, timbre, accent and baseline delivery; relative changes if baseVoice is supplied.' },
+      languageCode: { type: 'string', minLength: 1, description: 'BCP-47 primary language, e.g. ko-KR.' },
+      gender: { type: 'string', enum: ['male','female','neutral'], description: 'Perceived vocal gender from character identity.' },
+      baseVoice: { type: 'string', minLength: 1, maxLength: 300, description: 'Optional existing prebuilt voice name or accessible custom voice ID to remix.' },
+      outputPath: { type: 'string', minLength: 1, description: 'New local directory for voice-design.json and voice-preview.wav. Existing receipt prevents duplicate creation.' }
+    }, required: ['model','displayName','prompt','languageCode','gender','outputPath'] }
+  },
+  {
     name: 'tts_list_voices', title: 'Gemini voice catalog', annotations: HINT.read,
-    description: 'List Gemini curated voices or query the live extended/custom voice library. source=curated returns the static 30-voice list without API usage. source=library queries GET /v1beta/voices with pageToken/limit and requires GEMINI_API_KEY. Returns voice IDs and metadata; choose by audition. For ElevenLabs use tts_elevenlabs_voices. This tool does not synthesize audio.',
+    description: 'List Gemini curated voices or query the live extended/custom voice library. source=curated returns the static 30-voice list without API usage. source=library queries GET /v1beta/voices with pageToken/limit and requires GEMINI_API_KEY. Supports languageCode, gender, pitch, persona and description search; preserve filters across pages. There is no numeric age filter: search description text or use tts_voice_design to create/remix an age-appropriate voice. Returns voice IDs and metadata; metadata age is not listening evidence. For ElevenLabs use tts_elevenlabs_voices. This tool does not synthesize audio.',
     inputSchema: { type: 'object', additionalProperties: false, properties: {
       source: { type: 'string', enum: ['curated','library'], default: 'curated', description: 'Static basic catalog or live voice library.' },
+      languageCode: { type: 'array', items: { type: 'string', minLength: 1 }, description: 'Library-only languageCode filter; multiple values match with OR.' },
+      regionCode: { type: 'array', items: { type: 'string', minLength: 1 }, description: 'Library-only regionCode filter; multiple values match with OR.' },
+      accent: { type: 'array', items: { type: 'string', minLength: 1 }, description: 'Library-only accent filter; multiple values match with OR.' },
+      persona: { type: 'array', items: { type: 'string', minLength: 1 }, description: 'Library-only persona filter; multiple values match with OR.' },
+      context: { type: 'array', items: { type: 'string', minLength: 1 }, description: 'Library-only context filter; multiple values match with OR.' },
+      gender: { type: 'array', items: { type: 'string', enum: ['male', 'female', 'neutral'] }, description: 'Library-only gender filter.' },
+      pitch: { type: 'array', items: { type: 'string', enum: ['low', 'medium', 'high'] }, description: 'Library-only pitch filter.' },
+      type: { type: 'array', items: { type: 'string', enum: ['prebuilt', 'prompted', 'replicated'] }, description: 'Library-only type filter.' },
+      search: { type: 'string', minLength: 1, description: 'Library-only case-insensitive substring search of name and description, at most 2048 UTF-8 bytes; not a numeric age range.' },
       pageToken: { type: 'string', description: 'Next page token from a prior library response.' },
       limit: { type: 'integer', minimum: 1, maximum: 100, default: 30, description: 'Maximum library voices per request.' }
     } }
@@ -4811,7 +4861,7 @@ Returns: integer credit balance.`,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: `Update shot dialogue, line acting and local audio/video bindings.
 
-Use for dialogue edits, expression or intonation corrections, stable speaker routing and generation planning. list finds lines; prepare assigns stable ids; update replaces requested line fields; attach_audio/attach_video bind generated files. plan_audio resolves the pinned voice and each line's scene direction into raw generator arguments; plan_video resolves the selected adapter's capabilities and carries the same acting/timing context. Scene direction overrides baseline style without changing voice identity. Local files only: plans do not generate, listen, score or approve. Read first and pass expectedRevision for writes; unknown speakers, ambiguous targets, stale revisions and unsupported lip-sync routes fail. Keeps source backups.
+Use for dialogue edits, expression or intonation corrections, stable speaker routing and generation planning. list finds lines; prepare assigns stable ids; update replaces requested line fields; attach_audio returns measured timing; retime updates the complete shot clock from current speech and explicit action edits. attach_video binds generated files; reuse:tail_trim accepts only unchanged audio and performance starts with a shorter tail. plan_audio resolves the pinned voice and each line's scene direction into raw generator arguments; plan_video resolves the selected adapter's capabilities and carries the same acting/timing context. Scene direction overrides baseline style without changing voice identity. Local files only: plans do not generate, listen, score or approve. Read first and pass expectedRevision for writes; unknown speakers, ambiguous targets, stale revisions and unsupported lip-sync routes fail. Keeps source backups.
 
 Do NOT use to generate media: call the planned raw TTS tool or selected video adapter, then attach the result. Do NOT use for read-only whole-story inspection: use storyboard_read instead. Never group different emotional beats or nonconsecutive shots by shared image and slice them into unrelated reactions.
 
@@ -4819,7 +4869,7 @@ Returns revision, ordered matching lines with generationPlan and voice/audio has
     inputSchema: {
       type: 'object', properties: {
         path: { type: 'string', description: 'Storyboard directory or scenes.js' },
-        action: { type: 'string', description: 'Local operation: list, prepare ids, update a line, attach generated audio/video, plan raw speech arguments, or plan the selected video adapter', enum: ['prepare','list','update','attach_audio','plan_audio','plan_video','attach_video'] },
+        action: { type: 'string', description: 'Local operation: list, prepare ids, update a line, attach generated audio/video, plan raw speech arguments, or plan the selected video adapter', enum: ['prepare','list','update','attach_audio','plan_audio','plan_video','attach_video','retime'] },
         shotId: { type: 'string', description: 'Stable shot id, not its display number' }, lineId: { type: 'string', description: 'Stable dialogue id; required for line writes' }, speaker: { type: 'string', description: 'Filter by character id or exact display name' }, query: { type: 'string', description: 'Exact substring of spoken or subtitle text to find' },
         expectedRevision: { type: 'string', description: 'Current revision from list; required for writes' },
         patch: { type: 'object', description: 'Only the requested line fields to replace; speaker uses its stable id', properties: {
@@ -4835,6 +4885,11 @@ Returns revision, ordered matching lines with generationPlan and voice/audio has
             tailOutSeconds: { type: 'number', minimum: 0, maximum: 5, description: 'Reaction time after this line in seconds, e.g. 0.4; default zero.' }
           } }
         }, additionalProperties: false },
+        timingPatch: { type: 'object', description: 'Only for retime. Preserve standalone actions unless explicitly edited; provider padding never becomes an action.', additionalProperties: false, properties: {
+          speechBoundActions: { type: 'boolean', description: 'Explicitly remove inherited durations on withGroup actions so they follow measured speech' },
+          actions: { type: 'array', description: 'Explicit [zero-based performance index, positive seconds] edits for actions', items: { type: 'array', minItems: 2, maxItems: 2, items: { type: 'number' } } }
+        } },
+        reuse: { type: 'string', enum: ['tail_trim'], description: 'Only attach_video: preserve existing generated bytes for a verified temporal prefix; rejects changed audio, moved speech, changed action semantics or extension. Does not certify visual quality.' },
         audioPath: { type: 'string', description: 'Generated audio file; absolute or relative to storyboard directory' }, videoPath: { type: 'string', description: 'New video file to bind to the shot and current audio' },
         generation: { type: 'object', description: 'Raw TTS request and declared text language; no listening score', properties: { generator: { type: 'string', description: 'Raw TTS tool that generated this file' }, voiceSettings: { type: 'object', description: 'Exact voice and language settings sent to the generator' }, text: { type: 'string', description: 'Exact clean line text; voiceSettings stores the actual tagged provider request from plan_audio' }, language: { type: 'string', description: 'Declared text language, e.g. ko; metadata for engines without a language argument, never an invented API parameter' } }, required: ['generator','voiceSettings','text'], additionalProperties: false },
         capabilities: { type: 'object', description: 'Selected adapter capabilities from verified schema/documentation, with evidence', properties: { provider: { type: 'string', description: 'Selected video adapter provider id, matching the shot engine' }, model: { type: 'string', description: 'Selected model id, matching the shot model when set' }, audioConditioning: { type: 'boolean', description: 'Whether the adapter accepts supplied speech as conditioning' }, lipSync: { type: 'boolean', description: 'Whether supplied speech drives visible mouth motion' }, postLipSync: { type: 'boolean', description: 'Whether a separately selected post lip-sync adapter is available' }, evidence: { type: 'string', description: 'Documentation or verified capability record supporting these settings' } }, required: ['provider','model','audioConditioning','lipSync','postLipSync','evidence'], additionalProperties: false }
@@ -4851,7 +4906,7 @@ Use when the user asks to listen/watch, adversarially evaluate, or improve expre
 
 Do NOT use for free provenance or generation planning: use speech_manage instead. Do NOT use metadata or still frames as proof that speech or continuous acting works.
 
-Returns status pass/fail/unverified, nullable score, failures, review with situation/expression/body/vocalEmotion/speechAccuracy/lipSync evidence, media/direction hashes, usage, receiptPath and reused. success requires verified score >=95 on all required axes, confidence >=0.9, complete required track coverage and no findings. Unobserved axes are null; audio-only review cannot certify visual acting.`,
+User preference decides voice casting; perceived age and naturalness are subjective. Never reject or regenerate a preferred take to satisfy this review. Returns advisoryOnly=true, selectionAuthority=user, interpretation, status pass/fail/unverified, nullable score, failures, review with situation/expression/body/vocalEmotion/speechAccuracy/lipSync evidence, media/direction hashes, usage, receiptPath and reused. success requires verified score >=95 on all required axes, confidence >=0.9, complete required track coverage and no findings. Unobserved axes are null; audio-only review cannot certify visual acting.`,
     inputSchema: {
       type: 'object', additionalProperties: false, properties: {
         mediaPath: { type: 'string', minLength: 1, description: 'Local clip/audio file, e.g. /Volumes/data/story/meleon/test/shot-21.mp4.' },

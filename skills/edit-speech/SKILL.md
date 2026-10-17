@@ -1,13 +1,13 @@
 ---
 name: edit-speech
 description: >
-  Revises existing shot dialogue and rebuilds only affected speech and media.
+  Revises character voice samples or shot speech; rebuilds affected media.
   Use when the user asks to change a character's line, pronunciation, delivery or voice,
   including "7번 샷 민재 대사 수정", "이 목소리 바꿔", or "fix this line".
   Finds stable shot and line ids, preserves other characters and reports affected outputs.
   Storyboard plans a new episode; produce builds it; this skill repairs an existing one.
 argument-hint: "<channel> <episode> <shot, character or quoted line> <change>"
-allowed-tools: ["mcp__social-flow__speech_manage", "mcp__social-flow__acting_review", "mcp__social-flow__tts_review_acting", "mcp__social-flow__storyboard_read", "mcp__social-flow__storyboard_check", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__astra_audio2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__veo_reference"]
+allowed-tools: ["mcp__social-flow__tts_voice_design", "mcp__social-flow__tts_list_voices", "mcp__social-flow__speech_manage", "mcp__social-flow__acting_review", "mcp__social-flow__tts_review_acting", "mcp__social-flow__storyboard_read", "mcp__social-flow__storyboard_check", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__astra_audio2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__veo_reference"]
 ---
 **Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 
@@ -91,3 +91,15 @@ acting, invalidate affected speech, and preserve unchanged takes. Follow
 ElevenLabs permits `eleven_v4` only; Gemini remains supported. Local TTS is removed.
 An explicitly requested review/improvement loop is permitted within its scope;
 normal production continues without scoring or listening approval.
+
+## Character voice age and identity changes
+
+For character samples or a request to sound older/younger, follow
+[Gemini voice design](../_shared/gemini-voice-design.md). Route sample-only edits
+to the character identity and sheet; do not rebuild episode media unless requested.
+Do not claim an age correction after changing only turn style with the same voice ID.
+
+User preference takes precedence over model voice-age/naturalness scores. Preserve
+and apply the exact user-preferred take within the authorized sample scope, record
+its hash and the user's selection separately from any unfavorable model review.
+Do not replace its intended roughness or character with generic naturalness.

@@ -1,3 +1,4 @@
+import { designGeminiVoice, voiceDesignSchema } from './voice-design.js';
 import { reviewActing as reviewTtsActing, actingReviewSchema as ttsActingReviewSchema } from './tts-acting-review.js';
 import { manageVoiceAudition, voiceAuditionSchema } from './voice-audition.js';
 import { manageLocation } from './location.js';
@@ -167,6 +168,21 @@ function astraVideoReport(headline, result) {
     return (`${headline}.\n\nFile: ${result.videoPath}\nJob: ${result.jobId} (mode ${result.mode})\n` +
         `Bytes: ${result.bytes}\nElapsed: ${result.elapsedSeconds}s (queue wait included)\n` +
         `Prompt: ${result.prompt}${recorded}`);
+}
+function speechSyncReport(sync) {
+    if (!sync)
+        return '';
+    const lines = sync.attempts.map(({ videoPath, seed, check }, i) => `  attempt ${i + 1}${i === sync.chosen ? ' (provisional candidate)' : ''} · seed ${seed ?? 'server default'} · ${check.status}` +
+        (check.sync ? ` · margin ${check.sync.margin} (best ${check.sync.score} vs chance ${check.sync.chance})` : '') +
+        (check.reason ? ` · ${check.reason}` : '') + ` · ${videoPath}`);
+    const findings = sync.attempts[sync.chosen].check.findings.map((finding) => `  ⚠ ${finding.kind}: ${finding.what}`);
+    const unresolved = sync.attempts[sync.chosen].check.findings.some((finding) => finding.reseed)
+        ? `\nStill no_sync after ${sync.attempts.length} attempt(s); the clip with the best margin is kept as a provisional candidate, not a verified performance. Inspect it, or change the source image or prompt — another seed alone has not helped.`
+        : '';
+    return `\n\nSpeech sync check (picture motion against the supplied speech, ffmpeg only):\n${lines.join('\n')}` +
+        (sync.retryError ? `\n  ${sync.retryError}` : '') +
+        (findings.length ? `\nFindings on the provisional candidate:\n${findings.join('\n')}` : '') + unresolved +
+        `\nNot reviewed: ${sync.attempts[sync.chosen].check.notReviewed.join(', ')}.`;
 }
 // ── research schemas ─────────────────────────────────────────────
 /**
@@ -840,7 +856,7 @@ export const ROUTES = {
     astra_audio2video: async (args) => {
         const parsed = parseArgs(astraVideo.astraAudio2VideoSchema, args);
         const result = await astraVideo.generateFromAudio(parsed);
-        return text(`${astraVideoReport('Video generated from audio on the ASTRA video API', result)}\nAudio: ${parsed.audioPath ?? 'reused upload'}\naudioUploadId: ${result.audioUploadId}\nAudio expires at: ${result.audioExpiresAt ?? 'unknown (reused upload or metadata unavailable)'}\nAudio duration (seconds): ${result.audioDuration ?? 'unknown (reused upload or metadata unavailable)'}`);
+        return text(`${astraVideoReport('Video generated from audio on the ASTRA video API', result)}\nAudio: ${parsed.audioPath ?? 'reused upload'}\naudioUploadId: ${result.audioUploadId}\nAudio expires at: ${result.audioExpiresAt ?? 'unknown (reused upload or metadata unavailable)'}\nAudio duration (seconds): ${result.audioDuration ?? 'unknown (reused upload or metadata unavailable)'}${speechSyncReport(result.speechSync)}`);
     },
     astra_video_list_uploads: async (args) => {
         astraVideo.astraVideoListUploadsSchema.parse(args);
@@ -960,6 +976,10 @@ export const ROUTES = {
         return text(`Multi-speaker audio generated successfully!\n\nFile: ${result.audioPath}\nModel: ${result.model}\nSpeakers:\n${speakerInfo}\nScript length: ${request.script.length} chars`);
     },
     // Local synthesis (Supertonic) — runs on-device as a subprocess. No key, network, or quota.
+    tts_voice_design: async (args) => {
+        const result = await designGeminiVoice(voiceDesignSchema.parse(args));
+        return text(JSON.stringify(result, null, 2), !result.success);
+    },
     tts_list_voices: async (args) => text(JSON.stringify(await tts.listTtsVoices(tts.ttsVoicesSchema.parse(args)), null, 2)),
     // ── speech synthesis (ElevenLabs) — REST, saves the file locally, returns path + measured cost ──
     // character-cost is the vendor's billing header, so it is reported as measured rather

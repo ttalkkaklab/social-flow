@@ -20,7 +20,8 @@ function actingErrors(acting) {
 function resolvedStyle(voice, acting) {
   const errors=actingErrors(acting); if(errors.length)throw new Error(errors.join('; '));
   const direction=[...(acting?.direction?[acting.direction.trim()]:[]),...['context','intent','emotion','vocal'].filter(key=>acting?.[key]).map(key=>`${key}: ${acting[key].trim()}`)];
-  return direction.length ? direction.join('\n') : acting?.tags?.length ? undefined : voice?.stylePrompt?.trim();
+  const performance = direction.length ? direction.join('\n') : acting?.tags?.length ? undefined : voice?.stylePrompt?.trim();
+  return [voice?.voiceDirection?.trim(), performance].filter(Boolean).join('\n') || undefined;
 }
 function directionSupport(voice, acting) {
   // ElevenLabs inline cues are deliberately authored controls, not scene prose.
@@ -101,6 +102,10 @@ function planScenePerformance(input, measureAudio = () => null) {
   }
   const hasActions = performance.some(event => event.kind === 'action');
   const timing = cursor === null ? (warnings.some(item => item.startsWith('Action timing')) ? 'needs_action_timing' : 'needs_audio_duration') : hasActions ? (speech.size ? 'planned_actions_with_measured_audio' : 'planned_actions') : 'measured';
+  for (const event of performance.filter(e => e.kind !== 'action')) {
+    const gap = event.endSeconds - event.speechEndSeconds;
+    if (gap > 0.75) warnings.push('Speech ' + event.lineId + ' ends ' + gap.toFixed(3) + 's before its action ends; review inherited action duration after replacing speech.');
+  }
   return {performance,durationSeconds:cursor,timing,warnings};
 }
 function scenePerformancePayload(scene) {

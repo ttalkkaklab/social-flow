@@ -74,6 +74,7 @@ test('audio handoff uses the resolved whole-shot prompt and exactly one authored
   assert.equal(result.tool, 'astra_audio2video');
   assert.equal(result.arguments.imagePath, path.join(dir, 'start.png'));
   assert.equal(result.arguments.audioPath, audio);
+  assert.equal(result.arguments.expectLipSync, true, 'every line is on screen, so the speech sync check runs');
   assert.match(result.arguments.negativePrompt, /subtitles, captions/);
   assert.match(result.arguments.prompt, /outside the doorway/);
   assert.match(result.arguments.prompt, /She holds the tray steady/);
