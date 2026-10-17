@@ -309,9 +309,11 @@ test('Seedance 2.5 integer-second performance directions pass assembly and the s
   assert.throws(()=>assemble(win,0),/digit seconds/);save(win);
   assert.match(checkPrompt().stdout,/digit seconds/);
 }));
-test('legacy prompt bytes preserve the clean-output policy when cast and cutType are absent', () => {
+test('opening-state guidance augments legacy sources while preserving end/motion prompt bytes', () => {
   const p = assemble(fixture(1), 0);
-  assert.equal(digest(p.sourcePrompt), 'b51ee046763a9b03655f049d7119e9cd75fef489b7c75f8b0fa610db40973780');
+  assert.match(p.sourcePrompt, /opening instant BEFORE this shot's action/);
+  assert.match(p.sourcePrompt, /dialogue stays in audio, with no subtitles, captions or lettering/);
+  assert.equal(digest(p.sourcePrompt), '8455ccb1c518a88e7ae99192c715532728eb8247eb820b7c7d73736d5740a3ee');
   assert.equal(digest(p.endFramePrompt), 'ea5266c699957affead597eaf0c2a1cd4e60bf4e014136b27b6f0207612221a3');
   assert.equal(digest(p.motionPrompt), '2ed0cb8cfad2acce5a6cffe08edc71ceaad3d8acd5229630c3c248bcd7754a98');
 });

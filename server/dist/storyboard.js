@@ -196,6 +196,8 @@ export function readStoryboard(args) {
         result.propSheet = { props: doc.props, continuity: doc.propContinuity };
     result.inspection = { mediaViewed: false, evidenceStatus: 'not_verified',
         note: 'This response reads plans and recorded reviews only. Open referenced assets and verify current evidence before reporting visual quality or review validity.' };
+    const continuity = loadFromHere(join(REFERENCES_DIR, 'shot-continuity.js'));
+    result.continuityFindings = continuity.check(win, dirname(file));
     if (args.includeContext)
         result.reviewContext = {
             story: win.STORY || null, production: win.PRODUCTION || null, document: doc || null,
@@ -210,7 +212,7 @@ export function readStoryboard(args) {
         const playback = result.playback;
         const position = playback.findIndex(row => row.no === index + 1);
         const neighbor = (i) => i >= 0 && playback[i] ? { id: playback[i].id, no: playback[i].no } : null;
-        result.selectedShot = { no: index + 1, shot,
+        result.selectedShot = { no: index + 1, shot, continuity: continuity.plan(win, index, dirname(file)),
             scene: win.STRUCTURE?.scenes?.find(scene => scene.no === shot.scene) || null,
             playbackPosition: position < 0 ? null : position + 1,
             previous: position < 0 ? null : neighbor(position - 1), next: position < 0 ? null : neighbor(position + 1) };
