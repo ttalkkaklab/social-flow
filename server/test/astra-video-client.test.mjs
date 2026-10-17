@@ -22,6 +22,9 @@ import packageMetadata from '../package.json' with { type: 'json' };
 import {
   ASTRA_VIDEO_ALLOWED_FIELDS,
   ASTRA_VIDEO_FRAME_LIMITS,
+  ASTRA_VIDEO_FRAME_STEP,
+  ASTRA_VIDEO_MAX_AUTO_FRAMES,
+  ASTRA_VIDEO_MIN_FRAMES,
   ASTRA_VIDEO_IC_LORA_ADAPTERS,
   ASTRA_VIDEO_MEASURED_FIELDS,
   ASTRA_VIDEO_LORAS,
@@ -226,11 +229,11 @@ describe('buildJobBody — wire shape', () => {
 });
 
 describe('validators', () => {
-  it('generate frame counts are 8k+1 within 25..193', () => {
-    for (const good of [25, 33, 121, 193]) {
+  it('generate frame counts are 8k+1 within 25..361', () => {
+    for (const good of [25, 33, 121, 193, 361]) {
       parseOk(astraText2VideoSchema, { prompt: 'x', numFrames: good });
     }
-    for (const bad of [9, 24, 120, 194, 201, 481, 489]) {
+    for (const bad of [9, 24, 120, 194, 362, 369, 481, 489]) {
       parseFails(astraText2VideoSchema, { prompt: 'x', numFrames: bad });
     }
   });
@@ -390,12 +393,12 @@ describe('per-tool schemas', () => {
     );
   });
 
-  it('audio upload metadata rejects starts at the end and more than 193 selected frames', () => {
+  it('audio upload metadata rejects starts at the end and more than 361 selected frames', () => {
     const audio = { uploadId: 'a'.repeat(32), bytes: 1, kind: 'audio', duration: 30 };
     assert.equal(checkAudioSource(audio, { audioStartTime: 0, audioMaxDuration: 8.1, frameRate: 24 }), null);
     assert.match(
-      checkAudioSource(audio, { audioStartTime: 0, audioMaxDuration: 8.5, frameRate: 24 }),
-      /selects 201 frames.*maximum is 193/,
+      checkAudioSource(audio, { audioStartTime: 0, audioMaxDuration: 15.4, frameRate: 24 }),
+      /selects 369 frames.*maximum is 361/,
     );
     assert.match(checkAudioSource(audio, { audioStartTime: 30, numFrames: 121 }), /must be less than the source duration/);
   });
@@ -449,8 +452,7 @@ describe('measured ASTRA guidance', () => {
     return rows[0];
   };
   for (const [name, pattern] of [
-    ['server frame ceiling', /8k\+1, 25–193/],
-    ['guided and fast client ceiling', /guided\/fast client ceiling 121/],
+    ['server frame ceiling', /8k\+1, 25–361 on every mode/],
     ['pixel ceiling', /2,064,384-pixel ceiling/],
     ['1088x1920 refusal at every frame count', /1088×1920 exceeds the area ceiling at every frame count/],
     ['supplied audio preservation', /Clips carry 48kHz stereo AAC; `audio2video` carries the supplied sound re-encoded, rather than a newly generated track/],
@@ -575,16 +577,24 @@ describe('measured ASTRA guidance', () => {
 });
 
 describe('mode-specific ceilings and new input contracts', () => {
-  it('pins all five mode ceilings to the measured client and server limits', () => {
-    assert.deepEqual(ASTRA_VIDEO_FRAME_LIMITS, { generate: 193, guided: 121, guided_fast: 121, keyframe: 193, audio2video: 193, guided_hq: 121, ingredients: 121, ic_lora: 121 });
+  it("frame ceilings, minimum, step and the auto-duration cap equal the server's published /v1/models limits", () => {
+    const models = JSON.parse(fs.readFileSync(new URL('./fixtures/astra-v1-models.json', import.meta.url), 'utf8'));
+    const published = models.data[0].modes.filter((m) => m.num_frames);
+    assert.deepEqual(Object.keys(ASTRA_VIDEO_FRAME_LIMITS).sort(), published.map((m) => m.mode).sort());
+    for (const m of published) {
+      assert.equal(ASTRA_VIDEO_FRAME_LIMITS[m.mode], m.num_frames.max, `${m.mode} max`);
+      assert.equal(ASTRA_VIDEO_MIN_FRAMES, m.num_frames.min, `${m.mode} min`);
+      assert.equal(ASTRA_VIDEO_FRAME_STEP, m.num_frames.step, `${m.mode} step`);
+      if (m.auto_duration?.supported) assert.equal(ASTRA_VIDEO_MAX_AUTO_FRAMES, m.auto_duration.max_frames, `${m.mode} auto`);
+    }
   });
 
   it('every text and image tier accepts its ceiling and refuses the next grid value', () => {
-    for (const [tier, max] of [['default', 193], ['guided', 121], ['fast', 121], ['hq', 121]]) {
+    for (const [tier, max] of [['default', 361], ['guided', 361], ['fast', 361], ['hq', 361]]) {
       parseOk(astraText2VideoSchema, { prompt: 'x', tier, numFrames: max });
       parseFails(astraText2VideoSchema, { prompt: 'x', tier, numFrames: max + 8 });
     }
-    for (const [tier, max] of [['default', 193], ['guided', 121], ['hq', 121]]) {
+    for (const [tier, max] of [['default', 361], ['guided', 361], ['hq', 361]]) {
       parseOk(astraImg2VideoSchema, { prompt: 'x', firstFramePath: 'a.png', tier, numFrames: max });
       parseFails(astraImg2VideoSchema, { prompt: 'x', firstFramePath: 'a.png', tier, numFrames: max + 8 });
     }
@@ -594,11 +604,11 @@ describe('mode-specific ceilings and new input contracts', () => {
     ['keyframe', astraKeyframeVideoSchema, { prompt: 'x', images: [{ imagePath: 'a.png', frameIdx: 0 }, { imagePath: 'b.png', frameIdx: 192 }] }],
     ['audio2video', astraAudio2VideoSchema, { prompt: 'x', audioUploadId: 'reuse' }],
   ]) {
-    it(`${mode} accepts 193 frames at the server ceiling`, () => {
-      parseOk(schema, { ...args, numFrames: 193 });
+    it(`${mode} accepts 361 frames at the server ceiling`, () => {
+      parseOk(schema, { ...args, numFrames: 361 });
     });
-    it(`${mode} refuses 201 frames above the server ceiling`, () => {
-      assert.match(parseFails(schema, { ...args, numFrames: 201 }), /193/);
+    it(`${mode} refuses 369 frames above the server ceiling`, () => {
+      assert.match(parseFails(schema, { ...args, numFrames: 369 }), /361/);
       for (const numFrames of [24, 192, 481, 489]) parseFails(schema, { ...args, numFrames });
     });
   }
@@ -623,11 +633,10 @@ describe('mode-specific ceilings and new input contracts', () => {
   });
 
   it('advertises the same mode limits and new arguments', () => {
-    for (const [name, max] of [['astra_text2video', 193], ['astra_img2video', 193], ['astra_keyframe_video', 193], ['astra_audio2video', 193]]) {
+    for (const [name, max] of [['astra_text2video', 361], ['astra_img2video', 361], ['astra_keyframe_video', 361], ['astra_audio2video', 361]]) {
       const property = TOOLS.find(t => t.name === name).inputSchema.properties.numFrames;
       assert.equal(property.maximum, max);
-      assert.match(property.description, /guided: 121/);
-      assert.match(property.description, /server rejects values above 193/);
+      assert.match(property.description, /every mode: 361 \(the live server's published ceiling/);
     }
     const image = TOOLS.find(t => t.name === 'astra_img2video');
     assert.deepEqual(image.inputSchema.properties.tier.enum, ['default', 'guided', 'hq']);
@@ -1113,7 +1122,7 @@ describe('stage 3 — duration, generateAudio, capabilities', () => {
     assert.equal(parseOk(astraText2VideoSchema, { prompt: 'x', duration: 4 }).numFrames, 97);
     assert.equal('duration' in parseOk(astraText2VideoSchema, { prompt: 'x', duration: 4 }), false);
     assert.equal(parseOk(astraText2VideoSchema, { prompt: 'x', duration: 5, frameRate: 30 }).numFrames, 153);
-    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', tier: 'guided', duration: 8 }), /duration 8s at 24fps is 193 frames; mode guided takes 25-121 frames, i\.e\. duration more than 0\.8750s and at most 5\.2083s/);
+    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', tier: 'guided', duration: 16 }), /duration 16s at 24fps is 385 frames; mode guided takes 25-361 frames, i\.e\. duration more than 0\.8750s and at most 15\.2083s/);
     assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', duration: 0.5 }), /duration 0.5s/);
     assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', duration: 4, numFrames: 97 }), /duration and numFrames are mutually exclusive/);
     assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', duration: 4, autoDuration: { minSeconds: 1, maxSeconds: 4 } }), /duration and autoDuration/);

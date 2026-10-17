@@ -29,8 +29,7 @@ rather than dropped. The engine stays opt-in: nothing routes here unless the boa
 ASTRA's `fast` tier is a lower-resolution draft that finishes sooner than `guided`; measured at
 121s, it was slower than the default pipeline's 66s. Automatic duration selection stops at 121
 frames and its rounded range must contain an 8k+1 frame count. Direct `numFrames` accepts
-25-193 on the same grid under the live server ceiling (2026-09-30); the client keeps
-`guided` and `fast` capped at 121. For `astra_audio2video`,
+25-361 on the same grid on every mode, the live server ceiling (`/v1/models`, 2026-10-17). For `astra_audio2video`,
 choose `numFrames` or `audioMaxDuration`, never both; the tool also checks that `audioStartTime`
 is before the uploaded track ends. Retakes check source frames, 32-pixel dimensions and the
 requested end time against uploaded metadata before submission.
