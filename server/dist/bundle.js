@@ -88000,7 +88000,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
           type: "string",
           enum: ["default", "guided", "hq"],
           default: "default",
-          description: "default (generate), guided at 1536x1024 only, or hq (guided_hq, unmeasured). fast images are unmeasured and not enabled."
+          description: "default (generate), guided at 1536x1024 only, or hq (guided_hq, unmeasured, also 1536x1024 only). fast images are unmeasured and not enabled."
         },
         firstFramePath: {
           type: "string",
