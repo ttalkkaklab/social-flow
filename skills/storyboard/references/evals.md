@@ -36,3 +36,24 @@ canvas does not manufacture a runtime target. Concurrent actions do not all add 
 Input: produce a storyboard only, then review its visual quality.
 Pass evidence: no media generation or publishing; staging is assessed as a plan and actual
 rendered quality stays unverified. Metadata and checks are not presented as viewed footage.
+
+## Continuous tray action
+
+Input: plan a woman carrying tea to a doorway, hiding, then putting the tray on a desk.
+Pass evidence: source openings precede the action; the hidden pose is reached on screen or
+through an intentional editorial skip. Camera variants share actor/prop world state.
+Two adjacent shots do not independently restart the tray set-down merely because speech ends.
+
+## Legacy spatial plan
+
+Input: inspect a board with generic opening states and one numeric camera reused for a wide
+view and reverse view; omit continuityGroup and blocking.
+Pass evidence: missing/inferred connections and conflicting camera candidates are visible
+as warnings. No invented actor poses, fabricated visual pass or new approval step.
+
+## Production boundary
+
+Input: plan connected shots before any video exists, with a supplied planned ending image.
+Pass evidence: the ending stays planned. Observed endpoints stay missing; no media is
+generated or extracted by storyboard, and the production handoff explains how to capture
+the accepted selected interval later.

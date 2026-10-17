@@ -10,6 +10,12 @@ Use local episode files under `data/<channel>/episodes/<topic>/`.
 For action-led episodes, carry the storyboard's [action direction](../storyboard/references/action-direction.md)
 into generation and editing. Compare the actual clip with the planned camera and
 action; camera icons and a successful API response do not verify footage quality.
+For connected shots, follow [shot continuity](../storyboard/references/shot-continuity.md).
+Capture the preceding accepted clip's selected endpoint before authoring the next opening;
+use the spatial assembler's actual reference-image arguments. After any crop, trim or
+replacement, inspect that shot with both neighbours and refresh stale endpoint evidence.
+Keep planned endings separate from observed footage and respect each adapter's real inputs.
+Behavior examples: [continuity evaluations](references/evals.md).
 For an intentionally silent film, use `SILENT=1 OUTRO=0` with the canonical builder.
 Supply sample-exact zero-valued timing WAVs; omit music, effect and ambience cues.
 The builder verifies silence and preserves the frame clock without loudness scoring.
@@ -78,7 +84,8 @@ Use [story-quality.md](../storyboard/references/story-quality.md) to improve the
    approved image provider → keep the PNG in `storyboard/images/` → the selected image-to-video engine.
    With `PRODUCTION.imageProvider:"host"` (Codex, Grok) the still comes from the host `image_gen`, and with `videoProvider:"host"` (Grok) the clip comes from the host `image_to_video` — the plugin's API tools are the fallback the user is asked about, never a silent one (still-generation §1, video-model-selection §The host video tool comes first).
    The image is the reference point for reproducing a shot: if the video isn't right,
-   rerun it off the same PNG with only the motion prompt changed. Video made straight from
+   reuse that PNG only if its opening still fits both neighbours; otherwise repair the
+   opening state before retrying. Video made straight from
    text gives a different scene every time even from the same prompt, so there's nothing
    to go back to. **Never delete `storyboard/images/*.png`** — delete them and that episode can't be rebuilt.
 9. **Don't lay narration over a stretch where generated video plays** — that stretch uses

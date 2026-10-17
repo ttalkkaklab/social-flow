@@ -77373,6 +77373,8 @@ function readStoryboard(args) {
     evidenceStatus: "not_verified",
     note: "This response reads plans and recorded reviews only. Open referenced assets and verify current evidence before reporting visual quality or review validity."
   };
+  const continuity = loadFromHere(join2(REFERENCES_DIR, "shot-continuity.js"));
+  result.continuityFindings = continuity.check(win, dirname(file));
   if (args.includeContext) result.reviewContext = {
     story: win.STORY || null,
     production: win.PRODUCTION || null,
@@ -77390,6 +77392,7 @@ function readStoryboard(args) {
     result.selectedShot = {
       no: index + 1,
       shot,
+      continuity: continuity.plan(win, index, dirname(file)),
       scene: win.STRUCTURE?.scenes?.find((scene) => scene.no === shot.scene) || null,
       playbackPosition: position < 0 ? null : position + 1,
       previous: position < 0 ? null : neighbor(position - 1),
@@ -90186,6 +90189,8 @@ function manageSpeech(args) {
     if (args.lineId || args.speaker || args.query) throw new Error("Video planning uses all lines in the shot; remove line filters");
     for (const { line } of selected) actingSchema.nullable().optional().parse(line.acting);
     plan2 = speechVideoPlan({ ...scene, narration: selected.map(({ line }) => ({ ...line, audio: currentAudio(line, character(line.speaker)) ? line.audio : void 0 })) }, args.capabilities);
+    const continuityContract = nodeModule5.createRequire(import.meta.url)("../../skills/storyboard/references/shot-continuity.js");
+    plan2 = { ...plan2, continuity: continuityContract.plan(win, scenes.indexOf(scene), dirname7(file)) };
     if (args.action === "attach_video") {
       if (!args.videoPath) throw new Error("videoPath is required");
       const videoPath = resolve8(dirname7(file), args.videoPath);

@@ -123,7 +123,7 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
   const all = scenes.flatMap((scene, index) => ((scene.narration || []) as Line[]).map(line => ({ scene, index, line })));
   const selected = all.filter(({ scene, line }) => (!args.shotId || scene.id === args.shotId) && (!args.lineId || line.id === args.lineId) && (!args.speaker || line.speaker === args.speaker || character(line.speaker)?.name === args.speaker) && (!args.query || (line.tts + ' ' + (line.sub || '')).includes(args.query)));
   let invalidated: Record<string, unknown> | undefined;
-  let plan: ReturnType<typeof speechVideoPlan> | undefined;
+  let plan: (ReturnType<typeof speechVideoPlan> & { continuity?: unknown }) | undefined;
   if (args.action === 'update' || args.action === 'attach_audio') {
     if (!args.lineId || selected.length !== 1) throw new Error('Select exactly one stable lineId; list candidates for an ambiguous request');
     const { scene, line } = selected[0];
@@ -182,6 +182,10 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
     if (args.lineId || args.speaker || args.query) throw new Error('Video planning uses all lines in the shot; remove line filters');
     for (const {line} of selected) actingSchema.nullable().optional().parse(line.acting);
     plan = speechVideoPlan({...scene,narration:selected.map(({line}) => ({...line,audio:currentAudio(line,character(line.speaker))?line.audio:undefined}))}, args.capabilities);
+    const continuityContract = nodeModule.createRequire(import.meta.url)('../../skills/storyboard/references/shot-continuity.js') as {
+      plan(board: unknown, index: number, dir: string): unknown;
+    };
+    plan = { ...plan, continuity: continuityContract.plan(win, scenes.indexOf(scene), dirname(file)) };
     if (args.action === 'attach_video') {
       if (!args.videoPath) throw new Error('videoPath is required');
       const videoPath = resolve(dirname(file), args.videoPath);

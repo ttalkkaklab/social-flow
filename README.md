@@ -7,6 +7,13 @@ details remain expandable; still effects are labelled separately. These views de
 from existing fields and do not certify generated motion. See
 [action direction](skills/storyboard/references/action-direction.md).
 
+[Shot continuity](skills/storyboard/references/shot-continuity.md) connects concrete
+opening/closing poses with the preceding accepted clip's selected endpoint. The local
+capture helper records the actual source frame and detects stale trims or replacement
+clips; the image prompt assembler attaches a current endpoint as a state reference.
+Legacy boards expose missing blocking and inferred connections as advice. Assembly
+exports paired boundary PNGs beside playback excerpts, without claiming visual approval.
+
 Start a reusable video project with `/social-flow:project-init <directory>`.
 It saves SNS targets and connection records, video genre, video/speech/image
 models, visual style, video ratio and output format together in
