@@ -77,6 +77,15 @@ function motionPrompt(scene, plan) {
   return instructions.filter(Boolean).map(text => text.trim()).join(' ');
 }
 
+function designDirectionConflict(opening, continuityText) {
+  const side = text => {
+    const matches = [...String(text || '').matchAll(/image[ -](left|right)\s+jamb/gi)].map(m => m[1].toLowerCase());
+    return matches.length === 1 ? matches[0] : null;
+  };
+  const a = side(opening), b = side(continuityText);
+  return Boolean(a && b && a !== b);
+}
+
 async function prepare(target, options) {
   const dist = path.resolve(__dirname, '../../../server/dist');
   const adapter = await import(pathToFileURL(path.join(dist, 'astra-shot-runtime.bundle.js')).href);
@@ -100,6 +109,8 @@ async function prepare(target, options) {
     ...(options.outputPath ? { outputPath: path.resolve(options.outputPath) } : {}),
     ...(options.filename ? { filename: options.filename } : {}) };
   const warnings = [...plan.warnings];
+  if (scene.edit?.continuity && designDirectionConflict(scene.shot?.videoDesign?.before, scene.edit.continuity))
+    warnings.push('Opening and edit continuity disagree on image-left/image-right. Reconcile the authored state before judging continuity.');
   const onScreen = plan.mode === 'audio_conditioned';
   let tool, args, audioSeconds;
   if (onScreen) {
@@ -131,7 +142,7 @@ async function prepare(target, options) {
   if (onScreen && (edit.in || edit.pre))
     throw new Error('audio2video requires edit.in=0 and pre=0 so source trimming cannot remove supplied speech; replan the aligned shot explicitly');
   const coverage = require('../../_shared/video-duration.js').shotTiming(scene,
-    { performanceSeconds: plan.durationSeconds, audioSeconds, edit });
+    { performanceSeconds: plan.durationSeconds, audioSeconds, edit, outputFps: frameRate });
   const { numFrames: _frames, ...withoutFrames } = args;
   const optimized = adapter.resolveVideoDuration(tool, { ...withoutFrames, requiredSeconds: coverage.requiredSeconds });
   args = optimized.args;
@@ -150,7 +161,7 @@ async function prepare(target, options) {
     instructions: 'Use these arguments unchanged. References describe state; audio2video submits only the authored opening. Inspect the output, select its trim, capture its actual endpoint, then stage the next opening. No generation was performed.' };
 }
 
-module.exports = { prepare, motionPrompt };
+module.exports = { prepare, motionPrompt, designDirectionConflict };
 if (require.main === module) (async () => {
   const args = process.argv.slice(2), target = args.shift(), options = {};
   const names = { '--shot': 'shotId', '--audio': 'audioPath', '--output': 'outputPath', '--filename': 'filename' };

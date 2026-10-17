@@ -631,8 +631,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path4, errorMaps, issueData } = params;
-  const fullPath = [...path4, ...issueData.path || []];
+  const { data, path: path5, errorMaps, issueData } = params;
+  const fullPath = [...path5, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -748,11 +748,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path4, key) {
+  constructor(parent, value, path5, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path4;
+    this._path = path5;
     this._key = key;
   }
   get path() {
@@ -4448,9 +4448,9 @@ var scenarioCheckResultSchema = external_exports.object({
 });
 
 // src/speech.ts
-import { createHash as createHash2, randomUUID } from "node:crypto";
-import { readFileSync as readFileSync3, writeFileSync as writeFileSync2, renameSync as renameSync2, mkdirSync as mkdirSync2, existsSync as existsSync3 } from "node:fs";
-import { dirname as dirname3, resolve as resolve3, join as join4 } from "node:path";
+import { createHash as createHash3, randomUUID } from "node:crypto";
+import { readFileSync as readFileSync4, writeFileSync as writeFileSync4, renameSync as renameSync3, mkdirSync as mkdirSync3, existsSync as existsSync4 } from "node:fs";
+import { dirname as dirname3, resolve as resolve4, join as join4 } from "node:path";
 import * as nodeModule3 from "node:module";
 import { execFileSync } from "node:child_process";
 
@@ -4472,6 +4472,11 @@ function compileActing(text, acting, voice) {
   const shared = nodeModule2.createRequire(import.meta.url)("../../skills/_shared/speech-contract.js");
   return shared.compileActing(text, actingSchema.parse(acting || {}), voice);
 }
+
+// src/astra-video-client.ts
+import { createHash as createHash2, randomInt } from "node:crypto";
+import * as fs2 from "node:fs";
+import * as path2 from "node:path";
 
 // package.json
 var package_default = {
@@ -4604,8 +4609,44 @@ var defaultSnsCredentialFiles = {
   YOUTUBE: process.env.YOUTUBE_OAUTH_FILE || join2(snsTokenDir, "youtube-oauth-client.json")
 };
 var disabledToolsFile = join2(snsTokenDir, "disabled-tools.json");
+function astraVideoBaseUrl() {
+  return (process.env.ASTRA_VIDEO_URL || "https://video.astravision.co.kr").replace(/\/+$/, "");
+}
+function requireAstraVideoKey() {
+  if (!config.astraVideoApiKey) {
+    throw new Error(
+      "ASTRA_VIDEO is not set. astra_* video generation tools talk to the self-hosted ASTRA video API (https://video.astravision.co.kr) and it rejects every route but /healthz without a key. Ask the server operator for a key and export ASTRA_VIDEO; point ASTRA_VIDEO_URL at another host only if you run a second box of the same server. Without it, veo_* (GEMINI_API_KEY), seedance_* (ARK_API_KEY) and mlx_video_generate (on-device) still work."
+    );
+  }
+  return config.astraVideoApiKey;
+}
+
+// src/http.ts
+async function requestRaw(method, url, headers, body, timeoutMs) {
+  const effectiveTimeoutMs = timeoutMs ?? config.requestTimeoutMs;
+  try {
+    const res = await fetch(url, {
+      method: method.toUpperCase(),
+      headers: {
+        ...body !== void 0 ? { "Content-Type": "application/json" } : {},
+        ...headers
+      },
+      body: body !== void 0 ? JSON.stringify(body) : void 0,
+      signal: AbortSignal.timeout(effectiveTimeoutMs)
+    });
+    const text = await res.text();
+    return { ok: res.ok, status: res.status, body: text };
+  } catch (error) {
+    if (error instanceof Error && error.name === "TimeoutError") {
+      return { ok: false, status: 504, body: `Request timed out after ${effectiveTimeoutMs}ms: ${url}` };
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    return { ok: false, status: 502, body: `Upstream unreachable (${url}): ${message}` };
+  }
+}
 
 // src/media-utils.ts
+import * as fs from "node:fs";
 import * as path from "node:path";
 var ALLOWED_EXTENSIONS = {
   image: [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"],
@@ -4614,6 +4655,29 @@ var ALLOWED_EXTENSIONS = {
   json: [".json"],
   mesh: [".glb"]
 };
+function validateFilePath(filePath, options) {
+  const resolved = path.resolve(filePath);
+  if (filePath.includes("..")) {
+    throw new Error(`Path traversal detected: ${filePath}`);
+  }
+  if (options?.allowedExtensions) {
+    const ext = path.extname(resolved).toLowerCase();
+    if (!options.allowedExtensions.includes(ext)) {
+      throw new Error(
+        `File extension "${ext}" is not allowed. Allowed: ${options.allowedExtensions.join(", ")}`
+      );
+    }
+  }
+}
+function resolveOutputFile(outputDir, filename, kind) {
+  if (/[/\\]/.test(filename) || filename.includes("..")) {
+    throw new Error(`filename must be a bare file name without path separators: "${filename}"`);
+  }
+  validateFilePath(filename, { allowedExtensions: ALLOWED_EXTENSIONS[kind] });
+  const dir = path.resolve(outputDir);
+  fs.mkdirSync(dir, { recursive: true });
+  return path.join(dir, filename);
+}
 function bareFilenameSchema(kind) {
   const allowed = ALLOWED_EXTENSIONS[kind];
   return external_exports.string().min(1).refine((name) => !/[/\\]/.test(name) && !name.includes(".."), {
@@ -4621,6 +4685,195 @@ function bareFilenameSchema(kind) {
   }).refine((name) => allowed.includes(path.extname(name).toLowerCase()), {
     message: `filename extension must be one of: ${allowed.join(", ")}`
   });
+}
+
+// src/speech-sync-check.ts
+import { spawnSync } from "node:child_process";
+var FPS = 24;
+var PROXY_WIDTH = 128;
+var BLOCK = 8;
+var LAGS = [-2, -1, 0, 1, 2, 3, 4];
+var NULL_SHIFTS = 12;
+var SMOOTH_FRAMES = 5;
+var MOTION_CAP = 0.95;
+var SPEECH_FLOOR_DB = -50;
+var SPEECH_RANGE_DB = 30;
+var MIN_SPEECH_SECONDS = 1;
+var SYNC_MARGIN = 0.1;
+var NOT_REVIEWED = ["phoneme-level lip sync", "which visible person speaks", "voice identity"];
+var round = (n) => Math.round(n * 1e3) / 1e3;
+function ffmpeg(args) {
+  const run = spawnSync("ffmpeg", ["-v", "error", "-nostdin", ...args], { maxBuffer: 512 * 1024 * 1024 });
+  if (run.error) throw new Error(run.error.code === "ENOENT" ? "ffmpeg is not installed" : run.error.message);
+  if (run.status !== 0) throw new Error(`ffmpeg failed: ${String(run.stderr).trim().slice(-300)}`);
+  return run.stdout;
+}
+function probe(video) {
+  const run = spawnSync("ffprobe", ["-v", "error", "-show_entries", "stream=codec_type,width,height:format=duration", "-of", "json", video], { encoding: "utf8" });
+  if (run.error || run.status !== 0) throw new Error(`ffprobe could not read ${video}`);
+  const json = JSON.parse(run.stdout);
+  const picture = (json.streams || []).find((s) => s.codec_type === "video");
+  if (!picture?.width || !picture.height) throw new Error(`${video} has no video stream`);
+  return {
+    width: picture.width,
+    height: picture.height,
+    seconds: Number(json.format?.duration) || 0,
+    audio: (json.streams || []).some((s) => s.codec_type === "audio")
+  };
+}
+function blockMotion(video, width, height) {
+  const w = PROXY_WIDTH;
+  const h = Math.max(BLOCK, Math.round(height / width * w / BLOCK) * BLOCK);
+  const raw = ffmpeg(["-i", video, "-vf", `fps=${FPS},scale=${w}:${h}:flags=area,format=gray`, "-f", "rawvideo", "-"]);
+  const size = w * h;
+  const frames = Math.floor(raw.length / size);
+  const cols = w / BLOCK, rows = h / BLOCK;
+  const series = Array.from({ length: cols * rows }, () => new Array(frames).fill(0));
+  for (let f = 1; f < frames; f += 1) {
+    const cur = f * size, prev = cur - size;
+    for (let y = 0; y < h; y += 1) {
+      const rowBase = Math.floor(y / BLOCK) * cols;
+      for (let x = 0; x < w; x += 1) series[rowBase + Math.floor(x / BLOCK)][f] += Math.abs(raw[cur + y * w + x] - raw[prev + y * w + x]);
+    }
+  }
+  return series;
+}
+function envelope(audio, start, seconds, streamFromVideo = false) {
+  const window = [...start ? ["-ss", String(start)] : [], ...seconds !== null ? ["-t", String(seconds)] : []];
+  const pcm = ffmpeg([...window, "-i", audio, ...streamFromVideo ? ["-map", "0:a:0"] : [], "-vn", "-ac", "1", "-ar", "16000", "-f", "s16le", "-"]);
+  const samples = Math.floor(pcm.length / 2);
+  const out = [];
+  for (let f = 0; Math.round((f + 1) * 16e3 / FPS) <= samples; f += 1) {
+    const from = Math.round(f * 16e3 / FPS), to = Math.round((f + 1) * 16e3 / FPS);
+    let sum = 0;
+    for (let i = from; i < to; i += 1) {
+      const s = pcm.readInt16LE(i * 2) / 32768;
+      sum += s * s;
+    }
+    out.push(Math.sqrt(sum / (to - from)));
+  }
+  return out;
+}
+var db = (rms) => 20 * Math.log10(Math.max(rms, 1e-9));
+function speechFrames(env) {
+  const loudest = Math.max(...env.map(db));
+  return env.map((v) => db(v) > Math.max(SPEECH_FLOOR_DB, loudest - SPEECH_RANGE_DB));
+}
+function pearson(a, b, lag) {
+  let n = 0, sa = 0, sb = 0, saa = 0, sbb = 0, sab = 0;
+  for (let t = Math.max(0, lag); t < a.length && t - lag < b.length; t += 1) {
+    const x = a[t], y = b[t - lag];
+    n += 1;
+    sa += x;
+    sb += y;
+    saa += x * x;
+    sbb += y * y;
+    sab += x * y;
+  }
+  if (n < 3) return 0;
+  const va = saa - sa * sa / n, vb = sbb - sb * sb / n;
+  return va > 0 && vb > 0 ? (sab - sa * sb / n) / Math.sqrt(va * vb) : 0;
+}
+function bestSync(motion, env) {
+  let score = -1, lag = 0;
+  for (const series of motion) for (const l of LAGS) {
+    const r = pearson(series, env, l);
+    if (r > score) {
+      score = r;
+      lag = l;
+    }
+  }
+  return { score, lag };
+}
+function movingMean(series, width) {
+  const half = Math.floor(width / 2);
+  return series.map((_, i) => {
+    let sum = 0, n = 0;
+    for (let j = Math.max(0, i - half); j <= Math.min(series.length - 1, i + half); j += 1) {
+      sum += series[j];
+      n += 1;
+    }
+    return sum / n;
+  });
+}
+function capped(series) {
+  const cap = [...series].sort((a, b) => a - b)[Math.floor(MOTION_CAP * (series.length - 1))] ?? 0;
+  return series.map((v) => Math.min(v, cap));
+}
+function syncMeasure(motion, env) {
+  const frames = Math.min(env.length, motion[0]?.length ?? 0);
+  const clipped = motion.map((s) => movingMean(capped(s.slice(0, frames)), SMOOTH_FRAMES));
+  const audio = movingMean(env.slice(0, frames), SMOOTH_FRAMES);
+  const { score, lag } = bestSync(clipped, audio);
+  const nulls = [];
+  for (let j = 1; j <= NULL_SHIFTS; j += 1) {
+    const k = Math.round(frames * j / (NULL_SHIFTS + 1));
+    if (Math.min(k, frames - k) < FPS) continue;
+    nulls.push(bestSync(clipped, [...audio.slice(k), ...audio.slice(0, k)]).score);
+  }
+  nulls.sort((a, b) => a - b);
+  const chance = nulls.length ? nulls[Math.floor(0.9 * (nulls.length - 1))] : 1;
+  return { score, chance, margin: score - chance, lag };
+}
+function checkSpeechSync(opts) {
+  const result = { status: "not_measured", findings: [], notReviewed: NOT_REVIEWED };
+  try {
+    const clip = probe(opts.videoPath);
+    const start = opts.audioStartTime ?? 0;
+    let env;
+    if (opts.audioPath) {
+      env = envelope(opts.audioPath, start, opts.audioMaxDuration ?? null);
+      const active = speechFrames(env);
+      const lastSpeech = (active.lastIndexOf(true) + 1) / FPS;
+      if (lastSpeech > clip.seconds + 0.1)
+        result.findings.push({
+          kind: "speech_cut",
+          reseed: false,
+          what: `speech runs to ${round(lastSpeech)}s of the supplied window but the clip ends at ${round(clip.seconds)}s \u2014 request enough numFrames (8k+1, at most 193) and pad the WAV with silence, or split the line; another seed will not lengthen it`
+        });
+      if (clip.audio) {
+        const own = envelope(opts.videoPath, 0, null, true);
+        let correlation = -1, lagFrames = 0;
+        for (let l = -12; l <= 12; l += 1) {
+          const r = pearson(own, env, l);
+          if (r > correlation) {
+            correlation = r;
+            lagFrames = l;
+          }
+        }
+        result.audio = { correlation: round(correlation), lagFrames };
+        if (correlation < 0.9 || lagFrames !== 0)
+          result.findings.push({
+            kind: "audio_mismatch",
+            reseed: false,
+            what: `the clip's own audio is not the supplied WAV (envelope correlation ${round(correlation)} at ${lagFrames} frame(s) offset) \u2014 mux the pinned WAV instead of the clip track${lagFrames ? " and check the mouth timing against it" : ""}`
+          });
+      } else result.audio = null;
+    } else if (clip.audio) {
+      env = envelope(opts.videoPath, 0, null, true);
+    } else {
+      result.reason = "no local audioPath and no audio track in the clip";
+      return result;
+    }
+    const speechSeconds = speechFrames(env).slice(0, Math.round(clip.seconds * FPS)).filter(Boolean).length / FPS;
+    if (speechSeconds < MIN_SPEECH_SECONDS) {
+      result.reason = `only ${round(speechSeconds)}s of speech in the window \u2014 too little to measure`;
+      return result;
+    }
+    const m = syncMeasure(blockMotion(opts.videoPath, clip.width, clip.height), env);
+    result.sync = { score: round(m.score), chance: round(m.chance), margin: round(m.margin), lagFrames: m.lag, speechSeconds: round(speechSeconds) };
+    result.status = m.margin >= SYNC_MARGIN ? "follows_speech" : "no_sync";
+    if (result.status === "no_sync")
+      result.findings.push({
+        kind: "lip_sync",
+        reseed: true,
+        what: `no region of the picture moves with the speech (best ${round(m.score)} vs chance ${round(m.chance)}, margin under ${SYNC_MARGIN}) \u2014 the model likely ignored the voice`
+      });
+  } catch (error) {
+    result.status = "not_measured";
+    result.reason = error instanceof Error ? error.message : String(error);
+  }
+  return result;
 }
 
 // src/astra-video-client.ts
@@ -4635,6 +4888,15 @@ var ASTRA_VIDEO_TIERS = {
 var VALID_ASTRA_VIDEO_TIERS = Object.keys(ASTRA_VIDEO_TIERS);
 var ASTRA_VIDEO_LORAS = ["cinemagraph", "slow-motion"];
 var ASTRA_VIDEO_MAX_LORAS = 2;
+var ASTRA_VIDEO_ALLOWED_FIELDS = {
+  generate: ["auto_duration", "frame_rate", "hdr", "height", "images", "lora", "mode", "num_frames", "num_generated_keyframes", "prompt", "seed", "width"],
+  guided: ["auto_duration", "frame_rate", "hdr", "height", "images", "mode", "negative_prompt", "num_frames", "num_generated_keyframes", "num_inference_steps", "prompt", "seed", "width"],
+  guided_fast: ["auto_duration", "frame_rate", "hdr", "height", "images", "mode", "negative_prompt", "num_frames", "num_generated_keyframes", "num_inference_steps", "prompt", "seed", "width"],
+  keyframe: ["frame_rate", "hdr", "height", "images", "mode", "negative_prompt", "num_frames", "num_inference_steps", "prompt", "seed", "width"],
+  audio2video: ["audio_max_duration", "audio_start_time", "audio_upload_id", "frame_rate", "hdr", "height", "images", "mode", "negative_prompt", "num_frames", "num_inference_steps", "prompt", "seed", "width"],
+  ingredients: ["frame_rate", "hdr", "height", "images", "mode", "num_frames", "prompt", "references", "seed", "width"],
+  retake: ["end_time", "hdr", "mode", "prompt", "seed", "start_time", "video_upload_id"]
+};
 var ASTRA_VIDEO_MIN_FRAMES = 25;
 var ASTRA_VIDEO_FRAME_LIMITS = {
   generate: 193,
@@ -4660,8 +4922,16 @@ var ASTRA_VIDEO_UPLOAD_LIMITS = {
   video: 100 * 1024 * 1024,
   audio: 32 * 1024 * 1024
 };
+var ASTRA_VIDEO_SUBMITS_PER_MINUTE = 5;
+var ASTRA_VIDEO_SUBMITS_PER_HOUR = 60;
+var ASTRA_VIDEO_UPLOADS_PER_MINUTE = 10;
 var ASTRA_VIDEO_MAX_JOB_BODY_BYTES = 1024 * 1024;
 var ASTRA_VIDEO_USER_AGENT = `social-flow/${package_default.version}`;
+var ASTRA_VIDEO_MAX_WAIT_MS = 18e5;
+var POLL_INTERVAL_MS = 5e3;
+var SUBMIT_TIMEOUT_MS = 6e4;
+var STATUS_TIMEOUT_MS = 3e4;
+var TRANSFER_TIMEOUT_MS = 6e5;
 var astraVideoListUploadsSchema = external_exports.object({}).strict();
 var astraVideoDeleteUploadSchema = external_exports.object({
   uploadId: external_exports.string().min(1).max(256).regex(/^[A-Za-z0-9_-]+$/, "uploadId must be a bare upload identifier")
@@ -4921,6 +5191,341 @@ var astraVideoRetakeSchema = external_exports.object({
     });
   }
 });
+function checkAudioSource(upload, args) {
+  if (upload.kind !== "audio") return `audioPath uploaded as ${upload.kind}, not audio`;
+  if (!Number.isFinite(upload.duration) || (upload.duration ?? 0) <= 0) {
+    return "audio upload response did not include a positive duration";
+  }
+  const start = args.audioStartTime ?? 0;
+  const duration = upload.duration;
+  if (start >= duration) {
+    return `audioStartTime must be less than the source duration ${duration}s (got ${start})`;
+  }
+  if (args.numFrames !== void 0 || args.audioMaxDuration === void 0) return null;
+  const usableSeconds = Math.min(args.audioMaxDuration, duration - start);
+  const rawFrames = Math.floor(usableSeconds * (args.frameRate ?? 24));
+  const clampedFrames = Math.max(1, Math.min(1024, rawFrames));
+  const gridFrames = 1 + ASTRA_VIDEO_FRAME_STEP * Math.floor((clampedFrames - 1) / ASTRA_VIDEO_FRAME_STEP);
+  if (gridFrames > ASTRA_VIDEO_FRAME_LIMITS.audio2video) {
+    return `audioMaxDuration selects ${gridFrames} frames after clipping and the 8k+1 grid; maximum is ${ASTRA_VIDEO_FRAME_LIMITS.audio2video}`;
+  }
+  return null;
+}
+function put(body, key, value) {
+  if (value !== void 0) body[key] = value;
+}
+function buildJobBody(mode, args) {
+  const allowed = ASTRA_VIDEO_ALLOWED_FIELDS[mode];
+  if (!allowed) throw new Error(`Unknown ASTRA video mode: ${mode}`);
+  const body = { mode, prompt: args.prompt };
+  put(body, "num_frames", args.numFrames);
+  if (args.autoDuration) {
+    if (args.numFrames === void 0) {
+      body.auto_duration = { min_seconds: args.autoDuration.minSeconds, max_seconds: args.autoDuration.maxSeconds };
+    }
+  }
+  put(body, "width", args.width);
+  put(body, "height", args.height);
+  put(body, "frame_rate", args.frameRate);
+  put(body, "seed", args.seed);
+  if (args.lora?.length) body.lora = [...args.lora];
+  put(body, "negative_prompt", args.negativePrompt);
+  put(body, "num_inference_steps", args.numInferenceSteps);
+  put(body, "num_generated_keyframes", args.numGeneratedKeyframes);
+  if (args.images?.length) {
+    body.images = args.images.map((image) => {
+      const entry = { upload_id: image.uploadId, frame_idx: image.frameIdx };
+      put(entry, "strength", image.strength);
+      put(entry, "crf", image.crf);
+      return entry;
+    });
+  }
+  put(body, "audio_upload_id", args.audioUploadId);
+  put(body, "audio_start_time", args.audioStartTime);
+  put(body, "audio_max_duration", args.audioMaxDuration);
+  put(body, "video_upload_id", args.videoUploadId);
+  put(body, "start_time", args.startTime);
+  put(body, "end_time", args.endTime);
+  const rejected = Object.keys(body).filter((key) => !allowed.includes(key));
+  if (rejected.length) {
+    throw new Error(
+      `mode ${mode} does not accept ${rejected.join(", ")} \u2014 it accepts ${allowed.join(", ")}. Drop the field or pick the mode that owns it.`
+    );
+  }
+  return body;
+}
+function sleep(ms) {
+  return new Promise((resolve5) => setTimeout(resolve5, ms));
+}
+var submitTimestamps = [];
+async function waitForSubmitSlot() {
+  for (; ; ) {
+    const now = Date.now();
+    while (submitTimestamps.length && now - submitTimestamps[0] >= 36e5) submitTimestamps.shift();
+    const recentMinute = submitTimestamps.filter((timestamp) => now - timestamp < 6e4);
+    if (recentMinute.length < ASTRA_VIDEO_SUBMITS_PER_MINUTE && submitTimestamps.length < ASTRA_VIDEO_SUBMITS_PER_HOUR) {
+      submitTimestamps.push(now);
+      return;
+    }
+    const minuteWait = recentMinute.length >= ASTRA_VIDEO_SUBMITS_PER_MINUTE ? 6e4 - (now - recentMinute[0]) : 0;
+    const hourWait = submitTimestamps.length >= ASTRA_VIDEO_SUBMITS_PER_HOUR ? 36e5 - (now - submitTimestamps[0]) : 0;
+    await sleep(Math.max(minuteWait, hourWait) + 250);
+  }
+}
+var uploadTimestamps = [];
+async function waitForUploadSlot() {
+  for (; ; ) {
+    const now = Date.now();
+    while (uploadTimestamps.length && now - uploadTimestamps[0] >= 6e4) uploadTimestamps.shift();
+    if (uploadTimestamps.length < ASTRA_VIDEO_UPLOADS_PER_MINUTE) {
+      uploadTimestamps.push(now);
+      return;
+    }
+    await sleep(6e4 - (now - uploadTimestamps[0]) + 250);
+  }
+}
+function redactedFailure(what, status, body) {
+  const trimmed = body.length > 600 ? `${body.slice(0, 600)}\u2026` : body;
+  return new Error(`ASTRA video ${what} failed (HTTP ${status}): ${trimmed}`);
+}
+function isTerminalStatus(status) {
+  return status === 400 || status === 401 || status === 403 || status === 404 || status === 413 || status === 415;
+}
+function astraVideoHeaders(key) {
+  return {
+    Authorization: `Bearer ${key}`,
+    "User-Agent": ASTRA_VIDEO_USER_AGENT
+  };
+}
+function authHeaders() {
+  return astraVideoHeaders(requireAstraVideoKey());
+}
+function jobsUrl(suffix = "") {
+  return `${astraVideoBaseUrl()}/v1/jobs${suffix}`;
+}
+async function withBackoff(what, call, baseDelayMs = 2e3) {
+  let delay = baseDelayMs;
+  let last;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const result = await call();
+    if (result.ok || result.status !== 429 && result.status !== 503) return result;
+    last = result;
+    await sleep(delay);
+    delay *= 2;
+  }
+  return last;
+}
+var CONTENT_TYPE_BY_EXTENSION = {
+  ".png": { contentType: "image/png", kind: "image" },
+  ".jpg": { contentType: "image/jpeg", kind: "image" },
+  ".jpeg": { contentType: "image/jpeg", kind: "image" },
+  ".mp4": { contentType: "video/mp4", kind: "video" },
+  ".wav": { contentType: "audio/wav", kind: "audio" },
+  ".mp3": { contentType: "audio/mpeg", kind: "audio" }
+};
+function uploadContentType(filePath) {
+  const ext = path2.extname(filePath).toLowerCase();
+  const found = CONTENT_TYPE_BY_EXTENSION[ext];
+  if (!found) {
+    throw new Error(
+      `ASTRA video uploads accept ${Object.keys(CONTENT_TYPE_BY_EXTENSION).join(", ")} \u2014 "${ext || filePath}" is not one of them.`
+    );
+  }
+  return found;
+}
+async function uploadFile(filePath) {
+  const resolved = path2.resolve(filePath);
+  if (!fs2.existsSync(resolved)) throw new Error(`File not found: ${filePath}`);
+  const { contentType, kind } = uploadContentType(resolved);
+  const bytes = fs2.statSync(resolved).size;
+  const limit = ASTRA_VIDEO_UPLOAD_LIMITS[kind];
+  if (bytes > limit) {
+    throw new Error(`${path2.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit} bytes.`);
+  }
+  await waitForUploadSlot();
+  const headers = authHeaders();
+  const result = await withBackoff("upload", async () => {
+    try {
+      const response = await fetch(`${astraVideoBaseUrl()}/v1/uploads`, {
+        method: "POST",
+        headers: { ...headers, "Content-Type": contentType },
+        body: fs2.readFileSync(resolved),
+        signal: AbortSignal.timeout(TRANSFER_TIMEOUT_MS)
+      });
+      return { ok: response.ok, status: response.status, body: await response.text() };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { ok: false, status: 502, body: `Upload unreachable: ${message}` };
+    }
+  });
+  if (!result.ok) throw redactedFailure(`upload of ${path2.basename(resolved)}`, result.status, result.body);
+  const parsed = JSON.parse(result.body);
+  return {
+    uploadId: parsed.upload_id,
+    bytes: parsed.bytes,
+    kind: parsed.kind,
+    ...parsed.expires_at !== void 0 ? { expiresAt: parsed.expires_at } : {},
+    ...parsed.duration !== void 0 ? { duration: parsed.duration } : {},
+    ...parsed.width !== void 0 ? { width: parsed.width } : {},
+    ...parsed.height !== void 0 ? { height: parsed.height } : {},
+    ...parsed.frames !== void 0 ? { frames: parsed.frames } : {},
+    ...parsed.fps !== void 0 ? { fps: parsed.fps } : {}
+  };
+}
+async function submitJob(body) {
+  const bodyBytes = Buffer.byteLength(JSON.stringify(body));
+  if (bodyBytes > ASTRA_VIDEO_MAX_JOB_BODY_BYTES) {
+    throw new Error(`ASTRA video job body is ${bodyBytes} bytes; the ceiling is ${ASTRA_VIDEO_MAX_JOB_BODY_BYTES} bytes.`);
+  }
+  await waitForSubmitSlot();
+  const result = await withBackoff(
+    "submit",
+    () => requestRaw("post", jobsUrl(), authHeaders(), body, SUBMIT_TIMEOUT_MS),
+    15e3
+  );
+  if (!result.ok) throw redactedFailure("job submission", result.status, result.body);
+  const parsed = JSON.parse(result.body);
+  if (!parsed.job_id) throw new Error(`ASTRA video accepted the job but returned no job_id: ${result.body}`);
+  return parsed.job_id;
+}
+async function awaitResult(jobId) {
+  const startedAt = Date.now();
+  for (; ; ) {
+    if (Date.now() - startedAt > ASTRA_VIDEO_MAX_WAIT_MS) {
+      throw new Error(
+        `ASTRA video job ${jobId} did not finish within ${ASTRA_VIDEO_MAX_WAIT_MS / 1e3}s. It may still be running \u2014 check GET /v1/jobs/${jobId}.`
+      );
+    }
+    const status = await withBackoff(
+      "status",
+      () => requestRaw("get", jobsUrl(`/${jobId}`), authHeaders(), void 0, STATUS_TIMEOUT_MS)
+    );
+    if (!status.ok) {
+      if (isTerminalStatus(status.status)) throw redactedFailure(`status of job ${jobId}`, status.status, status.body);
+      await sleep(POLL_INTERVAL_MS);
+      continue;
+    }
+    const job = JSON.parse(status.body);
+    if (job.status === "failed") {
+      throw new Error(`ASTRA video job ${jobId} failed: ${job.error || "the server gave no reason"}`);
+    }
+    if (job.status === "succeeded") {
+      const download = await withBackoff("result download", async () => {
+        try {
+          const response = await fetch(jobsUrl(`/${jobId}/result`), {
+            headers: authHeaders(),
+            signal: AbortSignal.timeout(TRANSFER_TIMEOUT_MS)
+          });
+          return {
+            ok: response.ok,
+            status: response.status,
+            bytes: Buffer.from(await response.arrayBuffer())
+          };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          return { ok: false, status: 502, bytes: Buffer.from(message) };
+        }
+      });
+      if (download.status === 409) {
+        await sleep(POLL_INTERVAL_MS);
+        continue;
+      }
+      if (!download.ok) {
+        throw redactedFailure(`result download of job ${jobId}`, download.status, download.bytes.toString("utf8"));
+      }
+      return {
+        bytes: download.bytes,
+        request: job.request,
+        elapsedSeconds: Math.round((Date.now() - startedAt) / 1e3)
+      };
+    }
+    await sleep(POLL_INTERVAL_MS);
+  }
+}
+async function runJob(mode, prompt, body, outputPath, filename) {
+  const videoPath = resolveOutputFile(outputPath || process.cwd(), filename || `astra_${Date.now()}.mp4`, "video");
+  const receiptPath = `${videoPath}.astra-job.json`;
+  const writeReceipt = (value) => {
+    const temp = `${receiptPath}.${process.pid}.tmp`;
+    fs2.writeFileSync(temp, JSON.stringify(value, null, 2) + "\n", { mode: 384 });
+    fs2.renameSync(temp, receiptPath);
+  };
+  const jobId = await submitJob(body);
+  const submitted = { jobId, mode, prompt, videoPath, submittedAt: (/* @__PURE__ */ new Date()).toISOString(), submittedRequest: body };
+  writeReceipt({ ...submitted, status: "submitted" });
+  const { bytes, request, elapsedSeconds } = await awaitResult(jobId);
+  fs2.writeFileSync(videoPath, bytes);
+  const response = { videoPath, jobId, mode, prompt, bytes: bytes.length, elapsedSeconds, ...request ? { request } : {} };
+  writeReceipt({ ...submitted, ...response, sha256: createHash2("sha256").update(bytes).digest("hex"), status: "completed", completedAt: (/* @__PURE__ */ new Date()).toISOString() });
+  return response;
+}
+async function generateFromImage(args) {
+  const first = await uploadFile(args.firstFramePath);
+  const images = [{ uploadId: first.uploadId, frameIdx: 0, strength: args.strength ?? 1 }];
+  if (args.lastFramePath) {
+    const last = await uploadFile(args.lastFramePath);
+    images.push({ uploadId: last.uploadId, frameIdx: (args.numFrames ?? 121) - 1, strength: args.strength ?? 1 });
+  }
+  const mode = ASTRA_VIDEO_TIERS[args.tier];
+  const dimensions = mode === "guided" ? { width: 1536, height: 1024 } : {};
+  const body = buildJobBody(mode, { ...args, ...dimensions, images });
+  return runJob(mode, args.prompt, body, args.outputPath, args.filename);
+}
+async function generateFromAudio(args) {
+  if (args.imagePath && uploadContentType(args.imagePath).kind !== "image") {
+    throw new Error("ASTRA video imagePath must be an image (.png/.jpg/.jpeg)");
+  }
+  const audio = args.audioPath !== void 0 ? await uploadFile(args.audioPath) : void 0;
+  if (audio) {
+    const sourceError = checkAudioSource(audio, args);
+    if (sourceError) throw new Error(`ASTRA video audio source refused: ${sourceError}`);
+  }
+  const audioUploadId = audio?.uploadId ?? args.audioUploadId;
+  const image = args.imagePath ? await uploadFile(args.imagePath) : void 0;
+  if (image && image.kind !== "image") throw new Error("ASTRA video imagePath must upload as image");
+  const images = image ? [{ uploadId: image.uploadId, frameIdx: 0, strength: args.strength }] : void 0;
+  const uploaded = { audioUploadId, audioExpiresAt: audio?.expiresAt, audioDuration: audio?.duration };
+  if (!args.expectLipSync) {
+    const body = buildJobBody("audio2video", { ...args, audioUploadId, images });
+    return { ...await runJob("audio2video", args.prompt, body, args.outputPath, args.filename), ...uploaded };
+  }
+  const results = [];
+  const attempts = [];
+  let retryError;
+  for (let attempt = 1; attempt <= args.maxAttempts; attempt += 1) {
+    const seed = attempt === 1 ? args.seed : randomInt(ASTRA_VIDEO_MAX_SEED);
+    const filename = attempt === 1 || !args.filename ? args.filename : args.filename.replace(/(\.[^.]+)?$/, (ext) => `-attempt${attempt}${ext}`);
+    const body = buildJobBody("audio2video", { ...args, seed, audioUploadId, images });
+    let result;
+    try {
+      result = await runJob("audio2video", args.prompt, body, args.outputPath, filename);
+    } catch (error) {
+      if (attempt === 1) throw error;
+      retryError = `attempt ${attempt} failed: ${error instanceof Error ? error.message : String(error)}`;
+      break;
+    }
+    const check = checkSpeechSync({ videoPath: result.videoPath, audioPath: args.audioPath, audioStartTime: args.audioStartTime, audioMaxDuration: args.audioMaxDuration });
+    annotateReceipt(result.videoPath, { speechSync: { attempt, seed: seed ?? null, ...check } });
+    results.push(result);
+    attempts.push({ videoPath: result.videoPath, jobId: result.jobId, seed, check });
+    if (!check.findings.some((finding) => finding.reseed)) break;
+  }
+  const last = attempts.length - 1;
+  const chosen = attempts[last].check.findings.some((finding) => finding.reseed) ? attempts.reduce((best, a, i) => (a.check.sync?.margin ?? -Infinity) > (attempts[best].check.sync?.margin ?? -Infinity) ? i : best, 0) : last;
+  annotateReceipt(results[chosen].videoPath, { selection: {
+    status: "provisional",
+    basis: "picture_motion_audio_correlation",
+    candidate: chosen,
+    review: { camera: "not_reviewed", blocking: "not_reviewed", phonemeLipSync: "not_reviewed" }
+  } });
+  return { ...results[chosen], ...uploaded, speechSync: { attempts, chosen, ...retryError ? { retryError } : {} } };
+}
+function annotateReceipt(videoPath, extra) {
+  const receiptPath = `${videoPath}.astra-job.json`;
+  const temp = `${receiptPath}.${process.pid}.tmp`;
+  fs2.writeFileSync(temp, JSON.stringify({ ...JSON.parse(fs2.readFileSync(receiptPath, "utf8")), ...extra }, null, 2) + "\n", { mode: 384 });
+  fs2.renameSync(temp, receiptPath);
+}
 
 // src/speech.ts
 var voiceContract = () => nodeModule3.createRequire(import.meta.url)("../../skills/_shared/character-voice.js");
@@ -4928,7 +5533,7 @@ var actingContract = () => nodeModule3.createRequire(import.meta.url)("../../ski
 var delivery = external_exports.enum(["voiceover", "on_screen", "off_screen"]);
 var speechManageSchema = external_exports.object({
   path: external_exports.string().min(1),
-  action: external_exports.enum(["prepare", "list", "update", "attach_audio", "plan_audio", "plan_video", "attach_video"]),
+  action: external_exports.enum(["prepare", "list", "update", "attach_audio", "plan_audio", "plan_video", "attach_video", "retime"]),
   shotId: external_exports.string().optional(),
   lineId: external_exports.string().optional(),
   speaker: external_exports.string().optional(),
@@ -4937,17 +5542,19 @@ var speechManageSchema = external_exports.object({
   patch: external_exports.object({ tts: external_exports.string().min(1).optional(), sub: external_exports.string().optional(), speaker: external_exports.string().min(1).optional(), delivery: delivery.optional(), acting: actingSchema.nullable().optional() }).strict().optional(),
   audioPath: external_exports.string().optional(),
   videoPath: external_exports.string().optional(),
+  reuse: external_exports.literal("tail_trim").optional(),
+  timingPatch: external_exports.object({ speechBoundActions: external_exports.boolean().optional(), actions: external_exports.array(external_exports.tuple([external_exports.number().int().nonnegative(), external_exports.number().finite().positive()])).optional() }).strict().optional(),
   generation: external_exports.object({ generator: external_exports.string().min(1), voiceSettings: external_exports.record(external_exports.unknown()), text: external_exports.string().min(1), language: external_exports.string().min(1).optional() }).strict().optional(),
   capabilities: external_exports.object({ provider: external_exports.string().min(1), model: external_exports.string().min(1), audioConditioning: external_exports.boolean(), lipSync: external_exports.boolean(), postLipSync: external_exports.boolean(), evidence: external_exports.string().min(1) }).strict().optional()
 }).strict();
-var hash = (s) => createHash2("sha256").update(s).digest("hex");
+var hash = (s) => createHash3("sha256").update(s).digest("hex");
 var object = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
 function speechRevision(line, character) {
   return hash(JSON.stringify(actingContract().speechRevisionPayload(line, character?.tts)));
 }
 function currentAudio(line, character) {
   try {
-    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync3(line.audio.path) && hash(readFileSync3(line.audio.path)) === line.audio.sha256;
+    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync4(line.audio.path) && hash(readFileSync4(line.audio.path)) === line.audio.sha256;
   } catch {
     return false;
   }
@@ -4977,13 +5584,13 @@ function audioProvenanceStatus(line, character) {
   const voice = character?.tts;
   const historical = ["supertonic", "mlx"].includes(String(voice?.engine)) || voice?.engine === "elevenlabs" && ["eleven_v3", "eleven_v3_conversational", "eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_turbo_v2_5"].includes(String(voice?.model));
   try {
-    if (historical && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && hash(readFileSync3(line.audio.path)) === line.audio.sha256) return "preserved_historical_recording_unverified";
+    if (historical && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && hash(readFileSync4(line.audio.path)) === line.audio.sha256) return "preserved_historical_recording_unverified";
   } catch {
   }
   return "stale_or_missing";
 }
 function measuredDuration(line) {
-  if (!line.audio || !existsSync3(line.audio.path)) return null;
+  if (!line.audio || !existsSync4(line.audio.path)) return null;
   try {
     const value = Number(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
     return Number.isFinite(value) && value > 0 ? value : null;
@@ -5008,9 +5615,9 @@ function speechVideoPlan(input, capabilities) {
 function manageSpeech(args) {
   args = speechManageSchema.parse(args);
   const { file, win, header } = readBoard(args.path);
-  const before = readFileSync3(file, "utf8");
+  const before = readFileSync4(file, "utf8");
   const revision = hash(before);
-  const mutates = ["prepare", "update", "attach_audio", "attach_video"].includes(args.action);
+  const mutates = ["prepare", "update", "attach_audio", "attach_video", "retime"].includes(args.action);
   if (mutates && args.expectedRevision !== revision) throw new Error("Read speech first and supply its current expectedRevision; the storyboard may have changed");
   const doc = object(win.SB_DOC);
   const rawCharacters = doc.characters;
@@ -5018,6 +5625,9 @@ function manageSpeech(args) {
   const character = (id) => characters.find((c) => c.id === id);
   const scenes = win.SCENES;
   let changed = false;
+  let timing;
+  if (args.timingPatch && args.action !== "retime") throw new Error("timingPatch is only used by retime");
+  if (args.reuse && args.action !== "attach_video") throw new Error("reuse is only used by attach_video");
   if (args.action === "prepare") {
     const needsNarrator = object(win.STORY).version !== "story-v2" || scenes.some((scene) => (scene.narration || []).some((line) => !line.speaker));
     if ((needsNarrator || doc.narratorCharacterId !== void 0) && (typeof doc.narratorCharacterId !== "string" || !character(doc.narratorCharacterId)))
@@ -5070,12 +5680,12 @@ function manageSpeech(args) {
       }
     } else {
       if (!args.audioPath) throw new Error("audioPath is required");
-      const audioPath = resolve3(dirname3(file), args.audioPath);
+      const audioPath = resolve4(dirname3(file), args.audioPath);
       if (!args.generation || args.generation.text !== line.tts) throw new Error("Attach the actual generation arguments and exact line text");
       const voice = character(line.speaker)?.tts;
       const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation, line);
       if (voiceErrors.length) throw new Error("Generation arguments do not match the pinned character voice: " + voiceErrors.join("; "));
-      const bytes = readFileSync3(audioPath);
+      const bytes = readFileSync4(audioPath);
       if (!bytes.length) throw new Error("Audio file is empty");
       const priorAudio = line.audio;
       const audioHash = hash(bytes), lineRevision = speechRevision(line, character(line.speaker));
@@ -5089,6 +5699,39 @@ function manageSpeech(args) {
       line.audio = { path: audioPath, sha256: audioHash, revision: lineRevision, status: "not_reviewed", generation: args.generation };
       line.mediaStatus = "audio_ready";
     }
+    const clock = actingContract().planScenePerformance(scene, measuredDuration);
+    timing = {
+      shotId: scene.id,
+      storedSeconds: scene.duration,
+      measuredSeconds: clock.durationSeconds,
+      warnings: clock.warnings,
+      nextAction: "retime",
+      review: "not_reviewed"
+    };
+    changed = true;
+  }
+  if (args.action === "retime") {
+    const scene = scenes.find((item) => item.id === args.shotId);
+    if (!scene || args.lineId || args.speaker || args.query) throw new Error("Retime one complete shot by shotId");
+    for (const line of scene.narration || []) {
+      if (!currentAudio(line, character(line.speaker))) throw new Error("Attach current speech before retiming");
+    }
+    const contract2 = nodeModule3.createRequire(import.meta.url)("../../skills/_shared/performance-retiming.js");
+    const result = contract2.retime(scene, args.timingPatch || {}, measuredDuration);
+    scene.performance = result.scene.performance;
+    scene.duration = result.scene.duration;
+    const video = object(object(scene.visual).video);
+    if (Object.keys(video).length) video.speechStatus = "stale";
+    timing = {
+      shotId: scene.id,
+      previousSeconds: result.previousSeconds,
+      durationSeconds: result.plan.durationSeconds,
+      performance: result.plan.performance,
+      warnings: result.plan.warnings,
+      nextAction: "compose_and_prepare_video",
+      review: "not_reviewed"
+    };
+    invalidated = { video, edit: true };
     changed = true;
   }
   if (args.action === "plan_video" || args.action === "attach_video") {
@@ -5102,11 +5745,11 @@ function manageSpeech(args) {
     plan = { ...plan, continuity: continuityContract.plan(win, scenes.indexOf(scene), dirname3(file)) };
     if (args.action === "attach_video") {
       if (!args.videoPath) throw new Error("videoPath is required");
-      const videoPath = resolve3(dirname3(file), args.videoPath);
-      const bytes = readFileSync3(videoPath);
+      const videoPath = resolve4(dirname3(file), args.videoPath);
+      const bytes = readFileSync4(videoPath);
       if (!bytes.length) throw new Error("Video file is empty");
       const audio = selected.map(({ line }) => {
-        if (!line.audio || line.audio.revision !== speechRevision(line, character(line.speaker)) || hash(readFileSync3(line.audio.path)) !== line.audio.sha256) throw new Error("Generate and attach current speech before binding video");
+        if (!line.audio || line.audio.revision !== speechRevision(line, character(line.speaker)) || hash(readFileSync4(line.audio.path)) !== line.audio.sha256) throw new Error("Generate and attach current speech before binding video");
         const errors = voiceContract().generationVoiceErrors(character(line.speaker)?.tts, line.audio.generation, line);
         if (line.audio.generation.text !== line.tts || errors.length) throw new Error("Speech generation evidence changed: " + errors.join("; "));
         return { lineId: line.id, sha256: line.audio.sha256, revision: line.audio.revision };
@@ -5118,13 +5761,37 @@ function manageSpeech(args) {
       const videoSha256 = hash(bytes);
       const performanceChanged = priorBinding.performanceRevision && priorBinding.performanceRevision !== plan.performanceRevision;
       const audioChanged = Array.isArray(priorBinding.audio) && JSON.stringify(priorBinding.audio) !== JSON.stringify(audio);
-      if (priorBinding.videoSha256 === videoSha256 && (performanceChanged || audioChanged)) {
+      const retiming = nodeModule3.createRequire(import.meta.url)("../../skills/_shared/performance-retiming.js");
+      const tailTrim = args.reuse === "tail_trim" && priorBinding.videoSha256 === videoSha256 && !audioChanged && Array.isArray(priorBinding.audio) && retiming.prefixCompatible(priorBinding, plan);
+      if (args.reuse && !tailTrim) throw new Error("Tail trim requires identical bound audio, unchanged speech/action starts and semantics, and a shorter end. Regenerate changed speech or staging.");
+      let quality = { review: "not_reviewed", camera: "not_reviewed", lipSync: "not_reviewed" };
+      try {
+        const receipt = JSON.parse(readFileSync4(videoPath + ".astra-job.json", "utf8"));
+        if (receipt.sha256 === videoSha256) quality = { ...quality, speechSync: receipt.speechSync || null, selection: receipt.selection || null };
+        else if (!receipt.sha256 && receipt.videoPath === videoPath)
+          quality = { ...quality, unverifiedSpeechSync: receipt.speechSync || null, receiptBinding: "unverified" };
+      } catch {
+      }
+      if (priorBinding.videoSha256 === videoSha256 && (performanceChanged || audioChanged) && !tailTrim) {
         plan.warnings.push("Unchanged video bytes retain their original performance and audio binding; the revised performance or speech has not been generated in this footage.");
         video.speechStatus = "stale";
         invalidated = { video, edit: true };
       } else {
         video.clip = args.videoPath;
-        video.speechBinding = { ...plan, audio, videoPath, videoSha256 };
+        video.speechBinding = {
+          ...plan,
+          audio,
+          videoPath,
+          videoSha256,
+          quality,
+          ...tailTrim ? { reuse: {
+            kind: "tail_trim",
+            sourcePerformanceRevision: priorBinding.performanceRevision,
+            sourceDurationSeconds: priorBinding.durationSeconds,
+            selectedDurationSeconds: plan.durationSeconds,
+            review: "not_reviewed"
+          } } : {}
+        };
         video.speechStatus = "current";
       }
       visual.video = video;
@@ -5140,24 +5807,24 @@ function manageSpeech(args) {
       ids.add(line.id);
       if (!character(line.speaker)?.tts) throw new Error(`Missing pinned voice for ${line.speaker}`);
     }
-    const work = resolve3(dirname3(file), "../.work/speech-history");
-    mkdirSync2(work, { recursive: true });
+    const work = resolve4(dirname3(file), "../.work/speech-history");
+    mkdirSync3(work, { recursive: true });
     const backup = join4(work, revision + ".js");
-    if (!existsSync3(backup)) writeFileSync2(backup, before);
+    if (!existsSync4(backup)) writeFileSync4(backup, before);
     const nextSource = serializeBoard(win, header);
-    if (hash(readFileSync3(file)) !== revision) throw new Error("Storyboard changed during speech edit");
+    if (hash(readFileSync4(file)) !== revision) throw new Error("Storyboard changed during speech edit");
     const tmp = file + "." + randomUUID() + ".tmp";
-    writeFileSync2(tmp, nextSource);
-    renameSync2(tmp, file);
+    writeFileSync4(tmp, nextSource);
+    renameSync3(tmp, file);
   }
-  return { revision: hash(readFileSync3(file)), changed, invalidated, plan, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  return { revision: hash(readFileSync4(file)), changed, invalidated, plan, timing, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/video-duration.ts
 var import_video_duration = __toESM(require_video_duration(), 1);
 
 // src/seedance-client.ts
-import * as path2 from "node:path";
+import * as path3 from "node:path";
 var VALID_SEEDANCE_RESOLUTIONS = ["480p", "720p", "1080p", "4k"];
 var VALID_SEEDANCE_RATIOS = ["16:9", "9:16", "4:3", "3:4", "1:1", "21:9", "adaptive"];
 var SEEDANCE_MODEL_SPECS = {
@@ -5417,12 +6084,12 @@ var seedanceReferenceSchema = external_exports.object({
       });
     }
     for (const filePath of data.referenceVideoPaths) {
-      const ext = path2.extname(filePath).toLowerCase();
+      const ext = path3.extname(filePath).toLowerCase();
       if (!SEEDANCE_REFERENCE_VIDEO_EXTENSIONS.includes(ext)) {
         ctx.addIssue({
           code: external_exports.ZodIssueCode.custom,
           path: ["referenceVideoPaths"],
-          message: `Reference video must be mp4 or mov (got "${ext}" in ${path2.basename(filePath)}).`
+          message: `Reference video must be mp4 or mov (got "${ext}" in ${path3.basename(filePath)}).`
         });
       }
     }
@@ -5459,12 +6126,12 @@ var seedanceReferenceSchema = external_exports.object({
     });
   }
   for (const filePath of data.referenceAudioPaths) {
-    const ext = path2.extname(filePath).toLowerCase();
+    const ext = path3.extname(filePath).toLowerCase();
     if (!SEEDANCE_REFERENCE_AUDIO_EXTENSIONS.includes(ext)) {
       ctx.addIssue({
         code: external_exports.ZodIssueCode.custom,
         path: ["referenceAudioPaths"],
-        message: `Reference audio must be wav or mp3 (got "${ext}" in ${path2.basename(filePath)}).`
+        message: `Reference audio must be wav or mp3 (got "${ext}" in ${path3.basename(filePath)}).`
       });
     }
   }
@@ -5662,8 +6329,8 @@ function resolveVideoDuration(tool, input) {
 
 // src/usage-ledger.ts
 import { execFileSync as execFileSync2 } from "node:child_process";
-import path3 from "node:path";
-var EPISODE_MARKER = path3.join("storyboard", "scenes.js");
+import path4 from "node:path";
+var EPISODE_MARKER = path4.join("storyboard", "scenes.js");
 var VEO_TIER = {
   "veo-3.1-lite-generate-preview": "lite",
   "veo-3.1-fast-generate-preview": "fast",
@@ -5860,6 +6527,8 @@ function charUnits(args) {
 export {
   astraAudio2VideoSchema,
   astraImg2VideoSchema,
+  generateFromAudio,
+  generateFromImage,
   manageSpeech,
   priceOf,
   readBoard,

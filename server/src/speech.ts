@@ -15,11 +15,13 @@ export { actingSchema } from './speech-acting.js';
 const delivery = z.enum(['voiceover', 'on_screen', 'off_screen']);
 export const speechManageSchema = z.object({
   path: z.string().min(1),
-  action: z.enum(['prepare', 'list', 'update', 'attach_audio', 'plan_audio', 'plan_video', 'attach_video']),
+  action: z.enum(['prepare', 'list', 'update', 'attach_audio', 'plan_audio', 'plan_video', 'attach_video', 'retime']),
   shotId: z.string().optional(), lineId: z.string().optional(), speaker: z.string().optional(), query: z.string().optional(),
   expectedRevision: z.string().optional(),
   patch: z.object({ tts: z.string().min(1).optional(), sub: z.string().optional(), speaker: z.string().min(1).optional(), delivery: delivery.optional(), acting: actingSchema.nullable().optional() }).strict().optional(),
   audioPath: z.string().optional(), videoPath: z.string().optional(),
+  reuse: z.literal('tail_trim').optional(),
+  timingPatch: z.object({ speechBoundActions: z.boolean().optional(), actions: z.array(z.tuple([z.number().int().nonnegative(), z.number().finite().positive()])).optional() }).strict().optional(),
   generation: z.object({ generator: z.string().min(1), voiceSettings: z.record(z.unknown()), text: z.string().min(1), language: z.string().min(1).optional() }).strict().optional(),
   capabilities: z.object({ provider: z.string().min(1), model: z.string().min(1), audioConditioning: z.boolean(), lipSync: z.boolean(), postLipSync: z.boolean(), evidence: z.string().min(1) }).strict().optional(),
 }).strict();
@@ -94,7 +96,7 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
   const { file, win, header } = readBoard(args.path);
   const before = readFileSync(file, 'utf8');
   const revision = hash(before);
-  const mutates = ['prepare', 'update', 'attach_audio', 'attach_video'].includes(args.action);
+  const mutates = ['prepare', 'update', 'attach_audio', 'attach_video', 'retime'].includes(args.action);
   if (mutates && args.expectedRevision !== revision) throw new Error('Read speech first and supply its current expectedRevision; the storyboard may have changed');
   const doc = object(win.SB_DOC);
   const rawCharacters = doc.characters;
@@ -102,6 +104,9 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
   const character = (id: string | undefined) => characters.find(c => c.id === id);
   const scenes = win.SCENES!;
   let changed = false;
+  let timing: Record<string, unknown> | undefined;
+  if (args.timingPatch && args.action !== 'retime') throw new Error('timingPatch is only used by retime');
+  if (args.reuse && args.action !== 'attach_video') throw new Error('reuse is only used by attach_video');
   if (args.action === 'prepare') {
     const needsNarrator = object(win.STORY).version !== 'story-v2' || scenes.some(scene =>
       ((scene.narration || []) as Line[]).some(line => !line.speaker));
@@ -173,7 +178,27 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
       line.audio = { path: audioPath, sha256: audioHash, revision: lineRevision, status: 'not_reviewed', generation: args.generation };
       line.mediaStatus = 'audio_ready';
     }
+    const clock = actingContract().planScenePerformance(scene, measuredDuration);
+    timing = { shotId: scene.id, storedSeconds: scene.duration, measuredSeconds: clock.durationSeconds,
+      warnings: clock.warnings, nextAction: 'retime', review: 'not_reviewed' };
     changed = true;
+  }
+  if (args.action === 'retime') {
+    const scene = scenes.find(item => item.id === args.shotId);
+    if (!scene || args.lineId || args.speaker || args.query) throw new Error('Retime one complete shot by shotId');
+    for (const line of (scene.narration || []) as Line[]) {
+      if (!currentAudio(line, character(line.speaker))) throw new Error('Attach current speech before retiming');
+    }
+    const contract = nodeModule.createRequire(import.meta.url)('../../skills/_shared/performance-retiming.js');
+    const result = contract.retime(scene, args.timingPatch || {}, measuredDuration);
+    scene.performance = result.scene.performance;
+    scene.duration = result.scene.duration;
+    const video = object(object(scene.visual).video);
+    if (Object.keys(video).length) video.speechStatus = 'stale';
+    timing = { shotId: scene.id, previousSeconds: result.previousSeconds, durationSeconds: result.plan.durationSeconds,
+      performance: result.plan.performance, warnings: result.plan.warnings,
+      nextAction: 'compose_and_prepare_video', review: 'not_reviewed' };
+    invalidated = { video, edit: true }; changed = true;
   }
   if (args.action === 'plan_video' || args.action === 'attach_video') {
     const scene = scenes.find(item => item.id === args.shotId);
@@ -204,13 +229,28 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
       const videoSha256 = hash(bytes);
       const performanceChanged = priorBinding.performanceRevision && priorBinding.performanceRevision !== plan.performanceRevision;
       const audioChanged = Array.isArray(priorBinding.audio) && JSON.stringify(priorBinding.audio) !== JSON.stringify(audio);
-      if (priorBinding.videoSha256 === videoSha256 && (performanceChanged || audioChanged)) {
+      const retiming = nodeModule.createRequire(import.meta.url)('../../skills/_shared/performance-retiming.js');
+      const tailTrim = args.reuse === 'tail_trim' && priorBinding.videoSha256 === videoSha256 &&
+        !audioChanged && Array.isArray(priorBinding.audio) && retiming.prefixCompatible(priorBinding, plan);
+      if (args.reuse && !tailTrim) throw new Error('Tail trim requires identical bound audio, unchanged speech/action starts and semantics, and a shorter end. Regenerate changed speech or staging.');
+      let quality: Record<string, unknown> = { review: 'not_reviewed', camera: 'not_reviewed', lipSync: 'not_reviewed' };
+      try {
+        const receipt = JSON.parse(readFileSync(videoPath + '.astra-job.json', 'utf8'));
+        // Bind warnings to these exact bytes; a neighbour's receipt is not evidence.
+        if (receipt.sha256 === videoSha256) quality = { ...quality, speechSync: receipt.speechSync || null, selection: receipt.selection || null };
+        else if (!receipt.sha256 && receipt.videoPath === videoPath)
+          quality = { ...quality, unverifiedSpeechSync: receipt.speechSync || null, receiptBinding: 'unverified' };
+      } catch { /* Missing review evidence stays explicit, without blocking usable footage. */ }
+      if (priorBinding.videoSha256 === videoSha256 && (performanceChanged || audioChanged) && !tailTrim) {
         plan.warnings.push('Unchanged video bytes retain their original performance and audio binding; the revised performance or speech has not been generated in this footage.');
         video.speechStatus = 'stale';
         invalidated = {video, edit:true};
       } else {
         video.clip = args.videoPath;
-        video.speechBinding = {...plan,audio,videoPath,videoSha256};
+        video.speechBinding = {...plan,audio,videoPath,videoSha256,quality,
+          ...(tailTrim ? {reuse:{kind:'tail_trim',sourcePerformanceRevision:priorBinding.performanceRevision,
+            sourceDurationSeconds:priorBinding.durationSeconds, selectedDurationSeconds:plan.durationSeconds,
+            review:'not_reviewed'}} : {})};
         video.speechStatus = 'current';
       }
       visual.video=video; scene.visual=visual;
@@ -235,5 +275,5 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
     const tmp = file + '.' + randomUUID() + '.tmp';
     writeFileSync(tmp, nextSource); renameSync(tmp, file);
   }
-  return { revision: hash(readFileSync(file)), changed, invalidated, plan, ...(args.action === 'plan_audio' ? {audioPlans:selected.map(({scene,line})=>({shotId:scene.id,lineId:line.id,...speechAudioPlan(line,character(line.speaker))}))} : {}), lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line,character(line.speaker)), audioProvenanceStatus:audioProvenanceStatus(line,character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line,character(line.speaker)) })) };
+  return { revision: hash(readFileSync(file)), changed, invalidated, plan, timing, ...(args.action === 'plan_audio' ? {audioPlans:selected.map(({scene,line})=>({shotId:scene.id,lineId:line.id,...speechAudioPlan(line,character(line.speaker))}))} : {}), lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line,character(line.speaker)), audioProvenanceStatus:audioProvenanceStatus(line,character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line,character(line.speaker)) })) };
 }

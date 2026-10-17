@@ -218,16 +218,16 @@ function astraVideoReport(headline: string, result: import('./astra-video-client
 function speechSyncReport(sync: import('./astra-video-client.js').AstraVideoResponse['speechSync']): string {
   if (!sync) return '';
   const lines = sync.attempts.map(({ videoPath, seed, check }, i) =>
-    `  attempt ${i + 1}${i === sync.chosen ? ' (chosen)' : ''} · seed ${seed ?? 'server default'} · ${check.status}` +
+    `  attempt ${i + 1}${i === sync.chosen ? ' (provisional candidate)' : ''} · seed ${seed ?? 'server default'} · ${check.status}` +
     (check.sync ? ` · margin ${check.sync.margin} (best ${check.sync.score} vs chance ${check.sync.chance})` : '') +
     (check.reason ? ` · ${check.reason}` : '') + ` · ${videoPath}`);
   const findings = sync.attempts[sync.chosen].check.findings.map((finding) => `  ⚠ ${finding.kind}: ${finding.what}`);
   const unresolved = sync.attempts[sync.chosen].check.findings.some((finding) => finding.reseed)
-    ? `\nStill no_sync after ${sync.attempts.length} attempt(s); the clip with the best margin is kept. Inspect it, or change the source image or prompt — another seed alone has not helped.`
+    ? `\nStill no_sync after ${sync.attempts.length} attempt(s); the clip with the best margin is kept as a provisional candidate, not a verified performance. Inspect it, or change the source image or prompt — another seed alone has not helped.`
     : '';
   return `\n\nSpeech sync check (picture motion against the supplied speech, ffmpeg only):\n${lines.join('\n')}` +
     (sync.retryError ? `\n  ${sync.retryError}` : '') +
-    (findings.length ? `\nFindings on the chosen clip:\n${findings.join('\n')}` : '') + unresolved +
+    (findings.length ? `\nFindings on the provisional candidate:\n${findings.join('\n')}` : '') + unresolved +
     `\nNot reviewed: ${sync.attempts[sync.chosen].check.notReviewed.join(', ')}.`;
 }
 
