@@ -216,3 +216,15 @@ Never raise scores by hand to reach a requested target.
 ## Requested audio evaluation
 
 When the user explicitly requests an acting-quality loop, call `tts_review_acting` with the actual WAV, clean expectedText, scene direction, language and the actual request in requestedBy. It uses fixed weights (accuracy 25, acting 30, naturalness 25, audio quality 20), returns timestamped defects and binds its report to the audio hash. This is a model judgment, not human approval. Keep rejected takes and reports. Correct the reported defect and generate a new take only within the requested scope. Never call it during normal production without a review request.
+
+The audio critic uses the published professional band consistently: scores of 95–100
+may have positive observed evidence and no defect. Scores below 95 require a
+timestamped issue on that axis; scores below 90 require a major or critical issue.
+This does not raise provider scores or erase findings. Whole-clip confidence, the
+95 overall/character-fit thresholds and rejection of major/critical issues still apply.
+When correcting an older verdict, preserve its raw observation and original verdict,
+then write a separate record naming both the source evaluator and new verdict policy.
+
+Prefer concise, positive acoustic actions such as fully voiced falling endings or
+clipped confident bargaining. Avoid long lists of unwanted vocal effects in synthesis
+notes; compare actual takes because a direction is intent, not evidence of delivery.
