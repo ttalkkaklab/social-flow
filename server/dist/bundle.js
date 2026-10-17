@@ -6930,6 +6930,66 @@ var require_dist = __commonJS({
   }
 });
 
+// ../skills/_shared/video-duration.js
+var require_video_duration = __commonJS({
+  "../skills/_shared/video-duration.js"(exports, module) {
+    "use strict";
+    function positive(value, name) {
+      if (typeof value !== "number" || !Number.isFinite(value) || value <= 0)
+        throw new Error(name + " must be finite positive seconds");
+      return value;
+    }
+    function nonnegative(value, name) {
+      if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
+        throw new Error(name + " must be finite nonnegative seconds");
+      return value;
+    }
+    function minimumDuration2(requiredSeconds, limits) {
+      positive(requiredSeconds, "requiredSeconds");
+      let durationSeconds, numFrames;
+      if (limits.seconds) {
+        durationSeconds = limits.seconds.find((seconds) => seconds >= requiredSeconds);
+      } else if (limits.frameRate !== void 0) {
+        const fps = positive(limits.frameRate, "frameRate");
+        numFrames = Math.max(limits.min, 1 + limits.step * Math.ceil((requiredSeconds * fps - 1) / limits.step));
+        if (numFrames / fps < requiredSeconds) numFrames += limits.step;
+        if (numFrames <= limits.max) durationSeconds = numFrames / fps;
+      } else {
+        durationSeconds = Math.max(limits.min, Math.ceil(requiredSeconds));
+        if (durationSeconds > limits.max) durationSeconds = void 0;
+      }
+      if (durationSeconds === void 0) throw new Error("Required " + requiredSeconds + "s exceeds this route's duration limit; split or replan the shot. No truncation or automatic model switch.");
+      return {
+        requiredSeconds,
+        requestedSeconds: durationSeconds,
+        excessSeconds: durationSeconds - requiredSeconds,
+        ...numFrames === void 0 ? { durationSeconds } : { numFrames, frameRate: limits.frameRate }
+      };
+    }
+    function shotTiming(scene, { performanceSeconds, audioSeconds, edit = {}, outputFps = 30 } = {}) {
+      const plannedSeconds = positive(scene.duration, "scene.duration");
+      const measured = [performanceSeconds, audioSeconds].filter((value) => value !== void 0 && value !== null);
+      for (const value of measured) nonnegative(value, "measured duration");
+      const pre = nonnegative(edit.pre ?? 0, "edit.pre");
+      const post = nonnegative(edit.post ?? 0, "edit.post");
+      const sourceIn = nonnegative(edit.in ?? scene.edit?.in ?? 0, "edit.in");
+      const handle = nonnegative(edit.handle ?? 0, "outgoing handle");
+      const fps = positive(outputFps, "outputFps");
+      const body = Math.max(plannedSeconds, measured.length ? Math.max(...measured) + pre + post : plannedSeconds);
+      const bodySeconds = Math.ceil(body * fps) / fps;
+      const handleSeconds = Math.ceil(handle * fps) / fps;
+      return {
+        plannedSeconds,
+        bodySeconds,
+        sourceIn,
+        handleSeconds,
+        requiredSeconds: sourceIn + bodySeconds + handleSeconds
+      };
+    }
+    module.exports = { minimumDuration: minimumDuration2, shotTiming };
+  }
+});
+
 // node_modules/retry/lib/retry_operation.js
 var require_retry_operation = __commonJS({
   "node_modules/retry/lib/retry_operation.js"(exports, module) {
@@ -13722,19 +13782,19 @@ var require_node_domexception = __commonJS({
 });
 
 // node_modules/fetch-blob/from.js
-import { statSync as statSync3, createReadStream, promises as fs2 } from "node:fs";
-import { basename as basename2 } from "node:path";
+import { statSync as statSync6, createReadStream as createReadStream2, promises as fs5 } from "node:fs";
+import { basename as basename5 } from "node:path";
 var import_node_domexception, stat, blobFromSync, blobFrom, fileFrom, fileFromSync, fromBlob, fromFile, BlobDataItem;
 var init_from = __esm({
   "node_modules/fetch-blob/from.js"() {
     import_node_domexception = __toESM(require_node_domexception(), 1);
     init_file();
     init_fetch_blob();
-    ({ stat } = fs2);
-    blobFromSync = (path15, type) => fromBlob(statSync3(path15), path15, type);
+    ({ stat } = fs5);
+    blobFromSync = (path15, type) => fromBlob(statSync6(path15), path15, type);
     blobFrom = (path15, type) => stat(path15).then((stat4) => fromBlob(stat4, path15, type));
     fileFrom = (path15, type) => stat(path15).then((stat4) => fromFile(stat4, path15, type));
-    fileFromSync = (path15, type) => fromFile(statSync3(path15), path15, type);
+    fileFromSync = (path15, type) => fromFile(statSync6(path15), path15, type);
     fromBlob = (stat4, path15, type = "") => new fetch_blob_default([new BlobDataItem({
       path: path15,
       size: stat4.size,
@@ -13746,7 +13806,7 @@ var init_from = __esm({
       size: stat4.size,
       lastModified: stat4.mtimeMs,
       start: 0
-    })], basename2(path15), { type, lastModified: stat4.mtimeMs });
+    })], basename5(path15), { type, lastModified: stat4.mtimeMs });
     BlobDataItem = class _BlobDataItem {
       #path;
       #start;
@@ -13773,7 +13833,7 @@ var init_from = __esm({
         if (mtimeMs > this.lastModified) {
           throw new import_node_domexception.default("The requested file could not be read, typically due to permission problems that have occurred after a reference to a file was acquired.", "NotReadableError");
         }
-        yield* createReadStream(this.#path, {
+        yield* createReadStream2(this.#path, {
           start: this.#start,
           end: this.#start + this.size - 1
         });
@@ -14407,7 +14467,7 @@ var init_body = __esm({
 
 // node_modules/node-fetch/src/headers.js
 import { types as types2 } from "node:util";
-import http from "node:http";
+import http2 from "node:http";
 function fromRawHeaders(headers = []) {
   return new Headers2(
     headers.reduce((result, value, index, array2) => {
@@ -14429,14 +14489,14 @@ function fromRawHeaders(headers = []) {
 var validateHeaderName, validateHeaderValue, Headers2;
 var init_headers = __esm({
   "node_modules/node-fetch/src/headers.js"() {
-    validateHeaderName = typeof http.validateHeaderName === "function" ? http.validateHeaderName : (name) => {
+    validateHeaderName = typeof http2.validateHeaderName === "function" ? http2.validateHeaderName : (name) => {
       if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(name)) {
         const error2 = new TypeError(`Header name must be a valid HTTP token [${name}]`);
         Object.defineProperty(error2, "code", { value: "ERR_INVALID_HTTP_TOKEN" });
         throw error2;
       }
     };
-    validateHeaderValue = typeof http.validateHeaderValue === "function" ? http.validateHeaderValue : (name, value) => {
+    validateHeaderValue = typeof http2.validateHeaderValue === "function" ? http2.validateHeaderValue : (name, value) => {
       if (/[^\t\u0020-\u007E\u0080-\u00FF]/.test(value)) {
         const error2 = new TypeError(`Invalid character in header content ["${name}"]`);
         Object.defineProperty(error2, "code", { value: "ERR_INVALID_CHAR" });
@@ -15129,7 +15189,7 @@ __export(src_exports, {
   fileFromSync: () => fileFromSync,
   isRedirect: () => isRedirect
 });
-import http2 from "node:http";
+import http3 from "node:http";
 import https from "node:https";
 import zlib from "node:zlib";
 import Stream2, { PassThrough as PassThrough2, pipeline as pump } from "node:stream";
@@ -15147,7 +15207,7 @@ async function fetch2(url, options_) {
       resolve11(response2);
       return;
     }
-    const send = (parsedURL.protocol === "https:" ? https : http2).request;
+    const send = (parsedURL.protocol === "https:" ? https : http3).request;
     const { signal } = request;
     let response = null;
     const abort = () => {
@@ -29462,11 +29522,11 @@ __export(node_exports, {
   setDefaultBaseUrls: () => setDefaultBaseUrls
 });
 import { createWriteStream } from "fs";
-import * as fs3 from "fs/promises";
+import * as fs6 from "fs/promises";
 import { writeFile } from "fs/promises";
 import { Readable } from "node:stream";
 import { finished } from "node:stream/promises";
-import * as path2 from "path";
+import * as path5 from "path";
 function setDefaultBaseUrls(baseUrlParams) {
   _defaultBaseGeminiUrl = baseUrlParams.geminiUrl;
   _defaultBaseVertexUrl = baseUrlParams.vertexUrl;
@@ -44093,7 +44153,7 @@ async function uploadBlobInternal(file, uploadUrl, apiClient, httpOptions) {
         break;
       }
       retryCount++;
-      await sleep(currentDelayMs);
+      await sleep3(currentDelayMs);
       currentDelayMs = currentDelayMs * DELAY_MULTIPLIER;
     }
     offset += chunkSize;
@@ -44110,7 +44170,7 @@ async function getBlobStat(file) {
   const fileStat = { size: file.size, type: file.type };
   return fileStat;
 }
-function sleep(ms) {
+function sleep3(ms) {
   return new Promise((resolvePromise) => setTimeout(resolvePromise, ms));
 }
 function resolveCloudFlag(options) {
@@ -51463,7 +51523,7 @@ var init_node = __esm({
       async stat(file) {
         const fileStat = { size: 0, type: void 0 };
         if (typeof file === "string") {
-          const originalStat = await fs3.stat(file);
+          const originalStat = await fs6.stat(file);
           fileStat.size = originalStat.size;
           fileStat.type = this.inferMimeType(file);
           return fileStat;
@@ -51609,9 +51669,9 @@ var init_node = __esm({
         let response = new HttpResponse(new Response());
         let uploadCommand = "upload";
         let fileHandle;
-        const fileName = path2.basename(file);
+        const fileName = path5.basename(file);
         try {
-          fileHandle = await fs3.open(file, "r");
+          fileHandle = await fs6.open(file, "r");
           if (!fileHandle) {
             throw new Error(`Failed to open file`);
           }
@@ -51641,7 +51701,7 @@ var init_node = __esm({
                 break;
               }
               retryCount++;
-              await sleep(currentDelayMs);
+              await sleep3(currentDelayMs);
               currentDelayMs = currentDelayMs * DELAY_MULTIPLIER;
             }
             offset += bytesRead;
@@ -77821,685 +77881,217 @@ function describeToolGate(knownNames, env2 = process.env, jsonPatterns = []) {
   return `tool gate ${on.length} on / ${off} off (${bits.join("; ")})`;
 }
 
-// src/storyboard.ts
-import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
+// src/video-duration.ts
+var import_video_duration = __toESM(require_video_duration(), 1);
 
-// src/scenes-vm.ts
-import vm from "node:vm";
-var SCENES_VM_POLICY = Object.freeze({
-  timeoutMs: 5e3,
-  codeGeneration: Object.freeze({ strings: false, wasm: false })
-});
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-function describeEvaluationError(error2, filename) {
-  const detail = error2 && typeof error2 === "object" ? error2 : {};
-  const message = typeof detail.message === "string" ? detail.message : String(error2);
-  const stack = typeof detail.stack === "string" ? detail.stack : "";
-  const locations = [...stack.matchAll(new RegExp(`${escapeRegExp(filename)}:([0-9]+)(?::([0-9]+))?`, "g"))];
-  const location = locations.find((match2) => match2[2]) ?? locations[0];
-  const line = location?.[1] ?? "1";
-  const column = location?.[2] ?? "1";
-  const wrapped = new Error(
-    `${filename}:${line}:${column}: ${message}. Allowed syntax: storyboard JavaScript that assigns JSON-serializable data to window.*; eval and Function are disabled.`
-  );
-  wrapped.name = typeof detail.name === "string" ? detail.name : "Error";
-  wrapped.cause = error2;
-  return wrapped;
-}
-function evaluateWindowScript(source, options = {}) {
-  const timeout = options.timeoutMs ?? SCENES_VM_POLICY.timeoutMs;
-  const filename = options.filename ?? "scenes.js";
-  const context = vm.createContext(/* @__PURE__ */ Object.create(null), {
-    codeGeneration: SCENES_VM_POLICY.codeGeneration
-  });
-  try {
-    vm.runInContext(
-      "var window = {}; var console = { log() {}, warn() {}, error() {}, info() {}, debug() {} };",
-      context,
-      { timeout }
-    );
-    vm.runInContext(source, context, { filename, timeout });
-    const json2 = vm.runInContext("JSON.stringify(window)", context, { timeout });
-    if (typeof json2 !== "string") throw new Error("the script did not leave a window object");
-    const plain = JSON.parse(json2);
-    if (!plain || typeof plain !== "object" || Array.isArray(plain)) {
-      throw new Error("the script replaced window with a non-object");
-    }
-    return plain;
-  } catch (error2) {
-    throw describeEvaluationError(error2, filename);
-  }
-}
+// src/seedance-client.ts
+import { execFile } from "node:child_process";
+import * as fs3 from "node:fs";
+import * as path3 from "node:path";
 
-// src/storyboard.ts
-import { existsSync as existsSync2, mkdirSync, readFileSync as readFileSync2, renameSync, statSync as statSync2, unlinkSync, writeFileSync } from "node:fs";
-import * as nodeModule from "node:module";
-import { basename, dirname, join as join2, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-var PLUGIN_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
-var REFERENCES_DIR = join2(PLUGIN_ROOT, "skills", "storyboard", "references");
-var CONTRACT_FILE = join2(REFERENCES_DIR, "structure-contract.js");
-var CHECK_SCENES_FILE = join2(REFERENCES_DIR, "check-scenes.js");
-var CHECK_SCENARIO_FILE = join2(REFERENCES_DIR, "check-scenario.js");
-var loadFromHere = nodeModule.createRequire(import.meta.url);
-var contractCache;
-function contract() {
-  if (!contractCache) contractCache = loadFromHere(CONTRACT_FILE);
-  return contractCache;
+// src/media-publish.ts
+import { spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
+import * as fs from "node:fs";
+import * as http from "node:http";
+import * as path from "node:path";
+var MIME = {
+  ".mp4": "video/mp4",
+  ".mov": "video/quicktime",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".wav": "audio/wav",
+  ".mp3": "audio/mpeg"
+};
+function uploadConfig() {
+  const endpoint = process.env.MEDIA_UPLOAD_URL || process.env.MELEON_MEDIA_URL || "";
+  const key = process.env.MEDIA_UPLOAD_API_KEY || process.env.MELEON_MEDIA_API_KEY || "";
+  if (!endpoint || !key) return null;
+  const seconds = Number(process.env.MEDIA_UPLOAD_TIMEOUT || process.env.MELEON_UPLOAD_TIMEOUT || 300);
+  return { endpoint, key, timeoutMs: (Number.isFinite(seconds) && seconds > 0 ? seconds : 300) * 1e3 };
 }
-function cameraContract() {
-  return loadFromHere(join2(REFERENCES_DIR, "production-mode.js"));
-}
-function renderPurposes() {
-  const routing = loadFromHere(join2(REFERENCES_DIR, "render-routing.js"));
-  return Object.keys(routing.PURPOSES);
-}
-function stillCameraEffectList() {
-  const routing = loadFromHere(join2(REFERENCES_DIR, "render-routing.js"));
-  return routing.STILL_CAMERA_EFFECTS;
-}
-function propContract() {
-  return loadFromHere(join2(REFERENCES_DIR, "prop-continuity.js"));
-}
-var tuple = (list) => external_exports.enum(list);
-var MISSING = ["__contract-missing__"];
-function vocabAtLoad() {
-  try {
-    return contract().VOCAB;
-  } catch {
-    return {
-      SIZES: MISSING,
-      ANGLES: MISSING,
-      BEATS: MISSING,
-      TYPES: MISSING,
-      INFO_TYPES: MISSING,
-      SHARE_TYPES: MISSING,
-      HOOK_TYPES: MISSING,
-      HOOK_FORMS: MISSING,
-      ARCS: MISSING,
-      RENDER_MODES: MISSING,
-      PRODUCTION_MODES: MISSING,
-      CHARGES_OPEN: MISSING,
-      CHARGES_CLOSE: MISSING,
-      TRANSITION_RE: /^$/
-    };
-  }
-}
-var V = vocabAtLoad();
-var nonEmpty = external_exports.string().trim().min(1);
-var STRUCTURE_VERSION = (() => {
-  try {
-    return contract().VERSION;
-  } catch {
-    return "structure-v1";
-  }
-})();
-var sceneSchema = external_exports.object({
-  no: external_exports.number().int().positive().describe("Scene number \u2014 the value shots point at with `scene`"),
-  place: external_exports.string().optional().describe("One place \u2014 the slugline location"),
-  time: external_exports.string().optional().describe("One continuous stretch of time \u2014 \uB0AE \xB7 \uBC24 \xB7 \uC0C8\uBCBD \xB7 10\uB144 \uB4A4"),
-  event: external_exports.string().optional().describe("The one thing that happens in this scene"),
-  charge: external_exports.record(external_exports.unknown()).optional(),
-  turn: external_exports.string().optional().describe("What flipped between the open and the close"),
-  out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene")
-}).strict();
-var sequenceSchema = external_exports.object({
-  id: nonEmpty.describe('Stable id, e.g. "q1"'),
-  title: external_exports.string().optional().describe("The heading the approval page draws"),
-  purpose: external_exports.string().optional().describe("The one purpose that binds these scenes \u2014 two purposes are two sequences"),
-  question: nonEmpty.optional().describe("The dramatic question this stretch opens"),
-  payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question"),
-  scenes: external_exports.array(external_exports.number().int().positive()).describe("Scene numbers in playback order")
-}).strict();
-var structureSchema = external_exports.object({
-  version: external_exports.literal(STRUCTURE_VERSION),
-  nextShotId: external_exports.number().int().positive().optional(),
-  sequences: external_exports.array(sequenceSchema),
-  scenes: external_exports.array(sceneSchema)
-}).strict();
-var coverageSchema = external_exports.object({
-  azimuth: external_exports.number().finite().optional().describe("Horizontal camera bearing, 0\u2013180\xB0 inside the selected side of the axis"),
-  action: external_exports.string().trim().min(1).optional().describe("Visible action that carries this cut when no 30\xB0 or two-step change is used")
-}).passthrough();
-var lineCrossingSchema = external_exports.object({
-  method: external_exports.enum(["camera_move", "subject_move", "neutral", "intentional"]),
-  from: nonEmpty.describe("The previous space.line value"),
-  to: nonEmpty.describe("The new space.line value"),
-  reason: nonEmpty.describe("What the viewer sees that makes the new side legible"),
-  bridgeShot: external_exports.number().int().positive().optional().describe('Earlier neutral shot number; required only for method "neutral"')
-}).strict();
-var compositionSchema = external_exports.record(external_exports.unknown());
-var eyelineSchema = external_exports.object({ matchShot: external_exports.number().int().positive().optional() }).passthrough();
-var depthSchema = external_exports.record(external_exports.unknown());
-var cameraSchema = external_exports.record(external_exports.unknown()).superRefine((value, ctx) => {
-  for (const message of cameraContract().cameraInputErrors(value))
-    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-});
-var visualSchema = external_exports.object({ camera: cameraSchema.optional() }).passthrough();
-var shotIdSchema = external_exports.string().regex(/^s\d{4,}$/);
-var shotSchema = external_exports.object({
-  id: shotIdSchema.optional(),
-  type: tuple(V.TYPES),
-  title: external_exports.string().optional(),
-  narration: external_exports.array(external_exports.object({ id: external_exports.string().trim().min(1).optional(), delivery: external_exports.enum(["voiceover", "on_screen", "off_screen"]).optional(), tts: external_exports.string(), sub: external_exports.string().optional(), speaker: external_exports.string().trim().min(1).optional() }).passthrough()).optional(),
-  visual: visualSchema.optional(),
-  duration: external_exports.number().positive().optional(),
-  scene: external_exports.number().int().positive().optional(),
-  sceneSlug: external_exports.string().optional(),
-  sequence: external_exports.string().optional(),
-  transition: external_exports.string().regex(V.TRANSITION_RE, "not a join from scenes-schema \xA7scene transition").optional(),
-  beat: external_exports.string().optional(),
-  arc: external_exports.string().optional(),
-  hookType: external_exports.string().optional(),
-  hookForm: external_exports.string().optional(),
-  chapter: external_exports.string().optional(),
-  after: external_exports.number().int().nonnegative().optional(),
-  shot: external_exports.object({
-    feel: external_exports.string().optional(),
-    size: external_exports.string().optional(),
-    angle: external_exports.string().optional(),
-    why: external_exports.string().optional(),
-    info: external_exports.string().optional(),
-    infoType: external_exports.string().optional(),
-    share: external_exports.string().optional(),
-    shareType: external_exports.string().optional(),
-    space: external_exports.record(external_exports.unknown()).optional(),
-    eyeline: eyelineSchema.optional(),
-    composition: compositionSchema.optional(),
-    depth: depthSchema.optional(),
-    coverage: coverageSchema.optional(),
-    lineNeutral: external_exports.literal(true).optional(),
-    lineCrossing: external_exports.record(external_exports.unknown()).optional(),
-    render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: external_exports.string().optional(), reason: external_exports.string().optional() }).passthrough().optional()
-  }).passthrough().optional(),
-  sound: external_exports.record(external_exports.unknown()).optional()
-}).passthrough();
-var readLevelSchema = external_exports.enum(["outline", "scenes", "shots", "full"]);
-var storyboardReadSchema = external_exports.object({
-  path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
-  level: readLevelSchema.default("shots").describe("outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots = every shot summarised under its scene \xB7 full = the raw shot objects too"),
-  shotId: external_exports.string().min(1).optional().describe("Stable shot ID to inspect, with its raw plan and neighboring shot IDs"),
-  includeContext: external_exports.boolean().default(true).describe("Include STORY, PRODUCTION and SB_DOC as unverified review context")
-});
-function readStoryboard(args) {
-  const { win, file, sha256: sha2562 } = readBoard(args.path);
-  const result = contract().outline(win, args.level);
-  result.file = file;
-  result.mediaBaseDirectory = dirname(file);
-  result.sha256 = sha2562;
-  const doc = win.SB_DOC;
-  if (doc?.props || doc?.propContinuity) result.propSheet = { props: doc.props, continuity: doc.propContinuity };
-  result.inspection = {
-    mediaViewed: false,
-    evidenceStatus: "not_verified",
-    note: "This response reads plans and recorded reviews only. Open referenced assets and verify current evidence before reporting visual quality or review validity."
-  };
-  const continuity = loadFromHere(join2(REFERENCES_DIR, "shot-continuity.js"));
-  result.continuityFindings = continuity.check(win, dirname(file));
-  if (args.includeContext) result.reviewContext = {
-    story: win.STORY || null,
-    production: win.PRODUCTION || null,
-    document: doc || null,
-    evidenceStatus: "not_verified"
-  };
-  if (args.shotId) {
-    const shots = win.SCENES || [];
-    const matches = shots.map((shot2, index2) => ({ shot: shot2, index: index2 })).filter((item) => item.shot.id === args.shotId);
-    if (matches.length !== 1) throw new Error(`shotId ${args.shotId}: expected one match, found ${matches.length}`);
-    const { shot, index } = matches[0];
-    const playback = result.playback;
-    const position = playback.findIndex((row) => row.no === index + 1);
-    const neighbor = (i2) => i2 >= 0 && playback[i2] ? { id: playback[i2].id, no: playback[i2].no } : null;
-    result.selectedShot = {
-      no: index + 1,
-      shot,
-      continuity: continuity.plan(win, index, dirname(file)),
-      scene: win.STRUCTURE?.scenes?.find((scene) => scene.no === shot.scene) || null,
-      playbackPosition: position < 0 ? null : position + 1,
-      previous: position < 0 ? null : neighbor(position - 1),
-      next: position < 0 ? null : neighbor(position + 1)
-    };
-  }
-  return result;
-}
-var storyboardCheckSchema = external_exports.object({
-  path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
-  draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 machine-layer absences are deferred, not violations")
-});
-var scenarioCheckSchema = external_exports.object({
-  path: external_exports.string().min(1).describe("The candidates directory, or its selected scenario.md")
-});
-var productionSchema = external_exports.object({ mode: tuple([...V.PRODUCTION_MODES, "hook_only", "stills_only", "hybrid"]).optional(), renderRatioVersion: external_exports.literal(1).optional() }).passthrough();
-var globalsSchema = external_exports.record(external_exports.string().regex(/^[A-Z][A-Z0-9_]*$/, "a window.* global is UPPER_CASE"), external_exports.unknown()).superRefine((value, ctx) => {
-  if (value.PRODUCTION === void 0) return;
-  const parsed = productionSchema.safeParse(value.PRODUCTION);
-  if (!parsed.success) for (const issue2 of parsed.error.issues) ctx.addIssue({ ...issue2, path: ["PRODUCTION", ...issue2.path] });
-});
-var transitionPatchSchema = external_exports.object({
-  no: external_exports.number().int().positive().describe("Incoming shot number, 1-based, after removals and inserts"),
-  transition: external_exports.enum([
-    "cut",
-    "dip",
-    "dip:white",
-    "jcut",
-    "dissolve",
-    "iris",
-    "blur",
-    "zoom",
-    "push:l2r",
-    "push:r2l",
-    "push:u2d",
-    "push:d2u",
-    "whip:l2r",
-    "whip:r2l",
-    "whip:u2d",
-    "whip:d2u"
-  ]),
-  transitionSeconds: external_exports.number().finite().min(0.08).max(0.8).optional(),
-  reason: nonEmpty,
-  continuity: nonEmpty.optional()
-}).strict().refine(
-  (v) => !["cut", "dip", "dip:white"].includes(v.transition) || v.transitionSeconds === void 0,
-  "cut and dip do not accept transitionSeconds; dip fades each side for up to 0.30 seconds"
-);
-var storyboardApplySchema = external_exports.object({
-  path: external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing), or its scenes.js"),
-  draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 camera-continuity records (lineCrossing, coverage) are deferred, not violations"),
-  set: external_exports.object({ structure: structureSchema.optional(), shots: external_exports.array(shotSchema).min(1) }).optional().describe("Replace the whole board \u2014 the structure and every shot. The way a new board is written"),
-  structure: structureSchema.optional().describe("Replace window.STRUCTURE only"),
-  sequences: external_exports.array(sequenceSchema).optional().describe("Upsert sequences by id"),
-  scenes: external_exports.array(sceneSchema).optional().describe("Upsert scenes by no"),
-  shots: external_exports.array(external_exports.object({ no: external_exports.number().int().positive(), shot: shotSchema })).optional().describe("Upsert shots by 1-based position; no = length + 1 appends"),
-  shotsById: external_exports.array(external_exports.object({ id: shotIdSchema, shot: shotSchema })).optional().describe("Replace shots by their stable id (R6); the shot keeps that id. An unknown id is an error, nothing is written"),
-  insertShots: external_exports.array(external_exports.object({
-    after: external_exports.number().int().min(0).optional(),
-    afterId: shotIdSchema.optional(),
-    shots: external_exports.array(shotSchema).min(1)
-  }).refine((e2) => e2.after === void 0 !== (e2.afterId === void 0), { message: "give exactly one of after (position) or afterId (shot id)" })).optional().describe("Insert shots after a 1-based position (0 = at the start) or after the shot with afterId. Later positions shift"),
-  transitions: external_exports.array(transitionPatchSchema).min(1).optional().describe("Change only incoming transitions; dip fades through black. Keeps narration and visuals intact"),
-  removeShots: external_exports.array(external_exports.number().int().positive()).optional().describe("1-based positions to drop, resolved before the insert"),
-  removeShotIds: external_exports.array(shotIdSchema).min(1).optional().describe("Shot ids to drop, resolved before the insert"),
-  removeScenes: external_exports.array(external_exports.number().int().positive()).optional(),
-  removeSequences: external_exports.array(external_exports.string()).optional(),
-  globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY"),
-  expectedSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional().describe("Required for propSheet file edits; use the hash from storyboard_read"),
-  propSheet: external_exports.object({
-    props: external_exports.array(external_exports.record(external_exports.unknown())),
-    continuity: external_exports.record(external_exports.unknown()).optional()
-  }).strict().optional().describe("Replace the prop registry and optional version:1 continuity ledger together. SB_DOC.characters must register every owner and holder. See prop-continuity.md"),
-  dryRun: external_exports.boolean().default(false).describe("Validate and report, write nothing")
-});
-function scenesPath(target) {
-  const abs = resolve(target);
-  if (basename(abs) === "scenes.js") return abs;
-  return join2(abs, "scenes.js");
-}
-function readBoard(target) {
-  const file = scenesPath(target);
-  if (!existsSync2(file)) throw new Error(`no scenes.js at ${file}`);
-  if (!statSync2(file).isFile()) throw new Error(`${file} is not a file`);
-  const src = readFileSync2(file, "utf8");
-  const header = [];
-  for (const line of src.split("\n")) {
-    if (/^\s*\/\//.test(line)) header.push(line.trim());
-    else if (line.trim()) break;
-  }
-  let win;
-  try {
-    win = evaluateWindowScript(src, { filename: file });
-  } catch (e2) {
-    throw new Error(`failed to evaluate ${file}: ${e2.message}`);
-  }
-  if (!Array.isArray(win.SCENES)) throw new Error(`${file} has no window.SCENES array`);
-  return { file, header, win, sha256: createHash("sha256").update(src).digest("hex") };
-}
-var GLOBAL_ORDER = ["FORMAT", "VOICE", "THEME", "COMPREHENSION", "STORY", "PRODUCTION", "MOTION_POLICY", "MUSIC", "SFX", "STRUCTURE", "SCENES"];
-function serializeBoard(win, header = []) {
-  const keys = Object.keys(win).filter((k) => win[k] !== void 0);
-  keys.sort((a, b) => {
-    const ia = GLOBAL_ORDER.indexOf(a), ib = GLOBAL_ORDER.indexOf(b);
-    if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
-    return a.localeCompare(b);
-  });
-  const lines = header.filter((h2) => !/^\/\/\s*approved:/.test(h2));
-  if (lines.length) lines.push("");
-  for (const k of keys) {
-    const value = k === "SCENES" && Array.isArray(win[k]) ? win[k].map((shot) => shot.id === void 0 ? shot : { id: shot.id, ...shot }) : win[k];
-    lines.push(`window.${k} = ${JSON.stringify(value, null, 2)};`);
-  }
-  return lines.join("\n") + "\n";
-}
-function upsertBy(list, items, key) {
-  const out = list.slice();
-  for (const item of items) {
-    const i2 = out.findIndex((x2) => x2[key] === item[key]);
-    if (i2 === -1) out.push(item);
-    else out[i2] = item;
-  }
-  return out;
-}
-function validateShots(shots) {
-  const out = [];
-  const ids = /* @__PURE__ */ new Map();
-  shots.forEach((s2, i2) => {
-    const parsed = shotSchema.safeParse(s2);
-    if (!parsed.success) {
-      for (const issue2 of parsed.error.issues) out.push({ level: "bad", where: `shot ${i2 + 1}`, what: issue2.path.length === 1 && issue2.path[0] === "id" ? "id: expected s followed by at least four digits (for example s0001)" : `${issue2.path.join(".") || "(root)"}: ${issue2.message}` });
-    }
-    const id = s2 && typeof s2 === "object" ? s2.id : void 0;
-    if (typeof id !== "string") return;
-    const first = ids.get(id);
-    if (first !== void 0) out.push({ level: "bad", where: `shot ${i2 + 1}`, what: `id: duplicate ${id} (already used by shot ${first})` });
-    else ids.set(id, i2 + 1);
-  });
-  return out;
-}
-function validateStructure(structure) {
-  const parsed = structureSchema.safeParse(structure);
-  if (parsed.success) return [];
-  return parsed.error.issues.map((issue2) => ({ level: "bad", where: "structure", what: `${issue2.path.join(".") || "(root)"}: ${issue2.message}` }));
-}
-function applyPatch(win, patch) {
-  const next = { ...win };
-  if (patch.globals) for (const [k, v] of Object.entries(patch.globals)) {
-    if (k === "SCENES" || k === "STRUCTURE") throw new Error(`set ${k} through the dedicated fields, not globals`);
-    next[k] = v;
-  }
-  if (patch.propSheet) next.SB_DOC = {
-    ...next.SB_DOC ?? {},
-    props: patch.propSheet.props,
-    propContinuity: patch.propSheet.continuity
-  };
-  if (patch.set) {
-    if (patch.set.structure) next.STRUCTURE = patch.set.structure;
-    next.SCENES = patch.set.shots.slice();
-  }
-  if (patch.structure) next.STRUCTURE = patch.structure;
-  const st = next.STRUCTURE ?? { version: STRUCTURE_VERSION, sequences: [], scenes: [] };
-  if (!Array.isArray(st.sequences) || !Array.isArray(st.scenes) || st.scenes.some((sc) => !sc || typeof sc !== "object") || st.sequences.some((q) => !q || typeof q !== "object" || !Array.isArray(q.scenes)))
-    return { win: next, findings: [{ level: "bad", where: "structure", what: "STRUCTURE.sequences and STRUCTURE.scenes are arrays of objects \u2014 this board was hand-edited into a shape the tools cannot patch; rewrite it with `set`" }], synced: 0 };
-  let sequences = st.sequences.slice();
-  let scenes = st.scenes.slice();
-  if (patch.sequences) sequences = upsertBy(sequences, patch.sequences, "id");
-  if (patch.scenes) scenes = upsertBy(scenes, patch.scenes, "no");
-  if (patch.removeScenes) {
-    const drop = new Set(patch.removeScenes);
-    scenes = scenes.filter((sc) => !drop.has(sc.no));
-    sequences = sequences.map((q) => ({ ...q, scenes: q.scenes.filter((no) => !drop.has(no)) }));
-  }
-  if (patch.removeSequences) {
-    const drop = new Set(patch.removeSequences);
-    sequences = sequences.filter((q) => !drop.has(q.id));
-  }
-  if (patch.sequences || patch.scenes || patch.removeScenes || patch.removeSequences || next.STRUCTURE)
-    next.STRUCTURE = { version: st.version ?? STRUCTURE_VERSION, ...st.nextShotId === void 0 ? {} : { nextShotId: st.nextShotId }, sequences, scenes };
-  let shots = Array.isArray(next.SCENES) ? next.SCENES.slice() : [];
-  const byPosition = Boolean(patch.shots || patch.removeShots || patch.insertShots?.some((e2) => e2.after !== void 0));
-  const byId = Boolean(patch.shotsById || patch.removeShotIds || patch.insertShots?.some((e2) => e2.afterId !== void 0));
-  if (byPosition && byId) throw new Error("address shots by position (shots \xB7 after \xB7 removeShots) or by id (shotsById \xB7 afterId \xB7 removeShotIds) in one patch, not both");
-  const positionOfId = (id, list, what) => {
-    const index = list.findIndex((shot) => shot.id === id);
-    if (index < 0) throw new Error(`${what}: no shot with id ${id} on this board`);
-    return index;
-  };
-  if (patch.shotsById) for (const { id, shot } of patch.shotsById) {
-    const index = positionOfId(id, shots, "shotsById");
-    if (shot.id !== void 0 && shot.id !== id) throw new Error(`shotsById ${id}: the shot carries a different id (${shot.id}) \u2014 an id is not renamed through an upsert`);
-    shots[index] = { id, ...shot };
-  }
-  if (patch.shots) for (const { no, shot } of patch.shots.slice().sort((a, b) => a.no - b.no)) {
-    if (no > shots.length + 1) throw new Error(`shot ${no}: the board has ${shots.length} shots \u2014 no = ${shots.length + 1} appends`);
-    const current = shots[no - 1];
-    shots[no - 1] = shot.id === void 0 && current?.id !== void 0 ? { id: current.id, ...shot } : shot;
-  }
-  const beforeReorder = shots.slice();
-  if (patch.removeShots) {
-    const drop = new Set(patch.removeShots);
-    for (const no of drop) if (no > shots.length) throw new Error(`removeShots: there is no shot ${no}`);
-    shots = shots.filter((_, i2) => !drop.has(i2 + 1));
-  }
-  if (patch.removeShotIds) {
-    const drop = new Set(patch.removeShotIds.map((id) => positionOfId(id, shots, "removeShotIds")));
-    shots = shots.filter((_, i2) => !drop.has(i2));
-  }
-  if (patch.insertShots) {
-    const resolved = patch.insertShots.map((e2) => ({
-      after: e2.after !== void 0 ? e2.after : positionOfId(e2.afterId, shots, "insertShots.afterId") + 1,
-      shots: e2.shots
-    }));
-    const inserts = resolved.sort((a, b) => b.after - a.after);
-    for (const { after, shots: add } of inserts) {
-      if (after > shots.length) throw new Error(`insertShots: after ${after} is past the last shot (${shots.length})`);
-      shots.splice(after, 0, ...add);
-    }
-  }
-  const finalOrder = shots.slice();
-  const reordered = Boolean(patch.removeShots || patch.removeShotIds || patch.insertShots);
-  for (const source of reordered ? finalOrder : []) {
-    if (!beforeReorder.includes(source)) continue;
-    const e2 = source.shot?.eyeline;
-    if (e2 && typeof e2.matchShot === "number") {
-      const target = beforeReorder[e2.matchShot - 1];
-      const index = finalOrder.indexOf(target);
-      if (index < 0) throw new Error("eyeline.matchShot target was removed or missing; update the relation in the same patch");
-      const position = finalOrder.indexOf(source);
-      shots[position] = { ...source, shot: { ...source.shot, eyeline: { ...e2, matchShot: index + 1 } } };
-    }
-  }
-  const transitionTargets = /* @__PURE__ */ new Set();
-  for (const change of patch.transitions ?? []) {
-    const source = shots[change.no - 1];
-    if (!source) throw new Error(`transitions: there is no shot ${change.no}`);
-    if (transitionTargets.has(change.no)) throw new Error(`transitions: duplicate shot ${change.no}`);
-    transitionTargets.add(change.no);
-    if (["broll", "outro"].includes(source.type)) throw new Error("Spliced shots use their own assembly transition");
-    const moving = !["cut", "dip", "dip:white"].includes(change.transition);
-    if (moving && !shots.slice(0, change.no - 1).some((s2) => !["broll", "outro"].includes(s2.type)))
-      throw new Error("First shot cannot carry a previous picture");
-    if (moving) {
-      const previous = shots[change.no - 2];
-      if (!previous || ["broll", "outro"].includes(previous.type))
-        throw new Error("A moving carry cannot bridge an inserted recording; choose cut or dip");
-      if (previous.visual?.reuse !== void 0)
-        throw new Error("Reused clips cannot supply outgoing live handles; choose cut or dip");
-      if (previous.visual?.sync === true || source.visual?.sync === true)
-        throw new Error("Sync footage requires cut or dip, not a moving carry");
-    }
-    const edit = { ...source.edit ?? {}, reason: change.reason };
-    if (!moving || source.transition !== change.transition) delete edit.transitionSeconds;
-    if (change.transitionSeconds !== void 0) edit.transitionSeconds = change.transitionSeconds;
-    if (change.continuity !== void 0) edit.continuity = change.continuity;
-    if (moving && Number(edit.pre ?? 0) !== 0) throw new Error("Moving transitions require edit.pre=0; update the shot timing first");
-    shots[change.no - 1] = { ...source, transition: change.transition, edit };
-  }
-  const originalShots = Array.isArray(win.SCENES) ? win.SCENES : [];
-  const numericId = (shot) => typeof shot.id === "string" && /^s\d{4,}$/.test(shot.id) ? Number(shot.id.slice(1)) : 0;
-  const priorCounter = win.STRUCTURE && Number.isInteger(win.STRUCTURE.nextShotId) ? win.STRUCTURE.nextShotId : void 0;
-  const requestedCounter = Number.isInteger(st.nextShotId) ? st.nextShotId : void 0;
-  let nextShotId = Math.max(
-    priorCounter ?? 0,
-    requestedCounter ?? 0,
-    ...shots.map(numericId).map((id) => id + 1),
-    ...priorCounter === void 0 && requestedCounter === void 0 ? [Math.max(originalShots.length, ...originalShots.map(numericId)) + 1] : [],
-    1
-  );
-  shots = shots.map((shot) => {
-    if (shot.id !== void 0) return shot;
-    const id = `s${String(nextShotId).padStart(4, "0")}`;
-    nextShotId += 1;
-    return { id, ...shot };
-  });
-  if (next.STRUCTURE) next.STRUCTURE = { ...next.STRUCTURE, nextShotId };
-  next.SCENES = shots.map((shot) => ({ ...shot }));
-  const findings = [];
-  if (!shots.length) findings.push({ level: "bad", where: "board", what: "the board has no shots" });
-  if (next.STRUCTURE !== void 0) findings.push(...validateStructure(next.STRUCTURE));
-  findings.push(...validateShots(shots));
-  let synced = 0;
-  if (!findings.some((f3) => f3.level === "bad")) {
-    synced = contract().sync(next);
-    findings.push(...contract().guidedCheck(next, { draft: patch.draft }));
-  }
-  findings.push(...propContract().check(next));
-  return { win: next, findings, synced };
-}
-function applyStoryboard(args) {
-  const file = scenesPath(args.path);
-  const exists = existsSync2(file);
-  let header = [];
-  let win = {};
-  if (exists) ({ header, win } = readBoard(file));
-  else if (!args.set) throw new Error(`no scenes.js at ${file} \u2014 a new board is written with \`set\` (structure + shots)`);
-  else if (!existsSync2(dirname(file))) throw new Error(`directory does not exist: ${dirname(file)}`);
-  const original = exists ? readFileSync2(file, "utf8") : "";
-  const originalHash = createHash("sha256").update(original).digest("hex");
-  const previousDoc = win.SB_DOC;
-  const incomingDoc = args.globals?.SB_DOC;
-  const changesProps = !!args.propSheet || !!args.globals && Object.prototype.hasOwnProperty.call(args.globals, "SB_DOC") && ["props", "propContinuity"].some((key) => JSON.stringify(previousDoc?.[key]) !== JSON.stringify(incomingDoc?.[key]));
-  if (changesProps && exists && args.expectedSha256 !== originalHash)
-    throw new Error("head_moved: propSheet requires the current expectedSha256 from storyboard_read");
-  const { win: next, findings, synced } = applyPatch(win, args);
-  const location = loadFromHere(join2(REFERENCES_DIR, "location-assets.js"));
-  findings.push(...location.check(next, dirname(file)));
-  const bad = findings.some((f3) => f3.level === "bad");
-  const st = next.STRUCTURE;
-  const result = {
-    file,
-    written: false,
-    created: !exists,
-    approvalDropped: header.some((h2) => /^\/\/\s*approved:/.test(h2)),
-    shots: (next.SCENES ?? []).length,
-    scenes: st ? st.scenes.length : 0,
-    sequences: st ? st.sequences.length : 0,
-    synced,
-    findings
-  };
-  if (bad || args.dryRun) return result;
-  const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
-  try {
-    if (changesProps && exists) {
-      if (createHash("sha256").update(readFileSync2(file)).digest("hex") !== originalHash) throw new Error("head_moved");
-      const history = join2(dirname(file), ".prop-history");
-      mkdirSync(history, { recursive: true });
-      const backup = join2(history, originalHash + ".js");
-      if (!existsSync2(backup)) writeFileSync(backup, original, { flag: "wx" });
-    }
-    writeFileSync(tmp, serializeBoard(next, header), "utf8");
-    renameSync(tmp, file);
-  } catch (err4) {
+async function assertReachable(url, attempts, waitMs) {
+  let last = "";
+  for (let i2 = 0; i2 < attempts; i2 += 1) {
     try {
-      unlinkSync(tmp);
+      const head = await fetch(url, { method: "HEAD", signal: AbortSignal.timeout(15e3) });
+      if (head.ok) return;
+      const get = await fetch(url, { headers: { Range: "bytes=0-0" }, signal: AbortSignal.timeout(15e3) });
+      if (get.ok) {
+        await get.body?.cancel();
+        return;
+      }
+      last = `HTTP ${get.status}`;
+    } catch (error2) {
+      last = error2 instanceof Error ? error2.message : String(error2);
+    }
+    if (i2 < attempts - 1) await new Promise((resolve11) => setTimeout(resolve11, waitMs));
+  }
+  throw new Error(`public URL not reachable: ${url} (${last})`);
+}
+async function publishViaUpload(filePaths, config3) {
+  const urls = [];
+  for (const filePath of filePaths) {
+    const response = await fetch(config3.endpoint, {
+      method: "POST",
+      headers: { "x-api-key": config3.key, "Content-Type": MIME[path.extname(filePath).toLowerCase()] || "application/octet-stream" },
+      body: fs.readFileSync(filePath),
+      signal: AbortSignal.timeout(config3.timeoutMs)
+    });
+    const body = await response.text();
+    if (response.status !== 201) {
+      throw new Error(`media hosting refused ${path.basename(filePath)}: HTTP ${response.status} \u2014 ${body.slice(0, 300)}`);
+    }
+    let url = "";
+    try {
+      url = String(JSON.parse(body).data?.url || "");
     } catch {
     }
-    throw err4;
+    if (!/^https?:\/\//.test(url)) throw new Error(`media hosting answered 201 without data.url \u2014 ${body.slice(0, 300)}`);
+    await assertReachable(url, 3, 2e3);
+    urls.push(url);
   }
-  result.written = true;
-  return result;
+  return { urls, how: "upload", close: async () => void 0 };
 }
-var scenarioCheckResultSchema = external_exports.object({
-  files: external_exports.array(external_exports.string()),
-  violations: external_exports.number().int().nonnegative(),
-  warnings: external_exports.number().int().nonnegative(),
-  findings: external_exports.array(external_exports.object({
-    level: external_exports.enum(["bad", "warn"]),
-    where: external_exports.string(),
-    what: external_exports.string()
-  }))
-});
-function checkScenario(args, checkFile = CHECK_SCENARIO_FILE) {
-  let raw = "";
-  try {
-    raw = execFileSync(process.execPath, [checkFile, args.path, "--json"], {
-      encoding: "utf8",
-      timeout: 6e4,
-      stdio: ["ignore", "pipe", "pipe"]
-    });
-  } catch (e2) {
-    const err4 = e2;
-    raw = err4.stdout || "";
-    if (err4.status !== 1 || !raw.trim()) {
-      throw new Error(`check-scenario.js failed: ${(err4.stderr || err4.message).trim()}`);
+function serveLocally(filePaths) {
+  const token = randomBytes(16).toString("hex");
+  const routes = filePaths.map((p, i2) => `/${token}/${i2}/${encodeURIComponent(path.basename(p))}`);
+  const byRoute = new Map(routes.map((r2, i2) => [r2, filePaths[i2]]));
+  const server2 = http.createServer((req, res) => {
+    const file = byRoute.get((req.url || "").split("?")[0]);
+    if (!file || req.method !== "GET" && req.method !== "HEAD") {
+      res.writeHead(404).end();
+      return;
     }
-  }
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error(`check-scenario.js returned no JSON: ${raw.slice(0, 400)}`);
-  }
-  return scenarioCheckResultSchema.parse(parsed);
-}
-function checkStoryboard(args) {
-  const { file, win } = readBoard(args.path);
-  const seen = /* @__PURE__ */ new Set();
-  const structure = contract().guidedCheck(win, { draft: args.draft }).concat(validateShots(win.SCENES ?? [])).filter((f3) => {
-    const key = f3.level + "\0" + f3.where + "\0" + f3.what;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
+    let size = 0;
+    try {
+      size = fs.statSync(file).size;
+    } catch {
+      res.writeHead(404).end();
+      return;
+    }
+    const type = MIME[path.extname(file).toLowerCase()] || "application/octet-stream";
+    const range = /^bytes=(\d+)-(\d*)$/.exec(req.headers.range || "");
+    let start = 0;
+    let end = size - 1;
+    if (range) {
+      start = Number(range[1]);
+      end = range[2] ? Math.min(Number(range[2]), size - 1) : end;
+    }
+    if (start > end || start >= size) {
+      res.writeHead(416, { "Content-Range": `bytes */${size}` }).end();
+      return;
+    }
+    res.writeHead(range ? 206 : 200, {
+      "Content-Type": type,
+      "Content-Length": end - start + 1,
+      "Accept-Ranges": "bytes",
+      ...range ? { "Content-Range": `bytes ${start}-${end}/${size}` } : {}
+    });
+    if (req.method === "HEAD") {
+      res.end();
+      return;
+    }
+    fs.createReadStream(file, { start, end }).on("error", () => res.destroy()).pipe(res);
   });
-  const argv = [CHECK_SCENES_FILE, file, "--json"];
-  if (args.draft) argv.push("--draft");
-  let raw = "";
-  try {
-    raw = execFileSync(process.execPath, argv, { encoding: "utf8", timeout: 6e4, maxBuffer: 16 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] });
-  } catch (e2) {
-    const err4 = e2;
-    raw = err4.stdout || "";
-    if (!raw.trim()) throw new Error(`check-scenes.js failed: ${(err4.stderr || err4.message).trim()}`);
-  }
-  let parsed = {};
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error(`check-scenes.js returned no JSON: ${raw.slice(0, 400)}`);
-  }
-  const dup = new Set(structure.map((f3) => f3.level + "\0" + f3.where + "\0" + f3.what));
-  const rest = (parsed.findings ?? []).filter((f3) => !dup.has(f3.level + "\0" + f3.where + "\0" + f3.what));
-  const all = structure.concat(rest);
-  return {
-    file,
-    format: parsed.format ?? String(win.FORMAT ?? "shorts-9x16"),
-    shots: (win.SCENES ?? []).length,
-    draft: args.draft,
-    structure,
-    contract: rest,
-    violations: all.filter((f3) => f3.level === "bad").length,
-    warnings: all.filter((f3) => f3.level === "warn").length,
-    deferred: all.filter((f3) => f3.level === "later").length
+  return new Promise((resolve11, reject) => {
+    server2.once("error", reject);
+    server2.listen(0, "127.0.0.1", () => {
+      const address = server2.address();
+      const port = typeof address === "object" && address ? address.port : 0;
+      resolve11({ server: server2, port, routes });
+    });
+  });
+}
+function closeServer(server2) {
+  return new Promise((resolve11) => {
+    server2.closeAllConnections?.();
+    server2.close(() => resolve11());
+  });
+}
+var liveTunnels = /* @__PURE__ */ new Set();
+var exitHookInstalled = false;
+function killTunnelsOnExit() {
+  if (exitHookInstalled) return;
+  exitHookInstalled = true;
+  const killAll = () => {
+    for (const child of liveTunnels) if (child.exitCode === null) child.kill("SIGTERM");
   };
+  process.once("exit", killAll);
+  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
+    if (process.listenerCount(signal) > 0) continue;
+    process.once(signal, () => {
+      killAll();
+      process.kill(process.pid, signal);
+    });
+  }
 }
-function renderFindings(findings) {
-  if (!findings.length) return "  (none)";
-  const mark = { bad: "!", warn: "\xB7", later: "\u2026" };
-  return findings.map((f3) => `  ${mark[f3.level]} ${f3.where.padEnd(12)} ${f3.what}`).join("\n");
+async function publishViaTunnel(filePaths, cloudflared = "cloudflared") {
+  const { server: server2, port, routes } = await serveLocally(filePaths);
+  let child = null;
+  const close = async () => {
+    if (child) {
+      liveTunnels.delete(child);
+      if (child.exitCode === null) child.kill("SIGTERM");
+    }
+    child = null;
+    await closeServer(server2);
+  };
+  killTunnelsOnExit();
+  try {
+    const origin = await new Promise((resolve11, reject) => {
+      child = spawn(cloudflared, ["tunnel", "--url", `http://127.0.0.1:${port}`, "--no-autoupdate"], {
+        stdio: ["ignore", "pipe", "pipe"]
+      });
+      liveTunnels.add(child);
+      let log = "";
+      const timer = setTimeout(() => reject(new Error(`cloudflared gave no quick-tunnel URL within 60s
+${log.slice(-600)}`)), 6e4);
+      const onLine = (chunk2) => {
+        log += chunk2.toString();
+        const m2 = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/.exec(log);
+        if (m2) {
+          clearTimeout(timer);
+          resolve11(m2[0]);
+        }
+      };
+      child.stdout?.on("data", onLine);
+      child.stderr?.on("data", onLine);
+      child.once("error", (error2) => {
+        clearTimeout(timer);
+        reject(new Error(`could not start cloudflared (${error2.message}) \u2014 install it (brew install cloudflared) or set MEDIA_UPLOAD_URL`));
+      });
+      child.once("exit", (code) => {
+        clearTimeout(timer);
+        reject(new Error(`cloudflared exited with code ${code} before the tunnel came up
+${log.slice(-600)}`));
+      });
+    });
+    const urls = routes.map((r2) => origin + r2);
+    await new Promise((resolve11) => setTimeout(resolve11, 5e3));
+    for (const url of urls) await assertReachable(url, 30, 3e3);
+    console.error(`[media-publish] quick tunnel ${origin} serving ${filePaths.length} file(s)`);
+    return { urls, how: "tunnel", close };
+  } catch (error2) {
+    await close();
+    throw error2;
+  }
 }
-function renderApply(r2) {
-  const bad = r2.findings.filter((f3) => f3.level === "bad");
-  const head = r2.written ? `${r2.created ? "Created" : "Wrote"} ${r2.file}` : bad.length ? `NOT written \u2014 ${bad.length} violation(s) in ${r2.file}` : `Dry run \u2014 ${r2.file} untouched`;
-  const lines = [head, `  ${r2.sequences} sequence(s) \xB7 ${r2.scenes} scene(s) \xB7 ${r2.shots} shot(s) \xB7 ${r2.synced} shot label(s) synced from the structure`];
-  if (r2.approvalDropped && r2.written) lines.push("  the stale `// approved:` line was dropped; existing task authorization is unchanged");
-  lines.push("Findings:", renderFindings(r2.findings));
-  return lines.join("\n");
-}
-function renderCheck(r2) {
-  const lines = [
-    `scenes.js contract \u2014 ${r2.format} \xB7 ${r2.shots} shots${r2.draft ? " \xB7 story pass (--draft)" : ""}`,
-    `  ${r2.violations} violation(s), ${r2.warnings} to look at${r2.draft ? `, ${r2.deferred} deferred to \xA74b` : ""}`,
-    "Structure (sequences \u2192 scenes \u2192 shots):",
-    renderFindings(r2.structure),
-    "Shot contract (check-scenes.js):",
-    renderFindings(r2.contract)
-  ];
-  return lines.join("\n");
+async function publishFiles(filePaths) {
+  if (filePaths.length === 0) return { urls: [], how: "upload", close: async () => void 0 };
+  for (const filePath of filePaths) {
+    if (!fs.existsSync(filePath)) throw new Error(`file to publish not found: ${filePath}`);
+  }
+  const upload = uploadConfig();
+  if (upload) return publishViaUpload(filePaths, upload);
+  return publishViaTunnel(filePaths);
 }
 
 // src/media-utils.ts
-import * as fs from "node:fs";
-import * as path from "node:path";
+import * as fs2 from "node:fs";
+import * as path2 from "node:path";
 var ALLOWED_EXTENSIONS = {
   image: [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"],
   video: [".mp4", ".webm", ".mov", ".avi"],
@@ -78508,12 +78100,12 @@ var ALLOWED_EXTENSIONS = {
   mesh: [".glb"]
 };
 function validateFilePath(filePath, options) {
-  const resolved = path.resolve(filePath);
+  const resolved = path2.resolve(filePath);
   if (filePath.includes("..")) {
     throw new Error(`Path traversal detected: ${filePath}`);
   }
   if (options?.allowedExtensions) {
-    const ext = path.extname(resolved).toLowerCase();
+    const ext = path2.extname(resolved).toLowerCase();
     if (!options.allowedExtensions.includes(ext)) {
       throw new Error(
         `File extension "${ext}" is not allowed. Allowed: ${options.allowedExtensions.join(", ")}`
@@ -78531,11 +78123,11 @@ function formatFileSize(bytes) {
 }
 async function saveBase64Image(base64Data, filePath) {
   validateFilePath(filePath, { allowedExtensions: ALLOWED_EXTENSIONS.image });
-  const resolved = path.resolve(filePath);
-  await fs.promises.mkdir(path.dirname(resolved), { recursive: true });
+  const resolved = path2.resolve(filePath);
+  await fs2.promises.mkdir(path2.dirname(resolved), { recursive: true });
   const buffer = Buffer.from(base64Data, "base64");
-  await fs.promises.writeFile(resolved, buffer);
-  const stats = await fs.promises.stat(resolved);
+  await fs2.promises.writeFile(resolved, buffer);
+  const stats = await fs2.promises.stat(resolved);
   return { filePath: resolved, size: stats.size };
 }
 function pcmToWav(pcmData, sampleRate, numChannels) {
@@ -78564,13 +78156,13 @@ function resolveOutputFile(outputDir, filename, kind) {
     throw new Error(`filename must be a bare file name without path separators: "${filename}"`);
   }
   validateFilePath(filename, { allowedExtensions: ALLOWED_EXTENSIONS[kind] });
-  const dir = path.resolve(outputDir);
-  fs.mkdirSync(dir, { recursive: true });
-  return path.join(dir, filename);
+  const dir = path2.resolve(outputDir);
+  fs2.mkdirSync(dir, { recursive: true });
+  return path2.join(dir, filename);
 }
 function saveMediaFile(outputDir, filename, data, kind) {
   const fullPath = resolveOutputFile(outputDir, filename, kind);
-  fs.writeFileSync(fullPath, data);
+  fs2.writeFileSync(fullPath, data);
   return fullPath;
 }
 function saveAudioFile(outputDir, filename, data) {
@@ -78580,336 +78172,684 @@ function bareFilenameSchema(kind) {
   const allowed = ALLOWED_EXTENSIONS[kind];
   return external_exports.string().min(1).refine((name) => !/[/\\]/.test(name) && !name.includes(".."), {
     message: "filename must be a bare file name without path separators (use outputPath for the directory)"
-  }).refine((name) => allowed.includes(path.extname(name).toLowerCase()), {
+  }).refine((name) => allowed.includes(path2.extname(name).toLowerCase()), {
     message: `filename extension must be one of: ${allowed.join(", ")}`
   });
 }
 function mimeFromExtension(filePath, kind) {
-  const ext = path.extname(filePath).toLowerCase();
+  const ext = path2.extname(filePath).toLowerCase();
   if (kind === "image") {
     return ext === ".png" ? "image/png" : ext === ".gif" ? "image/gif" : ext === ".webp" ? "image/webp" : "image/jpeg";
   }
   return ext === ".webm" ? "video/webm" : ext === ".mov" ? "video/quicktime" : "video/mp4";
 }
 
-// src/music-client.ts
-var LYRIA_CLIP_MODEL = "lyria-3-clip-preview";
-var LYRIA_REALTIME_MODEL = "models/lyria-realtime-exp";
-var CLIP_DURATION_SECONDS = 30;
-var REALTIME_SAMPLE_RATE = 48e3;
-var REALTIME_CHANNELS = 2;
-var REALTIME_BYTES_PER_SAMPLE = 2;
-var REALTIME_BYTES_PER_SECOND = REALTIME_SAMPLE_RATE * REALTIME_CHANNELS * REALTIME_BYTES_PER_SAMPLE;
-var REALTIME_TIMEOUT_MARGIN_MS = 3e4;
-var REALTIME_POLL_INTERVAL_MS = 100;
-var MUSIC_GENRES = [
-  "Acid Jazz",
-  "Afrobeat",
-  "Ambient",
-  "Blues",
-  "Bossa Nova",
-  "Breakbeat",
-  "Classical",
-  "Country",
-  "Disco",
-  "Drum and Bass",
-  "Dub",
-  "Dubstep",
-  "EDM",
-  "Electronic",
-  "Funk",
-  "Gospel",
-  "Hip Hop",
-  "House",
-  "Jazz",
-  "Latin",
-  "Lo-Fi",
-  "Metal",
-  "Minimal Techno",
-  "Pop",
-  "R&B",
-  "Reggae",
-  "Rock",
-  "Soul",
-  "Synthwave",
-  "Techno",
-  "Trance",
-  "World Music"
-];
-var MUSIC_MOODS = [
-  "Ambient",
-  "Atmospheric",
-  "Calm",
-  "Cheerful",
-  "Cinematic",
-  "Dark",
-  "Dreamy",
-  "Emotional",
-  "Energetic",
-  "Epic",
-  "Experimental",
-  "Happy",
-  "Hopeful",
-  "Intense",
-  "Melancholic",
-  "Mysterious",
-  "Nostalgic",
-  "Peaceful",
-  "Playful",
-  "Powerful",
-  "Relaxing",
-  "Romantic",
-  "Sad",
-  "Suspenseful",
-  "Uplifting"
-];
-var MUSIC_INSTRUMENTS = [
-  "303 Acid Bass",
-  "Acoustic Guitar",
-  "Bass Guitar",
-  "Cello",
-  "Drums",
-  "Electric Guitar",
-  "Flute",
-  "Harp",
-  "Keyboard",
-  "Orchestra",
-  "Organ",
-  "Percussion",
-  "Piano",
-  "Saxophone",
-  "Strings",
-  "Synth",
-  "Synth Bass",
-  "Synth Lead",
-  "Synth Pad",
-  "Trumpet",
-  "Violin",
-  "Vocal Chops"
-];
-var MUSIC_SCALES = [
-  "C_MAJOR_A_MINOR",
-  "D_FLAT_MAJOR_B_FLAT_MINOR",
-  "D_MAJOR_B_MINOR",
-  "E_FLAT_MAJOR_C_MINOR",
-  "E_MAJOR_D_FLAT_MINOR",
-  "F_MAJOR_D_MINOR",
-  "G_FLAT_MAJOR_E_FLAT_MINOR",
-  "G_MAJOR_E_MINOR",
-  "A_FLAT_MAJOR_F_MINOR",
-  "A_MAJOR_G_FLAT_MINOR",
-  "B_FLAT_MAJOR_G_MINOR",
-  "B_MAJOR_A_FLAT_MINOR",
-  "SCALE_UNSPECIFIED"
-];
-var MUSIC_GENERATION_MODES = ["QUALITY", "DIVERSITY", "VOCALIZATION"];
-var durationSchema = external_exports.number().min(5).max(300).default(30);
-var weightedPromptSchema = external_exports.object({
-  text: external_exports.string().min(1, "Prompt text is required"),
-  weight: external_exports.number().refine((v) => v !== 0, "Weight must be a non-zero value").default(1)
-});
-var musicConfigSchema = external_exports.object({
-  guidance: external_exports.number().min(0).max(6).optional(),
-  bpm: external_exports.number().min(60).max(200).optional(),
-  scale: external_exports.enum(MUSIC_SCALES).optional(),
-  density: external_exports.number().min(0).max(1).optional(),
-  brightness: external_exports.number().min(0).max(1).optional(),
-  temperature: external_exports.number().min(0).max(3).optional(),
-  // model default 1.1 when unspecified
-  topK: external_exports.number().int().min(1).max(1e3).optional(),
-  seed: external_exports.number().int().min(0).max(2147483647).optional(),
-  // the only reproducibility control
-  muteBass: external_exports.boolean().optional(),
-  muteDrums: external_exports.boolean().optional(),
-  onlyBassAndDrums: external_exports.boolean().optional(),
-  musicGenerationMode: external_exports.enum(MUSIC_GENERATION_MODES).optional()
-});
-var musicGenerateSchema = external_exports.object({
+// src/seedance-client.ts
+var VALID_SEEDANCE_RESOLUTIONS = ["480p", "720p", "1080p", "4k"];
+var VALID_SEEDANCE_RATIOS = ["16:9", "9:16", "4:3", "3:4", "1:1", "21:9", "adaptive"];
+var SEEDANCE_MODEL_SPECS = {
+  // 1080p opened on 2026-08-17 (UTC+8) — 10-bit color, and the only tier the discount
+  // campaign covers (28% off list through 2026-09-17). 2.5 has no 4K; 2.0 does.
+  "dreamina-seedance-2-5-260628": {
+    resolutions: ["480p", "720p", "1080p"],
+    duration: [4, 30],
+    lastFrame: true,
+    referenceImages: [1, 30],
+    referenceAudio: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30, audioOnly: true },
+    referenceVideos: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30 },
+    audio: true,
+    seed: false,
+    realFaceInput: false,
+    activationGate: true
+  },
+  "dreamina-seedance-2-0-260128": {
+    resolutions: ["480p", "720p", "1080p", "4k"],
+    duration: [4, 15],
+    lastFrame: true,
+    referenceImages: [1, 9],
+    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
+    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
+    audio: true,
+    seed: false,
+    realFaceInput: false,
+    activationGate: true
+  },
+  "dreamina-seedance-2-0-fast-260128": {
+    resolutions: ["480p", "720p"],
+    duration: [4, 15],
+    lastFrame: true,
+    referenceImages: [1, 9],
+    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
+    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
+    audio: true,
+    seed: false,
+    realFaceInput: false,
+    activationGate: true
+  },
+  "dreamina-seedance-2-0-mini-260615": {
+    resolutions: ["480p", "720p"],
+    duration: [4, 15],
+    lastFrame: true,
+    referenceImages: [1, 9],
+    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
+    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
+    audio: true,
+    seed: false,
+    realFaceInput: false,
+    activationGate: true
+  },
+  "seedance-1-5-pro-251215": {
+    resolutions: ["480p", "720p", "1080p"],
+    duration: [4, 12],
+    lastFrame: true,
+    referenceImages: false,
+    referenceAudio: false,
+    referenceVideos: false,
+    audio: true,
+    seed: true,
+    realFaceInput: true,
+    activationGate: false
+  },
+  "seedance-1-0-pro-250528": {
+    resolutions: ["480p", "720p", "1080p"],
+    duration: [2, 12],
+    lastFrame: true,
+    referenceImages: false,
+    referenceAudio: false,
+    referenceVideos: false,
+    audio: false,
+    seed: true,
+    realFaceInput: true,
+    activationGate: false
+  },
+  "seedance-1-0-pro-fast-251015": {
+    resolutions: ["480p", "720p", "1080p"],
+    duration: [2, 12],
+    lastFrame: false,
+    referenceImages: false,
+    referenceAudio: false,
+    referenceVideos: false,
+    audio: false,
+    seed: true,
+    realFaceInput: true,
+    activationGate: false
+  }
+};
+var VALID_SEEDANCE_MODELS = Object.keys(SEEDANCE_MODEL_SPECS);
+var DEFAULT_SEEDANCE_MODEL = "seedance-1-5-pro-251215";
+var SEEDANCE_REFERENCE_MODELS = VALID_SEEDANCE_MODELS.filter(
+  (model) => SEEDANCE_MODEL_SPECS[model].referenceImages !== false
+);
+var DEFAULT_SEEDANCE_REFERENCE_MODEL = "dreamina-seedance-2-0-260128";
+var SEEDANCE_REAL_FACE_MODELS = VALID_SEEDANCE_MODELS.filter(
+  (model) => SEEDANCE_MODEL_SPECS[model].realFaceInput
+);
+var DEFAULT_SEEDANCE_RESOLUTION = "720p";
+var DEFAULT_SEEDANCE_DURATION = 5;
+var SEEDANCE_FPS = 24;
+var SEEDANCE_FRAME_MODELS = ["seedance-1-0-pro-250528", "seedance-1-0-pro-fast-251015"];
+var SEEDANCE_MIN_FRAMES = 29;
+var SEEDANCE_MAX_FRAMES = 289;
+var SEEDANCE_FRAME_STEP = 4;
+var POLL_INTERVAL_MS = 1e4;
+var MAX_POLLS = 90;
+var MAX_INPUT_IMAGE_BYTES = 30 * 1024 * 1024;
+var MAX_REQUEST_BYTES = 64 * 1024 * 1024;
+var MAX_INPUT_AUDIO_BYTES = 15 * 1024 * 1024;
+var MAX_INPUT_VIDEO_BYTES = 200 * 1024 * 1024;
+var SEEDANCE_REFERENCE_VIDEO_FPS = [24, 60];
+var SEEDANCE_REFERENCE_VIDEO_PIXELS = [407696, 8295044];
+var SEEDANCE_REFERENCE_AUDIO_EXTENSIONS = [".wav", ".mp3"];
+var SEEDANCE_REFERENCE_VIDEO_EXTENSIONS = [".mp4", ".mov"];
+var commonFields = {
   prompt: external_exports.string().min(1, "Prompt is required"),
-  genre: external_exports.string().optional(),
-  mood: external_exports.string().optional(),
-  instruments: external_exports.array(external_exports.string()).optional(),
-  durationSeconds: durationSchema,
-  bpm: external_exports.number().min(60).max(200).optional(),
+  model: external_exports.enum(VALID_SEEDANCE_MODELS).optional().default(DEFAULT_SEEDANCE_MODEL),
+  resolution: external_exports.enum(VALID_SEEDANCE_RESOLUTIONS).optional().default(DEFAULT_SEEDANCE_RESOLUTION),
+  durationSeconds: external_exports.number().int().optional(),
+  frames: external_exports.number().int().min(SEEDANCE_MIN_FRAMES).max(SEEDANCE_MAX_FRAMES).optional(),
+  generateAudio: external_exports.boolean().optional().default(false),
+  watermark: external_exports.boolean().optional().default(false),
+  seed: external_exports.number().int().min(-1).max(2147483647).optional(),
+  cameraFixed: external_exports.boolean().optional(),
   outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("audio").optional()
-});
-var musicAdvancedSchema = external_exports.object({
-  prompts: external_exports.array(weightedPromptSchema).min(1, "At least one prompt is required"),
-  durationSeconds: durationSchema,
-  config: musicConfigSchema.optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("audio").optional()
-});
-var musicClipSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required"),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("audio").optional()
-});
-async function generateClip(request) {
-  try {
-    const { GoogleGenAI: GoogleGenAI3 } = await Promise.resolve().then(() => (init_node(), node_exports));
-    const genai = new GoogleGenAI3({ apiKey: requireGeminiKey() });
-    console.error(`[Lyria] Generating 30s clip... (model: ${LYRIA_CLIP_MODEL})`);
-    console.error(`[Lyria] Prompt: ${request.prompt.substring(0, 100)}...`);
-    const interaction = await genai.interactions.create({
-      model: LYRIA_CLIP_MODEL,
-      input: request.prompt
-    });
-    for (const step of interaction.steps ?? []) {
-      if (step.type !== "model_output") continue;
-      for (const content of step.content ?? []) {
-        if (content.type !== "audio" || !content.data) continue;
-        const mimeType = content.mime_type || "audio/mp3";
-        const ext = mimeType.includes("wav") ? "wav" : "mp3";
-        const audioPath = saveAudioFile(
-          request.outputPath || process.cwd(),
-          request.filename || `music_clip_${Date.now()}.${ext}`,
-          Buffer.from(content.data, "base64")
-        );
-        console.error(`[Lyria] Clip saved to: ${audioPath}`);
-        return {
-          success: true,
-          audioPath,
-          prompt: request.prompt,
-          durationSeconds: CLIP_DURATION_SECONDS,
-          model: LYRIA_CLIP_MODEL
-        };
-      }
+  filename: bareFilenameSchema("video").optional()
+};
+var QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
+var HANGUL_RUN = /[가-힣]+(?:[ \t]+[가-힣]+)*/;
+function hangulOutsideQuotes(prompt) {
+  const match2 = prompt.replace(QUOTED_SEGMENT, " ").match(HANGUL_RUN);
+  return match2 ? match2[0] : null;
+}
+function validateCommon(data, ctx) {
+  const spec = SEEDANCE_MODEL_SPECS[data.model];
+  if (data.model !== "dreamina-seedance-2-5-260628") {
+    const korean = hangulOutsideQuotes(data.prompt);
+    if (korean) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["prompt"],
+        message: `${data.model} reads Chinese or English prompts only \u2014 the Korean "${korean}" sits outside quotation marks and would be ignored rather than obeyed. Write the direction in English; Korean dialogue belongs inside quotes (1.5 pro lip-syncs it), or route the shot to dreamina-seedance-2-5-260628.`
+      });
     }
-    return { success: false, error: `No audio in interaction response (status: ${interaction.status})` };
-  } catch (error2) {
-    const errorMessage = error2 instanceof Error ? error2.message : String(error2);
-    console.error(`[Lyria] Error: ${errorMessage}`);
-    return { success: false, error: errorMessage };
+  }
+  if (!spec.resolutions.includes(data.resolution)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["resolution"],
+      message: `${data.model} does not support ${data.resolution} (supported: ${spec.resolutions.join(", ")}).`
+    });
+  }
+  const [minDuration, maxDuration] = spec.duration;
+  if (data.frames !== void 0) {
+    if (!SEEDANCE_FRAME_MODELS.includes(data.model) || (data.frames - 1) % SEEDANCE_FRAME_STEP !== 0)
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["frames"], message: "frames requires Seedance 1.0 pro/pro-fast and 25+4n frames in 29..289" });
+    if (data.durationSeconds !== void 0)
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["durationSeconds"], message: "frames and durationSeconds are mutually exclusive" });
+  } else if ((data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) < minDuration || (data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) > maxDuration) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["durationSeconds"],
+      message: `${data.model} supports durations of ${minDuration}~${maxDuration}s (requested: ${data.durationSeconds}s).`
+    });
+  }
+  if (data.generateAudio && !spec.audio) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["generateAudio"],
+      message: `${data.model} is silent-only and cannot generate audio. If you need audio, use seedance-1-5-pro-251215 or later.`
+    });
+  }
+  if (!spec.seed) {
+    if (data.seed !== void 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["seed"],
+        message: `${data.model} does not support seed (Seedance 1.5 pro\xB71.0 pro\xB71.0 pro fast only).`
+      });
+    }
+    if (data.cameraFixed !== void 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["cameraFixed"],
+        message: `${data.model} does not support cameraFixed (Seedance 1.5 pro\xB71.0 pro\xB71.0 pro fast only). Direct a fixed camera through the prompt instead.`
+      });
+    }
   }
 }
-async function generateSimple(request) {
-  const promptParts = [request.prompt];
-  if (request.genre) promptParts.push(request.genre);
-  if (request.mood) promptParts.push(request.mood);
-  if (request.instruments && request.instruments.length > 0) {
-    promptParts.push(`with ${request.instruments.join(", ")}`);
+var seedanceText2VideoSchema = external_exports.object({
+  ...commonFields,
+  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("16:9")
+}).superRefine(validateCommon).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
+var seedanceImg2VideoSchema = external_exports.object({
+  ...commonFields,
+  sourceImagePath: external_exports.string().min(1, "Source image path is required"),
+  lastImagePath: external_exports.string().optional(),
+  // Following the input image's ratio is the default — specifying a different
+  // ratio makes the server center-crop the source image (the incident where a
+  // 9:16 cover got cropped).
+  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
+}).superRefine((data, ctx) => {
+  validateCommon(data, ctx);
+  if (data.lastImagePath && !SEEDANCE_MODEL_SPECS[data.model].lastFrame) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["lastImagePath"],
+      message: `${data.model} accepts a first frame only \u2014 for first+last frame interpolation use seedance-1-0-pro-250528 or later.`
+    });
   }
-  return generateAdvanced({
-    prompts: [{ text: promptParts.join(", "), weight: 1 }],
-    durationSeconds: request.durationSeconds ?? 30,
-    config: request.bpm ? { bpm: request.bpm } : void 0,
-    outputPath: request.outputPath,
-    filename: request.filename
+}).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
+var seedanceReferenceSchema = external_exports.object({
+  ...commonFields,
+  model: external_exports.enum(SEEDANCE_REFERENCE_MODELS).optional().default(DEFAULT_SEEDANCE_REFERENCE_MODEL),
+  referenceImagePaths: external_exports.array(external_exports.string()).optional().default([]),
+  referenceAudioPaths: external_exports.array(external_exports.string()).optional().default([]),
+  referenceVideoPaths: external_exports.array(external_exports.string()).optional().default([]),
+  referenceVideoUrls: external_exports.array(external_exports.string().url()).optional().default([]),
+  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
+}).superRefine((data, ctx) => {
+  validateCommon(data, ctx);
+  const spec = SEEDANCE_MODEL_SPECS[data.model];
+  if (spec.referenceImages === false) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["model"],
+      message: `${data.model} does not support reference images. Use the Dreamina Seedance 2.5 or 2.0 family (${SEEDANCE_REFERENCE_MODELS.join(", ")}).`
+    });
+    return;
+  }
+  const [, maxImages] = spec.referenceImages;
+  if (data.referenceImagePaths.length > maxImages) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceImagePaths"],
+      message: `${data.model} allows at most ${maxImages} reference images (requested: ${data.referenceImagePaths.length}).`
+    });
+  }
+  const videoCount = data.referenceVideoPaths.length + data.referenceVideoUrls.length;
+  if (data.referenceImagePaths.length === 0 && data.referenceAudioPaths.length === 0 && videoCount === 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceImagePaths"],
+      message: "At least one reference is required \u2014 referenceImagePaths, referenceAudioPaths, referenceVideoPaths/Urls, or a mix."
+    });
+    return;
+  }
+  if (videoCount > 0) {
+    const video = spec.referenceVideos;
+    if (video === false) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["referenceVideoPaths"], message: `${data.model} does not take reference video.` });
+      return;
+    }
+    if (videoCount > video.maxClips) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["referenceVideoPaths"],
+        message: `${data.model} allows at most ${video.maxClips} reference videos (requested: ${videoCount}).`
+      });
+    }
+    for (const filePath of data.referenceVideoPaths) {
+      const ext = path3.extname(filePath).toLowerCase();
+      if (!SEEDANCE_REFERENCE_VIDEO_EXTENSIONS.includes(ext)) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["referenceVideoPaths"],
+          message: `Reference video must be mp4 or mov (got "${ext}" in ${path3.basename(filePath)}).`
+        });
+      }
+    }
+    if (!/\bvideo\s*1\b/i.test(data.prompt)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["prompt"],
+        message: 'A reference video is bound in the prompt by index \u2014 write "Video 1" (2.5: "@Video 1") and say what it supplies (camera movement, blocking, motion timing) and what it must not (its visual content).'
+      });
+    }
+  }
+  if (data.referenceAudioPaths.length === 0) return;
+  const audio = spec.referenceAudio;
+  if (audio === false) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceAudioPaths"],
+      message: `${data.model} does not take reference audio.`
+    });
+    return;
+  }
+  if (data.referenceAudioPaths.length > audio.maxClips) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceAudioPaths"],
+      message: `${data.model} allows at most ${audio.maxClips} reference audio clips (requested: ${data.referenceAudioPaths.length}).`
+    });
+  }
+  if (!audio.audioOnly && data.referenceImagePaths.length === 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceImagePaths"],
+      message: `${data.model} needs at least one reference image alongside reference audio \u2014 audio-only input is dreamina-seedance-2-5-260628 only.`
+    });
+  }
+  for (const filePath of data.referenceAudioPaths) {
+    const ext = path3.extname(filePath).toLowerCase();
+    if (!SEEDANCE_REFERENCE_AUDIO_EXTENSIONS.includes(ext)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["referenceAudioPaths"],
+        message: `Reference audio must be wav or mp3 (got "${ext}" in ${path3.basename(filePath)}).`
+      });
+    }
+  }
+  if (!data.generateAudio) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["generateAudio"],
+      message: "Reference audio with generateAudio: false produces a silent video, so the voice reference has nothing to shape. Set generateAudio: true."
+    });
+  }
+}).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
+function sleep(ms) {
+  return new Promise((resolve11) => setTimeout(resolve11, ms));
+}
+function describeHttpError(status, body) {
+  try {
+    const parsed = JSON.parse(body);
+    const code = parsed.error?.code;
+    const message = parsed.error?.message;
+    if (message) return `HTTP ${status} ${code ? `(${code}) ` : ""}${message}`;
+  } catch {
+  }
+  return `HTTP ${status} \u2014 ${body.slice(0, 400)}`;
+}
+async function createTask(apiKey, body) {
+  const response = await fetch(`${arkBaseUrl()}/contents/generations/tasks`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify(body)
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to create video task: ${describeHttpError(response.status, await response.text())}`);
+  }
+  const json2 = await response.json();
+  if (!json2.id) throw new Error("No task id returned from ModelArk");
+  return json2.id;
+}
+async function getTask(apiKey, taskId) {
+  const response = await fetch(`${arkBaseUrl()}/contents/generations/tasks/${encodeURIComponent(taskId)}`, {
+    headers: { Authorization: `Bearer ${apiKey}` }
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to get task status: ${describeHttpError(response.status, await response.text())}`);
+  }
+  return response.json();
+}
+async function awaitVideoAndSave(apiKey, taskId, outputPath, filename) {
+  for (let poll = 1; poll <= MAX_POLLS; poll += 1) {
+    console.error(`[Seedance] Generation in progress... (polling ${poll}/${MAX_POLLS})`);
+    await sleep(POLL_INTERVAL_MS);
+    const task = await getTask(apiKey, taskId);
+    if (task.status === "failed" || task.status === "expired" || task.status === "cancelled") {
+      const reason = task.error?.message || task.status;
+      return { error: `Generation ${task.status}: ${reason}` };
+    }
+    if (task.status !== "succeeded") continue;
+    const videoUrl = task.content?.video_url;
+    if (!videoUrl) return { error: "Task succeeded but no video_url in response" };
+    const fullPath = resolveOutputFile(outputPath, filename, "video");
+    const download = await fetch(videoUrl);
+    if (!download.ok) {
+      return { error: `Failed to download video: HTTP ${download.status} (URL is valid for 24 hours)` };
+    }
+    fs3.writeFileSync(fullPath, Buffer.from(await download.arrayBuffer()));
+    console.error(`[Seedance] Video saved to: ${fullPath}`);
+    return { videoPath: fullPath, task };
+  }
+  return { error: `Video generation timed out (${MAX_POLLS * POLL_INTERVAL_MS / 6e4} minutes). Task ${taskId} may still be running \u2014 check the ModelArk console.` };
+}
+function readImageDataUri(filePath) {
+  const stats = fs3.statSync(filePath);
+  if (stats.size > MAX_INPUT_IMAGE_BYTES) {
+    throw new Error(
+      `Input image too large: ${path3.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 30MB)`
+    );
+  }
+  const buffer = fs3.readFileSync(filePath);
+  return `data:${mimeFromExtension(filePath, "image")};base64,${buffer.toString("base64")}`;
+}
+function loadImages(filePaths) {
+  const uris = [];
+  for (const filePath of filePaths) {
+    validateFilePath(filePath, { allowedExtensions: ALLOWED_EXTENSIONS.image });
+    if (!fs3.existsSync(filePath)) throw new Error(`Image not found: ${filePath}`);
+    uris.push(readImageDataUri(filePath));
+  }
+  assertRequestBudget(uris);
+  return uris;
+}
+function assertRequestBudget(uris) {
+  const total = uris.reduce((sum, uri) => sum + uri.length, 0);
+  if (total > MAX_REQUEST_BYTES) {
+    throw new Error(
+      `Request body too large: base64 total ${(total / 1024 / 1024).toFixed(1)}MB (limit 64MB). Use fewer reference files or smaller ones.`
+    );
+  }
+}
+function audioMimeFromExtension(filePath) {
+  return path3.extname(filePath).toLowerCase() === ".mp3" ? "audio/mp3" : "audio/wav";
+}
+function loadReferenceAudio(filePaths) {
+  return filePaths.map((filePath) => {
+    validateFilePath(filePath, { allowedExtensions: SEEDANCE_REFERENCE_AUDIO_EXTENSIONS });
+    if (!fs3.existsSync(filePath)) throw new Error(`Reference audio not found: ${filePath}`);
+    const stats = fs3.statSync(filePath);
+    if (stats.size > MAX_INPUT_AUDIO_BYTES) {
+      throw new Error(
+        `Reference audio too large: ${path3.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 15MB)`
+      );
+    }
+    return `data:${audioMimeFromExtension(filePath)};base64,${fs3.readFileSync(filePath).toString("base64")}`;
   });
 }
-function toLiveMusicConfig(config3) {
-  const result = {};
-  if (config3.guidance !== void 0) result.guidance = config3.guidance;
-  if (config3.bpm !== void 0) result.bpm = config3.bpm;
-  if (config3.scale !== void 0) result.scale = config3.scale;
-  if (config3.density !== void 0) result.density = config3.density;
-  if (config3.brightness !== void 0) result.brightness = config3.brightness;
-  if (config3.temperature !== void 0) result.temperature = config3.temperature;
-  if (config3.topK !== void 0) result.topK = config3.topK;
-  if (config3.seed !== void 0) result.seed = config3.seed;
-  if (config3.muteBass !== void 0) result.muteBass = config3.muteBass;
-  if (config3.muteDrums !== void 0) result.muteDrums = config3.muteDrums;
-  if (config3.onlyBassAndDrums !== void 0) result.onlyBassAndDrums = config3.onlyBassAndDrums;
-  if (config3.musicGenerationMode !== void 0) {
-    result.musicGenerationMode = config3.musicGenerationMode;
-  }
-  return result;
-}
-async function generateAdvanced(request) {
-  const targetDuration = request.durationSeconds ?? 30;
-  const targetBytes = targetDuration * REALTIME_BYTES_PER_SECOND;
-  const audioChunks = [];
-  const state = {
-    received: 0,
-    done: false,
-    error: null
-  };
-  let session;
-  const weightedPrompts = request.prompts.map((p) => ({ text: p.text, weight: p.weight ?? 1 }));
-  try {
-    const { GoogleGenAI: GoogleGenAI3 } = await Promise.resolve().then(() => (init_node(), node_exports));
-    const genai = new GoogleGenAI3({ apiKey: requireGeminiKey(), apiVersion: "v1alpha" });
-    console.error(`[Lyria] Streaming ${targetDuration}s... (model: ${LYRIA_REALTIME_MODEL})`);
-    console.error(`[Lyria] Prompts: ${weightedPrompts.map((p) => `"${p.text}"(${p.weight})`).join(", ")}`);
-    session = await genai.live.music.connect({
-      model: LYRIA_REALTIME_MODEL,
-      callbacks: {
-        onmessage: (message) => {
-          if (state.done) return;
-          for (const chunk2 of message.serverContent?.audioChunks ?? []) {
-            if (!chunk2.data) continue;
-            const buffer = Buffer.from(chunk2.data, "base64");
-            audioChunks.push(buffer);
-            state.received += buffer.length;
-          }
-        },
-        onerror: (error2) => {
-          console.error("[Lyria] Session error:", error2);
-          state.error = error2 instanceof Error ? error2 : new Error(String(error2));
-        },
-        onclose: () => {
+function probeVideo(filePath) {
+  return new Promise((resolve11) => {
+    execFile(
+      "ffprobe",
+      ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height,r_frame_rate:format=duration", "-of", "json", filePath],
+      { timeout: 15e3 },
+      (error2, out) => {
+        if (error2) return resolve11(null);
+        try {
+          const parsed = JSON.parse(String(out));
+          const stream = parsed.streams?.[0];
+          const [num5, den] = String(stream?.r_frame_rate || "").split("/").map(Number);
+          const fps = num5 && den ? num5 / den : NaN;
+          const seconds = Number.parseFloat(String(parsed.format?.duration ?? ""));
+          if (!stream?.width || !stream?.height || !Number.isFinite(fps) || !Number.isFinite(seconds) || seconds <= 0) return resolve11(null);
+          resolve11({ seconds, fps, width: stream.width, height: stream.height });
+        } catch {
+          resolve11(null);
         }
       }
-    });
-    await session.setWeightedPrompts({ weightedPrompts });
-    if (request.config) {
-      const musicGenerationConfig = toLiveMusicConfig(request.config);
-      if (Object.keys(musicGenerationConfig).length > 0) {
-        await session.setMusicGenerationConfig({ musicGenerationConfig });
-      }
-    }
-    await session.play();
-    const startTime = Date.now();
-    const timeoutMs = targetDuration * 1e3 + REALTIME_TIMEOUT_MARGIN_MS;
-    while (state.received < targetBytes && Date.now() - startTime < timeoutMs) {
-      if (state.error) throw state.error;
-      await new Promise((resolve11) => setTimeout(resolve11, REALTIME_POLL_INTERVAL_MS));
-    }
-    state.done = true;
-    closeQuietly(session);
-    session = void 0;
-    if (audioChunks.length === 0) {
-      return { success: false, error: "No audio data received from Lyria RealTime" };
-    }
-    const rawPcm = Buffer.concat(audioChunks);
-    const frameBytes = REALTIME_CHANNELS * REALTIME_BYTES_PER_SAMPLE;
-    const trimTo = Math.floor(Math.min(rawPcm.length, targetBytes) / frameBytes) * frameBytes;
-    const pcmData = rawPcm.subarray(0, trimTo);
-    const audioPath = saveAudioFile(
-      request.outputPath || process.cwd(),
-      request.filename || `music_${Date.now()}.wav`,
-      pcmToWav(pcmData, REALTIME_SAMPLE_RATE, REALTIME_CHANNELS)
     );
-    const durationSeconds = Math.round(pcmData.length / REALTIME_BYTES_PER_SECOND);
-    console.error(`[Lyria] Music saved to: ${audioPath} (${durationSeconds}s)`);
-    return {
-      success: true,
-      audioPath,
-      prompt: weightedPrompts.map((p) => p.text).join(", "),
-      durationSeconds,
-      model: LYRIA_REALTIME_MODEL
-    };
-  } catch (error2) {
-    state.done = true;
-    if (session) closeQuietly(session);
-    const errorMessage = error2 instanceof Error ? error2.message : String(error2);
-    console.error(`[Lyria] Error: ${errorMessage}`);
-    return { success: false, error: errorMessage };
+  });
+}
+async function checkReferenceVideos(filePaths, spec, model) {
+  const [minSeconds, maxSeconds] = spec.clipSeconds;
+  const [minFps, maxFps] = SEEDANCE_REFERENCE_VIDEO_FPS;
+  const [minPixels, maxPixels] = SEEDANCE_REFERENCE_VIDEO_PIXELS;
+  let total = 0;
+  for (const filePath of filePaths) {
+    validateFilePath(filePath, { allowedExtensions: SEEDANCE_REFERENCE_VIDEO_EXTENSIONS });
+    if (!fs3.existsSync(filePath)) throw new Error(`Reference video not found: ${filePath}`);
+    const name = path3.basename(filePath);
+    const stats = fs3.statSync(filePath);
+    if (stats.size > MAX_INPUT_VIDEO_BYTES) {
+      throw new Error(`Reference video too large: ${name} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 200MB)`);
+    }
+    const facts = await probeVideo(filePath);
+    if (!facts) {
+      console.error(`[Seedance] ffprobe unavailable \u2014 skipping the frame checks for ${name} (${model}: ${minSeconds}~${maxSeconds}s per clip, ${minFps}~${maxFps} fps)`);
+      continue;
+    }
+    if (facts.seconds < minSeconds || facts.seconds > maxSeconds) {
+      throw new Error(`Reference video ${name} is ${facts.seconds.toFixed(1)}s \u2014 ${model} accepts ${minSeconds}~${maxSeconds}s per clip.`);
+    }
+    if (facts.fps < minFps - 0.01 || facts.fps > maxFps + 0.01) {
+      throw new Error(`Reference video ${name} is ${facts.fps.toFixed(3)} fps \u2014 the vendor takes ${minFps}~${maxFps} fps (render the previz at 24 or 30).`);
+    }
+    const pixels = facts.width * facts.height;
+    if (pixels < minPixels || pixels > maxPixels) {
+      throw new Error(`Reference video ${name} is ${facts.width}\xD7${facts.height} (${pixels} px) \u2014 the vendor takes ${minPixels}~${maxPixels} pixels a frame.`);
+    }
+    total += facts.seconds;
+  }
+  if (total > spec.totalSeconds) {
+    throw new Error(`Reference videos total ${total.toFixed(1)}s \u2014 ${model} allows ${spec.totalSeconds}s across all clips.`);
+  }
+  return total;
+}
+function probeAudioSeconds(filePath) {
+  return new Promise((resolve11) => {
+    execFile(
+      "ffprobe",
+      ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", filePath],
+      { timeout: 15e3 },
+      (error2, out) => {
+        const seconds = Number.parseFloat(String(out ?? "").trim());
+        resolve11(!error2 && Number.isFinite(seconds) && seconds > 0 ? seconds : null);
+      }
+    );
+  });
+}
+async function checkReferenceAudioDurations(filePaths, spec, model) {
+  const [minSeconds, maxSeconds] = spec.clipSeconds;
+  let total = 0;
+  for (const filePath of filePaths) {
+    const seconds = await probeAudioSeconds(filePath);
+    if (seconds === null) {
+      console.error(
+        `[Seedance] ffprobe unavailable \u2014 skipping the duration check for ${path3.basename(filePath)} (${model}: ${minSeconds}~${maxSeconds}s per clip, ${spec.totalSeconds}s total)`
+      );
+      continue;
+    }
+    if (seconds < minSeconds || seconds > maxSeconds) {
+      throw new Error(
+        `Reference audio ${path3.basename(filePath)} is ${seconds.toFixed(1)}s \u2014 ${model} accepts ${minSeconds}~${maxSeconds}s per clip.`
+      );
+    }
+    total += seconds;
+  }
+  if (total > spec.totalSeconds) {
+    throw new Error(
+      `Reference audio totals ${total.toFixed(1)}s \u2014 ${model} allows ${spec.totalSeconds}s across all clips.`
+    );
   }
 }
-function closeQuietly(session) {
+function buildBody(request, parts) {
+  const spec = SEEDANCE_MODEL_SPECS[request.model];
+  const body = {
+    model: request.model,
+    content: [{ type: "text", text: request.prompt }, ...parts],
+    ratio: request.ratio,
+    resolution: request.resolution,
+    ...request.frames === void 0 ? { duration: request.durationSeconds } : { frames: request.frames },
+    watermark: request.watermark
+  };
+  if (spec.audio) body.generate_audio = request.generateAudio;
+  if (spec.seed) {
+    if (request.seed !== void 0) body.seed = request.seed;
+    if (request.cameraFixed !== void 0) body.camera_fixed = request.cameraFixed;
+  }
+  return body;
+}
+function toResponse(request, videoPath, task, taskId) {
+  return {
+    success: true,
+    videoPath,
+    prompt: request.prompt,
+    model: request.model,
+    ratio: task.ratio ?? request.ratio,
+    resolution: task.resolution ?? request.resolution,
+    duration: request.frames !== void 0 ? request.frames / SEEDANCE_FPS : task.duration ?? request.durationSeconds,
+    durationSource: request.frames !== void 0 ? "requested_frames" : task.duration !== void 0 ? "provider_reported" : "requested_seconds",
+    completionTokens: task.usage?.completion_tokens,
+    taskId
+  };
+}
+function toFailure(error2) {
+  const message = error2 instanceof Error ? error2.message : String(error2);
+  console.error(`[Seedance] Error: ${message}`);
+  return { success: false, error: message };
+}
+async function generateFromText(request) {
+  const apiKey = requireArkKey();
   try {
-    session.close();
+    console.error(`[Seedance] Starting text-to-video generation... (model: ${request.model})`);
+    const taskId = await createTask(apiKey, buildBody(request, []));
+    const saved = await awaitVideoAndSave(
+      apiKey,
+      taskId,
+      request.outputPath || process.cwd(),
+      request.filename || `video_${Date.now()}.mp4`
+    );
+    if ("error" in saved) return { success: false, error: saved.error, taskId };
+    return toResponse(request, saved.videoPath, saved.task, taskId);
   } catch (error2) {
-    console.error(`[Lyria] Session close failed (ignored): ${error2 instanceof Error ? error2.message : String(error2)}`);
+    return toFailure(error2);
+  }
+}
+async function generateFromImage(request) {
+  const apiKey = requireArkKey();
+  try {
+    const paths = [request.sourceImagePath, ...request.lastImagePath ? [request.lastImagePath] : []];
+    const uris = loadImages(paths);
+    const images = uris.map((url, index) => ({
+      type: "image_url",
+      image_url: { url },
+      role: index === 0 ? "first_frame" : "last_frame"
+    }));
+    console.error(`[Seedance] Starting image-to-video generation... (model: ${request.model})`);
+    console.error(`[Seedance] First frame: ${request.sourceImagePath}`);
+    if (request.lastImagePath) console.error(`[Seedance] Last frame: ${request.lastImagePath}`);
+    const taskId = await createTask(apiKey, buildBody(request, images));
+    const saved = await awaitVideoAndSave(
+      apiKey,
+      taskId,
+      request.outputPath || process.cwd(),
+      request.filename || `video_${Date.now()}.mp4`
+    );
+    if ("error" in saved) return { success: false, error: saved.error, taskId };
+    return {
+      ...toResponse(request, saved.videoPath, saved.task, taskId),
+      sourceImage: request.sourceImagePath,
+      lastImage: request.lastImagePath
+    };
+  } catch (error2) {
+    return toFailure(error2);
+  }
+}
+async function generateWithReferences(request) {
+  const apiKey = requireArkKey();
+  try {
+    const spec = SEEDANCE_MODEL_SPECS[request.model];
+    const imageUris = loadImages(request.referenceImagePaths);
+    const audioUris = loadReferenceAudio(request.referenceAudioPaths);
+    assertRequestBudget([...imageUris, ...audioUris]);
+    if (audioUris.length > 0 && spec.referenceAudio !== false) {
+      await checkReferenceAudioDurations(request.referenceAudioPaths, spec.referenceAudio, request.model);
+    }
+    let referenceVideoSeconds = 0;
+    if (request.referenceVideoPaths.length > 0 && spec.referenceVideos !== false) {
+      referenceVideoSeconds = await checkReferenceVideos(request.referenceVideoPaths, spec.referenceVideos, request.model);
+    }
+    if (request.referenceVideoUrls.length > 0 && spec.referenceVideos !== false) {
+      const assumed = request.referenceVideoUrls.length * request.durationSeconds;
+      if (referenceVideoSeconds + assumed > spec.referenceVideos.totalSeconds) {
+        throw new Error(
+          `Reference videos total at least ${(referenceVideoSeconds + assumed).toFixed(1)}s (URL clips counted at ${request.durationSeconds}s each) \u2014 ${request.model} allows ${spec.referenceVideos.totalSeconds}s across all clips.`
+        );
+      }
+    }
+    const published = await publishFiles(request.referenceVideoPaths);
+    try {
+      const videoUrls = [...published.urls, ...request.referenceVideoUrls];
+      const parts = [
+        ...imageUris.map((url) => ({ type: "image_url", image_url: { url }, role: "reference_image" })),
+        ...videoUrls.map((url) => ({ type: "video_url", video_url: { url }, role: "reference_video" })),
+        ...audioUris.map((url) => ({ type: "audio_url", audio_url: { url }, role: "reference_audio" }))
+      ];
+      console.error(`[Seedance] Starting reference-to-video generation... (model: ${request.model})`);
+      if (imageUris.length > 0) console.error(`[Seedance] Reference images: ${request.referenceImagePaths.join(", ")}`);
+      if (videoUrls.length > 0) console.error(`[Seedance] Reference videos: ${[...request.referenceVideoPaths, ...request.referenceVideoUrls].join(", ")}`);
+      if (audioUris.length > 0) console.error(`[Seedance] Reference audio: ${request.referenceAudioPaths.join(", ")}`);
+      const taskId = await createTask(apiKey, buildBody(request, parts));
+      const saved = await awaitVideoAndSave(
+        apiKey,
+        taskId,
+        request.outputPath || process.cwd(),
+        request.filename || `video_ref_${Date.now()}.mp4`
+      );
+      if ("error" in saved) return { success: false, error: saved.error, taskId };
+      return {
+        ...toResponse(request, saved.videoPath, saved.task, taskId),
+        referenceImages: request.referenceImagePaths,
+        referenceAudios: request.referenceAudioPaths,
+        ...videoUrls.length > 0 ? {
+          referenceVideos: [...request.referenceVideoPaths, ...request.referenceVideoUrls],
+          referenceVideoSeconds,
+          ...published.urls.length > 0 ? { referenceVideoRoute: published.how } : {}
+        } : {}
+      };
+    } finally {
+      await published.close();
+    }
+  } catch (error2) {
+    return toFailure(error2);
   }
 }
 
 // src/astra-video-client.ts
 import * as fs4 from "node:fs";
-import * as path3 from "node:path";
+import * as path4 from "node:path";
 
 // package.json
 var package_default = {
@@ -79072,7 +79012,7 @@ var ASTRA_VIDEO_UPLOADS_PER_MINUTE = 10;
 var ASTRA_VIDEO_MAX_JOB_BODY_BYTES = 1024 * 1024;
 var ASTRA_VIDEO_USER_AGENT = `social-flow/${package_default.version}`;
 var ASTRA_VIDEO_MAX_WAIT_MS = 18e5;
-var POLL_INTERVAL_MS = 5e3;
+var POLL_INTERVAL_MS2 = 5e3;
 var SUBMIT_TIMEOUT_MS = 6e4;
 var STATUS_TIMEOUT_MS = 3e4;
 var TRANSFER_TIMEOUT_MS = 6e5;
@@ -79491,7 +79431,7 @@ var CONTENT_TYPE_BY_EXTENSION = {
   ".mp3": { contentType: "audio/mpeg", kind: "audio" }
 };
 function uploadContentType(filePath) {
-  const ext = path3.extname(filePath).toLowerCase();
+  const ext = path4.extname(filePath).toLowerCase();
   const found = CONTENT_TYPE_BY_EXTENSION[ext];
   if (!found) {
     throw new Error(
@@ -79501,13 +79441,13 @@ function uploadContentType(filePath) {
   return found;
 }
 async function uploadFile(filePath) {
-  const resolved = path3.resolve(filePath);
+  const resolved = path4.resolve(filePath);
   if (!fs4.existsSync(resolved)) throw new Error(`File not found: ${filePath}`);
   const { contentType, kind } = uploadContentType(resolved);
   const bytes = fs4.statSync(resolved).size;
   const limit2 = ASTRA_VIDEO_UPLOAD_LIMITS[kind];
   if (bytes > limit2) {
-    throw new Error(`${path3.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit2} bytes.`);
+    throw new Error(`${path4.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit2} bytes.`);
   }
   await waitForUploadSlot();
   const headers = authHeaders();
@@ -79525,7 +79465,7 @@ async function uploadFile(filePath) {
       return { ok: false, status: 502, body: `Upload unreachable: ${message}` };
     }
   });
-  if (!result.ok) throw redactedFailure(`upload of ${path3.basename(resolved)}`, result.status, result.body);
+  if (!result.ok) throw redactedFailure(`upload of ${path4.basename(resolved)}`, result.status, result.body);
   const parsed = JSON.parse(result.body);
   return {
     uploadId: parsed.upload_id,
@@ -79569,7 +79509,7 @@ async function awaitResult(jobId) {
     );
     if (!status.ok) {
       if (isTerminalStatus(status.status)) throw redactedFailure(`status of job ${jobId}`, status.status, status.body);
-      await sleep2(POLL_INTERVAL_MS);
+      await sleep2(POLL_INTERVAL_MS2);
       continue;
     }
     const job = JSON.parse(status.body);
@@ -79594,7 +79534,7 @@ async function awaitResult(jobId) {
         }
       });
       if (download.status === 409) {
-        await sleep2(POLL_INTERVAL_MS);
+        await sleep2(POLL_INTERVAL_MS2);
         continue;
       }
       if (!download.ok) {
@@ -79606,7 +79546,7 @@ async function awaitResult(jobId) {
         elapsedSeconds: Math.round((Date.now() - startedAt) / 1e3)
       };
     }
-    await sleep2(POLL_INTERVAL_MS);
+    await sleep2(POLL_INTERVAL_MS2);
   }
 }
 async function runJob(mode, prompt, body, outputPath, filename) {
@@ -79626,12 +79566,12 @@ async function runJob(mode, prompt, body, outputPath, filename) {
   writeReceipt({ ...submitted, ...response, status: "completed", completedAt: (/* @__PURE__ */ new Date()).toISOString() });
   return response;
 }
-async function generateFromText(args) {
+async function generateFromText2(args) {
   const mode = ASTRA_VIDEO_TIERS[args.tier];
   const body = buildJobBody(mode, args);
   return runJob(mode, args.prompt, body, args.outputPath, args.filename);
 }
-async function generateFromImage(args) {
+async function generateFromImage2(args) {
   const first = await uploadFile(args.firstFramePath);
   const images = [{ uploadId: first.uploadId, frameIdx: 0, strength: args.strength ?? 1 }];
   if (args.lastFramePath) {
@@ -79677,865 +79617,1665 @@ async function retakeVideo(args) {
   return runJob("retake", args.prompt, body, args.outputPath, args.filename);
 }
 
-// src/seedance-client.ts
-import { execFile } from "node:child_process";
-import * as fs6 from "node:fs";
-import * as path5 from "node:path";
+// src/mlx-serve-client.ts
+import { execFile as execFile2 } from "node:child_process";
+import { existsSync as existsSync5, mkdtempSync, readFileSync as readFileSync5, rmSync, writeFileSync as writeFileSync4 } from "node:fs";
+import { tmpdir } from "node:os";
+import { join as join3 } from "node:path";
+var MLX_HEALTH_TIMEOUT_MS = 3e3;
+var MLX_MODELS_TIMEOUT_MS = 1e4;
+var MLX_LOAD_TIMEOUT_MS = 10 * 6e4;
+var MLX_IMAGE_TIMEOUT_MS = 15 * 6e4;
+var MLX_MUSIC_TIMEOUT_MS = 10 * 6e4;
+var MLX_VIDEO_TIMEOUT_MS = 20 * 6e4;
+var MLX_MESH_TIMEOUT_MS = 15 * 6e4;
+var MAX_VIDEO_RGB_BYTES = 800 * 1024 * 1024;
+var MLX_IMAGE_DIMENSION_STEP = 16;
+var MIN_MLX_IMAGE_DIMENSION = 256;
+var MAX_MLX_IMAGE_DIMENSION = 2048;
+var DEFAULT_MLX_IMAGE_SIZE = 1024;
+var MLX_VIDEO_DIMENSION_STEP = 64;
+var MLX_VIDEO_DIMENSION_STEP_ONE_STAGE = 32;
+var MIN_MLX_VIDEO_DIMENSION = 256;
+var MAX_MLX_VIDEO_DIMENSION = 1920;
+var DEFAULT_MLX_VIDEO_WIDTH = 768;
+var DEFAULT_MLX_VIDEO_HEIGHT = 1280;
+var DEFAULT_MLX_VIDEO_FRAMES = 49;
+var MIN_MLX_VIDEO_FRAMES = 9;
+var MAX_MLX_VIDEO_FRAMES = 241;
+var MLX_VIDEO_FRAME_STEP = 8;
+var MLX_VIDEO_FPS = 24;
+var MIN_MLX_MUSIC_SECONDS = 10;
+var MAX_MLX_MUSIC_SECONDS = 600;
+var DEFAULT_MLX_MUSIC_SECONDS = 30;
+var MAX_MLX_IMAGE_REFS = 3;
+function authHeaders2() {
+  const key = mlxServeApiKey();
+  return key ? { Authorization: `Bearer ${key}` } : {};
+}
+function isUnreachable(status, body) {
+  return status === 502 || status === 504 || /ECONNREFUSED|fetch failed|Upstream unreachable/i.test(body);
+}
+function mlxDownHint(detail) {
+  return `MLX Core is not reachable at ${mlxServeUrl()}. This plugin does not launch the app.
+Install the macOS menu-bar app (Apple Silicon, macOS 26.2+) and start it, or run mlx-serve --serve:
+  brew install --cask mlx-core
+If the server is on another host or port, set MLX_SERVE_URL.
+Loopback needs no API key; a non-loopback bind may need MLX_SERVE_API_KEY.
+` + (detail ? `
+${detail}` : "");
+}
+function translateUpstream(body) {
+  if (/out of memory|OOM|not enough.*RAM|insufficient memory/i.test(body)) {
+    return `${body}
 
-// src/media-publish.ts
-import { spawn } from "node:child_process";
-import { randomBytes } from "node:crypto";
-import * as fs5 from "node:fs";
-import * as http3 from "node:http";
-import * as path4 from "node:path";
-var MIME = {
-  ".mp4": "video/mp4",
-  ".mov": "video/quicktime",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".webp": "image/webp",
-  ".wav": "audio/wav",
-  ".mp3": "audio/mpeg"
-};
-function uploadConfig() {
-  const endpoint = process.env.MEDIA_UPLOAD_URL || process.env.MELEON_MEDIA_URL || "";
-  const key = process.env.MEDIA_UPLOAD_API_KEY || process.env.MELEON_MEDIA_API_KEY || "";
-  if (!endpoint || !key) return null;
-  const seconds = Number(process.env.MEDIA_UPLOAD_TIMEOUT || process.env.MELEON_UPLOAD_TIMEOUT || 300);
-  return { endpoint, key, timeoutMs: (Number.isFinite(seconds) && seconds > 0 ? seconds : 300) * 1e3 };
-}
-async function assertReachable(url, attempts, waitMs) {
-  let last = "";
-  for (let i2 = 0; i2 < attempts; i2 += 1) {
-    try {
-      const head = await fetch(url, { method: "HEAD", signal: AbortSignal.timeout(15e3) });
-      if (head.ok) return;
-      const get = await fetch(url, { headers: { Range: "bytes=0-0" }, signal: AbortSignal.timeout(15e3) });
-      if (get.ok) {
-        await get.body?.cancel();
-        return;
-      }
-      last = `HTTP ${get.status}`;
-    } catch (error2) {
-      last = error2 instanceof Error ? error2.message : String(error2);
-    }
-    if (i2 < attempts - 1) await new Promise((resolve11) => setTimeout(resolve11, waitMs));
-  }
-  throw new Error(`public URL not reachable: ${url} (${last})`);
-}
-async function publishViaUpload(filePaths, config3) {
-  const urls = [];
-  for (const filePath of filePaths) {
-    const response = await fetch(config3.endpoint, {
-      method: "POST",
-      headers: { "x-api-key": config3.key, "Content-Type": MIME[path4.extname(filePath).toLowerCase()] || "application/octet-stream" },
-      body: fs5.readFileSync(filePath),
-      signal: AbortSignal.timeout(config3.timeoutMs)
-    });
-    const body = await response.text();
-    if (response.status !== 201) {
-      throw new Error(`media hosting refused ${path4.basename(filePath)}: HTTP ${response.status} \u2014 ${body.slice(0, 300)}`);
-    }
-    let url = "";
-    try {
-      url = String(JSON.parse(body).data?.url || "");
-    } catch {
-    }
-    if (!/^https?:\/\//.test(url)) throw new Error(`media hosting answered 201 without data.url \u2014 ${body.slice(0, 300)}`);
-    await assertReachable(url, 3, 2e3);
-    urls.push(url);
-  }
-  return { urls, how: "upload", close: async () => void 0 };
-}
-function serveLocally(filePaths) {
-  const token = randomBytes(16).toString("hex");
-  const routes = filePaths.map((p, i2) => `/${token}/${i2}/${encodeURIComponent(path4.basename(p))}`);
-  const byRoute = new Map(routes.map((r2, i2) => [r2, filePaths[i2]]));
-  const server2 = http3.createServer((req, res) => {
-    const file = byRoute.get((req.url || "").split("?")[0]);
-    if (!file || req.method !== "GET" && req.method !== "HEAD") {
-      res.writeHead(404).end();
-      return;
-    }
-    let size = 0;
-    try {
-      size = fs5.statSync(file).size;
-    } catch {
-      res.writeHead(404).end();
-      return;
-    }
-    const type = MIME[path4.extname(file).toLowerCase()] || "application/octet-stream";
-    const range = /^bytes=(\d+)-(\d*)$/.exec(req.headers.range || "");
-    let start = 0;
-    let end = size - 1;
-    if (range) {
-      start = Number(range[1]);
-      end = range[2] ? Math.min(Number(range[2]), size - 1) : end;
-    }
-    if (start > end || start >= size) {
-      res.writeHead(416, { "Content-Range": `bytes */${size}` }).end();
-      return;
-    }
-    res.writeHead(range ? 206 : 200, {
-      "Content-Type": type,
-      "Content-Length": end - start + 1,
-      "Accept-Ranges": "bytes",
-      ...range ? { "Content-Range": `bytes ${start}-${end}/${size}` } : {}
-    });
-    if (req.method === "HEAD") {
-      res.end();
-      return;
-    }
-    fs5.createReadStream(file, { start, end }).on("error", () => res.destroy()).pipe(res);
-  });
-  return new Promise((resolve11, reject) => {
-    server2.once("error", reject);
-    server2.listen(0, "127.0.0.1", () => {
-      const address = server2.address();
-      const port = typeof address === "object" && address ? address.port : 0;
-      resolve11({ server: server2, port, routes });
-    });
-  });
-}
-function closeServer(server2) {
-  return new Promise((resolve11) => {
-    server2.closeAllConnections?.();
-    server2.close(() => resolve11());
-  });
-}
-var liveTunnels = /* @__PURE__ */ new Set();
-var exitHookInstalled = false;
-function killTunnelsOnExit() {
-  if (exitHookInstalled) return;
-  exitHookInstalled = true;
-  const killAll = () => {
-    for (const child of liveTunnels) if (child.exitCode === null) child.kill("SIGTERM");
-  };
-  process.once("exit", killAll);
-  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
-    if (process.listenerCount(signal) > 0) continue;
-    process.once(signal, () => {
-      killAll();
-      process.kill(process.pid, signal);
-    });
-  }
-}
-async function publishViaTunnel(filePaths, cloudflared = "cloudflared") {
-  const { server: server2, port, routes } = await serveLocally(filePaths);
-  let child = null;
-  const close = async () => {
-    if (child) {
-      liveTunnels.delete(child);
-      if (child.exitCode === null) child.kill("SIGTERM");
-    }
-    child = null;
-    await closeServer(server2);
-  };
-  killTunnelsOnExit();
-  try {
-    const origin = await new Promise((resolve11, reject) => {
-      child = spawn(cloudflared, ["tunnel", "--url", `http://127.0.0.1:${port}`, "--no-autoupdate"], {
-        stdio: ["ignore", "pipe", "pipe"]
-      });
-      liveTunnels.add(child);
-      let log = "";
-      const timer = setTimeout(() => reject(new Error(`cloudflared gave no quick-tunnel URL within 60s
-${log.slice(-600)}`)), 6e4);
-      const onLine = (chunk2) => {
-        log += chunk2.toString();
-        const m2 = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/.exec(log);
-        if (m2) {
-          clearTimeout(timer);
-          resolve11(m2[0]);
-        }
-      };
-      child.stdout?.on("data", onLine);
-      child.stderr?.on("data", onLine);
-      child.once("error", (error2) => {
-        clearTimeout(timer);
-        reject(new Error(`could not start cloudflared (${error2.message}) \u2014 install it (brew install cloudflared) or set MEDIA_UPLOAD_URL`));
-      });
-      child.once("exit", (code) => {
-        clearTimeout(timer);
-        reject(new Error(`cloudflared exited with code ${code} before the tunnel came up
-${log.slice(-600)}`));
-      });
-    });
-    const urls = routes.map((r2) => origin + r2);
-    await new Promise((resolve11) => setTimeout(resolve11, 5e3));
-    for (const url of urls) await assertReachable(url, 30, 3e3);
-    console.error(`[media-publish] quick tunnel ${origin} serving ${filePaths.length} file(s)`);
-    return { urls, how: "tunnel", close };
-  } catch (error2) {
-    await close();
-    throw error2;
-  }
-}
-async function publishFiles(filePaths) {
-  if (filePaths.length === 0) return { urls: [], how: "upload", close: async () => void 0 };
-  for (const filePath of filePaths) {
-    if (!fs5.existsSync(filePath)) throw new Error(`file to publish not found: ${filePath}`);
-  }
-  const upload = uploadConfig();
-  if (upload) return publishViaUpload(filePaths, upload);
-  return publishViaTunnel(filePaths);
-}
-
-// src/seedance-client.ts
-var VALID_SEEDANCE_RESOLUTIONS = ["480p", "720p", "1080p", "4k"];
-var VALID_SEEDANCE_RATIOS = ["16:9", "9:16", "4:3", "3:4", "1:1", "21:9", "adaptive"];
-var SEEDANCE_MODEL_SPECS = {
-  // 1080p opened on 2026-08-17 (UTC+8) — 10-bit color, and the only tier the discount
-  // campaign covers (28% off list through 2026-09-17). 2.5 has no 4K; 2.0 does.
-  "dreamina-seedance-2-5-260628": {
-    resolutions: ["480p", "720p", "1080p"],
-    duration: [4, 30],
-    lastFrame: true,
-    referenceImages: [1, 30],
-    referenceAudio: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30, audioOnly: true },
-    referenceVideos: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30 },
-    audio: true,
-    seed: false,
-    realFaceInput: false,
-    activationGate: true
-  },
-  "dreamina-seedance-2-0-260128": {
-    resolutions: ["480p", "720p", "1080p", "4k"],
-    duration: [4, 15],
-    lastFrame: true,
-    referenceImages: [1, 9],
-    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
-    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
-    audio: true,
-    seed: false,
-    realFaceInput: false,
-    activationGate: true
-  },
-  "dreamina-seedance-2-0-fast-260128": {
-    resolutions: ["480p", "720p"],
-    duration: [4, 15],
-    lastFrame: true,
-    referenceImages: [1, 9],
-    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
-    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
-    audio: true,
-    seed: false,
-    realFaceInput: false,
-    activationGate: true
-  },
-  "dreamina-seedance-2-0-mini-260615": {
-    resolutions: ["480p", "720p"],
-    duration: [4, 15],
-    lastFrame: true,
-    referenceImages: [1, 9],
-    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
-    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
-    audio: true,
-    seed: false,
-    realFaceInput: false,
-    activationGate: true
-  },
-  "seedance-1-5-pro-251215": {
-    resolutions: ["480p", "720p", "1080p"],
-    duration: [4, 12],
-    lastFrame: true,
-    referenceImages: false,
-    referenceAudio: false,
-    referenceVideos: false,
-    audio: true,
-    seed: true,
-    realFaceInput: true,
-    activationGate: false
-  },
-  "seedance-1-0-pro-250528": {
-    resolutions: ["480p", "720p", "1080p"],
-    duration: [2, 12],
-    lastFrame: true,
-    referenceImages: false,
-    referenceAudio: false,
-    referenceVideos: false,
-    audio: false,
-    seed: true,
-    realFaceInput: true,
-    activationGate: false
-  },
-  "seedance-1-0-pro-fast-251015": {
-    resolutions: ["480p", "720p", "1080p"],
-    duration: [2, 12],
-    lastFrame: false,
-    referenceImages: false,
-    referenceAudio: false,
-    referenceVideos: false,
-    audio: false,
-    seed: true,
-    realFaceInput: true,
-    activationGate: false
-  }
-};
-var VALID_SEEDANCE_MODELS = Object.keys(SEEDANCE_MODEL_SPECS);
-var DEFAULT_SEEDANCE_MODEL = "seedance-1-5-pro-251215";
-var SEEDANCE_REFERENCE_MODELS = VALID_SEEDANCE_MODELS.filter(
-  (model) => SEEDANCE_MODEL_SPECS[model].referenceImages !== false
-);
-var DEFAULT_SEEDANCE_REFERENCE_MODEL = "dreamina-seedance-2-0-260128";
-var SEEDANCE_REAL_FACE_MODELS = VALID_SEEDANCE_MODELS.filter(
-  (model) => SEEDANCE_MODEL_SPECS[model].realFaceInput
-);
-var DEFAULT_SEEDANCE_RESOLUTION = "720p";
-var DEFAULT_SEEDANCE_DURATION = 5;
-var SEEDANCE_FPS = 24;
-var POLL_INTERVAL_MS2 = 1e4;
-var MAX_POLLS = 90;
-var MAX_INPUT_IMAGE_BYTES = 30 * 1024 * 1024;
-var MAX_REQUEST_BYTES = 64 * 1024 * 1024;
-var MAX_INPUT_AUDIO_BYTES = 15 * 1024 * 1024;
-var MAX_INPUT_VIDEO_BYTES = 200 * 1024 * 1024;
-var SEEDANCE_REFERENCE_VIDEO_FPS = [24, 60];
-var SEEDANCE_REFERENCE_VIDEO_PIXELS = [407696, 8295044];
-var SEEDANCE_REFERENCE_AUDIO_EXTENSIONS = [".wav", ".mp3"];
-var SEEDANCE_REFERENCE_VIDEO_EXTENSIONS = [".mp4", ".mov"];
-var commonFields = {
-  prompt: external_exports.string().min(1, "Prompt is required"),
-  model: external_exports.enum(VALID_SEEDANCE_MODELS).optional().default(DEFAULT_SEEDANCE_MODEL),
-  resolution: external_exports.enum(VALID_SEEDANCE_RESOLUTIONS).optional().default(DEFAULT_SEEDANCE_RESOLUTION),
-  durationSeconds: external_exports.number().int().optional().default(DEFAULT_SEEDANCE_DURATION),
-  generateAudio: external_exports.boolean().optional().default(false),
-  watermark: external_exports.boolean().optional().default(false),
-  seed: external_exports.number().int().min(-1).max(2147483647).optional(),
-  cameraFixed: external_exports.boolean().optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").optional()
-};
-var QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
-var HANGUL_RUN = /[가-힣]+(?:[ \t]+[가-힣]+)*/;
-function hangulOutsideQuotes(prompt) {
-  const match2 = prompt.replace(QUOTED_SEGMENT, " ").match(HANGUL_RUN);
-  return match2 ? match2[0] : null;
-}
-function validateCommon(data, ctx) {
-  const spec = SEEDANCE_MODEL_SPECS[data.model];
-  if (data.model !== "dreamina-seedance-2-5-260628") {
-    const korean = hangulOutsideQuotes(data.prompt);
-    if (korean) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["prompt"],
-        message: `${data.model} reads Chinese or English prompts only \u2014 the Korean "${korean}" sits outside quotation marks and would be ignored rather than obeyed. Write the direction in English; Korean dialogue belongs inside quotes (1.5 pro lip-syncs it), or route the shot to dreamina-seedance-2-5-260628.`
-      });
-    }
-  }
-  if (!spec.resolutions.includes(data.resolution)) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["resolution"],
-      message: `${data.model} does not support ${data.resolution} (supported: ${spec.resolutions.join(", ")}).`
-    });
-  }
-  const [minDuration, maxDuration] = spec.duration;
-  if (data.durationSeconds < minDuration || data.durationSeconds > maxDuration) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["durationSeconds"],
-      message: `${data.model} supports durations of ${minDuration}~${maxDuration}s (requested: ${data.durationSeconds}s).`
-    });
-  }
-  if (data.generateAudio && !spec.audio) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["generateAudio"],
-      message: `${data.model} is silent-only and cannot generate audio. If you need audio, use seedance-1-5-pro-251215 or later.`
-    });
-  }
-  if (!spec.seed) {
-    if (data.seed !== void 0) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["seed"],
-        message: `${data.model} does not support seed (Seedance 1.5 pro\xB71.0 pro\xB71.0 pro fast only).`
-      });
-    }
-    if (data.cameraFixed !== void 0) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["cameraFixed"],
-        message: `${data.model} does not support cameraFixed (Seedance 1.5 pro\xB71.0 pro\xB71.0 pro fast only). Direct a fixed camera through the prompt instead.`
-      });
-    }
-  }
-}
-var seedanceText2VideoSchema = external_exports.object({
-  ...commonFields,
-  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("16:9")
-}).superRefine(validateCommon);
-var seedanceImg2VideoSchema = external_exports.object({
-  ...commonFields,
-  sourceImagePath: external_exports.string().min(1, "Source image path is required"),
-  lastImagePath: external_exports.string().optional(),
-  // Following the input image's ratio is the default — specifying a different
-  // ratio makes the server center-crop the source image (the incident where a
-  // 9:16 cover got cropped).
-  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
-}).superRefine((data, ctx) => {
-  validateCommon(data, ctx);
-  if (data.lastImagePath && !SEEDANCE_MODEL_SPECS[data.model].lastFrame) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["lastImagePath"],
-      message: `${data.model} accepts a first frame only \u2014 for first+last frame interpolation use seedance-1-0-pro-250528 or later.`
-    });
-  }
-});
-var seedanceReferenceSchema = external_exports.object({
-  ...commonFields,
-  model: external_exports.enum(SEEDANCE_REFERENCE_MODELS).optional().default(DEFAULT_SEEDANCE_REFERENCE_MODEL),
-  referenceImagePaths: external_exports.array(external_exports.string()).optional().default([]),
-  referenceAudioPaths: external_exports.array(external_exports.string()).optional().default([]),
-  referenceVideoPaths: external_exports.array(external_exports.string()).optional().default([]),
-  referenceVideoUrls: external_exports.array(external_exports.string().url()).optional().default([]),
-  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
-}).superRefine((data, ctx) => {
-  validateCommon(data, ctx);
-  const spec = SEEDANCE_MODEL_SPECS[data.model];
-  if (spec.referenceImages === false) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["model"],
-      message: `${data.model} does not support reference images. Use the Dreamina Seedance 2.5 or 2.0 family (${SEEDANCE_REFERENCE_MODELS.join(", ")}).`
-    });
-    return;
-  }
-  const [, maxImages] = spec.referenceImages;
-  if (data.referenceImagePaths.length > maxImages) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["referenceImagePaths"],
-      message: `${data.model} allows at most ${maxImages} reference images (requested: ${data.referenceImagePaths.length}).`
-    });
-  }
-  const videoCount = data.referenceVideoPaths.length + data.referenceVideoUrls.length;
-  if (data.referenceImagePaths.length === 0 && data.referenceAudioPaths.length === 0 && videoCount === 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["referenceImagePaths"],
-      message: "At least one reference is required \u2014 referenceImagePaths, referenceAudioPaths, referenceVideoPaths/Urls, or a mix."
-    });
-    return;
-  }
-  if (videoCount > 0) {
-    const video = spec.referenceVideos;
-    if (video === false) {
-      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["referenceVideoPaths"], message: `${data.model} does not take reference video.` });
-      return;
-    }
-    if (videoCount > video.maxClips) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["referenceVideoPaths"],
-        message: `${data.model} allows at most ${video.maxClips} reference videos (requested: ${videoCount}).`
-      });
-    }
-    for (const filePath of data.referenceVideoPaths) {
-      const ext = path5.extname(filePath).toLowerCase();
-      if (!SEEDANCE_REFERENCE_VIDEO_EXTENSIONS.includes(ext)) {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: ["referenceVideoPaths"],
-          message: `Reference video must be mp4 or mov (got "${ext}" in ${path5.basename(filePath)}).`
-        });
-      }
-    }
-    if (!/\bvideo\s*1\b/i.test(data.prompt)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["prompt"],
-        message: 'A reference video is bound in the prompt by index \u2014 write "Video 1" (2.5: "@Video 1") and say what it supplies (camera movement, blocking, motion timing) and what it must not (its visual content).'
-      });
-    }
-  }
-  if (data.referenceAudioPaths.length === 0) return;
-  const audio = spec.referenceAudio;
-  if (audio === false) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["referenceAudioPaths"],
-      message: `${data.model} does not take reference audio.`
-    });
-    return;
-  }
-  if (data.referenceAudioPaths.length > audio.maxClips) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["referenceAudioPaths"],
-      message: `${data.model} allows at most ${audio.maxClips} reference audio clips (requested: ${data.referenceAudioPaths.length}).`
-    });
-  }
-  if (!audio.audioOnly && data.referenceImagePaths.length === 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["referenceImagePaths"],
-      message: `${data.model} needs at least one reference image alongside reference audio \u2014 audio-only input is dreamina-seedance-2-5-260628 only.`
-    });
-  }
-  for (const filePath of data.referenceAudioPaths) {
-    const ext = path5.extname(filePath).toLowerCase();
-    if (!SEEDANCE_REFERENCE_AUDIO_EXTENSIONS.includes(ext)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["referenceAudioPaths"],
-        message: `Reference audio must be wav or mp3 (got "${ext}" in ${path5.basename(filePath)}).`
-      });
-    }
-  }
-  if (!data.generateAudio) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["generateAudio"],
-      message: "Reference audio with generateAudio: false produces a silent video, so the voice reference has nothing to shape. Set generateAudio: true."
-    });
-  }
-});
-function sleep3(ms) {
-  return new Promise((resolve11) => setTimeout(resolve11, ms));
-}
-function describeHttpError(status, body) {
-  try {
-    const parsed = JSON.parse(body);
-    const code = parsed.error?.code;
-    const message = parsed.error?.message;
-    if (message) return `HTTP ${status} ${code ? `(${code}) ` : ""}${message}`;
-  } catch {
-  }
-  return `HTTP ${status} \u2014 ${body.slice(0, 400)}`;
-}
-async function createTask(apiKey, body) {
-  const response = await fetch(`${arkBaseUrl()}/contents/generations/tasks`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify(body)
-  });
-  if (!response.ok) {
-    throw new Error(`Failed to create video task: ${describeHttpError(response.status, await response.text())}`);
-  }
-  const json2 = await response.json();
-  if (!json2.id) throw new Error("No task id returned from ModelArk");
-  return json2.id;
-}
-async function getTask(apiKey, taskId) {
-  const response = await fetch(`${arkBaseUrl()}/contents/generations/tasks/${encodeURIComponent(taskId)}`, {
-    headers: { Authorization: `Bearer ${apiKey}` }
-  });
-  if (!response.ok) {
-    throw new Error(`Failed to get task status: ${describeHttpError(response.status, await response.text())}`);
-  }
-  return response.json();
-}
-async function awaitVideoAndSave(apiKey, taskId, outputPath, filename) {
-  for (let poll = 1; poll <= MAX_POLLS; poll += 1) {
-    console.error(`[Seedance] Generation in progress... (polling ${poll}/${MAX_POLLS})`);
-    await sleep3(POLL_INTERVAL_MS2);
-    const task = await getTask(apiKey, taskId);
-    if (task.status === "failed" || task.status === "expired" || task.status === "cancelled") {
-      const reason = task.error?.message || task.status;
-      return { error: `Generation ${task.status}: ${reason}` };
-    }
-    if (task.status !== "succeeded") continue;
-    const videoUrl = task.content?.video_url;
-    if (!videoUrl) return { error: "Task succeeded but no video_url in response" };
-    const fullPath = resolveOutputFile(outputPath, filename, "video");
-    const download = await fetch(videoUrl);
-    if (!download.ok) {
-      return { error: `Failed to download video: HTTP ${download.status} (URL is valid for 24 hours)` };
-    }
-    fs6.writeFileSync(fullPath, Buffer.from(await download.arrayBuffer()));
-    console.error(`[Seedance] Video saved to: ${fullPath}`);
-    return { videoPath: fullPath, task };
-  }
-  return { error: `Video generation timed out (${MAX_POLLS * POLL_INTERVAL_MS2 / 6e4} minutes). Task ${taskId} may still be running \u2014 check the ModelArk console.` };
-}
-function readImageDataUri(filePath) {
-  const stats = fs6.statSync(filePath);
-  if (stats.size > MAX_INPUT_IMAGE_BYTES) {
-    throw new Error(
-      `Input image too large: ${path5.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 30MB)`
-    );
-  }
-  const buffer = fs6.readFileSync(filePath);
-  return `data:${mimeFromExtension(filePath, "image")};base64,${buffer.toString("base64")}`;
-}
-function loadImages(filePaths) {
-  const uris = [];
-  for (const filePath of filePaths) {
-    validateFilePath(filePath, { allowedExtensions: ALLOWED_EXTENSIONS.image });
-    if (!fs6.existsSync(filePath)) throw new Error(`Image not found: ${filePath}`);
-    uris.push(readImageDataUri(filePath));
-  }
-  assertRequestBudget(uris);
-  return uris;
-}
-function assertRequestBudget(uris) {
-  const total = uris.reduce((sum, uri) => sum + uri.length, 0);
-  if (total > MAX_REQUEST_BYTES) {
-    throw new Error(
-      `Request body too large: base64 total ${(total / 1024 / 1024).toFixed(1)}MB (limit 64MB). Use fewer reference files or smaller ones.`
-    );
-  }
-}
-function audioMimeFromExtension(filePath) {
-  return path5.extname(filePath).toLowerCase() === ".mp3" ? "audio/mp3" : "audio/wav";
-}
-function loadReferenceAudio(filePaths) {
-  return filePaths.map((filePath) => {
-    validateFilePath(filePath, { allowedExtensions: SEEDANCE_REFERENCE_AUDIO_EXTENSIONS });
-    if (!fs6.existsSync(filePath)) throw new Error(`Reference audio not found: ${filePath}`);
-    const stats = fs6.statSync(filePath);
-    if (stats.size > MAX_INPUT_AUDIO_BYTES) {
-      throw new Error(
-        `Reference audio too large: ${path5.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 15MB)`
-      );
-    }
-    return `data:${audioMimeFromExtension(filePath)};base64,${fs6.readFileSync(filePath).toString("base64")}`;
-  });
-}
-function probeVideo(filePath) {
-  return new Promise((resolve11) => {
-    execFile(
-      "ffprobe",
-      ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height,r_frame_rate:format=duration", "-of", "json", filePath],
-      { timeout: 15e3 },
-      (error2, out) => {
-        if (error2) return resolve11(null);
-        try {
-          const parsed = JSON.parse(String(out));
-          const stream = parsed.streams?.[0];
-          const [num5, den] = String(stream?.r_frame_rate || "").split("/").map(Number);
-          const fps = num5 && den ? num5 / den : NaN;
-          const seconds = Number.parseFloat(String(parsed.format?.duration ?? ""));
-          if (!stream?.width || !stream?.height || !Number.isFinite(fps) || !Number.isFinite(seconds) || seconds <= 0) return resolve11(null);
-          resolve11({ seconds, fps, width: stream.width, height: stream.height });
-        } catch {
-          resolve11(null);
-        }
-      }
-    );
-  });
-}
-async function checkReferenceVideos(filePaths, spec, model) {
-  const [minSeconds, maxSeconds] = spec.clipSeconds;
-  const [minFps, maxFps] = SEEDANCE_REFERENCE_VIDEO_FPS;
-  const [minPixels, maxPixels] = SEEDANCE_REFERENCE_VIDEO_PIXELS;
-  let total = 0;
-  for (const filePath of filePaths) {
-    validateFilePath(filePath, { allowedExtensions: SEEDANCE_REFERENCE_VIDEO_EXTENSIONS });
-    if (!fs6.existsSync(filePath)) throw new Error(`Reference video not found: ${filePath}`);
-    const name = path5.basename(filePath);
-    const stats = fs6.statSync(filePath);
-    if (stats.size > MAX_INPUT_VIDEO_BYTES) {
-      throw new Error(`Reference video too large: ${name} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 200MB)`);
-    }
-    const facts = await probeVideo(filePath);
-    if (!facts) {
-      console.error(`[Seedance] ffprobe unavailable \u2014 skipping the frame checks for ${name} (${model}: ${minSeconds}~${maxSeconds}s per clip, ${minFps}~${maxFps} fps)`);
-      continue;
-    }
-    if (facts.seconds < minSeconds || facts.seconds > maxSeconds) {
-      throw new Error(`Reference video ${name} is ${facts.seconds.toFixed(1)}s \u2014 ${model} accepts ${minSeconds}~${maxSeconds}s per clip.`);
-    }
-    if (facts.fps < minFps - 0.01 || facts.fps > maxFps + 0.01) {
-      throw new Error(`Reference video ${name} is ${facts.fps.toFixed(3)} fps \u2014 the vendor takes ${minFps}~${maxFps} fps (render the previz at 24 or 30).`);
-    }
-    const pixels = facts.width * facts.height;
-    if (pixels < minPixels || pixels > maxPixels) {
-      throw new Error(`Reference video ${name} is ${facts.width}\xD7${facts.height} (${pixels} px) \u2014 the vendor takes ${minPixels}~${maxPixels} pixels a frame.`);
-    }
-    total += facts.seconds;
-  }
-  if (total > spec.totalSeconds) {
-    throw new Error(`Reference videos total ${total.toFixed(1)}s \u2014 ${model} allows ${spec.totalSeconds}s across all clips.`);
-  }
-  return total;
-}
-function probeAudioSeconds(filePath) {
-  return new Promise((resolve11) => {
-    execFile(
-      "ffprobe",
-      ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", filePath],
-      { timeout: 15e3 },
-      (error2, out) => {
-        const seconds = Number.parseFloat(String(out ?? "").trim());
-        resolve11(!error2 && Number.isFinite(seconds) && seconds > 0 ? seconds : null);
-      }
-    );
-  });
-}
-async function checkReferenceAudioDurations(filePaths, spec, model) {
-  const [minSeconds, maxSeconds] = spec.clipSeconds;
-  let total = 0;
-  for (const filePath of filePaths) {
-    const seconds = await probeAudioSeconds(filePath);
-    if (seconds === null) {
-      console.error(
-        `[Seedance] ffprobe unavailable \u2014 skipping the duration check for ${path5.basename(filePath)} (${model}: ${minSeconds}~${maxSeconds}s per clip, ${spec.totalSeconds}s total)`
-      );
-      continue;
-    }
-    if (seconds < minSeconds || seconds > maxSeconds) {
-      throw new Error(
-        `Reference audio ${path5.basename(filePath)} is ${seconds.toFixed(1)}s \u2014 ${model} accepts ${minSeconds}~${maxSeconds}s per clip.`
-      );
-    }
-    total += seconds;
-  }
-  if (total > spec.totalSeconds) {
-    throw new Error(
-      `Reference audio totals ${total.toFixed(1)}s \u2014 ${model} allows ${spec.totalSeconds}s across all clips.`
-    );
-  }
-}
-function buildBody(request, parts) {
-  const spec = SEEDANCE_MODEL_SPECS[request.model];
-  const body = {
-    model: request.model,
-    content: [{ type: "text", text: request.prompt }, ...parts],
-    ratio: request.ratio,
-    resolution: request.resolution,
-    duration: request.durationSeconds,
-    watermark: request.watermark
-  };
-  if (spec.audio) body.generate_audio = request.generateAudio;
-  if (spec.seed) {
-    if (request.seed !== void 0) body.seed = request.seed;
-    if (request.cameraFixed !== void 0) body.camera_fixed = request.cameraFixed;
+The loaded media model and the chat model share one GPU. Unload a large chat or video model in MLX Core, or stop a concurrent Z-Image (mflux) run \u2014 Z-Image peaks at 32\u201339GB and LTX wants 24GB+ on its own.`;
   }
   return body;
 }
-function toResponse(request, videoPath, task, taskId) {
-  return {
-    success: true,
-    videoPath,
-    prompt: request.prompt,
-    model: request.model,
-    ratio: task.ratio ?? request.ratio,
-    resolution: task.resolution ?? request.resolution,
-    duration: task.duration ?? request.durationSeconds,
-    completionTokens: task.usage?.completion_tokens,
-    taskId
-  };
-}
-function toFailure(error2) {
-  const message = error2 instanceof Error ? error2.message : String(error2);
-  console.error(`[Seedance] Error: ${message}`);
-  return { success: false, error: message };
-}
-async function generateFromText2(request) {
-  const apiKey = requireArkKey();
-  try {
-    console.error(`[Seedance] Starting text-to-video generation... (model: ${request.model})`);
-    const taskId = await createTask(apiKey, buildBody(request, []));
-    const saved = await awaitVideoAndSave(
-      apiKey,
-      taskId,
-      request.outputPath || process.cwd(),
-      request.filename || `video_${Date.now()}.mp4`
-    );
-    if ("error" in saved) return { success: false, error: saved.error, taskId };
-    return toResponse(request, saved.videoPath, saved.task, taskId);
-  } catch (error2) {
-    return toFailure(error2);
+var imageDimension = external_exports.number().int().min(MIN_MLX_IMAGE_DIMENSION).max(MAX_MLX_IMAGE_DIMENSION).refine((v) => v % MLX_IMAGE_DIMENSION_STEP === 0, {
+  message: `width/height must be a multiple of ${MLX_IMAGE_DIMENSION_STEP} (for 9:16 that's 1088\xD71920, not 1080\xD71920). FLUX.2-klein is fixed at 1024\xD71024 \u2014 pick a Krea/Mage-Flow model for other sizes.`
+});
+var videoDimension = external_exports.number().int().min(MIN_MLX_VIDEO_DIMENSION).max(MAX_MLX_VIDEO_DIMENSION).refine((v) => v % MLX_VIDEO_DIMENSION_STEP_ONE_STAGE === 0, {
+  message: `width/height must be a multiple of ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE} (LTX grid), and of ${MLX_VIDEO_DIMENSION_STEP} unless you pass pipeline:"one_stage". 1080 is on neither grid \u2014 use 1088\xD71920 or the default 768\xD71280.`
+});
+var mlxImageGenerateSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
+  model: external_exports.string().min(1).optional(),
+  width: imageDimension.optional().default(DEFAULT_MLX_IMAGE_SIZE),
+  height: imageDimension.optional().default(DEFAULT_MLX_IMAGE_SIZE),
+  steps: external_exports.number().int().min(1).max(50).optional(),
+  seed: external_exports.number().int().min(0).optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  strength: external_exports.number().min(0).max(1).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("image").optional()
+});
+var mlxImageEditSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
+  imagePath: external_exports.string().min(1, "imagePath is required"),
+  refImagePaths: external_exports.array(external_exports.string().min(1)).max(MAX_MLX_IMAGE_REFS).optional(),
+  model: external_exports.string().min(1).optional(),
+  width: imageDimension.optional(),
+  height: imageDimension.optional(),
+  steps: external_exports.number().int().min(1).max(50).optional(),
+  seed: external_exports.number().int().min(0).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("image").optional()
+});
+var mlxMusicGenerateSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(4e3),
+  model: external_exports.string().min(1).optional(),
+  lyrics: external_exports.string().max(8e3).optional(),
+  instrumental: external_exports.boolean().optional().default(true),
+  durationSeconds: external_exports.number().int().min(MIN_MLX_MUSIC_SECONDS).max(MAX_MLX_MUSIC_SECONDS).optional().default(DEFAULT_MLX_MUSIC_SECONDS),
+  seed: external_exports.number().int().min(0).optional(),
+  refAudioPath: external_exports.string().min(1).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("audio").optional()
+}).superRefine((value, ctx) => {
+  if (value.instrumental && value.lyrics && value.lyrics.trim().length > 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      message: "instrumental:true cannot be sent beside lyrics \u2014 mlx-serve returns 400. Set instrumental false to sing, or drop lyrics for a bed."
+    });
   }
-}
-async function generateFromImage2(request) {
-  const apiKey = requireArkKey();
-  try {
-    const paths = [request.sourceImagePath, ...request.lastImagePath ? [request.lastImagePath] : []];
-    const uris = loadImages(paths);
-    const images = uris.map((url, index) => ({
-      type: "image_url",
-      image_url: { url },
-      role: index === 0 ? "first_frame" : "last_frame"
-    }));
-    console.error(`[Seedance] Starting image-to-video generation... (model: ${request.model})`);
-    console.error(`[Seedance] First frame: ${request.sourceImagePath}`);
-    if (request.lastImagePath) console.error(`[Seedance] Last frame: ${request.lastImagePath}`);
-    const taskId = await createTask(apiKey, buildBody(request, images));
-    const saved = await awaitVideoAndSave(
-      apiKey,
-      taskId,
-      request.outputPath || process.cwd(),
-      request.filename || `video_${Date.now()}.mp4`
-    );
-    if ("error" in saved) return { success: false, error: saved.error, taskId };
-    return {
-      ...toResponse(request, saved.videoPath, saved.task, taskId),
-      sourceImage: request.sourceImagePath,
-      lastImage: request.lastImagePath
-    };
-  } catch (error2) {
-    return toFailure(error2);
+});
+var mlxVideoGenerateSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
+  model: external_exports.string().min(1).optional(),
+  width: videoDimension.optional().default(DEFAULT_MLX_VIDEO_WIDTH),
+  height: videoDimension.optional().default(DEFAULT_MLX_VIDEO_HEIGHT),
+  numFrames: external_exports.number().int().min(MIN_MLX_VIDEO_FRAMES).max(MAX_MLX_VIDEO_FRAMES).optional().default(DEFAULT_MLX_VIDEO_FRAMES),
+  steps: external_exports.number().int().min(1).max(50).optional(),
+  seed: external_exports.number().int().min(0).optional(),
+  firstFrameImagePath: external_exports.string().min(1).optional(),
+  lastFrameImagePath: external_exports.string().min(1).optional(),
+  pipeline: external_exports.enum(["one_stage", "two_stage", "two_stage_hq"]).optional(),
+  decoder: external_exports.enum(["conv", "diffusion"]).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+}).superRefine((value, ctx) => {
+  if (videoExceedsMemory(value.width, value.height, value.numFrames)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      message: videoMemoryMessage(value.width, value.height, value.numFrames)
+    });
   }
-}
-async function generateWithReferences(request) {
-  const apiKey = requireArkKey();
-  try {
-    const spec = SEEDANCE_MODEL_SPECS[request.model];
-    const imageUris = loadImages(request.referenceImagePaths);
-    const audioUris = loadReferenceAudio(request.referenceAudioPaths);
-    assertRequestBudget([...imageUris, ...audioUris]);
-    if (audioUris.length > 0 && spec.referenceAudio !== false) {
-      await checkReferenceAudioDurations(request.referenceAudioPaths, spec.referenceAudio, request.model);
-    }
-    let referenceVideoSeconds = 0;
-    if (request.referenceVideoPaths.length > 0 && spec.referenceVideos !== false) {
-      referenceVideoSeconds = await checkReferenceVideos(request.referenceVideoPaths, spec.referenceVideos, request.model);
-    }
-    if (request.referenceVideoUrls.length > 0 && spec.referenceVideos !== false) {
-      const assumed = request.referenceVideoUrls.length * request.durationSeconds;
-      if (referenceVideoSeconds + assumed > spec.referenceVideos.totalSeconds) {
-        throw new Error(
-          `Reference videos total at least ${(referenceVideoSeconds + assumed).toFixed(1)}s (URL clips counted at ${request.durationSeconds}s each) \u2014 ${request.model} allows ${spec.referenceVideos.totalSeconds}s across all clips.`
-        );
+  if (value.pipeline !== "one_stage") {
+    for (const [field, size] of [["width", value.width], ["height", value.height]]) {
+      if (size % MLX_VIDEO_DIMENSION_STEP !== 0) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: [field],
+          message: `${field} ${size} is off the two-stage LTX grid (multiple of ${MLX_VIDEO_DIMENSION_STEP}). Pass pipeline:"one_stage" to use the ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE}px grid, or round to ${Math.round(size / MLX_VIDEO_DIMENSION_STEP) * MLX_VIDEO_DIMENSION_STEP}.`
+        });
       }
     }
-    const published = await publishFiles(request.referenceVideoPaths);
-    try {
-      const videoUrls = [...published.urls, ...request.referenceVideoUrls];
-      const parts = [
-        ...imageUris.map((url) => ({ type: "image_url", image_url: { url }, role: "reference_image" })),
-        ...videoUrls.map((url) => ({ type: "video_url", video_url: { url }, role: "reference_video" })),
-        ...audioUris.map((url) => ({ type: "audio_url", audio_url: { url }, role: "reference_audio" }))
-      ];
-      console.error(`[Seedance] Starting reference-to-video generation... (model: ${request.model})`);
-      if (imageUris.length > 0) console.error(`[Seedance] Reference images: ${request.referenceImagePaths.join(", ")}`);
-      if (videoUrls.length > 0) console.error(`[Seedance] Reference videos: ${[...request.referenceVideoPaths, ...request.referenceVideoUrls].join(", ")}`);
-      if (audioUris.length > 0) console.error(`[Seedance] Reference audio: ${request.referenceAudioPaths.join(", ")}`);
-      const taskId = await createTask(apiKey, buildBody(request, parts));
-      const saved = await awaitVideoAndSave(
-        apiKey,
-        taskId,
-        request.outputPath || process.cwd(),
-        request.filename || `video_ref_${Date.now()}.mp4`
-      );
-      if ("error" in saved) return { success: false, error: saved.error, taskId };
-      return {
-        ...toResponse(request, saved.videoPath, saved.task, taskId),
-        referenceImages: request.referenceImagePaths,
-        referenceAudios: request.referenceAudioPaths,
-        ...videoUrls.length > 0 ? {
-          referenceVideos: [...request.referenceVideoPaths, ...request.referenceVideoUrls],
-          referenceVideoSeconds,
-          ...published.urls.length > 0 ? { referenceVideoRoute: published.how } : {}
-        } : {}
-      };
-    } finally {
-      await published.close();
-    }
+  }
+  if ((value.numFrames - 1) % MLX_VIDEO_FRAME_STEP !== 0) {
+    const below = value.numFrames - (value.numFrames - 1) % MLX_VIDEO_FRAME_STEP;
+    const above = below + MLX_VIDEO_FRAME_STEP;
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["numFrames"],
+      message: `numFrames must be ${MLX_VIDEO_FRAME_STEP}k+1 (${MIN_MLX_VIDEO_FRAMES}, 17, 25, \u2026 ${MAX_MLX_VIDEO_FRAMES}) \u2014 LTX latent depth. ${value.numFrames} is not, and mlx-serve answers 200 with its own default instead of refusing. Use ${below} or ${Math.min(above, MAX_MLX_VIDEO_FRAMES)}.`
+    });
+  }
+});
+var mlx3dGenerateSchema = external_exports.object({
+  imagePath: external_exports.string().min(1, "imagePath is required"),
+  model: external_exports.string().min(1).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("mesh").optional()
+});
+function videoRgbBytes(width, height, frames) {
+  return width * height * frames * 3;
+}
+function videoExceedsMemory(width, height, frames) {
+  return videoRgbBytes(width, height, frames) > MAX_VIDEO_RGB_BYTES;
+}
+function videoMemoryMessage(width, height, frames) {
+  const mb = (videoRgbBytes(width, height, frames) / (1024 * 1024)).toFixed(0);
+  const cap = (MAX_VIDEO_RGB_BYTES / (1024 * 1024)).toFixed(0);
+  return `Decoded RGB would be ~${mb}MB (${width}\xD7${height}\xD7${frames}\xD73), over the ${cap}MB cap. Drop frames or canvas \u2014 1088\xD71920 at 8s/24fps is ~1.2GB and is refused. The default 768\xD71280\xD7${DEFAULT_MLX_VIDEO_FRAMES} stays under the cap.`;
+}
+function pickModel(models, capability) {
+  const has3 = (m2) => (m2.capabilities ?? []).includes(capability);
+  return models.find((m2) => m2.state === "ready" && has3(m2)) ?? models.find(has3);
+}
+function fileToBase64(filePath) {
+  if (!existsSync5(filePath)) return { ok: false, error: `File not found: ${filePath}` };
+  try {
+    return { ok: true, b64: readFileSync5(filePath).toString("base64") };
   } catch (error2) {
-    return toFailure(error2);
+    return { ok: false, error: error2 instanceof Error ? error2.message : String(error2) };
+  }
+}
+function parseModelsBody(body) {
+  const parsed = JSON.parse(body);
+  const list = parsed && typeof parsed === "object" && "data" in parsed ? parsed.data : parsed;
+  if (!Array.isArray(list)) return [];
+  return list.filter((entry) => Boolean(entry) && typeof entry === "object").map((entry) => ({
+    id: String(entry.id ?? entry.name ?? ""),
+    state: typeof entry.state === "string" ? entry.state : void 0,
+    capabilities: Array.isArray(entry.capabilities) ? entry.capabilities.map(String) : void 0
+  })).filter((entry) => entry.id.length > 0);
+}
+async function mlxHealth() {
+  const res = await requestRaw("get", `${mlxServeUrl()}/health`, authHeaders2(), void 0, MLX_HEALTH_TIMEOUT_MS);
+  if (res.ok) return { ok: true };
+  if (isUnreachable(res.status, res.body)) return { ok: false, error: mlxDownHint(res.body) };
+  return { ok: false, error: mlxDownHint(`HTTP ${res.status}: ${res.body}`) };
+}
+async function listMlxModels() {
+  const res = await requestRaw("get", `${mlxServeUrl()}/v1/models`, authHeaders2(), void 0, MLX_MODELS_TIMEOUT_MS);
+  if (!res.ok) {
+    if (isUnreachable(res.status, res.body)) return { ok: false, error: mlxDownHint(res.body) };
+    return { ok: false, error: translateUpstream(`HTTP ${res.status}: ${res.body}`) };
+  }
+  try {
+    return { ok: true, models: parseModelsBody(res.body) };
+  } catch (error2) {
+    return { ok: false, error: `Could not parse /v1/models: ${error2 instanceof Error ? error2.message : String(error2)}` };
+  }
+}
+async function loadModel(id) {
+  const res = await requestRaw(
+    "post",
+    `${mlxServeUrl()}/v1/load-model`,
+    authHeaders2(),
+    { model: id },
+    MLX_LOAD_TIMEOUT_MS
+  );
+  if (!res.ok) {
+    if (isUnreachable(res.status, res.body)) return { ok: false, error: mlxDownHint(res.body) };
+    return { ok: false, error: translateUpstream(`load-model HTTP ${res.status}: ${res.body}`) };
+  }
+  const deadline = Date.now() + MLX_LOAD_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const listed = await listMlxModels();
+    if (!listed.ok) return listed;
+    const found = listed.models?.find((m2) => m2.id === id);
+    if (found?.state === "ready") return { ok: true };
+    await new Promise((resolve11) => setTimeout(resolve11, 2e3));
+  }
+  return { ok: false, error: `Timed out waiting for model "${id}" to become ready.` };
+}
+async function resolveModel(capability, requested) {
+  const listed = await listMlxModels();
+  if (!listed.ok) return { ok: false, error: listed.error ?? mlxDownHint() };
+  const models = listed.models ?? [];
+  if (requested) {
+    const found = models.find((m2) => m2.id === requested);
+    if (!found) {
+      const loaded = await loadModel(requested);
+      if (!loaded.ok) {
+        return {
+          ok: false,
+          error: loaded.error ?? `Model "${requested}" is not in /v1/models. Download it in MLX Core and retry, or pass an id from GET /v1/models.`
+        };
+      }
+      return { ok: true, model: requested };
+    }
+    if (found.state !== "ready") {
+      const loaded = await loadModel(requested);
+      if (!loaded.ok) return { ok: false, error: loaded.error ?? `Failed to load "${requested}".` };
+    }
+    return { ok: true, model: requested };
+  }
+  const picked = pickModel(models, capability);
+  if (!picked) {
+    return {
+      ok: false,
+      error: `No mlx-serve model advertises capability "${capability}". Open MLX Core, download a model in the matching pane (Image / Audio / Video / 3D), and retry. This plugin does not download weights.`
+    };
+  }
+  if (picked.state !== "ready") {
+    const loaded = await loadModel(picked.id);
+    if (!loaded.ok) return { ok: false, error: loaded.error ?? `Failed to load "${picked.id}".` };
+  }
+  return { ok: true, model: picked.id };
+}
+function parseImageResponse(body) {
+  try {
+    const parsed = JSON.parse(body);
+    const data = parsed && typeof parsed === "object" && "data" in parsed ? parsed.data : void 0;
+    const first = Array.isArray(data) ? data[0] : void 0;
+    const b64 = first && typeof first === "object" && first !== null && "b64_json" in first ? first.b64_json : void 0;
+    if (typeof b64 !== "string" || b64.length === 0) return { error: `Image response missing data[0].b64_json: ${body.slice(0, 400)}` };
+    return { b64 };
+  } catch (error2) {
+    return { error: `Could not parse image JSON: ${error2 instanceof Error ? error2.message : String(error2)}` };
+  }
+}
+function parseVideoResponse(body) {
+  try {
+    const parsed = JSON.parse(body);
+    if (!parsed || typeof parsed !== "object") return { error: "Video response is not an object" };
+    const d = parsed;
+    if (d.format !== "rgb8") return { error: `Unexpected video format "${String(d.format)}" (want rgb8)` };
+    const frames = Number(d.frames);
+    const height = Number(d.height);
+    const width = Number(d.width);
+    const fps = Number(d.fps) || MLX_VIDEO_FPS;
+    if (![frames, height, width].every((n) => Number.isFinite(n) && n > 0)) {
+      return { error: `Video response missing frames/height/width: ${body.slice(0, 200)}` };
+    }
+    if (typeof d.data !== "string") return { error: "Video response missing data (base64 rgb8)" };
+    const rgb = Buffer.from(d.data, "base64");
+    const expect = frames * height * width * 3;
+    if (rgb.length !== expect) return { error: `RGB length ${rgb.length} != ${expect} (${frames}\xD7${height}\xD7${width}\xD73)` };
+    let audio;
+    if (typeof d.audio_data === "string" && d.audio_data.length > 0) {
+      audio = {
+        pcm: Buffer.from(d.audio_data, "base64"),
+        sampleRate: Number(d.audio_sample_rate) || 24e3,
+        channels: Number(d.audio_channels) || 2
+      };
+    }
+    return { format: "rgb8", frames, height, width, fps, rgb, audio };
+  } catch (error2) {
+    return { error: `Could not parse video JSON: ${error2 instanceof Error ? error2.message : String(error2)}` };
+  }
+}
+function parseGlbResponse(body) {
+  try {
+    const parsed = JSON.parse(body);
+    if (!parsed || typeof parsed !== "object") return { error: "3D response is not an object" };
+    const d = parsed;
+    if (typeof d.data !== "string" || d.data.length === 0) return { error: `3D response missing data: ${body.slice(0, 400)}` };
+    return { b64: d.data };
+  } catch (error2) {
+    return { error: `Could not parse 3D JSON: ${error2 instanceof Error ? error2.message : String(error2)}` };
+  }
+}
+async function muxRgbToMp4(opts) {
+  const dir = mkdtempSync(join3(tmpdir(), "mlx-video-"));
+  const rgbPath = join3(dir, "frames.rgb");
+  const wavPath = join3(dir, "audio.wav");
+  try {
+    writeFileSync4(rgbPath, opts.rgb);
+    const args = [
+      "-y",
+      "-f",
+      "rawvideo",
+      "-pix_fmt",
+      "rgb24",
+      "-s",
+      `${opts.width}x${opts.height}`,
+      "-r",
+      String(opts.fps),
+      "-i",
+      rgbPath
+    ];
+    if (opts.audio) {
+      writeFileSync4(wavPath, pcmToWav(opts.audio.pcm, opts.audio.sampleRate, opts.audio.channels));
+      args.push("-i", wavPath);
+    }
+    args.push(
+      "-frames:v",
+      String(opts.frames),
+      "-c:v",
+      "libx264",
+      "-pix_fmt",
+      "yuv420p"
+    );
+    if (opts.audio) args.push("-c:a", "aac");
+    args.push(opts.outFile);
+    await new Promise((resolve11, reject) => {
+      execFile2("ffmpeg", args, { timeout: 12e4, maxBuffer: 2 * 1024 * 1024 }, (error2, _out, errOut) => {
+        if (error2) {
+          const code = error2.code;
+          if (code === "ENOENT") {
+            reject(new Error("ffmpeg is not on PATH \u2014 mlx_video_generate muxes rgb8 frames to mp4 and needs ffmpeg."));
+            return;
+          }
+          reject(new Error(`${error2.message}${errOut ? `
+${String(errOut).slice(-500)}` : ""}`));
+          return;
+        }
+        resolve11();
+      });
+    });
+    if (!existsSync5(opts.outFile)) return { ok: false, error: "ffmpeg exited 0 but the mp4 was not written" };
+    return { ok: true };
+  } catch (error2) {
+    return { ok: false, error: error2 instanceof Error ? error2.message : String(error2) };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+async function postImage(body, outFile) {
+  const startedAt = Date.now();
+  const res = await requestRaw("post", `${mlxServeUrl()}/v1/images/generations`, authHeaders2(), body, MLX_IMAGE_TIMEOUT_MS);
+  if (!res.ok) {
+    if (isUnreachable(res.status, res.body)) return { success: false, error: mlxDownHint(res.body) };
+    return { success: false, error: translateUpstream(`HTTP ${res.status}: ${res.body}`) };
+  }
+  const parsed = parseImageResponse(res.body);
+  if ("error" in parsed) return { success: false, error: parsed.error };
+  writeFileSync4(outFile, Buffer.from(parsed.b64, "base64"));
+  return {
+    success: true,
+    path: outFile,
+    model: typeof body.model === "string" ? body.model : void 0,
+    elapsedSeconds: Math.round((Date.now() - startedAt) / 1e3)
+  };
+}
+async function generateMlxImage(request) {
+  const health = await mlxHealth();
+  if (!health.ok) return { success: false, error: health.error };
+  const resolved = await resolveModel("image", request.model);
+  if (!resolved.ok) return { success: false, error: resolved.error };
+  const body = {
+    prompt: request.prompt,
+    model: resolved.model,
+    size: `${request.width}x${request.height}`
+  };
+  if (request.steps !== void 0) body.steps = request.steps;
+  if (request.seed !== void 0) body.seed = request.seed;
+  if (request.imagePath) {
+    const img = fileToBase64(request.imagePath);
+    if (!img.ok) return { success: false, error: img.error };
+    body.image = img.b64;
+    if (request.strength !== void 0) body.strength = request.strength;
+  }
+  const outFile = resolveOutputFile(
+    request.outputPath || process.cwd(),
+    request.filename || `mlx_image_${Date.now()}.png`,
+    "image"
+  );
+  const result = await postImage(body, outFile);
+  if (result.success) {
+    result.width = request.width;
+    result.height = request.height;
+    result.steps = request.steps;
+    result.seed = request.seed;
+    result.model = resolved.model;
+  }
+  return result;
+}
+async function editMlxImage(request) {
+  const health = await mlxHealth();
+  if (!health.ok) return { success: false, error: health.error };
+  const resolved = await resolveModel("image", request.model);
+  if (!resolved.ok) return { success: false, error: resolved.error };
+  const src = fileToBase64(request.imagePath);
+  if (!src.ok) return { success: false, error: src.error };
+  const refs = [];
+  for (const path15 of request.refImagePaths ?? []) {
+    const ref = fileToBase64(path15);
+    if (!ref.ok) return { success: false, error: ref.error };
+    refs.push(ref.b64);
+  }
+  const body = {
+    prompt: request.prompt,
+    model: resolved.model,
+    mode: "edit",
+    image: src.b64
+  };
+  if (request.width && request.height) body.size = `${request.width}x${request.height}`;
+  if (request.steps !== void 0) body.steps = request.steps;
+  if (request.seed !== void 0) body.seed = request.seed;
+  if (refs.length) body.ref_images = refs;
+  const outFile = resolveOutputFile(
+    request.outputPath || process.cwd(),
+    request.filename || `mlx_edit_${Date.now()}.png`,
+    "image"
+  );
+  const result = await postImage(body, outFile);
+  if (result.success) {
+    result.model = resolved.model;
+    result.width = request.width;
+    result.height = request.height;
+    result.steps = request.steps;
+    result.seed = request.seed;
+  }
+  return result;
+}
+function wavLooksValid(buf) {
+  return buf.length >= 12 && buf.subarray(0, 4).toString("ascii") === "RIFF" && buf.subarray(8, 12).toString("ascii") === "WAVE";
+}
+function jsonErrorFromBytes(bytes, contentType, status) {
+  const asText = bytes.toString("utf8");
+  if (contentType.includes("json") || asText.trimStart().startsWith("{")) {
+    return translateUpstream(`HTTP ${status}: ${asText.slice(0, 1e3)}`);
+  }
+  if (!bytes.length) return `HTTP ${status}: empty body`;
+  return void 0;
+}
+async function generateMlxMusic(request) {
+  const health = await mlxHealth();
+  if (!health.ok) return { success: false, error: health.error };
+  const resolved = await resolveModel("music", request.model);
+  if (!resolved.ok) return { success: false, error: resolved.error };
+  const body = {
+    prompt: request.prompt,
+    model: resolved.model,
+    instrumental: request.instrumental,
+    duration_seconds: request.durationSeconds
+  };
+  if (request.lyrics !== void 0) body.lyrics = request.lyrics;
+  if (request.seed !== void 0) body.seed = request.seed;
+  if (request.refAudioPath) {
+    const clip2 = fileToBase64(request.refAudioPath);
+    if (!clip2.ok) return { success: false, error: clip2.error };
+    body.ref_audio = clip2.b64;
+  }
+  const startedAt = Date.now();
+  const res = await requestBytes(
+    "post",
+    `${mlxServeUrl()}/v1/audio/music-generations`,
+    authHeaders2(),
+    body,
+    MLX_MUSIC_TIMEOUT_MS
+  );
+  if (!res.ok) {
+    const text2 = res.bytes.toString("utf8");
+    if (isUnreachable(res.status, text2)) return { success: false, error: mlxDownHint(text2) };
+    return { success: false, error: translateUpstream(`HTTP ${res.status}: ${text2.slice(0, 1e3)}`) };
+  }
+  const jsonErr2 = jsonErrorFromBytes(res.bytes, res.contentType, res.status);
+  if (jsonErr2) return { success: false, error: jsonErr2 };
+  if (!wavLooksValid(res.bytes)) {
+    return { success: false, error: `Music response is not a WAV (got ${res.contentType || "unknown type"}, ${res.bytes.length} bytes)` };
+  }
+  const outFile = saveAudioFile(
+    request.outputPath || process.cwd(),
+    request.filename || `mlx_music_${Date.now()}.wav`,
+    res.bytes
+  );
+  return {
+    success: true,
+    path: outFile,
+    model: resolved.model,
+    durationSeconds: request.durationSeconds,
+    elapsedSeconds: Math.round((Date.now() - startedAt) / 1e3)
+  };
+}
+async function generateMlxVideo(request) {
+  const health = await mlxHealth();
+  if (!health.ok) return { success: false, error: health.error };
+  if (videoExceedsMemory(request.width, request.height, request.numFrames)) {
+    return { success: false, error: videoMemoryMessage(request.width, request.height, request.numFrames) };
+  }
+  const resolved = await resolveModel("video", request.model);
+  if (!resolved.ok) return { success: false, error: resolved.error };
+  const body = {
+    prompt: request.prompt,
+    model: resolved.model,
+    width: request.width,
+    height: request.height,
+    num_frames: request.numFrames
+  };
+  if (request.steps !== void 0) body.steps = request.steps;
+  if (request.seed !== void 0) body.seed = request.seed;
+  if (request.pipeline) body.pipeline = request.pipeline;
+  if (request.decoder) body.decoder = request.decoder;
+  if (request.firstFrameImagePath) {
+    const img = fileToBase64(request.firstFrameImagePath);
+    if (!img.ok) return { success: false, error: img.error };
+    body.first_frame_image = img.b64;
+  }
+  if (request.lastFrameImagePath) {
+    const img = fileToBase64(request.lastFrameImagePath);
+    if (!img.ok) return { success: false, error: img.error };
+    body.last_frame_image = img.b64;
+  }
+  const startedAt = Date.now();
+  const res = await requestRaw("post", `${mlxServeUrl()}/v1/video/generations`, authHeaders2(), body, MLX_VIDEO_TIMEOUT_MS);
+  if (!res.ok) {
+    if (isUnreachable(res.status, res.body)) return { success: false, error: mlxDownHint(res.body) };
+    return { success: false, error: translateUpstream(`HTTP ${res.status}: ${res.body}`) };
+  }
+  const parsed = parseVideoResponse(res.body);
+  if ("error" in parsed) return { success: false, error: parsed.error };
+  const outFile = resolveOutputFile(
+    request.outputPath || process.cwd(),
+    request.filename || `mlx_video_${Date.now()}.mp4`,
+    "video"
+  );
+  const muxed = await muxRgbToMp4({
+    rgb: parsed.rgb,
+    width: parsed.width,
+    height: parsed.height,
+    frames: parsed.frames,
+    fps: parsed.fps,
+    audio: parsed.audio,
+    outFile
+  });
+  if (!muxed.ok) return { success: false, error: muxed.error };
+  return {
+    success: true,
+    path: outFile,
+    model: resolved.model,
+    width: parsed.width,
+    height: parsed.height,
+    frames: parsed.frames,
+    fps: parsed.fps,
+    hasAudio: Boolean(parsed.audio),
+    durationSeconds: parsed.frames / parsed.fps,
+    elapsedSeconds: Math.round((Date.now() - startedAt) / 1e3)
+  };
+}
+async function generateMlx3d(request) {
+  const health = await mlxHealth();
+  if (!health.ok) return { success: false, error: health.error };
+  const resolved = await resolveModel("3d", request.model);
+  if (!resolved.ok) return { success: false, error: resolved.error };
+  const img = fileToBase64(request.imagePath);
+  if (!img.ok) return { success: false, error: img.error };
+  const startedAt = Date.now();
+  const res = await requestRaw(
+    "post",
+    `${mlxServeUrl()}/v1/3d/generations`,
+    authHeaders2(),
+    { image: img.b64, model: resolved.model },
+    MLX_MESH_TIMEOUT_MS
+  );
+  if (!res.ok) {
+    if (isUnreachable(res.status, res.body)) return { success: false, error: mlxDownHint(res.body) };
+    return { success: false, error: translateUpstream(`HTTP ${res.status}: ${res.body}`) };
+  }
+  const parsed = parseGlbResponse(res.body);
+  if ("error" in parsed) return { success: false, error: parsed.error };
+  const outFile = saveMediaFile(
+    request.outputPath || process.cwd(),
+    request.filename || `mlx_3d_${Date.now()}.glb`,
+    Buffer.from(parsed.b64, "base64"),
+    "mesh"
+  );
+  return {
+    success: true,
+    path: outFile,
+    model: resolved.model,
+    elapsedSeconds: Math.round((Date.now() - startedAt) / 1e3)
+  };
+}
+
+// src/video-duration.ts
+var DURATION_TOOLS = [
+  "veo_text2video",
+  "veo_img2video",
+  "veo_reference",
+  "omni_text2video",
+  "omni_img2video",
+  "seedance_text2video",
+  "seedance_img2video",
+  "seedance_reference",
+  "astra_text2video",
+  "astra_img2video",
+  "astra_keyframe_video",
+  "astra_audio2video",
+  "mlx_video_generate"
+];
+function resolveVideoDuration(tool, input) {
+  if (input.requiredSeconds === void 0) return { args: input, timing: null };
+  if (!DURATION_TOOLS.includes(tool)) throw new Error("requiredSeconds is not supported for " + tool);
+  for (const key of ["durationSeconds", "numFrames", "frames", "autoDuration", "audioMaxDuration"]) {
+    if (input[key] !== void 0) throw new Error("requiredSeconds is mutually exclusive with " + key + "; supply the shot need or an exact legacy request, not both");
+  }
+  let limits;
+  if (tool.startsWith("veo_")) {
+    const fixed = tool === "veo_reference" || ["1080p", "4k"].includes(String(input.resolution));
+    limits = { seconds: fixed ? [8] : [4, 6, 8] };
+  } else if (tool.startsWith("omni_")) {
+    limits = { min: 3, max: 10 };
+  } else if (tool.startsWith("seedance_")) {
+    const model = input.model ?? (tool === "seedance_reference" ? DEFAULT_SEEDANCE_REFERENCE_MODEL : DEFAULT_SEEDANCE_MODEL);
+    const spec = SEEDANCE_MODEL_SPECS[model];
+    if (!spec) throw new Error("Unknown Seedance model: " + String(model));
+    limits = SEEDANCE_FRAME_MODELS.includes(model) ? { min: SEEDANCE_MIN_FRAMES, max: SEEDANCE_MAX_FRAMES, step: SEEDANCE_FRAME_STEP, frameRate: SEEDANCE_FPS } : { min: spec.duration[0], max: spec.duration[1] };
+  } else if (tool.startsWith("astra_")) {
+    const mode = tool === "astra_audio2video" ? "audio2video" : tool === "astra_keyframe_video" ? "keyframe" : input.tier === "guided" ? "guided" : input.tier === "fast" ? "guided_fast" : "generate";
+    const frameRate = input.frameRate ?? 24;
+    if (typeof frameRate !== "number" || !Number.isFinite(frameRate) || frameRate < 1 || frameRate > 60)
+      throw new Error("frameRate must be finite in 1..60");
+    limits = { min: ASTRA_VIDEO_MIN_FRAMES, max: ASTRA_VIDEO_FRAME_LIMITS[mode], step: ASTRA_VIDEO_FRAME_STEP, frameRate };
+  } else {
+    limits = { min: MIN_MLX_VIDEO_FRAMES, max: MAX_MLX_VIDEO_FRAMES, step: MLX_VIDEO_FRAME_STEP, frameRate: MLX_VIDEO_FPS };
+  }
+  const timing = (0, import_video_duration.minimumDuration)(input.requiredSeconds, limits);
+  const { requiredSeconds: _required, ...args } = input;
+  if (timing.numFrames !== void 0) args[tool.startsWith("seedance_") ? "frames" : "numFrames"] = timing.numFrames;
+  else if (tool !== "veo_reference") args.durationSeconds = timing.durationSeconds;
+  return { args, timing };
+}
+
+// src/storyboard.ts
+import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
+
+// src/scenes-vm.ts
+import vm from "node:vm";
+var SCENES_VM_POLICY = Object.freeze({
+  timeoutMs: 5e3,
+  codeGeneration: Object.freeze({ strings: false, wasm: false })
+});
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function describeEvaluationError(error2, filename) {
+  const detail = error2 && typeof error2 === "object" ? error2 : {};
+  const message = typeof detail.message === "string" ? detail.message : String(error2);
+  const stack = typeof detail.stack === "string" ? detail.stack : "";
+  const locations = [...stack.matchAll(new RegExp(`${escapeRegExp(filename)}:([0-9]+)(?::([0-9]+))?`, "g"))];
+  const location = locations.find((match2) => match2[2]) ?? locations[0];
+  const line = location?.[1] ?? "1";
+  const column = location?.[2] ?? "1";
+  const wrapped = new Error(
+    `${filename}:${line}:${column}: ${message}. Allowed syntax: storyboard JavaScript that assigns JSON-serializable data to window.*; eval and Function are disabled.`
+  );
+  wrapped.name = typeof detail.name === "string" ? detail.name : "Error";
+  wrapped.cause = error2;
+  return wrapped;
+}
+function evaluateWindowScript(source, options = {}) {
+  const timeout = options.timeoutMs ?? SCENES_VM_POLICY.timeoutMs;
+  const filename = options.filename ?? "scenes.js";
+  const context = vm.createContext(/* @__PURE__ */ Object.create(null), {
+    codeGeneration: SCENES_VM_POLICY.codeGeneration
+  });
+  try {
+    vm.runInContext(
+      "var window = {}; var console = { log() {}, warn() {}, error() {}, info() {}, debug() {} };",
+      context,
+      { timeout }
+    );
+    vm.runInContext(source, context, { filename, timeout });
+    const json2 = vm.runInContext("JSON.stringify(window)", context, { timeout });
+    if (typeof json2 !== "string") throw new Error("the script did not leave a window object");
+    const plain = JSON.parse(json2);
+    if (!plain || typeof plain !== "object" || Array.isArray(plain)) {
+      throw new Error("the script replaced window with a non-object");
+    }
+    return plain;
+  } catch (error2) {
+    throw describeEvaluationError(error2, filename);
+  }
+}
+
+// src/storyboard.ts
+import { existsSync as existsSync6, mkdirSync as mkdirSync2, readFileSync as readFileSync6, renameSync as renameSync2, statSync as statSync5, unlinkSync, writeFileSync as writeFileSync5 } from "node:fs";
+import * as nodeModule from "node:module";
+import { basename as basename4, dirname as dirname2, join as join4, resolve as resolve3 } from "node:path";
+import { fileURLToPath } from "node:url";
+var PLUGIN_ROOT = resolve3(dirname2(fileURLToPath(import.meta.url)), "..", "..");
+var REFERENCES_DIR = join4(PLUGIN_ROOT, "skills", "storyboard", "references");
+var CONTRACT_FILE = join4(REFERENCES_DIR, "structure-contract.js");
+var CHECK_SCENES_FILE = join4(REFERENCES_DIR, "check-scenes.js");
+var CHECK_SCENARIO_FILE = join4(REFERENCES_DIR, "check-scenario.js");
+var loadFromHere = nodeModule.createRequire(import.meta.url);
+var contractCache;
+function contract() {
+  if (!contractCache) contractCache = loadFromHere(CONTRACT_FILE);
+  return contractCache;
+}
+function cameraContract() {
+  return loadFromHere(join4(REFERENCES_DIR, "production-mode.js"));
+}
+function renderPurposes() {
+  const routing = loadFromHere(join4(REFERENCES_DIR, "render-routing.js"));
+  return Object.keys(routing.PURPOSES);
+}
+function stillCameraEffectList() {
+  const routing = loadFromHere(join4(REFERENCES_DIR, "render-routing.js"));
+  return routing.STILL_CAMERA_EFFECTS;
+}
+function propContract() {
+  return loadFromHere(join4(REFERENCES_DIR, "prop-continuity.js"));
+}
+var tuple = (list) => external_exports.enum(list);
+var MISSING = ["__contract-missing__"];
+function vocabAtLoad() {
+  try {
+    return contract().VOCAB;
+  } catch {
+    return {
+      SIZES: MISSING,
+      ANGLES: MISSING,
+      BEATS: MISSING,
+      TYPES: MISSING,
+      INFO_TYPES: MISSING,
+      SHARE_TYPES: MISSING,
+      HOOK_TYPES: MISSING,
+      HOOK_FORMS: MISSING,
+      ARCS: MISSING,
+      RENDER_MODES: MISSING,
+      PRODUCTION_MODES: MISSING,
+      CHARGES_OPEN: MISSING,
+      CHARGES_CLOSE: MISSING,
+      TRANSITION_RE: /^$/
+    };
+  }
+}
+var V = vocabAtLoad();
+var nonEmpty = external_exports.string().trim().min(1);
+var STRUCTURE_VERSION = (() => {
+  try {
+    return contract().VERSION;
+  } catch {
+    return "structure-v1";
+  }
+})();
+var sceneSchema = external_exports.object({
+  no: external_exports.number().int().positive().describe("Scene number \u2014 the value shots point at with `scene`"),
+  place: external_exports.string().optional().describe("One place \u2014 the slugline location"),
+  time: external_exports.string().optional().describe("One continuous stretch of time \u2014 \uB0AE \xB7 \uBC24 \xB7 \uC0C8\uBCBD \xB7 10\uB144 \uB4A4"),
+  event: external_exports.string().optional().describe("The one thing that happens in this scene"),
+  charge: external_exports.record(external_exports.unknown()).optional(),
+  turn: external_exports.string().optional().describe("What flipped between the open and the close"),
+  out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene")
+}).strict();
+var sequenceSchema = external_exports.object({
+  id: nonEmpty.describe('Stable id, e.g. "q1"'),
+  title: external_exports.string().optional().describe("The heading the approval page draws"),
+  purpose: external_exports.string().optional().describe("The one purpose that binds these scenes \u2014 two purposes are two sequences"),
+  question: nonEmpty.optional().describe("The dramatic question this stretch opens"),
+  payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question"),
+  scenes: external_exports.array(external_exports.number().int().positive()).describe("Scene numbers in playback order")
+}).strict();
+var structureSchema = external_exports.object({
+  version: external_exports.literal(STRUCTURE_VERSION),
+  nextShotId: external_exports.number().int().positive().optional(),
+  sequences: external_exports.array(sequenceSchema),
+  scenes: external_exports.array(sceneSchema)
+}).strict();
+var coverageSchema = external_exports.object({
+  azimuth: external_exports.number().finite().optional().describe("Horizontal camera bearing, 0\u2013180\xB0 inside the selected side of the axis"),
+  action: external_exports.string().trim().min(1).optional().describe("Visible action that carries this cut when no 30\xB0 or two-step change is used")
+}).passthrough();
+var lineCrossingSchema = external_exports.object({
+  method: external_exports.enum(["camera_move", "subject_move", "neutral", "intentional"]),
+  from: nonEmpty.describe("The previous space.line value"),
+  to: nonEmpty.describe("The new space.line value"),
+  reason: nonEmpty.describe("What the viewer sees that makes the new side legible"),
+  bridgeShot: external_exports.number().int().positive().optional().describe('Earlier neutral shot number; required only for method "neutral"')
+}).strict();
+var compositionSchema = external_exports.record(external_exports.unknown());
+var eyelineSchema = external_exports.object({ matchShot: external_exports.number().int().positive().optional() }).passthrough();
+var depthSchema = external_exports.record(external_exports.unknown());
+var cameraSchema = external_exports.record(external_exports.unknown()).superRefine((value, ctx) => {
+  for (const message of cameraContract().cameraInputErrors(value))
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+});
+var visualSchema = external_exports.object({ camera: cameraSchema.optional() }).passthrough();
+var shotIdSchema = external_exports.string().regex(/^s\d{4,}$/);
+var shotSchema = external_exports.object({
+  id: shotIdSchema.optional(),
+  type: tuple(V.TYPES),
+  title: external_exports.string().optional(),
+  narration: external_exports.array(external_exports.object({ id: external_exports.string().trim().min(1).optional(), delivery: external_exports.enum(["voiceover", "on_screen", "off_screen"]).optional(), tts: external_exports.string(), sub: external_exports.string().optional(), speaker: external_exports.string().trim().min(1).optional() }).passthrough()).optional(),
+  visual: visualSchema.optional(),
+  duration: external_exports.number().positive().optional(),
+  scene: external_exports.number().int().positive().optional(),
+  sceneSlug: external_exports.string().optional(),
+  sequence: external_exports.string().optional(),
+  transition: external_exports.string().regex(V.TRANSITION_RE, "not a join from scenes-schema \xA7scene transition").optional(),
+  beat: external_exports.string().optional(),
+  arc: external_exports.string().optional(),
+  hookType: external_exports.string().optional(),
+  hookForm: external_exports.string().optional(),
+  chapter: external_exports.string().optional(),
+  after: external_exports.number().int().nonnegative().optional(),
+  shot: external_exports.object({
+    feel: external_exports.string().optional(),
+    size: external_exports.string().optional(),
+    angle: external_exports.string().optional(),
+    why: external_exports.string().optional(),
+    info: external_exports.string().optional(),
+    infoType: external_exports.string().optional(),
+    share: external_exports.string().optional(),
+    shareType: external_exports.string().optional(),
+    space: external_exports.record(external_exports.unknown()).optional(),
+    eyeline: eyelineSchema.optional(),
+    composition: compositionSchema.optional(),
+    depth: depthSchema.optional(),
+    coverage: coverageSchema.optional(),
+    lineNeutral: external_exports.literal(true).optional(),
+    lineCrossing: external_exports.record(external_exports.unknown()).optional(),
+    render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: external_exports.string().optional(), reason: external_exports.string().optional() }).passthrough().optional()
+  }).passthrough().optional(),
+  sound: external_exports.record(external_exports.unknown()).optional()
+}).passthrough();
+var readLevelSchema = external_exports.enum(["outline", "scenes", "shots", "full"]);
+var storyboardReadSchema = external_exports.object({
+  path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
+  level: readLevelSchema.default("shots").describe("outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots = every shot summarised under its scene \xB7 full = the raw shot objects too"),
+  shotId: external_exports.string().min(1).optional().describe("Stable shot ID to inspect, with its raw plan and neighboring shot IDs"),
+  includeContext: external_exports.boolean().default(true).describe("Include STORY, PRODUCTION and SB_DOC as unverified review context")
+});
+function readStoryboard(args) {
+  const { win, file, sha256: sha2562 } = readBoard(args.path);
+  const result = contract().outline(win, args.level);
+  result.file = file;
+  result.mediaBaseDirectory = dirname2(file);
+  result.sha256 = sha2562;
+  const doc = win.SB_DOC;
+  if (doc?.props || doc?.propContinuity) result.propSheet = { props: doc.props, continuity: doc.propContinuity };
+  result.inspection = {
+    mediaViewed: false,
+    evidenceStatus: "not_verified",
+    note: "This response reads plans and recorded reviews only. Open referenced assets and verify current evidence before reporting visual quality or review validity."
+  };
+  const continuity = loadFromHere(join4(REFERENCES_DIR, "shot-continuity.js"));
+  result.continuityFindings = continuity.check(win, dirname2(file));
+  if (args.includeContext) result.reviewContext = {
+    story: win.STORY || null,
+    production: win.PRODUCTION || null,
+    document: doc || null,
+    evidenceStatus: "not_verified"
+  };
+  if (args.shotId) {
+    const shots = win.SCENES || [];
+    const matches = shots.map((shot2, index2) => ({ shot: shot2, index: index2 })).filter((item) => item.shot.id === args.shotId);
+    if (matches.length !== 1) throw new Error(`shotId ${args.shotId}: expected one match, found ${matches.length}`);
+    const { shot, index } = matches[0];
+    const playback = result.playback;
+    const position = playback.findIndex((row) => row.no === index + 1);
+    const neighbor = (i2) => i2 >= 0 && playback[i2] ? { id: playback[i2].id, no: playback[i2].no } : null;
+    result.selectedShot = {
+      no: index + 1,
+      shot,
+      continuity: continuity.plan(win, index, dirname2(file)),
+      scene: win.STRUCTURE?.scenes?.find((scene) => scene.no === shot.scene) || null,
+      playbackPosition: position < 0 ? null : position + 1,
+      previous: position < 0 ? null : neighbor(position - 1),
+      next: position < 0 ? null : neighbor(position + 1)
+    };
+  }
+  return result;
+}
+var storyboardCheckSchema = external_exports.object({
+  path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
+  draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 machine-layer absences are deferred, not violations")
+});
+var scenarioCheckSchema = external_exports.object({
+  path: external_exports.string().min(1).describe("The candidates directory, or its selected scenario.md")
+});
+var productionSchema = external_exports.object({ mode: tuple([...V.PRODUCTION_MODES, "hook_only", "stills_only", "hybrid"]).optional(), renderRatioVersion: external_exports.literal(1).optional() }).passthrough();
+var globalsSchema = external_exports.record(external_exports.string().regex(/^[A-Z][A-Z0-9_]*$/, "a window.* global is UPPER_CASE"), external_exports.unknown()).superRefine((value, ctx) => {
+  if (value.PRODUCTION === void 0) return;
+  const parsed = productionSchema.safeParse(value.PRODUCTION);
+  if (!parsed.success) for (const issue2 of parsed.error.issues) ctx.addIssue({ ...issue2, path: ["PRODUCTION", ...issue2.path] });
+});
+var transitionPatchSchema = external_exports.object({
+  no: external_exports.number().int().positive().describe("Incoming shot number, 1-based, after removals and inserts"),
+  transition: external_exports.enum([
+    "cut",
+    "dip",
+    "dip:white",
+    "jcut",
+    "dissolve",
+    "iris",
+    "blur",
+    "zoom",
+    "push:l2r",
+    "push:r2l",
+    "push:u2d",
+    "push:d2u",
+    "whip:l2r",
+    "whip:r2l",
+    "whip:u2d",
+    "whip:d2u"
+  ]),
+  transitionSeconds: external_exports.number().finite().min(0.08).max(0.8).optional(),
+  reason: nonEmpty,
+  continuity: nonEmpty.optional()
+}).strict().refine(
+  (v) => !["cut", "dip", "dip:white"].includes(v.transition) || v.transitionSeconds === void 0,
+  "cut and dip do not accept transitionSeconds; dip fades each side for up to 0.30 seconds"
+);
+var storyboardApplySchema = external_exports.object({
+  path: external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing), or its scenes.js"),
+  draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 camera-continuity records (lineCrossing, coverage) are deferred, not violations"),
+  set: external_exports.object({ structure: structureSchema.optional(), shots: external_exports.array(shotSchema).min(1) }).optional().describe("Replace the whole board \u2014 the structure and every shot. The way a new board is written"),
+  structure: structureSchema.optional().describe("Replace window.STRUCTURE only"),
+  sequences: external_exports.array(sequenceSchema).optional().describe("Upsert sequences by id"),
+  scenes: external_exports.array(sceneSchema).optional().describe("Upsert scenes by no"),
+  shots: external_exports.array(external_exports.object({ no: external_exports.number().int().positive(), shot: shotSchema })).optional().describe("Upsert shots by 1-based position; no = length + 1 appends"),
+  shotsById: external_exports.array(external_exports.object({ id: shotIdSchema, shot: shotSchema })).optional().describe("Replace shots by their stable id (R6); the shot keeps that id. An unknown id is an error, nothing is written"),
+  insertShots: external_exports.array(external_exports.object({
+    after: external_exports.number().int().min(0).optional(),
+    afterId: shotIdSchema.optional(),
+    shots: external_exports.array(shotSchema).min(1)
+  }).refine((e2) => e2.after === void 0 !== (e2.afterId === void 0), { message: "give exactly one of after (position) or afterId (shot id)" })).optional().describe("Insert shots after a 1-based position (0 = at the start) or after the shot with afterId. Later positions shift"),
+  transitions: external_exports.array(transitionPatchSchema).min(1).optional().describe("Change only incoming transitions; dip fades through black. Keeps narration and visuals intact"),
+  removeShots: external_exports.array(external_exports.number().int().positive()).optional().describe("1-based positions to drop, resolved before the insert"),
+  removeShotIds: external_exports.array(shotIdSchema).min(1).optional().describe("Shot ids to drop, resolved before the insert"),
+  removeScenes: external_exports.array(external_exports.number().int().positive()).optional(),
+  removeSequences: external_exports.array(external_exports.string()).optional(),
+  globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY"),
+  expectedSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional().describe("Required for propSheet file edits; use the hash from storyboard_read"),
+  propSheet: external_exports.object({
+    props: external_exports.array(external_exports.record(external_exports.unknown())),
+    continuity: external_exports.record(external_exports.unknown()).optional()
+  }).strict().optional().describe("Replace the prop registry and optional version:1 continuity ledger together. SB_DOC.characters must register every owner and holder. See prop-continuity.md"),
+  dryRun: external_exports.boolean().default(false).describe("Validate and report, write nothing")
+});
+function scenesPath(target) {
+  const abs = resolve3(target);
+  if (basename4(abs) === "scenes.js") return abs;
+  return join4(abs, "scenes.js");
+}
+function readBoard(target) {
+  const file = scenesPath(target);
+  if (!existsSync6(file)) throw new Error(`no scenes.js at ${file}`);
+  if (!statSync5(file).isFile()) throw new Error(`${file} is not a file`);
+  const src = readFileSync6(file, "utf8");
+  const header = [];
+  for (const line of src.split("\n")) {
+    if (/^\s*\/\//.test(line)) header.push(line.trim());
+    else if (line.trim()) break;
+  }
+  let win;
+  try {
+    win = evaluateWindowScript(src, { filename: file });
+  } catch (e2) {
+    throw new Error(`failed to evaluate ${file}: ${e2.message}`);
+  }
+  if (!Array.isArray(win.SCENES)) throw new Error(`${file} has no window.SCENES array`);
+  return { file, header, win, sha256: createHash("sha256").update(src).digest("hex") };
+}
+var GLOBAL_ORDER = ["FORMAT", "VOICE", "THEME", "COMPREHENSION", "STORY", "PRODUCTION", "MOTION_POLICY", "MUSIC", "SFX", "STRUCTURE", "SCENES"];
+function serializeBoard(win, header = []) {
+  const keys = Object.keys(win).filter((k) => win[k] !== void 0);
+  keys.sort((a, b) => {
+    const ia = GLOBAL_ORDER.indexOf(a), ib = GLOBAL_ORDER.indexOf(b);
+    if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    return a.localeCompare(b);
+  });
+  const lines = header.filter((h2) => !/^\/\/\s*approved:/.test(h2));
+  if (lines.length) lines.push("");
+  for (const k of keys) {
+    const value = k === "SCENES" && Array.isArray(win[k]) ? win[k].map((shot) => shot.id === void 0 ? shot : { id: shot.id, ...shot }) : win[k];
+    lines.push(`window.${k} = ${JSON.stringify(value, null, 2)};`);
+  }
+  return lines.join("\n") + "\n";
+}
+function upsertBy(list, items, key) {
+  const out = list.slice();
+  for (const item of items) {
+    const i2 = out.findIndex((x2) => x2[key] === item[key]);
+    if (i2 === -1) out.push(item);
+    else out[i2] = item;
+  }
+  return out;
+}
+function validateShots(shots) {
+  const out = [];
+  const ids = /* @__PURE__ */ new Map();
+  shots.forEach((s2, i2) => {
+    const parsed = shotSchema.safeParse(s2);
+    if (!parsed.success) {
+      for (const issue2 of parsed.error.issues) out.push({ level: "bad", where: `shot ${i2 + 1}`, what: issue2.path.length === 1 && issue2.path[0] === "id" ? "id: expected s followed by at least four digits (for example s0001)" : `${issue2.path.join(".") || "(root)"}: ${issue2.message}` });
+    }
+    const id = s2 && typeof s2 === "object" ? s2.id : void 0;
+    if (typeof id !== "string") return;
+    const first = ids.get(id);
+    if (first !== void 0) out.push({ level: "bad", where: `shot ${i2 + 1}`, what: `id: duplicate ${id} (already used by shot ${first})` });
+    else ids.set(id, i2 + 1);
+  });
+  return out;
+}
+function validateStructure(structure) {
+  const parsed = structureSchema.safeParse(structure);
+  if (parsed.success) return [];
+  return parsed.error.issues.map((issue2) => ({ level: "bad", where: "structure", what: `${issue2.path.join(".") || "(root)"}: ${issue2.message}` }));
+}
+function applyPatch(win, patch) {
+  const next = { ...win };
+  if (patch.globals) for (const [k, v] of Object.entries(patch.globals)) {
+    if (k === "SCENES" || k === "STRUCTURE") throw new Error(`set ${k} through the dedicated fields, not globals`);
+    next[k] = v;
+  }
+  if (patch.propSheet) next.SB_DOC = {
+    ...next.SB_DOC ?? {},
+    props: patch.propSheet.props,
+    propContinuity: patch.propSheet.continuity
+  };
+  if (patch.set) {
+    if (patch.set.structure) next.STRUCTURE = patch.set.structure;
+    next.SCENES = patch.set.shots.slice();
+  }
+  if (patch.structure) next.STRUCTURE = patch.structure;
+  const st = next.STRUCTURE ?? { version: STRUCTURE_VERSION, sequences: [], scenes: [] };
+  if (!Array.isArray(st.sequences) || !Array.isArray(st.scenes) || st.scenes.some((sc) => !sc || typeof sc !== "object") || st.sequences.some((q) => !q || typeof q !== "object" || !Array.isArray(q.scenes)))
+    return { win: next, findings: [{ level: "bad", where: "structure", what: "STRUCTURE.sequences and STRUCTURE.scenes are arrays of objects \u2014 this board was hand-edited into a shape the tools cannot patch; rewrite it with `set`" }], synced: 0 };
+  let sequences = st.sequences.slice();
+  let scenes = st.scenes.slice();
+  if (patch.sequences) sequences = upsertBy(sequences, patch.sequences, "id");
+  if (patch.scenes) scenes = upsertBy(scenes, patch.scenes, "no");
+  if (patch.removeScenes) {
+    const drop = new Set(patch.removeScenes);
+    scenes = scenes.filter((sc) => !drop.has(sc.no));
+    sequences = sequences.map((q) => ({ ...q, scenes: q.scenes.filter((no) => !drop.has(no)) }));
+  }
+  if (patch.removeSequences) {
+    const drop = new Set(patch.removeSequences);
+    sequences = sequences.filter((q) => !drop.has(q.id));
+  }
+  if (patch.sequences || patch.scenes || patch.removeScenes || patch.removeSequences || next.STRUCTURE)
+    next.STRUCTURE = { version: st.version ?? STRUCTURE_VERSION, ...st.nextShotId === void 0 ? {} : { nextShotId: st.nextShotId }, sequences, scenes };
+  let shots = Array.isArray(next.SCENES) ? next.SCENES.slice() : [];
+  const byPosition = Boolean(patch.shots || patch.removeShots || patch.insertShots?.some((e2) => e2.after !== void 0));
+  const byId = Boolean(patch.shotsById || patch.removeShotIds || patch.insertShots?.some((e2) => e2.afterId !== void 0));
+  if (byPosition && byId) throw new Error("address shots by position (shots \xB7 after \xB7 removeShots) or by id (shotsById \xB7 afterId \xB7 removeShotIds) in one patch, not both");
+  const positionOfId = (id, list, what) => {
+    const index = list.findIndex((shot) => shot.id === id);
+    if (index < 0) throw new Error(`${what}: no shot with id ${id} on this board`);
+    return index;
+  };
+  if (patch.shotsById) for (const { id, shot } of patch.shotsById) {
+    const index = positionOfId(id, shots, "shotsById");
+    if (shot.id !== void 0 && shot.id !== id) throw new Error(`shotsById ${id}: the shot carries a different id (${shot.id}) \u2014 an id is not renamed through an upsert`);
+    shots[index] = { id, ...shot };
+  }
+  if (patch.shots) for (const { no, shot } of patch.shots.slice().sort((a, b) => a.no - b.no)) {
+    if (no > shots.length + 1) throw new Error(`shot ${no}: the board has ${shots.length} shots \u2014 no = ${shots.length + 1} appends`);
+    const current = shots[no - 1];
+    shots[no - 1] = shot.id === void 0 && current?.id !== void 0 ? { id: current.id, ...shot } : shot;
+  }
+  const beforeReorder = shots.slice();
+  if (patch.removeShots) {
+    const drop = new Set(patch.removeShots);
+    for (const no of drop) if (no > shots.length) throw new Error(`removeShots: there is no shot ${no}`);
+    shots = shots.filter((_, i2) => !drop.has(i2 + 1));
+  }
+  if (patch.removeShotIds) {
+    const drop = new Set(patch.removeShotIds.map((id) => positionOfId(id, shots, "removeShotIds")));
+    shots = shots.filter((_, i2) => !drop.has(i2));
+  }
+  if (patch.insertShots) {
+    const resolved = patch.insertShots.map((e2) => ({
+      after: e2.after !== void 0 ? e2.after : positionOfId(e2.afterId, shots, "insertShots.afterId") + 1,
+      shots: e2.shots
+    }));
+    const inserts = resolved.sort((a, b) => b.after - a.after);
+    for (const { after, shots: add } of inserts) {
+      if (after > shots.length) throw new Error(`insertShots: after ${after} is past the last shot (${shots.length})`);
+      shots.splice(after, 0, ...add);
+    }
+  }
+  const finalOrder = shots.slice();
+  const reordered = Boolean(patch.removeShots || patch.removeShotIds || patch.insertShots);
+  for (const source of reordered ? finalOrder : []) {
+    if (!beforeReorder.includes(source)) continue;
+    const e2 = source.shot?.eyeline;
+    if (e2 && typeof e2.matchShot === "number") {
+      const target = beforeReorder[e2.matchShot - 1];
+      const index = finalOrder.indexOf(target);
+      if (index < 0) throw new Error("eyeline.matchShot target was removed or missing; update the relation in the same patch");
+      const position = finalOrder.indexOf(source);
+      shots[position] = { ...source, shot: { ...source.shot, eyeline: { ...e2, matchShot: index + 1 } } };
+    }
+  }
+  const transitionTargets = /* @__PURE__ */ new Set();
+  for (const change of patch.transitions ?? []) {
+    const source = shots[change.no - 1];
+    if (!source) throw new Error(`transitions: there is no shot ${change.no}`);
+    if (transitionTargets.has(change.no)) throw new Error(`transitions: duplicate shot ${change.no}`);
+    transitionTargets.add(change.no);
+    if (["broll", "outro"].includes(source.type)) throw new Error("Spliced shots use their own assembly transition");
+    const moving = !["cut", "dip", "dip:white"].includes(change.transition);
+    if (moving && !shots.slice(0, change.no - 1).some((s2) => !["broll", "outro"].includes(s2.type)))
+      throw new Error("First shot cannot carry a previous picture");
+    if (moving) {
+      const previous = shots[change.no - 2];
+      if (!previous || ["broll", "outro"].includes(previous.type))
+        throw new Error("A moving carry cannot bridge an inserted recording; choose cut or dip");
+      if (previous.visual?.reuse !== void 0)
+        throw new Error("Reused clips cannot supply outgoing live handles; choose cut or dip");
+      if (previous.visual?.sync === true || source.visual?.sync === true)
+        throw new Error("Sync footage requires cut or dip, not a moving carry");
+    }
+    const edit = { ...source.edit ?? {}, reason: change.reason };
+    if (!moving || source.transition !== change.transition) delete edit.transitionSeconds;
+    if (change.transitionSeconds !== void 0) edit.transitionSeconds = change.transitionSeconds;
+    if (change.continuity !== void 0) edit.continuity = change.continuity;
+    if (moving && Number(edit.pre ?? 0) !== 0) throw new Error("Moving transitions require edit.pre=0; update the shot timing first");
+    shots[change.no - 1] = { ...source, transition: change.transition, edit };
+  }
+  const originalShots = Array.isArray(win.SCENES) ? win.SCENES : [];
+  const numericId = (shot) => typeof shot.id === "string" && /^s\d{4,}$/.test(shot.id) ? Number(shot.id.slice(1)) : 0;
+  const priorCounter = win.STRUCTURE && Number.isInteger(win.STRUCTURE.nextShotId) ? win.STRUCTURE.nextShotId : void 0;
+  const requestedCounter = Number.isInteger(st.nextShotId) ? st.nextShotId : void 0;
+  let nextShotId = Math.max(
+    priorCounter ?? 0,
+    requestedCounter ?? 0,
+    ...shots.map(numericId).map((id) => id + 1),
+    ...priorCounter === void 0 && requestedCounter === void 0 ? [Math.max(originalShots.length, ...originalShots.map(numericId)) + 1] : [],
+    1
+  );
+  shots = shots.map((shot) => {
+    if (shot.id !== void 0) return shot;
+    const id = `s${String(nextShotId).padStart(4, "0")}`;
+    nextShotId += 1;
+    return { id, ...shot };
+  });
+  if (next.STRUCTURE) next.STRUCTURE = { ...next.STRUCTURE, nextShotId };
+  next.SCENES = shots.map((shot) => ({ ...shot }));
+  const findings = [];
+  if (!shots.length) findings.push({ level: "bad", where: "board", what: "the board has no shots" });
+  if (next.STRUCTURE !== void 0) findings.push(...validateStructure(next.STRUCTURE));
+  findings.push(...validateShots(shots));
+  let synced = 0;
+  if (!findings.some((f3) => f3.level === "bad")) {
+    synced = contract().sync(next);
+    findings.push(...contract().guidedCheck(next, { draft: patch.draft }));
+  }
+  findings.push(...propContract().check(next));
+  return { win: next, findings, synced };
+}
+function applyStoryboard(args) {
+  const file = scenesPath(args.path);
+  const exists = existsSync6(file);
+  let header = [];
+  let win = {};
+  if (exists) ({ header, win } = readBoard(file));
+  else if (!args.set) throw new Error(`no scenes.js at ${file} \u2014 a new board is written with \`set\` (structure + shots)`);
+  else if (!existsSync6(dirname2(file))) throw new Error(`directory does not exist: ${dirname2(file)}`);
+  const original = exists ? readFileSync6(file, "utf8") : "";
+  const originalHash = createHash("sha256").update(original).digest("hex");
+  const previousDoc = win.SB_DOC;
+  const incomingDoc = args.globals?.SB_DOC;
+  const changesProps = !!args.propSheet || !!args.globals && Object.prototype.hasOwnProperty.call(args.globals, "SB_DOC") && ["props", "propContinuity"].some((key) => JSON.stringify(previousDoc?.[key]) !== JSON.stringify(incomingDoc?.[key]));
+  if (changesProps && exists && args.expectedSha256 !== originalHash)
+    throw new Error("head_moved: propSheet requires the current expectedSha256 from storyboard_read");
+  const { win: next, findings, synced } = applyPatch(win, args);
+  const location = loadFromHere(join4(REFERENCES_DIR, "location-assets.js"));
+  findings.push(...location.check(next, dirname2(file)));
+  const bad = findings.some((f3) => f3.level === "bad");
+  const st = next.STRUCTURE;
+  const result = {
+    file,
+    written: false,
+    created: !exists,
+    approvalDropped: header.some((h2) => /^\/\/\s*approved:/.test(h2)),
+    shots: (next.SCENES ?? []).length,
+    scenes: st ? st.scenes.length : 0,
+    sequences: st ? st.sequences.length : 0,
+    synced,
+    findings
+  };
+  if (bad || args.dryRun) return result;
+  const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    if (changesProps && exists) {
+      if (createHash("sha256").update(readFileSync6(file)).digest("hex") !== originalHash) throw new Error("head_moved");
+      const history = join4(dirname2(file), ".prop-history");
+      mkdirSync2(history, { recursive: true });
+      const backup = join4(history, originalHash + ".js");
+      if (!existsSync6(backup)) writeFileSync5(backup, original, { flag: "wx" });
+    }
+    writeFileSync5(tmp, serializeBoard(next, header), "utf8");
+    renameSync2(tmp, file);
+  } catch (err4) {
+    try {
+      unlinkSync(tmp);
+    } catch {
+    }
+    throw err4;
+  }
+  result.written = true;
+  return result;
+}
+var scenarioCheckResultSchema = external_exports.object({
+  files: external_exports.array(external_exports.string()),
+  violations: external_exports.number().int().nonnegative(),
+  warnings: external_exports.number().int().nonnegative(),
+  findings: external_exports.array(external_exports.object({
+    level: external_exports.enum(["bad", "warn"]),
+    where: external_exports.string(),
+    what: external_exports.string()
+  }))
+});
+function checkScenario(args, checkFile = CHECK_SCENARIO_FILE) {
+  let raw = "";
+  try {
+    raw = execFileSync(process.execPath, [checkFile, args.path, "--json"], {
+      encoding: "utf8",
+      timeout: 6e4,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  } catch (e2) {
+    const err4 = e2;
+    raw = err4.stdout || "";
+    if (err4.status !== 1 || !raw.trim()) {
+      throw new Error(`check-scenario.js failed: ${(err4.stderr || err4.message).trim()}`);
+    }
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error(`check-scenario.js returned no JSON: ${raw.slice(0, 400)}`);
+  }
+  return scenarioCheckResultSchema.parse(parsed);
+}
+function checkStoryboard(args) {
+  const { file, win } = readBoard(args.path);
+  const seen = /* @__PURE__ */ new Set();
+  const structure = contract().guidedCheck(win, { draft: args.draft }).concat(validateShots(win.SCENES ?? [])).filter((f3) => {
+    const key = f3.level + "\0" + f3.where + "\0" + f3.what;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const argv = [CHECK_SCENES_FILE, file, "--json"];
+  if (args.draft) argv.push("--draft");
+  let raw = "";
+  try {
+    raw = execFileSync(process.execPath, argv, { encoding: "utf8", timeout: 6e4, maxBuffer: 16 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] });
+  } catch (e2) {
+    const err4 = e2;
+    raw = err4.stdout || "";
+    if (!raw.trim()) throw new Error(`check-scenes.js failed: ${(err4.stderr || err4.message).trim()}`);
+  }
+  let parsed = {};
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error(`check-scenes.js returned no JSON: ${raw.slice(0, 400)}`);
+  }
+  const dup = new Set(structure.map((f3) => f3.level + "\0" + f3.where + "\0" + f3.what));
+  const rest = (parsed.findings ?? []).filter((f3) => !dup.has(f3.level + "\0" + f3.where + "\0" + f3.what));
+  const all = structure.concat(rest);
+  return {
+    file,
+    format: parsed.format ?? String(win.FORMAT ?? "shorts-9x16"),
+    shots: (win.SCENES ?? []).length,
+    draft: args.draft,
+    structure,
+    contract: rest,
+    violations: all.filter((f3) => f3.level === "bad").length,
+    warnings: all.filter((f3) => f3.level === "warn").length,
+    deferred: all.filter((f3) => f3.level === "later").length
+  };
+}
+function renderFindings(findings) {
+  if (!findings.length) return "  (none)";
+  const mark = { bad: "!", warn: "\xB7", later: "\u2026" };
+  return findings.map((f3) => `  ${mark[f3.level]} ${f3.where.padEnd(12)} ${f3.what}`).join("\n");
+}
+function renderApply(r2) {
+  const bad = r2.findings.filter((f3) => f3.level === "bad");
+  const head = r2.written ? `${r2.created ? "Created" : "Wrote"} ${r2.file}` : bad.length ? `NOT written \u2014 ${bad.length} violation(s) in ${r2.file}` : `Dry run \u2014 ${r2.file} untouched`;
+  const lines = [head, `  ${r2.sequences} sequence(s) \xB7 ${r2.scenes} scene(s) \xB7 ${r2.shots} shot(s) \xB7 ${r2.synced} shot label(s) synced from the structure`];
+  if (r2.approvalDropped && r2.written) lines.push("  the stale `// approved:` line was dropped; existing task authorization is unchanged");
+  lines.push("Findings:", renderFindings(r2.findings));
+  return lines.join("\n");
+}
+function renderCheck(r2) {
+  const lines = [
+    `scenes.js contract \u2014 ${r2.format} \xB7 ${r2.shots} shots${r2.draft ? " \xB7 story pass (--draft)" : ""}`,
+    `  ${r2.violations} violation(s), ${r2.warnings} to look at${r2.draft ? `, ${r2.deferred} deferred to \xA74b` : ""}`,
+    "Structure (sequences \u2192 scenes \u2192 shots):",
+    renderFindings(r2.structure),
+    "Shot contract (check-scenes.js):",
+    renderFindings(r2.contract)
+  ];
+  return lines.join("\n");
+}
+
+// src/music-client.ts
+var LYRIA_CLIP_MODEL = "lyria-3-clip-preview";
+var LYRIA_REALTIME_MODEL = "models/lyria-realtime-exp";
+var CLIP_DURATION_SECONDS = 30;
+var REALTIME_SAMPLE_RATE = 48e3;
+var REALTIME_CHANNELS = 2;
+var REALTIME_BYTES_PER_SAMPLE = 2;
+var REALTIME_BYTES_PER_SECOND = REALTIME_SAMPLE_RATE * REALTIME_CHANNELS * REALTIME_BYTES_PER_SAMPLE;
+var REALTIME_TIMEOUT_MARGIN_MS = 3e4;
+var REALTIME_POLL_INTERVAL_MS = 100;
+var MUSIC_GENRES = [
+  "Acid Jazz",
+  "Afrobeat",
+  "Ambient",
+  "Blues",
+  "Bossa Nova",
+  "Breakbeat",
+  "Classical",
+  "Country",
+  "Disco",
+  "Drum and Bass",
+  "Dub",
+  "Dubstep",
+  "EDM",
+  "Electronic",
+  "Funk",
+  "Gospel",
+  "Hip Hop",
+  "House",
+  "Jazz",
+  "Latin",
+  "Lo-Fi",
+  "Metal",
+  "Minimal Techno",
+  "Pop",
+  "R&B",
+  "Reggae",
+  "Rock",
+  "Soul",
+  "Synthwave",
+  "Techno",
+  "Trance",
+  "World Music"
+];
+var MUSIC_MOODS = [
+  "Ambient",
+  "Atmospheric",
+  "Calm",
+  "Cheerful",
+  "Cinematic",
+  "Dark",
+  "Dreamy",
+  "Emotional",
+  "Energetic",
+  "Epic",
+  "Experimental",
+  "Happy",
+  "Hopeful",
+  "Intense",
+  "Melancholic",
+  "Mysterious",
+  "Nostalgic",
+  "Peaceful",
+  "Playful",
+  "Powerful",
+  "Relaxing",
+  "Romantic",
+  "Sad",
+  "Suspenseful",
+  "Uplifting"
+];
+var MUSIC_INSTRUMENTS = [
+  "303 Acid Bass",
+  "Acoustic Guitar",
+  "Bass Guitar",
+  "Cello",
+  "Drums",
+  "Electric Guitar",
+  "Flute",
+  "Harp",
+  "Keyboard",
+  "Orchestra",
+  "Organ",
+  "Percussion",
+  "Piano",
+  "Saxophone",
+  "Strings",
+  "Synth",
+  "Synth Bass",
+  "Synth Lead",
+  "Synth Pad",
+  "Trumpet",
+  "Violin",
+  "Vocal Chops"
+];
+var MUSIC_SCALES = [
+  "C_MAJOR_A_MINOR",
+  "D_FLAT_MAJOR_B_FLAT_MINOR",
+  "D_MAJOR_B_MINOR",
+  "E_FLAT_MAJOR_C_MINOR",
+  "E_MAJOR_D_FLAT_MINOR",
+  "F_MAJOR_D_MINOR",
+  "G_FLAT_MAJOR_E_FLAT_MINOR",
+  "G_MAJOR_E_MINOR",
+  "A_FLAT_MAJOR_F_MINOR",
+  "A_MAJOR_G_FLAT_MINOR",
+  "B_FLAT_MAJOR_G_MINOR",
+  "B_MAJOR_A_FLAT_MINOR",
+  "SCALE_UNSPECIFIED"
+];
+var MUSIC_GENERATION_MODES = ["QUALITY", "DIVERSITY", "VOCALIZATION"];
+var durationSchema = external_exports.number().min(5).max(300).default(30);
+var weightedPromptSchema = external_exports.object({
+  text: external_exports.string().min(1, "Prompt text is required"),
+  weight: external_exports.number().refine((v) => v !== 0, "Weight must be a non-zero value").default(1)
+});
+var musicConfigSchema = external_exports.object({
+  guidance: external_exports.number().min(0).max(6).optional(),
+  bpm: external_exports.number().min(60).max(200).optional(),
+  scale: external_exports.enum(MUSIC_SCALES).optional(),
+  density: external_exports.number().min(0).max(1).optional(),
+  brightness: external_exports.number().min(0).max(1).optional(),
+  temperature: external_exports.number().min(0).max(3).optional(),
+  // model default 1.1 when unspecified
+  topK: external_exports.number().int().min(1).max(1e3).optional(),
+  seed: external_exports.number().int().min(0).max(2147483647).optional(),
+  // the only reproducibility control
+  muteBass: external_exports.boolean().optional(),
+  muteDrums: external_exports.boolean().optional(),
+  onlyBassAndDrums: external_exports.boolean().optional(),
+  musicGenerationMode: external_exports.enum(MUSIC_GENERATION_MODES).optional()
+});
+var musicGenerateSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required"),
+  genre: external_exports.string().optional(),
+  mood: external_exports.string().optional(),
+  instruments: external_exports.array(external_exports.string()).optional(),
+  durationSeconds: durationSchema,
+  bpm: external_exports.number().min(60).max(200).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("audio").optional()
+});
+var musicAdvancedSchema = external_exports.object({
+  prompts: external_exports.array(weightedPromptSchema).min(1, "At least one prompt is required"),
+  durationSeconds: durationSchema,
+  config: musicConfigSchema.optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("audio").optional()
+});
+var musicClipSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required"),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("audio").optional()
+});
+async function generateClip(request) {
+  try {
+    const { GoogleGenAI: GoogleGenAI3 } = await Promise.resolve().then(() => (init_node(), node_exports));
+    const genai = new GoogleGenAI3({ apiKey: requireGeminiKey() });
+    console.error(`[Lyria] Generating 30s clip... (model: ${LYRIA_CLIP_MODEL})`);
+    console.error(`[Lyria] Prompt: ${request.prompt.substring(0, 100)}...`);
+    const interaction = await genai.interactions.create({
+      model: LYRIA_CLIP_MODEL,
+      input: request.prompt
+    });
+    for (const step of interaction.steps ?? []) {
+      if (step.type !== "model_output") continue;
+      for (const content of step.content ?? []) {
+        if (content.type !== "audio" || !content.data) continue;
+        const mimeType = content.mime_type || "audio/mp3";
+        const ext = mimeType.includes("wav") ? "wav" : "mp3";
+        const audioPath = saveAudioFile(
+          request.outputPath || process.cwd(),
+          request.filename || `music_clip_${Date.now()}.${ext}`,
+          Buffer.from(content.data, "base64")
+        );
+        console.error(`[Lyria] Clip saved to: ${audioPath}`);
+        return {
+          success: true,
+          audioPath,
+          prompt: request.prompt,
+          durationSeconds: CLIP_DURATION_SECONDS,
+          model: LYRIA_CLIP_MODEL
+        };
+      }
+    }
+    return { success: false, error: `No audio in interaction response (status: ${interaction.status})` };
+  } catch (error2) {
+    const errorMessage = error2 instanceof Error ? error2.message : String(error2);
+    console.error(`[Lyria] Error: ${errorMessage}`);
+    return { success: false, error: errorMessage };
+  }
+}
+async function generateSimple(request) {
+  const promptParts = [request.prompt];
+  if (request.genre) promptParts.push(request.genre);
+  if (request.mood) promptParts.push(request.mood);
+  if (request.instruments && request.instruments.length > 0) {
+    promptParts.push(`with ${request.instruments.join(", ")}`);
+  }
+  return generateAdvanced({
+    prompts: [{ text: promptParts.join(", "), weight: 1 }],
+    durationSeconds: request.durationSeconds ?? 30,
+    config: request.bpm ? { bpm: request.bpm } : void 0,
+    outputPath: request.outputPath,
+    filename: request.filename
+  });
+}
+function toLiveMusicConfig(config3) {
+  const result = {};
+  if (config3.guidance !== void 0) result.guidance = config3.guidance;
+  if (config3.bpm !== void 0) result.bpm = config3.bpm;
+  if (config3.scale !== void 0) result.scale = config3.scale;
+  if (config3.density !== void 0) result.density = config3.density;
+  if (config3.brightness !== void 0) result.brightness = config3.brightness;
+  if (config3.temperature !== void 0) result.temperature = config3.temperature;
+  if (config3.topK !== void 0) result.topK = config3.topK;
+  if (config3.seed !== void 0) result.seed = config3.seed;
+  if (config3.muteBass !== void 0) result.muteBass = config3.muteBass;
+  if (config3.muteDrums !== void 0) result.muteDrums = config3.muteDrums;
+  if (config3.onlyBassAndDrums !== void 0) result.onlyBassAndDrums = config3.onlyBassAndDrums;
+  if (config3.musicGenerationMode !== void 0) {
+    result.musicGenerationMode = config3.musicGenerationMode;
+  }
+  return result;
+}
+async function generateAdvanced(request) {
+  const targetDuration = request.durationSeconds ?? 30;
+  const targetBytes = targetDuration * REALTIME_BYTES_PER_SECOND;
+  const audioChunks = [];
+  const state = {
+    received: 0,
+    done: false,
+    error: null
+  };
+  let session;
+  const weightedPrompts = request.prompts.map((p) => ({ text: p.text, weight: p.weight ?? 1 }));
+  try {
+    const { GoogleGenAI: GoogleGenAI3 } = await Promise.resolve().then(() => (init_node(), node_exports));
+    const genai = new GoogleGenAI3({ apiKey: requireGeminiKey(), apiVersion: "v1alpha" });
+    console.error(`[Lyria] Streaming ${targetDuration}s... (model: ${LYRIA_REALTIME_MODEL})`);
+    console.error(`[Lyria] Prompts: ${weightedPrompts.map((p) => `"${p.text}"(${p.weight})`).join(", ")}`);
+    session = await genai.live.music.connect({
+      model: LYRIA_REALTIME_MODEL,
+      callbacks: {
+        onmessage: (message) => {
+          if (state.done) return;
+          for (const chunk2 of message.serverContent?.audioChunks ?? []) {
+            if (!chunk2.data) continue;
+            const buffer = Buffer.from(chunk2.data, "base64");
+            audioChunks.push(buffer);
+            state.received += buffer.length;
+          }
+        },
+        onerror: (error2) => {
+          console.error("[Lyria] Session error:", error2);
+          state.error = error2 instanceof Error ? error2 : new Error(String(error2));
+        },
+        onclose: () => {
+        }
+      }
+    });
+    await session.setWeightedPrompts({ weightedPrompts });
+    if (request.config) {
+      const musicGenerationConfig = toLiveMusicConfig(request.config);
+      if (Object.keys(musicGenerationConfig).length > 0) {
+        await session.setMusicGenerationConfig({ musicGenerationConfig });
+      }
+    }
+    await session.play();
+    const startTime = Date.now();
+    const timeoutMs = targetDuration * 1e3 + REALTIME_TIMEOUT_MARGIN_MS;
+    while (state.received < targetBytes && Date.now() - startTime < timeoutMs) {
+      if (state.error) throw state.error;
+      await new Promise((resolve11) => setTimeout(resolve11, REALTIME_POLL_INTERVAL_MS));
+    }
+    state.done = true;
+    closeQuietly(session);
+    session = void 0;
+    if (audioChunks.length === 0) {
+      return { success: false, error: "No audio data received from Lyria RealTime" };
+    }
+    const rawPcm = Buffer.concat(audioChunks);
+    const frameBytes = REALTIME_CHANNELS * REALTIME_BYTES_PER_SAMPLE;
+    const trimTo = Math.floor(Math.min(rawPcm.length, targetBytes) / frameBytes) * frameBytes;
+    const pcmData = rawPcm.subarray(0, trimTo);
+    const audioPath = saveAudioFile(
+      request.outputPath || process.cwd(),
+      request.filename || `music_${Date.now()}.wav`,
+      pcmToWav(pcmData, REALTIME_SAMPLE_RATE, REALTIME_CHANNELS)
+    );
+    const durationSeconds = Math.round(pcmData.length / REALTIME_BYTES_PER_SECOND);
+    console.error(`[Lyria] Music saved to: ${audioPath} (${durationSeconds}s)`);
+    return {
+      success: true,
+      audioPath,
+      prompt: weightedPrompts.map((p) => p.text).join(", "),
+      durationSeconds,
+      model: LYRIA_REALTIME_MODEL
+    };
+  } catch (error2) {
+    state.done = true;
+    if (session) closeQuietly(session);
+    const errorMessage = error2 instanceof Error ? error2.message : String(error2);
+    console.error(`[Lyria] Error: ${errorMessage}`);
+    return { success: false, error: errorMessage };
+  }
+}
+function closeQuietly(session) {
+  try {
+    session.close();
+  } catch (error2) {
+    console.error(`[Lyria] Session close failed (ignored): ${error2 instanceof Error ? error2.message : String(error2)}`);
   }
 }
 
 // src/tts-client.ts
-import { writeFileSync as writeFileSync5 } from "node:fs";
+import { writeFileSync as writeFileSync6 } from "node:fs";
 var TTS_VOICES = {
   Zephyr: "Bright",
   Puck: "Upbeat",
@@ -80957,7 +81697,7 @@ async function generateGemini38Speech(request) {
     const audioPath = saveAudio(audio, request.outputPath, request.filename, "tts_gemini_38");
     const metadata = interaction;
     const usageReceiptPath = audioPath + ".provider-usage.json";
-    writeFileSync5(usageReceiptPath, JSON.stringify({
+    writeFileSync6(usageReceiptPath, JSON.stringify({
       provider: "gemini",
       model: request.model,
       interactionId: typeof metadata.id === "string" ? metadata.id : null,
@@ -81544,625 +82284,6 @@ async function createElevenLabsDictionary(input) {
 import { execFileSync as execFileSync2 } from "node:child_process";
 import { appendFileSync, existsSync as existsSync7, mkdirSync as mkdirSync3 } from "node:fs";
 import path7 from "node:path";
-
-// src/mlx-serve-client.ts
-import { execFile as execFile2 } from "node:child_process";
-import { existsSync as existsSync6, mkdtempSync, readFileSync as readFileSync6, rmSync, writeFileSync as writeFileSync7 } from "node:fs";
-import { tmpdir } from "node:os";
-import { join as join4 } from "node:path";
-var MLX_HEALTH_TIMEOUT_MS = 3e3;
-var MLX_MODELS_TIMEOUT_MS = 1e4;
-var MLX_LOAD_TIMEOUT_MS = 10 * 6e4;
-var MLX_IMAGE_TIMEOUT_MS = 15 * 6e4;
-var MLX_MUSIC_TIMEOUT_MS = 10 * 6e4;
-var MLX_VIDEO_TIMEOUT_MS = 20 * 6e4;
-var MLX_MESH_TIMEOUT_MS = 15 * 6e4;
-var MAX_VIDEO_RGB_BYTES = 800 * 1024 * 1024;
-var MLX_IMAGE_DIMENSION_STEP = 16;
-var MIN_MLX_IMAGE_DIMENSION = 256;
-var MAX_MLX_IMAGE_DIMENSION = 2048;
-var DEFAULT_MLX_IMAGE_SIZE = 1024;
-var MLX_VIDEO_DIMENSION_STEP = 64;
-var MLX_VIDEO_DIMENSION_STEP_ONE_STAGE = 32;
-var MIN_MLX_VIDEO_DIMENSION = 256;
-var MAX_MLX_VIDEO_DIMENSION = 1920;
-var DEFAULT_MLX_VIDEO_WIDTH = 768;
-var DEFAULT_MLX_VIDEO_HEIGHT = 1280;
-var DEFAULT_MLX_VIDEO_FRAMES = 49;
-var MIN_MLX_VIDEO_FRAMES = 9;
-var MAX_MLX_VIDEO_FRAMES = 241;
-var MLX_VIDEO_FRAME_STEP = 8;
-var MLX_VIDEO_FPS = 24;
-var MIN_MLX_MUSIC_SECONDS = 10;
-var MAX_MLX_MUSIC_SECONDS = 600;
-var DEFAULT_MLX_MUSIC_SECONDS = 30;
-var MAX_MLX_IMAGE_REFS = 3;
-function authHeaders2() {
-  const key = mlxServeApiKey();
-  return key ? { Authorization: `Bearer ${key}` } : {};
-}
-function isUnreachable(status, body) {
-  return status === 502 || status === 504 || /ECONNREFUSED|fetch failed|Upstream unreachable/i.test(body);
-}
-function mlxDownHint(detail) {
-  return `MLX Core is not reachable at ${mlxServeUrl()}. This plugin does not launch the app.
-Install the macOS menu-bar app (Apple Silicon, macOS 26.2+) and start it, or run mlx-serve --serve:
-  brew install --cask mlx-core
-If the server is on another host or port, set MLX_SERVE_URL.
-Loopback needs no API key; a non-loopback bind may need MLX_SERVE_API_KEY.
-` + (detail ? `
-${detail}` : "");
-}
-function translateUpstream(body) {
-  if (/out of memory|OOM|not enough.*RAM|insufficient memory/i.test(body)) {
-    return `${body}
-
-The loaded media model and the chat model share one GPU. Unload a large chat or video model in MLX Core, or stop a concurrent Z-Image (mflux) run \u2014 Z-Image peaks at 32\u201339GB and LTX wants 24GB+ on its own.`;
-  }
-  return body;
-}
-var imageDimension = external_exports.number().int().min(MIN_MLX_IMAGE_DIMENSION).max(MAX_MLX_IMAGE_DIMENSION).refine((v) => v % MLX_IMAGE_DIMENSION_STEP === 0, {
-  message: `width/height must be a multiple of ${MLX_IMAGE_DIMENSION_STEP} (for 9:16 that's 1088\xD71920, not 1080\xD71920). FLUX.2-klein is fixed at 1024\xD71024 \u2014 pick a Krea/Mage-Flow model for other sizes.`
-});
-var videoDimension = external_exports.number().int().min(MIN_MLX_VIDEO_DIMENSION).max(MAX_MLX_VIDEO_DIMENSION).refine((v) => v % MLX_VIDEO_DIMENSION_STEP_ONE_STAGE === 0, {
-  message: `width/height must be a multiple of ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE} (LTX grid), and of ${MLX_VIDEO_DIMENSION_STEP} unless you pass pipeline:"one_stage". 1080 is on neither grid \u2014 use 1088\xD71920 or the default 768\xD71280.`
-});
-var mlxImageGenerateSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
-  model: external_exports.string().min(1).optional(),
-  width: imageDimension.optional().default(DEFAULT_MLX_IMAGE_SIZE),
-  height: imageDimension.optional().default(DEFAULT_MLX_IMAGE_SIZE),
-  steps: external_exports.number().int().min(1).max(50).optional(),
-  seed: external_exports.number().int().min(0).optional(),
-  imagePath: external_exports.string().min(1).optional(),
-  strength: external_exports.number().min(0).max(1).optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("image").optional()
-});
-var mlxImageEditSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
-  imagePath: external_exports.string().min(1, "imagePath is required"),
-  refImagePaths: external_exports.array(external_exports.string().min(1)).max(MAX_MLX_IMAGE_REFS).optional(),
-  model: external_exports.string().min(1).optional(),
-  width: imageDimension.optional(),
-  height: imageDimension.optional(),
-  steps: external_exports.number().int().min(1).max(50).optional(),
-  seed: external_exports.number().int().min(0).optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("image").optional()
-});
-var mlxMusicGenerateSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required").max(4e3),
-  model: external_exports.string().min(1).optional(),
-  lyrics: external_exports.string().max(8e3).optional(),
-  instrumental: external_exports.boolean().optional().default(true),
-  durationSeconds: external_exports.number().int().min(MIN_MLX_MUSIC_SECONDS).max(MAX_MLX_MUSIC_SECONDS).optional().default(DEFAULT_MLX_MUSIC_SECONDS),
-  seed: external_exports.number().int().min(0).optional(),
-  refAudioPath: external_exports.string().min(1).optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("audio").optional()
-}).superRefine((value, ctx) => {
-  if (value.instrumental && value.lyrics && value.lyrics.trim().length > 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      message: "instrumental:true cannot be sent beside lyrics \u2014 mlx-serve returns 400. Set instrumental false to sing, or drop lyrics for a bed."
-    });
-  }
-});
-var mlxVideoGenerateSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
-  model: external_exports.string().min(1).optional(),
-  width: videoDimension.optional().default(DEFAULT_MLX_VIDEO_WIDTH),
-  height: videoDimension.optional().default(DEFAULT_MLX_VIDEO_HEIGHT),
-  numFrames: external_exports.number().int().min(MIN_MLX_VIDEO_FRAMES).max(MAX_MLX_VIDEO_FRAMES).optional().default(DEFAULT_MLX_VIDEO_FRAMES),
-  steps: external_exports.number().int().min(1).max(50).optional(),
-  seed: external_exports.number().int().min(0).optional(),
-  firstFrameImagePath: external_exports.string().min(1).optional(),
-  lastFrameImagePath: external_exports.string().min(1).optional(),
-  pipeline: external_exports.enum(["one_stage", "two_stage", "two_stage_hq"]).optional(),
-  decoder: external_exports.enum(["conv", "diffusion"]).optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").optional()
-}).superRefine((value, ctx) => {
-  if (videoExceedsMemory(value.width, value.height, value.numFrames)) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      message: videoMemoryMessage(value.width, value.height, value.numFrames)
-    });
-  }
-  if (value.pipeline !== "one_stage") {
-    for (const [field, size] of [["width", value.width], ["height", value.height]]) {
-      if (size % MLX_VIDEO_DIMENSION_STEP !== 0) {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: [field],
-          message: `${field} ${size} is off the two-stage LTX grid (multiple of ${MLX_VIDEO_DIMENSION_STEP}). Pass pipeline:"one_stage" to use the ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE}px grid, or round to ${Math.round(size / MLX_VIDEO_DIMENSION_STEP) * MLX_VIDEO_DIMENSION_STEP}.`
-        });
-      }
-    }
-  }
-  if ((value.numFrames - 1) % MLX_VIDEO_FRAME_STEP !== 0) {
-    const below = value.numFrames - (value.numFrames - 1) % MLX_VIDEO_FRAME_STEP;
-    const above = below + MLX_VIDEO_FRAME_STEP;
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["numFrames"],
-      message: `numFrames must be ${MLX_VIDEO_FRAME_STEP}k+1 (${MIN_MLX_VIDEO_FRAMES}, 17, 25, \u2026 ${MAX_MLX_VIDEO_FRAMES}) \u2014 LTX latent depth. ${value.numFrames} is not, and mlx-serve answers 200 with its own default instead of refusing. Use ${below} or ${Math.min(above, MAX_MLX_VIDEO_FRAMES)}.`
-    });
-  }
-});
-var mlx3dGenerateSchema = external_exports.object({
-  imagePath: external_exports.string().min(1, "imagePath is required"),
-  model: external_exports.string().min(1).optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("mesh").optional()
-});
-function videoRgbBytes(width, height, frames) {
-  return width * height * frames * 3;
-}
-function videoExceedsMemory(width, height, frames) {
-  return videoRgbBytes(width, height, frames) > MAX_VIDEO_RGB_BYTES;
-}
-function videoMemoryMessage(width, height, frames) {
-  const mb = (videoRgbBytes(width, height, frames) / (1024 * 1024)).toFixed(0);
-  const cap = (MAX_VIDEO_RGB_BYTES / (1024 * 1024)).toFixed(0);
-  return `Decoded RGB would be ~${mb}MB (${width}\xD7${height}\xD7${frames}\xD73), over the ${cap}MB cap. Drop frames or canvas \u2014 1088\xD71920 at 8s/24fps is ~1.2GB and is refused. The default 768\xD71280\xD7${DEFAULT_MLX_VIDEO_FRAMES} stays under the cap.`;
-}
-function pickModel(models, capability) {
-  const has3 = (m2) => (m2.capabilities ?? []).includes(capability);
-  return models.find((m2) => m2.state === "ready" && has3(m2)) ?? models.find(has3);
-}
-function fileToBase64(filePath) {
-  if (!existsSync6(filePath)) return { ok: false, error: `File not found: ${filePath}` };
-  try {
-    return { ok: true, b64: readFileSync6(filePath).toString("base64") };
-  } catch (error2) {
-    return { ok: false, error: error2 instanceof Error ? error2.message : String(error2) };
-  }
-}
-function parseModelsBody(body) {
-  const parsed = JSON.parse(body);
-  const list = parsed && typeof parsed === "object" && "data" in parsed ? parsed.data : parsed;
-  if (!Array.isArray(list)) return [];
-  return list.filter((entry) => Boolean(entry) && typeof entry === "object").map((entry) => ({
-    id: String(entry.id ?? entry.name ?? ""),
-    state: typeof entry.state === "string" ? entry.state : void 0,
-    capabilities: Array.isArray(entry.capabilities) ? entry.capabilities.map(String) : void 0
-  })).filter((entry) => entry.id.length > 0);
-}
-async function mlxHealth() {
-  const res = await requestRaw("get", `${mlxServeUrl()}/health`, authHeaders2(), void 0, MLX_HEALTH_TIMEOUT_MS);
-  if (res.ok) return { ok: true };
-  if (isUnreachable(res.status, res.body)) return { ok: false, error: mlxDownHint(res.body) };
-  return { ok: false, error: mlxDownHint(`HTTP ${res.status}: ${res.body}`) };
-}
-async function listMlxModels() {
-  const res = await requestRaw("get", `${mlxServeUrl()}/v1/models`, authHeaders2(), void 0, MLX_MODELS_TIMEOUT_MS);
-  if (!res.ok) {
-    if (isUnreachable(res.status, res.body)) return { ok: false, error: mlxDownHint(res.body) };
-    return { ok: false, error: translateUpstream(`HTTP ${res.status}: ${res.body}`) };
-  }
-  try {
-    return { ok: true, models: parseModelsBody(res.body) };
-  } catch (error2) {
-    return { ok: false, error: `Could not parse /v1/models: ${error2 instanceof Error ? error2.message : String(error2)}` };
-  }
-}
-async function loadModel(id) {
-  const res = await requestRaw(
-    "post",
-    `${mlxServeUrl()}/v1/load-model`,
-    authHeaders2(),
-    { model: id },
-    MLX_LOAD_TIMEOUT_MS
-  );
-  if (!res.ok) {
-    if (isUnreachable(res.status, res.body)) return { ok: false, error: mlxDownHint(res.body) };
-    return { ok: false, error: translateUpstream(`load-model HTTP ${res.status}: ${res.body}`) };
-  }
-  const deadline = Date.now() + MLX_LOAD_TIMEOUT_MS;
-  while (Date.now() < deadline) {
-    const listed = await listMlxModels();
-    if (!listed.ok) return listed;
-    const found = listed.models?.find((m2) => m2.id === id);
-    if (found?.state === "ready") return { ok: true };
-    await new Promise((resolve11) => setTimeout(resolve11, 2e3));
-  }
-  return { ok: false, error: `Timed out waiting for model "${id}" to become ready.` };
-}
-async function resolveModel(capability, requested) {
-  const listed = await listMlxModels();
-  if (!listed.ok) return { ok: false, error: listed.error ?? mlxDownHint() };
-  const models = listed.models ?? [];
-  if (requested) {
-    const found = models.find((m2) => m2.id === requested);
-    if (!found) {
-      const loaded = await loadModel(requested);
-      if (!loaded.ok) {
-        return {
-          ok: false,
-          error: loaded.error ?? `Model "${requested}" is not in /v1/models. Download it in MLX Core and retry, or pass an id from GET /v1/models.`
-        };
-      }
-      return { ok: true, model: requested };
-    }
-    if (found.state !== "ready") {
-      const loaded = await loadModel(requested);
-      if (!loaded.ok) return { ok: false, error: loaded.error ?? `Failed to load "${requested}".` };
-    }
-    return { ok: true, model: requested };
-  }
-  const picked = pickModel(models, capability);
-  if (!picked) {
-    return {
-      ok: false,
-      error: `No mlx-serve model advertises capability "${capability}". Open MLX Core, download a model in the matching pane (Image / Audio / Video / 3D), and retry. This plugin does not download weights.`
-    };
-  }
-  if (picked.state !== "ready") {
-    const loaded = await loadModel(picked.id);
-    if (!loaded.ok) return { ok: false, error: loaded.error ?? `Failed to load "${picked.id}".` };
-  }
-  return { ok: true, model: picked.id };
-}
-function parseImageResponse(body) {
-  try {
-    const parsed = JSON.parse(body);
-    const data = parsed && typeof parsed === "object" && "data" in parsed ? parsed.data : void 0;
-    const first = Array.isArray(data) ? data[0] : void 0;
-    const b64 = first && typeof first === "object" && first !== null && "b64_json" in first ? first.b64_json : void 0;
-    if (typeof b64 !== "string" || b64.length === 0) return { error: `Image response missing data[0].b64_json: ${body.slice(0, 400)}` };
-    return { b64 };
-  } catch (error2) {
-    return { error: `Could not parse image JSON: ${error2 instanceof Error ? error2.message : String(error2)}` };
-  }
-}
-function parseVideoResponse(body) {
-  try {
-    const parsed = JSON.parse(body);
-    if (!parsed || typeof parsed !== "object") return { error: "Video response is not an object" };
-    const d = parsed;
-    if (d.format !== "rgb8") return { error: `Unexpected video format "${String(d.format)}" (want rgb8)` };
-    const frames = Number(d.frames);
-    const height = Number(d.height);
-    const width = Number(d.width);
-    const fps = Number(d.fps) || MLX_VIDEO_FPS;
-    if (![frames, height, width].every((n) => Number.isFinite(n) && n > 0)) {
-      return { error: `Video response missing frames/height/width: ${body.slice(0, 200)}` };
-    }
-    if (typeof d.data !== "string") return { error: "Video response missing data (base64 rgb8)" };
-    const rgb = Buffer.from(d.data, "base64");
-    const expect = frames * height * width * 3;
-    if (rgb.length !== expect) return { error: `RGB length ${rgb.length} != ${expect} (${frames}\xD7${height}\xD7${width}\xD73)` };
-    let audio;
-    if (typeof d.audio_data === "string" && d.audio_data.length > 0) {
-      audio = {
-        pcm: Buffer.from(d.audio_data, "base64"),
-        sampleRate: Number(d.audio_sample_rate) || 24e3,
-        channels: Number(d.audio_channels) || 2
-      };
-    }
-    return { format: "rgb8", frames, height, width, fps, rgb, audio };
-  } catch (error2) {
-    return { error: `Could not parse video JSON: ${error2 instanceof Error ? error2.message : String(error2)}` };
-  }
-}
-function parseGlbResponse(body) {
-  try {
-    const parsed = JSON.parse(body);
-    if (!parsed || typeof parsed !== "object") return { error: "3D response is not an object" };
-    const d = parsed;
-    if (typeof d.data !== "string" || d.data.length === 0) return { error: `3D response missing data: ${body.slice(0, 400)}` };
-    return { b64: d.data };
-  } catch (error2) {
-    return { error: `Could not parse 3D JSON: ${error2 instanceof Error ? error2.message : String(error2)}` };
-  }
-}
-async function muxRgbToMp4(opts) {
-  const dir = mkdtempSync(join4(tmpdir(), "mlx-video-"));
-  const rgbPath = join4(dir, "frames.rgb");
-  const wavPath = join4(dir, "audio.wav");
-  try {
-    writeFileSync7(rgbPath, opts.rgb);
-    const args = [
-      "-y",
-      "-f",
-      "rawvideo",
-      "-pix_fmt",
-      "rgb24",
-      "-s",
-      `${opts.width}x${opts.height}`,
-      "-r",
-      String(opts.fps),
-      "-i",
-      rgbPath
-    ];
-    if (opts.audio) {
-      writeFileSync7(wavPath, pcmToWav(opts.audio.pcm, opts.audio.sampleRate, opts.audio.channels));
-      args.push("-i", wavPath);
-    }
-    args.push(
-      "-frames:v",
-      String(opts.frames),
-      "-c:v",
-      "libx264",
-      "-pix_fmt",
-      "yuv420p"
-    );
-    if (opts.audio) args.push("-c:a", "aac");
-    args.push(opts.outFile);
-    await new Promise((resolve11, reject) => {
-      execFile2("ffmpeg", args, { timeout: 12e4, maxBuffer: 2 * 1024 * 1024 }, (error2, _out, errOut) => {
-        if (error2) {
-          const code = error2.code;
-          if (code === "ENOENT") {
-            reject(new Error("ffmpeg is not on PATH \u2014 mlx_video_generate muxes rgb8 frames to mp4 and needs ffmpeg."));
-            return;
-          }
-          reject(new Error(`${error2.message}${errOut ? `
-${String(errOut).slice(-500)}` : ""}`));
-          return;
-        }
-        resolve11();
-      });
-    });
-    if (!existsSync6(opts.outFile)) return { ok: false, error: "ffmpeg exited 0 but the mp4 was not written" };
-    return { ok: true };
-  } catch (error2) {
-    return { ok: false, error: error2 instanceof Error ? error2.message : String(error2) };
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-}
-async function postImage(body, outFile) {
-  const startedAt = Date.now();
-  const res = await requestRaw("post", `${mlxServeUrl()}/v1/images/generations`, authHeaders2(), body, MLX_IMAGE_TIMEOUT_MS);
-  if (!res.ok) {
-    if (isUnreachable(res.status, res.body)) return { success: false, error: mlxDownHint(res.body) };
-    return { success: false, error: translateUpstream(`HTTP ${res.status}: ${res.body}`) };
-  }
-  const parsed = parseImageResponse(res.body);
-  if ("error" in parsed) return { success: false, error: parsed.error };
-  writeFileSync7(outFile, Buffer.from(parsed.b64, "base64"));
-  return {
-    success: true,
-    path: outFile,
-    model: typeof body.model === "string" ? body.model : void 0,
-    elapsedSeconds: Math.round((Date.now() - startedAt) / 1e3)
-  };
-}
-async function generateMlxImage(request) {
-  const health = await mlxHealth();
-  if (!health.ok) return { success: false, error: health.error };
-  const resolved = await resolveModel("image", request.model);
-  if (!resolved.ok) return { success: false, error: resolved.error };
-  const body = {
-    prompt: request.prompt,
-    model: resolved.model,
-    size: `${request.width}x${request.height}`
-  };
-  if (request.steps !== void 0) body.steps = request.steps;
-  if (request.seed !== void 0) body.seed = request.seed;
-  if (request.imagePath) {
-    const img = fileToBase64(request.imagePath);
-    if (!img.ok) return { success: false, error: img.error };
-    body.image = img.b64;
-    if (request.strength !== void 0) body.strength = request.strength;
-  }
-  const outFile = resolveOutputFile(
-    request.outputPath || process.cwd(),
-    request.filename || `mlx_image_${Date.now()}.png`,
-    "image"
-  );
-  const result = await postImage(body, outFile);
-  if (result.success) {
-    result.width = request.width;
-    result.height = request.height;
-    result.steps = request.steps;
-    result.seed = request.seed;
-    result.model = resolved.model;
-  }
-  return result;
-}
-async function editMlxImage(request) {
-  const health = await mlxHealth();
-  if (!health.ok) return { success: false, error: health.error };
-  const resolved = await resolveModel("image", request.model);
-  if (!resolved.ok) return { success: false, error: resolved.error };
-  const src = fileToBase64(request.imagePath);
-  if (!src.ok) return { success: false, error: src.error };
-  const refs = [];
-  for (const path15 of request.refImagePaths ?? []) {
-    const ref = fileToBase64(path15);
-    if (!ref.ok) return { success: false, error: ref.error };
-    refs.push(ref.b64);
-  }
-  const body = {
-    prompt: request.prompt,
-    model: resolved.model,
-    mode: "edit",
-    image: src.b64
-  };
-  if (request.width && request.height) body.size = `${request.width}x${request.height}`;
-  if (request.steps !== void 0) body.steps = request.steps;
-  if (request.seed !== void 0) body.seed = request.seed;
-  if (refs.length) body.ref_images = refs;
-  const outFile = resolveOutputFile(
-    request.outputPath || process.cwd(),
-    request.filename || `mlx_edit_${Date.now()}.png`,
-    "image"
-  );
-  const result = await postImage(body, outFile);
-  if (result.success) {
-    result.model = resolved.model;
-    result.width = request.width;
-    result.height = request.height;
-    result.steps = request.steps;
-    result.seed = request.seed;
-  }
-  return result;
-}
-function wavLooksValid(buf) {
-  return buf.length >= 12 && buf.subarray(0, 4).toString("ascii") === "RIFF" && buf.subarray(8, 12).toString("ascii") === "WAVE";
-}
-function jsonErrorFromBytes(bytes, contentType, status) {
-  const asText = bytes.toString("utf8");
-  if (contentType.includes("json") || asText.trimStart().startsWith("{")) {
-    return translateUpstream(`HTTP ${status}: ${asText.slice(0, 1e3)}`);
-  }
-  if (!bytes.length) return `HTTP ${status}: empty body`;
-  return void 0;
-}
-async function generateMlxMusic(request) {
-  const health = await mlxHealth();
-  if (!health.ok) return { success: false, error: health.error };
-  const resolved = await resolveModel("music", request.model);
-  if (!resolved.ok) return { success: false, error: resolved.error };
-  const body = {
-    prompt: request.prompt,
-    model: resolved.model,
-    instrumental: request.instrumental,
-    duration_seconds: request.durationSeconds
-  };
-  if (request.lyrics !== void 0) body.lyrics = request.lyrics;
-  if (request.seed !== void 0) body.seed = request.seed;
-  if (request.refAudioPath) {
-    const clip2 = fileToBase64(request.refAudioPath);
-    if (!clip2.ok) return { success: false, error: clip2.error };
-    body.ref_audio = clip2.b64;
-  }
-  const startedAt = Date.now();
-  const res = await requestBytes(
-    "post",
-    `${mlxServeUrl()}/v1/audio/music-generations`,
-    authHeaders2(),
-    body,
-    MLX_MUSIC_TIMEOUT_MS
-  );
-  if (!res.ok) {
-    const text2 = res.bytes.toString("utf8");
-    if (isUnreachable(res.status, text2)) return { success: false, error: mlxDownHint(text2) };
-    return { success: false, error: translateUpstream(`HTTP ${res.status}: ${text2.slice(0, 1e3)}`) };
-  }
-  const jsonErr2 = jsonErrorFromBytes(res.bytes, res.contentType, res.status);
-  if (jsonErr2) return { success: false, error: jsonErr2 };
-  if (!wavLooksValid(res.bytes)) {
-    return { success: false, error: `Music response is not a WAV (got ${res.contentType || "unknown type"}, ${res.bytes.length} bytes)` };
-  }
-  const outFile = saveAudioFile(
-    request.outputPath || process.cwd(),
-    request.filename || `mlx_music_${Date.now()}.wav`,
-    res.bytes
-  );
-  return {
-    success: true,
-    path: outFile,
-    model: resolved.model,
-    durationSeconds: request.durationSeconds,
-    elapsedSeconds: Math.round((Date.now() - startedAt) / 1e3)
-  };
-}
-async function generateMlxVideo(request) {
-  const health = await mlxHealth();
-  if (!health.ok) return { success: false, error: health.error };
-  if (videoExceedsMemory(request.width, request.height, request.numFrames)) {
-    return { success: false, error: videoMemoryMessage(request.width, request.height, request.numFrames) };
-  }
-  const resolved = await resolveModel("video", request.model);
-  if (!resolved.ok) return { success: false, error: resolved.error };
-  const body = {
-    prompt: request.prompt,
-    model: resolved.model,
-    width: request.width,
-    height: request.height,
-    num_frames: request.numFrames
-  };
-  if (request.steps !== void 0) body.steps = request.steps;
-  if (request.seed !== void 0) body.seed = request.seed;
-  if (request.pipeline) body.pipeline = request.pipeline;
-  if (request.decoder) body.decoder = request.decoder;
-  if (request.firstFrameImagePath) {
-    const img = fileToBase64(request.firstFrameImagePath);
-    if (!img.ok) return { success: false, error: img.error };
-    body.first_frame_image = img.b64;
-  }
-  if (request.lastFrameImagePath) {
-    const img = fileToBase64(request.lastFrameImagePath);
-    if (!img.ok) return { success: false, error: img.error };
-    body.last_frame_image = img.b64;
-  }
-  const startedAt = Date.now();
-  const res = await requestRaw("post", `${mlxServeUrl()}/v1/video/generations`, authHeaders2(), body, MLX_VIDEO_TIMEOUT_MS);
-  if (!res.ok) {
-    if (isUnreachable(res.status, res.body)) return { success: false, error: mlxDownHint(res.body) };
-    return { success: false, error: translateUpstream(`HTTP ${res.status}: ${res.body}`) };
-  }
-  const parsed = parseVideoResponse(res.body);
-  if ("error" in parsed) return { success: false, error: parsed.error };
-  const outFile = resolveOutputFile(
-    request.outputPath || process.cwd(),
-    request.filename || `mlx_video_${Date.now()}.mp4`,
-    "video"
-  );
-  const muxed = await muxRgbToMp4({
-    rgb: parsed.rgb,
-    width: parsed.width,
-    height: parsed.height,
-    frames: parsed.frames,
-    fps: parsed.fps,
-    audio: parsed.audio,
-    outFile
-  });
-  if (!muxed.ok) return { success: false, error: muxed.error };
-  return {
-    success: true,
-    path: outFile,
-    model: resolved.model,
-    width: parsed.width,
-    height: parsed.height,
-    frames: parsed.frames,
-    fps: parsed.fps,
-    hasAudio: Boolean(parsed.audio),
-    durationSeconds: parsed.frames / parsed.fps,
-    elapsedSeconds: Math.round((Date.now() - startedAt) / 1e3)
-  };
-}
-async function generateMlx3d(request) {
-  const health = await mlxHealth();
-  if (!health.ok) return { success: false, error: health.error };
-  const resolved = await resolveModel("3d", request.model);
-  if (!resolved.ok) return { success: false, error: resolved.error };
-  const img = fileToBase64(request.imagePath);
-  if (!img.ok) return { success: false, error: img.error };
-  const startedAt = Date.now();
-  const res = await requestRaw(
-    "post",
-    `${mlxServeUrl()}/v1/3d/generations`,
-    authHeaders2(),
-    { image: img.b64, model: resolved.model },
-    MLX_MESH_TIMEOUT_MS
-  );
-  if (!res.ok) {
-    if (isUnreachable(res.status, res.body)) return { success: false, error: mlxDownHint(res.body) };
-    return { success: false, error: translateUpstream(`HTTP ${res.status}: ${res.body}`) };
-  }
-  const parsed = parseGlbResponse(res.body);
-  if ("error" in parsed) return { success: false, error: parsed.error };
-  const outFile = saveMediaFile(
-    request.outputPath || process.cwd(),
-    request.filename || `mlx_3d_${Date.now()}.glb`,
-    Buffer.from(parsed.b64, "base64"),
-    "mesh"
-  );
-  return {
-    success: true,
-    path: outFile,
-    model: resolved.model,
-    elapsedSeconds: Math.round((Date.now() - startedAt) / 1e3)
-  };
-}
-
-// src/usage-ledger.ts
 var EPISODE_MARKER = path7.join("storyboard", "scenes.js");
 var MAX_WALK_UP = 6;
 function episodePathArg(args) {
@@ -82269,7 +82390,14 @@ function probeSeconds(file) {
 }
 var num = (v, fallback) => typeof v === "number" && Number.isFinite(v) ? v : fallback;
 var str = (v, fallback) => typeof v === "string" && v ? v : fallback;
-function priceOf(tool, args) {
+function priceOf(tool, args = {}) {
+  if (args.requiredSeconds !== void 0) {
+    try {
+      args = resolveVideoDuration(tool, args).args;
+    } catch (error2) {
+      return { key: null, quantity: null, note: "Invalid duration plan: " + String(error2) };
+    }
+  }
   if (tool.startsWith("veo_")) {
     const tier = VEO_TIER[str(args.model, "veo-3.1-fast-generate-preview")];
     const resolution = str(args.resolution, "720p");
@@ -82296,9 +82424,9 @@ function priceOf(tool, args) {
     };
   }
   if (tool.startsWith("seedance_")) {
-    const model = str(args.model, "seedance-1-5-pro-251215");
+    const model = str(args.model, tool === "seedance_reference" ? "dreamina-seedance-2-0-260128" : "seedance-1-5-pro-251215");
     const resolution = str(args.resolution, "720p");
-    const seconds = num(args.durationSeconds, 5);
+    const seconds = typeof args.frames === "number" ? args.frames / 24 : num(args.durationSeconds, 5);
     const base = model === "seedance-1-5-pro-251215" ? `1-5-pro-${args.generateAudio === true ? "audio" : "silent"}` : SEEDANCE_FAMILY[model];
     if (!base) return { key: null, quantity: seconds, note: `unmapped seedance model: ${model}` };
     const videos = [
@@ -82366,6 +82494,9 @@ function priceOf(tool, args) {
   if (tool === "suno_generate_lyrics") return { key: "music.suno-lyrics", quantity: 1 };
   if (tool === "mlx_music_generate") {
     return { key: "music.mlx", quantity: num(args.durationSeconds, DEFAULT_MLX_MUSIC_SECONDS) };
+  }
+  if (["astra_text2video", "astra_img2video", "astra_keyframe_video", "astra_audio2video"].includes(tool)) {
+    return { key: "video.astra", quantity: num(args.numFrames, 121) / num(args.frameRate, 24), note: "Self-hosted; hardware and wall-clock costs excluded" };
   }
   if (tool === "mlx_video_generate") {
     const frames = num(args.numFrames, DEFAULT_MLX_VIDEO_FRAMES);
@@ -90320,6 +90451,21 @@ Returns: JSON \u2014 { files, violations, warnings, findings: [{ level, where, w
     }
   }
 ];
+for (const tool of TOOLS) {
+  if (!DURATION_TOOLS.includes(tool.name)) continue;
+  tool.inputSchema.properties = { ...tool.inputSchema.properties, requiredSeconds: {
+    type: "number",
+    exclusiveMinimum: 0,
+    description: "Required source coverage in seconds, e.g. 3.2. Include the measured shot body, source trim and outgoing transition handle. Selects the shortest supported duration without changing model/resolution. Mutually exclusive with durationSeconds, numFrames, frames, autoDuration and audioMaxDuration. Use for new shots; exact legacy requests may retain their explicit length. Over-limit shots must be split; never truncated."
+  } };
+  if (tool.name === "seedance_text2video" || tool.name === "seedance_img2video") tool.inputSchema.properties.frames = {
+    type: "integer",
+    minimum: 29,
+    maximum: 289,
+    description: "Exact output frames, 1 mod 4 at 24 fps. Only Seedance 1.0 Pro/Fast. Mutually exclusive with durationSeconds and requiredSeconds. Use requiredSeconds to round upward automatically."
+  };
+  tool.description += "\nFor shot-length optimization, pass requiredSeconds (e.g. 3.2) instead of a fixed duration/frame count. Returns the required/requested/excess seconds as a duration plan; these are not measured output seconds. Do NOT use this option for extending, editing or retaking existing footage.";
+}
 var SNS_PLATFORM_BY_TOOL = {
   threads_publish: "THREADS",
   threads_draft_create: "THREADS",
@@ -97657,7 +97803,7 @@ Billed tokens: ${result.completionTokens.toLocaleString("en-US")} (completion_to
   return `Model: ${result.model}
 Ratio: ${result.ratio}
 Resolution: ${result.resolution}
-Duration: ${result.duration} seconds${tokens}
+Duration: ${result.duration} seconds (${result.durationSource || "provider reported; probe output"})${tokens}
 Task ID: ${result.taskId}`;
 }
 function fromApi(result, note) {
@@ -98410,12 +98556,12 @@ Length is unchanged from the input.`
   //    parse, call, and report. Failures arrive as thrown errors carrying the server's own
   //    message — never the request headers, which is where the key lives.
   astra_text2video: async (args) => {
-    const result = await generateFromText(parseArgs(astraText2VideoSchema, args));
+    const result = await generateFromText2(parseArgs(astraText2VideoSchema, args));
     return text(astraVideoReport("Video generated on the ASTRA video API", result));
   },
   astra_img2video: async (args) => {
     const parsed = parseArgs(astraImg2VideoSchema, args);
-    const result = await generateFromImage(parsed);
+    const result = await generateFromImage2(parsed);
     const frames = parsed.lastFramePath ? `
 Frames: ${parsed.firstFramePath} \u2192 ${parsed.lastFramePath}` : `
 First frame: ${parsed.firstFramePath}`;
@@ -98469,7 +98615,7 @@ Size and length are inherited from the source.`
   // billing basis, not a rate-sheet estimate, so per-episode cost tallies should
   // record this number.
   seedance_text2video: async (args) => {
-    const result = await generateFromText2(parseArgs(seedanceText2VideoSchema, args));
+    const result = await generateFromText(parseArgs(seedanceText2VideoSchema, args));
     if (!result.success) return text(`Seedance video generation failed: ${result.error}`, true);
     return text(`Video generated successfully!
 
@@ -98478,7 +98624,7 @@ ${seedanceMeta(result)}
 Prompt: ${result.prompt}`);
   },
   seedance_img2video: async (args) => {
-    const result = await generateFromImage2(parseArgs(seedanceImg2VideoSchema, args));
+    const result = await generateFromImage(parseArgs(seedanceImg2VideoSchema, args));
     if (!result.success) return text(`Seedance video generation from image failed: ${result.error}`, true);
     const lastImageInfo = result.lastImage ? `
 Last Frame Image: ${result.lastImage}` : "";
@@ -99073,6 +99219,16 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
     return text(JSON.stringify(r2, null, 2));
   }
 };
+for (const name of DURATION_TOOLS) {
+  const generate = ROUTES[name];
+  ROUTES[name] = async (input) => {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return generate(input);
+    const { args, timing } = resolveVideoDuration(name, input);
+    const result = await generate(args);
+    if (timing) result.content.push({ type: "text", text: "Duration plan (requested, not measured): " + JSON.stringify(timing) });
+    return result;
+  };
+}
 
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
@@ -99127,6 +99283,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           quantity,
           ...note ? { note } : {},
           detail: {
+            ...typeof callArgs.requiredSeconds === "number" ? { requiredSeconds: callArgs.requiredSeconds } : {},
             ...typeof callArgs.model === "string" ? { model: callArgs.model } : {},
             ...typeof callArgs.resolution === "string" ? { resolution: callArgs.resolution } : {},
             ...typeof callArgs.durationSeconds === "number" ? { durationSeconds: callArgs.durationSeconds } : {},

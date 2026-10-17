@@ -94,7 +94,7 @@ async function prepare(target, options) {
   const frameRate = video.frameRate ?? 24;
   const seconds = Number(scene.duration);
   if (!Number.isFinite(seconds) || seconds <= 0) throw new Error('Plan a finite positive shot duration');
-  const numFrames = video.numFrames ?? 8 * Math.ceil((seconds * frameRate - 1) / 8) + 1;
+  const numFrames = 8 * Math.ceil((seconds * frameRate - 1) / 8) + 1;
   const common = { prompt: motionPrompt(scene, plan), width, height, frameRate, numFrames,
     ...(video.seed !== undefined ? { seed: video.seed } : {}),
     ...(options.outputPath ? { outputPath: path.resolve(options.outputPath) } : {}),
@@ -121,6 +121,17 @@ async function prepare(target, options) {
   const neededSeconds = Math.max(seconds, audioSeconds || 0, plan.durationSeconds || 0);
   if (requestedSeconds + 1e-6 < neededSeconds)
     throw new Error('Requested frames would truncate the planned action or composed audio; lengthen or recut the shot explicitly');
+  const edit = require('./edit-plan.js').preview(win.SCENES, { videoWarningsApproved: true })
+    .find(row => row.card === win.SCENES.indexOf(scene)) || scene.edit || {};
+  if (onScreen && (edit.in || edit.pre))
+    throw new Error('audio2video requires edit.in=0 and pre=0 so source trimming cannot remove supplied speech; replan the aligned shot explicitly');
+  const coverage = require('../../_shared/video-duration.js').shotTiming(scene,
+    { performanceSeconds: plan.durationSeconds, audioSeconds, edit });
+  const { numFrames: _frames, ...withoutFrames } = args;
+  const optimized = adapter.resolveVideoDuration(tool, { ...withoutFrames, requiredSeconds: coverage.requiredSeconds });
+  args = optimized.args;
+  if (video.numFrames !== undefined && video.numFrames !== args.numFrames)
+    warnings.push('Stored numFrames differs from the optimized request. Refresh previz and quote before submitting a new generation.');
   const digest = value => createHash('sha256').update(value).digest('hex');
   const source = { path: imagePath, sha256: digest(fs.readFileSync(imagePath)), frameIdx: 0,
     role: 'authored_opening', opening: scene.shot?.videoDesign?.before || null };
@@ -130,7 +141,7 @@ async function prepare(target, options) {
   return { shotId: scene.id, boardRevision: response.revision, performanceRevision: plan.performanceRevision,
     tool, arguments: args, source,
     performancePrompt: plan.videoPrompt,
-    continuity: handoff, warnings, requestedSeconds, audioSeconds, review: 'not_reviewed',
+    continuity: handoff, warnings, requestedSeconds: optimized.timing.requestedSeconds, durationPlan: optimized.timing, quote: adapter.priceOf(tool, args), coverage, audioSeconds, review: 'not_reviewed',
     instructions: 'Use these arguments unchanged. References describe state; audio2video submits only the authored opening. Inspect the output, select its trim, capture its actual endpoint, then stage the next opening. No generation was performed.' };
 }
 

@@ -81,6 +81,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     quantity,
                     ...(note ? { note } : {}),
                     detail: {
+                        ...(typeof callArgs.requiredSeconds === 'number'
+                            ? { requiredSeconds: callArgs.requiredSeconds }
+                            : {}),
                         ...(typeof callArgs.model === 'string' ? { model: callArgs.model } : {}),
                         ...(typeof callArgs.resolution === 'string' ? { resolution: callArgs.resolution } : {}),
                         ...(typeof callArgs.durationSeconds === 'number'

@@ -113,3 +113,35 @@ test('on-screen handoff refuses mono or truncated sound without inventing an end
   assert.equal(result.arguments.lastFramePath, undefined);
   assert.ok(result.warnings.some(message => message.includes('no last-image input')));
 });
+
+test('new ASTRA requests discard oversized stored frames and include edit coverage', async t => {
+  const { dir, scene, save } = fixture(t);
+  scene.duration = 3.2;
+  scene.visual.video.numFrames = 193;
+  scene.edit = { in: .5, pre: 0, post: .12 };
+  save();
+  const result = await prepare(dir, { shotId: 's0001' });
+  assert.equal(result.arguments.numFrames, 89);
+  assert.ok(result.requestedSeconds >= 3.7);
+  assert.ok(result.warnings.some(message => message.includes('Stored numFrames')));
+  assert.equal(result.quote.quantity, result.requestedSeconds);
+});
+
+test('audio-conditioned source trim cannot silently remove speech', async t => {
+  const { dir, audio } = fixture(t, true);
+  const file = path.join(dir, 'scenes.js');
+  const win = require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file, 'utf8'));
+  win.SCENES[0].edit = { in: .5 };
+  writeFileSync(file, Object.entries(win).map(([key, value]) => `window.${key}=${JSON.stringify(value)};`).join('\n'));
+  await assert.rejects(prepare(dir, { shotId: 's0001', audioPath: audio }), /source trimming/);
+});
+
+test('measured planner returns final billing quantity after margins cross an integer boundary', async t => {
+  const { dir, scene, audio, save } = fixture(t);
+  scene.duration = 3.9; save();
+  ff(['-f', 'lavfi', '-i', 'sine=frequency=440:duration=3.9', '-ac', '2', audio]);
+  const { plan } = require('../../skills/produce/references/plan-video-duration.js');
+  const result = await plan(dir, { shotId: 's0001', tool: 'seedance_img2video', audioPath: audio });
+  assert.equal(result.arguments.durationSeconds, 5);
+  assert.equal(result.quote.quantity, 5);
+});
