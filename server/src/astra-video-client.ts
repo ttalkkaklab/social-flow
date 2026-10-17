@@ -145,17 +145,22 @@ export const ASTRA_VIDEO_ALLOWED_FIELDS: Record<string, readonly string[]> = Obj
   ]),
 );
 
-/** Client ceilings: generate/guided measured; guided_fast conservative; server rejects all modes above 193. */
+/**
+ * Frame ceilings follow the live server's published limit (`GET /v1/models` → modes[].num_frames.max,
+ * 361 since 2026-10-17); test/fixtures/astra-v1-models.json snapshots it and a test keeps the two equal.
+ * Lengths above 121 are not generation-tested on every mode; the server owns the failure-band gate.
+ */
 export const ASTRA_VIDEO_MIN_FRAMES = 25;
+export const ASTRA_VIDEO_SERVER_MAX_FRAMES = 361;
 export const ASTRA_VIDEO_FRAME_LIMITS = {
-  generate: 193,
-  guided: 121,
-  guided_fast: 121, // Conservative guided-family ceiling; not generation-tested.
-  keyframe: 193, // Server-enforced ceiling.
-  audio2video: 193, // Server-enforced ceiling.
-  guided_hq: 121, // Conservative guided-family ceiling; not generation-tested.
-  ingredients: 121, // Conservative; not generation-tested through this client.
-  ic_lora: 121, // Conservative; not generation-tested.
+  generate: ASTRA_VIDEO_SERVER_MAX_FRAMES,
+  guided: ASTRA_VIDEO_SERVER_MAX_FRAMES,
+  guided_fast: ASTRA_VIDEO_SERVER_MAX_FRAMES,
+  keyframe: ASTRA_VIDEO_SERVER_MAX_FRAMES,
+  audio2video: ASTRA_VIDEO_SERVER_MAX_FRAMES,
+  guided_hq: ASTRA_VIDEO_SERVER_MAX_FRAMES,
+  ingredients: ASTRA_VIDEO_SERVER_MAX_FRAMES,
+  ic_lora: ASTRA_VIDEO_SERVER_MAX_FRAMES,
 } as const;
 export type AstraFrameMode = keyof typeof ASTRA_VIDEO_FRAME_LIMITS;
 export const ASTRA_VIDEO_FRAME_STEP = 8;

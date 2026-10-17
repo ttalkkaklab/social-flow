@@ -104,15 +104,14 @@ to the host lane under an explicit provider choice.
 ([video-model-selection.md](video-model-selection.md) §ASTRA) sends the cut to our LTX-2.5
 server instead of a vendor. It is opt-in per shot and never a default: a call costs no money
 and 66–184s of wall clock, renders one job at a time behind a 20-job queue, and the frame
-ceiling is 193 (`guided`: 121). Use it where the episode can wait; stay on Seedance or Veo
+ceiling is 361 on every mode (the server's `/v1/models` limit; above 121 only some modes and sizes are measured — see the tool's numFrames description). Use it where the episode can wait; stay on Seedance or Veo
 whenever the clip is needed now. The face clauses in ① are unmeasured on this engine — treat
 a photoreal adult face here as unknown rather than permitted, and keep such a cut on Veo.
 Which tool a cut calls is in [full-video.md](full-video.md) §Asset generation step 4.
 
-**Every astra clip comes back with a generated AAC track and no argument turns it off.** The
-board's `generateAudio:false` on this lane is a statement that the episode lays its own
-narration — not a tool argument. Drop or duck the returned track in the edit; a cut that
-expected silence and got none is not a failed generation.
+**Every astra clip comes back with a generated AAC track unless the call passes `generateAudio: false`**,
+which strips it after generation (same render time). Pass it when the board's `generateAudio:false`
+says the episode lays its own narration; otherwise drop or duck the returned track in the edit.
 
 ## Video prompt grammar — it differs by engine
 

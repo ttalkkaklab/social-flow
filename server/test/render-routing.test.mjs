@@ -150,7 +150,9 @@ test('ASTRA previz keeps the exact frame duration instead of rounding up',()=>{
  s.visual.video.previz.seconds=8;assert.match(checkPreviz(s).join(),/match numFrames/);
  s.visual.video.previz.seconds=185/24;s.visual.video.previz.fps=30;assert.match(checkPreviz(s).join(),/match numFrames/);
  s.visual.video.previz.fps=24;s.visual.video.numFrames=184;assert.match(checkPreviz(s).join(),/8k\+1/);
- s.visual.video.numFrames=201;assert.match(checkPreviz(s).join(),/through 193/);
+ s.visual.video.numFrames=361;s.visual.video.previz.seconds=361/24;assert.deepEqual(checkPreviz(s),[]);   // the server ceiling itself passes
+ s.visual.video.numFrames=369;assert.match(checkPreviz(s).join(),/through 361/);
+ s.visual.video.previz.seconds=185/24;
  delete s.visual.video.numFrames;assert.match(checkPreviz(s).join(),/fractional seconds require numFrames/);
 });
 // ── free stock material (scenes-schema §stock material) ──

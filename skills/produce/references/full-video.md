@@ -342,7 +342,7 @@ plan reaches the model; never replace it with a global "static or subtle drift" 
    `1024x1920` for `shorts-9x16`, or `1920x1024` for `youtube-long-16x9`. Both stay on the
    64-pixel grid; the edit scales the short edge to the final 1080-pixel canvas. Also pass
    `numFrames` — not `duration`. Frames sit on the 8k+1 grid at `frameRate` 24, so convert the
-   required source seconds and round **up**: 5s → 121 frames (≈5.04s), 8s → 193 (≈8.04s), ceiling 193. Prefer `requiredSeconds` and follow [video-duration.md](video-duration.md); include source trim and outgoing live handles before rounding.
+   required source seconds and round **up**: 5s → 121 frames (≈5.04s), 8s → 193 (≈8.04s), ceiling 361. Prefer `requiredSeconds` and follow [video-duration.md](video-duration.md); include source trim and outgoing live handles before rounding.
    A cut that has both a first and a last still stays on `astra_img2video` and adds
    `lastFramePath`; `astra_keyframe_video` is for **3–8** stills pinned to frame indices, not for
    a two-frame cut. **A speech cut whose mouth is visible uses `astra_audio2video`** with the

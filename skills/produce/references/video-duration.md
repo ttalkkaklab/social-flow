@@ -42,7 +42,7 @@ legacy durations still work. Extension, edit and retake tools keep their own con
 | Omni text/image | Integer 3–10 seconds | Existing repository live API measurements; [current guide](https://ai.google.dev/gemini-api/docs/omni) does not specify this numeric output range. Keep the measured adapter contract |
 | Seedance 1.5 / 2.0 / 2.5 | Integers 4–12 / 4–15 / 4–30 seconds | [BytePlus task API](https://docs.byteplus.com/en/docs/modelark/create-video-generation-task-api) |
 | Seedance 1.0 Pro/Fast | 29–289 frames, 1 mod 4, at 24 fps; legacy integer seconds 2–12 | Same API, `frames` only on these two models. Prefer upward frame rounding: 2.4 seconds → 61 frames, not vendor's nearest-frame example of 57 |
-| ASTRA default/keyframe/audio | 25–193 frames, 8k+1 | Repository's deployed-service contract, 1–60 fps (24 default); guided/fast cap 121. Not a claim about every LTX deployment |
+| ASTRA (every mode but retake) | 25–361 frames, 8k+1 | Live server's published `/v1/models` limit, 1–60 fps (24 default); above 121 only some modes and sizes are measured. Not a claim about every LTX deployment |
 | MLX video | 9–241 frames, 8k+1 at 24 fps | Bundled local server contract; memory/resolution validation still applies |
 
 Examples: a 3.2-second need requests 4 seconds on Veo 720p, 8 on Veo 1080p,
