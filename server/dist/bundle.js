@@ -64343,6 +64343,655 @@ var require_scenes_vm = __commonJS({
   }
 });
 
+// ../skills/storyboard/references/production-mode.js
+var require_production_mode = __commonJS({
+  "../skills/storyboard/references/production-mode.js"(exports, module) {
+    (function(root) {
+      "use strict";
+      const text2 = (value) => typeof value === "string" && !!value.trim();
+      const CHOICES = ["full_video", "video_80", "video_50", "video_30", "video_lt10", "no_video"];
+      const CUT_TYPES = ["action", "reaction", "insert", "document", "map", "scenery"];
+      const MODES = { full_video: "\uC804\uCCB4 \uC601\uC0C1", video_80: "80% \uC774\uC0C1 \uC601\uC0C1", video_50: "50% \uC774\uC0C1 \uC601\uC0C1", video_30: "30% \uC774\uC0C1 \uC601\uC0C1", video_lt10: "10% \uBBF8\uB9CC \uC601\uC0C1", no_video: "0% \uC601\uC0C1", hook_only: "\uD6C5\uB9CC \uC601\uC0C1 (\uAE30\uC874 \uC2B9\uC778)", stills_only: "\uC815\uC9C0 \uC804\uC6A9 (\uAE30\uC874 \uC2B9\uC778)", hybrid: "\uD63C\uD569 \uC81C\uC791 (\uAE30\uC874 \uC2B9\uC778)" };
+      const RATIOS = { full_video: 1, video_80: 0.8, video_50: 0.5, video_30: 0.3, video_lt10: 0, no_video: 0 };
+      const BANDS = { full_video: [100, 100], video_80: [80, 100], video_50: [50, 80], video_30: [30, 50], video_lt10: [0, 10], no_video: [0, 0] };
+      const ratioMode = (mode) => mode === "hook_only" ? "video_lt10" : mode === "stills_only" ? "no_video" : mode;
+      function ratioBounds(mode, total) {
+        const key = ratioMode(mode), band = BANDS[key];
+        if (!band) return null;
+        const min = Math.ceil(total * band[0] / 100);
+        const max = key === "full_video" ? total : key === "no_video" ? 0 : Math.max(0, Math.ceil(total * band[1] / 100) - 1);
+        return { min, max: Math.max(min, max) };
+      }
+      const videoRender = (scene) => ["generated_video", "stock_video"].includes(scene.shot?.render?.mode);
+      function ratioErrors(win) {
+        const scenes = win.SCENES || [], bounds = ratioBounds(win.PRODUCTION?.mode, scenes.length);
+        if (!bounds) return [];
+        const n = scenes.filter(videoRender).length;
+        const missing = scenes.some((s2) => !s2.shot?.render?.mode);
+        return missing ? ["render ratio requires render.mode on every shot"] : n < bounds.min || n > bounds.max ? [`render ratio requires ${bounds.min}\u2013${bounds.max} video shots of ${scenes.length}; got ${n}`] : [];
+      }
+      const bandContract = (p) => p?.renderRatioVersion === 1 || ["video_80", "video_lt10", "no_video"].includes(p?.mode);
+      const newCut = (scene) => eligible(scene) && !reused(scene) && scene.type !== "broll";
+      const generated = (scene) => !!scene.visual?.video || scene.type === "quote" && typeof scene.visual?.clip === "object";
+      function hookScene(scenes) {
+        return scenes.find((s2) => s2.type === "hooking" || s2.beat === "hooking") || scenes.find((s2) => s2.type === "cover") || scenes.find(newCut);
+      }
+      function coverageErrors(win) {
+        if (bandContract(win.PRODUCTION)) return ratioErrors(win);
+        const key = win.PRODUCTION?.mode, scenes = win.SCENES || [], cuts = scenes.filter(newCut);
+        if (key === "hook_only") {
+          const hook = hookScene(scenes);
+          return hook && newCut(hook) && generated(hook) && cuts.filter(generated).length === 1 ? [] : ["hook_only requires only the opening hook cut to be generated video"];
+        }
+        if (!RATIOS[key]) return [];
+        const minimum = Math.ceil(cuts.length * RATIOS[key]);
+        return cuts.filter(generated).length >= minimum ? [] : [key + " requires at least " + minimum + " of " + cuts.length + " new cuts as generated video"];
+      }
+      const PREVIZ_RENDERERS = { blender: "\uBE14\uB80C\uB354 \uBE0C\uB9BF\uC9C0 \u2014 \uAD00\uC808 \uB9C8\uB124\uD0B9, \uBAA8\uC158 \uCEA1\uCC98", threejs: "three.js \uD398\uC774\uC9C0 \u2014 \uD5E4\uB4DC\uB9AC\uC2A4 \uD06C\uB86C, \uAD00\uC808 \uC5C6\uC74C" };
+      const VIDEO_MODELS = {
+        "seedance-1-5-pro-251215": { label: "Seedance 1.5 Pro", resolutions: ["720p", "1080p"] },
+        "dreamina-seedance-2-0-260128": { label: "Seedance 2.0", resolutions: ["1080p"] },
+        "dreamina-seedance-2-0-fast-260128": { label: "Seedance 2.0 fast", resolutions: ["720p"] },
+        "dreamina-seedance-2-0-mini-260615": { label: "Seedance 2.0 mini", resolutions: ["720p"] },
+        "dreamina-seedance-2-5-260628": { label: "Seedance 2.5", resolutions: ["720p", "1080p"] }
+      };
+      const ASTRA_RESOLUTION = "1024x1920";
+      const ASTRA_WIDE_RESOLUTION = "1920x1024";
+      const astraResolution = (win) => win.FORMAT === "youtube-long-16x9" ? ASTRA_WIDE_RESOLUTION : ASTRA_RESOLUTION;
+      const astraSize = (win) => win.FORMAT === "youtube-long-16x9" ? { source: ASTRA_WIDE_RESOLUTION, edit: "1920x1080" } : { source: ASTRA_RESOLUTION, edit: "1080x1920" };
+      const selectionRecorded = (sel) => sel && ["user", "standing"].includes(sel.kind) && text2(sel.reference);
+      const CAMERA_SLOTS = ["movement", "speed", "framing", "end"];
+      const normalize2 = (value) => String(value || "").toLowerCase().replace(/[\s\p{P}\p{S}]/gu, "");
+      const staticCamera = (camera) => /^(static|fixed|locked)/i.test(String(camera?.movement || "").trim());
+      const missingCameraSlots = (camera) => CAMERA_SLOTS.filter((slot) => !text2(camera?.[slot]) && !(slot === "speed" && staticCamera(camera)));
+      const CAMERA_PRESETS = { "drone-flythrough": { label: "\uB4DC\uB860 \uACBD\uB85C \uBE44\uD589", variants: { cinematic: "\uBD80\uB4DC\uB7EC\uC6B4 \uD56D\uACF5 \uCD2C\uC601", fpv: "\uAE30\uC6B8\uC5B4\uC9C0\uB294 FPV" } } };
+      const CAMERA_VECTOR_SCHEMA = { type: "array", minItems: 3, maxItems: 3, items: { type: "number" }, description: "Local metres [X right, Y forward, Z up], not latitude/longitude." };
+      const CAMERA_INPUT_SCHEMA = {
+        type: "object",
+        additionalProperties: true,
+        description: "Shot camera, independent of the episode visual style. A drone trajectory is authored first; drone-previz.js derives movement, speed, framing and end. Copy those slots back before prompt assembly.",
+        properties: {
+          preset: { type: "string", enum: Object.keys(CAMERA_PRESETS), description: "Optional shot preset. Omit on ordinary camera shots; drone-flythrough is continuous travel through a 3D location." },
+          variant: { type: "string", enum: Object.keys(CAMERA_PRESETS["drone-flythrough"].variants), description: "cinematic keeps the horizon level; fpv uses authored bank at bends. Required with drone-flythrough." },
+          movement: { type: "string", description: "One camera move in vendor vocabulary, chosen from shot.feel (directing-grammar \xA74\u2013\xA75): static \xB7 dolly in/out \xB7 zoom in/out (lens only) \xB7 dolly zoom in/out \xB7 pan left/right \xB7 tilt up/down \xB7 whip pan \xB7 truck left/right \xB7 pedestal up/down \xB7 crane up/down \xB7 arc shot \xB7 tracking \xB7 handheld \xB7 aerial. Not push in, orbit, boom or a Korean word (storyboard_check enforces the vocabulary and the conditions below). A pan, tilt, truck, pedestal or dolly is a sentence from framing to end, so end must differ from framing. A whip pan needs the hit in sound.sfx or visual.audio. A dolly zoom needs shot.depth deep (the background that stretches), a stationary subject, and happens once per episode. For drone shots copy the trajectory-derived value from drone-previz.js." },
+          speed: { type: "string", description: "Movement pace as slow, steady or fast \u2014 never inside movement, never a word the viewer cannot see (very slow, subtle). Empty on static. Generated from the trajectory on drone shots." },
+          framing: { type: "string", description: "Opening composition \u2014 what the camera holds before the move starts (hold in). Generated from the trajectory on drone shots." },
+          end: { type: "string", description: "Closing composition \u2014 where the move settles and holds (hold out); on a pan, tilt, truck, pedestal or dolly it names a different picture from framing. Generated from the trajectory on drone shots." },
+          trajectory: {
+            type: "object",
+            additionalProperties: true,
+            description: "Drone flight plan. Keys cover zero through seconds in increasing order; positions move and targets remain distinct and nonvertical. Render and inspect the interpolated path before generation.",
+            required: ["coordinateSpace", "seconds", "lensMm", "keys"],
+            properties: {
+              coordinateSpace: { type: "string", enum: ["local-meters"], description: "Blender-compatible local coordinates, Z up." },
+              seconds: { type: "integer", minimum: 2, maximum: 30, description: "Whole billed duration. Must match the selected model duration and the previz." },
+              lensMm: { type: "number", minimum: 12, maximum: 50, description: "Fixed focal length for the flight, in millimetres." },
+              keys: {
+                type: "array",
+                minItems: 2,
+                maxItems: 32,
+                description: "Ordered flight waypoints; first at=0, last at=seconds. Intermediate points do not imply stops.",
+                items: { type: "object", additionalProperties: true, required: ["at", "position", "target", "rollDeg", "label"], properties: {
+                  at: { type: "number", minimum: 0, description: "Seconds on the flight timeline; strictly increasing." },
+                  position: CAMERA_VECTOR_SCHEMA,
+                  target: { ...CAMERA_VECTOR_SCHEMA, description: "Point the camera looks toward, in local metres; aim ahead around the bend." },
+                  rollDeg: { type: "number", minimum: -35, maximum: 35, description: "Bank after aiming. cinematic requires 0 at every key; fpv allows \u221235 through 35 degrees." },
+                  label: { type: "string", minLength: 1, description: "English landmark label used in the generated camera prompt." }
+                } }
+              },
+              proxies: {
+                type: "array",
+                minItems: 1,
+                description: "Landmarks and occluders for the previz. May be omitted while drafting, but required by drone-previz.js before rendering. Uses previz-contract.js.",
+                items: { type: "object", additionalProperties: true, required: ["name", "kind", "keys"], properties: {
+                  name: { type: "string", pattern: "^[A-Za-z][A-Za-z0-9_-]{0,31}$", description: "Unique proxy identifier." },
+                  kind: { type: "string", enum: ["person", "box", "cylinder", "sphere", "car"], description: "box needs size; person needs height; cylinder needs radius and height; sphere needs radius; car size is optional." },
+                  color: { type: "string", pattern: "^#[0-9a-fA-F]{6}$", description: "One flat colour per proxy; omit for grey." },
+                  size: { ...CAMERA_VECTOR_SCHEMA, items: { type: "number", exclusiveMinimum: 0 }, description: "Positive dimensions [width, depth, height] in metres." },
+                  height: { type: "number", exclusiveMinimum: 0, description: "Proxy height in metres." },
+                  radius: { type: "number", exclusiveMinimum: 0, description: "Cylinder or sphere radius in metres." },
+                  keys: { type: "array", minItems: 1, description: "Proxy poses at 1-based frames; a static landmark uses one key.", items: { type: "object", additionalProperties: true, required: ["frame", "position"], properties: {
+                    frame: { type: "integer", minimum: 1, description: "1-based previz frame at 24 fps; a static proxy uses frame 1." },
+                    position: CAMERA_VECTOR_SCHEMA,
+                    rotationZDeg: { type: "number", description: "Proxy rotation around world Z, in degrees." }
+                  } } }
+                } }
+              }
+            }
+          }
+        },
+        allOf: [
+          { if: { required: ["preset"], properties: { preset: { const: "drone-flythrough" } } }, then: { required: ["variant", "trajectory"] } },
+          { if: { required: ["variant"], properties: { variant: { const: "cinematic" } } }, then: { properties: { trajectory: { properties: { keys: { items: { properties: { rollDeg: { const: 0 } } } } } } } } },
+          { if: { required: ["trajectory"] }, then: { required: ["preset"] } },
+          { if: { required: ["variant"] }, then: { required: ["preset"] } }
+        ]
+      };
+      function cameraInputErrors(camera) {
+        if (!camera || typeof camera !== "object" || Array.isArray(camera)) return ["camera must be an object"];
+        const errors = [];
+        for (const slot of CAMERA_SLOTS) if (camera[slot] !== void 0 && typeof camera[slot] !== "string") errors.push(slot + " must be text");
+        if (camera.preset !== void 0 && !Object.keys(CAMERA_PRESETS).includes(camera.preset)) errors.push("unknown camera preset");
+        if (camera.variant !== void 0 && !Object.keys(CAMERA_PRESETS["drone-flythrough"].variants).includes(camera.variant)) errors.push("unknown drone variant");
+        if ((camera.variant !== void 0 || camera.trajectory !== void 0) && !isDrone(camera)) errors.push("variant and trajectory require preset drone-flythrough");
+        return errors.concat(droneErrors(camera));
+      }
+      const isDrone = (camera) => camera?.preset === "drone-flythrough";
+      const vec32 = (v) => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite);
+      function droneErrors(camera) {
+        if (!isDrone(camera)) return camera?.trajectory ? ["trajectory requires preset drone-flythrough"] : [];
+        const e2 = [], t2 = camera.trajectory;
+        if (!CAMERA_PRESETS["drone-flythrough"].variants[camera.variant]) e2.push("drone variant must be cinematic or fpv");
+        if (!t2 || t2.coordinateSpace !== "local-meters") return e2.concat("drone trajectory needs local-meters coordinates (Z up)");
+        if (!Number.isInteger(t2.seconds) || t2.seconds < 2 || t2.seconds > 30) e2.push("drone trajectory.seconds must be 2\u201330 whole billed seconds");
+        if (!Number.isFinite(t2.lensMm) || t2.lensMm < 12 || t2.lensMm > 50) e2.push("drone lensMm must be 12\u201350");
+        if (!Array.isArray(t2.keys) || t2.keys.length < 2 || t2.keys.length > 32) return e2.concat("drone trajectory needs 2\u201332 ordered keys");
+        t2.keys.forEach((k, i2) => {
+          if (!k || !Number.isFinite(k.at) || k.at < 0 || k.at > t2.seconds || i2 && k.at <= t2.keys[i2 - 1]?.at) e2.push("drone key times must be finite, increasing and inside seconds");
+          if (!vec32(k?.position) || !vec32(k?.target)) e2.push("drone key needs position and target [x,y,z]");
+          else {
+            if (k.position.every((v, j) => v === k.target[j])) e2.push("drone target must differ from position");
+            if (Math.hypot(k.position[0] - k.target[0], k.position[1] - k.target[1]) < 0.01) e2.push("drone target must not point vertically (unstable horizon)");
+            if (i2 && vec32(t2.keys[i2 - 1]?.position) && k.position.every((v, j) => v === t2.keys[i2 - 1].position[j])) e2.push("drone consecutive positions must move");
+          }
+          if (!Number.isFinite(k?.rollDeg) || Math.abs(k.rollDeg) > (camera.variant === "cinematic" ? 0 : 35)) e2.push("drone rollDeg must be 0 for cinematic, or within \xB135 for fpv");
+          if (!text2(k?.label)) e2.push("drone keys need English landmark labels for framing and prompts");
+        });
+        if (t2.keys[0]?.at !== 0 || t2.keys[t2.keys.length - 1]?.at !== t2.seconds) e2.push("drone keys must cover 0 through trajectory.seconds");
+        return e2;
+      }
+      function droneSample(camera, at) {
+        const keys = camera.trajectory.keys;
+        let i2 = 0;
+        while (i2 < keys.length - 2 && at > keys[i2 + 1].at) i2++;
+        const a = keys[i2], b = keys[i2 + 1], dt = b.at - a.at, u = Math.max(0, Math.min(1, (at - a.at) / dt));
+        const tangent = (j, f3, axis) => {
+          const lo = keys[Math.max(0, j - 1)], hi = keys[Math.min(keys.length - 1, j + 1)];
+          return (hi[f3][axis] - lo[f3][axis]) / (hi.at - lo.at);
+        };
+        const out = {};
+        for (const f3 of ["position", "target"]) out[f3] = a[f3].map((v, j) => (2 * u ** 3 - 3 * u * u + 1) * v + (u ** 3 - 2 * u * u + u) * dt * tangent(i2, f3, j) + (-2 * u ** 3 + 3 * u * u) * b[f3][j] + (u ** 3 - u * u) * dt * tangent(i2 + 1, f3, j));
+        out.rollDeg = a.rollDeg + (b.rollDeg - a.rollDeg) * (u * u * (3 - 2 * u));
+        return out;
+      }
+      function droneSlots(camera) {
+        const e2 = droneErrors(camera);
+        if (e2.length) throw new Error(e2.join("; "));
+        const t2 = camera.trajectory, keys = t2.keys, at = (v) => v.map((n) => Number(n.toFixed(2))).join(", ");
+        return {
+          movement: "drone fly-through following " + keys.map((k) => k.label + " at (" + at(k.position) + ") metres looking toward (" + at(k.target) + ") with bank " + k.rollDeg + " degrees").join(" then ") + (camera.variant === "fpv" ? "; bank with the planned turns" : "; keep a level horizon"),
+          speed: "steady forward travel with continuous waypoint transitions",
+          framing: "Wide aerial view toward " + keys[0].label + "; camera at (" + at(keys[0].position) + ") metres, looking at (" + at(keys[0].target) + "), " + t2.lensMm + " mm lens",
+          end: "Arrive at " + keys[keys.length - 1].label + "; camera at (" + at(keys[keys.length - 1].position) + ") metres, looking at (" + at(keys[keys.length - 1].target) + ")"
+        };
+      }
+      function droneBinding(camera) {
+        return JSON.stringify({ preset: camera.preset, variant: camera.variant, trajectory: camera.trajectory });
+      }
+      function droneCameraKeys(camera, fps = 24) {
+        const e2 = droneErrors(camera);
+        if (e2.length) throw new Error(e2.join("; "));
+        if (!Number.isInteger(fps) || fps < 24 || fps > 60) throw new Error("drone fps must be 24\u201360");
+        const last = camera.trajectory.seconds * fps, stride = Math.ceil(last / 480), frames = [];
+        for (let frame = 1; frame < last; frame += stride) frames.push(frame);
+        frames.push(last);
+        return { lensMm: camera.trajectory.lensMm, keys: frames.map((frame) => {
+          const s2 = droneSample(camera, (frame - 1) / (last - 1) * camera.trajectory.seconds);
+          if (Math.hypot(s2.position[0] - s2.target[0], s2.position[1] - s2.target[1]) < 0.01) throw new Error("drone spline crosses a vertical or coincident target; adjust waypoints");
+          return { frame, ...s2 };
+        }) };
+      }
+      function droneSceneErrors(scene, { draft = false, advice = [] } = {}) {
+        const c = scene.visual?.camera;
+        if (!isDrone(c)) return droneErrors(c);
+        const e2 = droneErrors(c), r2 = scene.shot?.render, d = scene.shot?.videoDesign;
+        if (r2?.mode !== "generated_video" || !["place", "live_action"].includes(r2?.purpose)) e2.push("drone-flythrough requires generated_video with purpose place or live_action");
+        if (r2?.motionEssential !== true || !text2(r2?.whyNotStill)) advice.push("drone-flythrough needs motionEssential and whyNotStill, including in full_video");
+        if (d?.motion?.kind !== "spatial_reveal" || !text2(d.motion.visibleChange) || !text2(d.motion.reason)) advice.push("drone-flythrough needs a justified spatial_reveal with visibleChange");
+        if (["arcade", "papercut", "inkwash"].includes(d?.look)) advice.push("drone-flythrough needs a volumetric look; flat arcade, paper-cutout and ink-wash are incompatible");
+        if (!e2.length) {
+          const slots = droneSlots(c);
+          for (const k of CAMERA_SLOTS) if (c[k] !== slots[k]) e2.push("drone visual.camera." + k + " is stale; regenerate it from the trajectory");
+          if (!draft) {
+            const p = scene.visual?.video?.previz;
+            if (p?.camera?.trajectoryBinding !== droneBinding(c)) e2.push("drone previz trajectoryBinding is missing or stale; rebuild the previz");
+            if (p?.seconds !== c.trajectory.seconds) e2.push("drone previz seconds differ from trajectory.seconds");
+            if (Number.isFinite(scene.duration) && scene.duration > c.trajectory.seconds) e2.push("drone clip is shorter than its scene");
+          }
+        }
+        return e2;
+      }
+      const NEUTERED = /\b(?:very|extremely|almost|ever so)\s+(?:slow|slight|small|subtle|gentle)|\b(?:barely|hardly|imperceptibl[ey]|subtle|subtly|tiny|minimal|micro|slight|slightly|gentle|gently|restrained|quiet)\b|\bhold(?:ing)?\s+(?:the\s+)?(?:composition|frame|shot)\b|\block(?:ed)?[- ]off\b|\bbreathing only\b/i;
+      const WIDE = /\b(?:wide|establishing|extreme long|long shot|full[- ]body figures|small figures)\b/i;
+      const MOVES = [
+        { key: "static", family: "static", re: /^(?:static|fixed|locked(?:[- ]off)?)(?:\s+camera)?\b/i },
+        { key: "dolly zoom", family: "dollyzoom", re: /^dolly zoom(?:\s+(in|out))?\b/i },
+        { key: "dolly", family: "travel", re: /^dolly (?:in|out)\b/i },
+        { key: "zoom", family: "lens", re: /^zoom (?:in|out)\b/i },
+        { key: "whip pan", family: "whip", re: /^whip pan\b/i },
+        { key: "pan", family: "rotate", re: /^pan(?:\s+(?:left|right))?\b/i },
+        { key: "tilt", family: "rotate", re: /^tilt (?:up|down)\b/i },
+        { key: "truck", family: "travel", re: /^truck(?:\s+(?:left|right))?\b/i },
+        { key: "pedestal", family: "height", re: /^pedestal (?:up|down)\b/i },
+        { key: "crane", family: "height", re: /^crane (?:up|down)\b/i },
+        // arc and tracking hold one framing while the world moves past — no A/B rule, no hold phrase.
+        { key: "arc shot", family: "follow", re: /^arc shot\b/i },
+        { key: "tracking", family: "follow", re: /^tracking\b/i },
+        { key: "handheld", family: "viewpoint", re: /^(?:handheld|shaky cam)\b/i },
+        { key: "aerial", family: "aerial", re: /^(?:aerial|drone)\b/i }
+      ];
+      const MOVE_WORDS = "static, dolly in/out, zoom in/out, dolly zoom in/out, pan left/right, tilt up/down, whip pan, truck left/right, pedestal up/down, crane up/down, arc shot, tracking, handheld, aerial";
+      const SYNONYMS = [
+        [/\bpush(?:ing)?[ -]?in\b/i, "dolly in"],
+        [/\bpull[ -]?(?:back|out)\b/i, "dolly out"],
+        [/\borbit(?:ing)?\b/i, "arc shot"],
+        [/\bboom (?:up|down)\b/i, "pedestal up/down"],
+        [/\bcrab\b/i, "truck left/right"],
+        [/\b(?:zolly|vertigo(?: effect)?|contra[- ]zoom|trombone shot)\b/i, "dolly zoom in/out"],
+        [/\bswish pan\b/i, "whip pan"],
+        [/팬|패닝/, "pan left/right"],
+        [/틸트/, "tilt up/down"],
+        [/달리/, "dolly in/out"],
+        [/트럭/, "truck left/right"],
+        [/트래킹|따라가/, "tracking"],
+        [/휩|스윕/, "whip pan"],
+        [/페데스탈|붐/, "pedestal up/down"]
+      ];
+      const moveOf = (camera) => MOVES.find((m2) => m2.re.test(String(camera?.movement || "").trim())) || null;
+      const TRAVELS = ["rotate", "travel", "height", "lens", "dollyzoom"];
+      const travels = (camera) => {
+        const m2 = moveOf(camera);
+        return !!m2 && TRAVELS.includes(m2.family);
+      };
+      function moveErrors(scene) {
+        const v = scene.visual || {}, camera = v.camera || {}, errors = [];
+        if (isDrone(camera) || !text2(camera.movement)) return errors;
+        const written = String(camera.movement).trim();
+        const pace = /^(?:very\s+)?(?:slow|steady|fast|quick|rapid)(?:ly)?\s+/i.exec(written);
+        const movement = pace ? written.slice(pace[0].length) : written, move = moveOf({ movement });
+        if (pace) errors.push(`visual.camera.movement "${written}" carries the pace \u2014 the pace lives in visual.camera.speed; write "${movement}"`);
+        if (!move) {
+          const hint = SYNONYMS.find(([re]) => re.test(movement));
+          errors.push(`visual.camera.movement "${written}" is not a vendor move` + (hint ? ` \u2014 write "${hint[1]}"` : ` \u2014 open with one of ${MOVE_WORDS}`) + " (directing-grammar \xA74)");
+          return errors;
+        }
+        if (travels({ movement }) && text2(camera.framing) && text2(camera.end) && normalize2(camera.framing) === normalize2(camera.end))
+          errors.push(`a ${move.key} that starts and ends on "${camera.framing}" has nowhere to go \u2014 write what the camera settles on in visual.camera.end, or choose static`);
+        if (move.family === "whip" && !text2(scene.sound?.sfx) && !text2(v.audio))
+          errors.push("a whip pan lands on a sound \u2014 write the hit in sound.sfx (or the whoosh in visual.audio) on this shot");
+        if (move.family === "dollyzoom") {
+          if (!/^dolly zoom (?:in|out)\b/i.test(movement))
+            errors.push('a dolly zoom names its direction \u2014 "dolly zoom in" (camera in, lens out: the world backs away, isolation) or "dolly zoom out" (camera out, lens in: the background closes in, cornered)');
+          const depth = scene.shot?.depth;
+          if (depth?.mode !== "deep" || !Array.isArray(depth.planes) || depth.planes.length < 2)
+            errors.push("a dolly zoom is something that happens to the background \u2014 write shot.depth deep with the planes that stretch (a corridor, columns, a row of cars); in front of a plain wall nothing happens");
+          const travel = scene.shot?.composition?.movement;
+          if (travel && travel !== "stationary")
+            errors.push(`a dolly zoom holds the subject's size, so the subject stands still \u2014 shot.composition.movement is "${travel}"`);
+        }
+        return errors;
+      }
+      function cameraWarnings(scene) {
+        const camera = scene.visual?.camera || {}, move = moveOf(camera), warnings = [], d = scene.duration;
+        if (!move || isDrone(camera)) return warnings;
+        if (move.family === "dollyzoom" && Number.isFinite(d) && d > 5)
+          warnings.push(`a dolly zoom is one hit, 3\u20135 s (directing-grammar \xA75); this cut runs ${d} s \u2014 the viewer sees the trick before the feeling lands`);
+        if (move.family === "whip" && Number.isFinite(d) && d > 4)
+          warnings.push(`a whip pan is a transition, 3\u20134 s (directing-grammar \xA75); this cut runs ${d} s`);
+        if (move.family === "rotate" && /\bfast\b/i.test(String(camera.speed || "")))
+          warnings.push(`a fast ${move.key} strobes at 24 fps when the background holds vertical lines (posts, window frames); if it reads broken, widen the framing and come closer rather than slowing down (L13)`);
+        return warnings;
+      }
+      function episodeMoveErrors(scenes) {
+        const at = (scenes || []).map((s2, i2) => eligible(s2) && !reused(s2) && s2.visual?.video && moveOf(s2.visual?.camera)?.family === "dollyzoom" ? i2 + 1 : 0).filter(Boolean);
+        return at.length > 1 ? [`[dolly-zoom-twice] shots ${at.join(", ")} each ask for a dolly zoom \u2014 it is spent once per episode (directing-grammar \xA74); keep the shot where the world turns over, and write another move on the rest`] : [];
+      }
+      function cameraErrors(scene, { advice = [] } = {}) {
+        const v = scene.visual || {}, camera = v.camera || {}, errors = droneSceneErrors(scene, { advice });
+        const span = [camera.movement, camera.speed].filter(text2).join(" ");
+        const hit = NEUTERED.exec(span);
+        if (hit) advice.push(`visual.camera asks for a move the viewer cannot see ("${hit[0]}"); write a visible move at slow, steady or fast, or choose static`);
+        if (v.video?.cameraFixed === true && !staticCamera(camera))
+          errors.push(`visual.video.cameraFixed locks the provider camera while visual.camera.movement is "${camera.movement}"; drop cameraFixed or write static`);
+        advice.push(...moveErrors(scene));
+        return errors;
+      }
+      function finalState(design) {
+        const beats = design?.motion?.kind === "subject_action" ? design.motion.beats : null;
+        return Array.isArray(beats) && beats.length ? beats[beats.length - 1]?.state : design?.after;
+      }
+      const STYLES = {
+        "cinematic-miniature": {
+          label: "\uC2DC\uB124\uB9C8\uD2F1 \uBBF8\uB2C8\uC5B4\uCC98 \uB514\uC624\uB77C\uB9C8",
+          looks: ["miniature", "architectural"],
+          prompt: "Cinematic miniature diorama, tactile matte handcrafted surfaces, articulated miniature figures, coherent scale and soft contact shadows."
+        },
+        "photoreal": {
+          label: "\uC644\uC804 \uC2E4\uC0AC\uD48D",
+          looks: ["realistic"],
+          prompt: "Photoreal live-action cinematography: life-size human proportions, natural skin and fabric texture, real locations, physically plausible light and photographic lenses; every surface reads as a real material at real scale."
+        },
+        "webtoon": {
+          label: "\uC6F9\uD230\uD48D",
+          looks: ["webtoon"],
+          prompt: "Korean webtoon illustration: consistent expressive character linework, clean contour lines, controlled cel shading, illustrated backgrounds and a coherent drawn palette; skin and cloth are drawn, and the frame is one unbroken picture."
+        },
+        // Added 2026-09-08 from the Shorts style survey (docs/research/2026-09-08-shorts-visual-styles).
+        // Named studios and living artists stay out of every prompt: the image lane refuses them.
+        "claymation": {
+          label: "\uD074\uB808\uC774 \uC2A4\uD1B1\uBAA8\uC158",
+          looks: ["clay"],
+          prompt: "Stop-motion claymation: matte plasticine figures and sets with visible thumbprints and slight surface imperfections, chunky simplified forms, handcrafted miniature props, warm tactile studio light and soft contact shadows; the whole frame is one sculpted scene photographed on a set."
+        },
+        "paper-cutout": {
+          label: "\uC885\uC774 \uCEF7\uC544\uC6C3 \uB514\uC624\uB77C\uB9C8",
+          looks: ["papercut"],
+          prompt: "Layered paper-cut diorama: every figure, prop and backdrop is a flat cut-paper shape with visible fibre edges, stacked in separated depth layers with soft cast shadows between the layers, a muted paper palette, simple readable silhouettes and a shallow theatre-stage depth."
+        },
+        "ink-wash": {
+          label: "\uC218\uBB35\uD654",
+          looks: ["inkwash"],
+          prompt: "East Asian ink-wash painting: confident brushed black ink lines with wet-on-wet grey gradients on pale rice-paper texture, generous empty space, one restrained mineral accent colour, figures and places drawn in calligraphic strokes; the frame stays one painted picture."
+        },
+        "toon-3d": {
+          label: "3D \uCE74\uD230 \uCE90\uB9AD\uD130",
+          looks: ["toon3d"],
+          prompt: "Stylised 3D cartoon animation: appealing characters with large expressive eyes and simplified rounded proportions, soft subsurface skin, clean material shaders on props and sets, warm rim light and cinematic depth of field, rendered like a feature-animation frame."
+        },
+        // Added 2026-09-09 from a user reference: a 1990s hand-painted arcade fighting/action game frame.
+        // The game HUD (health bars, portraits, player names) is not part of the generated picture:
+        // the image lane garbles lettering, generated video warps a static overlay, and nothing is drawn over video.
+        "arcade-2d": {
+          label: "\uC544\uCF00\uC774\uB4DC \uAC8C\uC784 \uD654\uBA74",
+          looks: ["arcade"],
+          prompt: "Hand-painted 1990s arcade game art: characters as large painted sprites with bold dark outlines, exaggerated heroic proportions and saturated colours with hard cel highlights, staged side-on in front of layered parallax backgrounds (painted foreground props, a mid-ground set, a distant painted backdrop), slightly grainy CRT-era colour and a wide stage read; the whole frame is one painted game scene and the picture holds only the stage and its characters, every frame edge kept as painted scenery."
+        }
+      };
+      const packPresets = ["cinematic-miniature", "spatial-explainer"];
+      const ALL_LOOKS = ["archive", ...new Set(Object.values(STYLES).flatMap((s2) => s2.looks))];
+      const SHOT_STYLE_KEYS = ["preset", "reason", "selection", "materials", "palette", "lighting"];
+      function shotStyle(win, index) {
+        const base = win.PRODUCTION?.style || {}, o = win.SCENES?.[index]?.shot?.style;
+        if (!o || typeof o !== "object" || !text2(o.preset)) return { ...base, override: false };
+        const own = Object.fromEntries(["materials", "palette", "lighting"].filter((k) => text2(o[k])).map((k) => [k, o[k]]));
+        return { ...base, ...own, preset: o.preset, override: true, reason: o.reason, selection: o.selection };
+      }
+      function shotStyleErrors(scene, index, { advice = [] } = {}) {
+        const o = scene?.shot?.style, tag = "[shot-style] shot " + (index + 1) + ": ";
+        if (o === void 0) return [];
+        const errors = [];
+        if (!o || typeof o !== "object" || Array.isArray(o)) return [tag + "shot.style must be an object with preset, reason and selection"];
+        if (!STYLES[o.preset]) errors.push(tag + "shot.style.preset must be one of " + Object.keys(STYLES).join(", "));
+        if (!text2(o.reason)) advice.push(tag + "shot.style.reason states why this picture needs another preset than the episode");
+        if (!(o.selection && o.selection.kind === "user" && text2(o.selection.reference)))
+          advice.push(tag + `a per-shot style leaves the episode style only on the user's HITL approval; record it in shot.style.selection { kind: "user", reference }`);
+        Object.keys(o).filter((k) => !SHOT_STYLE_KEYS.includes(k)).forEach((k) => errors.push(tag + "shot.style." + k + " is not a shot-level field (world and camera language stay episode constants)"));
+        return errors;
+      }
+      function reused(scene) {
+        return scene.visual?.reuse !== void 0;
+      }
+      function videoCap(win, given) {
+        const policy2 = win.MOTION_POLICY || {};
+        const raw = given !== void 0 ? given : policy2.generatedVideoMax !== void 0 ? policy2.generatedVideoMax : policy2.generated_video_max;
+        return raw === void 0 || raw === null || raw === "" ? null : Number(raw);
+      }
+      function reuseErrors(scene) {
+        if (!reused(scene)) return [];
+        const v = scene.visual || {}, r2 = v.reuse, errors = [];
+        if (!r2 || typeof r2 !== "object" || Array.isArray(r2)) return ["visual.reuse must be an imported clip record"];
+        const local = (file) => text2(file) && !/^[a-z][a-z0-9+.-]*:|^\/\//i.test(file) && !/[\t\r\n|]/.test(file);
+        if (!local(r2.clip) || !/\.(mp4|mov|m4v|webm)$/i.test(r2.clip)) errors.push("visual.reuse.clip must be a local, already trimmed file path");
+        if (!/^[a-f0-9]{64}$/.test(r2.sha256 || "")) errors.push("visual.reuse.sha256 must identify the imported file bytes");
+        if (!text2(r2.sourceEpisode)) errors.push("visual.reuse.sourceEpisode must identify the original generated episode");
+        const range = r2.sourceRange;
+        if (!range || !Number.isFinite(range.start) || !Number.isFinite(range.end) || range.start < 0 || range.end <= range.start || !Number.isFinite(scene.duration) || scene.duration <= 0 || Math.abs(range.end - range.start - scene.duration) > 1e-3)
+          errors.push("visual.reuse.sourceRange must give original start/end seconds spanning exactly scene.duration");
+        if (v.video !== void 0 || v.clip !== void 0 || v.source !== void 0 || v.slide !== void 0 || v.renderedFile !== void 0 || v.engine !== void 0 || v.prompt !== void 0 || v.bgPrompt !== void 0 || v.bg !== void 0 || ["broll", "quote", "outro"].includes(scene.type))
+          errors.push("A reused clip cannot also declare a generation, recording, slide or alternate file handoff");
+        if (v.picture !== "ai-video" || v.overlay !== "none") errors.push("Reused generated clips keep picture:ai-video and overlay:none");
+        if (scene.title || scene.stat || (scene.bullets || []).length || scene.footnote)
+          errors.push("Reused video allows subtitles only; clear title, stat, bullets and footnote");
+        return errors;
+      }
+      function eligible(scene) {
+        const v = scene.visual || {};
+        return scene.type !== "outro" && !(!reused(scene) && !v.video && (["recording", "screencast"].includes(v.source) || v.picture === "recording" || v.source === "stock" && typeof v.clip === "string"));
+      }
+      function full(production) {
+        return production?.mode === "full_video";
+      }
+      function signature(win) {
+        const p = win.PRODUCTION || {};
+        return JSON.stringify({
+          format: win.FORMAT,
+          mode: p.mode,
+          ...p.renderRatioVersion !== void 0 ? { renderRatioVersion: p.renderRatioVersion } : {},
+          imageProvider: p.imageProvider,
+          videoProvider: p.videoProvider,
+          videoBudgetUsd: p.videoBudgetUsd,
+          maxAttempts: p.maxAttempts,
+          generationRevision: p.generationRevision,
+          comparison: p.comparison,
+          style: p.style,
+          cast: p.cast,
+          scenes: (win.SCENES || []).filter(eligible).map((s2) => {
+            const v = s2.visual || {}, video = { ...v.video };
+            delete video.clip;
+            return {
+              type: s2.type,
+              duration: s2.duration,
+              narration: s2.narration,
+              ...reused(s2) ? { reuse: v.reuse } : {},
+              render: s2.shot?.render,
+              design: s2.shot?.videoDesign,
+              cutType: s2.shot?.cutType,
+              frames: v.frames,
+              imagePair: v.imagePair,
+              styleRole: v.styleRole,
+              stylePack: v.stylePack,
+              bg: v.bg,
+              bgPrompt: v.bgPrompt,
+              camera: v.camera,
+              action: v.action,
+              video,
+              engine: v.engine,
+              prompt: v.prompt,
+              clip: typeof v.clip === "object" ? v.clip : void 0,
+              source: v.source,
+              license: v.license,
+              file: typeof v.clip === "string" ? v.clip : void 0
+            };
+          })
+        });
+      }
+      function motionErrors(scene) {
+        const d = scene.shot?.videoDesign || {}, m2 = d.motion, errors = [];
+        if (!m2 || !["subject_action", "spatial_reveal", "archive_hold"].includes(m2.kind))
+          return ["videoDesign.motion.kind must be subject_action, spatial_reveal or archive_hold"];
+        for (const key of ["subject", "visibleChange"])
+          if (!text2(m2[key])) errors.push("videoDesign.motion." + key + " is required");
+        if (m2.kind === "archive_hold" && d.look !== "archive") errors.push("archive_hold is only for archival evidence");
+        if (m2.kind !== "subject_action" && !text2(m2.reason)) errors.push("Camera-only or archival shots need an explicit motion.reason");
+        if (["character", "interaction"].includes(scene.visual?.styleRole) && d.look !== "archive" && m2.kind !== "subject_action")
+          errors.push("Character and interaction shots require subject_action, not a camera-only reveal");
+        if (m2.kind === "subject_action") {
+          const beats = m2.beats;
+          if (!Array.isArray(beats) || beats.length < 2 || beats.some((b) => !b || !Number.isFinite(b.at) || b.at < 0 || b.at > scene.duration || !text2(b.state)) || beats.some((b, i2) => i2 && b.at <= beats[i2 - 1].at) || new Set(beats.map((b) => b.state?.trim())).size < 2)
+            errors.push("Subject action needs distinct, ordered motion.beats with seconds and visible states within the shot");
+          else if (text2(d.after) && normalize2(d.after) !== normalize2(beats[beats.length - 1].state))
+            errors.push("videoDesign.after must be the last motion beat, written once; drop after or make the two identical");
+          const directions = [d.action, d.continuity, scene.visual?.video?.prompt].join(" ");
+          if (/keep (?:every|all) (?:person|people|characters?).{0,40}fixed|(?:people|women|characters?) (?:and door )?(?:stay|remain) fixed|only (?:very )?(?:small|subtle) (?:natural )?breathing|no new text, objects or actions/i.test(directions))
+            errors.push("Subject action contradicts a global freeze or breathing-only instruction");
+        }
+        return errors;
+      }
+      function check2(win, { requireSelection = false, requireApproval = false, draft = false, generatedVideoMax, advice = [] } = {}) {
+        const p = win.PRODUCTION, errors = Array.from(win.SCENES || []).flatMap((s2, i2) => reuseErrors(s2).map((e2) => `shot ${i2 + 1}: ${e2}`));
+        if (!p) return requireSelection || (win.SCENES || []).some(reused) ? errors.concat(["Choose a production mode with a six-option cost comparison before generation"]) : errors;
+        if (!MODES[p.mode]) errors.push("PRODUCTION.mode must be one of " + CHOICES.join(", ") + " (hook_only, stills_only and hybrid are legacy)");
+        if (p.renderRatioVersion !== void 0 && p.renderRatioVersion !== 1) errors.push("renderRatioVersion must be 1");
+        if (bandContract(p) && (win.SCENES || []).every((s2) => s2.shot?.render?.mode)) errors.push(...ratioErrors(win));
+        if (p.imageProvider !== void 0 && !["host", "api"].includes(p.imageProvider)) errors.push("PRODUCTION.imageProvider must be host or api");
+        if (p.videoProvider !== void 0 && !["host", "api", "astra"].includes(p.videoProvider)) errors.push("PRODUCTION.videoProvider must be host, api or astra");
+        if (!Number.isFinite(p.videoBudgetUsd) || p.videoBudgetUsd < 0)
+          errors.push("PRODUCTION.videoBudgetUsd must be a finite nonnegative episode cap");
+        if (!Number.isInteger(p.maxAttempts) || p.maxAttempts < 1 || p.maxAttempts > 5)
+          errors.push("PRODUCTION.maxAttempts must be 1\u20135 total attempts per clip (including the first)");
+        if (requireApproval && p.mode !== "stills_only" && (!p.approval || !["user", "standing"].includes(p.approval.kind) || !text2(p.approval.reference) || !Number.isFinite(Date.parse(p.approval.at)) || !text2(p.approval.quoteFingerprint)))
+          errors.push("PRODUCTION.approval needs kind, reference, at and the approved cost quoteFingerprint");
+        const chosen = p.style?.preset;
+        if (!chosen) advice.push("Choose an episode visual style (PRODUCTION.style.preset) before authoring; every production mode carries one");
+        else if (chosen !== "spatial-explainer" && !STYLES[chosen]) errors.push("Unknown PRODUCTION.style.preset");
+        if (STYLES[chosen] && (!["user", "standing"].includes(p.style.selection?.kind) || !text2(p.style.selection?.reference))) advice.push("Record the actual style HITL choice in PRODUCTION.style.selection");
+        if (STYLES[chosen] && !packPresets.includes(chosen) && p.style.referencePack)
+          errors.push("Only cinematic-miniature carries the miniature reference pack; drop referencePack for " + chosen);
+        if (p.cast !== void 0) {
+          if (!p.cast || typeof p.cast !== "object" || Array.isArray(p.cast)) errors.push("[cast-sheet] PRODUCTION.cast must be an object keyed by character id");
+          else Object.entries(p.cast).forEach(([id, entry]) => {
+            if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+              errors.push("[cast-sheet] PRODUCTION.cast." + id + " must be an object with name and sheet");
+              return;
+            }
+            if (!text2(entry.name)) errors.push("[cast-sheet] PRODUCTION.cast." + id + ".name is required");
+            if (!text2(entry.sheet)) errors.push("[cast-sheet] PRODUCTION.cast." + id + ".sheet is required");
+            if (entry.image !== void 0 && (!text2(entry.image) || /^[a-z][a-z0-9+.-]*:|^\/|^\\|(?:^|[\\/])\.\.(?:[\\/]|$)|[\t\r\n|]/i.test(entry.image)))
+              errors.push("[cast-sheet] PRODUCTION.cast." + id + ".image must be a relative path beside scenes.js");
+          });
+        }
+        (win.SCENES || []).forEach((scene, i2) => {
+          if (scene.shot?.cutType !== void 0 && !CUT_TYPES.includes(scene.shot.cutType))
+            errors.push("[cutType-unknown] shot " + (i2 + 1) + ": shot.cutType must be one of " + CUT_TYPES.join(", "));
+          shotStyleErrors(scene, i2, { advice }).forEach((e2) => errors.push(e2));
+        });
+        if (win.RENDER_ALLOCATION?.status === "pending") advice.push("render allocation is pending; submit the LLM plan before production");
+        if (draft) return errors;
+        (win.SCENES || []).forEach((s2, i2) => {
+          if (eligible(s2) && !reused(s2) && s2.visual?.video) {
+            const cameraAdvice = [];
+            cameraErrors(s2, { advice: cameraAdvice }).forEach((e2) => errors.push("shot " + (i2 + 1) + ": " + e2));
+            advice.push(...cameraAdvice.map((e2) => "shot " + (i2 + 1) + ": " + e2));
+          }
+        });
+        episodeMoveErrors(win.SCENES || []).forEach((e2) => advice.push(e2));
+        const generatedCuts = (win.SCENES || []).filter((s2) => eligible(s2) && !reused(s2) && s2.visual?.video && s2.shot?.render?.mode === "generated_video");
+        if (generatedCuts.length) {
+          for (const key of ["reference", "world", "materials", "palette", "lighting", "camera"])
+            if (!text2(p.style?.[key])) advice.push("PRODUCTION.style." + key + " is required once a generated cut exists");
+          if (!p.previz) advice.push("A 3D previz can help plan camera and blocking; select a renderer when using it.");
+          else if (!PREVIZ_RENDERERS[p.previz.renderer]) errors.push("Unsupported PRODUCTION.previz.renderer (blender | threejs)");
+          else if (p.previz && !selectionRecorded(p.previz.selection)) advice.push("Record the actual previz renderer HITL choice in PRODUCTION.previz.selection");
+          const vm2 = p.videoModel;
+          if (p.videoProvider === "host") {
+            if (vm2 && vm2.model !== "host") errors.push("PRODUCTION.videoModel.model must be host under videoProvider host");
+          } else if (p.videoProvider === "astra") {
+            if (vm2 && vm2.model !== "astra") errors.push("PRODUCTION.videoModel.model must be astra under videoProvider astra");
+          } else if (!vm2 || !text2(vm2.model)) errors.push("Ask which video model makes the generated cuts and record it in PRODUCTION.videoModel (an episode default or mixed; each cut records its model and resolution)");
+          if (vm2 && !["host", "astra"].includes(vm2.model) && !selectionRecorded(vm2.selection)) advice.push("Record the actual video model HITL choice in PRODUCTION.videoModel.selection");
+        }
+        errors.push(...coverageErrors(win));
+        if (!full(p)) {
+          const count = (win.SCENES || []).filter((s2) => eligible(s2) && (s2.visual?.video || s2.type === "broll" || s2.type === "quote" && typeof s2.visual?.clip === "object")).length;
+          if (p.mode === "hybrid" && (count < 1 && !(win.SCENES || []).some(reused) || count > 2)) errors.push("hybrid needs 1\u20132 generated clips or at least one reused clip with zero generation; revise conflicting channel constraints before production");
+          if (p.mode === "stills_only") {
+            const cap = videoCap(win, generatedVideoMax);
+            if (cap === null)
+              errors.push("stills_only needs the channel cap on the board: copy the profile policy into window.MOTION_POLICY with generated_video_max 0 (generatedVideoMax is read too)");
+            else if (cap !== 0)
+              errors.push("stills_only is for a channel whose generated_video_max is 0; choose a cost mode from the six-option comparison instead");
+            if (count) errors.push("stills_only carries no generated clip; " + count + " shot(s) hold one \u2014 drop them or choose a cost mode");
+            const imported = (win.SCENES || []).filter(reused).length;
+            if (imported) errors.push("stills_only plays no video at all; " + imported + " shot(s) import one (visual.reuse) \u2014 drop them or use the reuse shape");
+          }
+          return errors;
+        }
+        const style = p.style || {};
+        if (!generatedCuts.length) {
+          for (const key of ["reference", "world", "materials", "palette", "lighting", "camera"])
+            if (!text2(style[key])) advice.push("PRODUCTION.style." + key + " is required");
+        }
+        (win.SCENES || []).forEach((s2, i2) => {
+          if (!eligible(s2) || reused(s2) || bandContract(p) && s2.shot?.render?.mode === "stock_video") return;
+          const v = s2.visual || {}, design = s2.shot?.videoDesign || {};
+          const bad = (message) => errors.push("shot " + (i2 + 1) + ": " + message);
+          const warn = (message) => advice.push("shot " + (i2 + 1) + ": " + message);
+          if (s2.shot?.render?.mode !== "generated_video" || !v.video || v.slide || v.source && v.source !== "stock" || v.clip)
+            bad("full_video needs a narrated visual.video handoff; no slide/still substitution or b-roll splice");
+          if (["broll", "quote"].includes(s2.type)) bad("full_video generated cuts use ordinary narrated cards");
+          if (!text2(v.bg) || !text2(v.bgPrompt) && v.source !== "stock") bad("keep a source image path and its generation prompt");
+          if (!text2(v.video?.prompt)) bad("store the motion prompt before generation");
+          const hostVideo = p.videoProvider === "host", astraVideo = p.videoProvider === "astra";
+          const astra = astraSize(win);
+          const wantRes = hostVideo ? "720p" : astraVideo ? astra.source : v.video?.resolution || p.videoModel?.resolution || "1080p";
+          if (v.video?.resolution !== wantRes || v.video?.generateAudio !== false)
+            bad(hostVideo ? 'the host video tool tops out at 720p; write resolution:"720p" and generateAudio:false with separate narration' : astraVideo ? 'ASTRA renders on a 64-pixel grid; write resolution:"' + astra.source + '" (the edit scales it to ' + astra.edit + ") and generateAudio:false with separate narration" : "write the chosen model's resolution (" + wantRes + ") and generateAudio:false with separate narration");
+          if (v.video?.engine !== (hostVideo ? "host" : astraVideo ? "astra" : "seedance"))
+            bad(hostVideo ? `videoProvider:host routes every full_video cut to engine:"host" (the CLI's own image_to_video)` : astraVideo ? 'videoProvider:astra routes every full_video cut to engine:"astra" (our own LTX-2.5 box)' : "full_video uses the priced Seedance image-to-video route");
+          for (const key of ["look", "worldId", "before", "action", "continuity", "reject"])
+            if (!text2(design[key])) warn("videoDesign." + key + " is required");
+          if (design.motion?.kind !== "subject_action" && !text2(design.after)) warn("videoDesign.after is required unless the last motion beat states the final result");
+          if (design.camera !== void 0) warn("videoDesign.camera is retired; the camera lives in the four visual.camera slots");
+          for (const slot of missingCameraSlots(v.camera))
+            warn("visual.camera." + slot + " is recommended; the motion prompt is assembled from the four slots (speed may stay empty on a static camera)");
+          if (!ALL_LOOKS.includes(design.look))
+            warn("videoDesign.look must be one of " + ALL_LOOKS.join(", "));
+          const shotPreset = shotStyle(win, i2).preset;
+          if (STYLES[shotPreset] && design.look !== "archive" && !STYLES[shotPreset].looks.includes(design.look))
+            warn("videoDesign.look conflicts with the selected " + (shotPreset === style.preset ? "episode" : "per-shot") + " style");
+          motionErrors(s2).forEach(warn);
+          if (!Array.isArray(s2.narration) || !s2.narration.length) warn("a generated cut needs its approved narration");
+          if (s2.title || s2.stat || (s2.bullets || []).length || s2.footnote || !["none", void 0].includes(v.overlay))
+            bad("only burned subtitles go over full-video footage; clear title, bullets, footnote and overlays");
+        });
+        const run = [];
+        (win.SCENES || []).forEach((s2, i2) => {
+          if (!eligible(s2)) return;
+          const camera = s2.visual?.camera || {}, key = normalize2(camera.framing) + "|" + normalize2(camera.movement);
+          if (run.length && run[run.length - 1].key !== key) run.length = 0;
+          run.push({ key, shot: i2 + 1 });
+          if (run.length === 3) advice.push("shots " + run.map((r2) => r2.shot).join(", ") + ": the same framing and camera move three times in a row; change size, angle or move for a reason");
+        });
+        const generated2 = (win.SCENES || []).map((s2, i2) => ({ s: s2, shot: i2 + 1 })).filter(({ s: s2 }) => eligible(s2) && !reused(s2));
+        if (generated2.length >= 3) {
+          const statics = generated2.filter(({ s: s2 }) => staticCamera(s2.visual?.camera));
+          if (statics.length * 3 > generated2.length)
+            advice.push(`${statics.length} of ${generated2.length} shots hold a static camera; a full-video episode moves the camera on at least two of every three shots`);
+          generated2.forEach(({ s: s2, shot }, k) => {
+            if (k && staticCamera(s2.visual?.camera) && staticCamera(generated2[k - 1].s.visual?.camera))
+              advice.push(`shots ${generated2[k - 1].shot}, ${shot}: two static cameras in a row; move on one of them`);
+          });
+          const conventional = generated2.filter(({ s: s2 }) => !isDrone(s2.visual?.camera) || droneSceneErrors(s2).length);
+          const wide = conventional.filter(({ s: s2 }) => WIDE.test(String(s2.visual?.camera?.framing || "")));
+          if (wide.length * 2 > conventional.length)
+            advice.push(`${wide.length} of ${conventional.length} shots are framed wide; small figures on a wide stage read as a still on a phone \u2014 bring at least half the shots to medium or close`);
+        }
+        return errors;
+      }
+      function policy(base, production, scenes) {
+        if (!production || !MODES[production.mode]) return base;
+        if (bandContract(production)) {
+          const bounds = ratioBounds(production.mode, scenes.length);
+          return {
+            ...base,
+            videoBudgetUsd: production.videoBudgetUsd,
+            generatedVideoMax: bounds ? Math.max(0, bounds.max - scenes.filter((s2) => s2.shot?.render?.mode === "stock_video").length) : base.generatedVideoMax
+          };
+        }
+        return {
+          ...base,
+          videoBudgetUsd: production.videoBudgetUsd,
+          // hook_only: the hook plus every imported clip — reuse is outside the count but still a slot.
+          generatedVideoMax: production.mode === "hook_only" ? 1 + scenes.filter(reused).length : RATIOS[production.mode] ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2)
+        };
+      }
+      const api = { BANDS, ratioMode, ratioBounds, ratioErrors, videoRender, bandContract, CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, videoCap, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, ASTRA_RESOLUTION, ASTRA_WIDE_RESOLUTION, astraResolution, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check: check2, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
+      if (typeof module === "object" && module.exports) module.exports = api;
+      else root.PRODUCTION_MODE = api;
+    })(typeof window === "object" ? window : globalThis);
+  }
+});
+
 // ../skills/_shared/scene-acting.js
 var require_scene_acting = __commonJS({
   "../skills/_shared/scene-acting.js"(exports, module) {
@@ -64451,12 +65100,17 @@ var require_scene_acting = __commonJS({
     function scenePerformancePayload(scene) {
       return { performance: scene.performance, narration: (scene.narration || []).map((line) => ({ id: line.id, speaker: line.speaker, tts: line.tts, delivery: line.delivery, acting: line.acting })), videoDesign: scene.shot?.videoDesign, camera: scene.visual?.camera, source: { bg: scene.visual?.bg, character: scene.visual?.character, location: scene.shot?.location } };
     }
+    function cameraLock(camera = {}) {
+      return require_production_mode().moveOf(camera)?.family === "static" ? "Locked camera: preserve the opening framing, camera angle, focal length and background scale throughout; animate the planned subject action." : "";
+    }
     function sceneDirection(scene = {}) {
       const design = scene.shot?.videoDesign || {}, camera = scene.visual?.camera || {};
+      const lock = cameraLock(camera);
       return [
         ...["before", "action", "after", "continuity"].filter((key) => design[key]).map((key) => `${key}: ${design[key]}`),
         ...(design.motion?.beats || []).map((beat) => `Visible state: ${beat.state}`),
-        ...["framing", "movement", "speed", "end"].filter((key) => camera[key]).map((key) => `Camera ${key}: ${camera[key]}`)
+        ...["framing", "movement", ...lock ? [] : ["speed"], "end"].filter((key) => camera[key]).map((key) => `Camera ${key}: ${camera[key]}`),
+        ...lock ? [lock] : []
       ].join("\n");
     }
     var VIDEO_TEXT_POLICY = "Keep the entire video image text-free: no subtitles, captions, dialogue text, typography, letters, logos or watermarks, including during speech.";
@@ -64484,7 +65138,7 @@ var require_scene_acting = __commonJS({
       });
       return ["A clean cinematic image with an unobstructed scene and text-free surfaces.", route, visualDirection(sceneDirection(scene)), ...beats, VIDEO_TEXT_POLICY].join("\n");
     }
-    module.exports = { actingErrors, resolvedStyle, directionSupport, speechRevisionPayload, VIDEO_TEXT_POLICY, sceneVideoPrompt, planScenePerformance, sceneDirection, scenePerformancePayload };
+    module.exports = { actingErrors, resolvedStyle, directionSupport, speechRevisionPayload, VIDEO_TEXT_POLICY, sceneVideoPrompt, planScenePerformance, sceneDirection, scenePerformancePayload, cameraLock };
   }
 });
 

@@ -7,6 +7,7 @@ const { resolveStylePack } = require('./style-pack.js');
 const PROMPT = require('./assemble-bg-prompt.js');
 const { previzHandoff } = require('./render-routing.js');
 const { cutTreatment, castLines, defaultStyleRole } = require('./cut-treatments.js');
+const { cameraLock } = require('../../_shared/scene-acting.js');
 const LOOKS = {
   miniature: 'An architectural exhibition miniature diorama with articulated objects, matte materials, soft contact shadows and restrained fine detail.',
   architectural: 'A precise architectural cutaway model with believable thickness, connected parts, legible spatial relationships and softly lit material surfaces.',
@@ -65,6 +66,7 @@ function characterIds(value) {
 // LTX takes the source frame, not a Seedance reference clip. Its 2000-character
 // request limit applies to the complete prompt; reject overflow without losing action beats.
 function astraMotionPrompt(d, camera, style, treatment, externalNarration, castAppearance = [], hasVisibleCast = true) {
+  const lock = cameraLock(camera);
   const beats = d.motion?.kind === 'subject_action' ? d.motion.beats : [];
   const states = beats.length ? beatsInWords(beats)
     : 'At first, ' + clause(d.before) + '. Finally, ' + clause(finalState(d));
@@ -73,7 +75,8 @@ function astraMotionPrompt(d, camera, style, treatment, externalNarration, castA
   const prompt = [...(style.preset === 'webtoon' ? [
     'A continuous shot of hand-drawn 2D cel animation. Black ink contours and flat shaded colour planes persist on ' + (hasVisibleCast ? 'visible faces, hands, hair, clothing and the illustrated background' : 'objects and the illustrated environment') + ' in every frame.'
   ] : [treatment]),
-    'Camera: ' + [camera.framing, camera.movement, camera.speed].map(clause).join('; ') + '.',
+    'Camera: ' + [camera.framing, camera.movement, ...(!lock ? [camera.speed] : [])].filter(text).map(clause).join('; ') + '.',
+    ...(lock ? [lock] : []),
     ...(!actionInBeats ? ['Action: ' + clause(d.action) + '.'] : []), states + '.',
     ...(!sameLanding ? ['Camera landing: ' + clause(camera.end) + '.'] : []),
     hasVisibleCast ? 'The input image fixes identity, face, costume, proportions, materials and actor screen positions; preserve them while the planned action changes pose and location.'

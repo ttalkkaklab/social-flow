@@ -272,24 +272,31 @@ as a sequence:
 
 ### Camera dynamics
 
-`production-mode.js` holds these on the four camera slots of every generated shot; ep402
-(2026-09-06) and ep411 (2026-09-09) broke each one and read as slideshows.
+Choose movement from the scene's action and the information a changed view reveals.
+Legacy camera-ratio diagnostics in `production-mode.js` are advice, not a reason to
+move a camera that needs to hold a spatial relationship.
 
-- **A move the viewer can see.** `movement` and `speed` never carry `very slow`, `subtle`,
-  `gentle`, `tiny`, `slight`, `barely`, `restrained`, `quiet`, `hold composition` or
-  `breathing only`. A move written to be invisible is a still with extra steps. Write `slow`,
-  `steady` or `fast` with a vendor move — `dolly in`, `truck right`, `arc shot`, `pedestal up`,
-  `crane down` — or choose `static` on purpose.
-- **Static is the minority.** At most one shot in three holds a static camera, never two in a
-  row. The subject action carries a static shot; the other two carry the viewer.
-- **Wide is the minority.** At most half the shots are framed wide. Small full-body figures
-  on a wide stage move a few pixels on a phone; bring the other half to medium or close, where
-  a gesture fills the frame.
+- **Give each move a destination.** State the opening view, travel direction, revealed
+  information and landing composition in the four existing camera slots. "Walking speed"
+  alone does not distinguish a lateral follow from an approach. Match screen direction
+  in `shot.composition`, actor blocking, references and the actual provider prompt.
+- **Hold when the relationship matters.** An eavesdropping shot may need the listener in
+  foreground and speaker in depth throughout. Consecutive static shots are valid when
+  action, reaction or a deliberate change of view carries the scene. The prompt assembler
+  explicitly preserves a static camera's framing, angle, focal length and background scale;
+  this direction is not proof that the returned clip obeyed it.
+- **Choose size by what must be read.** Keep faces and gestures legible on a phone while
+  retaining the doors, witnesses or objects that explain the action. No wide-shot ratio
+  replaces checking the actual composition.
 - **No provider lock under a written move.** `visual.video.cameraFixed:true` is only legal with
   `movement: static`; ep402 shot 12 asked for an optical push and locked the camera at once.
 - **Generate at the card length.** The beats end inside `scene.duration`; a 10-second clip for
   a 5-second card spreads the action past the cut. `check-production.js --ready` refuses a clip
   more than three seconds longer than its card unless `edit.in` skips into the action.
+
+For camera drift, repeated action, destructive crops or broken adjacent shots, use the
+[camera correction workflow](camera-correction.md). Review the edited framing again:
+removing generated captions by cropping can also remove the listener or a needed landmark.
 
 ## Generation and cost
 

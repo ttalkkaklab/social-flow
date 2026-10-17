@@ -106,12 +106,19 @@ function planScenePerformance(input, measureAudio = () => null) {
 function scenePerformancePayload(scene) {
   return {performance:scene.performance, narration:(scene.narration || []).map(line => ({id:line.id,speaker:line.speaker,tts:line.tts,delivery:line.delivery,acting:line.acting})), videoDesign:scene.shot?.videoDesign,camera:scene.visual?.camera,source:{bg:scene.visual?.bg,character:scene.visual?.character,location:scene.shot?.location}};
 }
+function cameraLock(camera = {}) {
+  return require('../storyboard/references/production-mode.js').moveOf(camera)?.family === 'static'
+    ? 'Locked camera: preserve the opening framing, camera angle, focal length and background scale throughout; animate the planned subject action.'
+    : '';
+}
 function sceneDirection(scene = {}) {
   const design = scene.shot?.videoDesign || {}, camera = scene.visual?.camera || {};
+  const lock = cameraLock(camera);
   return [
     ...['before','action','after','continuity'].filter(key => design[key]).map(key => `${key}: ${design[key]}`),
     ...(design.motion?.beats || []).map(beat => `Visible state: ${beat.state}`),
-    ...['framing','movement','speed','end'].filter(key => camera[key]).map(key => `Camera ${key}: ${camera[key]}`),
+    ...['framing','movement',...(lock ? [] : ['speed']),'end'].filter(key => camera[key]).map(key => `Camera ${key}: ${camera[key]}`),
+    ...(lock ? [lock] : []),
   ].join('\n');
 }
 const VIDEO_TEXT_POLICY = 'Keep the entire video image text-free: no subtitles, captions, dialogue text, typography, letters, logos or watermarks, including during speech.';
@@ -152,4 +159,4 @@ function sceneVideoPrompt(performance, mode, scene = {}) {
   });
   return ['A clean cinematic image with an unobstructed scene and text-free surfaces.', route, visualDirection(sceneDirection(scene)), ...beats, VIDEO_TEXT_POLICY].join('\n');
 }
-module.exports={actingErrors,resolvedStyle,directionSupport,speechRevisionPayload,VIDEO_TEXT_POLICY,sceneVideoPrompt,planScenePerformance,sceneDirection,scenePerformancePayload};
+module.exports={actingErrors,resolvedStyle,directionSupport,speechRevisionPayload,VIDEO_TEXT_POLICY,sceneVideoPrompt,planScenePerformance,sceneDirection,scenePerformancePayload,cameraLock};

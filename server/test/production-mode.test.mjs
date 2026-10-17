@@ -87,6 +87,31 @@ test('ASTRA speech locks distinguish narrator, visible dialogue and off-screen c
   scene.narration = [{tts:'Narration',speaker:'narrator',delivery:'voiceover'}];
   assert.match(assemble(win, 0).motionPrompt, /mouths closed/);
 });
+test('ASTRA static framing is explicit and never serializes an absent camera speed', () => {
+  const win = fixture(1), scene = win.SCENES[0];
+  scene.visual.video = {engine: 'astra'};
+  delete scene.visual.camera.speed;
+  const prompt = assemble(win, 0).motionPrompt;
+  assert.doesNotMatch(prompt, /undefined/);
+  assert.match(prompt, /preserve the opening framing, camera angle, focal length and background scale/);
+  scene.visual.camera = {...scene.visual.camera, movement: 'dolly in', speed: 'slow'};
+  assert.doesNotMatch(assemble(win, 0).motionPrompt, /Locked camera:/);
+});
+test('spatial prompts share explicit camera locks across ASTRA and Seedance routes', () => {
+  const win = fixture(1), scene = win.SCENES[0];
+  for (const engine of ['astra', 'seedance']) {
+    scene.visual.video.engine = engine;
+    for (const movement of ['static', 'fixed camera', 'locked-off camera']) {
+      scene.visual.camera.movement = movement;
+      scene.visual.camera.speed = 'walking speed';
+      const prompt = assemble(win, 0).motionPrompt;
+      assert.match(prompt, /Locked camera: preserve the opening framing/);
+      assert.doesNotMatch(prompt, /walking speed|undefined/);
+    }
+    scene.visual.camera = {...scene.visual.camera, movement: 'dolly in', speed: 'slow'};
+    assert.doesNotMatch(assemble(win, 0).motionPrompt, /Locked camera:/);
+  }
+});
 test('ASTRA oversized motion plans fail before generation without truncating the action', () => {
   const win = fixture(1);
   win.SCENES[0].visual.video = { engine: 'astra' };
@@ -309,11 +334,12 @@ test('Seedance 2.5 integer-second performance directions pass assembly and the s
   assert.throws(()=>assemble(win,0),/digit seconds/);save(win);
   assert.match(checkPrompt().stdout,/digit seconds/);
 }));
-test('legacy prompt bytes preserve the clean-output policy when cast and cutType are absent', () => {
+test('legacy prompts retain image bytes and include the shared camera and clean-output policies', () => {
   const p = assemble(fixture(1), 0);
   assert.equal(digest(p.sourcePrompt), 'b51ee046763a9b03655f049d7119e9cd75fef489b7c75f8b0fa610db40973780');
   assert.equal(digest(p.endFramePrompt), 'ea5266c699957affead597eaf0c2a1cd4e60bf4e014136b27b6f0207612221a3');
-  assert.equal(digest(p.motionPrompt), '2ed0cb8cfad2acce5a6cffe08edc71ceaad3d8acd5229630c3c248bcd7754a98');
+  assert.match(p.motionPrompt, /Locked camera: preserve the opening framing/);
+  assert.equal(digest(p.motionPrompt), '118bad971fe5fdf9f971828da1722f3fa61487259c72f6beafe62760998691e1');
 });
 test('per-cut prompts inject cast locks, cast images and mapped worlds', () => {
   const win = fixture(1), scene = win.SCENES[0];
