@@ -102,6 +102,10 @@ function planScenePerformance(input, measureAudio = () => null) {
   }
   const hasActions = performance.some(event => event.kind === 'action');
   const timing = cursor === null ? (warnings.some(item => item.startsWith('Action timing')) ? 'needs_action_timing' : 'needs_audio_duration') : hasActions ? (speech.size ? 'planned_actions_with_measured_audio' : 'planned_actions') : 'measured';
+  for (const event of performance.filter(e => e.kind !== 'action')) {
+    const gap = event.endSeconds - event.speechEndSeconds;
+    if (gap > 0.75) warnings.push('Speech ' + event.lineId + ' ends ' + gap.toFixed(3) + 's before its action ends; review inherited action duration after replacing speech.');
+  }
   return {performance,durationSeconds:cursor,timing,warnings};
 }
 function scenePerformancePayload(scene) {

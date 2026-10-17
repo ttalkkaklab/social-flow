@@ -100,12 +100,16 @@ test('expectLipSync re-renders a clip that ignored the voice with a new seed and
   assert.equal(jobs[1].audio_upload_id, 'audio-id', 'the same audio upload is reused');
   assert.match(text, /File: .*line-attempt2\.mp4/);
   assert.match(text, /attempt 1 · seed 7 · no_sync/);
-  assert.match(text, /attempt 2 \(chosen\) · seed \d+ · follows_speech/);
+  assert.match(text, /attempt 2 \(provisional candidate\) · seed \d+ · follows_speech/);
   assert.match(text, /Not reviewed: phoneme-level lip sync/);
   const first = JSON.parse(fs.readFileSync(file('line.mp4.astra-job.json'), 'utf8'));
   assert.equal(first.status, 'completed');
   assert.equal(first.speechSync.status, 'no_sync');
   assert.equal(first.speechSync.seed, 7);
+  assert.match(first.sha256, /^[a-f0-9]{64}$/);
+  const candidate = JSON.parse(fs.readFileSync(file('line-attempt2.mp4.astra-job.json'), 'utf8'));
+  assert.equal(candidate.selection.status, 'provisional');
+  assert.deepEqual(candidate.selection.review, {camera:'not_reviewed',blocking:'not_reviewed',phonemeLipSync:'not_reviewed'});
 });
 
 test('the attempt cap keeps the best clip with its finding instead of failing', async (t) => {
