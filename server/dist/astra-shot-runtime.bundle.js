@@ -4913,8 +4913,8 @@ var astraImg2VideoSchema = external_exports.object({
       ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["autoDuration"], message: durationError });
     }
   }
-  if (mode === "guided" && ((data.width ?? 1536) !== 1536 || (data.height ?? 1024) !== 1024)) {
-    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["width"], message: "guided images require 1536x1024" });
+  if ((mode === "guided" || mode === "guided_hq") && ((data.width ?? 1536) !== 1536 || (data.height ?? 1024) !== 1024)) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["width"], message: `${data.tier} images require 1536x1024` });
   }
   if (mode !== "generate" && data.lora?.length) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["lora"], message: 'lora is accepted only on tier "default"' });

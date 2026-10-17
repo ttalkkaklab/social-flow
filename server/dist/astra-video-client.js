@@ -466,8 +466,9 @@ export const astraImg2VideoSchema = z
             ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['autoDuration'], message: durationError });
         }
     }
-    if (mode === 'guided' && ((data.width ?? 1536) !== 1536 || (data.height ?? 1024) !== 1024)) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['width'], message: 'guided images require 1536x1024' });
+    // guided_hq image runs are measured only at 1536x1024 (stage 4), so hq is held to guided's size.
+    if ((mode === 'guided' || mode === 'guided_hq') && ((data.width ?? 1536) !== 1536 || (data.height ?? 1024) !== 1024)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['width'], message: `${data.tier} images require 1536x1024` });
     }
     if (mode !== 'generate' && data.lora?.length) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['lora'], message: 'lora is accepted only on tier "default"' });
@@ -664,6 +665,22 @@ width = 1536, height = 1024) {
     const pixels = width * height;
     if (frames > 1 && pixels > ASTRA_VIDEO_MAX_REFERENCE_PIXELS) {
         return `a reference feeding ${frames} frames allows an output of at most ${ASTRA_VIDEO_MAX_REFERENCE_PIXELS} pixels (got ${width}x${height} = ${pixels}); use a still reference or a smaller output`;
+    }
+    return null;
+}
+/**
+ * The server's `check_mask_source`: the mask feeds as many frames as the reference, and that count
+ * is 1 or 8k+1 (both capped by numFrames) — otherwise the engine asserts. Checked before the job slot.
+ */
+export function checkMaskSource(mask, reference, numFrames = 121) {
+    if (mask.kind !== 'video')
+        return `conditioningMaskPath uploaded as ${mask.kind}, not video`;
+    if (!mask.frames)
+        return 'conditioningMaskPath frame count unreadable — upload it again';
+    const usedMask = Math.min(mask.frames, numFrames);
+    const usedReference = reference.kind === 'image' ? 1 : Math.min(reference.frames ?? 0, numFrames);
+    if (usedMask !== usedReference || !(usedReference === 1 || (usedReference - 1) % ASTRA_VIDEO_FRAME_STEP === 0)) {
+        return `the mask must feed as many frames as the reference, and that count must be 1 or 8k+1 (after numFrames ${numFrames}: mask ${usedMask} · reference ${usedReference})`;
     }
     return null;
 }
@@ -1022,7 +1039,7 @@ export async function generateFromImage(args) {
         images.push({ uploadId: last.uploadId, frameIdx: (args.numFrames ?? 121) - 1, strength: args.strength ?? 1.0 });
     }
     const mode = ASTRA_VIDEO_TIERS[args.tier];
-    const dimensions = mode === 'guided' ? { width: 1536, height: 1024 } : {};
+    const dimensions = mode === 'guided' || mode === 'guided_hq' ? { width: 1536, height: 1024 } : {};
     const body = buildJobBody(mode, { ...args, ...dimensions, images });
     return runJob(mode, args.prompt, body, args.outputPath, args.filename);
 }
@@ -1063,8 +1080,9 @@ export async function generateIcLora(args) {
     let conditioningMask;
     if (args.conditioningMaskPath) {
         const mask = await uploadFile(args.conditioningMaskPath);
-        if (mask.kind !== 'video')
-            throw new Error(`ASTRA video conditioningMaskPath uploaded as ${mask.kind}, not video`);
+        const maskError = checkMaskSource(mask, reference, args.numFrames);
+        if (maskError)
+            throw new Error(`ASTRA video conditioning mask refused: ${maskError}`);
         conditioningMask = { uploadId: mask.uploadId, strength: args.conditioningMaskStrength };
     }
     const mode = icLoraMode(args.adapter);

@@ -40,6 +40,7 @@ import {
   checkAutoDuration,
   checkDimensions,
   checkFrameIdx,
+  checkMaskSource,
   checkReferenceSource,
   checkRetakeSource,
   icLoraMode,
@@ -991,6 +992,9 @@ describe('stage 2 — ic_lora, guided_hq, guidance, lora strength', () => {
   it('tier hq maps to guided_hq on text2video and img2video', () => {
     assert.equal(ASTRA_VIDEO_TIERS.hq, 'guided_hq');
     parseOk(astraImg2VideoSchema, { prompt: 'x', firstFramePath: 'a.png', tier: 'hq', negativePrompt: 'blur', numInferenceSteps: 15 });
+    assert.match(parseFails(astraImg2VideoSchema, { prompt: 'x', firstFramePath: 'a.png', tier: 'hq', width: 1024, height: 1024 }), /hq images require 1536x1024/);
+    // skipStage2 false is the engine default and never reaches the wire (live ingredients refuses the key).
+    assert.equal('skip_stage_2' in buildJobBody('ingredients', { prompt: 'x', skipStage2: false }), false);
     assert.match(parseFails(astraImg2VideoSchema, { prompt: 'x', firstFramePath: 'a.png', tier: 'hq', lora: ['cinemagraph'] }), /lora is accepted only on tier "default"/);
   });
 
@@ -1027,6 +1031,23 @@ describe('stage 2 — ic_lora, guided_hq, guidance, lora strength', () => {
     assert.equal(checkReferenceSource({ uploadId: 'u', kind: 'image', width: 4000, height: 4000 }, 121, 1536, 1344), null);
     assert.equal(checkReferenceSource(clip(121), 1, 1536, 1344), null);
     assert.match(checkReferenceSource({ uploadId: 'u', kind: 'audio' }), /not image or video/);
+    // The ceiling itself passes: 1536x1216 = 1,867,776 is allowed, one grid step more is not.
+    assert.equal(checkReferenceSource(clip(121), 121, 1536, 1216), null);
+    assert.match(checkReferenceSource(clip(121), 121, 1536, 1280), /at most/);
+  });
+
+  it('checkMaskSource follows the server: same frames as the reference, 1 or 8k+1, both capped by numFrames', () => {
+    const clip = (frames) => ({ uploadId: 'u', kind: 'video', frames, width: 640, height: 360 });
+    const still = { uploadId: 'r', kind: 'image', width: 640, height: 360 };
+    assert.equal(checkMaskSource(clip(121), clip(121)), null);
+    assert.equal(checkMaskSource(clip(200), clip(150)), null); // both capped to 121
+    assert.equal(checkMaskSource(clip(1), still), null);
+    assert.equal(checkMaskSource(clip(49), clip(49), 121), null);
+    assert.match(checkMaskSource(clip(97), clip(121)), /mask 97 · reference 121/);
+    assert.match(checkMaskSource(clip(50), clip(50)), /8k\+1/);
+    assert.match(checkMaskSource(clip(121), still), /mask 121 · reference 1/);
+    assert.match(checkMaskSource({ uploadId: 'u', kind: 'image' }, clip(121)), /not video/);
+    assert.match(checkMaskSource({ uploadId: 'u', kind: 'video' }, clip(121)), /unreadable/);
   });
 
   it('the tool sends ingredients without adapter, and ic_lora with adapter, mask and skip_stage_2', async () => {
@@ -1064,6 +1085,9 @@ describe('stage 2 — ic_lora, guided_hq, guidance, lora strength', () => {
       assert.match(result.content[0].text, /Adapter: deblur/);
       // A moving reference at an output over the ceiling never reaches /v1/jobs.
       await assert.rejects(ROUTES.astra_ic_lora({ prompt: 'x', adapter: 'deblur', referencePath: path.join(dir, 'r.mp4'), width: 1536, height: 1344, outputPath: dir, filename: 'c.mp4' }), /reference refused/);
+      assert.equal(jobs.length, 2);
+      // A mask that would trip the engine assert never reaches /v1/jobs either (still reference, clip mask).
+      await assert.rejects(ROUTES.astra_ic_lora({ prompt: 'x', adapter: 'deblur', referencePath: path.join(dir, 'r.png'), conditioningMaskPath: path.join(dir, 'm.mp4'), outputPath: dir, filename: 'd.mp4' }), /conditioning mask refused/);
       assert.equal(jobs.length, 2);
     } finally { globalThis.fetch = oldFetch; config.astraVideoApiKey = oldKey; fs.rmSync(dir, { recursive: true, force: true }); }
   });

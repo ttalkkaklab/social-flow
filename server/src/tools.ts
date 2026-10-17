@@ -2180,7 +2180,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 
 Use when a generated background or photo has to move and nobody is waiting on it — same trade as astra_text2video: free, ours, one job at a time. Give firstFramePath alone to animate from that frame, or add lastFramePath and the clip lands on it. The tool uploads the files itself; pass local paths, not ids.
 Do NOT use for more than two stills — that is astra_keyframe_video, which pins each image to a frame index. For an immediate clip use veo_img2video or seedance_img2video.
-tier accepts default (generate), guided, or hq (guided_hq — unmeasured, refused until the 2026-10-17 server change is live). guided images require 1536x1024 (omitted dimensions use that size); hq has no measured size rule; fast images are not enabled. lora is default-only; negativePrompt and numInferenceSteps are guided-only, and with guidance also hq. Passing one to the wrong tier is refused before the call.
+tier accepts default (generate), guided, or hq (guided_hq — unmeasured, refused until the 2026-10-17 server change is live). guided and hq images require 1536x1024 (omitted dimensions use that size); fast images are not enabled. lora is default-only; negativePrompt and numInferenceSteps are guided-only, and with guidance also hq. Passing one to the wrong tier is refused before the call.
 The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. autoDuration lets the server choose at most 121 frames from a first still alone; it is refused with lastFramePath unless numFrames is also given (numFrames wins). png, jpg and jpeg are accepted, up to 32 MiB each.
 Warning: image-conditioned generate (width 1280, measured at heights 704/768) failure frames: {121,129,137}; guided (width 1280, measured at height 704) failure frames: {121}. Guided 129/137 succeeded at 1280x704 in server probes (the only guided size probed), but the existing client guided ceiling is 121. The client requires 1536x1024 for guided images, so the guided 1280x704 probes are not client alternatives. Within current client limits use generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at 121 frames also succeeded. Text-only 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause. The server owns the failure-band acceptance gate; this warning adds no client-side block.
 ${ASTRA_LIMITS_LINE}
@@ -2383,7 +2383,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         },
         conditioningMaskPath: {
           type: 'string',
-          description: 'Optional local black-and-white .mp4 attention mask over the reference. Uploaded automatically.',
+          description: 'Optional local black-and-white .mp4 attention mask over the reference. Uploaded automatically. It must feed as many frames as the reference (a still reference takes a 1-frame mask), and that count, after numFrames caps both, must be 1 or 8k+1 — otherwise it is refused before the job.',
         },
         conditioningMaskStrength: {
           type: 'number', minimum: 0, maximum: 1,

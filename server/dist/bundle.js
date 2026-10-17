@@ -79290,8 +79290,8 @@ var astraImg2VideoSchema = external_exports.object({
       ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["autoDuration"], message: durationError });
     }
   }
-  if (mode === "guided" && ((data.width ?? 1536) !== 1536 || (data.height ?? 1024) !== 1024)) {
-    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["width"], message: "guided images require 1536x1024" });
+  if ((mode === "guided" || mode === "guided_hq") && ((data.width ?? 1536) !== 1536 || (data.height ?? 1024) !== 1024)) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["width"], message: `${data.tier} images require 1536x1024` });
   }
   if (mode !== "generate" && data.lora?.length) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["lora"], message: 'lora is accepted only on tier "default"' });
@@ -79446,6 +79446,16 @@ function checkReferenceSource(upload, numFrames = 121, width = 1536, height = 10
   const pixels = width * height;
   if (frames > 1 && pixels > ASTRA_VIDEO_MAX_REFERENCE_PIXELS) {
     return `a reference feeding ${frames} frames allows an output of at most ${ASTRA_VIDEO_MAX_REFERENCE_PIXELS} pixels (got ${width}x${height} = ${pixels}); use a still reference or a smaller output`;
+  }
+  return null;
+}
+function checkMaskSource(mask, reference, numFrames = 121) {
+  if (mask.kind !== "video") return `conditioningMaskPath uploaded as ${mask.kind}, not video`;
+  if (!mask.frames) return "conditioningMaskPath frame count unreadable \u2014 upload it again";
+  const usedMask = Math.min(mask.frames, numFrames);
+  const usedReference = reference.kind === "image" ? 1 : Math.min(reference.frames ?? 0, numFrames);
+  if (usedMask !== usedReference || !(usedReference === 1 || (usedReference - 1) % ASTRA_VIDEO_FRAME_STEP === 0)) {
+    return `the mask must feed as many frames as the reference, and that count must be 1 or 8k+1 (after numFrames ${numFrames}: mask ${usedMask} \xB7 reference ${usedReference})`;
   }
   return null;
 }
@@ -79749,7 +79759,7 @@ async function generateFromImage2(args) {
     images.push({ uploadId: last.uploadId, frameIdx: (args.numFrames ?? 121) - 1, strength: args.strength ?? 1 });
   }
   const mode = ASTRA_VIDEO_TIERS[args.tier];
-  const dimensions = mode === "guided" ? { width: 1536, height: 1024 } : {};
+  const dimensions = mode === "guided" || mode === "guided_hq" ? { width: 1536, height: 1024 } : {};
   const body = buildJobBody(mode, { ...args, ...dimensions, images });
   return runJob(mode, args.prompt, body, args.outputPath, args.filename);
 }
@@ -79786,7 +79796,8 @@ async function generateIcLora(args) {
   let conditioningMask;
   if (args.conditioningMaskPath) {
     const mask = await uploadFile(args.conditioningMaskPath);
-    if (mask.kind !== "video") throw new Error(`ASTRA video conditioningMaskPath uploaded as ${mask.kind}, not video`);
+    const maskError = checkMaskSource(mask, reference, args.numFrames);
+    if (maskError) throw new Error(`ASTRA video conditioning mask refused: ${maskError}`);
     conditioningMask = { uploadId: mask.uploadId, strength: args.conditioningMaskStrength };
   }
   const mode = icLoraMode(args.adapter);
@@ -87971,7 +87982,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 
 Use when a generated background or photo has to move and nobody is waiting on it \u2014 same trade as astra_text2video: free, ours, one job at a time. Give firstFramePath alone to animate from that frame, or add lastFramePath and the clip lands on it. The tool uploads the files itself; pass local paths, not ids.
 Do NOT use for more than two stills \u2014 that is astra_keyframe_video, which pins each image to a frame index. For an immediate clip use veo_img2video or seedance_img2video.
-tier accepts default (generate), guided, or hq (guided_hq \u2014 unmeasured, refused until the 2026-10-17 server change is live). guided images require 1536x1024 (omitted dimensions use that size); hq has no measured size rule; fast images are not enabled. lora is default-only; negativePrompt and numInferenceSteps are guided-only, and with guidance also hq. Passing one to the wrong tier is refused before the call.
+tier accepts default (generate), guided, or hq (guided_hq \u2014 unmeasured, refused until the 2026-10-17 server change is live). guided and hq images require 1536x1024 (omitted dimensions use that size); fast images are not enabled. lora is default-only; negativePrompt and numInferenceSteps are guided-only, and with guidance also hq. Passing one to the wrong tier is refused before the call.
 The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. autoDuration lets the server choose at most 121 frames from a first still alone; it is refused with lastFramePath unless numFrames is also given (numFrames wins). png, jpg and jpeg are accepted, up to 32 MiB each.
 Warning: image-conditioned generate (width 1280, measured at heights 704/768) failure frames: {121,129,137}; guided (width 1280, measured at height 704) failure frames: {121}. Guided 129/137 succeeded at 1280x704 in server probes (the only guided size probed), but the existing client guided ceiling is 121. The client requires 1536x1024 for guided images, so the guided 1280x704 probes are not client alternatives. Within current client limits use generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at 121 frames also succeeded. Text-only 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause. The server owns the failure-band acceptance gate; this warning adds no client-side block.
 ${ASTRA_LIMITS_LINE}
@@ -88183,7 +88194,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         },
         conditioningMaskPath: {
           type: "string",
-          description: "Optional local black-and-white .mp4 attention mask over the reference. Uploaded automatically."
+          description: "Optional local black-and-white .mp4 attention mask over the reference. Uploaded automatically. It must feed as many frames as the reference (a still reference takes a 1-frame mask), and that count, after numFrames caps both, must be 1 or 8k+1 \u2014 otherwise it is refused before the job."
         },
         conditioningMaskStrength: {
           type: "number",
