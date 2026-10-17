@@ -1192,6 +1192,8 @@ describe('audio2video — audio must cover the video (D6)', () => {
     assert.match(checkAudioCoversVideo(5.708333, 153, 24), /numFrames to 137 or less/);
     // Too short for any 8k+1 of 25+: the numFrames fix is dropped.
     assert.doesNotMatch(checkAudioCoversVideo(0.9, 121, 24), /set numFrames/);
+    // fit exactly 25 still offers the numFrames fix (24fps · 1.05s → 25.2 frames).
+    assert.match(checkAudioCoversVideo(1.05, 121, 24), /set numFrames to 25 or less/);
   });
 
   it('applies to wav without audioMaxDuration only, using numFrames (121 when omitted) after audioStartTime', () => {
@@ -1201,6 +1203,9 @@ describe('audio2video — audio must cover the video (D6)', () => {
     assert.match(checkAudioSource(wav, { wav: true, numFrames: 97, audioStartTime: 1 }), /usable audio 3\.000s \(after audioStartTime\)/);
     assert.equal(checkAudioSource(wav, { wav: false }), null); // mp3: length may be an estimate
     assert.equal(checkAudioSource(wav, { wav: true, audioMaxDuration: 4 }), null);
+    // frameRate is honoured: 121 frames at 30fps = 4.0333s is covered by 4s of audio, at 24fps it is not.
+    assert.equal(checkAudioSource(wav, { wav: true, frameRate: 30 }), null);
+    assert.match(checkAudioSource({ uploadId: 'a', kind: 'audio', duration: 3.5 }, { wav: true, frameRate: 30 }), /121 frames = 4\.0333s at 30fps/);
   });
 
   it('the tool refuses a short WAV after upload and before /v1/jobs', async () => {
@@ -1213,13 +1218,21 @@ describe('audio2video — audio must cover the video (D6)', () => {
       const pathname = new URL(url).pathname;
       if (pathname === '/v1/uploads') return Response.json({ upload_id: 'audio-id', kind: 'audio', bytes: 4, duration: 5.71, expires_at: '2026-10-18T00:00:00Z' }, { status: 201 });
       if (pathname === '/v1/jobs') { jobs.push(JSON.parse(init.body)); return Response.json({ job_id: 'test-job' }, { status: 202 }); }
-      throw new Error(`Unexpected mocked route ${pathname}`);
+      if (pathname === '/v1/jobs/test-job') return Response.json({ status: 'succeeded', request: jobs.at(-1) });
+      if (pathname === '/v1/jobs/test-job/result') return new Response('mock-mp4');
+      // An unknown route answers 404 instead of throwing, so a regression fails instead of hanging.
+      return new Response('unexpected route', { status: 404 });
     };
     fs.writeFileSync(path.join(dir, 'a.wav'), 'wave');
+    fs.writeFileSync(path.join(dir, 'a.mp3'), 'mp3');
     try {
       await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioPath: path.join(dir, 'a.wav'), numFrames: 145, outputPath: dir }), /audio is shorter than the video/);
       await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioPath: path.join(dir, 'a.wav'), duration: 6, outputPath: dir }), /audio is shorter than the video/);
       assert.equal(jobs.length, 0);
+      // The same short length as mp3 is not judged (its length may be an estimate): it reaches /v1/jobs.
+      await ROUTES.astra_audio2video({ prompt: 'x', audioPath: path.join(dir, 'a.mp3'), numFrames: 145, outputPath: dir, filename: 'mp3.mp4' });
+      assert.equal(jobs.length, 1);
+      assert.equal(jobs[0].num_frames, 145);
     } finally { globalThis.fetch = oldFetch; config.astraVideoApiKey = oldKey; fs.rmSync(dir, { recursive: true, force: true }); }
   });
 });
