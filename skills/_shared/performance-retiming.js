@@ -21,6 +21,9 @@ function retime(scene, options, measure) {
 
 
 function prefixCompatible(prior, next) {
+  // The prose prompt omits source identity and can collapse distinct camera/design fields.
+  // Legacy bindings lack this evidence and must not acquire it from the revised board.
+  if (!prior.reuseContextRevision || prior.reuseContextRevision !== next.reuseContextRevision) return false;
   if (!Number.isFinite(prior.durationSeconds) || !Number.isFinite(next.durationSeconds) ||
       next.durationSeconds <= 0 || next.durationSeconds >= prior.durationSeconds) return false;
   const cleanPrompt = text => String(text || '').replace(/Action interval [0-9.]+–[0-9.]+ seconds\./g, 'Action interval.');

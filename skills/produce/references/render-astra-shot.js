@@ -25,6 +25,13 @@ async function render(target, options) {
   if ([out,record,out+'.astra-job.json'].some(file=>fs.existsSync(file)))
     throw new Error('Candidate or submission already exists; reconcile its receipt before another request');
   fs.mkdirSync(path.dirname(out), {recursive:true});
+  // Reserve before preparing audio: concurrent invocations must not submit the same candidate.
+  try {
+    fs.writeFileSync(record, JSON.stringify({status:'preparing',review:'not_reviewed'})+'\n', {flag:'wx'});
+  } catch (error) {
+    if (error.code === 'EEXIST') throw new Error('Candidate or submission already exists; reconcile its receipt before another request');
+    throw error;
+  }
   const input = {...options};
   if (options.audioPath) {
     input.audioPath = out + '.stereo.wav';

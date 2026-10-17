@@ -148,6 +148,19 @@ test('retime is a revisioned tool operation; safe tail reuse preserves speech an
  assert.throws(()=>manageSpeech({path:target,action:'retime',shotId:line.shotId,expectedRevision:'stale'}),/revision/i);
  next=manageSpeech({path:target,action:'retime',shotId:line.shotId,expectedRevision:next.revision,timingPatch:{speechBoundActions:true}});
  assert.equal(next.timing.durationSeconds,1);assert.equal(next.lines[0].audio.sha256,originalHash);
+ const retimedSource=readFileSync(file,'utf8');
+ for (const sourceChange of ['background','character','location','legacy']) {
+  const changed=require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(retimedSource);
+  const shot=changed.SCENES[0];
+  if(sourceChange==='background')shot.visual.bg='different-room.png';
+  if(sourceChange==='character')shot.visual.character='different-actor';
+  if(sourceChange==='location')shot.shot={...shot.shot,location:'different-room'};
+  if(sourceChange==='legacy')delete shot.visual.video.speechBinding.reuseContextRevision;
+  writeFileSync(file,Object.entries(changed).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+  const revision=manageSpeech({path:target,action:'list'}).revision;
+  assert.throws(()=>manageSpeech({path:target,action:'attach_video',shotId:line.shotId,expectedRevision:revision,videoPath:video,capabilities:caps,reuse:'tail_trim'}),/identical bound audio/,sourceChange);
+ }
+ writeFileSync(file,retimedSource);
  next=manageSpeech({path:target,action:'attach_video',shotId:line.shotId,expectedRevision:next.revision,videoPath:video,capabilities:caps,reuse:'tail_trim'});
  assert.equal(next.invalidated,undefined);
  assert.match(readFileSync(file,'utf8'),/"kind": "tail_trim"/);

@@ -24,8 +24,8 @@ test('continuity warning compares the same jamb statement, not arbitrary left an
 });
 
 const { prefixCompatible } = require('../../skills/_shared/performance-retiming.js');
-const { planScenePerformance, sceneVideoPrompt } = require('../../skills/_shared/scene-acting.js');
-function plan(s) { const t=planScenePerformance(s,()=>2.13); return {...t,videoPrompt:sceneVideoPrompt(t.performance,'audio_conditioned',s)}; }
+const { planScenePerformance, sceneVideoPrompt, scenePerformancePayload } = require('../../skills/_shared/scene-acting.js');
+function plan(s) { const t=planScenePerformance(s,()=>2.13); const {performance,narration,...context}=scenePerformancePayload(s); return {...t,reuseContextRevision:JSON.stringify(context),videoPrompt:sceneVideoPrompt(t.performance,'audio_conditioned',s)}; }
 test('prefix reuse permits a shorter tail but rejects shifted speech, changed direction and longer footage', () => {
   const prior=plan(scene), shorter=retime(scene,{speechBoundActions:true},()=>2.13).scene;
   assert.equal(prefixCompatible(prior,plan(shorter)),true);
@@ -34,6 +34,12 @@ test('prefix reuse permits a shorter tail but rejects shifted speech, changed di
   const changed=structuredClone(shorter);changed.performance[0].text='Turn away';
   assert.equal(prefixCompatible(prior,plan(changed)),false);
   assert.equal(prefixCompatible(plan(shorter),prior),false);
+  for (const patch of [{visual:{bg:'changed.png'}},{visual:{character:'different-actor'}},{shot:{location:'different-room'}}]) {
+    const changedSource={...structuredClone(shorter),...patch};
+    assert.equal(prefixCompatible(prior,plan(changedSource)),false);
+  }
+  const legacy={...prior};delete legacy.reuseContextRevision;
+  assert.equal(prefixCompatible(legacy,plan(shorter)),false);
 });
 
 test('provider padding uses a separate WAV and cannot change canonical speech or truncate it', async t => {
@@ -60,4 +66,16 @@ test('shared renderer refuses an existing candidate before any planning or provi
   writeFileSync(join(dir,'candidate.mp4.render.json'),'{}');
   await assert.rejects(render('missing-board',{outputPath:dir,filename:'candidate.mp4'}),/already exists/);
   await assert.rejects(render('missing-board',{outputPath:dir,filename:'../other.mp4'}),/plain .mp4/);
+});
+
+test('concurrent render attempts reserve a single candidate before preparation', async t => {
+  const {mkdtempSync,readFileSync,rmSync}=await import('node:fs');
+  const {tmpdir}=await import('node:os');const {join}=await import('node:path');
+  const {render}=require('../../skills/produce/references/render-astra-shot.js');
+  const dir=mkdtempSync(join(tmpdir(),'concurrent-shot-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));
+  const options={outputPath:dir,filename:'candidate.mp4'};
+  const attempts=await Promise.allSettled([render('missing-board',options),render('missing-board',options)]);
+  assert.equal(attempts.filter(r=>r.status==='rejected' && /already exists/.test(r.reason.message)).length,1);
+  assert.equal(JSON.parse(readFileSync(join(dir,'candidate.mp4.render.json'),'utf8')).status,'preparing');
+  await assert.rejects(render('missing-board',options),/already exists/);
 });
