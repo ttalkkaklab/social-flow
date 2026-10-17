@@ -237,7 +237,7 @@ function extensionFromMimeType(mimeType) {
  */
 async function synthesizeWithRetry(model, contentText, speechConfig, temperature) {
     const { GoogleGenAI } = await import('@google/genai');
-    const genai = new GoogleGenAI({ apiKey: requireGeminiKey() });
+    const genai = new GoogleGenAI({ apiKey: requireGeminiKey(), httpOptions: { timeout: 120_000 } });
     let lastError;
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
         try {

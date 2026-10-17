@@ -922,7 +922,9 @@ describe('supported speech surface', () => {
   it('audition surface exposes three candidates and explicit user selection', () => {
     const tool = byName.get('character_voice_audition');
     const props = tool.inputSchema.properties;
-    assert.deepEqual(props.action.enum, ['create', 'read', 'select']);
+    assert.deepEqual(props.action.enum, ['plan', 'create', 'read', 'select']);
+    assert.ok(props.voiceProfile && props.candidates.items.properties.metadata);
+    assert.ok(props.candidates.items.properties.tts.properties.voiceDirection);
     assert.equal(props.candidates.minItems, 3);
     assert.equal(props.candidates.maxItems, 3);
     assert.deepEqual(props.candidateId.enum, ['1', '2', '3']);

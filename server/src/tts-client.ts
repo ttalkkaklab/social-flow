@@ -315,7 +315,7 @@ async function synthesizeWithRetry(
   temperature: number | undefined,
 ): Promise<AudioPayload> {
   const { GoogleGenAI } = await import('@google/genai');
-  const genai = new GoogleGenAI({ apiKey: requireGeminiKey() });
+  const genai = new GoogleGenAI({ apiKey: requireGeminiKey(), httpOptions: { timeout: 120_000 } });
 
   let lastError: unknown;
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {

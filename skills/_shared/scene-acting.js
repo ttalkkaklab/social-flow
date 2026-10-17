@@ -20,7 +20,8 @@ function actingErrors(acting) {
 function resolvedStyle(voice, acting) {
   const errors=actingErrors(acting); if(errors.length)throw new Error(errors.join('; '));
   const direction=[...(acting?.direction?[acting.direction.trim()]:[]),...['context','intent','emotion','vocal'].filter(key=>acting?.[key]).map(key=>`${key}: ${acting[key].trim()}`)];
-  return direction.length ? direction.join('\n') : acting?.tags?.length ? undefined : voice?.stylePrompt?.trim();
+  const performance = direction.length ? direction.join('\n') : acting?.tags?.length ? undefined : voice?.stylePrompt?.trim();
+  return [voice?.voiceDirection?.trim(), performance].filter(Boolean).join('\n') || undefined;
 }
 function directionSupport(voice, acting) {
   // ElevenLabs inline cues are deliberately authored controls, not scene prose.

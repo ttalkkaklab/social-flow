@@ -9,12 +9,13 @@ function speechRevision(line, character) {
 /** Provider prompt formatting shared by request planning and provenance validation. */
 function compileActing(text, acting, voice) {
   voice={...voice};
-  for(const key of ['voiceId','model','stylePrompt'])if(typeof voice[key]==='string')voice[key]=voice[key].trim();
+  for(const key of ['voiceId','model','stylePrompt','voiceDirection'])if(typeof voice[key]==='string')voice[key]=voice[key].trim();
   if(typeof voice.language==='string')voice.language=require('./character-voice.js').normalizeLanguage(voice.language);
   const performance = acting || {};
   const {actingErrors,resolvedStyle,directionSupport}=require('./scene-acting.js');
   const errors=actingErrors(acting);if(errors.length)throw new Error(errors.join('; '));
   const direction=resolvedStyle(voice,acting),support=directionSupport(voice,acting);
+  if (!support.supported && voice.engine === 'gemini' && voice.voiceDirection) throw new Error(support.warnings.join('; '));
   const tags = performance.tags || [];
   if (voice.engine === 'elevenlabs') {
     if (voice.model !== undefined && voice.model !== 'eleven_v4') throw new Error('Explicitly update this character to eleven_v4 before generating new speech');
