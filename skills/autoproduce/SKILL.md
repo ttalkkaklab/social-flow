@@ -73,8 +73,10 @@ not inherit a publishing schedule or automatic queue authorization.
    setup/payoff and prop/spatial continuity. Plan listener responses and silence alongside
    words. If review is useful, use the [storyboard reviewer](../../agents/storyboard-reviewer.md):
    first supply audience-visible actions and speech only, then reveal intentions and sources.
-3. Turn scenes into shots while preserving their events. Estimate time from words, sequential
-   actions and concurrent actions. A hard duration limit calls for simpler content or an
+3. Turn scenes into shots while preserving their events. For narration-led work, apply
+   [visual grounding](../storyboard/references/narration-visual-grounding.md) before conte prompts:
+   distinguish the spoken information from each picture's contribution. Estimate time from
+   words, sequential actions and concurrent actions. A hard duration limit calls for simpler content or an
    episode split, not unexplained jumps. Pass whole shots to speech/video planning.
 4. Run the relevant storyboard diagnostics and refresh its local review HTML. Fix technical
    execution errors. Resolve concrete editorial findings in scope and report any remainder.

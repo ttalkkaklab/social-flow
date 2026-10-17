@@ -6,8 +6,8 @@
  * (GenSpace 2025: ~60% on simple views, ~21% on allocentric). This script writes the
  * visible result — what is where in the frame, which way it faces — in the order the
  * still actually gets drawn. storyboard §5 calls it and stores the whole stdout as
- * `visual.bgPrompt`; produce reruns it only when a `shot` field changed on a still it
- * regenerates (a plain regeneration resends the stored string). Motion prompts for
+ * `visual.bgPrompt`; produce reruns it when the shot, spoken meaning or grounding
+ * changes (an unchanged regeneration resends the stored string). Motion prompts for
  * image→video do not go through here — the still already locked the space, and
  * re-describing it makes the engine redesign the scene.
  *
@@ -81,6 +81,7 @@
 const fs = require("fs");
 const path = require("path");
 const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
+const sourceContext = require('./source-context.js');
 
 const SIZE_WORDS = {
   els: "extreme long shot, person under a tenth of the frame height",
@@ -288,6 +289,7 @@ function parseArgs(argv) {
 
 function bannedHits(text) {
   if (!text) return [];
+  text = sourceContext.withoutContext(text);
   const hits = [];
   for (const b of BANNED) {
     const m = text.match(b.re);
@@ -342,10 +344,12 @@ function assemble(opts) {
   if (exclude) parts.push(exclude.replace(/[.!?\s]*$/, "") + ".");
   if (opts.location) parts.push(opts.location.prompt);
   if (tail) parts.push(tail.replace(/[.!?\s]*$/, "") + ".");
+  const editorial = sourceContext.guidance(opts.sourceContext);
+  if (editorial) parts.push(editorial);
 
   const prompt = parts.join(" ").replace(/\s+/g, " ").replace(/\s+\./g, ".").trim();
 
-  // The whole prompt is checked — a "left view of" in --scene ships to the model just the same.
+  // Check visual directions, including --scene; quoted editorial context is not camera syntax.
   const hits = bannedHits(prompt);
   return { prompt, space, hits, unknown, size, angle, layout: opts.layout, facing: opts.facing, ...(opts.propSnapshot?.length ? {propSnapshot:opts.propSnapshot}:{}), sourceImageArgs:{referenced_image_paths:[...new Set([...(opts.location?.paths || []), ...(opts.sourceImageArgs?.referenced_image_paths || [])])]}, ...(opts.location ? {locationBinding:opts.location.binding}:{}) };
 }
@@ -382,6 +386,9 @@ function loadShot(file, index) {
     line: sp.line,
     light: sp.light,
     camera: v.camera || null,
+    scene: typeof sh.videoDesign?.before === 'string' ? sh.videoDesign.before
+      : sh.render?.mode === 'still_camera' && typeof v.action === 'string' ? v.action : undefined,
+    sourceContext: sourceContext.context(s, win.STORY),
     audio: typeof v.audio === "string" ? v.audio : "",
     style: style.preset ? style : null,
     position: "SCENES[" + i + "] = shot " + (i + 1) + " of " + scenes.length + (s.type ? " (" + s.type + ")" : "") +

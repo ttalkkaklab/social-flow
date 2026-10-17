@@ -9,9 +9,12 @@ must cost nothing). This file is the execution half: which engine each still goe
 call is made, what disqualifies the picture that comes back, and what gets written into the
 ledger.
 
-**Nothing here re-decides the plan.** `visual.bgPrompt` arrives assembled and machine-checked;
-resend it as-is. A changed `shot` field is the one reason to rerun `assemble-bg-prompt.js`, and
-then only from the fields — never by editing the stored string by hand.
+`visual.bgPrompt` arrives from the authored plan. Reuse it only while the narration meaning,
+visual purpose, factual/reconstruction boundary, opening and referenced assets still agree.
+If inspection finds a mismatch, correct the relevant plan fields within the requested scope
+and reassemble the affected source prompt; do not patch only the stored string. A changed
+camera is not the only reason to refresh it. Inspect unchanged pixels against revised words
+before deciding whether regeneration is needed. Prompt refresh does not authorize new spending.
 
 ## Contents
 
@@ -187,6 +190,12 @@ the body — "no maps" draws a map (measured: 4 of 4 failed). An element that ke
 gets designed out of the scene sentence instead.
 
 ## 3. The image check
+
+Apply [content grounding](../../storyboard/references/narration-visual-grounding.md#inspect-content-separately-from-appearance)
+before judging style. Describe what the pixels actually show, then compare with the line,
+shot purpose and opening state. Record content fit and its limits in existing review notes;
+the styleMatch field below only describes style. An expressive face in the right room is
+not evidence of a narrated event. Keep source-image inspection separate from future motion.
 
 Compare all source images in playback order and compare recurring characters together before
 video generation. Open the actual paths declared by the board, including legacy filenames;

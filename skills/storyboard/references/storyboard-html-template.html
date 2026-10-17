@@ -1030,6 +1030,7 @@
 <script src="./review-files.js"></script>
 <script src="./scenes.js"></script>
 <script>window.SCENE_SB_DOC = window.SB_SCENES_DOC = window.SB_DOC;</script>
+<script src="./source-context.js"></script>
 <script src="./prop-continuity.js"></script>
 <script src="./render-routing.js"></script>
 <script src="./production-mode.js"></script>
@@ -2314,6 +2315,7 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
   function personOnScreen(s, spaceText) {
     if (charsOf(s).length || s.type === "cover") return true;
     var t = (spaceText || "") + " " + ((s.visual && s.visual.bgPrompt) || "");
+    if (window.SFSourceContext) t = window.SFSourceContext.withoutContext(t);
     // "face" is not in the list — "face not visible" / "face turned away" are the exclusion wordings.
     return /\b(?:person|people|woman|women|man|men|girl|boy|child|children|kid|adult|worker|student|customer|speaker|figure|hands?)\b/i.test(t);
   }
@@ -2324,6 +2326,7 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
   /* Same three patterns as assemble-bg-prompt.js BANNED — its --selftest fails if these drift. */
   function bannedSpaceHits(text) {
     if (!text) return [];
+    if (window.SFSourceContext) text = window.SFSourceContext.withoutContext(text);
     var hits = [];
     if (/\b(?:left|right|front|back|rear) view of\b/i.test(text)) hits.push("camera-inference (\"left view of\")");
     if (/\b(?:from|to|on|at) (?:the |a |an )?(?:(?!(?:camera|viewer|frame|picture)(?:'s|’s))[\w-]+(?:'s|’s) (?:own )?(?:left|right|front|back|rear)|(?:his|her|its|their) (?:own )?(?:left|right))\b/i.test(text)) hits.push("allocentric (\"from X's right\", \"to her left\")");
