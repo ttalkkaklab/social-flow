@@ -2133,8 +2133,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 
 Use when a generated background or photo has to move and nobody is waiting on it — same trade as astra_text2video: free, ours, one job at a time. Give firstFramePath alone to animate from that frame, or add lastFramePath and the clip lands on it. The tool uploads the files itself; pass local paths, not ids.
 Do NOT use for more than two stills — that is astra_keyframe_video, which pins each image to a frame index. For an immediate clip use veo_img2video or seedance_img2video.
-tier accepts default (generate) or guided only. guided images require 1536x1024 (omitted dimensions use that size); fast images are not enabled. lora is default-only.
-The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. png, jpg and jpeg are accepted, up to 32 MiB each.
+tier accepts default (generate) or guided only. guided images require 1536x1024 (omitted dimensions use that size); fast images are not enabled. lora is default-only; negativePrompt and numInferenceSteps are guided-only. Passing one to the wrong tier is refused before the call.
+The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. autoDuration lets the server choose at most 121 frames from a first still alone; it is refused with lastFramePath unless numFrames is also given (numFrames wins). png, jpg and jpeg are accepted, up to 32 MiB each.
 Warning: image-conditioned generate (width 1280, measured at heights 704/768) failure frames: {121,129,137}; guided (width 1280, measured at height 704) failure frames: {121}. Guided 129/137 succeeded at 1280x704 in server probes (the only guided size probed), but the existing client guided ceiling is 121. The client requires 1536x1024 for guided images, so the guided 1280x704 probes are not client alternatives. Within current client limits use generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at 121 frames also succeeded. Text-only 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause. The server owns the failure-band acceptance gate; this warning adds no client-side block.
 ${ASTRA_LIMITS_LINE}
 Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off — no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
@@ -2164,11 +2164,14 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
           description: 'How strictly the generated frames must match the supplied stills, 0.0-1.0 (default: 1.0 — hold the image exactly).',
         },
         numFrames: astraNumFramesProperty('generate'),
+        autoDuration: ASTRA_AUTO_DURATION_PROPERTY,
         width: ASTRA_WIDTH_PROPERTY,
         height: ASTRA_HEIGHT_PROPERTY,
         frameRate: ASTRA_FRAME_RATE_PROPERTY,
         seed: ASTRA_SEED_PROPERTY,
         lora: ASTRA_LORA_PROPERTY,
+        negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
+        numInferenceSteps: ASTRA_STEPS_PROPERTY,
         numGeneratedKeyframes: ASTRA_GENERATED_KEYFRAMES_PROPERTY,
         outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
         filename: ASTRA_FILENAME_PROPERTY,

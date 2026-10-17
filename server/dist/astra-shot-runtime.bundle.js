@@ -4699,17 +4699,44 @@ var astraImg2VideoSchema = external_exports.object({
   lastFramePath: external_exports.string().optional(),
   strength: external_exports.number().min(0).max(1).optional(),
   numFrames: numFramesSchema("generate"),
+  autoDuration: autoDurationSchema,
   width: widthSchema,
   height: heightSchema,
   frameRate: frameRateSchema,
   seed: seedSchema,
   lora: loraSchema,
+  negativePrompt: negativePromptSchema,
+  numInferenceSteps: numInferenceStepsSchema,
   numGeneratedKeyframes: numGeneratedKeyframesSchema,
   ...outputFields
 }).superRefine((data, ctx) => {
   const mode = ASTRA_VIDEO_TIERS[data.tier];
   if (data.numFrames !== void 0 && data.numFrames > ASTRA_VIDEO_FRAME_LIMITS[mode]) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["numFrames"], message: `numFrames must be at most ${ASTRA_VIDEO_FRAME_LIMITS[mode]} for mode ${mode}` });
+  }
+  if (mode === "generate") {
+    for (const key of ["negativePrompt", "numInferenceSteps"]) {
+      if (data[key] !== void 0) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: [key],
+          message: `${key} is accepted only on tier "guided"; mode generate has no such field.`
+        });
+      }
+    }
+  }
+  if (data.autoDuration && data.numFrames === void 0) {
+    if (data.lastFramePath) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["autoDuration"],
+        message: "autoDuration cannot be combined with lastFramePath: the last still is pinned to numFrames-1, so give numFrames instead."
+      });
+    }
+    const durationError = checkAutoDuration(data.autoDuration, data.frameRate ?? 24);
+    if (durationError) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["autoDuration"], message: durationError });
+    }
   }
   if (mode === "guided") {
     if ((data.width ?? 1536) !== 1536 || (data.height ?? 1024) !== 1024) {

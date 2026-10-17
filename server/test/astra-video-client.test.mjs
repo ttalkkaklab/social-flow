@@ -53,7 +53,7 @@ const parseOk = (schema, args) => {
   return result.data;
 };
 
-describe('the five tiers/modes cover all six server modes', () => {
+describe('the five tools cover six of the seven server modes', () => {
   it('tier map resolves to generate/guided/guided_fast', () => {
     assert.deepEqual(Object.values(ASTRA_VIDEO_TIERS), ['generate', 'guided', 'guided_fast']);
   });
@@ -61,8 +61,22 @@ describe('the five tiers/modes cover all six server modes', () => {
   it('every mode the server has is in the allow-list table', () => {
     assert.deepEqual(
       Object.keys(ASTRA_VIDEO_ALLOWED_FIELDS).sort(),
-      ['audio2video', 'generate', 'guided', 'guided_fast', 'keyframe', 'retake'],
+      ['audio2video', 'generate', 'guided', 'guided_fast', 'ingredients', 'keyframe', 'retake'],
     );
+  });
+
+  // Re-probed 2026-10-17: the invalid-mode 400 names seven modes; ingredients' unknown-key 400 names these ten.
+  it('ingredients carries the measured allow-list, references included, and no tool sends it yet', () => {
+    assert.deepEqual(
+      [...ASTRA_VIDEO_ALLOWED_FIELDS.ingredients].sort(),
+      ['frame_rate', 'hdr', 'height', 'images', 'mode', 'num_frames', 'prompt', 'references', 'seed', 'width'],
+    );
+    for (const field of ['lora', 'auto_duration', 'negative_prompt', 'num_inference_steps']) {
+      assert.ok(!ASTRA_VIDEO_ALLOWED_FIELDS.ingredients.includes(field), field);
+    }
+    assert.deepEqual(buildJobBody('ingredients', { prompt: 'x', numFrames: 121 }), { mode: 'ingredients', prompt: 'x', num_frames: 121 });
+    assert.throws(() => buildJobBody('ingredients', { prompt: 'x', lora: ['cinemagraph'] }), /mode ingredients does not accept lora/);
+    assert.ok(!TOOLS.some(t => t.name.startsWith('astra_') && JSON.stringify(t.inputSchema).includes('references')), 'no astra tool exposes references until its format is measured');
   });
 
   // Measured 2026-09-29: the server names the whole allow-list when it rejects an unknown key.
@@ -293,6 +307,31 @@ describe('per-tool schemas', () => {
     parseOk(astraImg2VideoSchema, { prompt: 'x', firstFramePath: '/tmp/a.png', lastFramePath: '/tmp/b.png', strength: 0.9 });
     parseFails(astraImg2VideoSchema, { prompt: 'x' });
     parseFails(astraImg2VideoSchema, { prompt: 'x', firstFramePath: '/tmp/a.png', strength: 1.4 });
+  });
+
+  it('img2video takes negativePrompt and numInferenceSteps on guided only', () => {
+    const guided = { prompt: 'x', firstFramePath: '/tmp/a.png', tier: 'guided' };
+    parseOk(astraImg2VideoSchema, { ...guided, negativePrompt: 'subtitles, captions', numInferenceSteps: 30 });
+    for (const bad of [0, 51, 2.5]) parseFails(astraImg2VideoSchema, { ...guided, numInferenceSteps: bad });
+    parseFails(astraImg2VideoSchema, { ...guided, negativePrompt: 'x'.repeat(2001) });
+    for (const key of ['negativePrompt', 'numInferenceSteps']) {
+      const value = key === 'negativePrompt' ? 'subtitles' : 30;
+      assert.match(parseFails(astraImg2VideoSchema, { prompt: 'x', firstFramePath: '/tmp/a.png', [key]: value }), /only on tier "guided"/);
+    }
+  });
+
+  it('img2video autoDuration needs the 8k+1 grid and refuses a pinned last still', () => {
+    const first = { prompt: 'x', firstFramePath: '/tmp/a.png' };
+    parseOk(astraImg2VideoSchema, { ...first, autoDuration: { minSeconds: 2, maxSeconds: 5 } });
+    parseOk(astraImg2VideoSchema, { ...first, tier: 'guided', autoDuration: { minSeconds: 2, maxSeconds: 5 } });
+    assert.match(parseFails(astraImg2VideoSchema, { ...first, autoDuration: { minSeconds: 2, maxSeconds: 6 } }), /121 frames or earlier/);
+    assert.match(parseFails(astraImg2VideoSchema, { ...first, autoDuration: { minSeconds: 1.1, maxSeconds: 1.3 } }), /8k\+1/);
+    assert.match(
+      parseFails(astraImg2VideoSchema, { ...first, lastFramePath: '/tmp/b.png', autoDuration: { minSeconds: 2, maxSeconds: 5 } }),
+      /cannot be combined with lastFramePath/,
+    );
+    // numFrames wins, so the pinned index is known and auto_duration is dropped from the body.
+    parseOk(astraImg2VideoSchema, { ...first, lastFramePath: '/tmp/b.png', numFrames: 97, autoDuration: { minSeconds: 2, maxSeconds: 5 } });
   });
 
   it('keyframe takes 2..8 images and checks each index against the clip', () => {
@@ -568,6 +607,8 @@ describe('mode-specific ceilings and new input contracts', () => {
     }
     const image = TOOLS.find(t => t.name === 'astra_img2video');
     assert.deepEqual(image.inputSchema.properties.tier.enum, ['default', 'guided']);
+    for (const key of ['autoDuration', 'negativePrompt', 'numInferenceSteps']) assert.ok(image.inputSchema.properties[key], key);
+    assert.match(image.description, /negativePrompt and numInferenceSteps are guided-only/);
     const audio = TOOLS.find(t => t.name === 'astra_audio2video');
     assert.deepEqual(audio.inputSchema.oneOf, [{ required: ['audioPath'] }, { required: ['audioUploadId'] }]);
     assert.ok(audio.inputSchema.properties.imagePath);
@@ -721,6 +762,25 @@ describe('mocked tool calls', () => {
       assert.equal(jobs[0].width, 1536);
       assert.equal(jobs[0].height, 1024);
       assert.equal(jobs[0].images[1].frame_idx, 120);
+    });
+  });
+
+  it('guided image calls send negative_prompt and num_inference_steps', async () => {
+    await withServer(async ({ dir, jobs }) => {
+      await ROUTES.astra_img2video({ prompt: 'x', tier: 'guided', firstFramePath: path.join(dir, 'face.png'), negativePrompt: 'subtitles', numInferenceSteps: 30, outputPath: dir });
+      assert.equal(jobs[0].negative_prompt, 'subtitles');
+      assert.equal(jobs[0].num_inference_steps, 30);
+    });
+  });
+
+  it('image calls send auto_duration from a first still, and refuse the wrong tier before any upload', async () => {
+    await withServer(async ({ dir, uploads, jobs }) => {
+      await assert.rejects(ROUTES.astra_img2video({ prompt: 'x', firstFramePath: path.join(dir, 'face.png'), negativePrompt: 'subtitles' }), /only on tier "guided"/);
+      assert.deepEqual(uploads, []);
+      await ROUTES.astra_img2video({ prompt: 'x', firstFramePath: path.join(dir, 'face.png'), autoDuration: { minSeconds: 2, maxSeconds: 5 }, outputPath: dir });
+      assert.deepEqual(jobs[0].auto_duration, { min_seconds: 2, max_seconds: 5 });
+      assert.equal(jobs[0].num_frames, undefined);
+      assert.deepEqual(jobs[0].images.map(i => i.frame_idx), [0]);
     });
   });
 });

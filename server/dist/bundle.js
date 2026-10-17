@@ -79039,6 +79039,7 @@ var ASTRA_VIDEO_ALLOWED_FIELDS = {
   guided_fast: ["auto_duration", "frame_rate", "hdr", "height", "images", "mode", "negative_prompt", "num_frames", "num_generated_keyframes", "num_inference_steps", "prompt", "seed", "width"],
   keyframe: ["frame_rate", "hdr", "height", "images", "mode", "negative_prompt", "num_frames", "num_inference_steps", "prompt", "seed", "width"],
   audio2video: ["audio_max_duration", "audio_start_time", "audio_upload_id", "frame_rate", "hdr", "height", "images", "mode", "negative_prompt", "num_frames", "num_inference_steps", "prompt", "seed", "width"],
+  ingredients: ["frame_rate", "hdr", "height", "images", "mode", "num_frames", "prompt", "references", "seed", "width"],
   retake: ["end_time", "hdr", "mode", "prompt", "seed", "start_time", "video_upload_id"]
 };
 var ASTRA_VIDEO_MIN_FRAMES = 25;
@@ -79233,17 +79234,44 @@ var astraImg2VideoSchema = external_exports.object({
   lastFramePath: external_exports.string().optional(),
   strength: external_exports.number().min(0).max(1).optional(),
   numFrames: numFramesSchema("generate"),
+  autoDuration: autoDurationSchema,
   width: widthSchema,
   height: heightSchema,
   frameRate: frameRateSchema,
   seed: seedSchema,
   lora: loraSchema,
+  negativePrompt: negativePromptSchema,
+  numInferenceSteps: numInferenceStepsSchema,
   numGeneratedKeyframes: numGeneratedKeyframesSchema,
   ...outputFields
 }).superRefine((data, ctx) => {
   const mode = ASTRA_VIDEO_TIERS[data.tier];
   if (data.numFrames !== void 0 && data.numFrames > ASTRA_VIDEO_FRAME_LIMITS[mode]) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["numFrames"], message: `numFrames must be at most ${ASTRA_VIDEO_FRAME_LIMITS[mode]} for mode ${mode}` });
+  }
+  if (mode === "generate") {
+    for (const key of ["negativePrompt", "numInferenceSteps"]) {
+      if (data[key] !== void 0) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: [key],
+          message: `${key} is accepted only on tier "guided"; mode generate has no such field.`
+        });
+      }
+    }
+  }
+  if (data.autoDuration && data.numFrames === void 0) {
+    if (data.lastFramePath) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["autoDuration"],
+        message: "autoDuration cannot be combined with lastFramePath: the last still is pinned to numFrames-1, so give numFrames instead."
+      });
+    }
+    const durationError = checkAutoDuration(data.autoDuration, data.frameRate ?? 24);
+    if (durationError) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["autoDuration"], message: durationError });
+    }
   }
   if (mode === "guided") {
     if ((data.width ?? 1536) !== 1536 || (data.height ?? 1024) !== 1024) {
@@ -87613,8 +87641,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 
 Use when a generated background or photo has to move and nobody is waiting on it \u2014 same trade as astra_text2video: free, ours, one job at a time. Give firstFramePath alone to animate from that frame, or add lastFramePath and the clip lands on it. The tool uploads the files itself; pass local paths, not ids.
 Do NOT use for more than two stills \u2014 that is astra_keyframe_video, which pins each image to a frame index. For an immediate clip use veo_img2video or seedance_img2video.
-tier accepts default (generate) or guided only. guided images require 1536x1024 (omitted dimensions use that size); fast images are not enabled. lora is default-only.
-The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. png, jpg and jpeg are accepted, up to 32 MiB each.
+tier accepts default (generate) or guided only. guided images require 1536x1024 (omitted dimensions use that size); fast images are not enabled. lora is default-only; negativePrompt and numInferenceSteps are guided-only. Passing one to the wrong tier is refused before the call.
+The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. autoDuration lets the server choose at most 121 frames from a first still alone; it is refused with lastFramePath unless numFrames is also given (numFrames wins). png, jpg and jpeg are accepted, up to 32 MiB each.
 Warning: image-conditioned generate (width 1280, measured at heights 704/768) failure frames: {121,129,137}; guided (width 1280, measured at height 704) failure frames: {121}. Guided 129/137 succeeded at 1280x704 in server probes (the only guided size probed), but the existing client guided ceiling is 121. The client requires 1536x1024 for guided images, so the guided 1280x704 probes are not client alternatives. Within current client limits use generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at 121 frames also succeeded. Text-only 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause. The server owns the failure-band acceptance gate; this warning adds no client-side block.
 ${ASTRA_LIMITS_LINE}
 Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off \u2014 no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
@@ -87646,11 +87674,14 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
           description: "How strictly the generated frames must match the supplied stills, 0.0-1.0 (default: 1.0 \u2014 hold the image exactly)."
         },
         numFrames: astraNumFramesProperty("generate"),
+        autoDuration: ASTRA_AUTO_DURATION_PROPERTY,
         width: ASTRA_WIDTH_PROPERTY,
         height: ASTRA_HEIGHT_PROPERTY,
         frameRate: ASTRA_FRAME_RATE_PROPERTY,
         seed: ASTRA_SEED_PROPERTY,
         lora: ASTRA_LORA_PROPERTY,
+        negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
+        numInferenceSteps: ASTRA_STEPS_PROPERTY,
         numGeneratedKeyframes: ASTRA_GENERATED_KEYFRAMES_PROPERTY,
         outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
         filename: ASTRA_FILENAME_PROPERTY

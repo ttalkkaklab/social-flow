@@ -18,11 +18,12 @@
  *   `request` the server actually recorded.
  * - `GET /v1/jobs/<id>/result` answers `video/mp4`, or **409** while the job is still running.
  *
- * Six modes, and the server rejects any body key the mode does not own — the error names the
+ * Seven modes, and the server rejects any body key the mode does not own — the error names the
  * whole allow-list, which is how the per-mode field tables below were measured rather than read
- * off a manual. The five exported tools cover all six: text2video carries generate/guided/
+ * off a manual. The five exported tools cover six of them: text2video carries generate/guided/
  * guided_fast behind `tier`, img2video is generate/guided with 1-2 images, and keyframe / audio2video /
- * retake are one mode each.
+ * retake are one mode each. `ingredients` (re-probed 2026-10-17) has no tool yet: the server names
+ * a `references` field but the element format is unmeasured, so it is listed, not guessed at.
  *
  * Two deliberate departures from the sibling clients:
  * - **Uploads do not go through http.ts.** requestRaw/requestBytes JSON.stringify their body;
@@ -72,6 +73,7 @@ export const ASTRA_VIDEO_ALLOWED_FIELDS: Record<string, readonly string[]> = {
   guided_fast: ['auto_duration', 'frame_rate', 'hdr', 'height', 'images', 'mode', 'negative_prompt', 'num_frames', 'num_generated_keyframes', 'num_inference_steps', 'prompt', 'seed', 'width'],
   keyframe: ['frame_rate', 'hdr', 'height', 'images', 'mode', 'negative_prompt', 'num_frames', 'num_inference_steps', 'prompt', 'seed', 'width'],
   audio2video: ['audio_max_duration', 'audio_start_time', 'audio_upload_id', 'frame_rate', 'hdr', 'height', 'images', 'mode', 'negative_prompt', 'num_frames', 'num_inference_steps', 'prompt', 'seed', 'width'],
+  ingredients: ['frame_rate', 'hdr', 'height', 'images', 'mode', 'num_frames', 'prompt', 'references', 'seed', 'width'],
   retake: ['end_time', 'hdr', 'mode', 'prompt', 'seed', 'start_time', 'video_upload_id'],
 } as const;
 
@@ -348,7 +350,13 @@ export const astraText2VideoSchema = z
     }
   });
 
-/** astra_img2video — generate or guided with one or two stills pinned to frames. */
+/**
+ * astra_img2video — generate or guided with one or two stills pinned to frames.
+ *
+ * negativePrompt and numInferenceSteps exist only on guided, as on text2video. autoDuration
+ * cannot pick a length when lastFramePath is given: the end still is pinned to numFrames-1,
+ * which the client has to know before the call.
+ */
 export const astraImg2VideoSchema = z
   .object({
     prompt: promptSchema,
@@ -357,11 +365,14 @@ export const astraImg2VideoSchema = z
     lastFramePath: z.string().optional(),
     strength: z.number().min(0).max(1).optional(),
     numFrames: numFramesSchema('generate'),
+    autoDuration: autoDurationSchema,
     width: widthSchema,
     height: heightSchema,
     frameRate: frameRateSchema,
     seed: seedSchema,
     lora: loraSchema,
+    negativePrompt: negativePromptSchema,
+    numInferenceSteps: numInferenceStepsSchema,
     numGeneratedKeyframes: numGeneratedKeyframesSchema,
     ...outputFields,
   })
@@ -369,6 +380,31 @@ export const astraImg2VideoSchema = z
     const mode = ASTRA_VIDEO_TIERS[data.tier];
     if (data.numFrames !== undefined && data.numFrames > ASTRA_VIDEO_FRAME_LIMITS[mode]) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['numFrames'], message: `numFrames must be at most ${ASTRA_VIDEO_FRAME_LIMITS[mode]} for mode ${mode}` });
+    }
+    if (mode === 'generate') {
+      for (const key of ['negativePrompt', 'numInferenceSteps'] as const) {
+        if (data[key] !== undefined) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [key],
+            message: `${key} is accepted only on tier "guided"; mode generate has no such field.`,
+          });
+        }
+      }
+    }
+    // numFrames wins over autoDuration (the body drops auto_duration), so only a bare range is checked.
+    if (data.autoDuration && data.numFrames === undefined) {
+      if (data.lastFramePath) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['autoDuration'],
+          message: 'autoDuration cannot be combined with lastFramePath: the last still is pinned to numFrames-1, so give numFrames instead.',
+        });
+      }
+      const durationError = checkAutoDuration(data.autoDuration, data.frameRate ?? 24);
+      if (durationError) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['autoDuration'], message: durationError });
+      }
     }
     if (mode === 'guided') {
       if ((data.width ?? 1536) !== 1536 || (data.height ?? 1024) !== 1024) {
