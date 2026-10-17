@@ -5,17 +5,17 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
-const { identityCharacter, direction } = require('../../_shared/character-identity.js');
+const { identityCharacter, direction, requiresSpeech } = require('../../_shared/character-identity.js');
 const { identityVoice } = require('../../_shared/character-voice.js');
 
-function handoff(file) {
+function handoff(file, { requireSpeech = true } = {}) {
   const source = fs.readFileSync(file, 'utf8');
-  const character = identityCharacter(source);
+  const character = identityCharacter(source, { requireSpeech });
   const name = /^#\s+(.+)$/m.exec(source)?.[1]?.trim();
   if (!name) throw new Error('identity.md needs a # Name heading');
   const id = path.basename(path.dirname(path.resolve(file)));
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) throw new Error('Character folder needs a kebab-case id');
-  return { id, name, character, tts: identityVoice(source), direction: direction(character), identitySha256: createHash('sha256').update(source).digest('hex') };
+  return { id, name, character, tts: identityVoice(source, { optional: !requireSpeech }), direction: direction(character, { requireSpeech }), identitySha256: createHash('sha256').update(source).digest('hex') };
 }
 if (require.main === module) {
   try {
@@ -36,7 +36,7 @@ function sourceErrors(win, boardDir) {
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c?.id || '')) { errors.push('Invalid character id'); continue; }
     const file = path.join(channel, 'assets', 'characters', c.id, 'identity.md');
     try {
-      const current = handoff(file);
+      const current = handoff(file, { requireSpeech: requiresSpeech(win, c.id) });
       if (current.identitySha256 !== c.identitySha256 || JSON.stringify(current.character) !== JSON.stringify(c.character) || JSON.stringify(current.tts) !== JSON.stringify(c.tts))
         errors.push(`Character ${c.id}: local identity changed; regenerate handoff and affected assets`);
     } catch (error) { errors.push(`Character ${c.id}: ${error.message}`); }

@@ -1,5 +1,12 @@
 # social-flow
 
+Storyboards show camera pictograms with visible movement/speed, planned shot lengths
+and incoming cut continuity beside each shot. The length comparison links to the
+original shot cards in playback order and keeps unknown lengths unknown. Camera
+details remain expandable; still effects are labelled separately. These views derive
+from existing fields and do not certify generated motion. See
+[action direction](skills/storyboard/references/action-direction.md).
+
 Start a reusable video project with `/social-flow:project-init <directory>`.
 It saves SNS targets and connection records, video genre, video/speech/image
 models, visual style, video ratio and output format together in

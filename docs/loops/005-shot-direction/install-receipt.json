@@ -1,0 +1,19 @@
+{
+  "installedPath": "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.115.1-direction.1",
+  "server": {
+    "name": "social-flow",
+    "version": "0.115.1-direction.1"
+  },
+  "toolCount": 86,
+  "ltxToolPresent": true,
+  "projectStatus": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"status\": \"project_setup_required\",\n  \"file\": \"/Users/zeans/orca/workspaces/social-flow/bramble/.social-flow/models.json\",\n  \"workspace\": \"/Users/zeans/orca/workspaces/social-flow/bramble\",\n  \"missing\": [\n    \"videoType\",\n    \"models\",\n    \"project\",\n    \"style\",\n    \"production\",\n    \"sns\"\n  ],\n  \"pendingConnections\": [],\n  \"connectionNote\": \"Saved connection status is historical. Recheck sns_account_check before publishing; setup does not authorize publication.\"\n}"
+      }
+    ],
+    "isError": false
+  },
+  "at": "2026-10-17T02:34:07.481Z"
+}

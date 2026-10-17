@@ -39,7 +39,7 @@ const object = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const text = v => typeof v === 'string' && v.trim().length > 0 && v.length <= 2000;
 const placeholder = v => typeof v === 'string' && /^(?:tbd|todo|unknown|미정|추후|<[^>]+>|\{\{.*\}\})$/i.test(v.trim());
 
-function identityErrors(character, { ready = true } = {}) {
+function identityErrors(character, { ready = true, requireSpeech = true } = {}) {
   if (!object(character)) return ['character: structured identity is required (migrate legacy identity.md explicitly)'];
   const errors = [];
   if (character.schemaVersion !== 1) errors.push('character.schemaVersion must be 1');
@@ -55,7 +55,7 @@ function identityErrors(character, { ready = true } = {}) {
       if (!['confirmed', 'pending', 'not_applicable'].includes(f.status)) { errors.push(`${p}: invalid status`); continue; }
       if (f.status !== 'confirmed') {
         if (f.value !== null || !text(f.reason)) errors.push(`${p}: unresolved or inapplicable fields need value:null and a reason`);
-        if (f.status === 'pending' && ready) errors.push(`${p}: pending`);
+        if (f.status === 'pending' && ready && (group !== 'speech' || requireSpeech)) errors.push(`${p}: pending`);
         if (f.status === 'not_applicable' && !optional) errors.push(`${p}: cannot be not_applicable`);
         continue;
       }
@@ -82,8 +82,8 @@ function identityCharacter(source, options) {
   return values[0];
 }
 
-function direction(character) {
-  const errors = identityErrors(character);
+function direction(character, options) {
+  const errors = identityErrors(character, options);
   if (errors.length) throw new Error(errors.join('; '));
   const lines = groups => GROUPS.filter(g => groups.includes(g[0])).flatMap(([group, , , fields]) => fields.flatMap(([key, , label]) => {
     const field = character[group][key];
@@ -97,6 +97,12 @@ function direction(character) {
   };
 }
 
+function requiresSpeech(win, id) {
+  if (win?.STORY?.version !== 'story-v2' || !Array.isArray(win.SCENES)) return true;
+  return win.SCENES.some(s => Array.isArray(s?.narration) && s.narration.some(n =>
+    typeof n?.tts === 'string' && n.tts.trim() && (!n.speaker || n.speaker === id)));
+}
+
 function boardIdentityErrors(win) {
   const entries = win?.SB_DOC?.characters;
   const chars = Array.isArray(entries) ? entries : Object.entries(entries || {}).map(([id, c]) => ({ ...c, id }));
@@ -105,12 +111,13 @@ function boardIdentityErrors(win) {
   if (win?.SB_DOC?.characterSchemaVersion !== undefined && !required) errors.push('Unsupported SB_DOC.characterSchemaVersion');
   for (const c of chars) {
     if (!required && c?.character === undefined) continue; // Legacy boards remain readable.
-    const issues = identityErrors(c?.character);
+    const options = { requireSpeech: requiresSpeech(win, c?.id) };
+    const issues = identityErrors(c?.character, options);
     errors.push(...issues.map(e => `Character ${c?.id}: ${e}`));
-    if (!issues.length && Object.entries(direction(c.character)).some(([key, value]) => c.direction?.[key] !== value)) errors.push(`Character ${c.id}: direction does not match structured identity; regenerate handoff`);
+    if (!issues.length && Object.entries(direction(c.character, options)).some(([key, value]) => c.direction?.[key] !== value)) errors.push(`Character ${c.id}: direction does not match structured identity; regenerate handoff`);
     if (!/^[a-f0-9]{64}$/.test(c?.identitySha256 || '')) errors.push(`Character ${c?.id}: identitySha256 is required`);
   }
   return errors;
 }
 
-module.exports = { GROUPS, identityErrors, identityCharacter, direction, boardIdentityErrors };
+module.exports = { GROUPS, identityErrors, identityCharacter, direction, boardIdentityErrors, requiresSpeech };

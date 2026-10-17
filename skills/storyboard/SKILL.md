@@ -14,6 +14,8 @@ allowed-tools: ["mcp__social-flow__project_manage", "mcp__social-flow__location_
 ---
 
 Save and read episode files locally under `data/<channel>/episodes/<topic>/`.
+For character action and camera planning, use [action direction](references/action-direction.md).
+The review derives camera icons, cut connections and planned length bars from existing shot fields.
 Use [the local storyboard contract](../storyboard/references/storyboard-target.md).
 **Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 

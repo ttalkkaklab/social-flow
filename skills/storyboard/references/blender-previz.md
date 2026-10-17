@@ -227,8 +227,10 @@ trade: exact camera and timing from the clip, a close first frame from the still
 
 ### 6.1 Rendering the clip for the model
 
-- **Whole seconds, equal to the billed length.** The cut's `duration` rounds up to the
-  model's floor (2.0: 4–15 s); render exactly that many seconds — `frameEnd = fps × seconds`
+- **Frame-aligned duration matching the selected model.** For integer-second models,
+  use the supported billed length (2.0: 4–15 s). Frame-count models may use fractional
+  seconds, such as LTX 145 frames / 24 fps. Render that exact positive frame count —
+  `frameEnd = round(fps × seconds)`
   — and the route refuses a mismatch. Practitioners keep a previz-guided move to 3–8 s and
   one camera move per shot. One idea per move: the camera moves or the subject moves, both
   only when the cut needs both — a 12 s clip with a dolly, a walk and a pan made the model pick
@@ -286,8 +288,8 @@ video: {
 ```
 
 `check-scenes.js` rejects the record when the renderer is not `blender` or `threejs`, the clip
-is not a local mp4, the first frame is not a local png, the hash is missing, the seconds are not
-whole, the fps is outside 24–60, `camera.movement` is absent or differs from
+is not a local mp4, the first frame is not a local png, the hash is missing, duration violates the adapter contract (integer seconds for existing adapters;
+ASTRA/LTX accepts a declared `numFrames` / `frameRate` duration), the fps is outside 24–60, `camera.movement` is absent or differs from
 `visual.camera.movement`, `referenceImagePaths[0]` is not the source still, an end frame is
 declared, or the prompt lacks the bindings in §6.3 — and it rejects a `generated_video` cut with
 a `visual.video` slot and no `previz` at all (the draft pass defers this to the camera pass).
