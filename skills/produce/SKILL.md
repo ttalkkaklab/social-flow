@@ -5,7 +5,6 @@ description: >
 argument-hint: "<channel> <topic> [platformCSV|auto]"
 allowed-tools: ["mcp__social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__social-flow__acting_review", "mcp__social-flow__tts_review_acting", "mcp__social-flow__capability_status", "Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__music_generate_advanced", "mcp__social-flow__stock_search", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__astra_img2video", "mcp__social-flow__astra_keyframe_video", "mcp__social-flow__astra_audio2video", "mcp__social-flow__astra_video_retake", "mcp__social-flow__astra_video_list_uploads", "mcp__social-flow__astra_video_delete_upload", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
 ---
-
 Use local episode files under `data/<channel>/episodes/<topic>/`.
 For action-led episodes, carry the storyboard's [action direction](../storyboard/references/action-direction.md)
 into generation and editing. Compare the actual clip with the planned camera and
@@ -20,7 +19,6 @@ For an intentionally silent film, use `SILENT=1 OUTRO=0` with the canonical buil
 Supply sample-exact zero-valued timing WAVs; omit music, effect and ambience cues.
 The builder verifies silence and preserves the frame clock without loudness scoring.
 **Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
-
 For tracked props, read [prop continuity](../storyboard/references/prop-continuity.md). Resolve the shot snapshot before prompts, preserve reference versions and record the snapshot with generated assets; verify the actual holder and condition in images and clips.
 **New authoring contract (2026-10-16):** Read [character-led scenarios](../storyboard/references/character-scenarios.md) first. New scenarios use `scenario-v2` and boards use `story-v2`: cast existing characters (including narrators), choose evidence/fiction/adapted, write observable actions and attributed speech, and review the whole performance. Its type-specific grounding and rubric replace the legacy research quotas, forced wow/engine mix, spoken-message and narration-only requirements below. Legacy unversioned scenarios and story-v1 boards keep their existing checks. Production voice, budget and publishing consent are unchanged.
 # Per-platform content production — data/[channel]/episodes/[topic]/output/
@@ -30,8 +28,9 @@ master on every platform. No subtitle/caption typography may be generated into c
 burned during editing. Keep exact dialogue for audio checks and optional separate YouTube
 subtitle files only when requested; existing subtitle files do not authorize uploading them.
 Use the selected adapter's prepared request and its no-visible-text policy. For ASTRA,
-run [prepare-astra-shot.js](references/prepare-astra-shot.js) after composing speech and
-submit its returned `tool` and `arguments` unchanged. It carries the performance timing
+use [render-astra-shot.js](references/render-astra-shot.js) after composing speech. It calls
+[prepare-astra-shot.js](references/prepare-astra-shot.js), pads a separate transport WAV
+and records a provisional candidate without changing the authored shot clock. It carries the performance timing
 into a motion prompt without literal dialogue or screenplay labels. `plan_video` remains
 the performance plan; its structured `videoPrompt` is not ASTRA's final provider prompt.
 Do not paste literal dialogue into an audio-conditioned video prompt; the supplied WAV

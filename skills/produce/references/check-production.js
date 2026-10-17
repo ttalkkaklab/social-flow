@@ -165,6 +165,15 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
   const imageReview = require('../../storyboard/references/shot-image-review.js').check(win, storyboard);
   const continuityReview = require('../../storyboard/references/shot-continuity.js').check(win, storyboard);
   const imageWarnings = [...imageReview, ...continuityReview].map(f => f.where + ': ' + f.what);
+  for (const [index, scene] of win.SCENES.entries()) {
+    const binding = scene.visual?.video?.speechBinding;
+    if (!binding) continue;
+    const quality = binding.quality;
+    if ((quality?.speechSync || quality?.unverifiedSpeechSync)?.status === 'no_sync')
+      imageWarnings.push('shot ' + (index + 1) + ': selected footage has an unresolved speech-motion synchronization warning; phoneme lip-sync is not verified' + (quality?.receiptBinding === 'unverified' ? ' (legacy receipt is not hash-bound)' : ''));
+    if (quality?.selection?.status === 'provisional')
+      imageWarnings.push('shot ' + (index + 1) + ': automatic candidate selection is provisional; camera, blocking and phoneme lip-sync are not reviewed');
+  }
   if (assemblyOnly) {
     const errors=[], warnings=['Visual quality review is advisory; assembly does not certify unseen media.', ...imageWarnings];
     const reusedShots=[];

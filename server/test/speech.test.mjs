@@ -122,3 +122,50 @@ test('story-v2 speaker edits synchronize performance without changing its addres
  const edited={};new Function('window',readFileSync(file,'utf8'))(edited);
  assert.deepEqual(edited.SCENES[0].performance,[{kind:'dialogue',character:'narrator',to:'audience',group:1},{kind:'action',character:'hero',text:'Waves.'}]);
 });
+
+test('retime is a revisioned tool operation; safe tail reuse preserves speech and changed audio cannot be relabelled', async t => {
+ const {execFileSync}=await import('node:child_process');
+ const {dir,target,r}=setup(t),line=r.lines[0],file=path.join(target,'scenes.js');
+ const win=require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8'));
+ win.SCENES[0].performance=[{kind:'action',text:'Speak on phone',withGroup:1,durationSeconds:4},{kind:'dialogue',character:line.speaker,group:1}];
+ win.SCENES[0].duration=4;writeFileSync(file,Object.entries(win).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+ const audio=path.join(dir,'timed.wav'),video=path.join(dir,'video.mp4');
+ execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=frequency=440:duration=1','-c:a','pcm_s16le',audio]);writeFileSync(video,'video fixture');
+ let next=manageSpeech({path:target,action:'list'});
+ const generation={generator:'tts_generate',language:'ko',voiceSettings:{voiceName:'Kore',speed:1},text:'Hello'};
+ next=manageSpeech({path:target,action:'attach_audio',lineId:line.id,expectedRevision:next.revision,audioPath:audio,generation});
+ assert.equal(next.timing.measuredSeconds,4);assert.ok(next.timing.warnings.length);
+ next=manageSpeech({path:target,action:'attach_video',shotId:line.shotId,expectedRevision:next.revision,videoPath:video,capabilities:caps});
+ const {createHash}=await import('node:crypto');
+ writeFileSync(video+'.astra-job.json',JSON.stringify({sha256:createHash('sha256').update(readFileSync(video)).digest('hex'),speechSync:{status:'no_sync'},selection:{status:'provisional'}}));
+ next=manageSpeech({path:target,action:'attach_video',shotId:line.shotId,expectedRevision:next.revision,videoPath:video,capabilities:caps});
+ let bound=require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8')).SCENES[0].visual.video.speechBinding;
+ assert.equal(bound.quality.speechSync.status,'no_sync');assert.equal(bound.quality.selection.status,'provisional');
+ const check=require('../../skills/produce/references/check-production.js').check(target,{assemblyOnly:true});
+ assert.ok(check.warnings.some(w=>w.includes('unresolved speech-motion')));
+ assert.ok(check.warnings.some(w=>w.includes('automatic candidate selection is provisional')));
+ const originalHash=next.lines[0].audio.sha256;
+ assert.throws(()=>manageSpeech({path:target,action:'retime',shotId:line.shotId,expectedRevision:'stale'}),/revision/i);
+ next=manageSpeech({path:target,action:'retime',shotId:line.shotId,expectedRevision:next.revision,timingPatch:{speechBoundActions:true}});
+ assert.equal(next.timing.durationSeconds,1);assert.equal(next.lines[0].audio.sha256,originalHash);
+ const retimedSource=readFileSync(file,'utf8');
+ for (const sourceChange of ['background','character','location','legacy']) {
+  const changed=require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(retimedSource);
+  const shot=changed.SCENES[0];
+  if(sourceChange==='background')shot.visual.bg='different-room.png';
+  if(sourceChange==='character')shot.visual.character='different-actor';
+  if(sourceChange==='location')shot.shot={...shot.shot,location:'different-room'};
+  if(sourceChange==='legacy')delete shot.visual.video.speechBinding.reuseContextRevision;
+  writeFileSync(file,Object.entries(changed).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+  const revision=manageSpeech({path:target,action:'list'}).revision;
+  assert.throws(()=>manageSpeech({path:target,action:'attach_video',shotId:line.shotId,expectedRevision:revision,videoPath:video,capabilities:caps,reuse:'tail_trim'}),/identical bound audio/,sourceChange);
+ }
+ writeFileSync(file,retimedSource);
+ next=manageSpeech({path:target,action:'attach_video',shotId:line.shotId,expectedRevision:next.revision,videoPath:video,capabilities:caps,reuse:'tail_trim'});
+ assert.equal(next.invalidated,undefined);
+ assert.match(readFileSync(file,'utf8'),/"kind": "tail_trim"/);
+ assert.match(readFileSync(file,'utf8'),/"speechStatus": "current"/);
+ const retake=path.join(dir,'retake.wav');execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=frequency=880:duration=1','-c:a','pcm_s16le',retake]);
+ next=manageSpeech({path:target,action:'attach_audio',lineId:line.id,expectedRevision:next.revision,audioPath:retake,generation});
+ assert.throws(()=>manageSpeech({path:target,action:'attach_video',shotId:line.shotId,expectedRevision:next.revision,videoPath:video,capabilities:caps,reuse:'tail_trim'}),/identical bound audio/);
+});

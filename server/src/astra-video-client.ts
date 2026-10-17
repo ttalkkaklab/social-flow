@@ -33,7 +33,7 @@
  *   never the request headers — see redactedFailure().
  */
 
-import { randomInt } from 'node:crypto';
+import { createHash, randomInt } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { z } from 'zod';
@@ -993,7 +993,7 @@ async function runJob(
   const { bytes, request, elapsedSeconds } = await awaitResult(jobId);
   fs.writeFileSync(videoPath, bytes);
   const response = { videoPath, jobId, mode, prompt, bytes: bytes.length, elapsedSeconds, ...(request ? { request } : {}) };
-  writeReceipt({ ...submitted, ...response, status: 'completed', completedAt: new Date().toISOString() });
+  writeReceipt({ ...submitted, ...response, sha256: createHash('sha256').update(bytes).digest('hex'), status: 'completed', completedAt: new Date().toISOString() });
   return response;
 }
 
@@ -1075,6 +1075,11 @@ export async function generateFromAudio(args: AstraAudio2VideoRequest): Promise<
   const chosen = attempts[last].check.findings.some((finding) => finding.reseed)
     ? attempts.reduce((best, a, i) => ((a.check.sync?.margin ?? -Infinity) > (attempts[best].check.sync?.margin ?? -Infinity) ? i : best), 0)
     : last;
+  // This selects a transport candidate, never an accepted performance. Carry that
+  // distinction in the persisted receipt so attachment and assembly cannot lose it.
+  annotateReceipt(results[chosen].videoPath, { selection: { status: 'provisional',
+    basis: 'picture_motion_audio_correlation', candidate: chosen,
+    review: { camera: 'not_reviewed', blocking: 'not_reviewed', phonemeLipSync: 'not_reviewed' } } });
   return { ...results[chosen], ...uploaded, speechSync: { attempts, chosen, ...(retryError ? { retryError } : {}) } };
 }
 
