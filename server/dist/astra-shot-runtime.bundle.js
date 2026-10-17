@@ -4886,6 +4886,8 @@ var astraAudio2VideoSchema = external_exports.object({
   seed: seedSchema,
   negativePrompt: negativePromptSchema,
   numInferenceSteps: numInferenceStepsSchema,
+  expectLipSync: external_exports.boolean().default(false),
+  maxAttempts: external_exports.number().int().min(1).max(3).default(2),
   ...outputFields
 }).superRefine((data, ctx) => {
   if (data.audioPath !== void 0 === (data.audioUploadId !== void 0)) {

@@ -108,8 +108,13 @@ async function prepare(target, options) {
     const audioPath = path.resolve(options.audioPath);
     audioSeconds = probeAudio(audioPath);
     tool = 'astra_audio2video';
+    // The tool's speech sync check expects motion under every spoken line, so it stays off
+    // when an off-screen voice shares the track (mouths should be still then).
+    const expectLipSync = plan.performance.filter(event => event.kind !== 'action').every(event => event.delivery === 'on_screen');
     args = adapter.astraAudio2VideoSchema.parse({ ...common, audioPath, imagePath, strength: video.strength ?? 0.9,
-      negativePrompt: video.negativePrompt ?? 'subtitles, captions, dialogue text, typography, letters, logos, watermarks' });
+      negativePrompt: video.negativePrompt ?? 'subtitles, captions, dialogue text, typography, letters, logos, watermarks',
+      expectLipSync });
+    if (!expectLipSync) warnings.push('An off-screen voice shares this audio, so the automatic speech sync check and reseed are off. Inspect each visible mouth against its line.');
     if (scene.visual.frames?.end) warnings.push('audio2video has no last-image input. The planned end is review context, not a submitted constraint.');
   } else {
     tool = 'astra_img2video';

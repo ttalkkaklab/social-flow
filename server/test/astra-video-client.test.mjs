@@ -664,6 +664,8 @@ describe('mocked tool calls', () => {
       assert.match(result.content[0].text, /audioUploadId: audio-id/);
       assert.match(result.content[0].text, /Audio expires at: 2026-10-01T04:00:00Z/);
       assert.match(result.content[0].text, /Audio duration \(seconds\): 30/);
+      assert.equal(jobs.length, 1, 'the speech sync check and its reseed are opt-in');
+      assert.doesNotMatch(result.content[0].text, /Speech sync check/);
     });
   });
 
