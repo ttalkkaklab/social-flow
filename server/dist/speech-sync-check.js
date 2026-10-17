@@ -169,7 +169,7 @@ export function checkSpeechSync(opts) {
             const lastSpeech = (active.lastIndexOf(true) + 1) / FPS;
             if (lastSpeech > clip.seconds + 0.1)
                 result.findings.push({ kind: 'speech_cut', reseed: false,
-                    what: `speech runs to ${round(lastSpeech)}s of the supplied window but the clip ends at ${round(clip.seconds)}s — request enough numFrames (8k+1, at most 193) and pad the WAV with silence, or split the line; another seed will not lengthen it` });
+                    what: `speech runs to ${round(lastSpeech)}s of the supplied window but the clip ends at ${round(clip.seconds)}s — request enough numFrames (8k+1, at most 361) and pad the WAV with silence, or split the line; another seed will not lengthen it` });
             if (clip.audio) {
                 const own = envelope(opts.videoPath, 0, null, true);
                 let correlation = -1, lagFrames = 0;

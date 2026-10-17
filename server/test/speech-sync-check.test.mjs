@@ -92,12 +92,14 @@ async function withAstra(t, results) {
 
 test('expectLipSync re-renders a clip that ignored the voice with a new seed and keeps the one that follows it', async (t) => {
   const { file, jobs, dir } = await withAstra(t, ['ignored.mp4', 'synced.mp4']);
-  const out = await ROUTES.astra_audio2video({ prompt: 'x', audioPath: file('speech.wav'), numFrames: 145, seed: 7, expectLipSync: true, outputPath: dir, filename: 'line.mp4' });
+  const out = await ROUTES.astra_audio2video({ prompt: 'x', audioPath: file('speech.wav'), numFrames: 145, seed: 7, guidance: { a2vGuidanceScale: 4 }, expectLipSync: true, outputPath: dir, filename: 'line.mp4' });
   const text = out.content[0].text;
   assert.equal(jobs.length, 2);
   assert.equal(jobs[0].seed, 7);
   assert.ok(Number.isInteger(jobs[1].seed) && jobs[1].seed !== 7);
   assert.equal(jobs[1].audio_upload_id, 'audio-id', 'the same audio upload is reused');
+  // The retry is the same request with a new seed: guidance must ride along on every attempt.
+  for (const job of jobs) assert.deepEqual(job.guidance, { a2v_guidance_scale: 4 });
   assert.match(text, /File: .*line-attempt2\.mp4/);
   assert.match(text, /attempt 1 · seed 7 · no_sync/);
   assert.match(text, /attempt 2 \(provisional candidate\) · seed \d+ · follows_speech/);

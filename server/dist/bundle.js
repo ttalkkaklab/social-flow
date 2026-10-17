@@ -79113,7 +79113,7 @@ function checkSpeechSync(opts) {
         result.findings.push({
           kind: "speech_cut",
           reseed: false,
-          what: `speech runs to ${round(lastSpeech)}s of the supplied window but the clip ends at ${round(clip2.seconds)}s \u2014 request enough numFrames (8k+1, at most 193) and pad the WAV with silence, or split the line; another seed will not lengthen it`
+          what: `speech runs to ${round(lastSpeech)}s of the supplied window but the clip ends at ${round(clip2.seconds)}s \u2014 request enough numFrames (8k+1, at most 361) and pad the WAV with silence, or split the line; another seed will not lengthen it`
         });
       if (clip2.audio) {
         const own = envelope(opts.videoPath, 0, null, true);
@@ -79229,21 +79229,16 @@ var ASTRA_VIDEO_ALLOWED_FIELDS = Object.fromEntries(
   ])
 );
 var ASTRA_VIDEO_MIN_FRAMES = 25;
+var ASTRA_VIDEO_SERVER_MAX_FRAMES = 361;
 var ASTRA_VIDEO_FRAME_LIMITS = {
-  generate: 193,
-  guided: 121,
-  guided_fast: 121,
-  // Conservative guided-family ceiling; not generation-tested.
-  keyframe: 193,
-  // Server-enforced ceiling.
-  audio2video: 193,
-  // Server-enforced ceiling.
-  guided_hq: 121,
-  // Conservative guided-family ceiling; not generation-tested.
-  ingredients: 121,
-  // Conservative; not generation-tested through this client.
-  ic_lora: 121
-  // Conservative; not generation-tested.
+  generate: ASTRA_VIDEO_SERVER_MAX_FRAMES,
+  guided: ASTRA_VIDEO_SERVER_MAX_FRAMES,
+  guided_fast: ASTRA_VIDEO_SERVER_MAX_FRAMES,
+  keyframe: ASTRA_VIDEO_SERVER_MAX_FRAMES,
+  audio2video: ASTRA_VIDEO_SERVER_MAX_FRAMES,
+  guided_hq: ASTRA_VIDEO_SERVER_MAX_FRAMES,
+  ingredients: ASTRA_VIDEO_SERVER_MAX_FRAMES,
+  ic_lora: ASTRA_VIDEO_SERVER_MAX_FRAMES
 };
 var ASTRA_VIDEO_FRAME_STEP = 8;
 var ASTRA_VIDEO_MAX_AUTO_FRAMES = 121;
@@ -86302,7 +86297,7 @@ var OMNI_ASPECT_RATIO_PROPERTY = {
   enum: ["16:9", "9:16"],
   default: "16:9"
 };
-var ASTRA_FRAME_LIMITS_DESCRIPTION = `generate/default: ${ASTRA_VIDEO_FRAME_LIMITS.generate}; guided: ${ASTRA_VIDEO_FRAME_LIMITS.guided}; guided_fast/fast: ${ASTRA_VIDEO_FRAME_LIMITS.guided_fast} and guided_hq/hq: ${ASTRA_VIDEO_FRAME_LIMITS.guided_hq} (conservative, not generation-tested); keyframe: ${ASTRA_VIDEO_FRAME_LIMITS.keyframe} and audio2video: ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} (server rejects values above 193).`;
+var ASTRA_FRAME_LIMITS_DESCRIPTION = `every mode: ${ASTRA_VIDEO_FRAME_LIMITS.generate} (the live server's published ceiling, about 15.0s at 24fps). Longest successful renders in the live job log (2026-10-17): generate 361 at 1280x704 and 193 at 1024x1920; audio2video and keyframe 185 at 1024x1920; ingredients 161 at 1536x1024; guided 193 at 1280x704 text-only; fast, hq and ic_lora never above 121. The server refuses only two known 1280-wide failure bands (see astra_img2video); every other pair outside those measurements is unmeasured \u2014 it may fail or run slowly and hold the one-at-a-time queue for up to 1800s.`;
 var astraNumFramesProperty = (mode) => ({
   type: "integer",
   description: `Clip length in FRAMES, not seconds: 8k+1, minimum ${ASTRA_VIDEO_MIN_FRAMES}. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} Server default: 121 (~5.0s at 24fps). Off-grid and over-limit values are refused before the call.`,
@@ -88336,7 +88331,7 @@ Use when a generated background or photo has to move and nobody is waiting on it
 Do NOT use for more than two stills \u2014 that is astra_keyframe_video, which pins each image to a frame index. For an immediate clip use veo_img2video or seedance_img2video.
 tier accepts default (generate), guided, or hq (guided_hq \u2014 quality unmeasured). guided and hq images require 1536x1024 (omitted dimensions use that size); fast images are not enabled. lora is default-only; negativePrompt and numInferenceSteps are guided-only, and with guidance also hq. Passing one to the wrong tier is refused before the call.
 The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. autoDuration lets the server choose at most 121 frames from a first still alone; it is refused with lastFramePath unless numFrames is also given (numFrames wins). png, jpg and jpeg are accepted, up to 32 MiB each.
-Warning: image-conditioned generate (width 1280, measured at heights 704/768) failure frames: {121,129,137}; guided (width 1280, measured at height 704) failure frames: {121}. Guided 129/137 succeeded at 1280x704 in server probes (the only guided size probed), but the existing client guided ceiling is 121. The client requires 1536x1024 for guided images, so the guided 1280x704 probes are not client alternatives. Within current client limits use generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at 121 frames also succeeded. Text-only 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause. The server owns the failure-band acceptance gate; this warning adds no client-side block.
+Warning: image-conditioned generate (width 1280, measured at heights 704/768) failure frames: {121,129,137}; guided (width 1280, measured at height 704) failure frames: {121}. Guided 129/137 succeeded at 1280x704 in server probes (the only guided size probed). The client requires 1536x1024 for guided images, so the guided 1280x704 probes are not client alternatives. Within current client limits use generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at 121 frames also succeeded. Text-only 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause. The server owns the failure-band acceptance gate; this warning adds no client-side block.
 ${ASTRA_LIMITS_LINE}
 Every clip comes back with a generated AAC audio track (48kHz stereo, measured). Set generateAudio: false when the episode lays its own narration or BGM over the clip \u2014 the server strips the sound after generation (same render time).
 
@@ -88537,7 +88532,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, the
 Use when an existing picture has to be transformed rather than invented: "ingredients" builds a new clip from the reference's subject; "clean-plate", "colorization", "day-to-night", "deblur", "decompression" and "water-simulation" rework the reference clip; "pixel-upscaler-x2" upscales it (request an output twice the reference size yourself). The server picks the adapter weights from its own catalog \u2014 there is no path argument. The tool uploads the reference and the optional mask itself; pass local paths.
 Do NOT use to animate a still from frame 0 (astra_img2video) or to re-roll a span of a clip (astra_video_retake).
 Status: adapter "ingredients" without conditioningMask and skipStage2 runs as the server's existing ingredients mode. Every other adapter runs as mode ic_lora; conditioningMask and skipStage2 are live since the 2026-10-17 server change. Recommended strengths per adapter are unmeasured.
-A reference clip of 2 or more frames above ${ASTRA_VIDEO_MAX_REFERENCE_PIXELS} pixels is refused after upload and before the job, as the server does. skipStage2 skips the second stage, so the output is half resolution. Length: numFrames 8k+1, ${ASTRA_VIDEO_MIN_FRAMES}-${ASTRA_VIDEO_FRAME_LIMITS.ic_lora} (conservative, not generation-tested); there is no autoDuration.
+A reference clip of 2 or more frames above ${ASTRA_VIDEO_MAX_REFERENCE_PIXELS} pixels is refused after upload and before the job, as the server does. skipStage2 skips the second stage, so the output is half resolution. Length: numFrames 8k+1, ${ASTRA_VIDEO_MIN_FRAMES}-${ASTRA_VIDEO_FRAME_LIMITS.ic_lora} (the server ceiling; long references are not generation-tested); there is no autoDuration.
 ${ASTRA_LIMITS_LINE}
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,

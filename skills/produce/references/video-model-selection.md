@@ -29,8 +29,7 @@ rather than dropped. The engine stays opt-in: nothing routes here unless the boa
 ASTRA's `fast` tier is a lower-resolution draft that finishes sooner than `guided`; measured at
 121s, it was slower than the default pipeline's 66s. Automatic duration selection stops at 121
 frames and its rounded range must contain an 8k+1 frame count. Direct `numFrames` accepts
-25-193 on the same grid under the live server ceiling (2026-09-30); the client keeps
-`guided` and `fast` capped at 121. For `astra_audio2video`,
+25-361 on the same grid on every mode, the live server ceiling (`/v1/models`, 2026-10-17). For `astra_audio2video`,
 choose `numFrames` or `audioMaxDuration`, never both; the tool also checks that `audioStartTime`
 is before the uploaded track ends. Retakes check source frames, 32-pixel dimensions and the
 requested end time against uploaded metadata before submission.
@@ -61,7 +60,7 @@ multiple of neither 64 nor 32. The edit may add padding instead of scaling when 
 
 For image-conditioned calls, the server blocks **generate: {121,129,137}** at
 width 1280 (measured at heights 704/768) and **guided: {121}** at width 1280 (measured at height 704). Guided 129 and 137 succeeded at 1280x704 in server probes (the only guided size probed);
-the client's existing guided ceiling is still 121. The client requires 1536x1024 for guided images,
+the guided client ceiling is now 361 like every mode. The client requires 1536x1024 for guided images,
 so the guided 1280x704 probes are not client alternatives. Within current client limits use
 generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at
 121 frames also succeeded. The image-conditioned warning does not apply to `astra_text2video`: text-only

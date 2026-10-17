@@ -4829,7 +4829,7 @@ function checkSpeechSync(opts) {
         result.findings.push({
           kind: "speech_cut",
           reseed: false,
-          what: `speech runs to ${round(lastSpeech)}s of the supplied window but the clip ends at ${round(clip.seconds)}s \u2014 request enough numFrames (8k+1, at most 193) and pad the WAV with silence, or split the line; another seed will not lengthen it`
+          what: `speech runs to ${round(lastSpeech)}s of the supplied window but the clip ends at ${round(clip.seconds)}s \u2014 request enough numFrames (8k+1, at most 361) and pad the WAV with silence, or split the line; another seed will not lengthen it`
         });
       if (clip.audio) {
         const own = envelope(opts.videoPath, 0, null, true);
@@ -4944,21 +4944,16 @@ var ASTRA_VIDEO_ALLOWED_FIELDS = Object.fromEntries(
   ])
 );
 var ASTRA_VIDEO_MIN_FRAMES = 25;
+var ASTRA_VIDEO_SERVER_MAX_FRAMES = 361;
 var ASTRA_VIDEO_FRAME_LIMITS = {
-  generate: 193,
-  guided: 121,
-  guided_fast: 121,
-  // Conservative guided-family ceiling; not generation-tested.
-  keyframe: 193,
-  // Server-enforced ceiling.
-  audio2video: 193,
-  // Server-enforced ceiling.
-  guided_hq: 121,
-  // Conservative guided-family ceiling; not generation-tested.
-  ingredients: 121,
-  // Conservative; not generation-tested through this client.
-  ic_lora: 121
-  // Conservative; not generation-tested.
+  generate: ASTRA_VIDEO_SERVER_MAX_FRAMES,
+  guided: ASTRA_VIDEO_SERVER_MAX_FRAMES,
+  guided_fast: ASTRA_VIDEO_SERVER_MAX_FRAMES,
+  keyframe: ASTRA_VIDEO_SERVER_MAX_FRAMES,
+  audio2video: ASTRA_VIDEO_SERVER_MAX_FRAMES,
+  guided_hq: ASTRA_VIDEO_SERVER_MAX_FRAMES,
+  ingredients: ASTRA_VIDEO_SERVER_MAX_FRAMES,
+  ic_lora: ASTRA_VIDEO_SERVER_MAX_FRAMES
 };
 var ASTRA_VIDEO_FRAME_STEP = 8;
 var ASTRA_VIDEO_MAX_AUTO_FRAMES = 121;
