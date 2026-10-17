@@ -160,11 +160,12 @@ function check(work, board) {
   const rows=fs.readFileSync(path.join(work,'cards.tsv'),'utf8').split(/\r?\n/).filter(l=>l.trim()&&!l.startsWith('#')).map(l=>l.split('\t'));
   const expected=win.SCENES.map((s,i)=>({s,i})).filter(({s})=>!['broll','outro'].includes(s.type));
   if(JSON.stringify(rows.map(r=>r[0]))!==JSON.stringify(expected.map(({i})=>String(i))))throw new Error('card order differs from SCENES');
-  const media={};
+  const media={}, warnings=[];
   for(const [k,{s,i}] of expected.entries()) {
     const audio=path.resolve(work,rows[k][1]);
     const bytes=fs.readFileSync(audio);
     if(!bytes.length)throw new Error('Empty audio for card '+i);
+    require('./compose-speech.js').checkSilentTiming(s,board,win.SB_DOC?.performanceTimingVersion,audio);
     media[audio]=hash(bytes);
     if(s.visual?.video?.speechStatus==='stale')throw new Error('Dialogue-dependent video is stale for card '+i);
     const characters=win.SB_DOC?.characters||[];
@@ -189,6 +190,9 @@ function check(work, board) {
       if(path.resolve(board,s.visual.video.clip||'')!==path.resolve(binding.videoPath) || hash(fs.readFileSync(binding.videoPath))!==binding.videoSha256)throw new Error('Bound video changed for card '+i);
       const audio=(s.narration||[]).map(n=>({lineId:n.id,sha256:n.audio?.sha256,revision:n.audio?.revision}));
       if(JSON.stringify(binding.audio)!==JSON.stringify(audio))throw new Error('Video speech binding is stale for card '+i);
+      const payload=require('../../_shared/scene-acting.js').scenePerformancePayload(s);
+      if(binding.performanceRevision && binding.performanceRevision!==hash(JSON.stringify(payload)))throw new Error('Video performance binding is stale for card '+i);
+      if(!binding.performanceRevision)warnings.push('card '+i+': legacy video performance binding is unverified');
       media[binding.videoPath]=binding.videoSha256;
     }
     if(win.SB_DOC?.speechPlanVersion===1 && (s.narration||[]).some(n=>n.delivery==='on_screen') && s.visual?.video && !binding)throw new Error('On-screen dialogue needs a video speech binding for card '+i);
@@ -197,7 +201,7 @@ function check(work, board) {
     const receipt=read(audio+'.generation.json')||read(audio+'.quality.json');
     if(win.SB_DOC?.speechPlanVersion===1 && lines.length && win.VOICE!=='user') {
       if(new Set(lines.map(n=>n.speaker)).size!==1 && receipt?.generator!=='speech_compose')throw new Error('Multi-speaker shots need separately attached lines and speech_compose receipt');
-      const padded=lines.some(n=>(n.acting?.leadInSeconds??0)>0||(n.acting?.tailOutSeconds??0)>0);
+      const padded=lines.some(n=>(n.acting?.leadInSeconds??0)>0||(n.acting?.tailOutSeconds??0)>0) || s.performance?.some(event=>event.kind==='action' && (win.SB_DOC?.performanceTimingVersion===1 || event.durationSeconds!==undefined || event.withGroup!==undefined));
       const direct=!padded && lines.length===1 && lines[0].audio?.sha256===media[audio];
       if(!direct && (!receipt || receipt.audioSha256!==media[audio] || JSON.stringify(receipt.lineIds)!==JSON.stringify(lines.map(n=>n.id)) || receipt.expectedText!==lines.map(n=>n.tts).join('. ')))throw new Error('Scene WAV has no current line-bound generation receipt for card '+i);
     }
@@ -206,13 +210,7 @@ function check(work, board) {
       const composition=require('./compose-speech.js');
       if(JSON.stringify(receipt.lineSources)!==JSON.stringify(composition.lineSources(lines)))throw new Error('Scene audio composition is stale for card '+i);
       if(receipt.audioSha256!==media[audio])throw new Error('Scene audio composition changed for card '+i);
-      let duration=0;
-      const intervals=lines.map(n=>{
-        const startSeconds=duration,lead=n.acting?.leadInSeconds??0,tail=n.acting?.tailOutSeconds??0;
-        const speechStartSeconds=duration+lead,speechEndSeconds=speechStartSeconds+composition.duration(path.resolve(board,n.audio.path));
-        duration=speechEndSeconds+tail;
-        return {lineId:n.id,startSeconds,speechStartSeconds,speechEndSeconds,endSeconds:duration};
-      });
+      const {intervals,durationSeconds:duration}=composition.sceneTiming(s,board,win.SB_DOC?.performanceTimingVersion);
       if(JSON.stringify(receipt.intervals)!==JSON.stringify(intervals))throw new Error('Scene audio timing intervals are stale for card '+i);
       if(Math.abs(composition.duration(audio)-duration)>0.03)throw new Error('Scene audio does not preserve planned acting timing for card '+i);
     } else if(receipt) {
@@ -222,7 +220,7 @@ function check(work, board) {
       authorizeSpeed(work,'final',receipt.playbackSpeed??1);
     }
   }
-  fs.writeFileSync(path.join(work,REPORT),JSON.stringify({status:'not_reviewed',policy:'speech-provenance-v1',warnings:[],inputs:media,approved:false},null,2)+'\n');
+  fs.writeFileSync(path.join(work,REPORT),JSON.stringify({status:'not_reviewed',policy:'speech-provenance-v1',warnings,inputs:media,approved:false},null,2)+'\n');
   return media;
 }
 function checkTempo(work,speed,min=1,max=1) {
@@ -245,7 +243,7 @@ if(require.main===module){
       if(!dir) throw new Error('usage: check-tts-quality.js check <workdir> [storyboard] | approve <workdir> <user approval reference>');
       check(dir,board);
       const report=lastReport(dir);
-      console.log(report.warnings.length?`Generated narration proceeds with ${report.warnings.length} user-approved warning(s); see ${REPORT}`:'Speech media recorded; listening not performed and no approval required');
+      console.log(report.warnings.length?`Generated narration proceeds with ${report.warnings.length} unverified provenance warning(s); see ${REPORT}`:'Speech media recorded; listening not performed and no approval required');
     }
   }catch(e){console.error('TTS quality: '+e.message);process.exitCode=1;}
 }

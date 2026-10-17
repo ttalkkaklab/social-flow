@@ -761,15 +761,20 @@ voiceSettings; declare text language separately when the API auto-detects it. No
 listening, STT, scores, retry-to-pass loop or human listening approval runs by default;
 an explicitly requested review/improvement loop may inspect actual media and report findings.
 
-Use one speaker per scene. Split speaker changes into separate shots before synthesis.
+A shot may contain several speakers. Keep each line's speaker, pinned voice and receipt;
+use the shared composer to place their takes in performance order. Cut on the scene's
+staging or a real adapter constraint, not on every speaker change.
 Use WAV, preserve the selected voice and speed, and resample differing sample rates before
 assembly. The current builder cannot concatenate MP3 as PCM. Keep speech at speed 1 unless
 the user requested another speed under [tts-speed.md](references/tts-speed.md).
 Generate each stable line as a take; combine consecutive lines into the scene WAV and record
 its ordered lineIds, expectedText and actual audioSha256. For single-line shots, use the bound
-WAV directly when no reaction padding is planned. For directed or multi-line scenes, attach all line
-audio first; build-reel invokes [compose-speech.js](references/compose-speech.js) to add
-leadInSeconds/tailOutSeconds and align subtitles to measured speech intervals. Run that
+WAV directly when no reaction padding or independent action is planned. For directed,
+multi-line or action-bearing scenes, attach all line audio first; build-reel invokes
+[compose-speech.js](references/compose-speech.js) to place measured speech and ordered action
+intervals on one timeline. New boards carry `SB_DOC.performanceTimingVersion:1` and need
+finite independent-action timing before composition. Optional subtitle sidecars align to
+measured speech intervals; the video stays clean. Run that
 same composer before audio-conditioned video generation so video uses the padded WAV. Subtitle timing follows the
 actual WAV; file and timing checks do not listen.
 Keep ElevenLabs seed, stability and pronunciation dictionaries fixed across retakes when

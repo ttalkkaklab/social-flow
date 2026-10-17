@@ -275,15 +275,43 @@ test('full video still requires source-backed quantities and subtitle-only foota
 test('source and motion prompts share style without inventing a person; end-frame route is preserved', () => {
   const win = fixture(), p = assemble(win, 0);
   assert.match(p.sourcePrompt, /Matte concrete/); assert.match(p.sourcePrompt, /miniature/);
+  assert.match(p.sourcePrompt, /dialogue stays in audio, with no subtitles, captions or lettering in the image or final video/);
+  assert.doesNotMatch(p.sourcePrompt, /subtitles are added in editing/);
   assert.match(p.motionPrompt, /Buildings rise vertically/);
   assert.match(p.motionPrompt, /stays exactly consistent with the input frame/);
   assert.doesNotMatch(p.motionPrompt, /\d+ seconds|Korean woman/);
   win.SCENES[0].visual.video.lastImagePath = 'images/end.png';
   assert.equal(scenePlan(win.SCENES[0]).lastImagePath, 'images/end.png');
 });
-test('legacy prompt bytes stay fixed when cast and cutType are absent', () => {
+test('complete performance prompts honor Seedance model language and retain Korean story text', () => {
+  const win=fixture(1),scene=win.SCENES[0];
+  scene.performance=[{kind:'action',character:'host',text:'소포를 문 옆에 내려놓는다.',durationSeconds:1}];
+  assert.throws(()=>assemble(win,0),/event.videoDirection/);
+  scene.performance[0].videoDirection='Places the parcel beside the door.';
+  const translated=assemble(win,0).motionPrompt;
+  assert.match(translated,/Places the parcel beside the door/);assert.doesNotMatch(translated,/소포/);
+  assert.equal(scene.performance[0].text,'소포를 문 옆에 내려놓는다.');
+  scene.performance[0].videoDirection='Moves for 2 seconds.';
+  assert.throws(()=>assemble(win,0),/digit seconds/);
+  delete scene.performance[0].videoDirection;scene.visual.video.model='dreamina-seedance-2-5-260628';
+  assert.match(assemble(win,0).motionPrompt,/소포를 문 옆에 내려놓는다/);
+  scene.visual.video.engine='astra';assert.match(assemble(win,0).motionPrompt,/소포를 문 옆에 내려놓는다/);
+});
+test('Seedance 2.5 integer-second performance directions pass assembly and the stored-prompt CLI', () => withBoard(({board,save})=>{
+  const win=fixture(1),scene=win.SCENES[0];
+  scene.visual.video.model='dreamina-seedance-2-5-260628';
+  scene.performance=[{kind:'action',character:'host',text:'Moves for 2 seconds.',durationSeconds:2}];
+  scene.visual.video.prompt=assemble(win,0).motionPrompt;
+  assert.match(scene.visual.video.prompt,/Moves for 2 seconds/);save(win);
+  const checkPrompt=()=>spawnSync(process.execPath,[path.join(root,'skills/storyboard/references/check-scenes.js'),board,'--draft','--json'],{encoding:'utf8'});
+  const current=checkPrompt();assert.equal(current.error,undefined);assert.doesNotMatch(current.stdout,/digit seconds/);
+  scene.visual.video.model='seedance-1-5-pro-251215';
+  assert.throws(()=>assemble(win,0),/digit seconds/);save(win);
+  assert.match(checkPrompt().stdout,/digit seconds/);
+}));
+test('legacy prompt bytes preserve the clean-output policy when cast and cutType are absent', () => {
   const p = assemble(fixture(1), 0);
-  assert.equal(digest(p.sourcePrompt), '8a15019e3e4691ba94903a125dd26358a0d1e10bbd0ef2abc0c7401361367050');
+  assert.equal(digest(p.sourcePrompt), 'b51ee046763a9b03655f049d7119e9cd75fef489b7c75f8b0fa610db40973780');
   assert.equal(digest(p.endFramePrompt), 'ea5266c699957affead597eaf0c2a1cd4e60bf4e014136b27b6f0207612221a3');
   assert.equal(digest(p.motionPrompt), '2ed0cb8cfad2acce5a6cffe08edc71ceaad3d8acd5229630c3c248bcd7754a98');
 });
@@ -1317,4 +1345,14 @@ test('prop appearance and custody reach source, motion, end frame and reference 
   assert.match(assemble(win, 0, '/board').motionPrompt, /right hand/);
   assert.equal(output.propSnapshot[0].after.holderId, 'b');
   assert.ok(output.sourceImageArgs.referenced_image_paths.includes('/board/images/watch.png'));
+});
+
+test('spatial model prompts preserve canonical action and addressee beyond videoDesign summary',()=>{
+ for(const engine of ['seedance','astra']) {
+  const win=fixture(1),scene=win.SCENES[0];scene.visual.video.engine=engine;
+  scene.narration[0].speaker='courier';scene.narration[0].delivery='off_screen';
+  scene.performance=[{kind:'dialogue',character:'courier',to:'bride',group:1},{kind:'action',character:'bride',text:'Drops the parcel.'}];
+  const prompt=assemble(win,0).motionPrompt;
+  assert.match(prompt,/addressed to bride/);assert.match(prompt,/Drops the parcel/);
+ }
 });

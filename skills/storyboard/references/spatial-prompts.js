@@ -173,27 +173,42 @@ function assemble(win, index, dir) {
       const ref = castReferenceImages.find(item => item.id === actor.id);
       return ref ? ['The ' + actor.color + ' proxy is ' + ref.name + ' from attached image ' + (sourceReferenceImages.indexOf(ref.path) + 1) + '; that image supplies appearance only.'] : [];
     }),
-    'Keep the physical subject legible at phone size. The image contains only the scene; subtitles are added in editing.'].join('\n');
+    'Keep the physical subject legible at phone size. The image contains only a text-free scene; dialogue stays in audio, with no subtitles, captions or lettering in the image or final video.'].join('\n');
   const locationLock = locationRef ? '. The location holds the approved reference architecture and fixed object inventory: ' + locationRef.invariants.join('; ') : '';
   const lock = lockText(d, style, treatment, castLocks) + locationLock + (propPrompt ? ". " + propPrompt : "") + (isDrone(camera) ? '. The flight keeps continuous terrain parallax and stable landmarks; the picture stays a clean aerial view with scenery at every frame edge' : '');
   let motionPrompt = null;
   const engine = v.video?.engine || v.engine || 'seedance';
+  const promptEngine = v.video?.model === 'dreamina-seedance-2-5-260628' ? 'seedance-2.5' : 'seedance';
+  // Keep the story text intact. An optional adapter rendering carries the same
+  // event in English when the selected model cannot accept its original language.
+  const performanceDirection = (scene.performance || []).map((event, index) => {
+    if (event.videoDirection !== undefined && !text(event.videoDirection)) throw new Error('performance.videoDirection must be non-empty text');
+    if (event.kind === 'action') return `Event ${index + 1}: ${event.character}: ${event.videoDirection || event.text}` +
+      (event.withGroup ? ` (concurrent with speech group ${event.withGroup})` : '');
+    const line = scene.narration?.[event.group - 1];
+    const direction = event.videoDirection || line?.acting?.visual;
+    return `Event ${index + 1}: ${event.character} ${line?.delivery || 'voiceover'}` +
+      (event.to ? ` addressed to ${event.to}; preserve the listener and eyeline` : '') +
+      (direction ? `; ${direction}` : '');
+  }).join('. ');
   if (!missingSlots.length && engine === 'astra') {
     const astraAppearance = activeCast.filter(({ entry }) => text(entry.sheet))
       .map(({ entry }) => 'Appearance to preserve on visible parts only: ' + clause(entry.sheet) + '.');
     motionPrompt = astraMotionPrompt(d, camera, style, treatment, !!spoken.trim() && (scene.narration || []).every(n => n.delivery === 'voiceover' || (!n.delivery && (!n.speaker || n.speaker === win.SB_DOC?.narratorCharacterId))), [...astraAppearance, ...(propPrompt ? [propPrompt] : [])], castIds.length > 0) + locationLock;
-    if(motionPrompt.length>2000)throw new Error('ASTRA motion prompt including location exceeds 2000 characters');
+    if (performanceDirection) motionPrompt += '\nOrdered performance: ' + performanceDirection;
   } else if (!missingSlots.length) {
     const onReferenceRoute = previz && (v.video.engine || v.engine || 'seedance') !== 'host' && previzHandoff(scene) === 'reference_video';
-    const clip = PROMPT.clipAssemble({ engine: 'seedance', camera, motion: motionText(d), locks: lock,
+    const clip = PROMPT.clipAssemble({ engine: promptEngine, camera, motion: motionText(d) + (performanceDirection ? '\nOrdered performance: ' + performanceDirection : ''), locks: lock,
       ...(onReferenceRoute ? { scene: previzPreamble(previz) } : {}),
       audio: 'silent; narration is supplied separately' });
     const problems = [...clip.hits.map(h => `"${h.match}" (${h.why})`), ...clip.negHits.map(h => `negative directive "${h}"`),
       ...clip.timeHits, ...clip.hanHits.map(h => `Korean "${h}"`), ...(clip.lockMissing ? ['no consistency lock'] : [])];
     if (problems.length) throw new Error('The motion prompt fails the Seedance prompt gate that check-scenes.js runs: ' + problems.join('; ') +
-      '. Rewrite videoDesign.action, motion.beats or continuity positively, in English, without seconds.');
+      '. Rewrite videoDesign.action, motion.beats or continuity positively, without seconds. For translated performance, preserve the original text and supply each event.videoDirection in the selected model\'s supported language.');
     motionPrompt = clip.prompt;
   }
+  if (engine === 'astra' && motionPrompt?.length > 2000)
+    throw new Error('ASTRA motion prompt including performance exceeds 2000 characters; shorten descriptions or split at a natural action boundary, preserving every action');
   const locationEndReady = !locationRef || !!(locationRef.resultImage && v.bg && path.resolve(dir,v.bg)===path.resolve(dir,locationRef.resultImage));
   return { spatialWarnings, propSnapshot, propReferenceImages, endFrameImageArgs: locationRef && locationEndReady ? {referenced_image_paths: [path.resolve(dir,v.bg), ...locationRef.endPaths]} : {}, endFrameReady: locationEndReady, locationEndReferenceImages: locationRef?.endPaths || [], locationBinding: locationRef?.binding || null, locationReferenceRoles: locationRef?.roles || [], sourcePrompt: source, stylePreset: preset, cutType, castIds,
     styleBinding: pack?.binding || null,

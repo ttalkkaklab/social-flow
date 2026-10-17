@@ -455,18 +455,19 @@ function engineOf(scene) {
    never a directive, because this engine has no negativePrompt argument; and it closes with
    a consistency lock. The checks are assemble-bg-prompt.js's own, so a prompt that clears
    this checker is one the assembler would have written. */
-function seedancePromptFindings(prompt, engine) {
+function seedancePromptFindings(prompt, engine, model) {
   const text = String(prompt || '').trim();
   if (engine !== 'seedance' || !text) return [];
   const out = [];
   // The Audio: sentence is exempt from the negative check — "no music, no speech" is a state.
   const audioAt = text.search(/Audio\s*:/i);
   const body = audioAt >= 0 ? text.slice(0, audioAt) : text;
-  PROMPT.hangulHits(text, 'seedance').forEach((h) => out.push(
+  const promptEngine = model === 'dreamina-seedance-2-5-260628' ? 'seedance-2.5' : 'seedance';
+  PROMPT.hangulHits(text, promptEngine).forEach((h) => out.push(
     `the stored clip prompt carries Korean ("${h}") — a seedance body reads Chinese or English; Korean goes inside the quotes of a dialogue line`));
   PROMPT.negDirectiveHits(body, 'seedance').forEach((h) => out.push(
     `the stored clip prompt gives a negative directive ("${h}") — Seedance has no negativePrompt argument: re-describe the scene and put what must hold into the consistency lock`));
-  PROMPT.timingHits(body, 'seedance').forEach((h) => out.push(`the stored clip prompt carries ${h}`));
+  PROMPT.timingHits(body, promptEngine).forEach((h) => out.push(`the stored clip prompt carries ${h}`));
   if (PROMPT.lockMissing(text, 'seedance')) out.push(
     'the stored clip prompt has no consistency lock — a seedance clip closes with the sentence that says what holds in every frame ' +
     '("the subject stays exactly consistent with the input frame; appearance, proportions and materials hold"), ' +
@@ -629,12 +630,12 @@ function check(win, fmt, opts) {
       if (!registry.some(entry => entry.id === c?.id))
         machine('story cast', 'selected character ' + c?.id + ' must be in SB_DOC.characters');
     }
-    scenes.forEach((s, i) => {
-      const actions = (Array.isArray(s.performance) ? s.performance : []).filter(e => e?.kind === 'action');
-      for (const action of actions) {
-        if (typeof action.text === 'string' && !String(s.visual?.action || '').includes(action.text))
-          machine('shot ' + (i + 1), 'performance action is missing from visual.action — carry the reviewed action into the production plan');
-      }
+    scenes.forEach((scene, i) => {
+      if (!(scene.narration || []).length && win.STORY.transcripts?.some(item => item.shot === i + 1)) return;
+      try {
+        const plan = require('../../_shared/scene-acting.js').planScenePerformance(scene);
+        plan.warnings.forEach(message => warn('shot ' + (i + 1), message));
+      } catch (error) { machine('shot ' + (i + 1), error.message); }
     });
   }
 
@@ -657,9 +658,9 @@ function check(win, fmt, opts) {
   /* The preset spells the shot band `sceneCountMin`/`sceneCountMax` (formats.js §3.2), which is
      also what the approval page's strip reads. This check asked for `shotMin`/`shotMax` — keys
      no preset has ever emitted — so it never fired until 2026-09-07. */
-  if (pacing.sceneCountMin && main.length < pacing.sceneCountMin)
+  if (win.STORY?.version !== 'story-v2' && pacing.sceneCountMin && main.length < pacing.sceneCountMin)
     warn('episode', `${main.length} main shots — the ${fmt.label} band is ${pacing.sceneCountMin}~${pacing.sceneCountMax}`);
-  if (pacing.sceneCountMax && main.length > pacing.sceneCountMax)
+  if (win.STORY?.version !== 'story-v2' && pacing.sceneCountMax && main.length > pacing.sceneCountMax)
     warn('episode', `${main.length} main shots — the ${fmt.label} band is ${pacing.sceneCountMin}~${pacing.sceneCountMax}`);
 
   /* Total length against the channel's band, with the preset's underneath it (`length_min_seconds`
@@ -675,9 +676,16 @@ function check(win, fmt, opts) {
   const bandFloor = isShort && Number.isFinite(motionPolicy.lengthMin) ? motionPolicy.lengthMin : pacing.totalMin;
   const bandCeil = isShort && Number.isFinite(motionPolicy.lengthMax) ? motionPolicy.lengthMax : pacing.totalMax;
   const lenTxt = (v) => `${Math.round(v * 10) / 10}s`;
-  if (played > 0 && Number.isFinite(pacing.totalHard) && played > pacing.totalHard)
+  if (win.STORY?.version === 'story-v2') {
+    const raw = win.MOTION_POLICY || {};
+    const minimum = Number(raw.length_min_seconds ?? raw.lengthMin);
+    const maximum = Number(raw.length_max_seconds ?? raw.lengthMax);
+    if (played > 0 && ((minimum > 0 && played < minimum) || (maximum > 0 && played > maximum)))
+      warn('episode', 'Planned duration ' + lenTxt(played) + ' is outside the explicitly selected length constraint; revise the scope or split the episode without deleting necessary actions.');
+  }
+  if (win.STORY?.version !== 'story-v2' && played > 0 && Number.isFinite(pacing.totalHard) && played > pacing.totalHard)
     bad('episode', `main body ${lenTxt(played)} — past the cap of ${lenTxt(pacing.totalHard)}`);
-  else if (played > 0 && Number.isFinite(bandFloor) && Number.isFinite(bandCeil) &&
+  else if (win.STORY?.version !== 'story-v2' && played > 0 && Number.isFinite(bandFloor) && Number.isFinite(bandCeil) &&
            (played < bandFloor || played > bandCeil))
     warn('episode', `main body ${lenTxt(played)} — outside the ` +
                     `${bandFloor !== pacing.totalMin || bandCeil !== pacing.totalMax ? 'channel band' : 'default'} ` +
@@ -1266,7 +1274,7 @@ function check(win, fmt, opts) {
         // A b-roll is a generated shot, so the engine is billed for a length it has to be given
         // (§cut length); scenePlan rejects the shot without one.
         warn(where, 'no duration');
-      } else if (pacing.sceneMin && (dur < pacing.sceneMin || dur > pacing.sceneMax)) {
+      } else if (win.STORY?.version !== 'story-v2' && pacing.sceneMin && (dur < pacing.sceneMin || dur > pacing.sceneMax)) {
         warn(where, `duration ${dur}s — the ${fmt.label} band is ${pacing.sceneMin}~${pacing.sceneMax}s`);
       }
     }
@@ -1320,7 +1328,7 @@ function check(win, fmt, opts) {
       const prompt = v.prompt || (v.video && v.video.prompt) ||
                      (v.clip && typeof v.clip === 'object' && v.clip.prompt);
       if (!prompt) machine(where, 'no stored clip prompt — produce sends this verbatim (scenes-schema §clip prompt)');
-      else seedancePromptFindings(prompt, engineOf(s)).forEach((f) => machine(where, f));
+      else seedancePromptFindings(prompt, engineOf(s), s.visual?.video?.model).forEach((f) => machine(where, f));
       // A clip planned silent (generateAudio:false — every full-video cut) has nothing to describe.
       if (!v.audio && s.type !== 'quote' && !(v.video && v.video.generateAudio === false))
         warn(where, 'no visual.audio — the engine invents a soundtrack under the narration');
@@ -2883,6 +2891,9 @@ function selftest() {
      engineOf({ type: 'broll', visual: { engine: 'astra' } }) === 'astra');
   ok('an astra clip prompt is not held to the Seedance grammar',
      seedancePromptFindings('she turns to the window', 'astra').length === 0);
+  ok('stored Seedance 2.5 prompts preserve its Korean direction support',
+     seedancePromptFindings('소포를 내려놓는다. The subject stays consistent.', 'seedance', 'dreamina-seedance-2-5-260628').length === 0 &&
+     seedancePromptFindings('소포를 내려놓는다. The subject stays consistent.', 'seedance', 'seedance-1-5-pro-251215').some(f => f.includes('Korean')));
   ok('a board that names the model instead of the lane still falls back to the type default',
      engineOf({ type: 'points', visual: { video: { engine: 'ltx' } } }) === 'seedance');
 
