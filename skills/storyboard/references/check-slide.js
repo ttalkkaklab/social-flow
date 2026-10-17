@@ -218,10 +218,12 @@ function checkDir(dir, only, opts) {
     }
 
     // Charts use a versioned, shared renderer. A renamed number card cannot satisfy it.
+    let canonicalChart = false;
     if (scene.shot?.render?.mode === 'data_graph' || slide?.chartRenderer != null) {
       require('./render-routing.js').checkScene(scene).forEach(message => fail(base, message));
       const expected = fs.readFileSync(path.join(__dirname, 'chart-slide-template.html'), 'utf8')
         .replace('const SLIDE_SHOT = 1;', `const SLIDE_SHOT = ${no};`);
+      canonicalChart = src === expected;
       if (src !== expected) fail(base, 'chart HTML must match chart-slide-template.html; author values and focus in scenes.js, improve the shared template for layout changes');
       for (const name of ['chart-runtime.js', 'render-routing.js']) {
         const asset = path.join(slidesDir, 'assets', name);
@@ -461,8 +463,10 @@ function checkDir(dir, only, opts) {
            템플릿 자신의 그라데이션은 사진 컷 스크림 하나뿐이라 그 규칙만 빼고 검사한다.
            머리는 render 함수 앞 구간이다(저작 코드가 문자열로 뱉는 <style> 과 겹치지 않게). */
         const headCss = start > 0 ? code.slice(0, start).replace(/\.scrim\s*\{[^}]*\}/g, "") : "";
-        if (/\b(?:linear|conic|radial)-gradient\s*\(/i.test(authored) ||
-            /\b(?:linear|conic|radial)-gradient\s*\(/i.test(headCss)) fail(base, MSG.gradientAuthored);
+        // The canonical chart owns its optional liquid-glass material. Its exact
+        // template/runtime checks above still prevent an episode-specific replacement.
+        if (!canonicalChart && (/\b(?:linear|conic|radial)-gradient\s*\(/i.test(authored) ||
+            /\b(?:linear|conic|radial)-gradient\s*\(/i.test(headCss))) fail(base, MSG.gradientAuthored);
         /* 재질 — 셀렉터가 전부 html.studio 로 시작하는 규칙 블록만 빼고 본다. 목록에 다른 셀렉터를
            하나라도 끼우면 그 블록은 검사 대상이다(리뷰 실측 우회). render 함수가 없으면 파일 전체다. */
         const GEN = /background-clip\s*:\s*text|-webkit-background-clip\s*:\s*text|\bbox-shadow\s*:|\btext-shadow\s*:|\bbackdrop-filter\s*:|\bfilter\s*:\s*(?:drop-shadow|blur)\s*\(/i;

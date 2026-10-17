@@ -61,7 +61,8 @@
     return {locate,paths};
   }
   function render(data,{width=728,height=660,group=1,progress=1,accent,wide=false,elapsedMs=progress*1000,growMs=1000,plateMs=400}={}){
-    const C=colors(data.surface,color(accent)),v=data.values,n=v.length;
+    const glass=data.material==='liquid-glass';
+    const C=glass?{paper:'#F4F6FA',ink:'#172237',muted:'#536077',line:'#D9E1EE',neutral:'#B7CBE8',accent:color(accent)||'#1764D8'}:colors(data.surface,color(accent)),v=data.values,n=v.length;
     // Keep type/stroke floors aligned with slide-design §3 and slide-legibility role floors.
     const TYPE=wide?{label:32,value:32,foot:24}:{label:44,value:44,foot:28},HAIR=wide?2:3,RULE=wide?4:6;
     const first=group<=1,p=ease(clamp(elapsedMs/(first?growMs:plateMs))),reveal=first?geometryEase(clamp(elapsedMs/growMs)):1;
@@ -117,10 +118,83 @@
         out+=t((left+right)/2,bottom+84,data.binUnit||'',TYPE.foot,C.muted,'middle');
       }
     }else if(data.chart==='stacked-bar'){
+      if(data.reveal){
+        // Source values stay exact. Only the geometry and its associated label reveal.
+        const R=data.reveal,at=window=>group>1?1:geometryEase(clamp((elapsedMs-window.startMs)/(window.endMs-window.startMs)));
+        const totalProgress=at(R.total),barY=glass?150:105,barH=glass?(wide?180:132):(wide?150:100);
+        const radius=glass?Math.min(38,barH/3):0;
+        if(glass){
+          out+=`<defs>
+            <linearGradient id="glass-rail" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#FFFFFF" stop-opacity=".42"/><stop offset=".48" stop-color="#CFDBEB" stop-opacity=".40"/><stop offset="1" stop-color="#AABFD9" stop-opacity=".60"/></linearGradient>
+            <linearGradient id="glass-spent" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#5C94DB" stop-opacity=".62"/><stop offset=".55" stop-color="${C.accent}" stop-opacity=".58"/><stop offset="1" stop-color="#4D7FBF" stop-opacity=".66"/></linearGradient>
+            <linearGradient id="glass-balance" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#EAF3FF" stop-opacity=".40"/><stop offset=".5" stop-color="#B5CEEF" stop-opacity=".32"/><stop offset="1" stop-color="#A1BEDF" stop-opacity=".47"/></linearGradient>
+            <linearGradient id="glass-specular" x1="0" y1="0" x2="1" y2=".3"><stop stop-color="#FFFFFF" stop-opacity=".95"/><stop offset=".35" stop-color="#FFFFFF" stop-opacity=".40"/><stop offset=".7" stop-color="#FFFFFF" stop-opacity=".08"/><stop offset="1" stop-color="#FFFFFF" stop-opacity=".62"/></linearGradient>
+            <linearGradient id="glass-meniscus"><stop stop-color="#FFFFFF" stop-opacity="0"/><stop offset=".65" stop-color="#FFFFFF" stop-opacity=".12"/><stop offset="1" stop-color="#FFFFFF" stop-opacity=".82"/></linearGradient>
+            <filter id="glass-depth" x="-10%" y="-40%" width="120%" height="200%"><feDropShadow dx="0" dy="9" stdDeviation="14" flood-color="#526A94" flood-opacity=".11"/><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#FFFFFF" flood-opacity=".8"/></filter>
+            <clipPath id="glass-profile"><rect x="0" y="${barY}" width="${width*totalProgress}" height="${barH}" rx="${radius}"/></clipPath>
+          </defs>`;
+        }
+        out+=t(0,glass?54:55,glass?(R.totalLabel||'Total'):(R.totalLabel||'Total')+' '+num(data.total)+' '+data.unit,glass?(wide?34:40):(wide?48:TYPE.value),C.muted,'start',550);
+        if(glass)out+=t(width,70,num(data.total)+' '+data.unit,glass?(wide?72:64):(wide?48:TYPE.value),C.ink,glass?'end':'start',750);
+        if(glass){
+          // The quiet ruler belongs to the quantity, and remains visible through the tint.
+          out+=`<g clip-path="url(#glass-profile)" opacity=".34">`;
+          for(let tick=1;tick<20;tick++){
+            const x=width*tick/20;
+            out+=line(x,barY+barH*.36,x,barY+barH*.64,'#859BB7',tick%5===0?2:1);
+          }
+          out+='</g><g filter="url(#glass-depth)">';
+        }
+        out+=`<rect data-mark="total" x="0" y="${barY}" width="${width*totalProgress}" height="${barH}" rx="${radius}" fill="${glass?'url(#glass-rail)':C.line}"/>`;
+        if(glass)out+='</g><g clip-path="url(#glass-profile)">';
+        let offset=0,labelOut='';
+        v.forEach((d,i)=>{
+          const window=R.parts.find(part=>part.label===d.label),q=at(window),partW=width*d.value/data.total;
+          const fill=glass?`url(#${i===0?'glass-spent':'glass-balance'})`:(i===0?C.accent:C.neutral),cx=offset+partW/2;
+          out+=`<rect data-mark="part" data-label="${esc(d.label)}" x="${offset}" y="${barY}" width="${partW*q}" height="${barH}" fill="${fill}"/>`;
+          // Later narration groups transfer emphasis without changing measured widths.
+          if(!first){
+            const hot=emphasis(i);
+            out+=`<rect data-mark="focus" data-label="${esc(d.label)}" x="${offset}" y="${barY}" width="${partW}" height="${barH}" fill="${C.accent}" opacity="${hot*.18}"/>`;
+          }
+          if(glass&&q>0&&q<1){
+            // Optical response travels only with the actual quantity boundary and
+            // settles away with the reveal. It never moves the measured rectangle.
+            const edge=offset+partW*q,lensW=Math.min(32,partW*q);
+            const response=clamp(q*8)*clamp((1-q)*12);
+            out+=`<g opacity="${response}"><rect x="${edge-lensW}" y="${barY+5}" width="${lensW}" height="${barH-10}" fill="url(#glass-meniscus)"/>`;
+            for(let tick=1;tick<20;tick++){
+              const x=width*tick/20,distance=edge-x;
+              if(x>=offset&&distance>3&&distance<44){
+                const bend=Math.sin(distance/44*Math.PI)*5;
+                out+=`<path d="M ${x} ${barY+barH*.36} Q ${x+bend} ${barY+barH*.5} ${x} ${barY+barH*.64} L ${x+1.5} ${barY+barH*.64} Q ${x+bend+1.5} ${barY+barH*.5} ${x+1.5} ${barY+barH*.36} Z" fill="#526E94" opacity=".22"/>`;
+              }
+            }
+            out+='</g>';
+          }
+          if(q>0){
+            const labelOpacity=ease(clamp((q-.90)/.10)),settle=glass?8*(1-labelOpacity):0;
+            labelOut+=`<g opacity="${labelOpacity}" transform="translate(0 ${settle})">`+line(cx,barY+barH+20,cx,barY+barH+48,glass?'#879BB9':C.muted,glass?2:RULE,'',glass?'hair':'rule');
+            labelOut+=t(cx,barY+barH+96,d.label,glass?(wide?36:40):(wide?36:TYPE.label),C.muted,'middle',550);
+            labelOut+=t(cx,barY+barH+170,num(d.value)+' '+data.unit,glass?(wide?72:60):(wide?56:TYPE.value),C.ink,'middle',750)+'</g>';
+          }
+          offset+=partW;
+        });
+        if(glass){
+          // A narrow asymmetric rim replaces the broad glossy-tube highlight.
+          out+=`<rect x="3" y="${barY+3}" width="${Math.max(0,width*totalProgress-6)}" height="${barH-6}" rx="${radius-3}" fill="none" stroke="url(#glass-specular)" stroke-width="3"/>`;
+          out+=`<path d="M ${radius} ${barY+7} H ${Math.max(radius,width*totalProgress-radius)}" fill="none" stroke="#FFFFFF" stroke-width="1" opacity=".5"/>`;
+          let divider=0;
+          v.slice(0,-1).forEach((d,i)=>{divider+=width*d.value/data.total;const q=at(R.parts.find(part=>part.label===d.label));out+=line(divider,barY+2,divider,barY+barH-2,'#FFFFFF',2,`opacity="${q*.8}"`)});
+          out+=`<rect x="1" y="${barY+1}" width="${Math.max(0,width*totalProgress-2)}" height="${barH-2}" rx="${radius}" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-opacity=".35"/></g>`;
+        }
+        out+=labelOut;
+      }else{
       const barY=90,barH=74;let x=0;
       v.forEach((d,i)=>{const w=d.value/data.total*width*reveal,hot=emphasis(i);out+=`<rect x="${x}" y="${barY}" width="${w}" height="${barH}" fill="${mix(C.neutral,C.accent,.12+.88*i/Math.max(1,n-1))}" stroke="${C.paper}" stroke-width="${HAIR}"/><rect x="${x}" y="${barY}" width="${w}" height="${barH}" fill="${C.accent}" opacity="${hot}" stroke="${C.paper}" stroke-width="${HAIR}"/>`;x+=w});
       out+=t(0,43,'0%',TYPE.foot,C.muted)+t(width,43,'100%',TYPE.foot,C.muted,'end');
       v.forEach((d,i)=>{const yy=245+i*(height-265)/n,hot=emphasis(i);out+=`<circle cx="8" cy="${yy-10}" r="6" fill="${C.accent}" opacity="${.3+.7*hot}"/>`+label(30,yy,d.label)+t(width,yy,num(d.value)+'  /  '+num(d.value/data.total*100)+'%',TYPE.value,C.ink,'end',700)});
+      }
     }else if(data.chart==='donut'||data.chart==='pie'){
       const radius=Math.min(width*.235,height*.32),cx=radius+8,cy=height/2-15,inner=data.chart==='donut'?radius*.66:0;
       const keyX=width*.55,keyW=width-keyX,wrap=Math.max(1,Math.floor((keyW-23)/TYPE.label));

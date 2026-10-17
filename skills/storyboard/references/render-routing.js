@@ -245,6 +245,8 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
    if(!Array.isArray(d)||d.length!==2||!d.every(Number.isFinite)||d[1]<=d[0]||d[0]>Math.min(0,...finite)||d[1]<Math.max(0,...finite))errors.push('data.domain needs finite [lo,hi], lo <= min(0,values), hi >= max(0,values), hi > lo');
   }
   if(data.surface!=null&&!['paper','ink'].includes(data.surface))errors.push('chart surface must be paper or ink');
+  if(data.material!=null&&data.material!=='liquid-glass')errors.push('unsupported chart material');
+  if(data.material==='liquid-glass'&&(data.chart!=='stacked-bar'||!data.reveal))errors.push('liquid-glass currently needs a staged stacked-bar');
   if(data.decimals!=null&&(!Number.isInteger(data.decimals)||data.decimals<0||data.decimals>3))errors.push('chart decimals must be 0..3');
   if(data.chart==='line'||data.chart==='timeline'){
    const dates=values.map(v=>{
@@ -258,6 +260,11 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
   if(data.chart==='histogram'&&values.some((v,i)=>!Number.isFinite(v?.from)||!Number.isFinite(v?.to)||v.to<=v.from||v.value<0||(i>0&&v.from!==values[i-1].to)||(i>0&&Math.abs((v.to-v.from)-(values[0].to-values[0].from))>1e-9)))errors.push('histogram needs contiguous equal-width from/to bins and nonnegative frequencies');
   if(data.chart==='map')errors.push(...checkMap(data));
   const beats=data.beats;
+  if(data.reveal!=null){
+   const r=data.reveal,window=w=>w&&Number.isFinite(w.startMs)&&Number.isFinite(w.endMs)&&w.startMs>=0&&w.endMs>w.startMs;
+   if(data.chart!=='stacked-bar'||!window(r.total)||!Array.isArray(r.parts)||r.parts.length!==values.length||new Set(r.parts.map(p=>p?.label)).size!==values.length||r.parts.some(p=>!labels.includes(p?.label)||!window(p)||p.startMs<r.total.endMs))errors.push('staged share reveal needs a total window and one finite ordered window per source label after the total');
+   else if(r.parts.some((p,i)=>i>0&&p.startMs<r.parts[i-1].endMs))errors.push('staged share reveal part windows must not overlap');
+  }
   if(!Array.isArray(beats)||!beats.length||beats.length!==segments)errors.push('chart beats need one group, focus and insight per narration segment');
   else beats.forEach((b,i)=>{
    if(b?.group!==i+1||!Array.isArray(b.focus)||!b.focus.length||new Set(b.focus).size!==b.focus.length||b.focus.some(l=>!labels.includes(l))||!text(b.insight))errors.push('chart beat '+(i+1)+' needs its group, unique existing focus labels and a concrete insight');
