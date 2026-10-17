@@ -32,6 +32,7 @@ import { youtubeTopicScout } from './youtube-topic-scout.js';
 import * as snsScout from './sns-issue-scout.js';
 import { formatError, formatFileSize, saveBase64Image } from './media-utils.js';
 import { renderCapabilityStatus } from './capability-status.js';
+import { DURATION_TOOLS, resolveVideoDuration } from './video-duration.js';
 function text(message, isError = false) {
     return { content: [{ type: 'text', text: message }], isError };
 }
@@ -75,7 +76,7 @@ function seedanceMeta(result) {
     const tokens = result.completionTokens === undefined
         ? ''
         : `\nBilled tokens: ${result.completionTokens.toLocaleString('en-US')} (completion_tokens — what the vendor bills on)`;
-    return `Model: ${result.model}\nRatio: ${result.ratio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds${tokens}\nTask ID: ${result.taskId}`;
+    return `Model: ${result.model}\nRatio: ${result.ratio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds (${result.durationSource || 'provider reported; probe output'})${tokens}\nTask ID: ${result.taskId}`;
 }
 /**
  * Platform API result → MCP tool result.
@@ -1342,3 +1343,17 @@ export const ROUTES = {
         return text(JSON.stringify(r, null, 2));
     },
 };
+// Normalize before schema validation and before any file upload or paid API call.
+// Keep exact legacy requests intact; new shot calls state their required coverage.
+for (const name of DURATION_TOOLS) {
+    const generate = ROUTES[name];
+    ROUTES[name] = async (input) => {
+        if (!input || typeof input !== 'object' || Array.isArray(input))
+            return generate(input);
+        const { args, timing } = resolveVideoDuration(name, input);
+        const result = await generate(args);
+        if (timing)
+            result.content.push({ type: 'text', text: 'Duration plan (requested, not measured): ' + JSON.stringify(timing) });
+        return result;
+    };
+}

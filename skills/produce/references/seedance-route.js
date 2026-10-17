@@ -60,10 +60,23 @@ function scenePlan(scene) {
   if (engine !== 'seedance') {
     // A host video tool takes no reference clip, so a previz on that lane shapes the still and the
     // prompt instead (handoff frame_and_prompt, render-routing checkPreviz) and is not a Seedance field.
-    const named = SEEDANCE_KEYS.filter((k) => settings[k] !== undefined &&
+    const named = SEEDANCE_KEYS.filter((k) => settings[k] !== undefined && !(engine === 'veo' && k === 'model') &&
       !(k === 'previz' && (engine === 'host' || engine === 'astra') && previzHandoff(scene) === 'frame_and_prompt'));
     if (named.length)
       throw new Error(named.join(', ') + ' only applies to Seedance — set engine:"seedance" or drop the setting');
+    if (engine === 'veo') {
+      const resolution = settings.resolution || '1080p';
+      const tool = kind === 'quote' ? 'veo_reference' : 'veo_img2video';
+      const models = { 'veo-3.1-lite-generate-preview': 'lite', 'veo-3.1-fast-generate-preview': 'fast', 'veo-3.1-generate-preview': 'standard' };
+      const model = settings.model || (kind === 'quote' ? 'veo-3.1-fast-generate-preview' : 'veo-3.1-lite-generate-preview');
+      const tier = models[model];
+      if (!tier || !['720p', '1080p', '4k'].includes(resolution) || (tier === 'lite' && (resolution === '4k' || kind === 'quote')))
+        throw new Error('Unsupported Veo model/resolution/route; select a supported model explicitly');
+      const duration = require('../../_shared/video-duration.js').minimumDuration(scene.duration,
+        { seconds: tool === 'veo_reference' || resolution !== '720p' ? [8] : [4, 6, 8] });
+      return { kind, engine, resolution, tool, model, durationSeconds: duration.requestedSeconds,
+        priceKey: 'veo.' + tier + '.' + resolution, reason: 'minimum supported shot duration' };
+    }
     return { kind, engine };
   }
   const purpose = settings.modelPurpose || 'standard';

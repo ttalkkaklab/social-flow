@@ -35,6 +35,7 @@ import { formatError, formatFileSize, saveBase64Image } from './media-utils.js';
 import type { ApiResult } from './http.js';
 import { renderCapabilityStatus } from './capability-status.js';
 import { CHANNEL_SLUG_RE } from './config.js';
+import { DURATION_TOOLS, resolveVideoDuration } from './video-duration.js';
 
 /** MCP content blocks — generated images are also returned as base64 image blocks. */
 export type ToolContent =
@@ -107,6 +108,7 @@ function seedanceMeta(result: {
   ratio?: string;
   resolution?: string;
   duration?: number;
+  durationSource?: string;
   completionTokens?: number;
   taskId?: string;
 }): string {
@@ -114,7 +116,7 @@ function seedanceMeta(result: {
     result.completionTokens === undefined
       ? ''
       : `\nBilled tokens: ${result.completionTokens.toLocaleString('en-US')} (completion_tokens — what the vendor bills on)`;
-  return `Model: ${result.model}\nRatio: ${result.ratio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds${tokens}\nTask ID: ${result.taskId}`;
+  return `Model: ${result.model}\nRatio: ${result.ratio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds (${result.durationSource || 'provider reported; probe output'})${tokens}\nTask ID: ${result.taskId}`;
 }
 
 /**
@@ -1491,3 +1493,16 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     return text(JSON.stringify(r, null, 2));
   },
 };
+
+// Normalize before schema validation and before any file upload or paid API call.
+// Keep exact legacy requests intact; new shot calls state their required coverage.
+for (const name of DURATION_TOOLS) {
+  const generate = ROUTES[name];
+  ROUTES[name] = async input => {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) return generate(input);
+    const { args, timing } = resolveVideoDuration(name, input as Record<string, unknown>);
+    const result = await generate(args);
+    if (timing) result.content.push({ type: 'text', text: 'Duration plan (requested, not measured): ' + JSON.stringify(timing) });
+    return result;
+  };
+}
