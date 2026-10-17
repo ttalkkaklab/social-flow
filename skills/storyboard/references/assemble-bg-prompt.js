@@ -249,6 +249,8 @@ function clipAssemble(opts) {
                 cam.end ? (travels ? "settling on " : "ending on ") + String(cam.end).trim() : ""]
     .filter(Boolean).join(", ");
   if (span) parts.push(dot(span));
+  const cameraInvariant = require('../../_shared/scene-acting.js').cameraLock(cam);
+  if (cameraInvariant) parts.push(dot(cameraInvariant));
   if (motion) parts.push(dot(motion));
   if (locks) parts.push(dot(locks));
   if (audio) parts.push(dot(/^audio\s*:/i.test(audio) ? audio : "Audio: " + audio));

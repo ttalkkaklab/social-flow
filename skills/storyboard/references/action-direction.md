@@ -71,6 +71,8 @@ stable shot references or authorize extra generation calls.
 
 Inspect source images, actual motion, endpoints, neighbouring cuts and the final
 edit. Record missing evidence as unreviewed; a good prompt is not a passing review.
+For an existing scene, follow the [camera correction workflow](../../produce/references/camera-correction.md)
+before replacing clips or cropping away defects.
 For an explicitly requested quality loop, freeze criteria before reviewing, use an
 independent reviewer and repair named defects. Never improve a score by weakening
 criteria, shortening away required story events or relabelling generated failures.
