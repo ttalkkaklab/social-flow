@@ -157,6 +157,11 @@ async function prepare(target, options) {
     ...(video.seed !== undefined ? { seed: video.seed } : {}),
     ...(options.outputPath ? { outputPath: path.resolve(options.outputPath) } : {}),
     ...(options.filename ? { filename: options.filename } : {}) };
+  // Carry authored controls to the selected adapter; never let Zod strip an unsupported choice.
+  const controls = {};
+  for (const key of ['guidance', 'numInferenceSteps', 'negativePrompt', 'generateAudio'])
+    if (video[key] !== undefined) controls[key] = video[key];
+  if (video.hdr !== undefined) throw new Error('hdr cannot be combined with the authored opening image');
   const warnings = [...plan.warnings, ...motionTimeline(scene, plan).warnings];
   if (scene.edit?.continuity && designDirectionConflict(scene.shot?.videoDesign?.before, scene.edit.continuity))
     warnings.push('Opening and edit continuity disagree on image-left/image-right. Reconcile the authored state before judging continuity.');
@@ -164,6 +169,13 @@ async function prepare(target, options) {
   const hasKeyframes = scene.visual.frames?.keyframes !== undefined;
   if (onScreen && hasKeyframes)
     throw new Error('audio2video does not support intermediate keyframes; do not silently discard this authored constraint');
+  if (onScreen || hasKeyframes) {
+    for (const key of ['tier', 'lora', 'numGeneratedKeyframes'])
+      if (video[key] !== undefined) throw new Error(key + ' is not supported by ' + (onScreen ? 'audio2video' : 'keyframe'));
+  } else {
+    for (const key of ['tier', 'lora', 'numGeneratedKeyframes'])
+      if (video[key] !== undefined) controls[key] = video[key];
+  }
   let tool, args, audioSeconds;
   if (onScreen) {
     if (!options.audioPath) throw new Error('Supply the composed shot audioPath for on-screen speech');
@@ -176,19 +188,19 @@ async function prepare(target, options) {
     const expectLipSync = plan.performance.filter(event => event.kind !== 'action').every(event => event.delivery === 'on_screen');
     args = adapter.astraAudio2VideoSchema.parse({ ...common, audioPath, imagePath, strength: video.strength ?? 0.9,
       negativePrompt: video.negativePrompt ?? 'subtitles, captions, dialogue text, typography, letters, logos, watermarks',
-      expectLipSync });
+      expectLipSync, ...controls });
     if (!expectLipSync) warnings.push('An off-screen voice shares this audio, so the automatic speech sync check and reseed are off. Inspect each visible mouth against its line.');
     if (scene.visual.frames?.end) warnings.push('audio2video has no last-image input. The planned end is review context, not a submitted constraint.');
   } else if (hasKeyframes) {
     tool = 'astra_keyframe_video';
     args = adapter.astraKeyframeVideoSchema.parse({ ...common,
       images: keyframeImages(scene, dir, numFrames, frameRate), generateAudio: video.generateAudio ?? false,
-      ...(video.negativePrompt ? { negativePrompt: video.negativePrompt } : {}) });
+      ...controls });
   } else {
     tool = 'astra_img2video';
     args = adapter.astraImg2VideoSchema.parse({ ...common, firstFramePath: imagePath,
       ...(scene.visual.frames?.end ? { lastFramePath: localImage(dir, scene.visual.frames.end) } : {}),
-      strength: video.strength ?? 1 });
+      strength: video.strength ?? 1, ...controls });
   }
   const requestedSeconds = args.numFrames / args.frameRate;
   const neededSeconds = Math.max(seconds, audioSeconds || 0, plan.durationSeconds || 0);

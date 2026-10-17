@@ -149,22 +149,24 @@ describe('buildJobBody — wire shape', () => {
     });
   });
 
-  it('never sends hdr, even though every allow-list contains it', () => {
-    const body = buildJobBody('generate', { prompt: 'x', numFrames: 121 });
-    assert.ok(!('hdr' in body), 'hdr must not be sent in this version');
+  it('HDR is opt-in, reaches the wire and refuses visual inputs', () => {
+    assert.equal(buildJobBody('generate', { prompt: 'x' }).hdr, undefined);
+    for (const tier of ['default', 'guided', 'fast', 'hq']) {
+      const args = parseOk(astraText2VideoSchema, { prompt: 'x', tier, hdr: 'ACESCCT' });
+      assert.equal(buildJobBody(ASTRA_VIDEO_TIERS[tier], args).hdr, 'ACESCCT');
+    }
+    parseFails(astraText2VideoSchema, { prompt: 'x', hdr: 'HDR10' });
+    parseFails(astraAudio2VideoSchema, { prompt: 'x', audioUploadId: 'a', imagePath: 'a.png', hdr: 'ACESCG' });
+    parseOk(astraAudio2VideoSchema, { prompt: 'x', audioUploadId: 'a', hdr: 'ACESCG' });
+    assert.throws(() => buildJobBody('generate', { prompt: 'x', hdr: 'ACESCG', images: [{ uploadId: 'a', frameIdx: 0 }] }), /visual inputs/);
   });
 
-  it('autoDuration becomes auto_duration, and drops when numFrames is also given', () => {
+  it('autoDuration becomes auto_duration and refuses conflicting explicit frames', () => {
     const auto = buildJobBody('generate', { prompt: 'x', autoDuration: { minSeconds: 1, maxSeconds: 4 } });
     assert.deepEqual(auto.auto_duration, { min_seconds: 1, max_seconds: 4 });
-
-    const explicit = buildJobBody('generate', {
-      prompt: 'x',
-      numFrames: 121,
-      autoDuration: { minSeconds: 1, maxSeconds: 4 },
-    });
-    assert.ok(!('auto_duration' in explicit), 'numFrames wins, so auto_duration is not sent');
-    assert.equal(explicit.num_frames, 121);
+    assert.throws(() => buildJobBody('generate', {
+      prompt: 'x', numFrames: 121, autoDuration: { minSeconds: 1, maxSeconds: 4 },
+    }), /mutually exclusive/);
   });
 
   it('images carry upload_id/frame_idx and optional strength/crf only when set', () => {
@@ -272,8 +274,8 @@ describe('validators', () => {
     parseFails(astraText2VideoSchema, { prompt: 'x', autoDuration: { minSeconds: 1, maxSeconds: 20 } });
     parseOk(astraText2VideoSchema, { prompt: 'x', frameRate: 60, autoDuration: { minSeconds: 1, maxSeconds: 2.02 } });
     parseFails(astraText2VideoSchema, { prompt: 'x', frameRate: 60, autoDuration: { minSeconds: 1, maxSeconds: 2.03 } });
-    // The final API checks the object's fields but ignores its range when numFrames is explicit.
-    parseOk(astraText2VideoSchema, { prompt: 'x', numFrames: 121, autoDuration: { minSeconds: 1, maxSeconds: 20 } });
+    // The plugin rejects ambiguous selectors even when explicit frames would take precedence upstream.
+    parseFails(astraText2VideoSchema, { prompt: 'x', numFrames: 121, autoDuration: { minSeconds: 1, maxSeconds: 20 } });
   });
 
   it('uses an explicit versioned User-Agent on every centralized ASTRA header set', () => {
@@ -357,8 +359,8 @@ describe('per-tool schemas', () => {
       parseFails(astraImg2VideoSchema, { ...first, lastFramePath: '/tmp/b.png', autoDuration: { minSeconds: 2, maxSeconds: 5 } }),
       /cannot be combined with lastFramePath/,
     );
-    // numFrames wins, so the pinned index is known and auto_duration is dropped from the body.
-    parseOk(astraImg2VideoSchema, { ...first, lastFramePath: '/tmp/b.png', numFrames: 97, autoDuration: { minSeconds: 2, maxSeconds: 5 } });
+    // An explicit frame count must not silently discard a requested automatic range.
+    parseFails(astraImg2VideoSchema, { ...first, lastFramePath: '/tmp/b.png', numFrames: 97, autoDuration: { minSeconds: 2, maxSeconds: 5 } });
   });
 
   it('keyframe takes 2..8 images and checks each index against the clip', () => {
@@ -457,7 +459,7 @@ describe('measured ASTRA guidance', () => {
     ['1088x1920 refusal at every frame count', /1088×1920 exceeds the area ceiling at every frame count/],
     ['supplied audio preservation', /Clips carry 48kHz stereo AAC; `audio2video` carries the supplied sound re-encoded, rather than a newly generated track/],
     ['stereo input and mono refused at upload', /Stereo \(2-channel\) input is required: mono is refused at upload because it fails in the engine audio encoder/],
-    ['default audio length', /With neither length argument, audio2video uses 121 frames \(~5\.04s\), not the source length/],
+    ['default audio length', /client explicitly sends 121 frames \(~5\.04s\) for compatibility/],
     ['rounded audio length', /`audioMaxDuration: 8` selects 185 frames \(~7\.71s\) at 24fps/],
     ['the generateAudio switch', /`generateAudio: false` strips the sound after generation/],
   ]) {
@@ -496,8 +498,8 @@ describe('measured ASTRA guidance', () => {
     it(`${surface} recommends generate frames at their measured point`, () => {
       assert.match(read(), /Within current client limits use\s+generate 113\/145 \(measured at 1280x704\)/);
     });
-    it(`${surface} excludes guided probes from client alternatives`, () => {
-      assert.match(read(), /The client requires 1536x1024 for guided images,\s+so the guided 1280x704 probes are not client alternatives/);
+    it(`${surface} distinguishes permitted sizes from measured quality`, () => {
+      assert.match(read(), /Guided and hq sizes follow the server grid and pixel ceiling; unmeasured sizes are not quality guarantees/);
       assert.doesNotMatch(read(), /(?:or|and) guided 113/);
     });
   }
@@ -520,10 +522,10 @@ describe('measured ASTRA guidance', () => {
     const audio = tool('astra_audio2video');
     assert.match(audio.description, /supplied WAV re-encoded as AAC/);
     assert.match(audio.description, /0\.99997 at zero lag/);
-    assert.match(audio.description, /default is 121 frames.*not the source audio length/);
+    assert.match(audio.description, /client explicitly sends 121 frames/);
     assert.match(audio.description, /audioMaxDuration=8\.0 at 24fps rounds down to 185 frames/);
     assert.match(audio.inputSchema.properties.audioMaxDuration.description, /8 seconds selects 185 frames/);
-    assert.match(audio.inputSchema.properties.audioMaxDuration.description, /both length fields are omitted.*121 frames/);
+    assert.match(audio.inputSchema.properties.audioMaxDuration.description, /are omitted.*client explicitly sends 121 frames/);
   });
 
   it('pixel ceiling accepts its exact boundary and rejects 1088x1920 even at 25 frames', () => {
@@ -542,9 +544,9 @@ describe('measured ASTRA guidance', () => {
   it('checks the pixel ceiling with server defaults for every omitted-side shape', () => {
     for (const mode of ['generate', 'guided', 'keyframe', 'audio2video']) {
       assert.equal(checkDimensions(undefined, undefined, mode), null, mode);
-      assert.equal(checkDimensions(1984, undefined, mode), null, mode);
+      assert.equal(checkDimensions(1920, undefined, mode), null, mode);
       assert.equal(checkDimensions(undefined, 1344, mode), null, mode);
-      assert.match(checkDimensions(2048, undefined, mode), /at most 2064384/, mode);
+      assert.match(checkDimensions(2048, undefined, mode), /between 64 and 1920/, mode);
       assert.match(checkDimensions(undefined, 1408, mode), /at most 2064384/, mode);
       assert.match(checkDimensions(undefined, 1920, mode), /at most 2064384/, mode);
     }
@@ -560,11 +562,11 @@ describe('measured ASTRA guidance', () => {
       [astraKeyframeVideoSchema, { prompt: 'x', images: [{ imagePath: 'a.png', frameIdx: 0 }, { imagePath: 'b.png', frameIdx: 24 }] }],
       [astraAudio2VideoSchema, { prompt: 'x', audioPath: 'voice.wav' }],
     ]) {
-      for (const dims of [{}, { width: 1984 }, { height: 1344 }, { width: 1344, height: 1536 }]) {
+      for (const dims of [{}, { width: 1920 }, { height: 1344 }, { width: 1344, height: 1536 }]) {
         parseOk(schema, { ...args, ...dims });
       }
       for (const dims of [{ width: 2048 }, { height: 1920 }, { width: 1088, height: 1920 }]) {
-        assert.match(parseFails(schema, { ...args, ...dims }), /at most 2064384/);
+        assert.match(parseFails(schema, { ...args, ...dims }), /at most 2064384|between 64 and 1920/);
       }
     }
   });
@@ -613,10 +615,10 @@ describe('mode-specific ceilings and new input contracts', () => {
     });
   }
 
-  it('guided images only accept the measured size and reject fast and lora', () => {
+  it('guided images accept the server grid and reject invalid sizes, fast and lora', () => {
     const args = { prompt: 'x', firstFramePath: 'a.png', tier: 'guided' };
     for (const dims of [{}, { width: 1536 }, { height: 1024 }, { width: 1536, height: 1024 }]) parseOk(astraImg2VideoSchema, { ...args, ...dims });
-    for (const dims of [{ width: 1280, height: 704 }, { width: 1024 }, { height: 1536 }]) parseFails(astraImg2VideoSchema, { ...args, ...dims });
+    for (const dims of [{ width: 1280, height: 704 }, { width: 1024 }]) parseOk(astraImg2VideoSchema, { ...args, ...dims });
     parseFails(astraImg2VideoSchema, { ...args, tier: 'fast' });
     parseFails(astraImg2VideoSchema, { ...args, lora: ['cinemagraph'] });
     parseOk(astraImg2VideoSchema, { ...args, tier: 'default', width: 1280, height: 704, lora: ['cinemagraph'] });
@@ -782,7 +784,7 @@ describe('mocked tool calls', () => {
     await withServer(async ({ dir, uploads, jobs, setDuration }) => {
       await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioPath: 'a.wav', audioUploadId: 'reuse' }), /exactly one/);
       await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioUploadId: 'reuse', imagePath: 'not-image.wav' }), /must be an image/);
-      await assert.rejects(ROUTES.astra_img2video({ prompt: 'x', firstFramePath: 'face.png', tier: 'guided', width: 1280, height: 704 }), /1536x1024/);
+      await assert.rejects(ROUTES.astra_img2video({ prompt: 'x', firstFramePath: 'face.png', tier: 'guided', width: 1080, height: 1920 }), /multiple of 64/);
       assert.deepEqual(uploads, []);
       setDuration(1);
       await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioPath: path.join(dir, 'a.wav'), audioStartTime: 1 }), /source duration/);
@@ -798,6 +800,27 @@ describe('mocked tool calls', () => {
       assert.equal(jobs[0].height, 1024);
       assert.equal(jobs[0].images[1].frame_idx, 120);
     });
+  });
+
+  it('HQ image requests preserve authored portrait dimensions and controls on the wire', async () => {
+    await withServer(async ({ dir, jobs }) => {
+      await ROUTES.astra_img2video({ prompt: 'x', tier: 'hq', width: 1024, height: 1920,
+        firstFramePath: path.join(dir, 'face.png'), guidance: { videoCfgGuidanceScale: 4 },
+        generateAudio: false, duration: 2, outputPath: dir });
+      assert.equal(jobs[0].mode, 'guided_hq');
+      assert.equal(jobs[0].width, 1024);
+      assert.equal(jobs[0].height, 1920);
+      assert.equal(jobs[0].num_frames, 49);
+      assert.equal(jobs[0].generate_audio, false);
+      assert.deepEqual(jobs[0].guidance, { video_cfg_guidance_scale: 4 });
+    });
+  });
+
+  it('audio omission is normalized explicitly while explicit audio spans stay delegated', () => {
+    const args = { prompt: 'x', audioUploadId: 'a' };
+    assert.equal(buildJobBody('audio2video', parseOk(astraAudio2VideoSchema, args)).num_frames, 121);
+    assert.equal(parseOk(astraAudio2VideoSchema, { ...args, audioMaxDuration: 3 }).numFrames, undefined);
+    assert.equal(parseOk(astraAudio2VideoSchema, { ...args, duration: 3 }).numFrames, 73);
   });
 
   it('guided image calls send negative_prompt and num_inference_steps', async () => {
@@ -1005,7 +1028,7 @@ describe('stage 2 — ic_lora, guided_hq, guidance, lora strength', () => {
   it('tier hq maps to guided_hq on text2video and img2video', () => {
     assert.equal(ASTRA_VIDEO_TIERS.hq, 'guided_hq');
     parseOk(astraImg2VideoSchema, { prompt: 'x', firstFramePath: 'a.png', tier: 'hq', negativePrompt: 'blur', numInferenceSteps: 15 });
-    assert.match(parseFails(astraImg2VideoSchema, { prompt: 'x', firstFramePath: 'a.png', tier: 'hq', width: 1024, height: 1024 }), /hq images require 1536x1024/);
+    parseOk(astraImg2VideoSchema, { prompt: 'x', firstFramePath: 'a.png', tier: 'hq', width: 1024, height: 1920 });
     // skipStage2 false is the engine default and never reaches the wire (live ingredients refuses the key).
     assert.equal('skip_stage_2' in buildJobBody('ingredients', { prompt: 'x', skipStage2: false }), false);
     assert.match(parseFails(astraImg2VideoSchema, { prompt: 'x', firstFramePath: 'a.png', tier: 'hq', lora: ['cinemagraph'] }), /lora is accepted only on tier "default"/);
@@ -1250,3 +1273,39 @@ describe('audio2video — audio must cover the video (D6)', () => {
   });
 });
 
+
+describe('2026-10-18 live contract snapshot (read-only capture; no render claims)', () => {
+  const models = JSON.parse(fs.readFileSync(new URL('./fixtures/astra-v1-models.json', import.meta.url), 'utf8')).data[0];
+  const openapi = JSON.parse(fs.readFileSync(new URL('./fixtures/astra-openapi-20261018.json', import.meta.url), 'utf8'));
+  const schemas = openapi.paths['/v1/jobs'].post.requestBody.content['application/json'].schema.oneOf;
+  it('wire allow-lists track both operational sources; duration is the deliberate local conversion', () => {
+    for (const mode of models.modes) {
+      const schema = schemas.find(s => s.properties.mode.const === mode.mode);
+      assert.deepEqual([...ASTRA_VIDEO_ALLOWED_FIELDS[mode.mode]].sort(), mode.allowed_fields.filter(k => k !== 'duration').sort());
+      assert.deepEqual(Object.keys(schema.properties).sort(), [...mode.allowed_fields].sort());
+    }
+  });
+  it('HDR and guidance enums/ranges are backed by the OpenAPI rather than a prose assertion', () => {
+    const wire = schemas.find(s => s.properties.mode.const === 'guided').properties;
+    for (const hdr of wire.hdr.enum.filter(Boolean))
+      assert.equal(astraText2VideoSchema.parse({ prompt: 'x', hdr }).hdr, hdr);
+    for (const [key, spec] of Object.entries(wire.guidance.properties)) {
+      const toolKey = key.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
+      const args = value => ({ prompt: 'x', tier: 'guided', guidance: { [toolKey]: value } });
+      if (spec.type === 'number' || spec.type === 'integer') {
+        parseOk(astraText2VideoSchema, args(spec.minimum));
+        parseOk(astraText2VideoSchema, args(spec.maximum));
+        parseFails(astraText2VideoSchema, args(spec.minimum - 1));
+        parseFails(astraText2VideoSchema, args(spec.maximum + 1));
+      }
+    }
+  });
+  it('records contradictory audio omission metadata and keeps the client request deterministic', () => {
+    assert.equal(models.modes.find(m => m.mode === 'audio2video').num_frames.default, null);
+    assert.ok(models.contract_notes.some(n => n.includes('생략하면 121프레임')));
+    assert.equal(astraAudio2VideoSchema.parse({ prompt: 'x', audioUploadId: 'a' }).numFrames, 121);
+    assert.equal(models.limits.upload.max_files_per_key, 200);
+    assert.equal(Object.keys(openapi.paths).length, 6);
+    assert.equal(openapi.paths['/v1/uploads'].get, undefined);
+  });
+});

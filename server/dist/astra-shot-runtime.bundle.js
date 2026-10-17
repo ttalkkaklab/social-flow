@@ -4960,7 +4960,6 @@ var ASTRA_VIDEO_MAX_AUTO_FRAMES = 121;
 var ASTRA_VIDEO_DIMENSION_STEP = 64;
 var ASTRA_VIDEO_FAST_DIMENSION_STEP = 32;
 var ASTRA_VIDEO_FAST_MIN_DIMENSION = 32;
-var ASTRA_VIDEO_FAST_MAX_DIMENSION = 1920;
 var ASTRA_VIDEO_MAX_PIXELS = 2064384;
 var ASTRA_VIDEO_MAX_SEED = 2147483647;
 var ASTRA_VIDEO_MAX_PROMPT_CHARS = 2e3;
@@ -5002,6 +5001,9 @@ function framesForSeconds(seconds, frameRate = 24) {
 }
 var durationSchema = external_exports.number().positive().finite().optional();
 function checkDuration(data, mode, ctx) {
+  if (data.numFrames !== void 0 && data.autoDuration !== void 0) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["autoDuration"], message: "autoDuration and numFrames are mutually exclusive" });
+  }
   if (data.duration === void 0) return;
   for (const other of ["numFrames", "autoDuration", "audioMaxDuration"]) {
     if (data[other] !== void 0) {
@@ -5026,6 +5028,7 @@ function resolveDuration(data) {
   return duration === void 0 ? rest : { ...rest, numFrames: framesForSeconds(duration, data.frameRate ?? 24) };
 }
 var generateAudioSchema = external_exports.boolean().optional();
+var hdrSchema = external_exports.enum(["SRGB_LINEAR", "ACESCG", "ACESCCT"]).optional();
 var seedSchema = external_exports.number().int().min(0).max(ASTRA_VIDEO_MAX_SEED).optional();
 var frameRateSchema = external_exports.number().min(1).max(60).optional();
 var negativePromptSchema = external_exports.string().max(ASTRA_VIDEO_MAX_PROMPT_CHARS).optional();
@@ -5072,8 +5075,9 @@ function checkDimensions(width, height, mode) {
   for (const [name, value] of [["width", width], ["height", height]]) {
     if (value === void 0) continue;
     if (value % step !== 0) return `${name} must be a multiple of ${step} for mode ${mode} (got ${value})`;
-    if (fast && (value < ASTRA_VIDEO_FAST_MIN_DIMENSION || value > ASTRA_VIDEO_FAST_MAX_DIMENSION)) {
-      return `${name} must be between ${ASTRA_VIDEO_FAST_MIN_DIMENSION} and ${ASTRA_VIDEO_FAST_MAX_DIMENSION} for mode guided_fast (got ${value})`;
+    const min = fast ? ASTRA_VIDEO_FAST_MIN_DIMENSION : ASTRA_VIDEO_DIMENSION_STEP;
+    if (value < min || value > 1920) {
+      return `${name} must be between ${min} and 1920 for mode ${mode} (got ${value})`;
     }
   }
   const pixels = (width ?? (fast ? 768 : 1536)) * (height ?? (fast ? 512 : 1024));
@@ -5115,6 +5119,7 @@ var astraText2VideoSchema = external_exports.object({
   seed: seedSchema,
   duration: durationSchema,
   generateAudio: generateAudioSchema,
+  hdr: hdrSchema,
   lora: loraSchema,
   negativePrompt: negativePromptSchema,
   numInferenceSteps: numInferenceStepsSchema,
@@ -5206,9 +5211,6 @@ var astraImg2VideoSchema = external_exports.object({
       ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["autoDuration"], message: durationError });
     }
   }
-  if ((mode === "guided" || mode === "guided_hq") && ((data.width ?? 1536) !== 1536 || (data.height ?? 1024) !== 1024)) {
-    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["width"], message: `${data.tier} images require 1536x1024` });
-  }
   if (mode !== "generate" && data.lora?.length) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["lora"], message: 'lora is accepted only on tier "default"' });
   }
@@ -5266,6 +5268,7 @@ var astraAudio2VideoSchema = external_exports.object({
   seed: seedSchema,
   duration: durationSchema,
   generateAudio: generateAudioSchema,
+  hdr: hdrSchema,
   negativePrompt: negativePromptSchema,
   numInferenceSteps: numInferenceStepsSchema,
   guidance: guidanceSchema,
@@ -5274,6 +5277,9 @@ var astraAudio2VideoSchema = external_exports.object({
   ...outputFields
 }).superRefine((data, ctx) => {
   checkDuration(data, "audio2video", ctx);
+  if (data.hdr && data.imagePath) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["hdr"], message: "hdr cannot be combined with imagePath; remove hdr or the visual input" });
+  }
   if (data.audioPath !== void 0 === (data.audioUploadId !== void 0)) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["audioPath"], message: "Provide exactly one of audioPath or audioUploadId" });
   }
@@ -5288,7 +5294,7 @@ var astraAudio2VideoSchema = external_exports.object({
       message: "audioMaxDuration and numFrames are mutually exclusive"
     });
   }
-}).transform(resolveDuration);
+}).transform(resolveDuration).transform((data) => data.numFrames === void 0 && data.audioMaxDuration === void 0 ? { ...data, numFrames: 121 } : data);
 var astraVideoRetakeSchema = external_exports.object({
   prompt: promptSchema,
   sourceVideoPath: external_exports.string().min(1, "sourceVideoPath is required"),
@@ -5389,11 +5395,16 @@ function buildJobBody(mode, args) {
   const allowed = ASTRA_VIDEO_ALLOWED_FIELDS[mode];
   if (!allowed) throw new Error(`Unknown ASTRA video mode: ${mode}`);
   const body = { mode, prompt: args.prompt };
+  if (args.numFrames !== void 0 && args.autoDuration !== void 0) {
+    throw new Error("autoDuration and numFrames are mutually exclusive");
+  }
+  if (args.hdr && (args.images?.length || args.references?.length || args.conditioningMask || args.videoUploadId)) {
+    throw new Error("hdr cannot be combined with visual inputs");
+  }
+  put(body, "hdr", args.hdr);
   put(body, "num_frames", args.numFrames);
   if (args.autoDuration) {
-    if (args.numFrames === void 0) {
-      body.auto_duration = { min_seconds: args.autoDuration.minSeconds, max_seconds: args.autoDuration.maxSeconds };
-    }
+    body.auto_duration = { min_seconds: args.autoDuration.minSeconds, max_seconds: args.autoDuration.maxSeconds };
   }
   put(body, "width", args.width);
   put(body, "height", args.height);
@@ -5656,7 +5667,7 @@ async function generateFromImage(args) {
     images.push({ uploadId: last.uploadId, frameIdx: (args.numFrames ?? 121) - 1, strength: args.strength ?? 1 });
   }
   const mode = ASTRA_VIDEO_TIERS[args.tier];
-  const dimensions = mode === "guided" || mode === "guided_hq" ? { width: 1536, height: 1024 } : {};
+  const dimensions = mode === "guided" || mode === "guided_hq" ? { width: args.width ?? 1536, height: args.height ?? 1024 } : {};
   const body = buildJobBody(mode, { ...args, ...dimensions, images });
   return runJob(mode, args.prompt, body, args.outputPath, args.filename);
 }
@@ -6497,7 +6508,7 @@ var DURATION_TOOLS = [
 function resolveVideoDuration(tool, input) {
   if (input.requiredSeconds === void 0) return { args: input, timing: null };
   if (!DURATION_TOOLS.includes(tool)) throw new Error("requiredSeconds is not supported for " + tool);
-  for (const key of ["durationSeconds", "numFrames", "frames", "autoDuration", "audioMaxDuration"]) {
+  for (const key of ["duration", "durationSeconds", "numFrames", "frames", "autoDuration", "audioMaxDuration"]) {
     if (input[key] !== void 0) throw new Error("requiredSeconds is mutually exclusive with " + key + "; supply the shot need or an exact legacy request, not both");
   }
   let limits;
@@ -6512,7 +6523,7 @@ function resolveVideoDuration(tool, input) {
     if (!spec) throw new Error("Unknown Seedance model: " + String(model));
     limits = SEEDANCE_FRAME_MODELS.includes(model) ? { min: SEEDANCE_MIN_FRAMES, max: SEEDANCE_MAX_FRAMES, step: SEEDANCE_FRAME_STEP, frameRate: SEEDANCE_FPS } : { min: spec.duration[0], max: spec.duration[1] };
   } else if (tool.startsWith("astra_")) {
-    const mode = tool === "astra_audio2video" ? "audio2video" : tool === "astra_keyframe_video" ? "keyframe" : input.tier === "guided" ? "guided" : input.tier === "fast" ? "guided_fast" : "generate";
+    const mode = tool === "astra_audio2video" ? "audio2video" : tool === "astra_keyframe_video" ? "keyframe" : input.tier === "guided" ? "guided" : input.tier === "fast" ? "guided_fast" : input.tier === "hq" ? "guided_hq" : "generate";
     const frameRate = input.frameRate ?? 24;
     if (typeof frameRate !== "number" || !Number.isFinite(frameRate) || frameRate < 1 || frameRate > 60)
       throw new Error("frameRate must be finite in 1..60");

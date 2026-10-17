@@ -275,3 +275,54 @@ test('renderer dispatches prepared keyframes to their own adapter and rejects un
   await assert.rejects(submitPrepared(client, 'unknown', args), /Unsupported prepared ASTRA tool/);
   assert.equal(calls.length, 1);
 });
+
+test('image handoff preserves HQ controls and default-tier LoRA strength', async t => {
+  const { dir, scene, save } = fixture(t);
+  Object.assign(scene.visual.video, { tier: 'hq', resolution: '1024x1920', guidance: { videoCfgGuidanceScale: 4 },
+    negativePrompt: 'blur', numInferenceSteps: 15, generateAudio: false });
+  save();
+  const result = await prepare(dir, { shotId: scene.id });
+  for (const key of ['tier', 'guidance', 'negativePrompt', 'numInferenceSteps', 'generateAudio'])
+    assert.deepEqual(result.arguments[key], scene.visual.video[key]);
+  assert.equal(result.arguments.width, 1024);
+  assert.equal(result.arguments.height, 1920);
+  delete scene.visual.video.guidance;
+  delete scene.visual.video.negativePrompt;
+  delete scene.visual.video.numInferenceSteps;
+  Object.assign(scene.visual.video, { tier: 'default', lora: [{ name: 'cinemagraph', strength: .6 }], numGeneratedKeyframes: 2 });
+  save();
+  const basic = await prepare(dir, { shotId: scene.id });
+  assert.deepEqual(basic.arguments.lora, scene.visual.video.lora);
+  assert.equal(basic.arguments.numGeneratedKeyframes, 2);
+});
+
+test('keyframe handoff carries guided controls and rejects unsupported tier instead of dropping it', async t => {
+  const { dir, scene, save } = fixture(t);
+  scene.visual.frames = { mode: 'first_last', end: 'start.png', keyframes: [{ atSeconds: .5, image: 'start.png' }] };
+  Object.assign(scene.visual.video, { guidance: { videoCfgGuidanceScale: 3 }, numInferenceSteps: 12, generateAudio: false });
+  save();
+  const result = await prepare(dir, { shotId: scene.id });
+  assert.equal(result.tool, 'astra_keyframe_video');
+  assert.deepEqual(result.arguments.guidance, { videoCfgGuidanceScale: 3 });
+  assert.equal(result.arguments.numInferenceSteps, 12);
+  assert.equal(result.arguments.generateAudio, false);
+  scene.visual.video.tier = 'hq'; save();
+  await assert.rejects(prepare(dir, { shotId: scene.id }), /tier is not supported by keyframe/);
+});
+
+test('audio handoff forwards controls and rejects unsupported LoRA without editing the board', async t => {
+  const { dir, audio } = fixture(t, true);
+  const file = path.join(dir, 'scenes.js');
+  const win = require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file, 'utf8'));
+  const video = win.SCENES[0].visual.video;
+  const save = () => writeFileSync(file, Object.entries(win).map(([k, v]) => `window.${k}=${JSON.stringify(v)};`).join('\n'));
+  Object.assign(video, { guidance: { a2vGuidanceScale: 3 }, numInferenceSteps: 20, generateAudio: false }); save();
+  const before = readFileSync(file, 'utf8');
+  const result = await prepare(dir, { shotId: 's0001', audioPath: audio });
+  assert.deepEqual(result.arguments.guidance, { a2vGuidanceScale: 3 });
+  assert.equal(result.arguments.numInferenceSteps, 20);
+  assert.equal(result.arguments.generateAudio, false);
+  assert.equal(readFileSync(file, 'utf8'), before);
+  video.lora = ['slow-motion']; save();
+  await assert.rejects(prepare(dir, { shotId: 's0001', audioPath: audio }), /lora is not supported by audio2video/);
+});

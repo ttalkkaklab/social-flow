@@ -124,16 +124,20 @@ const OMNI_ASPECT_RATIO_PROPERTY = {
  * numeric levers appear on every generation tool but retake. astra_video_retake takes none of them —
  * a retake inherits the source exactly.
  */
+const ASTRA_HDR_PROPERTY = {
+    type: 'string', enum: ['SRGB_LINEAR', 'ACESCG', 'ACESCCT'],
+    description: 'Optional HDR input color space for BT.2020/HLG 10-bit output. Only without visual inputs; audio2video cannot combine hdr with imagePath. Verify color preservation in downstream assembly.',
+};
 const ASTRA_FRAME_LIMITS_DESCRIPTION = `every mode: ${ASTRA_VIDEO_FRAME_LIMITS.generate} (the live server's published ceiling, about 15.0s at 24fps). Longest successful renders in the live job log (2026-10-17): generate 361 at 1280x704 and 193 at 1024x1920; audio2video and keyframe 185 at 1024x1920; ingredients 161 at 1536x1024; guided 193 at 1280x704 text-only; fast, hq and ic_lora never above 121. The server refuses only two known 1280-wide failure bands (see astra_img2video); every other pair outside those measurements is unmeasured — it may fail or run slowly and hold the one-at-a-time queue for up to 1800s.`;
 const astraNumFramesProperty = (mode) => ({
     type: 'integer',
-    description: `Clip length in FRAMES, not seconds: 8k+1, minimum ${ASTRA_VIDEO_MIN_FRAMES}. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} Server default: 121 (~5.0s at 24fps). Off-grid and over-limit values are refused before the call.`,
+    description: `Clip length in FRAMES, not seconds: 8k+1, minimum ${ASTRA_VIDEO_MIN_FRAMES}. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} ${mode === 'audio2video' ? 'Client compatibility default: explicitly sends 121' : 'Server default: 121'} (~5.0s at 24fps). Off-grid and over-limit values are refused before the call.`,
     minimum: ASTRA_VIDEO_MIN_FRAMES,
     maximum: ASTRA_VIDEO_FRAME_LIMITS[mode],
 });
 const ASTRA_AUTO_DURATION_PROPERTY = {
     type: 'object',
-    description: 'Let the server pick the length inside a range instead of naming frames. After seconds are rounded at frameRate, the range must start at frame 1 or later, end at frame 121 or earlier, and contain an 8k+1 value. Ignored when numFrames is also given.',
+    description: 'Let the server pick the length inside a range instead of naming frames. After seconds are rounded at frameRate, the range must start at frame 1 or later, end at frame 121 or earlier, and contain an 8k+1 value. Mutually exclusive with numFrames and duration.',
     properties: {
         minSeconds: { type: 'number', description: 'Shortest acceptable clip length in seconds.' },
         maxSeconds: { type: 'number', description: 'Longest acceptable clip length in seconds.' },
@@ -142,11 +146,11 @@ const ASTRA_AUTO_DURATION_PROPERTY = {
 };
 const ASTRA_WIDTH_PROPERTY = {
     type: 'integer',
-    description: `Frame width in pixels (default: 1536, or 768 on tier "fast"). Must be a multiple of 64 — or of ${ASTRA_VIDEO_FAST_DIMENSION_STEP} within 32-1920 on tier "fast". width * height must not exceed ${ASTRA_VIDEO_MAX_PIXELS}. FOR 9:16 ASK FOR 1024x1920 FIRST. 1088x1920 exceeds the area ceiling at every frame count. The plugin's usual 1080x1920 is REFUSED, because 1080 is not a multiple of 64 or of 32. To fit a 1080x1920 canvas, widen the 1024-pixel output to 1080 (about 5.5%) in the edit or add side padding.`,
+    description: `Frame width in pixels (default: 1536, or 768 on tier "fast"). Must be within 64-1920 and a multiple of 64 — or of ${ASTRA_VIDEO_FAST_DIMENSION_STEP} within 32-1920 on tier "fast". width * height must not exceed ${ASTRA_VIDEO_MAX_PIXELS}. FOR 9:16 ASK FOR 1024x1920 FIRST. 1088x1920 exceeds the area ceiling at every frame count. The plugin's usual 1080x1920 is REFUSED, because 1080 is not a multiple of 64 or of 32. To fit a 1080x1920 canvas, widen the 1024-pixel output to 1080 (about 5.5%) in the edit or add side padding.`,
 };
 const ASTRA_HEIGHT_PROPERTY = {
     type: 'integer',
-    description: `Frame height in pixels (default: 1024, or 512 on tier "fast"). Same grid rule as width, and the same ${ASTRA_VIDEO_MAX_PIXELS}-pixel area ceiling. For 9:16, use 1024x1920 first. 1088x1920 exceeds the area ceiling at every frame count. Never use 1080x1920, whose width is off the grid. To fit a 1080x1920 canvas, widen the 1024-pixel output to 1080 (about 5.5%) in the edit or add side padding.`,
+    description: `Frame height in pixels (default: 1024, or 512 on tier "fast"). Same per-edge range and grid rule as width, and the same ${ASTRA_VIDEO_MAX_PIXELS}-pixel area ceiling. For 9:16, use 1024x1920 first. 1088x1920 exceeds the area ceiling at every frame count. Never use 1080x1920, whose width is off the grid. To fit a 1080x1920 canvas, widen the 1024-pixel output to 1080 (about 5.5%) in the edit or add side padding.`,
 };
 const ASTRA_FRAME_RATE_PROPERTY = {
     type: 'number',
@@ -2099,7 +2103,7 @@ Returns: a text block with the saved .mp4 path, the new interaction id, and the 
 Use when the shot is not time-critical and you would rather not spend vendor money: this server is ours, so a call costs wall clock instead of dollars, and no vendor content policy applies. It is also the only lane with an adapter (lora) for cinemagraph and slow-motion looks.
 Do NOT use when someone is waiting: the box renders ONE job at a time and yours queues behind whatever else is running. A measured 121-frame 1536x1024 render takes about 66s (tier "default"), 169s ("guided"), 121s ("fast") — plus the queue. For an immediate clip go to veo_text2video or seedance_text2video.
 tier picks the pipeline and also which arguments exist: lora only on "default", negativePrompt, numInferenceSteps and guidance only on "guided"/"fast"/"hq". "hq" is the two-stage high-quality pipeline (quality unmeasured). "fast" means a draft that is faster than "guided"; it is not faster than the default pipeline. Passing one to the wrong tier is refused before the call.
-Length is frames, not seconds: numFrames must be 8k+1, minimum 25. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} 121 = about 5.0s at 24fps, the server default. Give autoDuration instead to let the server choose at most 121 frames; the rounded range must contain an 8k+1 value. numFrames wins if both are given.
+Length is frames, not seconds: numFrames must be 8k+1, minimum 25. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} 121 = about 5.0s at 24fps, the server default. Give autoDuration instead to let the server choose at most 121 frames; the rounded range must contain an 8k+1 value. numFrames and autoDuration are mutually exclusive.
 ${ASTRA_LIMITS_LINE}
 Every clip comes back with a generated AAC audio track (48kHz stereo, measured). Set generateAudio: false when the episode lays its own narration or BGM over the clip — the server strips the sound after generation (same render time).
 
@@ -2125,6 +2129,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                 seed: ASTRA_SEED_PROPERTY,
                 duration: ASTRA_DURATION_PROPERTY,
                 generateAudio: ASTRA_GENERATE_AUDIO_PROPERTY,
+                hdr: ASTRA_HDR_PROPERTY,
                 lora: ASTRA_LORA_PROPERTY,
                 negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
                 numInferenceSteps: ASTRA_STEPS_PROPERTY,
@@ -2144,9 +2149,9 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 
 Use when a generated background or photo has to move and nobody is waiting on it — same trade as astra_text2video: free, ours, one job at a time. Give firstFramePath alone to animate from that frame, or add lastFramePath and the clip lands on it. The tool uploads the files itself; pass local paths, not ids.
 Do NOT use for more than two stills — that is astra_keyframe_video, which pins each image to a frame index. For an immediate clip use veo_img2video or seedance_img2video.
-tier accepts default (generate), guided, or hq (guided_hq — quality unmeasured). guided and hq images require 1536x1024 (omitted dimensions use that size); fast images are not enabled. lora is default-only; negativePrompt and numInferenceSteps are guided-only, and with guidance also hq. Passing one to the wrong tier is refused before the call.
-The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. autoDuration lets the server choose at most 121 frames from a first still alone; it is refused with lastFramePath unless numFrames is also given (numFrames wins). png, jpg and jpeg are accepted, up to 32 MiB each.
-Warning: image-conditioned generate (width 1280, measured at heights 704/768) failure frames: {121,129,137}; guided (width 1280, measured at height 704) failure frames: {121}. Guided 129/137 succeeded at 1280x704 in server probes (the only guided size probed). The client requires 1536x1024 for guided images, so the guided 1280x704 probes are not client alternatives. Within current client limits use generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at 121 frames also succeeded. Text-only 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause. The server owns the failure-band acceptance gate; this warning adds no client-side block.
+tier accepts default (generate), guided, or hq (guided_hq — quality unmeasured). guided and hq images use the 64-pixel grid and pixel ceiling (omitted dimensions default to 1536x1024); fast images are not enabled. lora is default-only; negativePrompt and numInferenceSteps are guided-only, and with guidance also hq. Passing one to the wrong tier is refused before the call.
+The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. autoDuration lets the server choose at most 121 frames from a first still alone; it is refused with lastFramePath or numFrames. png, jpg and jpeg are accepted, up to 32 MiB each.
+Warning: image-conditioned generate (width 1280, measured at heights 704/768) failure frames: {121,129,137}; guided (width 1280, measured at height 704) failure frames: {121}. Guided 129/137 succeeded at 1280x704 in server probes (the only guided size probed). Guided and hq sizes follow the server grid and pixel ceiling; unmeasured sizes are not quality guarantees. Within current client limits use generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at 121 frames also succeeded. Text-only 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause. The server owns the failure-band acceptance gate; this warning adds no client-side block.
 ${ASTRA_LIMITS_LINE}
 Every clip comes back with a generated AAC audio track (48kHz stereo, measured). Set generateAudio: false when the episode lays its own narration or BGM over the clip — the server strips the sound after generation (same render time).
 
@@ -2160,7 +2165,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                 },
                 tier: {
                     type: 'string', enum: ['default', 'guided', 'hq'], default: 'default',
-                    description: 'default (generate), guided at 1536x1024 only, or hq (guided_hq, unmeasured, also 1536x1024 only). fast images are unmeasured and not enabled.',
+                    description: 'default (generate), guided, or hq (guided_hq, quality unmeasured); all follow the 64-pixel grid and pixel ceiling. fast images are unmeasured and not enabled.',
                 },
                 firstFramePath: {
                     type: 'string',
@@ -2266,7 +2271,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 
 Use when the picture has to follow a sound you already have — a narration take, a music bed, a recorded effect — instead of the picture being cut to it afterwards. Provide exactly one of audioPath (local .wav/.mp3) or audioUploadId (reuse an existing upload without uploading again). Reused ids have unknown expiry/duration locally, so the server checks them. Optionally give imagePath to pin one portrait to frame 0.
 Do NOT use to add sound to a finished clip: this generates new picture from the audio, it does not mux. The rendered video carries the supplied WAV re-encoded as AAC (48kHz stereo): a measured upload-to-output 100ms RMS Pearson correlation was 0.99997 at zero lag. Input audio must have two channels: mono fails in the engine's audio encoder, so the server refuses it at upload (re-encode with ffmpeg -ac 2). The audio after audioStartTime must also cover the video: a WAV more than 0.08s shorter than numFrames/frameRate (121 frames when omitted) dies on a latent shape mismatch, so it is refused after upload and before the job with the length to fix — or pass audioMaxDuration to follow the audio.
-Choose either numFrames or audioMaxDuration, never both. numFrames fixes the clip length. audioMaxDuration uses the shorter of that value and the audio remaining after audioStartTime, floors seconds × frameRate, then rounds down to 8k+1; more than ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} frames is refused when upload duration is known. audioStartTime must be before the uploaded audio ends. With neither length field, the default is 121 frames (about 5.04s at 24fps), not the source audio length: an 8.000s WAV produced 5.041s of audio. Set numFrames or audioMaxDuration to request a longer span; audioMaxDuration=8.0 at 24fps rounds down to 185 frames (about 7.708s), so grid rounding can still trim the tail. A measured 121-frame render took about 170s plus queue.
+Choose either numFrames or audioMaxDuration, never both. numFrames fixes the clip length. audioMaxDuration uses the shorter of that value and the audio remaining after audioStartTime, floors seconds × frameRate, then rounds down to 8k+1; more than ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} frames is refused when upload duration is known. audioStartTime must be before the uploaded audio ends. With neither length field, the client explicitly sends 121 frames (about 5.04s at 24fps) for compatibility: an 8.000s WAV produced 5.041s of audio. Set numFrames or audioMaxDuration to request a longer span; audioMaxDuration=8.0 at 24fps rounds down to 185 frames (about 7.708s), so grid rounding can still trim the tail. A measured 121-frame render took about 170s plus queue.
 Set expectLipSync:true when every spoken line in the audio belongs to a visible speaker (on_screen). LTX 2.5 sometimes ignores the voice, so after each render ffmpeg compares the picture's motion with the speech loudness; when no region moves with the speech, the same audio, image and prompt render again with a new seed, up to maxAttempts (default 2, each a full render). It never fails the call: the best clip is returned with its findings, and every attempt's seed and measurement are written into its .astra-job.json. It also reports speech cut off by the frame count and a clip audio track that differs from the supplied WAV; another seed fixes neither, so those are reported, not retried. It does not judge phoneme-level lip sync, which visible person spoke, or voice identity, and in medium or wide shots the mouth is too small to measure reliably. Calibrated 2026-10-17 on five real close-ups whose mouths stayed closed (margins −0.23 to −0.08, threshold 0.1); no real clip that followed the voice was available, and a new seed rarely fixed a refusal, so a second failure points at the opening image, prompt or strength. Leave it off for music, effects or off-screen voice.
 ${ASTRA_LIMITS_LINE}
 
@@ -2300,7 +2305,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, the
                 },
                 audioMaxDuration: {
                     type: 'number',
-                    description: `Maximum seconds to use after audioStartTime. Mutually exclusive with numFrames. With a fresh upload, the shorter of this and remaining audio must produce at most ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} frames on the 8k+1 grid. Reused ids defer duration checks to the server. At 24fps, 8 seconds selects 185 frames (about 7.71s). If both length fields are omitted, the server uses 121 frames (about 5.04s), not the audio length.`,
+                    description: `Maximum seconds to use after audioStartTime. Mutually exclusive with numFrames. With a fresh upload, the shorter of this and remaining audio must produce at most ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} frames on the 8k+1 grid. Reused ids defer duration checks to the server. At 24fps, 8 seconds selects 185 frames (about 7.71s). If duration, numFrames and audioMaxDuration are omitted, the client explicitly sends 121 frames (about 5.04s). Server metadata disagrees about omission; use an explicit length.`,
                 },
                 numFrames: astraNumFramesProperty('audio2video'),
                 width: ASTRA_WIDTH_PROPERTY,
@@ -2309,6 +2314,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, the
                 seed: ASTRA_SEED_PROPERTY,
                 duration: ASTRA_DURATION_PROPERTY,
                 generateAudio: ASTRA_GENERATE_AUDIO_PROPERTY,
+                hdr: ASTRA_HDR_PROPERTY,
                 negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
                 numInferenceSteps: ASTRA_STEPS_PROPERTY,
                 guidance: ASTRA_GUIDANCE_PROPERTY,
@@ -2442,14 +2448,14 @@ Returns: the server's JSON report verbatim. No arguments.`,
         name: 'astra_video_list_uploads',
         title: 'ASTRA video upload list',
         annotations: HINT.read,
-        description: 'List uploads owned by the configured ASTRA_VIDEO key. No filters or pagination arguments. Uploads expire after 24 hours; the key has a 20-upload / 1 GiB storage ceiling. Requires server GET /v1/uploads support; an unavailable endpoint or invalid response is an error, never an empty list. Server support and response contract still require live verification.',
+        description: 'List uploads owned by the configured ASTRA_VIDEO key. No filters or pagination arguments. Uploads expire after 24 hours; the key has a 200-file storage ceiling (live 2026-10-18 contract). Not in the six official OpenAPI routes. Requires server GET /v1/uploads support; an unavailable endpoint or invalid response is an error, never an empty list. Server support and response contract still require live verification.',
         inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     },
     {
         name: 'astra_video_delete_upload',
         title: 'Delete an ASTRA video upload',
         annotations: HINT.moderate,
-        description: '⚠️ Destructive: never call without user approval for the selected upload (HITL). Permanently delete one upload owned by the configured ASTRA_VIDEO key. List uploads first and choose the exact uploadId; do not delete inputs still needed by queued/running jobs or planned reuse. Requires server DELETE /v1/uploads/<id> support. An unavailable endpoint or unconfirmed response is an error, never a successful deletion. Server support and response contract still require live verification.',
+        description: '⚠️ Destructive: never call without user approval for the selected upload (HITL). Permanently delete one upload owned by the configured ASTRA_VIDEO key. List uploads first and choose the exact uploadId; do not delete inputs still needed by queued/running jobs or planned reuse. Not in the six official OpenAPI routes. Requires server DELETE /v1/uploads/<id> support. An unavailable endpoint or unconfirmed response is an error, never a successful deletion. Server support and response contract still require live verification.',
         inputSchema: {
             type: 'object',
             properties: { uploadId: { type: 'string', minLength: 1, maxLength: 256, pattern: '^[A-Za-z0-9_-]+$', description: 'Exact upload identifier from the list; not a URL or local path.' } },
@@ -4914,7 +4920,7 @@ for (const tool of TOOLS) {
         continue;
     tool.inputSchema.properties = { ...tool.inputSchema.properties, requiredSeconds: {
             type: 'number', exclusiveMinimum: 0,
-            description: 'Required source coverage in seconds, e.g. 3.2. Include the measured shot body, source trim and outgoing transition handle. Selects the shortest supported duration without changing model/resolution. Mutually exclusive with durationSeconds, numFrames, frames, autoDuration and audioMaxDuration. Use for new shots; exact legacy requests may retain their explicit length. Over-limit shots must be split; never truncated.',
+            description: 'Required source coverage in seconds, e.g. 3.2. Include the measured shot body, source trim and outgoing transition handle. Selects the shortest supported duration without changing model/resolution. Mutually exclusive with duration, durationSeconds, numFrames, frames, autoDuration and audioMaxDuration. Use for new shots; exact legacy requests may retain their explicit length. Over-limit shots must be split; never truncated.',
         } };
     if (tool.name === 'seedance_text2video' || tool.name === 'seedance_img2video')
         tool.inputSchema.properties.frames = {

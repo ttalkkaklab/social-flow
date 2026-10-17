@@ -34,7 +34,7 @@ test('frame boundaries select the minimum covering point and never silently clip
   }
   for (const requiredSeconds of [0, -1, NaN, Infinity, '4'])
     assert.throws(() => resolveVideoDuration('veo_text2video', { requiredSeconds }), /finite positive/);
-  for (const key of ['durationSeconds', 'numFrames', 'frames', 'autoDuration', 'audioMaxDuration'])
+  for (const key of ['duration', 'durationSeconds', 'numFrames', 'frames', 'autoDuration', 'audioMaxDuration'])
     assert.throws(() => resolveVideoDuration('veo_text2video', { requiredSeconds: 4, [key]: 8 }), /mutually exclusive/);
   assert.throws(() => resolveVideoDuration('astra_text2video', { requiredSeconds: 16, tier: 'fast' }), /split or replan/);
   assert.throws(() => resolveVideoDuration('veo_text2video', { requiredSeconds: 8.01 }), /split or replan/);

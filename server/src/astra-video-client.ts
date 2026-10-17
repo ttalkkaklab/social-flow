@@ -10,7 +10,7 @@
  * Shape of the API (measured against the live server 2026-09-29, evidence in the PR body):
  * - `POST /v1/uploads` takes the file **bytes as the whole body**, kind chosen by Content-Type,
  *   and answers 201 `{upload_id, kind, bytes, expires_at}` (audio adds `duration`, video adds
- *   `width/height/frames/fps`). Uploads live 24h; 20 per key, 1 GiB total.
+ *   `width/height/frames/fps`). Uploads live 24h; 200 files per key (2026-10-18 live contract).
  * - `POST /v1/jobs` answers 202 `{job_id, status:"queued", queue_position, status_url, result_url}`.
  *   Job bodies stop at 1 MiB; acceptance is limited to 5/min and 60/hour per key, with at
  *   most 20 jobs waiting in the queue.
@@ -321,6 +321,9 @@ function checkDuration(
   mode: AstraFrameMode,
   ctx: z.RefinementCtx,
 ): void {
+  if (data.numFrames !== undefined && data.autoDuration !== undefined) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['autoDuration'], message: 'autoDuration and numFrames are mutually exclusive' });
+  }
   if (data.duration === undefined) return;
   for (const other of ['numFrames', 'autoDuration', 'audioMaxDuration'] as const) {
     if (data[other] !== undefined) {
@@ -349,6 +352,7 @@ function resolveDuration<T extends { duration?: number; numFrames?: number; fram
 
 /** `generateAudio: false` strips the sound stream after generation (same GPU time). */
 const generateAudioSchema = z.boolean().optional();
+const hdrSchema = z.enum(['SRGB_LINEAR', 'ACESCG', 'ACESCCT']).optional();
 
 const seedSchema = z.number().int().min(0).max(ASTRA_VIDEO_MAX_SEED).optional();
 const frameRateSchema = z.number().min(1).max(60).optional();
@@ -418,7 +422,7 @@ const outputFields = {
 
 /**
  * Pixel-grid check. guided_fast alone is on the 32 grid and is additionally bounded
- * 32..1920 per side; every other mode is a plain multiple of 64. The area ceiling is shared.
+ * 32..1920 per side; other modes use 64..1920 in multiples of 64. The area ceiling is shared.
  */
 export function checkDimensions(
   width: number | undefined,
@@ -430,8 +434,9 @@ export function checkDimensions(
   for (const [name, value] of [['width', width], ['height', height]] as const) {
     if (value === undefined) continue;
     if (value % step !== 0) return `${name} must be a multiple of ${step} for mode ${mode} (got ${value})`;
-    if (fast && (value < ASTRA_VIDEO_FAST_MIN_DIMENSION || value > ASTRA_VIDEO_FAST_MAX_DIMENSION)) {
-      return `${name} must be between ${ASTRA_VIDEO_FAST_MIN_DIMENSION} and ${ASTRA_VIDEO_FAST_MAX_DIMENSION} for mode guided_fast (got ${value})`;
+    const min = fast ? ASTRA_VIDEO_FAST_MIN_DIMENSION : ASTRA_VIDEO_DIMENSION_STEP;
+    if (value < min || value > 1920) {
+      return `${name} must be between ${min} and 1920 for mode ${mode} (got ${value})`;
     }
   }
   // The server fills each omitted side independently, including single-sided requests.
@@ -493,6 +498,7 @@ export const astraText2VideoSchema = z
     seed: seedSchema,
     duration: durationSchema,
     generateAudio: generateAudioSchema,
+    hdr: hdrSchema,
     lora: loraSchema,
     negativePrompt: negativePromptSchema,
     numInferenceSteps: numInferenceStepsSchema,
@@ -528,8 +534,7 @@ export const astraText2VideoSchema = z
     if (dimensionError) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['width'], message: dimensionError });
     }
-    // The server gives an explicit num_frames precedence over auto_duration. It still checks
-    // the object's shape, but ignores the automatic range when num_frames is present.
+    // Length selectors are mutually exclusive; validate automatic ranges independently.
     if (data.autoDuration && data.numFrames === undefined) {
       const durationError = checkAutoDuration(data.autoDuration, data.frameRate ?? 24);
       if (durationError) {
@@ -585,7 +590,7 @@ export const astraImg2VideoSchema = z
         }
       }
     }
-    // numFrames wins over autoDuration (the body drops auto_duration), so only a bare range is checked.
+    // Validate the automatic range and require a known length for a final image.
     if (data.autoDuration && data.numFrames === undefined) {
       if (data.lastFramePath) {
         ctx.addIssue({
@@ -598,10 +603,6 @@ export const astraImg2VideoSchema = z
       if (durationError) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['autoDuration'], message: durationError });
       }
-    }
-    // guided_hq image runs are measured only at 1536x1024 (stage 4), so hq is held to guided's size.
-    if ((mode === 'guided' || mode === 'guided_hq') && ((data.width ?? 1536) !== 1536 || (data.height ?? 1024) !== 1024)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['width'], message: `${data.tier} images require 1536x1024` });
     }
     if (mode !== 'generate' && data.lora?.length) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['lora'], message: 'lora is accepted only on tier "default"' });
@@ -673,6 +674,7 @@ export const astraAudio2VideoSchema = z
     seed: seedSchema,
     duration: durationSchema,
     generateAudio: generateAudioSchema,
+    hdr: hdrSchema,
     negativePrompt: negativePromptSchema,
     numInferenceSteps: numInferenceStepsSchema,
     guidance: guidanceSchema,
@@ -682,6 +684,9 @@ export const astraAudio2VideoSchema = z
   })
   .superRefine((data, ctx) => {
     checkDuration(data, 'audio2video', ctx);
+    if (data.hdr && data.imagePath) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['hdr'], message: 'hdr cannot be combined with imagePath; remove hdr or the visual input' });
+    }
     if ((data.audioPath !== undefined) === (data.audioUploadId !== undefined)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['audioPath'], message: 'Provide exactly one of audioPath or audioUploadId' });
     }
@@ -697,7 +702,10 @@ export const astraAudio2VideoSchema = z
       });
     }
   })
-  .transform(resolveDuration);
+  .transform(resolveDuration)
+  // The live default field and contract_notes disagree; preserve the client default explicitly.
+  .transform((data) => data.numFrames === undefined && data.audioMaxDuration === undefined
+    ? { ...data, numFrames: 121 } : data);
 
 /**
  * astra_video_retake — mode retake. Re-rolls one time span of an existing clip.
@@ -971,6 +979,7 @@ export function buildJobBody(
     conditioningMask?: { uploadId: string; strength?: number };
     skipStage2?: boolean;
     generateAudio?: boolean;
+    hdr?: 'SRGB_LINEAR' | 'ACESCG' | 'ACESCCT';
     negativePrompt?: string;
     numInferenceSteps?: number;
     numGeneratedKeyframes?: number;
@@ -988,13 +997,16 @@ export function buildJobBody(
 
   const body: JobBody = { mode, prompt: args.prompt };
 
+  if (args.numFrames !== undefined && args.autoDuration !== undefined) {
+    throw new Error('autoDuration and numFrames are mutually exclusive');
+  }
+  if (args.hdr && (args.images?.length || args.references?.length || args.conditioningMask || args.videoUploadId)) {
+    throw new Error('hdr cannot be combined with visual inputs');
+  }
+  put(body, 'hdr', args.hdr);
   put(body, 'num_frames', args.numFrames);
   if (args.autoDuration) {
-    // The server takes num_frames over auto_duration when both arrive; sending both is
-    // legal but misleading, so the explicit frame count wins here too and auto_duration drops.
-    if (args.numFrames === undefined) {
-      body.auto_duration = { min_seconds: args.autoDuration.minSeconds, max_seconds: args.autoDuration.maxSeconds };
-    }
+    body.auto_duration = { min_seconds: args.autoDuration.minSeconds, max_seconds: args.autoDuration.maxSeconds };
   }
   put(body, 'width', args.width);
   put(body, 'height', args.height);
@@ -1047,7 +1059,6 @@ export function buildJobBody(
         'Drop the field or pick the mode that owns it.',
     );
   }
-  // `hdr` is in every allow-list and is deliberately never sent (see the PR body).
   return body;
 }
 
@@ -1357,7 +1368,7 @@ export async function generateFromImage(args: AstraImg2VideoRequest): Promise<As
     images.push({ uploadId: last.uploadId, frameIdx: (args.numFrames ?? 121) - 1, strength: args.strength ?? 1.0 });
   }
   const mode = ASTRA_VIDEO_TIERS[args.tier];
-  const dimensions = mode === 'guided' || mode === 'guided_hq' ? { width: 1536, height: 1024 } : {};
+  const dimensions = mode === 'guided' || mode === 'guided_hq' ? { width: args.width ?? 1536, height: args.height ?? 1024 } : {};
   const body = buildJobBody(mode, { ...args, ...dimensions, images });
   return runJob(mode, args.prompt, body, args.outputPath, args.filename);
 }

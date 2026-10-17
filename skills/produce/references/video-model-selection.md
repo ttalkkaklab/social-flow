@@ -38,7 +38,7 @@ The front door has returned 403 for a runtime-default User-Agent, so every ASTRA
 `User-Agent: social-flow/<version>`. Per key, uploads are limited to 10/min and jobs to 5/min and
 60/hour; the waiting queue holds 20 jobs, and `/v1/jobs` bodies stop at 1 MiB.
 
-Uploads expire after 24 hours and each key has a storage ceiling of **20 uploads / 1 GiB**.
+Uploads expire after 24 hours and each key has a storage ceiling of **200 files** (live 2026-10-18 contract).
 Use `astra_video_list_uploads` with no arguments to find ids, then
 `astra_video_delete_upload({uploadId: "the-exact-id"})` only for inputs no longer needed
 by queued/running jobs or planned reuse. Deleting an upload does not delete a local source file.
@@ -60,8 +60,7 @@ multiple of neither 64 nor 32. The edit may add padding instead of scaling when 
 
 For image-conditioned calls, the server blocks **generate: {121,129,137}** at
 width 1280 (measured at heights 704/768) and **guided: {121}** at width 1280 (measured at height 704). Guided 129 and 137 succeeded at 1280x704 in server probes (the only guided size probed);
-the guided client ceiling is now 361 like every mode. The client requires 1536x1024 for guided images,
-so the guided 1280x704 probes are not client alternatives. Within current client limits use
+the guided client ceiling is now 361 like every mode. Guided and hq sizes follow the server grid and pixel ceiling; unmeasured sizes are not quality guarantees. Within current client limits use
 generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at
 121 frames also succeeded. The image-conditioned warning does not apply to `astra_text2video`: text-only
 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause.
@@ -148,8 +147,8 @@ the reviewer's inspection of frames 0/20/40/60/85 from job
 Clips carry AAC (48kHz stereo); `generateAudio: false` strips it after generation (same render time). **audio2video carries the supplied
 WAV re-encoded as AAC**, rather than newly generated sound: job `558632165cfe4678a631eb460bf89457`
 measured 100ms RMS Pearson correlation 0.99997 at zero lag. Use stereo (2-channel) input;
-mono WAV is refused at upload because it fails in the engine's audio encoder. With neither
-`numFrames` nor `audioMaxDuration`, the server uses 121 frames (~5.04s at 24fps), even for an
+mono WAV is refused at upload because it fails in the engine's audio encoder. With no
+`duration`, `numFrames` or `audioMaxDuration`, the client explicitly sends 121 frames (~5.04s at 24fps) for compatibility, even for an
 8-second WAV. `numFrames` fixes the length; `audioMaxDuration: 8` selects 185 frames (~7.71s)
 at 24fps after rounding, so it can trim the tail. Drop or duck the output track in the edit
 when laying another narration or BGM over it.
@@ -960,3 +959,16 @@ export ARK_API_KEY="..."   # https://ai.byteplus.com/ark/region:ap-southeast-1/a
 The region is `ap-southeast-1` (Singapore), the only one. `ARK_BASE_URL` can override it, but
 the video models live only in that region, so normally leave it alone. Without this key,
 `veo_*` still runs on `GEMINI_API_KEY` — the two engines don't block each other.
+
+
+ASTRA contract update (2026-10-18): the live audio2video capability field says omitted
+length follows audio, but its contract_notes still say 121 frames. The plugin therefore
+sends its historical 121-frame default explicitly when duration, numFrames and
+audioMaxDuration are absent. Use audioMaxDuration to follow a bounded audio span.
+Length selectors are mutually exclusive. HDR is available on text2video and audio2video
+without imagePath; downstream assembly must preserve its BT.2020/HLG 10-bit color.
+The shot preparation helper forwards authored tier, guidance, LoRA strength, inference
+steps and generateAudio when the selected mode supports them. Unsupported tier/LoRA
+choices on audio/keyframe shots produce an actionable error instead of being discarded.
+Upload listing/deletion are provisional extensions, absent from the six official OpenAPI
+routes; availability is not promised by the generation contract.
