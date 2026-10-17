@@ -15,7 +15,7 @@ export function resolveVideoDuration(tool, input) {
         return { args: input, timing: null };
     if (!DURATION_TOOLS.includes(tool))
         throw new Error('requiredSeconds is not supported for ' + tool);
-    for (const key of ['durationSeconds', 'numFrames', 'frames', 'autoDuration', 'audioMaxDuration']) {
+    for (const key of ['duration', 'durationSeconds', 'numFrames', 'frames', 'autoDuration', 'audioMaxDuration']) {
         if (input[key] !== undefined)
             throw new Error('requiredSeconds is mutually exclusive with ' + key + '; supply the shot need or an exact legacy request, not both');
     }
@@ -38,7 +38,7 @@ export function resolveVideoDuration(tool, input) {
     }
     else if (tool.startsWith('astra_')) {
         const mode = tool === 'astra_audio2video' ? 'audio2video' : tool === 'astra_keyframe_video' ? 'keyframe'
-            : input.tier === 'guided' ? 'guided' : input.tier === 'fast' ? 'guided_fast' : 'generate';
+            : input.tier === 'guided' ? 'guided' : input.tier === 'fast' ? 'guided_fast' : input.tier === 'hq' ? 'guided_hq' : 'generate';
         const frameRate = input.frameRate ?? 24;
         if (typeof frameRate !== 'number' || !Number.isFinite(frameRate) || frameRate < 1 || frameRate > 60)
             throw new Error('frameRate must be finite in 1..60');
