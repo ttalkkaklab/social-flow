@@ -9,6 +9,7 @@
 - [Common data](#common-data)
 - [Delivery follows the story](#delivery-follows-the-story)
 - [Direct each line and reaction](#direct-each-line-and-reaction)
+- [Speech purpose boundaries](#speech-purpose-boundaries)
 - [Common voice layer](#common-voice-layer)
 - [Adapter layer](#adapter-layer)
 - [Current adapter examples](#current-adapter-examples-checked-2026-10-16)
@@ -129,7 +130,8 @@ hands and props. Reuse identity references, but do not force confusion or restra
 start from an unrelated smiling sales pose. Preserve the previous shot's physical state
 where the story continues. Create a new image only within the authorized asset scope.
 
-Generate each emotional beat separately. Never concatenate nonconsecutive shots or
+Generate each change of speech purpose or vocal delivery separately, including changes
+without a new emotion. Never concatenate nonconsecutive shots or
 different reactions into one generation merely because they share an image, then slice
 at audio-length boundaries. A deliberately continuous take needs ordered beat timings
 and observed cut points before reuse; a prompt does not establish where the model acted.
@@ -212,6 +214,73 @@ Reuse the receipt for unchanged media/direction, including a failing result; imp
 take before evaluating it again. Report pass/fail/unverified and unresolved findings as
 returned. A requested 95-point target is an evaluation criterion, not permission to invent
 a passing score, reroll identical media, spend without a limit or block unrelated production.
+
+## Speech purpose boundaries
+
+A speech line is a span with one communicative purpose and compatible vocal delivery.
+It is not necessarily a sentence, a speaker turn or a shot. Split where intent or vocal
+contour changes: identification then questioning, reassurance then a command, or a quoted
+question followed by the speaker's own explanation. Keep consecutive sentences together
+when purpose and delivery continue. Punctuation alone cannot decide these boundaries.
+
+Before generating, read the words in their actual situation. Use `acting.context` for the
+immediate trigger, `intent` for what this speaker is doing to the listener, and `vocal` for
+audible phrasing, stress and completion. For example, answering a phone with one's own
+name/rank is a declarative self-introduction even when the sentence ends in Korean `요`.
+It needs a firm falling completion; a following skeptical question needs its own direction.
+Emotion labels such as stern or suspicious do not specify that difference.
+
+```js
+narration: [
+  {
+    id: "tanaka-identify", speaker: "officer-tanaka", delivery: "on_screen",
+    tts: "경찰서 다나카 경부요.", sub: "경찰서 다나카 경부요.",
+    acting: {
+      context: "Answering an incoming telephone call.",
+      intent: "State his own affiliation, name and rank to the caller.",
+      vocal: "Dry, grounded adult male voice. Matter-of-fact self-identification; finish low and firmly downward on 경부요."
+    }
+  },
+  {
+    id: "tanaka-confirm", speaker: "officer-tanaka", delivery: "on_screen",
+    tts: "독립운동가를 잡게 해주겠다고?", sub: "독립운동가를 잡게 해주겠다고?",
+    acting: {
+      context: "The caller has just offered to help catch an independence activist.",
+      intent: "Verify the caller's offer.",
+      vocal: "Same dry, grounded voice. A restrained skeptical confirmation question."
+    }
+  }
+],
+performance: [
+  {kind: "dialogue", character: "officer-tanaka", to: "uncle", group: 1},
+  {kind: "action", character: "officer-tanaka", text: "He listens to the caller's offer.", durationSeconds: 1},
+  {kind: "dialogue", character: "officer-tanaka", to: "uncle", group: 2}
+]
+```
+
+The listening duration is an authored example, not a universal pause. Stage any pickup
+before the self-introduction when the opening image still has the receiver on its cradle.
+Preserve this event order in video direction; do not describe the whole shot only as listening
+and questioning. A speech boundary alone does not introduce another camera cut.
+
+Plan and attach each line independently with the same pinned voice. Inspect the compiled
+`generation` arguments, not just the prose in the board: the identification style must apply
+only to its own text, and the question style only to the question. Keep Gemini 3.8's resolved
+turn style within its 500-character adapter limit. For ElevenLabs, author a compact audible
+`direction`/`tags` cue per line; rich prose alone is not an inline control. Compose current
+line audio with the performance timeline before generating any audio-conditioned video.
+
+For an existing combined line, a narrowly scoped correction may explicitly describe the two
+sentence deliveries in that line's supported style. If editing its structure, preserve text,
+speaker, surrounding IDs and all performance group references through storyboard editing;
+`speech_manage update` changes one line and does not insert a second line. Treat dependent
+speaking video as stale after changing either speech or performance, and report it honestly.
+
+When the user requests an improvement loop, keep the scene intent and rubric fixed, review
+the actual generated audio, and retain each take's exact prompt, hash, usage and findings.
+Fix a concrete audible defect before generating the next take. Do not reroll a review of
+unchanged media to seek a passing number, soften the intended delivery, or treat a pitch
+trace as proof of natural acting. Normal production still has no automatic listening gate.
 
 ## Adapter layer
 

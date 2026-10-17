@@ -11,15 +11,75 @@ import {ASTRA_VIDEO_MAX_PROMPT_CHARS} from '../dist/astra-video-client.js';
 const require=createRequire(import.meta.url),voice={engine:'gemini',voiceId:'Kore',model:'gemini-2.5-flash-preview-tts',language:'ko',speed:1,stylePrompt:'Bright confident sales smile.'};
 const caps={provider:'fixture',model:'acting',audioConditioning:true,lipSync:true,postLipSync:false,evidence:'test adapter'};
 function wav(seconds){const b=Buffer.alloc(44+48000*seconds*2);b.write('RIFF');b.writeUInt32LE(b.length-8,4);b.write('WAVEfmt ',8);b.writeUInt32LE(16,16);b.writeUInt16LE(1,20);b.writeUInt16LE(1,22);b.writeUInt32LE(48000,24);b.writeUInt32LE(96000,28);b.writeUInt16LE(2,32);b.writeUInt16LE(16,34);b.write('data',36);b.writeUInt32LE(b.length-44,40);return b;}
-function fixture(t,lines=[{tts:'What did I pass?',speaker:'host',delivery:'on_screen'}]) {
+function fixture(t,lines=[{tts:'What did I pass?',speaker:'host',delivery:'on_screen'}],tts=voice) {
  const dir=mkdtempSync(path.join(tmpdir(),'acting-contract-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));
  const board=path.join(dir,'storyboard'),work=path.join(dir,'.work');mkdirSync(board);mkdirSync(work);
- const win={STORY:{version:'story-v2'},SB_DOC:{characters:[{id:'host',tts:voice}]},SCENES:[{type:'points',narration:lines,visual:{video:{}}}]};
+ const win={STORY:{version:'story-v2'},SB_DOC:{characters:[{id:'host',tts}]},SCENES:[{type:'points',narration:lines,visual:{video:{}}}]};
  writeFileSync(path.join(board,'scenes.js'),Object.entries(win).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
  let r=manageSpeech({path:board,action:'list'});r=manageSpeech({path:board,action:'prepare',expectedRevision:r.revision});
  return {dir,board,work,r};
 }
 const proof=line=>({generator:line.generationPlan.generator,voiceSettings:line.generationPlan.arguments,text:line.tts,language:line.generationPlan.language});
+test('one speaker identifies himself, listens and questions in one shot with isolated TTS directions',t=>{
+ const phone=JSON.parse(readFileSync(new URL('./fixtures/telephone-speech-intent.json',import.meta.url),'utf8'));
+ const pinned={engine:'gemini',voiceId:'Orus',model:'gemini-3.8-flash-tts',language:'ko',speed:1};
+ const {dir,board,work}=fixture(t,phone.narration,pinned),file=path.join(board,'scenes.js'),win={};
+ new Function('window',readFileSync(file,'utf8'))(win);
+ win.SB_DOC.performanceTimingVersion=1;win.SCENES[0].performance=phone.performance;
+ writeFileSync(file,Object.entries(win).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+ let state=manageSpeech({path:board,action:'list'});
+ const plans=manageSpeech({path:board,action:'plan_audio'}).audioPlans;
+ assert.equal(plans.length,2);
+ for(const [index,plan] of plans.entries()){
+  assert.equal(plan.generator,'tts_gemini_38');assert.equal(plan.generation.voice,'Orus');
+  assert.equal(plan.generation.turns.length,1);assert.equal(plan.generation.turns[0].text,phone.narration[index].tts);
+  assert.ok(gemini38TtsSchema.safeParse(plan.generation).success);
+ }
+ assert.match(plans[0].generation.turns[0].style,/self-identification|identifying himself/);
+ assert.match(plans[0].generation.turns[0].style,/falling|downward/);
+ assert.doesNotMatch(plans[0].generation.turns[0].style,/skeptical confirmation/);
+ assert.match(plans[1].generation.turns[0].style,/skeptical confirmation/);
+ assert.doesNotMatch(plans[1].generation.turns[0].style,/self-identification/);
+ // Constant nonzero PCM identifies the two inputs; the listener interval must be actual silence.
+ for(const [index,line] of state.lines.entries()){
+  const audio=path.join(dir,`phone-${index}.wav`),bytes=wav(1);
+  for(let offset=44;offset<bytes.length;offset+=2)bytes.writeInt16LE((index+1)*1000,offset);
+  writeFileSync(audio,bytes);
+  state=manageSpeech({path:board,action:'attach_audio',lineId:line.id,expectedRevision:state.revision,audioPath:audio,generation:proof(line)});
+ }
+ const shotId=state.lines[0].shotId,plan=manageSpeech({path:board,action:'plan_video',shotId,capabilities:caps}).plan;
+ assert.deepEqual(plan.performance.map(event=>event.kind),['dialogue','action','dialogue']);
+ assert.equal(plan.durationSeconds,3);assert.equal(plan.performance[2].speechStartSeconds,2);
+ assert.match(plan.videoPrompt,/listens to the caller/);assert.match(plan.videoPrompt,/falling|downward/);
+ writeFileSync(path.join(work,'cards.tsv'),'0\tphone-0.wav\t1\n');
+ const {compose,duration}=require('../../skills/produce/references/compose-speech.js');
+ const output=compose(work,board)[0];assert.equal(duration(output.audioPath),3);
+ assert.deepEqual(output.lineIds,['identify','confirm']);
+ const {execFileSync}=require('node:child_process');
+ const pcm=execFileSync('ffmpeg',['-v','error','-i',output.audioPath,'-f','s16le','-ac','1','-ar','48000','pipe:1']);
+ const sample=seconds=>pcm.readInt16LE(Math.round(seconds*48000)*2);
+ assert.equal(sample(.5),1000);assert.equal(sample(1.5),0);assert.equal(sample(2.5),2000);
+ const video=path.join(dir,'phone.mp4');writeFileSync(video,'previous synchronized media');
+ state=manageSpeech({path:board,action:'attach_video',shotId,expectedRevision:state.revision,videoPath:video,capabilities:caps});
+ const secondAudio=state.lines[1].audio;
+ state=manageSpeech({path:board,action:'update',lineId:'identify',expectedRevision:state.revision,patch:{acting:{...phone.narration[0].acting,vocal:'Firm low falling self-identification, with natural connected Korean phrasing.'}}});
+ assert.equal(state.invalidated.video.speechStatus,'stale');
+ const current=manageSpeech({path:board,action:'list'}).lines;
+ assert.equal(current[0].audioCurrent,false);assert.equal(current[1].audioCurrent,true);
+ assert.deepEqual(current[1].audio,secondAudio);assert.throws(()=>compose(work,board),/identify: Character speech requires recorded generation voiceSettings/);
+});
+test('speech intent boundaries preserve a sustained multi-sentence line and provider-specific controls',()=>{
+ const text='괜찮아. 내가 옆에 있어. 천천히 해.';
+ const gemini={engine:'gemini',voiceId:'Orus',model:'gemini-3.8-flash-tts',language:'ko',speed:1};
+ const plan=speechAudioPlan({tts:text,acting:{context:'A friend is frightened.',intent:'Reassure the friend.',vocal:'Warm, calm reassurance throughout.'}},{id:'host',tts:gemini});
+ assert.equal(plan.generation.turns.length,1);assert.equal(plan.generation.turns[0].text,text);
+ const eleven={engine:'elevenlabs',voiceId:'pinned-voice',model:'eleven_v4',language:'ko',speed:1};
+ const identify=speechAudioPlan({tts:'경찰서 다나카 경부요.',acting:{direction:'firm declarative statement',intent:'State his own identity.'}},{id:'host',tts:eleven});
+ const confirm=speechAudioPlan({tts:'독립운동가를 잡게 해주겠다고?',acting:{direction:'restrained skeptical question',intent:'Verify the offer.'}},{id:'host',tts:eleven});
+ assert.equal(identify.generation.text,'[firm declarative statement] 경찰서 다나카 경부요.');
+ assert.equal(confirm.generation.text,'[restrained skeptical question] 독립운동가를 잡게 해주겠다고?');
+ for(const p of [identify,confirm])assert.ok(elevenLabsGenerateSchema.safeParse(p.generation).success);
+});
 test('scene acting replaces cheerful baseline, rejects old style and keeps voice pinned',t=>{
  const {dir,board,r}=fixture(t),line=r.lines[0],audio=path.join(dir,'line.wav');writeFileSync(audio,wav(1));
  let next=manageSpeech({path:board,action:'update',lineId:line.id,expectedRevision:r.revision,patch:{acting:{context:'Unexpected result',emotion:'Confused',vocal:'Ask quietly, no smile',visual:'Smile fades; look at partner'}}});
