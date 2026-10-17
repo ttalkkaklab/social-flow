@@ -6953,6 +6953,8 @@ var require_video_duration = __commonJS({
         const fps = positive(limits.frameRate, "frameRate");
         numFrames = Math.max(limits.min, 1 + limits.step * Math.ceil((requiredSeconds * fps - 1) / limits.step));
         if (numFrames / fps < requiredSeconds) numFrames += limits.step;
+        while (numFrames - limits.step >= limits.min && (numFrames - limits.step) / fps >= requiredSeconds)
+          numFrames -= limits.step;
         if (numFrames <= limits.max) durationSeconds = numFrames / fps;
       } else {
         durationSeconds = Math.max(limits.min, Math.ceil(requiredSeconds));

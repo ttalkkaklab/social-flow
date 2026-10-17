@@ -21,6 +21,10 @@ function minimumDuration(requiredSeconds, limits) {
     // Compute the first legal frame count, then compare in seconds to avoid rounding down.
     numFrames = Math.max(limits.min, 1 + limits.step * Math.ceil((requiredSeconds * fps - 1) / limits.step));
     if (numFrames / fps < requiredSeconds) numFrames += limits.step;
+    // Multiplication can cross a grid boundary at fractional fps. Compare playback
+    // seconds directly so an exactly covering preceding grid point still wins.
+    while (numFrames - limits.step >= limits.min && (numFrames - limits.step) / fps >= requiredSeconds)
+      numFrames -= limits.step;
     if (numFrames <= limits.max) durationSeconds = numFrames / fps;
   } else {
     durationSeconds = Math.max(limits.min, Math.ceil(requiredSeconds));

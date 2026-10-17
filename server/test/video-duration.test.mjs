@@ -25,7 +25,7 @@ test('every new-generation tool exposes requiredSeconds and selects covering dur
 });
 
 test('frame boundaries select the minimum covering point and never silently clip', () => {
-  for (const [min, max, step, fps] of [[25, 193, 8, 24], [9, 241, 8, 24], [29, 289, 4, 24], [25, 193, 8, 60]]) {
+  for (const [min, max, step, fps] of [[25, 193, 8, 24], [9, 241, 8, 24], [29, 289, 4, 24], [25, 193, 8, 60], [25, 193, 8, 29.97], [25, 193, 8, 59.94]]) {
     for (let frame = min; frame <= max; frame += step) {
       assert.equal(minimumDuration(frame / fps, { min, max, step, frameRate: fps }).numFrames, frame);
       if (frame < max) assert.equal(minimumDuration(frame / fps + 1e-7, { min, max, step, frameRate: fps }).numFrames, frame + step);
