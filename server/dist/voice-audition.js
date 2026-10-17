@@ -2,6 +2,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { z } from 'zod';
+import { isDeepStrictEqual } from 'node:util';
+import { createRequire } from 'node:module';
 import { ttsSchema } from './character-tts.js';
 import { actingSchema, compileActing } from './speech-acting.js';
 import { elevenLabsGenerateSchema, generateElevenLabsSpeech } from './elevenlabs-client.js';
@@ -9,16 +11,25 @@ import { gemini38TtsSchema, generateGemini38Speech, generateSpeech, ttsGenerateS
 import { disabledToolPatterns, disabledToolsFile } from './config.js';
 import { resolveToolGate } from './tool-gate.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
-const candidate = z.object({ label: z.string().trim().min(1).max(100), reason: z.string().trim().min(1).max(500), tts: ttsSchema.refine(v => !!v.model, 'Choose an explicit model for audition') }).strict();
+import { characterVoiceTarget, compareVoiceMetadata, voiceMetadataSchema, voiceProfileSchema } from './voice-target.js';
+const candidate = z.object({ label: z.string().trim().min(1).max(100), reason: z.string().trim().min(1).max(500), tts: ttsSchema.refine(v => !!v.model, 'Choose an explicit model for audition'), metadata: voiceMetadataSchema.optional() }).strict().superRefine((value, ctx) => {
+    if (value.metadata && value.metadata.voiceId !== value.tts.voiceId)
+        ctx.addIssue({ code: 'custom', path: ['metadata', 'voiceId'], message: 'Metadata must describe this candidate voice ID' });
+});
+const sampleTurn = z.object({ text: z.string().trim().min(1).max(300), acting: actingSchema.optional() }).strict();
 export const voiceAuditionSchema = z.object({
-    action: z.enum(['create', 'read', 'select']), identityPath: z.string().min(1).optional(),
+    action: z.enum(['plan', 'create', 'read', 'select']), identityPath: z.string().min(1).optional(),
     auditionPath: z.string().min(1).optional(), sampleText: z.string().trim().min(5).max(300).optional(),
     candidates: z.array(candidate).length(3).optional(), acting: actingSchema.optional(),
+    sampleTurns: z.array(sampleTurn).min(2).max(10).optional(),
+    voiceProfile: voiceProfileSchema.optional(),
     candidateId: z.enum(['1', '2', '3']).optional(), userSelection: z.string().trim().min(1).max(1000).optional(),
 }).strict().superRefine((args, ctx) => {
     if (args.action === 'create' && (!args.identityPath || !args.sampleText || !args.candidates))
         ctx.addIssue({ code: 'custom', message: 'create requires identityPath, sampleText and exactly three candidates' });
-    if (args.action !== 'create' && !args.auditionPath)
+    if (args.action === 'plan' && !args.identityPath)
+        ctx.addIssue({ code: 'custom', message: 'plan requires identityPath' });
+    if (['read', 'select'].includes(args.action) && !args.auditionPath)
         ctx.addIssue({ code: 'custom', message: 'auditionPath is required' });
     if (args.action === 'select' && (!args.candidateId || !args.userSelection))
         ctx.addIssue({ code: 'custom', message: 'select requires candidateId and the actual user selection; never auto-select' });
@@ -28,9 +39,33 @@ export const voiceAuditionSchema = z.object({
         if (new Set(args.candidates.map(c => `${c.tts.engine}/${c.tts.model}/${c.tts.language}`)).size !== 1)
             ctx.addIssue({ code: 'custom', message: 'Compare voices with the same engine, model and language' });
     }
+    if (args.sampleTurns) {
+        const normalize = (value) => value.replace(/\s+/g, ' ').trim();
+        if (!args.sampleText || normalize(args.sampleTurns.map(turn => turn.text).join(' ')) !== normalize(args.sampleText))
+            ctx.addIssue({ code: 'custom', path: ['sampleTurns'], message: 'Turn texts must reproduce sampleText in order, without added or omitted words' });
+        if (args.acting)
+            ctx.addIssue({ code: 'custom', path: ['acting'], message: 'Use per-turn acting when sampleTurns is present; keep stable identity in voiceDirection' });
+        if (args.candidates?.some(choice => choice.tts.engine !== 'gemini' || !choice.tts.model?.startsWith('gemini-3.8-')))
+            ctx.addIssue({ code: 'custom', path: ['sampleTurns'], message: 'Per-turn sample acting requires Gemini 3.8 TTS' });
+    }
 });
 const hash = (value) => createHash('sha256').update(value).digest('hex');
 const escape = (s) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function compileSample(text, acting, voice, turns) {
+    if (!turns)
+        return compileActing(text, acting, voice);
+    turns = z.array(sampleTurn).min(2).max(10).parse(turns);
+    const normalize = (value) => value.replace(/\s+/g, ' ').trim();
+    if (acting || normalize(turns.map(turn => turn.text).join(' ')) !== normalize(text))
+        throw new Error('Sample turns must reproduce sampleText with per-turn acting only');
+    if (voice.engine !== 'gemini' || !String(voice.model).startsWith('gemini-3.8-'))
+        throw new Error('Per-turn sample acting requires Gemini 3.8 TTS');
+    const { directionSupport } = createRequire(import.meta.url)('../../skills/_shared/scene-acting.js');
+    if (turns.some(turn => !directionSupport(voice, turn.acting).supported))
+        throw new Error('Per-turn resolved vocal style exceeds the Gemini 3.8 limit of 500 characters; shorten the controls');
+    const compiled = turns.map(turn => compileActing(turn.text, turn.acting, voice));
+    return { generator: 'tts_gemini_38', generation: { ...compiled[0].generation, turns: compiled.flatMap(turn => turn.generation.turns) } };
+}
 function save(file, value) {
     const temporary = file + '.' + randomUUID() + '.tmp';
     writeFileSync(temporary, JSON.stringify(value, null, 2));
@@ -41,21 +76,35 @@ function preview(audition) {
 }
 /** Create paid previews, or apply only the candidate explicitly selected by the user. */
 export async function manageVoiceAudition(args) {
-    if (args.action === 'create') {
+    if (args.action === 'create' || args.action === 'plan') {
         const identityPath = resolve(args.identityPath);
         const source = readFileSync(identityPath, 'utf8');
         const blocks = [...source.matchAll(/```json\s*\n([\s\S]*?)```/g)].map(m => JSON.parse(m[1]));
         if (blocks.filter(b => b.character !== undefined).length !== 1)
             throw new Error('Create the character identity JSON before auditioning; tts may be absent until selection');
+        const target = characterVoiceTarget(source, args.voiceProfile);
+        const planned = (args.candidates || []).map(choice => {
+            if (choice.tts.engine === 'gemini' && !choice.tts.voiceDirection && target.baselineDirection.length > 400) {
+                const generationError = 'Derived voice direction exceeds 400 characters; supply a compact voiceProfile.baselineDirection before synthesis';
+                if (args.action === 'create')
+                    throw new Error(generationError);
+                return { ...choice, match: compareVoiceMetadata(target, choice.metadata), compiled: undefined, generationError };
+            }
+            const tts = ttsSchema.parse({ ...choice.tts, ...(choice.tts.engine === 'gemini' && target.baselineDirection && !choice.tts.voiceDirection ? { voiceDirection: target.baselineDirection } : {}) });
+            const compiled = args.sampleText ? compileSample(args.sampleText, args.acting, tts, args.sampleTurns) : undefined;
+            return { ...choice, tts, match: compareVoiceMetadata(target, choice.metadata), ...(compiled ? { compiled } : {}) };
+        });
+        if (args.action === 'plan')
+            return { identityPath, identitySha256: hash(source), target, candidates: planned, review: 'not_reviewed', instruction: 'Use provider metadata to choose candidates; unknown attributes require auditioning. No audio generated and identity is unchanged.' };
         const outputPath = join(dirname(identityPath), 'voice-auditions', randomUUID());
         mkdirSync(outputPath, { recursive: true });
         const auditionPath = join(outputPath, 'audition.json');
-        const audition = { version: 1, status: 'generating', identityPath, identitySha256: hash(source), sampleText: args.sampleText, candidates: [], previewPath: join(outputPath, 'index.html') };
+        const audition = { version: 1, status: 'generating', identityPath, identitySha256: hash(source), sampleText: args.sampleText, candidates: [], target, ...(args.acting ? { acting: args.acting } : {}), ...(args.sampleTurns ? { sampleTurns: args.sampleTurns } : {}), previewPath: join(outputPath, 'index.html') };
         save(auditionPath, audition);
         try {
-            for (const [index, choice] of args.candidates.entries()) {
+            for (const [index, choice] of planned.entries()) {
                 const id = String(index + 1);
-                const compiled = compileActing(args.sampleText, args.acting, choice.tts);
+                const compiled = choice.compiled;
                 const gate = resolveToolGate(compiled.generator, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
                 if (!gate.enabled)
                     throw new Error('Audition generator is disabled: ' + compiled.generator + ': ' + gate.reason);
@@ -82,7 +131,8 @@ export async function manageVoiceAudition(args) {
                 const bytes = readFileSync(result.audioPath);
                 if (bytes.subarray(0, 4).toString() !== 'RIFF' || bytes.length <= 44)
                     throw new Error('Candidate must be a nonempty WAV');
-                audition.candidates.push({ ...choice, id, audioPath: result.audioPath, audioSha256: hash(bytes), generation: { generator: compiled.generator, arguments: generation, result } });
+                const { compiled: _compiled, ...record } = choice;
+                audition.candidates.push({ ...record, id, audioPath: result.audioPath, audioSha256: hash(bytes), generation: { generator: compiled.generator, arguments: generation, result } });
                 save(auditionPath, audition);
             }
             audition.status = 'ready';
@@ -110,6 +160,12 @@ export async function manageVoiceAudition(args) {
     const recorded = chosen.generation;
     const config = ttsSchema.parse(chosen.tts);
     const actual = recorded.arguments || {};
+    if (audition.target || config.voiceDirection) {
+        const expected = compileSample(audition.sampleText, audition.acting, config, audition.sampleTurns);
+        const actualRequest = Object.fromEntries(Object.entries(actual).filter(([key]) => !['outputPath', 'filename'].includes(key)));
+        if (expected.generator !== recorded.generator || !isDeepStrictEqual(actualRequest, expected.generation))
+            throw new Error('Candidate voice settings or acting differ from recorded generation; create a new audition');
+    }
     if ((actual.voiceId || actual.voice || actual.voiceName) !== config.voiceId || actual.model !== config.model ||
         (config.engine === 'elevenlabs' && (recorded.generator !== 'tts_elevenlabs_generate' || actual.languageCode !== config.language || actual.stability !== config.stability || actual.similarity !== config.similarity)) ||
         (config.engine === 'gemini' && !['tts_generate', 'tts_gemini_38'].includes(recorded.generator || '')))

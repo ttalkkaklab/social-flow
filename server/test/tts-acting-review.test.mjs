@@ -64,3 +64,25 @@ test('failed dispatched acting reviews record usage locally and in the episode l
   rmSync(dir,{recursive:true,force:true});
  }
 });
+
+test('character audio review sends evidence policy as system instructions and binds the requested target', async () => {
+ const dir=mkdtempSync(join(tmpdir(),'character-review-policy-'));
+ const previousFetch=globalThis.fetch,previousKey=config.geminiApiKey;
+ let body;
+ try {
+  config.geminiApiKey='offline-test-never-sent';
+  const observation={accuracy:100,acting:100,naturalness:100,audioQuality:100,characterFit:100,observedVoice:'Adult female in a clear middle register.',complete:true,confidence:.96,confidenceReason:'The full recording is clear and audible.',heardText:'Hello',evidence:'The entire recording is audible, with clear words and no observed defect.',issues:[]};
+  globalThis.fetch=async(_url,init)=>{body=JSON.parse(init.body);return new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(observation)}]}}],usageMetadata:{promptTokenCount:100,candidatesTokenCount:100}}));};
+  const audioPath=join(dir,'take.wav');writeFileSync(audioPath,pcmToWav(Buffer.alloc(48000,10),24000,1));
+  const characterTarget={vocalGender:'female',perceivedAge:'24',timbre:'clear middle register',pace:null,register:null,traits:[],habits:null,emotionalRange:null};
+  const result=await reviewActing({audioPath,expectedText:'Hello',direction:'Conversational',language:'en',requestedBy:'Please evaluate character fit',outputPath:dir,characterTarget});
+  const policy=JSON.stringify(body.systemInstruction || body.system_instruction);
+  assert.match(policy,/untrusted data/);
+  assert.match(policy,/Do not compress scores/);
+  assert.match(policy,/Do not manufacture/);
+  assert.equal(result.review.characterFit,100);
+  assert.deepEqual(result.inputs.characterTarget,characterTarget);
+  assert.ok(result.apiVersion);
+  assert.equal(result.verdict,'PASS');
+ } finally {globalThis.fetch=previousFetch;config.geminiApiKey=previousKey;rmSync(dir,{recursive:true,force:true});}
+});

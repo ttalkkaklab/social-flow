@@ -13,8 +13,8 @@ function voiceErrors(tts) {
   if (!tts || typeof tts !== 'object' || Array.isArray(tts)) return ['tts is required'];
   const errors = [];
   tts = { ...tts };
-  for (const [field, max] of [['voiceId',300],['language',32],['model',128],['stylePrompt',1000]]) {
-    if (tts[field] === undefined && ['model','stylePrompt'].includes(field)) continue;
+  for (const [field, max] of [['voiceId',300],['language',32],['model',128],['stylePrompt',1000],['voiceDirection',400]]) {
+    if (tts[field] === undefined && ['model','stylePrompt','voiceDirection'].includes(field)) continue;
     if (typeof tts[field] !== 'string' || !tts[field].trim() || tts[field].trim().length > max) errors.push(`tts.${field} must be a non-empty string of at most ${max} characters`);
     else tts[field] = tts[field].trim();
   }
@@ -31,6 +31,7 @@ function voiceErrors(tts) {
   if (tts.engine === 'elevenlabs' && !/^[A-Za-z0-9_-]{1,64}$/.test(tts.voiceId)) errors.push('Invalid ElevenLabs voiceId');
   for (const key of ['stability','similarity']) if (tts[key] !== undefined && (tts.engine !== 'elevenlabs' || typeof tts[key] !== 'number' || !Number.isFinite(tts[key]) || tts[key] < 0 || tts[key] > 1)) errors.push(`tts.${key} requires ElevenLabs and a number between 0 and 1`);
   if (tts.stylePrompt !== undefined && (tts.engine !== 'gemini' || (typeof tts.model === 'string' && tts.model.startsWith('gemini-3.8-')))) errors.push('This engine does not accept stylePrompt');
+  if (tts.voiceDirection !== undefined && tts.engine !== 'gemini') errors.push('Stable voiceDirection is supported by Gemini only');
   return errors;
 }
 
@@ -44,8 +45,8 @@ function generationVoiceErrors(expected, proof, line) {
   if (!engines[proof.generator] || settings.speakers || settings.inputs) return ['Character speech requires a single-speaker generation proof'];
   if (engines[proof.generator] === 'elevenlabs' && settings.model !== undefined && settings.model !== 'eleven_v4') errors.push('Unsupported ElevenLabs generation model');
   let compiled;
-  if (line?.acting) {
-    try { compiled = require('./speech-contract.js').compileActing(line.tts, line.acting, expected); }
+  if (line?.acting || expected.voiceDirection !== undefined) {
+    try { compiled = require('./speech-contract.js').compileActing(line?.tts ?? proof.text, line?.acting, expected); }
     catch (error) { return ['Invalid acting: ' + error.message]; }
     if (proof.generator !== compiled.generator) errors.push('Acting generator differs from plan_audio');
     for (const [key, value] of Object.entries(compiled.generation)) {
@@ -91,7 +92,7 @@ function identityVoice(source, { optional = false } = {}) {
   const errors = voiceErrors(voices[0]);
   if (errors.length) throw new Error(errors.join('; '));
   const result = { ...voices[0], language: normalizeLanguage(voices[0].language) };
-  for (const field of ['voiceId','model','stylePrompt']) if (typeof result[field] === 'string') result[field] = result[field].trim();
+  for (const field of ['voiceId','model','stylePrompt','voiceDirection']) if (typeof result[field] === 'string') result[field] = result[field].trim();
   return result;
 }
 

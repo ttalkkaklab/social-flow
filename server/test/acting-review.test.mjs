@@ -34,6 +34,9 @@ test('provider JSON contract bounds confidence as fraction and all scores 0 to 1
     assert.equal(axis.minimum, 0); assert.equal(axis.maximum, 100);
   }
   assert.ok(ACTING_RESPONSE_JSON_SCHEMA.required.includes('confidenceReason'));
+  assert.equal(ACTING_RESPONSE_JSON_SCHEMA.properties.findings.items.properties.observed.minLength,10);
+  assert.equal(ACTING_RESPONSE_JSON_SCHEMA.properties.findings.items.properties.expected.minLength,1);
+  assert.equal(ACTING_RESPONSE_JSON_SCHEMA.properties.findings.items.properties.correction.minLength,1);
   assert.equal(actingObservationSchema.safeParse({ ...good(), confidenceReason: '' }).success, false);
   assert.equal(actingObservationSchema.safeParse({ ...good(), confidenceReason: undefined }).success, false);
 });

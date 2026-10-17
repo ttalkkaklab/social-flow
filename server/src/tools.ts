@@ -997,30 +997,48 @@ const ACTING_PROPERTY = { type: 'object', additionalProperties: false, descripti
   direction: { type: 'string', maxLength: 500, description: 'Short plain delivery direction; no bracket markup.' },
   tags: { type: 'array', maxItems: 6, items: { type: 'string', maxLength: 60 }, description: 'Bare English vocal events prepended to this line, e.g. sigh. Split the line for later changes.' }
 } };
+const VOICE_PROFILE_PROPERTY = { type: 'object', additionalProperties: false, description: 'Explicit acoustic targets; never infer voice gender from names or roles.', properties: {
+  vocalGender: { type: 'string', enum: ['female','male','neutral','unspecified'], description: 'Desired audible gender, e.g. female; unspecified preserves uncertainty.' },
+  perceivedAge: { type: 'string', maxLength: 100, description: 'Desired age impression, e.g. adult in her fifties; defaults to confirmed character age.' },
+  baselineDirection: { type: 'string', maxLength: 400, description: 'Stable compact voice description, e.g. mature low female register, dry measured phrasing. No biography or changing scene emotion.' }
+} };
+const CHARACTER_TARGET_PROPERTY = { type: 'object', additionalProperties: false, description: 'Acoustic target from character_voice_audition plan. Metadata is intent, never proof of the voice heard.', properties: {
+  vocalGender: {type:'string',enum:['female','male','neutral','unspecified'],description:'Requested audible gender, e.g. female; unspecified skips gender comparison.'},
+  perceivedAge: {type:['string','null'],maxLength:100,description:'Plausible perceived age, e.g. 52 years old; null means unknown.'},
+  ...Object.fromEntries(['timbre','pace','register','habits','emotionalRange'].map(key=>[key,{type:['string','null'],maxLength:2000,description:`Confirmed character ${key}, e.g. low clear voice or measured phrasing; null means unknown.`}])),
+  traits: {type:'array',maxItems:20,description:'Character tendencies as context, e.g. ["restrained and precise"]. Do not demand every trait in one short line.',items:{type:'string',maxLength:2000}}
+}, required:['vocalGender','perceivedAge','timbre','pace','register','habits','emotionalRange','traits'] };
 
 export const TOOLS: Tool[] = [
   {
     name: 'tts_review_acting', title: 'Explicitly requested adversarial audio review', annotations: HINT.generate,
-    description: 'Send an actual WAV to the configured Gemini audio reviewer only when the user asks for listening/evaluation. Scores accuracy25, acting30, naturalness25, audio quality20. Returns model judgment, timestamped defects, audio hash and saved report. PASS requires >=95, complete listening, confidence>=0.9 and no major/critical issue. Never call automatically from normal production, invent listening evidence, or treat a model score as human approval. Does not generate speech or change the WAV.',
+    description: 'Create an adversarial review of actual speech audio.\n\nUse for explicitly requested listening, voice-fit evaluation or acting review. Optional characterTarget scores characterFit40/accuracy20/acting15/naturalness15/audioQuality10 and independently describes the voice heard; otherwise uses the existing acting rubric. Returns score (0-100), timestamped defects, observed voice, hashes and immutable reports. PASS needs >=95, characterFit>=95 when requested, complete listening, confidence>=0.9 and no major/critical issue. Do NOT use for synthesis — use the planned raw TTS tool. Never run as a default production gate or equate model judgment with user approval.',
     inputSchema: { type: 'object', additionalProperties: false, properties: {
       audioPath: { type: 'string', description: 'Actual WAV path, under14MiB.' }, expectedText: { type: 'string', maxLength: 4000, description: 'Clean expected spoken words, without acting tags.' },
       direction: { type: 'string', maxLength: 2000, description: 'Requested scene intent and audible performance changes.' }, language: { type: 'string', default: 'ko', description: 'Spoken language.' },
-      requestedBy: { type: 'string', maxLength: 1000, description: 'Actual user request authorizing paid audio evaluation.' }, outputPath: { type: 'string', description: 'Local directory for hash-bound review reports.' }
+      requestedBy: { type: 'string', maxLength: 1000, description: 'Actual user request authorizing paid audio evaluation.' }, outputPath: { type: 'string', description: 'Local directory for hash-bound review reports.' }, characterTarget: CHARACTER_TARGET_PROPERTY
     }, required: ['audioPath','expectedText','direction','requestedBy','outputPath'] }
   },
   {
     name: 'character_voice_audition', title: 'Audition three character voices and save the user choice',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    description: 'create generates exactly three paid voice previews using the same sample and model, writes a local HTML page with audio players and an audition manifest, and leaves identity.md unchanged. Choose three distinct voices matching the character from the voice lookup tools. read loads the existing audition. select requires the actual user choice; it verifies identity and audio hashes, backs up identity.md, and writes only the chosen tts configuration and selection provenance. Never select on behalf of the user, invent a choice, or run creation again after a partial failure without inspecting the manifest. Returns auditionPath, previewPath, candidate audio files and selection state. No publishing or automatic scoring.',
+    description: 'Create character voice auditions or plan acoustic targets.\n\nUse for casting, sample voices or character voice matching. plan reads confirmed age, timbre, speech and personality without synthesis; compare real provider metadata and expose unknowns. create generates three paid previews, composes a compact Gemini voiceDirection with acting and saves target/metadata/request/hash evidence without changing identity. select requires the actual user choice and verifies hashes before saving its voice settings. Returns target, candidate comparisons, auditionPath, previewPath and selection state. Do NOT use for ordinary dialogue — use speech_manage plan_audio and its raw TTS tool. Never auto-select or score without a requested audio review; inspect partial failures before retrying.',
     inputSchema: { type: 'object', additionalProperties: false, properties: {
-      action: { type: 'string', enum: ['create','read','select'], description: 'Generate three choices, inspect them, or save an explicit user choice.' },
+      action: { type: 'string', enum: ['plan','create','read','select'], description: 'plan reads identity without generating; create generates three choices; read inspects; select saves an explicit user choice.' },
       identityPath: { type: 'string', description: 'Existing character identity.md with one structured character JSON block. Draft tts may be absent before selection.' },
       auditionPath: { type: 'string', description: 'Manifest path returned by create; required for read/select.' },
       sampleText: { type: 'string', minLength: 5, maxLength: 300, description: 'Same natural spoken sample for all three candidates; no tag markup.' },
+      sampleTurns: {type:'array',minItems:2,maxItems:10,description:'Optional Gemini 3.8 sample excerpts with separate acting. Texts joined with spaces must reproduce sampleText exactly; omit top-level acting. Each turn retains the same candidate voice and stable baseline.',items:{type:'object',additionalProperties:false,required:['text'],properties:{text:{type:'string',minLength:1,maxLength:300,description:'Exact spoken excerpt in sample order, e.g. I will help you.'},acting:ACTING_PROPERTY}}},
       acting: ACTING_PROPERTY,
+      voiceProfile: VOICE_PROFILE_PROPERTY,
       candidates: { type: 'array', minItems: 3, maxItems: 3, description: 'Exactly three distinct voice IDs on one selected engine/model/language.', items: { type: 'object', additionalProperties: false, required: ['label','reason','tts'], properties: {
         label: { type: 'string', maxLength: 100, description: 'Human-readable candidate label.' },
         reason: { type: 'string', maxLength: 500, description: 'Why this voice suits the character.' },
+        metadata: {type:'object',additionalProperties:false,description:'Actual voice lookup evidence, e.g. Gemini library metadata; omitted fields stay unknown.',properties:{
+          voiceId:{type:'string',maxLength:300,description:'Exact candidate voice ID, e.g. ko-kr-theatrical-1.'},
+          source:{type:'string',enum:['gemini-library','gemini-curated','elevenlabs'],description:'Voice lookup source, e.g. gemini-library; never label inferred facts as provider metadata.'},retrievedAt:{type:'string',format:'date-time',description:'Actual lookup time, e.g. 2026-10-17T10:00:00Z.'},
+          gender:{type:'string',maxLength:100,description:'Provider-reported vocal gender, e.g. female; omit when absent.'},age:{type:'string',maxLength:200,description:'Provider age label, e.g. 35-year-old; omit when absent.'},pitch:{type:'string',maxLength:100,description:'Provider pitch label, e.g. low; omit when absent.'},description:{type:'string',maxLength:2000,description:'Exact provider voice description, e.g. warm low voice; no invented attributes.'}
+        },required:['voiceId','source','retrievedAt']},
         tts: { type: 'object', description: 'Candidate voice settings saved unchanged only after user selection.', additionalProperties: false, required: ['engine','model','voiceId','language','speed'], properties: {
           engine: { type: 'string', enum: ['gemini','elevenlabs'], description: 'Selected speech provider.' },
           model: { type: 'string', description: 'Explicit supported Gemini model or eleven_v4.' },
@@ -1029,7 +1047,8 @@ export const TOOLS: Tool[] = [
           speed: { type: 'number', enum: [1], description: 'Neutral speed only.' },
           stability: { type: 'number', minimum: 0, maximum: 1, description: 'Optional ElevenLabs v4 consistency.' },
           similarity: { type: 'number', minimum: 0, maximum: 1, description: 'Optional ElevenLabs v4 voice similarity.' },
-          stylePrompt: { type: 'string', description: 'Only for pre-3.8 Gemini baseline style.' }
+          stylePrompt: { type: 'string', description: 'Only for pre-3.8 Gemini baseline style.' },
+          voiceDirection: { type: 'string', maxLength:400, description:'Compact stable Gemini vocal identity; plan/create derives it from the character when omitted. Preserved alongside scene acting.' }
         } }
       } } },
       candidateId: { type: 'string', enum: ['1','2','3'], description: 'Candidate selected by the user.' },

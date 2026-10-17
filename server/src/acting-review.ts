@@ -175,7 +175,7 @@ export const ACTING_RESPONSE_JSON_SCHEMA = { type: 'object', additionalPropertie
   confidenceReason: { type: 'string', minLength: 1, maxLength: 4000, description: 'Specific observed conditions supporting confidence or uncertainty. Name the actual limitation, if any; do not repeat the numeric confidence or invent uncertainty.' },
   findings: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['start', 'end', 'axis', 'severity', 'observed', 'expected', 'correction'], properties: {
     start: { type: 'number' }, end: { type: 'number' }, axis: { type: 'string', enum: AXES }, severity: { type: 'string', enum: ['minor', 'major', 'critical'] },
-    observed: { type: 'string' }, expected: { type: 'string' }, correction: { type: 'string' },
+    observed: { type: 'string', minLength: 10, maxLength: 2000 }, expected: { type: 'string', minLength: 1, maxLength: 2000 }, correction: { type: 'string', minLength: 1, maxLength: 2000 },
   } } },
 } };
 
