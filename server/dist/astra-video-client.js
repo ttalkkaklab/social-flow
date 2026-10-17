@@ -24,8 +24,8 @@
  * generate/guided/guided_hq with 1-2 images, ic_lora covers ingredients and ic_lora (one reference
  * clip or still through an IC-LoRA adapter), and keyframe / audio2video / retake are one mode each.
  * guided_hq, ic_lora, `guidance`, `conditioning_mask`, `skip_stage_2` and `{name, strength}` lora
- * entries follow the 2026-10-17 server design (room 3b9a99e6 DESIGN §2-3) and are unmeasured until
- * that server change is live; until then the server answers them with a 400.
+ * entries came with the 2026-10-17 server change (room 3b9a99e6 DESIGN §2-3), live since 15:00Z
+ * that day; their quality is unmeasured.
  *
  * Two deliberate departures from the sibling clients:
  * - **Uploads do not go through http.ts.** requestRaw/requestBytes JSON.stringify their body;
@@ -109,9 +109,9 @@ export const ASTRA_VIDEO_MEASURED_FIELDS = {
     retake: ['end_time', 'hdr', 'mode', 'prompt', 'seed', 'start_time', 'video_upload_id'],
 };
 /**
- * Fields the 2026-10-17 server design adds (DESIGN §2-3). Not measured: the live server still
- * refuses every one of them until the server change ships. Kept apart from the measured table
- * so re-probing after the deploy can fold them in — or strike them — in one place.
+ * Fields the 2026-10-17 server design adds (DESIGN §2-3). Live since 2026-10-17 15:00Z:
+ * the server's /v1/models allowed_fields carries every one of them. Kept apart from the older
+ * measured table so a later server change can fold them in — or strike them — in one place.
  */
 const ASTRA_VIDEO_DESIGN_FIELDS = {
     generate: ['generate_audio'],
@@ -678,7 +678,7 @@ function uploadKindIssue(filePath, kinds, name) {
  * adapter "ingredients" runs as the measured `ingredients` mode and never sends `adapter`;
  * every other adapter runs as mode `ic_lora`. The server owns the adapter catalog — there is
  * no path argument. conditioningMask, skipStage2 and every adapter but ingredients are
- * unmeasured until the server change ships.
+ * live since the 2026-10-17 server change; their quality is unmeasured.
  */
 export const astraIcLoraSchema = z
     .object({

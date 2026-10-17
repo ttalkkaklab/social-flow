@@ -290,7 +290,7 @@ const ASTRA_SEED_PROPERTY = {
 
 const ASTRA_LORA_PROPERTY = {
   type: 'array',
-  description: `Distinct look adapters to load, at most 2. "cinemagraph" freezes the frame except for one moving element; "slow-motion" stretches the action. Give a bare name for strength 1.0, or {name, strength} with strength 0-${ASTRA_VIDEO_MAX_LORA_STRENGTH} (the object form is new in the 2026-10-17 server design and is refused until that server change is live). Duplicate names are refused. Accepted ONLY on tier "default" (mode generate) — any other tier is refused before the call.`,
+  description: `Distinct look adapters to load, at most 2. "cinemagraph" freezes the frame except for one moving element; "slow-motion" stretches the action. Give a bare name for strength 1.0, or {name, strength} with strength 0-${ASTRA_VIDEO_MAX_LORA_STRENGTH}. Duplicate names are refused. Accepted ONLY on tier "default" (mode generate) — any other tier is refused before the call.`,
   maxItems: 2,
   items: {
     oneOf: [
@@ -339,12 +339,12 @@ const ASTRA_DURATION_PROPERTY = {
 
 const ASTRA_GENERATE_AUDIO_PROPERTY = {
   type: 'boolean',
-  description: 'false = return a silent mp4 (the sound stream is stripped after generation; render time is the same). Default true. On audio2video false also removes the supplied sound. New in the 2026-10-17 server design: refused until that server change is live.',
+  description: 'false = return a silent mp4 (the sound stream is stripped after generation; render time is the same). Default true. On audio2video false also removes the supplied sound.',
 } as const;
 
 const ASTRA_GUIDANCE_PROPERTY = {
   type: 'object',
-  description: 'Optional engine guidance knobs; leave it out unless a render needs correcting — every omitted key keeps the pipeline default, and the defaults are tuned. Typical fixes: ignores the prompt → raise videoCfgGuidanceScale (default 3.0) a little; oversaturated or burnt colours → raise videoRescaleScale or lower videoCfgGuidanceScale; lip-sync loose on audio2video → raise a2vGuidanceScale. Defaults for guided, fast, keyframe and audio2video: videoCfg 3.0 · videoStg 1.0 · videoRescale 0.7 · videoStgBlocks [28] · videoSkipStep 0 · a2v 3.0 · audioCfg 7.0 · audioStg 1.0 · audioRescale 0.7 · audioStgBlocks [28] · audioSkipStep 0 · v2a 3.0. tier "hq" differs: videoStg 0.0 · videoRescale 0.45 · videoStgBlocks [] · audioStg 0.0 · audioRescale 1.0 — so on hq a stg scale does nothing unless you also give its block list. Ranges are the server\'s conservative bounds, not measured quality guidance. Accepted on the step-based modes only (tiers "guided", "fast", "hq", and the keyframe and audio2video tools). New in the 2026-10-17 server design: refused until that server change is live.',
+  description: 'Optional engine guidance knobs; leave it out unless a render needs correcting — every omitted key keeps the pipeline default, and the defaults are tuned. Typical fixes: ignores the prompt → raise videoCfgGuidanceScale (default 3.0) a little; oversaturated or burnt colours → raise videoRescaleScale or lower videoCfgGuidanceScale; lip-sync loose on audio2video → raise a2vGuidanceScale. Defaults for guided, fast, keyframe and audio2video: videoCfg 3.0 · videoStg 1.0 · videoRescale 0.7 · videoStgBlocks [28] · videoSkipStep 0 · a2v 3.0 · audioCfg 7.0 · audioStg 1.0 · audioRescale 0.7 · audioStgBlocks [28] · audioSkipStep 0 · v2a 3.0. tier "hq" differs: videoStg 0.0 · videoRescale 0.45 · videoStgBlocks [] · audioStg 0.0 · audioRescale 1.0 — so on hq a stg scale does nothing unless you also give its block list. Ranges are the server\'s conservative bounds, not measured quality guidance. Accepted on the step-based modes only (tiers "guided", "fast", "hq", and the keyframe and audio2video tools).',
   properties: {
     ...Object.fromEntries(Object.entries(ASTRA_VIDEO_GUIDANCE_RANGES).map(([key, [minimum, maximum]]) => [guidanceToolKey(key), {
       type: key.endsWith('_skip_step') ? 'integer' : 'number',
@@ -2179,10 +2179,10 @@ Returns: a text block with the saved .mp4 path, the new interaction id, and the 
 
 Use when the shot is not time-critical and you would rather not spend vendor money: this server is ours, so a call costs wall clock instead of dollars, and no vendor content policy applies. It is also the only lane with an adapter (lora) for cinemagraph and slow-motion looks.
 Do NOT use when someone is waiting: the box renders ONE job at a time and yours queues behind whatever else is running. A measured 121-frame 1536x1024 render takes about 66s (tier "default"), 169s ("guided"), 121s ("fast") — plus the queue. For an immediate clip go to veo_text2video or seedance_text2video.
-tier picks the pipeline and also which arguments exist: lora only on "default", negativePrompt, numInferenceSteps and guidance only on "guided"/"fast"/"hq". "hq" is the two-stage high-quality pipeline (new in the 2026-10-17 server design, unmeasured and refused until that server change is live). "fast" means a draft that is faster than "guided"; it is not faster than the default pipeline. Passing one to the wrong tier is refused before the call.
+tier picks the pipeline and also which arguments exist: lora only on "default", negativePrompt, numInferenceSteps and guidance only on "guided"/"fast"/"hq". "hq" is the two-stage high-quality pipeline (quality unmeasured). "fast" means a draft that is faster than "guided"; it is not faster than the default pipeline. Passing one to the wrong tier is refused before the call.
 Length is frames, not seconds: numFrames must be 8k+1, minimum 25. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} 121 = about 5.0s at 24fps, the server default. Give autoDuration instead to let the server choose at most 121 frames; the rounded range must contain an 8k+1 value. numFrames wins if both are given.
 ${ASTRA_LIMITS_LINE}
-Every clip comes back with a generated AAC audio track (48kHz stereo, measured). Set generateAudio: false when the episode lays its own narration or BGM over the clip — the server strips the sound after generation (same render time). generateAudio is new in the 2026-10-17 server design and refused until that server change is live; until then drop or duck the track in the edit.
+Every clip comes back with a generated AAC audio track (48kHz stereo, measured). Set generateAudio: false when the episode lays its own narration or BGM over the clip — the server strips the sound after generation (same render time).
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
     inputSchema: {
@@ -2194,7 +2194,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         },
         tier: {
           type: 'string',
-          description: 'Pipeline — pick by what the shot needs. "default" (generate, ~66s for 121 frames): the fastest and the usual choice; the only tier taking lora. "guided" (~169s): slower, and the tier to use when the picture must follow a detailed prompt or avoid something (negativePrompt), or when you need numInferenceSteps or guidance. "fast" (guided_fast, ~121s): a 768x512 draft of guided on a 32-pixel grid — faster than guided but not faster than default; use it to preview a guided prompt. "hq" (guided_hq): the two-stage high-quality pipeline for a hero shot where render time does not matter; unmeasured, refused until the server change is live.',
+          description: 'Pipeline — pick by what the shot needs. "default" (generate, ~66s for 121 frames): the fastest and the usual choice; the only tier taking lora. "guided" (~169s): slower, and the tier to use when the picture must follow a detailed prompt or avoid something (negativePrompt), or when you need numInferenceSteps or guidance. "fast" (guided_fast, ~121s): a 768x512 draft of guided on a 32-pixel grid — faster than guided but not faster than default; use it to preview a guided prompt. "hq" (guided_hq): the two-stage high-quality pipeline for a hero shot where render time does not matter; quality unmeasured.',
           enum: ['default', 'guided', 'fast', 'hq'],
           default: 'default',
         },
@@ -2225,11 +2225,11 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 
 Use when a generated background or photo has to move and nobody is waiting on it — same trade as astra_text2video: free, ours, one job at a time. Give firstFramePath alone to animate from that frame, or add lastFramePath and the clip lands on it. The tool uploads the files itself; pass local paths, not ids.
 Do NOT use for more than two stills — that is astra_keyframe_video, which pins each image to a frame index. For an immediate clip use veo_img2video or seedance_img2video.
-tier accepts default (generate), guided, or hq (guided_hq — unmeasured, refused until the 2026-10-17 server change is live). guided and hq images require 1536x1024 (omitted dimensions use that size); fast images are not enabled. lora is default-only; negativePrompt and numInferenceSteps are guided-only, and with guidance also hq. Passing one to the wrong tier is refused before the call.
+tier accepts default (generate), guided, or hq (guided_hq — quality unmeasured). guided and hq images require 1536x1024 (omitted dimensions use that size); fast images are not enabled. lora is default-only; negativePrompt and numInferenceSteps are guided-only, and with guidance also hq. Passing one to the wrong tier is refused before the call.
 The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. autoDuration lets the server choose at most 121 frames from a first still alone; it is refused with lastFramePath unless numFrames is also given (numFrames wins). png, jpg and jpeg are accepted, up to 32 MiB each.
 Warning: image-conditioned generate (width 1280, measured at heights 704/768) failure frames: {121,129,137}; guided (width 1280, measured at height 704) failure frames: {121}. Guided 129/137 succeeded at 1280x704 in server probes (the only guided size probed), but the existing client guided ceiling is 121. The client requires 1536x1024 for guided images, so the guided 1280x704 probes are not client alternatives. Within current client limits use generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at 121 frames also succeeded. Text-only 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause. The server owns the failure-band acceptance gate; this warning adds no client-side block.
 ${ASTRA_LIMITS_LINE}
-Every clip comes back with a generated AAC audio track (48kHz stereo, measured). Set generateAudio: false when the episode lays its own narration or BGM over the clip — the server strips the sound after generation (same render time). generateAudio is new in the 2026-10-17 server design and refused until that server change is live; until then drop or duck the track in the edit.
+Every clip comes back with a generated AAC audio track (48kHz stereo, measured). Set generateAudio: false when the episode lays its own narration or BGM over the clip — the server strips the sound after generation (same render time).
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
     inputSchema: {
@@ -2284,7 +2284,7 @@ Use when the shot has to hit specific compositions in a specific order — a sto
 Do NOT use for one or two stills (astra_img2video is simpler) or when the clip is driven by sound (astra_audio2video).
 frameIdx is 0-based and must be inside the clip: a 121-frame render accepts 0-120. This mode has no length-guessing and no adapters — autoDuration, numGeneratedKeyframes and lora do not exist here and are refused before the call. A measured 121-frame render took about 184s plus queue.
 ${ASTRA_LIMITS_LINE}
-Every clip comes back with a generated AAC audio track (48kHz stereo, measured). Set generateAudio: false when the episode lays its own narration or BGM over the clip — the server strips the sound after generation (same render time). generateAudio is new in the 2026-10-17 server design and refused until that server change is live; until then drop or duck the track in the edit.
+Every clip comes back with a generated AAC audio track (48kHz stereo, measured). Set generateAudio: false when the episode lays its own narration or BGM over the clip — the server strips the sound after generation (same render time).
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
     inputSchema: {
@@ -2346,7 +2346,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
     description: `Render a clip driven by an existing audio track on the self-hosted ASTRA video API (mode audio2video).
 
 Use when the picture has to follow a sound you already have — a narration take, a music bed, a recorded effect — instead of the picture being cut to it afterwards. Provide exactly one of audioPath (local .wav/.mp3) or audioUploadId (reuse an existing upload without uploading again). Reused ids have unknown expiry/duration locally, so the server checks them. Optionally give imagePath to pin one portrait to frame 0.
-Do NOT use to add sound to a finished clip: this generates new picture from the audio, it does not mux. The rendered video carries the supplied WAV re-encoded as AAC (48kHz stereo): a measured upload-to-output 100ms RMS Pearson correlation was 0.99997 at zero lag. Input audio must have two channels: mono fails in the engine's audio encoder, and the 2026-10-17 server design refuses it at upload (re-encode with ffmpeg -ac 2). The audio after audioStartTime must also cover the video: a WAV more than 0.08s shorter than numFrames/frameRate (121 frames when omitted) dies on a latent shape mismatch, so it is refused after upload and before the job with the length to fix — or pass audioMaxDuration to follow the audio.
+Do NOT use to add sound to a finished clip: this generates new picture from the audio, it does not mux. The rendered video carries the supplied WAV re-encoded as AAC (48kHz stereo): a measured upload-to-output 100ms RMS Pearson correlation was 0.99997 at zero lag. Input audio must have two channels: mono fails in the engine's audio encoder, so the server refuses it at upload (re-encode with ffmpeg -ac 2). The audio after audioStartTime must also cover the video: a WAV more than 0.08s shorter than numFrames/frameRate (121 frames when omitted) dies on a latent shape mismatch, so it is refused after upload and before the job with the length to fix — or pass audioMaxDuration to follow the audio.
 Choose either numFrames or audioMaxDuration, never both. numFrames fixes the clip length. audioMaxDuration uses the shorter of that value and the audio remaining after audioStartTime, floors seconds × frameRate, then rounds down to 8k+1; more than ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} frames is refused when upload duration is known. audioStartTime must be before the uploaded audio ends. With neither length field, the default is 121 frames (about 5.04s at 24fps), not the source audio length: an 8.000s WAV produced 5.041s of audio. Set numFrames or audioMaxDuration to request a longer span; audioMaxDuration=8.0 at 24fps rounds down to 185 frames (about 7.708s), so grid rounding can still trim the tail. A measured 121-frame render took about 170s plus queue.
 Set expectLipSync:true when every spoken line in the audio belongs to a visible speaker (on_screen). LTX 2.5 sometimes ignores the voice, so after each render ffmpeg compares the picture's motion with the speech loudness; when no region moves with the speech, the same audio, image and prompt render again with a new seed, up to maxAttempts (default 2, each a full render). It never fails the call: the best clip is returned with its findings, and every attempt's seed and measurement are written into its .astra-job.json. It also reports speech cut off by the frame count and a clip audio track that differs from the supplied WAV; another seed fixes neither, so those are reported, not retried. It does not judge phoneme-level lip sync, which visible person spoke, or voice identity, and in medium or wide shots the mouth is too small to measure reliably. Calibrated 2026-10-17 on five real close-ups whose mouths stayed closed (margins −0.23 to −0.08, threshold 0.1); no real clip that followed the voice was available, and a new seed rarely fixed a refusal, so a second failure points at the opening image, prompt or strength. Leave it off for music, effects or off-screen voice.
 ${ASTRA_LIMITS_LINE}
@@ -2361,11 +2361,11 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, the
         },
         audioPath: {
           type: 'string',
-          description: 'Local path to the driving audio (.wav or .mp3, at most 32 MiB). Stereo (2-channel) input required. Mono fails during generation: the live server still accepts it (202), the 2026-10-17 server design refuses it at upload. Uploaded automatically.',
+          description: 'Local path to the driving audio (.wav or .mp3, at most 32 MiB). Stereo (2-channel) input required. Mono is refused at upload (it fails in the engine audio encoder); an id uploaded before 2026-10-17 15:00Z can still be mono and fail during generation. Uploaded automatically.',
         },
         audioUploadId: {
           type: 'string', minLength: 1,
-          description: 'Existing audio upload id, mutually exclusive with audioPath. Stereo (2-channel) input required. Mono fails during generation: the live server still accepts it (202), the 2026-10-17 server design refuses it at upload. No upload or local source-duration check. Server rejects expired ids.',
+          description: 'Existing audio upload id, mutually exclusive with audioPath. Stereo (2-channel) input required. Mono is refused at upload (it fails in the engine audio encoder); an id uploaded before 2026-10-17 15:00Z can still be mono and fail during generation. No upload or local source-duration check. Server rejects expired ids.',
         },
         imagePath: {
           type: 'string', minLength: 1,
@@ -2416,7 +2416,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, the
 
 Use when an existing picture has to be transformed rather than invented: "ingredients" builds a new clip from the reference's subject; "clean-plate", "colorization", "day-to-night", "deblur", "decompression" and "water-simulation" rework the reference clip; "pixel-upscaler-x2" upscales it (request an output twice the reference size yourself). The server picks the adapter weights from its own catalog — there is no path argument. The tool uploads the reference and the optional mask itself; pass local paths.
 Do NOT use to animate a still from frame 0 (astra_img2video) or to re-roll a span of a clip (astra_video_retake).
-Status: adapter "ingredients" without conditioningMask and skipStage2 runs as the server's existing ingredients mode. Every other adapter, conditioningMask and skipStage2 come from the 2026-10-17 server design and are refused until that server change is live. Recommended strengths per adapter are unmeasured.
+Status: adapter "ingredients" without conditioningMask and skipStage2 runs as the server's existing ingredients mode. Every other adapter runs as mode ic_lora; conditioningMask and skipStage2 are live since the 2026-10-17 server change. Recommended strengths per adapter are unmeasured.
 A reference clip of 2 or more frames above ${ASTRA_VIDEO_MAX_REFERENCE_PIXELS} pixels is refused after upload and before the job, as the server does. skipStage2 skips the second stage, so the output is half resolution. Length: numFrames 8k+1, ${ASTRA_VIDEO_MIN_FRAMES}-${ASTRA_VIDEO_FRAME_LIMITS.ic_lora} (conservative, not generation-tested); there is no autoDuration.
 ${ASTRA_LIMITS_LINE}
 
@@ -2431,7 +2431,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         adapter: {
           type: 'string',
           enum: [...ASTRA_VIDEO_IC_LORA_ADAPTERS],
-          description: 'What to do with the reference. "ingredients": generate a NEW clip conditioned on a reference sheet — one composite image laying out the characters, objects and look to use (runs today as the ingredients mode). "clean-plate": remove people, pedestrians and vehicles from a reference clip and rebuild the empty background (VFX plate). "colorization": restore natural colour to grayscale, monochrome or desaturated video. "day-to-night": re-render a daytime clip as the same shot at night. "deblur": remove blur from a reference clip. "decompression": remove compression artefacts from low-bit-rate or heavily compressed video. "water-simulation": add water to a clip — rivers, surf, rain, waterfalls, floods, splashes. "pixel-upscaler-x2": creatively upscale a low-resolution clip 2x — request width/height twice the reference size. Every adapter except ingredients runs as mode ic_lora and is refused until the server change is live; per-adapter quality and strengths are unmeasured.',
+          description: 'What to do with the reference. "ingredients": generate a NEW clip conditioned on a reference sheet — one composite image laying out the characters, objects and look to use (runs today as the ingredients mode). "clean-plate": remove people, pedestrians and vehicles from a reference clip and rebuild the empty background (VFX plate). "colorization": restore natural colour to grayscale, monochrome or desaturated video. "day-to-night": re-render a daytime clip as the same shot at night. "deblur": remove blur from a reference clip. "decompression": remove compression artefacts from low-bit-rate or heavily compressed video. "water-simulation": add water to a clip — rivers, surf, rain, waterfalls, floods, splashes. "pixel-upscaler-x2": creatively upscale a low-resolution clip 2x — request width/height twice the reference size. Every adapter except ingredients runs as mode ic_lora; per-adapter quality and strengths are unmeasured.',
         },
         referencePath: {
           type: 'string',
@@ -2477,7 +2477,7 @@ Do NOT use to make a clip longer or to change its size: the output inherits the 
 The SOURCE has to be on the grid already — 8k+1 frames, both sides a multiple of 32 — or the server refuses at acceptance. A clip this API produced always qualifies. A measured retake took about 80s plus queue.
 The tool checks the upload response before submission: endTime must not pass source frames/fps, so an invalid source or span does not consume a queue slot.
 ${ASTRA_LIMITS_LINE}
-Every clip comes back with a generated AAC audio track (48kHz stereo, measured). Set generateAudio: false when the episode lays its own narration or BGM over the clip — the server strips the sound after generation (same render time). generateAudio is new in the 2026-10-17 server design and refused until that server change is live; until then drop or duck the track in the edit.
+Every clip comes back with a generated AAC audio track (48kHz stereo, measured). Set generateAudio: false when the episode lays its own narration or BGM over the clip — the server strips the sound after generation (same render time).
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
     inputSchema: {
@@ -2513,7 +2513,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
     annotations: HINT.read,
     description: `Read the live ASTRA video server's own capability report (GET /v1/models): for each mode the fields it accepts, frame and pixel ceilings, blocked width/frame combinations, the lora and IC-LoRA catalogs, and the rate limits — the values that process actually enforces right now.
 
-Use before an unusual request (a new adapter, guidance, hq, a large size, a long clip) when you are unsure the server accepts it: the tool descriptions record the 2026-10-17 design, and the live server can lag behind them or differ. A field missing from a mode in this report is refused with a 400.
+Use before an unusual request (a new adapter, guidance, hq, a large size, a long clip) when you are unsure the server accepts it: the tool descriptions were written for the 2026-10-17 server, and a later server change can differ from them. A field missing from a mode in this report is refused with a 400.
 Do NOT call it before every render — the ordinary arguments are already checked locally, and the server rate-limits queries per minute.
 
 Returns: the server's JSON report verbatim. No arguments.`,

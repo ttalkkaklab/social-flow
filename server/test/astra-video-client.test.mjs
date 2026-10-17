@@ -504,13 +504,13 @@ describe('measured ASTRA guidance', () => {
     assert.doesNotMatch(tool('astra_text2video').description, /image-conditioned|failure frames|CUDA illegal memory access/);
   });
 
-  it('audio inputs warn that mono fails generation and is refused at upload once the server change ships', () => {
+  it('audio inputs warn that mono fails generation and is refused at upload', () => {
     const audio = tool('astra_audio2video');
-    assert.match(audio.description, /mono fails in the engine's audio encoder, and the 2026-10-17 server design refuses it at upload/);
+    assert.match(audio.description, /mono fails in the engine's audio encoder, so the server refuses it at upload/);
     for (const name of ['audioPath', 'audioUploadId']) {
       const description = audio.inputSchema.properties[name].description;
       assert.match(description, /Stereo \(2-channel\) input required/);
-      assert.match(description, /Mono fails during generation: the live server still accepts it \(202\), the 2026-10-17 server design refuses it at upload/);
+      assert.match(description, /Mono is refused at upload \(it fails in the engine audio encoder\); an id uploaded before 2026-10-17 15:00Z can still be mono/);
     }
   });
 
