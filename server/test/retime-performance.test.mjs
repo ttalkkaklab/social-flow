@@ -79,3 +79,21 @@ test('concurrent render attempts reserve a single candidate before preparation',
   assert.equal(JSON.parse(readFileSync(join(dir,'candidate.mp4.render.json'),'utf8')).status,'preparing');
   await assert.rejects(render('missing-board',options),/already exists/);
 });
+
+test('retry reservations conflict with independent candidate names in either order and preserve existing media', async t => {
+  const {mkdtempSync,readFileSync,writeFileSync,rmSync}=await import('node:fs');
+  const {tmpdir}=await import('node:os');const {join}=await import('node:path');
+  const {render,reserveRetryCandidates}=require('../../skills/produce/references/render-astra-shot.js');
+  const dir=mkdtempSync(join(tmpdir(),'retry-shot-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));
+  reserveRetryCandidates(join(dir,'first.mp4'),2);
+  await assert.rejects(render('missing-board',{outputPath:dir,filename:'first-attempt2.mp4'}),/already exists/);
+  const root=render('missing-board',{outputPath:dir,filename:'second-attempt2.mp4'});
+  assert.throws(()=>reserveRetryCandidates(join(dir,'second.mp4'),2),/already exists/);
+  await assert.rejects(root);
+  writeFileSync(join(dir,'third-attempt2.mp4'),'existing footage');
+  assert.throws(()=>reserveRetryCandidates(join(dir,'third.mp4'),2),/already exists/);
+  assert.equal(readFileSync(join(dir,'third-attempt2.mp4'),'utf8'),'existing footage');
+  writeFileSync(join(dir,'fourth-attempt2.mp4.astra-job.json'),'existing receipt');
+  assert.throws(()=>reserveRetryCandidates(join(dir,'fourth.mp4'),2),/already exists/);
+  assert.equal(readFileSync(join(dir,'fourth-attempt2.mp4.astra-job.json'),'utf8'),'existing receipt');
+});

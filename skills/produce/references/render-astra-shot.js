@@ -16,29 +16,47 @@ function conditioningAudio(source, output, seconds) {
   return {source,output,canonicalSeconds:measured,transportSeconds:seconds};
 }
 
+function reserveCandidate(out, metadata = {}) {
+  const record = out + '.render.json';
+  if ([out,record,out+'.astra-job.json'].some(file=>fs.existsSync(file)))
+    throw new Error('Candidate or submission already exists; reconcile its receipt before another request');
+  fs.mkdirSync(path.dirname(out), {recursive:true});
+  try {
+    fs.writeFileSync(record, JSON.stringify({status:'preparing',review:'not_reviewed',...metadata})+'\n', {flag:'wx'});
+  } catch (error) {
+    if (error.code === 'EEXIST') throw new Error('Candidate or submission already exists; reconcile its receipt before another request');
+    throw error;
+  }
+}
+
+function reserveRetryCandidates(out, maxAttempts) {
+  for (let attempt = 2; attempt <= maxAttempts; attempt++) {
+    const retry = out.replace(/(\.[^.]+)?$/, ext => `-attempt${attempt}${ext}`);
+    reserveCandidate(retry, {parentCandidate:out,attempt});
+  }
+}
+
 async function render(target, options) {
   if (!options.outputPath || !options.filename) throw new Error('Supply an output directory and unique candidate filename');
   if (path.basename(options.filename) !== options.filename || !options.filename.endsWith('.mp4'))
     throw new Error('Use a plain .mp4 candidate filename');
   const out = path.resolve(options.outputPath, options.filename);
   const record = out + '.render.json';
-  if ([out,record,out+'.astra-job.json'].some(file=>fs.existsSync(file)))
-    throw new Error('Candidate or submission already exists; reconcile its receipt before another request');
-  fs.mkdirSync(path.dirname(out), {recursive:true});
   // Reserve before preparing audio: concurrent invocations must not submit the same candidate.
-  try {
-    fs.writeFileSync(record, JSON.stringify({status:'preparing',review:'not_reviewed'})+'\n', {flag:'wx'});
-  } catch (error) {
-    if (error.code === 'EEXIST') throw new Error('Candidate or submission already exists; reconcile its receipt before another request');
-    throw error;
-  }
+  reserveCandidate(out);
   const input = {...options};
   if (options.audioPath) {
     input.audioPath = out + '.stereo.wav';
     execFileSync('ffmpeg',['-v','error','-y','-i',options.audioPath,'-ar','48000','-ac','2','-c:a','pcm_s16le',input.audioPath],{timeout:120000});
   }
   const prepared = await prepare(target, input);
-  const args = {...prepared.arguments};
+  const client = await import(pathToFileURL(path.resolve(__dirname,'../../../server/dist/astra-shot-runtime.bundle.js')).href);
+  const args = prepared.tool === 'astra_audio2video'
+    ? client.astraAudio2VideoSchema.parse(prepared.arguments) : {...prepared.arguments};
+  // Retries share the provider's filename convention. Claim their paths before any submission,
+  // including the schema's default attempt count; keep claims if preparation/submission fails.
+  if (prepared.tool === 'astra_audio2video' && args.expectLipSync)
+    reserveRetryCandidates(out, args.maxAttempts);
   let transport;
   if (prepared.tool === 'astra_audio2video') {
     const audio = out + '.conditioning.wav';
@@ -48,7 +66,6 @@ async function render(target, options) {
   const request = {shotId:prepared.shotId,tool:prepared.tool,arguments:args,transport,
     canonicalCoverage:prepared.coverage,quote:prepared.quote,review:'not_reviewed',status:'submitting'};
   fs.writeFileSync(record, JSON.stringify(request,null,2)+'\n');
-  const client = await import(pathToFileURL(path.resolve(__dirname,'../../../server/dist/astra-shot-runtime.bundle.js')).href);
   const result = prepared.tool === 'astra_audio2video'
     ? await client.generateFromAudio(args) : await client.generateFromImage(args);
   const response = {...request,status:'generated',result,selection:{status:'provisional',
@@ -57,7 +74,7 @@ async function render(target, options) {
   fs.writeFileSync(record,JSON.stringify(response,null,2)+'\n');
   return response;
 }
-module.exports = { render, conditioningAudio };
+module.exports = { render, conditioningAudio, reserveRetryCandidates };
 if (require.main === module) (async()=>{
   const args=process.argv.slice(2),target=args.shift(),options={};
   const names={'--shot':'shotId','--audio':'audioPath','--output':'outputPath','--filename':'filename'};
