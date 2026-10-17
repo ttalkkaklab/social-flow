@@ -3649,6 +3649,14 @@ plan binding and review. It is not a ninth episode style or a Google Earth impor
 
 `shot.location` binds a versioned location manifest, state, numerical camera and required object IDs. `visual.location` stores rendered references, approval, generation receipt and pixel review. Use `location_manage` to author these records; do not fabricate hashes or approvals. See [location-assets.md](location-assets.md) for the schema, browser proposal workflow and generation handoff. Boards without location bindings remain compatible.
 
+Optional `shot.location.blocking` holds persistent actors with complete start/end world
+poses (floor position, body yaw, gaze target and held object IDs), plus an optional action
+axis. `endStateId` selects the closing set state. Related cuts use `continuityGroup`;
+an incoming `continuityBreak` explains intentional discontinuity. Cross-shot differences
+produce advisory findings. Render this plan before generating images. The location
+`previz` action writes both source references and `visual.video.previz.locationBinding`
+from the same set, camera and blocking; changed inputs or clip bytes invalidate the binding.
+
 ## Character performance (story-v2)
 
 New boards follow [character-led scenarios](character-scenarios.md). `narration[]` remains the

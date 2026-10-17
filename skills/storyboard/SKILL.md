@@ -933,6 +933,15 @@ delegated any more; the reads of 0.49 that looked at it (per-scene role, camera,
 yours now, against the same rules, with the checker's exit code as the gate. Go through them
 once, in this order, before §5:
 
+- **Resolve shared space before composing images.** For recurring places, dialogue, entrances,
+  travel or prop hand-offs, follow [location assets](references/location-assets.md): build one
+  Blender set, bind each shot's camera and complete actor start/end blocking, then inspect
+  clean location renders together in cut order. Include off-camera actors, body facing and
+  gaze targets. Reuse the previous cut's end state as the next start within a continuityGroup;
+  explain time skips with continuityBreak. Plan axis crossings with lineCrossing. Run the
+  location check for advisory continuity findings. When motion previz is useful, use
+  `mcp__social-flow__location_manage` action `previz` so it shares the set/camera/blocking.
+  These local spatial renders precede generated storyboard images and make no paid calls.
 - **Per scene, does it do its job and is there a reason for it to be here** — the cover says
   what the story is about within 3 seconds and gives a reason to stay, with something legible and already moving at t=0; on a short every middle
   shot is a drip (each pays one piece and opens the next gap, the last drip completes the answer under a gap cover or makes it hold up under a `spoiler` one,
@@ -1322,4 +1331,4 @@ Set `status: approved` in `storyboard.md` and deliver the local HTML link.
 Read [traps.md](references/traps.md) once per episode before §2. Keep attachments and rights evidence locally.
 
 ## Persistent locations
-For recurring places, follow [location assets](references/location-assets.md). Bind an immutable set/state/camera to each shot, render and review references, then pass the assembler's actual reference paths to generation. Never substitute a prose-only location description for a bound set. Camera changes invalidate its references.
+For recurring places, follow [location assets](references/location-assets.md) during §4b before §5 image planning. Share the set, actor blocking and camera between reference renders and motion previz. Changes to the camera, actors or endpoint states invalidate the associated renders. Compare real images; continuity findings guide corrections without a new approval gate.
