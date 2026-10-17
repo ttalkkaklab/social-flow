@@ -36,6 +36,7 @@ import {
   astraText2VideoSchema,
   astraVideoRetakeSchema,
   buildJobBody,
+  checkAudioCoversVideo,
   checkAudioSource,
   checkAutoDuration,
   checkDimensions,
@@ -503,13 +504,13 @@ describe('measured ASTRA guidance', () => {
     assert.doesNotMatch(tool('astra_text2video').description, /image-conditioned|failure frames|CUDA illegal memory access/);
   });
 
-  it('audio inputs warn that mono is accepted but fails generation', () => {
+  it('audio inputs warn that mono fails generation and is refused at upload once the server change ships', () => {
     const audio = tool('astra_audio2video');
-    assert.match(audio.description, /mono passes upload and job acceptance but fails during generation/);
+    assert.match(audio.description, /mono fails in the engine's audio encoder, and the 2026-10-17 server design refuses it at upload/);
     for (const name of ['audioPath', 'audioUploadId']) {
       const description = audio.inputSchema.properties[name].description;
       assert.match(description, /Stereo \(2-channel\) input required/);
-      assert.match(description, /Mono WAV passes acceptance \(202\) but fails during generation/);
+      assert.match(description, /Mono fails during generation: the live server still accepts it \(202\), the 2026-10-17 server design refuses it at upload/);
     }
   });
 
@@ -1172,6 +1173,54 @@ describe('stage 3 — duration, generateAudio, capabilities', () => {
       assert.match(limited.content[0].text, /HTTP 429/);
       await assert.rejects(() => ROUTES.astra_video_capabilities({ mode: 'generate' }));
     } finally { globalThis.fetch = oldFetch; config.astraVideoApiKey = oldKey; }
+  });
+});
+
+// Server D6 (ltx-api 10e6e74, contract 3b893376): a WAV that surely cannot cover the video is refused before the job.
+describe('audio2video — audio must cover the video (D6)', () => {
+  it('matches the server rule and its fixes on the 12:22Z live failure', () => {
+    // 5.71s of audio against 145 frames = 6.0417s at 24fps: fails live; the server proposes 137 frames.
+    const message = checkAudioCoversVideo(5.71, 145, 24);
+    assert.match(message, /usable audio 5\.710s vs 145 frames = 6\.0417s at 24fps/);
+    assert.match(message, /\(1\) re-upload audio of at least 6\.0417s · \(2\) set numFrames to 137 or less \(duration 5\.7083s or less\) · \(3\) use audioMaxDuration/);
+    // The user's 12:27Z retry with 6.04s of audio rendered: inside the slack.
+    assert.equal(checkAudioCoversVideo(6.04, 145, 24), null);
+    // 0.08s is the edge: just inside passes, just past it is refused.
+    assert.equal(checkAudioCoversVideo(121 / 24 - 0.0799, 121, 24), null);
+    assert.notEqual(checkAudioCoversVideo(121 / 24 - 0.0801, 121, 24), null);
+    // ffprobe's six decimals must not cost a grid step: 137/24 = 5.708333 still fits 137.
+    assert.match(checkAudioCoversVideo(5.708333, 153, 24), /numFrames to 137 or less/);
+    // Too short for any 8k+1 of 25+: the numFrames fix is dropped.
+    assert.doesNotMatch(checkAudioCoversVideo(0.9, 121, 24), /set numFrames/);
+  });
+
+  it('applies to wav without audioMaxDuration only, using numFrames (121 when omitted) after audioStartTime', () => {
+    const wav = { uploadId: 'a', kind: 'audio', duration: 4 };
+    assert.match(checkAudioSource(wav, { wav: true }), /121 frames = 5\.0417s/);
+    assert.equal(checkAudioSource(wav, { wav: true, numFrames: 97 }), null);
+    assert.match(checkAudioSource(wav, { wav: true, numFrames: 97, audioStartTime: 1 }), /usable audio 3\.000s \(after audioStartTime\)/);
+    assert.equal(checkAudioSource(wav, { wav: false }), null); // mp3: length may be an estimate
+    assert.equal(checkAudioSource(wav, { wav: true, audioMaxDuration: 4 }), null);
+  });
+
+  it('the tool refuses a short WAV after upload and before /v1/jobs', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'astra-d6-'));
+    const oldKey = config.astraVideoApiKey;
+    const oldFetch = globalThis.fetch;
+    config.astraVideoApiKey = 'test-only-key';
+    const jobs = [];
+    globalThis.fetch = async (url, init = {}) => {
+      const pathname = new URL(url).pathname;
+      if (pathname === '/v1/uploads') return Response.json({ upload_id: 'audio-id', kind: 'audio', bytes: 4, duration: 5.71, expires_at: '2026-10-18T00:00:00Z' }, { status: 201 });
+      if (pathname === '/v1/jobs') { jobs.push(JSON.parse(init.body)); return Response.json({ job_id: 'test-job' }, { status: 202 }); }
+      throw new Error(`Unexpected mocked route ${pathname}`);
+    };
+    fs.writeFileSync(path.join(dir, 'a.wav'), 'wave');
+    try {
+      await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioPath: path.join(dir, 'a.wav'), numFrames: 145, outputPath: dir }), /audio is shorter than the video/);
+      await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioPath: path.join(dir, 'a.wav'), duration: 6, outputPath: dir }), /audio is shorter than the video/);
+      assert.equal(jobs.length, 0);
+    } finally { globalThis.fetch = oldFetch; config.astraVideoApiKey = oldKey; fs.rmSync(dir, { recursive: true, force: true }); }
   });
 });
 

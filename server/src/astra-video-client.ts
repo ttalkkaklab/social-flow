@@ -809,9 +809,27 @@ export interface AstraVideoUpload {
 }
 
 /** Validate audio metadata after upload, before consuming a job slot. */
+/** The server's D6 slack: audio up to 0.06s shorter than the video still renders, so only 0.08s+ is refused. */
+export const ASTRA_VIDEO_SHORT_AUDIO_SLACK = 0.08;
+
+/**
+ * The server's `check_audio_covers_video` (D6): on audio2video without audioMaxDuration the audio
+ * after audioStartTime must cover the video, or the engine dies on a latent shape mismatch.
+ * Only wav is judged — an mp3 length from ffprobe can be an estimate. Same fixes as the server's 400.
+ */
+export function checkAudioCoversVideo(usable: number, numFrames: number, frameRate: number, afterStart = false): string | null {
+  const videoSeconds = numFrames / frameRate;
+  if (usable + ASTRA_VIDEO_SHORT_AUDIO_SLACK >= videoSeconds) return null;
+  const fit = 8 * Math.floor((usable * frameRate - 1) / 8 + 1e-4) + 1;
+  const fixes = [`re-upload audio of at least ${(Math.ceil(videoSeconds * 1e4) / 1e4).toFixed(4)}s`];
+  if (fit >= ASTRA_VIDEO_MIN_FRAMES) fixes.push(`set numFrames to ${fit} or less (duration ${(fit / frameRate).toFixed(4)}s or less)`);
+  fixes.push('use audioMaxDuration instead of numFrames/duration to follow the audio length');
+  return `the audio is shorter than the video — usable audio ${usable.toFixed(3)}s${afterStart ? ' (after audioStartTime)' : ''} vs ${numFrames} frames = ${videoSeconds.toFixed(4)}s at ${frameRate}fps; generation would fail on a latent shape mismatch. Fix: ${fixes.map((f, i) => `(${i + 1}) ${f}`).join(' · ')}`;
+}
+
 export function checkAudioSource(
   upload: AstraVideoUpload,
-  args: { audioStartTime?: number; audioMaxDuration?: number; numFrames?: number; frameRate?: number },
+  args: { audioStartTime?: number; audioMaxDuration?: number; numFrames?: number; frameRate?: number; wav?: boolean },
 ): string | null {
   if (upload.kind !== 'audio') return `audioPath uploaded as ${upload.kind}, not audio`;
   if (!Number.isFinite(upload.duration) || (upload.duration ?? 0) <= 0) {
@@ -821,6 +839,10 @@ export function checkAudioSource(
   const duration = upload.duration as number;
   if (start >= duration) {
     return `audioStartTime must be less than the source duration ${duration}s (got ${start})`;
+  }
+  if (args.audioMaxDuration === undefined && args.wav) {
+    const shortError = checkAudioCoversVideo(duration - start, args.numFrames ?? 121, args.frameRate ?? 24, start > 0);
+    if (shortError) return shortError;
   }
   if (args.numFrames !== undefined || args.audioMaxDuration === undefined) return null;
 
@@ -1337,7 +1359,7 @@ export async function generateFromAudio(args: AstraAudio2VideoRequest): Promise<
   }
   const audio = args.audioPath !== undefined ? await uploadFile(args.audioPath) : undefined;
   if (audio) {
-    const sourceError = checkAudioSource(audio, args);
+    const sourceError = checkAudioSource(audio, { ...args, wav: /\.wav$/i.test(args.audioPath ?? '') });
     if (sourceError) throw new Error(`ASTRA video audio source refused: ${sourceError}`);
   }
   // Reused ids have no locally known metadata; the server validates expiry and duration.

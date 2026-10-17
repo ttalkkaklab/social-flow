@@ -79483,6 +79483,16 @@ var astraIcLoraSchema = external_exports.object({
 function icLoraMode(adapter) {
   return adapter === "ingredients" ? "ingredients" : "ic_lora";
 }
+var ASTRA_VIDEO_SHORT_AUDIO_SLACK = 0.08;
+function checkAudioCoversVideo(usable, numFrames, frameRate, afterStart = false) {
+  const videoSeconds = numFrames / frameRate;
+  if (usable + ASTRA_VIDEO_SHORT_AUDIO_SLACK >= videoSeconds) return null;
+  const fit = 8 * Math.floor((usable * frameRate - 1) / 8 + 1e-4) + 1;
+  const fixes = [`re-upload audio of at least ${(Math.ceil(videoSeconds * 1e4) / 1e4).toFixed(4)}s`];
+  if (fit >= ASTRA_VIDEO_MIN_FRAMES) fixes.push(`set numFrames to ${fit} or less (duration ${(fit / frameRate).toFixed(4)}s or less)`);
+  fixes.push("use audioMaxDuration instead of numFrames/duration to follow the audio length");
+  return `the audio is shorter than the video \u2014 usable audio ${usable.toFixed(3)}s${afterStart ? " (after audioStartTime)" : ""} vs ${numFrames} frames = ${videoSeconds.toFixed(4)}s at ${frameRate}fps; generation would fail on a latent shape mismatch. Fix: ${fixes.map((f3, i2) => `(${i2 + 1}) ${f3}`).join(" \xB7 ")}`;
+}
 function checkAudioSource(upload, args) {
   if (upload.kind !== "audio") return `audioPath uploaded as ${upload.kind}, not audio`;
   if (!Number.isFinite(upload.duration) || (upload.duration ?? 0) <= 0) {
@@ -79492,6 +79502,10 @@ function checkAudioSource(upload, args) {
   const duration3 = upload.duration;
   if (start >= duration3) {
     return `audioStartTime must be less than the source duration ${duration3}s (got ${start})`;
+  }
+  if (args.audioMaxDuration === void 0 && args.wav) {
+    const shortError = checkAudioCoversVideo(duration3 - start, args.numFrames ?? 121, args.frameRate ?? 24, start > 0);
+    if (shortError) return shortError;
   }
   if (args.numFrames !== void 0 || args.audioMaxDuration === void 0) return null;
   const usableSeconds = Math.min(args.audioMaxDuration, duration3 - start);
@@ -79842,7 +79856,7 @@ async function generateFromAudio(args) {
   }
   const audio = args.audioPath !== void 0 ? await uploadFile(args.audioPath) : void 0;
   if (audio) {
-    const sourceError = checkAudioSource(audio, args);
+    const sourceError = checkAudioSource(audio, { ...args, wav: /\.wav$/i.test(args.audioPath ?? "") });
     if (sourceError) throw new Error(`ASTRA video audio source refused: ${sourceError}`);
   }
   const audioUploadId = audio?.uploadId ?? args.audioUploadId;
@@ -88192,7 +88206,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
     description: `Render a clip driven by an existing audio track on the self-hosted ASTRA video API (mode audio2video).
 
 Use when the picture has to follow a sound you already have \u2014 a narration take, a music bed, a recorded effect \u2014 instead of the picture being cut to it afterwards. Provide exactly one of audioPath (local .wav/.mp3) or audioUploadId (reuse an existing upload without uploading again). Reused ids have unknown expiry/duration locally, so the server checks them. Optionally give imagePath to pin one portrait to frame 0.
-Do NOT use to add sound to a finished clip: this generates new picture from the audio, it does not mux. The rendered video carries the supplied WAV re-encoded as AAC (48kHz stereo): a measured upload-to-output 100ms RMS Pearson correlation was 0.99997 at zero lag. Input WAV must have two channels; mono passes upload and job acceptance but fails during generation with "expected input[1, 1, 507, 66] to have 2 channels, but got 1 channels instead".
+Do NOT use to add sound to a finished clip: this generates new picture from the audio, it does not mux. The rendered video carries the supplied WAV re-encoded as AAC (48kHz stereo): a measured upload-to-output 100ms RMS Pearson correlation was 0.99997 at zero lag. Input audio must have two channels: mono fails in the engine's audio encoder, and the 2026-10-17 server design refuses it at upload (re-encode with ffmpeg -ac 2). The audio after audioStartTime must also cover the video: a WAV more than 0.08s shorter than numFrames/frameRate (121 frames when omitted) dies on a latent shape mismatch, so it is refused after upload and before the job with the length to fix \u2014 or pass audioMaxDuration to follow the audio.
 Choose either numFrames or audioMaxDuration, never both. numFrames fixes the clip length. audioMaxDuration uses the shorter of that value and the audio remaining after audioStartTime, floors seconds \xD7 frameRate, then rounds down to 8k+1; more than ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} frames is refused when upload duration is known. audioStartTime must be before the uploaded audio ends. With neither length field, the default is 121 frames (about 5.04s at 24fps), not the source audio length: an 8.000s WAV produced 5.041s of audio. Set numFrames or audioMaxDuration to request a longer span; audioMaxDuration=8.0 at 24fps rounds down to 185 frames (about 7.708s), so grid rounding can still trim the tail. A measured 121-frame render took about 170s plus queue.
 ${ASTRA_LIMITS_LINE}
 
@@ -88206,12 +88220,12 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         },
         audioPath: {
           type: "string",
-          description: "Local path to the driving audio (.wav or .mp3, at most 32 MiB). Stereo (2-channel) input required. Mono WAV passes acceptance (202) but fails during generation. Uploaded automatically."
+          description: "Local path to the driving audio (.wav or .mp3, at most 32 MiB). Stereo (2-channel) input required. Mono fails during generation: the live server still accepts it (202), the 2026-10-17 server design refuses it at upload. Uploaded automatically."
         },
         audioUploadId: {
           type: "string",
           minLength: 1,
-          description: "Existing audio upload id, mutually exclusive with audioPath. Stereo (2-channel) input required. Mono WAV passes acceptance (202) but fails during generation. No upload or local source-duration check. Server rejects expired ids."
+          description: "Existing audio upload id, mutually exclusive with audioPath. Stereo (2-channel) input required. Mono fails during generation: the live server still accepts it (202), the 2026-10-17 server design refuses it at upload. No upload or local source-duration check. Server rejects expired ids."
         },
         imagePath: {
           type: "string",
