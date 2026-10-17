@@ -68,8 +68,14 @@ Gemini example: `{"text":"<sigh> 괜찮아. 내가 옆에 있어.","style":"soft
 ElevenLabs example: `[soft, reassuring] [sigh] 괜찮아. 내가 옆에 있어.` with
 `model:"eleven_v4"`. These illustrate syntax, not a listening-tested promise.
 
-For Gemini 3.8, use a short style for each turn and split turns when the emotion
-changes. Put voice identity in voice selection/design. Non-speech events use
+For Gemini 3.8, use a short style for each turn and split lines when speech purpose or
+vocal contour changes, even if the emotion stays restrained. A self-introduction followed
+by a skeptical question needs separate contexts, intents and vocal directions; a global
+questioning cue must not cover the identification. Keep both lines in the same shot when
+staging calls for it and retain listening/reaction in performance order. Several sentences
+with unchanged purpose may stay together; punctuation is not an automatic splitting rule.
+Use the speech-purpose example in the shot speech contract. Put voice identity in
+voice selection/design. Non-speech events use
 English tags even when the dialogue is Korean.
 [Google speech generation](https://ai.google.dev/gemini-api/docs/speech-generation).
 

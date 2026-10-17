@@ -35,6 +35,7 @@ import { execFileSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FRAMES, MLX_VIDEO_FPS } from './mlx-serve-client.js';
+import { resolveVideoDuration } from './video-duration.js';
 
 /** One recorded call. `key`/`quantity` are the cost-ledger coordinates when they are knowable. */
 export interface UsageEvent {
@@ -201,8 +202,12 @@ const str = (v: unknown, fallback: string): string => (typeof v === 'string' && 
  */
 export function priceOf(
   tool: string,
-  args: Record<string, unknown>,
+  args: Record<string, unknown> = {},
 ): { key: string | null; quantity: number | null; note?: string } {
+  if (args.requiredSeconds !== undefined) {
+    try { args = resolveVideoDuration(tool, args).args; }
+    catch (error) { return { key: null, quantity: null, note: 'Invalid duration plan: ' + String(error) }; }
+  }
   if (tool.startsWith('veo_')) {
     const tier = VEO_TIER[str(args.model, 'veo-3.1-fast-generate-preview')];
     const resolution = str(args.resolution, '720p');
@@ -239,9 +244,9 @@ export function priceOf(
   }
 
   if (tool.startsWith('seedance_')) {
-    const model = str(args.model, 'seedance-1-5-pro-251215');
+    const model = str(args.model, tool === 'seedance_reference' ? 'dreamina-seedance-2-0-260128' : 'seedance-1-5-pro-251215');
     const resolution = str(args.resolution, '720p');
-    const seconds = num(args.durationSeconds, 5);
+    const seconds = typeof args.frames === 'number' ? args.frames / 24 : num(args.durationSeconds, 5);
     // 1.5 pro is the only model whose price splits on audio — silent is exactly half.
     const base = model === 'seedance-1-5-pro-251215'
       ? `1-5-pro-${args.generateAudio === true ? 'audio' : 'silent'}`
@@ -327,6 +332,9 @@ export function priceOf(
 
   if (tool === 'mlx_music_generate') {
     return { key: 'music.mlx', quantity: num(args.durationSeconds, DEFAULT_MLX_MUSIC_SECONDS) };
+  }
+  if (['astra_text2video', 'astra_img2video', 'astra_keyframe_video', 'astra_audio2video'].includes(tool)) {
+    return { key: 'video.astra', quantity: num(args.numFrames, 121) / num(args.frameRate, 24), note: 'Self-hosted; hardware and wall-clock costs excluded' };
   }
   if (tool === 'mlx_video_generate') {
     const frames = num(args.numFrames, DEFAULT_MLX_VIDEO_FRAMES);
