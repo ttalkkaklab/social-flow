@@ -456,7 +456,7 @@ describe('measured ASTRA guidance', () => {
     ['pixel ceiling', /2,064,384-pixel ceiling/],
     ['1088x1920 refusal at every frame count', /1088×1920 exceeds the area ceiling at every frame count/],
     ['supplied audio preservation', /Clips carry 48kHz stereo AAC; `audio2video` carries the supplied sound re-encoded, rather than a newly generated track/],
-    ['stereo input and mono generation failure', /Stereo \(2-channel\) input is required: mono WAV passes acceptance but fails generation/],
+    ['stereo input and mono refused at upload', /Stereo \(2-channel\) input is required: mono is refused at upload because it fails in the engine audio encoder/],
     ['default audio length', /With neither length argument, audio2video uses 121 frames \(~5\.04s\), not the source length/],
     ['rounded audio length', /`audioMaxDuration: 8` selects 185 frames \(~7\.71s\) at 24fps/],
     ['the generateAudio switch', /`generateAudio: false` strips the sound after generation/],
@@ -1239,6 +1239,8 @@ describe('audio2video — audio must cover the video (D6)', () => {
     try {
       await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioPath: path.join(dir, 'a.wav'), numFrames: 145, outputPath: dir }), /audio is shorter than the video/);
       await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioPath: path.join(dir, 'a.wav'), duration: 6, outputPath: dir }), /audio is shorter than the video/);
+      // expectLipSync takes the retry branch; the D6 check must still run before any job.
+      await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioPath: path.join(dir, 'a.wav'), numFrames: 145, expectLipSync: true, outputPath: dir }), /audio is shorter than the video/);
       assert.equal(jobs.length, 0);
       // The same short length as mp3 is not judged (its length may be an estimate): it reaches /v1/jobs.
       await ROUTES.astra_audio2video({ prompt: 'x', audioPath: path.join(dir, 'a.mp3'), numFrames: 145, outputPath: dir, filename: 'mp3.mp4' });
