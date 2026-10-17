@@ -6,7 +6,14 @@ import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 
 import {
   ASTRA_VIDEO_FAST_DIMENSION_STEP,
+  ASTRA_VIDEO_GUIDANCE_RANGES,
+  guidanceToolKey,
+  ASTRA_VIDEO_IC_LORA_ADAPTERS,
   ASTRA_VIDEO_LORAS,
+  ASTRA_VIDEO_MAX_LORA_STRENGTH,
+  ASTRA_VIDEO_MAX_REFERENCE_PIXELS,
+  ASTRA_VIDEO_MAX_STG_BLOCK,
+  ASTRA_VIDEO_MAX_STG_BLOCKS,
   ASTRA_VIDEO_FRAME_LIMITS,
   ASTRA_VIDEO_MAX_PIXELS,
   ASTRA_VIDEO_MAX_SEED,
@@ -236,10 +243,10 @@ const OMNI_ASPECT_RATIO_PROPERTY = {
  * Shared ASTRA video property definitions (self-hosted LTX-2.5).
  *
  * Length is frames rather than seconds and sizes sit on a pixel grid, so the same four
- * numeric levers appear on four of the five tools. astra_video_retake takes none of them —
+ * numeric levers appear on every generation tool but retake. astra_video_retake takes none of them —
  * a retake inherits the source exactly.
  */
-const ASTRA_FRAME_LIMITS_DESCRIPTION = `generate/default: ${ASTRA_VIDEO_FRAME_LIMITS.generate}; guided: ${ASTRA_VIDEO_FRAME_LIMITS.guided}; guided_fast/fast: ${ASTRA_VIDEO_FRAME_LIMITS.guided_fast} (conservative, not generation-tested); keyframe: ${ASTRA_VIDEO_FRAME_LIMITS.keyframe} and audio2video: ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} (server rejects values above 193).`;
+const ASTRA_FRAME_LIMITS_DESCRIPTION = `generate/default: ${ASTRA_VIDEO_FRAME_LIMITS.generate}; guided: ${ASTRA_VIDEO_FRAME_LIMITS.guided}; guided_fast/fast: ${ASTRA_VIDEO_FRAME_LIMITS.guided_fast} and guided_hq/hq: ${ASTRA_VIDEO_FRAME_LIMITS.guided_hq} (conservative, not generation-tested); keyframe: ${ASTRA_VIDEO_FRAME_LIMITS.keyframe} and audio2video: ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} (server rejects values above 193).`;
 const astraNumFramesProperty = (mode: keyof typeof ASTRA_VIDEO_FRAME_LIMITS) => ({
   type: 'integer',
   description: `Clip length in FRAMES, not seconds: 8k+1, minimum ${ASTRA_VIDEO_MIN_FRAMES}. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} Server default: 121 (~5.0s at 24fps). Off-grid and over-limit values are refused before the call.`,
@@ -283,11 +290,49 @@ const ASTRA_SEED_PROPERTY = {
 
 const ASTRA_LORA_PROPERTY = {
   type: 'array',
-  description: 'Distinct look adapters to load, at most 2. "cinemagraph" freezes the frame except for one moving element; "slow-motion" stretches the action. Duplicate names are refused. Accepted ONLY on tier "default" (mode generate) — any other tier is refused before the call.',
+  description: `Distinct look adapters to load, at most 2. "cinemagraph" freezes the frame except for one moving element; "slow-motion" stretches the action. Give a bare name for strength 1.0, or {name, strength} with strength 0-${ASTRA_VIDEO_MAX_LORA_STRENGTH} (the object form is new in the 2026-10-17 server design and is refused until that server change is live). Duplicate names are refused. Accepted ONLY on tier "default" (mode generate) — any other tier is refused before the call.`,
   maxItems: 2,
-  uniqueItems: true,
-  items: { type: 'string', description: 'Adapter name.', enum: [...ASTRA_VIDEO_LORAS] },
+  items: {
+    oneOf: [
+      { type: 'string', description: 'Adapter name at strength 1.0.', enum: [...ASTRA_VIDEO_LORAS] },
+      {
+        type: 'object',
+        description: 'Adapter name with an explicit strength.',
+        properties: {
+          name: { type: 'string', enum: [...ASTRA_VIDEO_LORAS], description: 'Adapter name.' },
+          strength: { type: 'number', minimum: 0, maximum: ASTRA_VIDEO_MAX_LORA_STRENGTH, description: `Adapter strength, 0-${ASTRA_VIDEO_MAX_LORA_STRENGTH}.` },
+        },
+        required: ['name', 'strength'],
+        additionalProperties: false,
+      },
+    ],
+  },
 } as const;
+
+const ASTRA_STG_BLOCKS_PROPERTY = {
+  type: 'array',
+  description: `Transformer blocks for spatio-temporal guidance: 1-${ASTRA_VIDEO_MAX_STG_BLOCKS} distinct integers 0-${ASTRA_VIDEO_MAX_STG_BLOCK} (engine default [28]).`,
+  minItems: 1,
+  maxItems: ASTRA_VIDEO_MAX_STG_BLOCKS,
+  uniqueItems: true,
+  items: { type: 'integer', minimum: 0, maximum: ASTRA_VIDEO_MAX_STG_BLOCK },
+} as const;
+
+const ASTRA_GUIDANCE_PROPERTY = {
+  type: 'object',
+  description: 'Engine guidance knobs, keyed by the engine\'s argument names in camelCase (videoCfgGuidanceScale = --video-cfg-guidance-scale). Every key is optional; an omitted key keeps the engine default. The ranges are the server\'s conservative bounds, not measured quality guidance. Accepted on the step-based modes only (tiers "guided", "fast", "hq", and the keyframe and audio2video tools) — never on tier "default". New in the 2026-10-17 server design: refused until that server change is live.',
+  properties: {
+    ...Object.fromEntries(Object.entries(ASTRA_VIDEO_GUIDANCE_RANGES).map(([key, [minimum, maximum]]) => [guidanceToolKey(key), {
+      type: key.endsWith('_skip_step') ? 'integer' : 'number',
+      minimum,
+      maximum,
+      description: `--${key.replaceAll('_', '-')} (${minimum}-${maximum}).`,
+    }])),
+    videoStgBlocks: ASTRA_STG_BLOCKS_PROPERTY,
+    audioStgBlocks: ASTRA_STG_BLOCKS_PROPERTY,
+  },
+  additionalProperties: false,
+};
 
 const ASTRA_NEGATIVE_PROMPT_PROPERTY = {
   type: 'string',
@@ -2091,7 +2136,7 @@ Returns: a text block with the saved .mp4 path, the new interaction id, and the 
 
 Use when the shot is not time-critical and you would rather not spend vendor money: this server is ours, so a call costs wall clock instead of dollars, and no vendor content policy applies. It is also the only lane with an adapter (lora) for cinemagraph and slow-motion looks.
 Do NOT use when someone is waiting: the box renders ONE job at a time and yours queues behind whatever else is running. A measured 121-frame 1536x1024 render takes about 66s (tier "default"), 169s ("guided"), 121s ("fast") — plus the queue. For an immediate clip go to veo_text2video or seedance_text2video.
-tier picks the pipeline and also which arguments exist: lora only on "default", negativePrompt and numInferenceSteps only on "guided"/"fast". "fast" means a draft that is faster than "guided"; it is not faster than the default pipeline. Passing one to the wrong tier is refused before the call.
+tier picks the pipeline and also which arguments exist: lora only on "default", negativePrompt, numInferenceSteps and guidance only on "guided"/"fast"/"hq". "hq" is the two-stage high-quality pipeline (new in the 2026-10-17 server design, unmeasured and refused until that server change is live). "fast" means a draft that is faster than "guided"; it is not faster than the default pipeline. Passing one to the wrong tier is refused before the call.
 Length is frames, not seconds: numFrames must be 8k+1, minimum 25. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} 121 = about 5.0s at 24fps, the server default. Give autoDuration instead to let the server choose at most 121 frames; the rounded range must contain an 8k+1 value. numFrames wins if both are given.
 ${ASTRA_LIMITS_LINE}
 Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off — no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
@@ -2106,8 +2151,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         },
         tier: {
           type: 'string',
-          description: 'Pipeline: "default" (generate — the only tier taking lora), "guided" (slower, takes negativePrompt and numInferenceSteps), "fast" (guided_fast — 768x512 draft, 32-pixel grid, faster than guided but not faster than default).',
-          enum: ['default', 'guided', 'fast'],
+          description: 'Pipeline: "default" (generate — the only tier taking lora), "guided" (slower, takes negativePrompt, numInferenceSteps and guidance), "fast" (guided_fast — 768x512 draft, 32-pixel grid, faster than guided but not faster than default), "hq" (guided_hq — two-stage high quality, unmeasured, refused until the server change is live).',
+          enum: ['default', 'guided', 'fast', 'hq'],
           default: 'default',
         },
         numFrames: astraNumFramesProperty('generate'),
@@ -2119,6 +2164,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         lora: ASTRA_LORA_PROPERTY,
         negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
         numInferenceSteps: ASTRA_STEPS_PROPERTY,
+        guidance: ASTRA_GUIDANCE_PROPERTY,
         numGeneratedKeyframes: ASTRA_GENERATED_KEYFRAMES_PROPERTY,
         outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
         filename: ASTRA_FILENAME_PROPERTY,
@@ -2134,7 +2180,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 
 Use when a generated background or photo has to move and nobody is waiting on it — same trade as astra_text2video: free, ours, one job at a time. Give firstFramePath alone to animate from that frame, or add lastFramePath and the clip lands on it. The tool uploads the files itself; pass local paths, not ids.
 Do NOT use for more than two stills — that is astra_keyframe_video, which pins each image to a frame index. For an immediate clip use veo_img2video or seedance_img2video.
-tier accepts default (generate) or guided only. guided images require 1536x1024 (omitted dimensions use that size); fast images are not enabled. lora is default-only; negativePrompt and numInferenceSteps are guided-only. Passing one to the wrong tier is refused before the call.
+tier accepts default (generate), guided, or hq (guided_hq — unmeasured, refused until the 2026-10-17 server change is live). guided images require 1536x1024 (omitted dimensions use that size); hq has no measured size rule; fast images are not enabled. lora is default-only; negativePrompt and numInferenceSteps are guided-only, and with guidance also hq. Passing one to the wrong tier is refused before the call.
 The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. autoDuration lets the server choose at most 121 frames from a first still alone; it is refused with lastFramePath unless numFrames is also given (numFrames wins). png, jpg and jpeg are accepted, up to 32 MiB each.
 Warning: image-conditioned generate (width 1280, measured at heights 704/768) failure frames: {121,129,137}; guided (width 1280, measured at height 704) failure frames: {121}. Guided 129/137 succeeded at 1280x704 in server probes (the only guided size probed), but the existing client guided ceiling is 121. The client requires 1536x1024 for guided images, so the guided 1280x704 probes are not client alternatives. Within current client limits use generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at 121 frames also succeeded. Text-only 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause. The server owns the failure-band acceptance gate; this warning adds no client-side block.
 ${ASTRA_LIMITS_LINE}
@@ -2149,8 +2195,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
           description: 'What happens between the frames — movement, camera, mood. English recommended. 1-2000 characters.',
         },
         tier: {
-          type: 'string', enum: ['default', 'guided'], default: 'default',
-          description: 'default (generate), or guided at 1536x1024 only. fast images are unmeasured and not enabled.',
+          type: 'string', enum: ['default', 'guided', 'hq'], default: 'default',
+          description: 'default (generate), guided at 1536x1024 only, or hq (guided_hq, unmeasured). fast images are unmeasured and not enabled.',
         },
         firstFramePath: {
           type: 'string',
@@ -2173,6 +2219,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         lora: ASTRA_LORA_PROPERTY,
         negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
         numInferenceSteps: ASTRA_STEPS_PROPERTY,
+        guidance: ASTRA_GUIDANCE_PROPERTY,
         numGeneratedKeyframes: ASTRA_GENERATED_KEYFRAMES_PROPERTY,
         outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
         filename: ASTRA_FILENAME_PROPERTY,
@@ -2236,6 +2283,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         seed: ASTRA_SEED_PROPERTY,
         negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
         numInferenceSteps: ASTRA_STEPS_PROPERTY,
+        guidance: ASTRA_GUIDANCE_PROPERTY,
         outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
         filename: ASTRA_FILENAME_PROPERTY,
       },
@@ -2292,11 +2340,68 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         seed: ASTRA_SEED_PROPERTY,
         negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
         numInferenceSteps: ASTRA_STEPS_PROPERTY,
+        guidance: ASTRA_GUIDANCE_PROPERTY,
         outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
         filename: ASTRA_FILENAME_PROPERTY,
       },
       required: ['prompt'],
       oneOf: [{ required: ['audioPath'] }, { required: ['audioUploadId'] }],
+    },
+  },
+  {
+    name: 'astra_ic_lora',
+    title: 'ASTRA video generation (IC-LoRA reference → video)',
+    annotations: HINT.generate,
+    description: `Render a clip conditioned on one reference still or clip through an IC-LoRA adapter on the self-hosted ASTRA video API.
+
+Use when an existing picture has to be transformed rather than invented: "ingredients" builds a new clip from the reference's subject; "clean-plate", "colorization", "day-to-night", "deblur", "decompression" and "water-simulation" rework the reference clip; "pixel-upscaler-x2" upscales it (request an output twice the reference size yourself). The server picks the adapter weights from its own catalog — there is no path argument. The tool uploads the reference and the optional mask itself; pass local paths.
+Do NOT use to animate a still from frame 0 (astra_img2video) or to re-roll a span of a clip (astra_video_retake).
+Status: adapter "ingredients" without conditioningMask and skipStage2 runs as the server's existing ingredients mode. Every other adapter, conditioningMask and skipStage2 come from the 2026-10-17 server design and are refused until that server change is live. Recommended strengths per adapter are unmeasured.
+A reference clip of 2 or more frames above ${ASTRA_VIDEO_MAX_REFERENCE_PIXELS} pixels is refused after upload and before the job, as the server does. skipStage2 skips the second stage, so the output is half resolution. Length: numFrames 8k+1, ${ASTRA_VIDEO_MIN_FRAMES}-${ASTRA_VIDEO_FRAME_LIMITS.ic_lora} (conservative, not generation-tested); there is no autoDuration.
+${ASTRA_LIMITS_LINE}
+
+Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'What the output clip shows. English recommended. 1-2000 characters.',
+        },
+        adapter: {
+          type: 'string',
+          enum: [...ASTRA_VIDEO_IC_LORA_ADAPTERS],
+          description: 'IC-LoRA adapter. "ingredients" runs as the existing ingredients mode; the rest run as mode ic_lora.',
+        },
+        referencePath: {
+          type: 'string',
+          description: 'Local reference still or clip (.png/.jpg/.jpeg up to 32 MiB, .mp4 up to 100 MiB). Uploaded automatically.',
+        },
+        referenceStrength: {
+          type: 'number', minimum: 0, maximum: 1,
+          description: 'Reference conditioning strength, 0.0-1.0 (server default: 1.0).',
+        },
+        conditioningMaskPath: {
+          type: 'string',
+          description: 'Optional local black-and-white .mp4 attention mask over the reference. Uploaded automatically.',
+        },
+        conditioningMaskStrength: {
+          type: 'number', minimum: 0, maximum: 1,
+          description: 'Mask strength, 0.0-1.0. Requires conditioningMaskPath.',
+        },
+        skipStage2: {
+          type: 'boolean',
+          description: 'Skip the second (upscaling) stage: faster, half-resolution output. Default false.',
+        },
+        numFrames: astraNumFramesProperty('ic_lora'),
+        width: ASTRA_WIDTH_PROPERTY,
+        height: ASTRA_HEIGHT_PROPERTY,
+        frameRate: ASTRA_FRAME_RATE_PROPERTY,
+        seed: ASTRA_SEED_PROPERTY,
+        outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
+        filename: ASTRA_FILENAME_PROPERTY,
+      },
+      required: ['prompt', 'adapter', 'referencePath'],
     },
   },
   {

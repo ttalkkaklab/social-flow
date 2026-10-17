@@ -78970,12 +78970,42 @@ var ASTRA_VIDEO_TIERS = {
   /** `guided` — slower, takes a negative prompt and a step count. */
   guided: "guided",
   /** `guided_fast` — 768x512 draft tier, faster than guided but not the default pipeline. */
-  fast: "guided_fast"
+  fast: "guided_fast",
+  /** `guided_hq` — two-stage high-quality pipeline (15 steps by default). Unmeasured. */
+  hq: "guided_hq"
 };
 var VALID_ASTRA_VIDEO_TIERS = Object.keys(ASTRA_VIDEO_TIERS);
 var ASTRA_VIDEO_LORAS = ["cinemagraph", "slow-motion"];
 var ASTRA_VIDEO_MAX_LORAS = 2;
-var ASTRA_VIDEO_ALLOWED_FIELDS = {
+var ASTRA_VIDEO_MAX_LORA_STRENGTH = 2;
+var ASTRA_VIDEO_IC_LORA_ADAPTERS = [
+  "clean-plate",
+  "colorization",
+  "day-to-night",
+  "deblur",
+  "decompression",
+  "water-simulation",
+  "pixel-upscaler-x2",
+  "ingredients"
+];
+var ASTRA_VIDEO_GUIDANCE_RANGES = {
+  video_cfg_guidance_scale: [1, 15],
+  video_stg_guidance_scale: [0, 5],
+  video_rescale_scale: [0, 1],
+  video_skip_step: [0, 10],
+  a2v_guidance_scale: [1, 10],
+  audio_cfg_guidance_scale: [1, 15],
+  audio_stg_guidance_scale: [0, 5],
+  audio_rescale_scale: [0, 1],
+  audio_skip_step: [0, 10],
+  v2a_guidance_scale: [1, 10]
+};
+var guidanceToolKey = (wireKey) => wireKey.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
+var guidanceWireKey = (toolKey) => toolKey.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+var ASTRA_VIDEO_MAX_STG_BLOCK = 47;
+var ASTRA_VIDEO_MAX_STG_BLOCKS = 8;
+var ASTRA_VIDEO_MAX_REFERENCE_PIXELS = 1867776;
+var ASTRA_VIDEO_MEASURED_FIELDS = {
   generate: ["auto_duration", "frame_rate", "hdr", "height", "images", "lora", "mode", "num_frames", "num_generated_keyframes", "prompt", "seed", "width"],
   guided: ["auto_duration", "frame_rate", "hdr", "height", "images", "mode", "negative_prompt", "num_frames", "num_generated_keyframes", "num_inference_steps", "prompt", "seed", "width"],
   guided_fast: ["auto_duration", "frame_rate", "hdr", "height", "images", "mode", "negative_prompt", "num_frames", "num_generated_keyframes", "num_inference_steps", "prompt", "seed", "width"],
@@ -78984,6 +79014,21 @@ var ASTRA_VIDEO_ALLOWED_FIELDS = {
   ingredients: ["frame_rate", "hdr", "height", "images", "mode", "num_frames", "prompt", "references", "seed", "width"],
   retake: ["end_time", "hdr", "mode", "prompt", "seed", "start_time", "video_upload_id"]
 };
+var ASTRA_VIDEO_DESIGN_FIELDS = {
+  guided: ["guidance"],
+  guided_fast: ["guidance"],
+  keyframe: ["guidance"],
+  audio2video: ["guidance"],
+  guided_hq: [...ASTRA_VIDEO_MEASURED_FIELDS.guided, "guidance"],
+  ingredients: ["conditioning_mask", "skip_stage_2"],
+  ic_lora: [...ASTRA_VIDEO_MEASURED_FIELDS.ingredients, "adapter", "conditioning_mask", "skip_stage_2"]
+};
+var ASTRA_VIDEO_ALLOWED_FIELDS = Object.fromEntries(
+  [.../* @__PURE__ */ new Set([...Object.keys(ASTRA_VIDEO_MEASURED_FIELDS), ...Object.keys(ASTRA_VIDEO_DESIGN_FIELDS)])].map((mode) => [
+    mode,
+    [.../* @__PURE__ */ new Set([...ASTRA_VIDEO_MEASURED_FIELDS[mode] ?? [], ...ASTRA_VIDEO_DESIGN_FIELDS[mode] ?? []])].sort()
+  ])
+);
 var ASTRA_VIDEO_MIN_FRAMES = 25;
 var ASTRA_VIDEO_FRAME_LIMITS = {
   generate: 193,
@@ -78992,8 +79037,14 @@ var ASTRA_VIDEO_FRAME_LIMITS = {
   // Conservative guided-family ceiling; not generation-tested.
   keyframe: 193,
   // Server-enforced ceiling.
-  audio2video: 193
+  audio2video: 193,
   // Server-enforced ceiling.
+  guided_hq: 121,
+  // Conservative guided-family ceiling; not generation-tested.
+  ingredients: 121,
+  // Conservative; not generation-tested through this client.
+  ic_lora: 121
+  // Conservative; not generation-tested.
 };
 var ASTRA_VIDEO_FRAME_STEP = 8;
 var ASTRA_VIDEO_MAX_AUTO_FRAMES = 121;
@@ -79078,7 +79129,29 @@ var autoDurationSchema = external_exports.object({
 }).refine((d) => d.minSeconds <= d.maxSeconds, {
   message: "autoDuration.minSeconds must be <= maxSeconds"
 }).optional();
-var loraSchema = external_exports.array(external_exports.enum(ASTRA_VIDEO_LORAS)).max(ASTRA_VIDEO_MAX_LORAS).refine((values) => new Set(values).size === values.length, { message: "lora values must be unique" }).optional();
+var loraSchema = external_exports.array(external_exports.union([
+  external_exports.enum(ASTRA_VIDEO_LORAS),
+  external_exports.object({
+    name: external_exports.enum(ASTRA_VIDEO_LORAS),
+    strength: external_exports.number().min(0).max(ASTRA_VIDEO_MAX_LORA_STRENGTH)
+  }).strict()
+])).max(ASTRA_VIDEO_MAX_LORAS).refine((values) => {
+  const names = values.map((value) => typeof value === "string" ? value : value.name);
+  return new Set(names).size === names.length;
+}, { message: "lora names must be unique" }).optional();
+var stgBlocksSchema = external_exports.array(external_exports.number().int().min(0).max(ASTRA_VIDEO_MAX_STG_BLOCK)).min(1).max(ASTRA_VIDEO_MAX_STG_BLOCKS).refine((values) => new Set(values).size === values.length, { message: "stg block indices must be unique" }).optional();
+var guidanceRange = (key) => {
+  const [min, max] = ASTRA_VIDEO_GUIDANCE_RANGES[key];
+  const number3 = key.endsWith("_skip_step") ? external_exports.number().int() : external_exports.number();
+  return number3.min(min).max(max).optional();
+};
+var guidanceSchema = external_exports.object({
+  ...Object.fromEntries(
+    Object.keys(ASTRA_VIDEO_GUIDANCE_RANGES).map((key) => [guidanceToolKey(key), guidanceRange(key)])
+  ),
+  videoStgBlocks: stgBlocksSchema,
+  audioStgBlocks: stgBlocksSchema
+}).strict().optional();
 var outputFields = {
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("video").optional()
@@ -79123,7 +79196,7 @@ function checkAutoDuration(duration3, frameRate = 24) {
 }
 var astraText2VideoSchema = external_exports.object({
   prompt: promptSchema,
-  tier: external_exports.enum(["default", "guided", "fast"]).optional().default("default"),
+  tier: external_exports.enum(["default", "guided", "fast", "hq"]).optional().default("default"),
   numFrames: numFramesSchema("generate"),
   autoDuration: autoDurationSchema,
   width: widthSchema,
@@ -79134,6 +79207,7 @@ var astraText2VideoSchema = external_exports.object({
   negativePrompt: negativePromptSchema,
   numInferenceSteps: numInferenceStepsSchema,
   numGeneratedKeyframes: numGeneratedKeyframesSchema,
+  guidance: guidanceSchema,
   ...outputFields
 }).superRefine((data, ctx) => {
   const mode = ASTRA_VIDEO_TIERS[data.tier];
@@ -79148,12 +79222,12 @@ var astraText2VideoSchema = external_exports.object({
     });
   }
   if (mode === "generate") {
-    for (const key of ["negativePrompt", "numInferenceSteps"]) {
+    for (const key of ["negativePrompt", "numInferenceSteps", "guidance"]) {
       if (data[key] !== void 0) {
         ctx.addIssue({
           code: external_exports.ZodIssueCode.custom,
           path: [key],
-          message: `${key} is accepted only on tier "guided" or "fast"; mode generate has no such field.`
+          message: `${key} is accepted only on tier "guided", "fast" or "hq"; mode generate has no such field.`
         });
       }
     }
@@ -79171,7 +79245,7 @@ var astraText2VideoSchema = external_exports.object({
 });
 var astraImg2VideoSchema = external_exports.object({
   prompt: promptSchema,
-  tier: external_exports.enum(["default", "guided"]).optional().default("default"),
+  tier: external_exports.enum(["default", "guided", "hq"]).optional().default("default"),
   firstFramePath: external_exports.string().min(1, "firstFramePath is required"),
   lastFramePath: external_exports.string().optional(),
   strength: external_exports.number().min(0).max(1).optional(),
@@ -79185,6 +79259,7 @@ var astraImg2VideoSchema = external_exports.object({
   negativePrompt: negativePromptSchema,
   numInferenceSteps: numInferenceStepsSchema,
   numGeneratedKeyframes: numGeneratedKeyframesSchema,
+  guidance: guidanceSchema,
   ...outputFields
 }).superRefine((data, ctx) => {
   const mode = ASTRA_VIDEO_TIERS[data.tier];
@@ -79192,12 +79267,12 @@ var astraImg2VideoSchema = external_exports.object({
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["numFrames"], message: `numFrames must be at most ${ASTRA_VIDEO_FRAME_LIMITS[mode]} for mode ${mode}` });
   }
   if (mode === "generate") {
-    for (const key of ["negativePrompt", "numInferenceSteps"]) {
+    for (const key of ["negativePrompt", "numInferenceSteps", "guidance"]) {
       if (data[key] !== void 0) {
         ctx.addIssue({
           code: external_exports.ZodIssueCode.custom,
           path: [key],
-          message: `${key} is accepted only on tier "guided"; mode generate has no such field.`
+          message: `${key} is accepted only on tier "guided" or "hq"; mode generate has no such field.`
         });
       }
     }
@@ -79215,13 +79290,11 @@ var astraImg2VideoSchema = external_exports.object({
       ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["autoDuration"], message: durationError });
     }
   }
-  if (mode === "guided") {
-    if ((data.width ?? 1536) !== 1536 || (data.height ?? 1024) !== 1024) {
-      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["width"], message: "guided images require 1536x1024" });
-    }
-    if (data.lora?.length) {
-      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["lora"], message: 'lora is accepted only on tier "default"' });
-    }
+  if (mode === "guided" && ((data.width ?? 1536) !== 1536 || (data.height ?? 1024) !== 1024)) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["width"], message: "guided images require 1536x1024" });
+  }
+  if (mode !== "generate" && data.lora?.length) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["lora"], message: 'lora is accepted only on tier "default"' });
   }
   const dimensionError = checkDimensions(data.width, data.height, mode);
   if (dimensionError) {
@@ -79245,6 +79318,7 @@ var astraKeyframeVideoSchema = external_exports.object({
   seed: seedSchema,
   negativePrompt: negativePromptSchema,
   numInferenceSteps: numInferenceStepsSchema,
+  guidance: guidanceSchema,
   ...outputFields
 }).superRefine((data, ctx) => {
   const dimensionError = checkDimensions(data.width, data.height, "keyframe");
@@ -79273,6 +79347,7 @@ var astraAudio2VideoSchema = external_exports.object({
   seed: seedSchema,
   negativePrompt: negativePromptSchema,
   numInferenceSteps: numInferenceStepsSchema,
+  guidance: guidanceSchema,
   ...outputFields
 }).superRefine((data, ctx) => {
   if (data.audioPath !== void 0 === (data.audioUploadId !== void 0)) {
@@ -79306,6 +79381,45 @@ var astraVideoRetakeSchema = external_exports.object({
     });
   }
 });
+function uploadKindIssue(filePath, kinds, name) {
+  try {
+    const { kind } = uploadContentType(filePath);
+    return kinds.includes(kind) ? null : `${name} must be ${kinds.join(" or ")} (got ${kind})`;
+  } catch (error2) {
+    return error2 instanceof Error ? error2.message : String(error2);
+  }
+}
+var astraIcLoraSchema = external_exports.object({
+  prompt: promptSchema,
+  adapter: external_exports.enum(ASTRA_VIDEO_IC_LORA_ADAPTERS),
+  referencePath: external_exports.string().trim().min(1, "referencePath is required"),
+  referenceStrength: external_exports.number().min(0).max(1).optional(),
+  conditioningMaskPath: external_exports.string().trim().min(1).optional(),
+  conditioningMaskStrength: external_exports.number().min(0).max(1).optional(),
+  skipStage2: external_exports.boolean().optional(),
+  numFrames: numFramesSchema("ic_lora"),
+  width: widthSchema,
+  height: heightSchema,
+  frameRate: frameRateSchema,
+  seed: seedSchema,
+  ...outputFields
+}).superRefine((data, ctx) => {
+  const referenceIssue = uploadKindIssue(data.referencePath, ["image", "video"], "referencePath");
+  if (referenceIssue) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["referencePath"], message: referenceIssue });
+  if (data.conditioningMaskPath !== void 0) {
+    const maskIssue = uploadKindIssue(data.conditioningMaskPath, ["video"], "conditioningMaskPath");
+    if (maskIssue) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["conditioningMaskPath"], message: maskIssue });
+  } else if (data.conditioningMaskStrength !== void 0) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["conditioningMaskStrength"], message: "conditioningMaskStrength needs conditioningMaskPath" });
+  }
+  const dimensionError = checkDimensions(data.width, data.height, icLoraMode(data.adapter));
+  if (dimensionError) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["width"], message: dimensionError });
+  }
+});
+function icLoraMode(adapter) {
+  return adapter === "ingredients" ? "ingredients" : "ic_lora";
+}
 function checkAudioSource(upload, args) {
   if (upload.kind !== "audio") return `audioPath uploaded as ${upload.kind}, not audio`;
   if (!Number.isFinite(upload.duration) || (upload.duration ?? 0) <= 0) {
@@ -79323,6 +79437,15 @@ function checkAudioSource(upload, args) {
   const gridFrames = 1 + ASTRA_VIDEO_FRAME_STEP * Math.floor((clampedFrames - 1) / ASTRA_VIDEO_FRAME_STEP);
   if (gridFrames > ASTRA_VIDEO_FRAME_LIMITS.audio2video) {
     return `audioMaxDuration selects ${gridFrames} frames after clipping and the 8k+1 grid; maximum is ${ASTRA_VIDEO_FRAME_LIMITS.audio2video}`;
+  }
+  return null;
+}
+function checkReferenceSource(upload, numFrames = 121, width = 1536, height = 1024) {
+  if (upload.kind !== "image" && upload.kind !== "video") return `referencePath uploaded as ${upload.kind}, not image or video`;
+  const frames = upload.kind === "image" ? 1 : Math.min(upload.frames ?? 0, numFrames);
+  const pixels = width * height;
+  if (frames > 1 && pixels > ASTRA_VIDEO_MAX_REFERENCE_PIXELS) {
+    return `a reference feeding ${frames} frames allows an output of at most ${ASTRA_VIDEO_MAX_REFERENCE_PIXELS} pixels (got ${width}x${height} = ${pixels}); use a still reference or a smaller output`;
   }
   return null;
 }
@@ -79365,7 +79488,24 @@ function buildJobBody(mode, args) {
   put(body, "height", args.height);
   put(body, "frame_rate", args.frameRate);
   put(body, "seed", args.seed);
-  if (args.lora?.length) body.lora = [...args.lora];
+  if (args.lora?.length) body.lora = args.lora.map((entry) => typeof entry === "string" ? entry : { name: entry.name, strength: entry.strength });
+  if (args.guidance && Object.keys(args.guidance).length) {
+    body.guidance = Object.fromEntries(Object.entries(args.guidance).map(([key, value]) => [guidanceWireKey(key), value]));
+  }
+  put(body, "adapter", args.adapter);
+  if (args.references?.length) {
+    body.references = args.references.map((reference) => {
+      const entry = { upload_id: reference.uploadId };
+      put(entry, "strength", reference.strength);
+      return entry;
+    });
+  }
+  if (args.conditioningMask) {
+    const mask = { upload_id: args.conditioningMask.uploadId };
+    put(mask, "strength", args.conditioningMask.strength);
+    body.conditioning_mask = mask;
+  }
+  if (args.skipStage2) body.skip_stage_2 = true;
   put(body, "negative_prompt", args.negativePrompt);
   put(body, "num_inference_steps", args.numInferenceSteps);
   put(body, "num_generated_keyframes", args.numGeneratedKeyframes);
@@ -79638,6 +79778,26 @@ async function generateFromAudio(args) {
   const body = buildJobBody("audio2video", { ...args, audioUploadId, images });
   const result = await runJob("audio2video", args.prompt, body, args.outputPath, args.filename);
   return { ...result, audioUploadId, audioExpiresAt: audio?.expiresAt, audioDuration: audio?.duration };
+}
+async function generateIcLora(args) {
+  const reference = await uploadFile(args.referencePath);
+  const referenceError = checkReferenceSource(reference, args.numFrames, args.width, args.height);
+  if (referenceError) throw new Error(`ASTRA video reference refused: ${referenceError}`);
+  let conditioningMask;
+  if (args.conditioningMaskPath) {
+    const mask = await uploadFile(args.conditioningMaskPath);
+    if (mask.kind !== "video") throw new Error(`ASTRA video conditioningMaskPath uploaded as ${mask.kind}, not video`);
+    conditioningMask = { uploadId: mask.uploadId, strength: args.conditioningMaskStrength };
+  }
+  const mode = icLoraMode(args.adapter);
+  const { adapter, ...rest } = args;
+  const body = buildJobBody(mode, {
+    ...rest,
+    ...mode === "ic_lora" ? { adapter } : {},
+    references: [{ uploadId: reference.uploadId, strength: args.referenceStrength }],
+    conditioningMask
+  });
+  return runJob(mode, args.prompt, body, args.outputPath, args.filename);
 }
 async function retakeVideo(args) {
   const source = await uploadFile(args.sourceVideoPath);
@@ -85969,7 +86129,7 @@ var OMNI_ASPECT_RATIO_PROPERTY = {
   enum: ["16:9", "9:16"],
   default: "16:9"
 };
-var ASTRA_FRAME_LIMITS_DESCRIPTION = `generate/default: ${ASTRA_VIDEO_FRAME_LIMITS.generate}; guided: ${ASTRA_VIDEO_FRAME_LIMITS.guided}; guided_fast/fast: ${ASTRA_VIDEO_FRAME_LIMITS.guided_fast} (conservative, not generation-tested); keyframe: ${ASTRA_VIDEO_FRAME_LIMITS.keyframe} and audio2video: ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} (server rejects values above 193).`;
+var ASTRA_FRAME_LIMITS_DESCRIPTION = `generate/default: ${ASTRA_VIDEO_FRAME_LIMITS.generate}; guided: ${ASTRA_VIDEO_FRAME_LIMITS.guided}; guided_fast/fast: ${ASTRA_VIDEO_FRAME_LIMITS.guided_fast} and guided_hq/hq: ${ASTRA_VIDEO_FRAME_LIMITS.guided_hq} (conservative, not generation-tested); keyframe: ${ASTRA_VIDEO_FRAME_LIMITS.keyframe} and audio2video: ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} (server rejects values above 193).`;
 var astraNumFramesProperty = (mode) => ({
   type: "integer",
   description: `Clip length in FRAMES, not seconds: 8k+1, minimum ${ASTRA_VIDEO_MIN_FRAMES}. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} Server default: 121 (~5.0s at 24fps). Off-grid and over-limit values are refused before the call.`,
@@ -86007,10 +86167,46 @@ var ASTRA_SEED_PROPERTY = {
 };
 var ASTRA_LORA_PROPERTY = {
   type: "array",
-  description: 'Distinct look adapters to load, at most 2. "cinemagraph" freezes the frame except for one moving element; "slow-motion" stretches the action. Duplicate names are refused. Accepted ONLY on tier "default" (mode generate) \u2014 any other tier is refused before the call.',
+  description: `Distinct look adapters to load, at most 2. "cinemagraph" freezes the frame except for one moving element; "slow-motion" stretches the action. Give a bare name for strength 1.0, or {name, strength} with strength 0-${ASTRA_VIDEO_MAX_LORA_STRENGTH} (the object form is new in the 2026-10-17 server design and is refused until that server change is live). Duplicate names are refused. Accepted ONLY on tier "default" (mode generate) \u2014 any other tier is refused before the call.`,
   maxItems: 2,
+  items: {
+    oneOf: [
+      { type: "string", description: "Adapter name at strength 1.0.", enum: [...ASTRA_VIDEO_LORAS] },
+      {
+        type: "object",
+        description: "Adapter name with an explicit strength.",
+        properties: {
+          name: { type: "string", enum: [...ASTRA_VIDEO_LORAS], description: "Adapter name." },
+          strength: { type: "number", minimum: 0, maximum: ASTRA_VIDEO_MAX_LORA_STRENGTH, description: `Adapter strength, 0-${ASTRA_VIDEO_MAX_LORA_STRENGTH}.` }
+        },
+        required: ["name", "strength"],
+        additionalProperties: false
+      }
+    ]
+  }
+};
+var ASTRA_STG_BLOCKS_PROPERTY = {
+  type: "array",
+  description: `Transformer blocks for spatio-temporal guidance: 1-${ASTRA_VIDEO_MAX_STG_BLOCKS} distinct integers 0-${ASTRA_VIDEO_MAX_STG_BLOCK} (engine default [28]).`,
+  minItems: 1,
+  maxItems: ASTRA_VIDEO_MAX_STG_BLOCKS,
   uniqueItems: true,
-  items: { type: "string", description: "Adapter name.", enum: [...ASTRA_VIDEO_LORAS] }
+  items: { type: "integer", minimum: 0, maximum: ASTRA_VIDEO_MAX_STG_BLOCK }
+};
+var ASTRA_GUIDANCE_PROPERTY = {
+  type: "object",
+  description: `Engine guidance knobs, keyed by the engine's argument names in camelCase (videoCfgGuidanceScale = --video-cfg-guidance-scale). Every key is optional; an omitted key keeps the engine default. The ranges are the server's conservative bounds, not measured quality guidance. Accepted on the step-based modes only (tiers "guided", "fast", "hq", and the keyframe and audio2video tools) \u2014 never on tier "default". New in the 2026-10-17 server design: refused until that server change is live.`,
+  properties: {
+    ...Object.fromEntries(Object.entries(ASTRA_VIDEO_GUIDANCE_RANGES).map(([key, [minimum, maximum]]) => [guidanceToolKey(key), {
+      type: key.endsWith("_skip_step") ? "integer" : "number",
+      minimum,
+      maximum,
+      description: `--${key.replaceAll("_", "-")} (${minimum}-${maximum}).`
+    }])),
+    videoStgBlocks: ASTRA_STG_BLOCKS_PROPERTY,
+    audioStgBlocks: ASTRA_STG_BLOCKS_PROPERTY
+  },
+  additionalProperties: false
 };
 var ASTRA_NEGATIVE_PROMPT_PROPERTY = {
   type: "string",
@@ -87731,7 +87927,7 @@ Returns: a text block with the saved .mp4 path, the new interaction id, and the 
 
 Use when the shot is not time-critical and you would rather not spend vendor money: this server is ours, so a call costs wall clock instead of dollars, and no vendor content policy applies. It is also the only lane with an adapter (lora) for cinemagraph and slow-motion looks.
 Do NOT use when someone is waiting: the box renders ONE job at a time and yours queues behind whatever else is running. A measured 121-frame 1536x1024 render takes about 66s (tier "default"), 169s ("guided"), 121s ("fast") \u2014 plus the queue. For an immediate clip go to veo_text2video or seedance_text2video.
-tier picks the pipeline and also which arguments exist: lora only on "default", negativePrompt and numInferenceSteps only on "guided"/"fast". "fast" means a draft that is faster than "guided"; it is not faster than the default pipeline. Passing one to the wrong tier is refused before the call.
+tier picks the pipeline and also which arguments exist: lora only on "default", negativePrompt, numInferenceSteps and guidance only on "guided"/"fast"/"hq". "hq" is the two-stage high-quality pipeline (new in the 2026-10-17 server design, unmeasured and refused until that server change is live). "fast" means a draft that is faster than "guided"; it is not faster than the default pipeline. Passing one to the wrong tier is refused before the call.
 Length is frames, not seconds: numFrames must be 8k+1, minimum 25. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} 121 = about 5.0s at 24fps, the server default. Give autoDuration instead to let the server choose at most 121 frames; the rounded range must contain an 8k+1 value. numFrames wins if both are given.
 ${ASTRA_LIMITS_LINE}
 Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off \u2014 no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
@@ -87746,8 +87942,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         },
         tier: {
           type: "string",
-          description: 'Pipeline: "default" (generate \u2014 the only tier taking lora), "guided" (slower, takes negativePrompt and numInferenceSteps), "fast" (guided_fast \u2014 768x512 draft, 32-pixel grid, faster than guided but not faster than default).',
-          enum: ["default", "guided", "fast"],
+          description: 'Pipeline: "default" (generate \u2014 the only tier taking lora), "guided" (slower, takes negativePrompt, numInferenceSteps and guidance), "fast" (guided_fast \u2014 768x512 draft, 32-pixel grid, faster than guided but not faster than default), "hq" (guided_hq \u2014 two-stage high quality, unmeasured, refused until the server change is live).',
+          enum: ["default", "guided", "fast", "hq"],
           default: "default"
         },
         numFrames: astraNumFramesProperty("generate"),
@@ -87759,6 +87955,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         lora: ASTRA_LORA_PROPERTY,
         negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
         numInferenceSteps: ASTRA_STEPS_PROPERTY,
+        guidance: ASTRA_GUIDANCE_PROPERTY,
         numGeneratedKeyframes: ASTRA_GENERATED_KEYFRAMES_PROPERTY,
         outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
         filename: ASTRA_FILENAME_PROPERTY
@@ -87774,7 +87971,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 
 Use when a generated background or photo has to move and nobody is waiting on it \u2014 same trade as astra_text2video: free, ours, one job at a time. Give firstFramePath alone to animate from that frame, or add lastFramePath and the clip lands on it. The tool uploads the files itself; pass local paths, not ids.
 Do NOT use for more than two stills \u2014 that is astra_keyframe_video, which pins each image to a frame index. For an immediate clip use veo_img2video or seedance_img2video.
-tier accepts default (generate) or guided only. guided images require 1536x1024 (omitted dimensions use that size); fast images are not enabled. lora is default-only; negativePrompt and numInferenceSteps are guided-only. Passing one to the wrong tier is refused before the call.
+tier accepts default (generate), guided, or hq (guided_hq \u2014 unmeasured, refused until the 2026-10-17 server change is live). guided images require 1536x1024 (omitted dimensions use that size); hq has no measured size rule; fast images are not enabled. lora is default-only; negativePrompt and numInferenceSteps are guided-only, and with guidance also hq. Passing one to the wrong tier is refused before the call.
 The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. autoDuration lets the server choose at most 121 frames from a first still alone; it is refused with lastFramePath unless numFrames is also given (numFrames wins). png, jpg and jpeg are accepted, up to 32 MiB each.
 Warning: image-conditioned generate (width 1280, measured at heights 704/768) failure frames: {121,129,137}; guided (width 1280, measured at height 704) failure frames: {121}. Guided 129/137 succeeded at 1280x704 in server probes (the only guided size probed), but the existing client guided ceiling is 121. The client requires 1536x1024 for guided images, so the guided 1280x704 probes are not client alternatives. Within current client limits use generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at 121 frames also succeeded. Text-only 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause. The server owns the failure-band acceptance gate; this warning adds no client-side block.
 ${ASTRA_LIMITS_LINE}
@@ -87790,9 +87987,9 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         },
         tier: {
           type: "string",
-          enum: ["default", "guided"],
+          enum: ["default", "guided", "hq"],
           default: "default",
-          description: "default (generate), or guided at 1536x1024 only. fast images are unmeasured and not enabled."
+          description: "default (generate), guided at 1536x1024 only, or hq (guided_hq, unmeasured). fast images are unmeasured and not enabled."
         },
         firstFramePath: {
           type: "string",
@@ -87815,6 +88012,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         lora: ASTRA_LORA_PROPERTY,
         negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
         numInferenceSteps: ASTRA_STEPS_PROPERTY,
+        guidance: ASTRA_GUIDANCE_PROPERTY,
         numGeneratedKeyframes: ASTRA_GENERATED_KEYFRAMES_PROPERTY,
         outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
         filename: ASTRA_FILENAME_PROPERTY
@@ -87878,6 +88076,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         seed: ASTRA_SEED_PROPERTY,
         negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
         numInferenceSteps: ASTRA_STEPS_PROPERTY,
+        guidance: ASTRA_GUIDANCE_PROPERTY,
         outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
         filename: ASTRA_FILENAME_PROPERTY
       },
@@ -87939,11 +88138,72 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         seed: ASTRA_SEED_PROPERTY,
         negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
         numInferenceSteps: ASTRA_STEPS_PROPERTY,
+        guidance: ASTRA_GUIDANCE_PROPERTY,
         outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
         filename: ASTRA_FILENAME_PROPERTY
       },
       required: ["prompt"],
       oneOf: [{ required: ["audioPath"] }, { required: ["audioUploadId"] }]
+    }
+  },
+  {
+    name: "astra_ic_lora",
+    title: "ASTRA video generation (IC-LoRA reference \u2192 video)",
+    annotations: HINT.generate,
+    description: `Render a clip conditioned on one reference still or clip through an IC-LoRA adapter on the self-hosted ASTRA video API.
+
+Use when an existing picture has to be transformed rather than invented: "ingredients" builds a new clip from the reference's subject; "clean-plate", "colorization", "day-to-night", "deblur", "decompression" and "water-simulation" rework the reference clip; "pixel-upscaler-x2" upscales it (request an output twice the reference size yourself). The server picks the adapter weights from its own catalog \u2014 there is no path argument. The tool uploads the reference and the optional mask itself; pass local paths.
+Do NOT use to animate a still from frame 0 (astra_img2video) or to re-roll a span of a clip (astra_video_retake).
+Status: adapter "ingredients" without conditioningMask and skipStage2 runs as the server's existing ingredients mode. Every other adapter, conditioningMask and skipStage2 come from the 2026-10-17 server design and are refused until that server change is live. Recommended strengths per adapter are unmeasured.
+A reference clip of 2 or more frames above ${ASTRA_VIDEO_MAX_REFERENCE_PIXELS} pixels is refused after upload and before the job, as the server does. skipStage2 skips the second stage, so the output is half resolution. Length: numFrames 8k+1, ${ASTRA_VIDEO_MIN_FRAMES}-${ASTRA_VIDEO_FRAME_LIMITS.ic_lora} (conservative, not generation-tested); there is no autoDuration.
+${ASTRA_LIMITS_LINE}
+
+Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        prompt: {
+          type: "string",
+          description: "What the output clip shows. English recommended. 1-2000 characters."
+        },
+        adapter: {
+          type: "string",
+          enum: [...ASTRA_VIDEO_IC_LORA_ADAPTERS],
+          description: 'IC-LoRA adapter. "ingredients" runs as the existing ingredients mode; the rest run as mode ic_lora.'
+        },
+        referencePath: {
+          type: "string",
+          description: "Local reference still or clip (.png/.jpg/.jpeg up to 32 MiB, .mp4 up to 100 MiB). Uploaded automatically."
+        },
+        referenceStrength: {
+          type: "number",
+          minimum: 0,
+          maximum: 1,
+          description: "Reference conditioning strength, 0.0-1.0 (server default: 1.0)."
+        },
+        conditioningMaskPath: {
+          type: "string",
+          description: "Optional local black-and-white .mp4 attention mask over the reference. Uploaded automatically."
+        },
+        conditioningMaskStrength: {
+          type: "number",
+          minimum: 0,
+          maximum: 1,
+          description: "Mask strength, 0.0-1.0. Requires conditioningMaskPath."
+        },
+        skipStage2: {
+          type: "boolean",
+          description: "Skip the second (upscaling) stage: faster, half-resolution output. Default false."
+        },
+        numFrames: astraNumFramesProperty("ic_lora"),
+        width: ASTRA_WIDTH_PROPERTY,
+        height: ASTRA_HEIGHT_PROPERTY,
+        frameRate: ASTRA_FRAME_RATE_PROPERTY,
+        seed: ASTRA_SEED_PROPERTY,
+        outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
+        filename: ASTRA_FILENAME_PROPERTY
+      },
+      required: ["prompt", "adapter", "referencePath"]
     }
   },
   {
@@ -97658,7 +97918,7 @@ function capabilityStatus() {
           provider: "astra video (self-hosted LTX-2.5)",
           configured: has2(config2.astraVideoApiKey),
           needs: "ASTRA_VIDEO",
-          note: "astra_text2video \xB7 astra_img2video \xB7 astra_keyframe_video \xB7 astra_audio2video \xB7 astra_video_retake \xB7 astra_video_list_uploads \xB7 astra_video_delete_upload (upload management requires server endpoint support; configuration is not a live check) \u2014 our own box, no per-call bill, but ONE render at a time (66-184s each plus queue); the batch lane, not the interactive one"
+          note: "astra_text2video \xB7 astra_img2video \xB7 astra_keyframe_video \xB7 astra_audio2video \xB7 astra_ic_lora \xB7 astra_video_retake \xB7 astra_video_list_uploads \xB7 astra_video_delete_upload (upload management requires server endpoint support; configuration is not a live check) \u2014 our own box, no per-call bill, but ONE render at a time (66-184s each plus queue); the batch lane, not the interactive one"
         }
       ]
     },
@@ -98679,6 +98939,16 @@ Audio duration (seconds): ${result.audioDuration ?? "unknown (reused upload or m
     } catch (error2) {
       return text(error2 instanceof Error ? error2.message : "ASTRA upload deletion failed", true);
     }
+  },
+  astra_ic_lora: async (args) => {
+    const parsed = parseArgs(astraIcLoraSchema, args);
+    const result = await generateIcLora(parsed);
+    return text(
+      `${astraVideoReport("Video generated through an IC-LoRA adapter on the ASTRA video API", result)}
+Adapter: ${parsed.adapter}
+Reference: ${parsed.referencePath}` + (parsed.conditioningMaskPath ? `
+Conditioning mask: ${parsed.conditioningMaskPath}` : "")
+    );
   },
   astra_video_retake: async (args) => {
     const parsed = parseArgs(astraVideoRetakeSchema, args);
