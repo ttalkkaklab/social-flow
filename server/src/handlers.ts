@@ -215,6 +215,22 @@ function astraVideoReport(headline: string, result: import('./astra-video-client
   );
 }
 
+function speechSyncReport(sync: import('./astra-video-client.js').AstraVideoResponse['speechSync']): string {
+  if (!sync) return '';
+  const lines = sync.attempts.map(({ videoPath, seed, check }, i) =>
+    `  attempt ${i + 1}${i === sync.chosen ? ' (chosen)' : ''} · seed ${seed ?? 'server default'} · ${check.status}` +
+    (check.sync ? ` · margin ${check.sync.margin} (best ${check.sync.score} vs chance ${check.sync.chance})` : '') +
+    (check.reason ? ` · ${check.reason}` : '') + ` · ${videoPath}`);
+  const findings = sync.attempts[sync.chosen].check.findings.map((finding) => `  ⚠ ${finding.kind}: ${finding.what}`);
+  const unresolved = sync.attempts[sync.chosen].check.findings.some((finding) => finding.reseed)
+    ? `\nStill no_sync after ${sync.attempts.length} attempt(s); the clip with the best margin is kept. Inspect it, or change the source image or prompt — another seed alone has not helped.`
+    : '';
+  return `\n\nSpeech sync check (picture motion against the supplied speech, ffmpeg only):\n${lines.join('\n')}` +
+    (sync.retryError ? `\n  ${sync.retryError}` : '') +
+    (findings.length ? `\nFindings on the chosen clip:\n${findings.join('\n')}` : '') + unresolved +
+    `\nNot reviewed: ${sync.attempts[sync.chosen].check.notReviewed.join(', ')}.`;
+}
+
 // ── research schemas ─────────────────────────────────────────────
 
 /**
@@ -947,7 +963,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   astra_audio2video: async (args) => {
     const parsed = parseArgs(astraVideo.astraAudio2VideoSchema, args);
     const result = await astraVideo.generateFromAudio(parsed);
-    return text(`${astraVideoReport('Video generated from audio on the ASTRA video API', result)}\nAudio: ${parsed.audioPath ?? 'reused upload'}\naudioUploadId: ${result.audioUploadId}\nAudio expires at: ${result.audioExpiresAt ?? 'unknown (reused upload or metadata unavailable)'}\nAudio duration (seconds): ${result.audioDuration ?? 'unknown (reused upload or metadata unavailable)'}`);
+    return text(`${astraVideoReport('Video generated from audio on the ASTRA video API', result)}\nAudio: ${parsed.audioPath ?? 'reused upload'}\naudioUploadId: ${result.audioUploadId}\nAudio expires at: ${result.audioExpiresAt ?? 'unknown (reused upload or metadata unavailable)'}\nAudio duration (seconds): ${result.audioDuration ?? 'unknown (reused upload or metadata unavailable)'}${speechSyncReport(result.speechSync)}`);
   },
   astra_video_list_uploads: async (args) => {
     astraVideo.astraVideoListUploadsSchema.parse(args);

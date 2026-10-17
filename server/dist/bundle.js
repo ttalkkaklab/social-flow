@@ -16052,7 +16052,7 @@ var require_bignumber = __commonJS({
             intCheck(b, 2, ALPHABET.length, "Base");
             if (b == 10 && alphabetHasNormalDecimalDigits) {
               x2 = new BigNumber2(v);
-              return round(x2, DECIMAL_PLACES + x2.e + 1, ROUNDING_MODE);
+              return round2(x2, DECIMAL_PLACES + x2.e + 1, ROUNDING_MODE);
             }
             str8 = String(v);
             if (isNum = typeof v == "number") {
@@ -16544,7 +16544,7 @@ var require_bignumber = __commonJS({
             }
             if (base == BASE) {
               for (i2 = 1, s2 = qc[0]; s2 >= 10; s2 /= 10, i2++) ;
-              round(q, dp + (q.e = i2 + e2 * LOG_BASE - 1) + 1, rm, more);
+              round2(q, dp + (q.e = i2 + e2 * LOG_BASE - 1) + 1, rm, more);
             } else {
               q.e = e2;
               q.r = +more;
@@ -16563,7 +16563,7 @@ var require_bignumber = __commonJS({
             str8 = coeffToString(n.c);
             str8 = id == 1 || id == 2 && (ne <= TO_EXP_NEG || ne >= TO_EXP_POS) ? toExponential(str8, ne) : toFixedPoint(str8, ne, "0");
           } else {
-            n = round(new BigNumber2(n), i2, rm);
+            n = round2(new BigNumber2(n), i2, rm);
             e2 = n.e;
             str8 = coeffToString(n.c);
             len = str8.length;
@@ -16636,7 +16636,7 @@ var require_bignumber = __commonJS({
             x2.c = x2.e = null;
           };
         })();
-        function round(x2, sd, rm, r2) {
+        function round2(x2, sd, rm, r2) {
           var d, i2, j, k, n, ni, rd, xc = x2.c, pows10 = POWS_TEN;
           if (xc) {
             out: {
@@ -16743,7 +16743,7 @@ var require_bignumber = __commonJS({
             intCheck(dp, 0, MAX);
             if (rm == null) rm = ROUNDING_MODE;
             else intCheck(rm, 0, 8);
-            return round(new BigNumber2(x2), dp + x2.e + 1, rm);
+            return round2(new BigNumber2(x2), dp + x2.e + 1, rm);
           }
           if (!(c = x2.c)) return null;
           n = ((v = c.length - 1) - bitFloor(this.e / LOG_BASE)) * LOG_BASE;
@@ -16806,7 +16806,7 @@ var require_bignumber = __commonJS({
               nIsOdd = i2 % 2;
             } else {
               n = n.times(half);
-              round(n, n.e + 1, 1);
+              round2(n, n.e + 1, 1);
               if (n.e > 14) {
                 nIsOdd = isOdd(n);
               } else {
@@ -16824,13 +16824,13 @@ var require_bignumber = __commonJS({
           }
           if (isModExp) return y;
           if (nIsNeg) y = ONE.div(y);
-          return m2 ? y.mod(m2) : k ? round(y, POW_PRECISION, ROUNDING_MODE, more) : y;
+          return m2 ? y.mod(m2) : k ? round2(y, POW_PRECISION, ROUNDING_MODE, more) : y;
         };
         P.integerValue = function(rm) {
           var n = new BigNumber2(this);
           if (rm == null) rm = ROUNDING_MODE;
           else intCheck(rm, 0, 8);
-          return round(n, n.e + 1, rm);
+          return round2(n, n.e + 1, rm);
         };
         P.isEqualTo = P.eq = function(y, b) {
           return compare(this, new BigNumber2(y, b)) === 0;
@@ -17063,7 +17063,7 @@ var require_bignumber = __commonJS({
             intCheck(sd, 1, MAX);
             if (rm == null) rm = ROUNDING_MODE;
             else intCheck(rm, 0, 8);
-            return round(new BigNumber2(x2), sd, rm);
+            return round2(new BigNumber2(x2), sd, rm);
           }
           if (!(c = x2.c)) return null;
           v = c.length - 1;
@@ -17112,7 +17112,7 @@ var require_bignumber = __commonJS({
                 n = n.slice(s2 - 3, s2 + 1);
                 if (n == "9999" || !rep && n == "4999") {
                   if (!rep) {
-                    round(t2, t2.e + DECIMAL_PLACES + 2, 0);
+                    round2(t2, t2.e + DECIMAL_PLACES + 2, 0);
                     if (t2.times(t2).eq(x2)) {
                       r2 = t2;
                       break;
@@ -17123,7 +17123,7 @@ var require_bignumber = __commonJS({
                   rep = 1;
                 } else {
                   if (!+n || !+n.slice(1) && n.charAt(0) == "5") {
-                    round(r2, r2.e + DECIMAL_PLACES + 2, 1);
+                    round2(r2, r2.e + DECIMAL_PLACES + 2, 1);
                     m2 = !r2.times(r2).eq(x2);
                   }
                   break;
@@ -17131,7 +17131,7 @@ var require_bignumber = __commonJS({
               }
             }
           }
-          return round(r2, r2.e + DECIMAL_PLACES + 1, ROUNDING_MODE, m2);
+          return round2(r2, r2.e + DECIMAL_PLACES + 1, ROUNDING_MODE, m2);
         };
         P.toExponential = function(dp, rm) {
           if (dp != null) {
@@ -17247,7 +17247,7 @@ var require_bignumber = __commonJS({
             if (b == null) {
               str8 = e2 <= TO_EXP_NEG || e2 >= TO_EXP_POS ? toExponential(coeffToString(n.c), e2) : toFixedPoint(coeffToString(n.c), e2, "0");
             } else if (b === 10 && alphabetHasNormalDecimalDigits) {
-              n = round(new BigNumber2(n), DECIMAL_PLACES + e2 + 1, ROUNDING_MODE);
+              n = round2(new BigNumber2(n), DECIMAL_PLACES + e2 + 1, ROUNDING_MODE);
               str8 = toFixedPoint(coeffToString(n.c), n.e, "0");
             } else {
               intCheck(b, 2, ALPHABET.length, "Base");
@@ -20065,17 +20065,17 @@ var require_oauth2client = __commonJS({
         }
         const signed = segments[0] + "." + segments[1];
         let signature = segments[2];
-        let envelope;
+        let envelope2;
         let payload;
         try {
-          envelope = JSON.parse(crypto2.decodeBase64StringUtf8(segments[0]));
+          envelope2 = JSON.parse(crypto2.decodeBase64StringUtf8(segments[0]));
         } catch (err4) {
           if (err4 instanceof Error) {
             err4.message = `Can't parse token envelope: ${segments[0]}': ${err4.message}`;
           }
           throw err4;
         }
-        if (!envelope) {
+        if (!envelope2) {
           throw new Error("Can't parse token envelope: " + segments[0]);
         }
         try {
@@ -20089,11 +20089,11 @@ var require_oauth2client = __commonJS({
         if (!payload) {
           throw new Error("Can't parse token payload: " + segments[1]);
         }
-        if (!Object.prototype.hasOwnProperty.call(certs, envelope.kid)) {
-          throw new Error("No pem found for envelope: " + JSON.stringify(envelope));
+        if (!Object.prototype.hasOwnProperty.call(certs, envelope2.kid)) {
+          throw new Error("No pem found for envelope: " + JSON.stringify(envelope2));
         }
-        const cert = certs[envelope.kid];
-        if (envelope.alg === "ES256") {
+        const cert = certs[envelope2.kid];
+        if (envelope2.alg === "ES256") {
           signature = formatEcdsa.joseToDer(signature, "ES256").toString("base64");
         }
         const verified = await crypto2.verify(cert, signed, signature);
@@ -20139,7 +20139,7 @@ var require_oauth2client = __commonJS({
             throw new Error("Wrong recipient, payload audience != requiredAudience");
           }
         }
-        return new loginticket_1.LoginTicket(envelope, payload);
+        return new loginticket_1.LoginTicket(envelope2, payload);
       }
       /**
        * Returns a promise that resolves with AccessTokenResponse type if
@@ -66261,7 +66261,7 @@ var require_final_speech_chapters = __commonJS({
   "../skills/produce/references/final-speech-chapters.js"(exports, module) {
     "use strict";
     var { createHash: createHash8 } = __require("node:crypto");
-    var { spawnSync: spawnSync3 } = __require("node:child_process");
+    var { spawnSync: spawnSync4 } = __require("node:child_process");
     var { normalize: normalize2, cer } = require_check_tts_quality();
     var RATE2 = 24e3;
     var BYTES2 = 4;
@@ -66270,9 +66270,9 @@ var require_final_speech_chapters = __commonJS({
     var hash5 = (x2) => createHash8("sha256").update(x2).digest("hex");
     var digest2 = (x2) => hash5(JSON.stringify(x2));
     function decode2(media) {
-      const encoded = spawnSync3("ffmpeg", ["-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", String(RATE2), "-c:a", "flac", "-f", "flac", "pipe:1"], { maxBuffer: RATE2 * BYTES2 * 1800 + 65536, timeout: 6e4 });
+      const encoded = spawnSync4("ffmpeg", ["-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", String(RATE2), "-c:a", "flac", "-f", "flac", "pipe:1"], { maxBuffer: RATE2 * BYTES2 * 1800 + 65536, timeout: 6e4 });
       if (encoded.error || encoded.status !== 0) throw new Error("Cannot decode final audio: " + (encoded.error?.message || String(encoded.stderr)));
-      const r2 = spawnSync3("ffmpeg", ["-v", "error", "-i", "pipe:0", "-map", "0:a:0", "-f", "s32le", "pipe:1"], { input: encoded.stdout, maxBuffer: RATE2 * BYTES2 * 1800 + 1024, timeout: 6e4 });
+      const r2 = spawnSync4("ffmpeg", ["-v", "error", "-i", "pipe:0", "-map", "0:a:0", "-f", "s32le", "pipe:1"], { input: encoded.stdout, maxBuffer: RATE2 * BYTES2 * 1800 + 1024, timeout: 6e4 });
       if (r2.error || r2.status !== 0) throw new Error("Cannot decode canonical FLAC: " + (r2.error?.message || String(r2.stderr)));
       if (!r2.stdout.length || r2.stdout.length % BYTES2) throw new Error("Empty or invalid final PCM");
       return r2.stdout;
@@ -78853,6 +78853,7 @@ async function generateWithReferences(request) {
 }
 
 // src/astra-video-client.ts
+import { randomInt } from "node:crypto";
 import * as fs4 from "node:fs";
 import * as path4 from "node:path";
 
@@ -78966,6 +78967,195 @@ function buildQuery(params) {
   return qs ? `?${qs}` : "";
 }
 
+// src/speech-sync-check.ts
+import { spawnSync } from "node:child_process";
+var FPS = 24;
+var PROXY_WIDTH = 128;
+var BLOCK = 8;
+var LAGS = [-2, -1, 0, 1, 2, 3, 4];
+var NULL_SHIFTS = 12;
+var SMOOTH_FRAMES = 5;
+var MOTION_CAP = 0.95;
+var SPEECH_FLOOR_DB = -50;
+var SPEECH_RANGE_DB = 30;
+var MIN_SPEECH_SECONDS = 1;
+var SYNC_MARGIN = 0.1;
+var NOT_REVIEWED = ["phoneme-level lip sync", "which visible person speaks", "voice identity"];
+var round = (n) => Math.round(n * 1e3) / 1e3;
+function ffmpeg(args) {
+  const run = spawnSync("ffmpeg", ["-v", "error", "-nostdin", ...args], { maxBuffer: 512 * 1024 * 1024 });
+  if (run.error) throw new Error(run.error.code === "ENOENT" ? "ffmpeg is not installed" : run.error.message);
+  if (run.status !== 0) throw new Error(`ffmpeg failed: ${String(run.stderr).trim().slice(-300)}`);
+  return run.stdout;
+}
+function probe(video) {
+  const run = spawnSync("ffprobe", ["-v", "error", "-show_entries", "stream=codec_type,width,height:format=duration", "-of", "json", video], { encoding: "utf8" });
+  if (run.error || run.status !== 0) throw new Error(`ffprobe could not read ${video}`);
+  const json2 = JSON.parse(run.stdout);
+  const picture = (json2.streams || []).find((s2) => s2.codec_type === "video");
+  if (!picture?.width || !picture.height) throw new Error(`${video} has no video stream`);
+  return {
+    width: picture.width,
+    height: picture.height,
+    seconds: Number(json2.format?.duration) || 0,
+    audio: (json2.streams || []).some((s2) => s2.codec_type === "audio")
+  };
+}
+function blockMotion(video, width, height) {
+  const w = PROXY_WIDTH;
+  const h2 = Math.max(BLOCK, Math.round(height / width * w / BLOCK) * BLOCK);
+  const raw = ffmpeg(["-i", video, "-vf", `fps=${FPS},scale=${w}:${h2}:flags=area,format=gray`, "-f", "rawvideo", "-"]);
+  const size = w * h2;
+  const frames = Math.floor(raw.length / size);
+  const cols = w / BLOCK, rows = h2 / BLOCK;
+  const series = Array.from({ length: cols * rows }, () => new Array(frames).fill(0));
+  for (let f3 = 1; f3 < frames; f3 += 1) {
+    const cur = f3 * size, prev = cur - size;
+    for (let y = 0; y < h2; y += 1) {
+      const rowBase = Math.floor(y / BLOCK) * cols;
+      for (let x2 = 0; x2 < w; x2 += 1) series[rowBase + Math.floor(x2 / BLOCK)][f3] += Math.abs(raw[cur + y * w + x2] - raw[prev + y * w + x2]);
+    }
+  }
+  return series;
+}
+function envelope(audio, start, seconds, streamFromVideo = false) {
+  const window2 = [...start ? ["-ss", String(start)] : [], ...seconds !== null ? ["-t", String(seconds)] : []];
+  const pcm = ffmpeg([...window2, "-i", audio, ...streamFromVideo ? ["-map", "0:a:0"] : [], "-vn", "-ac", "1", "-ar", "16000", "-f", "s16le", "-"]);
+  const samples = Math.floor(pcm.length / 2);
+  const out = [];
+  for (let f3 = 0; Math.round((f3 + 1) * 16e3 / FPS) <= samples; f3 += 1) {
+    const from = Math.round(f3 * 16e3 / FPS), to = Math.round((f3 + 1) * 16e3 / FPS);
+    let sum = 0;
+    for (let i2 = from; i2 < to; i2 += 1) {
+      const s2 = pcm.readInt16LE(i2 * 2) / 32768;
+      sum += s2 * s2;
+    }
+    out.push(Math.sqrt(sum / (to - from)));
+  }
+  return out;
+}
+var db = (rms) => 20 * Math.log10(Math.max(rms, 1e-9));
+function speechFrames(env2) {
+  const loudest = Math.max(...env2.map(db));
+  return env2.map((v) => db(v) > Math.max(SPEECH_FLOOR_DB, loudest - SPEECH_RANGE_DB));
+}
+function pearson(a, b, lag) {
+  let n = 0, sa = 0, sb = 0, saa = 0, sbb = 0, sab = 0;
+  for (let t2 = Math.max(0, lag); t2 < a.length && t2 - lag < b.length; t2 += 1) {
+    const x2 = a[t2], y = b[t2 - lag];
+    n += 1;
+    sa += x2;
+    sb += y;
+    saa += x2 * x2;
+    sbb += y * y;
+    sab += x2 * y;
+  }
+  if (n < 3) return 0;
+  const va = saa - sa * sa / n, vb = sbb - sb * sb / n;
+  return va > 0 && vb > 0 ? (sab - sa * sb / n) / Math.sqrt(va * vb) : 0;
+}
+function bestSync(motion, env2) {
+  let score4 = -1, lag = 0;
+  for (const series of motion) for (const l of LAGS) {
+    const r2 = pearson(series, env2, l);
+    if (r2 > score4) {
+      score4 = r2;
+      lag = l;
+    }
+  }
+  return { score: score4, lag };
+}
+function movingMean(series, width) {
+  const half = Math.floor(width / 2);
+  return series.map((_, i2) => {
+    let sum = 0, n = 0;
+    for (let j = Math.max(0, i2 - half); j <= Math.min(series.length - 1, i2 + half); j += 1) {
+      sum += series[j];
+      n += 1;
+    }
+    return sum / n;
+  });
+}
+function capped(series) {
+  const cap = [...series].sort((a, b) => a - b)[Math.floor(MOTION_CAP * (series.length - 1))] ?? 0;
+  return series.map((v) => Math.min(v, cap));
+}
+function syncMeasure(motion, env2) {
+  const frames = Math.min(env2.length, motion[0]?.length ?? 0);
+  const clipped = motion.map((s2) => movingMean(capped(s2.slice(0, frames)), SMOOTH_FRAMES));
+  const audio = movingMean(env2.slice(0, frames), SMOOTH_FRAMES);
+  const { score: score4, lag } = bestSync(clipped, audio);
+  const nulls = [];
+  for (let j = 1; j <= NULL_SHIFTS; j += 1) {
+    const k = Math.round(frames * j / (NULL_SHIFTS + 1));
+    if (Math.min(k, frames - k) < FPS) continue;
+    nulls.push(bestSync(clipped, [...audio.slice(k), ...audio.slice(0, k)]).score);
+  }
+  nulls.sort((a, b) => a - b);
+  const chance = nulls.length ? nulls[Math.floor(0.9 * (nulls.length - 1))] : 1;
+  return { score: score4, chance, margin: score4 - chance, lag };
+}
+function checkSpeechSync(opts) {
+  const result = { status: "not_measured", findings: [], notReviewed: NOT_REVIEWED };
+  try {
+    const clip2 = probe(opts.videoPath);
+    const start = opts.audioStartTime ?? 0;
+    let env2;
+    if (opts.audioPath) {
+      env2 = envelope(opts.audioPath, start, opts.audioMaxDuration ?? null);
+      const active = speechFrames(env2);
+      const lastSpeech = (active.lastIndexOf(true) + 1) / FPS;
+      if (lastSpeech > clip2.seconds + 0.1)
+        result.findings.push({
+          kind: "speech_cut",
+          reseed: false,
+          what: `speech runs to ${round(lastSpeech)}s of the supplied window but the clip ends at ${round(clip2.seconds)}s \u2014 request enough numFrames (8k+1, at most 193) and pad the WAV with silence, or split the line; another seed will not lengthen it`
+        });
+      if (clip2.audio) {
+        const own = envelope(opts.videoPath, 0, null, true);
+        let correlation = -1, lagFrames = 0;
+        for (let l = -12; l <= 12; l += 1) {
+          const r2 = pearson(own, env2, l);
+          if (r2 > correlation) {
+            correlation = r2;
+            lagFrames = l;
+          }
+        }
+        result.audio = { correlation: round(correlation), lagFrames };
+        if (correlation < 0.9 || lagFrames !== 0)
+          result.findings.push({
+            kind: "audio_mismatch",
+            reseed: false,
+            what: `the clip's own audio is not the supplied WAV (envelope correlation ${round(correlation)} at ${lagFrames} frame(s) offset) \u2014 mux the pinned WAV instead of the clip track${lagFrames ? " and check the mouth timing against it" : ""}`
+          });
+      } else result.audio = null;
+    } else if (clip2.audio) {
+      env2 = envelope(opts.videoPath, 0, null, true);
+    } else {
+      result.reason = "no local audioPath and no audio track in the clip";
+      return result;
+    }
+    const speechSeconds = speechFrames(env2).slice(0, Math.round(clip2.seconds * FPS)).filter(Boolean).length / FPS;
+    if (speechSeconds < MIN_SPEECH_SECONDS) {
+      result.reason = `only ${round(speechSeconds)}s of speech in the window \u2014 too little to measure`;
+      return result;
+    }
+    const m2 = syncMeasure(blockMotion(opts.videoPath, clip2.width, clip2.height), env2);
+    result.sync = { score: round(m2.score), chance: round(m2.chance), margin: round(m2.margin), lagFrames: m2.lag, speechSeconds: round(speechSeconds) };
+    result.status = m2.margin >= SYNC_MARGIN ? "follows_speech" : "no_sync";
+    if (result.status === "no_sync")
+      result.findings.push({
+        kind: "lip_sync",
+        reseed: true,
+        what: `no region of the picture moves with the speech (best ${round(m2.score)} vs chance ${round(m2.chance)}, margin under ${SYNC_MARGIN}) \u2014 the model likely ignored the voice`
+      });
+  } catch (error2) {
+    result.status = "not_measured";
+    result.reason = error2 instanceof Error ? error2.message : String(error2);
+  }
+  return result;
+}
+
 // src/astra-video-client.ts
 var ASTRA_VIDEO_TIERS = {
   /** `generate` — the default pipeline. The only tier that takes `lora`. */
@@ -78984,6 +79174,7 @@ var ASTRA_VIDEO_ALLOWED_FIELDS = {
   guided_fast: ["auto_duration", "frame_rate", "hdr", "height", "images", "mode", "negative_prompt", "num_frames", "num_generated_keyframes", "num_inference_steps", "prompt", "seed", "width"],
   keyframe: ["frame_rate", "hdr", "height", "images", "mode", "negative_prompt", "num_frames", "num_inference_steps", "prompt", "seed", "width"],
   audio2video: ["audio_max_duration", "audio_start_time", "audio_upload_id", "frame_rate", "hdr", "height", "images", "mode", "negative_prompt", "num_frames", "num_inference_steps", "prompt", "seed", "width"],
+  ingredients: ["frame_rate", "hdr", "height", "images", "mode", "num_frames", "prompt", "references", "seed", "width"],
   retake: ["end_time", "hdr", "mode", "prompt", "seed", "start_time", "video_upload_id"]
 };
 var ASTRA_VIDEO_MIN_FRAMES = 25;
@@ -79178,17 +79369,44 @@ var astraImg2VideoSchema = external_exports.object({
   lastFramePath: external_exports.string().optional(),
   strength: external_exports.number().min(0).max(1).optional(),
   numFrames: numFramesSchema("generate"),
+  autoDuration: autoDurationSchema,
   width: widthSchema,
   height: heightSchema,
   frameRate: frameRateSchema,
   seed: seedSchema,
   lora: loraSchema,
+  negativePrompt: negativePromptSchema,
+  numInferenceSteps: numInferenceStepsSchema,
   numGeneratedKeyframes: numGeneratedKeyframesSchema,
   ...outputFields
 }).superRefine((data, ctx) => {
   const mode = ASTRA_VIDEO_TIERS[data.tier];
   if (data.numFrames !== void 0 && data.numFrames > ASTRA_VIDEO_FRAME_LIMITS[mode]) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["numFrames"], message: `numFrames must be at most ${ASTRA_VIDEO_FRAME_LIMITS[mode]} for mode ${mode}` });
+  }
+  if (mode === "generate") {
+    for (const key of ["negativePrompt", "numInferenceSteps"]) {
+      if (data[key] !== void 0) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: [key],
+          message: `${key} is accepted only on tier "guided"; mode generate has no such field.`
+        });
+      }
+    }
+  }
+  if (data.autoDuration && data.numFrames === void 0) {
+    if (data.lastFramePath) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["autoDuration"],
+        message: "autoDuration cannot be combined with lastFramePath: the last still is pinned to numFrames-1, so give numFrames instead."
+      });
+    }
+    const durationError = checkAutoDuration(data.autoDuration, data.frameRate ?? 24);
+    if (durationError) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["autoDuration"], message: durationError });
+    }
   }
   if (mode === "guided") {
     if ((data.width ?? 1536) !== 1536 || (data.height ?? 1024) !== 1024) {
@@ -79248,6 +79466,8 @@ var astraAudio2VideoSchema = external_exports.object({
   seed: seedSchema,
   negativePrompt: negativePromptSchema,
   numInferenceSteps: numInferenceStepsSchema,
+  expectLipSync: external_exports.boolean().default(false),
+  maxAttempts: external_exports.number().int().min(1).max(3).default(2),
   ...outputFields
 }).superRefine((data, ctx) => {
   if (data.audioPath !== void 0 === (data.audioUploadId !== void 0)) {
@@ -79610,9 +79830,41 @@ async function generateFromAudio(args) {
   const image = args.imagePath ? await uploadFile(args.imagePath) : void 0;
   if (image && image.kind !== "image") throw new Error("ASTRA video imagePath must upload as image");
   const images = image ? [{ uploadId: image.uploadId, frameIdx: 0, strength: args.strength }] : void 0;
-  const body = buildJobBody("audio2video", { ...args, audioUploadId, images });
-  const result = await runJob("audio2video", args.prompt, body, args.outputPath, args.filename);
-  return { ...result, audioUploadId, audioExpiresAt: audio?.expiresAt, audioDuration: audio?.duration };
+  const uploaded = { audioUploadId, audioExpiresAt: audio?.expiresAt, audioDuration: audio?.duration };
+  if (!args.expectLipSync) {
+    const body = buildJobBody("audio2video", { ...args, audioUploadId, images });
+    return { ...await runJob("audio2video", args.prompt, body, args.outputPath, args.filename), ...uploaded };
+  }
+  const results = [];
+  const attempts = [];
+  let retryError;
+  for (let attempt = 1; attempt <= args.maxAttempts; attempt += 1) {
+    const seed = attempt === 1 ? args.seed : randomInt(ASTRA_VIDEO_MAX_SEED);
+    const filename = attempt === 1 || !args.filename ? args.filename : args.filename.replace(/(\.[^.]+)?$/, (ext) => `-attempt${attempt}${ext}`);
+    const body = buildJobBody("audio2video", { ...args, seed, audioUploadId, images });
+    let result;
+    try {
+      result = await runJob("audio2video", args.prompt, body, args.outputPath, filename);
+    } catch (error2) {
+      if (attempt === 1) throw error2;
+      retryError = `attempt ${attempt} failed: ${error2 instanceof Error ? error2.message : String(error2)}`;
+      break;
+    }
+    const check2 = checkSpeechSync({ videoPath: result.videoPath, audioPath: args.audioPath, audioStartTime: args.audioStartTime, audioMaxDuration: args.audioMaxDuration });
+    annotateReceipt(result.videoPath, { speechSync: { attempt, seed: seed ?? null, ...check2 } });
+    results.push(result);
+    attempts.push({ videoPath: result.videoPath, jobId: result.jobId, seed, check: check2 });
+    if (!check2.findings.some((finding) => finding.reseed)) break;
+  }
+  const last = attempts.length - 1;
+  const chosen = attempts[last].check.findings.some((finding) => finding.reseed) ? attempts.reduce((best, a, i2) => (a.check.sync?.margin ?? -Infinity) > (attempts[best].check.sync?.margin ?? -Infinity) ? i2 : best, 0) : last;
+  return { ...results[chosen], ...uploaded, speechSync: { attempts, chosen, ...retryError ? { retryError } : {} } };
+}
+function annotateReceipt(videoPath, extra) {
+  const receiptPath = `${videoPath}.astra-job.json`;
+  const temp = `${receiptPath}.${process.pid}.tmp`;
+  fs4.writeFileSync(temp, JSON.stringify({ ...JSON.parse(fs4.readFileSync(receiptPath, "utf8")), ...extra }, null, 2) + "\n", { mode: 384 });
+  fs4.renameSync(temp, receiptPath);
 }
 async function retakeVideo(args) {
   const source = await uploadFile(args.sourceVideoPath);
@@ -83045,8 +83297,8 @@ function alignmentFromWords(text2, words) {
       cursor = ends[i2];
     }
   }
-  const round = (t2) => Math.round(t2 * 1e3) / 1e3;
-  return { alignment: { characters: chars, character_start_times_seconds: starts.map(round), character_end_times_seconds: ends.map(round) }, matched: count, letters: letterIdx.length };
+  const round2 = (t2) => Math.round(t2 * 1e3) / 1e3;
+  return { alignment: { characters: chars, character_start_times_seconds: starts.map(round2), character_end_times_seconds: ends.map(round2) }, matched: count, letters: letterIdx.length };
 }
 async function alignmentFromAsr(wav, text2, language) {
   if (!existsSync9(wav)) throw new Error(`No WAV at ${wav}`);
@@ -85478,7 +85730,7 @@ main()
 `;
 
 // src/suno-client.ts
-import { spawnSync } from "node:child_process";
+import { spawnSync as spawnSync2 } from "node:child_process";
 import * as path10 from "node:path";
 var SUNO_MODELS = ["V4", "V4_5", "V4_5PLUS", "V4_5ALL", "V5", "V5_5"];
 var DEFAULT_SUNO_MODEL = "V5";
@@ -85677,7 +85929,7 @@ function extOf(filename) {
   return path10.extname(filename).toLowerCase();
 }
 function transcodeToWav(src, dest) {
-  const result = spawnSync(
+  const result = spawnSync2(
     "ffmpeg",
     ["-y", "-v", "error", "-i", src, "-acodec", "pcm_s16le", "-ar", "48000", "-ac", "2", dest],
     { encoding: "utf8", timeout: 12e4 }
@@ -85740,8 +85992,8 @@ async function pollRecord(taskId, opts) {
   for (let poll = 1; poll <= opts.maxPolls; poll += 1) {
     console.error(`[Suno] ${opts.label} in progress... (polling ${poll}/${opts.maxPolls}, task ${taskId})`);
     await sleep5(opts.intervalMs);
-    const envelope = await sunoFetch(`/api/v1/generate/record-info?taskId=${encodeURIComponent(taskId)}`);
-    last = asRecord(envelope.data) ?? {};
+    const envelope2 = await sunoFetch(`/api/v1/generate/record-info?taskId=${encodeURIComponent(taskId)}`);
+    last = asRecord(envelope2.data) ?? {};
     const status = last.status;
     const tracks = tracksFromRecord(last);
     if (isTerminalFailure(status)) {
@@ -85763,8 +86015,8 @@ async function pollLyrics(taskId) {
   for (let poll = 1; poll <= LYRICS_MAX_POLLS; poll += 1) {
     console.error(`[Suno] Lyrics in progress... (polling ${poll}/${LYRICS_MAX_POLLS}, task ${taskId})`);
     await sleep5(LYRICS_POLL_INTERVAL_MS);
-    const envelope = await sunoFetch(`/api/v1/lyrics/record-info?taskId=${encodeURIComponent(taskId)}`);
-    last = asRecord(envelope.data) ?? {};
+    const envelope2 = await sunoFetch(`/api/v1/lyrics/record-info?taskId=${encodeURIComponent(taskId)}`);
+    last = asRecord(envelope2.data) ?? {};
     const status = last.status;
     const lyrics = lyricsFromRecord(last);
     if (isTerminalFailure(status)) {
@@ -85890,10 +86142,10 @@ async function generateLyrics(request) {
 }
 async function getCredits() {
   try {
-    const envelope = await sunoFetch("/api/v1/generate/credit");
-    const credits = typeof envelope.data === "number" ? envelope.data : num2(asRecord(envelope.data) ?? {}, "credits", "credit");
+    const envelope2 = await sunoFetch("/api/v1/generate/credit");
+    const credits = typeof envelope2.data === "number" ? envelope2.data : num2(asRecord(envelope2.data) ?? {}, "credits", "credit");
     if (credits === void 0) {
-      return { success: false, error: `Unexpected credits payload: ${JSON.stringify(envelope.data)}` };
+      return { success: false, error: `Unexpected credits payload: ${JSON.stringify(envelope2.data)}` };
     }
     return { success: true, credits };
   } catch (error2) {
@@ -87773,8 +88025,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 
 Use when a generated background or photo has to move and nobody is waiting on it \u2014 same trade as astra_text2video: free, ours, one job at a time. Give firstFramePath alone to animate from that frame, or add lastFramePath and the clip lands on it. The tool uploads the files itself; pass local paths, not ids.
 Do NOT use for more than two stills \u2014 that is astra_keyframe_video, which pins each image to a frame index. For an immediate clip use veo_img2video or seedance_img2video.
-tier accepts default (generate) or guided only. guided images require 1536x1024 (omitted dimensions use that size); fast images are not enabled. lora is default-only.
-The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. png, jpg and jpeg are accepted, up to 32 MiB each.
+tier accepts default (generate) or guided only. guided images require 1536x1024 (omitted dimensions use that size); fast images are not enabled. lora is default-only; negativePrompt and numInferenceSteps are guided-only. Passing one to the wrong tier is refused before the call.
+The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. autoDuration lets the server choose at most 121 frames from a first still alone; it is refused with lastFramePath unless numFrames is also given (numFrames wins). png, jpg and jpeg are accepted, up to 32 MiB each.
 Warning: image-conditioned generate (width 1280, measured at heights 704/768) failure frames: {121,129,137}; guided (width 1280, measured at height 704) failure frames: {121}. Guided 129/137 succeeded at 1280x704 in server probes (the only guided size probed), but the existing client guided ceiling is 121. The client requires 1536x1024 for guided images, so the guided 1280x704 probes are not client alternatives. Within current client limits use generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at 121 frames also succeeded. Text-only 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause. The server owns the failure-band acceptance gate; this warning adds no client-side block.
 ${ASTRA_LIMITS_LINE}
 Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off \u2014 no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
@@ -87806,11 +88058,14 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
           description: "How strictly the generated frames must match the supplied stills, 0.0-1.0 (default: 1.0 \u2014 hold the image exactly)."
         },
         numFrames: astraNumFramesProperty("generate"),
+        autoDuration: ASTRA_AUTO_DURATION_PROPERTY,
         width: ASTRA_WIDTH_PROPERTY,
         height: ASTRA_HEIGHT_PROPERTY,
         frameRate: ASTRA_FRAME_RATE_PROPERTY,
         seed: ASTRA_SEED_PROPERTY,
         lora: ASTRA_LORA_PROPERTY,
+        negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
+        numInferenceSteps: ASTRA_STEPS_PROPERTY,
         numGeneratedKeyframes: ASTRA_GENERATED_KEYFRAMES_PROPERTY,
         outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
         filename: ASTRA_FILENAME_PROPERTY
@@ -87889,9 +88144,10 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 Use when the picture has to follow a sound you already have \u2014 a narration take, a music bed, a recorded effect \u2014 instead of the picture being cut to it afterwards. Provide exactly one of audioPath (local .wav/.mp3) or audioUploadId (reuse an existing upload without uploading again). Reused ids have unknown expiry/duration locally, so the server checks them. Optionally give imagePath to pin one portrait to frame 0.
 Do NOT use to add sound to a finished clip: this generates new picture from the audio, it does not mux. The rendered video carries the supplied WAV re-encoded as AAC (48kHz stereo): a measured upload-to-output 100ms RMS Pearson correlation was 0.99997 at zero lag. Input WAV must have two channels; mono passes upload and job acceptance but fails during generation with "expected input[1, 1, 507, 66] to have 2 channels, but got 1 channels instead".
 Choose either numFrames or audioMaxDuration, never both. numFrames fixes the clip length. audioMaxDuration uses the shorter of that value and the audio remaining after audioStartTime, floors seconds \xD7 frameRate, then rounds down to 8k+1; more than ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} frames is refused when upload duration is known. audioStartTime must be before the uploaded audio ends. With neither length field, the default is 121 frames (about 5.04s at 24fps), not the source audio length: an 8.000s WAV produced 5.041s of audio. Set numFrames or audioMaxDuration to request a longer span; audioMaxDuration=8.0 at 24fps rounds down to 185 frames (about 7.708s), so grid rounding can still trim the tail. A measured 121-frame render took about 170s plus queue.
+Set expectLipSync:true when every spoken line in the audio belongs to a visible speaker (on_screen). LTX 2.5 sometimes ignores the voice, so after each render ffmpeg compares the picture's motion with the speech loudness; when no region moves with the speech, the same audio, image and prompt render again with a new seed, up to maxAttempts (default 2, each a full render). It never fails the call: the best clip is returned with its findings, and every attempt's seed and measurement are written into its .astra-job.json. It also reports speech cut off by the frame count and a clip audio track that differs from the supplied WAV; another seed fixes neither, so those are reported, not retried. It does not judge phoneme-level lip sync, which visible person spoke, or voice identity, and in medium or wide shots the mouth is too small to measure reliably. Calibrated 2026-10-17 on five real close-ups whose mouths stayed closed (margins \u22120.23 to \u22120.08, threshold 0.1); no real clip that followed the voice was available, and a new seed rarely fixed a refusal, so a second failure points at the opening image, prompt or strength. Leave it off for music, effects or off-screen voice.
 ${ASTRA_LIMITS_LINE}
 
-Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
+Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, the request the server recorded and, with expectLipSync, each attempt's speech sync result.`,
     inputSchema: {
       type: "object",
       properties: {
@@ -87935,6 +88191,18 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         seed: ASTRA_SEED_PROPERTY,
         negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
         numInferenceSteps: ASTRA_STEPS_PROPERTY,
+        expectLipSync: {
+          type: "boolean",
+          default: false,
+          description: "true when every spoken line in the audio is said by a visible person. Checks that the picture moves with the speech after each render and re-renders with a new seed when it does not. Off for music, effects or off-screen voice."
+        },
+        maxAttempts: {
+          type: "integer",
+          minimum: 1,
+          maximum: 3,
+          default: 2,
+          description: "expectLipSync only: total renders including the first (default 2). Each one is a full render (~170s plus queue) on the one-at-a-time ASTRA box."
+        },
         outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
         filename: ASTRA_FILENAME_PROPERTY
       },
@@ -91262,10 +91530,10 @@ var ACTING_REVIEW_MODEL = process.env.SOCIAL_FLOW_ACTING_REVIEW_MODEL?.trim() ||
 var API_VERSION = process.env.SOCIAL_FLOW_TTS_REVIEW_API_VERSION?.trim() || "v1";
 var VISUAL_POLICY = "acting-review-v7";
 var AUDIO_POLICY = "acting-review-v6";
-function actingMediaPart(bytes, probe, mode) {
+function actingMediaPart(bytes, probe2, mode) {
   return {
-    inlineData: { data: bytes.toString("base64"), mimeType: probe.mimeType },
-    ...probe.video && mode !== "audio" ? { videoMetadata: { fps: 8 } } : {}
+    inlineData: { data: bytes.toString("base64"), mimeType: probe2.mimeType },
+    ...probe2.video && mode !== "audio" ? { videoMetadata: { fps: 8 } } : {}
   };
 }
 var MAX_BYTES = 12 * 1024 * 1024;
@@ -91360,7 +91628,7 @@ async function probeActingMedia(file) {
   if (!mimeType || video && mimeType !== "video/mp4") throw new Error("Review supports MP4 video and WAV/FLAC/MP3/M4A audio");
   return { duration: Number(result.format?.duration), audio, video, mimeType };
 }
-function actingReviewOutcome(review, probe, request) {
+function actingReviewOutcome(review, probe2, request) {
   const failures = [];
   const required2 = ["situation"];
   if (request.mode !== "audio") required2.push("expression", "body");
@@ -91397,11 +91665,11 @@ function actingReviewOutcome(review, probe, request) {
       verified = false;
       failures.push(`${track} observation claimed outside requested mode`);
     }
-    if (needed && (!seen.observed || !seen.complete || seen.start === null || seen.end === null || seen.start > 0.1 || Math.abs(seen.end - probe.duration) > 0.25)) {
+    if (needed && (!seen.observed || !seen.complete || seen.start === null || seen.end === null || seen.start > 0.1 || Math.abs(seen.end - probe2.duration) > 0.25)) {
       verified = false;
       failures.push(`${track} coverage incomplete`);
     }
-    if (seen.observed && (!probe[track] || seen.start === null || seen.end === null || seen.end < seen.start || seen.end > probe.duration + 0.25)) {
+    if (seen.observed && (!probe2[track] || seen.start === null || seen.end === null || seen.end < seen.start || seen.end > probe2.duration + 0.25)) {
       verified = false;
       failures.push(`Invalid ${track} coverage`);
     }
@@ -91426,7 +91694,7 @@ function actingReviewOutcome(review, probe, request) {
       }
     }
   }
-  if (review.findings.some((f3) => f3.end < f3.start || f3.end > probe.duration + 0.25)) {
+  if (review.findings.some((f3) => f3.end < f3.start || f3.end > probe2.duration + 0.25)) {
     verified = false;
     failures.push("Invalid finding timestamps");
   }
@@ -91462,13 +91730,13 @@ var ACTING_RESPONSE_JSON_SCHEMA = { type: "object", additionalProperties: false,
     correction: { type: "string", minLength: 1, maxLength: 2e3 }
   } } }
 } };
-async function evaluate(bytes, probe, request) {
+async function evaluate(bytes, probe2, request) {
   const { GoogleGenAI: GoogleGenAI3 } = await Promise.resolve().then(() => (init_node(), node_exports));
   const client = new GoogleGenAI3({ apiKey: requireGeminiKey(), httpOptions: { apiVersion: API_VERSION, timeout: 18e4 } });
   const response = await client.models.generateContent({
     model: ACTING_REVIEW_MODEL,
-    contents: [{ role: "user", parts: [actingMediaPart(bytes, probe, request.mode), {
-      text: `Review the entire supplied media critically against this quoted production brief: ${JSON.stringify({ expectedText: request.expectedText, direction: request.direction, mode: request.mode, measuredDuration: probe.duration })}.
+    contents: [{ role: "user", parts: [actingMediaPart(bytes, probe2, request.mode), {
+      text: `Review the entire supplied media critically against this quoted production brief: ${JSON.stringify({ expectedText: request.expectedText, direction: request.direction, mode: request.mode, measuredDuration: probe2.duration })}.
 Confidence must be a fraction from 0 to 1 (for example 0.95), never a 0\u2013100 percentage. Scores use 0\u2013100. Do not convert uncertainty into a performance deduction; lower confidence and explain the limitation in the coverage evidence.
 Explain confidenceReason with the actual observational basis: what was clearly heard/seen or what prevented reliable judgment. A short clip alone is not proof of poor delivery or uncertainty; identify the specific missing evidence if its brevity limits this judgment. Never manufacture a limitation or inflate confidence.
 Judge the precise brief without expanding its expectations. Mild puzzlement does not require deeper confusion, extra hesitation, slower speech, or exaggerated facial motion. Identify a concrete contradiction to the requested intent, rather than a stylistic preference.
@@ -91501,10 +91769,10 @@ async function reviewActing2(input, deps = { probe: probeActingMedia, evaluate }
   const stat4 = statSync7(mediaPath);
   if (!stat4.isFile() || stat4.size === 0 || stat4.size > MAX_BYTES) throw new Error("Review requires a nonempty media file no larger than 12 MiB");
   const bytes = readFileSync13(mediaPath);
-  const probe = await deps.probe(mediaPath);
-  if (!Number.isFinite(probe.duration) || probe.duration <= 0 || probe.duration > 120) throw new Error("Review requires media duration within (0, 120] seconds");
-  if (request.mode !== "video" && !probe.audio) throw new Error("Requested audio review requires an audio track");
-  if (request.mode !== "audio" && !probe.video) throw new Error("Requested visual review requires a video track");
+  const probe2 = await deps.probe(mediaPath);
+  if (!Number.isFinite(probe2.duration) || probe2.duration <= 0 || probe2.duration > 120) throw new Error("Review requires media duration within (0, 120] seconds");
+  if (request.mode !== "video" && !probe2.audio) throw new Error("Requested audio review requires an audio track");
+  if (request.mode !== "audio" && !probe2.video) throw new Error("Requested visual review requires a video track");
   const mediaSha256 = hash3(bytes);
   if (currentHash(mediaPath) !== mediaSha256) throw new Error("Source media changed during probe; review was not sent");
   const directionSha256 = hash3(JSON.stringify({ direction: request.direction, expectedText: request.expectedText, mode: request.mode }));
@@ -91516,10 +91784,10 @@ async function reviewActing2(input, deps = { probe: probeActingMedia, evaluate }
     try {
       const cached2 = cachedReceiptSchema.parse(JSON.parse(readFileSync13(receiptPath, "utf8")));
       const cachedDirection = hash3(JSON.stringify({ direction: cached2.request.direction, expectedText: cached2.request.expectedText, mode: cached2.request.mode }));
-      if (cached2.policy !== policy || cached2.model !== ACTING_REVIEW_MODEL || cached2.mediaSha256 !== mediaSha256 || cached2.directionSha256 !== directionSha256 || cached2.requestSha256 !== requestSha256 || cachedDirection !== directionSha256 || JSON.stringify(cached2.media) !== JSON.stringify(probe)) throw new Error("Cached receipt identity does not match this review");
+      if (cached2.policy !== policy || cached2.model !== ACTING_REVIEW_MODEL || cached2.mediaSha256 !== mediaSha256 || cached2.directionSha256 !== directionSha256 || cached2.requestSha256 !== requestSha256 || cachedDirection !== directionSha256 || JSON.stringify(cached2.media) !== JSON.stringify(probe2)) throw new Error("Cached receipt identity does not match this review");
       const currentMediaSha2562 = currentHash(mediaPath);
       const sourceChanged2 = cached2.sourceChanged || currentMediaSha2562 !== mediaSha256;
-      const outcome = sourceChanged2 ? unverified(["Source media changed during or after review"]) : cached2.review ? actingReviewOutcome(cached2.review, probe, request) : unverified(cached2.failures);
+      const outcome = sourceChanged2 ? unverified(["Source media changed during or after review"]) : cached2.review ? actingReviewOutcome(cached2.review, probe2, request) : unverified(cached2.failures);
       return { ...cached2, ...outcome, sourceChanged: sourceChanged2, currentMediaSha256: currentMediaSha2562, currentMediaPath: mediaPath, receiptPath, reused: true };
     } catch (error2) {
       return { ...unverified([`Invalid cached receipt: ${error2 instanceof Error ? error2.message : String(error2)}`]), receiptPath, reused: true };
@@ -91537,12 +91805,12 @@ async function reviewActing2(input, deps = { probe: probeActingMedia, evaluate }
   let rejectedObservation = null;
   let result = unverified([]);
   try {
-    const response = await deps.evaluate(bytes, probe, request);
+    const response = await deps.evaluate(bytes, probe2, request);
     rejectedObservation = preserveRejectedObservation(response.observation);
     usage = usageSchema.parse(response.usage);
     review = actingObservationSchema.parse(response.observation);
     rejectedObservation = null;
-    result = actingReviewOutcome(review, probe, request);
+    result = actingReviewOutcome(review, probe2, request);
   } catch (error2) {
     if (error2 && typeof error2 === "object" && "usage" in error2) usage = error2.usage;
     if (error2 && typeof error2 === "object" && "rejectedObservation" in error2) rejectedObservation = preserveRejectedObservation(error2.rejectedObservation);
@@ -91575,7 +91843,7 @@ async function reviewActing2(input, deps = { probe: probeActingMedia, evaluate }
     directionSha256,
     requestSha256,
     request: { ...request, mediaPath },
-    media: probe,
+    media: probe2,
     review,
     rejectedObservation,
     usage,
@@ -91608,7 +91876,7 @@ import { createHash as createHash6, randomUUID as randomUUID6 } from "node:crypt
 import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync10, readFileSync as readFileSync14, realpathSync as realpathSync2, renameSync as renameSync8, statSync as statSync8, writeFileSync as writeFileSync14 } from "node:fs";
 import { dirname as dirname8, join as join13, resolve as resolve9 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
-import { spawnSync as spawnSync2 } from "node:child_process";
+import { spawnSync as spawnSync3 } from "node:child_process";
 var nonempty = external_exports.string().trim().min(1);
 var channelSchema = external_exports.string().regex(CHANNEL_SLUG_RE);
 var AXES2 = ["voice", "purpose", "flow"];
@@ -91750,7 +92018,7 @@ function checkThreadsGate(input) {
     const checker = resolve9(dirname8(fileURLToPath3(import.meta.url)), "../../skills/platform-guide/references/check-style.py");
     for (const [body, surface] of [[input.caption, input.replyToId ? "reply" : "threads"], [input.selfReply, "reply"]]) {
       if (!body) continue;
-      const run = spawnSync2("python3", [checker, "--surface", surface, "-"], { input: body, encoding: "utf8", timeout: 15e3, maxBuffer: 1024 * 1024 });
+      const run = spawnSync3("python3", [checker, "--surface", surface, "-"], { input: body, encoding: "utf8", timeout: 15e3, maxBuffer: 1024 * 1024 });
       if (run.error || run.status !== 0 && run.status !== 1) throw new Error(`Style check failed (${surface}, exit ${run.status}): ${run.error?.message ?? run.stdout}`);
       if (run.status === 1) console.warn(`Style check warning (${surface}, exit 1): ${run.stdout}`);
     }
@@ -98047,6 +98315,21 @@ Bytes: ${result.bytes}
 Elapsed: ${result.elapsedSeconds}s (queue wait included)
 Prompt: ${result.prompt}${recorded}`;
 }
+function speechSyncReport(sync) {
+  if (!sync) return "";
+  const lines = sync.attempts.map(({ videoPath, seed, check: check2 }, i2) => `  attempt ${i2 + 1}${i2 === sync.chosen ? " (chosen)" : ""} \xB7 seed ${seed ?? "server default"} \xB7 ${check2.status}` + (check2.sync ? ` \xB7 margin ${check2.sync.margin} (best ${check2.sync.score} vs chance ${check2.sync.chance})` : "") + (check2.reason ? ` \xB7 ${check2.reason}` : "") + ` \xB7 ${videoPath}`);
+  const findings = sync.attempts[sync.chosen].check.findings.map((finding) => `  \u26A0 ${finding.kind}: ${finding.what}`);
+  const unresolved = sync.attempts[sync.chosen].check.findings.some((finding) => finding.reseed) ? `
+Still no_sync after ${sync.attempts.length} attempt(s); the clip with the best margin is kept. Inspect it, or change the source image or prompt \u2014 another seed alone has not helped.` : "";
+  return `
+
+Speech sync check (picture motion against the supplied speech, ffmpeg only):
+${lines.join("\n")}` + (sync.retryError ? `
+  ${sync.retryError}` : "") + (findings.length ? `
+Findings on the chosen clip:
+${findings.join("\n")}` : "") + unresolved + `
+Not reviewed: ${sync.attempts[sync.chosen].check.notReviewed.join(", ")}.`;
+}
 var searchQuery = external_exports.string().min(1).max(300);
 var searchPage = external_exports.number().int().min(1).max(5).optional();
 var countryCode = external_exports.string().regex(/^[a-z]{2}$/i, "must be a 2-letter country code, e.g. kr, us").optional();
@@ -98764,7 +99047,7 @@ ${pins}`);
 Audio: ${parsed.audioPath ?? "reused upload"}
 audioUploadId: ${result.audioUploadId}
 Audio expires at: ${result.audioExpiresAt ?? "unknown (reused upload or metadata unavailable)"}
-Audio duration (seconds): ${result.audioDuration ?? "unknown (reused upload or metadata unavailable)"}`);
+Audio duration (seconds): ${result.audioDuration ?? "unknown (reused upload or metadata unavailable)"}${speechSyncReport(result.speechSync)}`);
   },
   astra_video_list_uploads: async (args) => {
     astraVideoListUploadsSchema.parse(args);

@@ -18,11 +18,12 @@
  *   `request` the server actually recorded.
  * - `GET /v1/jobs/<id>/result` answers `video/mp4`, or **409** while the job is still running.
  *
- * Six modes, and the server rejects any body key the mode does not own — the error names the
+ * Seven modes, and the server rejects any body key the mode does not own — the error names the
  * whole allow-list, which is how the per-mode field tables below were measured rather than read
- * off a manual. The five exported tools cover all six: text2video carries generate/guided/
+ * off a manual. The five exported tools cover six of them: text2video carries generate/guided/
  * guided_fast behind `tier`, img2video is generate/guided with 1-2 images, and keyframe / audio2video /
- * retake are one mode each.
+ * retake are one mode each. `ingredients` (re-probed 2026-10-17) has no tool yet: the server names
+ * a `references` field but the element format is unmeasured, so it is listed, not guessed at.
  *
  * Two deliberate departures from the sibling clients:
  * - **Uploads do not go through http.ts.** requestRaw/requestBytes JSON.stringify their body;
@@ -31,6 +32,7 @@
  * - **The key never leaves this file.** Errors quote the server's message and the HTTP status,
  *   never the request headers — see redactedFailure().
  */
+import { randomInt } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { z } from 'zod';
@@ -38,6 +40,7 @@ import packageMetadata from '../package.json' with { type: 'json' };
 import { astraVideoBaseUrl, requireAstraVideoKey } from './config.js';
 import { requestRaw } from './http.js';
 import { bareFilenameSchema, resolveOutputFile } from './media-utils.js';
+import { checkSpeechSync } from './speech-sync-check.js';
 // ── constants measured against the live server ───────────────────────────────
 /** The three text-driven modes, exposed as one `tier` argument on astra_text2video. */
 export const ASTRA_VIDEO_TIERS = {
@@ -65,6 +68,7 @@ export const ASTRA_VIDEO_ALLOWED_FIELDS = {
     guided_fast: ['auto_duration', 'frame_rate', 'hdr', 'height', 'images', 'mode', 'negative_prompt', 'num_frames', 'num_generated_keyframes', 'num_inference_steps', 'prompt', 'seed', 'width'],
     keyframe: ['frame_rate', 'hdr', 'height', 'images', 'mode', 'negative_prompt', 'num_frames', 'num_inference_steps', 'prompt', 'seed', 'width'],
     audio2video: ['audio_max_duration', 'audio_start_time', 'audio_upload_id', 'frame_rate', 'hdr', 'height', 'images', 'mode', 'negative_prompt', 'num_frames', 'num_inference_steps', 'prompt', 'seed', 'width'],
+    ingredients: ['frame_rate', 'hdr', 'height', 'images', 'mode', 'num_frames', 'prompt', 'references', 'seed', 'width'],
     retake: ['end_time', 'hdr', 'mode', 'prompt', 'seed', 'start_time', 'video_upload_id'],
 };
 /** Client ceilings: generate/guided measured; guided_fast conservative; server rejects all modes above 193. */
@@ -317,7 +321,13 @@ export const astraText2VideoSchema = z
         }
     }
 });
-/** astra_img2video — generate or guided with one or two stills pinned to frames. */
+/**
+ * astra_img2video — generate or guided with one or two stills pinned to frames.
+ *
+ * negativePrompt and numInferenceSteps exist only on guided, as on text2video. autoDuration
+ * cannot pick a length when lastFramePath is given: the end still is pinned to numFrames-1,
+ * which the client has to know before the call.
+ */
 export const astraImg2VideoSchema = z
     .object({
     prompt: promptSchema,
@@ -326,11 +336,14 @@ export const astraImg2VideoSchema = z
     lastFramePath: z.string().optional(),
     strength: z.number().min(0).max(1).optional(),
     numFrames: numFramesSchema('generate'),
+    autoDuration: autoDurationSchema,
     width: widthSchema,
     height: heightSchema,
     frameRate: frameRateSchema,
     seed: seedSchema,
     lora: loraSchema,
+    negativePrompt: negativePromptSchema,
+    numInferenceSteps: numInferenceStepsSchema,
     numGeneratedKeyframes: numGeneratedKeyframesSchema,
     ...outputFields,
 })
@@ -338,6 +351,31 @@ export const astraImg2VideoSchema = z
     const mode = ASTRA_VIDEO_TIERS[data.tier];
     if (data.numFrames !== undefined && data.numFrames > ASTRA_VIDEO_FRAME_LIMITS[mode]) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['numFrames'], message: `numFrames must be at most ${ASTRA_VIDEO_FRAME_LIMITS[mode]} for mode ${mode}` });
+    }
+    if (mode === 'generate') {
+        for (const key of ['negativePrompt', 'numInferenceSteps']) {
+            if (data[key] !== undefined) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: [key],
+                    message: `${key} is accepted only on tier "guided"; mode generate has no such field.`,
+                });
+            }
+        }
+    }
+    // numFrames wins over autoDuration (the body drops auto_duration), so only a bare range is checked.
+    if (data.autoDuration && data.numFrames === undefined) {
+        if (data.lastFramePath) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['autoDuration'],
+                message: 'autoDuration cannot be combined with lastFramePath: the last still is pinned to numFrames-1, so give numFrames instead.',
+            });
+        }
+        const durationError = checkAutoDuration(data.autoDuration, data.frameRate ?? 24);
+        if (durationError) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['autoDuration'], message: durationError });
+        }
     }
     if (mode === 'guided') {
         if ((data.width ?? 1536) !== 1536 || (data.height ?? 1024) !== 1024) {
@@ -404,6 +442,8 @@ export const astraAudio2VideoSchema = z
     seed: seedSchema,
     negativePrompt: negativePromptSchema,
     numInferenceSteps: numInferenceStepsSchema,
+    expectLipSync: z.boolean().default(false),
+    maxAttempts: z.number().int().min(1).max(3).default(2),
     ...outputFields,
 })
     .superRefine((data, ctx) => {
@@ -834,9 +874,49 @@ export async function generateFromAudio(args) {
     if (image && image.kind !== 'image')
         throw new Error('ASTRA video imagePath must upload as image');
     const images = image ? [{ uploadId: image.uploadId, frameIdx: 0, strength: args.strength }] : undefined;
-    const body = buildJobBody('audio2video', { ...args, audioUploadId, images });
-    const result = await runJob('audio2video', args.prompt, body, args.outputPath, args.filename);
-    return { ...result, audioUploadId, audioExpiresAt: audio?.expiresAt, audioDuration: audio?.duration };
+    const uploaded = { audioUploadId, audioExpiresAt: audio?.expiresAt, audioDuration: audio?.duration };
+    if (!args.expectLipSync) {
+        const body = buildJobBody('audio2video', { ...args, audioUploadId, images });
+        return { ...await runJob('audio2video', args.prompt, body, args.outputPath, args.filename), ...uploaded };
+    }
+    // LTX 2.5 sometimes ignores the voice, and which seeds do is luck: same audio, image and
+    // prompt, a new seed only. Never an error — the best clip ships with its findings.
+    const results = [];
+    const attempts = [];
+    let retryError;
+    for (let attempt = 1; attempt <= args.maxAttempts; attempt += 1) {
+        const seed = attempt === 1 ? args.seed : randomInt(ASTRA_VIDEO_MAX_SEED);
+        const filename = attempt === 1 || !args.filename ? args.filename : args.filename.replace(/(\.[^.]+)?$/, (ext) => `-attempt${attempt}${ext}`);
+        const body = buildJobBody('audio2video', { ...args, seed, audioUploadId, images });
+        let result;
+        try {
+            result = await runJob('audio2video', args.prompt, body, args.outputPath, filename);
+        }
+        catch (error) {
+            if (attempt === 1)
+                throw error;
+            // A failed retry must not cost the clip already on disk.
+            retryError = `attempt ${attempt} failed: ${error instanceof Error ? error.message : String(error)}`;
+            break;
+        }
+        const check = checkSpeechSync({ videoPath: result.videoPath, audioPath: args.audioPath, audioStartTime: args.audioStartTime, audioMaxDuration: args.audioMaxDuration });
+        annotateReceipt(result.videoPath, { speechSync: { attempt, seed: seed ?? null, ...check } });
+        results.push(result);
+        attempts.push({ videoPath: result.videoPath, jobId: result.jobId, seed, check });
+        if (!check.findings.some((finding) => finding.reseed))
+            break;
+    }
+    const last = attempts.length - 1;
+    const chosen = attempts[last].check.findings.some((finding) => finding.reseed)
+        ? attempts.reduce((best, a, i) => ((a.check.sync?.margin ?? -Infinity) > (attempts[best].check.sync?.margin ?? -Infinity) ? i : best), 0)
+        : last;
+    return { ...results[chosen], ...uploaded, speechSync: { attempts, chosen, ...(retryError ? { retryError } : {}) } };
+}
+function annotateReceipt(videoPath, extra) {
+    const receiptPath = `${videoPath}.astra-job.json`;
+    const temp = `${receiptPath}.${process.pid}.tmp`;
+    fs.writeFileSync(temp, JSON.stringify({ ...JSON.parse(fs.readFileSync(receiptPath, 'utf8')), ...extra }, null, 2) + '\n', { mode: 0o600 });
+    fs.renameSync(temp, receiptPath);
 }
 export async function retakeVideo(args) {
     const source = await uploadFile(args.sourceVideoPath);

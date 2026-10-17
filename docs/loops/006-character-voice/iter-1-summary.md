@@ -12,10 +12,10 @@ Regression coverage includes changed identities, unknown/conflicting metadata,
 age-category boundaries, baseline preservation, overlength controls, ordered excerpt
 text, unsupported adapters, baseline/acting tampering, wrong-character scores,
 professional-band evidence, placeholder observations and incomplete reviewer receipts.
-The final full check passed 2,064 tests across 188 suites. Skill lint passed all
+The final full check passed 2,075 tests across 188 suites. Skill lint passed all
 16 rules across 21 skills; whitespace checks passed.
 
-The work branch integrated dev af9111f, including its per-axis observation schema.
+The work branch integrated dev af9111f and latest origin/dev62d499b, including its per-axis observation schema.
 Character fit uses that schema without changing the five frozen weights or the 95
 thresholds. A separate verdict-policy repair aligns the existing 95 professional /
 no-required-correction anchor with acceptance of substantive positive observations.
