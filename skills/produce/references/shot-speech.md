@@ -218,5 +218,7 @@ identity voice and from visible/off-screen `delivery`. Use `speech_manage` to up
 acting, invalidate affected speech, and preserve unchanged takes. Follow
 [acting prompts](acting-prompts.md).
 ElevenLabs permits `eleven_v4` only; Gemini remains supported. Local TTS is removed.
+Read the [v4 API contract](../../_shared/elevenlabs-v4.md) for request limits,
+language codes, IPA, continuity and provenance before calling ElevenLabs tools.
 An explicitly requested review/improvement loop is permitted within its scope;
 normal production continues without scoring or listening approval.

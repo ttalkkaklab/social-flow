@@ -84,6 +84,9 @@ Tags are natural language cues, not a guaranteed enum. Start with a small set of
 place them where delivery changes, and avoid conflicting cues. Punctuation and
 wording also affect performance. Keep v4 model-specific settings; never send
 legacy style/speed sliders or SSML pauses.
+For pronunciation, use v4's slash-delimited `/IPA/` or a pinned alias dictionary;
+keep subtitle spelling separate from the spoken request. See the
+[v4 API contract](../../_shared/elevenlabs-v4.md) for examples and continuity options.
 [ElevenLabs v4](https://elevenlabs.io/docs/overview/capabilities/text-to-speech/eleven-v4),
 [official prompting guidance](https://elevenlabs.io/docs/overview/capabilities/text-to-speech/best-practices).
 

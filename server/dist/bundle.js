@@ -15234,7 +15234,7 @@ async function fetch2(url, options_) {
               finalize();
               return;
             }
-            const requestOptions = {
+            const requestOptions2 = {
               headers: new Headers2(request.headers),
               follow: request.follow,
               counter: request.counter + 1,
@@ -15249,7 +15249,7 @@ async function fetch2(url, options_) {
             };
             if (!isDomainOrSubdomain(request.url, locationURL) || !isSameProtocol(request.url, locationURL)) {
               for (const name of ["authorization", "www-authenticate", "cookie", "cookie2"]) {
-                requestOptions.headers.delete(name);
+                requestOptions2.headers.delete(name);
               }
             }
             if (response_.statusCode !== 303 && request.body && options_.body instanceof Stream2.Readable) {
@@ -15258,15 +15258,15 @@ async function fetch2(url, options_) {
               return;
             }
             if (response_.statusCode === 303 || (response_.statusCode === 301 || response_.statusCode === 302) && request.method === "POST") {
-              requestOptions.method = "GET";
-              requestOptions.body = void 0;
-              requestOptions.headers.delete("content-length");
+              requestOptions2.method = "GET";
+              requestOptions2.body = void 0;
+              requestOptions2.headers.delete("content-length");
             }
             const responseReferrerPolicy = parseReferrerPolicyFromHeader(headers);
             if (responseReferrerPolicy) {
-              requestOptions.referrerPolicy = responseReferrerPolicy;
+              requestOptions2.referrerPolicy = responseReferrerPolicy;
             }
-            resolve11(fetch2(new Request2(locationURL, requestOptions)));
+            resolve11(fetch2(new Request2(locationURL, requestOptions2)));
             finalize();
             return;
           }
@@ -47247,9 +47247,9 @@ var init_node = __esm({
         for (const functionCall of functionCalls) {
           if (functionCall.name in this.functionNameToMcpClient) {
             const mcpClient = this.functionNameToMcpClient[functionCall.name];
-            let requestOptions = void 0;
+            let requestOptions2 = void 0;
             if (this.config.timeout) {
-              requestOptions = {
+              requestOptions2 = {
                 timeout: this.config.timeout
               };
             }
@@ -47261,7 +47261,7 @@ var init_node = __esm({
               // Set the result schema to undefined to allow MCP to rely on the
               // default schema.
               void 0,
-              requestOptions
+              requestOptions2
             );
             functionCallResponseParts.push({
               functionResponse: {
@@ -75173,15 +75173,15 @@ var Protocol = class {
         if (abortController.signal.aborted) {
           throw new McpError(ErrorCode.ConnectionClosed, "Request was cancelled");
         }
-        const requestOptions = { ...options, relatedRequestId: request.id };
-        if (relatedTaskId && !requestOptions.relatedTask) {
-          requestOptions.relatedTask = { taskId: relatedTaskId };
+        const requestOptions2 = { ...options, relatedRequestId: request.id };
+        if (relatedTaskId && !requestOptions2.relatedTask) {
+          requestOptions2.relatedTask = { taskId: relatedTaskId };
         }
-        const effectiveTaskId = requestOptions.relatedTask?.taskId ?? relatedTaskId;
+        const effectiveTaskId = requestOptions2.relatedTask?.taskId ?? relatedTaskId;
         if (effectiveTaskId && taskStore) {
           await taskStore.updateTaskStatus(effectiveTaskId, "input_required");
         }
-        return await this.request(r2, resultSchema, requestOptions);
+        return await this.request(r2, resultSchema, requestOptions2);
       },
       authInfo: extra?.authInfo,
       requestId: request.id,
@@ -80217,6 +80217,7 @@ var ELEVENLABS_DIALOGUE_MODEL = DEFAULT_ELEVENLABS_MODEL;
 var ELEVENLABS_MODEL_CHAR_CAPS = { eleven_v4: 1e4 };
 var MAX_ELEVENLABS_INPUT_CHARS = ELEVENLABS_MODEL_CHAR_CAPS.eleven_v4;
 var MAX_ELEVENLABS_DIALOGUE_CHARS = MAX_ELEVENLABS_INPUT_CHARS;
+var RECOMMENDED_ELEVENLABS_DIALOGUE_CHARS = 2e3;
 var ELEVENLABS_DIALOGUE_MAX_VOICES = 10;
 var ELEVENLABS_DIALOGUE_MAX_INPUTS = 50;
 var ELEVENLABS_OUTPUT_FORMATS = [
@@ -80238,7 +80239,8 @@ var RETRY_BASE_DELAY_MS2 = 1e3;
 var voiceIdSchema = external_exports.string().regex(/^[A-Za-z0-9_-]{1,64}$/, "voiceId must be an ElevenLabs voice_id (letters, digits, _ or -)");
 var modelSchema2 = external_exports.enum(ELEVENLABS_MODELS).optional().default(DEFAULT_ELEVENLABS_MODEL);
 var outputFormatSchema = external_exports.enum(ELEVENLABS_OUTPUT_FORMATS).optional().default(DEFAULT_ELEVENLABS_OUTPUT_FORMAT);
-var languageCodeSchema = external_exports.string().regex(/^[a-z]{2}$/, 'languageCode must be a 2-letter ISO 639-1 code (e.g. "ko")').optional();
+var ELEVENLABS_LANGUAGE_CODE_PATTERN = "^(?:[a-z]{2}|ast|yue|ceb|fil)$";
+var languageCodeSchema = external_exports.string().regex(new RegExp(ELEVENLABS_LANGUAGE_CODE_PATTERN), 'languageCode must be a 2-letter code (e.g. "ko") or ast, yue, ceb, fil').optional();
 var seedSchema2 = external_exports.number().int().min(0).max(4294967295).optional();
 var normalizationSchema = external_exports.enum(ELEVENLABS_TEXT_NORMALIZATION).optional();
 var voiceSettingsFields = {
@@ -80251,11 +80253,22 @@ var voiceSettingsFields = {
 var continuityFields = {
   previousText: external_exports.string().max(100).optional(),
   nextText: external_exports.string().max(100).optional(),
+  previousRequestIds: external_exports.array(external_exports.string().trim().min(1)).min(1).max(3).optional(),
+  nextRequestIds: external_exports.array(external_exports.string().trim().min(1)).min(1).max(3).optional(),
   pronunciationDictionaryLocators: external_exports.array(external_exports.object({
     pronunciationDictionaryId: external_exports.string().trim().min(1),
     versionId: external_exports.string().trim().min(1)
   }).strict()).min(1).max(3).optional()
 };
+var requestOptions = {
+  usePvcAsIvc: external_exports.boolean().optional(),
+  enableLogging: external_exports.boolean().optional()
+};
+function checkRequestLogging(value, ctx) {
+  if (value.enableLogging === false && (value.previousRequestIds?.length || value.nextRequestIds?.length)) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["enableLogging"], message: "Zero retention disables request stitching; omit request IDs or enable logging" });
+  }
+}
 function checkV4Settings(value, ctx) {
   if (value.similarity !== void 0 && value.similarityBoost !== void 0 && value.similarity !== value.similarityBoost) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["similarityBoost"], message: "similarityBoost is a legacy alias of similarity; supply only one value or matching values" });
@@ -80294,10 +80307,12 @@ var elevenLabsGenerateSchema = external_exports.object({
   ...voiceSettingsFields,
   seed: seedSchema2,
   ...continuityFields,
+  ...requestOptions,
   applyTextNormalization: normalizationSchema,
   ...outputFields2
 }).strict().superRefine((value, ctx) => {
   checkV4Settings(value, ctx);
+  checkRequestLogging(value, ctx);
   checkV4Text(value.text, ctx, ["text"]);
   checkFilenameMatchesFormat(value, ctx);
 });
@@ -80310,12 +80325,14 @@ var elevenLabsDialogueSchema = external_exports.object({
   model: modelSchema2,
   ...voiceSettingsFields,
   ...continuityFields,
+  ...requestOptions,
   seed: seedSchema2,
   languageCode: languageCodeSchema,
   applyTextNormalization: normalizationSchema,
   ...outputFields2
 }).strict().superRefine((value, ctx) => {
   checkV4Settings(value, ctx);
+  checkRequestLogging(value, ctx);
   for (const [index, line] of value.inputs.entries()) checkV4Text(line.text, ctx, ["inputs", index, "text"]);
   const total = value.inputs.reduce((sum, line) => sum + line.text.length, 0);
   if (total > MAX_ELEVENLABS_DIALOGUE_CHARS) {
@@ -80544,6 +80561,9 @@ function elevenLabsDialogueRequestBody(request) {
     ...request.languageCode ? { language_code: request.languageCode } : {},
     ...request.previousText ? { previous_text: request.previousText } : {},
     ...request.nextText ? { future_text: request.nextText } : {},
+    ...request.previousRequestIds ? { previous_request_ids: request.previousRequestIds } : {},
+    ...request.nextRequestIds ? { next_request_ids: request.nextRequestIds } : {},
+    ...request.usePvcAsIvc !== void 0 ? { use_pvc_as_ivc: request.usePvcAsIvc } : {},
     ...request.pronunciationDictionaryLocators ? { pronunciation_dictionary_locators: request.pronunciationDictionaryLocators.map((d) => ({ pronunciation_dictionary_id: d.pronunciationDictionaryId, version_id: d.versionId })) } : {},
     ...request.applyTextNormalization ? { apply_text_normalization: request.applyTextNormalization } : {}
   };
@@ -80562,12 +80582,15 @@ async function generateElevenLabsDialogue(request) {
     const outputDir = request.outputPath || process.cwd();
     const filename = request.filename || `elevenlabs_dialogue_${Date.now()}${extensionForFormat(request.outputFormat)}`;
     const totalChars = request.inputs.reduce((sum, line) => sum + line.text.length, 0);
+    const warnings = totalChars > RECOMMENDED_ELEVENLABS_DIALOGUE_CHARS ? [`Dialogue contains ${totalChars} characters; ElevenLabs recommends at most ${RECOMMENDED_ELEVENLABS_DIALOGUE_CHARS} per request. Longer requests may terminate early or fail validation; split at scene boundaries.`] : [];
     const voices = new Set(request.inputs.map((line) => line.voiceId));
     console.error(
       `[ElevenLabs] Synthesizing dialogue... (${request.inputs.length} lines, ${voices.size} voices, ${totalChars} chars, ${request.outputFormat})`
     );
     const body = elevenLabsDialogueRequestBody(request);
-    const endpoint = `/v1/text-to-dialogue${request.timestamps ? "/with-timestamps" : ""}?output_format=${request.outputFormat}`;
+    const query = new URLSearchParams({ output_format: request.outputFormat });
+    if (request.enableLogging !== void 0) query.set("enable_logging", String(request.enableLogging));
+    const endpoint = `/v1/text-to-dialogue${request.timestamps ? "/with-timestamps" : ""}?${query}`;
     const response = await elevenFetch(endpoint, { method: "POST", body: JSON.stringify(body) }, timeoutFor(totalChars));
     const meta = readMeta(response);
     if (request.timestamps) {
@@ -80576,11 +80599,15 @@ async function generateElevenLabsDialogue(request) {
         model: ELEVENLABS_DIALOGUE_MODEL,
         inputs: request.inputs.map((line) => ({ voice_id: line.voiceId, text: line.text })),
         ...request.inputs.length === 1 ? { voice_id: request.inputs[0].voiceId, text: request.inputs[0].text } : {},
-        request: body
+        request: body,
+        output_format: request.outputFormat,
+        enable_logging: request.enableLogging ?? true,
+        ...meta
       });
       console.error(`[ElevenLabs] Dialogue saved to: ${saved.audioPath} (+ ${path6.basename(saved.alignmentPath)})`);
       return {
         success: true,
+        warnings,
         audioPath: saved.audioPath,
         alignmentPath: saved.alignmentPath,
         model: ELEVENLABS_DIALOGUE_MODEL,
@@ -80597,6 +80624,7 @@ async function generateElevenLabsDialogue(request) {
     console.error(`[ElevenLabs] Dialogue saved to: ${audioPath}`);
     return {
       success: true,
+      warnings,
       audioPath,
       model: ELEVENLABS_DIALOGUE_MODEL,
       outputFormat: request.outputFormat,
@@ -85138,16 +85166,27 @@ var ELEVENLABS_TIMESTAMPS_PROPERTY = {
   description: "Also fetch per-character timing (default: false). Uses the with-timestamps endpoint at the same price and writes <audio basename>.alignment.json next to the audio \u2014 the vendor's `alignment` (start/end seconds for every input character) and `normalized_alignment` verbatim. Read `alignment`: for Korean the normalized one is romanized and cannot index the source text.",
   default: false
 };
+var ELEVENLABS_LANGUAGE_CODE_PROPERTY = {
+  type: "string",
+  description: 'Text language, e.g. "ko", "en", "ja". v4 also accepts ast, yue, ceb and fil for languages without a two-letter code. Omit for automatic detection.',
+  pattern: ELEVENLABS_LANGUAGE_CODE_PATTERN
+};
 var ELEVENLABS_SEED_PROPERTY = {
-  type: "number",
-  description: "Best-effort seed 0\u20134294967295. Same inputs can still vary; preserve for comparison, never promise deterministic audio.",
+  type: "integer",
+  description: "Best-effort seed 0\u20134294967295, e.g. 42. Same inputs can still vary; preserve for comparison, never promise deterministic audio.",
   minimum: 0,
   maximum: 4294967295
 };
 var ELEVENLABS_NORMALIZATION_PROPERTY = {
   type: "string",
-  description: 'Number/date reading: "auto" (vendor default), "on" (always spell out digits and dates \u2014 flash_v2_5 reads them raw otherwise, so turn this on for copy with prices or dates), "off" (never).',
+  description: 'Text normalization: "auto" (vendor default), "on" (normalize numbers and dates), "off" (skip). Example: "on" for a script containing dates.',
   enum: [...ELEVENLABS_TEXT_NORMALIZATION]
+};
+var ELEVENLABS_STABILITY_PROPERTY = {
+  type: "number",
+  description: "v4 delivery stability 0\u20131, e.g. 0.5 (vendor default). Lower permits more expressive variation; higher is steadier. Preserve a pinned value across retakes.",
+  minimum: 0,
+  maximum: 1
 };
 var MUSIC_SCALE_ENUM = [...MUSIC_SCALES];
 var MUSIC_MODE_ENUM = [...MUSIC_GENERATION_MODES];
@@ -85634,20 +85673,24 @@ var storyboardShotInput = {
 };
 var ELEVENLABS_V4_PROPERTIES = {
   model: { type: "string", enum: [...ELEVENLABS_MODELS], default: DEFAULT_ELEVENLABS_MODEL, description: "Only eleven_v4 is accepted. Never fall back to a legacy model." },
-  languageCode: { type: "string", pattern: "^[a-z]{2}$", description: "ISO 639-1 text language, e.g. ko." },
-  stability: { type: "number", minimum: 0, maximum: 1, description: "Consistency of delivery; lower permits more expression." },
-  similarity: { type: "number", minimum: 0, maximum: 1, description: "Similarity to the chosen voice; maps to settings.similarity." },
-  similarityBoost: { type: "number", minimum: 0, maximum: 1, description: "Deprecated alias for similarity; do not supply both with different values." },
+  languageCode: ELEVENLABS_LANGUAGE_CODE_PROPERTY,
+  stability: ELEVENLABS_STABILITY_PROPERTY,
+  similarity: { type: "number", minimum: 0, maximum: 1, description: "Adherence to the reference voice, e.g. 0.75 (vendor default); maps to settings.similarity. Higher may reduce naturalness." },
+  similarityBoost: { type: "number", minimum: 0, maximum: 1, description: "Deprecated alias for similarity, e.g. 0.75; do not supply both with different values." },
   speed: { type: "number", enum: [1], description: "Compatibility no-op only. v4 does not accept a numerical speed setting." },
   seed: ELEVENLABS_SEED_PROPERTY,
-  previousText: { type: "string", maxLength: 100, description: "Prior speech context; not synthesized." },
-  nextText: { type: "string", maxLength: 100, description: "Following speech context; maps to future_text, not synthesized." },
-  pronunciationDictionaryLocators: { type: "array", minItems: 1, maxItems: 3, description: "Pinned dictionary versions.", items: { type: "object", additionalProperties: false, properties: { pronunciationDictionaryId: { type: "string", description: "Dictionary id." }, versionId: { type: "string", description: "Version id." } }, required: ["pronunciationDictionaryId", "versionId"] } },
+  previousText: { type: "string", maxLength: 100, description: 'Prior speech context, e.g. "We arrived."; not synthesized. Provider support can vary.' },
+  nextText: { type: "string", maxLength: 100, description: 'Following context, e.g. "Then we left."; maps to future_text, not synthesized. Provider support can vary.' },
+  previousRequestIds: { type: "array", minItems: 1, maxItems: 3, items: { type: "string", minLength: 1 }, description: 'Real dialogue request IDs for continuity, e.g. ["prior-request-id"]. Last is closest to this take. Requires logging; provider support can vary.' },
+  nextRequestIds: { type: "array", minItems: 1, maxItems: 3, items: { type: "string", minLength: 1 }, description: 'Real following dialogue request IDs, e.g. ["next-request-id"], for a middle-clip retake. First is closest. Requires logging; provider support can vary.' },
+  usePvcAsIvc: { type: "boolean", description: "Explicitly use the instant-clone version of a professional voice, e.g. true. Omitted uses provider default false. May change expressiveness, latency and voice character; never enable as an automatic fallback." },
+  enableLogging: { type: "boolean", description: "Provider request logging, e.g. true (provider default). false requests Enterprise-only zero retention and disables request stitching; local audio and sidecars are still saved." },
+  pronunciationDictionaryLocators: { type: "array", minItems: 1, maxItems: 3, description: 'Pinned dictionary versions, e.g. [{"pronunciationDictionaryId":"dict-id","versionId":"version-id"}].', items: { type: "object", additionalProperties: false, properties: { pronunciationDictionaryId: { type: "string", minLength: 1, description: "Dictionary id from tts_elevenlabs_dictionary." }, versionId: { type: "string", minLength: 1, description: "Version id from tts_elevenlabs_dictionary." } }, required: ["pronunciationDictionaryId", "versionId"] } },
   applyTextNormalization: ELEVENLABS_NORMALIZATION_PROPERTY,
   outputFormat: ELEVENLABS_OUTPUT_FORMAT_PROPERTY,
   timestamps: ELEVENLABS_TIMESTAMPS_PROPERTY,
-  outputPath: { type: "string", description: "Output directory." },
-  filename: { type: "string", description: "Output basename with matching extension." }
+  outputPath: { type: "string", description: "Output directory, e.g. /tmp/speech. Defaults to the working directory." },
+  filename: { type: "string", description: "Output basename with matching extension, e.g. shot-01.wav. Omit for a generated name." }
 };
 var ACTING_PROPERTY = { type: "object", additionalProperties: false, description: "Per-line performance, separate from character identity. Empty object clears direction.", properties: {
   direction: { type: "string", maxLength: 500, description: "Short plain delivery direction; no bracket markup." },
@@ -87825,7 +87868,7 @@ Requires ffmpeg and GEMINI_API_KEY even for local synthesis. One paid audio-revi
           audioSha256: { type: "string", pattern: "^[a-f0-9]{64}$", description: "SHA-256 of the current checked WAV, as recorded in its quality proof." },
           reason: { type: "string", minLength: 10, maxLength: 1e3, description: "Actual time, word or sound defect observed during listening." }
         } },
-        episode: { type: "object", additionalProperties: false, description: "Required for ElevenLabs assembly. Ordered complete scene texts, current index and one fixed seed. Derives previousText/nextText on supported models; v3 omits them and relies on final listening for scene continuity.", properties: {
+        episode: { type: "object", additionalProperties: false, description: "Required for ElevenLabs assembly. Ordered complete scene texts, current index and one fixed seed. Derives v4 previousText/nextText, bounded to 100 characters per side. A fixed seed is best effort; listening is not automatic.", properties: {
           texts: { description: "Complete scene texts in playback order.", type: "array", minItems: 1, maxItems: 80, items: { type: "string", minLength: 1, maxLength: 4e3 } },
           index: { description: "Index of this scene in texts, starting at zero.", type: "integer", minimum: 0 },
           seed: { description: "One seed fixed across the episode and all retakes.", type: "integer", minimum: 0, maximum: 4294967295 }
@@ -88016,9 +88059,9 @@ Returns: a text block with the saved .wav file path, speaker/voice assignments, 
     name: "tts_elevenlabs_generate",
     title: "ElevenLabs v4 single voice",
     annotations: HINT.generate,
-    description: "Generate one voice with eleven_v4 through Text to Dialogue. Put short acting directions and vocal events in square brackets inside text. Returns RIFF WAV by default, measured character cost and optional timestamps. Only v4 is supported; old models and local TTS are removed. Use tts_elevenlabs_dialogue for multiple voices, or Gemini when selected. Keep identity voice pinned; scene acting may change. Free-tier output is non-commercial. No automatic listening review.",
+    description: "Create a paid single-voice take with eleven_v4 through Text to Dialogue. Use for narration, voiceover or a character line. Put delivery cues in [audio tags] and pronunciation in /IPA/. Returns a local audio path (RIFF WAV by default), available usage/request metadata, warnings and an optional alignment sidecar. Do NOT use to discover voices \u2014 use tts_elevenlabs_voices; use tts_elevenlabs_dialogue for multiple voices. Preserve the pinned voice. Free-tier output is non-commercial. No automatic review or model fallback.",
     inputSchema: { type: "object", additionalProperties: false, properties: {
-      text: { type: "string", minLength: 1, maxLength: MAX_ELEVENLABS_INPUT_CHARS, description: "Spoken text with square-bracket acting tags. v4 supports up to 10000 characters; short coherent scenes are preferable. No SSML." },
+      text: { type: "string", minLength: 1, maxLength: MAX_ELEVENLABS_INPUT_CHARS, description: 'Spoken text, e.g. "[whispering] Hello."; /IPA/ is supported, SSML is not. Model cap 10000; Dialogue recommends <=2000 total characters to avoid truncation or validation failures. Longer accepted inputs return a warning.' },
       voiceId: ELEVENLABS_VOICE_ID_PROPERTY,
       ...ELEVENLABS_V4_PROPERTIES
     }, required: ["text", "voiceId"] }
@@ -88027,10 +88070,10 @@ Returns: a text block with the saved .wav file path, speaker/voice assignments, 
     name: "tts_elevenlabs_dialogue",
     title: "ElevenLabs v4 multi-voice dialogue",
     annotations: HINT.generate,
-    description: "Generate a continuous dialogue with eleven_v4. Each input contains text and voiceId; use square-bracket acting tags in that turn. Unlike tts_multi_speaker, this plugin accepts up to 10 distinct voices (plugin bound). Prefer <=2000 total characters for coherent performance; hard cap 10000. Optional timestamps preserve voice_segments. Mixed-speaker audio needs an explicit dialogue assembly route; do not pass it to a single-speaker scene builder. No automatic review or model fallback.",
+    description: "Create paid multi-voice dialogue with eleven_v4 for conversations or character exchanges. Each turn has text and voiceId, with optional [audio tags] or /IPA/ in text. REST permits 10 distinct voices. Keep total text <=2000 characters for reliable generation; model cap 10000. Returns a local audio path, available usage/request metadata, warnings and optional timestamps with voice_segments. Do NOT use to discover voices \u2014 use tts_elevenlabs_voices. Use tts_elevenlabs_generate for one voice, or tts_multi_speaker for selected Gemini dialogue. Mixed-speaker output requires an explicit dialogue assembly route. No automatic review or model fallback.",
     inputSchema: { type: "object", additionalProperties: false, properties: {
-      inputs: { type: "array", minItems: 1, maxItems: ELEVENLABS_DIALOGUE_MAX_INPUTS, description: "Ordered turns; at most 10 voices in this plugin.", items: { type: "object", additionalProperties: false, properties: {
-        text: { type: "string", minLength: 1, description: "Turn transcript, optionally with v4 audio tags." },
+      inputs: { type: "array", minItems: 1, maxItems: ELEVENLABS_DIALOGUE_MAX_INPUTS, description: 'Ordered turns, e.g. [{"text":"Hello.","voiceId":"your-voice-id"}]. REST permits 10 voices; this plugin accepts up to 50 turns.', items: { type: "object", additionalProperties: false, properties: {
+        text: { type: "string", minLength: 1, description: 'Turn transcript, e.g. "[laughing] Hello."; optional v4 audio tags or /IPA/.' },
         voiceId: ELEVENLABS_VOICE_ID_PROPERTY
       }, required: ["text", "voiceId"] } },
       ...ELEVENLABS_V4_PROPERTIES
@@ -96752,7 +96795,8 @@ function elevenlabsFormatNote(format) {
   return format.startsWith("wav_") || format.startsWith("pcm_") ? ` (mono 16-bit WAV ${Number(format.split("_")[1]) / 1e3}kHz \u2014 RIFF, builder-ready)` : " (mp3 \u2014 not for build-reel.sh narration input)";
 }
 function elevenlabsMeta(result) {
-  return (result.durationSeconds !== void 0 ? `Duration: ${result.durationSeconds}s
+  return (result.warnings?.map((warning) => `Warning: ${warning}
+`).join("") ?? "") + (result.durationSeconds !== void 0 ? `Duration: ${result.durationSeconds}s
 ` : "") + (result.characterCost !== void 0 ? `Character cost: ${result.characterCost} (vendor-metered characters \u2014 the billing quantity; log this \xF7 1000 in the cost ledger)
 ` : "") + (result.latencyMs !== void 0 ? `Vendor latency: ${result.latencyMs} ms
 ` : "") + (result.requestId ? `Request ID: ${result.requestId}

@@ -87,8 +87,10 @@ function elevenlabsMeta(result: {
   latencyMs?: number;
   alignmentPath?: string;
   alignedCharacters?: number;
+  warnings?: string[];
 }): string {
   return (
+    (result.warnings?.map(warning => `Warning: ${warning}\n`).join('') ?? '') +
     (result.durationSeconds !== undefined ? `Duration: ${result.durationSeconds}s\n` : '') +
     (result.characterCost !== undefined ? `Character cost: ${result.characterCost} (vendor-metered characters — the billing quantity; log this ÷ 1000 in the cost ledger)\n` : '') +
     (result.latencyMs !== undefined ? `Vendor latency: ${result.latencyMs} ms\n` : '') +

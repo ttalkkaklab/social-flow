@@ -40,6 +40,7 @@ import {
   ELEVENLABS_DIALOGUE_MAX_VOICES,
   ELEVENLABS_DIALOGUE_MODEL,
   ELEVENLABS_MODELS,
+  ELEVENLABS_LANGUAGE_CODE_PATTERN,
   ELEVENLABS_MODEL_CHAR_CAPS,
   ELEVENLABS_OUTPUT_FORMATS,
   ELEVENLABS_TEXT_NORMALIZATION,
@@ -428,13 +429,13 @@ const ELEVENLABS_TIMESTAMPS_PROPERTY = {
 const ELEVENLABS_LANGUAGE_CODE_PROPERTY = {
   type: 'string',
   description:
-    'ISO 639-1 code to enforce ("ko", "en", "ja"). Only eleven_flash_v2_5 / eleven_turbo_v2_5 / eleven_v3 honor it; eleven_multilingual_v2 detects the language from the text and ignores this. Set it for short Korean lines on flash — a two-word line can be misdetected.',
-  pattern: '^[a-z]{2}$',
+    'Text language, e.g. "ko", "en", "ja". v4 also accepts ast, yue, ceb and fil for languages without a two-letter code. Omit for automatic detection.',
+  pattern: ELEVENLABS_LANGUAGE_CODE_PATTERN,
 };
 
 const ELEVENLABS_SEED_PROPERTY = {
-  type: 'number',
-  description: 'Best-effort seed 0–4294967295. Same inputs can still vary; preserve for comparison, never promise deterministic audio.',
+  type: 'integer',
+  description: 'Best-effort seed 0–4294967295, e.g. 42. Same inputs can still vary; preserve for comparison, never promise deterministic audio.',
   minimum: 0,
   maximum: 4294967295,
 };
@@ -442,14 +443,14 @@ const ELEVENLABS_SEED_PROPERTY = {
 const ELEVENLABS_NORMALIZATION_PROPERTY = {
   type: 'string',
   description:
-    'Number/date reading: "auto" (vendor default), "on" (always spell out digits and dates — flash_v2_5 reads them raw otherwise, so turn this on for copy with prices or dates), "off" (never).',
+    'Text normalization: "auto" (vendor default), "on" (normalize numbers and dates), "off" (skip). Example: "on" for a script containing dates.',
   enum: [...ELEVENLABS_TEXT_NORMALIZATION],
 };
 
 const ELEVENLABS_STABILITY_PROPERTY = {
   type: 'number',
   description:
-    'Voice stability 0–1 (vendor default 0.5). Higher is steadier and flatter; lower is more expressive and can wobble between takes. On eleven_v3 this is a 3-way mode, not a slider — 0.0 Creative (audio tags react most, occasional hallucinated words), 0.5 Natural, 1.0 Robust (tags barely react); other values are snapped. Keep it identical across every cut of one video.',
+    'v4 delivery stability 0–1, e.g. 0.5 (vendor default). Lower permits more expressive variation; higher is steadier. Preserve a pinned value across retakes.',
   minimum: 0,
   maximum: 1,
 };
@@ -974,18 +975,22 @@ const storyboardShotInput = {
 
 const ELEVENLABS_V4_PROPERTIES = {
   model: { type: 'string', enum: [...ELEVENLABS_MODELS], default: DEFAULT_ELEVENLABS_MODEL, description: 'Only eleven_v4 is accepted. Never fall back to a legacy model.' },
-  languageCode: { type: 'string', pattern: '^[a-z]{2}$', description: 'ISO 639-1 text language, e.g. ko.' },
-  stability: { type: 'number', minimum: 0, maximum: 1, description: 'Consistency of delivery; lower permits more expression.' },
-  similarity: { type: 'number', minimum: 0, maximum: 1, description: 'Similarity to the chosen voice; maps to settings.similarity.' },
-  similarityBoost: { type: 'number', minimum: 0, maximum: 1, description: 'Deprecated alias for similarity; do not supply both with different values.' },
+  languageCode: ELEVENLABS_LANGUAGE_CODE_PROPERTY,
+  stability: ELEVENLABS_STABILITY_PROPERTY,
+  similarity: { type: 'number', minimum: 0, maximum: 1, description: 'Adherence to the reference voice, e.g. 0.75 (vendor default); maps to settings.similarity. Higher may reduce naturalness.' },
+  similarityBoost: { type: 'number', minimum: 0, maximum: 1, description: 'Deprecated alias for similarity, e.g. 0.75; do not supply both with different values.' },
   speed: { type: 'number', enum: [1], description: 'Compatibility no-op only. v4 does not accept a numerical speed setting.' },
   seed: ELEVENLABS_SEED_PROPERTY,
-  previousText: { type: 'string', maxLength: 100, description: 'Prior speech context; not synthesized.' },
-  nextText: { type: 'string', maxLength: 100, description: 'Following speech context; maps to future_text, not synthesized.' },
-  pronunciationDictionaryLocators: { type: 'array', minItems: 1, maxItems: 3, description: 'Pinned dictionary versions.', items: { type: 'object', additionalProperties: false, properties: { pronunciationDictionaryId: { type: 'string', description: 'Dictionary id.' }, versionId: { type: 'string', description: 'Version id.' } }, required: ['pronunciationDictionaryId','versionId'] } },
+  previousText: { type: 'string', maxLength: 100, description: 'Prior speech context, e.g. "We arrived."; not synthesized. Provider support can vary.' },
+  nextText: { type: 'string', maxLength: 100, description: 'Following context, e.g. "Then we left."; maps to future_text, not synthesized. Provider support can vary.' },
+  previousRequestIds: { type: 'array', minItems: 1, maxItems: 3, items: { type: 'string', minLength: 1 }, description: 'Real dialogue request IDs for continuity, e.g. ["prior-request-id"]. Last is closest to this take. Requires logging; provider support can vary.' },
+  nextRequestIds: { type: 'array', minItems: 1, maxItems: 3, items: { type: 'string', minLength: 1 }, description: 'Real following dialogue request IDs, e.g. ["next-request-id"], for a middle-clip retake. First is closest. Requires logging; provider support can vary.' },
+  usePvcAsIvc: { type: 'boolean', description: 'Explicitly use the instant-clone version of a professional voice, e.g. true. Omitted uses provider default false. May change expressiveness, latency and voice character; never enable as an automatic fallback.' },
+  enableLogging: { type: 'boolean', description: 'Provider request logging, e.g. true (provider default). false requests Enterprise-only zero retention and disables request stitching; local audio and sidecars are still saved.' },
+  pronunciationDictionaryLocators: { type: 'array', minItems: 1, maxItems: 3, description: 'Pinned dictionary versions, e.g. [{"pronunciationDictionaryId":"dict-id","versionId":"version-id"}].', items: { type: 'object', additionalProperties: false, properties: { pronunciationDictionaryId: { type: 'string', minLength: 1, description: 'Dictionary id from tts_elevenlabs_dictionary.' }, versionId: { type: 'string', minLength: 1, description: 'Version id from tts_elevenlabs_dictionary.' } }, required: ['pronunciationDictionaryId','versionId'] } },
   applyTextNormalization: ELEVENLABS_NORMALIZATION_PROPERTY,
   outputFormat: ELEVENLABS_OUTPUT_FORMAT_PROPERTY, timestamps: ELEVENLABS_TIMESTAMPS_PROPERTY,
-  outputPath: { type: 'string', description: 'Output directory.' }, filename: { type: 'string', description: 'Output basename with matching extension.' }
+  outputPath: { type: 'string', description: 'Output directory, e.g. /tmp/speech. Defaults to the working directory.' }, filename: { type: 'string', description: 'Output basename with matching extension, e.g. shot-01.wav. Omit for a generated name.' }
 };
 
 const ACTING_PROPERTY = { type: 'object', additionalProperties: false, description: 'Per-line performance, separate from character identity. Empty object clears direction.', properties: {
@@ -3167,7 +3172,7 @@ Requires ffmpeg and GEMINI_API_KEY even for local synthesis. One paid audio-revi
         rejectTake: { type: 'object', additionalProperties: false, required: ['audioSha256','reason'], description: 'When final listening finds a defect in a previously checked take, reject that exact WAV and use only remaining attempts. Never waives any check.', properties: {
           audioSha256: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'SHA-256 of the current checked WAV, as recorded in its quality proof.' }, reason: { type: 'string', minLength: 10, maxLength: 1000, description: 'Actual time, word or sound defect observed during listening.' },
         } },
-        episode: { type: 'object', additionalProperties: false, description: 'Required for ElevenLabs assembly. Ordered complete scene texts, current index and one fixed seed. Derives previousText/nextText on supported models; v3 omits them and relies on final listening for scene continuity.', properties: {
+        episode: { type: 'object', additionalProperties: false, description: 'Required for ElevenLabs assembly. Ordered complete scene texts, current index and one fixed seed. Derives v4 previousText/nextText, bounded to 100 characters per side. A fixed seed is best effort; listening is not automatic.', properties: {
           texts: { description: 'Complete scene texts in playback order.', type: 'array', minItems: 1, maxItems: 80, items: { type: 'string', minLength: 1, maxLength: 4000 } },
           index: { description: 'Index of this scene in texts, starting at zero.', type: 'integer', minimum: 0 }, seed: { description: 'One seed fixed across the episode and all retakes.', type: 'integer', minimum: 0, maximum: 4294967295 },
         }, required: ['texts','index','seed'] },
@@ -3352,19 +3357,19 @@ Returns: a text block with the saved .wav file path, speaker/voice assignments, 
   },
   {
     name: 'tts_elevenlabs_generate', title: 'ElevenLabs v4 single voice', annotations: HINT.generate,
-    description: 'Generate one voice with eleven_v4 through Text to Dialogue. Put short acting directions and vocal events in square brackets inside text. Returns RIFF WAV by default, measured character cost and optional timestamps. Only v4 is supported; old models and local TTS are removed. Use tts_elevenlabs_dialogue for multiple voices, or Gemini when selected. Keep identity voice pinned; scene acting may change. Free-tier output is non-commercial. No automatic listening review.',
+    description: 'Create a paid single-voice take with eleven_v4 through Text to Dialogue. Use for narration, voiceover or a character line. Put delivery cues in [audio tags] and pronunciation in /IPA/. Returns a local audio path (RIFF WAV by default), available usage/request metadata, warnings and an optional alignment sidecar. Do NOT use to discover voices — use tts_elevenlabs_voices; use tts_elevenlabs_dialogue for multiple voices. Preserve the pinned voice. Free-tier output is non-commercial. No automatic review or model fallback.',
     inputSchema: { type: 'object', additionalProperties: false, properties: {
-      text: { type: 'string', minLength: 1, maxLength: MAX_ELEVENLABS_INPUT_CHARS, description: 'Spoken text with square-bracket acting tags. v4 supports up to 10000 characters; short coherent scenes are preferable. No SSML.' },
+      text: { type: 'string', minLength: 1, maxLength: MAX_ELEVENLABS_INPUT_CHARS, description: 'Spoken text, e.g. "[whispering] Hello."; /IPA/ is supported, SSML is not. Model cap 10000; Dialogue recommends <=2000 total characters to avoid truncation or validation failures. Longer accepted inputs return a warning.' },
       voiceId: ELEVENLABS_VOICE_ID_PROPERTY,
       ...ELEVENLABS_V4_PROPERTIES
     }, required: ['text','voiceId'] }
   },
   {
     name: 'tts_elevenlabs_dialogue', title: 'ElevenLabs v4 multi-voice dialogue', annotations: HINT.generate,
-    description: 'Generate a continuous dialogue with eleven_v4. Each input contains text and voiceId; use square-bracket acting tags in that turn. Unlike tts_multi_speaker, this plugin accepts up to 10 distinct voices (plugin bound). Prefer <=2000 total characters for coherent performance; hard cap 10000. Optional timestamps preserve voice_segments. Mixed-speaker audio needs an explicit dialogue assembly route; do not pass it to a single-speaker scene builder. No automatic review or model fallback.',
+    description: 'Create paid multi-voice dialogue with eleven_v4 for conversations or character exchanges. Each turn has text and voiceId, with optional [audio tags] or /IPA/ in text. REST permits 10 distinct voices. Keep total text <=2000 characters for reliable generation; model cap 10000. Returns a local audio path, available usage/request metadata, warnings and optional timestamps with voice_segments. Do NOT use to discover voices — use tts_elevenlabs_voices. Use tts_elevenlabs_generate for one voice, or tts_multi_speaker for selected Gemini dialogue. Mixed-speaker output requires an explicit dialogue assembly route. No automatic review or model fallback.',
     inputSchema: { type: 'object', additionalProperties: false, properties: {
-      inputs: { type: 'array', minItems: 1, maxItems: ELEVENLABS_DIALOGUE_MAX_INPUTS, description: 'Ordered turns; at most 10 voices in this plugin.', items: { type: 'object', additionalProperties: false, properties: {
-        text: { type: 'string', minLength: 1, description: 'Turn transcript, optionally with v4 audio tags.' }, voiceId: ELEVENLABS_VOICE_ID_PROPERTY
+      inputs: { type: 'array', minItems: 1, maxItems: ELEVENLABS_DIALOGUE_MAX_INPUTS, description: 'Ordered turns, e.g. [{"text":"Hello.","voiceId":"your-voice-id"}]. REST permits 10 voices; this plugin accepts up to 50 turns.', items: { type: 'object', additionalProperties: false, properties: {
+        text: { type: 'string', minLength: 1, description: 'Turn transcript, e.g. "[laughing] Hello."; optional v4 audio tags or /IPA/.' }, voiceId: ELEVENLABS_VOICE_ID_PROPERTY
       }, required: ['text','voiceId'] } }, ...ELEVENLABS_V4_PROPERTIES
     }, required: ['inputs'] }
   },

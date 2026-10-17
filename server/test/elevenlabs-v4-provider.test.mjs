@@ -16,6 +16,7 @@ const {
   listElevenLabsVoices,
 } = await import('../dist/elevenlabs-client.js');
 const { pcmToWav } = await import('../dist/media-utils.js');
+const { TOOLS } = await import('../dist/tools.js');
 const VOICE = 'test_voice';
 
 const alignment = { characters: ['안', '녕'], character_start_times_seconds: [0, 0.1], character_end_times_seconds: [0.1, 0.2] };
@@ -119,4 +120,123 @@ test('voice discovery preserves filters, pagination and preview URL', async () =
     assert.equal(result.hasMore, true);
     assert.equal(result.voices[0].previewUrl, 'https://example.test/preview.mp3');
   } finally { globalThis.fetch = savedFetch; }
+});
+
+test('v4 supports documented language exceptions and slash IPA without accepting SSML', () => {
+  for (const languageCode of ['ko', 'en', 'ast', 'yue', 'ceb', 'fil']) {
+    for (const [schema, input] of [
+      [elevenLabsGenerateSchema, { text: '/həˈloʊ/', voiceId: VOICE }],
+      [elevenLabsDialogueSchema, { inputs: [{ text: '/həˈloʊ/', voiceId: VOICE }] }],
+    ]) assert.ok(schema.safeParse({ ...input, languageCode }).success, languageCode);
+  }
+  for (const languageCode of ['kor', 'eng', 'ko-KR', 'Korean', '']) {
+    assert.equal(elevenLabsGenerateSchema.safeParse({ text: '안녕', voiceId: VOICE, languageCode }).success, false);
+  }
+  assert.equal(elevenLabsGenerateSchema.safeParse({ text: '<phoneme ph="həˈloʊ">hello</phoneme>', voiceId: VOICE }).success, false);
+});
+
+test('both schemas bound request IDs and reject zero-retention stitching before fetch', async () => {
+  const savedFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => { calls++; throw new Error('unexpected fetch'); };
+  try {
+    for (const field of ['previousRequestIds', 'nextRequestIds']) {
+      for (const value of [[], [''], [' '], ['a', 'b', 'c', 'd']]) {
+        assert.equal(elevenLabsGenerateSchema.safeParse({ text: 'hi', voiceId: VOICE, [field]: value }).success, false);
+        assert.equal(elevenLabsDialogueSchema.safeParse({ inputs: [{ text: 'hi', voiceId: VOICE }], [field]: value }).success, false);
+      }
+      assert.equal((await generateElevenLabsSpeech({ text: 'hi', voiceId: VOICE, enableLogging: false, [field]: ['real-id'] })).success, false);
+      assert.equal((await generateElevenLabsDialogue({ inputs: [{ text: 'hi', voiceId: VOICE }], enableLogging: false, [field]: ['real-id'] })).success, false);
+    }
+    assert.equal(calls, 0);
+  } finally { globalThis.fetch = savedFetch; }
+});
+
+test('continuity and clone controls reach both routes in provider field names', async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'eleven-v4-controls-'));
+  const savedFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, init) => {
+    const parsedUrl = new URL(url);
+    calls.push({ url: parsedUrl, body: JSON.parse(init.body) });
+    return audioResponse(parsedUrl.pathname.endsWith('/with-timestamps'));
+  };
+  try {
+    for (const timestamps of [false, true]) {
+      const controls = { languageCode: 'yue', previousRequestIds: ['oldest', 'closest'], nextRequestIds: ['following', 'latest'], usePvcAsIvc: false, enableLogging: true, timestamps, outputPath: dir, filename: `take-${timestamps}.wav` };
+      const result = timestamps
+        ? await generateElevenLabsDialogue(elevenLabsDialogueSchema.parse({ inputs: [{ text: '/həˈloʊ/', voiceId: VOICE }, { text: 'hello', voiceId: 'other-voice' }], ...controls }))
+        : await generateElevenLabsSpeech(elevenLabsGenerateSchema.parse({ text: '/həˈloʊ/', voiceId: VOICE, ...controls }));
+      assert.equal(result.success, true, result.error);
+      const { url, body } = calls.at(-1);
+      assert.equal(url.searchParams.get('enable_logging'), 'true');
+      assert.deepEqual(body.previous_request_ids, ['oldest', 'closest']);
+      assert.deepEqual(body.next_request_ids, ['following', 'latest']);
+      assert.equal(body.use_pvc_as_ivc, false);
+      assert.equal(body.language_code, 'yue');
+      assert.equal(body.enable_logging, undefined);
+      assert.equal(body.output_format, undefined);
+      assert.equal(body.inputs[0].text, '/həˈloʊ/');
+      if (timestamps) {
+        const sidecar = JSON.parse(readFileSync(result.alignmentPath, 'utf8'));
+        assert.deepEqual(sidecar.request, body);
+        assert.equal(sidecar.requestId, 'mock-v4');
+        assert.equal(sidecar.characterCost, 2);
+        assert.equal(sidecar.enable_logging, true);
+        assert.equal(sidecar.output_format, 'wav_24000');
+        assert.deepEqual(sidecar.normalized_alignment, alignment);
+      }
+    }
+    for (const timestamps of [false, true]) {
+      const result = await generateElevenLabsSpeech(elevenLabsGenerateSchema.parse({ text: 'hi', voiceId: VOICE, enableLogging: false, usePvcAsIvc: true, timestamps, outputPath: dir, filename: `private-${timestamps}.wav` }));
+      assert.equal(result.success, true, result.error);
+      assert.equal(calls.at(-1).url.searchParams.get('enable_logging'), 'false');
+      assert.equal(calls.at(-1).body.use_pvc_as_ivc, true);
+      if (timestamps) assert.equal(JSON.parse(readFileSync(result.alignmentPath, 'utf8')).enable_logging, false);
+    }
+    const result = await generateElevenLabsSpeech(elevenLabsGenerateSchema.parse({ text: 'hi', voiceId: VOICE, outputPath: dir, filename: 'defaults.wav' }));
+    assert.equal(result.success, true);
+    assert.equal(calls.at(-1).url.searchParams.has('enable_logging'), false);
+    for (const key of ['previous_request_ids', 'next_request_ids', 'use_pvc_as_ivc']) assert.equal(Object.hasOwn(calls.at(-1).body, key), false);
+    assert.equal(calls.length, 5, 'no hidden chunking, audition or fallback requests');
+  } finally {
+    globalThis.fetch = savedFetch;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('Dialogue recommendation warns above 2000 without overriding the model cap', async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'eleven-v4-size-'));
+  const savedFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => { calls++; return audioResponse(); };
+  try {
+    const short = await generateElevenLabsSpeech(elevenLabsGenerateSchema.parse({ text: 'x'.repeat(2000), voiceId: VOICE, outputPath: dir, filename: 'short.wav' }));
+    assert.equal(short.success, true, short.error);
+    assert.deepEqual(short.warnings, []);
+    const long = await generateElevenLabsDialogue(elevenLabsDialogueSchema.parse({ inputs: [{ text: 'x'.repeat(1000), voiceId: VOICE }, { text: 'x'.repeat(1001), voiceId: 'other' }], outputPath: dir, filename: 'long.wav' }));
+    assert.equal(long.success, true, long.error);
+    assert.match(long.warnings[0], /2001.*2000/);
+    assert.equal(calls, 2);
+    assert.equal(elevenLabsDialogueSchema.safeParse({ inputs: [{ text: 'x'.repeat(10001), voiceId: VOICE }] }).success, false);
+  } finally {
+    globalThis.fetch = savedFetch;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('MCP tool surfaces expose the same v4 controls as runtime validation', () => {
+  for (const name of ['tts_elevenlabs_generate', 'tts_elevenlabs_dialogue']) {
+    const tool = TOOLS.find(t => t.name === name);
+    const properties = tool.inputSchema.properties;
+    const schema = name.endsWith('generate') ? elevenLabsGenerateSchema : elevenLabsDialogueSchema;
+    assert.deepEqual(Object.keys(properties).sort(), Object.keys(schema.innerType().shape).sort());
+    assert.equal(properties.seed.type, 'integer');
+    assert.equal(properties.previousRequestIds.maxItems, 3);
+    assert.equal(properties.nextRequestIds.maxItems, 3);
+    assert.equal(new RegExp(properties.languageCode.pattern).test('yue'), true);
+    assert.equal(new RegExp(properties.languageCode.pattern).test('kor'), false);
+    assert.match(tool.description, /paid/);
+    assert.match(tool.description, /tts_elevenlabs_voices/);
+  }
 });
