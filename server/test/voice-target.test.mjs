@@ -21,11 +21,13 @@ const voice = { engine:'gemini', model:'gemini-3.8-flash-tts',voiceId:'Kore',lan
 test('confirmed voice targets carry age and acoustic fields without turning biography into controls', () => {
   const first = characterVoiceTarget(source);
   assert.equal(first.vocalGender, 'male');
-  assert.match(first.baselineDirection, /24세|24/);
+  assert.match(first.perceivedAge, /24세|24/);
+  assert.doesNotMatch(first.baselineDirection,/Voice age|Vocal gender|Timbre:/);
   assert.ok(first.traits.length);
   assert.doesNotMatch(first.baselineDirection, /Goal|Backstory|Traits|Fear/);
   const changed = doc(); changed.character.identity.age.value = '70세';
-  assert.notEqual(characterVoiceTarget(markdown(changed)).baselineDirection,first.baselineDirection);
+  assert.notEqual(characterVoiceTarget(markdown(changed)).perceivedAge,first.perceivedAge);
+  assert.equal(characterVoiceTarget(markdown(changed)).baselineDirection,first.baselineDirection,'immutable age belongs to casting, not delivery style');
   changed.character.speech.timbre.value = '낮고 선명한 여성 중음';
   assert.equal(characterVoiceTarget(markdown(changed)).vocalGender,'female');
   const missing = characterVoiceTarget('```json\n{"character":{"name":"Mrs. Smith"}}\n```');
@@ -55,14 +57,14 @@ test('provider comparisons distinguish known conflicts from missing metadata', (
 
 test('stable Gemini voice identity survives scene emotion and exact request provenance', () => {
   for (const model of ['gemini-3.8-flash-tts','gemini-2.5-flash-preview-tts']) {
-    const pinned = {...voice,model,voiceDirection:'Mature female, low clear register.'};
+    const pinned = {...voice,model,voiceDirection:'Dry concise phrasing with low falling endings.'};
     assert.deepEqual(voiceErrors(pinned),[]);
     assert.equal(ttsSchema.safeParse(pinned).success,true);
     for (const acting of [undefined,{direction:'urgent but restrained'}]) {
       const line = {tts:'괜찮아요.',...(acting?{acting}:{})};
       const plan = compileActing(line.tts,acting,pinned);
       const style = plan.generation.turns?.[0].style || plan.generation.stylePrompt;
-      assert.match(style,/Mature female/);
+      assert.match(style,/Dry concise phrasing/);
       if (acting) assert.match(style,/urgent but restrained/);
       const proof={generator:plan.generator,text:line.tts,language:'ko',voiceSettings:plan.generation};
       assert.deepEqual(generationVoiceErrors(pinned,proof,line),[]);
@@ -89,10 +91,12 @@ test('audition planning is read-only and adds identity controls to the same gene
     const args=voiceAuditionSchema.parse({action:'plan',identityPath,candidates,sampleText:'괜찮아요. 제가 여기 있어요.'});
     const plan=await manageVoiceAudition(args);
     assert.equal(plan.review,'not_reviewed');
-    assert.match(plan.candidates[0].compiled.generation.turns[0].style,/24/);
+    assert.equal(plan.candidates[0].compiled.generation.turns[0].style,plan.target.baselineDirection);
+    assert.match(plan.target.perceivedAge,/24/);
+    assert.ok(plan.target.warnings.some(text=>/immutable speaker traits/.test(text)));
     assert.equal(plan.candidates[0].tts.voiceDirection,plan.target.baselineDirection);
     assert.equal(readFileSync(identityPath,'utf8'),source);
-    const lengthy=doc();lengthy.character.speech.timbre.value='Low resonant voice. '.repeat(30);
+    const lengthy=doc();lengthy.character.speech.pace.value='Measured concise phrasing. '.repeat(30);
     writeFileSync(identityPath,markdown(lengthy));
     const incomplete=await manageVoiceAudition(args);
     assert.match(incomplete.candidates[0].generationError,/compact/);

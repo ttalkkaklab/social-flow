@@ -18,8 +18,8 @@ function characterVoiceTarget(source, override = {}) {
   const age = profile.perceivedAge || value('identity', 'age');
   const pace = value('speech', 'pace'), register = value('speech', 'register');
   const baselineDirection = profile.baselineDirection || [
-    age && `Voice age: ${age}.`, vocalGender !== 'unspecified' && `Vocal gender: ${vocalGender}.`,
-    timbre && `Timbre: ${timbre}`, pace && `Phrasing: ${pace}`, register && `Register: ${register}`,
+    pace && `Phrasing: ${pace}`, register && `Register: ${register}`,
+    value('speech', 'habits') && `Speech habit: ${value('speech', 'habits')}`,
   ].filter(Boolean).join('\n');
   return {
     vocalGender, perceivedAge: age || null, timbre: timbre || null, pace: pace || null,
@@ -28,8 +28,9 @@ function characterVoiceTarget(source, override = {}) {
     baselineDirection,
     sources: { vocalGender: profile.vocalGender ? 'voiceProfile.vocalGender' : derivedGender ? 'character.speech.timbre' : null,
       perceivedAge: profile.perceivedAge ? 'voiceProfile.perceivedAge' : age ? 'character.identity.age' : null,
-      baselineDirection: profile.baselineDirection ? 'voiceProfile.baselineDirection' : 'confirmed identity and speech fields' },
+      baselineDirection: profile.baselineDirection ? 'voiceProfile.baselineDirection' : 'confirmed speech pace, register and habits' },
     warnings: [
+      'Age, vocal gender and stable timbre are casting constraints. Match the base voice; Gemini 3.8 style cannot change immutable speaker traits.',
       ...(vocalGender === 'unspecified' ? ['Vocal gender is unspecified; do not infer it from a name, role or appearance.'] : []),
       ...(!age ? ['Perceived voice age is unspecified.'] : []),
       ...(!timbre ? ['Vocal timbre is unspecified.'] : []),

@@ -115,3 +115,7 @@ a new sample. Keep previous inputs and reviews in a sibling evidence folder. Exi
 hash-bound reviews become stale on any identity/media change; never carry their score
 forward. Obtain a fresh independent review on the actual revised files before recording
 new hashes. Test create and update paths as well as rejected incomplete updates.
+
+For Gemini3.8, age, vocal gender and stable timbre guide base-voice selection and
+actual audition. They cannot be changed with turn style. The derived baseline sends
+only confirmed speech pace, register and habits; keep explicit delivery overrides short.

@@ -86617,7 +86617,7 @@ var ACTING_PROPERTY = { type: "object", additionalProperties: false, description
 var VOICE_PROFILE_PROPERTY = { type: "object", additionalProperties: false, description: "Explicit acoustic targets; never infer voice gender from names or roles.", properties: {
   vocalGender: { type: "string", enum: ["female", "male", "neutral", "unspecified"], description: "Desired audible gender, e.g. female; unspecified preserves uncertainty." },
   perceivedAge: { type: "string", maxLength: 100, description: "Desired age impression, e.g. adult in her fifties; defaults to confirmed character age." },
-  baselineDirection: { type: "string", maxLength: 400, description: "Stable compact voice description, e.g. mature low female register, dry measured phrasing. No biography or changing scene emotion." }
+  baselineDirection: { type: "string", maxLength: 400, description: "Short habitual delivery, e.g. dry measured phrasing. For Gemini3.8 use the base voice for age/gender/timbre; style cannot change immutable traits. No biography or changing scene emotion." }
 } };
 var CHARACTER_TARGET_PROPERTY = { type: "object", additionalProperties: false, description: "Acoustic target from character_voice_audition plan. Metadata is intent, never proof of the voice heard.", properties: {
   vocalGender: { type: "string", enum: ["female", "male", "neutral", "unspecified"], description: "Requested audible gender, e.g. female; unspecified skips gender comparison." },
@@ -86675,7 +86675,7 @@ var TOOLS = [
           stability: { type: "number", minimum: 0, maximum: 1, description: "Optional ElevenLabs v4 consistency." },
           similarity: { type: "number", minimum: 0, maximum: 1, description: "Optional ElevenLabs v4 voice similarity." },
           stylePrompt: { type: "string", description: "Only for pre-3.8 Gemini baseline style." },
-          voiceDirection: { type: "string", maxLength: 400, description: "Compact stable Gemini vocal identity; plan/create derives it from the character when omitted. Preserved alongside scene acting." }
+          voiceDirection: { type: "string", maxLength: 400, description: "Short habitual Gemini delivery; plan/create derives speech pace, register and habits when omitted. Base voice selection carries age, gender and timbre. Preserved alongside scene acting." }
         } }
       } } },
       candidateId: { type: "string", enum: ["1", "2", "3"], description: "Candidate selected by the user." },

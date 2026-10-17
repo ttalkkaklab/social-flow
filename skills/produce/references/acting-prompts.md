@@ -20,10 +20,14 @@ supported pinned settings. Keep the dramatic action in the script plan, such as
 short audible cues rather than sending a biography to the synthesizer.
 
 Gemini identities may also pin `tts.voiceDirection` (1–400 characters): a stable,
-compact acoustic baseline describing perceived age, vocal gender when explicitly
-specified, timbre and habitual phrasing. The shared compiler preserves it alongside
+compact habitual-delivery baseline describing phrasing, pace and conversational
+register. Age, vocal gender and stable timbre remain casting constraints. The shared compiler preserves it alongside
 scene acting in both Gemini 3.8 turn style and earlier Gemini `stylePrompt`.
-Scene emotion replaces a legacy emotional `stylePrompt`, not this stable baseline.
+Scene emotion replaces a legacy emotional `stylePrompt`, not this habitual baseline.
+For Gemini3.8, choose the base voice by the casting target and actual audition.
+Its style field cannot change immutable age, gender or speaker timbre; automatically
+derived controls include only pace, register and speech habits. Keep explicit overrides
+short and use them for delivery. [Google prompting guidance](https://ai.google.dev/gemini-api/docs/speech-generation#consistency-across-generations-and-what-to-avoid) recommends a matching library or designed voice and short turn styles.
 Keep conditional emotions and biography out of `voiceDirection`. A combined 3.8
 baseline and acting style over 500 characters fails before synthesis; shorten the
 authored controls rather than silently dropping identity. ElevenLabs does not accept
