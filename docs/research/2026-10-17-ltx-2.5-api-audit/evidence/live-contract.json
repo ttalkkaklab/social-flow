@@ -1,0 +1,181 @@
+{
+  "checkedDate": "2026-10-17",
+  "timezone": "Asia/Seoul",
+  "codeRevision": "b25423285988bfdf775ee7ea3f9e3d2f8bed050c",
+  "endpoint": "https://video.astravision.co.kr/v1/jobs",
+  "method": "POST",
+  "methodDescription": "Invalid mode or unknown field with an empty prompt. All requests were rejected before job acceptance. Authentication headers are omitted.",
+  "invalidModeProbe": {
+    "request": {
+      "mode": "__social_flow_invalid_mode__",
+      "prompt": ""
+    },
+    "httpStatus": 400,
+    "error": "mode 는 generate · guided · guided_fast · keyframe · audio2video · ingredients · retake 중 하나여야 한다"
+  },
+  "fieldProbeTemplate": {
+    "mode": "MODE_UNDER_TEST",
+    "prompt": "",
+    "__social_flow_schema_probe__": true
+  },
+  "modeFieldProbes": [
+    {
+      "mode": "generate",
+      "httpStatus": 400,
+      "allowedFields": [
+        "auto_duration",
+        "frame_rate",
+        "hdr",
+        "height",
+        "images",
+        "lora",
+        "mode",
+        "num_frames",
+        "num_generated_keyframes",
+        "prompt",
+        "seed",
+        "width"
+      ],
+      "error": "본문에 쓸 수 없는 이름이 있다: __social_flow_schema_probe__ — 쓸 수 있는 이름은 auto_duration, frame_rate, hdr, height, images, lora, mode, num_frames, num_generated_keyframes, prompt, seed, width 다"
+    },
+    {
+      "mode": "guided",
+      "httpStatus": 400,
+      "allowedFields": [
+        "auto_duration",
+        "frame_rate",
+        "hdr",
+        "height",
+        "images",
+        "mode",
+        "negative_prompt",
+        "num_frames",
+        "num_generated_keyframes",
+        "num_inference_steps",
+        "prompt",
+        "seed",
+        "width"
+      ],
+      "error": "본문에 쓸 수 없는 이름이 있다: __social_flow_schema_probe__ — 쓸 수 있는 이름은 auto_duration, frame_rate, hdr, height, images, mode, negative_prompt, num_frames, num_generated_keyframes, num_inference_steps, prompt, seed, width 다"
+    },
+    {
+      "mode": "guided_fast",
+      "httpStatus": 400,
+      "allowedFields": [
+        "auto_duration",
+        "frame_rate",
+        "hdr",
+        "height",
+        "images",
+        "mode",
+        "negative_prompt",
+        "num_frames",
+        "num_generated_keyframes",
+        "num_inference_steps",
+        "prompt",
+        "seed",
+        "width"
+      ],
+      "error": "본문에 쓸 수 없는 이름이 있다: __social_flow_schema_probe__ — 쓸 수 있는 이름은 auto_duration, frame_rate, hdr, height, images, mode, negative_prompt, num_frames, num_generated_keyframes, num_inference_steps, prompt, seed, width 다"
+    },
+    {
+      "mode": "keyframe",
+      "httpStatus": 400,
+      "allowedFields": [
+        "frame_rate",
+        "hdr",
+        "height",
+        "images",
+        "mode",
+        "negative_prompt",
+        "num_frames",
+        "num_inference_steps",
+        "prompt",
+        "seed",
+        "width"
+      ],
+      "error": "본문에 쓸 수 없는 이름이 있다: __social_flow_schema_probe__ — 쓸 수 있는 이름은 frame_rate, hdr, height, images, mode, negative_prompt, num_frames, num_inference_steps, prompt, seed, width 다"
+    },
+    {
+      "mode": "audio2video",
+      "httpStatus": 400,
+      "allowedFields": [
+        "audio_max_duration",
+        "audio_start_time",
+        "audio_upload_id",
+        "frame_rate",
+        "hdr",
+        "height",
+        "images",
+        "mode",
+        "negative_prompt",
+        "num_frames",
+        "num_inference_steps",
+        "prompt",
+        "seed",
+        "width"
+      ],
+      "error": "본문에 쓸 수 없는 이름이 있다: __social_flow_schema_probe__ — 쓸 수 있는 이름은 audio_max_duration, audio_start_time, audio_upload_id, frame_rate, hdr, height, images, mode, negative_prompt, num_frames, num_inference_steps, prompt, seed, width 다"
+    },
+    {
+      "mode": "retake",
+      "httpStatus": 400,
+      "allowedFields": [
+        "end_time",
+        "hdr",
+        "mode",
+        "prompt",
+        "seed",
+        "start_time",
+        "video_upload_id"
+      ],
+      "error": "본문에 쓸 수 없는 이름이 있다: __social_flow_schema_probe__ — 쓸 수 있는 이름은 end_time, hdr, mode, prompt, seed, start_time, video_upload_id 다"
+    },
+    {
+      "mode": "ingredients",
+      "httpStatus": 400,
+      "allowedFields": [
+        "frame_rate",
+        "hdr",
+        "height",
+        "images",
+        "mode",
+        "num_frames",
+        "prompt",
+        "references",
+        "seed",
+        "width"
+      ],
+      "error": "본문에 쓸 수 없는 이름이 있다: __social_flow_schema_probe__ — 쓸 수 있는 이름은 frame_rate, hdr, height, images, mode, num_frames, prompt, references, seed, width 다"
+    }
+  ],
+  "referenceShapeProbes": [
+    {
+      "request": {
+        "mode": "ingredients",
+        "prompt": "",
+        "references": "__invalid_type__"
+      },
+      "httpStatus": 400,
+      "error": "prompt 는 1~2000자여야 한다"
+    },
+    {
+      "request": {
+        "mode": "ingredients",
+        "prompt": "",
+        "references": [
+          {}
+        ]
+      },
+      "httpStatus": 400,
+      "error": "prompt 는 1~2000자여야 한다"
+    }
+  ],
+  "validationRequests": 10,
+  "allHttp400": true,
+  "acceptedGenerationJobs": 0,
+  "limits": [
+    "Allowed field names do not establish accepted value types or successful generation.",
+    "Empty-prompt reference probes stop at prompt validation, so references item types and limits are not established."
+  ]
+}
