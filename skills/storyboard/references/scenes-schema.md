@@ -788,6 +788,37 @@ and a distinct `end` image before video generation. The approval page displays b
 continuity rules. Legacy boards without `frames` retain their original single-frame display,
 unless an existing `lastImagePath` supplies a second frame.
 
+### ASTRA intermediate contact frames
+
+For an ASTRA silent or offscreen-voice shot whose contact order needs an authored
+intermediate image, keep `visual.frames.mode:"first_last"`, `visual.bg` and
+`visual.frames.end`. Add `visual.frames.keyframes` with 1–6 entries:
+
+```js
+keyframes: [
+  { atSeconds: 1.0, image: 'images/tray-contact.png',
+    state: 'Tray base rests on the desk; both hands still grip.', strength: 1 },
+  { atSeconds: 1.5, image: 'images/tray-release.png',
+    state: 'The supported tray stays fixed as both hands release.', strength: 1 }
+]
+```
+
+`atSeconds` is a source-clip time, strictly inside the planned shot duration.
+The preparation helper rounds it to the nearest frame at the chosen frame rate;
+indices must remain distinct, increasing and inside the opening/ending indices.
+`image` is a local path relative to the board. Optional `strength` is 0–1;
+`state` records the authored state in provenance. Keep timed performance consistent
+with every image. This explicitly selects `astra_keyframe_video`: opening at frame
+zero, intermediate images at authored indices and ending at the final optimized
+request frame, with no more than eight images total. Preparation returns image
+hashes, actual indices and a fresh quote; image constraints do not prove physical
+contact or usable output. Inspect the continuous result.
+
+The normal first/last adapter remains unchanged when `keyframes` is absent.
+Audio-conditioned shots reject intermediate frames because `audio2video` cannot
+accept them. Inspect these images directly; the standard board preview displays
+opening/ending images and does not certify intermediate states.
+
 ## Fields common to every shot
 
 Every generated cut declares `shot.render` using [render-routing.md](render-routing.md).

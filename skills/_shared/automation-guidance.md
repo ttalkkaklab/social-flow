@@ -5,6 +5,9 @@ mandatory executable quality gates. This policy takes precedence over older
 score thresholds, review loops, creative checklists and intermediate approval
 requirements in skills and reviewer instructions.
 
+For every review follow [host evaluation](host-review.md). The executing host LLM
+judges actual evidence; no external evaluation API or model fallback is used.
+
 ## Continue toward the requested artifact
 
 Use the user's task, established choices and delegated judgment. Complete authorized

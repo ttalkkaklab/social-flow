@@ -63,18 +63,23 @@ async function render(target, options) {
     transport = conditioningAudio(args.audioPath, audio, args.numFrames / args.frameRate);
     args.audioPath = audio;
   }
-  const request = {shotId:prepared.shotId,tool:prepared.tool,arguments:args,transport,
+  const request = {shotId:prepared.shotId,tool:prepared.tool,arguments:args,transport,keyframes:prepared.keyframes,
     canonicalCoverage:prepared.coverage,quote:prepared.quote,review:'not_reviewed',status:'submitting'};
   fs.writeFileSync(record, JSON.stringify(request,null,2)+'\n');
-  const result = prepared.tool === 'astra_audio2video'
-    ? await client.generateFromAudio(args) : await client.generateFromImage(args);
+  const result = await submitPrepared(client, prepared.tool, args);
   const response = {...request,status:'generated',result,selection:{status:'provisional',
     review:{camera:'not_reviewed',blocking:'not_reviewed',phonemeLipSync:'not_reviewed'}},
     nextAction:'Inspect candidate and neighbours, then attach_video with the selected file. Findings are advisory; this renderer neither attaches nor certifies output.'};
   fs.writeFileSync(record,JSON.stringify(response,null,2)+'\n');
   return response;
 }
-module.exports = { render, conditioningAudio, reserveRetryCandidates };
+async function submitPrepared(client, tool, args) {
+  if (tool === 'astra_audio2video') return client.generateFromAudio(client.astraAudio2VideoSchema.parse(args));
+  if (tool === 'astra_img2video') return client.generateFromImage(client.astraImg2VideoSchema.parse(args));
+  if (tool === 'astra_keyframe_video') return client.generateFromKeyframes(client.astraKeyframeVideoSchema.parse(args));
+  throw new Error('Unsupported prepared ASTRA tool: ' + tool);
+}
+module.exports = { render, conditioningAudio, reserveRetryCandidates, submitPrepared };
 if (require.main === module) (async()=>{
   const args=process.argv.slice(2),target=args.shift(),options={};
   const names={'--shot':'shotId','--audio':'audioPath','--output':'outputPath','--filename':'filename'};

@@ -39,15 +39,15 @@ test('MCP acting bounds agree with runtime rejection of invalid direction and ti
   }
 });
 
-test('paid acting evaluation is discoverable only as explicit review, with request evidence', () => {
+test('host acting evidence is discoverable with explicit request context', () => {
   const review = TOOLS.find(tool => tool.name === 'acting_review');
   assert.ok(review);
   assert.deepEqual(review.inputSchema.required, ['mediaPath', 'direction', 'requestedBy', 'reason']);
   assert.equal(review.inputSchema.additionalProperties, false);
   assert.equal(review.inputSchema.properties.mode.default, 'audiovisual');
-  assert.match(review.description, /explicitly requested paid/);
-  assert.match(review.description, /never a default produce\/autoproduce gate/);
-  assert.match(review.description, /audio-only review cannot certify visual acting/);
+  assert.match(review.description, /host LLM/);
+  assert.match(review.description, /No external evaluation call/);
+  assert.match(review.description, /Unsupported modalities remain unverified/);
 });
 
 

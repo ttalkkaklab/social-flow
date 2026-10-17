@@ -4,7 +4,7 @@ import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 import { ASTRA_VIDEO_FAST_DIMENSION_STEP, ASTRA_VIDEO_GUIDANCE_RANGES, guidanceToolKey, ASTRA_VIDEO_IC_LORA_ADAPTERS, ASTRA_VIDEO_LORAS, ASTRA_VIDEO_MAX_LORA_STRENGTH, ASTRA_VIDEO_MAX_REFERENCE_PIXELS, ASTRA_VIDEO_MAX_STG_BLOCK, ASTRA_VIDEO_MAX_STG_BLOCKS, ASTRA_VIDEO_FRAME_LIMITS, ASTRA_VIDEO_MAX_PIXELS, ASTRA_VIDEO_MAX_SEED, ASTRA_VIDEO_MIN_FRAMES, } from './astra-video-client.js';
 import { DEFAULT_SEEDANCE_DURATION, DEFAULT_SEEDANCE_MODEL, DEFAULT_SEEDANCE_REFERENCE_MODEL, DEFAULT_SEEDANCE_RESOLUTION, SEEDANCE_FPS, SEEDANCE_REFERENCE_MODELS, VALID_SEEDANCE_MODELS, VALID_SEEDANCE_RATIOS, VALID_SEEDANCE_RESOLUTIONS, } from './seedance-client.js';
 import { DEFAULT_GEMINI_38_TTS_MODEL, DEFAULT_TTS_MODEL, DEFAULT_TTS_TEMPERATURE, DEFAULT_VOICE, GEMINI_38_TTS_MODELS, MAX_GEMINI_38_TTS_INPUT_CHARS, TTS_VOICE_NAMES, VALID_TTS_MODELS, } from './tts-client.js';
-import { GENERATORS, REVIEW_MODEL } from './tts-quality.js';
+import { GENERATORS } from './tts-quality.js';
 import { DEFAULT_ELEVENLABS_MODEL, DEFAULT_ELEVENLABS_OUTPUT_FORMAT, ELEVENLABS_DIALOGUE_MAX_INPUTS, ELEVENLABS_MODELS, ELEVENLABS_LANGUAGE_CODE_PATTERN, ELEVENLABS_OUTPUT_FORMATS, ELEVENLABS_TEXT_NORMALIZATION, ELEVENLABS_VOICE_CATEGORIES, MAX_ELEVENLABS_INPUT_CHARS, DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT, DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE, ELEVENLABS_SFX_MODEL, ELEVENLABS_SFX_OUTPUT_FORMATS, ELEVENLABS_SFX_SECONDS, ELEVENLABS_SFX_USD_PER_MINUTE, MAX_ELEVENLABS_SFX_TEXT_CHARS, } from './elevenlabs-client.js';
 import { DEFAULT_ZIMAGE_QUANTIZE, DEFAULT_ZIMAGE_STEPS, MAX_ZIMAGE_DIMENSION, MIN_ZIMAGE_DIMENSION, ZIMAGE_DIMENSION_STEP, ZIMAGE_QUANTIZE_OPTIONS, } from './zimage-client.js';
 import { DEFAULT_QWEN3_ASR_LANGUAGE, DEFAULT_QWEN3_ASR_MODEL, QWEN3_ASR_LANGUAGES, QWEN3_ASR_MODELS, } from './qwen3-asr-client.js';
@@ -881,12 +881,153 @@ const CHARACTER_TARGET_PROPERTY = { type: 'object', additionalProperties: false,
     }, required: ['vocalGender', 'perceivedAge', 'timbre', 'pace', 'register', 'habits', 'emotionalRange', 'traits'] };
 export const TOOLS = [
     {
-        name: 'tts_review_acting', title: 'Explicitly requested adversarial audio review', annotations: HINT.generate,
-        description: 'Create an adversarial review of actual speech audio.\n\nUse for explicitly requested listening, voice-fit evaluation or acting review. Optional characterTarget scores characterFit40/accuracy20/acting15/naturalness15/audioQuality10 and independently describes the voice heard; otherwise uses the existing acting rubric. Returns score (0-100), timestamped defects, observed voice, hashes and immutable reports. PASS needs >=95, characterFit>=95 when requested, complete listening, confidence>=0.9 and no major/critical issue. Do NOT use for synthesis — use the planned raw TTS tool. Never run as a default production gate or equate model judgment with user approval.',
+        "name": "host_review",
+        "title": "Prepare and record host media evaluation",
+        "annotations": {
+            "readOnlyHint": false,
+            "destructiveHint": false,
+            "idempotentHint": false,
+            "openWorldHint": false
+        },
+        "description": "Create local evidence handoffs or save host review observations.\n\nUse for requested adversarial video, camera or speech evaluation. prepare probes local media and extracts eight timestamped frames without judging; record saves an immutable receipt after native host inspection. No external model call, upload, or paid-evaluator fallback. Do NOT use for generation or voice provenance \u2014 use speech_manage. Returns status not_reviewed/observed/unverified, score=null (no aggregate certification), mediaSha256, duration in seconds, and on record receiptPath and per-axis observations. Scores and coverage are host self-reports, never proof of perception. Frames support composition only; motion requires playback and speech requires listening.",
+        "inputSchema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "mediaPath",
+                "brief"
+            ],
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "prepare",
+                        "record"
+                    ],
+                    "default": "prepare", "description": "prepare reads media metadata; record writes a host observation receipt."
+                },
+                "mediaPath": {
+                    "type": "string",
+                    "description": "Local media path, e.g. /tmp/shot.mp4."
+                },
+                "brief": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 24000,
+                    "description": "Requested scene and rubric, e.g. Held camera; woman bows without moving her feet."
+                },
+                "mode": {
+                    "type": "string",
+                    "enum": [
+                        "video",
+                        "audio",
+                        "audiovisual"
+                    ],
+                    "default": "audiovisual", "description": "Requested tracks; choose video for a silent clip."
+                },
+                "mediaSha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$",
+                    "description": "Exact SHA256 from prepare; required for record."
+                },
+                "reviewer": {
+                    "type": "string",
+                    "description": "Actual host model/session identifier, e.g. Codex current session; self-reported."
+                },
+                "coverage": {
+                    "description": "Actual host perception, e.g. sampled_frames; never infer playback.",
+                    "type": "string",
+                    "enum": [
+                        "sampled_frames",
+                        "video_playback",
+                        "audio_playback",
+                        "audiovisual_playback",
+                        "unavailable"
+                    ]
+                },
+                "complete": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "True only after full requested playback; samples cannot claim completion."
+                },
+                "limitations": {
+                    "type": "string",
+                    "maxLength": 4000,
+                    "description": "Actual limits, e.g. Sampled frames only; audio unavailable."
+                },
+                "observations": {
+                    "description": "Timestamped host observations; empty when unavailable.",
+                    "type": "array",
+                    "maxItems": 100,
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                            "axis",
+                            "start",
+                            "end",
+                            "score",
+                            "evidence",
+                            "correction"
+                        ],
+                        "properties": {
+                            "axis": {
+                                "description": "Rubric axis, e.g. composition; motion axes require playback.",
+                                "type": "string",
+                                "enum": [
+                                    "composition",
+                                    "camera",
+                                    "direction",
+                                    "continuity",
+                                    "physicalNaturalness",
+                                    "facialNaturalness",
+                                    "speechAccuracy",
+                                    "vocalEmotion",
+                                    "audioQuality",
+                                    "lipSync"
+                                ]
+                            },
+                            "start": {
+                                "type": "number",
+                                "minimum": 0,
+                                "description": "Observed interval start in seconds, e.g. 1.0."
+                            },
+                            "end": {
+                                "type": "number",
+                                "minimum": 0,
+                                "description": "Observed interval end in seconds, e.g. 2.0."
+                            },
+                            "score": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ],
+                                "minimum": 0,
+                                "maximum": 100,
+                                "description": "Subjective axis score, e.g. 85; null if unverified."
+                            },
+                            "evidence": {
+                                "type": "string",
+                                "minLength": 10,
+                                "description": "Actual observation, e.g. Woman touches the right frame edge at 1.5s."
+                            },
+                            "correction": {
+                                "type": "string",
+                                "description": "Concrete change, e.g. Shift subject left while retaining the doorway."
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    {
+        name: 'tts_review_acting', title: 'Explicitly requested adversarial audio review', annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+        description: "Create local review evidence for the host LLM. Use for requested listening, acting or camera review. Returns status=not_reviewed, score=null, mediaPath, timestamped frame paths when visual, SHA256, duration in seconds, rubric and nextAction; it does not judge or upload media. Open evidence with native host capabilities and record observations with host_review. Unsupported modalities remain unverified. Do NOT use for synthesis \u2014 use the selected raw generator. No external evaluation call or automatic fallback.",
         inputSchema: { type: 'object', additionalProperties: false, properties: {
-                audioPath: { type: 'string', description: 'Actual WAV path, under14MiB.' }, expectedText: { type: 'string', maxLength: 4000, description: 'Clean expected spoken words, without acting tags.' },
+                audioPath: { type: 'string', description: 'Actual local audio path.' }, expectedText: { type: 'string', maxLength: 4000, description: 'Clean expected spoken words, without acting tags.' },
                 direction: { type: 'string', maxLength: 2000, description: 'Requested scene intent and audible performance changes.' }, language: { type: 'string', default: 'ko', description: 'Spoken language.' },
-                requestedBy: { type: 'string', maxLength: 1000, description: 'Actual user request authorizing paid audio evaluation.' }, outputPath: { type: 'string', description: 'Local directory for hash-bound review reports.' }, characterTarget: CHARACTER_TARGET_PROPERTY
+                requestedBy: { type: 'string', maxLength: 1000, description: 'Actual user request for host audio evaluation.' }, outputPath: { type: 'string', description: 'Legacy output directory; host receipts use the host-review cache.' }, characterTarget: CHARACTER_TARGET_PROPERTY
             }, required: ['audioPath', 'expectedText', 'direction', 'requestedBy', 'outputPath'] }
     },
     {
@@ -3096,8 +3237,8 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
     },
     // ── Speech synthesis (Google Gemini TTS — ported from the fect-mcp tts module) ─────────
     {
-        name: 'tts_review_final', title: 'Review assembled speech', annotations: HINT.generate,
-        description: 'Optional review only when the user explicitly requests automatic audio review; never a default production or delivery requirement. Listen to the actual final WAV or video, including all sentence transitions and the music mix. Requires accuracy >=98 and pronunciation, naturalness, clarity and continuity >=95, with no defects. Writes a hash-bound .speech-quality.json proof. The blind-transcription (STT) check and its CER <=2% gate do not run unless transcriptCheck carries a user request for them (owner directive 2026-10-04). One paid Gemini review call per payload (two with transcriptCheck); no synthesis. An optional review outage is reported without blocking default delivery. Supply the complete spoken text including native clip speech. Supports up to 30 minutes and 12,000 script characters, with a lossless FLAC review payload under 14 MiB. Payloads over 14 MiB require final-timeline sentence segments; the tool reviews lossless chapters and every cross-chapter sentence join, then binds all coverage to the complete media. Budget one review per chapter and boundary (two with transcriptCheck).',
+        name: 'tts_review_final', title: 'Review assembled speech', annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+        description: "Create local review evidence for the host LLM. Use for requested listening, acting or camera review. Returns status=not_reviewed, score=null, mediaPath, timestamped frame paths when visual, SHA256, duration in seconds, rubric and nextAction; it does not judge or upload media. Open evidence with native host capabilities and record observations with host_review. Unsupported modalities remain unverified. Do NOT use for synthesis \u2014 use the selected raw generator. No external evaluation call or automatic fallback.",
         inputSchema: { type: 'object', additionalProperties: false, properties: {
                 mediaPath: { type: 'string', description: 'Absolute path of the final media that ships.' },
                 segments: { type: 'array', minItems: 1, maxItems: 1000, description: 'Required when the final FLAC exceeds 14 MiB. Complete spoken sentences in playback order on the final timeline. First starts at 0; each extends to the next start (last to audio EOF), at most 60 seconds each. Joined text must equal expectedText. The tool groups them into bounded chapters and reviews every chapter boundary.', items: { type: 'object', additionalProperties: false, required: ['startSeconds', 'expectedText'], properties: { startSeconds: { type: 'number', minimum: 0, description: 'Start of this complete sentence on the final audio timeline; the first is 0.' }, expectedText: { type: 'string', minLength: 1, maxLength: 1000, description: 'Complete spoken sentence, including intended phonetic number/name spelling.' } } } },
@@ -3126,11 +3267,7 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
         name: 'tts_generate_checked',
         title: 'Generate and review narration',
         annotations: HINT.generate,
-        description: `Generate one scene with the pinned TTS engine, review the actual WAV, and regenerate failed takes up to maxAttempts (1–3, including the first take).
-Legacy opt-in review tool: use only when the user explicitly requests automatic audio review. Never call from default produce/autoproduce; those flows use raw TTS and speech_manage provenance. Pass the existing generator's arguments in generation, the complete spoken expectedText (phonetic spelling; no acting tags or speaker labels), language, and the profile's intended delivery. Voice and generation settings stay unchanged across attempts; the episode seed stays fixed on every retake (vendor determinism is best-effort). An entire scene is one call; never split it into sentence calls.
-Every single-voice take has its sentences re-spaced before review: a fixed sentencePause of digital silence between sentences (stretched up to 1.0s where a subtitle cue would read faster than 6.0 chars/s after playbackSpeed), a 0.14s lead, speech samples copied as generated (the 12 ms fades stay on the natural gap). tts_elevenlabs_generate is fetched with timestamps and spaced from its own alignment; tts_generate and tts_gemini_38 are aligned by the local forced aligner (mlx-qwen3-asr --timestamps) first, so a multi-sentence scene on any engine ships with the same pauses. Pass segments (the scene's narration[].tts list) so the pauses land on the builder's segment boundaries; the wrapper writes <wav>.sentences.json and the .alignment.json for the shipped audio. Generate consecutive sentences in one call whenever they belong to one breath — the engine reads them as one utterance, where one call per sentence restarts the voice at every sentence.
-Checks signal/duration, then ${REVIEW_MODEL} listening scores: accuracy >=98, pronunciation/naturalness/clarity >=95, confidence >=0.9, no audible defects. The blind-transcription (STT) check and its CER <=2% gate do not run unless transcriptCheck carries a user request for them (owner directive 2026-10-04); the proof then records transcript: null. Returns an optional historical hash-bound .wav.quality.json review proof. Missing keys, unavailable reviewer or malformed responses hold production (unverified); exhausted attempts return fail, and that finding goes to the user as a warning they can accept for the current take (skills/produce/references/tts-hitl.md). Scores are operational thresholds, not a guarantee of human judgement.
-Requires ffmpeg and GEMINI_API_KEY even for local synthesis. One paid audio-review call per acoustically valid take (two with transcriptCheck), plus the selected generator's costs. Record the retry-inclusive allowance before calling; review tokens are logged as unpriced until reconciled with provider billing. Do not call again to reset an exhausted attempt budget. Do not use for recordings or native clip speech. Do not change engines/voices or lower thresholds to obtain PASS.`,
+        description: "Generate one speech take without automatic scoring or retakes. Use for a legacy checked-TTS call; returns generation result, status=not_reviewed and host-review next action. Do NOT use for evaluation alone \u2014 use host_review. Paid synthesis uses the selected generator and existing authorization; no evaluation API is called.",
         inputSchema: {
             type: 'object', additionalProperties: false,
             properties: {
@@ -4620,21 +4757,17 @@ Returns revision, ordered matching lines with generationPlan and voice/audio has
     },
     {
         name: 'acting_review',
-        title: 'Review requested acting against actual audio and video',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: `Review actual acting only for an explicitly requested paid evaluation.
-
-Use when the user asks to listen/watch, adversarially evaluate, or improve expression, intonation and acting against a scene direction. Sends the supplied local media to Gemini and writes an immutable local receipt beside it. This is an optional paid external call under existing authorization, never a default produce/autoproduce gate. Supports media up to 12 MiB and 120 seconds; audiovisual/video modes require MP4, audio supports WAV, MP3, FLAC or M4A. Same media/direction/request reuses its receipt, including failures, rather than rerolling a score.
-
-Do NOT use for free provenance or generation planning: use speech_manage instead. Do NOT use metadata or still frames as proof that speech or continuous acting works.
-
-User preference decides voice casting; perceived age and naturalness are subjective. Never reject or regenerate a preferred take to satisfy this review. Returns advisoryOnly=true, selectionAuthority=user, interpretation, status pass/fail/unverified, nullable score, failures, review with situation/expression/body/vocalEmotion/speechAccuracy/lipSync evidence, media/direction hashes, usage, receiptPath and reused. success requires verified score >=95 on all required axes, confidence >=0.9, complete required track coverage and no findings. Unobserved axes are null; audio-only review cannot certify visual acting.`,
+        title: 'Review performance or cinematography from actual media',
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+        description: "Create local review evidence for the host LLM. Use for requested listening, acting or camera review. Returns status=not_reviewed, score=null, mediaPath, timestamped frame paths when visual, SHA256, duration in seconds, rubric and nextAction; it does not judge or upload media. Open evidence with native host capabilities and record observations with host_review. Unsupported modalities remain unverified. Do NOT use for synthesis \u2014 use the selected raw generator. No external evaluation call or automatic fallback.",
         inputSchema: {
             type: 'object', additionalProperties: false, properties: {
                 mediaPath: { type: 'string', minLength: 1, description: 'Local clip/audio file, e.g. /Volumes/data/story/meleon/test/shot-21.mp4.' },
                 expectedText: { type: 'string', maxLength: 8000, default: '', description: 'Exact intended spoken words, e.g. What did you pass? Empty for silent media.' },
                 direction: { type: 'string', minLength: 20, maxLength: 12000, description: 'Scene situation, intent, emotion, audible delivery, visible actions and timing, e.g. Celebration ends; lower hands and quietly ask the applicant what he passed.' },
                 mode: { type: 'string', enum: ['audiovisual', 'audio', 'video'], default: 'audiovisual', description: 'Tracks to inspect; audiovisual requests both sound and picture.' },
+                focus: { type: 'string', enum: ['performance', 'cinematography'], default: 'performance', description: 'Optional assessment scope; cinematography requires mode=video and uses camera/direction/continuity/naturalness evidence rather than emotional acting.' },
+                retryTransportFailure: { type: 'boolean', default: false, description: 'Legacy compatibility field, ignored. Host reviews never call an external evaluator.' },
                 requestedBy: { type: 'string', minLength: 1, maxLength: 200, description: 'Source of explicit user review request, e.g. User request in this session.' },
                 reason: { type: 'string', minLength: 10, maxLength: 1000, description: 'Requested evaluation purpose, e.g. Verify the confused reaction after revising the sales tone.' }
             }, required: ['mediaPath', 'direction', 'requestedBy', 'reason']

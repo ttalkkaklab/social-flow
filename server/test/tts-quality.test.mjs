@@ -204,62 +204,13 @@ test('failed replacement review never attributes old scores to the new reviewer'
   assert.equal(f.proof().attempts[0].model,REVIEW_MODEL);assert.equal(f.count(),1);
 });
 
-test('review API version override and blank default reach both review requests',async t=>{
-  // both only exist when the dictation check was asked for; by default there is one review call
-  const f=setup(t);await f.deps.generate();
-  for(const [value,expected] of [['  v1beta  ','v1beta'],['  ','v1']]){
-    const child=`
-      import {listen, REVIEW_API_VERSION} from './dist/tts-quality.js';
-      const urls=[];
-      globalThis.fetch=async(input)=>{
-        urls.push(String(input.url ?? input));
-        const result=urls.length===1?{transcript:${JSON.stringify(script)}}:${JSON.stringify(good())};
-        return new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(result)}]}}]}),{status:200,headers:{'Content-Type':'application/json'}});
-      };
-      await listen(${JSON.stringify(f.file)},${JSON.stringify({...f.request,transcriptCheck:dictation})});
-      console.log(JSON.stringify({version:REVIEW_API_VERSION,urls}));
-    `;
-    const result=spawnSync(process.execPath,['--input-type=module','-e',child],{
-      cwd:path.resolve(import.meta.dirname,'..'),encoding:'utf8',
-      env:{...process.env,GEMINI_API_KEY:'test-only',GOOGLE_API_KEY:'',GOOGLE_GENAI_USE_VERTEXAI:'false',SOCIAL_FLOW_TTS_REVIEW_API_VERSION:value},
-    });
-    assert.equal(result.status,0,result.stderr);
-    const actual=JSON.parse(result.stdout);assert.equal(actual.version,expected);assert.equal(actual.urls.length,2);
-    for(const url of actual.urls)assert.equal(new URL(url).pathname.split('/')[1],expected);
-  }
-});
-
-test('the dictation check does not run unless it was asked for',async t=>{
-  const f=setup(t);await f.deps.generate();
-  const child=`
-    import {listen} from './dist/tts-quality.js';
-    const TRANSCRIBE='Transcribe every audible spoken word';
-    const bodies=[];
-    globalThis.fetch=async(input,init)=>{
-      let body='';
-      try{body=typeof init?.body==='string'?init.body:(input&&typeof input.text==='function'?await input.text():String(init?.body??''));}catch{body='';}
-      bodies.push(body);
-      const result=body.includes(TRANSCRIBE)?{transcript:${JSON.stringify(script)}}:${JSON.stringify(good())};
-      return new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(result)}]}}]}),{status:200,headers:{'Content-Type':'application/json'}});
-    };
-    const ALONE='No blind transcript accompanies this take';
-    const seen=()=>{const b=bodies.splice(0);return {calls:b.length,transcribe:b.filter(x=>x.includes(TRANSCRIBE)).length,
-      blindInReview:b.filter(x=>x.includes('blindTranscript')).length,readingAlone:b.filter(x=>x.includes(ALONE)).length,
-      firstIsTranscribe:b.length?b[0].includes(TRANSCRIBE):false};};
-    const off=await listen(${JSON.stringify(f.file)},${JSON.stringify(f.request)});
-    const offSeen=seen();
-    const on=await listen(${JSON.stringify(f.file)},${JSON.stringify({...f.request,transcriptCheck:dictation})});
-    console.log(JSON.stringify({off:{...offSeen,transcript:off.transcript},on:{...seen(),transcript:on.transcript}}));
-  `;
-  const result=spawnSync(process.execPath,['--input-type=module','-e',child],{cwd:path.resolve(import.meta.dirname,'..'),encoding:'utf8',
-    env:{...process.env,GEMINI_API_KEY:'test-only',GOOGLE_API_KEY:'',GOOGLE_GENAI_USE_VERTEXAI:'false',SOCIAL_FLOW_TTS_REVIEW_API_VERSION:''}});
-  assert.equal(result.status,0,result.stderr);
-  const {off,on}=JSON.parse(result.stdout);
-  // Off: one paid call, no transcription prompt leaves the process, and the judge is never handed a transcript.
-  // The judge is told the second reading is absent; this states the absence, it does not replace it.
-  assert.deepEqual(off,{calls:1,transcribe:0,blindInReview:0,readingAlone:1,firstIsTranscribe:false,transcript:null});
-  // On request: the blind pass runs first, separately, and its words reach the listening judge.
-  assert.deepEqual(on,{calls:2,transcribe:1,blindInReview:1,readingAlone:0,firstIsTranscribe:true,transcript:script});
+test('legacy direct listening cannot dispatch an external model request', async () => {
+ const {listen}=await import('../dist/tts-quality.js');
+ const previous=globalThis.fetch;let calls=0;
+ try {globalThis.fetch=async()=>{calls++;throw new Error('unexpected network');};
+  await assert.rejects(listen('/tmp/unused.wav',{}),/External listening evaluation is retired/);
+  assert.equal(calls,0);
+ } finally {globalThis.fetch=previous;}
 });
 
 test('a null transcript disarms the CER gate and nothing else',()=>{

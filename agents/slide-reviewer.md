@@ -41,9 +41,12 @@ description: >
   <commentary>A design-quality verdict on a slide — get the score and fix directives from slide-reviewer's rubric.</commentary>
   </example>
 tools: Read, Grep, Glob, Bash
-model: sonnet
 color: yellow
 ---
+
+Use the current host model and native media capabilities. Follow
+[host evaluation](../skills/_shared/host-review.md); unsupported modalities stay unverified.
+
 **Automatic execution policy:** Read [automation guidance](../skills/_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 
 

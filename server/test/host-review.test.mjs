@@ -1,0 +1,38 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, rmSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { hostReview } from '../dist/host-review.js';
+import { reviewActing } from '../dist/acting-review.js';
+import { reviewFinalSpeech } from '../dist/tts-final-quality.js';
+test('host review prepares locally, binds records, and refuses unsupported claims', async t => {
+ const dir=mkdtempSync(path.join(tmpdir(),'host-review-'));
+ t.after(()=>rmSync(dir,{recursive:true,force:true}));
+ const file=path.join(dir,'clip.mp4');
+ execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=c=black:s=64x64:r=10:d=1','-f','lavfi','-i','anullsrc=r=48000:cl=mono','-t','2','-c:v','libx264','-c:a','aac',file]);
+ const previous=globalThis.fetch; globalThis.fetch=async()=>{throw new Error('Unexpected network');};
+ t.after(()=>{globalThis.fetch=previous;});
+ const request={mediaPath:file,brief:'Woman holds a level tray at the doorway',mode:'video'};
+ const prepared=await hostReview(request);
+ assert.equal(prepared.status,'not_reviewed');assert.equal(prepared.score,null);
+ assert.equal(prepared.frames.length,8);assert.ok(prepared.frames.every(f=>f.seconds<=.9));
+ const legacy=await reviewActing({mediaPath:file,direction:request.brief,mode:'video',requestedBy:'User',reason:'Inspect camera and framing'});
+ assert.equal(legacy.provider,'host');assert.equal(legacy.externalEvaluationCalls,0);
+ const final=await reviewFinalSpeech({mediaPath:file,expectedText:'Hello',language:'en',delivery:'Quiet'});
+ assert.equal(final.status,'not_reviewed');
+ const segments=Array.from({length:11},(_,i)=>({startSeconds:i,expectedText:'a'.repeat(1000)}));
+ const long=await reviewFinalSpeech({mediaPath:file,expectedText:segments.map(s=>s.expectedText).join(' '),language:'en',delivery:'b'.repeat(2000),segments});
+ assert.equal(long.status,'not_reviewed');assert.deepEqual(long.segments,segments);
+ const record={...request,action:'record',mediaSha256:prepared.mediaSha256,reviewer:'Test host',coverage:'sampled_frames',observations:[{axis:'composition',start:0,end:.9,score:85,evidence:'Observed a black test frame, with no subject visible.',correction:'Use the intended image'}]};
+ const saved=await hostReview(record); t.after(()=>rmSync(saved.receiptPath,{force:true}));
+ assert.equal(saved.score,null);assert.equal(saved.status,'observed');
+ assert.equal(JSON.parse(readFileSync(saved.receiptPath)).observations[0].score,85);
+ await assert.rejects(hostReview({...record,complete:true}),/complete|Complete/);
+ await assert.rejects(hostReview({...record,mediaSha256:'0'.repeat(64)}),/current media SHA256/);
+ for(const axis of ['camera','continuity','physicalNaturalness','speechAccuracy','lipSync'])
+  await assert.rejects(hostReview({...record,observations:[{...record.observations[0],axis}]}),/require/);
+ await assert.rejects(hostReview({...record,observations:[{...record.observations[0],end:3}]}),/timestamps/);
+ await assert.rejects(hostReview({...record,coverage:'audiovisual_playback'}),/contradicts/);
+});

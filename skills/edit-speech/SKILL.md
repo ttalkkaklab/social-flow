@@ -7,8 +7,10 @@ description: >
   Finds stable shot and line ids, preserves other characters and reports affected outputs.
   Storyboard plans a new episode; produce builds it; this skill repairs an existing one.
 argument-hint: "<channel> <episode> <shot, character or quoted line> <change>"
-allowed-tools: ["mcp__social-flow__tts_voice_design", "mcp__social-flow__tts_list_voices", "mcp__social-flow__speech_manage", "mcp__social-flow__acting_review", "mcp__social-flow__tts_review_acting", "mcp__social-flow__storyboard_read", "mcp__social-flow__storyboard_check", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__astra_audio2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__veo_reference"]
+allowed-tools: ["mcp__social-flow__host_review", "mcp__social-flow__tts_voice_design", "mcp__social-flow__tts_list_voices", "mcp__social-flow__speech_manage", "mcp__social-flow__acting_review", "mcp__social-flow__tts_review_acting", "mcp__social-flow__storyboard_read", "mcp__social-flow__storyboard_check", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__astra_audio2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__veo_reference"]
 ---
+Follow [host evaluation](../_shared/host-review.md) for every requested review.
+
 **Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 
 # Revise shot speech
