@@ -7,7 +7,7 @@ description: >
   Finds stable shot and line ids, preserves other characters and reports affected outputs.
   Storyboard plans a new episode; produce builds it; this skill repairs an existing one.
 argument-hint: "<channel> <episode> <shot, character or quoted line> <change>"
-allowed-tools: ["mcp__social-flow__speech_manage", "mcp__social-flow__acting_review", "mcp__social-flow__tts_review_acting", "mcp__social-flow__storyboard_read", "mcp__social-flow__storyboard_check", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__astra_audio2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__veo_reference"]
+allowed-tools: ["mcp__social-flow__speech_manage", "mcp__social-flow__acting_review", "mcp__social-flow__tts_review_acting", "mcp__social-flow__storyboard_read", "mcp__social-flow__storyboard_check", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__astra_audio2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__veo_reference"]
 ---
 **Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 
@@ -48,6 +48,10 @@ new character dialogue or voices. Do not silently turn a user's dialogue into na
    stylePrompt. For ElevenLabs v4, write a compact acting.direction/tags cue for
    audible delivery; rich context and vocal paragraphs stay in the scene plan.
    Report unsupported-control warnings without silently changing engines.
+   Follow [ElevenLabs v4](../_shared/elevenlabs-v4.md) for `/IPA/` pronunciation and
+   optional neighbor request IDs. Copy real IDs from existing receipts/sidecars;
+   retain the actual added arguments in voiceSettings. Preserve logging and clone
+   mode choices. Never guess a request ID or change clone mode on an API failure.
    Do not call automatic listening, dictation, scoring or approval tools. Record the generator,
    actual voice settings, text and speed in the generation receipt. Use `attach_audio` to bind
    the file to its line revision, passing the actual generation arguments and text. Generated speech stays `not_reviewed`; that is usable output.

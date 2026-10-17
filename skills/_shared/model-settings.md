@@ -81,7 +81,9 @@ prices. A configured credential does not guarantee a successful generation.
    Use the installed video-model selection reference and cost tables. Explain the
    change each option makes. The host is the recommended initial choice when it
    supports the requested job; the user can explicitly choose an API instead.
-2. **Speech model.** Offer available Gemini models or ElevenLabs `eleven_v4` only. Local TTS
+2. **Speech model.** Offer available Gemini models or ElevenLabs `eleven_v4` only
+   ([v4 API contract](elevenlabs-v4.md)); v4 Turbo uses a separate realtime WebSocket
+   and is not supported by the file-generation tools. Local TTS
    engines are removed; do not offer Supertonic or MLX speech. Keep model selection separate from each
    character's voice ID, language, speed and style. Show existing pinned voices
    that conflict with the proposed engine/model during setup; let the user retain

@@ -20,7 +20,9 @@ export const ELEVENLABS_DIALOGUE_MODEL = DEFAULT_ELEVENLABS_MODEL;
 export const ELEVENLABS_MODEL_CHAR_CAPS = { eleven_v4: 10_000 };
 export const MAX_ELEVENLABS_INPUT_CHARS = ELEVENLABS_MODEL_CHAR_CAPS.eleven_v4;
 export const MAX_ELEVENLABS_DIALOGUE_CHARS = MAX_ELEVENLABS_INPUT_CHARS;
-/** Plugin request bounds, not a claim about v4's intrinsic speaker limit. */
+/** Dialogue documentation recommends this size even though the model allows 10,000. */
+export const RECOMMENDED_ELEVENLABS_DIALOGUE_CHARS = 2_000;
+/** The REST endpoint permits 10 unique voices; the 50-turn bound is local. */
 export const ELEVENLABS_DIALOGUE_MAX_VOICES = 10;
 export const ELEVENLABS_DIALOGUE_MAX_INPUTS = 50;
 /**
@@ -64,8 +66,9 @@ const voiceIdSchema = z
     .regex(/^[A-Za-z0-9_-]{1,64}$/, 'voiceId must be an ElevenLabs voice_id (letters, digits, _ or -)');
 const modelSchema = z.enum(ELEVENLABS_MODELS).optional().default(DEFAULT_ELEVENLABS_MODEL);
 const outputFormatSchema = z.enum(ELEVENLABS_OUTPUT_FORMATS).optional().default(DEFAULT_ELEVENLABS_OUTPUT_FORMAT);
-/** ISO 639-1 language hint ("ko", "en"). */
-const languageCodeSchema = z.string().regex(/^[a-z]{2}$/, 'languageCode must be a 2-letter ISO 639-1 code (e.g. "ko")').optional();
+/** Model docs also list ISO 639-3 exceptions without a two-letter code. */
+export const ELEVENLABS_LANGUAGE_CODE_PATTERN = '^(?:[a-z]{2}|ast|yue|ceb|fil)$';
+const languageCodeSchema = z.string().regex(new RegExp(ELEVENLABS_LANGUAGE_CODE_PATTERN), 'languageCode must be a 2-letter code (e.g. "ko") or ast, yue, ceb, fil').optional();
 const seedSchema = z.number().int().min(0).max(4_294_967_295).optional();
 const normalizationSchema = z.enum(ELEVENLABS_TEXT_NORMALIZATION).optional();
 /** v4 dialogue settings. The legacy similarityBoost name is an explicit alias. */
@@ -79,10 +82,21 @@ const voiceSettingsFields = {
 const continuityFields = {
     previousText: z.string().max(100).optional(),
     nextText: z.string().max(100).optional(),
+    previousRequestIds: z.array(z.string().trim().min(1)).min(1).max(3).optional(),
+    nextRequestIds: z.array(z.string().trim().min(1)).min(1).max(3).optional(),
     pronunciationDictionaryLocators: z.array(z.object({
         pronunciationDictionaryId: z.string().trim().min(1), versionId: z.string().trim().min(1),
     }).strict()).min(1).max(3).optional(),
 };
+const requestOptions = {
+    usePvcAsIvc: z.boolean().optional(),
+    enableLogging: z.boolean().optional(),
+};
+function checkRequestLogging(value, ctx) {
+    if (value.enableLogging === false && (value.previousRequestIds?.length || value.nextRequestIds?.length)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['enableLogging'], message: 'Zero retention disables request stitching; omit request IDs or enable logging' });
+    }
+}
 function checkV4Settings(value, ctx) {
     if (value.similarity !== undefined && value.similarityBoost !== undefined && value.similarity !== value.similarityBoost) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['similarityBoost'], message: 'similarityBoost is a legacy alias of similarity; supply only one value or matching values' });
@@ -131,12 +145,14 @@ export const elevenLabsGenerateSchema = z
     ...voiceSettingsFields,
     seed: seedSchema,
     ...continuityFields,
+    ...requestOptions,
     applyTextNormalization: normalizationSchema,
     ...outputFields,
 })
     .strict()
     .superRefine((value, ctx) => {
     checkV4Settings(value, ctx);
+    checkRequestLogging(value, ctx);
     checkV4Text(value.text, ctx, ['text']);
     checkFilenameMatchesFormat(value, ctx);
 });
@@ -153,6 +169,7 @@ export const elevenLabsDialogueSchema = z
     model: modelSchema,
     ...voiceSettingsFields,
     ...continuityFields,
+    ...requestOptions,
     seed: seedSchema,
     languageCode: languageCodeSchema,
     applyTextNormalization: normalizationSchema,
@@ -161,6 +178,7 @@ export const elevenLabsDialogueSchema = z
     .strict()
     .superRefine((value, ctx) => {
     checkV4Settings(value, ctx);
+    checkRequestLogging(value, ctx);
     for (const [index, line] of value.inputs.entries())
         checkV4Text(line.text, ctx, ['inputs', index, 'text']);
     const total = value.inputs.reduce((sum, line) => sum + line.text.length, 0);
@@ -451,6 +469,9 @@ export function elevenLabsDialogueRequestBody(request) {
         ...(request.languageCode ? { language_code: request.languageCode } : {}),
         ...(request.previousText ? { previous_text: request.previousText } : {}),
         ...(request.nextText ? { future_text: request.nextText } : {}),
+        ...(request.previousRequestIds ? { previous_request_ids: request.previousRequestIds } : {}),
+        ...(request.nextRequestIds ? { next_request_ids: request.nextRequestIds } : {}),
+        ...(request.usePvcAsIvc !== undefined ? { use_pvc_as_ivc: request.usePvcAsIvc } : {}),
         ...(request.pronunciationDictionaryLocators ? { pronunciation_dictionary_locators: request.pronunciationDictionaryLocators.map(d => ({ pronunciation_dictionary_id: d.pronunciationDictionaryId, version_id: d.versionId })) } : {}),
         ...(request.applyTextNormalization ? { apply_text_normalization: request.applyTextNormalization } : {}),
     };
@@ -473,10 +494,16 @@ export async function generateElevenLabsDialogue(request) {
         const outputDir = request.outputPath || process.cwd();
         const filename = request.filename || `elevenlabs_dialogue_${Date.now()}${extensionForFormat(request.outputFormat)}`;
         const totalChars = request.inputs.reduce((sum, line) => sum + line.text.length, 0);
+        const warnings = totalChars > RECOMMENDED_ELEVENLABS_DIALOGUE_CHARS
+            ? [`Dialogue contains ${totalChars} characters; ElevenLabs recommends at most ${RECOMMENDED_ELEVENLABS_DIALOGUE_CHARS} per request. Longer requests may terminate early or fail validation; split at scene boundaries.`]
+            : [];
         const voices = new Set(request.inputs.map((line) => line.voiceId));
         console.error(`[ElevenLabs] Synthesizing dialogue... (${request.inputs.length} lines, ${voices.size} voices, ${totalChars} chars, ${request.outputFormat})`);
         const body = elevenLabsDialogueRequestBody(request);
-        const endpoint = `/v1/text-to-dialogue${request.timestamps ? '/with-timestamps' : ''}?output_format=${request.outputFormat}`;
+        const query = new URLSearchParams({ output_format: request.outputFormat });
+        if (request.enableLogging !== undefined)
+            query.set('enable_logging', String(request.enableLogging));
+        const endpoint = `/v1/text-to-dialogue${request.timestamps ? '/with-timestamps' : ''}?${query}`;
         const response = await elevenFetch(endpoint, { method: 'POST', body: JSON.stringify(body) }, timeoutFor(totalChars));
         const meta = readMeta(response);
         if (request.timestamps) {
@@ -486,10 +513,14 @@ export async function generateElevenLabsDialogue(request) {
                 inputs: request.inputs.map((line) => ({ voice_id: line.voiceId, text: line.text })),
                 ...(request.inputs.length === 1 ? { voice_id: request.inputs[0].voiceId, text: request.inputs[0].text } : {}),
                 request: body,
+                output_format: request.outputFormat,
+                enable_logging: request.enableLogging ?? true,
+                ...meta,
             });
             console.error(`[ElevenLabs] Dialogue saved to: ${saved.audioPath} (+ ${path.basename(saved.alignmentPath)})`);
             return {
                 success: true,
+                warnings,
                 audioPath: saved.audioPath,
                 alignmentPath: saved.alignmentPath,
                 model: ELEVENLABS_DIALOGUE_MODEL,
@@ -506,6 +537,7 @@ export async function generateElevenLabsDialogue(request) {
         console.error(`[ElevenLabs] Dialogue saved to: ${audioPath}`);
         return {
             success: true,
+            warnings,
             audioPath,
             model: ELEVENLABS_DIALOGUE_MODEL,
             outputFormat: request.outputFormat,
