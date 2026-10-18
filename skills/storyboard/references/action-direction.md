@@ -1,5 +1,13 @@
 # Character action, camera and cutting
 
+## Contents
+
+- [Choose the event](#choose-the-event-before-the-technique)
+- [Required camera-direction pass](#required-camera-direction-pass)
+- [Camera fields](#map-purpose-to-the-existing-camera-fields)
+- [Cutting](#cut-on-a-meaningful-change)
+- [Verification](#verify-what-was-produced)
+
 Use this guide when planning character-led drama, comedy or action. It is creative
 guidance, not an execution gate. Keep the character identity and scenario contracts;
 do not add an influencer persona, emotion score or camera-icon record beside them.
@@ -15,6 +23,47 @@ Write the action and reaction before choosing the camera. Use `shot.info` for th
 new information, `shot.feel` for intended experience and existing `shot.cutType` for
 action, reaction or insert. Keep motivation in the scenario; a smile icon cannot
 explain a choice. Scene state does not rewrite the baseline character identity.
+
+## Required camera-direction pass
+
+Complete this pass for every production storyboard, including unattended authors, after
+observable scenes and before source-image prompts. Explicit content-only work defers it.
+
+1. Name what the viewer must notice first and what changes by the end of the beat.
+2. Choose shot size, angle, camera distance and depth/focus together. Compare a held
+   frame with a motivated move: approach a withheld reaction, follow a travelling subject,
+   pull back to reveal a relationship, or shift focus from evidence to its observer.
+3. Record the choice in `shot.techniques` with a scene-specific reason. Write the actual
+   starting picture, motion pace/path and ending picture in `visual.camera`; keep
+   `shot.size`, `shot.angle` and `shot.depth` consistent. For rack focus name both subjects
+   and the focus order in `framing`/`end`, including the action cue or focus timing.
+   `shot.techniques[].reason` and `camera.purpose` are review context; their prose is
+   not copied into provider prompts. A static camera can still direct attention through focus/blocking.
+4. For static, explain what the fixed frame preserves: simultaneous reactions, a tiny
+   hand action, a deliberate wait or a readable spatial relationship. “Keep action legible”
+   copied across unrelated beats, or action text copied into purpose, is not a decision.
+   Do not supply static as a placeholder when the choice has not been made.
+5. Read consecutive shots in scene order. Reconsider repeated framing, copied reasons
+   and unchanging focus where the subject, discovery or pressure changes. Keep intentional
+   stillness. Never alternate moves by index, enforce a moving-shot percentage or add
+   spectacle that obscures acting. Explain deliberate repeated setups with their actual beats.
+6. Carry these choices into image composition, motion prompts and any existing location/
+   previz plan. Reassemble stale prompts after changes; do not retain `cameraFixed:true`
+   for a travelling camera. Review actual footage for the intended attention shift.
+
+Before delivery, review the actual sequence even when diagnostics are empty. Ask what a
+held view would lose, whether a move reveals the answer too soon, and whether focus or
+blocking can do the job more clearly. Compare opening → action cue → attention change →
+landing with the next cut. Paraphrased boilerplate and an arbitrary cycle of different
+moves still fail this authoring pass; word variety is not evidence of direction.
+Use the [camera behavior cases](evals.md#camera-direction-without-effect-cycling) for
+requested adversarial checks.
+
+The shared checker reports missing choices/reasons, repeated reason components or landings,
+action copied into rationale and all-static plans as advice,
+including draft plans with camera fields. The HTML shows the same findings. Review them
+and repair generic choices before presenting a completed production plan; findings alone
+neither judge the art nor block tool execution. Do not invent image or motion review evidence.
 
 ## Map purpose to the existing camera fields
 

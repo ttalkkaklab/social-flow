@@ -627,3 +627,13 @@ it('readiness separates configuration, corrupt files, missing cast links and unr
   assert.equal(result.assets[0].file,'present');assert.equal(result.assets[0].decoding,'failed');
   assert.equal(result.visualReview,'not_reviewed');
 });
+
+
+it('read and draft check expose camera choices missing from a production shot', () => {
+  const dir = tmp(), file = join(dir, 'scenes.js');
+  writeFileSync(file, 'window.SCENES=[{id:"s0001",type:"points",shot:{render:{mode:"generated_video"}},visual:{camera:{framing:"Desk"}}}];');
+  const read = readStoryboard({path: dir, level: 'shot'});
+  assert.ok(read.cameraDirectionFindings.some(f => f.what.startsWith('[camera-plan-missing]')));
+  const checked = checkStoryboard({path: dir, draft: true});
+  assert.ok(checked.contract.some(f => f.level === 'warn' && f.what.startsWith('[camera-plan-missing]')));
+});

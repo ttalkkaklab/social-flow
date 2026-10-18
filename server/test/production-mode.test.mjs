@@ -37,8 +37,8 @@ function fixture(n = 3) {
       continuity: 'The river and mountain retain their original shape.', reject: 'Reject unstable buildings and changing trees.' } },
     visual: { why: 'Physical removal exposes the stream.', action: 'The buildings rise.', bg: `images/scene-${i + 1}.png`,
       // One static set-up in three: the camera moves on two of every three full-video shots.
-      camera: { framing: ['Elevated three-quarter view', 'Low wide view of the valley', 'Close view of the stream bed'][i % 3],
-        movement: ['static', 'dolly in', 'truck right'][i % 3], speed: i % 3 ? 'slow' : 'steady', end: 'The open stream' },
+      camera: { purpose: `Keep building ${i + 1} and its newly exposed stream section readable`, framing: ['Elevated three-quarter view', 'Low wide view of the valley', 'Close view of the stream bed'][i % 3],
+        movement: ['static', 'dolly in', 'truck right'][i % 3], speed: i % 3 ? 'slow' : 'steady', end: i < 2 ? 'The open stream' : `The open stream. Section ${i + 1} is exposed.` },
       video: { engine: 'seedance', model: 'seedance-1-5-pro-251215', resolution: '1080p', generateAudio: false } } }));
   for (let i = 0; i < n; i++) {
     const prompts = assemble(win, i); win.SCENES[i].visual.bgPrompt = prompts.sourcePrompt;
@@ -243,7 +243,11 @@ function stillsBoard(n = 9, policy = { generatedVideoMax: 0, videoBudgetUsd: 0 }
   win.MOTION_POLICY = policy;
   win.PRODUCTION = { ...win.PRODUCTION, mode: 'stills_only', videoBudgetUsd: 0, maxAttempts: 1 };
   delete win.PRODUCTION.approval;
-  for (const scene of win.SCENES) { scene.shot.render.mode = 'still_camera'; delete scene.visual.video; }
+  for (const scene of win.SCENES) {
+    scene.shot.render.mode = 'still_camera';
+    scene.shot.render.camera = {effect: 'push', target: scene.visual.camera.end, reason: scene.visual.camera.purpose};
+    delete scene.visual.video;
+  }
   return win;
 }
 test('stills_only accepts nine still cuts, keeps the four cost choices and preserves the channel cap', () => {
@@ -1398,4 +1402,50 @@ test('spatial model prompts preserve canonical action and addressee beyond video
   const prompt=assemble(win,0).motionPrompt;
   assert.match(prompt,/addressed to bride/);assert.match(prompt,/Drops the parcel/);
  }
+});
+
+test('camera direction reports copied defaults as advice and preserves motivated holds', () => {
+  const shot = (reason, movement = 'static') => ({
+    shot: {render: {mode: 'generated_video'}, techniques: [{id: 'camera.static', reason}]},
+    visual: {camera: {movement, framing: 'Two people at a desk', end: 'Both reactions'}}
+  });
+  const copied = [shot('Keep the action legible'), shot('Keep the action legible')];
+  const warnings = runtimeMode.cameraDirectionWarnings(copied);
+  assert.equal(warnings.filter(x => x.startsWith('[camera-purpose-repeated]')).length, 1);
+  assert.equal(warnings.filter(x => x.startsWith('[camera-all-static]')).length, 1);
+  const advice = [];
+  assert.deepEqual(runtimeMode.check({SCENES: copied}, {draft: true, advice}), []);
+  assert.deepEqual(advice, warnings);
+  const intentional = [shot('Keep both conflicting reactions visible'), shot('Reveal the witness behind the envelope')];
+  intentional[1].shot.techniques.push({id: 'camera.rack-focus', reason: 'Move focus to the witness'});
+  assert.equal(runtimeMode.cameraDirectionWarnings(intentional).filter(x => x.startsWith('[camera-purpose-repeated]')).length, 0);
+  assert.deepEqual(runtimeMode.cameraDirectionWarnings([intentional[0]]), []);
+  assert.deepEqual(runtimeMode.cameraDirectionWarnings([{type: 'points', narration: []}]), []);
+  assert.equal(runtimeMode.cameraDirectionWarnings([shot('')])[0].startsWith('[camera-purpose-missing]'), true);
+  assert.deepEqual(runtimeMode.cameraDirectionWarnings([intentional[0], shot('Reveal distance to the exit', 'dolly out')]), []);
+});
+
+
+test('camera advice survives incomplete inputs and detects copied components in mixed plans', () => {
+  const make = (extra = {}) => ({type: 'points', shot: {render: {mode: 'generated_video'}}, ...extra});
+  for (const techniques of [null, {}, [null], [{id: 3}], ['static']]) {
+    const s = make({shot: {render: {mode: 'generated_video'}, techniques}});
+    assert.doesNotThrow(() => runtimeMode.cameraDirectionWarnings([s]));
+    assert.ok(runtimeMode.cameraDirectionWarnings([s]).some(x => x.startsWith('[camera-plan-missing]')));
+  }
+  const repeated = [1, 2, 3].map(i => make({shot: {render: {mode: 'generated_video'}, techniques: [
+    {id: 'camera.static', reason: 'Keep the acting legible'},
+    {id: 'camera.eye', reason: `Look at witness ${i}`}
+  ]}, visual: {camera: {movement: i === 3 ? 'dolly in' : 'static', end: 'Hold the authored composition'}}}));
+  const notes = runtimeMode.cameraDirectionWarnings(repeated);
+  assert.ok(notes.some(x => x.startsWith('[camera-purpose-repeated]')));
+  assert.ok(notes.some(x => x.startsWith('[camera-end-repeated]')));
+  assert.ok(!notes.some(x => x.startsWith('[camera-all-static]')));
+  const still = {shot: {render: {mode: 'still_camera', camera: {effect: 'push', reason: 'Approach the lost key'}}}};
+  assert.ok(runtimeMode.cameraDirectionWarnings([still, structuredClone(still)]).some(x => x.startsWith('[camera-purpose-repeated]')));
+  const actionCopy = make({shot: {render: {mode: 'generated_video'}, info: 'The witness raises her hand'},
+    visual: {camera: {movement: 'static', purpose: 'The witness raises her hand'}}});
+  assert.ok(runtimeMode.cameraDirectionWarnings([actionCopy]).some(x => x.startsWith('[camera-purpose-action-copy]')));
+  assert.deepEqual(runtimeMode.cameraDirectionWarnings([null, {type: 'outro'}, {shot: {render: {mode: 'stock_video'}}},
+    make({visual: {reuse: {}}}), {type: 'points', narration: []}]), []);
 });

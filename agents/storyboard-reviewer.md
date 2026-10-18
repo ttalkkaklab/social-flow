@@ -107,6 +107,14 @@ Reject invented historical evidence as a repair for an abstract or uncertain sta
 - Does the source image precede an important action rather than already show its result?
 - Does the motion plan perform the story's event, rather than substitute generic head turns
   and camera pushes? Can the chosen medium render the planned exchange?
+- Has each shot deliberately chosen framing, angle, focus and movement for its beat?
+  Compare static reasons against the actual action; flag copied hold rationales and
+  missed reveals or attention shifts, including paraphrased boilerplate and arbitrary
+  move cycling that produce no lexical warnings. Reconstruct opening → action cue →
+  attention change → landing; check what a hold would lose and what a move might spoil.
+  Static plus rack focus can be purposeful. Cite
+  affected shots and a motivated alternative, never a moving-shot quota. Follow the
+  required camera-direction pass in action-direction.md for production-plan review.
 - Do simultaneous speech/actions overlap intentionally, with time for independent actions
   and necessary reactions? Are estimates distinguished from measured timing?
 

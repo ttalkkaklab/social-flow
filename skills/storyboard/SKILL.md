@@ -200,6 +200,13 @@ One shot may carry a complete exchange. Use the ordered `performance` and speech
 references in character-scenarios so that every story event survives the translation.
 Do not add coverage merely to meet a size count or repeat a medium close-up for every line.
 
+Before image prompts, perform the required camera-direction pass in
+[action direction](references/action-direction.md#required-camera-direction-pass).
+Choose framing, angle, focus and movement from each beat; never initialize every shot
+with static or copy one generic hold rationale. Persist shot-specific camera technique
+reasons and executable endpoints, then review the sequence for purposeful holds and
+changes of attention. This is authoring work, not a moving-shot quota or approval gate.
+
 For each consequential action, make the following understandable in the actual plan:
 who can see or hear it; where people stand and look; who has the prop before and after;
 what initiates the action; how the recipient reacts; what the next shot inherits.

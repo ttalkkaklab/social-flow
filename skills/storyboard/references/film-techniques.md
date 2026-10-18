@@ -4,6 +4,10 @@
 
 Read `storyboard_read` with `includeTechniques:true` (default). Choose from `techniqueCatalog.entries` after defining the shot's information and visible action. Every entry exposes `id`, bilingual `label`, `use`, `instruction`, `glyph` and the corresponding legacy `fields`. Save deliberate choices with `storyboard_apply`:
 
+This example deliberately combines a held viewpoint with a focus reveal; it is not a
+default shot template. Complete the [camera-direction pass](action-direction.md#required-camera-direction-pass)
+for each beat before choosing entries. Do not copy its static choice into unrelated shots.
+
 ```json
 {
   "shot": {
@@ -20,15 +24,15 @@ Read `storyboard_read` with `includeTechniques:true` (default). Choose from `tec
   "visual": {
     "camera": {
       "movement":"static",
-      "speed":"focus shifts smoothly over two seconds",
+      "speed":"",
       "framing":"Waist-up foreground speaker with an envelope, witness beyond the right shoulder.",
-      "end":"Camera stays fixed. Witness is sharp in the background; envelope is soft."
+      "end":"After the witness stops, shift focus over two seconds from the foreground envelope to the witness beyond the right shoulder. Camera stays fixed; the envelope becomes soft."
     }
   }
 }
 ```
 
-This fragment belongs inside a complete shot replacement; preserve unrelated fields. The four camera fields remain executable direction. A technique ID provides precise shared meaning; it does not invent actor positions, focus endpoints, speed or the final crop. `techniqueFindings` reports contradictory choices as advice. Unknown IDs, duplicates and missing reasons are malformed inputs. Existing boards without selections remain readable.
+This fragment belongs inside a complete shot replacement; preserve unrelated fields. The four camera fields remain executable direction. Reasons are review context and are not emitted into provider prompts; put named focus targets, focus order and its action cue or timing into `framing`/`end`. A technique ID provides precise shared meaning; it does not invent actor positions, focus endpoints, speed or the final crop. `techniqueFindings` reports contradictory choices as advice. Unknown IDs, duplicates and missing reasons are malformed inputs. Existing boards without selections remain readable.
 
 Select frame size separately from actor count: a two-shot can be MS, MFS or LS. MS is waist-up; MFS ends at mid-thigh. End-framing changes belong in `camera.end`, not a second starting-size selection. Static plus rack focus is valid. Static plus dolly in is contradictory. Snorricam needs body mounting and a fixed face; ordinary handheld sway is different. Dolly in changes viewpoint, zoom in changes field of view, and a dolly zoom coordinates both to hold the subject's screen size.
 

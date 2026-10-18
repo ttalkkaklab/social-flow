@@ -85,6 +85,7 @@ interface CameraContract {
   CAMERA_INPUT_SCHEMA: Record<string, unknown>;
   ALL_LOOKS: string[];
   cameraInputErrors(value: unknown): string[];
+  cameraDirectionWarnings(scenes: unknown): string[];
 }
 export function cameraContract(): CameraContract {
   return loadFromHere(join(REFERENCES_DIR, 'production-mode.js')) as CameraContract;
@@ -338,6 +339,7 @@ export function readStoryboard(args: z.infer<typeof storyboardReadSchema>): Reco
     plan(board: Board, index: number, dir: string): unknown;
   };
   result.continuityFindings = continuity.check(win, dirname(file));
+  result.cameraDirectionFindings = cameraContract().cameraDirectionWarnings(win.SCENES).map(what => ({ level: 'warn', where: 'camera direction', what }));
   result.techniqueFindings = (win.SCENES || []).flatMap((scene, index) => techniqueContract().findings(scene).map(what => ({level:'warn', where:'shot '+(index+1), what})));
   if (args.includeContext) result.reviewContext = {
     story: win.STORY || null, production: win.PRODUCTION || null, document: doc || null,

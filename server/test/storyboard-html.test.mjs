@@ -186,3 +186,18 @@ test('location planning sheets render without Blender, link shots and distinguis
   context.LANG = 'en'; context.doc = {};
   assert.match(render(), /Background\/location sheets have not been written yet/);
 });
+
+
+test('review HTML surfaces camera advice without promoting it to execution failures', () => {
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const start = template.indexOf('  if (window.PRODUCTION_MODE && window.PRODUCTION_MODE.cameraDirectionWarnings)');
+  const end = template.indexOf('  if (window.PRODUCTION) {', start);
+  assert.ok(start >= 0 && end > start);
+  const findings = [];
+  const context = {window: {PRODUCTION_MODE: require('../../skills/storyboard/references/production-mode.js')},
+    SCENES: [{shot: {render: {mode: 'generated_video'}}}], T: {where: {production: 'production'}},
+    flag: (level, where, what) => findings.push({level, where, what})};
+  runInNewContext(template.slice(start, end), context);
+  assert.ok(findings.some(f => f.what.startsWith('[camera-plan-missing]')));
+  assert.ok(findings.every(f => f.level === 'warn'));
+});
