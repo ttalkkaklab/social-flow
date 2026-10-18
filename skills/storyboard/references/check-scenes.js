@@ -47,7 +47,7 @@ const FORMAT_RESOLVE = path.resolve(SELF_DIR, '..', '..', 'platform-guide', 'ref
    checker and the assembler can never disagree about what a seedance prompt may say. */
 const PROMPT = require(path.join(SELF_DIR, 'assemble-bg-prompt.js'));
 const { scenePlan } = require('../../produce/references/seedance-route.js');
-const { mixFindings } = require('../../produce/references/sound-mix-contract.js');
+const { mixFindings, musicEnvelopeFindings } = require('../../produce/references/sound-mix-contract.js');
 const { assemble: assembleSpatialPrompt } = require('./spatial-prompts.js');
 const { APPEARANCE_WORDS } = require('./cut-treatments.js');
 
@@ -1473,6 +1473,8 @@ function check(win, fmt, opts) {
     // room for the brand sting was spending one of the episode's two reversal places.
     if (s.sound && s.sound.drop === true && (s.type === 'broll' || s.type === 'outro'))
       bad(where, `sound.drop on a ${s.type} — not a card`);
+
+    for (const finding of musicEnvelopeFindings(s.sound?.musicGain, s.duration, s.type)) bad(where, finding);
 
     // Explicit music-only silence windows preserve narration and room tone. Full digital silence
     // is not represented here because it would also erase the words the shot is meant to carry.
