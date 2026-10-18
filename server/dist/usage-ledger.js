@@ -353,7 +353,7 @@ function charUnits(args) {
 /** True for the tools whose calls belong in an episode's cost ledger. */
 export function isBillableTool(tool) {
     // This wrapper records each synthesis and review itself, including rejected takes.
-    if (['tts_generate_checked', 'character_voice_audition', 'tts_review_acting', 'tts_local_generate', 'mlx_tts_generate'].includes(tool))
+    if (['tts_route', 'tts_generate_checked', 'character_voice_audition', 'tts_review_acting', 'tts_local_generate', 'mlx_tts_generate'].includes(tool))
         return false;
     // Catalogue reads cost nothing and belong in no ledger.
     if (tool === 'tts_list_voices' || tool === 'tts_elevenlabs_voices' || tool === 'music_list_options')

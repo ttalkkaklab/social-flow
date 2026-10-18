@@ -10,6 +10,8 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { z } from 'zod';
+import { executeSpeech, type SpeechResult } from './tts-execution.js';
+import { decodeSpeechBase64, validateSpeechAudio, validateSpeechAlignment, validateSpeechSegments } from './tts-audio.js';
 import { elevenLabsBaseUrl, requireElevenLabsKey } from './config.js';
 import { bareFilenameSchema, pcmToWav, saveAudioFile } from './media-utils.js';
 
@@ -367,7 +369,7 @@ export interface ElevenLabsVoiceSegment {
  * Synthesis response. error holds only the cause message — the handler adds the
  * "… failed:" prefix (same convention as tts-client).
  */
-export interface ElevenLabsSynthesisResponse {
+export interface ElevenLabsSynthesisResponse extends SpeechResult {
   success: boolean;
   error?: string;
   warnings?: string[];
@@ -510,7 +512,7 @@ function timeoutFor(textLength: number): number {
   return Math.min(5 * 60_000, 60_000 + textLength * 40);
 }
 
-async function elevenFetch(pathAndQuery: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+async function elevenFetch(pathAndQuery: string, init: RequestInit, timeoutMs: number, attempts = MAX_ATTEMPTS): Promise<Response> {
   const apiKey = requireElevenLabsKey();
   const url = `${elevenLabsBaseUrl()}${pathAndQuery}`;
   const headers: Record<string, string> = {
@@ -519,12 +521,12 @@ async function elevenFetch(pathAndQuery: string, init: RequestInit, timeoutMs: n
   };
 
   let lastError: Error | undefined;
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 0; attempt < attempts; attempt++) {
     const response = await fetch(url, { ...init, headers, signal: AbortSignal.timeout(timeoutMs) });
     if (response.ok) return response;
     const bodyText = await response.text();
     lastError = new Error(describeElevenLabsError(response.status, bodyText));
-    if (!isRetryable(response.status) || attempt === MAX_ATTEMPTS - 1) break;
+    if (!isRetryable(response.status) || attempt === attempts - 1) break;
     await sleep(RETRY_BASE_DELAY_MS * (attempt + 1));
   }
   throw lastError ?? new Error('ElevenLabs request failed');
@@ -595,7 +597,11 @@ function saveTimestamped(
   extra: Record<string, unknown>,
 ): { audioPath: string; alignmentPath: string; speechEndSeconds?: number; alignedCharacters?: number; voiceSegments?: number; audio: Buffer } {
   if (!body.audio_base64) throw new Error('with-timestamps response carried no audio_base64');
-  const audio = Buffer.from(body.audio_base64, 'base64');
+  const audio = decodeSpeechBase64(body.audio_base64);
+  const duration = validateSpeechAudio(audio, path.extname(filename).slice(1));
+  validateSpeechAlignment(body.alignment, duration);
+  validateSpeechAlignment(body.normalized_alignment, duration);
+  validateSpeechSegments(body.voice_segments, duration, extra.inputs as {voice_id: string}[]);
   const audioPath = saveAudioFile(outputDir, filename, audio);
   const alignmentPath = alignmentPathFor(audioPath);
   fs.writeFileSync(
@@ -650,14 +656,15 @@ export async function generateElevenLabsSpeech(request: ElevenLabsGenerateReques
   try {
     // Validate here too: callers importing the adapter directly cannot bypass v4-only checks.
     const { text, voiceId, ...settings } = elevenLabsGenerateSchema.parse(request);
-    return await generateElevenLabsDialogue({ ...settings, inputs: [{ text, voiceId }] });
+    const parsed = { text, voiceId, ...settings };
+    return await executeSpeech('tts_elevenlabs_generate', parsed, output => synthesizeElevenLabsDialogue({ ...settings, ...output, inputs: [{ text, voiceId }] }));
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
 
 /** Multi-voice dialogue — POST /v1/text-to-dialogue[/with-timestamps] (eleven_v4) */
-export async function generateElevenLabsDialogue(request: ElevenLabsDialogueRequest): Promise<ElevenLabsSynthesisResponse> {
+async function synthesizeElevenLabsDialogue(request: ElevenLabsDialogueRequest): Promise<ElevenLabsSynthesisResponse> {
   try {
     request = elevenLabsDialogueSchema.parse(request);
     const outputDir = request.outputPath || process.cwd();
@@ -674,7 +681,7 @@ export async function generateElevenLabsDialogue(request: ElevenLabsDialogueRequ
     const query = new URLSearchParams({ output_format: request.outputFormat });
     if (request.enableLogging !== undefined) query.set('enable_logging', String(request.enableLogging));
     const endpoint = `/v1/text-to-dialogue${request.timestamps ? '/with-timestamps' : ''}?${query}`;
-    const response = await elevenFetch(endpoint, { method: 'POST', body: JSON.stringify(body) }, timeoutFor(totalChars));
+    const response = await elevenFetch(endpoint, { method: 'POST', body: JSON.stringify(body) }, timeoutFor(totalChars), 1);
     const meta = readMeta(response);
 
     if (request.timestamps) {
@@ -705,6 +712,7 @@ export async function generateElevenLabsDialogue(request: ElevenLabsDialogueRequ
     }
 
     const audio = Buffer.from(await response.arrayBuffer());
+    validateSpeechAudio(audio, path.extname(filename).slice(1));
     const audioPath = saveAudioFile(outputDir, filename, audio);
     console.error(`[ElevenLabs] Dialogue saved to: ${audioPath}`);
     return {
@@ -888,4 +896,12 @@ export async function createElevenLabsDictionary(input: z.input<typeof elevenLab
   }, 30000);
   const result = z.object({ id: z.string().min(1), version_id: z.string().min(1) }).parse(await response.json());
   return { pronunciationDictionaryId: result.id, versionId: result.version_id };
+}
+
+
+export async function generateElevenLabsDialogue(request: ElevenLabsDialogueRequest): Promise<ElevenLabsSynthesisResponse> {
+  try {
+    const parsed = elevenLabsDialogueSchema.parse(request);
+    return await executeSpeech('tts_elevenlabs_dialogue', parsed, output => synthesizeElevenLabsDialogue({ ...parsed, ...output }));
+  } catch (error) { return { success: false, error: error instanceof Error ? error.message : String(error) }; }
 }

@@ -9,7 +9,7 @@ const SETTINGS_FILE = '.social-flow/models.json';
 const SNAPSHOT_FILE = '.work/model-settings.json';
 const VIDEO_TYPES = require('./video-types.json').types;
 const ENGINES = {
-  video: ['host', 'seedance', 'veo', 'astra', 'mlx'],
+  video: ['host', 'seedance', 'veo', 'astra', 'mlx', 'omni'],
   speech: ['gemini', 'elevenlabs'],
   image: ['host', 'gpt-image', 'zimage', 'mlx'],
 };
@@ -183,6 +183,10 @@ module.exports = { SETTINGS_FILE, SNAPSHOT_FILE, VIDEO_TYPES, validateVideoType,
 if (require.main === module) {
   try {
     const [command, workspace, argument] = process.argv.slice(2);
+    if (command === 'catalog') {
+      console.log(JSON.stringify(require('./video-catalog.json'), null, 2));
+      process.exit(0);
+    }
     if (command === 'types') {
       console.log(JSON.stringify(VIDEO_TYPES, null, 2));
       process.exit(0);

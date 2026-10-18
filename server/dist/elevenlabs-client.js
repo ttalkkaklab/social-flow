@@ -9,6 +9,8 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { z } from 'zod';
+import { executeSpeech } from './tts-execution.js';
+import { decodeSpeechBase64, validateSpeechAudio, validateSpeechAlignment, validateSpeechSegments } from './tts-audio.js';
 import { elevenLabsBaseUrl, requireElevenLabsKey } from './config.js';
 import { bareFilenameSchema, pcmToWav, saveAudioFile } from './media-utils.js';
 // ── Constants (source of truth for the tool schemas) ─────────────
@@ -361,7 +363,7 @@ function sleep(ms) {
 function timeoutFor(textLength) {
     return Math.min(5 * 60_000, 60_000 + textLength * 40);
 }
-async function elevenFetch(pathAndQuery, init, timeoutMs) {
+async function elevenFetch(pathAndQuery, init, timeoutMs, attempts = MAX_ATTEMPTS) {
     const apiKey = requireElevenLabsKey();
     const url = `${elevenLabsBaseUrl()}${pathAndQuery}`;
     const headers = {
@@ -369,13 +371,13 @@ async function elevenFetch(pathAndQuery, init, timeoutMs) {
         ...(init.body ? { 'Content-Type': 'application/json' } : {}),
     };
     let lastError;
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    for (let attempt = 0; attempt < attempts; attempt++) {
         const response = await fetch(url, { ...init, headers, signal: AbortSignal.timeout(timeoutMs) });
         if (response.ok)
             return response;
         const bodyText = await response.text();
         lastError = new Error(describeElevenLabsError(response.status, bodyText));
-        if (!isRetryable(response.status) || attempt === MAX_ATTEMPTS - 1)
+        if (!isRetryable(response.status) || attempt === attempts - 1)
             break;
         await sleep(RETRY_BASE_DELAY_MS * (attempt + 1));
     }
@@ -433,7 +435,11 @@ function alignmentPathFor(audioPath) {
 function saveTimestamped(body, outputDir, filename, extra) {
     if (!body.audio_base64)
         throw new Error('with-timestamps response carried no audio_base64');
-    const audio = Buffer.from(body.audio_base64, 'base64');
+    const audio = decodeSpeechBase64(body.audio_base64);
+    const duration = validateSpeechAudio(audio, path.extname(filename).slice(1));
+    validateSpeechAlignment(body.alignment, duration);
+    validateSpeechAlignment(body.normalized_alignment, duration);
+    validateSpeechSegments(body.voice_segments, duration, extra.inputs);
     const audioPath = saveAudioFile(outputDir, filename, audio);
     const alignmentPath = alignmentPathFor(audioPath);
     fs.writeFileSync(alignmentPath, JSON.stringify({
@@ -481,14 +487,15 @@ export async function generateElevenLabsSpeech(request) {
     try {
         // Validate here too: callers importing the adapter directly cannot bypass v4-only checks.
         const { text, voiceId, ...settings } = elevenLabsGenerateSchema.parse(request);
-        return await generateElevenLabsDialogue({ ...settings, inputs: [{ text, voiceId }] });
+        const parsed = { text, voiceId, ...settings };
+        return await executeSpeech('tts_elevenlabs_generate', parsed, output => synthesizeElevenLabsDialogue({ ...settings, ...output, inputs: [{ text, voiceId }] }));
     }
     catch (error) {
         return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
 }
 /** Multi-voice dialogue — POST /v1/text-to-dialogue[/with-timestamps] (eleven_v4) */
-export async function generateElevenLabsDialogue(request) {
+async function synthesizeElevenLabsDialogue(request) {
     try {
         request = elevenLabsDialogueSchema.parse(request);
         const outputDir = request.outputPath || process.cwd();
@@ -504,7 +511,7 @@ export async function generateElevenLabsDialogue(request) {
         if (request.enableLogging !== undefined)
             query.set('enable_logging', String(request.enableLogging));
         const endpoint = `/v1/text-to-dialogue${request.timestamps ? '/with-timestamps' : ''}?${query}`;
-        const response = await elevenFetch(endpoint, { method: 'POST', body: JSON.stringify(body) }, timeoutFor(totalChars));
+        const response = await elevenFetch(endpoint, { method: 'POST', body: JSON.stringify(body) }, timeoutFor(totalChars), 1);
         const meta = readMeta(response);
         if (request.timestamps) {
             const saved = saveTimestamped((await response.json()), outputDir, filename, {
@@ -533,6 +540,7 @@ export async function generateElevenLabsDialogue(request) {
             };
         }
         const audio = Buffer.from(await response.arrayBuffer());
+        validateSpeechAudio(audio, path.extname(filename).slice(1));
         const audioPath = saveAudioFile(outputDir, filename, audio);
         console.error(`[ElevenLabs] Dialogue saved to: ${audioPath}`);
         return {
@@ -685,4 +693,13 @@ export async function createElevenLabsDictionary(input) {
     }, 30000);
     const result = z.object({ id: z.string().min(1), version_id: z.string().min(1) }).parse(await response.json());
     return { pronunciationDictionaryId: result.id, versionId: result.version_id };
+}
+export async function generateElevenLabsDialogue(request) {
+    try {
+        const parsed = elevenLabsDialogueSchema.parse(request);
+        return await executeSpeech('tts_elevenlabs_dialogue', parsed, output => synthesizeElevenLabsDialogue({ ...parsed, ...output }));
+    }
+    catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
 }

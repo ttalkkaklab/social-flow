@@ -4461,77 +4461,9 @@ var scenarioCheckResultSchema = external_exports.object({
   }))
 });
 
-// src/speech.ts
-import { createHash as createHash3, randomUUID } from "node:crypto";
-import { readFileSync as readFileSync4, writeFileSync as writeFileSync4, renameSync as renameSync3, mkdirSync as mkdirSync3, existsSync as existsSync4 } from "node:fs";
-import { dirname as dirname3, resolve as resolve4, join as join4 } from "node:path";
-import * as nodeModule3 from "node:module";
-import { execFileSync } from "node:child_process";
-
-// src/speech-acting.ts
-import * as nodeModule2 from "node:module";
-var actingText = external_exports.string().trim().min(1).max(1e3);
-var actingSchema = external_exports.object({
-  context: actingText.optional(),
-  intent: actingText.optional(),
-  emotion: actingText.optional(),
-  vocal: actingText.optional(),
-  visual: actingText.optional(),
-  leadInSeconds: external_exports.number().finite().min(0).max(5).optional(),
-  tailOutSeconds: external_exports.number().finite().min(0).max(5).optional(),
-  direction: external_exports.string().trim().min(1).max(500).regex(/^[^<>\[\]|\r\n]+$/, "Use plain delivery direction, without tag markup").optional(),
-  tags: external_exports.array(external_exports.string().trim().min(1).max(60).regex(/^[A-Za-z][A-Za-z ,'-]*$/, "Use bare English vocal tag names")).max(6).optional()
-}).strict();
-function compileActing(text, acting, voice) {
-  const shared = nodeModule2.createRequire(import.meta.url)("../../skills/_shared/speech-contract.js");
-  return shared.compileActing(text, actingSchema.parse(acting || {}), voice);
-}
-
-// src/astra-video-client.ts
-import { createHash as createHash2, randomInt } from "node:crypto";
-import * as fs2 from "node:fs";
-import * as path2 from "node:path";
-
-// package.json
-var package_default = {
-  name: "@zeans/social-flow-mcp-server",
-  version: "0.116.0",
-  license: "Apache-2.0",
-  description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
-  type: "module",
-  main: "dist/index.js",
-  engines: {
-    node: ">=20"
-  },
-  scripts: {
-    build: "tsc && npm run bundle && npm run bundle:shot && npm run bundle:mesh",
-    start: "node dist/index.js",
-    test: "node --test test/*.test.mjs",
-    check: "npm run build && npm test",
-    "check:dist": "npm run build && node check-dist.mjs",
-    bundle: `esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/bundle.js --banner:js="import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);"`,
-    "bundle:shot": `esbuild src/astra-shot-runtime.ts --bundle --platform=node --format=esm --outfile=dist/astra-shot-runtime.bundle.js --banner:js="import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);"`,
-    "bundle:mesh": "node build-mesh.mjs"
-  },
-  dependencies: {
-    "@google/genai": "^2.21.0",
-    "@modelcontextprotocol/sdk": "^1.0.0",
-    openai: "^6.46.0",
-    zod: "^3.23.8"
-  },
-  devDependencies: {
-    "@types/node": "^20.14.0",
-    esbuild: "^0.28.2",
-    three: "0.180.0",
-    typescript: "^5.6.0"
-  },
-  bin: {
-    "social-flow-mcp": "dist/index.js"
-  },
-  files: [
-    "dist"
-  ]
-};
+// src/video-routing.ts
+import { createRequire as createRequire2 } from "node:module";
+import { fileURLToPath as fileURLToPath3 } from "node:url";
 
 // src/config.ts
 import { accessSync, constants, existsSync as existsSync2, readFileSync as readFileSync2, readdirSync, statSync as statSync2 } from "node:fs";
@@ -4635,28 +4567,11 @@ function requireAstraVideoKey() {
   return config.astraVideoApiKey;
 }
 
-// src/http.ts
-async function requestRaw(method, url, headers, body, timeoutMs) {
-  const effectiveTimeoutMs = timeoutMs ?? config.requestTimeoutMs;
-  try {
-    const res = await fetch(url, {
-      method: method.toUpperCase(),
-      headers: {
-        ...body !== void 0 ? { "Content-Type": "application/json" } : {},
-        ...headers
-      },
-      body: body !== void 0 ? JSON.stringify(body) : void 0,
-      signal: AbortSignal.timeout(effectiveTimeoutMs)
-    });
-    const text = await res.text();
-    return { ok: res.ok, status: res.status, body: text };
-  } catch (error) {
-    if (error instanceof Error && error.name === "TimeoutError") {
-      return { ok: false, status: 504, body: `Request timed out after ${effectiveTimeoutMs}ms: ${url}` };
-    }
-    const message = error instanceof Error ? error.message : String(error);
-    return { ok: false, status: 502, body: `Upstream unreachable (${url}): ${message}` };
-  }
+// src/video-events.ts
+import { AsyncLocalStorage } from "node:async_hooks";
+var videoEvents = new AsyncLocalStorage();
+function recordVideoSubmission(id) {
+  if (id) videoEvents.getStore()?.submitted(id);
 }
 
 // src/media-utils.ts
@@ -4699,6 +4614,499 @@ function bareFilenameSchema(kind) {
   }).refine((name) => allowed.includes(path.extname(name).toLowerCase()), {
     message: `filename extension must be one of: ${allowed.join(", ")}`
   });
+}
+
+// src/video-client.ts
+var VALID_VIDEO_MODELS = [
+  "veo-3.1-generate-preview",
+  // top quality (default) — 720p $0.40/s
+  "veo-3.1-fast-generate-preview",
+  // low latency, low cost — 720p $0.10/s (4x cheaper than default)
+  "veo-3.1-lite-generate-preview"
+  // cheapest — 720p $0.05/s (8x cheaper). No 4K/Extension/Reference
+];
+var DEFAULT_VIDEO_MODEL = "veo-3.1-fast-generate-preview";
+var VALID_VIDEO_ASPECT_RATIOS = ["16:9", "9:16"];
+var VALID_VIDEO_RESOLUTIONS = ["720p", "1080p", "4k"];
+var API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
+var FILES_URI_PREFIX = `${API_BASE_URL}/files/`;
+var HANDLE_LIFETIME_MS = 48 * 60 * 60 * 1e3;
+var DurationSchema = external_exports.union([external_exports.literal(4), external_exports.literal(6), external_exports.literal(8)]).optional().default(8);
+function validateResolutionConstraints(model, resolution, durationSeconds, ctx) {
+  if ((resolution === "1080p" || resolution === "4k") && durationSeconds !== 8) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["durationSeconds"],
+      message: `${resolution} resolution is only supported at 8s duration (requested: ${durationSeconds}s).`
+    });
+  }
+  if (resolution === "4k" && model === "veo-3.1-lite-generate-preview") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["resolution"],
+      message: "veo-3.1-lite-generate-preview does not support 4k (720p/1080p only)."
+    });
+  }
+}
+function rejectLiteNegativePrompt(negativePrompt, model, ctx) {
+  if (negativePrompt && model === "veo-3.1-lite-generate-preview") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["negativePrompt"],
+      message: "negativePrompt is not accepted on veo-3.1-lite-generate-preview (the API returns 400). Write the exclusion into the prompt as positive description, or use veo-3.1-fast-generate-preview."
+    });
+  }
+}
+function rejectLiteModel(feature, model, ctx) {
+  if (model === "veo-3.1-lite-generate-preview") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["model"],
+      message: `${feature} is not supported on veo-3.1-lite-generate-preview. Use veo-3.1-generate-preview or veo-3.1-fast-generate-preview.`
+    });
+  }
+}
+var negativePromptSchema = external_exports.string().max(500).optional().describe(
+  `Comma-separated noun or adjective phrases to exclude (e.g. "wall, frame, text overlay"). Never use instructive language such as "no" or "don't" \u2014 the API docs reject that form.`
+);
+var text2VideoSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required"),
+  negativePrompt: negativePromptSchema,
+  model: external_exports.enum(VALID_VIDEO_MODELS).optional().default(DEFAULT_VIDEO_MODEL),
+  aspectRatio: external_exports.enum(VALID_VIDEO_ASPECT_RATIOS).optional().default("16:9"),
+  resolution: external_exports.enum(VALID_VIDEO_RESOLUTIONS).optional().default("720p"),
+  durationSeconds: DurationSchema,
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+}).superRefine((data, ctx) => {
+  validateResolutionConstraints(data.model, data.resolution, data.durationSeconds, ctx);
+  rejectLiteNegativePrompt(data.negativePrompt, data.model, ctx);
+});
+var img2VideoSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required"),
+  negativePrompt: negativePromptSchema,
+  sourceImagePath: external_exports.string().min(1, "Source image path is required"),
+  lastImagePath: external_exports.string().optional(),
+  model: external_exports.enum(VALID_VIDEO_MODELS).optional().default(DEFAULT_VIDEO_MODEL),
+  aspectRatio: external_exports.enum(VALID_VIDEO_ASPECT_RATIOS).optional().default("16:9"),
+  resolution: external_exports.enum(VALID_VIDEO_RESOLUTIONS).optional().default("720p"),
+  durationSeconds: DurationSchema,
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+}).superRefine((data, ctx) => {
+  validateResolutionConstraints(data.model, data.resolution, data.durationSeconds, ctx);
+  rejectLiteNegativePrompt(data.negativePrompt, data.model, ctx);
+});
+var videoExtensionSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required"),
+  sourceVideoPath: external_exports.string().min(1, "Source video path is required"),
+  sourceVideoUri: external_exports.string().startsWith(FILES_URI_PREFIX, `Source video URI must start with ${FILES_URI_PREFIX}`).optional(),
+  model: external_exports.enum(VALID_VIDEO_MODELS).optional().default(DEFAULT_VIDEO_MODEL),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+}).superRefine((data, ctx) => rejectLiteModel("video extension", data.model, ctx));
+var referenceVideoSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required"),
+  referenceImagePaths: external_exports.array(external_exports.string()).min(1, "At least one reference image is required").max(3, "Maximum 3 reference images allowed"),
+  model: external_exports.enum(VALID_VIDEO_MODELS).optional().default(DEFAULT_VIDEO_MODEL),
+  aspectRatio: external_exports.enum(VALID_VIDEO_ASPECT_RATIOS).optional().default("16:9"),
+  resolution: external_exports.enum(VALID_VIDEO_RESOLUTIONS).optional().default("720p"),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+}).superRefine((data, ctx) => {
+  rejectLiteModel("reference images", data.model, ctx);
+  validateResolutionConstraints(data.model, data.resolution, 8, ctx);
+});
+
+// src/seedance-client.ts
+import * as path2 from "node:path";
+var VALID_SEEDANCE_RESOLUTIONS = ["480p", "720p", "1080p", "4k"];
+var VALID_SEEDANCE_RATIOS = ["16:9", "9:16", "4:3", "3:4", "1:1", "21:9", "adaptive"];
+var SEEDANCE_MODEL_SPECS = {
+  // 1080p opened on 2026-08-17 (UTC+8) — 10-bit color, and the only tier the discount
+  // campaign covers (28% off list through 2026-09-17). 2.5 has no 4K; 2.0 does.
+  "dreamina-seedance-2-5-260628": {
+    resolutions: ["480p", "720p", "1080p"],
+    duration: [4, 30],
+    lastFrame: true,
+    referenceImages: [1, 30],
+    referenceAudio: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30, audioOnly: true },
+    referenceVideos: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30 },
+    audio: true,
+    seed: false,
+    realFaceInput: false,
+    activationGate: true
+  },
+  "dreamina-seedance-2-0-260128": {
+    resolutions: ["480p", "720p", "1080p", "4k"],
+    duration: [4, 15],
+    lastFrame: true,
+    referenceImages: [1, 9],
+    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
+    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
+    audio: true,
+    seed: false,
+    realFaceInput: false,
+    activationGate: true
+  },
+  "dreamina-seedance-2-0-fast-260128": {
+    resolutions: ["480p", "720p"],
+    duration: [4, 15],
+    lastFrame: true,
+    referenceImages: [1, 9],
+    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
+    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
+    audio: true,
+    seed: false,
+    realFaceInput: false,
+    activationGate: true
+  },
+  "dreamina-seedance-2-0-mini-260615": {
+    resolutions: ["480p", "720p"],
+    duration: [4, 15],
+    lastFrame: true,
+    referenceImages: [1, 9],
+    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
+    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
+    audio: true,
+    seed: false,
+    realFaceInput: false,
+    activationGate: true
+  },
+  "seedance-1-5-pro-251215": {
+    resolutions: ["480p", "720p", "1080p"],
+    duration: [4, 12],
+    lastFrame: true,
+    referenceImages: false,
+    referenceAudio: false,
+    referenceVideos: false,
+    audio: true,
+    seed: true,
+    realFaceInput: true,
+    activationGate: false
+  },
+  "seedance-1-0-pro-250528": {
+    resolutions: ["480p", "720p", "1080p"],
+    duration: [2, 12],
+    lastFrame: true,
+    referenceImages: false,
+    referenceAudio: false,
+    referenceVideos: false,
+    audio: false,
+    seed: true,
+    realFaceInput: true,
+    activationGate: false
+  },
+  "seedance-1-0-pro-fast-251015": {
+    resolutions: ["480p", "720p", "1080p"],
+    duration: [2, 12],
+    lastFrame: false,
+    referenceImages: false,
+    referenceAudio: false,
+    referenceVideos: false,
+    audio: false,
+    seed: true,
+    realFaceInput: true,
+    activationGate: false
+  }
+};
+var VALID_SEEDANCE_MODELS = Object.keys(SEEDANCE_MODEL_SPECS);
+var DEFAULT_SEEDANCE_MODEL = "seedance-1-5-pro-251215";
+var SEEDANCE_REFERENCE_MODELS = VALID_SEEDANCE_MODELS.filter(
+  (model) => SEEDANCE_MODEL_SPECS[model].referenceImages !== false
+);
+var DEFAULT_SEEDANCE_REFERENCE_MODEL = "dreamina-seedance-2-0-260128";
+var SEEDANCE_REAL_FACE_MODELS = VALID_SEEDANCE_MODELS.filter(
+  (model) => SEEDANCE_MODEL_SPECS[model].realFaceInput
+);
+var DEFAULT_SEEDANCE_RESOLUTION = "720p";
+var DEFAULT_SEEDANCE_DURATION = 5;
+var SEEDANCE_FPS = 24;
+var SEEDANCE_FRAME_MODELS = ["seedance-1-0-pro-250528", "seedance-1-0-pro-fast-251015"];
+var SEEDANCE_MIN_FRAMES = 29;
+var SEEDANCE_MAX_FRAMES = 289;
+var SEEDANCE_FRAME_STEP = 4;
+var MAX_INPUT_IMAGE_BYTES = 30 * 1024 * 1024;
+var MAX_REQUEST_BYTES = 64 * 1024 * 1024;
+var MAX_INPUT_AUDIO_BYTES = 15 * 1024 * 1024;
+var MAX_INPUT_VIDEO_BYTES = 200 * 1024 * 1024;
+var SEEDANCE_REFERENCE_AUDIO_EXTENSIONS = [".wav", ".mp3"];
+var SEEDANCE_REFERENCE_VIDEO_EXTENSIONS = [".mp4", ".mov"];
+var commonFields = {
+  prompt: external_exports.string().min(1, "Prompt is required"),
+  model: external_exports.enum(VALID_SEEDANCE_MODELS).optional().default(DEFAULT_SEEDANCE_MODEL),
+  resolution: external_exports.enum(VALID_SEEDANCE_RESOLUTIONS).optional().default(DEFAULT_SEEDANCE_RESOLUTION),
+  durationSeconds: external_exports.number().int().optional(),
+  frames: external_exports.number().int().min(SEEDANCE_MIN_FRAMES).max(SEEDANCE_MAX_FRAMES).optional(),
+  generateAudio: external_exports.boolean().optional().default(false),
+  watermark: external_exports.boolean().optional().default(false),
+  seed: external_exports.number().int().min(-1).max(2147483647).optional(),
+  cameraFixed: external_exports.boolean().optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+};
+var QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
+var HANGUL_RUN = /[가-힣]+(?:[ \t]+[가-힣]+)*/;
+function hangulOutsideQuotes(prompt) {
+  const match = prompt.replace(QUOTED_SEGMENT, " ").match(HANGUL_RUN);
+  return match ? match[0] : null;
+}
+function validateCommon(data, ctx) {
+  const spec = SEEDANCE_MODEL_SPECS[data.model];
+  if (data.model !== "dreamina-seedance-2-5-260628") {
+    const korean = hangulOutsideQuotes(data.prompt);
+    if (korean) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["prompt"],
+        message: `${data.model} reads Chinese or English prompts only \u2014 the Korean "${korean}" sits outside quotation marks and would be ignored rather than obeyed. Write the direction in English; Korean dialogue belongs inside quotes (1.5 pro lip-syncs it), or route the shot to dreamina-seedance-2-5-260628.`
+      });
+    }
+  }
+  if (!spec.resolutions.includes(data.resolution)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["resolution"],
+      message: `${data.model} does not support ${data.resolution} (supported: ${spec.resolutions.join(", ")}).`
+    });
+  }
+  const [minDuration, maxDuration] = spec.duration;
+  if (data.frames !== void 0) {
+    if (!SEEDANCE_FRAME_MODELS.includes(data.model) || (data.frames - 1) % SEEDANCE_FRAME_STEP !== 0)
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["frames"], message: "frames requires Seedance 1.0 pro/pro-fast and 25+4n frames in 29..289" });
+    if (data.durationSeconds !== void 0)
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["durationSeconds"], message: "frames and durationSeconds are mutually exclusive" });
+  } else if ((data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) < minDuration || (data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) > maxDuration) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["durationSeconds"],
+      message: `${data.model} supports durations of ${minDuration}~${maxDuration}s (requested: ${data.durationSeconds}s).`
+    });
+  }
+  if (data.generateAudio && !spec.audio) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["generateAudio"],
+      message: `${data.model} is silent-only and cannot generate audio. If you need audio, use seedance-1-5-pro-251215 or later.`
+    });
+  }
+  if (!spec.seed) {
+    if (data.seed !== void 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["seed"],
+        message: `${data.model} does not support seed (Seedance 1.5 pro\xB71.0 pro\xB71.0 pro fast only).`
+      });
+    }
+    if (data.cameraFixed !== void 0) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["cameraFixed"],
+        message: `${data.model} does not support cameraFixed (Seedance 1.5 pro\xB71.0 pro\xB71.0 pro fast only). Direct a fixed camera through the prompt instead.`
+      });
+    }
+  }
+}
+var seedanceText2VideoSchema = external_exports.object({
+  ...commonFields,
+  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("16:9")
+}).superRefine(validateCommon).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
+var seedanceImg2VideoSchema = external_exports.object({
+  ...commonFields,
+  sourceImagePath: external_exports.string().min(1, "Source image path is required"),
+  lastImagePath: external_exports.string().optional(),
+  // Following the input image's ratio is the default — specifying a different
+  // ratio makes the server center-crop the source image (the incident where a
+  // 9:16 cover got cropped).
+  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
+}).superRefine((data, ctx) => {
+  validateCommon(data, ctx);
+  if (data.lastImagePath && !SEEDANCE_MODEL_SPECS[data.model].lastFrame) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["lastImagePath"],
+      message: `${data.model} accepts a first frame only \u2014 for first+last frame interpolation use seedance-1-0-pro-250528 or later.`
+    });
+  }
+}).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
+var seedanceReferenceSchema = external_exports.object({
+  ...commonFields,
+  model: external_exports.enum(SEEDANCE_REFERENCE_MODELS).optional().default(DEFAULT_SEEDANCE_REFERENCE_MODEL),
+  referenceImagePaths: external_exports.array(external_exports.string()).optional().default([]),
+  referenceAudioPaths: external_exports.array(external_exports.string()).optional().default([]),
+  referenceVideoPaths: external_exports.array(external_exports.string()).optional().default([]),
+  referenceVideoUrls: external_exports.array(external_exports.string().url()).optional().default([]),
+  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
+}).superRefine((data, ctx) => {
+  validateCommon(data, ctx);
+  const spec = SEEDANCE_MODEL_SPECS[data.model];
+  if (spec.referenceImages === false) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["model"],
+      message: `${data.model} does not support reference images. Use the Dreamina Seedance 2.5 or 2.0 family (${SEEDANCE_REFERENCE_MODELS.join(", ")}).`
+    });
+    return;
+  }
+  const [, maxImages] = spec.referenceImages;
+  if (data.referenceImagePaths.length > maxImages) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceImagePaths"],
+      message: `${data.model} allows at most ${maxImages} reference images (requested: ${data.referenceImagePaths.length}).`
+    });
+  }
+  const videoCount = data.referenceVideoPaths.length + data.referenceVideoUrls.length;
+  if (data.referenceImagePaths.length === 0 && data.referenceAudioPaths.length === 0 && videoCount === 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceImagePaths"],
+      message: "At least one reference is required \u2014 referenceImagePaths, referenceAudioPaths, referenceVideoPaths/Urls, or a mix."
+    });
+    return;
+  }
+  if (videoCount > 0) {
+    const video = spec.referenceVideos;
+    if (video === false) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["referenceVideoPaths"], message: `${data.model} does not take reference video.` });
+      return;
+    }
+    if (videoCount > video.maxClips) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["referenceVideoPaths"],
+        message: `${data.model} allows at most ${video.maxClips} reference videos (requested: ${videoCount}).`
+      });
+    }
+    for (const filePath of data.referenceVideoPaths) {
+      const ext = path2.extname(filePath).toLowerCase();
+      if (!SEEDANCE_REFERENCE_VIDEO_EXTENSIONS.includes(ext)) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["referenceVideoPaths"],
+          message: `Reference video must be mp4 or mov (got "${ext}" in ${path2.basename(filePath)}).`
+        });
+      }
+    }
+    if (!/\bvideo\s*1\b/i.test(data.prompt)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["prompt"],
+        message: 'A reference video is bound in the prompt by index \u2014 write "Video 1" (2.5: "@Video 1") and say what it supplies (camera movement, blocking, motion timing) and what it must not (its visual content).'
+      });
+    }
+  }
+  if (data.referenceAudioPaths.length === 0) return;
+  const audio = spec.referenceAudio;
+  if (audio === false) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceAudioPaths"],
+      message: `${data.model} does not take reference audio.`
+    });
+    return;
+  }
+  if (data.referenceAudioPaths.length > audio.maxClips) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceAudioPaths"],
+      message: `${data.model} allows at most ${audio.maxClips} reference audio clips (requested: ${data.referenceAudioPaths.length}).`
+    });
+  }
+  if (!audio.audioOnly && data.referenceImagePaths.length === 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["referenceImagePaths"],
+      message: `${data.model} needs at least one reference image alongside reference audio \u2014 audio-only input is dreamina-seedance-2-5-260628 only.`
+    });
+  }
+  for (const filePath of data.referenceAudioPaths) {
+    const ext = path2.extname(filePath).toLowerCase();
+    if (!SEEDANCE_REFERENCE_AUDIO_EXTENSIONS.includes(ext)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["referenceAudioPaths"],
+        message: `Reference audio must be wav or mp3 (got "${ext}" in ${path2.basename(filePath)}).`
+      });
+    }
+  }
+  if (!data.generateAudio) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["generateAudio"],
+      message: "Reference audio with generateAudio: false produces a silent video, so the voice reference has nothing to shape. Set generateAudio: true."
+    });
+  }
+}).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
+
+// src/astra-video-client.ts
+import { createHash as createHash2, randomInt } from "node:crypto";
+import * as fs2 from "node:fs";
+import * as path3 from "node:path";
+
+// package.json
+var package_default = {
+  name: "@zeans/social-flow-mcp-server",
+  version: "0.116.0",
+  license: "Apache-2.0",
+  description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
+  type: "module",
+  main: "dist/index.js",
+  engines: {
+    node: ">=20"
+  },
+  scripts: {
+    build: "tsc && node build-video-catalog.mjs && npm run bundle && npm run bundle:shot && npm run bundle:mesh",
+    start: "node dist/index.js",
+    test: "node --test test/*.test.mjs",
+    check: "npm run build && npm test",
+    "check:dist": "npm run build && node check-dist.mjs",
+    bundle: `esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/bundle.js --banner:js="import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);"`,
+    "bundle:shot": `esbuild src/astra-shot-runtime.ts --bundle --platform=node --format=esm --outfile=dist/astra-shot-runtime.bundle.js --banner:js="import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);"`,
+    "bundle:mesh": "node build-mesh.mjs"
+  },
+  dependencies: {
+    "@google/genai": "^2.21.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    openai: "^6.46.0",
+    zod: "^3.23.8"
+  },
+  devDependencies: {
+    "@types/node": "^20.14.0",
+    esbuild: "^0.28.2",
+    three: "0.180.0",
+    typescript: "^5.6.0"
+  },
+  bin: {
+    "social-flow-mcp": "dist/index.js"
+  },
+  files: [
+    "dist"
+  ]
+};
+
+// src/http.ts
+async function requestRaw(method, url, headers, body, timeoutMs) {
+  const effectiveTimeoutMs = timeoutMs ?? config.requestTimeoutMs;
+  try {
+    const res = await fetch(url, {
+      method: method.toUpperCase(),
+      headers: {
+        ...body !== void 0 ? { "Content-Type": "application/json" } : {},
+        ...headers
+      },
+      body: body !== void 0 ? JSON.stringify(body) : void 0,
+      signal: AbortSignal.timeout(effectiveTimeoutMs)
+    });
+    const text = await res.text();
+    return { ok: res.ok, status: res.status, body: text };
+  } catch (error) {
+    if (error instanceof Error && error.name === "TimeoutError") {
+      return { ok: false, status: 504, body: `Request timed out after ${effectiveTimeoutMs}ms: ${url}` };
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    return { ok: false, status: 502, body: `Upstream unreachable (${url}): ${message}` };
+  }
 }
 
 // src/speech-sync-check.ts
@@ -5045,7 +5453,7 @@ var generateAudioSchema = external_exports.boolean().optional();
 var hdrSchema = external_exports.enum(["SRGB_LINEAR", "ACESCG", "ACESCCT"]).optional();
 var seedSchema = external_exports.number().int().min(0).max(ASTRA_VIDEO_MAX_SEED).optional();
 var frameRateSchema = external_exports.number().min(1).max(60).optional();
-var negativePromptSchema = external_exports.string().max(ASTRA_VIDEO_MAX_PROMPT_CHARS).optional();
+var negativePromptSchema2 = external_exports.string().max(ASTRA_VIDEO_MAX_PROMPT_CHARS).optional();
 var numInferenceStepsSchema = external_exports.number().int().min(1).max(50).optional();
 var numGeneratedKeyframesSchema = external_exports.number().int().min(0).max(16).optional();
 var widthSchema = external_exports.number().int().positive().optional();
@@ -5135,7 +5543,7 @@ var astraText2VideoSchema = external_exports.object({
   generateAudio: generateAudioSchema,
   hdr: hdrSchema,
   lora: loraSchema,
-  negativePrompt: negativePromptSchema,
+  negativePrompt: negativePromptSchema2,
   numInferenceSteps: numInferenceStepsSchema,
   numGeneratedKeyframes: numGeneratedKeyframesSchema,
   guidance: guidanceSchema,
@@ -5190,7 +5598,7 @@ var astraImg2VideoSchema = external_exports.object({
   duration: durationSchema,
   generateAudio: generateAudioSchema,
   lora: loraSchema,
-  negativePrompt: negativePromptSchema,
+  negativePrompt: negativePromptSchema2,
   numInferenceSteps: numInferenceStepsSchema,
   numGeneratedKeyframes: numGeneratedKeyframesSchema,
   guidance: guidanceSchema,
@@ -5250,7 +5658,7 @@ var astraKeyframeVideoSchema = external_exports.object({
   seed: seedSchema,
   duration: durationSchema,
   generateAudio: generateAudioSchema,
-  negativePrompt: negativePromptSchema,
+  negativePrompt: negativePromptSchema2,
   numInferenceSteps: numInferenceStepsSchema,
   guidance: guidanceSchema,
   ...outputFields
@@ -5283,7 +5691,7 @@ var astraAudio2VideoSchema = external_exports.object({
   duration: durationSchema,
   generateAudio: generateAudioSchema,
   hdr: hdrSchema,
-  negativePrompt: negativePromptSchema,
+  negativePrompt: negativePromptSchema2,
   numInferenceSteps: numInferenceStepsSchema,
   guidance: guidanceSchema,
   expectLipSync: external_exports.boolean().default(false),
@@ -5424,16 +5832,16 @@ function buildJobBody(mode, args) {
   put(body, "height", args.height);
   put(body, "frame_rate", args.frameRate);
   put(body, "seed", args.seed);
-  if (args.lora?.length) body.lora = args.lora.map((entry) => typeof entry === "string" ? entry : { name: entry.name, strength: entry.strength });
+  if (args.lora?.length) body.lora = args.lora.map((entry2) => typeof entry2 === "string" ? entry2 : { name: entry2.name, strength: entry2.strength });
   if (args.guidance && Object.keys(args.guidance).length) {
     body.guidance = Object.fromEntries(Object.entries(args.guidance).map(([key, value]) => [guidanceWireKey(key), value]));
   }
   put(body, "adapter", args.adapter);
   if (args.references?.length) {
     body.references = args.references.map((reference) => {
-      const entry = { upload_id: reference.uploadId };
-      put(entry, "strength", reference.strength);
-      return entry;
+      const entry2 = { upload_id: reference.uploadId };
+      put(entry2, "strength", reference.strength);
+      return entry2;
     });
   }
   if (args.conditioningMask) {
@@ -5448,10 +5856,10 @@ function buildJobBody(mode, args) {
   put(body, "num_generated_keyframes", args.numGeneratedKeyframes);
   if (args.images?.length) {
     body.images = args.images.map((image) => {
-      const entry = { upload_id: image.uploadId, frame_idx: image.frameIdx };
-      put(entry, "strength", image.strength);
-      put(entry, "crf", image.crf);
-      return entry;
+      const entry2 = { upload_id: image.uploadId, frame_idx: image.frameIdx };
+      put(entry2, "strength", image.strength);
+      put(entry2, "crf", image.crf);
+      return entry2;
     });
   }
   put(body, "audio_upload_id", args.audioUploadId);
@@ -5538,7 +5946,7 @@ var CONTENT_TYPE_BY_EXTENSION = {
   ".mp3": { contentType: "audio/mpeg", kind: "audio" }
 };
 function uploadContentType(filePath) {
-  const ext = path2.extname(filePath).toLowerCase();
+  const ext = path3.extname(filePath).toLowerCase();
   const found = CONTENT_TYPE_BY_EXTENSION[ext];
   if (!found) {
     throw new Error(
@@ -5548,13 +5956,13 @@ function uploadContentType(filePath) {
   return found;
 }
 async function uploadFile(filePath) {
-  const resolved = path2.resolve(filePath);
+  const resolved = path3.resolve(filePath);
   if (!fs2.existsSync(resolved)) throw new Error(`File not found: ${filePath}`);
   const { contentType, kind } = uploadContentType(resolved);
   const bytes = fs2.statSync(resolved).size;
   const limit = ASTRA_VIDEO_UPLOAD_LIMITS[kind];
   if (bytes > limit) {
-    throw new Error(`${path2.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit} bytes.`);
+    throw new Error(`${path3.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit} bytes.`);
   }
   await waitForUploadSlot();
   const headers = authHeaders();
@@ -5572,7 +5980,7 @@ async function uploadFile(filePath) {
       return { ok: false, status: 502, body: `Upload unreachable: ${message}` };
     }
   });
-  if (!result.ok) throw redactedFailure(`upload of ${path2.basename(resolved)}`, result.status, result.body);
+  if (!result.ok) throw redactedFailure(`upload of ${path3.basename(resolved)}`, result.status, result.body);
   const parsed = JSON.parse(result.body);
   return {
     uploadId: parsed.upload_id,
@@ -5665,6 +6073,7 @@ async function runJob(mode, prompt, body, outputPath, filename) {
     fs2.renameSync(temp, receiptPath);
   };
   const jobId = await submitJob(body);
+  recordVideoSubmission(jobId);
   const submitted = { jobId, mode, prompt, videoPath, submittedAt: (/* @__PURE__ */ new Date()).toISOString(), submittedRequest: body };
   writeReceipt({ ...submitted, status: "submitted" });
   const { bytes, request, elapsedSeconds } = await awaitResult(jobId);
@@ -5750,6 +6159,523 @@ function annotateReceipt(videoPath, extra) {
   fs2.renameSync(temp, receiptPath);
 }
 
+// src/omni-client.ts
+var VALID_OMNI_ASPECT_RATIOS = ["16:9", "9:16"];
+var VALID_OMNI_RESOLUTIONS = ["360p", "720p", "1080p", "4k"];
+var durationSchema2 = external_exports.number().int().min(3).max(10).optional().default(8);
+var resolutionSchema = external_exports.enum(VALID_OMNI_RESOLUTIONS).optional().default("720p");
+var aspectRatioSchema = external_exports.enum(VALID_OMNI_ASPECT_RATIOS).optional().default("16:9");
+var omniText2VideoSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required"),
+  aspectRatio: aspectRatioSchema,
+  resolution: resolutionSchema,
+  durationSeconds: durationSchema2,
+  seed: external_exports.number().int().optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+});
+var omniImg2VideoSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required"),
+  sourceImagePath: external_exports.string().min(1, "Source image path is required"),
+  lastImagePath: external_exports.string().optional(),
+  aspectRatio: aspectRatioSchema,
+  resolution: resolutionSchema,
+  durationSeconds: durationSchema2,
+  seed: external_exports.number().int().optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+});
+var continuationFields = {
+  prompt: external_exports.string().min(1, "Prompt is required"),
+  previousInteractionId: external_exports.string().optional(),
+  sourceVideoPath: external_exports.string().optional(),
+  resolution: resolutionSchema,
+  seed: external_exports.number().int().optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+};
+function requireOneSource(data, ctx) {
+  const given = [data.previousInteractionId, data.sourceVideoPath].filter(Boolean).length;
+  if (given !== 1) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["previousInteractionId"],
+      message: "Give exactly one source: previousInteractionId (an interaction from an earlier omni_* call) or sourceVideoPath (a local mp4 of at most 10 seconds)."
+    });
+  }
+}
+var omniExtendSchema = external_exports.object({ ...continuationFields, durationSeconds: durationSchema2 }).superRefine(requireOneSource);
+var omniEditSchema = external_exports.object(continuationFields).superRefine(requireOneSource);
+
+// src/mlx-serve-client.ts
+var MLX_LOAD_TIMEOUT_MS = 10 * 6e4;
+var MLX_IMAGE_TIMEOUT_MS = 15 * 6e4;
+var MLX_MUSIC_TIMEOUT_MS = 10 * 6e4;
+var MLX_VIDEO_TIMEOUT_MS = 20 * 6e4;
+var MLX_MESH_TIMEOUT_MS = 15 * 6e4;
+var MAX_VIDEO_RGB_BYTES = 800 * 1024 * 1024;
+var MLX_IMAGE_DIMENSION_STEP = 16;
+var MIN_MLX_IMAGE_DIMENSION = 256;
+var MAX_MLX_IMAGE_DIMENSION = 2048;
+var DEFAULT_MLX_IMAGE_SIZE = 1024;
+var MLX_VIDEO_DIMENSION_STEP = 64;
+var MLX_VIDEO_DIMENSION_STEP_ONE_STAGE = 32;
+var MIN_MLX_VIDEO_DIMENSION = 256;
+var MAX_MLX_VIDEO_DIMENSION = 1920;
+var DEFAULT_MLX_VIDEO_WIDTH = 768;
+var DEFAULT_MLX_VIDEO_HEIGHT = 1280;
+var DEFAULT_MLX_VIDEO_FRAMES = 49;
+var MIN_MLX_VIDEO_FRAMES = 9;
+var MAX_MLX_VIDEO_FRAMES = 241;
+var MLX_VIDEO_FRAME_STEP = 8;
+var MLX_VIDEO_FPS = 24;
+var MIN_MLX_MUSIC_SECONDS = 10;
+var MAX_MLX_MUSIC_SECONDS = 600;
+var DEFAULT_MLX_MUSIC_SECONDS = 30;
+var MAX_MLX_IMAGE_REFS = 3;
+var imageDimension = external_exports.number().int().min(MIN_MLX_IMAGE_DIMENSION).max(MAX_MLX_IMAGE_DIMENSION).refine((v) => v % MLX_IMAGE_DIMENSION_STEP === 0, {
+  message: `width/height must be a multiple of ${MLX_IMAGE_DIMENSION_STEP} (for 9:16 that's 1088\xD71920, not 1080\xD71920). FLUX.2-klein is fixed at 1024\xD71024 \u2014 pick a Krea/Mage-Flow model for other sizes.`
+});
+var videoDimension = external_exports.number().int().min(MIN_MLX_VIDEO_DIMENSION).max(MAX_MLX_VIDEO_DIMENSION).refine((v) => v % MLX_VIDEO_DIMENSION_STEP_ONE_STAGE === 0, {
+  message: `width/height must be a multiple of ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE} (LTX grid), and of ${MLX_VIDEO_DIMENSION_STEP} unless you pass pipeline:"one_stage". 1080 is on neither grid \u2014 use 1088\xD71920 or the default 768\xD71280.`
+});
+var mlxImageGenerateSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
+  model: external_exports.string().min(1).optional(),
+  width: imageDimension.optional().default(DEFAULT_MLX_IMAGE_SIZE),
+  height: imageDimension.optional().default(DEFAULT_MLX_IMAGE_SIZE),
+  steps: external_exports.number().int().min(1).max(50).optional(),
+  seed: external_exports.number().int().min(0).optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  strength: external_exports.number().min(0).max(1).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("image").optional()
+});
+var mlxImageEditSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
+  imagePath: external_exports.string().min(1, "imagePath is required"),
+  refImagePaths: external_exports.array(external_exports.string().min(1)).max(MAX_MLX_IMAGE_REFS).optional(),
+  model: external_exports.string().min(1).optional(),
+  width: imageDimension.optional(),
+  height: imageDimension.optional(),
+  steps: external_exports.number().int().min(1).max(50).optional(),
+  seed: external_exports.number().int().min(0).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("image").optional()
+});
+var mlxMusicGenerateSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(4e3),
+  model: external_exports.string().min(1).optional(),
+  lyrics: external_exports.string().max(8e3).optional(),
+  instrumental: external_exports.boolean().optional().default(true),
+  durationSeconds: external_exports.number().int().min(MIN_MLX_MUSIC_SECONDS).max(MAX_MLX_MUSIC_SECONDS).optional().default(DEFAULT_MLX_MUSIC_SECONDS),
+  seed: external_exports.number().int().min(0).optional(),
+  refAudioPath: external_exports.string().min(1).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("audio").optional()
+}).superRefine((value, ctx) => {
+  if (value.instrumental && value.lyrics && value.lyrics.trim().length > 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      message: "instrumental:true cannot be sent beside lyrics \u2014 mlx-serve returns 400. Set instrumental false to sing, or drop lyrics for a bed."
+    });
+  }
+});
+var mlxVideoGenerateSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
+  model: external_exports.string().min(1).optional(),
+  width: videoDimension.optional().default(DEFAULT_MLX_VIDEO_WIDTH),
+  height: videoDimension.optional().default(DEFAULT_MLX_VIDEO_HEIGHT),
+  numFrames: external_exports.number().int().min(MIN_MLX_VIDEO_FRAMES).max(MAX_MLX_VIDEO_FRAMES).optional().default(DEFAULT_MLX_VIDEO_FRAMES),
+  steps: external_exports.number().int().min(1).max(50).optional(),
+  seed: external_exports.number().int().min(0).optional(),
+  firstFrameImagePath: external_exports.string().min(1).optional(),
+  lastFrameImagePath: external_exports.string().min(1).optional(),
+  pipeline: external_exports.enum(["one_stage", "two_stage", "two_stage_hq"]).optional(),
+  decoder: external_exports.enum(["conv", "diffusion"]).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+}).superRefine((value, ctx) => {
+  if (videoExceedsMemory(value.width, value.height, value.numFrames)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      message: videoMemoryMessage(value.width, value.height, value.numFrames)
+    });
+  }
+  if (value.pipeline !== "one_stage") {
+    for (const [field, size] of [["width", value.width], ["height", value.height]]) {
+      if (size % MLX_VIDEO_DIMENSION_STEP !== 0) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: [field],
+          message: `${field} ${size} is off the two-stage LTX grid (multiple of ${MLX_VIDEO_DIMENSION_STEP}). Pass pipeline:"one_stage" to use the ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE}px grid, or round to ${Math.round(size / MLX_VIDEO_DIMENSION_STEP) * MLX_VIDEO_DIMENSION_STEP}.`
+        });
+      }
+    }
+  }
+  if ((value.numFrames - 1) % MLX_VIDEO_FRAME_STEP !== 0) {
+    const below = value.numFrames - (value.numFrames - 1) % MLX_VIDEO_FRAME_STEP;
+    const above = below + MLX_VIDEO_FRAME_STEP;
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["numFrames"],
+      message: `numFrames must be ${MLX_VIDEO_FRAME_STEP}k+1 (${MIN_MLX_VIDEO_FRAMES}, 17, 25, \u2026 ${MAX_MLX_VIDEO_FRAMES}) \u2014 LTX latent depth. ${value.numFrames} is not, and mlx-serve answers 200 with its own default instead of refusing. Use ${below} or ${Math.min(above, MAX_MLX_VIDEO_FRAMES)}.`
+    });
+  }
+});
+var mlx3dGenerateSchema = external_exports.object({
+  imagePath: external_exports.string().min(1, "imagePath is required"),
+  model: external_exports.string().min(1).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("mesh").optional()
+});
+function videoRgbBytes(width, height, frames) {
+  return width * height * frames * 3;
+}
+function videoExceedsMemory(width, height, frames) {
+  return videoRgbBytes(width, height, frames) > MAX_VIDEO_RGB_BYTES;
+}
+function videoMemoryMessage(width, height, frames) {
+  const mb = (videoRgbBytes(width, height, frames) / (1024 * 1024)).toFixed(0);
+  const cap = (MAX_VIDEO_RGB_BYTES / (1024 * 1024)).toFixed(0);
+  return `Decoded RGB would be ~${mb}MB (${width}\xD7${height}\xD7${frames}\xD73), over the ${cap}MB cap. Drop frames or canvas \u2014 1088\xD71920 at 8s/24fps is ~1.2GB and is refused. The default 768\xD71280\xD7${DEFAULT_MLX_VIDEO_FRAMES} stays under the cap.`;
+}
+
+// src/video-duration.ts
+var import_video_duration = __toESM(require_video_duration(), 1);
+var DURATION_TOOLS = [
+  "veo_text2video",
+  "veo_img2video",
+  "veo_reference",
+  "omni_text2video",
+  "omni_img2video",
+  "seedance_text2video",
+  "seedance_img2video",
+  "seedance_reference",
+  "astra_text2video",
+  "astra_img2video",
+  "astra_keyframe_video",
+  "astra_audio2video",
+  "mlx_video_generate"
+];
+function resolveVideoDuration(tool, input) {
+  if (input.requiredSeconds === void 0) return { args: input, timing: null };
+  if (!DURATION_TOOLS.includes(tool)) throw new Error("requiredSeconds is not supported for " + tool);
+  for (const key of ["duration", "durationSeconds", "numFrames", "frames", "autoDuration", "audioMaxDuration"]) {
+    if (input[key] !== void 0) throw new Error("requiredSeconds is mutually exclusive with " + key + "; supply the shot need or an exact legacy request, not both");
+  }
+  let limits;
+  if (tool.startsWith("veo_")) {
+    const fixed = tool === "veo_reference" || ["1080p", "4k"].includes(String(input.resolution));
+    limits = { seconds: fixed ? [8] : [4, 6, 8] };
+  } else if (tool.startsWith("omni_")) {
+    limits = { min: 3, max: 10 };
+  } else if (tool.startsWith("seedance_")) {
+    const model = input.model ?? (tool === "seedance_reference" ? DEFAULT_SEEDANCE_REFERENCE_MODEL : DEFAULT_SEEDANCE_MODEL);
+    const spec = SEEDANCE_MODEL_SPECS[model];
+    if (!spec) throw new Error("Unknown Seedance model: " + String(model));
+    limits = SEEDANCE_FRAME_MODELS.includes(model) ? { min: SEEDANCE_MIN_FRAMES, max: SEEDANCE_MAX_FRAMES, step: SEEDANCE_FRAME_STEP, frameRate: SEEDANCE_FPS } : { min: spec.duration[0], max: spec.duration[1] };
+  } else if (tool.startsWith("astra_")) {
+    const mode = tool === "astra_audio2video" ? "audio2video" : tool === "astra_keyframe_video" ? "keyframe" : input.tier === "guided" ? "guided" : input.tier === "fast" ? "guided_fast" : input.tier === "hq" ? "guided_hq" : "generate";
+    const frameRate = input.frameRate ?? 24;
+    if (typeof frameRate !== "number" || !Number.isFinite(frameRate) || frameRate < 1 || frameRate > 60)
+      throw new Error("frameRate must be finite in 1..60");
+    limits = { min: ASTRA_VIDEO_MIN_FRAMES, max: ASTRA_VIDEO_FRAME_LIMITS[mode], step: ASTRA_VIDEO_FRAME_STEP, frameRate };
+  } else {
+    limits = { min: MIN_MLX_VIDEO_FRAMES, max: MAX_MLX_VIDEO_FRAMES, step: MLX_VIDEO_FRAME_STEP, frameRate: MLX_VIDEO_FPS };
+  }
+  const timing = (0, import_video_duration.minimumDuration)(input.requiredSeconds, limits);
+  const { requiredSeconds: _required, ...args } = input;
+  if (timing.numFrames !== void 0) args[tool.startsWith("seedance_") ? "frames" : "numFrames"] = timing.numFrames;
+  else if (tool !== "veo_reference") args.durationSeconds = timing.durationSeconds;
+  return { args, timing };
+}
+
+// src/video-registry.ts
+var entry = (engine, deployment, operation, schema) => ({ engine, deployment, operation, schema });
+var VIDEO_ADAPTERS = Object.freeze({
+  veo_text2video: entry("veo", "gemini-api", "text", text2VideoSchema),
+  veo_img2video: entry("veo", "gemini-api", "image", img2VideoSchema),
+  veo_reference: entry("veo", "gemini-api", "reference", referenceVideoSchema),
+  veo_extension: entry("veo", "gemini-api", "extend", videoExtensionSchema),
+  seedance_text2video: entry("seedance", "byteplus", "text", seedanceText2VideoSchema),
+  seedance_img2video: entry("seedance", "byteplus", "image", seedanceImg2VideoSchema),
+  seedance_reference: entry("seedance", "byteplus", "reference", seedanceReferenceSchema),
+  astra_text2video: entry("astra", "self-hosted-ltx", "text", astraText2VideoSchema),
+  astra_img2video: entry("astra", "self-hosted-ltx", "image", astraImg2VideoSchema),
+  astra_keyframe_video: entry("astra", "self-hosted-ltx", "keyframe", astraKeyframeVideoSchema),
+  astra_audio2video: entry("astra", "self-hosted-ltx", "audio", astraAudio2VideoSchema),
+  astra_ic_lora: entry("astra", "self-hosted-ltx", "control", astraIcLoraSchema),
+  astra_video_retake: entry("astra", "self-hosted-ltx", "retake", astraVideoRetakeSchema),
+  omni_text2video: entry("omni", "gemini-interactions", "text", omniText2VideoSchema),
+  omni_img2video: entry("omni", "gemini-interactions", "image", omniImg2VideoSchema),
+  omni_extend: entry("omni", "gemini-interactions", "extend", omniExtendSchema),
+  omni_edit: entry("omni", "gemini-interactions", "edit", omniEditSchema),
+  mlx_video_generate: entry("mlx", "local-mlx", "text", mlxVideoGenerateSchema)
+});
+function speechVideoCapabilities(provider, model) {
+  if (provider === "astra") return { provider, model, audioConditioning: true, lipSync: true, postLipSync: false, evidence: "astra_audio2video adapter contract" };
+  if (provider === "veo" && VALID_VIDEO_MODELS.includes(model))
+    return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "Gemini Veo has no external audio input" };
+  if (provider === "seedance" && Object.hasOwn(SEEDANCE_MODEL_SPECS, model))
+    return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed" };
+  if (["host", "mlx", "omni"].includes(provider))
+    return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "No verified external-speech synchronization adapter; voiceover remains available" };
+  throw new Error("No verified speech synchronization contract for selected deployment/model");
+}
+
+// src/video-pricing.ts
+import { fileURLToPath as fileURLToPath2 } from "node:url";
+
+// src/usage-ledger.ts
+import { execFileSync } from "node:child_process";
+import path4 from "node:path";
+var EPISODE_MARKER = path4.join("storyboard", "scenes.js");
+var VEO_TIER = {
+  "veo-3.1-lite-generate-preview": "lite",
+  "veo-3.1-fast-generate-preview": "fast",
+  "veo-3.1-generate-preview": "standard"
+};
+var SEEDANCE_FAMILY = {
+  "dreamina-seedance-2-5-260628": "2-5",
+  "dreamina-seedance-2-0-260128": "2-0",
+  "dreamina-seedance-2-0-fast-260128": "2-0-fast",
+  "dreamina-seedance-2-0-mini-260615": "2-0-mini",
+  "seedance-1-0-pro-250528": "1-0-pro",
+  "seedance-1-0-pro-fast-251015": "1-0-pro-fast"
+};
+var PRICED_VIDEO_KEYS = /* @__PURE__ */ new Set([
+  "veo.lite.720p",
+  "veo.fast.720p",
+  "veo.standard.720p",
+  "veo.lite.1080p",
+  "veo.fast.1080p",
+  "veo.standard.1080p",
+  "veo.fast.4k",
+  "veo.standard.4k",
+  "omni.360p",
+  "omni.720p",
+  "omni.1080p",
+  "omni.4k",
+  "seedance.1-0-pro-fast.1080p",
+  "seedance.1-0-pro-fast.720p",
+  "seedance.1-5-pro-silent.1080p",
+  "seedance.1-5-pro-silent.720p",
+  "seedance.1-5-pro-audio.1080p",
+  "seedance.1-0-pro.1080p",
+  "seedance.2-0-mini.720p",
+  "seedance.2-0-fast.720p",
+  "seedance.2-0.1080p",
+  "seedance.2-5.720p",
+  "seedance.2-5.1080p",
+  // A request that carries a reference video (the previz lane) bills input + output seconds
+  // at the vendor's lower with-video token rate — its own rows.
+  "seedance.2-0-video.1080p",
+  "seedance.2-5-video.720p",
+  "seedance.2-5-video.1080p",
+  "seedance.2-0-fast-video.720p",
+  "seedance.2-0-mini-video.720p"
+]);
+var ELEVENLABS_KEY = { eleven_v4: "tts.elevenlabs" };
+function probeSeconds(file) {
+  try {
+    const out = execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], {
+      encoding: "utf8",
+      timeout: 15e3,
+      stdio: ["ignore", "pipe", "ignore"]
+    });
+    const seconds = Number.parseFloat(out.trim());
+    return Number.isFinite(seconds) && seconds > 0 ? Math.round(seconds * 1e3) / 1e3 : null;
+  } catch {
+    return null;
+  }
+}
+var num = (v, fallback) => typeof v === "number" && Number.isFinite(v) ? v : fallback;
+var str = (v, fallback) => typeof v === "string" && v ? v : fallback;
+function priceOf(tool, args = {}) {
+  if (args.requiredSeconds !== void 0) {
+    try {
+      args = resolveVideoDuration(tool, args).args;
+    } catch (error) {
+      return { key: null, quantity: null, note: "Invalid duration plan: " + String(error) };
+    }
+  }
+  if (tool.startsWith("veo_")) {
+    const tier = VEO_TIER[str(args.model, "veo-3.1-fast-generate-preview")];
+    const resolution = str(args.resolution, "720p");
+    if (!tier) return { key: null, quantity: null, note: `unmapped veo model: ${String(args.model)}` };
+    const forcedEight = resolution !== "720p" || tool === "veo_reference";
+    const seconds = tool === "veo_extension" ? 7 : forcedEight ? 8 : num(args.durationSeconds, 8);
+    const key = `veo.${tier}.${resolution}`;
+    if (!PRICED_VIDEO_KEYS.has(key)) return { key: null, quantity: seconds, note: `no price row for ${key}` };
+    return {
+      key,
+      quantity: seconds,
+      ...tool === "veo_extension" ? { note: "extension adds 7s of new content per call \u2014 whether the vendor bills 7 or the 8s cut length is unconfirmed" } : {}
+    };
+  }
+  if (tool.startsWith("omni_")) {
+    const resolution = str(args.resolution, "720p");
+    const key = `omni.${resolution}`;
+    if (!PRICED_VIDEO_KEYS.has(key)) return { key: null, quantity: null, note: `no price row for ${key}` };
+    const asked = tool === "omni_edit" ? null : num(args.durationSeconds, 8);
+    return {
+      key,
+      quantity: 1,
+      note: `flat per-call charge${asked === null ? "" : ` \u2014 ${asked}s requested, billed the same as 10s`}`
+    };
+  }
+  if (tool.startsWith("seedance_")) {
+    const model = str(args.model, tool === "seedance_reference" ? "dreamina-seedance-2-0-260128" : "seedance-1-5-pro-251215");
+    const resolution = str(args.resolution, "720p");
+    const seconds = typeof args.frames === "number" ? args.frames / 24 : num(args.durationSeconds, 5);
+    const base = model === "seedance-1-5-pro-251215" ? `1-5-pro-${args.generateAudio === true ? "audio" : "silent"}` : SEEDANCE_FAMILY[model];
+    if (!base) return { key: null, quantity: seconds, note: `unmapped seedance model: ${model}` };
+    const videos = [
+      ...Array.isArray(args.referenceVideoPaths) ? args.referenceVideoPaths : [],
+      ...Array.isArray(args.referenceVideoUrls) ? args.referenceVideoUrls : []
+    ].filter((v) => typeof v === "string");
+    const family = videos.length ? `${base}-video` : base;
+    const key = `seedance.${family}.${resolution}`;
+    if (!PRICED_VIDEO_KEYS.has(key)) return { key: null, quantity: seconds, note: `no price row for ${key}` };
+    if (!videos.length) return { key, quantity: seconds };
+    let input = 0;
+    const unread = [];
+    for (const video of videos) {
+      const probed = /^[a-z][a-z0-9+.-]*:/i.test(video) ? null : probeSeconds(video);
+      if (probed === null) unread.push(video);
+      input += probed ?? seconds;
+    }
+    return {
+      key,
+      quantity: seconds + input,
+      note: `output ${seconds}s + reference video ${input}s${unread.length ? ` (${unread.length} clip(s) assumed ${seconds}s \u2014 not probed)` : ""}`
+    };
+  }
+  if (tool.startsWith("gpt_image_")) {
+    const quality = str(args.quality, "medium");
+    return { key: `image.gpt-image-2.${quality}`, quantity: num(args.n, 1) };
+  }
+  if (tool === "image_local_generate") {
+    return { key: "image.local", quantity: num(args.n, 1) };
+  }
+  if (tool === "mlx_image_generate" || tool === "mlx_image_edit") {
+    return { key: "image.mlx", quantity: 1 };
+  }
+  if (tool === "tts_generate" || tool === "tts_multi_speaker") {
+    const model = str(args.model, "gemini-2.5-flash-preview-tts");
+    const tier = model.includes("pro") ? "pro" : "flash";
+    return { key: `tts.gemini-${tier}`, quantity: charUnits(args) };
+  }
+  if (tool.startsWith("tts_elevenlabs_")) {
+    const key = ELEVENLABS_KEY[str(args.model, "eleven_v4")] ?? null;
+    return {
+      key,
+      quantity: null,
+      note: `ElevenLabs bills the metered character-cost header, which sits below the raw text length (raw ${rawChars(args)} chars) \u2014 read the quantity off the response, not from here`
+    };
+  }
+  if (tool === "sfx_elevenlabs_generate") {
+    const seconds = args.durationSeconds;
+    return {
+      key: "sfx.elevenlabs",
+      quantity: typeof seconds === "number" && Number.isFinite(seconds) ? seconds : null,
+      note: typeof seconds === "number" ? void 0 : "billed per second of generated audio and no durationSeconds was requested \u2014 read the measured duration off the response"
+    };
+  }
+  if (tool === "music_generate_clip") return { key: "music.lyria-clip", quantity: 1 };
+  if (tool === "music_generate" || tool === "music_generate_advanced") {
+    return {
+      key: "music.lyria-realtime",
+      quantity: num(args.durationSeconds, 30),
+      note: "unit price unconfirmed \u2014 the report excludes this item rather than counting it as 0"
+    };
+  }
+  if (tool === "suno_generate") return { key: "music.suno-generate", quantity: 1 };
+  if (tool === "suno_generate_sound") return { key: "music.suno-sound", quantity: 1 };
+  if (tool === "suno_generate_lyrics") return { key: "music.suno-lyrics", quantity: 1 };
+  if (tool === "mlx_music_generate") {
+    return { key: "music.mlx", quantity: num(args.durationSeconds, DEFAULT_MLX_MUSIC_SECONDS) };
+  }
+  if (["astra_text2video", "astra_img2video", "astra_keyframe_video", "astra_audio2video"].includes(tool)) {
+    return { key: "video.astra", quantity: num(args.numFrames, 121) / num(args.frameRate, 24), note: "Self-hosted; hardware and wall-clock costs excluded" };
+  }
+  if (tool === "mlx_video_generate") {
+    const frames = num(args.numFrames, DEFAULT_MLX_VIDEO_FRAMES);
+    return { key: "video.mlx", quantity: Math.round(frames / MLX_VIDEO_FPS * 1e3) / 1e3 };
+  }
+  if (tool === "mlx_3d_generate") {
+    return { key: "3d.mlx", quantity: 1 };
+  }
+  return { key: null, quantity: null };
+}
+function rawChars(args) {
+  if (typeof args.text === "string") return args.text.length;
+  if (typeof args.input === "string") return args.input.length;
+  if (typeof args.script === "string") return args.script.length;
+  if (Array.isArray(args.inputs)) {
+    return args.inputs.reduce(
+      (sum, t) => sum + (t && typeof t === "object" && typeof t.text === "string" ? t.text.length : 0),
+      0
+    );
+  }
+  return 0;
+}
+function charUnits(args) {
+  return Math.round(rawChars(args) / 1e3 * 1e3) / 1e3;
+}
+
+// src/video-pricing.ts
+var PRICE_FILE = fileURLToPath2(new URL("../../skills/autoproduce/references/prices.tsv", import.meta.url));
+
+// src/video-routing.ts
+var load = createRequire2(import.meta.url);
+var shared = fileURLToPath3(new URL("../../skills/_shared/video-selection.js", import.meta.url));
+var routingContext = (episode, shotId) => load(shared).readVideoContext(episode, shotId);
+var idSchema = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
+var videoPlanSchema = external_exports.object({
+  episode: external_exports.string().min(1),
+  shotId: external_exports.string().min(1),
+  requestId: idSchema,
+  operation: external_exports.string().optional(),
+  tool: external_exports.string().optional(),
+  args: external_exports.record(external_exports.unknown()).default({})
+}).strict();
+var videoExecuteSchema = external_exports.object({ episode: external_exports.string().min(1), planId: external_exports.string().regex(/^[a-f0-9]{64}$/) }).strict();
+
+// src/speech.ts
+import { createHash as createHash3, randomUUID } from "node:crypto";
+import { readFileSync as readFileSync4, writeFileSync as writeFileSync4, renameSync as renameSync3, mkdirSync as mkdirSync3, existsSync as existsSync4 } from "node:fs";
+import { dirname as dirname3, resolve as resolve4, join as join4 } from "node:path";
+import * as nodeModule3 from "node:module";
+import { execFileSync as execFileSync2 } from "node:child_process";
+
+// src/speech-acting.ts
+import * as nodeModule2 from "node:module";
+var actingText = external_exports.string().trim().min(1).max(1e3);
+var actingSchema = external_exports.object({
+  context: actingText.optional(),
+  intent: actingText.optional(),
+  emotion: actingText.optional(),
+  vocal: actingText.optional(),
+  visual: actingText.optional(),
+  leadInSeconds: external_exports.number().finite().min(0).max(5).optional(),
+  tailOutSeconds: external_exports.number().finite().min(0).max(5).optional(),
+  direction: external_exports.string().trim().min(1).max(500).regex(/^[^<>\[\]|\r\n]+$/, "Use plain delivery direction, without tag markup").optional(),
+  tags: external_exports.array(external_exports.string().trim().min(1).max(60).regex(/^[A-Za-z][A-Za-z ,'-]*$/, "Use bare English vocal tag names")).max(6).optional()
+}).strict();
+function compileActing(text, acting, voice) {
+  const shared3 = nodeModule2.createRequire(import.meta.url)("../../skills/_shared/speech-contract.js");
+  return shared3.compileActing(text, actingSchema.parse(acting || {}), voice);
+}
+
+// src/tts-models.ts
+import { createRequire as createRequire4 } from "node:module";
+var shared2 = () => createRequire4(import.meta.url)("../../skills/_shared/tts-models.js");
+function resolveTtsModel(provider, model) {
+  return shared2().resolveTtsModel(provider, model);
+}
+
 // src/speech.ts
 var voiceContract = () => nodeModule3.createRequire(import.meta.url)("../../skills/_shared/character-voice.js");
 var actingContract = () => nodeModule3.createRequire(import.meta.url)("../../skills/_shared/scene-acting.js");
@@ -5791,7 +6717,8 @@ function speechAudioPlan(line, character) {
   const direction = actingContract().directionSupport(voice, line.acting);
   const language = validator.normalizeLanguage(voice.language);
   const compiled = compileActing(line.tts, line.acting || void 0, { ...voice, language });
-  return { ...compiled, arguments: compiled.generation, expectedText: line.tts, speechRevision: speechRevision(line, character), language, direction, review: "not_reviewed" };
+  const modelContract = resolveTtsModel(String(voice.engine), typeof voice.model === "string" ? voice.model.trim() : void 0);
+  return { ...compiled, capabilities: modelContract, arguments: compiled.generation, expectedText: line.tts, speechRevision: speechRevision(line, character), language, direction, review: "not_reviewed" };
 }
 function inspectionAudioPlan(line, character) {
   if (!character?.tts) return { available: false, warnings: ["Missing pinned character voice"], review: "not_reviewed" };
@@ -5815,7 +6742,7 @@ function audioProvenanceStatus(line, character) {
 function measuredDuration(line) {
   if (!line.audio || !existsSync4(line.audio.path)) return null;
   try {
-    const value = Number(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
+    const value = Number(execFileSync2("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
     return Number.isFinite(value) && value > 0 ? value : null;
   } catch {
     return null;
@@ -5965,6 +6892,14 @@ function manageSpeech(args) {
     if (selected.some(({ line }) => !line.id || !line.speaker || !line.delivery)) throw new Error("Prepare explicit speech before planning video");
     if (args.lineId || args.speaker || args.query) throw new Error("Video planning uses all lines in the shot; remove line filters");
     for (const { line } of selected) actingSchema.nullable().optional().parse(line.acting);
+    const episode = dirname3(dirname3(file));
+    if (existsSync4(join4(episode, ".work/model-settings.json"))) {
+      const { selection } = routingContext(episode, args.shotId);
+      const verified = speechVideoCapabilities(selection.engine, selection.model || selection.engine);
+      if (args.capabilities && (args.capabilities.provider !== verified.provider || args.capabilities.model !== verified.model || args.capabilities.audioConditioning !== verified.audioConditioning || args.capabilities.lipSync !== verified.lipSync || args.capabilities.postLipSync !== verified.postLipSync))
+        throw new Error("Caller capabilities disagree with selected adapter registry");
+      args = { ...args, capabilities: verified };
+    }
     plan = speechVideoPlan({ ...scene, narration: selected.map(({ line }) => ({ ...line, audio: currentAudio(line, character(line.speaker)) ? line.audio : void 0 })) }, args.capabilities);
     const continuityContract = nodeModule3.createRequire(import.meta.url)("../../skills/storyboard/references/shot-continuity.js");
     plan = { ...plan, continuity: continuityContract.plan(win, scenes.indexOf(scene), dirname3(file)) };
@@ -6043,711 +6978,6 @@ function manageSpeech(args) {
     renameSync3(tmp, file);
   }
   return { revision: hash(readFileSync4(file)), changed, invalidated, plan, timing, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
-}
-
-// src/video-duration.ts
-var import_video_duration = __toESM(require_video_duration(), 1);
-
-// src/seedance-client.ts
-import * as path3 from "node:path";
-var VALID_SEEDANCE_RESOLUTIONS = ["480p", "720p", "1080p", "4k"];
-var VALID_SEEDANCE_RATIOS = ["16:9", "9:16", "4:3", "3:4", "1:1", "21:9", "adaptive"];
-var SEEDANCE_MODEL_SPECS = {
-  // 1080p opened on 2026-08-17 (UTC+8) — 10-bit color, and the only tier the discount
-  // campaign covers (28% off list through 2026-09-17). 2.5 has no 4K; 2.0 does.
-  "dreamina-seedance-2-5-260628": {
-    resolutions: ["480p", "720p", "1080p"],
-    duration: [4, 30],
-    lastFrame: true,
-    referenceImages: [1, 30],
-    referenceAudio: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30, audioOnly: true },
-    referenceVideos: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30 },
-    audio: true,
-    seed: false,
-    realFaceInput: false,
-    activationGate: true
-  },
-  "dreamina-seedance-2-0-260128": {
-    resolutions: ["480p", "720p", "1080p", "4k"],
-    duration: [4, 15],
-    lastFrame: true,
-    referenceImages: [1, 9],
-    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
-    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
-    audio: true,
-    seed: false,
-    realFaceInput: false,
-    activationGate: true
-  },
-  "dreamina-seedance-2-0-fast-260128": {
-    resolutions: ["480p", "720p"],
-    duration: [4, 15],
-    lastFrame: true,
-    referenceImages: [1, 9],
-    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
-    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
-    audio: true,
-    seed: false,
-    realFaceInput: false,
-    activationGate: true
-  },
-  "dreamina-seedance-2-0-mini-260615": {
-    resolutions: ["480p", "720p"],
-    duration: [4, 15],
-    lastFrame: true,
-    referenceImages: [1, 9],
-    referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
-    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
-    audio: true,
-    seed: false,
-    realFaceInput: false,
-    activationGate: true
-  },
-  "seedance-1-5-pro-251215": {
-    resolutions: ["480p", "720p", "1080p"],
-    duration: [4, 12],
-    lastFrame: true,
-    referenceImages: false,
-    referenceAudio: false,
-    referenceVideos: false,
-    audio: true,
-    seed: true,
-    realFaceInput: true,
-    activationGate: false
-  },
-  "seedance-1-0-pro-250528": {
-    resolutions: ["480p", "720p", "1080p"],
-    duration: [2, 12],
-    lastFrame: true,
-    referenceImages: false,
-    referenceAudio: false,
-    referenceVideos: false,
-    audio: false,
-    seed: true,
-    realFaceInput: true,
-    activationGate: false
-  },
-  "seedance-1-0-pro-fast-251015": {
-    resolutions: ["480p", "720p", "1080p"],
-    duration: [2, 12],
-    lastFrame: false,
-    referenceImages: false,
-    referenceAudio: false,
-    referenceVideos: false,
-    audio: false,
-    seed: true,
-    realFaceInput: true,
-    activationGate: false
-  }
-};
-var VALID_SEEDANCE_MODELS = Object.keys(SEEDANCE_MODEL_SPECS);
-var DEFAULT_SEEDANCE_MODEL = "seedance-1-5-pro-251215";
-var SEEDANCE_REFERENCE_MODELS = VALID_SEEDANCE_MODELS.filter(
-  (model) => SEEDANCE_MODEL_SPECS[model].referenceImages !== false
-);
-var DEFAULT_SEEDANCE_REFERENCE_MODEL = "dreamina-seedance-2-0-260128";
-var SEEDANCE_REAL_FACE_MODELS = VALID_SEEDANCE_MODELS.filter(
-  (model) => SEEDANCE_MODEL_SPECS[model].realFaceInput
-);
-var DEFAULT_SEEDANCE_RESOLUTION = "720p";
-var DEFAULT_SEEDANCE_DURATION = 5;
-var SEEDANCE_FPS = 24;
-var SEEDANCE_FRAME_MODELS = ["seedance-1-0-pro-250528", "seedance-1-0-pro-fast-251015"];
-var SEEDANCE_MIN_FRAMES = 29;
-var SEEDANCE_MAX_FRAMES = 289;
-var SEEDANCE_FRAME_STEP = 4;
-var MAX_INPUT_IMAGE_BYTES = 30 * 1024 * 1024;
-var MAX_REQUEST_BYTES = 64 * 1024 * 1024;
-var MAX_INPUT_AUDIO_BYTES = 15 * 1024 * 1024;
-var MAX_INPUT_VIDEO_BYTES = 200 * 1024 * 1024;
-var SEEDANCE_REFERENCE_AUDIO_EXTENSIONS = [".wav", ".mp3"];
-var SEEDANCE_REFERENCE_VIDEO_EXTENSIONS = [".mp4", ".mov"];
-var commonFields = {
-  prompt: external_exports.string().min(1, "Prompt is required"),
-  model: external_exports.enum(VALID_SEEDANCE_MODELS).optional().default(DEFAULT_SEEDANCE_MODEL),
-  resolution: external_exports.enum(VALID_SEEDANCE_RESOLUTIONS).optional().default(DEFAULT_SEEDANCE_RESOLUTION),
-  durationSeconds: external_exports.number().int().optional(),
-  frames: external_exports.number().int().min(SEEDANCE_MIN_FRAMES).max(SEEDANCE_MAX_FRAMES).optional(),
-  generateAudio: external_exports.boolean().optional().default(false),
-  watermark: external_exports.boolean().optional().default(false),
-  seed: external_exports.number().int().min(-1).max(2147483647).optional(),
-  cameraFixed: external_exports.boolean().optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").optional()
-};
-var QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
-var HANGUL_RUN = /[가-힣]+(?:[ \t]+[가-힣]+)*/;
-function hangulOutsideQuotes(prompt) {
-  const match = prompt.replace(QUOTED_SEGMENT, " ").match(HANGUL_RUN);
-  return match ? match[0] : null;
-}
-function validateCommon(data, ctx) {
-  const spec = SEEDANCE_MODEL_SPECS[data.model];
-  if (data.model !== "dreamina-seedance-2-5-260628") {
-    const korean = hangulOutsideQuotes(data.prompt);
-    if (korean) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["prompt"],
-        message: `${data.model} reads Chinese or English prompts only \u2014 the Korean "${korean}" sits outside quotation marks and would be ignored rather than obeyed. Write the direction in English; Korean dialogue belongs inside quotes (1.5 pro lip-syncs it), or route the shot to dreamina-seedance-2-5-260628.`
-      });
-    }
-  }
-  if (!spec.resolutions.includes(data.resolution)) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["resolution"],
-      message: `${data.model} does not support ${data.resolution} (supported: ${spec.resolutions.join(", ")}).`
-    });
-  }
-  const [minDuration, maxDuration] = spec.duration;
-  if (data.frames !== void 0) {
-    if (!SEEDANCE_FRAME_MODELS.includes(data.model) || (data.frames - 1) % SEEDANCE_FRAME_STEP !== 0)
-      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["frames"], message: "frames requires Seedance 1.0 pro/pro-fast and 25+4n frames in 29..289" });
-    if (data.durationSeconds !== void 0)
-      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["durationSeconds"], message: "frames and durationSeconds are mutually exclusive" });
-  } else if ((data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) < minDuration || (data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) > maxDuration) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["durationSeconds"],
-      message: `${data.model} supports durations of ${minDuration}~${maxDuration}s (requested: ${data.durationSeconds}s).`
-    });
-  }
-  if (data.generateAudio && !spec.audio) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["generateAudio"],
-      message: `${data.model} is silent-only and cannot generate audio. If you need audio, use seedance-1-5-pro-251215 or later.`
-    });
-  }
-  if (!spec.seed) {
-    if (data.seed !== void 0) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["seed"],
-        message: `${data.model} does not support seed (Seedance 1.5 pro\xB71.0 pro\xB71.0 pro fast only).`
-      });
-    }
-    if (data.cameraFixed !== void 0) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["cameraFixed"],
-        message: `${data.model} does not support cameraFixed (Seedance 1.5 pro\xB71.0 pro\xB71.0 pro fast only). Direct a fixed camera through the prompt instead.`
-      });
-    }
-  }
-}
-var seedanceText2VideoSchema = external_exports.object({
-  ...commonFields,
-  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("16:9")
-}).superRefine(validateCommon).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
-var seedanceImg2VideoSchema = external_exports.object({
-  ...commonFields,
-  sourceImagePath: external_exports.string().min(1, "Source image path is required"),
-  lastImagePath: external_exports.string().optional(),
-  // Following the input image's ratio is the default — specifying a different
-  // ratio makes the server center-crop the source image (the incident where a
-  // 9:16 cover got cropped).
-  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
-}).superRefine((data, ctx) => {
-  validateCommon(data, ctx);
-  if (data.lastImagePath && !SEEDANCE_MODEL_SPECS[data.model].lastFrame) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["lastImagePath"],
-      message: `${data.model} accepts a first frame only \u2014 for first+last frame interpolation use seedance-1-0-pro-250528 or later.`
-    });
-  }
-}).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
-var seedanceReferenceSchema = external_exports.object({
-  ...commonFields,
-  model: external_exports.enum(SEEDANCE_REFERENCE_MODELS).optional().default(DEFAULT_SEEDANCE_REFERENCE_MODEL),
-  referenceImagePaths: external_exports.array(external_exports.string()).optional().default([]),
-  referenceAudioPaths: external_exports.array(external_exports.string()).optional().default([]),
-  referenceVideoPaths: external_exports.array(external_exports.string()).optional().default([]),
-  referenceVideoUrls: external_exports.array(external_exports.string().url()).optional().default([]),
-  ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
-}).superRefine((data, ctx) => {
-  validateCommon(data, ctx);
-  const spec = SEEDANCE_MODEL_SPECS[data.model];
-  if (spec.referenceImages === false) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["model"],
-      message: `${data.model} does not support reference images. Use the Dreamina Seedance 2.5 or 2.0 family (${SEEDANCE_REFERENCE_MODELS.join(", ")}).`
-    });
-    return;
-  }
-  const [, maxImages] = spec.referenceImages;
-  if (data.referenceImagePaths.length > maxImages) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["referenceImagePaths"],
-      message: `${data.model} allows at most ${maxImages} reference images (requested: ${data.referenceImagePaths.length}).`
-    });
-  }
-  const videoCount = data.referenceVideoPaths.length + data.referenceVideoUrls.length;
-  if (data.referenceImagePaths.length === 0 && data.referenceAudioPaths.length === 0 && videoCount === 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["referenceImagePaths"],
-      message: "At least one reference is required \u2014 referenceImagePaths, referenceAudioPaths, referenceVideoPaths/Urls, or a mix."
-    });
-    return;
-  }
-  if (videoCount > 0) {
-    const video = spec.referenceVideos;
-    if (video === false) {
-      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["referenceVideoPaths"], message: `${data.model} does not take reference video.` });
-      return;
-    }
-    if (videoCount > video.maxClips) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["referenceVideoPaths"],
-        message: `${data.model} allows at most ${video.maxClips} reference videos (requested: ${videoCount}).`
-      });
-    }
-    for (const filePath of data.referenceVideoPaths) {
-      const ext = path3.extname(filePath).toLowerCase();
-      if (!SEEDANCE_REFERENCE_VIDEO_EXTENSIONS.includes(ext)) {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: ["referenceVideoPaths"],
-          message: `Reference video must be mp4 or mov (got "${ext}" in ${path3.basename(filePath)}).`
-        });
-      }
-    }
-    if (!/\bvideo\s*1\b/i.test(data.prompt)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["prompt"],
-        message: 'A reference video is bound in the prompt by index \u2014 write "Video 1" (2.5: "@Video 1") and say what it supplies (camera movement, blocking, motion timing) and what it must not (its visual content).'
-      });
-    }
-  }
-  if (data.referenceAudioPaths.length === 0) return;
-  const audio = spec.referenceAudio;
-  if (audio === false) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["referenceAudioPaths"],
-      message: `${data.model} does not take reference audio.`
-    });
-    return;
-  }
-  if (data.referenceAudioPaths.length > audio.maxClips) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["referenceAudioPaths"],
-      message: `${data.model} allows at most ${audio.maxClips} reference audio clips (requested: ${data.referenceAudioPaths.length}).`
-    });
-  }
-  if (!audio.audioOnly && data.referenceImagePaths.length === 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["referenceImagePaths"],
-      message: `${data.model} needs at least one reference image alongside reference audio \u2014 audio-only input is dreamina-seedance-2-5-260628 only.`
-    });
-  }
-  for (const filePath of data.referenceAudioPaths) {
-    const ext = path3.extname(filePath).toLowerCase();
-    if (!SEEDANCE_REFERENCE_AUDIO_EXTENSIONS.includes(ext)) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["referenceAudioPaths"],
-        message: `Reference audio must be wav or mp3 (got "${ext}" in ${path3.basename(filePath)}).`
-      });
-    }
-  }
-  if (!data.generateAudio) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["generateAudio"],
-      message: "Reference audio with generateAudio: false produces a silent video, so the voice reference has nothing to shape. Set generateAudio: true."
-    });
-  }
-}).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
-
-// src/mlx-serve-client.ts
-var MLX_LOAD_TIMEOUT_MS = 10 * 6e4;
-var MLX_IMAGE_TIMEOUT_MS = 15 * 6e4;
-var MLX_MUSIC_TIMEOUT_MS = 10 * 6e4;
-var MLX_VIDEO_TIMEOUT_MS = 20 * 6e4;
-var MLX_MESH_TIMEOUT_MS = 15 * 6e4;
-var MAX_VIDEO_RGB_BYTES = 800 * 1024 * 1024;
-var MLX_IMAGE_DIMENSION_STEP = 16;
-var MIN_MLX_IMAGE_DIMENSION = 256;
-var MAX_MLX_IMAGE_DIMENSION = 2048;
-var DEFAULT_MLX_IMAGE_SIZE = 1024;
-var MLX_VIDEO_DIMENSION_STEP = 64;
-var MLX_VIDEO_DIMENSION_STEP_ONE_STAGE = 32;
-var MIN_MLX_VIDEO_DIMENSION = 256;
-var MAX_MLX_VIDEO_DIMENSION = 1920;
-var DEFAULT_MLX_VIDEO_WIDTH = 768;
-var DEFAULT_MLX_VIDEO_HEIGHT = 1280;
-var DEFAULT_MLX_VIDEO_FRAMES = 49;
-var MIN_MLX_VIDEO_FRAMES = 9;
-var MAX_MLX_VIDEO_FRAMES = 241;
-var MLX_VIDEO_FRAME_STEP = 8;
-var MLX_VIDEO_FPS = 24;
-var MIN_MLX_MUSIC_SECONDS = 10;
-var MAX_MLX_MUSIC_SECONDS = 600;
-var DEFAULT_MLX_MUSIC_SECONDS = 30;
-var MAX_MLX_IMAGE_REFS = 3;
-var imageDimension = external_exports.number().int().min(MIN_MLX_IMAGE_DIMENSION).max(MAX_MLX_IMAGE_DIMENSION).refine((v) => v % MLX_IMAGE_DIMENSION_STEP === 0, {
-  message: `width/height must be a multiple of ${MLX_IMAGE_DIMENSION_STEP} (for 9:16 that's 1088\xD71920, not 1080\xD71920). FLUX.2-klein is fixed at 1024\xD71024 \u2014 pick a Krea/Mage-Flow model for other sizes.`
-});
-var videoDimension = external_exports.number().int().min(MIN_MLX_VIDEO_DIMENSION).max(MAX_MLX_VIDEO_DIMENSION).refine((v) => v % MLX_VIDEO_DIMENSION_STEP_ONE_STAGE === 0, {
-  message: `width/height must be a multiple of ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE} (LTX grid), and of ${MLX_VIDEO_DIMENSION_STEP} unless you pass pipeline:"one_stage". 1080 is on neither grid \u2014 use 1088\xD71920 or the default 768\xD71280.`
-});
-var mlxImageGenerateSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
-  model: external_exports.string().min(1).optional(),
-  width: imageDimension.optional().default(DEFAULT_MLX_IMAGE_SIZE),
-  height: imageDimension.optional().default(DEFAULT_MLX_IMAGE_SIZE),
-  steps: external_exports.number().int().min(1).max(50).optional(),
-  seed: external_exports.number().int().min(0).optional(),
-  imagePath: external_exports.string().min(1).optional(),
-  strength: external_exports.number().min(0).max(1).optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("image").optional()
-});
-var mlxImageEditSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
-  imagePath: external_exports.string().min(1, "imagePath is required"),
-  refImagePaths: external_exports.array(external_exports.string().min(1)).max(MAX_MLX_IMAGE_REFS).optional(),
-  model: external_exports.string().min(1).optional(),
-  width: imageDimension.optional(),
-  height: imageDimension.optional(),
-  steps: external_exports.number().int().min(1).max(50).optional(),
-  seed: external_exports.number().int().min(0).optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("image").optional()
-});
-var mlxMusicGenerateSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required").max(4e3),
-  model: external_exports.string().min(1).optional(),
-  lyrics: external_exports.string().max(8e3).optional(),
-  instrumental: external_exports.boolean().optional().default(true),
-  durationSeconds: external_exports.number().int().min(MIN_MLX_MUSIC_SECONDS).max(MAX_MLX_MUSIC_SECONDS).optional().default(DEFAULT_MLX_MUSIC_SECONDS),
-  seed: external_exports.number().int().min(0).optional(),
-  refAudioPath: external_exports.string().min(1).optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("audio").optional()
-}).superRefine((value, ctx) => {
-  if (value.instrumental && value.lyrics && value.lyrics.trim().length > 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      message: "instrumental:true cannot be sent beside lyrics \u2014 mlx-serve returns 400. Set instrumental false to sing, or drop lyrics for a bed."
-    });
-  }
-});
-var mlxVideoGenerateSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
-  model: external_exports.string().min(1).optional(),
-  width: videoDimension.optional().default(DEFAULT_MLX_VIDEO_WIDTH),
-  height: videoDimension.optional().default(DEFAULT_MLX_VIDEO_HEIGHT),
-  numFrames: external_exports.number().int().min(MIN_MLX_VIDEO_FRAMES).max(MAX_MLX_VIDEO_FRAMES).optional().default(DEFAULT_MLX_VIDEO_FRAMES),
-  steps: external_exports.number().int().min(1).max(50).optional(),
-  seed: external_exports.number().int().min(0).optional(),
-  firstFrameImagePath: external_exports.string().min(1).optional(),
-  lastFrameImagePath: external_exports.string().min(1).optional(),
-  pipeline: external_exports.enum(["one_stage", "two_stage", "two_stage_hq"]).optional(),
-  decoder: external_exports.enum(["conv", "diffusion"]).optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").optional()
-}).superRefine((value, ctx) => {
-  if (videoExceedsMemory(value.width, value.height, value.numFrames)) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      message: videoMemoryMessage(value.width, value.height, value.numFrames)
-    });
-  }
-  if (value.pipeline !== "one_stage") {
-    for (const [field, size] of [["width", value.width], ["height", value.height]]) {
-      if (size % MLX_VIDEO_DIMENSION_STEP !== 0) {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: [field],
-          message: `${field} ${size} is off the two-stage LTX grid (multiple of ${MLX_VIDEO_DIMENSION_STEP}). Pass pipeline:"one_stage" to use the ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE}px grid, or round to ${Math.round(size / MLX_VIDEO_DIMENSION_STEP) * MLX_VIDEO_DIMENSION_STEP}.`
-        });
-      }
-    }
-  }
-  if ((value.numFrames - 1) % MLX_VIDEO_FRAME_STEP !== 0) {
-    const below = value.numFrames - (value.numFrames - 1) % MLX_VIDEO_FRAME_STEP;
-    const above = below + MLX_VIDEO_FRAME_STEP;
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["numFrames"],
-      message: `numFrames must be ${MLX_VIDEO_FRAME_STEP}k+1 (${MIN_MLX_VIDEO_FRAMES}, 17, 25, \u2026 ${MAX_MLX_VIDEO_FRAMES}) \u2014 LTX latent depth. ${value.numFrames} is not, and mlx-serve answers 200 with its own default instead of refusing. Use ${below} or ${Math.min(above, MAX_MLX_VIDEO_FRAMES)}.`
-    });
-  }
-});
-var mlx3dGenerateSchema = external_exports.object({
-  imagePath: external_exports.string().min(1, "imagePath is required"),
-  model: external_exports.string().min(1).optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("mesh").optional()
-});
-function videoRgbBytes(width, height, frames) {
-  return width * height * frames * 3;
-}
-function videoExceedsMemory(width, height, frames) {
-  return videoRgbBytes(width, height, frames) > MAX_VIDEO_RGB_BYTES;
-}
-function videoMemoryMessage(width, height, frames) {
-  const mb = (videoRgbBytes(width, height, frames) / (1024 * 1024)).toFixed(0);
-  const cap = (MAX_VIDEO_RGB_BYTES / (1024 * 1024)).toFixed(0);
-  return `Decoded RGB would be ~${mb}MB (${width}\xD7${height}\xD7${frames}\xD73), over the ${cap}MB cap. Drop frames or canvas \u2014 1088\xD71920 at 8s/24fps is ~1.2GB and is refused. The default 768\xD71280\xD7${DEFAULT_MLX_VIDEO_FRAMES} stays under the cap.`;
-}
-
-// src/video-duration.ts
-var DURATION_TOOLS = [
-  "veo_text2video",
-  "veo_img2video",
-  "veo_reference",
-  "omni_text2video",
-  "omni_img2video",
-  "seedance_text2video",
-  "seedance_img2video",
-  "seedance_reference",
-  "astra_text2video",
-  "astra_img2video",
-  "astra_keyframe_video",
-  "astra_audio2video",
-  "mlx_video_generate"
-];
-function resolveVideoDuration(tool, input) {
-  if (input.requiredSeconds === void 0) return { args: input, timing: null };
-  if (!DURATION_TOOLS.includes(tool)) throw new Error("requiredSeconds is not supported for " + tool);
-  for (const key of ["duration", "durationSeconds", "numFrames", "frames", "autoDuration", "audioMaxDuration"]) {
-    if (input[key] !== void 0) throw new Error("requiredSeconds is mutually exclusive with " + key + "; supply the shot need or an exact legacy request, not both");
-  }
-  let limits;
-  if (tool.startsWith("veo_")) {
-    const fixed = tool === "veo_reference" || ["1080p", "4k"].includes(String(input.resolution));
-    limits = { seconds: fixed ? [8] : [4, 6, 8] };
-  } else if (tool.startsWith("omni_")) {
-    limits = { min: 3, max: 10 };
-  } else if (tool.startsWith("seedance_")) {
-    const model = input.model ?? (tool === "seedance_reference" ? DEFAULT_SEEDANCE_REFERENCE_MODEL : DEFAULT_SEEDANCE_MODEL);
-    const spec = SEEDANCE_MODEL_SPECS[model];
-    if (!spec) throw new Error("Unknown Seedance model: " + String(model));
-    limits = SEEDANCE_FRAME_MODELS.includes(model) ? { min: SEEDANCE_MIN_FRAMES, max: SEEDANCE_MAX_FRAMES, step: SEEDANCE_FRAME_STEP, frameRate: SEEDANCE_FPS } : { min: spec.duration[0], max: spec.duration[1] };
-  } else if (tool.startsWith("astra_")) {
-    const mode = tool === "astra_audio2video" ? "audio2video" : tool === "astra_keyframe_video" ? "keyframe" : input.tier === "guided" ? "guided" : input.tier === "fast" ? "guided_fast" : input.tier === "hq" ? "guided_hq" : "generate";
-    const frameRate = input.frameRate ?? 24;
-    if (typeof frameRate !== "number" || !Number.isFinite(frameRate) || frameRate < 1 || frameRate > 60)
-      throw new Error("frameRate must be finite in 1..60");
-    limits = { min: ASTRA_VIDEO_MIN_FRAMES, max: ASTRA_VIDEO_FRAME_LIMITS[mode], step: ASTRA_VIDEO_FRAME_STEP, frameRate };
-  } else {
-    limits = { min: MIN_MLX_VIDEO_FRAMES, max: MAX_MLX_VIDEO_FRAMES, step: MLX_VIDEO_FRAME_STEP, frameRate: MLX_VIDEO_FPS };
-  }
-  const timing = (0, import_video_duration.minimumDuration)(input.requiredSeconds, limits);
-  const { requiredSeconds: _required, ...args } = input;
-  if (timing.numFrames !== void 0) args[tool.startsWith("seedance_") ? "frames" : "numFrames"] = timing.numFrames;
-  else if (tool !== "veo_reference") args.durationSeconds = timing.durationSeconds;
-  return { args, timing };
-}
-
-// src/usage-ledger.ts
-import { execFileSync as execFileSync2 } from "node:child_process";
-import path4 from "node:path";
-var EPISODE_MARKER = path4.join("storyboard", "scenes.js");
-var VEO_TIER = {
-  "veo-3.1-lite-generate-preview": "lite",
-  "veo-3.1-fast-generate-preview": "fast",
-  "veo-3.1-generate-preview": "standard"
-};
-var SEEDANCE_FAMILY = {
-  "dreamina-seedance-2-5-260628": "2-5",
-  "dreamina-seedance-2-0-260128": "2-0",
-  "dreamina-seedance-2-0-fast-260128": "2-0-fast",
-  "dreamina-seedance-2-0-mini-260615": "2-0-mini",
-  "seedance-1-0-pro-250528": "1-0-pro",
-  "seedance-1-0-pro-fast-251015": "1-0-pro-fast"
-};
-var PRICED_VIDEO_KEYS = /* @__PURE__ */ new Set([
-  "veo.lite.720p",
-  "veo.fast.720p",
-  "veo.standard.720p",
-  "veo.lite.1080p",
-  "veo.fast.1080p",
-  "veo.standard.1080p",
-  "veo.fast.4k",
-  "veo.standard.4k",
-  "omni.360p",
-  "omni.720p",
-  "omni.1080p",
-  "omni.4k",
-  "seedance.1-0-pro-fast.1080p",
-  "seedance.1-0-pro-fast.720p",
-  "seedance.1-5-pro-silent.1080p",
-  "seedance.1-5-pro-silent.720p",
-  "seedance.1-5-pro-audio.1080p",
-  "seedance.1-0-pro.1080p",
-  "seedance.2-0-mini.720p",
-  "seedance.2-0-fast.720p",
-  "seedance.2-0.1080p",
-  "seedance.2-5.720p",
-  "seedance.2-5.1080p",
-  // A request that carries a reference video (the previz lane) bills input + output seconds
-  // at the vendor's lower with-video token rate — its own rows.
-  "seedance.2-0-video.1080p",
-  "seedance.2-5-video.720p",
-  "seedance.2-5-video.1080p",
-  "seedance.2-0-fast-video.720p",
-  "seedance.2-0-mini-video.720p"
-]);
-var ELEVENLABS_KEY = { eleven_v4: "tts.elevenlabs" };
-function probeSeconds(file) {
-  try {
-    const out = execFileSync2("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], {
-      encoding: "utf8",
-      timeout: 15e3,
-      stdio: ["ignore", "pipe", "ignore"]
-    });
-    const seconds = Number.parseFloat(out.trim());
-    return Number.isFinite(seconds) && seconds > 0 ? Math.round(seconds * 1e3) / 1e3 : null;
-  } catch {
-    return null;
-  }
-}
-var num = (v, fallback) => typeof v === "number" && Number.isFinite(v) ? v : fallback;
-var str = (v, fallback) => typeof v === "string" && v ? v : fallback;
-function priceOf(tool, args = {}) {
-  if (args.requiredSeconds !== void 0) {
-    try {
-      args = resolveVideoDuration(tool, args).args;
-    } catch (error) {
-      return { key: null, quantity: null, note: "Invalid duration plan: " + String(error) };
-    }
-  }
-  if (tool.startsWith("veo_")) {
-    const tier = VEO_TIER[str(args.model, "veo-3.1-fast-generate-preview")];
-    const resolution = str(args.resolution, "720p");
-    if (!tier) return { key: null, quantity: null, note: `unmapped veo model: ${String(args.model)}` };
-    const forcedEight = resolution !== "720p" || tool === "veo_reference";
-    const seconds = tool === "veo_extension" ? 7 : forcedEight ? 8 : num(args.durationSeconds, 8);
-    const key = `veo.${tier}.${resolution}`;
-    if (!PRICED_VIDEO_KEYS.has(key)) return { key: null, quantity: seconds, note: `no price row for ${key}` };
-    return {
-      key,
-      quantity: seconds,
-      ...tool === "veo_extension" ? { note: "extension adds 7s of new content per call \u2014 whether the vendor bills 7 or the 8s cut length is unconfirmed" } : {}
-    };
-  }
-  if (tool.startsWith("omni_")) {
-    const resolution = str(args.resolution, "720p");
-    const key = `omni.${resolution}`;
-    if (!PRICED_VIDEO_KEYS.has(key)) return { key: null, quantity: null, note: `no price row for ${key}` };
-    const asked = tool === "omni_edit" ? null : num(args.durationSeconds, 8);
-    return {
-      key,
-      quantity: 1,
-      note: `flat per-call charge${asked === null ? "" : ` \u2014 ${asked}s requested, billed the same as 10s`}`
-    };
-  }
-  if (tool.startsWith("seedance_")) {
-    const model = str(args.model, tool === "seedance_reference" ? "dreamina-seedance-2-0-260128" : "seedance-1-5-pro-251215");
-    const resolution = str(args.resolution, "720p");
-    const seconds = typeof args.frames === "number" ? args.frames / 24 : num(args.durationSeconds, 5);
-    const base = model === "seedance-1-5-pro-251215" ? `1-5-pro-${args.generateAudio === true ? "audio" : "silent"}` : SEEDANCE_FAMILY[model];
-    if (!base) return { key: null, quantity: seconds, note: `unmapped seedance model: ${model}` };
-    const videos = [
-      ...Array.isArray(args.referenceVideoPaths) ? args.referenceVideoPaths : [],
-      ...Array.isArray(args.referenceVideoUrls) ? args.referenceVideoUrls : []
-    ].filter((v) => typeof v === "string");
-    const family = videos.length ? `${base}-video` : base;
-    const key = `seedance.${family}.${resolution}`;
-    if (!PRICED_VIDEO_KEYS.has(key)) return { key: null, quantity: seconds, note: `no price row for ${key}` };
-    if (!videos.length) return { key, quantity: seconds };
-    let input = 0;
-    const unread = [];
-    for (const video of videos) {
-      const probed = /^[a-z][a-z0-9+.-]*:/i.test(video) ? null : probeSeconds(video);
-      if (probed === null) unread.push(video);
-      input += probed ?? seconds;
-    }
-    return {
-      key,
-      quantity: seconds + input,
-      note: `output ${seconds}s + reference video ${input}s${unread.length ? ` (${unread.length} clip(s) assumed ${seconds}s \u2014 not probed)` : ""}`
-    };
-  }
-  if (tool.startsWith("gpt_image_")) {
-    const quality = str(args.quality, "medium");
-    return { key: `image.gpt-image-2.${quality}`, quantity: num(args.n, 1) };
-  }
-  if (tool === "image_local_generate") {
-    return { key: "image.local", quantity: num(args.n, 1) };
-  }
-  if (tool === "mlx_image_generate" || tool === "mlx_image_edit") {
-    return { key: "image.mlx", quantity: 1 };
-  }
-  if (tool === "tts_generate" || tool === "tts_multi_speaker") {
-    const model = str(args.model, "gemini-2.5-flash-preview-tts");
-    const tier = model.includes("pro") ? "pro" : "flash";
-    return { key: `tts.gemini-${tier}`, quantity: charUnits(args) };
-  }
-  if (tool.startsWith("tts_elevenlabs_")) {
-    const key = ELEVENLABS_KEY[str(args.model, "eleven_v4")] ?? null;
-    return {
-      key,
-      quantity: null,
-      note: `ElevenLabs bills the metered character-cost header, which sits below the raw text length (raw ${rawChars(args)} chars) \u2014 read the quantity off the response, not from here`
-    };
-  }
-  if (tool === "sfx_elevenlabs_generate") {
-    const seconds = args.durationSeconds;
-    return {
-      key: "sfx.elevenlabs",
-      quantity: typeof seconds === "number" && Number.isFinite(seconds) ? seconds : null,
-      note: typeof seconds === "number" ? void 0 : "billed per second of generated audio and no durationSeconds was requested \u2014 read the measured duration off the response"
-    };
-  }
-  if (tool === "music_generate_clip") return { key: "music.lyria-clip", quantity: 1 };
-  if (tool === "music_generate" || tool === "music_generate_advanced") {
-    return {
-      key: "music.lyria-realtime",
-      quantity: num(args.durationSeconds, 30),
-      note: "unit price unconfirmed \u2014 the report excludes this item rather than counting it as 0"
-    };
-  }
-  if (tool === "suno_generate") return { key: "music.suno-generate", quantity: 1 };
-  if (tool === "suno_generate_sound") return { key: "music.suno-sound", quantity: 1 };
-  if (tool === "suno_generate_lyrics") return { key: "music.suno-lyrics", quantity: 1 };
-  if (tool === "mlx_music_generate") {
-    return { key: "music.mlx", quantity: num(args.durationSeconds, DEFAULT_MLX_MUSIC_SECONDS) };
-  }
-  if (["astra_text2video", "astra_img2video", "astra_keyframe_video", "astra_audio2video"].includes(tool)) {
-    return { key: "video.astra", quantity: num(args.numFrames, 121) / num(args.frameRate, 24), note: "Self-hosted; hardware and wall-clock costs excluded" };
-  }
-  if (tool === "mlx_video_generate") {
-    const frames = num(args.numFrames, DEFAULT_MLX_VIDEO_FRAMES);
-    return { key: "video.mlx", quantity: Math.round(frames / MLX_VIDEO_FPS * 1e3) / 1e3 };
-  }
-  if (tool === "mlx_3d_generate") {
-    return { key: "3d.mlx", quantity: 1 };
-  }
-  return { key: null, quantity: null };
-}
-function rawChars(args) {
-  if (typeof args.text === "string") return args.text.length;
-  if (typeof args.input === "string") return args.input.length;
-  if (typeof args.script === "string") return args.script.length;
-  if (Array.isArray(args.inputs)) {
-    return args.inputs.reduce(
-      (sum, t) => sum + (t && typeof t === "object" && typeof t.text === "string" ? t.text.length : 0),
-      0
-    );
-  }
-  return 0;
-}
-function charUnits(args) {
-  return Math.round(rawChars(args) / 1e3 * 1e3) / 1e3;
 }
 export {
   astraAudio2VideoSchema,

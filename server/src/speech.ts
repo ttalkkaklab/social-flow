@@ -1,3 +1,5 @@
+import { routingContext } from './video-routing.js';
+import { speechVideoCapabilities } from './video-registry.js';
 /** Model-independent dialogue addressing, revision tracking and media dependencies. */
 import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync, writeFileSync, renameSync, mkdirSync, existsSync } from 'node:fs';
@@ -8,6 +10,7 @@ import { execFileSync } from 'node:child_process';
 const voiceContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/character-voice.js') as { generationVoiceErrors(voice: unknown, proof: unknown, line?: unknown): string[] };
 import { readBoard, serializeBoard } from './storyboard.js';
 import { actingSchema, compileActing, type SpeechActing } from './speech-acting.js';
+import { resolveTtsModel } from './tts-models.js';
 import { ASTRA_VIDEO_MAX_PROMPT_CHARS } from './astra-video-client.js';
 
 const actingContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/scene-acting.js') as { resolvedStyle(voice: unknown, acting: unknown): string | undefined; directionSupport(voice: unknown, acting: unknown): { stylePrompt?: string; supported: boolean; warnings: string[] }; speechRevisionPayload(line: unknown, voice: unknown): unknown; scenePerformancePayload(scene: unknown): unknown; VIDEO_TEXT_POLICY: string; sceneVideoPrompt(performance: unknown[], mode: string, scene?: unknown): string; planScenePerformance(scene: unknown, measureAudio: (line: Line) => number | null): {performance: Record<string, unknown>[]; durationSeconds: number | null; timing: string; warnings: string[]} };
@@ -49,7 +52,8 @@ export function speechAudioPlan(line: Line, character: Character | undefined) {
   const direction = actingContract().directionSupport(voice, line.acting);
   const language = validator.normalizeLanguage(voice.language) as string;
   const compiled = compileActing(line.tts, line.acting || undefined, {...voice,language});
-  return {...compiled, arguments:compiled.generation, expectedText:line.tts, speechRevision:speechRevision(line,character), language, direction, review:'not_reviewed'};
+  const modelContract = resolveTtsModel(String(voice.engine), typeof voice.model === 'string' ? voice.model.trim() : undefined);
+  return {...compiled, capabilities: modelContract, arguments:compiled.generation, expectedText:line.tts, speechRevision:speechRevision(line,character), language, direction, review:'not_reviewed'};
 }
 
 function inspectionAudioPlan(line: Line, character: Character | undefined) {
@@ -208,6 +212,15 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
     if (selected.some(({line}) => !line.id || !line.speaker || !line.delivery)) throw new Error('Prepare explicit speech before planning video');
     if (args.lineId || args.speaker || args.query) throw new Error('Video planning uses all lines in the shot; remove line filters');
     for (const {line} of selected) actingSchema.nullable().optional().parse(line.acting);
+    const episode = dirname(dirname(file));
+    if (existsSync(join(episode, '.work/model-settings.json'))) {
+      const { selection } = routingContext(episode, args.shotId);
+      const verified = speechVideoCapabilities(selection.engine, selection.model || selection.engine);
+      if (args.capabilities && (args.capabilities.provider !== verified.provider || args.capabilities.model !== verified.model ||
+          args.capabilities.audioConditioning !== verified.audioConditioning || args.capabilities.lipSync !== verified.lipSync || args.capabilities.postLipSync !== verified.postLipSync))
+        throw new Error('Caller capabilities disagree with selected adapter registry');
+      args = { ...args, capabilities: verified };
+    }
     plan = speechVideoPlan({...scene,narration:selected.map(({line}) => ({...line,audio:currentAudio(line,character(line.speaker))?line.audio:undefined}))}, args.capabilities);
     const continuityContract = nodeModule.createRequire(import.meta.url)('../../skills/storyboard/references/shot-continuity.js') as {
       plan(board: unknown, index: number, dir: string): unknown;

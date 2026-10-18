@@ -57,6 +57,10 @@ The composer's file/timing checks are not listening QA.
 
 ## Common voice layer
 
+Use [TTS routing](../../_shared/tts-routing.md) for model capabilities, pure payload
+planning and restart-safe execution. Raw synthesis tools share the execution checks;
+only `tts_route execute` accepts a stable request ID for replay protection.
+
 For new episodes, apply [directory model settings](../../_shared/model-settings.md)
 before selecting speaker voices. Use its speech engine/model for new `tts` records
 and retain only explicit character exceptions. Existing episode snapshots and
