@@ -63,8 +63,11 @@ and episode creation over MCP; `skills/_shared/project-settings.js` is its CLI.
 Claude Code's read-only SessionStart hook reports missing settings. Other hosts
 use the skill's explicit preflight; neither path silently chooses preferences.
 
-At first setup in a working directory, choose the video type, then the video,
-speech and image models. The [type catalog](skills/_shared/video-types.md) covers
+At first setup in a working directory, choose the video type, then the video model
+and its credentials, then the image model and its credentials. Finally choose whether
+separate TTS is needed; if yes, select its model and configure credentials, otherwise
+save `models.speech:{engine:"none"}`. Reuse configured keys, including shared provider
+keys. Host/local engines need their tools available, not a separate API key. The [type catalog](skills/_shared/video-types.md) covers
 drama, comedy, documentary, explainer, tutorial, review, interview, vlog,
 advertisement, music video and custom/hybrid, with each choice's speech direction
 shown before selection. The choices are saved in `.social-flow/models.json`
@@ -505,7 +508,7 @@ measurements.
 /social-flow:intro my-channel              # 1.3 (optional) channel intro — 4 concepts HITL → 4s veo render → 90-point convergence (spliced after the episode as a closer)
 /social-flow:setup-threads my-channel      # 1.4 (optional) SNS account setup + API tokens — browser HITL, ego lite only (per platform: setup-instagram · setup-youtube)
 /social-flow:ingest my-channel record      # 1.5 (optional) screen+voice recording → timeline — an alternative research source
-/social-flow:storyboard my-channel "July FX swings"   # 2. research → wow points → 3 messages for today's viewer → 3 seven-item scenarios (one topic each, shown with their wow) → pick → more research → scenes (narration read on request, recorded as evidence) → storyboard → [approval] · nothing generated
+/social-flow:storyboard my-channel "July FX swings"   # scenario preview → character/prop/location sheets → complete scenes → shots → shared template + check · no media generation
 /social-flow:produce my-channel 20260729-fx           # 3. video + per-platform text
 /social-flow:publish my-channel 20260729-fx           # 4. [approval] → publish → record permalinks
 /social-flow:grow-threads my-channel init             # 5. (optional) Threads growth plan [approval — standing authorization]
@@ -517,6 +520,11 @@ measurements.
 /social-flow:topic-scout my-channel                   # 1.6 topics the market has already validated — md source of truth + chart HTML
 /social-flow:review-recent my-channel                 # 6. feedback HTML for the last 5 episodes (funnel · bars · next-episode levers)
 ```
+
+Storyboard authors, including delegated agents, follow the same required order. Show the
+scenario before detailed authoring without adding an approval pause unless requested.
+Prepare [character, prop and background/location sheets](skills/storyboard/references/asset-sheets.md)
+before shot design and export the shared review template with its `--check` result.
 
 Each step checks the previous step's output — produce stops on an unapproved
 storyboard, publish stops on unfinished production, and each points you back to the
@@ -530,7 +538,7 @@ them the pipeline ends at `produce` with the finished video and per-platform tex
 **One topic string straight to a finished video** (steps 2–3 with no human approval):
 
 ```
-/social-flow:autoproduce my-channel "July FX swings"   # research → wow points → 3 messages → 3 seven-item scenarios [one batched read] → pick → more research → scenes.js (reviews on request, recorded as evidence) → images → TTS → build → output
+/social-flow:autoproduce my-channel "July FX swings"   # scenario → asset sheets → shared storyboard → authorized production → output
 ```
 
 Without a human, the run keeps the operational contracts — fact verification (3+
@@ -655,12 +663,12 @@ social-flow/
 │   │   └── references/          #   setup-playbook.md (loopback listener · production-stage 7-day expiry trap)
 │   ├── datago/                  # /social-flow:datago — open-data research → collection → seed records
 │   ├── ingest/                  # /social-flow:ingest — screen recording (+voice) → timeline (recording control · STT · scene boundaries · keyframes)
-│   ├── storyboard/              # /social-flow:storyboard — research → wow points (what the viewer believes → what the evidence shows) → 3 messages for today's viewer → 3 seven-item scenarios (one topic each, never "X는 알 수 없다", each shown with its wow) → pick → more research → narration → narration and vocabulary reads on request (inline, ≤3 reads) → the board (author's read + check-scenes.js) → the image and clip plan → [approval]. No generation call — produce makes the stills, slides and clips
+│   ├── storyboard/              # scenario preview → character/prop/location sheets → complete scenes → shots → bundled review HTML + check; stops before media generation
 │   │   └── references/          #   scenes-schema.md (§structure — sequences · scenes · shots) · structure-contract.js (the rules storyboard_apply · check-scenes.js · storyboard.html share) · directing-grammar.md · motion-slide-template.html (studio ground · slab material · rendered object) · slide-design.md (look · motion tokens · the slide-reviewer rubric) · check-slide.js · rendered-object.md + bake-object.py (an SDF-raymarched object baked to a frame sheet, numpy + Pillow, ₩0 an episode) · blender-objects.md + bake-blender.py (the mesh recipe path-traced by Blender Cycles into the same sheet — real cast shadow, minutes of local GPU per cut, `--probe` forecasts them)
 │   ├── produce/                 # /social-flow:produce — stills (§1.5) → clips → slides (§3.6) → video build + per-platform text
 │   │   └── references/          #   build-reel.sh (subtitle-free master; `SUB_MODE` is a legacy burn-in switch the builder ignores) · speedup.sh (required final pace pass, 1.0 default, ≤6.2 chars/s) · bgm-bed.sh · bgm-scoring.md · video-template.html · render-motion-slide.mjs (motion slide → one clip per reveal group, no npm dependency) · QA harness
 │   ├── edit-speech/             # /social-flow:edit-speech — targeted speech corrections for one shot or character (speech_manage · raw TTS · not_reviewed)
-│   ├── autoproduce/             # /social-flow:autoproduce — one topic through research → wow points → 3 messages → 3 seven-item scenarios [one batched read on the wow and curiosity · fear · intrigue · comedy, auto-pick unattended] → more research → authoring (reviews recorded as evidence) → video (operational contracts only, economy tier default)
+│   ├── autoproduce/             # storyboard workflow → authorized production; scenario presentation does not add an approval pause
 │   │   └── references/          #   cost-tiers.md (legacy model ladder; the saved model governs) · prices.tsv (price SoT) · cost-report.sh
 │   │                            #   cost-tally.md (per-episode cost ledger convention — shared by storyboard/produce)
 │   ├── publish/                 # /social-flow:publish — HITL approval, then platform publishing

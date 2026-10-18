@@ -31,7 +31,12 @@ When the episode's layout/runtime has drifted from the bundled template, refresh
 inspect, and check again. Do not waive it because the episode
 uses local files.
 
-The shared generator is the only review renderer. Channel library copies use a relative base URL to the same episode assets.
+The shared generator is the only review renderer, including content-plan HTML.
+Prepare [asset sheets](asset-sheets.md) before shot authoring. The review displays canonical
+`SB_DOC.props` with custody/history and `SB_DOC.locations` with layout, lighting, invariants,
+reference images and shot links. `visual.locationId` links a shot to its planning sheet;
+Blender's `visual.location` remains a separate production binding. An absent sheet displays
+as missing; `SB_DOC.assetSheetNotes` supplies explicit not-applicable reasons. Channel library copies use a relative base URL to the same episode assets.
 
 The review uses a light Liquid Glass navigation layer, bundled Inter/Pretendard/
 regional Noto Sans, a 240px desktop navigation column and

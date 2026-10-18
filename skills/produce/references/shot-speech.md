@@ -22,6 +22,12 @@ Historical proof parsers remain for old artifacts; they are not new-production r
 
 ## Common data
 
+When the episode snapshot has `models.speech.engine:"none"`, skip separate TTS
+and voice auditions. Use supplied recordings, native video audio or silence as
+planned; do not infer a TTS engine from a profile's pinned voice. If new synthesized
+speech is requested, follow the model-settings credential step for an explicit
+speech selection/episode override before calling a speech tool.
+
 Set `SB_DOC.speechPlanVersion:1` and, on newly authored boards,
 `SB_DOC.performanceTimingVersion:1`. For story-v2, select a narrator only when the story needs one;
 explicit character speakers and silent stories need no narrator. When selected, include the

@@ -69,7 +69,9 @@ not inherit a publishing schedule or automatic queue authorization.
 1. Run the storyboard skill's current workflow. Start from the settled material or saved
    draft; compare causal alternatives only when a decision needs them or the user asks.
    No human selection pause is needed when automatic selection is already authorized. Record that it was an
-   automatic choice; never call it a user approval.
+   automatic choice; never call it a user approval. Follow storyboard's scenario-preview
+   rule and prepare all three asset sheet categories before detailed scene/shot authoring.
+   Delegated writers receive the same skill, sheet and shared-template contract.
 2. Write complete scenes before shots. Inspect character knowledge, decisive motivation,
    setup/payoff and prop/spatial continuity. Plan listener responses and silence alongside
    words. If review is useful, use the [storyboard reviewer](../../agents/storyboard-reviewer.md):
