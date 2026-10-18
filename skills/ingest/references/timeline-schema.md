@@ -104,7 +104,7 @@ Alignment rules:
   warns past 3x reduction).
 - `subs.text` is the **corrected notation** from timeline.md (the corrected side of
   original(→corrected), the sub principle) — put the raw original in and the
-  misrecognition is fixed on screen forever.
+  misrecognition travels into the timeline and any sidecar the user requests.
 - Scenes in the script but missing from the recording, and speech outside the
   script (improvised), get reported to the user; settle it after they choose
   [re-shoot that part / drop the scene / keep the improvisation].

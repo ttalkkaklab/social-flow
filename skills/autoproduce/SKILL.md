@@ -6,7 +6,7 @@ description: >
   or an authorized growth loop refills its queue. Develops complete causal scenes,
   plans shots and content-led timing, then produces the media within saved choices and
   spending limits. Storyboard stops at a plan; produce builds an existing approved board.
-argument-hint: "<channel> \"<topic>\" [unattended]"
+argument-hint: "<channel> \"<topic>\" [unattended <platform>]"
 allowed-tools: ["mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
   "WebSearch", "WebFetch",
   "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search",
@@ -18,9 +18,7 @@ allowed-tools: ["mcp__social-flow__project_manage", "mcp__plugin_social-flow_soc
   "mcp__social-flow__mlx_image_generate", "mcp__plugin_social-flow_social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__plugin_social-flow_social-flow__mlx_image_edit",
   "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "mcp__social-flow__tts_generate", "mcp__plugin_social-flow_social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__plugin_social-flow_social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__sfx_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__sfx_elevenlabs_generate",
   "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices",
-  "mcp__social-flow__veo_img2video", "mcp__plugin_social-flow_social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__plugin_social-flow_social-flow__veo_reference",
-  "mcp__social-flow__astra_img2video", "mcp__plugin_social-flow_social-flow__astra_img2video", "mcp__social-flow__astra_keyframe_video", "mcp__plugin_social-flow_social-flow__astra_keyframe_video", "mcp__social-flow__astra_audio2video", "mcp__plugin_social-flow_social-flow__astra_audio2video", "mcp__social-flow__mlx_video_generate", "mcp__plugin_social-flow_social-flow__mlx_video_generate",
-  "mcp__social-flow__seedance_img2video", "mcp__plugin_social-flow_social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__plugin_social-flow_social-flow__seedance_reference",
+  "mcp__social-flow__video_catalog", "mcp__plugin_social-flow_social-flow__video_catalog", "mcp__social-flow__video_plan", "mcp__plugin_social-flow_social-flow__video_plan", "mcp__social-flow__video_execute", "mcp__plugin_social-flow_social-flow__video_execute", "mcp__social-flow__video_status", "mcp__plugin_social-flow_social-flow__video_status",
   "mcp__social-flow__music_generate_clip", "mcp__plugin_social-flow_social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate", "mcp__plugin_social-flow_social-flow__mlx_music_generate"]
 ---
 
@@ -48,11 +46,14 @@ or benchmark request stops with plans even if it tests this automatic route.
 Read the channel profile and [project initialization](../project-init/SKILL.md). Reuse saved
 genre, model, style, ratio, format, voice and SNS targets. Create/snapshot a new episode with
 `project_manage` or its CLI. Existing episodes retain their snapshots and explicit choices.
-Interactive setup asks missing preferences once. Unattended runs report missing required
-production settings without inventing choices; pending SNS connections alone do not block
-local work. Text-only planning can proceed with unresolved production choices labeled.
+Interactive setup asks missing preferences once. An unattended run with incomplete settings
+reports `project_setup_required` and the missing fields, then stops before the lock,
+authoring or spending ([setup report](references/unattended-lifecycle.md#setup-report-before-lock));
+it invents no choice. Pending SNS connections alone do not block local work.
 Use [model settings](../_shared/model-settings.md) and `capability_status` to check the saved
-adapters; do not silently switch provider or voice.
+adapters; do not silently switch provider or voice. Generated video goes through
+`video_catalog` → `video_plan` → `video_execute` under produce's routing contract, never a
+direct adapter call.
 
 Prepare shared identities and export the [character sheets](../channel/references/character-identity.md#prepare-the-shared-sheet-before-episode-authoring)
 before casting. Missing images stay pending. New stories do not need generated portraits

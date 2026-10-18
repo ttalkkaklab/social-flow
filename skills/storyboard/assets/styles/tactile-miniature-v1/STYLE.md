@@ -1,4 +1,4 @@
-# Tactile miniature · the default full-video look
+# Tactile miniature · the cinematic-miniature reference pack
 
 This pack ships reference images and rules together so another machine starts from the same
 materials and spatial treatment. The images are explanatory pictures generated for this

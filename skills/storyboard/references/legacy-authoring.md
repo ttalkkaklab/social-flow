@@ -13,8 +13,7 @@ For new work, return to the corresponding SKILL.md and character-scenarios.md.
 - 1. Load the profile
 - 1.5 Pick the format — short-form 9:16 (default) vs YouTube long-form 16:9
 - 1.6 Pick the mode — generated (default) vs filmed (screencast)
-- 1.7 Choose visual style and production mode before authoring
-- New episodes: character-led scenario branch
+- 1.7 Visual style and production mode on a resumed board
 - 2. Research and fact-checking (follows profile §5 policy)
 - 2.5 Confirm the structure — settled by the §2.2 approval, before any scene exists
 - 3. Create the topic directory
@@ -98,12 +97,11 @@ publishable episode and does not fabricate a story approval. Match camera effect
 
 ### 1. Load the profile
 
-**Project setup comes first for new episodes:** follow [project-init](../../project-init/SKILL.md)
-and inspect project settings before authoring. Reuse saved genre, models, style,
-video ratio, format and SNS targets. Create the episode with `project_manage episode`
-or its CLI and apply the returned handoff. A resumed board keeps its existing
-snapshot and explicit overrides. Missing preferences are asked once during setup;
-later style/ratio/format questions below apply only when missing or explicitly changed.
+**New episodes do not start here** — they follow [project-init](../../project-init/SKILL.md)
+and [character-scenarios.md](character-scenarios.md). A resumed board keeps its existing
+snapshot and explicit overrides; a legacy board that recorded no preference takes the
+project's `.social-flow/models.json` defaults as an assistant decision
+(automation-guidance.md) rather than a new question.
 
 **Model adapter mapping:** follow [model settings](../../_shared/model-settings.md)
 as soon as the working directory is known. Select video type → video model → speech model → image model once if
@@ -200,33 +198,25 @@ script.md, the hand-off to filming, and the long-form mixing rules — is in
 [shooting-mode.md](shooting-mode.md). **A fully generated short-form episode, the
 default, skips it.**
 
-### 1.7 Choose visual style and production mode before authoring
+### 1.7 Visual style and production mode on a resumed board
 
-Read [visual-style.md](visual-style.md). Before writing the storyboard, ask the user
-to choose one of the presets in `production-mode.js` `STYLES` — cinematic-miniature, photoreal,
-webtoon, claymation, paper-cutout, ink-wash, toon-3d or arcade-2d.
-Wait for the actual choice, persist it for this episode, and apply it to every generated
-start/end storyboard image and subsequent video prompt, in every production mode.
-Reuse an explicit existing choice; do not infer a style from production mode. Both prompt assemblers write the preset's treatment into every generated still's `bgPrompt`, and `check-scenes.js` refuses one without it (`[style-missing]`). When you judge that one shot needs another preset, that is the user's call: ask with AskUserQuestion and write their answer to `shot.style` (visual-style.md §Per-shot style); never change a shot's look on your own. For shot-level drone flight, follow [drone-flythrough.md](drone-flythrough.md).
-
-Read [production-mode.md](production-mode.md). Before visual planning, present
-the six render ratios in production-mode.md
-with `production-cost.js` first-pass and retry-inclusive estimates, model, resolution, audio,
-clip counts, exchange-rate assumption, exclusions and the explicit episode budget cap.
-Persist the actual HITL answer in `window.PRODUCTION` beside the §1 `imageProvider`/`videoProvider` detection; no paid generation happens here. **Two more questions on every episode with generated cuts** (user directive 2026-09-11, production-mode.md §Two more questions): before the first previz render ask **which 3D renderer** — Blender or three.js — and persist `PRODUCTION.previz`; before the §7 approval ask **which video model** with `video-model-options.js`'s cost table and persist `PRODUCTION.videoModel` as the episode default or `model:"mixed"`, and write each cut's selected model and resolution. `production-mode.js` refuses the board without both records.
-At final board approval refresh the exact quote and bind its fingerprint to that approval.
+A resumed board reuses the `PRODUCTION` snapshot it already carries — `style.preset` with its
+`selection`, `mode`, `renderRatioVersion`, `videoModel`, `previz`, `imageProvider` /
+`videoProvider` — and asks nothing. A legacy board that recorded none of these takes the
+project's `.social-flow/models.json` defaults as an assistant decision (automation-guidance.md);
+do not ask the style, ratio, renderer or model questions again. Both prompt assemblers write
+the preset's treatment into every generated still's `bgPrompt`, and `check-scenes.js` reports
+one without it (`[style-missing]`). A per-shot preset stays in `shot.style` with its recorded
+`selection` (visual-style.md §Per-shot style). For shot-level drone flight, follow
+[drone-flythrough.md](drone-flythrough.md). The quote bound to an existing approval stays
+bound; changed inputs need a fresh quote, not a new preference question.
 Only for the cinematic-miniature style, load the bundled [style guide and image pack](../assets/styles/tactile-miniature-v1/STYLE.md); choose `visual.styleRole` by the narrated subject/action, not the shot number. The assembler emits real reference-image arguments and a portable style binding. Never use a reference's historical props as a substitute for the new topic. Read [full-video.md](../../produce/references/full-video.md), write the spatial style
 and each `videoDesign`, including the subject-motion contract and timed action states in full-video.md, fill the four `visual.camera` slots under its §Camera dynamics (a move the viewer can see, static on at most one shot in three, wide on at most half, `cameraFixed` only under static), then use [spatial-prompts.js](spatial-prompts.js), which assembles both prompts and runs the Seedance prompt gate. This branch
 supersedes hybrid's shot cap, mandatory HTML explanation and person-required source clauses.
 Keep facts, narration reviews and the no-marks-over-video rule. Copy `production-mode.js`
 with the HTML template, render-routing.js, structure-contract.js and style-samples.js; `cost-preview.js --sbdoc` supplies both prices.
 
-### New episodes: character-led scenario branch
-
-After §1, follow [character-scenarios.md](character-scenarios.md) through casting, three candidates, selection and whole-story approval. Its workflow replaces §2–§4.6 below
-for new episodes; those sections describe the legacy story-v1 path. Use the same research tools for factual claims, not the legacy minimum-search/three-wow gates. Then rejoin §4.7 for camera,
-asset and sound planning, §5–§7 for the board and budget approval. Carry all performance events into visual plans and show them with speaker names on the approval screen. Do not rewrite
-observable action as narrator exposition just to satisfy legacy prose below.
+New work follows [character-scenarios.md](character-scenarios.md) and the storyboard SKILL.md; §2–§7 below describe the legacy story-v1 path for resumed boards only.
 
 ### 2. Research and fact-checking (follows profile §5 policy)
 
@@ -534,8 +524,8 @@ Core rules:
   Every editorial diagram must declare `quality:"object-state-v1"` and a `subject` with
   observable before/after states for every narration group. Physical subjects require
   `slide.object`; a camera move, flat cutout or settle does not satisfy the contract.
-  `check-scenes.js` blocks missing or invalid plans even in draft mode. Never waive this gate
-  to keep an unattended run moving. Do not modify an existing finished video to adopt the rule.
+  `check-scenes.js` and `check-slide.js` report a missing or invalid plan as a warning.
+  Do not modify an existing finished video to adopt the rule.
   Declare one `{group, primitive}` in `slide.motionBeats` for every narration segment; each
   group changes the picture, so these slides run the static-ground clock per group and sit
   outside `html_plate_max`. A still, a clip with marks or labels drawn over it, kinetic type,
@@ -1051,7 +1041,8 @@ so produce doesn't have to guess.
 **The cover background is this episode's meta image** — the cover frame becomes `cover.jpg`
 (the YouTube thumbnail and the first frame of the IG and FB videos) as-is. Not a metaphorical
 still life but **a photorealistic person scene where the topic is visible at a glance**
-(generated people only, Korean women by default — per the profile §3 target), framed at the
+(generated people only, cast for the profile §3 target audience — no demographic default — and
+made with the saved image model), framed at the
 cover shot's `shot.size`·`shot.angle` — `eye` unless the cover wrote a reason, since the hook
 cut is where the trust axis wins (directing-grammar §3). The `face not visible` negative
 direction is the one place it changes to `seen from behind, face turned away` (produce

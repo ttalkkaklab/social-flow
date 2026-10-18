@@ -155,7 +155,9 @@ Palette choices are editorial (cool clear data), botanical (organic/process), pl
 (creative transformation), midnight (technology/contrast). Choose by subject and channel;
 these are starting points, not a mandate to restyle every shot. Keep number and unit
 hierarchy, distinct shape roles, generous but purposeful space and quiet source text.
-No glass gradients by default. Make the visual relation recognizable before decorative effects.
+Liquid Glass is the material for the canonical chart (chart-design.md §Liquid Glass material);
+elsewhere the default stays restrained, with no glass gradients unless the subject calls for
+them. Make the visual relation recognizable before decorative effects.
 
 Build with the installed `skills/produce/references/prepare-motion-graphic.js BOARD --shot N`,
 then run the returned renderer command at final fps. Use only the shared headless capture

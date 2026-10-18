@@ -20,6 +20,16 @@ reuse the episode's snapshot, explicit overrides and pinned speaker voice; a new
 directory default does not change an existing take's model. Change it only when
 the user requests that change. Never silently fall back to another speech engine.
 
+When the user asks to apply the current character sheet, read that character's
+shared `voice-selection.json` and identity `tts`, then compare engine, model and
+voice ID with `SB_DOC.characters`. That request authorizes updating the named
+characters' episode voice pins; a stale episode pin is not the requested voice.
+Back up the board, record the scoped change and regenerate affected requested
+media. Assert that each `plan_audio` result and actual generation receipt match
+the selected sheet before attaching audio. Report other affected episode lines
+as stale if they are outside the requested rebuild. A sample-only voice edit or
+an unrelated directory-default change still preserves existing episode pins.
+
 Use `speech_manage action:list` on the existing board. Filter by shotId, speaker id/name,
 or quoted text. Shot numbers are display positions; stable shotId and lineId are the edit
 addresses. If a request matches several lines, report the candidates and clarify only the
@@ -64,13 +74,13 @@ new character dialogue or voices. Do not silently turn a user's dialogue into na
    different reactions or nonconsecutive shots by shared source image and slice them later.
    Attach all current line audio, then use the speech contract's compose-speech command
    before audio-conditioned video generation; build-reel also runs it automatically.
-   It materializes planned reaction time and synchronizes subtitles to speech intervals.
+   It materializes planned reaction time and synchronizes any requested subtitle sidecar to speech intervals.
    On-screen dialogue requires audio-conditioned animation or an explicit post lip-sync
    adapter. Never silently substitute closed-mouth action. Off-screen speech and narration
    can be mixed over existing action footage. Preserve the selected model and budget; a
    change request does not authorize unrelated generations or publishing.
 5. Bind the new clip with `attach_video`, current revision, selected capabilities and videoPath;
-   this records the source audio hashes and clears stale status. If delivery already exists, rebuild the affected clip, audio timing, subtitles and final
+   this records the source audio hashes and clears stale status. If delivery already exists, rebuild the affected clip, audio timing, any requested sidecar and the final
    edit using produce's existing commands. Preserve unaffected takes and report their hashes.
    Do not label a script-only patch as a regenerated video. Return the changed shot/line,
    speaker, text, new files and any media still needing regeneration. No listening approval.

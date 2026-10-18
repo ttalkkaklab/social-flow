@@ -5,8 +5,9 @@ description: >
   user asks to "게시해", "올려줘", "SNS 게시", "publish to social", "스레드/인스타/페북/유튜브에 올려", or once
   production is done. Takes the per-platform content under
   data/[channel]/episodes/[topic]/output/ through account checks and public media hosting,
-  stops at a mandatory human approval gate, publishes through the social-flow platform
-  tools as an immediate public post, and records the permalinks in publish-log.md.
+  stops for the user's publishing authorization, publishes through the social-flow platform
+  tools (Threads, Instagram and Facebook post at once; YouTube uploads private and flips
+  public with youtube_update), and records the permalinks in publish-log.md.
 argument-hint: "<channel> <topic> [platformCSV|auto]"
 # *_publish/facebook_comment are deliberately left un-pre-approved — the native
 # permission prompt on every irreversible publish call has to act as a second line of
@@ -19,16 +20,16 @@ allowed-tools: ["mcp__social-flow__project_manage", "mcp__plugin_social-flow_soc
 Use local episode files under `data/<channel>/episodes/<topic>/`.
 
 
-**HITL records:** Record final platform approval separately from actual publication outcomes. Preserve actual provenance in local files and reuse existing authorization. This adds no approval gate.
+**HITL records:** Record the user's platform approval separately from actual publication outcomes. Preserve actual provenance in local files and reuse existing authorization. Publishing needs the user's authorization; quality reviews add no gate.
 
 
-# Platform publishing — public immediately after HITL approval
+# Platform publishing — after the user's approval
 
 
 Publishes the finished artifacts in `output/` with the per-platform publish tools.
-**The publish tools have no review gate, so calling one = instantly public.** This
-skill's approval gate (§2) and the native permission prompt that fires on every
-publish call (never pre-approved) are the two lines of defense. Don't nudge the user
+**Threads, Instagram and Facebook post the moment the tool is called; YouTube uploads
+private (rule 9).** The user's approval (§1) and the native permission prompt that fires on
+every publish call (never pre-approved) are the two lines of defense. Don't nudge the user
 into promoting that prompt to "always allow".
 
 **Owner directive (2026-10-17): upload the clean, subtitle-free video on every platform,
@@ -76,7 +77,9 @@ from profile languages or an SRT already on disk. This overrides older subtitle 
    Existing sidecars and legacy burned-in files do not change this choice.
 9. **Every YouTube upload starts private — no exceptions** (user directive 2026-08-19).
    Call `youtube_publish` with **`privacyStatus: "private"`**, attach everything the
-   cover needs, and only then flip to public with `youtube_update`. Publishing straight
+   cover needs, and only then flip to public with `youtube_update`. The server uploads
+   private by default and rejects a `public` request (`unlisted` stays allowed); growth
+   loops run the same flip with `youtube_update` under their approved plan. Publishing straight
    to public exposes a mid-sentence frame as the first thing anyone sees while you are
    still attaching the cover. This holds for short-form and long-form alike; the
    long-form specifics are rule 10.
@@ -158,11 +161,11 @@ from profile languages or an SRT already on disk. This overrides older subtitle 
 
   ```bash
   REF=${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references
-  node $REF/episode-state.js .        # from the episode directory · exit 1 = blocked
+  node $REF/episode-state.js .        # from the episode directory · exit 1 = a delivery blocker
   ```
 
-  The check also verifies `output/video/delivery-proof.json` against the delivered video,
-  subtitles and source storyboard. A separate export without current assembly provenance
+  The check also verifies `output/video/delivery-proof.json` against the delivered files
+  and source storyboard. A separate export without current assembly provenance
   must be rebuilt through the common builder and final pace pass. For a large final speech
   payload, the embedded chapter manifest must cover every original audio sample and every
   chapter join. The same preflight rejects a missing/unverified chapter, boundary gap,
@@ -170,10 +173,12 @@ from profile languages or an SRT already on disk. This overrides older subtitle 
 
   Exit 1 here means the directory promised something it never delivered — a video with no
   per-platform text, a `queue_*: ready` marker with no video behind it, **an `output/` still
-  holding the pre-pass build** (the final pace pass in produce §7.5 is required; the check reads
-  both the `── speedup x…` and `PASS final speech rate` lines in
-  `output/video/build-report.txt`). Publishing is the irreversible step,
-  so a blocker gets resolved or explained to the user before §1, never worked around.
+  holding the pre-pass build** (the pace pass in produce §7.5 writes the `── speedup x…` line
+  to `output/video/build-report.txt`, then a `PASS final speech rate` line for a requested
+  sidecar or the `subtitle-based rate check skipped` marker without one — the default,
+  subtitle-free delivery). These blockers are technical, not quality verdicts. Publishing is
+  the irreversible step, so resolve or explain one to the user before §1 rather than working
+  around it.
 - Confirm the `output/` artifacts exist and that `storyboard.md` says
   `status: produced` — otherwise point them at `/social-flow:produce` first.
   Both formats require `output/video/video.mp4`, the subtitle-free master.
@@ -207,31 +212,30 @@ node ${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-meta.js output
 # Don't append | head to shorten the output — $? becomes that command's and a FAIL reads as 0
 ```
 
-`check-meta.js` exit 2 goes back to produce the same way an S1 does — a meta.md
-outside the playbook §6 layout, an angle bracket in the title, a preset hashtag
-missing, or `COMPREHENSION.answer` copied into the title or description. Its
-exit 1 goes into the gate prompt as is — but only when the output ends with a
-`CHECK_META: exit=1 …` line. A broken install exits 1 too, with a node stack and
-no tail, and that is **unchecked, not one warning**.
+`check-meta.js` exit 2 (a meta.md outside the playbook §6 layout, an angle bracket in
+the title, a preset hashtag missing, or `COMPREHENSION.answer` copied into the title or
+description) and exit 1 both go into the approval prompt as findings for the user to
+weigh — but only when the output ends with a `CHECK_META: exit=…` line. A broken
+install exits 1 too, with a node stack and no tail, and that is **unchecked, not one
+warning**.
 
 On exit 4 the copy isn't Korean and the checker declined to judge it — that surface is
 **unchecked, not clean**. Say so in the approval prompt by name, so the person approving
 knows they are the only reader it got.
 
-On exit 2 (S1) don't take it to the gate; send it back to `/social-flow:produce` to be
-fixed — editing the sentence on the spot here breaks rule 4. Put exit 1 (warning) into
-the gate prompt as is and let the user judge. **If the header line has `quote-exempt N`,
-list those N separately in the prompt** — they're violations the checker excluded from
-the verdict without knowing whether the source is genuine. If it really is quoting a
-source, publish as is; if we wrote the sentence and only wrapped it in quotes, send it
-back to produce. exit 3 means the gate didn't run — fix the path and run it again, and
+Exit 2 (S1) and exit 1 (warning) both go into the approval prompt as suggestions, with
+the flagged lines quoted, and the user judges; a style finding never sends the copy back
+to produce on its own. A fix the user wants is applied and the copy re-presented (rule 4).
+**If the header line has `quote-exempt N`, list those N separately in the prompt** —
+they're violations the checker excluded from the verdict without knowing whether the
+source is genuine, so say whether each one quotes a real source or is our own sentence
+in quotes. exit 3 means the checker didn't run — fix the path and run it again, and
 if you can't, state "style unverified" in the prompt. If the checker file itself is
 missing, python returns 2, so the existence check line above tells them apart.
 
 Present the final version for each platform with AskUserQuestion — the full body/caption,
 the media **local paths** (every platform gets `video.mp4`; YouTube gets a separate
-SRT only when requested), the
-subtitle cue count, the hashtags, the FB first-comment copy, all of it; the account it
+SRT only when requested), the hashtags, the FB first-comment copy, all of it; the account it
 will publish to (from the account check); and the style-check results (per-surface exit
 and score, number of quote exemptions). Options: [publish everything / some platforms
 only / revise and re-present / stop]. **Passing this gate is the approval to actually
@@ -422,8 +426,8 @@ subtitles only, so this pipeline cannot upload dubs. Two real paths:
 
 - **YouTube auto-dubbing** — on channels where YouTube has enabled the multi-language
   feature (https://support.google.com/youtube/answer/13338784) YouTube generates
-  dubbed audio itself. The subtitle tracks this skill uploads are what seed the
-  translation quality, so publishing with captions is the lever this pipeline controls.
+  dubbed audio itself. Subtitle tracks the user requested and this skill uploaded seed
+  that translation quality; a track is never added for this reason without the request.
 - **Custom dub tracks** go up by hand in YouTube Studio (up to 30 languages; an
   audio-only file about the length of the video). The long-form private stage (§3-2)
   is the moment — attach the tracks while the video is private, then flip public.
@@ -476,8 +480,11 @@ it and report the rest as done.
 
 When you reply to comments after publishing (`sns_comment_reply`), check the copy
 first as well. For THREADS, create a `surface: "reply"` draft with its parent
-comment ID as `replyToId`, submit its voice review, then pass that `draftId` to
-`sns_comment_reply`; the server applies the same configured gate as grow-threads.
+comment ID as `replyToId` (`threads_draft_create` returns `draftId` + `bodyHash`), then
+pass that `draftId` with `channel` to `sns_comment_reply`. The server verifies only that
+the posted body hashes to the draft's hash, the channel matches and the reply target
+matches; the draft needs no review. `threads_review_submit` records reviews as hash-bound
+evidence and never blocks, and `check-style.py` findings come back as suggestions.
 The episode fallback self-reply above is already handled in its approved call.
 A reply is person-to-person talk, which is where AI phrasing gets
 spotted fastest — golden-hour response isn't a reason to skip the check.

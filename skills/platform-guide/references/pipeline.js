@@ -1,10 +1,13 @@
 /**
- * pipeline.js — the episode pipeline's stages, gates, lanes and reviewers (Single Source of Truth)
+ * pipeline.js — the episode pipeline's step catalog: stages, checks, lanes and reviewers
+ * (Single Source of Truth)
  *
  * This file is to the pipeline axis what formats.js is to the format axis. It gathers the
- * stage ladder and the gate policy that were scattered across five SKILL.md sections and one
+ * stage ladder and the check catalog that were scattered across five SKILL.md sections and one
  * hard-coded switch statement into one place, and pipeline-lint.js machine-checks the prose
- * mirrors against it.
+ * mirrors against it. Since the owner directive of 2026-10-16 only operational contracts stop
+ * work (readable inputs, actual spending limits, real authorization); reviews and style checks
+ * file findings, and the rows below say so.
  *
  * ┌ Consumers ──────────────────────────────────────────────────────────┐
  * │ episode-state.js   STAGES → an episode's stage, next step, ladder   │
@@ -21,9 +24,9 @@
  *
  * ## Why the prose still exists
  *
- * A SKILL.md section teaches an agent *how* to run a gate — what to put on the approval
- * screen, which findings to carry, how to word the delegation. This file fixes only *that*
- * the gate exists, where it lives, and what it decides. Deleting the prose in favour of the
+ * A SKILL.md section teaches an agent *how* to run a check or review — what to put on the
+ * approval screen, which findings to carry, how to word the delegation. This file fixes only
+ * *that* the step exists, where it lives, and what it decides. Deleting the prose in favour of the
  * data would trade a readable instruction for a lookup, so the mirrors stay and the lint
  * checks them (the same call format-lint.js made about the template mirrors).
  */
@@ -99,16 +102,21 @@ const BROKEN_STAGE = {
 };
 
 /**
- * Every gate in the pipeline.
+ * Every check in the pipeline — the step catalog.
  *
- *   kind      hitl = a person decides · machine = a checker or a reviewer agent decides
+ *   kind      hitl = a person decides (authorization) · machine = a checker or a reviewer runs;
+ *             `checks` says what it looks at and `onFail` what happens with the finding
  *   skill     the skill whose document runs it · section = the heading it lives under
- *   num       autoproduce's own gate number, for the unattended ones (SKILL.md replacement table)
- *   replaces  which attended gate this unattended one stands in for
+ *   num       autoproduce's own step number, for the unattended ones (SKILL.md replacement table)
+ *   replaces  which attended step this unattended one stands in for
  *
- * The attended gates are transcribed from storyboard/SKILL.md:1228, produce/SKILL.md:1221 and
- * :1380, publish/SKILL.md:158. The unattended gates are transcribed from
- * autoproduce/SKILL.md's replacement table and its `(gate N)` section headings.
+ * The attended steps were transcribed from storyboard/SKILL.md:1228, produce/SKILL.md:1221 and
+ * :1380, publish/SKILL.md:158; the unattended ones from autoproduce/SKILL.md's replacement
+ * table and its `(gate N)` section headings. Owner directive 2026-10-16: the score bars,
+ * review-round caps, topic drops and queue holds those rows used to carry are retired —
+ * a review files findings with the episode, and only operational contracts (facts that
+ * cannot be supported, an unbuildable report, a spending cap, authorization) change what
+ * happens next. `onFail` below reads accordingly.
  */
 const GATES = [
   // ── Attended path ────────────────────────────────────────────────────
@@ -150,7 +158,7 @@ const GATES = [
     heading: 'Quality gate',
     stage: 'produced',
     reviewer: 'content-reviewer',
-    checks: 'CONTENT_REVIEW tail shows copy ≥ 95 and P0 = 0 (one round, publish-bound episodes only)',
+    checks: 'content-reviewer read on request or for a concrete uncertainty; the CONTENT_REVIEW tail is filed with the episode as evidence (no score bar)',
     onFail: 'report the unresolved findings to the user and let them decide',
   },
   {
@@ -172,8 +180,8 @@ const GATES = [
     skill: 'autoproduce',
     section: '§2',
     replaces: 'storyboard-approval',
-    checks: 'time-sensitive values cross-checked against 2 independent sources · 3+ verified facts',
-    onFail: 'topic discarded',
+    checks: 'time-sensitive values cross-checked against 2 independent sources · verified facts recorded in research.md',
+    onFail: 'narrow unsupported claims or choose a supported candidate; a topic is dropped only when no claim in it can be supported',
   },
   {
     id: 'style',
@@ -183,8 +191,8 @@ const GATES = [
     section: '§4',
     replaces: 'storyboard-approval',
     checker: 'check-style.py',
-    checks: 'check-style.py exit ≤ 1 per surface',
-    onFail: 'fix and retry; abort after 2 failures',
+    checks: 'check-style.py run per surface; its findings are recorded with the episode',
+    onFail: 'fix the concrete findings; S1 and S2 are suggestions and never abort authoring',
   },
   {
     id: 'build',
@@ -204,8 +212,8 @@ const GATES = [
     section: '§10',
     replaces: 'publish-approval',
     reviewer: 'content-reviewer',
-    checks: 'content-reviewer copy ≥ 95 · P0 = 0 (one round)',
-    onFail: 'queue_*: hold',
+    checks: 'content-reviewer read on request or for a concrete uncertainty; findings filed with the episode (no score bar)',
+    onFail: 'report the findings; queue_*: hold is for a delivery failure (build or media missing), a cost cap or missing authorization, never for a score',
   },
   {
     id: 'spend',
@@ -227,8 +235,8 @@ const GATES = [
     replaces: 'storyboard-approval',
     reviewer: 'storyboard-reviewer',
     mode: 'scenario',
-    checks: 'three candidates judged in one batched read on curiosity · fear · intrigue · comedy → the highest at ≥95 · P0 = 0 (one improving re-read of the best page at most)',
-    onFail: 'topic dropped',
+    checks: 'the candidates judged in one batched read on curiosity · fear · intrigue · comedy; findings and scores filed, no bar',
+    onFail: 'continue with the best justified candidate and report the findings; a topic is dropped only for an unsupportable premise',
   },
   {
     id: 'review-narration',
@@ -239,8 +247,8 @@ const GATES = [
     replaces: 'storyboard-approval',
     reviewer: 'storyboard-reviewer',
     mode: 'narration',
-    checks: 'the narration alone, handed inline and read in order without the picture — looped to ≥95 · P0 = 0 (cap 3 reads)',
-    onFail: 'authoring aborted',
+    checks: 'the narration alone, handed inline and read in order without the picture; findings filed, no bar and no fixed read count',
+    onFail: 'repair material weaknesses within the task and report the rest; authoring continues',
   },
   {
     id: 'review-vocabulary',
@@ -251,58 +259,60 @@ const GATES = [
     replaces: 'storyboard-approval',
     reviewer: 'storyboard-reviewer',
     mode: 'vocabulary',
-    checks: "the narration's words alone, handed inline — looped to ≥95 · P0 = 0 (cap 3 reads)",
-    onFail: 'authoring aborted',
+    checks: "the narration's words alone, handed inline; findings filed, no bar and no fixed read count",
+    onFail: 'repair material weaknesses within the task and report the rest; authoring continues',
   },
 ];
 
 /**
  * The reviewer agents and their verdict tails. Transcribed from platform-guide/SKILL.md's
- * adversarial-review table and the agent definitions in agents/.
+ * review table and the agent definitions in agents/.
  *
- * `bar: null` means no fixed bar lives here — the narration and vocabulary loops apply their
- * 95 line in the delegator (see the gate definitions above); the other modes file the score.
+ * `bar` and `rounds` are null for every reviewer since 2026-10-16: a score informs revisions
+ * and never decides sending, queueing or authoring; a review runs on request or for a concrete
+ * uncertainty, not a fixed number of times. A user who explicitly asks for a convergence loop
+ * sets its target in that request, not here.
  */
 const REVIEWERS = [
   {
     id: 'storyboard-reviewer',
     tails: ['STORYBOARD_REVIEW'],
-    // narration and vocabulary loop to 95 in the delegator (cap 3 reads each, the narration handed
-    // inline); scenario is one batched read on the unattended path. The other five modes stay in
-    // the agent for on-request reads — the default flow stopped calling them in 0.50.0.
+    // scenario is one batched read on the unattended path; narration and vocabulary are reads
+    // the delegator asks for. The other five modes stay in the agent for on-request reads —
+    // the default flow stopped calling them in 0.50.0.
     bar: null,
-    rounds: 3,
+    rounds: null,
     modes: ['scenario', 'narration', 'copy', 'scene', 'vocabulary', 'camera', 'sound', 'image'],
     surfaces: ['storyboard copy'],
   },
   {
     id: 'content-reviewer',
     tails: ['CONTENT_REVIEW', 'PLAN_REVIEW'],
-    bar: 95,
-    rounds: 1, // one read at produce §10 on a publish-bound episode; plan mode on request only (0.50.0)
+    bar: null,
+    rounds: null, // read at produce §10 on request or for a concrete uncertainty; plan mode on request only (0.50.0)
     modes: ['deliverable', 'plan'],
     surfaces: ['platform copy'],
   },
   {
     id: 'growth-post-reviewer',
     tails: ['GROWTH_POST_REVIEW'],
-    bar: 95,
-    rounds: 3,
+    bar: null,
+    rounds: null,
     modes: ['post', 'reply', 'standalone'],
     surfaces: ['growth copy', 'post-publish replies', 'bio · channel description · tagline'],
   },
   {
     id: 'brand-reviewer',
     tails: ['BRANDING_REVIEW', 'INTRO_REVIEW'],
-    bar: 95,
-    rounds: null, // convergence loop — branding 95, intro 90 (intro/SKILL.md §8)
+    bar: null,
+    rounds: null, // a convergence loop runs only when the user asks for one (branding/intro skills)
     modes: ['profile-image', 'intro'],
     surfaces: ['channel assets'],
   },
   {
     id: 'slide-reviewer',
     tails: ['SLIDE_REVIEW'],
-    bar: 95,
+    bar: null,
     rounds: null, // on request only since 0.50.0 — the flow admits a slide on check-slide.js and the author's own sheet read
     modes: ['slide'],
     surfaces: ['motion slides'],

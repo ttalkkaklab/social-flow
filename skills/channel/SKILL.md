@@ -4,9 +4,9 @@ description: >
   Creates channel profiles and reusable character sheets; stops before episodes. Use
   when the user asks to "채널 만들어", "채널 추가", "채널 목록", "프로파일 수정", "add a channel", "set up a
   content channel", "캐릭터 만들어", "캐릭터 시트 수정", or wants to create or update the channel directory under data/. For full workspace defaults (SNS, genre, style, video ratio) use project-init. Writes
-  data/[slug]/profile.md — target audience, tone, TTS voice, visual theme, target
-  platforms, fact-check policy — the source of truth every storyboard, produce and publish
-  run opens before anything else.
+  data/[slug]/profile.md — target audience, tone, pinned voice IDs, visual theme, target
+  platforms, fact-check policy — the identity file every storyboard, produce and publish
+  run opens first; engines, SNS targets, visual style and ratio live in .social-flow/models.json.
 argument-hint: "[add|list|update|serve|character] [channel-name]"
 allowed-tools: ["mcp__social-flow__tts_gemini_38", "mcp__plugin_social-flow_social-flow__tts_gemini_38", "mcp__social-flow__tts_voice_design", "mcp__plugin_social-flow_social-flow__tts_voice_design", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__stt_local_transcribe", "mcp__plugin_social-flow_social-flow__stt_local_transcribe", "mcp__social-flow__character_voice_audition", "mcp__plugin_social-flow_social-flow__character_voice_audition", "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_generate"]
 ---
@@ -67,7 +67,7 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
    - Target audience (who watches, and in what moment)
    - Tone (polite explanatory (존댓말) / casual punchy (반말) / documentary
      narration, etc.) — the register decided here is the source of truth for every
-     output that follows. The style gate doesn't change this register; it only
+     output that follows. The style check doesn't change this register; it only
      strips AI tells (platform-guide `references/korean-style.md`)
    - Publish platforms (threads / instagram / facebook / youtube)
    - Fact-check policy (informational=research required / creative·daily-life=skip)
@@ -78,10 +78,13 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
    identity settings. Keep line-specific emotion in `narration[].acting`, not the
    character's identity. Follow [acting prompts](../produce/references/acting-prompts.md).
    Change the identity voice only when the user requests it.
-   For each new character, generate three actual voice samples using distinct voices,
-   one shared Korean sample and the selected engine/model. Show the playable candidates,
-   wait for explicit selection, then save the selected voice settings/reference audio
-   to the identity and sheet. Pending drafts must not label a candidate as confirmed.
+   A new character's voice is auditioned only when the user requests character work
+   (`character`, or an explicit voice request): generate real samples with distinct voices
+   (three is the usual audition), one shared Korean sample and the selected engine/model,
+   show the playable candidates, wait for the user's selection, then save the selected
+   voice settings/reference audio to the identity and sheet. During `add` and project-init
+   the voice stays pending and no sample is billed. Pending drafts must not label a
+   candidate as confirmed.
 
 
    If the working directory already has [model settings](../_shared/model-settings.md),
@@ -110,11 +113,11 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
    channel has a reason to hold a tighter band — omitted, the format's own band applies.
 
    **Channel copy (description·bio) is outgoing copy** — the setup skills upload
-   this text as the platform bio verbatim. After writing it, run the style gate
-   (check-style `--surface screen`), then delegate to the growth-post-reviewer
-   agent as a `standalone` surface; use the findings to improve copy before it goes
-   into profile.md (up to 3 rounds; if it falls short, show the findings and
-   refine together with the user).
+   this text as the platform bio verbatim. After writing it, run check-style
+   (`--surface screen`) and use its findings as suggestions. On the user's request, or
+   when a line reads off and you want an independent read, delegate to the
+   growth-post-reviewer agent as a `standalone` surface and fold the useful findings
+   into the copy with the user; a score decides nothing here.
 
    **Shared-asset catalog** — copy `data/<slug>/assets/catalog.md` from
    `references/assets-catalog-template.md`. Don't create empty kind folders.
@@ -146,9 +149,9 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
 
 7. **Report** — show the full generated profile.md and point to the next steps:
    if there's no profile image (logo) yet, first `/social-flow:branding <channel>`
-   (4 candidates → HITL direction pick → adversarial convergence); once the logo
+   (4 candidates → HITL direction pick → review on request); once the logo
    is fixed, optionally `/social-flow:intro <channel>` (a channel intro video
-   where the character acts — 4 concepts HITL → veo generation), then pick a
+   where the character acts — 4 concepts HITL → generation with the saved video model), then pick a
    market-validated topic with `/social-flow:topic-scout <channel>` and go to
    `/social-flow:storyboard <channel> <topic>`.
 
@@ -165,8 +168,8 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
    measures against, so a board that drew no flag last week comes back flagged today
    (`check-scenes.js` and the approval strip warn outside the band; only the 180s platform
    cap fails). Neither touches an episode that is already built.
-   If the channel copy (description·bio) changed, pass the same gate as add
-   step 5 again (optional style diagnostics and concrete copy review).
+   If the channel copy (description·bio) changed, run the same optional check as add
+   step 5 again (style diagnostics as suggestions; a reviewer read on request).
 3. Report before/after as a table.
 
 ## serve procedure
@@ -218,7 +221,7 @@ For every new or updated character, follow [character-identity.md](references/ch
 Export the bundled sheet before any episode candidates or scene images, including drafts with pending media. Follow [panel specifications](references/character-panels.md) for purpose, canvas ratio and subject size. Never hand-author the review HTML.
 
 Every confirmed character sheet includes its selected `tts` in the identity JSON.
-Before the three-candidate audition selection, the draft may omit `tts`; do not
+Before the voice audition (requested character work), the draft may omit `tts`; do not
 substitute the following example as a confirmed voice. After selection, the block includes:
 
 ```json
@@ -287,8 +290,10 @@ when copying it to another machine. Design source and limits:
 
 ## Rules
 
-- **profile.md is the only SoT** — don't keep tone·voice·theme in session memory
-  or other files. The storyboard/produce/publish skills always read this file first.
+- **profile.md is the SoT for identity, tone, theme and pinned voice IDs** — don't keep
+  them in session memory or other files. Engines, SNS targets, visual style and video
+  ratio live in `.social-flow/models.json` (project-init). The storyboard/produce/publish
+  skills read both first.
 - **Platform signatures stay within platform grammar** — define hashtags·CTA
   within the platform-guide skill's playbook limits (Threads hashtags ≤1,
   YouTube 3~5, etc.).

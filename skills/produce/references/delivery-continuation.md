@@ -9,9 +9,9 @@ calling a paid generator and continue independent work while any required answer
 **Resume through delivery in this session.** A directory of clips or a continuation
 checkpoint is not a completed episode. Inspect `episode-state.js`, preserve existing
 assets and approvals, then continue narration → manifests → assembly → final checks →
-`output/`. Reuse approval for the exact disclosed warnings; do not repeatedly ask or
-rewrite failed reviews as PASS. Exhausted quality retries follow the video HITL
-contracts rather than silently ending the run. Only an actual missing authorization,
+`output/`. Carry the recorded warnings forward with the output; do not ask for their approval or
+rewrite failed reviews as PASS. Exhausted quality retries are reported under
+assembly-video-hitl.md rather than silently ending the run. Only an actual missing authorization,
 unavailable dependency or unresolved encoding/input error can require a pause; report
 the specific remaining action and complete independent work first. Do not claim
 completion until the delivered files and delivery proof validate. Publication is separate.

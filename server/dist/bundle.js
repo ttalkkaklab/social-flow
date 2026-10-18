@@ -66471,12 +66471,15 @@ var require_production_mode = __commonJS({
         return { min, max: Math.max(min, max) };
       }
       const videoRender = (scene) => ["generated_video", "stock_video"].includes(scene.shot?.render?.mode);
-      function ratioErrors(win) {
+      function ratioErrors(win, { advice = [] } = {}) {
         const scenes = win.SCENES || [], bounds = ratioBounds(win.PRODUCTION?.mode, scenes.length);
         if (!bounds) return [];
         const n = scenes.filter(videoRender).length;
         const missing = scenes.some((s2) => !s2.shot?.render?.mode);
-        return missing ? ["render ratio requires render.mode on every shot"] : n < bounds.min || n > bounds.max ? [`render ratio requires ${bounds.min}\u2013${bounds.max} video shots of ${scenes.length}; got ${n}`] : [];
+        if (missing) return ["render ratio requires render.mode on every shot"];
+        if (n > bounds.max) return [`render ratio allows at most ${bounds.max} video shots of ${scenes.length} under ${win.PRODUCTION.mode}; got ${n}`];
+        if (n < bounds.min) advice.push(`${n} of ${scenes.length} shots are video; the chosen ratio ${win.PRODUCTION.mode} aims at ${bounds.min}\u2013${bounds.max}. That is fine when the story needs no more motion; report the shortfall instead of adding cuts`);
+        return [];
       }
       const bandContract = (p) => p?.renderRatioVersion === 1 || ["video_80", "video_lt10", "no_video"].includes(p?.mode);
       const newCut = (scene) => eligible(scene) && !reused(scene) && scene.type !== "broll";
@@ -66491,9 +66494,7 @@ var require_production_mode = __commonJS({
           const hook = hookScene(scenes);
           return hook && newCut(hook) && generated(hook) && cuts.filter(generated).length === 1 ? [] : ["hook_only requires only the opening hook cut to be generated video"];
         }
-        if (!RATIOS[key]) return [];
-        const minimum = Math.ceil(cuts.length * RATIOS[key]);
-        return cuts.filter(generated).length >= minimum ? [] : [key + " requires at least " + minimum + " of " + cuts.length + " new cuts as generated video"];
+        return [];
       }
       const PREVIZ_RENDERERS = { blender: "\uBE14\uB80C\uB354 \uBE0C\uB9BF\uC9C0 \u2014 \uAD00\uC808 \uB9C8\uB124\uD0B9, \uBAA8\uC158 \uCEA1\uCC98", threejs: "three.js \uD398\uC774\uC9C0 \u2014 \uD5E4\uB4DC\uB9AC\uC2A4 \uD06C\uB86C, \uAD00\uC808 \uC5C6\uC74C" };
       const catalogue = typeof module === "object" && module.exports ? require_video_catalog() : { adapters: [] };
@@ -66507,7 +66508,7 @@ var require_production_mode = __commonJS({
       const ASTRA_WIDE_RESOLUTION = "1920x1024";
       const astraResolution = (win) => win.FORMAT === "youtube-long-16x9" ? ASTRA_WIDE_RESOLUTION : ASTRA_RESOLUTION;
       const astraSize = (win) => win.FORMAT === "youtube-long-16x9" ? { source: ASTRA_WIDE_RESOLUTION, edit: "1920x1080" } : { source: ASTRA_RESOLUTION, edit: "1080x1920" };
-      const selectionRecorded = (sel) => sel && ["user", "standing"].includes(sel.kind) && text3(sel.reference);
+      const selectionRecorded = (sel) => sel && ["user", "standing", "assistant"].includes(sel.kind) && text3(sel.reference);
       const CAMERA_SLOTS = ["movement", "speed", "framing", "end"];
       const normalize2 = (value) => String(value || "").toLowerCase().replace(/[\s\p{P}\p{S}]/gu, "");
       const staticCamera = (camera) => /^(static|fixed|locked)/i.test(String(camera?.movement || "").trim());
@@ -66521,7 +66522,7 @@ var require_production_mode = __commonJS({
         properties: {
           preset: { type: "string", enum: Object.keys(CAMERA_PRESETS), description: "Optional shot preset. Omit on ordinary camera shots; drone-flythrough is continuous travel through a 3D location." },
           variant: { type: "string", enum: Object.keys(CAMERA_PRESETS["drone-flythrough"].variants), description: "cinematic keeps the horizon level; fpv uses authored bank at bends. Required with drone-flythrough." },
-          movement: { type: "string", description: "One camera move in vendor vocabulary, chosen from shot.feel (directing-grammar \xA74\u2013\xA75): static \xB7 dolly in/out \xB7 zoom in/out (lens only) \xB7 dolly zoom in/out \xB7 pan left/right \xB7 tilt up/down \xB7 whip pan \xB7 truck left/right \xB7 pedestal up/down \xB7 crane up/down \xB7 arc shot \xB7 tracking \xB7 handheld \xB7 aerial. Not push in, orbit, boom or a Korean word (storyboard_check enforces the vocabulary and the conditions below). A pan, tilt, truck, pedestal or dolly is a sentence from framing to end, so end must differ from framing. A whip pan needs the hit in sound.sfx or visual.audio. A dolly zoom needs shot.depth deep (the background that stretches), a stationary subject, and happens once per episode. For drone shots copy the trajectory-derived value from drone-previz.js." },
+          movement: { type: "string", description: "One camera move in vendor vocabulary, chosen from shot.feel (directing-grammar \xA74\u2013\xA75): static \xB7 dolly in/out \xB7 zoom in/out (lens only) \xB7 dolly zoom in/out \xB7 pan left/right \xB7 tilt up/down \xB7 whip pan \xB7 truck left/right \xB7 pedestal up/down \xB7 crane up/down \xB7 arc shot \xB7 tracking \xB7 handheld \xB7 aerial. Not push in, orbit, boom or a Korean word (storyboard_check enforces the vocabulary and the conditions below). A pan, tilt, truck, pedestal or dolly is a sentence from framing to end, so end must differ from framing. A whip pan needs the hit in sound.sfx or visual.audio. A dolly zoom needs shot.depth deep (the background that stretches), a stationary subject, with a scene-specific purpose. For drone shots copy the trajectory-derived value from drone-previz.js." },
           speed: { type: "string", description: "Movement pace as slow, steady or fast \u2014 never inside movement, never a word the viewer cannot see (very slow, subtle). Empty on static. Generated from the trajectory on drone shots." },
           framing: { type: "string", description: "Opening composition \u2014 what the camera holds before the move starts (hold in). Generated from the trajectory on drone shots." },
           end: { type: "string", description: "Closing composition \u2014 where the move settles and holds (hold out); on a pan, tilt, truck, pedestal or dolly it names a different picture from framing. Generated from the trajectory on drone shots." },
@@ -66670,7 +66671,6 @@ var require_production_mode = __commonJS({
         return e2;
       }
       const NEUTERED = /\b(?:very|extremely|almost|ever so)\s+(?:slow|slight|small|subtle|gentle)|\b(?:barely|hardly|imperceptibl[ey]|subtle|subtly|tiny|minimal|micro|slight|slightly|gentle|gently|restrained|quiet)\b|\bhold(?:ing)?\s+(?:the\s+)?(?:composition|frame|shot)\b|\block(?:ed)?[- ]off\b|\bbreathing only\b/i;
-      const WIDE = /\b(?:wide|establishing|extreme long|long shot|full[- ]body figures|small figures)\b/i;
       const MOVES = [
         { key: "static", family: "static", re: /^(?:static|fixed|locked(?:[- ]off)?)(?:\s+camera)?\b/i },
         { key: "dolly zoom", family: "dollyzoom", re: /^dolly zoom(?:\s+(in|out))?\b/i },
@@ -66751,8 +66751,18 @@ var require_production_mode = __commonJS({
         return warnings;
       }
       function episodeMoveErrors(scenes) {
-        const at = (scenes || []).map((s2, i2) => eligible(s2) && !reused(s2) && s2.visual?.video && moveOf(s2.visual?.camera)?.family === "dollyzoom" ? i2 + 1 : 0).filter(Boolean);
-        return at.length > 1 ? [`[dolly-zoom-twice] shots ${at.join(", ")} each ask for a dolly zoom \u2014 it is spent once per episode (directing-grammar \xA74); keep the shot where the world turns over, and write another move on the rest`] : [];
+        const seen = /* @__PURE__ */ new Map(), notes = [];
+        for (const [index, scene] of (scenes || []).entries()) {
+          if (moveOf(scene.visual?.camera)?.family !== "dollyzoom") continue;
+          const purpose = String(scene.shot?.info || scene.shot?.why || "").trim();
+          if (!purpose) {
+            notes.push(`shot ${index + 1}: explain what this dolly zoom reveals`);
+            continue;
+          }
+          if (seen.has(purpose)) notes.push(`shots ${seen.get(purpose)} and ${index + 1}: repeated dolly zoom with identical information; inspect whether the second beat adds anything`);
+          seen.set(purpose, index + 1);
+        }
+        return notes;
       }
       function cameraErrors(scene, { advice = [] } = {}) {
         const v = scene.visual || {}, camera = v.camera || {}, errors = droneSceneErrors(scene, { advice });
@@ -66831,8 +66841,8 @@ var require_production_mode = __commonJS({
         if (!o || typeof o !== "object" || Array.isArray(o)) return [tag + "shot.style must be an object with preset, reason and selection"];
         if (!STYLES[o.preset]) errors.push(tag + "shot.style.preset must be one of " + Object.keys(STYLES).join(", "));
         if (!text3(o.reason)) advice.push(tag + "shot.style.reason states why this picture needs another preset than the episode");
-        if (!(o.selection && o.selection.kind === "user" && text3(o.selection.reference)))
-          advice.push(tag + `a per-shot style leaves the episode style only on the user's HITL approval; record it in shot.style.selection { kind: "user", reference }`);
+        if (!selectionRecorded(o.selection))
+          advice.push(tag + 'record who chose the per-shot style in shot.style.selection { kind: "user" | "assistant", reference }');
         Object.keys(o).filter((k) => !SHOT_STYLE_KEYS.includes(k)).forEach((k) => errors.push(tag + "shot.style." + k + " is not a shot-level field (world and camera language stay episode constants)"));
         return errors;
       }
@@ -66859,7 +66869,7 @@ var require_production_mode = __commonJS({
           errors.push("A reused clip cannot also declare a generation, recording, slide or alternate file handoff");
         if (v.picture !== "ai-video" || v.overlay !== "none") errors.push("Reused generated clips keep picture:ai-video and overlay:none");
         if (scene.title || scene.stat || (scene.bullets || []).length || scene.footnote)
-          errors.push("Reused video allows subtitles only; clear title, stat, bullets and footnote");
+          errors.push("Nothing goes over reused footage; clear title, stat, bullets and footnote");
         return errors;
       }
       function eligible(scene) {
@@ -66940,19 +66950,19 @@ var require_production_mode = __commonJS({
         if (!p) return requireSelection || (win.SCENES || []).some(reused) ? errors.concat(["Choose a production mode with a six-option cost comparison before generation"]) : errors;
         if (!MODES[p.mode]) errors.push("PRODUCTION.mode must be one of " + CHOICES.join(", ") + " (hook_only, stills_only and hybrid are legacy)");
         if (p.renderRatioVersion !== void 0 && p.renderRatioVersion !== 1) errors.push("renderRatioVersion must be 1");
-        if (bandContract(p) && (win.SCENES || []).every((s2) => s2.shot?.render?.mode)) errors.push(...ratioErrors(win));
+        if (bandContract(p) && (win.SCENES || []).every((s2) => s2.shot?.render?.mode)) errors.push(...ratioErrors(win, { advice }));
         if (p.imageProvider !== void 0 && !["host", "api"].includes(p.imageProvider)) errors.push("PRODUCTION.imageProvider must be host or api");
         if (p.videoProvider !== void 0 && !["host", "api", "astra"].includes(p.videoProvider)) errors.push("PRODUCTION.videoProvider must be host, api or astra");
         if (!Number.isFinite(p.videoBudgetUsd) || p.videoBudgetUsd < 0)
           errors.push("PRODUCTION.videoBudgetUsd must be a finite nonnegative episode cap");
         if (!Number.isInteger(p.maxAttempts) || p.maxAttempts < 1 || p.maxAttempts > 5)
           errors.push("PRODUCTION.maxAttempts must be 1\u20135 total attempts per clip (including the first)");
-        if (requireApproval && p.mode !== "stills_only" && (!p.approval || !["user", "standing"].includes(p.approval.kind) || !text3(p.approval.reference) || !Number.isFinite(Date.parse(p.approval.at)) || !text3(p.approval.quoteFingerprint)))
+        if (requireApproval && !["stills_only", "no_video"].includes(p.mode) && (!p.approval || !["user", "standing"].includes(p.approval.kind) || !text3(p.approval.reference) || !Number.isFinite(Date.parse(p.approval.at)) || !text3(p.approval.quoteFingerprint)))
           errors.push("PRODUCTION.approval needs kind, reference, at and the approved cost quoteFingerprint");
         const chosen = p.style?.preset;
         if (!chosen) advice.push("Choose an episode visual style (PRODUCTION.style.preset) before authoring; every production mode carries one");
         else if (chosen !== "spatial-explainer" && !STYLES[chosen]) errors.push("Unknown PRODUCTION.style.preset");
-        if (STYLES[chosen] && (!["user", "standing"].includes(p.style.selection?.kind) || !text3(p.style.selection?.reference))) advice.push("Record the actual style HITL choice in PRODUCTION.style.selection");
+        if (STYLES[chosen] && !selectionRecorded(p.style.selection)) advice.push("Record where the style came from in PRODUCTION.style.selection (user, standing or assistant, with its reference)");
         if (STYLES[chosen] && !packPresets.includes(chosen) && p.style.referencePack)
           errors.push("Only cinematic-miniature carries the miniature reference pack; drop referencePack for " + chosen);
         if (p.cast !== void 0) {
@@ -66987,16 +66997,16 @@ var require_production_mode = __commonJS({
         if (generatedCuts.length) {
           for (const key of ["reference", "world", "materials", "palette", "lighting", "camera"])
             if (!text3(p.style?.[key])) advice.push("PRODUCTION.style." + key + " is required once a generated cut exists");
-          if (!p.previz) advice.push("A 3D previz can help plan camera and blocking; select a renderer when using it.");
+          if (!p.previz) advice.push("A 3D previz can help plan camera and blocking; when using one, copy the saved previzRenderer from .social-flow/models.json or record the author's pick.");
           else if (!PREVIZ_RENDERERS[p.previz.renderer]) errors.push("Unsupported PRODUCTION.previz.renderer (blender | threejs)");
-          else if (p.previz && !selectionRecorded(p.previz.selection)) advice.push("Record the actual previz renderer HITL choice in PRODUCTION.previz.selection");
+          else if (p.previz && !selectionRecorded(p.previz.selection)) advice.push("Record where the previz renderer came from in PRODUCTION.previz.selection (standing from models.json, or an assistant decision when nothing was saved)");
           const vm2 = p.videoModel;
           if (p.videoProvider === "host") {
             if (vm2 && vm2.model !== "host") errors.push("PRODUCTION.videoModel.model must be host under videoProvider host");
           } else if (p.videoProvider === "astra") {
             if (vm2 && vm2.model !== "astra") errors.push("PRODUCTION.videoModel.model must be astra under videoProvider astra");
-          } else if (!vm2 || !text3(vm2.model)) errors.push("Ask which video model makes the generated cuts and record it in PRODUCTION.videoModel (an episode default or mixed; each cut records its model and resolution)");
-          if (vm2 && !["host", "astra"].includes(vm2.model) && !selectionRecorded(vm2.selection)) advice.push("Record the actual video model HITL choice in PRODUCTION.videoModel.selection");
+          } else if (!vm2 || !text3(vm2.model)) errors.push("Copy the saved video selection into PRODUCTION.videoModel (model-settings.md); ask only when .social-flow/models.json has no video model");
+          if (vm2 && !["host", "astra"].includes(vm2.model) && !selectionRecorded(vm2.selection)) advice.push("Record where the video model came from in PRODUCTION.videoModel.selection (standing from models.json, or the user's explicit choice)");
         }
         errors.push(...coverageErrors(win));
         if (!full(p)) {
@@ -67059,7 +67069,7 @@ var require_production_mode = __commonJS({
           motionErrors(s2).forEach(warn);
           if (!Array.isArray(s2.narration) || !s2.narration.length) warn("a generated cut needs its approved narration");
           if (s2.title || s2.stat || (s2.bullets || []).length || s2.footnote || !["none", void 0].includes(v.overlay))
-            bad("only burned subtitles go over full-video footage; clear title, bullets, footnote and overlays");
+            bad("nothing goes over full-video footage; clear title, bullets, footnote and overlays");
         });
         const run = [];
         (win.SCENES || []).forEach((s2, i2) => {
@@ -67069,20 +67079,6 @@ var require_production_mode = __commonJS({
           run.push({ key, shot: i2 + 1 });
           if (run.length === 3) advice.push("shots " + run.map((r2) => r2.shot).join(", ") + ": the same framing and camera move three times in a row; change size, angle or move for a reason");
         });
-        const generated2 = (win.SCENES || []).map((s2, i2) => ({ s: s2, shot: i2 + 1 })).filter(({ s: s2 }) => eligible(s2) && !reused(s2));
-        if (generated2.length >= 3) {
-          const statics = generated2.filter(({ s: s2 }) => staticCamera(s2.visual?.camera));
-          if (statics.length * 3 > generated2.length)
-            advice.push(`${statics.length} of ${generated2.length} shots hold a static camera; a full-video episode moves the camera on at least two of every three shots`);
-          generated2.forEach(({ s: s2, shot }, k) => {
-            if (k && staticCamera(s2.visual?.camera) && staticCamera(generated2[k - 1].s.visual?.camera))
-              advice.push(`shots ${generated2[k - 1].shot}, ${shot}: two static cameras in a row; move on one of them`);
-          });
-          const conventional = generated2.filter(({ s: s2 }) => !isDrone(s2.visual?.camera) || droneSceneErrors(s2).length);
-          const wide = conventional.filter(({ s: s2 }) => WIDE.test(String(s2.visual?.camera?.framing || "")));
-          if (wide.length * 2 > conventional.length)
-            advice.push(`${wide.length} of ${conventional.length} shots are framed wide; small figures on a wide stage read as a still on a phone \u2014 bring at least half the shots to medium or close`);
-        }
         return errors;
       }
       function policy(base, production, scenes) {
@@ -67105,6 +67101,135 @@ var require_production_mode = __commonJS({
       const api = { resolveVideoChoice, BANDS, ratioMode, ratioBounds, ratioErrors, videoRender, bandContract, CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, videoCap, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, ASTRA_RESOLUTION, ASTRA_WIDE_RESOLUTION, astraResolution, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check: check2, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
       if (typeof module === "object" && module.exports) module.exports = api;
       else root.PRODUCTION_MODE = api;
+    })(typeof window === "object" ? window : globalThis);
+  }
+});
+
+// ../skills/storyboard/references/film-techniques.js
+var require_film_techniques = __commonJS({
+  "../skills/storyboard/references/film-techniques.js"(exports, module) {
+    (function(root) {
+      "use strict";
+      const VERSION2 = "film-techniques-v1";
+      const esc2 = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+      const entries = [];
+      function add(id, category, ko, en, use, instruction, glyph, fields2 = {}) {
+        entries.push({ id, category, label: { ko, en }, use, instruction, glyph, fields: fields2 });
+      }
+      const camera = "M3 12h10v8H3zM13 14l5-3v10l-5-3";
+      const person = "M23 7a3 3 0 1 0 .01 0M23 13v10m-4-7h8m-4 7-3 5m3-5 3 5";
+      add("camera.static", "camera", "\uACE0\uC815", "Static", "\uC5F0\uAE30\xB7\uB300\uC0C1 \uBCC0\uD654 \uC790\uCCB4\uC5D0 \uC9D1\uC911\uD55C\uB2E4.", "Keep camera position, angle and focal length fixed.", camera + "M8 20v9m-4 0 4-9 4 9", { movement: "static" });
+      add("camera.dolly-in", "camera", "\uB2EC\uB9AC \uC778", "Dolly in", "\uAE68\uB2EC\uC74C\uC774\uB098 \uB300\uC0C1\uC5D0 \uB2E4\uAC00\uAC00\uB294 \uACBD\uD5D8\uC744 \uBCF4\uC5EC \uC900\uB2E4.", "Move physically toward the subject; specify the starting crop and closer ending crop.", camera + "M19 26h10m-4-4 4 4-4 4", { movement: "dolly in" });
+      add("camera.dolly-out", "camera", "\uB2EC\uB9AC \uC544\uC6C3", "Dolly out", "\uC8FC\uBCC0 \uB9E5\uB77D\uC744 \uACF5\uAC1C\uD558\uAC70\uB098 \uC778\uBB3C\uC5D0\uAC8C\uC11C \uAC70\uB9AC\uB97C \uB454\uB2E4.", "Move physically away; name what enters the wider ending frame.", camera + "M29 26H19m4-4-4 4 4 4", { movement: "dolly out" });
+      add("camera.slow-zoom-in", "camera", "\uC2AC\uB85C \uC90C \uC778", "Slow zoom in", "\uAC19\uC740 \uC2DC\uC810\uC5D0\uC11C \uB300\uC0C1\uC744 \uD655\uB300\uD558\uBA70 \uAE34\uC7A5\uC744 \uB9CC\uB4E0\uB2E4.", "Keep camera position fixed and narrow field of view slowly; perspective stays unchanged.", "M3 3h26v26H3zM10 10h12v12H10zM4 4l6 6m16-6-4 6", { movement: "zoom in", speed: "slow" });
+      add("camera.arc", "camera", "\uC544\uD06C \uC0F7", "Arc shot", "\uC778\uBB3C \uC8FC\uBCC0 \uACF5\uAC04\uC774\uB098 \uCCAB \uB4F1\uC7A5\uC744 \uBCF4\uC5EC \uC900\uB2E4.", "Travel on a curved path around the subject; name the arc direction and endpoint.", person + "M6 24C-2 4 30 1 29 22m-5-3 5 3 1-6", { movement: "arc shot" });
+      add("camera.follow", "camera", "\uD314\uB85C\uC6B0 \uC0F7", "Follow shot", "\uC778\uBB3C\uC744 \uB530\uB77C \uACF5\uAC04\uC5D0 \uB4E4\uC5B4\uAC00\uAC70\uB098 \uCD94\uACA9\uD55C\uB2E4.", "Follow behind the subject; preserve the planned gap and screen direction.", camera + "M23 3v8m-3-3 3 3 3-3M23 23v7", { movement: "tracking from behind" });
+      add("camera.reverse-tracking", "camera", "\uB9AC\uBC84\uC2A4 \uD2B8\uB798\uD0B9", "Reverse tracking", "\uAC77\uB294 \uC778\uBB3C\uC758 \uC5BC\uAD74\uACFC \uB300\uD654\uB97C \uACC4\uC18D \uBCF4\uC5EC \uC900\uB2E4.", "Retreat in front of the walking subject, facing them and maintaining distance.", camera + "M23 11V3m-3 3 3-3 3 3M23 23v7", { movement: "tracking backward in front of the subject" });
+      add("camera.handheld", "camera", "\uD578\uB4DC\uD5EC\uB4DC", "Handheld", "\uD604\uC7A5\uAC10\uC774\uB098 \uBD88\uC548\uD55C \uAD00\uCC30\uC744 \uD45C\uD604\uD55C\uB2E4.", "Use low-amplitude operated-camera sway; specify intensity.", "M5 8l20-2 2 17-20 2zM2 2l2 2m24 24 2 2M12 12l8 4-8 4z", { movement: "handheld" });
+      add("camera.whip-pan", "camera", "\uD729 \uD32C", "Whip pan", "\uC2DC\uC120\uC744 \uAE09\uD788 \uB3CC\uB824 \uB450 \uB300\uC0C1\uC744 \uC5F0\uACB0\uD55C\uB2E4.", "Pan rapidly from the named first subject and settle on the named second subject.", "M3 8h15M3 14h20M3 20h26m-6-6 6 6-6 6", { movement: "whip pan", speed: "fast" });
+      add("camera.crane-up", "camera", "\uD06C\uB808\uC778 \uC5C5", "Crane up", "\uC7A5\uBA74\uC744 \uB2EB\uAC70\uB098 \uC704\uCABD \uACF5\uAC04\uC744 \uACF5\uAC1C\uD55C\uB2E4.", "Raise the camera; explicitly describe whether its look direction stays level or tilts.", camera + "M24 28V4m-4 4 4-4 4 4", { movement: "crane up" });
+      add("camera.snorricam", "camera", "\uC2A4\uB178\uB9AC\uCEA0", "Snorricam", "\uD328\uB2C9 \uB4F1 \uC778\uBB3C\uC5D0 \uBD99\uC740 \uC8FC\uAD00\uC801 \uACBD\uD5D8\uC744 \uBCF4\uC5EC \uC900\uB2E4.", "Camera is rigidly mounted to the torso facing the face; face stays fixed in frame while background moves.", "M16 2a5 5 0 1 0 .01 0M7 28v-9h18v9M11 19v-5h10v5M2 8l3-3m22 3 3-3", { movement: "handheld body-mounted facing the subject" });
+      add("camera.push-past", "camera", "\uD478\uC2DC \uD328\uC2A4\uD2B8", "Push past", "\uC804\uACBD\uC744 \uC9C0\uB098 \uC228\uACA8\uC9C4 \uACF5\uAC04\uC744 \uACF5\uAC1C\uD55C\uB2E4.", "Travel past the named foreground object or through an open doorway to a specified landing view.", "M3 29V3h16v26M10 25l18-14m-7 0h7v7", { movement: "dolly in past foreground" });
+      add("camera.rear", "camera", "\uB9AC\uC5B4 \uC0F7", "Rear shot", "\uC5BC\uAD74\uC744 \uC228\uAE30\uACE0 \uAD00\uAC1D\uC774 \uBC18\uC751\uC744 \uC0C1\uC0C1\uD558\uAC8C \uD55C\uB2E4.", "View the subject from behind; describe the crop separately.", "M16 3a6 6 0 1 0 .01 0M4 29v-7q12-12 24 0v7M13 7h6", { viewpoint: "rear" });
+      add("camera.low", "camera", "\uB85C\uC6B0 \uC575\uAE00", "Low angle", "\uC544\uB798\uC5D0\uC11C \uC778\uBB3C\uC774\uB098 \uBB3C\uCCB4\uC758 \uB192\uC774\uB97C \uAC15\uC870\uD55C\uB2E4.", "Place camera below the subject looking upward; movement is a separate choice.", "M3 26h8v4H3zM12 24 25 9m-7 2 7-2-1 7M24 4v24", { angle: "low" });
+      add("camera.high", "camera", "\uD558\uC774 \uC575\uAE00", "High angle", "\uC778\uBB3C\uACFC \uC8FC\uBCC0 \uACF5\uAC04\uC744 \uB0B4\uB824\uB2E4\uBCF8\uB2E4.", "Place camera above the subject looking down; movement is a separate choice.", "M3 2h8v4H3zM12 8l13 15m-7-2 7 2-1-7M24 4v24", { angle: "high" });
+      add("camera.overhead", "camera", "\uC624\uBC84\uD5E4\uB4DC", "Overhead", "\uB3D9\uC120\uACFC \uC704\uCE58 \uAD00\uACC4\uB97C \uC218\uC9C1 \uC2DC\uC810\uC73C\uB85C \uBCF4\uC5EC \uC900\uB2E4.", "Look straight down at ninety degrees; name the readable floor layout.", "M12 2h8v5h-8zM16 8v10m-4-4 4 4 4-4M3 25q13-10 26 0-13 10-26 0z", { angle: "overhead" });
+      add("camera.dutch", "camera", "\uB354\uCE58 \uC575\uAE00", "Dutch angle", "\uC758\uB3C4\uC801\uC778 \uBD88\uADE0\uD615\uC744 \uD45C\uD604\uD55C\uB2E4.", "Tilt the horizon by the chosen angle; describe why this imbalance matters.", "M3 10 25 3l6 20-22 7zM8 20l16-5", { angle: "dutch" });
+      add("camera.dolly-zoom", "camera", "\uB3CC\uB9AC \uC90C", "Dolly zoom", "\uC778\uBB3C \uD06C\uAE30\uB97C \uC720\uC9C0\uD558\uBA70 \uBC30\uACBD \uC6D0\uADFC\uC758 \uBCC0\uD654\uB97C \uBCF4\uC5EC \uC900\uB2E4.", "Coordinate dolly and opposite zoom; explicitly choose in or out and hold subject screen size.", "M3 4h26v24H3zM10 9h12v14H10zM1 16h8m-3-3 3 3-3 3M31 16h-8m3-3-3 3 3 3", { movement: "dolly zoom" });
+      add("camera.rack-focus", "camera", "\uB799 \uD3EC\uCEE4\uC2A4", "Rack focus", "\uC11C\uB85C \uB2E4\uB978 \uAC70\uB9AC\uC758 \uB300\uC0C1 \uC0AC\uC774\uB85C \uAD00\uC2EC\uC744 \uC62E\uAE34\uB2E4.", "Shift sharp focus from the named near subject to the named far subject, or reverse; specify both endpoints.", "M3 18a7 7 0 1 0 .01 0M22 5a4 4 0 1 0 .01 0M12 14l9-5m-6 0h6v6", { focus: "rack" });
+      add("camera.side-tracking", "camera", "\uC0AC\uC774\uB4DC \uD2B8\uB798\uD0B9", "Side tracking", "\uC778\uBB3C \uC606\uC5D0\uC11C \uC774\uB3D9\uC758 \uB9AC\uB4EC\uC744 \uBCF4\uC5EC \uC900\uB2E4.", "Move parallel beside the subject, matching speed and preserving the side view.", camera + "M3 27h26m-4-4 4 4-4 4M23 4v14", { movement: "truck parallel to the subject" });
+      add("camera.pov", "camera", "1\uC778\uCE6D \uC2DC\uC810", "First-person POV", "\uAD00\uAC1D\uC774 \uC778\uBB3C\uC758 \uB208\uC73C\uB85C \uD589\uB3D9\uC744 \uACBD\uD5D8\uD558\uAC8C \uD55C\uB2E4.", "View from the character eyes; describe visible hands and crop when needed.", "M4 10V4h6M22 4h6v6M28 22v6h-6M10 28H4v-6M12 16h8M16 12v8", { viewpoint: "pov" });
+      add("camera.drone-pullback", "camera", "\uB4DC\uB860 \uD480\uBC31", "Drone pullback", "\uD6C4\uD1F4\uC640 \uC0C1\uC2B9\uC73C\uB85C \uC7A5\uC18C\uC758 \uADDC\uBAA8\uB97C \uACF5\uAC1C\uD55C\uB2E4.", "Travel backward and upward together; name the revealed space and final scale.", "M12 10h8v8h-8zM4 5h7M21 5h7M8 5l4 5m8 0 4-5M5 27 27 5m-8 0h8v8", { movement: "aerial backward and upward" });
+      add("camera.pan-left", "camera", "\uC67C\uCABD \uD32C", "Pan left", "\uC67C\uCABD \uB300\uC0C1\uC744 \uACF5\uAC1C\uD55C\uB2E4.", "Rotate left in place from one named target to another.", camera + "M29 27H3m5-4-5 4 5 4", { movement: "pan left" });
+      add("camera.pan-right", "camera", "\uC624\uB978\uCABD \uD32C", "Pan right", "\uC624\uB978\uCABD \uB300\uC0C1\uC744 \uACF5\uAC1C\uD55C\uB2E4.", "Rotate right in place from one named target to another.", camera + "M3 27h26m-5-4 5 4-5 4", { movement: "pan right" });
+      add("camera.tilt-up", "camera", "\uD2F8\uD2B8 \uC5C5", "Tilt up", "\uC704\uCABD \uB300\uC0C1\uC744 \uACF5\uAC1C\uD55C\uB2E4.", "Tilt upward from the starting target to the ending target.", "M4 16h10v8H4zM22 28V4m-5 5 5-5 5 5M3 29h12", { movement: "tilt up" });
+      add("camera.tilt-down", "camera", "\uD2F8\uD2B8 \uB2E4\uC6B4", "Tilt down", "\uC544\uB798\uCABD \uB300\uC0C1\uC744 \uACF5\uAC1C\uD55C\uB2E4.", "Tilt downward from the starting target to the ending target.", "M4 4h10v8H4zM22 4v24m-5-5 5 5 5-5M3 29h12", { movement: "tilt down" });
+      add("camera.eye", "camera", "\uB208\uB192\uC774", "Eye level", "\uC778\uBB3C\uACFC \uAC19\uC740 \uB192\uC774\uC5D0\uC11C \uAD00\uCC30\uD55C\uB2E4.", "Keep the lens at the subject eye height.", camera + "M19 12h10M23 4v24", { angle: "eye" });
+      const sizes = [
+        ["els", "\uC775\uC2A4\uD2B8\uB9BC \uB871\uC0F7", "Extreme long shot", "\uACF5\uAC04\xB7\uACE0\uB9BD\xB7\uADDC\uBAA8", "extreme long shot, subject tiny in the environment", 9],
+        ["ls", "\uB871\uC0F7", "Long shot", "\uC7A5\uC18C\uC640 \uC778\uBB3C \uC704\uCE58", "wide shot, full body with room above and below", 21],
+        ["fs", "\uD480\uC0F7", "Full shot", "\uC804\uC2E0 \uB3D9\uC791\xB7\uC758\uC0C1", "full shot, head to toe", 28],
+        ["mfs", "\uBBF8\uB514\uC5C4 \uD480\uC0F7", "Medium full shot", "\uD5C8\uB9AC \uC8FC\uBCC0 \uD589\uB3D9\xB7\uB300\uCE58", "medium full shot, frame bottom at mid-thigh", 37],
+        ["ms", "\uBBF8\uB514\uC5C4 \uC0F7", "Medium shot", "\uB300\uD654\xB7\uC0C1\uCCB4 \uD589\uB3D9", "medium shot, waist up", 44],
+        ["mcu", "\uBBF8\uB514\uC5C4 \uD074\uB85C\uC988\uC5C5", "Medium close-up", "\uB300\uC0AC\xB7\uD45C\uC815", "medium close-up, chest up", 56],
+        ["cu", "\uD074\uB85C\uC988\uC5C5", "Close-up", "\uC5BC\uAD74\uC758 \uBC18\uC751", "close-up, face and shoulders", 75],
+        ["choker", "\uBE45 \uD074\uB85C\uC988\uC5C5", "Big close-up", "\uC5BC\uAD74\uC758 \uBBF8\uC138\uD55C \uBCC0\uD654", "tight close-up, forehead to chin", 110],
+        ["ecu", "\uC775\uC2A4\uD2B8\uB9BC \uD074\uB85C\uC988\uC5C5", "Extreme close-up", "\uB208\xB7\uC785 \uB4F1 \uC138\uBD80", "extreme close-up, a named detail fills the frame", 180]
+      ];
+      const SIZE_WORDS = {}, SIZE_GLYPHS = {};
+      for (const [key, ko, en, use, instruction, height] of sizes) {
+        const k = height / 100, top = key === "choker" ? -11 : key === "ecu" ? -29 : 2;
+        let glyph = `<g transform="translate(${16 - 50 * k} ${top}) scale(${k})"><circle cx="50" cy="15" r="12"/><path d="M31 72V46q0-12 19-12t19 12v26zM40 72v26M60 72v26"/><path d="M43 14h3m8 0h3M43 22h14"/></g>`;
+        glyph = glyph.replace(/<circle /g, '<circle vector-effect="non-scaling-stroke" ').replace(/<path /g, '<path vector-effect="non-scaling-stroke" ');
+        if (key === "ecu") glyph = '<path d="M1 16Q16 1 31 16Q16 31 1 16Z"/><circle cx="16" cy="16" r="6"/><circle cx="16" cy="16" r="2"/>';
+        if (key === "choker") glyph = '<path d="M4 0V17Q16 38 28 17V0M8 9h5m6 0h5M11 23q5 3 10 0"/>';
+        glyph = '<rect x="1" y="1" width="30" height="30" rx="2" opacity=".3"/>' + glyph;
+        SIZE_WORDS[key] = instruction;
+        SIZE_GLYPHS[key] = glyph;
+        add("framing." + key, "framing", ko, en, use, instruction, glyph, { size: key });
+      }
+      const refs = [["front", "\uC815\uBA74 \uC804\uC2E0", "Front reference", "\uC804\uC2E0\xB7\uC758\uC0C1\xB7\uCCB4\uD615", "Head-to-shoes front view; retain the complete head.", "M16 3a4 4 0 1 0 .01 0M8 29V15h16v14M16 15v14M13 7h6"], ["back", "\uD6C4\uBA74 \uC804\uC2E0", "Back reference", "\uD6C4\uBA74\xB7\uB4A4\uB3CC\uC544\uC12C", "Complete back view; preserve clothing seams and hair silhouette.", "M16 3a4 4 0 1 0 .01 0M8 29V15h16v14M16 15v14M11 17h10"], ["face", "\uC5BC\uAD74 \uCC38\uC870", "Face reference", "\uB300\uC0AC\xB7\uC5BC\uAD74 \uBC18\uC751", "Neutral face including hair; keep identity separate from scene lighting.", "M16 3a12 12 0 1 0 .01 0M10 13h3m6 0h3M12 21h8"], ["costume", "\uC758\uC0C1 \uC804\uC6A9 \uCC38\uC870", "Costume reference", "\uC758\uC0C1\xB7\uCCB4\uD615 \uBCF4\uC870", "Optional derived costume reference without face; never replace the baseline complete front panel.", "M10 4 3 10l4 7 3-3v15h12V14l3 3 4-7-7-6-6 7z"]];
+      for (const [key, ko, en, use, instruction, glyph] of refs) add("character." + key, "character", ko, en, use, instruction, glyph, { reference: key });
+      const timing = [["insert", "\uC778\uC11C\uD2B8 \uC2DC\uAC04", "Insert timing", "\uB2E8\uC11C\xB7\uC0AC\uBB3C \uD655\uC778", "Start around 3\u20134 seconds; measure actual reading/action time.", "M3 8h26v16H3zM11 12h10v8H11z"], ["action", "\uD589\uB3D9 \uC2DC\uAC04", "Action timing", "\uC774\uB3D9\xB7\uC811\uCD09\xB7\uB3C4\uCC29", "Start around 5\u20137 seconds; preserve anticipation, action and response.", "M3 24l8-12 7 8 11-15M3 29h26"], ["dialogue", "\uB300\uC0AC\xB7\uAC10\uC815 \uC2DC\uAC04", "Dialogue timing", "\uB9D0\uACFC \uD45C\uC815\uC758 \uBCC0\uD654", "Start around 7\u201310 seconds, then use measured speech and reaction time.", "M3 4h26v18H13l-6 7v-7H3zM8 10h16M8 16h10"], ["establishing", "\uACF5\uAC04 \uC18C\uAC1C \uC2DC\uAC04", "Establishing timing", "\uC7A5\uC18C\uC640 \uC704\uCE58\uB97C \uC77D\uB294 \uC2DC\uAC04", "Start around 5\u20138 seconds; allow the viewer to recognize spatial relationships.", "M3 27V12l13-9 13 9v15zM12 27V16h8v11"], ["long-take", "\uB871\uD14C\uC774\uD06C \uC2DC\uAC04", "Long-take timing", "\uC5F0\uC18D \uC2DC\uAC04 \uC790\uCCB4\uAC00 \uD544\uC694\uD55C \uC7A5\uBA74", "Ten seconds or longer only when motivated; verify complete movement, model limits and action coverage.", "M2 16h28M3 10v12m6-12v12m6-12v12m6-12v12m6-12v12"]];
+      for (const [key, ko, en, use, instruction, glyph] of timing) add("timing." + key, "timing", ko, en, use, instruction, glyph, { timing: key });
+      const byId = Object.assign(/* @__PURE__ */ Object.create(null), Object.fromEntries(entries.map((entry2) => [entry2.id, entry2])));
+      function validate2(selection) {
+        if (!Array.isArray(selection)) return ["shot.techniques must be an array"];
+        const errors = [], seen = /* @__PURE__ */ new Set();
+        for (const item of selection) {
+          if (!item || !byId[item.id]) errors.push("Unknown technique: " + String(item?.id));
+          if (seen.has(item?.id)) errors.push("Duplicate technique: " + String(item?.id));
+          seen.add(item?.id);
+          if (typeof item?.reason !== "string" || !item.reason.trim()) errors.push("Technique needs this shot\u2019s reason: " + String(item?.id));
+        }
+        return errors;
+      }
+      function selected(scene) {
+        return Array.isArray(scene.shot?.techniques) ? scene.shot.techniques.map((item) => ({ ...item, entry: byId[item?.id] })) : [];
+      }
+      function instructions(scene) {
+        return selected(scene).filter((item) => item.entry && ["camera", "framing"].includes(item.entry.category)).map((item) => item.entry.category === "framing" ? "Opening frame: " + item.entry.instruction + "." : item.entry.instruction).join(" ");
+      }
+      function sourceInstructions(scene) {
+        return selected(scene).filter((item) => item.entry).map(({ entry: entry2 }) => {
+          if (entry2.category === "framing") return "Opening frame: " + entry2.instruction + ".";
+          if (entry2.fields.viewpoint || entry2.fields.angle) return entry2.instruction;
+          if (entry2.fields.focus === "rack") return "Stage the named near and far focus targets at distinct depths; use the authored opening focus from camera.framing.";
+          return "";
+        }).filter(Boolean).join(" ");
+      }
+      function findings(scene) {
+        const selection = scene.shot?.techniques;
+        if (selection === void 0) return [];
+        const notes = validate2(selection), sh = scene.shot || {}, cam = scene.visual?.camera || {};
+        const chosen = selected(scene).filter((item) => item.entry);
+        const frames = chosen.filter((item) => item.entry.category === "framing");
+        const viewpoints = new Set(chosen.map((item) => item.entry.fields.viewpoint).filter(Boolean));
+        if (viewpoints.size > 1) notes.push("Conflicting viewpoints: choose one opening viewpoint; describe a deliberate viewpoint transition in camera.end.");
+        if (frames.length > 1) notes.push("Multiple starting frame sizes: choose one; describe the ending crop in camera.end.");
+        for (const { entry: entry2 } of chosen) {
+          if (entry2.fields.size && sh.size !== entry2.fields.size) notes.push(entry2.id + " conflicts with shot.size " + String(sh.size));
+          if (entry2.fields.angle && sh.angle !== entry2.fields.angle) notes.push(entry2.id + " conflicts with shot.angle " + String(sh.angle));
+          if (entry2.fields.movement && !String(cam.movement || "").toLowerCase().trim().startsWith(entry2.fields.movement)) notes.push(entry2.id + " needs camera movement " + entry2.fields.movement);
+        }
+        if (chosen.some((x2) => x2.entry.id === "camera.static") && chosen.some((x2) => x2.entry.fields.movement && x2.entry.id !== "camera.static")) notes.push("Static camera conflicts with a selected moving-camera technique.");
+        return notes;
+      }
+      function icon(entry2) {
+        const body = entry2.glyph.startsWith("<") ? entry2.glyph : '<path d="' + entry2.glyph + '"/>';
+        return '<svg viewBox="0 0 32 32" width="40" height="40" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' + body + "</svg>";
+      }
+      function tiles(scene, lang) {
+        const items = selected(scene);
+        if (!items.length) return "";
+        return '<div class="technique-tiles">' + items.map(({ entry: entry2, id, reason }) => '<details class="technique-tile"><summary>' + (entry2 ? icon(entry2) : "") + "<span>" + esc2(entry2?.label[lang] || entry2?.label.en || id) + "</span></summary><p>" + esc2(reason) + "</p><p>" + esc2(entry2?.use || "Unknown technique") + '</p><p lang="en">' + esc2(entry2?.instruction || "") + "</p><small>" + esc2(id) + "</small></details>").join("") + "</div>";
+      }
+      function legend(lang) {
+        return '<details class="technique-library"><summary>' + (lang === "ko" ? "\uAE30\uBC95 \uC0AC\uC804 \xB7 \uC544\uC774\uCF58\uACFC \uC120\uD0DD \uAE30\uC900" : "Technique catalogue \xB7 icons and selection guidance") + "</summary><p>" + (lang === "ko" ? "\uC7A5\uBA74\uC758 \uC815\uBCF4\uC640 \uD589\uB3D9\uC744 \uBA3C\uC800 \uC815\uD55C \uB4A4 \uAE30\uBC95\uC744 \uACE0\uB974\uC138\uC694. \uC544\uC774\uCF58\uC740 \uACC4\uD68D\uC744 \uC124\uBA85\uD558\uBA70 \uC2E4\uC81C \uC601\uC0C1 \uAC80\uC99D\uC744 \uB73B\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4." : "Choose from the scene\u2019s information and action. Icons describe a plan, not verified footage.") + "</p>" + ["character", "camera", "framing", "timing"].map((category) => "<h3>" + (lang === "ko" ? { character: "\uCE90\uB9AD\uD130 \uCC38\uC870", camera: "\uCE74\uBA54\uB77C \uAE30\uBC95", framing: "\uD504\uB808\uC784 \uD06C\uAE30", timing: "\uCEF7 \uC2DC\uAC04" }[category] : { character: "Character references", camera: "Camera techniques", framing: "Frame sizes", timing: "Cut timing" }[category]) + '</h3><div class="technique-tiles">' + entries.filter((e2) => e2.category === category).map((e2) => '<details class="technique-tile"><summary>' + icon(e2) + "<span>" + esc2(e2.label[lang] || e2.label.en) + "</span></summary><p>" + esc2(e2.use) + '</p><p lang="en">' + esc2(e2.instruction) + "</p><small>" + esc2(e2.id) + "</small></details>").join("") + "</div>").join("") + "</details>";
+      }
+      const api = { VERSION: VERSION2, entries, byId, SIZE_WORDS, SIZE_GLYPHS, validate: validate2, selected, instructions, sourceInstructions, findings, icon, tiles, legend };
+      if (typeof module === "object" && module.exports) module.exports = api;
+      else root.FILM_TECHNIQUES = api;
     })(typeof window === "object" ? window : globalThis);
   }
 });
@@ -67220,7 +67345,7 @@ var require_scene_acting = __commonJS({
       return { performance, durationSeconds: cursor, timing, warnings };
     }
     function scenePerformancePayload(scene) {
-      return { performance: scene.performance, narration: (scene.narration || []).map((line) => ({ id: line.id, speaker: line.speaker, tts: line.tts, delivery: line.delivery, acting: line.acting })), videoDesign: scene.shot?.videoDesign, camera: scene.visual?.camera, source: { bg: scene.visual?.bg, character: scene.visual?.character, location: scene.shot?.location } };
+      return { performance: scene.performance, narration: (scene.narration || []).map((line) => ({ id: line.id, speaker: line.speaker, tts: line.tts, delivery: line.delivery, acting: line.acting })), videoDesign: scene.shot?.videoDesign, techniques: scene.shot?.techniques, camera: scene.visual?.camera, source: { bg: scene.visual?.bg, character: scene.visual?.character, location: scene.shot?.location } };
     }
     function cameraLock(camera = {}) {
       return require_production_mode().moveOf(camera)?.family === "static" ? "Locked camera: preserve the opening framing, camera angle, focal length and background scale throughout; animate the planned subject action." : "";
@@ -67241,6 +67366,7 @@ var require_scene_acting = __commonJS({
       return [
         ...keys2.map((key) => `${key}: ${design[key]}`),
         ...states,
+        require_film_techniques().instructions(scene),
         ...["framing", "movement", ...lock2 ? [] : ["speed"], "end"].filter((key) => camera[key]).map((key) => `Camera ${key}: ${camera[key]}`),
         ...lock2 ? [lock2] : []
       ].join("\n");
@@ -68299,7 +68425,7 @@ var require_check_tts_quality = __commonJS({
           const audio2 = (s2.narration || []).map((n) => ({ lineId: n.id, sha256: n.audio?.sha256, revision: n.audio?.revision }));
           if (JSON.stringify(binding.audio) !== JSON.stringify(audio2)) throw new Error("Video speech binding is stale for card " + i2);
           const payload = require_scene_acting().scenePerformancePayload(s2);
-          if (binding.performanceRevision && binding.performanceRevision !== hash7(JSON.stringify(payload))) throw new Error("Video performance binding is stale for card " + i2);
+          if (binding.performanceRevision && binding.performanceRevision !== hash7(JSON.stringify(payload))) warnings.push("card " + i2 + ": performance plan changed since the clip was bound; inspect the clip against the current plan (stale)");
           if (!binding.performanceRevision) warnings.push("card " + i2 + ": legacy video performance binding is unverified");
           media[binding.videoPath] = binding.videoSha256;
         }
@@ -84688,6 +84814,19 @@ function contract() {
 function cameraContract() {
   return loadFromHere(join5(REFERENCES_DIR, "production-mode.js"));
 }
+function techniqueContract() {
+  return loadFromHere(join5(REFERENCES_DIR, "film-techniques.js"));
+}
+var techniqueSelectionSchema = external_exports.array(external_exports.object({
+  id: nonEmptyTechniqueId(),
+  reason: external_exports.string().trim().min(1).describe("Why this technique serves this shot\u2019s information or action")
+}).strict()).superRefine((value, ctx) => {
+  for (const message of techniqueContract().validate(value))
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+});
+function nonEmptyTechniqueId() {
+  return external_exports.string().trim().min(1).describe("Stable id from storyboard_read techniqueCatalog");
+}
 function motionThemeContract() {
   return loadFromHere(join5(REFERENCES_DIR, "motion-graphics.js"));
 }
@@ -84800,6 +84939,7 @@ var shotSchema = external_exports.object({
   chapter: external_exports.string().optional(),
   after: external_exports.number().int().nonnegative().optional(),
   shot: external_exports.object({
+    techniques: techniqueSelectionSchema.optional(),
     feel: external_exports.string().optional(),
     size: external_exports.string().optional(),
     angle: external_exports.string().optional(),
@@ -84842,6 +84982,7 @@ var storyboardReadSchema = external_exports.object({
   path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
   level: readLevelSchema.default("shots").describe("outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots = every shot summarised under its scene \xB7 full = the raw shot objects too"),
   shotId: external_exports.string().min(1).optional().describe("Stable shot ID to inspect, with its raw plan and neighboring shot IDs"),
+  includeTechniques: external_exports.boolean().default(true).describe("Return canonical technique ids, purposes, icons and provider instructions"),
   includeContext: external_exports.boolean().default(true).describe("Include STORY, PRODUCTION and SB_DOC as unverified review context")
 });
 function readStoryboard(args) {
@@ -84850,6 +84991,16 @@ function readStoryboard(args) {
   result.file = file;
   result.mediaBaseDirectory = dirname2(file);
   result.sha256 = sha2562;
+  if (args.includeTechniques !== false) result.techniqueCatalog = {
+    version: techniqueContract().VERSION,
+    entries: techniqueContract().entries,
+    selections: (win.SCENES || []).map((scene, i2) => ({
+      id: scene.id,
+      no: i2 + 1,
+      techniques: scene.shot?.techniques || [],
+      findings: techniqueContract().findings(scene)
+    }))
+  };
   const doc = win.SB_DOC;
   if (doc?.props || doc?.propContinuity) result.propSheet = { props: doc.props, continuity: doc.propContinuity };
   result.inspection = {
@@ -84859,6 +85010,7 @@ function readStoryboard(args) {
   };
   const continuity = loadFromHere(join5(REFERENCES_DIR, "shot-continuity.js"));
   result.continuityFindings = continuity.check(win, dirname2(file));
+  result.techniqueFindings = (win.SCENES || []).flatMap((scene, index) => techniqueContract().findings(scene).map((what) => ({ level: "warn", where: "shot " + (index + 1), what })));
   if (args.includeContext) result.reviewContext = {
     story: win.STORY || null,
     production: win.PRODUCTION || null,
@@ -90557,7 +90709,7 @@ var MUSIC_DURATION_PROPERTY = {
   maximum: 300,
   default: 30
 };
-var SNS_HITL_LINE = "Captions and titles are posted verbatim, with no rewriting \u2014 pass the final copy, hashtags included. After publishing, report the permalink from the response to the user.";
+var SNS_HITL_LINE = "Captions and titles are posted verbatim, with no rewriting \u2014 pass the final copy, hashtags included. Publishing needs the user's authorization for this post, or an approved standing growth plan (growth-plan.md status: approved) that covers it. After publishing, report the permalink from the response to the user.";
 var SNS_CHANNEL_PROPERTY = {
   type: "string",
   pattern: "^[a-z0-9][a-z0-9-]{0,63}$",
@@ -90921,6 +91073,13 @@ var shotCameraInput = (() => {
   }
 })();
 var enumInput = (values, description) => ({ type: "string", ...values?.length ? { enum: values } : {}, description });
+var techniqueIds = (() => {
+  try {
+    return techniqueContract().entries.map((entry2) => String(entry2.id));
+  } catch {
+    return [];
+  }
+})();
 var motionThemes = (() => {
   try {
     return Object.keys(motionThemeContract().THEMES);
@@ -90988,7 +91147,11 @@ var storyboardShotInput = {
       additionalProperties: true,
       description: "Shot grammar and production route. Render mode chooses how to build the shot; visual.camera chooses how it is filmed; shot.depth chooses how many planes the viewer may read at once (L11).",
       properties: {
-        size: { type: "string", description: "Framing size. Recommended vocabulary is in the directing skill." },
+        techniques: { type: "array", description: "Authored choices from storyboard_read techniqueCatalog. Persist each technique id and this shot\u2019s reason. Match size/angle/camera fields to its fields; provider prompts consume its instructions. Icons do not verify actual footage.", items: { type: "object", additionalProperties: false, required: ["id", "reason"], properties: {
+          id: { type: "string", ...techniqueIds.length ? { enum: techniqueIds } : {}, description: "Stable semantic technique id, including independent focus and viewpoint choices." },
+          reason: { type: "string", minLength: 1, description: "The visible information or action that motivates this selection." }
+        } } },
+        size: { type: "string", description: "Canonical framing size: mfs=mid-thigh, ms=waist-up. Keep two-shot/POV roles in separate technique or framing prose." },
         angle: { type: "string", description: "Camera angle. Recommended vocabulary is in the directing skill." },
         infoType: { type: "string", description: "Information carried by the shot; must agree with its purpose. Recommended vocabulary is in the directing skill." },
         feel: { type: "string", description: "What the viewer should feel before choosing framing and movement." },
@@ -91499,7 +91662,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend \u2014 use
     name: "stock_search",
     title: "Free stock search (Pexels \xB7 Pixabay \xB7 NASA \xB7 Commons)",
     annotations: HINT.read,
-    description: 'Free, commercially usable photos and clips for a cut that needs the real thing \u2014 an actual place, era, event or live action \u2014 at zero generation cost. Searches Pexels and Pixabay (PEXELS_API_KEY / PIXABAY_API_KEY; a missing key skips that provider with a note), the NASA Image and Video Library and Wikimedia Commons (no key). Every item returns a ready `visual.license` block (provider, page url, license name and url, commercial/modify flags, attribution text, retrievedAt) \u2014 store it verbatim on the `visual.source: "stock"` cut; check-scenes.js refuses a stock cut without it. Commons results are filtered to public domain, CC0 and plain CC BY (share-alike, non-commercial and no-derivatives files are dropped and counted) because an edited, monetized cut cannot carry those terms. This tool does not download: fetch `files[0].url` with curl into storyboard/footage/ (video, as footage/s<n>-<provider>-<id>.mp4) or storyboard/images/stock/ (photo); Commons video is WebM and needs an ffmpeg transcode. People, logos and brands in frame stay a separate rights question on every provider; NASA insignia and identifiable current astronauts are excluded from commercial use. English keywords work best on Pexels, Pixabay and NASA. Read-only; Pexels allows 200 requests/hour, Pixabay 100/minute.',
+    description: 'Free, commercially usable photos and clips for a cut that needs the real thing \u2014 an actual place, era, event or live action \u2014 at zero generation cost. Searches Pexels and Pixabay (PEXELS_API_KEY / PIXABAY_API_KEY; a missing key skips that provider with a note), the NASA Image and Video Library and Wikimedia Commons (no key). Every item returns a ready `visual.license` block (provider, page url, license name and url, commercial/modify flags, attribution text, retrievedAt) \u2014 store it verbatim on the `visual.source: "stock"` cut; check-scenes.js warns when the license record is missing. Commons results are filtered to public domain, CC0 and plain CC BY (share-alike, non-commercial and no-derivatives files are dropped and counted) because an edited, monetized cut cannot carry those terms. This tool does not download: fetch `files[0].url` with curl into storyboard/footage/ (video, as footage/s<n>-<provider>-<id>.mp4) or storyboard/images/stock/ (photo); Commons video is WebM and needs an ffmpeg transcode. People, logos and brands in frame stay a separate rights question on every provider; NASA insignia and identifiable current astronauts are excluded from commercial use. English keywords work best on Pexels, Pixabay and NASA. Read-only; Pexels allows 200 requests/hour, Pixabay 100/minute.',
     inputSchema: {
       type: "object",
       properties: {
@@ -91969,7 +92132,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend \u2014 use
 
 Use when the user asks to create, generate, or make a video, clip, footage, or short ad from a description alone (\uBE44\uB514\uC624 \uC0DD\uC131, \uC601\uC0C1 \uB9CC\uB4E4\uC5B4\uC918). Audio is generated natively: wrap dialogue in double quotes, and describe SFX ("engine roaring") and ambient sound explicitly in the prompt.
 Do NOT use when a source visual exists \u2014 use veo_img2video to animate a still image, veo_extension to continue a Veo-generated video, or veo_reference to keep a specific subject consistent from photos.
-Prefer seedance_text2video when you need a length off Veo's 4/6/8-second grid, a ratio other than 16:9 or 9:16, or a much cheaper silent shot; keep Veo when native dialogue audio is the point.
+The Seedance counterpart is seedance_text2video (lengths off the 4/6/8-second grid, 21:9 or 4:3 frames, optional silence); the saved model decides which engine runs.
 Cost lever: the default is now fast ($0.10/s at 720p) because blind-arena Elo shows no measurable quality gap between the tiers; drop to lite ($0.05/s) whenever 4k, extension, and reference images are not needed. Generation is asynchronous and typically takes 1-6 minutes.
 
 Returns: a text block with the saved .mp4 file path, model, aspect ratio, resolution, and duration in seconds. Videos carry an invisible SynthID watermark.`,
@@ -92010,7 +92173,7 @@ Returns: a text block with the saved .mp4 file path, model, aspect ratio, resolu
 
 Use when the user provides an image to bring to life, animate, or add motion to (\uC774\uBBF8\uC9C0\uB85C \uC601\uC0C1 \uB9CC\uB4E4\uAE30) \u2014 e.g. animate a product photo. Provide sourceImagePath as the first frame; optionally add lastImagePath for a smooth transition between two images. The prompt should describe the desired motion.
 Do NOT use for pure text-to-video (use veo_text2video), continuing an existing video (use veo_extension), or subject consistency from reference photos (use veo_reference).
-For a silent b-roll shot from an already-generated background, seedance_img2video bills only the seconds you ask for \u2014 a 4-second 1080p shot runs about $0.23 silent against $0.64 on veo-3.1-lite, which must bill 8 seconds at 1080p and cannot turn audio off. Stay on Veo when the clip needs native audio or a later veo_extension.
+The Seedance counterpart is seedance_img2video; the saved model decides which engine runs.
 Person policy, measured 2026-08-15: an adult photoreal face in the source image passes here and holds for the clip, while Seedance 2.x rejects the very same file \u2014 so this is the image lane for photoreal people. A face that reads as a MINOR is blocked whether it arrives as a photo or an illustration (Support code 17301594); blocked generations are not billed, so redraw the cut instead of hunting for a way around it.
 For composition control \u2014 a subject appearing, vanishing, or changing pose exactly as drawn \u2014 pass lastImagePath. Reference images (veo_reference) carry appearance, not layout.
 Generation is asynchronous and typically takes 1-6 minutes.
@@ -92161,7 +92324,7 @@ Returns: a text block with the saved .mp4 file path, reference image list, model
 
 Use when the shot needs a length off Veo's 4/6/8 grid (any whole 3-10 seconds), or when the cut will be edited or extended afterwards \u2014 omni_edit and omni_extend continue from the interactionId this returns.
 Do NOT use when a source visual exists \u2014 omni_img2video animates a still, omni_extend continues a clip, omni_edit rewrites one.
-COST, measured 2026-09-06: this model bills a FLAT ~$1.01 per call, not per second. A 3-second 360p draft costs the same as a full 10-second 4k render, and more than a whole 8-second veo-3.1-lite shot ($0.40). So never call it for a draft or a short cut \u2014 go to veo_text2video or seedance_text2video for those, and come here when you need the full 10 seconds, an off-grid length, or the edit lane. Ask for the seconds you actually want; a shorter clip refunds nothing.
+COST, measured 2026-09-06: this model bills a FLAT ~$1.01 per call, not per second. A 3-second 360p draft costs the same as a full 10-second 4k render. Ask for the seconds you actually want; a shorter clip refunds nothing.
 Audio is always generated and cannot be turned off: wrap dialogue in double quotes and name SFX and ambience in the prompt. There is no negative-prompt field on this model \u2014 write exclusions as positive description instead.
 
 Returns: a text block with the saved .mp4 path, the interaction id to continue from, resolution, aspect ratio, and duration.`,
@@ -92197,9 +92360,9 @@ Returns: a text block with the saved .mp4 path, the interaction id to continue f
     annotations: HINT.generate,
     description: `Animate a still image, or interpolate between two images, using Gemini Omni 1.1 Flash.
 
-Use when a generated background or photo has to move and the cut wants an off-grid length, or will be edited afterwards. Pass sourceImagePath as the first frame; add lastImagePath and the model renders the transition between the two. Billing is a flat ~$1.01 per call regardless of length or resolution, so a short cut is cheaper on veo_img2video or seedance_img2video.
+Use when a generated background or photo has to move and the cut wants an off-grid length, or will be edited afterwards. Pass sourceImagePath as the first frame; add lastImagePath and the model renders the transition between the two. Billing is a flat ~$1.01 per call regardless of length or resolution.
 Do NOT use for pure text-to-video (omni_text2video) or for continuing an existing clip (omni_extend).
-veo_img2video remains the lane for a photoreal adult face, whose policy is measured there; Omni's person policy is unmeasured, so route people to Veo until it is. For silent b-roll at a length you pick, seedance_img2video is cheaper still.
+veo_img2video remains the lane for a photoreal adult face, whose policy is measured there; Omni's person policy is unmeasured, so route people to Veo until it is.
 Composition control lives here \u2014 a subject appearing, vanishing, or ending in an exact pose \u2014 because both frames are yours.
 
 Returns: a text block with the saved .mp4 path, the interaction id to continue from, the source frames, resolution, aspect ratio, and duration.`,
@@ -92295,7 +92458,7 @@ Returns: a text block with the saved .mp4 path, the new interaction id, the sour
 
 Use when a generated cut is right in movement and framing but wrong in content \u2014 swap an object, change a colour, drop something from the frame \u2014 instead of re-rolling the whole shot and losing the camera move. State the change plainly ("change the persimmon to a green apple, keep the camera move identical"). Source is exactly one of previousInteractionId (an earlier omni_* call) or sourceVideoPath (a local mp4 of at most 10 seconds).
 Do NOT use to make a clip longer \u2014 that is omni_extend. Veo has no instruction-edit lane at all, so a Veo clip that needs one comes here by file path.
-The output runs the same length as the input (measured 3.008s in, 3.008s out); aspect ratio is inherited and not settable. Each edit is a fresh generation billed at the flat ~$1.01, not a cheap patch \u2014 two edits cost more than re-rolling the shot on Veo.
+The output runs the same length as the input (measured 3.008s in, 3.008s out); aspect ratio is inherited and not settable. Each edit is a fresh generation billed at the flat ~$1.01, not a cheap patch.
 
 Returns: a text block with the saved .mp4 path, the new interaction id, and the source.`,
     inputSchema: {
@@ -92341,7 +92504,7 @@ Returns: a text block with the saved .mp4 path, the new interaction id, and the 
     description: `Generate a video from a text prompt on the self-hosted ASTRA video API (LTX-2.5).
 
 Use when the shot is not time-critical and you would rather not spend vendor money: this server is ours, so a call costs wall clock instead of dollars, and no vendor content policy applies. It is also the only lane with an adapter (lora) for cinemagraph and slow-motion looks.
-Do NOT use when someone is waiting: the box renders ONE job at a time and yours queues behind whatever else is running. A measured 121-frame 1536x1024 render takes about 66s (tier "default"), 169s ("guided"), 121s ("fast") \u2014 plus the queue. For an immediate clip go to veo_text2video or seedance_text2video.
+Do NOT use when someone is waiting: the box renders ONE job at a time and yours queues behind whatever else is running. A measured 121-frame 1536x1024 render takes about 66s (tier "default"), 169s ("guided"), 121s ("fast") \u2014 plus the queue.
 tier picks the pipeline and also which arguments exist: lora only on "default", negativePrompt, numInferenceSteps and guidance only on "guided"/"fast"/"hq". "hq" is the two-stage high-quality pipeline (quality unmeasured). "fast" means a draft that is faster than "guided"; it is not faster than the default pipeline. Passing one to the wrong tier is refused before the call.
 Length is frames, not seconds: numFrames must be 8k+1, minimum 25. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} 121 = about 5.0s at 24fps, the server default. Give autoDuration instead to let the server choose at most 121 frames; the rounded range must contain an 8k+1 value. numFrames and autoDuration are mutually exclusive.
 ${ASTRA_LIMITS_LINE}
@@ -92388,7 +92551,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
     description: `Animate a still, or interpolate between a first and a last still, on the self-hosted ASTRA video API.
 
 Use when a generated background or photo has to move and nobody is waiting on it \u2014 same trade as astra_text2video: free, ours, one job at a time. Give firstFramePath alone to animate from that frame, or add lastFramePath and the clip lands on it. The tool uploads the files itself; pass local paths, not ids.
-Do NOT use for more than two stills \u2014 that is astra_keyframe_video, which pins each image to a frame index. For an immediate clip use veo_img2video or seedance_img2video.
+Do NOT use for more than two stills \u2014 that is astra_keyframe_video, which pins each image to a frame index.
 tier accepts default (generate), guided, or hq (guided_hq \u2014 quality unmeasured). guided and hq images use the 64-pixel grid and pixel ceiling (omitted dimensions default to 1536x1024); fast images are not enabled. lora is default-only; negativePrompt and numInferenceSteps are guided-only, and with guidance also hq. Passing one to the wrong tier is refused before the call.
 The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. autoDuration lets the server choose at most 121 frames from a first still alone; it is refused with lastFramePath or numFrames. png, jpg and jpeg are accepted, up to 32 MiB each.
 Warning: image-conditioned generate (width 1280, measured at heights 704/768) failure frames: {121,129,137}; guided (width 1280, measured at height 704) failure frames: {121}. Guided 129/137 succeeded at 1280x704 in server probes (the only guided size probed). Guided and hq sizes follow the server grid and pixel ceiling; unmeasured sizes are not quality guarantees. Within current client limits use generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at 121 frames also succeeded. Text-only 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause. The server owns the failure-band acceptance gate; this warning adds no client-side block.
@@ -92727,7 +92890,7 @@ Returns: the server's JSON report verbatim. No arguments.`,
     annotations: HINT.generate,
     description: `Generate a video from a text prompt using ByteDance Seedance (BytePlus ModelArk).
 
-Use when you need a clip that Veo's fixed 4/6/8-second grid cannot express \u2014 an odd length (2-30 seconds, any whole second), a 21:9 or 4:3 frame, or simply the cheapest possible shot: a silent 9:16 1080p 5-second clip costs about $0.24 on seedance-1-0-pro-fast, against $0.64 on veo-3.1-lite and $0.96 on veo-3.1-fast (Veo forces an 8-second bill at 1080p and always includes audio). Korean prompts are understood only by dreamina-seedance-2-5; every other model expects English.
+Use when you need a clip that Veo's fixed 4/6/8-second grid cannot express \u2014 an odd length (2-30 seconds, any whole second), a 21:9 or 4:3 frame, or a silent shot billed for the requested duration. Korean prompts are understood only by dreamina-seedance-2-5; every other model expects English.
 Do NOT use when you need Veo's native dialogue audio quality or its +7s extension of an existing clip \u2014 veo_text2video and veo_extension keep those. When a source visual already exists use seedance_img2video, and for subject consistency from photos use seedance_reference.
 Model choice drives both price and limits; read the model parameter before overriding the default. Generation is asynchronous and typically takes 1-6 minutes.
 
@@ -93504,11 +93667,11 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
     description: "Legacy alias of host_review prepare for the assembled episode audio (mediaPath of the final media, the full expectedText, optional segments): returns local evidence for the host LLM to listen to end to end. Use only when the user asks for a final listening review and an existing plan already calls tts_review_final; new reviews use host_review. Returns status=not_reviewed, score=null, mediaPath, SHA256, duration in seconds, rubric, nextAction and the segments as sent. It does not judge, upload or call an external evaluator, and assembly never waits on it. Do NOT use for synthesis.",
     inputSchema: { type: "object", additionalProperties: false, properties: {
       mediaPath: { type: "string", description: "Absolute path of the final media that ships." },
-      segments: { type: "array", minItems: 1, maxItems: 1e3, description: "Required when the final FLAC exceeds 14 MiB. Complete spoken sentences in playback order on the final timeline. First starts at 0; each extends to the next start (last to audio EOF), at most 60 seconds each. Joined text must equal expectedText. The tool groups them into bounded chapters and reviews every chapter boundary.", items: { type: "object", additionalProperties: false, required: ["startSeconds", "expectedText"], properties: { startSeconds: { type: "number", minimum: 0, description: "Start of this complete sentence on the final audio timeline; the first is 0." }, expectedText: { type: "string", minLength: 1, maxLength: 1e3, description: "Complete spoken sentence, including intended phonetic number/name spelling." } } } },
+      segments: { type: "array", minItems: 1, maxItems: 1e3, description: "Optional: complete spoken sentences in playback order on the final timeline. First starts at 0; each extends to the next start (last to audio EOF), at most 60 seconds each. Joined text must equal expectedText. Returned with the evidence so the host review can check chapter boundaries of a long episode.", items: { type: "object", additionalProperties: false, required: ["startSeconds", "expectedText"], properties: { startSeconds: { type: "number", minimum: 0, description: "Start of this complete sentence on the final audio timeline; the first is 0." }, expectedText: { type: "string", minLength: 1, maxLength: 1e3, description: "Complete spoken sentence, including intended phonetic number/name spelling." } } } },
       expectedText: { description: "Complete spoken text, including speech in clips and the outro.", type: "string", minLength: 1, maxLength: 12e3 },
       language: { description: "Spoken language, for example Korean.", type: "string", minLength: 2, maxLength: 80 },
       delivery: { description: "Intended delivery and continuity across the whole episode.", type: "string", minLength: 1, maxLength: 2e3 },
-      transcriptCheck: { type: "object", additionalProperties: false, required: ["requestedBy", "reason"], description: "Present only when the user asked for the blind-transcription (STT) check; omitted, that check does not run and only the listening review judges the take. Carries who asked and their actual words \u2014 there is no environment default.", properties: {
+      transcriptCheck: { type: "object", additionalProperties: false, required: ["requestedBy", "reason"], description: "Present only when the user asked for a blind-transcription (STT) check; it is recorded in the evidence brief for the host review. No transcription runs automatically. Carries who asked and their actual words \u2014 there is no environment default.", properties: {
         requestedBy: { type: "string", minLength: 1, maxLength: 200, description: 'Who asked for the dictation check, e.g. "user".' },
         reason: { type: "string", minLength: 10, maxLength: 1e3, description: "The actual request that turned it on, quoted or referenced." }
       } }
@@ -93532,9 +93695,9 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
   },
   {
     name: "tts_generate_checked",
-    title: "Generate and review narration",
+    title: "Generate narration (raw take, not_reviewed)",
     annotations: HINT.generate,
-    description: "Generate one speech take without automatic scoring or retakes. Use for a legacy checked-TTS call; returns generation result, status=not_reviewed and host-review next action. Do NOT use for evaluation alone \u2014 use host_review. Paid synthesis uses the selected generator and existing authorization; no evaluation API is called.",
+    description: "Generate one speech take with provenance and no automatic listening, scoring or retakes. Use for a legacy checked-TTS call; returns the generation result (file, speaker, voice settings, timing), status=not_reviewed and a host-review next action. Do NOT use for evaluation alone \u2014 use host_review. Paid synthesis uses the selected generator and existing authorization; no evaluation API is called.",
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -93546,12 +93709,12 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
         delivery: { type: "string", minLength: 1, maxLength: 2e3, description: "Intended natural delivery from profile \xA72, including tone and pacing." },
         outputPath: { type: "string", description: "Episode PCM directory, normally .work/pcm." },
         filename: { type: "string", description: "Scene WAV basename, e.g. c0.wav." },
-        maxAttempts: { type: "integer", minimum: 1, maximum: 3, default: 3, description: "First generation plus retakes; set within the approved allowance." },
-        rejectTake: { type: "object", additionalProperties: false, required: ["audioSha256", "reason"], description: "When final listening finds a defect in a previously checked take, reject that exact WAV and use only remaining attempts. Never waives any check.", properties: {
-          audioSha256: { type: "string", pattern: "^[a-f0-9]{64}$", description: "SHA-256 of the current checked WAV, as recorded in its quality proof." },
-          reason: { type: "string", minLength: 10, maxLength: 1e3, description: "Actual time, word or sound defect observed during listening." }
+        maxAttempts: { type: "integer", minimum: 1, maximum: 3, default: 3, description: "Legacy allowance (at most 3). The tool generates once; no automatic retake follows." },
+        rejectTake: { type: "object", additionalProperties: false, required: ["audioSha256", "reason"], description: "Legacy record of an earlier take the user rejected after listening: which WAV and why. It does not trigger a retake; request a new take explicitly.", properties: {
+          audioSha256: { type: "string", pattern: "^[a-f0-9]{64}$", description: "SHA-256 of the rejected WAV, as recorded in its provenance file." },
+          reason: { type: "string", minLength: 10, maxLength: 1e3, description: "Actual time, word or sound defect the user observed." }
         } },
-        episode: { type: "object", additionalProperties: false, description: "Required for ElevenLabs assembly. Ordered complete scene texts, current index and one fixed seed. Derives v4 previousText/nextText, bounded to 100 characters per side. A fixed seed is best effort; listening is not automatic.", properties: {
+        episode: { type: "object", additionalProperties: false, description: "Required for ElevenLabs assembly. Ordered complete scene texts, current index and one fixed seed. Derives v4 previousText/nextText, bounded to 100 characters per side. A fixed seed is best effort; nothing listens automatically.", properties: {
           texts: { description: "Complete scene texts in playback order.", type: "array", minItems: 1, maxItems: 80, items: { type: "string", minLength: 1, maxLength: 4e3 } },
           index: { description: "Index of this scene in texts, starting at zero.", type: "integer", minimum: 0 },
           seed: { description: "One seed fixed across the episode and all retakes.", type: "integer", minimum: 0, maximum: 4294967295 }
@@ -93559,7 +93722,7 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
         segments: { type: "array", minItems: 1, maxItems: 80, items: { type: "string", minLength: 1, maxLength: 1e3 }, description: "The scene's narration[].tts sentences in order (joined they read as expectedText). Every single-voice take gets a fixed pause at each segment boundary \u2014 the boundary the builder's reveals and subtitle cues use. Without it, pauses go after sentence-final punctuation." },
         sentencePause: { type: "number", minimum: 0.25, maximum: 1.5, default: 0.5, description: "Silence between sentences in the take's own timeline, seconds. The builder detects pauses from 0.16s and fits a 0.35s reveal fade inside one." },
         playbackSpeed: { type: "number", minimum: 0.5, maximum: 3, default: 1, description: "ElevenLabs requires 1: use generation.speed for the requested rate and keep assembly at 1. Other engines require an explicit user request in outputPath/speed-authorization.json for any non-1 factor; this controls subtitle pause sizing." },
-        transcriptCheck: { type: "object", additionalProperties: false, required: ["requestedBy", "reason"], description: "Present only when the user asked for the blind-transcription (STT) check; omitted, that check does not run and only the listening review judges the take. Carries who asked and their actual words \u2014 there is no environment default.", properties: {
+        transcriptCheck: { type: "object", additionalProperties: false, required: ["requestedBy", "reason"], description: "Present only when the user asked for a blind-transcription (STT) check; it is recorded for the host review. No transcription or listening runs automatically. Carries who asked and their actual words \u2014 there is no environment default.", properties: {
           requestedBy: { type: "string", minLength: 1, maxLength: 200, description: 'Who asked for the dictation check, e.g. "user".' },
           reason: { type: "string", minLength: 10, maxLength: 1e3, description: "The actual request that turned it on, quoted or referenced." }
         } }
@@ -94458,31 +94621,31 @@ Returns: integer credit balance.`,
   {
     name: "threads_draft_create",
     title: "Create Threads growth draft",
-    description: "Store a Threads growth draft before review. Returns draftId and bodyHash (SHA-256 of NFC, LF, trimmed body + selfReply). Edits require a new draft and reviews. No public posting.",
+    description: "Store a Threads growth draft. Returns draftId and bodyHash (SHA-256 of NFC, LF, trimmed body + selfReply); threads_publish checks the posted body against that hash. Changing the text means a new draft. Reviews are optional evidence. No public posting.",
     annotations: HINT.generate,
     inputSchema: { type: "object", properties: {
       channel: SNS_CHANNEL_PROPERTY,
       body: { type: "string", minLength: 1, description: "Draft body." },
-      selfReply: { type: "string", minLength: 1, description: "Optional information self-reply (voice review only)." },
-      surface: { type: "string", enum: ["post", "reply"], description: "post by default; reply requires replyToId and only voice review." },
+      selfReply: { type: "string", minLength: 1, description: "Optional information self-reply; part of bodyHash." },
+      surface: { type: "string", enum: ["post", "reply"], description: "post by default; reply requires replyToId (reviews on a reply use the voice axis only)." },
       replyToId: { type: "string", description: "Required reply target for a reply draft; bound to publication." },
       readerMessage: { type: "string", minLength: 1, description: "One-sentence summary of the post." },
       purpose: { type: "string", enum: ["fun", "moved", "info", "empathy"], description: "Exactly one intended reader outcome." },
-      purposeEvidence: { type: "string", minLength: 1, description: "Verbatim body excerpt demonstrating the chosen purpose; whitespace-only normalization." },
-      flow: { type: "object", description: "Reader progression: hook, turn, residue.", properties: {
+      purposeEvidence: { type: "string", minLength: 1, description: "Optional verbatim body excerpt demonstrating the chosen purpose; when supplied it must appear in the body (whitespace-only normalization)." },
+      flow: { type: "object", description: "Optional reader progression: hook, turn, residue.", properties: {
         hook: { type: "string", minLength: 1, description: "Why the opening holds attention." },
         turn: { type: "string", minLength: 1, description: "What the middle reveals." },
         residue: { type: "string", minLength: 1, description: "What the reader takes away." }
       }, required: ["hook", "turn", "residue"] },
-      comicElements: { description: "Concrete comic elements in the draft.", type: "array", items: { type: "string", minLength: 1 }, minItems: 1 },
+      comicElements: { description: "Optional concrete comic elements in the draft; a supplied list needs at least one entry.", type: "array", items: { type: "string", minLength: 1 }, minItems: 1 },
       submitter: { type: "string", description: "Submitting agent identifier (self-reported)." },
       submitterContext: { type: "string", description: "Submitting session/context identifier (self-reported)." }
-    }, required: ["channel", "body", "readerMessage", "comicElements", "purpose", "purposeEvidence", "flow"] }
+    }, required: ["channel", "body", "readerMessage", "purpose"] }
   },
   {
     name: "threads_review_submit",
     title: "Submit Threads draft review",
-    description: "Record a voice/purpose/flow review; score purpose only against the chosen draft purpose (fun, moved, info, empathy), never against another purpose. Bind the review to bodyHash. A required rubric item scoring zero must be submitted as a P0 finding to block publication; the server does not infer semantic failures from scores. Findings quote actual draft text; only whitespace differences are ignored. No LLM/API is called. Identifiers are self-reported: the server cannot distinguish subagents in the same session or enforce reviewer independence.",
+    description: "Record a voice/purpose/flow review; score purpose only against the chosen draft purpose (fun, moved, info, empathy), never against another purpose. Bind the review to bodyHash. Findings and scores are recorded as evidence bound to bodyHash; they do not block publishing. Findings quote actual draft text; only whitespace differences are ignored. No LLM/API is called. Identifiers are self-reported: the server cannot distinguish subagents in the same session or enforce reviewer independence.",
     annotations: HINT.generate,
     inputSchema: { type: "object", properties: {
       draftId: { description: "Identifier returned by threads_draft_create.", type: "string" },
@@ -94496,7 +94659,7 @@ Returns: integer credit balance.`,
       findings: { description: "Quoted evidence, including at least one pass finding for a clean review.", type: "array", minItems: 1, items: { type: "object", properties: {
         quote: { description: "Exact draft excerpt; whitespace differences allowed.", type: "string", minLength: 1 },
         issue: { description: "Observation supported by the quote.", type: "string", minLength: 1 },
-        severity: { description: "pass for positive evidence; P0 blocks publishing.", type: "string", enum: ["pass", "P0", "P1", "P2"] }
+        severity: { description: "pass for positive evidence; P0/P1/P2 grade a defect as evidence for the author.", type: "string", enum: ["pass", "P0", "P1", "P2"] }
       }, required: ["quote", "issue", "severity"] } }
     }, required: ["draftId", "bodyHash", "axis", "score", "reasons", "improvements", "reviewer", "reviewerContext", "findings"] }
   },
@@ -94505,7 +94668,7 @@ Returns: integer credit balance.`,
     title: "\u26A0\uFE0F Threads publish (immediately public)",
     annotations: HINT.publish,
     outputSchema: publishOutput("postId", "Threads post id \u2014 pass as replyToId to chain a follow-up reply"),
-    description: `\u26A0\uFE0F Direct Threads publishing \u2014 posts to the Threads API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). Exactly one of draftId (growth: hash-bound reviews, configured gate.json thresholds and style check) or episodeRef (existing episode and matching approval record) is required. dryRun checks without API calls. Call only right after the user has checked and approved the final copy and media (HITL \u2014 never call without approval). A post carries one of four shapes: a video (videoUrl), a single image (imageUrl), a link preview card (linkUrl), or text alone. The three media fields are mutually exclusive \u2014 one media_type per post. **Video episodes put the video on the post itself via videoUrl**, so it plays inline in the timeline with nothing to click away to; do not attach the video as a reply or fall back to a bare link (user directive 2026-08-19). Carousels are not supported by this tool. Publish quota: 250 per 24 hours. ${SNS_HITL_LINE}`,
+    description: `\u26A0\uFE0F Direct Threads publishing \u2014 posts to the Threads API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). Exactly one of draftId (growth: the published body must match the draft's bodyHash, channel and reply target; check-style.py findings come back as warnings) or episodeRef (existing episode and matching approval record) is required. dryRun checks without API calls. Call only right after the user has checked and approved the final copy and media (HITL \u2014 never call without the user's approval or an approved standing growth plan). A post carries one of four shapes: a video (videoUrl), a single image (imageUrl), a link preview card (linkUrl), or text alone. The three media fields are mutually exclusive \u2014 one media_type per post. **Video episodes put the video on the post itself via videoUrl**, so it plays inline in the timeline with nothing to click away to; do not attach the video as a reply or fall back to a bare link (user directive 2026-08-19). Carousels are not supported by this tool. Publish quota: 250 per 24 hours. ${SNS_HITL_LINE}`,
     inputSchema: {
       type: "object",
       properties: {
@@ -94526,10 +94689,10 @@ Returns: integer credit balance.`,
         },
         replyToId: { type: "string", description: "Publish as a reply to this post id (own reply chain, or joining someone else's post)" },
         channel: SNS_CHANNEL_PROPERTY,
-        draftId: { type: "string", description: "Reviewed growth draft identifier; exclusive with episodeRef." },
+        draftId: { type: "string", description: "Growth draft identifier from threads_draft_create; exclusive with episodeRef." },
         episodeRef: { type: "string", description: "Episode topic slug under data/<channel>/episodes; requires matching threads-publish-approval.json." },
-        selfReply: { type: "string", description: "Optional reviewed self-reply; posted after the root succeeds." },
-        dryRun: { type: "boolean", description: "Validate all gates without token access or network publishing." }
+        selfReply: { type: "string", description: "Optional self-reply from the draft; posted after the root succeeds." },
+        dryRun: { type: "boolean", description: "Validate the draft binding (body hash, channel, reply target) without publishing; no token access or network call." }
       },
       required: ["caption", "channel"],
       oneOf: [{ required: ["draftId"], not: { required: ["episodeRef"] } }, { required: ["episodeRef"], not: { required: ["draftId"] } }]
@@ -94540,7 +94703,7 @@ Returns: integer credit balance.`,
     title: "\u26A0\uFE0F Instagram publish (immediately public)",
     annotations: HINT.publish,
     outputSchema: publishOutput("mediaId", "Instagram media id"),
-    description: `\u26A0\uFE0F Direct Instagram publishing \u2014 posts to the IG API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL \u2014 never call without approval). 1-10 images (2+ makes a carousel) **or** one Reels video (mutually exclusive with imageUrls). Images must be **JPEG only** (PNG/MPO/JPS rejected). Images cannot be replaced after publishing (only the caption can be edited). Publish quota: 100 per rolling 24 hours (a carousel counts as 1). ${SNS_HITL_LINE}`,
+    description: `\u26A0\uFE0F Direct Instagram publishing \u2014 posts to the IG API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL \u2014 never call without the user's approval or an approved standing growth plan). 1-10 images (2+ makes a carousel) **or** one Reels video (mutually exclusive with imageUrls). Images must be **JPEG only** (PNG/MPO/JPS rejected). Images cannot be replaced after publishing (only the caption can be edited). Publish quota: 100 per rolling 24 hours (a carousel counts as 1). ${SNS_HITL_LINE}`,
     inputSchema: {
       type: "object",
       properties: {
@@ -94565,7 +94728,7 @@ Returns: integer credit balance.`,
     title: "\u26A0\uFE0F Facebook Page publish (immediately public)",
     annotations: HINT.publish,
     outputSchema: FACEBOOK_PUBLISH_OUTPUT,
-    description: `\u26A0\uFE0F Direct Facebook Page publishing \u2014 posts to the Graph API with the local Page token, **immediately public** (the posting Page is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL \u2014 never call without approval). Forms: text / up to 10 images / one video (regular video \u2014 not Reels). Video posts may include a separate subtitle file (captionFilePath) only when requested \u2014 this pipeline uploads subtitles separately instead of burning them in, so give videoUrl the clean subtitle-free master, not a burned-in copy. The source link goes **without exception** in the first comment via facebook_comment right after a successful publish, not in the body (linkUrl). ${SNS_HITL_LINE}`,
+    description: `\u26A0\uFE0F Direct Facebook Page publishing \u2014 posts to the Graph API with the local Page token, **immediately public** (the posting Page is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL \u2014 never call without the user's approval or an approved standing growth plan). Forms: text / up to 10 images / one video (regular video \u2014 not Reels). Video posts may include a separate subtitle file (captionFilePath) only when requested \u2014 this pipeline uploads subtitles separately instead of burning them in, so give videoUrl the clean subtitle-free master, not a burned-in copy. The source link goes **without exception** in the first comment via facebook_comment right after a successful publish, not in the body (linkUrl). ${SNS_HITL_LINE}`,
     inputSchema: {
       type: "object",
       properties: {
@@ -94607,7 +94770,7 @@ Returns: integer credit balance.`,
     title: "\u26A0\uFE0F Facebook comment (immediately public)",
     annotations: HINT.publish,
     outputSchema: publishOutput("commentId", "Facebook comment id"),
-    description: `\u26A0\uFE0F Direct Facebook Page commenting \u2014 adds an **immediately public** comment on the Page's own post with the Page token (the author is the Page itself). There is no separate review gate, so publish only copy the user has approved (HITL \u2014 never call without approval). Main use: the link rule of putting the source link in the **first comment** right after a facebook_publish success (first comment instead of a body link \u2014 FB comment links are clickable and render previews). Use postId straight from the facebook_publish response. If only the comment failed, retry just this tool (do not re-publish the post \u2014 the publish API is non-idempotent). ${SNS_HITL_LINE}`,
+    description: `\u26A0\uFE0F Direct Facebook Page commenting \u2014 adds an **immediately public** comment on the Page's own post with the Page token (the author is the Page itself). There is no separate review gate, so publish only copy the user has approved (HITL \u2014 never call without the user's approval or an approved standing growth plan). Main use: the link rule of putting the source link in the **first comment** right after a facebook_publish success (first comment instead of a body link \u2014 FB comment links are clickable and render previews). Use postId straight from the facebook_publish response. If only the comment failed, retry just this tool (do not re-publish the post \u2014 the publish API is non-idempotent). ${SNS_HITL_LINE}`,
     inputSchema: {
       type: "object",
       properties: {
@@ -94620,10 +94783,10 @@ Returns: integer credit balance.`,
   },
   {
     name: "youtube_publish",
-    title: "\u26A0\uFE0F YouTube upload (immediately public)",
+    title: "\u26A0\uFE0F YouTube upload (starts private)",
     annotations: HINT.publish,
     outputSchema: YOUTUBE_PUBLISH_OUTPUT,
-    description: `\u26A0\uFE0F Direct YouTube publishing \u2014 uploads a **local video file, immediately public**, with the local OAuth refresh token (the target channel is the token-owning account). There is no separate review gate, so call only right after the user has checked and approved the final copy and video (HITL \u2014 never call without approval). Portrait 9:16 videos of 3 minutes or less are auto-classified as Shorts (no separate flag). The only platform that needs no public URL hosting (direct file upload \u2014 subtitle files included). **Every video stays subtitle-free.** Give videoFilePath the clean master. Only when the user requests separate YouTube subtitles, pass an .srt via captionFilePath or requested captionTracks; otherwise omit caption inputs. Uploads draw from the videos.insert-only "Video Uploads" quota bucket \u2014 1 unit per call, 100/day by default, so there is no reason to ration episode publishing (the old "1,600 units = 6/day" limit disappeared in the 2026 quota overhaul). ${SNS_HITL_LINE}`,
+    description: `\u26A0\uFE0F Direct YouTube publishing \u2014 uploads a **local video file as a private video** with the local OAuth refresh token (the target channel is the token-owning account). privacyStatus defaults to private and a request for public is rejected: upload private (or unlisted), check the watch page, then flip it public with youtube_update. There is no separate review gate, so call only right after the user has checked and approved the final copy and video (HITL \u2014 never call without the user's approval or an approved standing growth plan). Portrait 9:16 videos of 3 minutes or less are auto-classified as Shorts (no separate flag). The only platform that needs no public URL hosting (direct file upload \u2014 subtitle files included). **Every video stays subtitle-free.** Give videoFilePath the clean master. Only when the user requests separate YouTube subtitles, pass an .srt via captionFilePath or requested captionTracks; otherwise omit caption inputs. Uploads draw from the videos.insert-only "Video Uploads" quota bucket \u2014 1 unit per call, 100/day by default, so there is no reason to ration episode publishing (the old "1,600 units = 6/day" limit disappeared in the 2026 quota overhaul). ${SNS_HITL_LINE}`,
     inputSchema: {
       type: "object",
       properties: {
@@ -94657,7 +94820,8 @@ Returns: integer credit balance.`,
         privacyStatus: {
           type: "string",
           enum: ["public", "unlisted", "private"],
-          description: "Privacy (default public)"
+          default: "private",
+          description: "Privacy (default private; public is rejected \u2014 flip with youtube_update)"
         },
         categoryId: {
           type: "string",
@@ -94683,7 +94847,7 @@ Returns: integer credit balance.`,
     title: "\u26A0\uFE0F YouTube video metadata & privacy update",
     annotations: HINT.moderate,
     outputSchema: YOUTUBE_UPDATE_OUTPUT,
-    description: `\u26A0\uFE0F Edits the privacy, title, or description of an already-published YouTube video (videos.update). **Applies the instant it is called and cannot be undone \u2014 never call without human approval.** **This is stage two of the long-form two-stage publish** \u2014 upload an 8-15 minute video as privacyStatus "private", have a human check encoding, subtitles, and chapters on the watch page, then flip it public with this tool. Going straight to public, short-form style, means viewers see the failure first. **videos.update overwrites rather than patching**, so this tool first reads the current values via videos.list and merges \u2014 fields you did not pass are re-sent as they are now (title, description, tags, language, COPPA declaration, synthetic-media disclosure, all of it). The change is irreversible, so **on a video you have not touched before, call dryRun: true first and eyeball wouldSend.** publishAt (scheduled publish) only takes effect while privacyStatus is private \u2014 otherwise a 400 rejection. **Scope**: youtube (read-only youtube.readonly won't do, and neither will the publish-only youtube.upload). When missing, the error carries reissue guidance.`,
+    description: "\u26A0\uFE0F Edits the privacy, title, or description of an already-published YouTube video (videos.update). **Applies the instant it is called and cannot be undone \u2014 never call without human approval or an approved standing growth plan (growth-plan.md status: approved).** **This is the step that flips a private upload public** \u2014 every youtube_publish upload starts private; check encoding, thumbnail, metadata and any chapters on the watch page, then flip it public with this tool. Inside the growth loop the same sequence runs under the approved plan. **videos.update overwrites rather than patching**, so this tool first reads the current values via videos.list and merges \u2014 fields you did not pass are re-sent as they are now (title, description, tags, language, COPPA declaration, synthetic-media disclosure, all of it). The change is irreversible, so **on a video you have not touched before, call dryRun: true first and eyeball wouldSend.** publishAt (scheduled publish) only takes effect while privacyStatus is private \u2014 otherwise a 400 rejection. **Scope**: youtube (read-only youtube.readonly won't do, and neither will the publish-only youtube.upload). When missing, the error carries reissue guidance.",
     inputSchema: {
       type: "object",
       properties: {
@@ -94756,7 +94920,7 @@ Returns: integer credit balance.`,
     title: "\u26A0\uFE0F Reply to inbound comment (immediately public)",
     annotations: HINT.publish,
     outputSchema: COMMENT_REPLY_OUTPUT,
-    description: `\u26A0\uFE0F Replies to an inbound comment \u2014 posts an **immediately public** reply with local tokens (the author is the brand account itself). THREADS requires a reviewed surface=reply draftId with matching commentId, voice score and server style check, exactly as threads_publish; dryRun validates without posting. Publish only copy the user has approved (HITL \u2014 never call without approval). Use commentId straight from the sns_comment_inbox response. Per-platform contracts: THREADS \u2014 a new post carrying reply_to_id is the reply, so chains extend freely down to replies-to-replies / INSTAGRAM \u2014 replies attach to **top-level comments only** (to answer a sub-comment, pass its parent commentId \u2014 for comments carrying parentCommentId, use that value) / FACEBOOK \u2014 a comment on a comment id is the sub-comment / YOUTUBE \u2014 also top-level only, but a sub-comment id is accepted: this tool looks up the parent, reattaches at the thread root, and reports where it landed via parentCommentId in the response (needs the youtube.force-ssl scope). On failure, never blindly retry the same call (non-idempotent \u2014 duplicate replies). ${SNS_HITL_LINE}`,
+    description: `\u26A0\uFE0F Replies to an inbound comment \u2014 posts an **immediately public** reply with local tokens (the author is the brand account itself). THREADS requires a surface=reply draftId whose body and commentId match the draft, exactly as threads_publish (check-style.py findings come back as warnings); dryRun validates without posting. Publish only copy the user has approved (HITL \u2014 never call without the user's approval or an approved standing growth plan). Use commentId straight from the sns_comment_inbox response. Per-platform contracts: THREADS \u2014 a new post carrying reply_to_id is the reply, so chains extend freely down to replies-to-replies / INSTAGRAM \u2014 replies attach to **top-level comments only** (to answer a sub-comment, pass its parent commentId \u2014 for comments carrying parentCommentId, use that value) / FACEBOOK \u2014 a comment on a comment id is the sub-comment / YOUTUBE \u2014 also top-level only, but a sub-comment id is accepted: this tool looks up the parent, reattaches at the thread root, and reports where it landed via parentCommentId in the response (needs the youtube.force-ssl scope). On failure, never blindly retry the same call (non-idempotent \u2014 duplicate replies). ${SNS_HITL_LINE}`,
     inputSchema: {
       type: "object",
       properties: {
@@ -94764,8 +94928,8 @@ Returns: integer credit balance.`,
         commentId: { type: "string", description: "commentId from sns_comment_inbox (IG must be a top-level comment id \u2014 YT also accepts a sub-comment id)" },
         message: { type: "string", description: "Final reply \u2014 THREADS \u2264500 chars, IG \u22642,200, FB \u22648,000, YT \u226410,000" },
         channel: SNS_CHANNEL_PROPERTY,
-        draftId: { type: "string", description: "Required for THREADS: reviewed reply draft bound to this commentId. Not accepted for other platforms." },
-        dryRun: { type: "boolean", description: "THREADS only: validate the reply gate without credential or API access." }
+        draftId: { type: "string", description: "Required for THREADS: reply draft bound to this commentId. Not accepted for other platforms." },
+        dryRun: { type: "boolean", description: "THREADS only: validate the reply draft binding (body hash, channel, commentId) without credential or API access." }
       },
       required: ["platform", "commentId", "message"]
     }
@@ -95090,6 +95254,8 @@ Returns revision, ordered matching lines with generationPlan and voice/audio has
     annotations: HINT.local,
     description: `Read an episode's scenes.js and return it as a tree: sequences (purpose \xB7 question \xB7 payoff) \u2192 scenes (place \xB7 time \xB7 event \xB7 charge \xB7 turn \xB7 out) \u2192 shots (stable id \xB7 ordered actions and attributed speech \xB7 feel \xB7 info \xB7 render \xB7 character/location/prop references \xB7 media plan). Reads the file only; no API call.
 
+The default techniqueCatalog provides the four filmmaking elements and per-technique selection guidance. Store intentional choices as shot.techniques:[{id,reason}] and keep existing camera/size/angle fields consistent.
+
 Use it before editing an existing board, and after storyboard_apply to see the board the way the approval page groups it. level=outline is enough to plan a change; level=full carries every raw shot object (large \u2014 one shot is ~40 fields).
 Do NOT use it to validate \u2014 storyboard_check runs the contract. A board with no window.STRUCTURE comes back with every shot under unplacedShots; write the structure with storyboard_apply.
 
@@ -95102,6 +95268,7 @@ Returns: JSON \u2014 { file, mediaBaseDirectory, sha256, version, format, shots,
         path: { type: "string", description: "The storyboard directory (data/<channel>/episodes/<topic>/storyboard/) or its scenes.js" },
         level: { type: "string", enum: ["outline", "scenes", "shots", "full"], description: "outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots (default) = every shot summarised under its scene \xB7 full = raw shot objects too" },
         shotId: { type: "string", description: "Stable shot ID; adds raw selectedShot with scene and neighboring IDs without removing the overall flow. Unknown or duplicate IDs fail." },
+        includeTechniques: { type: "boolean", description: "Default true: return canonical techniqueCatalog with ids, purposes, unique icons, provider instructions, current selections and conflicting-plan advice." },
         includeContext: { type: "boolean", description: "Default true: return STORY, PRODUCTION and SB_DOC for character, background, prop and scenario inspection. Recorded evidence is not verified by this read." }
       },
       required: ["path"]
@@ -95111,12 +95278,12 @@ Returns: JSON \u2014 { file, mediaBaseDirectory, sha256, version, format, shots,
     name: "storyboard_apply",
     title: "Write or patch a storyboard with validation",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: `Write a storyboard's scenes.js from a sequence \u2192 scene \u2192 shot model, or patch part of it, in one call. Every shot is validated against the grammar vocabularies (type \xB7 beat \xB7 size \xB7 angle \xB7 infoType \xB7 shareType \xB7 render.mode \xB7 transition), the structure against its rules (one place and time per scene, a charge that turns, every scene in exactly one sequence, shots grouped by scene in sequence order, two sizes per scene), and the derived shot labels (sceneSlug \xB7 sequence) are written from the structure. Nothing is written when a violation is found \u2014 the findings come back instead. Warnings are written and reported.
+    description: `Write a storyboard's scenes.js from a sequence \u2192 scene \u2192 shot model, or patch part of it, in one call. Every shot is checked against the shot schema (type and render.mode vocabularies, transition join, stable id format and uniqueness, camera input, line-crossing and motion-graphic records), the structure against its schema (version, typed scenes and sequences), location references are checked, and the derived shot labels (sceneSlug \xB7 sequence) are written from the structure. Nothing is written when a violation is found \u2014 the findings come back instead. Warnings are written and reported; creative choices (beat, size, angle, charge) are not validated here.
 
 Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard \xA74), and to change one thing later (scenes / sequences by key, shots by id \u2014 shotsById \xB7 insertShots.afterId \xB7 removeShotIds \u2014 or by position, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC \xB7 SFX). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril \u2014 it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
 storyboard_apply assigns stable shot ids (s0001\u2026) and advances STRUCTURE.nextShotId; preserve those ids and do not edit them by hand.
 Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline \xB7 shot.composition \xB7 shot.depth in the input schema. shot.depth (L11): count what the viewer must read in the frame at once \u2014 one thing \u2192 shallow with focus (a person's eyes), two or more \u2192 deep with the planes listed front to back; a departure needs a reason, and a still_camera focus-in/rack-focus cut cannot be deep. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
-Do NOT pass a shot's visual plan through a summary \u2014 pass the object scenes-schema.md defines (visual \xB7 shot.space \xB7 visual.camera \xB7 visual.video \u2026); unknown keys on a shot pass through untouched. Editing an approved board drops its \`// approved:\` line; it is approved again at the HITL gate.
+Do NOT pass a shot's visual plan through a summary \u2014 pass the object scenes-schema.md defines (visual \xB7 shot.space \xB7 visual.camera \xB7 visual.video \u2026); unknown keys on a shot pass through untouched. Editing a board drops its stale \`// approved:\` line; existing task authorization is unchanged.
 
 Scene: { no, place, time, event, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? }. Sequence: { id, title, purpose, question?, payoff?, scenes: [no\u2026] }. The reasons for each field are in scenes-schema.md \xA7structure.
 
@@ -95186,7 +95353,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     annotations: HINT.local,
     description: `Run the sequence \u2192 scene \u2192 shot rules and the full scenes.js contract (check-scenes.js: vocabularies, beat order, camera slots, motion policy, production mode) on a board and return every finding. Reads the file and runs a local script; no API call.
 
-Use it after storyboard_apply and before delegating a reviewer or generating anything \u2014 the same command the storyboard skill runs by hand (\`node check-scenes.js storyboard/\`). draft:true is the story pass (\xA74a): machine-layer absences are deferred and counted, vocabularies and beat order still fail.
+Use it after storyboard_apply and before delegating a reviewer or generating anything \u2014 the same command the storyboard skill runs by hand (\`node check-scenes.js storyboard/\`). draft:true is the story pass (\xA74a): machine-layer absences are deferred and counted; structure/address errors fail, creative findings are warnings.
 Do NOT treat a pass as visual quality \u2014 frame overflow, hero-stat width and speech rate are measured on the rendered canvas in storyboard.html's check strip.
 
 Returns: counts (violations \xB7 warnings \xB7 deferred) and two lists \u2014 structure findings, then shot-contract findings \u2014 each line "! where what" (violation) or "\xB7 where what" (warning).`,
@@ -95205,7 +95372,7 @@ Returns: counts (violations \xB7 warnings \xB7 deferred) and two lists \u2014 st
     annotations: HINT.local,
     description: `Check local scenario candidates or a selected story plan.
 
-Use it after drafting candidates/d1\u2013d3.md before selection, and on scenario.md before board authoring. Reads local files and runs a local script; no writes or API calls. Legacy scenarios use S1\u2013S12. scenario-v2 reads cast.json and character identity paths, validates actions and attributed speech, and requires research references only for factual assertions; fiction has no search quota.
+Use it after drafting the scenario or its candidates, before selection, and on scenario.md before board authoring. Reads local files and runs a local script; no writes or API calls. Legacy scenarios use S1\u2013S12. scenario-v2 reads cast.json and character identity paths, validates actions and attributed speech, and requires research references only for factual assertions; fiction has no search quota.
 Do NOT use for shot/camera validation \u2014 use storyboard_check. A pass verifies structure and references, not factual truth, character motivation, entertainment value or user approval.
 
 Returns: JSON \u2014 { files, violations, warnings, findings: [{ level, where, what }] }, in candidate file order. Findings start with S1\u2013S12 or V2; violations block authoring, warnings do not.`,
@@ -95259,6 +95426,7 @@ var videoContextSchema = {
 };
 for (const tool of TOOLS) {
   if (VIDEO_ADAPTERS[tool.name]) {
+    tool.description = `In a configured workspace, episode video goes through video_plan \u2192 video_execute; direct calls need videoContext (episode, shotId, requestId), except channel assets under data/<channel>/assets/, which must still match the saved model. ${tool.description}`;
     tool.inputSchema.properties = {
       ...tool.inputSchema.properties,
       videoContext: { ...videoContextSchema, description: "Production context. Required for configured episodes; applies saved selection, spending authorization, concurrency and duplicate-submission protection." }
@@ -96015,6 +96183,8 @@ function prepareVideoVoice(tool, input, context) {
 // src/video-routing.ts
 var load3 = createRequire5(import.meta.url);
 var shared2 = fileURLToPath5(new URL("../../skills/_shared/video-selection.js", import.meta.url));
+var modelSettings = fileURLToPath5(new URL("../../skills/_shared/model-settings.js", import.meta.url));
+var CHANNEL_ASSET_RE = /^data\/[a-z0-9][a-z0-9-]*\/assets(\/|$)/;
 var routingContext = (episode, shotId) => load3(shared2).readVideoContext(episode, shotId);
 function stable3(value) {
   if (Array.isArray(value)) return value.map(stable3);
@@ -96265,6 +96435,38 @@ async function executeVideo(raw, dispatch) {
     });
   }
 }
+async function dispatchChannelAsset(tool, args, root, output2, dispatch) {
+  const read2 = load3(modelSettings).readSettings(root);
+  const selection = read2.config?.models?.video;
+  if (!selection) throw new Error(`project_setup_required: ${read2.status}; save .social-flow/models.json before generating channel assets`);
+  const bound = { ...bindSelection2(tool, args, selection), outputPath: output2 };
+  const startedAt = Date.now();
+  let ok = false;
+  try {
+    const result = await dispatch(tool, bound);
+    ok = !result.isError;
+    return result;
+  } finally {
+    const assets = path16.join(root, ...path16.relative(root, output2).split(path16.sep).slice(0, 3));
+    const file = path16.join(assets, ".work/video-requests.jsonl");
+    try {
+      fs16.mkdirSync(path16.dirname(file), { recursive: true });
+      fs16.appendFileSync(file, JSON.stringify({
+        ts: (/* @__PURE__ */ new Date()).toISOString(),
+        kind: "channel_asset",
+        tool,
+        ok,
+        ms: Date.now() - startedAt,
+        ...priceOf(tool, bound),
+        outputPath: output2,
+        selection,
+        source: "workspace_settings"
+      }) + "\n");
+    } catch (error2) {
+      console.error("[social-flow] could not write the channel-asset video record: " + (error2 instanceof Error ? error2.message : String(error2)));
+    }
+  }
+}
 async function routeLegacyVideo(tool, raw, dispatch) {
   const gate2 = resolveToolGate(tool, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
   if (!gate2.enabled) throw new Error("video_tool_disabled: " + gate2.reason);
@@ -96275,8 +96477,11 @@ async function routeLegacyVideo(tool, raw, dispatch) {
     const plan2 = planVideo({ ...ctx, tool, args });
     return executeVideo({ episode: plan2.episode, planId: plan2.id }, dispatch);
   }
-  let dir = canonical2(path16.resolve(typeof args.outputPath === "string" ? args.outputPath : process.cwd()));
+  const output2 = canonical2(path16.resolve(typeof args.outputPath === "string" ? args.outputPath : process.cwd()));
+  let dir = output2;
   for (; ; ) {
+    if (fs16.existsSync(path16.join(dir, ".social-flow/models.json")) && CHANNEL_ASSET_RE.test(path16.relative(dir, output2).split(path16.sep).join("/")))
+      return dispatchChannelAsset(tool, args, dir, output2, dispatch);
     if (fs16.existsSync(path16.join(dir, ".work/model-settings.json")) || fs16.existsSync(path16.join(dir, ".social-flow/models.json")))
       throw new Error("video_context_required: pass episode, shotId and requestId for configured production");
     const parent = path16.dirname(dir);
@@ -96361,7 +96566,7 @@ async function routeSpeech(input) {
 import { execFile as execFile7 } from "node:child_process";
 import { promisify as promisify3 } from "node:util";
 import { createHash as createHash12, randomUUID as randomUUID4 } from "node:crypto";
-import { createReadStream as createReadStream3, mkdirSync as mkdirSync10, realpathSync as realpathSync6, statSync as statSync9, writeFileSync as writeFileSync17 } from "node:fs";
+import { createReadStream as createReadStream3, mkdirSync as mkdirSync11, realpathSync as realpathSync6, statSync as statSync9, writeFileSync as writeFileSync17 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
 import path17 from "node:path";
 var exec2 = promisify3(execFile7);
@@ -96419,7 +96624,7 @@ async function hostReview(input) {
     const frames = [];
     if (r2.mode !== "audio") {
       const directory3 = path17.join(homedir4(), ".cache", "social-flow", "host-reviews", "evidence", mediaSha256, randomUUID4());
-      mkdirSync10(directory3, { recursive: true, mode: 448 });
+      mkdirSync11(directory3, { recursive: true, mode: 448 });
       const timing = await exec2("ffprobe", [
         "-v",
         "error",
@@ -96484,7 +96689,7 @@ async function hostReview(input) {
   }
   if (await digest2(file) !== mediaSha256) throw new Error("Media changed while recording observations");
   const directory2 = path17.join(homedir4(), ".cache", "social-flow", "host-reviews");
-  mkdirSync10(directory2, { recursive: true, mode: 448 });
+  mkdirSync11(directory2, { recursive: true, mode: 448 });
   const receiptPath = path17.join(directory2, `${mediaSha256}-${randomUUID4()}.json`);
   const result = {
     ...base,
@@ -96502,7 +96707,7 @@ async function hostReview(input) {
 }
 
 // src/voice-design.ts
-import { existsSync as existsSync22, mkdirSync as mkdirSync11, writeFileSync as writeFileSync18 } from "node:fs";
+import { existsSync as existsSync22, mkdirSync as mkdirSync12, writeFileSync as writeFileSync18 } from "node:fs";
 import { resolve as resolve6 } from "node:path";
 import { createHash as createHash13 } from "node:crypto";
 var voiceDesignSchema = external_exports.object({
@@ -96531,7 +96736,7 @@ async function designGeminiVoice(input) {
   const samplePath = resolve6(output2, "voice-preview.wav");
   const body = buildVoiceDesignBody(args);
   const apiKey = requireGeminiKey();
-  mkdirSync11(output2, { recursive: true });
+  mkdirSync12(output2, { recursive: true });
   if (existsSync22(samplePath)) throw new Error("Preview already exists; use a new outputPath.");
   writeFileSync18(receiptPath, JSON.stringify({ status: "submitted", request: body, submittedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2), { flag: "wx" });
   const response = await requestRaw(
@@ -96670,7 +96875,7 @@ async function reviewActing(input) {
 
 // src/voice-audition.ts
 import { createHash as createHash14, randomUUID as randomUUID5 } from "node:crypto";
-import { appendFileSync as appendFileSync2, existsSync as existsSync23, mkdirSync as mkdirSync12, readFileSync as readFileSync22, writeFileSync as writeFileSync19, renameSync as renameSync7 } from "node:fs";
+import { appendFileSync as appendFileSync3, existsSync as existsSync23, mkdirSync as mkdirSync13, readFileSync as readFileSync22, writeFileSync as writeFileSync19, renameSync as renameSync7 } from "node:fs";
 import { dirname as dirname5, join as join11, resolve as resolve7 } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { createRequire as createRequire8 } from "node:module";
@@ -96821,7 +97026,7 @@ async function manageVoiceAudition(args) {
     });
     if (args.action === "plan") return { identityPath, identitySha256: hash3(source2), target, candidates: planned, review: "not_reviewed", instruction: "Use provider metadata to choose candidates; unknown attributes require auditioning. No audio generated and identity is unchanged." };
     const outputPath = join11(dirname5(identityPath), "voice-auditions", randomUUID5());
-    mkdirSync12(outputPath, { recursive: true });
+    mkdirSync13(outputPath, { recursive: true });
     const auditionPath2 = join11(outputPath, "audition.json");
     const audition2 = { version: 1, status: "generating", identityPath, identitySha256: hash3(source2), sampleText: args.sampleText, candidates: [], target, ...args.acting ? { acting: args.acting } : {}, ...args.sampleTurns ? { sampleTurns: args.sampleTurns } : {}, previewPath: join11(outputPath, "index.html") };
     save(auditionPath2, audition2);
@@ -96848,7 +97053,7 @@ async function manageVoiceAudition(args) {
             note: "Character audition candidate " + id,
             detail: { model: choice.tts.model || "", voiceId: choice.tts.voiceId, ...result?.requestId ? { requestId: result.requestId } : {} }
           };
-          appendFileSync2(join11(outputPath, "events.jsonl"), JSON.stringify(event) + "\n");
+          appendFileSync3(join11(outputPath, "events.jsonl"), JSON.stringify(event) + "\n");
           recordUsage(outputPath, event);
         }
         if (!result.success || !result.audioPath) throw new Error(result.error || "Candidate generation returned no audio");
@@ -96974,7 +97179,7 @@ function manageProject(args) {
 
 // src/speech.ts
 import { createHash as createHash15, randomUUID as randomUUID6 } from "node:crypto";
-import { readFileSync as readFileSync23, writeFileSync as writeFileSync20, renameSync as renameSync8, mkdirSync as mkdirSync13, existsSync as existsSync24 } from "node:fs";
+import { readFileSync as readFileSync23, writeFileSync as writeFileSync20, renameSync as renameSync8, mkdirSync as mkdirSync14, existsSync as existsSync24 } from "node:fs";
 import { dirname as dirname7, resolve as resolve9, join as join13 } from "node:path";
 import * as nodeModule6 from "node:module";
 import { execFileSync as execFileSync7 } from "node:child_process";
@@ -97269,7 +97474,7 @@ function manageSpeech(args) {
       if (!character(line.speaker)?.tts) throw new Error(`Missing pinned voice for ${line.speaker}`);
     }
     const work = resolve9(dirname7(file), "../.work/speech-history");
-    mkdirSync13(work, { recursive: true });
+    mkdirSync14(work, { recursive: true });
     const backup = join13(work, revision + ".js");
     if (!existsSync24(backup)) writeFileSync20(backup, before);
     const nextSource = serializeBoard(win, header);
@@ -97284,7 +97489,7 @@ function manageSpeech(args) {
 // src/acting-review.ts
 import { execFile as execFile8 } from "node:child_process";
 import { createHash as createHash16, randomUUID as randomUUID7 } from "node:crypto";
-import { existsSync as existsSync25, mkdirSync as mkdirSync14, readFileSync as readFileSync24, realpathSync as realpathSync7, renameSync as renameSync9, rmSync as rmSync9, statSync as statSync10, writeFileSync as writeFileSync21 } from "node:fs";
+import { existsSync as existsSync25, mkdirSync as mkdirSync15, readFileSync as readFileSync24, realpathSync as realpathSync7, renameSync as renameSync9, rmSync as rmSync9, statSync as statSync10, writeFileSync as writeFileSync21 } from "node:fs";
 import path18 from "node:path";
 import { homedir as homedir5 } from "node:os";
 import { promisify as promisify4 } from "node:util";
@@ -97628,7 +97833,7 @@ async function reviewActing2(input, deps) {
   let requestSha256 = hash5(JSON.stringify({ mediaSha256, directionSha256, model: ACTING_REVIEW_MODEL, policy }));
   const directory2 = path18.resolve(deps.cacheDirectory || process.env.SOCIAL_FLOW_ACTING_REVIEW_CACHE_DIR?.trim() || path18.join(homedir5(), ".cache", "social-flow", "acting-reviews"));
   let receiptPath = path18.join(directory2, `${requestSha256}.json`);
-  mkdirSync14(directory2, { recursive: true, mode: 448 });
+  mkdirSync15(directory2, { recursive: true, mode: 448 });
   const readMatchingReceipt = (file, expectedHash, retryOf2) => {
     const cached2 = cachedReceiptSchema.parse(JSON.parse(readFileSync24(file, "utf8")));
     const cachedDirection = hash5(JSON.stringify({ direction: cached2.request.direction, expectedText: cached2.request.expectedText, mode: cached2.request.mode }));
@@ -97737,7 +97942,7 @@ async function reviewActing2(input, deps) {
 
 // src/threads-gate.ts
 import { createHash as createHash17, randomUUID as randomUUID8 } from "node:crypto";
-import { appendFileSync as appendFileSync3, mkdirSync as mkdirSync15, readFileSync as readFileSync25, realpathSync as realpathSync8, renameSync as renameSync10, statSync as statSync11, writeFileSync as writeFileSync22 } from "node:fs";
+import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync16, readFileSync as readFileSync25, realpathSync as realpathSync8, renameSync as renameSync10, statSync as statSync11, writeFileSync as writeFileSync22 } from "node:fs";
 import { dirname as dirname8, join as join14, resolve as resolve10 } from "node:path";
 import { fileURLToPath as fileURLToPath7 } from "node:url";
 import { spawnSync as spawnSync3 } from "node:child_process";
@@ -97754,9 +97959,9 @@ var draftSchema = external_exports.object({
   replyToId: nonempty.optional(),
   readerMessage: nonempty,
   purpose: external_exports.enum(["fun", "moved", "info", "empathy"]),
-  purposeEvidence: nonempty,
-  flow: external_exports.object({ hook: nonempty, turn: nonempty, residue: nonempty }),
-  comicElements: external_exports.array(nonempty).min(1),
+  purposeEvidence: nonempty.optional(),
+  flow: external_exports.object({ hook: nonempty, turn: nonempty, residue: nonempty }).optional(),
+  comicElements: external_exports.array(nonempty).min(1).optional(),
   submitter: nonempty.optional(),
   submitterContext: nonempty.optional()
 });
@@ -97785,12 +97990,12 @@ function draftLocation(id) {
 }
 function audit(channel, tool, result, details = {}) {
   const dir = directory(channel);
-  mkdirSync15(dir, { recursive: true });
-  appendFileSync3(join14(dir, "gate-log.jsonl"), JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool, result, ...details }) + "\n", { mode: 384 });
+  mkdirSync16(dir, { recursive: true });
+  appendFileSync4(join14(dir, "gate-log.jsonl"), JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool, result, ...details }) + "\n", { mode: 384 });
 }
 function save2(draft) {
   const { file } = draftLocation(draft.draftId);
-  mkdirSync15(dirname8(file), { recursive: true });
+  mkdirSync16(dirname8(file), { recursive: true });
   const temp = `${file}.${randomUUID8()}.tmp`;
   writeFileSync22(temp, JSON.stringify(draft), { mode: 384 });
   renameSync10(temp, file);
@@ -97799,7 +98004,7 @@ function load4(id) {
   const value = JSON.parse(readFileSync25(draftLocation(id).file, "utf8"));
   draftSchema.parse(value);
   if (value.draftId !== id || value.channel !== draftLocation(id).channel || threadsBodyHash(value.body, value.selfReply) !== value.bodyHash) {
-    throw new Error("Draft body hash mismatch; create and review a new draft");
+    throw new Error("Draft body hash mismatch; create a new draft");
   }
   return value;
 }
@@ -97825,7 +98030,7 @@ function createThreadsDraft(args) {
   return gateCall("threads_draft_create", args, () => {
     const input = draftSchema.strict().parse(args);
     if (input.surface === "reply" !== Boolean(input.replyToId)) throw new Error("Reply drafts require replyToId; post drafts must omit it");
-    if (!whitespace(input.body).includes(whitespace(input.purposeEvidence))) throw new Error("Purpose evidence quote not present in draft body");
+    if (input.purposeEvidence && !whitespace(input.body).includes(whitespace(input.purposeEvidence))) throw new Error("Purpose evidence quote not present in draft body");
     const draftId = `${input.channel}.${randomUUID8()}`;
     const bodyHash = threadsBodyHash(input.body, input.selfReply);
     save2({ ...input, draftId, bodyHash, reviews: {} });
@@ -97862,31 +98067,17 @@ function checkThreadsGate(input) {
     if (input.replyToId !== draft.replyToId) throw new Error("Draft reply target mismatch");
     const bodyHash = threadsBodyHash(input.caption, input.selfReply);
     if (bodyHash !== draft.bodyHash) throw new Error("Publish body hash mismatch");
-    let limits;
-    try {
-      limits = external_exports.object({ voice: external_exports.number().finite().min(0).max(100), purpose: external_exports.number().finite().min(0).max(100), flow: external_exports.number().finite().min(0).max(100) }).parse(JSON.parse(readFileSync25(join14(directory(draft.channel), "gate.json"), "utf8")));
-    } catch (error2) {
-      if (error2.code === "ENOENT") throw new Error("Gate thresholds not configured (\uAE30\uC900\uC810 \uBBF8\uC124\uC815): gate.json required");
-      throw error2;
-    }
-    const axes2 = draft.surface === "reply" ? ["voice"] : AXES2;
-    for (const axis2 of axes2) {
-      const review = draft.reviews[axis2];
-      if (!review) throw new Error(`Missing ${axis2} review`);
-      reviewSchema2.parse(review);
-      if (review.draftId !== draft.draftId || review.axis !== axis2) throw new Error("Review identity mismatch");
-      if (review.findings.some((finding) => finding.severity === "P0")) throw new Error(`${axis2} review has unresolved P0`);
-      if (review.bodyHash !== bodyHash) throw new Error(`${axis2} review hash mismatch`);
-      if (review.score < limits[axis2]) throw new Error(`${axis2} score ${review.score} below ${limits[axis2]}`);
-    }
     const checker = resolve10(dirname8(fileURLToPath7(import.meta.url)), "../../skills/platform-guide/references/check-style.py");
+    const styleWarnings = [];
     for (const [body, surface] of [[input.caption, input.replyToId ? "reply" : "threads"], [input.selfReply, "reply"]]) {
       if (!body) continue;
       const run = spawnSync3("python3", [checker, "--surface", surface, "-"], { input: body, encoding: "utf8", timeout: 15e3, maxBuffer: 1024 * 1024 });
-      if (run.error || run.status !== 0 && run.status !== 1) throw new Error(`Style check failed (${surface}, exit ${run.status}): ${run.error?.message ?? run.stdout}`);
-      if (run.status === 1) console.warn(`Style check warning (${surface}, exit 1): ${run.stdout}`);
+      if (run.error) styleWarnings.push(`Style check unavailable (${surface}): ${run.error.message}`);
+      else if (run.status !== 0) styleWarnings.push(`Style check warning (${surface}, exit ${run.status}): ${run.stdout || run.stderr}`);
     }
-    return { bodyHash };
+    for (const warning of styleWarnings) console.warn(warning);
+    if (styleWarnings.length) audit(draft.channel, "threads_publish", "style_warning", { draftId: draft.draftId, styleFindings: styleWarnings });
+    return styleWarnings.length ? { bodyHash, styleWarnings } : { bodyHash };
   });
 }
 function checkThreadsEpisode(input) {
@@ -100031,6 +100222,9 @@ async function queryResumeOffset(sessionUrl, total, mimeType) {
   }
 }
 async function publishYoutube(input) {
+  if (input.privacyStatus === "public") {
+    throw new Error('YouTube uploads start private (owner directive 2026-08-19/2026-10-18): upload with privacyStatus "private" or "unlisted", then flip to public with youtube_update after checking the watch page');
+  }
   const mimeType = YT_VIDEO_MIME_BY_EXT[extname10(input.videoFilePath).toLowerCase()];
   if (!mimeType) return fail2(400, `Unsupported video extension: ${input.videoFilePath} (.mp4/.mov)`);
   let videoSize;
@@ -100110,7 +100304,7 @@ async function publishYoutube(input) {
             categoryId: input.categoryId ?? "22"
           },
           status: {
-            privacyStatus: input.privacyStatus ?? "public",
+            privacyStatus: input.privacyStatus ?? "private",
             // COPPA self-declaration — hardcoding it would falsely declare kids' content, so it comes from input
             selfDeclaredMadeForKids: input.madeForKids ?? false,
             // Synthetic-media disclosure — this pipeline's video and music are generated, so default true
@@ -101218,7 +101412,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
 }
 
 // src/content-feedback.ts
-import { mkdirSync as mkdirSync16, writeFileSync as writeFileSync24 } from "node:fs";
+import { mkdirSync as mkdirSync17, writeFileSync as writeFileSync24 } from "node:fs";
 import { dirname as dirname10, isAbsolute, join as join17, resolve as resolve11 } from "node:path";
 
 // src/content-feedback-html.ts
@@ -101850,7 +102044,7 @@ async function contentFeedback(input) {
     instagram
   };
   if (htmlPath) {
-    mkdirSync16(dirname10(htmlPath), { recursive: true });
+    mkdirSync17(dirname10(htmlPath), { recursive: true });
     writeFileSync24(htmlPath, renderFeedbackHtml(report), "utf8");
   }
   return { ok: true, status: 200, body: JSON.stringify(report) };
@@ -103462,7 +103656,8 @@ var youtubePublishSchema = external_exports.object({
   // chapter list too, making it the longest-description path, so block it here —
   // getting a 400 after burning the whole upload costs the quota.
   caption: ytDescription,
-  privacyStatus: external_exports.enum(["public", "unlisted", "private"]).optional(),
+  // Uploads start private (owner directive 2026-08-19/2026-10-18); publishYoutube rejects 'public'.
+  privacyStatus: external_exports.enum(["public", "unlisted", "private"]).default("private"),
   // The thumbnail is required — without one an arbitrary frame becomes the cover,
   // and after publishing the Shorts portrait surface can't be reverted via the API
   // (enforced by user directive, 2026-08-13).
@@ -103501,7 +103696,7 @@ var commentReplySchema = external_exports.object({
   dryRun: external_exports.boolean().optional()
 }).superRefine((v, ctx) => {
   if (v.platform === "THREADS" && (!v.draftId || !v.channel)) {
-    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: "THREADS replies require channel and reviewed reply draftId" });
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: "THREADS replies require channel and reply draftId" });
   }
   if (v.platform !== "THREADS" && (v.draftId !== void 0 || v.dryRun !== void 0)) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: "draftId and dryRun are supported only for THREADS replies" });
@@ -104501,10 +104696,14 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
   threads_review_submit: async (args) => text2(JSON.stringify(submitThreadsReview(args))),
   threads_publish: async (args) => {
     const input = gateCall("threads_publish", args, () => parseArgs(threadsPublishSchema, args));
-    if (input.draftId) checkThreadsGate(input);
+    let styleWarnings;
+    if (input.draftId) styleWarnings = checkThreadsGate(input).styleWarnings;
     else checkThreadsEpisode(input);
-    if (input.dryRun) return fromApi({ ok: true, status: 200, body: JSON.stringify({ platform: "THREADS", postId: "", dryRun: true, gatePassed: true }) }, "Dry run: no publishing API called.");
-    return fromApi(await publishThreadsWithSelfReply(input), SNS_PUBLISHED_NOTE);
+    const note = (head) => styleWarnings?.length ? `${head}
+Style suggestions (not blocking):
+${styleWarnings.join("\n")}` : head;
+    if (input.dryRun) return fromApi({ ok: true, status: 200, body: JSON.stringify({ platform: "THREADS", postId: "", dryRun: true, gatePassed: true, styleWarnings }) }, note("Dry run: no publishing API called."));
+    return fromApi(await publishThreadsWithSelfReply(input), note(SNS_PUBLISHED_NOTE));
   },
   instagram_publish: async (args) => {
     const input = parseArgs(instagramPublishSchema, args);

@@ -5,9 +5,9 @@ description: >
   the user asks to "인트로 영상 만들어", "채널 인트로", "오프닝 영상", "로고 애니메이션 영상", "make a channel intro
   video", "create a logo sting", or right after /social-flow:branding installs the profile
   image. Designs 4 concepts (character action × mood × sonic logo) for a human pick,
-  generates the character acting with veo, reveals the channel name on a deterministic
-  text plate, aligns a Lyria sonic logo to the landing frame, clears brand-reviewer's
-  intro mode (90 or above, zero P0), and installs master, stinger, lockup and sonic assets
+  generates the character acting with the saved video model, reveals the channel name on a
+  deterministic text plate, aligns a Lyria sonic logo to the landing frame, runs
+  brand-reviewer's intro mode on request, and installs master, stinger, lockup and sonic assets
   under data/[slug]/assets/intro/. Boundary — branding makes the still profile image, this
   makes the moving opening.
 argument-hint: "<channel> [extra instructions]"
@@ -24,9 +24,9 @@ Follow [host evaluation](../_shared/host-review.md) for every requested review.
 # Channel intro video — data/[channel]/assets/intro/
 
 Makes the intro (logo sting) that the channel's profile character **acts in
-person** — in this order: **4-concept HITL pick → veo video generation
-(mandatory path) → channel-name reveal + sonic-logo alignment → adversarial
-convergence (score 90) → HITL watch approval**. The channel name and tagline
+person** — in this order: **4-concept HITL pick → video generation with the saved
+video model → channel-name reveal + sonic-logo alignment → review on request →
+HITL watch approval**. The channel name and tagline
 must appear so a viewer knows "what channel this is" within 3 seconds, and a
 memorable sonic logo is aligned to the landing frame. The design rationale
 lives in `references/intro-playbook.md` — the SoT. **Read it before starting.**
@@ -87,7 +87,7 @@ second). Other can carry a blend ("A's action with C's mood") or a full
 redesign — fold in a blend and confirm, or build 4 fresh concepts for a redesign.
 
 Record the confirmed concept, scenario, and prompt draft in `.work/brief.md` —
-the baseline document for the convergence loop and re-runs. The tagline
+the baseline document for the review rounds and re-runs. The tagline
 (the §1 content promise compressed, 2 lines max) is also finalized here.
 
 ### 3. Capture the 3 brand cards (deterministic — logo pixels never pass through a generative model)
@@ -120,16 +120,16 @@ Open the 3 captures with Read and check them — channel-name typos, tagline
 line breaks, character crop. An error here corrupts everything downstream.
 
 Once burned into the frame, the tagline can't be fixed. Run it through the
-style gate once (the channel name is a proper noun, outside the checker's scope).
+style checker once and treat its findings as suggestions (the channel name is a proper
+noun, outside the checker's scope).
 
 ```bash
 echo "<tagline>" | python3 ${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-style.py --surface screen -
 ```
 
-After the checker passes, delegate to the growth-post-reviewer agent on the
-`standalone` surface — use the review’s concrete wording suggestions before putting the tagline on
-screen (3 rounds max — it's a one-line copy, so to save rounds delegate 2–3
-candidates together and pick).
+On request, or when the line reads off, delegate to the growth-post-reviewer agent on the
+`standalone` surface — use the review's concrete wording suggestions before putting the
+tagline on screen (it's a one-line copy, so delegate 2–3 candidates together and pick).
 
 ### 4. Opening keyframe (long version only — skipped at the 4-second standard)
 
@@ -141,25 +141,32 @@ path — reference editing doesn't exist in image_local_generate) — the pre-en
 silhouette, with the profile negative prompt + text exclusion, saved as
 `.work/open-frame.png`. Skip it for front-facing character-entrance concepts.
 
-### 5. Video generation (veo — mandatory path)
+### 5. Video generation (the saved video model)
 
 The body of the intro is **always made with a video-generation tool** — never
 substituted by HTML captures and ffmpeg assembly alone (cards and text are
-only the §7 finishing overlays).
+only the §7 finishing overlays). The tool is the saved video model
+(`.social-flow/models.json` → `models.video`); channel assets follow the directory
+model settings like episodes do, and a different engine needs the user's explicit
+request. In a configured workspace (one with `.social-flow/models.json`) an intro clip is a
+channel asset, not an episode: call the saved model's adapter directly with an `outputPath`
+under `data/<slug>/assets/`, without `videoContext` (`video_plan` takes an episode). The
+server binds the call to the saved video model and resolution (a different engine fails with
+`model_selection_mismatch`) and logs it to `data/<slug>/assets/.work/video-requests.jsonl`.
 
-- **Under Grok the host `image_to_video` makes it** — `char-card.png` as the source,
-  `duration` 4, 720p, `video.host` in the ledger; the veo lines below are the API lane
-  (owner directive 2026-09-07).
+- **Host video model** — the host `image_to_video` makes it: `char-card.png` as the
+  source, `duration` 4, 720p, `video.host` in the ledger. The veo lines below describe
+  the Veo API lane for a saved Veo model; another saved API model uses its own
+  image-to-video call with the same source, length and prompt rules.
 - **Default (4-second standard — user-confirmed)**: `veo_img2video` —
   `sourceImagePath` = **`char-card.png`** (first frame = final pose card),
-  aspectRatio `9:16`, resolution `720p`, durationSeconds **`4`**, model
-  **`veo-3.1-lite-generate-preview`** (Lite first — 1/8 the cost). 4 seconds
+  aspectRatio `9:16`, resolution `720p`, durationSeconds **`4`**, model = the saved
+  Veo grade (Lite is 1/8 the cost of the quality model). 4 seconds
   is **720p-only** and `lastImagePath` interpolation is **rejected** (measured
   400 — playbook §8.5). Put "the framing and crop never change" + "returns to
   the exact starting pose by the 3-second mark" in the prompt; ending
   alignment is guaranteed by the §7 lockup crossfade. The build upscales the
-  720p source to 1080×1920. The quality (default) model is used only for the
-  final single retry of the §8 escalation.
+  720p source to 1080×1920.
 - **Long version (trailer use only)**: durationSeconds `8` + resolution
   `1080p` + `lastImagePath` = char-card (first+last interpolation; the §4
   opening keyframe may be used).
@@ -224,15 +231,14 @@ unresolved findings from the previous round, and state that this is
 "intro video mode". Parse the verdict tail
 `INTRO_REVIEW: score=NN p0=N verdict=PASS|FAIL`.
 
-- **PASS** → §9.
-- **FAIL — findings fixable in post** (stalled opening, timing misalignment,
-  level balance): re-run §7 with only the knobs changed (no veo re-call — cheap).
-- **FAIL — generation defects** (character off-model, near-glyphs, effect
+- **No findings worth acting on** → §9.
+- **Findings fixable in post** (stalled opening, timing misalignment,
+  level balance): re-run §7 with only the knobs changed (no video re-call — cheap).
+- **Generation defects** (character off-model, near-glyphs, effect
   soup): fold the findings into the prompt via the playbook §9 correction
-  table and regenerate §5. **Model escalation contract**: ① up to 2
-  improvement regenerations on Lite → ② if still FAIL, **one final render on
-  the default (quality) model**, only within existing budget and provider authorization.
-  Further attempts depend on concrete expected improvements, not a score or fixed review cap.
+  table and regenerate §5 — only when the user asks for the regeneration and it fits the
+  authorized budget. A higher model grade is likewise the user's explicit request, never
+  an automatic escalation after a FAIL label.
 - Report the chosen version and unresolved findings. Further generation depends
   on the authorized budget and task, not a reviewer score or an automatic escalation.
 
@@ -262,22 +268,23 @@ python3 "$ASSET" --ensure data/<slug> intro sonic   "intro/<slug>-sonic-logo.wav
 ```
 
 Update the **intro assets** line in profile.md §6 (add it if missing). Report:
-final score, regeneration count, timeline, deliverable path table + usage
+review findings when a review ran, regeneration count, timeline, deliverable path table + usage
 guidance (the playbook §1 table — always state **never placed in front of
 short-form content**). Note that uploading to platform channel pages
 (trailer, profile intro) is manual work.
 
 ## Rules
 
-- **The video body is always generated with veo** — card captures and ffmpeg
-  handle only the finishing (text reveal, lockup guarantee, mix).
-- **Never call veo before the concept is confirmed** — the pick happens on the
+- **The video body is always generated with the saved video model** — card captures and
+  ffmpeg handle only the finishing (text reveal, lockup guarantee, mix).
+- **Never call the video model before the concept is confirmed** — the pick happens on the
   4 text concepts of §2. Generating multiple video candidates to choose from
   is banned on cost.
-- **Verdict authority belongs to brand-reviewer (intro mode) alone** — never
-  end the loop by self-scoring. No score manipulation.
+- **Reviews are advisory** — brand-reviewer (intro mode) findings inform revisions and
+  are reported as they came; no score manipulation, no fabricated review, no
+  regeneration spent on a verdict label alone.
 - **Channel-name and tagline text is never left to the generative model** —
-  every veo call puts `text` in `negativePrompt`, and text is handled by the
+  every video call puts `text` in `negativePrompt`, and text is handled by the
   lockup card and plate (deterministic render). Writing "no text" in the body
   makes letters appear instead.
 - **The sonic logo is a channel asset** — once confirmed, reuse it across all

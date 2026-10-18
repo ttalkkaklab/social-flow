@@ -564,7 +564,8 @@ const youtubePublishSchema = z.object({
   // chapter list too, making it the longest-description path, so block it here —
   // getting a 400 after burning the whole upload costs the quota.
   caption: ytDescription,
-  privacyStatus: z.enum(['public', 'unlisted', 'private']).optional(),
+  // Uploads start private (owner directive 2026-08-19/2026-10-18); publishYoutube rejects 'public'.
+  privacyStatus: z.enum(['public', 'unlisted', 'private']).default('private'),
   // The thumbnail is required — without one an arbitrary frame becomes the cover,
   // and after publishing the Shorts portrait surface can't be reverted via the API
   // (enforced by user directive, 2026-08-13).
@@ -629,7 +630,7 @@ const commentReplySchema = z
   })
   .superRefine((v, ctx) => {
     if (v.platform === 'THREADS' && (!v.draftId || !v.channel)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'THREADS replies require channel and reviewed reply draftId' });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'THREADS replies require channel and reply draftId' });
     }
     if (v.platform !== 'THREADS' && (v.draftId !== undefined || v.dryRun !== undefined)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'draftId and dryRun are supported only for THREADS replies' });
@@ -1426,10 +1427,13 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   threads_review_submit: async (args) => text(JSON.stringify(submitThreadsReview(args))),
   threads_publish: async (args) => {
     const input = gateCall('threads_publish', args, () => parseArgs(threadsPublishSchema, args));
-    if (input.draftId) checkThreadsGate(input);
+    let styleWarnings: string[] | undefined;
+    if (input.draftId) styleWarnings = checkThreadsGate(input).styleWarnings;
     else checkThreadsEpisode(input);
-    if (input.dryRun) return fromApi({ ok: true, status: 200, body: JSON.stringify({ platform: 'THREADS', postId: '', dryRun: true, gatePassed: true }) }, 'Dry run: no publishing API called.');
-    return fromApi(await sns.publishThreadsWithSelfReply(input), SNS_PUBLISHED_NOTE);
+    // Style findings are suggestions: returned with the result, never a reason to withhold the post.
+    const note = (head: string) => styleWarnings?.length ? `${head}\nStyle suggestions (not blocking):\n${styleWarnings.join('\n')}` : head;
+    if (input.dryRun) return fromApi({ ok: true, status: 200, body: JSON.stringify({ platform: 'THREADS', postId: '', dryRun: true, gatePassed: true, styleWarnings }) }, note('Dry run: no publishing API called.'));
+    return fromApi(await sns.publishThreadsWithSelfReply(input), note(SNS_PUBLISHED_NOTE));
   },
   instagram_publish: async (args) => {
     const input = parseArgs(instagramPublishSchema, args);

@@ -203,8 +203,8 @@ cry when nothing else is visible, and `ecu` is when only the eyes are remembered
 | `els` | extreme long shot (완전 풀) | person under 1/10 of the height (a dot) — the place is the subject | alone · powerless · the world is big · **or** scale when the frame holds many people | openings, endings, "nobody here" | 20 m or more | space (wind, traffic, echo) loud; no human voice needed |
 | `ls` | long shot · wide (와이드) | full body with room above and below, 40–60 % of the height | where we are, how many, how far apart — the **establishing** job | the first shot of a scene; situation explanation | 5–6 m — walk, don't zoom | space forward; lines may be faint |
 | `fs` | full shot (풀숏) | head to toe, almost no slack, 85–95 % of the height | the whole body's action — walk, gesture, costume | action and movement starts here | ~3 m | balanced |
-| `mfs` | medium full · knee shot (니숏, "cowboy") | bottom at **mid-shin** | two people talking, body plus a bit of room | two-person dialogue | — | balanced |
-| `ms` | medium shot (미디엄) | bottom at **mid-thigh** — never the waist | relation, gesture with context — the dialogue default. When in doubt, start here | dialogue, explanation with hands | — | lines clean, space behind |
+| `mfs` | medium full · cowboy | bottom at **mid-thigh** | two people talking, body plus a bit of room | two-person dialogue | — | balanced |
+| `ms` | medium shot (미디엄) | bottom at **waist** | relation, gesture with context — the dialogue default. When in doubt, start here | dialogue, explanation with hands | — | lines clean, space behind |
 | `mcu` | medium close-up · bust shot (바스트) | bottom at **mid-chest** | face and hands together — the last size that shows both | news, interview, **talking-head speech, the hook cut** | — | voice clean, space well back |
 | `cu` | close-up (클로즈업) | shoulder line at the bottom, **crown lightly cropped**, almost no headroom | "look at this now" — the director's command; the emotion workhorse | the one line that matters in the scene | step back 1.5–2 m and use the 2× tele — never lean in | voice and breath forward |
 | `choker` | choker | forehead to chin | emotion at its peak | once, at the peak | — | breath forward |
@@ -215,11 +215,12 @@ Compositions that ride on top of the size — write them in `shot.size` when the
 distance does: `two` (two-shot), `three` (three-shot), `ots` (over the shoulder), `pov` (the
 character's eyes — view from the character eyes, no view of their face), `back` (from behind — the face withheld),
 `cutaway` (away from the action to something in the scene), `reaction` (the face that saw it).
-`ws` is the legacy key for `ls` and still renders. `two` and `three` sit at `mfs` (cut at mid-shin, never the knee — both
-bodies and the room between them) unless `shot.why` says why they close to `ms`; `ots` sits at
-`mcu`; `pov`, `back`, `cutaway` and `reaction` say where the camera looks, not how far — write the distance beside them ("`back`, at `ms`") in the shot's reason or
-`framing`, or the script prints no distance for that shot. `shot.size` itself holds one key and
-nothing else — `"two"`, never `"two (mfs)"`; the checker reads the key.
+`ws` is the legacy key for `ls`. Composition labels `two`, `three`, `ots`,
+`pov`, `back`, `cutaway` and `reaction` remain supported for old boards, but do not
+imply a crop. New boards store the actual distance in `shot.size` and describe
+participants/viewpoint separately in `visual.camera.framing` and `shot.techniques`.
+Use `framing.mfs` for mid-thigh and `framing.ms` for waist-up. The canonical labels,
+size prompt words and icons live together in `film-techniques.js`.
 
 Two names from the set that are roles, not sizes — write the size and let `shot.info` carry
 the role: an **establishing shot** (설정샷, "에스타 하나 따놔") is the first shot of a scene that
@@ -229,7 +230,7 @@ filmed-scene term, the coverage note the shooting script prints (§7).
 
 Rules that come with the dial `[course]`:
 
-- **Don't cut at a joint** — not the neck, wrist, elbow, waist, knee or ankle. Cut mid-chest,
+- **Don't cut at a joint** — not the neck, wrist, elbow, knee or ankle. Cut mid-chest,
   mid-thigh, mid-shin. A joint cut reads as a severed body; a between-joints cut reads as a body
   continuing off-frame. It is the cheapest difference between an amateur frame and a pro one.
 - **A close-up is made by stepping back and pulling in with the lens**, not by putting the camera
@@ -305,7 +306,7 @@ is cut mid-action); `mcu` on a detail the hand is holding (the object is too sma
 tiny figure meant as scale with nobody else in the frame; a wide shot whose sound line says the
 lines are clear (at `ls`/`els` the space is in front and the people in the picture are far — only
 the narrator's voice-over, which is not in the picture, stays clean); a composition tag whose
-distance names one size and describes another (`back` "at `fs`" cut at mid-shin is `mfs`).
+distance names one size and describes another (`back` "at `fs`" cut at mid-thigh is `mfs`).
 
 ---
 
@@ -428,7 +429,7 @@ the mood, the exclusions (`--exclude` — the image tools have no exclusion argu
 noun list rides in the body) and the fill-the-frame tail (owner 2026-08-25 — no
 letterbox or lower-third fade). On a still with nobody in it,
 `--no-person` swaps the size ladder's body words ("full body", "chest up") for the subject's.
-storyboard §5 runs it when the plan is written and stores the full stdout as `bgPrompt`;
+The storyboard runs it when the shot plan is written (SKILL.md §4, cut and stage the scenes) and stores the full stdout as `bgPrompt`;
 produce sends that string to the engine unchanged.
 Hand-written prefixes that fight the fields are a camera-mode finding.
 
@@ -444,8 +445,8 @@ Rules:
 - **`line` is the 180° sentence.** Required when two people (or a person and what they look at)
   share the scene; omitted on a single-subject shot. The first shot from a new side writes
   `lineCrossing`: `camera_move`, `subject_move`, `neutral`, or `intentional`. A neutral bridge
-  shot carries `lineNeutral: true` and the crossing names its shot number. The checker blocks an
-  unexplained line change.
+  shot carries `lineNeutral: true` and the crossing names its shot number. The checker reports
+  an unexplained line change as a warning (§8).
 - **`light` is optional** and uses the same camera frame (`key from camera-left`, shadow
   falling right). Directional light is one of the few spatial cues the still actually keeps.
 - **A room is drawn from three-quarters** `[course]`. Ask for a place head-on and the model has
@@ -484,8 +485,8 @@ move while the other dials stayed at their defaults.
 | Bundle | Move (vendor word) | What it serves | Note |
 |---|---|---|---|
 | approach | `dolly in` | realisation · awakening · attention closing in on one thing | the camera passes through the space — fore and background flow at different speeds |
-| approach | `zoom in` (lens only, slow) | pressure · quiet tension — the space compresses behind the person | not a dolly: the frame scales, the background presses onto the back |
-| approach | `dolly zoom in` / `dolly zoom out` | the moment the world turns over — the person's size holds, only the background moves. **in** (camera in, lens out): the background backs away and spreads — isolation, "I'm alone in this". **out** (camera out, lens in): the background closes in and stacks up — cornered, "nowhere to go" | two actions in one: the vendor table's exception. It happens to the *background*, so the shot needs depth cues (a corridor, columns, a row of cars — `shot.depth` deep with the planes) and a subject who stands still; in front of a plain wall nothing happens. 3–5 s, once per episode — the second time the audience watches the camera |
+| approach | `zoom in` (lens only, slow) | pressure · quiet tension — the field of view narrows while camera position stays fixed | not a dolly: the frame scales, perspective relationships stay unchanged at a fixed position |
+| approach | `dolly zoom in` / `dolly zoom out` | the moment the world turns over — the person's size holds, only the background moves. **in** (camera in, lens out): the background backs away and spreads — isolation, "I'm alone in this". **out** (camera out, lens in): the background closes in and stacks up — cornered, "nowhere to go" | two actions in one: the vendor table's exception. It happens to the *background*, so the shot needs depth cues (a corridor, columns, a row of cars — `shot.depth` deep with the planes) and a subject who stands still; in front of a plain wall nothing happens. 3–5 s is a starting example; repeat only when a new story beat earns it |
 | rotate | `pan left` / `pan right` | introducing a space (one pan leaves the room's map in the viewer's head — better than three cuts) · confirming a relation (A, then the pan finds B: the two are in one room and know it) | the camera turns in place. A pan is a sentence from A to B — `framing` is A, `end` is B, and a pan whose two ends are the same picture is a look-around the edit cuts. It buys spatial proof with speed: a cut is faster but cannot prove the two share a room |
 | rotate | `tilt up` / `tilt down` | scale by time — how big a thing is, told by how long it takes the eye to finish it; a reveal after a reaction (face → gaze up → camera follows → the thing enters from the top) | the camera nods in place. A tilt up makes the subject larger; a `pedestal up` (height, not angle) looks down on it instead — the two are never the same cue. Sound before picture on a reveal: the bed swells before the whole thing is in frame |
 | rotate · travel | `arc shot` | a first appearance · explaining the space around one person in a single move | not `orbit` (0 hits in the Veo text) |
@@ -508,7 +509,7 @@ move while the other dials stayed at their defaults.
 - **One move per cut.** Two moves in one clip make the model hesitate and the frame dither. The
   engine file carries the per-model nuance (the default model teaches combinations; 2.0 asks
   for one) — the storyboard writes one unless a reason sits beside the second.
-- **A long take (10 s+) holds one move, no exception.**
+- **Start a long take with one clear move.** Combine moves when the selected adapter and authored path support them; inspect the whole result.
 - **A move has a hold on each end** `[course]` (L13–L14). Hold in → ease in → the move → ease
   out → hold out. `framing` is the held opening, `end` the held closing; the assembled span
   reads `framing, pauses, then speed movement, settling on end` on every travelling move (pan,
@@ -575,15 +576,11 @@ this lane for cards that reach the builder as images (produce SKILL §6 has the 
 
 Two disciplines carry over unchanged. The move supports the declared feel — it never carries
 it (the evidence base for stills is practitioner practice, not measurement, so claim even
-less). And rationing: most cards keep the alternating default drift; a punch is the cover's
+less). And rationing: every `still_camera` cut picks its `shot.render.camera` effect from the
+cut's purpose (render-routing.md — introduce a face with focus-in, inspect then a face with
+rack focus, approach a detail, pull back for context), never from the card's odd/even index
+(CLAUDE.md §Physical subjects: do not cycle effects by shot number); a punch is the cover's
 move; drift is spent where presence or unease is the feel, not sprinkled for "energy".
-Since 2026-09-06 this lane carries every cut whose `shot.render` picks a still, which on a
-short is most of them, so a still now
-carries a whole cut: the centre push caps at 7.5% because the text is baked in, and over a
-5–8 s cut that is under 1.5%/s — a `pan` travel (12% at the default scale), a `focus` zoom
-that arrives at the subject, or `hold` + `drift` reads as an operated camera where the
-centre push reads as a slow slideshow. One still holds one cut; a longer cut swaps the still
-per sentence (`narration[].img`).
 
 **How hard the window moves follows the beat** `[blog]`. A 46s reference short measured frame
 by frame (docs/research/2026-08-26-still-photo-camera-motion) ran every still on one ladder —
@@ -622,15 +619,15 @@ scene that doesn't need a move written stays on the alternating default.
 | scale by time · looking up (규모 — 올려다봄) | `fs`/`ls`, the thing filling the top | `low` → `eye` | `tilt up`, steady | `tilt` up the picture | 5–8 s | the bed swells before the top is in frame | after a reaction shot when there is a person; a `pedestal up` looks down on it instead |
 | scale · how big this is (규모) | `els`/`ls` with many subjects | `high` or `overhead` | `static`, or `dolly out` rising | `out`, or `pan` across the expanse | 5–8 s | space loud | the same tiny person alone means loneliness, not scale — the head count flips the meaning |
 | alone · powerless · the world is big (고독·무력) | `els` | `eye` or slight `high` | `static` or slow `dolly out` | slow `out` | 5–8 s | wind, room, distant machine — **no human voice** | Mad Max's cliff: the smallness says the sentence; don't narrate it on top |
-| intimate · I'm in it (친밀·당사자) | `mcu` → `cu` | `eye` | `static` or very slow `dolly in` | slow `in`, `focus` on the person | 7–10 s | voice and breath forward, space gone | one close-up (`cu`·`choker`·`ecu`) per scene — spend it on the line that matters |
+| intimate · I'm in it (친밀·당사자) | `mcu` → `cu` | `eye` | `static` or very slow `dolly in` | slow `in`, `focus` on the person | 7–10 s | voice and breath forward, space gone | choose close-ups for the expression or detail that carries the beat; no fixed quota |
 | quiet tension · pressure (조용한 긴장·압박) | `ms` → `mcu` | `eye` | slow `zoom in` or `static` | slow `in`, `focus` on the person | 7–10 s | room tone, no music swell | a `dolly in` opens the space instead — the wrong approach for pressure |
 | realisation · awakening (각성·깨달음) | `mcu`/`cu` | `eye` | `dolly in` | `in` + `focus` at the subject | 5–7 s | the bed drops (`sound.drop`), then the line | |
 | loss · letting go (상실) | `ms`/`ls` | `eye` | `dolly out` | `out` | 5–8 s | space rising, no speech | |
-| unease · something is wrong (불안·불길) | `ms`/`mcu` | `dutch` (once, reason written) or `eye` | `handheld` | `hold` + `drift` | 5–7 s | room tone, an off sound | the dutch fee — once per episode |
+| unease · something is wrong (불안·불길) | `ms`/`mcu` | `dutch` (with a scene-specific reason) or `eye` | `handheld` | `hold` + `drift` | 5–7 s | room tone, an off sound | use the tilt only where imbalance serves the scene |
 | imposing · hero · dangerous (위압·영웅) | `fs`/`ms` | `low` (+ wide lens) | `static` or slow `dolly in` | slow `in` — the low angle is drawn in the still | 5–7 s | low end forward | `[study]`: bigger and stronger, **not** better liked |
 | powerless · isolated · watched (무력·고립·감시) | `ls`/`ms` | `high` | `static` or slow `dolly out` | `out` | 5–8 s | the surroundings' sound | a subject filling a high-angle frame alone doesn't read weak |
 | fate · the whole picture in one frame (운명·요약) | `ls`/`els` | `overhead` | `static` | slow `out`, or `hold` + `drift` | 5–8 s | space | |
-| shock · alone in it · the world backs away (충격·고립) | `mcu` | `eye` | `dolly zoom in` | `punch` | 3–5 s | the surroundings drop out, one hit, then only the person's own sound (*Jaws*: the beach noise leaves, Brody stays) | once per episode, either direction; needs depth cues behind the person (`shot.depth` deep) and a subject who stands still |
+| shock · alone in it · the world backs away (충격·고립) | `mcu` | `eye` | `dolly zoom in` | `punch` | 3–5 s | the surroundings drop out, one hit, then only the person's own sound (*Jaws*: the beach noise leaves, Brody stays) | either direction; needs depth cues behind the person (`shot.depth` deep) and a subject who stands still |
 | cornered · no way out (궁지·압박) | `mcu` | `eye` | `dolly zoom out` | slow `in`, `focus` on the person | 3–5 s | the room closes in — a low drone rises | the same once-per-episode budget as the row above |
 | hidden information revealed (숨은 정보 공개) | two planes, or `insert` | `eye` | `rack focus` / `static` | `in` + `focus` at the detail | 3–4 s | the object's sound | an insert replaces three lines |
 | the rhythm of travel (이동의 리듬) | `fs`/`ms` | `eye` | `truck` | `pan` in the travel's direction | 5–7 s | footsteps, passing space | |
@@ -653,8 +650,9 @@ what the audience is supposed to get.
 `[course]` unless marked.
 
 1. **One shot, one new piece of information** (`shot.info`). Two shots in a scene saying the
-   same thing — one can go. 4–6 shots in a dialogue scene; a short informational piece has a
-   floor of two sizes per scene (wide + close). The check that catches a fake: cover the `info`
+   same thing — one can go. 4–6 shots in a dialogue scene and two sizes per scene (wide + close)
+   were the story-v1 defaults; on a story-v2 board the shot count follows what the audience
+   needs to notice (storyboard SKILL §4), with no per-scene floor. The check that catches a fake: cover the `info`
    lines and read only the sizes, angles and moves down the scene. If every setup shows the
    same thing from the same distance, the scene is one viewpoint chopped into decorative cuts,
    and no wording in `info` will fix it.
@@ -665,18 +663,14 @@ what the audience is supposed to get.
    has already established carries no debt — the viewer still holds the room; only a new place,
    or a break long enough to change it, owes a wide. A run of close shots with no wide keeps the
    audience tense and lost at once.
-3. **The close-up is rationed** — one close-up (`cu`·`choker`·`ecu`) per scene, `choker`/`ecu` once or twice per
-   episode. Everything emphasised is nothing emphasised. `[course]` — the `[study]` inverted U
-   agrees only in shape; its peak of three was measured on a long film, not on a 35–75 s short,
-   so the counts here are the craft ration, not a measured optimum.
-4. **Wide ≥ 1.5× the close** in length — generated clips against the §cut length rows as well,
-   filmed shots against the close beside them only.
-5. **The angle is a change, not a state.** Plan where the height moves and why.
-6. **One dutch per episode, reason written.**
-7. **One move per cut; `static` is a choice.** A second move only on Seedance 1.5 Pro (the
-   model whose vendor teaches combinations) and only with the reason written beside it
-   (scenes-schema §camera). Spend moves on openings and transitions, where the cut's character
-   isn't set and immersion is what a move actually raised `[study]`.
+3. **Close-up frequency follows the information and performance.** No numerical
+   per-scene quota establishes quality. Inspect whether repeated close views earn their place.
+4. **Length follows readable action.** Wider views may need more orientation time;
+   no fixed wide-to-close ratio replaces measured action, speech and reaction.
+5. **Angle is an authored viewpoint.** Keep or change it for a reason.
+6. **Dutch angles are deliberate.** Record the reason; there is no episode count limit.
+7. **Start with one primary move.** A compound move needs a coherent path and support
+   from the chosen adapter. Static is valid; do not add movement to satisfy a quota.
 8. **Eye level on the hook cut and every speech clip** unless a reason is written. `[study]`
 9. **Sound follows size** (§2).
 10. **The feel is written before the dials.** A feel written after the camera was chosen is a
@@ -725,8 +719,8 @@ what the audience is supposed to get.
     background, or the still lane on a `speed` row above the default, since a hold past one
     second is what the reference never does; and every boundary carries the join that says
     what moved between the two shots (scenes-schema §scene transition). Motion on every card costs
-    `visual.video` slots — the storyboard says which cards want one and the user decides
-    how many.
+    `visual.video` slots — the storyboard says which cards want one, and the saved render ratio
+    (`PRODUCTION.mode`, production-mode.md) is the target and the cost ceiling for how many.
 16. **Every boundary is a join, chosen from what happened between the two shots.** `[course]`
     Write `transition` on every shot after the first, from the table in scenes-schema
     §scene transition (one home — do not copy the table here): `jcut` when the two shots are
@@ -776,17 +770,16 @@ below are what the script's standing notes carry `[course]`.
 | Value | Written in | Read by |
 |---|---|---|
 | `shot.feel` | every shot | storyboard.html (the feel line · missing-feel warning), script.md (the `느낌` line), reviewer camera mode (on request only, 0.50.0 — does the technique serve it), image mode (does the picture show it) |
-| `shot.size` | every shot (`check-scenes.js` fails any shot but the outro without one after the story pass) | storyboard.html badge · script.md (the `사이즈·앵글` line — size with its distance — and the `소리` line that follows the size) · `bgPrompt` (the size words) · `visual.camera.framing` on generated shots · reviewer camera mode (does the size show what `info` needs — §2.1 — plus rationing and establish-then-close) |
+| `shot.size` | every shot (`check-scenes.js` fails any shot but the outro without one after the story pass) | storyboard.html badge · script.md (the `사이즈·앵글` line — size with its distance — and the `소리` line that follows the size) · `bgPrompt` (the size words) · `visual.camera.framing` on generated shots · reviewer camera mode (does the size show what `info` needs — §2.1 — plus the reveal order) |
 | `shot.why` | when `size`/`angle` leave their row, or a composition tag needs its distance | storyboard.html (beside the badges) · reviewer camera mode (a written reason is a departure, not a finding) |
-| `shot.angle` | every shot (default `eye`) | storyboard.html badge · script.md (the same `사이즈·앵글` line — angle with the eye-height baseline) · `bgPrompt` ("eye level" / "seen from above" / "low angle") · reviewer camera mode (angle as change, dutch fee, hook at eye level) |
+| `shot.angle` | every shot (default `eye`) | storyboard.html badge · script.md (the same `사이즈·앵글` line — angle with the eye-height baseline) · `bgPrompt` ("eye level" / "seen from above" / "low angle") · reviewer camera mode (angle as a motivated viewpoint) |
 | `shot.space` | generated stills (filmed shots when two people, or a person and what they look at, share the scene) | `assemble-bg-prompt.js` (the spatial prefix of `bgPrompt`) · storyboard.html (the space line · missing-layout warning) · script.md (the `자리` line) · reviewer camera mode (banned language, missing layout/facing) · image mode (does the PNG match layout and facing) |
 | `visual.camera` | generated shots | produce (assembles the prompt, adds nothing) · reviewer camera mode (slots, vendor words, one move, `end`) |
-| `duration` | generated clips · filmed shots | generated clips: the cut-length table (scenes-schema §cut length) + wide ≥ 1.5× close · filmed shots: the ratio only (no cap) |
+| `duration` | generated clips · filmed shots | measured speech, action, reaction and edit handles; the cut-length table is a starting guide |
 | `visual.audio` | generated shots | produce · reviewer sound mode (sound follows size) |
 
 The check strip in `storyboard.html` warns on: a shot with no `shot.feel` or no `shot.size`, a
-`shot.size` or `shot.angle` outside the vocabulary, more than one `cu`/`choker`/`ecu` in one scene, more than
-two `choker`/`ecu` in the episode, more than one `dutch` in the episode, a scene opening close
+`shot.size` or `shot.angle` outside the vocabulary, contradictory technique selections, a scene opening close
 (`mcu`/`cu`/`choker`/`ecu`/`insert`) whose next picture shot is not an `ls`/`els` (or `mfs`/`two`), a generated still
 with no `shot.space.layout` (an `insert`/`ecu` that fills the frame with one object is exempt),
 a space block written with no `frame` or with a `frame` that is not `camera`, a person on

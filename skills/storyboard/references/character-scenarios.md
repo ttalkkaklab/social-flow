@@ -115,8 +115,8 @@ situation → central choice → consequence → final observable change. Record
 in the candidate review. Shared cast, setting, historical facts or an initial incident are
 allowed. Changing engine labels, premise notes or the antagonist's last demand while keeping
 the same choices and consequences does not establish distinct story directions. The checker
-warns when any candidates copy the exact observable event sequences of the hook and all
-three developments (ignoring whitespace and author notes). This is a narrow warning, not a
+warns when any candidates copy the exact observable event sequences of the hook and every
+development (ignoring whitespace and author notes). This is a narrow warning, not a
 semantic similarity score: reviewers still judge the full stories, including legitimate
 branches from a shared setup and paraphrases that evade exact matching.
 
@@ -182,11 +182,18 @@ cannot convey an unseen hand action just because the performance text names it.
 
 ## Scenario file (scenario-v2)
 
-Frontmatter: `version: scenario-v2`, `channel`, `topic`, `direction: D1 | D2 | D3`, and
+Frontmatter: `version: scenario-v2`, `channel`, `topic`, `direction: D<n>` (D1, D2, … — as many
+directions as the decision needs), and
 `frozen:` (empty until board authoring). One fenced `scenario-json` object is the canonical
 candidate. Render its actual beats and events for the user; do not maintain another script.
 
-Recommended object fields (the checker still validates readable data shapes):
+Object fields. `check-scenario.js` requires readable data shapes: `kind`, `engine`, `expression`,
+`reveal`, `premise`, `viewerExperience`, `message`, `endingReason`, a non-empty `cast` with
+`role`/`want`/`voice`/`reason`, `beats` whose non-CTA rows carry `events` (each with `kind`,
+`character`, `text`, `basis`; factual events cite Verified claim IDs), a `setups` array and
+`adaptationBoundary` on adapted work. A missing `difference` is a warning (a single settled
+scenario has nothing to differ from); `expectation`/`change`/`necessity` and the suggested beat
+order are warnings too. The rest below is recommended:
 
 - `kind`, `expression`, `engine`, `reveal: held | upfront | none`.
 - `premise`, `viewerExperience`, `message` (intended meaning, not a mandatory closing line),
@@ -306,6 +313,46 @@ Set STORY.version to story-v2. Keep viewerNeed, thesis, basis, endingReason, kin
 reveal, cta, cast and beats (one change/necessity per performance shot). Opening, payoff, ending,
 optional ask, and review refs use `{shot, event, quote}` against the actual performance event.
 The thesis is author intent and need not occur verbatim in speech. Adapted adds adaptationBoundary.
+
+### Story-v2 STORY example
+
+The shape `story-performance.js` reads. Replace every value; a quote is an exact substring of
+that event's observable text, and `review` exists only after an actual read (otherwise the
+story is `not_reviewed`, which is a finding, not a stop):
+
+```js
+window.STORY = {
+  version: "story-v2",
+  kind: "fiction",                 // evidence | fiction | adapted (adapted adds adaptationBoundary)
+  expression: "mixed",             // narration | dialogue | visual | mixed
+  reveal: "held",                  // held | upfront | none
+  viewerNeed: "Why the clerk lets the stranger through",
+  thesis: "Trust goes to the person who shows what they risk",   // author intent; need not be spoken
+  basis: "Invented events under the channel's world rules; no factual claim",
+  endingReason: "The stranger's own loss is what the clerk saw before deciding",
+  cast: [
+    { id: "clerk", role: "gatekeeper", want: "to keep the ledger clean", voice: "clipped, formal",
+      source: "../../assets/characters/clerk/identity.json" }
+  ],
+  opening: { shot: 1, event: 1, quote: "closes the ledger as the stranger reaches the counter" },
+  payoff:  { shot: 4, event: 2, quote: "slides the key across without a word" },
+  ending:  { shot: 5, event: 1, quote: "leaves the coin on the counter" },
+  cta: "none",                     // optional: ask: { shot, event, quote }
+  beats: [
+    { shot: 1, change: "The viewer expects a refusal", necessity: "Without it the key means nothing" }
+    // one row per performance shot
+  ],
+  review: {                        // written only after an actual read
+    hash: "<node check-story.js storyboard/ --hash>",
+    verdict: "pass", unresolved: [],
+    meaning:     { reason: "…", refs: [{ shot: 4, event: 2, quote: "slides the key across" }] },
+    progression: { reason: "…", refs: [{ shot: 2, event: 1, quote: "…" }] },
+    payoff:      { reason: "…", refs: [{ shot: 4, event: 2, quote: "…" }] },
+    grounding:   { reason: "…", refs: [{ shot: 1, event: 1, quote: "…" }] },
+    character:   { reason: "…", refs: [{ shot: 3, event: 1, quote: "…" }] }
+  }
+};
+```
 
 `node check-story.js storyboard/ --text` extracts only observable actions and attributed speech
 in playback order. `--map` maps findings to shot/event; `--text --speech` extracts words alone

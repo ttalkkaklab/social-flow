@@ -1147,6 +1147,8 @@
       }
       if (TYPES.indexOf(s.type) < 0) bad(where, 'unsupported shot type');
       if (s.shot?.render?.mode !== undefined && !RENDER_MODES.includes(s.shot.render.mode)) bad(where, 'unsupported render mode');
+      // No renderer draws marks over a clip (owner decision 2026-10-18): the retired footage route cannot execute.
+      if (s.visual?.slide?.treatment === 'footage') bad(where, 'treatment:"footage" is retired — nothing is drawn over video; use an editorial motion diagram or a clean clip');
       const matchShot = s.shot?.eyeline?.matchShot;
       if (matchShot !== undefined && (!posInt(matchShot) || !shots[matchShot - 1] || matchShot === i + 1)) bad(where, 'eyeline.matchShot must reference another existing shot');
       if (s.duration !== undefined && (!Number.isFinite(s.duration) || s.duration <= 0)) bad(where, 'duration must be finite and positive');

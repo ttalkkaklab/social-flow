@@ -115,6 +115,7 @@ export async function applyVoiceLock(input, dependencies = defaults) {
     writeFileSync(result.reportPath, JSON.stringify({ ...result, policy: 'voice-lock-v1', inputKind: request.inputKind, voiceLock: lock, generatedAt: new Date().toISOString() }, null, 2) + '\n', { flag: 'wx' });
     return result;
 }
+// Unregistered legacy: nothing imports this tool list (the voice-lock ASR gate was retired 2026-10-16). Kept for reference only.
 export const VOICE_LOCK_TOOLS = [{
         name: 'voice_lock_apply', title: 'Lock generated dialogue to a character voice',
         description: 'Convert single-speaker model-generated audio/video with ElevenLabs STS. Records source blind ASR and checks converted ASR against approved dialogue (CER <= 2%) and duration drift <= 120 ms. Writes new WAV, optional MP4 and report without overwriting source. Paid conversion runs once after source validation. Separate mixed audio into dialogue stems first. Does not clone voices. passed verifies text and signal, not perceptual identity or lip sync: listen before assembly. Failed findings follow produce speech HITL.',

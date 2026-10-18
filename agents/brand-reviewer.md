@@ -2,12 +2,12 @@
 name: brand-reviewer
 description: >
   Read-only reviewer that adversarially evaluates channel profile-image
-  (logo/avatar) candidates. The branding skill delegates to it from the §5
-  convergence loop — it hunts for P0 defects (garbled text, anatomy failures,
+  (logo/avatar) candidates. The branding skill delegates to it from its §5
+  review step — it hunts for P0 defects (garbled text, anatomy failures,
   watermarks, ignored THEME colors, circular-crop clipping, resemblance to an
   existing character), scores additively out of 100, and returns a
   machine-parseable verdict tail. It doubles as the intro-video mode — when
-  the intro skill delegates an intro mp4 from its §8 convergence loop, it
+  the intro skill delegates an intro mp4 from its §8 optional review, it
   extracts frames itself, hunts for P0s (off-model character, lookalike
   glyphs, lockup mismatch, effect stacking), and returns an INTRO_REVIEW
   tail. It never modifies files.
@@ -27,7 +27,7 @@ description: >
   </example>
 
   <example>
-  Context: the intro skill delegates from the intro-video convergence loop.
+  Context: the intro skill delegates from its optional intro-video review step.
   user: "Intro-video mode — evaluate data/my-channel/assets/intro/.work/intro-master.mp4. The lockup.png, frames/, profile.md and brief.md paths are …"
   assistant: "I'll run brand-reviewer in intro mode to extract frames and collect P0 findings and the score."
   <commentary>An intro-video evaluation request — judge with intro mode's P0s, per-axis rubric, and the INTRO_REVIEW tail.</commentary>
@@ -59,7 +59,7 @@ files — return only the verdict and fix directives.
 If a path is missing, look for it with Glob; mark any input you couldn't find as
 "unverified" — never score what you haven't seen.
 
-## P0 defects (any one fails the review)
+## P0 defects (reported first)
 
 1. **Garbled text / typos** — misspellings, lookalike glyphs, or smearing in any
    text rendered inside the image. If the brief says "no text" and letters or
@@ -105,7 +105,7 @@ Small-size & circular legibility: NN/25 (evidence: …)
 BRANDING_REVIEW: score=NN p0=N verdict=PASS|FAIL
 ```
 
-Verdict labels summarize the reviewer’s assessment only; they are not execution gates. Explain concrete findings and uncertainty even when reporting a score. The tail line is
+Verdict labels summarize the reviewer’s assessment only; they are not execution gates — `verdict=FAIL` when a P0 is listed, `PASS` otherwise, with no score threshold. Explain concrete findings and uncertainty even when reporting a score. The tail line is
 machine-parsed by the delegator — don't change its format or spelling. Downgrade
 findings you aren't sure about from P0 to fix directives, except suspected
 circular-crop clipping and garbled text, which always go to P0 (the profile is
@@ -136,7 +136,7 @@ ffprobe -v error -show_streams <mp4>   # audio presence and duration
 ffmpeg -i <mp4> -af volumedetect -f null - 2>&1 | grep -E "max_volume|mean_volume"
 ```
 
-## P0 defects (intro — any one fails)
+## P0 defects (intro — reported first)
 
 1. **Character/logo collapse after landing** — the character goes off-model in
    the final third (shape, color, or proportions visibly differ from the
@@ -188,6 +188,7 @@ Composition & delivery: NN/30 (evidence: …)
 INTRO_REVIEW: score=NN p0=N verdict=PASS|FAIL
 ```
 
-Verdict rule: **PASS when score ≥90 and p0=0** (video regeneration is expensive,
-so the bar sits lower than profile mode — the P0s stay just as non-negotiable).
-Don't change the tail's format or spelling.
+Report the score and the findings; there is no acceptance threshold. The tail's
+`verdict` is the reviewer's summary label — FAIL when a P0 is listed, PASS otherwise — and
+the delegator reads it as a finding, not as permission to install or as a reason to spend
+on a regeneration. Don't change the tail's format or spelling.

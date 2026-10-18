@@ -2,6 +2,21 @@
 
 Channel-based short-form/long-form content pipeline Claude Code plugin.
 
+## Owner decisions (2026-10-18)
+
+- Precedence: the later-dated directive wins, and a superseded sentence is deleted in place, not kept under a banner.
+- Delivered video is subtitle-free, including speech (2026-10-17): no subtitle, caption, label or mark of any kind over a moving picture; a separate SRT only when the user asks.
+- Korean style S1 findings (`check-style.py`) are suggestions, never execution gates.
+- The Threads server gate is removed: the draft/body-hash binding stays, reviews are hash-bound evidence, and no score, P0 label or gate file blocks a post.
+- Previz is optional; no checker refuses a generated cut without one.
+- The production ratio is a planning target and cost ceiling: the band's upper bound and the budget are enforced, the lower bound is not.
+- Every YouTube upload starts `private`; `youtube_update` flips it to public, and growth loops run the same sequence under the approved plan.
+- Channel assets (logos, intros, growth images) follow `.social-flow/models.json` like episodes; host-first is only the initial recommendation at setup.
+- `treatment:"footage"` is a retired route and a hard execution error.
+- An unattended run without complete settings reports `project_setup_required` and defers authoring.
+- Initial style, ratio and format are asked once at project setup, then reused.
+- The static-ground limit is guidance.
+
 ## Guided automation (owner directive, 2026-10-16)
 
 CTA checks are removed. Creative structure, writing style, camera direction, review
@@ -14,21 +29,13 @@ does not become a prerequisite for unrelated tool execution.
 Keep the minimum contracts required to execute: readable inputs, stable references,
 supported adapter payloads, usable media, finite timing, concurrency and actual
 spending limits. Existing authorization persists. Quality warnings do not require a
-new approval, including assembly warnings described in older sections below. This
+new approval: video and visual-plan findings at assembly (2026-09-14) are shown with
+the output and kept in the build record, and authorized assembly proceeds without
+fabricated PASS reviews or a second question. This
 does not expand the requested artifact into paid generation, external uploads or
 publishing that the user has not authorized. Prefer the skill's practical guidance
 over mandatory metadata and arbitrary checker thresholds.
 [README.md](README.md) is the source of truth for structure, skills, and the MCP tool list.
-
-## Assembly video checks (user directive, 2026-09-14)
-
-Video and visual-plan findings at assembly are warnings subject to HITL, not an
-unconditional veto. Present the actual findings and follow
-`skills/produce/references/assembly-video-hitl.md`. Once the user approves those
-warnings for the current inputs, assemble immediately without fabricating PASS
-reviews or asking again. This exception supersedes pre-assembly quality gates
-elsewhere in this repository. Keep the approval and warnings in the build record.
-It authorizes neither additional spending nor publishing.
 
 ## Speech production (user directive, 2026-10-16)
 
@@ -48,9 +55,10 @@ Name the subject and write concretely instead — "근거를 남긴다" → "근
 "추천이 갈린다" → "미용실마다 다른 색을 권한다", "둘로 나뉜다" → "두 갈래다".
 
 **The scope isn't just content copy** — skill docs, code comments, tool descriptions,
-published HTML, commit messages, user responses, all of it. `check-style.py` D8(S1)
-machine-blocks content copy, but **no checker runs on docs and comments**, so the
-writer has to hold the line. Run this scan when writing or editing a doc:
+published HTML, commit messages, user responses, all of it. `check-style.py` flags D8
+as an S1 finding on content copy; S1 findings are suggestions, never execution gates
+(2026-10-18). **No checker runs on docs and comments**, so the writer has to hold the
+line. Run this scan when writing or editing a doc:
 
 ```bash
 python3 - <<'PY'
@@ -84,13 +92,19 @@ tense, and imperatives (`남겼어`·`남겨 둬`).
 ## Episode production choice (user directive, 2026-09-06)
 
 New episodes follow the six-ratio contract in `skills/storyboard/references/production-mode.md`
-and persist `renderRatioVersion:1`. Before assets, HITL offers those six choices with first-pass and retry-inclusive video
-costs, model, resolution, audio setting, explicit budget cap and exclusions. Persist the choice
-in `window.PRODUCTION`. Legacy approvals without that version count new cuts, rounded up; exclude reused clips, supplied
-recordings/stock clips and the shared outro. Hook-only generates the opening hook alone.
-Explicit episode choices override the old 1–2 clip cap and optional-hook default. Keep
-`hybrid` only for existing approvals. Bind approval to the final cost quote. Resume an unchanged approval.
-Before storyboard authoring, ask for one of the visual-style presets — cinematic-miniature,
+and persist `renderRatioVersion:1`. The episode's ratio is the saved `production.mode` in
+`.social-flow/models.json`; only when no value is saved does HITL offer the six choices, with
+first-pass and retry-inclusive video costs, model, resolution, audio setting, explicit budget cap
+and exclusions. Persist the choice in `window.PRODUCTION`. The ratio is a planning target and
+the cost ceiling: the band's upper bound and the budget are enforced, the lower bound is not,
+and fewer generated cuts than the target is reported, never padded with unneeded video.
+Legacy approvals without that version count new cuts, rounded up; exclude reused clips, supplied
+recordings/stock clips and the shared outro.
+Explicit episode choices override the old 1–2 clip cap and optional-hook default.
+`hook_only`, `stills_only` and `hybrid` are legacy production-mode ids for resumed boards only.
+Bind approval to the final cost quote. Resume an unchanged approval.
+The visual style is the saved `style.preset`; only when none is saved, ask once at project
+setup for one of the visual-style presets — cinematic-miniature,
 photoreal live action, webtoon, claymation, paper-cutout, ink-wash, toon-3d (added 2026-09-08
 from the Shorts style survey) or arcade-2d (added 2026-09-09, a hand-painted 1990s arcade game
 frame with no HUD) — and apply that choice to every new source/end image and video prompt in
@@ -98,8 +112,8 @@ either mode.
 Follow `skills/storyboard/references/visual-style.md`; production mode never chooses the art style.
 For cinematic-miniature only, full_video follows the spatial-explainer reference `LQZjvQ5W2ck`: consistent miniature/cutaway/
 realistic materials, stable geography, deliberate camera moves and visible physical changes.
-Its branch overrides the older HTML-only explanation, person-required video and generated-shot
-cap clauses below. It does not relax facts, voice, budget, publishing approval or the ban on
+Its branch overrides the older HTML-only explanation and generated-shot cap clauses below. It
+does not relax facts, voice, budget, publishing approval or the ban on
 marks over video. Read the production-mode and full-video contracts linked from the skills.
 Quality is reviewed against source images and actual clip playback, with asset-bound evidence;
 a metadata pass alone is not proof of visual quality. Never hide a failed clip with a still,
@@ -117,11 +131,12 @@ New generations follow the explicitly selected model resolution, including 720p.
 
 ## Nothing is drawn over video — explanation is an HTML slide (user directive, 2026-09-05)
 
-This outranks every other rule in the plugin, the skills and the reference docs.
+This is an absolute content rule: no marks and no type of any kind over a moving picture.
 
 - **Nothing is drawn over video.** No arrow, route, X, ring, hatch, bracket, dot, label or
   callout goes over a generated clip, a motion background, a b-roll, a quote clip or a
-  recording. The burned subtitle is the only type on a moving picture. The footage treatment
+  recording. Delivered video is subtitle-free, including speech (2026-10-17); a subtitle the
+  user asks for is a separate SRT file, never type on the picture. The footage treatment
   (`treatment:"footage"`, 0.47–0.53: one clip per sentence under drawn marks) is retired —
   `check-scenes.js` and `check-slide.js` reject it.
 - **A cut that needs an arrow, a figure or a principle is an HTML slide, not video.**
@@ -170,9 +185,10 @@ This outranks every other rule in the plugin, the skills and the reference docs.
 
 This replaces the older mandatory-video hook and fixed editorial-cut quotas.
 Use `skills/storyboard/references/render-routing.md` before choosing any assets.
-Every generated cut declares `shot.render.mode`, `purpose` and `reason`:
-`still_camera`, `character_html`, `object_html`, `data_graph`, `generated_video`, `editorial_html`,
-or `stock_video` (a free stock or archive clip with its `visual.license` record, 2026-09-07).
+Every generated cut declares `shot.render.mode` — the renderer needs it — and, as guidance
+for the reader, `purpose` and `reason`:
+`still_camera`, `character_html`, `object_html`, `data_graph`, `motion_html`, `generated_video`,
+`editorial_html`, or `stock_video` (a free stock or archive clip with its `visual.license` record, 2026-09-07).
 People mentioned in narration do not automatically need 3D characters; incidental numbers
 in a mechanism do not automatically need a graph. Choose the information the viewer needs.
 
@@ -182,10 +198,10 @@ No cut is paid video merely because it opens the episode. Every generated-video 
 essential continuous motion and an explanation of why a still or controlled HTML action is
 insufficient. Existing recordings and the shared outro retain their source.
 
-`check-scenes.js --draft` blocks missing or contradictory choices before assets; full checks
-also match the choice to the production handoff. The approval page displays the mode and reason.
-Camera HTML is still-camera motion and never counts as true subject motion. Keep the existing
-static-ground limit, episode budget, generation cap and no-marks-over-video rule.
+`check-scenes.js --draft` warns about missing or contradictory choices before assets; full checks
+also compare the choice with the production handoff. The approval page displays the mode and reason.
+Camera HTML is still-camera motion and never counts as true subject motion. Keep the episode
+budget, generation cap and no-marks-over-video rule; the static-ground limit is guidance.
 
 ## Visual direction and charts (user directive, 2026-09-06)
 
@@ -208,7 +224,7 @@ style/ratio prompts. Store credential references only; tokens stay in the extern
 SNS directory. Pending SNS setup does not prevent local production. Defaults and
 budget ceilings do not authorize generation spending or publication.
 
-## Host media tools first (user directive, 2026-09-07)
+## Directory model selection (user directive, 2026-10-16)
 
 **Images containing text (owner directive, 2026-10-18):** Every newly generated or
 edited image that must display or preserve readable text uses **GPT Image 2**
@@ -238,46 +254,45 @@ Keep narrator roles, inner thoughts and messages explicit. Existing settings mis
 only the type ask only that choice for a new episode; existing episode resumes retain
 their original snapshot. The type is independent of the visual style and output format.
 Initial setup is an explicit preference step, including on interactive autoproduce;
-unattended callers without settings defer production with `model_setup_required`.
+unattended callers without complete settings report `project_setup_required` with the missing
+fields and defer authoring (status codes: `skills/_shared/model-settings.md`).
 
-When the CLI running a skill ships its own media generation, that tool comes before the
-plugin's API lanes. Codex and Grok expose `image_gen` (Grok also `image_edit`), so every
-generated still, slide art, candidate logo, intro keyframe and growth-post image goes there
-first; Grok exposes `image_to_video` and `reference_to_video`, so every generated clip goes
-there first. Claude Code has neither, so the API table applies unchanged there. The storyboard
-records the detection in `window.PRODUCTION.imageProvider` and `videoProvider` (`host` | `api`);
-an explicit `api` written for the episode wins, and the fallback from a failed host call is
-asked for, never silent. Host output is logged as `image.host` / `video.host` at $0 with the
-allowance noted. The contract is `skills/produce/references/still-generation.md` §1 and
-`skills/produce/references/video-model-selection.md` §The host video tool comes first.
+At first setup, a host CLI's own media tool (Codex and Grok `image_gen`, Grok also `image_edit`,
+`image_to_video` and `reference_to_video`; user directive 2026-09-07) is the recommended default;
+once saved, the saved choice governs every generated still, slide art, clip, candidate logo,
+intro keyframe and growth-post image — channel assets follow `.social-flow/models.json` like
+episodes. The storyboard records the saved providers in `window.PRODUCTION.imageProvider` and
+`videoProvider` (`host` | `astra` | `api`); the fallback from a failed host call is asked for,
+never silent. Host output is logged as `image.host` / `video.host` at $0 with the allowance
+noted. Contracts: `skills/produce/references/still-generation.md` §1 and
+`skills/produce/references/video-model-selection.md`.
 
-## AI video cuts are pre-rendered in 3D first (user directive, 2026-09-11)
+## 3D previz for generated cuts (user directive 2026-09-11; optional since 2026-10-18)
 
-Every `generated_video` cut renders its camera and blocking in 3D before any video call — a
+A `generated_video` cut may render its camera and blocking in 3D before the video call — a
 Blender previz through the `blender_*` bridge, or a three.js previz through
 `skills/storyboard/references/previz-template.html` — at the cut's billed length, 24 fps, grey
 proxies with one flat colour per actor and nothing else in frame. The render is stored as
 `visual.video.previz` (`renderer`, `clip`, `firstFrame`, `sha256`, `fps`, `seconds`,
-`camera.movement`) and `check-scenes.js` refuses a generated cut without it. The previz gives
-the video model its camera, timing and blocking: on the API lane it rides Seedance 2.x as the
-reference video (`Video 1`) with the source still as `Image 1`; on a host video tool that takes
-no clip it shapes the still and the prompt instead (`handoff:"frame_and_prompt"`). The source
-still is edited from the previz's first frame, so the composition the clip starts on is the
-composition the still has. The previz's move and the shot's `visual.camera.movement` must agree;
-a prompt that fights the clip drifts. Imported clips (`visual.reuse`), stock footage, recordings
-and the outro carry none, and neither do b-roll and speech clips on the Veo sound lane (no clip
-input there; the reference route is the motion-background route). Two of the choices are the user's, asked with AskUserQuestion and
-recorded before anything renders or bills: **which renderer** (Blender or three.js) before the
-first previz render — `PRODUCTION.previz` — and **which video model** (the Seedance 2.x grades,
-with `video-model-options.js`'s cost table) before any video call — `PRODUCTION.videoModel`;
-`production-mode.js` refuses a board with generated cuts that lacks either record. Contract:
-`skills/storyboard/references/blender-previz.md` §6 and `production-mode.md` §When to ask.
+`camera.movement`); no checker refuses a generated cut without it. A previz helps camera and
+blocking when the model takes a reference clip (Seedance 2.x `reference_video`: the previz as
+`Video 1`, the source still as `Image 1`); for a `frame_and_prompt` adapter it only shapes the
+still and the prompt and is advice. When a previz exists, the source still is edited from its
+first frame, and its move and the shot's `visual.camera.movement` must agree; a prompt that
+fights the clip drifts. Imported clips (`visual.reuse`), stock footage, recordings and the outro
+carry none, and neither do b-roll and speech clips on the Veo sound lane. The renderer is the
+saved `production.previzRenderer` (`PRODUCTION.previz`); when none is saved, the author picks one
+and records it as an assistant decision — no renderer or model question is asked. Episode video
+runs through `video_catalog → video_plan → video_execute`; a direct adapter call on a configured
+episode needs `videoContext`. Contract: `skills/storyboard/references/blender-previz.md` §6 and
+`production-mode.md`.
 
 ## Per-cut video models (user directive, 2026-09-13)
 
-This replaces the episode-wide model lock and the 2.x-only previz rule above.
-Each cut chooses its model and resolution. `PRODUCTION.videoModel` is an episode default
-or `model: 'mixed'`, with the recorded choice covering the plan. Seedance 1.5 Pro is allowed.
+Cuts inherit the saved video model and resolution: `PRODUCTION.videoModel` comes from
+`.social-flow/models.json` through the episode handoff (`selection.kind:'standing'`). A per-cut
+change is an explicit user exception recorded in `PRODUCTION.modelSettings.overrides`;
+`model:'mixed'` describes such a plan. Seedance 1.5 Pro is allowed.
 A 1.x previz uses `frame_and_prompt`; 2.x may send `reference_video`. Keep real API input
 constraints, cost quotes and approved budgets. `modelReason` is optional.
 

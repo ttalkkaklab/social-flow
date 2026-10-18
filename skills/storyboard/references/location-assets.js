@@ -93,7 +93,7 @@ function render(win,index,dir){
 function renderJob(ctx){return {manifest:ctx.m,blend:safe(path.dirname(ctx.p),ctx.m.assets.blend.path),stateId:ctx.b.stateId,endStateId:ctx.b.endStateId||ctx.b.stateId,blocking:ctx.b.blocking||null};}
 function previz(win,index,dir,{seconds,fps=24}){
   const ctx=context(win,index,dir);if(!ctx)throw new Error('bind a location first');
-  if(win.PRODUCTION?.previz?.renderer&&win.PRODUCTION.previz.renderer!=='blender')throw new Error('location previz uses Blender; keep the saved renderer choice');
+  if(win.PRODUCTION?.previz?.renderer&&win.PRODUCTION.previz.renderer!=='blender')throw new Error('location previz renders with Blender; with a three.js renderer plan the shared set with the previz template or stills');
   if(!ctx.s.visual?.video||!ctx.s.visual?.camera?.movement)throw new Error('previz needs an existing video plan and camera movement');
   if(!Number.isInteger(fps)||fps<24||fps>60||!Number.isFinite(seconds)||seconds<=0||Math.abs(seconds*fps-Math.round(seconds*fps))>1e-6||seconds*fps>3000)throw new Error('previz needs 24..60 fps and a finite duration of 1..3000 whole frames');
   const video=ctx.s.visual.video,engine=video.engine||ctx.s.visual.engine||'seedance';

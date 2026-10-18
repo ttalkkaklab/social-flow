@@ -1,0 +1,43 @@
+{
+  "at": "2026-10-18T05:57:35.106678+00:00",
+  "base": "2966cc67f13c976e40234ce42dff0e0b8b4f7933",
+  "sourceBackupStash": "a0aff69b9df20cd900fa13ef967f45ff5d297221",
+  "resolvedConflicts": [
+    "server/dist/bundle.js regenerated from merged sources",
+    "server/test/storyboard-html.test.mjs preserves font assets plus two technique exports"
+  ],
+  "objectiveGate": {
+    "tests": 2244,
+    "pass": 2244,
+    "fail": 0,
+    "log": "/tmp/film-dev-integration-check.log"
+  },
+  "lint": "16 rules across 21 skills passed",
+  "installation": "install-4.json",
+  "installedSmoke": {
+    "root": "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.115.4",
+    "passed": true,
+    "checks": [
+      "fresh bundled MCP exposes acting and opt-in review",
+      "installed direction changes affect plan while identity stays fixed",
+      "installed host review prepares evidence without external judgment or invented score",
+      "installed attachment accepts resolved style and rejects wrong voice/old style",
+      "installed video plan shares acting and measured anticipation/reaction time",
+      "acting-only edit invalidates dependent media and preserves other line"
+    ],
+    "bundleSha256": "d8f8a4a8832e78ab044acf1651e0a4d640a1bc0adb785f17c136443098c52cf6",
+    "server": {
+      "name": "social-flow",
+      "version": "0.115.4"
+    }
+  },
+  "localBoardCorrections": [
+    "Copied both generated previz assets into storyboard-relative paths, preserving originals.",
+    "Recorded measured frame counts and frame rate for ASTRA clips.",
+    "Replaced three template editorial strings with episode descriptions."
+  ],
+  "boardScreenshot": "/tmp/film-dev-board-fixed.png",
+  "remainingBoardFindingsLog": "/tmp/film-dev-board-check-final.log",
+  "qualityScore": null,
+  "qualityStatus": "Full audiovisual review and user-confirmed rubric pending; no passing score inferred."
+}

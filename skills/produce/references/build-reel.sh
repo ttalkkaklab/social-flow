@@ -11,13 +11,14 @@
 #                         in/out/auto zoom over the whole card by the card's span: span= when written,
 #                         else KB_RATE × card seconds capped at KB_ZMAX (the baked text stays in the zone).
 #                         zoom=none skips Ken Burns — for footage that already moves, like filmed clips.
-#                         Refused on a still card (every segment visual an image): a still never sits
-#                         frozen under the voice (owner directive 2026-09-03).
+#                         Warned on a still card (every segment visual an image): a still sitting frozen under
+#                         the voice is reported with ⚠ and the build continues (camera direction is guidance,
+#                         owner 2026-10-16; a planned motionIntent intentional_still is named in the line).
 #                         zoom=punch lands ZOOM_SPAN (3.5%) inside the first PUNCH_D seconds (ease-out), then
 #                         keeps creeping to the card's span — the cover-card move (the hook contract wants
 #                         movement inside 0–3s, and nothing sits frozen after the hit).
 #                         zoom=hold keeps a fixed scale with no zoom motion — the base for drift=1
-#                         (pure handheld) or a pan= travel. A bare hold is refused on a still card too.
+#                         (pure handheld) or a pan= travel. A bare hold draws the same warning on a still card.
 #                         All zoom/pan motion is eased (smoothstep) — KB_EASE=linear restores the old ramp.
 #                         Column 5 opts is "k=v,k=v" (optional — 4-column files run unchanged today):
 #                           sync=1        a card whose audio is one body with the picture (live voice
@@ -377,13 +378,24 @@ if [ "$DIMBAD" = 1 ] || [ "$DIMWARN" = 1 ]; then
   fi
   WARN=1
 fi
-# A still never sits frozen under the voice (owner directive 2026-09-03). A card whose every
+# A still never sits frozen under the voice without a ⚠ line (owner directive 2026-09-03; guidance since 2026-10-16). A card whose every
 # segment visual is an image is a still card, and it needs a camera move: in/out/auto/punch,
 # a pan= travel, or hold+drift=1. zoom=none and a bare hold are for footage that already
 # moves. Checked here, before the first ffmpeg, with the loop's column-3 parsing. The same
 # pass writes stillcards.txt — the card list the KB_RATE default below applies to, so a
 # filmed card with no span= keeps the ZOOM_SPAN floor instead of the still ladder's push.
 : > stillcards.txt
+# Cards whose scene plans an intentional still (motion-production.md) — the frozen-still warning names them.
+# Guarded so a harness that runs this block without the board (set -u) keeps working; the list is then empty.
+STILL_INTENT_CARDS=""
+if [ -n "${STORYBOARD:-}" ] && [ -f "${STORYBOARD}/scenes.js" ]; then
+  STILL_INTENT_CARDS=$(node -e '
+const fs=require("fs"),{evaluateWindowScript}=require(process.argv[2]);
+const win=evaluateWindowScript(fs.readFileSync(process.argv[1],"utf8"),{filename:process.argv[1]});
+const still=x=>!!x&&x.type==="intentional_still";
+console.log((win.SCENES||[]).flatMap((s,i)=>still(s.visual?.motionIntent)||still(s.shot?.render?.motionIntent)||(s.productionPlan?.cuts||[]).some(c=>still(c?.motionIntent))?[i]:[]).join(" "));
+' "$STORYBOARD/scenes.js" "${HERE:-.}/../../_shared/scenes-vm.js" 2>/dev/null || true)
+fi
 while IFS=$'\t' read -r _CI _ _ _CZ _CO; do
   [ -z "${_CI:-}" ] && continue
   STILLCARD=1; SEENVIS=0
@@ -404,8 +416,9 @@ while IFS=$'\t' read -r _CI _ _ _CZ _CO; do
     hold) case ",${_CO:-}," in *,drift=1,*|*,pan=*) continue ;; esac ;;
     *) continue ;;
   esac
-  say "✗ card $_CI: a still card with zoom=${_CZ:-auto} — a still never sits frozen under the voice. Use in|out|auto|punch, pan=<dir>, or hold+drift=1 (none and a bare hold are for footage that already moves)"
-  exit 1
+  case " $STILL_INTENT_CARDS " in *" $_CI "*) INTENT=" (planned motionIntent intentional_still)";; *) INTENT="";; esac
+  say "⚠ card $_CI: a still card with zoom=${_CZ:-auto} sits frozen under the voice${INTENT} — camera direction is guidance (owner 2026-10-16); use in|out|auto|punch, pan=<dir>, or hold+drift=1 unless the still is planned (none and a bare hold are for footage that already moves)"
+  WARN=1
 done < cards.resolved.tsv
 
 # Per-segment sfx + BGM gating (optional) — sfx.tsv:

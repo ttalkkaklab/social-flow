@@ -1,0 +1,17 @@
+{
+  "installedAt": "2026-10-18T08:52:37.685Z",
+  "source": "/tmp/social-flow-film-techniques-build6",
+  "plan": "/Users/zeans/.local/state/social-flow-props/plan-2026-10-18T08-52-37-028Z.json",
+  "installations": [
+    {
+      "target": "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.118.0",
+      "backup": "/Users/zeans/.local/state/social-flow-props/backups/2026-10-18T08-52-37-028Z/0",
+      "verifiedFiles": 21
+    },
+    {
+      "target": "/Users/zeans/.claude/plugins/cache/social-flow/social-flow/0.118.0",
+      "backup": "/Users/zeans/.local/state/social-flow-props/backups/2026-10-18T08-52-37-028Z/1",
+      "verifiedFiles": 21
+    }
+  ]
+}

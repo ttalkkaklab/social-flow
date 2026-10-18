@@ -1,35 +1,27 @@
-# The scenario stage — three candidates, scored, then one pick
+# The scenario stage — three candidates, scored, then one pick (legacy)
 
-**New authoring contract (2026-10-16):** Read [character-led scenarios](character-scenarios.md) first. New scenarios use `scenario-v2` and boards use `story-v2`: cast existing characters (including narrators), choose evidence/fiction/adapted, write observable actions and attributed speech, and review the whole performance. Its type-specific grounding and rubric replace the legacy research quotas, forced wow/engine mix, spoken-message and narration-only requirements below. Legacy unversioned scenarios and story-v1 boards keep their existing checks. Production voice, budget, destination and publishing consent are unchanged.
+**Scope (2026-10-16):** this file is the legacy candidate procedure for unversioned and story-v1 episodes. New work follows [character-led scenarios](character-scenarios.md) (`scenario-v2`, `story-v2`): as many alternatives as the decision needs, no fixed headings, no score bar. In every version, CTA fields, share triggers, scores, review records and freeze stamps are optional guidance that never gates generation; continue with reported findings and do not fabricate approval or a pass. Legacy episodes keep their existing checks. Production voice, budget, destination and publishing consent are unchanged.
 
 
-Read [story-quality.md](story-quality.md) before drafting. It governs the meaning, evidence
-and ending of every candidate. Keep the seven headings, but modern parallels are optional,
+Read [story-quality.md](story-quality.md) before drafting. It guides the meaning, evidence
+and ending of every candidate. The seven headings are the suggested shape; modern parallels are optional,
 마무리 delivers the supported resolution, and CTA may be omitted without a reason. No score
-waives a missing message or unpaid promise. This supersedes conflicting item rules below.
+waives a missing message or unpaid promise, and none drops a topic.
 
 `scenario.md` is what the storyboard skill writes before §4 opens a shot: one page that
 lays out the episode as an investigation while a story candidate still costs a page
 instead of a board. Both formats run this stage. On long-form a candidate used to be a
 54–66 KB `scenes.js`; on a short the board is small, but a direction row (question · hook
 · hero) is too thin to judge whether a viewer would stay — that is the "밋밋하다" failure
-the 95-point loop exists to catch.
+the 95-point loop was built to catch.
 
 The loop happens **after first research, the wow points and the three messages, before the
-pick** (storyboard §2.1 · §2.2). Three different episodes this topic could be — one topic cut
+pick** (legacy-authoring.md §2.1 · §2.2). Three different episodes this topic could be — one topic cut
 from each message, each message the so-what of one wow point — are written as three pages
-**in one fixed shape — the seven items below** (user directive, 2026-09-02) — the user sees
+**in one shape — the seven items below** (user directive, 2026-09-02) — the user sees
 all three in full and picks (§Score: no reviewer on the attended path; autoproduce scores the
-three once in scenario mode and picks only among pages that cleared 95). Additional
+three once in scenario mode and prefers pages that cleared 95). Additional
 research and the board come after that, on the winner only.
-
-## Automation directive (2026-10-16)
-
-CTA fields, sections, wording, speech, placement and share triggers are optional guidance
-for every scenario version. They never gate generation. Scores, review records and freeze
-stamps are useful provenance when available, not automatic-stop conditions. Continue with
-reported findings and do not fabricate approval or a pass. This directive supersedes older
-mandatory CTA/selection/freeze wording below.
 
 
 ## Contents
@@ -324,19 +316,20 @@ the three in one context and returns one tail per page:
 STORYBOARD_REVIEW: mode=scenario candidate=d<n> score=NN p0=N primary=<engine> secondary=<engine|none>
 ```
 
-Stamp `score`, `p0`, `round` on each file's frontmatter. **Do not start §4 from a page that
-has not been read on this path.**
+Stamp `score`, `p0`, `round` on each file's frontmatter. Prefer starting §4 from a page that
+has been read on this path; a missing read is `not_reviewed`, not a stop.
 
-### Loop (unattended only)
+### Re-read (unattended only)
 
 There is one re-read, not a loop. If no page is at `score ≥ 95` with `p0 = 0`, apply the
 findings to the best page, P0 first, and delegate that one page again — the second and last
-call. Still short: drop the topic. Do not rephrase a failed page into a fourth candidate,
+call. Still short: continue with the best justified page and report the remaining findings;
+a score does not drop a topic. Do not rephrase a page into a fourth candidate,
 and do not read the same page a third time. (0.50.0 — the per-candidate loop of 0.49 ran up
 to fifteen reads an episode at two million tokens each, measured, and the human pick on the
 attended path made most of them redundant.)
 
-A read that comes back `p0 > 0` is not a pass even at 95.
+A read that comes back `p0 > 0` is a finding to repair, whatever the score.
 
 ### Pick
 
@@ -349,8 +342,9 @@ one-line option is not what gets approved; the wow and the seven items are. Then
   the 주제 and the engine; the option description carries the 실제로는 half of the wow, so the
   user compares three reversals, not three topics. Recommended is the page whose wow you would
   say at lunch and whose engine you can point at in its own sentences, first in the list.
-- **Unattended autoproduce:** take the highest at 95 with `p0 = 0`. **None: drop the topic**
-  (same counter as a facts-floor drop). Do not author a board from a page that failed the bar.
+- **Unattended autoproduce:** take the highest at 95 with `p0 = 0`; when none reaches it, take
+  the best justified page and report its findings with the board. A score below the bar is a
+  note, not a reason to drop the topic.
 
 Write `Chosen: D# (<YYYY-MM-DD>)` into `research.md` §Directions, copy the winner to
 `storyboard/scenario.md` (keep the candidate files — they are the audit of the other
@@ -394,7 +388,7 @@ event itself; inventing a modern connection to prolong it is not a solution.
 | 4 | **전개 #2** | The next necessary evidence, choice or consequence that changes understanding. A modern bridge is optional. On answer-first this supplies the early result and names its subject directly. |
 | 5 | **전개 #3** | Develop or test the answer with evidence, action or a limit. Use sourced modern cases only when they serve this content; no minimum case count. |
 | — | *(the landing)* | One of 전개 #1–#3 is `wow_lands`: the reversal said plainly in its last sentence, on its claim, the feel curve's maximum on its header. Whatever follows it is the cost, the limit and what changes now. |
-| 6 | **마무리** | The earned resolution as a picture and a line: the 「그날 이후로」 frame — where the world stands after the reversal — and over it the page's Message sentence in the narration's words, heard once, last (§The wow first · §The message). Not a summary, not a moral, not the reversal said again, not the picture described in words. State limits honestly. Do not outsource the answer to a generic opinion question. Name the one forwardable thing here — the message line, or the reversal in one sentence when the line is too general to pass on; §4 writes it into the closing shot's `shot.share`, where a short requires it, and the message line into `STORY.thesis`, which the checker requires to be heard at or after the payoff. |
+| 6 | **마무리** | The earned resolution as a picture and a line: the 「그날 이후로」 frame — where the world stands after the reversal — and over it the page's Message sentence in the narration's words, heard once, last (§The wow first · §The message). Not a summary, not a moral, not the reversal said again, not the picture described in words. State limits honestly. Do not outsource the answer to a generic opinion question. Name the one forwardable thing here — the message line, or the reversal in one sentence when the line is too general to pass on; §4 may write it into the closing shot's `shot.share` (optional on every format) and the message line into `STORY.thesis`; the story-v1 checker reports when no spoken group at or after the payoff carries it. |
 | 7 | **CTA** | Optional. Omit this row or write an ask if it serves the episode. Wording, position, speech and share metadata are editorial choices, not checks. |
 
 ### 훅 may invent a scene, not a fact
@@ -422,7 +416,7 @@ at §2.3; unused cases never become a claim or caption.
 | 전개 #3 | `drip`, 1–2 shots — where the held answer is first complete, or where the answer the cover already stated meets its hardest test | `body` | `result` |
 | 마무리 + optional CTA | Narrative ending; optional `cta` label and share metadata | Same | Same |
 
-A short lands inside the 4–7 shot band (5–7 by this map). Long-form keeps the arc
+A short usually lands around 4–7 shots by this map; the story decides. Long-form keeps the arc
 storyboard §2.3 picked (scenes-schema §playback order): unfinished-sentence material is
 `story`, where 전개 #2 is the turn; everything else is `answer-first`, where 전개 #2's present
 answer is the result shown before the body. `COMPREHENSION.question` is the specific question
@@ -520,7 +514,8 @@ and freeze. `--json` returns `{files, violations, warnings, findings}`; findings
 `level` (`bad` or `warn`), `where` and `what` (S1–S12). Exit codes are 0 (no P0),
 1 (P0) and 3 (input error). `--selftest` exercises passing and failing fixtures.
 
-Keep exactly the seven level-two headings above, in order. Replace `<s>` with a
+The seven level-two headings above, in order, are the suggested shape; another readable
+outline is allowed. Replace `<s>` with a
 signed integer from −3 to +3 and `<감정>` with the feeling. Quote scalar values that
 contain `#` (especially `wow_lands` and claim citations) or YAML punctuation; use
 the `anchors` mapping and a numeric inline `claims` array. Multiline strings may
@@ -531,7 +526,8 @@ anchors and board-level material. S5 warns about unreadable or misplaced feel
 values and monotone rises. S12 warns on short-form character bands (spaces count):
 훅 60, 전개 #1 130, #2 150, #3 150, 마무리 100, CTA 40. Long-form turns the bands
 off (resolved board format, otherwise `arc: answer-first|story` before a board).
-S12 rejects a chosen direction mismatch or missing frozen stamp beside scenes.js.
+S12 warns on a missing frozen stamp beside scenes.js (provenance, not a stop); a chosen
+direction that differs from research.md's `Chosen:` line is still reported as a violation.
 S13 in check-scenes starts as a warning, comparing the cover first narration
 sentence (`sub`, falling back to `tts`), last narrated non-outro shot, its `shot.share`
 and spoiler flag against the anchors. Legacy scenarios without anchors skip S13.

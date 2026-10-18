@@ -1,7 +1,7 @@
 # Review with the LLM running this plugin
 
-All subjective evaluation belongs to the current host LLM. This overrides older
-Gemini, Qwen, pinned reviewer-model and paid-review recipes. Do not send media to an
+All subjective evaluation belongs to the current host LLM. For review recipes, this
+replaces the older Gemini, Qwen, pinned reviewer-model and paid-review recipes. Do not send media to an
 external evaluator or install a second model automatically. Host usage follows its
 own plan; zero external evaluation calls does not mean the host itself is free.
 

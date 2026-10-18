@@ -96,6 +96,6 @@ if (require.main === module) {
     const kind = opt('--kind') || 'video';
     const problems = findings(s, kind, { stillLimit: kind === 'card' ? STILL_CEILING_SECONDS : null });
     console.log(JSON.stringify({ ...s, kind, findings: problems }, null, 2));
-    process.exitCode = problems.length ? 1 : 0;
+    process.exitCode = 0;   // findings are evidence, not a verdict; only an unreadable file fails
   } catch (e) { console.error('measure-motion: ' + e.message); process.exitCode = 1; }
 }

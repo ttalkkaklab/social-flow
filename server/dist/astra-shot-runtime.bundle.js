@@ -4209,6 +4209,19 @@ function contract() {
 function cameraContract() {
   return loadFromHere(join(REFERENCES_DIR, "production-mode.js"));
 }
+function techniqueContract() {
+  return loadFromHere(join(REFERENCES_DIR, "film-techniques.js"));
+}
+var techniqueSelectionSchema = external_exports.array(external_exports.object({
+  id: nonEmptyTechniqueId(),
+  reason: external_exports.string().trim().min(1).describe("Why this technique serves this shot\u2019s information or action")
+}).strict()).superRefine((value, ctx) => {
+  for (const message of techniqueContract().validate(value))
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+});
+function nonEmptyTechniqueId() {
+  return external_exports.string().trim().min(1).describe("Stable id from storyboard_read techniqueCatalog");
+}
 function motionThemeContract() {
   return loadFromHere(join(REFERENCES_DIR, "motion-graphics.js"));
 }
@@ -4310,6 +4323,7 @@ var shotSchema = external_exports.object({
   chapter: external_exports.string().optional(),
   after: external_exports.number().int().nonnegative().optional(),
   shot: external_exports.object({
+    techniques: techniqueSelectionSchema.optional(),
     feel: external_exports.string().optional(),
     size: external_exports.string().optional(),
     angle: external_exports.string().optional(),
@@ -4352,6 +4366,7 @@ var storyboardReadSchema = external_exports.object({
   path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
   level: readLevelSchema.default("shots").describe("outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots = every shot summarised under its scene \xB7 full = the raw shot objects too"),
   shotId: external_exports.string().min(1).optional().describe("Stable shot ID to inspect, with its raw plan and neighboring shot IDs"),
+  includeTechniques: external_exports.boolean().default(true).describe("Return canonical technique ids, purposes, icons and provider instructions"),
   includeContext: external_exports.boolean().default(true).describe("Include STORY, PRODUCTION and SB_DOC as unverified review context")
 });
 var storyboardCheckSchema = external_exports.object({
@@ -6731,6 +6746,7 @@ var load = createRequire2(import.meta.url);
 // src/video-routing.ts
 var load2 = createRequire3(import.meta.url);
 var shared = fileURLToPath3(new URL("../../skills/_shared/video-selection.js", import.meta.url));
+var modelSettings = fileURLToPath3(new URL("../../skills/_shared/model-settings.js", import.meta.url));
 var routingContext = (episode, shotId) => load2(shared).readVideoContext(episode, shotId);
 var idSchema = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var videoPlanSchema = external_exports.object({

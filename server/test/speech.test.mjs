@@ -572,7 +572,9 @@ describe('scene direction', () => {
   compose(work,board);assert.ok(checker.check(work,board));
   for(const change of [s=>s.performance[1].text='Drops parcel.',s=>s.performance[0].to='audience',s=>s.performance[1].durationSeconds=2,s=>s.visual.camera={framing:'Close on parcel.'}]) {
    const changed=JSON.parse(JSON.stringify(bound));change(changed.SCENES[0]);save(changed);compose(work,board);
-   assert.throws(()=>checker.check(work,board),/Video performance binding is stale/);
+   assert.ok(checker.check(work,board)); // a changed performance plan is a recorded stale warning, not a stop (2026-10-18)
+   const warnings=JSON.parse(readFileSync(path.join(work,'tts-warnings.json'),'utf8')).warnings;
+   assert.ok(warnings.some(w=>/performance plan changed since the clip was bound.*\(stale\)/.test(w)),warnings.join('\n'));
   }
  });
 

@@ -174,7 +174,7 @@ test('previz timing and saved renderer are checked before launching Blender',()=
   assert.throws(()=>L.previz(f.win,0,f.boardDir,{seconds:Infinity}),/finite/);
   assert.throws(()=>L.previz(f.win,0,f.boardDir,{seconds:2.5}),/whole/);
   f.win.PRODUCTION.previz={renderer:'threejs'};
-  assert.throws(()=>L.previz(f.win,0,f.boardDir,{seconds:2}),/saved renderer/);
+  assert.throws(()=>L.previz(f.win,0,f.boardDir,{seconds:2}),/renders with Blender; with a three\.js renderer/);
 }));
 
 const blenderBin=process.env.BLENDER||'/Applications/Blender.app/Contents/MacOS/Blender';

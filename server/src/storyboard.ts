@@ -86,6 +86,25 @@ interface CameraContract {
 export function cameraContract(): CameraContract {
   return loadFromHere(join(REFERENCES_DIR, 'production-mode.js')) as CameraContract;
 }
+interface TechniqueContract {
+  VERSION: string;
+  entries: Array<Record<string, unknown>>;
+  validate(value: unknown): string[];
+  findings(scene: unknown): string[];
+}
+export function techniqueContract(): TechniqueContract {
+  return loadFromHere(join(REFERENCES_DIR, 'film-techniques.js')) as TechniqueContract;
+}
+export const techniqueSelectionSchema = z.array(z.object({
+  id: nonEmptyTechniqueId(),
+  reason: z.string().trim().min(1).describe('Why this technique serves this shot’s information or action'),
+}).strict()).superRefine((value, ctx) => {
+  for (const message of techniqueContract().validate(value))
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+});
+function nonEmptyTechniqueId() { return z.string().trim().min(1).describe('Stable id from storyboard_read techniqueCatalog'); }
+
+
 interface MotionThemeContract {
   THEMES: Record<string, unknown>;
   resolveTheme(plan: unknown): unknown;
@@ -213,6 +232,7 @@ export const shotSchema = z
     after: z.number().int().nonnegative().optional(),
     shot: z
       .object({
+        techniques: techniqueSelectionSchema.optional(),
         feel: z.string().optional(),
         size: z.string().optional(),
         angle: z.string().optional(),
@@ -258,6 +278,7 @@ export const storyboardReadSchema = z.object({
   path: z.string().min(1).describe('The storyboard directory, or its scenes.js'),
   level: readLevelSchema.default('shots').describe('outline = sequences with scene numbers · scenes = scene cards with shot numbers · shots = every shot summarised under its scene · full = the raw shot objects too'),
   shotId: z.string().min(1).optional().describe('Stable shot ID to inspect, with its raw plan and neighboring shot IDs'),
+  includeTechniques: z.boolean().default(true).describe('Return canonical technique ids, purposes, icons and provider instructions'),
   includeContext: z.boolean().default(true).describe('Include STORY, PRODUCTION and SB_DOC as unverified review context'),
 });
 
@@ -268,6 +289,11 @@ export function readStoryboard(args: z.infer<typeof storyboardReadSchema>): Reco
   result.file = file;
   result.mediaBaseDirectory = dirname(file);
   result.sha256 = sha256;
+  if (args.includeTechniques !== false) result.techniqueCatalog = {
+    version: techniqueContract().VERSION, entries: techniqueContract().entries,
+    selections: (win.SCENES || []).map((scene, i) => ({ id: scene.id, no: i + 1,
+      techniques: scene.shot?.techniques || [], findings: techniqueContract().findings(scene) })),
+  };
   const doc = win.SB_DOC as Record<string, unknown> | undefined;
   if (doc?.props || doc?.propContinuity) result.propSheet = { props: doc.props, continuity: doc.propContinuity };
   result.inspection = { mediaViewed: false, evidenceStatus: 'not_verified',
@@ -277,6 +303,7 @@ export function readStoryboard(args: z.infer<typeof storyboardReadSchema>): Reco
     plan(board: Board, index: number, dir: string): unknown;
   };
   result.continuityFindings = continuity.check(win, dirname(file));
+  result.techniqueFindings = (win.SCENES || []).flatMap((scene, index) => techniqueContract().findings(scene).map(what => ({level:'warn', where:'shot '+(index+1), what})));
   if (args.includeContext) result.reviewContext = {
     story: win.STORY || null, production: win.PRODUCTION || null, document: doc || null,
     evidenceStatus: 'not_verified',

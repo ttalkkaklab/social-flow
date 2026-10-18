@@ -92,9 +92,10 @@ function motionPrompt(scene, plan) {
   const span = (start, end) => Number.isFinite(start) && Number.isFinite(end)
     ? concurrentLine ? ' During the supplied spoken line,' : ` From ${at(start)} to ${at(end)} seconds,` : '';
   const instructions = [
-    'Keep the exact people, location and visual style of the supplied opening image.',
+    'One continuous uninterrupted shot. Keep the exact people, location and visual style of the supplied opening image.',
     redact(design.before),
     redact(camera.framing),
+    require('../../storyboard/references/film-techniques.js').instructions(scene),
     require('../../storyboard/references/production-mode.js').moveOf(camera)?.family === 'static'
       ? 'The camera stays fixed with identical framing, angle, focal length and background scale. ' + redact(camera.end)
       : redact([camera.movement, camera.speed, camera.end].filter(Boolean).join('. ')),
@@ -120,8 +121,8 @@ function motionPrompt(scene, plan) {
     instructions.push((Number.isFinite(beat.at) ? `At ${at(beat.at)} seconds, ` : '') + redact(beat.state));
     seen.add(beat.state);
   }
-  if (design.after) instructions.push('The shot finishes with this state: ' + redact(design.after));
-  if (design.continuity) instructions.push(redact(design.continuity));
+  if (design.continuity) instructions.push('Preserve these continuity conditions throughout: ' + redact(design.continuity));
+  if (design.after) instructions.push('The shot finishes with this state and holds it until the cut: ' + redact(design.after));
   instructions.push('All surfaces stay unlettered and unobstructed, exactly as in the supplied image.');
   return instructions.filter(Boolean).map(text => text.trim()).join(' ');
 }

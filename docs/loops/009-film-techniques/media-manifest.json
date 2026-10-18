@@ -1,0 +1,91 @@
+[
+  {
+    "file": "/Volumes/data/story/meleon/data/gyeongseong-family-farce/episodes/ep01-fake-bride/.work/film-techniques-v1/clips/s0205-r1.mp4",
+    "sha256": "ce63ddd508bbc76199a9d76f1f314b8718bbe7d2481c50d543a4954987cc643a",
+    "status": "rejected_sampled_composition",
+    "score": null,
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "width": 1024,
+          "height": 1920,
+          "r_frame_rate": "24/1"
+        }
+      ],
+      "format": {
+        "duration": "4.375000"
+      }
+    }
+  },
+  {
+    "file": "/Volumes/data/story/meleon/data/gyeongseong-family-farce/episodes/ep01-fake-bride/.work/film-techniques-v1/clips/s0205-r2.mp4",
+    "sha256": "2561cdecc018359f04faf21e1764a9f7782e1efa22eeb523c77b4160380d01a1",
+    "status": "candidate_not_fully_reviewed",
+    "score": null,
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "width": 1024,
+          "height": 1920,
+          "r_frame_rate": "24/1"
+        }
+      ],
+      "format": {
+        "duration": "4.375000"
+      }
+    }
+  },
+  {
+    "file": "/Volumes/data/story/meleon/data/gyeongseong-family-farce/episodes/ep01-fake-bride/.work/film-techniques-v1/clips/s1101-r1.mp4",
+    "sha256": "332eb9934f4f337cdfe54f812faf243fa72d799234ded7088c4cd5b01e60b3da",
+    "status": "raw_silent_audio_conditioned",
+    "score": null,
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "width": 704,
+          "height": 1280,
+          "r_frame_rate": "24/1"
+        }
+      ],
+      "format": {
+        "duration": "5.708333"
+      }
+    }
+  },
+  {
+    "file": "/Volumes/data/story/meleon/data/gyeongseong-family-farce/episodes/ep01-fake-bride/.work/film-techniques-v1/clips/s1101-r1-with-speech.mp4",
+    "sha256": "08423c3e8b6a7442a5a89689e04ec69392c824d8c87b8d7decf4bb7b6bf638db",
+    "status": "candidate_not_fully_reviewed",
+    "score": null,
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "width": 704,
+          "height": 1280,
+          "r_frame_rate": "24/1"
+        },
+        {
+          "codec_name": "aac",
+          "channels": 2,
+          "r_frame_rate": "0/0"
+        }
+      ],
+      "format": {
+        "duration": "5.708333"
+      }
+    }
+  }
+]

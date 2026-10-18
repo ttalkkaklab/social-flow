@@ -109,7 +109,7 @@ function planScenePerformance(input, measureAudio = () => null) {
   return {performance,durationSeconds:cursor,timing,warnings};
 }
 function scenePerformancePayload(scene) {
-  return {performance:scene.performance, narration:(scene.narration || []).map(line => ({id:line.id,speaker:line.speaker,tts:line.tts,delivery:line.delivery,acting:line.acting})), videoDesign:scene.shot?.videoDesign,camera:scene.visual?.camera,source:{bg:scene.visual?.bg,character:scene.visual?.character,location:scene.shot?.location}};
+  return {performance:scene.performance, narration:(scene.narration || []).map(line => ({id:line.id,speaker:line.speaker,tts:line.tts,delivery:line.delivery,acting:line.acting})), videoDesign:scene.shot?.videoDesign,techniques:scene.shot?.techniques,camera:scene.visual?.camera,source:{bg:scene.visual?.bg,character:scene.visual?.character,location:scene.shot?.location}};
 }
 function cameraLock(camera = {}) {
   return require('../storyboard/references/production-mode.js').moveOf(camera)?.family === 'static'
@@ -129,6 +129,7 @@ function sceneDirection(scene = {}, performance = []) {
   return [
     ...keys.map(key => `${key}: ${design[key]}`),
     ...states,
+    require('../storyboard/references/film-techniques.js').instructions(scene),
     ...['framing','movement',...(lock ? [] : ['speed']),'end'].filter(key => camera[key]).map(key => `Camera ${key}: ${camera[key]}`),
     ...(lock ? [lock] : []),
   ].join('\n');

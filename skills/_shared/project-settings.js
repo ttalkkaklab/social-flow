@@ -114,6 +114,8 @@ function handoff(snapshot) {
   const production = {
     videoType: c.videoType,
     modelSettings: { source: snapshot.source, revision: snapshot.revision, models: c.models },
+    // Saved video selection → the board's episode default (production-mode.md §Persist). host/astra adapters carry the engine name as model.
+    ...(c.models?.video ? { videoModel: { model: ['host', 'astra'].includes(c.models.video.engine) ? c.models.video.engine : c.models.video.model, ...(c.models.video.resolution ? { resolution: c.models.video.resolution } : {}), selection } } : {}),
     ...(c.style ? { style: { ...c.style, selection } } : {}),
     ...(c.production ? { mode: c.production.mode, renderRatioVersion: c.production.renderRatioVersion, selection } : {}),
     ...(c.production?.previzRenderer ? { previz: { renderer: c.production.previzRenderer, selection } } : {}),

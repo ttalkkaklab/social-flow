@@ -39,7 +39,7 @@ mesh lane and inspect full-rate playback. Never infer continuous motion quality 
    state change. Do not reward copying the palette, object or layout without a reason.
 2. Cite the new slide's actual frame and location, then the narration or token it should match.
 3. A source/code inspection or an example image cannot earn points for unseen output.
-   Preserve the rubric's 95-point and zero-P0 threshold; there is no automatic example pass.
+   Report the score and findings as evidence; an example image never grants a pass.
 
 Source context: [broadcast study](../../../docs/research/2026-09-02-broadcast-slide-design/index.html)
 and [object study](../../../docs/research/2026-09-04-rendered-object-slide/index.html).

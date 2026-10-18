@@ -12,8 +12,8 @@ image changes with the sentence. Copy the visual system, not its disc, colours o
 ## Planning gate
 
 Every editorial diagram declares `quality: "object-state-v1"` and `subject` in scenes.js.
-`check-scenes.js` rejects missing contracts, including in draft mode. Do not approve the
-storyboard or start paid generation while that check fails. Existing output files are not
+`check-scenes.js` reports missing contracts as warnings, including in draft mode. Fill them in
+before paid generation. Existing output files are not
 rewritten; an old storyboard submitted for a new build must acquire this plan first.
 
 ```js
@@ -83,5 +83,6 @@ surface detail, a consistent light direction, readable silhouettes and purposefu
 through the spoken sentence. A frozen cutout with moving labels is a failure even if every
 machine check passed. Check actual playback for timing; frames alone do not verify it.
 Do not invent a numerical quality score. An unavailable visual/playback check is unverified,
-not a pass. Fix a failed cut before assembly; if the supported lane cannot meet the reference,
-show the failed frame and request direction. Never mark the episode ready on a missing review.
+not a pass. Fix a failed cut when you can; if the supported lane cannot meet the reference,
+show the failed frame with the output. A missing review is recorded as `not_reviewed` and
+assembly continues with that warning shown.

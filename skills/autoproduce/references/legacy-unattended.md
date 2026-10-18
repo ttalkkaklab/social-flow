@@ -20,7 +20,7 @@ For new work, return to the corresponding SKILL.md and character-scenarios.md.
 - 3. Authoring scenes.js
 - 3.5 Narration read-through gate (gate 6f — storyboard-reviewer narration mode)
 - 3.6 Wording review (gate 6c — storyboard-reviewer vocabulary mode)
-- 4. Style gate — video surfaces (gate 2)
+- 4. Style check — video surfaces (gate 2)
 - 5. Tier decision + pre-spend estimate (gate 5)
 - 6. Visual generation
 - 6.5 Image check (the author's own read)
@@ -184,7 +184,7 @@ This takes precedence over the older model-only setup and per-run style/ratio de
 
 Then follow [model settings](../../_shared/model-settings.md) for the selected working
 directory. Interactive first use asks video type → video model → speech model → image model and saves the choices.
-Unattended first use with no settings reports `model_setup_required` before taking
+Unattended first use with no settings reports `project_setup_required` before taking
 the production lock; if only the type is missing, report `video_type_required`.
 Do not infer the user's standing type choice. Apply [video types](../../_shared/video-types.md)
 to the storyboard and carry the selected type into `PRODUCTION.videoType` before taking
@@ -198,34 +198,15 @@ Load `data/<channel>/profile.md` (abort if missing). On an unattended call,
 also read the calling growth plan's `autoproduce:` block
 (`growth/<platform>/growth-plan.md` — the `<platform>` argument): `enabled`, `topic_source`,
 `min_queue`, `daily_produce_cap`, `duplicate_threshold`, `max_cost_per_video`, `daily_cost_cap`,
-`weekly_cap`, `mark_queues`, and the two standing previz answers `previz_renderer` and
-`video_model` (§5 — absent, no generated cut is planned).
+`weekly_cap`, `mark_queues`, and the optional overrides `previz_renderer` and
+`video_model` (the saved `models.json` choices satisfy both; absent, the saved models apply).
 
 **The lock is per channel** — two growth loops share one channel, so a
-per-platform lock is useless. Use `mkdir`'s atomicity.
-
-```bash
-G=data/<channel>/growth; LOCK=$G/.autoproduce.lock
-TOKEN=$(uuidgen)                     # ownership token for this run
-mkdir -p "$G"
-# held longer than 60 minutes = dead lock (Veo async takes at most 6 minutes, so the margin is generous)
-[ -d "$LOCK" ] && [ -n "$(find "$LOCK" -maxdepth 0 -mmin +60 2>/dev/null)" ] && rm -rf "$LOCK"
-mkdir "$LOCK" 2>/dev/null || { echo "another loop is authoring — skipping this tick"; exit 0; }
-printf '%s %s <platform>\n' "$TOKEN" "$(date -u +%FT%TZ)" > "$LOCK/owner"
-```
-
-Once you hold the lock, **release it no matter how the run ends — success,
-failure, or abort.** Forget, and the next tick waits 60 minutes. But before
-deleting, **check the lock is still yours.**
-
-```bash
-grep -qF "$TOKEN" "$LOCK/owner" 2>/dev/null && rm -rf "$LOCK"
-```
-
-An unconditional `rm -rf` fails like this — while my run drags past 60 minutes,
-the next tick declares the lock dead, reclaims it, and creates its own. My run
-finishes late and **deletes someone else's lock.** A third loop then slips
-through the gap and authoring overlaps on the same channel.
+per-platform lock is useless. Acquire, verify and release it exactly as
+[unattended-lifecycle.md#channel-lock](unattended-lifecycle.md#channel-lock) describes:
+`mkdir` atomicity, an owner record with this run's token, release on every exit only while
+the token still matches, and no reclaim on age alone — a run that drags past an arbitrary
+timeout is still alive, and deleting its lock lets a third loop author the same channel.
 
 Read today's and this week's totals from `$G/autoproduce.json` (create if
 missing). If any of the following trips, don't author — report the reason.
@@ -266,11 +247,10 @@ argument, follow the plan's `topic_source`.
   Knowledge-iN, "what people don't know" sits there in their own question
   wording — raw material for hooks. Use this mode only when the user explicitly
   picked it at init.
-- **`scout`** — use one topic picked in
-  `data/<channel>/growth/keywords/market-keywords.md` (or the top of the
-  keyword table if none is marked). These are phrases `/social-flow:topic-scout`
-  extracted from videos at 5x or more the channel median. If the file is
-  missing or older than 14 days, don't author — point to topic-scout. Don't
+- **`scout`** — the marked topic in `data/<channel>/growth/keywords/market-keywords.md`,
+  phrases `/social-flow:topic-scout` extracted from videos at 5x or more the channel
+  median. The fallback and the 14-day freshness rule are in
+  [unattended-lifecycle.md#scout-fallback](unattended-lifecycle.md#scout-fallback). Don't
   re-call the tool every tick — search.list costs 100 units per call.
 
 **Topic-axis gate** — check the candidate against profile §1's topic areas and
@@ -315,8 +295,8 @@ Build the slug by profile §7's rules.
 ### 2. Research & verification (gate 1)
 
 Research per profile §5 policy. Tool order and quota thrift:
-`references/cost-tiers.md` §non-money budgets — **`serp_*` at most twice per
-episode**.
+`references/cost-tiers.md` §non-money budgets — `serp_*` for precise searches, about
+two per episode as guidance.
 
 Research is the step before any scene is written, and it follows the storyboard
 skill's §2 shape inside the quota — **two passes, a pick in between**:
@@ -324,7 +304,8 @@ skill's §2 shape inside the quota — **two passes, a pick in between**:
 1. **First research (§2.1)** — write the direction-finding question map (3–5 rows:
    what people ask, what's true, which explanations compete), search per question
    from two directions (`kin`·`news`·`blog` on naver_search, WebSearch, `datago`
-   for government-origin figures), log **ten or more** searches, then find the **wow
+   for government-origin figures), log the searches you ran (a count is guidance, not a
+   quota — search until the claims actually made are supported), then find the **wow
    points** in `research.md` §Wow — three or more rows, what the viewer walks in believing
    → what the evidence shows (claim #N, a type; the 실제로는 half gets a 진짜?, not a
    그렇구나 — storyboard `scenario-stage.md` §The wow first), then decide **three
@@ -442,7 +423,7 @@ The rules automated authoring breaks most often:
 - `tts` holds the Korean phonetic spelling ("4,700만"→"사천칠백만"), `sub` the
   original notation.
 - THEME copies profile §3's values verbatim.
-- Structure: hook + drip (1–n) + spoken CTA (4–12 shots, typically 2–5 drips);
+- Structure: hook + drip (1–n) + a close (a spoken CTA is optional; 4–12 shots, typically 2–5 drips);
   main body inside the channel's band — profile.md's `length_min_seconds` and
   `length_max_seconds`; unset, the preset's 35–120 seconds stands, of which 35–75s is the
   recommendation and going over it needs a design reason. No profile key raises the
@@ -459,8 +440,8 @@ The rules automated authoring breaks most often:
   stimulus. Continuity applies to the stimulus, not to the outcome — playbook §2 governs
   the title and description whatever the cover's hookType is. Fear needs the threat backed
   in research.md or cushioned with possibility phrasing, and the drip shots must answer
-  it — in the unattended loop, unbacked fear is blocked by copy-gate P0-4 (scenes-schema
-  §the four opening strategies).
+  it — in the unattended loop, unbacked fear is a copy finding (P0-4, scenes-schema
+  §the four opening strategies) to fix in the draft.
 - Next to `hookType` write **`hookForm`** — the shape of the first line, one of
   `paradox`·`gap`·`payoff`·`identify`·`number`·`secret` (scenes-schema §the six hook
   forms), `payoff` included on a short. Whatever the form, close what it opens: a gap
@@ -471,7 +452,7 @@ The rules automated authoring breaks most often:
   in it), and **the first second is the floor under the first three** — at t=0 the topic
   word or the figure is legible on an authored information slide and the picture is already moving. Never burn narration subtitles into the video. **Every narration
   sentence opens curiosity, moves the information forward, or puts evidence down — or
-  it's cut** (copy-gate P0-11). Optional sidecar subtitles use one sentence per cue and follow actual speech timing.
+  it's cut** (copy finding P0-11). Optional sidecar subtitles use one sentence per cue and follow actual speech timing.
 - **A short is always hook → drip (1–n) → cta.** Do not default to
   `answer-first`. Write `beat:"hook"` on the cover, `beat:"drip"` on every
   middle shot, `beat:"cta"` on the last narrated shot. n ≥ 1. Do not write
@@ -494,11 +475,10 @@ The rules automated authoring breaks most often:
 - One entry is one shot. Write `scene`·`sceneSlug`·`shot.feel`·`shot.size`·
   `shot.angle`·`shot.info`·`shot.infoType`·`shot.space` and `visual.picture`·`visual.overlay` (source of
   truth: scenes-schema §grammar units and production layers). On a short's `cta` shot
-  also write **`shot.share`** — the one sentence, figure or verdict a viewer would forward
+  optionally write **`shot.share`** — the one sentence, figure or verdict a viewer would forward
   as-is, written like `shot.info` — and `shot.shareType`, one of
-  `fact`·`verdict`·`line`·`checklist`·`none`. `check-scenes.js` fails the episode when that
-  shot has no `shot.share` or under 8 compacted characters of one, so an unattended run stops
-  before generation rather than shipping a close nobody would pass on. **Feel first** —
+  `fact`·`verdict`·`line`·`checklist`·`none`. Both are optional (automation-guidance);
+  `check-scenes.js` allows a short whose close has no share trigger. **Feel first** —
   say what the audience should feel on the shot, then take the size and the angle
   (and the move and length on a generated shot) from the feel → technique table
   (`../storyboard/references/directing-grammar.md` §5). Write `shot.space` (`frame:
@@ -513,7 +493,7 @@ The rules automated authoring breaks most often:
 The story layer is done when the spoken sentences alone carry the episode (user
 directive, 2026-09-02) — unattended there is nobody to hear the gap a picture was
 going to fill, so this reads for it before any money goes out. Runs after
-`check-scenes.js --draft` exits 0 and before the style gate, because it rewrites
+`check-scenes.js --draft` exits 0 and before the style check, because it rewrites
 narration.
 
 **Hand the sentences over inline** — the reviewer opens no file for this read:
@@ -594,7 +574,7 @@ is now your own pass against storyboard §4's rules — `directing-grammar.md` �
 feel and the dials, scenes-schema §camera · §cut length · §sound for the slots, the cue names
 and the clip audio — and the checker's exit code is what gates it.
 
-### 4. Style gate — video surfaces (gate 2)
+### 4. Style check — video surfaces (gate 2)
 
 ```bash
 PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
@@ -607,7 +587,8 @@ done
 0 pass / 1 warning / 2 S1 detected / **3 means the gate didn't run — that is
 not a pass**. On 2, **fix scenes.js** and redo from §4 — fixing only
 `.work/text-*.txt` desyncs it from the video.
-Still 2 after two fixes: abort and report — this keeps the unattended loop from
+Still 2 after two fixes: write the remaining lines into the report as suggestions and
+continue — S1 is a suggestion, not a stop, and this keeps the unattended loop from
 polishing the same sentence forever.
 
 ### 5. Tier decision + pre-spend estimate (gate 5)
@@ -686,16 +667,14 @@ the price.
   arguments. Replace the baseline video projection in `.work/cost-estimate.tsv` with those
   model-specific rows and rerun the full episode cap check, including spent attempts.
   Never add a paid comparison by default or exceed the standing budget for an upgrade.
-- **Hook motion background (only when selected by the cut plan, and only with standing
-  answers)** — every generated cut is a 3D previz cut with two HITL choices behind it
-  (CLAUDE.md §AI video cuts are pre-rendered in 3D first): the previz renderer and the video
-  model. The unattended loop cannot ask, so it plans a `generated_video` cut **only when the
-  growth plan's `autoproduce:` block names both** — `previz_renderer: threejs` (Blender needs
-  a machine with it) and `video_model: dreamina-seedance-2-0-mini-260615 720p` (or another
-  2.x grade) — and records them as `PRODUCTION.previz` / `PRODUCTION.videoModel` with
-  `selection.kind: "standing"` and the plan as the reference. Without both, `hook_video` stays
-  off and the opening is a still with a camera move; `production-mode.js` refuses the board
-  otherwise. With them: render the three.js previz (`previz-template.html` →
+- **Hook motion background (only when selected by the cut plan)** — the renderer and the video
+  model come from `.social-flow/models.json` (`production.previzRenderer`, `models.video`),
+  recorded as `PRODUCTION.previz` / `PRODUCTION.videoModel` with `selection.kind: "standing"`;
+  the growth plan's `autoproduce:` `previz_renderer` / `video_model` fields are optional
+  overrides. A previz is optional (2026-10-18): useful when the model takes a reference clip,
+  advice otherwise, and no checker refuses a cut without one. `hook_video` stays off unless
+  the channel policy enables it, and the opening is then a still with a camera move. When a
+  generated hook is planned: optionally render the three.js previz (`previz-template.html` →
   `render-motion-slide.mjs --previz`), edit the cover still from its first frame, and call
   `seedance_reference` with the previz as `referenceVideoPaths`, the stored `visual.video.prompt`
   verbatim, `generateAudio: false`, the cover's `duration` (4–8 s; input plus output seconds are
@@ -788,9 +767,9 @@ glyphs, a bright lower third that will drown the subtitles.
 
 - **What the clip brought back** — every returned clip runs `check-clip-artifacts.js`
   (produce §3). A finding gets **one** regeneration off the same still with the artifact
-  negatives added; a finding on the second take is written to the run's findings and the run
-  waits, the same as a speech warning — it does not approve its own warnings, and a clip
-  with text on the picture is never assembled unflagged.
+  negatives added; a finding on the second take is written to the run's findings with the
+  clip path and the run continues (unattended-lifecycle.md#completion) — it does not approve
+  its own warnings, and a clip with text on the picture is never assembled unflagged.
 - **Room tone** — `sound.ambience` follows the SFX rule below: a loop entry that resolves or
   can be generated is laid, one that cannot is left off the shots rather than named.
 - **SFX** — unattended runs use only effects that resolve. A `window.SFX` `{ prompt }` entry
@@ -949,8 +928,9 @@ as-is, `check-meta.js` on `output/youtube/meta.md` included — the title and
 description withhold the result, playbook §2). A `spoiler` cover buys nothing here:
 continuity applies to the stimulus, not to the outcome — playbook §2 governs the title
 and description whatever the cover's hookType is, and on a short the answer-leak check
-runs either way. exit 2: fix and rerun; two
-failures and that platform's queue marker doesn't get stamped. **Also run produce §9's batch check (check-batch)** — on
+runs either way. exit 2: fix what you can and rerun; what remains after two passes goes into
+the report as suggestions, and the queue marker still follows
+unattended-lifecycle.md#completion. **Also run produce §9's batch check (check-batch)** — on
 the unattended path nobody is around to notice "this reads just like the last
 one", and since the growth loops call this skill repeatedly, this is where
 channel homogenization piles up fastest. There's no verdict (rankings only) —
@@ -979,12 +959,13 @@ status: produced
 auto_produced: true
 approved_by: autoproduce/<calling growth plan, or user>
 tier: economy            # economy | escalated
-queue: ready             # approved platforms only — hold while P0s are unresolved
+queue: ready             # approved platforms only (unattended-lifecycle.md#completion — a creative finding is not a hold)
 queue_instagram: ready
 queue_at: 2026-08-11
 ```
 
-4. Release the lock (`rm -rf "$LOCK"`)
+4. Release the lock — only while the owner record still carries this run's token
+   (unattended-lifecycle.md#channel-lock)
 5. Report — topic, slug, total length, tier, cost, queues stamped, the scenario
    and narration scores (with the read count), unresolved findings
 
