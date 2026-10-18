@@ -5,6 +5,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
+const { isDeepStrictEqual } = require('node:util');
 const { identityCharacter, direction, requiresSpeech } = require('../../_shared/character-identity.js');
 const { identityVoice, voiceErrors } = require('../../_shared/character-voice.js');
 
@@ -23,7 +24,27 @@ function handoff(file, { requireSpeech = true } = {}) {
   if (!name) throw new Error('identity.md needs a # Name heading');
   const id = path.basename(path.dirname(path.resolve(file)));
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) throw new Error('Character folder needs a kebab-case id');
-  return { id, name, character, tts: identityVoice(source, { optional: !requireSpeech }), direction: direction(character, { requireSpeech }), identitySha256: createHash('sha256').update(source).digest('hex') };
+  const tts = identityVoice(source, { optional: !requireSpeech });
+  return { id, name, character, tts, direction: direction(character, { requireSpeech }), identitySha256: createHash('sha256').update(source).digest('hex'), ...selectedVoiceReference(source, tts) };
+}
+
+// Reuse the chosen audition's actual bytes, rather than an unrelated old voice.wav.
+function selectedVoiceReference(source, tts) {
+  if (!tts) return {};
+  const document = [...source.matchAll(/```json\s*\n([\s\S]*?)```/g)].map(m => JSON.parse(m[1])).find(v => v?.character);
+  const selection = document?.voiceSelection;
+  if (!selection?.auditionPath) return {};
+  try {
+    const audition = JSON.parse(fs.readFileSync(selection.auditionPath, 'utf8'));
+    const chosen = audition.candidates?.find(c => c.id === selection.candidateId);
+    if (!chosen || !isDeepStrictEqual(chosen.tts, tts) || chosen.audioSha256 !== selection.audioSha256 || !path.isAbsolute(chosen.audioPath))
+      throw new Error('Selected voice sample no longer matches the pinned character voice');
+    // Byte validation belongs to video_plan when this sample is actually an input.
+    return {voiceReference:{path: chosen.audioPath, sha256: chosen.audioSha256, tts}};
+  } catch (error) {
+    // Missing optional samples must not block stills or ordinary TTS production.
+    return {voiceReferenceWarning: error.message};
+  }
 }
 if (require.main === module) {
   try {

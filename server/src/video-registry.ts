@@ -56,11 +56,24 @@ export function videoCatalog() {
   return {
     version: 1,
     adapters: Object.entries(VIDEO_ADAPTERS).map(([tool, a]) => ({ tool, engine: a.engine, deployment: a.deployment, operation: a.operation,
+      voice: videoVoiceCapabilities(tool),
       fields: keys(a.schema), modelConstraints: a.engine === 'seedance' ? seedance.SEEDANCE_MODEL_SPECS :
         a.engine === 'veo' ? { models: veo.VALID_VIDEO_MODELS, resolutions: veo.VALID_VIDEO_RESOLUTIONS, note: 'Use video_plan for cross-field constraints' } :
         { note: 'Use video_plan; deployment-specific schema is authoritative' } })),
     host: { execution: 'external', note: 'Host tools are outside MCP enforcement; never claim an API gate protects their calls.' },
     unimplemented: ['minimax-h3-api', 'ltx-official-api'],
+  };
+}
+/** Operation-specific contracts, separate from exact supplied-speech synchronization. */
+export function videoVoiceCapabilities(tool: string) {
+  const adapter = VIDEO_ADAPTERS[tool];
+  if (!adapter) throw new Error('Unsupported video tool: ' + tool);
+  return {
+    voiceReference: tool === 'seedance_reference' ? 'model_dependent' : 'unsupported',
+    suppliedSpeech: tool === 'astra_audio2video' ? 'audio_conditioned_reencoded' : 'unsupported',
+    exactAudioPreservation: false,
+    voiceContinuation: tool === 'omni_extend' ? 'previous_interaction_id' : tool === 'veo_extension' ? 'source_final_second' : 'unsupported',
+    review: 'not_reviewed',
   };
 }
 export function speechVideoCapabilities(provider: string, model: string) {
