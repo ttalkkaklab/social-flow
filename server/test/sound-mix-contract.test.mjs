@@ -38,26 +38,22 @@ function compile(dir, mix) {
 }
 
 test('$mix checker and compiler share every numeric boundary and reject malformed values before writes', () => {
+  // Both CLIs consume mixFindings, so the value matrix runs against it directly.
+  for (const [field, , min, max] of MIX_FIELDS) {
+    const rows = [[min, true], [max, true], [min - 0.01, false], [max + 0.01, false], [null, false], [true, false], ['', false], [Infinity, false]];
+    if (field.endsWith('Seconds')) rows.push([1e-7, false], [1e-6, false], [0.001, true]);
+    for (const [value, accepted] of rows) assert.equal(mixFindings(set({}, field, value)).length === 0, accepted, `${field}=${value}`);
+  }
+  // One spawn per consumer and outcome proves each CLI reads the shared bounds.
   const dir = fixture();
   try {
-    for (const [field, , min, max] of MIX_FIELDS) {
-      for (const [value, accepted] of [[min, true], [max, true], [min - 0.01, false], [max + 0.01, false], [null, false], [true, false], ['', false]]) {
-        const mix = set({}, field, value);
-        const result = compile(dir, mix);
-        assert.equal(result.status === 0, accepted, `${field}=${value}: ${result.stderr}`);
-        const checked = spawnSync(process.execPath, [checker, join(dir, 'scenes.js'), '--draft', '--json'], { encoding: 'utf8' });
-        const findings = JSON.parse(checked.stdout).findings.filter(f => f.where === 'window.MUSIC.$mix');
-        assert.equal(findings.length === 0, accepted, `${field}=${value}: ${JSON.stringify(findings)}`);
-      }
-      assert.ok(mixFindings(set({}, field, Infinity)).length, field);
-      if (field.endsWith('Seconds')) {
-        assert.notEqual(compile(dir, set({}, field, 1e-7)).status, 0, field);
-        assert.notEqual(compile(dir, set({}, field, 1e-6)).status, 0, field);
-        assert.equal(compile(dir, set({}, field, 0.001)).status, 0, field);
-      }
-    }
+    const findings = () => JSON.parse(spawnSync(process.execPath, [checker, join(dir, 'scenes.js'), '--draft', '--json'], { encoding: 'utf8' }).stdout)
+      .findings.filter(f => f.where === 'window.MUSIC.$mix');
+    assert.equal(compile(dir, { ducking: { ratio: 20 } }).status, 0);
+    assert.deepEqual(findings(), []);
     const before = readFileSync(join(dir, 'work/sound.env'), 'utf8');
     assert.notEqual(compile(dir, { ducking: { ratio: 21 } }).status, 0);
+    assert.equal(findings().length, 1);
     assert.equal(readFileSync(join(dir, 'work/sound.env'), 'utf8'), before);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
@@ -85,20 +81,23 @@ test('every compiled minimum and maximum runs through the builder audio filter g
     writeFileSync(join(dir, 'work/cardstart.tsv'), '0\t0\n1\t0.5\n');
     writeFileSync(join(dir, 'work/bgmgate.list'), '1\t1.5\n');
     const script = `set -e\nsay() { :; }\n. work/sound.env\n${defaults}\nNT=3\nSFXIN=""\nAMBIN="-i work/amb.wav"\n${fadeStart}\n${mixStage}`;
-    for (const [field, , min, max] of MIX_FIELDS) {
-      for (const value of field.endsWith('Seconds') ? [min, 0.001, max] : [min, max]) {
-        const mix = set({}, field, value);
-        assert.equal(compile(dir, mix).status, 0);
-        command('bash', ['-c', script], { cwd: dir });
-        const pcm = command('ffmpeg', ['-v', 'error', '-i', 'work/mix.wav', '-f', 'f32le', '-'], { cwd: dir, encoding: null }).stdout;
-        let audible = false;
-        for (let i = 0; i < pcm.length; i += 4) {
-          const sample = pcm.readFloatLE(i);
-          assert.ok(Number.isFinite(sample), `${field}=${value}`);
-          audible ||= Math.abs(sample) > 0.001;
-        }
-        assert.ok(audible, `${field}=${value}: mix must retain the narration`);
+    // Every bound at once: one compile and filter-graph run per extreme instead of one per field.
+    for (const mix of [
+      MIX_FIELDS.reduce((all, [field, , min]) => set(all, field, min), {}),
+      MIX_FIELDS.filter(([field]) => field.endsWith('Seconds')).reduce((all, [field]) => set(all, field, 0.001), {}),
+      MIX_FIELDS.reduce((all, [field, , , max]) => set(all, field, max), {}),
+    ]) {
+      const label = JSON.stringify(mix);
+      assert.equal(compile(dir, mix).status, 0, label);
+      command('bash', ['-c', script], { cwd: dir });
+      const pcm = command('ffmpeg', ['-v', 'error', '-i', 'work/mix.wav', '-f', 'f32le', '-'], { cwd: dir, encoding: null }).stdout;
+      let audible = false;
+      for (let i = 0; i < pcm.length; i += 4) {
+        const sample = pcm.readFloatLE(i);
+        assert.ok(Number.isFinite(sample), label);
+        audible ||= Math.abs(sample) > 0.001;
       }
+      assert.ok(audible, `${label}: mix must retain the narration`);
     }
     assert.equal(compile(dir, { silenceRampSeconds: 0, endingFadeSeconds: 0, hook: { releaseSeconds: 0 } }).status, 0);
     command('bash', ['-c', script], { cwd: dir });
@@ -118,12 +117,11 @@ test('cue crossfade and bed/ambience separation boundaries use the real bed comp
   try {
     command('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'sine=frequency=220:sample_rate=48000:duration=24', '-ac', '2', join(dir, 'cue.wav')]);
     writeFileSync(join(dir, 'cues.tsv'), `0\t${join(dir, 'cue.wav')}\n12\t${join(dir, 'cue.wav')}\n`);
-    for (const crossfade of [0, 0.001, 10]) {
-      for (const separation of [0, 30]) {
-        command('bash', [join(refs, 'bgm-bed.sh'), join(dir, 'bed.wav'), '24', String(-16 - separation), join(dir, 'cues.tsv')], { env: { ...process.env, BGM_CUE_XF: String(crossfade) } });
-        const duration = Number(command('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', join(dir, 'bed.wav')]).stdout);
-        assert.ok(Math.abs(duration - 24) < 0.01, `crossfade=${crossfade}: ${duration}`);
-      }
+    // Separation only sets the bed's target loudness, so each crossfade bound runs once.
+    for (const [crossfade, separation] of [[0, 0], [0.001, 30], [10, 30]]) {
+      command('bash', [join(refs, 'bgm-bed.sh'), join(dir, 'bed.wav'), '24', String(-16 - separation), join(dir, 'cues.tsv')], { env: { ...process.env, BGM_CUE_XF: String(crossfade) } });
+      const duration = Number(command('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', join(dir, 'bed.wav')]).stdout);
+      assert.ok(Math.abs(duration - 24) < 0.01, `crossfade=${crossfade}: ${duration}`);
     }
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

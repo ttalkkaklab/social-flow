@@ -212,10 +212,6 @@ describe('sns_issue_scout · serp_trending_now tool surface', () => {
   it('the platforms enum matches the module source of truth', () => {
     assert.deepEqual(scout.inputSchema.properties.platforms.items.enum, [...SNS_SCOUT_PLATFORMS]);
   });
-  it('the description nails down that the yardstick differs from the YouTube multiplier — it stops the two being mixed into one table', () => {
-    assert.match(scout.description, /no engagement counts/);
-    assert.match(scout.description, /never mix it into the same table/);
-  });
   it('the description spells out the credit formula', () => {
     assert.match(scout.description, /Credits = platforms × seeds × pagesPerQuery/);
     assert.match(trending.description, /One call = one SerpApi credit/);

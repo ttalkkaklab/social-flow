@@ -1,8 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import { ttsSchema } from '../dist/character-tts.js';
 const require = createRequire(import.meta.url);
-const { identityVoice, boardVoiceErrors } = require('../../skills/_shared/character-voice.js');
+const { identityVoice, boardVoiceErrors, voiceErrors, generationVoiceErrors } = require('../../skills/_shared/character-voice.js');
+const { compileActing } = require('../../skills/_shared/speech-contract.js');
 const tts = { engine: 'gemini', voiceId: 'Kore', language: 'ko', speed: 1 };
 const identity = value => '```json\n' + JSON.stringify({ tts: value }) + '\n```';
 test('character identity requires structured, usable voice settings', () => {
@@ -97,4 +99,46 @@ test('provenance checks the voice and language fields consumed by each generator
   delete eproof.voiceSettings.lang;eproof.voiceSettings.languageCode='ko';assert.deepEqual(generationVoiceErrors(eleven,eproof,line),[]);
   delete eproof.voiceSettings.languageCode;assert.deepEqual(generationVoiceErrors(eleven,eproof,line),[]);
   delete eproof.voiceSettings.voiceId;eproof.voiceSettings.voiceName=eleven.voiceId;assert.match(generationVoiceErrors(eleven,eproof,line).join(),/voiceId differs/);
+});
+
+test('baseline generation receipts cannot substitute another spoken line or tagged turn',()=>{
+ const voice={...tts,model:'gemini-2.5-flash-preview-tts',stylePrompt:'Bright confident sales smile.'};
+ const {generationVoiceErrors}=require('../../skills/_shared/character-voice.js'),line={tts:'Original line'};
+ const single={generator:'tts_generate',language:'ko',text:line.tts,voiceSettings:{model:voice.model,voiceName:voice.voiceId,stylePrompt:voice.stylePrompt,text:'Different line'}};
+ assert.match(generationVoiceErrors(voice,single,line).join(),/Generation text differs/);
+ const v38={...voice,model:'gemini-3.8-flash-tts',stylePrompt:undefined};
+ const turns={generator:'tts_gemini_38',language:'ko',text:line.tts,voiceSettings:{model:v38.model,voice:v38.voiceId,turns:[{text:'Different line'}]}};
+ assert.match(generationVoiceErrors(v38,turns,line).join(),/Generation turns differ/);
+ turns.voiceSettings.turns=[{text:'<sigh> '+line.tts}];assert.match(generationVoiceErrors(v38,turns,line).join(),/Generation turns differ/);
+ delete single.voiceSettings.text;assert.deepEqual(generationVoiceErrors(voice,single,line),[]);
+});
+
+test('stable Gemini voice identity survives scene emotion and exact request provenance', () => {
+  const voice = { ...tts, model: 'gemini-3.8-flash-tts' };
+  for (const model of ['gemini-3.8-flash-tts','gemini-2.5-flash-preview-tts']) {
+    const pinned = {...voice,model,voiceDirection:'Dry concise phrasing with low falling endings.'};
+    assert.deepEqual(voiceErrors(pinned),[]);
+    assert.equal(ttsSchema.safeParse(pinned).success,true);
+    for (const acting of [undefined,{direction:'urgent but restrained'}]) {
+      const line = {tts:'괜찮아요.',...(acting?{acting}:{})};
+      const plan = compileActing(line.tts,acting,pinned);
+      const style = plan.generation.turns?.[0].style || plan.generation.stylePrompt;
+      assert.match(style,/Dry concise phrasing/);
+      if (acting) assert.match(style,/urgent but restrained/);
+      const proof={generator:plan.generator,text:line.tts,language:'ko',voiceSettings:plan.generation};
+      assert.deepEqual(generationVoiceErrors(pinned,proof,line),[]);
+      const tampered=structuredClone(proof);
+      if(tampered.voiceSettings.turns) delete tampered.voiceSettings.turns[0].style;
+      else delete tampered.voiceSettings.stylePrompt;
+      assert.match(generationVoiceErrors(pinned,tampered,line).join(),/differs/);
+    }
+  }
+});
+
+test('unsupported or oversized identity controls fail rather than silently dropping a baseline', () => {
+  const voice = { ...tts, model: 'gemini-3.8-flash-tts' };
+  const eleven={...voice,engine:'elevenlabs',model:'eleven_v4',voiceId:'actor',voiceDirection:'Do not insert biography into audio tags.'};
+  assert.ok(voiceErrors(eleven).length);
+  assert.equal(ttsSchema.safeParse(eleven).success,false);
+  assert.throws(()=>compileActing('Hi',{direction:'x'.repeat(200)},{...voice,voiceDirection:'y'.repeat(400)}),/500/);
 });

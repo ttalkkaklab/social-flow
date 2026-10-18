@@ -76,4 +76,3 @@ test('a route edit changes the approval signature and mismatched billed duration
  s.visual.camera.trajectory.seconds=5;
  assert.throws(()=>scenePlan(s),/resolved billed duration/);
 });
-export {shot};

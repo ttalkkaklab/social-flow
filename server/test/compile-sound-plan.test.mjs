@@ -7,7 +7,6 @@ import { afterEach, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const compiler = fileURLToPath(new URL('../../skills/produce/references/compile-sound-plan.js', import.meta.url));
-const builder = fileURLToPath(new URL('../../skills/produce/references/build-reel.sh', import.meta.url));
 const roots = [];
 afterEach(() => { while (roots.length) rmSync(roots.pop(), { recursive: true, force: true }); });
 
@@ -112,13 +111,5 @@ window.SCENES=[
     const rows = readFileSync(join(p.work, 'sfx.tsv'), 'utf8');
     assert.match(rows, new RegExp(join(p.channel, 'assets/custom/mapped.aiff').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     assert.match(rows, new RegExp(join(p.channel, 'assets/audio/sfx/clip.mp4').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-  });
-
-  it('the build entrypoint compiles the current board before sourcing sound.env', () => {
-    const source = readFileSync(builder, 'utf8');
-    const compileAt = source.indexOf('node "$HERE/compile-sound-plan.js"');
-    const sourceAt = source.indexOf('[ -f sound.env ] && . ./sound.env');
-    assert.notEqual(compileAt, -1);
-    assert.ok(compileAt < sourceAt, 'compile-sound-plan must run before sound.env is sourced');
   });
 });

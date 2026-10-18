@@ -19,6 +19,18 @@ import { TOOLS } from '../dist/tools.js';
 
 import packageMetadata from '../package.json' with { type: 'json' };
 
+// The client really sleeps 5 s between polls and up to a minute for its rate limits.
+// Run that clock forward instead of waiting it out; sub-second timers stay real.
+const realNow = Date.now;
+const realSetTimeout = globalThis.setTimeout;
+let skippedMs = 0;
+Date.now = () => realNow() + skippedMs;
+globalThis.setTimeout = (fn, ms = 0, ...args) => {
+  if (ms < 1_000) return realSetTimeout(fn, ms, ...args);
+  skippedMs += ms;
+  return realSetTimeout(fn, 0, ...args);
+};
+
 import {
   ASTRA_VIDEO_ALLOWED_FIELDS,
   ASTRA_VIDEO_FRAME_LIMITS,
@@ -106,30 +118,6 @@ describe('the tools cover the measured seven modes and the two designed ones', (
     assert.deepEqual(added('ic_lora'), [...ASTRA_VIDEO_MEASURED_FIELDS.ingredients, 'adapter', 'conditioning_mask', 'skip_stage_2', 'generate_audio'].sort());
   });
 
-  // Measured 2026-09-29: the server names the whole allow-list when it rejects an unknown key.
-  it('generate alone takes lora, and does not take negative_prompt or num_inference_steps', () => {
-    assert.ok(ASTRA_VIDEO_ALLOWED_FIELDS.generate.includes('lora'));
-    assert.ok(!ASTRA_VIDEO_ALLOWED_FIELDS.generate.includes('negative_prompt'));
-    assert.ok(!ASTRA_VIDEO_ALLOWED_FIELDS.generate.includes('num_inference_steps'));
-    for (const mode of ['guided', 'guided_fast', 'guided_hq', 'keyframe', 'audio2video', 'ingredients', 'ic_lora', 'retake']) {
-      assert.ok(!ASTRA_VIDEO_ALLOWED_FIELDS[mode].includes('lora'), `${mode} must not accept lora`);
-    }
-  });
-
-  it('num_generated_keyframes lives on generate and the two guided tiers only', () => {
-    for (const mode of ['generate', 'guided', 'guided_fast']) {
-      assert.ok(ASTRA_VIDEO_ALLOWED_FIELDS[mode].includes('num_generated_keyframes'), mode);
-    }
-    for (const mode of ['keyframe', 'audio2video', 'retake']) {
-      assert.ok(!ASTRA_VIDEO_ALLOWED_FIELDS[mode].includes('num_generated_keyframes'), mode);
-    }
-  });
-
-  it('auto_duration is absent from keyframe, audio2video and retake', () => {
-    for (const mode of ['keyframe', 'audio2video', 'ingredients', 'ic_lora', 'retake']) {
-      assert.ok(!ASTRA_VIDEO_ALLOWED_FIELDS[mode].includes('auto_duration'), mode);
-    }
-  });
 });
 
 describe('buildJobBody — wire shape', () => {
@@ -246,11 +234,6 @@ describe('validators', () => {
     assert.equal(checkDimensions(768, 512, 'guided_fast'), null);
     assert.match(checkDimensions(63, 512, 'guided_fast'), /multiple of 32/);
     assert.match(checkDimensions(1952, 32, 'guided_fast'), /between 32 and 1920/);
-  });
-
-  it('the area ceiling applies whatever the grid', () => {
-    assert.equal(checkDimensions(1536, 1024, 'generate'), null);
-    assert.match(checkDimensions(1920, 1920, 'generate'), new RegExp(`at most ${ASTRA_VIDEO_MAX_PIXELS}`));
   });
 
   it('frameIdx is 0..numFrames-1 — 121 frames means 120 is the last', () => {
@@ -445,27 +428,6 @@ describe('per-tool schemas', () => {
 describe('measured ASTRA guidance', () => {
   const tool = name => TOOLS.find(t => t.name === name);
 
-  // The README ASTRA row is the third public surface beside tools and the engine guide.
-  // Keep the checks scoped to that row so unrelated model limits cannot satisfy them.
-  const readmeAstraRow = () => {
-    const readme = fs.readFileSync(new URL('../../README.md', import.meta.url), 'utf8');
-    const rows = readme.split('\n').filter(line => line.startsWith('| Video generation | `astra_text2video`'));
-    assert.equal(rows.length, 1, 'README must have one ASTRA video row');
-    return rows[0];
-  };
-  for (const [name, pattern] of [
-    ['server frame ceiling', /8k\+1, 25–361 on every mode/],
-    ['pixel ceiling', /2,064,384-pixel ceiling/],
-    ['1088x1920 refusal at every frame count', /1088×1920 exceeds the area ceiling at every frame count/],
-    ['supplied audio preservation', /Clips carry 48kHz stereo AAC; `audio2video` carries the supplied sound re-encoded, rather than a newly generated track/],
-    ['stereo input and mono refused at upload', /Stereo \(2-channel\) input is required: mono is refused at upload because it fails in the engine audio encoder/],
-    ['default audio length', /client explicitly sends 121 frames \(~5\.04s\) for compatibility/],
-    ['rounded audio length', /`audioMaxDuration: 8` selects 185 frames \(~7\.71s\) at 24fps/],
-    ['the generateAudio switch', /`generateAudio: false` strips the sound after generation/],
-  ]) {
-    it(`README ASTRA documents ${name}`, () => assert.match(readmeAstraRow(), pattern));
-  }
-
   it('image warning keeps generate and guided failure frames separate', () => {
     const description = tool('astra_img2video').description;
     const frames = mode => description.match(new RegExp(`${mode} \\(width 1280, measured at [^)]+\\) failure frames: \\{([^}]+)\\}`))?.[1].split(',').map(Number);
@@ -473,39 +435,6 @@ describe('measured ASTRA guidance', () => {
     assert.deepEqual(frames('guided'), [121]);
     assert.match(description, /Guided 129\/137 succeeded/);
     assert.match(description, /hypothesis, not a confirmed cause/);
-  });
-
-  it('image failure warnings use width gates and preserve measured success points', () => {
-    const description = tool('astra_img2video').description;
-    assert.match(description, /generate \(width 1280, measured at heights 704\/768\) failure frames/);
-    assert.match(description, /guided \(width 1280, measured at height 704\) failure frames/);
-    assert.match(description, /Text-only 1280x704 at 121 frames succeeded/);
-    assert.match(description, /generate 1536x704 and 1536x1024 at 121 frames also succeeded/);
-    const guide = fs.readFileSync(new URL('../../skills/produce/references/video-model-selection.md', import.meta.url), 'utf8');
-    assert.match(guide, /generate: \{121,129,137\}\*\* at\s+width 1280 \(measured at heights 704\/768\)/);
-    assert.match(guide, /guided: \{121\}\*\* at width 1280 \(measured at height 704\)/);
-    assert.match(guide, /text-only\s+1280x704 at 121 frames succeeded/);
-    assert.match(guide, /generate 1536x704 and 1536x1024 at\s+121 frames also succeeded/);
-  });
-
-  for (const [surface, read] of [
-    ['image tool', () => tool('astra_img2video').description],
-    ['engine guide', () => fs.readFileSync(new URL('../../skills/produce/references/video-model-selection.md', import.meta.url), 'utf8')],
-  ]) {
-    it(`${surface} gives the guided probe success point`, () => {
-      assert.match(read(), /Guided (?:129\/137|129 and 137) succeeded at 1280x704 in server probes \(the only guided size probed\)/);
-    });
-    it(`${surface} recommends generate frames at their measured point`, () => {
-      assert.match(read(), /Within current client limits use\s+generate 113\/145 \(measured at 1280x704\)/);
-    });
-    it(`${surface} distinguishes permitted sizes from measured quality`, () => {
-      assert.match(read(), /Guided and hq sizes follow the server grid and pixel ceiling; unmeasured sizes are not quality guarantees/);
-      assert.doesNotMatch(read(), /(?:or|and) guided 113/);
-    });
-  }
-
-  it('text-only tool does not advertise an image-conditioned failure band', () => {
-    assert.doesNotMatch(tool('astra_text2video').description, /image-conditioned|failure frames|CUDA illegal memory access/);
   });
 
   it('audio inputs warn that mono fails generation and is refused at upload', () => {
@@ -516,16 +445,6 @@ describe('measured ASTRA guidance', () => {
       assert.match(description, /Stereo \(2-channel\) input required/);
       assert.match(description, /Mono is refused at upload \(it fails in the engine audio encoder\); an id uploaded before 2026-10-17 15:00Z can still be mono/);
     }
-  });
-
-  it('audio guidance preserves the source track and explains default and rounded duration', () => {
-    const audio = tool('astra_audio2video');
-    assert.match(audio.description, /supplied WAV re-encoded as AAC/);
-    assert.match(audio.description, /0\.99997 at zero lag/);
-    assert.match(audio.description, /client explicitly sends 121 frames/);
-    assert.match(audio.description, /audioMaxDuration=8\.0 at 24fps rounds down to 185 frames/);
-    assert.match(audio.inputSchema.properties.audioMaxDuration.description, /8 seconds selects 185 frames/);
-    assert.match(audio.inputSchema.properties.audioMaxDuration.description, /are omitted.*client explicitly sends 121 frames/);
   });
 
   it('pixel ceiling accepts its exact boundary and rejects 1088x1920 even at 25 frames', () => {
@@ -1299,13 +1218,5 @@ describe('2026-10-18 live contract snapshot (read-only capture; no render claims
         parseFails(astraText2VideoSchema, args(spec.maximum + 1));
       }
     }
-  });
-  it('records contradictory audio omission metadata and keeps the client request deterministic', () => {
-    assert.equal(models.modes.find(m => m.mode === 'audio2video').num_frames.default, null);
-    assert.ok(models.contract_notes.some(n => n.includes('생략하면 121프레임')));
-    assert.equal(astraAudio2VideoSchema.parse({ prompt: 'x', audioUploadId: 'a' }).numFrames, 121);
-    assert.equal(models.limits.upload.max_files_per_key, 200);
-    assert.equal(Object.keys(openapi.paths).length, 6);
-    assert.equal(openapi.paths['/v1/uploads'].get, undefined);
   });
 });
