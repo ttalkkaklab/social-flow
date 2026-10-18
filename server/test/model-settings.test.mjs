@@ -208,6 +208,18 @@ test('retired saved speech choices require explicit migration and keep historica
   }
 });
 
+test('optional music choices persist into snapshots and reject invented provider model pairs', t => {
+  const root = workspace(t);
+  settings.saveSettings(root, models, { videoType, request: 'Initial user selections' });
+  settings.saveSettings(root, { music: { engine: 'lyria', model: 'lyria-3.5' } }, { request: 'Use Lyria 3.5 for music', expectedRevision: settings.readSettings(root).revision });
+  const dir = episode(root, 'music');
+  assert.equal(settings.snapshotSettings(root, dir).config.models.music.model, 'lyria-3.5');
+  settings.saveSettings(root, { music: { engine: 'elevenlabs', model: 'music_v2_5' } }, { request: 'Change new episode music to ElevenLabs', expectedRevision: settings.readSettings(root).revision });
+  assert.equal(settings.snapshotSettings(root, dir).config.models.music.model, 'lyria-3.5');
+  assert.throws(() => settings.validateModels({ music: { engine: 'suno-api', model: 'V5' } }, true));
+  assert.throws(() => settings.validateModels({ music: { engine: 'lyria', model: 'music_v2_5' } }, true));
+});
+
 test('GenAI is a separate model-selecting engine; legacy Astra remains fixed-model', () => {
   const video = { engine:'astra-genai', model:'ltx-2.5-22b-dev', resolution:'1280x704' };
   const image = { engine:'astra-genai', model:'z-image-turbo' };

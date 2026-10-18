@@ -150,7 +150,7 @@ function createEpisode(root, topic) {
 function manageProject(args) {
   if (!object(args) || Object.keys(args).some(key => !['action', 'workspace', 'settings', 'request', 'expectedRevision', 'profileMarkdown', 'topic'].includes(key))) throw new Error('Invalid project arguments');
   if (!['options', 'status', 'init', 'update', 'episode'].includes(args.action)) throw new Error('Unknown project action');
-  if (args.action === 'options') return { videoTypes: models.VIDEO_TYPES, ...config.options() };
+  if (args.action === 'options') return { videoTypes: models.VIDEO_TYPES, musicCatalog: require('./music-catalog.json'), ...config.options() };
   if (typeof args.workspace !== 'string' || !path.isAbsolute(args.workspace)) throw new Error('workspace must be an explicit absolute project directory');
   if (!fs.existsSync(args.workspace)) throw new Error('Workspace does not exist; create the user-selected project directory first');
   const root = fs.realpathSync(args.workspace);

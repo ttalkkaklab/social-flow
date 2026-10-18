@@ -1,3 +1,5 @@
+import { MUSIC_ADAPTERS } from './music-registry.js';
+import { MUSIC_TOOLS } from './music-tools.js';
 import { GENAI_TOOLS } from './astra-genai-tools.js';
 import { GPT_IMAGE_MODELS } from './image-models.js';
 import { IMAGE_ADAPTERS } from './image-registry.js';
@@ -3960,12 +3962,12 @@ Returns JSON: status, missing fields, canonical paths, config and revision; epis
                                 id: { type: 'string', description: 'Type ID from options, e.g. drama or documentary.' },
                                 detail: { type: 'string', description: 'Required for custom, e.g. Documentary with acted historical scenes.' },
                             }, required: ['id'] },
-                        models: { type: 'object', additionalProperties: false, description: 'Video, speech and image model selections; use capability_status and host schemas for actual availability.', properties: Object.fromEntries(['video', 'speech', 'image'].map(kind => [kind, {
+                        models: { type: 'object', additionalProperties: false, description: 'Video, speech, image and optional music model selections; use capability_status and host schemas for actual availability.', properties: Object.fromEntries(['video', 'speech', 'image', 'music'].map(kind => [kind, {
                                     type: 'object', additionalProperties: false, description: `${kind} selection; fixed engines omit model, host uses host-managed.`,
                                     properties: {
-                                        engine: { type: 'string', enum: kind === 'video' ? ['host', 'seedance', 'veo', 'astra', 'astra-genai', 'mlx'] : kind === 'speech' ? ['gemini', 'elevenlabs'] : ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
+                                        engine: { type: 'string', enum: kind === 'video' ? ['host', 'seedance', 'veo', 'astra', 'astra-genai', 'mlx'] : kind === 'speech' ? ['gemini', 'elevenlabs'] : kind === 'music' ? ['lyria', 'suno-api', 'elevenlabs', 'mlx'] : ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
                                         model: { type: 'string', description: 'Supported model ID, e.g. host-managed. Omit for astra and zimage.' },
-                                        ...(kind !== 'speech' ? { host: { type: 'string', description: 'Host CLI when engine is host, e.g. codex.' } } : {}),
+                                        ...(!['speech', 'music'].includes(kind) ? { host: { type: 'string', description: 'Host CLI when engine is host, e.g. codex.' } } : {}),
                                         ...(kind === 'video' ? { resolution: { type: 'string', description: 'Supported source resolution, e.g. 720p.' } } : {}),
                                         ...(kind === 'image' ? { quality: { type: 'string', description: 'Supported quality, e.g. high; a prompt preference on host tools without a quality parameter.' } } : {}),
                                     }, required: ['engine'],
@@ -4034,47 +4036,41 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
         name: 'suno_generate',
         title: 'Suno full song',
         annotations: HINT.generate,
-        description: `Generate a full Suno song (exactly 2 variants) via sunoapi.org. This is a third-party REST wrapper — Suno Inc. has no public self-serve API as of 2026-08.
-
-Use when the user wants a SUNG song, jingle, or original track with lyrics — the thing Lyria cannot do well. customMode=false: only prompt, the model writes lyrics. customMode=true + instrumental=false: prompt IS the lyrics (write them first with suno_generate_lyrics if needed). customMode=true + instrumental=true: no vocals; style and title required. Default model V5 (up to 8 min). Each call takes 2–3 minutes and returns two mp3 files downloaded locally (remote URLs expire in 15 days).
-Do NOT use as the default narration-under BGM bed — vocals fight the voiceover, and a 3-minute song does not loop cleanly. For looping beds prefer suno_generate_sound or music_generate_clip (Lyria, $0.04, 30s, GEMINI_API_KEY). For an exact duration 5–300s or seed reproducibility use music_generate.
-Requires SUNO_API_KEY. This key being unset does not block music_*(Lyria).
-
-Returns: saved file paths for both tracks, durations, titles, taskId.`,
+        description: 'Generate two song variants through sunoapi.org, a third-party API separate from Suno Platform. Use the saved V6 model via music_plan. Returns downloaded files and task ID; no automatic provider fallback.',
         inputSchema: {
             type: 'object',
             properties: {
                 prompt: {
                     type: 'string',
-                    description: 'In non-custom mode: the idea the model turns into lyrics+music (required, max 3000 chars). In custom mode with vocals: the EXACT lyrics to sing (required, V4 max 3000, V4_5+ max 5000). Omit when customMode+instrumental.',
+                    description: 'Optional prompt; non-custom mode max 3000 characters and also needs style or lyrics. Explicit lyrics take precedence.',
                 },
                 customMode: {
                     type: 'boolean',
-                    description: 'false (default): prompt-only, auto lyrics. true: you supply style+title, and lyrics via prompt unless instrumental.',
+                    description: 'false: requires style or lyrics. true: custom controls; requires style, lyrics or negativeTags.',
                     default: false,
                 },
                 instrumental: {
                     type: 'boolean',
-                    description: 'true = no vocals. In custom mode this drops the lyrics requirement (style+title still required). Default false.',
+                    description: 'true = instrumental, e.g. a narration bed. Default false.',
                     default: false,
                 },
                 style: {
                     type: 'string',
-                    description: 'Genre/style for custom mode (required when customMode=true). V4 max 200 chars, later models max 1000. Example: "calm lo-fi, soft piano, space for voiceover"',
+                    description: 'Music style, usable in either mode. Example: "calm lo-fi, soft piano, space for voiceover"',
                 },
                 title: {
                     type: 'string',
-                    description: 'Track title for custom mode (required when customMode=true). V4/V4_5ALL max 80 chars, others max 100.',
+                    description: 'Optional custom-mode title, at most 80 characters.',
                 },
                 model: {
                     type: 'string',
-                    description: `Suno model (default: "${DEFAULT_SUNO_MODEL}"). V4 ≤4 min; V4_5 / V4_5PLUS / V4_5ALL / V5 / V5_5 ≤8 min. V5_5 is the only model that accepts duration. Pick V5 unless you need V5_5 duration or V4_5ALL structure.`,
+                    description: 'sunoapi.org model ID; current generation supports the V6 family.',
                     enum: [...SUNO_MODELS],
                     default: DEFAULT_SUNO_MODEL,
                 },
                 duration: {
                     type: 'number',
-                    description: 'Length in seconds (10–360). Only valid when model=V5_5 AND customMode=true. Integer.',
+                    description: 'V6 custom-mode length in seconds (10–360). Integer.',
                     minimum: 10,
                     maximum: 360,
                 },
@@ -4093,7 +4089,7 @@ Returns: saved file paths for both tracks, durations, titles, taskId.`,
                 },
                 personaModel: {
                     type: 'string',
-                    description: 'style_persona (default) for Generate Persona ids, voice_persona for Suno Voice ids (V5/V5_5 only).',
+                    description: 'Custom-mode persona type: style_persona or voice_persona. Requires a valid provider persona ID.',
                     enum: [...SUNO_PERSONA_MODELS],
                 },
                 pickTrack: {
@@ -5045,3 +5041,23 @@ TOOLS.push({ name: 'image_catalog', title: 'Inspect image adapters and models',
     description: 'Read a local image receipt without contacting providers. action:reconcile closes a submission_unknown or interrupted submitting request as failed only after the caller supplies terminal/billing evidence and spentUsd. action:refresh recovers a GenAI image download from its saved provider response and updates the managed receipt; it never regenerates. Completed requests are immutable. Do not reconcile a request still running at the provider.',
     inputSchema: { type: 'object', additionalProperties: false, properties: { directory: { type: 'string', description: 'Absolute directory.' }, requestId: { type: 'string', description: 'Original request ID.' }, action: { type: 'string', enum: ['read', 'reconcile', 'refresh'], description: 'Defaults to local read. refresh recovers a GenAI image download from its saved response without regeneration.' }, executorStopped: { type: 'boolean', description: 'Required true to reconcile submitting: verify the executor has exited and provider is terminal. A live local owner is rejected.' }, evidence: { type: 'string', description: 'For reconcile: actual terminal status and billing evidence reference.' }, spentUsd: { type: 'number', minimum: 0, description: 'For reconcile: verified total charge, including failed generation.' } }, required: ['directory', 'requestId'] },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true } });
+TOOLS.push(...MUSIC_TOOLS);
+const musicContextSchema = { type: 'object', description: 'Managed music context; selection, authorization and stable request ID for an episode or workspace asset.', additionalProperties: false, properties: {
+        directory: { type: 'string', description: 'Absolute episode or workspace directory, e.g. /work/data/demo/episodes/intro.' },
+        assetId: { type: 'string', description: 'Stable cue/asset ID, e.g. base.' },
+        requestId: { type: 'string', description: 'Stable attempt ID, e.g. base-1. Reuse after interruption.' },
+        reserveUsd: { type: 'number', minimum: 0, description: 'Total provider cost estimate for all tracks, e.g. 0.5; zero for local. Not an invoice cap.' },
+    }, required: ['directory', 'assetId', 'requestId'] };
+for (const tool of TOOLS) {
+    if (!MUSIC_ADAPTERS[tool.name])
+        continue;
+    tool.description = 'Generate music with the selected provider. Configured production requires musicContext and routes through music_plan → music_execute. Do NOT use to inspect models — use music_catalog. ' + tool.description;
+    tool.inputSchema.properties = { ...tool.inputSchema.properties, musicContext: musicContextSchema };
+    if (tool.name === 'suno_generate_sound')
+        tool.description = 'Retired V5 sounds adapter; generation is rejected before submission. Use music_catalog and explicitly select a supported V6 instrumental song instead. Does not automatically substitute models.';
+    if (tool.name === 'suno_generate') {
+        tool.inputSchema.properties.model = { type: 'string', enum: ['V6', 'V6_MINI', 'V6_WILD'], default: 'V6', description: 'sunoapi.org third-party model ID, not a Suno Platform identifier.' };
+        tool.inputSchema.properties.lyrics = { type: 'string', maxLength: 5000, description: 'Lyrics, e.g. [Verse] followed by Korean lyrics. Preferred over prompt in custom mode.' };
+        tool.description = 'Generate songs using sunoapi.org, a third-party provider. Configured calls require musicContext. Use music_catalog to inspect choices; do NOT treat this as the Suno Platform official API. Returns local tracks and provider task ID. V6 custom mode requires style, lyrics or negativeTags; duration is 10–360 seconds. Non-custom mode requires style or lyrics; prompt alone is insufficient. Old V4/V5 models are retired.';
+    }
+}
