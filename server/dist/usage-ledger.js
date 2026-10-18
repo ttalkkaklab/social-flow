@@ -294,6 +294,10 @@ export function priceOf(tool, args = {}) {
                 : 'billed per second of generated audio and no durationSeconds was requested — read the measured duration off the response',
         };
     }
+    if (tool === 'music_generate_song')
+        return { key: 'music.' + String(args.model || 'lyria-3.5'), quantity: 1, note: 'Price unconfirmed; reconcile provider billing' };
+    if (tool === 'music_elevenlabs_generate')
+        return { key: 'music.elevenlabs.' + String(args.modelId || 'music_v2_5'), quantity: 1, note: 'Price unconfirmed; reconcile provider billing' };
     if (tool === 'music_generate_clip')
         return { key: 'music.lyria-clip', quantity: 1 };
     if (tool === 'music_generate' || tool === 'music_generate_advanced') {
@@ -303,6 +307,8 @@ export function priceOf(tool, args = {}) {
             note: 'unit price unconfirmed — the report excludes this item rather than counting it as 0',
         };
     }
+    if (tool === 'suno_generate' && String(args.model).startsWith('V6'))
+        return { key: 'music.suno.' + String(args.model), quantity: 1, note: 'Current V6 price unconfirmed; do not reuse legacy V5 credit rates' };
     if (tool === 'suno_generate')
         return { key: 'music.suno-generate', quantity: 1 };
     if (tool === 'suno_generate_sound')
@@ -354,6 +360,8 @@ function charUnits(args) {
 export function isBillableTool(tool) {
     // This wrapper records each synthesis and review itself, including rejected takes.
     if (['tts_route', 'tts_generate_checked', 'character_voice_audition', 'tts_review_acting', 'tts_local_generate', 'mlx_tts_generate'].includes(tool))
+        return false;
+    if (['music_catalog', 'music_plan', 'music_execute', 'music_status'].includes(tool))
         return false;
     // Catalogue reads cost nothing and belong in no ledger.
     if (tool === 'tts_list_voices' || tool === 'tts_elevenlabs_voices' || tool === 'music_list_options')

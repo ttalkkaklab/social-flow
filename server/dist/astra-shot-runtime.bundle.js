@@ -5082,7 +5082,7 @@ var package_default = {
     node: ">=20"
   },
   scripts: {
-    build: "tsc && node build-video-catalog.mjs && node build-image-catalog.mjs && npm run bundle && npm run bundle:shot && npm run bundle:mesh",
+    build: "tsc && node build-video-catalog.mjs && node build-image-catalog.mjs && node build-music-catalog.mjs && npm run bundle && npm run bundle:shot && npm run bundle:mesh",
     start: "node dist/index.js",
     test: "node --test test/*.test.mjs",
     check: "npm run build && npm test",
@@ -6651,6 +6651,8 @@ function priceOf(tool, args = {}) {
       note: typeof seconds === "number" ? void 0 : "billed per second of generated audio and no durationSeconds was requested \u2014 read the measured duration off the response"
     };
   }
+  if (tool === "music_generate_song") return { key: "music." + String(args.model || "lyria-3.5"), quantity: 1, note: "Price unconfirmed; reconcile provider billing" };
+  if (tool === "music_elevenlabs_generate") return { key: "music.elevenlabs." + String(args.modelId || "music_v2_5"), quantity: 1, note: "Price unconfirmed; reconcile provider billing" };
   if (tool === "music_generate_clip") return { key: "music.lyria-clip", quantity: 1 };
   if (tool === "music_generate" || tool === "music_generate_advanced") {
     return {
@@ -6659,6 +6661,7 @@ function priceOf(tool, args = {}) {
       note: "unit price unconfirmed \u2014 the report excludes this item rather than counting it as 0"
     };
   }
+  if (tool === "suno_generate" && String(args.model).startsWith("V6")) return { key: "music.suno." + String(args.model), quantity: 1, note: "Current V6 price unconfirmed; do not reuse legacy V5 credit rates" };
   if (tool === "suno_generate") return { key: "music.suno-generate", quantity: 1 };
   if (tool === "suno_generate_sound") return { key: "music.suno-sound", quantity: 1 };
   if (tool === "suno_generate_lyrics") return { key: "music.suno-lyrics", quantity: 1 };

@@ -19,7 +19,7 @@ spending authorization separate. The low-level model CLI below remains available
 for compatibility and explicit model changes; it preserves all project fields.
 
 Owner directive, 2026-10-16: once the production working directory is known, select
-**video type → video model → speech model → image model** once and save them in that directory. Every new
+**video type → video model → speech model → image model → music model** once and save them in that directory. Every new
 episode uses those choices until the user explicitly requests a change. This takes
 precedence over automatic host detection, economy/quality routing, per-cut model
 escalation and repeated model questions in older skill sections. It is an explicit
@@ -59,7 +59,7 @@ selection. Existing choices may be offered as candidates.
 
 `project_manage episode` returns `created`, `resumed` or `legacy_episode`.
 
-## First setup: video type, then three models
+## First setup: video type, then media models
 
 First read [video types](video-types.md) and run:
 
@@ -109,13 +109,20 @@ prices. A configured credential does not guarantee a successful generation.
    cost and quality controls. Store an explicit API choice even when a host tool
    is present. No later cover/points heuristic can substitute another model.
 
+4. **Music model.** Read `music_catalog` (also in `project_manage options`). Save
+   `models.music` as `{engine, model}`: `lyria`, `elevenlabs`, `suno-api` or `mlx`.
+   Offer this choice when new music is wanted. Existing settings without music stay
+   valid; new music generation reports `music_setup_required` until a choice exists.
+   Reusing a channel bed requires no music model choice. A configured model is not
+   spending authorization. See [music routing](music-routing.md).
+
 Ask in that order, or use a multi-question interface preserving the order. Reuse
 answers already explicit in the user's request; ask only for missing categories.
 Do not bill for samples during setup unless requested. Do not treat silence as a
 selection. This first setup is a user-requested preference step and is not waived
 by the general automation advice to choose unspecified creative preferences.
 
-Save the type and all three model selections together. Example only — these are **not defaults**:
+Save the type and selected media models together. Example only — these are **not defaults**:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/skills/_shared/model-settings.js" init "$WORKSPACE" <<'JSON'

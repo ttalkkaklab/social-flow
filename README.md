@@ -356,7 +356,7 @@ the whole projection rather than a bill that has already partly arrived.
 | **Video** | deterministic HTML motion slides rendered locally with headless Chrome. Optional: `mlx_video_generate` (24fps, RAM-capped). Under Grok the CLI's own `image_to_video` is the setup-time recommendation (1–15 s, 720p ceiling, subscription allowance) | Veo 3.1 (Gemini) per second · Seedance (ModelArk) per second | …you use the HTML motion lane or the Grok host lane. The saved video model decides the paid engine. A channel can prohibit stills and still spend zero on generated video; Ken Burns does not count as true motion. mlx_video is not the default and is not on the Veo/Seedance face-policy table |
 | **Speech (TTS)** | Your own recording | Gemini TTS or ElevenLabs `eleven_v4` | Generate with the saved voice and record provenance. No automatic paid speech review; local TTS is removed. |
 | **Transcription (STT)** | `stt_local_transcribe` — Qwen3-ASR via mlx, $0 (whisper.cpp fallback) | none | never — there is no paid STT path here |
-| **Music (BGM)** | `mlx_music_generate` when MLX Core is running | Lyria clip via Gemini (the default) | …you ship without BGM, or you have MLX Core up with a music model |
+| **Music (BGM)** | Saved MLX music pack or reused channel bed | Saved Lyria / ElevenLabs / sunoapi.org model | …you reuse audio or choose an installed local pack |
 
 A near-zero run is possible: local images, local transcription, no generated video, no
 BGM. Speech is the one paid step left (local TTS is removed): raw TTS on the saved model,
@@ -620,10 +620,10 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 108 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 114 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions — 108 tools, including voice auditions and opt-in acting review
+│       ├── tools.ts             # tool definitions — 114 tools, including voice auditions and opt-in acting review
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -694,12 +694,12 @@ visual style, video ratio and format live in the workspace's `.social-flow/model
 each episode snapshots them in `.work/model-settings.json`, and `profile.md` keeps the
 channel's tone, theme and pinned character voice IDs (the speech model itself is the saved `models.speech`).
 
-## MCP tool surface (108 tools)
+## MCP tool surface (114 tools)
 
 `project_manage`: options · status · init · update · episode. Local project setup
 with genre, models, style, ratio, format and SNS records; no generation or publishing.
 
-**`tools/list` does not show all 108.** The credential-gated publish, review and insights tools
+**`tools/list` does not show all 114.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
@@ -742,9 +742,11 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Voice generation | `tts_elevenlabs_generate` / `tts_elevenlabs_dialogue` / `tts_elevenlabs_voices` | ElevenLabs (`ELEVENLABS_API_KEY`). Only `eleven_v4` is allowed for speech. Square-bracket acting tags, Stability/Similarity and timestamped output; no style/speed slider or SSML. Voice listing supports language/gender/accent filters, pagination and preview URLs. Supports /IPA/, documented 3-letter language codes, optional neighbor request IDs, PVC-as-IVC and Enterprise zero retention. Prefer ≤2,000 characters per Dialogue request; the 10,000 model ceiling is not a reliability promise. [v4 API contract](skills/_shared/elevenlabs-v4.md). Use current API pricing and save actual usage. |
 | Sound effects | `sfx_elevenlabs_generate` | ElevenLabs text→SFX (ELEVENLABS_API_KEY — `eleven_text_to_sound_v2`, 0.5–30 s, prompt influence, seamless loops for room-tone beds). The endpoint has no WAV format, so the server asks for PCM and writes the RIFF header itself: a mono 48 kHz WAV the builder reads directly, plus a `.json` provenance sidecar (tool, model, prompt, seconds, request id, date, rights). The storyboard names each effect in `window.SFX` and points shots at it with `sound.sfx`; produce generates each id **once into the channel catalog** (`assets/audio/sfx/<id>.wav`) and later episodes reuse it at $0. $0.12 per minute of generated audio on every plan; the Free tier is non-commercial. Which cuts get one: [scenes-schema §sound effects](skills/storyboard/references/scenes-schema.md#sound-effects-windowsfx-soundsfx) |
 | Speech recognition | `stt_local_transcribe` | Qwen3-ASR on-device via mlx-qwen3-asr/MLX (**no API key, no network, no billing — the default Korean STT**. Needs Apple Silicon + `uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"`; the first call downloads ~3.4GB of weights. ingest runs the same engine and falls back to whisper.cpp without it) |
-| Music generation | `music_generate_clip` / `music_generate` / `music_generate_advanced` / `music_list_options` | Lyria 3 Clip (fixed 30s mp3 — the default BGM path) · Lyria RealTime (5–300s variable wav 48kHz, seed reproducibility). `GEMINI_API_KEY` |
-| Music generation | `suno_generate` / `suno_generate_sound` / `suno_generate_lyrics` / `suno_credits` | sunoapi.org third-party REST (not an official Suno Inc. API). Sung full songs (2 tracks, 2–8 min) · loopable beds with BPM/key · lyrics only · remaining credits. `SUNO_API_KEY`. Autoproduce does not call these |
-| Music generation | `mlx_music_generate` | MLX Core / mlx-serve (WAV. Default instrumental. Optional bed; default BGM stays Lyria) |
+| Music routing | `music_catalog` / `music_plan` / `music_execute` / `music_status` | Saved model selection, native payload validation, budget/concurrency reservation, deduplication and verified 48 kHz stereo WAV. [Contract](skills/_shared/music-routing.md) |
+| Music generation | `music_generate_song` / `music_generate_clip` / `music_generate` / `music_generate_advanced` / `music_list_options` | Google Lyria Clip / 3.5 songs and RealTime control. `GEMINI_API_KEY` |
+| Music generation | `music_elevenlabs_generate` | Official Eleven Music v2 / v2.5; prompt or composition plan. `ELEVENLABS_API_KEY` |
+| Music generation | `suno_generate` / `suno_generate_lyrics` / `suno_credits` | sunoapi.org third-party V6 family, not Suno Platform. V5 `suno_generate_sound` is retired and rejected. `SUNO_API_KEY` |
+| Music generation | `mlx_music_generate` | Exact installed MLX Core music pack, local compute; default instrumental |
 | 3D | `mlx_3d_generate` | MLX Core / mlx-serve (GLB from an image, consumed by the offline HTML mesh slide lane) |
 | 3D previz | `blender_scene_read` / `blender_scene_build` / `blender_camera_set` / `blender_object_animate` / `blender_pose_key` / `blender_motion_import` / `blender_render_previz` | **Optional before a generated video cut** (user directive 2026-09-11, optional since 2026-10-18) — the same plan renders in three.js through `previz-template.html` + `previz-runtime.js` when Blender is not installed. The local Blender, headless (**no API key, no network, no add-on, no GUI** — needs Blender 4.2+). Reads a .blend; builds a set of grey proxies — a person is a jointed mannequin on a 19-bone rig — plus dog·car·box·cylinder·sphere and GLB imports at the cut's frame range and resolution; places and keys the camera by location, look-at target and lens in metres, degrees and mm; keys objects and people's roots through space; poses a person by channel (raise, elbow, knee, bow …) or retargets a BVH/FBX motion-capture clip onto it, scaled, faced and floored; renders a clean H.264 previz plus stamped stills in Workbench or Eevee. Camera, blocking and body timing as numbers, iterated for free before any paid generation, then handed through `video_plan` → `video_execute` as the reference video of a Seedance 2.x cut — the hand-off (previz → camera and timing, still → first frame, sheets → look, prompt → acting) is in [blender-previz.md](skills/storyboard/references/blender-previz.md) §6 |
 | Growth review | `threads_draft_create` / `threads_review_submit` | Persist drafts and quote-grounded voice/purpose/flow reviews; no model API calls |
@@ -808,9 +810,9 @@ Local speech synthesis is removed, including Supertonic and MLX TTS.
 - **Use WAV for assembly.** Keep provider timestamps and actual generated duration;
   resample sources where required. A mixed-speaker dialogue take still needs a supported
   scene/line binding before it can enter the current single-speaker scene builder.
-- **The default BGM path is `music_generate_clip`** (Lyria 3, fixed 30s, ~$0.04 per
-  clip). Use the `music_generate` family only when you need exact length
-  (narration-fitted) or seed reproducibility.
+- **BGM follows saved `models.music`** through `music_plan → music_execute`.
+  Existing channel audio is reused first. See the [provider research](docs/research/2026-10-18-music-models/README.md)
+  for official contracts, Korean support evidence and third-party boundaries.
 - **`tts_multi_speaker` on the flash model often rejects short dialogue scripts**
   (`Model tried to generate text…`). The server does not retry: report the failure, and change
   the model only as an explicit user exception recorded in `PRODUCTION.modelSettings.overrides`

@@ -106,12 +106,13 @@ export function capabilityStatus(): {
     {
       capability: 'music_generation',
       providers: [
+        { provider: 'Eleven Music', configured: has(config.elevenLabsApiKey), needs: 'ELEVENLABS_API_KEY', note: 'Official music_v2 / music_v2_5; select models.music and use music_plan → music_execute' },
         { provider: 'lyria (Gemini)', configured: gemini, needs: 'GEMINI_API_KEY',
-          note: 'music_generate · music_generate_clip' },
-        { provider: 'suno (sunoapi.org)', configured: has(config.sunoApiKey), needs: 'SUNO_API_KEY',
-          note: 'suno_generate — third-party wrapper, not an official Suno API' },
+          note: 'music_generate_song · music_generate_advanced; saved Lyria selection' },
+        { provider: 'suno-api (sunoapi.org third party)', configured: has(config.sunoApiKey), needs: 'SUNO_API_KEY',
+          note: 'suno_generate — V6 family; separate from the official Suno Platform' },
         { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
-          note: 'mlx_music_generate — optional local bed; default BGM stays Lyria' },
+          note: 'mlx_music_generate — exact installed pack from saved music selection' },
       ],
     },
     {

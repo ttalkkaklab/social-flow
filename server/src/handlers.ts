@@ -1,3 +1,6 @@
+import { MUSIC_ADAPTERS, musicCatalog } from './music-registry.js';
+import { planMusic, musicPlanSummary, executeMusic, musicStatus, routeLegacyMusic } from './music-routing.js';
+import { generateLyriaSong, generateElevenMusic } from './music-song-client.js';
 import { IMAGE_ADAPTERS, imageCatalog } from './image-registry.js';
 import { planImage, imagePlanSummary, executeImage, routeLegacyImage, imageStatus } from './image-routing.js';
 import { videoStatus } from './video-routing.js';
@@ -1294,6 +1297,8 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     );
   },
 
+  music_generate_song: async args => { const r = await generateLyriaSong(args); return { ...text(JSON.stringify(r)), musicReceipt: { audioPath: r.audioPath, requestId: r.providerId } }; },
+  music_elevenlabs_generate: async args => { const r = await generateElevenMusic(args); return { ...text(JSON.stringify(r)), musicReceipt: { audioPath: r.audioPath, requestId: r.providerId } }; },
   // ── music generation (Lyria) — 30s batch clip / streaming with an exact duration ──
   music_generate_clip: async (args) => {
     const result = await music.generateClip(parseArgs(music.musicClipSchema, args));
@@ -1365,7 +1370,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   suno_generate: async (args) => {
     const request = parseArgs(suno.sunoGenerateSchema, args);
     const result = await suno.generateMusic(request);
-    if (!result.success) return text(`Suno generation failed: ${result.error}`, true);
+    if (!result.success) return { musicReceipt: { requestId: result.taskId }, ...text(`Suno generation failed: ${result.error}`, true) };
     const tracks = result.tracks ?? [];
     const lines = tracks.map(
       (track, index) =>
@@ -1374,11 +1379,11 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
         (track.durationSeconds ? `  ${Math.round(track.durationSeconds)}s` : '') +
         (track.tags ? `  [${track.tags}]` : ''),
     );
-    return text(
+    return { musicReceipt: { requestId: result.taskId, audioPath: result.audioPath }, ...text(
       `Suno tracks generated.\n\nPrimary: ${result.audioPath}\nModel: ${result.model}\nTask: ${result.taskId}\nTracks (${tracks.length}):\n${lines.join('\n')}\n\n` +
-        `Remote URLs expire in 15 days — these local files are the keepers. ` +
-        `For a bed under narration, pick the instrumental variant and set filename to .wav so it matches .work/bgm.wav.`,
-    );
+        `Remote URLs expire in 14 days — these local files are the keepers. ` +
+        `Managed execution decodes the selected track to the final WAV path.`,
+    ) };
   },
   suno_generate_sound: async (args) => {
     const request = parseArgs(suno.sunoSoundSchema, args);
@@ -1606,3 +1611,12 @@ ROUTES.image_catalog = async () => text(JSON.stringify(imageCatalog(), null, 2))
 ROUTES.image_plan = async args => text(JSON.stringify(imagePlanSummary(planImage(args)), null, 2));
 ROUTES.image_execute = args => executeImage(args, dispatchImage);
 ROUTES.image_status = async args => text(JSON.stringify(imageStatus(args), null, 2));
+
+// Music adapters cannot bypass saved selection or reservations in a configured workspace.
+const musicDispatch = Object.fromEntries(Object.keys(MUSIC_ADAPTERS).map(name => [name, ROUTES[name]]));
+const dispatchMusic = (name: string, args: Record<string, unknown>) => musicDispatch[name](args);
+for (const name of Object.keys(MUSIC_ADAPTERS)) ROUTES[name] = args => routeLegacyMusic(name, args, dispatchMusic);
+ROUTES.music_catalog = async () => text(JSON.stringify(musicCatalog(), null, 2));
+ROUTES.music_plan = async args => text(JSON.stringify(musicPlanSummary(planMusic(args)), null, 2));
+ROUTES.music_execute = args => executeMusic(args, dispatchMusic);
+ROUTES.music_status = async args => text(JSON.stringify(musicStatus(args), null, 2));

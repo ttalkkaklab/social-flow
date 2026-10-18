@@ -8,7 +8,7 @@ description: >
   and format together. For only a channel profile or character edit use channel;
   storyboard plans an episode and autoproduce builds one.
 argument-hint: "[init|status|update] [project-directory]"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__sns_account_check", "mcp__plugin_social-flow_social-flow__sns_account_check", "mcp__social-flow__character_voice_audition", "mcp__plugin_social-flow_social-flow__character_voice_audition", "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_voices"]
+allowed-tools: ["mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__sns_account_check", "mcp__plugin_social-flow_social-flow__sns_account_check", "mcp__social-flow__character_voice_audition", "mcp__plugin_social-flow_social-flow__character_voice_audition", "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_voices"]
 ---
 
 # Project setup
@@ -36,7 +36,7 @@ episode work, continue to that skill after setup without asking for the same cho
    `project.channel` selects one primary channel; other existing directories are preserved.
 3. Call `project_manage action:options` and `capability_status`. Follow
    [model settings](../_shared/model-settings.md) for **genre → video model → speech
-   model → image model**. Reuse explicit prior answers and existing settings.
+   model → image model → music model when generating new music**. Reuse explicit prior answers and existing settings.
 4. Ask for the missing **visual style**, **video ratio**, and **output format** — asked
    once here, then reused (the owner's exception to assistant-decided preferences).
    Show the rendering descriptions in [visual style](../storyboard/references/visual-style.md).

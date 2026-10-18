@@ -12,6 +12,7 @@ const ENGINES = {
   video: ['host', 'seedance', 'veo', 'astra', 'mlx', 'omni'],
   speech: ['gemini', 'elevenlabs'],
   image: ['host', 'gpt-image', 'zimage', 'mlx'],
+  music: ['lyria', 'suno-api', 'elevenlabs', 'mlx'],
 };
 const RETIRED_ELEVENLABS_MODELS = ['eleven_multilingual_v2', 'eleven_v3', 'eleven_v3_conversational', 'eleven_flash_v2_5', 'eleven_turbo_v2_5'];
 function retiredSpeech(choice) {
@@ -21,6 +22,7 @@ const FIELDS = {
   video: ['engine', 'model', 'resolution', 'host'],
   speech: ['engine', 'model'],
   image: ['engine', 'model', 'quality', 'host'],
+  music: ['engine', 'model'],
 };
 
 function object(value) {
@@ -52,6 +54,7 @@ function validateModels(models, partial = false, allowRetiredSpeech = false) {
   if (partial && !Object.keys(models).length) throw new Error('Model update is empty');
   for (const [kind, engines] of Object.entries(ENGINES)) {
     if (partial && !Object.hasOwn(models, kind)) continue;
+    if (kind === 'music' && !Object.hasOwn(models, kind)) continue; // Existing projects retain their snapshots.
     const choice = models[kind];
     const retired = allowRetiredSpeech && kind === 'speech' && retiredSpeech(choice);
     if (!object(choice) || (!engines.includes(choice.engine) && !retired)) throw new Error(`${kind}.engine must be one of ${engines.join(', ')}`);
@@ -72,6 +75,10 @@ function validateModels(models, partial = false, allowRetiredSpeech = false) {
         throw new Error('Image quality tiers are not supported by the selected local adapter');
       }
       if (choice.engine === 'host' && choice.model !== 'host-managed') throw new Error('Host image model must be host-managed');
+    }
+    if (kind === 'music' && choice.engine !== 'mlx') {
+      const supported = require('./music-catalog.json').models;
+      if (!supported.some(m => m.engine === choice.engine && m.model === choice.model)) throw new Error('Unsupported music selection; consult music_catalog');
     }
     if (kind === 'speech' && choice.engine === 'elevenlabs' && choice.model !== 'eleven_v4' && !retired) throw new Error('ElevenLabs speech requires eleven_v4');
   }
