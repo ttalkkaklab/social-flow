@@ -203,9 +203,12 @@ These are the existing portrait ASS defaults from build-reel.sh, not changes to 
 | Word | 84 | 5 | 640 |
 | Phrase | 92 | 4 | 680 |
 
-Screen text supplies hierarchy or evidence; subtitles carry the spoken sentence. Avoid
-repeating the same full sentence in both. Keep authored text outside the format's
-subtitle band and use the same word-cue input when kinetic words track subtitle onsets.
+Screen text supplies hierarchy or evidence; the narration carries the spoken sentence. The
+delivered video is subtitle-free (produce SKILL, 2026-10-17) — the table above records
+build-reel.sh's old burn-in defaults as history, and a subtitle file, when the user asks for
+one, is a separate sidecar. Avoid repeating the same full sentence on screen. Keep
+authored text inside the zone — the bottom band stays clear — and use the same word-cue input
+when kinetic words track speech onsets.
 
 ## 4. Composition — one fact, then the evidence
 
@@ -228,7 +231,7 @@ subtitle band and use the same word-cue input when kinetic words track subtitle 
   an AI front end look like. The studio slab (§1) is the opposite thing: a lit edge, a hard
   thickness, a short dark shadow where it touches the wall, and only then a spread — a thing
   standing on a set, not a card floating over one. That material lives in the template head
-  and nowhere else; `check-slide.js` blocks a shadow, a glass fill and a radius past 8px in
+  and nowhere else; `check-slide.js` warns on a shadow, a glass fill and a radius past 8px in
   the authored region and in any head rule outside the template's `html.studio` set.
 - **A source line may take the corner.** When the vertical budget is spent — an object slot
   and a hero on one slide — `h.foot(0, …, { corner: true })` sits the source at the zone's
@@ -311,7 +314,7 @@ Rules:
   segment shorter than the clip cuts to the next clip's rest frame mid-motion — the
   renderer warns past the cap either way.
 - **The sustain layer — the clip fills the sentence.** produce hands the renderer each
-  segment's measured length (`--segs k:ms,…`; the storyboard gate estimates with
+  segment's measured length (`--segs k:ms,…`; the storyboard check estimates with
   `--segs auto` at the schema's 4.5 chars/s), and elements marked `sv` stretch their one
   meaning-bearing movement to it: a count-up counts while the sentence says the number, a
   bar keeps filling, a rule keeps drawing, a dot grid keeps filling (`sv: true` on
@@ -380,13 +383,17 @@ Rules:
 ## 6. What reads as generated — and the rubric
 
 `slide-reviewer` scores a rendered slide (the `--sheet` frames) additively out of 100,
-points only with frame-file evidence. PASS at **score ≥ 95 and p0 = 0**.
+points only with frame-file evidence. The score and the findings are evidence about the slide;
+there is no acceptance threshold (automation-guidance.md) — the author decides what to rework.
 
 **One rubric, four kinds and two diagram treatments.** The P0 list and the four axes below
-apply to every authored screen — diagram, kinetic type, character act and camera cut alike
-(scenes-schema §the authored-screen lane). §6.1 adds the editorial-frame test, §6.2 the retired
+apply to every authored screen — diagram, kinetic type and character act alike
+(scenes-schema §the authored-screen lane). A `camera` cut — a photograph under the shared
+camera runtime — is read for its focus, rates and source upscale instead: plate typography,
+zone fill (P0-F) and the 2.6 s entrance cap do not apply to it, and that is the only kind
+exemption. §6.1 adds the editorial-frame test, §6.2 the retired
 footage marks; §7 and §8 add
-the P0s that only their kind can commit and say what the axes look at there. Nothing is
+the P0s that only their kind can commit and say what the axes look at there. Nothing else is
 subtracted for a kind: a kinetic screen is still judged on palette restraint, and a character
 screen still has to put its number on screen legibly.
 
@@ -408,19 +415,20 @@ screen still has to put its number on screen legibly.
 10. Any text set below its role's size in the §3 table for the slide's format, or a
     structural line thinner than that format's `--hair` (dividers) or `--rule` (axes,
     connectors, rails) — the slide is unreadable on the phone it is made for
-11. **One picture under the narration** — the slide's picture does not change for longer than
-    the channel's static-ground limit (`window.MOTION_POLICY.maxStaticGroundSeconds`, default
+11. **One picture under the narration** — a finding, not a P0 (owner decision 2026-10-18: the
+    static-ground limit is guidance). The slide's picture does not change for longer than
+    the channel's static-ground guide (`window.MOTION_POLICY.maxStaticGroundSeconds`, default
     8 s — one cut). A plate or a kinetic screen that runs a whole long scene while only the
-    type, a number or a callout changes is a slideshow, not a video (owner directive
+    type, a number or a callout changes reads as a slideshow, not a video (owner directive
     2026-09-03 — "the viewer has to feel a video: image changes, animation, camera moves";
     a still under its camera move holds one cut by the 2026-09-05 directive).
     The clock resets only when the picture itself changes: the next generated clip, a new
     photograph under the next sentence, a recording — and, on an explanation slide, the next
     reveal group (directive 2026-09-05: a movement per group, so the clock runs per group).
-    So an authored plate on an `other` beat is a one-sentence card (a verdict, a single number);
-    `check-scenes.js` blocks the estimate before the slide is authored and this review reads
-    the sheet: `g<k>-mid` and `g<k>-end` showing the same picture across two or more groups is
-    this P0
+    So an authored plate on an `other` beat is usually a one-sentence card (a verdict, a single
+    number); `check-scenes.js` warns on the estimate before the slide is authored and this
+    review reads the sheet: `g<k>-mid` and `g<k>-end` showing the same picture across two or
+    more groups is this finding, reported with the groups and seconds involved
 
 12. **A rendered object that does not do what the sentence says** — the object turns or
     recedes while the narration states a count, the stamp count on the frame disagrees with
@@ -541,7 +549,7 @@ includes source/date readability at phone scale.
 ### 6.2 Marks — pen strokes on the studio stage (the footage ground is retired)
 
 **Nothing is drawn over video** (user directive 2026-09-05, CLAUDE.md §Nothing is drawn over
-video — it outranks every rule in this file). The footage treatment this section used to
+video — the no-marks rule covers every moving picture and nothing in this file relaxes it). The footage treatment this section used to
 describe — a generated clip per reveal group under coral marks and a matte — is retired, and
 `treatment:"footage"` is rejected by the checkers. What survives here is the mark grammar,
 because the same helpers draw the pen strokes on a studio slide (§1), where the ground is a
@@ -610,12 +618,12 @@ decisions.
 - **The struck-out phrase is the one device with a second meaning.** `h.cross` reveals the
   phrase, then draws a 10px rule through it — the thing that turned out to be wrong. Once
   per screen at most.
-- **What is on screen is not the subtitle.** The subtitle band is already carrying the sentence.
+- **What is on screen is not the narration.** The voice is already carrying the sentence.
   The screen carries what is left when the sentence is cut to its point.
 
 **P0, added for this kind**
 
-13. A screen phrase identical to its segment's `sub` — the same sentence twice, once burned in and once as the picture
+13. A screen phrase identical to its segment's narration sentence (`narration[k].sub` is its written form) — the viewer hears the sentence and reads it at the same time
 14. More than one hero-sized phrase, or rendered lines above the limits: hero 3, max quote 2, supporting phrase 2, screen total 4
 15. Two effect kinds on one screen, or a word that rotates, bounces, or arcs in. An art that travels and a word that enters on the same group is one event, not two. Mixing `drop` and `wipe` is still two; `mask` and `words:true` are one.
 
@@ -643,7 +651,7 @@ rules keep the scene from becoming a mascot show or a row of labelled boxes.
   `--ease` — opacity stays at 1 so the walk is on screen, not covered by a fade.
 - **The words say it, the figure reacts.** The sentence rises as a mask rise (`h.said`), the
   earlier lines dim, the last one settles. A gesture is never the only thing conveying a value or
-  a claim — the style gate and the reviewer read text, and a point that exists only as a raised
+  a claim — the style check and the reviewer read text, and a point that exists only as a raised
   arm is a point nothing has checked.
 - **Use illustration assets when available.** A character or prop is a matched, transparent,
   text-free plate created by the available image tool; HTML stages its arrival and relationship.
@@ -672,7 +680,7 @@ photoreal 3D. Use refined `h.mark.arrow` curves with a tangent-following head; k
 weight subordinate to the object silhouette. Inspect the actual clip before accepting it.
 Low-rate sheets and flat actor icons are not the default for new physical subjects.
 
-The mandatory planning and production gates are in [object-state-quality.md](object-state-quality.md).
+The planning and production checks are in [object-state-quality.md](object-state-quality.md).
 Every editorial diagram declares its subject changes before approval. A still cutout that
 only translates or settles fails the physical-object lane, even when its lighting looks good.
 

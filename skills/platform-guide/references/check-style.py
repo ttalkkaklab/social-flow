@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Deterministic Korean AI-tell checker — the shared gate for every social-flow surface.
+"""Deterministic Korean AI-tell checker — the shared style check for every social-flow surface.
 
 `korean-style.md` is the SoT for the rule definitions. This script is those
-rules turned into a machine verdict, and the verdict is authoritative (agents
-don't override it with their own judgment).
+rules turned into machine findings. The findings are suggestions the writer fixes
+or justifies; the exit codes report severity (owner directive 2026-10-16 — no
+caller treats them as a veto on authorized work).
 
     python3 check-style.py --surface narration output/script.txt
     cat post.md | python3 check-style.py --surface threads -
@@ -355,15 +356,17 @@ PATTERNS: list[Pattern] = [
     # isn't loosened.
     # Not caught: adnominals ("갈리는 이유" — headline phrasing) · conditionals
     # ("나뉜다면") · colloquial past and imperatives ("후기 남겼어"·"메모 남겨 둬"·
-    # "3일 남았어요").
+    # "3일 남았어요") · spoken past ("갈렸어요"·"나뉘었어요" — CLAUDE.md's spoken-past
+    # exception, 2026-10-18). The written and polite past (갈렸다·갈렸습니다·나뉘었다·
+    # 나뉘었습니다) stay caught: they are the same recital register one tense back.
     # '남기다' is transitive but shares the report-register ending, so it's caught too —
     # present formal only (남긴다·남깁니다). People say "적어 둔다"·"메모해 둔다".
     # The '갈-' family only word-initially or as '엇갈-' — "헷갈렸어요"·"헷갈립니다" are
     # everyday words, and matching without a boundary false-positives (found while
     # porting to fect-persona, 2026-08-12).
     ("D8", "S1", "report-register stative verb ending",
-     re.compile(r"(나뉜다|나뉩니다|나뉘어요|나뉘죠|나뉘었"
-                r"|(?:엇|(?<![가-힣]))갈(?:린다|립니다|려요|리죠|렸다|렸어요|렸습니다|립니까)"
+     re.compile(r"(나뉜다|나뉩니다|나뉘어요|나뉘죠|나뉘었(?:다|습니다)"
+                r"|(?:엇|(?<![가-힣]))갈(?:린다|립니다|려요|리죠|렸다|렸습니다|립니까)"
                 r"|(?<!살아)남습니다|(?<!살아)남는다|남긴다|남깁니다)(?!면)"), 0,
      "Make the target the subject, concretely — '추천이 갈려요' → '미용실마다 다른 색을 권해요',"
      " '근거를 남긴다' → '근거를 적어 둔다'"),
@@ -1384,7 +1387,8 @@ SELFTEST = [
      "후기 남겼어.\n"
      "메모 남기는 게 나아.\n"
      "둘로 나뉜다면 그때 다시 보자.\n"
-     "처음엔 저도 헷갈렸어요. 이름이 비슷해서 헷갈립니다.\n"),  # '헷갈리다' is an everyday word
+     "처음엔 저도 헷갈렸어요. 이름이 비슷해서 헷갈립니다.\n"  # '헷갈리다' is an everyday word
+     "어제는 추천이 갈렸어요. 의견이 둘로 나뉘었어요.\n"),  # spoken past — CLAUDE.md exception (2026-10-18)
     # '살아남다' is a different verb (1 measured over-block). On threads D9 (written-
     # register ending) catches it, so D8's lookbehind is pinned separately on narration,
     # where D9 is off.

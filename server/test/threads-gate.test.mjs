@@ -7,6 +7,8 @@ import { ROUTES } from '../dist/handlers.js';
 import { threadsBodyHash } from '../dist/threads-gate.js';
 
 // All calls use the real MCP routes; network access fails the test immediately.
+// Contract (owner decision 2026-10-18): a draft binds body hash, channel and reply target.
+// Reviews are evidence, there is no gate.json or score threshold, style findings are warnings.
 test('Threads growth and episode gates: real routes, no publishing APIs', async (t) => {
   const cwd = process.cwd();
   const temp = mkdtempSync(join(tmpdir(), 'threads-gate-'));
@@ -19,16 +21,20 @@ test('Threads growth and episode gates: real routes, no publishing APIs', async 
   const body = '맥북을 켰어요. 비밀번호가 생각나지 않아서 커피부터 마셨어요.';
   const base = { channel: 'test', body, readerMessage: '설정을 확인해요', comicElements: ['커피부터 마시는 장면'], purpose: 'empathy', purposeEvidence: body, flow: { hook: '장면', turn: '실수', residue: '공감' }, submitter: 'writer', submitterContext: 'session-1' };
   const dir = join(temp, 'data/test/growth/threads');
-  const config = (voice = 95, purpose = 80) => writeFileSync(join(dir, 'gate.json'), JSON.stringify({ voice, purpose, flow: 80 }));
   try {
-    for (const key of ['channel', 'body', 'readerMessage', 'comicElements', 'purpose', 'purposeEvidence', 'flow']) {
+    for (const key of ['channel', 'body', 'readerMessage', 'purpose']) {
       const input = { ...base }; delete input[key];
       await assert.rejects(invoke('threads_draft_create', input));
     }
+    // Creative metadata is optional: a draft without comicElements, purposeEvidence or flow is accepted and publishable.
+    const plain = payload(await invoke('threads_draft_create', { channel: 'test', body, readerMessage: '설정을 확인해요', purpose: 'info' }));
+    assert.equal(plain.bodyHash, threadsBodyHash(body));
+    assert.equal((await invoke('threads_publish', { channel: 'test', caption: body, draftId: plain.draftId, dryRun: true })).structuredContent.gatePassed, true);
     for (const input of [{ ...base, body: ' ' }, { ...base, comicElements: [] }, { ...base, comicElements: [' '] }, { ...base, channel: '../escape' }]) {
       await assert.rejects(invoke('threads_draft_create', input));
     }
     await assert.rejects(invoke('threads_draft_create', { ...base, purpose: ['info', 'fun'] }));
+    // A supplied purposeEvidence is still checked against the body.
     await assert.rejects(invoke('threads_draft_create', { ...base, purposeEvidence: '없는 문장' }), /quote not present/);
     await assert.rejects(invoke('threads_draft_create', { ...base, flow: { hook: '시작', turn: '전환' } }));
     const draft = payload(await invoke('threads_draft_create', base));
@@ -44,73 +50,53 @@ test('Threads growth and episode gates: real routes, no publishing APIs', async 
     for (const quote of [body.replace('맥북을', '맥북이'), body.replace('.', '!')]) {
       await assert.rejects(invoke('threads_review_submit', review('voice', { findings: [{ quote, issue: '변조 인용', severity: 'pass' }] })), /quote not present/);
     }
+    // No reviews, no gate.json: the draft binding alone is the publishing contract.
+    assert.equal((await invoke('threads_publish', pub)).structuredContent.gatePassed, true);
     const receipt = payload(await invoke('threads_review_submit', review('voice', { findings: [{ quote: body.replaceAll(' ', '\n  '), issue: '공백 차이', severity: 'pass' }] })));
     assert.equal(receipt.selfReview, true);
     assert.equal(receipt.sameContext, true);
-    await assert.rejects(invoke('threads_publish', pub), /thresholds not configured/);
-    config();
-    await assert.rejects(invoke('threads_publish', pub), /Missing purpose/);
-    await invoke('threads_review_submit', review('purpose', { score: 79 }));
-    await assert.rejects(invoke('threads_publish', pub), /below 80/);
-    await invoke('threads_review_submit', review('purpose'));
-    await assert.rejects(invoke('threads_publish', pub), /Missing flow/);
-    await invoke('threads_review_submit', review('flow'));
+    // Reviews are evidence: a zero score, a P0 finding and a malformed gate.json on disk do not block.
+    await invoke('threads_review_submit', review('purpose', { score: 0 }));
+    await invoke('threads_review_submit', review('voice', { findings: [{ quote: body, issue: '해결 전 결함', severity: 'P0' }] }));
+    writeFileSync(join(dir, 'gate.json'), '{bad');
+    assert.equal((await invoke('threads_publish', pub)).structuredContent.gatePassed, true);
     await assert.rejects(invoke('threads_publish', { ...pub, caption: body + ' 수정' }), /hash mismatch/);
     await assert.rejects(invoke('threads_publish', { ...pub, channel: 'other' }), /channel mismatch/);
     await assert.rejects(invoke('threads_publish', { channel: 'test', caption: body, dryRun: true }), /Exactly one/);
     await assert.rejects(invoke('threads_publish', { ...pub, episodeRef: 'episode' }), /Exactly one/);
     assert.equal((await invoke('threads_publish', pub)).structuredContent.dryRun, true);
-    config(100, 100);
-    assert.equal((await invoke('threads_publish', pub)).structuredContent.gatePassed, true);
-    writeFileSync(join(dir, 'gate.json'), '{bad');
-    await assert.rejects(invoke('threads_publish', pub));
-    for (const settings of [{ voice: 95 }, { voice: '95', purpose: 80, flow: 80 }, { voice: 101, purpose: 80, flow: 80 }, null]) {
-      writeFileSync(join(dir, 'gate.json'), JSON.stringify(settings));
-      await assert.rejects(invoke('threads_publish', pub));
-    }
-    config();
     for (const [exit, caption] of [
       [2, '결과는 둘로 나뉩니다.'],
       [1, '접수 절차를 개선시킬 방법을 찾았어요.\n기한 전 신고에 주의가 요구됩니다.\n이 수치는 현지 물가가 얼마나 올랐는지를 말해 줍니다.'],
     ]) {
-      await t.test(`style checker exit ${exit}: ${exit === 2 ? 'blocks' : 'passes with visible warning'}`, async (t) => {
+      await t.test(`style checker exit ${exit}: passes with a visible warning`, async (t) => {
         const warning = t.mock.method(console, 'warn', () => {});
         const checked = payload(await invoke('threads_draft_create', { ...base, body: caption, purposeEvidence: caption }));
-        for (const axis of ['voice', 'purpose', 'flow']) {
-          await invoke('threads_review_submit', { ...review(axis), ...checked, findings: [{ quote: caption, issue: '체커 종료 코드 검증', severity: 'pass' }] });
-        }
-        const input = { ...pub, draftId: checked.draftId, caption };
-        if (exit === 2) {
-          await assert.rejects(invoke('threads_publish', input), /Style check failed \(threads, exit 2\)/);
-          assert.equal(warning.mock.callCount(), 0);
-        } else {
-          assert.equal((await invoke('threads_publish', input)).structuredContent.gatePassed, true);
-          assert.equal(warning.mock.callCount(), 1);
-          assert.match(warning.mock.calls[0].arguments[0], /Style check warning \(threads, exit 1\):.*verdict WARN/s);
-          assert.match(warning.mock.calls[0].arguments[0], /S1 0 S2 2 S3 1/);
-        }
+        const result = await invoke('threads_publish', { ...pub, draftId: checked.draftId, caption });
+        assert.equal(result.structuredContent.gatePassed, true);
+        assert.equal(result.structuredContent.styleWarnings.length, 1);
+        assert.match(result.structuredContent.styleWarnings[0], new RegExp(`Style check warning \\(threads, exit ${exit}\\)`));
+        assert.match(result.content[0].text, /Style suggestions \(not blocking\)/);
+        assert.equal(warning.mock.callCount(), 1);
+        assert.match(warning.mock.calls[0].arguments[0], new RegExp(`Style check warning \\(threads, exit ${exit}\\):.*verdict`, 's'));
+        if (exit === 1) assert.match(warning.mock.calls[0].arguments[0], /S1 0 S2 2 S3 1/);
       });
     }
-    // An actual checker failure must block even when all reviews pass.
-    const bad = payload(await invoke('threads_draft_create', { ...base, body: '결과는 둘로 나뉩니다.', purposeEvidence: '결과는 둘로 나뉩니다.' }));
-    for (const axis of ['voice', 'purpose', 'flow']) await invoke('threads_review_submit', { ...review(axis), ...bad, findings: [{ quote: '결과는 둘로 나뉩니다.', issue: '검사기 차단 검증', severity: 'pass' }] });
-    await assert.rejects(invoke('threads_publish', { ...pub, draftId: bad.draftId, caption: '결과는 둘로 나뉩니다.' }), /Style check failed/);
+    // A clean body returns no style warnings at all.
+    assert.equal((await invoke('threads_publish', pub)).structuredContent.styleWarnings, undefined);
+    // A reply draft needs no review either; its reply target stays bound.
     const replyDraft = payload(await invoke('threads_draft_create', { ...base, surface: 'reply', replyToId: 'parent-1' }));
-    await invoke('threads_review_submit', { ...review('voice'), ...replyDraft });
     const replyPub = { ...pub, draftId: replyDraft.draftId, replyToId: 'parent-1' };
     assert.equal((await invoke('threads_publish', replyPub)).structuredContent.dryRun, true);
     await assert.rejects(invoke('threads_publish', { ...replyPub, replyToId: undefined }), /reply target mismatch/);
+    await invoke('threads_review_submit', { ...review('voice'), ...replyDraft });
     await assert.rejects(invoke('threads_review_submit', { ...review('purpose'), ...replyDraft }), /voice review only/);
     const selfReply = '커피는 식기 전에 마셔요.';
     const chainDraft = payload(await invoke('threads_draft_create', { ...base, selfReply }));
-    for (const axis of ['voice', 'purpose', 'flow']) await invoke('threads_review_submit', { ...review(axis), ...chainDraft });
     const chainPub = { ...pub, draftId: chainDraft.draftId, selfReply };
     assert.equal((await invoke('threads_publish', chainPub)).structuredContent.dryRun, true);
     await assert.rejects(invoke('threads_publish', { ...chainPub, selfReply: selfReply + ' 수정' }), /hash mismatch/);
     await assert.rejects(invoke('threads_review_submit', { ...review('purpose'), ...chainDraft, findings: [{ quote: selfReply, issue: '자답은 목적 평가 대상 밖', severity: 'pass' }] }), /quote not present/);
-    await invoke('threads_review_submit', review('voice', { findings: [{ quote: body, issue: '해결 전 결함', severity: 'P0' }] }));
-    await assert.rejects(invoke('threads_publish', pub), /unresolved P0/);
-    await invoke('threads_review_submit', review('voice'));
     for (const invalid of ['', '   ', null, undefined]) {
       await assert.rejects(invoke('threads_publish', { ...pub, draftId: invalid }));
       await assert.rejects(invoke('threads_publish', { channel: 'test', caption: body, episodeRef: invalid, dryRun: true }));
@@ -123,7 +109,7 @@ test('Threads growth and episode gates: real routes, no publishing APIs', async 
     await assert.rejects(invoke('sns_comment_reply', { ...comment, message: body + ' 수정' }), /hash mismatch/);
     await assert.rejects(invoke('sns_comment_reply', { ...comment, draftId: draft.draftId }), /reply target mismatch/);
     await assert.rejects(invoke('sns_comment_reply', { ...comment, platform: 'INSTAGRAM' }), /only for THREADS/);
-    // Disk mutation cannot retain a review for the old body.
+    // Disk mutation cannot retain a review or a publish binding for the old body.
     const file = join(dir, 'drafts', draft.draftId.split('.')[1] + '.json');
     const saved = JSON.parse(readFileSync(file, 'utf8'));
     writeFileSync(file, JSON.stringify({ ...saved, body: '바뀐 문장이에요.' }));
@@ -146,6 +132,7 @@ test('Threads growth and episode gates: real routes, no publishing APIs', async 
     const audit = readFileSync(join(dir, 'gate-log.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
     assert.ok(audit.some(e => e.result === 'rejected'));
     assert.ok(audit.some(e => e.selfReview === true && e.sameContext === true));
+    assert.ok(audit.some(e => e.result === 'style_warning' && e.styleFindings.length === 1));
     assert.equal(networkCalls, 0);
   } finally {
     process.chdir(cwd);

@@ -169,15 +169,16 @@ channel, and consent to issue a fresh `refresh_token`. Treat
   | Scope | What it opens | When |
   |---|---|---|
   | `youtube.upload` | video upload | publish (required) |
-  | `youtube.force-ssl` | caption upload + comment reads/replies | publish (required) · growth |
+  | `youtube.force-ssl` | `youtube_update` (the private → public flip) + comment reads/replies + requested caption tracks | publish (required) · growth |
   | `youtube.readonly` | channel/video reads | growth |
   | `yt-analytics.readonly` | period metrics (views, watch time, subscriber change) | growth |
   | `yt-analytics-monetary.readonly` | revenue metrics | optional |
 
-  If `force-ssl` is missing, **the video uploads but only the captions fail**
-  (this pipeline uploads captions separately via `captions.insert`). The first
-  two are enough if you'll only publish, but growing scopes later means
-  reissuing, so turning them all on from the start is recommended.
+  If `force-ssl` is missing, **the video uploads private but stays there** — the
+  flip to public (`youtube_update`), comment replies and any caption track the
+  user requested (`captions.insert`) all need it. The first two scopes are
+  enough if you'll only publish, but growing scopes later means reissuing, so
+  turning them all on from the start is recommended.
 
 ## Save · verify · record
 

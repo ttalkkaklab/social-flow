@@ -21,8 +21,8 @@ Assembly video-check failures follow [assembly-video-hitl.md](assembly-video-hit
 
 ## Entry and scope
 
-Use only for an explicitly approved `window.PRODUCTION.mode:'full_video'`
-([production-mode.md](../../storyboard/references/production-mode.md)). This branch replaces
+Use when `window.PRODUCTION.mode` is `'full_video'` — the project's saved video ratio inherited from
+`.social-flow/models.json`, or an explicit episode choice ([production-mode.md](../../storyboard/references/production-mode.md)). This branch replaces
 hybrid's 1–2 generated-shot cap, HTML-only explanation routing, person-required source images
 and generic photo style with the episode's selected style. It does not change facts, voice,
 language, narration approval, budget or publishing approval.
@@ -107,8 +107,8 @@ its generator. These are authored reconstruction instructions, not recovered pro
   let water pass, or approach a bridge. Write opening state → action → final state, with
   anticipation, contact and release where an actor is involved. Camera motion alone may
   reveal a place; it cannot replace a promised change in the subject.
-- The no-marks-over-video rule holds: no added arrows, X marks, rings, labels, badges or
-  titles. Burned subtitles are the only overlay. Explain with object movement and framing.
+- The no-marks-over-video rule holds: no added arrows, X marks, rings, labels, badges, titles
+  or subtitles — nothing is typed over footage (2026-10-17). Explain with object movement and framing.
   Numeric comparisons still require source values and the actual count or proportion; if a
   generator cannot draw that accurately, stop and propose a revised cut or mode.
 
@@ -155,14 +155,16 @@ visual: {
 }
 ```
 
-**Every shot is pre-rendered in 3D before its prompt is written** (user directive 2026-09-11,
-[blender-previz.md](../../storyboard/references/blender-previz.md) §6): a Blender or three.js
-previz at the billed length, 24 fps, stored as `visual.video.previz` with the move it performs
-in `previz.camera.movement` — the four `visual.camera` slots are then written to match it, the
-still is edited from its first frame (§6.6), and on the API lane the shot is a Seedance 2.x
-reference cut (`modelPurpose:"previz"`, the clip as `Video 1`; the vendor bills input plus
-output seconds, `cost-preview.js` prices it on the `…-video` rows). `check-scenes.js` refuses a
-generated cut without the previz once the camera pass is written.
+**A 3D previz is optional** ([blender-previz.md](../../storyboard/references/blender-previz.md) §6):
+a Blender or three.js previz at the billed length, 24 fps, stored as `visual.video.previz` with the
+move it performs in `previz.camera.movement`, helps camera and blocking when the cut's saved model
+takes a reference clip — on Seedance 2.x the shot can be a reference cut (`modelPurpose:"previz"`,
+the clip as `Video 1`; the vendor bills input plus output seconds, `cost-preview.js` prices it on
+the `…-video` rows). When one exists, the four `visual.camera` slots are written to match it and
+the still is edited from its first frame (§6.6). On a `frame_and_prompt` adapter (Seedance 1.x,
+Veo, a host tool, ASTRA) the previz is advice only. Each cut keeps its own saved model and
+resolution (per-cut, 2026-09-13). `check-scenes.js` reports a generated cut without a previz as
+advisory, never a refusal.
 
 One camera contract per shot: the four `visual.camera` slots, in vendor vocabulary; on a
 static camera `speed` stays empty and the span reads `static camera`. `videoDesign.camera` is
@@ -182,18 +184,18 @@ the same `clipAssemble` recipe as every other clip in this pipeline: the camera 
 four slots (`framing, speed movement, ending on end`; a travelling move reads `framing, pauses, then
 speed movement, settling on end` — the hold on each end; a static camera has no speed), the
 subject action with its beats in words, a consistency lock that carries the look and the
-episode camera language, and `Audio: silent`. Store it as `visual.video.prompt`. Before
-returning on the Seedance lane, the helper runs the Seedance prompt gate that `check-scenes.js` runs on every
+episode camera language, and `Audio: silent`. Store it as `visual.video.prompt`. On the
+Seedance lane the helper returns the Seedance wording advice that `check-scenes.js` also reports on every
 stored Seedance prompt (Korean outside dialogue quotes, a negative directive, a timecode or digit
-seconds, a missing lock) and fails with the reason instead of emitting a prompt the board
-would then reject. Duration is an API parameter. If a fixed-camera change benefits from an
+seconds, a missing lock) as entries in its `warnings` array, beside the prompt; read them before
+storing, since the server still refuses Korean outside quotes at the call. Duration is an API parameter. If a fixed-camera change benefits from an
 end frame, edit the same source using `endFramePrompt`, keep that file, and set
 `visual.frames.end`; the router forwards it as `lastImagePath`. Do not impose a fixed-camera
 end frame on a travelling-camera shot.
 
 For `visual.video.engine:"astra"`, the helper builds an LTX prompt from the same
-camera, ordered action beats, style and identity lock. It does not run Seedance's
-wording gate or claim that a reference video or silent audio request is sent.
+camera, ordered action beats, style and identity lock. It returns no Seedance wording
+advice and does not claim that a reference video or silent audio request is sent.
 Selected cast sheets also enter the ASTRA prompt as appearance locks for action,
 reaction and insert cuts. Their text counts toward the limit; it is never dropped
 to make an oversized request fit. The locks describe appearance without name labels.
@@ -291,7 +293,7 @@ move a camera that needs to hold a spatial relationship.
 - **No provider lock under a written move.** `visual.video.cameraFixed:true` is only legal with
   `movement: static`; ep402 shot 12 asked for an optical push and locked the camera at once.
 - **Generate at the card length.** The beats end inside `scene.duration`; a 10-second clip for
-  a 5-second card spreads the action past the cut. `check-production.js --ready` refuses a clip
+  a 5-second card spreads the action past the cut. `check-production.js --ready` warns on a clip
   more than three seconds longer than its card unless `edit.in` skips into the action.
 
 For camera drift, repeated action, destructive crops or broken adjacent shots, use the
@@ -324,20 +326,22 @@ plan reaches the model; never replace it with a global "static or subtle drift" 
    split/replan and re-quote before generation; never stretch the clip with a loop or freeze.
 4. Before **each** video call, including retries, run:
    `node ${CLAUDE_PLUGIN_ROOT}/skills/produce/references/check-production.js storyboard/ --before-call N`.
-   Pass the exact `generation` arguments from `cost-preview.js --json`, resolved local
-   `imagePath`, optional `lastImagePath`, and stored prompt to `mcp__social-flow__seedance_img2video`.
+   Save a `video_plan` whose operation args are the exact `generation` arguments from
+   `cost-preview.js --json`, the resolved local `imagePath`, optional `lastImagePath` and the stored
+   prompt, then `video_execute` it; the plan selects the saved model's adapter (`seedance_img2video`
+   and so on), and a direct adapter call carries `videoContext`.
    Under `videoProvider:'host'` the call is the host `image_to_video` instead (source image,
    stored prompt, `duration`, 720p) and the ledger row is `video.host` for the requested seconds.
    Under `videoProvider:'astra'` the call goes to our own LTX-2.5 box and the ledger row is
    `video.astra` at $0 — the cost is wall clock, so book the seconds but expect no charge.
    Submit ASTRA cuts serially: its single worker cannot render them in parallel, and queue
    time counts against the host's tool-response timeout. A transport timeout does not mean
-   the accepted generation failed. Before another submission, inspect the requested output
-   and its `<video>.astra-job.json` receipt. The client writes the job ID and request before
+   the accepted generation failed. Before another submission, inspect `video_status` for the same
+   request ID and the `<video>.astra-job.json` receipt it points at. The client writes the job ID and request before
    polling, then the saved response after download even if the host stopped waiting. A
    `submitted` receipt is unresolved, not a failed take; do not reset attempts or duplicate
    that job. If a completed file exists, probe and review it normally and retain the receipt.
-   **Default: `astra_img2video`** with the shot's still as `firstFramePath`, the stored prompt,
+   **On the ASTRA lane the default tool is `astra_img2video`** with the shot's still as `firstFramePath`, the stored prompt,
    and the shot's `visual.video.resolution` passed through as `width` and `height`:
    `1024x1920` for `shorts-9x16`, or `1920x1024` for `youtube-long-16x9`. Both stay on the
    64-pixel grid; the edit scales the short edge to the final 1080-pixel canvas. Also pass
@@ -354,7 +358,7 @@ plan reaches the model; never replace it with a global "static or subtle drift" 
    8.000s take came back as 5.041s; name the length explicitly. Re-roll one bad stretch of an
    accepted clip with `astra_video_retake` (span in seconds; it inherits the source's size and
    length exactly) rather than regenerating the shot. Uploads expire after 24h under a
-   20-upload ceiling — when a long episode hits it, clear finished ones with
+   200-file storage ceiling per key (video-model-selection.md §ASTRA) — when a long episode hits it, clear finished ones with
    `astra_video_list_uploads` / `astra_video_delete_upload` instead of waiting out the expiry.
    Image-conditioned `generate` has a measured failure band at frames {121,129,137} (width
    1280); the server owns the acceptance gate, so a refusal there is a retry at another frame
@@ -387,7 +391,7 @@ same frame. Before rejecting a clip for extra actors, duplicated objects or fuse
 extract and inspect the original frame at the suspected time. Record that time and frame
 path with the finding. A contact sheet remains a diagnostic aid, never full playback proof.
 
-Write `.work/video-review.json` with exactly one accepted record per generated shot:
+When you have watched a clip, write `.work/video-review.json` with one record per watched shot; a shot without a record stays `not_reviewed`:
 
 ```json
 {
@@ -429,8 +433,8 @@ Record `motionEvidence` separately from camera evidence; camera-only motion and 
 subject states fail. These fields are human playback observations, not automated proof of
 motion. Never fill them from the prompt or mark an unwatched clip accepted.
 
-The gate checks hashes, playback evidence, sample times, unresolved
-defects, media resolution and duration. It cannot judge aesthetics: the reviewer must reject
+`check-production.js --ready` errors on media resolution and duration; hashes, playback
+evidence, sample times and unresolved defects are reported as `not_reviewed`/`stale` warnings. It cannot judge aesthetics: the reviewer must reject
 rubbery buildings, popping objects, sliding terrain, action discontinuity, muddy materials,
 or a shot that misses the reference style even when its metadata passes.
 
@@ -438,13 +442,14 @@ or a shot that misses the reference style even when its metadata passes.
 
 The review says a person saw the subject move; `measure-motion.js` says how much of the clip
 moves. `check-production.js --ready` measures every accepted clip (cached by SHA-256 in
-`.work/motion-metrics.json`) and refuses one that stands still longer than 2 seconds, repeats
+`.work/motion-metrics.json`) and warns on one that stands still longer than 2 seconds, repeats
 the previous picture on more than half its samples, or averages under 1.8 on the proxy scale.
 ep402's frozen clips measured 0.85–1.16 with every sample a repeat; ep411's quietest accepted
 clips measured 2.15–2.8. The same pass reads where visible motion starts: when the action
 begins after the first second and `edit.in` is still 0, set `edit.in` to the onset
-([cinematic-edit.md](cinematic-edit.md)) or regenerate. A failed measurement is a failed clip;
-regenerate it with a visible subject action or camera move.
+([cinematic-edit.md](cinematic-edit.md)). A proxy finding is evidence to inspect, not a verdict:
+watch the clip, and regenerate only when the clip actually fails its action and the budget
+covers the call — never to satisfy the number.
 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/skills/produce/references/measure-motion.js .work/video/s07-attempt-1.mp4
@@ -466,9 +471,9 @@ in narration order. Each record includes `segment`, `videoSha256`, `in`, `startF
 and `motionEvidence`. `seeks` are source-file times inside the actual trimmed interval;
 `motionEvidence.beats[].at` is local to that interval. Inspect the final group's outgoing
 handle too. A previous whole-card review cannot establish these new source reviews.
-Motion is measured separately over each used source interval. Existing still review,
-budget, unknown music price and TTS findings retain their gates; source/trim/clock errors
-are structural failures and cannot be approved as quality warnings.
+Motion is measured separately over each used source interval. Budget and an unknown music price
+remain errors; still review and TTS findings are recorded warnings; source/trim/clock errors
+are structural failures and cannot be waved through as quality warnings.
 
 
 Run `check-production.js storyboard/ --ready` before capture/build. Generate no HTML scene
@@ -481,14 +486,15 @@ reserve its handle before quoting generation, and use the common builder for del
 Do not blanket-assign `cut` or replace the builder with an episode-specific concatenation script. Keep narration without burned subtitles; clear on-screen `title`, `bullets`, `stat` and
 `footnote`, storing thumbnail/title copy in platform metadata instead.
 
-`build-reel.sh` reruns the approved-quote, review and manifest gates, and `verify-assembled.js`
-measures every card of the assembled reel with the same proxy: a clip card that reads as a
-still, or an authored slide that repeats its picture on most samples or holds one plate past
-the channel plate limit (ceiling 8 seconds), stops the build. The normal build report,
-speed pass, phone QA and content review still run. Watch the final edit for timing and subject
-continuity; an individually accepted clip can still cut badly with its neighbours. A failed
-quality check holds the deliverable and queue. Report actual video spend separately from the
-approved estimate and all other production costs.
+`build-reel.sh` reruns the approved-quote and manifest checks and reports the review state, and
+`verify-assembled.js` measures every card of the assembled reel with the same proxy: a clip card
+that reads as a still, or an authored slide that repeats its picture on most samples or holds one
+plate past the channel plate limit (ceiling 8 seconds), is written to `assembled-check.json` as a
+warning and the build continues. The normal build report, speed pass, phone QA and completion
+report still run. Watch the final edit for timing and subject continuity; an individually
+accepted clip can still cut badly with its neighbours. A quality finding is reported with the
+deliverable; it does not hold the deliverable or the queue. Report actual video spend separately
+from the approved estimate and all other production costs.
 
 ## Revised storyboard attempts
 

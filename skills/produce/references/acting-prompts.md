@@ -186,10 +186,10 @@ The critic should try to disprove quality, not reward prompt wording or metadata
 
 For a requested character-fit evaluation, pass the plan/audition target's acoustic
 fields as `tts_review_acting.characterTarget` (omit plan-only `baselineDirection`,
-`sources`, `warnings`). The reviewer independently describes the voice heard and
-scores characterFit40/accuracy20/acting15/naturalness15/audioQuality10. A pass needs
-both total and characterFit at least 95, full listening, confidence at least 0.9,
-consistent timestamped deductions and no major/critical issue. A correct transcript
+`sources`, `warnings`). The tool prepares host-review evidence (`status: not_reviewed`, no
+score); the executing host listens to the whole take and describes the voice heard against the
+target with timestamped findings on character fit, accuracy, acting, naturalness and audio
+quality — one rubric (host-review.md), no numeric pass bar. A correct transcript
 cannot compensate for the wrong voice. Preserve failed takes and reviewer responses;
 do not reroll an unchanged recording just to obtain a higher score. This opt-in
 review never becomes a prerequisite for normal production or user voice selection.
@@ -219,11 +219,11 @@ Never raise scores by hand to reach a requested target.
 
 ## Requested audio evaluation
 
-When the user explicitly requests an acting-quality loop, call `tts_review_acting` with the actual WAV, clean expectedText, scene direction, language and the actual request in requestedBy. It uses fixed weights (accuracy 25, acting 30, naturalness 25, audio quality 20), returns timestamped defects and binds its report to the audio hash. This is a model judgment, not human approval. Keep rejected takes and reports. Correct the reported defect and generate a new take only within the requested scope. Never call it during normal production without a review request.
+When the user explicitly requests an acting-quality loop, call `tts_review_acting` with the actual WAV, clean expectedText, scene direction, language and the actual request in requestedBy. It prepares host-review evidence bound to the audio hash; the host records timestamped defects on the same rubric as above (character fit, accuracy, acting, naturalness, audio quality). This is a host observation, not human approval. Keep rejected takes and reports. Correct the reported defect and generate a new take only within the requested scope. Never call it during normal production without a review request.
 
-The audio critic uses the published professional band consistently: scores of 95–100
-may have positive observed evidence and no defect. Scores below 95 require a
-timestamped issue on that axis; scores below 90 require a major or critical issue.
+Scores, when the requested loop uses them, follow host-review.md's band (95 no required
+correction · 90 a noticeable issue · below 80 a distracting defect) with a timestamped finding
+behind every deduction; a score never decides whether the take ships.
 This does not raise provider scores or erase findings. Whole-clip confidence, the
 95 overall/character-fit thresholds and rejection of major/critical issues still apply.
 When correcting an older verdict, preserve its raw observation and original verdict,

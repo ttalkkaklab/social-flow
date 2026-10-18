@@ -1,10 +1,11 @@
 # AGENTS.md — working rules for this repository
 
-social-flow is a Claude Code plugin: 18 skills, 5 reviewer agents, and one bundled
+social-flow is a Claude Code plugin: 21 skills, 5 reviewer agents, and one bundled
 MCP server. [README.md](README.md) is the source of truth for structure and the tool
-list; [CLAUDE.md](CLAUDE.md) holds the branch flow, the commit rules and the Korean
-prose rules. **Read CLAUDE.md before you write anything** — it is short, and the
-style rules there are enforced by a checker.
+list; [CLAUDE.md](CLAUDE.md) holds the owner's dated production directives (the later
+date wins), the branch flow, the commit rules and the Korean prose rules. **Read
+CLAUDE.md before you write anything** — no checker runs on docs, comments or tool
+descriptions, so the writer holds the style line with the D8 scan quoted there.
 
 ## GitHub authentication — owner directive, 2026-10-16
 
@@ -18,7 +19,7 @@ Never print a token, put it in a remote URL, persist it in a file or change glob
 authentication for this task. If the dedicated variable is absent or lacks access,
 report that specific blocker without revealing its value.
 
-## Tool lanes — one lane each, no fallbacks
+## Tool lanes — one lane each
 
 These are the lanes the skills are allowed to name. A skill's `allowed-tools` may
 list the plugin's own server and nothing else; a host CLI's native media tools are not MCP
@@ -28,8 +29,9 @@ tools and never appear there.
 |---|---|---|
 | Driving a browser | `ego lite` (`ego-browser`, a tool of the user's machine) | claude-in-chrome, chrome-devtools MCP, any other browser automation |
 | Rendering or screenshotting a page | headless Chrome via `skills/produce/references/capture-frames.sh` | browser MCP servers |
-| Images and video where the host CLI ships its own media tools (Codex `image_gen`; Grok `image_gen` · `image_edit` · `image_to_video` · `reference_to_video`) | the host tool first (user directive 2026-09-07); the plugin server only as a fallback the user asked for | any external MCP server |
+| Images and video where the host CLI ships its own media tools (Codex `image_gen`; Grok `image_gen` · `image_edit` · `image_to_video` · `reference_to_video`) | the saved model choice in `.social-flow/models.json` governs (user directive 2026-10-16); the host tool is the setup-time recommendation, and a fallback after a failed host call is asked for, never silent | any external MCP server |
 | Images, video, voice, music, search otherwise | `mcp__social-flow__*` — the server this plugin ships | any external MCP server |
+| Web search with no `SERPAPI_API_KEY` or Naver pair | the host's `WebSearch` tool — the one allowed search fallback | any external MCP server |
 | Reading an image | the `Read` tool, which takes images natively | vision MCP servers |
 
 **ego lite has no fallback.** It is macOS-only. Where it is missing, the skill says
@@ -49,7 +51,7 @@ gone from every machine that runs this plugin.
   in its own words. storyboard plans and stops for approval · produce builds an
   approved episode · autoproduce runs both unattended.
 - `argument-hint` stays. Codex ignores the field and loads the skill anyway
-  (measured: all 18 present in `codex debug prompt-input`), and Claude Code uses it.
+  (measured: all skills present in `codex debug prompt-input`), and Claude Code uses it.
 
 ## Before you say it works
 

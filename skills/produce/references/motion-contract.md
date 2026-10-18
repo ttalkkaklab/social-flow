@@ -33,8 +33,8 @@ The final reel is measured again because trims, transitions and re-encoding chan
 When a thin line is essential, inspect the clip and the narrated relation together. If a larger
 subject action better explains it, revise that action and render again. Do not thicken a line,
 add blinking, lower a global threshold or animate an unrelated background just to move a score.
-Present real findings under [assembly-video-hitl.md](assembly-video-hitl.md); an approval covers
-only the reported inputs and warnings. A new finding on the final output must be reported as new.
+Present real findings under [assembly-video-hitl.md](assembly-video-hitl.md): they are recorded
+warnings tied to the reported inputs, not an approval. A new finding on the final output is reported as new.
 
 Regression comparisons live in `server/test/motion-contract.test.mjs`. They compare lossless
 rendered frames with H.264 output and retain the background-only counterexample: a numeric

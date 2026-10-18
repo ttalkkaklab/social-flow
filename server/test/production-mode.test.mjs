@@ -67,7 +67,7 @@ test('ASTRA prompt assembly uses its own image-to-video contract instead of Seed
   scene.narration = [];
   assert.doesNotMatch(assemble(win, 0).motionPrompt, /keep their mouths closed/);
   scene.visual.video.engine = 'seedance';
-  assert.throws(() => assemble(win, 0), /Seedance prompt gate/);
+  assert.match(assemble(win, 0).warnings.join(), /Seedance prompt advice/);
 });
 test('ASTRA speech locks distinguish narrator, visible dialogue and off-screen character speech', () => {
   const win = fixture(1), scene = win.SCENES[0];
@@ -80,7 +80,7 @@ test('ASTRA speech locks distinguish narrator, visible dialogue and off-screen c
   assert.doesNotMatch(assemble(win, 0).motionPrompt, /mouths closed/);
   const continuity=scene.shot.videoDesign.continuity;
   scene.shot.videoDesign.continuity='He never speaks.';
-  assert.throws(()=>assemble(win,0),/On-screen dialogue conflicts/);
+  assert.match(assemble(win,0).warnings.join(),/On-screen dialogue conflicts/);
   scene.shot.videoDesign.continuity=continuity;
   scene.narration.push({tts:'Narration',speaker:'narrator',delivery:'voiceover'});
   assert.doesNotMatch(assemble(win, 0).motionPrompt, /mouths closed/);
@@ -225,7 +225,7 @@ test('hybrid and full video retain distinct semantic and policy rules', () => {
     const partial = { PRODUCTION: { mode: m, videoBudgetUsd: 5, maxAttempts: 2 }, SCENES: [] };
     assert.match(mode.check(partial, { draft: true }).join(), /Choose an episode visual style/);
     partial.PRODUCTION.style = { preset: 'webtoon' };
-    assert.match(mode.check(partial).join(), /style HITL choice/);
+    assert.match(mode.check(partial).join(), /Record where the style came from/);
     partial.PRODUCTION.style.selection = { kind: 'user', reference: 'User chose webtoon.' };
     assert.doesNotMatch(mode.check(partial).join(), /style/);
   }
@@ -293,7 +293,7 @@ test('full video still requires source-backed quantities and subtitle-only foota
   const win = fixture(), s = win.SCENES[0];
   s.shot.infoType = 'statistic'; s.shot.render.purpose = 'comparison';
   assert.match(checkScene(s, { production: win.PRODUCTION }).join(), /source/);
-  s.stat = '100'; assert.match(mode.check(win).join(), /only burned subtitles/);
+  s.stat = '100'; assert.match(mode.check(win).join(), /nothing goes over full-video footage/);
   s.stat = ''; s.visual.video.resolution = '720p';
   assert.doesNotMatch(mode.check(win).join(), /1080p/);
 });
@@ -311,13 +311,13 @@ test('source and motion prompts share style without inventing a person; end-fram
 test('complete performance prompts honor Seedance model language and retain Korean story text', () => {
   const win=fixture(1),scene=win.SCENES[0];
   scene.performance=[{kind:'action',character:'host',text:'소포를 문 옆에 내려놓는다.',durationSeconds:1}];
-  assert.throws(()=>assemble(win,0),/event.videoDirection/);
+  assert.match(assemble(win,0).warnings.join(),/event.videoDirection/);
   scene.performance[0].videoDirection='Places the parcel beside the door.';
   const translated=assemble(win,0).motionPrompt;
   assert.match(translated,/Places the parcel beside the door/);assert.doesNotMatch(translated,/소포/);
   assert.equal(scene.performance[0].text,'소포를 문 옆에 내려놓는다.');
   scene.performance[0].videoDirection='Moves for 2 seconds.';
-  assert.throws(()=>assemble(win,0),/digit seconds/);
+  assert.match(assemble(win,0).warnings.join(),/digit seconds/);
   delete scene.performance[0].videoDirection;scene.visual.video.model='dreamina-seedance-2-5-260628';
   assert.match(assemble(win,0).motionPrompt,/소포를 문 옆에 내려놓는다/);
   scene.visual.video.engine='astra';assert.match(assemble(win,0).motionPrompt,/소포를 문 옆에 내려놓는다/);
@@ -331,7 +331,7 @@ test('Seedance 2.5 integer-second performance directions pass assembly and the s
   const checkPrompt=()=>spawnSync(process.execPath,[path.join(root,'skills/storyboard/references/check-scenes.js'),board,'--draft','--json'],{encoding:'utf8'});
   const current=checkPrompt();assert.equal(current.error,undefined);assert.doesNotMatch(current.stdout,/digit seconds/);
   scene.visual.video.model='seedance-1-5-pro-251215';
-  assert.throws(()=>assemble(win,0),/digit seconds/);save(win);
+  assert.match(assemble(win,0).warnings.join(),/digit seconds/);save(win);
   assert.match(checkPrompt().stdout,/digit seconds/);
 }));
 test('opening-state and static-camera guidance augment legacy prompts without changing end frames', () => {
@@ -340,7 +340,8 @@ test('opening-state and static-camera guidance augment legacy prompts without ch
   assert.match(p.sourcePrompt, /dialogue stays in audio, with no subtitles, captions or lettering/);
   assert.match(p.sourcePrompt, /Speech may carry facts that the picture cannot show/);
   assert.match(p.sourcePrompt, /subsequent action and completed result belong to later frames/);
-  assert.equal(digest(p.sourcePrompt), 'fec9382471ec454632c5791c0528761760c1bc477fe641f8bd05208c0004f562');
+  // 2026-10-18: the source prompt keeps the frame clean "with nothing added over it later" instead of "for subtitles added later" (subtitle-free delivery).
+  assert.equal(digest(p.sourcePrompt), '303078d1b504572a1b84a4b8414c2593ea190bede865b99ff569ebc23737a3fe');
   assert.equal(digest(p.endFramePrompt), 'ea5266c699957affead597eaf0c2a1cd4e60bf4e014136b27b6f0207612221a3');
   assert.match(p.motionPrompt, /Locked camera: preserve the opening framing/);
   assert.equal(digest(p.motionPrompt), '118bad971fe5fdf9f971828da1722f3fa61487259c72f6beafe62760998691e1');
@@ -457,7 +458,11 @@ test('a generated still needs a current style review against the preset the shot
     videoSha256: digest(readFileSync(video)), playback: true, seeks: [.1, 2.5, 4.8], defects: [],
     ...Object.fromEntries(['composition', 'materials', 'continuity', 'action', 'camera', 'referenceMatch'].map(k => [k, 'Synthetic fixture evidence for the contract: ' + k])) };
   writeFileSync(path.join(work, 'video-review.json'), JSON.stringify({ shots: [review] }));
-  assert.match(check(board, { ready: true }).errors.join(), /still review is required/);
+  const first = check(board, { ready: true });
+  assert.match(first.errors.join(), /no current still review in still-review.json; style and content remain not_reviewed/);
+  // The fixture declares a previz clip it never rendered: optional, so a warning, never an ENOENT error.
+  assert.match(first.warnings.join(), /previz file missing; previz is optional/);
+  assert.doesNotMatch(check(board, { ready: true }).errors.filter(e => !first.warnings.includes(e)).join(), /ENOENT/);
   const still = { shot: 1, imageSha256: hashFile(board, 'images/scene-1.png'), preset: 'photoreal', styleMatch: true,
     reviewer: 'test fixture', at: '2026-09-06T12:00:00Z', evidence: 'Synthetic: photographic skin and real granite at real scale.' };
   const saveStill = () => writeFileSync(path.join(work, 'still-review.json'), JSON.stringify({ shots: [still] }));
@@ -556,7 +561,7 @@ test('large storyboard cost snapshots flush fully when captured through a pipe',
 test('full-video preflight rejects missing actions and freezing people before a paid call', () => {
  const w=fixture(1),s=w.SCENES[0],m=s.shot.videoDesign.motion;
  delete s.shot.videoDesign.motion;
- assert.match(mode.check(w).join(),/motion.kind/);assert.throws(()=>assemble(w,0),/motion.kind/);
+ assert.match(mode.check(w).join(),/motion.kind/);assert.match(assemble(w,0).warnings.join(),/motion.kind/);
  s.shot.videoDesign.motion=m;s.visual.styleRole='interaction';
  s.visual.video.prompt='Keep every person and bundle fixed in place.';
  assert.match(mode.check(w).join(),/global freeze/);
@@ -790,20 +795,20 @@ test('the previz renderer and the video model are HITL choices recorded before a
   assert.deepEqual(mode.check(win, { requireApproval: true }), []);
   const without = key => { const w = fixture(); delete w.PRODUCTION[key]; return mode.check(w).join(); };
   assert.match(without('previz'), /3D previz can help/);
-  assert.match(without('videoModel'), /Ask which video model/);
-  const w = fixture(); delete w.PRODUCTION.previz.selection; assert.match(mode.check(w).join(), /previz renderer HITL choice/);
+  assert.match(without('videoModel'), /Copy the saved video selection into PRODUCTION.videoModel/);
+  const w = fixture(); delete w.PRODUCTION.previz.selection; assert.match(mode.check(w).join(), /Record where the previz renderer came from/);
   w.PRODUCTION.previz = { renderer: 'maya', selection: { kind: 'user', reference: 'x' } }; assert.match(mode.check(w).join(), /Unsupported PRODUCTION.previz.renderer/);
   const r = fixture(); r.PRODUCTION.videoModel.resolution = '480p'; assert.doesNotMatch(mode.check(r).join(), /resolution must be one of/);
   r.PRODUCTION.videoModel = { model: 'seedance-1-5-pro-251215', resolution: '1080p', selection: { kind: 'user', reference: 'x' } };
-  assert.doesNotMatch(mode.check(r).join(), /Ask which video model/);
+  assert.doesNotMatch(mode.check(r).join(), /Copy the saved video selection/);
   // The draft pass has no generated cuts settled yet; a board with no generated cut never asks.
-  assert.doesNotMatch(mode.check(without.call(null, 'previz') && fixture(), { draft: true }).join(), /Ask which/);
+  assert.doesNotMatch(mode.check(without.call(null, 'previz') && fixture(), { draft: true }).join(), /Copy the saved video selection/);
   const still = fixture(); delete still.PRODUCTION.previz; delete still.PRODUCTION.videoModel;
   for (const s of still.SCENES) { s.shot.render.mode = 'still_camera'; delete s.visual.video; }
-  assert.doesNotMatch(mode.check(still).join(), /Ask which/);
+  assert.doesNotMatch(mode.check(still).join(), /Copy the saved video selection/);
   // The host lane: the tool is the model, so the record says host or stays absent.
   const host = fixture(); host.PRODUCTION.videoProvider = 'host'; delete host.PRODUCTION.videoModel;
-  assert.doesNotMatch(mode.check(host).join(), /Ask which|videoModel/);
+  assert.doesNotMatch(mode.check(host).join(), /Copy the saved video selection|videoModel/);
   host.PRODUCTION.videoModel = { model: 'dreamina-seedance-2-0-260128', resolution: '1080p', selection: { kind: 'user', reference: 'x' } };
   assert.match(mode.check(host).join(), /must be host under videoProvider host/);
   // A 720p grade the table offers must pass the full-video checks on the shots that carry it (review H1).
@@ -854,17 +859,21 @@ test('the assembled motion prompt clears the Seedance prompt gate that check-sce
   assert.equal(PROMPT.lockMissing(p, 'seedance'), false);
   for (const style of Object.values(mode.STYLES)) assert.deepEqual(PROMPT.negDirectiveHits(style.prompt, 'seedance'), []);
   const d = win.SCENES[0].shot.videoDesign;
+  // Prompt-advice hits are warnings on the assembled result (2026-10-18), the same text check-scenes.js reports.
+  const advice = () => assemble(win, 0).warnings.join();
   d.action = 'Do not move the trees while the buildings rise.';
-  assert.throws(() => assemble(win, 0), /prompt gate.*negative directive/);
+  assert.match(advice(), /prompt advice.*negative directive/);
   d.action = 'Buildings rise over 4 seconds.';
-  assert.throws(() => assemble(win, 0), /prompt gate.*digit seconds/);
+  assert.match(advice(), /prompt advice.*digit seconds/);
   d.action = '건물이 올라간다.';
-  assert.throws(() => assemble(win, 0), /prompt gate.*Korean/);
+  assert.match(advice(), /prompt advice.*Korean/);
 });
 test('one camera contract: the four visual.camera slots, never videoDesign.camera', () => {
   const win = fixture(), s = win.SCENES[0];
   delete s.visual.camera.end;
-  assert.throws(() => assemble(win, 0), /Missing visual\.camera\.end/);
+  const partial = assemble(win, 0);
+  assert.match(partial.warnings.join(), /Missing visual\.camera\.end/);
+  assert.equal(partial.motionPrompt, null);
   assert.match(mode.check(win).join(), /visual\.camera\.end is recommended/);
   s.visual.camera.end = 'The open stream'; s.shot.videoDesign.camera = 'A fixed view.';
   assert.throws(() => assemble(win, 0), /videoDesign\.camera is retired/);
@@ -916,16 +925,16 @@ test('a static camera leaves speed empty, and the final state is written once', 
   assert.match(assemble(win, 0).endFramePrompt, /final state: Buildings clear the river bed\./);
   s.visual.camera.movement = 'dolly in';
   assert.match(mode.check(win).join(), /visual\.camera\.speed is recommended/);
-  assert.throws(() => assemble(win, 0), /Missing visual\.camera\.speed/);
+  assert.match(assemble(win, 0).warnings.join(), /Missing visual\.camera\.speed/);
   s.visual.camera.movement = 'static';
   d.after = 'A crane now stands where the blocks were.';
   assert.match(mode.check(win).join(), /after must be the last motion beat/);
-  assert.throws(() => assemble(win, 0), /after must be the last motion beat/);
+  assert.match(assemble(win, 0).warnings.join(), /after must be the last motion beat/);
   d.after = 'Buildings clear the river bed';
   assert.deepEqual(mode.check(win), []);
   delete d.after; d.motion.kind = 'spatial_reveal'; d.motion.reason = 'The camera carries the reveal.';
   assert.match(mode.check(win).join(), /videoDesign\.after is required/);
-  assert.throws(() => assemble(win, 0), /Missing videoDesign\.after/);
+  assert.match(assemble(win, 0).warnings.join(), /Missing videoDesign\.after/);
 });
 test('a shot look outside the selected preset fails the full check, not only the draft', () => {
   const win = fixture();
@@ -980,8 +989,9 @@ test('percentage minima round up by new cut count and hook-only rejects extra vi
   const cuts = Array.from({ length: 7 }, (_, i) => ({ type: i ? 'points' : 'cover', duration: i ? 5 : 20, visual: {} }));
   const win = { PRODUCTION: { mode: 'video_50' }, SCENES: cuts };
   for (const s of cuts.slice(0, 3)) s.visual.video = { engine: 'host' };
-  assert.match(mode.coverageErrors(win).join(), /at least 4 of 7/);
-  assert.match(mode.check(win).join(), /at least 4 of 7/);
+  // The ratio target is advice (2026-10-18): fewer video cuts than the band is reported, never an error.
+  assert.deepEqual(mode.coverageErrors(win), []);
+  assert.doesNotMatch(mode.check(win).join(), /at least 4 of 7/);
   cuts[3].visual.video = { engine: 'host' };
   assert.deepEqual(mode.coverageErrors(win), []);
   win.SCENES.push({ type: 'outro' }, { visual: { source: 'recording' } }, { visual: { source: 'stock', clip: 'stock.mp4' } }, { visual: { reuse: {} } });
@@ -990,7 +1000,7 @@ test('percentage minima round up by new cut count and hook-only rejects extra vi
   delete cuts[3].visual.video;
   assert.deepEqual(mode.coverageErrors(win), []);
   delete cuts[2].visual.video;
-  assert.match(mode.coverageErrors(win).join(), /at least 3 of 7/);
+  assert.deepEqual(mode.coverageErrors(win), []);
   win.PRODUCTION.mode = 'hook_only';
   assert.match(mode.coverageErrors(win).join(), /only the opening hook/);
   delete cuts[1].visual.video;
@@ -1159,7 +1169,8 @@ test('six render bands count stock and generated shots, with small-N lower-bound
     assert.ok(bounds.min <= bounds.max);
     const win = {PRODUCTION:{mode:key,renderRatioVersion:1}, SCENES:Array.from({length:n},(_,i)=>({shot:{render:{mode:i<bounds.min ? (i%2?'stock_video':'generated_video'):'still_camera'}}}))};
     assert.deepEqual(mode.coverageErrors(win), []);
-    if (bounds.min) { win.SCENES[0].shot.render.mode='still_camera'; assert.ok(mode.coverageErrors(win).length); }
+    // Below the band is advice, not an error (2026-10-18); above the band still fails.
+    if (bounds.min) { win.SCENES[0].shot.render.mode='still_camera'; const advice=[]; assert.deepEqual(mode.ratioErrors(win,{advice}), []); assert.match(advice.join(), /aims at/); assert.deepEqual(mode.coverageErrors(win), []); }
     win.SCENES.forEach(s=>s.shot.render.mode='generated_video');
     if(bounds.max<n) assert.ok(mode.coverageErrors(win).length);
   }

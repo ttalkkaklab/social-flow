@@ -1,6 +1,6 @@
 # Video pipeline details — contracts, gates, pitfalls
 
-Assembly video-check failures follow [assembly-video-hitl.md](assembly-video-hitl.md): present warnings, obtain explicit user approval and assemble the approved inputs. This takes precedence over pre-assembly quality-block wording in this document.
+Assembly video-check failures follow [assembly-video-hitl.md](assembly-video-hitl.md): show the findings with the output, record them in the build record and assemble the authorized inputs; no new approval is asked. This takes precedence over pre-assembly quality-block wording in this document.
 
 
 The composition contract around build-reel.sh, plus pitfalls verified in real builds.
@@ -95,9 +95,9 @@ falls back silently and no short video loops or freezes to fill its window.
 | `drift` ≠ 0.0000s | **Do not proceed** — pipeline bug |
 | `missing reveal state: r<k>` | **Do not proceed** — capture the missing state and split that segment into `A\|B` sub-reveals, then rebuild |
 | `last reveal state unused` | **Do not proceed** — the last bullet/source never appears in the video. If `no reveals.tsv` shows, this check is off (capture-reveals.sh wasn't used) |
-| `REGEN recommended` (speech rate outside [3.2/factor, 6.2/factor] — [3.2, 6.2] at the 1.0 default · clipped ending) | Recheck that card through the checked speech gate within its remaining attempt allowance, then rebuild. If exhausted, hold and correct the script through the existing approval rules |
-| `boundary sidecar N/K` | OK — the boundaries are the pauses the checked TTS tool laid in (`<wav>.sentences.json`), snapped to the detected silences |
-| `⚠ … sentence sidecar did not match the detected pauses` | OK to continue — the build used the longest pauses instead. Check that card's reveals in playback; a recurring mismatch means the WAV was edited after the checked tool wrote its sidecar |
+| `REGEN recommended` (speech rate outside [3.2/factor, 6.2/factor] — [3.2, 6.2] at the 1.0 default · clipped ending) | Advisory. Listen to that card when useful; regenerate it once with the raw TTS tool and the same voice settings (shot-speech.md), record the new receipt, then rebuild. Speech stays `not_reviewed`; a card outside the band does not hold the build |
+| `boundary sidecar N/K` | OK — the boundaries are the pauses recorded in the take's sentence sidecar (`<wav>.sentences.json`), snapped to the detected silences |
+| `⚠ … sentence sidecar did not match the detected pauses` | OK to continue — the build used the longest pauses instead. Check that card's reveals in playback; a recurring mismatch means the WAV was edited after its sidecar was written |
 | `boundary proportional fallback` | OK to continue — if it recurs, fix the script's sentence boundaries (periods) |
 | `segment window under 0.9s` | Merge the short sentence with a neighbor |
 | `min gap between reveals <0.40s` | Trim bullets or lengthen the sentence |
@@ -110,24 +110,27 @@ falls back silently and no short video loops or freezes to fill its window.
 | `✗ OUTRO=1 but <asset> isn't in the workdir` | **Do not proceed** — the build stops there. Copy the outro under `format.env`'s `OUTRO_ASSET` name (produce §6), or set `OUTRO=0` when the channel ships without one |
 | `✗ OUTRO=0 but the build spliced an outro` | **Do not proceed** — the speed pass stops there. The flag was changed after the build, so the outro is sitting inside the feature and would be sped up with it. Rebuild under the flag you want |
 | `✗ OUTRO=1 but the build joined no outro` | **Do not proceed** — the speed pass stops there. The flag was changed after the build, so the tail boundary would be cut out of the feature and its last seconds shipped unsped. Rebuild under the flag you want |
-| `⚠ first cue at …s — past the 1.0s mark` | The opening second carries no words. Not a build failure: look at `.work/qa/first-frame.png`, and if the frame is bare too, bring the cover's first sentence forward and rebuild |
-| `── first cue …s` (no mark) | OK — the first subtitle is up inside the first second, and the t=0 still is in `.work/qa/` |
+| `⚠ first cue at …s — past the 1.0s mark` (requested sidecar only) | The opening second carries no cue. Not a build failure: look at `.work/qa/first-frame.png`, and if the frame is bare too, bring the cover's first sentence forward and rebuild |
+| `── first cue …s` (no mark; requested sidecar only) | OK — the first cue is up inside the first second, and the t=0 still is in `.work/qa/` |
 | No `── speedup x…` line | **Do not proceed** — the required speed pass (produce §7.5) never ran, and `output/` would get the un-sped build. Run `speedup.sh .work` and copy the `-fast` set |
-| No `PASS final speech rate` line, or a `final speech rate` failure | **Do not proceed** — the shipped subtitle timeline was not checked or exceeds 6.2 characters/s. Lower the profile factor or shorten the dense line, rerun the pass, and use only the new `-fast` set |
+| `── no subtitle sidecar requested; subtitle-based rate check skipped` | The speech-rate verdict is a `PASS final speech rate` line, or this skip marker when no SRT was requested; `episode-state.js` accepts either. Expected on the default clean build: no cue timeline exists to measure. Readiness is the `── speedup x…` marker plus a verified `delivery-proof.json` |
+| `✗ final speech rate exceeds 6.2 chars/s` (requested sidecar only) | **Do not proceed** — the requested SRT exceeds 6.2 characters/s after the pass. Shorten the dense line (a non-1.0 factor needs the explicit episode request in `speed-authorization.json`), rerun the pass, and use only the new `-fast` set |
 | `reel-fast.mp4 is …s but …s was expected` | **Do not proceed** — the speed pass exits 1; the filter didn't take. Check that the `outro.mp4` in the workdir is the same file the build spliced — a flag the build and the pass disagree on is caught earlier, by the `✗ OUTRO=…` lines above |
 | `apart after the speed-up — YouTube drops chapters under 10s` | Long-form only. Merge the chapters that landed under 10s apart and rebuild — YouTube drops the entire list, not just that entry |
 
 ## Three TTS failure modes and responses (Gemini TTS, field-tested)
 
-All generated narration first passes `tts_generate_checked` as defined in `tts-quality.md`.
-Missing/stale/failed speech proofs block assembly. The wrapper owns the three-take limit;
-legacy advisories below never authorize extra takes or changing the profile model.
-Unavailable review holds production. After any audio replacement, obtain a new proof.
+Narration is generated with the raw engine tool and recorded `not_reviewed` (shot-speech.md,
+owner directive 2026-10-16); `tts_generate_checked` and its proofs are historical and no longer
+gate assembly. These failure shapes still occur; answer them within the pinned voice and the
+episode's attempt allowance, never by switching the profile model. After any audio replacement,
+write a new generation receipt beside the WAV.
 
 1. **Duration degeneration** — a short script can contain minutes of trailing silence.
-   The checked tool rejects abnormal duration and uses only the remaining take allowance.
+   Measure the WAV (`ffprobe`); a take far longer than its text supports is regenerated once with
+   the raw tool and a new receipt.
 2. **`No content parts in response`** — the Gemini client retries its request at fixed settings.
-   If it still fails, the checked tool holds production. Do not change the profile's model
+   If it still fails, report the actual cause and stop that card. Do not change the profile's model
    or rewrite the script merely to make the request succeed.
 3. **`INTERNAL 500`** — provider retries stay inside the client. Persistent failure is
    unverified, not an instruction to spend three more takes.

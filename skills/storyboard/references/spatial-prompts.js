@@ -22,9 +22,10 @@ const LOOKS = {
   archive: 'A faithful presentation of the supplied archival reference, preserving its composition and marks as source evidence.'
 };
 const text = value => typeof value === 'string' && !!value.trim();
-const clause = value => String(value).trim().replace(/[.!?\s]*$/, '');
-function require_(fields) {
-  for (const [name, value] of Object.entries(fields)) if (!text(value)) throw new Error('Missing ' + name);
+const clause = value => String(value ?? '').trim().replace(/[.!?\s]*$/, '');
+// Missing creative fields are reported as warnings; the prompt is assembled from what exists.
+function missing_(fields) {
+  return Object.entries(fields).filter(([, value]) => !text(value)).map(([name]) => 'Missing ' + name);
 }
 /* Beats are ordered by description, never by a clock: Seedance 1.5 Pro shows no timestamps in any
    vendor example and 2.0 self-reports unstable precision timing (scenes-schema §clip prompt). The
@@ -33,8 +34,9 @@ function beatsInWords(beats) {
   return beats.map((b, i) => (i === 0 ? 'At first' : i === beats.length - 1 ? 'Finally' : 'Then') + ', ' + clause(b.state)).join('. ');
 }
 function motionText(d) {
-  if (d.motion?.kind !== 'subject_action') return d.action;
-  return ['Subject action: ' + clause(d.action), 'Visible change: ' + clause(d.motion.visibleChange), beatsInWords(d.motion.beats),
+  if (d.motion?.kind !== 'subject_action') return d.action || '';
+  return ['Subject action: ' + clause(d.action), 'Visible change: ' + clause(d.motion.visibleChange),
+    ...(Array.isArray(d.motion.beats) && d.motion.beats.length ? [beatsInWords(d.motion.beats)] : []),
     'The articulated subject itself carries this change; ambient motion and the camera move stay secondary'].join('. ');
 }
 /* The consistency lock is the only place an exclusion can go on Seedance, and the gate wants its
@@ -95,35 +97,34 @@ function assemble(win, index, dir) {
   if (!MODES[win.PRODUCTION?.mode]) throw new Error('Choose a production mode before assembling prompts');
   const scene = win.SCENES[index], d = scene?.shot?.videoDesign, v = scene?.visual;
   if (!d || !win.PRODUCTION.style || !LOOKS[d.look]) throw new Error('Choose style and videoDesign before assembling prompts');
-  if ((scene.narration || []).some(line => line.delivery === 'on_screen') && /never speaks|mouths? (?:stay |remain |kept )?closed|no speech,? no dialogue/i.test(JSON.stringify(d))) {
-    throw new Error('On-screen dialogue conflicts with a silent-acting instruction in videoDesign; resolve the named speaker action before generating');
-  }
+  // Throws stay for input that cannot be assembled; creative gaps and conflicts land in `warnings`
+  // on the result (automation guidance 2026-10-16) and the prompt is built from the fields that exist.
+  const warnings = [];
+  if ((scene.narration || []).some(line => line.delivery === 'on_screen') && /never speaks|mouths? (?:stay |remain |kept )?closed|no speech,? no dialogue/i.test(JSON.stringify(d)))
+    warnings.push('On-screen dialogue conflicts with a silent-acting instruction in videoDesign; resolve the named speaker action before generating');
   const overrideProblems = shotStyleErrors(scene, index);
   if (overrideProblems.length) throw new Error(overrideProblems.join('; '));
-  // The episode style, or the user-approved per-shot preset with its own materials/palette/lighting.
+  // The episode style, or the per-shot preset with its own materials/palette/lighting.
   const style = shotStyle(win, index);
   if (!v || typeof v !== 'object') throw new Error('Missing visual');
   if (d.camera !== undefined) throw new Error('videoDesign.camera is retired; the camera lives in the four visual.camera slots');
   const droneProblems = droneSceneErrors(scene, {draft:true});
   if (droneProblems.length) throw new Error(droneProblems.join('; '));
   const isVideo = full(win.PRODUCTION) || !!v.video;
-  if (isVideo) {
-    const errors = motionErrors(scene);
-    if (errors.length) throw new Error(errors.join('; '));
-  }
+  if (isVideo) warnings.push(...motionErrors(scene));
   const after = finalState(d);
-  require_({ 'videoDesign.before': d.before, 'videoDesign.action': d.action, 'videoDesign.after (or the last motion beat)': after,
+  warnings.push(...missing_({ 'videoDesign.before': d.before, 'videoDesign.action': d.action, 'videoDesign.after (or the last motion beat)': after,
     'videoDesign.continuity': d.continuity, 'style.world': style.world, 'style.materials': style.materials, 'style.palette': style.palette,
-    'style.lighting': style.lighting, 'style.camera': style.camera, 'visual.camera.framing': v.camera?.framing });
-  const camera = v.camera, missingSlots = missingCameraSlots(camera);
-  if (isVideo && missingSlots.length) throw new Error('Missing ' + missingSlots.map(s => 'visual.camera.' + s).join(', ') + ' (the motion prompt is assembled from the four slots)');
+    'style.lighting': style.lighting, 'style.camera': style.camera, 'visual.camera.framing': v.camera?.framing }));
+  const camera = v.camera || {}, missingSlots = missingCameraSlots(camera);
+  if (isVideo && missingSlots.length) warnings.push('Missing ' + missingSlots.map(s => 'visual.camera.' + s).join(', ') + ' (the motion prompt is assembled from the four slots, so none is returned yet)');
   const canvas = win.FORMAT === 'youtube-long-16x9' ? 'Landscape 16:9' : 'Portrait 9:16';
   const preset = style.preset || 'spatial-explainer'; // Resume existing miniature boards.
   if (preset !== 'spatial-explainer' && !STYLES[preset]) throw new Error('Unknown visual style: ' + preset);
   if (STYLES[preset] && d.look !== 'archive' && !STYLES[preset].looks.includes(d.look))
-    throw new Error('Shot look conflicts with the ' + (style.override ? 'per-shot' : 'selected') + ' visual style');
+    warnings.push('Shot look conflicts with the ' + (style.override ? 'per-shot' : 'selected') + ' visual style');
   if (STYLES[preset] && !packPresets.includes(preset) && style.referencePack && !style.override)
-    throw new Error('Remove the miniature reference pack for this style');
+    warnings.push('Remove the miniature reference pack for this style');
   const treatment = d.look === 'archive' ? LOOKS.archive : (STYLES[preset]?.prompt || LOOKS[d.look]);
   const cutType = scene.shot?.cutType;
   const castIds = characterIds(v.character);
@@ -159,7 +160,7 @@ function assemble(win, index, dir) {
   const world = style.worlds?.[d.worldId] ?? style.world;
   const propPrompt = require('./prop-continuity.js').prompt(win, index);
   const source = [...(propPrompt ? [propPrompt] : []), canvas + ', edge-to-edge composition.',
-    'Opening state: ' + d.before,
+    'Opening state: ' + (d.before || ''),
     sourceContext.guidance(sourceContext.context(scene, win.STORY)),
     ...continuityContract.sourceGuidance(continuity, sourceReferenceImages),
     ...(compositionLock ? [compositionLock] : []),
@@ -167,13 +168,13 @@ function assemble(win, index, dir) {
                             : previzFrame ? 'The first attached image is the previz frame: its composition is kept exactly. Attached image ' + (sourceReferenceImages.indexOf(pack.referenceImagePaths[0]) + 1) + ' is for STYLE ONLY.'
                             : 'Attached image ' + (sourceReferenceImages.indexOf(pack.referenceImagePaths[0]) + 1) + ' is for STYLE ONLY. Design the opening composition for this shot, preserving the state supplied by continuity references.', ...Object.values(pack.rules)] : []),
     treatment, ...(perCutTreatment ? [perCutTreatment] : []), ...castPromptLines, ...castImageLines, world,
-    'Materials: ' + style.materials, 'Palette: ' + style.palette, 'Lighting: ' + style.lighting,
-    'Camera language: ' + style.camera,
-    'Camera composition: ' + camera.framing,
+    'Materials: ' + (style.materials || ''), 'Palette: ' + (style.palette || ''), 'Lighting: ' + (style.lighting || ''),
+    'Camera language: ' + (style.camera || ''),
+    'Camera composition: ' + (camera.framing || ''),
     ...(scene.shot?.depth?.mode === 'deep' ? ['Depth: keep all planned planes sharp and readable together: ' + (scene.shot.depth.planes || []).join('; ') + '.'] : []),
     ...(scene.shot?.depth?.mode === 'shallow' ? ['Depth: shallow focus on ' + (scene.shot.depth.focus || 'the planned subject') + '.'] : []),
     ...(perCutTreatment || activeCast.length ? ['Framing priority: the shot camera composition controls crop, angle, subject scale and visible body parts. Cast sheets, cut-type notes and episode camera language supply appearance and intent only; keep off-frame body parts outside the image.' + (previzFrame ? ' The previz first frame must already match this composition; correct a conflicting previz before generating the source image.' : '')] : []),
-    'Spatial continuity: ' + d.continuity,
+    'Spatial continuity: ' + (d.continuity || ''),
     ...(locationRef ? [locationRef.prompt, 'Attached image ' + (sourceReferenceImages.indexOf(locationRef.paths[0]) + 1) + ' is the LOCATION reference (reference review: ' + (locationRef.approved ? 'reviewed' : 'not_reviewed or stale') + '). Preserve its camera and architecture.'] : []),
     ...(locationRef?.startActors || []).flatMap(actor => {
       const ref = castReferenceImages.find(item => item.id === actor.id);
@@ -209,14 +210,15 @@ function assemble(win, index, dir) {
       audio: 'silent; narration is supplied separately' });
     const problems = [...clip.hits.map(h => `"${h.match}" (${h.why})`), ...clip.negHits.map(h => `negative directive "${h}"`),
       ...clip.timeHits, ...clip.hanHits.map(h => `Korean "${h}"`), ...(clip.lockMissing ? ['no consistency lock'] : [])];
-    if (problems.length) throw new Error('The motion prompt fails the Seedance prompt gate that check-scenes.js runs: ' + problems.join('; ') +
-      '. Rewrite videoDesign.action, motion.beats or continuity positively, without seconds. For translated performance, preserve the original text and supply each event.videoDirection in the selected model\'s supported language.');
+    if (problems.length) warnings.push('The motion prompt trips the Seedance prompt advice that check-scenes.js also reports: ' + problems.join('; ') +
+      '. Prefer rewriting videoDesign.action, motion.beats or continuity positively, without seconds. For translated performance, preserve the original text and supply each event.videoDirection in the selected model\'s supported language.');
     motionPrompt = clip.prompt;
   }
+  // The vendor rejects the request above this length, so it stays a hard stop.
   if (engine === 'astra' && motionPrompt?.length > 2000)
     throw new Error('ASTRA motion prompt including performance exceeds 2000 characters; shorten descriptions or split at a natural action boundary, preserving every action');
   const locationEndReady = !locationRef || !!(locationRef.resultImage && v.bg && path.resolve(dir,v.bg)===path.resolve(dir,locationRef.resultImage));
-  return { continuity, spatialWarnings, propSnapshot, propReferenceImages, endFrameImageArgs: locationRef && locationEndReady ? {referenced_image_paths: [path.resolve(dir,v.bg), ...locationRef.endPaths]} : {}, endFrameReady: locationEndReady, locationEndReferenceImages: locationRef?.endPaths || [], locationBinding: locationRef?.binding || null, locationReferenceRoles: locationRef?.roles || [], sourcePrompt: source, stylePreset: preset, cutType, castIds,
+  return { warnings, continuity, spatialWarnings, propSnapshot, propReferenceImages, endFrameImageArgs: locationRef && locationEndReady ? {referenced_image_paths: [path.resolve(dir,v.bg), ...locationRef.endPaths]} : {}, endFrameReady: locationEndReady, locationEndReferenceImages: locationRef?.endPaths || [], locationBinding: locationRef?.binding || null, locationReferenceRoles: locationRef?.roles || [], sourcePrompt: source, stylePreset: preset, cutType, castIds,
     styleBinding: pack?.binding || null,
     styleGuidePath: pack?.guidePath || null,
     castReferenceImages,
@@ -224,8 +226,8 @@ function assemble(win, index, dir) {
     // The previz frame goes first, followed by the pack image and the episode cast images.
     sourceImageArgs: sourceReferenceImages.length ? { referenced_image_paths: sourceReferenceImages } : {},
     previzFirstFrame: previzFrame,
-    endFramePrompt: (locationRef ? 'Image 1 is the generated opening frame; image 2 is the location endpoint render. Preserve image 1 appearance while using image 2 for the final camera, architecture and authored character state. ' + locationRef.endPrompt + '\n' : '') + 'Edit the supplied opening image into this final state: ' + after + '\n' + treatment + '\n' + lock +
-      '\nPreserve lighting. Follow the planned camera endpoint: ' + (camera.end || camera.framing),
+    endFramePrompt: (locationRef ? 'Image 1 is the generated opening frame; image 2 is the location endpoint render. Preserve image 1 appearance while using image 2 for the final camera, architecture and authored character state. ' + locationRef.endPrompt + '\n' : '') + 'Edit the supplied opening image into this final state: ' + (after || '') + '\n' + treatment + '\n' + lock +
+      '\nPreserve lighting. Follow the planned camera endpoint: ' + (camera.end || camera.framing || ''),
     motionPrompt };
 }
 module.exports = { assemble, LOOKS, beatsInWords, previzPreamble, PREVIZ_SOURCE_LOCK };
@@ -235,6 +237,8 @@ if (require.main === module) {
     if (!target || !args.includes('--shot') || !Number.isInteger(n) || n < 1) throw new Error('usage: spatial-prompts.js <storyboard dir|scenes.js> --shot N');
     const scenesPath = fs.statSync(target).isDirectory() ? path.join(target, 'scenes.js') : target;
     const win = readScenes(scenesPath);
-    console.log(JSON.stringify(assemble(win, n - 1, path.dirname(path.resolve(scenesPath))), null, 2));
+    const result = assemble(win, n - 1, path.dirname(path.resolve(scenesPath)));
+    for (const w of result.warnings) console.error('spatial-prompts warning: ' + w);
+    console.log(JSON.stringify(result, null, 2));
   } catch (e) { console.error('spatial-prompts: ' + e.message); process.exitCode = 1; }
 }

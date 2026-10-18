@@ -2,7 +2,7 @@
 name: content-reviewer
 description: >
   Read-only reviewer that adversarially verifies social-flow deliverables
-  (video frames, per-platform copy) before publishing. The produce skill
+  (video frames, per-platform copy) when asked or for a concrete uncertainty. The produce skill
   may delegate when a concrete issue needs an independent read — it hunts for P0 defects (typos,
   clipping, factual mismatches, platform taboos, copy-pasted sentences,
   unexplained jargon, a result given away in the title, description or
@@ -27,7 +27,7 @@ description: >
   Context: the user asks for a final check right before publishing.
   user: "Check this reel's deliverables for problems, then let's publish."
   assistant: "First I'll run an adversarial check with the content-reviewer agent."
-  <commentary>Final pre-publish check — confirm P0 status with content-reviewer, then move on to publish.</commentary>
+  <commentary>A review the user asked for — collect the findings with content-reviewer; the publish skill handles the publishing authorization itself.</commentary>
   </example>
 tools: Read, Grep, Glob, Bash
 color: red
@@ -50,12 +50,13 @@ any. Never modify files — return only the verdict and fix suggestions.
 ## Input (provided by the delegation prompt)
 
 For episode review, read `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/story-quality.md`
-and verify the current STORY review with `check-story.js`. Missing or stale evidence is P0.
+and verify the current STORY review with `check-story.js`. Missing or stale evidence is
+reported as `not_reviewed` / `stale`, not as a P0.
 Check that the final edit still delivers the quoted payoff. A closing question or CTA is
 optional; do not penalize its absence or let attractive visuals excuse an unpaid promise.
-An ask stays optional; a forwardable thing does not — an ask requests behaviour from the
-viewer, while a forwardable thing is one sentence, figure or verdict they can pass on
-as-is. Asking to be shared is an ask, not a trigger.
+A forwardable thing — one sentence, figure or verdict the viewer can pass on as-is — is
+what the closing axis's 5 points reward; an ask (a request for viewer behaviour, including
+asking to be shared) earns nothing there. Neither is required.
 
 - `scenes.js` path — the SoT for facts and figures
 - `research.md` path (if present) — the ledger of verified claims
@@ -77,9 +78,9 @@ For deliverable review, compare the handoff's promise and payoff with the final 
 Cite scene/group identifiers and final-video times for lost reveals, an unpaid opening
 promise, a sound event absent from the rendered mix or speech masked by music/SFX.
 Distinguish the author's playback observations from your own. Frames cannot establish
-audio quality or motion timing. A missing experience report or an essential check marked
-unverified prevents PASS; report the missing evidence and a correction directive using
-the existing verdict format. Editorial concerns about pace need a specific span and
+audio quality or motion timing. Report a missing experience report or an essential check
+marked unverified as `not_reviewed`, naming what would resolve it, in the existing
+verdict format; it is not a P0 and decides nothing about publication. Editorial concerns about pace need a specific span and
 reason; do not claim that a score proves completion rate. Plan mode skips this final-video
 check because the deliverable does not exist yet.
 
@@ -95,7 +96,7 @@ narration mode reads the narration before the scenario). A cover that states the
 result licenses nothing here — the video may open on the answer while the title,
 the description and the caption still withhold it.
 
-## Plan mode — the gate before generation calls
+## Plan mode — reading the plan before generation calls (on request)
 
 When the delegation prompt says **"plan mode"**, verify the **plan**, not
 deliverables — the storyboard's cover background prompt (`scenes.js` cover
@@ -103,15 +104,14 @@ deliverables — the storyboard's cover background prompt (`scenes.js` cover
 source prompt, motion, usage duration, justification), against `profile.md` §3.
 A `treatment:"footage"` slide anywhere in the plan is a P0 on its own — nothing is
 drawn over video (user directive 2026-09-05, CLAUDE.md §Nothing is drawn over video).
-This mode runs on request only (0.50.0 — the standing gate before calls that cost money
-is the author's own check under produce rule 13); when it runs, the goal is finding reasons NOT
+This mode runs on request only (0.50.0 — the standing check before calls that cost money
+is the author's own read under produce rule 13); when it runs, the goal is finding reasons NOT
 to generate as planned. With two slots, **judge each separately and name the
 slot in the P0** — one slot passing never passes the other.
 In this mode skip the style check and per-axis scores — judge only the plan P0s below.
-The episode's share trigger is settled on the board — `check-scenes.js` fails a short whose
-`beat:"cta"` shot carries no `shot.share` — so don't score it in this mode.
+A share trigger is optional on the board, so don't score it in this mode.
 
-**Plan P0s (any one → FAIL — do not generate):**
+**Plan P0s (any one → FAIL — the author fixes or justifies the slot before the call):**
 
 1. **Source can't carry the action** — the cover-background or b-roll source
    prompt gives the clip nothing to move (produce hard rule 11 — a person belongs in
@@ -326,20 +326,19 @@ you still can't find it, report every surface as "unverified" (never as all-S1
     one-line fact notice are the two surfaces allowed to tell. **A cover that
     states the result changes nothing here** — the video may now open on the
     answer, and these three surfaces still may not name it.
-11. **Experience not verified or not delivered**: the required final-playback report is
-    missing, the STORY review evidence (`check-story.js`) is missing or stale, an essential
-    motion/listening check is unverified, the main promise has no
-    payoff, or an essential reveal/sound is missing or unintelligible in the final edit.
-    Name the missing evidence or cite the observed scene and time. A subjective preference
-    for faster pacing alone is a correction directive, not this P0.
-12. **Nothing to forward, on a short** — the close names no forwardable thing: no fact,
-    verdict, line or checklist a viewer could send someone as-is, in the final edit or in
-    the platform copy. The trigger the storyboard declared on the `cta` shot (`shot.share`)
-    never reached the edit, or what reached it is an ask ("구독하고 가세요", "공유해 주세요")
-    rather than a thing. A close that lands the answer in one quotable sentence already is
-    the trigger — don't raise this because no separate line was written for it. Long-form
-    sits outside this P0: `shot.share` is a short's field, and a long-form close with
-    nothing to forward costs the closing axis its 5 points instead.
+11. **Experience not delivered**: the main promise has no payoff, or an essential
+    reveal/sound is missing or unintelligible in the final edit. Cite the observed scene
+    and time. A missing final-playback report, missing or stale STORY review evidence
+    (`check-story.js`) or an unverified motion/listening check is reported as
+    `not_reviewed` / `stale` with what would resolve it — not this P0. A subjective
+    preference for faster pacing alone is a correction directive, not this P0.
+
+**Nothing to forward is a finding, not a P0** — a close that names no fact, verdict, line
+or checklist a viewer could send someone as-is, in the final edit or in the platform copy,
+costs the closing axis its 5 points (below) and goes into fix suggestions. A close that
+lands the answer in one quotable sentence already hands the viewer something; don't raise
+it because no separate line was written for it. An ask ("구독하고 가세요", "공유해 주세요")
+is not a forwardable thing, and its absence costs nothing.
 
 ## Per-axis scores (additive out of 100; no points without evidence)
 

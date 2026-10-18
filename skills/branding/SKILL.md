@@ -1,17 +1,17 @@
 ---
 name: branding
 description: >
-  Generates and refines a channel profile image until an adversarial reviewer passes it.
-  Use when the user asks to "프로필 이미지 만들어", "채널 로고 만들어", "브랜딩 이미지 생성", "make a channel
+  Generates and refines a channel profile image and reviews it on request. Use when the
+  user asks to "프로필 이미지 만들어", "채널 로고 만들어", "브랜딩 이미지 생성", "make a channel
   profile image", "generate a channel logo", or right after /social-flow:channel add on a
   channel with no logo. Collects an image brief through AskUserQuestion, generates 4
-  candidates in distinct style directions with gpt_image, opens a contact sheet for the
-  human to pick a direction, then refines the pick through the brand-reviewer loop until
-  the relevant findings have been considered within the requested task, and installs the master plus platform
+  candidates in distinct style directions with the saved image model, opens a contact sheet
+  for the human to pick a direction, refines the pick with brand-reviewer findings when a
+  review is asked for, and installs the master plus platform
   resizes under data/[slug]/assets/branding/ with profile.md updated. Boundary — this
   makes the still profile image; the intro skill makes the moving opening.
 argument-hint: "<channel> [extra instructions]"
-allowed-tools: ["mcp__social-flow__host_review", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img"]
+allowed-tools: ["mcp__social-flow__host_review", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__image_local_generate", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit"]
 ---
 Follow [host evaluation](../_shared/host-review.md) for every requested review.
 
@@ -26,8 +26,9 @@ Follow [host evaluation](../_shared/host-review.md) for every requested review.
 Produces the channel's profile image (logo/avatar) in this order: **brief
 collection → 4 candidate generation → HITL direction pick (browser) →
 concrete visual review**. The final image is the brand master used
-on every platform account profile of the channel, so completion is declared
-**only by the brand-reviewer agent's verdict**, never by self-scoring.
+on every platform account profile of the channel. The brand-reviewer agent's
+findings are advisory: they inform revisions, and the user's pick and the requested
+task decide completion — never a self-score, never a fabricated review.
 
 ## Deliverables (path contract)
 
@@ -67,18 +68,17 @@ every platform.
   input — suggest candidates from the channel identity, accept Other)
 
 Record the answers in `.work/brief.md` — it's the baseline document for the
-convergence loop and re-runs.
+review rounds and re-runs.
 
 ### 3. Generate the 4 candidates
 
-Generate **4 distinct style directions** with `gpt_image_text2img`
-(size "1024x1024") and save them as `.work/candidate-{a,b,c,d}.png`. Branding
-is **an exception to the local-first default path (image_local_generate)** —
-this master becomes the channel's face, so it falls under the quality clause,
-and gpt-side rendering is also safer against brand-reviewer's broken-glyph P0.
-Under Codex or Grok the host `image_gen` makes the four instead (`1:1`, the same prompts,
-`image.host` in the ledger) — the quality clause is about glyphs, and the host tools render
-them as well as the API (owner directive 2026-09-07).
+Generate **4 distinct style directions** with the saved image model
+(`.social-flow/models.json` → `models.image`; the host image tool is the recommended
+initial choice at setup, an API or local engine when that is what was saved) at 1:1
+(`1024x1024`) and save them as `.work/candidate-{a,b,c,d}.png`. Log the matching
+`image.*` ledger row (`image.host` at $0 on a host tool). Channel assets follow the
+directory model settings like episodes do; a different engine needs the user's explicit
+request.
 Default directions (swap per the brief):
 
 - **A flat-mascot** — flat vector mascot, thick outlines, simple shapes
@@ -109,17 +109,21 @@ Shared prompt skeleton (identical across all 4; only the style wording changes):
 
 ### 5. Review and improve the brand image
 
-Copy the pick to `.work/iter-0.png` and iterate (use further rounds only when useful and authorized):
+Copy the pick to `.work/iter-0.png`. Look at it yourself at both sizes and fix what you
+can see. Run the reviewer and further rounds only when the user asks for a review or a
+concrete doubt needs an independent read, and only within the authorized generation budget:
 
 1. Make the small review copy: `sips -z 192 192 iter-N.png --out iter-N-192.png`.
 2. **Delegate to the brand-reviewer agent (Agent)** — pass the paths of
    iter-N.png, iter-N-192.png, profile.md, `.work/brief.md`, plus any
    unresolved findings from the previous round.
    Parse the verdict tail `BRANDING_REVIEW: score=NN p0=N verdict=PASS|FAIL`.
-3. Resolve useful findings within the task, record any remaining limitations, then continue to §6. A numerical score is not a gate.
-4. **FAIL** → turn the findings into correction directives and revise with
-   `gpt_image_img2img`.
-   - Reference = **the highest-scoring image so far** (not the previous
+3. Resolve useful findings within the task, record any remaining limitations, then continue to §6. A numerical score is not a gate, and the verdict label alone starts no regeneration.
+4. When a finding is worth a paid revision (the user agrees, or it is a concrete defect
+   such as garbled glyphs or clipping), turn it into correction directives and revise
+   with the saved image model's edit tool (`gpt_image_img2img`, `mlx_image_edit`, or the
+   host tool's edit).
+   - Reference = **the best image so far** (not the previous
      iteration — prevents regressions)
    - Prompt = the §3 direction prompt plus the correction directives only.
      **No full rewrites** — direction drift voids the HITL decision the user made.
@@ -142,7 +146,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/channel/references/resolve-asset.py \
 ```
 
 Update the **logo asset** line in profile.md §1 to the master path (add it if
-missing). Report: final score, iteration count, P0 history, deliverable path
+missing). Report: review findings when a review ran, iteration count, deliverable path
 table + next steps — the channel intro video `/social-flow:intro <channel>`
 (an intro acted by the finalized character — optional), and the main content
 `/social-flow:storyboard <channel> <topic>`. State that uploading to each
@@ -151,9 +155,9 @@ profile-image replacement).
 
 ## Rules
 
-- **Verdict authority belongs to brand-reviewer alone** — the skill runner
-  never ends the loop by eyeballing the image as "looks good enough". No score
-  manipulation, no self-scored completion.
+- **Reviews are advisory** — brand-reviewer's findings inform revisions and are reported
+  as they came; the user's pick and the requested task decide completion. No score
+  manipulation, no fabricated review, no regeneration spent on a verdict label alone.
 - **Candidates and iterations live in `.work/`** (gitignored) — only the 4
   final files go into `assets/branding/`.
 - **Text in the image is excluded by default** — 2–4 letter initials only
@@ -162,7 +166,7 @@ profile-image replacement).
   the README safety contract. Always include the profile's banned subjects in
   the negative prompt.
 - The direction (style) picked at the §4 HITL step **never changes inside the
-  convergence loop** — if it must change, stop the loop and return to §4 for a
+  review rounds** — if it must change, stop and return to §4 for a
   fresh pick.
 
 ## Additional Resources

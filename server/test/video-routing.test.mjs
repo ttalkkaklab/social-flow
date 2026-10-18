@@ -91,6 +91,20 @@ test('configured legacy route requires context and explicit mismatch cannot bypa
  await assert.rejects(routeLegacyVideo('seedance_text2video',{prompt:'x',videoContext:{episode:f.episode,shotId:'s1',requestId:'a'}},dispatch),/mismatch/);
  await routeLegacyVideo('veo_text2video',{prompt:'x',videoContext:{episode:f.episode,shotId:'s1',requestId:'a'}},dispatch);assert.equal(calls,1);
 });
+test('channel assets under data/<channel>/assets/ need no context but follow the saved video model',async t=>{
+ const f=fixture(t); let seen=null; const dispatch=async(tool,args)=>{seen={tool,args};return result;};
+ const intro=path.join(f.root,'data/c/assets/intro'); fs.mkdirSync(intro,{recursive:true});
+ await routeLegacyVideo('veo_text2video',{prompt:'x',outputPath:intro},dispatch);
+ assert.equal(seen.tool,'veo_text2video'); assert.equal(seen.args.model,selection.model); assert.equal(seen.args.resolution,selection.resolution);
+ assert.equal(seen.args.outputPath,intro); assert.equal(seen.args.videoContext,undefined);
+ await assert.rejects(routeLegacyVideo('seedance_text2video',{prompt:'x',outputPath:intro},dispatch),/model_selection_mismatch/);
+ await assert.rejects(routeLegacyVideo('veo_text2video',{prompt:'x',model:'veo-3.1-generate-preview',outputPath:intro},dispatch),/model_selection_mismatch/);
+ const log=fs.readFileSync(path.join(f.root,'data/c/assets/.work/video-requests.jsonl'),'utf8').trim().split('\n').map(JSON.parse);
+ assert.equal(log.length,1); assert.equal(log[0].kind,'channel_asset'); assert.equal(log[0].tool,'veo_text2video'); assert.equal(log[0].selection.engine,'veo'); assert.equal(log[0].ok,true);
+ // Episode outputs and every other workspace path still need videoContext.
+ await assert.rejects(routeLegacyVideo('veo_text2video',{prompt:'x',outputPath:path.join(f.episode,'.work')},dispatch),/context_required/);
+ await assert.rejects(routeLegacyVideo('veo_text2video',{prompt:'x',outputPath:path.join(f.root,'data/c/other')},dispatch),/context_required/);
+});
 test('public MCP legacy handler validates context before reaching a real provider',async t=>{
  const f=fixture(t);
  await assert.rejects(ROUTES.seedance_text2video({prompt:'x',videoContext:{episode:f.episode,shotId:'s1',requestId:'a'}}),/mismatch/);

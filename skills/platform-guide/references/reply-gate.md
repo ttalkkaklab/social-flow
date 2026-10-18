@@ -14,7 +14,10 @@ Do not force sentences to become longer solely to satisfy a style heuristic.
 Revise the actual problem while preserving meaning, context and the speaker's
 voice. Deletion is one option, not a mandatory editing operation. Record useful
 unresolved findings without inventing a clean result or automatically skipping a
-reply because a number is below a threshold.
+reply because a number is below a threshold. A reply stays unsent only for an
+unresolved factual or context problem — it would assert something unverified, or
+it answers past what the comment says — or for missing authorization; a creative
+shortfall is revised, not a reason to skip. Record the reason when a reply is not sent.
 
 ## Context to read
 

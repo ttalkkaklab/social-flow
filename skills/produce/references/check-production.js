@@ -12,6 +12,7 @@ function assetPath(storyboard, file) {
   return path.resolve(file.startsWith('.work/') ? path.dirname(storyboard) : storyboard, file);
 }
 function hashFile(storyboard, file) { return digest(fs.readFileSync(assetPath(storyboard, file))); }
+function previzOnDisk(storyboard, previz) { return Boolean(previz && typeof previz.clip === 'string' && previz.clip.trim() && fs.existsSync(assetPath(storyboard, previz.clip))); }
 function shotDigest(win, index) {
   return digest(mode.signature({ ...win, SCENES: [win.SCENES[index]] }));
 }
@@ -22,10 +23,11 @@ function readReviews(work) {
   catch (error) { return {shots:[],readWarning:'Unreadable optional review: '+error.message}; }
 }
 function videoFile(scene) { return mode.reused(scene) ? scene.visual.reuse.clip : scene.visual.video.clip; }
-// Every generated still was looked at for content and style separately (visual-style.md): the record
-// is .work/still-review.json { shots: [{ shot, imageSha256, preset, styleMatch, reviewer, at, evidence }] }.
-// A still that does not match its preset is remade, or the shot's style is changed with the user's
-// approval (shot.style) and the new still reviewed again — never assembled as it is.
+// A generated still that was looked at for content and style (visual-style.md) has a record in
+// .work/still-review.json { shots: [{ shot, imageSha256, preset, styleMatch, reviewer, at, evidence }] }.
+// The record is evidence: a missing or stale one is reported as not_reviewed (warning), never written
+// without looking. A still that does not match its preset is remade, or the shot's style is changed
+// with the user's approval (shot.style) and the new still reviewed again.
 function readStillReviews(work) {
   const file = path.join(work, 'still-review.json');
   if (!fs.existsSync(file)) return {shots:[]};
@@ -41,7 +43,7 @@ function stillReviewErrors(win, index, storyboard, reviews) {
   const scene = win.SCENES[index], preset = mode.shotStyle(win, index).preset;
   if (!mode.STYLES[preset]) return [];
   const matches = (reviews.shots || []).filter(r => r.shot === index + 1), review = matches[0] || {};
-  if (matches.length !== 1) return ['one current still review is required in still-review.json (content and style, visual-style.md)'];
+  if (matches.length !== 1) return ['no current still review in still-review.json; style and content remain not_reviewed'];
   const errors = [];
   let sha; try { sha = hashFile(storyboard, scene.visual.bg); } catch (e) { return [e.message]; }
   if (review.imageSha256 !== sha) errors.push('still review is stale; look at the current image and record it again');
@@ -64,7 +66,7 @@ function motionMetrics(work, file, sha256) {
   return saved[sha256];
 }
 // The review says a person saw the subject move; the measurement says how much of the clip
-// actually moves. Both hold before a clip enters the timeline (full-video.md §Measured motion).
+// actually moves. Both are reported as warnings before a clip enters the timeline (full-video.md §Measured motion).
 function motionGateErrors(scene, metrics, clipSeconds) {
   const remedy = mode.reused(scene) ? 'select and review an existing clip with visible motion; re-trim the source and update its import record if needed' : 'revise the action or camera move within the approved generation budget';
   const errors = motion.findings(metrics, 'video').map(f => 'measured motion: ' + f + '; ' + remedy);
@@ -85,11 +87,12 @@ function accepted(win, index, storyboard, review) {
   }
   if (mode.reused(scene)) return review && review.planDigest === shotDigest(win, index) &&
     review.videoSha256 === scene.visual.reuse.sha256 && review.videoSha256 === hashFile(storyboard, videoFile(scene));
+  // A previz is optional (2026-10-18): a declared clip that is not on disk is reported as a warning by check(), not a stale review.
   const previz = scene.visual.video.previz;
   return review && review.planDigest === shotDigest(win, index) &&
     review.sourceSha256 === hashFile(storyboard, scene.visual.bg) &&
     (!framePlan(scene).end || review.endSha256 === hashFile(storyboard, framePlan(scene).end)) &&
-    (!previz || previz.sha256 === hashFile(storyboard, previz.clip)) &&
+    (!previzOnDisk(storyboard, previz) || previz.sha256 === hashFile(storyboard, previz.clip)) &&
     review.videoSha256 === hashFile(storyboard, scene.visual.video.clip);
 }
 function motionReviewErrors(scene, review) {
@@ -213,9 +216,9 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
     catch (e) { errors.push('shot ' + (index + 1) + ': ' + e.message); }
   }
   const work = workdir ? path.resolve(workdir) : path.join(path.dirname(storyboard), '.work'), p = win.PRODUCTION;
-  // stills_only holds no generated clip (production-mode.md): there is no priced option, no quote
-  // to approve and no retry estimate. Imported clips, the ledger and the still reviews still hold.
-  const priced = p.mode !== 'stills_only';
+  // no_video (and legacy stills_only) holds no generated clip (production-mode.md): there is no priced
+  // option, no quote to approve and no retry estimate. Imported clips, the ledger and the still reviews still hold.
+  const priced = !['no_video', 'stills_only'].includes(p.mode);
   const current = priced ? quote(win) : null;
   const option = priced ? current.options[p.mode] : { provisional: false, retryHighUsd: 0, rows: [] };
   if (priced) {
@@ -237,7 +240,7 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
   if (reviews.readWarning) warnings.push(reviews.readWarning);
   if (!Array.isArray(reviews.shots)) { warnings.push('video-review.json needs a shots array; video quality is unverified'); reviews.shots=[]; }
   if (beforeCall !== null && !priced) {
-    errors.push('stills_only generates no video; no shot can be selected for a video API call — choose a cost mode first');
+    errors.push(p.mode + ' generates no video; no shot can be selected for a video API call — choose a video ratio with generated cuts first');
   } else if (beforeCall !== null) {
     const row = option.rows.find(r => r.shot === beforeCall);
     if (!row) errors.push('Requested shot has no priced video generation');
@@ -293,6 +296,7 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
         return;
       }
       if (matches.length !== 1) warn('one current video review is required for quality certification; quality remains unverified.');
+      if (scene.visual?.video?.previz && !previzOnDisk(storyboard, scene.visual.video.previz)) warn('previz file missing; previz is optional');
       try {
         if (!accepted(win, index, storyboard, review)) warn('review is stale; inspect the current image, clip and shot plan');
         const probe = spawnSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries',
@@ -306,7 +310,7 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
         for (const key of ['composition', 'materials', 'continuity', 'action', 'camera', 'referenceMatch'])
           if (typeof review[key] !== 'string' || review[key].trim().length < 12) warn('review needs concrete evidence for ' + key);
         motionReviewErrors(scene, review).forEach(warn);
-        if (!Array.isArray(review.defects) || review.defects.length) warn('unresolved visual defects block production');
+        if (!Array.isArray(review.defects) || review.defects.length) warn('unresolved visual defects recorded; quality not_reviewed');
         const seeks = review.seeks;
         if (!Array.isArray(seeks) || seeks.length < 3 || seeks.some(t => !Number.isFinite(t) || t < 0 || t > scene.duration) ||
             !seeks.some(t => t <= scene.duration * .15) || !seeks.some(t => t >= scene.duration * .85) ||
@@ -338,8 +342,8 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
   }
   return { active: true, mode: p.mode, generatedShots, reusedShots, plainVideoShots, errors, warnings, imageReview, continuityReview, costReport: { exit: spent.exit, unresolved: spent.unresolved || [] }, quote: current };
 }
-// A zero-video board reaches this gate with no quote and no approval; every other mode still
-// owes both. The fixture boards live in a temp dir so the checker runs its real file path.
+// A zero-video board reaches this gate with no quote and no approval; every other mode owes the
+// spending approval before a video call. The fixture boards live in a temp dir so the checker runs its real file path.
 function selftest() {
   const os = require('os');
   const board = production => {
@@ -359,17 +363,19 @@ function selftest() {
       '];', ''].join('\n'));
     return path.join(dir, 'storyboard');
   };
-  const stills = { mode: 'stills_only', imageProvider: 'host', videoBudgetUsd: 0, maxAttempts: 1,
+  const zero = { mode: 'no_video', renderRatioVersion: 1, imageProvider: 'host', videoBudgetUsd: 0, maxAttempts: 1,
     style: { preset: 'cinematic-miniature', selection: { kind: 'standing', reference: 'profile.md §3' } } };
   let fails = 0;
   const ok = (name, pass) => { console.log((pass ? 'ok   ' : 'FAIL ') + name); if (!pass) fails++; };
-  ok('stills_only passes the production gate without a cost approval', (() => {
-    const r = check(board(stills));
+  ok('no_video passes the production gate without a cost approval', (() => {
+    const r = check(board(zero));
     return r.active && !r.errors.length && r.quote === null && !r.generatedShots.length;
   })());
-  ok('stills_only refuses a video API call', check(board(stills), { beforeCall: 2 }).errors
+  ok('no_video refuses a video API call', check(board(zero), { beforeCall: 2 }).errors
+    .some(e => /no_video generates no video/.test(e)));
+  ok('legacy stills_only still refuses a video API call', check(board({ ...zero, mode: 'stills_only', renderRatioVersion: undefined }), { beforeCall: 2 }).errors
     .some(e => /stills_only generates no video/.test(e)));
-  ok('a cost mode still owes its approval', check(board({ ...stills, mode: 'hook_only', videoBudgetUsd: 10 })).errors
+  ok('a cost mode owes its spending approval before a video call', check(board({ ...zero, mode: 'video_50', videoBudgetUsd: 10 }), { beforeCall: 2 }).errors
     .some(e => /PRODUCTION\.approval needs/.test(e)));
   console.log(fails ? 'check-production selftest: ' + fails + ' failed' : 'check-production selftest OK');
   process.exitCode = fails ? 1 : 0;

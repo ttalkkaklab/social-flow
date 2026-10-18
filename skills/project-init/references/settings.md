@@ -63,8 +63,11 @@ are retained. The project tool does not stage or commit anything.
 
 `episode` returns `created`, `resumed` or `legacy_episode`. A legacy board without
 a snapshot is kept unchanged. A new snapshot stores all preferences, including
-SNS records, and a hash of the config. Its handoff provides authoring defaults;
-it is not an approved storyboard, generation budget approval or publish request.
+SNS records, and a hash of the config. Its handoff provides authoring defaults,
+including `PRODUCTION.videoModel` from the saved video selection and the top-level
+`episodeBudgetUsd` planning ceiling, which the author carries into
+`PRODUCTION.videoAuthorization.maxUsd` — the one value [video routing](../../_shared/video-routing.md)
+enforces. The handoff is not an approved storyboard, generation budget approval or publish request.
 
 Hook registration follows the [Claude Code plugin hook convention](https://code.claude.com/docs/en/plugins-reference#hooks)
 and [SessionStart context schema](https://code.claude.com/docs/en/hooks#sessionstart).

@@ -89,9 +89,11 @@ measurements.
   link still has the separate problem of pulling readers away and cutting
   replies — the growth loop's regular posts **default to link-in-reply, and
   body links only after channel A/B measurement**, recorded in the plan.
-  Episode content (videos going out via produce → publish) is the exception
-  where a body link is canonical (platform-playbook §3) — know the two paths
-  differ and don't mix them. **A breakout push is a third path** — the growth
+  Episode content (videos going out via produce → publish) carries the video
+  on the post itself (`videoUrl`), with no external link in the body and a
+  self-reply link only as the fallback for an episode that can't carry its
+  video (platform-playbook §3) — know the two paths differ and don't mix them.
+  **A breakout push is a third path** — the growth
   loop posting about an episode that already went out on YouTube. It takes the
   episode path's treatment, since its subject is an episode, but its target is
   the **YouTube watch URL**: §3 prefers the IG reel permalink to keep the
@@ -161,9 +163,11 @@ account). Rules:
    die for the same reason (see the information-delivery posts in §Form's
    measurements) — stake one judgment of your own, just don't close with a
    verdict.
-3. **End on a question — but never an empty one.** Lay down one experience of
-   your own and invite the other person's. "여러분 생각은?" (what do you all
-   think?) is close to engagement begging.
+3. **A post written for conversation ends on a question — never an empty one.**
+   Lay down one experience of your own and invite the other person's. "여러분
+   생각은?" (what do you all think?) is close to engagement begging. A post
+   written to travel (rule 8, §Post types) is not obliged to ask; it closes on a
+   line that still leaves the reader something.
 4. **Don't spend the hook.** Say the whole conclusion and there's nothing
    left to reply with.
 5. **An image lands harder and travels less.** Buffer's 10.2M-post set puts
@@ -179,10 +183,10 @@ account). Rules:
 7. **Don't close in written register.** Ending on `-ㄴ다/-는다` — like
    "화면이 나온다" · "주소부터 준다" · "이렇게 친다" — is newspaper register;
    in casual speech people say "나와" · "줘" · "쳐" · "~하거든" · "~하더라".
-   User directive (2026-08-13), and `check-style.py` D9 blocks it at S1.
-   Posts explaining a procedure drift into this ending, so watch **while
-   authoring** — meet it first at the checker and you rewrite the paragraph
-   wholesale.
+   User directive (2026-08-13); `check-style.py` D9 flags it at S2, a
+   suggestion since 2026-09-20 (korean-style.md §D9). Posts explaining a
+   procedure drift into this ending, so watch **while authoring** — meet it
+   first at the checker and you rewrite the paragraph wholesale.
 8. **Pick the intent before the first sentence** — reach or conversation. They
    come from different posts and a post reaching for both usually misses both
    (§Post types).
@@ -190,7 +194,7 @@ account). Rules:
    engagement on posts where the author replied to their own post — the
    largest lift of the six platforms it tracks. One line that adds something
    (the detail that didn't fit, the number behind the claim, the counter-case),
-   never "많이 봐줘"-type filler, and it goes through the gate like any other
+   never "많이 봐줘"-type filler, and it goes through the review like any other
    copy.
 
 ### 글의 뼈대 — four beats, any topic
@@ -217,9 +221,9 @@ and each one earns the next.
    experience, not from the post. `들여다본 적 있어?` · `뭘 시킬 거야?` An empty
    `여러분 생각은?` is the failure of this beat, not the beat itself.
 
-The beats map onto the draft fields the server gate requires: beat 1 is `flow.hook`,
-beats 2–3 are `flow.turn`, beat 4 is `flow.residue`, and §Message selection's two
-stake lines are what decide whether the topic gets beats at all.
+The beats map onto the optional `flow` fields `threads_draft_create` records: beat 1
+is `flow.hook`, beats 2–3 are `flow.turn`, beat 4 is `flow.residue`, and §Message
+selection's two stake lines are what decide whether the topic gets beats at all.
 
 **The shape is not a template to fill.** Each beat is a decision about the
 material; if beat 3 has to be invented, the topic has no turn in it and beats
@@ -255,8 +259,8 @@ material; if beat 3 has to be invented, the topic has no turn in it and beats
   what they feel. Keep factual qualifiers even when they soften the joke.
 - **Check the opening before scoring the rest.** If it needs internal context
   to make sense, rewrite it; high style or scene scores don't compensate.
-  Report it as P0-12 in the review, quoting the complete first sentence, so
-  the gate blocks it without inferring meaning from a total score.
+  Report it as finding 12 in the review, quoting the complete first sentence,
+  so the writer can act on it without inferring meaning from a total score.
 
 ### AI 티가 나는 구조 — avoid the template
 
@@ -432,7 +436,7 @@ throw information out get sprayed wide and nobody taps — the bad side of the
 "scrolled past" ranking signal.
 
 **The axis that split them wasn't style — it was the reader's stake.** None
-of the four had vocabulary tells (all passed the style gate). The API-trap
+of the four had vocabulary tells (all passed the style checker). The API-trap
 list applies only to people building Threads automation themselves; the
 confessional reads as their own story to anyone growing an account. 7.6x the
 reach at the same age.
@@ -446,7 +450,7 @@ Rejected hypotheses get recorded too — "uniform sentence length reads as
 machine" broke on measurement. The top-response post was the more uniform one
 (coefficient of variation 0.13). But the **longest sentence** did split them
 (only the trailing post capped at 21 characters; the rest 25+), and that was
-fixed as gate C7 (korean-style.md §C7).
+fixed as rule C7 (korean-style.md §C7).
 
 ## §Engagement targets — ability to contribute comes before reach
 

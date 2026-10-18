@@ -27,11 +27,18 @@
  *      스스로 도는 그림도 금지 — gif·apng·애니메이션 webp 와 SVG SMIL 은 Animation 객체를
  *      안 만들어서 __seek 이 못 세우고 __meta().stray 로도 안 잡힌다. 그림은 png·jpg 만.
  *   5. 재질 — box-shadow·text-shadow·drop-shadow 는 템플릿 머리의 스튜디오 판 규칙(html.studio …)
- *      만 든다. 저작 영역과 머리의 다른 규칙에서는 생성형 표식이라 막는다(그라데이션과 같은 자리 규칙).
+ *      만 든다. 저작 영역과 머리의 다른 규칙에서는 생성형 표식이라 ⚠ 경고로 알린다(그라데이션과 같은 자리 규칙).
  *   6. 구운 물체(slide.object · rendered-object.md) — 시트 png 와 사이드카 js 가 있고, 슬라이드가
  *      사이드카를 <script src> 로 읽고, render 가 h.object(rg, id) 로 앉히고, 잉크 상자가 존 안이다.
  *
- * exit 0 전부 통과 / 1 위반 있음 / 2 인자·파일 오류.
+ * 두 등급(사용자 지시 2026-10-16 — 창작·디자인 규칙은 가이드):
+ *   ✗ 위반 — 파일 누락·파일명·등록 불일치, scenes.js 에 없는 글자, 템플릿·런타임 불일치, 폐기된 footage,
+ *            어휘 밖 kind·treatment·동작, 결정성(seek·시계·원격·자동 재생), 구운 물체의 시트·사이드카·존.
+ *   ⚠ 경고 — 그라데이션·그림자·글래스·둥근 카드, 평판 h.stage("flat"), editorial 의 role·motif,
+ *            래스터 한 장짜리 editorial, slide-quality.js 의 ADVISORY(quality 계획·그룹별 변화 수).
+ *            종료 코드를 바꾸지 않고 저작자가 읽는다.
+ *
+ * exit 0 통과(⚠ 경고 포함) / 1 위반 있음 / 2 인자·파일 오류.
  */
 const fs = require("fs");
 const path = require("path");
@@ -133,6 +140,7 @@ function checkDir(dir, only, opts) {
 
   let bad = 0;
   const fail = (f, msg) => { console.error(`✗ ${f}: ${msg}`); bad++; };
+  const warn = (f, msg) => { console.error(`⚠ ${f}: ${msg}`); };   // 디자인·메타데이터 가이드 — 종료 코드를 바꾸지 않는다
 
   for (const f of files) {
     const base = path.basename(f);
@@ -206,17 +214,18 @@ function checkDir(dir, only, opts) {
       }
     }
     if (motion && kind === "diagram") {
-      require('./slide-quality.js').checkQuality(slide, (scene.narration || []).length)
-        .forEach(message => fail(base, message));
+      const quality = require('./slide-quality.js');
+      quality.checkQuality(slide, (scene.narration || []).length)
+        .forEach(message => (quality.ADVISORY.has(message) ? warn : fail)(base, message));
       if (slide.treatment === 'editorial' && /\bh\.stage\s*\([^)]*["']flat["']/.test(code))
-        fail(base, 'editorial slides require the studio ground; h.stage("flat") is not allowed');
+        warn(base, 'editorial slides sit on the studio ground by default (slide-design.md §1); h.stage("flat") is the plain plate for camera and kinetic screens');
       const treatment = slide && slide.treatment;
       if (!treatment) fail(base, MSG.treatmentMissing);
       else if (treatment === "footage") fail(base, MSG.treatmentRetired);
       else if (TREATMENTS.indexOf(treatment) === -1) fail(base, MSG.treatmentVocab(treatment));
       else if (treatment === "editorial") {
-        if (EDITORIAL_ROLES.indexOf(slide.role) === -1) fail(base, MSG.editorialRole(slide.role));
-        if (!String(slide.motif || "").trim()) fail(base, MSG.editorialMotif);
+        if (EDITORIAL_ROLES.indexOf(slide.role) === -1) warn(base, MSG.editorialRole(slide.role));
+        if (!String(slide.motif || "").trim()) warn(base, MSG.editorialMotif);
       } else if (!String(scene.visual.action || "").trim()) {
         fail(base, MSG.photoAction);
       }
@@ -255,7 +264,7 @@ function checkDir(dir, only, opts) {
       const stop = code.indexOf("SEEK-RUNTIME-BEGIN", start >= 0 ? start : 0);
       const authored = start >= 0 ? code.slice(start, stop >= 0 ? stop : code.length) : "";
       const hasRaster = /<img\b|\burl\s*\(/i.test(authored);
-      if (hasRaster && !EDITORIAL_ASSEMBLY.test(authored)) fail(base, MSG.editorialRasterOnly);
+      if (hasRaster && !EDITORIAL_ASSEMBLY.test(authored)) warn(base, MSG.editorialRasterOnly);
     }
 
     // timeline · statistic · principle 장면은 선언만 모션이어선 안 된다. renderSlide()가
@@ -481,7 +490,7 @@ function checkDir(dir, only, opts) {
         // The canonical chart owns its optional liquid-glass material. Its exact
         // template/runtime checks above still prevent an episode-specific replacement.
         if (!canonicalChart && (/\b(?:linear|conic|radial)-gradient\s*\(/i.test(authored) ||
-            /\b(?:linear|conic|radial)-gradient\s*\(/i.test(headCss))) fail(base, MSG.gradientAuthored);
+            /\b(?:linear|conic|radial)-gradient\s*\(/i.test(headCss))) warn(base, MSG.gradientAuthored);
         /* 재질 — 셀렉터가 전부 html.studio 로 시작하는 규칙 블록만 빼고 본다. 목록에 다른 셀렉터를
            하나라도 끼우면 그 블록은 검사 대상이다(리뷰 실측 우회). render 함수가 없으면 파일 전체다. */
         const GEN = /background-clip\s*:\s*text|-webkit-background-clip\s*:\s*text|\bbox-shadow\s*:|\btext-shadow\s*:|\bbackdrop-filter\s*:|\bfilter\s*:\s*(?:drop-shadow|blur)\s*\(/i;
@@ -490,11 +499,11 @@ function checkDir(dir, only, opts) {
           css.replace(/\/\*[\s\S]*?\*\//g, "").replace(/([^{}]+)\{[^{}]*\}/g, (r, sel) =>
             sel.replace(/^[\s\S]*;/, "").split(",").every(s => /^\s*html(?:\.[\w-]+)*\.studio(?![\w-])/.test(s)) ? "" : r) + "</style>");
         if (start >= 0 ? (GEN.test(authored) || GEN.test(noMat(headCss))) : GEN.test(noMat(code)))
-          fail(base, MSG.generatedStyle);
+          warn(base, MSG.generatedStyle);
       }
       const radii = [...code.matchAll(/border-radius\s*:\s*(\d+(?:\.\d+)?)px/gi)].map(m => Number(m[1]));
       const cardRadius = radii.find(r => r >= 8);
-      if (cardRadius !== undefined) fail(base, MSG.roundedCard(cardRadius));
+      if (cardRadius !== undefined) warn(base, MSG.roundedCard(cardRadius));
     }
 
     if (!bad) console.log(`✓ ${base}${motion ? " (motion · " + kind + ")" : ""}`);
@@ -599,6 +608,8 @@ function selftest() {
       segs: { "1": 3000, "2": 3000 }, cell: [630, 600], cols: 9, n: 11,
       ranges: { "1": [0, 5], "2": [5, 10] }, ink: [49, 15, 629, 521] }, over) }) + ');';
   const BLENDER_SLIDE = `const SLIDE_SHOT = 24; window.__seek = 1; <script src="assets/s24-cart.js"></script> function renderSlide(S, h) { return h.object(1, "s24-cart", { x: 97, y: 0, slot: true }); }`;
+  // W(msg) — 디자인·메타데이터 규칙은 ⚠ 경고로 나오고 종료 코드는 0 이다. 문자열은 ✗ 위반(exit 1).
+  const W = warn => ({ warn });
   const cases = [
     ["s1-static.html", `const SLIDE_SHOT = 1; const a = "정지 라벨";`, [MSG.mustMotion]],
     ["s1-static.html", `const SLIDE_SHOT = 1; <style>.x{animation:rise 1s}</style>`, [MSG.mustMotion]],
@@ -608,17 +619,17 @@ function selftest() {
     ["s2-motion.html", `const SLIDE_SHOT = 2; <style>@keyframes rise{}</style> window.__seek = () => 1;`, []],
     ["s2-motion.html", `const SLIDE_SHOT = 2; <style>@keyframes rise{}</style>`, [MSG.motionSeek]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.x{transition: opacity 1s}</style>`, [MSG.motionTransition]],
-    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.x{backdrop-filter:blur(8px);box-shadow:0 8px 20px #000}</style>`, [MSG.generatedStyle]],
-    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.x{border-radius:18px}</style>`, [MSG.roundedCard(18)]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.x{backdrop-filter:blur(8px);box-shadow:0 8px 20px #000}</style>`, [W(MSG.generatedStyle)]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.x{border-radius:18px}</style>`, [W(MSG.roundedCard(18))]],
     // 플레이트·스크림 그라데이션은 템플릿 머리 CSS 자리(저작 영역 밖)라 통과한다
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.scrim{background:linear-gradient(to top,#000,transparent)}</style> function renderSlide(S, h) { return h.count(1, 3); }`, []],
-    // 저작 영역의 그라데이션은 글자·막대에 쓰인 것이라 막는다
-    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; function renderSlide(S, h) { return '<style>.hero{background:linear-gradient(90deg,#f00,#00f)}</style>' + h.count(1, 3); }`, [MSG.gradientAuthored]],
+    // 저작 영역의 그라데이션은 글자·막대에 쓰인 것이라 경고한다
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; function renderSlide(S, h) { return '<style>.hero{background:linear-gradient(90deg,#f00,#00f)}</style>' + h.count(1, 3); }`, [W(MSG.gradientAuthored)]],
     /* 화살표 대입형에서도 저작 영역을 찾아야 한다 — 선언형만 찾으면 검사가 조용히 통과했다(리뷰 실측) */
-    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; const renderSlide = (S, h) => { return '<style>.hero{background:linear-gradient(90deg,#f00,#00f)}</style>' + h.count(1, 3); };`, [MSG.gradientAuthored]],
-    /* 머리 CSS 에 더한 그라데이션도 막는다 — 스크림 규칙 하나만 예외다 */
-    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.scrim{background:linear-gradient(to top,#000,transparent)} .rule{background:linear-gradient(90deg,#f00,#00f)}</style> function renderSlide(S, h) { return h.count(1, 3); }`, [MSG.gradientAuthored]],
-    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; function renderSlide(S, h) { return '<style>.x{background-clip:text}</style>'; }`, [MSG.generatedStyle]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; const renderSlide = (S, h) => { return '<style>.hero{background:linear-gradient(90deg,#f00,#00f)}</style>' + h.count(1, 3); };`, [W(MSG.gradientAuthored)]],
+    /* 머리 CSS 에 더한 그라데이션도 경고한다 — 스크림 규칙 하나만 예외다 */
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.scrim{background:linear-gradient(to top,#000,transparent)} .rule{background:linear-gradient(90deg,#f00,#00f)}</style> function renderSlide(S, h) { return h.count(1, 3); }`, [W(MSG.gradientAuthored)]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; function renderSlide(S, h) { return '<style>.x{background-clip:text}</style>'; }`, [W(MSG.generatedStyle)]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; requestAnimationFrame(step);`, [MSG.motionClock]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; @font-face{src:url("https://x/y.woff2")}`, [MSG.webfont]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <link rel="stylesheet" href="https://fonts.googleapis.com/css2">`, [MSG.webfont]],
@@ -672,7 +683,7 @@ function selftest() {
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <svg><animateTransform attributeName="transform"/></svg>`,
       [MSG.smil]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; function renderSlide(S, h) { return '<img src="../images/scene-3.png">'; }`,
-      [MSG.editorialRasterOnly]],
+      [W(MSG.editorialRasterOnly)]],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; function renderSlide(S, h) { return h.fig(1, 0) + '<img class="art" src="assets/a.png">'; }`, []],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <img src="https://cdn.example.com/a.png">`,
       [MSG.remoteMedia("https://cdn.example.com/a.png")]],
@@ -692,7 +703,7 @@ function selftest() {
     ["s7-badact.html", `const SLIDE_SHOT = 7; window.__seek = 1; function renderCharacter(S, h) {}`, [MSG.actsVocab("moonwalk")]],
     ["s8-fewacts.html", `const SLIDE_SHOT = 8; window.__seek = 1; function renderCharacter(S, h) {}`, [MSG.actsShort(1, 3)]],
     ["s9-notreatment.html", `const SLIDE_SHOT = 9; window.__seek = 1;`, [MSG.treatmentMissing]],
-    ["s10-norole.html", `const SLIDE_SHOT = 10; window.__seek = 1;`, [MSG.editorialRole(undefined), MSG.editorialMotif]],
+    ["s10-norole.html", `const SLIDE_SHOT = 10; window.__seek = 1;`, [W(MSG.editorialRole(undefined)), W(MSG.editorialMotif)]],
     ["s11-noaction.html", `const SLIDE_SHOT = 11; window.__seek = 1;`, [MSG.photoAction]],
     ["s12-timeline.html", `const SLIDE_SHOT = 12; window.__seek = 1; function renderSlide(S, h) { return h.date(1, h.L(0)); }`, []],
     ["s12-timeline.html", `const SLIDE_SHOT = 12; window.__seek = 1; function renderSlide(S, h) { return h.rv(1, h.L(0)); }`,
@@ -749,12 +760,17 @@ function selftest() {
     ["s24-blender.html", BLENDER_SLIDE, ["mesh recipe changed after the bake; rebake the sheet"], "sidecar-sha"],
     ["s24-blender.html", BLENDER_SLIDE, ["object sidecar samples differs from scenes.js; rebake the sheet"], "sidecar-samples"],
     ["s24-blender.html", BLENDER_SLIDE, ["object sidecar has 1 frame groups for 2 narration segments; rebake with --segs"], "sidecar-groups"],
-    // 재질 — 템플릿 머리의 html.studio 규칙은 통과하고, 저작 영역과 머리의 다른 규칙은 막는다
+    // 재질 — 템플릿 머리의 html.studio 규칙은 통과하고 저작 영역과 머리의 다른 규칙은 경고한다
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>html.studio .band{box-shadow:0 2px 0 #000} html.studio .stage{text-shadow:0 1px 0 #000} html.studio .marks .mk{filter:drop-shadow(0 1px 1px #000)}</style> function renderSlide(S, h) { return h.count(1, 3); }`, []],
-    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>html.studio .band{box-shadow:0 2px 0 #000} .card{box-shadow:0 8px 20px #000}</style> function renderSlide(S, h) { return h.count(1, 3); }`, [MSG.generatedStyle]],
-    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; function renderSlide(S, h) { return '<style>.n{text-shadow:0 4px 8px #000}</style>' + h.count(1, 3); }`, [MSG.generatedStyle]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>html.studio .band{box-shadow:0 2px 0 #000} .card{box-shadow:0 8px 20px #000}</style> function renderSlide(S, h) { return h.count(1, 3); }`, [W(MSG.generatedStyle)]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; function renderSlide(S, h) { return '<style>.n{text-shadow:0 4px 8px #000}</style>' + h.count(1, 3); }`, [W(MSG.generatedStyle)]],
     // 셀렉터 목록에 html.studio 를 하나 끼워도 다른 셀렉터는 검사 대상이다(리뷰 실측 우회)
-    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.card, html.studio .band{box-shadow:0 24px 60px rgba(0,0,0,.5)}</style> function renderSlide(S, h) { return h.count(1, 3); }`, [MSG.generatedStyle]],
+    ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>.card, html.studio .band{box-shadow:0 24px 60px rgba(0,0,0,.5)}</style> function renderSlide(S, h) { return h.count(1, 3); }`, [W(MSG.generatedStyle)]],
+    // slide-quality.js 의 ADVISORY — quality 계획이 없는 editorial, 세그먼트 수와 다른 변화 수는 경고다
+    ["s21-hold.html", `const SLIDE_SHOT = 21; window.__seek = 1; function renderSlide(S, h) { return h.count(1, 3); }`,
+      [W("editorial slide requires quality: object-state-v1 and a subject change plan")], "no-quality"],
+    ["s22-hold.html", `const SLIDE_SHOT = 22; window.__seek = 1; function renderSlide(S, h) { return h.count(1, 3); }`,
+      [W("slide.subject.changes needs one before/after change per narration segment")], "fewer-changes"],
     // html.wide.studio 처럼 다른 클래스가 앞서도 스튜디오 규칙이다
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>html.wide.studio .band{box-shadow:0 2px 0 #000}</style> function renderSlide(S, h) { return h.count(1, 3); }`, []],
     // 파일 첫 규칙이 스튜디오 규칙이어도 면제다 — 앞의 doctype·head 가 셀렉터에 붙지 않는다(리뷰 실측)
@@ -786,12 +802,24 @@ function selftest() {
       fs.writeFileSync(path.join(slides, f), body);
     }
     fs.writeFileSync(path.join(slides, name), body);
+    // ADVISORY 픽스처 — scenes.js 의 quality 계획을 지우거나 줄인 사본으로 검사한다
+    const scenesBody = fs.readFileSync(path.join(tmp, "scenes.js"), "utf8");
+    if (flag === "no-quality" || flag === "fewer-changes") {
+      const no = parseInt(name.match(/^s(\d+)-/)[1], 10);
+      fs.writeFileSync(path.join(tmp, "scenes.js"), scenesBody + `
+        { const sl = window.SCENES[${no - 1}].visual.slide;
+          ${flag === "no-quality" ? "delete sl.quality; delete sl.subject;" : "sl.subject.changes = [];"} }`);
+    }
     const got = [];
     console.error = m => got.push(String(m)); console.log = () => {};
-    checkDir(tmp, [name]);
+    const code = checkDir(tmp, [name]);
     console.error = realErr; console.log = realLog;
-    const ok = expect.length === got.length && expect.every((e, i) => got[i].endsWith(e));
-    if (!ok) { failed++; realErr(`✗ selftest ${name} — expected ${JSON.stringify(expect)} got ${JSON.stringify(got)}`); }
+    if (flag === "no-quality" || flag === "fewer-changes") fs.writeFileSync(path.join(tmp, "scenes.js"), scenesBody);
+    // 문자열은 ✗ 위반(exit 1), W(...) 는 ⚠ 경고(exit 0) — 등급까지 고정한다
+    const line = e => typeof e === "object" ? `⚠ ${name}: ${e.warn}` : `✗ ${name}: ${e}`;
+    const wantCode = expect.some(e => typeof e === "string") ? 1 : 0;
+    const ok = expect.length === got.length && expect.every((e, i) => got[i] === line(e)) && code === wantCode;
+    if (!ok) { failed++; realErr(`✗ selftest ${name} — expected ${JSON.stringify(expect.map(line))} (exit ${wantCode}) got ${JSON.stringify(got)} (exit ${code})`); }
   }
   wipeSlides();
   const missing = [];

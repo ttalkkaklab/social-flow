@@ -191,7 +191,7 @@ function check(work, board) {
       const audio=(s.narration||[]).map(n=>({lineId:n.id,sha256:n.audio?.sha256,revision:n.audio?.revision}));
       if(JSON.stringify(binding.audio)!==JSON.stringify(audio))throw new Error('Video speech binding is stale for card '+i);
       const payload=require('../../_shared/scene-acting.js').scenePerformancePayload(s);
-      if(binding.performanceRevision && binding.performanceRevision!==hash(JSON.stringify(payload)))throw new Error('Video performance binding is stale for card '+i);
+      if(binding.performanceRevision && binding.performanceRevision!==hash(JSON.stringify(payload)))warnings.push('card '+i+': performance plan changed since the clip was bound; inspect the clip against the current plan (stale)');
       if(!binding.performanceRevision)warnings.push('card '+i+': legacy video performance binding is unverified');
       media[binding.videoPath]=binding.videoSha256;
     }

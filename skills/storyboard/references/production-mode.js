@@ -58,13 +58,18 @@
     return { min, max: Math.max(min, max) };
   }
   const videoRender = scene => ['generated_video','stock_video'].includes(scene.shot?.render?.mode);
-  function ratioErrors(win) {
+  // The chosen ratio is a planning target and the cost ceiling (owner decision 2026-10-18): the
+  // band's upper count is enforced, the lower count is advice. Fewer video cuts than the target
+  // is reported, never padded with video the story does not need.
+  function ratioErrors(win, { advice = [] } = {}) {
     const scenes = win.SCENES || [], bounds = ratioBounds(win.PRODUCTION?.mode, scenes.length);
     if (!bounds) return [];
     const n = scenes.filter(videoRender).length;
     const missing = scenes.some(s => !s.shot?.render?.mode);
-    return missing ? ['render ratio requires render.mode on every shot'] : n < bounds.min || n > bounds.max
-      ? [`render ratio requires ${bounds.min}–${bounds.max} video shots of ${scenes.length}; got ${n}`] : [];
+    if (missing) return ['render ratio requires render.mode on every shot'];
+    if (n > bounds.max) return [`render ratio allows at most ${bounds.max} video shots of ${scenes.length} under ${win.PRODUCTION.mode}; got ${n}`];
+    if (n < bounds.min) advice.push(`${n} of ${scenes.length} shots are video; the chosen ratio ${win.PRODUCTION.mode} aims at ${bounds.min}–${bounds.max}. That is fine when the story needs no more motion; report the shortfall instead of adding cuts`);
+    return [];
   }
   const bandContract = p => p?.renderRatioVersion === 1 || ['video_80','video_lt10','no_video'].includes(p?.mode);
   // A cut is a shot in the playback line; b-roll is spliced by `after` and is not a cut, so it
@@ -80,12 +85,11 @@
       return hook && newCut(hook) && generated(hook) && cuts.filter(generated).length === 1
         ? [] : ['hook_only requires only the opening hook cut to be generated video'];
     }
-    if (!RATIOS[key]) return [];
-    const minimum = Math.ceil(cuts.length * RATIOS[key]);
-    return cuts.filter(generated).length >= minimum ? [] : [key + ' requires at least ' + minimum + ' of ' + cuts.length + ' new cuts as generated video'];
+    // Legacy percentage approvals carry no minimum either (owner decision 2026-10-18).
+    return [];
   }
-  // Two HITL choices every episode with generated video records (user directive 2026-09-11):
-  // which 3D renderer draws the mandatory previz, and which video model the clips are made on.
+  // The previz renderer and the video model come from .social-flow/models.json (model-settings.md);
+  // a previz is optional, and the board records which renderer drew one when it exists.
   const PREVIZ_RENDERERS = { blender: '블렌더 브릿지 — 관절 마네킹, 모션 캡처', threejs: 'three.js 페이지 — 헤드리스 크롬, 관절 없음' };
   // Suggested models and priced resolutions; each cut may choose its own model and resolution.
   // Node planners consume the build projection of installed adapters. Browser checks do
@@ -109,7 +113,8 @@
   const astraSize = win => win.FORMAT === 'youtube-long-16x9'
     ? { source: ASTRA_WIDE_RESOLUTION, edit: '1920x1080' }
     : { source: ASTRA_RESOLUTION, edit: '1080x1920' };
-  const selectionRecorded = sel => sel && ['user', 'standing'].includes(sel.kind) && text(sel.reference);
+  // user = answered in HITL · standing = copied from saved settings or a written plan · assistant = chosen by the author when nothing was saved (automation-guidance.md).
+  const selectionRecorded = sel => sel && ['user', 'standing', 'assistant'].includes(sel.kind) && text(sel.reference);
   // The four slots every generated shot stores (scenes-schema §camera); spatial-prompts.js
   // assembles the motion prompt's camera span from them, so nothing else describes the camera.
   const CAMERA_SLOTS = ['movement', 'speed', 'framing', 'end'];
@@ -425,8 +430,8 @@
     if (!o || typeof o !== 'object' || Array.isArray(o)) return [tag + 'shot.style must be an object with preset, reason and selection'];
     if (!STYLES[o.preset]) errors.push(tag + 'shot.style.preset must be one of ' + Object.keys(STYLES).join(', '));
     if (!text(o.reason)) advice.push(tag + 'shot.style.reason states why this picture needs another preset than the episode');
-    if (!(o.selection && o.selection.kind === 'user' && text(o.selection.reference)))
-      advice.push(tag + 'a per-shot style leaves the episode style only on the user\'s HITL approval; record it in shot.style.selection { kind: "user", reference }');
+    if (!selectionRecorded(o.selection))
+      advice.push(tag + 'record who chose the per-shot style in shot.style.selection { kind: "user" | "assistant", reference }');
     Object.keys(o).filter(k => !SHOT_STYLE_KEYS.includes(k)).forEach(k => errors.push(tag + 'shot.style.' + k + ' is not a shot-level field (world and camera language stay episode constants)'));
     return errors;
   }
@@ -459,7 +464,7 @@
       errors.push('A reused clip cannot also declare a generation, recording, slide or alternate file handoff');
     if (v.picture !== 'ai-video' || v.overlay !== 'none') errors.push('Reused generated clips keep picture:ai-video and overlay:none');
     if (scene.title || scene.stat || (scene.bullets || []).length || scene.footnote)
-      errors.push('Reused video allows subtitles only; clear title, stat, bullets and footnote');
+      errors.push('Nothing goes over reused footage; clear title, stat, bullets and footnote');
     return errors;
   }
   // A supplied file — the user's recording, or a free stock clip (visual.source "stock" with a
@@ -517,7 +522,7 @@
       ? errors.concat(['Choose a production mode with a six-option cost comparison before generation']) : errors;
     if (!MODES[p.mode]) errors.push('PRODUCTION.mode must be one of ' + CHOICES.join(', ') + ' (hook_only, stills_only and hybrid are legacy)');
     if (p.renderRatioVersion !== undefined && p.renderRatioVersion !== 1) errors.push('renderRatioVersion must be 1');
-    if (bandContract(p) && (win.SCENES || []).every(s => s.shot?.render?.mode)) errors.push(...ratioErrors(win));
+    if (bandContract(p) && (win.SCENES || []).every(s => s.shot?.render?.mode)) errors.push(...ratioErrors(win, { advice }));
     // host = the CLI's own media tool (image_gen on Codex and Grok, image_to_video on Grok); absent reads as api.
     if (p.imageProvider !== undefined && !['host', 'api'].includes(p.imageProvider)) errors.push('PRODUCTION.imageProvider must be host or api');
     // astra = our own LTX-2.5 box (video-model-selection §ASTRA). Video only: there is no image lane on it,
@@ -527,9 +532,9 @@
       errors.push('PRODUCTION.videoBudgetUsd must be a finite nonnegative episode cap');
     if (!Number.isInteger(p.maxAttempts) || p.maxAttempts < 1 || p.maxAttempts > 5)
       errors.push('PRODUCTION.maxAttempts must be 1–5 total attempts per clip (including the first)');
-    // stills_only buys no generated video, so there is no cost quote to fingerprint and nothing
-    // for the user to approve; the six-option comparison never ran. Every other mode carries one.
-    if (requireApproval && p.mode !== 'stills_only' && (!p.approval || !['user', 'standing'].includes(p.approval.kind) ||
+    // no_video (and legacy stills_only) buys no generated video, so there is no cost quote to
+    // fingerprint and nothing for the user to approve. Every other mode carries one.
+    if (requireApproval && !['stills_only', 'no_video'].includes(p.mode) && (!p.approval || !['user', 'standing'].includes(p.approval.kind) ||
         !text(p.approval.reference) || !Number.isFinite(Date.parse(p.approval.at)) || !text(p.approval.quoteFingerprint)))
       errors.push('PRODUCTION.approval needs kind, reference, at and the approved cost quoteFingerprint');
     // The visual style is asked before authoring in every production mode (visual-style.md,
@@ -538,8 +543,7 @@
     const chosen = p.style?.preset;
     if (!chosen) advice.push('Choose an episode visual style (PRODUCTION.style.preset) before authoring; every production mode carries one');
     else if (chosen !== 'spatial-explainer' && !STYLES[chosen]) errors.push('Unknown PRODUCTION.style.preset');
-    if (STYLES[chosen] && (!['user', 'standing'].includes(p.style.selection?.kind) ||
-        !text(p.style.selection?.reference))) advice.push('Record the actual style HITL choice in PRODUCTION.style.selection');
+    if (STYLES[chosen] && !selectionRecorded(p.style.selection)) advice.push('Record where the style came from in PRODUCTION.style.selection (user, standing or assistant, with its reference)');
     if (STYLES[chosen] && !packPresets.includes(chosen) && p.style.referencePack)
       errors.push('Only cinematic-miniature carries the miniature reference pack; drop referencePack for ' + chosen);
     if (p.cast !== undefined) {
@@ -570,25 +574,25 @@
       }
     });
     episodeMoveErrors(win.SCENES || []).forEach(e => advice.push(e));
-    // A generated cut exists → the previz renderer and the video model were put to the user
-    // (blender-previz.md §6, production-mode.md §When to ask). Nothing renders or bills before that.
+    // A generated cut exists → the video model comes from the saved directory selection and the
+    // optional previz names its renderer (model-settings.md, production-mode.md §When to ask).
     const generatedCuts = (win.SCENES || []).filter(s => eligible(s) && !reused(s) && s.visual?.video && s.shot?.render?.mode === 'generated_video');
     if (generatedCuts.length) {
       // spatial-prompts.js assembles every source and motion prompt from these six fields.
       for (const key of ['reference', 'world', 'materials', 'palette', 'lighting', 'camera'])
         if (!text(p.style?.[key])) advice.push('PRODUCTION.style.' + key + ' is required once a generated cut exists');
-      if (!p.previz) advice.push('A 3D previz can help plan camera and blocking; select a renderer when using it.');
+      if (!p.previz) advice.push('A 3D previz can help plan camera and blocking; when using one, copy the saved previzRenderer from .social-flow/models.json or record the author\'s pick.');
       else if (!PREVIZ_RENDERERS[p.previz.renderer]) errors.push('Unsupported PRODUCTION.previz.renderer (blender | threejs)');
-      else if (p.previz && !selectionRecorded(p.previz.selection)) advice.push('Record the actual previz renderer HITL choice in PRODUCTION.previz.selection');
+      else if (p.previz && !selectionRecorded(p.previz.selection)) advice.push('Record where the previz renderer came from in PRODUCTION.previz.selection (standing from models.json, or an assistant decision when nothing was saved)');
       const vm = p.videoModel;
       if (p.videoProvider === 'host') {
         if (vm && vm.model !== 'host') errors.push('PRODUCTION.videoModel.model must be host under videoProvider host');
       } else if (p.videoProvider === 'astra') {
         if (vm && vm.model !== 'astra') errors.push('PRODUCTION.videoModel.model must be astra under videoProvider astra');
-      } else if (!vm || !text(vm.model)) errors.push('Ask which video model makes the generated cuts and record it in PRODUCTION.videoModel (an episode default or mixed; each cut records its model and resolution)');
-      // The model HITL exists to pick among priced vendor tiers. Our own boxes have no tiers to price,
-      // so host and astra record no selection; every other value still has to name who chose it.
-      if (vm && !['host', 'astra'].includes(vm.model) && !selectionRecorded(vm.selection)) advice.push('Record the actual video model HITL choice in PRODUCTION.videoModel.selection');
+      } else if (!vm || !text(vm.model)) errors.push('Copy the saved video selection into PRODUCTION.videoModel (model-settings.md); ask only when .social-flow/models.json has no video model');
+      // The selection record names where the model came from. Our own boxes have no tiers to price,
+      // so host and astra record no selection; every other value still names its source.
+      if (vm && !['host', 'astra'].includes(vm.model) && !selectionRecorded(vm.selection)) advice.push('Record where the video model came from in PRODUCTION.videoModel.selection (standing from models.json, or the user\'s explicit choice)');
     }
     errors.push(...coverageErrors(win));
     if (!full(p)) {
@@ -662,7 +666,7 @@
       motionErrors(s).forEach(warn);
       if (!Array.isArray(s.narration) || !s.narration.length) warn('a generated cut needs its approved narration');
       if (s.title || s.stat || (s.bullets || []).length || s.footnote || !['none', undefined].includes(v.overlay))
-        bad('only burned subtitles go over full-video footage; clear title, bullets, footnote and overlays');
+        bad('nothing goes over full-video footage; clear title, bullets, footnote and overlays');
     });
     // Three identical set-ups in a row read as one long take that keeps restarting. A change of
     // size, angle or move needs a reason, and the reason is the next sentence (full-video.md §Shot plan).

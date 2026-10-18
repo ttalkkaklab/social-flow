@@ -25,8 +25,7 @@ autoproduce:                # when the queue runs dry the loop authors directly 
   duplicate_threshold: 0.5  # duplicate-verdict threshold (check-duplicate.py) — raise only for series channels
   max_cost_per_video: 1.00  # USD — passes the economy baseline ($0.27–0.29) and one lite b-roll promotion ($0.91–0.93); with a hook on the mini grade below the promotion needs 1.50, on 2.0 1080p 3.70
   daily_cost_cap: 2.00      # USD — two economy episodes with one promotion, or one episode with a mini hook and a promotion; a single episode must fit under it
-  previz_renderer: threejs  # threejs | blender — the standing answer to PRODUCTION.previz (every generated cut is a 3D previz cut); absent = the loop plans no generated cut
-  video_model: "dreamina-seedance-2-0-mini-260615 720p"   # a Seedance 2.x grade + resolution, the standing answer to PRODUCTION.videoModel (video-model-options.js prices the grades); absent = no generated cut
+  # previz_renderer / video_model — optional overrides, not prerequisites; `.social-flow/models.json` governs the renderer and the video model (model-settings.md · unattended-lifecycle.md#authorization-and-limits)
   weekly_cap: 7.00          # USD
   mark_queues: ["instagram"]  # queues to stamp on authoring success — only platforms with an approved growth plan
 ---
@@ -104,15 +103,16 @@ topic_keywords: ["Vietnam visa", "expat paperwork"]   # only with topic_source: 
 ```
 
 - **Cost** — per-episode cap `max_cost_per_video`; daily and weekly totals
-  accrue in the channel-shared `data/<channel>/growth/autoproduce.json`. The
-  ladder and promotion conditions:
-  `skills/autoproduce/references/cost-tiers.md` is the source of truth, and
-  Instagram's promotion trigger is a trend — the last 3 episodes' average
-  `reels_skip_rate` up 5+ points against the previous 3 (no absolute threshold,
-  revised 2026-08-15).
-- **Quality** — only episodes that pass every machine gate (fact check, style,
-  storyboard-review copy, images, build report, content-reviewer P0, cost)
-  become `queue_instagram: ready`; one failure means `hold`.
+  accrue in the channel-shared `data/<channel>/growth/autoproduce.json`.
+  Engines follow `.social-flow/models.json` (model-settings.md);
+  `skills/autoproduce/references/cost-tiers.md` prices the grades and is not a
+  promotion rule — no metric trend switches an engine.
+- **Quality** — reviews (fact check, style, storyboard-review, content-reviewer)
+  are recorded as findings with the episode and never hold it. `queue_instagram:
+  hold` is for a technical delivery failure (the build or its media missing), a
+  cost cap hit or missing authorization
+  (`skills/autoproduce/references/unattended-lifecycle.md#completion`), and
+  waits for a human.
 - **Duplicates** — before authoring, `check-duplicate.py` compares the
   candidate against all of the channel's existing topics. A different slug but
   the same story reworded drops the candidate (threshold

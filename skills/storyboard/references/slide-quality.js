@@ -1,5 +1,12 @@
-/* Shared planning contract. Reading old artifacts does not invoke this production gate. */
+/* Shared planning contract. Reading old artifacts does not invoke this production gate.
+   ADVISORY holds the two guidance messages (owner directive 2026-10-16): a missing quality plan and a
+   change count that differs from the narration count are reported, never refused. Every other message
+   is an input-shape error the renderer or bake actually needs. Callers route with ADVISORY.has(msg). */
 const VERSION = 'object-state-v1';
+const ADVISORY = new Set([
+  'editorial slide requires quality: object-state-v1 and a subject change plan',
+  'slide.subject.changes needs one before/after change per narration segment',
+]);
 function checkQuality(slide, segments) {
   if (!slide) return [];
   if (slide.quality == null) return (slide.kind || 'diagram') === 'diagram' && slide.treatment === 'editorial'
@@ -10,8 +17,10 @@ function checkQuality(slide, segments) {
   if (!subject || !['object', 'data', 'type'].includes(subject.kind))
     return ['slide.subject.kind must be object, data or type'];
   const changes = subject.changes;
-  if (!Array.isArray(changes) || changes.length !== segments)
-    return ['slide.subject.changes needs one before/after change per narration segment'];
+  if (!Array.isArray(changes))
+    return ['slide.subject.changes must be an array of {group, before, after, driver}'];
+  if (changes.length !== segments)
+    errors.push('slide.subject.changes needs one before/after change per narration segment');
   const drivers = subject.kind === 'object' ? ['geometry', 'surface', 'articulation', 'spatial']
     : subject.kind === 'data' ? ['value', 'relation'] : ['type'];
   changes.forEach((change, i) => {
@@ -52,4 +61,4 @@ function checkQuality(slide, segments) {
   } else if (slide.object?.renderer != null && slide.object.renderer !== 'sheet') errors.push('unknown object.renderer; choose mesh, blender or sheet');
   return errors;
 }
-module.exports = { VERSION, checkQuality };
+module.exports = { VERSION, ADVISORY, checkQuality };

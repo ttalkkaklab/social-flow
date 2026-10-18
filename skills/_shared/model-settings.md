@@ -48,6 +48,17 @@ repair, not permission to overwrite it with defaults. Do not copy choices from a
 previous episode or channel profile into directory settings without the user's
 selection. Existing choices may be offered as candidates.
 
+| Status | Returned by | Meaning |
+|---|---|---|
+| `setup_required` | `model-settings.js show` | No `.social-flow/models.json`; run first setup. |
+| `video_type_required` | `model-settings.js show` | Models saved, type missing; ask only the type. |
+| `configured` | `model-settings.js show` | Type and three models saved (model-only view). |
+| `migration_required` | both | Retired speech model; update speech explicitly before new generation. |
+| `project_setup_required` | `project_manage status` / `episode` | Project, style, production, SNS or channel layout missing; `missing[]` names them. An unattended caller reports it and defers authoring. |
+| `ready` | `project_manage status` | Complete settings; authoring starts without a preference question. |
+
+`project_manage episode` returns `created`, `resumed` or `legacy_episode`.
+
 ## First setup: video type, then three models
 
 First read [video types](video-types.md) and run:
@@ -76,7 +87,7 @@ not live availability. Show installed/configured options, capability limits and
 known pricing, labelled with its date. Do not invent credentials, exact latency or
 prices. A configured credential does not guarantee a successful generation.
 
-1. **Video model.** Offer host video when exposed, Seedance/Veo API models and
+1. **Video model** (first-setup menu; a saved choice is never re-offered). Offer host video when exposed, Seedance/Veo API models and
    ASTRA or MLX when available. Include resolution and reference/audio support.
    Use the installed video-model selection reference and cost tables. Explain the
    change each option makes. The host is the recommended initial choice when it
@@ -88,7 +99,11 @@ prices. A configured credential does not guarantee a successful generation.
    character's voice ID, language, speed and style. Show existing pinned voices
    that conflict with the proposed engine/model during setup; let the user retain
    an explicit character exception or request migration. Do not silently change
-   the voice or invent a voice ID on another provider.
+   the voice or invent a voice ID on another provider. The model registry
+   (`tts-models.js`) marks only the 3.8 family (`tts_gemini_38`) as taking a voice
+   designed with `tts_voice_design`; when the saved speech model is another family,
+   using such a voice needs an explicit model exception recorded in
+   `PRODUCTION.modelSettings.overrides`.
 3. **Image model.** Offer the host image tool first when available, then supported
    GPT Image, Z-Image and MLX options. Explain reference editing, readable text,
    cost and quality controls. Store an explicit API choice even when a host tool
@@ -129,13 +144,16 @@ chosen tool supports. Host `quality` is a prompt preference if no parameter exis
 
 ## Apply to authoring and generation
 
-Before the first board is authored, create the episode directory and snapshot:
+Before the first board is authored, create the episode with `project_manage episode` (or
+`project-settings.js episode`): it creates the directory, the snapshot and the
+`FORMAT`/`PRODUCTION` handoff, including `PRODUCTION.videoModel` from the saved video
+selection. The low-level snapshot below is the legacy path for model-only workspaces:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/skills/_shared/model-settings.js" snapshot "$WORKSPACE" "$EPISODE"
 ```
 
-This writes `$EPISODE/.work/model-settings.json` once. On resume it returns the
+Either path writes `$EPISODE/.work/model-settings.json` once. On resume it returns the
 existing snapshot even if workspace preferences changed; it never rewrites the
 board or approved assets. Copy `{source, revision, models: config.models}` from
 the result into `PRODUCTION.modelSettings` in `scenes.js`, and copy `config.videoType`
@@ -147,7 +165,7 @@ through storyboard → produce → edit-speech. Apply choices before cost quotes
 | Selection | Production handoff |
 |---|---|
 | Image | `PRODUCTION.imageProvider` is `host` for host, otherwise `api` (including local tools). `modelSettings.models.image` supplies the exact engine/model/quality for every new still and edit. |
-| Video | `PRODUCTION.videoProvider` is `host`, `astra`, or `api` for other engines. `PRODUCTION.videoModel` uses `model:'host'` / `model:'astra'` for those adapters, otherwise the selected model, plus resolution where supported. Record `selection:{kind:'standing',reference:source,note:'Directory model selection'}`. Populate each cut's existing engine/model/resolution fields from the selection using that adapter's contract. |
+| Video | `PRODUCTION.videoProvider` is `host`, `astra`, or `api` for other engines. `PRODUCTION.videoModel` uses `model:'host'` / `model:'astra'` for those adapters, otherwise the selected model, plus resolution where supported. Record `selection:{kind:'standing',reference:<snapshot or source file>}` (an optional `note:'Directory model selection'`); `project_manage episode` fills `PRODUCTION.videoModel` with `kind` and `reference`. Populate each cut's existing engine/model/resolution fields from the selection using that adapter's contract. |
 | Speech | Use `modelSettings.models.speech` when authoring new speaker `tts` records and resolve a compatible voice. Copy the selected model explicitly into `SB_DOC.characters[].tts` when selectable. Generate from those records with raw speech tools. |
 
 Do not send this config object as a tool payload. Translate it into the selected
@@ -158,7 +176,8 @@ required edit, reference or speech route, explain that limitation and request an
 explicit exception before switching. Do not downgrade, escalate or fall back on
 your own, including after API failure, a missing key or a change of host CLI.
 
-Directory choices govern **new episodes**. Existing approved boards and pinned
+Directory choices govern **new episodes and channel assets** (logos, intros, growth
+images). Existing approved boards and pinned
 character exceptions retain their explicit choices. When a legacy board has no
 snapshot, read its actual settings first; do not relabel conflicting choices as
 inherited or rewrite them. Set up workspace preferences for subsequent episodes
@@ -199,8 +218,8 @@ one episode sets `PRODUCTION.videoType` and records the request under
 `PRODUCTION.modelSettings.overrides`; it does not update the directory default.
 
 Interactive autoproduce runs the same setup once. An unattended growth invocation
-with no complete config reports `model_setup_required` and defers new production
-until the user selects a type and models. If only the type is missing, report
+with no complete config reports `project_setup_required` with the missing fields and
+defers authoring until the user completes setup. If only the type is missing, report
 `video_type_required` and ask only that choice on interactive return.
 With a complete config it reuses it without questions;
 legacy growth-plan model defaults do not override it. Existing explicit per-run

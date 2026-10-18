@@ -72,7 +72,8 @@ is convenience. The next session doesn't press that button again either.
 
 ### Workaround — find in the browser, reply via the API
 
-Engagement works even before approval. Do the discovery in the browser and
+Engagement works even before approval. Do the discovery in the browser — ego
+lite, the only browser lane; if it is missing, say so and skip the stage — and
 the posting with the channel token. Since the write goes through the API,
 **whatever account the browser is logged into, the publishing identity is the
 channel** — wrong-account accidents are structurally impossible.
@@ -113,24 +114,11 @@ Not a permissions problem — **right after creation the container status is
 polling). The old code only polled when `imageUrl` was present, so text
 replies always published immediately.
 
-The server is fixed (`publishThreads` now polls unconditionally). **But the
-MCP server process runs on the dist loaded at session start, so until a
-restart the old code keeps failing.** The workaround then is the 2-step
-direct call:
-
-```bash
-TOK=$(cat ~/.config/social-flow/<channel>/threads_token)
-C=$(curl -sS -X POST "https://graph.threads.net/v1.0/me/threads" \
-     -d media_type=TEXT_POST --data-urlencode "text@draft.txt" \
-     -d "reply_to_id=<target-id>" -d "access_token=$TOK" | jq -r .id)
-# poll every 3 seconds until status is FINISHED (usually 1–2 tries)
-curl -sS -X POST "https://graph.threads.net/v1.0/me/threads_publish" \
-     -d "creation_id=$C" -d "access_token=$TOK"
-```
-
-**Never publish a container later whose publish already failed** — if the
-workaround already posted in the meantime, that's a duplicate. Containers
-disappear on their own after 24 hours.
+Fixed in 2026-08: `publishThreads` polls unconditionally, so every publish goes
+through the MCP tools and carries its `draftId`. The raw-curl workaround that
+sat here is retired — it bypassed the draft record, and the bug it stepped
+around is gone. If the error ever returns, log it and report it; never
+blind-retry (absolute rule 3).
 
 Don't conclude "publishable" from the container creation returning 200 alone.
 Creation does not validate reply permission (we got this wrong once).
@@ -142,14 +130,17 @@ So **when someone answers a reply we left on their post, the inbox never
 catches it** — exactly where the conversation continues, and the golden hour
 gets missed wholesale.
 
-Each tick, check directly with our recent reply IDs:
+Each tick, check directly with our recent reply IDs (a read-only query; the
+token file is `<SNS_TOKEN_DIR>/<slug>/threads_token`, default
+`~/.config/social-flow/<slug>/` — never echo its value):
 
 ```bash
+TOK=$(cat "${SNS_TOKEN_DIR:-$HOME/.config/social-flow}/<slug>/threads_token")
 curl -sS "https://graph.threads.net/v1.0/<our-reply-id>/replies\
 ?fields=id,username,text,timestamp&access_token=$TOK"
 ```
 
-Keep the recent reply IDs in state and run this query.
+Keep the recent reply IDs in `state.recentReplyIds` and run this query.
 
 ## 5. Post-level metrics lag account-level ones
 

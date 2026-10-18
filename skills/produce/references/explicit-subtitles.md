@@ -32,8 +32,8 @@ append parsing, clipping and splitting use their original path. Replacement timi
 and its shared inward centisecond contract do not change.
 
 All `subs=` file bytes, including legacy append files, enter the assembly input SHA
-proof and video-warning fingerprint. Changed/missing files require a fresh preflight
-and any current warning approval. The builder checks the original file against that
+proof and video-warning fingerprint. Changed/missing files require a fresh preflight;
+recorded warnings are re-reported, not re-approved. The builder checks the original file against that
 proof again before encoding the card, and the final verifier rejects absent/stale subtitle
 provenance. Checked snapshots are temporary builder files, not new source inputs.
 Neither mode establishes that a timestamp matches speech: review timings against

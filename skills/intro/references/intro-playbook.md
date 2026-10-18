@@ -23,7 +23,7 @@ Sources at the end.
 **Never put a brand intro in front of short-form content.** 50–60% of viewer
 drop-off happens within the first 3 seconds, and logo animations or channel
 title cards push the hook back and cut retention directly. In short-form,
-branding is carried by style consistency (theme colors, subtitle tone) and by
+branding is carried by style consistency (theme colors, slide typography, voice) and by
 the outro on channels that keep one — the outro-off case is at the end of this
 section.
 
@@ -35,8 +35,8 @@ operating decision (owner brief, 2026-09-07) whose only outside support is
 author advice — grow-youtube's growth playbook §Hook and length carries "Make
 the first second strong, treat the intro like a thumbnail" and marks it advice,
 not a measured result. Produce measures it after the build: it reports where
-the first subtitle cue starts and warns — never fails — when that lands past
-1.0s.
+the first cue of a requested subtitle sidecar starts and warns — never fails — when
+that lands past 1.0s.
 
 Legitimate uses of the intro assets:
 

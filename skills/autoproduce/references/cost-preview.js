@@ -23,8 +23,9 @@
  * `--json` is the read-only lane and writes neither: board.js calls it once per episode to
  * draw a page, and observing a channel must not change every episode in it.
  *
- * `.work/cost-estimate.tsv` is a third file and belongs to autoproduce §5: a whole-episode
- * projection used only for the cap verdict. This script never reads or writes it, so an
+ * `.work/cost-estimate.tsv` is a third file and belongs to the unattended cap check
+ * (unattended-lifecycle.md#cap-check): a whole-episode projection used only for the cap
+ * verdict. This script never reads or writes it, so an
  * unattended run's cap check and a storyboard's approval screen can't clobber each other.
  *
  * ## Prices come from one place and the maths from one calculator
@@ -39,8 +40,8 @@
  * TTS and music stay out on purpose. `music.lyria-realtime` has no published unit price,
  * so its key is `?` in prices.tsv and the calculator refuses a verdict on any file
  * carrying it (exit 1, by design — a silent $0 shrinks the episode). Putting it in the
- * forecast would make every forecast unreadable. Narration on the local engine is $0.
- * What is left — the video slots — is where saying yes actually spends money.
+ * forecast would make every forecast unreadable. What is left — the stills and the video
+ * slots — is where saying yes actually spends money.
  *
  * Exit codes follow cost-report.sh so a caller can branch the same way:
  *   0  ok
@@ -158,23 +159,26 @@ const ROUTES = {
     why: 'veo_img2video · lite — a footage slide clip on the no-ARK_API_KEY route · 1080p is 8s-only'
   },
   /* Stills moved behind the approval gate on 2026-09-04 (owner directive — a plan the user
-     rejects must cost nothing), so they are a projection now, not a ledger line. The engine
-     split is storyboard §5's: gpt high for the cover and for every still a video engine reads
-     as its input (a b-roll's source scene, a motion-background scene — still-generation.md §1),
-     local Z-Image at $0 for the rest. A still that has to contain text also goes to gpt — rare,
-     and the forecast is under by $0.22 when it happens, which the §7 screen says out loud
-     rather than hiding. */
+     rejects must cost nothing), so they are a projection now, not a ledger line. Every still
+     bills on the saved image model (PRODUCTION.modelSettings.models.image — model-settings.md,
+     2026-10-16): host → image.host, gpt-image → image.gpt-image-2.<quality>, zimage/mlx →
+     image.local. Only a legacy board with no saved model keeps the old split — gpt high for the
+     cover and every still a video engine reads, local for the rest. */
   'still/gpt': {
     key: 'image.gpt-image-2.high', fixedQty: 1,
-    why: 'gpt_image_text2img high — the thumbnail, and every still a video engine reads'
+    why: 'gpt_image_text2img — the saved image model (legacy boards: the cover and every still a video engine reads)'
   },
   'still/local': {
     key: 'image.local', fixedQty: 1,
-    why: 'image_local_generate — local Z-Image, $0'
+    why: 'image_local_generate / mlx_image_generate — on-device, $0'
   },
   'still/host': {
     key: 'image.host', fixedQty: 1,
     why: 'host-provided image generation — included allowance, no separately billed image API'
+  },
+  'art/gpt': {
+    key: 'image.gpt-image-2.high', fixedQty: 1,
+    why: 'gpt_image_text2img — a slide art plate on the saved image model'
   },
   'art/local': {
     key: 'image.local', fixedQty: 1,
@@ -267,11 +271,21 @@ function videoSlots(scenes) {
  * fingerprint tracks the video slots the check strip warns about, and it is duplicated into
  * storyboard-html-template.html, where a still count would go stale for $0.
  */
-function stillSlots(scenes, imageProvider) {
-  /* Which scenes' stills a video engine reads as its input. Those are photorealistic people on
-     gpt high, never the local engine (still-generation.md §1 · storyboard §5): a b-roll takes
+/** The price route of the saved image model (model-settings.md); null when the board has none. */
+function savedStillEngine(imageModel) {
+  const e = imageModel && imageModel.engine;
+  if (!e) return null;
+  const engine = e === 'host' ? 'host' : e === 'gpt-image' ? 'gpt' : 'local';   // zimage · mlx — on-device, $0
+  return { engine, quality: engine === 'gpt' ? imageModel.quality || 'high' : undefined };
+}
+
+function stillSlots(scenes, imageProvider, imageModel) {
+  const saved = savedStillEngine(imageModel);
+  /* Legacy boards only — no PRODUCTION.modelSettings (before 2026-10-16). There the stills a
+     video engine reads as its input went to gpt high, never the local engine: a b-roll takes
      its source from the scene at its `after` index, and a motion-background scene feeds its
-     own still to the engine. Miss them and the approval screen under-reports $0.22 a shot. */
+     own still to the engine. A saved model prices every still the same way instead
+     (model-settings.md: no cover/points heuristic substitutes another model). */
   const videoSource = new Set();
   scenes.forEach((shot, i) => {
     const s = shot || {};
@@ -290,15 +304,17 @@ function stillSlots(scenes, imageProvider) {
     if (v.reuse !== undefined) { scenePlan(s); return; } // Validated import, no paid slot.
     if (v.bgPrompt) {
       const isCover = s.type === 'cover';
-      const engine = imageProvider === 'host' ? 'host' : isCover || videoSource.has(i) ? 'gpt' : 'local';
-      slots.push({ shot: shotNo, kind: 'still', engine, duration: 0,
+      const engine = saved ? saved.engine
+        : imageProvider === 'host' ? 'host' : isCover || videoSource.has(i) ? 'gpt' : 'local';
+      slots.push({ shot: shotNo, kind: 'still', engine, quality: saved ? saved.quality : undefined, duration: 0,
                    label: isCover ? 'cover background'
                         : videoSource.has(i) ? 'scene still · video source' : 'scene still' });
     }
     const sl = v.slide;
     if (sl && Array.isArray(sl.arts)) {
       sl.arts.forEach((art, j) => {
-        slots.push({ shot: shotNo, kind: 'art', engine: imageProvider === 'host' ? 'host' : 'local', duration: 0,
+        slots.push({ shot: shotNo, kind: 'art', engine: saved ? saved.engine : imageProvider === 'host' ? 'host' : 'local',
+                     quality: saved ? saved.quality : undefined, duration: 0,
                      label: 'slide art ' + ((art && art.file) || j + 1) });
       });
     }
@@ -343,8 +359,12 @@ function costFingerprint(scenes) {
 function forecastRows(slots) {
   return slots.map((slot) => {
     const plan = slot.plan;
-    const route = plan ? { key: plan.priceKey, fixedSeconds: plan.billedSeconds || plan.durationSeconds,
+    const base = plan ? { key: plan.priceKey, fixedSeconds: plan.billedSeconds || plan.durationSeconds,
       why: plan.tool + ' · ' + plan.model + ' · ' + plan.reason } : ROUTES[slot.kind + '/' + slot.engine];
+    // A saved gpt-image model carries its quality tier; the table's `.high` key is the legacy default.
+    // An unknown tier makes an unknown key, which cost-report.sh reports as exit 1 rather than $0.
+    const route = slot.quality && slot.quality !== 'high'
+      ? Object.assign({}, base, { key: base.key.replace(/\.high$/, '.' + slot.quality) }) : base;
     const qty = route.supportedSeconds ? require('../../_shared/video-duration.js').minimumDuration(slot.duration, { seconds: route.supportedSeconds }).requestedSeconds
       : route.fixedQty !== undefined ? route.fixedQty
       : route.fixedSeconds !== undefined ? route.fixedSeconds : slot.duration;
@@ -561,7 +581,9 @@ function selftest() {
     process.stderr.write('WARN storyboard-html-template.html not found — drift guard skipped\n');
   }
 
-  // Stills are a projection since 2026-09-04 — the storyboard generates nothing.
+  // Stills are a projection since 2026-09-04 — the storyboard generates nothing. These cases
+  // pass no saved image model, so they pin the legacy cover/points split boards before
+  // 2026-10-16 still get.
   const stills = stillSlots([
     { type: 'cover', visual: { bgPrompt: 'p' } },
     { type: 'points', visual: { bgPrompt: 'p' } },
@@ -594,6 +616,25 @@ function selftest() {
   ok('stills stay out of the fingerprint',
      costFingerprint([{ type: 'cover', visual: { bgPrompt: 'p' } }]) === 'none');
 
+  // The saved image model (model-settings.md, 2026-10-16) prices every still — no cover/points split.
+  const savedScenes = [
+    { type: 'cover', visual: { bgPrompt: 'p' } },
+    { type: 'points', visual: { bgPrompt: 'p' } },
+    { type: 'points', visual: { bgPrompt: 'p', video: { prompt: 'x' } } },
+    { type: 'points', visual: { slide: { kind: 'principle', arts: [{ file: 'a.png' }] } } }
+  ];
+  ok('a saved Z-Image model prices the cover and a video-source still local',
+     stillSlots(savedScenes, 'api', { engine: 'zimage' }).every((x) => x.engine === 'local'));
+  ok('a saved MLX model is the local $0 route too',
+     stillSlots(savedScenes, 'api', { engine: 'mlx' }).every((x) => x.engine === 'local'));
+  const gptLow = forecastRows(stillSlots(savedScenes, 'api', { engine: 'gpt-image', model: 'gpt-image-2', quality: 'low' }));
+  ok('a saved gpt-image model prices every still and art plate at its saved quality',
+     gptLow.length === 4 && gptLow.every((r) => r.key === 'image.gpt-image-2.low' && r.qty === 1));
+  ok('a saved gpt-image model without a quality bills high',
+     forecastRows(stillSlots(savedScenes, 'api', { engine: 'gpt-image' })).every((r) => r.key === 'image.gpt-image-2.high'));
+  ok('a saved host image model is the host route even without imageProvider',
+     stillSlots(savedScenes, undefined, { engine: 'host', host: 'codex' }).every((x) => x.engine === 'host'));
+
   if (failed) { process.stderr.write(failed + ' check(s) failed\n'); process.exit(1); }
   process.stdout.write('cost-preview selftest OK\n');
 }
@@ -619,7 +660,10 @@ function main() {
 
   // Stills first, then the video slots — the order the money goes out in produce.
   let slots;
-  try { slots = stillSlots(scenes, win.PRODUCTION?.imageProvider).concat(videoSlots(scenes)); }
+  try {
+    slots = stillSlots(scenes, win.PRODUCTION?.imageProvider, win.PRODUCTION?.modelSettings?.models?.image)
+      .concat(videoSlots(scenes));
+  }
   catch (e) { die(e.message); }
   const rows = forecastRows(slots);
   const fingerprint = costFingerprint(scenes);

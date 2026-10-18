@@ -4,7 +4,7 @@
 
 - [Plan a change the viewer can identify](#plan-a-change-the-viewer-can-identify)
 - [Plan each opening frame before assigning images](#plan-each-opening-frame-before-assigning-images)
-- [Hard stops before assets](#hard-stops-before-assets)
+- [Warnings before assets](#warnings-before-assets)
 - [Review the episode, not only individual end frames](#review-the-episode-not-only-individual-end-frames)
 
 **Automatic execution:** [Automation guidance](../../_shared/automation-guidance.md) supersedes creative quality gates, repeated approvals and review-score requirements here. Keep the concrete guidance and truthful review state. Enforce only actual runtime dependencies and the scope of external-action authorization.
@@ -85,11 +85,12 @@ the board as visually reviewed. Explain intentional reuse in the existing shot r
 review notes; otherwise correct the plan and use shot-specific frames within the authorized
 generation scope. A warning does not authorize regeneration or another spending allowance.
 
-## Hard stops before assets
+## Warnings before assets
 
-`render-routing.js` is shared by `check-scenes.js` and the approval page:
+`render-routing.js` is shared by `check-scenes.js` and the review page; it reports these as
+advice, so fix them in the plan rather than treating them as stops:
 
-- Three or more cuts cannot copy the same normalized render reason.
+- Three or more cuts copying the same normalized render reason is flagged.
 - Text-led slides have a ceiling of two per short. In long-form they occupy at most 20% of
   generated scene duration. Each lasts at most eight seconds, including its reveals.
 - `subject.kind:"type"` and kinetic text count toward that ceiling even with `motionBeats`.

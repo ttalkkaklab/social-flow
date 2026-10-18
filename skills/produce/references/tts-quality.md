@@ -11,8 +11,9 @@ explicitly requested adversarial improvement loop. Never create a PASS record fo
 media that was not evaluated or treat transcript matching as an acting assessment.
 
 Where the user requests listening review, evaluate the actual generated or assembled
-file, retain its hash and save concrete findings. Use `tts_review_final` only within
-that request and its spending authorization. State any unsupported review axis.
+file, retain its hash and save concrete findings. `tts_review_final` prepares host-review
+evidence within that request (no external evaluation call); listen yourself and record the
+findings. State any unsupported review axis.
 If speech changes afterward, reevaluate affected speech and joins before describing
 the new artifact with the previous score. An unavailable evaluator is not a pass.
 

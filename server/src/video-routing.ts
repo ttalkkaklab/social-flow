@@ -17,6 +17,9 @@ import type { ToolResult } from './handlers.js';
 
 const load = createRequire(import.meta.url);
 const shared = fileURLToPath(new URL('../../skills/_shared/video-selection.js', import.meta.url));
+const modelSettings = fileURLToPath(new URL('../../skills/_shared/model-settings.js', import.meta.url));
+/** Channel assets (intro clips, logo motion, growth images) live here; they have no episode or shot. */
+const CHANNEL_ASSET_RE = /^data\/[a-z0-9][a-z0-9-]*\/assets(\/|$)/;
 interface Selection { engine: string; model?: string; resolution?: string; host?: string }
 interface Context {
   episode: string; shotId: string; selection: Selection; source: string; revision: string;
@@ -221,6 +224,36 @@ export async function executeVideo(raw: unknown, dispatch: VideoDispatch): Promi
   }
 }
 
+/**
+ * A channel asset under data/<channel>/assets/ (owner decision 2026-10-18): no episode, no videoContext,
+ * but the saved workspace video model still binds the call, and the request is written to
+ * data/<channel>/assets/.work/video-requests.jsonl (the episode ledger deliberately skips asset paths).
+ */
+async function dispatchChannelAsset(tool: string, args: Record<string, unknown>, root: string, output: string, dispatch: VideoDispatch): Promise<ToolResult> {
+  const read = (load(modelSettings) as { readSettings(root: string): { status: string; config?: { models?: { video?: Selection } } } }).readSettings(root);
+  const selection = read.config?.models?.video;
+  if (!selection) throw new Error(`project_setup_required: ${read.status}; save .social-flow/models.json before generating channel assets`);
+  const bound = { ...bindSelection(tool, args, selection), outputPath: output };
+  const startedAt = Date.now();
+  let ok = false;
+  try {
+    const result = await dispatch(tool, bound);
+    ok = !result.isError;
+    return result;
+  } finally {
+    const assets = path.join(root, ...path.relative(root, output).split(path.sep).slice(0, 3));
+    const file = path.join(assets, '.work/video-requests.jsonl');
+    try {
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.appendFileSync(file, JSON.stringify({ ts: new Date().toISOString(), kind: 'channel_asset', tool, ok, ms: Date.now() - startedAt,
+        ...priceOf(tool, bound), outputPath: output, selection, source: 'workspace_settings' }) + '\n');
+    } catch (error) {
+      // A record write must never take down a call that already cost money.
+      console.error('[social-flow] could not write the channel-asset video record: ' + (error instanceof Error ? error.message : String(error)));
+    }
+  }
+}
+
 /** Legacy standalone tools remain callable; episode calls cannot bypass selection by using them. */
 export async function routeLegacyVideo(tool: string, raw: unknown, dispatch: VideoDispatch): Promise<ToolResult> {
   const gate = resolveToolGate(tool, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
@@ -232,8 +265,11 @@ export async function routeLegacyVideo(tool: string, raw: unknown, dispatch: Vid
     const plan = planVideo({ ...ctx, tool, args });
     return executeVideo({ episode: plan.episode, planId: plan.id }, dispatch);
   }
-  let dir = canonical(path.resolve(typeof args.outputPath === 'string' ? args.outputPath : process.cwd()));
+  const output = canonical(path.resolve(typeof args.outputPath === 'string' ? args.outputPath : process.cwd()));
+  let dir = output;
   for (;;) {
+    if (fs.existsSync(path.join(dir, '.social-flow/models.json')) && CHANNEL_ASSET_RE.test(path.relative(dir, output).split(path.sep).join('/')))
+      return dispatchChannelAsset(tool, args, dir, output, dispatch);
     if (fs.existsSync(path.join(dir, '.work/model-settings.json')) || fs.existsSync(path.join(dir, '.social-flow/models.json')))
       throw new Error('video_context_required: pass episode, shotId and requestId for configured production');
     const parent = path.dirname(dir); if (parent === dir) break; dir = parent;

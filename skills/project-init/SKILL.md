@@ -37,16 +37,20 @@ episode work, continue to that skill after setup without asking for the same cho
 3. Call `project_manage action:options` and `capability_status`. Follow
    [model settings](../_shared/model-settings.md) for **genre → video model → speech
    model → image model**. Reuse explicit prior answers and existing settings.
-4. Ask for the missing **visual style**, **video ratio**, and **output format**.
+4. Ask for the missing **visual style**, **video ratio**, and **output format** — asked
+   once here, then reused (the owner's exception to assistant-decided preferences).
    Show the rendering descriptions in [visual style](../storyboard/references/visual-style.md).
    The six ratio IDs come from options: `full_video`, `video_80`, `video_50`,
    `video_30`, `video_lt10`, `no_video`. Explain the actual ranges (100%, 80–<100%,
    50–<80%, 30–<50%, <10%, 0%) and that the ratio counts shots, not running time.
-   Integer rounding follows the production contract. Explain cost implications
+   The ratio is a planning target and cost ceiling: the band's upper bound and the
+   budget are enforced, the lower bound is not. Integer rounding follows the
+   production contract. Explain cost implications
    using the selected model; an exact quote needs an actual episode plan.
    Select `shorts-9x16` or `youtube-long-16x9`. Save optional palette/material/
    lighting directions when supplied. Save a previz renderer and per-episode USD
-   ceiling if the user chooses them. A ceiling is not permission to spend.
+   ceiling (`episodeBudgetUsd`) if the user chooses them; the author carries that ceiling
+   into `PRODUCTION.videoAuthorization.maxUsd` for routing. A ceiling is not permission to spend.
 5. Ask which SNS platforms are targets and whether to connect now or later.
    Record all four platforms: disabled ones use `enabled:false,status:disabled`;
    selected but unverified ones use `enabled:true,status:pending`.

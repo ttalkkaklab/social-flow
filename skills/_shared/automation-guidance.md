@@ -22,9 +22,12 @@ choices and standing authorization; do not ask the same question again. Keep the
 scope of those choices: a production budget is not publishing permission.
 
 Exception requested by the user: the initial directory-level video type selection,
-then video, speech and image model selection follow [model settings](model-settings.md). Ask for actual choices
-once, persist them, and reuse them for every later episode. Do not invent these
-standing preferences or let automatic engine routing override them.
+then video, speech and image model selection follow [model settings](model-settings.md),
+and the initial visual style, video ratio and output format follow
+[project-init](../project-init/SKILL.md). Ask for actual choices once at project setup,
+persist them, and reuse them for every later episode and for channel assets (logos,
+intros, growth images). Do not invent these standing preferences or let automatic
+engine routing override them.
 
 ## Creative principles are review prompts
 

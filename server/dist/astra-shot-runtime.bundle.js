@@ -6631,6 +6631,7 @@ var PRICE_FILE = fileURLToPath2(new URL("../../skills/autoproduce/references/pri
 // src/video-routing.ts
 var load = createRequire2(import.meta.url);
 var shared = fileURLToPath3(new URL("../../skills/_shared/video-selection.js", import.meta.url));
+var modelSettings = fileURLToPath3(new URL("../../skills/_shared/model-settings.js", import.meta.url));
 var routingContext = (episode, shotId) => load(shared).readVideoContext(episode, shotId);
 var idSchema = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var videoPlanSchema = external_exports.object({

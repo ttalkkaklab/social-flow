@@ -77,11 +77,13 @@ Resolve unknowns with the user, or retain pending; never retrofit a fabricated r
 2. Use the host image tool where available. Generate the first panel, inspect it, then
    use it as the reference for subsequent views. Keep each panel in a separate file;
    do not feed a multi-view composite to an image/video generator.
-3. Before confirming a new character voice, generate **three distinct voice candidates**
-   matched to the identity. Use the selected engine/model and the same natural Korean
-   sample from `speech.examples`. Present real audio with playback and wait for the
-   user's explicit candidate selection. Only then persist that candidate's `tts` and
-   reference audio in the identity/sheet. A pending draft must not claim a confirmed voice.
+3. When the user requests character voice work, audition before confirming the voice:
+   generate distinct voice candidates matched to the identity (three is the usual
+   audition), using the selected engine/model and the same natural Korean sample from
+   `speech.examples`. Present real audio with playback and wait for the user's candidate
+   selection. Only then persist that candidate's `tts` and reference audio in the
+   identity/sheet. Project-init and channel `add` leave the voice pending and bill no
+   sample. A pending draft must not claim a confirmed voice.
    Follow [acting prompts and auditions](../../produce/references/acting-prompts.md).
    `direction.voice` guides performance; per-line `acting` does not replace voice identity.
    Use the audition tool's read-only `plan` to extract acoustic targets and compare

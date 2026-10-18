@@ -209,7 +209,8 @@ acting; keep media that was not played/listened to explicitly `not_reviewed`.
 For an explicitly requested paid audiovisual evaluation, `acting_review` can inspect a
 local clip against the actual scene direction and expected speech. Supply requestedBy and
 reason from that request, preserve the authorized budget, and call it only for that review
-scope. It uploads media to Gemini and writes a receipt; it is never part of default speech
+scope. It prepares host-review evidence for the executing host to inspect (no upload to an
+external evaluator, host-review.md) and writes a receipt; it is never part of default speech
 generation. Receipts use a shared content-hash cache at `~/.cache/social-flow/acting-reviews`
 (or `SOCIAL_FLOW_ACTING_REVIEW_CACHE_DIR`), so copying a take does not create a new review.
 They are local provenance records, not tamper-proof attestations. Audio-only results do not
@@ -327,9 +328,12 @@ LTX 2.5 sometimes renders the character without following the voice, and which s
 this is luck (research 2026-10-17: HF LTX-2.5 discussion #44, Wan2GP #2200). When every
 line in the composed WAV is `on_screen`, pass `expectLipSync: true`; `prepare-astra-shot.js`
 sets it. After each render the tool correlates picture motion with the speech loudness
-(ffmpeg only, any OS, no upload). When no region moves with the speech, it renders again
-with the same audio, image and prompt and a new seed, up to `maxAttempts` (default 2).
-It keeps the best clip and writes every attempt's seed and measurement into the attempt's
+(ffmpeg only, any OS, no upload). Under the routing contract a request submits once
+(`maxAttempts: 1`, video-routing.md); when no region moves with the speech the tool reports the
+measurement, and a retake with the same audio, image and prompt and a new seed is a new request
+within the episode attempt limit. `render-astra-shot.js`, which calls the runtime outside routing,
+keeps the runtime's own `maxAttempts` (default 2) for that retry and reserves `-attemptN` candidates.
+Every attempt's seed and measurement is written into the attempt's
 `.astra-job.json`. Speech cut off by the frame count and a clip track that differs from the
 WAV are reported without a retry, because another seed fixes neither. Mixed on-screen and
 off-screen lines in one track keep the check off, since the visible mouth should be still

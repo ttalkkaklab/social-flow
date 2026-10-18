@@ -323,7 +323,9 @@ test('bound video becomes stale when action, addressee, timing or source composi
  compose(work,board);assert.ok(checker.check(work,board));
  for(const change of [s=>s.performance[1].text='Drops parcel.',s=>s.performance[0].to='audience',s=>s.performance[1].durationSeconds=2,s=>s.visual.camera={framing:'Close on parcel.'}]) {
   const changed=JSON.parse(JSON.stringify(bound));change(changed.SCENES[0]);save(changed);compose(work,board);
-  assert.throws(()=>checker.check(work,board),/Video performance binding is stale/);
+  // A changed performance plan is a provenance warning in tts-warnings.json (2026-10-18), not a stop.
+  assert.ok(checker.check(work,board));
+  assert.match(JSON.parse(readFileSync(path.join(work,'tts-warnings.json'),'utf8')).warnings.join(),/performance plan changed since the clip was bound.*\(stale\)/);
  }
 });
 
