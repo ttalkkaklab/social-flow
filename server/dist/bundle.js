@@ -94538,7 +94538,7 @@ function prepareVideoVoice(tool, input, context) {
   const characters = Array.isArray(raw) ? raw.map(object3) : Object.entries(object3(raw)).map(([id, value]) => ({ ...object3(value), id }));
   const visual = object3(context.shot.visual);
   const nativeSlot = Boolean(visual.clip) || context.shot.type === "broll";
-  const audible = tool.startsWith("veo_") || tool.startsWith("omni_") || args.generateAudio === true;
+  const audible = tool.startsWith("veo_") || tool.startsWith("omni_") || (tool.startsWith("astra_") ? args.generateAudio !== false : args.generateAudio === true);
   const native = tool !== "astra_audio2video" && audible && (nativeSlot || lines.some((line) => line.delivery === "on_screen"));
   const spec = SEEDANCE_MODEL_SPECS[args.model];
   const limitedPromptLanguage = tool.startsWith("seedance_") && !String(args.model).includes("2-5");

@@ -94,7 +94,8 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
   const characters: Record<string, unknown>[] = Array.isArray(raw) ? raw.map(object) : Object.entries(object(raw)).map(([id, value]) => ({ ...object(value), id }));
   const visual = object(context.shot.visual);
   const nativeSlot = Boolean(visual.clip) || context.shot.type === 'broll';
-  const audible = tool.startsWith('veo_') || tool.startsWith('omni_') || args.generateAudio === true;
+  const audible = tool.startsWith('veo_') || tool.startsWith('omni_') ||
+    (tool.startsWith('astra_') ? args.generateAudio !== false : args.generateAudio === true);
   const native = tool !== 'astra_audio2video' && audible && (nativeSlot || lines.some(line => line.delivery === 'on_screen'));
   const spec = SEEDANCE_MODEL_SPECS[args.model as SeedanceModel];
   const limitedPromptLanguage = tool.startsWith('seedance_') && !String(args.model).includes('2-5');

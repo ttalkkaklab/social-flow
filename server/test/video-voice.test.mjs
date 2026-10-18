@@ -57,6 +57,18 @@ test('silent backgrounds and voiceovers do not gain paid references or fabricate
   assert.equal(result.voiceContinuity.strategy,'external_tts');
   assert.equal(prepareVideoVoice('veo_text2video',{prompt:'Act.'},ctx).args.prompt,'Act.');
 });
+test('ASTRA native audio defaults on while explicit silence and supplied speech keep their contracts',t=>{
+  const ctx=fixture(t);
+  for (const tool of ['astra_text2video','astra_img2video','astra_keyframe_video','astra_ic_lora','astra_video_retake']) {
+    for (const setting of [{},{generateAudio:true},{generateAudio:false}]) {
+      const result=prepareVideoVoice(tool,{prompt:'Act.',...setting},ctx);
+      assert.equal(result.voiceContinuity.strategy,setting.generateAudio===false?'external_tts':'prompt_voice');
+      if (setting.generateAudio===false) assert.equal(result.args.prompt,'Act.');
+      else assert.match(result.args.prompt,/Low dry voice, Seoul accent/);
+      assert.equal(result.args.generateAudio,setting.generateAudio);
+    }
+  }
+});
 test('ASTRA preserves the audio-first prompt; exact waveform and lip-sync claims stay separate',t=>{
   const ctx=fixture(t);const result=prepareVideoVoice('astra_audio2video',{prompt:'Animate supplied speech.',audioUploadId:'a'},ctx);
   assert.equal(result.args.prompt,'Animate supplied speech.');assert.equal(result.voiceContinuity.strategy,'supplied_audio');
