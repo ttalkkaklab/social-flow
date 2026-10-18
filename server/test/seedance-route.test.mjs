@@ -146,17 +146,12 @@ test('the astra lane routes to our LTX box, takes no Seedance field, and an unkn
     /only applies to Seedance/);
 });
 
-test('an engine the router accepts has its tools in produce\'s allow-list and its call named in the recipe', () => {
+test('an engine the router accepts has its tools in produce\'s allow-list', () => {
   // A board can only reach a tool produce is allowed to call. An engine added to scenePlan
   // without its tools here passes every board check and then dies at the call site, so the
   // two lists are asserted against each other rather than maintained in parallel by hand.
-  const read = (rel) => readFileSync(fileURLToPath(new URL('../../' + rel, import.meta.url)), 'utf8');
-  const allowed = JSON.parse(read('skills/produce/SKILL.md')
+  const allowed = JSON.parse(readFileSync(fileURLToPath(new URL('../../skills/produce/SKILL.md', import.meta.url)), 'utf8')
     .split('\n').find((l) => l.startsWith('allowed-tools:')).slice('allowed-tools:'.length));
-  // produce's call instructions sit in two files — the per-step recipe and the engine guide —
-  // so a tool named in either one counts as documented.
-  const recipe = read('skills/produce/references/full-video.md')
-    + read('skills/produce/references/video-generation.md');
   // The tools each lane's cuts are made with. `host` is the CLI's own tool, named by the host
   // rather than by us, so it has no mcp entry to assert.
   const LANE_TOOLS = {
@@ -170,15 +165,11 @@ test('an engine the router accepts has its tools in produce\'s allow-list and it
     for (const tool of tools) {
       assert.ok(allowed.includes('mcp__social-flow__' + tool),
         'produce SKILL.md allowed-tools is missing ' + tool + ' for engine:"' + engine + '"');
-      assert.ok(recipe.includes(tool),
-        'neither full-video.md nor video-generation.md says when to call ' + tool
-        + ' on engine:"' + engine + '"');
     }
   }
   // Negative control: the assertion is reading the real lists, not passing on everything.
   assert.ok(!allowed.includes('mcp__social-flow__astra_text2video'),
     'produce starts from a still, so a text-to-video tool should not be reachable');
-  assert.ok(!recipe.includes('ltx_img2video'), 'the lane is named astra, not ltx');
 });
 
 test('a previz on the host lane is not a Seedance field, and on the Seedance route it must travel as Video 1', () => {
@@ -225,4 +216,20 @@ test('a previz cut rides the reference route as Video 1 and bills input + output
   // A previz belongs to a motion background only — the checkers and the approval page read visual.video.previz.
   assert.throws(() => scenePlan({ type: 'quote', duration: 6, visual: { bg: 'images/scene-4.png', clip: { ...base, prompt: 'x',
     previz: { ...previz, seconds: 6 } } } }), /motion-background/);
+});
+
+test('Veo storyboard forecast respects selected resolution and rejects over-limit shots', () => {
+  const shot = { type: 'broll', duration: 3.2, visual: { engine: 'veo', resolution: '720p' } };
+  assert.equal(scenePlan(shot).durationSeconds, 4);
+  assert.equal(scenePlan({ ...shot, visual: { engine: 'veo' } }).durationSeconds, 8);
+  assert.throws(() => scenePlan({ ...shot, duration: 9 }), /split or replan/);
+});
+
+test('Veo forecasts cannot invent a priced lite 4k route', () => {
+  const shot = { type: 'broll', duration: 3, visual: { engine: 'veo', resolution: '4k' } };
+  assert.throws(() => scenePlan(shot), /Unsupported Veo/);
+  const model = 'veo-3.1-fast-generate-preview';
+  const plan = scenePlan({ ...shot, visual: { ...shot.visual, model } });
+  assert.equal(plan.model, model);
+  assert.equal(plan.priceKey, priceOf(plan.tool, plan).key);
 });

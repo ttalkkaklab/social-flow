@@ -1,5 +1,5 @@
 /**
- * resumable.test.mjs — verifies YouTube chunked upload against a mock server.
+ * sns-client.test.mjs — uploadResumable: verifies YouTube chunked upload against a mock server.
  *
  * Without this test, §5.11's verdict of "don't add a size-threshold branch" falls apart,
  * because the reason for going down a single path is that "every build verifies the chunk

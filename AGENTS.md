@@ -68,6 +68,10 @@ cd .. && node skills/platform-guide/references/skill-lint.js
 skill points at a reference file that isn't there. Both run in CI
 (`.github/workflows/check.yml`) — a green local run is what a PR needs.
 
+New tests follow CLAUDE.md's "Tests — few, one file per module" section: add cases to
+the tested module's existing file, and only for behavior the change adds or alters.
+`server/test/test-layout.test.mjs` rejects a test file named after no module.
+
 Anything under `data/` is a local artifact and never gets committed. `server/dist/`
 is a build artifact that **must** be committed, because marketplace installs never
 run `npm install`.

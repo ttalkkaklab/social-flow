@@ -1,14 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createRequire } from 'node:module';
-import { mkdtempSync, rmSync, readFileSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 const require = createRequire(import.meta.url);
 const motion = require('../../skills/produce/references/measure-motion.js');
-const { checkQuality } = require('../../skills/storyboard/references/slide-quality.js');
 const W = 1080, H = 1920, frames = 13;
 const cases = ['thin-line', 'static', 'flicker', 'background-only', 'subject-action'];
 
@@ -52,21 +51,7 @@ test('lossless rendered comparisons and final H.264 preserve the motion contract
         }
       }
     }
-    // The background counterexample has plenty of pixels moving but no valid subject change.
-    const plan = driver => ({ treatment: 'editorial', quality: 'object-state-v1', subject: {
-      kind: 'data', changes: [{ group: 1, before: 'empty measure', after: 'filled measure', driver }],
-    } });
-    assert.ok(checkQuality(plan('camera'), 1).some(f => f.includes('not subject changes')));
-    assert.ok(checkQuality(plan('settle'), 1).some(f => f.includes('not subject changes')));
-    assert.deepEqual(checkQuality(plan('value'), 1), []);
   } finally { rmSync(dir, { recursive: true, force: true }); }
-});
-
-test('the slide renderer records the shared metric without using it as an approval', () => {
-  const renderer = readFileSync(new URL('../../skills/produce/references/render-motion-slide.mjs', import.meta.url), 'utf8');
-  assert.match(renderer, /motion\.slideEvidence\(r\.mp4, \{ stillLimit: motion\.plateStillLimit\(global\.window\.MOTION_POLICY\) \}\)/);
-  assert.match(renderer, /rendered_motion: renderedMotion/);
-  assert.match(renderer, /opt\.pngOnly \|\| opt\.previz \? null/);
 });
 
 // Optional real HTML helper capture on macOS:

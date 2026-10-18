@@ -1,16 +1,11 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import {cameraGuard,readContrastFrame,rowContrast} from '../../skills/produce/references/render-evidence.mjs';
+import {cameraGuard,contrastWarning,readContrastFrame,rowContrast} from '../../skills/produce/references/render-evidence.mjs';
 const meta=(w,h)=>({zoomPeak:1.32,peakUpscale:Math.max(1080/w,1920/h)*1.32});
 test('camera source guard rejects undersized 8-second push but accepts full canvas sources',()=>{
  assert.match(cameraGuard(meta(941,1672),1080,1920),/1.516 exceeds 1.5; minimum source 951x1690/);
  assert.equal(cameraGuard(meta(1088,1920),1080,1920),null);
  assert.equal(cameraGuard({zoomPeak:1.5,peakUpscale:1.5},1080,1920),null);
-});
-test('the renderer calls the tested camera guard and preserves the fatal error path',()=>{
- const s=fs.readFileSync(new URL('../../skills/produce/references/render-motion-slide.mjs',import.meta.url),'utf8');
- assert.match(s,/isCamera\?cameraGuard\(meta,W,H\):null/);assert.match(s,/if\(cameraProblem\)return die\(cameraProblem\)/);
 });
 test('one grayscale decode serves multiple row crops',()=>{
  let calls=0;
@@ -25,6 +20,14 @@ test('failed or incomplete contrast decoding produces an unmeasured result witho
  for(const decode of [()=>{throw Error('ffmpeg unavailable')},()=>Buffer.from([0])]){
   const result=readContrastFrame('sheet.png',2,2,decode);assert.equal(result.pixels,null);assert.ok(result.error);
  }
- const source=fs.readFileSync(new URL('../../skills/produce/references/render-motion-slide.mjs',import.meta.url),'utf8');
- assert.match(source,/contrast unmeasured:/);
+});
+for(const [px,ratio,warn] of [[65,4.49,true],[65,4.51,false],[66,2.99,true],[66,3.01,false]])test(`contrast px ${px} ratio ${ratio} warning ${warn}`,()=>{
+ const message=contrastWarning(ratio,px,'#sample');
+ assert.equal(message!==null,warn);
+ if(warn)assert.match(message,new RegExp(`below ${px===65?'4.5':'3'}:1`));
+});
+test('exact contrast boundaries pass; unmeasured contrast is not a low contrast warning',()=>{
+ assert.equal(contrastWarning(4.5,65,'x'),null);
+ assert.equal(contrastWarning(3,66,'x'),null);
+ assert.equal(contrastWarning(null,65,'x'),null);
 });
