@@ -1,3 +1,4 @@
+import { recordVideoSubmission } from './video-events.js';
 /**
  * Gemini Omni 1.1 Flash video client — the Interactions API lane next to Veo 3.1.
  *
@@ -128,12 +129,13 @@ async function downloadVideo(apiKey, videoUri) {
 async function runInteraction(params, outputPath, filename, label) {
     const apiKey = requireGeminiKey();
     const { GoogleGenAI } = await import('@google/genai');
-    const genai = new GoogleGenAI({ apiKey });
+    const genai = new GoogleGenAI({ apiKey, httpOptions: { retryOptions: { attempts: 1 } } });
     // The path is resolved before the call: a bad directory must not cost a paid generation.
     const fullPath = resolveOutputFile(outputPath, filename, 'video');
     console.error(`[Omni] ${label} starting... (${params.response_format.resolution})`);
     const created = await genai.interactions.create(params);
     const interactionId = created.id;
+    recordVideoSubmission(interactionId);
     if (!interactionId)
         return { error: 'No interaction id returned from API' };
     for (let poll = 1; poll <= MAX_POLLS; poll++) {

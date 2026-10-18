@@ -69,3 +69,7 @@ apps/*/build/
 # scratch frames from the 2026-08-16 mouse-character test — local only
 .tmp-mouse-vid/
 node_modules
+
+# Local speech execution receipts and active output locks
+.speech-runs/
+*.speech-lock/

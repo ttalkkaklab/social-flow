@@ -1,3 +1,4 @@
+import { recordVideoSubmission } from './video-events.js';
 /**
  * Google Veo 3.1 video generation client — ported from the fect-mcp-server video module.
  *
@@ -287,7 +288,7 @@ export async function generateFromText(request) {
     const durationSeconds = request.durationSeconds ?? DEFAULT_DURATION_SECONDS;
     try {
         const { GoogleGenAI } = await import('@google/genai');
-        const genai = new GoogleGenAI({ apiKey });
+        const genai = new GoogleGenAI({ apiKey, httpOptions: { retryOptions: { attempts: 1 } } });
         console.error(`[Veo] Starting text-to-video generation... (model: ${model})`);
         console.error(`[Veo] Prompt: ${request.prompt.substring(0, 100)}...`);
         const config = {
@@ -298,6 +299,7 @@ export async function generateFromText(request) {
         if (request.negativePrompt)
             config.negativePrompt = request.negativePrompt;
         const operation = await genai.models.generateVideos({ model, prompt: request.prompt, config });
+        recordVideoSubmission(operation.name);
         if (!operation.name)
             return { success: false, error: 'No operation name returned from API' };
         const saved = await awaitVideoAndSave(apiKey, operation.name, request.outputPath || process.cwd(), request.filename || `video_${Date.now()}.mp4`, 'Generation');
@@ -341,7 +343,7 @@ export async function generateFromImage(request) {
             }
         }
         const { GoogleGenAI } = await import('@google/genai');
-        const genai = new GoogleGenAI({ apiKey });
+        const genai = new GoogleGenAI({ apiKey, httpOptions: { retryOptions: { attempts: 1 } } });
         console.error(`[Veo] Starting image-to-video generation... (model: ${model})`);
         console.error(`[Veo] First frame image: ${request.sourceImagePath}`);
         if (request.lastImagePath)
@@ -364,6 +366,7 @@ export async function generateFromImage(request) {
             image: readInlineImage(request.sourceImagePath),
             config,
         });
+        recordVideoSubmission(operation.name);
         if (!operation.name)
             return { success: false, error: 'No operation name returned from API' };
         const saved = await awaitVideoAndSave(apiKey, operation.name, request.outputPath || process.cwd(), request.filename || `video_${Date.now()}.mp4`, 'Generation');
@@ -442,7 +445,7 @@ export async function extendVideo(request) {
             }
         }
         const { GoogleGenAI } = await import('@google/genai');
-        const genai = new GoogleGenAI({ apiKey });
+        const genai = new GoogleGenAI({ apiKey, httpOptions: { retryOptions: { attempts: 1 } } });
         console.error(`[Veo] Starting video extension... (model: ${model})`);
         console.error(`[Veo] Source video: ${request.sourceVideoPath}`);
         console.error(`[Veo] Prompt: ${request.prompt.substring(0, 100)}...`);
@@ -457,6 +460,7 @@ export async function extendVideo(request) {
             video: { uri: sourceVideoUri },
             config,
         });
+        recordVideoSubmission(operation.name);
         if (!operation.name)
             return { success: false, error: 'No operation name returned from API' };
         const saved = await awaitVideoAndSave(apiKey, operation.name, request.outputPath || process.cwd(), request.filename || `video_extended_${Date.now()}.mp4`, 'Extension');
@@ -495,7 +499,7 @@ export async function generateWithReferences(request) {
             }
         }
         const { GoogleGenAI, VideoGenerationReferenceType } = await import('@google/genai');
-        const genai = new GoogleGenAI({ apiKey });
+        const genai = new GoogleGenAI({ apiKey, httpOptions: { retryOptions: { attempts: 1 } } });
         console.error(`[Veo] Starting video generation with reference images... (model: ${model})`);
         console.error(`[Veo] Reference images: ${request.referenceImagePaths.join(', ')}`);
         console.error(`[Veo] Prompt: ${request.prompt.substring(0, 100)}...`);
@@ -512,6 +516,7 @@ export async function generateWithReferences(request) {
             referenceImages,
         };
         const operation = await genai.models.generateVideos({ model, prompt: request.prompt, config });
+        recordVideoSubmission(operation.name);
         if (!operation.name)
             return { success: false, error: 'No operation name returned from API' };
         const saved = await awaitVideoAndSave(apiKey, operation.name, request.outputPath || process.cwd(), request.filename || `video_ref_${Date.now()}.mp4`, 'Generation');

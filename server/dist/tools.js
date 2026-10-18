@@ -1,5 +1,6 @@
+import { VIDEO_ADAPTERS } from './video-registry.js';
 import { DURATION_TOOLS } from './video-duration.js';
-import { cameraContract, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
+import { cameraContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 import { ASTRA_VIDEO_FAST_DIMENSION_STEP, ASTRA_VIDEO_GUIDANCE_RANGES, guidanceToolKey, ASTRA_VIDEO_IC_LORA_ADAPTERS, ASTRA_VIDEO_LORAS, ASTRA_VIDEO_MAX_LORA_STRENGTH, ASTRA_VIDEO_MAX_REFERENCE_PIXELS, ASTRA_VIDEO_MAX_STG_BLOCK, ASTRA_VIDEO_MAX_STG_BLOCKS, ASTRA_VIDEO_FRAME_LIMITS, ASTRA_VIDEO_MAX_PIXELS, ASTRA_VIDEO_MAX_SEED, ASTRA_VIDEO_MIN_FRAMES, } from './astra-video-client.js';
 import { DEFAULT_SEEDANCE_DURATION, DEFAULT_SEEDANCE_MODEL, DEFAULT_SEEDANCE_REFERENCE_MODEL, DEFAULT_SEEDANCE_RESOLUTION, SEEDANCE_FPS, SEEDANCE_REFERENCE_MODELS, VALID_SEEDANCE_MODELS, VALID_SEEDANCE_RATIOS, VALID_SEEDANCE_RESOLUTIONS, } from './seedance-client.js';
@@ -759,6 +760,12 @@ const shotCameraInput = (() => {
     }
 })();
 const enumInput = (values, description) => ({ type: 'string', ...(values?.length ? { enum: values } : {}), description });
+const motionTypes = (() => { try {
+    return motionGraphicTypes();
+}
+catch {
+    return [];
+} })();
 const purposes = (() => { try {
     return renderPurposes();
 }
@@ -809,6 +816,18 @@ const storyboardShotInput = {
                 angle: { type: 'string', description: 'Camera angle. Recommended vocabulary is in the directing skill.' },
                 infoType: { type: 'string', description: 'Information carried by the shot; must agree with its purpose. Recommended vocabulary is in the directing skill.' },
                 feel: { type: 'string', description: 'What the viewer should feel before choosing framing and movement.' },
+                motionGraphic: {
+                    type: 'object', additionalProperties: true, required: ['version', 'type', 'evidence', 'style'],
+                    description: 'Motion design plan. Read motion-graphics.md, choose from intent and inputs, record why alternatives lose. Does not replace render mode or camera. Built-in SVG examples use motion_html; physical subjects retain mesh routes.',
+                    properties: {
+                        version: { type: 'integer', enum: [1], description: 'Motion plan schema version.' }, type: enumInput(motionTypes, 'Semantic motion family, independent of palette and transition effects.'),
+                        intent: { type: 'string', description: 'One viewer takeaway.' }, reason: { type: 'string', description: 'Content-specific choice and rejected alternative.' },
+                        evidence: enumInput(['data', 'recording', 'reenactment', 'metaphor'], 'Evidence provenance; never present a mock UI as an actual recording.'),
+                        style: { type: 'object', description: 'Palette and subject-specific visual direction.', additionalProperties: true, properties: { palette: enumInput(['editorial', 'botanical', 'plum', 'midnight'], 'Built-in palette; retain channel identity.'), reason: { type: 'string', description: 'Why this visual direction suits the subject.' } } },
+                        beats: { type: 'array', description: 'Editorial timing intentions; authored slides can implement custom timing.', items: { type: 'object', description: 'One meaningful change.', required: ['at', 'action'], properties: { at: { type: 'number', minimum: 0, maximum: 1, description: 'Normalized shot time, zero to one.' }, action: { type: 'string', description: 'Visible change or result-reading hold.' } } } },
+                        content: { type: 'object', additionalProperties: true, description: 'Type-specific source data; see motion-graphics.md. Preserve exact source values.' }
+                    }
+                },
                 eyeline: eyelineInput, composition: compositionInput, depth: depthInput,
                 render: {
                     type: 'object', additionalProperties: true, required: ['mode'],
@@ -884,6 +903,16 @@ const CHARACTER_TARGET_PROPERTY = { type: 'object', additionalProperties: false,
         traits: { type: 'array', maxItems: 20, description: 'Character tendencies as context, e.g. ["restrained and precise"]. Do not demand every trait in one short line.', items: { type: 'string', maxLength: 2000 } }
     }, required: ['vocalGender', 'perceivedAge', 'timbre', 'pace', 'register', 'habits', 'emotionalRange', 'traits'] };
 export const TOOLS = [
+    {
+        name: 'tts_route', title: 'Speech model routing', annotations: HINT.generate,
+        description: 'Discover implemented speech models, plan a selected generator, or execute it with durable request identity. Use capabilities without credentials; plan validates generation without network or writes. execute needs generator, generation.outputPath and requestId, reuses matching completed audio, and refuses changed or uncertain prior requests. Returns capabilities or audioPath, receiptPath, attempts and not_reviewed; no listening, model fallback or automatic retries. Use speech_manage plan_audio for pinned character/acting arguments. Only implemented Gemini and ElevenLabs v4 adapters are available. Raw tools remain compatible and share execution checks. Plans do not quote or authorize spending.',
+        inputSchema: { type: 'object', additionalProperties: false, properties: {
+                action: { type: 'string', enum: ['capabilities', 'plan', 'execute'], description: 'Read capabilities, validate a pure plan, or submit one explicitly identified take.' },
+                generator: { type: 'string', enum: [...GENERATORS], description: 'Exact implemented raw synthesis tool. Required for plan and execute.' },
+                generation: { type: 'object', description: 'Exact arguments of the selected raw generator; unsupported controls fail validation.' },
+                requestId: { type: 'string', pattern: '^[A-Za-z0-9_-]{1,100}$', description: 'Unique logical take ID. Reuse only for the same request in the same output directory.' },
+            }, required: ['action'] },
+    },
     {
         "name": "host_review",
         "title": "Prepare and record host media evaluation",
@@ -4941,3 +4970,29 @@ export const SNS_PLATFORM_BY_TOOL = {
     youtube_publish: 'YOUTUBE',
     youtube_insights: 'YOUTUBE',
 };
+const videoContextSchema = {
+    type: 'object', additionalProperties: false,
+    properties: { episode: { type: 'string', description: 'Absolute episode directory.' },
+        shotId: { type: 'string', description: 'Stable storyboard shot ID.' },
+        requestId: { type: 'string', description: 'Stable logical attempt ID; reuse after timeout, never invent a retry ID.' } },
+    required: ['episode', 'shotId', 'requestId'],
+};
+for (const tool of TOOLS) {
+    if (VIDEO_ADAPTERS[tool.name]) {
+        tool.inputSchema.properties = { ...tool.inputSchema.properties,
+            videoContext: { ...videoContextSchema, description: 'Production context. Required for configured episodes; applies saved selection, spending authorization, concurrency and duplicate-submission protection.' } };
+    }
+}
+TOOLS.push({ name: 'video_catalog', title: 'Inspect installed video adapters', description: 'List installed video adapter contracts, deployment identifiers and supported operations. Read-only; no generation or live authentication probe. Use before video_plan; model availability is configuration, not a successful API test.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } }, { name: 'video_plan', title: 'Plan a video with saved model settings', description: 'Prepare an episode video request from saved model selection and explicit overrides. Compiles pinned character voice descriptions and Seedance voice-reference mappings, reports voiceContinuity limits without claiming a listening review, validates the final adapter payload, and pins prices and local input hashes. No media generation. Returns a plan ID, provenance and cost estimate; use video_execute under existing spending authorization. Re-plan after speech, voice or reference edits. Exact supplied-speech synchronization is separate from native voice imitation.',
+    inputSchema: { ...videoContextSchema, properties: { ...videoContextSchema.properties,
+            operation: { type: 'string', enum: ['text', 'image', 'reference', 'audio', 'keyframe', 'control', 'extend', 'edit', 'retake'], description: 'Operation; the selected engine determines the tool.' },
+            tool: { type: 'string', description: 'Optional exact installed adapter tool, checked against the saved selection.' },
+            args: { type: 'object', additionalProperties: true, description: 'Adapter-specific fields. Omit model/resolution to inherit saved selection; unknown fields fail.' } } },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false } }, { name: 'video_execute', title: 'Execute an authorized video plan', description: 'Execute a saved video_plan under the episode spending authorization. Revalidates selection, inputs, price and provider configuration, reserves budget atomically and records submission identity. Repeated completed requests reuse their result; pending or ambiguous submissions are never resubmitted. API work can incur charges; host-managed video requires an external host handoff.',
+    inputSchema: { type: 'object', additionalProperties: false, properties: { episode: { type: 'string', description: 'Absolute episode directory used by video_plan.' }, planId: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'Plan ID returned by video_plan.' } }, required: ['episode', 'planId'] },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true } });
+TOOLS.push({ name: 'video_status', title: 'Read a saved video request receipt',
+    description: 'Read the local status, reservation, provider request ID and cached result of a managed video request. Does not contact a provider or resubmit. Use after interruption; ambiguous requests keep their reservation until explicit provider and billing reconciliation.',
+    inputSchema: { type: 'object', additionalProperties: false, properties: { episode: { type: 'string', description: 'Absolute episode directory.' }, requestId: { type: 'string', description: 'Original logical request ID from video_plan.' } }, required: ['episode', 'requestId'] },
+    annotations: { readOnlyHint: true, openWorldHint: false } });

@@ -6,6 +6,7 @@ import { config, disabledToolPatterns, disabledToolsFile, listChannelDirs } from
 import { describeToolGate, resolveToolGate, warnUnknownPatterns } from './tool-gate.js';
 import { SNS_PLATFORM_BY_TOOL, TOOLS } from './tools.js';
 import { ROUTES } from './handlers.js';
+import { isManagedVideoCall } from './video-registry.js';
 import { enabledPlatforms } from './sns-client.js';
 import { episodePathArg, isBillableTool, priceOf, recordUsage } from './usage-ledger.js';
 import { readFileSync as readFinalRequest } from 'node:fs';
@@ -14,7 +15,7 @@ import { reviewFinalSpeech } from './tts-final-quality.js';
 // package.json's version and every plugin manifest in skill-lint.js's MANIFESTS (it checks that they agree).
 // If the two drift, the version clients see stops matching the actual package, so bump this
 // line together with package.json (the contract test checks that the two agree).
-const server = new Server({ name: 'social-flow', version: '0.115.4' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'social-flow', version: '0.116.0' }, { capabilities: { tools: {} } });
 // Per-platform publish tools are exposed only for platforms that have a credential file
 // (default tokens ∪ channel directories) — this is evaluated per request, so adding a token
 // file takes effect without a server restart. Every handler stays registered, so calling a
@@ -61,7 +62,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         // at the one point every call passes through, so it does not depend on a skill remembering
         // to append a line after the fact (usage-ledger.ts explains where it lands and why).
         // A failed call is recorded too — a retry after a failure can still have been billed.
-        if (isBillableTool(name)) {
+        if (isBillableTool(name) && !isManagedVideoCall(name, args)) {
             const callArgs = (args ?? {});
             const startedAt = Date.now();
             let ok = false;

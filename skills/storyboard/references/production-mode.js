@@ -2,6 +2,48 @@
 (function (root) {
   'use strict';
   const text = value => typeof value === 'string' && !!value.trim();
+  function resolveVideoChoice(production, shot, snapshotVideo) {
+    const shotId = String(shot.id ?? shot.shot?.id);
+    const object = value => value && typeof value === 'object' && !Array.isArray(value);
+    let selection = snapshotVideo;
+    let source = snapshotVideo ? 'episode_snapshot' : 'legacy_board';
+    if (!selection) {
+      const v = shot.visual?.video;
+      const model = v?.model || production.videoModel?.model;
+      const engine = ['host', 'astra'].includes(production.videoProvider) ? production.videoProvider : v?.engine || (
+        typeof model === 'string' && model.includes('seedance') ? 'seedance' : typeof model === 'string' && model.startsWith('veo-') ? 'veo' : undefined);
+      if (!engine) throw new Error('Legacy board has no explicit video selection; do not inherit current workspace defaults');
+      selection = { engine, ...(!['astra', 'host'].includes(engine) && model ? { model } : {}),
+        ...(v?.resolution || production.videoModel?.resolution ? { resolution: v?.resolution || production.videoModel?.resolution } : {}) };
+    }
+    // Preserve pre-existing per-cut and episode choices before applying scoped changes.
+    if (snapshotVideo) {
+      for (const [choice, origin] of [[production.videoModel, 'board_episode'], [shot.visual?.video, 'board_shot']]) {
+        if (!choice || choice.model === 'mixed') continue;
+        if (!choice.engine && !choice.model && !choice.resolution) continue;
+        const engine = choice.engine || (choice.model?.includes('seedance') ? 'seedance' : choice.model?.startsWith('veo-') ? 'veo' : selection.engine);
+        const next = { ...(engine === selection.engine ? selection : {}), engine, ...Object.fromEntries(['engine','model','resolution','host'].filter(k => choice[k] !== undefined).map(k => [k, choice[k]])) };
+
+        if (next.engine === 'astra' && next.model === 'astra') delete next.model;
+        if (next.engine === 'host' && next.model === 'host') next.model = 'host-managed';
+        if (JSON.stringify(next) !== JSON.stringify(selection)) { selection = next; source = origin; }
+      }
+    }
+    const overrides = production.modelSettings?.overrides || [];
+    if (!Array.isArray(overrides)) throw new Error('modelSettings.overrides must be an array of explicit scoped changes');
+    for (const scope of ['episode', 'shot']) {
+      for (const change of overrides) {
+        if (!object(change) || !['episode', 'shot'].includes(change.scope) || typeof change.request !== 'string' || !change.request.trim())
+          throw new Error('Each model override requires scope and the actual user request');
+        if (change.scope === 'shot' && (typeof change.shotId !== 'string' || !change.shotId)) throw new Error('Shot override needs shotId');
+        if (change.scope !== scope || (scope === 'shot' && change.shotId !== shotId) || !change.video) continue;
+
+        selection = change.video; // Replace the category; never carry old-provider options forward.
+        source = scope + '_override';
+      }
+    }
+    return { selection, source };
+  }
   const CHOICES = ['full_video', 'video_80', 'video_50', 'video_30', 'video_lt10', 'no_video'];
   const CUT_TYPES = ['action', 'reaction', 'insert', 'document', 'map', 'scenery'];
   const MODES = { full_video: '전체 영상', video_80: '80% 이상 영상', video_50: '50% 이상 영상', video_30: '30% 이상 영상', video_lt10: '10% 미만 영상', no_video: '0% 영상', hook_only: '훅만 영상 (기존 승인)', stills_only: '정지 전용 (기존 승인)', hybrid: '혼합 제작 (기존 승인)' };
@@ -46,13 +88,19 @@
   // which 3D renderer draws the mandatory previz, and which video model the clips are made on.
   const PREVIZ_RENDERERS = { blender: '블렌더 브릿지 — 관절 마네킹, 모션 캡처', threejs: 'three.js 페이지 — 헤드리스 크롬, 관절 없음' };
   // Suggested models and priced resolutions; each cut may choose its own model and resolution.
-  const VIDEO_MODELS = {
-    'seedance-1-5-pro-251215': { label: 'Seedance 1.5 Pro', resolutions: ['720p', '1080p'] },
-    'dreamina-seedance-2-0-260128': { label: 'Seedance 2.0', resolutions: ['1080p'] },
-    'dreamina-seedance-2-0-fast-260128': { label: 'Seedance 2.0 fast', resolutions: ['720p'] },
-    'dreamina-seedance-2-0-mini-260615': { label: 'Seedance 2.0 mini', resolutions: ['720p'] },
-    'dreamina-seedance-2-5-260628': { label: 'Seedance 2.5', resolutions: ['720p', '1080p'] }
-  };
+  // Node planners consume the build projection of installed adapters. Browser checks do
+  // not present model choices and need no copy of this catalogue.
+  const catalogue = typeof module === 'object' && module.exports
+    ? require('../../_shared/video-catalog.json') : { adapters: [] };
+  const seedanceContract = catalogue.adapters.find(adapter => adapter.tool === 'seedance_img2video');
+  const priced = typeof module === 'object' && module.exports ? require('../../produce/references/seedance-route.js').PRICED : new Set();
+  const VIDEO_MODELS = Object.fromEntries(Object.entries(seedanceContract?.modelConstraints || {})
+    .filter(([model, spec]) => spec.referenceVideos || model === 'seedance-1-5-pro-251215')
+    .map(([model, spec]) => [model, { label: model.replace(/^(dreamina-)?seedance-/, 'Seedance ').replace(/-\d{6}$/, '').replace(/(\d)-(\d)/, '$1.$2').replace(/-/g, ' ').replace(/ pro$/, ' Pro'), resolutions: spec.resolutions.filter(res => {
+      const family = model.replace(/^(dreamina-)?seedance-/, '').replace(/-\d{6}$/, '');
+      return priced.has('seedance.' + family + (model === 'seedance-1-5-pro-251215' ? '-silent.' : '-video.') + res);
+    }) }]).filter(([, spec]) => spec.resolutions.length));
+
   // Our own LTX-2.5 box is not a tier in the table above: it has no price, so nothing to compare.
   // Its dimensions follow the board FORMAT while staying on the 64-pixel grid and below the area ceiling.
   const ASTRA_RESOLUTION = '1024x1920';
@@ -579,7 +627,12 @@
       if (!text(v.bg) || (!text(v.bgPrompt) && v.source !== 'stock')) bad('keep a source image path and its generation prompt');
       if (!text(v.video?.prompt)) bad('store the motion prompt before generation');
       // The host video tool (owner directive 2026-09-07) tops out at 720p and takes every full_video cut.
-      const hostVideo = p.videoProvider === 'host', astraVideo = p.videoProvider === 'astra';
+      let selected;
+      try { selected = resolveVideoChoice(p, s, p.modelSettings?.models?.video); }
+      catch (error) { bad(error.message); return; }
+      const selectedEngine = selected.selection.engine;
+      const managedChoice = Boolean(p.modelSettings?.models?.video) || selected.source.endsWith('_override');
+      const hostVideo = selectedEngine === 'host', astraVideo = selectedEngine === 'astra';
       // ASTRA sizes sit on a 64-pixel grid under a 2,064,384-pixel area ceiling. Read the board's
       // existing FORMAT: portrait renders 1024x1920 and landscape renders 1920x1024, then the edit
       // scales the short edge to the final canvas. Naming a vendor tier label here would be a size
@@ -587,14 +640,14 @@
       // The API lane renders at the resolution the user chose with the model (PRODUCTION.videoModel); 1080p before that record exists.
       const astra = astraSize(win);
       const wantRes = hostVideo ? '720p' : astraVideo ? astra.source : (v.video?.resolution || p.videoModel?.resolution || '1080p');
-      if (v.video?.resolution !== wantRes || v.video?.generateAudio !== false)
+      if (!managedChoice && (v.video?.resolution !== wantRes || (!['veo', 'omni'].includes(selectedEngine) && v.video?.generateAudio !== false)))
         bad(hostVideo ? 'the host video tool tops out at 720p; write resolution:"720p" and generateAudio:false with separate narration'
           : astraVideo ? 'ASTRA renders on a 64-pixel grid; write resolution:"' + astra.source + '" (the edit scales it to ' + astra.edit + ') and generateAudio:false with separate narration'
                       : 'write the chosen model\'s resolution (' + wantRes + ') and generateAudio:false with separate narration');
-      if (v.video?.engine !== (hostVideo ? 'host' : astraVideo ? 'astra' : 'seedance'))
+      if (!['host','astra','seedance','veo','mlx','omni'].includes(selectedEngine) || (!managedChoice && v.video?.engine !== selectedEngine))
         bad(hostVideo ? 'videoProvider:host routes every full_video cut to engine:"host" (the CLI\'s own image_to_video)'
           : astraVideo ? 'videoProvider:astra routes every full_video cut to engine:"astra" (our own LTX-2.5 box)'
-                      : 'full_video uses the priced Seedance image-to-video route');
+                      : 'full_video must use its selected deployed video engine');
       for (const key of ['look', 'worldId', 'before', 'action', 'continuity', 'reject'])
         if (!text(design[key])) warn('videoDesign.' + key + ' is required');
       if (design.motion?.kind !== 'subject_action' && !text(design.after)) warn('videoDesign.after is required unless the last motion beat states the final result');
@@ -654,7 +707,7 @@
       // hook_only: the hook plus every imported clip — reuse is outside the count but still a slot.
       generatedVideoMax: production.mode === 'hook_only' ? 1 + scenes.filter(reused).length : RATIOS[production.mode] ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2) };
   }
-  const api = { BANDS, ratioMode, ratioBounds, ratioErrors, videoRender, bandContract, CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, videoCap, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, ASTRA_RESOLUTION, ASTRA_WIDE_RESOLUTION, astraResolution, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
+  const api = { resolveVideoChoice, BANDS, ratioMode, ratioBounds, ratioErrors, videoRender, bandContract, CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, videoCap, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, ASTRA_RESOLUTION, ASTRA_WIDE_RESOLUTION, astraResolution, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PRODUCTION_MODE = api;
 })(typeof window === 'object' ? window : globalThis);

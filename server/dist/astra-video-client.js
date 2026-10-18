@@ -1,3 +1,4 @@
+import { recordVideoSubmission } from './video-events.js';
 /**
  * ASTRA video API client — the self-hosted LTX lane next to Veo, Seedance and Omni.
  *
@@ -1149,6 +1150,7 @@ async function runJob(mode, prompt, body, outputPath, filename) {
         fs.renameSync(temp, receiptPath);
     };
     const jobId = await submitJob(body);
+    recordVideoSubmission(jobId);
     const submitted = { jobId, mode, prompt, videoPath, submittedAt: new Date().toISOString(), submittedRequest: body };
     writeReceipt({ ...submitted, status: 'submitted' });
     const { bytes, request, elapsedSeconds } = await awaitResult(jobId);

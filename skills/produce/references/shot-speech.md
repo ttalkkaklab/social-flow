@@ -57,6 +57,16 @@ The composer's file/timing checks are not listening QA.
 
 ## Common voice layer
 
+Read [voice-continuity.md](voice-continuity.md) for the character-to-video handoff.
+`video_plan` compiles stable acoustic descriptions and available Seedance sample
+bindings from the pinned cast. Keep its voice-identity, dialogue, speaker-assignment
+and lip-sync findings separate. Native reference-voice imitation does not establish
+exact synchronization with a finished WAV, so the adapter table below still applies.
+
+Use [TTS routing](../../_shared/tts-routing.md) for model capabilities, pure payload
+planning and restart-safe execution. Raw synthesis tools share the execution checks;
+only `tts_route execute` accepts a stable request ID for replay protection.
+
 For new episodes, apply [directory model settings](../../_shared/model-settings.md)
 before selecting speaker voices. Use its speech engine/model for new `tts` records
 and retain only explicit character exceptions. Existing episode snapshots and
