@@ -103,8 +103,9 @@ BG="#0b1020" $REF/build-screencast.sh .work   # → reel.mp4 (clean) · optional
   line, so the outro tail still comes out at 1.0x; with `OUTRO=0` there is no tail and the whole
   file speeds up. The default factor is 1.0, which preserves the
   user's recorded voice and timing. This builder has no rate normalization of its own.
-  A channel-selected 1.2x raises a take at the 5~6 characters/s shooting standard to 6.0~7.2,
-  which can exceed the final 6.2 characters/s gate. Profile.md §2 can override the default.
+  A user-requested 1.2x (`.work/speed-authorization.json`, tts-speed.md) raises a take at the 5~6
+  characters/s shooting standard to 6.0~7.2, which can exceed the 6.2 characters/s check on a
+  requested SRT sidecar. A profile.md §2 value is not that request.
 - From here on, phone-mode review, platform text, and the quality gates follow produce
   SKILL.md §8–10 unchanged.
 

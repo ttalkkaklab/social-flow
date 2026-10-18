@@ -5,7 +5,7 @@ Use this only when scenes.js has a slide scene. Every `visual.slide` is a motion
 storyboard is approved** (owner directive 2026-09-04 — slide arts are generated images, and
 no image is made before approval). What the user approved is the plan in scenes.js: the kind,
 the `labels`, the `motionBeats`, the `arts` list. Nothing here writes new copy — every
-character on a slide already cleared the copy gates inside scenes.js.
+character on a slide already passed the copy checks inside scenes.js.
 
 Related contracts: `references/slide-design.md` (the design rubric the reviewer scores
 against), `references/check-slide.js` (the machine check), and produce §3.6 for how the
@@ -13,20 +13,23 @@ rendered slides enter the build.
 
 ### Slide authoring (produce §3.6 — after approval)
 
-For editorial diagrams, [object-state-quality.md](object-state-quality.md) is required.
-The storyboard's `quality` and `subject.changes` are the production contract. Do not treat
-an entrance, a camera drift or `sv:"settle"` as the physical subject's state change.
+For editorial diagrams, [object-state-quality.md](object-state-quality.md) guides the plan.
+The storyboard's `quality` and `subject.changes` record the subject's planned state changes;
+`check-slide.js` reports a missing plan or a change count that differs from the narration count
+as a warning. Do not treat an entrance, a camera drift or `sv:"settle"` as the physical
+subject's state change.
 
 Build the per-scene HTML slides from the copy/camera/sound-reviewed storyboard's `plan` and
 `labels`. Every copy
-gate has already passed, so no new text gets written here — **every character on a slide comes
+check has already run, so no new text gets written here — **every character on a slide comes
 from scenes.js** (`title`, `bullets`, `slide.labels`). Plant a new Korean string here and text
-that never passed the style gate goes on screen.
+that skipped the style check goes on screen.
 
 One path. `slide.motion: true` is required. `slide.kind` says which template it starts from
 and which design section judges it: `"diagram"` (the default) · `"kinetic"` · `"character"`.
 The procedure is one procedure; only the template and the design rules differ. All of them
-share the text rule above, `check-slide.js`, and the §7 approval that follows.
+share the text rule above and `check-slide.js`; the storyboard is already approved when this
+step runs (produce §3.6), so no further approval follows the slide.
 
 Assign reveal groups 1:1 with the narration segments (group 0 = the base skeleton). Only
 scenes using sub-reveals (`A|B`) have more groups than segments.
@@ -67,7 +70,7 @@ rubric the reviewer applies.
      contact shadow come from the template head, never from `renderSlide()`). Lines are `--hair` 3px, `--rule` 6px
      or `--band` 10px — nothing thinner goes on a phone. Never add a gradient inside
      `renderSlide()` (the ground plate and the photo scrim already live in the template's
-     head CSS; `check-slide.js` blocks a gradient in the authored region).
+     head CSS; `check-slide.js` warns on a gradient in the authored region).
    - **Mark the sustain layer and the focus shift while authoring** (slide-design.md §5):
      `sv: true` on the one meaning-bearing movement of any group whose sentence runs past
      its entrance (count-up, bar fill, dot fill, draws), `sv: "settle"` on an entered
@@ -98,13 +101,13 @@ rubric the reviewer applies.
      rails, masks, signal lines, stems, rings, or custom DOM equivalents). Build the connection
      the narration claims on screen. For example, two gesture plates can enter separately, meet
      on a sourced symbol, and keep the source label visible; that is an online interpretation,
-     not proof that the gestures created the symbol. `check-slide.js` rejects a raster-only
-     editorial render before the visual reviewer sees it.
+     not proof that the gestures created the symbol. `check-slide.js` warns on a raster-only
+     editorial render before the sheet is read.
    - A diagram with `treatment:"editorial"` sits on the **studio ground** by default
      (slide-design.md §1): a cyclorama plate, slab material on every tag, band and plate, a cast
      shadow under the type, the stage alone drifting 1% a group. Nothing to call — `h.stage("flat")`
      is the plain plate for a `camera` or `kinetic` screen only; on an editorial diagram
-     `check-slide.js` rejects it (the studio ground is required). Marks use `h.mark.arrow` with a small tangent-following head. Call
+     `check-slide.js` and the renderer warn when it is used. Marks use `h.mark.arrow` with a small tangent-following head. Call
      `h.stage(…)` before any `h.mark.*` — the mark layer reads the studio class when it is made.
    - New physical subjects use the mesh lane in [mesh-objects.md](mesh-objects.md). The same recipe
      can bake into a path-traced sheet with `renderer:"blender"` ([blender-objects.md](blender-objects.md));
@@ -139,9 +142,11 @@ rubric the reviewer applies.
      (slide-design.md §6.2).
 2. **Machine check** — `node references/check-slide.js <storyboard directory> --require-all`
    (`motion:true` written, `__seek` present, no `transition`, no clocks or timers, no web
-   fonts, every Korean string in scenes.js, no shadow or gradient outside the template's studio
-   rules, and — with `slide.object` — the sheet, its sidecar, the include, the `h.object` call
-   and the object's ink inside the zone). Don't move on unless it exits 0.
+   fonts, every Korean string in scenes.js, and — with `slide.object` — the sheet, its sidecar,
+   the include, the `h.object` call and the object's ink inside the zone). Those are the
+   `✗` rules that exit 1; fix them before moving on. Design rules — a shadow or gradient outside
+   the template's studio rules, a rounded card, a missing `role`/`motif`, a raster-only editorial
+   frame, a missing quality plan — print as `⚠` warnings and leave exit 0; read them and decide.
 3. **Render the sheet** (free, ~10s a slide). Run from the storyboard directory —
    `slides/` and `.work/slide-check/` are relative to it:
 
@@ -156,9 +161,11 @@ rubric the reviewer applies.
    produce re-renders with measured lengths (optional-lanes.md §3.6). The sheet frames
    carry the plate ground but not the film grain — grain is added at the mp4 encode
    (`--grain`, default 6) and never shows in `--png-only` output. The renderer stops
-   (exit 1) on a contract breach and says which: a page script that
+   (exit 1) on what it cannot render and says which: a page script that
    threw (the exception is printed), an animation outside any reveal group, an infinite
-   animation, a group with no motion, fewer groups than segments.
+   animation, a group with no motion (unless the scene declares `motionIntent`
+   `intentional_still`), fewer groups than segments. `check-slide.js` findings, a missing
+   studio ground and an undeclared primitive print as warnings and the render continues.
 
    Read the summary line: the group count must equal the segment count (or the segment
    count plus the `A|B` sub-reveals you wrote); `zone_fill_pct` at 55%+ on both axes (a
@@ -166,26 +173,26 @@ rubric the reviewer applies.
    frozen past 40% of its segment wants a `.sv` sustain). Open
    `sheet/g<k>-end.png` for the last group and confirm by eye that everything the scene
    claims is on it, inside the zone.
-4. **The design gate — your own read of the sheet.** For every authored cut open
+4. **The design read — your own read of the sheet.** For every authored cut open
    `sheet/g<k>-end.png` for its last group and the `g<k>-mid.png` of any group that moves, with
    `summary.json` beside them (the renderer writes it next to the manifest — `zone_fill_pct` and
    the coverage warnings live there), and judge the cut against `references/slide-design.md`
    §6 — text inside the zone, every on-screen word in scenes.js, every figure matching `labels`
    and research.md, one accent and no gradient text, a plate ground and not a flat fill, motion
    that means the value spoken, an end frame that is the conclusion. A cut that fails a point is
-   re-authored once and re-rendered (steps 2–3). After the author's check, an independent
-   reviewer scores at least one sample of each `slide.kind` present in the episode. Supply
-   scenes.js, narration, the sheet and summary together; batch samples in one review.
-   The reviewer returns `SLIDE_REVIEW: slide=<file> score=NN p0=N verdict=PASS|FAIL`.
-   Acceptance requires score ≥95 and P0=0. Record reviewer, sample, score and evidence
-   path in storyboard.md. Rework failed samples and independently review the changed
-   samples again; do not repeat all samples without a new finding. An unresolved cut
-   goes back to the user with its sheet rather than into the build.
+   re-authored once and re-rendered (steps 2–3). When the user asks for an independent read,
+   or a concrete uncertainty calls for one, `slide-reviewer` scores a sample of the `slide.kind`
+   in question. Supply scenes.js, narration, the sheet and summary together; batch samples in
+   one review. The reviewer returns `SLIDE_REVIEW: slide=<file> score=NN p0=N verdict=PASS|FAIL`
+   — evidence about the slide, not an acceptance threshold. Record reviewer, sample, score and
+   evidence path in storyboard.md. Rework what the findings justify and review the changed
+   samples again when asked; do not repeat all samples without a new finding. A cut that stays
+   unresolved ships with its findings recorded in storyboard.md and the build record.
 5. Nothing goes in the ledger — the render is local. The `.work/slide-check/` frames stay
    for produce to compare against (§3.6 re-renders the clips from the same file).
 
-`autoproduce` runs this same check before narration and build; a slide still wrong after the
-re-author aborts the unattended build.
+`autoproduce` runs the same author's check before narration and build; a slide still wrong after
+the re-author ships with its findings recorded in the build record.
 
 #### Kinetic type — the same procedure, a different template
 
@@ -198,8 +205,9 @@ re-author aborts the unattended build.
    art on group 1 then the title with `in` — that pair is one event. Type-only (a verdict,
    a cross) skips arts. Mixing `drop` and `wipe` on type is still two kinds.
 2. The design section is **`slide-design.md` §7**, with three extra P0s to check on your own
-   read (slide-reviewer applies the same three when asked) — a screen phrase that repeats the subtitle sentence, a second hero-sized phrase or a
-   line past five words, two effect kinds on one screen. The default entrance is `mask`
+   read (slide-reviewer applies the same three when asked) — a screen phrase that repeats the
+   narration sentence, a second hero-sized phrase, two effect kinds on one screen. Line length is
+   guidance: §7 counts rendered lines, not words. The default entrance is `mask`
    (`words:true` staggers it word by word and counts as the same kind); `h.band` is the
    verdict plate and the last thing to enter.
 3. Steps 2–5 (machine check, sheet render, your own read of the sheet, the change log in

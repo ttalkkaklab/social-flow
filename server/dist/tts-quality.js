@@ -1,5 +1,5 @@
 import { authorizeSpeed } from '../../skills/produce/references/tts-speed-policy.js';
-/** Scene-level speech review and bounded regeneration. No successful review, no usable output. */
+/** Scene-level speech generation with provenance. The default path generates once and returns `not_reviewed`; the injected-dependency path (tests, explicit requests) still runs the bounded review loop. */
 import { execFile } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';

@@ -25,7 +25,10 @@ Ordinary dialogue keeps the selected voice ID and uses per-turn delivery directi
 5. Generate the character's representative lines with `tts_gemini_38`, using the
    returned `voice_...` as `voice`. Use one request with several turns for a connected
    sample; put only delivery/emotion in their styles. The design preview is not the
-   requested script. Keep the model and voice ID pinned for later dialogue.
+   requested script. Keep the model and voice ID pinned for later dialogue. The model
+   registry marks only the 3.8 family as taking a designed voice; when the saved speech
+   model is another family, request an explicit model exception
+   ([model settings](model-settings.md)) before using it.
 6. Back up previous samples and settings. Apply within the user's scope, update
    identity `tts`, generation provenance and the rendered character sheet. Preserve
    older audition records as historical, never as evidence for the new sample.

@@ -52,17 +52,19 @@ function die(msg) {
 
 const exists = (p) => { try { return fs.existsSync(p); } catch (e) { return false; } };
 // The speed pass (produce §7.5) writes its own line into build-report.txt. An episode whose
-// report has no such line shipped the un-sped build to output/ — subtitles included, on a
-// timeline that no longer matches the picture. null = no report to read, so no verdict.
+// report has no such line shipped the un-sped build to output/, so any requested sidecar or
+// chapter file no longer matches the picture. null = no report to read, so no verdict.
 const hasSpeedMarker = (p) => {
   try { return /── speedup x/.test(fs.readFileSync(p, 'utf8')); } catch (e) { return null; }
 };
 const hasFinalRateMarker = (p) => {
-  // speedup.sh appends, so rerunning at another factor leaves both verdicts in the file. Only the
+  // speedup.sh appends, so rerunning at another factor leaves several verdicts in the file. Only the
   // last one describes the -fast set output/ carries — an earlier PASS must not clear a later FAIL.
+  // Delivery is subtitle-free by default; with no sidecar requested the pass writes the skip marker
+  // instead of a rate verdict, and that marker satisfies the check.
   try {
-    const m = fs.readFileSync(p, 'utf8').match(/(?:PASS|FAIL) final speech rate/g);
-    return m ? m[m.length - 1].startsWith('PASS') : false;
+    const m = fs.readFileSync(p, 'utf8').match(/(?:PASS|FAIL) final speech rate|subtitle-based rate check skipped/g);
+    return m ? !m[m.length - 1].startsWith('FAIL') : false;
   } catch (e) { return null; }
 };
 const isDir = (p) => { try { return fs.statSync(p).isDirectory(); } catch (e) { return false; } };
@@ -216,8 +218,8 @@ function blockers(ep, stage) {
     out.push('output/ holds the un-sped build — the required speed pass never ran ' +
              '(produce §7.5: speedup.sh, then copy the -fast set)');
   if (stage !== 'published' && ep.has.video && ep.has.speechRateChecked === false)
-    out.push('output/ has no final speech-rate PASS — rerun the final pace pass and keep the ' +
-             'shipped subtitle timeline at or below 6.2 characters/s');
+    out.push('output/ has no final speech-rate verdict and no skip marker — rerun the pace pass ' +
+             '(produce §7.5: speedup.sh writes PASS/FAIL for a requested sidecar, the skip line without one)');
 
   return out;
 }
@@ -447,8 +449,8 @@ function selftest() {
     has: Object.assign({}, base.has, { video: true, speechRateChecked: v })
   }), 'produced');
   ok('a built video with no final-rate marker is a blocker',
-     rated(false).some((x) => /speech-rate PASS/.test(x)));
-  ok('the final-rate marker clears it', !rated(true).some((x) => /speech-rate PASS/.test(x)));
+     rated(false).some((x) => /speech-rate verdict/.test(x)));
+  ok('the final-rate marker clears it', !rated(true).some((x) => /speech-rate verdict/.test(x)));
   ok('a published episode is past the point of blocking on it',
      !blockers(Object.assign({}, base, {
        has: Object.assign({}, base.has, { video: true, spedUp: false })
@@ -463,6 +465,13 @@ function selftest() {
   ok('a rerun that ends in PASS reads as PASS',
      withReport('── FAIL final speech rate: 6.6\n── PASS final speech rate: 5.0\n') === true);
   ok('a report with no verdict line reads as false', withReport('── speedup x1.20\n') === false);
+  // Subtitle-free delivery (the default) requests no sidecar, so the pass writes a skip marker.
+  ok('the no-sidecar skip marker satisfies the check',
+     withReport('── speedup x1.00\n── no subtitle sidecar requested; subtitle-based rate check skipped\n') === true);
+  ok('a FAIL followed by a rerun without a sidecar reads as satisfied',
+     withReport('── FAIL final speech rate: 6.6\n── speedup x1.00\n── no subtitle sidecar requested; subtitle-based rate check skipped\n') === true);
+  ok('a skip followed by a later FAIL reads as FAIL',
+     withReport('── no subtitle sidecar requested; subtitle-based rate check skipped\n── speedup x1.20\n── FAIL final speech rate: 6.6\n') === false);
   fs.unlinkSync(tmp);
   ok('a missing report has no verdict', hasFinalRateMarker(tmp) === null);
 

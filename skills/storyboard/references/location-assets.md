@@ -1,6 +1,6 @@
 # Persistent locations (v1)
 
-A location is an immutable Blender set plus semantic JSON, not a collection of independently generated angles. Use the existing storyboard/produce skills; `location_manage` is the bundled local tool. It never calls paid providers. Blender is required for location authoring/rendering; existing three.js previz remains available for other shots.
+A location is an immutable Blender set plus semantic JSON, not a collection of independently generated angles. Use the existing storyboard/produce skills; `location_manage` is the bundled local tool. It never calls paid providers. Location authoring and rendering run in Blender, so use this file when the saved previz renderer (`.social-flow/models.json` `production.previzRenderer`) is Blender and Blender is installed; with a three.js renderer or no Blender, plan recurring places with the three.js previz template or stills and say so in the plan.
 
 ## Contents
 
@@ -64,8 +64,8 @@ the bound camera path, actor root movement and head gaze into a clean silent H.2
 start/middle/end PNGs and a local working `.blend`. Translation, body rotation and camera
 position/target/lens interpolate linearly between endpoints; gaze-target switches and
 visibility changes occur at the closing endpoint. Complex body action still needs the
-articulated Blender bridge. The operation uses the saved Blender renderer choice and
-does not select a new video model or spend on generation. Duration must contain whole
+articulated Blender bridge. The operation renders with Blender — it refuses a board whose
+saved renderer is three.js — and does not select a new video model or spend on generation. Duration must contain whole
 frames (at most 3000); ordinary video routes use whole seconds, while ASTRA matches its
 `numFrames/frameRate`. Width and height must be even for H.264.
 
@@ -86,29 +86,29 @@ States map IDs to `{label,light:0..5,objects:{objectId:{position?,rotation?,visi
 
 Call `location_manage` with `{action:"build",spec:"/absolute/spec.json",root:"/absolute/data/channel/assets/locations"}`. It creates `id/vN/location.json`, `source.blend`, `preview.glb` and hashes. Existing versions are never overwritten. Change the spec and increment revision for edits. GLB is the browser preview; Blender renders are the appearance authority. Do not edit generated files in place.
 
-`{action:"sheet",manifest:".../location.json",stateId:"day",output:"/new/sheet-directory"}` renders every registered camera from the same set/state. Inspect these real images before approving a set. Regenerate into a new directory after changes.
+`{action:"sheet",manifest:".../location.json",stateId:"day",output:"/new/sheet-directory"}` renders every registered camera from the same set/state. Inspect these real images before committing to a set. Regenerate into a new directory after changes.
 
 ## Bind and render a shot
 
 `{action:"bind",board:".../storyboard/scenes.js",shotId:"s0001",manifest:".../location.json",stateId:"day",cameraId:"wide",mustShow:["door"]}` writes `shot.location`. `worldId` still controls the episode's world/style; location controls physical space. `visual.camera` remains the narrative camera direction; numerical location camera coordinates are not reconstructed from that prose.
 
-`{action:"render",board:".../scenes.js",shotId:"s0001"}` writes clean start/end PNGs and `visual.location` evidence. Inspect the actual renders, then call `approve` with `reviewer` and observed `notes`. Approval binds to manifest bytes, state, camera, required landmarks and visual.camera. Changing any input makes evidence stale. A stale image may still be displayed in old HTML, but cannot enter new generation. Refresh the board after every change.
+`{action:"render",board:".../scenes.js",shotId:"s0001"}` writes clean start/end PNGs and `visual.location` evidence. Inspect the actual renders, then record the inspection with the `approve` action (`reviewer` and observed `notes`); this is an inspection record, not a spending approval. The record binds to manifest bytes, state, camera, required landmarks and visual.camera. Changing any input makes evidence stale. A stale image may still be displayed in old HTML, but cannot enter new generation. Refresh the board after every change.
 
-`references` returns verified absolute image paths, scopes and hashes. The full-video/still spatial prompt assembler attaches the location image to `sourceImageArgs.referenced_image_paths`. Pass those arguments to the host media tool first. Model input limits must be checked before a call; never silently omit location, character or style references. A reference image is not a depth-control input. No current adapter claims native depth/segmentation conditioning.
+`references` returns verified absolute image paths, scopes and hashes. The full-video/still spatial prompt assembler attaches the location image to `sourceImageArgs.referenced_image_paths`. Pass those arguments to the saved image model (`.social-flow/models.json`). Model input limits must be checked before a call; never silently omit location, character or style references. A reference image is not a depth-control input. No current adapter claims native depth/segmentation conditioning.
 
-A generated video's grey motion previz and the location still share the same numerical camera and blocking when built with action `previz`. Inspect the start image against the set before spending on video. Inspect start/middle/end and disocclusion moments in the clip; metadata approval is not visual quality proof. Existing assembly HITL rules still apply. Direct Blender location renders are available when exact architecture is required.
+A generated video's grey motion previz and the location still share the same numerical camera and blocking when built with action `previz`. Inspect the start image against the set before spending on video. Inspect start/middle/end and disocclusion moments in the clip; a metadata record is not visual quality proof. Assembly findings are warnings recorded with the build. Direct Blender location renders are available when exact architecture is required.
 
 ## Interactive review and camera changes
 
 Refresh with `storyboard-html.js`. The shared HTML embeds a location section with GLB orbit, shot camera, top view, wall visibility, object lookup, camera-path scrub, and reference images. Serve the channel directory over local HTTP; file URL GLB loading is not guaranteed by browsers. All runtime assets are bundled; no CDN is required.
-Exploration and wall hiding never write the set or the shot. `Export camera proposal` downloads a versioned JSON patch; apply with `{action:"camera",board:".../scenes.js",patch:"/downloaded/proposal.json"}`. It refuses a stale base fingerprint. Render, inspect, approve and refresh afterward. This is an explicit proposal workflow, not a pretend save button on a read-only page. The shared local review shell is preserved.
+Exploration and wall hiding never write the set or the shot. `Export camera proposal` downloads a versioned JSON patch; apply with `{action:"camera",board:".../scenes.js",patch:"/downloaded/proposal.json"}`. It refuses a stale base fingerprint. Render, inspect, record the inspection and refresh afterward. This is an explicit proposal workflow, not a pretend save button on a read-only page. The shared local review shell is preserved.
 
 ## Checks and compatibility
 
-`check` returns location findings; `ready:true` requires current reviewed renders. Full check-scenes invokes the same check. Existing boards with no location binding keep their behavior. Storyboard apply validates bound manifests before writing. All location artifacts belong under ignored `data/`. Installations ship server/dist and the compiled viewer.
+`check` returns location findings; with `ready:true` a missing or stale render review is a warning (`not_reviewed`), not a stop. Full check-scenes invokes the same check. Existing boards with no location binding keep their behavior. Storyboard apply validates bound manifests before writing. All location artifacts belong under ignored `data/`. Installations ship server/dist and the compiled viewer.
 
 A runnable authored set is [location-example.js](location-example.js): `node location-example.js /absolute/data/location-review`. This writes a spec and a test board, not a publishable episode. Use `receipt` after an actual generation with provider, callId, referencePaths and output to bind the output bytes to the sent references. The viewer shows the recorded result beside the references. State changes export a `location-state` proposal and use the same `camera` apply action.
 
-After inspecting actual generated pixels, call `review` with verdict pass/warning/fail, reviewer and observed notes. Receipt and review bind output bytes; a changed output fails validation. The viewer displays the verdict without inventing a pass. End-frame generation requires the real generated opening image in visual.bg: `endFrameReady` stays false until that file has a current receipt and passing pixel review, then endFrameImageArgs contains opening image followed by the location endpoint render.
+After inspecting actual generated pixels, call `review` with verdict pass/warning/fail, reviewer and observed notes. Receipt and review bind output bytes; a changed output fails validation. The viewer displays the verdict without inventing a pass; a missing review reads as `not_reviewed`. End-frame generation requires the real generated opening image in visual.bg: `endFrameReady` stays false until that file is the receipted output, then endFrameImageArgs contains opening image followed by the location endpoint render. The pixel review travels with it as pass, warning, fail or `not_reviewed`.
 
 The general still assembler also carries location inputs: run `assemble-bg-prompt.js --json` and forward its image arguments. Bound locations reject text-only output so references cannot disappear silently. Production pre-call checks revalidate bindings and generated outputs.

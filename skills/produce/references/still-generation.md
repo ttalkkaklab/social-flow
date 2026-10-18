@@ -62,8 +62,8 @@ allowance, $0 — a quota is not a price). Two CLIs, two mechanics:
   and `image_edit` for anything with a reference image (`image` takes an absolute path; the
   character panels go face first, then body). Both return the saved file's absolute path; copy
   it to `storyboard/images/scene-<n>.png`. Hangul rendering is unmeasured on this tool: make a
-  text-bearing frame once, read the glyphs, and only a broken read moves that frame to
-  `gpt_image_text2img` — with the ledger line and one sentence in `build-report.txt`.
+  text-bearing frame once and read the glyphs; a broken read is reported in `build-report.txt` and
+  the user is asked for an explicit exception before any other engine is billed — no silent switch.
 
 A host call that fails, or a tool that is missing, is put to the user before any separately
 billed API call — a fallback nobody approved is money nobody approved.
@@ -127,9 +127,10 @@ launches the app, so a down `:11234` fails closed. On a machine without mflux,
 selected engine and request an explicit alternative before any GPT Image call.
 
 **Backgrounds that become video sources** — a scene with b-roll attached, a motion-background
-scene — are made on gpt high or the host image tool, never the local engine, with something
+scene — are made on the saved image model at its saved quality (model-settings.md), with something
 in frame for the clip to move (rule 11 — a person only when the shot needs one). Blurry or
-static, and those 8 seconds look like a still frame.
+static, and those 8 seconds look like a still frame; a saved engine that cannot deliver a usable
+source is reported for an explicit exception.
 
 ## 2. Making the calls
 
@@ -239,8 +240,9 @@ photo in ink-wash — each is a mismatch (visual-style.md). Write the read to
               "evidence": "Drawn skin and cloth, clean contour lines, cel-shaded background." }] }
 ```
 
-`check-production.js --ready` refuses assembly for a generated still without a current entry,
-with `styleMatch:false`, or reviewed against another preset than the shot now carries. A
+`check-production.js --ready` reports a generated still without a current entry, with
+`styleMatch:false`, or reviewed against another preset than the shot now carries as a
+`not_reviewed`/`stale` warning; the record is written only after actually looking. A
 mismatch is remade in the shot's preset. When the preset itself is wrong for this picture, that
 is the user's call: ask with AskUserQuestion, and only their approval writes `shot.style`
 (visual-style.md §Per-shot style) — then the prompt is reassembled, the still regenerated and
@@ -253,18 +255,19 @@ What disqualifies an image:
 - a baked-in pseudo-character or a lookalike glyph
 - readable text (unless the scene asked for it and went to gpt)
 - a real person on a channel that generates its people
-- a bright lower third that will drown the subtitles
+- a bright lower third under the cover's code-rendered bottom text block
 
 **Remake only what fails, once.** Add the correction on top of the original prompt — don't
 re-describe it wholesale, which loses the elements that had passed. Props with text engraved
 on them (keyboards, calculators, signboards) can't be blocked with negative directions; taking
 the object out of the composition is the answer.
 
-**If the remake still looks wrong, don't buy a third attempt.** Put it to the user with
-AskUserQuestion — the picture, what is wrong with it, and the options [ship it / one more
-remake / change the scene]. Under storyboard's old §5.5 this landed on the approval screen;
-after the split there is no later screen, so this is where a human looks. On the unattended
-path (autoproduce §6.5) the same situation writes `queue_*: hold` at wrap-up instead.
+**If the remake still looks wrong, don't buy a third attempt on your own.** Ship the better of
+the two with the finding recorded in `build-report.txt` and the completion report, or change the
+scene within the plan; a third paid attempt needs remaining spending authorization and is offered
+as an option in the report, not asked as an approval. Unattended runs
+([unattended-lifecycle.md#image-check](../../autoproduce/references/unattended-lifecycle.md#image-check))
+ship the best attempt and report the limitation; a still that merely looks wrong writes no queue hold.
 
 ## 4. The ledger
 

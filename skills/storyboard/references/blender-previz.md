@@ -1,25 +1,28 @@
 # 3D previz — camera, blocking and body timing as numbers, before any video call
 
-For recurring spaces and cross-shot blocking, use the shared location workflow first
-(storyboard §4b, location-assets.md). `mcp__social-flow__location_manage` action `previz`
+For recurring spaces and cross-shot blocking on a Blender project, use the shared location
+workflow first (storyboard SKILL.md §4, [location-assets.md](location-assets.md)).
+`mcp__social-flow__location_manage` action `previz`
 renders the same immutable set, numerical camera and actor start/end states used by the
 location source images. It avoids independently rebuilding the room for each cut.
 The bridge below remains the articulated acting path; its output should be compared
 with the bound location references. A standalone clip does not certify cross-shot geography.
 
-**Every `generated_video` cut is pre-rendered in 3D first** (user directive 2026-09-11): a
-Blender previz through the bridge tools below, or a three.js previz through
-`previz-template.html` (§6.5) where Blender is not installed. `check-scenes.js` refuses a
-generated cut without `visual.video.previz`, and the video model receives the render — as the
-reference clip on Seedance 2.x, or as the composition of the still and the numbers in the
-prompt on a host video tool that takes no clip (§6.7). Imported clips (`visual.reuse`), stock
+**A `generated_video` cut may be pre-rendered in 3D first** — the previz is optional (owner
+decision 2026-10-18): a Blender previz through the bridge tools below, or a three.js previz
+through `previz-template.html` (§6.5) where Blender is not installed. It helps most when the
+video model takes a reference clip (Seedance 2.x `reference_video`); on a `frame_and_prompt`
+adapter or a host video tool that takes no clip it shapes the still and the numbers in the
+prompt as advice (§6.7). No checker refuses a generated cut without `visual.video.previz`.
+Imported clips (`visual.reuse`), stock
 footage, recordings and the outro carry none, and neither do b-roll (`type:"broll"`) and speech
 clips (`visual.clip`): those are Veo sound-lane slots with no clip input, and the reference
-route is a motion-background (`visual.video`) route. **Which renderer and which video model are the
-user's choices**, asked with AskUserQuestion before the first previz render and before any
-video call and recorded in `PRODUCTION.previz` and `PRODUCTION.videoModel`
-(production-mode.md §Two more questions); every shot's `previz.renderer` must match the renderer choice.
-Each cut may select its own `video.model` and resolution under the recorded plan.
+route is a motion-background (`visual.video`) route. The renderer comes from
+`.social-flow/models.json` `production.previzRenderer` (`PRODUCTION.previz`,
+`selection.kind:'standing'`); when nothing is saved the author picks one and records it as an
+assistant decision. The video model is the saved directory selection (`PRODUCTION.videoModel`,
+production-mode.md §Renderer and video model); every rendered shot's `previz.renderer` matches
+the recorded renderer. Each cut may select its own `video.model` and resolution under the recorded plan.
 
 Seven MCP tools drive the Blender installed on this machine the way the Higgsfield Bridge
 drives it for ChatGPT, without a relay, an add-on or a GUI: `blender_scene_read`,
@@ -294,12 +297,12 @@ video: {
 }
 ```
 
-`check-scenes.js` rejects the record when the renderer is not `blender` or `threejs`, the clip
+`check-scenes.js` flags the record when the renderer is not `blender` or `threejs`, the clip
 is not a local mp4, the first frame is not a local png, the hash is missing, duration violates the adapter contract (integer seconds for existing adapters;
 ASTRA/LTX accepts a declared `numFrames` / `frameRate` duration), the fps is outside 24–60, `camera.movement` is absent or differs from
 `visual.camera.movement`, `referenceImagePaths[0]` is not the source still, an end frame is
-declared, or the prompt lacks the bindings in §6.3 — and it rejects a `generated_video` cut with
-a `visual.video` slot and no `previz` at all (the draft pass defers this to the camera pass).
+declared, or the prompt lacks the bindings in §6.3. A `generated_video` cut with a
+`visual.video` slot and no `previz` at all gets advice only, after the draft pass: the previz is optional.
 `seedance-route.js` routes it to `seedance_reference` on 2.0 (2.5 when a fixed voice or more
 than nine images ride along) and prices it on the `…-video` rows: the vendor bills **input
 plus output seconds**, at a lower per-token rate, so a 5 s cut with a 5 s previz bills 10 s
@@ -335,7 +338,7 @@ the prompt gate lets through on this route; anything else goes into the positive
 route, ahead of the camera span, so a full-video board never types them by hand.
 
 **The text must not fight the clip.** The camera span in the prompt is written from the four
-`visual.camera` slots, and the clip performs `previz.camera.movement`; the checker refuses the
+`visual.camera` slots, and the clip performs `previz.camera.movement`; the checker flags the
 two disagreeing, because a prompt that says `static camera` under a clip that pushes in
 produces a shake, not a choice. Keep the style adjectives few — past three, the model drops the
 movement for the look — and when a retake drifts, change one thing at a time so the cause is
@@ -417,10 +420,10 @@ true rather than hoped for. The approval page shows the frame beside the clip.
 ### 6.7 A host video tool that takes no clip
 
 Under `PRODUCTION.videoProvider:"host"` the slot is `engine:"host"` and the host tool takes a
-still and a prompt, no reference video. The previz is still rendered and stored — the directive
-has no exception — with `handoff:"frame_and_prompt"` (implied on that lane): the still is edited
-from `firstFrame` (§6.6), the prompt's camera span is the previz's move (the checker holds
-`camera.movement` equal to the slot), and the playback review compares the result with the
+still and a prompt, no reference video. A previz is optional here as everywhere; when one is
+rendered it is stored with `handoff:"frame_and_prompt"` (implied on that lane): the still is edited
+from `firstFrame` (§6.6), the prompt's camera span is the previz's move (the checker flags a
+`camera.movement` that differs from the slot), and the playback review compares the result with the
 previz the same way (§6.4). None of the Seedance fields apply on that lane, and the route does
 not bill previz seconds there.
 

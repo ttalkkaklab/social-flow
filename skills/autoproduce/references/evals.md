@@ -14,9 +14,11 @@ publication; media quality is explicitly unverified, even when plan scores are h
 
 ## Incomplete production setup
 
-Input: an unattended call lacks a model preference or spending authorization.
-Expected: report the missing production prerequisite and continue any independent authorized
-local planning. Pass: no invented preference, approval or price; no paid call before its inputs.
+Input: an unattended call lacks a saved model preference or spending authorization.
+Expected: report `project_setup_required` (or the missing spending authorization) with the
+missing fields and stop before authoring; an interactive call asks once. Pass: no invented
+preference, approval or price; no paid call before its inputs; no board written under
+unresolved settings.
 
 ## Concurrency and scope
 

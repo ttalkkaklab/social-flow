@@ -24,7 +24,7 @@ and content-reviewer's rubric all take this document as their baseline.
 
 ## §1 Platform decision tree
 
-Material selection gate: ① pass at least 1 of the three gates (new information ·
+Material selection: ① pass at least 1 of the three tests (new information ·
 emotional pull · timeliness)
 ② reader stake — answer in one line: **"who reads this post, and what will they
 be able to decide within 60 seconds?"** If the answer only works when our tool
@@ -64,13 +64,15 @@ When unsure, start with Threads — lightest, cheapest to fail.
   Don't skimp on evidence, clauses, figures.
 - **IG caption = only the hook extracted from the article register** — finish
   the hook inside the first 125 characters (everything before the fold), then
-  context and a save/share CTA. Links in captions aren't clickable — the link
-  goes in a comment.
-- **Threads = spoken register** — casual speech, short by default + one closing
-  question (§3 decides the length and the type; short is the default, not the
-  rule). Don't spend the whole hook (say everything and there's no reason to
-  click). Hashtags ≤1. Video episodes carry no cover image — **the video rides on
-  the post itself** (§3).
+  context; a save/share prompt is optional and earns its line only when the
+  material is something to come back to. Links in captions aren't clickable —
+  the link goes in a comment.
+- **Threads = spoken register** — casual speech, short by default; a closing
+  question when the post is written for conversation, a line that still leaves
+  the reader something when it is written to travel (§3 decides the intent, the
+  length and the type; short is the default, not the rule). Don't spend the whole
+  hook (say everything and there's no reason to click). Hashtags ≤1. Video
+  episodes carry no cover image — **the video rides on the post itself** (§3).
 
 ### Plain-language principle (all platforms · all surfaces)
 
@@ -140,7 +142,9 @@ five read — so it now sits here, in `check-meta.js` (verbatim copies of
   person. Short stays the default because the timeline is scanned, not because
   long is penalized. Two lines that lose the reader are long.
 - Structure: one line of observation/discovery → (optional) one line of
-  elaboration → closing question.
+  elaboration → a closing question when the post is for conversation (the
+  intent chosen in the first bullet decides; a post written to travel closes on
+  a line that still leaves the reader something).
 - **The biggest form is a hook plus a chain of your own replies.** One short
   hook post, then the substance in self-replies (`threads_publish`'s
   `replyToId`, one part per call). The reader clicks once and keeps clicking,
@@ -178,14 +182,16 @@ five read — so it now sits here, in `check-meta.js` (verbatim copies of
 ## §4 Instagram
 
 - **Reels**: one public HTTPS videoUrl. Complete the hook in the caption's
-  first 125 chars + a save/share prompt. The profile grid center-crops to a
+  first 125 chars; a save/share prompt is optional. The profile grid center-crops to a
   square — titles and figures must sit in the vertical center band (y≈420–1500)
   to stay readable in the grid.
 - **Carousel**: 1–10 images (API hard limit 10), all cards unified as JPEG
   (the IG API takes JPEG and force-crops to the first card's aspect ratio).
 - Images and video can't be swapped after publishing (only the caption is
   editable) — the approval gate is the last chance.
-- Hashtags 3–5.
+- Hashtags: no fixed count — topic markers in the caption, not the first comment
+  (grow-instagram `references/growth-playbook.md` §Captions; count optimization
+  has no primary evidence).
 
 ## §5 Facebook
 
@@ -244,10 +250,12 @@ five read — so it now sits here, in `check-meta.js` (verbatim copies of
 - Custom thumbnails apply to **landscape surfaces only** — the portrait surfaces
   (Shorts feed · Shorts tab) take a separate frame, set in a browser at
   `studio.youtube.com/video/<id>/edit` → `⋮` over the portrait image →
-  **"Select from video"** (measured 2026-08-19). Any browser we drive works; the
-  native app isn't needed, and `Change` in that menu is file upload, which only
-  swaps the landscape surface. The emulator route in publish
-  `references/shorts-surface-adb.md` is the fallback.
+  **"Select from video"** (measured 2026-08-19). Drive it with ego lite — the only
+  browser lane (AGENTS.md §Tool lanes); where ego lite is missing, say so and stop
+  rather than reach for another browser. The native app isn't needed, and `Change`
+  in that menu is file upload, which only swaps the landscape surface. The emulator
+  route in publish `references/shorts-surface-adb.md` covers the case where the
+  picker is missing or the cover isn't among the candidates.
 - **The verdict is not `oardefault.jpg`** — it stays 404 after the frame is set,
   and `oar2.jpg` answers 200 with a cached older frame. Read the tile's `img` src
   from the channel Shorts tab DOM (`youtube.com/@<handle>/shorts`) and confirm by
@@ -401,22 +409,18 @@ five read — so it now sits here, in `check-meta.js` (verbatim copies of
 - [ ] Unexplained jargon · over-compressed sentences (plain-language violation)
 - [ ] **The reader has no stake** — if the post only works with our tool or
       pipeline name in it, change the material. Channel field data (Threads):
-      with zero vocabulary tells and a clean style-gate pass, our API-pitfall
+      with zero vocabulary tells and a clean style-check pass, our API-pitfall
       list still reached 1/7.6 of a same-age confession post that laid our own
       metrics bare. The axis that split them wasn't style — it was reader stake
 - [ ] A numeric range got collapsed to its upper bound (fact distortion)
 - [ ] AI-generated or character speech staged to look like a real person or
       news footage
-- [ ] Hashtag limits exceeded (Threads >1, IG/YT >5)
+- [ ] Hashtag limits exceeded (Threads >1; YT missing the preset's `#Shorts` or past
+      60, where YouTube ignores every one)
 - [ ] The brand logo shows in the cover's first 3 seconds (a skip signal)
 - [ ] The first subtitle cue starts later than 1.0s — the build measures it off
       the shipped SRT and warns, and a muted viewer spends that second with
       nothing to read (§7)
-- [ ] **A short with nothing to forward** — the `beat:"cta"` shot carries no
-      `shot.share` (`check-scenes.js` fails it). An ask stays optional; a
-      forwardable thing does not — an ask requests behaviour from the viewer,
-      while a forwardable thing is one sentence, figure or verdict they can pass
-      on as-is. Asking to be shared is an ask, not a trigger.
 - [ ] The cut ends on an outro the channel doesn't publish, or drops the one it
       does — `shortform_outro` in the profile front matter (`on` when the key is
       absent) and `OUTRO` in `.work/format.env` have to agree

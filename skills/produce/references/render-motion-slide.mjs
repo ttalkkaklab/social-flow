@@ -109,7 +109,7 @@ import { cameraGuard, readContrastFrame, rowContrast, contrastWarning } from './
 import { dependencyTracker, runtimeInputs, readCachedRender, writeRenderCache } from './motion-render-cache.mjs';
 import { parseWordCues } from './word-cue-map.mjs';
 import { measureSlideDOM, groupTextRows, roleFontFloor } from './slide-legibility.mjs';
-import { spawn, execFileSync } from "node:child_process";
+import { spawn, spawnSync, execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import fs from "node:fs";
@@ -195,14 +195,14 @@ const shotNo = parseInt((path.basename(htmlAbs).match(/^s(\d+)-/) || [])[1] || "
 const scene = (global.window.SCENES || [])[shotNo - 1];
 const segCount = scene && Array.isArray(scene.narration) ? scene.narration.length : null;
 if (scene?.visual?.slide?.quality != null || scene?.visual?.slide?.treatment === 'editorial') {
-  // Direct rendering must not bypass the planning and baked-pixel gate.
-  try {
-    execFileSync(process.execPath, [fileURLToPath(new URL('../../storyboard/references/check-slide.js', import.meta.url)),
-      path.dirname(scenesPath), path.basename(htmlAbs)], { stdio: 'pipe' });
-  } catch (error) {
-    console.error(String(error.stdout || '') + String(error.stderr || error.message));
-    process.exit(1);
-  }
+  // check-slide.js findings are reported here and the render continues (owner directive 2026-10-16:
+  // design rules are guidance, not execution gates). The renderer still stops below on what it
+  // cannot render — a missing page API, a stray animation, a group with no clip.
+  const check = spawnSync(process.execPath, [fileURLToPath(new URL('../../storyboard/references/check-slide.js', import.meta.url)),
+    path.dirname(scenesPath), path.basename(htmlAbs)], { encoding: 'utf8' });
+  const report = (String(check.stdout || '') + String(check.stderr || check.error?.message || '')).trim();
+  if (check.status !== 0 || /^⚠ /m.test(report))
+    console.error(`⚠ check-slide.js findings for ${path.basename(htmlAbs)} (rendering continues):\n${report}`);
 }
 const semanticBeats = scene && scene.visual && scene.visual.slide && Array.isArray(scene.visual.slide.motionBeats)
   ? scene.visual.slide.motionBeats.filter(b => b && Number.isInteger(Number(b.group)) && b.primitive)
@@ -466,7 +466,7 @@ const openPage = async () => {
     if (specFps !== 24) return die(`--previz captures at 24 fps but window.PREVIZ.fps is ${specFps} — set the spec to 24 (blender-previz.md §6.1)`);
   }
   if (treatment === 'editorial' && scene?.visual?.slide?.renderer !== 'motion-svg-v1' && !await evalJS("document.documentElement.classList.contains('studio') && !!document.querySelector('.studio-plate')"))
-    return die('editorial slides require the studio ground and material system; h.stage("flat") cannot satisfy object-state quality');
+    segWarn.push('editorial slide renders without the studio ground (html.studio + .studio-plate) — slide-design.md §1 expects the studio material on an editorial diagram; h.stage("flat") is the plain plate for camera and kinetic screens');
   const size = await evalJS("window.__size()");
   if (size.w !== W || size.h !== H) return die(`page size ${size.w}x${size.h} ≠ format canvas ${W}x${H} (window.FORMAT=${FORMAT})`);
   const meta = await evalJS("window.__meta()");           // { hold, stray, infinite }
@@ -490,7 +490,7 @@ const openPage = async () => {
     }
     for (const key of actual) if (!expected.has(key)) {
       const [group, primitive] = key.split("\t");
-      return die(`rendered HTML adds undeclared group ${group} primitive "${primitive}" — motionBeats permits one meaning-bearing movement kind per narration group`);
+      segWarn.push(`rendered HTML adds undeclared group ${group} primitive "${primitive}" — motionBeats plans one meaning-bearing movement kind per narration group; declare it or drop the extra move`);
     }
   }
   const warn = segWarn.slice();
@@ -592,8 +592,15 @@ const openPage = async () => {
   const groups = await evalJS("window.__groups()");
   const N = groups.length - 1;
   if (N < 1) return die("no reveal groups — every moving element needs data-rg ≥ 1");
+  // A declared intentional still (motion-production.md: motionIntent.type "intentional_still" on the cut or
+  // its visual) may hold a group; otherwise a motionless group is a still clip under a spoken segment.
+  const intentionalStill = [scene?.visual?.motionIntent, scene?.shot?.render?.motionIntent].some(m => m?.type === 'intentional_still');
   for (let k = 1; k <= N; k++)
-    if (groups[k].dur <= meta.hold) return die(`group ${k} has no motion (only the ${meta.hold}ms hold) — a spoken segment would get a still clip. Either move something in group ${k} or renumber the groups`);
+    if (groups[k].dur <= meta.hold) {
+      const msg = `group ${k} has no motion (only the ${meta.hold}ms hold) — a spoken segment would get a still clip. Either move something in group ${k} or renumber the groups`;
+      if (intentionalStill) warn.push(msg + " (kept: the scene declares motionIntent intentional_still)");
+      else return die(msg);
+    }
   if (opt.previz && N !== 1) return die(`a previz page has exactly one reveal group (the whole cut); this page has ${N}`);
   if (!opt.previz && segCount != null && N < segCount) return die(`${N} reveal groups but ${segCount} narration segments in scenes.js shot ${shotNo} — segment ${N + 1} would have no clip. Add groups (segment k → group k)`);
   // Entrance cap = 2.6s of motion + the template's hold tail (slide-design.md §motion) — a narration

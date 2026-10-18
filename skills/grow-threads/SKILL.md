@@ -6,9 +6,10 @@ description: >
   growth loop running. One tick replies to inbox comments (golden hour first), snapshots
   insights, joins keyword conversations whenever it judges it has a real contribution (no
   daily cap), and writes and publishes new posts whenever there is something worth saying
-  — slots are a rhythm, not a gate — attaching a generated image when one helps. Every
-  outgoing text clears the configured review gates (zero P0) before it goes
-  out, inside the standing authorization in data/[channel]/growth/threads/growth-plan.md.
+  — slots are a rhythm, not a cap — attaching a generated image when one helps. Every
+  outgoing text is recorded as a draft and reviewed, and the server binds the published
+  body to the reviewed draft, inside the standing authorization in
+  data/[channel]/growth/threads/growth-plan.md.
   Recur with /loop [interval] /social-flow:grow-threads [channel]. First run needs the
   init argument.
 argument-hint: "<channel> [init|tick|status]"
@@ -32,7 +33,7 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
 Growth skills are **split per platform** — tactics, tools, and state differ
 platform by platform. This skill is Threads-only; grow-instagram and grow-youtube
 sit on the same skeleton (plan = standing
-authorization · judgment-based publishing + review gate · idempotent state).
+authorization · judgment-based publishing + editorial review · idempotent state).
 That's also why the state path is scoped to `growth/threads/`.
 
 One invocation = one growth-cycle tick. The harness handles repetition:
@@ -62,7 +63,8 @@ account. Tactics and style rules live in `references/growth-playbook.md`
 
 1. **No publishing without a plan** — if `data/<channel>/growth/threads/growth-plan.md`
    is missing or its frontmatter isn't `status: approved`, call no publish tool.
-   Point the user to init. The plan is the standing authorization — if a post
+   Point the user to init. The plan is the standing authorization the publish
+   tools' descriptions refer to (`growth-plan.md` status: approved) — if a post
    outside the plan's scope (topic pool, keywords, tone) is needed, don't do it
    autonomously; ask the user for a plan update. A breakout push handed over by
    the channel's YouTube loop sits outside that scope as well: it becomes
@@ -77,8 +79,8 @@ account. Tactics and style rules live in `references/growth-playbook.md`
    sns_comment_reply fails, don't blindly repeat the same call (duplicate post).
    Log the failure in growth-log and move on to the next tick.
 4. **No plaintext token exposure** — tokens live only in files under
-   `~/.config/social-flow/<channel-slug>/`. Don't store whole API responses in
-   state.json or growth-log.md (only the fields you need).
+   `<SNS_TOKEN_DIR>/<slug>/` (default `~/.config/social-flow/<slug>/`). Don't store
+   whole API responses in state.json or growth-log.md (only the fields you need).
 5. **Use review findings as guidance** — read outgoing copy in context and fix
    concrete problems. Missing thresholds, low scores and a fixed review-count limit
    do not block an authorized post or reply. Preserve the plan's actual posting
@@ -232,122 +234,130 @@ as written by a person** (no AI tells), and **does it fit the context**
    its phrasing flows straight in — write revisions **from the original event
    only**.
 
-2. **Adversarial review (delegated to the growth-post-reviewer agent)** —
-   batch the drafts that passed the self-check by stage and delegate them in
-   one call (inbox-reply batch · search-engagement batch · new post). The
-   delegation prompt must carry: the full draft texts (numbered, surface
-   stated), for replies the source context (target post and original comment in
-   full — without this the context axis scores 0), the paths to
-   `growth-plan.md` and `profile.md`, and the self-check exit code. **A chain
-   goes up as one `post_chain` draft** — its parts numbered in reading order in
-   the one draft, so the reviewer judges the hook, each part and the whole the
-   way a reader meets them; one FAIL anywhere fails the chain. The reviewer
-   returns a `GROWTH_POST_REVIEW: draft=N score=NN p0=N verdict=PASS|FAIL` tail
-   per draft.
+2. **Editorial review (delegated to the growth-post-reviewer agent)** — this
+   read is the review of record. Batch the drafts that passed the self-check by
+   stage and delegate them in one call (inbox-reply batch · search-engagement
+   batch · new post). The delegation prompt must carry: the full draft texts
+   (numbered, surface stated), for replies the source context (target post and
+   original comment in full — without this the context axis scores 0), the
+   paths to `growth-plan.md` and `profile.md`, and the self-check exit code.
+   **A chain goes up as one `post_chain` draft** — its parts numbered in
+   reading order in the one draft, so the reviewer judges the hook, each part
+   and the whole the way a reader meets them; a finding on any part is a
+   finding on the chain. The reviewer returns a
+   `GROWTH_POST_REVIEW: draft=N score=NN p0=N verdict=PASS|FAIL` tail per
+   draft. The label and the score are the reviewer's assessment, recorded as
+   evidence (§Server publishing contract, step 2). What keeps a draft from
+   going out is a P0 that names an unresolved problem — a fact the copy asserts
+   without support, a reply aimed past what the source says, a policy
+   violation — or missing authorization, never the score
+   (platform-guide `references/reply-gate.md`).
 
-3. **Improvement loop (3 rounds max)** — fix FAIL drafts as the correction
-   directives say. When fixing, **only delete** — plant a metaphor or stock
-   phrase that wasn't there and that's the new AI tell.
+3. **Revise** — fix the findings as the directives say. When fixing, **prefer
+   deletion** — plant a metaphor or stock phrase that wasn't there and that's
+   the new AI tell; what may be added is a fact or qualifier the sentence needs
+   to stay true.
 
    **The costliest trap is not metaphor but the urge to fill the empty spot.**
    Delete the flagged expression and the text gets shorter and starts to feel
    like it "won't be understood." The material added at that moment becomes the
-   next round's defect — the 2026-08-12 new post failed all 3 rounds **in
-   exactly this structure** and was skipped: tactics-document vocabulary
+   next revision's defect — the 2026-08-12 new post went through three revisions
+   **in exactly this structure** and was not sent: tactics-document vocabulary
    (`뿌려지고`) → reviewer-verdict vocabulary from the log (`드러날 자리였어`)
    → **an unverified factual addition** (summarizing the other person's post,
    it invented a claim not in the original — and that reply would have sat
-   under their post, where the author could read it). One rule — **end every
-   fix with deletion.** If it feels bare after deleting, don't hunt for new
-   material; **first read whether the preceding passage already fills that
-   spot** (all three times, it did).
+   under their post, where the author could read it). That last one is the
+   kind of problem that does keep a draft from going out. One rule — **end
+   every fix by deleting, not adding.** If it feels bare after deleting, don't
+   hunt for new material; **first read whether the preceding passage already
+   fills that spot** (all three times, it did).
 
-   **Check first whether a finding is a P0 or a deduction; if a deduction,
-   absorb it.** The same day, two candidate engagement replies flipped on this
-   rule — the delete-only version carried a −2 deduction (one premise the other
-   person hadn't stated) and **passed at 96**, while the version that reworked
-   its first sentence to erase even that −2 scored **77 with two P0s**
-   (reviewer-critique vocabulary inflow + internal notation the other person
-   never used). **Trying to push copy that already cleared the bar toward a
-   perfect score is what creates P0s.**
+   **Read a finding for what it is before acting on it — a problem to resolve,
+   or a deduction to absorb.** The same day, two candidate engagement replies
+   flipped on this: the delete-only version carried one deduction (a premise
+   the other person hadn't stated) and read well, while the version that
+   reworked its first sentence to erase even that deduction came back with two
+   P0s (reviewer-critique vocabulary inflow + internal notation the other
+   person never used). **Pushing copy that already reads well toward a perfect
+   score is what creates P0s.**
 
    When the call could go either way, don't decide alone — **delegate both
    versions together**. In the case above that's what kept the bad version off
    the feed. Even a direction the reviewer didn't recommend goes up alongside
-   if there are grounds — doing so at 13:55 the same day earned 92, two points
-   above the recommended version's 90, and those two points decided
-   publish-or-skip right after the bar had been lowered to 90.
+   if there are grounds — and grounds come only from what's inside the copy
+   (is the fact verified, did the reviewer attach a condition), never from
+   score arithmetic.
 
-   **But never argue from score arithmetic.** One of the three grounds that
-   time was rejected — "the recommended version caps at 91, so burning the
-   last round equals a skip" is **not a fact about the copy.** Working
-   backwards from the deduction ledger to "I need N points" amounts to asking
-   for a one-time exemption from one of the accumulated deductions — scoring
-   fitted to the outcome. The `3 rounds short = skip` rule exists precisely
-   for that situation. Grounds come only from what's inside the copy (is the
-   fact verified, did the reviewer attach a condition).
+   Re-delegate only the revised drafts when a finding needs a second read, and
+   include the previous round's findings so the reviewer rules on whether
+   they're resolved. There is no fixed round count: stop when the findings are
+   addressed or justified, and send within the existing authorization.
 
-   Re-delegate only the fixed drafts, and include the previous round's
-   findings so the reviewer rules on whether they're resolved.
+4. **Record the assessment** — write the actual findings and the score into
+   growth-log as evidence (§5) and submit the read as the draft's review record
+   (§Server publishing contract, step 2). Continue within the existing
+   publishing authorization; a draft that falls short of a numerical creative
+   threshold is reported, not skipped.
 
-4. **Report the assessment** — record actual findings and any score as evidence.
-   Continue within the existing publishing authorization; do not skip solely because
-   a draft falls short of a numerical creative threshold.
+## Server publishing contract — draft, review record, publish
 
-## Server publishing gate — draft, independent review, publish
+Run from the project root containing `data/`. The server keeps one operational
+contract: **the body that gets published is the body that was recorded and
+reviewed.** It keeps no score threshold, no required review per axis, no P0 veto
+and no `gate.json`; the style check runs and returns suggestions (owner decision
+2026-10-18).
 
-Run from the project root containing `data/`. Before authoring, read
-`data/<channel>/growth/threads/gate.json`. The owner sets its numeric `voice`, `purpose`,
-and `flow` thresholds (0–100) after rubric calibration. Missing or malformed
-configuration means no numeric target was established. Do not invent a target or a passing review. Use the actual findings as guidance; preserve independent publishing authorization.
+1. Call `threads_draft_create(channel, body, readerMessage, purpose, selfReply?,
+   surface?, replyToId?, purposeEvidence?, flow?, comicElements?, submitter?,
+   submitterContext?)`. The response supplies `draftId` and `bodyHash` (SHA-256
+   of the normalized body + selfReply). `readerMessage` is a one-sentence
+   summary; `purpose` is exactly one of `fun`, `moved`, `info`, `empathy`.
+   `purposeEvidence`, `flow` (`hook`, `turn`, `residue`) and `comicElements` are
+   optional notes for the record — supply them when they help the review, and a
+   supplied `purposeEvidence` must quote the body verbatim (whitespace-only
+   normalization). For a conversation or inbox reply, pass `surface: "reply"`
+   and `replyToId`; this target is bound to the draft.
+2. Record the editorial review (§Editorial review guidance, step 2) with
+   `threads_review_submit(draftId, bodyHash, axis: "voice", score, reasons,
+   improvements, reviewer, reviewerContext, findings)` — the growth-post-reviewer's
+   score and its findings, each with `quote`, `issue` and `severity` (`pass`,
+   `P0`, `P1`, `P2`); a clean read still quotes the passage supporting it. The
+   server checks that each quote occurs in the draft (whitespace normalized).
+   `voice` is the one axis the loop submits, for posts and replies alike;
+   `purpose` and `flow` stay available for a read that was made on those axes.
+   A review is evidence bound to the hash; it never blocks the publish. Do not
+   call paid model APIs or use `OPENAI_API_KEY` / `GEMINI_API_KEY` for review —
+   the host subagent reads within the subscription.
+3. Call `threads_publish(channel, draftId, caption, selfReply?, imageUrl?,
+   replyToId?, dryRun?)` with the reviewed text. The server verifies that the
+   normalized body+selfReply SHA-256 equals the draft's `bodyHash`, that the
+   channel matches and that the reply target matches the draft's `replyToId` —
+   that binding is the whole check. It also runs the bundled `check-style.py`
+   (`threads` for a post, `reply` for replies) and returns the findings as
+   suggestions; exit 1, 2 and 4 are logged as warnings and never refuse the
+   call. `dryRun: true` validates the draft binding without reading credentials
+   or calling publishing APIs. A successful live call posts the main body and
+   then its optional self-reply. If the self-reply fails after the main post
+   succeeds, retain the returned root post ID and warning; never retry the
+   whole post.
 
-1. Call `threads_draft_create(channel, body, readerMessage, comicElements,
-   purpose, purposeEvidence, flow, submitter, submitterContext, selfReply?)`. Every required text must be nonempty,
-   and `comicElements` must contain at least one concrete element. The response
-   supplies `draftId` and `bodyHash`. `readerMessage` is a one-sentence summary.
-   Choose exactly one `purpose`; `purposeEvidence` must quote the main body.
-   Supply all three flow fields: `hook`, `turn`, `residue`. For a conversation reply, also pass
-   `surface: "reply"` and `replyToId`; this target is bound to the draft.
-2. Delegate voice, purpose and flow reviews to separate host subagents within the subscription,
-   supplying the exact stored copy and hash. Do not call paid model APIs or use
-   `OPENAI_API_KEY` / `GEMINI_API_KEY` for review. Voice covers the body and any
-   information self-reply; purpose and flow cover the new post body only. Score purpose against exactly the
-   chosen outcome (`fun`, `moved`, `info`, or `empathy`), not a different outcome. A `surface: "reply"`
-   draft needs voice only. Keep information self-replies factual; do not add jokes
-   to satisfy the new-post rubric.
-3. Submit each result with `threads_review_submit(draftId, bodyHash, axis, score,
-   reasons, improvements, reviewer, reviewerContext, findings)`. Reasons,
-   improvements, and findings each need at least one item. Each finding includes
-   `quote`, `issue`, and `severity` (`pass`, `P0`, `P1`, or `P2`). A passing review
-   still quotes the passage supporting its verdict. The server checks that the
-   quote occurs in the draft, normalizing whitespace only; invented or paraphrased
-   quotations are rejected. Purpose and flow findings must quote the main body.
-4. Call `threads_publish(channel, draftId, caption, selfReply?, imageUrl?,
-   replyToId?, dryRun?)` with the reviewed text. The server verifies the normalized
-   body+selfReply SHA-256, required axes, configured scores, and runs the bundled
-   `check-style.py` itself (`threads` for a post, `reply` for replies). Only exit 0
-   passes; nonzero exits (including accumulated-warning exit 1 and skip exit 4),
-   timeouts or a missing checker block. S2 findings that still return exit 0 do not block. `dryRun: true`
-   exercises the same gate without reading credentials or calling publishing APIs.
-   A successful live call posts the main body and then its optional self-reply.
-   If the self-reply fails after the main post succeeds, retain the returned root
-   post ID and warning; never retry the whole post.
-
-Changing either text requires a new draft and fresh reviews. Audit records go to
-`data/<channel>/growth/threads/gate-log.jsonl`; malformed calls with no resolvable
-channel go to `data/unknown/growth/threads/gate-log.jsonl`. Scores and findings
-remain reviewer claims: exact quotation proves textual grounding, not sound judgment.
-Reviewer and context identifiers are self-reported. The server cannot distinguish
-subagents in the same session or enforce reviewer independence; matching submitter
-identifiers are logged, not rejected. Unknown submitters are recorded as unknown.
-Local draft, threshold and episode-approval files assume a trusted workspace writer.
+Changing either text means a new draft (the hash no longer matches) and a fresh
+review record. Audit records go to `data/<channel>/growth/threads/gate-log.jsonl`;
+malformed calls with no resolvable channel go to
+`data/unknown/growth/threads/gate-log.jsonl`. Scores and findings remain reviewer
+claims: exact quotation proves textual grounding, not sound judgment. Reviewer
+and context identifiers are self-reported. The server cannot distinguish
+subagents in the same session or enforce reviewer independence; matching
+submitter identifiers are logged, not rejected. Unknown submitters are recorded
+as unknown. Local draft and episode-approval files assume a trusted workspace
+writer.
 
 Every `threads_publish` in the growth loop, including image posts and keyword
-replies below, uses this sequence and carries `draftId`. Never use an episode
-reference to bypass growth review. Inbox `sns_comment_reply(platform: "THREADS")`
-also requires the reviewed reply `draftId` and runs this same voice gate. Its
-`commentId` must match the draft's `replyToId`; omitting a draft never bypasses
-review. This covers the plugin MCP routes, not external direct API clients.
+replies below, carries a `draftId`. Never use an episode reference to publish
+growth copy. Inbox `sns_comment_reply(platform: "THREADS")` also takes the reply
+draft's `draftId`; its `commentId` must match the draft's `replyToId`. The draft
+is the record of what was sent; it needs no review to be publishable. This covers
+the plugin MCP routes, not external direct API clients.
 
 ## Image procedure — generate and upload
 
@@ -379,8 +389,8 @@ hosting to get one.
    · ≤10MB (shrink with sips if over) · type is judged from the leading bytes,
    so a disguised extension won't pass. On 429 (60-per-10-minutes cap), give
    up on the image this tick and try next tick.
-4. **Publish** — `threads_publish(caption, imageUrl, channel, draftId)` with body copy
-   that passed the gate (§Adversarial review).
+4. **Publish** — `threads_publish(caption, imageUrl, channel, draftId)` with the
+   reviewed body copy (§Editorial review guidance).
 
 > Hosting is the operator's to provide — any endpoint that accepts `POST` with
 > an `x-api-key` header and raw bytes, returns `201 {data:{url}}`, and serves
@@ -402,17 +412,21 @@ reset it.
 `summary.withinGoldenHour` is non-zero, start with those comments. Skip
 comments listed in `state.gateSkippedCommentIds` (below). Write the reply per
 playbook §Replies (plan tone, 1–3 sentences, leave room for the other person
-to answer again), create a `surface: "reply"` draft with `replyToId: commentId`, pass its voice
-review through the §Server publishing gate, then post via
+to answer again), create a `surface: "reply"` draft with `replyToId: commentId`, run
+the §Editorial review and record it (§Server publishing contract), then post via
 `sns_comment_reply(platform: "THREADS", channel, commentId, message, draftId)` — replies are person-to-person conversation, where AI
 tells get caught fastest. For successful posts, the inbox's `answeredByUs`
 filter guarantees dedup.
 
-**Comments that fail the gate's 3 rounds get recorded in
-`gateSkippedCommentIds` and closed out** — leave them without `answeredByUs`
-and every tick will re-draft and re-review the same comment forever (the
-biggest reviewer-call leak in an unattended loop). Report "n unanswered due to
-gate" in the tick summary so a human can decide whether to reply personally.
+**Comments the loop decides not to answer get recorded in
+`gateSkippedCommentIds` and closed out.** A reply stays unsent only for an
+unresolved factual or context problem — the answer would assert something
+unverified, or it can't be written without inventing — or for missing
+authorization; a creative shortfall is revised, not a reason to skip
+(reply-gate.md). Leave a closed-out comment without `answeredByUs` and every
+tick will re-draft and re-review it forever (the biggest reviewer-call leak in
+an unattended loop). Report "n not answered" with the reason in the tick
+summary so a human can decide whether to reply personally.
 
 **Watching only the inbox misses half the conversation** —
 `sns_comment_inbox` scans only our **root posts**, so when someone answers a
@@ -420,10 +434,6 @@ reply we left on their post, it never shows up. That's exactly where
 conversations continue, and the golden hour gets missed wholesale. Query
 `/{id}/replies` directly with the recent reply IDs in
 `state.recentReplyIds` and handle those too (`references/api-limits.md` §4).
-
-If a reply post fails with `code 24 / subcode 4279009` ("media not found"),
-it's a container-polling problem, not permissions — handle it with the
-workaround in §3 of the same document and never blind-retry (duplicate post).
 
 Spam and hate comments get no reply — just report them in the next tick
 summary (hiding is outside autonomous scope — the user decides).
@@ -447,38 +457,40 @@ real contribution exists, and exactly as many as exist. There's no count cap,
 but the moment even one presence-only reply slips in, the whole account's
 signal takes the hit — that's the yardstick. Write the copy per playbook
 §Search engagement (experience and information contributions only, no
-promotion or links, 8+ words), pass the §gate, then publish via
+promotion or links, 8+ words), run the §Editorial review and record it, then publish via
 `threads_publish(channel, draftId, caption, replyToId: <postId>)`. Add the postId to `engagedPostIds`
-(keep the latest 500 — prevents re-engaging the same post). **Add postIds
-skipped after 3 failed gate rounds exactly the same way** — it's the record of
-"attempted". Otherwise every tick re-drafts and re-reviews that post until it
-ages out of the 24-hour search window.
+(keep the latest 500 — prevents re-engaging the same post). **Add postIds the
+loop drafted for and then did not send (an unresolved factual or context
+problem) exactly the same way** — it's the record of "attempted". Otherwise
+every tick re-drafts and re-reviews that post until it ages out of the 24-hour
+search window.
 
-**Before picking a topic, read `state.gateSkippedDrafts` first** — resurface a
-gate-blocked topic with only the surface changed (new post → reply) and the
-same P0 follows it. A surface change is not a defect fix. Measured
-(2026-08-12): a topic skipped at 52 the previous day was reused as a reply the
-next day and blocked again at 60, with the skip reason reproduced word for
-word. If a skip record carries `lesson` · `reusable`, follow those directives.
+**Before picking a topic, read `state.gateSkippedDrafts` first** — a topic not
+sent for a factual or context problem, resurfaced with only the surface changed
+(new post → reply), carries the same problem. A surface change is not a fix.
+Measured (2026-08-12): a topic not sent the previous day was reused as a reply
+the next day and the same finding came back word for word. If a skip record
+carries `lesson` · `reusable`, follow those directives.
 
-**Compare by the defect type in `why`, not by `topic`** — there are paths
-where the same defect follows even when the topic differs completely. At 11:50
+**Compare by the problem type in `why`, not by `topic`** — there are paths
+where the same problem follows even when the topic differs completely. At 11:50
 the same day, a draft on an entirely different topic axis (about someone
-else's speech-style example) was blocked with **the same defect** as the 07:30
+else's speech-style example) came back with **the same problem** as the 07:30
 skip: "automation self-exposure with only the tool name removed, function left
 in". Scanning topics alone won't show it.
 
-**When two P0s block each other, skip without running rounds.** That draft's
-structure was: write it truthfully and the automated authorship shows; avoid
-that and you must claim outcomes never experienced — delete either side and
-zero material remains. The dividing line from the round deletion saved (10:00
-the same day, 73→96) is **whether real material remains after deleting.** If
-none remains, that's a target we have nothing to give, and skipping is the
-answer.
+**When two findings cancel each other out, skip.** That draft's structure was:
+write it truthfully and the automated authorship shows; avoid that and you must
+claim outcomes never experienced — delete either side and zero material
+remains. The dividing line from the revision that saved a draft the same
+morning is **whether real material remains after deleting.** If none remains,
+that's a target we have nothing true to give — not a creative shortfall — and
+skipping is the answer.
 
 **If `threads_search` returns zero posts from other people, that's normal** —
 before the app's advanced-access approval, only your own posts come back (not
-a bug). Then find in the browser and reply via the API. The discovery path,
+a bug). Then find in the browser — ego lite, the only browser lane; if it is
+missing, say so and skip this stage — and reply via the API. The discovery path,
 the ID-extraction rules (3 traps), and the pre-publish re-check are in
 `references/api-limits.md` §2 — the source of truth. **Pull the body and the
 ID from different places and they shift by one — the reply lands on the wrong
@@ -501,18 +513,18 @@ not spent, question ending) and let the video hang off it. **A post whose whole
 content is "go watch this" doesn't go out** — that's the engagement-begging
 shape absolute rule 2 names, and it reads as an ad to everyone scrolling past. The link follows the plan's §Link
 policy and its target is the YouTube watch URL, not the IG permalink the
-episode fallback uses (playbook §Principles, the links bullet). The gate runs
+episode fallback uses (playbook §Principles, the links bullet). The review runs
 as it does on any other post, and so does the golden-hour hold below. On
 publish, record `{ videoId, postId, at }` in `state.pushes` plus one line in
 growth-log. One push per candidate — never a second post about the same video
 in a later tick.
 
-**What the gate does and doesn't cover here.** It catches the ask:
+**What the reviewer does and doesn't cover here.** It catches the ask:
 "공유해 주세요" is engagement begging with or without a candidate behind it
 (growth-post-reviewer P0-2 names the push and exempts nothing). It doesn't
 catch a link on the post surface — that P0 is scoped to search replies. So the
 judgment about whether this post earns its link is yours, before the draft ever
-reaches the gate.
+reaches the reviewer.
 
 If any condition is missing — no candidate, `threads` not among the targets, or
 `push_allowed` false or absent — leave it alone and go on to the ordinary
@@ -522,13 +534,13 @@ under it would publish outside the pool (absolute rule 1). Report the waiting
 candidate and ask the user for a plan update; don't push first and explain
 afterwards.
 
-**When there's something to say, write — any time.** The gate on a new post is
+**When there's something to say, write — any time.** What decides a new post is
 the material, not the clock — first judge, from the topic pool × step-2
 learning, whether there is "something this channel is worth hearing on right
 now"; if yes, author it per playbook §New-post style (short by default, hook
-not spent, question ending, hashtags ≤1), pass the §gate, then
-`threads_publish`. If not, don't write even at slot time — filler posting is
-the worst move.
+not spent, a question ending when the post is for conversation, hashtags ≤1),
+run the §Editorial review and record it, then `threads_publish`. If not, don't
+write even at slot time — filler posting is the worst move.
 
 **Two decisions come before the first sentence** (playbook §Post types):
 
@@ -550,7 +562,7 @@ the worst move.
 - Style-check every part on its own (`--surface threads`), then delegate the
   whole chain to the reviewer **as one draft** — the parts numbered in reading
   order on the `post_chain` surface, so the reviewer sees what a reader would
-  see. A FAIL anywhere fails the chain.
+  see. A finding on any part is a finding on the chain.
 - Publish part 1 with `threads_publish`, take its `postId`, publish part 2 with
   `replyToId: <part 1 postId>`, and keep chaining off the previous part's id.
 - **Stop at the first failure and don't retry inside the tick** (absolute rule
@@ -565,7 +577,7 @@ the worst move.
 measured +42% engagement where the author replied to their own post, the
 largest lift of the six platforms. One line that adds something — the detail
 that didn't fit, the number behind the claim, a counter-case — through the same
-gate on the `post` surface, published with `replyToId: <the new post's id>`.
+review on the `post` surface, published with `replyToId: <the new post's id>`.
 Skip it when the post already carries everything: a filler self-reply is the
 engagement-begging register absolute rule 2 bans. A chain needs none, since its
 parts already are the self-replies.
@@ -608,8 +620,8 @@ knows**. Never open with tool names or internal terms.
 **Don't write the first sentence right away — jot down 3–4 entry points
 first** — pick among a lived incident / a number / a question back / a
 counter-example. Write cold and the model converges on the blandest opening
-every time, so each post passes the gate while the whole timeline speaks in
-one voice. The evidence grade is low — one measurement has candidate-widening
+every time, so each post reads clean on its own while the whole timeline speaks
+in one voice. The evidence grade is low — one measurement has candidate-widening
 lifting diversity 1.6–2.1x, but it's an English creative-writing preprint with
 no Korean field data. The procedure costs nearly nothing, so it's in.
 
@@ -622,13 +634,13 @@ after it), the parts in reading order in the body, and the author's own first
 reply under the post it answers. The batch checker splits on headers, so
 filing the parts separately would read one chain as several near-identical
 posts and cry homogenization → append one
-tick-summary line to growth-log.md — the memo carries each published draft's
-gate score (skips included) → one report line to the user:
-`[tick hh:mm] replies n · engagements n · new posts n · gate passed n/skipped n · followers ±n`.
+tick-summary line to growth-log.md — the memo carries each draft's review score
+and any not-sent reason → one report line to the user:
+`[tick hh:mm] replies n · engagements n · new posts n · reviewed n/not sent n · followers ±n`.
 A tick with no actions gets "observation only" — quiet ticks are normal.
 
 **Measure the batch every five new posts** (the tick where the `##` count in
-`posts.md` hits a multiple of 5). The gate sees one draft at a time, so it
+`posts.md` hits a multiple of 5). The reviewer sees one draft at a time, so it
 **can't in principle see** the whole loop converging on one mold — individual
 quality and batch diversity move in opposite directions (sister-plugin
 measurement: two drafts differing only in topic scored 100/100 each with 0.77
@@ -662,18 +674,12 @@ missing plan clause is a question for the user. No publishing.
   resume next tick.
 - **Token expiry** (Meta, 60 days) → all publishing is blocked, so recommend
   stopping the loop and walk through the token-setup.md renewal procedure.
-- **Reply fails with `code 24 / subcode 4279009`** → the container was still
-  `IN_PROGRESS` when published (not permissions). Handle with the 2-step
-  workaround in `references/api-limits.md` §3. The server is fixed, but **the
-  MCP process runs on the dist loaded at session start, so it keeps failing
-  until a restart** — recommend restarting and take the workaround for this
-  tick.
 - **Post views showing 0** → not a failure but pre-aggregation (the account
   daily total rises first). Compare posts of the same age, and if an immediate
-  value is needed, read `impression_count` in the browser (same document §5).
+  value is needed, read `impression_count` in the browser with ego lite (same
+  document §5); if ego lite is missing, say so and wait for the API value.
 
 The wall-by-wall tool limits and workarounds, all experienced firsthand, are
 in `references/api-limits.md` — no follow API, keyword-search advanced access,
-the 3 ID-extraction traps, container polling, inbox limited to root posts,
-metric lag. **A new session reads that document first** (never spend time on
-the same wall twice).
+the 3 ID-extraction traps, inbox limited to root posts, metric lag. **A new
+session reads that document first** (never spend time on the same wall twice).

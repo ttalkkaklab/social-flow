@@ -8,11 +8,12 @@ choice uses `selection.kind:standing` with the snapshot path as reference. Ask o
 when no saved or explicit episode choice exists; unattended new episodes require
 complete project setup. Later instructions to ask every episode do not override this.
 
-A new episode without a saved choice asks for a visual style in HITL before the storyboard and its images are
-written. Production mode (100%, at least 50%, at least 30%, or hook only) and style are separate choices; the two
-questions may be shown together. The production-mode question carries production-mode.md's
-first-pass cost, retry cost and budget cap. Do not say that the style alone changes the API
-price; price follows model, length, resolution and retry count.
+Without a saved choice, first setup ([project-init](../../project-init/SKILL.md)) asks for the
+visual style once, before any storyboard and its images are written, and saves it in
+`.social-flow/models.json`. The production ratio (the six ids in production-mode.md) and style are
+separate choices; the two questions may be shown together at that setup. The ratio question
+carries production-mode.md's first-pass cost, retry cost and budget cap. Do not say that the
+style alone changes the API price; price follows model, length, resolution and retry count.
 
 Every option carries a short plain-language description: what the picture looks like, in
 terms the user already knows, then what kind of episode it suits (user directive, 2026-09-08).
@@ -31,18 +32,19 @@ it never goes into a generation prompt.
 > - 아케이드 게임 화면 — 90년대 오락실 액션 게임처럼 굵은 윤곽선과 진한 채색으로 그린 캐릭터가 겹겹이 세운 배경 앞에 서는 화면입니다. 신화·영웅담·대결 구도의 이야기, 인물이 크게 보여야 하는 편에 맞습니다. 상단 체력바 같은 게임 인터페이스는 안 그립니다.
 
 When the user proposes another style, spell out its rendering rules and add a supported
-preset before continuing. Without a choice, wait before authoring. Never record a
-recommendation or silence as the choice. A style already chosen for this episode is not
-asked again. Unattended runs need the style written in their standing plan; otherwise the
-question stays pending. `production-mode.js` (and so `check-scenes.js` and `storyboard_check`)
-refuses a board without `PRODUCTION.style.preset` and its selection record in every production
-mode, from the story pass on.
+preset before continuing. Without a saved or explicit choice, pick the preset that fits the
+material, record it as an assistant decision (`selection: { kind: 'assistant', reference }`) and
+continue; wait only when the user asked to be consulted. Never record a recommendation or
+silence as the user's choice. A style already chosen for this episode is not asked again.
+Unattended runs take the style from `.social-flow/models.json`. `production-mode.js` (and so
+`check-scenes.js` and `storyboard_check`) advises when `PRODUCTION.style.preset` or its selection
+record is missing, in every production mode, from the story pass on.
 
 ## Contents
 
 - [Recording the choice and writing images](#recording-the-choice-and-writing-images)
 - [The prompt carries the style, machine-checked](#the-prompt-carries-the-style-machine-checked)
-- [Per-shot style — only through the user](#per-shot-style-only-through-the-user)
+- [Per-shot style — author it and record the reason](#per-shot-style-author-it-and-record-the-reason)
 - [The still is looked at for style, on record](#the-still-is-looked-at-for-style-on-record)
 - [Camera presets are separate](#camera-presets-are-separate)
 
@@ -85,7 +87,7 @@ style: {
   colour; the frame is one painting. Generated video holds only slow environment motion (mist,
   water, wind, a brush stroke appearing) — fast subject motion breaks the ink lines, so acted
   cuts stay stills with a camera move. (The still-with-a-camera-move advice here and under
-  `paper-cutout` is for hybrid; in `full_video` every non-stock cut is generated video
+  `paper-cutout` is for partial ratios; in `full_video` every non-stock cut is generated video
   (production-mode.md), so keep those cuts' subject motion minimal instead.)
 - `toon-3d`: `look` is toon3d. Rounded stylised 3D characters with large expressive eyes and
   clean shaders; keep each character's model, costume and colours identical across cuts by
@@ -140,7 +142,8 @@ scenery cuts receive no cast sheet or cast image.
 
 A cut that needs an end image edits the start image with `endFramePrompt`. Start and end keep
 the same style, people, costume and space. Video uses `motionPrompt`, which the helper
-assembles from the four `visual.camera` slots and checks against the Seedance prompt gate.
+assembles from the four `visual.camera` slots; Seedance prompt advice for the 2.x reference
+route comes back in the result's `warnings`.
 After generation, open the image and review content and style separately. A doll-like
 surface in photoreal, photographic skin in webtoon, a smooth plastic figure in claymation, a
 painted-looking photo in ink-wash or a soft airbrushed figure without outlines in arcade-2d is a
@@ -169,46 +172,47 @@ Every generated still's `visual.bgPrompt` holds the preset's treatment sentence
 (`production-mode.js` `STYLES[preset].prompt`), then the episode materials, palette and lighting.
 Both assemblers write it — `spatial-prompts.js` on generated-video cuts, `assemble-bg-prompt.js
 --from scenes.js` on still-camera cuts — so a prompt is never typed by hand. `check-scenes.js`
-refuses a generated still whose prompt lacks the treatment (`[style-missing]`); archive looks,
+flags a generated still whose prompt lacks the treatment (`[style-missing]`); archive looks,
 stock photographs and pre-preset `spatial-explainer` boards are the exceptions. A hand-assembled
 still without `--from` names its preset with `--preset`.
 
-## Per-shot style — only through the user
+## Per-shot style — author it and record the reason
 
 Sometimes the author reads a shot and judges that the episode preset cannot carry this picture:
 a painted memory inside a photoreal episode, a document that has to look like the real paper.
-That judgement is not the author's to act on. Stop and put it to the user with AskUserQuestion —
-which shot, what the picture needs, which preset would carry it and why, and the option to keep
-the episode style. Only the user's answer opens the shot, recorded on that shot:
+Author it: record on the shot which preset carries the picture and why, and show the override in
+the plan. Ask the user only when they asked to be consulted; an unattended run records its
+decision and continues. The record sits on that shot:
 
 ```js
 shot: {
   style: {
     preset: 'ink-wash',                      // one of the STYLES presets
     reason: 'The valley is remembered, not seen; a painted frame says so.',
-    selection: { kind: 'user', reference: 'User approved ink-wash for shot 4 on 2026-09-19.' },
+    selection: { kind: 'assistant', reference: 'Author chose ink-wash for shot 4: a remembered valley.' },   // kind:'user' when the user chose it
     materials: 'Brushed ink on rice paper.'  // optional: materials · palette · lighting for this shot
   }
 }
 ```
 
-- `selection.kind` is `user` only. A standing plan cannot pre-authorise a per-shot style; an
-  unattended run that wants one holds and asks.
+- `selection.kind` is `user` when the user chose it and `assistant` when the author did; either
+  way `reference` says why.
 - `videoDesign.look` follows the shot's preset, not the episode's. World and camera language
   stay episode constants — the shot changes how the picture is rendered, not where it is.
 - Both assemblers read the override, so the shot's prompts carry its treatment, and
-  `check-scenes.js` checks the prompt against the shot's preset. `production-mode.js` refuses an
-  override without `reason` and the user's `selection` (`[shot-style]`).
-- The approval page draws the shot's own style tile with the reason and the approval record.
+  `check-scenes.js` checks the prompt against the shot's preset. `production-mode.js` advises on an
+  override without `reason` or `selection` (`[shot-style]`) and refuses only an unknown preset.
+- The review page draws the shot's own style tile with the reason and the selection record.
 - A picture that came back off-style is not a reason to write an override after the fact. Remake
-  it in the shot's preset; ask the user only when the preset itself is wrong for the shot.
+  it in the shot's preset; change the preset only when it is wrong for the shot.
 
 ## The still is looked at for style, on record
 
 After generation, each still is read for content and for style separately (still-generation.md
 §3) and the read is written to `.work/still-review.json`, bound to the image bytes and the preset
-the shot carries. `check-production.js --ready` refuses assembly without a current review, with
-`styleMatch:false`, or with a review made against another preset than the shot now has.
+the shot carries. `check-production.js --ready` records a warning when a still has no current
+review (`not_reviewed`), carries `styleMatch:false`, or was reviewed against another preset than
+the shot now has (`stale`); assembly continues with those warnings shown.
 
 ## Camera presets are separate
 

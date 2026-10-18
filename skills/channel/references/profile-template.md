@@ -14,7 +14,11 @@ motion_allowed_kinds: ai-video,recording,stock-video,motion-slide
 motion_max_consecutive_stills: off
 motion_max_still_seconds: off
 motion_require_action: false
-generated_video_max: 2
+generated_video_max: 2    # a ceiling for this channel; the episode's ratio choice (PRODUCTION.mode) plans under it
+# max_static_ground_seconds: 8  # optional — one still under its camera move; check-scenes warns past it (default 8)
+# html_plate_max: 2             # optional — static plates on `other` beats per episode (default 2; motion slides sit outside)
+# video_budget_usd: 10          # optional — generated-video spend per episode the storyboard check compares (default 10)
+# hook_video: off               # optional — on requires a video opening; off (default) lets the content choose
 shortform_outro: on       # on | off (absent = on)
 # length_min_seconds: 35  # optional — narrows the short-form band for this channel
 # length_max_seconds: 75  # leave both out and the preset band applies (35–120s on shorts)
@@ -39,7 +43,8 @@ shortform_outro: on       # on | off (absent = on)
 - **Register**: <polite explanatory (존댓말) | casual punchy (반말) | documentary narration | ...>
 - **Narrator personality**: <e.g. a calm news-briefing anchor>
 - **TTS voice (fixed — do not change)**:
-  - Engine: `<gemini | elevenlabs>` — use the saved directory choice.
+  - Engine: see `.social-flow/models.json` (`models.speech`) — the profile pins only the
+    voice; `gemini` or `elevenlabs` below is whichever that file saved.
   - With gemini → voiceName: `<Gemini voice name or supported custom voice ID>` ·
     model: `<selected Gemini TTS model>`. Keep stable identity settings separate
     from per-line acting. Gemini 3.8 uses turn-level style and inline vocal events.
@@ -56,7 +61,8 @@ shortform_outro: on       # on | off (absent = on)
 - **Playback speed (the post-build pace pass)**: `1.0` — a profile value cannot authorize
   changing TTS speed. Non-1 synthesis or final playback requires an explicit user request
   for the episode, recorded under produce's `references/tts-speed.md` contract. Assembly
-  and the outro always preserve 1.0x. Final subtitle speech must stay under 6.2 characters/s.
+  and the outro always preserve 1.0x. A requested subtitle sidecar is checked at or below
+  6.2 characters/s; the default subtitle-free delivery skips that check.
 
 - **Plain-language principle**: use §1's audience knowledge, §2's voice and supplied
   writing samples. Default to adult non-specialists if unspecified. Preserve ordinary
@@ -81,8 +87,10 @@ scenes sets it to `majority` or a ratio, then narrows `motion_allowed_kinds` as 
 
 `motion_require_action: true` also requires `visual.action` on every qualifying shot. Camera
 movement, Ken Burns, caption swaps, and still-image changes never count as true motion.
-`generated_video_max` overrides the format default only for this channel; the storyboard still
-shows the projected cost before approval. `motion_max_consecutive_stills` and
+`generated_video_max` is this channel's ceiling on generated cuts; the episode's ratio choice
+(`PRODUCTION.mode`) plans under it and the storyboard shows the projected cost before approval.
+`max_static_ground_seconds`, `html_plate_max`, `video_budget_usd` and `hook_video` are the other
+keys `check-scenes.js` reads (one line each in the front matter above). `motion_max_consecutive_stills` and
 `motion_max_still_seconds` stop long static runs even when the episode clears the ratio.
 `length_min_seconds` and `length_max_seconds` narrow the short-form length band for this
 channel — `check-scenes.js` and the approval strip then measure the episode against your
@@ -127,11 +135,11 @@ The THEME contract of video-template.html — it goes into scenes.js as-is:
 | facebook | ✅/❌ | ordinary video post (not a reel) |
 | youtube | ✅/❌ | shorts — local upload, 100 uploads/day quota |
 
-- **Subtitle languages**: <`ko` for a single-language channel. For multi-language
-  subtitles write `ko (default) · en · vi` — produce translates `subs.srt` into each
-  extra language (`subs.en.srt` …, BCP-47 codes) and publish uploads every one as its
-  own toggleable track on YouTube (`captionTracks`) and Facebook (`captionFiles`).
-  The burned-in copy for IG/Threads stays in the default language>
+- **YouTube subtitle sidecar languages (optional)**: <leave blank unless the user asks
+  for separate YouTube caption tracks; then list them, `ko · en · vi` (BCP-47). produce
+  writes `subs.<lang>.srt` only on that request and publish uploads them as
+  `captionTracks` only when the user requests tracks. The delivered video is
+  subtitle-free on every platform>
 - **Per-platform signature**: <hashtag set, CTA wording — within the platform's grammar>
 - **Public media hosting**: <how to upload publicly over HTTPS for IG/FB — if there
   isn't one, write "undecided" and settle it at publish time. Threads video posts and

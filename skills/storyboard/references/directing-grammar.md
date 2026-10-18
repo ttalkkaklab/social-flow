@@ -429,7 +429,7 @@ the mood, the exclusions (`--exclude` — the image tools have no exclusion argu
 noun list rides in the body) and the fill-the-frame tail (owner 2026-08-25 — no
 letterbox or lower-third fade). On a still with nobody in it,
 `--no-person` swaps the size ladder's body words ("full body", "chest up") for the subject's.
-storyboard §5 runs it when the plan is written and stores the full stdout as `bgPrompt`;
+The storyboard runs it when the shot plan is written (SKILL.md §4, cut and stage the scenes) and stores the full stdout as `bgPrompt`;
 produce sends that string to the engine unchanged.
 Hand-written prefixes that fight the fields are a camera-mode finding.
 
@@ -445,8 +445,8 @@ Rules:
 - **`line` is the 180° sentence.** Required when two people (or a person and what they look at)
   share the scene; omitted on a single-subject shot. The first shot from a new side writes
   `lineCrossing`: `camera_move`, `subject_move`, `neutral`, or `intentional`. A neutral bridge
-  shot carries `lineNeutral: true` and the crossing names its shot number. The checker blocks an
-  unexplained line change.
+  shot carries `lineNeutral: true` and the crossing names its shot number. The checker reports
+  an unexplained line change as a warning (§8).
 - **`light` is optional** and uses the same camera frame (`key from camera-left`, shadow
   falling right). Directional light is one of the few spatial cues the still actually keeps.
 - **A room is drawn from three-quarters** `[course]`. Ask for a place head-on and the model has
@@ -576,15 +576,11 @@ this lane for cards that reach the builder as images (produce SKILL §6 has the 
 
 Two disciplines carry over unchanged. The move supports the declared feel — it never carries
 it (the evidence base for stills is practitioner practice, not measurement, so claim even
-less). And rationing: most cards keep the alternating default drift; a punch is the cover's
+less). And rationing: every `still_camera` cut picks its `shot.render.camera` effect from the
+cut's purpose (render-routing.md — introduce a face with focus-in, inspect then a face with
+rack focus, approach a detail, pull back for context), never from the card's odd/even index
+(CLAUDE.md §Physical subjects: do not cycle effects by shot number); a punch is the cover's
 move; drift is spent where presence or unease is the feel, not sprinkled for "energy".
-Since 2026-09-06 this lane carries every cut whose `shot.render` picks a still, which on a
-short is most of them, so a still now
-carries a whole cut: the centre push caps at 7.5% because the text is baked in, and over a
-5–8 s cut that is under 1.5%/s — a `pan` travel (12% at the default scale), a `focus` zoom
-that arrives at the subject, or `hold` + `drift` reads as an operated camera where the
-centre push reads as a slow slideshow. One still holds one cut; a longer cut swaps the still
-per sentence (`narration[].img`).
 
 **How hard the window moves follows the beat** `[blog]`. A 46s reference short measured frame
 by frame (docs/research/2026-08-26-still-photo-camera-motion) ran every still on one ladder —
@@ -654,8 +650,9 @@ what the audience is supposed to get.
 `[course]` unless marked.
 
 1. **One shot, one new piece of information** (`shot.info`). Two shots in a scene saying the
-   same thing — one can go. 4–6 shots in a dialogue scene; a short informational piece has a
-   floor of two sizes per scene (wide + close). The check that catches a fake: cover the `info`
+   same thing — one can go. 4–6 shots in a dialogue scene and two sizes per scene (wide + close)
+   were the story-v1 defaults; on a story-v2 board the shot count follows what the audience
+   needs to notice (storyboard SKILL §4), with no per-scene floor. The check that catches a fake: cover the `info`
    lines and read only the sizes, angles and moves down the scene. If every setup shows the
    same thing from the same distance, the scene is one viewpoint chopped into decorative cuts,
    and no wording in `info` will fix it.
@@ -722,8 +719,8 @@ what the audience is supposed to get.
     background, or the still lane on a `speed` row above the default, since a hold past one
     second is what the reference never does; and every boundary carries the join that says
     what moved between the two shots (scenes-schema §scene transition). Motion on every card costs
-    `visual.video` slots — the storyboard says which cards want one and the user decides
-    how many.
+    `visual.video` slots — the storyboard says which cards want one, and the saved render ratio
+    (`PRODUCTION.mode`, production-mode.md) is the target and the cost ceiling for how many.
 16. **Every boundary is a join, chosen from what happened between the two shots.** `[course]`
     Write `transition` on every shot after the first, from the table in scenes-schema
     §scene transition (one home — do not copy the table here): `jcut` when the two shots are

@@ -23,6 +23,7 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
   "WebSearch", "WebFetch",
   "mcp__social-flow__sns_account_check", "mcp__plugin_social-flow_social-flow__sns_account_check", "mcp__social-flow__sns_comment_inbox", "mcp__plugin_social-flow_social-flow__sns_comment_inbox",
   "mcp__social-flow__youtube_insights", "mcp__plugin_social-flow_social-flow__youtube_insights", "mcp__social-flow__youtube_publish", "mcp__plugin_social-flow_social-flow__youtube_publish",
+  "mcp__social-flow__youtube_update", "mcp__plugin_social-flow_social-flow__youtube_update",
   "mcp__social-flow__sns_comment_reply", "mcp__plugin_social-flow_social-flow__sns_comment_reply",
   "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search",
   "mcp__social-flow__serp_news_search", "mcp__plugin_social-flow_social-flow__serp_news_search", "mcp__social-flow__youtube_topic_scout", "mcp__plugin_social-flow_social-flow__youtube_topic_scout",
@@ -58,7 +59,8 @@ loop. There are two ways to fill it.
 - **The loop fills it** — with plan `autoproduce.enabled: true`, the moment the
   queue runs dry the tick builds an episode itself and stamps the marker (§2.5).
   Topics, subject scope, and the per-episode cost cap are all written in the
-  plan, and only episodes that pass the machine gates enter the queue.
+  plan; an episode the loop finishes building enters the queue with its review
+  findings recorded beside it.
 
 **Hourly is the resting cadence** — slot publishing and comment replies both
 live fine at that resolution, and authoring only happens when the queue is
@@ -78,17 +80,22 @@ and circulating folklore that was rejected sits in its own do-not-cite list.
 
 1. **No publishing without a plan** — if `data/<channel>/growth/youtube/growth-plan.md`
    is missing or its frontmatter isn't `status: approved`, call no publish tool.
-   The plan is the standing authorization — if out-of-scope publishing is needed,
-   ask the user to update the plan.
+   The plan is the standing authorization the publish tools' descriptions refer
+   to (`growth-plan.md` status: approved) — if out-of-scope publishing is
+   needed, ask the user to update the plan.
 2. **No publishing a video without `queue: ready`** — queue eligibility is only
    topics whose storyboard.md frontmatter `status` is `produced` **or**
    `published` with `queue: ready`. produced only means "production finished",
    not "cleared to post" — whether it goes out is decided by the `queue` marker.
    Why `published` counts toward eligibility is in §3 (when another path
    publishes first, the status flips). The marker is stamped by a human or by
-   §2.5's autoproduce. **Autoproduce stamps `ready` only on episodes that passed
-   every machine gate, and `hold` if even one failed** — hold never publishes;
-   a human has to look and flip it. And autoproduce itself runs only when the
+   §2.5's autoproduce. **Autoproduce stamps `ready` on an episode it finished
+   building, with the review findings recorded beside it; `hold` is for a
+   technical delivery failure (the build or its media missing), a cost cap hit
+   or missing authorization** (`skills/autoproduce/references/unattended-lifecycle.md#completion`)
+   — creative scores and style findings never hold an episode. Hold never
+   publishes; a human has to look and flip it. And
+   autoproduce itself runs only when the
    plan turned it on — with `autoproduce.enabled` false or absent, §2.5 is
    skipped whole, and it never authors past the budgets (per-episode, daily,
    weekly).
@@ -103,18 +110,21 @@ and circulating folklore that was rejected sits in its own do-not-cite list.
    falls under the exemption list in the playbook §AI disclosure, and that
    judgment belongs to the user (recorded in the plan).
 5. **No plaintext token exposure** — tokens live only in files under
-   `~/.config/social-flow/<channel-slug>/`. Don't store whole API responses in
-   state.json or growth-log.md (needed fields only).
+   `<SNS_TOKEN_DIR>/<slug>/` (default `~/.config/social-flow/<slug>/`). Don't store
+   whole API responses in state.json or growth-log.md (needed fields only).
 6. **Hard caps** — publishing up to the plan's slot count (max 3/day);
    autoproduce up to `daily_produce_cap` (default 1) and the cost caps — never
-   past **2 episodes/day** for this plan (autoproduce absolute rule 7). Only
+   past **2 episodes/day** for this plan
+   (`skills/autoproduce/references/unattended-lifecycle.md#daily-cap`). Only
    inbox replies are uncapped.
 7. **Every tool call sets `channel: <channel-slug>`** — channel tokens only, no
    default-token fallback (prevents posting to the wrong account).
 8. **Don't edit a video while it's spreading** — while a videoId sits in
    `state.watching`, none of its metadata changes: no `youtube_update` on
    title, description, tags or privacy, no thumbnail re-upload, no caption
-   re-upload. The certain cost is measurement — change the title mid-window and
+   re-upload. The freeze starts with the flip to public — the `youtube_update`
+   that ends §3's private upload is the last publish step, not an edit. The
+   certain cost is measurement — change the title mid-window and
    the later samples belong to a different video than the earlier ones, so the
    candidate rule compares two things. Whether an edit also resets the promotion
    itself is creator lore nobody has verified; that it can't be ruled out is
@@ -226,9 +236,10 @@ The template and state schema are in `references/growth-plan-template.md`.
    `queue: ready` publicly in their slots with no per-publish approval, and
    replies to incoming comments on its own. Stop by stopping /loop; change scope
    by editing the plan."* If autoproduce is on, add one line: *"When the queue
-   runs dry, the loop picks a topic and builds a video itself, and if it passes
-   machine verification it publishes before a human sees it. It stays within
-   N episodes/day and $X per episode."* If a push target was named, add one
+   runs dry, the loop picks a topic, builds a video itself and publishes it
+   before a human sees it; review findings are recorded with the episode, not
+   a precondition. It stays within N episodes/day and $X per episode."* If a
+   push target was named, add one
    more: *"When a fresh video's view count runs ahead of this channel's own
    recent episodes, the loop writes it down as a breakout candidate, and the
    <platform> loop publishes one post pointing at it with no per-post
@@ -255,10 +266,12 @@ judged by the time of our last reply within the thread, so a new comment that
 arrived **after** our reply stays unanswered and gets picked up correctly. Pass
 a nested-comment id and the tool re-targets the thread root.
 
-**Both gates run before the reply goes out** — the machine style check
-(`check-style.py --surface reply`) and then the growth-post-reviewer agent, batched once
-per tick. Use concrete copy findings to revise within the existing reply authorization; a
-reply that hasn't cleared in 3 rounds is skipped and logged. The contract, the exact
+**Two reads help before the reply goes out** — the style check
+(`check-style.py --surface reply`) and the growth-post-reviewer agent, batched once
+per tick. Use concrete copy findings to revise within the existing reply authorization.
+A reply stays unsent only for an unresolved factual or context problem or missing
+authorization; a creative shortfall is revised, not a reason to skip, and there is no
+round count. Log the reason whenever a reply is not sent. The context to read, the exact
 command, and what to attach per platform: [reply-gate.md](../platform-guide/references/reply-gate.md).
 
 YouTube's row in that table: attach the original comment and **the title and description
@@ -377,19 +390,21 @@ only):
    `weekly_cap`
 3. Today's authoring count **for this plan** (success and failure included,
    autoproduce.json `counts.<platform>`) below **min(`daily_produce_cap`, 2)** —
-   2 is the per-platform hard cap (autoproduce absolute rule 7). Other platform
-   loops' authoring doesn't count here
+   2 is the per-platform daily cap (`skills/autoproduce/references/unattended-lifecycle.md#daily-cap`).
+   Other platform loops' authoring doesn't count here
 4. The channel lock (`data/<channel>/growth/.autoproduce.lock`) can be taken —
    if not, the other platform's loop is authoring, so just move on
 
 On pass, Read `${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/SKILL.md` and **follow
 the unattended-mode procedure as written** — the invocation is
-`autoproduce <channel> unattended youtube` (no topic: the plan's `topic_source` decides). Pass the metric read in §2
-(`averageViewPercentage`) as the tier-judgment input — the judgment is a trend
-(if the last 3 episodes' average worsened 5%p or more against the previous 3,
-promote the opening b-roll after the cover to veo-lite — the cover's text never
-escalates, cost-tiers §The economy tier). Under 6 published episodes, no promotion
-(source of truth: autoproduce `references/cost-tiers.md`).
+`autoproduce <channel> unattended youtube` (no topic: the plan's `topic_source` decides). Engines follow the saved
+directory model settings in `.social-flow/models.json` (`skills/_shared/model-settings.md`);
+no metric trend promotes a cut to another engine, and `cost-tiers.md` prices the
+grades rather than choosing them. The budget rule is the cap check
+(`skills/autoproduce/references/unattended-lifecycle.md#cap-check`): over the cap,
+the plan shrinks under the same saved models. Pass the §2 metric
+(`averageViewPercentage`) along as an observation for the human's planning, not
+as an engine switch.
 
 **On authoring success, stamp every platform queue in the plan's
 `autoproduce.mark_queues`.** One 9:16 master goes out to both platforms — build
@@ -402,14 +417,18 @@ Authoring takes minutes (longer with Veo). A long tick is normal, and once
 authoring finishes it proceeds straight into §3 — **publishing can happen
 within the same tick**.
 
-On failure, it depends on where it fell. Failed at the research gate: drop the
-topic (leave no files) and move to the next candidate, but after two drops give
-up authoring for this tick. Built the video and then failed a quality gate:
-leave it at `queue: hold` and preserve the failed attempt so an intentional retry does not duplicate paid work — repeated
-failure just burns money.
+On failure, it depends on where it fell. When research is insufficient, narrow
+unsupported claims or choose a supported candidate; drop a topic (leave no
+files) only when no claim in it can be supported, and after two such drops give
+up authoring for this tick. Preserve completed work and actual findings:
+creative quality scores alone do not drop the topic or hold its queue. A build
+that did not finish, or finished without usable media, stays at `queue: hold`
+with the failed attempt preserved, so an intentional retry does not duplicate
+paid work — repeated failure just burns money. Actual budget limits and
+publication authorization remain operational boundaries.
 
 **However it ends, record the cost spent so far in `autoproduce.json`.** Count
-without the failures and a channel that keeps failing gates spends the budget
+without the failures and a channel whose builds keep failing spends the budget
 without limit. Today's authoring count also includes successes and failures
 together. Reasons go in growth-log and the report.
 
@@ -427,10 +446,17 @@ video published during a watch takes nothing away from the one being watched.
 Holding slots would also strand them — a slot pushed past the 3-hour rule is
 gone for the day.
 
+**Drain `state.pendingFlip` before scanning the queue.** An entry there is a
+video this loop already uploaded private whose flip to public did not happen
+(step 3 below failed, or the tick ended between upload and flip). Run steps 2–3
+on it and the On-success bookkeeping, and clear the entry; never upload that
+topic again (absolute rule 3). The entry claims the topic, so the queue scan
+below skips any topic named in `state.pendingFlip`.
+
 Queue candidates are the `data/<channel>/episodes/*/storyboard/storyboard.md`
 whose frontmatter `status` is `produced` **or** `published` with `queue: ready`,
-and whose topic isn't in `state.publishedTopics`. If several, the one with the
-oldest `queue_at` (file mtime if absent).
+and whose topic isn't in `state.publishedTopics` or `state.pendingFlip`. If
+several, the one with the oldest `queue_at` (file mtime if absent).
 
 **Not excluding `published` matters.** `status` is a single field with no
 platform dimension; when the same topic is queued on several platforms and
@@ -447,20 +473,40 @@ Pre-publish checks — first, **look for an existing YOUTUBE row in
 publish skill: don't publish, clean up to `queue: done`, and report
 (`state.publishedTopics` holds only what this loop published, so it can't block
 what a human published). Then check that `output/video/video.mp4` (**the clean
-master without subtitles**) and `output/youtube/meta.md` exist, that
+master without subtitles**) and `output/youtube/meta.md` exist, and that
 `output/video/cover.jpg` exists (without it an arbitrary frame becomes the
-thumbnail — report to the user and skip), and that `output/video/subs.srt`
-exists. **No subtitle file, no publish — report it** — subtitles upload
-separately from the video by principle (publish skill rule 8), and fixing a
-video that went out without them means uploading the file later by hand. An
-old build needs a rebuild via `/social-flow:produce`.
+thumbnail — report to the user and skip). No subtitle file is a precondition:
+separate tracks (`captionFilePath` / `captionTracks`) go up only for the
+languages the plan's `caption_tracks` lists — the user's request, empty or
+absent by default — and an SRT on disk is not a request (publish skill,
+2026-10-17). If a requested track fails, the response carries `captionWarning`:
+the upload stands, report the warning, don't republish.
 
-`youtube_publish(channel, videoFilePath, title, caption, thumbnailFilePath, captionFilePath)` —
-`captionFilePath` is the local `output/video/subs.srt` path.
-Don't set `containsSyntheticMedia` (defaults true). If the response carries
-`captionWarning`, **the publish succeeded** — don't republish; put the warning
-in the tick report (the most common cause is a token missing the
-`youtube.force-ssl` scope). On success:
+**Upload private, confirm, then flip** — the same sequence the publish skill
+runs, here under the approved growth plan instead of a per-video approval (the
+tool descriptions' standing-growth-plan clause):
+
+1. `youtube_publish(channel, videoFilePath, title, caption, thumbnailFilePath,
+   privacyStatus: "private")` — the server uploads private by default and
+   refuses a `public` request. Don't set `containsSyntheticMedia` (defaults
+   true). The response carries the `videoId`. **Write
+   `{ videoId, topic, uploadedAt }` into `state.pendingFlip` and save state
+   right away** — from this moment the video exists on YouTube, and this entry
+   is what keeps a later tick from uploading the topic a second time.
+2. Confirm the thumbnail and the metadata: no `thumbnailWarning` in the
+   response, and the title and description as sent match
+   `output/youtube/meta.md`. A `thumbnailWarning` means the cover was rejected
+   (usually a channel without phone verification) — the upload stands; report
+   the warning and still flip, because leaving the video stranded private does
+   not improve on publishing it with the warning reported. The Shorts vertical
+   frame (below) is set while the video is still private when ego lite is
+   available.
+3. `youtube_update(channel, videoId, privacyStatus: "public")` — the flip is the
+   publish moment; `publishedAt` for the watch is taken here, and the
+   `state.pendingFlip` entry is cleared. From this point the video's metadata is
+   frozen (absolute rule 8).
+
+On success:
 
 - Update storyboard.md frontmatter to `status: published`, `queue: done`
 - Record the permalink in `output/publish-log.md` (same format as the publish
@@ -473,16 +519,17 @@ in the tick report (the most common cause is a token missing the
 - **Set the Shorts vertical-surface frame** — `thumbnailFilePath` changes only
   the landscape surface; the vertical frame in the Shorts feed and the
   channel's Shorts tab is set in web Studio ("Select from video", driven with ego
-  lite — publish skill §Shorts frame), with the YouTube app's frame picker as the
-  fallback (`references/shorts-surface-adb.md`). Confirm the shorts-tab tile once
-  the video is public. If the browser needs a login the tick can't do, **don't
-  halt the loop** — write the videoId and the hold reason into growth-log and the
-  tick report for a human (the frame picker is unstable for ~5 minutes after
-  upload, so deferring to the next tick is fine).
+  lite — the only browser lane; publish skill §Shorts frame). The emulator route
+  in `skills/publish/references/shorts-surface-adb.md` covers a missing picker or
+  a cover absent from the candidates. Confirm the shorts-tab tile once the video
+  is public. If ego lite is missing or the browser needs a login the tick can't
+  do, **don't halt the loop and don't hold the flip** — write the videoId and the
+  reason into growth-log and the tick report for a human (the frame picker is
+  unstable for ~5 minutes after upload, so deferring to the next tick is fine).
 - **Open the velocity watch** — append
   `{ videoId, topic, publishedAt, samples: [], verdict: null }` to
-  `state.watching`, `publishedAt` off our own clock (`youtube_publish` returns
-  the videoId and the permalink but no publish time). Take t0 here rather than
+  `state.watching`, `publishedAt` off our own clock at the moment of the flip
+  to public (`youtube_update` returns no publish time). Take t0 here rather than
   at the next tick, with one extra
   `youtube_insights(channel, days: 7, videoLimit: 3)` — §2's response was
   fetched before this upload existed, so the video isn't in it. If the upload
@@ -494,10 +541,12 @@ in the tick report (the most common cause is a token missing the
   to finish. Put in the report that the watch wants a shorter `/loop` interval
   for as long as the window is open.
 
-On failure, don't record filledSlots and **don't retry within this tick**
-either (the next tick retries the same slot). Write the failure reason in
-growth-log. A `thumbnailWarning` means the publish succeeded, so don't
-re-upload — report the warning only.
+On an upload failure, don't record filledSlots and **don't retry within this
+tick** either (the next tick retries the same slot). Write the failure reason in
+growth-log. If the upload succeeded and only the flip failed, the video is
+private with its `videoId` known: leave the `state.pendingFlip` entry in place,
+write the reason in growth-log, and let the next tick drain it (the paragraph at
+the top of this section) — never re-upload (absolute rule 3).
 
 ### 4. Save and report
 

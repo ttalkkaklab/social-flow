@@ -7,7 +7,6 @@ For new work, return to the corresponding SKILL.md and character-scenarios.md.
 
 ## Contents
 
-- Version dispatch
 - Picking the mode
 - Scenario mode
 - Inputs (supplied by the delegation prompt)
@@ -62,18 +61,7 @@ When in doubt, say so in the finding rather than staying quiet. A directive that
 uncertainty ("this reads as a stock phrase to me — check it against the profile's voice")
 costs the author a second of thought; a defect you swallowed costs the episode.
 
-## Version dispatch
-
-For scenario-v2 or story-v2, use the character-led contract above instead of the legacy P0
-list and scoring axes below. Scenario mode reads the three candidates' observable events,
-then compares cast motivation, intended experience and type-specific evidence. Narration mode
-is the existing wire name for the whole-performance read: first read actions and attributed
-speech without intent, write what happened and what changed, then compare STORY and sources.
-Return five quoted judgments (meaning, progression, payoff, grounding, character) and the same
-STORYBOARD_REVIEW tail. Vocabulary mode reads only spoken lines with character context; no
-speech is not applicable. Do not penalize an unspoken theme, silent ending, absent twist,
-shared primary engine or fictional event without a research citation. Require sources for
-claims presented as real; assess invented events against world rules and motivation.
+A scenario-v2 or story-v2 review uses [agents/storyboard-reviewer.md](../../../agents/storyboard-reviewer.md), not the modes below.
 
 ## Picking the mode
 

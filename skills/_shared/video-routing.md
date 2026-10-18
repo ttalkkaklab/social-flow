@@ -50,9 +50,13 @@ Quality scores, storytelling choices and review stamps are not execution gates.
 
 ## Spending authorization and receipts
 
-Reuse the existing `PRODUCTION.approval` quote fingerprint, `videoBudgetUsd` and
-`maxAttempts`. For an explicit spending instruction not represented by that legacy
-quote, record its reference and limits without manufacturing approval:
+`PRODUCTION.videoAuthorization.maxUsd` is the one ceiling routing enforces; when it is
+absent, routing falls back to the legacy quote — `PRODUCTION.approval` (its
+`quoteFingerprint` must still match the board), `videoBudgetUsd` and `maxAttempts`.
+The channel's `video_budget_usd` and the project's `production.episodeBudgetUsd` are
+planning ceilings routing never reads; the author carries the applicable one into
+`maxUsd`. For an explicit spending instruction not represented by the legacy quote,
+record its reference and limits without manufacturing approval:
 
 ```js
 window.PRODUCTION.videoAuthorization = {
@@ -74,6 +78,10 @@ A stable `requestId` identifies one logical attempt. Completed requests return t
 cached result. Pending or ambiguous requests never submit again. Managed ASTRA audio requests bind
 `maxAttempts: 1`; explicit multi-generation adapter retries are rejected. Use the
 episode attempt limit for separately tracked attempts after a terminal result.
+The one documented exception to the plan route is the ASTRA audio-conditioned shot
+(`skills/produce/references/render-astra-shot.js`, owner directive 2026-10-17): it submits
+through the ASTRA runtime with the composed speech WAV and records a provisional candidate;
+its reseed count is that script's own setting, and each reseed is a separately recorded request.
 If an adapter unexpectedly submits multiple jobs, every reported provider ID is
 retained and the request remains ambiguous even if the adapter returns an earlier clip. `video_status`
 reads the original provider ID, reserved cost, tokens and result without network I/O.

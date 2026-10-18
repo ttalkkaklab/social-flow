@@ -4,7 +4,8 @@
 
 
 The beat skeleton (`scenes-schema.md` §playback order) says **where** scenes go. Short-form
-is three beats, always: hook → drip (1–n) → cta. Long-form still walks two arcs. This file
+commonly runs hook → drip (1–n) → cta — a common shape, not a requirement; a narrative ending
+may be a drip and a spoken ask is optional. Long-form still walks two arcs. This file
 says **how scenes push each other** — the craft layer classic screenwriting settled long
 before short-form existed, cut down to what a 4–70-shot storyboard can actually use. On a
 short the "body" in the rules below is the drip shots. The
@@ -118,8 +119,8 @@ recontextualize earlier scenes without contradicting them. Craft canon.
 - **On `arc:"story"`**: the turn's clue sits in the setup or an early build shot. A turn
   with no plant reads as a cheat; a plant with no payoff is an unpaid promise — the same
   debt the §six hook forms rule tracks for the main hook, extended to every deliberate
-  plant. Write the plant → payoff pair into `SB_DOC.craft.loops` (`kind: "plant"`, storyboard
-  SKILL §6) — storyboard.html draws the ledger and tags both shots, so the reviewer and the
+  plant. Write the plant → payoff pair into `SB_DOC.craft.loops` (`kind: "plant"`,
+  legacy-authoring.md §6) — storyboard.html draws the ledger and tags both shots, so the reviewer and the
   user can check it at §7.
 - One red herring is legitimate tension (it makes the viewer commit to a wrong read);
   stacked red herrings burn trust.
@@ -189,12 +190,13 @@ curiosity — the hook has to sit close enough that the answer feels reachable. 
   (어쩌다 여기까지 왔지?). On a story arc, when the cover's first frame can carry the
   incongruity, let the picture open the loop and keep segment ① for the promise; a narration
   line that explains what's odd about the frame spends the gap. Lecture reading, field practice.
-- **Bookkeeping**: a short informational episode carries **one governing loop only** (the
+- **Bookkeeping** (guidance, not a count the checker holds): a short informational episode
+  usually carries **one governing loop** (the
   `hookForm`). A question paid in the same shot or by the next seam is welcome, but it never
   becomes another branch the viewer has to remember. A short narrative may carry one
-  cross-scene sub-loop because a person or event can hold that promise. Long-form carries
-  2–4. Every loop names, at open time, the scene that pays it —
-  put the pairs into `SB_DOC.craft.loops` (storyboard SKILL §6 — the document draws them and
+  cross-scene sub-loop because a person or event can hold that promise. Long-form tends to
+  carry 2–4. Every loop names, at open time, the scene that pays it —
+  put the pairs into `SB_DOC.craft.loops` (legacy-authoring.md §6 — the document draws them and
   the §7 screen reads them). An unclosed loop is the
   "stopped, then left" penalty plus trust damage on the next episode (§six hook forms holds this for the main
   hook; this extends it to every loop opened mid-episode).
@@ -422,8 +424,8 @@ broke. Telling it in that order is the named anti-pattern of informational long-
 **chronological trap**): the strongest moment sits minutes deep behind context nobody asked
 for yet, and the seams read "and then", which §1 already bans one cut at a time. This rule
 bans it at the storyline level: lay the episode out as an **investigation of one question**,
-and let the storyboard skill's §2.5 HITL settle which investigation shape 전개 #1 rides
-inside, before any scene exists (the seven-item skeleton around it is fixed at §2.2). Survey with graded sources:
+and settle which investigation shape 전개 #1 rides inside before any scene exists — in the
+scenario itself on story-v2 (no approval step), at the §2.5 question on legacy story-v1 boards. Survey with graded sources:
 [docs/research/2026-08-29-longform-storyline](../../../docs/research/2026-08-29-longform-storyline/).
 Our own retention report (2026-08-26, n=4) points the same way — the mystery-shaped subject
 held a flat curve and finished first.
@@ -441,7 +443,8 @@ Four rules hold whatever shape gets picked:
   on the cover and the drips owe the reason, the cost and the limit instead. Holding is the
   default and keeps a reveal to finish on; open on the result when the result itself is the
   surprise and the reason is worth the rest of the runtime.
-- **The promise sentence.** Inside the opening the viewer hears, in one sentence, what they
+- **The promise sentence** (informational episodes; optional for drama and visual comedy,
+  where the promise may be enacted). Inside the opening the viewer hears, in one sentence, what they
   will know or be able to do by the end. Curiosity alone underdelivers for informational
   content — the promise is the title and thumbnail's claim said out loud, and the episode is
   then judged on keeping it. Continuity applies to the stimulus, not to the outcome — playbook
@@ -529,22 +532,22 @@ stayed at one level, an end that summarized.
   result. A callback can make the opening mean something different on replay. Default to
   no CTA; if a relevant question or action helps, place it after the payoff. Do not require
   two closing lines or a memory poll. Subscribe and like asks stay banned.
-  An ask stays optional; a forwardable thing does not — an ask requests behaviour from the viewer,
-  while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking to be
-  shared is an ask, not a trigger.
+  An ask stays optional, and so does naming a forwardable thing in `shot.share` — an ask requests
+  behaviour from the viewer, while a forwardable thing is one sentence, figure or verdict they can
+  pass on as-is; when the episode has one, write it plainly. Asking to be shared is an ask, not a trigger.
 - **Write the hook and the last line first.** 윤수영 (first-generation short-form writer):
   two or three lines of hook and ending, then everything in between — and what makes a scene
   land is 의외성, not description (field practice). The v4→v5 rewrite was exactly this: the
   loss line and the callback line were written before any body scene was touched, and the
-  body then only had to descend between them. **The place for those lines is the scenario
-  page the user approves at the storyboard skill's §2.2** (since 2026-09-02; §2.5 only
-  confirms it) — before a shot exists, because §4 is where a sentence can first be written
+  body then only had to descend between them. **The place for those lines is the scenario**
+  (the `scenario-v2` candidate on new work, with no approval step; the §2.2 page on legacy
+  story-v1 boards) — before a shot exists, because §4 is where a sentence can first be written
   down, and §4 asks for forty-odd values a shot at once (ep07's nine shots carry 449 between
   them), so a rule about writing order can't live there. The 훅's first spoken sentence, the
   마무리 resolution and any chosen CTA are items on that page, and the sign of the feel
-  curve sits on every item's header. Those approved lines go across verbatim; everything else
+  curve sits on every item's header. Those settled lines go across verbatim; everything else
   §4's story pass rewrites into the board in its own words, and §7 is where the sentences
-  are read. What the user agrees to at §2.2 is the shape — this stake, this callback, this
+  are read. What the scenario settles is the shape — this stake, this callback, this
   curve — while scenes are free. Unattended runs copy the same three lines into the
   `scenes.js` header comment; there is no gate to mirror.
 
@@ -556,11 +559,12 @@ stayed at one level, an end that summarized.
   pass and then a machine pass: the story layer already comes apart from the layer that costs
   money, and authoring them in one breath is what makes a story fix feel expensive.
 
-Checks the pass runs (§10's spirit):
+Prompts the pass reads itself against (§10's spirit; review prompts, not stops):
 
 - The feel chart in storyboard.md carries a sign per shot; the minimum precedes `craft.burst`,
   the maximum sits on the turn or the result.
-- The cover's first spoken sentence names a loss or a stake before it names a question.
+- On informational episodes the cover's first spoken sentence names a loss or a stake before it
+  names a question; drama and visual comedy may open on action instead.
 - The 마무리 pays the promise with specific content and names the one thing a viewer would
   forward. CTA is optional and follows the answer. No line in the episode contains a
   subscribe or like ask, and the forwardable line is never an ask to send it on.
@@ -597,7 +601,8 @@ short-form). Survey with sources:
   then let the rest of the board be what connects them. A board where every shot got equal
   design attention has no peak, which §7 needs exactly one of — and the way that failure reads
   from inside is that you cannot say which shot is the one.
-- **List at least five ways the moment could go, then pick.** Her definition of character is
+- **List several ways the moment could go, then pick** — as many as the decision needs; five is
+  her habit, not a quota. Her definition of character is
   procedural — "사건에 부딪혔을 때, 사건을 해결해 나가는 방식" — so the work at a named moment is
   enumeration, not invention. Write down five things that could happen there before writing the
   `shot.info`/`narration` pair. The first one to arrive is the one the viewer also thought of;
@@ -671,8 +676,8 @@ declaration. The first sentence is a scene already under way — no name, no yea
 (§11's cold open with the date removed). The body is 원인 → 막힘 → 한 방, one person and one
 stroke (§9's double hit on the payoff shot, `sound.drop` on it — §7). The close is one
 picture after the blow, and when the record is disputed the last line shows the dispute
-instead of picking a side. The screen changes with every sentence, and the subtitle colours
-only the year and the name. `STORY.person` declares it and `check-story.js` holds the shape:
+instead of picking a side. The screen changes with every sentence; the master stays clean, with
+no burned subtitles (2026-10-17). `STORY.person` declares it and `check-story.js` holds the shape:
 [person-short.md](person-short.md). Field practice — observed on top episodes, no
 retention measurement behind it.
 

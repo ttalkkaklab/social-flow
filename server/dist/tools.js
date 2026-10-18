@@ -372,7 +372,7 @@ const MUSIC_DURATION_PROPERTY = {
     default: 30,
 };
 /** Shared tail for the per-platform publish tools — final-copy contract + post-publish report */
-const SNS_HITL_LINE = 'Captions and titles are posted verbatim, with no rewriting — pass the final copy, hashtags included. After publishing, report the permalink from the response to the user.';
+const SNS_HITL_LINE = 'Captions and titles are posted verbatim, with no rewriting — pass the final copy, hashtags included. Publishing needs the user\'s authorization for this post, or an approved standing growth plan (growth-plan.md status: approved) that covers it. After publishing, report the permalink from the response to the user.';
 /**
  * Shared channel (brand) selector property — names the <SNS_TOKEN_DIR>/<slug>/
  * token directory paired with the data/<slug>/ channel.
@@ -1296,7 +1296,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend — use bl
         name: 'stock_search',
         title: 'Free stock search (Pexels · Pixabay · NASA · Commons)',
         annotations: HINT.read,
-        description: 'Free, commercially usable photos and clips for a cut that needs the real thing — an actual place, era, event or live action — at zero generation cost. Searches Pexels and Pixabay (PEXELS_API_KEY / PIXABAY_API_KEY; a missing key skips that provider with a note), the NASA Image and Video Library and Wikimedia Commons (no key). Every item returns a ready `visual.license` block (provider, page url, license name and url, commercial/modify flags, attribution text, retrievedAt) — store it verbatim on the `visual.source: "stock"` cut; check-scenes.js refuses a stock cut without it. Commons results are filtered to public domain, CC0 and plain CC BY (share-alike, non-commercial and no-derivatives files are dropped and counted) because an edited, monetized cut cannot carry those terms. This tool does not download: fetch `files[0].url` with curl into storyboard/footage/ (video, as footage/s<n>-<provider>-<id>.mp4) or storyboard/images/stock/ (photo); Commons video is WebM and needs an ffmpeg transcode. People, logos and brands in frame stay a separate rights question on every provider; NASA insignia and identifiable current astronauts are excluded from commercial use. English keywords work best on Pexels, Pixabay and NASA. Read-only; Pexels allows 200 requests/hour, Pixabay 100/minute.',
+        description: 'Free, commercially usable photos and clips for a cut that needs the real thing — an actual place, era, event or live action — at zero generation cost. Searches Pexels and Pixabay (PEXELS_API_KEY / PIXABAY_API_KEY; a missing key skips that provider with a note), the NASA Image and Video Library and Wikimedia Commons (no key). Every item returns a ready `visual.license` block (provider, page url, license name and url, commercial/modify flags, attribution text, retrievedAt) — store it verbatim on the `visual.source: "stock"` cut; check-scenes.js warns when the license record is missing. Commons results are filtered to public domain, CC0 and plain CC BY (share-alike, non-commercial and no-derivatives files are dropped and counted) because an edited, monetized cut cannot carry those terms. This tool does not download: fetch `files[0].url` with curl into storyboard/footage/ (video, as footage/s<n>-<provider>-<id>.mp4) or storyboard/images/stock/ (photo); Commons video is WebM and needs an ffmpeg transcode. People, logos and brands in frame stay a separate rights question on every provider; NASA insignia and identifiable current astronauts are excluded from commercial use. English keywords work best on Pexels, Pixabay and NASA. Read-only; Pexels allows 200 requests/hour, Pixabay 100/minute.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -1768,7 +1768,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend — use bl
 
 Use when the user asks to create, generate, or make a video, clip, footage, or short ad from a description alone (비디오 생성, 영상 만들어줘). Audio is generated natively: wrap dialogue in double quotes, and describe SFX ("engine roaring") and ambient sound explicitly in the prompt.
 Do NOT use when a source visual exists — use veo_img2video to animate a still image, veo_extension to continue a Veo-generated video, or veo_reference to keep a specific subject consistent from photos.
-Prefer seedance_text2video when you need a length off Veo's 4/6/8-second grid, a ratio other than 16:9 or 9:16, or a much cheaper silent shot; keep Veo when native dialogue audio is the point.
+The Seedance counterpart is seedance_text2video (lengths off the 4/6/8-second grid, 21:9 or 4:3 frames, optional silence); the saved model decides which engine runs.
 Cost lever: the default is now fast ($0.10/s at 720p) because blind-arena Elo shows no measurable quality gap between the tiers; drop to lite ($0.05/s) whenever 4k, extension, and reference images are not needed. Generation is asynchronous and typically takes 1-6 minutes.
 
 Returns: a text block with the saved .mp4 file path, model, aspect ratio, resolution, and duration in seconds. Videos carry an invisible SynthID watermark.`,
@@ -1809,7 +1809,7 @@ Returns: a text block with the saved .mp4 file path, model, aspect ratio, resolu
 
 Use when the user provides an image to bring to life, animate, or add motion to (이미지로 영상 만들기) — e.g. animate a product photo. Provide sourceImagePath as the first frame; optionally add lastImagePath for a smooth transition between two images. The prompt should describe the desired motion.
 Do NOT use for pure text-to-video (use veo_text2video), continuing an existing video (use veo_extension), or subject consistency from reference photos (use veo_reference).
-For a silent b-roll shot from an already-generated background, seedance_img2video bills only the seconds you ask for — a 4-second 1080p shot runs about $0.23 silent against $0.64 on veo-3.1-lite, which must bill 8 seconds at 1080p and cannot turn audio off. Stay on Veo when the clip needs native audio or a later veo_extension.
+The Seedance counterpart is seedance_img2video; the saved model decides which engine runs.
 Person policy, measured 2026-08-15: an adult photoreal face in the source image passes here and holds for the clip, while Seedance 2.x rejects the very same file — so this is the image lane for photoreal people. A face that reads as a MINOR is blocked whether it arrives as a photo or an illustration (Support code 17301594); blocked generations are not billed, so redraw the cut instead of hunting for a way around it.
 For composition control — a subject appearing, vanishing, or changing pose exactly as drawn — pass lastImagePath. Reference images (veo_reference) carry appearance, not layout.
 Generation is asynchronous and typically takes 1-6 minutes.
@@ -1960,7 +1960,7 @@ Returns: a text block with the saved .mp4 file path, reference image list, model
 
 Use when the shot needs a length off Veo's 4/6/8 grid (any whole 3-10 seconds), or when the cut will be edited or extended afterwards — omni_edit and omni_extend continue from the interactionId this returns.
 Do NOT use when a source visual exists — omni_img2video animates a still, omni_extend continues a clip, omni_edit rewrites one.
-COST, measured 2026-09-06: this model bills a FLAT ~$1.01 per call, not per second. A 3-second 360p draft costs the same as a full 10-second 4k render, and more than a whole 8-second veo-3.1-lite shot ($0.40). So never call it for a draft or a short cut — go to veo_text2video or seedance_text2video for those, and come here when you need the full 10 seconds, an off-grid length, or the edit lane. Ask for the seconds you actually want; a shorter clip refunds nothing.
+COST, measured 2026-09-06: this model bills a FLAT ~$1.01 per call, not per second. A 3-second 360p draft costs the same as a full 10-second 4k render. Ask for the seconds you actually want; a shorter clip refunds nothing.
 Audio is always generated and cannot be turned off: wrap dialogue in double quotes and name SFX and ambience in the prompt. There is no negative-prompt field on this model — write exclusions as positive description instead.
 
 Returns: a text block with the saved .mp4 path, the interaction id to continue from, resolution, aspect ratio, and duration.`,
@@ -1996,9 +1996,9 @@ Returns: a text block with the saved .mp4 path, the interaction id to continue f
         annotations: HINT.generate,
         description: `Animate a still image, or interpolate between two images, using Gemini Omni 1.1 Flash.
 
-Use when a generated background or photo has to move and the cut wants an off-grid length, or will be edited afterwards. Pass sourceImagePath as the first frame; add lastImagePath and the model renders the transition between the two. Billing is a flat ~$1.01 per call regardless of length or resolution, so a short cut is cheaper on veo_img2video or seedance_img2video.
+Use when a generated background or photo has to move and the cut wants an off-grid length, or will be edited afterwards. Pass sourceImagePath as the first frame; add lastImagePath and the model renders the transition between the two. Billing is a flat ~$1.01 per call regardless of length or resolution.
 Do NOT use for pure text-to-video (omni_text2video) or for continuing an existing clip (omni_extend).
-veo_img2video remains the lane for a photoreal adult face, whose policy is measured there; Omni's person policy is unmeasured, so route people to Veo until it is. For silent b-roll at a length you pick, seedance_img2video is cheaper still.
+veo_img2video remains the lane for a photoreal adult face, whose policy is measured there; Omni's person policy is unmeasured, so route people to Veo until it is.
 Composition control lives here — a subject appearing, vanishing, or ending in an exact pose — because both frames are yours.
 
 Returns: a text block with the saved .mp4 path, the interaction id to continue from, the source frames, resolution, aspect ratio, and duration.`,
@@ -2094,7 +2094,7 @@ Returns: a text block with the saved .mp4 path, the new interaction id, the sour
 
 Use when a generated cut is right in movement and framing but wrong in content — swap an object, change a colour, drop something from the frame — instead of re-rolling the whole shot and losing the camera move. State the change plainly ("change the persimmon to a green apple, keep the camera move identical"). Source is exactly one of previousInteractionId (an earlier omni_* call) or sourceVideoPath (a local mp4 of at most 10 seconds).
 Do NOT use to make a clip longer — that is omni_extend. Veo has no instruction-edit lane at all, so a Veo clip that needs one comes here by file path.
-The output runs the same length as the input (measured 3.008s in, 3.008s out); aspect ratio is inherited and not settable. Each edit is a fresh generation billed at the flat ~$1.01, not a cheap patch — two edits cost more than re-rolling the shot on Veo.
+The output runs the same length as the input (measured 3.008s in, 3.008s out); aspect ratio is inherited and not settable. Each edit is a fresh generation billed at the flat ~$1.01, not a cheap patch.
 
 Returns: a text block with the saved .mp4 path, the new interaction id, and the source.`,
         inputSchema: {
@@ -2140,7 +2140,7 @@ Returns: a text block with the saved .mp4 path, the new interaction id, and the 
         description: `Generate a video from a text prompt on the self-hosted ASTRA video API (LTX-2.5).
 
 Use when the shot is not time-critical and you would rather not spend vendor money: this server is ours, so a call costs wall clock instead of dollars, and no vendor content policy applies. It is also the only lane with an adapter (lora) for cinemagraph and slow-motion looks.
-Do NOT use when someone is waiting: the box renders ONE job at a time and yours queues behind whatever else is running. A measured 121-frame 1536x1024 render takes about 66s (tier "default"), 169s ("guided"), 121s ("fast") — plus the queue. For an immediate clip go to veo_text2video or seedance_text2video.
+Do NOT use when someone is waiting: the box renders ONE job at a time and yours queues behind whatever else is running. A measured 121-frame 1536x1024 render takes about 66s (tier "default"), 169s ("guided"), 121s ("fast") — plus the queue.
 tier picks the pipeline and also which arguments exist: lora only on "default", negativePrompt, numInferenceSteps and guidance only on "guided"/"fast"/"hq". "hq" is the two-stage high-quality pipeline (quality unmeasured). "fast" means a draft that is faster than "guided"; it is not faster than the default pipeline. Passing one to the wrong tier is refused before the call.
 Length is frames, not seconds: numFrames must be 8k+1, minimum 25. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} 121 = about 5.0s at 24fps, the server default. Give autoDuration instead to let the server choose at most 121 frames; the rounded range must contain an 8k+1 value. numFrames and autoDuration are mutually exclusive.
 ${ASTRA_LIMITS_LINE}
@@ -2187,7 +2187,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         description: `Animate a still, or interpolate between a first and a last still, on the self-hosted ASTRA video API.
 
 Use when a generated background or photo has to move and nobody is waiting on it — same trade as astra_text2video: free, ours, one job at a time. Give firstFramePath alone to animate from that frame, or add lastFramePath and the clip lands on it. The tool uploads the files itself; pass local paths, not ids.
-Do NOT use for more than two stills — that is astra_keyframe_video, which pins each image to a frame index. For an immediate clip use veo_img2video or seedance_img2video.
+Do NOT use for more than two stills — that is astra_keyframe_video, which pins each image to a frame index.
 tier accepts default (generate), guided, or hq (guided_hq — quality unmeasured). guided and hq images use the 64-pixel grid and pixel ceiling (omitted dimensions default to 1536x1024); fast images are not enabled. lora is default-only; negativePrompt and numInferenceSteps are guided-only, and with guidance also hq. Passing one to the wrong tier is refused before the call.
 The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. autoDuration lets the server choose at most 121 frames from a first still alone; it is refused with lastFramePath or numFrames. png, jpg and jpeg are accepted, up to 32 MiB each.
 Warning: image-conditioned generate (width 1280, measured at heights 704/768) failure frames: {121,129,137}; guided (width 1280, measured at height 704) failure frames: {121}. Guided 129/137 succeeded at 1280x704 in server probes (the only guided size probed). Guided and hq sizes follow the server grid and pixel ceiling; unmeasured sizes are not quality guarantees. Within current client limits use generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at 121 frames also succeeded. Text-only 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause. The server owns the failure-band acceptance gate; this warning adds no client-side block.
@@ -2511,7 +2511,7 @@ Returns: the server's JSON report verbatim. No arguments.`,
         annotations: HINT.generate,
         description: `Generate a video from a text prompt using ByteDance Seedance (BytePlus ModelArk).
 
-Use when you need a clip that Veo's fixed 4/6/8-second grid cannot express — an odd length (2-30 seconds, any whole second), a 21:9 or 4:3 frame, or simply the cheapest possible shot: a silent 9:16 1080p 5-second clip costs about $0.24 on seedance-1-0-pro-fast, against $0.64 on veo-3.1-lite and $0.96 on veo-3.1-fast (Veo forces an 8-second bill at 1080p and always includes audio). Korean prompts are understood only by dreamina-seedance-2-5; every other model expects English.
+Use when you need a clip that Veo's fixed 4/6/8-second grid cannot express — an odd length (2-30 seconds, any whole second), a 21:9 or 4:3 frame, or a silent shot billed for the requested duration. Korean prompts are understood only by dreamina-seedance-2-5; every other model expects English.
 Do NOT use when you need Veo's native dialogue audio quality or its +7s extension of an existing clip — veo_text2video and veo_extension keep those. When a source visual already exists use seedance_img2video, and for subject consistency from photos use seedance_reference.
 Model choice drives both price and limits; read the model parameter before overriding the default. Generation is asynchronous and typically takes 1-6 minutes.
 
@@ -3286,11 +3286,11 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
         description: "Legacy alias of host_review prepare for the assembled episode audio (mediaPath of the final media, the full expectedText, optional segments): returns local evidence for the host LLM to listen to end to end. Use only when the user asks for a final listening review and an existing plan already calls tts_review_final; new reviews use host_review. Returns status=not_reviewed, score=null, mediaPath, SHA256, duration in seconds, rubric, nextAction and the segments as sent. It does not judge, upload or call an external evaluator, and assembly never waits on it. Do NOT use for synthesis.",
         inputSchema: { type: 'object', additionalProperties: false, properties: {
                 mediaPath: { type: 'string', description: 'Absolute path of the final media that ships.' },
-                segments: { type: 'array', minItems: 1, maxItems: 1000, description: 'Required when the final FLAC exceeds 14 MiB. Complete spoken sentences in playback order on the final timeline. First starts at 0; each extends to the next start (last to audio EOF), at most 60 seconds each. Joined text must equal expectedText. The tool groups them into bounded chapters and reviews every chapter boundary.', items: { type: 'object', additionalProperties: false, required: ['startSeconds', 'expectedText'], properties: { startSeconds: { type: 'number', minimum: 0, description: 'Start of this complete sentence on the final audio timeline; the first is 0.' }, expectedText: { type: 'string', minLength: 1, maxLength: 1000, description: 'Complete spoken sentence, including intended phonetic number/name spelling.' } } } },
+                segments: { type: 'array', minItems: 1, maxItems: 1000, description: 'Optional: complete spoken sentences in playback order on the final timeline. First starts at 0; each extends to the next start (last to audio EOF), at most 60 seconds each. Joined text must equal expectedText. Returned with the evidence so the host review can check chapter boundaries of a long episode.', items: { type: 'object', additionalProperties: false, required: ['startSeconds', 'expectedText'], properties: { startSeconds: { type: 'number', minimum: 0, description: 'Start of this complete sentence on the final audio timeline; the first is 0.' }, expectedText: { type: 'string', minLength: 1, maxLength: 1000, description: 'Complete spoken sentence, including intended phonetic number/name spelling.' } } } },
                 expectedText: { description: 'Complete spoken text, including speech in clips and the outro.', type: 'string', minLength: 1, maxLength: 12000 },
                 language: { description: 'Spoken language, for example Korean.', type: 'string', minLength: 2, maxLength: 80 },
                 delivery: { description: 'Intended delivery and continuity across the whole episode.', type: 'string', minLength: 1, maxLength: 2000 },
-                transcriptCheck: { type: 'object', additionalProperties: false, required: ['requestedBy', 'reason'], description: 'Present only when the user asked for the blind-transcription (STT) check; omitted, that check does not run and only the listening review judges the take. Carries who asked and their actual words — there is no environment default.', properties: {
+                transcriptCheck: { type: 'object', additionalProperties: false, required: ['requestedBy', 'reason'], description: 'Present only when the user asked for a blind-transcription (STT) check; it is recorded in the evidence brief for the host review. No transcription runs automatically. Carries who asked and their actual words — there is no environment default.', properties: {
                         requestedBy: { type: 'string', minLength: 1, maxLength: 200, description: 'Who asked for the dictation check, e.g. "user".' }, reason: { type: 'string', minLength: 10, maxLength: 1000, description: 'The actual request that turned it on, quoted or referenced.' },
                     } },
             }, required: ['mediaPath', 'expectedText', 'language', 'delivery'] },
@@ -3310,9 +3310,9 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
     },
     {
         name: 'tts_generate_checked',
-        title: 'Generate and review narration',
+        title: 'Generate narration (raw take, not_reviewed)',
         annotations: HINT.generate,
-        description: "Generate one speech take without automatic scoring or retakes. Use for a legacy checked-TTS call; returns generation result, status=not_reviewed and host-review next action. Do NOT use for evaluation alone \u2014 use host_review. Paid synthesis uses the selected generator and existing authorization; no evaluation API is called.",
+        description: "Generate one speech take with provenance and no automatic listening, scoring or retakes. Use for a legacy checked-TTS call; returns the generation result (file, speaker, voice settings, timing), status=not_reviewed and a host-review next action. Do NOT use for evaluation alone \u2014 use host_review. Paid synthesis uses the selected generator and existing authorization; no evaluation API is called.",
         inputSchema: {
             type: 'object', additionalProperties: false,
             properties: {
@@ -3323,18 +3323,18 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
                 delivery: { type: 'string', minLength: 1, maxLength: 2000, description: 'Intended natural delivery from profile §2, including tone and pacing.' },
                 outputPath: { type: 'string', description: 'Episode PCM directory, normally .work/pcm.' },
                 filename: { type: 'string', description: 'Scene WAV basename, e.g. c0.wav.' },
-                maxAttempts: { type: 'integer', minimum: 1, maximum: 3, default: 3, description: 'First generation plus retakes; set within the approved allowance.' },
-                rejectTake: { type: 'object', additionalProperties: false, required: ['audioSha256', 'reason'], description: 'When final listening finds a defect in a previously checked take, reject that exact WAV and use only remaining attempts. Never waives any check.', properties: {
-                        audioSha256: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'SHA-256 of the current checked WAV, as recorded in its quality proof.' }, reason: { type: 'string', minLength: 10, maxLength: 1000, description: 'Actual time, word or sound defect observed during listening.' },
+                maxAttempts: { type: 'integer', minimum: 1, maximum: 3, default: 3, description: 'Legacy allowance (at most 3). The tool generates once; no automatic retake follows.' },
+                rejectTake: { type: 'object', additionalProperties: false, required: ['audioSha256', 'reason'], description: 'Legacy record of an earlier take the user rejected after listening: which WAV and why. It does not trigger a retake; request a new take explicitly.', properties: {
+                        audioSha256: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'SHA-256 of the rejected WAV, as recorded in its provenance file.' }, reason: { type: 'string', minLength: 10, maxLength: 1000, description: 'Actual time, word or sound defect the user observed.' },
                     } },
-                episode: { type: 'object', additionalProperties: false, description: 'Required for ElevenLabs assembly. Ordered complete scene texts, current index and one fixed seed. Derives v4 previousText/nextText, bounded to 100 characters per side. A fixed seed is best effort; listening is not automatic.', properties: {
+                episode: { type: 'object', additionalProperties: false, description: 'Required for ElevenLabs assembly. Ordered complete scene texts, current index and one fixed seed. Derives v4 previousText/nextText, bounded to 100 characters per side. A fixed seed is best effort; nothing listens automatically.', properties: {
                         texts: { description: 'Complete scene texts in playback order.', type: 'array', minItems: 1, maxItems: 80, items: { type: 'string', minLength: 1, maxLength: 4000 } },
                         index: { description: 'Index of this scene in texts, starting at zero.', type: 'integer', minimum: 0 }, seed: { description: 'One seed fixed across the episode and all retakes.', type: 'integer', minimum: 0, maximum: 4294967295 },
                     }, required: ['texts', 'index', 'seed'] },
                 segments: { type: 'array', minItems: 1, maxItems: 80, items: { type: 'string', minLength: 1, maxLength: 1000 }, description: 'The scene\'s narration[].tts sentences in order (joined they read as expectedText). Every single-voice take gets a fixed pause at each segment boundary — the boundary the builder\'s reveals and subtitle cues use. Without it, pauses go after sentence-final punctuation.' },
                 sentencePause: { type: 'number', minimum: 0.25, maximum: 1.5, default: 0.5, description: 'Silence between sentences in the take\'s own timeline, seconds. The builder detects pauses from 0.16s and fits a 0.35s reveal fade inside one.' },
                 playbackSpeed: { type: 'number', minimum: 0.5, maximum: 3, default: 1, description: 'ElevenLabs requires 1: use generation.speed for the requested rate and keep assembly at 1. Other engines require an explicit user request in outputPath/speed-authorization.json for any non-1 factor; this controls subtitle pause sizing.' },
-                transcriptCheck: { type: 'object', additionalProperties: false, required: ['requestedBy', 'reason'], description: 'Present only when the user asked for the blind-transcription (STT) check; omitted, that check does not run and only the listening review judges the take. Carries who asked and their actual words — there is no environment default.', properties: {
+                transcriptCheck: { type: 'object', additionalProperties: false, required: ['requestedBy', 'reason'], description: 'Present only when the user asked for a blind-transcription (STT) check; it is recorded for the host review. No transcription or listening runs automatically. Carries who asked and their actual words — there is no environment default.', properties: {
                         requestedBy: { type: 'string', minLength: 1, maxLength: 200, description: 'Who asked for the dictation check, e.g. "user".' }, reason: { type: 'string', minLength: 10, maxLength: 1000, description: 'The actual request that turned it on, quoted or referenced.' },
                     } },
             },
@@ -4210,30 +4210,30 @@ Returns: integer credit balance.`,
     {
         name: 'threads_draft_create',
         title: 'Create Threads growth draft',
-        description: 'Store a Threads growth draft before review. Returns draftId and bodyHash (SHA-256 of NFC, LF, trimmed body + selfReply). Edits require a new draft and reviews. No public posting.',
+        description: 'Store a Threads growth draft. Returns draftId and bodyHash (SHA-256 of NFC, LF, trimmed body + selfReply); threads_publish checks the posted body against that hash. Changing the text means a new draft. Reviews are optional evidence. No public posting.',
         annotations: HINT.generate,
         inputSchema: { type: 'object', properties: {
                 channel: SNS_CHANNEL_PROPERTY,
-                body: { type: 'string', minLength: 1, description: 'Draft body.' }, selfReply: { type: 'string', minLength: 1, description: 'Optional information self-reply (voice review only).' },
-                surface: { type: 'string', enum: ['post', 'reply'], description: 'post by default; reply requires replyToId and only voice review.' },
+                body: { type: 'string', minLength: 1, description: 'Draft body.' }, selfReply: { type: 'string', minLength: 1, description: 'Optional information self-reply; part of bodyHash.' },
+                surface: { type: 'string', enum: ['post', 'reply'], description: 'post by default; reply requires replyToId (reviews on a reply use the voice axis only).' },
                 replyToId: { type: 'string', description: 'Required reply target for a reply draft; bound to publication.' },
                 readerMessage: { type: 'string', minLength: 1, description: 'One-sentence summary of the post.' },
                 purpose: { type: 'string', enum: ['fun', 'moved', 'info', 'empathy'], description: 'Exactly one intended reader outcome.' },
-                purposeEvidence: { type: 'string', minLength: 1, description: 'Verbatim body excerpt demonstrating the chosen purpose; whitespace-only normalization.' },
-                flow: { type: 'object', description: 'Reader progression: hook, turn, residue.', properties: {
+                purposeEvidence: { type: 'string', minLength: 1, description: 'Optional verbatim body excerpt demonstrating the chosen purpose; when supplied it must appear in the body (whitespace-only normalization).' },
+                flow: { type: 'object', description: 'Optional reader progression: hook, turn, residue.', properties: {
                         hook: { type: 'string', minLength: 1, description: 'Why the opening holds attention.' },
                         turn: { type: 'string', minLength: 1, description: 'What the middle reveals.' },
                         residue: { type: 'string', minLength: 1, description: 'What the reader takes away.' },
                     }, required: ['hook', 'turn', 'residue'] },
-                comicElements: { description: 'Concrete comic elements in the draft.', type: 'array', items: { type: 'string', minLength: 1 }, minItems: 1 },
+                comicElements: { description: 'Optional concrete comic elements in the draft; a supplied list needs at least one entry.', type: 'array', items: { type: 'string', minLength: 1 }, minItems: 1 },
                 submitter: { type: 'string', description: 'Submitting agent identifier (self-reported).' },
                 submitterContext: { type: 'string', description: 'Submitting session/context identifier (self-reported).' },
-            }, required: ['channel', 'body', 'readerMessage', 'comicElements', 'purpose', 'purposeEvidence', 'flow'] },
+            }, required: ['channel', 'body', 'readerMessage', 'purpose'] },
     },
     {
         name: 'threads_review_submit',
         title: 'Submit Threads draft review',
-        description: 'Record a voice/purpose/flow review; score purpose only against the chosen draft purpose (fun, moved, info, empathy), never against another purpose. Bind the review to bodyHash. A required rubric item scoring zero must be submitted as a P0 finding to block publication; the server does not infer semantic failures from scores. Findings quote actual draft text; only whitespace differences are ignored. No LLM/API is called. Identifiers are self-reported: the server cannot distinguish subagents in the same session or enforce reviewer independence.',
+        description: 'Record a voice/purpose/flow review; score purpose only against the chosen draft purpose (fun, moved, info, empathy), never against another purpose. Bind the review to bodyHash. Findings and scores are recorded as evidence bound to bodyHash; they do not block publishing. Findings quote actual draft text; only whitespace differences are ignored. No LLM/API is called. Identifiers are self-reported: the server cannot distinguish subagents in the same session or enforce reviewer independence.',
         annotations: HINT.generate,
         inputSchema: { type: 'object', properties: {
                 draftId: { description: 'Identifier returned by threads_draft_create.', type: 'string' }, bodyHash: { description: 'Exact reviewed draft hash.', type: 'string', pattern: '^[a-f0-9]{64}$' },
@@ -4243,7 +4243,7 @@ Returns: integer credit balance.`,
                 reviewer: { description: 'Self-reported reviewer identifier.', type: 'string', minLength: 1 }, reviewerContext: { description: 'Self-reported session/context identifier.', type: 'string', minLength: 1 },
                 findings: { description: 'Quoted evidence, including at least one pass finding for a clean review.', type: 'array', minItems: 1, items: { type: 'object', properties: {
                             quote: { description: 'Exact draft excerpt; whitespace differences allowed.', type: 'string', minLength: 1 }, issue: { description: 'Observation supported by the quote.', type: 'string', minLength: 1 },
-                            severity: { description: 'pass for positive evidence; P0 blocks publishing.', type: 'string', enum: ['pass', 'P0', 'P1', 'P2'] },
+                            severity: { description: 'pass for positive evidence; P0/P1/P2 grade a defect as evidence for the author.', type: 'string', enum: ['pass', 'P0', 'P1', 'P2'] },
                         }, required: ['quote', 'issue', 'severity'] } },
             }, required: ['draftId', 'bodyHash', 'axis', 'score', 'reasons', 'improvements', 'reviewer', 'reviewerContext', 'findings'] },
     },
@@ -4252,7 +4252,7 @@ Returns: integer credit balance.`,
         title: '⚠️ Threads publish (immediately public)',
         annotations: HINT.publish,
         outputSchema: publishOutput('postId', 'Threads post id — pass as replyToId to chain a follow-up reply'),
-        description: `⚠️ Direct Threads publishing — posts to the Threads API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). Exactly one of draftId (growth: hash-bound reviews, configured gate.json thresholds and style check) or episodeRef (existing episode and matching approval record) is required. dryRun checks without API calls. Call only right after the user has checked and approved the final copy and media (HITL — never call without approval). A post carries one of four shapes: a video (videoUrl), a single image (imageUrl), a link preview card (linkUrl), or text alone. The three media fields are mutually exclusive — one media_type per post. **Video episodes put the video on the post itself via videoUrl**, so it plays inline in the timeline with nothing to click away to; do not attach the video as a reply or fall back to a bare link (user directive 2026-08-19). Carousels are not supported by this tool. Publish quota: 250 per 24 hours. ${SNS_HITL_LINE}`,
+        description: `⚠️ Direct Threads publishing — posts to the Threads API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). Exactly one of draftId (growth: the published body must match the draft's bodyHash, channel and reply target; check-style.py findings come back as warnings) or episodeRef (existing episode and matching approval record) is required. dryRun checks without API calls. Call only right after the user has checked and approved the final copy and media (HITL — never call without the user's approval or an approved standing growth plan). A post carries one of four shapes: a video (videoUrl), a single image (imageUrl), a link preview card (linkUrl), or text alone. The three media fields are mutually exclusive — one media_type per post. **Video episodes put the video on the post itself via videoUrl**, so it plays inline in the timeline with nothing to click away to; do not attach the video as a reply or fall back to a bare link (user directive 2026-08-19). Carousels are not supported by this tool. Publish quota: 250 per 24 hours. ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -4273,10 +4273,10 @@ Returns: integer credit balance.`,
                 },
                 replyToId: { type: 'string', description: 'Publish as a reply to this post id (own reply chain, or joining someone else\'s post)' },
                 channel: SNS_CHANNEL_PROPERTY,
-                draftId: { type: 'string', description: 'Reviewed growth draft identifier; exclusive with episodeRef.' },
+                draftId: { type: 'string', description: 'Growth draft identifier from threads_draft_create; exclusive with episodeRef.' },
                 episodeRef: { type: 'string', description: 'Episode topic slug under data/<channel>/episodes; requires matching threads-publish-approval.json.' },
-                selfReply: { type: 'string', description: 'Optional reviewed self-reply; posted after the root succeeds.' },
-                dryRun: { type: 'boolean', description: 'Validate all gates without token access or network publishing.' },
+                selfReply: { type: 'string', description: 'Optional self-reply from the draft; posted after the root succeeds.' },
+                dryRun: { type: 'boolean', description: 'Validate the draft binding (body hash, channel, reply target) without publishing; no token access or network call.' },
             },
             required: ['caption', 'channel'],
             oneOf: [{ required: ['draftId'], not: { required: ['episodeRef'] } }, { required: ['episodeRef'], not: { required: ['draftId'] } }],
@@ -4287,7 +4287,7 @@ Returns: integer credit balance.`,
         title: '⚠️ Instagram publish (immediately public)',
         annotations: HINT.publish,
         outputSchema: publishOutput('mediaId', 'Instagram media id'),
-        description: `⚠️ Direct Instagram publishing — posts to the IG API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL — never call without approval). 1-10 images (2+ makes a carousel) **or** one Reels video (mutually exclusive with imageUrls). Images must be **JPEG only** (PNG/MPO/JPS rejected). Images cannot be replaced after publishing (only the caption can be edited). Publish quota: 100 per rolling 24 hours (a carousel counts as 1). ${SNS_HITL_LINE}`,
+        description: `⚠️ Direct Instagram publishing — posts to the IG API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL — never call without the user's approval or an approved standing growth plan). 1-10 images (2+ makes a carousel) **or** one Reels video (mutually exclusive with imageUrls). Images must be **JPEG only** (PNG/MPO/JPS rejected). Images cannot be replaced after publishing (only the caption can be edited). Publish quota: 100 per rolling 24 hours (a carousel counts as 1). ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -4312,7 +4312,7 @@ Returns: integer credit balance.`,
         title: '⚠️ Facebook Page publish (immediately public)',
         annotations: HINT.publish,
         outputSchema: FACEBOOK_PUBLISH_OUTPUT,
-        description: `⚠️ Direct Facebook Page publishing — posts to the Graph API with the local Page token, **immediately public** (the posting Page is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL — never call without approval). Forms: text / up to 10 images / one video (regular video — not Reels). Video posts may include a separate subtitle file (captionFilePath) only when requested — this pipeline uploads subtitles separately instead of burning them in, so give videoUrl the clean subtitle-free master, not a burned-in copy. The source link goes **without exception** in the first comment via facebook_comment right after a successful publish, not in the body (linkUrl). ${SNS_HITL_LINE}`,
+        description: `⚠️ Direct Facebook Page publishing — posts to the Graph API with the local Page token, **immediately public** (the posting Page is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL — never call without the user's approval or an approved standing growth plan). Forms: text / up to 10 images / one video (regular video — not Reels). Video posts may include a separate subtitle file (captionFilePath) only when requested — this pipeline uploads subtitles separately instead of burning them in, so give videoUrl the clean subtitle-free master, not a burned-in copy. The source link goes **without exception** in the first comment via facebook_comment right after a successful publish, not in the body (linkUrl). ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -4354,7 +4354,7 @@ Returns: integer credit balance.`,
         title: '⚠️ Facebook comment (immediately public)',
         annotations: HINT.publish,
         outputSchema: publishOutput('commentId', 'Facebook comment id'),
-        description: `⚠️ Direct Facebook Page commenting — adds an **immediately public** comment on the Page's own post with the Page token (the author is the Page itself). There is no separate review gate, so publish only copy the user has approved (HITL — never call without approval). Main use: the link rule of putting the source link in the **first comment** right after a facebook_publish success (first comment instead of a body link — FB comment links are clickable and render previews). Use postId straight from the facebook_publish response. If only the comment failed, retry just this tool (do not re-publish the post — the publish API is non-idempotent). ${SNS_HITL_LINE}`,
+        description: `⚠️ Direct Facebook Page commenting — adds an **immediately public** comment on the Page's own post with the Page token (the author is the Page itself). There is no separate review gate, so publish only copy the user has approved (HITL — never call without the user's approval or an approved standing growth plan). Main use: the link rule of putting the source link in the **first comment** right after a facebook_publish success (first comment instead of a body link — FB comment links are clickable and render previews). Use postId straight from the facebook_publish response. If only the comment failed, retry just this tool (do not re-publish the post — the publish API is non-idempotent). ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -4367,10 +4367,10 @@ Returns: integer credit balance.`,
     },
     {
         name: 'youtube_publish',
-        title: '⚠️ YouTube upload (immediately public)',
+        title: '⚠️ YouTube upload (starts private)',
         annotations: HINT.publish,
         outputSchema: YOUTUBE_PUBLISH_OUTPUT,
-        description: `⚠️ Direct YouTube publishing — uploads a **local video file, immediately public**, with the local OAuth refresh token (the target channel is the token-owning account). There is no separate review gate, so call only right after the user has checked and approved the final copy and video (HITL — never call without approval). Portrait 9:16 videos of 3 minutes or less are auto-classified as Shorts (no separate flag). The only platform that needs no public URL hosting (direct file upload — subtitle files included). **Every video stays subtitle-free.** Give videoFilePath the clean master. Only when the user requests separate YouTube subtitles, pass an .srt via captionFilePath or requested captionTracks; otherwise omit caption inputs. Uploads draw from the videos.insert-only "Video Uploads" quota bucket — 1 unit per call, 100/day by default, so there is no reason to ration episode publishing (the old "1,600 units = 6/day" limit disappeared in the 2026 quota overhaul). ${SNS_HITL_LINE}`,
+        description: `⚠️ Direct YouTube publishing — uploads a **local video file as a private video** with the local OAuth refresh token (the target channel is the token-owning account). privacyStatus defaults to private and a request for public is rejected: upload private (or unlisted), check the watch page, then flip it public with youtube_update. There is no separate review gate, so call only right after the user has checked and approved the final copy and video (HITL — never call without the user's approval or an approved standing growth plan). Portrait 9:16 videos of 3 minutes or less are auto-classified as Shorts (no separate flag). The only platform that needs no public URL hosting (direct file upload — subtitle files included). **Every video stays subtitle-free.** Give videoFilePath the clean master. Only when the user requests separate YouTube subtitles, pass an .srt via captionFilePath or requested captionTracks; otherwise omit caption inputs. Uploads draw from the videos.insert-only "Video Uploads" quota bucket — 1 unit per call, 100/day by default, so there is no reason to ration episode publishing (the old "1,600 units = 6/day" limit disappeared in the 2026 quota overhaul). ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -4404,7 +4404,8 @@ Returns: integer credit balance.`,
                 privacyStatus: {
                     type: 'string',
                     enum: ['public', 'unlisted', 'private'],
-                    description: 'Privacy (default public)',
+                    default: 'private',
+                    description: 'Privacy (default private; public is rejected — flip with youtube_update)',
                 },
                 categoryId: {
                     type: 'string',
@@ -4430,7 +4431,7 @@ Returns: integer credit balance.`,
         title: '⚠️ YouTube video metadata & privacy update',
         annotations: HINT.moderate,
         outputSchema: YOUTUBE_UPDATE_OUTPUT,
-        description: '⚠️ Edits the privacy, title, or description of an already-published YouTube video (videos.update). **Applies the instant it is called and cannot be undone — never call without human approval.** **This is stage two of the long-form two-stage publish** — upload an 8-15 minute video as privacyStatus "private", have a human check encoding, subtitles, and chapters on the watch page, then flip it public with this tool. Going straight to public, short-form style, means viewers see the failure first. **videos.update overwrites rather than patching**, so this tool first reads the current values via videos.list and merges — fields you did not pass are re-sent as they are now (title, description, tags, language, COPPA declaration, synthetic-media disclosure, all of it). The change is irreversible, so **on a video you have not touched before, call dryRun: true first and eyeball wouldSend.** publishAt (scheduled publish) only takes effect while privacyStatus is private — otherwise a 400 rejection. **Scope**: youtube (read-only youtube.readonly won\'t do, and neither will the publish-only youtube.upload). When missing, the error carries reissue guidance.',
+        description: '⚠️ Edits the privacy, title, or description of an already-published YouTube video (videos.update). **Applies the instant it is called and cannot be undone — never call without human approval or an approved standing growth plan (growth-plan.md status: approved).** **This is the step that flips a private upload public** — every youtube_publish upload starts private; check encoding, thumbnail, metadata and any chapters on the watch page, then flip it public with this tool. Inside the growth loop the same sequence runs under the approved plan. **videos.update overwrites rather than patching**, so this tool first reads the current values via videos.list and merges — fields you did not pass are re-sent as they are now (title, description, tags, language, COPPA declaration, synthetic-media disclosure, all of it). The change is irreversible, so **on a video you have not touched before, call dryRun: true first and eyeball wouldSend.** publishAt (scheduled publish) only takes effect while privacyStatus is private — otherwise a 400 rejection. **Scope**: youtube (read-only youtube.readonly won\'t do, and neither will the publish-only youtube.upload). When missing, the error carries reissue guidance.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -4503,7 +4504,7 @@ Returns: integer credit balance.`,
         title: '⚠️ Reply to inbound comment (immediately public)',
         annotations: HINT.publish,
         outputSchema: COMMENT_REPLY_OUTPUT,
-        description: `⚠️ Replies to an inbound comment — posts an **immediately public** reply with local tokens (the author is the brand account itself). THREADS requires a reviewed surface=reply draftId with matching commentId, voice score and server style check, exactly as threads_publish; dryRun validates without posting. Publish only copy the user has approved (HITL — never call without approval). Use commentId straight from the sns_comment_inbox response. Per-platform contracts: THREADS — a new post carrying reply_to_id is the reply, so chains extend freely down to replies-to-replies / INSTAGRAM — replies attach to **top-level comments only** (to answer a sub-comment, pass its parent commentId — for comments carrying parentCommentId, use that value) / FACEBOOK — a comment on a comment id is the sub-comment / YOUTUBE — also top-level only, but a sub-comment id is accepted: this tool looks up the parent, reattaches at the thread root, and reports where it landed via parentCommentId in the response (needs the youtube.force-ssl scope). On failure, never blindly retry the same call (non-idempotent — duplicate replies). ${SNS_HITL_LINE}`,
+        description: `⚠️ Replies to an inbound comment — posts an **immediately public** reply with local tokens (the author is the brand account itself). THREADS requires a surface=reply draftId whose body and commentId match the draft, exactly as threads_publish (check-style.py findings come back as warnings); dryRun validates without posting. Publish only copy the user has approved (HITL — never call without the user's approval or an approved standing growth plan). Use commentId straight from the sns_comment_inbox response. Per-platform contracts: THREADS — a new post carrying reply_to_id is the reply, so chains extend freely down to replies-to-replies / INSTAGRAM — replies attach to **top-level comments only** (to answer a sub-comment, pass its parent commentId — for comments carrying parentCommentId, use that value) / FACEBOOK — a comment on a comment id is the sub-comment / YOUTUBE — also top-level only, but a sub-comment id is accepted: this tool looks up the parent, reattaches at the thread root, and reports where it landed via parentCommentId in the response (needs the youtube.force-ssl scope). On failure, never blindly retry the same call (non-idempotent — duplicate replies). ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -4511,8 +4512,8 @@ Returns: integer credit balance.`,
                 commentId: { type: 'string', description: 'commentId from sns_comment_inbox (IG must be a top-level comment id — YT also accepts a sub-comment id)' },
                 message: { type: 'string', description: 'Final reply — THREADS ≤500 chars, IG ≤2,200, FB ≤8,000, YT ≤10,000' },
                 channel: SNS_CHANNEL_PROPERTY,
-                draftId: { type: 'string', description: 'Required for THREADS: reviewed reply draft bound to this commentId. Not accepted for other platforms.' },
-                dryRun: { type: 'boolean', description: 'THREADS only: validate the reply gate without credential or API access.' },
+                draftId: { type: 'string', description: 'Required for THREADS: reply draft bound to this commentId. Not accepted for other platforms.' },
+                dryRun: { type: 'boolean', description: 'THREADS only: validate the reply draft binding (body hash, channel, commentId) without credential or API access.' },
             },
             required: ['platform', 'commentId', 'message'],
         },
@@ -4848,12 +4849,12 @@ Returns: JSON — { file, mediaBaseDirectory, sha256, version, format, shots, se
         name: 'storyboard_apply',
         title: 'Write or patch a storyboard with validation',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-        description: `Write a storyboard's scenes.js from a sequence → scene → shot model, or patch part of it, in one call. Every shot is validated against the grammar vocabularies (type · beat · size · angle · infoType · shareType · render.mode · transition), the structure against its rules (one place and time per scene, a charge that turns, every scene in exactly one sequence, shots grouped by scene in sequence order, two sizes per scene), and the derived shot labels (sceneSlug · sequence) are written from the structure. Nothing is written when a violation is found — the findings come back instead. Warnings are written and reported.
+        description: `Write a storyboard's scenes.js from a sequence → scene → shot model, or patch part of it, in one call. Every shot is checked against the shot schema (type and render.mode vocabularies, transition join, stable id format and uniqueness, camera input, line-crossing and motion-graphic records), the structure against its schema (version, typed scenes and sequences), location references are checked, and the derived shot labels (sceneSlug · sequence) are written from the structure. Nothing is written when a violation is found — the findings come back instead. Warnings are written and reported; creative choices (beat, size, angle, charge) are not validated here.
 
 Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard §4), and to change one thing later (scenes / sequences by key, shots by id — shotsById · insertShots.afterId · removeShotIds — or by position, globals for FORMAT · THEME · COMPREHENSION · STORY · PRODUCTION · MUSIC · SFX). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril — it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change — do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
 storyboard_apply assigns stable shot ids (s0001…) and advances STRUCTURE.nextShotId; preserve those ids and do not edit them by hand.
 Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline · shot.composition · shot.depth in the input schema. shot.depth (L11): count what the viewer must read in the frame at once — one thing → shallow with focus (a person's eyes), two or more → deep with the planes listed front to back; a departure needs a reason, and a still_camera focus-in/rack-focus cut cannot be deep. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
-Do NOT pass a shot's visual plan through a summary — pass the object scenes-schema.md defines (visual · shot.space · visual.camera · visual.video …); unknown keys on a shot pass through untouched. Editing an approved board drops its \`// approved:\` line; it is approved again at the HITL gate.
+Do NOT pass a shot's visual plan through a summary — pass the object scenes-schema.md defines (visual · shot.space · visual.camera · visual.video …); unknown keys on a shot pass through untouched. Editing a board drops its stale \`// approved:\` line; existing task authorization is unchanged.
 
 Scene: { no, place, time, event, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? }. Sequence: { id, title, purpose, question?, payoff?, scenes: [no…] }. The reasons for each field are in scenes-schema.md §structure.
 
@@ -4918,7 +4919,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         annotations: HINT.local,
         description: `Run the sequence → scene → shot rules and the full scenes.js contract (check-scenes.js: vocabularies, beat order, camera slots, motion policy, production mode) on a board and return every finding. Reads the file and runs a local script; no API call.
 
-Use it after storyboard_apply and before delegating a reviewer or generating anything — the same command the storyboard skill runs by hand (\`node check-scenes.js storyboard/\`). draft:true is the story pass (§4a): machine-layer absences are deferred and counted, vocabularies and beat order still fail.
+Use it after storyboard_apply and before delegating a reviewer or generating anything — the same command the storyboard skill runs by hand (\`node check-scenes.js storyboard/\`). draft:true is the story pass (§4a): machine-layer absences are deferred and counted; structure/address errors fail, creative findings are warnings.
 Do NOT treat a pass as visual quality — frame overflow, hero-stat width and speech rate are measured on the rendered canvas in storyboard.html's check strip.
 
 Returns: counts (violations · warnings · deferred) and two lists — structure findings, then shot-contract findings — each line "! where what" (violation) or "· where what" (warning).`,
@@ -4937,7 +4938,7 @@ Returns: counts (violations · warnings · deferred) and two lists — structure
         annotations: HINT.local,
         description: `Check local scenario candidates or a selected story plan.
 
-Use it after drafting candidates/d1–d3.md before selection, and on scenario.md before board authoring. Reads local files and runs a local script; no writes or API calls. Legacy scenarios use S1–S12. scenario-v2 reads cast.json and character identity paths, validates actions and attributed speech, and requires research references only for factual assertions; fiction has no search quota.
+Use it after drafting the scenario or its candidates, before selection, and on scenario.md before board authoring. Reads local files and runs a local script; no writes or API calls. Legacy scenarios use S1–S12. scenario-v2 reads cast.json and character identity paths, validates actions and attributed speech, and requires research references only for factual assertions; fiction has no search quota.
 Do NOT use for shot/camera validation — use storyboard_check. A pass verifies structure and references, not factual truth, character motivation, entertainment value or user approval.
 
 Returns: JSON — { files, violations, warnings, findings: [{ level, where, what }] }, in candidate file order. Findings start with S1–S12 or V2; violations block authoring, warnings do not.`,
@@ -4992,6 +4993,8 @@ const videoContextSchema = {
 };
 for (const tool of TOOLS) {
     if (VIDEO_ADAPTERS[tool.name]) {
+        // Legacy direct entrypoints: the routing contract comes first in every description.
+        tool.description = `In a configured workspace, episode video goes through video_plan → video_execute; direct calls need videoContext (episode, shotId, requestId), except channel assets under data/<channel>/assets/, which must still match the saved model. ${tool.description}`;
         tool.inputSchema.properties = { ...tool.inputSchema.properties,
             videoContext: { ...videoContextSchema, description: 'Production context. Required for configured episodes; applies saved selection, spending authorization, concurrency and duplicate-submission protection.' } };
     }

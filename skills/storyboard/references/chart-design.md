@@ -79,7 +79,7 @@ one-off episode file. Author titles, values, beats and sources in `scenes.js`.
 - `THEME.chartAccent` may supply one six-digit hex accent. It emphasizes the discussed marks;
   axes and reading text retain their high-contrast ink. A full rainbow is not a category key.
 - Portrait uses a headline above a large chart. Landscape places the explanation beside
-  the chart. Both reserve the format's subtitle area. Direct labels reduce legend hunting.
+  the chart. Both keep the format's lower safe area clear (the master carries no subtitles). Direct labels reduce legend hunting.
 - Bars start from zero, including signed data. Time spacing reflects elapsed time. Values
   of a million or more use compact numeric notation; choose `decimals` to match source precision.
 - Initial geometry reveals with a smooth ease. Subsequent groups keep the geometry and

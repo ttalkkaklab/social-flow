@@ -33,12 +33,15 @@ function checkScenarioV2(meta, body, research, opts = {}) {
   let data;
   try { data = readContract(body); } catch (e) { bad(e.message); return { meta, findings }; }
   if (!['evidence', 'fiction', 'adapted'].includes(data.kind)) bad('kind must be evidence, fiction or adapted');
-  for (const key of ['premise', 'viewerExperience', 'message', 'endingReason', 'difference'])
+  for (const key of ['premise', 'viewerExperience', 'message', 'endingReason'])
     if (!text(data[key])) bad(key + ' is required');
+  // A single settled scenario has nothing to differ from; the sentence matters when alternatives exist.
+  if (!text(data.difference)) warn('difference could state how this candidate differs from the alternatives in situation, choice or payoff');
   if (!ENGINES.includes(data.engine)) bad('unknown viewer engine');
   if (!['narration', 'dialogue', 'visual', 'mixed'].includes(data.expression)) bad('unknown expression mode');
   if (!['held', 'upfront', 'none'].includes(data.reveal)) bad('reveal must be held, upfront or none');
-  if (!['D1', 'D2', 'D3'].includes(meta.direction)) bad('direction must be D1, D2 or D3');
+  // As many directions as the decision needs: D1, D2, … (not a fixed three).
+  if (!/^D[1-9]\d*$/.test(String(meta.direction || ''))) bad('direction must be D<n> (D1, D2, …)');
   if (!text(meta.channel) || !text(meta.topic)) bad('channel and topic are required');
   const cast = Array.isArray(data.cast) ? data.cast : [];
   const ids = new Set();

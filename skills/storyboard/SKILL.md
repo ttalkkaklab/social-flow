@@ -7,7 +7,7 @@ description: >
   action and attributed speech, then plans shots and content-led timing. Saves the local
   review board. Produce builds an approved board; autoproduce runs both unattended.
 argument-hint: "<channel> <topic or topic hint>"
-allowed-tools: ["mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__plugin_social-flow_social-flow__location_manage", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__storyboard_apply", "mcp__plugin_social-flow_social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__plugin_social-flow_social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__plugin_social-flow_social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__plugin_social-flow_social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__plugin_social-flow_social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__plugin_social-flow_social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__plugin_social-flow_social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__plugin_social-flow_social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__plugin_social-flow_social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__plugin_social-flow_social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__plugin_social-flow_social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics", "mcp__plugin_social-flow_social-flow__suno_generate_lyrics"]
+allowed-tools: ["mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__plugin_social-flow_social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__storyboard_apply", "mcp__plugin_social-flow_social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__plugin_social-flow_social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__plugin_social-flow_social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__plugin_social-flow_social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__plugin_social-flow_social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__plugin_social-flow_social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__plugin_social-flow_social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__plugin_social-flow_social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__plugin_social-flow_social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__plugin_social-flow_social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__plugin_social-flow_social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics", "mcp__plugin_social-flow_social-flow__suno_generate_lyrics"]
 ---
 For motion-graphic shots, follow [motion type selection and design](references/motion-graphics.md): persist `shot.motionGraphic` with a common `THEME.motionGraphicTheme` when the episode needs consistency and contextual `style.theme` (`auto` or an explicit channel theme), choose the type from viewer intent and available evidence, and keep style, choreography and renderer separate. Built-in abstract scenes use the installed `prepare-motion-graphic.js`; asset-dependent types retain their authored or mesh routes.
 
@@ -150,15 +150,19 @@ A listener's off-screen reaction is not delivered unless another planned shot sh
 or its sound conveys the intended information. A prop cannot already be received in the
 source image when the shot needs to show its handoff.
 
-For recurring places, dialogue, entrances, travel or prop handoffs, plan one shared
-Blender set with [location assets](references/location-assets.md). Bind each shot's camera
-and complete actor start/end blocking, including off-camera actors, body facing and gaze.
-Within a `continuityGroup`, carry the previous cut's end state into the next start; explain
-time skips with `continuityBreak` and axis crossings with `lineCrossing`. Before generated
-images, render and inspect the shared space in cut order; produce uses `location_manage`
-action `previz` so motion shares the same set, camera and blocking. Camera, actor or endpoint
-changes invalidate those references. Continuity findings guide corrections without a new
-approval gate; record only actual image reviews. Local spatial renders make no paid calls.
+For recurring places, dialogue, entrances, travel or prop handoffs, plan one shared set.
+When the saved previz renderer (`.social-flow/models.json` `production.previzRenderer`) is
+Blender and Blender is installed, build it with [location assets](references/location-assets.md);
+with a three.js renderer or no Blender, plan the recurring place with
+[previz-template.html](references/previz-template.html) or stills and say so in the plan.
+Bind each shot's camera and complete actor start/end blocking, including off-camera actors,
+body facing and gaze. Within a `continuityGroup`, carry the previous cut's end state into the
+next start; explain time skips with `continuityBreak` and axis crossings with `lineCrossing`.
+Before generated images, render and inspect the shared space in cut order. Previz rendering is
+optional and belongs to produce (`location_manage` action `previz` on a Blender set) so motion
+shares the same set, camera and blocking. Camera, actor or endpoint changes invalidate those
+references. Continuity findings guide corrections without a new approval gate; record only
+actual image reviews. Local spatial renders make no paid calls.
 
 Read [render routing](references/render-routing.md) and
 [visual direction](references/visual-direction.md) for relevant rendering choices, not old

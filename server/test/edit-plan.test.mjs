@@ -14,7 +14,8 @@ test('source transitions compile automatically with live handles and short audio
 });
 test('contradictory, missing and malformed edits fail instead of falling back',()=>{
  assert.throws(()=>compile(scenes(),cards.replace('1\tvoice.wav\t0\tnone','1\tvoice.wav\t0\tnone\tenter=cut')),/contradicts/);
- assert.throws(()=>compile([{},{}],cards),/choose a transition/);
+ assert.equal(compile([{},{}],cards).plan[1].transition,'cut'); // a missing transition defaults to cut (2026-10-18)
+ assert.throws(()=>compile([{},{transition:'spin'}],cards),/unknown transition/);
  for(const edit of [{transitionSeconds:NaN},{in:-1},{post:'0.2'},{unknown:1},{transitionSeconds:0}]){
   const s=scenes();s[1].edit=edit;assert.throws(()=>compile(s,cards));
  }

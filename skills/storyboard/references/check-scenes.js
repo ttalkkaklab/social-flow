@@ -1164,8 +1164,9 @@ function check(win, fmt, opts) {
 
 
     const slide = v.slide;
-    require('./slide-quality.js').checkQuality(slide, (s.narration || []).length)
-      .forEach(message => bad(where, message));
+    const slideQuality = require('./slide-quality.js');
+    slideQuality.checkQuality(slide, (s.narration || []).length)
+      .forEach(message => (slideQuality.ADVISORY.has(message) ? warn : bad)(where, message));
     if (slide && slide.motion === true && (slide.kind || 'diagram') === 'diagram') {
       if (!String(slide.treatment || '').trim()) {
         machine(where, 'motion diagram has no slide.treatment — choose editorial when HTML owns the frame, or photo-action when the photographed subject itself changes');
@@ -3054,7 +3055,7 @@ function selftest() {
     over.SCENES[0].shot.videoDesign.look = 'inkwash';
     over.SCENES[0].visual.bgPrompt = assembleSpatialPrompt(over, 0).sourcePrompt;
     const stale = perShotFixture(); stale.SCENES[0].shot.style = over.SCENES[0].shot.style; stale.SCENES[0].shot.videoDesign.look = 'inkwash';
-    // An override without the user's record is refused by production-mode.js, not silently applied.
+    // An override without a selection record gets advice from production-mode.js; the preset still applies.
     const unapproved = perShotFixture(); unapproved.SCENES[0].shot.style = { preset: 'ink-wash', reason: 'x' };
     const selectionAdvice=[];
     const selectionErrors=pm.check(unapproved, { draft: true, advice:selectionAdvice });
@@ -3063,7 +3064,7 @@ function selftest() {
       over.SCENES[0].visual.bgPrompt.includes(pm.STYLES['ink-wash'].prompt) &&
       !lookHas(perShot(over), 'bad', /\[style-missing\]/) &&
       lookHas(perShot(stale), 'bad', /\[style-missing\].*per-shot style "ink-wash"/) &&
-      selectionErrors.length === 0 && selectionAdvice.some(e => /\[shot-style\].*HITL approval/.test(e)) &&
+      selectionErrors.length === 0 && selectionAdvice.some(e => /\[shot-style\].*shot\.style\.selection/.test(e)) &&
       !pm.check(over, { draft: true }).some(e => /\[shot-style\]/.test(e));
   })());
   ok('worldId-unmapped warns on a missing set and accepts a mapped set', (() => {

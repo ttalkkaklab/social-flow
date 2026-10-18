@@ -67,7 +67,7 @@ function check(work,delivery,burned,subtitles){
     const verified=masters(work),inserted=scenes.some(s=>s.type==='broll');
     const expectedNames=inserted?SPLICED:BASE;
     const names=[delivery,burned,subtitles];
-    if(names.some((f,i)=>!f||path.resolve(work,f)!==path.join(work,expectedNames[i])))throw new Error('delivery must use the checked clean, burned and subtitle set');
+    if(names.some((f,i)=>!f||path.resolve(work,f)!==path.join(work,expectedNames[i])))throw new Error('delivery must name the checked set: the clean master plus the fixed reel-sub/subs names (both sidecar files are optional)');
     if(inserted){
       const splice=JSON.parse(fs.readFileSync(path.join(work,'splice-check.json'),'utf8'));
       if(splice.assembledSha256!==hash(path.join(work,'assembled-check.json'))||!splice.outputs||SPLICED.some(f=>!Object.hasOwn(splice.outputs,f))||!splice.outputs['reel-spliced.mp4'])throw new Error('missing or stale splice proof');
@@ -80,10 +80,14 @@ function check(work,delivery,burned,subtitles){
   const first=proof.cards[0],planned=scenes[first].duration;
   const actual=duration(path.join(work,'work',`v${first}.mp4`));
   if(!Number.isFinite(planned)||Math.abs(actual-planned)>.5)throw new Error(`opening is ${actual}s but the plan says ${planned}s; reconcile measured narration and trim before assembly`);
-  for(const i of proof.cards)if(scenes[i].shot?.render?.mode==='editorial_html'&&duration(path.join(work,'work',`v${i}.mp4`))>8.07)throw new Error('text-led card '+i+' exceeds 8 seconds after encoding');
-  if(fs.existsSync(path.join(work,'reel-sub.mp4'))&&Math.abs(duration(path.join(work,'reel-sub.mp4'))-duration(master))>.07)throw new Error('clean and burned masters differ in duration');
+  if(fs.existsSync(path.join(work,'reel-sub.mp4'))&&Math.abs(duration(path.join(work,'reel-sub.mp4'))-duration(master))>.07)throw new Error('clean master and the legacy reel-sub.mp4 differ in duration');
   require('./check-edit-timeline.js').check(work);
   const measured=cardMotion(work,scenes,policy);
+  // Guidance, not a gate (owner 2026-10-16): a text-led card past 8 seconds is recorded for review and the build continues.
+  for(const i of proof.cards)if(scenes[i].shot?.render?.mode==='editorial_html'&&duration(path.join(work,'work',`v${i}.mp4`))>8.07){
+    const w='card '+i+': text-led card runs past 8 seconds after encoding; split it or shorten the line when the read drags';
+    measured.warnings.push(w);measured.status='needs-review';console.error('Assembled warning: '+w);
+  }
   fs.writeFileSync(path.join(work,'assembled-check.json'),JSON.stringify({editCheckSha256:hash(path.join(work,'edit-check.json')),groupCheckSha256:scenes.some(s=>s.visual?.video?.groupPlan!==undefined)?hash(path.join(work,'group-check.json')):null,outputs:hashes(work,BASE),duration:duration(master),opening:actual,plannedOpening:planned,motion:measured},null,2)+'\n');
 }
 function splice(work,args,finish=false){

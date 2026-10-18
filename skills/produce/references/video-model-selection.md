@@ -153,9 +153,10 @@ mono WAV is refused at upload because it fails in the engine's audio encoder. Wi
 at 24fps after rounding, so it can trim the tail. Drop or duck the output track in the edit
 when laying another narration or BGM over it.
 
-This document is the source of truth for choosing between the two engines. Tool descriptions
-carry their own summaries of it, and `skills/autoproduce/references/prices.tsv` is the source
-of truth for unit prices.
+This document describes the two API engines' capabilities and prompt grammar; which engine an
+episode uses is the saved directory model (model-settings.md), and the comparisons here serve first
+setup and explicit change requests. Tool descriptions carry their own summaries of it, and
+`skills/autoproduce/references/prices.tsv` is the source of truth for unit prices.
 
 Reference date 2026-08-15. The Seedance side was verified by opening the official BytePlus
 ModelArk docs directly, with the write-up in `docs/api-reference/seedance.html`. The Veo prices
@@ -181,7 +182,7 @@ cross-engine multipliers below stand.
 - [Prompt grammar — the two engines differ](#prompt-grammar-the-two-engines-differ)
   - [Positive locks — what an exclusion turns into on Seedance](#positive-locks-what-an-exclusion-turns-into-on-seedance)
   - [The batch-failure ladder — which level to change](#the-batch-failure-ladder-which-level-to-change)
-- [Camera — this section is the source of truth for engine vocabulary and routing](#camera-this-section-is-the-source-of-truth-for-engine-vocabulary-and-routing)
+- [Camera — this section is the source of truth for engine vocabulary and routing](#camera-engine-vocabulary-and-moves-per-cut)
 - [What Seedance can't do](#what-seedance-cant-do)
 - [Key setup](#key-setup)
 
@@ -193,10 +194,10 @@ host default and per-cut recommendations below guide first setup only. Do not
 replace a saved choice because another host, cheaper tier or faster engine is now
 available. A capability mismatch needs an explicit user exception before switching.
 
-**Rule 0 (owner directive 2026-09-07).** When the CLI running produce ships its own video
-tool, that tool is the default route for every generated clip, and the four rules below choose
-between the API engines only where the episode wrote `videoProvider:"api"` or the cut wrote a
-reason the host tool cannot serve. Today that CLI is **Grok**: `image_to_video` (one source
+**Rule 0 (owner directive 2026-09-07; a first-setup recommendation since 2026-10-16).** When
+the CLI running produce ships its own video tool, recommend that tool at directory setup; once
+`.social-flow/models.json` holds a video model, that saved choice is the route, and the four rules
+below inform first setup or an explicit change request only. Today that CLI is **Grok**: `image_to_video` (one source
 image, `duration` 1–15 s, `resolution` 480p or 720p, the aspect follows the source image) and
 `reference_to_video` (several reference images, `duration` 6 or 10 s, preset `voices` for a
 speaking subject). Codex and Claude Code ship no video tool, so `videoProvider` is `"api"` there.
@@ -250,8 +251,9 @@ and people don't prefer it. If you need reference images, extension, or 4K, lite
 those, so step up to fast; if you don't need those three, it's **lite**. The standard tier is
 only for when a human explicitly picks it.
 
-**3. If the slot discards the sound, Seedance silent; if the slot uses the sound, Veo.** The
-reasoning is §The one axis that splits them, below.
+**3. (First setup) If the slot discards the sound, Seedance silent fits; if the slot uses the
+sound, Veo fits.** Once a model is saved it serves both slots; the reasoning is §The one axis that
+splits them, below.
 
 **4. Don't make an unevaluated model the default for an important cut.** 2.5 · 2.0 fast ·
 2.0 mini · 1.0 pro fast are on no public arena at all (§Quality). If you want one because it's
@@ -282,7 +284,7 @@ Store the selection fields beside the prompt: `visual.video` for motion backgrou
 | `referenceAudioPaths` | Planned fixed-voice samples; forces the 2.5 speaking/b-roll route |
 | `previz` | `{ renderer, clip, firstFrame, sha256, fps, seconds, camera: { movement }, handoff?, actors?, blend? }` with `modelPurpose:"previz"` — the clip rendered at the billed length, `referenceImagePaths[0]` the source still, no end frame; billed as input + output seconds on the `…-video` price rows. On `engine:"host"` the same record carries `handoff:"frame_and_prompt"` and none of the Seedance fields |
 | `model` | Optional exact model ID; omit to use the purpose-based selection. An explicit override must pass the same capability checks |
-| `resolution` | Defaults to `1080p`; do not choose a 720p-only tier for a 1080p episode |
+| `resolution` | The saved resolution for this model (720p allowed, CLAUDE.md 2026-09-12); the final canvas scales the source |
 
 For complex motion with a photoreal face, keep 1.5 or choose a compatible Veo route;
 do not remove the face or change the shot merely to qualify for 2.x. When 1.5 is chosen,
@@ -291,8 +293,9 @@ in `modelReason`. Multi-reference/voice requirements with a photoreal face must 
 replanned on a compatible route before generating.
 
 Produce reads each Seedance row's `generation` object from `cost-preview.js --json` and
-uses its `tool`, `model`, `resolution`, `durationSeconds`, `generateAudio`, and reference
-paths in the API call. Resolve relative reference paths from the storyboard directory.
+uses its `tool`, `model`, `resolution`, `generateAudio`, and reference paths as the `video_plan`
+operation args, with `requiredSeconds` from `plan-video-duration.js` for the length
+(video-duration.md; the legacy `durationSeconds` is not sent beside it). Resolve relative reference paths from the storyboard directory.
 Add the stored prompt and source/output paths. Do not send planning fields such as
 `modelPurpose`, `modelReason`, `realFaceInput`, `priceKey`, or `kind` as tool arguments.
 `seedance_img2video` takes the existing source still; `seedance_reference` takes the
@@ -305,13 +308,12 @@ model, purpose, resolution, audio, or references invalidates the cost snapshot. 
 price combinations block a budget verdict instead of using the 1.5 price. Forecasts use
 list prices, including 2.5 at 1080p, so expiring discounts cannot understate the budget.
 
-Keep upgrades inside the episode budget and existing approval scope. Unattended runs make
-a hook only on the growth plan's standing `video_model` (a supported model; with none, no generated
-hook at all), and may pick a compatible model for the requirements above only when the full
-revised estimate fits the authorized cap. Do not make a paid A/B comparison by default.
-If a compatible 1.5 clip on a b-roll or speech slot repeatedly misses an essential action, a 2.0 retry is an escalation:
-record the failure and reason, retain the spent ledger, and recalculate the remaining budget
-before calling. Reference/voice requirements cannot be dropped just to fit the cap.
+Keep upgrades inside the episode budget and existing approval scope. Unattended runs use the
+saved directory model like attended ones; a legacy growth-plan `video_model` does not override it.
+Do not make a paid A/B comparison by default. If a saved-model clip repeatedly misses an essential
+action, or the saved model cannot take a required reference or voice input, report the limitation
+with the spent ledger and request an explicit exception before any other model is billed.
+Reference/voice requirements cannot be dropped just to fit the cap.
 
 ## One-line decisions
 
@@ -324,7 +326,7 @@ before calling. Reference/voice requirements cannot be dropped just to fit the c
 | You must **reproduce the composition** of a source picture | First/last frames (`sourceImagePath`+`lastImagePath`), not reference images — both engines. References carry look and style, not composition |
 | **Any generated_video cut** — every one carries a 3D previz (user directive 2026-09-11) | `seedance_reference` · 2.x · the Blender or three.js previz as `referenceVideoPaths` (`modelPurpose:"previz"`, `handoff:"reference_video"`), the source still as `Image 1` — the vendor's clay-model reference; input plus output seconds billed. Seedance 1.x and host tools use the previz first frame and camera/blocking prompt instead of uploading its clip (`handoff:"frame_and_prompt"`, storyboard blender-previz.md §6.7) |
 | **Register a character once and keep calling it** | Only the Seedance asset library (`asset://`) — Veo has no registry; it's base64 inline per request |
-| **A cut with dialogue/sound effects** | `veo_text2video` / `veo_img2video` — Veo's audio is better |
+| **A cut with dialogue/sound effects** | `veo_img2video` — Veo's audio is better (produce rule 8: never `veo_text2video`) |
 | **Extending** an existing Veo clip | `veo_extension` — Seedance has no counterpart tool |
 | Consistent person video from a **real person's photo** | `veo_reference` — Seedance 2.x rejects live-action faces *(untested)* |
 | **Character/product** consistency from several photos | `seedance_reference` · 2.5 (up to 30 images) — Veo is 3 images, fixed 8s |
@@ -758,8 +760,8 @@ write them in whatever order reads well.
 **Exclusion directives are the most common mistake.** Write "no ~" in the body and that noun
 tends to get drawn — there's a field-tested local-image case where `"no maps"` produced maps
 (4 of 4 failed), and the Veo prompt guide itself marks directive phrasing not recommended.
-The server's four `veo_*` tools expose the `negativePrompt` argument, so route all exclusions
-there.
+On Veo fast/standard route all exclusions into the `negativePrompt` argument; lite takes none (the
+API returns 400), so there every exclusion stays in the prompt body as positive description.
 
 **Portrait must be explicit on Veo** — `aspectRatio` defaults to `16:9` and only two values
 are allowed. A portrait start image doesn't carry it over. Developer-forum reports exist of
@@ -858,7 +860,7 @@ the differentiator.
 
 ---
 
-## Camera — this section is the source of truth for engine vocabulary and routing
+## Camera — engine vocabulary and moves per cut
 
 This section owns **which word each engine understands and how many moves a model takes per
 cut**. Which technique a shot should use — the size, the angle, the move, the length and the
