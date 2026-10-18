@@ -63,7 +63,9 @@ function reviewStatus(root, folder) {
 function shell({ file, channelDir, channel, title, section, body }) {
   const assets = path.join(channelDir, 'assets', 'review');
   const nav = [['storyboards', '스토리보드', 'Storyboards', path.join(channelDir, 'storyboards', 'index.html')],
-    ['characters', '캐릭터 시트', 'Character sheets', path.join(channelDir, 'assets', 'characters', 'index.html')]];
+    ['characters', '캐릭터 시트', 'Character sheets', path.join(channelDir, 'assets', 'characters', 'index.html')],
+    ['props', '소품 시트', 'Prop sheets', path.join(channelDir, 'assets', 'props', 'index.html')],
+    ['locations', '배경 시트', 'Background sheets', path.join(channelDir, 'assets', 'locations', 'index.html')]];
   return `<!doctype html>\n${MARKER}\n<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(title)} · ${esc(channel)}</title><link rel="stylesheet" href="${rel(file, path.join(assets, 'review.css'))}"></head><body class="review-page">
 <a class="review-skip" href="#review-content">${t("본문으로", "Skip to content")}</a><aside class="review-sidebar"><a class="review-brand" href="${rel(file, path.join(channelDir, 'index.html'))}">딸깍스토리</a><div class="review-channel">${esc(channel)}</div><nav aria-label="Navigation">${nav.map(([key, ko, en, target]) => `<a href="${rel(file, target)}"${key === section ? ' aria-current="page"' : ''}>${t(ko, en)}</a>`).join('')}</nav><footer>${t('로컬 라이브러리', 'Local library')}</footer></aside>
 <main class="review-main" id="review-content" tabindex="-1"><select class="review-language" data-language aria-label="Language"><option value="ko">한국어</option><option value="en">English</option></select>${body}</main><script src="${rel(file, path.join(assets, 'review.js'))}"></script></body></html>\n`;
@@ -232,6 +234,33 @@ function exportChannel(channelDirectory, { check = false } = {}) {
     cards += `<article data-card data-search="${esc((character.name + ' ' + character.id + ' ' + role).toLocaleLowerCase())}" class="review-card review-character"><a class="review-card-art" href="${rel(charIndex, file)}" aria-label="${esc(character.name)}">${preview ? image(charIndex, path.join(folder, preview.file), character.name) : empty('이미지 없음', 'No image yet')}</a><div class="review-card-body"><div class="review-card-heading"><h2><a href="${rel(charIndex, file)}">${esc(character.name)}</a></h2>${voicePreview(dir, charIndex, folder, character)}</div>${preview?.reference ? `<span class="review-reference">${t('참고 이미지', 'Reference image')}</span>` : ''}<p class="review-role">${esc(role)}</p>${review}${panelStatus(slots)}</div></article>`;
   }
   render(charIndex, 'Characters', 'characters', heading(t('캐릭터 시트', 'Character sheets'), `${chars.length} ${t('명의 캐릭터', 'characters')}`) + searchBox() + `<div class="review-grid review-catalog">${cards}</div><div data-no-results${chars.length ? ' hidden' : ''}>${empty(chars.length ? '검색 조건에 맞는 캐릭터가 없습니다.' : '등록된 캐릭터가 없습니다.', chars.length ? 'No characters match your search.' : 'No characters yet.')}</div>`);
+  // Episode-owned sheets stay canonical in scenes.js; these are read-only catalogues.
+  for (const [kind, ko, en, anchor] of [
+    ['props', '소품 시트', 'Prop sheets', 'props'],
+    ['locations', '배경 시트', 'Background sheets', 'location-sheets'],
+  ]) {
+    const file = path.join(dir, 'assets', kind, 'index.html');
+    let items = '', count = 0;
+    for (const board of boards) {
+      const doc = boardWindows.get(board.topic)?.SB_DOC || {};
+      const entries = Array.isArray(doc[kind]) ? doc[kind] : [];
+      const folder = path.join(dir, 'episodes', board.topic, 'storyboard');
+      for (const entry of entries) {
+        if (!entry || typeof entry !== 'object') continue;
+        count++;
+        const name = entry.name || entry.id || '—';
+        const reference = entry.imageUrl || (Array.isArray(entry.references) ? entry.references.find(ref => ref && !ref.condition)?.path : '');
+        const target = typeof reference === 'string' && reference && !/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(reference) ? path.resolve(folder, reference) : null;
+        const preview = target && regular(dir, target) ? image(file, target, name) : empty('참조 이미지 대기', 'Reference image pending');
+        const fields = kind === 'locations' ? [['layout', '배치·동선', 'Layout / movement'], ['lighting', '시간·조명', 'Time / lighting'], ['invariants', '고정 요소', 'Invariants']] : [['tracking', '추적 방식', 'Tracking']];
+        const details = fields.map(([key, labelKo, labelEn]) => field(t(labelKo, labelEn), Array.isArray(entry[key]) ? entry[key].join(' · ') : entry[key])).join('');
+        const source = path.join(folder, 'storyboard.html');
+        const link = regular(dir, source) ? `<a href="${rel(file, source)}#${anchor}">${t('스토리보드에서 보기', 'View in storyboard')}</a>` : t('검토 HTML 미등록', 'Review HTML not supplied');
+        items += `<article class="review-card" data-card data-search="${esc((name + ' ' + (entry.id || '') + ' ' + board.title).toLocaleLowerCase())}">${preview}<div class="review-card-body"><h2>${esc(name)}</h2><p>${esc(board.title)} · ${esc(entry.id)}</p><p>${esc(entry.description || '')}</p><dl>${details}</dl>${link}</div></article>`;
+      }
+    }
+    render(file, en, kind, heading(t(ko, en), t('에피소드별 시트를 모아 봅니다.', 'Browse sheets by episode.')) + searchBox() + `<div class="review-grid review-catalog">${items}</div><div data-no-results${count ? ' hidden' : ''}>${empty(count ? '검색 조건에 맞는 시트가 없습니다.' : '등록된 시트가 없습니다.', count ? 'No sheets match your search.' : 'No sheets yet.')}</div>`);
+  }
   const boardIndex = path.join(dir, 'storyboards', 'index.html');
   cards = '';
   for (const board of boards) {

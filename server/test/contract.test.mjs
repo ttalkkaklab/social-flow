@@ -110,7 +110,7 @@ describe('tool surface', () => {
   });
 
   // The model picks a tool by its description. Two tools with the same text leave it a coin
-  // toss — acting_review, tts_review_acting and tts_review_final shared one until 0.118.2.
+  // toss — acting_review, tts_review_acting and tts_review_final shared one until 0.118.3.
   it('descriptions are unique', () => {
     const seen = new Map();
     for (const tool of TOOLS) {
