@@ -116,7 +116,7 @@ function render(scene,p,{portrait=false,onFont,boardTheme}={}){
  }else if(['process','timeline'].includes(m.type)){
    const n=c.items.length,centered=theme&&m.type==='timeline'&&!portrait,step=portrait?(theme&&m.type==='process'?Math.max(h/n,260):h/n):centered?wide/n:(wide-200)/(n-1);
    c.items.forEach((v,i)=>{const q=centered?at(i*.18,.16+i*.18):theme&&m.type==='process'?at(.04+i*.20,.22+i*.20):at(.08+i*.22,.28+i*.22),xx=portrait?x+26:centered?x+step*(i+.5):x+step*i+25,yy=portrait?y+step*i:y+90;
-    if(i<n-1){const progress=at(.18+i*.22,.45+i*.22);out+=line(xx,yy,portrait?xx:xx+step,portrait?yy+step:yy,C.soft,4)+line(xx,yy,portrait?xx:xx+step*progress,portrait?yy+step*progress:yy,C.accent,4);}
+    if(i<n-1){const progress=centered?at(.10+i*.18,.18+i*.18):at(.18+i*.22,.45+i*.22);out+=line(xx,yy,portrait?xx:xx+step,portrait?yy+step:yy,C.soft,4)+line(xx,yy,portrait?xx:xx+step*progress,portrait?yy+step*progress:yy,C.accent,4);}
     out+=`<g opacity="${q}" transform="translate(0 ${24*(1-q)})">`;
     if(theme&&portrait&&m.type==='process'&&i<n-1){const handoff=at(.18+i*.2,.32+i*.2);if(handoff>0&&handoff<1){const py=yy+step*handoff;out+=rect(xx-15,py-21,30,42,C.paper,3)+line(xx-9,py-9,xx+9,py-9,C.accent,3)+line(xx-9,py,xx+9,py,C.accent,3)+line(xx-9,py+9,xx+4,py+9,C.accent,3);}}
     out+=circle(xx,yy,centered?23+8*Math.sin(Math.PI*q):23,C.soft)+circle(xx,yy,23*q,C.accent)+text(xx,yy+8,i+1,23,C.paper,550,'middle',q);
@@ -164,11 +164,15 @@ function render(scene,p,{portrait=false,onFont,boardTheme}={}){
    out+=text(ax+30,ay+54,c.inputLabel||'입력',28,C.muted);
    if(!c.mappings)out+=wrap(ax+30,ay+125,c.input,theme?42:portrait?35:33,bw-60,C.ink,500);
    out+=`<g opacity="${q}" transform="translate(0 ${20*(1-q)})">`+rect(bx,by,bw,bh,outputPaper,theme?theme.layout.radius:18)+text(bx+30,by+54,c.outputLabel||'결과',28,outputInk,450,'start',c.mappings?(theme?at(.35,.45):at(.66,.76)):1)+(c.mappings?'':wrap(bx+30,by+125,c.output,theme?42:portrait?35:33,bw-60,outputInk,500))+'</g>';
+   if(theme&&c.mappings){
+     const copying=c.mappings.some(item=>item.fields?.length),ghost=copying?1-.9*at(.08,.1)*(1-at(.42,.45)):1;
+     c.mappings.forEach((item,i)=>out+=text(ax+30,ay+125+i*68,item.from,30,C.muted,450,'start',ghost));
+   }
    if(c.mappings)c.mappings.forEach((item,i)=>{
      if(theme&&item.fields?.length){
        const local=clamp((p-.45-i*.44/c.mappings.length)/(.44/c.mappings.length)),phase=(a,b)=>ease((local-a)/(b-a));
        const sx=ax+30,sy=ay+125+i*68,ex=bx+30,ey=by+125+i*68,travel=at(.08,.45),reorder=phase(0,.7),finish=phase(.7,1);
-       out+=text(sx,sy,item.from,30,C.muted,450);
+       if(travel>0&&travel<1)out+=rect(sx-10,sy+(ey-sy)*travel-36,bw-60,52,'#ffffff',6);
        item.fields.forEach((value,fieldIndex)=>{
          const font=fontFace(value,'body',500),startOffset=measure(item.from.slice(0,item.from.indexOf(value)),30,500,'body',font),endOffset=measure(item.to.slice(0,item.to.indexOf(value)),30,500,'body',font);
          const xx=sx+(ex-sx)*travel+startOffset+(endOffset-startOffset)*reorder,yy=sy+(ey-sy)*travel+Math.sin(Math.PI*reorder)*(fieldIndex%2?26:-26);
@@ -182,7 +186,7 @@ const t=at(.22,.66),sx=ax+30,sy=ay+125+i*68,ex=bx+30,ey=by+125+i*68;out+=text(sx
    out+=`<path d="${vertical?`M${mx-10} ${my+12}l10 12 10-12`:`M${mx+12} ${my-10}l12 10-12 10`}" fill="none" stroke="${C.accent}" stroke-width="4"/>`;}
    if(m.type==='ui_demo'){
     const buttonY=ay+bh-72;
-    out+=rect(ax+30,buttonY,bw-60,49,at(.14,.3)>.5?C.accent:C.muted,8)+text(ax+bw/2,buttonY+33+(p>.27&&p<.32?3:0),theme&&p>.27&&p<.4?(c.processingLabel||'정리 중…'):theme&&p>=.65?(c.doneLabel||'완료'):c.action,theme?30:24,C.paper,550,'middle');
+    out+=rect(ax+30,buttonY,bw-60,49,at(.14,.3)>.5?C.accent:C.muted,8)+text(ax+bw/2,buttonY+33+(p>.27&&p<.32?3:0),theme&&p>.27&&p<.65?(c.processingLabel||'정리 중…'):theme&&p>=.65?(c.doneLabel||'완료'):c.action,theme?30:24,C.paper,550,'middle');
     const cp=at(.08,.3),px=ax+bw-85,py=buttonY+140-110*cp;
     if(p>.27&&p<.36)out+=`<circle cx="${px}" cy="${buttonY+30}" r="${8+100*(p-.27)}" fill="none" stroke="${C.accent}" stroke-width="3"/>`;
     if(p<.5)out+=`<path d="M${px} ${py}l0 33 9-8 9 17 8-4-9-17 12-2z" fill="${C.paper}" stroke="${C.ink}" stroke-width="2"/>`;
