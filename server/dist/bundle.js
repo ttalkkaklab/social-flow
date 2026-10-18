@@ -84325,7 +84325,7 @@ import * as path8 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.118.0",
+  version: "0.118.1",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -92397,7 +92397,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend \u2014 use
   },
   {
     name: "image_local_generate",
-    title: "Image generation (local \xB7 Z-Image \u2014 default)",
+    title: "Image generation (local \xB7 Z-Image \u2014 explicit local choice)",
     annotations: HINT.generateLocal,
     description: "Generate a text-only image locally with Z-Image Turbo via mflux. Requires the mflux executable and downloaded model weights; first use may download weights. No per-call API bill. This adapter does not expose upstream img2img or LoRA. Use the saved engine; never automatically substitute gpt_image_text2img after failure. Korean text quality requires inspection. Returns a local PNG path and requested generation settings. Use imageContext for configured production.",
     inputSchema: {
@@ -105753,7 +105753,7 @@ ROUTES.music_status = async (args) => text2(JSON.stringify(musicStatus(args), nu
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.118.0" },
+  { name: "social-flow", version: "0.118.1" },
   { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

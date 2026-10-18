@@ -11,7 +11,7 @@ Channel-based short-form/long-form content pipeline Claude Code plugin.
 - Previz is optional; no checker refuses a generated cut without one.
 - The production ratio is a planning target and cost ceiling: the band's upper bound and the budget are enforced, the lower bound is not.
 - Every YouTube upload starts `private`; `youtube_update` flips it to public, and growth loops run the same sequence under the approved plan.
-- Channel assets (logos, intros, growth images) follow `.social-flow/models.json` like episodes; host-first is only the initial recommendation at setup.
+- Channel assets (logos, intros, growth images) follow `.social-flow/models.json` like episodes; initial image setup recommends ASTRA GenAI; video setup recommends a supported host tool.
 - `treatment:"footage"` is a retired route and a hard execution error.
 - An unattended run without complete settings reports `project_setup_required` and defers authoring.
 - Initial style, ratio and format are asked once at project setup, then reused.
@@ -269,8 +269,10 @@ Initial setup is an explicit preference step, including on interactive autoprodu
 unattended callers without complete settings report `project_setup_required` with the missing
 fields and defer authoring (status codes: `skills/_shared/model-settings.md`).
 
-At first setup, a host CLI's own media tool (Codex and Grok `image_gen`, Grok also `image_edit`,
-`image_to_video` and `reference_to_video`; user directive 2026-09-07) is the recommended default;
+At first image setup, recommend ASTRA GenAI (`engine:"astra-genai", model:"z-image-turbo"`)
+(owner directive, 2026-10-18), not local mflux. Configure `ASTRA_GENAI_API_KEY` if missing;
+local generation and host image tools are explicit alternatives. Text-bearing images still
+require GPT Image 2. At first video setup, a supported host video tool is recommended;
 once saved, the saved choice governs every generated still, slide art, clip, candidate logo,
 intro keyframe and growth-post image — channel assets follow `.social-flow/models.json` like
 episodes. The storyboard records the saved providers in `window.PRODUCTION.imageProvider` and

@@ -37,6 +37,8 @@ episode work, continue to that skill after setup without asking for the same cho
 3. Call `project_manage action:options` and `capability_status`. Follow
    [model settings](../_shared/model-settings.md) for **genre → video model → video credentials → image model → image credentials
    → TTS needed? → speech model and credentials only if yes → music when wanted**.
+   Recommend ASTRA GenAI (`astra-genai` / `z-image-turbo`) for initial image selection,
+   not local mflux; readable-text images require GPT Image 2.
    Complete each credential step before the next model question; follow the shared
    credential procedure, including server reconnect and configuration recheck.
    An explicit no-TTS choice saves `models.speech:{engine:"none"}`. Reuse explicit prior answers and existing settings.

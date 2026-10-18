@@ -1029,7 +1029,7 @@ assembler's stdout as `visual.bgPrompt` — the whole string.
 so produce doesn't have to guess.
 
 - **`imageProvider:"host"` → every still and slide art goes to the host image tool** (Codex or Grok `image_gen`; Grok `image_edit` for a reference), `image.host` at $0. The four API lines below apply on Claude Code, or where the episode wrote `"api"` (still-generation §1).
-- **points backgrounds → `image_local_generate`** (local Z-Image, $0). The default.
+- **points backgrounds → `image_local_generate`** (local Z-Image, $0), only when explicitly selected.
 - **The cover background (scene-1) → `gpt_image_text2img` `quality: "high"`** ($0.22). It's
   both the thumbnail and veo's input, so the quality clause applies.
 - **Any screen that has to contain text → `gpt_image_text2img`** whatever the scene — the

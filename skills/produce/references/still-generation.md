@@ -19,7 +19,7 @@ before deciding whether regeneration is needed. Prompt refresh does not authoriz
 ## Contents
 
 - [1. Which engine, and why](#1-which-engine-and-why)
-  - [The host image tool comes first](#the-host-image-tool-comes-first-owner-directive-2026-09-07)
+  - [The host image tool comes first](#when-the-saved-image-selection-uses-the-host)
   - [The API table](#the-api-table-claude-code-or-imageproviderapi)
 - [2. Making the calls](#2-making-the-calls)
 - [3. The image check](#3-the-image-check)
@@ -49,11 +49,11 @@ Do not add unexposed options or infer model quality from a successful contract c
 
 First resolve [directory model settings](../../_shared/model-settings.md). Use the
 episode snapshot's image engine/model/quality and explicit user overrides for every
-new still. The host preference and API table below are first-setup recommendations
-only when no choice exists. A saved API/local choice overrides host detection;
+new still. Initial image setup recommends ASTRA GenAI (`astra-genai` / `z-image-turbo`);
+the host and local adapters below apply only when selected. A saved API/local choice overrides host detection;
 missing tools, failed calls and unsupported edits do not authorize substitution.
 
-### The host image tool comes first (owner directive 2026-09-07)
+### When the saved image selection uses the host
 
 The storyboard wrote `PRODUCTION.imageProvider` from the tool list of the CLI it ran in
 (storyboard §1): `"host"` where the CLI ships `image_gen` — Codex, Grok — and `"api"` on Claude
@@ -120,7 +120,7 @@ Measured 2026-08-12 (`docs/research/2026-08-12-local-image-generation`).
 
 | Still | Engine | Price | Why |
 |---|---|---|---|
-| points backgrounds | `image_local_generate` (Z-Image) | $0 | the default; a few minutes each, so queue them sequentially |
+| points backgrounds | `image_local_generate` (Z-Image) | $0 | only when selected; queue local calls sequentially |
 | cover background (scene-1) | `gpt_image_text2img` `quality:"high"` | $0.22 | it is the thumbnail *and* veo's input — the quality clause |
 | any screen with text in it | `gpt_image_text2img` | per quality | the local engine breaks Korean jamo ("딸깍연구소" → "달닥연구소") |
 | a scene with `visual.character` | `gpt_image_img2img` | per quality | the panels are the input, not a description |
@@ -130,7 +130,7 @@ the default, into the scene. Follow it. **A departure invented at call time gene
 something nobody approved.**
 
 `mlx_image_generate` / `mlx_image_edit` are an optional extra local lane when MLX Core is up.
-They do not replace Z-Image as the default and they do not take Hangul; the plugin never
+They require an explicit local selection; readable text uses GPT Image 2; the plugin never
 launches the app, so a down `:11234` fails closed. On a machine without mflux,
 `image_local_generate` fails with install instructions — report the unavailable
 selected engine and request an explicit alternative before any GPT Image call.

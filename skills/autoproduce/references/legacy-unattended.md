@@ -635,7 +635,7 @@ the price.
     glance; use `seen from behind, face turned away` instead of
     `face not visible`. On escalated episodes this PNG doubles as the veo
     source.
-  - Points backgrounds: **`image_local_generate` (local Z-Image — the default,
+  - Points backgrounds: **`image_local_generate` (local Z-Image — only when explicitly selected,
     $0 per image)**, **2–4 photorealistic shots of the topic** — the photo is
     the star (absolute rule 14), so reusing one image turns the whole body into
     a single frozen frame. Change the shot when the content axis changes, but

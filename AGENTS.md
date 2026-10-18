@@ -29,7 +29,7 @@ tools and never appear there.
 |---|---|---|
 | Driving a browser | `ego lite` (`ego-browser`, a tool of the user's machine) | claude-in-chrome, chrome-devtools MCP, any other browser automation |
 | Rendering or screenshotting a page | headless Chrome via `skills/produce/references/capture-frames.sh` | browser MCP servers |
-| Images and video where the host CLI ships its own media tools (Codex `image_gen`; Grok `image_gen` · `image_edit` · `image_to_video` · `reference_to_video`) | the saved model choice in `.social-flow/models.json` governs (user directive 2026-10-16); the host tool is the setup-time recommendation, and a fallback after a failed host call is asked for, never silent | any external MCP server |
+| Images and video where the host CLI ships its own media tools (Codex `image_gen`; Grok `image_gen` · `image_edit` · `image_to_video` · `reference_to_video`) | the saved model choice in `.social-flow/models.json` governs (user directive 2026-10-16); ASTRA GenAI is the image setup recommendation (2026-10-18), a supported host tool is the video setup recommendation, and a fallback after a failed host call is asked for, never silent | any external MCP server |
 | Images, video, voice, music, search otherwise | `mcp__social-flow__*` and its plugin-install form `mcp__plugin_social-flow_social-flow__*` — the server this plugin ships | any external MCP server |
 | Web search with no `SERPAPI_API_KEY` or Naver pair | the host's `WebSearch` tool — the one allowed search fallback | any external MCP server |
 | Reading an image | the `Read` tool, which takes images natively | vision MCP servers |
