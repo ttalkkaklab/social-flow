@@ -64,6 +64,24 @@ window.SCENES=[{type:"cover",duration:5,narration:[{tts:"a"}],sound:{
     assert.match(env, /\$\{DUCK_RELEASE:=250\}/);
   });
 
+  it('compiles gain curves and rejects invalid timing without replacing manifests', () => {
+    const p = room();
+    const board = join(p.board, 'scenes.js');
+    const write = points => writeFileSync(board, `window.SCENES=[{type:"cover",duration:5,sound:{musicGain:${JSON.stringify(points)}}}];`);
+    write([{atSeconds:0,gainDb:-12},{atSeconds:4,gainDb:3}]);
+    assert.equal(run(p).status, 0);
+    const manifest = readFileSync(join(p.work, 'music-gain.tsv'), 'utf8');
+    assert.match(manifest, /gainDb/);
+    for (const points of [[], [{atSeconds:1,gainDb:0}], [{atSeconds:0,gainDb:13}], [{atSeconds:0,gainDb:0},{atSeconds:6,gainDb:1}]]) {
+      write(points);
+      assert.notEqual(run(p).status, 0);
+      assert.equal(readFileSync(join(p.work, 'music-gain.tsv'), 'utf8'), manifest);
+    }
+    writeFileSync(board, 'window.SCENES=[{type:"cover",duration:5}];');
+    assert.equal(run(p).status, 0);
+    assert.equal(existsSync(join(p.work, 'music-gain.tsv')), false);
+  });
+
   it('removes an effect on the next compile while keeping current mix settings', () => {
     const p = room();
     writeFileSync(join(p.channel, 'assets/audio/sfx/whoosh.wav'), 'sfx');

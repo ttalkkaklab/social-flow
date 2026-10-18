@@ -126,7 +126,7 @@ automatically improve the scene.
 
 In the table, map every intended event to a supported control:
 
-- `sound.cue` selects a declared window.MUSIC cue at a shot boundary on the attended path.
+- `sound.cue` selects a declared window.MUSIC cue at a shot boundary, including authorized automatic production.
   Resolve asset cues before building and include generated cues in the approved cost plan.
 - `sound.drop: true` removes the bed for the shot. Spend the short's single drop on the
   line that needs room, on the turn for a story arc. This does not mute voice or SFX.
@@ -135,8 +135,8 @@ In the table, map every intended event to a supported control:
   Do not spend the drop on the hook to get a quiet opening.
 - `sound.sfx` names an existing channel asset and plays at the shot's first frame. Use it
   for a visible event or a specific transition, not as a whoosh on every cut. If the impact
-  happens mid-shot, use the documented segment manifest route in produce §6 or omit the
-  effect. Do not claim a word-level cue that the current renderer cannot schedule.
+  happens mid-shot, use `sound.effects[].atSeconds`. This is a shot-relative time, not
+  automatic word alignment. Use `sound.musicGain` for a planned music gain curve.
 - `visual.audio` describes generated clip audio. Motion backgrounds discard that audio;
   an essential sound must have a supported mix route. B-roll keeps its own sound under
   the existing no-narration contract. Never plan dialogue over that slot.
@@ -145,8 +145,10 @@ In the table, map every intended event to a supported control:
   Follow [acting prompts](../../produce/references/acting-prompts.md). Keep spoken
   wording and subtitles separate from generated tags; do not change identity voice for an effect.
 
-Autoproduce uses one bed, without window.MUSIC or sound.cue. Design its contrast with
-supported drops, resolved SFX and scene rhythm from the outset. Missing sound assets require
+Autoproduce may reuse multiple existing cues and alternate arrangements. Generate additional
+cues only within the saved model choice and authorized music allocation. One bed is an
+economical option, not a mandatory format. Design contrast with gain curves, cue changes,
+supported drops, resolved SFX and scene rhythm. Missing sound assets require
 a documented substitute or omission that still delivers the beat. If the story depends on
 the unavailable sound, report that with the output. Do not add unpriced generation or exceed the cap.
 

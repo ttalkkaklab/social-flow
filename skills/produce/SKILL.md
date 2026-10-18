@@ -507,7 +507,7 @@ All `still_camera` cuts use the unchanged shared camera HTML template and runtim
   padding + the 2 s handover (bgm-scoring.md §2; the last cue needs no handover). A cue that
   comes up short loops at the boundary and `bed.log` prints the exact span to regenerate at.
 
-  On a legacy board without `$mix`, `sound.effects` or `sound.silence`, continue to write **`.work/bgm.tsv`** by hand — `idx <TAB> audio-file`, one row per shot that changes the cue:
+  On a legacy board without `$mix`, `sound.effects` or `sound.silence` or `sound.musicGain`, continue to write **`.work/bgm.tsv`** by hand — `idx <TAB> audio-file`, one row per shot that changes the cue:
   ```
   4	bgm-tense.wav
   ```
@@ -517,11 +517,13 @@ All `still_camera` cuts use the unchanged shared camera HTML template and runtim
   A shot with `sound.drop` becomes an `sfx.tsv` row per segment of that shot, audio column empty
   and `bgm` set to `off` (§sfx below). A shot with `sound.sfx` becomes one row on **seg 0** — the
   shot's first frame — with the path `resolve-asset.py <channel dir> sfx <id>` returns.
-  `build-reel.sh` runs `compile-sound-plan.js` before reading `sound.env`. On an extended board, do not hand-write `bgm.tsv` · `sfx.tsv` · `amb.tsv` · `silence.tsv` or `sound.env`: the compiler records their hashes in `.work/sound-plan.json`.
+  `build-reel.sh` runs `compile-sound-plan.js` before reading `sound.env`. On an extended board, do not hand-write `bgm.tsv` · `sfx.tsv` · `amb.tsv` · `silence.tsv` · `music-gain.tsv` or `sound.env`: the compiler records their hashes in `.work/sound-plan.json`.
   It removes only a stale file whose hash still matches that marker; human edits are kept with a warning, and a markerless legacy board stays byte-identical.
   **The level is not a knob here.** The builder measures the narration and sets the bed
-  `BGM_SEP` LU under it (10 by default), clamps the bed's true peak, and stops the build if the
-  voice-to-bed separation **while the voice is up** lands under 4 LU. The hook is handled there
+  `BGM_SEP` LU under it (10 by default), clamps the bed's true peak, and warns if the
+  voice-to-bed separation **while the voice is up** lands under the configured review threshold.
+  Use `sound.musicGain` for shot-relative gain curves and `$mix.ducking` for threshold,
+  wet mix and detector lookahead as well as ratio/attack/release. Existing boards keep their defaults. The hook is handled there
   too: card 0 sits a further `BGM_HOOK_LU` (6) down and ramps back from card 1, so the opening
   needs no drone cue. So the prompt only has to make the bed *fit* — the established wording is
   "leaves space for a spoken voiceover, no melody in the vocal frequency range". The build

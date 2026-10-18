@@ -163,12 +163,15 @@ awk -v f="$SPEED" 'BEGIN{exit !(f >= 0.5 && f <= 3.0)}' \
 RATE_LO=${RATE_LO:-$(awk -v f="$SPEED" 'BEGIN{printf "%.2f", 3.2 / f}')}
 RATE_HI=${RATE_HI:-$(awk -v f="$SPEED" 'BEGIN{printf "%.2f", 6.2 / f}')}
 BGM_SEP=${BGM_SEP:-10}             # LU the bed sits under the measured speech loudness (see bgm-scoring.md)
-BGM_SEP_MIN=${BGM_SEP_MIN:-4}      # below this the build stops — the music is competing with the voice
+BGM_SEP_MIN=${BGM_SEP_MIN:-4}      # review warning below this separation; never an execution gate
 BGM_LOOP_XF=${BGM_LOOP_XF:-2.0}    # crossfade when a cue is shorter than its span
 BGM_CUE_XF=${BGM_CUE_XF:-2.0}      # crossfade between two cues (bgm.tsv)
 export BGM_LOOP_XF BGM_CUE_XF
 DUCK_RELEASE=${DUCK_RELEASE:-250}  # sidechain release ms — guides put 200–500, 400–700 if it pumps (bgm-scoring.md §2)
 DUCK_ATTACK=${DUCK_ATTACK:-20}     # sidechain attack ms
+DUCK_THRESHOLD=${DUCK_THRESHOLD:-0.02}
+DUCK_MIX=${DUCK_MIX:-1}
+DUCK_LOOKAHEAD=${DUCK_LOOKAHEAD:-0}
 DUCK_RATIO=${DUCK_RATIO:-8}        # sidechain ratio — measured ~16 LU of ducking on a TTS voice (bgm-scoring.md §2)
 BGM_HOOK_LU=${BGM_HOOK_LU:-6}      # extra LU the bed sits under BGM_SEP during card 0 — the hook opens over a quieter bed
 BGM_HOOK_R=${BGM_HOOK_R:-2.0}      # ramp back to the resting level, starting at card 1. 0 = no hook attenuation
@@ -433,6 +436,7 @@ CHAPTSV=""; [ -f chapters.tsv ] && CHAPTSV=chapters.tsv
 : > work/chapstart.tsv
 : > work/sfx.list
 : > work/bgmgate.list
+: > work/music-gain.list
 
 N=0
 TOTF=0                              # cumulative frames (source of absolute subtitle times — holds because concat is sample-exact)
@@ -1038,6 +1042,14 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
     done
   fi
 
+  # Resolve authored music curves against the actual rendered shot duration.
+  if [ -f music-gain.tsv ]; then
+    while IFS=$'\t' read -r _ POINTS; do
+      END=$(awk -v s="$CS0" -v d="$D" 'BEGIN{printf "%.4f", s+d}')
+      printf '%s\t%s\t%s\n' "$CS0" "$END" "$POINTS" >> work/music-gain.list
+    done < <(awk -F'\t' -v i="$IDX" '$1==i' music-gain.tsv)
+  fi
+
   # Shot-relative, music-only silence windows. Narration and room tone keep playing.
   if [ -n "$SILTSV" ]; then
     while IFS=$'\t' read -r _ SS SE SCOPE; do
@@ -1373,6 +1385,15 @@ fi
 # 10b) BGM mute — multiply a gate in per window. A hard cut makes the music stop dead, so there's a
 #      ${BGM_GATE_R}s ramp. gate = max(falling slope, rising slope) — 1 outside the window, 0 inside.
 BGMGATE=""
+MUSICGAIN=""
+if [ -s work/music-gain.list ]; then
+  MUSICGAIN=$(node "$HERE/sound-mix-contract.js" work/music-gain.list)
+fi
+# Advance only the detector; voice and picture keep their original timestamps.
+DUCKKEY=""
+if awk -v m="$DUCK_LOOKAHEAD" 'BEGIN{exit !(m > 0)}'; then
+  DUCKKEY="atrim=start=$(awk -v m="$DUCK_LOOKAHEAD" 'BEGIN{print m/1000}'),asetpts=PTS-STARTPTS,apad,"
+fi
 if [ -s work/bgmgate.list ]; then
   BGMGATE=$(awk -F'\t' -v r="$BGM_GATE_R" '
     {if(r==0) printf "%snot(between(t\\,%s\\,%s))", (NR>1?"*":""), $1, $2;
@@ -1419,13 +1440,14 @@ fi
 #      head and tail fades, the gate windows, then ducking. bed-ducked.wav is tapped off for the
 #      separation check below — measuring it after the amix would be measuring the voice too.
 ffmpeg -y -v error -i work/narration.wav -i work/bed.wav $SFXIN $AMBIN -filter_complex "
-  [0:a]aformat=channel_layouts=stereo,asplit=2[vo_key][vo_raw];
+  [0:a]aformat=channel_layouts=stereo,asplit=2[vo_detect][vo_raw];
+  [vo_detect]${DUCKKEY}anull[vo_key];
   ${SFXIN:+[2:a]aformat=channel_layouts=stereo[sfxa];}
   $AMBLEG
   $VOMIX
-  [1:a]atrim=0:$NT,asetpts=PTS-STARTPTS,${BEDEQ}
+  [1:a]atrim=0:$NT,asetpts=PTS-STARTPTS,${BEDEQ}${MUSICGAIN}
        afade=t=in:st=0:d=1.2,${FADEOUT}${HOOKVOL}anull$BGMGATE[bgv];
-  [bgv][vo_key]sidechaincompress=threshold=0.02:ratio=$DUCK_RATIO:attack=$DUCK_ATTACK:release=$DUCK_RELEASE:makeup=1,
+  [bgv][vo_key]sidechaincompress=threshold=$DUCK_THRESHOLD:mix=$DUCK_MIX:ratio=$DUCK_RATIO:attack=$DUCK_ATTACK:release=$DUCK_RELEASE:makeup=1,
        asplit=2[duck][duckqa];
   ${FINALMIX},
        loudnorm=I=$FINAL_LUFS:TP=$FINAL_TP:LRA=$FINAL_LRA,aresample=48000[out]
@@ -1454,7 +1476,7 @@ measure_i() {   # measure_i <file> [filter_complex-with-loudnorm] — integrated
 }
 BED_D=$(measure_i work/bed-ducked.wav)
 BED_S=$(measure_i work/bed-ducked.wav \
-  "[1:a]aformat=channel_layouts=stereo[k];[0:a][k]sidechaingate=threshold=0.02:ratio=9000:range=0:attack=1:release=50,loudnorm=print_format=json")
+  "[1:a]aformat=channel_layouts=stereo[k];[0:a][k]sidechaingate=threshold=$DUCK_THRESHOLD:ratio=9000:range=0:attack=1:release=50,loudnorm=print_format=json")
 if [ "$BED_D" = "-inf" ] || [ "$SPEECH_I" = "-inf" ]; then
   say "── voice-to-bed separation not applicable: primary audio or ducked bed is silent"
 else
@@ -1470,8 +1492,8 @@ else
   say "── voice-to-bed separation ${SEP} LU across the whole timeline (speech ${SPEECH_I} / ducked bed ${BED_D}) — no speech-gated reading, the voice key stayed under the gate"
 fi
 if awk -v v="$SEP_S" -v m="$BGM_SEP_MIN" 'BEGIN{exit !(v < m)}'; then
-  say "✗ separation ${SEP_S} LU is under the ${BGM_SEP_MIN} LU floor — the bed is competing with the voice"
-  exit 1
+  say "⚠ separation ${SEP_S} LU is under the ${BGM_SEP_MIN} LU review threshold — listen for masked speech"
+  WARN=1
 elif awk -v v="$SEP_S" -v d="$BGM_SEP" 'BEGIN{exit !(v < d + 1)}'; then
   # Ducking can only widen the gap, so a speech-gated reading at the resting distance means the
   # sidechain never fired — the key went silent, or the bed reached the mix around it.

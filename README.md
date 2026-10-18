@@ -494,7 +494,9 @@ Story and production share a [direction guide](skills/storyboard/references/rete
 Each development pays part of the opening promise with evidence or a changed expectation.
 The board maps those beats to visible changes, sound events and the final payoff. Production
 checks that map against the finished video at delivery speed, including a listen to the mix.
-Autoproduce keeps its single-bed budget and can use music drops and available sound effects.
+Autoproduce can reuse multiple music cues or generate them within its authorized allocation.
+Shot-relative music gain curves and configurable ducking shape dialogue and reveals; low
+speech-to-music separation is a review warning, not an assembly gate.
 An unverified playback check is recorded as `not_reviewed`; it does not hold the episode from
 the publish queue. These are editorial checks; completion-rate improvements require audience
 measurements.

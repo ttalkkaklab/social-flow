@@ -84,7 +84,10 @@ not inherit a publishing schedule or automatic queue authorization.
 4. Run the relevant storyboard diagnostics and refresh its local review HTML. Fix technical
    execution errors. Resolve concrete editorial findings in scope and report any remainder.
    A schema pass is not an audience-comprehension or visual-quality pass.
-5. If production is authorized, follow produce for the complete generation/build path. Read
+5. Music may use existing alternate arrangements and multiple cues; additional generation stays
+   within the saved model and authorized allocation. Use shot-relative gain curves for dramatic
+   swells and restrained dialogue. A single bed is optional, not an unattended restriction.
+   If production is authorized, follow produce for the complete generation/build path. Read
    [production mode](../storyboard/references/production-mode.md), confirm the saved model
    and existing approved cap against the content-derived quote, and preserve real attempt
    limits. An estimate is not a receipt. Unknown pricing stays visibly unknown.

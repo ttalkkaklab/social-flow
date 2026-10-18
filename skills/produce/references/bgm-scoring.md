@@ -1,7 +1,7 @@
 # Scoring the bed — the numbers, and how much each one is worth
 
 Two kinds of statement live in this file and they are not worth the same. **Levels** come from
-peer-reviewed listening tests and published delivery specs, and the builder enforces them.
+peer-reviewed listening tests and published delivery specs, and the builder measures them. Creative thresholds produce review warnings.
 **Craft** — where a cue changes, when the music drops out — has no primary source behind it;
 a five-angle source sweep came back with zero verified claims on cue-unit scoring, hit points,
 riser lead times, sidechain parameter values, or 2–4kHz carving. Those are written here as our
@@ -32,7 +32,7 @@ commentary-over-music** and at least 15 LU for commentary-over-ambience. The pap
 saying plainly that these "are only general guidelines and not strict rules". The same paper's
 short-window analysis treats **speech-to-background under 0 LU** — the music no louder than the
 voice — as the point where listening effort measurably climbs. Read 4 LU as the alarm line the
-build refuses to cross, never as where the bed belongs.
+build flags for listening, never as where the bed belongs.
 
 **Carry the limits with the numbers.** Those experiments are around 20 German-speaking adults
 judging 9–14 second broadcast excerpts through DNN-separated stems. Not one of our conditions —
@@ -79,7 +79,7 @@ Instagram and TikTok publish nothing we could verify either.
   the ducker's own key and threshold, so only the bed under speech reaches the R128 integration)
   and once across the whole timeline. The gated reading is speech-to-background *during speech*,
   the quantity the listening tests above measured, and it is the one checked against
-  `BGM_SEP_MIN` (4): under it the build **stops**; no wider than the resting distance means the
+  `BGM_SEP_MIN` (4): under it the build **warns and continues**; no wider than the resting distance means the
   sidechain never fired, which is a warning. The whole-timeline figure stays in the log; it has
   the un-ducked gaps in it and reads lower, and the distance between the two is how far the bed
   rises between sentences. Measured on one 71 s TTS episode (pundago ep421): 25.8 LU under
@@ -148,8 +148,8 @@ scenes-schema §sound effects.
 
 A single bed can support the whole episode. Choose changes from the story's turns using
 [retention-direction.md](../../storyboard/references/retention-direction.md) §4, then listen
-to the final mix using §5. Cue placement is an editorial decision. Autoproduce keeps one
-bed and uses supported drops and available SFX; it does not generate multiple cues.
+to the final mix using §5. Cue placement is an editorial decision. Autoproduce may reuse multiple cues or generate them within its authorized allocation.
+A single bed remains an economical option.
 
 `bgm.tsv` (`idx <TAB> audio-file`) changes the bed at a card and keeps it until the next row;
 changes crossfade over `BGM_CUE_XF` (2.0s). The storyboard authors it as `sound.cue` per shot
@@ -171,8 +171,7 @@ Our working defaults, all of them ours to overturn:
   Own-channel production guide (2026-08), field practice. Since 2026-09-16 the builder does
   the first half itself (`BGM_HOOK_LU`, §2), so a quiet opening needs no drone cue and no
   drop on the cover.
-- **The crossfade lands on the card start**, so the incoming cue arrives with the picture rather
-  than after it.
+- **The crossfade starts on the card boundary**, so the incoming cue starts with the picture and reaches its full level after the overlap.
 - **Don't score against the narration's own rhythm.** The one BPM finding that survived
   verification is about persuasion, not retention — high-tempo instrumental beds (120–160) beat
   low-tempo and no-music in an expert-explainer misinformation-correction experiment (JCMC 2024,
@@ -182,9 +181,12 @@ Our working defaults, all of them ours to overturn:
 
 ## 4. Generating a bed
 
-`music_generate` (exact length 5–300s, `bpm`, `scale`, `seed`) is the lane for a bed that has to
-fit a span, and `seed` is the only reproducibility control there is. `music_generate_clip` returns
-a fixed 30s clip. Both are Lyria, both instrumental-only, and both carry a SynthID watermark.
+Use the saved `models.music` through [music routing](../../_shared/music-routing.md).
+Reuse a suitable channel asset first; assess its dramatic role rather than copying the default
+regardless of content. Translate prompt intent into the selected adapter's native fields.
+Do not switch providers because an example below uses Lyria. Output duration is measured;
+the builder handles looping and placement. Provider controls are requests, not proof that
+a generated track follows every transition or preserves a motif.
 
 Lyria RealTime takes **weighted prompts**, not a paragraph: each is `{text, weight}`, weight can be
 anything but 0, and 1.0 is the documented starting point. Weights inside one message are
@@ -235,3 +237,32 @@ Sources for §1: [QoMEX 2023](https://arxiv.org/abs/2305.19100) ·
 The survey behind the 2026-09-16 changes — the guide ranges for ducking and EQ, the platform
 figures and the generator prompt grammars, drawn as charts with an evidence grade on each
 number: `docs/research/2026-09-16-bgm-direction/index.html`.
+
+
+## 6. Plan the musical role before choosing a track
+
+For each dramatic section, state the role (understanding, tension, intimacy, propulsion,
+release or deliberate absence), speech density, instrumentation, entry/exit trigger and
+expected change. Keep these editorial notes in the readable board, not new required metadata.
+
+| Content | Arrangement starting point | Shape under speech |
+|---|---|---|
+| Dense explanation | Sparse instrumental pulse, little lead melody | Lower gain; drop on crucial numbers if needed |
+| Intimate dialogue | Few sustained instruments, room for breathing | Keep a stable low bed across short pauses |
+| Suspense | Repeated motif, restrained bass texture | Add density after dialogue; do not reveal the twist early |
+| Comedy | Light or deliberately straight-faced cue | Leave the punch line and reaction room |
+| Action / reveal | Rhythmic layers or a wider arrangement | Build after speech, resolve at the action |
+| Testimony / sensitive history | Minimal score or no score | Avoid telling the audience to celebrate humiliation |
+
+These are creative options, not fixed genre-to-BPM rules. Compare sparse/full or no-drums
+versions of the same material before selecting unrelated songs. Existing alternate files can
+be ordinary named cues; the renderer does not isolate stems. `sound.musicGain` shapes a single
+bed in dB at shot-relative times, with silence/drop taking precedence. See scenes-schema for
+the executable fields. Match curve endpoints across cuts when continuity is intended.
+
+Keep global defaults for old boards. New dialogue-heavy work can try ratio 3, release 600 ms,
+lookahead 120 ms and wet mix 0.7, then compare the result. Lookahead advances the detector only;
+it is not semantic phrase detection. A curve spanning a pause is the explicit way to prevent
+an unwanted rise there. Fixed EQ remains optional; no dynamic frequency-selective ducking is
+implemented. Review on a phone, in mono and at modest volume when listening is requested.
+Measure and report the final file; a numeric pass is not a claim that it was heard.

@@ -2269,7 +2269,7 @@ window.MUSIC = {
     ambienceSeparationLu: 15,          // room tone under the speech (amb.tsv)
     cueCrossfadeSeconds: 2,
     hook: { attenuationLu: 6, releaseSeconds: 2 },
-    ducking: { ratio: 8, attackMs: 20, releaseMs: 250 },
+    ducking: { ratio: 8, attackMs: 20, releaseMs: 250, threshold: 0.02, mix: 1, lookaheadMs: 0 },
     endingFadeSeconds: 2.2,
     silenceRampSeconds: 0.3
   },
@@ -2308,6 +2308,7 @@ Per shot:
 ```js
 sound: {
   cue:  "tense",    // the bed changes to this cue here and stays until another shot changes it
+  musicGain: [{ atSeconds: 0, gainDb: -6 }, { atSeconds: 2, gainDb: 0 }],
   drop: false,      // true = the bed goes silent under this shot (0.30s ramp, not a cut)
   sfx:  "whoosh-soft",  // a key in window.SFX (or a channel sfx catalog id), heard at the shot's first frame (§sound effects)
   ambience: "room-office", // a loop in window.SFX — the room tone starts here and holds until a shot names another or ends it with null
@@ -2334,7 +2335,7 @@ and logical ids only.
 the builder's existing defaults, and omitting `$mix` entirely leaves a legacy board on its old
 manifest and mix path. `targetLufs` and `truePeakDbtp` are this project's delivery values; YouTube's
 public help describes Stable volume but does not publish a numeric upload target. `bedSeparationLu`
-sets the music below measured narration; `minimumSeparationLu` is the speech-time build floor.
+sets the music below measured narration; `minimumSeparationLu` is a speech-time review warning, never an execution gate.
 `ambienceSeparationLu` does the same for the room-tone bed (`AMB_SEP`, 15 by default), which is laid
 once and never ducked.
 
@@ -2346,11 +2347,28 @@ cue-span precision and avoiding crossfades shorter than an audio sample. Zero `c
 ending fade, zero `silenceRampSeconds` makes a hard mute window, and zero
 `hook.releaseSeconds` disables hook attenuation. Omitting these settings preserves the builder's
 existing defaults. Bed and ambience separation are gain targets; measured speech-to-bed separation
-still has to satisfy the requested floor after mixing.
+is reported against the requested review threshold after mixing.
 
 `drop` carries the same card restriction the silence window carries — `broll` and `outro` are
 refused. An outro drop put in to clear room for the brand sting used to spend one of the two
 reversal places below.
+
+`sound.musicGain` is an optional, shot-relative array of `{atSeconds, gainDb}` points.
+It starts at zero seconds, increases strictly in time (whole milliseconds), and stays inside
+both the planned and actual rendered duration. Gain spans -60 to +12 dB relative to the
+measured bed. The builder interpolates linearly in dB, holds the last point to the shot end,
+and resets to 0 dB on the next shot. Match endpoints across adjacent shots to avoid a jump.
+It affects music only, before ducking; silence/drop still wins. Use it for an entrance,
+a restrained explanation or a swell after speech. It does not separate instruments.
+Only narrated cards support it; b-roll and outro keep their separate audio paths.
+
+`ducking.threshold` controls detector sensitivity (linear amplitude, 0.001–1).
+`ducking.mix` blends compressed and dry bed (0–1); 0 disables ducking, 1 is legacy full wet.
+`ducking.lookaheadMs` (0–500) advances only the detector, never the voice or picture.
+These controls do not recognize sentences; use an authored curve across a deliberate pause.
+Legacy settings remain unchanged. For a new dialogue-heavy drama, compare ratio 3,
+releaseMs 600, lookaheadMs 120 and mix 0.7 against the legacy mix; these are listening
+starting points, not standards or guaranteed attenuation depths.
 
 **Reversal places are a short's budget of two.** A shot with `drop: true`, or one carrying any
 `silence` window, is one reversal place, and `check-scenes.js` reports a third **on a short**.
