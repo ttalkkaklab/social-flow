@@ -64,6 +64,12 @@ future resolution. If characters foresee the comic hazard, inspect their precaut
 competing priority or legible flaw before the mishap. Repetition earns comic credit when
 it changes pressure, tactic, status or consequence rather than merely restating a trait.
 
+For dramatic principals, extend the blind read with character-depth questions before
+opening author notes: what matters enough to cost them something, what different sides
+of the person appear in their conduct, and how does this particular relationship change
+their tactic? Quote the performed evidence and mark genuine ambiguity. A generic but
+coherent character is a different finding from an unmotivated decisive choice.
+
 ## 2. Compare intent and inspect the handoff
 
 Now read the selected scenario, actual identities, STORY, STRUCTURE, visual plan and relevant
@@ -74,6 +80,14 @@ its established rules; adapted work against its disclosed invention boundary.
 Trace the decisive causal and knowledge chain. Quote the event that enables a new belief,
 assignment of trust, risk or choice before that decision. People may make poor choices if
 motivation and consequences are legible; do not require every fictional character to be wise.
+Use [character depth](../skills/storyboard/references/character-depth.md) to compare those
+observations with intent. Check whether a supposed flaw changes a choice or merely labels
+the person, whether self-justification is supported when used, and whether a claimed
+relationship change has an observable consequence. For serialized fiction, compare relevant
+canonical prior endings; do not infer history from draft alternatives. Keep the existing
+character/motivation axis. No new score gate, compulsory transformation, moral ambiguity,
+trauma or inner-conflict subplot for narrators/incidental roles. A complex stable conviction
+is valid. Do not demand explanatory dialogue when behavior permits a fair inference.
 
 Compare performance with planned shots, source/end states and generation directions:
 

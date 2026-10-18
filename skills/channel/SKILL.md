@@ -217,6 +217,10 @@ node "$CLAUDE_PLUGIN_ROOT/skills/channel/references/serve.js" data --port 8400
 ## Local review HTML (required after character edits)
 
 For every new or updated character, follow [character-identity.md](references/character-identity.md). The structured identity is required in addition to the pinned voice below.
+For dramatic characters, apply [character depth](../storyboard/references/character-depth.md)
+when filling existing personality, relationship and acting fields. Connect tendencies to
+choices and costs instead of accumulating adjectives. Preserve existing canon and keep
+episode-specific pressure separate from the shared identity; no extra JSON keys are required.
 
 Export the bundled sheet before any episode candidates or scene images, including drafts with pending media. Follow [panel specifications](references/character-panels.md) for purpose, canvas ratio and subject size. Never hand-author the review HTML.
 

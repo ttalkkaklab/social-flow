@@ -84,6 +84,10 @@ particular audience experience; the points below are craft options, not a univer
    curiosity, fear, intrigue, comedy, empathy, awe or discovery. Candidates may share an engine.
 2. Give the central character a want and an obstacle. For explanation, this can be the
    audience's question and the demonstration that resolves it. Cast only necessary characters.
+   For dramatic principals, use the character-depth guidance linked from storyboard:
+   identify what makes the pursuit personally costly, how a relationship affects their
+   method, and which performed choice reveals it. A single clear want can carry a plot
+   without yet revealing a complex person. Do not force every role into an inner conflict.
 3. Draft the opening situation and the final observable change. Give the audience enough
    information to anticipate a result. A promise may be enacted; an explanatory promise
    sentence, loss hook and question are not mandatory for drama or visual comedy.
@@ -142,6 +146,11 @@ For each scene establish enough place/time and starting situation to follow who 
 what interferes, the choice they make and what changes. Keep the audience's necessary
 information in actions, actual speech or available sounds; identity sheets are not on screen.
 Use existing `STRUCTURE.scenes` fields for the scene handoff rather than a new required form.
+In a dramatic exchange, let the counterpart's response affect the tactic and expose a
+priority or tension. Preserve the cost and aftermath of important choices. For serialized
+fiction, read relevant canonical prior endings before resetting trust, knowledge or an arc;
+note the episode's starting/resulting state in storyboard.md when useful, not in a duplicate
+identity schema. Unapproved alternatives do not establish series history.
 
 Allow a scene to hold multiple lines, multiple speakers and silence. Cut only after the
 scene reads coherently. The first speaker's line, second speaker's answer and listener's

@@ -12,6 +12,12 @@ Input: test multiple storyboards with the installed plugin without generating me
 Expected: stop at local plans and independent review. Pass: no paid media, uploads or queued
 publication; media quality is explicitly unverified, even when plan scores are high.
 
+For a dramatic local benchmark, also use storyboard's character-depth cases: a decorative
+flaw, a stable conviction, evidence lost in shot framing and a serialized consequence.
+Pass evidence: the automatic route reads the shared character-depth guidance and preserves
+the same choices and relationship responses as the storyboard route. Do not reduce it to
+filling cast.want or invent a new review threshold. The narrator-only boundary still applies.
+
 ## Incomplete production setup
 
 Input: an unattended call lacks a saved model preference or spending authorization.
