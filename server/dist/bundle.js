@@ -81340,7 +81340,7 @@ import * as path5 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.117.0",
+  version: "0.118.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -90238,6 +90238,21 @@ var CHARACTER_TARGET_PROPERTY = { type: "object", additionalProperties: false, d
   ...Object.fromEntries(["timbre", "pace", "register", "habits", "emotionalRange"].map((key) => [key, { type: ["string", "null"], maxLength: 2e3, description: `Confirmed character ${key}, e.g. low clear voice or measured phrasing; null means unknown.` }])),
   traits: { type: "array", maxItems: 20, description: 'Character tendencies as context, e.g. ["restrained and precise"]. Do not demand every trait in one short line.', items: { type: "string", maxLength: 2e3 } }
 }, required: ["vocalGender", "perceivedAge", "timbre", "pace", "register", "habits", "emotionalRange", "traits"] };
+var SERVER_INSTRUCTIONS = `social-flow plans, produces and publishes short- and long-form videos for SNS channels. When tool definitions are deferred, search by task using the words at the end.
+
+Start: \`capability_status\` shows which providers are configured on this machine; \`project_manage\` holds the saved project settings (models, visual style, ratio, SNS targets). Reuse saved choices instead of asking again.
+
+Episode video: \`video_catalog\` \u2192 \`video_plan\` \u2192 \`video_execute\`, and \`video_status\` after an interruption. The provider tools (veo_*, seedance_*, astra_*, omni_*, mlx_video_generate) are the adapters that route calls; call one directly only when the user names it.
+
+Storyboard: \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_route\` and the tts_* tools generate. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
+
+Images: \`image_local_generate\` is the free local default for text-free images; any image with text in it (Korean especially) goes to \`gpt_image_text2img\`. Music: music_*, suno_*. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
+
+SNS: run \`sns_account_check\` first; publish tools appear only for platforms with a credential file. \`threads_publish\`, \`instagram_publish\`, \`facebook_publish\`, \`youtube_publish\` and \`sns_comment_reply\` are public the moment they run \u2014 call them only with the user's approval for that post or inside a growth-plan.md standing authorization.
+
+Spending: generation tools bill the provider and write the episode ledger. Saved defaults and budget caps are not approval to spend; stay inside the authorization the user gave.
+
+Search words: \uC601\uC0C1 video clip, \uC774\uBBF8\uC9C0 image, \uC74C\uC131 TTS narration voice, \uC74C\uC545 BGM music, \uD6A8\uACFC\uC74C SFX, \uC2A4\uD1A0\uB9AC\uBCF4\uB4DC storyboard, \uC5C5\uB85C\uB4DC \uAC8C\uC2DC publish, \uB313\uAE00 comment, \uC778\uC0AC\uC774\uD2B8 insights, \uD2B8\uB80C\uB4DC topic research.`;
 var TOOLS = [
   {
     name: "tts_route",
@@ -90398,7 +90413,7 @@ var TOOLS = [
     name: "tts_review_acting",
     title: "Explicitly requested adversarial audio review",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: "Create local review evidence for the host LLM. Use for requested listening, acting or camera review. Returns status=not_reviewed, score=null, mediaPath, timestamped frame paths when visual, SHA256, duration in seconds, rubric and nextAction; it does not judge or upload media. Open evidence with native host capabilities and record observations with host_review. Unsupported modalities remain unverified. Do NOT use for synthesis \u2014 use the selected raw generator. No external evaluation call or automatic fallback.",
+    description: "Legacy alias of host_review prepare for one speech take (audioPath, expectedText, direction, optional characterTarget): returns local evidence for the host LLM to listen to. Use only when an existing plan or script already calls tts_review_acting after the user asked for an acting review of a line; new reviews use host_review. Returns status=not_reviewed, score=null, mediaPath, SHA256, duration in seconds, rubric and nextAction; outputPath is ignored. It does not judge, upload or call an external evaluator. Do NOT use for synthesis \u2014 use speech_manage and the selected generator.",
     inputSchema: { type: "object", additionalProperties: false, properties: {
       audioPath: { type: "string", description: "Actual local audio path." },
       expectedText: { type: "string", maxLength: 4e3, description: "Clean expected spoken words, without acting tags." },
@@ -92657,7 +92672,7 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
     name: "tts_review_final",
     title: "Review assembled speech",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: "Create local review evidence for the host LLM. Use for requested listening, acting or camera review. Returns status=not_reviewed, score=null, mediaPath, timestamped frame paths when visual, SHA256, duration in seconds, rubric and nextAction; it does not judge or upload media. Open evidence with native host capabilities and record observations with host_review. Unsupported modalities remain unverified. Do NOT use for synthesis \u2014 use the selected raw generator. No external evaluation call or automatic fallback.",
+    description: "Legacy alias of host_review prepare for the assembled episode audio (mediaPath of the final media, the full expectedText, optional segments): returns local evidence for the host LLM to listen to end to end. Use only when the user asks for a final listening review and an existing plan already calls tts_review_final; new reviews use host_review. Returns status=not_reviewed, score=null, mediaPath, SHA256, duration in seconds, rubric, nextAction and the segments as sent. It does not judge, upload or call an external evaluator, and assembly never waits on it. Do NOT use for synthesis.",
     inputSchema: { type: "object", additionalProperties: false, properties: {
       mediaPath: { type: "string", description: "Absolute path of the final media that ships." },
       segments: { type: "array", minItems: 1, maxItems: 1e3, description: "Required when the final FLAC exceeds 14 MiB. Complete spoken sentences in playback order on the final timeline. First starts at 0; each extends to the next start (last to audio EOF), at most 60 seconds each. Joined text must equal expectedText. The tool groups them into bounded chapters and reviews every chapter boundary.", items: { type: "object", additionalProperties: false, required: ["startSeconds", "expectedText"], properties: { startSeconds: { type: "number", minimum: 0, description: "Start of this complete sentence on the final audio timeline; the first is 0." }, expectedText: { type: "string", minLength: 1, maxLength: 1e3, description: "Complete spoken sentence, including intended phonetic number/name spelling." } } } },
@@ -94223,7 +94238,7 @@ Returns revision, ordered matching lines with generationPlan and voice/audio has
     name: "acting_review",
     title: "Review performance or cinematography from actual media",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: "Create local review evidence for the host LLM. Use for requested listening, acting or camera review. Returns status=not_reviewed, score=null, mediaPath, timestamped frame paths when visual, SHA256, duration in seconds, rubric and nextAction; it does not judge or upload media. Open evidence with native host capabilities and record observations with host_review. Unsupported modalities remain unverified. Do NOT use for synthesis \u2014 use the selected raw generator. No external evaluation call or automatic fallback.",
+    description: "Legacy alias of host_review prepare for one clip or audio file: probes the media, extracts timestamped frames when visual and returns evidence for the host LLM to inspect. Use only when an existing plan or script already calls acting_review for a requested performance or cinematography review (mode audiovisual, audio or video; focus performance or cinematography); new reviews use host_review. Returns status=not_reviewed, score=null, mediaPath, SHA256, duration in seconds, rubric and nextAction. It does not judge or upload media. Unsupported modalities remain unverified. No external evaluation call. Do NOT use for synthesis \u2014 use the selected raw generator.",
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -102154,10 +102169,17 @@ Resolution: ${result.resolution}
 Duration: ${result.duration} seconds (${result.durationSource || "provider reported; probe output"})${tokens}
 Task ID: ${result.taskId}`;
 }
+var API_ERROR_BODY_MAX = 4e3;
+function apiErrorText(result) {
+  const { status, body } = result;
+  const next = status === 401 || status === 403 ? "The platform refused the credential or permission. Run sns_account_check for this channel; an expired token needs its setup skill (setup-threads, setup-instagram, setup-youtube)." : status === 404 ? "The target ID was not found. Re-read IDs from the latest inbox, insights or publish log instead of reusing an old one." : status === 429 ? "Rate limited. Wait before the next call; do not retry in a loop." : status >= 500 ? "Upstream or network failure. Retry later \u2014 but for a publish or reply, check the platform or output/publish-log.md first: the post may already be live." : "The platform rejected the request. Fix the field the body names; the same arguments fail the same way.";
+  const shown = body.length > API_ERROR_BODY_MAX ? `${body.slice(0, API_ERROR_BODY_MAX)}\u2026 (${body.length - API_ERROR_BODY_MAX} more chars cut)` : body;
+  return `HTTP ${status} \u2014 ${next}
+${shown}`;
+}
 function fromApi(result, note) {
   if (!result.ok) {
-    return text2(`HTTP ${result.status}
-${result.body}`, true);
+    return text2(apiErrorText(result), true);
   }
   const out = text2(note ? `${note}
 ${result.body}` : result.body);
@@ -103632,8 +103654,8 @@ ROUTES.video_status = async (args) => text2(JSON.stringify(videoStatus(args), nu
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.117.0" },
-  { capabilities: { tools: {} } }
+  { name: "social-flow", version: "0.118.0" },
+  { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   const enabled = new Set(enabledPlatforms());

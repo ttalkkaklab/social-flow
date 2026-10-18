@@ -1098,6 +1098,29 @@ const CHARACTER_TARGET_PROPERTY = { type: 'object', additionalProperties: false,
   traits: {type:'array',maxItems:20,description:'Character tendencies as context, e.g. ["restrained and precise"]. Do not demand every trait in one short line.',items:{type:'string',maxLength:2000}}
 }, required:['vocalGender','perceivedAge','timbre','pace','register','habits','emotionalRange','traits'] };
 
+/**
+ * MCP server instructions (InitializeResult.instructions). With tool search on, Claude Code
+ * loads only tool names and this text at session start, so this is how the model learns
+ * which of ~100 names to search for and which route a job takes. Claude Code cuts it at
+ * 4,096 characters, so the routing comes first. Every backticked tool name is checked
+ * against TOOLS by the contract test.
+ */
+export const SERVER_INSTRUCTIONS = `social-flow plans, produces and publishes short- and long-form videos for SNS channels. When tool definitions are deferred, search by task using the words at the end.
+
+Start: \`capability_status\` shows which providers are configured on this machine; \`project_manage\` holds the saved project settings (models, visual style, ratio, SNS targets). Reuse saved choices instead of asking again.
+
+Episode video: \`video_catalog\` → \`video_plan\` → \`video_execute\`, and \`video_status\` after an interruption. The provider tools (veo_*, seedance_*, astra_*, omni_*, mlx_video_generate) are the adapters that route calls; call one directly only when the user names it.
+
+Storyboard: \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_route\` and the tts_* tools generate. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
+
+Images: \`image_local_generate\` is the free local default for text-free images; any image with text in it (Korean especially) goes to \`gpt_image_text2img\`. Music: music_*, suno_*. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
+
+SNS: run \`sns_account_check\` first; publish tools appear only for platforms with a credential file. \`threads_publish\`, \`instagram_publish\`, \`facebook_publish\`, \`youtube_publish\` and \`sns_comment_reply\` are public the moment they run — call them only with the user's approval for that post or inside a growth-plan.md standing authorization.
+
+Spending: generation tools bill the provider and write the episode ledger. Saved defaults and budget caps are not approval to spend; stay inside the authorization the user gave.
+
+Search words: 영상 video clip, 이미지 image, 음성 TTS narration voice, 음악 BGM music, 효과음 SFX, 스토리보드 storyboard, 업로드 게시 publish, 댓글 comment, 인사이트 insights, 트렌드 topic research.`;
+
 export const TOOLS: Tool[] = [
   {
     name: 'tts_route', title: 'Speech model routing', annotations: HINT.generate,
@@ -1252,7 +1275,7 @@ export const TOOLS: Tool[] = [
 },
   {
     name: 'tts_review_acting', title: 'Explicitly requested adversarial audio review', annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: "Create local review evidence for the host LLM. Use for requested listening, acting or camera review. Returns status=not_reviewed, score=null, mediaPath, timestamped frame paths when visual, SHA256, duration in seconds, rubric and nextAction; it does not judge or upload media. Open evidence with native host capabilities and record observations with host_review. Unsupported modalities remain unverified. Do NOT use for synthesis \u2014 use the selected raw generator. No external evaluation call or automatic fallback.",
+    description: "Legacy alias of host_review prepare for one speech take (audioPath, expectedText, direction, optional characterTarget): returns local evidence for the host LLM to listen to. Use only when an existing plan or script already calls tts_review_acting after the user asked for an acting review of a line; new reviews use host_review. Returns status=not_reviewed, score=null, mediaPath, SHA256, duration in seconds, rubric and nextAction; outputPath is ignored. It does not judge, upload or call an external evaluator. Do NOT use for synthesis — use speech_manage and the selected generator.",
     inputSchema: { type: 'object', additionalProperties: false, properties: {
       audioPath: { type: 'string', description: 'Actual local audio path.' }, expectedText: { type: 'string', maxLength: 4000, description: 'Clean expected spoken words, without acting tags.' },
       direction: { type: 'string', maxLength: 2000, description: 'Requested scene intent and audible performance changes.' }, language: { type: 'string', default: 'ko', description: 'Spoken language.' },
@@ -3500,7 +3523,7 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
   // ── Speech synthesis (Google Gemini TTS — ported from the fect-mcp tts module) ─────────
   {
     name: 'tts_review_final', title: 'Review assembled speech', annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: "Create local review evidence for the host LLM. Use for requested listening, acting or camera review. Returns status=not_reviewed, score=null, mediaPath, timestamped frame paths when visual, SHA256, duration in seconds, rubric and nextAction; it does not judge or upload media. Open evidence with native host capabilities and record observations with host_review. Unsupported modalities remain unverified. Do NOT use for synthesis \u2014 use the selected raw generator. No external evaluation call or automatic fallback.",
+    description: "Legacy alias of host_review prepare for the assembled episode audio (mediaPath of the final media, the full expectedText, optional segments): returns local evidence for the host LLM to listen to end to end. Use only when the user asks for a final listening review and an existing plan already calls tts_review_final; new reviews use host_review. Returns status=not_reviewed, score=null, mediaPath, SHA256, duration in seconds, rubric, nextAction and the segments as sent. It does not judge, upload or call an external evaluator, and assembly never waits on it. Do NOT use for synthesis.",
     inputSchema: { type: 'object', additionalProperties: false, properties: {
       mediaPath: { type: 'string', description: 'Absolute path of the final media that ships.' },
       segments: { type: 'array', minItems: 1, maxItems: 1000, description: 'Required when the final FLAC exceeds 14 MiB. Complete spoken sentences in playback order on the final timeline. First starts at 0; each extends to the next start (last to audio EOF), at most 60 seconds each. Joined text must equal expectedText. The tool groups them into bounded chapters and reviews every chapter boundary.', items: { type: 'object', additionalProperties: false, required: ['startSeconds','expectedText'], properties: { startSeconds: { type: 'number', minimum: 0, description: 'Start of this complete sentence on the final audio timeline; the first is 0.' }, expectedText: { type: 'string', minLength: 1, maxLength: 1000, description: 'Complete spoken sentence, including intended phonetic number/name spelling.' } } } },
@@ -5068,7 +5091,7 @@ Returns revision, ordered matching lines with generationPlan and voice/audio has
     name: 'acting_review',
     title: 'Review performance or cinematography from actual media',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: "Create local review evidence for the host LLM. Use for requested listening, acting or camera review. Returns status=not_reviewed, score=null, mediaPath, timestamped frame paths when visual, SHA256, duration in seconds, rubric and nextAction; it does not judge or upload media. Open evidence with native host capabilities and record observations with host_review. Unsupported modalities remain unverified. Do NOT use for synthesis \u2014 use the selected raw generator. No external evaluation call or automatic fallback.",
+    description: "Legacy alias of host_review prepare for one clip or audio file: probes the media, extracts timestamped frames when visual and returns evidence for the host LLM to inspect. Use only when an existing plan or script already calls acting_review for a requested performance or cinematography review (mode audiovisual, audio or video; focus performance or cinematography); new reviews use host_review. Returns status=not_reviewed, score=null, mediaPath, SHA256, duration in seconds, rubric and nextAction. It does not judge or upload media. Unsupported modalities remain unverified. No external evaluation call. Do NOT use for synthesis — use the selected raw generator.",
     inputSchema: {
       type: 'object', additionalProperties: false, properties: {
         mediaPath: { type: 'string', minLength: 1, description: 'Local clip/audio file, e.g. /Volumes/data/story/meleon/test/shot-21.mp4.' },

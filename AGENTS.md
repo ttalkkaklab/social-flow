@@ -1,6 +1,6 @@
 # AGENTS.md — working rules for this repository
 
-social-flow is a Claude Code plugin: 18 skills, 5 reviewer agents, and one bundled
+social-flow is a Claude Code plugin: 21 skills, 5 reviewer agents, and one bundled
 MCP server. [README.md](README.md) is the source of truth for structure and the tool
 list; [CLAUDE.md](CLAUDE.md) holds the branch flow, the commit rules and the Korean
 prose rules. **Read CLAUDE.md before you write anything** — it is short, and the
@@ -29,7 +29,7 @@ tools and never appear there.
 | Driving a browser | `ego lite` (`ego-browser`, a tool of the user's machine) | claude-in-chrome, chrome-devtools MCP, any other browser automation |
 | Rendering or screenshotting a page | headless Chrome via `skills/produce/references/capture-frames.sh` | browser MCP servers |
 | Images and video where the host CLI ships its own media tools (Codex `image_gen`; Grok `image_gen` · `image_edit` · `image_to_video` · `reference_to_video`) | the host tool first (user directive 2026-09-07); the plugin server only as a fallback the user asked for | any external MCP server |
-| Images, video, voice, music, search otherwise | `mcp__social-flow__*` — the server this plugin ships | any external MCP server |
+| Images, video, voice, music, search otherwise | `mcp__social-flow__*` and its plugin-install form `mcp__plugin_social-flow_social-flow__*` — the server this plugin ships | any external MCP server |
 | Reading an image | the `Read` tool, which takes images natively | vision MCP servers |
 
 **ego lite has no fallback.** It is macOS-only. Where it is missing, the skill says
@@ -49,7 +49,13 @@ gone from every machine that runs this plugin.
   in its own words. storyboard plans and stops for approval · produce builds an
   approved episode · autoproduce runs both unattended.
 - `argument-hint` stays. Codex ignores the field and loads the skill anyway
-  (measured: all 18 present in `codex debug prompt-input`), and Claude Code uses it.
+  (measured: every skill present in `codex debug prompt-input`), and Claude Code uses it.
+- `allowed-tools` names each of this server's tools twice: `mcp__social-flow__<tool>` (a
+  project `.mcp.json`, Codex) and `mcp__plugin_social-flow_social-flow__<tool>` (a Claude
+  Code marketplace install). Claude Code permission rules match a plugin server only in the
+  plugin form, so the bare name alone pre-approves nothing there. skill-lint holds the pair.
+- Never put `disable-model-invocation: true` on a `grow-*` skill — besides hiding it from
+  the model, it stops a scheduled task or `/loop` from running the skill.
 
 ## Before you say it works
 

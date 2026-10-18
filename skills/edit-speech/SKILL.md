@@ -7,7 +7,7 @@ description: >
   Finds stable shot and line ids, preserves other characters and reports affected outputs.
   Storyboard plans a new episode; produce builds it; this skill repairs an existing one.
 argument-hint: "<channel> <episode> <shot, character or quoted line> <change>"
-allowed-tools: ["mcp__social-flow__host_review", "mcp__social-flow__tts_voice_design", "mcp__social-flow__tts_list_voices", "mcp__social-flow__speech_manage", "mcp__social-flow__acting_review", "mcp__social-flow__tts_review_acting", "mcp__social-flow__storyboard_read", "mcp__social-flow__storyboard_check", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__astra_audio2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__veo_reference"]
+allowed-tools: ["mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__tts_voice_design", "mcp__plugin_social-flow_social-flow__tts_voice_design", "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "mcp__social-flow__acting_review", "mcp__plugin_social-flow_social-flow__acting_review", "mcp__social-flow__tts_review_acting", "mcp__plugin_social-flow_social-flow__tts_review_acting", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__storyboard_check", "mcp__plugin_social-flow_social-flow__storyboard_check", "mcp__social-flow__tts_generate", "mcp__plugin_social-flow_social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__plugin_social-flow_social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__astra_audio2video", "mcp__plugin_social-flow_social-flow__astra_audio2video", "mcp__social-flow__seedance_reference", "mcp__plugin_social-flow_social-flow__seedance_reference", "mcp__social-flow__veo_reference", "mcp__plugin_social-flow_social-flow__veo_reference"]
 ---
 Follow [host evaluation](../_shared/host-review.md) for every requested review.
 
@@ -78,8 +78,9 @@ new character dialogue or voices. Do not silently turn a user's dialogue into na
 If the user explicitly requests testing or an adversarial improvement loop, review the
 actual media as authorized and preserve the measured findings. A schema or planning pass
 does not establish improved acting; report unheard/unplayed output as `not_reviewed`.
-An explicitly requested paid evaluation may use `acting_review` under the authorized
-budget, as described in the speech contract. Do not call it in ordinary edit-speech runs.
+An explicitly requested review prepares evidence with `host_review` (`acting_review` and
+`tts_review_acting` are its legacy aliases); no external evaluator is called. Do not call
+them in ordinary edit-speech runs.
 
 Generation receipts keep actual API arguments in voiceSettings. For Gemini,
 which has no language argument, put the declared text language in generation.language
