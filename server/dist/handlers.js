@@ -1,3 +1,6 @@
+import { videoStatus } from './video-routing.js';
+import { planVideo, executeVideo, routeLegacyVideo } from './video-routing.js';
+import { VIDEO_ADAPTERS, videoCatalog } from './video-registry.js';
 import { routeSpeech, speechRouteSchema } from './tts-routing.js';
 import { hostReview } from './host-review.js';
 import { designGeminiVoice, voiceDesignSchema } from './voice-design.js';
@@ -1400,3 +1403,14 @@ for (const name of DURATION_TOOLS) {
         return result;
     };
 }
+// All legacy video entrypoints share the routing service. Capture the raw adapters once;
+// video_execute must not recurse through the public wrapper.
+const videoDispatch = Object.fromEntries(Object.keys(VIDEO_ADAPTERS).map(name => [name, ROUTES[name]]));
+const dispatchVideo = (name, args) => videoDispatch[name](args);
+for (const name of Object.keys(VIDEO_ADAPTERS)) {
+    ROUTES[name] = args => routeLegacyVideo(name, args, dispatchVideo);
+}
+ROUTES.video_catalog = async () => text(JSON.stringify(videoCatalog(), null, 2));
+ROUTES.video_plan = async (args) => text(JSON.stringify(planVideo(args), null, 2));
+ROUTES.video_execute = args => executeVideo(args, dispatchVideo);
+ROUTES.video_status = async (args) => text(JSON.stringify(videoStatus(args), null, 2));

@@ -1,3 +1,4 @@
+import { recordVideoSubmission, recordVideoTokens } from './video-events.js';
 /**
  * ByteDance Seedance video generation client (BytePlus ModelArk).
  *
@@ -678,6 +679,7 @@ function buildBody(request, parts) {
 }
 /** Assemble the success response — the actual generation result (values the vendor returned) wins. */
 function toResponse(request, videoPath, task, taskId) {
+    recordVideoTokens(task.usage?.completion_tokens);
     return {
         success: true,
         videoPath,
@@ -703,6 +705,7 @@ export async function generateFromText(request) {
     try {
         console.error(`[Seedance] Starting text-to-video generation... (model: ${request.model})`);
         const taskId = await createTask(apiKey, buildBody(request, []));
+        recordVideoSubmission(taskId);
         const saved = await awaitVideoAndSave(apiKey, taskId, request.outputPath || process.cwd(), request.filename || `video_${Date.now()}.mp4`);
         if ('error' in saved)
             return { success: false, error: saved.error, taskId };
@@ -728,6 +731,7 @@ export async function generateFromImage(request) {
         if (request.lastImagePath)
             console.error(`[Seedance] Last frame: ${request.lastImagePath}`);
         const taskId = await createTask(apiKey, buildBody(request, images));
+        recordVideoSubmission(taskId);
         const saved = await awaitVideoAndSave(apiKey, taskId, request.outputPath || process.cwd(), request.filename || `video_${Date.now()}.mp4`);
         if ('error' in saved)
             return { success: false, error: saved.error, taskId };
@@ -785,6 +789,7 @@ export async function generateWithReferences(request) {
             if (audioUris.length > 0)
                 console.error(`[Seedance] Reference audio: ${request.referenceAudioPaths.join(', ')}`);
             const taskId = await createTask(apiKey, buildBody(request, parts));
+            recordVideoSubmission(taskId);
             const saved = await awaitVideoAndSave(apiKey, taskId, request.outputPath || process.cwd(), request.filename || `video_ref_${Date.now()}.mp4`);
             if ('error' in saved)
                 return { success: false, error: saved.error, taskId };

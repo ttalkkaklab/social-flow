@@ -206,3 +206,8 @@ With a complete config it reuses it without questions;
 legacy growth-plan model defaults do not override it. Existing explicit per-run
 exceptions still apply. Continue to honor standing budgets and other applicable
 render settings; the saved video selection satisfies the model-choice step.
+
+Episode video execution uses the [shared routing contract](video-routing.md).
+Read `video_catalog` (or `node skills/_shared/model-settings.js catalog`) for installed
+adapters, then use `video_plan` and `video_execute`. Legacy video calls must carry
+`videoContext` when targeting configured production.

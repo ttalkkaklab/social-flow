@@ -1,0 +1,1075 @@
+{
+  "version": 1,
+  "adapters": [
+    {
+      "tool": "veo_text2video",
+      "engine": "veo",
+      "deployment": "gemini-api",
+      "operation": "text",
+      "fields": [
+        "prompt",
+        "negativePrompt",
+        "model",
+        "aspectRatio",
+        "resolution",
+        "durationSeconds",
+        "outputPath",
+        "filename"
+      ],
+      "modelConstraints": {
+        "models": [
+          "veo-3.1-generate-preview",
+          "veo-3.1-fast-generate-preview",
+          "veo-3.1-lite-generate-preview"
+        ],
+        "resolutions": [
+          "720p",
+          "1080p",
+          "4k"
+        ],
+        "note": "Use video_plan for cross-field constraints"
+      }
+    },
+    {
+      "tool": "veo_img2video",
+      "engine": "veo",
+      "deployment": "gemini-api",
+      "operation": "image",
+      "fields": [
+        "prompt",
+        "negativePrompt",
+        "sourceImagePath",
+        "lastImagePath",
+        "model",
+        "aspectRatio",
+        "resolution",
+        "durationSeconds",
+        "outputPath",
+        "filename"
+      ],
+      "modelConstraints": {
+        "models": [
+          "veo-3.1-generate-preview",
+          "veo-3.1-fast-generate-preview",
+          "veo-3.1-lite-generate-preview"
+        ],
+        "resolutions": [
+          "720p",
+          "1080p",
+          "4k"
+        ],
+        "note": "Use video_plan for cross-field constraints"
+      }
+    },
+    {
+      "tool": "veo_reference",
+      "engine": "veo",
+      "deployment": "gemini-api",
+      "operation": "reference",
+      "fields": [
+        "prompt",
+        "referenceImagePaths",
+        "model",
+        "aspectRatio",
+        "resolution",
+        "outputPath",
+        "filename"
+      ],
+      "modelConstraints": {
+        "models": [
+          "veo-3.1-generate-preview",
+          "veo-3.1-fast-generate-preview",
+          "veo-3.1-lite-generate-preview"
+        ],
+        "resolutions": [
+          "720p",
+          "1080p",
+          "4k"
+        ],
+        "note": "Use video_plan for cross-field constraints"
+      }
+    },
+    {
+      "tool": "veo_extension",
+      "engine": "veo",
+      "deployment": "gemini-api",
+      "operation": "extend",
+      "fields": [
+        "prompt",
+        "sourceVideoPath",
+        "sourceVideoUri",
+        "model",
+        "outputPath",
+        "filename"
+      ],
+      "modelConstraints": {
+        "models": [
+          "veo-3.1-generate-preview",
+          "veo-3.1-fast-generate-preview",
+          "veo-3.1-lite-generate-preview"
+        ],
+        "resolutions": [
+          "720p",
+          "1080p",
+          "4k"
+        ],
+        "note": "Use video_plan for cross-field constraints"
+      }
+    },
+    {
+      "tool": "seedance_text2video",
+      "engine": "seedance",
+      "deployment": "byteplus",
+      "operation": "text",
+      "fields": [
+        "prompt",
+        "model",
+        "resolution",
+        "durationSeconds",
+        "frames",
+        "generateAudio",
+        "watermark",
+        "seed",
+        "cameraFixed",
+        "outputPath",
+        "filename",
+        "ratio"
+      ],
+      "modelConstraints": {
+        "dreamina-seedance-2-5-260628": {
+          "resolutions": [
+            "480p",
+            "720p",
+            "1080p"
+          ],
+          "duration": [
+            4,
+            30
+          ],
+          "lastFrame": true,
+          "referenceImages": [
+            1,
+            30
+          ],
+          "referenceAudio": {
+            "maxClips": 10,
+            "clipSeconds": [
+              2,
+              30
+            ],
+            "totalSeconds": 30,
+            "audioOnly": true
+          },
+          "referenceVideos": {
+            "maxClips": 10,
+            "clipSeconds": [
+              2,
+              30
+            ],
+            "totalSeconds": 30
+          },
+          "audio": true,
+          "seed": false,
+          "realFaceInput": false,
+          "activationGate": true
+        },
+        "dreamina-seedance-2-0-260128": {
+          "resolutions": [
+            "480p",
+            "720p",
+            "1080p",
+            "4k"
+          ],
+          "duration": [
+            4,
+            15
+          ],
+          "lastFrame": true,
+          "referenceImages": [
+            1,
+            9
+          ],
+          "referenceAudio": {
+            "maxClips": 3,
+            "clipSeconds": [
+              2,
+              15
+            ],
+            "totalSeconds": 15,
+            "audioOnly": false
+          },
+          "referenceVideos": {
+            "maxClips": 3,
+            "clipSeconds": [
+              2,
+              15
+            ],
+            "totalSeconds": 15
+          },
+          "audio": true,
+          "seed": false,
+          "realFaceInput": false,
+          "activationGate": true
+        },
+        "dreamina-seedance-2-0-fast-260128": {
+          "resolutions": [
+            "480p",
+            "720p"
+          ],
+          "duration": [
+            4,
+            15
+          ],
+          "lastFrame": true,
+          "referenceImages": [
+            1,
+            9
+          ],
+          "referenceAudio": {
+            "maxClips": 3,
+            "clipSeconds": [
+              2,
+              15
+            ],
+            "totalSeconds": 15,
+            "audioOnly": false
+          },
+          "referenceVideos": {
+            "maxClips": 3,
+            "clipSeconds": [
+              2,
+              15
+            ],
+            "totalSeconds": 15
+          },
+          "audio": true,
+          "seed": false,
+          "realFaceInput": false,
+          "activationGate": true
+        },
+        "dreamina-seedance-2-0-mini-260615": {
+          "resolutions": [
+            "480p",
+            "720p"
+          ],
+          "duration": [
+            4,
+            15
+          ],
+          "lastFrame": true,
+          "referenceImages": [
+            1,
+            9
+          ],
+          "referenceAudio": {
+            "maxClips": 3,
+            "clipSeconds": [
+              2,
+              15
+            ],
+            "totalSeconds": 15,
+            "audioOnly": false
+          },
+          "referenceVideos": {
+            "maxClips": 3,
+            "clipSeconds": [
+              2,
+              15
+            ],
+            "totalSeconds": 15
+          },
+          "audio": true,
+          "seed": false,
+          "realFaceInput": false,
+          "activationGate": true
+        },
+        "seedance-1-5-pro-251215": {
+          "resolutions": [
+            "480p",
+            "720p",
+            "1080p"
+          ],
+          "duration": [
+            4,
+            12
+          ],
+          "lastFrame": true,
+          "referenceImages": false,
+          "referenceAudio": false,
+          "referenceVideos": false,
+          "audio": true,
+          "seed": true,
+          "realFaceInput": true,
+          "activationGate": false
+        },
+        "seedance-1-0-pro-250528": {
+          "resolutions": [
+            "480p",
+            "720p",
+            "1080p"
+          ],
+          "duration": [
+            2,
+            12
+          ],
+          "lastFrame": true,
+          "referenceImages": false,
+          "referenceAudio": false,
+          "referenceVideos": false,
+          "audio": false,
+          "seed": true,
+          "realFaceInput": true,
+          "activationGate": false
+        },
+        "seedance-1-0-pro-fast-251015": {
+          "resolutions": [
+            "480p",
+            "720p",
+            "1080p"
+          ],
+          "duration": [
+            2,
+            12
+          ],
+          "lastFrame": false,
+          "referenceImages": false,
+          "referenceAudio": false,
+          "referenceVideos": false,
+          "audio": false,
+          "seed": true,
+          "realFaceInput": true,
+          "activationGate": false
+        }
+      }
+    },
+    {
+      "tool": "seedance_img2video",
+      "engine": "seedance",
+      "deployment": "byteplus",
+      "operation": "image",
+      "fields": [
+        "prompt",
+        "model",
+        "resolution",
+        "durationSeconds",
+        "frames",
+        "generateAudio",
+        "watermark",
+        "seed",
+        "cameraFixed",
+        "outputPath",
+        "filename",
+        "sourceImagePath",
+        "lastImagePath",
+        "ratio"
+      ],
+      "modelConstraints": {
+        "dreamina-seedance-2-5-260628": {
+          "resolutions": [
+            "480p",
+            "720p",
+            "1080p"
+          ],
+          "duration": [
+            4,
+            30
+          ],
+          "lastFrame": true,
+          "referenceImages": [
+            1,
+            30
+          ],
+          "referenceAudio": {
+            "maxClips": 10,
+            "clipSeconds": [
+              2,
+              30
+            ],
+            "totalSeconds": 30,
+            "audioOnly": true
+          },
+          "referenceVideos": {
+            "maxClips": 10,
+            "clipSeconds": [
+              2,
+              30
+            ],
+            "totalSeconds": 30
+          },
+          "audio": true,
+          "seed": false,
+          "realFaceInput": false,
+          "activationGate": true
+        },
+        "dreamina-seedance-2-0-260128": {
+          "resolutions": [
+            "480p",
+            "720p",
+            "1080p",
+            "4k"
+          ],
+          "duration": [
+            4,
+            15
+          ],
+          "lastFrame": true,
+          "referenceImages": [
+            1,
+            9
+          ],
+          "referenceAudio": {
+            "maxClips": 3,
+            "clipSeconds": [
+              2,
+              15
+            ],
+            "totalSeconds": 15,
+            "audioOnly": false
+          },
+          "referenceVideos": {
+            "maxClips": 3,
+            "clipSeconds": [
+              2,
+              15
+            ],
+            "totalSeconds": 15
+          },
+          "audio": true,
+          "seed": false,
+          "realFaceInput": false,
+          "activationGate": true
+        },
+        "dreamina-seedance-2-0-fast-260128": {
+          "resolutions": [
+            "480p",
+            "720p"
+          ],
+          "duration": [
+            4,
+            15
+          ],
+          "lastFrame": true,
+          "referenceImages": [
+            1,
+            9
+          ],
+          "referenceAudio": {
+            "maxClips": 3,
+            "clipSeconds": [
+              2,
+              15
+            ],
+            "totalSeconds": 15,
+            "audioOnly": false
+          },
+          "referenceVideos": {
+            "maxClips": 3,
+            "clipSeconds": [
+              2,
+              15
+            ],
+            "totalSeconds": 15
+          },
+          "audio": true,
+          "seed": false,
+          "realFaceInput": false,
+          "activationGate": true
+        },
+        "dreamina-seedance-2-0-mini-260615": {
+          "resolutions": [
+            "480p",
+            "720p"
+          ],
+          "duration": [
+            4,
+            15
+          ],
+          "lastFrame": true,
+          "referenceImages": [
+            1,
+            9
+          ],
+          "referenceAudio": {
+            "maxClips": 3,
+            "clipSeconds": [
+              2,
+              15
+            ],
+            "totalSeconds": 15,
+            "audioOnly": false
+          },
+          "referenceVideos": {
+            "maxClips": 3,
+            "clipSeconds": [
+              2,
+              15
+            ],
+            "totalSeconds": 15
+          },
+          "audio": true,
+          "seed": false,
+          "realFaceInput": false,
+          "activationGate": true
+        },
+        "seedance-1-5-pro-251215": {
+          "resolutions": [
+            "480p",
+            "720p",
+            "1080p"
+          ],
+          "duration": [
+            4,
+            12
+          ],
+          "lastFrame": true,
+          "referenceImages": false,
+          "referenceAudio": false,
+          "referenceVideos": false,
+          "audio": true,
+          "seed": true,
+          "realFaceInput": true,
+          "activationGate": false
+        },
+        "seedance-1-0-pro-250528": {
+          "resolutions": [
+            "480p",
+            "720p",
+            "1080p"
+          ],
+          "duration": [
+            2,
+            12
+          ],
+          "lastFrame": true,
+          "referenceImages": false,
+          "referenceAudio": false,
+          "referenceVideos": false,
+          "audio": false,
+          "seed": true,
+          "realFaceInput": true,
+          "activationGate": false
+        },
+        "seedance-1-0-pro-fast-251015": {
+          "resolutions": [
+            "480p",
+            "720p",
+            "1080p"
+          ],
+          "duration": [
+            2,
+            12
+          ],
+          "lastFrame": false,
+          "referenceImages": false,
+          "referenceAudio": false,
+          "referenceVideos": false,
+          "audio": false,
+          "seed": true,
+          "realFaceInput": true,
+          "activationGate": false
+        }
+      }
+    },
+    {
+      "tool": "seedance_reference",
+      "engine": "seedance",
+      "deployment": "byteplus",
+      "operation": "reference",
+      "fields": [
+        "prompt",
+        "model",
+        "resolution",
+        "durationSeconds",
+        "frames",
+        "generateAudio",
+        "watermark",
+        "seed",
+        "cameraFixed",
+        "outputPath",
+        "filename",
+        "referenceImagePaths",
+        "referenceAudioPaths",
+        "referenceVideoPaths",
+        "referenceVideoUrls",
+        "ratio"
+      ],
+      "modelConstraints": {
+        "dreamina-seedance-2-5-260628": {
+          "resolutions": [
+            "480p",
+            "720p",
+            "1080p"
+          ],
+          "duration": [
+            4,
+            30
+          ],
+          "lastFrame": true,
+          "referenceImages": [
+            1,
+            30
+          ],
+          "referenceAudio": {
+            "maxClips": 10,
+            "clipSeconds": [
+              2,
+              30
+            ],
+            "totalSeconds": 30,
+            "audioOnly": true
+          },
+          "referenceVideos": {
+            "maxClips": 10,
+            "clipSeconds": [
+              2,
+              30
+            ],
+            "totalSeconds": 30
+          },
+          "audio": true,
+          "seed": false,
+          "realFaceInput": false,
+          "activationGate": true
+        },
+        "dreamina-seedance-2-0-260128": {
+          "resolutions": [
+            "480p",
+            "720p",
+            "1080p",
+            "4k"
+          ],
+          "duration": [
+            4,
+            15
+          ],
+          "lastFrame": true,
+          "referenceImages": [
+            1,
+            9
+          ],
+          "referenceAudio": {
+            "maxClips": 3,
+            "clipSeconds": [
+              2,
+              15
+            ],
+            "totalSeconds": 15,
+            "audioOnly": false
+          },
+          "referenceVideos": {
+            "maxClips": 3,
+            "clipSeconds": [
+              2,
+              15
+            ],
+            "totalSeconds": 15
+          },
+          "audio": true,
+          "seed": false,
+          "realFaceInput": false,
+          "activationGate": true
+        },
+        "dreamina-seedance-2-0-fast-260128": {
+          "resolutions": [
+            "480p",
+            "720p"
+          ],
+          "duration": [
+            4,
+            15
+          ],
+          "lastFrame": true,
+          "referenceImages": [
+            1,
+            9
+          ],
+          "referenceAudio": {
+            "maxClips": 3,
+            "clipSeconds": [
+              2,
+              15
+            ],
+            "totalSeconds": 15,
+            "audioOnly": false
+          },
+          "referenceVideos": {
+            "maxClips": 3,
+            "clipSeconds": [
+              2,
+              15
+            ],
+            "totalSeconds": 15
+          },
+          "audio": true,
+          "seed": false,
+          "realFaceInput": false,
+          "activationGate": true
+        },
+        "dreamina-seedance-2-0-mini-260615": {
+          "resolutions": [
+            "480p",
+            "720p"
+          ],
+          "duration": [
+            4,
+            15
+          ],
+          "lastFrame": true,
+          "referenceImages": [
+            1,
+            9
+          ],
+          "referenceAudio": {
+            "maxClips": 3,
+            "clipSeconds": [
+              2,
+              15
+            ],
+            "totalSeconds": 15,
+            "audioOnly": false
+          },
+          "referenceVideos": {
+            "maxClips": 3,
+            "clipSeconds": [
+              2,
+              15
+            ],
+            "totalSeconds": 15
+          },
+          "audio": true,
+          "seed": false,
+          "realFaceInput": false,
+          "activationGate": true
+        },
+        "seedance-1-5-pro-251215": {
+          "resolutions": [
+            "480p",
+            "720p",
+            "1080p"
+          ],
+          "duration": [
+            4,
+            12
+          ],
+          "lastFrame": true,
+          "referenceImages": false,
+          "referenceAudio": false,
+          "referenceVideos": false,
+          "audio": true,
+          "seed": true,
+          "realFaceInput": true,
+          "activationGate": false
+        },
+        "seedance-1-0-pro-250528": {
+          "resolutions": [
+            "480p",
+            "720p",
+            "1080p"
+          ],
+          "duration": [
+            2,
+            12
+          ],
+          "lastFrame": true,
+          "referenceImages": false,
+          "referenceAudio": false,
+          "referenceVideos": false,
+          "audio": false,
+          "seed": true,
+          "realFaceInput": true,
+          "activationGate": false
+        },
+        "seedance-1-0-pro-fast-251015": {
+          "resolutions": [
+            "480p",
+            "720p",
+            "1080p"
+          ],
+          "duration": [
+            2,
+            12
+          ],
+          "lastFrame": false,
+          "referenceImages": false,
+          "referenceAudio": false,
+          "referenceVideos": false,
+          "audio": false,
+          "seed": true,
+          "realFaceInput": true,
+          "activationGate": false
+        }
+      }
+    },
+    {
+      "tool": "astra_text2video",
+      "engine": "astra",
+      "deployment": "self-hosted-ltx",
+      "operation": "text",
+      "fields": [
+        "prompt",
+        "tier",
+        "numFrames",
+        "autoDuration",
+        "width",
+        "height",
+        "frameRate",
+        "seed",
+        "duration",
+        "generateAudio",
+        "hdr",
+        "lora",
+        "negativePrompt",
+        "numInferenceSteps",
+        "numGeneratedKeyframes",
+        "guidance",
+        "outputPath",
+        "filename"
+      ],
+      "modelConstraints": {
+        "note": "Use video_plan; deployment-specific schema is authoritative"
+      }
+    },
+    {
+      "tool": "astra_img2video",
+      "engine": "astra",
+      "deployment": "self-hosted-ltx",
+      "operation": "image",
+      "fields": [
+        "prompt",
+        "tier",
+        "firstFramePath",
+        "lastFramePath",
+        "strength",
+        "numFrames",
+        "autoDuration",
+        "width",
+        "height",
+        "frameRate",
+        "seed",
+        "duration",
+        "generateAudio",
+        "lora",
+        "negativePrompt",
+        "numInferenceSteps",
+        "numGeneratedKeyframes",
+        "guidance",
+        "outputPath",
+        "filename"
+      ],
+      "modelConstraints": {
+        "note": "Use video_plan; deployment-specific schema is authoritative"
+      }
+    },
+    {
+      "tool": "astra_keyframe_video",
+      "engine": "astra",
+      "deployment": "self-hosted-ltx",
+      "operation": "keyframe",
+      "fields": [
+        "prompt",
+        "images",
+        "numFrames",
+        "width",
+        "height",
+        "frameRate",
+        "seed",
+        "duration",
+        "generateAudio",
+        "negativePrompt",
+        "numInferenceSteps",
+        "guidance",
+        "outputPath",
+        "filename"
+      ],
+      "modelConstraints": {
+        "note": "Use video_plan; deployment-specific schema is authoritative"
+      }
+    },
+    {
+      "tool": "astra_audio2video",
+      "engine": "astra",
+      "deployment": "self-hosted-ltx",
+      "operation": "audio",
+      "fields": [
+        "prompt",
+        "audioPath",
+        "audioUploadId",
+        "imagePath",
+        "strength",
+        "audioStartTime",
+        "audioMaxDuration",
+        "numFrames",
+        "width",
+        "height",
+        "frameRate",
+        "seed",
+        "duration",
+        "generateAudio",
+        "hdr",
+        "negativePrompt",
+        "numInferenceSteps",
+        "guidance",
+        "expectLipSync",
+        "maxAttempts",
+        "outputPath",
+        "filename"
+      ],
+      "modelConstraints": {
+        "note": "Use video_plan; deployment-specific schema is authoritative"
+      }
+    },
+    {
+      "tool": "astra_ic_lora",
+      "engine": "astra",
+      "deployment": "self-hosted-ltx",
+      "operation": "control",
+      "fields": [
+        "prompt",
+        "adapter",
+        "referencePath",
+        "referenceStrength",
+        "conditioningMaskPath",
+        "conditioningMaskStrength",
+        "skipStage2",
+        "numFrames",
+        "width",
+        "height",
+        "frameRate",
+        "seed",
+        "duration",
+        "generateAudio",
+        "outputPath",
+        "filename"
+      ],
+      "modelConstraints": {
+        "note": "Use video_plan; deployment-specific schema is authoritative"
+      }
+    },
+    {
+      "tool": "astra_video_retake",
+      "engine": "astra",
+      "deployment": "self-hosted-ltx",
+      "operation": "retake",
+      "fields": [
+        "prompt",
+        "sourceVideoPath",
+        "startTime",
+        "endTime",
+        "seed",
+        "generateAudio",
+        "outputPath",
+        "filename"
+      ],
+      "modelConstraints": {
+        "note": "Use video_plan; deployment-specific schema is authoritative"
+      }
+    },
+    {
+      "tool": "omni_text2video",
+      "engine": "omni",
+      "deployment": "gemini-interactions",
+      "operation": "text",
+      "fields": [
+        "prompt",
+        "aspectRatio",
+        "resolution",
+        "durationSeconds",
+        "seed",
+        "outputPath",
+        "filename"
+      ],
+      "modelConstraints": {
+        "note": "Use video_plan; deployment-specific schema is authoritative"
+      }
+    },
+    {
+      "tool": "omni_img2video",
+      "engine": "omni",
+      "deployment": "gemini-interactions",
+      "operation": "image",
+      "fields": [
+        "prompt",
+        "sourceImagePath",
+        "lastImagePath",
+        "aspectRatio",
+        "resolution",
+        "durationSeconds",
+        "seed",
+        "outputPath",
+        "filename"
+      ],
+      "modelConstraints": {
+        "note": "Use video_plan; deployment-specific schema is authoritative"
+      }
+    },
+    {
+      "tool": "omni_extend",
+      "engine": "omni",
+      "deployment": "gemini-interactions",
+      "operation": "extend",
+      "fields": [
+        "prompt",
+        "previousInteractionId",
+        "sourceVideoPath",
+        "resolution",
+        "seed",
+        "outputPath",
+        "filename",
+        "durationSeconds"
+      ],
+      "modelConstraints": {
+        "note": "Use video_plan; deployment-specific schema is authoritative"
+      }
+    },
+    {
+      "tool": "omni_edit",
+      "engine": "omni",
+      "deployment": "gemini-interactions",
+      "operation": "edit",
+      "fields": [
+        "prompt",
+        "previousInteractionId",
+        "sourceVideoPath",
+        "resolution",
+        "seed",
+        "outputPath",
+        "filename"
+      ],
+      "modelConstraints": {
+        "note": "Use video_plan; deployment-specific schema is authoritative"
+      }
+    },
+    {
+      "tool": "mlx_video_generate",
+      "engine": "mlx",
+      "deployment": "local-mlx",
+      "operation": "text",
+      "fields": [
+        "prompt",
+        "model",
+        "width",
+        "height",
+        "numFrames",
+        "steps",
+        "seed",
+        "firstFrameImagePath",
+        "lastFrameImagePath",
+        "pipeline",
+        "decoder",
+        "outputPath",
+        "filename"
+      ],
+      "modelConstraints": {
+        "note": "Use video_plan; deployment-specific schema is authoritative"
+      }
+    }
+  ],
+  "host": {
+    "execution": "external",
+    "note": "Host tools are outside MCP enforcement; never claim an API gate protects their calls."
+  },
+  "unimplemented": [
+    "minimax-h3-api",
+    "ltx-official-api"
+  ]
+}
