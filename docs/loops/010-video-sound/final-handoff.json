@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "root": "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.115.4-sound.1",
+  "fixture": "/var/folders/15/60g2wtt90rl8vms1ydjcq_2h0000gn/T/sf-installed-handoff-pxZMhr",
+  "checks": [
+    "keyframe empty source sound enabled",
+    "keyframe auto native enabled",
+    "keyframe explicit native enabled",
+    "authored false rejects conflict",
+    "legacy keyframe default preserved"
+  ],
+  "review": "not_reviewed"
+}

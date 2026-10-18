@@ -1,0 +1,29 @@
+{
+  "version": "0.115.4-sound.1",
+  "sourceBuild": "/Users/zeans/.local/state/social-flow-installed/builds/0.115.4-sound.1",
+  "registrationBackups": [
+    {
+      "path": "/Users/zeans/.codex/config.toml",
+      "backup": "/Users/zeans/.local/state/social-flow-installed/config-backups/sound-20261018-160609/0-config.toml"
+    },
+    {
+      "path": "/Users/zeans/.claude/plugins/known_marketplaces.json",
+      "backup": "/Users/zeans/.local/state/social-flow-installed/config-backups/sound-20261018-160609/1-known_marketplaces.json"
+    },
+    {
+      "path": "/Users/zeans/.claude/plugins/installed_plugins.json",
+      "backup": "/Users/zeans/.local/state/social-flow-installed/config-backups/sound-20261018-160609/2-installed_plugins.json"
+    }
+  ],
+  "codexSource": "/Users/zeans/.local/state/social-flow-installed/builds/0.115.4-sound.1",
+  "claudeInstall": [
+    {
+      "scope": "user",
+      "installPath": "/Users/zeans/.claude/plugins/cache/social-flow/social-flow/0.115.4-sound.1",
+      "version": "0.115.4-sound.1",
+      "installedAt": "2026-10-16T16:46:25.833Z",
+      "lastUpdated": "2026-10-18T07:06:09.875734+00:00"
+    }
+  ],
+  "scope": "only social-flow registration updated; running processes are not restarted"
+}

@@ -219,6 +219,14 @@ async function prepare(target, options) {
     images: keyframeImages(scene, dir, args.numFrames, frameRate) });
   if (video.numFrames !== undefined && video.numFrames !== args.numFrames)
     warnings.push('Stored numFrames differs from the optimized request. Refresh previz and quote before submitting a new generation.');
+  const sound = { ...scene.sound };
+  if (sound.audioSource === undefined && scene.narration?.some(line => (line.tts || '').trim())) sound.audioSource = 'speech';
+  const soundArgs = { ...args };
+  // The legacy keyframe fallback is not an authored request to suppress sound.
+  if (hasKeyframes && video.generateAudio === undefined) delete soundArgs.generateAudio;
+  const soundPlan = scene.sound?.audioSource !== undefined || Array.isArray(scene.sound?.effects)
+    ? adapter.prepareVideoSound(tool, soundArgs, sound) : undefined;
+  if (soundPlan) { args = soundPlan.arguments; warnings.push(...soundPlan.warnings); }
   const digest = value => createHash('sha256').update(value).digest('hex');
   const source = { path: imagePath, sha256: digest(fs.readFileSync(imagePath)), frameIdx: 0,
     role: 'authored_opening', opening: scene.shot?.videoDesign?.before || null };
@@ -232,7 +240,7 @@ async function prepare(target, options) {
     state: index > 0 && index < args.images.length - 1 ? scene.visual.frames.keyframes[index - 1].state || null : null,
   })) : undefined;
   return { shotId: scene.id, boardRevision: response.revision, performanceRevision: plan.performanceRevision,
-    tool, arguments: args, source, ...(keyframes ? { keyframes } : {}),
+    tool, arguments: args, source, ...(soundPlan ? { soundPlan } : {}), ...(keyframes ? { keyframes } : {}),
     performancePrompt: plan.videoPrompt,
     continuity: handoff, warnings, requestedSeconds: optimized.timing.requestedSeconds, durationPlan: optimized.timing, quote: adapter.priceOf(tool, args), coverage, audioSeconds, review: 'not_reviewed',
     instructions: 'Use these arguments unchanged. References describe state; audio2video submits only the authored opening. Inspect the output, select its trim, capture its actual endpoint, then stage the next opening. No generation was performed.' };

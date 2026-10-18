@@ -1,0 +1,6 @@
+{
+  "passed": true,
+  "backup": "/Users/zeans/.local/state/social-flow-installed/config-backups/sound-final-20261018T071803Z/known_marketplaces.json",
+  "source": "/Users/zeans/.local/state/social-flow-installed/builds/0.115.4-sound.1",
+  "reason": "Another workspace refreshed shared marketplace registry during testing; restored only social-flow entry"
+}

@@ -115,6 +115,7 @@ STORYBOARD=$(node -e 'console.log(require("path").resolve(process.argv[1]))' "${
 [ -f "$STORYBOARD/scenes.js" ] || { echo "source storyboard/scenes.js is required; pass the storyboard directory as build-reel.sh argument 2" >&2; exit 1; }
 [ "${SILENT:-0}" != "1" ] || node "$HERE/silent-plan.js" "$STORYBOARD/scenes.js"
 node "$HERE/compose-speech.js" "$WORKDIR" "$STORYBOARD" >/dev/null
+node "$HERE/prepare-source-audio.js" "$WORKDIR" "$STORYBOARD" >/dev/null
 node "$HERE/verify-build-plan.js" "$WORKDIR" "$STORYBOARD"
 # A normal board is <channel>/episodes/<topic>/storyboard. Proof fixtures may put storyboard/
 # directly under their channel root, so fall back to the storyboard parent in that shape.
@@ -1246,7 +1247,16 @@ else
 #   mix anyway, so only the distance between the two survives to the listener.
 SPEECH_I=$(ffmpeg -hide_banner -nostats -i work/narration.wav -af loudnorm=print_format=json -f null - 2>&1 \
   | tr -d ' \t"' | awk -F: '$1=="input_i"{gsub(/,/,"",$2); print $2}')
-BED_I=$(awk -v s="$SPEECH_I" -v d="$BGM_SEP" 'BEGIN{printf "%.2f", s-d}')
+# A silent primary track is valid for post-only Foley. It cannot be the gain reference:
+# -inf minus any separation would mute every otherwise audible effect.
+MIX_REFERENCE_I=$SPEECH_I
+if [ "$SPEECH_I" = "-inf" ]; then
+  MIX_REFERENCE_I=-16
+  say "── primary audio is silent; effects/ambience use a -16 LUFS mix reference (not measured speech)"
+else
+  case "$SPEECH_I" in ''|*[!0-9.+-]*) say "✗ cannot measure primary audio"; exit 1;; esac
+fi
+BED_I=$(awk -v s="$MIX_REFERENCE_I" -v d="$BGM_SEP" 'BEGIN{printf "%.2f", s-d}')
 
 : > work/bgmcue.list
 if [ -f bgm.tsv ]; then
@@ -1299,7 +1309,7 @@ if [ -s work/sfx.list ]; then
   SI=(-f lavfi -t "$NT" -i "anullsrc=r=48000:cl=mono"); SFC=""; SMIX="[0:a]"; SN2=1
   while IFS=$'\t' read -r ST SP SSEP; do
     SSEP=${SSEP:-$SFX_SEP}
-    SFX_T=$(awk -v s="$SPEECH_I" -v d="$SSEP" 'BEGIN{printf "%.2f", s-d}')
+    SFX_T=$(awk -v s="$MIX_REFERENCE_I" -v d="$SSEP" 'BEGIN{printf "%.2f", s-d}')
     read -r SM SPK <<< "$(sfx_measure "$SP")"
     case "$SM" in ''|*[!0-9.+-]*) say "✗ sfx: could not measure $SP"; exit 1;; esac
     awk -v m="$SM" 'BEGIN{exit !(m > -60)}' || { say "✗ sfx: $SP is silent (max momentary ${SM} LUFS)"; exit 1; }
@@ -1338,7 +1348,7 @@ if [ -n "$AMBTSV" ]; then
     if ! awk -v s="$CUE0" 'BEGIN{exit !(s < 0.001)}'; then
       { printf '0.0000\t-\n'; cat work/ambcue.list; } > work/ambcue.tmp; mv work/ambcue.tmp work/ambcue.list
     fi
-    AMB_I=$(awk -v s="$SPEECH_I" -v d="$AMB_SEP" 'BEGIN{printf "%.2f", s-d}')
+    AMB_I=$(awk -v s="$MIX_REFERENCE_I" -v d="$AMB_SEP" 'BEGIN{printf "%.2f", s-d}')
     BED_LOOP_OK=1 "$HERE/bgm-bed.sh" work/amb.wav "$NT" "$AMB_I" work/ambcue.list > work/amb.log 2>&1 \
       || { cat work/amb.log; say "✗ the ambience bed failed to render"; exit 1; }
     while IFS= read -r L; do say "$L"; done < work/amb.log
@@ -1427,13 +1437,17 @@ measure_i() {   # measure_i <file> [filter_complex-with-loudnorm] — integrated
     V=$(ffmpeg -hide_banner -nostats -i "$1" -af loudnorm=print_format=json -f null - 2>&1 \
       | tr -d ' \t"' | awk -F: '$1=="input_i"{gsub(/,/,"",$2); print $2}')
   fi
-  case "$V" in ''|*[!0-9.+-]*) echo "";; *) echo "$V";; esac
+  case "$V" in -inf) echo "-inf";; ''|*[!0-9.+-]*) echo "";; *) echo "$V";; esac
 }
 BED_D=$(measure_i work/bed-ducked.wav)
 BED_S=$(measure_i work/bed-ducked.wav \
   "[1:a]aformat=channel_layouts=stereo[k];[0:a][k]sidechaingate=threshold=0.02:ratio=9000:range=0:attack=1:release=50,loudnorm=print_format=json")
+if [ "$BED_D" = "-inf" ] || [ "$SPEECH_I" = "-inf" ]; then
+  say "── voice-to-bed separation not applicable: primary audio or ducked bed is silent"
+else
+[ -n "$BED_D" ] || { say "✗ cannot measure the ducked bed"; exit 1; }
 SEP=$(awk -v s="$SPEECH_I" -v b="$BED_D" 'BEGIN{printf "%.1f", s-b}')
-if [ -n "$BED_S" ]; then
+if [ -n "$BED_S" ] && [ "$BED_S" != "-inf" ]; then
   SEP_S=$(awk -v s="$SPEECH_I" -v b="$BED_S" 'BEGIN{printf "%.1f", s-b}')
   DEPTH=$(awk -v v="$SEP_S" -v d="$BGM_SEP" 'BEGIN{printf "%.1f", v-d}')
   say "── voice-to-bed separation ${SEP_S} LU while the voice is up (bed ${BED_S} LUFS, ducking depth ≈ ${DEPTH} LU) · ${SEP} LU across the whole timeline (speech ${SPEECH_I} / ducked bed ${BED_D})"
@@ -1450,6 +1464,7 @@ elif awk -v v="$SEP_S" -v d="$BGM_SEP" 'BEGIN{exit !(v < d + 1)}'; then
   # sidechain never fired — the key went silent, or the bed reached the mix around it.
   say "⚠ separation ${SEP_S} LU under speech is no wider than the ${BGM_SEP} LU resting distance — the ducking isn't firing"
   WARN=1
+fi
 fi
 
 fi

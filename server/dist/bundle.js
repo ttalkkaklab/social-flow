@@ -67913,6 +67913,7 @@ var require_compose_speech = __commonJS({
       for (let row = 0; row < rows.length; row++) {
         if (!rows[row].trim() || rows[row].startsWith("#")) continue;
         const fields = rows[row].split("	"), scene = win.SCENES[Number(fields[0])];
+        if (scene?.sound?.audioSource === "video") continue;
         const lines = (scene?.narration || []).filter((n) => (n.tts || "").trim());
         if (scene) checkSilentTiming(scene, board, win.SB_DOC?.performanceTimingVersion, path18.resolve(work, fields[1]));
         if (!lines.length || lines.length === 1 && !lines.some((n) => n.acting != null) && !scene.performance?.some((event) => event.kind === "action")) continue;
@@ -68146,6 +68147,16 @@ var require_check_tts_quality = __commonJS({
         }
         if (win.SB_DOC?.speechPlanVersion === 1 && (s2.narration || []).some((n) => n.delivery === "on_screen") && s2.visual?.video && !binding) throw new Error("On-screen dialogue needs a video speech binding for card " + i2);
         const lines = (s2.narration || []).filter((n) => (n.tts || "").trim());
+        if (s2.sound?.audioSource === "video") {
+          const extraction = (read2(path18.join(work, "source-audio.json")) || []).find((item) => item.card === String(i2));
+          if (!extraction || extraction.audio !== audio || extraction.audioSha256 !== media[audio] || hash7(fs12.readFileSync(extraction.video)) !== extraction.sourceSha256)
+            throw new Error("Missing or stale source soundtrack extraction for card " + i2);
+          if (binding && path18.resolve(extraction.video) !== path18.resolve(binding.videoPath))
+            throw new Error("Source soundtrack differs from bound speech video for card " + i2);
+          media[extraction.video] = extraction.sourceSha256;
+          warnings.push("card " + i2 + ": source soundtrack retained; perceptual audio quality not_reviewed");
+          continue;
+        }
         const receipt = read2(audio + ".generation.json") || read2(audio + ".quality.json");
         if (win.SB_DOC?.speechPlanVersion === 1 && lines.length && win.VOICE !== "user") {
           if (new Set(lines.map((n) => n.speaker)).size !== 1 && receipt?.generator !== "speech_compose") throw new Error("Multi-speaker shots need separately attached lines and speech_compose receipt");
