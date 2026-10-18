@@ -102,6 +102,7 @@ function image(file, target, alt, cover = false) { return `<img class="review-im
 
 // Reference artwork is a preview, never evidence of a completed panel set.
 function characterPreview(root, folder, character, slots) {
+  if (slots.face) return { file: slots.face, reference: false, portrait: true };
   if (slots.front) return { file: slots.front, reference: false };
   const references = character.images.map(im => im.file)
     .filter(file => /^reference(?:-v\d+)?\.(png|jpe?g|webp)$/i.test(file))
@@ -231,9 +232,9 @@ function exportChannel(channelDirectory, { check = false } = {}) {
     body += `<details class="review-detail character-source"><summary>${t('캐릭터 설정 원문', 'Full character identity')}</summary><p>${t('원문에 적힌 검토 상태는 작성 당시 기록입니다. 현재 평가는 페이지 상단에서 확인하세요.', 'Review status in the source reflects when it was written. The current review appears at the top of this page.')}</p><pre class="review-source">${esc(source || '—')}</pre></details></article>`;
     render(file, character.name, 'characters', body);
     const preview = characterPreview(dir, folder, character, slots);
-    cards += `<article data-card data-search="${esc((character.name + ' ' + character.id + ' ' + role).toLocaleLowerCase())}" class="review-card review-character"><a class="review-card-art" href="${rel(charIndex, file)}" aria-label="${esc(character.name)}">${preview ? image(charIndex, path.join(folder, preview.file), character.name) : empty('이미지 없음', 'No image yet')}</a><div class="review-card-body"><div class="review-card-heading"><h2><a href="${rel(charIndex, file)}">${esc(character.name)}</a></h2>${voicePreview(dir, charIndex, folder, character)}</div>${preview?.reference ? `<span class="review-reference">${t('참고 이미지', 'Reference image')}</span>` : ''}<p class="review-role">${esc(role)}</p>${review}${panelStatus(slots)}</div></article>`;
+    cards += `<article data-card data-search="${esc((character.name + ' ' + character.id + ' ' + role).toLocaleLowerCase())}" class="review-card review-character"><a class="review-card-art review-character-art${preview?.portrait ? ' review-character-portrait' : ''}" href="${rel(charIndex, file)}" aria-label="${esc(character.name)}">${preview ? image(charIndex, path.join(folder, preview.file), character.name) : empty('이미지 없음', 'No image yet')}</a><div class="review-card-body"><div class="review-card-heading"><h2><a href="${rel(charIndex, file)}">${esc(character.name)}</a></h2>${voicePreview(dir, charIndex, folder, character)}</div>${preview?.reference ? `<span class="review-reference">${t('참고 이미지', 'Reference image')}</span>` : ''}<p class="review-role">${esc(role)}</p>${review}${panelStatus(slots)}</div></article>`;
   }
-  render(charIndex, 'Characters', 'characters', heading(t('캐릭터 시트', 'Character sheets'), `${chars.length} ${t('명의 캐릭터', 'characters')}`) + searchBox() + `<div class="review-grid review-catalog">${cards}</div><div data-no-results${chars.length ? ' hidden' : ''}>${empty(chars.length ? '검색 조건에 맞는 캐릭터가 없습니다.' : '등록된 캐릭터가 없습니다.', chars.length ? 'No characters match your search.' : 'No characters yet.')}</div>`);
+  render(charIndex, 'Characters', 'characters', heading(t('캐릭터 시트', 'Character sheets'), `${chars.length} ${t('명의 캐릭터', 'characters')}`) + searchBox() + `<div class="review-grid review-catalog review-character-catalog">${cards}</div><div data-no-results${chars.length ? ' hidden' : ''}>${empty(chars.length ? '검색 조건에 맞는 캐릭터가 없습니다.' : '등록된 캐릭터가 없습니다.', chars.length ? 'No characters match your search.' : 'No characters yet.')}</div>`);
   // Episode-owned sheets stay canonical in scenes.js; these are read-only catalogues.
   for (const [kind, ko, en, anchor] of [
     ['props', '소품 시트', 'Prop sheets', 'props'],
