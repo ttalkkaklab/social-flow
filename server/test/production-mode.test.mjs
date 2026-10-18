@@ -879,7 +879,7 @@ test('three identical set-ups in a row fail full video; a changed framing passes
   win.SCENES[1].visual.camera.framing = 'Low wide view';
   assert.doesNotMatch(mode.check(win).join(), /three times in a row/);
 });
-test('the camera carries a full-video episode: visible moves, no provider lock under a move, static and wide in the minority', () => {
+test('the camera carries a full-video episode: visible moves, no provider lock under a move, purposeful static and wide shots without quotas', () => {
   const win = fixture(6);
   assert.deepEqual(mode.check(win), []);
   const s = win.SCENES[1];
@@ -892,14 +892,14 @@ test('the camera carries a full-video episode: visible moves, no provider lock u
   assert.match(mode.check(win).join(), /shot 2: visual\.video\.cameraFixed locks the provider camera/);
   s.visual.camera.movement = 'static'; delete s.visual.camera.speed;
   assert.doesNotMatch(mode.check(win).join(), /cameraFixed/);
-  // Shots 1 and 2 are now both static: two in a row, and 3 of 6 exceeds one in three.
-  assert.match(mode.check(win).join(), /shots 1, 2: two static cameras in a row/);
-  assert.match(mode.check(win).join(), /3 of 6 shots hold a static camera/);
+  // Consecutive static cameras are valid; the action determines whether they work.
+  assert.doesNotMatch(mode.check(win).join(), /two static cameras in a row/);
+  assert.doesNotMatch(mode.check(win).join(), /shots hold a static camera/);
   Object.assign(s.visual.camera, { movement: 'arc shot', speed: 'steady' }); delete s.visual.video.cameraFixed;
   assert.deepEqual(mode.check(win), []);
   // Shot 5 is already 'Low wide view'; three more wide framings make four of six.
   win.SCENES.slice(0, 3).forEach(x => { x.visual.camera.framing = 'wide shot with small full-body figures'; });
-  assert.match(mode.check(win).join(), /4 of 6 shots are framed wide/);
+  assert.doesNotMatch(mode.check(win).join(), /shots are framed wide/);
   win.SCENES[2].visual.camera.framing = 'medium shot from behind';
   assert.deepEqual(mode.check(win), []);
   // Hybrid keeps the per-shot camera rules on its generated clips.
@@ -1091,7 +1091,7 @@ test('three 2.5 hook cuts can mix with 1.5 body cuts and retain per-cut pricing'
 // move names two pictures, a whip pan lands on a sound, a dolly zoom is a background event
 // spent once — per shot, in the same contract the approval page and the MCP schema read.
 test('a generated shot names its move in vendor vocabulary and gets the practitioner word corrected', () => {
-  const shot = (camera, extra = {}) => ({ type: 'points', duration: 5, shot: { feel: 'x', ...extra }, visual: { camera, video: { prompt: 'p' } } });
+  const shot = (camera, extra = {}) => ({ type: 'points', duration: 5, shot: { feel: 'x', info: 'Reveal the threat in the corridor', ...extra }, visual: { camera, video: { prompt: 'p' } } });
   const four = (movement) => ({ movement, speed: 'slow', framing: 'the desk', end: 'the door' });
   assert.deepEqual(mode.cameraErrors(shot(four('dolly in toward the door'))), []);
   for (const [written, want] of [['push in', /write "dolly in"/], ['orbit the table', /write "arc shot"/],
@@ -1121,8 +1121,8 @@ test('a whip pan lands on a sound', () => {
   assert.deepEqual(mode.cameraErrors({ ...base, visual: { ...base.visual, audio: 'a hard whoosh' } }), []);
   assert.match(mode.cameraWarnings({ ...base, sound: { sfx: 'whoosh-hard' }, duration: 6 }).join('\n'), /whip pan is a transition/);
 });
-test('a dolly zoom names its direction, happens to a deep background, on a standing subject, once', () => {
-  const shot = (movement, extra = {}) => ({ type: 'points', duration: 4, shot: { feel: 'x', ...extra },
+test('a dolly zoom names its direction, happens to a deep background, on a standing subject, with a reason for each use', () => {
+  const shot = (movement, extra = {}) => ({ type: 'points', duration: 4, shot: { feel: 'x', info: 'Reveal the threat in the corridor', ...extra },
     visual: { camera: { movement, speed: 'fast', framing: 'chest-up', end: 'chest-up, the corridor stretched' }, video: { prompt: 'p' } } });
   const bare = mode.cameraErrors(shot('dolly zoom')).join('\n');
   assert.match(bare, /names its direction/); assert.match(bare, /happens to the background/);
@@ -1135,11 +1135,13 @@ test('a dolly zoom names its direction, happens to a deep background, on a stand
   assert.deepEqual(mode.episodeMoveErrors([shot('dolly zoom in', ok), shot('static'), shot('pan left')]), []);
   // board shot numbers, with an HTML slide (no visual.video) in between
   const slide = { type: 'points', duration: 5, shot: { feel: 'x' }, visual: { slide: { kind: 'diagram' } } };
-  assert.match(mode.episodeMoveErrors([shot('dolly zoom in', ok), slide, slide, shot('static'), shot('dolly zoom out', ok)]).join('\n'), /\[dolly-zoom-twice\] shots 1, 5/);
-  // the episode check runs it: the second dolly zoom in a full-video board is a production-mode finding
+  assert.match(mode.episodeMoveErrors([shot('dolly zoom in', ok), slide, slide, shot('static'), shot('dolly zoom out', ok)]).join('\n'), /shots 1 and 5: repeated dolly zoom/);
+  // Distinct revelations may use the same technique without a numerical quota.
   const win = fixture(3);
   for (const i of [0, 2]) { Object.assign(win.SCENES[i].shot, ok); win.SCENES[i].visual.camera = { movement: 'dolly zoom in', speed: 'fast', framing: 'A', end: 'B' }; }
-  assert.match(mode.check(win).join('\n'), /\[dolly-zoom-twice\]/);
+  win.SCENES[0].shot.info='The corridor reveals a threat'; win.SCENES[2].shot.info='The room collapses around the witness';
+  assert.deepEqual(mode.episodeMoveErrors(win.SCENES), []);
+  const advice=[]; mode.check(win,{advice}); assert.doesNotMatch(advice.join('\n'), /repeated dolly zoom/);
 });
 test('a fast pan or tilt warns about 24 fps strobing', () => {
   const shot = (movement, speed) => ({ type: 'points', duration: 5, shot: { feel: 'x' }, visual: { camera: { movement, speed, framing: 'A', end: 'B' }, video: { prompt: 'p' } } });
@@ -1149,7 +1151,7 @@ test('a fast pan or tilt warns about 24 fps strobing', () => {
 });
 test('the MCP camera schema carries the vocabulary and the per-move conditions', () => {
   const m = mode.CAMERA_INPUT_SCHEMA.properties.movement.description;
-  for (const word of ['tilt up/down', 'dolly zoom in/out', 'whip pan', 'end must differ from framing', 'sound.sfx', 'shot.depth deep', 'once per episode']) assert.ok(m.includes(word), word);
+  for (const word of ['tilt up/down', 'dolly zoom in/out', 'whip pan', 'end must differ from framing', 'sound.sfx', 'shot.depth deep']) assert.ok(m.includes(word), word);
 });
 
 

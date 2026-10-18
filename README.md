@@ -1,5 +1,7 @@
 # social-flow
 
+The [filmmaking guide](docs/guides/ai-film-four-elements/index.html) explains character references, camera direction, framing and shot timing. `storyboard_read` exposes the shared 45-entry technique catalogue; `shot.techniques` stores stable IDs with shot-specific reasons. The offline storyboard exports the same catalogue, with a distinct pictogram and explanation for every entry. Camera instructions reach the generic, speech-planning and ASTRA prompt paths. See [technique selection](skills/storyboard/references/film-techniques.md).
+
 Character video requests now compile [voice continuity](skills/produce/references/voice-continuity.md)
 from pinned cast settings. `video_plan` maps Seedance samples to their actual audio
 and image indices, repeats authored Google voice descriptions, and records separate

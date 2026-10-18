@@ -254,3 +254,15 @@ See [evaluation cases](references/evals.md) for behavioral regression exercises.
 
 For independent motion examples use [animation-review.md](../produce/references/animation-review.md)
 instead of inventing an episode. For existing supplied recordings use the ingest contract.
+
+
+## Four filmmaking elements and semantic technique choices
+
+Read the catalogue returned by `storyboard_read` (`includeTechniques:true`) before
+choosing techniques. Persist each purposeful choice as `shot.techniques:[{id,reason}]`.
+The shared source is [film-techniques.js](references/film-techniques.js); exported boards also
+carry the complete catalogue as JSON and an accessible icon legend. Choose from
+information/action needs, not a diversity quota. Match canonical MS (waist-up), MFS
+(mid-thigh), reference panels and camera fields. A static rack-focus cut selects
+both ids so the focus change survives the camera icon and provider prompt.
+Review actual images and footage before claiming the planned technique was achieved.

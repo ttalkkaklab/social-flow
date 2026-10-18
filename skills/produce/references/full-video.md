@@ -273,8 +273,8 @@ as a sequence:
 ### Camera dynamics
 
 Choose movement from the scene's action and the information a changed view reveals.
-Legacy camera-ratio diagnostics in `production-mode.js` are advice, not a reason to
-move a camera that needs to hold a spatial relationship.
+There is no static/wide-shot quota. Keep the camera still when the scene needs to
+hold a spatial relationship.
 
 - **Give each move a destination.** State the opening view, travel direction, revealed
   information and landing composition in the four existing camera slots. "Walking speed"

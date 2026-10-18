@@ -39,6 +39,7 @@
   const JOINS = { cut: ['하드컷', 'Hard cut'], jcut: ['J컷', 'J-cut'], dip: ['암전 전환', 'Dip'],
     dissolve: ['디졸브', 'Dissolve'], whip: ['휩 전환', 'Whip'], zoom: ['줌 전환', 'Zoom'],
     push: ['밀기', 'Push'], iris: ['아이리스', 'Iris'], blur: ['블러', 'Blur'] };
+  function catalogue() { return typeof module === 'object' && module.exports ? require('./film-techniques.js') : root.FILM_TECHNIQUES; }
   function cameraOf(scene, lang) {
     const still = scene.shot?.render?.mode === 'still_camera';
     const camera = still ? scene.shot.render.camera : scene.visual?.camera;
@@ -53,6 +54,9 @@
       const effect = effects[value];
       row = effect ? [effect[0], null, effect[1], effect[2]] : null;
     }
+    const authored = !still && catalogue()?.selected(scene).filter(item => item.entry?.category === 'camera');
+    const specific = authored && (authored.find(item => item.entry.fields.focus) || authored.find(item => item.entry.fields.movement && item.id !== 'camera.static') || authored.find(item => item.entry.fields.viewpoint) || authored.find(item => item.entry.fields.movement));
+    if (specific) row = [specific.id, null, specific.entry.label.ko, specific.entry.label.en];
     const label = row ? word(lang, row[2], row[3]) : value ? word(lang, '기타 이동', 'Custom move') : word(lang, '이동 미설정', 'Move not planned');
     return { key: row?.[0] || 'other', label, raw: typeof raw === 'string' ? raw : '',
       medium: still ? word(lang, '스틸 효과', 'Still effect') : word(lang, '카메라 계획', 'Camera plan'),
@@ -64,6 +68,8 @@
   }
   const seconds = value => value === null ? '?' : String(Math.round(value * 100) / 100);
   function icon(key) {
+    const entry = catalogue()?.byId[key];
+    if (entry) return catalogue().icon(entry);
     const family = { crash: 'zoom', 'dolly-zoom': 'zoom', whip: 'pan', tracking: 'dolly', aerial: 'arc' }[key] || key;
     return '<svg viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="' + (PATHS[family] || PATHS.other) + '"/></svg>';
   }

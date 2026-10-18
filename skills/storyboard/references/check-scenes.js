@@ -1321,6 +1321,7 @@ function check(win, fmt, opts) {
       });
       // A move the viewer cannot see, a provider camera lock under a written move, a move outside
       // the vendor vocabulary or one missing what it needs (production-mode.js — L13–L15 rules).
+      require('./film-techniques.js').findings(s).forEach(message => warn(where, message));
       const cameraAdvice=[];
       productionMode.cameraErrors(s,{advice:cameraAdvice}).forEach((e) => machine(where, e));
       cameraAdvice.forEach((e) => warn(where, e));
