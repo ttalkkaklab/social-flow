@@ -63,7 +63,7 @@ test('wrong-purpose, missing, malformed, traversal and symlink references cannot
 test('episode scene paths and copies are diagnosed even when renamed into the shared folder',()=>{
   const f=fixture();try {
     const win={SB_DOC:{characters:[{id:'hero',panels:{body:'../../../assets/characters/hero/front.ppm'}}]},SCENES:[]};
-    assert.deepEqual(boardPanelFindings(win,f.board,f.root),[]);
+    assert.equal(boardPanelFindings(win,f.board,f.root).filter(x=>x.domain!=='image-reference-missing').length,0);
     f.manifest.panels.front.purpose='episode_scene';f.save();
     assert.ok(boardPanelFindings(win,f.board,f.root).some(x=>x.domain==='image-purpose'));
     f.manifest.panels.front.purpose='character_reference';f.save();
@@ -74,5 +74,17 @@ test('episode scene paths and copies are diagnosed even when renamed into the sh
     assert.ok(boardPanelFindings(win,f.board,f.root).length);
     rmSync(join(f.folder,'identity.md'));
     assert.ok(boardPanelFindings(win,f.board,f.root).some(x=>x.domain==='character-source'));
+  }finally{f.clean();}
+});
+
+test('shared images with empty storyboard references identify the exact character, slot and file',()=>{
+  const f=fixture();try {
+    for (const characters of [[{id:'hero',panels:{}}], {hero:{panels:{face:'   '}}}]) {
+      const findings=boardPanelFindings({SB_DOC:{characters}},f.board,f.root);
+      assert.equal(findings.filter(x=>x.domain==='image-reference-missing').length,3);
+      const face=findings.find(x=>x.slot==='face');
+      assert.equal(face.characterId,'hero');assert.equal(face.source,join(f.folder,'face.ppm'));
+      assert.equal(face.field,'SB_DOC.characters.hero.panels.face');
+    }
   }finally{f.clean();}
 });

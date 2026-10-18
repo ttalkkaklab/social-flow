@@ -31,7 +31,12 @@ test('managed success verifies actual image and reuses one receipt without anoth
   const first = await f.run(p, dispatch);
   assert.equal(first.imageReceipt.output.width, 1);
   assert.equal(first.imageReceipt.review, 'not_reviewed');
+  assert.equal(first.structuredContent.outputPath, p.outputFile);
+  assert.equal(first.structuredContent.readiness.decoding, 'verified');
+  assert.equal(first.structuredContent.readiness.visualReview, 'not_reviewed');
   assert.deepEqual(await f.run(p, dispatch), first); assert.equal(calls, 1);
+  imageTransaction(f.dir, undefined, state => { delete state.jobs[p.requestId].result.structuredContent; });
+  assert.deepEqual((await f.run(p, dispatch)).structuredContent, first.structuredContent);
   const job = imageStatus({ directory: f.dir, requestId: p.requestId });
   assert.equal(job.status, 'completed'); assert.equal(job.reserveUsd, 0);
   fs.writeFileSync(p.outputFile, 'corrupt');
@@ -64,7 +69,7 @@ test('selection/input changes stale a plan; configured raw calls cannot bypass c
 
 test('ambiguous failure retains reservation and blocks resubmission until explicit reconciliation', async t => {
   const f = fixture(t); const p = f.plan(); let calls = 0;
-  await assert.rejects(f.run(p, async () => { calls++; throw new Error('timeout'); }), /timeout/);
+  assert.equal((await f.run(p, async () => { calls++; throw new Error('timeout'); })).structuredContent.status, 'submission_unknown');
   assert.equal(imageStatus({ directory: f.dir, requestId: p.requestId }).status, 'submission_unknown');
   await assert.rejects(f.run(p, async () => { calls++; return {}; }), /request_pending/);
   await assert.rejects(f.run(f.plan('next'), async () => assert.fail()), /concurrency_limit/);
@@ -119,13 +124,14 @@ test('GenAI image planning requires a reservation and recovery preserves provide
   const key=config.astraGenaiApiKey;config.astraGenaiApiKey='fixture';t.after(()=>config.astraGenaiApiKey=key);
   assert.throws(()=>f.plan(),/quote_required/);
   const p=f.plan('genai',{}, {reserveUsd:0.1});assert.equal(p.tool,'astra_genai_text2img');
-  await assert.rejects(f.run(p,async (_tool,args)=>{
+  const interrupted = await f.run(p,async (_tool,args)=>{
     output(args);
     const { readImageMetadata } = await import('../dist/image-media.js');
     const imagePath=path.join(args.outputPath,args.filename);
     fs.writeFileSync(imagePath+'.astra-genai.json',JSON.stringify({baseUrl:astraGenaiBaseUrl(),fingerprint:'fixture',imagePath,status:'completed',requestId:'image-provider-1',output:readImageMetadata(imagePath),usage:{image_count:1}}));
     throw new Error('interrupted');
-  }),/interrupted/);
+  });
+  assert.equal(interrupted.structuredContent.status,'submission_unknown');
   const job=await imageStatus({directory:f.dir,requestId:'genai',action:'refresh'});
   assert.equal(job.status,'completed');assert.equal(job.providerId,'image-provider-1');assert.equal(job.reserveUsd,0.1);
   await f.run(p,async()=>assert.fail('must reuse recovered image'));
@@ -143,4 +149,31 @@ test('GenAI edit plans bind source and mask files and refuse stale inputs', asyn
   assert.equal(plan.args.size, undefined); assert.equal(plan.quote.reserveUsd, 0.1);
   fs.writeFileSync(path.join(f.dir, 'mask.png'), Buffer.concat([png, Buffer.from('changed')]));
   await assert.rejects(f.run(plan, async () => assert.fail('stale input must not generate')), /stale/);
+});
+
+test('confirmed provider failure releases concurrency but retains unknown billing and request identity', async t => {
+  const { GenaiRequestError } = await import('../dist/astra-genai-client.js');
+  const f = fixture(t); const p = f.plan();
+  const failed = await f.run(p, async () => { throw new GenaiRequestError('provider failed', true, 500); });
+  assert.equal(failed.isError, true); assert.equal(failed.structuredContent.status, 'failed');
+  assert.equal(imageStatus({ directory:f.dir,requestId:p.requestId }).spentUsd, undefined);
+  await assert.rejects(f.run(p, async () => assert.fail()), /request_pending/);
+  assert.equal((await f.run(f.plan('next'), async (_tool,args) => output(args))).structuredContent.status, 'completed');
+});
+test('received output that cannot decode is failed, not an unknown submission', async t => {
+  const f=fixture(t); const p=f.plan();
+  const result=await f.run(p,async (_tool,args)=>{output(args);fs.writeFileSync(p.outputFile,'broken');return {content:[]};});
+  assert.equal(result.structuredContent.status,'failed');
+  assert.equal(result.structuredContent.readiness.decoding,'not_verified');
+  assert.equal(imageStatus({directory:f.dir,requestId:p.requestId}).status,'failed');
+});
+
+test('completed provider generation with failed download releases the slot and preserves usage for recovery', async t => {
+  const { GenaiImageOutputError }=await import('../dist/astra-genai-image.js');
+  const f=fixture(t),p=f.plan();
+  const result=await f.run(p,async()=>{throw new GenaiImageOutputError('download failed','remote-1',{image_count:1});});
+  assert.equal(result.structuredContent.status,'failed');assert.equal(result.structuredContent.providerId,'remote-1');
+  assert.deepEqual(result.structuredContent.usage,{image_count:1});
+  assert.equal((await f.run(f.plan('next'),async (_tool,args)=>output(args))).structuredContent.status,'completed');
+  assert.equal(imageStatus({directory:f.dir,requestId:p.requestId,action:'reconcile',spentUsd:0,evidence:'billing receipt'}).status,'failed');
 });

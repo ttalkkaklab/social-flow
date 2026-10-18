@@ -1109,3 +1109,26 @@ capabilities. Unsupported checks stay unverified. See [the review contract](skil
 Motion graphics support six contextual design themes: report, product, learning, campaign, story and playful. Set the storyboard default with `THEME.motionGraphicTheme`; individual shots can override it. Set `shot.motionGraphic.style.theme.id` to `auto` (optionally with `context`) or a theme id. Storyboard updates store the resolved choice and reason; the renderer uses the same theme tokens for typography, spacing, color and timing. Palette-only boards retain their existing appearance.
 
 Theme typography bundles Paperlogy, Black Han Sans, Gowun Batang, Dongle, Jua, Space Grotesk and Roboto Flex with OFL notices. Font coverage is checked against bundled cmap data; title fallbacks are recorded, and actual loaded font widths drive wrapping. See [motion design system](docs/design-system/MOTION.md) and [font research](docs/design-system/FONTS.md).
+
+### Image execution and production diagnostics
+
+`image_execute` returns text plus a versioned `structuredContent` object with
+`status`, `outputPath`, `requestId`, `providerId`, `usage`, `output` metadata and
+`readiness`. This covers completed execution, post-dispatch failures, cached results
+and `image_status action:refresh` recovery. Preflight validation still uses the
+normal tool error contract. Unknown usage is `null`, never an assumed zero charge.
+A completed image has passed file and decoding checks; references and visual review
+are separate checks, not a production-ready claim.
+
+Explicit GenAI rejection or terminal failure releases the execution slot. Timeouts
+and ambiguous gateway responses keep `submission_unknown` and block duplicate
+submission. A completed provider response with a failed download releases the slot;
+`refresh` retries the saved download without generating again. Unknown billing keeps
+the budget reservation until `image_status action:reconcile` records actual spending.
+
+`storyboard_read.readiness` reports project configuration, referenced character file
+presence/decoding, reference findings and unreviewed visual quality separately.
+The storyboard checker and shared-sheet export warn when a registered shared panel
+exists but its cast member's storyboard reference is empty, naming the character,
+slot, source file and field to fix. These are project-data diagnostics, not evidence
+that the plugin created the project's incorrect code or settings.

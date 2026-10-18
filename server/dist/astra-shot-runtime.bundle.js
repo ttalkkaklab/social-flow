@@ -95,6 +95,17 @@ var require_video_duration = __commonJS({
   }
 });
 
+// src/project.ts
+import * as nodeModule from "node:module";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+var loadFromHere = nodeModule.createRequire(import.meta.url);
+var helper = resolve(dirname(fileURLToPath(import.meta.url)), "../../skills/_shared/project-settings.js");
+function manageProject(args) {
+  const project = loadFromHere(helper);
+  return project.manageProject(args);
+}
+
 // src/production-workflow.ts
 import * as fs2 from "node:fs";
 import path2 from "node:path";
@@ -4140,17 +4151,6 @@ var coerce = {
   date: ((arg) => ZodDate.create({ ...arg, coerce: true }))
 };
 var NEVER = INVALID;
-
-// src/project.ts
-import * as nodeModule from "node:module";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-var loadFromHere = nodeModule.createRequire(import.meta.url);
-var helper = resolve(dirname(fileURLToPath(import.meta.url)), "../../skills/_shared/project-settings.js");
-function manageProject(args) {
-  const project = loadFromHere(helper);
-  return project.manageProject(args);
-}
 
 // src/routing-files.ts
 import * as fs from "node:fs";

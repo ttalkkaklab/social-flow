@@ -1,3 +1,4 @@
+import { GenaiRequestError } from './astra-genai-client.js';
 import { requireWorkflow, workflowRevision, workflowEpisode } from './production-workflow.js';
 import * as fs from 'node:fs';
 import path from 'node:path';
@@ -13,7 +14,7 @@ import { readImageMetadata, verifyImageFile } from './image-media.js';
 import { config, mfluxZImageBin, mlxServeConfigured, disabledToolPatterns, disabledToolsFile } from './config.js';
 import { resolveToolGate } from './tool-gate.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
-import { recoverGenaiImage, buildGenaiImageBody, genaiImageSchema, genaiImageEditSchema } from './astra-genai-image.js';
+import { GenaiImageOutputError, recoverGenaiImage, buildGenaiImageBody, genaiImageSchema, genaiImageEditSchema } from './astra-genai-image.js';
 const load = createRequire(import.meta.url);
 const selectionHelper = fileURLToPath(new URL('../../skills/_shared/image-selection.js', import.meta.url));
 export const imageContext = (directory, assetId) => load(selectionHelper).readImageContext(directory, assetId);
@@ -139,6 +140,12 @@ export function imagePlanSummary(plan) {
     const { args, sourceArgs: _source, ...summary } = plan;
     return { ...summary, fields: Object.keys(args), review: 'not_reviewed' };
 }
+function imageExecutionResult(plan, status, receipt, output) {
+    return { version: 1, status, outputPath: plan.outputFile ?? null, requestId: plan.requestId,
+        providerId: receipt?.requestId ?? null, usage: receipt?.usage ?? null, output: output ?? null,
+        readiness: { file: output ? 'verified' : 'not_verified', decoding: output ? 'verified' : 'not_verified',
+            configuration: 'selection_validated', references: 'not_checked', visualReview: 'not_reviewed' } };
+}
 export async function executeImage(raw, dispatch) {
     gate('image_execute');
     const input = imageExecuteSchema.parse(raw), directory = fs.realpathSync(input.directory);
@@ -160,7 +167,8 @@ export async function executeImage(raw, dispatch) {
         if (previous.status === 'completed') {
             if (!plan.outputFile || readImageMetadata(plan.outputFile).sha256 !== previous.output?.sha256)
                 throw new Error('image_cached_output_changed');
-            return previous.result;
+            const cached = previous.result;
+            return { ...cached, structuredContent: imageExecutionResult(plan, 'completed', { usage: previous.usage, requestId: previous.providerId }, previous.output) };
         }
         throw new Error('image_request_pending: inspect image_status; never resubmit this request ID');
     }
@@ -192,7 +200,7 @@ export async function executeImage(raw, dispatch) {
             status: 'submitting', ownerPid: process.pid, ownerHost: os.hostname(), reserveUsd: plan.quote.reserveUsd, updatedAt: new Date().toISOString() };
     });
     const started = Date.now();
-    let ok = false;
+    let ok = false, providerCompleted = false;
     try {
         const result = await dispatch(plan.tool, plan.args);
         const receipt = result.imageReceipt;
@@ -203,10 +211,11 @@ export async function executeImage(raw, dispatch) {
         });
         if (result.isError)
             throw new Error('image_adapter_failed: ' + JSON.stringify(result.content));
+        providerCompleted = true;
         if (!plan.outputFile)
             throw new Error('image_output_missing');
         const output = verifyImageFile(plan.outputFile);
-        const response = { ...result, content: result.content.filter(item => item.type !== 'image'), imageReceipt: { ...receipt, output, review: 'not_reviewed' } };
+        const response = { ...result, structuredContent: imageExecutionResult(plan, 'completed', receipt, output), content: result.content.filter(item => item.type !== 'image'), imageReceipt: { ...receipt, output, review: 'not_reviewed' } };
         imageTransaction(directory, undefined, state => {
             Object.assign(state.jobs[plan.requestId], { status: 'completed', output, result: response, updatedAt: new Date().toISOString() });
         });
@@ -214,8 +223,15 @@ export async function executeImage(raw, dispatch) {
         return response;
     }
     catch (error) {
-        imageTransaction(directory, undefined, state => { state.jobs[plan.requestId].status = 'submission_unknown'; });
-        throw error;
+        const status = providerCompleted || error instanceof GenaiImageOutputError || (error instanceof GenaiRequestError && error.terminal) ? 'failed' : 'submission_unknown';
+        const message = error instanceof Error ? error.message : String(error);
+        imageTransaction(directory, undefined, state => Object.assign(state.jobs[plan.requestId], {
+            status, evidence: message, updatedAt: new Date().toISOString(),
+            ...(error instanceof GenaiImageOutputError ? { providerId: error.requestId, usage: error.usage } : {}),
+        }));
+        const job = readImageState(directory)?.jobs[plan.requestId];
+        return { isError: true, content: [{ type: 'text', text: message }],
+            structuredContent: { ...imageExecutionResult(plan, status, { usage: job?.usage, requestId: job?.providerId }), error: message } };
     }
     finally {
         recordUsage(plan.outputFile, { ts: new Date().toISOString(), tool: plan.tool, ok, ms: Date.now() - started,
@@ -260,7 +276,7 @@ export function imageStatus(raw) {
             throw new Error('image_reconciliation_requires_billing_evidence');
         imageTransaction(directory, undefined, state => {
             const job = Object.hasOwn(state.jobs, input.requestId) ? state.jobs[input.requestId] : undefined;
-            if (!job || !['submitting', 'submission_unknown'].includes(job.status))
+            if (!job || !['submitting', 'submission_unknown', 'failed'].includes(job.status))
                 throw new Error('image_reconciliation_requires_unknown_terminal_request');
             if (job.status === 'submitting') {
                 if (input.executorStopped !== true)
@@ -302,7 +318,8 @@ async function refreshGenaiImage(directory, requestId) {
     const receipt = await recoverGenaiImage(job.outputFile + '.astra-genai.json');
     if (receipt.imagePath !== job.outputFile)
         throw new Error('image_recovery_output_mismatch');
-    const result = { content: [{ type: 'text', text: JSON.stringify(receipt) }], imageReceipt: receipt };
+    const result = { content: [{ type: 'text', text: JSON.stringify(receipt) }], imageReceipt: receipt,
+        structuredContent: imageExecutionResult(plan, 'completed', receipt, receipt.output) };
     imageTransaction(directory, undefined, current => Object.assign(current.jobs[requestId], {
         status: 'completed', result, output: receipt.output, providerId: receipt.requestId, usage: receipt.usage,
         updatedAt: new Date().toISOString(),

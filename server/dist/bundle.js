@@ -82286,6 +82286,15 @@ function requireAstraGenaiKey() {
   if (!config.astraGenaiApiKey) throw new Error("ASTRA_GENAI_API_KEY is required: issue a gateway token in the GenAI console; ASTRA_VIDEO is a separate credential.");
   return config.astraGenaiApiKey;
 }
+var GenaiRequestError = class extends Error {
+  constructor(message, terminal, httpStatus) {
+    super(message);
+    this.terminal = terminal;
+    this.httpStatus = httpStatus;
+  }
+  terminal;
+  httpStatus;
+};
 async function requestGenai(method, route, body, timeoutMs = 6e4, onResponse) {
   const key = requireAstraGenaiKey();
   const response = await fetch(astraGenaiBaseUrl() + route, {
@@ -82298,7 +82307,13 @@ async function requestGenai(method, route, body, timeoutMs = 6e4, onResponse) {
   const text3 = await response.text();
   if (!response.ok) {
     const detail = text3.replaceAll(key, "[redacted]").slice(0, 2e3);
-    throw new Error(`ASTRA GenAI HTTP ${response.status}: ${detail}`);
+    let terminal = response.status >= 400 && response.status < 500 && ![408, 409, 425].includes(response.status);
+    try {
+      const evidence = JSON.parse(text3);
+      terminal ||= typeof evidence.request_id === "string" && ["failed", "FAILED", "error"].includes(evidence.status ?? evidence.output?.task_status);
+    } catch {
+    }
+    throw new GenaiRequestError(`ASTRA GenAI HTTP ${response.status}: ${detail}`, terminal, response.status);
   }
   onResponse?.(response.headers);
   try {
@@ -82681,6 +82696,15 @@ var responseSchema = external_exports.object({
     message: external_exports.object({ content: external_exports.array(external_exports.object({ image: external_exports.string().optional(), text: external_exports.string().optional() }).passthrough()) }).passthrough()
   }).passthrough()).length(1) }).passthrough()
 }).passthrough();
+var GenaiImageOutputError = class extends Error {
+  constructor(message, requestId, usage) {
+    super(message);
+    this.requestId = requestId;
+    this.usage = usage;
+  }
+  requestId;
+  usage;
+};
 async function generateGenaiImage(input, operation = "text") {
   const args = (operation === "edit" ? genaiImageEditSchema : genaiImageSchema).parse(input);
   requireAstraGenaiKey();
@@ -82692,19 +82716,37 @@ async function generateGenaiImage(input, operation = "text") {
     throw new Error("GenAI image output/receipt already exists; inspect the receipt before any new generation.");
   fs7.writeFileSync(receiptPath, JSON.stringify({ baseUrl: astraGenaiBaseUrl(), fingerprint, imagePath, status: "submitting" }), { flag: "wx", mode: 384 });
   let promptExtension;
-  const raw = await requestGenai("POST", GENAI_IMAGE_ROUTE, body, 30 * 6e4, (headers) => {
-    const value = headers.get("x-prompt-extend");
-    if (value === "applied" || value === "fallback") promptExtension = value;
-  });
+  let raw;
+  try {
+    raw = await requestGenai("POST", GENAI_IMAGE_ROUTE, body, 30 * 6e4, (headers) => {
+      const value = headers.get("x-prompt-extend");
+      if (value === "applied" || value === "fallback") promptExtension = value;
+    });
+  } catch (error2) {
+    atomicJson(receiptPath, {
+      baseUrl: astraGenaiBaseUrl(),
+      fingerprint,
+      imagePath,
+      status: error2 instanceof GenaiRequestError && error2.terminal ? "failed" : "submission_unknown",
+      error: error2 instanceof Error ? error2.message : String(error2)
+    });
+    throw error2;
+  }
   atomicJson(receiptPath, { baseUrl: astraGenaiBaseUrl(), fingerprint, imagePath, status: "received", response: raw, promptExtension });
-  return recoverGenaiImage(receiptPath);
+  try {
+    return await recoverGenaiImage(receiptPath);
+  } catch (error2) {
+    const received = responseSchema.safeParse(raw);
+    if (received.success) throw new GenaiImageOutputError(error2 instanceof Error ? error2.message : String(error2), received.data.request_id, received.data.usage);
+    throw error2;
+  }
 }
 async function recoverGenaiImage(receiptPath) {
   const receipt = external_exports.object({
     baseUrl: external_exports.string(),
     fingerprint: external_exports.string(),
     imagePath: external_exports.string(),
-    status: external_exports.enum(["submitting", "received", "completed"]),
+    status: external_exports.enum(["submitting", "submission_unknown", "failed", "received", "completed"]),
     response: external_exports.unknown().optional(),
     output: external_exports.object({ sha256: external_exports.string() }).passthrough().optional(),
     requestId: external_exports.string().optional(),
@@ -82719,6 +82761,7 @@ async function recoverGenaiImage(receiptPath) {
     if (output2.sha256 !== receipt.output?.sha256) throw new Error("GenAI cached image changed");
     return { imagePath, requestId: receipt.requestId, usage: receipt.usage, usedPrompt: receipt.usedPrompt, promptExtension: receipt.promptExtension, output: output2, review: "not_reviewed" };
   }
+  if (receipt.status === "failed") throw new Error("GenAI image request failed; inspect billing before a new request");
   if (receipt.status !== "received") throw new Error("GenAI image submission is ambiguous; inspect provider usage before retrying");
   const response = responseSchema.parse(receipt.response);
   const images = response.output.choices[0].message.content.flatMap((item) => item.image ? [item.image] : []);
@@ -86337,12 +86380,54 @@ var storyboardReadSchema = external_exports.object({
   includeTechniques: external_exports.boolean().default(true).describe("Return canonical technique ids, purposes, icons and provider instructions"),
   includeContext: external_exports.boolean().default(true).describe("Include STORY, PRODUCTION and SB_DOC as unverified review context")
 });
+function boardReadiness(win, boardDir) {
+  let root = boardDir, channel;
+  for (; ; ) {
+    if (basename6(root) === "episodes") channel = dirname4(root);
+    if (existsSync12(join6(root, ".social-flow/models.json")) || dirname4(root) === root) break;
+    root = dirname4(root);
+  }
+  let configuration;
+  try {
+    const project = manageProject({ action: "status", workspace: root });
+    configuration = { status: project.status, missing: project.missing };
+  } catch {
+    configuration = { status: "not_verified" };
+  }
+  const panels = loadFromHere2(join6(PLUGIN_ROOT, "skills/channel/references/character-panels.js"));
+  const findings = channel ? panels.boardPanelFindings(win, boardDir, channel) : [];
+  const document2 = win.SB_DOC;
+  const entries = document2?.characters ?? [];
+  const characters = Array.isArray(entries) ? entries : Object.entries(entries).map(([id, c]) => ({ ...c, id }));
+  const assets = characters.flatMap((c) => Object.entries(c.panels ?? {}).map(([slot, name]) => {
+    const file = typeof name === "string" && name.trim() ? resolve4(boardDir, name) : null;
+    const present = !!file && existsSync12(file) && statSync6(file).isFile();
+    let decoding = "not_verified";
+    if (present) {
+      try {
+        verifyImageFile(file);
+        decoding = "verified";
+      } catch {
+        decoding = "failed";
+      }
+    }
+    return { characterId: c.id, slot, path: file, file: present ? "present" : "missing", decoding, visualReview: "not_reviewed" };
+  }));
+  return {
+    configuration,
+    assets,
+    references: { status: !channel ? "not_checked" : findings.length ? "needs_attention" : "checked", findings },
+    visualReview: "not_reviewed",
+    note: "Diagnostics only; no overall production-ready or visual-quality claim."
+  };
+}
 function readStoryboard(args) {
   const { win, file, sha256: sha2562 } = readBoard(args.path);
   const result = contract().outline(win, args.level);
   result.file = file;
   result.mediaBaseDirectory = dirname4(file);
   result.sha256 = sha2562;
+  result.readiness = boardReadiness(win, dirname4(file));
   if (args.includeTechniques !== false) result.techniqueCatalog = {
     version: techniqueContract().VERSION,
     entries: techniqueContract().entries,
@@ -96140,14 +96225,14 @@ TOOLS.push(
   {
     name: "image_execute",
     title: "Execute an authorized image plan",
-    description: "Execute a saved image plan with atomic budget/concurrency reservations and duplicate protection. Revalidates selection, input hashes and adapter contract before dispatch. Records provider usage, actual output dimensions/hash and not_reviewed quality. Completed requests reuse receipts; ambiguous submissions never auto-retry. API execution incurs charges; host plans cannot run here.",
+    description: "Execute a saved image plan with atomic budget/concurrency reservations and duplicate protection. Revalidates selection, input hashes and adapter contract before dispatch. Returns structuredContent version, status, outputPath, requestId, providerId, usage, output and separate readiness checks alongside text. Completed means decoded output, not production-ready. Records provider usage, actual output dimensions/hash and not_reviewed quality. Completed requests reuse receipts; ambiguous submissions never auto-retry. API execution incurs charges; host plans cannot run here.",
     inputSchema: { type: "object", additionalProperties: false, properties: { directory: { type: "string", description: "Absolute directory from image_plan." }, planId: { type: "string", pattern: "^[a-f0-9]{64}$", description: "Saved plan ID." } }, required: ["directory", "planId"] },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true }
   },
   {
     name: "image_status",
     title: "Inspect or reconcile an image receipt",
-    description: "Read a local image receipt without contacting providers. action:reconcile closes a submission_unknown or interrupted submitting request as failed only after the caller supplies terminal/billing evidence and spentUsd. action:refresh recovers a GenAI image download from its saved provider response and updates the managed receipt; it never regenerates. Completed requests are immutable. Do not reconcile a request still running at the provider.",
+    description: "Read a local image receipt without contacting providers. action:reconcile settles a failed request or closes a submission_unknown or interrupted submitting request as failed only after the caller supplies terminal/billing evidence and spentUsd. action:refresh recovers a GenAI image download from its saved provider response and updates the managed receipt; it never regenerates. Completed requests are immutable. Do not reconcile a request still running at the provider.",
     inputSchema: { type: "object", additionalProperties: false, properties: { directory: { type: "string", description: "Absolute directory." }, requestId: { type: "string", description: "Original request ID." }, action: { type: "string", enum: ["read", "reconcile", "refresh"], description: "Defaults to local read. refresh recovers a GenAI image download from its saved response without regeneration." }, executorStopped: { type: "boolean", description: "Required true to reconcile submitting: verify the executor has exited and provider is terminal. A live local owner is rejected." }, evidence: { type: "string", description: "For reconcile: actual terminal status and billing evidence reference." }, spentUsd: { type: "number", minimum: 0, description: "For reconcile: verified total charge, including failed generation." } }, required: ["directory", "requestId"] },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }
   }
@@ -96772,6 +96857,24 @@ function imagePlanSummary(plan2) {
   const { args, sourceArgs: _source, ...summary } = plan2;
   return { ...summary, fields: Object.keys(args), review: "not_reviewed" };
 }
+function imageExecutionResult(plan2, status, receipt, output2) {
+  return {
+    version: 1,
+    status,
+    outputPath: plan2.outputFile ?? null,
+    requestId: plan2.requestId,
+    providerId: receipt?.requestId ?? null,
+    usage: receipt?.usage ?? null,
+    output: output2 ?? null,
+    readiness: {
+      file: output2 ? "verified" : "not_verified",
+      decoding: output2 ? "verified" : "not_verified",
+      configuration: "selection_validated",
+      references: "not_checked",
+      visualReview: "not_reviewed"
+    }
+  };
+}
 async function executeImage(raw, dispatch) {
   gate2("image_execute");
   const input = imageExecuteSchema.parse(raw), directory2 = fs18.realpathSync(input.directory);
@@ -96788,7 +96891,8 @@ async function executeImage(raw, dispatch) {
     if (previous.planId !== id) throw new Error("image_request_id_conflict");
     if (previous.status === "completed") {
       if (!plan2.outputFile || readImageMetadata(plan2.outputFile).sha256 !== previous.output?.sha256) throw new Error("image_cached_output_changed");
-      return previous.result;
+      const cached2 = previous.result;
+      return { ...cached2, structuredContent: imageExecutionResult(plan2, "completed", { usage: previous.usage, requestId: previous.providerId }, previous.output) };
     }
     throw new Error("image_request_pending: inspect image_status; never resubmit this request ID");
   }
@@ -96820,7 +96924,7 @@ async function executeImage(raw, dispatch) {
     };
   });
   const started = Date.now();
-  let ok = false;
+  let ok = false, providerCompleted = false;
   try {
     const result = await dispatch(plan2.tool, plan2.args);
     const receipt = result.imageReceipt;
@@ -96833,19 +96937,30 @@ async function executeImage(raw, dispatch) {
       });
     });
     if (result.isError) throw new Error("image_adapter_failed: " + JSON.stringify(result.content));
+    providerCompleted = true;
     if (!plan2.outputFile) throw new Error("image_output_missing");
     const output2 = verifyImageFile(plan2.outputFile);
-    const response = { ...result, content: result.content.filter((item) => item.type !== "image"), imageReceipt: { ...receipt, output: output2, review: "not_reviewed" } };
+    const response = { ...result, structuredContent: imageExecutionResult(plan2, "completed", receipt, output2), content: result.content.filter((item) => item.type !== "image"), imageReceipt: { ...receipt, output: output2, review: "not_reviewed" } };
     imageTransaction(directory2, void 0, (state) => {
       Object.assign(state.jobs[plan2.requestId], { status: "completed", output: output2, result: response, updatedAt: (/* @__PURE__ */ new Date()).toISOString() });
     });
     ok = true;
     return response;
   } catch (error2) {
-    imageTransaction(directory2, void 0, (state) => {
-      state.jobs[plan2.requestId].status = "submission_unknown";
-    });
-    throw error2;
+    const status = providerCompleted || error2 instanceof GenaiImageOutputError || error2 instanceof GenaiRequestError && error2.terminal ? "failed" : "submission_unknown";
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    imageTransaction(directory2, void 0, (state) => Object.assign(state.jobs[plan2.requestId], {
+      status,
+      evidence: message,
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      ...error2 instanceof GenaiImageOutputError ? { providerId: error2.requestId, usage: error2.usage } : {}
+    }));
+    const job = readImageState(directory2)?.jobs[plan2.requestId];
+    return {
+      isError: true,
+      content: [{ type: "text", text: message }],
+      structuredContent: { ...imageExecutionResult(plan2, status, { usage: job?.usage, requestId: job?.providerId }), error: message }
+    };
   } finally {
     recordUsage(plan2.outputFile, {
       ts: (/* @__PURE__ */ new Date()).toISOString(),
@@ -96897,7 +97012,7 @@ function imageStatus(raw) {
     if (!input.evidence || input.spentUsd === void 0) throw new Error("image_reconciliation_requires_billing_evidence");
     imageTransaction(directory2, void 0, (state) => {
       const job = Object.hasOwn(state.jobs, input.requestId) ? state.jobs[input.requestId] : void 0;
-      if (!job || !["submitting", "submission_unknown"].includes(job.status)) throw new Error("image_reconciliation_requires_unknown_terminal_request");
+      if (!job || !["submitting", "submission_unknown", "failed"].includes(job.status)) throw new Error("image_reconciliation_requires_unknown_terminal_request");
       if (job.status === "submitting") {
         if (input.executorStopped !== true) throw new Error("image_reconciliation_requires_executor_stopped");
         if (job.ownerHost === os2.hostname() && job.ownerPid) {
@@ -96931,7 +97046,11 @@ async function refreshGenaiImage(directory2, requestId) {
   gate2(plan2.tool);
   const receipt = await recoverGenaiImage(job.outputFile + ".astra-genai.json");
   if (receipt.imagePath !== job.outputFile) throw new Error("image_recovery_output_mismatch");
-  const result = { content: [{ type: "text", text: JSON.stringify(receipt) }], imageReceipt: receipt };
+  const result = {
+    content: [{ type: "text", text: JSON.stringify(receipt) }],
+    imageReceipt: receipt,
+    structuredContent: imageExecutionResult(plan2, "completed", receipt, receipt.output)
+  };
   imageTransaction(directory2, void 0, (current) => Object.assign(current.jobs[requestId], {
     status: "completed",
     result,
