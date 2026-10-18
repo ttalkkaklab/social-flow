@@ -685,3 +685,21 @@
 .character-media { margin: var(--review-s12) 0; padding-top: 0; border-top: 0; font-size: var(--review-s14); }
 .character-sheet .review-panel-front .review-empty, .character-sheet .review-panel-back .review-empty { aspect-ratio: 2 / 3; }
 .character-sheet .review-panel-face .review-empty { aspect-ratio: 1; }
+
+/* Keep every production cut visible beside its duration and source path. */
+.production-cut-review { margin: 1rem 0; }
+.production-cut-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: 1rem;
+}
+.production-cut { margin: 0; min-width: 0; }
+.production-cut figcaption { margin-bottom: 0.5rem; font-weight: 600; }
+.production-cut img, .production-cut video {
+  display: block;
+  width: 100%;
+  max-height: 32rem;
+  object-fit: contain;
+}
+.production-cut-path { overflow-wrap: anywhere; font-size: 0.75rem; }
+.representative-frame-label { font-size: 0.875rem; }

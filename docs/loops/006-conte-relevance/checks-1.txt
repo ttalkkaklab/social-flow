@@ -1,0 +1,3 @@
+npm run check: PASS, 2139 tests, 194 suites, 0 failed
+skill-lint: PASS, 16 rules across 21 skills
+Focused audit tests: 4 passed in repo root and server working directories after cwd-independent test fix.
