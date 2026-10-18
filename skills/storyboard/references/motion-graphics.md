@@ -175,3 +175,5 @@ For playful kinetic type, set `content.emphasis` to one exact substring per line
 For input/output mappings that reorder fields, provide `mappings[].fields` with 1–2 exact substrings shared by `from` and `to`. The renderer copies each highlighted field, reorders it at the destination, then resolves the full output. Rows travel together at a fixed pitch, then reorder one row at a time so neighbouring fields never cross. Without field metadata it uses the simpler whole-row transition.
 
 Portrait process artifacts may declare `artifactKind:"frames"` or `"checklist"` with 1–3 short `artifactItems`; retain `artifact` as the readable summary. Use miniature frames for an actual storyboard output and a checklist for actual review criteria, not arbitrary variation. Other artifacts retain the simple document specimen.
+
+Frame specimens can pair each `artifactItems` label with `artifactVisuals` (`bars`, `flow`, or `check`) when that representation describes the actual planned frame. The miniature is a storyboard sketch, never evidence of a rendered or recorded asset.
