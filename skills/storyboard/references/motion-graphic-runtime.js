@@ -118,7 +118,7 @@ function render(scene,p,{portrait=false,onFont,boardTheme}={}){
    c.items.forEach((v,i)=>{const q=centered?at(i*.18,.16+i*.18):theme&&m.type==='process'?at(.04+i*.20,.22+i*.20):at(.08+i*.22,.28+i*.22),xx=portrait?x+26:centered?x+step*(i+.5):x+step*i+25,yy=portrait?y+step*i:y+90;
     if(i<n-1){const progress=centered?at(.10+i*.18,.18+i*.18):at(.18+i*.22,.45+i*.22);out+=line(xx,yy,portrait?xx:xx+step,portrait?yy+step:yy,C.soft,4)+line(xx,yy,portrait?xx:xx+step*progress,portrait?yy+step*progress:yy,C.accent,4);}
     out+=`<g opacity="${q}" transform="translate(0 ${24*(1-q)})">`;
-    if(theme&&portrait&&m.type==='process'&&i<n-1){const handoff=at(.18+i*.2,.32+i*.2);if(handoff>0&&handoff<1){const py=yy+step*handoff;out+=rect(xx-15,py-21,30,42,C.paper,3)+line(xx-9,py-9,xx+9,py-9,C.accent,3)+line(xx-9,py,xx+9,py,C.accent,3)+line(xx-9,py+9,xx+4,py+9,C.accent,3);}}
+    if(portrait&&m.type==='process'&&i<n-1){const handoff=theme?at(.18+i*.2,.32+i*.2):at(.24+i*.22,.46+i*.22);if(handoff>0&&handoff<1){const py=yy+step*handoff;out+=rect(xx-15,py-21,30,42,C.paper,3)+line(xx-9,py-9,xx+9,py-9,C.accent,3)+line(xx-9,py,xx+9,py,C.accent,3)+line(xx-9,py+9,xx+4,py+9,C.accent,3);}}
     out+=circle(xx,yy,centered?23+8*Math.sin(Math.PI*q):23,C.soft)+circle(xx,yy,23*q,C.accent)+text(xx,yy+8,i+1,23,C.paper,550,'middle',q);
     const tx=portrait?xx+65:xx-22,ty=portrait?yy-12:yy+95;
     if(centered){
@@ -129,9 +129,9 @@ function render(scene,p,{portrait=false,onFont,boardTheme}={}){
       out+=wrap(tx,ty,v.label,portrait?38:34,portrait?wide-95:step-30,C.ink,550);
       if(v.date||v.detail)out+=wrap(tx,ty+65,v.date||v.detail,27,portrait?wide-100:step-35,C.muted);
     }
-    if(theme&&portrait&&v.artifact){
+    if(portrait&&v.artifact){
       const aw=wide-120;
-      if(v.artifactKind==='frames'&&v.artifactItems?.length){
+      if(theme&&v.artifactKind==='frames'&&v.artifactItems?.length){
         const cell=(aw-16*(v.artifactItems.length-1))/v.artifactItems.length;
         v.artifactItems.forEach((label,j)=>{const left=tx+j*(cell+16),cx=left+cell/2,kind=v.artifactVisuals?.[j];out+=rect(left,ty+110,cell,104,C.paper,3)+line(left,ty+110,left+cell,ty+110,C.soft,2);
           if(kind==='bars'){out+=line(cx-36,ty+165,cx+36,ty+165,C.muted,2)+rect(cx-30,ty+143,22,22,C.muted,1)+rect(cx+8,ty+125,22,40,C.accent,1);}
@@ -140,11 +140,11 @@ function render(scene,p,{portrait=false,onFont,boardTheme}={}){
           else out+=text(left+14,ty+150,String(j+1).padStart(2,'0'),20,C.muted,500);
           out+=text(left+14,ty+200,label,25,C.ink,500);
         });
-      }else if(v.artifactKind==='checklist'&&v.artifactItems?.length){
+      }else if(theme&&v.artifactKind==='checklist'&&v.artifactItems?.length){
         out+=rect(tx,ty+110,aw,104,C.soft,8);
         const cell=aw/v.artifactItems.length;
         v.artifactItems.forEach((label,j)=>{const left=tx+20+j*cell;out+=`<path d="M${left} ${ty+160}l7 8 14-18" stroke="${C.accent}" stroke-width="4" fill="none"/>`+text(left+30,ty+168,label,25,C.ink,500);});
-      }else out+=rect(tx,ty+110,aw,104,C.soft,8)+line(tx+24,ty+140,tx+wide-180,ty+140,C.muted,1)+text(tx+24,ty+183,v.artifact,27,C.ink,500);
+      }else out+=rect(tx,ty+110,aw,104,C.soft,8)+line(tx+24,ty+140,tx+wide-180,ty+140,theme?C.muted:C.accent,theme?1:3)+text(tx+24,ty+183,v.artifact,27,C.ink,500);
     }
     out+='</g>';
    });

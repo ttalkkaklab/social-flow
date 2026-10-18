@@ -166,17 +166,12 @@ test('raw board defaults prepare without shot normalization and await inherited 
    assert.equal(renders[0].boardTheme.id,'story');
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
-test('legacy portrait processes ignore artifact metadata and retain their original intermediate geometry',()=>{
+test('legacy portrait processes preserve v0.116 artifact cards and handoff geometry',()=>{
  const runtime=require('../../skills/storyboard/references/motion-graphic-runtime.js');
- const s=sample();s.shot.motionGraphic.type='process';
- s.shot.motionGraphic.content={title:'Process',items:[{label:'First'},{label:'Second'}]};
- for(const p of [.3,.4,.5]){
-   const original=runtime.render(s,p,{portrait:true});
-   const annotated=structuredClone(s);
-   annotated.shot.motionGraphic.content.items[0].artifact='Legacy metadata';
-   assert.equal(runtime.render(annotated,p,{portrait:true}),original);
-   assert.doesNotMatch(original,/<rect[^>]*width="30" height="42"/,'new document handoffs require an opted-in theme');
- }
+ const scene={"shot":{"motionGraphic":{"type":"process","style":{"palette":"editorial"},"content":{"title":"Process","items":[{"label":"First","artifact":"Legacy metadata"},{"label":"Second"}]}}}};
+ const expected=["01cbedf91f23bb8b3178c7d7a2465084a8c112d3b9f743185eaabce1b0556ed2","af682ca6d7eca934b3d3482d74d557928f94ead965f002112348732179518ab7","87d376575869f5efeff2af9d734a3ebe26af7c7e6851f21f567ed34ad3134fa5"];
+ const normalize=s=>s.replace(/ data-theme="legacy"/,'').replace(/<g letter-spacing="0">([\s\S]*?)<\/g>/,'$1').replace(/ {2,}/g,' ');
+ [.3,.4,.5].forEach((p,i)=>assert.equal(createHash('sha256').update(normalize(runtime.render(scene,p,{portrait:true}))).digest('hex'),expected[i]));
 });
 test('kinetic emphasis must identify exact source text and remains seek deterministic',()=>{
  const s=sample();s.shot.motionGraphic.type='kinetic_type';s.shot.motionGraphic.style={theme:{id:'playful'}};
