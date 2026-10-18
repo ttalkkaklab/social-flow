@@ -1,7 +1,7 @@
 ---
 name: storyboard
 description: >
-  Presents a scenario, then builds the template board; stops before media generation. Use when the
+  Presents a scenario and template board; stops before media generation. Use when the
   user asks to "스토리보드 만들어", "스토리보드 작성", "촬영 대본 만들어", "make a storyboard",
   or "plan a video". Casts characters, develops causal alternatives, writes observable
   action and attributed speech, then plans shots and content-led timing. Saves the local
