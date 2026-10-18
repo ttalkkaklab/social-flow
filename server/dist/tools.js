@@ -1,6 +1,6 @@
 import { VIDEO_ADAPTERS } from './video-registry.js';
 import { DURATION_TOOLS } from './video-duration.js';
-import { cameraContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
+import { cameraContract, motionThemeContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 import { ASTRA_VIDEO_FAST_DIMENSION_STEP, ASTRA_VIDEO_GUIDANCE_RANGES, guidanceToolKey, ASTRA_VIDEO_IC_LORA_ADAPTERS, ASTRA_VIDEO_LORAS, ASTRA_VIDEO_MAX_LORA_STRENGTH, ASTRA_VIDEO_MAX_REFERENCE_PIXELS, ASTRA_VIDEO_MAX_STG_BLOCK, ASTRA_VIDEO_MAX_STG_BLOCKS, ASTRA_VIDEO_FRAME_LIMITS, ASTRA_VIDEO_MAX_PIXELS, ASTRA_VIDEO_MAX_SEED, ASTRA_VIDEO_MIN_FRAMES, } from './astra-video-client.js';
 import { DEFAULT_SEEDANCE_DURATION, DEFAULT_SEEDANCE_MODEL, DEFAULT_SEEDANCE_REFERENCE_MODEL, DEFAULT_SEEDANCE_RESOLUTION, SEEDANCE_FPS, SEEDANCE_REFERENCE_MODELS, VALID_SEEDANCE_MODELS, VALID_SEEDANCE_RATIOS, VALID_SEEDANCE_RESOLUTIONS, } from './seedance-client.js';
@@ -760,6 +760,12 @@ const shotCameraInput = (() => {
     }
 })();
 const enumInput = (values, description) => ({ type: 'string', ...(values?.length ? { enum: values } : {}), description });
+const motionThemes = (() => { try {
+    return Object.keys(motionThemeContract().THEMES);
+}
+catch {
+    return [];
+} })();
 const motionTypes = (() => { try {
     return motionGraphicTypes();
 }
@@ -823,7 +829,7 @@ const storyboardShotInput = {
                         version: { type: 'integer', enum: [1], description: 'Motion plan schema version.' }, type: enumInput(motionTypes, 'Semantic motion family, independent of palette and transition effects.'),
                         intent: { type: 'string', description: 'One viewer takeaway.' }, reason: { type: 'string', description: 'Content-specific choice and rejected alternative.' },
                         evidence: enumInput(['data', 'recording', 'reenactment', 'metaphor'], 'Evidence provenance; never present a mock UI as an actual recording.'),
-                        style: { type: 'object', description: 'Palette and subject-specific visual direction.', additionalProperties: true, properties: { palette: enumInput(['editorial', 'botanical', 'plum', 'midnight'], 'Built-in palette; retain channel identity.'), reason: { type: 'string', description: 'Why this visual direction suits the subject.' } } },
+                        style: { type: 'object', description: 'Palette and subject-specific visual direction.', additionalProperties: true, properties: { theme: { type: 'object', additionalProperties: true, required: ['id'], description: 'Coherent motion design system. Use auto for contextual selection; an explicit id overrides automatic selection. storyboard_apply persists the resolved theme and reason.', properties: { id: enumInput(['auto', ...motionThemes], 'Theme selection, independent of semantic motion type.'), context: enumInput(['research', 'software', 'education', 'campaign', 'storytelling', 'friendly'], 'Communication context; overrides the type-based default in auto mode.'), reason: { type: 'string', description: 'Why an explicit theme suits the audience and subject.' } } }, palette: enumInput(['editorial', 'botanical', 'plum', 'midnight'], 'Built-in palette; retain channel identity.'), reason: { type: 'string', description: 'Why this visual direction suits the subject.' } } },
                         beats: { type: 'array', description: 'Editorial timing intentions; authored slides can implement custom timing.', items: { type: 'object', description: 'One meaningful change.', required: ['at', 'action'], properties: { at: { type: 'number', minimum: 0, maximum: 1, description: 'Normalized shot time, zero to one.' }, action: { type: 'string', description: 'Visible change or result-reading hold.' } } } },
                         content: { type: 'object', additionalProperties: true, description: 'Type-specific source data; see motion-graphics.md. Preserve exact source values.' }
                     }
@@ -4879,7 +4885,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
                 removeShotIds: { type: 'array', items: { type: 'string', pattern: '^s\\d{4,}$', description: 'A stable shot id' }, description: 'Shot ids to drop (resolved before inserts). Not with the position fields in the same patch' },
                 removeScenes: { type: 'array', items: { type: 'number', description: 'Scene number' }, description: 'Scene numbers to drop from STRUCTURE.scenes and from every sequence' },
                 removeSequences: { type: 'array', items: { type: 'string', description: 'Sequence id' }, description: 'Sequence ids to drop' },
-                globals: { type: 'object', description: 'Other window.* blocks to set — FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. MUSIC.$mix is optional sound-design metadata; SFX keeps logical asset ids only. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1.' },
+                globals: { type: 'object', description: 'Other window.* blocks to set — FORMAT, THEME (motionGraphicTheme: {id: auto or theme id, context?, reason?} sets the common motion theme; explicit shot ids or contexts override it), COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. MUSIC.$mix is optional sound-design metadata; SFX keeps logical asset ids only. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1.' },
                 expectedSha256: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'Current scenes.js hash from storyboard_read; required when editing propSheet on an existing board.' },
                 propSheet: { type: 'object', additionalProperties: false, required: ['props'], description: 'Replace the complete prop sheet atomically. Keep other editorial metadata. Changes validate story-time custody and invalidate approval; original file is backed up.', properties: {
                         props: { type: 'array', description: 'Complete prop registry for this board', items: { type: 'object', additionalProperties: true, required: ['id'], properties: {

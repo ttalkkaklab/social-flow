@@ -65647,16 +65647,104 @@ var require_motion_graphics = __commonJS({
         plum: { paper: "#f7f3f7", ink: "#382a45", muted: "#6e5a78", accent: "#8542a5", soft: "#e9dfed" },
         midnight: { paper: "#111e32", ink: "#f6f8fc", muted: "#b2c1d6", accent: "#80bfff", soft: "#263b55" }
       };
+      const THEMES = {
+        report: {
+          typography: { title: "paperlogy", body: "pretendard", number: "spacegrotesk", latin: "spacegrotesk" },
+          label: "\uB9AC\uD3EC\uD2B8",
+          use: "Measured quantities, research and evidence",
+          colors: { paper: "#f5f7fb", ink: "#172d49", muted: "#50627b", accent: "#2359c4", soft: "#dce5f1" },
+          type: { title: 56, weight: 650, tracking: -1.5 },
+          layout: { pad: 88, titleY: 130, bodyY: 290, radius: 3 },
+          motion: { curve: "smooth", end: 0.82 }
+        },
+        product: {
+          typography: { title: "paperlogy", body: "pretendard", number: "spacegrotesk", latin: "spacegrotesk" },
+          label: "\uC81C\uD488 \uC2DC\uC5F0",
+          use: "Software actions and input/output transformations",
+          colors: { paper: "#edf1f8", ink: "#202c48", muted: "#53617d", accent: "#5845c6", soft: "#dce1ee" },
+          type: { title: 62, weight: 600, tracking: -2 },
+          layout: { pad: 104, titleY: 140, bodyY: 310, radius: 18 },
+          motion: { curve: "decelerate", end: 0.78 }
+        },
+        learning: {
+          typography: { title: "paperlogy", body: "pretendard", number: "spacegrotesk", latin: "spacegrotesk" },
+          label: "\uD559\uC2B5",
+          use: "Ordered steps, conceptual relationships and models",
+          colors: { paper: "#eef5f2", ink: "#173f38", muted: "#48695f", accent: "#137967", soft: "#d5e6df" },
+          type: { title: 54, weight: 600, tracking: -1 },
+          layout: { pad: 96, titleY: 138, bodyY: 310, radius: 8 },
+          motion: { curve: "smooth", end: 0.88 }
+        },
+        campaign: {
+          typography: { title: "blackhansans", body: "pretendard", number: "robotoflex", latin: "robotoflex" },
+          label: "\uCEA0\uD398\uC778",
+          use: "Short expressive statements and identity beats",
+          colors: { paper: "#762446", ink: "#fff8f1", muted: "#efd4df", accent: "#ffd2a5", soft: "#984461" },
+          type: { title: 76, weight: 780, tracking: -3 },
+          layout: { pad: 80, titleY: 150, bodyY: 330, radius: 2 },
+          motion: { curve: "decelerate", end: 0.94 }
+        }
+      };
+      THEMES.story = {
+        label: "\uC2A4\uD1A0\uB9AC",
+        use: "Quotes, cultural stories and reflective narration",
+        typography: { title: "gowunbatang", body: "pretendard", number: "spacegrotesk", latin: "gowunbatang" },
+        colors: { paper: "#f2f0f7", ink: "#362e49", muted: "#655d76", accent: "#73549a", soft: "#e2ddeb" },
+        type: { title: 64, weight: 700, tracking: -1 },
+        layout: { pad: 104, titleY: 142, bodyY: 325, radius: 4 },
+        motion: { curve: "smooth", end: 1 }
+      };
+      THEMES.playful = {
+        label: "\uD50C\uB808\uC774\uD480",
+        use: "Friendly character-led explanations and light learning",
+        typography: { title: "jua", body: "pretendard", number: "spacegrotesk", latin: "jua" },
+        colors: { paper: "#fff5e4", ink: "#4b3820", muted: "#776044", accent: "#986117", soft: "#f1dfbf" },
+        type: { title: 100, weight: 700, tracking: 0 },
+        layout: { pad: 96, titleY: 140, bodyY: 310, radius: 24 },
+        motion: { curve: "decelerate", end: 0.8 }
+      };
+      const CONTEXT_THEMES = { research: "report", software: "product", education: "learning", campaign: "campaign", storytelling: "story", friendly: "playful" };
+      function resolveTheme(m2, boardTheme) {
+        const own = m2.style?.theme;
+        const inherited = boardTheme && (!own || own.id === "auto" && !own.context);
+        const request = inherited ? boardTheme : own;
+        if (!request) return null;
+        if (request.context && !Object.hasOwn(CONTEXT_THEMES, request.context)) throw Error("unknown motion theme context");
+        let id = request.id, reason = request.reason, selectedBy = "explicit";
+        if (id === "auto") {
+          if (request.context && !Object.hasOwn(CONTEXT_THEMES, request.context)) throw Error("unknown motion theme context");
+          id = CONTEXT_THEMES[request.context];
+          selectedBy = request.context ? "context" : "type";
+          if (!id) id = ["comparison", "part_whole", "trend", "timeline", "recorded_evidence"].includes(m2.type) ? "report" : ["ui_demo", "input_output", "before_after", "layers", "product_hero"].includes(m2.type) ? "product" : ["kinetic_type", "brand_mark", "montage"].includes(m2.type) ? "campaign" : "learning";
+          reason = request.context ? `${{ research: "\uC218\uCE58\uC640 \uADFC\uAC70", software: "\uC18C\uD504\uD2B8\uC6E8\uC5B4 \uC0AC\uC6A9", education: "\uD559\uC2B5\uACFC \uC774\uD574", campaign: "\uC9E7\uACE0 \uAC15\uD55C \uBA54\uC2DC\uC9C0", storytelling: "\uC778\uC6A9\uACFC \uC774\uC57C\uAE30", friendly: "\uCE5C\uADFC\uD55C \uC124\uBA85" }[request.context]} \uC911\uC2EC\uC758 \uC804\uB2EC \uBAA9\uC801\uC5D0 \uB9DE\uCDB0 ${THEMES[id].label} \uD14C\uB9C8\uB97C \uC120\uD0DD\uD588\uC2B5\uB2C8\uB2E4.` : `${TYPES[m2.type]?.label || m2.type} \uC720\uD615\uC758 \uC815\uBCF4 \uAD6C\uC870\uC5D0 \uB9DE\uCDB0 ${THEMES[id].label} \uD14C\uB9C8\uB97C \uC120\uD0DD\uD588\uC2B5\uB2C8\uB2E4.`;
+        }
+        if (!Object.hasOwn(THEMES, id)) throw Error("unknown motion theme: " + id);
+        return { id, reason: reason || (inherited ? `\uC2A4\uD1A0\uB9AC\uBCF4\uB4DC \uACF5\uD1B5 ${THEMES[id].label} \uD14C\uB9C8\uB97C \uC801\uC6A9\uD588\uC2B5\uB2C8\uB2E4.` : THEMES[id].use), selectedBy: inherited ? "storyboard" : selectedBy, systemVersion: 1, typography: { ...THEMES[id].typography } };
+      }
+      function applyTheme(scene, boardTheme) {
+        const m2 = scene.shot?.motionGraphic;
+        if (!m2 || !m2.style?.theme && !boardTheme) return scene;
+        const resolved = resolveTheme(m2, boardTheme);
+        return { ...scene, shot: { ...scene.shot, motionGraphic: { ...m2, style: { ...m2.style, theme: { id: "auto", ...m2.style?.theme, resolved } } } } };
+      }
       const txt = (x2) => typeof x2 === "string" && !!x2.trim();
-      function inspect(scene) {
+      function inspect(scene, boardTheme) {
         const m2 = scene.shot?.motionGraphic, errors = [], advice = [];
         if (!m2) return { errors, advice };
         if (m2.version !== 1) errors.push("motionGraphic.version must be 1");
-        if (!TYPES[m2.type]) errors.push("unknown motionGraphic.type: " + m2.type);
+        if (!Object.hasOwn(TYPES, m2.type)) errors.push("unknown motionGraphic.type: " + m2.type);
         if (!txt(m2.reason)) advice.push("Explain why this type serves this line; name a rejected alternative.");
         if (!txt(m2.intent)) advice.push("Name the one thing the viewer should understand or feel.");
         if (!["data", "recording", "reenactment", "metaphor"].includes(m2.evidence)) errors.push("motionGraphic.evidence must be data, recording, reenactment or metaphor");
-        if (scene.visual?.slide?.renderer === "motion-svg-v1" && !PALETTES[m2.style?.palette]) errors.push("choose a supported palette or author a custom slide without the built-in renderer");
+        if (m2.style?.theme || boardTheme) {
+          try {
+            resolveTheme(m2, boardTheme);
+          } catch (e2) {
+            errors.push(e2.message);
+          }
+          if (m2.style?.theme?.context && !Object.hasOwn(CONTEXT_THEMES, m2.style.theme.context)) errors.push("unknown motion theme context");
+        }
+        if (scene.visual?.slide?.renderer === "motion-svg-v1" && !m2.style?.theme && !boardTheme && !PALETTES[m2.style?.palette]) errors.push("choose a supported palette or author a custom slide without the built-in renderer");
         if (!txt(m2.style?.reason)) advice.push("Explain palette and typography in the subject context.");
         if (m2.evidence === "recording" && !scene.visual?.src && !scene.visual?.clip) errors.push("recording evidence requires an actual source file");
         if (!Array.isArray(m2.beats) || !m2.beats.length) advice.push("Plan introduce, change and read/hold beats against speech or music.");
@@ -65667,8 +65755,8 @@ var require_motion_graphics = __commonJS({
         }
         return { errors, advice };
       }
-      function validateContent(scene) {
-        const m2 = scene.shot?.motionGraphic, errors = inspect(scene).errors;
+      function validateContent(scene, boardTheme) {
+        const m2 = scene.shot?.motionGraphic, errors = inspect(scene, boardTheme).errors;
         if (!m2 || !TYPES[m2.type]?.builtIn) return errors.concat("type needs an authored slide or its existing asset route; no generic fallback");
         const c = m2.content || {};
         if (m2.evidence === "recording") errors.push("built-in graphics cannot claim recording evidence; use the actual footage route");
@@ -65688,11 +65776,15 @@ var require_motion_graphics = __commonJS({
         if (["before_after", "input_output", "ui_demo"].includes(m2.type) && (!txt(c.input) || !txt(c.output))) errors.push("input and output are required");
         if (c.mappings && (!Array.isArray(c.mappings) || c.mappings.length < 1 || c.mappings.length > 3 || c.mappings.some((v) => !txt(v?.from) || !txt(v?.to)))) errors.push("mappings need 1..3 explicit from/to correspondences");
         if (m2.type === "ui_demo" && !txt(c.action)) errors.push("UI demo needs an explicit action label");
+        if (Array.isArray(c.mappings) && c.mappings.some((item) => item?.fields !== void 0 && (!Array.isArray(item.fields) || !item.fields.length || item.fields.length > 2 || item.fields.some((v) => !txt(v) || !txt(item.from) || !txt(item.to) || !item.from.includes(v) || !item.to.includes(v))))) errors.push("mapping fields must contain 1..2 nonempty exact substrings of both from and to");
+        if (Array.isArray(c.items) && c.items.some((v) => v?.artifactKind && (!["frames", "checklist"].includes(v.artifactKind) || !Array.isArray(v.artifactItems) || v.artifactItems.length < 1 || v.artifactItems.length > 3 || v.artifactItems.some((t2) => !txt(t2))))) errors.push("artifactKind needs frames or checklist and 1..3 short artifactItems");
+        if (Array.isArray(c.items) && c.items.some((v) => v?.artifactVisuals !== void 0 && (!Array.isArray(v.artifactVisuals) || v.artifactVisuals.length !== v.artifactItems?.length || v.artifactVisuals.some((k) => !["bars", "flow", "check"].includes(k))))) errors.push("artifactVisuals must match artifactItems with bars, flow or check");
         if (m2.type === "kinetic_type" && (!Array.isArray(c.lines) || !c.lines.length || c.lines.length > 3 || c.lines.some((v) => !txt(v)))) errors.push("1..3 short lines required");
+        if (m2.type === "kinetic_type" && c.emphasis !== void 0 && (!Array.isArray(c.emphasis) || c.emphasis.length !== c.lines?.length || c.emphasis.some((v, i2) => typeof v !== "string" || v && (!txt(c.lines?.[i2]) || !c.lines[i2].includes(v))))) errors.push("emphasis must align with lines and quote an exact substring (empty string means no emphasis)");
         if (m2.type === "simulation" && (!Number.isInteger(c.capacity) || c.capacity < 2 || c.capacity > 12 || !Number.isFinite(c.arrival) || c.arrival <= 0 || !Number.isFinite(c.service) || c.service <= 0)) errors.push("simulation needs capacity 2..12 and positive finite arrival/service rates");
         return errors;
       }
-      const api = { TYPES, PALETTES, inspect, validateContent };
+      const api = { TYPES, PALETTES, THEMES, CONTEXT_THEMES, resolveTheme, applyTheme, inspect, validateContent };
       if (typeof module === "object" && module.exports) module.exports = api;
       else root.MOTION_GRAPHICS = api;
     })(typeof window === "object" ? window : globalThis);
@@ -81248,7 +81340,7 @@ import * as path5 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.116.0",
+  version: "0.117.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -83611,6 +83703,9 @@ function contract() {
 function cameraContract() {
   return loadFromHere(join4(REFERENCES_DIR, "production-mode.js"));
 }
+function motionThemeContract() {
+  return loadFromHere(join4(REFERENCES_DIR, "motion-graphics.js"));
+}
 function motionGraphicTypes() {
   const registry2 = loadFromHere(join4(REFERENCES_DIR, "motion-graphics.js"));
   return Object.keys(registry2.TYPES);
@@ -83741,7 +83836,15 @@ var shotSchema = external_exports.object({
       intent: external_exports.string().optional(),
       reason: external_exports.string().optional(),
       evidence: external_exports.enum(["data", "recording", "reenactment", "metaphor"]),
-      style: external_exports.object({ palette: external_exports.string(), reason: external_exports.string().optional() }).passthrough(),
+      style: external_exports.object({
+        palette: external_exports.string().optional(),
+        reason: external_exports.string().optional(),
+        theme: external_exports.object({
+          id: external_exports.string().refine((value) => value === "auto" || Object.hasOwn(motionThemeContract().THEMES, value), "unknown motion theme"),
+          context: external_exports.enum(["research", "software", "education", "campaign", "storytelling", "friendly"]).optional(),
+          reason: external_exports.string().optional()
+        }).passthrough().optional()
+      }).passthrough(),
       beats: external_exports.array(external_exports.object({ at: external_exports.number().min(0).max(1), action: external_exports.string() }).passthrough()).optional(),
       content: external_exports.record(external_exports.unknown()).optional()
     }).passthrough().optional(),
@@ -83940,6 +84043,8 @@ function applyPatch(win, patch) {
     if (k === "SCENES" || k === "STRUCTURE") throw new Error(`set ${k} through the dedicated fields, not globals`);
     next[k] = v;
   }
+  const boardMotionTheme = next.THEME?.motionGraphicTheme;
+  if (boardMotionTheme) motionThemeContract().resolveTheme({ type: "process", style: { theme: boardMotionTheme } });
   if (patch.propSheet) next.SB_DOC = {
     ...next.SB_DOC ?? {},
     props: patch.propSheet.props,
@@ -84065,7 +84170,7 @@ function applyPatch(win, patch) {
     return { id, ...shot };
   });
   if (next.STRUCTURE) next.STRUCTURE = { ...next.STRUCTURE, nextShotId };
-  next.SCENES = shots.map((shot) => ({ ...shot }));
+  next.SCENES = shots.map((shot) => shot.shot?.motionGraphic && (shot.shot.motionGraphic.style.theme || next.THEME?.motionGraphicTheme) ? motionThemeContract().applyTheme({ ...shot }, next.THEME?.motionGraphicTheme) : { ...shot });
   const findings = [];
   if (!shots.length) findings.push({ level: "bad", where: "board", what: "the board has no shots" });
   if (next.STRUCTURE !== void 0) findings.push(...validateStructure(next.STRUCTURE));
@@ -89957,6 +90062,13 @@ var shotCameraInput = (() => {
   }
 })();
 var enumInput = (values, description) => ({ type: "string", ...values?.length ? { enum: values } : {}, description });
+var motionThemes = (() => {
+  try {
+    return Object.keys(motionThemeContract().THEMES);
+  } catch {
+    return [];
+  }
+})();
 var motionTypes = (() => {
   try {
     return motionGraphicTypes();
@@ -90032,7 +90144,7 @@ var storyboardShotInput = {
             intent: { type: "string", description: "One viewer takeaway." },
             reason: { type: "string", description: "Content-specific choice and rejected alternative." },
             evidence: enumInput(["data", "recording", "reenactment", "metaphor"], "Evidence provenance; never present a mock UI as an actual recording."),
-            style: { type: "object", description: "Palette and subject-specific visual direction.", additionalProperties: true, properties: { palette: enumInput(["editorial", "botanical", "plum", "midnight"], "Built-in palette; retain channel identity."), reason: { type: "string", description: "Why this visual direction suits the subject." } } },
+            style: { type: "object", description: "Palette and subject-specific visual direction.", additionalProperties: true, properties: { theme: { type: "object", additionalProperties: true, required: ["id"], description: "Coherent motion design system. Use auto for contextual selection; an explicit id overrides automatic selection. storyboard_apply persists the resolved theme and reason.", properties: { id: enumInput(["auto", ...motionThemes], "Theme selection, independent of semantic motion type."), context: enumInput(["research", "software", "education", "campaign", "storytelling", "friendly"], "Communication context; overrides the type-based default in auto mode."), reason: { type: "string", description: "Why an explicit theme suits the audience and subject." } } }, palette: enumInput(["editorial", "botanical", "plum", "midnight"], "Built-in palette; retain channel identity."), reason: { type: "string", description: "Why this visual direction suits the subject." } } },
             beats: { type: "array", description: "Editorial timing intentions; authored slides can implement custom timing.", items: { type: "object", description: "One meaningful change.", required: ["at", "action"], properties: { at: { type: "number", minimum: 0, maximum: 1, description: "Normalized shot time, zero to one." }, action: { type: "string", description: "Visible change or result-reading hold." } } } },
             content: { type: "object", additionalProperties: true, description: "Type-specific source data; see motion-graphics.md. Preserve exact source values." }
           }
@@ -94200,7 +94312,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         removeShotIds: { type: "array", items: { type: "string", pattern: "^s\\d{4,}$", description: "A stable shot id" }, description: "Shot ids to drop (resolved before inserts). Not with the position fields in the same patch" },
         removeScenes: { type: "array", items: { type: "number", description: "Scene number" }, description: "Scene numbers to drop from STRUCTURE.scenes and from every sequence" },
         removeSequences: { type: "array", items: { type: "string", description: "Sequence id" }, description: "Sequence ids to drop" },
-        globals: { type: "object", description: "Other window.* blocks to set \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. MUSIC.$mix is optional sound-design metadata; SFX keeps logical asset ids only. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1." },
+        globals: { type: "object", description: "Other window.* blocks to set \u2014 FORMAT, THEME (motionGraphicTheme: {id: auto or theme id, context?, reason?} sets the common motion theme; explicit shot ids or contexts override it), COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. MUSIC.$mix is optional sound-design metadata; SFX keeps logical asset ids only. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1." },
         expectedSha256: { type: "string", pattern: "^[a-f0-9]{64}$", description: "Current scenes.js hash from storyboard_read; required when editing propSheet on an existing board." },
         propSheet: { type: "object", additionalProperties: false, required: ["props"], description: "Replace the complete prop sheet atomically. Keep other editorial metadata. Changes validate story-time custody and invalidate approval; original file is backed up.", properties: {
           props: { type: "array", description: "Complete prop registry for this board", items: { type: "object", additionalProperties: true, required: ["id"], properties: {
@@ -103520,7 +103632,7 @@ ROUTES.video_status = async (args) => text2(JSON.stringify(videoStatus(args), nu
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.116.0" },
+  { name: "social-flow", version: "0.117.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

@@ -11,6 +11,68 @@ Do not add it to ordinary footage merely because a camera moves.
 - Type catalog and built-in content
 - Design, timing and installed preparation
 
+## Contextual themes
+
+For every newly planned motion graphic, set `style.theme` as below. Keep the semantic
+`type` separate: comparison describes what the scene explains; report describes how
+it looks and moves. The executable design-system source is `motion-graphics.js`;
+`prepare-motion-graphic.js --themes` lists its tokens.
+
+```json
+{"style":{"theme":{"id":"auto","context":"software"}}}
+```
+
+| Theme | Context | Use | Typography, composition and timing |
+|---|---|---|---|
+| report | research | Data, evidence, measured change | Blue ink on cool paper, compact title, tight geometry, smooth measured movement |
+| product | software | UI actions, digital transformations | Violet accent, wider margins, medium title weight, softer surfaces, quick settling |
+| learning | education | Processes, relationships, models | Green ink, restrained title scale, spacious stages, longer sequential reveals |
+| campaign | campaign | Short statements and identity | Rose accent, heavy display type, larger title, earlier result hold |
+
+Select context from the intended communication, audience and channel brief, never
+from a keyword match or shot number. `auto` with context selects the corresponding
+theme; without context it uses the semantic type as a deterministic fallback.
+For example, comparison defaults to report, but a comparison of software outputs
+can use product by setting `context:"software"`. UI demo defaults to product;
+process to learning; kinetic type to campaign. Avoid campaign for dense evidence.
+
+For a consistent episode, set `window.THEME.motionGraphicTheme` through
+`storyboard_apply.globals.THEME`, preserving the other THEME fields:
+
+```json
+{"THEME":{"brand":"Channel","motionGraphicTheme":{"id":"product","reason":"A connected software walkthrough"}}}
+```
+
+Automatic shots inherit that common choice. An explicit shot theme id or explicit
+shot context overrides it. Changing the common theme refreshes all inherited
+`resolved` records. The storyboard header displays the common theme; shot cards
+show their actual choice and reason. Without a common theme, automatic selection
+continues to use shot context and semantic type. Existing palette-only boards
+change only if a common theme is explicitly added or the shot is migrated.
+
+A channel's approved theme takes priority: supply its explicit id and a brief
+subject-specific `reason`. Use one theme across a connected sequence unless a
+change of purpose justifies a switch. Do not cycle all six themes in an episode.
+`storyboard_apply` persists `style.theme.resolved` (id, reason, selectedBy and
+systemVersion); it recomputes automatic choices after edits. An explicit id wins
+over context. Unknown ids/contexts are input errors, not silent fallbacks.
+
+The renderer consumes bundled font roles: Paperlogy titles for report/product/learning,
+Black Han Sans for campaign, Gowun Batang for story, and Dongle for playful. Body
+text uses Pretendard; numeric/Latin roles use Space Grotesk or Roboto Flex. Font
+files, cmap coverage, source URLs, hashes and OFL notices ship with the plugin.
+The preparer records whole-text fallback to bundled Pretendard when a title font
+lacks a character, and reports characters that no bundled fallback can render.
+Do not claim glyph support from `document.fonts.check` alone.
+
+It consumes theme-specific
+weights, size, tracking, spacing, corner geometry, colors and motion curve from the
+theme. This is a first theme system, not evidence that all its compositions meet a
+visual quality target. Review actual rendered clips for hierarchy, content fit,
+readability, purposeful motion and subject fit. Do not turn a functional test into
+an aesthetic score. Existing palette-only boards remain unchanged; migrate them
+explicitly. A theme never authorizes a mock recording or a flat physical mechanism.
+
 ## Plan from the situation
 
 1. Write the viewer takeaway and identify the relation: quantities, part/whole,
@@ -107,3 +169,11 @@ improvement loop, use an independent reviewer and retain failures. Do not manufa
 score or make subjective quality gates prerequisites for unrelated execution.
 
 Long labels, unusually large numbers and dense datasets need an authored composition if the built-in layout cannot fit them. Never abbreviate or drop source values silently. Check intermediate frames as well as the final hold: moving rows can collide even when the final layout fits.
+
+For playful kinetic type, set `content.emphasis` to one exact substring per line (empty string skips emphasis). The selected word grows into focus, moves to its reading position, and the remaining phrase resolves around it. Choose the word that carries the sentence’s change; do not emphasize arbitrary words for decoration.
+
+For input/output mappings that reorder fields, provide `mappings[].fields` with 1–2 exact substrings shared by `from` and `to`. The renderer copies each highlighted field, reorders it at the destination, then resolves the full output. Rows travel together at a fixed pitch, then reorder one row at a time so neighbouring fields never cross. Without field metadata it uses the simpler whole-row transition.
+
+Portrait process artifacts may declare `artifactKind:"frames"` or `"checklist"` with 1–3 short `artifactItems`; retain `artifact` as the readable summary. Use miniature frames for an actual storyboard output and a checklist for actual review criteria, not arbitrary variation. Other artifacts retain the simple document specimen.
+
+Frame specimens can pair each `artifactItems` label with `artifactVisuals` (`bars`, `flow`, or `check`) when that representation describes the actual planned frame. The miniature is a storyboard sketch, never evidence of a rendered or recorded asset.

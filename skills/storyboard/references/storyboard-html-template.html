@@ -2964,6 +2964,13 @@ window.STORYBOARD_READY = (async function () {
   h += '<div class="doc-kicker">' + esc(DOC.channelName || DOC.channel || THEME.brand) +
        (DOC.series ? " · " + esc(DOC.series) : "") + "</div>";
   h += '<h1 class="doc-title">' + esc(DOC.displayTitle || DOC.topic || "") + "</h1>";
+  if (THEME.motionGraphicTheme) {
+    var commonMotion = THEME.motionGraphicTheme;
+    var commonMotionInfo = window.MOTION_GRAPHICS && MOTION_GRAPHICS.THEMES[commonMotion.id];
+    h += '<p class="review-video-type">' + esc(LANG === 'ko' ? '공통 모션 테마: ' : 'Common motion theme: ') +
+      esc(commonMotionInfo ? commonMotionInfo.label : commonMotion.id) +
+      (commonMotion.reason ? ' · ' + esc(commonMotion.reason) : '') + '</p>';
+  }
   var videoType = window.PRODUCTION && window.PRODUCTION.videoType;
   if (videoType && videoType.id) {
     var typeNames = (window.REVIEW_VIDEO_TYPES || {})[videoType.id] || {};
@@ -4228,7 +4235,7 @@ window.STORYBOARD_READY = (async function () {
     var mg = s.shot && s.shot.motionGraphic;
     if (mg) {
       var mt = window.MOTION_GRAPHICS && window.MOTION_GRAPHICS.TYPES[mg.type];
-      h += '<div class="motion-plan"><strong>' + esc(mt ? (LANG === 'ko' ? mt.label : mt.id) : mg.type) + '</strong><p>' + esc(mg.intent || '') + '</p><p>' + esc(mg.reason || '') + '</p><small>' + esc(mg.evidence || '') + ' · ' + esc(mg.style && mg.style.palette || '') + '</small></div>';
+      h += '<div class="motion-plan"><strong>' + esc(mt ? (LANG === 'ko' ? mt.label : mt.id) : mg.type) + '</strong><p>' + esc(mg.intent || '') + '</p><p>' + esc(mg.reason || '') + '</p><small>' + esc(mg.evidence || '') + ' · ' + esc(mg.style && mg.style.theme ? ((mg.style.theme.resolved && mg.style.theme.resolved.id) || mg.style.theme.id) : mg.style && mg.style.palette || '') + '</small>' + (mg.style && mg.style.theme && mg.style.theme.resolved ? '<p>' + esc(mg.style.theme.resolved.reason) + '</p>' : '') + '</div>';
     }
     /* A shot that left the episode style (shot.style) shows its own preset here, with the reason and
        the user's approval record — the reader must see where the look changes before approving. */

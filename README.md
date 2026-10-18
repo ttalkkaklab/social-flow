@@ -12,7 +12,7 @@ selection reason, evidence, visual direction and timing intent. The shared
 [21-type guide](skills/storyboard/references/motion-graphics.md) distinguishes
 comparisons, workflows, UI demonstrations, mechanisms and other situations.
 Twelve abstract families have a deterministic local SVG renderer with bundled
-Inter/Pretendard fonts. Physical mechanisms and recorded evidence retain their
+role-based fonts and six contextual themes. Physical mechanisms and recorded evidence retain their
 asset routes; a catalog type does not imply an automatic renderer. Storyboard
 cards show the choice and reason. Prepare a built-in scene with
 `node skills/produce/references/prepare-motion-graphic.js BOARD --shot N`.
@@ -1056,3 +1056,7 @@ running the plugin. No external evaluation model is called. Legacy `acting_revie
 `tts_generate_checked` generates one take without scoring or automatic retakes.
 Sampled frames support composition only; playback and listening require actual host
 capabilities. Unsupported checks stay unverified. See [the review contract](skills/_shared/host-review.md).
+
+Motion graphics support six contextual design themes: report, product, learning, campaign, story and playful. Set the storyboard default with `THEME.motionGraphicTheme`; individual shots can override it. Set `shot.motionGraphic.style.theme.id` to `auto` (optionally with `context`) or a theme id. Storyboard updates store the resolved choice and reason; the renderer uses the same theme tokens for typography, spacing, color and timing. Palette-only boards retain their existing appearance.
+
+Theme typography bundles Paperlogy, Black Han Sans, Gowun Batang, Dongle, Jua, Space Grotesk and Roboto Flex with OFL notices. Font coverage is checked against bundled cmap data; title fallbacks are recorded, and actual loaded font widths drive wrapping. See [motion design system](docs/design-system/MOTION.md) and [font research](docs/design-system/FONTS.md).

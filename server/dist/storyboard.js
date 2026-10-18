@@ -49,6 +49,9 @@ export function contract() {
 export function cameraContract() {
     return loadFromHere(join(REFERENCES_DIR, 'production-mode.js'));
 }
+export function motionThemeContract() {
+    return loadFromHere(join(REFERENCES_DIR, 'motion-graphics.js'));
+}
 export function motionGraphicTypes() {
     const registry = loadFromHere(join(REFERENCES_DIR, 'motion-graphics.js'));
     return Object.keys(registry.TYPES);
@@ -179,7 +182,13 @@ export const shotSchema = z
             type: z.string().refine(value => motionGraphicTypes().includes(value), 'unknown motion graphic type'),
             intent: z.string().optional(), reason: z.string().optional(),
             evidence: z.enum(['data', 'recording', 'reenactment', 'metaphor']),
-            style: z.object({ palette: z.string(), reason: z.string().optional() }).passthrough(),
+            style: z.object({ palette: z.string().optional(), reason: z.string().optional(),
+                theme: z.object({
+                    id: z.string().refine(value => value === 'auto' || Object.hasOwn(motionThemeContract().THEMES, value), 'unknown motion theme'),
+                    context: z.enum(['research', 'software', 'education', 'campaign', 'storytelling', 'friendly']).optional(),
+                    reason: z.string().optional(),
+                }).passthrough().optional(),
+            }).passthrough(),
             beats: z.array(z.object({ at: z.number().min(0).max(1), action: z.string() }).passthrough()).optional(),
             content: z.record(z.unknown()).optional(),
         }).passthrough().optional(),
@@ -391,6 +400,9 @@ export function applyPatch(win, patch) {
                 throw new Error(`set ${k} through the dedicated fields, not globals`);
             next[k] = v;
         }
+    const boardMotionTheme = next.THEME?.motionGraphicTheme;
+    if (boardMotionTheme)
+        motionThemeContract().resolveTheme({ type: 'process', style: { theme: boardMotionTheme } });
     if (patch.propSheet)
         next.SB_DOC = { ...(next.SB_DOC ?? {}),
             props: patch.propSheet.props, propContinuity: patch.propSheet.continuity };
@@ -543,7 +555,7 @@ export function applyPatch(win, patch) {
     });
     if (next.STRUCTURE)
         next.STRUCTURE = { ...next.STRUCTURE, nextShotId };
-    next.SCENES = shots.map((shot) => ({ ...shot })); // sync() writes sceneSlug/sequence — never into the caller's objects
+    next.SCENES = shots.map((shot) => shot.shot?.motionGraphic && (shot.shot.motionGraphic.style.theme || next.THEME?.motionGraphicTheme) ? motionThemeContract().applyTheme({ ...shot }, next.THEME?.motionGraphicTheme) : { ...shot }); // sync() writes sceneSlug/sequence — never into the caller's objects
     const findings = [];
     if (!shots.length)
         findings.push({ level: 'bad', where: 'board', what: 'the board has no shots' });
