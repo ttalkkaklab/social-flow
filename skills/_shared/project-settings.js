@@ -128,6 +128,8 @@ function handoff(snapshot) {
 
 function createEpisode(root, topic) {
   if (!config.SLUG.test(topic || '')) throw new Error('Invalid episode topic slug');
+  const state = status(root);
+  if (state.status !== 'ready') throw new Error(`project_setup_required: ${state.missing.join(', ')}`);
   const saved = read(root);
   if (!saved.config?.project) throw new Error('project_setup_required: choose the project channel first');
   const base = `data/${saved.config.project.channel}/episodes/${topic}`;
@@ -139,8 +141,6 @@ function createEpisode(root, topic) {
     return { status: 'resumed', episode: dir, snapshot, handoff: handoff(snapshot) };
   }
   if (fs.existsSync(board)) return { status: 'legacy_episode', episode: dir, note: 'Resume the existing board and its explicit choices; no snapshot or files were rewritten.' };
-  const state = status(root);
-  if (state.status !== 'ready') throw new Error(`project_setup_required: ${state.missing.join(', ')}`);
   for (const sub of ['storyboard', '.work', 'output']) managed(root, `${base}/${sub}`, 'directory');
   for (const sub of ['storyboard', '.work', 'output']) fs.mkdirSync(path.join(dir, sub), { recursive: true });
   const snapshot = models.snapshotSettings(root, dir);

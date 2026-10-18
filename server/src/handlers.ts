@@ -1,3 +1,4 @@
+import { manageWorkflow } from './production-workflow.js';
 import { MUSIC_ADAPTERS, musicCatalog } from './music-registry.js';
 import { planMusic, musicPlanSummary, executeMusic, musicStatus, routeLegacyMusic } from './music-routing.js';
 import { generateLyriaSong, generateElevenMusic } from './music-song-client.js';
@@ -1560,6 +1561,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     const input = parseArgs(threadsSearchSchema, args);
     return fromApi(await sns.threadsKeywordSearch(input));
   },
+  production_workflow: async args => text(JSON.stringify(manageWorkflow(args), null, 2)),
   // ── Storyboard ──
   location_manage: async (args) => {
     try { return text(JSON.stringify(await manageLocation(args), null, 2)); }

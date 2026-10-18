@@ -227,3 +227,10 @@ test('no-TTS projects are ready and snapshots retain the choice after TTS is ena
   assert.deepEqual(call(root, 'episode', { topic: 'silent' }).snapshot.config.models.speech, { engine: 'none' });
   assert.equal(call(root, 'episode', { topic: 'spoken' }).snapshot.config.models.speech.model, 'eleven_v4');
 });
+
+test('resuming an existing episode still requires complete project setup', t => {
+  const root = workspace(t); init(root);
+  call(root, 'episode', { topic: 'resume' });
+  fs.rmSync(path.join(root, 'data/history/profile.md'));
+  assert.throws(() => call(root, 'episode', { topic: 'resume' }), /project_setup_required/);
+});

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { manageWorkflow, requireWorkflow } from './production-workflow.js';
 import { isManagedMusicCall } from './music-registry.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -19,7 +20,7 @@ import { reviewFinalSpeech } from './tts-final-quality.js';
 // If the two drift, the version clients see stops matching the actual package, so bump this
 // line together with package.json (the contract test checks that the two agree).
 const server = new Server(
-  { name: 'social-flow', version: '0.118.3' },
+  { name: 'social-flow', version: '0.119.0' },
   { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS },
 );
 
@@ -126,6 +127,14 @@ process.once('SIGINT', gracefulShutdown);
 process.once('SIGTERM', gracefulShutdown);
 
 async function main() {
+  if (process.argv[2] === '--workflow') {
+    console.log(JSON.stringify(manageWorkflow(JSON.parse(readFinalRequest(process.argv[3], 'utf8'))), null, 2));
+    return;
+  }
+  if (process.argv[2] === '--workflow-check-video') {
+    requireWorkflow(process.argv[3], 'video');
+    return;
+  }
   if (process.argv[2] === '--review-final') {
     const gate = resolveToolGate('tts_review_final', { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
     if (!gate.enabled) throw new Error(`Final speech review is disabled: ${gate.reason}`);

@@ -3934,6 +3934,23 @@ Returns: a text block with the saved .wav path, model, duration, and generation 
         },
     },
     {
+        name: 'production_workflow',
+        title: 'Advance verified production stages',
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+        description: 'Enforce episode preparation order after project setup: characters (text+images), text_storyboard (content/dialogue/narration), props (text+images), backgrounds (text+images), image_storyboard, then video. status reports the next stage; begin registers every asset id and file path; complete verifies actual text and decodable images and hashes them. rewind invalidates the selected stage and all later stages without deleting media. Missing or changed artifacts block downstream generation. Existing episodes register reused artifacts in the same order; this does not authorize spending. Not-applicable reasons are allowed only for empty character/prop/background categories. Host tools and arbitrary shell writes remain outside this server boundary.',
+        inputSchema: { type: 'object', additionalProperties: false, required: ['episode', 'action'], properties: {
+                episode: { type: 'string', description: 'Absolute episode directory.' },
+                action: { type: 'string', description: 'Inspect, register, finish or invalidate a stage.', enum: ['status', 'begin', 'complete', 'rewind'] },
+                stage: { type: 'string', description: 'Required for begin, complete and rewind.', enum: ['characters', 'text_storyboard', 'props', 'backgrounds', 'image_storyboard'] },
+                entries: { type: 'array', description: 'Complete inventory for the stage, required on begin unless notApplicable.', items: { type: 'object', additionalProperties: false, required: ['id', 'text'], properties: {
+                            id: { type: 'string', description: 'Use this exact assetId in image_plan.' },
+                            text: { type: 'string', description: 'Nonempty text artifact path, relative to episode or absolute.' },
+                            image: { type: 'string', description: 'Actual or planned image path; required except in text_storyboard. Set image_plan output to this path.' },
+                        } } },
+                notApplicable: { type: 'string', description: 'Concrete reason this category has no subjects; entries must be empty.' },
+            } },
+    },
+    {
         name: 'project_manage',
         title: 'Set up a multi-episode project',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },

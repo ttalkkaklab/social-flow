@@ -11,6 +11,11 @@ argument-hint: "[init|status|update] [project-directory]"
 allowed-tools: ["mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__sns_account_check", "mcp__plugin_social-flow_social-flow__sns_account_check", "mcp__social-flow__character_voice_audition", "mcp__plugin_social-flow_social-flow__character_voice_audition", "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_voices"]
 ---
 
+Follow [production order](../_shared/production-workflow.md). Project setup precedes
+all episode work. Complete each artifact stage before the next; pending media cannot
+complete a visual stage. Preserve actual spending authorization.
+
+
 # Project setup
 
 Set up the user-selected workspace for repeated episodes. The single settings file

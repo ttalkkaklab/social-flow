@@ -3,7 +3,10 @@
 Owner direction, 2026-10-16: keep creative principles in skills as guidance, not
 mandatory executable quality gates. This policy takes precedence over older
 score thresholds, review loops, creative checklists and intermediate approval
-requirements in skills and reviewer instructions.
+requirements in skills and reviewer instructions. The explicit 2026-10-19
+[production order](production-workflow.md) is an execution contract: complete project
+setup, characters, text storyboard, props, backgrounds and image storyboard before video.
+Its artifact prerequisites are enforced independently of subjective quality reviews.
 
 For every review follow [host evaluation](host-review.md). The executing host LLM
 judges actual evidence; no external evaluation API or model fallback is used.
