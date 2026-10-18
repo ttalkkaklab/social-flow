@@ -425,11 +425,11 @@ var require_codegen = __commonJS({
         const rhs = this.rhs === void 0 ? "" : ` = ${this.rhs}`;
         return `${varKind} ${this.name}${rhs};` + _n;
       }
-      optimizeNames(names, constants2) {
+      optimizeNames(names, constants3) {
         if (!names[this.name.str])
           return;
         if (this.rhs)
-          this.rhs = optimizeExpr(this.rhs, names, constants2);
+          this.rhs = optimizeExpr(this.rhs, names, constants3);
         return this;
       }
       get names() {
@@ -446,10 +446,10 @@ var require_codegen = __commonJS({
       render({ _n }) {
         return `${this.lhs} = ${this.rhs};` + _n;
       }
-      optimizeNames(names, constants2) {
+      optimizeNames(names, constants3) {
         if (this.lhs instanceof code_1.Name && !names[this.lhs.str] && !this.sideEffects)
           return;
-        this.rhs = optimizeExpr(this.rhs, names, constants2);
+        this.rhs = optimizeExpr(this.rhs, names, constants3);
         return this;
       }
       get names() {
@@ -510,8 +510,8 @@ var require_codegen = __commonJS({
       optimizeNodes() {
         return `${this.code}` ? this : void 0;
       }
-      optimizeNames(names, constants2) {
-        this.code = optimizeExpr(this.code, names, constants2);
+      optimizeNames(names, constants3) {
+        this.code = optimizeExpr(this.code, names, constants3);
         return this;
       }
       get names() {
@@ -540,12 +540,12 @@ var require_codegen = __commonJS({
         }
         return nodes.length > 0 ? this : void 0;
       }
-      optimizeNames(names, constants2) {
+      optimizeNames(names, constants3) {
         const { nodes } = this;
         let i2 = nodes.length;
         while (i2--) {
           const n = nodes[i2];
-          if (n.optimizeNames(names, constants2))
+          if (n.optimizeNames(names, constants3))
             continue;
           subtractNames(names, n.names);
           nodes.splice(i2, 1);
@@ -598,12 +598,12 @@ var require_codegen = __commonJS({
           return void 0;
         return this;
       }
-      optimizeNames(names, constants2) {
+      optimizeNames(names, constants3) {
         var _a4;
-        this.else = (_a4 = this.else) === null || _a4 === void 0 ? void 0 : _a4.optimizeNames(names, constants2);
-        if (!(super.optimizeNames(names, constants2) || this.else))
+        this.else = (_a4 = this.else) === null || _a4 === void 0 ? void 0 : _a4.optimizeNames(names, constants3);
+        if (!(super.optimizeNames(names, constants3) || this.else))
           return;
-        this.condition = optimizeExpr(this.condition, names, constants2);
+        this.condition = optimizeExpr(this.condition, names, constants3);
         return this;
       }
       get names() {
@@ -626,10 +626,10 @@ var require_codegen = __commonJS({
       render(opts) {
         return `for(${this.iteration})` + super.render(opts);
       }
-      optimizeNames(names, constants2) {
-        if (!super.optimizeNames(names, constants2))
+      optimizeNames(names, constants3) {
+        if (!super.optimizeNames(names, constants3))
           return;
-        this.iteration = optimizeExpr(this.iteration, names, constants2);
+        this.iteration = optimizeExpr(this.iteration, names, constants3);
         return this;
       }
       get names() {
@@ -665,10 +665,10 @@ var require_codegen = __commonJS({
       render(opts) {
         return `for(${this.varKind} ${this.name} ${this.loop} ${this.iterable})` + super.render(opts);
       }
-      optimizeNames(names, constants2) {
-        if (!super.optimizeNames(names, constants2))
+      optimizeNames(names, constants3) {
+        if (!super.optimizeNames(names, constants3))
           return;
-        this.iterable = optimizeExpr(this.iterable, names, constants2);
+        this.iterable = optimizeExpr(this.iterable, names, constants3);
         return this;
       }
       get names() {
@@ -710,11 +710,11 @@ var require_codegen = __commonJS({
         (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNodes();
         return this;
       }
-      optimizeNames(names, constants2) {
+      optimizeNames(names, constants3) {
         var _a4, _b;
-        super.optimizeNames(names, constants2);
-        (_a4 = this.catch) === null || _a4 === void 0 ? void 0 : _a4.optimizeNames(names, constants2);
-        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants2);
+        super.optimizeNames(names, constants3);
+        (_a4 = this.catch) === null || _a4 === void 0 ? void 0 : _a4.optimizeNames(names, constants3);
+        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants3);
         return this;
       }
       get names() {
@@ -1015,7 +1015,7 @@ var require_codegen = __commonJS({
     function addExprNames(names, from) {
       return from instanceof code_1._CodeOrName ? addNames(names, from.names) : names;
     }
-    function optimizeExpr(expr, names, constants2) {
+    function optimizeExpr(expr, names, constants3) {
       if (expr instanceof code_1.Name)
         return replaceName(expr);
       if (!canOptimize(expr))
@@ -1030,14 +1030,14 @@ var require_codegen = __commonJS({
         return items;
       }, []));
       function replaceName(n) {
-        const c = constants2[n.str];
+        const c = constants3[n.str];
         if (c === void 0 || names[n.str] !== 1)
           return n;
         delete names[n.str];
         return c;
       }
       function canOptimize(e2) {
-        return e2 instanceof code_1._Code && e2._items.some((c) => c instanceof code_1.Name && names[c.str] === 1 && constants2[c.str] !== void 0);
+        return e2 instanceof code_1._Code && e2._items.some((c) => c instanceof code_1.Name && names[c.str] === 1 && constants3[c.str] !== void 0);
       }
     }
     function subtractNames(names, from) {
@@ -2999,7 +2999,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve11.call(this, root, ref);
+      let _sch = resolve12.call(this, root, ref);
       if (_sch === void 0) {
         const schema = (_a4 = root.localRefs) === null || _a4 === void 0 ? void 0 : _a4[ref];
         const { schemaId } = this.opts;
@@ -3026,7 +3026,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve11(root, ref) {
+    function resolve12(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -3657,7 +3657,7 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve11(baseURI, relativeURI, options) {
+    function resolve12(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const { parsed: baseParsed, malformedAuthorityOrPort: baseMalformed } = parseWithStatus(baseURI, schemelessOptions);
       const { parsed: relativeParsed, malformedAuthorityOrPort: relativeMalformed } = parseWithStatus(relativeURI, schemelessOptions);
@@ -3941,7 +3941,7 @@ var require_fast_uri = __commonJS({
     var fastUri = {
       SCHEMES,
       normalize: normalize2,
-      resolve: resolve11,
+      resolve: resolve12,
       resolveComponent,
       equal,
       serialize,
@@ -7256,7 +7256,7 @@ var require_p_retry = __commonJS({
       return error2;
     };
     var isNetworkError = (errorMessage) => networkErrorMsgs.includes(errorMessage);
-    var pRetry2 = (input, options) => new Promise((resolve11, reject) => {
+    var pRetry2 = (input, options) => new Promise((resolve12, reject) => {
       options = {
         onFailedAttempt: () => {
         },
@@ -7266,7 +7266,7 @@ var require_p_retry = __commonJS({
       const operation = retry2.operation(options);
       operation.attempt(async (attemptNumber) => {
         try {
-          resolve11(await input(attemptNumber));
+          resolve12(await input(attemptNumber));
         } catch (error2) {
           if (!(error2 instanceof Error)) {
             reject(new TypeError(`Non-error was thrown: "${error2}". You should only throw errors.`));
@@ -7800,8 +7800,8 @@ var require_retry3 = __commonJS({
       }
       const delay2 = getNextRetryDelay(config3);
       err4.config.retryConfig.currentRetryAttempt += 1;
-      const backoff = config3.retryBackoff ? config3.retryBackoff(err4, delay2) : new Promise((resolve11) => {
-        setTimeout(resolve11, delay2);
+      const backoff = config3.retryBackoff ? config3.retryBackoff(err4, delay2) : new Promise((resolve12) => {
+        setTimeout(resolve12, delay2);
       });
       if (config3.onRetryAttempt) {
         await config3.onRetryAttempt(err4);
@@ -8577,8 +8577,8 @@ var require_helpers = __commonJS({
     function req(url, opts = {}) {
       const href = typeof url === "string" ? url : url.href;
       const req2 = (href.startsWith("https:") ? https2 : http4).request(url, opts);
-      const promise = new Promise((resolve11, reject) => {
-        req2.once("response", resolve11).once("error", reject).end();
+      const promise = new Promise((resolve12, reject) => {
+        req2.once("response", resolve12).once("error", reject).end();
       });
       req2.then = promise.then.bind(promise);
       return req2;
@@ -8755,7 +8755,7 @@ var require_parse_proxy_response = __commonJS({
     var debug_1 = __importDefault(require_src());
     var debug = (0, debug_1.default)("https-proxy-agent:parse-proxy-response");
     function parseProxyResponse(socket) {
-      return new Promise((resolve11, reject) => {
+      return new Promise((resolve12, reject) => {
         let buffersLength = 0;
         const buffers = [];
         function read2() {
@@ -8821,7 +8821,7 @@ var require_parse_proxy_response = __commonJS({
           }
           debug("got proxy server response: %o %o", firstLine, headers);
           cleanup();
-          resolve11({
+          resolve12({
             connect: {
               statusCode,
               statusText,
@@ -9063,7 +9063,7 @@ var require_ponyfill_es2018 = __commonJS({
         return new originalPromise(executor);
       }
       function promiseResolvedWith(value) {
-        return newPromise((resolve11) => resolve11(value));
+        return newPromise((resolve12) => resolve12(value));
       }
       function promiseRejectedWith(reason) {
         return originalPromiseReject(reason);
@@ -9233,8 +9233,8 @@ var require_ponyfill_es2018 = __commonJS({
         return new TypeError("Cannot " + name + " a stream using a released reader");
       }
       function defaultReaderClosedPromiseInitialize(reader) {
-        reader._closedPromise = newPromise((resolve11, reject) => {
-          reader._closedPromise_resolve = resolve11;
+        reader._closedPromise = newPromise((resolve12, reject) => {
+          reader._closedPromise_resolve = resolve12;
           reader._closedPromise_reject = reject;
         });
       }
@@ -9408,8 +9408,8 @@ var require_ponyfill_es2018 = __commonJS({
           }
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve11, reject) => {
-            resolvePromise = resolve11;
+          const promise = newPromise((resolve12, reject) => {
+            resolvePromise = resolve12;
             rejectPromise = reject;
           });
           const readRequest = {
@@ -9514,8 +9514,8 @@ var require_ponyfill_es2018 = __commonJS({
           const reader = this._reader;
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve11, reject) => {
-            resolvePromise = resolve11;
+          const promise = newPromise((resolve12, reject) => {
+            resolvePromise = resolve12;
             rejectPromise = reject;
           });
           const readRequest = {
@@ -10534,8 +10534,8 @@ var require_ponyfill_es2018 = __commonJS({
           }
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve11, reject) => {
-            resolvePromise = resolve11;
+          const promise = newPromise((resolve12, reject) => {
+            resolvePromise = resolve12;
             rejectPromise = reject;
           });
           const readIntoRequest = {
@@ -10847,10 +10847,10 @@ var require_ponyfill_es2018 = __commonJS({
           wasAlreadyErroring = true;
           reason = void 0;
         }
-        const promise = newPromise((resolve11, reject) => {
+        const promise = newPromise((resolve12, reject) => {
           stream._pendingAbortRequest = {
             _promise: void 0,
-            _resolve: resolve11,
+            _resolve: resolve12,
             _reject: reject,
             _reason: reason,
             _wasAlreadyErroring: wasAlreadyErroring
@@ -10867,9 +10867,9 @@ var require_ponyfill_es2018 = __commonJS({
         if (state === "closed" || state === "errored") {
           return promiseRejectedWith(new TypeError(`The stream (in ${state} state) is not in the writable state and cannot be closed`));
         }
-        const promise = newPromise((resolve11, reject) => {
+        const promise = newPromise((resolve12, reject) => {
           const closeRequest = {
-            _resolve: resolve11,
+            _resolve: resolve12,
             _reject: reject
           };
           stream._closeRequest = closeRequest;
@@ -10882,9 +10882,9 @@ var require_ponyfill_es2018 = __commonJS({
         return promise;
       }
       function WritableStreamAddWriteRequest(stream) {
-        const promise = newPromise((resolve11, reject) => {
+        const promise = newPromise((resolve12, reject) => {
           const writeRequest = {
-            _resolve: resolve11,
+            _resolve: resolve12,
             _reject: reject
           };
           stream._writeRequests.push(writeRequest);
@@ -11500,8 +11500,8 @@ var require_ponyfill_es2018 = __commonJS({
         return new TypeError("Cannot " + name + " a stream using a released writer");
       }
       function defaultWriterClosedPromiseInitialize(writer) {
-        writer._closedPromise = newPromise((resolve11, reject) => {
-          writer._closedPromise_resolve = resolve11;
+        writer._closedPromise = newPromise((resolve12, reject) => {
+          writer._closedPromise_resolve = resolve12;
           writer._closedPromise_reject = reject;
           writer._closedPromiseState = "pending";
         });
@@ -11537,8 +11537,8 @@ var require_ponyfill_es2018 = __commonJS({
         writer._closedPromiseState = "resolved";
       }
       function defaultWriterReadyPromiseInitialize(writer) {
-        writer._readyPromise = newPromise((resolve11, reject) => {
-          writer._readyPromise_resolve = resolve11;
+        writer._readyPromise = newPromise((resolve12, reject) => {
+          writer._readyPromise_resolve = resolve12;
           writer._readyPromise_reject = reject;
         });
         writer._readyPromiseState = "pending";
@@ -11625,7 +11625,7 @@ var require_ponyfill_es2018 = __commonJS({
         source._disturbed = true;
         let shuttingDown = false;
         let currentWrite = promiseResolvedWith(void 0);
-        return newPromise((resolve11, reject) => {
+        return newPromise((resolve12, reject) => {
           let abortAlgorithm;
           if (signal !== void 0) {
             abortAlgorithm = () => {
@@ -11770,7 +11770,7 @@ var require_ponyfill_es2018 = __commonJS({
             if (isError) {
               reject(error2);
             } else {
-              resolve11(void 0);
+              resolve12(void 0);
             }
             return null;
           }
@@ -12051,8 +12051,8 @@ var require_ponyfill_es2018 = __commonJS({
         let branch1;
         let branch2;
         let resolveCancelPromise;
-        const cancelPromise = newPromise((resolve11) => {
-          resolveCancelPromise = resolve11;
+        const cancelPromise = newPromise((resolve12) => {
+          resolveCancelPromise = resolve12;
         });
         function pullAlgorithm() {
           if (reading) {
@@ -12143,8 +12143,8 @@ var require_ponyfill_es2018 = __commonJS({
         let branch1;
         let branch2;
         let resolveCancelPromise;
-        const cancelPromise = newPromise((resolve11) => {
-          resolveCancelPromise = resolve11;
+        const cancelPromise = newPromise((resolve12) => {
+          resolveCancelPromise = resolve12;
         });
         function forwardReaderError(thisReader) {
           uponRejection(thisReader._closedPromise, (r2) => {
@@ -12924,8 +12924,8 @@ var require_ponyfill_es2018 = __commonJS({
           const writableHighWaterMark = ExtractHighWaterMark(writableStrategy, 1);
           const writableSizeAlgorithm = ExtractSizeAlgorithm(writableStrategy);
           let startPromise_resolve;
-          const startPromise = newPromise((resolve11) => {
-            startPromise_resolve = resolve11;
+          const startPromise = newPromise((resolve12) => {
+            startPromise_resolve = resolve12;
           });
           InitializeTransformStream(this, startPromise, writableHighWaterMark, writableSizeAlgorithm, readableHighWaterMark, readableSizeAlgorithm);
           SetUpTransformStreamDefaultControllerFromTransformer(this, transformer);
@@ -13018,8 +13018,8 @@ var require_ponyfill_es2018 = __commonJS({
         if (stream._backpressureChangePromise !== void 0) {
           stream._backpressureChangePromise_resolve();
         }
-        stream._backpressureChangePromise = newPromise((resolve11) => {
-          stream._backpressureChangePromise_resolve = resolve11;
+        stream._backpressureChangePromise = newPromise((resolve12) => {
+          stream._backpressureChangePromise_resolve = resolve12;
         });
         stream._backpressure = backpressure;
       }
@@ -13187,8 +13187,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const readable = stream._readable;
-        controller._finishPromise = newPromise((resolve11, reject) => {
-          controller._finishPromise_resolve = resolve11;
+        controller._finishPromise = newPromise((resolve12, reject) => {
+          controller._finishPromise_resolve = resolve12;
           controller._finishPromise_reject = reject;
         });
         const cancelPromise = controller._cancelAlgorithm(reason);
@@ -13214,8 +13214,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const readable = stream._readable;
-        controller._finishPromise = newPromise((resolve11, reject) => {
-          controller._finishPromise_resolve = resolve11;
+        controller._finishPromise = newPromise((resolve12, reject) => {
+          controller._finishPromise_resolve = resolve12;
           controller._finishPromise_reject = reject;
         });
         const flushPromise = controller._flushAlgorithm();
@@ -13245,8 +13245,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const writable = stream._writable;
-        controller._finishPromise = newPromise((resolve11, reject) => {
-          controller._finishPromise_resolve = resolve11;
+        controller._finishPromise = newPromise((resolve12, reject) => {
+          controller._finishPromise_resolve = resolve12;
           controller._finishPromise_reject = reject;
         });
         const cancelPromise = controller._cancelAlgorithm(reason);
@@ -15197,7 +15197,7 @@ import zlib from "node:zlib";
 import Stream2, { PassThrough as PassThrough2, pipeline as pump } from "node:stream";
 import { Buffer as Buffer3 } from "node:buffer";
 async function fetch2(url, options_) {
-  return new Promise((resolve11, reject) => {
+  return new Promise((resolve12, reject) => {
     const request = new Request2(url, options_);
     const { parsedURL, options } = getNodeRequestOptions(request);
     if (!supportedSchemas.has(parsedURL.protocol)) {
@@ -15206,7 +15206,7 @@ async function fetch2(url, options_) {
     if (parsedURL.protocol === "data:") {
       const data = dist_default(request.url);
       const response2 = new Response2(data, { headers: { "Content-Type": data.typeFull } });
-      resolve11(response2);
+      resolve12(response2);
       return;
     }
     const send = (parsedURL.protocol === "https:" ? https : http3).request;
@@ -15328,7 +15328,7 @@ async function fetch2(url, options_) {
             if (responseReferrerPolicy) {
               requestOptions2.referrerPolicy = responseReferrerPolicy;
             }
-            resolve11(fetch2(new Request2(locationURL, requestOptions2)));
+            resolve12(fetch2(new Request2(locationURL, requestOptions2)));
             finalize();
             return;
           }
@@ -15361,7 +15361,7 @@ async function fetch2(url, options_) {
       const codings = headers.get("Content-Encoding");
       if (!request.compress || request.method === "HEAD" || codings === null || response_.statusCode === 204 || response_.statusCode === 304) {
         response = new Response2(body, responseOptions);
-        resolve11(response);
+        resolve12(response);
         return;
       }
       const zlibOptions = {
@@ -15375,7 +15375,7 @@ async function fetch2(url, options_) {
           }
         });
         response = new Response2(body, responseOptions);
-        resolve11(response);
+        resolve12(response);
         return;
       }
       if (codings === "deflate" || codings === "x-deflate") {
@@ -15399,12 +15399,12 @@ async function fetch2(url, options_) {
             });
           }
           response = new Response2(body, responseOptions);
-          resolve11(response);
+          resolve12(response);
         });
         raw.once("end", () => {
           if (!response) {
             response = new Response2(body, responseOptions);
-            resolve11(response);
+            resolve12(response);
           }
         });
         return;
@@ -15416,11 +15416,11 @@ async function fetch2(url, options_) {
           }
         });
         response = new Response2(body, responseOptions);
-        resolve11(response);
+        resolve12(response);
         return;
       }
       response = new Response2(body, responseOptions);
-      resolve11(response);
+      resolve12(response);
     });
     writeToStream(request_, request).catch(reject);
   });
@@ -15492,7 +15492,7 @@ var require_gaxios = __commonJS({
     var retry_js_1 = require_retry3();
     var stream_1 = __require("stream");
     var interceptor_js_1 = require_interceptor();
-    var randomUUID8 = async () => globalThis.crypto?.randomUUID() || (await import("crypto")).randomUUID();
+    var randomUUID9 = async () => globalThis.crypto?.randomUUID() || (await import("crypto")).randomUUID();
     var HTTP_STATUS_NO_CONTENT = 204;
     var Gaxios = class {
       agentCache = /* @__PURE__ */ new Map();
@@ -15765,7 +15765,7 @@ var require_gaxios = __commonJS({
          */
         ["Blob", "File", "FormData"].includes(opts.data?.constructor?.name || "");
         if (opts.multipart?.length) {
-          const boundary = await randomUUID8();
+          const boundary = await randomUUID9();
           preparedHeaders.set("content-type", `multipart/related; boundary=${boundary}`);
           opts.body = stream_1.Readable.from(this.getMultipartRequest(opts.multipart, boundary));
         } else if (shouldDirectlyPassData) {
@@ -21488,7 +21488,7 @@ var require_jwtaccess = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve11, reject) => {
+        return new Promise((resolve12, reject) => {
           if (!inputStream) {
             reject(new Error("Must pass in a stream containing the service account auth settings."));
           }
@@ -21497,7 +21497,7 @@ var require_jwtaccess = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              resolve11();
+              resolve12();
             } catch (err4) {
               reject(err4);
             }
@@ -21736,7 +21736,7 @@ var require_jwtclient = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve11, reject) => {
+        return new Promise((resolve12, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the service account auth settings.");
           }
@@ -21745,7 +21745,7 @@ var require_jwtclient = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              resolve11();
+              resolve12();
             } catch (e2) {
               reject(e2);
             }
@@ -21878,7 +21878,7 @@ var require_refreshclient = __commonJS({
         }
       }
       async fromStreamAsync(inputStream) {
-        return new Promise((resolve11, reject) => {
+        return new Promise((resolve12, reject) => {
           if (!inputStream) {
             return reject(new Error("Must pass in a stream containing the user refresh token."));
           }
@@ -21887,7 +21887,7 @@ var require_refreshclient = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              return resolve11();
+              return resolve12();
             } catch (err4) {
               return reject(err4);
             }
@@ -23720,7 +23720,7 @@ var require_pluggable_auth_handler = __commonJS({
        * @return A promise that resolves with the executable response.
        */
       retrieveResponseFromExecutable(envMap) {
-        return new Promise((resolve11, reject) => {
+        return new Promise((resolve12, reject) => {
           const child = childProcess.spawn(this.commandComponents[0], this.commandComponents.slice(1), {
             env: { ...process.env, ...Object.fromEntries(envMap) }
           });
@@ -23742,7 +23742,7 @@ var require_pluggable_auth_handler = __commonJS({
               try {
                 const responseJson = JSON.parse(output);
                 const response = new executable_response_1.ExecutableResponse(responseJson);
-                return resolve11(response);
+                return resolve12(response);
               } catch (error2) {
                 if (error2 instanceof executable_response_1.ExecutableResponseError) {
                   return reject(error2);
@@ -24934,7 +24934,7 @@ var require_googleauth = __commonJS({
         }
       }
       fromStreamAsync(inputStream, options) {
-        return new Promise((resolve11, reject) => {
+        return new Promise((resolve12, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the Google auth settings.");
           }
@@ -24944,7 +24944,7 @@ var require_googleauth = __commonJS({
               try {
                 const data = JSON.parse(chunks.join(""));
                 const r2 = this._cacheClientFromJSON(data, options);
-                return resolve11(r2);
+                return resolve12(r2);
               } catch (err4) {
                 if (!this.keyFilename)
                   throw err4;
@@ -24954,7 +24954,7 @@ var require_googleauth = __commonJS({
                 });
                 this.cachedCredential = client;
                 this.setGapicJWTValues(client);
-                return resolve11(client);
+                return resolve12(client);
               }
             } catch (err4) {
               return reject(err4);
@@ -24990,17 +24990,17 @@ var require_googleauth = __commonJS({
        * Run the Google Cloud SDK command that prints the default project ID
        */
       async getDefaultServiceProjectId() {
-        return new Promise((resolve11) => {
+        return new Promise((resolve12) => {
           (0, child_process_1.exec)("gcloud config config-helper --format json", (err4, stdout) => {
             if (!err4 && stdout) {
               try {
                 const projectId = JSON.parse(stdout).configuration.properties.core.project;
-                resolve11(projectId);
+                resolve12(projectId);
                 return;
               } catch (e2) {
               }
             }
-            resolve11(null);
+            resolve12(null);
           });
         });
       }
@@ -27908,7 +27908,7 @@ var require_websocket = __commonJS({
     var http4 = __require("http");
     var net = __require("net");
     var tls = __require("tls");
-    var { randomBytes: randomBytes2, createHash: createHash11 } = __require("crypto");
+    var { randomBytes: randomBytes2, createHash: createHash12 } = __require("crypto");
     var { Duplex, Readable: Readable2 } = __require("stream");
     var { URL: URL2 } = __require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -28576,8 +28576,8 @@ var require_websocket = __commonJS({
           abortHandshake(websocket, socket, "Invalid Upgrade header");
           return;
         }
-        const digest3 = createHash11("sha1").update(key + GUID).digest("base64");
-        if (res.headers["sec-websocket-accept"] !== digest3) {
+        const digest4 = createHash12("sha1").update(key + GUID).digest("base64");
+        if (res.headers["sec-websocket-accept"] !== digest4) {
           abortHandshake(websocket, socket, "Invalid Sec-WebSocket-Accept header");
           return;
         }
@@ -28945,7 +28945,7 @@ var require_websocket_server = __commonJS({
     var EventEmitter = __require("events");
     var http4 = __require("http");
     var { Duplex } = __require("stream");
-    var { createHash: createHash11 } = __require("crypto");
+    var { createHash: createHash12 } = __require("crypto");
     var extension2 = require_extension();
     var PerMessageDeflate2 = require_permessage_deflate();
     var subprotocol2 = require_subprotocol();
@@ -29252,12 +29252,12 @@ var require_websocket_server = __commonJS({
           );
         }
         if (this._state > RUNNING) return abortHandshake(socket, 503);
-        const digest3 = createHash11("sha1").update(key + GUID).digest("base64");
+        const digest4 = createHash12("sha1").update(key + GUID).digest("base64");
         const headers = [
           "HTTP/1.1 101 Switching Protocols",
           "Upgrade: websocket",
           "Connection: Upgrade",
-          `Sec-WebSocket-Accept: ${digest3}`
+          `Sec-WebSocket-Accept: ${digest4}`
         ];
         const ws = new this.options.WebSocket(null, void 0, this.options);
         if (protocols.size) {
@@ -33001,14 +33001,14 @@ function __asyncValues(o) {
   }, i2);
   function verb(n) {
     i2[n] = o[n] && function(v) {
-      return new Promise(function(resolve11, reject) {
-        v = o[n](v), settle(resolve11, reject, v.done, v.value);
+      return new Promise(function(resolve12, reject) {
+        v = o[n](v), settle(resolve12, reject, v.done, v.value);
       });
     };
   }
-  function settle(resolve11, reject, d, v) {
+  function settle(resolve12, reject, d, v) {
     Promise.resolve(v).then(function(v2) {
-      resolve11({ value: v2, done: d });
+      resolve12({ value: v2, done: d });
     }, reject);
   }
 }
@@ -39942,7 +39942,7 @@ function retryIntervalFromResponse(res) {
   return 0;
 }
 async function delay(delay2) {
-  return new Promise((resolve11) => setTimeout(resolve11, delay2));
+  return new Promise((resolve12) => setTimeout(resolve12, delay2));
 }
 async function logRequest(logger, req) {
   if (!logger) {
@@ -47385,8 +47385,8 @@ var init_node = __esm({
         const url = `${websocketBaseUrl}/ws/google.ai.generativelanguage.${apiVersion}.GenerativeService.BidiGenerateMusic?key=${apiKey}`;
         let onopenResolve = () => {
         };
-        const onopenPromise = new Promise((resolve11) => {
-          onopenResolve = resolve11;
+        const onopenPromise = new Promise((resolve12) => {
+          onopenResolve = resolve12;
         });
         const callbacks = params.callbacks;
         const onopenAwaitedCallback = function() {
@@ -47592,8 +47592,8 @@ var init_node = __esm({
         }
         let onopenResolve = () => {
         };
-        const onopenPromise = new Promise((resolve11) => {
-          onopenResolve = resolve11;
+        const onopenPromise = new Promise((resolve12) => {
+          onopenResolve = resolve12;
         });
         const callbacks = params.callbacks;
         const onopenAwaitedCallback = function() {
@@ -47606,8 +47606,8 @@ var init_node = __esm({
         const messageQueue = [];
         let setupCompleteResolve = () => {
         };
-        const setupCompletePromise = new Promise((resolve11) => {
-          setupCompleteResolve = resolve11;
+        const setupCompletePromise = new Promise((resolve12) => {
+          setupCompleteResolve = resolve12;
         });
         const websocketCallbacks = {
           onopen: onopenAwaitedCallback,
@@ -52175,7 +52175,7 @@ var init_values = __esm({
 var sleep6;
 var init_sleep = __esm({
   "node_modules/openai/internal/utils/sleep.mjs"() {
-    sleep6 = (ms) => new Promise((resolve11) => setTimeout(resolve11, ms));
+    sleep6 = (ms) => new Promise((resolve12) => setTimeout(resolve12, ms));
   }
 });
 
@@ -53368,8 +53368,8 @@ var init_api_promise = __esm({
     init_parse();
     APIPromise2 = class _APIPromise extends Promise {
       constructor(client, responsePromise, parseResponse2 = defaultParseResponse) {
-        super((resolve11) => {
-          resolve11(null);
+        super((resolve12) => {
+          resolve12(null);
         });
         this.responsePromise = responsePromise;
         this.parseResponse = parseResponse2;
@@ -54339,12 +54339,12 @@ var init_EventStream = __esm({
         _EventStream_errored.set(this, false);
         _EventStream_aborted.set(this, false);
         _EventStream_catchingPromiseCreated.set(this, false);
-        __classPrivateFieldSet(this, _EventStream_connectedPromise, new Promise((resolve11, reject) => {
-          __classPrivateFieldSet(this, _EventStream_resolveConnectedPromise, resolve11, "f");
+        __classPrivateFieldSet(this, _EventStream_connectedPromise, new Promise((resolve12, reject) => {
+          __classPrivateFieldSet(this, _EventStream_resolveConnectedPromise, resolve12, "f");
           __classPrivateFieldSet(this, _EventStream_rejectConnectedPromise, reject, "f");
         }), "f");
-        __classPrivateFieldSet(this, _EventStream_endPromise, new Promise((resolve11, reject) => {
-          __classPrivateFieldSet(this, _EventStream_resolveEndPromise, resolve11, "f");
+        __classPrivateFieldSet(this, _EventStream_endPromise, new Promise((resolve12, reject) => {
+          __classPrivateFieldSet(this, _EventStream_resolveEndPromise, resolve12, "f");
           __classPrivateFieldSet(this, _EventStream_rejectEndPromise, reject, "f");
         }), "f");
         __classPrivateFieldGet(this, _EventStream_connectedPromise, "f").catch(() => {
@@ -54444,11 +54444,11 @@ var init_EventStream = __esm({
        *   const message = await stream.emitted('message') // rejects if the stream errors
        */
       emitted(event) {
-        return new Promise((resolve11, reject) => {
+        return new Promise((resolve12, reject) => {
           __classPrivateFieldSet(this, _EventStream_catchingPromiseCreated, true, "f");
           if (event !== "error")
             this.once("error", reject);
-          this.once(event, resolve11);
+          this.once(event, resolve12);
         });
       }
       /**
@@ -54531,8 +54531,8 @@ var init_EventStream = __esm({
             }
             if (ended)
               return Promise.resolve(doneResult());
-            return new Promise((resolve11, reject) => {
-              readQueue.push({ resolve: resolve11, reject });
+            return new Promise((resolve12, reject) => {
+              readQueue.push({ resolve: resolve12, reject });
             });
           },
           return: () => {
@@ -55750,7 +55750,7 @@ var init_ChatCompletionStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve11, reject) => readQueue.push({ resolve: resolve11, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
+              return new Promise((resolve12, reject) => readQueue.push({ resolve: resolve12, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
             }
             const chunk2 = pushQueue.shift();
             return { value: chunk2, done: false };
@@ -55840,7 +55840,7 @@ var init_ChatCompletionStreamingRunner = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve11, reject) => readQueue.push({ resolve: resolve11, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
+              return new Promise((resolve12, reject) => readQueue.push({ resolve: resolve12, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
             }
             const event = pushQueue.shift();
             if (!event) {
@@ -59634,7 +59634,7 @@ var init_AssistantStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve11, reject) => readQueue.push({ resolve: resolve11, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
+              return new Promise((resolve12, reject) => readQueue.push({ resolve: resolve12, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
             }
             const chunk2 = pushQueue.shift();
             return { value: chunk2, done: false };
@@ -62298,7 +62298,7 @@ var init_ResponseStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve11, reject) => readQueue.push({ resolve: resolve11, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
+              return new Promise((resolve12, reject) => readQueue.push({ resolve: resolve12, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
             }
             const event = pushQueue.shift();
             return { value: event, done: false };
@@ -65172,7 +65172,7 @@ var require_scene_acting = __commonJS({
     }
     function sceneDirection(scene = {}, performance = []) {
       const design = scene.shot?.videoDesign || {}, camera = scene.visual?.camera || {};
-      const lock = cameraLock(camera);
+      const lock2 = cameraLock(camera);
       const actions = new Set(performance.filter((event) => event.kind === "action").map((event) => event.videoDirection || event.text));
       const keys = ["before", "action", "after", "continuity"].filter((key) => design[key] && !(key === "action" && actions.has(design[key])));
       const seen = new Set(keys.map((key) => design[key]));
@@ -65186,8 +65186,8 @@ var require_scene_acting = __commonJS({
       return [
         ...keys.map((key) => `${key}: ${design[key]}`),
         ...states,
-        ...["framing", "movement", ...lock ? [] : ["speed"], "end"].filter((key) => camera[key]).map((key) => `Camera ${key}: ${camera[key]}`),
-        ...lock ? [lock] : []
+        ...["framing", "movement", ...lock2 ? [] : ["speed"], "end"].filter((key) => camera[key]).map((key) => `Camera ${key}: ${camera[key]}`),
+        ...lock2 ? [lock2] : []
       ].join("\n");
     }
     var VIDEO_TEXT_POLICY = "Keep the entire video image text-free: no subtitles, captions, dialogue text, typography, letters, logos or watermarks, including during speech.";
@@ -65216,6 +65216,45 @@ var require_scene_acting = __commonJS({
       return ["A clean cinematic image with an unobstructed scene and text-free surfaces.", route, visualDirection(sceneDirection(scene, performance)), ...beats, VIDEO_TEXT_POLICY].join("\n");
     }
     module.exports = { actingErrors, resolvedStyle, directionSupport, speechRevisionPayload, VIDEO_TEXT_POLICY, sceneVideoPrompt, planScenePerformance, sceneDirection, scenePerformancePayload, cameraLock };
+  }
+});
+
+// ../skills/_shared/tts-models.js
+var require_tts_models = __commonJS({
+  "../skills/_shared/tts-models.js"(exports, module) {
+    "use strict";
+    var models = [
+      ["gemini-2.5-flash-preview-tts", "gemini", "legacy", "tts_generate", "tts_multi_speaker"],
+      ["gemini-2.5-pro-preview-tts", "gemini", "legacy", "tts_generate", "tts_multi_speaker"],
+      ["gemini-3.1-flash-tts-preview", "gemini", "legacy", "tts_generate", "tts_multi_speaker"],
+      ["gemini-3.8-flash-tts", "gemini", "metadata", "tts_gemini_38", "tts_gemini_38"],
+      ["gemini-3.8-flash-lite-tts", "gemini", "metadata", "tts_gemini_38", "tts_gemini_38"],
+      ["eleven_v4", "elevenlabs", "inline", "tts_elevenlabs_generate", "tts_elevenlabs_dialogue"]
+    ].map(([model, provider, direction, single, dialogue]) => Object.freeze({
+      model,
+      provider,
+      direction,
+      single,
+      dialogue,
+      maxSpeakers: provider === "elevenlabs" ? 10 : 2,
+      maxCharacters: provider === "elevenlabs" ? 1e4 : 16e3,
+      recommendedDialogueCharacters: provider === "elevenlabs" ? 2e3 : null,
+      maxStyleCharacters: direction === "metadata" ? 500 : null,
+      vocalEvents: direction !== "legacy",
+      customVoice: direction !== "legacy",
+      numericSpeed: false,
+      timestamps: provider === "elevenlabs",
+      evidence: provider === "elevenlabs" ? "https://elevenlabs.io/docs/api-reference/text-to-dialogue/convert" : "https://ai.google.dev/gemini-api/docs/speech-generation"
+    }));
+    var TTS_MODELS = Object.freeze(models);
+    var TTS_DEFAULT_MODELS = Object.freeze({ gemini: "gemini-2.5-flash-preview-tts", elevenlabs: "eleven_v4" });
+    function resolveTtsModel2(provider, model) {
+      const selected = model === void 0 ? TTS_DEFAULT_MODELS[provider] : model;
+      const entry = TTS_MODELS.find((item) => item.provider === provider && item.model === selected);
+      if (!entry) throw new Error(`Unsupported TTS provider/model: ${provider}/${String(selected)}; no model fallback`);
+      return entry;
+    }
+    module.exports = { TTS_MODELS, TTS_DEFAULT_MODELS, resolveTtsModel: resolveTtsModel2 };
   }
 });
 
@@ -65369,8 +65408,9 @@ var require_character_voice = __commonJS({
   "../skills/_shared/character-voice.js"(exports, module) {
     "use strict";
     var GEMINI_VOICES = new Set("Zephyr Puck Charon Kore Fenrir Leda Orus Aoede Callirrhoe Autonoe Enceladus Iapetus Umbriel Algieba Despina Erinome Algenib Rasalgethi Laomedeia Achernar Alnilam Schedar Gacrux Pulcherrima Achird Zubenelgenubi Vindemiatrix Sadachbia Sadaltager Sulafat".split(" "));
-    var GEMINI_MODELS = /* @__PURE__ */ new Set(["gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts", "gemini-3.1-flash-tts-preview", "gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts"]);
-    var ELEVENLABS_MODELS2 = /* @__PURE__ */ new Set(["eleven_v4"]);
+    var { TTS_MODELS } = require_tts_models();
+    var GEMINI_MODELS = new Set(TTS_MODELS.filter((m2) => m2.provider === "gemini").map((m2) => m2.model));
+    var ELEVENLABS_MODELS2 = new Set(TTS_MODELS.filter((m2) => m2.provider === "elevenlabs").map((m2) => m2.model));
     function normalizeLanguage(value) {
       const raw = typeof value === "string" ? value.trim().toLowerCase() : "";
       return { korean: "ko", english: "en", japanese: "ja", chinese: "zh", spanish: "es", french: "fr", portuguese: "pt" }[raw] || raw;
@@ -65519,22 +65559,26 @@ var require_character_voice = __commonJS({
 var require_speech_contract = __commonJS({
   "../skills/_shared/speech-contract.js"(exports, module) {
     "use strict";
-    var { createHash: createHash11 } = __require("node:crypto");
+    var { createHash: createHash12 } = __require("node:crypto");
     function speechRevision2(line, character) {
-      return createHash11("sha256").update(JSON.stringify(require_scene_acting().speechRevisionPayload(line, character?.tts))).digest("hex");
+      return createHash12("sha256").update(JSON.stringify(require_scene_acting().speechRevisionPayload(line, character?.tts))).digest("hex");
     }
     function compileActing2(text2, acting, voice) {
       voice = { ...voice };
       for (const key of ["voiceId", "model", "stylePrompt", "voiceDirection"]) if (typeof voice[key] === "string") voice[key] = voice[key].trim();
       if (typeof voice.language === "string") voice.language = require_character_voice().normalizeLanguage(voice.language);
+      const { resolveTtsModel: resolveTtsModel2 } = require_tts_models();
+      if (!["gemini", "elevenlabs"].includes(voice.engine)) throw new Error("Choose a supported engine: Gemini or ElevenLabs v4; local TTS has been removed");
+      if (voice.engine === "elevenlabs" && voice.model !== void 0 && voice.model !== "eleven_v4") throw new Error("Explicitly update this character to eleven_v4 before generating new speech");
+      const contract2 = resolveTtsModel2(voice.engine, voice.model);
       const performance = acting || {};
       const { actingErrors, resolvedStyle, directionSupport } = require_scene_acting();
       const errors = actingErrors(acting);
       if (errors.length) throw new Error(errors.join("; "));
       const direction = resolvedStyle(voice, acting), support = directionSupport(voice, acting);
-      if (!support.supported && voice.engine === "gemini" && voice.voiceDirection) throw new Error(support.warnings.join("; "));
+      if (!support.supported && voice.engine === "gemini") throw new Error(support.warnings.join("; "));
       const tags = performance.tags || [];
-      if (voice.engine === "elevenlabs") {
+      if (contract2.direction === "inline") {
         if (voice.model !== void 0 && voice.model !== "eleven_v4") throw new Error("Explicitly update this character to eleven_v4 before generating new speech");
         const controls = [performance.direction?.trim(), ...tags].filter(Boolean).map((tag) => `[${tag}]`).join(" ");
         return { generator: "tts_elevenlabs_generate", generation: {
@@ -65546,7 +65590,7 @@ var require_speech_contract = __commonJS({
           ...voice.similarity !== void 0 ? { similarity: voice.similarity } : {}
         } };
       }
-      if (voice.engine === "gemini" && String(voice.model).startsWith("gemini-3.8-")) {
+      if (contract2.direction === "metadata") {
         const events = tags.map((tag) => `<${tag}>`).join(" ");
         return { generator: "tts_gemini_38", generation: {
           model: voice.model,
@@ -65564,7 +65608,7 @@ var require_speech_contract = __commonJS({
           ...stylePrompt ? { stylePrompt } : {}
         } };
       }
-      throw new Error("Speech supports Gemini and ElevenLabs v4 only; local TTS has been removed");
+      throw new Error("Choose a supported engine: Gemini or ElevenLabs v4; local TTS has been removed");
     }
     module.exports = { speechRevision: speechRevision2, compileActing: compileActing2 };
   }
@@ -65719,7 +65763,7 @@ var require_story_contract = __commonJS({
     var crypto2 = __require("node:crypto");
     var object4 = (x2) => x2 !== null && typeof x2 === "object" && !Array.isArray(x2);
     var text2 = (x2) => typeof x2 === "string" && x2.trim().length > 0;
-    var canonical = (x2) => Array.isArray(x2) ? x2.map(canonical) : object4(x2) ? Object.fromEntries(Object.keys(x2).sort().map((k) => [k, canonical(x2[k])])) : x2;
+    var canonical2 = (x2) => Array.isArray(x2) ? x2.map(canonical2) : object4(x2) ? Object.fromEntries(Object.keys(x2).sort().map((k) => [k, canonical2(x2[k])])) : x2;
     var PAST_FINAL = /(았|었|였|했|왔|갔|봤|됐|냈|셨|잤|샀|썼|줬|놨|뒀|했었|았었|었었)(?:다|어요|어|습니다|죠|네요|거든요|대요|답니다|지요|잖아요|던\s*것이다|던\s*거다|던\s*겁니다|던\s*거예요)\s*$/;
     var MORAL_FINAL = /(?:하자|합시다|말자|맙시다|세요|십시오|해야\s*(?:한다|해요|합니다|해|돼요|됩니다|된다)|[아어해마]라)\s*$/;
     function storySpeech(win) {
@@ -65766,7 +65810,7 @@ var require_story_contract = __commonJS({
         ...s2.visual?.reuse !== void 0 ? { reuse: s2.visual.reuse } : {},
         recording: s2.visual?.source === "recording" ? s2.visual.clip : void 0
       });
-      return crypto2.createHash("sha256").update(JSON.stringify(canonical({
+      return crypto2.createHash("sha256").update(JSON.stringify(canonical2({
         ...win.STORY?.version === "story-v2" ? { cast: win.SB_DOC?.characters, narrator: win.SB_DOC?.narratorCharacterId } : {},
         comprehension: win.COMPREHENSION,
         story,
@@ -65927,14 +65971,14 @@ var require_compose_speech = __commonJS({
     "use strict";
     var fs10 = __require("node:fs");
     var path15 = __require("node:path");
-    var { execFileSync: execFileSync4 } = __require("node:child_process");
-    var { createHash: createHash11 } = __require("node:crypto");
+    var { execFileSync: execFileSync5 } = __require("node:child_process");
+    var { createHash: createHash12 } = __require("node:crypto");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
     var { actingErrors, speechRevisionPayload, planScenePerformance } = require_scene_acting();
     var { generationVoiceErrors } = require_character_voice();
-    var hash5 = (value) => createHash11("sha256").update(value).digest("hex");
+    var hash5 = (value) => createHash12("sha256").update(value).digest("hex");
     function duration3(file) {
-      const seconds = Number(execFileSync4("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file], { encoding: "utf8", timeout: 1e4 }).trim());
+      const seconds = Number(execFileSync5("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file], { encoding: "utf8", timeout: 1e4 }).trim());
       if (!Number.isFinite(seconds) || seconds <= 0) throw new Error("Unusable speech duration: " + file);
       return seconds;
     }
@@ -65993,7 +66037,7 @@ var require_compose_speech = __commonJS({
         filters.push(lines.map((_, i2) => `[a${i2}]`).join("") + `amix=inputs=${lines.length}:normalize=0,apad,atrim=duration=${timing.durationSeconds}[out]`);
         const output = path15.join(work, `c${fields[0]}-speech.wav`), tmp = output + ".tmp.wav";
         try {
-          execFileSync4("ffmpeg", ["-y", "-v", "error", ...inputs, "-filter_complex", filters.join(";"), "-map", "[out]", "-c:a", "pcm_s16le", tmp], { timeout: 12e4 });
+          execFileSync5("ffmpeg", ["-y", "-v", "error", ...inputs, "-filter_complex", filters.join(";"), "-map", "[out]", "-c:a", "pcm_s16le", tmp], { timeout: 12e4 });
           fs10.renameSync(tmp, output);
         } finally {
           if (fs10.existsSync(tmp)) fs10.unlinkSync(tmp);
@@ -66026,10 +66070,10 @@ var require_check_tts_quality = __commonJS({
     var fs10 = __require("node:fs");
     var path15 = __require("node:path");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
-    var { createHash: createHash11 } = __require("node:crypto");
+    var { createHash: createHash12 } = __require("node:crypto");
     var { speechRevision: speechRevision2 } = require_speech_contract();
     var { authorizeSpeed: authorizeSpeed2 } = require_tts_speed_policy();
-    var hash5 = (value) => createHash11("sha256").update(value).digest("hex");
+    var hash5 = (value) => createHash12("sha256").update(value).digest("hex");
     var normalize2 = (text2) => text2.normalize("NFKC").toLowerCase().replace(/[\p{P}\p{Z}\s]/gu, "");
     function cer(expected, heard) {
       const a = [...normalize2(expected)], b = [...normalize2(heard)];
@@ -66264,15 +66308,15 @@ var require_check_tts_quality = __commonJS({
 var require_final_speech_chapters = __commonJS({
   "../skills/produce/references/final-speech-chapters.js"(exports, module) {
     "use strict";
-    var { createHash: createHash11 } = __require("node:crypto");
+    var { createHash: createHash12 } = __require("node:crypto");
     var { spawnSync: spawnSync4 } = __require("node:child_process");
     var { normalize: normalize2, cer } = require_check_tts_quality();
     var RATE2 = 24e3;
     var BYTES2 = 4;
     var LIMIT2 = 14 * 1024 * 1024;
     var POLICY2 = "final-speech-chapters-v1";
-    var hash5 = (x2) => createHash11("sha256").update(x2).digest("hex");
-    var digest3 = (x2) => hash5(JSON.stringify(x2));
+    var hash5 = (x2) => createHash12("sha256").update(x2).digest("hex");
+    var digest4 = (x2) => hash5(JSON.stringify(x2));
     function decode2(media) {
       const encoded = spawnSync4("ffmpeg", ["-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", String(RATE2), "-c:a", "flac", "-f", "flac", "pipe:1"], { maxBuffer: RATE2 * BYTES2 * 1800 + 65536, timeout: 6e4 });
       if (encoded.error || encoded.status !== 0) throw new Error("Cannot decode final audio: " + (encoded.error?.message || String(encoded.stderr)));
@@ -66302,7 +66346,7 @@ var require_final_speech_chapters = __commonJS({
       return [...chapters2, ...boundaries];
     }
     function manifest2(p) {
-      return digest3({ sampleRate: p.sampleRate, totalSamples: p.totalSamples, pcmSha256: p.pcmSha256, segments: p.segments, pieces: p.pieces });
+      return digest4({ sampleRate: p.sampleRate, totalSamples: p.totalSamples, pcmSha256: p.pcmSha256, segments: p.segments, pieces: p.pieces });
     }
     function listeningFailures2(p) {
       const r2 = p.review, s2 = p.signal, f3 = [];
@@ -66331,16 +66375,16 @@ var require_final_speech_chapters = __commonJS({
         const e2 = expected[i2], v = p.pieces[i2];
         for (const [k, value] of Object.entries(e2)) if (v[k] !== value) throw new Error("Chapter order or boundary changed: " + k);
         if (v.pcmSha256 !== hash5(pcm.subarray(e2.startSample * BYTES2, e2.endSample * BYTES2)) || !Number.isInteger(v.payloadBytes) || v.payloadBytes <= 0 || v.payloadBytes > LIMIT2 || !/^[a-f0-9]{64}$/.test(v.audioSha256 || "")) throw new Error("Chapter audio hash or payload changed");
-        if (v.model !== p.model || digest3(v.transcriptCheck ?? null) !== digest3(p.transcriptCheck ?? null)) throw new Error("Chapter reviewer/request differs from manifest");
+        if (v.model !== p.model || digest4(v.transcriptCheck ?? null) !== digest4(p.transcriptCheck ?? null)) throw new Error("Chapter reviewer/request differs from manifest");
         const f3 = listeningFailures2(v);
-        if (!["pass", "fail"].includes(v.status) || !Array.isArray(v.failures) || digest3(v.failures) !== digest3(f3) || v.status !== (f3.length ? "fail" : "pass")) throw new Error("Chapter verdict does not match its review");
+        if (!["pass", "fail"].includes(v.status) || !Array.isArray(v.failures) || digest4(v.failures) !== digest4(f3) || v.status !== (f3.length ? "fail" : "pass")) throw new Error("Chapter verdict does not match its review");
         failures.push(...f3.map((x2) => `${e2.kind} ${e2.index}: ${x2}`));
       }
-      if (!["pass", "fail"].includes(p.status) || p.status !== (failures.length ? "fail" : "pass") || digest3(p.failures) !== digest3(failures)) throw new Error("Final chapter verdict does not match complete evidence");
+      if (!["pass", "fail"].includes(p.status) || p.status !== (failures.length ? "fail" : "pass") || digest4(p.failures) !== digest4(failures)) throw new Error("Final chapter verdict does not match complete evidence");
       if (requirePass && failures.length) throw new Error(failures.join("; "));
       return failures;
     }
-    module.exports = { RATE: RATE2, BYTES: BYTES2, LIMIT: LIMIT2, POLICY: POLICY2, hash: hash5, digest: digest3, decode: decode2, plan: plan2, manifest: manifest2, listeningFailures: listeningFailures2, validate: validate2 };
+    module.exports = { RATE: RATE2, BYTES: BYTES2, LIMIT: LIMIT2, POLICY: POLICY2, hash: hash5, digest: digest4, decode: decode2, plan: plan2, manifest: manifest2, listeningFailures: listeningFailures2, validate: validate2 };
   }
 });
 
@@ -76225,7 +76269,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve11) => setTimeout(resolve11, pollInterval));
+        await new Promise((resolve12) => setTimeout(resolve12, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -76242,7 +76286,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve11, reject) => {
+    return new Promise((resolve12, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -76320,7 +76364,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve11(parseResult.data);
+            resolve12(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -76581,12 +76625,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve11, reject) => {
+    return new Promise((resolve12, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve11, interval);
+      const timeoutId = setTimeout(resolve12, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -77462,12 +77506,12 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve11) => {
+    return new Promise((resolve12) => {
       const json2 = serializeMessage(message);
       if (this._stdout.write(json2)) {
-        resolve11();
+        resolve12();
       } else {
-        this._stdout.once("drain", resolve11);
+        this._stdout.once("drain", resolve12);
       }
     });
   }
@@ -77936,7 +77980,7 @@ async function assertReachable(url, attempts, waitMs) {
     } catch (error2) {
       last = error2 instanceof Error ? error2.message : String(error2);
     }
-    if (i2 < attempts - 1) await new Promise((resolve11) => setTimeout(resolve11, waitMs));
+    if (i2 < attempts - 1) await new Promise((resolve12) => setTimeout(resolve12, waitMs));
   }
   throw new Error(`public URL not reachable: ${url} (${last})`);
 }
@@ -78005,19 +78049,19 @@ function serveLocally(filePaths) {
     }
     fs.createReadStream(file, { start, end }).on("error", () => res.destroy()).pipe(res);
   });
-  return new Promise((resolve11, reject) => {
+  return new Promise((resolve12, reject) => {
     server2.once("error", reject);
     server2.listen(0, "127.0.0.1", () => {
       const address = server2.address();
       const port = typeof address === "object" && address ? address.port : 0;
-      resolve11({ server: server2, port, routes });
+      resolve12({ server: server2, port, routes });
     });
   });
 }
 function closeServer(server2) {
-  return new Promise((resolve11) => {
+  return new Promise((resolve12) => {
     server2.closeAllConnections?.();
-    server2.close(() => resolve11());
+    server2.close(() => resolve12());
   });
 }
 var liveTunnels = /* @__PURE__ */ new Set();
@@ -78050,7 +78094,7 @@ async function publishViaTunnel(filePaths, cloudflared = "cloudflared") {
   };
   killTunnelsOnExit();
   try {
-    const origin = await new Promise((resolve11, reject) => {
+    const origin = await new Promise((resolve12, reject) => {
       child = spawn(cloudflared, ["tunnel", "--url", `http://127.0.0.1:${port}`, "--no-autoupdate"], {
         stdio: ["ignore", "pipe", "pipe"]
       });
@@ -78063,7 +78107,7 @@ ${log.slice(-600)}`)), 6e4);
         const m2 = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/.exec(log);
         if (m2) {
           clearTimeout(timer);
-          resolve11(m2[0]);
+          resolve12(m2[0]);
         }
       };
       child.stdout?.on("data", onLine);
@@ -78079,7 +78123,7 @@ ${log.slice(-600)}`));
       });
     });
     const urls = routes.map((r2) => origin + r2);
-    await new Promise((resolve11) => setTimeout(resolve11, 5e3));
+    await new Promise((resolve12) => setTimeout(resolve12, 5e3));
     for (const url of urls) await assertReachable(url, 30, 3e3);
     console.error(`[media-publish] quick tunnel ${origin} serving ${filePaths.length} file(s)`);
     return { urls, how: "tunnel", close };
@@ -78517,7 +78561,7 @@ var seedanceReferenceSchema = external_exports.object({
   }
 }).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
 function sleep(ms) {
-  return new Promise((resolve11) => setTimeout(resolve11, ms));
+  return new Promise((resolve12) => setTimeout(resolve12, ms));
 }
 function describeHttpError(status, body) {
   try {
@@ -78619,23 +78663,23 @@ function loadReferenceAudio(filePaths) {
   });
 }
 function probeVideo(filePath) {
-  return new Promise((resolve11) => {
+  return new Promise((resolve12) => {
     execFile(
       "ffprobe",
       ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height,r_frame_rate:format=duration", "-of", "json", filePath],
       { timeout: 15e3 },
       (error2, out) => {
-        if (error2) return resolve11(null);
+        if (error2) return resolve12(null);
         try {
           const parsed = JSON.parse(String(out));
           const stream = parsed.streams?.[0];
           const [num5, den] = String(stream?.r_frame_rate || "").split("/").map(Number);
           const fps = num5 && den ? num5 / den : NaN;
           const seconds = Number.parseFloat(String(parsed.format?.duration ?? ""));
-          if (!stream?.width || !stream?.height || !Number.isFinite(fps) || !Number.isFinite(seconds) || seconds <= 0) return resolve11(null);
-          resolve11({ seconds, fps, width: stream.width, height: stream.height });
+          if (!stream?.width || !stream?.height || !Number.isFinite(fps) || !Number.isFinite(seconds) || seconds <= 0) return resolve12(null);
+          resolve12({ seconds, fps, width: stream.width, height: stream.height });
         } catch {
-          resolve11(null);
+          resolve12(null);
         }
       }
     );
@@ -78677,14 +78721,14 @@ async function checkReferenceVideos(filePaths, spec, model) {
   return total;
 }
 function probeAudioSeconds(filePath) {
-  return new Promise((resolve11) => {
+  return new Promise((resolve12) => {
     execFile(
       "ffprobe",
       ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", filePath],
       { timeout: 15e3 },
       (error2, out) => {
         const seconds = Number.parseFloat(String(out ?? "").trim());
-        resolve11(!error2 && Number.isFinite(seconds) && seconds > 0 ? seconds : null);
+        resolve12(!error2 && Number.isFinite(seconds) && seconds > 0 ? seconds : null);
       }
     );
   });
@@ -79680,8 +79724,8 @@ var astraIcLoraSchema = external_exports.object({
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["width"], message: dimensionError });
   }
 }).transform(resolveDuration);
-function icLoraMode(adapter) {
-  return adapter === "ingredients" ? "ingredients" : "ic_lora";
+function icLoraMode(adapter2) {
+  return adapter2 === "ingredients" ? "ingredients" : "ic_lora";
 }
 var ASTRA_VIDEO_SHORT_AUDIO_SLACK = 0.08;
 function checkAudioCoversVideo(usable, numFrames, frameRate, afterStart = false) {
@@ -79825,7 +79869,7 @@ function buildJobBody(mode, args) {
   return body;
 }
 function sleep2(ms) {
-  return new Promise((resolve11) => setTimeout(resolve11, ms));
+  return new Promise((resolve12) => setTimeout(resolve12, ms));
 }
 var submitTimestamps = [];
 async function waitForSubmitSlot() {
@@ -80015,18 +80059,18 @@ async function awaitResult(jobId) {
 async function runJob(mode, prompt, body, outputPath, filename) {
   const videoPath = resolveOutputFile(outputPath || process.cwd(), filename || `astra_${Date.now()}.mp4`, "video");
   const receiptPath = `${videoPath}.astra-job.json`;
-  const writeReceipt = (value) => {
+  const writeReceipt2 = (value) => {
     const temp = `${receiptPath}.${process.pid}.tmp`;
     fs4.writeFileSync(temp, JSON.stringify(value, null, 2) + "\n", { mode: 384 });
     fs4.renameSync(temp, receiptPath);
   };
   const jobId = await submitJob(body);
   const submitted = { jobId, mode, prompt, videoPath, submittedAt: (/* @__PURE__ */ new Date()).toISOString(), submittedRequest: body };
-  writeReceipt({ ...submitted, status: "submitted" });
+  writeReceipt2({ ...submitted, status: "submitted" });
   const { bytes, request, elapsedSeconds } = await awaitResult(jobId);
   fs4.writeFileSync(videoPath, bytes);
   const response = { videoPath, jobId, mode, prompt, bytes: bytes.length, elapsedSeconds, ...request ? { request } : {} };
-  writeReceipt({ ...submitted, ...response, sha256: createHash("sha256").update(bytes).digest("hex"), status: "completed", completedAt: (/* @__PURE__ */ new Date()).toISOString() });
+  writeReceipt2({ ...submitted, ...response, sha256: createHash("sha256").update(bytes).digest("hex"), status: "completed", completedAt: (/* @__PURE__ */ new Date()).toISOString() });
   return response;
 }
 async function generateFromText2(args) {
@@ -80122,10 +80166,10 @@ async function generateIcLora(args) {
     conditioningMask = { uploadId: mask.uploadId, strength: args.conditioningMaskStrength };
   }
   const mode = icLoraMode(args.adapter);
-  const { adapter, ...rest } = args;
+  const { adapter: adapter2, ...rest } = args;
   const body = buildJobBody(mode, {
     ...rest,
-    ...mode === "ic_lora" ? { adapter } : {},
+    ...mode === "ic_lora" ? { adapter: adapter2 } : {},
     references: [{ uploadId: reference.uploadId, strength: args.referenceStrength }],
     conditioningMask
   });
@@ -80360,7 +80404,7 @@ async function loadModel(id) {
     if (!listed.ok) return listed;
     const found = listed.models?.find((m2) => m2.id === id);
     if (found?.state === "ready") return { ok: true };
-    await new Promise((resolve11) => setTimeout(resolve11, 2e3));
+    await new Promise((resolve12) => setTimeout(resolve12, 2e3));
   }
   return { ok: false, error: `Timed out waiting for model "${id}" to become ready.` };
 }
@@ -80485,7 +80529,7 @@ async function muxRgbToMp4(opts) {
     );
     if (opts.audio) args.push("-c:a", "aac");
     args.push(opts.outFile);
-    await new Promise((resolve11, reject) => {
+    await new Promise((resolve12, reject) => {
       execFile2("ffmpeg", args, { timeout: 12e4, maxBuffer: 2 * 1024 * 1024 }, (error2, _out, errOut) => {
         if (error2) {
           const code = error2.code;
@@ -80497,7 +80541,7 @@ async function muxRgbToMp4(opts) {
 ${String(errOut).slice(-500)}` : ""}`));
           return;
         }
-        resolve11();
+        resolve12();
       });
     });
     if (!existsSync5(opts.outFile)) return { ok: false, error: "ffmpeg exited 0 but the mp4 was not written" };
@@ -81754,7 +81798,7 @@ async function generateAdvanced(request) {
     const timeoutMs = targetDuration * 1e3 + REALTIME_TIMEOUT_MARGIN_MS;
     while (state.received < targetBytes && Date.now() - startTime < timeoutMs) {
       if (state.error) throw state.error;
-      await new Promise((resolve11) => setTimeout(resolve11, REALTIME_POLL_INTERVAL_MS));
+      await new Promise((resolve12) => setTimeout(resolve12, REALTIME_POLL_INTERVAL_MS));
     }
     state.done = true;
     closeQuietly(session);
@@ -81797,7 +81841,270 @@ function closeQuietly(session) {
 }
 
 // src/tts-client.ts
-import { writeFileSync as writeFileSync6 } from "node:fs";
+import { writeFileSync as writeFileSync8 } from "node:fs";
+
+// src/tts-execution.ts
+import { AsyncLocalStorage } from "node:async_hooks";
+import { createHash as createHash3, randomUUID } from "node:crypto";
+import { accessSync as accessSync2, constants as constants2, existsSync as existsSync7, lstatSync, mkdirSync as mkdirSync3, readFileSync as readFileSync7, realpathSync, renameSync as renameSync3, rmSync as rmSync3, writeFileSync as writeFileSync7 } from "node:fs";
+import { tmpdir as tmpdir3 } from "node:os";
+import { extname as extname5, join as join6, resolve as resolve4 } from "node:path";
+
+// src/tts-models.ts
+import { createRequire as createRequire2 } from "node:module";
+var shared = () => createRequire2(import.meta.url)("../../skills/_shared/tts-models.js");
+function getTtsModels() {
+  return shared().TTS_MODELS;
+}
+function resolveTtsModel(provider, model) {
+  return shared().resolveTtsModel(provider, model);
+}
+
+// src/tts-audio.ts
+import { execFileSync as execFileSync2 } from "node:child_process";
+import { mkdtempSync as mkdtempSync2, rmSync as rmSync2, writeFileSync as writeFileSync6 } from "node:fs";
+import { tmpdir as tmpdir2 } from "node:os";
+import { join as join5 } from "node:path";
+function decodeSpeechBase64(data) {
+  if (typeof data !== "string" || !data.length || data.length % 4 !== 0 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(data)) {
+    throw new Error("Invalid speech audio base64");
+  }
+  const bytes = Buffer.from(data, "base64");
+  if (!bytes.length) throw new Error("Empty speech audio");
+  return bytes;
+}
+function validateSpeechAudio(bytes, extension2) {
+  extension2 = extension2.toLowerCase();
+  if (!bytes.length) throw new Error("Empty speech audio");
+  if (extension2 === "wav") {
+    if (bytes.length < 44 || bytes.toString("ascii", 0, 4) !== "RIFF" || bytes.toString("ascii", 8, 12) !== "WAVE" || bytes.readUInt32LE(4) + 8 !== bytes.length) {
+      throw new Error("Invalid or truncated speech WAV");
+    }
+    let byteRate = 0, blockAlign = 0, dataSize = 0, offset = 12;
+    for (; offset + 8 <= bytes.length; ) {
+      const size = bytes.readUInt32LE(offset + 4), start = offset + 8;
+      if (start + size > bytes.length) throw new Error("Truncated speech WAV chunk");
+      const id = bytes.toString("ascii", offset, offset + 4);
+      if (id === "fmt ") {
+        if (size < 16 || byteRate) throw new Error("Invalid speech WAV format");
+        const format = bytes.readUInt16LE(start), channels = bytes.readUInt16LE(start + 2);
+        const rate = bytes.readUInt32LE(start + 4), bits = bytes.readUInt16LE(start + 14);
+        byteRate = bytes.readUInt32LE(start + 8);
+        blockAlign = bytes.readUInt16LE(start + 12);
+        if (![1, 3].includes(format) || channels < 1 || channels > 8 || rate < 8e3 || rate > 192e3 || !(format === 3 ? [32, 64] : [8, 16, 24, 32]).includes(bits) || blockAlign !== channels * bits / 8 || byteRate !== rate * blockAlign) {
+          throw new Error("Invalid speech WAV encoding");
+        }
+      }
+      if (id === "data") dataSize += size;
+      offset = start + size + (size & 1);
+    }
+    if (offset !== bytes.length || !byteRate || !dataSize || dataSize % blockAlign !== 0) throw new Error("Invalid speech WAV data");
+    return dataSize / byteRate;
+  }
+  const dir = mkdtempSync2(join5(tmpdir2(), "speech-probe-"));
+  try {
+    const file = join5(dir, `audio.${extension2}`);
+    writeFileSync6(file, bytes);
+    const result = JSON.parse(execFileSync2(
+      "ffprobe",
+      [
+        "-v",
+        "error",
+        "-show_entries",
+        "stream=codec_type:format=duration,format_name",
+        "-of",
+        "json",
+        file
+      ],
+      { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "pipe"] }
+    ));
+    const duration3 = Number(result.format?.duration);
+    const names = { mp3: "mp3", ogg: "ogg", webm: "webm", aac: "aac", flac: "flac" };
+    if (!names[extension2] || !String(result.format?.format_name).split(",").includes(names[extension2]) || !result.streams?.some((s2) => s2.codec_type === "audio") || !Number.isFinite(duration3) || duration3 <= 0) {
+      throw new Error("Invalid speech audio format or duration");
+    }
+    const decoded = execFileSync2(
+      "ffmpeg",
+      [
+        "-v",
+        "error",
+        "-xerror",
+        "-err_detect",
+        "explode",
+        "-i",
+        file,
+        "-map",
+        "0:a:0",
+        "-progress",
+        "pipe:1",
+        "-nostats",
+        "-f",
+        "null",
+        "-"
+      ],
+      { encoding: "utf8", timeout: 3e4, stdio: ["ignore", "pipe", "pipe"] }
+    );
+    const decodedTimes = [...decoded.matchAll(/^out_time_us=(\d+)$/gm)].map((match2) => Number(match2[1]));
+    if (!decodedTimes.some((time3) => Number.isFinite(time3) && time3 > 0)) throw new Error("Speech audio decoded no samples");
+    return duration3;
+  } finally {
+    rmSync2(dir, { recursive: true, force: true });
+  }
+}
+function validateSpeechAlignment(value, duration3) {
+  if (value == null) return;
+  if (typeof value !== "object") throw new Error("Invalid speech alignment");
+  const a = value;
+  const chars = a.characters, starts = a.character_start_times_seconds, ends = a.character_end_times_seconds;
+  if (!Array.isArray(chars) || !Array.isArray(starts) || !Array.isArray(ends) || chars.length !== starts.length || chars.length !== ends.length) throw new Error("Invalid speech alignment lengths");
+  for (let i2 = 0; i2 < chars.length; i2++) {
+    if (typeof chars[i2] !== "string" || typeof starts[i2] !== "number" || typeof ends[i2] !== "number" || !Number.isFinite(starts[i2]) || !Number.isFinite(ends[i2]) || starts[i2] < 0 || ends[i2] < starts[i2] || ends[i2] > duration3 + 0.1 || i2 > 0 && (starts[i2] < starts[i2 - 1] || ends[i2] < ends[i2 - 1])) {
+      throw new Error("Invalid speech alignment timing");
+    }
+  }
+}
+function validateSpeechSegments(value, duration3, inputs) {
+  if (value == null) return;
+  if (!Array.isArray(value)) throw new Error("Invalid speech voice segments");
+  for (const segment of value) {
+    if (!segment || typeof segment !== "object") throw new Error("Invalid speech voice segment");
+    const {
+      start_time_seconds: start,
+      end_time_seconds: end,
+      character_start_index: from,
+      character_end_index: to,
+      dialogue_input_index: index,
+      voice_id: voice
+    } = segment;
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end < start || end > duration3 + 0.1 || !Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to < from || !Number.isInteger(index) || index < 0 || index >= inputs.length || inputs[index].voice_id !== voice) {
+      throw new Error("Invalid speech voice segment timing or speaker");
+    }
+  }
+}
+
+// src/tts-execution.ts
+var executionId = new AsyncLocalStorage();
+function withSpeechRequestId(id, run) {
+  if (!/^[A-Za-z0-9_-]{1,100}$/.test(id)) throw new Error("Invalid speech requestId");
+  return executionId.run(id, run);
+}
+var digest = (value) => createHash3("sha256").update(value).digest("hex");
+function canonical(value) {
+  if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]";
+  if (value && typeof value === "object") return "{" + Object.entries(value).filter(([, v]) => v !== void 0).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => JSON.stringify(k) + ":" + canonical(v)).join(",") + "}";
+  return JSON.stringify(value);
+}
+function writeReceipt(file, value) {
+  const temporary = file + "." + randomUUID() + ".tmp";
+  writeFileSync7(temporary, JSON.stringify(value, null, 2) + "\n", { mode: 384 });
+  renameSync3(temporary, file);
+}
+function lock(directory2) {
+  try {
+    mkdirSync3(directory2);
+  } catch {
+    throw new Error(`Speech execution is busy or interrupted: ${directory2}. Inspect its receipt before retrying; locks are never stolen.`);
+  }
+  return () => rmSync3(directory2, { recursive: true, force: true });
+}
+async function executeSpeech(generator, args, run) {
+  const provider = generator.startsWith("tts_elevenlabs_") ? "elevenlabs" : "gemini";
+  const contract2 = resolveTtsModel(provider, String(args.model));
+  if (![contract2.single, contract2.dialogue].includes(generator)) throw new Error("Generator does not implement selected TTS model");
+  const gate = resolveToolGate(generator, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
+  if (!gate.enabled) throw new Error(`Selected speech generator is disabled: ${gate.reason}`);
+  const key = provider === "gemini" ? requireGeminiKey() : requireElevenLabsKey();
+  const id = executionId.getStore() || randomUUID();
+  const outputPath = resolve4(String(args.outputPath || process.cwd()));
+  const extension2 = String(args.outputFormat || "wav").startsWith("mp3") ? "mp3" : "wav";
+  const filename = String(args.filename || `${generator}_${id}.${extension2}`);
+  if (/[/\\]/.test(filename)) throw new Error("Speech filename must be a bare filename");
+  validateFilePath(filename, { allowedExtensions: ["." + extension2] });
+  mkdirSync3(outputPath, { recursive: true });
+  accessSync2(outputPath, constants2.W_OK);
+  const directory2 = realpathSync(outputPath), audioPath = join6(directory2, filename);
+  const stem = audioPath.slice(0, -extname5(audioPath).length);
+  for (const file of [audioPath, stem + ".alignment.json", audioPath + ".provider-usage.json"]) {
+    try {
+      if (lstatSync(file).isSymbolicLink()) throw new Error("Speech output must not be a symlink");
+    } catch (error2) {
+      if (error2.code !== "ENOENT") throw error2;
+    }
+  }
+  const runs = join6(directory2, ".speech-runs");
+  mkdirSync3(runs, { recursive: true });
+  const receiptPath = join6(runs, id + ".json");
+  const fingerprint = digest(canonical({ generator, args: { ...args, outputPath: directory2 } }));
+  const releaseRequest = lock(join6(runs, id + ".lock"));
+  let releaseOutput, releaseSlot;
+  try {
+    if (existsSync7(receiptPath)) {
+      const prior = JSON.parse(readFileSync7(receiptPath, "utf8"));
+      if (prior.fingerprint !== fingerprint) throw new Error("Speech requestId was already used with different arguments");
+      if (prior.status !== "completed") throw new Error("Speech request outcome is uncertain or failed; inspect receipt before a new explicit requestId");
+      if (digest(readFileSync7(prior.result.audioPath)) !== prior.audioSha256) throw new Error("Recorded speech audio changed or is missing");
+      for (const artifact of prior.artifacts || []) {
+        if (digest(readFileSync7(artifact.path)) !== artifact.sha256) throw new Error("Recorded speech sidecar changed or is missing");
+      }
+      return { ...prior.result, receiptPath, review: "not_reviewed", replayed: true };
+    }
+    releaseOutput = lock(stem + ".speech-lock");
+    const limit2 = Number(process.env.SOCIAL_FLOW_TTS_MAX_CONCURRENCY || 2);
+    if (!Number.isInteger(limit2) || limit2 < 1 || limit2 > 32) throw new Error("SOCIAL_FLOW_TTS_MAX_CONCURRENCY must be an integer from 1 to 32");
+    const slots = join6(tmpdir3(), `social-flow-tts-${process.getuid?.() ?? "user"}-${digest(provider + key).slice(0, 24)}`);
+    mkdirSync3(slots, { recursive: true });
+    for (let i2 = 0; i2 < limit2; i2++) {
+      const slot = join6(slots, String(i2));
+      try {
+        mkdirSync3(slot);
+        releaseSlot = () => rmSync3(slot, { recursive: true, force: true });
+        break;
+      } catch (error2) {
+        if (error2.code !== "EEXIST") throw error2;
+      }
+    }
+    if (!releaseSlot) throw new Error("Speech provider concurrency limit reached; no request submitted");
+    const record2 = {
+      version: 1,
+      requestId: id,
+      generator,
+      provider,
+      model: args.model,
+      fingerprint,
+      generation: args,
+      startedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      review: "not_reviewed",
+      attempts: 1,
+      billingStatus: "not_an_invoice"
+    };
+    writeReceipt(receiptPath, { ...record2, status: "submitting" });
+    try {
+      const result = await run({ outputPath, filename });
+      if (!result.success || !result.audioPath) throw new Error(result.error || "Speech provider returned no audio");
+      if (realpathSync(result.audioPath) !== audioPath) throw new Error("Speech provider returned an unexpected output path");
+      const bytes = readFileSync7(audioPath);
+      const durationSeconds = validateSpeechAudio(bytes, extname5(audioPath).slice(1));
+      const artifacts = ["alignmentPath", "usageReceiptPath"].flatMap((field) => {
+        const file = result[field];
+        if (typeof file !== "string") return [];
+        return [{ path: file, sha256: digest(readFileSync7(file)) }];
+      });
+      const completed = { ...result, receiptPath, attempts: 1, review: "not_reviewed" };
+      writeReceipt(receiptPath, { ...record2, status: "completed", artifacts, audioSha256: digest(bytes), durationSeconds, result: completed });
+      return completed;
+    } catch (error2) {
+      const message = error2 instanceof Error ? error2.message : String(error2);
+      writeReceipt(receiptPath, { ...record2, status: "uncertain", error: message });
+      return { success: false, error: message, receiptPath, attempts: 1, review: "not_reviewed" };
+    }
+  } finally {
+    releaseSlot?.();
+    releaseOutput?.();
+    releaseRequest();
+  }
+}
+
+// src/tts-client.ts
 var TTS_VOICES = {
   Zephyr: "Bright",
   Puck: "Upbeat",
@@ -81920,8 +82227,6 @@ var VALID_TTS_MODELS = [
 var DEFAULT_TTS_MODEL = "gemini-2.5-flash-preview-tts";
 var MAX_TTS_INPUT_CHARS = 16e3;
 var DEFAULT_TTS_TEMPERATURE = 0.4;
-var MAX_ATTEMPTS = 3;
-var RETRY_BASE_DELAY_MS = 400;
 var PCM_FALLBACK_MIME = "audio/L16;codec=pcm;rate=24000";
 var PCM_CHANNELS = 1;
 var voiceSchema = external_exports.enum(TTS_VOICE_NAMES);
@@ -81933,29 +82238,36 @@ var ttsGenerateSchema = external_exports.object({
   model: modelSchema,
   stylePrompt: external_exports.string().optional(),
   temperature: temperatureSchema,
+  speed: external_exports.literal(1).optional(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("audio").optional()
-});
+}).strict();
 var speakerSchema = external_exports.object({
   speakerName: external_exports.string().min(1, "Speaker name is required"),
   voiceName: voiceSchema
-});
+}).strict();
 var ttsMultiSpeakerSchema = external_exports.object({
   script: external_exports.string().min(1, "Script is required").max(MAX_TTS_INPUT_CHARS, `Script exceeds ${MAX_TTS_INPUT_CHARS} characters (32k-token session limit); split the script`),
-  speakers: external_exports.array(speakerSchema).min(1).max(2, "Maximum 2 speakers allowed"),
+  speakers: external_exports.array(speakerSchema).min(1).max(2, "Maximum 2 speakers allowed").refine(
+    (speakers) => new Set(speakers.map((s2) => s2.speakerName)).size === speakers.length,
+    "Speaker names must be unique"
+  ),
   model: modelSchema,
   stylePrompt: external_exports.string().optional(),
   temperature: temperatureSchema,
+  speed: external_exports.literal(1).optional(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("audio").optional()
-});
+}).strict();
 function isRawPcmMimeType(mimeType) {
   const normalized = mimeType.toLowerCase();
-  return normalized.startsWith("audio/l16") || normalized.includes("codec=pcm");
+  return /^audio\/(?:l16|pcm)(?:;|$)/.test(normalized);
 }
 function parseSampleRate(mimeType) {
-  const match2 = mimeType.match(/rate=(\d+)/);
-  return match2 ? parseInt(match2[1], 10) : 24e3;
+  const match2 = mimeType.match(/(?:^|;)\s*rate=([^;]*)/i);
+  if (!match2) return 24e3;
+  if (!/^\d+$/.test(match2[1])) throw new Error("Invalid speech PCM sample rate");
+  return Number(match2[1]);
 }
 function buildStyledPrompt(stylePrompt, transcript) {
   if (!stylePrompt) return transcript;
@@ -81978,56 +82290,43 @@ function extensionFromMimeType(mimeType) {
     "audio/aac": "aac",
     "audio/flac": "flac"
   };
-  return mimeToExt2[mimeType.split(";")[0]] || "wav";
+  const extension2 = mimeToExt2[mimeType.toLowerCase().split(";")[0]];
+  if (!extension2) throw new Error("Unsupported speech audio MIME: " + mimeType);
+  return extension2;
 }
-async function synthesizeWithRetry(model, contentText, speechConfig, temperature) {
+async function synthesizeOnce(model, contentText, speechConfig, temperature) {
   const { GoogleGenAI: GoogleGenAI3 } = await Promise.resolve().then(() => (init_node(), node_exports));
-  const genai = new GoogleGenAI3({ apiKey: requireGeminiKey(), httpOptions: { timeout: 12e4 } });
-  let lastError;
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    try {
-      const config3 = {
-        responseModalities: ["AUDIO"],
-        speechConfig,
-        // undefined means the vendor default (1.0). The normal path is the schema default (0.4) being injected.
-        ...temperature !== void 0 ? { temperature } : {}
-      };
-      const response = await genai.models.generateContent({
-        model,
-        contents: [{ role: "user", parts: [{ text: contentText }] }],
-        config: config3
-      });
-      const parts = response.candidates?.[0]?.content?.parts;
-      if (!parts || parts.length === 0) throw new Error("No content parts in response");
-      for (const part of parts) {
-        if (part.inlineData?.data) {
-          return { data: part.inlineData.data, mimeType: part.inlineData.mimeType || PCM_FALLBACK_MIME };
-        }
-      }
-      throw new Error("No audio data found in response parts");
-    } catch (error2) {
-      lastError = error2;
-      if (attempt < MAX_ATTEMPTS - 1) {
-        await new Promise((resolve11) => setTimeout(resolve11, RETRY_BASE_DELAY_MS * (attempt + 1)));
-      }
-    }
+  const genai = new GoogleGenAI3({ apiKey: requireGeminiKey(), httpOptions: { timeout: 12e4, retryOptions: { attempts: 1 } } });
+  const config3 = {
+    responseModalities: ["AUDIO"],
+    speechConfig,
+    ...temperature !== void 0 ? { temperature } : {}
+  };
+  const response = await genai.models.generateContent({
+    model,
+    contents: [{ role: "user", parts: [{ text: contentText }] }],
+    config: config3
+  });
+  const parts = response.candidates?.[0]?.content?.parts;
+  for (const part of parts || []) {
+    if (part.inlineData?.data) return { data: part.inlineData.data, mimeType: part.inlineData.mimeType || PCM_FALLBACK_MIME };
   }
-  const message = lastError instanceof Error ? lastError.message : String(lastError);
-  const hint = model === DEFAULT_TTS_MODEL ? ' (retried 3x \u2014 this script may not pass on flash; retry with model="gemini-2.5-pro-preview-tts")' : " (retried 3x)";
-  throw new Error(message + hint);
+  throw new Error("No audio data found in response; inspect this attempt before explicitly retrying");
 }
 function saveAudio(audio, outputPath, filename, defaultPrefix) {
-  const rawBuffer = Buffer.from(audio.data, "base64");
+  const rawBuffer = decodeSpeechBase64(audio.data);
+  if (isRawPcmMimeType(audio.mimeType) && (rawBuffer.length % 2 !== 0 || parseSampleRate(audio.mimeType) < 8e3 || parseSampleRate(audio.mimeType) > 192e3)) throw new Error("Invalid speech PCM");
   const isPcm = isRawPcmMimeType(audio.mimeType);
   const fileBuffer = isPcm ? pcmToWav(rawBuffer, parseSampleRate(audio.mimeType), PCM_CHANNELS) : rawBuffer;
   const ext = isPcm ? "wav" : extensionFromMimeType(audio.mimeType);
+  validateSpeechAudio(fileBuffer, ext);
   return saveAudioFile(
     outputPath || process.cwd(),
     filename || `${defaultPrefix}_${Date.now()}.${ext}`,
     fileBuffer
   );
 }
-async function generateSpeech(request) {
+async function generateSpeechImpl(request) {
   const model = request.model || DEFAULT_TTS_MODEL;
   const voiceName = request.voiceName || DEFAULT_VOICE;
   try {
@@ -82035,7 +82334,7 @@ async function generateSpeech(request) {
     const speechConfig = {
       voiceConfig: { prebuiltVoiceConfig: { voiceName } }
     };
-    const audio = await synthesizeWithRetry(
+    const audio = await synthesizeOnce(
       model,
       buildStyledPrompt(request.stylePrompt, request.text),
       speechConfig,
@@ -82050,7 +82349,7 @@ async function generateSpeech(request) {
     return { success: false, error: errorMessage };
   }
 }
-async function generateDialogue(request) {
+async function generateDialogueImpl(request) {
   const model = request.model || DEFAULT_TTS_MODEL;
   try {
     const speakerNames = request.speakers.map((s2) => s2.speakerName).join(", ");
@@ -82063,7 +82362,7 @@ async function generateDialogue(request) {
         }))
       }
     };
-    const audio = await synthesizeWithRetry(
+    const audio = await synthesizeOnce(
       model,
       buildStyledPrompt(request.stylePrompt, request.script),
       speechConfig,
@@ -82089,11 +82388,11 @@ var gemini38TurnSchema = external_exports.object({
   text: external_exports.string().min(1, "Turn text is required").max(MAX_GEMINI_38_TTS_INPUT_CHARS),
   speaker: external_exports.string().min(1).max(100).optional(),
   style: external_exports.string().min(1).max(500).optional()
-});
+}).strict();
 var gemini38SpeakerSchema = external_exports.object({
   speaker: external_exports.string().min(1, "Speaker name is required").max(100),
   voice: external_exports.enum(TTS_VOICE_NAMES)
-});
+}).strict();
 var gemini38TtsSchema = external_exports.object({
   turns: external_exports.array(gemini38TurnSchema).min(1, "At least one turn is required").max(200),
   model: external_exports.enum(GEMINI_38_TTS_MODELS).optional().default(DEFAULT_GEMINI_38_TTS_MODEL),
@@ -82101,7 +82400,7 @@ var gemini38TtsSchema = external_exports.object({
   speakers: external_exports.array(gemini38SpeakerSchema).length(2, "Conversational mode requires exactly 2 speakers").optional(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("audio").optional()
-}).superRefine((request, ctx) => {
+}).strict().superRefine((request, ctx) => {
   const totalChars = request.turns.reduce((sum, turn) => sum + turn.text.length, 0);
   if (totalChars > MAX_GEMINI_38_TTS_INPUT_CHARS) {
     ctx.addIssue({
@@ -82111,6 +82410,7 @@ var gemini38TtsSchema = external_exports.object({
     });
   }
   if (request.speakers) {
+    if (request.voice !== DEFAULT_VOICE) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["voice"], message: "voice is a single-speaker control; use speakers[].voice for dialogue" });
     const names = new Set(request.speakers.map((speaker) => speaker.speaker));
     if (names.size !== request.speakers.length) {
       ctx.addIssue({
@@ -82209,7 +82509,7 @@ function describeGemini38Error(status, body) {
   }
   return `HTTP ${status}: ${body || "(empty body)"}`;
 }
-async function generateGemini38Speech(request) {
+async function generateGemini38SpeechImpl(request) {
   try {
     const apiKey = requireGeminiKey();
     const response = await requestRaw(
@@ -82232,7 +82532,7 @@ async function generateGemini38Speech(request) {
     const audioPath = saveAudio(audio, request.outputPath, request.filename, "tts_gemini_38");
     const metadata = interaction;
     const usageReceiptPath = audioPath + ".provider-usage.json";
-    writeFileSync6(usageReceiptPath, JSON.stringify({
+    writeFileSync8(usageReceiptPath, JSON.stringify({
       provider: "gemini",
       model: request.model,
       interactionId: typeof metadata.id === "string" ? metadata.id : null,
@@ -82256,12 +82556,37 @@ async function generateGemini38Speech(request) {
     return { success: false, error: errorMessage };
   }
 }
+async function generateSpeech(request) {
+  try {
+    const parsed = ttsGenerateSchema.parse(request);
+    return await executeSpeech("tts_generate", parsed, (output) => generateSpeechImpl({ ...parsed, ...output }));
+  } catch (error2) {
+    return { success: false, error: error2 instanceof Error ? error2.message : String(error2) };
+  }
+}
+async function generateDialogue(request) {
+  try {
+    const parsed = ttsMultiSpeakerSchema.parse(request);
+    if (new Set(parsed.speakers.map((s2) => s2.speakerName)).size !== parsed.speakers.length) throw new Error("Speaker names must be unique");
+    return await executeSpeech("tts_multi_speaker", parsed, (output) => generateDialogueImpl({ ...parsed, ...output }));
+  } catch (error2) {
+    return { success: false, error: error2 instanceof Error ? error2.message : String(error2) };
+  }
+}
+async function generateGemini38Speech(request) {
+  try {
+    const parsed = gemini38TtsSchema.parse(request);
+    return await executeSpeech("tts_gemini_38", parsed, (output) => generateGemini38SpeechImpl({ ...parsed, ...output }));
+  } catch (error2) {
+    return { success: false, error: error2 instanceof Error ? error2.message : String(error2) };
+  }
+}
 
 // src/tts-quality.ts
 var import_tts_speed_policy = __toESM(require_tts_speed_policy(), 1);
 import { execFile as execFile3 } from "node:child_process";
-import { createHash as createHash3, randomUUID } from "node:crypto";
-import { closeSync, existsSync as existsSync8, mkdirSync as mkdirSync4, openSync, readFileSync as readFileSync7, renameSync as renameSync3, rmSync as rmSync2, writeFileSync as writeFileSync8 } from "node:fs";
+import { createHash as createHash4, randomUUID as randomUUID2 } from "node:crypto";
+import { closeSync, existsSync as existsSync9, mkdirSync as mkdirSync5, openSync, readFileSync as readFileSync8, renameSync as renameSync4, rmSync as rmSync4, writeFileSync as writeFileSync10 } from "node:fs";
 import path8 from "node:path";
 import { promisify as promisify2 } from "node:util";
 
@@ -82291,8 +82616,8 @@ var DEFAULT_ELEVENLABS_OUTPUT_FORMAT = "wav_24000";
 var ELEVENLABS_TEXT_NORMALIZATION = ["auto", "on", "off"];
 var ELEVENLABS_VOICE_CATEGORIES = ["premade", "cloned", "generated", "professional"];
 var CONCURRENCY_HINT = "check the concurrency allowance for the account plan";
-var MAX_ATTEMPTS2 = 3;
-var RETRY_BASE_DELAY_MS2 = 1e3;
+var MAX_ATTEMPTS = 3;
+var RETRY_BASE_DELAY_MS = 1e3;
 var voiceIdSchema = external_exports.string().regex(/^[A-Za-z0-9_-]{1,64}$/, "voiceId must be an ElevenLabs voice_id (letters, digits, _ or -)");
 var modelSchema2 = external_exports.enum(ELEVENLABS_MODELS).optional().default(DEFAULT_ELEVENLABS_MODEL);
 var outputFormatSchema = external_exports.enum(ELEVENLABS_OUTPUT_FORMATS).optional().default(DEFAULT_ELEVENLABS_OUTPUT_FORMAT);
@@ -82497,7 +82822,7 @@ function describeElevenLabsError(httpStatus, bodyText) {
     case "concurrent_limit_exceeded":
     case "rate_limit_exceeded":
     case "system_busy":
-      return `${message} \u2014 concurrency/rate limit (${CONCURRENCY_HINT}); the server already retried ${MAX_ATTEMPTS2}x. Run the scenes one at a time.`;
+      return `${message} \u2014 concurrency/rate limit (${CONCURRENCY_HINT}); the server already retried ${MAX_ATTEMPTS}x. Run the scenes one at a time.`;
     case "output_format_not_allowed":
       return `${message} \u2014 pick wav_24000 or wav_48000 (every plan) or upgrade the plan.`;
     case "voice_not_found":
@@ -82519,12 +82844,12 @@ function isRetryable(httpStatus) {
   return httpStatus === 429 || httpStatus >= 500;
 }
 function sleep4(ms) {
-  return new Promise((resolve11) => setTimeout(resolve11, ms));
+  return new Promise((resolve12) => setTimeout(resolve12, ms));
 }
 function timeoutFor(textLength) {
   return Math.min(5 * 6e4, 6e4 + textLength * 40);
 }
-async function elevenFetch(pathAndQuery, init, timeoutMs) {
+async function elevenFetch(pathAndQuery, init, timeoutMs, attempts = MAX_ATTEMPTS) {
   const apiKey = requireElevenLabsKey();
   const url = `${elevenLabsBaseUrl()}${pathAndQuery}`;
   const headers = {
@@ -82532,13 +82857,13 @@ async function elevenFetch(pathAndQuery, init, timeoutMs) {
     ...init.body ? { "Content-Type": "application/json" } : {}
   };
   let lastError;
-  for (let attempt = 0; attempt < MAX_ATTEMPTS2; attempt++) {
+  for (let attempt = 0; attempt < attempts; attempt++) {
     const response = await fetch(url, { ...init, headers, signal: AbortSignal.timeout(timeoutMs) });
     if (response.ok) return response;
     const bodyText = await response.text();
     lastError = new Error(describeElevenLabsError(response.status, bodyText));
-    if (!isRetryable(response.status) || attempt === MAX_ATTEMPTS2 - 1) break;
-    await sleep4(RETRY_BASE_DELAY_MS2 * (attempt + 1));
+    if (!isRetryable(response.status) || attempt === attempts - 1) break;
+    await sleep4(RETRY_BASE_DELAY_MS * (attempt + 1));
   }
   throw lastError ?? new Error("ElevenLabs request failed");
 }
@@ -82578,7 +82903,11 @@ function alignmentPathFor(audioPath) {
 }
 function saveTimestamped(body, outputDir, filename, extra) {
   if (!body.audio_base64) throw new Error("with-timestamps response carried no audio_base64");
-  const audio = Buffer.from(body.audio_base64, "base64");
+  const audio = decodeSpeechBase64(body.audio_base64);
+  const duration3 = validateSpeechAudio(audio, path6.extname(filename).slice(1));
+  validateSpeechAlignment(body.alignment, duration3);
+  validateSpeechAlignment(body.normalized_alignment, duration3);
+  validateSpeechSegments(body.voice_segments, duration3, extra.inputs);
   const audioPath = saveAudioFile(outputDir, filename, audio);
   const alignmentPath = alignmentPathFor(audioPath);
   fs7.writeFileSync(
@@ -82628,12 +82957,13 @@ function elevenLabsDialogueRequestBody(request) {
 async function generateElevenLabsSpeech(request) {
   try {
     const { text: text2, voiceId, ...settings } = elevenLabsGenerateSchema.parse(request);
-    return await generateElevenLabsDialogue({ ...settings, inputs: [{ text: text2, voiceId }] });
+    const parsed = { text: text2, voiceId, ...settings };
+    return await executeSpeech("tts_elevenlabs_generate", parsed, (output) => synthesizeElevenLabsDialogue({ ...settings, ...output, inputs: [{ text: text2, voiceId }] }));
   } catch (error2) {
     return { success: false, error: error2 instanceof Error ? error2.message : String(error2) };
   }
 }
-async function generateElevenLabsDialogue(request) {
+async function synthesizeElevenLabsDialogue(request) {
   try {
     request = elevenLabsDialogueSchema.parse(request);
     const outputDir = request.outputPath || process.cwd();
@@ -82648,7 +82978,7 @@ async function generateElevenLabsDialogue(request) {
     const query = new URLSearchParams({ output_format: request.outputFormat });
     if (request.enableLogging !== void 0) query.set("enable_logging", String(request.enableLogging));
     const endpoint = `/v1/text-to-dialogue${request.timestamps ? "/with-timestamps" : ""}?${query}`;
-    const response = await elevenFetch(endpoint, { method: "POST", body: JSON.stringify(body) }, timeoutFor(totalChars));
+    const response = await elevenFetch(endpoint, { method: "POST", body: JSON.stringify(body) }, timeoutFor(totalChars), 1);
     const meta = readMeta(response);
     if (request.timestamps) {
       const saved = saveTimestamped(await response.json(), outputDir, filename, {
@@ -82677,6 +83007,7 @@ async function generateElevenLabsDialogue(request) {
       };
     }
     const audio = Buffer.from(await response.arrayBuffer());
+    validateSpeechAudio(audio, path6.extname(filename).slice(1));
     const audioPath = saveAudioFile(outputDir, filename, audio);
     console.error(`[ElevenLabs] Dialogue saved to: ${audioPath}`);
     return {
@@ -82814,10 +83145,65 @@ async function createElevenLabsDictionary(input) {
   const result = external_exports.object({ id: external_exports.string().min(1), version_id: external_exports.string().min(1) }).parse(await response.json());
   return { pronunciationDictionaryId: result.id, versionId: result.version_id };
 }
+async function generateElevenLabsDialogue(request) {
+  try {
+    const parsed = elevenLabsDialogueSchema.parse(request);
+    return await executeSpeech("tts_elevenlabs_dialogue", parsed, (output) => synthesizeElevenLabsDialogue({ ...parsed, ...output }));
+  } catch (error2) {
+    return { success: false, error: error2 instanceof Error ? error2.message : String(error2) };
+  }
+}
+
+// src/tts-adapters.ts
+var SPEECH_GENERATORS = ["tts_generate", "tts_multi_speaker", "tts_gemini_38", "tts_elevenlabs_generate", "tts_elevenlabs_dialogue"];
+function adapter(schema, run, describe) {
+  return (input) => {
+    const args = schema.parse(input);
+    return { args, ...describe(args), run: () => run(args) };
+  };
+}
+var withoutTags = (text2) => text2.replace(/\[[^\]]*\]/g, "");
+var adapters = {
+  tts_generate: adapter(
+    ttsGenerateSchema,
+    generateSpeech,
+    (p) => ({ spokenText: p.text, singleSpeaker: true })
+  ),
+  tts_multi_speaker: adapter(
+    ttsMultiSpeakerSchema,
+    generateDialogue,
+    (p) => ({ spokenText: p.script.split("\n").map((line) => {
+      const speaker = p.speakers.find((s2) => line.trimStart().startsWith(s2.speakerName + ":"));
+      return speaker ? line.trimStart().slice(speaker.speakerName.length + 1) : line;
+    }).join(" "), singleSpeaker: false })
+  ),
+  tts_gemini_38: adapter(
+    gemini38TtsSchema,
+    generateGemini38Speech,
+    (p) => ({ spokenText: p.turns.map((t2) => t2.text.replace(/<[^>]+>/g, "")).join(" "), singleSpeaker: !p.speakers })
+  ),
+  tts_elevenlabs_generate: adapter(
+    elevenLabsGenerateSchema,
+    generateElevenLabsSpeech,
+    (p) => ({ spokenText: withoutTags(p.text), singleSpeaker: true })
+  ),
+  tts_elevenlabs_dialogue: adapter(
+    elevenLabsDialogueSchema,
+    generateElevenLabsDialogue,
+    (p) => ({ spokenText: p.inputs.map((t2) => withoutTags(t2.text)).join(" "), singleSpeaker: false })
+  )
+};
+function prepareSpeech(generator, generation) {
+  const selected = external_exports.enum(SPEECH_GENERATORS).parse(generator);
+  const prepared = adapters[selected](generation);
+  const contract2 = resolveTtsModel(selected.startsWith("tts_elevenlabs_") ? "elevenlabs" : "gemini", prepared.args.model);
+  if (![contract2.single, contract2.dialogue].includes(selected)) throw new Error("TTS adapter/model mismatch");
+  return { ...prepared, generator: selected };
+}
 
 // src/usage-ledger.ts
-import { execFileSync as execFileSync2 } from "node:child_process";
-import { appendFileSync, existsSync as existsSync7, mkdirSync as mkdirSync3 } from "node:fs";
+import { execFileSync as execFileSync3 } from "node:child_process";
+import { appendFileSync, existsSync as existsSync8, mkdirSync as mkdirSync4 } from "node:fs";
 import path7 from "node:path";
 var EPISODE_MARKER = path7.join("storyboard", "scenes.js");
 var MAX_WALK_UP = 6;
@@ -82838,7 +83224,7 @@ function findEpisodeDir(outputPath) {
   }
   for (let i2 = 0; i2 <= MAX_WALK_UP; i2++) {
     try {
-      if (existsSync7(path7.join(dir, EPISODE_MARKER))) return dir;
+      if (existsSync8(path7.join(dir, EPISODE_MARKER))) return dir;
     } catch {
       return null;
     }
@@ -82854,7 +83240,7 @@ function recordUsage(outputPath, event) {
   const workDir = path7.join(episodeDir, ".work");
   const file = path7.join(workDir, "events.jsonl");
   try {
-    mkdirSync3(workDir, { recursive: true });
+    mkdirSync4(workDir, { recursive: true });
     appendFileSync(file, JSON.stringify(event) + "\n", { encoding: "utf8", flag: "a" });
     return file;
   } catch (error2) {
@@ -82912,7 +83298,7 @@ var PRICED_VIDEO_KEYS = /* @__PURE__ */ new Set([
 var ELEVENLABS_KEY = { eleven_v4: "tts.elevenlabs" };
 function probeSeconds(file) {
   try {
-    const out = execFileSync2("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], {
+    const out = execFileSync3("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], {
       encoding: "utf8",
       timeout: 15e3,
       stdio: ["ignore", "pipe", "ignore"]
@@ -83058,7 +83444,7 @@ function charUnits(args) {
   return Math.round(rawChars(args) / 1e3 * 1e3) / 1e3;
 }
 function isBillableTool(tool) {
-  if (["tts_generate_checked", "character_voice_audition", "tts_review_acting", "tts_local_generate", "mlx_tts_generate"].includes(tool)) return false;
+  if (["tts_route", "tts_generate_checked", "character_voice_audition", "tts_review_acting", "tts_local_generate", "mlx_tts_generate"].includes(tool)) return false;
   if (tool === "tts_list_voices" || tool === "tts_elevenlabs_voices" || tool === "music_list_options") return false;
   return tool.startsWith("veo_") || tool.startsWith("omni_") || tool.startsWith("seedance_") || tool.startsWith("gpt_image_") || tool.startsWith("tts_") || tool.startsWith("music_") || tool.startsWith("suno_generate") || tool.startsWith("mlx_") || tool === "image_local_generate";
 }
@@ -83233,7 +83619,7 @@ var exec = promisify2(execFile3);
 var QUALITY_POLICY = "speech-quality-v1";
 var REVIEW_API_VERSION = process.env.SOCIAL_FLOW_TTS_REVIEW_API_VERSION?.trim() || "v1";
 var REVIEW_MODEL = process.env.SOCIAL_FLOW_TTS_REVIEW_MODEL?.trim() || "gemini-3.8-flash";
-var GENERATORS = ["tts_generate", "tts_multi_speaker", "tts_gemini_38", "tts_elevenlabs_generate", "tts_elevenlabs_dialogue"];
+var GENERATORS = SPEECH_GENERATORS;
 var transcriptCheckSchema = external_exports.object({
   requestedBy: external_exports.string().trim().min(1).max(200),
   reason: external_exports.string().trim().min(10).max(1e3)
@@ -83291,7 +83677,7 @@ var reviewSchema = external_exports.object({
   }).strict()).max(100)
 }).strict();
 var normalizeSpeech = (s2) => s2.normalize("NFKC").toLowerCase().replace(/[\p{P}\p{Z}\s]/gu, "");
-var sha256 = (s2) => createHash3("sha256").update(s2).digest("hex");
+var sha256 = (s2) => createHash4("sha256").update(s2).digest("hex");
 function characterErrorRate(expected, heard) {
   const a = [...normalizeSpeech(expected)], b = [...normalizeSpeech(heard)];
   if (!a.length || b.length > 12e3) return 1;
@@ -83366,54 +83752,16 @@ function prepareGeneration(request) {
     }
     args.seed = seed2;
   }
-  let spoken, parsed, run, spacing = false, seed;
-  switch (request.generator) {
-    // Single-voice engines without a vendor alignment get one from the local aligner (applySentenceSpacing), so their sentences are spaced like an ElevenLabs take.
-    case "tts_generate": {
-      const p = ttsGenerateSchema.parse(args);
-      parsed = p;
-      spoken = p.text;
-      run = () => generateSpeech(p);
-      spacing = true;
-      break;
-    }
-    case "tts_multi_speaker": {
-      const p = ttsMultiSpeakerSchema.parse(args);
-      parsed = p;
-      spoken = p.script.split("\n").map((line) => {
-        const name = p.speakers.find((s2) => line.trimStart().startsWith(s2.speakerName + ":"));
-        return name ? line.trimStart().slice(name.speakerName.length + 1) : line;
-      }).join(" ");
-      run = () => generateDialogue(p);
-      break;
-    }
-    case "tts_gemini_38": {
-      const p = gemini38TtsSchema.parse(args);
-      parsed = p;
-      spoken = p.turns.map((turn) => turn.text.replace(/<[^>]+>/g, "")).join(" ");
-      run = () => generateGemini38Speech(p);
-      spacing = !p.speakers;
-      break;
-    }
-    // Timestamps cost nothing extra and are what the sentence spacing reads, so the checked lane always asks for them.
-    case "tts_elevenlabs_generate": {
-      const p = elevenLabsGenerateSchema.parse({ ...args, timestamps: true });
-      parsed = p;
-      spoken = p.text.replace(/\[[^\]]*\]/g, "");
-      run = (o) => generateElevenLabsSpeech({ ...p, ...o?.seed !== void 0 ? { seed: o.seed } : {} });
-      spacing = true;
-      seed = p.seed;
-      break;
-    }
-    case "tts_elevenlabs_dialogue": {
-      const p = elevenLabsDialogueSchema.parse(args);
-      parsed = p;
-      spoken = p.inputs.map((i2) => i2.text.replace(/\[[^\]]*\]/g, "")).join(" ");
-      run = (o) => generateElevenLabsDialogue({ ...p, ...o?.seed !== void 0 ? { seed: o.seed } : {} });
-      seed = p.seed;
-      break;
-    }
-  }
+  const selected = prepareSpeech(request.generator, {
+    ...args,
+    ...request.generator === "tts_elevenlabs_generate" ? { timestamps: true } : {}
+  });
+  const parsed = selected.args, spoken = selected.spokenText, spacing = selected.singleSpeaker;
+  const seed = typeof parsed.seed === "number" ? parsed.seed : void 0;
+  const run = (overrides) => prepareSpeech(request.generator, {
+    ...parsed,
+    ...overrides?.seed !== void 0 && request.generator.startsWith("tts_elevenlabs_") ? { seed: overrides.seed } : {}
+  }).run();
   if (normalizeSpeech(spoken) !== normalizeSpeech(request.expectedText)) throw new Error("expectedText must match the complete spoken generation text; only punctuation, spacing, speaker labels and ElevenLabs acting tags may differ");
   if ("outputFormat" in parsed && !String(parsed.outputFormat).startsWith("wav_")) throw new Error("Checked narration requires WAV output");
   return { args: parsed, run, spacing, seed };
@@ -83422,30 +83770,30 @@ var sentencesPathFor = (wav) => wav + ".sentences.json";
 async function applySentenceSpacing(output, request, align) {
   (0, import_tts_speed_policy.authorizeSpeed)(request.outputPath, "final", request.playbackSpeed);
   const alignmentPath = output.replace(/\.wav$/i, "") + ".alignment.json";
-  rmSync2(sentencesPathFor(output), { force: true });
+  rmSync4(sentencesPathFor(output), { force: true });
   try {
-    if (existsSync8(alignmentPath)) {
+    if (existsSync9(alignmentPath)) {
       try {
-        if (JSON.parse(readFileSync7(alignmentPath, "utf8")).engine === "asr-aligner") rmSync2(alignmentPath, { force: true });
+        if (JSON.parse(readFileSync8(alignmentPath, "utf8")).engine === "asr-aligner") rmSync4(alignmentPath, { force: true });
       } catch {
-        rmSync2(alignmentPath, { force: true });
+        rmSync4(alignmentPath, { force: true });
       }
     }
-    if (!existsSync8(alignmentPath)) {
+    if (!existsSync9(alignmentPath)) {
       if (!align) return { skipped: "no alignment sidecar beside the take and no aligner" };
       const aligned = await align(output, request.expectedText, request.language);
       if (aligned.matched < aligned.letters * 0.8) throw new Error(`aligner matched ${aligned.matched}/${aligned.letters} script letters; transcript "${aligned.transcript.slice(0, 60)}"`);
-      writeFileSync8(alignmentPath, JSON.stringify({ engine: "asr-aligner", generator: request.generator, text: request.expectedText, transcript: aligned.transcript, matched: aligned.matched, letters: aligned.letters, alignment: aligned.alignment }, null, 2));
+      writeFileSync10(alignmentPath, JSON.stringify({ engine: "asr-aligner", generator: request.generator, text: request.expectedText, transcript: aligned.transcript, matched: aligned.matched, letters: aligned.letters, alignment: aligned.alignment }, null, 2));
     }
-    const sidecar = JSON.parse(readFileSync7(alignmentPath, "utf8"));
+    const sidecar = JSON.parse(readFileSync8(alignmentPath, "utf8"));
     const alignment = sidecar.alignment;
     if (!alignment?.characters?.length) return { skipped: "alignment sidecar carries no characters" };
     const segments = request.segments ?? splitSentences(alignment.characters.join(""));
-    const result = respace(readFileSync7(output), alignment, segments, { pause: request.sentencePause, playbackSpeed: request.playbackSpeed });
-    writeFileSync8(output, result.wav);
+    const result = respace(readFileSync8(output), alignment, segments, { pause: request.sentencePause, playbackSpeed: request.playbackSpeed });
+    writeFileSync10(output, result.wav);
     const meta = { policy: SPACING_POLICY, source: sidecar.engine === "asr-aligner" ? "asr-aligner" : "vendor", pause: request.sentencePause, playbackSpeed: request.playbackSpeed, lead: result.lead, gaps: result.gaps, inserted: result.inserted, boundaries: result.boundaries, duration: result.duration, segmentsFrom: request.segments ? "request" : "sentence-final punctuation" };
-    writeFileSync8(alignmentPath, JSON.stringify({ ...sidecar, alignment: result.alignment, vendor_alignment: sidecar.vendor_alignment ?? sidecar.alignment, respaced: meta }, null, 2));
-    writeFileSync8(sentencesPathFor(output), JSON.stringify({ version: 1, ...meta, audio: path8.basename(output), audioSha256: sha256(result.wav), sentences: result.sentences }, null, 2) + "\n");
+    writeFileSync10(alignmentPath, JSON.stringify({ ...sidecar, alignment: result.alignment, vendor_alignment: sidecar.vendor_alignment ?? sidecar.alignment, respaced: meta }, null, 2));
+    writeFileSync10(sentencesPathFor(output), JSON.stringify({ version: 1, ...meta, audio: path8.basename(output), audioSha256: sha256(result.wav), sentences: result.sentences }, null, 2) + "\n");
     return meta;
   } catch (error2) {
     return { skipped: error2 instanceof Error ? error2.message : String(error2) };
@@ -83466,11 +83814,11 @@ async function generateCheckedSpeech(input, dependencies) {
     final: (0, import_tts_speed_policy.authorizeSpeed)(request.outputPath, "final", request.playbackSpeed)
   };
   const output = path8.resolve(request.outputPath, request.filename), proofFile = output + ".quality.json";
-  mkdirSync4(path8.dirname(output), { recursive: true });
+  mkdirSync5(path8.dirname(output), { recursive: true });
   const lockFile = proofFile + ".lock";
-  let lock;
+  let lock2;
   try {
-    lock = openSync(lockFile, "wx");
+    lock2 = openSync(lockFile, "wx");
   } catch {
     return { success: false, status: "unverified", error: "This audio has an active review lock. Wait for it; after a crashed process, inspect the lock before removing it." };
   }
@@ -83495,14 +83843,14 @@ async function generateCheckedSpeech(input, dependencies) {
   };
   function save3(status, extra = {}) {
     const report = { ...base, status, attempts, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
-    const temporary = proofFile + "." + randomUUID() + ".tmp";
-    writeFileSync8(temporary, JSON.stringify(report, null, 2) + "\n");
-    renameSync3(temporary, proofFile);
+    const temporary = proofFile + "." + randomUUID2() + ".tmp";
+    writeFileSync10(temporary, JSON.stringify(report, null, 2) + "\n");
+    renameSync4(temporary, proofFile);
     return { success: status === "pass", status, audioPath: output, proofPath: proofFile, attempts: attempts.length, ...extra };
   }
   try {
-    if (existsSync8(proofFile)) {
-      const old = JSON.parse(readFileSync7(proofFile, "utf8"));
+    if (existsSync9(proofFile)) {
+      const old = JSON.parse(readFileSync8(proofFile, "utf8"));
       if (Object.entries(base).every(([key, value]) => key === "model" || key === "voiceSettings" && old[key] === void 0 || JSON.stringify(old[key]) === JSON.stringify(value))) {
         if (!Array.isArray(old.attempts) || old.attempts.length > 3) throw new Error("Invalid attempt history");
         attempts.push(...old.attempts.map((take) => ({ ...take, model: take.model ?? old.model })));
@@ -83512,12 +83860,12 @@ async function generateCheckedSpeech(input, dependencies) {
         const transcriptSatisfied = transcriptRecorded && (!request.transcriptCheck || storedTranscript !== null);
         if (last?.duplicateOf) return save3("fail", { error: "Identical rejected audio already stopped this request; correct the episode pronunciation or delivery plan" });
         if (request.rejectTake) {
-          if (!last || last.audioSha256 !== request.rejectTake.audioSha256 || !existsSync8(output) || sha256(readFileSync7(output)) !== request.rejectTake.audioSha256) throw new Error("The rejected take is not the current audio; inspect the current file before requesting another retake");
+          if (!last || last.audioSha256 !== request.rejectTake.audioSha256 || !existsSync9(output) || sha256(readFileSync8(output)) !== request.rejectTake.audioSha256) throw new Error("The rejected take is not the current audio; inspect the current file before requesting another retake");
           last.authorRejection = request.rejectTake.reason;
           last.pending = false;
           last.failures = [...Array.isArray(last.failures) ? last.failures : [], "Rejected during final listening: " + request.rejectTake.reason];
         }
-        if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && transcriptSatisfied && existsSync8(output) && old.audioSha256 === sha256(readFileSync7(output)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, storedTranscript, reviewSchema.parse(last.review), last.signal.duration).length) {
+        if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && transcriptSatisfied && existsSync9(output) && old.audioSha256 === sha256(readFileSync8(output)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, storedTranscript, reviewSchema.parse(last.review), last.signal.duration).length) {
           if (old.voiceSettings === void 0) save3("pass", { audioSha256: old.audioSha256 });
           const lastSpacing = last.spacing;
           return {
@@ -83530,7 +83878,7 @@ async function generateCheckedSpeech(input, dependencies) {
             spacing: !prepared.spacing ? "not applicable" : lastSpacing?.skipped ? "skipped: " + String(lastSpacing.skipped) : "applied"
           };
         }
-        if (!request.rejectTake && (old.model !== REVIEW_MODEL || !transcriptSatisfied) && old.status === "pass" && last && existsSync8(output) && last.audioSha256 === sha256(readFileSync7(output))) {
+        if (!request.rejectTake && (old.model !== REVIEW_MODEL || !transcriptSatisfied) && old.status === "pass" && last && existsSync9(output) && last.audioSha256 === sha256(readFileSync8(output))) {
           last.previousReviews = [
             ...Array.isArray(last.previousReviews) ? last.previousReviews : [],
             { model: last.model, transcript: last.transcript, review: last.review, failures: last.failures, signal: last.signal, cer: last.cer, transcriptCheck: last.transcriptCheck ?? null }
@@ -83545,7 +83893,7 @@ async function generateCheckedSpeech(input, dependencies) {
     await deps.preflight();
     while (true) {
       let take = attempts.at(-1);
-      const resumeReview = take?.pending === true && typeof take.audioSha256 === "string" && existsSync8(output) && take.audioSha256 === sha256(readFileSync7(output));
+      const resumeReview = take?.pending === true && typeof take.audioSha256 === "string" && existsSync9(output) && take.audioSha256 === sha256(readFileSync8(output));
       if (!resumeReview) {
         if (attempts.length >= request.maxAttempts) break;
         const attempt = attempts.length + 1;
@@ -83575,10 +83923,10 @@ async function generateCheckedSpeech(input, dependencies) {
         if (!generated.success || path8.resolve(generated.audioPath || generated.path || "") !== output) throw new Error(generated.error || "Generator did not return the requested audio path");
         if (prepared.spacing) take.spacing = await applySentenceSpacing(output, request, deps.align);
         else {
-          rmSync2(sentencesPathFor(output), { force: true });
+          rmSync4(sentencesPathFor(output), { force: true });
           take.spacing = { skipped: "engine has no alignment" };
         }
-        take.audioSha256 = sha256(readFileSync7(output));
+        take.audioSha256 = sha256(readFileSync8(output));
         save3("unverified");
         const duplicate = attempts.slice(0, -1).find((a) => a.audioSha256 === take.audioSha256 && a.pending === false && Array.isArray(a.failures) && a.failures.length);
         if (duplicate) {
@@ -83595,7 +83943,7 @@ async function generateCheckedSpeech(input, dependencies) {
         listened.review = reviewSchema.parse(listened.review);
         failures = reviewFailures(request.expectedText, listened.transcript, listened.review, signal.duration);
       }
-      if (audioSha256 !== sha256(readFileSync7(output))) throw new Error("Audio changed during review");
+      if (audioSha256 !== sha256(readFileSync8(output))) throw new Error("Audio changed during review");
       Object.assign(take, {
         pending: false,
         audioSha256,
@@ -83614,16 +83962,16 @@ async function generateCheckedSpeech(input, dependencies) {
   } catch (error2) {
     return save3("unverified", { error: error2 instanceof Error ? error2.message : String(error2) });
   } finally {
-    closeSync(lock);
-    rmSync2(lockFile, { force: true });
+    closeSync(lock2);
+    rmSync4(lockFile, { force: true });
   }
 }
 
 // src/zimage-client.ts
 import { execFile as execFile4 } from "node:child_process";
-import { existsSync as existsSync9 } from "node:fs";
+import { existsSync as existsSync10 } from "node:fs";
 import { homedir as homedir2 } from "node:os";
-import { join as join5 } from "node:path";
+import { join as join7 } from "node:path";
 var DEFAULT_ZIMAGE_STEPS = 9;
 var ZIMAGE_QUANTIZE_OPTIONS = [4, 6, 8];
 var DEFAULT_ZIMAGE_QUANTIZE = 8;
@@ -83638,8 +83986,8 @@ function zimageTimeoutMs(width, height, steps) {
   return Math.min(30 * 6e4, 12e4 + Math.ceil(steps * megapixels * 45e3));
 }
 function weightCacheDir() {
-  const hfHome = process.env.HF_HOME || join5(homedir2(), ".cache", "huggingface");
-  return join5(hfHome, "hub", "models--Tongyi-MAI--Z-Image-Turbo");
+  const hfHome = process.env.HF_HOME || join7(homedir2(), ".cache", "huggingface");
+  return join7(hfHome, "hub", "models--Tongyi-MAI--Z-Image-Turbo");
 }
 var WEIGHT_DOWNLOAD_ALLOWANCE_MS = 60 * 6e4;
 function installHint(detail) {
@@ -83663,7 +84011,7 @@ var zimageGenerateSchema = external_exports.object({
 });
 async function generateLocalImage(request) {
   const bin = mfluxZImageBin();
-  if (!existsSync9(bin)) {
+  if (!existsSync10(bin)) {
     return { success: false, error: installHint(`mflux binary not found: "${bin}"`) };
   }
   const outFile = resolveOutputFile(
@@ -83686,7 +84034,7 @@ async function generateLocalImage(request) {
     outFile
   ];
   if (request.seed !== void 0) cliArgs.push("--seed", String(request.seed));
-  const firstCall = !existsSync9(weightCacheDir());
+  const firstCall = !existsSync10(weightCacheDir());
   if (firstCall) {
     console.error("[Z-Image] First call \u2014 downloading ~31GB of weights to the huggingface cache first. This can take a long time.");
   }
@@ -83695,7 +84043,7 @@ async function generateLocalImage(request) {
   );
   const startedAt = Date.now();
   try {
-    await new Promise((resolve11, reject) => {
+    await new Promise((resolve12, reject) => {
       execFile4(
         bin,
         cliArgs,
@@ -83717,7 +84065,7 @@ async function generateLocalImage(request) {
 ${tail}` : ""}`));
             return;
           }
-          resolve11();
+          resolve12();
         }
       );
     });
@@ -83726,7 +84074,7 @@ ${tail}` : ""}`));
     console.error(`[Z-Image] Error: ${message.split("\n")[0]}`);
     return { success: false, error: message };
   }
-  if (!existsSync9(outFile)) {
+  if (!existsSync10(outFile)) {
     return {
       success: false,
       error: `mflux exited without producing the output file: ${outFile}`
@@ -83748,9 +84096,9 @@ ${tail}` : ""}`));
 
 // src/qwen3-asr-client.ts
 import { execFile as execFile5 } from "node:child_process";
-import { existsSync as existsSync10, mkdirSync as mkdirSync5, mkdtempSync as mkdtempSync2, readFileSync as readFileSync8, renameSync as renameSync4, rmSync as rmSync3 } from "node:fs";
+import { existsSync as existsSync11, mkdirSync as mkdirSync6, mkdtempSync as mkdtempSync3, readFileSync as readFileSync9, renameSync as renameSync5, rmSync as rmSync5 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
-import { basename as basename8, extname as extname6, join as join6 } from "node:path";
+import { basename as basename8, extname as extname7, join as join8 } from "node:path";
 var QWEN3_ASR_MODELS = ["Qwen/Qwen3-ASR-1.7B", "Qwen/Qwen3-ASR-0.6B"];
 var DEFAULT_QWEN3_ASR_MODEL = "Qwen/Qwen3-ASR-1.7B";
 var QWEN3_ASR_LANGUAGES = [
@@ -83849,13 +84197,13 @@ function qwen3AsrTimeoutMs(audioSeconds) {
 }
 var WEIGHT_DOWNLOAD_ALLOWANCE_MS2 = 60 * 6e4;
 function weightCacheDir2(model) {
-  const hfHome = process.env.HF_HOME || join6(homedir3(), ".cache", "huggingface");
+  const hfHome = process.env.HF_HOME || join8(homedir3(), ".cache", "huggingface");
   const slug = model.replaceAll("/", "--");
-  return join6(hfHome, "hub", `models--${slug}`);
+  return join8(hfHome, "hub", `models--${slug}`);
 }
 function alignerCacheDir() {
-  const hfHome = process.env.HF_HOME || join6(homedir3(), ".cache", "huggingface");
-  return join6(hfHome, "hub", "models--Qwen--Qwen3-ForcedAligner-0.6B");
+  const hfHome = process.env.HF_HOME || join8(homedir3(), ".cache", "huggingface");
+  return join8(hfHome, "hub", "models--Qwen--Qwen3-ForcedAligner-0.6B");
 }
 function installHint2(detail) {
   return `${detail}
@@ -83866,7 +84214,7 @@ If installed elsewhere, point QWEN3_ASR_BIN at the executable (e.g. QWEN3_ASR_BI
 The first call downloads ~3.4GB of Qwen3-ASR-1.7B weights (plus the ForcedAligner) to ~/.cache/huggingface. Until it is installed, ingest uses the whisper.cpp fallback.`;
 }
 var qwen3AsrTranscribeSchema = external_exports.object({
-  audioPath: external_exports.string().min(1, "audioPath is required").refine((p) => !p.includes(".."), { message: 'audioPath must not contain ".."' }).refine((p) => AUDIO_INPUT_EXTENSIONS.includes(extname6(p).toLowerCase()), {
+  audioPath: external_exports.string().min(1, "audioPath is required").refine((p) => !p.includes(".."), { message: 'audioPath must not contain ".."' }).refine((p) => AUDIO_INPUT_EXTENSIONS.includes(extname7(p).toLowerCase()), {
     message: `audioPath extension must be one of: ${AUDIO_INPUT_EXTENSIONS.join(", ")}`
   }),
   language: external_exports.string().optional().default(DEFAULT_QWEN3_ASR_LANGUAGE).transform((value) => canonicalizeLanguage(value)),
@@ -83877,7 +84225,7 @@ var qwen3AsrTranscribeSchema = external_exports.object({
   filename: bareFilenameSchema("json").optional()
 });
 function probeDurationSeconds(audioPath) {
-  return new Promise((resolve11) => {
+  return new Promise((resolve12) => {
     execFile5(
       "ffprobe",
       ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", audioPath],
@@ -83885,10 +84233,10 @@ function probeDurationSeconds(audioPath) {
       (error2, out) => {
         const seconds = Number.parseFloat((out || "").trim());
         if (error2 || !Number.isFinite(seconds) || seconds <= 0) {
-          resolve11(60);
+          resolve12(60);
           return;
         }
-        resolve11(seconds);
+        resolve12(seconds);
       }
     );
   });
@@ -83905,10 +84253,10 @@ function normalizeSegments(data) {
 }
 async function transcribeLocal(request) {
   const bin = qwen3AsrBin();
-  if (!existsSync10(bin)) {
+  if (!existsSync11(bin)) {
     return { success: false, error: installHint2(`mlx-qwen3-asr binary not found: "${bin}"`) };
   }
-  if (!existsSync10(request.audioPath)) {
+  if (!existsSync11(request.audioPath)) {
     return { success: false, error: `Audio file not found: ${request.audioPath}` };
   }
   const outFile = resolveOutputFile(
@@ -83917,9 +84265,9 @@ async function transcribeLocal(request) {
     "json"
   );
   const outDir = request.outputPath || process.cwd();
-  mkdirSync5(outDir, { recursive: true });
-  const scratchDir = mkdtempSync2(join6(outDir, ".qwen3-asr-"));
-  const firstCall = !existsSync10(weightCacheDir2(request.model)) || request.timestamps && !existsSync10(alignerCacheDir());
+  mkdirSync6(outDir, { recursive: true });
+  const scratchDir = mkdtempSync3(join8(outDir, ".qwen3-asr-"));
+  const firstCall = !existsSync11(weightCacheDir2(request.model)) || request.timestamps && !existsSync11(alignerCacheDir());
   if (firstCall) {
     console.error(
       "[Qwen3-ASR] First call \u2014 downloading ~3.4GB of weights (plus ForcedAligner if timestamps) to the huggingface cache. This can take a while."
@@ -83945,7 +84293,7 @@ async function transcribeLocal(request) {
   );
   const startedAt = Date.now();
   try {
-    await new Promise((resolve11, reject) => {
+    await new Promise((resolve12, reject) => {
       execFile5(
         bin,
         cliArgs,
@@ -83965,31 +84313,31 @@ async function transcribeLocal(request) {
 ${tail}` : ""}`));
             return;
           }
-          resolve11();
+          resolve12();
         }
       );
     });
   } catch (error2) {
-    rmSync3(scratchDir, { recursive: true, force: true });
+    rmSync5(scratchDir, { recursive: true, force: true });
     const message = error2 instanceof Error ? error2.message : String(error2);
     console.error(`[Qwen3-ASR] Error: ${message.split("\n")[0]}`);
     return { success: false, error: message };
   }
-  const cliJsonPath = join6(scratchDir, `${basename8(request.audioPath, extname6(request.audioPath))}.json`);
-  if (!existsSync10(cliJsonPath)) {
-    rmSync3(scratchDir, { recursive: true, force: true });
+  const cliJsonPath = join8(scratchDir, `${basename8(request.audioPath, extname7(request.audioPath))}.json`);
+  if (!existsSync11(cliJsonPath)) {
+    rmSync5(scratchDir, { recursive: true, force: true });
     return { success: false, error: `mlx-qwen3-asr exited without producing JSON (looked for ${cliJsonPath})` };
   }
   let parsed;
   try {
-    parsed = parseCliJson(readFileSync8(cliJsonPath, "utf8"));
+    parsed = parseCliJson(readFileSync9(cliJsonPath, "utf8"));
   } catch (error2) {
-    rmSync3(scratchDir, { recursive: true, force: true });
+    rmSync5(scratchDir, { recursive: true, force: true });
     const message = error2 instanceof Error ? error2.message : String(error2);
     return { success: false, error: `Failed to parse CLI JSON: ${message}` };
   }
-  renameSync4(cliJsonPath, outFile);
-  rmSync3(scratchDir, { recursive: true, force: true });
+  renameSync5(cliJsonPath, outFile);
+  rmSync5(scratchDir, { recursive: true, force: true });
   const segments = normalizeSegments(parsed);
   const text2 = (parsed.text ?? segments.map((s2) => s2.text).join("")).trim();
   const elapsed = Math.round((Date.now() - startedAt) / 100) / 10;
@@ -84007,9 +84355,9 @@ ${tail}` : ""}`));
 
 // src/blender-bridge.ts
 import { execFile as execFile6 } from "node:child_process";
-import { existsSync as existsSync11, mkdtempSync as mkdtempSync3, readFileSync as readFileSync9, rmSync as rmSync4, writeFileSync as writeFileSync9 } from "node:fs";
-import { tmpdir as tmpdir2 } from "node:os";
-import { dirname as dirname3, extname as extname7, join as join7, resolve as resolve4 } from "node:path";
+import { existsSync as existsSync12, mkdtempSync as mkdtempSync4, readFileSync as readFileSync10, rmSync as rmSync6, writeFileSync as writeFileSync11 } from "node:fs";
+import { tmpdir as tmpdir4 } from "node:os";
+import { dirname as dirname3, extname as extname8, join as join9, resolve as resolve5 } from "node:path";
 var BLENDER_PROXY_KINDS = ["person", "dog", "car", "box", "cylinder", "sphere"];
 var BLENDER_INTERPOLATIONS = ["LINEAR", "BEZIER", "CONSTANT"];
 var BLENDER_PREVIZ_ENGINES = ["workbench", "eevee"];
@@ -84051,7 +84399,7 @@ var frameNumber = external_exports.number().int().min(0).max(1e6);
 var blenderName = external_exports.string().min(1).refine((n) => Buffer.byteLength(n, "utf8") <= MAX_BLENDER_NAME, { message: `a Blender object name is at most ${MAX_BLENDER_NAME} bytes of UTF-8` }).refine((n) => !n.includes("/") && !n.includes("\\"), { message: "a Blender object name cannot contain path separators" });
 var evenPixels = (min) => external_exports.number().int().min(min).max(4096).multipleOf(2, "must be an even number of pixels (H.264)");
 var hexColor = external_exports.string().regex(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "color must be a hex triplet such as #4a90d9");
-var blendPath = external_exports.string().min(1, "blendPath is required").refine((p) => !p.includes(".."), { message: 'blendPath must not contain ".."' }).refine((p) => extname7(p).toLowerCase() === ".blend", { message: "blendPath must end in .blend" }).transform((p) => resolve4(p));
+var blendPath = external_exports.string().min(1, "blendPath is required").refine((p) => !p.includes(".."), { message: 'blendPath must not contain ".."' }).refine((p) => extname8(p).toLowerCase() === ".blend", { message: "blendPath must end in .blend" }).transform((p) => resolve5(p));
 var blenderSceneReadSchema = external_exports.object({ blendPath });
 var proxySchema = external_exports.object({
   name: blenderName,
@@ -84064,7 +84412,7 @@ var proxySchema = external_exports.object({
   color: hexColor.optional()
 });
 var importSchema = external_exports.object({
-  glbPath: external_exports.string().min(1).refine((p) => !p.includes(".."), { message: 'glbPath must not contain ".."' }).refine((p) => [".glb", ".gltf"].includes(extname7(p).toLowerCase()), { message: "glbPath must end in .glb or .gltf" }).transform((p) => resolve4(p)),
+  glbPath: external_exports.string().min(1).refine((p) => !p.includes(".."), { message: 'glbPath must not contain ".."' }).refine((p) => [".glb", ".gltf"].includes(extname8(p).toLowerCase()), { message: "glbPath must end in .glb or .gltf" }).transform((p) => resolve5(p)),
   name: blenderName,
   location: vec3.optional().default([0, 0, 0]),
   rotationDeg: vec3.optional().default([0, 0, 0]),
@@ -84193,7 +84541,7 @@ var blenderPoseKeySchema = external_exports.object({
     frames.add(k.frame);
   }
 });
-var motionPath = external_exports.string().min(1, "motionPath is required").refine((p) => !p.includes(".."), { message: 'motionPath must not contain ".."' }).refine((p) => BLENDER_MOTION_FORMATS.includes(extname7(p).toLowerCase()), { message: `motionPath must end in ${BLENDER_MOTION_FORMATS.join(" or ")}` }).transform((p) => resolve4(p));
+var motionPath = external_exports.string().min(1, "motionPath is required").refine((p) => !p.includes(".."), { message: 'motionPath must not contain ".."' }).refine((p) => BLENDER_MOTION_FORMATS.includes(extname8(p).toLowerCase()), { message: `motionPath must end in ${BLENDER_MOTION_FORMATS.join(" or ")}` }).transform((p) => resolve5(p));
 var blenderMotionImportSchema = external_exports.object({
   blendPath,
   object: blenderName,
@@ -84233,7 +84581,7 @@ var blenderRenderPrevizSchema = external_exports.object({
       ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["frameEnd"], message: `a previz is at most ${MAX_PREVIZ_FRAMES} frames` });
     }
   }
-  if (extname7(data.filename).toLowerCase() !== ".mp4") {
+  if (extname8(data.filename).toLowerCase() !== ".mp4") {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["filename"], message: "the previz clip is written as .mp4 (H.264)" });
   }
 });
@@ -84309,12 +84657,12 @@ function runBridge(job, timeoutMs) {
 async function runBridgeUnlocked(job, timeoutMs) {
   const blender = blenderBin();
   if (!blender) return { success: false, error: installHint3("Blender was not found on this machine.") };
-  const dir = mkdtempSync3(join7(tmpdir2(), "blender-bridge-"));
-  const script = join7(dir, "bridge.py");
-  const jobPath = join7(dir, "job.json");
-  const resultPath = join7(dir, "result.json");
-  writeFileSync9(script, BRIDGE_PY, "utf-8");
-  writeFileSync9(jobPath, JSON.stringify({ ...job, resultPath }), "utf-8");
+  const dir = mkdtempSync4(join9(tmpdir4(), "blender-bridge-"));
+  const script = join9(dir, "bridge.py");
+  const jobPath = join9(dir, "job.json");
+  const resultPath = join9(dir, "result.json");
+  writeFileSync11(script, BRIDGE_PY, "utf-8");
+  writeFileSync11(jobPath, JSON.stringify({ ...job, resultPath }), "utf-8");
   try {
     const run = await new Promise((resolveRun) => {
       execFile6(
@@ -84333,8 +84681,8 @@ ${stderr}`.split("\n").filter((l) => l.trim().length > 0);
         }
       );
     });
-    if (existsSync11(resultPath)) {
-      const raw = JSON.parse(readFileSync9(resultPath, "utf-8"));
+    if (existsSync12(resultPath)) {
+      const raw = JSON.parse(readFileSync10(resultPath, "utf-8"));
       if (raw.ok) return { success: true, result: raw.result };
       return { success: false, error: `${raw.error ?? "Blender reported an error"}${raw.trace ? `
 ${raw.trace}` : ""}` };
@@ -84345,11 +84693,11 @@ ${raw.trace}` : ""}` };
     return { success: false, error: `Blender exited with code ${run.code ?? "unknown"} before writing a result:
 ${run.tail}` };
   } finally {
-    rmSync4(dir, { recursive: true, force: true });
+    rmSync6(dir, { recursive: true, force: true });
   }
 }
 async function readScene(request) {
-  if (!existsSync11(request.blendPath)) {
+  if (!existsSync12(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
   const r2 = await runBridge({ op: "read", blendPath: request.blendPath }, EDIT_TIMEOUT_MS);
@@ -84357,48 +84705,48 @@ async function readScene(request) {
 }
 async function buildScene(request) {
   for (const imp of request.imports) {
-    if (!existsSync11(imp.glbPath)) return { success: false, error: `GLB not found: ${imp.glbPath}` };
+    if (!existsSync12(imp.glbPath)) return { success: false, error: `GLB not found: ${imp.glbPath}` };
   }
-  if (!request.reset && !existsSync11(request.blendPath)) {
+  if (!request.reset && !existsSync12(request.blendPath)) {
     return { success: false, error: `reset is false but ${request.blendPath} does not exist yet \u2014 set reset to true to create it.` };
   }
   const r2 = await runBridge({ op: "build", ...request }, EDIT_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function setCamera(request) {
-  if (!existsSync11(request.blendPath)) {
+  if (!existsSync12(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
   const r2 = await runBridge({ op: "camera", ...request }, EDIT_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function animateObject(request) {
-  if (!existsSync11(request.blendPath)) {
+  if (!existsSync12(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
   const r2 = await runBridge({ op: "animate", ...request }, EDIT_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function poseKey(request) {
-  if (!existsSync11(request.blendPath)) {
+  if (!existsSync12(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
   const r2 = await runBridge({ op: "pose", ...request }, EDIT_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function importMotion(request) {
-  if (!existsSync11(request.blendPath)) {
+  if (!existsSync12(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
-  if (!existsSync11(request.motionPath)) return { success: false, error: `motion file not found: ${request.motionPath}` };
+  if (!existsSync12(request.motionPath)) return { success: false, error: `motion file not found: ${request.motionPath}` };
   const r2 = await runBridge({ op: "motion", ...request, maxFrames: MAX_PREVIZ_FRAMES }, MOTION_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function renderPreviz(request) {
-  if (!existsSync11(request.blendPath)) {
+  if (!existsSync12(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
-  const outputDir = request.outputPath ? resolve4(request.outputPath) : join7(dirname3(request.blendPath), "previz");
+  const outputDir = request.outputPath ? resolve5(request.outputPath) : join9(dirname3(request.blendPath), "previz");
   const videoPath = resolveOutputFile(outputDir, request.filename, "video");
   const framesForTimeout = request.frameStart !== void 0 && request.frameEnd !== void 0 ? request.frameEnd - request.frameStart + 1 : MAX_PREVIZ_FRAMES;
   const timeoutMs = request.timeoutSeconds ? request.timeoutSeconds * 1e3 : previzTimeoutMs(framesForTimeout, request.engine);
@@ -85920,7 +86268,7 @@ var sunoLyricsSchema = external_exports.object({
   prompt: external_exports.string().min(1).max(200)
 });
 function sleep5(ms) {
-  return new Promise((resolve11) => setTimeout(resolve11, ms));
+  return new Promise((resolve12) => setTimeout(resolve12, ms));
 }
 function describeSunoError(code, msg, httpStatus) {
   const text2 = (msg || "").trim() || "(no message)";
@@ -87052,6 +87400,18 @@ var CHARACTER_TARGET_PROPERTY = { type: "object", additionalProperties: false, d
   traits: { type: "array", maxItems: 20, description: 'Character tendencies as context, e.g. ["restrained and precise"]. Do not demand every trait in one short line.', items: { type: "string", maxLength: 2e3 } }
 }, required: ["vocalGender", "perceivedAge", "timbre", "pace", "register", "habits", "emotionalRange", "traits"] };
 var TOOLS = [
+  {
+    name: "tts_route",
+    title: "Speech model routing",
+    annotations: HINT.generate,
+    description: "Discover implemented speech models, plan a selected generator, or execute it with durable request identity. Use capabilities without credentials; plan validates generation without network or writes. execute needs generator, generation.outputPath and requestId, reuses matching completed audio, and refuses changed or uncertain prior requests. Returns capabilities or audioPath, receiptPath, attempts and not_reviewed; no listening, model fallback or automatic retries. Use speech_manage plan_audio for pinned character/acting arguments. Only implemented Gemini and ElevenLabs v4 adapters are available. Raw tools remain compatible and share execution checks. Plans do not quote or authorize spending.",
+    inputSchema: { type: "object", additionalProperties: false, properties: {
+      action: { type: "string", enum: ["capabilities", "plan", "execute"], description: "Read capabilities, validate a pure plan, or submit one explicitly identified take." },
+      generator: { type: "string", enum: [...GENERATORS], description: "Exact implemented raw synthesis tool. Required for plan and execute." },
+      generation: { type: "object", description: "Exact arguments of the selected raw generator; unsupported controls fail validation." },
+      requestId: { type: "string", pattern: "^[A-Za-z0-9_-]{1,100}$", description: "Unique logical take ID. Reuse only for the same request in the same output directory." }
+    }, required: ["action"] }
+  },
   {
     "name": "host_review",
     "title": "Prepare and record host media evaluation",
@@ -91204,11 +91564,56 @@ var SNS_PLATFORM_BY_TOOL = {
   youtube_insights: "YOUTUBE"
 };
 
+// src/tts-routing.ts
+var speechRouteSchema = external_exports.object({
+  action: external_exports.enum(["capabilities", "plan", "execute"]),
+  generator: external_exports.enum(SPEECH_GENERATORS).optional(),
+  generation: external_exports.record(external_exports.unknown()).optional(),
+  requestId: external_exports.string().regex(/^[A-Za-z0-9_-]{1,100}$/).optional()
+}).strict().superRefine((value, ctx) => {
+  if (value.action !== "capabilities" && (!value.generator || !value.generation)) ctx.addIssue({ code: "custom", message: "plan/execute require generator and generation" });
+  if (value.action === "execute" && (!value.requestId || !value.generation?.outputPath)) ctx.addIssue({ code: "custom", message: "execute requires requestId and generation.outputPath for durable replay protection" });
+  if (value.action === "capabilities" && (value.generator || value.generation || value.requestId)) ctx.addIssue({ code: "custom", message: "capabilities takes no generation arguments" });
+});
+async function routeSpeech(input) {
+  const request = speechRouteSchema.parse(input);
+  if (request.action === "capabilities") return { models: getTtsModels(), review: "not_reviewed" };
+  const prepared = prepareSpeech(request.generator, request.generation);
+  const model = resolveTtsModel(prepared.generator.startsWith("tts_elevenlabs_") ? "elevenlabs" : "gemini", String(prepared.args.model));
+  const gate = resolveToolGate(prepared.generator, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
+  const plan2 = {
+    generator: prepared.generator,
+    generation: prepared.args,
+    capabilities: model,
+    enabled: gate.enabled,
+    gateReason: gate.reason,
+    review: "not_reviewed",
+    warnings: model.recommendedDialogueCharacters && prepared.spokenText.length > model.recommendedDialogueCharacters ? ["Split long ElevenLabs dialogue at scene boundaries; requests above 2000 characters may terminate early."] : [],
+    cost: { status: "not_quoted", note: "Provider usage is recorded when available; this plan neither reserves nor authorizes spending." }
+  };
+  if (request.action === "plan") return plan2;
+  if (!gate.enabled) throw new Error("Selected speech generator is disabled: " + gate.reason);
+  const started = Date.now();
+  const result = await withSpeechRequestId(request.requestId, prepared.run);
+  if (result.attempts && !result.replayed) {
+    const price = priceOf(prepared.generator, prepared.args);
+    recordUsage(episodePathArg(prepared.args), {
+      ts: (/* @__PURE__ */ new Date()).toISOString(),
+      tool: prepared.generator,
+      ok: result.success,
+      ms: Date.now() - started,
+      ...price,
+      detail: { model: String(prepared.args.model), requestId: request.requestId, receiptPath: result.receiptPath || "" }
+    });
+  }
+  return result;
+}
+
 // src/host-review.ts
 import { execFile as execFile7 } from "node:child_process";
 import { promisify as promisify3 } from "node:util";
-import { createHash as createHash4, randomUUID as randomUUID2 } from "node:crypto";
-import { createReadStream as createReadStream3, mkdirSync as mkdirSync6, realpathSync, statSync as statSync7, writeFileSync as writeFileSync10 } from "node:fs";
+import { createHash as createHash5, randomUUID as randomUUID3 } from "node:crypto";
+import { createReadStream as createReadStream3, mkdirSync as mkdirSync7, realpathSync as realpathSync2, statSync as statSync7, writeFileSync as writeFileSync12 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
 import path10 from "node:path";
 var exec2 = promisify3(execFile7);
@@ -91232,15 +91637,15 @@ var hostReviewSchema = external_exports.object({
     correction: external_exports.string().trim().max(4e3)
   }).strict()).max(100).default([])
 }).strict();
-async function digest(file) {
-  const hash5 = createHash4("sha256");
+async function digest2(file) {
+  const hash5 = createHash5("sha256");
   for await (const chunk2 of createReadStream3(file)) hash5.update(chunk2);
   return hash5.digest("hex");
 }
 async function hostReview(input) {
-  const r2 = hostReviewSchema.parse(input), file = realpathSync(r2.mediaPath);
+  const r2 = hostReviewSchema.parse(input), file = realpathSync2(r2.mediaPath);
   if (!statSync7(file).isFile() || !statSync7(file).size) throw new Error("Provide a nonempty local media file");
-  const mediaSha256 = await digest(file);
+  const mediaSha256 = await digest2(file);
   const { stdout } = await exec2("ffprobe", ["-v", "error", "-show_format", "-show_streams", "-of", "json", file], { maxBuffer: 4 * 1024 * 1024 });
   const probe2 = JSON.parse(stdout), duration3 = Number(probe2.format.duration);
   const streams = probe2.streams;
@@ -91265,8 +91670,8 @@ async function hostReview(input) {
   if (r2.action === "prepare") {
     const frames = [];
     if (r2.mode !== "audio") {
-      const directory3 = path10.join(homedir4(), ".cache", "social-flow", "host-reviews", "evidence", mediaSha256, randomUUID2());
-      mkdirSync6(directory3, { recursive: true, mode: 448 });
+      const directory3 = path10.join(homedir4(), ".cache", "social-flow", "host-reviews", "evidence", mediaSha256, randomUUID3());
+      mkdirSync7(directory3, { recursive: true, mode: 448 });
       const timing = await exec2("ffprobe", [
         "-v",
         "error",
@@ -91303,7 +91708,7 @@ async function hostReview(input) {
         frames.push({ seconds, path: output });
       }
     }
-    if (await digest(file) !== mediaSha256) throw new Error("Media changed while preparing evidence");
+    if (await digest2(file) !== mediaSha256) throw new Error("Media changed while preparing evidence");
     return {
       ...base,
       status: "not_reviewed",
@@ -91329,10 +91734,10 @@ async function hostReview(input) {
     if (o.axis === "composition" && !(hasVideo || r2.coverage === "sampled_frames" && r2.mode !== "audio")) throw new Error("Composition requires visible evidence");
     if (o.axis === "lipSync" && !(hasVideo && hasAudio)) throw new Error("Lip sync requires audiovisual playback");
   }
-  if (await digest(file) !== mediaSha256) throw new Error("Media changed while recording observations");
+  if (await digest2(file) !== mediaSha256) throw new Error("Media changed while recording observations");
   const directory2 = path10.join(homedir4(), ".cache", "social-flow", "host-reviews");
-  mkdirSync6(directory2, { recursive: true, mode: 448 });
-  const receiptPath = path10.join(directory2, `${mediaSha256}-${randomUUID2()}.json`);
+  mkdirSync7(directory2, { recursive: true, mode: 448 });
+  const receiptPath = path10.join(directory2, `${mediaSha256}-${randomUUID3()}.json`);
   const result = {
     ...base,
     status: r2.observations.some((o) => o.score !== null) ? "observed" : "unverified",
@@ -91344,14 +91749,14 @@ async function hostReview(input) {
     createdAt: (/* @__PURE__ */ new Date()).toISOString(),
     receiptPath
   };
-  writeFileSync10(receiptPath, JSON.stringify(result, null, 2) + "\n", { flag: "wx", mode: 384 });
+  writeFileSync12(receiptPath, JSON.stringify(result, null, 2) + "\n", { flag: "wx", mode: 384 });
   return result;
 }
 
 // src/voice-design.ts
-import { existsSync as existsSync12, mkdirSync as mkdirSync7, writeFileSync as writeFileSync11 } from "node:fs";
-import { resolve as resolve5 } from "node:path";
-import { createHash as createHash5 } from "node:crypto";
+import { existsSync as existsSync13, mkdirSync as mkdirSync8, writeFileSync as writeFileSync13 } from "node:fs";
+import { resolve as resolve6 } from "node:path";
+import { createHash as createHash6 } from "node:crypto";
 var voiceDesignSchema = external_exports.object({
   model: external_exports.enum(GEMINI_38_TTS_MODELS),
   displayName: external_exports.string().trim().min(1).max(100),
@@ -91373,14 +91778,14 @@ function buildVoiceDesignBody(args) {
 }
 async function designGeminiVoice(input) {
   const args = voiceDesignSchema.parse(input);
-  const output = resolve5(args.outputPath);
-  const receiptPath = resolve5(output, "voice-design.json");
-  const samplePath = resolve5(output, "voice-preview.wav");
+  const output = resolve6(args.outputPath);
+  const receiptPath = resolve6(output, "voice-design.json");
+  const samplePath = resolve6(output, "voice-preview.wav");
   const body = buildVoiceDesignBody(args);
   const apiKey = requireGeminiKey();
-  mkdirSync7(output, { recursive: true });
-  if (existsSync12(samplePath)) throw new Error("Preview already exists; use a new outputPath.");
-  writeFileSync11(receiptPath, JSON.stringify({ status: "submitted", request: body, submittedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2), { flag: "wx" });
+  mkdirSync8(output, { recursive: true });
+  if (existsSync13(samplePath)) throw new Error("Preview already exists; use a new outputPath.");
+  writeFileSync13(receiptPath, JSON.stringify({ status: "submitted", request: body, submittedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2), { flag: "wx" });
   const response = await requestRaw(
     "post",
     "https://generativelanguage.googleapis.com/v1beta/voices",
@@ -91390,27 +91795,27 @@ async function designGeminiVoice(input) {
   );
   if (!response.ok) {
     const error2 = describeGemini38Error(response.status, response.body);
-    writeFileSync11(receiptPath, JSON.stringify({ status: response.status >= 500 ? "uncertain" : "failed", request: body, error: error2 }, null, 2));
+    writeFileSync13(receiptPath, JSON.stringify({ status: response.status >= 500 ? "uncertain" : "failed", request: body, error: error2 }, null, 2));
     return { success: false, receiptPath, error: error2, instruction: "Do not blindly retry: inspect this receipt and list stored prompted voices first." };
   }
   let voice;
   try {
     voice = JSON.parse(response.body);
   } catch {
-    writeFileSync11(receiptPath, JSON.stringify({ status: "uncertain", request: body, error: "Invalid JSON response" }, null, 2));
+    writeFileSync13(receiptPath, JSON.stringify({ status: "uncertain", request: body, error: "Invalid JSON response" }, null, 2));
     return { success: false, receiptPath, error: "Invalid JSON response; reconcile stored voices before retrying." };
   }
   const { sample_audio: sample, ...metadata } = voice;
   const record2 = { status: "created", request: body, voice: metadata, reviewStatus: "not_reviewed", billingStatus: "provider_usage_not_invoice" };
-  writeFileSync11(receiptPath, JSON.stringify(record2, null, 2));
+  writeFileSync13(receiptPath, JSON.stringify(record2, null, 2));
   const audio = external_exports.object({ mime_type: external_exports.string(), data: external_exports.string().min(1) }).safeParse(sample);
   const bytes = audio.success ? Buffer.from(audio.data.data, "base64") : Buffer.alloc(0);
   if (typeof voice.id !== "string" || !voice.id.startsWith("voice_") || !audio.success || audio.data.mime_type !== "audio/wav" || bytes.length <= 44 || bytes.toString("ascii", 0, 4) !== "RIFF" || bytes.toString("ascii", 8, 12) !== "WAVE") {
     return { success: false, voiceId: voice.id, receiptPath, error: "Voice response or WAV preview invalid; the remote voice may exist. Inspect the receipt before another paid creation." };
   }
-  writeFileSync11(samplePath, bytes, { flag: "wx" });
-  const audioSha256 = createHash5("sha256").update(bytes).digest("hex");
-  writeFileSync11(receiptPath, JSON.stringify({ ...record2, samplePath, audioSha256 }, null, 2));
+  writeFileSync13(samplePath, bytes, { flag: "wx" });
+  const audioSha256 = createHash6("sha256").update(bytes).digest("hex");
+  writeFileSync13(receiptPath, JSON.stringify({ ...record2, samplePath, audioSha256 }, null, 2));
   return {
     success: true,
     voiceId: voice.id,
@@ -91451,14 +91856,14 @@ var characterTargetSchema = external_exports.object({
   habits: external_exports.string().max(2e3).nullable(),
   emotionalRange: external_exports.string().max(2e3).nullable()
 });
-var shared = () => nodeModule2.createRequire(import.meta.url)("../../skills/_shared/voice-target.js");
+var shared2 = () => nodeModule2.createRequire(import.meta.url)("../../skills/_shared/voice-target.js");
 var characterVoiceTarget = (source, override = {}) => {
   const blocks = [...source.matchAll(/```json\s*\n([\s\S]*?)```/g)].map((match2) => JSON.parse(match2[1]));
   const saved = blocks.find((block) => block?.character)?.voiceProfile;
   const profile = { ...voiceProfileSchema.parse(saved || {}), ...voiceProfileSchema.parse(override) };
-  return shared().characterVoiceTarget(source, profile);
+  return shared2().characterVoiceTarget(source, profile);
 };
-var compareVoiceMetadata = (target, metadata) => shared().compareVoiceMetadata(target, metadata);
+var compareVoiceMetadata = (target, metadata) => shared2().compareVoiceMetadata(target, metadata);
 
 // src/tts-acting-review.ts
 var actingReviewSchema = external_exports.object({
@@ -91516,11 +91921,11 @@ async function reviewActing(input) {
 }
 
 // src/voice-audition.ts
-import { createHash as createHash6, randomUUID as randomUUID3 } from "node:crypto";
-import { appendFileSync as appendFileSync2, existsSync as existsSync13, mkdirSync as mkdirSync8, readFileSync as readFileSync10, writeFileSync as writeFileSync12, renameSync as renameSync5 } from "node:fs";
-import { dirname as dirname5, join as join9, resolve as resolve6 } from "node:path";
+import { createHash as createHash7, randomUUID as randomUUID4 } from "node:crypto";
+import { appendFileSync as appendFileSync2, existsSync as existsSync14, mkdirSync as mkdirSync9, readFileSync as readFileSync11, writeFileSync as writeFileSync14, renameSync as renameSync6 } from "node:fs";
+import { dirname as dirname5, join as join11, resolve as resolve7 } from "node:path";
 import { isDeepStrictEqual } from "node:util";
-import { createRequire as createRequire4 } from "node:module";
+import { createRequire as createRequire5 } from "node:module";
 
 // src/voice-lock-config.ts
 var VOICE_LOCK_MODEL = "eleven_multilingual_sts_v2";
@@ -91562,8 +91967,8 @@ var ttsSchema = external_exports.object(ttsFields).superRefine((tts, ctx) => {
   if (tts.engine === "gemini" && !Object.hasOwn(TTS_VOICES, tts.voiceId) && !(tts.model?.startsWith("gemini-3.8-") && /^[A-Za-z][A-Za-z0-9_-]*$/.test(tts.voiceId))) ctx.addIssue({ code: "custom", path: ["voiceId"], message: "Unknown Gemini voiceId" });
   const issue2 = (field, message) => ctx.addIssue({ code: "custom", path: [field], message });
   if (["gemini", "elevenlabs"].includes(tts.engine) && tts.speed !== 1) issue2("speed", "This engine supports character speed 1 only");
-  if (tts.engine === "gemini" && tts.model !== void 0 && ![...VALID_TTS_MODELS, ...GEMINI_38_TTS_MODELS].includes(tts.model)) issue2("model", "Unsupported Gemini model");
-  if (tts.engine === "elevenlabs" && tts.model !== void 0 && !ELEVENLABS_MODELS.includes(tts.model)) issue2("model", "Unsupported ElevenLabs model");
+  if (tts.engine === "gemini" && tts.model !== void 0 && !getTtsModels().some((m2) => m2.provider === "gemini" && m2.model === tts.model)) issue2("model", "Unsupported Gemini model");
+  if (tts.engine === "elevenlabs" && tts.model !== void 0 && !getTtsModels().some((m2) => m2.provider === "elevenlabs" && m2.model === tts.model)) issue2("model", "Unsupported ElevenLabs model");
   if (tts.engine === "elevenlabs" && !/^[A-Za-z0-9_-]{1,64}$/.test(tts.voiceId)) issue2("voiceId", "Invalid ElevenLabs voiceId");
   if (tts.engine !== "elevenlabs") {
     for (const key of ["stability", "similarity"]) if (tts[key] !== void 0) issue2(key, "This setting is only supported by ElevenLabs");
@@ -91587,8 +91992,8 @@ var actingSchema = external_exports.object({
   tags: external_exports.array(external_exports.string().trim().min(1).max(60).regex(/^[A-Za-z][A-Za-z ,'-]*$/, "Use bare English vocal tag names")).max(6).optional()
 }).strict();
 function compileActing(text2, acting, voice) {
-  const shared2 = nodeModule3.createRequire(import.meta.url)("../../skills/_shared/speech-contract.js");
-  return shared2.compileActing(text2, actingSchema.parse(acting || {}), voice);
+  const shared3 = nodeModule3.createRequire(import.meta.url)("../../skills/_shared/speech-contract.js");
+  return shared3.compileActing(text2, actingSchema.parse(acting || {}), voice);
 }
 
 // src/voice-audition.ts
@@ -91628,7 +92033,7 @@ var voiceAuditionSchema = external_exports.object({
       ctx.addIssue({ code: "custom", path: ["sampleTurns"], message: "Per-turn sample acting requires Gemini 3.8 TTS" });
   }
 });
-var hash = (value) => createHash6("sha256").update(value).digest("hex");
+var hash = (value) => createHash7("sha256").update(value).digest("hex");
 var escape2 = (s2) => s2.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 function compileSample(text2, acting, voice, turns) {
   if (!turns) return compileActing(text2, acting, voice);
@@ -91636,23 +92041,23 @@ function compileSample(text2, acting, voice, turns) {
   const normalize2 = (value) => value.replace(/\s+/g, " ").trim();
   if (acting || normalize2(turns.map((turn) => turn.text).join(" ")) !== normalize2(text2)) throw new Error("Sample turns must reproduce sampleText with per-turn acting only");
   if (voice.engine !== "gemini" || !String(voice.model).startsWith("gemini-3.8-")) throw new Error("Per-turn sample acting requires Gemini 3.8 TTS");
-  const { directionSupport } = createRequire4(import.meta.url)("../../skills/_shared/scene-acting.js");
+  const { directionSupport } = createRequire5(import.meta.url)("../../skills/_shared/scene-acting.js");
   if (turns.some((turn) => !directionSupport(voice, turn.acting).supported)) throw new Error("Per-turn resolved vocal style exceeds the Gemini 3.8 limit of 500 characters; shorten the controls");
   const compiled = turns.map((turn) => compileActing(turn.text, turn.acting, voice));
   return { generator: "tts_gemini_38", generation: { ...compiled[0].generation, turns: compiled.flatMap((turn) => turn.generation.turns) } };
 }
 function save(file, value) {
-  const temporary = file + "." + randomUUID3() + ".tmp";
-  writeFileSync12(temporary, JSON.stringify(value, null, 2));
-  renameSync5(temporary, file);
+  const temporary = file + "." + randomUUID4() + ".tmp";
+  writeFileSync14(temporary, JSON.stringify(value, null, 2));
+  renameSync6(temporary, file);
 }
 function preview(audition) {
   return `<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Voice audition</title><style>body{font:18px system-ui;max-width:800px;margin:40px auto;padding:24px;color:#17212b;background:#f5f3ee}article{padding:24px;margin:20px 0;background:white;border:1px solid #d8d4cc;border-radius:12px}audio{width:100%}small{color:#52616b}</style><h1>\uC74C\uC131 \uD6C4\uBCF4 3\uAC1C</h1><p>\uAC19\uC740 \uB300\uC0AC\uB97C \uB4E3\uACE0 \uC6D0\uD558\uB294 \uD6C4\uBCF4 \uBC88\uD638\uB97C \uB300\uD654\uCC3D\uC5D0\uC11C \uC120\uD0DD\uD558\uC138\uC694. \uC120\uD0DD \uC804\uC5D0\uB294 \uCE90\uB9AD\uD130 \uC74C\uC131\uC744 \uD655\uC815\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.</p><blockquote>${escape2(audition.sampleText)}</blockquote>${audition.candidates.map((c) => `<article><h2>${c.id}. ${escape2(c.label)}</h2><p>${escape2(c.reason)}</p><audio controls preload="metadata" src="candidate-${c.id}.wav"></audio><small>${escape2(c.tts.engine)} \xB7 ${escape2(c.tts.model || "")} \xB7 ${escape2(c.tts.voiceId)}</small></article>`).join("")}</html>`;
 }
 async function manageVoiceAudition(args) {
   if (args.action === "create" || args.action === "plan") {
-    const identityPath = resolve6(args.identityPath);
-    const source2 = readFileSync10(identityPath, "utf8");
+    const identityPath = resolve7(args.identityPath);
+    const source2 = readFileSync11(identityPath, "utf8");
     const blocks = [...source2.matchAll(/```json\s*\n([\s\S]*?)```/g)].map((m2) => JSON.parse(m2[1]));
     if (blocks.filter((b) => b.character !== void 0).length !== 1) throw new Error("Create the character identity JSON before auditioning; tts may be absent until selection");
     const target = characterVoiceTarget(source2, args.voiceProfile);
@@ -91667,10 +92072,10 @@ async function manageVoiceAudition(args) {
       return { ...choice, tts, match: compareVoiceMetadata(target, choice.metadata), ...compiled ? { compiled } : {} };
     });
     if (args.action === "plan") return { identityPath, identitySha256: hash(source2), target, candidates: planned, review: "not_reviewed", instruction: "Use provider metadata to choose candidates; unknown attributes require auditioning. No audio generated and identity is unchanged." };
-    const outputPath = join9(dirname5(identityPath), "voice-auditions", randomUUID3());
-    mkdirSync8(outputPath, { recursive: true });
-    const auditionPath2 = join9(outputPath, "audition.json");
-    const audition2 = { version: 1, status: "generating", identityPath, identitySha256: hash(source2), sampleText: args.sampleText, candidates: [], target, ...args.acting ? { acting: args.acting } : {}, ...args.sampleTurns ? { sampleTurns: args.sampleTurns } : {}, previewPath: join9(outputPath, "index.html") };
+    const outputPath = join11(dirname5(identityPath), "voice-auditions", randomUUID4());
+    mkdirSync9(outputPath, { recursive: true });
+    const auditionPath2 = join11(outputPath, "audition.json");
+    const audition2 = { version: 1, status: "generating", identityPath, identitySha256: hash(source2), sampleText: args.sampleText, candidates: [], target, ...args.acting ? { acting: args.acting } : {}, ...args.sampleTurns ? { sampleTurns: args.sampleTurns } : {}, previewPath: join11(outputPath, "index.html") };
     save(auditionPath2, audition2);
     try {
       for (const [index, choice] of planned.entries()) {
@@ -91682,7 +92087,7 @@ async function manageVoiceAudition(args) {
         const started = Date.now();
         let result;
         try {
-          result = compiled.generator === "tts_elevenlabs_generate" ? await generateElevenLabsSpeech(elevenLabsGenerateSchema.parse(generation)) : compiled.generator === "tts_gemini_38" ? await generateGemini38Speech(gemini38TtsSchema.parse(generation)) : await generateSpeech(ttsGenerateSchema.parse(generation));
+          result = await prepareSpeech(compiled.generator, generation).run();
         } finally {
           const price = priceOf(compiled.generator, generation);
           const event = {
@@ -91695,18 +92100,18 @@ async function manageVoiceAudition(args) {
             note: "Character audition candidate " + id,
             detail: { model: choice.tts.model || "", voiceId: choice.tts.voiceId, ...result?.requestId ? { requestId: result.requestId } : {} }
           };
-          appendFileSync2(join9(outputPath, "events.jsonl"), JSON.stringify(event) + "\n");
+          appendFileSync2(join11(outputPath, "events.jsonl"), JSON.stringify(event) + "\n");
           recordUsage(outputPath, event);
         }
         if (!result.success || !result.audioPath) throw new Error(result.error || "Candidate generation returned no audio");
-        const bytes = readFileSync10(result.audioPath);
+        const bytes = readFileSync11(result.audioPath);
         if (bytes.subarray(0, 4).toString() !== "RIFF" || bytes.length <= 44) throw new Error("Candidate must be a nonempty WAV");
         const { compiled: _compiled, ...record2 } = choice;
         audition2.candidates.push({ ...record2, id, audioPath: result.audioPath, audioSha256: hash(bytes), generation: { generator: compiled.generator, arguments: generation, result } });
         save(auditionPath2, audition2);
       }
       audition2.status = "ready";
-      writeFileSync12(audition2.previewPath, preview(audition2));
+      writeFileSync14(audition2.previewPath, preview(audition2));
       save(auditionPath2, audition2);
       return { auditionPath: auditionPath2, ...audition2, instruction: "Present all three audio players. Wait for the user to choose a candidate, then call select with their actual response." };
     } catch (error2) {
@@ -91715,8 +92120,8 @@ async function manageVoiceAudition(args) {
       throw new Error(`Audition incomplete; existing candidates are preserved at ${auditionPath2}. ${error2 instanceof Error ? error2.message : String(error2)}`);
     }
   }
-  const auditionPath = resolve6(args.auditionPath);
-  const audition = JSON.parse(readFileSync10(auditionPath, "utf8"));
+  const auditionPath = resolve7(args.auditionPath);
+  const audition = JSON.parse(readFileSync11(auditionPath, "utf8"));
   if (audition.version !== 1) throw new Error("Unsupported audition manifest");
   if (args.action === "read") return { auditionPath, ...audition };
   if (audition.status !== "ready" || audition.candidates.length !== 3) throw new Error("Select only from a complete, unselected three-voice audition");
@@ -91733,8 +92138,8 @@ async function manageVoiceAudition(args) {
   }
   if ((actual.voiceId || actual.voice || actual.voiceName) !== config3.voiceId || actual.model !== config3.model || config3.engine === "elevenlabs" && (recorded.generator !== "tts_elevenlabs_generate" || actual.languageCode !== config3.language || actual.stability !== config3.stability || actual.similarity !== config3.similarity) || config3.engine === "gemini" && !["tts_generate", "tts_gemini_38"].includes(recorded.generator || ""))
     throw new Error("Candidate voice settings differ from the recorded generation; create a new audition");
-  for (const c of audition.candidates) if (!existsSync13(c.audioPath) || hash(readFileSync10(c.audioPath)) !== c.audioSha256) throw new Error("Audition audio changed; regenerate or restore original audio before selection");
-  const source = readFileSync10(audition.identityPath, "utf8");
+  for (const c of audition.candidates) if (!existsSync14(c.audioPath) || hash(readFileSync11(c.audioPath)) !== c.audioSha256) throw new Error("Audition audio changed; regenerate or restore original audio before selection");
+  const source = readFileSync11(audition.identityPath, "utf8");
   if (hash(source) !== audition.identitySha256) throw new Error("Character identity changed after audition; create a new audition for the current character");
   const selection = { candidateId: chosen.id, userSelection: args.userSelection, at: (/* @__PURE__ */ new Date()).toISOString(), auditionPath, audioSha256: chosen.audioSha256 };
   let replaced = false;
@@ -91746,10 +92151,10 @@ async function manageVoiceAudition(args) {
     return "```json\n" + JSON.stringify({ ...value, tts: ttsSchema.parse(chosen.tts), voiceSelection: selection }, null, 2) + "\n```";
   });
   if (!replaced) throw new Error("Missing identity JSON");
-  writeFileSync12(join9(dirname5(auditionPath), "identity-before-selection.md"), source, { flag: "wx" });
-  const temporary = audition.identityPath + "." + randomUUID3() + ".tmp";
-  writeFileSync12(temporary, next);
-  renameSync5(temporary, audition.identityPath);
+  writeFileSync14(join11(dirname5(auditionPath), "identity-before-selection.md"), source, { flag: "wx" });
+  const temporary = audition.identityPath + "." + randomUUID4() + ".tmp";
+  writeFileSync14(temporary, next);
+  renameSync6(temporary, audition.identityPath);
   audition.status = "selected";
   audition.selected = { ...selection, identitySha256: hash(next) };
   save(auditionPath, audition);
@@ -91758,7 +92163,7 @@ async function manageVoiceAudition(args) {
 
 // src/location.ts
 import * as nodeModule4 from "node:module";
-import { join as join10 } from "node:path";
+import { join as join12 } from "node:path";
 var loader = nodeModule4.createRequire(import.meta.url);
 var actorPoseSchema = external_exports.object({
   position: external_exports.tuple([external_exports.number().finite(), external_exports.number().finite(), external_exports.number().finite()]),
@@ -91804,27 +92209,27 @@ var locationSchema = external_exports.object({
 }).strict();
 async function manageLocation(args) {
   const input = locationSchema.parse(args);
-  const contract2 = loader(join10(REFERENCES_DIR, "location-assets.js"));
+  const contract2 = loader(join12(REFERENCES_DIR, "location-assets.js"));
   return contract2.run(input);
 }
 
 // src/project.ts
 import * as nodeModule5 from "node:module";
-import { dirname as dirname6, resolve as resolve7 } from "node:path";
+import { dirname as dirname6, resolve as resolve8 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 var loadFromHere2 = nodeModule5.createRequire(import.meta.url);
-var helper = resolve7(dirname6(fileURLToPath2(import.meta.url)), "../../skills/_shared/project-settings.js");
+var helper = resolve8(dirname6(fileURLToPath2(import.meta.url)), "../../skills/_shared/project-settings.js");
 function manageProject(args) {
   const project = loadFromHere2(helper);
   return project.manageProject(args);
 }
 
 // src/speech.ts
-import { createHash as createHash7, randomUUID as randomUUID4 } from "node:crypto";
-import { readFileSync as readFileSync11, writeFileSync as writeFileSync13, renameSync as renameSync6, mkdirSync as mkdirSync9, existsSync as existsSync14 } from "node:fs";
-import { dirname as dirname7, resolve as resolve8, join as join11 } from "node:path";
+import { createHash as createHash8, randomUUID as randomUUID5 } from "node:crypto";
+import { readFileSync as readFileSync12, writeFileSync as writeFileSync15, renameSync as renameSync7, mkdirSync as mkdirSync10, existsSync as existsSync15 } from "node:fs";
+import { dirname as dirname7, resolve as resolve9, join as join13 } from "node:path";
 import * as nodeModule6 from "node:module";
-import { execFileSync as execFileSync3 } from "node:child_process";
+import { execFileSync as execFileSync4 } from "node:child_process";
 var voiceContract = () => nodeModule6.createRequire(import.meta.url)("../../skills/_shared/character-voice.js");
 var actingContract = () => nodeModule6.createRequire(import.meta.url)("../../skills/_shared/scene-acting.js");
 var delivery = external_exports.enum(["voiceover", "on_screen", "off_screen"]);
@@ -91844,14 +92249,14 @@ var speechManageSchema = external_exports.object({
   generation: external_exports.object({ generator: external_exports.string().min(1), voiceSettings: external_exports.record(external_exports.unknown()), text: external_exports.string().min(1), language: external_exports.string().min(1).optional() }).strict().optional(),
   capabilities: external_exports.object({ provider: external_exports.string().min(1), model: external_exports.string().min(1), audioConditioning: external_exports.boolean(), lipSync: external_exports.boolean(), postLipSync: external_exports.boolean(), evidence: external_exports.string().min(1) }).strict().optional()
 }).strict();
-var hash2 = (s2) => createHash7("sha256").update(s2).digest("hex");
+var hash2 = (s2) => createHash8("sha256").update(s2).digest("hex");
 var object3 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
 function speechRevision(line, character) {
   return hash2(JSON.stringify(actingContract().speechRevisionPayload(line, character?.tts)));
 }
 function currentAudio(line, character) {
   try {
-    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync14(line.audio.path) && hash2(readFileSync11(line.audio.path)) === line.audio.sha256;
+    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync15(line.audio.path) && hash2(readFileSync12(line.audio.path)) === line.audio.sha256;
   } catch {
     return false;
   }
@@ -91865,7 +92270,8 @@ function speechAudioPlan(line, character) {
   const direction = actingContract().directionSupport(voice, line.acting);
   const language = validator.normalizeLanguage(voice.language);
   const compiled = compileActing(line.tts, line.acting || void 0, { ...voice, language });
-  return { ...compiled, arguments: compiled.generation, expectedText: line.tts, speechRevision: speechRevision(line, character), language, direction, review: "not_reviewed" };
+  const modelContract = resolveTtsModel(String(voice.engine), typeof voice.model === "string" ? voice.model.trim() : void 0);
+  return { ...compiled, capabilities: modelContract, arguments: compiled.generation, expectedText: line.tts, speechRevision: speechRevision(line, character), language, direction, review: "not_reviewed" };
 }
 function inspectionAudioPlan(line, character) {
   if (!character?.tts) return { available: false, warnings: ["Missing pinned character voice"], review: "not_reviewed" };
@@ -91881,15 +92287,15 @@ function audioProvenanceStatus(line, character) {
   const voice = character?.tts;
   const historical = ["supertonic", "mlx"].includes(String(voice?.engine)) || voice?.engine === "elevenlabs" && ["eleven_v3", "eleven_v3_conversational", "eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_turbo_v2_5"].includes(String(voice?.model));
   try {
-    if (historical && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && hash2(readFileSync11(line.audio.path)) === line.audio.sha256) return "preserved_historical_recording_unverified";
+    if (historical && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && hash2(readFileSync12(line.audio.path)) === line.audio.sha256) return "preserved_historical_recording_unverified";
   } catch {
   }
   return "stale_or_missing";
 }
 function measuredDuration(line) {
-  if (!line.audio || !existsSync14(line.audio.path)) return null;
+  if (!line.audio || !existsSync15(line.audio.path)) return null;
   try {
-    const value = Number(execFileSync3("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
+    const value = Number(execFileSync4("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
     return Number.isFinite(value) && value > 0 ? value : null;
   } catch {
     return null;
@@ -91914,7 +92320,7 @@ function speechVideoPlan(input, capabilities) {
 function manageSpeech(args) {
   args = speechManageSchema.parse(args);
   const { file, win, header } = readBoard(args.path);
-  const before = readFileSync11(file, "utf8");
+  const before = readFileSync12(file, "utf8");
   const revision = hash2(before);
   const mutates = ["prepare", "update", "attach_audio", "attach_video", "retime"].includes(args.action);
   if (mutates && args.expectedRevision !== revision) throw new Error("Read speech first and supply its current expectedRevision; the storyboard may have changed");
@@ -91935,7 +92341,7 @@ function manageSpeech(args) {
     for (const scene of scenes) {
       scene.id ||= "s" + String(++next).padStart(4, "0");
       for (const line of scene.narration || []) {
-        line.id ||= "d-" + randomUUID4();
+        line.id ||= "d-" + randomUUID5();
         line.speaker ||= doc.narratorCharacterId;
         line.delivery ||= line.speaker === doc.narratorCharacterId ? "voiceover" : "on_screen";
       }
@@ -91979,12 +92385,12 @@ function manageSpeech(args) {
       }
     } else {
       if (!args.audioPath) throw new Error("audioPath is required");
-      const audioPath = resolve8(dirname7(file), args.audioPath);
+      const audioPath = resolve9(dirname7(file), args.audioPath);
       if (!args.generation || args.generation.text !== line.tts) throw new Error("Attach the actual generation arguments and exact line text");
       const voice = character(line.speaker)?.tts;
       const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation, line);
       if (voiceErrors.length) throw new Error("Generation arguments do not match the pinned character voice: " + voiceErrors.join("; "));
-      const bytes = readFileSync11(audioPath);
+      const bytes = readFileSync12(audioPath);
       if (!bytes.length) throw new Error("Audio file is empty");
       const priorAudio = line.audio;
       const audioHash = hash2(bytes), lineRevision = speechRevision(line, character(line.speaker));
@@ -92044,11 +92450,11 @@ function manageSpeech(args) {
     plan2 = { ...plan2, continuity: continuityContract.plan(win, scenes.indexOf(scene), dirname7(file)) };
     if (args.action === "attach_video") {
       if (!args.videoPath) throw new Error("videoPath is required");
-      const videoPath = resolve8(dirname7(file), args.videoPath);
-      const bytes = readFileSync11(videoPath);
+      const videoPath = resolve9(dirname7(file), args.videoPath);
+      const bytes = readFileSync12(videoPath);
       if (!bytes.length) throw new Error("Video file is empty");
       const audio = selected.map(({ line }) => {
-        if (!line.audio || line.audio.revision !== speechRevision(line, character(line.speaker)) || hash2(readFileSync11(line.audio.path)) !== line.audio.sha256) throw new Error("Generate and attach current speech before binding video");
+        if (!line.audio || line.audio.revision !== speechRevision(line, character(line.speaker)) || hash2(readFileSync12(line.audio.path)) !== line.audio.sha256) throw new Error("Generate and attach current speech before binding video");
         const errors = voiceContract().generationVoiceErrors(character(line.speaker)?.tts, line.audio.generation, line);
         if (line.audio.generation.text !== line.tts || errors.length) throw new Error("Speech generation evidence changed: " + errors.join("; "));
         return { lineId: line.id, sha256: line.audio.sha256, revision: line.audio.revision };
@@ -92065,7 +92471,7 @@ function manageSpeech(args) {
       if (args.reuse && !tailTrim) throw new Error("Tail trim requires identical bound audio, unchanged speech/action starts and semantics, and a shorter end. Regenerate changed speech or staging.");
       let quality = { review: "not_reviewed", camera: "not_reviewed", lipSync: "not_reviewed" };
       try {
-        const receipt = JSON.parse(readFileSync11(videoPath + ".astra-job.json", "utf8"));
+        const receipt = JSON.parse(readFileSync12(videoPath + ".astra-job.json", "utf8"));
         if (receipt.sha256 === videoSha256) quality = { ...quality, speechSync: receipt.speechSync || null, selection: receipt.selection || null };
         else if (!receipt.sha256 && receipt.videoPath === videoPath)
           quality = { ...quality, unverifiedSpeechSync: receipt.speechSync || null, receiptBinding: "unverified" };
@@ -92106,23 +92512,23 @@ function manageSpeech(args) {
       ids.add(line.id);
       if (!character(line.speaker)?.tts) throw new Error(`Missing pinned voice for ${line.speaker}`);
     }
-    const work = resolve8(dirname7(file), "../.work/speech-history");
-    mkdirSync9(work, { recursive: true });
-    const backup = join11(work, revision + ".js");
-    if (!existsSync14(backup)) writeFileSync13(backup, before);
+    const work = resolve9(dirname7(file), "../.work/speech-history");
+    mkdirSync10(work, { recursive: true });
+    const backup = join13(work, revision + ".js");
+    if (!existsSync15(backup)) writeFileSync15(backup, before);
     const nextSource = serializeBoard(win, header);
-    if (hash2(readFileSync11(file)) !== revision) throw new Error("Storyboard changed during speech edit");
-    const tmp = file + "." + randomUUID4() + ".tmp";
-    writeFileSync13(tmp, nextSource);
-    renameSync6(tmp, file);
+    if (hash2(readFileSync12(file)) !== revision) throw new Error("Storyboard changed during speech edit");
+    const tmp = file + "." + randomUUID5() + ".tmp";
+    writeFileSync15(tmp, nextSource);
+    renameSync7(tmp, file);
   }
-  return { revision: hash2(readFileSync11(file)), changed, invalidated, plan: plan2, timing, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  return { revision: hash2(readFileSync12(file)), changed, invalidated, plan: plan2, timing, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/acting-review.ts
 import { execFile as execFile8 } from "node:child_process";
-import { createHash as createHash8, randomUUID as randomUUID5 } from "node:crypto";
-import { existsSync as existsSync15, mkdirSync as mkdirSync10, readFileSync as readFileSync12, realpathSync as realpathSync2, renameSync as renameSync7, rmSync as rmSync5, statSync as statSync8, writeFileSync as writeFileSync14 } from "node:fs";
+import { createHash as createHash9, randomUUID as randomUUID6 } from "node:crypto";
+import { existsSync as existsSync16, mkdirSync as mkdirSync11, readFileSync as readFileSync13, realpathSync as realpathSync3, renameSync as renameSync8, rmSync as rmSync7, statSync as statSync8, writeFileSync as writeFileSync16 } from "node:fs";
 import path11 from "node:path";
 import { homedir as homedir5 } from "node:os";
 import { promisify as promisify4 } from "node:util";
@@ -92187,11 +92593,11 @@ var actingObservationSchema = external_exports.object({
     correction: external_exports.string().trim().min(1).max(2e3)
   }).strict()).max(80)
 }).strict();
-var hash3 = (data) => createHash8("sha256").update(data).digest("hex");
+var hash3 = (data) => createHash9("sha256").update(data).digest("hex");
 var currentHash = (file) => {
   try {
     const stat4 = statSync8(file);
-    return stat4.isFile() && stat4.size <= MAX_BYTES ? hash3(readFileSync12(file)) : null;
+    return stat4.isFile() && stat4.size <= MAX_BYTES ? hash3(readFileSync13(file)) : null;
   } catch {
     return null;
   }
@@ -92452,10 +92858,10 @@ async function reviewActing2(input, deps) {
   if (!deps) return hostReview({ mediaPath: request.mediaPath, mode: request.mode, brief: JSON.stringify(request) });
   actingReviewTimeout(request.focus);
   const policy = request.focus === "cinematography" ? CINEMATOGRAPHY_POLICY : request.mode === "audio" ? AUDIO_POLICY : VISUAL_POLICY;
-  const mediaPath = realpathSync2(request.mediaPath);
+  const mediaPath = realpathSync3(request.mediaPath);
   const stat4 = statSync8(mediaPath);
   if (!stat4.isFile() || stat4.size === 0 || stat4.size > MAX_BYTES) throw new Error("Review requires a nonempty media file no larger than 12 MiB");
-  const bytes = readFileSync12(mediaPath);
+  const bytes = readFileSync13(mediaPath);
   const probe2 = await deps.probe(mediaPath);
   if (!Number.isFinite(probe2.duration) || probe2.duration <= 0 || probe2.duration > 120) throw new Error("Review requires media duration within (0, 120] seconds");
   if (request.mode !== "video" && !probe2.audio) throw new Error("Requested audio review requires an audio track");
@@ -92466,16 +92872,16 @@ async function reviewActing2(input, deps) {
   let requestSha256 = hash3(JSON.stringify({ mediaSha256, directionSha256, model: ACTING_REVIEW_MODEL, policy }));
   const directory2 = path11.resolve(deps.cacheDirectory || process.env.SOCIAL_FLOW_ACTING_REVIEW_CACHE_DIR?.trim() || path11.join(homedir5(), ".cache", "social-flow", "acting-reviews"));
   let receiptPath = path11.join(directory2, `${requestSha256}.json`);
-  mkdirSync10(directory2, { recursive: true, mode: 448 });
+  mkdirSync11(directory2, { recursive: true, mode: 448 });
   const readMatchingReceipt = (file, expectedHash, retryOf2) => {
-    const cached2 = cachedReceiptSchema.parse(JSON.parse(readFileSync12(file, "utf8")));
+    const cached2 = cachedReceiptSchema.parse(JSON.parse(readFileSync13(file, "utf8")));
     const cachedDirection = hash3(JSON.stringify({ direction: cached2.request.direction, expectedText: cached2.request.expectedText, mode: cached2.request.mode }));
     if (cached2.request.focus !== request.focus || cached2.policy !== policy || cached2.model !== ACTING_REVIEW_MODEL || cached2.mediaSha256 !== mediaSha256 || cached2.directionSha256 !== directionSha256 || cached2.requestSha256 !== expectedHash || cachedDirection !== directionSha256 || cached2.retryOf !== retryOf2 || cached2.request.retryTransportFailure !== Boolean(retryOf2) || JSON.stringify(cached2.media) !== JSON.stringify(probe2)) throw new Error("Cached receipt identity does not match this review");
     return cached2;
   };
   let retryOf;
   if (request.retryTransportFailure) {
-    if (!existsSync15(receiptPath)) throw new Error("Transport retry requires an existing matching original receipt; no new review was sent");
+    if (!existsSync16(receiptPath)) throw new Error("Transport retry requires an existing matching original receipt; no new review was sent");
     const parent = readMatchingReceipt(receiptPath, requestSha256);
     if (!isTransportFailure(parent) || currentHash(mediaPath) !== mediaSha256 || parent.currentMediaSha256 !== void 0 && parent.currentMediaSha256 !== mediaSha256)
       throw new Error("Transport retry requires an unchanged original timeout/abort receipt with no observation; reviewed or rejected observations cannot be rerolled");
@@ -92483,7 +92889,7 @@ async function reviewActing2(input, deps) {
     requestSha256 = hash3(JSON.stringify({ retryOf, attempt: 1, policy: "transport-retry-v1" }));
     receiptPath = path11.join(directory2, `${requestSha256}.json`);
   }
-  if (existsSync15(receiptPath)) {
+  if (existsSync16(receiptPath)) {
     try {
       const cached2 = readMatchingReceipt(receiptPath, requestSha256, retryOf);
       const currentMediaSha2562 = currentHash(mediaPath);
@@ -92494,9 +92900,9 @@ async function reviewActing2(input, deps) {
       return { ...ACTING_REVIEW_ADVISORY, ...unverified([`Invalid cached receipt: ${error2 instanceof Error ? error2.message : String(error2)}`]), receiptPath, reused: true };
     }
   }
-  const lock = `${receiptPath}.lock`;
+  const lock2 = `${receiptPath}.lock`;
   try {
-    writeFileSync14(lock, JSON.stringify({ pid: process.pid, startedAt: (/* @__PURE__ */ new Date()).toISOString() }), { flag: "wx" });
+    writeFileSync16(lock2, JSON.stringify({ pid: process.pid, startedAt: (/* @__PURE__ */ new Date()).toISOString() }), { flag: "wx" });
   } catch {
     throw new Error("An identical review is running or was interrupted; inspect its lock instead of issuing another paid review");
   }
@@ -92553,30 +92959,30 @@ async function reviewActing2(input, deps) {
     currentMediaSha256,
     ...retryOf ? { retryOf } : {}
   };
-  const temporary = `${receiptPath}.${randomUUID5()}.tmp`;
+  const temporary = `${receiptPath}.${randomUUID6()}.tmp`;
   try {
-    writeFileSync14(lock, JSON.stringify({ phase: "evaluated", receipt }), { flag: "w" });
-    writeFileSync14(temporary, JSON.stringify(receipt, null, 2) + "\n", { flag: "wx" });
-    renameSync7(temporary, receiptPath);
+    writeFileSync16(lock2, JSON.stringify({ phase: "evaluated", receipt }), { flag: "w" });
+    writeFileSync16(temporary, JSON.stringify(receipt, null, 2) + "\n", { flag: "wx" });
+    renameSync8(temporary, receiptPath);
   } catch (error2) {
     try {
-      rmSync5(temporary, { force: true });
+      rmSync7(temporary, { force: true });
     } catch {
     }
-    throw new Error(`Could not persist paid acting review; preserved lock at ${lock}: ${error2 instanceof Error ? error2.message : String(error2)}`);
+    throw new Error(`Could not persist paid acting review; preserved lock at ${lock2}: ${error2 instanceof Error ? error2.message : String(error2)}`);
   }
   try {
-    rmSync5(lock, { force: true });
+    rmSync7(lock2, { force: true });
   } catch {
-    console.error(`[acting_review] Receipt saved; stale lock can be removed: ${lock}`);
+    console.error(`[acting_review] Receipt saved; stale lock can be removed: ${lock2}`);
   }
   return { ...receipt, ...ACTING_REVIEW_ADVISORY, receiptPath, reused: false };
 }
 
 // src/threads-gate.ts
-import { createHash as createHash9, randomUUID as randomUUID6 } from "node:crypto";
-import { appendFileSync as appendFileSync3, mkdirSync as mkdirSync11, readFileSync as readFileSync13, realpathSync as realpathSync3, renameSync as renameSync8, statSync as statSync9, writeFileSync as writeFileSync15 } from "node:fs";
-import { dirname as dirname8, join as join12, resolve as resolve9 } from "node:path";
+import { createHash as createHash10, randomUUID as randomUUID7 } from "node:crypto";
+import { appendFileSync as appendFileSync3, mkdirSync as mkdirSync12, readFileSync as readFileSync14, realpathSync as realpathSync4, renameSync as renameSync9, statSync as statSync9, writeFileSync as writeFileSync17 } from "node:fs";
+import { dirname as dirname8, join as join14, resolve as resolve10 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 import { spawnSync as spawnSync3 } from "node:child_process";
 var nonempty = external_exports.string().trim().min(1);
@@ -92611,30 +93017,30 @@ var reviewSchema2 = external_exports.object({
 });
 var normalize = (s2) => s2.normalize("NFC").replace(/\r\n?/g, "\n").trim();
 function threadsBodyHash(body, selfReply = "") {
-  return createHash9("sha256").update(JSON.stringify([normalize(body), normalize(selfReply)])).digest("hex");
+  return createHash10("sha256").update(JSON.stringify([normalize(body), normalize(selfReply)])).digest("hex");
 }
 function directory(channel) {
-  return join12(process.cwd(), "data", channelSchema.parse(channel), "growth", "threads");
+  return join14(process.cwd(), "data", channelSchema.parse(channel), "growth", "threads");
 }
 function draftLocation(id) {
   const match2 = /^([a-z0-9][a-z0-9-]*)\.([a-f0-9-]{36})$/.exec(id);
   if (!match2 || !external_exports.string().uuid().safeParse(match2[2]).success) throw new Error("Invalid draftId");
-  return { channel: match2[1], file: join12(directory(match2[1]), "drafts", `${match2[2]}.json`) };
+  return { channel: match2[1], file: join14(directory(match2[1]), "drafts", `${match2[2]}.json`) };
 }
 function audit(channel, tool, result, details = {}) {
   const dir = directory(channel);
-  mkdirSync11(dir, { recursive: true });
-  appendFileSync3(join12(dir, "gate-log.jsonl"), JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool, result, ...details }) + "\n", { mode: 384 });
+  mkdirSync12(dir, { recursive: true });
+  appendFileSync3(join14(dir, "gate-log.jsonl"), JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool, result, ...details }) + "\n", { mode: 384 });
 }
 function save2(draft) {
   const { file } = draftLocation(draft.draftId);
-  mkdirSync11(dirname8(file), { recursive: true });
-  const temp = `${file}.${randomUUID6()}.tmp`;
-  writeFileSync15(temp, JSON.stringify(draft), { mode: 384 });
-  renameSync8(temp, file);
+  mkdirSync12(dirname8(file), { recursive: true });
+  const temp = `${file}.${randomUUID7()}.tmp`;
+  writeFileSync17(temp, JSON.stringify(draft), { mode: 384 });
+  renameSync9(temp, file);
 }
 function load(id) {
-  const value = JSON.parse(readFileSync13(draftLocation(id).file, "utf8"));
+  const value = JSON.parse(readFileSync14(draftLocation(id).file, "utf8"));
   draftSchema.parse(value);
   if (value.draftId !== id || value.channel !== draftLocation(id).channel || threadsBodyHash(value.body, value.selfReply) !== value.bodyHash) {
     throw new Error("Draft body hash mismatch; create and review a new draft");
@@ -92664,7 +93070,7 @@ function createThreadsDraft(args) {
     const input = draftSchema.strict().parse(args);
     if (input.surface === "reply" !== Boolean(input.replyToId)) throw new Error("Reply drafts require replyToId; post drafts must omit it");
     if (!whitespace(input.body).includes(whitespace(input.purposeEvidence))) throw new Error("Purpose evidence quote not present in draft body");
-    const draftId = `${input.channel}.${randomUUID6()}`;
+    const draftId = `${input.channel}.${randomUUID7()}`;
     const bodyHash = threadsBodyHash(input.body, input.selfReply);
     save2({ ...input, draftId, bodyHash, reviews: {} });
     audit(input.channel, "threads_draft_create", "created", { draftId, bodyHash, submitter: input.submitter ?? null, submitterContext: input.submitterContext ?? null });
@@ -92702,7 +93108,7 @@ function checkThreadsGate(input) {
     if (bodyHash !== draft.bodyHash) throw new Error("Publish body hash mismatch");
     let limits;
     try {
-      limits = external_exports.object({ voice: external_exports.number().finite().min(0).max(100), purpose: external_exports.number().finite().min(0).max(100), flow: external_exports.number().finite().min(0).max(100) }).parse(JSON.parse(readFileSync13(join12(directory(draft.channel), "gate.json"), "utf8")));
+      limits = external_exports.object({ voice: external_exports.number().finite().min(0).max(100), purpose: external_exports.number().finite().min(0).max(100), flow: external_exports.number().finite().min(0).max(100) }).parse(JSON.parse(readFileSync14(join14(directory(draft.channel), "gate.json"), "utf8")));
     } catch (error2) {
       if (error2.code === "ENOENT") throw new Error("Gate thresholds not configured (\uAE30\uC900\uC810 \uBBF8\uC124\uC815): gate.json required");
       throw error2;
@@ -92717,7 +93123,7 @@ function checkThreadsGate(input) {
       if (review.bodyHash !== bodyHash) throw new Error(`${axis2} review hash mismatch`);
       if (review.score < limits[axis2]) throw new Error(`${axis2} score ${review.score} below ${limits[axis2]}`);
     }
-    const checker = resolve9(dirname8(fileURLToPath3(import.meta.url)), "../../skills/platform-guide/references/check-style.py");
+    const checker = resolve10(dirname8(fileURLToPath3(import.meta.url)), "../../skills/platform-guide/references/check-style.py");
     for (const [body, surface] of [[input.caption, input.replyToId ? "reply" : "threads"], [input.selfReply, "reply"]]) {
       if (!body) continue;
       const run = spawnSync3("python3", [checker, "--surface", surface, "-"], { input: body, encoding: "utf8", timeout: 15e3, maxBuffer: 1024 * 1024 });
@@ -92731,14 +93137,14 @@ function checkThreadsEpisode(input) {
   gateCall("threads_publish", input, () => {
     const channel = channelSchema.parse(input.channel);
     const topic = channelSchema.parse(input.episodeRef);
-    const root = realpathSync3(join12(process.cwd(), "data", channel, "episodes"));
-    const episode = realpathSync3(join12(root, topic));
+    const root = realpathSync4(join14(process.cwd(), "data", channel, "episodes"));
+    const episode = realpathSync4(join14(root, topic));
     if (dirname8(episode) !== root || !statSync9(episode).isDirectory()) throw new Error("Invalid episode directory");
-    const board = realpathSync3(join12(episode, "storyboard", "scenes.js"));
+    const board = realpathSync4(join14(episode, "storyboard", "scenes.js"));
     if (!board.startsWith(episode + "/") || !statSync9(board).isFile()) throw new Error("Missing episode storyboard");
-    const approvalPath = realpathSync3(join12(episode, "threads-publish-approval.json"));
+    const approvalPath = realpathSync4(join14(episode, "threads-publish-approval.json"));
     if (dirname8(approvalPath) !== episode) throw new Error("Invalid episode approval path");
-    const approval = JSON.parse(readFileSync13(approvalPath, "utf8"));
+    const approval = JSON.parse(readFileSync14(approvalPath, "utf8"));
     if (approval.approved !== true) throw new Error("Episode publishing approval required");
     for (const key of ["caption", "selfReply", "imageUrl", "videoUrl", "linkUrl", "replyToId"]) {
       if ((approval[key] ?? "") !== (input[key] ?? "")) throw new Error(`Episode approval mismatch: ${key}`);
@@ -92748,9 +93154,9 @@ function checkThreadsEpisode(input) {
 
 // src/datago-client.ts
 import { mkdir, writeFile as writeFile2 } from "node:fs/promises";
-import { existsSync as existsSync16 } from "node:fs";
-import { tmpdir as tmpdir3 } from "node:os";
-import { join as join13 } from "node:path";
+import { existsSync as existsSync17 } from "node:fs";
+import { tmpdir as tmpdir5 } from "node:os";
+import { join as join15 } from "node:path";
 var PORTAL_BASE = "https://www.data.go.kr";
 var ODCLOUD_BASE = "https://api.odcloud.kr/api";
 var OPENAPI_BASE = "https://apis.data.go.kr";
@@ -92989,14 +93395,14 @@ async function downloadFile2(input) {
   const cd = fileRes.headers.get("content-disposition") ?? "";
   const rawName = cd.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i)?.[1] ?? `datago-${input.publicDataPk}.bin`;
   const filename = sanitizeFilename(fixHeaderEncoding(rawName.replace(/"/g, "")));
-  const saveDir = input.saveDir ?? join13(tmpdir3(), "social-flow-datago");
+  const saveDir = input.saveDir ?? join15(tmpdir5(), "social-flow-datago");
   await mkdir(saveDir, { recursive: true });
-  let savedPath = join13(saveDir, filename);
-  for (let i2 = 1; existsSync16(savedPath); i2++) {
+  let savedPath = join15(saveDir, filename);
+  for (let i2 = 1; existsSync17(savedPath); i2++) {
     if (i2 >= 100) {
       return err(`there are already 100+ files with the same name in ${saveDir} \u2014 clean up saveDir or point at a different directory.`);
     }
-    savedPath = join13(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
+    savedPath = join15(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
   }
   await writeFile2(savedPath, buf);
   const preview2 = decodePreview(buf.subarray(0, 4096));
@@ -94327,24 +94733,24 @@ async function stockSearch(input) {
 }
 
 // src/sns-client.ts
-import { createHash as createHash10, randomUUID as randomUUID7 } from "node:crypto";
+import { createHash as createHash11, randomUUID as randomUUID8 } from "node:crypto";
 import {
-  existsSync as existsSync17,
+  existsSync as existsSync18,
   mkdirSync as nodeMkdirSync,
   readFileSync as nodeReadFileSync,
   rmSync as nodeRmSync,
   writeFileSync as nodeWriteFileSync
 } from "node:fs";
 import { open as nodeOpen, readFile, stat as stat3 } from "node:fs/promises";
-import { basename as basename9, dirname as dirname9, extname as extname9, join as join14 } from "node:path";
+import { basename as basename9, dirname as dirname9, extname as extname10, join as join16 } from "node:path";
 function enabledPlatforms() {
   const channelDirs = listChannelDirs();
   return SNS_PLATFORMS.filter(
-    (platform) => existsSync17(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
+    (platform) => existsSync18(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
   );
 }
 function availablePlatformsFor(channel) {
-  return SNS_PLATFORMS.filter((platform) => existsSync17(snsCredentialFile(platform, channel)));
+  return SNS_PLATFORMS.filter((platform) => existsSync18(snsCredentialFile(platform, channel)));
 }
 var GRAPH_VERSION = "v23.0";
 var THREADS_BASE = "https://graph.threads.net/v1.0";
@@ -94352,7 +94758,7 @@ var IG_BASE = `https://graph.instagram.com/${GRAPH_VERSION}`;
 var FB_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 var DEFAULT_POLL_INTERVAL_MS = 2e3;
 var DEFAULT_POLL_MAX_TRIES = 60;
-var sleep7 = (ms) => new Promise((resolve11) => setTimeout(resolve11, ms));
+var sleep7 = (ms) => new Promise((resolve12) => setTimeout(resolve12, ms));
 function fail2(status, message) {
   return { ok: false, status, body: message };
 }
@@ -94928,7 +95334,7 @@ var YT_THUMB_MAX_BYTES = 2 * 1024 * 1024;
 var CAPTION_MAX_BYTES_YT = 100 * 1024 * 1024;
 var CAPTION_MAX_BYTES_FB = 200 * 1024;
 async function readCaptionFile(path15, maxBytes) {
-  if (extname9(path15).toLowerCase() !== ".srt") {
+  if (extname10(path15).toLowerCase() !== ".srt") {
     return { error: fail2(400, `Caption file must be .srt (SubRip): ${path15}`) };
   }
   let bytes;
@@ -94944,7 +95350,7 @@ async function readCaptionFile(path15, maxBytes) {
   return { bytes };
 }
 async function uploadYoutubeCaption(token, videoId, caption) {
-  const boundary = `sfcap${randomUUID7().replace(/-/g, "")}`;
+  const boundary = `sfcap${randomUUID8().replace(/-/g, "")}`;
   const meta = JSON.stringify({
     snippet: { videoId, language: caption.language, name: "", isDraft: false }
   });
@@ -95040,8 +95446,8 @@ function parseResumeOffset(range) {
   return m2 ? Number(m2[1]) + 1 : 0;
 }
 function sessionStateFile(filePath) {
-  const key = createHash10("sha256").update(filePath).digest("hex").slice(0, 16);
-  return join14(snsTokenDir, ".yt-upload", `${key}.json`);
+  const key = createHash11("sha256").update(filePath).digest("hex").slice(0, 16);
+  return join16(snsTokenDir, ".yt-upload", `${key}.json`);
 }
 function readState(filePath) {
   try {
@@ -95141,7 +95547,7 @@ async function queryResumeOffset(sessionUrl, total, mimeType) {
   }
 }
 async function publishYoutube(input) {
-  const mimeType = YT_VIDEO_MIME_BY_EXT[extname9(input.videoFilePath).toLowerCase()];
+  const mimeType = YT_VIDEO_MIME_BY_EXT[extname10(input.videoFilePath).toLowerCase()];
   if (!mimeType) return fail2(400, `Unsupported video extension: ${input.videoFilePath} (.mp4/.mov)`);
   let videoSize;
   let videoMtimeMs;
@@ -95156,7 +95562,7 @@ async function publishYoutube(input) {
   }
   let thumb;
   if (input.thumbnailFilePath) {
-    const thumbMime = YT_THUMB_MIME_BY_EXT[extname9(input.thumbnailFilePath).toLowerCase()];
+    const thumbMime = YT_THUMB_MIME_BY_EXT[extname10(input.thumbnailFilePath).toLowerCase()];
     if (!thumbMime) {
       return fail2(400, `Unsupported thumbnail extension: ${input.thumbnailFilePath} (.jpg/.jpeg/.png)`);
     }
@@ -96175,8 +96581,8 @@ async function checkAccounts(channel) {
 
 // src/tts-final-quality.ts
 import { execFile as execFile9 } from "node:child_process";
-import { existsSync as existsSync18, mkdtempSync as mkdtempSync4, readFileSync as readFileSync14, rmSync as rmSync6, writeFileSync as writeFileSync16, renameSync as renameSync9, openSync as openSync2, closeSync as closeSync2 } from "node:fs";
-import { tmpdir as tmpdir4 } from "node:os";
+import { existsSync as existsSync19, mkdtempSync as mkdtempSync5, readFileSync as readFileSync15, rmSync as rmSync8, writeFileSync as writeFileSync18, renameSync as renameSync10, openSync as openSync2, closeSync as closeSync2 } from "node:fs";
+import { tmpdir as tmpdir6 } from "node:os";
 import path13 from "node:path";
 import { promisify as promisify5 } from "node:util";
 var chapters = __toESM(require_final_speech_chapters(), 1);
@@ -96198,35 +96604,35 @@ async function reviewFinalSpeech(input, deps) {
   }
   const { transcriptCheck, segments, ...identity } = request;
   const proofPath = media + ".speech-quality.json", lockPath = proofPath + ".lock";
-  let lock;
+  let lock2;
   try {
-    lock = openSync2(lockPath, "wx");
+    lock2 = openSync2(lockPath, "wx");
   } catch {
     return { success: false, status: "unverified", error: "Final speech review is already locked" };
   }
-  const temp = mkdtempSync4(path13.join(tmpdir4(), "speech-final-"));
+  const temp = mkdtempSync5(path13.join(tmpdir6(), "speech-final-"));
   let base = { version: 1, policy: "final-speech-v1", model: REVIEW_MODEL, ...identity, mediaPath: media };
   let singleReviewStarted = false;
   function save3(status, extra) {
     const result = { ...base, status, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
     const staging = path13.join(temp, "proof.json");
-    writeFileSync16(staging, JSON.stringify(result, null, 2) + "\n");
-    writeFileSync16(proofPath + ".tmp", readFileSync14(staging));
-    renameSync9(proofPath + ".tmp", proofPath);
+    writeFileSync18(staging, JSON.stringify(result, null, 2) + "\n");
+    writeFileSync18(proofPath + ".tmp", readFileSync15(staging));
+    renameSync10(proofPath + ".tmp", proofPath);
     return { success: status === "pass", status, proofPath, ...extra };
   }
   try {
-    base = { ...base, mediaSha256: sha256(readFileSync14(media)), textSha256: sha256(normalizeSpeech(request.expectedText)) };
+    base = { ...base, mediaSha256: sha256(readFileSync15(media)), textSha256: sha256(normalizeSpeech(request.expectedText)) };
     const wav = path13.join(temp, "final.flac");
     await exec4("ffmpeg", ["-y", "-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", "24000", "-c:a", "flac", wav], { timeout: 6e4 });
-    base.audioSha256 = sha256(readFileSync14(wav));
-    if (sha256(readFileSync14(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
-    if (readFileSync14(wav).length > chapters.LIMIT) {
+    base.audioSha256 = sha256(readFileSync15(wav));
+    if (sha256(readFileSync15(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
+    if (readFileSync15(wav).length > chapters.LIMIT) {
       return await reviewChapters(request, media, wav, temp, base, proofPath, save3, deps);
     }
-    if (sha256(readFileSync14(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
-    if (existsSync18(proofPath)) {
-      const old = JSON.parse(readFileSync14(proofPath, "utf8"));
+    if (sha256(readFileSync15(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
+    if (existsSync19(proofPath)) {
+      const old = JSON.parse(readFileSync15(proofPath, "utf8"));
       const same = Object.entries(base).every(([k, v]) => ["mediaSha256", "expectedText"].includes(k) || old[k] === v);
       if (old.audioSha256 === base.audioSha256 && old.textSha256 === base.textSha256 && old.status === "fail") return save3("fail", { reused: true, signal: old.signal, transcript: old.transcript, transcriptCheck: transcriptCheck ?? old.transcriptCheck ?? null, failures: old.failures, review: old.review, error: "This exact final audio already failed; fix the audio before another listening review" });
       if (same && old.status === "pass" && (!transcriptCheck || typeof old.transcript === "string")) {
@@ -96255,15 +96661,15 @@ async function reviewFinalSpeech(input, deps) {
     const result = await deps.listen(wav, reviewRequest, true);
     failures.push(...reviewFailures(request.expectedText, result.transcript, result.review, signal.duration));
     if ((result.review.continuity ?? 0) < 95 || !result.review.continuityEvidence) failures.push("Episode continuity below 95 or missing listening evidence");
-    if (sha256(readFileSync14(media)) !== base.mediaSha256) throw new Error("Final media changed during listening");
+    if (sha256(readFileSync15(media)) !== base.mediaSha256) throw new Error("Final media changed during listening");
     return save3(failures.length ? "fail" : "pass", { signal, ...result, transcriptCheck: transcriptCheck ?? null, failures });
   } catch (error2) {
     const failure2 = { error: error2 instanceof Error ? error2.message : String(error2) };
     return singleReviewStarted ? save3("unverified", failure2) : { success: false, status: "unverified", proofPath, ...failure2 };
   } finally {
-    rmSync6(temp, { recursive: true, force: true });
-    closeSync2(lock);
-    rmSync6(lockPath, { force: true });
+    rmSync8(temp, { recursive: true, force: true });
+    closeSync2(lock2);
+    rmSync8(lockPath, { force: true });
   }
 }
 async function reviewChapters(request, media, wav, temp, base, proofPath, save3, deps) {
@@ -96271,7 +96677,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
   const pcm = chapters.decode(wav), totalSamples = pcm.length / chapters.BYTES;
   const planned = chapters.plan(request.segments, totalSamples, request.expectedText);
   const identity = { policy: chapters.POLICY, sampleRate: chapters.RATE, totalSamples, pcmSha256: chapters.hash(pcm), segments: request.segments, transcriptCheck: request.transcriptCheck ?? null };
-  const old = existsSync18(proofPath) ? JSON.parse(readFileSync14(proofPath, "utf8")) : null;
+  const old = existsSync19(proofPath) ? JSON.parse(readFileSync15(proofPath, "utf8")) : null;
   const pieces = [];
   const commit = (status, extra = {}) => save3(status, { ...identity, pieces, manifestSha256: chapters.manifest({ ...identity, pieces }), ...extra });
   if (old?.pcmSha256 === identity.pcmSha256 && old.textSha256 === base.textSha256 && old.status === "fail") {
@@ -96287,9 +96693,9 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
     for (const piece of planned) {
       const samples = pcm.subarray(piece.startSample * chapters.BYTES, piece.endSample * chapters.BYTES);
       const raw = path13.join(temp, "piece.pcm"), file = path13.join(temp, "piece.flac");
-      writeFileSync16(raw, samples);
+      writeFileSync18(raw, samples);
       await exec4("ffmpeg", ["-y", "-v", "error", "-f", "s32le", "-ar", String(chapters.RATE), "-ac", "1", "-i", raw, "-map_metadata", "-1", "-c:a", "flac", file], { timeout: 6e4 });
-      const payload = readFileSync14(file);
+      const payload = readFileSync15(file);
       if (payload.length > chapters.LIMIT || !chapters.decode(file).equals(samples)) throw new Error("Chapter encoding exceeded the limit or changed PCM samples");
       const binding = { ...piece, pcmSha256: chapters.hash(samples), audioSha256: chapters.hash(payload), payloadBytes: payload.length, model: REVIEW_MODEL, transcriptCheck: request.transcriptCheck ?? null };
       const reusable = old?.pcmSha256 === identity.pcmSha256 && old.textSha256 === base.textSha256 && old.language === request.language && old.delivery === request.delivery && old.manifestSha256 === chapters.manifest(old);
@@ -96317,7 +96723,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
         evidence = { ...evidence, status: failures2.length ? "fail" : "pass", failures: failures2 };
       }
       pieces.push(evidence);
-      if (sha256(readFileSync14(media)) !== base.mediaSha256) throw new Error("Final media changed during chapter listening");
+      if (sha256(readFileSync15(media)) !== base.mediaSha256) throw new Error("Final media changed during chapter listening");
       commit("unverified");
     }
     const failures = pieces.flatMap((p) => p.failures.map((f3) => `${p.kind} ${p.index}: ${f3}`));
@@ -96380,7 +96786,7 @@ function requireOneSource(data, ctx) {
 var omniExtendSchema = external_exports.object({ ...continuationFields, durationSeconds: durationSchema3 }).superRefine(requireOneSource);
 var omniEditSchema = external_exports.object(continuationFields).superRefine(requireOneSource);
 function sleep8(ms) {
-  return new Promise((resolve11) => setTimeout(resolve11, ms));
+  return new Promise((resolve12) => setTimeout(resolve12, ms));
 }
 function readInlineFile(filePath, kind) {
   const data = fs8.readFileSync(filePath).toString("base64");
@@ -96737,7 +97143,7 @@ async function downloadVideo2(apiKey, videoUri) {
   return Buffer.from(arrayBuffer);
 }
 function sleep9(ms) {
-  return new Promise((resolve11) => setTimeout(resolve11, ms));
+  return new Promise((resolve12) => setTimeout(resolve12, ms));
 }
 async function awaitVideoAndSave2(apiKey, operationName, outputPath, filename, label) {
   let pollCount = 0;
@@ -97012,8 +97418,8 @@ async function generateWithReferences2(request) {
 }
 
 // src/content-feedback.ts
-import { mkdirSync as mkdirSync12, writeFileSync as writeFileSync19 } from "node:fs";
-import { dirname as dirname10, isAbsolute, join as join15, resolve as resolve10 } from "node:path";
+import { mkdirSync as mkdirSync13, writeFileSync as writeFileSync21 } from "node:fs";
+import { dirname as dirname10, isAbsolute, join as join17, resolve as resolve11 } from "node:path";
 
 // src/content-feedback-html.ts
 function escapeHtml(value) {
@@ -97598,14 +98004,14 @@ function analyzeInstagramMedia(media, limit2) {
   return { items, cohort, notes };
 }
 function defaultHtmlPath(channel) {
-  return join15(process.cwd(), "data", channel, "growth", "review-recent.html");
+  return join17(process.cwd(), "data", channel, "growth", "review-recent.html");
 }
 function resolveHtmlPath(channel, outputPath) {
   if (outputPath) {
     if (outputPath.includes("..")) {
       throw new Error(`Path traversal detected: ${outputPath}`);
     }
-    const resolved = isAbsolute(outputPath) ? outputPath : resolve10(process.cwd(), outputPath);
+    const resolved = isAbsolute(outputPath) ? outputPath : resolve11(process.cwd(), outputPath);
     if (!resolved.toLowerCase().endsWith(".html")) {
       throw new Error(`outputPath must end in .html: ${outputPath}`);
     }
@@ -97644,8 +98050,8 @@ async function contentFeedback(input) {
     instagram
   };
   if (htmlPath) {
-    mkdirSync12(dirname10(htmlPath), { recursive: true });
-    writeFileSync19(htmlPath, renderFeedbackHtml(report), "utf8");
+    mkdirSync13(dirname10(htmlPath), { recursive: true });
+    writeFileSync21(htmlPath, renderFeedbackHtml(report), "utf8");
   }
   return { ok: true, status: 200, body: JSON.stringify(report) };
 }
@@ -98550,12 +98956,12 @@ function collectQueries2(input) {
   return out;
 }
 function hitToPost(platform, hit, query) {
-  const canonical = canonicalPost(platform, hit.link);
-  if (!canonical) return null;
+  const canonical2 = canonicalPost(platform, hit.link);
+  if (!canonical2) return null;
   return {
     platform,
-    url: canonical.url,
-    author: canonical.author ?? authorFromSource(hit.source),
+    url: canonical2.url,
+    author: canonical2.author ?? authorFromSource(hit.source),
     title: hit.title.replace(/\s+/g, " ").trim(),
     snippet: hit.snippet.replace(/\s+/g, " ").trim().slice(0, SNIPPET_CAP),
     date: hit.date,
@@ -98687,14 +99093,14 @@ ${errors.join("\n")}`);
 }
 
 // src/capability-status.ts
-import { existsSync as existsSync20 } from "node:fs";
+import { existsSync as existsSync21 } from "node:fs";
 import path14 from "node:path";
 import os from "node:os";
 var has2 = (v) => Boolean(v && v.length > 0);
 var binOk = (p) => {
   try {
-    if (p.includes(path14.sep)) return existsSync20(p);
-    return (process.env.PATH || "").split(path14.delimiter).some((dir) => dir && existsSync20(path14.join(dir, p)));
+    if (p.includes(path14.sep)) return existsSync21(p);
+    return (process.env.PATH || "").split(path14.delimiter).some((dir) => dir && existsSync21(path14.join(dir, p)));
   } catch {
     return false;
   }
@@ -99862,6 +100268,10 @@ Prompt: ${result.prompt}`
   tts_generate_checked: async (args) => {
     const result = await generateCheckedSpeech(parseArgs(checkedSpeechSchema, args));
     return text(JSON.stringify(result, null, 2), result.success !== true);
+  },
+  tts_route: async (args) => {
+    const result = await routeSpeech(speechRouteSchema.parse(args));
+    return text(JSON.stringify(result, null, 2), "success" in result && result.success === false);
   },
   tts_generate: async (args) => {
     const request = parseArgs(ttsGenerateSchema, args);

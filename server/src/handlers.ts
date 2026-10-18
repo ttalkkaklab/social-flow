@@ -1,3 +1,4 @@
+import { routeSpeech, speechRouteSchema } from './tts-routing.js';
 import { hostReview } from './host-review.js';
 import { designGeminiVoice, voiceDesignSchema } from './voice-design.js';
 import { reviewActing as reviewTtsActing, actingReviewSchema as ttsActingReviewSchema } from './tts-acting-review.js';
@@ -1052,6 +1053,10 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   tts_generate_checked: async (args) => {
     const result = await generateCheckedSpeech(parseArgs(checkedSpeechSchema, args));
     return text(JSON.stringify(result, null, 2), result.success !== true);
+  },
+  tts_route: async (args) => {
+    const result = await routeSpeech(speechRouteSchema.parse(args));
+    return text(JSON.stringify(result, null, 2), 'success' in result && result.success === false);
   },
   tts_generate: async (args) => {
     const request = parseArgs(tts.ttsGenerateSchema, args);

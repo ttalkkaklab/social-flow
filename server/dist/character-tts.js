@@ -1,5 +1,5 @@
-import { ELEVENLABS_MODELS } from './elevenlabs-client.js';
-import { TTS_VOICES, VALID_TTS_MODELS, GEMINI_38_TTS_MODELS } from './tts-client.js';
+import { getTtsModels } from './tts-models.js';
+import { TTS_VOICES } from './tts-client.js';
 import { voiceLockConfigSchema } from './voice-lock-config.js';
 import { z } from 'zod';
 export const TTS_DEFAULTS = { engine: 'elevenlabs', voiceId: 'L4az9Gb378GIycFl2nAB', model: 'eleven_v4', speed: 1, language: 'ko' };
@@ -25,9 +25,9 @@ export const ttsSchema = z.object(ttsFields).superRefine((tts, ctx) => {
     const issue = (field, message) => ctx.addIssue({ code: 'custom', path: [field], message });
     if (['gemini', 'elevenlabs'].includes(tts.engine) && tts.speed !== 1)
         issue('speed', 'This engine supports character speed 1 only');
-    if (tts.engine === 'gemini' && tts.model !== undefined && ![...VALID_TTS_MODELS, ...GEMINI_38_TTS_MODELS].includes(tts.model))
+    if (tts.engine === 'gemini' && tts.model !== undefined && !getTtsModels().some(m => m.provider === 'gemini' && m.model === tts.model))
         issue('model', 'Unsupported Gemini model');
-    if (tts.engine === 'elevenlabs' && tts.model !== undefined && !ELEVENLABS_MODELS.includes(tts.model))
+    if (tts.engine === 'elevenlabs' && tts.model !== undefined && !getTtsModels().some(m => m.provider === 'elevenlabs' && m.model === tts.model))
         issue('model', 'Unsupported ElevenLabs model');
     if (tts.engine === 'elevenlabs' && !/^[A-Za-z0-9_-]{1,64}$/.test(tts.voiceId))
         issue('voiceId', 'Invalid ElevenLabs voiceId');
