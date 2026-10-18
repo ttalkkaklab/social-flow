@@ -50,6 +50,10 @@ actions connected; a source still depicts the opening instant, not the completed
 Read [automation guidance](../_shared/automation-guidance.md) and
 [character-led scenarios](references/character-scenarios.md). They define the active
 new-episode workflow below. Use `scenario-v2` and `story-v2` for new work.
+For dramatic characters, read [character depth](references/character-depth.md) before
+choosing the scenario. Connect competing priorities and relationship-specific behavior
+to choices and consequences, then preserve that evidence in scenes and shots. Apply the
+same guidance to scenario-only work; do not add a subplot to an explainer narrator.
 Only a resumed unversioned or story-v1 episode uses
 [legacy authoring](references/legacy-authoring.md); do not load that file for new work
 or silently migrate an approved board. The old narration-only workflow, fixed runtime,
@@ -157,7 +161,11 @@ Read the scene sequence as an audience member before detailing shots. For an ind
 review, hand a fresh reviewer only the ordered actions and actual words first. Withhold
 synopsis, intentions, `necessity`, character wants, desired score and prior favorable reviews.
 Ask what happened, why the decisive choices occurred, how each character learned what they
-know and what the ending changed. Then compare with intent, identities and evidence.
+know and what the ending changed.
+For dramatic principals, also ask what their choices cost, what different sides of them
+the events reveal and how the relationship affects their tactics. Credit visible or
+audible evidence, not a biography or a declared character arc. Record this reading before
+comparing with intent, identities and evidence.
 Repair the specific missing or contradictory event; do not merely rewrite the explanation
 in author metadata. The [reviewer](../../agents/storyboard-reviewer.md) describes this order.
 A review is useful evidence, not a standing numerical gate.

@@ -52,6 +52,13 @@ is not_applicable, not a fake cast member. Record fixed landmarks with anatomica
 left/right when asymmetric. Review examples and numeric/visual consistency manually:
 a schema check cannot prove anatomy, personality, acting or voice quality.
 
+For dramatic characters, use the character-depth guidance linked from the channel skill.
+Write how a trait affects a choice, when a strength creates a cost, and how the person's
+attitude changes with a particular counterpart. Existing goal/flaw/fear/relationships
+fields can express this without schema additions. Do not require a traumatic past,
+self-deception or a growth arc for every role. An arc describes a possibility until the
+story earns it; a new episode's temporary state does not silently rewrite shared canon.
+
 Run from the installed plugin:
 
 ```bash

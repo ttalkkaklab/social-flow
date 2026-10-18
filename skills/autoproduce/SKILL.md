@@ -30,6 +30,10 @@ another writing recipe. Use their current contracts. For new episodes follow sto
 single `scenario-v2` → `story-v2` flow: causal alternatives, complete acted scenes, blind
 comprehension, shot planning, then content-derived timing. Read
 [character-led scenarios](../storyboard/references/character-scenarios.md).
+For dramatic characters, read [character depth](../storyboard/references/character-depth.md)
+before scenario selection. Carry the chosen conflict through performed choices, relationship
+responses and shot framing; metadata alone does not deliver it. Narrators and incidental
+roles need no compulsory inner-conflict subplot.
 
 Use [legacy unattended notes](references/legacy-unattended.md) only to understand a resumed
 unversioned or story-v1 episode's old files. Never load them as instructions for a new story.

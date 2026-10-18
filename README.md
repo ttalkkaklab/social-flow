@@ -1,5 +1,11 @@
 # social-flow
 
+[Character depth](skills/storyboard/references/character-depth.md) connects shared identities
+to episode choices, personal costs and relationship-specific behavior. Channel, storyboard
+and autoproduce use the same guidance; blind review checks the performed evidence before
+reading author intentions. Existing schemas remain unchanged, and narrators or incidental
+roles do not acquire compulsory subplots or character arcs.
+
 The [filmmaking guide](docs/guides/ai-film-four-elements/index.html) explains character references, camera direction, framing and shot timing. `storyboard_read` exposes the shared 45-entry technique catalogue; `shot.techniques` stores stable IDs with shot-specific reasons. The offline storyboard exports the same catalogue, with a distinct pictogram and explanation for every entry. Camera instructions reach the generic, speech-planning and ASTRA prompt paths. See [technique selection](skills/storyboard/references/film-techniques.md).
 
 Character video requests now compile [voice continuity](skills/produce/references/voice-continuity.md)

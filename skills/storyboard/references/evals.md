@@ -16,6 +16,10 @@
 - [Revised opening with a stale ending](#revised-opening-with-a-stale-ending)
 - [Costly agreement and foreseeable mishap](#costly-agreement-and-foreseeable-mishap)
 - [Overexplained repair](#overexplained-repair)
+- [Clear goal with a decorative flaw](#clear-goal-with-a-decorative-flaw)
+- [A stable conviction and distinct relationships](#a-stable-conviction-and-distinct-relationships)
+- [Character evidence lost in shots](#character-evidence-lost-in-shots)
+- [Serialized consequence and narrator boundary](#serialized-consequence-and-narrator-boundary)
 
 Use a fresh author with the installed skill and raw brief. A separate reviewer first
 receives only ordered actions and speech; do not supply intended interpretation or an
@@ -129,3 +133,47 @@ Pass evidence: one economical behavior gives the goal personal weight, precautio
 readable risk without automatically naming the coming joke, and routine completion is
 compressed while contested terms and actual prop transfers survive. Deliberate suspense
 remains valid; do not erase necessary context merely to surprise the audience.
+
+## Clear goal with a decorative flaw
+
+Input: write a scenario-only workplace drama about a mentor who cares for a junior but
+fears becoming unnecessary. The initial draft has a clear promotion goal and calls the
+mentor controlling, yet every action is uncomplicated help. Existing identities already
+establish these tendencies. Ask for more character depth without a tragic backstory.
+Pass evidence: the performed exchange makes the mentor's competing priorities affect a
+choice and lets the junior respond from their own pursuit. The reviewer can cite the
+choice and its cost without reading the premise. No invented childhood, extra identity
+keys, media generation or mandatory redemption; scenario-only scope stays intact.
+Changing only the flaw description does not count as a repair.
+
+## A stable conviction and distinct relationships
+
+Input: a principled repairer refuses to falsify a report, even at personal cost. Their
+employer wants discretion; their sibling fears losing the family's income. Write the
+scene without making the repairer abandon the principle or confess a secret.
+Pass evidence: the stable conviction remains valid, but the repairer's tactics and
+responses differ with each counterpart and the cost reaches the actual exchange. The
+other characters can affect events. No forced self-deception, moral ambiguity or lesson.
+The reviewer distinguishes depth revealed under pressure from personality transformation.
+
+## Character evidence lost in shots
+
+Input: a complete scene shows a mentor reaching for a remote, a junior keeping it and
+the mentor withdrawing their hand. The board crops to a face throughout and starts with
+the mentor already smiling; author notes claim that they relinquish control.
+Pass evidence: the author preserves the trigger, contested remote and response in the
+performance and planned framing, with an opening before the decisive action. Optional
+acting notes support the same situation without adding a spoken explanation. The reviewer
+cites the missing cue in the original plan and judges the revision as planning evidence
+only; no generated image, voice or video quality is claimed.
+
+## Serialized consequence and narrator boundary
+
+Input: draft a sequel using a canonical prior ending in which a partner withdrew trust.
+Also provide a later unapproved alternative in which they reconciled. Then request an
+unrelated narrator-only factual explainer using the same channel.
+Pass evidence: the sequel starts from canonical distrust and earns any restoration in
+events; it does not silently promote the alternative or overwrite shared identity. The
+source episode and relevant resulting state are recorded in storyboard.md when useful.
+The explainer adds no invented personal conflict or therapeutic arc. Missing history is
+reported as uncertain, not filled in as fact; no new required schema or approval gate.
