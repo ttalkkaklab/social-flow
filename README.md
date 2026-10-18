@@ -63,8 +63,11 @@ and episode creation over MCP; `skills/_shared/project-settings.js` is its CLI.
 Claude Code's read-only SessionStart hook reports missing settings. Other hosts
 use the skill's explicit preflight; neither path silently chooses preferences.
 
-At first setup in a working directory, choose the video type, then the video,
-speech and image models. The [type catalog](skills/_shared/video-types.md) covers
+At first setup in a working directory, choose the video type, then the video model
+and its credentials, then the image model and its credentials. Finally choose whether
+separate TTS is needed; if yes, select its model and configure credentials, otherwise
+save `models.speech:{engine:"none"}`. Reuse configured keys, including shared provider
+keys. Host/local engines need their tools available, not a separate API key. The [type catalog](skills/_shared/video-types.md) covers
 drama, comedy, documentary, explainer, tutorial, review, interview, vlog,
 advertisement, music video and custom/hybrid, with each choice's speech direction
 shown before selection. The choices are saved in `.social-flow/models.json`

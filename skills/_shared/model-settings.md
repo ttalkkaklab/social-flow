@@ -19,7 +19,8 @@ spending authorization separate. The low-level model CLI below remains available
 for compatibility and explicit model changes; it preserves all project fields.
 
 Owner directive, 2026-10-16: once the production working directory is known, select
-**video type → video model → speech model → image model → music model** once and save them in that directory. Every new
+**video type → video model and credentials → image model and credentials →
+TTS needed? → speech model and credentials if yes → music when wanted** once and save them in that directory. Every new
 episode uses those choices until the user explicitly requests a change. This takes
 precedence over automatic host detection, economy/quality routing, per-cut model
 escalation and repeated model questions in older skill sections. It is an explicit
@@ -49,7 +50,7 @@ node "${CLAUDE_PLUGIN_ROOT}/skills/_shared/model-settings.js" show "$WORKSPACE"
 ```
 
 `configured`: briefly state the saved type and models and continue without another
-question. `setup_required`: select the type and three models below before authoring a
+question. `setup_required`: select the type, video/image models and explicit TTS choice below before authoring a
 new generated episode or making a media call. `video_type_required`: older settings
 already contain models; ask only for the type before the next new episode and save
 it with `update`. Resume an existing episode from its snapshot/board without another
@@ -62,7 +63,7 @@ selection. Existing choices may be offered as candidates.
 |---|---|---|
 | `setup_required` | `model-settings.js show` | No `.social-flow/models.json`; run first setup. |
 | `video_type_required` | `model-settings.js show` | Models saved, type missing; ask only the type. |
-| `configured` | `model-settings.js show` | Type and three models saved (model-only view). |
+| `configured` | `model-settings.js show` | Type, video/image models and speech model or explicit none saved (model-only view). |
 | `migration_required` | both | Retired speech model; update speech explicitly before new generation. |
 | `project_setup_required` | `project_manage status` / `episode` | Project, style, production, SNS or channel layout missing; `missing[]` names them. An unattended caller reports it and defers authoring. |
 | `ready` | `project_manage status` | Complete settings; authoring starts without a preference question. |
@@ -102,7 +103,16 @@ prices. A configured credential does not guarantee a successful generation.
    Use the installed video-model selection reference and cost tables. Explain the
    change each option makes. The host is the recommended initial choice when it
    supports the requested job; the user can explicitly choose an API instead.
-2. **Speech model.** Offer available Gemini models or ElevenLabs `eleven_v4` only
+2. **Image model.** Offer the host image tool first when available, then supported
+   GPT Image, Z-Image and MLX options. Explain reference editing, readable text,
+   cost and quality controls. Store an explicit API choice even when a host tool
+   is present. No later cover/points heuristic can substitute another model.
+
+3. **TTS needed?** Ask whether this project needs separately generated speech.
+   If not, save `models.speech:{engine:"none"}` and skip speech model, voice and
+   credential questions. This covers silence, supplied recordings and native video
+   audio without a separate TTS call. Do not infer this choice from the genre.
+   If yes, select a **speech model**, then complete its credential check below. Offer available Gemini models or ElevenLabs `eleven_v4` only
    ([v4 API contract](elevenlabs-v4.md)); v4 Turbo uses a separate realtime WebSocket
    and is not supported by the file-generation tools. Local TTS
    engines are removed; do not offer Supertonic or MLX speech. Keep model selection separate from each
@@ -114,10 +124,6 @@ prices. A configured credential does not guarantee a successful generation.
    designed with `tts_voice_design`; when the saved speech model is another family,
    using such a voice needs an explicit model exception recorded in
    `PRODUCTION.modelSettings.overrides`.
-3. **Image model.** Offer the host image tool first when available, then supported
-   GPT Image, Z-Image and MLX options. Explain reference editing, readable text,
-   cost and quality controls. Store an explicit API choice even when a host tool
-   is present. No later cover/points heuristic can substitute another model.
 
 4. **Music model.** Read `music_catalog` (also in `project_manage options`). Save
    `models.music` as `{engine, model}`: `lyria`, `elevenlabs`, `suno-api` or `mlx`.
@@ -126,7 +132,8 @@ prices. A configured credential does not guarantee a successful generation.
    Reusing a channel bed requires no music model choice. A configured model is not
    spending authorization. See [music routing](music-routing.md).
 
-Ask in that order, or use a multi-question interface preserving the order. Reuse
+Complete each model selection and its credential step below before asking for the next category.
+Do not batch video, image and speech choices ahead of credential setup. Reuse
 answers already explicit in the user's request; ask only for missing categories.
 Do not bill for samples during setup unless requested. Do not treat silence as a
 selection. This first setup is a user-requested preference step and is not waived
@@ -161,6 +168,37 @@ host-managed tools cannot pin an internal vendor version they do not expose.
 Video may include `resolution`; image may include `quality`. Use only values the
 chosen tool supports. Host `quality` is a prompt preference if no parameter exists.
 
+## Credential step after each selection
+
+After video selection, after image selection, and after speech selection only when
+TTS is enabled, check the selected provider with `capability_status`. Reuse existing
+credentials; a shared key configured for video must not be requested again for TTS.
+For a host tool, confirm that the tool is exposed and authenticated through the host;
+for local engines, check the installation. Neither requires an invented API token.
+
+If the selected API provider is unconfigured, name its required variable and guide
+the user to configure it before the next model question. Use the provider's adapter
+reference and `capability_status.needs`: Seedance uses `ARK_API_KEY`, Veo/Omni and
+Gemini TTS use `GEMINI_API_KEY`, GPT Image uses `OPENAI_API_KEY`, ElevenLabs uses
+`ELEVENLABS_API_KEY`, ASTRA video uses `ASTRA_VIDEO`, and ASTRA GenAI uses
+`ASTRA_GENAI_API_KEY`. Do not interchange ASTRA credentials.
+
+Credentials belong in the server environment or `<SNS_TOKEN_DIR>/.env` (default
+`~/.config/social-flow/.env`), outside the project. Have the user enter secrets
+locally, never in chat, model settings, command arguments or logs. Preserve existing
+entries; protect the directory/file with modes 700/600. These media keys are shared
+provider credentials, separate from per-channel SNS OAuth files. The running server
+loads configuration at startup: after a change, reconnect/restart that MCP server
+and re-run `capability_status` before advancing. Report presence as configured,
+not as proof that the key is valid; do not generate a paid sample to test it.
+
+If setup cannot finish, report the selected provider and missing variable or host/local
+requirement, keep explicit answers in the session and resume at this step. Do not
+silently switch providers or mark setup complete. A user who explicitly defers setup
+may keep a local text-only draft with unresolved production requirements. Unattended
+runs report the missing requirement and defer generation instead of prompting.
+Apply the same credential step to an optional music selection.
+
 ## Apply to authoring and generation
 
 Before the first board is authored, create the episode with `project_manage episode` (or
@@ -185,7 +223,7 @@ through storyboard → produce → edit-speech. Apply choices before cost quotes
 |---|---|
 | Image | `PRODUCTION.imageProvider` is `host` for host, otherwise `api` (including local tools). `modelSettings.models.image` supplies the exact engine/model/quality for every new still and edit. |
 | Video | `PRODUCTION.videoProvider` is `host`, `astra`, or `api` for other engines. `PRODUCTION.videoModel` uses `model:'host'` / `model:'astra'` for those adapters, otherwise the selected model, plus resolution where supported. Record `selection:{kind:'standing',reference:<snapshot or source file>}` (an optional `note:'Directory model selection'`); `project_manage episode` fills `PRODUCTION.videoModel` with `kind` and `reference`. Populate each cut's existing engine/model/resolution fields from the selection using that adapter's contract. |
-| Speech | Use `modelSettings.models.speech` when authoring new speaker `tts` records and resolve a compatible voice. Copy the selected model explicitly into `SB_DOC.characters[].tts` when selectable. Generate from those records with raw speech tools. |
+| Speech | With `engine:"none"`, do not create TTS records, audition voices or call TTS tools. Use supplied/native audio or silence as planned. If separate synthesis becomes necessary, request an explicit speech choice and credentials before generation; never auto-enable TTS. Otherwise use `modelSettings.models.speech` when authoring new speaker `tts` records and resolve a compatible voice. Copy the selected model explicitly into `SB_DOC.characters[].tts` when selectable. Generate from those records with raw speech tools. |
 
 Do not send this config object as a tool payload. Translate it into the selected
 tool's actual arguments; fixed-model tools get no invented `model` argument.

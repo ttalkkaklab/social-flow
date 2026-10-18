@@ -35,8 +35,11 @@ episode work, continue to that skill after setup without asking for the same cho
    channels ask which one this project's defaults should target; do not pick the first.
    `project.channel` selects one primary channel; other existing directories are preserved.
 3. Call `project_manage action:options` and `capability_status`. Follow
-   [model settings](../_shared/model-settings.md) for **genre → video model → speech
-   model → image model → music model when generating new music**. Reuse explicit prior answers and existing settings.
+   [model settings](../_shared/model-settings.md) for **genre → video model → video credentials → image model → image credentials
+   → TTS needed? → speech model and credentials only if yes → music when wanted**.
+   Complete each credential step before the next model question; follow the shared
+   credential procedure, including server reconnect and configuration recheck.
+   An explicit no-TTS choice saves `models.speech:{engine:"none"}`. Reuse explicit prior answers and existing settings.
 4. Ask for the missing **visual style**, **video ratio**, and **output format** — asked
    once here, then reused (the owner's exception to assistant-decided preferences).
    Show the rendering descriptions in [visual style](../storyboard/references/visual-style.md).
@@ -68,7 +71,8 @@ saved choices. An unattended caller with incomplete setup returns
 For a new channel, author `profileMarkdown` from the
 [profile template](../channel/references/profile-template.md) using channel skill's
 audience, tone, voice and theme procedure. Keep its platform table and voice engine
-consistent with the selected settings. Do not generate sample media during setup.
+consistent with the selected settings. For speech engine `none`, do not invent
+voices, run voice auditions or generate speech samples. Do not generate sample media during setup.
 Pass the completed profile to `project_manage init`; for an existing profile omit
 it so the file stays untouched. The tool creates the catalog and episodes slot,
 adds local data/settings ignore rules, and preserves all existing assets.

@@ -228,3 +228,11 @@ test('GenAI is a separate model-selecting engine; legacy Astra remains fixed-mod
   assert.doesNotThrow(()=>settings.validateModels({video:{engine:'astra'}},true));
   assert.throws(()=>settings.validateModels({video:{engine:'astra',model:video.model}},true),/fixed server model/);
 });
+
+
+test('explicit no-TTS selection accepts no model and omission still requires setup', () => {
+  assert.doesNotThrow(() => settings.validateModels({ ...models, speech: { engine: 'none' } }));
+  assert.throws(() => settings.validateModels({ ...models, speech: { engine: 'none', model: 'unused' } }), /omit model/);
+  const { speech, ...missingSpeech } = models;
+  assert.throws(() => settings.validateModels(missingSpeech), /speech.engine/);
+});
