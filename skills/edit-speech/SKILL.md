@@ -20,6 +20,16 @@ reuse the episode's snapshot, explicit overrides and pinned speaker voice; a new
 directory default does not change an existing take's model. Change it only when
 the user requests that change. Never silently fall back to another speech engine.
 
+When the user asks to apply the current character sheet, read that character's
+shared `voice-selection.json` and identity `tts`, then compare engine, model and
+voice ID with `SB_DOC.characters`. That request authorizes updating the named
+characters' episode voice pins; a stale episode pin is not the requested voice.
+Back up the board, record the scoped change and regenerate affected requested
+media. Assert that each `plan_audio` result and actual generation receipt match
+the selected sheet before attaching audio. Report other affected episode lines
+as stale if they are outside the requested rebuild. A sample-only voice edit or
+an unrelated directory-default change still preserves existing episode pins.
+
 Use `speech_manage action:list` on the existing board. Filter by shotId, speaker id/name,
 or quoted text. Shot numbers are display positions; stable shotId and lineId are the edit
 addresses. If a request matches several lines, report the candidates and clarify only the

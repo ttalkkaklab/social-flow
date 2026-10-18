@@ -56,5 +56,20 @@
     "s3": 0,
     "verdict": "PASS",
     "exit_code": 0
+  },
+  "devIntegration20261018": {
+    "commit": "84635fe",
+    "command": "npm run check --prefix server",
+    "tests": 2311,
+    "pass": 2311,
+    "fail": 0,
+    "log": "/tmp/film-merge-check.log",
+    "skillLint": "17 rules across 21 skills",
+    "installedSmoke": {
+      "version": "0.118.0",
+      "catalogEntries": 45,
+      "result": "/tmp/film-installed-read6-result.json"
+    },
+    "installReceipt": "/tmp/film-install6-result.json"
   }
 }
