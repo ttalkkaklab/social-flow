@@ -88,3 +88,14 @@ both Mac caches to the repository. The author reloaded the installed reference b
 run-03. Final skill lint and diff checks pass. The runtime remains unchanged from the full
 2,354-test passing run; no redundant prose-assertion tests were added. Final draft, canon
 and author notes pass the Korean style checker; changed repository prose has no D8 findings.
+
+## Dev integration validation
+
+Before PR merge, current dev was integrated without conflicts. Its additional music tool
+permissions change the storyboard skill frontmatter but not the causal-dialogue guidance.
+The installation receipts above describe the exact pre-integration snapshot read by the
+author and still match both Mac caches; they are historical evidence, not hashes of every
+later repository revision. A fresh full check after integration passed 2,414 tests in 227
+suites, and skill-lint passed all 17 rules. Independent change review reported zero
+critical, high, medium or low findings. Episode artifacts and their 96-point review remain
+unchanged.
