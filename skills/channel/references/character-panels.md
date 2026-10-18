@@ -8,11 +8,34 @@ merely to make a diagnostic disappear.
 
 | Slot | Canvas | Framing |
 | --- | --- | --- |
-| front | 2:3 portrait, e.g. 1024×1536 | Head to shoes visible; neutral stance; full subject height 80–90% |
-| back | Same 2:3 canvas as front | Back facing camera; head to shoes; full subject height 80–90% |
+| front | 2:3 portrait, e.g. 1024×1536 | Headless front mannequin, neck/shoulders to shoes; neutral stance; visible subject height 80–90% |
+| back | Same 2:3 canvas as front | Headless rear mannequin, neck/shoulders to shoes; same outfit and scale; visible subject height 80–90% |
 | face | 1:1 square, e.g. 1024×1024 | Neutral forward face; complete head including hair; head height 60–75% |
 
-Center the subject, use a plain background and keep front/back subject heights
+The baseline has one visible face, in `face.png` only. Front/back show the outfit
+and body proportions without a head or facial features. Use a headless mannequin
+for body landmarks; an outfit-only ghost mannequin may hide the body entirely while
+preserving the worn silhouette. Do not add a mannequin head or a blurred second face.
+For unclothed stylized characters, preserve the headless torso, limbs, markings and
+tail; the face panel supplies the head design. These are reference assets, not scene
+anatomy: generated scenes must restore the complete character from the face reference.
+
+Use a neutral grey background and soft even studio lighting. Keep the face neutral,
+sharp and large, with the entire hair silhouette visible. Store rear-hair or unusual
+head details separately when needed; do not put a second face into the body panels.
+Save separate source images even when the review HTML displays them side by side.
+
+This is our default for newly generated or explicitly revised panels, not a Seedance
+API requirement. Preserve existing originals; do not bill regeneration solely to
+migrate old sheets. Inspect legacy panels and describe their actual contents honestly.
+The renderer's size/hash checks cannot establish that a head was removed.
+
+Sources: Higgsfield's [single-face edit](https://higgsfield.ai/blog/cinematic_headphones)
+and [ghost-mannequin workflow](https://higgsfield.ai/blog/seedance4k-breakdown).
+Our front/back headless pair combines these practices; not every vendor example
+removes the rear head.
+
+Center the subject and keep front/back subject heights
 within 3 percentage points. These are generation/comparison targets, not measured
 physical height. They are independent of the episode's 9:16 or 16:9 video format.
 Inspect the actual picture for cropping, perspective, identity and scene props.
@@ -42,7 +65,7 @@ unverified-purpose warning; arbitrary `reference-v1.png` files are not guessed a
 
 After inspecting an actual image, an optional measurement is
 `framing: {status: "measured", sha256: "<actual file hash>", subjectBox: [x,y,width,height]}`.
-Coordinates are normalized to 0–1. Measure the full subject for body slots and the
+Coordinates are normalized to 0–1. Measure the visible headless subject, neck/shoulders to shoes, for body slots and the
 head including hair for face. Do not invent the box or treat a model's self-report
 as visual inspection. Changed bytes invalidate the measurement. The diagnostic
 checks recorded occupancy and comparison tolerances; it cannot detect the person

@@ -570,26 +570,30 @@ hand over the two or three the shot actually needs:
 data/<channel>/assets/characters/<id>/
   identity.md   # the canonical description — look, marks, expression, voice, veo verdict
   face.png      # face close-up — neutral, minimal shoulders, plain background. The headshot the vendor asks for
-  body.png      # canonical front panel: complete head-to-shoes body, clothes and shoes
-  costume.png   # optional derived costume-only input; not a baseline front panel
-  back.png      # full body, back, no face — required for every new reference set
+  body.png      # canonical front panel: headless mannequin, build, clothes and shoes
+  costume.png   # optional wardrobe variant; baseline body/back already omit the head
+  back.png      # matching headless rear mannequin — required for every new reference set
   front.png     # legacy: full body with the head on. Fallback when the panels don't exist yet
   voice.wav     # the fixed voice sample — 5–10 s of speech in the character's register, no music or effects. Reference audio for cuts the model voices
 ```
 
 **Front-facing reference set: `[face.png, body.png]`, in that order.** That is the vendor's headshot +
-full body, and array order is weight, so the face leads. Add `back.png` only for a shot where the
-character is seen from behind; a pure rear shot uses back alone, and a facial close-up uses face alone.
+body-reference pairing, with our headless wardrobe panel and the face first. Add
+`back.png` for rear views. A rear shot still needs the head design from `face.png`
+(or a separate approved rear-head reference); do not send the headless back alone.
+A facial close-up uses face alone. State that body panels supply wardrobe/build,
+while the face supplies the complete head; the scene depicts a complete character.
 Keep body, back and face reference images locally. All three must be stored before
 a new character reference set is complete; optional extra images serve specific poses/details. Never build a combined sheet out of the panels — the moment two
 angles share one image, this whole section's warning applies again.
 
 **Baseline and adapter inputs are separate.** The shared front panel follows
-`../../channel/references/character-panels.md`: retain the complete head and shoes.
-A face-erased or headless costume reference is an optional derived input for a
-specific adapter experiment, never the default baseline and never relabelled as
-`front`. Keep the original, record why the derivative is used and compare actual
-identity drift. Multiple panels in the review sheet do not imply a multi-panel
+`../../channel/references/character-panels.md`: front and back omit the head;
+the face close-up is the single facial identity reference. This is our authoring
+convention, not a vendor API constraint. Preserve legacy originals and inspect
+actual identity drift. For a first-frame image-to-video adapter, compose a complete
+scene image using these references first; never use a headless panel as the literal
+opening frame. Multiple panels in the review sheet do not imply a multi-panel
 image should be submitted as one video start frame.
 
 **Light the sheet flat** `[course]`. A reference sheet gets rejected on lighting far more often

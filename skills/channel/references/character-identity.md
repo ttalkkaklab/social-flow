@@ -85,11 +85,15 @@ for provider mappings and the distinction between sample imitation and exact spe
 
 1. Author the identity before images. Use `direction.image` for the appearance prompt
    plus the specific panel framing. Create separate front full-body, back full-body,
-   and face close-up images following [character-panels.md](character-panels.md). The front includes the head and a neutral face; the back
-   faces away. Never erase a face from the front body. Match proportions, clothing,
-   colors and landmarks across all panels. Keep expressions/poses as optional extras.
-2. Use the host image tool where available. Generate the first panel, inspect it, then
-   use it as the reference for subsequent views. Keep each panel in a separate file;
+   and face close-up images following [character-panels.md](character-panels.md).
+   Front and back are headless mannequin-style references for build and wardrobe;
+   only the face close-up shows the head and face. Match proportions, clothing,
+   colors and body landmarks across both body panels. Keep expressions, poses and
+   rear-hair details as optional extras, separate from the baseline set.
+2. Follow the saved image model and [image routing](../../_shared/image-routing.md).
+   Generate and inspect the face close-up first, then use the identity and approved
+   wardrobe references to create the headless front and matching back.
+   Keep each panel in a separate file;
    do not feed a multi-view composite to an image/video generator.
 3. When the user requests character voice work, audition before confirming the voice:
    generate distinct voice candidates matched to the identity (three is the usual

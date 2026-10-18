@@ -32,7 +32,7 @@ This fragment belongs inside a complete shot replacement; preserve unrelated fie
 
 Select frame size separately from actor count: a two-shot can be MS, MFS or LS. MS is waist-up; MFS ends at mid-thigh. End-framing changes belong in `camera.end`, not a second starting-size selection. Static plus rack focus is valid. Static plus dolly in is contradictory. Snorricam needs body mounting and a fixed face; ordinary handheld sway is different. Dolly in changes viewpoint, zoom in changes field of view, and a dolly zoom coordinates both to hold the subject's screen size.
 
-Character icons identify reference intent, not proof that an image was submitted. Use the complete front, back and neutral face baseline. A faceless costume derivative is optional. Check actual reference paths and source images before generation.
+Character icons identify reference intent, not proof that an image was submitted. Use headless front/back mannequin references and one neutral face close-up. Restore the complete head in scene images; keep rear-hair details as optional separate references. Check actual reference paths and source images before generation.
 
 Timing entries provide starting ranges, never duration clamps. Measured speech, performance, editing handles and provider frame limits determine the request. A two-second reply need not become seven seconds. A long take needs visible action throughout; an idle held frame does not satisfy it.
 
