@@ -34,11 +34,31 @@ before detailed text authoring; presentation does not add an approval pause.
 Use the bundled storyboard HTML and verify its export. Delegated authors use the same
 order and deliverables. See `skills/_shared/production-workflow.md`.
 
+## Fixed cut stages (owner directive, 2026-10-19, later clarification)
+
+Cut storyboard production uses seven separate skills in fixed order: review-context ->
+review-camera -> compose-blender -> generate-cut-images -> review-cut-images ->
+generate-cut-videos -> review-cut-videos. Autoproduce coordinates; the server enforces
+stage completion, current evidence and rewind. Character, prop and background sheets
+remain preparation assets. Context review follows text; props/backgrounds finish before
+camera review. Required Blender still compositions precede cut image generation. Animated
+video previz remains optional. No renderer fallback or review skip is permitted for these
+cut stages. This overrides the earlier guidance-only review policy for this scope.
+
+Context review uses a fresh independent reviewer with audience-visible actions and words
+only, before synopsis, motives or author explanations. Test what an unbriefed viewer can
+understand and cite the planned beat/cut showing each consequential fact. Missing causes,
+knowledge acquisition or required shots need actual story repairs, not metadata excuses.
+Authors repair; independent reviewers recheck. Scores alone cannot complete a stage.
+Existing boards can re-enter a stage by command; reuse inspected media and rewind only
+affected dependencies. No review command implies new paid generation or publication.
+See skills/_shared/production-workflow.md for receipts, limits and command boundaries.
+
 ## Guided automation (owner directive, 2026-10-16)
 
-CTA checks are removed. Creative structure, writing style, camera direction, review
-scores, frozen stamps and subjective quality belong primarily in skills as guidance,
-not automatic execution gates. Continue authorized work with honest findings and
+CTA checks are removed. Outside the fixed cut workflow, creative structure, writing style,
+camera direction, review scores, frozen stamps and subjective quality belong primarily
+in skills as guidance, not automatic execution gates. Continue authorized work with honest findings and
 `not_reviewed` or stale evidence instead of manufacturing a passing review. A user
 who explicitly requests a quality-improvement loop still gets that loop; its score
 does not become a prerequisite for unrelated tool execution.

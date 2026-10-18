@@ -1,12 +1,12 @@
 ---
 name: autoproduce
 description: >
-  Builds an episode unattended locally; runs storyboard then produce. Use when the
+  Builds or improves an episode through seven fixed production stages. Use when the
   user asks to "이 주제로 영상 하나 만들어", "자동으로 쇼츠 만들어", "make a short end to end",
-  or an authorized growth loop refills its queue. Develops complete causal scenes,
+  "기존 스토리보드 개선", or an authorized growth loop refills its queue. Develops complete causal scenes,
   plans shots and content-led timing, then produces the media within saved choices and
   spending limits. Storyboard stops at a plan; produce builds an existing approved board.
-argument-hint: "<channel> \"<topic>\" [unattended <platform>]"
+argument-hint: "[episode-or-storyboard-path | channel topic]"
 allowed-tools: ["mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__music_plan", "mcp__plugin_social-flow_social-flow__music_plan", "mcp__social-flow__music_execute", "mcp__plugin_social-flow_social-flow__music_execute", "mcp__social-flow__music_status", "mcp__plugin_social-flow_social-flow__music_status", "mcp__social-flow__music_generate_song", "mcp__plugin_social-flow_social-flow__music_generate_song", "mcp__social-flow__music_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__music_elevenlabs_generate", "mcp__social-flow__suno_generate", "mcp__plugin_social-flow_social-flow__suno_generate", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
   "WebSearch", "WebFetch",
   "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search",
@@ -61,61 +61,49 @@ direct adapter call.
 
 Prepare shared identities and export the [character sheets](../channel/references/character-identity.md#prepare-the-shared-sheet-before-episode-authoring)
 before text authoring. Follow [production order](../_shared/production-workflow.md):
-project setup, character text/images, text storyboard, prop text/images, background
-text/images, image storyboard, then video. Missing authorization blocks generation.
+project setup and asset preparation, then the fixed context/camera/Blender/image/video
+stages and their independent reviews. Missing authorization blocks generation.
 
 For growth-loop calls, read the calling platform's `growth-plan.md` and follow
 [unattended lifecycle](references/unattended-lifecycle.md) for channel locking, topic
 selection, duplicate checks, counters and queue scope. Human-invoked local drafting does
 not inherit a publishing schedule or automatic queue authorization.
 
-## Author once, then produce
+## Coordinate the fixed stage skills
 
-1. Run the storyboard skill's current workflow. Start from the settled material or saved
-   draft; compare causal alternatives only when a decision needs them or the user asks.
-   No human selection pause is needed when automatic selection is already authorized. Record that it was an
-   automatic choice; never call it a user approval. Follow storyboard's scenario-preview
-   rule. Complete character sheets before text; finish props and backgrounds after text
-   and before the image storyboard. Advance production_workflow at each boundary.
-   Delegated writers receive the same skill, sheet and shared-template contract.
-2. Write complete scenes before shots. Inspect character knowledge, decisive motivation,
-   setup/payoff and prop/spatial continuity. Plan listener responses and silence alongside
-   words. If review is useful, use the [storyboard reviewer](../../agents/storyboard-reviewer.md):
-   first supply audience-visible actions and speech only, then reveal intentions and sources.
-3. Turn scenes into shots while preserving their events. For narration-led work, apply
-   [visual grounding](../storyboard/references/narration-visual-grounding.md) before conte prompts:
-   distinguish the spoken information from each picture's contribution. Estimate time from
-   words, sequential actions and concurrent actions. A hard duration limit calls for simpler content or an
-   episode split, not unexplained jumps. Pass whole shots to speech/video planning.
-4. Run the relevant storyboard diagnostics and refresh its local review HTML. Fix technical
-   execution errors. Resolve concrete editorial findings in scope and report any remainder.
-   A schema pass is not an audience-comprehension or visual-quality pass.
-5. Music may use existing alternate arrangements and multiple cues; additional generation stays
-   within the saved model and authorized allocation. Use shot-relative gain curves for dramatic
-   swells and restrained dialogue. A single bed is optional, not an unattended restriction.
-   If production is authorized, follow produce for the complete generation/build path. Read
-   [production mode](../storyboard/references/production-mode.md), confirm the saved model
-   and existing approved cap against the content-derived quote, and preserve real attempt
-   limits. An estimate is not a receipt. Unknown pricing stays visibly unknown.
-6. Produce plans and inspects source images, relevant previz and generated shots. Compare
-   adjacent shots as a scene: visible action, listener response, object state, eyelines and
-   sound must carry the story the board promised. Sample frames alone cannot certify
-   continuous action or voice delivery. Report precisely what was not viewed or heard.
-7. Deliver the clean master and requested platform text through produce's current delivery
-   verification. Follow [shot speech](../produce/references/shot-speech.md): speech has real
-   provenance and `not_reviewed` status; do not add automated listening/STT/scoring gates.
-   Do not burn dialogue into the video. Optional separate captions follow the user's scope.
+Read [the fixed workflow](../_shared/production-workflow.md). Inspect production_workflow
+status and call the skill for the current stage; never reorder it based on confidence,
+cost, existing media, a good synopsis or a previous favorable score.
 
-Keep research when factual claims need it, all candidates, the selected scenario,
-`scenes.js`, readable board, HTML, actual review records and production receipts locally.
-Keep decisions and actual costs in `.work/`; use the current builders rather than copying
-an old shell pipeline or fixed playback speed from historical notes.
+For new work, use storyboard for character preparation and observable text. For a supplied
+existing episode/storyboard path, import inspected preparation assets and preserve the
+existing story; do not start a replacement episode. Review-only scope stops at its requested
+stage and does not imply generation or publication authorization.
+
+1. Invoke [review-context](../review-context/SKILL.md). The reviewer reconstructs the story
+   from audience-visible actions and speech without the author's explanation.
+2. Finish prop/background preparation from the reviewed text, then invoke
+   [review-camera](../review-camera/SKILL.md).
+3. Invoke [compose-blender](../compose-blender/SKILL.md).
+4. Invoke [generate-cut-images](../generate-cut-images/SKILL.md).
+5. Invoke [review-cut-images](../review-cut-images/SKILL.md).
+6. Invoke [generate-cut-videos](../generate-cut-videos/SKILL.md).
+7. Invoke [review-cut-videos](../review-cut-videos/SKILL.md).
+
+For failures, let the author repair the earliest affected stage and rerun invalidated
+stages with independent review. Preserve unchanged assets and the frozen rubric. Enforce
+real spending/attempt limits and the shared loop stopping condition. If required review,
+Blender or media input is unavailable, report the incomplete stage without substituting
+another workflow. The coordinator cannot write a passing verdict on a reviewer's behalf.
+
+After video_review, use produce for assembly, music, requested platform copy and final
+delivery verification. Keep speech provenance without automatic speech-scoring/STT gates.
+Publishing remains a separate authorization. Preserve actual costs and failed reports.
 
 ## Reviews and explicit improvement loops
 
-Reviews improve the work; they do not impose an automatic approval gate. Do not manufacture
-scores, freeze stamps or media reviews. Do not hold a growth queue solely for a creative
-score. Readability, usable files, supported payloads, finite execution timing, concurrency,
+The fixed cut reviews are required completion stages. Other optional reviews do not add approval gates. Do not manufacture
+scores, freeze stamps or media reviews. Do not invent a passing result to fill a growth queue. Readability, usable files, supported payloads, finite execution timing, concurrency,
 spending and publication authority remain real requirements.
 
 When the user requests a convergence loop, run that loop to the stated criterion. Keep

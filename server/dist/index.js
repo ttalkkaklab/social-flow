@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { manageWorkflow, requireWorkflow } from './production-workflow.js';
+import { manageWorkflow, requireWorkflow, requireReviewedVideos } from './production-workflow.js';
 import { isManagedMusicCall } from './music-registry.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -18,7 +18,7 @@ import { reviewFinalSpeech } from './tts-final-quality.js';
 // package.json's version and every plugin manifest in skill-lint.js's MANIFESTS (it checks that they agree).
 // If the two drift, the version clients see stops matching the actual package, so bump this
 // line together with package.json (the contract test checks that the two agree).
-const server = new Server({ name: 'social-flow', version: '0.119.0' }, { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS });
+const server = new Server({ name: 'social-flow', version: '0.120.0' }, { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS });
 // Per-platform publish tools are exposed only for platforms that have a credential file
 // (default tokens ∪ channel directories) — this is evaluated per request, so adding a token
 // file takes effect without a server restart. Every handler stays registered, so calling a
@@ -124,6 +124,14 @@ process.once('SIGTERM', gracefulShutdown);
 async function main() {
     if (process.argv[2] === '--workflow') {
         console.log(JSON.stringify(manageWorkflow(JSON.parse(readFinalRequest(process.argv[3], 'utf8'))), null, 2));
+        return;
+    }
+    if (process.argv[2] === '--workflow-check-delivery') {
+        requireWorkflow(process.argv[3], 'delivery');
+        if (process.argv[4]) {
+            const manifest = JSON.parse(readFinalRequest(process.argv[4], 'utf8'));
+            requireReviewedVideos(process.argv[3], manifest.videoSha256 ?? {});
+        }
         return;
     }
     if (process.argv[2] === '--workflow-check-video') {

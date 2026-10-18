@@ -4163,11 +4163,24 @@ function canonicalPath(file) {
 }
 
 // src/production-workflow.ts
-var STAGES = ["characters", "text_storyboard", "props", "backgrounds", "image_storyboard"];
+var STAGES = [
+  "characters",
+  "text_storyboard",
+  "context_review",
+  "props",
+  "backgrounds",
+  "camera_review",
+  "blender_composition",
+  "image_storyboard",
+  "image_review",
+  "video",
+  "video_review"
+];
+var IMAGE_STAGES = ["characters", "props", "backgrounds", "blender_composition", "image_storyboard"];
 var stageSchema = external_exports.enum(STAGES);
-var entrySchema = external_exports.object({ id: external_exports.string().min(1), text: external_exports.string().min(1), image: external_exports.string().min(1).optional() }).strict();
-var recordSchema = external_exports.object({ stage: stageSchema, entries: external_exports.array(entrySchema), notApplicable: external_exports.string().optional(), hashes: external_exports.record(external_exports.string()).optional() }).strict();
-var stateSchema = external_exports.object({ version: external_exports.literal(1), completed: external_exports.array(recordSchema), active: recordSchema.optional() }).strict();
+var entrySchema = external_exports.object({ id: external_exports.string().min(1), text: external_exports.string().min(1), image: external_exports.string().min(1).optional(), blend: external_exports.string().min(1).optional(), video: external_exports.string().min(1).optional() }).strict();
+var recordSchema = external_exports.object({ stage: stageSchema, entries: external_exports.array(entrySchema), notApplicable: external_exports.string().optional(), criteriaHash: external_exports.string().optional(), hashes: external_exports.record(external_exports.string()).optional() }).strict();
+var stateSchema = external_exports.object({ version: external_exports.literal(2), completed: external_exports.array(recordSchema), active: recordSchema.optional(), rubrics: external_exports.record(external_exports.string()).default({}) }).strict();
 var workflowSchema = external_exports.object({
   episode: external_exports.string().min(1),
   action: external_exports.enum(["status", "begin", "complete", "rewind"]),
@@ -4197,13 +4210,19 @@ function readyProject(episode) {
   if (result.status !== "ready") throw new Error("project_setup_required: " + JSON.stringify(result.missing));
 }
 function read(episode) {
-  if (!fs2.existsSync(stateFile(episode))) return { version: 1, completed: [] };
-  const state = stateSchema.parse(JSON.parse(fs2.readFileSync(stateFile(episode), "utf8")));
+  if (!fs2.existsSync(stateFile(episode))) return { version: 2, completed: [], rubrics: {} };
+  const raw = JSON.parse(fs2.readFileSync(stateFile(episode), "utf8"));
+  if (raw.version === 1) {
+    raw.completed = (raw.completed ?? []).slice(0, 2);
+    delete raw.active;
+    raw.version = 2;
+  }
+  const state = stateSchema.parse(raw);
   for (const [i, record] of state.completed.entries()) {
     if (record.stage !== STAGES[i] || !record.hashes) throw new Error("workflow_invalid_state");
     validateRecord(record);
     for (const entry2 of record.entries) {
-      for (const file of [entry2.text, entry2.image].filter(Boolean)) {
+      for (const file of [entry2.text, entry2.image, entry2.blend, entry2.video].filter(Boolean)) {
         if (!/^[a-f0-9]{64}$/.test(record.hashes[file] ?? "")) throw new Error("workflow_invalid_state");
       }
     }
@@ -4226,9 +4245,35 @@ function validateRecord(record) {
   for (const entry2 of record.entries) {
     if (ids.has(entry2.id)) throw new Error("workflow_duplicate_asset_id");
     ids.add(entry2.id);
-    if (record.stage === "text_storyboard" ? entry2.image !== void 0 : !entry2.image) throw new Error("workflow_artifacts_required: text plus image, text only for text_storyboard");
+    if (IMAGE_STAGES.includes(record.stage) ? !entry2.image : entry2.image !== void 0) throw new Error("workflow_artifacts_required: image required only for image stages");
+    if (record.stage === "blender_composition" ? !entry2.blend : entry2.blend !== void 0) throw new Error("workflow_blender_required");
+    if (record.stage === "video" ? !entry2.video : entry2.video !== void 0) throw new Error("workflow_video_required");
   }
 }
+var reviewSchema = external_exports.object({
+  stage: external_exports.enum(["context_review", "camera_review", "image_review", "video_review"]),
+  author: external_exports.string().trim().min(1),
+  reviewer: external_exports.string().trim().min(1),
+  independent: external_exports.literal(true),
+  verdict: external_exports.literal("pass"),
+  coverage: external_exports.enum(["text", "images", "video_playback"]),
+  criteria: external_exports.object({ path: external_exports.string().min(1), sha256: external_exports.string().regex(/^[a-f0-9]{64}$/) }).strict(),
+  inputs: external_exports.record(external_exports.string().regex(/^[a-f0-9]{64}$/)),
+  cutIds: external_exports.array(external_exports.string().min(1)).min(1).optional(),
+  observations: external_exports.array(external_exports.string().trim().min(10)).min(1),
+  unresolved: external_exports.array(external_exports.string()).length(0),
+  audienceRead: external_exports.object({
+    blind: external_exports.literal(true),
+    reconstruction: external_exports.string().trim().min(20),
+    transitions: external_exports.array(external_exports.object({
+      from: external_exports.string().min(1),
+      to: external_exports.string().min(1),
+      viewerUnderstands: external_exports.string().trim().min(10),
+      evidence: external_exports.array(external_exports.object({ path: external_exports.string().min(1), quote: external_exports.string().trim().min(5), cutId: external_exports.string().min(1) }).strict()).min(1)
+    }).strict()).min(1),
+    missingContext: external_exports.array(external_exports.string()).length(0)
+  }).strict().optional()
+}).strict();
 function requireWorkflow(directory, kind, assetId, outputFile) {
   const episode = workflowEpisode(directory);
   if (!episode) {
@@ -4238,14 +4283,19 @@ function requireWorkflow(directory, kind, assetId, outputFile) {
   readyProject(episode);
   const state = read(episode);
   verifyPrevious(state);
-  if (kind === "video") {
-    if (state.completed.length !== STAGES.length) throw new Error("workflow_out_of_order: complete image_storyboard before video");
+  if (kind === "composition") {
+    if (state.active?.stage !== "blender_composition" || assetId && !state.active.entries.some((entry2) => entry2.id === assetId)) throw new Error("workflow_out_of_order: complete camera_review and begin blender_composition");
+  } else if (kind === "delivery") {
+    if (state.completed.length !== STAGES.length) throw new Error("workflow_out_of_order: complete video_review before assembly or delivery");
+  } else if (kind === "video") {
+    if (state.active?.stage !== "video") throw new Error("workflow_out_of_order: complete image_review and begin video");
+    if (assetId && !state.active.entries.some((entry2) => entry2.id === assetId)) throw new Error("workflow_unknown_cut");
   } else if (kind === "text") {
     if (!state.completed.length) throw new Error("workflow_out_of_order: complete characters before text_storyboard");
   } else {
     const active = state.active;
     const entry2 = active?.entries.find((item) => item.id === assetId);
-    if (!active || active.stage === "text_storyboard" || !entry2?.image) throw new Error("workflow_out_of_order: begin the current image stage and register assetId");
+    if (!active || !["characters", "props", "backgrounds", "image_storyboard"].includes(active.stage) || !entry2?.image) throw new Error("workflow_out_of_order: begin the current image stage and register assetId");
     if (outputFile && canonicalPath(outputFile) !== entry2.image) throw new Error("workflow_output_mismatch: use the registered image path");
   }
 }
@@ -4303,7 +4353,7 @@ function evaluateWindowScript(source, options = {}) {
 }
 
 // src/storyboard.ts
-import { existsSync as existsSync3, mkdirSync as mkdirSync3, readFileSync as readFileSync2, renameSync as renameSync2, statSync, unlinkSync as unlinkSync3, writeFileSync as writeFileSync2 } from "node:fs";
+import { existsSync as existsSync3, mkdirSync as mkdirSync3, readFileSync as readFileSync2, renameSync as renameSync2, statSync as statSync2, unlinkSync as unlinkSync3, writeFileSync as writeFileSync2 } from "node:fs";
 import * as nodeModule2 from "node:module";
 import { basename, dirname as dirname2, join, resolve as resolve2 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
@@ -4556,7 +4606,7 @@ function scenesPath(target) {
 function readBoard(target) {
   const file = scenesPath(target);
   if (!existsSync3(file)) throw new Error(`no scenes.js at ${file}`);
-  if (!statSync(file).isFile()) throw new Error(`${file} is not a file`);
+  if (!statSync2(file).isFile()) throw new Error(`${file} is not a file`);
   const src = readFileSync2(file, "utf8");
   const header = [];
   for (const line of src.split("\n")) {
@@ -4604,7 +4654,7 @@ import { createRequire as createRequire4 } from "node:module";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 
 // src/config.ts
-import { accessSync, constants, existsSync as existsSync4, readFileSync as readFileSync3, readdirSync, statSync as statSync2 } from "node:fs";
+import { accessSync, constants, existsSync as existsSync4, readFileSync as readFileSync3, readdirSync, statSync as statSync3 } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, join as join2 } from "node:path";
 function loadEnvFile(file = join2(process.env.SNS_TOKEN_DIR || join2(homedir(), ".config", "social-flow"), ".env")) {
@@ -5187,7 +5237,7 @@ import * as path5 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.119.0",
+  version: "0.120.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",

@@ -113,12 +113,13 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # grab before cd (path to
 WORKDIR="${1:?usage: build-reel.sh <workdir>}"
 # Resolve the supplied board before changing directories; both gates inspect the same plan.
 STORYBOARD=$(node -e 'console.log(require("path").resolve(process.argv[1]))' "${2:-$WORKDIR/../storyboard}")
-node "$HERE/../../../server/dist/bundle.js" --workflow-check-video "$STORYBOARD"
+node "$HERE/../../../server/dist/bundle.js" --workflow-check-delivery "$STORYBOARD"
 [ -f "$STORYBOARD/scenes.js" ] || { echo "source storyboard/scenes.js is required; pass the storyboard directory as build-reel.sh argument 2" >&2; exit 1; }
 [ "${SILENT:-0}" != "1" ] || node "$HERE/silent-plan.js" "$STORYBOARD/scenes.js"
 node "$HERE/compose-speech.js" "$WORKDIR" "$STORYBOARD" >/dev/null
 node "$HERE/prepare-source-audio.js" "$WORKDIR" "$STORYBOARD" >/dev/null
 node "$HERE/verify-build-plan.js" "$WORKDIR" "$STORYBOARD"
+node "$HERE/../../../server/dist/bundle.js" --workflow-check-delivery "$STORYBOARD" "$WORKDIR/build-plan-check.json"
 # A normal board is <channel>/episodes/<topic>/storyboard. Proof fixtures may put storyboard/
 # directly under their channel root, so fall back to the storyboard parent in that shape.
 CHANNEL_DIR=$(node -e 'const p=require("path"), s=p.resolve(process.argv[1]), episode=p.dirname(s), episodes=p.dirname(episode); console.log(p.basename(episodes)==="episodes"?p.dirname(episodes):p.dirname(s))' "$STORYBOARD")
