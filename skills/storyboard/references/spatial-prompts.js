@@ -158,6 +158,8 @@ function assemble(win, index, dir) {
   const perCutTreatment = appliesCutLook ? cutTreatment(preset, cutType) : '';
   const world = style.worlds?.[d.worldId] ?? style.world;
   const propPrompt = require('./prop-continuity.js').prompt(win, index);
+  const sourceTechnique = require('./film-techniques.js').sourceInstructions(scene);
+  const videoTechnique = require('./film-techniques.js').instructions(scene);
   const source = [...(propPrompt ? [propPrompt] : []), canvas + ', edge-to-edge composition.',
     'Opening state: ' + d.before,
     sourceContext.guidance(sourceContext.context(scene, win.STORY)),
@@ -170,6 +172,7 @@ function assemble(win, index, dir) {
     'Materials: ' + style.materials, 'Palette: ' + style.palette, 'Lighting: ' + style.lighting,
     'Camera language: ' + style.camera,
     'Camera composition: ' + camera.framing,
+    ...(sourceTechnique ? [sourceTechnique] : []),
     ...(scene.shot?.depth?.mode === 'deep' ? ['Depth: keep all planned planes sharp and readable together: ' + (scene.shot.depth.planes || []).join('; ') + '.'] : []),
     ...(scene.shot?.depth?.mode === 'shallow' ? ['Depth: shallow focus on ' + (scene.shot.depth.focus || 'the planned subject') + '.'] : []),
     ...(perCutTreatment || activeCast.length ? ['Framing priority: the shot camera composition controls crop, angle, subject scale and visible body parts. Cast sheets, cut-type notes and episode camera language supply appearance and intent only; keep off-frame body parts outside the image.' + (previzFrame ? ' The previz first frame must already match this composition; correct a conflicting previz before generating the source image.' : '')] : []),
@@ -201,10 +204,11 @@ function assemble(win, index, dir) {
     const astraAppearance = activeCast.filter(({ entry }) => text(entry.sheet))
       .map(({ entry }) => 'Appearance to preserve on visible parts only: ' + clause(entry.sheet) + '.');
     motionPrompt = astraMotionPrompt(d, camera, style, treatment, !!spoken.trim() && (scene.narration || []).every(n => n.delivery === 'voiceover' || (!n.delivery && (!n.speaker || n.speaker === win.SB_DOC?.narratorCharacterId))), [...astraAppearance, ...(propPrompt ? [propPrompt] : [])], castIds.length > 0) + locationLock;
+    if (videoTechnique) motionPrompt += '\n' + videoTechnique;
     if (performanceDirection) motionPrompt += '\nOrdered performance: ' + performanceDirection;
   } else if (!missingSlots.length) {
     const onReferenceRoute = previz && (v.video.engine || v.engine || 'seedance') !== 'host' && previzHandoff(scene) === 'reference_video';
-    const clip = PROMPT.clipAssemble({ engine: promptEngine, camera, motion: motionText(d) + (performanceDirection ? '\nOrdered performance: ' + performanceDirection : ''), locks: lock,
+    const clip = PROMPT.clipAssemble({ engine: promptEngine, camera, techniques:scene.shot?.techniques, motion: motionText(d) + (performanceDirection ? '\nOrdered performance: ' + performanceDirection : ''), locks: lock,
       ...(onReferenceRoute ? { scene: previzPreamble(previz) } : {}),
       audio: 'silent; narration is supplied separately' });
     const problems = [...clip.hits.map(h => `"${h.match}" (${h.why})`), ...clip.negHits.map(h => `negative directive "${h}"`),

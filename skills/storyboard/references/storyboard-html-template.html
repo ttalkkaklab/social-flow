@@ -509,6 +509,12 @@
   .shot-angle.angle-dutch, .shot-angle.angle-low, .shot-angle.angle-high, .shot-angle.angle-overhead { color: var(--accent-ink); }
   .shot-why { font-size: 0.8em; color: var(--muted); margin-left: 0.4em; }
   .shot-grammar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); margin: var(--s2) 0 0; }
+  .technique-tiles { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0; }
+  .technique-tile { flex: 1 1 180px; max-width: 350px; border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+  .technique-tile summary { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+  .technique-tile summary svg { flex: 0 0 40px; }
+  .technique-tile p { font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
+  .technique-library { margin: 20px 0; padding: 16px; border: 1px solid var(--line); }
   .shot-size { display: inline-flex; align-items: center; gap: 8px; cursor: default; border: 0; padding: 0; letter-spacing: 0; }
   .shot-size .size-ico { width: 32px; height: 32px; border-radius: 23%; }
   .shot-size .sz { display: flex; flex-direction: column; line-height: 1.15; }
@@ -1037,6 +1043,7 @@
 <script src="./production-mode.js"></script>
 <script src="./style-samples.js"></script>
 <script src="./structure-contract.js"></script>
+<script src="./film-techniques.js"></script>
 <script src="./shot-direction.js"></script>
 <script>
 /* ✎ SB_DOC BEGIN — fill in this block only (editorial metadata that is not in scenes.js).
@@ -1299,14 +1306,14 @@ window.STORYBOARD_READY = (async function () {
                   ls: "far, wide · whole body with room — where this is, how many, how far apart (the establishing shot)",
                   ws: "same as the long shot",
                   fs: "full body · crown to toes — the whole body acting: dance, fight, walk",
-                  mfs: "knee shot, cowboy · cut at mid-shin — two people and the distance between them",
-                  ms: "cut at mid-thigh · upper body, hands explaining, the conversation default",
+                  mfs: "cowboy · cut at mid-thigh — two people and the distance between them",
+                  ms: "waist-up · upper body, hands explaining, the conversation default",
                   mcu: "bust shot · cut at mid-chest — talking to camera; hook, anchor, interview",
                   cu: "the face fills the frame, crown cropped — the one line; one per scene",
                   choker: "eyes and mouth only — the peak of tension; once or twice an episode",
                   ecu: "eyes only, fingertips only — the detail at the peak",
                   insert: "a thing, a hand, a screen, no face — one picture instead of three lines",
-                  two: "two people in one frame (cut at mid-shin)",
+                  two: "two people in one frame; specify their crop",
                   three: "three in one frame — shows the group, not the place",
                   ots: "over a shoulder — the near shoulder in front, the other face (mcu)",
                   pov: "point of view · what that person sees — write the distance in shot.why",
@@ -1645,14 +1652,14 @@ window.STORYBOARD_READY = (async function () {
                   ls: "와이드, 먼 · 전신에 여유 — 어디인지·몇 명인지·얼마나 떨어졌는지 (설정샷)",
                   ws: "롱숏과 같다",
                   fs: "전신 · 머리끝부터 발끝까지 — 몸 전체 동작, 춤·격투·걸음",
-                  mfs: "니숏, 카우보이숏 · 정강이 중간에서 자른다 — 두 사람과 그 사이 거리",
-                  ms: "허벅지 중간에서 자른다 — 상반신과 손짓, 대화 기본값",
+                  mfs: "니숏, 카우보이숏 · 허벅지 중간에서 자른다 — 두 사람과 그 사이 거리",
+                  ms: "허리에서 자른다 — 상반신과 손짓, 대화 기본값",
                   mcu: "바스트숏 · 가슴 중간에서 자른다 — 카메라 보고 말하기, 훅·앵커·인터뷰",
                   cu: "얼굴이 화면을 채운다, 정수리는 잘림 — 그 한 마디, 씬당 하나",
                   choker: "눈과 입만 — 긴장의 정점, 회차에 한두 번",
                   ecu: "눈만·손끝만 — 정점의 디테일",
                   insert: "물건·손·화면만, 얼굴 없음 — 그림 하나가 대사 세 줄을 대신한다",
-                  two: "둘을 한 프레임에 (정강이 중간에서 자른다)",
+                  two: "둘을 한 프레임에 (절단 위치는 별도로 지정)",
                   three: "셋을 한 프레임에 — 무리는 보이지만 장소는 못 깐다",
                   ots: "어깨 너머 — 앞사람 어깨가 앞에, 상대 얼굴은 미디엄 클로즈업",
                   pov: "시점숏 · 그 사람이 본 것 — 거리는 shot.why 에 적는다",
@@ -2141,7 +2148,7 @@ window.STORYBOARD_READY = (async function () {
   function overlayOf(s) { return (s.visual && s.visual.overlay) || inferredOverlay(s); }
   /* Shot-size pictograms (directing-grammar §2 · §2.1). One 32×32 frame and a line figure drawn
      100 units tall — head 3–27, torso 34–72, legs 72–98 — scaled so the frame's bottom edge lands
-     where that size cuts a person (mid-shin · mid-thigh · mid-chest, never a joint). Anything
+     where that size cuts a person (mid-thigh · waist · mid-chest, never a joint). Anything
      outside the viewBox is simply not drawn, so the frame does the cropping. The stroke stays 2px
      at every scale (vector-effect), so a far figure and a near one share one line weight. */
   var SIZE_ICON = (function () {
@@ -2196,6 +2203,7 @@ window.STORYBOARD_READY = (async function () {
     };
     return { sizes: D, angles: A, person: person, dot: dot };
   })();
+  Object.assign(SIZE_ICON.sizes, window.FILM_TECHNIQUES.SIZE_GLYPHS);
   var ANGLE_ICON = SIZE_ICON.angles;
   var ICON_PERSON = SIZE_ICON.person, ICON_DOT = SIZE_ICON.dot;
   SIZE_ICON = SIZE_ICON.sizes;
@@ -2206,7 +2214,7 @@ window.STORYBOARD_READY = (async function () {
     var d = SIZE_ICON[size];
     return d ? '<svg class="size-ico f-' + SIZE_FAMILY[size] + '" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>" : "";
   }
-  function sizeTitle(size) { return (T.size[size] || size) + " — " + (T.sizeHint[size] || ""); }
+  function sizeTitle(size) { var e = window.FILM_TECHNIQUES.byId["framing." + size]; return e ? e.label[LANG] + " — " + e.instruction : (T.size[size] || size) + " — " + (T.sizeHint[size] || ""); }
   function angleIcon(a) {
     var d = ANGLE_ICON[a];
     return d ? '<svg class="size-ico a-cam" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>" : "";
@@ -3604,7 +3612,7 @@ window.STORYBOARD_READY = (async function () {
      shot.feel was framed before anyone said what the audience should feel there; the
      rationing rules catch the close-up spent twice and the dutch used twice. Warnings — the
      reviewer's camera mode and the person at the approval step weigh them. */
-  var feelGaps = 0, sizeUnknown = 0, chokerEcu = 0, dutchCount = 0, cuPerScene = {};
+  var feelGaps = 0, sizeUnknown = 0;
   SCENES.forEach(function (s, i) {
     if (s.type === "outro") return;
     var g = grammarOf(s, i);
@@ -3622,22 +3630,9 @@ window.STORYBOARD_READY = (async function () {
     if (g.angle && !T.angle[g.angle]) {
       flag("warn", T.shotCap(i + 1), 'shot.angle "' + g.angle + '" is outside the vocabulary — eye · high · low · overhead · dutch (directing-grammar §3)');
     }
-    if (CLOSE_SIZES[g.size]) {
-      var key = String(g.scene);
-      cuPerScene[key] = (cuPerScene[key] || 0) + 1;
-      if (cuPerScene[key] === 2)
-        flag("warn", "Scene S#" + key, "a second close-up in the same scene — the close-up is a command, and a command repeated stops being heard. One cu per scene, on the line that matters (directing-grammar §6)");
-    }
-    if (g.size === "choker" || g.size === "ecu") {
-      chokerEcu++;
-      if (chokerEcu === 3)
-        flag("warn", T.shotCap(i + 1), "a third choker / extreme close-up in the episode — once or twice is the ration (directing-grammar §6)");
-    }
-    if (g.angle === "dutch") {
-      dutchCount++;
-      if (dutchCount === 2)
-        flag("warn", T.shotCap(i + 1), "a second dutch angle — the tilt lands once and then reads as the new horizon; one per episode, with its reason written on the shot (directing-grammar §3)");
-    }
+    window.FILM_TECHNIQUES.findings(s).forEach(function (message) {
+      flag("warn", T.shotCap(i + 1), message);
+    });
   });
 
   /* Frame space — the floor plan of a generated still (directing-grammar §3.5). Older files
@@ -4145,6 +4140,7 @@ window.STORYBOARD_READY = (async function () {
   /* ══ Timeline ══ */
   h += '<h2 class="sec" id="timeline">' + esc(T.timelineHead) +
        '<span class="aside">' + esc(T.timelineAside) + "</span></h2>";
+  h += window.FILM_TECHNIQUES.legend(LANG);
   h += window.SHOT_DIRECTION.timeline(SCENES, LANG, DOC);
   if (outroUnknown) flag("warn", T.where.outro, "there is an outro scene but no SB_DOC.outro length — it does not count toward the total");
 
@@ -4213,7 +4209,7 @@ window.STORYBOARD_READY = (async function () {
     // this shot's why / render.reason are the tile's tooltip; the legend above names every icon.
     var gram = "";
     function tile(icon, label, tip, unknown) {
-      return '<span class="shot-size' + (unknown ? " unknown" : "") + '" data-tip="' + esc(tip) + '">' +
+      return '<span tabindex="0" role="img" aria-label="' + esc(tip) + '" class="shot-size' + (unknown ? " unknown" : "") + '" data-tip="' + esc(tip) + '">' +
              (icon || '<span class="sz"><b>' + esc(label) + "</b></span>") + "</span>";
     }
     if (g.size) gram += tile(sizeIcon(g.size), T.size[g.size] || (g.size + " ?"),
@@ -4297,6 +4293,7 @@ window.STORYBOARD_READY = (async function () {
     h += '<span class="scene-checks">' + sceneChips[i] + "</span></div>";
     var directionAt = directionOrder.findIndex(function (o) { return o.i === i; });
     h += window.SHOT_DIRECTION.summary(s, i, directionAt > 0 ? directionOrder[directionAt - 1].s : null, LANG, DOC);
+    h += window.FILM_TECHNIQUES.tiles(s, LANG);
     if (gram) h += '<div class="shot-grammar">' + gram + "</div>";
     // The picture and overlay badges are gone from here — the render tile above says what
     // moves, and the overlay reads off the frame itself.

@@ -1,0 +1,60 @@
+{
+  "fullCheck": {
+    "tests": 2245,
+    "pass": 2245,
+    "fail": 0,
+    "log": "/tmp/film-final-check.log"
+  },
+  "postCheckEdit": {
+    "change": "Remove duplicated still-image instructions from generic video prompt",
+    "targetedTests": 10,
+    "pass": 10
+  },
+  "skillLint": "16 rules,21skills,PASS",
+  "installedSmoke": {
+    "root": "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.115.4",
+    "passed": true,
+    "checks": [
+      "fresh bundled MCP exposes acting and opt-in review",
+      "installed direction changes affect plan while identity stays fixed",
+      "installed host review prepares evidence without external judgment or invented score",
+      "installed attachment accepts resolved style and rejects wrong voice/old style",
+      "installed video plan shares acting and measured anticipation/reaction time",
+      "acting-only edit invalidates dependent media and preserves other line"
+    ],
+    "bundleSha256": "e4d1aeb70a2ee2cf294a6f4ce429b8c21067c577fcf460b59344179eec242583",
+    "server": {
+      "name": "social-flow",
+      "version": "0.115.4"
+    }
+  },
+  "installReport": "install-5.json",
+  "rubricStyle": {
+    "surface": "doc",
+    "chars": 744,
+    "sentences": 13,
+    "findings": [],
+    "quoted_findings": 0,
+    "metrics": [],
+    "score": 100,
+    "s1": 0,
+    "s2": 0,
+    "s3": 0,
+    "verdict": "PASS",
+    "exit_code": 0
+  },
+  "reviewStyle": {
+    "surface": "doc",
+    "chars": 3453,
+    "sentences": 52,
+    "findings": [],
+    "quoted_findings": 0,
+    "metrics": [],
+    "score": 100,
+    "s1": 0,
+    "s2": 0,
+    "s3": 0,
+    "verdict": "PASS",
+    "exit_code": 0
+  }
+}

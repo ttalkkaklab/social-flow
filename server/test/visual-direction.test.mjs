@@ -25,6 +25,7 @@ test('approval renderer recognizes camera photographs without hiding unsupported
    type:'points',duration:5,title:'Rider',narration:[{tts:'Look at the rider.'}],
    visual:{bg:'images/rider.png',picture:'still',overlay:'none',slide:{kind,motion:true,file:'slides/s1-rider.html',plan:'Approach the rider.'}}
   }]};
+  window.FILM_TECHNIQUES=require(path.join(ref,'film-techniques.js'));
   window.SHOT_DIRECTION=require(path.join(ref,'shot-direction.js'));
   window.document=document;
   runInNewContext(readFileSync(path.join(root,'skills/channel/references/review-assets/review-typography.js'),'utf8'),{window});

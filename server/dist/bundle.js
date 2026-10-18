@@ -64475,7 +64475,7 @@ var require_production_mode = __commonJS({
         properties: {
           preset: { type: "string", enum: Object.keys(CAMERA_PRESETS), description: "Optional shot preset. Omit on ordinary camera shots; drone-flythrough is continuous travel through a 3D location." },
           variant: { type: "string", enum: Object.keys(CAMERA_PRESETS["drone-flythrough"].variants), description: "cinematic keeps the horizon level; fpv uses authored bank at bends. Required with drone-flythrough." },
-          movement: { type: "string", description: "One camera move in vendor vocabulary, chosen from shot.feel (directing-grammar \xA74\u2013\xA75): static \xB7 dolly in/out \xB7 zoom in/out (lens only) \xB7 dolly zoom in/out \xB7 pan left/right \xB7 tilt up/down \xB7 whip pan \xB7 truck left/right \xB7 pedestal up/down \xB7 crane up/down \xB7 arc shot \xB7 tracking \xB7 handheld \xB7 aerial. Not push in, orbit, boom or a Korean word (storyboard_check enforces the vocabulary and the conditions below). A pan, tilt, truck, pedestal or dolly is a sentence from framing to end, so end must differ from framing. A whip pan needs the hit in sound.sfx or visual.audio. A dolly zoom needs shot.depth deep (the background that stretches), a stationary subject, and happens once per episode. For drone shots copy the trajectory-derived value from drone-previz.js." },
+          movement: { type: "string", description: "One camera move in vendor vocabulary, chosen from shot.feel (directing-grammar \xA74\u2013\xA75): static \xB7 dolly in/out \xB7 zoom in/out (lens only) \xB7 dolly zoom in/out \xB7 pan left/right \xB7 tilt up/down \xB7 whip pan \xB7 truck left/right \xB7 pedestal up/down \xB7 crane up/down \xB7 arc shot \xB7 tracking \xB7 handheld \xB7 aerial. Not push in, orbit, boom or a Korean word (storyboard_check enforces the vocabulary and the conditions below). A pan, tilt, truck, pedestal or dolly is a sentence from framing to end, so end must differ from framing. A whip pan needs the hit in sound.sfx or visual.audio. A dolly zoom needs shot.depth deep (the background that stretches), a stationary subject, with a scene-specific purpose. For drone shots copy the trajectory-derived value from drone-previz.js." },
           speed: { type: "string", description: "Movement pace as slow, steady or fast \u2014 never inside movement, never a word the viewer cannot see (very slow, subtle). Empty on static. Generated from the trajectory on drone shots." },
           framing: { type: "string", description: "Opening composition \u2014 what the camera holds before the move starts (hold in). Generated from the trajectory on drone shots." },
           end: { type: "string", description: "Closing composition \u2014 where the move settles and holds (hold out); on a pan, tilt, truck, pedestal or dolly it names a different picture from framing. Generated from the trajectory on drone shots." },
@@ -64624,7 +64624,6 @@ var require_production_mode = __commonJS({
         return e2;
       }
       const NEUTERED = /\b(?:very|extremely|almost|ever so)\s+(?:slow|slight|small|subtle|gentle)|\b(?:barely|hardly|imperceptibl[ey]|subtle|subtly|tiny|minimal|micro|slight|slightly|gentle|gently|restrained|quiet)\b|\bhold(?:ing)?\s+(?:the\s+)?(?:composition|frame|shot)\b|\block(?:ed)?[- ]off\b|\bbreathing only\b/i;
-      const WIDE = /\b(?:wide|establishing|extreme long|long shot|full[- ]body figures|small figures)\b/i;
       const MOVES = [
         { key: "static", family: "static", re: /^(?:static|fixed|locked(?:[- ]off)?)(?:\s+camera)?\b/i },
         { key: "dolly zoom", family: "dollyzoom", re: /^dolly zoom(?:\s+(in|out))?\b/i },
@@ -64705,8 +64704,18 @@ var require_production_mode = __commonJS({
         return warnings;
       }
       function episodeMoveErrors(scenes) {
-        const at = (scenes || []).map((s2, i2) => eligible(s2) && !reused(s2) && s2.visual?.video && moveOf(s2.visual?.camera)?.family === "dollyzoom" ? i2 + 1 : 0).filter(Boolean);
-        return at.length > 1 ? [`[dolly-zoom-twice] shots ${at.join(", ")} each ask for a dolly zoom \u2014 it is spent once per episode (directing-grammar \xA74); keep the shot where the world turns over, and write another move on the rest`] : [];
+        const seen = /* @__PURE__ */ new Map(), notes = [];
+        for (const [index, scene] of (scenes || []).entries()) {
+          if (moveOf(scene.visual?.camera)?.family !== "dollyzoom") continue;
+          const purpose = String(scene.shot?.info || scene.shot?.why || "").trim();
+          if (!purpose) {
+            notes.push(`shot ${index + 1}: explain what this dolly zoom reveals`);
+            continue;
+          }
+          if (seen.has(purpose)) notes.push(`shots ${seen.get(purpose)} and ${index + 1}: repeated dolly zoom with identical information; inspect whether the second beat adds anything`);
+          seen.set(purpose, index + 1);
+        }
+        return notes;
       }
       function cameraErrors(scene, { advice = [] } = {}) {
         const v = scene.visual || {}, camera = v.camera || {}, errors = droneSceneErrors(scene, { advice });
@@ -65014,20 +65023,6 @@ var require_production_mode = __commonJS({
           run.push({ key, shot: i2 + 1 });
           if (run.length === 3) advice.push("shots " + run.map((r2) => r2.shot).join(", ") + ": the same framing and camera move three times in a row; change size, angle or move for a reason");
         });
-        const generated2 = (win.SCENES || []).map((s2, i2) => ({ s: s2, shot: i2 + 1 })).filter(({ s: s2 }) => eligible(s2) && !reused(s2));
-        if (generated2.length >= 3) {
-          const statics = generated2.filter(({ s: s2 }) => staticCamera(s2.visual?.camera));
-          if (statics.length * 3 > generated2.length)
-            advice.push(`${statics.length} of ${generated2.length} shots hold a static camera; a full-video episode moves the camera on at least two of every three shots`);
-          generated2.forEach(({ s: s2, shot }, k) => {
-            if (k && staticCamera(s2.visual?.camera) && staticCamera(generated2[k - 1].s.visual?.camera))
-              advice.push(`shots ${generated2[k - 1].shot}, ${shot}: two static cameras in a row; move on one of them`);
-          });
-          const conventional = generated2.filter(({ s: s2 }) => !isDrone(s2.visual?.camera) || droneSceneErrors(s2).length);
-          const wide = conventional.filter(({ s: s2 }) => WIDE.test(String(s2.visual?.camera?.framing || "")));
-          if (wide.length * 2 > conventional.length)
-            advice.push(`${wide.length} of ${conventional.length} shots are framed wide; small figures on a wide stage read as a still on a phone \u2014 bring at least half the shots to medium or close`);
-        }
         return errors;
       }
       function policy(base, production, scenes) {
@@ -65050,6 +65045,135 @@ var require_production_mode = __commonJS({
       const api = { BANDS, ratioMode, ratioBounds, ratioErrors, videoRender, bandContract, CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, videoCap, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, ASTRA_RESOLUTION, ASTRA_WIDE_RESOLUTION, astraResolution, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check: check2, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
       if (typeof module === "object" && module.exports) module.exports = api;
       else root.PRODUCTION_MODE = api;
+    })(typeof window === "object" ? window : globalThis);
+  }
+});
+
+// ../skills/storyboard/references/film-techniques.js
+var require_film_techniques = __commonJS({
+  "../skills/storyboard/references/film-techniques.js"(exports, module) {
+    (function(root) {
+      "use strict";
+      const VERSION2 = "film-techniques-v1";
+      const esc2 = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+      const entries = [];
+      function add(id, category, ko, en, use, instruction, glyph, fields = {}) {
+        entries.push({ id, category, label: { ko, en }, use, instruction, glyph, fields });
+      }
+      const camera = "M3 12h10v8H3zM13 14l5-3v10l-5-3";
+      const person = "M23 7a3 3 0 1 0 .01 0M23 13v10m-4-7h8m-4 7-3 5m3-5 3 5";
+      add("camera.static", "camera", "\uACE0\uC815", "Static", "\uC5F0\uAE30\xB7\uB300\uC0C1 \uBCC0\uD654 \uC790\uCCB4\uC5D0 \uC9D1\uC911\uD55C\uB2E4.", "Keep camera position, angle and focal length fixed.", camera + "M8 20v9m-4 0 4-9 4 9", { movement: "static" });
+      add("camera.dolly-in", "camera", "\uB2EC\uB9AC \uC778", "Dolly in", "\uAE68\uB2EC\uC74C\uC774\uB098 \uB300\uC0C1\uC5D0 \uB2E4\uAC00\uAC00\uB294 \uACBD\uD5D8\uC744 \uBCF4\uC5EC \uC900\uB2E4.", "Move physically toward the subject; specify the starting crop and closer ending crop.", camera + "M19 26h10m-4-4 4 4-4 4", { movement: "dolly in" });
+      add("camera.dolly-out", "camera", "\uB2EC\uB9AC \uC544\uC6C3", "Dolly out", "\uC8FC\uBCC0 \uB9E5\uB77D\uC744 \uACF5\uAC1C\uD558\uAC70\uB098 \uC778\uBB3C\uC5D0\uAC8C\uC11C \uAC70\uB9AC\uB97C \uB454\uB2E4.", "Move physically away; name what enters the wider ending frame.", camera + "M29 26H19m4-4-4 4 4 4", { movement: "dolly out" });
+      add("camera.slow-zoom-in", "camera", "\uC2AC\uB85C \uC90C \uC778", "Slow zoom in", "\uAC19\uC740 \uC2DC\uC810\uC5D0\uC11C \uB300\uC0C1\uC744 \uD655\uB300\uD558\uBA70 \uAE34\uC7A5\uC744 \uB9CC\uB4E0\uB2E4.", "Keep camera position fixed and narrow field of view slowly; perspective stays unchanged.", "M3 3h26v26H3zM10 10h12v12H10zM4 4l6 6m16-6-4 6", { movement: "zoom in", speed: "slow" });
+      add("camera.arc", "camera", "\uC544\uD06C \uC0F7", "Arc shot", "\uC778\uBB3C \uC8FC\uBCC0 \uACF5\uAC04\uC774\uB098 \uCCAB \uB4F1\uC7A5\uC744 \uBCF4\uC5EC \uC900\uB2E4.", "Travel on a curved path around the subject; name the arc direction and endpoint.", person + "M6 24C-2 4 30 1 29 22m-5-3 5 3 1-6", { movement: "arc shot" });
+      add("camera.follow", "camera", "\uD314\uB85C\uC6B0 \uC0F7", "Follow shot", "\uC778\uBB3C\uC744 \uB530\uB77C \uACF5\uAC04\uC5D0 \uB4E4\uC5B4\uAC00\uAC70\uB098 \uCD94\uACA9\uD55C\uB2E4.", "Follow behind the subject; preserve the planned gap and screen direction.", camera + "M23 3v8m-3-3 3 3 3-3M23 23v7", { movement: "tracking from behind" });
+      add("camera.reverse-tracking", "camera", "\uB9AC\uBC84\uC2A4 \uD2B8\uB798\uD0B9", "Reverse tracking", "\uAC77\uB294 \uC778\uBB3C\uC758 \uC5BC\uAD74\uACFC \uB300\uD654\uB97C \uACC4\uC18D \uBCF4\uC5EC \uC900\uB2E4.", "Retreat in front of the walking subject, facing them and maintaining distance.", camera + "M23 11V3m-3 3 3-3 3 3M23 23v7", { movement: "tracking backward in front of the subject" });
+      add("camera.handheld", "camera", "\uD578\uB4DC\uD5EC\uB4DC", "Handheld", "\uD604\uC7A5\uAC10\uC774\uB098 \uBD88\uC548\uD55C \uAD00\uCC30\uC744 \uD45C\uD604\uD55C\uB2E4.", "Use low-amplitude operated-camera sway; specify intensity.", "M5 8l20-2 2 17-20 2zM2 2l2 2m24 24 2 2M12 12l8 4-8 4z", { movement: "handheld" });
+      add("camera.whip-pan", "camera", "\uD729 \uD32C", "Whip pan", "\uC2DC\uC120\uC744 \uAE09\uD788 \uB3CC\uB824 \uB450 \uB300\uC0C1\uC744 \uC5F0\uACB0\uD55C\uB2E4.", "Pan rapidly from the named first subject and settle on the named second subject.", "M3 8h15M3 14h20M3 20h26m-6-6 6 6-6 6", { movement: "whip pan", speed: "fast" });
+      add("camera.crane-up", "camera", "\uD06C\uB808\uC778 \uC5C5", "Crane up", "\uC7A5\uBA74\uC744 \uB2EB\uAC70\uB098 \uC704\uCABD \uACF5\uAC04\uC744 \uACF5\uAC1C\uD55C\uB2E4.", "Raise the camera; explicitly describe whether its look direction stays level or tilts.", camera + "M24 28V4m-4 4 4-4 4 4", { movement: "crane up" });
+      add("camera.snorricam", "camera", "\uC2A4\uB178\uB9AC\uCEA0", "Snorricam", "\uD328\uB2C9 \uB4F1 \uC778\uBB3C\uC5D0 \uBD99\uC740 \uC8FC\uAD00\uC801 \uACBD\uD5D8\uC744 \uBCF4\uC5EC \uC900\uB2E4.", "Camera is rigidly mounted to the torso facing the face; face stays fixed in frame while background moves.", "M16 2a5 5 0 1 0 .01 0M7 28v-9h18v9M11 19v-5h10v5M2 8l3-3m22 3 3-3", { movement: "handheld body-mounted facing the subject" });
+      add("camera.push-past", "camera", "\uD478\uC2DC \uD328\uC2A4\uD2B8", "Push past", "\uC804\uACBD\uC744 \uC9C0\uB098 \uC228\uACA8\uC9C4 \uACF5\uAC04\uC744 \uACF5\uAC1C\uD55C\uB2E4.", "Travel past the named foreground object or through an open doorway to a specified landing view.", "M3 29V3h16v26M10 25l18-14m-7 0h7v7", { movement: "dolly in past foreground" });
+      add("camera.rear", "camera", "\uB9AC\uC5B4 \uC0F7", "Rear shot", "\uC5BC\uAD74\uC744 \uC228\uAE30\uACE0 \uAD00\uAC1D\uC774 \uBC18\uC751\uC744 \uC0C1\uC0C1\uD558\uAC8C \uD55C\uB2E4.", "View the subject from behind; describe the crop separately.", "M16 3a6 6 0 1 0 .01 0M4 29v-7q12-12 24 0v7M13 7h6", { viewpoint: "rear" });
+      add("camera.low", "camera", "\uB85C\uC6B0 \uC575\uAE00", "Low angle", "\uC544\uB798\uC5D0\uC11C \uC778\uBB3C\uC774\uB098 \uBB3C\uCCB4\uC758 \uB192\uC774\uB97C \uAC15\uC870\uD55C\uB2E4.", "Place camera below the subject looking upward; movement is a separate choice.", "M3 26h8v4H3zM12 24 25 9m-7 2 7-2-1 7M24 4v24", { angle: "low" });
+      add("camera.high", "camera", "\uD558\uC774 \uC575\uAE00", "High angle", "\uC778\uBB3C\uACFC \uC8FC\uBCC0 \uACF5\uAC04\uC744 \uB0B4\uB824\uB2E4\uBCF8\uB2E4.", "Place camera above the subject looking down; movement is a separate choice.", "M3 2h8v4H3zM12 8l13 15m-7-2 7 2-1-7M24 4v24", { angle: "high" });
+      add("camera.overhead", "camera", "\uC624\uBC84\uD5E4\uB4DC", "Overhead", "\uB3D9\uC120\uACFC \uC704\uCE58 \uAD00\uACC4\uB97C \uC218\uC9C1 \uC2DC\uC810\uC73C\uB85C \uBCF4\uC5EC \uC900\uB2E4.", "Look straight down at ninety degrees; name the readable floor layout.", "M12 2h8v5h-8zM16 8v10m-4-4 4 4 4-4M3 25q13-10 26 0-13 10-26 0z", { angle: "overhead" });
+      add("camera.dutch", "camera", "\uB354\uCE58 \uC575\uAE00", "Dutch angle", "\uC758\uB3C4\uC801\uC778 \uBD88\uADE0\uD615\uC744 \uD45C\uD604\uD55C\uB2E4.", "Tilt the horizon by the chosen angle; describe why this imbalance matters.", "M3 10 25 3l6 20-22 7zM8 20l16-5", { angle: "dutch" });
+      add("camera.dolly-zoom", "camera", "\uB3CC\uB9AC \uC90C", "Dolly zoom", "\uC778\uBB3C \uD06C\uAE30\uB97C \uC720\uC9C0\uD558\uBA70 \uBC30\uACBD \uC6D0\uADFC\uC758 \uBCC0\uD654\uB97C \uBCF4\uC5EC \uC900\uB2E4.", "Coordinate dolly and opposite zoom; explicitly choose in or out and hold subject screen size.", "M3 4h26v24H3zM10 9h12v14H10zM1 16h8m-3-3 3 3-3 3M31 16h-8m3-3-3 3 3 3", { movement: "dolly zoom" });
+      add("camera.rack-focus", "camera", "\uB799 \uD3EC\uCEE4\uC2A4", "Rack focus", "\uC11C\uB85C \uB2E4\uB978 \uAC70\uB9AC\uC758 \uB300\uC0C1 \uC0AC\uC774\uB85C \uAD00\uC2EC\uC744 \uC62E\uAE34\uB2E4.", "Shift sharp focus from the named near subject to the named far subject, or reverse; specify both endpoints.", "M3 18a7 7 0 1 0 .01 0M22 5a4 4 0 1 0 .01 0M12 14l9-5m-6 0h6v6", { focus: "rack" });
+      add("camera.side-tracking", "camera", "\uC0AC\uC774\uB4DC \uD2B8\uB798\uD0B9", "Side tracking", "\uC778\uBB3C \uC606\uC5D0\uC11C \uC774\uB3D9\uC758 \uB9AC\uB4EC\uC744 \uBCF4\uC5EC \uC900\uB2E4.", "Move parallel beside the subject, matching speed and preserving the side view.", camera + "M3 27h26m-4-4 4 4-4 4M23 4v14", { movement: "truck parallel to the subject" });
+      add("camera.pov", "camera", "1\uC778\uCE6D \uC2DC\uC810", "First-person POV", "\uAD00\uAC1D\uC774 \uC778\uBB3C\uC758 \uB208\uC73C\uB85C \uD589\uB3D9\uC744 \uACBD\uD5D8\uD558\uAC8C \uD55C\uB2E4.", "View from the character eyes; describe visible hands and crop when needed.", "M4 10V4h6M22 4h6v6M28 22v6h-6M10 28H4v-6M12 16h8M16 12v8", { viewpoint: "pov" });
+      add("camera.drone-pullback", "camera", "\uB4DC\uB860 \uD480\uBC31", "Drone pullback", "\uD6C4\uD1F4\uC640 \uC0C1\uC2B9\uC73C\uB85C \uC7A5\uC18C\uC758 \uADDC\uBAA8\uB97C \uACF5\uAC1C\uD55C\uB2E4.", "Travel backward and upward together; name the revealed space and final scale.", "M12 10h8v8h-8zM4 5h7M21 5h7M8 5l4 5m8 0 4-5M5 27 27 5m-8 0h8v8", { movement: "aerial backward and upward" });
+      add("camera.pan-left", "camera", "\uC67C\uCABD \uD32C", "Pan left", "\uC67C\uCABD \uB300\uC0C1\uC744 \uACF5\uAC1C\uD55C\uB2E4.", "Rotate left in place from one named target to another.", camera + "M29 27H3m5-4-5 4 5 4", { movement: "pan left" });
+      add("camera.pan-right", "camera", "\uC624\uB978\uCABD \uD32C", "Pan right", "\uC624\uB978\uCABD \uB300\uC0C1\uC744 \uACF5\uAC1C\uD55C\uB2E4.", "Rotate right in place from one named target to another.", camera + "M3 27h26m-5-4 5 4-5 4", { movement: "pan right" });
+      add("camera.tilt-up", "camera", "\uD2F8\uD2B8 \uC5C5", "Tilt up", "\uC704\uCABD \uB300\uC0C1\uC744 \uACF5\uAC1C\uD55C\uB2E4.", "Tilt upward from the starting target to the ending target.", "M4 16h10v8H4zM22 28V4m-5 5 5-5 5 5M3 29h12", { movement: "tilt up" });
+      add("camera.tilt-down", "camera", "\uD2F8\uD2B8 \uB2E4\uC6B4", "Tilt down", "\uC544\uB798\uCABD \uB300\uC0C1\uC744 \uACF5\uAC1C\uD55C\uB2E4.", "Tilt downward from the starting target to the ending target.", "M4 4h10v8H4zM22 4v24m-5-5 5 5 5-5M3 29h12", { movement: "tilt down" });
+      add("camera.eye", "camera", "\uB208\uB192\uC774", "Eye level", "\uC778\uBB3C\uACFC \uAC19\uC740 \uB192\uC774\uC5D0\uC11C \uAD00\uCC30\uD55C\uB2E4.", "Keep the lens at the subject eye height.", camera + "M19 12h10M23 4v24", { angle: "eye" });
+      const sizes = [
+        ["els", "\uC775\uC2A4\uD2B8\uB9BC \uB871\uC0F7", "Extreme long shot", "\uACF5\uAC04\xB7\uACE0\uB9BD\xB7\uADDC\uBAA8", "extreme long shot, subject tiny in the environment", 9],
+        ["ls", "\uB871\uC0F7", "Long shot", "\uC7A5\uC18C\uC640 \uC778\uBB3C \uC704\uCE58", "wide shot, full body with room above and below", 21],
+        ["fs", "\uD480\uC0F7", "Full shot", "\uC804\uC2E0 \uB3D9\uC791\xB7\uC758\uC0C1", "full shot, head to toe", 28],
+        ["mfs", "\uBBF8\uB514\uC5C4 \uD480\uC0F7", "Medium full shot", "\uD5C8\uB9AC \uC8FC\uBCC0 \uD589\uB3D9\xB7\uB300\uCE58", "medium full shot, frame bottom at mid-thigh", 37],
+        ["ms", "\uBBF8\uB514\uC5C4 \uC0F7", "Medium shot", "\uB300\uD654\xB7\uC0C1\uCCB4 \uD589\uB3D9", "medium shot, waist up", 44],
+        ["mcu", "\uBBF8\uB514\uC5C4 \uD074\uB85C\uC988\uC5C5", "Medium close-up", "\uB300\uC0AC\xB7\uD45C\uC815", "medium close-up, chest up", 56],
+        ["cu", "\uD074\uB85C\uC988\uC5C5", "Close-up", "\uC5BC\uAD74\uC758 \uBC18\uC751", "close-up, face and shoulders", 75],
+        ["choker", "\uBE45 \uD074\uB85C\uC988\uC5C5", "Big close-up", "\uC5BC\uAD74\uC758 \uBBF8\uC138\uD55C \uBCC0\uD654", "tight close-up, forehead to chin", 110],
+        ["ecu", "\uC775\uC2A4\uD2B8\uB9BC \uD074\uB85C\uC988\uC5C5", "Extreme close-up", "\uB208\xB7\uC785 \uB4F1 \uC138\uBD80", "extreme close-up, a named detail fills the frame", 180]
+      ];
+      const SIZE_WORDS = {}, SIZE_GLYPHS = {};
+      for (const [key, ko, en, use, instruction, height] of sizes) {
+        const k = height / 100, top = key === "choker" ? -11 : key === "ecu" ? -29 : 2;
+        let glyph = `<g transform="translate(${16 - 50 * k} ${top}) scale(${k})"><circle cx="50" cy="15" r="12"/><path d="M31 72V46q0-12 19-12t19 12v26zM40 72v26M60 72v26"/><path d="M43 14h3m8 0h3M43 22h14"/></g>`;
+        glyph = glyph.replace(/<circle /g, '<circle vector-effect="non-scaling-stroke" ').replace(/<path /g, '<path vector-effect="non-scaling-stroke" ');
+        if (key === "ecu") glyph = '<path d="M1 16Q16 1 31 16Q16 31 1 16Z"/><circle cx="16" cy="16" r="6"/><circle cx="16" cy="16" r="2"/>';
+        if (key === "choker") glyph = '<path d="M4 0V17Q16 38 28 17V0M8 9h5m6 0h5M11 23q5 3 10 0"/>';
+        glyph = '<rect x="1" y="1" width="30" height="30" rx="2" opacity=".3"/>' + glyph;
+        SIZE_WORDS[key] = instruction;
+        SIZE_GLYPHS[key] = glyph;
+        add("framing." + key, "framing", ko, en, use, instruction, glyph, { size: key });
+      }
+      const refs = [["front", "\uC815\uBA74 \uC804\uC2E0", "Front reference", "\uC804\uC2E0\xB7\uC758\uC0C1\xB7\uCCB4\uD615", "Head-to-shoes front view; retain the complete head.", "M16 3a4 4 0 1 0 .01 0M8 29V15h16v14M16 15v14M13 7h6"], ["back", "\uD6C4\uBA74 \uC804\uC2E0", "Back reference", "\uD6C4\uBA74\xB7\uB4A4\uB3CC\uC544\uC12C", "Complete back view; preserve clothing seams and hair silhouette.", "M16 3a4 4 0 1 0 .01 0M8 29V15h16v14M16 15v14M11 17h10"], ["face", "\uC5BC\uAD74 \uCC38\uC870", "Face reference", "\uB300\uC0AC\xB7\uC5BC\uAD74 \uBC18\uC751", "Neutral face including hair; keep identity separate from scene lighting.", "M16 3a12 12 0 1 0 .01 0M10 13h3m6 0h3M12 21h8"], ["costume", "\uC758\uC0C1 \uC804\uC6A9 \uCC38\uC870", "Costume reference", "\uC758\uC0C1\xB7\uCCB4\uD615 \uBCF4\uC870", "Optional derived costume reference without face; never replace the baseline complete front panel.", "M10 4 3 10l4 7 3-3v15h12V14l3 3 4-7-7-6-6 7z"]];
+      for (const [key, ko, en, use, instruction, glyph] of refs) add("character." + key, "character", ko, en, use, instruction, glyph, { reference: key });
+      const timing = [["insert", "\uC778\uC11C\uD2B8 \uC2DC\uAC04", "Insert timing", "\uB2E8\uC11C\xB7\uC0AC\uBB3C \uD655\uC778", "Start around 3\u20134 seconds; measure actual reading/action time.", "M3 8h26v16H3zM11 12h10v8H11z"], ["action", "\uD589\uB3D9 \uC2DC\uAC04", "Action timing", "\uC774\uB3D9\xB7\uC811\uCD09\xB7\uB3C4\uCC29", "Start around 5\u20137 seconds; preserve anticipation, action and response.", "M3 24l8-12 7 8 11-15M3 29h26"], ["dialogue", "\uB300\uC0AC\xB7\uAC10\uC815 \uC2DC\uAC04", "Dialogue timing", "\uB9D0\uACFC \uD45C\uC815\uC758 \uBCC0\uD654", "Start around 7\u201310 seconds, then use measured speech and reaction time.", "M3 4h26v18H13l-6 7v-7H3zM8 10h16M8 16h10"], ["establishing", "\uACF5\uAC04 \uC18C\uAC1C \uC2DC\uAC04", "Establishing timing", "\uC7A5\uC18C\uC640 \uC704\uCE58\uB97C \uC77D\uB294 \uC2DC\uAC04", "Start around 5\u20138 seconds; allow the viewer to recognize spatial relationships.", "M3 27V12l13-9 13 9v15zM12 27V16h8v11"], ["long-take", "\uB871\uD14C\uC774\uD06C \uC2DC\uAC04", "Long-take timing", "\uC5F0\uC18D \uC2DC\uAC04 \uC790\uCCB4\uAC00 \uD544\uC694\uD55C \uC7A5\uBA74", "Ten seconds or longer only when motivated; verify complete movement, model limits and action coverage.", "M2 16h28M3 10v12m6-12v12m6-12v12m6-12v12m6-12v12"]];
+      for (const [key, ko, en, use, instruction, glyph] of timing) add("timing." + key, "timing", ko, en, use, instruction, glyph, { timing: key });
+      const byId = Object.assign(/* @__PURE__ */ Object.create(null), Object.fromEntries(entries.map((entry) => [entry.id, entry])));
+      function validate2(selection) {
+        if (!Array.isArray(selection)) return ["shot.techniques must be an array"];
+        const errors = [], seen = /* @__PURE__ */ new Set();
+        for (const item of selection) {
+          if (!item || !byId[item.id]) errors.push("Unknown technique: " + String(item?.id));
+          if (seen.has(item?.id)) errors.push("Duplicate technique: " + String(item?.id));
+          seen.add(item?.id);
+          if (typeof item?.reason !== "string" || !item.reason.trim()) errors.push("Technique needs this shot\u2019s reason: " + String(item?.id));
+        }
+        return errors;
+      }
+      function selected(scene) {
+        return Array.isArray(scene.shot?.techniques) ? scene.shot.techniques.map((item) => ({ ...item, entry: byId[item?.id] })) : [];
+      }
+      function instructions(scene) {
+        return selected(scene).filter((item) => item.entry && ["camera", "framing"].includes(item.entry.category)).map((item) => item.entry.category === "framing" ? "Opening frame: " + item.entry.instruction + "." : item.entry.instruction).join(" ");
+      }
+      function sourceInstructions(scene) {
+        return selected(scene).filter((item) => item.entry).map(({ entry }) => {
+          if (entry.category === "framing") return "Opening frame: " + entry.instruction + ".";
+          if (entry.fields.viewpoint || entry.fields.angle) return entry.instruction;
+          if (entry.fields.focus === "rack") return "Stage the named near and far focus targets at distinct depths; use the authored opening focus from camera.framing.";
+          return "";
+        }).filter(Boolean).join(" ");
+      }
+      function findings(scene) {
+        const selection = scene.shot?.techniques;
+        if (selection === void 0) return [];
+        const notes = validate2(selection), sh = scene.shot || {}, cam = scene.visual?.camera || {};
+        const chosen = selected(scene).filter((item) => item.entry);
+        const frames = chosen.filter((item) => item.entry.category === "framing");
+        const viewpoints = new Set(chosen.map((item) => item.entry.fields.viewpoint).filter(Boolean));
+        if (viewpoints.size > 1) notes.push("Conflicting viewpoints: choose one opening viewpoint; describe a deliberate viewpoint transition in camera.end.");
+        if (frames.length > 1) notes.push("Multiple starting frame sizes: choose one; describe the ending crop in camera.end.");
+        for (const { entry } of chosen) {
+          if (entry.fields.size && sh.size !== entry.fields.size) notes.push(entry.id + " conflicts with shot.size " + String(sh.size));
+          if (entry.fields.angle && sh.angle !== entry.fields.angle) notes.push(entry.id + " conflicts with shot.angle " + String(sh.angle));
+          if (entry.fields.movement && !String(cam.movement || "").toLowerCase().trim().startsWith(entry.fields.movement)) notes.push(entry.id + " needs camera movement " + entry.fields.movement);
+        }
+        if (chosen.some((x2) => x2.entry.id === "camera.static") && chosen.some((x2) => x2.entry.fields.movement && x2.entry.id !== "camera.static")) notes.push("Static camera conflicts with a selected moving-camera technique.");
+        return notes;
+      }
+      function icon(entry) {
+        const body = entry.glyph.startsWith("<") ? entry.glyph : '<path d="' + entry.glyph + '"/>';
+        return '<svg viewBox="0 0 32 32" width="40" height="40" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' + body + "</svg>";
+      }
+      function tiles(scene, lang) {
+        const items = selected(scene);
+        if (!items.length) return "";
+        return '<div class="technique-tiles">' + items.map(({ entry, id, reason }) => '<details class="technique-tile"><summary>' + (entry ? icon(entry) : "") + "<span>" + esc2(entry?.label[lang] || entry?.label.en || id) + "</span></summary><p>" + esc2(reason) + "</p><p>" + esc2(entry?.use || "Unknown technique") + '</p><p lang="en">' + esc2(entry?.instruction || "") + "</p><small>" + esc2(id) + "</small></details>").join("") + "</div>";
+      }
+      function legend(lang) {
+        return '<details class="technique-library"><summary>' + (lang === "ko" ? "\uAE30\uBC95 \uC0AC\uC804 \xB7 \uC544\uC774\uCF58\uACFC \uC120\uD0DD \uAE30\uC900" : "Technique catalogue \xB7 icons and selection guidance") + "</summary><p>" + (lang === "ko" ? "\uC7A5\uBA74\uC758 \uC815\uBCF4\uC640 \uD589\uB3D9\uC744 \uBA3C\uC800 \uC815\uD55C \uB4A4 \uAE30\uBC95\uC744 \uACE0\uB974\uC138\uC694. \uC544\uC774\uCF58\uC740 \uACC4\uD68D\uC744 \uC124\uBA85\uD558\uBA70 \uC2E4\uC81C \uC601\uC0C1 \uAC80\uC99D\uC744 \uB73B\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4." : "Choose from the scene\u2019s information and action. Icons describe a plan, not verified footage.") + "</p>" + ["character", "camera", "framing", "timing"].map((category) => "<h3>" + (lang === "ko" ? { character: "\uCE90\uB9AD\uD130 \uCC38\uC870", camera: "\uCE74\uBA54\uB77C \uAE30\uBC95", framing: "\uD504\uB808\uC784 \uD06C\uAE30", timing: "\uCEF7 \uC2DC\uAC04" }[category] : { character: "Character references", camera: "Camera techniques", framing: "Frame sizes", timing: "Cut timing" }[category]) + '</h3><div class="technique-tiles">' + entries.filter((e2) => e2.category === category).map((e2) => '<details class="technique-tile"><summary>' + icon(e2) + "<span>" + esc2(e2.label[lang] || e2.label.en) + "</span></summary><p>" + esc2(e2.use) + '</p><p lang="en">' + esc2(e2.instruction) + "</p><small>" + esc2(e2.id) + "</small></details>").join("") + "</div>").join("") + "</details>";
+      }
+      const api = { VERSION: VERSION2, entries, byId, SIZE_WORDS, SIZE_GLYPHS, validate: validate2, selected, instructions, sourceInstructions, findings, icon, tiles, legend };
+      if (typeof module === "object" && module.exports) module.exports = api;
+      else root.FILM_TECHNIQUES = api;
     })(typeof window === "object" ? window : globalThis);
   }
 });
@@ -65165,7 +65289,7 @@ var require_scene_acting = __commonJS({
       return { performance, durationSeconds: cursor, timing, warnings };
     }
     function scenePerformancePayload(scene) {
-      return { performance: scene.performance, narration: (scene.narration || []).map((line) => ({ id: line.id, speaker: line.speaker, tts: line.tts, delivery: line.delivery, acting: line.acting })), videoDesign: scene.shot?.videoDesign, camera: scene.visual?.camera, source: { bg: scene.visual?.bg, character: scene.visual?.character, location: scene.shot?.location } };
+      return { performance: scene.performance, narration: (scene.narration || []).map((line) => ({ id: line.id, speaker: line.speaker, tts: line.tts, delivery: line.delivery, acting: line.acting })), videoDesign: scene.shot?.videoDesign, techniques: scene.shot?.techniques, camera: scene.visual?.camera, source: { bg: scene.visual?.bg, character: scene.visual?.character, location: scene.shot?.location } };
     }
     function cameraLock(camera = {}) {
       return require_production_mode().moveOf(camera)?.family === "static" ? "Locked camera: preserve the opening framing, camera angle, focal length and background scale throughout; animate the planned subject action." : "";
@@ -65186,6 +65310,7 @@ var require_scene_acting = __commonJS({
       return [
         ...keys.map((key) => `${key}: ${design[key]}`),
         ...states,
+        require_film_techniques().instructions(scene),
         ...["framing", "movement", ...lock2 ? [] : ["speed"], "end"].filter((key) => camera[key]).map((key) => `Camera ${key}: ${camera[key]}`),
         ...lock2 ? [lock2] : []
       ].join("\n");
@@ -80921,6 +81046,19 @@ function contract() {
 function cameraContract() {
   return loadFromHere(join4(REFERENCES_DIR, "production-mode.js"));
 }
+function techniqueContract() {
+  return loadFromHere(join4(REFERENCES_DIR, "film-techniques.js"));
+}
+var techniqueSelectionSchema = external_exports.array(external_exports.object({
+  id: nonEmptyTechniqueId(),
+  reason: external_exports.string().trim().min(1).describe("Why this technique serves this shot\u2019s information or action")
+}).strict()).superRefine((value, ctx) => {
+  for (const message of techniqueContract().validate(value))
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+});
+function nonEmptyTechniqueId() {
+  return external_exports.string().trim().min(1).describe("Stable id from storyboard_read techniqueCatalog");
+}
 function renderPurposes() {
   const routing = loadFromHere(join4(REFERENCES_DIR, "render-routing.js"));
   return Object.keys(routing.PURPOSES);
@@ -81026,6 +81164,7 @@ var shotSchema = external_exports.object({
   chapter: external_exports.string().optional(),
   after: external_exports.number().int().nonnegative().optional(),
   shot: external_exports.object({
+    techniques: techniqueSelectionSchema.optional(),
     feel: external_exports.string().optional(),
     size: external_exports.string().optional(),
     angle: external_exports.string().optional(),
@@ -81050,6 +81189,7 @@ var storyboardReadSchema = external_exports.object({
   path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
   level: readLevelSchema.default("shots").describe("outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots = every shot summarised under its scene \xB7 full = the raw shot objects too"),
   shotId: external_exports.string().min(1).optional().describe("Stable shot ID to inspect, with its raw plan and neighboring shot IDs"),
+  includeTechniques: external_exports.boolean().default(true).describe("Return canonical technique ids, purposes, icons and provider instructions"),
   includeContext: external_exports.boolean().default(true).describe("Include STORY, PRODUCTION and SB_DOC as unverified review context")
 });
 function readStoryboard(args) {
@@ -81058,6 +81198,16 @@ function readStoryboard(args) {
   result.file = file;
   result.mediaBaseDirectory = dirname2(file);
   result.sha256 = sha2562;
+  if (args.includeTechniques !== false) result.techniqueCatalog = {
+    version: techniqueContract().VERSION,
+    entries: techniqueContract().entries,
+    selections: (win.SCENES || []).map((scene, i2) => ({
+      id: scene.id,
+      no: i2 + 1,
+      techniques: scene.shot?.techniques || [],
+      findings: techniqueContract().findings(scene)
+    }))
+  };
   const doc = win.SB_DOC;
   if (doc?.props || doc?.propContinuity) result.propSheet = { props: doc.props, continuity: doc.propContinuity };
   result.inspection = {
@@ -81067,6 +81217,7 @@ function readStoryboard(args) {
   };
   const continuity = loadFromHere(join4(REFERENCES_DIR, "shot-continuity.js"));
   result.continuityFindings = continuity.check(win, dirname2(file));
+  result.techniqueFindings = (win.SCENES || []).flatMap((scene, index) => techniqueContract().findings(scene).map((what) => ({ level: "warn", where: "shot " + (index + 1), what })));
   if (args.includeContext) result.reviewContext = {
     story: win.STORY || null,
     production: win.PRODUCTION || null,
@@ -87253,6 +87404,13 @@ var shotCameraInput = (() => {
   }
 })();
 var enumInput = (values, description) => ({ type: "string", ...values?.length ? { enum: values } : {}, description });
+var techniqueIds = (() => {
+  try {
+    return techniqueContract().entries.map((entry) => String(entry.id));
+  } catch {
+    return [];
+  }
+})();
 var purposes = (() => {
   try {
     return renderPurposes();
@@ -87306,7 +87464,11 @@ var storyboardShotInput = {
       additionalProperties: true,
       description: "Shot grammar and production route. Render mode chooses how to build the shot; visual.camera chooses how it is filmed; shot.depth chooses how many planes the viewer may read at once (L11).",
       properties: {
-        size: { type: "string", description: "Framing size. Recommended vocabulary is in the directing skill." },
+        techniques: { type: "array", description: "Authored choices from storyboard_read techniqueCatalog. Persist each technique id and this shot\u2019s reason. Match size/angle/camera fields to its fields; provider prompts consume its instructions. Icons do not verify actual footage.", items: { type: "object", additionalProperties: false, required: ["id", "reason"], properties: {
+          id: { type: "string", ...techniqueIds.length ? { enum: techniqueIds } : {}, description: "Stable semantic technique id, including independent focus and viewpoint choices." },
+          reason: { type: "string", minLength: 1, description: "The visible information or action that motivates this selection." }
+        } } },
+        size: { type: "string", description: "Canonical framing size: mfs=mid-thigh, ms=waist-up. Keep two-shot/POV roles in separate technique or framing prose." },
         angle: { type: "string", description: "Camera angle. Recommended vocabulary is in the directing skill." },
         infoType: { type: "string", description: "Information carried by the shot; must agree with its purpose. Recommended vocabulary is in the directing skill." },
         feel: { type: "string", description: "What the viewer should feel before choosing framing and movement." },
@@ -91407,6 +91569,8 @@ Returns revision, ordered matching lines with generationPlan and voice/audio has
     annotations: HINT.local,
     description: `Read an episode's scenes.js and return it as a tree: sequences (purpose \xB7 question \xB7 payoff) \u2192 scenes (place \xB7 time \xB7 event \xB7 charge \xB7 turn \xB7 out) \u2192 shots (stable id \xB7 ordered actions and attributed speech \xB7 feel \xB7 info \xB7 render \xB7 character/location/prop references \xB7 media plan). Reads the file only; no API call.
 
+The default techniqueCatalog provides the four filmmaking elements and per-technique selection guidance. Store intentional choices as shot.techniques:[{id,reason}] and keep existing camera/size/angle fields consistent.
+
 Use it before editing an existing board, and after storyboard_apply to see the board the way the approval page groups it. level=outline is enough to plan a change; level=full carries every raw shot object (large \u2014 one shot is ~40 fields).
 Do NOT use it to validate \u2014 storyboard_check runs the contract. A board with no window.STRUCTURE comes back with every shot under unplacedShots; write the structure with storyboard_apply.
 
@@ -91419,6 +91583,7 @@ Returns: JSON \u2014 { file, mediaBaseDirectory, sha256, version, format, shots,
         path: { type: "string", description: "The storyboard directory (data/<channel>/episodes/<topic>/storyboard/) or its scenes.js" },
         level: { type: "string", enum: ["outline", "scenes", "shots", "full"], description: "outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots (default) = every shot summarised under its scene \xB7 full = raw shot objects too" },
         shotId: { type: "string", description: "Stable shot ID; adds raw selectedShot with scene and neighboring IDs without removing the overall flow. Unknown or duplicate IDs fail." },
+        includeTechniques: { type: "boolean", description: "Default true: return canonical techniqueCatalog with ids, purposes, unique icons, provider instructions, current selections and conflicting-plan advice." },
         includeContext: { type: "boolean", description: "Default true: return STORY, PRODUCTION and SB_DOC for character, background, prop and scenario inspection. Recorded evidence is not verified by this read." }
       },
       required: ["path"]

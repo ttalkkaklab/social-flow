@@ -568,7 +568,8 @@ hand over the two or three the shot actually needs:
 data/<channel>/assets/characters/<id>/
   identity.md   # the canonical description — look, marks, expression, voice, veo verdict
   face.png      # face close-up — neutral, minimal shoulders, plain background. The headshot the vendor asks for
-  body.png      # full body, front, HEADLESS — body, clothes, shoes. No face
+  body.png      # canonical front panel: complete head-to-shoes body, clothes and shoes
+  costume.png   # optional derived costume-only input; not a baseline front panel
   back.png      # full body, back, no face — required for every new reference set
   front.png     # legacy: full body with the head on. Fallback when the panels don't exist yet
   voice.wav     # the fixed voice sample — 5–10 s of speech in the character's register, no music or effects. Reference audio for cuts the model voices
@@ -581,22 +582,13 @@ Keep body, back and face reference images locally. All three must be stored befo
 a new character reference set is complete; optional extra images serve specific poses/details. Never build a combined sheet out of the panels — the moment two
 angles share one image, this whole section's warning applies again.
 
-**Why the front panel is headless.** The face is already carried by `face.png` at a much larger
-size, so a head on the body panel is the same information twice, and the more human figures a
-reference set carries the more readily the model reads them as several people — the doppelgänger
-failure. **This part is a creator practice, not vendor guidance**: ByteDance documents the
-two-image set but says nothing about removing the head from the full body. Treat it as our
-working default and settle it with an A/B (same shot, headless body vs `front.png`, ID drift
-compared over a few 8-second cuts) — the open question is already logged in the camera research.
-
-An outside practitioner reaches the same failure mode from the other direction `[course]`.
-Higgsfield's course keeps the three-panel sheet as one image, but the step it insists on is
-erasing the face from the full-body panel — "more than one face and Seedance wobbles; by the
-fifth scene your lead is a stranger." So the two sources disagree on the container (one sheet
-vs separate files) and agree on the rule underneath: **one face per reference set.** Their
-container isn't ours to copy — their platform saves the sheet as a named Element and matches it
-by tag, which is not what a raw `referenceImages` array does, and ByteDance's own warning
-against multi-angle assets is `[vendor]`. Keep the panels split; take the confirmation.
+**Baseline and adapter inputs are separate.** The shared front panel follows
+`../../channel/references/character-panels.md`: retain the complete head and shoes.
+A face-erased or headless costume reference is an optional derived input for a
+specific adapter experiment, never the default baseline and never relabelled as
+`front`. Keep the original, record why the derivative is used and compare actual
+identity drift. Multiple panels in the review sheet do not imply a multi-panel
+image should be submitted as one video start frame.
 
 **Light the sheet flat** `[course]`. A reference sheet gets rejected on lighting far more often
 than on likeness, and every shot generated from it inherits the fault. What passes: soft

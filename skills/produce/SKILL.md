@@ -9,7 +9,7 @@ Follow [host evaluation](../_shared/host-review.md). Use local episode files und
 For narrated or mixed scenes, apply [visual grounding](../storyboard/references/narration-visual-grounding.md) before source images, including host calls and full-video: enumerate all editorial cuts and inspect repetition across the whole episode; never propagate a chapter score to shots; compare actual pixels with the line, visual purpose and opening state; repair weak conte before motion and carry its action into the provider request.
 For action-led episodes, carry the storyboard's [action direction](../storyboard/references/action-direction.md)
 into generation and editing. Compare the actual clip with the planned camera and
-action; camera icons and a successful API response do not verify footage quality.
+action; camera icons and a successful API response do not verify footage quality. Use `storyboard_read` techniqueCatalog and persist `shot.techniques:[{id,reason}]`; [film-techniques.js](../storyboard/references/film-techniques.js) owns icons, selection guidance and provider instructions. Keep fields consistent; inspect actual footage before certifying a technique.
 For connected shots, follow [shot continuity](../storyboard/references/shot-continuity.md).
 Capture the preceding accepted clip's selected endpoint before authoring the next opening;
 use the spatial assembler's actual reference-image arguments. After any crop, trim or

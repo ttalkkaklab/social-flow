@@ -4209,6 +4209,19 @@ function contract() {
 function cameraContract() {
   return loadFromHere(join(REFERENCES_DIR, "production-mode.js"));
 }
+function techniqueContract() {
+  return loadFromHere(join(REFERENCES_DIR, "film-techniques.js"));
+}
+var techniqueSelectionSchema = external_exports.array(external_exports.object({
+  id: nonEmptyTechniqueId(),
+  reason: external_exports.string().trim().min(1).describe("Why this technique serves this shot\u2019s information or action")
+}).strict()).superRefine((value, ctx) => {
+  for (const message of techniqueContract().validate(value))
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+});
+function nonEmptyTechniqueId() {
+  return external_exports.string().trim().min(1).describe("Stable id from storyboard_read techniqueCatalog");
+}
 var tuple = (list) => external_exports.enum(list);
 var MISSING = ["__contract-missing__"];
 function vocabAtLoad() {
@@ -4303,6 +4316,7 @@ var shotSchema = external_exports.object({
   chapter: external_exports.string().optional(),
   after: external_exports.number().int().nonnegative().optional(),
   shot: external_exports.object({
+    techniques: techniqueSelectionSchema.optional(),
     feel: external_exports.string().optional(),
     size: external_exports.string().optional(),
     angle: external_exports.string().optional(),
@@ -4327,6 +4341,7 @@ var storyboardReadSchema = external_exports.object({
   path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
   level: readLevelSchema.default("shots").describe("outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots = every shot summarised under its scene \xB7 full = the raw shot objects too"),
   shotId: external_exports.string().min(1).optional().describe("Stable shot ID to inspect, with its raw plan and neighboring shot IDs"),
+  includeTechniques: external_exports.boolean().default(true).describe("Return canonical technique ids, purposes, icons and provider instructions"),
   includeContext: external_exports.boolean().default(true).describe("Include STORY, PRODUCTION and SB_DOC as unverified review context")
 });
 var storyboardCheckSchema = external_exports.object({

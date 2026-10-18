@@ -5,7 +5,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const HELPERS = ['source-context.js', 'render-routing.js', 'production-mode.js', 'structure-contract.js', 'style-samples.js', 'shot-direction.js', 'review-layout.js', 'prop-continuity.js', 'prop-sheet.js', 'location-contract.js', 'location-review-runtime.js', 'location-review.css'];
+const HELPERS = ['source-context.js', 'render-routing.js', 'production-mode.js', 'structure-contract.js', 'style-samples.js', 'film-techniques.js', 'shot-direction.js', 'review-layout.js', 'prop-continuity.js', 'prop-sheet.js', 'location-contract.js', 'location-review-runtime.js', 'location-review.css'];
 const REVIEW_ASSETS = path.join(__dirname, '..', '..', 'channel', 'references', 'review-assets');
 const { FONT_ASSETS } = require('../../channel/references/review-fonts.js');
 const ASSETS = ['review.css', ...FONT_ASSETS];
@@ -56,7 +56,8 @@ function storyboardHtml(directory, check = false) {
     'window.REVIEW_FILES = ' + JSON.stringify(available) + ';\n' +
     'window.REVIEW_CHARACTER_PORTRAITS = ' + JSON.stringify(portraits).replace(/</g, '\\u003c') + ';\n' +
     'window.REVIEW_VIDEO_TYPES = ' + JSON.stringify(typeLabels).replace(/</g, '\\u003c') + ';\n';
-  const files = [['location-review-data.js', 'window.LOCATION_REVIEW = ' + JSON.stringify(locationData).replace(/</g, '\\u003c') + ';\n'], ['storyboard.html', html], ['review-files.js', reviewData], ...HELPERS.map(name => [name, fs.readFileSync(path.join(__dirname, name))]),
+  const catalogue = require('./film-techniques.js');
+  const files = [['film-techniques.json', JSON.stringify({version:catalogue.VERSION, entries:catalogue.entries}, null, 2) + '\n'], ['location-review-data.js', 'window.LOCATION_REVIEW = ' + JSON.stringify(locationData).replace(/</g, '\\u003c') + ';\n'], ['storyboard.html', html], ['review-files.js', reviewData], ...HELPERS.map(name => [name, fs.readFileSync(path.join(__dirname, name))]),
     ...ASSETS.map(name => [name, fs.readFileSync(path.join(REVIEW_ASSETS, name))])];
   const changed = files.filter(([name, content]) => {
     const file = path.join(dir, name);

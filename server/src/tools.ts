@@ -1,6 +1,6 @@
 import { DURATION_TOOLS } from './video-duration.js';
 import { CHANNEL_SLUG_RE } from './config.js';
-import { cameraContract, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
+import { techniqueContract, cameraContract, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 
@@ -970,6 +970,7 @@ const shotCameraInput = (() => {
   catch { return { type: 'object', description: 'Camera contract unavailable: restore skills/storyboard/references/production-mode.js' }; }
 })();
 const enumInput = (values: string[] | undefined, description: string) => ({ type: 'string', ...(values?.length ? { enum: values } : {}), description });
+const techniqueIds = (() => { try { return techniqueContract().entries.map(entry => String(entry.id)); } catch { return []; } })();
 const purposes = (() => { try { return renderPurposes(); } catch { return []; } })();
 const stillCameraEffects = (() => { try { return stillCameraEffectList(); } catch { return []; } })();
 // The still lane's window move (render-routing.js, still-camera.js) — the camera a photograph gets.
@@ -1001,7 +1002,11 @@ const storyboardShotInput = {
       type: 'object', additionalProperties: true,
       description: 'Shot grammar and production route. Render mode chooses how to build the shot; visual.camera chooses how it is filmed; shot.depth chooses how many planes the viewer may read at once (L11).',
       properties: {
-        size: { type: 'string', description: 'Framing size. Recommended vocabulary is in the directing skill.' },
+        techniques: { type: 'array', description: 'Authored choices from storyboard_read techniqueCatalog. Persist each technique id and this shot’s reason. Match size/angle/camera fields to its fields; provider prompts consume its instructions. Icons do not verify actual footage.', items: { type: 'object', additionalProperties: false, required: ['id','reason'], properties: {
+          id: { type: 'string', ...(techniqueIds.length ? { enum: techniqueIds } : {}), description: 'Stable semantic technique id, including independent focus and viewpoint choices.' },
+          reason: { type: 'string', minLength: 1, description: 'The visible information or action that motivates this selection.' },
+        } } },
+        size: { type: 'string', description: 'Canonical framing size: mfs=mid-thigh, ms=waist-up. Keep two-shot/POV roles in separate technique or framing prose.' },
         angle: { type: 'string', description: 'Camera angle. Recommended vocabulary is in the directing skill.' },
         infoType: { type: 'string', description: 'Information carried by the shot; must agree with its purpose. Recommended vocabulary is in the directing skill.' },
         feel: { type: 'string', description: 'What the viewer should feel before choosing framing and movement.' },
@@ -5073,6 +5078,8 @@ Returns revision, ordered matching lines with generationPlan and voice/audio has
     annotations: HINT.local,
     description: `Read an episode's scenes.js and return it as a tree: sequences (purpose · question · payoff) → scenes (place · time · event · charge · turn · out) → shots (stable id · ordered actions and attributed speech · feel · info · render · character/location/prop references · media plan). Reads the file only; no API call.
 
+The default techniqueCatalog provides the four filmmaking elements and per-technique selection guidance. Store intentional choices as shot.techniques:[{id,reason}] and keep existing camera/size/angle fields consistent.
+
 Use it before editing an existing board, and after storyboard_apply to see the board the way the approval page groups it. level=outline is enough to plan a change; level=full carries every raw shot object (large — one shot is ~40 fields).
 Do NOT use it to validate — storyboard_check runs the contract. A board with no window.STRUCTURE comes back with every shot under unplacedShots; write the structure with storyboard_apply.
 
@@ -5085,6 +5092,7 @@ Returns: JSON — { file, mediaBaseDirectory, sha256, version, format, shots, se
         path: { type: 'string', description: 'The storyboard directory (data/<channel>/episodes/<topic>/storyboard/) or its scenes.js' },
         level: { type: 'string', enum: ['outline', 'scenes', 'shots', 'full'], description: 'outline = sequences with scene numbers · scenes = scene cards with shot numbers · shots (default) = every shot summarised under its scene · full = raw shot objects too' },
         shotId: { type: 'string', description: 'Stable shot ID; adds raw selectedShot with scene and neighboring IDs without removing the overall flow. Unknown or duplicate IDs fail.' },
+        includeTechniques: { type: 'boolean', description: 'Default true: return canonical techniqueCatalog with ids, purposes, unique icons, provider instructions, current selections and conflicting-plan advice.' },
         includeContext: { type: 'boolean', description: 'Default true: return STORY, PRODUCTION and SB_DOC for character, background, prop and scenario inspection. Recorded evidence is not verified by this read.' },
       },
       required: ['path'],

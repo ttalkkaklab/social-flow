@@ -49,7 +49,7 @@ test('resolved four-second action excludes stale eight-second design timing with
     startSeconds: 0, endSeconds: 4 }] };
   const prompt = motionPrompt(scene, plan), timeline = motionTimeline(scene, plan);
   assert.match(prompt, /From 0 to 4 seconds, Walk for two seconds/);
-  assert.match(prompt, /shot finishes with this state: The tray rests/);
+  assert.match(prompt, /shot finishes with this state and holds it until the cut: The tray rests/);
   assert.doesNotMatch(prompt, /first four|still holds|At 6.5|At 8/);
   assert.ok(timeline.warnings.some(message => message.includes('6.5s falls outside')));
   assert.ok(timeline.warnings.some(message => message.includes('8s falls outside')));

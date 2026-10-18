@@ -84,16 +84,8 @@ const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
 const sourceContext = require('./source-context.js');
 
 const SIZE_WORDS = {
-  els: "extreme long shot, person under a tenth of the frame height",
-  ls: "wide shot, full body with room above and below",
-  ws: "wide shot, full body with room above and below",
-  fs: "full shot, head to toe",
-  mfs: "medium full shot, frame bottom at mid-shin",
-  ms: "medium shot, frame bottom at mid-thigh",
-  mcu: "medium close-up, chest up",
-  cu: "close-up, shoulders at the bottom, crown lightly cropped",
-  choker: "choker, forehead to chin",
-  ecu: "extreme close-up",
+  ...require('./film-techniques.js').SIZE_WORDS,
+  ws: require('./film-techniques.js').SIZE_WORDS.ls,
   insert: "insert, the object fills the frame",
   two: "two-shot",
   three: "three-shot",
@@ -236,6 +228,8 @@ function clipAssemble(opts) {
   const dot = s => s.replace(/[.!?\s]*$/, "") + ".";
 
   const parts = [];
+  const techniqueInstructions = require('./film-techniques.js').instructions({shot:{techniques:opts.techniques}});
+  if (techniqueInstructions) parts.push(techniqueInstructions);
   const space = opts.withSpace ? spaceSentence(opts) : "";
   if (space) parts.push(space);
   if (opts.propPrompt) parts.push(opts.propPrompt);
@@ -336,6 +330,8 @@ function assemble(opts) {
   const parts = [];
   if (sizeWords) parts.push(sizeWords + ", " + angleWords + ".");
   else parts.push(angleWords + ".");
+  const sourceTechnique = require('./film-techniques.js').sourceInstructions({shot:{techniques:opts.techniques}});
+  if (sourceTechnique) parts.push(sourceTechnique);
   if (space) parts.push(space);
   if (opts.propPrompt) parts.push(opts.propPrompt);
   parts.push(...styleSentences(opts.style));
@@ -378,6 +374,7 @@ function loadShot(file, index) {
     propPrompt: require('./prop-continuity.js').prompt(win, i),
     propSnapshot,
     sourceImageArgs: propReferenceImages.length ? { referenced_image_paths: propReferenceImages } : {},
+    techniques: sh.techniques,
     size: sh.size,
     angle: sh.angle,
     layout: sp.layout,
@@ -463,7 +460,7 @@ function selftest() {
     spaceSentence({ layout: "from the camera, the right-hand door is on the right of frame" }),
     "From the camera: the right-hand door is on the right of frame.");
   eq("sentence ends are normalised",
-    assemble({ size: "ms", scene: "is this it?", tail: "" }).prompt, "medium shot, frame bottom at mid-thigh, at eye level. is this it.");
+    assemble({ size: "ms", scene: "is this it?", tail: "" }).prompt, "medium shot, waist up, at eye level. is this it.");
   ok("out-of-vocabulary size is reported", assemble({ size: "xyz", scene: "x" }).unknown.length === 1);
 
   // No space written (an older scenes.js) — no dangling "From the camera." sentence.
@@ -473,7 +470,7 @@ function selftest() {
 
   // --tail "" turns the tail off; --space-only gives just the sentence.
   eq("empty tail is honoured",
-    assemble({ size: "ms", scene: "x", tail: "" }).prompt, "medium shot, frame bottom at mid-thigh, at eye level. x.");
+    assemble({ size: "ms", scene: "x", tail: "" }).prompt, "medium shot, waist up, at eye level. x.");
   eq("space sentence alone (quote clip)",
     assemble({ size: "mcu", layout: "speaker centred", facing: "faces the camera" }).space,
     "From the camera: speaker centred. faces the camera.");
@@ -712,7 +709,7 @@ function main(argv) {
     const cam = { ...(opts.camera || {}) };
     ["movement", "speed", "framing", "end"].forEach(k => { if (args[k] !== undefined) cam[k] = args[k]; });
     const r = clipAssemble({
-      camera: cam, engine: args.engine, propPrompt: opts.propPrompt,
+      camera: cam, techniques: opts.techniques, engine: args.engine, propPrompt: opts.propPrompt,
       scene: opts.scene, motion: args.motion, locks: args.locks,
       audio: args.audio !== undefined ? args.audio : opts.audio,
       withSpace: !!args["with-space"],

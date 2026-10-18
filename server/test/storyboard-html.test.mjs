@@ -13,7 +13,7 @@ test('HTML creation and refresh keep one design while preserving episode metadat
   const dir = mkdtempSync(join(tmpdir(), 'sf-board-html-'));
   try {
     // No scenes, credentials, or network are required to create the review shell.
-    assert.equal(storyboardHtml(dir).length, 16 + FONT_ASSETS.length);
+    assert.equal(storyboardHtml(dir).length, 18 + FONT_ASSETS.length);
     const file = join(dir, 'storyboard.html');
     const original = readFileSync(file, 'utf8');
     const title = '<title>Episode $& — 로컬 검토</title>';
@@ -62,7 +62,7 @@ test('check is read-only and malformed existing metadata is preserved for repair
   const root = mkdtempSync(join(tmpdir(), 'sf-board-html-check-'));
   try {
     const dir = join(root, 'storyboard');
-    assert.equal(storyboardHtml(dir, true).length, 16 + FONT_ASSETS.length);
+    assert.equal(storyboardHtml(dir, true).length, 18 + FONT_ASSETS.length);
     assert.equal(existsSync(dir), false);
     storyboardHtml(dir);
     const file = join(dir, 'storyboard.html');
