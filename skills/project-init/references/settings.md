@@ -74,3 +74,8 @@ and [SessionStart context schema](https://code.claude.com/docs/en/hooks#sessions
 Only the session's explicit `cwd` is checked; it does not search parent projects
 or initialize an arbitrary working directory. Hosts without this hook use the
 same skill preflight. Hook execution itself is network-free and read-only.
+
+For a project without separate TTS, save `models.speech:{engine:"none"}` with no
+`model`. This explicit choice is required; omitting speech still means setup is
+incomplete. Follow model-settings.md for sequential video, image and optional TTS
+credential checks. Project `ready` validates saved choices, not live credentials.

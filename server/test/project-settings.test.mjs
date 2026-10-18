@@ -213,3 +213,17 @@ test('project status exposes retired speech and explicit updates repair it witho
   assert.deepEqual(fixed.config.sns, pending.config.sns);
   assert.deepEqual(fixed.config.models.video, pending.config.models.video);
 });
+
+
+test('no-TTS projects are ready and snapshots retain the choice after TTS is enabled', t => {
+  const root = workspace(t);
+  const choices = defaults();
+  choices.models.speech = { engine: 'none' };
+  const ready = init(root, choices);
+  assert.equal(ready.status, 'ready');
+  const first = call(root, 'episode', { topic: 'silent' });
+  assert.deepEqual(first.snapshot.config.models.speech, { engine: 'none' });
+  call(root, 'update', { expectedRevision: ready.revision, request: 'Enable separate TTS', settings: { models: { speech: { engine: 'elevenlabs', model: 'eleven_v4' } } } });
+  assert.deepEqual(call(root, 'episode', { topic: 'silent' }).snapshot.config.models.speech, { engine: 'none' });
+  assert.equal(call(root, 'episode', { topic: 'spoken' }).snapshot.config.models.speech.model, 'eleven_v4');
+});

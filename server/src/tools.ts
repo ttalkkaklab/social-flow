@@ -4186,11 +4186,11 @@ Returns JSON: status, missing fields, canonical paths, config and revision; epis
               id: { type: 'string', description: 'Type ID from options, e.g. drama or documentary.' },
               detail: { type: 'string', description: 'Required for custom, e.g. Documentary with acted historical scenes.' },
             }, required: ['id'] },
-            models: { type: 'object', additionalProperties: false, description: 'Video, speech, image and optional music model selections; use capability_status and host schemas for actual availability.', properties: Object.fromEntries(['video', 'speech', 'image', 'music'].map(kind => [kind, {
+            models: { type: 'object', additionalProperties: false, description: 'Select video and check credentials, then image and check credentials, then decide whether TTS is needed. Use speech:{engine:"none"} to skip TTS; otherwise select speech and check credentials. Music is optional. Use capability_status and host schemas for availability.', properties: Object.fromEntries(['video', 'speech', 'image', 'music'].map(kind => [kind, {
               type: 'object', additionalProperties: false, description: `${kind} selection; fixed engines omit model, host uses host-managed.`,
               properties: {
-                engine: { type: 'string', enum: kind === 'video' ? ['host', 'seedance', 'veo', 'astra', 'astra-genai', 'mlx'] : kind === 'speech' ? ['gemini', 'elevenlabs'] : kind === 'music' ? ['lyria', 'suno-api', 'elevenlabs', 'mlx'] : ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
-                model: { type: 'string', description: 'Supported model ID, e.g. host-managed. Omit for astra and zimage.' },
+                engine: { type: 'string', enum: kind === 'video' ? ['host', 'seedance', 'veo', 'astra', 'astra-genai', 'mlx'] : kind === 'speech' ? ['none', 'gemini', 'elevenlabs'] : kind === 'music' ? ['lyria', 'suno-api', 'elevenlabs', 'mlx'] : ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
+                model: { type: 'string', description: 'Supported model ID, e.g. host-managed. Omit for astra, zimage and speech engine none.' },
                 ...(!['speech', 'music'].includes(kind) ? { host: { type: 'string', description: 'Host CLI when engine is host, e.g. codex.' } } : {}),
                 ...(kind === 'video' ? { resolution: { type: 'string', description: 'Supported source resolution, e.g. 720p.' } } : {}),
                 ...(kind === 'image' ? { quality: { type: 'string', description: 'Supported quality, e.g. high; a prompt preference on host tools without a quality parameter.' } } : {}),

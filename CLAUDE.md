@@ -242,7 +242,9 @@ is not a generated-image model call. See [image routing](skills/_shared/image-ro
 **Directory model selection (user directive, 2026-10-16) supersedes automatic routing.**
 Once the working directory is known, follow `skills/_shared/model-settings.md`: ask
 for the video type first (drama, comedy, documentary, explainer and the researched
-catalog's other options), then video, speech and image models once. Save all choices
+catalog's other options), then video model and credentials, image model and credentials,
+then whether separate TTS is needed. If yes, select its model and configure credentials;
+if no, save `models.speech:{engine:"none"}` and skip TTS setup. Save all choices
 in `.social-flow/models.json`, and use
 those settings for subsequent episodes until the user explicitly requests a change.
 Host-first is an initial recommendation, not a reason to replace a saved choice.

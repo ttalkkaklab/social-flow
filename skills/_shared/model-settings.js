@@ -10,7 +10,7 @@ const SNAPSHOT_FILE = '.work/model-settings.json';
 const VIDEO_TYPES = require('./video-types.json').types;
 const ENGINES = {
   video: ['host', 'seedance', 'veo', 'astra', 'astra-genai', 'mlx', 'omni'],
-  speech: ['gemini', 'elevenlabs'],
+  speech: ['none', 'gemini', 'elevenlabs'],
   image: ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai'],
   music: ['lyria', 'suno-api', 'elevenlabs', 'mlx'],
 };
@@ -60,6 +60,10 @@ function validateModels(models, partial = false, allowRetiredSpeech = false) {
     if (!object(choice) || (!engines.includes(choice.engine) && !retired)) throw new Error(`${kind}.engine must be one of ${engines.join(', ')}`);
     for (const [key, value] of Object.entries(choice)) {
       if (!FIELDS[kind].includes(key) || !nonempty(value)) throw new Error(`Invalid ${kind}.${key}`);
+    }
+    if (kind === 'speech' && choice.engine === 'none') {
+      if (Object.keys(choice).length !== 1) throw new Error('speech.none accepts only engine; omit model');
+      continue;
     }
     const fixed = ['zimage', 'astra'].includes(choice.engine) || (retired && choice.engine === 'supertonic');
     if (choice.engine === 'host' && !nonempty(choice.host)) throw new Error(`${kind}.host must identify the selected CLI, such as codex or grok`);
