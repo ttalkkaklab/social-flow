@@ -59,7 +59,7 @@
   var notes = disclosure(words('기획과 참고 자료', 'Plan and reference material'));
   var shotSection = document.createElement('section'); shotSection.className = 'review-shots';
   var node = shots;
-  while (node && node.id !== 'cast' && node.id !== 'contract') {
+  while (node && node.id !== 'cast' && node.id !== 'location-sheets' && node.id !== 'contract') {
     var next = node.nextElementSibling; shotSection.appendChild(node); node = next;
   }
   // Pull the style out of the document header and show it below the shot tree.
@@ -99,12 +99,15 @@
     shots.insertAdjacentElement('afterend', timing);
   }
   if (style) app.appendChild(style);
+  var locationSheets = notes.querySelector('#location-sheets');
+  if (locationSheets) app.appendChild(locationSheets);
   app.appendChild(checks); app.appendChild(notes);
   checks.id = 'review-checks'; notes.id = 'review-notes';
   var jump = document.createElement('nav');
   jump.className = 'review-jump';
   jump.setAttribute('aria-label', words('검토 바로가기', 'Review sections'));
   [['shots', words('샷 보기', 'Shots')],
+    ['location-sheets', words('배경·장소', 'Backgrounds / locations')],
     ['review-checks', words('검사·비용', 'Checks / costs') + (status ? ' · ' + status.textContent : '')],
     ['review-notes', words('기획·자료', 'Plan / references')]].forEach(function (entry) {
     var link = document.createElement('a'); link.href = '#' + entry[0];

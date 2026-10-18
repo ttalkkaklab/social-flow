@@ -156,3 +156,33 @@ test('motion review honors its source range and exposes missing or short media',
   assert.equal(player.nextElementSibling.textContent, 'missing media');
   assert.match(html, /final edit effects are not included/);
 });
+
+test('location planning sheets render without Blender, link shots and distinguish missing from inapplicable', () => {
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const start = template.indexOf('  function locationSheetsHtml(');
+  const end = template.indexOf('  h += locationSheetsHtml', start);
+  const context = {
+    LANG: 'ko', esc: value => String(value ?? '').replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;'),
+    doc: { locations: [{ id: 'room', name: '작업실 <동쪽>', description: '작은 방', layout: '서쪽 문, 중앙 탁자', lighting: '오후 창빛', invariants: ['문 위치', '탁자 위치'], sheetPath: '../../../assets/locations/room/index.html' }] },
+    shots: [{ id: 's1', title: '컵 전달', visual: { locationId: 'room' } }, { id: 's2', visual: { locationId: 'street' } }],
+  };
+  const render = () => runInNewContext(template.slice(start, end) + '\nlocationSheetsHtml(doc, shots)', context);
+  assert.match(render(), /작업실 &lt;동쪽>/);
+  assert.match(render(), /서쪽 문, 중앙 탁자/);
+  assert.match(render(), /문 위치 · 탁자 위치/);
+  assert.match(render(), /href="#shot-1"/);
+  assert.doesNotMatch(render(), /href="#shot-2"/);
+  assert.match(render(), /참조 이미지 대기/);
+  context.doc.locations[0].imageUrl = 'javascript:alert(1)';
+  context.doc.locations[0].sheetPath = 'data:text/html,unsafe';
+  assert.doesNotMatch(render(), /(?:src|href)="(?:javascript|data):/);
+  context.doc.locations[0].imageUrl = '../media/room.png';
+  assert.match(render(), /src="\.\.\/media\/room.png"/);
+  context.doc = {};
+  assert.match(render(), /아직 작성하지 않았습니다/);
+  context.doc.assetSheetNotes = { locations: '해당 없음: 추상 그래프' };
+  assert.match(render(), /해당 없음: 추상 그래프/);
+  assert.doesNotMatch(render(), /아직 작성하지 않았습니다/);
+  context.LANG = 'en'; context.doc = {};
+  assert.match(render(), /Background\/location sheets have not been written yet/);
+});

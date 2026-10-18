@@ -14,7 +14,12 @@ Use the user's task, established choices and delegated judgment. Complete author
 local work without making the user approve intermediate prose, candidates, camera
 plans, style choices or bookkeeping. A storyboard request ends with a reviewable
 storyboard; it does not automatically start media generation, spending or publishing.
-An inspection request remains read-only unless the user requests corrections.
+Present the storyboard's scenario before detailed authoring in interactive work; this
+progress update does not require approval or a pause. Prepare its character, prop and
+background/location sheets before shot design, then export the shared template. These are
+requested planning deliverables, not numerical quality gates. Honor an explicit request
+to wait for scenario selection. An inspection request remains read-only unless the user
+requests corrections.
 
 If a preference is unspecified, make a reasonable, reversible choice and record it
 as an assistant decision. Do not label it a human approval. Reuse existing explicit

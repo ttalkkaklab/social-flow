@@ -1,7 +1,7 @@
 ---
 name: storyboard
 description: >
-  Plans an episode from complete scenes; stops before media generation. Use when the
+  Presents a scenario and template board; stops before media generation. Use when the
   user asks to "스토리보드 만들어", "스토리보드 작성", "촬영 대본 만들어", "make a storyboard",
   or "plan a video". Casts characters, develops causal alternatives, writes observable
   action and attributed speech, then plans shots and content-led timing. Saves the local
@@ -15,6 +15,30 @@ Follow [host evaluation](../_shared/host-review.md) for every requested review.
 
 
 # Storyboard: make the story understandable, then plan its images
+
+## Required authoring and delivery order
+
+For a new storyboard: present the scenario → prepare character, prop and background/location
+sheets → write complete scenes → plan shots → export the bundled review template.
+Scenario presentation is a progress update, not an approval request. In an interactive
+session, show the premise, characters, causal sequence, ending and selection reason before
+writing the detailed board. Continue unless the user requested selection/approval first;
+in that case wait for their answer. For an unattended run, save the same preview in
+`scenario.md` and include it in the run report. Do not invent a user approval.
+
+A storyboard request requires the shared HTML, even when no media generation is requested.
+Read [storyboard design](references/storyboard-design.md), generate with
+`node "$CLAUDE_PLUGIN_ROOT/skills/storyboard/references/storyboard-html.js" "<episodeDir>/storyboard"`
+and verify the same command with `--check` before delivery. A custom HTML or Markdown-only
+board is not a substitute. Explicit text-only/scenario-only requests stop at that scope;
+any HTML review still uses the shared template.
+
+When delegating writing, pass the resolved path of this SKILL.md, the episode directory,
+user scope, saved choices and this required order to the author. Require it to read this
+skill and its sheet/design references before writing, return the scenario preview before
+shot authoring, and return sheet paths, board path and actual template-check result.
+The coordinator relays the preview to the user before detailed work continues and verifies
+the deliverables. `storyboard-reviewer` is read-only; it is not the author.
 
 Save episode files under `data/<channel>/episodes/<topic>/`.
 For character action and camera planning, use [action direction](references/action-direction.md).
@@ -57,8 +81,11 @@ Follow [character preparation](../channel/references/character-identity.md#prepa
 Read actual identities, export shared sheets and snapshot the available pool in `cast.json`.
 Images may be pending. Cast only needed people, with specific wants and distinct speech;
 select a narrator only when the expression needs one. Do not invent existing IDs or voices.
-Use [location assets](references/location-assets.md) for recurring sets and
-[prop continuity](references/prop-continuity.md) for transferred or recurring objects.
+Before shot design, complete the three sheet categories using
+[asset sheet preparation](references/asset-sheets.md). This includes one-off characters,
+story-relevant props and every background/location, not only recurring assets. Reuse actual
+existing sheets; create missing drafts. Missing images stay pending and do not authorize
+paid generation. Do not proceed with an applicable sheet category silently omitted.
 
 Store local plans under `data/<channel>/episodes/<topic>/storyboard/` following
 [the destination contract](references/storyboard-target.md). No planning artifacts under
@@ -77,7 +104,8 @@ choices and consequences, not engine labels or hooks attached to the same plot. 
 alternatives in `candidates/` using `scenario-v2`; labels are storage, not a scene quota.
 Select with the user's established preference or choose the strongest justified direction
 in authorized automatic work. Keep `scenario.md` and the selection reason. Do not repeat
-an approval that the user already gave.
+an approval that the user already gave. Present the selected scenario using the required
+order above before writing the detailed scenes and shots.
 
 Before counting shots, work through what each character knows, wants and can physically
 do. Show the transfer of essential information. An audience may infer motive from a refusal,
@@ -100,8 +128,9 @@ old media approvals; score only that layer with a rubric fixed before authoring.
 Content-only branch: retain place/time, entrances, listening distance and prop handling
 needed to understand the events. Defer camera specifications, renderer selection, image
 prompts, voice production and measured timings in steps 4–5. Deliver the canonical text
-data and a readable scene sequence/HTML labelled as a content plan; these are sufficient
-for this scoped request. Keep old production plans attached to their old revision. In
+data and a readable scene sequence labelled as a content plan; these are sufficient
+only for an explicit content-only request. Prepare the applicable asset sheets first.
+If delivering HTML, use the shared template; ordinary storyboard requests still need it. Keep old production plans attached to their old revision. In
 step 6 run only checks applicable to the chosen content format and verify its export;
 do not invent production fields merely to clear a full production-board checker.
 
