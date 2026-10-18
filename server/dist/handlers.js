@@ -86,6 +86,29 @@ function seedanceMeta(result) {
         : `\nBilled tokens: ${result.completionTokens.toLocaleString('en-US')} (completion_tokens — what the vendor bills on)`;
     return `Model: ${result.model}\nRatio: ${result.ratio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds (${result.durationSource || 'provider reported; probe output'})${tokens}\nTask ID: ${result.taskId}`;
 }
+/** Platform error JSON fits well inside this; anything longer is an HTML error page or a dump. */
+const API_ERROR_BODY_MAX = 4000;
+/**
+ * A failed platform call as the agent should read it: the next step first, then the
+ * platform's own body, capped. Claude Code shows only the head and tail of a long error,
+ * and a bare status code tells the agent nothing about what to do. requestRaw reports a
+ * timeout as 504 and an unreachable host as 502, so a publish that "failed" with a 5xx
+ * may still have gone out — retrying blind can post twice.
+ */
+export function apiErrorText(result) {
+    const { status, body } = result;
+    const next = status === 401 || status === 403
+        ? 'The platform refused the credential or permission. Run sns_account_check for this channel; an expired token needs its setup skill (setup-threads, setup-instagram, setup-youtube).'
+        : status === 404
+            ? 'The target ID was not found. Re-read IDs from the latest inbox, insights or publish log instead of reusing an old one.'
+            : status === 429
+                ? 'Rate limited. Wait before the next call; do not retry in a loop.'
+                : status >= 500
+                    ? 'Upstream or network failure. Retry later — but for a publish or reply, check the platform or output/publish-log.md first: the post may already be live.'
+                    : 'The platform rejected the request. Fix the field the body names; the same arguments fail the same way.';
+    const shown = body.length > API_ERROR_BODY_MAX ? `${body.slice(0, API_ERROR_BODY_MAX)}… (${body.length - API_ERROR_BODY_MAX} more chars cut)` : body;
+    return `HTTP ${status} — ${next}\n${shown}`;
+}
 /**
  * Platform API result → MCP tool result.
  *
@@ -97,7 +120,7 @@ function seedanceMeta(result) {
  */
 function fromApi(result, note) {
     if (!result.ok) {
-        return text(`HTTP ${result.status}\n${result.body}`, true);
+        return text(apiErrorText(result), true);
     }
     // The note attaches to the success path only — if a failed publish carried a
     // "published" notice, the caller would report the failure as success and skip

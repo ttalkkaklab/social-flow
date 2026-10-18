@@ -119,15 +119,15 @@ falls back silently and no short video loops or freezes to fill its window.
 
 ## Three TTS failure modes and responses (Gemini TTS, field-tested)
 
-All generated narration first passes `tts_generate_checked` as defined in `tts-quality.md`.
-Missing/stale/failed speech proofs block assembly. The wrapper owns the three-take limit;
-legacy advisories below never authorize extra takes or changing the profile model.
-Unavailable review holds production. After any audio replacement, obtain a new proof.
+Speech follows [shot-speech.md](shot-speech.md) (owner directive 2026-10-16): generate with
+the selected raw TTS tool, record provenance and `not_reviewed`, and continue. No speech
+proof, listening pass or review gates assembly. The failures below are about the request
+itself; none of them authorizes extra takes or a change of the profile's model.
 
 1. **Duration degeneration** — a short script can contain minutes of trailing silence.
-   The checked tool rejects abnormal duration and uses only the remaining take allowance.
+   Measure the WAV duration against the line; regenerate only that line, once, and report it.
 2. **`No content parts in response`** — the Gemini client retries its request at fixed settings.
-   If it still fails, the checked tool holds production. Do not change the profile's model
+   If it still fails, report the line as failed. Do not change the profile's model
    or rewrite the script merely to make the request succeed.
 3. **`INTERNAL 500`** — provider retries stay inside the client. Persistent failure is
    unverified, not an instruction to spend three more takes.

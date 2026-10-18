@@ -26,8 +26,8 @@ import {
   snsCredentialFile,
   snsTokenDir,
 } from '../dist/config.js';
-import { SNS_PLATFORM_BY_TOOL, TOOLS } from '../dist/tools.js';
-import { ROUTES, threadsTextLength } from '../dist/handlers.js';
+import { SERVER_INSTRUCTIONS, SNS_PLATFORM_BY_TOOL, TOOLS } from '../dist/tools.js';
+import { ROUTES, apiErrorText, threadsTextLength } from '../dist/handlers.js';
 import { STOCK_PROVIDERS, STOCK_MEDIA, STOCK_ORIENTATIONS, STOCK_MAX_LIMIT } from '../dist/stock-client.js';
 import {
   DEFAULT_GEMINI_38_TTS_MODEL,
@@ -109,6 +109,16 @@ describe('tool surface', () => {
     assert.equal(byName.size, TOOLS.length, 'duplicate tool name');
   });
 
+  // The model picks a tool by its description. Two tools with the same text leave it a coin
+  // toss — acting_review, tts_review_acting and tts_review_final shared one until 0.118.0.
+  it('descriptions are unique', () => {
+    const seen = new Map();
+    for (const tool of TOOLS) {
+      assert.equal(seen.get(tool.description), undefined, `${tool.name} repeats ${seen.get(tool.description)}'s description`);
+      seen.set(tool.description, tool.name);
+    }
+  });
+
   for (const tool of TOOLS) {
     describe(tool.name, () => {
       it('name follows the snake_case namespace convention', () => {
@@ -120,6 +130,8 @@ describe('tool surface', () => {
         assert.ok(tool.title.trim().length > 0, 'title is empty');
         assert.ok(tool.title.length <= 60, `title too long (${tool.title.length} chars)`);
         assert.ok((tool.description ?? '').trim().length >= 40, 'description missing or too short');
+        // Claude Code cuts an upfront tool description at 4,096 characters; the rest never reaches the model.
+        assert.ok(tool.description.length <= 4096, `description too long (${tool.description.length} chars)`);
       });
 
       it('inputSchema is a valid object schema', () => {
@@ -1458,6 +1470,46 @@ describe('multi-channel token resolution', () => {
       assert.ok(CHANNEL_SLUG_RE.test(channel), `${channel} is a regular slug`);
       assert.doesNotThrow(() => snsCredentialFile('YOUTUBE', channel));
     }
+  });
+});
+
+/**
+ * With tool search on, Claude Code loads only tool names and these instructions at session
+ * start, and it cuts the instructions at 4,096 characters. A tool name the server no longer
+ * ships would send the model searching for nothing.
+ */
+describe('server instructions', () => {
+  it('fit in what Claude Code loads at session start', () => {
+    assert.ok(SERVER_INSTRUCTIONS.length > 0);
+    assert.ok(SERVER_INSTRUCTIONS.length <= 4096, `${SERVER_INSTRUCTIONS.length} chars`);
+  });
+
+  it('name only tools the server ships', () => {
+    const named = [...SERVER_INSTRUCTIONS.matchAll(/`([a-z][a-z0-9]*(?:_[a-z0-9]+)+)`/g)].map((m) => m[1]);
+    assert.ok(named.length > 0, 'instructions name no tools');
+    for (const name of named) assert.ok(byName.has(name), `instructions name unknown tool ${name}`);
+  });
+});
+
+/**
+ * A failed SNS call used to come back as `HTTP 403` plus the raw body. Claude Code shows only
+ * the head and tail of a long error, so the next step goes first and the body is capped.
+ */
+describe('apiErrorText', () => {
+  it('puts the next step before the upstream body', () => {
+    const out = apiErrorText({ ok: false, status: 403, body: '{"error":"expired"}' });
+    assert.match(out, /^HTTP 403 — .*sns_account_check/);
+    assert.ok(out.endsWith('{"error":"expired"}'));
+  });
+
+  it('warns that a failed publish may already be live on 5xx', () => {
+    assert.match(apiErrorText({ ok: false, status: 504, body: 'Request timed out' }), /may already be live/);
+  });
+
+  it('caps a long body', () => {
+    const out = apiErrorText({ ok: false, status: 500, body: 'x'.repeat(10_000) });
+    assert.ok(out.length < 4500, `${out.length} chars`);
+    assert.match(out, /more chars cut/);
   });
 });
 
