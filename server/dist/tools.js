@@ -1,3 +1,4 @@
+import { GENAI_TOOLS } from './astra-genai-tools.js';
 import { GPT_IMAGE_MODELS } from './image-models.js';
 import { IMAGE_ADAPTERS } from './image-registry.js';
 import { VIDEO_ADAPTERS } from './video-registry.js';
@@ -3962,7 +3963,7 @@ Returns JSON: status, missing fields, canonical paths, config and revision; epis
                         models: { type: 'object', additionalProperties: false, description: 'Video, speech and image model selections; use capability_status and host schemas for actual availability.', properties: Object.fromEntries(['video', 'speech', 'image'].map(kind => [kind, {
                                     type: 'object', additionalProperties: false, description: `${kind} selection; fixed engines omit model, host uses host-managed.`,
                                     properties: {
-                                        engine: { type: 'string', enum: kind === 'video' ? ['host', 'seedance', 'veo', 'astra', 'mlx'] : kind === 'speech' ? ['gemini', 'elevenlabs'] : ['host', 'gpt-image', 'zimage', 'mlx'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
+                                        engine: { type: 'string', enum: kind === 'video' ? ['host', 'seedance', 'veo', 'astra', 'astra-genai', 'mlx'] : kind === 'speech' ? ['gemini', 'elevenlabs'] : ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
                                         model: { type: 'string', description: 'Supported model ID, e.g. host-managed. Omit for astra and zimage.' },
                                         ...(kind !== 'speech' ? { host: { type: 'string', description: 'Host CLI when engine is host, e.g. codex.' } } : {}),
                                         ...(kind === 'video' ? { resolution: { type: 'string', description: 'Supported source resolution, e.g. 720p.' } } : {}),
@@ -4957,6 +4958,7 @@ Returns: JSON — { files, violations, warnings, findings: [{ level, where, what
  * (default tokens ∪ channel directories). All handlers stay registered — calling
  * an unconfigured platform directly returns an explicit missing-token error.
  */
+TOOLS.push(...GENAI_TOOLS);
 // New generations can state the coverage needed; exact legacy requests keep their schema.
 for (const tool of TOOLS) {
     if (!DURATION_TOOLS.includes(tool.name))
@@ -5009,9 +5011,9 @@ TOOLS.push({ name: 'video_catalog', title: 'Inspect installed video adapters', d
     inputSchema: { type: 'object', additionalProperties: false, properties: { episode: { type: 'string', description: 'Absolute episode directory used by video_plan.' }, planId: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'Plan ID returned by video_plan.' } }, required: ['episode', 'planId'] },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true } });
 TOOLS.push({ name: 'video_status', title: 'Read a saved video request receipt',
-    description: 'Read the local status, reservation, provider request ID and cached result of a managed video request. Does not contact a provider or resubmit. Use after interruption; ambiguous requests keep their reservation until explicit provider and billing reconciliation.',
-    inputSchema: { type: 'object', additionalProperties: false, properties: { episode: { type: 'string', description: 'Absolute episode directory.' }, requestId: { type: 'string', description: 'Original logical request ID from video_plan.' } }, required: ['episode', 'requestId'] },
-    annotations: { readOnlyHint: true, openWorldHint: false } });
+    description: 'Read a managed video receipt. Default action:read is local only. action:refresh queries an existing ASTRA GenAI job, downloads completed media and updates the receipt without generation. Other providers do not support refresh. Use after interruption; ambiguous requests keep their reservation until explicit provider and billing reconciliation.',
+    inputSchema: { type: 'object', additionalProperties: false, properties: { episode: { type: 'string', description: 'Absolute episode directory.' }, requestId: { type: 'string', description: 'Original logical request ID from video_plan.' }, action: { type: 'string', enum: ['read', 'refresh'], default: 'read', description: 'read is local only; refresh recovers an existing GenAI job and can save completed video.' } }, required: ['episode', 'requestId'] },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true } });
 const imageContextSchema = { type: 'object', additionalProperties: false,
     properties: { directory: { type: 'string', description: 'Absolute episode or configured workspace directory.' },
         assetId: { type: 'string', description: 'Stable shot or asset ID.' }, requestId: { type: 'string', description: 'Stable logical attempt ID; reuse on retry.' },
@@ -5040,6 +5042,6 @@ TOOLS.push({ name: 'image_catalog', title: 'Inspect image adapters and models',
     description: 'Execute a saved image plan with atomic budget/concurrency reservations and duplicate protection. Revalidates selection, input hashes and adapter contract before dispatch. Records provider usage, actual output dimensions/hash and not_reviewed quality. Completed requests reuse receipts; ambiguous submissions never auto-retry. API execution incurs charges; host plans cannot run here.',
     inputSchema: { type: 'object', additionalProperties: false, properties: { directory: { type: 'string', description: 'Absolute directory from image_plan.' }, planId: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'Saved plan ID.' } }, required: ['directory', 'planId'] },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true } }, { name: 'image_status', title: 'Inspect or reconcile an image receipt',
-    description: 'Read a local image receipt without contacting providers. action:reconcile closes a submission_unknown or interrupted submitting request as failed only after the caller supplies terminal/billing evidence and spentUsd. It does not resubmit, certify quality or recover a missing image. Completed requests are immutable. Do not reconcile a request still running at the provider.',
-    inputSchema: { type: 'object', additionalProperties: false, properties: { directory: { type: 'string', description: 'Absolute directory.' }, requestId: { type: 'string', description: 'Original request ID.' }, action: { type: 'string', enum: ['read', 'reconcile'], description: 'Defaults to read.' }, executorStopped: { type: 'boolean', description: 'Required true to reconcile submitting: verify the executor has exited and provider is terminal. A live local owner is rejected.' }, evidence: { type: 'string', description: 'For reconcile: actual terminal status and billing evidence reference.' }, spentUsd: { type: 'number', minimum: 0, description: 'For reconcile: verified total charge, including failed generation.' } }, required: ['directory', 'requestId'] },
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false } });
+    description: 'Read a local image receipt without contacting providers. action:reconcile closes a submission_unknown or interrupted submitting request as failed only after the caller supplies terminal/billing evidence and spentUsd. action:refresh recovers a GenAI image download from its saved provider response and updates the managed receipt; it never regenerates. Completed requests are immutable. Do not reconcile a request still running at the provider.',
+    inputSchema: { type: 'object', additionalProperties: false, properties: { directory: { type: 'string', description: 'Absolute directory.' }, requestId: { type: 'string', description: 'Original request ID.' }, action: { type: 'string', enum: ['read', 'reconcile', 'refresh'], description: 'Defaults to local read. refresh recovers a GenAI image download from its saved response without regeneration.' }, executorStopped: { type: 'boolean', description: 'Required true to reconcile submitting: verify the executor has exited and provider is terminal. A live local owner is rejected.' }, evidence: { type: 'string', description: 'For reconcile: actual terminal status and billing evidence reference.' }, spentUsd: { type: 'number', minimum: 0, description: 'For reconcile: verified total charge, including failed generation.' } }, required: ['directory', 'requestId'] },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true } });

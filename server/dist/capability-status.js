@@ -58,6 +58,8 @@ export function capabilityStatus() {
                     note: 'seedance_text2video · seedance_img2video · seedance_reference' },
                 { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
                     note: 'mlx_video_generate — 24fps rgb8 muxed to mp4, RAM-capped; not the default path' },
+                { provider: 'astra-genai (LTX v2 gateway)', configured: has(config.astraGenaiApiKey), needs: 'ASTRA_GENAI_API_KEY',
+                    note: 'astra_genai_text2video · astra_genai_img2video · astra_genai_video_status; separate gateway token, no supplied audio or LoRA; configuration is not a live check' },
                 { provider: 'astra video (self-hosted LTX-2.5)', configured: has(config.astraVideoApiKey), needs: 'ASTRA_VIDEO',
                     note: 'astra_text2video · astra_img2video · astra_keyframe_video · astra_audio2video · astra_ic_lora · astra_video_retake · astra_video_capabilities · astra_video_list_uploads · astra_video_delete_upload (upload management requires server endpoint support; configuration is not a live check) — our own box, no per-call bill, but ONE render at a time (66-184s each plus queue); the batch lane, not the interactive one' },
             ],
@@ -65,6 +67,8 @@ export function capabilityStatus() {
         {
             capability: 'image_generation',
             providers: [
+                { provider: 'astra-genai (DashScope gateway)', configured: has(config.astraGenaiApiKey), needs: 'ASTRA_GENAI_API_KEY',
+                    note: 'astra_genai_text2img — one PNG from text, 800-character prompt limit; gateway model availability requires verification' },
                 { provider: 'z-image (local, mflux)', configured: binOk(mfluxZImageBin()), needs: 'mflux on this machine',
                     note: 'image_local_generate — local text generation; saved image selection takes precedence' },
                 { provider: 'gpt-image (OpenAI)', configured: has(config.openaiApiKey), needs: 'OPENAI_API_KEY',

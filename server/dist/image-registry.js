@@ -1,10 +1,12 @@
 import { z } from 'zod';
+import { genaiImageSchema } from './astra-genai-image.js';
 import { text2ImageSchema, img2ImgSchema } from './image-client.js';
 import { mlxImageGenerateSchema, mlxImageEditSchema } from './mlx-serve-client.js';
 import { zimageGenerateSchema } from './zimage-client.js';
 import { GPT_IMAGE_MODELS, GPT_IMAGE_CONTRACTS, assertImageModelAvailable, validateMlxImageOperation } from './image-models.js';
 import { validateImageBase64 } from './image-media.js';
 export const IMAGE_ADAPTERS = Object.freeze({
+    astra_genai_text2img: { engine: 'astra-genai', operation: 'text', schema: genaiImageSchema },
     gpt_image_text2img: { engine: 'gpt-image', operation: 'text', schema: text2ImageSchema },
     gpt_image_img2img: { engine: 'gpt-image', operation: 'edit', schema: img2ImgSchema },
     image_local_generate: { engine: 'zimage', operation: 'text', schema: zimageGenerateSchema },

@@ -207,3 +207,12 @@ test('retired saved speech choices require explicit migration and keep historica
     assert.equal(settings.snapshotSettings(root, episode(root, 'after')).config.models.speech.model, 'eleven_v4');
   }
 });
+
+test('GenAI is a separate model-selecting engine; legacy Astra remains fixed-model', () => {
+  const video = { engine:'astra-genai', model:'ltx-2.5-22b-dev', resolution:'1280x704' };
+  const image = { engine:'astra-genai', model:'z-image-turbo' };
+  assert.doesNotThrow(()=>settings.validateModels({video,image,speech:models.speech}));
+  assert.throws(()=>settings.validateModels({video:{engine:'astra-genai'}},true),/model is required/);
+  assert.doesNotThrow(()=>settings.validateModels({video:{engine:'astra'}},true));
+  assert.throws(()=>settings.validateModels({video:{engine:'astra',model:video.model}},true),/fixed server model/);
+});

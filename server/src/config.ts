@@ -93,6 +93,8 @@ export const config = {
    * because that is what the server's operators issue it under.
    */
   astraVideoApiKey: process.env.ASTRA_VIDEO || '',
+  /** Unified gateway token; never substitute the legacy ASTRA_VIDEO key. */
+  astraGenaiApiKey: process.env.ASTRA_GENAI_API_KEY || '',
   /**
    * YouTube Data API key (youtube_topic_scout's preferred public-query path).
    * Unlike OAuth it doesn't spend your channel's quota. Without it, falls back to

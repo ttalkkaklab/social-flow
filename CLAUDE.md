@@ -226,6 +226,20 @@ budget ceilings do not authorize generation spending or publication.
 
 ## Directory model selection (user directive, 2026-10-16)
 
+**Images containing text (owner directive, 2026-10-18):** Every newly generated or
+edited image that must display or preserve readable text uses **GPT Image 2**
+(`gpt-image-2`). This includes Hangul and other languages, signs, labels, packaging,
+lettered clothing, wordmarks, posters and reference-product edits. This standing
+asset-specific choice overrides saved image defaults and host-first routing. A host
+tool qualifies only when its actual model is verifiably GPT Image 2; an unspecified
+host-managed model does not. Otherwise use the plugin's GPT Image adapter with the
+exact model ID. If unavailable, report the blocker; do not substitute Z-Image,
+another GPT Image version or another model. Apply the scoped override before planning
+and quoting, retain existing spending authorization, and inspect the resulting text.
+Do not regenerate existing assets solely to migrate models. Code-rendered typography
+is not a generated-image model call. See [image routing](skills/_shared/image-routing.md).
+
+**Directory model selection (user directive, 2026-10-16) supersedes automatic routing.**
 Once the working directory is known, follow `skills/_shared/model-settings.md`: ask
 for the video type first (drama, comedy, documentary, explainer and the researched
 catalog's other options), then video, speech and image models once. Save all choices

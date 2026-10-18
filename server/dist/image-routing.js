@@ -12,6 +12,7 @@ import { readImageMetadata, verifyImageFile } from './image-media.js';
 import { config, mfluxZImageBin, mlxServeConfigured, disabledToolPatterns, disabledToolsFile } from './config.js';
 import { resolveToolGate } from './tool-gate.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
+import { recoverGenaiImage } from './astra-genai-image.js';
 const load = createRequire(import.meta.url);
 const selectionHelper = fileURLToPath(new URL('../../skills/_shared/image-selection.js', import.meta.url));
 export const imageContext = (directory, assetId) => load(selectionHelper).readImageContext(directory, assetId);
@@ -33,6 +34,8 @@ function environment(tool) {
     const engine = IMAGE_ADAPTERS[tool].engine;
     if (engine === 'gpt-image' && !config.openaiApiKey)
         throw new Error('image_provider_unconfigured: OPENAI_API_KEY');
+    if (engine === 'astra-genai' && !config.astraGenaiApiKey)
+        throw new Error('image_provider_unconfigured: ASTRA_GENAI_API_KEY');
     if (engine === 'mlx' && !mlxServeConfigured())
         throw new Error('image_provider_unconfigured: MLX Core');
     if (engine === 'zimage') {
@@ -235,9 +238,11 @@ export async function routeLegacyImage(tool, raw, dispatch) {
 }
 export function imageStatus(raw) {
     gate('image_status');
-    const input = z.object({ directory: z.string().min(1), requestId: idSchema, action: z.enum(['read', 'reconcile']).default('read'),
+    const input = z.object({ directory: z.string().min(1), requestId: idSchema, action: z.enum(['read', 'reconcile', 'refresh']).default('read'),
         executorStopped: z.boolean().optional(), evidence: z.string().min(1).optional(), spentUsd: z.number().finite().nonnegative().optional() }).strict().parse(raw);
     const directory = fs.realpathSync(input.directory);
+    if (input.action === 'refresh')
+        return refreshGenaiImage(directory, input.requestId);
     if (input.action === 'reconcile') {
         if (!input.evidence || input.spentUsd === undefined)
             throw new Error('image_reconciliation_requires_billing_evidence');
@@ -271,4 +276,24 @@ export function imageStatus(raw) {
     }
     const jobs = readImageState(directory)?.jobs;
     return jobs && Object.hasOwn(jobs, input.requestId) ? jobs[input.requestId] : { requestId: input.requestId, status: 'not_started' };
+}
+async function refreshGenaiImage(directory, requestId) {
+    const state = readImageState(directory);
+    const job = state?.jobs[requestId];
+    if (!job || job.tool !== 'astra_genai_text2img')
+        throw new Error('image_refresh_unsupported: requires an existing GenAI image request');
+    const plan = JSON.parse(fs.readFileSync(path.join(directory, '.work/image-routing/plans', job.planId + '.json'), 'utf8'));
+    const { id, ...body } = plan;
+    if (id !== job.planId || routingHash(body) !== id || plan.directory !== directory || plan.outputFile !== job.outputFile || plan.tool !== job.tool)
+        throw new Error('image_recovery_plan_invalid');
+    gate(plan.tool);
+    const receipt = await recoverGenaiImage(job.outputFile + '.astra-genai.json');
+    if (receipt.imagePath !== job.outputFile)
+        throw new Error('image_recovery_output_mismatch');
+    const result = { content: [{ type: 'text', text: JSON.stringify(receipt) }], imageReceipt: receipt };
+    imageTransaction(directory, undefined, current => Object.assign(current.jobs[requestId], {
+        status: 'completed', result, output: receipt.output, providerId: receipt.requestId, usage: receipt.usage,
+        updatedAt: new Date().toISOString(),
+    }));
+    return readImageState(directory).jobs[requestId];
 }

@@ -112,3 +112,22 @@ test('interrupted submitting requests require stopped executor evidence; prototy
   assert.equal(imageStatus({ ...reconcile, executorStopped: true }).status, 'failed');
   await f.run(f.plan('next'), async (_tool, args) => output(args));
 });
+
+test('GenAI image planning requires a reservation and recovery preserves provider evidence', async t => {
+  const { astraGenaiBaseUrl } = await import('../dist/astra-genai-client.js');
+  const f = fixture(t, { engine:'astra-genai', model:'z-image-turbo' }, { reference:'fixture',maxUsd:1 });
+  const key=config.astraGenaiApiKey;config.astraGenaiApiKey='fixture';t.after(()=>config.astraGenaiApiKey=key);
+  assert.throws(()=>f.plan(),/quote_required/);
+  const p=f.plan('genai',{}, {reserveUsd:0.1});assert.equal(p.tool,'astra_genai_text2img');
+  assert.throws(()=>f.plan('edit',{}, {operation:'edit',reserveUsd:0}),/operation_unsupported/);
+  await assert.rejects(f.run(p,async (_tool,args)=>{
+    output(args);
+    const { readImageMetadata } = await import('../dist/image-media.js');
+    const imagePath=path.join(args.outputPath,args.filename);
+    fs.writeFileSync(imagePath+'.astra-genai.json',JSON.stringify({baseUrl:astraGenaiBaseUrl(),fingerprint:'fixture',imagePath,status:'completed',requestId:'image-provider-1',output:readImageMetadata(imagePath),usage:{image_count:1}}));
+    throw new Error('interrupted');
+  }),/interrupted/);
+  const job=await imageStatus({directory:f.dir,requestId:'genai',action:'refresh'});
+  assert.equal(job.status,'completed');assert.equal(job.providerId,'image-provider-1');assert.equal(job.reserveUsd,0.1);
+  await f.run(p,async()=>assert.fail('must reuse recovered image'));
+});

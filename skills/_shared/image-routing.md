@@ -21,6 +21,24 @@ capabilities and billing behavior, then rebuild the catalog and bundled server.
 Do not claim research-only GPT 2.5, BFL, Krea, Model Studio or xAI APIs are installed.
 Their implementation is separate from the existing local and host lanes.
 
+## Images containing text: GPT Image 2 required
+
+Owner directive, 2026-10-18: use `gpt-image-2` for every new generation or edit that
+must display or preserve readable text, in any language. This includes signs,
+posters, product labels, packaging, lettered clothing and wordmarks. It overrides
+workspace/snapshot image defaults and host-first recommendations for these assets.
+Before planning and quoting, record this standing directive as the actual request
+in an explicit scoped override: `image: {engine:'gpt-image', model:'gpt-image-2'}`.
+Use a shot override whose `shotId` matches `assetId` in the episode or workspace
+board; the selector also uses stable IDs for branding assets. Keep the scope narrow;
+do not change the workspace default for unrelated images. A host tool can serve the
+asset only if its actual model is verifiably GPT Image 2; `host-managed` alone is
+not evidence. Use the plugin adapter otherwise. Never substitute another model
+when GPT Image 2 is unavailable; report the missing capability or credential.
+This selects a model, not a new spending budget. Reuse existing authorization and
+inspect actual spelling after generation; model choice does not certify correctness.
+Preserve existing assets. Code-rendered typography does not invoke this model rule.
+
 ## Selection and planning
 
 `directory` is an absolute episode or workspace directory. Episode snapshots win over

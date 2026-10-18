@@ -34,6 +34,8 @@ import * as tts from './tts-client.js';
 import { checkedSpeechSchema, generateCheckedSpeech } from './tts-quality.js';
 import { finalSpeechSchema, reviewFinalSpeech } from './tts-final-quality.js';
 import * as astraVideo from './astra-video-client.js';
+import { generateGenaiVideo, getGenaiVideoStatus, genaiVideoStatusSchema } from './astra-genai-video.js';
+import { generateGenaiImage } from './astra-genai-image.js';
 import * as omni from './omni-client.js';
 import * as video from './video-client.js';
 import { contentFeedback } from './content-feedback.js';
@@ -977,6 +979,13 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   //    Acceptance and result are separate calls, so the client polls; these routes only
   //    parse, call, and report. Failures arrive as thrown errors carrying the server's own
   //    message — never the request headers, which is where the key lives.
+  astra_genai_text2video: async args => text(JSON.stringify(await generateGenaiVideo('text-to-video', args))),
+  astra_genai_img2video: async args => text(JSON.stringify(await generateGenaiVideo('image-to-video', args))),
+  astra_genai_text2img: async args => {
+    const result = await generateGenaiImage(args);
+    return { ...text(JSON.stringify(result)), imageReceipt: result };
+  },
+  astra_genai_video_status: async args => text(JSON.stringify(await getGenaiVideoStatus(genaiVideoStatusSchema.parse(args)))),
   astra_text2video: async (args) => {
     const result = await astraVideo.generateFromText(parseArgs(astraVideo.astraText2VideoSchema, args));
     return text(astraVideoReport('Video generated on the ASTRA video API', result));
@@ -1596,7 +1605,7 @@ ROUTES.video_catalog = async () => text(JSON.stringify(videoCatalog(), null, 2))
 ROUTES.video_plan = async args => text(JSON.stringify(planVideo(args), null, 2));
 ROUTES.video_execute = args => executeVideo(args, dispatchVideo);
 
-ROUTES.video_status = async args => text(JSON.stringify(videoStatus(args), null, 2));
+ROUTES.video_status = async args => text(JSON.stringify(await videoStatus(args), null, 2));
 
 // Existing tools are compatibility entrypoints into the same image service.
 const imageDispatch = Object.fromEntries(Object.keys(IMAGE_ADAPTERS).map(name => [name, ROUTES[name]]));
@@ -1605,4 +1614,4 @@ for (const name of Object.keys(IMAGE_ADAPTERS)) ROUTES[name] = args => routeLega
 ROUTES.image_catalog = async () => text(JSON.stringify(imageCatalog(), null, 2));
 ROUTES.image_plan = async args => text(JSON.stringify(imagePlanSummary(planImage(args)), null, 2));
 ROUTES.image_execute = args => executeImage(args, dispatchImage);
-ROUTES.image_status = async args => text(JSON.stringify(imageStatus(args), null, 2));
+ROUTES.image_status = async args => text(JSON.stringify(await imageStatus(args), null, 2));
