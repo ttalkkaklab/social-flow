@@ -13,7 +13,7 @@ import { config, mfluxZImageBin, mlxServeConfigured, disabledToolPatterns, disab
 import { resolveToolGate } from './tool-gate.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
 import type { ToolResult } from './handlers.js';
-import { recoverGenaiImage } from './astra-genai-image.js';
+import { recoverGenaiImage, buildGenaiImageBody, genaiImageSchema, genaiImageEditSchema } from './astra-genai-image.js';
 
 const load = createRequire(import.meta.url);
 interface Selection { engine: string; model?: string; quality?: string; host?: string }
@@ -60,6 +60,7 @@ function inputFiles(args: Record<string, unknown>, directory: string): Record<st
     return resolved;
   };
   if (typeof args.imagePath === 'string') args.imagePath = resolve(args.imagePath);
+  if (typeof args.maskPath === 'string') args.maskPath = resolve(args.maskPath);
   if (Array.isArray(args.refImagePaths)) args.refImagePaths = args.refImagePaths.map(v => resolve(String(v)));
   return inputs;
 }
@@ -107,6 +108,8 @@ export function planImage(raw: unknown): ImagePlan {
     if (!withinDirectory(context.directory, outputFile)) throw new Error('image_output_outside_directory');
   }
   const inputs = selection.engine === 'host' ? {} : inputFiles(args, context.directory);
+  if (selection.engine === 'astra-genai')
+    buildGenaiImageBody((tool === 'astra_genai_edit' ? genaiImageEditSchema : genaiImageSchema).parse(args));
   if (outputFile && Object.hasOwn(inputs, outputFile)) throw new Error('image_output_overwrites_input');
   const quote = imageQuote(selection.engine, selection.model, input.reserveUsd);
   const body = { version: 1 as const, directory: context.directory, assetId: input.assetId, requestId: input.requestId,
@@ -237,7 +240,7 @@ export function imageStatus(raw: unknown) {
 async function refreshGenaiImage(directory: string, requestId: string) {
   const state = readImageState(directory);
   const job = state?.jobs[requestId];
-  if (!job || job.tool !== 'astra_genai_text2img') throw new Error('image_refresh_unsupported: requires an existing GenAI image request');
+  if (!job || !['astra_genai_text2img', 'astra_genai_edit'].includes(job.tool)) throw new Error('image_refresh_unsupported: requires an existing GenAI image request');
   const plan: ImagePlan = JSON.parse(fs.readFileSync(path.join(directory, '.work/image-routing/plans', job.planId + '.json'), 'utf8'));
   const { id, ...body } = plan;
   if (id !== job.planId || routingHash(body) !== id || plan.directory !== directory || plan.outputFile !== job.outputFile || plan.tool !== job.tool)

@@ -873,6 +873,11 @@ export const ROUTES = {
     //    message — never the request headers, which is where the key lives.
     astra_genai_text2video: async (args) => text(JSON.stringify(await generateGenaiVideo('text-to-video', args))),
     astra_genai_img2video: async (args) => text(JSON.stringify(await generateGenaiVideo('image-to-video', args))),
+    astra_genai_msr: async (args) => text(JSON.stringify(await generateGenaiVideo('msr', args))),
+    astra_genai_edit: async (args) => {
+        const result = await generateGenaiImage(args, 'edit');
+        return { ...text(JSON.stringify(result)), imageReceipt: result };
+    },
     astra_genai_text2img: async (args) => {
         const result = await generateGenaiImage(args);
         return { ...text(JSON.stringify(result)), imageReceipt: result };

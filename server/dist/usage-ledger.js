@@ -188,7 +188,7 @@ export function priceOf(tool, args = {}) {
         }
     }
     if (tool.startsWith('astra_genai_'))
-        return { key: tool === 'astra_genai_text2img' ? 'image.astra-genai' : 'video.astra-genai', quantity: null, note: 'Gateway pricing unverified; managed reservation is authoritative, not a measured bill' };
+        return { key: ['astra_genai_text2img', 'astra_genai_edit'].includes(tool) ? 'image.astra-genai' : 'video.astra-genai', quantity: null, note: 'Gateway pricing unverified; managed reservation is authoritative, not a measured bill' };
     if (tool.startsWith('veo_')) {
         const tier = VEO_TIER[str(args.model, 'veo-3.1-fast-generate-preview')];
         const resolution = str(args.resolution, '720p');

@@ -916,6 +916,37 @@
       }
     },
     {
+      "tool": "astra_genai_msr",
+      "engine": "astra-genai",
+      "deployment": "genai-ltx-msr",
+      "operation": "reference",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "prompt",
+        "references",
+        "referenceStrength",
+        "referenceFrames",
+        "width",
+        "height",
+        "numFrames",
+        "duration",
+        "frameRate",
+        "seed",
+        "reserveUsd",
+        "outputPath",
+        "filename"
+      ],
+      "modelConstraints": {
+        "note": "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. No supplied speech or audio controls."
+      }
+    },
+    {
       "tool": "astra_text2video",
       "engine": "astra",
       "deployment": "self-hosted-ltx",

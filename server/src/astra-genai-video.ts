@@ -5,7 +5,7 @@ import * as fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { bareFilenameSchema, resolveOutputFile } from './media-utils.js';
-import { astraGenaiBaseUrl, downloadGenaiResult, requestGenai, requireAstraGenaiKey } from './astra-genai-client.js';
+import { astraGenaiBaseUrl, downloadGenaiResult, requestGenai, requireAstraGenaiKey, genaiImageUriSchema, genaiSourceUri } from './astra-genai-client.js';
 import { atomicJson } from './routing-files.js';
 import { recordVideoSubmission } from './video-events.js';
 
@@ -27,6 +27,43 @@ export const genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
   imageUri: z.string().min(1),
   lastFrameUri: z.string().min(1).nullable().optional(),
 });
+export const genaiMsrSchema = z.object({
+  prompt: z.string().trim().min(1).max(2000),
+  references: z.array(z.object({
+    imageUri: genaiImageUriSchema.optional(), imagePath: z.string().min(1).optional(),
+    background: z.boolean().default(false),
+  }).strict().refine(ref => Number(!!ref.imageUri) + Number(!!ref.imagePath) === 1,
+    'Supply exactly one imageUri or imagePath')).min(1).max(5),
+  referenceStrength: z.number().finite().min(0).max(1).default(1),
+  referenceFrames: z.union([z.literal(25), z.literal(33)]).default(33),
+  width: z.number().int().min(64).max(1920).multipleOf(64).default(1536),
+  height: z.number().int().min(64).max(1920).multipleOf(64).default(1024),
+  numFrames: z.number().int().min(25).max(361).refine(n => (n - 1) % 8 === 0).optional(),
+  duration: z.number().finite().gt(0).max(360).optional(),
+  frameRate: z.number().finite().min(1).max(60).default(24),
+  seed: z.number().int().min(0).max(2147483647).default(42),
+  reserveUsd: z.number().finite().nonnegative(),
+  outputPath: z.string().optional(),
+  filename: bareFilenameSchema('video').refine(name => name.endsWith('.mp4'), 'Use a .mp4 filename').optional(),
+}).strict().superRefine((args, ctx) => {
+  const issue = (message: string) => ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+  const backgrounds = args.references.filter(ref => ref.background).length;
+  if (backgrounds > 1 || args.references.length - backgrounds > 4) issue('MSR supports at most four subjects and one background');
+  if (args.width * args.height > 2064384) issue('MSR maximum is 2,064,384 pixels');
+  if (args.duration !== undefined) {
+    if (args.numFrames !== undefined) issue('Omit numFrames when using duration');
+    const frames = 1 + 8 * Math.ceil((args.duration * args.frameRate - 1) / 8 - 0.5 - 1e-9);
+    if (frames < 25 || frames > 361) issue('MSR duration must round to 25..361 frames');
+  }
+});
+export function buildGenaiMsrBody(args: z.infer<typeof genaiMsrSchema>) {
+  return { prompt: args.prompt,
+    references: args.references.map(ref => ({ image_uri: genaiSourceUri(ref.imageUri, ref.imagePath), background: ref.background })),
+    reference_strength: args.referenceStrength, reference_frames: args.referenceFrames,
+    width: args.width, height: args.height, frame_rate: args.frameRate, seed: args.seed,
+    ...(args.duration === undefined ? { num_frames: args.numFrames ?? 121 } : { duration: args.duration }) };
+}
+
 export type GenaiVideoRequest = z.infer<typeof genaiTextToVideoSchema> & {
   imageUri?: string; lastFrameUri?: string | null;
 };
@@ -42,7 +79,7 @@ export function buildGenaiVideoBody(args: GenaiVideoRequest): Record<string, unk
   };
 }
 
-const operationSchema = z.enum(['text-to-video', 'image-to-video']);
+const operationSchema = z.enum(['text-to-video', 'image-to-video', 'msr']);
 type Operation = z.infer<typeof operationSchema>;
 const receiptSchema = z.object({
   version: z.literal(1), baseUrl: z.string(), operation: operationSchema, fingerprint: z.string(),
@@ -64,7 +101,7 @@ export async function getGenaiVideoStatus(input: z.infer<typeof genaiVideoStatus
     if (createHash('sha256').update(bytes).digest('hex') !== receipt.sha256) throw new Error('GenAI cached output changed');
     return { jobId: receipt.jobId, status: 'completed', videoPath: receipt.videoPath, downloaded: true, review: 'not_reviewed' };
   }
-  const route = `/v1/ltx/v2/${receipt.operation}/${encodeURIComponent(receipt.jobId)}`;
+  const route = `${genaiVideoRoute(receipt.operation)}/${encodeURIComponent(receipt.jobId)}`;
   const job = statusSchema.parse(await requestGenai('GET', route));
   if (job.id !== receipt.jobId) throw new Error('GenAI status job ID mismatch');
   if (job.status === 'failed') throw new Error(`GenAI video ${receipt.jobId} failed: ${JSON.stringify(job.error ?? 'No details').slice(0, 1000)}`);
@@ -88,10 +125,14 @@ export async function getGenaiVideoStatus(input: z.infer<typeof genaiVideoStatus
   return { jobId: receipt.jobId, status: 'completed', videoPath: receipt.videoPath, downloaded: true, review: 'not_reviewed' };
 }
 
+function genaiVideoRoute(operation: Operation): string {
+  return operation === 'msr' ? '/v1/ltx/msr' : `/v1/ltx/v2/${operation}`;
+}
+
 export async function generateGenaiVideo(operation: Operation, input: unknown) {
-  const args = (operation === 'text-to-video' ? genaiTextToVideoSchema : genaiImageToVideoSchema).parse(input);
+  const args = (operation === 'msr' ? genaiMsrSchema : operation === 'text-to-video' ? genaiTextToVideoSchema : genaiImageToVideoSchema).parse(input);
   requireAstraGenaiKey();
-  const body = buildGenaiVideoBody(args);
+  const body = 'references' in args ? buildGenaiMsrBody(args) : buildGenaiVideoBody(args);
   const fingerprint = createHash('sha256').update(JSON.stringify(body)).digest('hex');
   const videoPath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.mp4`, 'video');
   const receiptPath = videoPath + '.astra-genai.json';
@@ -105,7 +146,7 @@ export async function generateGenaiVideo(operation: Operation, input: unknown) {
     if (fs.existsSync(videoPath)) throw new Error('GenAI output already exists');
     const receipt = { version: 1 as const, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, status: 'submitting' as const };
     fs.writeFileSync(receiptPath, JSON.stringify(receipt), { flag: 'wx', mode: 0o600 });
-    const accepted = z.object({ id: z.string().min(1) }).passthrough().parse(await requestGenai('POST', `/v1/ltx/v2/${operation}`, body));
+    const accepted = z.object({ id: z.string().min(1) }).passthrough().parse(await requestGenai('POST', genaiVideoRoute(operation), body));
     atomicJson(receiptPath, { ...receipt, jobId: accepted.id, status: 'submitted' });
     recordVideoSubmission(accepted.id);
   }

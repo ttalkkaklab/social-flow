@@ -289,3 +289,19 @@ test('GenAI selection binds its model and reservation; managed recovery complete
  assert.equal((await videoStatus({episode:f.episode,requestId:'genai',action:'refresh'})).status,'completed');
  await f.execute(p,async()=>assert.fail('must reuse recovered result'));assert.equal(calls,1);
 });
+
+test('managed MSR plans select reference operation and bind dimensions and local references', async t => {
+  const f = fixture(t, { engine: 'astra-genai', model: 'ltx-2.5-22b-distilled', resolution: '1280x704' });
+  const ref = path.join(f.episode, 'person.png'); fs.writeFileSync(ref, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=', 'base64'));
+  fs.writeFileSync(path.join(f.episode, 'invalid.png'), 'not an image');
+  assert.throws(() => planVideo({ episode: f.episode, shotId: 's1', requestId: 'invalid', operation: 'reference', args: { prompt: 'Walk.', references: [{ imagePath: 'invalid.png' }], reserveUsd: 0.25 } }), /image_invalid/);
+  assert.equal(fs.existsSync(path.join(f.episode, '.work/video-routing/state.json')), false);
+  const p = planVideo({ episode: f.episode, shotId: 's1', requestId: 'msr', operation: 'reference', args: {
+    prompt: 'Person in image 1 walks.', references: [{ imagePath: 'person.png' }], duration: 5, reserveUsd: 0.25,
+  } });
+  assert.equal(p.tool, 'astra_genai_msr'); assert.equal(p.args.model, undefined); assert.equal(p.args.resolution, undefined);
+  assert.equal(p.args.width, 1280); assert.equal(p.args.height, 704); assert.equal(p.args.references[0].imagePath, ref);
+  assert.equal(Object.keys(p.inputs).length, 1); assert.equal(p.quote.reserveUsd, 0.25);
+  fs.appendFileSync(ref, 'changed');
+  await assert.rejects(f.execute(p, async () => assert.fail('stale reference must not generate')), /stale/);
+});
