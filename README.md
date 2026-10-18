@@ -1,5 +1,11 @@
 # social-flow
 
+Character video requests now compile [voice continuity](skills/produce/references/voice-continuity.md)
+from pinned cast settings. `video_plan` maps Seedance samples to their actual audio
+and image indices, repeats authored Google voice descriptions, and records separate
+unreviewed identity/dialogue/speaker/lip-sync findings. Saved plans become stale when
+speech, voice settings or reference bytes change. Selected audition samples travel
+with the character handoff; no automatic listening gate or paid generation is added.
 
 Motion-graphic shots now persist `shot.motionGraphic`: a semantic type, viewer intent,
 selection reason, evidence, visual direction and timing intent. The shared

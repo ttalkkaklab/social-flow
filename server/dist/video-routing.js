@@ -13,6 +13,7 @@ import { atomicJson, videoTransaction } from './video-state.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
 import { OMNI_MODEL } from './omni-client.js';
 import { videoEvents } from './video-events.js';
+import { prepareVideoVoice } from './video-voice.js';
 const load = createRequire(import.meta.url);
 const shared = fileURLToPath(new URL('../../skills/_shared/video-selection.js', import.meta.url));
 export const routingContext = (episode, shotId) => load(shared).readVideoContext(episode, shotId);
@@ -130,7 +131,8 @@ export function planVideo(raw) {
     }
     if (!tool)
         throw new Error('Selected deployment has no adapter for this operation');
-    const args = parseVideoArgs(tool, bindSelection(tool, input.args, selection));
+    const voice = prepareVideoVoice(tool, bindSelection(tool, input.args, selection), context);
+    const args = parseVideoArgs(tool, voice.args);
     const output = canonical(path.resolve(context.episode, typeof args.outputPath === 'string' ? args.outputPath : '.work/video'));
     if (!within(context.episode, output))
         throw new Error('Video output must stay inside the selected episode');
@@ -145,6 +147,7 @@ export function planVideo(raw) {
     }
     const quote = quoteVideo(tool, args);
     const body = { version: 1, episode: context.episode, shotId: input.shotId, requestId: input.requestId, tool, args,
+        sourceArgs: input.args, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
         selection, source: context.source, contextRevision: context.revision, inputs, quote, execution: 'server' };
     const plan = { ...body, id: hash(body) };
     atomicJson(path.join(context.episode, '.work/video-routing/plans', plan.id + '.json'), plan);
@@ -178,7 +181,7 @@ export async function executeVideo(raw, dispatch) {
     const context = routingContext(episode, plan.shotId);
     if (context.revision !== plan.contextRevision)
         throw new Error('video_plan_stale: selection or authorization changed');
-    const refreshed = planVideo({ episode, shotId: plan.shotId, requestId: plan.requestId, tool: plan.tool, args: plan.args });
+    const refreshed = planVideo({ episode, shotId: plan.shotId, requestId: plan.requestId, tool: plan.tool, args: plan.sourceArgs ?? plan.args });
     if (refreshed.id !== id)
         throw new Error('video_plan_stale: inputs, price or adapter contract changed');
     checkVideoEnvironment(plan.tool);

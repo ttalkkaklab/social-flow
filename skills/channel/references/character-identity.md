@@ -67,6 +67,13 @@ SHA-256. Legacy sheets still render their original text, but must be explicitly
 migrated before a new review pass. Preserve all existing prose and media on migration.
 Resolve unknowns with the user, or retain pending; never retrofit a fabricated review.
 
+When `voiceSelection` points to a selected audition, the compiler also exports its
+recorded `voiceReference` path, file hash and TTS settings. Copy that record into the
+episode cast. Missing/stale audition records produce `voiceReferenceWarning`, not
+a block on stills or TTS. The video planner validates sample bytes when used; do not
+substitute an old `voice.wav`. See [video voice continuity](../../produce/references/voice-continuity.md)
+for provider mappings and the distinction between sample imitation and exact speech.
+
 ## Generate and use
 
 1. Author the identity before images. Use `direction.image` for the appearance prompt

@@ -40,6 +40,7 @@ Do not paste literal dialogue into an audio-conditioned video prompt; the suppli
 carries the exact spoken words.
 Inspect actual clips for accidental text; a no-text prompt alone does not prove clean frames.
 **Speech production override (2026-10-16):** Read [shot-speech.md](references/shot-speech.md).
+Read [voice-continuity.md](references/voice-continuity.md); keep the complete cast (including `voiceReference`) in `SB_DOC.characters` before `video_plan`. Inspect its `voiceContinuity` mapping and warnings; native imitation does not synchronize the finished WAV or add a listening gate.
 Generate with raw TTS tools; do not run automatic speech reviews, dictation, voice-lock ASR,
 or listening approval. The provenance-only builder proceeds with `not_reviewed` speech.
 Older checked-TTS/listening recipes below are historical and do not govern new work.
@@ -409,13 +410,13 @@ means generating something nobody approved.
   lip-synced speaking cut — pass it as `referenceAudioPaths` and bind it in the prompt right
   after the reference list: `@Image 1-2 are Claude and speak with the voice of @Audio 1`. Two
   speakers, two clips, one sentence each; `@Audio N` is the Nth entry of `referenceAudioPaths`.
-  The route is `dreamina-seedance-2-5-260628` — the only model whose guide documents the
-  per-character mapping, and the 2.0 series takes no audio-only input. Veo has no audio
-  reference; select an explicit speech synchronization adapter under shot-speech.md. A cut voiced
-  by TTS in the build needs no voice reference at all — the sample exists so the model-voiced
-  lane and the TTS lane match the voice `identity.md` pins (profile §2). Imitation, not cloning: also describe the voice in words
-  (gender, age, texture, pace, mood) and keep the lines in the sample's tone — the vendor's own
-  FAQ says the result drifts otherwise.
+  Use the saved compatible Seedance selection: 2.5 documents explicit mapping; 2.0/Fast/Mini accept reference audio with an image. Do not silently switch grades.
+  `video_plan` preserves reference indices and maps pinned samples.
+  Veo has no audio reference; select an explicit speech synchronization adapter under
+  shot-speech.md when the finished WAV must drive the mouth. A cut voiced
+  by TTS in the build needs no voice reference; native speech can approximate the pinned voice (profile §2). This is imitation,
+  not cloning: repeat authored timbre/accent separately from each line's emotion and
+  recording environment. Unknown acoustic traits stay unknown.
 
   An entry written as `{ id, scope }` carries its **jurisdiction** — copy that clause into the
   prompt's reference list verbatim (`@mouse — controls the helmet and body only`). Don't

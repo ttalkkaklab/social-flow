@@ -34,6 +34,15 @@ selected resolution without adding unsupported width/height fields.
 Remote URL contents cannot be pinned; use immutable provider assets or local files.
 Re-plan after changes. No network submission occurs during planning.
 
+Character speech also uses the [voice continuity contract](../produce/references/voice-continuity.md).
+The planner adds stable acoustic descriptions and, on audible Seedance reference
+requests, pinned character samples with explicit speaker/image/audio mappings.
+It saves original `sourceArgs` separately from the compiled request and records
+`voiceContinuity` with hashes, warnings and four independent `not_reviewed` fields.
+Revalidation includes dialogue, acting, cast voice settings and sample bytes.
+The catalog's operation-specific `voice` fields distinguish sample imitation from
+supplied-speech animation. They never certify perceptual consistency or exact lip sync.
+
 `video_execute` takes `episode` and `planId`. It rechecks selection, inputs, prices,
 provider configuration and disabled-tool settings, then reserves budget under an
 exclusive filesystem lock before dispatching the adapter. It never switches engines.

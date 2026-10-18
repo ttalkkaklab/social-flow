@@ -13,6 +13,7 @@ import { atomicJson, videoTransaction } from './video-state.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
 import { OMNI_MODEL } from './omni-client.js';
 import { videoEvents } from './video-events.js';
+import { prepareVideoVoice, type VoiceContinuity } from './video-voice.js';
 import type { ToolResult } from './handlers.js';
 
 const load = createRequire(import.meta.url);
@@ -39,6 +40,7 @@ export interface VideoPlan {
   version: 1; id: string; episode: string; shotId: string; requestId: string; tool: string;
   args: Record<string, unknown>; selection: Selection; source: string; contextRevision: string;
   inputs: Record<string, string>; quote: VideoQuote; execution: 'server' | 'host_handoff';
+  sourceArgs?: Record<string, unknown>; voiceContinuity?: VoiceContinuity;
 }
 function within(root: string, file: string): boolean {
   const relative = path.relative(root, file);
@@ -121,7 +123,8 @@ export function planVideo(raw: unknown): VideoPlan {
     return plan;
   }
   if (!tool) throw new Error('Selected deployment has no adapter for this operation');
-  const args = parseVideoArgs(tool, bindSelection(tool, input.args, selection));
+  const voice = prepareVideoVoice(tool, bindSelection(tool, input.args, selection), context);
+  const args = parseVideoArgs(tool, voice.args);
   const output = canonical(path.resolve(context.episode, typeof args.outputPath === 'string' ? args.outputPath : '.work/video'));
   if (!within(context.episode, output)) throw new Error('Video output must stay inside the selected episode');
   args.outputPath = output;
@@ -135,6 +138,7 @@ export function planVideo(raw: unknown): VideoPlan {
   }
   const quote = quoteVideo(tool, args);
   const body = { version: 1 as const, episode: context.episode, shotId: input.shotId, requestId: input.requestId, tool, args,
+    sourceArgs: input.args, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
     selection, source: context.source, contextRevision: context.revision, inputs, quote, execution: 'server' as const };
   const plan = { ...body, id: hash(body) };
   atomicJson(path.join(context.episode, '.work/video-routing/plans', plan.id + '.json'), plan);
@@ -165,7 +169,7 @@ export async function executeVideo(raw: unknown, dispatch: VideoDispatch): Promi
   if (plan.execution === 'host_handoff') throw new Error('host_handoff_required: use the selected host CLI; no API substitution');
   const context = routingContext(episode, plan.shotId);
   if (context.revision !== plan.contextRevision) throw new Error('video_plan_stale: selection or authorization changed');
-  const refreshed = planVideo({ episode, shotId: plan.shotId, requestId: plan.requestId, tool: plan.tool, args: plan.args });
+  const refreshed = planVideo({ episode, shotId: plan.shotId, requestId: plan.requestId, tool: plan.tool, args: plan.sourceArgs ?? plan.args });
   if (refreshed.id !== id) throw new Error('video_plan_stale: inputs, price or adapter contract changed');
   checkVideoEnvironment(plan.tool);
   const auth = authorization(context);
