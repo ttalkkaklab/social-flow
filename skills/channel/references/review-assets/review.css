@@ -885,3 +885,54 @@
   .review-board .review-jump { display: none; }
   .review-board .doc-title { font-size: 1.75rem; }
 }
+
+/* Face-led cast profiles; other reference artwork keeps its original framing. */
+.review-character-catalog {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: var(--review-s24);
+  align-items: stretch;
+}
+.review-character-catalog .review-character {
+  max-width: none;
+  padding: var(--review-s24);
+  border: var(--review-s1) solid var(--review-glass-border);
+  border-radius: var(--review-s20);
+  background: var(--review-reading-surface);
+}
+.review-character .review-character-art {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: var(--review-s180);
+  border-radius: var(--review-s12);
+}
+.review-character-art .review-image,
+.review-character-art .review-empty {
+  width: var(--review-s180);
+  max-width: 100%;
+  height: var(--review-s180);
+  min-height: 0;
+}
+.review-character-portrait .review-image {
+  padding: 0;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center;
+  border: var(--review-s4) solid var(--review-white);
+  box-shadow: 0 0 0 var(--review-s1) var(--review-line);
+}
+.review-character .review-card-body { padding: var(--review-s20) 0 0; }
+.review-character .review-card-heading h2 {
+  font-size: var(--review-s20);
+  letter-spacing: -0.025em;
+}
+.review-character .review-role {
+  margin-top: var(--review-s4);
+  font-size: var(--review-s14);
+  word-break: keep-all;
+}
+.review-character .review-card-body > .review-status:last-child {
+  padding-top: var(--review-s12);
+  border-top: var(--review-s1) solid var(--review-line);
+  gap: var(--review-s6) var(--review-s12);
+}
