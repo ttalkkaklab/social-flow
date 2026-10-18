@@ -866,6 +866,8 @@ or whitespace; a bare `*` matches every tool.
 
 ## Documentation (docs/)
 
+Latest image model research: **[Image APIs, local models and production tips](docs/research/2026-10-18-image-models/README.md)** — model-by-model official documentation, pricing, retirement dates, generation/editing examples and differences from the current adapters, checked 2026-10-18 (Korean).
+
 Latest video API research: **[MiniMax H3, LTX 2.5, Seedance and Veo API pricing](docs/research/2026-10-18-video-model-api-pricing/README.md)** — official endpoints, model capabilities, per-second/token rates and reference-input charges, checked 2026-10-18 (Korean).
 
 Manuals are bilingual — Korean pages with English siblings (`*.en.html`).
