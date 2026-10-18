@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "social-flow",
   "display_name": "Social Flow",
-  "version": "0.118.2",
+  "version": "0.118.3",
   "description": "The social-flow MCP tools for the Claude Desktop chat \u2014 research search, image, video, voice and music generation, and SNS publishing. A desktop extension carries no skills; the full pipeline installs as a plugin in Cowork.",
   "author": {
     "name": "Zeans",

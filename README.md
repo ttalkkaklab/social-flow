@@ -1022,7 +1022,10 @@ Existing recordings remain reusable with their provenance. See the
 
 `node skills/channel/references/review-library.js data/<channel>` saves a channel
 home, `assets/characters/index.html`, `assets/characters/<id>/index.html`,
-`storyboards/index.html` and `storyboards/<episode>/index.html`. All open directly
+`assets/props/index.html`, `assets/locations/index.html`, `storyboards/index.html`
+and `storyboards/<episode>/index.html`. The sidebar links to storyboards, character
+sheets, prop sheets and background sheets. Prop and background catalogues read each
+episode’s canonical `SB_DOC` in `scenes.js` and link back to its storyboard. All open directly
 with file://, with bundled Wanted Sans and no network request. Character sheets
 show front/back/face, additional images, identity and voice. Episode pages use the
 same canonical review renderer; production inputs remain in `episodes/`.

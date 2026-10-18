@@ -21,7 +21,9 @@
   var nav = document.createElement('nav'); nav.setAttribute('aria-label', words('탐색', 'Navigation'));
   [
     ['../../../storyboards/index.html', words('스토리보드', 'Storyboards')],
-    ['../../../assets/characters/index.html', words('캐릭터 시트', 'Character sheets')]
+    ['../../../assets/characters/index.html', words('캐릭터 시트', 'Character sheets')],
+    ['../../../assets/props/index.html', words('소품 시트', 'Prop sheets')],
+    ['../../../assets/locations/index.html', words('배경 시트', 'Background sheets')]
   ].forEach(function (entry, i) {
     var a = document.createElement('a'); a.href = entry[0]; a.textContent = entry[1];
     if (!i) a.setAttribute('aria-current', 'page'); nav.appendChild(a);
@@ -132,6 +134,8 @@
     event.preventDefault(); reveal(a.getAttribute('href'));
   });
   if (location.hash) reveal(location.hash);
+  // Prop sheets are inserted by the following script; resolve incoming links again after load.
+  window.addEventListener('load', function () { if (location.hash) reveal(location.hash); });
   window.addEventListener('beforeprint', function () {
     document.querySelectorAll('details').forEach(function (el) { el.dataset.wasOpen = String(el.open); el.open = true; });
   });

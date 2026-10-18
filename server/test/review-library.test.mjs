@@ -264,3 +264,39 @@ test('character detail keeps structured facts and lists, local transcript and re
     assert.ok(html.includes('Full character identity'));
   } finally { f.clean(); }
 });
+
+test('prop and background catalogues preserve episode scope, local media and navigation', () => {
+  const f = fixture();
+  try {
+    const doc = { props: [{ id: 'cup', name: 'Cup <script>', description: 'Ceramic', imageUrl: 'cup.png' }], locations: [{ id: 'room', name: 'Room', layout: 'Door on left', invariants: ['Window'], imageUrl: '../../../../outside.png' }] };
+    f.write('episodes/one/storyboard/scenes.js', 'window.SCENES = []; window.SB_DOC = ' + JSON.stringify(doc));
+    f.write('episodes/one/storyboard/cup.png', 'fixture');
+    writeFileSync(join(f.root, 'outside.png'), 'outside');
+    f.write('episodes/two/storyboard/storyboard.md', '# Episode two');
+    f.write('episodes/two/storyboard/scenes.js', 'window.SCENES = []; window.SB_DOC = ' + JSON.stringify(doc));
+    storyboardHtml(join(f.dir, 'episodes/one/storyboard'));
+    storyboardHtml(join(f.dir, 'episodes/two/storyboard'));
+    exportChannel(f.dir);
+    for (const kind of ['props', 'locations']) {
+      const html = readFileSync(join(f.dir, 'assets', kind, 'index.html'), 'utf8');
+      assert.equal((html.match(/class="review-card" data-card/g) || []).length, 2);
+      assert.ok(html.includes('aria-current="page"'));
+      assert.ok(html.includes('../../episodes/one/storyboard/storyboard.html#'));
+      assert.ok(html.includes('../../episodes/two/storyboard/storyboard.html#'));
+      assert.ok(!html.includes('src="../../../../outside.png"'));
+      assert.ok(html.includes('../characters/index.html'));
+    }
+    const props = readFileSync(join(f.dir, 'assets/props/index.html'), 'utf8');
+    assert.ok(props.includes('Cup &lt;script&gt;'));
+    assert.ok(props.includes('src="../../episodes/one/storyboard/cup.png"'));
+    const backgrounds = readFileSync(join(f.dir, 'assets/locations/index.html'), 'utf8');
+    assert.ok(backgrounds.includes('Door on left'));
+    assert.ok(backgrounds.includes('Reference image pending'));
+    const layout = readFileSync(join(f.dir, 'episodes/one/storyboard/review-layout.js'), 'utf8');
+    for (const kind of ['props', 'locations']) assert.ok(layout.includes(`../../../assets/${kind}/index.html`));
+    assert.deepEqual(exportChannel(f.dir, { check: true }).changed, []);
+    for (const episode of ['one', 'two']) f.write(`episodes/${episode}/storyboard/scenes.js`, 'window.SCENES = [];');
+    exportChannel(f.dir);
+    assert.ok(readFileSync(join(f.dir, 'assets/props/index.html'), 'utf8').includes('No sheets yet.'));
+  } finally { f.clean(); }
+});
