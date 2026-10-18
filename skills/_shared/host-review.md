@@ -26,9 +26,10 @@ repair. Keep the same rubric between revisions: 95 means no required correction;
 defects and cannot be converted into a passing score. A composition score is not a
 whole-video score. Avoid exaggerated acting demands for deliberately restrained scenes.
 
-For an explicitly requested improvement loop, use an independent host reviewer when
+For the fixed cut workflow and explicitly requested improvement loops, use an independent host reviewer when
 the host supports subagents; inherit the active model, not a pinned external model.
-Otherwise review in the current session and disclose that it is not independent.
+For a fixed cut stage, unavailable independent review leaves the stage incomplete.
+For other optional reviews, review in the current session and disclose that it is not independent.
 Do not show the reviewer prior scores or the target before collecting observations.
 Normal production still generates speech without automatic scoring or retakes.
 Legacy acting_review, tts_review_acting and tts_review_final now prepare host evidence.

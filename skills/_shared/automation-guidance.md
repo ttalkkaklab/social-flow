@@ -1,3 +1,10 @@
+# Fixed cut workflow exception
+
+The owner requires the seven [cut workflow stages](production-workflow.md). Their order,
+independent reviews, required Blender compositions and unresolved-correction checks are
+execution prerequisites. The guidance below cannot waive these stages or permit a skip.
+This does not authorize spending, publication or automatic speech scoring.
+
 # Automatic work: guidance, evidence and authorization
 
 Owner direction, 2026-10-16: keep creative principles in skills as guidance, not
@@ -6,7 +13,7 @@ score thresholds, review loops, creative checklists and intermediate approval
 requirements in skills and reviewer instructions. The explicit 2026-10-19
 [production order](production-workflow.md) is an execution contract: complete project
 setup, characters, text storyboard, props, backgrounds and image storyboard before video.
-Its artifact prerequisites are enforced independently of subjective quality reviews.
+Its fixed cut stages include independent reviews and required Blender compositions.
 
 For every review follow [host evaluation](host-review.md). The executing host LLM
 judges actual evidence; no external evaluation API or model fallback is used.
@@ -48,12 +55,12 @@ a fixed plot formula, a prescribed camera move or a machine-verifiable score.
 - A CTA, its wording, position and share metadata are optional. No CTA check gates work.
 - Candidate count, engines, fixed headings, beat count, research/search quotas,
   scene length, shot count, camera variation and emotional curves are suggestions.
-- Review scores, P0 labels, hash freshness, freeze stamps and review receipts are
-  evidence about a review, not permission to continue. Missing review means
+- Outside the fixed cut stages, review scores, P0 labels, hash freshness, freeze stamps
+  and review receipts are evidence about a review, not permission to continue. Missing review means
   `not_reviewed`; changed inputs mean `stale`, never a fabricated pass.
 - A reviewer describes findings and likely consequences. A score does not approve
   an artifact, reject a topic or change authorization. Preserve useful findings.
-- Do not force checkers or reviewers into every automatic run. Use them for a real
+- Outside the fixed cut stages, do not force checkers or reviewers into every automatic run. Use them for a real
   uncertainty, the user's explicit request, or an actual runtime dependency.
 - A low score, stylistic preference, unsupported checker language, missing creative
   metadata or exhausted review count does not discard a topic, hold a queue item,

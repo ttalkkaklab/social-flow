@@ -106,6 +106,10 @@ function render(win,index,dir){
   try{blender({...renderJob(ctx),action:'render',cameras,output,fingerprint});}catch(e){fs.rmSync(output,{recursive:true,force:true});throw e;}
   const frames=Object.fromEntries(Object.keys(cameras).map(k=>[k,{path:relative+'/'+k+'.png',sha256:fileHash(path.join(output,k+'.png'))}]));
   ctx.s.visual={...ctx.s.visual,location:{fingerprint,frames,spatial:{path:relative+'/spatial.json',sha256:fileHash(path.join(output,'spatial.json'))},renderer:'blender',renderedAt:new Date().toISOString()}};
+  const blend=renderJob(ctx).blend, image=path.join(output,'start.png'), receiptPath=path.join(output,'composition.json');
+  write(receiptPath,{renderer:'blender',shotId:ctx.s.id,fingerprint,
+    blend:{path:blend,sha256:fileHash(blend)},image:{path:image,sha256:fileHash(image)}});
+  ctx.s.visual.location.compositionReceipt=receiptPath;
   return ctx.s.visual.location;
 }
 function renderJob(ctx){return {manifest:ctx.m,blend:safe(path.dirname(ctx.p),ctx.m.assets.blend.path),stateId:ctx.b.stateId,endStateId:ctx.b.endStateId||ctx.b.stateId,blocking:ctx.b.blocking||null};}

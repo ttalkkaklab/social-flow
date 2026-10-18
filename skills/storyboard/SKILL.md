@@ -16,6 +16,13 @@ Follow [host evaluation](../_shared/host-review.md) for every requested review.
 
 # Storyboard: make the story understandable, then plan its images
 
+**Fixed cut workflow:** Follow [production workflow](../_shared/production-workflow.md).
+The seven stage skills own context review, camera review, Blender composition, cut image
+generation/review and cut video generation/review. These are required episode stages,
+including re-entry for existing boards; guidance-only policies do not waive them. This
+skill supplies shared authoring/production mechanics and must not collapse those stages.
+
+
 For saved GenAI selections, use [GenAI operation selection](../_shared/astra-genai.md)
 while preparing sheets and shots. Plan img2img for whole-image changes, inpaint for
 local corrections and MSR for character/outfit/prop/background continuity in video.
@@ -220,10 +227,10 @@ or its sound conveys the intended information. A prop cannot already be received
 source image when the shot needs to show its handoff.
 
 For recurring places, dialogue, entrances, travel or prop handoffs, plan one shared set.
-When the saved previz renderer (`.social-flow/models.json` `production.previzRenderer`) is
-Blender and Blender is installed, build it with [location assets](references/location-assets.md);
-with a three.js renderer or no Blender, plan the recurring place with
-[previz-template.html](references/previz-template.html) or stills and say so in the plan.
+For cut storyboard compositions, build it with Blender using
+[location assets](references/location-assets.md) through compose-blender after camera_review.
+Missing Blender blocks that stage; three.js or still planning cannot replace it.
+The saved previz renderer applies only to optional animated video references.
 Bind each shot's camera and complete actor start/end blocking, including off-camera actors,
 body facing and gaze. Within a `continuityGroup`, carry the previous cut's end state into the
 next start; explain time skips with `continuityBreak` and axis crossings with `lineCrossing`.

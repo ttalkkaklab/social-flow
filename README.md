@@ -1139,3 +1139,21 @@ The storyboard checker and shared-sheet export warn when a registered shared pan
 exists but its cast member's storyboard reference is empty, naming the character,
 slot, source file and field to fix. These are project-data diagnostics, not evidence
 that the plugin created the project's incorrect code or settings.
+
+## Fixed cut workflow and existing-board improvement
+
+Cut production uses seven separate skills, coordinated by autoproduce and enforced by
+production_workflow: review-context -> review-camera -> compose-blender ->
+generate-cut-images -> review-cut-images -> generate-cut-videos -> review-cut-videos.
+Character/prop/background sheets remain preparation assets. Required Blender still
+compositions are separate from optional animated video previz. Reviews are independent,
+file-hash-bound and require no unresolved corrections; missing review cannot become pass.
+
+Use `/social-flow:review-context <episode-or-storyboard-path>` to improve an existing
+story from an unbriefed viewer's perspective and stop before camera work. Use
+`/social-flow:review-camera <path>` for direction after context review, or
+`/social-flow:autoproduce <path>` with an explicit end-to-end improvement request.
+All seven stage skills accept an existing episode path. Unchanged media is reused;
+a review request never authorizes paid regeneration or publishing. See
+[the fixed workflow](skills/_shared/production-workflow.md) for all stage skills,
+receipt fields, migration, rewind and capability limits.

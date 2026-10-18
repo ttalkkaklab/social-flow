@@ -119,7 +119,7 @@ export function checkVideoEnvironment(tool) {
 }
 export function planVideo(raw) {
     const input = videoPlanSchema.parse(raw);
-    requireWorkflow(input.episode, 'video');
+    requireWorkflow(input.episode, 'video', input.shotId);
     const context = routingContext(input.episode, input.shotId);
     const { selection } = context;
     const tool = input.tool || Object.entries(VIDEO_ADAPTERS).find(([, a]) => a.engine === selection.engine && a.operation === input.operation)?.[0];
@@ -186,7 +186,7 @@ export async function executeVideo(raw, dispatch) {
         throw new Error('Invalid video plan');
     if (plan.execution === 'host_handoff')
         throw new Error('host_handoff_required: use the selected host CLI; no API substitution');
-    requireWorkflow(episode, 'video');
+    requireWorkflow(episode, 'video', plan.shotId);
     if (plan.workflowRevision !== workflowRevision(episode))
         throw new Error('workflow_plan_stale: prepare a new video plan');
     const context = routingContext(episode, plan.shotId);

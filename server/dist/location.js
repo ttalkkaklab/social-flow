@@ -2,6 +2,7 @@
 import * as nodeModule from 'node:module';
 import { join } from 'node:path';
 import { z } from 'zod';
+import { requireWorkflow } from './production-workflow.js';
 import { REFERENCES_DIR } from './storyboard.js';
 const loader = nodeModule.createRequire(import.meta.url);
 const actorPoseSchema = z.object({
@@ -34,6 +35,8 @@ export const locationSchema = z.object({
 }).strict();
 export async function manageLocation(args) {
     const input = locationSchema.parse(args);
+    if (input.action === 'render' && input.board)
+        requireWorkflow(input.board, 'composition', input.shotId);
     const contract = loader(join(REFERENCES_DIR, 'location-assets.js'));
     return contract.run(input);
 }

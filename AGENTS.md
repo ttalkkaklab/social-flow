@@ -1,6 +1,6 @@
 # AGENTS.md — working rules for this repository
 
-social-flow is a Claude Code plugin: 21 skills, 5 reviewer agents, and one bundled
+social-flow is a Claude Code plugin: 28 skills, 5 reviewer agents, and one bundled
 MCP server. [README.md](README.md) is the source of truth for structure and the tool
 list; [CLAUDE.md](CLAUDE.md) holds the owner's dated production directives (the later
 date wins), the branch flow, the commit rules and the Korean prose rules. **Read

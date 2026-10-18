@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { manageWorkflow, requireWorkflow } from './production-workflow.js';
+import { manageWorkflow, requireWorkflow, requireReviewedVideos } from './production-workflow.js';
 import { isManagedMusicCall } from './music-registry.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -20,7 +20,7 @@ import { reviewFinalSpeech } from './tts-final-quality.js';
 // If the two drift, the version clients see stops matching the actual package, so bump this
 // line together with package.json (the contract test checks that the two agree).
 const server = new Server(
-  { name: 'social-flow', version: '0.119.0' },
+  { name: 'social-flow', version: '0.120.0' },
   { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS },
 );
 
@@ -129,6 +129,14 @@ process.once('SIGTERM', gracefulShutdown);
 async function main() {
   if (process.argv[2] === '--workflow') {
     console.log(JSON.stringify(manageWorkflow(JSON.parse(readFinalRequest(process.argv[3], 'utf8'))), null, 2));
+    return;
+  }
+  if (process.argv[2] === '--workflow-check-delivery') {
+    requireWorkflow(process.argv[3], 'delivery');
+    if (process.argv[4]) {
+      const manifest = JSON.parse(readFinalRequest(process.argv[4], 'utf8'));
+      requireReviewedVideos(process.argv[3], manifest.videoSha256 ?? {});
+    }
     return;
   }
   if (process.argv[2] === '--workflow-check-video') {

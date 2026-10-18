@@ -227,8 +227,8 @@ small expression edits. Record the observed framing/action, not merely a filenam
 
 **Look at the picture that came out.** Open every `images/scene-*.png` (and the
 `narration[].img` files in illustration mode) once with Read against that scene's `shot.info`
-and narration. The criterion is right, not pretty. No reviewer is delegated — the image review
-of 0.49 cost six million tokens a read (measured) and your own look costs nothing. Shooting
+and narration. The criterion is right, not pretty. For cut storyboard images, review-cut-images uses a fresh independent host reviewer
+under the fixed production workflow. The author cannot certify their own corrections. Shooting
 mode skips this entirely.
 
 For cinematic-miniature, also read the bundled [style guide](../../storyboard/assets/styles/tactile-miniature-v1/STYLE.md).

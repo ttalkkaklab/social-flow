@@ -6840,7 +6840,7 @@ var require_node_domexception = __commonJS({
 });
 
 // node_modules/fetch-blob/from.js
-import { statSync as statSync2, createReadStream, promises as fs4 } from "node:fs";
+import { statSync as statSync3, createReadStream, promises as fs4 } from "node:fs";
 import { basename } from "node:path";
 var import_node_domexception, stat, blobFromSync, blobFrom, fileFrom, fileFromSync, fromBlob, fromFile, BlobDataItem;
 var init_from = __esm({
@@ -6849,10 +6849,10 @@ var init_from = __esm({
     init_file();
     init_fetch_blob();
     ({ stat } = fs4);
-    blobFromSync = (path25, type) => fromBlob(statSync2(path25), path25, type);
+    blobFromSync = (path25, type) => fromBlob(statSync3(path25), path25, type);
     blobFrom = (path25, type) => stat(path25).then((stat4) => fromBlob(stat4, path25, type));
     fileFrom = (path25, type) => stat(path25).then((stat4) => fromFile(stat4, path25, type));
-    fileFromSync = (path25, type) => fromFile(statSync2(path25), path25, type);
+    fileFromSync = (path25, type) => fromFile(statSync3(path25), path25, type);
     fromBlob = (stat4, path25, type = "") => new fetch_blob_default([new BlobDataItem({
       path: path25,
       size: stat4.size,
@@ -68223,14 +68223,14 @@ var require_compose_speech = __commonJS({
     "use strict";
     var fs21 = __require("node:fs");
     var path25 = __require("node:path");
-    var { execFileSync: execFileSync10 } = __require("node:child_process");
+    var { execFileSync: execFileSync11 } = __require("node:child_process");
     var { createHash: createHash21 } = __require("node:crypto");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
     var { actingErrors, speechRevisionPayload, planScenePerformance } = require_scene_acting();
     var { generationVoiceErrors } = require_character_voice();
     var hash7 = (value) => createHash21("sha256").update(value).digest("hex");
     function duration3(file) {
-      const seconds = Number(execFileSync10("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file], { encoding: "utf8", timeout: 1e4 }).trim());
+      const seconds = Number(execFileSync11("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file], { encoding: "utf8", timeout: 1e4 }).trim());
       if (!Number.isFinite(seconds) || seconds <= 0) throw new Error("Unusable speech duration: " + file);
       return seconds;
     }
@@ -68290,7 +68290,7 @@ var require_compose_speech = __commonJS({
         filters.push(lines.map((_, i2) => `[a${i2}]`).join("") + `amix=inputs=${lines.length}:normalize=0,apad,atrim=duration=${timing.durationSeconds}[out]`);
         const output2 = path25.join(work, `c${fields2[0]}-speech.wav`), tmp = output2 + ".tmp.wav";
         try {
-          execFileSync10("ffmpeg", ["-y", "-v", "error", ...inputs, "-filter_complex", filters.join(";"), "-map", "[out]", "-c:a", "pcm_s16le", tmp], { timeout: 12e4 });
+          execFileSync11("ffmpeg", ["-y", "-v", "error", ...inputs, "-filter_complex", filters.join(";"), "-map", "[out]", "-c:a", "pcm_s16le", tmp], { timeout: 12e4 });
           fs21.renameSync(tmp, output2);
         } finally {
           if (fs21.existsSync(tmp)) fs21.unlinkSync(tmp);
@@ -72697,6 +72697,9 @@ var coerce = {
 };
 var NEVER = INVALID;
 
+// src/production-workflow.ts
+import { execFileSync as execFileSync2 } from "node:child_process";
+
 // src/project.ts
 import * as nodeModule from "node:module";
 import { dirname, resolve } from "node:path";
@@ -72812,11 +72815,25 @@ function validateImageBase64(value, mime) {
 }
 
 // src/production-workflow.ts
-var STAGES = ["characters", "text_storyboard", "props", "backgrounds", "image_storyboard"];
+var STAGES = [
+  "characters",
+  "text_storyboard",
+  "context_review",
+  "props",
+  "backgrounds",
+  "camera_review",
+  "blender_composition",
+  "image_storyboard",
+  "image_review",
+  "video",
+  "video_review"
+];
+var REVIEWS = ["context_review", "camera_review", "image_review", "video_review"];
+var IMAGE_STAGES = ["characters", "props", "backgrounds", "blender_composition", "image_storyboard"];
 var stageSchema = external_exports.enum(STAGES);
-var entrySchema = external_exports.object({ id: external_exports.string().min(1), text: external_exports.string().min(1), image: external_exports.string().min(1).optional() }).strict();
-var recordSchema = external_exports.object({ stage: stageSchema, entries: external_exports.array(entrySchema), notApplicable: external_exports.string().optional(), hashes: external_exports.record(external_exports.string()).optional() }).strict();
-var stateSchema = external_exports.object({ version: external_exports.literal(1), completed: external_exports.array(recordSchema), active: recordSchema.optional() }).strict();
+var entrySchema = external_exports.object({ id: external_exports.string().min(1), text: external_exports.string().min(1), image: external_exports.string().min(1).optional(), blend: external_exports.string().min(1).optional(), video: external_exports.string().min(1).optional() }).strict();
+var recordSchema = external_exports.object({ stage: stageSchema, entries: external_exports.array(entrySchema), notApplicable: external_exports.string().optional(), criteriaHash: external_exports.string().optional(), hashes: external_exports.record(external_exports.string()).optional() }).strict();
+var stateSchema = external_exports.object({ version: external_exports.literal(2), completed: external_exports.array(recordSchema), active: recordSchema.optional(), rubrics: external_exports.record(external_exports.string()).default({}) }).strict();
 var workflowSchema = external_exports.object({
   episode: external_exports.string().min(1),
   action: external_exports.enum(["status", "begin", "complete", "rewind"]),
@@ -72846,13 +72863,19 @@ function readyProject(episode) {
   if (result.status !== "ready") throw new Error("project_setup_required: " + JSON.stringify(result.missing));
 }
 function read(episode) {
-  if (!fs2.existsSync(stateFile(episode))) return { version: 1, completed: [] };
-  const state = stateSchema.parse(JSON.parse(fs2.readFileSync(stateFile(episode), "utf8")));
+  if (!fs2.existsSync(stateFile(episode))) return { version: 2, completed: [], rubrics: {} };
+  const raw = JSON.parse(fs2.readFileSync(stateFile(episode), "utf8"));
+  if (raw.version === 1) {
+    raw.completed = (raw.completed ?? []).slice(0, 2);
+    delete raw.active;
+    raw.version = 2;
+  }
+  const state = stateSchema.parse(raw);
   for (const [i2, record2] of state.completed.entries()) {
     if (record2.stage !== STAGES[i2] || !record2.hashes) throw new Error("workflow_invalid_state");
     validateRecord(record2);
     for (const entry2 of record2.entries) {
-      for (const file of [entry2.text, entry2.image].filter(Boolean)) {
+      for (const file of [entry2.text, entry2.image, entry2.blend, entry2.video].filter(Boolean)) {
         if (!/^[a-f0-9]{64}$/.test(record2.hashes[file] ?? "")) throw new Error("workflow_invalid_state");
       }
     }
@@ -72875,8 +72898,93 @@ function validateRecord(record2) {
   for (const entry2 of record2.entries) {
     if (ids.has(entry2.id)) throw new Error("workflow_duplicate_asset_id");
     ids.add(entry2.id);
-    if (record2.stage === "text_storyboard" ? entry2.image !== void 0 : !entry2.image) throw new Error("workflow_artifacts_required: text plus image, text only for text_storyboard");
+    if (IMAGE_STAGES.includes(record2.stage) ? !entry2.image : entry2.image !== void 0) throw new Error("workflow_artifacts_required: image required only for image stages");
+    if (record2.stage === "blender_composition" ? !entry2.blend : entry2.blend !== void 0) throw new Error("workflow_blender_required");
+    if (record2.stage === "video" ? !entry2.video : entry2.video !== void 0) throw new Error("workflow_video_required");
   }
+}
+var reviewSchema = external_exports.object({
+  stage: external_exports.enum(["context_review", "camera_review", "image_review", "video_review"]),
+  author: external_exports.string().trim().min(1),
+  reviewer: external_exports.string().trim().min(1),
+  independent: external_exports.literal(true),
+  verdict: external_exports.literal("pass"),
+  coverage: external_exports.enum(["text", "images", "video_playback"]),
+  criteria: external_exports.object({ path: external_exports.string().min(1), sha256: external_exports.string().regex(/^[a-f0-9]{64}$/) }).strict(),
+  inputs: external_exports.record(external_exports.string().regex(/^[a-f0-9]{64}$/)),
+  cutIds: external_exports.array(external_exports.string().min(1)).min(1).optional(),
+  observations: external_exports.array(external_exports.string().trim().min(10)).min(1),
+  unresolved: external_exports.array(external_exports.string()).length(0),
+  audienceRead: external_exports.object({
+    blind: external_exports.literal(true),
+    reconstruction: external_exports.string().trim().min(20),
+    transitions: external_exports.array(external_exports.object({
+      from: external_exports.string().min(1),
+      to: external_exports.string().min(1),
+      viewerUnderstands: external_exports.string().trim().min(10),
+      evidence: external_exports.array(external_exports.object({ path: external_exports.string().min(1), quote: external_exports.string().trim().min(5), cutId: external_exports.string().min(1) }).strict()).min(1)
+    }).strict()).min(1),
+    missingContext: external_exports.array(external_exports.string()).length(0)
+  }).strict().optional()
+}).strict();
+function validateInventory(state, record2) {
+  if (record2.stage === "video") {
+    const imageIds = new Set(state.completed.find((item) => item.stage === "image_storyboard").entries.map((entry2) => entry2.id));
+    if (record2.entries.some((entry2) => !imageIds.has(entry2.id))) throw new Error("workflow_unknown_cut");
+  }
+  const previous = record2.stage === "image_storyboard" ? "blender_composition" : record2.stage === "blender_composition" ? "camera_review" : void 0;
+  if (previous) {
+    const ids = state.completed.find((item) => item.stage === previous).entries.map((entry2) => entry2.id).sort();
+    if (JSON.stringify(ids) !== JSON.stringify(record2.entries.map((entry2) => entry2.id).sort())) throw new Error("workflow_cut_inventory_mismatch");
+  }
+}
+function verifyReview(state, stage, file, hashes) {
+  const review = reviewSchema.parse(JSON.parse(fs2.readFileSync(file, "utf8")));
+  if (review.stage !== stage || review.author === review.reviewer) throw new Error("workflow_independent_review_required");
+  if (stage !== "context_review") {
+    const sourceStage = stage === "camera_review" ? state.active : state.completed.find((record2) => record2.stage === (stage === "image_review" ? "image_storyboard" : "video"));
+    const ids = sourceStage.entries.map((entry2) => entry2.id).sort();
+    if (JSON.stringify(ids) !== JSON.stringify([...review.cutIds ?? []].sort())) throw new Error("workflow_review_cut_coverage");
+  }
+  const coverage2 = stage === "video_review" ? "video_playback" : stage === "image_review" ? "images" : "text";
+  if (review.coverage !== coverage2) throw new Error("workflow_review_coverage");
+  const check2 = (input, hash7) => {
+    if (!path2.isAbsolute(input) || digest(input) !== hash7) throw new Error("workflow_review_stale");
+    hashes[input] = hash7;
+  };
+  check2(review.criteria.path, review.criteria.sha256);
+  if (state.active?.criteriaHash !== review.criteria.sha256) throw new Error("workflow_rubric_changed");
+  if (stage === "context_review") {
+    if (!review.audienceRead) throw new Error("workflow_audience_read_required");
+    const texts = state.completed.find((record2) => record2.stage === "text_storyboard").entries.map((entry2) => entry2.text);
+    for (const transition of review.audienceRead.transitions) {
+      for (const evidence of transition.evidence) {
+        if (!texts.includes(evidence.path)) throw new Error("workflow_audience_evidence_required");
+        const text3 = fs2.readFileSync(evidence.path, "utf8");
+        if (!text3.includes(evidence.quote) || !text3.includes(evidence.cutId)) throw new Error("workflow_audience_evidence_required");
+      }
+    }
+  }
+  for (const [input, hash7] of Object.entries(review.inputs)) check2(input, hash7);
+  const source = stage === "context_review" ? "text_storyboard" : stage === "image_review" ? "image_storyboard" : stage === "video_review" ? "video" : "text_storyboard";
+  for (const [input, hash7] of Object.entries(state.completed.find((record2) => record2.stage === source).hashes)) {
+    if (review.inputs[input] !== hash7) throw new Error("workflow_review_incomplete");
+  }
+  if (stage === "camera_review" && !Object.keys(review.inputs).some((input) => !Object.hasOwn(state.completed.find((record2) => record2.stage === source).hashes, input))) throw new Error("workflow_camera_plan_required");
+}
+function requireCompositionReference(directory2, assetId, args) {
+  const episode = workflowEpisode(directory2);
+  if (!episode) return;
+  const state = read(episode);
+  verifyPrevious(state);
+  if (state.active?.stage !== "image_storyboard") return;
+  const image = state.completed.find((record2) => record2.stage === "blender_composition").entries.find((entry2) => entry2.id === assetId)?.image;
+  const inputs = [
+    args.imagePath,
+    ...Array.isArray(args.refImagePaths) ? args.refImagePaths : [],
+    ...Array.isArray(args.referenced_image_paths) ? args.referenced_image_paths : []
+  ];
+  if (!image || !inputs.some((input) => typeof input === "string" && canonicalPath(path2.resolve(directory2, input)) === image)) throw new Error("workflow_composition_reference_required");
 }
 function manageWorkflow(raw) {
   const input = workflowSchema.parse(raw), episode = fs2.realpathSync(input.episode);
@@ -72893,6 +73001,10 @@ function manageWorkflow(raw) {
   try {
     const state = read(episode);
     if (input.action === "rewind") {
+      const history = path2.join(folder, "production-workflow-history");
+      fs2.mkdirSync(history, { recursive: true });
+      const reports = Object.fromEntries([...state.completed, ...state.active ? [state.active] : []].filter((record2) => REVIEWS.includes(record2.stage)).flatMap((record2) => record2.entries).filter((entry2) => fs2.existsSync(entry2.text)).map((entry2) => [entry2.text, fs2.readFileSync(entry2.text, "utf8")]));
+      atomicJson(path2.join(history, `${Date.now()}-${process.hrtime.bigint()}.json`), { state, reports });
       const index = STAGES.indexOf(stageSchema.parse(input.stage));
       if (index > state.completed.length) throw new Error("workflow_out_of_order");
       state.completed = state.completed.slice(0, index);
@@ -72900,13 +73012,23 @@ function manageWorkflow(raw) {
     } else {
       verifyPrevious(state);
       if (input.action === "begin") {
-        if (state.active || input.stage !== STAGES[state.completed.length]) throw new Error(`workflow_out_of_order: next ${state.active?.stage ?? STAGES[state.completed.length] ?? "video"}`);
+        if (state.active || input.stage !== STAGES[state.completed.length]) throw new Error(`workflow_out_of_order: next ${state.active?.stage ?? STAGES[state.completed.length] ?? "done"}`);
         const record2 = { stage: stageSchema.parse(input.stage), entries: (input.entries ?? []).map((entry2) => ({
           ...entry2,
           text: canonicalPath(path2.resolve(episode, entry2.text)),
-          ...entry2.image ? { image: canonicalPath(path2.resolve(episode, entry2.image)) } : {}
+          ...entry2.image ? { image: canonicalPath(path2.resolve(episode, entry2.image)) } : {},
+          ...entry2.blend ? { blend: canonicalPath(path2.resolve(episode, entry2.blend)) } : {},
+          ...entry2.video ? { video: canonicalPath(path2.resolve(episode, entry2.video)) } : {}
         })), ...input.notApplicable ? { notApplicable: input.notApplicable } : {} };
         validateRecord(record2);
+        if (REVIEWS.includes(record2.stage)) {
+          const criteria = record2.entries.map((entry2) => JSON.parse(fs2.readFileSync(entry2.text, "utf8")).criteria);
+          if (criteria.some((item) => !item || !path2.isAbsolute(item.path) || digest(item.path) !== item.sha256) || new Set(criteria.map((item) => item.sha256)).size !== 1) throw new Error("workflow_rubric_required");
+          if (state.rubrics[record2.stage] && state.rubrics[record2.stage] !== criteria[0].sha256) throw new Error("workflow_rubric_changed");
+          state.rubrics[record2.stage] = criteria[0].sha256;
+          Object.assign(record2, { criteriaHash: criteria[0].sha256 });
+        }
+        validateInventory(state, record2);
         state.active = record2;
       } else if (input.action === "complete") {
         if (!state.active || state.active.stage !== input.stage) throw new Error("workflow_out_of_order: begin this stage first");
@@ -72915,6 +73037,18 @@ function manageWorkflow(raw) {
         for (const entry2 of state.active.entries) {
           if (!fs2.readFileSync(entry2.text, "utf8").trim()) throw new Error("workflow_empty_text: " + entry2.text);
           hashes[entry2.text] = digest(entry2.text);
+          if (REVIEWS.includes(state.active.stage)) verifyReview(state, state.active.stage, entry2.text, hashes);
+          if (entry2.blend) {
+            if (path2.extname(entry2.blend) !== ".blend" || !fs2.statSync(entry2.blend).size) throw new Error("workflow_blender_required");
+            hashes[entry2.blend] = digest(entry2.blend);
+            const receipt = JSON.parse(fs2.readFileSync(entry2.text, "utf8"));
+            if (receipt.renderer !== "blender" || receipt.shotId !== entry2.id || (!receipt.blend?.path || canonicalPath(receipt.blend.path) !== entry2.blend) || receipt.blend?.sha256 !== hashes[entry2.blend] || (!receipt.image?.path || canonicalPath(receipt.image.path) !== entry2.image) || receipt.image?.sha256 !== digest(entry2.image)) throw new Error("workflow_blender_receipt_required");
+          }
+          if (entry2.video) {
+            const probe2 = JSON.parse(execFileSync2("ffprobe", ["-v", "error", "-show_format", "-show_streams", "-of", "json", entry2.video], { encoding: "utf8", timeout: 3e4 }));
+            if (!probe2.streams?.some((stream) => stream.codec_type === "video") || !(Number(probe2.format?.duration) > 0)) throw new Error("workflow_video_invalid");
+            hashes[entry2.video] = digest(entry2.video);
+          }
           if (entry2.image) {
             verifyImageFile(entry2.image);
             hashes[entry2.image] = digest(entry2.image);
@@ -72925,7 +73059,7 @@ function manageWorkflow(raw) {
       }
     }
     if (input.action !== "status") atomicJson(stateFile(episode), state);
-    return { ...state, next: state.active?.stage ?? STAGES[state.completed.length] ?? "video", episode };
+    return { ...state, next: state.active?.stage ?? STAGES[state.completed.length] ?? "done", episode };
   } finally {
     fs2.closeSync(fd);
     fs2.unlinkSync(lock2);
@@ -72940,15 +73074,32 @@ function requireWorkflow(directory2, kind, assetId, outputFile) {
   readyProject(episode);
   const state = read(episode);
   verifyPrevious(state);
-  if (kind === "video") {
-    if (state.completed.length !== STAGES.length) throw new Error("workflow_out_of_order: complete image_storyboard before video");
+  if (kind === "composition") {
+    if (state.active?.stage !== "blender_composition" || assetId && !state.active.entries.some((entry2) => entry2.id === assetId)) throw new Error("workflow_out_of_order: complete camera_review and begin blender_composition");
+  } else if (kind === "delivery") {
+    if (state.completed.length !== STAGES.length) throw new Error("workflow_out_of_order: complete video_review before assembly or delivery");
+  } else if (kind === "video") {
+    if (state.active?.stage !== "video") throw new Error("workflow_out_of_order: complete image_review and begin video");
+    if (assetId && !state.active.entries.some((entry2) => entry2.id === assetId)) throw new Error("workflow_unknown_cut");
   } else if (kind === "text") {
     if (!state.completed.length) throw new Error("workflow_out_of_order: complete characters before text_storyboard");
   } else {
     const active = state.active;
     const entry2 = active?.entries.find((item) => item.id === assetId);
-    if (!active || active.stage === "text_storyboard" || !entry2?.image) throw new Error("workflow_out_of_order: begin the current image stage and register assetId");
+    if (!active || !["characters", "props", "backgrounds", "image_storyboard"].includes(active.stage) || !entry2?.image) throw new Error("workflow_out_of_order: begin the current image stage and register assetId");
     if (outputFile && canonicalPath(outputFile) !== entry2.image) throw new Error("workflow_output_mismatch: use the registered image path");
+  }
+}
+function requireReviewedVideos(directory2, media) {
+  const episode = workflowEpisode(directory2);
+  if (!episode) return;
+  requireWorkflow(directory2, "delivery");
+  const video2 = read(episode).completed.find((record2) => record2.stage === "video");
+  const reviewed = new Map(video2.entries.map((entry2) => [entry2.video, video2.hashes[entry2.video]]));
+  if (!Object.keys(media).length) throw new Error("workflow_delivery_media_required");
+  for (const [file, hash7] of Object.entries(media)) {
+    const absolute = canonicalPath(path2.resolve(directory2, file));
+    if (reviewed.get(absolute) !== hash7 || digest(absolute) !== hash7) throw new Error("workflow_unreviewed_delivery_media: " + file);
   }
 }
 function workflowRevision(directory2) {
@@ -72957,7 +73108,7 @@ function workflowRevision(directory2) {
 }
 
 // src/config.ts
-import { accessSync, constants, existsSync as existsSync3, readFileSync as readFileSync3, readdirSync, statSync } from "node:fs";
+import { accessSync, constants, existsSync as existsSync3, readFileSync as readFileSync3, readdirSync, statSync as statSync2 } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, join } from "node:path";
 function loadEnvFile(file = join(process.env.SNS_TOKEN_DIR || join(homedir(), ".config", "social-flow"), ".env")) {
@@ -73063,7 +73214,7 @@ function blenderBin() {
   const runnable = (p) => {
     try {
       accessSync(p, constants.X_OK);
-      return statSync(p).isFile();
+      return statSync2(p).isFile();
     } catch {
       return false;
     }
@@ -82314,7 +82465,7 @@ var MUSIC_TOOLS = [
 // src/astra-genai-video.ts
 import { createHash as createHash4 } from "node:crypto";
 import * as fs6 from "node:fs";
-import { execFileSync as execFileSync2 } from "node:child_process";
+import { execFileSync as execFileSync3 } from "node:child_process";
 import { setTimeout as sleep3 } from "node:timers/promises";
 
 // src/astra-genai-client.ts
@@ -82517,7 +82668,7 @@ async function getGenaiVideoStatus(input) {
   const temp = `${receipt.videoPath}.${process.pid}.download.mp4`;
   try {
     fs6.writeFileSync(temp, bytes, { flag: "wx", mode: 384 });
-    const probe2 = JSON.parse(execFileSync2("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:format=duration", "-of", "json", temp], { encoding: "utf8", timeout: 3e4 }));
+    const probe2 = JSON.parse(execFileSync3("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:format=duration", "-of", "json", temp], { encoding: "utf8", timeout: 3e4 }));
     if (!(probe2.streams?.[0]?.width > 0) || !(Number(probe2.format?.duration) > 0)) throw new Error("GenAI result has no usable video stream");
     if (fs6.existsSync(receipt.videoPath)) {
       if (createHash4("sha256").update(fs6.readFileSync(receipt.videoPath)).digest("hex") !== createHash4("sha256").update(bytes).digest("hex"))
@@ -84569,7 +84720,7 @@ import * as path9 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.119.0",
+  version: "0.120.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -86179,7 +86330,7 @@ function isManagedVideoCall(tool, input) {
 
 // src/storyboard.ts
 import { createHash as createHash7 } from "node:crypto";
-import { execFileSync as execFileSync3 } from "node:child_process";
+import { execFileSync as execFileSync4 } from "node:child_process";
 
 // src/scenes-vm.ts
 import vm from "node:vm";
@@ -86231,7 +86382,7 @@ function evaluateWindowScript(source, options = {}) {
 }
 
 // src/storyboard.ts
-import { existsSync as existsSync12, mkdirSync as mkdirSync4, readFileSync as readFileSync13, renameSync as renameSync3, statSync as statSync6, unlinkSync as unlinkSync3, writeFileSync as writeFileSync10 } from "node:fs";
+import { existsSync as existsSync12, mkdirSync as mkdirSync4, readFileSync as readFileSync13, renameSync as renameSync3, statSync as statSync7, unlinkSync as unlinkSync3, writeFileSync as writeFileSync10 } from "node:fs";
 import * as nodeModule2 from "node:module";
 import { basename as basename6, dirname as dirname4, join as join6, resolve as resolve4 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
@@ -86441,7 +86592,7 @@ function boardReadiness(win, boardDir) {
   const characters = Array.isArray(entries) ? entries : Object.entries(entries).map(([id, c]) => ({ ...c, id }));
   const assets = characters.flatMap((c) => Object.entries(c.panels ?? {}).map(([slot, name]) => {
     const file = typeof name === "string" && name.trim() ? resolve4(boardDir, name) : null;
-    const present = !!file && existsSync12(file) && statSync6(file).isFile();
+    const present = !!file && existsSync12(file) && statSync7(file).isFile();
     let decoding = "not_verified";
     if (present) {
       try {
@@ -86590,7 +86741,7 @@ function scenesPath(target) {
 function readBoard(target) {
   const file = scenesPath(target);
   if (!existsSync12(file)) throw new Error(`no scenes.js at ${file}`);
-  if (!statSync6(file).isFile()) throw new Error(`${file} is not a file`);
+  if (!statSync7(file).isFile()) throw new Error(`${file} is not a file`);
   const src = readFileSync13(file, "utf8");
   const header = [];
   for (const line of src.split("\n")) {
@@ -86865,7 +87016,7 @@ var scenarioCheckResultSchema = external_exports.object({
 function checkScenario(args, checkFile = CHECK_SCENARIO_FILE) {
   let raw = "";
   try {
-    raw = execFileSync3(process.execPath, [checkFile, args.path, "--json"], {
+    raw = execFileSync4(process.execPath, [checkFile, args.path, "--json"], {
       encoding: "utf8",
       timeout: 6e4,
       stdio: ["ignore", "pipe", "pipe"]
@@ -86898,7 +87049,7 @@ function checkStoryboard(args) {
   if (args.draft) argv.push("--draft");
   let raw = "";
   try {
-    raw = execFileSync3(process.execPath, argv, { encoding: "utf8", timeout: 6e4, maxBuffer: 16 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] });
+    raw = execFileSync4(process.execPath, argv, { encoding: "utf8", timeout: 6e4, maxBuffer: 16 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] });
   } catch (e2) {
     const err4 = e2;
     raw = err4.stdout || "";
@@ -86971,7 +87122,7 @@ function resolveTtsModel(provider, model) {
 }
 
 // src/tts-audio.ts
-import { execFileSync as execFileSync4 } from "node:child_process";
+import { execFileSync as execFileSync5 } from "node:child_process";
 import { mkdtempSync as mkdtempSync2, rmSync as rmSync4, writeFileSync as writeFileSync11 } from "node:fs";
 import { tmpdir as tmpdir2 } from "node:os";
 import { join as join7 } from "node:path";
@@ -87015,7 +87166,7 @@ function validateSpeechAudio(bytes, extension2) {
   try {
     const file = join7(dir, `audio.${extension2}`);
     writeFileSync11(file, bytes);
-    const result = JSON.parse(execFileSync4(
+    const result = JSON.parse(execFileSync5(
       "ffprobe",
       [
         "-v",
@@ -87033,7 +87184,7 @@ function validateSpeechAudio(bytes, extension2) {
     if (!names[extension2] || !String(result.format?.format_name).split(",").includes(names[extension2]) || !result.streams?.some((s2) => s2.codec_type === "audio") || !Number.isFinite(duration3) || duration3 <= 0) {
       throw new Error("Invalid speech audio format or duration");
     }
-    const decoded = execFileSync4(
+    const decoded = execFileSync5(
       "ffmpeg",
       [
         "-v",
@@ -88312,7 +88463,7 @@ function prepareSpeech(generator, generation2) {
 }
 
 // src/usage-ledger.ts
-import { execFileSync as execFileSync5 } from "node:child_process";
+import { execFileSync as execFileSync6 } from "node:child_process";
 import { appendFileSync, existsSync as existsSync14, mkdirSync as mkdirSync6 } from "node:fs";
 import path11 from "node:path";
 var EPISODE_MARKER = path11.join("storyboard", "scenes.js");
@@ -88408,7 +88559,7 @@ var PRICED_VIDEO_KEYS = /* @__PURE__ */ new Set([
 var ELEVENLABS_KEY = { eleven_v4: "tts.elevenlabs" };
 function probeSeconds(file) {
   try {
-    const out = execFileSync5("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], {
+    const out = execFileSync6("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], {
       encoding: "utf8",
       timeout: 15e3,
       stdio: ["ignore", "pipe", "ignore"]
@@ -88772,7 +88923,7 @@ var checkedSpeechSchema = external_exports.object({
   }
 });
 var score = external_exports.number().finite().min(0).max(100);
-var reviewSchema = external_exports.object({
+var reviewSchema2 = external_exports.object({
   accuracy: score,
   pronunciation: score,
   naturalness: score,
@@ -88980,7 +89131,7 @@ async function generateCheckedSpeech(input, dependencies) {
           last.pending = false;
           last.failures = [...Array.isArray(last.failures) ? last.failures : [], "Rejected during final listening: " + request.rejectTake.reason];
         }
-        if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && transcriptSatisfied && existsSync15(output2) && old.audioSha256 === sha256(readFileSync15(output2)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, storedTranscript, reviewSchema.parse(last.review), last.signal.duration).length) {
+        if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && transcriptSatisfied && existsSync15(output2) && old.audioSha256 === sha256(readFileSync15(output2)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, storedTranscript, reviewSchema2.parse(last.review), last.signal.duration).length) {
           if (old.voiceSettings === void 0) save3("pass", { audioSha256: old.audioSha256 });
           const lastSpacing = last.spacing;
           return {
@@ -89055,7 +89206,7 @@ async function generateCheckedSpeech(input, dependencies) {
       let listened;
       if (!failures.length) {
         listened = await deps.listen(output2, request);
-        listened.review = reviewSchema.parse(listened.review);
+        listened.review = reviewSchema2.parse(listened.review);
         failures = reviewFailures(request.expectedText, listened.transcript, listened.review, signal.duration);
       }
       if (audioSha256 !== sha256(readFileSync15(output2))) throw new Error("Audio changed during review");
@@ -95078,15 +95229,17 @@ Returns: a text block with the saved .wav path, model, duration, and generation 
     name: "production_workflow",
     title: "Advance verified production stages",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: "Enforce episode preparation order after project setup: characters (text+images), text_storyboard (content/dialogue/narration), props (text+images), backgrounds (text+images), image_storyboard, then video. status reports the next stage; begin registers every asset id and file path; complete verifies actual text and decodable images and hashes them. rewind invalidates the selected stage and all later stages without deleting media. Missing or changed artifacts block downstream generation. Existing episodes register reused artifacts in the same order; this does not authorize spending. Not-applicable reasons are allowed only for empty character/prop/background categories. Host tools and arbitrary shell writes remain outside this server boundary.",
+    description: "Enforce fixed episode order: characters, text_storyboard, context_review, props, backgrounds, camera_review, blender_composition, image_storyboard, image_review, video, video_review. Reviews require independent evidence against current input hashes, a frozen rubric, no unresolved corrections and actual playback for video. Context review reconstructs audience understanding from cited text and cut IDs. Blender compositions must be actual render receipts and actual image-generation references. begin registers artifacts; complete validates them; rewind archives receipts and invalidates descendants. No skip, waiver or alternate renderer. Host tools and arbitrary shell writes remain outside this server boundary.",
     inputSchema: { type: "object", additionalProperties: false, required: ["episode", "action"], properties: {
       episode: { type: "string", description: "Absolute episode directory." },
       action: { type: "string", description: "Inspect, register, finish or invalidate a stage.", enum: ["status", "begin", "complete", "rewind"] },
-      stage: { type: "string", description: "Required for begin, complete and rewind.", enum: ["characters", "text_storyboard", "props", "backgrounds", "image_storyboard"] },
+      stage: { type: "string", description: "Required for begin, complete and rewind.", enum: ["characters", "text_storyboard", "context_review", "props", "backgrounds", "camera_review", "blender_composition", "image_storyboard", "image_review", "video", "video_review"] },
       entries: { type: "array", description: "Complete inventory for the stage, required on begin unless notApplicable.", items: { type: "object", additionalProperties: false, required: ["id", "text"], properties: {
         id: { type: "string", description: "Use this exact assetId in image_plan." },
-        text: { type: "string", description: "Nonempty text artifact path, relative to episode or absolute." },
-        image: { type: "string", description: "Actual or planned image path; required except in text_storyboard. Set image_plan output to this path." }
+        text: { type: "string", description: "Text artifact, review JSON, or Blender composition.json receipt path. Review begin requires criteria path/hash before evaluation." },
+        image: { type: "string", description: "Actual or planned image path for asset/image stages. Use the same cut id as camera_review and blender_composition." },
+        blend: { type: "string", description: "Actual .blend source file for blender_composition only." },
+        video: { type: "string", description: "Actual or planned video file for video stage only; entry id is video_plan shotId." }
       } } },
       notApplicable: { type: "string", description: "Concrete reason this category has no subjects; entries must be empty." }
     } }
@@ -96301,7 +96454,7 @@ for (const tool of TOOLS) {
 import * as fs16 from "node:fs";
 import path15 from "node:path";
 import os from "node:os";
-import { execFileSync as execFileSync7 } from "node:child_process";
+import { execFileSync as execFileSync8 } from "node:child_process";
 import { createRequire as createRequire4 } from "node:module";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
@@ -96369,9 +96522,9 @@ function musicTransaction(directory2, openingSpendUsd, update) {
 import * as fs15 from "node:fs";
 import path14 from "node:path";
 import { createHash as createHash10, randomUUID as randomUUID4 } from "node:crypto";
-import { execFileSync as execFileSync6 } from "node:child_process";
+import { execFileSync as execFileSync7 } from "node:child_process";
 function readMusicMetadata(file) {
-  const result = JSON.parse(execFileSync6(
+  const result = JSON.parse(execFileSync7(
     "ffprobe",
     [
       "-v",
@@ -96399,7 +96552,7 @@ function normalizeMusicFile(source, target) {
   fs15.mkdirSync(path14.dirname(target), { recursive: true });
   const temporary = target + "." + randomUUID4() + ".wav";
   try {
-    execFileSync6(
+    execFileSync7(
       "ffmpeg",
       [
         "-nostdin",
@@ -96459,7 +96612,7 @@ function gate(tool) {
 }
 function environment(tool) {
   gate(tool);
-  for (const binary of ["ffmpeg", "ffprobe"]) execFileSync7(binary, ["-version"], { timeout: 1e4, stdio: "ignore" });
+  for (const binary of ["ffmpeg", "ffprobe"]) execFileSync8(binary, ["-version"], { timeout: 1e4, stdio: "ignore" });
   const engine = MUSIC_ADAPTERS[tool].engine;
   if (engine === "lyria") requireGeminiKey();
   if (engine === "suno-api") requireSunoKey();
@@ -96868,6 +97021,7 @@ function planImage(raw) {
     if (!withinDirectory(context2.directory, outputFile)) throw new Error("image_output_outside_directory");
   }
   requireWorkflow(input.directory, "image", input.assetId, outputFile);
+  requireCompositionReference(input.directory, input.assetId, args);
   const inputs = selection.engine === "host" ? {} : inputFiles2(args, context2.directory);
   if (selection.engine === "astra-genai")
     buildGenaiImageBody((tool === "astra_genai_edit" ? genaiImageEditSchema : genaiImageSchema).parse(args));
@@ -96923,6 +97077,7 @@ async function executeImage(raw, dispatch) {
   const { id, ...body } = plan2;
   if (id !== input.planId || routingHash(body) !== id || plan2.directory !== directory2) throw new Error("image_plan_invalid");
   requireWorkflow(directory2, "image", plan2.assetId, plan2.outputFile);
+  requireCompositionReference(directory2, plan2.assetId, plan2.args);
   if (plan2.workflowRevision !== workflowRevision(directory2)) throw new Error("workflow_plan_stale: prepare a new image plan");
   if (plan2.execution === "host_handoff") throw new Error("host_handoff_required: call the selected host tool, never substitute an API");
   gate2(plan2.tool);
@@ -97105,7 +97260,7 @@ async function refreshGenaiImage(directory2, requestId) {
 
 // src/video-routing.ts
 import * as fs20 from "node:fs";
-import { execFileSync as execFileSync8 } from "node:child_process";
+import { execFileSync as execFileSync9 } from "node:child_process";
 import path20 from "node:path";
 import { createRequire as createRequire7 } from "node:module";
 import { fileURLToPath as fileURLToPath7 } from "node:url";
@@ -97466,7 +97621,7 @@ function checkVideoEnvironment(tool) {
 }
 function planVideo(raw) {
   const input = videoPlanSchema.parse(raw);
-  requireWorkflow(input.episode, "video");
+  requireWorkflow(input.episode, "video", input.shotId);
   const context2 = routingContext(input.episode, input.shotId);
   const { selection } = context2;
   const tool = input.tool || Object.entries(VIDEO_ADAPTERS).find(([, a]) => a.engine === selection.engine && a.operation === input.operation)?.[0];
@@ -97502,7 +97657,7 @@ function planVideo(raw) {
   const inputs = inputFiles3(args, context2.episode);
   if (tool === "astra_genai_msr") buildGenaiMsrBody(genaiMsrSchema.parse(args));
   if (tool === "astra_video_retake" && selection.resolution) {
-    const probe2 = JSON.parse(execFileSync8("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", String(args.sourceVideoPath)], { encoding: "utf8", timeout: 15e3 }));
+    const probe2 = JSON.parse(execFileSync9("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", String(args.sourceVideoPath)], { encoding: "utf8", timeout: 15e3 }));
     const stream = probe2.streams?.[0];
     if (!stream || `${stream.width}x${stream.height}` !== selection.resolution)
       throw new Error("model_selection_mismatch: retake inherits source dimensions; select the source resolution");
@@ -97557,7 +97712,7 @@ async function executeVideo(raw, dispatch) {
   const { id, ...body } = plan2;
   if (id !== request.planId || hash2(body) !== id || plan2.episode !== episode) throw new Error("Invalid video plan");
   if (plan2.execution === "host_handoff") throw new Error("host_handoff_required: use the selected host CLI; no API substitution");
-  requireWorkflow(episode, "video");
+  requireWorkflow(episode, "video", plan2.shotId);
   if (plan2.workflowRevision !== workflowRevision(episode)) throw new Error("workflow_plan_stale: prepare a new video plan");
   const context2 = routingContext(episode, plan2.shotId);
   if (context2.revision !== plan2.contextRevision) throw new Error("video_plan_stale: selection or authorization changed");
@@ -97771,7 +97926,7 @@ async function routeSpeech(input) {
 import { execFile as execFile7 } from "node:child_process";
 import { promisify as promisify3 } from "node:util";
 import { createHash as createHash14, randomUUID as randomUUID5 } from "node:crypto";
-import { createReadStream as createReadStream3, mkdirSync as mkdirSync14, realpathSync as realpathSync8, statSync as statSync10, writeFileSync as writeFileSync17 } from "node:fs";
+import { createReadStream as createReadStream3, mkdirSync as mkdirSync14, realpathSync as realpathSync8, statSync as statSync11, writeFileSync as writeFileSync17 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
 import path21 from "node:path";
 var exec2 = promisify3(execFile7);
@@ -97802,7 +97957,7 @@ async function digest3(file) {
 }
 async function hostReview(input) {
   const r2 = hostReviewSchema.parse(input), file = realpathSync8(r2.mediaPath);
-  if (!statSync10(file).isFile() || !statSync10(file).size) throw new Error("Provide a nonempty local media file");
+  if (!statSync11(file).isFile() || !statSync11(file).size) throw new Error("Provide a nonempty local media file");
   const mediaSha256 = await digest3(file);
   const { stdout } = await exec2("ffprobe", ["-v", "error", "-show_format", "-show_streams", "-of", "json", file], { maxBuffer: 4 * 1024 * 1024 });
   const probe2 = JSON.parse(stdout), duration3 = Number(probe2.format.duration);
@@ -97862,7 +98017,7 @@ async function hostReview(input) {
           "2",
           output2
         ], { timeout: 3e4 });
-        if (!statSync10(output2).size) throw new Error("Frame extraction produced an empty image");
+        if (!statSync11(output2).size) throw new Error("Frame extraction produced an empty image");
         frames.push({ seconds, path: output2 });
       }
     }
@@ -98367,6 +98522,7 @@ var locationSchema = external_exports.object({
 }).strict();
 async function manageLocation(args) {
   const input = locationSchema.parse(args);
+  if (input.action === "render" && input.board) requireWorkflow(input.board, "composition", input.shotId);
   const contract2 = loader(join12(REFERENCES_DIR, "location-assets.js"));
   return contract2.run(input);
 }
@@ -98376,7 +98532,7 @@ import { createHash as createHash17, randomUUID as randomUUID7 } from "node:cryp
 import { readFileSync as readFileSync28, writeFileSync as writeFileSync20, renameSync as renameSync8, mkdirSync as mkdirSync17, existsSync as existsSync27 } from "node:fs";
 import { dirname as dirname7, resolve as resolve9, join as join13 } from "node:path";
 import * as nodeModule6 from "node:module";
-import { execFileSync as execFileSync9 } from "node:child_process";
+import { execFileSync as execFileSync10 } from "node:child_process";
 var voiceContract = () => nodeModule6.createRequire(import.meta.url)("../../skills/_shared/character-voice.js");
 var actingContract = () => nodeModule6.createRequire(import.meta.url)("../../skills/_shared/scene-acting.js");
 var delivery = external_exports.enum(["voiceover", "on_screen", "off_screen"]);
@@ -98442,7 +98598,7 @@ function audioProvenanceStatus(line, character) {
 function measuredDuration(line) {
   if (!line.audio || !existsSync27(line.audio.path)) return null;
   try {
-    const value = Number(execFileSync9("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
+    const value = Number(execFileSync10("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
     return Number.isFinite(value) && value > 0 ? value : null;
   } catch {
     return null;
@@ -98683,7 +98839,7 @@ function manageSpeech(args) {
 // src/acting-review.ts
 import { execFile as execFile8 } from "node:child_process";
 import { createHash as createHash18, randomUUID as randomUUID8 } from "node:crypto";
-import { existsSync as existsSync28, mkdirSync as mkdirSync18, readFileSync as readFileSync29, realpathSync as realpathSync9, renameSync as renameSync9, rmSync as rmSync10, statSync as statSync11, writeFileSync as writeFileSync21 } from "node:fs";
+import { existsSync as existsSync28, mkdirSync as mkdirSync18, readFileSync as readFileSync29, realpathSync as realpathSync9, renameSync as renameSync9, rmSync as rmSync10, statSync as statSync12, writeFileSync as writeFileSync21 } from "node:fs";
 import path22 from "node:path";
 import { homedir as homedir5 } from "node:os";
 import { promisify as promisify4 } from "node:util";
@@ -98751,7 +98907,7 @@ var actingObservationSchema = external_exports.object({
 var hash5 = (data) => createHash18("sha256").update(data).digest("hex");
 var currentHash = (file) => {
   try {
-    const stat4 = statSync11(file);
+    const stat4 = statSync12(file);
     return stat4.isFile() && stat4.size <= MAX_BYTES ? hash5(readFileSync29(file)) : null;
   } catch {
     return null;
@@ -99014,7 +99170,7 @@ async function reviewActing2(input, deps) {
   actingReviewTimeout(request.focus);
   const policy = request.focus === "cinematography" ? CINEMATOGRAPHY_POLICY : request.mode === "audio" ? AUDIO_POLICY : VISUAL_POLICY;
   const mediaPath = realpathSync9(request.mediaPath);
-  const stat4 = statSync11(mediaPath);
+  const stat4 = statSync12(mediaPath);
   if (!stat4.isFile() || stat4.size === 0 || stat4.size > MAX_BYTES) throw new Error("Review requires a nonempty media file no larger than 12 MiB");
   const bytes = readFileSync29(mediaPath);
   const probe2 = await deps.probe(mediaPath);
@@ -99136,7 +99292,7 @@ async function reviewActing2(input, deps) {
 
 // src/threads-gate.ts
 import { createHash as createHash19, randomUUID as randomUUID9 } from "node:crypto";
-import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync19, readFileSync as readFileSync30, realpathSync as realpathSync10, renameSync as renameSync10, statSync as statSync12, writeFileSync as writeFileSync22 } from "node:fs";
+import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync19, readFileSync as readFileSync30, realpathSync as realpathSync10, renameSync as renameSync10, statSync as statSync13, writeFileSync as writeFileSync22 } from "node:fs";
 import { dirname as dirname8, join as join14, resolve as resolve10 } from "node:path";
 import { fileURLToPath as fileURLToPath8 } from "node:url";
 import { spawnSync as spawnSync3 } from "node:child_process";
@@ -99159,7 +99315,7 @@ var draftSchema = external_exports.object({
   submitter: nonempty.optional(),
   submitterContext: nonempty.optional()
 });
-var reviewSchema2 = external_exports.object({
+var reviewSchema3 = external_exports.object({
   draftId: nonempty,
   bodyHash: hashSchema,
   axis: external_exports.enum(AXES2),
@@ -99234,7 +99390,7 @@ function createThreadsDraft(args) {
 }
 function submitThreadsReview(args) {
   return gateCall("threads_review_submit", args, () => {
-    const input = reviewSchema2.strict().parse(args);
+    const input = reviewSchema3.strict().parse(args);
     const draft = load5(input.draftId);
     if (input.bodyHash !== draft.bodyHash) throw new Error("Review body hash mismatch");
     if (draft.surface === "reply" && input.axis !== "voice") throw new Error("Reply drafts use voice review only");
@@ -99280,9 +99436,9 @@ function checkThreadsEpisode(input) {
     const topic = channelSchema.parse(input.episodeRef);
     const root = realpathSync10(join14(process.cwd(), "data", channel, "episodes"));
     const episode = realpathSync10(join14(root, topic));
-    if (dirname8(episode) !== root || !statSync12(episode).isDirectory()) throw new Error("Invalid episode directory");
+    if (dirname8(episode) !== root || !statSync13(episode).isDirectory()) throw new Error("Invalid episode directory");
     const board = realpathSync10(join14(episode, "storyboard", "scenes.js"));
-    if (!board.startsWith(episode + "/") || !statSync12(board).isFile()) throw new Error("Missing episode storyboard");
+    if (!board.startsWith(episode + "/") || !statSync13(board).isFile()) throw new Error("Missing episode storyboard");
     const approvalPath = realpathSync10(join14(episode, "threads-publish-approval.json"));
     if (dirname8(approvalPath) !== episode) throw new Error("Invalid episode approval path");
     const approval = JSON.parse(readFileSync30(approvalPath, "utf8"));
@@ -102508,7 +102664,7 @@ async function reviewFinalSpeech(input, deps) {
       const same = Object.entries(base).every(([k, v]) => ["mediaSha256", "expectedText"].includes(k) || old[k] === v);
       if (old.audioSha256 === base.audioSha256 && old.textSha256 === base.textSha256 && old.status === "fail") return save3("fail", { reused: true, signal: old.signal, transcript: old.transcript, transcriptCheck: transcriptCheck ?? old.transcriptCheck ?? null, failures: old.failures, review: old.review, error: "This exact final audio already failed; fix the audio before another listening review" });
       if (same && old.status === "pass" && (!transcriptCheck || typeof old.transcript === "string")) {
-        const review = reviewSchema.parse(old.review);
+        const review = reviewSchema2.parse(old.review);
         if (!signalFailures(old.signal, request.expectedText, 1800).length && !reviewFailures(request.expectedText, typeof old.transcript === "string" ? old.transcript : null, review, old.signal.duration).length && (review.continuity ?? 0) >= 95 && review.continuityEvidence) return save3("pass", { reused: true, signal: old.signal, transcript: old.transcript, transcriptCheck: transcriptCheck ?? old.transcriptCheck ?? null, review, failures: [] });
       }
     }
@@ -102589,7 +102745,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
           filename: "final.wav"
         }), transcriptCheck: request.transcriptCheck };
         const result = await deps.listen(file, reviewRequest, true);
-        reviewSchema.parse(result.review);
+        reviewSchema2.parse(result.review);
         evidence = { ...binding, signal, ...result, status: "pass" };
         const failures2 = chapters.listeningFailures(evidence);
         evidence = { ...evidence, status: failures2.length ? "fail" : "pass", failures: failures2 };
@@ -106094,7 +106250,7 @@ ROUTES.music_status = async (args) => text2(JSON.stringify(musicStatus(args), nu
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.119.0" },
+  { name: "social-flow", version: "0.120.0" },
   { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -106177,6 +106333,14 @@ process.once("SIGTERM", gracefulShutdown);
 async function main() {
   if (process.argv[2] === "--workflow") {
     console.log(JSON.stringify(manageWorkflow(JSON.parse(readFinalRequest(process.argv[3], "utf8"))), null, 2));
+    return;
+  }
+  if (process.argv[2] === "--workflow-check-delivery") {
+    requireWorkflow(process.argv[3], "delivery");
+    if (process.argv[4]) {
+      const manifest2 = JSON.parse(readFinalRequest(process.argv[4], "utf8"));
+      requireReviewedVideos(process.argv[3], manifest2.videoSha256 ?? {});
+    }
     return;
   }
   if (process.argv[2] === "--workflow-check-video") {
