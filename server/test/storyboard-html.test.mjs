@@ -162,6 +162,7 @@ test('location planning sheets render without Blender, link shots and distinguis
   const start = template.indexOf('  function locationSheetsHtml(');
   const end = template.indexOf('  h += locationSheetsHtml', start);
   const context = {
+    window: {LOCATION_DETAIL_LINKS:{room:'../../../assets/locations/details/room.html'},LOCATION_REVIEW:[{id:'room',shotId:'s1'}]},
     LANG: 'ko', esc: value => String(value ?? '').replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;'),
     doc: { locations: [{ id: 'room', name: '작업실 <동쪽>', description: '작은 방', layout: '서쪽 문, 중앙 탁자', lighting: '오후 창빛', invariants: ['문 위치', '탁자 위치'], sheetPath: '../../../assets/locations/room/index.html' }] },
     shots: [{ id: 's1', title: '컵 전달', visual: { locationId: 'room' } }, { id: 's2', visual: { locationId: 'street' } }],
@@ -169,6 +170,8 @@ test('location planning sheets render without Blender, link shots and distinguis
   const render = () => runInNewContext(template.slice(start, end) + '\nlocationSheetsHtml(doc, shots)', context);
   assert.match(render(), /작업실 &lt;동쪽>/);
   assert.match(render(), /서쪽 문, 중앙 탁자/);
+  assert.match(render(), /data-location-shot="s1"/);
+  assert.match(render(), /details\/room.html/);
   assert.match(render(), /문 위치 · 탁자 위치/);
   assert.match(render(), /href="#shot-1"/);
   assert.doesNotMatch(render(), /href="#shot-2"/);
