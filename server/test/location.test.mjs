@@ -1,3 +1,6 @@
+import {runInNewContext} from 'node:vm';
+import {Vector3} from 'three';
+import {createActors,updateActors} from '../location-actors.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
@@ -186,6 +189,8 @@ test('real Blender renders one shared set, moving actors, gaze and matching prev
     try{
       const m=structuredClone(spec);
       m.objects=m.objects.filter(o=>['floor','door','door-handle','desk-top','toolbox'].includes(o.id));
+      m.objects.push({id:'gaze-wall',label:'Gaze occluder',kind:'box',position:[0,0,1],size:[.1,.5,2],color:'#aaaaaa'});
+      m.states.open.objects['gaze-wall']={visible:false};
       m.states.day.objects.toolbox={position:[-4,1.15,1.12]};
       m.states.open.objects.toolbox={position:[4,1.15,1.12]};
       m.cameras={wide:{position:[3,-5,3],target:[0,.5,.9],lensMm:35,width:480,height:270,end:{position:[2.5,-4.5,2.8],target:[.2,.5,.9]}}};
@@ -197,7 +202,18 @@ test('real Blender renders one shared set, moving actors, gaze and matching prev
       const sourceHash=L.fileHash(path.join(path.dirname(built.manifest),'source.blend'));
       const stills=L.render(win,0,boardDir);
       for(const f of Object.values(stills.frames))assert.ok(fs.statSync(path.join(boardDir,f.path)).size>1000);
+      const spatial=L.references(win,0,boardDir);
+      assert.equal(spatial.spatialPaths.length,6);
+      assert.equal(spatial.spatial.fingerprint,stills.fingerprint);
+      assert.equal(spatial.spatial.views.start.actors.length,2);
+      assert.equal(spatial.spatial.views.start.actors[0].cameraSamples.length,5);
+      assert.equal(spatial.spatial.views.end.stateId,'open');
+      assert.equal(spatial.spatial.views.start.actors[0].gaze.target,'B');
+      assert.equal(spatial.spatial.views.start.actors[0].gaze.blockedBy,'gaze-wall');
+      assert.equal(spatial.spatial.views.end.actors[0].gaze.blockedBy,null);
+      assert.ok(spatial.spatial.views.start.actorDistances[0].floorOriginDistanceMetres>0);
       const record=L.previz(win,0,boardDir,{seconds:2,fps:24});
+      assert.deepEqual(L.references(win,0,boardDir).spatial,spatial.spatial);
       assert.equal(record.firstFrame,win.SCENES[0].visual.location.frames.start.path);
       assert.equal(record.locationBinding.fingerprint,win.SCENES[0].visual.location.fingerprint);
       assert.equal(L.fileHash(path.join(path.dirname(built.manifest),'source.blend')),sourceHash);
@@ -217,3 +233,43 @@ test('real Blender renders one shared set, moving actors, gaze and matching prev
       if(kept)console.log('Spatial render evidence: '+boardDir);
     }finally{if(!kept)fs.rmSync(dir,{recursive:true,force:true});}
   });
+
+test('spatial evidence rejects changed bytes and stale fingerprints',()=>fixture(f=>{
+  ready(f);const location=f.win.SCENES[0].visual.location,p=path.join(f.boardDir,'locations/spatial.json');
+  fs.writeFileSync(p,JSON.stringify({version:1,fingerprint:location.fingerprint,views:{}}));
+  location.spatial={path:'locations/spatial.json',sha256:L.fileHash(p)};
+  assert.equal(L.references(f.win,0,f.boardDir).spatial.version,1);
+  fs.appendFileSync(p,' ');assert.throws(()=>L.references(f.win,0,f.boardDir),/spatial bytes/);
+  fs.writeFileSync(p,JSON.stringify({fingerprint:'old'}));location.spatial.sha256=L.fileHash(p);
+  assert.throws(()=>L.references(f.win,0,f.boardDir),/spatial report is stale/);
+}));
+
+test('web proxies share endpoint origins, height, gaze and Blender linear yaw',()=>{
+  const start=[{id:'A',height:2,color:'#ff0000',position:[1,2,0],rotationZDeg:350,gazeTarget:'B'},{id:'B',height:1.5,color:'#0000ff',position:[-2,0,0],rotationZDeg:0}];
+  const end=[{...start[0],position:[2,3,0],rotationZDeg:10},start[1]],model=createActors(start);
+  updateActors(model,start,end,.5,[]);
+  const a=model.actors.get('A'),b=model.actors.get('B');
+  assert.deepEqual(a.root.position.toArray(),[1.5,2.5,0]);assert.ok(Math.abs(a.root.rotation.z-Math.PI)<1e-8);
+  assert.equal(a.head.getWorldPosition(new Vector3()).z,1.82);
+  const direction=b.head.getWorldPosition(new Vector3()).sub(a.head.getWorldPosition(new Vector3())).normalize();
+  const facing=new Vector3(0,-1,0).applyQuaternion(a.head.getWorldQuaternion(a.head.quaternion.clone()));
+  assert.ok(facing.dot(direction)>.999999);
+  updateActors(model,start,end,1,[],false);
+  assert.deepEqual(a.root.position.toArray(),end[0].position);assert.equal(a.gaze.visible,false);
+  updateActors(model,start.map(x=>({...x,gazeTarget:'prop'})),end,0,[{id:'prop',position:[0,0,3]}]);
+  assert.ok(a.gaze.visible);assert.ok(Number.isFinite(a.head.quaternion.w));
+});
+
+test('timeline endpoint state matches exports and intermediate states cannot be exported',()=>{
+  const source=fs.readFileSync(new URL('../location-review-runtime.mjs',import.meta.url),'utf8');
+  const handler=source.split('\n').find(line=>line.trim().startsWith('time.oninput='));
+  const ctx={time:{value:'0'},e:{stateId:'day',endStateId:'open'},stateSelect:{},phase:{},stateExport:{},lens:{},info:{},
+    original:{lensMm:35,position:[0,0,2],target:[0,1,1]},
+    applyState:()=>{},refreshActors:()=>{},setCamera:()=>{},size:()=>{},word:(ko,en)=>en};
+  runInNewContext(handler,ctx);
+  for(const [value,phase,state,disabled] of [[100,'end','open',false],[50,'between','day',true],[0,'start','day',false]]){
+    ctx.time.value=String(value);ctx.time.oninput();
+    assert.equal(ctx.phase.value,phase);assert.equal(ctx.stateSelect.value,state);
+    assert.equal(ctx.selectedState,state);assert.equal(ctx.stateExport.disabled,disabled);
+  }
+});

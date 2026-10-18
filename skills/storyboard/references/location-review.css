@@ -16,3 +16,5 @@
 .location-error { color: #a52020; }
 @media (max-width: 700px) { .location-layout { grid-template-columns: minmax(0, 1fr); } .location-stage { height: 330px; } .location-review { padding: 0.75rem; } }
 @media print { .location-stage, .location-controls { display: none; } }
+
+.location-spatial { max-height: 24rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.8rem; }

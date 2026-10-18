@@ -6,6 +6,7 @@ import sys
 
 import bpy
 from mathutils import Vector
+from bpy_extras.object_utils import world_to_camera_view
 
 args = sys.argv[sys.argv.index('--') + 1:]
 job = json.load(open(args[0], encoding='utf-8'))
@@ -242,6 +243,91 @@ def render_previz(actors):
         bpy.ops.render.render(write_still=True)
 
 
+def spatial_report(actors, phase, spec, state_id):
+    """Measure authored geometry, never infer real-world truth from a render."""
+    scene = bpy.context.scene
+    bpy.context.view_layer.update()
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    pose = poses(phase)
+    meshes = [o for o in scene.objects if o.type == 'MESH' and not o.hide_render]
+
+    def owner(obj):
+        while obj.parent:
+            obj = obj.parent
+        return obj.name.removeprefix('actor-')
+
+    def obstruction(origin, target, exclude):
+        delta = target - origin
+        if delta.length < 1e-6:
+            return None
+        hits = []
+        for obj in meshes:
+            if owner(obj) in exclude:
+                continue
+            evaluated = obj.evaluated_get(depsgraph)
+            inverse = evaluated.matrix_world.inverted()
+            local_origin = inverse @ origin
+            local_target = inverse @ target
+            ray = local_target - local_origin
+            if ray.length < 1e-8:
+                continue
+            hit, point, _, _ = evaluated.ray_cast(
+                local_origin, ray.normalized(), distance=ray.length)
+            if hit:
+                distance = (evaluated.matrix_world @ point - origin).length
+                if distance < delta.length - 1e-5:
+                    hits.append((distance, owner(obj)))
+        return min(hits)[1] if hits else None
+
+    rows = []
+    for aid, (root, head) in actors.items():
+        height = next(a['height'] for a in job['blocking']['actors']
+                      if a['id'] == aid)
+        eye = head.matrix_world.translation.copy()
+        samples = []
+        for name, offset in [('head', (0, 0, .91)),
+                             ('chest', (0, 0, .65)),
+                             ('hips', (0, 0, .48)),
+                             ('left', (.22, 0, .61)),
+                             ('right', (-.22, 0, .61))]:
+            point = root.matrix_world @ (Vector(offset) * height)
+            ndc = world_to_camera_view(scene, scene.camera, point)
+            blocker = obstruction(scene.camera.location, point, {aid})
+            samples.append({'name': name, 'world': list(point),
+                            'screen': [ndc.x, ndc.y], 'depth': ndc.z,
+                            'inFrame': 0 <= ndc.x <= 1 and 0 <= ndc.y <= 1
+                            and scene.camera.data.clip_start <= ndc.z
+                            <= scene.camera.data.clip_end,
+                            'blockedBy': blocker})
+        target_id = pose[aid].get('gazeTarget')
+        target = None
+        if target_id in actors:
+            target = actors[target_id][1].matrix_world.translation
+        elif target_id and bpy.data.objects.get(target_id):
+            target = bpy.data.objects[target_id].matrix_world.translation
+        gaze = None
+        if target is not None:
+            gaze = {'target': target_id, 'distanceMetres': (target-eye).length,
+                    'blockedBy': obstruction(eye, target, {aid, target_id})}
+        rows.append({'id': aid, 'height': height, **pose[aid],
+                     'eyePosition': list(eye), 'gaze': gaze,
+                     'cameraSamples': samples})
+    distances = [{'from': a['id'], 'to': b['id'],
+                  'floorOriginDistanceMetres':
+                  (Vector(a['position'])-Vector(b['position'])).length}
+                 for i, a in enumerate(rows) for b in rows[i+1:]]
+    objects = []
+    for base in m['objects']:
+        obj = bpy.data.objects[base['id']]
+        objects.append({'id': base['id'], 'label': base['label'],
+                        'position': list(obj.matrix_world.translation),
+                        'dimensions': list(obj.dimensions),
+                        'rotationDeg': [math.degrees(v) for v in obj.rotation_euler],
+                        'visible': not obj.hide_render})
+    return {'phase': phase, 'stateId': state_id, 'camera': spec,
+            'actors': rows, 'objects': objects, 'actorDistances': distances}
+
+
 if job['action'] == 'build':
     bpy.ops.wm.read_factory_settings(use_empty=True)
     for spec in m['objects']:
@@ -294,12 +380,24 @@ else:
     else:
         bpy.context.scene.render.use_stamp = False
         bpy.context.scene.render.image_settings.file_format = 'PNG'
+        reports = {}
         for name, spec in job['cameras'].items():
-            phase = 'end' if name == 'end' else 'start'
+            phase = 'end' if name.startswith('end') else 'start'
             state_id = job.get('endStateId', job['stateId']) if phase == 'end' else job['stateId']
             apply_state(state_id)
             place_actors(actors, poses(phase), state_id)
             camera(spec)
             bpy.context.scene.render.filepath = os.path.join(out, name + '.png')
             bpy.ops.render.render(write_still=True)
+            reports[name] = spatial_report(actors, phase, spec, state_id)
+        report = {'version': 1, 'units': 'metres', 'up': 'Z',
+                  'fingerprint': job.get('fingerprint'),
+                  'provenance': m['provenance'], 'views': reports,
+                  'limits': ['Authored proxy geometry, not measured reality.',
+                             'Opaque mesh ray intersections; transparency is ignored.',
+                             'Five actor sample points, not silhouette visibility percentages.',
+                             'Screen coordinates use bottom-left origin.',
+                             'Gaze tests target centres; no field-of-view or perception claim.']}
+        with open(os.path.join(out, 'spatial.json'), 'w', encoding='utf-8') as stream:
+            json.dump(report, stream, ensure_ascii=False, indent=2)
 print('LOCATION_RENDER_OK')

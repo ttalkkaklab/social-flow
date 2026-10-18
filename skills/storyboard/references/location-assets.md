@@ -112,3 +112,30 @@ A runnable authored set is [location-example.js](location-example.js): `node loc
 After inspecting actual generated pixels, call `review` with verdict pass/warning/fail, reviewer and observed notes. Receipt and review bind output bytes; a changed output fails validation. The viewer displays the verdict without inventing a pass; a missing review reads as `not_reviewed`. End-frame generation requires the real generated opening image in visual.bg: `endFrameReady` stays false until that file is the receipted output, then endFrameImageArgs contains opening image followed by the location endpoint render. The pixel review travels with it as pass, warning, fail or `not_reviewed`.
 
 The general still assembler also carries location inputs: run `assemble-bg-prompt.js --json` and forward its image arguments. Bound locations reject text-only output so references cannot disappear silently. Production pre-call checks revalidate bindings and generated outputs.
+
+
+## Spatial evidence and background details
+
+`render` also writes start/end top and side views plus a hash-bound `spatial.json`.
+`references` returns `spatial`, `spatialPaths` (absolute paths for all six views), and
+`spatialAsset`. Read the report and inspect the images together when reasoning about
+blocking. Generation still receives only its shot endpoint image; auxiliary views are
+LLM review evidence, not extra image-model inputs. Existing endpoint-only renders remain
+usable; render again to add spatial evidence. A subsequent previz preserves matching evidence.
+
+The report names its metre/Z-up coordinate system, source provenance, endpoint state,
+camera, world positions, actor origin distances, gaze ray blockers, and five camera
+sample points per actor. Screen coordinates have a bottom-left origin. These are
+intersections with authored proxy meshes, not real-world measurements or a visible-area
+percentage. Transparent materials are treated as opaque. Gaze tests target centres and
+exclude source/target geometry; they do not establish human perception or field of view.
+Changed inputs invalidate the report with the reference images. Never infer a clear view
+from missing evidence, or call a proposed camera view the saved shot.
+
+The offline viewer includes actors, body facing, target-oriented heads and optional gaze
+arrows, endpoint selection and camera/actor path scrubbing. Exploration does not edit the
+shot. `storyboard-html.js` adds links from each background sheet to its linked 3D shots and
+its background detail page. Refresh the channel with `review-library.js` after refreshing
+boards: background catalogue cards open individual detail pages with the same viewer,
+endpoint/top/side images, and downloadable spatial evidence. Unbound sheets keep their
+text/image detail and show that no 3D set is connected. No paid generation is involved.

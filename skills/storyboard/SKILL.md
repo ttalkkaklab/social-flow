@@ -225,6 +225,10 @@ optional and belongs to produce (`location_manage` action `previz` on a Blender 
 shares the same set, camera and blocking. Camera, actor or endpoint changes invalidate those
 references. Continuity findings guide corrections without a new approval gate; record only
 actual image reviews. Local spatial renders make no paid calls.
+After a location render, read `references.spatial` and inspect `spatialPaths` for spatial
+reasoning. These are authored-geometry measurements, not a guarantee of LLM perception.
+Refresh both storyboard HTML and the channel review library so background detail pages
+show the same actor placement, views and evidence.
 
 Read [render routing](references/render-routing.md) and
 [visual direction](references/visual-direction.md) for relevant rendering choices, not old
