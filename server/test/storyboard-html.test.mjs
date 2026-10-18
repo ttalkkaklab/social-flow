@@ -90,3 +90,68 @@ test('dialogue portrait honors the episode cast image before channel images', ()
   delete context.CAST[0].panels.face;
   assert.match(render(), /src="resolved-face.png"/);
 });
+
+test('review shows every production cut, timing and motion file without substituting the representative', () => {
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const start = template.indexOf('  function productionCutsHtml(');
+  const end = template.indexOf('  function camOf(', start);
+  const context = {
+    LANG: 'en',
+    esc: value => String(value ?? '').replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;'),
+    scene: { visual: { src: 'unrelated-representative.png' }, productionPlan: { cuts: [
+      { kind: 'still', path: '../media/first.png', seconds: 2 },
+      { kind: 'motion', path: '../media/second.mp4', seconds: 3, start: 1 },
+      { kind: 'still', path: '../media/third.jpg', seconds: 4 },
+      { kind: 'still', seconds: 1 },
+    ] } },
+  };
+  const render = () => runInNewContext(template.slice(start, end) + '\nproductionCutsHtml(scene)', context);
+  const html = render();
+  assert.equal((html.match(/data-cut-index=/g) || []).length, 4);
+  assert.match(html, /src="\.\.\/media\/first.png"/);
+  assert.match(html, /<video src="\.\.\/media\/second.mp4" controls/);
+  assert.match(html, /src="\.\.\/media\/third.jpg"/);
+  assert.match(html, /Cut 2 · motion · 3s · Start 1s/);
+  assert.match(html, /Missing path/);
+  assert.match(html, /Display does not mean review approval/);
+  assert.doesNotMatch(html, /unrelated-representative/);
+  context.scene = { visual: { src: 'legacy.png' } };
+  assert.equal(render(), '');
+  context.scene = { productionPlan: { cuts: [{ path: 'javascript:alert(1)', seconds: -1 }] } };
+  assert.doesNotMatch(render(), /(?:src|href)="javascript:/);
+  assert.match(render(), /Duration unknown/);
+});
+
+test('motion review honors its source range and exposes missing or short media', () => {
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const start = template.indexOf('  function productionCutsHtml(');
+  const end = template.indexOf('  function camOf(', start);
+  const html = runInNewContext(template.slice(start, end) + '\nproductionCutsHtml(scene)', {
+    LANG: 'en', esc: value => String(value ?? ''),
+    scene: { productionPlan: { cuts: [{ kind: 'motion', path: 'source.mp4', start: 7, seconds: 3 }] } },
+  });
+  const handlers = Object.fromEntries([...html.matchAll(/(onloadedmetadata|onplay|ontimeupdate|onerror)="([^"]+)"/g)]
+    .map(([, name, code]) => [name, code.replaceAll('&lt;', '<')]));
+  const player = { dataset: { start: '7', end: '10', error: 'missing media' }, duration: 20,
+    currentTime: 0, nextElementSibling: { hidden: true }, pause() { this.paused = true; } };
+  const fire = name => new Function(handlers[name]).call(player);
+  fire('onloadedmetadata');
+  assert.equal(player.currentTime, 7);
+  player.currentTime = 10.2;
+  fire('ontimeupdate');
+  assert.equal(player.currentTime, 10);
+  assert.equal(player.paused, true);
+  fire('onplay');
+  assert.equal(player.currentTime, 7);
+  player.currentTime = 2;
+  fire('ontimeupdate');
+  assert.equal(player.currentTime, 7);
+  player.duration = 8;
+  fire('onloadedmetadata');
+  assert.equal(player.nextElementSibling.hidden, false);
+  player.nextElementSibling.hidden = true;
+  fire('onerror');
+  assert.equal(player.nextElementSibling.hidden, false);
+  assert.equal(player.nextElementSibling.textContent, 'missing media');
+  assert.match(html, /final edit effects are not included/);
+});

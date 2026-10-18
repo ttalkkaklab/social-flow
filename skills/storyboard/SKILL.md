@@ -122,6 +122,7 @@ For narrated or mixed scenes, apply [narration and visual grounding](references/
 before writing any source-image prompt. Decide what the picture contributes to the line,
 then stage that contribution; shared character, prop and background sheets constrain
 appearance, not meaning. Use the existing shot info/reason and opening/action fields.
+Inspect the complete cut sequence and episode-wide repetition using the linked grounding procedure; a representative image does not cover a multi-cut block.
 Check pictured evidence separately from what the voice explains, including deliberate
 context or reaction shots. A coherent voice track cannot certify the storyboard images.
 

@@ -1973,6 +1973,50 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
      is assembled out of them here and stored (§clip prompt), and produce sends it verbatim,
      so a slot left empty is a defect here, not there. */
   var CAM_SLOTS = ["movement", "speed", "framing", "end"];
+  // Production cuts are the review unit; a representative frame cannot certify them.
+  function productionCutsHtml(s) {
+    var cuts = s.productionPlan && s.productionPlan.cuts;
+    if (!Array.isArray(cuts) || !cuts.length) return '';
+    var ko = LANG === 'ko';
+    var heading = ko ? '제작 컷 전체' : 'All production cuts';
+    var rows = cuts.map(function (entry, index) {
+      var cut = entry || {};
+      var src = typeof cut.path === 'string' ? cut.path : '';
+      var local = src && !/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(src);
+      var duration = Number.isFinite(cut.seconds) && cut.seconds > 0 ? cut.seconds + 's' : (ko ? '길이 미확인' : 'Duration unknown');
+      var label = (ko ? '컷 ' : 'Cut ') + (index + 1) + ' · ' + (cut.kind || '?') + ' · ' + duration;
+      var media = '';
+      var fail = ko ? '파일을 표시할 수 없습니다. 경로를 확인하세요.' : 'Cannot display this file. Check its path.';
+      if (local && /\.(?:mp4|webm|mov|m4v)$/i.test(src)) {
+        var from = cut.start === undefined ? 0 : cut.start;
+        var validRange = Number.isFinite(from) && from >= 0 && Number.isFinite(cut.seconds) && cut.seconds > 0;
+        var rangeError = ko ? '재생 구간을 확인할 수 없습니다. 원본 길이와 시작·종료 시간을 확인하세요.' : 'Cannot verify this range. Check source duration and start/end times.';
+        var end = validRange ? from + cut.seconds : 0;
+        var handlers = validRange
+          ? ' onloadedmetadata="if(this.duration &lt; Number(this.dataset.end)){this.nextElementSibling.hidden=false;}this.currentTime=Number(this.dataset.start)"' +
+            ' onplay="if(this.currentTime &lt; Number(this.dataset.start)||this.currentTime >= Number(this.dataset.end)){this.currentTime=Number(this.dataset.start)}"' +
+            ' ontimeupdate="if(this.currentTime &lt; Number(this.dataset.start)){this.currentTime=Number(this.dataset.start)}if(this.currentTime >= Number(this.dataset.end)){this.pause();if(this.currentTime > Number(this.dataset.end)){this.currentTime=Number(this.dataset.end)}}"'
+          : '';
+        media = '<video src="' + esc(src) + '" controls playsinline preload="metadata" data-start="' + (validRange ? from : '') +
+          '" data-end="' + (validRange ? end : '') + '" aria-label="' + esc(label) + '"' + handlers +
+          ' onerror="this.nextElementSibling.textContent=this.dataset.error;this.nextElementSibling.hidden=false" data-error="' + esc(fail) + '"></video>' +
+          '<p class="production-cut-error"' + (validRange ? ' hidden' : '') + '>' + esc(rangeError) + '</p>' +
+          '<p>' + esc(ko ? '원본 구간 미리보기 · 최종 편집 효과는 포함하지 않습니다.' : 'Source range preview · final edit effects are not included.') + '</p>';
+      } else if (local && /\.(?:png|jpe?g|webp|gif|avif|svg)$/i.test(src)) {
+        media = '<a href="' + esc(src) + '" target="_blank" rel="noopener"><img src="' + esc(src) + '" alt="' + esc(label) + '" loading="lazy" onerror="this.parentNode.nextElementSibling.hidden=false"></a>' +
+          '<p class="production-cut-error" hidden>' + esc(fail) + '</p>';
+      } else {
+        media = '<p>' + esc(ko ? '미리보기 없음 · 실제 파일 검토 필요' : 'No preview · inspect the actual file') + '</p>';
+      }
+      var start = Number.isFinite(cut.start) ? ' · ' + (ko ? '시작 ' : 'Start ') + cut.start + 's' : '';
+      return '<figure class="production-cut" data-cut-index="' + index + '"><figcaption>' + esc(label + start) + '</figcaption>' + media +
+        '<p class="production-cut-path">' + esc(src || (ko ? '경로 없음' : 'Missing path')) + '</p></figure>';
+    }).join('');
+    return '<section class="production-cut-review" aria-label="' + esc(heading) + '"><h4>' + esc(heading) + ' · ' + cuts.length +
+      '</h4><p>' + esc(ko ? '등록된 컷을 순서대로 표시합니다. 표시 여부와 검토 통과 여부는 별개입니다. 영상은 직접 재생해서 확인하세요.' :
+      'Every declared cut appears in order. Display does not mean review approval. Play each video to inspect it.') + '</p><div class="production-cut-grid">' + rows + '</div></section>';
+  }
+
   function camOf(s) { return (s.visual && s.visual.camera) || null; }
   function camHtml(cam) {
     if (!cam) return "";
@@ -4266,6 +4310,11 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
          (spaceTextOf(g.space) ? '<span class="shot-info"><b>' + esc(T.spaceLabel) + "</b>" + esc(spaceTextOf(g.space)) + "</span>"
             : (genStill(s) && !FILL_FRAME[g.size] ? '<span class="shot-info shot-feel miss"><b>' + esc(T.spaceLabel) + "</b>" + esc(T.spaceMissing) + "</span>" : "")) +
          "</div>";
+
+    h += productionCutsHtml(s);
+    h += '<p class="representative-frame-label">' + esc(LANG === 'ko'
+      ? '아래는 대표 프레임·자막 배치입니다. 전체 제작 컷 검토를 대신하지 않습니다.'
+      : 'Below: representative frame and caption layout. This does not replace review of all production cuts.') + '</p>';
 
     if (s.type === "broll") {
       var v = s.visual || {};

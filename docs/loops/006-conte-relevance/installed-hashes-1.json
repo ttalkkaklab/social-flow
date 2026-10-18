@@ -1,0 +1,8 @@
+{
+  "skills/storyboard/SKILL.md": "e2ef19cd206157c3d4ce72d32211986122492e258c41bb9eac3315951e0921f4",
+  "skills/produce/SKILL.md": "f5d9fdd9129ebf1478e7b12c8fbc8e5d4de15e63f5458170c2ca1c75fd7e2d9a",
+  "skills/storyboard/references/narration-visual-grounding.md": "43f639fe3d033ec49b879b00f4177affe0c312491e7670db7fa2191458b2d198",
+  "skills/storyboard/references/storyboard-html-template.html": "c52b623c6312dc9fb09acd8400e477e3cba3954b1824bfe9f9a6f5d3f014d0b1",
+  "skills/channel/references/review-assets/review.css": "a59f34fb092a6dbfbfb224464d9a5ce404305e82711fdf3a8e00c9ad3256921a",
+  "agents/storyboard-reviewer.md": "d1c4a6360c292a447df8825793ca5e4bd3d03387850c111ab3a3fa8dfa52ad0c"
+}

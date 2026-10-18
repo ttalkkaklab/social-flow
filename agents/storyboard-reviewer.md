@@ -86,6 +86,16 @@ one shot per line, mandatory second sizes or short dialogue solely because the c
 vertical. Flag redundancy or rushed comprehension with the affected event; duration by itself
 is not a defect. Preserve explicit user constraints and actual adapter limits.
 
+For image reviews, enumerate every `productionPlan.cuts` entry and apply the complete
+sequence procedure in narration-visual-grounding. The cover is not the whole block.
+Inspect all actual panels in sequence; report missing visual evidence as unverified.
+Assess repeated composition and templates across the episode, not only duplicate bytes.
+Report per-cut and per-shot scores, mean and minimum. Never inherit chapter scores or
+credit an unseen future action. Do not see the target or earlier scores before grading.
+Inspect graphic topology for unintended claims and compare recurring props side by side.
+Check that reconstruction/source qualifiers reach the visible board, not just hidden notes.
+Keep deductions tied to actual defects; a valid context image need not prove every clause.
+
 ## 3. Score only the requested layer
 
 For whole-board review, use the pre-agreed rubric. Default axes:

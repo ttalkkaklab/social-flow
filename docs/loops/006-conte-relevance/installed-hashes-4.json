@@ -1,0 +1,102 @@
+[
+  {
+    "file": "agents/storyboard-reviewer.md",
+    "sha256": "267ae662a371dd3d7ec7a4e2c18b441b45cdb36bd9c6c5cb88791c061c0f16cc",
+    "bothCachesVerified": true
+  },
+  {
+    "file": "skills/_shared/host-review.md",
+    "sha256": "12bbe0a222796bc19e5401d07ce36ed773525b623f064fed9bc00c4a94b39b0a",
+    "bothCachesVerified": true
+  },
+  {
+    "file": "skills/channel/references/review-assets/review.css",
+    "sha256": "a59f34fb092a6dbfbfb224464d9a5ce404305e82711fdf3a8e00c9ad3256921a",
+    "bothCachesVerified": true
+  },
+  {
+    "file": "skills/produce/SKILL.md",
+    "sha256": "70a67d407dffc88e6b0954dbbdb493455b562ab0e8513a1e7dee42111b901087",
+    "bothCachesVerified": true
+  },
+  {
+    "file": "skills/produce/references/motion-contract.md",
+    "sha256": "a77421fc6e97fcae097a840eec0df2b30e3da5cf6d890bc535b19ca935e83fb0",
+    "bothCachesVerified": true
+  },
+  {
+    "file": "skills/produce/references/motion-expectation.js",
+    "sha256": "b84807f5036009790ee7c6fa0fe94982bce6361ef818d0b047ec0e7fbe5437c6",
+    "bothCachesVerified": true
+  },
+  {
+    "file": "skills/produce/references/motion-production.md",
+    "sha256": "f3497fb1eeafd8ceb4e637fafc48362818ea06c147e378c76777857f09d70dcd",
+    "bothCachesVerified": true
+  },
+  {
+    "file": "skills/produce/references/motion-render-cache.mjs",
+    "sha256": "e04d423bb370a07e2ac4104a062611b13c66149d8cdf157b7d5e8e12c93c8407",
+    "bothCachesVerified": true
+  },
+  {
+    "file": "skills/produce/references/prepare-chart-slide.js",
+    "sha256": "64281d64382b018ea63808080c7e055cbea1d4c464f376e1e4c9231d79dc937d",
+    "bothCachesVerified": true
+  },
+  {
+    "file": "skills/produce/references/render-motion-slide.mjs",
+    "sha256": "6744e27051f73d7cf990f8a75110c74336641d1a19cdf7217bf698311b80cee7",
+    "bothCachesVerified": true
+  },
+  {
+    "file": "skills/produce/references/verify-assembled.js",
+    "sha256": "405a3201039d8ccf67925c725a692c33e71228bb586b90c33a582c85d6206a90",
+    "bothCachesVerified": true
+  },
+  {
+    "file": "skills/storyboard/SKILL.md",
+    "sha256": "0192f506c765e870cc887d6301b469c04baf022298fa349fc180bcad3d4af1ea",
+    "bothCachesVerified": true
+  },
+  {
+    "file": "skills/storyboard/references/chart-design.md",
+    "sha256": "f007663d78ddc0656fd520aa7b5572e523c5ddf7af489d1b00f89c6ad5b58382",
+    "bothCachesVerified": true
+  },
+  {
+    "file": "skills/storyboard/references/chart-runtime.js",
+    "sha256": "526a823091bc5734a23a971d2da24fa39bb160e4af3988245cede5107d2b0c68",
+    "bothCachesVerified": true
+  },
+  {
+    "file": "skills/storyboard/references/chart-slide-template.html",
+    "sha256": "53fd151ca096946148fc2d21fe607d7d1f90c8ac62d2f68769f36ccc70adb2a2",
+    "bothCachesVerified": true
+  },
+  {
+    "file": "skills/storyboard/references/check-slide.js",
+    "sha256": "594c369d78e5ebb7054e6f3613b1abb4bbbdfce1a2dabb8e009347dfb56b964c",
+    "bothCachesVerified": true
+  },
+  {
+    "file": "skills/storyboard/references/narration-visual-grounding.md",
+    "sha256": "d58fd44adc0ef6426a7bf2e15fac42291b7e8443f7bafa63083b16cbed3edc1a",
+    "bothCachesVerified": true
+  },
+  {
+    "file": "skills/storyboard/references/render-routing.js",
+    "sha256": "2fed5897038979ab46188c1df7e76f9d2c36d716f681e8d96bfffb18653c024a",
+    "bothCachesVerified": true
+  },
+  {
+    "file": "skills/storyboard/references/storyboard-html-template.html",
+    "sha256": "8a5405d0ea535dde865809a2b17bb3f4385eb62abc716db1941c841b011ef81a",
+    "bothCachesVerified": true
+  },
+  {
+    "file": "skills/storyboard/references/visual-coverage-audit.js",
+    "sha256": "71f63371e91656aa975feb4f0462b35197cb818b82b3d549fb068f536f44b539",
+    "bothCachesVerified": true
+  }
+]

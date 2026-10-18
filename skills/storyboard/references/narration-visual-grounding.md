@@ -112,3 +112,124 @@ work together. The picture-only pass need not reconstruct an entire documentary 
 it detects generic or misleading imagery that narration masks. Report a deliberate context
 or reaction shot as such, and assess its surrounding scene. Inspect actual playback for
 completed actions and timing; sampled frames cannot certify the whole clip.
+
+
+## Review the complete visual sequence, not its cover
+
+A narration block can contain several editorial cuts. `visual.src` is only its
+representative image when `productionPlan.cuts` exists; it is not proof of complete
+coverage. Enumerate every cut in playback order, with its path, duration and actual
+image or inspected video frame. Never attach only `cuts[0]` and call the block reviewed.
+Video-only entries remain visually unverified until opened or sampled; sampled frames
+establish composition only. Preserve the distinction between a source opening, a conte
+panel, an editorial cut and completed playback.
+
+Before drawing, make an episode-wide picture sequence. Compare each cut with both its
+neighbours and earlier uses: subject, action, object state, scale, camera position,
+setting and graphic structure. Changing words in the same three-box diagram is still
+visual repetition. Changing a filename, crop or camera push does not create a new event.
+A deliberate callback needs a visible new consequence or a bounded editorial role;
+its repetition cost still counts. Do not delete substantive narration to fit spare art.
+
+Use a map for spatial relations, a quantitative chart for amounts, attributable evidence
+for documentary claims and staged action for reconstructed events. These are choices
+based on the information, not quotas. A generic card factory must not silently replace
+missing maps, documents, action or reactions. Related words on a card do not establish
+that its arrows express a meaningful causal, temporal or organizational relation.
+
+For a requested image-improvement loop, freeze the user's rubric before authoring.
+When relevance and repetition are the priority, use content agreement 50, new visual
+information/nonrepetition 35 and visual craft 15. Open actual images, describe visible
+facts first, then justify each deduction. An absent decisive comparison cannot receive
+near-full agreement; a duplicate with no new consequence cannot receive near-full novelty.
+Keep planned actions and pixels separate. Attractive light cannot repay lost meaning.
+
+Score each requested shot and each constituent cut before aggregating. Report the mean,
+minimum, unreviewed count and severe defects separately. Never copy a chapter average to
+individual shots or declare every shot passed because the mean passed. Bind reviews to
+exact paths/hashes and their coverage; changed text, images or edit order stale that scope.
+Existing review files are historical evidence, never a prior score to reproduce.
+
+When improving the plugin against an episode, fix reusable authoring/review causes first,
+run tests, install the changed files on the user's machine and verify their hashes. Only
+then may an author reload the installed skill and rewrite the episode. Retain the previous
+board and reviews, record the installed root and hashes used, and use an independent
+reviewer who does not see the desired score or prior scores. Repeat installation before
+each authoring iteration. A rewritten plan without its actual images cannot satisfy an
+image-quality target. Keep factual qualifiers, scope and existing media authorization.
+
+Run the read-only inventory before visual review:
+
+```bash
+node "$CLAUDE_PLUGIN_ROOT/skills/storyboard/references/visual-coverage-audit.js" storyboard/
+```
+
+It lists every editorial cut, byte-identical images, unavailable images and shared review
+scores. It does not infer semantic fit, perceive template similarity or assign scores.
+Use its complete inventory to choose which actual assets to open, not as visual approval.
+
+## Repair meaning and continuity before another image batch
+
+For a revision, translate each observed defect into a visible acceptance condition before
+generating. Keep that condition in the existing shot notes: the information to add, the
+misreading to remove, the exact reference to preserve and the adjacent cut it must match.
+Do not replace one abstract diagram with another merely to change its silhouette.
+
+Audit graphic semantics independently of their text. A central hub implies leadership or
+control; equal membership belongs within an organization boundary without invented counts.
+An overlap claims a shared set; an arrow claims direction, sequence or causation; area and
+height imply magnitude. Use them only for supported relations. Geographic connectors must
+distinguish approximate movement from a documented itinerary. Dates belong on an explicit
+chronological axis, not an unexplained rising and falling line.
+
+For each repeated prop, compare the actual adjacent images together: colour, binding, page
+design, closure, size, custody and state. Carry the chosen reference into subsequent image
+edits. A book comparison needs the same spread; receiving and returning money needs the
+same purse; a help/result sequence needs the same recipient and work in progress. Preserve
+character identity and recurring officials too. Different camera angles alone cannot turn
+the same teacher-leaning-over-pupil action into new information; show preparation, a specific
+learning task and the learner's independent result when those fit the narration.
+
+Choose documentary treatment from the evidence, not a quote-card template. Distinct source
+details, a carefully bounded comparison or a source-led chronology can explain different
+claims. Keep attribution legible and distinguish original scans from modern typesetting.
+Do not invent archival-looking receipts, handwriting or result sheets. Reconstruction and
+conceptual-example qualifiers must be visible in the storyboard presentation, with a clear
+plan for the audience-facing edit; buried metadata does not establish that viewers see them.
+This does not authorize marks on video or a second set of burned captions.
+
+Reinspect the whole sequence after local repairs. Check that replacing a generic card has
+not created a new run of identical tables, source pages or close-ups. A callback should
+juxtapose concrete earlier evidence with a new consequence, not repeat a familiar label.
+For a long still, add another panel only when it supplies necessary new information; do
+not claim that future camera movement fixes an image that currently adds nothing.
+
+When a prop survives an edit, compare its identifying details rather than its category:
+the same book means the same diagram orientation and page layout, not merely another
+face diagram; the same purse includes its cord, knot and ornaments, not only its colour.
+Check participant roles across the entire exchange. A return recipient must be visibly
+identifiable as the earlier requester or payer when that continuity carries the meaning;
+a matching sleeve in one adjacent image is insufficient if the original participant differs.
+
+An insert earns its place through newly legible evidence or a changed state, not tighter
+framing alone. A side-by-side reuse earns only the information its comparison adds; do not
+count both old pictures as new information. If an added panel repeats the same instant,
+remove it and preserve the complete narration and timing, or author a supported next
+reaction. Never invent a completed exercise, successful outcome or historical action just
+to make a second panel different. Reinspect the resulting duration and sequence honestly.
+
+For a comparison callback, allocate visual space to the new relation. Compress already
+established amounts and actions into only the anchor needed for the comparison; repeating
+the entire earlier explanation consumes attention even when its facts are correct. Check
+each directional connector for a visible endpoint and consistent arrowheads, or use a
+directionless connection when no one-way claim is intended. Across close-ups, compare
+garment material, weave, collar and fastening as well as colour: a cropped face makes
+those details carry more of the person's continuity.
+
+Track clothing layers and accessories through an uninterrupted action too: an outer
+vest, apron or lanyard cannot appear or disappear between a handover and its response
+without a visible reason. Use the adjacent accepted image as the complete costume
+reference. After an edit, inspect the rendered result; repeated failed micro-edits may
+need a fresh composition constrained by the accepted identities rather than the faulty
+target. Preserve the narrative role and record rejected candidates instead of claiming
+that sending the correction established success.
