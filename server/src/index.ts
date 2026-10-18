@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isManagedMusicCall } from './music-registry.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } from '@modelcontextprotocol/sdk/types.js';
@@ -68,7 +69,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     // at the one point every call passes through, so it does not depend on a skill remembering
     // to append a line after the fact (usage-ledger.ts explains where it lands and why).
     // A failed call is recorded too — a retry after a failure can still have been billed.
-    if (isBillableTool(name) && !isManagedVideoCall(name, args) && !isManagedImageCall(name, args)) {
+    if (isBillableTool(name) && !isManagedVideoCall(name, args) && !isManagedImageCall(name, args) && !isManagedMusicCall(name, args)) {
       const callArgs = (args ?? {}) as Record<string, unknown>;
       const startedAt = Date.now();
       let ok = false;

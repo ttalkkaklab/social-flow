@@ -1,0 +1,208 @@
+{
+  "version": 1,
+  "revision": "2026-10-18",
+  "models": [
+    {
+      "engine": "lyria",
+      "model": "lyria-3-clip-preview",
+      "tool": "music_generate_song",
+      "vocals": true,
+      "duration": "30 seconds; fixed",
+      "provider": "Google official"
+    },
+    {
+      "engine": "lyria",
+      "model": "lyria-3.5",
+      "tool": "music_generate_song",
+      "vocals": true,
+      "duration": "Prompt-directed; measure output",
+      "provider": "Google official"
+    },
+    {
+      "engine": "lyria",
+      "model": "models/lyria-realtime-exp",
+      "tool": "music_generate_advanced",
+      "vocals": false,
+      "duration": "5–300 seconds; local stream collection limit",
+      "provider": "Google official"
+    },
+    {
+      "engine": "suno-api",
+      "model": "V6",
+      "tool": "suno_generate",
+      "vocals": true,
+      "duration": "10–360 seconds in custom mode",
+      "provider": "sunoapi.org third party, NOT Suno Platform"
+    },
+    {
+      "engine": "suno-api",
+      "model": "V6_MINI",
+      "tool": "suno_generate",
+      "vocals": true,
+      "duration": "10–360 seconds in custom mode",
+      "provider": "sunoapi.org third party, NOT Suno Platform"
+    },
+    {
+      "engine": "suno-api",
+      "model": "V6_WILD",
+      "tool": "suno_generate",
+      "vocals": true,
+      "duration": "10–360 seconds in custom mode",
+      "provider": "sunoapi.org third party, NOT Suno Platform"
+    },
+    {
+      "engine": "elevenlabs",
+      "model": "music_v2",
+      "tool": "music_elevenlabs_generate",
+      "vocals": true,
+      "duration": "3–600 seconds",
+      "provider": "ElevenLabs official"
+    },
+    {
+      "engine": "elevenlabs",
+      "model": "music_v2_5",
+      "tool": "music_elevenlabs_generate",
+      "vocals": true,
+      "duration": "3–600 seconds",
+      "provider": "ElevenLabs official"
+    }
+  ],
+  "adapters": [
+    {
+      "tool": "music_generate_clip",
+      "engine": "lyria",
+      "fixedModel": "lyria-3-clip-preview",
+      "fields": [
+        "prompt",
+        "outputPath",
+        "filename"
+      ]
+    },
+    {
+      "tool": "music_generate_song",
+      "engine": "lyria",
+      "fields": [
+        "model",
+        "prompt",
+        "lyrics",
+        "instrumental",
+        "outputPath",
+        "filename"
+      ]
+    },
+    {
+      "tool": "music_generate",
+      "engine": "lyria",
+      "fixedModel": "models/lyria-realtime-exp",
+      "fields": [
+        "prompt",
+        "genre",
+        "mood",
+        "instruments",
+        "durationSeconds",
+        "bpm",
+        "outputPath",
+        "filename"
+      ]
+    },
+    {
+      "tool": "music_generate_advanced",
+      "engine": "lyria",
+      "fixedModel": "models/lyria-realtime-exp",
+      "fields": [
+        "prompts",
+        "durationSeconds",
+        "config",
+        "outputPath",
+        "filename"
+      ]
+    },
+    {
+      "tool": "suno_generate",
+      "engine": "suno-api",
+      "fields": [
+        "prompt",
+        "lyrics",
+        "customMode",
+        "instrumental",
+        "style",
+        "title",
+        "model",
+        "duration",
+        "negativeTags",
+        "vocalGender",
+        "personaId",
+        "personaModel",
+        "pickTrack",
+        "outputPath",
+        "filename"
+      ]
+    },
+    {
+      "tool": "suno_generate_sound",
+      "engine": "suno-api",
+      "fixedModel": "V5",
+      "fields": [
+        "prompt",
+        "soundLoop",
+        "soundTempo",
+        "soundKey",
+        "pickTrack",
+        "outputPath",
+        "filename"
+      ]
+    },
+    {
+      "tool": "music_elevenlabs_generate",
+      "engine": "elevenlabs",
+      "fields": [
+        "modelId",
+        "prompt",
+        "compositionPlan",
+        "musicLengthMs",
+        "forceInstrumental",
+        "seed",
+        "storeForInpainting",
+        "outputPath",
+        "filename"
+      ]
+    },
+    {
+      "tool": "mlx_music_generate",
+      "engine": "mlx",
+      "fields": [
+        "prompt",
+        "model",
+        "lyrics",
+        "instrumental",
+        "durationSeconds",
+        "seed",
+        "refAudioPath",
+        "outputPath",
+        "filename"
+      ]
+    }
+  ],
+  "local": {
+    "engine": "mlx",
+    "tool": "mlx_music_generate",
+    "model": "Exact installed MLX Core music pack ID; no automatic pack selection"
+  },
+  "unimplemented": [
+    {
+      "engine": "suno-official",
+      "reason": "Official platform exists; authenticated request schema not verified",
+      "source": "https://platform.suno.com/"
+    },
+    {
+      "engine": "lyria-vertex",
+      "reason": "Separate Cloud authentication and predict contract; not a Gemini adapter"
+    }
+  ],
+  "sources": [
+    "https://ai.google.dev/gemini-api/docs/music-generation",
+    "https://ai.google.dev/gemini-api/docs/realtime-music-generation",
+    "https://elevenlabs.io/docs/api-reference/music/compose",
+    "https://docs.sunoapi.org/suno-api/generate-music"
+  ]
+}

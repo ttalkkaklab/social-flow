@@ -1,0 +1,25 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const settings = require('../../skills/_shared/model-settings.js');
+const { readMusicContext } = require('../../skills/_shared/music-selection.js');
+test('snapshot choice survives workspace changes; explicit cue overrides apply only to that cue', t => {
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'music-selection-')));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const models = { video: { engine: 'astra' }, speech: { engine: 'elevenlabs', model: 'eleven_v4' }, image: { engine: 'zimage' }, music: { engine: 'lyria', model: 'lyria-3.5' } };
+  const first = settings.saveSettings(root, models, { videoType: { id: 'drama' }, request: 'Initial choices' });
+  const dir = path.join(root, 'episode'); fs.mkdirSync(dir); settings.snapshotSettings(root, dir);
+  settings.saveSettings(root, { music: { engine: 'elevenlabs', model: 'music_v2_5' } }, { request: 'Use Eleven for new music', expectedRevision: first.revision });
+  assert.equal(readMusicContext(root, 'base').selection.engine, 'elevenlabs');
+  assert.equal(readMusicContext(dir, 'base').selection.engine, 'lyria');
+  fs.mkdirSync(path.join(dir, 'storyboard'));
+  const board = { modelSettings: { overrides: [{ scope: 'shot', shotId: 'outro', request: 'Use V6 for outro', music: { engine: 'suno-api', model: 'V6' } }] } };
+  const write = () => fs.writeFileSync(path.join(dir, 'storyboard/scenes.js'), 'window.PRODUCTION=' + JSON.stringify(board)); write();
+  assert.equal(readMusicContext(dir, 'outro').selection.model, 'V6');
+  assert.equal(readMusicContext(dir, 'base').selection.model, 'lyria-3.5');
+  board.modelSettings.overrides[0].request = ''; write(); assert.throws(() => readMusicContext(dir, 'outro'), /override_invalid/);
+});
