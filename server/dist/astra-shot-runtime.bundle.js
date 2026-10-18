@@ -4209,6 +4209,10 @@ function contract() {
 function cameraContract() {
   return loadFromHere(join(REFERENCES_DIR, "production-mode.js"));
 }
+function motionGraphicTypes() {
+  const registry = loadFromHere(join(REFERENCES_DIR, "motion-graphics.js"));
+  return Object.keys(registry.TYPES);
+}
 var tuple = (list) => external_exports.enum(list);
 var MISSING = ["__contract-missing__"];
 function vocabAtLoad() {
@@ -4318,6 +4322,16 @@ var shotSchema = external_exports.object({
     coverage: coverageSchema.optional(),
     lineNeutral: external_exports.literal(true).optional(),
     lineCrossing: external_exports.record(external_exports.unknown()).optional(),
+    motionGraphic: external_exports.object({
+      version: external_exports.literal(1),
+      type: external_exports.string().refine((value) => motionGraphicTypes().includes(value), "unknown motion graphic type"),
+      intent: external_exports.string().optional(),
+      reason: external_exports.string().optional(),
+      evidence: external_exports.enum(["data", "recording", "reenactment", "metaphor"]),
+      style: external_exports.object({ palette: external_exports.string(), reason: external_exports.string().optional() }).passthrough(),
+      beats: external_exports.array(external_exports.object({ at: external_exports.number().min(0).max(1), action: external_exports.string() }).passthrough()).optional(),
+      content: external_exports.record(external_exports.unknown()).optional()
+    }).passthrough().optional(),
     render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: external_exports.string().optional(), reason: external_exports.string().optional() }).passthrough().optional()
   }).passthrough().optional(),
   sound: external_exports.record(external_exports.unknown()).optional()
@@ -5033,7 +5047,7 @@ import * as path3 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.115.4",
+  version: "0.116.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",

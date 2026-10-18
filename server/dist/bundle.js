@@ -65486,16 +65486,103 @@ var require_video_catalog = __commonJS({
   }
 });
 
+// ../skills/storyboard/references/motion-graphics.js
+var require_motion_graphics = __commonJS({
+  "../skills/storyboard/references/motion-graphics.js"(exports, module) {
+    (function(root) {
+      "use strict";
+      const rows = [
+        ["kinetic_type", "\uD0A4\uB124\uD2F1 \uD0C0\uC774\uD3EC\uADF8\uB798\uD53C", "Words carry the argument", "short statement", "motion_html", true],
+        ["comparison", "\uC218\uB7C9\xB7\uBE44\uAD50", "Compare magnitudes on a common scale", "labelled values and unit", "data_graph", true],
+        ["part_whole", "\uC804\uCCB4\xB7\uBD80\uBD84", "Explain composition or allocation", "nonnegative values summing to total", "data_graph", true],
+        ["trend", "\uCD94\uC138", "Show measured change over time", "ordered observations", "data_graph", true],
+        ["timeline", "\uD0C0\uC784\uB77C\uC778", "Explain event order", "dated events", "data_graph", true],
+        ["process", "\uACFC\uC815\xB7\uC808\uCC28", "Show ordered stages and handoffs", "ordered steps", "motion_html", true],
+        ["relationship", "\uAD00\uACC4\xB7\uD750\uB984", "Explain connections, not necessarily sequence", "nodes and explicit edges", "motion_html", true],
+        ["causal", "\uC6D0\uB9AC\xB7\uC778\uACFC", "Change a cause and show its effect", "model, variable and limits", "motion_html", false],
+        ["before_after", "\uC0C1\uD0DC \uBCC0\uD658\xB7\uC804\uD6C4 \uBE44\uAD50", "Compare the same subject before and after", "matched states and invariant", "motion_html", true],
+        ["ui_demo", "UI \uC870\uC791 \uC2DC\uC5F0", "Show an action and visible interface response", "action, input and output", "motion_html", true],
+        ["input_output", "\uC785\uB825\xB7\uC0B0\uCD9C\uBB3C \uBCC0\uD658", "Trace input into a corresponding result", "input and output content", "motion_html", true],
+        ["recorded_evidence", "\uC2E4\uC81C \uAE30\uB85D \uAE30\uBC18 \uC124\uBA85", "Prove an actual operation", "supplied recording and source", "stock_video", false],
+        ["spatial", "\uACF5\uAC04\xB7\uACBD\uB85C \uD0D0\uC0C9", "Locate a detail within a whole", "map or authored space and focus path", "motion_html", false],
+        ["layers", "\uB808\uC774\uC5B4 \uBD84\uD574\xB7\uC7AC\uC870\uB9BD", "Explain a digital layer structure", "ordered layer names", "motion_html", true],
+        ["mechanism", "\uC624\uBE0C\uC81D\uD2B8\xB7\uBA54\uCEE4\uB2C8\uC998", "Explain physical operation", "articulated mesh and action", "object_html", false],
+        ["product_hero", "\uC81C\uD488 \uD788\uC5B4\uB85C", "Reveal product form and material", "recognizable product asset", "object_html", false],
+        ["character_action", "\uCE90\uB9AD\uD130\xB7\uC0C1\uD669", "Explain a human action or reaction", "character and purposeful action", "character_html", false],
+        ["metaphor", "\uC5F0\uC18D \uBAA8\uD551\xB7\uC2DC\uAC01\uC801 \uC740\uC720", "Connect concepts through a visual analogy", "explicit analogy and correspondences", "motion_html", false],
+        ["simulation", "\uC81C\uB108\uB808\uC774\uD2F0\uBE0C\xB7\uC2DC\uBBAC\uB808\uC774\uC158", "Explain accumulation and limits", "capacity, arrival and service rates", "motion_html", true],
+        ["brand_mark", "\uBE0C\uB79C\uB4DC\xB7\uB85C\uACE0", "Make an identity memorable", "supplied logo and motion signature", "motion_html", false],
+        ["montage", "\uB9AC\uB4EC \uC911\uC2EC \uBABD\uD0C0\uC8FC", "Build energy rather than detailed explanation", "assets and musical beat map", "motion_html", false]
+      ];
+      const TYPES = Object.fromEntries(rows.map(([id, label, use, inputs, route, builtIn]) => [id, { id, label, use, inputs, route, builtIn }]));
+      const PALETTES = {
+        editorial: { paper: "#f7f8fa", ink: "#192c43", muted: "#526479", accent: "#245be5", soft: "#e4eaf3" },
+        botanical: { paper: "#f2f6f0", ink: "#183b31", muted: "#50665a", accent: "#217255", soft: "#dce9de" },
+        plum: { paper: "#f7f3f7", ink: "#382a45", muted: "#6e5a78", accent: "#8542a5", soft: "#e9dfed" },
+        midnight: { paper: "#111e32", ink: "#f6f8fc", muted: "#b2c1d6", accent: "#80bfff", soft: "#263b55" }
+      };
+      const txt = (x2) => typeof x2 === "string" && !!x2.trim();
+      function inspect(scene) {
+        const m2 = scene.shot?.motionGraphic, errors = [], advice = [];
+        if (!m2) return { errors, advice };
+        if (m2.version !== 1) errors.push("motionGraphic.version must be 1");
+        if (!TYPES[m2.type]) errors.push("unknown motionGraphic.type: " + m2.type);
+        if (!txt(m2.reason)) advice.push("Explain why this type serves this line; name a rejected alternative.");
+        if (!txt(m2.intent)) advice.push("Name the one thing the viewer should understand or feel.");
+        if (!["data", "recording", "reenactment", "metaphor"].includes(m2.evidence)) errors.push("motionGraphic.evidence must be data, recording, reenactment or metaphor");
+        if (scene.visual?.slide?.renderer === "motion-svg-v1" && !PALETTES[m2.style?.palette]) errors.push("choose a supported palette or author a custom slide without the built-in renderer");
+        if (!txt(m2.style?.reason)) advice.push("Explain palette and typography in the subject context.");
+        if (m2.evidence === "recording" && !scene.visual?.src && !scene.visual?.clip) errors.push("recording evidence requires an actual source file");
+        if (!Array.isArray(m2.beats) || !m2.beats.length) advice.push("Plan introduce, change and read/hold beats against speech or music.");
+        else for (const b of m2.beats) if (!b || !Number.isFinite(b.at) || b.at < 0 || b.at > 1 || !txt(b.action)) errors.push("beats need normalized finite at and a visible action");
+        if (scene.shot?.render?.mode === "motion_html") {
+          if (!Number.isFinite(scene.duration) || scene.duration <= 0) errors.push("motion HTML needs a positive finite duration");
+          if (!scene.visual?.slide || scene.visual.slide.motion !== true) errors.push("motion HTML needs a motion slide handoff");
+        }
+        return { errors, advice };
+      }
+      function validateContent(scene) {
+        const m2 = scene.shot?.motionGraphic, errors = inspect(scene).errors;
+        if (!m2 || !TYPES[m2.type]?.builtIn) return errors.concat("type needs an authored slide or its existing asset route; no generic fallback");
+        const c = m2.content || {};
+        if (m2.evidence === "recording") errors.push("built-in graphics cannot claim recording evidence; use the actual footage route");
+        if (!txt(c.title)) errors.push("content.title is required");
+        if (["comparison", "part_whole", "trend"].includes(m2.type)) {
+          if (!Array.isArray(c.values) || c.values.length < 2 || c.values.length > 6 || c.values.some((v) => !txt(v?.label) || !Number.isFinite(v.value) || v.value < 0)) errors.push("2..6 labelled nonnegative finite values required");
+          if (!txt(c.unit) || !txt(c.source)) errors.push("data content needs unit and source");
+          if (m2.type === "part_whole" && Array.isArray(c.values) && c.values.length > 4) errors.push("built-in part/whole supports at most 4 labelled parts; author a denser composition for more");
+          if (m2.type === "part_whole" && (!(c.total > 0) || Math.abs((Array.isArray(c.values) ? c.values : []).reduce((a, b) => a + (b?.value || 0), 0) - c.total) > 1e-8)) errors.push("parts must sum to positive total");
+          if (m2.type !== "part_whole" && (Array.isArray(c.values) ? c.values : []).every((v) => v?.value === 0)) errors.push("data scale must be positive");
+        }
+        if (["process", "timeline", "layers", "relationship"].includes(m2.type)) {
+          if (!Array.isArray(c.items) || c.items.length < 2 || c.items.length > 4 || c.items.some((v) => !txt(v?.label))) errors.push("2..4 labelled items required");
+          if (m2.type === "timeline" && (Array.isArray(c.items) ? c.items : []).some((v) => !txt(v?.date))) errors.push("timeline items need dates");
+          if (m2.type === "relationship" && (!Array.isArray(c.edges) || !c.edges.length || c.edges.some((e2) => !Array.isArray(e2) || e2.length !== 2 || e2.some((i2) => !Number.isInteger(i2) || i2 < 0 || i2 >= c.items?.length) || e2[0] === e2[1]))) errors.push("relationship edges must reference distinct existing item indexes");
+        }
+        if (["before_after", "input_output", "ui_demo"].includes(m2.type) && (!txt(c.input) || !txt(c.output))) errors.push("input and output are required");
+        if (c.mappings && (!Array.isArray(c.mappings) || c.mappings.length < 1 || c.mappings.length > 3 || c.mappings.some((v) => !txt(v?.from) || !txt(v?.to)))) errors.push("mappings need 1..3 explicit from/to correspondences");
+        if (m2.type === "ui_demo" && !txt(c.action)) errors.push("UI demo needs an explicit action label");
+        if (m2.type === "kinetic_type" && (!Array.isArray(c.lines) || !c.lines.length || c.lines.length > 3 || c.lines.some((v) => !txt(v)))) errors.push("1..3 short lines required");
+        if (m2.type === "simulation" && (!Number.isInteger(c.capacity) || c.capacity < 2 || c.capacity > 12 || !Number.isFinite(c.arrival) || c.arrival <= 0 || !Number.isFinite(c.service) || c.service <= 0)) errors.push("simulation needs capacity 2..12 and positive finite arrival/service rates");
+        return errors;
+      }
+      const api = { TYPES, PALETTES, inspect, validateContent };
+      if (typeof module === "object" && module.exports) module.exports = api;
+      else root.MOTION_GRAPHICS = api;
+    })(typeof window === "object" ? window : globalThis);
+  }
+});
+
 // ../skills/storyboard/references/render-routing.js
 var require_render_routing = __commonJS({
   "../skills/storyboard/references/render-routing.js"(exports, module) {
     (function(root) {
       "use strict";
       const productionMode = () => typeof module === "object" && module.exports ? require_production_mode() : root.PRODUCTION_MODE;
-      const PURPOSES = { portrait: "still_camera", atmosphere: "still_camera", place: "still_camera", detail: "still_camera", human_process: "character_html", mechanism: "object_html", physical_state: "object_html", comparison: "data_graph", trend: "data_graph", share: "data_graph", distribution: "data_graph", geographic: "data_graph", timeline: "data_graph", live_action: "generated_video", evidence_quote: "editorial_html", verdict: "editorial_html", archive: "stock_video" };
-      const ALTERNATIVES = { live_action: ["stock_video"], atmosphere: ["stock_video"], place: ["stock_video"] };
+      const PURPOSES = { motion_explanation: "motion_html", portrait: "still_camera", atmosphere: "still_camera", place: "still_camera", detail: "still_camera", human_process: "character_html", mechanism: "object_html", physical_state: "object_html", comparison: "data_graph", trend: "data_graph", share: "data_graph", distribution: "data_graph", geographic: "data_graph", timeline: "data_graph", live_action: "generated_video", evidence_quote: "editorial_html", verdict: "editorial_html", archive: "stock_video" };
+      const ALTERNATIVES = { comparison: ["motion_html"], trend: ["motion_html"], share: ["motion_html"], timeline: ["motion_html"], live_action: ["stock_video"], atmosphere: ["stock_video"], place: ["stock_video"] };
       const STILL_CAMERA_EFFECTS = ["focus-in", "rack-focus", "approach", "pull", "pan", "tilt", "push", "reveal", "parallax"];
-      const LABELS = { still_camera: "\uC815\uC9C0 \uC774\uBBF8\uC9C0 \xB7 \uCE74\uBA54\uB77C \uBB34\uBE59", character_html: "3D \uCE90\uB9AD\uD130 \xB7 HTML", object_html: "3D \uC0AC\uBB3C \xB7 HTML", data_graph: "\uC218\uCE58\xB7\uADF8\uB798\uD504 \xB7 HTML", generated_video: "\uC601\uC0C1 \uC0DD\uC131", editorial_html: "\uC9E7\uC740 \uC778\uC6A9\xB7\uACB0\uB860 \xB7 HTML", stock_video: "\uC678\uBD80 \uC601\uC0C1 \xB7 \uBB34\uB8CC \uC18C\uC7AC" };
+      const LABELS = { motion_html: "\uBAA8\uC158\uADF8\uB798\uD53D \xB7 HTML", still_camera: "\uC815\uC9C0 \uC774\uBBF8\uC9C0 \xB7 \uCE74\uBA54\uB77C \uBB34\uBE59", character_html: "3D \uCE90\uB9AD\uD130 \xB7 HTML", object_html: "3D \uC0AC\uBB3C \xB7 HTML", data_graph: "\uC218\uCE58\xB7\uADF8\uB798\uD504 \xB7 HTML", generated_video: "\uC601\uC0C1 \uC0DD\uC131", editorial_html: "\uC9E7\uC740 \uC778\uC6A9\xB7\uACB0\uB860 \xB7 HTML", stock_video: "\uC678\uBD80 \uC601\uC0C1 \xB7 \uBB34\uB8CC \uC18C\uC7AC" };
       const CHARTS = { comparison: ["bar", "dot"], trend: ["line"], share: ["stacked-bar", "donut", "pie"], distribution: ["histogram"], geographic: ["map"], timeline: ["timeline"] };
       const text2 = (x2) => typeof x2 === "string" && !!x2.trim();
       function exempt(scene) {
@@ -65620,6 +65707,15 @@ var require_render_routing = __commonJS({
           if (r2.mode !== "generated_video") warn(r2.purpose + " requires generated_video, not " + r2.mode);
         } else if (options.length && !options.includes(r2.mode) && !(drone && r2.purpose === "place" && r2.mode === "generated_video")) warn(r2.purpose + " requires " + options.join(" or ") + ", not " + r2.mode);
         if (!text2(r2.reason)) warn("reason must explain why this treatment conveys the cut");
+        if (scene.shot?.motionGraphic) {
+          const mg = typeof module === "object" && module.exports ? require_motion_graphics() : root.MOTION_GRAPHICS;
+          if (mg) {
+            const result = mg.inspect(scene);
+            result.errors.forEach(bad);
+            result.advice.forEach(warn);
+          } else warn("motion-graphics.js is missing from this storyboard");
+        }
+        if (r2.mode === "motion_html" && !scene.shot?.motionGraphic) bad("motion_html needs shot.motionGraphic");
         const info = scene.shot?.infoType;
         if (info === "statistic" && !["comparison", "trend", "share", "distribution", "geographic"].includes(r2.purpose)) warn("statistic needs a quantitative purpose");
         if (info === "timeline" && r2.purpose !== "timeline") warn("timeline needs a timeline purpose");
@@ -65684,7 +65780,7 @@ var require_render_routing = __commonJS({
             if (slide && slide.kind !== "camera") bad("a still-camera HTML wrapper must use kind camera, not an explanation kind");
             if (!slide || slide.kind !== "camera" || slide.motion !== true) bad("still camera needs the shared camera HTML runtime for a verifiable image and camera handoff");
           }
-          if (["character_html", "object_html", "data_graph"].includes(r2.mode)) {
+          if (["character_html", "object_html", "data_graph", "motion_html"].includes(r2.mode)) {
             if (generated) bad("an explanation cannot hand off to generated video");
             if (!slide || slide.kind !== "diagram" || slide.motion !== true || slide.treatment !== "editorial") bad("explanation needs an editorial motion diagram");
             if (r2.mode === "data_graph" && (slide?.subject?.kind !== "data" || slide?.object)) bad("graph explanation needs a data subject without a physical 3D object");
@@ -65845,7 +65941,7 @@ var require_render_routing = __commonJS({
           if (r2?.mode === "editorial_html" || slide?.subject?.kind === "type" || slide?.kind === "kinetic") {
             textCount++;
             textSeconds += Number.isFinite(s2.duration) ? s2.duration : 0;
-            if (!r2 || r2.mode !== "editorial_html") errors.push("shot " + (i2 + 1) + ": text-led slides must use editorial_html; motionBeats cannot turn typography into subject motion");
+            if (!r2 || !["editorial_html", "motion_html"].includes(r2.mode)) errors.push("shot " + (i2 + 1) + ": text-led slides must use editorial_html; motionBeats cannot turn typography into subject motion");
             if (s2.duration > 8) errors.push("shot " + (i2 + 1) + ": text-led slide exceeds 8 seconds");
           }
         });
@@ -81015,7 +81111,7 @@ import * as path5 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.115.4",
+  version: "0.116.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -83366,6 +83462,10 @@ function contract() {
 function cameraContract() {
   return loadFromHere(join4(REFERENCES_DIR, "production-mode.js"));
 }
+function motionGraphicTypes() {
+  const registry2 = loadFromHere(join4(REFERENCES_DIR, "motion-graphics.js"));
+  return Object.keys(registry2.TYPES);
+}
 function renderPurposes() {
   const routing = loadFromHere(join4(REFERENCES_DIR, "render-routing.js"));
   return Object.keys(routing.PURPOSES);
@@ -83486,6 +83586,16 @@ var shotSchema = external_exports.object({
     coverage: coverageSchema.optional(),
     lineNeutral: external_exports.literal(true).optional(),
     lineCrossing: external_exports.record(external_exports.unknown()).optional(),
+    motionGraphic: external_exports.object({
+      version: external_exports.literal(1),
+      type: external_exports.string().refine((value) => motionGraphicTypes().includes(value), "unknown motion graphic type"),
+      intent: external_exports.string().optional(),
+      reason: external_exports.string().optional(),
+      evidence: external_exports.enum(["data", "recording", "reenactment", "metaphor"]),
+      style: external_exports.object({ palette: external_exports.string(), reason: external_exports.string().optional() }).passthrough(),
+      beats: external_exports.array(external_exports.object({ at: external_exports.number().min(0).max(1), action: external_exports.string() }).passthrough()).optional(),
+      content: external_exports.record(external_exports.unknown()).optional()
+    }).passthrough().optional(),
     render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: external_exports.string().optional(), reason: external_exports.string().optional() }).passthrough().optional()
   }).passthrough().optional(),
   sound: external_exports.record(external_exports.unknown()).optional()
@@ -89698,6 +89808,13 @@ var shotCameraInput = (() => {
   }
 })();
 var enumInput = (values, description) => ({ type: "string", ...values?.length ? { enum: values } : {}, description });
+var motionTypes = (() => {
+  try {
+    return motionGraphicTypes();
+  } catch {
+    return [];
+  }
+})();
 var purposes = (() => {
   try {
     return renderPurposes();
@@ -89755,6 +89872,22 @@ var storyboardShotInput = {
         angle: { type: "string", description: "Camera angle. Recommended vocabulary is in the directing skill." },
         infoType: { type: "string", description: "Information carried by the shot; must agree with its purpose. Recommended vocabulary is in the directing skill." },
         feel: { type: "string", description: "What the viewer should feel before choosing framing and movement." },
+        motionGraphic: {
+          type: "object",
+          additionalProperties: true,
+          required: ["version", "type", "evidence", "style"],
+          description: "Motion design plan. Read motion-graphics.md, choose from intent and inputs, record why alternatives lose. Does not replace render mode or camera. Built-in SVG examples use motion_html; physical subjects retain mesh routes.",
+          properties: {
+            version: { type: "integer", enum: [1], description: "Motion plan schema version." },
+            type: enumInput(motionTypes, "Semantic motion family, independent of palette and transition effects."),
+            intent: { type: "string", description: "One viewer takeaway." },
+            reason: { type: "string", description: "Content-specific choice and rejected alternative." },
+            evidence: enumInput(["data", "recording", "reenactment", "metaphor"], "Evidence provenance; never present a mock UI as an actual recording."),
+            style: { type: "object", description: "Palette and subject-specific visual direction.", additionalProperties: true, properties: { palette: enumInput(["editorial", "botanical", "plum", "midnight"], "Built-in palette; retain channel identity."), reason: { type: "string", description: "Why this visual direction suits the subject." } } },
+            beats: { type: "array", description: "Editorial timing intentions; authored slides can implement custom timing.", items: { type: "object", description: "One meaningful change.", required: ["at", "action"], properties: { at: { type: "number", minimum: 0, maximum: 1, description: "Normalized shot time, zero to one." }, action: { type: "string", description: "Visible change or result-reading hold." } } } },
+            content: { type: "object", additionalProperties: true, description: "Type-specific source data; see motion-graphics.md. Preserve exact source values." }
+          }
+        },
         eyeline: eyelineInput,
         composition: compositionInput,
         depth: depthInput,
@@ -103090,7 +103223,7 @@ ROUTES.video_status = async (args) => text(JSON.stringify(videoStatus(args), nul
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.115.4" },
+  { name: "social-flow", version: "0.116.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

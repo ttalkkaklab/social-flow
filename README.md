@@ -1,5 +1,16 @@
 # social-flow
 
+
+Motion-graphic shots now persist `shot.motionGraphic`: a semantic type, viewer intent,
+selection reason, evidence, visual direction and timing intent. The shared
+[21-type guide](skills/storyboard/references/motion-graphics.md) distinguishes
+comparisons, workflows, UI demonstrations, mechanisms and other situations.
+Twelve abstract families have a deterministic local SVG renderer with bundled
+Inter/Pretendard fonts. Physical mechanisms and recorded evidence retain their
+asset routes; a catalog type does not imply an automatic renderer. Storyboard
+cards show the choice and reason. Prepare a built-in scene with
+`node skills/produce/references/prepare-motion-graphic.js BOARD --shot N`.
+
 Storyboards show camera pictograms with visible movement/speed, planned shot lengths
 and incoming cut continuity beside each shot. The length comparison links to the
 original shot cards in playback order and keeps unknown lengths unknown. Camera

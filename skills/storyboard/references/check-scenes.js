@@ -924,7 +924,7 @@ function check(win, fmt, opts) {
   {
     const CLOSE_OPEN = ['mcu', 'cu', 'choker', 'ecu', 'insert'];
     const PAYS = ['els', 'ls', 'ws', 'mfs', 'two'];
-    const EXPLAIN = ['data_graph', 'editorial_html', 'object_html', 'character_html'];
+    const EXPLAIN = ['motion_html', 'data_graph', 'editorial_html', 'object_html', 'character_html'];
     const isScreen = (s) => s.shot && s.shot.render && EXPLAIN.indexOf(s.shot.render.mode) !== -1;
     const byScene = new Map();
     scenes.forEach((s, i) => {
@@ -952,7 +952,7 @@ function check(win, fmt, opts) {
      (30-degree / two-step-size rule). Filmed cards are the vlog exception, and so is an
      HTML explanation screen (shot.render.mode) — the whole picture changes there. */
   const isExplainScreen = (s) => s.shot && s.shot.render &&
-    ['data_graph', 'editorial_html', 'object_html', 'character_html'].indexOf(s.shot.render.mode) !== -1;
+    ['motion_html', 'data_graph', 'editorial_html', 'object_html', 'character_html'].indexOf(s.shot.render.mode) !== -1;
   for (let i = 1; i < scenes.length; i++) {
     const prev = scenes[i - 1], cur = scenes[i];
     if (!isStillCard(prev) || !isStillCard(cur)) continue;
@@ -1194,7 +1194,7 @@ function check(win, fmt, opts) {
        against the rendered DOM. */
     if (INFO_ROLE[shot.infoType] && !productionMode.full(win.PRODUCTION)) {
       const expectedRole = INFO_ROLE[shot.infoType];
-      const allowed = INFO_PRIMITIVES[shot.infoType];
+      const allowed = shot.render?.mode === 'motion_html' ? [...INFO_PRIMITIVES[shot.infoType], 'state-transform'] : INFO_PRIMITIVES[shot.infoType];
       if (!slide) {
         machine(where, `${shot.infoType} beat has no visual.slide — it must be a seekable editorial HTML slide on the studio stage; nothing is drawn over video (directive 2026-09-05)`);
       } else if (slide.treatment === 'footage') {

@@ -465,7 +465,7 @@ const openPage = async () => {
     const specFps = await evalJS("window.PREVIZ && window.PREVIZ.fps");
     if (specFps !== 24) return die(`--previz captures at 24 fps but window.PREVIZ.fps is ${specFps} — set the spec to 24 (blender-previz.md §6.1)`);
   }
-  if (treatment === 'editorial' && !await evalJS("document.documentElement.classList.contains('studio') && !!document.querySelector('.studio-plate')"))
+  if (treatment === 'editorial' && scene?.visual?.slide?.renderer !== 'motion-svg-v1' && !await evalJS("document.documentElement.classList.contains('studio') && !!document.querySelector('.studio-plate')"))
     return die('editorial slides require the studio ground and material system; h.stage("flat") cannot satisfy object-state quality');
   const size = await evalJS("window.__size()");
   if (size.w !== W || size.h !== H) return die(`page size ${size.w}x${size.h} ≠ format canvas ${W}x${H} (window.FORMAT=${FORMAT})`);
