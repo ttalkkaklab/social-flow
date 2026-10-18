@@ -217,3 +217,19 @@ count both old pictures as new information. If an added panel repeats the same i
 remove it and preserve the complete narration and timing, or author a supported next
 reaction. Never invent a completed exercise, successful outcome or historical action just
 to make a second panel different. Reinspect the resulting duration and sequence honestly.
+
+For a comparison callback, allocate visual space to the new relation. Compress already
+established amounts and actions into only the anchor needed for the comparison; repeating
+the entire earlier explanation consumes attention even when its facts are correct. Check
+each directional connector for a visible endpoint and consistent arrowheads, or use a
+directionless connection when no one-way claim is intended. Across close-ups, compare
+garment material, weave, collar and fastening as well as colour: a cropped face makes
+those details carry more of the person's continuity.
+
+Track clothing layers and accessories through an uninterrupted action too: an outer
+vest, apron or lanyard cannot appear or disappear between a handover and its response
+without a visible reason. Use the adjacent accepted image as the complete costume
+reference. After an edit, inspect the rendered result; repeated failed micro-edits may
+need a fresh composition constrained by the accepted identities rather than the faulty
+target. Preserve the narrative role and record rejected candidates instead of claiming
+that sending the correction established success.

@@ -74,3 +74,24 @@ Baseline calibration: the earlier53.4 was a preliminary representative-image ass
 A later auditable independent43-shot baseline review uses the frozen50/35/15 rubric and
 scores82.16 (minimum46). Keep both records; use the auditable per-shot baseline in the
 comparison table, not the preliminary number as a mechanically comparable improvement.
+
+Integration: merged current dev cabfbc2 without conflicts;2209 tests in196 suites pass.
+The intermediate20-file dev-sync cache overlay reconciles incoming motion-production dependencies while
+preserving iteration3 author input hashes. This sync does not rewrite the frozen board.
+
+Iteration3 independent result: mean99.49, minimum94,45/45 panels inspected,
+P0=0,P1=0,P2=5. s0016=95 and s0034=94 do not exceed95. Preserve this verdict.
+Iteration4 adds comparison-anchor economy, connector direction and cropped-garment
+continuity guidance. Lint/diff checks pass; executable files are unchanged since the
+2209-test run. The20-file overlay was installed in both Mac caches before author reload.
+
+Iteration4: mean99.814, minimum95,45/45 panels inspected,P0=0,P1=0,P2=2.
+The helper's vest/lanyard continuity costs5 points at s0043; strict greater-than95
+still fails. No earlier verdict is rescored. Iteration5 adds uninterrupted wardrobe
+layer/accessory checks and the lesson from rejected micro-edits. Lint/diff pass;
+installed both caches before author reload. Executable code is unchanged.
+
+Iteration5 final:mean99.81395348837209,minimum96,45/45 native panels,43/43 shots,
+unreviewed0,P0=0,P1=0,P2=2. Every shot strictly above95; criterion achieved.
+Minor printed-guide-line(s0007) and garment-texture(s0009) defects retained honestly.
+Proceed to user-authorized dev merge, main-worktree pull and isolated-worktree cleanup.
