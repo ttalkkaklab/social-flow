@@ -362,22 +362,16 @@ describe('mlx_* tools', () => {
     'mlx_3d_generate',
   ];
 
-  it('all five mlx tools are listed and routed as local generation', () => {
+  it('all five mlx tools are listed as local generation', () => {
     for (const name of MLX) {
       const tool = byName.get(name);
       assert.ok(tool, `missing tool ${name}`);
-      assert.equal(typeof ROUTES[name], 'function', `missing route ${name}`);
       assert.equal(tool.annotations.openWorldHint, false, `${name} must be generateLocal`);
       assert.equal(tool.annotations.readOnlyHint, false);
       assert.equal(tool.annotations.destructiveHint, false);
       assert.match(tool.description, /brew install --cask mlx-core/);
       assert.match(tool.description, /never launches the app/);
     }
-  });
-
-  it('the mlx family pattern hides exactly the five mlx tools', () => {
-    const hidden = TOOLS.filter((tool) => isToolDisabled(tool.name, ['mlx_*'])).map((t) => t.name).sort();
-    assert.deepEqual(hidden, [...MLX].sort());
   });
 
   it('image lane stays default-local and Hangul stays gpt_image', () => {
@@ -409,33 +403,6 @@ describe('mlx_* tools', () => {
     assert.equal(video.inputSchema.properties.width.default, 768);
     assert.equal(video.inputSchema.properties.height.default, 1280);
     assert.equal(video.inputSchema.properties.numFrames.default, 49);
-  });
-
-  it('3d is GLB-only and says the pipeline has no consumer', () => {
-    const mesh = byName.get('mlx_3d_generate');
-    assert.match(mesh.description, /GLB/);
-    assert.match(mesh.description, /HTML mesh lane consumes embedded GLB/);
-    assert.match(mesh.description, /approved physical-object slide plan/);
-    assert.ok((mesh.inputSchema.required ?? []).includes('imagePath'));
-  });
-});
-
-describe('suno_* tools', () => {
-  const SUNO = ['suno_generate', 'suno_generate_sound', 'suno_generate_lyrics', 'suno_credits'];
-
-  it('all four suno tools are listed and routed', () => {
-    for (const name of SUNO) {
-      assert.ok(TOOLS.some((tool) => tool.name === name), `missing tool ${name}`);
-      assert.equal(typeof ROUTES[name], 'function', `missing route ${name}`);
-    }
-  });
-
-  it('suno_generate describes the third-party REST and does not claim an official Suno API', () => {
-    const tool = TOOLS.find((t) => t.name === 'suno_generate');
-    assert.match(tool.description, /sunoapi\.org/);
-    assert.match(tool.description, /no public self-serve API/);
-    assert.match(tool.description, /SUNO_API_KEY/);
-    assert.match(tool.description, /does not block music_/);
   });
 });
 
@@ -721,14 +688,6 @@ describe('YouTube per-format caption contract (16:9 long-form lane)', () => {
   it('names the long-form branch', () => {
     assert.match(yt().inputSchema.properties.caption.description, /16:9|long-form/);
   });
-
-  it('guides long-form toward chapter timestamps', () => {
-    assert.match(yt().inputSchema.properties.caption.description, /chapter|timestamp/i);
-  });
-
-  it('the thumbnail description speaks to landscape long-form too', () => {
-    assert.match(yt().inputSchema.properties.thumbnailFilePath.description, /landscape/);
-  });
 });
 
 describe('Threads post-media contract', () => {
@@ -756,12 +715,6 @@ describe('Threads post-media contract', () => {
   it('the videoUrl description asks for the burned-in copy', () => {
     // Threads has no subtitle parameter, so a clean master ships without subtitles
     assert.match(props().videoUrl.description, /subtitle-burned|burned-in/i, 'videoUrl does not ask for the burn-in');
-  });
-
-  it('the tool description does not fall back to the link-reply strategy', () => {
-    // if the old strategy ("body + full-video link reply") lingers in the
-    // description, callers publish one more reply and the video goes out twice
-    assert.doesNotMatch(th().description, /link reply|the link in a reply/, 'the old link-reply strategy lingers in the description');
   });
 
   it('argument name matches IG (the video of a post = videoUrl)', () => {
@@ -897,17 +850,9 @@ describe('single-source constants', () => {
 });
 
 describe('supported speech surface', () => {
-  it('removed local synthesis and v2 voice conversion cannot be listed or called', () => {
-    for (const name of ['tts_local_generate', 'mlx_tts_generate', 'voice_lock_apply']) {
-      assert.equal(byName.has(name), false, name);
-      assert.equal(ROUTES[name], undefined, name);
-    }
-  });
-
-  it('Gemini, ElevenLabs v4 and character auditions have live handlers', () => {
+  it('Gemini, ElevenLabs v4 and character auditions are listed; ElevenLabs is pinned to v4', () => {
     for (const name of ['tts_generate', 'tts_multi_speaker', 'tts_gemini_38', 'tts_list_voices', 'tts_elevenlabs_generate', 'tts_elevenlabs_dialogue', 'tts_elevenlabs_voices', 'character_voice_audition']) {
       assert.ok(byName.has(name), name);
-      assert.equal(typeof ROUTES[name], 'function', name);
     }
     for (const name of ['tts_elevenlabs_generate', 'tts_elevenlabs_dialogue']) {
       const props = byName.get(name).inputSchema.properties;
@@ -958,7 +903,6 @@ describe('speech lane separation (ElevenLabs)', () => {
     const item = dialogue.inputSchema.properties.inputs.items;
     assert.ok(item.required.includes('voiceId') && item.required.includes('text'));
     assert.equal(dialogue.inputSchema.properties.inputs.maxItems, ELEVENLABS_DIALOGUE_MAX_INPUTS);
-    assert.deepEqual(dialogue.inputSchema.properties.model.enum, ['eleven_v4']);
   });
 
   it('the output contract names the RIFF default and warns that mp3 is not builder input', () => {

@@ -46,6 +46,7 @@ test('final speed cannot bypass approval through missing cards or a different en
   const dir = setup(t);
   assert.doesNotThrow(() => checkTempo(dir, 1));
   assert.throws(() => checkTempo(dir, 1.2), /explicit user request/);
+  assert.throws(() => checkTempo(dir, NaN), /Invalid TTS speed/);
   save(dir, [{ ...approval, scope: 'final' }]);
   assert.doesNotThrow(() => checkTempo(dir, 1.2));
   assert.throws(() => checkTempo(dir, 1.1), /explicit user request/);
