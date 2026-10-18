@@ -1,16 +1,14 @@
 # Offline review design
 
 Reference: ttalkkak-story commit `d29f1a6` (2026-10-11), design system 1.2.0.
-Source components: `src/components/ui/page.tsx`, `globals.css`,
+Historical source components: `src/components/ui/page.tsx`, `globals.css`,
 `features/characters/components/character-card.tsx`, `character-form.tsx`,
 `character-image-slots.tsx`, and `features/storyboard/components/shot-tree.tsx`.
 
 - Palette: background #fcfcfd, text #18181b, secondary text #52525b,
   separators #e4e4e7, actions #2563eb, positive state #147a4b.
-- Typography: bundled Wanted Sans Variable 1.0.3; source npm wanted-sans@1.0.3,
-  `fonts/webfonts/variable/complete/woff2/WantedSansVariable.woff2`.
-  OFL license travels beside the font. No CDN requests. Latin text uses Wanted Sans
-  locally; other font families are not bundled.
+- Typography: local Inter 4.1, Pretendard Variable 1.3.9 and Noto Sans JP/SC/TC
+  variable fonts, each with its OFL license. See the current typography section below.
 - Shared CSS declares color and size tokens once; all review components use them.
   Responsive thresholds are 640px, 768px and 1024px (max-width rules use one pixel
   below the threshold). The brand name is 20px.
@@ -83,3 +81,32 @@ Evaluation rubric and independent reports: [character detail review](../../../do
 Upstream image diagnostics and episode links remain available beneath the gallery.
 Diagnostic details show their count when collapsed; they do not override the
 character content review or imply that matching the template certifies the art.
+
+## Multilingual typography and Liquid Glass (2026-10-18)
+
+This section supersedes the earlier visual token values. The canvas is #f2f5f9
+with a static cool light field. Floating navigation uses 78% white, a white rim,
+24px blur and a restrained shadow. Shot cards use 94% white without blur. Text stays
+#18181b, secondary text #4b5565, separators #dce2eb and actions #2563eb.
+
+Inter supplies Latin (English, Vietnamese, German, French and Spanish). Pretendard
+supplies Korean. Noto Sans JP/SC/TC supplies Japanese, Simplified and Traditional
+Chinese. All faces and individual OFL files travel with generated boards and library
+copies via `review-fonts.js`; no CDN or installed font is required. Provenance and
+coverage live in `review-assets/fonts/manifest.json`. Legacy Wanted Sans assets are
+not copied by the current generator.
+
+The base is 15px/1.65; dialogue 16px/1.8; shot headings 18–20px; document headings
+28–36px, weight 650. Script language is `SB_DOC.contentLanguage`, with optional
+one-based `SB_DOC.shotLanguages` overrides. Explicit Chinese script tags control
+regional glyphs independently of the English/Korean interface picker. Han-only
+legacy text has an unknown language and an SC fallback; set the region explicitly.
+
+The rail occupies the existing 240px column, inset 16px with a 224px visible surface.
+It flows above the content below 1024px. The timing chart is a native disclosure
+so a long episode does not push the first shot far down a mobile screen.
+Reduced transparency, greater contrast, no-blur support and print have opaque
+alternatives. Fonts settle before preview measurements and dependent views mount.
+
+Research, screenshots and independent evaluation:
+[typography review](../../../docs/loops/009-review-typography/research.md).
