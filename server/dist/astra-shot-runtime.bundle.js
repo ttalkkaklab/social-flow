@@ -5067,7 +5067,7 @@ var package_default = {
     node: ">=20"
   },
   scripts: {
-    build: "tsc && node build-video-catalog.mjs && npm run bundle && npm run bundle:shot && npm run bundle:mesh",
+    build: "tsc && node build-video-catalog.mjs && node build-image-catalog.mjs && npm run bundle && npm run bundle:shot && npm run bundle:mesh",
     start: "node dist/index.js",
     test: "node --test test/*.test.mjs",
     check: "npm run build && npm test",
@@ -6218,6 +6218,28 @@ function requireOneSource(data, ctx) {
 var omniExtendSchema = external_exports.object({ ...continuationFields, durationSeconds: durationSchema2 }).superRefine(requireOneSource);
 var omniEditSchema = external_exports.object(continuationFields).superRefine(requireOneSource);
 
+// src/image-models.ts
+function mlxImageFamily(model = "") {
+  if (/qwen.*image.*2[.-]1/i.test(model)) return "qwen-2.1";
+  if (/mage[-_]?flow/i.test(model)) return /edit/i.test(model) ? "mage-edit" : "mage";
+  if (/krea[-_]?2/i.test(model)) return "krea";
+  if (/flux[.-]?2[-_]?klein/i.test(model)) return "flux-klein";
+  return "unknown";
+}
+function validateMlxImageOperation(model, operation, args) {
+  const family = mlxImageFamily(model);
+  if (operation === "edit" && !["flux-klein", "mage-edit", "qwen-2.1"].includes(family))
+    throw new Error("image_operation_unsupported: select an identified editing pack");
+  if (operation === "variation" && !["flux-klein", "krea"].includes(family))
+    throw new Error("image_operation_unsupported: this pack has no verified strength-based variation");
+  if (args.transparent === true && family !== "qwen-2.1")
+    throw new Error("image_transparency_unsupported: transparent requires Qwen-Image-2.1");
+  const refs = Array.isArray(args.refImagePaths) ? args.refImagePaths.length : 0;
+  if (refs > (family === "qwen-2.1" ? 9 : 3)) throw new Error("image_reference_limit");
+  if (family === "qwen-2.1" && /turbo/i.test(model || "") && args.steps !== void 0 && args.steps !== 8)
+    throw new Error("image_schedule_fixed: Qwen Turbo uses its saved 8-step schedule");
+}
+
 // src/mlx-serve-client.ts
 var MLX_LOAD_TIMEOUT_MS = 10 * 6e4;
 var MLX_IMAGE_TIMEOUT_MS = 15 * 6e4;
@@ -6243,9 +6265,9 @@ var MLX_VIDEO_FPS = 24;
 var MIN_MLX_MUSIC_SECONDS = 10;
 var MAX_MLX_MUSIC_SECONDS = 600;
 var DEFAULT_MLX_MUSIC_SECONDS = 30;
-var MAX_MLX_IMAGE_REFS = 3;
+var MAX_MLX_IMAGE_REFS = 9;
 var imageDimension = external_exports.number().int().min(MIN_MLX_IMAGE_DIMENSION).max(MAX_MLX_IMAGE_DIMENSION).refine((v) => v % MLX_IMAGE_DIMENSION_STEP === 0, {
-  message: `width/height must be a multiple of ${MLX_IMAGE_DIMENSION_STEP} (for 9:16 that's 1088\xD71920, not 1080\xD71920). FLUX.2-klein is fixed at 1024\xD71024 \u2014 pick a Krea/Mage-Flow model for other sizes.`
+  message: `width/height must be a multiple of ${MLX_IMAGE_DIMENSION_STEP} (for 9:16 that's 1088\xD71920, not 1080\xD71920). Model and installed backend may impose additional size constraints.`
 });
 var videoDimension = external_exports.number().int().min(MIN_MLX_VIDEO_DIMENSION).max(MAX_MLX_VIDEO_DIMENSION).refine((v) => v % MLX_VIDEO_DIMENSION_STEP_ONE_STAGE === 0, {
   message: `width/height must be a multiple of ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE} (LTX grid), and of ${MLX_VIDEO_DIMENSION_STEP} unless you pass pipeline:"one_stage". 1080 is on neither grid \u2014 use 1088\xD71920 or the default 768\xD71280.`
@@ -6253,26 +6275,46 @@ var videoDimension = external_exports.number().int().min(MIN_MLX_VIDEO_DIMENSION
 var mlxImageGenerateSchema = external_exports.object({
   prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
   model: external_exports.string().min(1).optional(),
+  transparent: external_exports.boolean().optional(),
   width: imageDimension.optional().default(DEFAULT_MLX_IMAGE_SIZE),
   height: imageDimension.optional().default(DEFAULT_MLX_IMAGE_SIZE),
-  steps: external_exports.number().int().min(1).max(50).optional(),
+  steps: external_exports.number().int().min(1).max(100).optional(),
   seed: external_exports.number().int().min(0).optional(),
   imagePath: external_exports.string().min(1).optional(),
   strength: external_exports.number().min(0).max(1).optional(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("image").optional()
+}).superRefine((value, ctx) => {
+  if (value.width === void 0 !== (value.height === void 0)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: "Send width and height together" });
+  if (value.model) {
+    try {
+      validateMlxImageOperation(value.model, "imagePath" in value && value.imagePath ? "refImagePaths" in value ? "edit" : "variation" : "text", value);
+    } catch (error) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: String(error) });
+    }
+  }
 });
 var mlxImageEditSchema = external_exports.object({
   prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
   imagePath: external_exports.string().min(1, "imagePath is required"),
   refImagePaths: external_exports.array(external_exports.string().min(1)).max(MAX_MLX_IMAGE_REFS).optional(),
   model: external_exports.string().min(1).optional(),
+  transparent: external_exports.boolean().optional(),
   width: imageDimension.optional(),
   height: imageDimension.optional(),
-  steps: external_exports.number().int().min(1).max(50).optional(),
+  steps: external_exports.number().int().min(1).max(100).optional(),
   seed: external_exports.number().int().min(0).optional(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("image").optional()
+}).superRefine((value, ctx) => {
+  if (value.width === void 0 !== (value.height === void 0)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: "Send width and height together" });
+  if (value.model) {
+    try {
+      validateMlxImageOperation(value.model, "edit", value);
+    } catch (error) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: String(error) });
+    }
+  }
 });
 var mlxMusicGenerateSchema = external_exports.object({
   prompt: external_exports.string().min(1, "Prompt is required").max(4e3),

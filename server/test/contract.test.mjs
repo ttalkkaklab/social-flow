@@ -381,21 +381,9 @@ describe('mlx_* tools', () => {
       assert.equal(tool.annotations.openWorldHint, false, `${name} must be generateLocal`);
       assert.equal(tool.annotations.readOnlyHint, false);
       assert.equal(tool.annotations.destructiveHint, false);
-      assert.match(tool.description, /brew install --cask mlx-core/);
-      assert.match(tool.description, /never launches the app/);
+      if (!name.startsWith('mlx_image_')) assert.match(tool.description, /brew install --cask mlx-core/);
+      if (!name.startsWith('mlx_image_')) assert.match(tool.description, /never launches the app/);
     }
-  });
-
-  it('image lane stays default-local and Hangul stays gpt_image', () => {
-    const gen = byName.get('mlx_image_generate');
-    const edit = byName.get('mlx_image_edit');
-    assert.match(gen.description, /image_local_generate/);
-    assert.match(gen.description, /gpt_image_text2img/);
-    assert.match(gen.description, /1088×1920/);
-    assert.match(gen.description, /default:true/);
-    assert.match(edit.description, /mode:"edit"/);
-    assert.match(edit.description, /gpt_image_img2img/);
-    assert.equal(gen.inputSchema.properties.width.default, 1024);
   });
 
   it('music defaults instrumental and names the lyrics 400', () => {
@@ -966,24 +954,13 @@ describe('image lane separation (local · OpenAI)', () => {
     assert.equal(local.annotations.readOnlyHint, false);
   });
 
-  it('the local tool description gives the mflux install and binary override', () => {
-    assert.match(local.description, /uv tool install --python 3\.12 mflux/, 'no install guidance');
-    assert.match(local.description, /MFLUX_ZIMAGE_BIN/, 'no binary path override method');
-  });
 
-  it('the local tool description warns about the large first-call download', () => {
-    // call it unaware of the 31GB and you misread it as "stuck" and kill it — flag the download in advance
-    assert.match(local.description, /31GB/, 'no weight-download warning');
-  });
 
-  it('routes text-bearing images to gpt_image — with the measured Korean evidence', () => {
-    assert.match(local.description, /gpt_image_text2img/, 'no billed-lane guidance');
-    assert.match(local.description, /딸깍연구소/, 'no measured Korean-rendering evidence');
-  });
 
-  it('the gpt_image description gives the reverse routing (the default is local)', () => {
-    assert.match(paid.description, /image_local_generate/, 'no local-default-lane guidance');
-  });
+
+
+
+
 
   it('the generation nudge in serp_image_search points at both lanes', () => {
     assert.match(byName.get('serp_image_search').description, /image_local_generate/);

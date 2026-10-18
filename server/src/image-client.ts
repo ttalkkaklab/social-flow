@@ -12,24 +12,17 @@
  *   - images.edit also supports output_format, so the response MIME follows the requested outputFormat.
  *   - input_fidelity is edit-only and can be passed only on gpt-image-1 / gpt-image-1.5.
  *     gpt-image-2 always runs at high, so the parameter must not be sent (official guide),
- *     and gpt-image-1-mini doesn't support it. (Both are pre-blocked in the schema superRefine.)
+ *     while gpt-image-1-mini accepts only low.
  *
  * The API key is validated at call time, not at startup (config.requireOpenAiKey).
  */
 
 import { z } from 'zod';
 import { requireOpenAiKey } from './config.js';
+import { GPT_IMAGE_MODELS, gptImageFamily, assertImageModelAvailable } from './image-models.js';
 
-// Supported OpenAI image generation models (as of 2026-07, per openai SDK v6 ImageModel)
-// - For simplicity only the GPT Image family is exposed (dall-e-* finished shutting down 2026-05-12).
-// - EOL schedule: gpt-image-1 → 2026-10-23, gpt-image-1.5 / gpt-image-1-mini → 2026-12-01.
-//   After that, gpt-image-2 is the only model left on the Images API.
-export const VALID_GPT_IMAGE_MODELS = [
-  'gpt-image-2',      // newest · recommended default (photorealism + strong instruction adherence, reasoning-based)
-  'gpt-image-1.5',    // quality/cost balance (mid-tier) — shutdown scheduled 2026-12-01
-  'gpt-image-1',      // previous generation — shutdown scheduled 2026-10-23
-  'gpt-image-1-mini', // cheap, lower-quality option — shutdown scheduled 2026-12-01
-] as const;
+// See image-models.ts for dated capabilities and retirement dates. No automatic replacement.
+export const VALID_GPT_IMAGE_MODELS = GPT_IMAGE_MODELS;
 
 export type GPTImageModel = (typeof VALID_GPT_IMAGE_MODELS)[number];
 
@@ -72,7 +65,7 @@ export const VALID_GPT_IMAGE_FORMATS = ['png', 'jpeg', 'webp'] as const;
 export type GPTImageFormat = (typeof VALID_GPT_IMAGE_FORMATS)[number];
 
 // Input detail preservation strength (images.edit only)
-// - gpt-image-1-mini: unsupported.
+// - gpt-image-1-mini: low only.
 // - gpt-image-2: always runs at high and the parameter itself cannot be passed
 //   (official guide: "omit this parameter; the API doesn't allow changing it").
 export const VALID_GPT_IMAGE_INPUT_FIDELITY = ['high', 'low'] as const;
@@ -94,7 +87,7 @@ function validateSizeAgainstModel(model: GPTImageModel, size: string, ctx: z.Ref
   const match = WH_SIZE_RE.exec(size);
   if (!match) return; // already rejected by the field schema refine
 
-  if (!GPT_IMAGE_FLEXIBLE_SIZE_MODELS.includes(model)) {
+  if (!GPT_IMAGE_FLEXIBLE_SIZE_MODELS.includes(gptImageFamily(model) as GPTImageModel)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['size'],
@@ -135,7 +128,7 @@ function validateSizeAgainstModel(model: GPTImageModel, size: string, ctx: z.Ref
 
 /**
  * Validate the background value against model/output-format constraints.
- * - gpt-image-2 does not support transparent (documented fact).
+ * - gpt-image-2 transparency is available in preview; availability is provider-controlled.
  * - transparent is only possible with png/webp output, which support transparency (not jpeg).
  */
 function validateBackground(
@@ -146,14 +139,6 @@ function validateBackground(
 ): void {
   if (background !== 'transparent') return;
 
-  if (model === 'gpt-image-2') {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['background'],
-      message:
-        'gpt-image-2 does not support transparent backgrounds. Use opaque/auto, or switch to gpt-image-1 (EOL 2026-10-23) / gpt-image-1.5 (EOL 2026-12-01). After EOL no model supports transparency, so consider post-processing (background removal).',
-    });
-  }
   if (outputFormat === 'jpeg') {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -202,14 +187,14 @@ export const img2ImgSchema = z
     validateSizeAgainstModel(data.model, data.size, ctx);
     validateBackground(data.model, data.background, data.outputFormat, ctx);
     if (data.inputFidelity) {
-      if (data.model === 'gpt-image-1-mini') {
+      if (data.model === 'gpt-image-1-mini' && data.inputFidelity !== 'low') {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['inputFidelity'],
           message:
-            'inputFidelity is not supported on gpt-image-1-mini. Use gpt-image-1 / gpt-image-1.5.',
+            'gpt-image-1-mini supports only low inputFidelity. Use gpt-image-1 / gpt-image-1.5.',
         });
-      } else if (data.model === 'gpt-image-2') {
+      } else if (gptImageFamily(data.model) === 'gpt-image-2') {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['inputFidelity'],
@@ -234,7 +219,10 @@ export interface ImageGenerationResponse {
   quality?: string;
   revisedPrompt?: string;
   error?: string;
+  usage?: unknown;
+  requestId?: string;
 }
+
 
 // outputFormat → MIME mapping
 function formatToMime(format: GPTImageFormat): string {
@@ -263,6 +251,7 @@ function mimeToExt(mime: string): string {
 
 /** Generate an image from a text prompt (POST /v1/images/generations) */
 export async function generateFromText(request: Text2ImageRequest): Promise<ImageGenerationResponse> {
+  assertImageModelAvailable(request.model);
   const apiKey = requireOpenAiKey();
   const model = request.model || DEFAULT_MODEL;
   const outputFormat = request.outputFormat || 'png';
@@ -271,7 +260,7 @@ export async function generateFromText(request: Text2ImageRequest): Promise<Imag
   try {
     // dynamic import of the openai SDK — loaded only when a generation tool is called
     const { default: OpenAI } = await import('openai');
-    const client = new OpenAI({ apiKey });
+    const client = new OpenAI({ apiKey, maxRetries: 0 });
 
     const response = await client.images.generate({
       model,
@@ -301,6 +290,7 @@ export async function generateFromText(request: Text2ImageRequest): Promise<Imag
 
 /** Edit/compose from reference images + a prompt (POST /v1/images/edits) */
 export async function generateFromImage(request: Img2ImgRequest): Promise<ImageGenerationResponse> {
+  assertImageModelAvailable(request.model);
   const apiKey = requireOpenAiKey();
   const model = request.model || DEFAULT_MODEL;
   const sourceMime = request.sourceMimeType || 'image/png';
@@ -309,7 +299,7 @@ export async function generateFromImage(request: Img2ImgRequest): Promise<ImageG
 
   try {
     const { default: OpenAI, toFile } = await import('openai');
-    const client = new OpenAI({ apiKey });
+    const client = new OpenAI({ apiKey, maxRetries: 0 });
 
     // Decode base64 and convert to Uploadable sequentially, to ease memory pressure.
     const sourceExt = mimeToExt(sourceMime);
@@ -358,7 +348,7 @@ export async function generateFromImage(request: Img2ImgRequest): Promise<ImageG
 
 /** Extract the first image's base64 from an OpenAI response */
 function extractImage(
-  response: { data?: Array<{ b64_json?: string; revised_prompt?: string }> },
+  response: { data?: Array<{ b64_json?: string; revised_prompt?: string }>; usage?: unknown; _request_id?: string | null; size?: string; quality?: string },
   prompt: string,
   meta: { model: string; size?: string; quality?: string; mimeType: string },
 ): ImageGenerationResponse {
@@ -382,8 +372,10 @@ function extractImage(
     mimeType: meta.mimeType,
     prompt,
     model: meta.model,
-    size: meta.size,
-    quality: meta.quality,
+    size: response.size ?? meta.size,
+    quality: response.quality ?? meta.quality,
+    usage: response.usage,
+    requestId: response._request_id ?? undefined,
     revisedPrompt: typeof first?.revised_prompt === 'string' ? first.revised_prompt : undefined,
   };
 }

@@ -6,6 +6,7 @@ import { config, disabledToolPatterns, disabledToolsFile, listChannelDirs } from
 import { describeToolGate, resolveToolGate, warnUnknownPatterns } from './tool-gate.js';
 import { SERVER_INSTRUCTIONS, SNS_PLATFORM_BY_TOOL, TOOLS } from './tools.js';
 import { ROUTES } from './handlers.js';
+import { isManagedImageCall } from './image-registry.js';
 import { isManagedVideoCall } from './video-registry.js';
 import { enabledPlatforms } from './sns-client.js';
 import { episodePathArg, isBillableTool, priceOf, recordUsage } from './usage-ledger.js';
@@ -62,7 +63,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         // at the one point every call passes through, so it does not depend on a skill remembering
         // to append a line after the fact (usage-ledger.ts explains where it lands and why).
         // A failed call is recorded too — a retry after a failure can still have been billed.
-        if (isBillableTool(name) && !isManagedVideoCall(name, args)) {
+        if (isBillableTool(name) && !isManagedVideoCall(name, args) && !isManagedImageCall(name, args)) {
             const callArgs = (args ?? {});
             const startedAt = Date.now();
             let ok = false;

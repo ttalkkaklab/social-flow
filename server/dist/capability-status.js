@@ -66,11 +66,11 @@ export function capabilityStatus() {
             capability: 'image_generation',
             providers: [
                 { provider: 'z-image (local, mflux)', configured: binOk(mfluxZImageBin()), needs: 'mflux on this machine',
-                    note: 'image_local_generate — free, and the default for backgrounds with no text' },
+                    note: 'image_local_generate — local text generation; saved image selection takes precedence' },
                 { provider: 'gpt-image (OpenAI)', configured: has(config.openaiApiKey), needs: 'OPENAI_API_KEY',
-                    note: 'gpt_image_text2img · gpt_image_img2img — the only lane that renders Korean text' },
+                    note: 'gpt_image_text2img · gpt_image_img2img — API generation/editing; inspect Korean text in actual results' },
                 { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
-                    note: 'mlx_image_generate · mlx_image_edit — optional local lane, not the default' },
+                    note: 'mlx_image_generate · mlx_image_edit — installed model capabilities vary; inspect image_catalog before image_plan' },
             ],
         },
         {

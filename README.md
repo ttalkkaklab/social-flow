@@ -609,10 +609,10 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 104 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 108 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions — 104 tools, including voice auditions and opt-in acting review
+│       ├── tools.ts             # tool definitions — 108 tools, including voice auditions and opt-in acting review
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -679,12 +679,12 @@ Episodes are saved only under `data/<channel>/episodes/<topic>/`. Open
 media and publication logs stay in the local episode directory; no destination
 selection or workspace key is required.
 
-## MCP tool surface (104 tools)
+## MCP tool surface (108 tools)
 
 `project_manage`: options · status · init · update · episode. Local project setup
 with genre, models, style, ratio, format and SNS records; no generation or publishing.
 
-**`tools/list` does not show all 104.** The credential-gated publish, review and insights tools
+**`tools/list` does not show all 108.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
@@ -706,9 +706,10 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Research | `stock_search` | Free stock photos and clips — Pexels · Pixabay (`PEXELS_API_KEY` / `PIXABAY_API_KEY`) · NASA Image and Video Library · Wikimedia Commons (no key). Every item returns the `visual.license` block a `visual.source: "stock"` cut stores; Commons is filtered to public domain, CC0 and CC BY. The survey behind it, with license quotes and the Korean public-domain sources: [free stock sources](docs/research/2026-09-07-free-stock-sources/index.html) (Korean) |
 | Open data | `datago_search` / `datago_detail` / `datago_file_download` | data.go.kr (no auth — search·detail·raw file) |
 | Open data | `datago_file_fetch` / `datago_api_call` | odcloud · apis.data.go.kr (auth key + **per-API usage application** required) |
+| Image routing | `image_catalog` / `image_plan` / `image_execute` / `image_status` | Saved image selection, model-specific capability checks, atomic cost reservations, duplicate protection and measured output receipts. [Routing contract](skills/_shared/image-routing.md). Host execution stays external. |
 | Image generation | `image_local_generate` | Z-Image Turbo on-device via mflux (**no API key, no network, no billing — the default path on Claude Code**; under Codex and Grok the CLI's own `image_gen` comes first. Needs Apple Silicon + `uv tool install --python 3.12 mflux`; first call downloads 31GB of weights. No text inside images — Korean jamo break up) |
-| Image generation | `mlx_image_generate` / `mlx_image_edit` | MLX Core / mlx-serve on loopback (**no vendor bill**. Optional lane — default stays Z-Image. Hangul still goes to gpt_image. Fail closed if :11234 is down; this plugin never launches the app. `brew install --cask mlx-core`) |
-| Image generation | `gpt_image_text2img` / `gpt_image_img2img` | OpenAI GPT Image (OPENAI_API_KEY — **the text-and-quality path**: text rendering, arbitrary WIDTHxHEIGHT, up to 16 reference images, mask inpainting) |
+| Image generation | `mlx_image_generate` / `mlx_image_edit` | MLX Core / mlx-serve on loopback (**no vendor bill**. Optional lane — default stays Z-Image. Inspect actual Hangul. Model-specific edit/variation/alpha contracts apply. Fail closed if :11234 is down; this plugin never launches the app. `brew install --cask mlx-core`) |
+| Image generation | `gpt_image_text2img` / `gpt_image_img2img` | OpenAI GPT Image (OPENAI_API_KEY — **saved selection takes precedence**: model-dependent sizes, up to 16 references, mask inpainting, usage receipts; GPT Image 2 transparent output is preview) |
 | Video generation | `veo_text2video` / `veo_img2video` / `veo_extension` / `veo_reference` | Veo 3.1 (GEMINI_API_KEY — 720p–4k, 4/6/8s grid; **native audio, local-file extension, and live-person reference** are this engine's edge) |
 | Video generation | `omni_text2video` / `omni_img2video` / `omni_extend` / `omni_edit` | Gemini Omni 1.1 Flash (GEMINI_API_KEY, Interactions API — 360p–4k, **any whole 3–10s**, and the only lane that **edits a clip by instruction** or extends a local mp4 to a 40s cumulative cap. **Billed flat ~$1.01 per call** — measured against the spend counter, not per second as the pricing page reads — so a 3s draft costs more than a full 8s veo-3.1-lite shot; worth it at the full 10s or for the edit lane, never for a short cut. No reference-image or negative-prompt field, and its person policy is unmeasured — photoreal faces stay on `veo_img2video`) |
 | Video routing | `video_catalog` / `video_plan` / `video_execute` / `video_status` | Saved model selection, adapter validation, atomic episode budget reservations and durable request receipts. [Routing contract](skills/_shared/video-routing.md). |
@@ -866,6 +867,8 @@ can turn one JSON-disabled tool back on for that session. Values split on commas
 or whitespace; a bare `*` matches every tool.
 
 ## Documentation (docs/)
+
+Latest image model research: **[Image APIs, local models and production tips](docs/research/2026-10-18-image-models/README.md)** — model-by-model official documentation, pricing, retirement dates, generation/editing examples and differences from the current adapters, checked 2026-10-18 (Korean).
 
 Latest video API research: **[MiniMax H3, LTX 2.5, Seedance and Veo API pricing](docs/research/2026-10-18-video-model-api-pricing/README.md)** — official endpoints, model capabilities, per-second/token rates and reference-input charges, checked 2026-10-18 (Korean).
 

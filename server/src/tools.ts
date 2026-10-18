@@ -1,3 +1,5 @@
+import { GPT_IMAGE_MODELS } from './image-models.js';
+import { IMAGE_ADAPTERS } from './image-registry.js';
 import { VIDEO_ADAPTERS } from './video-registry.js';
 import { DURATION_TOOLS } from './video-duration.js';
 import { CHANNEL_SLUG_RE } from './config.js';
@@ -1113,7 +1115,7 @@ Episode video: \`video_catalog\` → \`video_plan\` → \`video_execute\`, and \
 
 Storyboard: \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_route\` and the tts_* tools generate. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
 
-Images: \`image_local_generate\` is the free local default for text-free images; any image with text in it (Korean especially) goes to \`gpt_image_text2img\`. Music: music_*, suno_*. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
+Images: \`image_catalog\` → \`image_plan\` → \`image_execute\`, then \`image_status\` after interruption. Preserve the saved model choice; legacy image adapters require imageContext for configured production. Host selections remain external handoffs. Music: music_*, suno_*. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
 
 SNS: run \`sns_account_check\` first; publish tools appear only for platforms with a credential file. \`threads_publish\`, \`instagram_publish\`, \`facebook_publish\`, \`youtube_publish\` and \`sns_comment_reply\` are public the moment they run — call them only with the user's approval for that post or inside a growth-plan.md standing authorization.
 
@@ -1651,13 +1653,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend — use bl
     name: 'gpt_image_text2img',
     title: 'Image generation (text → image)',
     annotations: HINT.generate,
-    description: `Generate an image from a text prompt using OpenAI GPT Image models.
-
-Use when the image must contain legible text — posters, labels, UI mockups, signage, title cards — or when a quality boost over the local default is worth paying for. The local engine breaks Korean glyphs (measured: "딸깍연구소" came out as "달닥연구소"); every text-bearing image belongs here. Strengths: reliable text rendering inside the image, strong photorealism, and exact custom WIDTHxHEIGHT resolutions (e.g. "1088x1920" for 9:16 — gpt-image-2 only, edges multiple of 16).
-Do NOT use as the first choice for text-free images (cover backgrounds, b-roll, draft exploration) — the plugin's default path is image_local_generate (local Z-Image, free); this tool bills per image. Do NOT use to edit or compose existing images — use gpt_image_img2img.
-Note: gpt-image-2 (default) does NOT support transparent backgrounds; transparent requires the deprecated gpt-image-1/1.5 and png/webp output. Size/quality/background constraints are enforced per model — see each parameter.
-
-Returns: the generated image as MCP image content (always base64), plus a text block with model, size, quality, and the saved file path when savePath is given.`,
+    description: 'Generate one image with the selected OpenAI GPT Image API model. Use for a new image; use gpt_image_img2img for references or masks. OPENAI_API_KEY required; billed text/image input and output. Saved image selection takes precedence over default recommendations. GPT Image 2 transparency is preview; retired models fail without substitution. Returns base64 image, saved path when requested, and provider usage receipt. For configured production use image_plan/image_execute or imageContext.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1669,7 +1665,7 @@ Returns: the generated image as MCP image content (always base64), plus a text b
         model: {
           type: 'string',
           description: 'OpenAI GPT Image model (default: "gpt-image-2")',
-          enum: ['gpt-image-2', 'gpt-image-1.5', 'gpt-image-1', 'gpt-image-1-mini'],
+          enum: [...GPT_IMAGE_MODELS],
           default: 'gpt-image-2',
         },
         size: {
@@ -1687,7 +1683,7 @@ Returns: the generated image as MCP image content (always base64), plus a text b
         background: {
           type: 'string',
           description:
-            'Background mode (default: "opaque"). "transparent" is NOT supported by gpt-image-2 (use gpt-image-1 / gpt-image-1.5) and requires a png or webp output.',
+            'Background mode (default: "opaque"). "transparent" requires PNG/WebP; GPT Image 2 support is preview.',
           enum: ['opaque', 'transparent', 'auto'],
           default: 'opaque',
         },
@@ -1709,13 +1705,7 @@ Returns: the generated image as MCP image content (always base64), plus a text b
     name: 'gpt_image_img2img',
     title: 'Image edit & compose (image → image)',
     annotations: HINT.generate,
-    description: `Edit or compose images using OpenAI GPT Image models (multi-reference + optional mask).
-
-Use when the user asks to inpaint a masked region, combine multiple reference images (1-16 via sourceImagesBase64) into one output, or edit while preserving fine input details such as faces and logos (이미지 합성, 인페인팅, 이미지 수정, 배경 교체).
-Do NOT use for text-to-image from scratch — use gpt_image_text2img.
-Mask: optional PNG with alpha channel, same dimensions as the first source image; fully transparent pixels are the regions to regenerate (applied to the first image only). gpt-image-2 (default) always runs at high input fidelity — do not pass inputFidelity for it.
-
-Returns: the edited image as MCP image content (always base64, in the requested outputFormat), plus a text block with model, size, quality, mask/fidelity flags, and the saved file path when savePath is given.`,
+    description: 'Edit or compose an image with up to 16 references and an optional PNG mask using OpenAI GPT Image. Use gpt_image_text2img for text-only generation. OPENAI_API_KEY required; billed input and output. inputFidelity: low/high for 1 and 1.5, low only for mini, omit for 2. Transparent output requires PNG/WebP. Returns image and provider usage. Saved selection is binding; use imageContext for configured production.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1744,7 +1734,7 @@ Returns: the edited image as MCP image content (always base64, in the requested 
         model: {
           type: 'string',
           description: 'OpenAI GPT Image model (default: "gpt-image-2")',
-          enum: ['gpt-image-2', 'gpt-image-1.5', 'gpt-image-1', 'gpt-image-1-mini'],
+          enum: [...GPT_IMAGE_MODELS],
           default: 'gpt-image-2',
         },
         size: {
@@ -1762,7 +1752,7 @@ Returns: the edited image as MCP image content (always base64, in the requested 
         background: {
           type: 'string',
           description:
-            'Background mode (default: "opaque"). "transparent" is NOT supported by gpt-image-2 (use gpt-image-1 / gpt-image-1.5) and requires a png or webp output.',
+            'Background mode (default: "opaque"). "transparent" requires PNG/WebP; GPT Image 2 support is preview.',
           enum: ['opaque', 'transparent', 'auto'],
           default: 'opaque',
         },
@@ -1774,7 +1764,7 @@ Returns: the edited image as MCP image content (always base64, in the requested 
         },
         inputFidelity: {
           type: 'string',
-          description: 'How strongly to preserve fine details (faces, logos, layout) of the input images. Only for gpt-image-1 / gpt-image-1.5 (API default: "low"). Do NOT set for gpt-image-2 (always high fidelity, parameter rejected) or gpt-image-1-mini (unsupported).',
+          description: 'How strongly to preserve fine details (faces, logos, layout) of the input images. Use low/high for gpt-image-1 or 1.5, low only for mini. Omit for gpt-image-2 and its snapshot (always high fidelity).',
           enum: ['high', 'low'],
         },
         savePath: {
@@ -1789,13 +1779,7 @@ Returns: the edited image as MCP image content (always base64, in the requested 
     name: 'image_local_generate',
     title: 'Image generation (local · Z-Image — default)',
     annotations: HINT.generateLocal,
-    description: `Generate an image from a text prompt **on this machine** using Z-Image Turbo (6B, Apache 2.0) via mflux — no API key, no network, no per-image cost.
-
-This is the DEFAULT image generation path of this plugin. Use for any text-free image: cover backgrounds, b-roll stills, branding drafts, mood exploration, bulk candidate batches (이미지 생성, 커버 배경). Measured on this class of machine (M4 Max): 1024×1024 in ~2–3.5 min and 1088×1920 (9:16) in ~7.5 min under heavy load — minutes, not seconds, with 32–39GB peak memory; avoid running alongside video renders.
-Do NOT use when the image must contain legible text — Korean glyphs break (measured: "딸깍연구소" rendered as "달닥연구소"); any text-bearing image (poster, label, title card) and any quality-critical shot goes to gpt_image_text2img instead. Do NOT use to edit existing images — gpt_image_img2img.
-Requires mflux (\`uv tool install --python 3.12 mflux\`; Apple Silicon only); set MFLUX_ZIMAGE_BIN if the binary lives elsewhere. The first call downloads the ~31GB weight repository to ~/.cache/huggingface — the tool extends its own timeout by an hour for that download, so a very slow first call is normal, not stuck.
-
-Returns: a text block with the saved .png path, resolution, steps, seed, quantization, and generation time.`,
+    description: 'Generate a text-only image locally with Z-Image Turbo via mflux. Requires the mflux executable and downloaded model weights; first use may download weights. No per-call API bill. This adapter does not expose upstream img2img or LoRA. Use the saved engine; never automatically substitute gpt_image_text2img after failure. Korean text quality requires inspection. Returns a local PNG path and requested generation settings. Use imageContext for configured production.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1852,13 +1836,7 @@ Returns: a text block with the saved .png path, resolution, steps, seed, quantiz
     name: 'mlx_image_generate',
     title: 'Image generation (local · MLX Core)',
     annotations: HINT.generateLocal,
-    description: `Generate an image on this machine via MLX Core / mlx-serve (HTTP to 127.0.0.1:11234). No vendor bill. This plugin never launches the app — if :11234 is down the call fails closed with a brew install --cask mlx-core hint.
-
-Use as an optional local image lane when MLX Core is running and an image model is downloaded (FLUX.2-klein is fixed at 1024×1024; Krea/Mage-Flow accept any multiple of ${MLX_IMAGE_DIMENSION_STEP} in ${MIN_MLX_IMAGE_DIMENSION}–${MAX_MLX_IMAGE_DIMENSION}, so 9:16 is 1088×1920 not 1080×1920). Optional imagePath is img2img (strength 0–1).
-Do NOT use as the default path — that stays image_local_generate (Z-Image). Do NOT use when the image must contain legible Korean text — Hangul still goes to gpt_image_text2img (measured: local engines break jamo). Do NOT POST /v1/load-model with default:true; this tool never does that, because it would steal the chat model the app is serving. Shares the GPU with Z-Image (32–39GB peak) and LTX video — don't run them together.
-Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve on PATH (or MLX_SERVE_URL). A non-loopback bind may need MLX_SERVE_API_KEY.
-
-Returns: a text block with the saved .png path, model, size, and generation time.`,
+    description: 'Generate a local image or a supported strength-based variation through a running MLX Core / mlx-serve. No vendor bill; this plugin never launches the app. Model IDs come from the installed server. Known family capabilities are checked; Mage uses mlx_image_edit instead of variation. transparent is available only for Qwen-Image-2.1 and compatible server versions. Saved engine choice wins; gpt_image_text2img is a separate paid adapter. Returns a path and measured output dimensions. Use imageContext for configured production.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1922,13 +1900,7 @@ Returns: a text block with the saved .png path, model, size, and generation time
     name: 'mlx_image_edit',
     title: 'Image edit (local · MLX Core)',
     annotations: HINT.generateLocal,
-    description: `Edit an existing image on this machine via MLX Core / mlx-serve. Posts JSON to /v1/images/generations with mode:"edit" (not multipart /v1/images/edits). No vendor bill. This plugin never launches the app.
-
-Use when you have a source PNG to change and MLX Core is running with an image-edit model. Up to ${MAX_MLX_IMAGE_REFS} extra reference images (refImagePaths). image_local_generate (Z-Image) has no edit lane, so this is the local alternative to gpt_image_img2img.
-Do NOT use for text-to-image from scratch — use mlx_image_generate or image_local_generate. Do NOT use when the result must contain legible Korean text — that stays gpt_image_img2img / gpt_image_text2img. Do NOT treat this as the default image path.
-Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve on PATH (or MLX_SERVE_URL). brew install --cask mlx-core if :11234 is down.
-
-Returns: a text block with the saved .png path, model, and generation time.`,
+    description: 'Edit a local source image through MLX Core / mlx-serve, using JSON mode:edit. Select an identified FLUX.2-klein, Mage-Flow Edit or Qwen-Image-2.1 pack. Qwen accepts 9 additional references, other known packs 3. Krea supports variations through mlx_image_generate, not this editing contract. No vendor bill; no automatic app launch or gpt_image_img2img fallback. Returns saved PNG and actual output dimensions; requested size may be a pixel budget. Use imageContext for configured production.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -5299,3 +5271,39 @@ TOOLS.push({ name: 'video_status', title: 'Read a saved video request receipt',
   description: 'Read the local status, reservation, provider request ID and cached result of a managed video request. Does not contact a provider or resubmit. Use after interruption; ambiguous requests keep their reservation until explicit provider and billing reconciliation.',
   inputSchema: { type: 'object', additionalProperties: false, properties: { episode: { type: 'string', description: 'Absolute episode directory.' }, requestId: { type: 'string', description: 'Original logical request ID from video_plan.' } }, required: ['episode','requestId'] },
   annotations: { readOnlyHint: true, openWorldHint: false } });
+
+const imageContextSchema = { type: 'object' as const, additionalProperties: false,
+  properties: { directory: { type: 'string', description: 'Absolute episode or configured workspace directory.' },
+    assetId: { type: 'string', description: 'Stable shot or asset ID.' }, requestId: { type: 'string', description: 'Stable logical attempt ID; reuse on retry.' },
+    reserveUsd: { type: 'number', minimum: 0, description: 'Positive total input+output estimate for API calls; zero for local/host. Not a provider invoice cap.' } },
+  required: ['directory', 'assetId', 'requestId'] };
+for (const tool of TOOLS) {
+  if (!IMAGE_ADAPTERS[tool.name]) continue;
+  tool.inputSchema.properties = { ...tool.inputSchema.properties, imageContext: { ...imageContextSchema, description: 'Managed image context: binds saved selection, spending limits and duplicate protection.' } };
+  if (tool.name.startsWith('mlx_image_')) {
+    Object.assign(tool.inputSchema.properties, { transparent: { type: 'boolean', description: 'Qwen-Image-2.1 only; preserve native PNG alpha. Requires compatible installed backend.' } });
+    const steps = tool.inputSchema.properties.steps as Record<string, unknown>;
+    steps.maximum = 100;
+    steps.description = 'Requested steps (1–100). Qwen 2.1 Turbo accepts only 8; actual backend schedule may differ.';
+  }
+}
+TOOLS.push(
+  { name: 'image_catalog', title: 'Inspect image adapters and models',
+    description: 'Read installed image adapter contracts, model retirement dates and capability boundaries. No provider request or model loading. Research-only APIs are listed as unimplemented. Use image_plan to validate a concrete request.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } },
+  { name: 'image_plan', title: 'Plan an image with saved selection',
+    description: 'Prepare an image request for an episode or workspace asset. Resolves saved selection and explicit overrides, checks adapter capabilities and image inputs, pins hashes and an API reservation estimate, then saves a local plan. No generation. Returns plan ID and provenance without echoing base64 inputs. Host plans require external handoff. Use image_execute for server adapters.',
+    inputSchema: { ...imageContextSchema, properties: { ...imageContextSchema.properties,
+      operation: { type: 'string', enum: ['text', 'edit', 'variation'], description: 'Requested operation; selected model determines its adapter.' },
+      tool: { type: 'string', description: 'Optional exact adapter name; must match saved selection.' },
+      args: { type: 'object', additionalProperties: true, description: 'Adapter fields. Saved model/quality are inherited; conflicting or unknown fields fail.' } } },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false } },
+  { name: 'image_execute', title: 'Execute an authorized image plan',
+    description: 'Execute a saved image plan with atomic budget/concurrency reservations and duplicate protection. Revalidates selection, input hashes and adapter contract before dispatch. Records provider usage, actual output dimensions/hash and not_reviewed quality. Completed requests reuse receipts; ambiguous submissions never auto-retry. API execution incurs charges; host plans cannot run here.',
+    inputSchema: { type: 'object', additionalProperties: false, properties: { directory: { type: 'string', description: 'Absolute directory from image_plan.' }, planId: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'Saved plan ID.' } }, required: ['directory', 'planId'] },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true } },
+  { name: 'image_status', title: 'Inspect or reconcile an image receipt',
+    description: 'Read a local image receipt without contacting providers. action:reconcile closes a submission_unknown or interrupted submitting request as failed only after the caller supplies terminal/billing evidence and spentUsd. It does not resubmit, certify quality or recover a missing image. Completed requests are immutable. Do not reconcile a request still running at the provider.',
+    inputSchema: { type: 'object', additionalProperties: false, properties: { directory: { type: 'string', description: 'Absolute directory.' }, requestId: { type: 'string', description: 'Original request ID.' }, action: { type: 'string', enum: ['read', 'reconcile'], description: 'Defaults to read.' }, executorStopped: { type: 'boolean', description: 'Required true to reconcile submitting: verify the executor has exited and provider is terminal. A live local owner is rejected.' }, evidence: { type: 'string', description: 'For reconcile: actual terminal status and billing evidence reference.' }, spentUsd: { type: 'number', minimum: 0, description: 'For reconcile: verified total charge, including failed generation.' } }, required: ['directory', 'requestId'] },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false } },
+);
