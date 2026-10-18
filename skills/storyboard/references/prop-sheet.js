@@ -18,7 +18,7 @@
   const nav = document.querySelector('.review-jump');
   if (nav) { const a = el('a', t('소품', 'Props')); a.href = '#props'; nav.append(a); }
   const notes = document.getElementById('review-notes'); app.insertBefore(section, notes || null);
-  if (!props.length) { section.append(el('p', t('등록한 소품이 없습니다.', 'No props registered.'))); return; }
+  if (!props.length) { section.append(el('p', doc.assetSheetNotes?.props || t('소품 시트를 아직 작성하지 않았습니다.', 'Prop sheets have not been written yet.'))); return; }
   const findings = api.check(window);
   const errors = findings.filter(f => f.level === 'bad');
   if (findings.length) {
@@ -68,6 +68,7 @@
       if (typeof image === 'string' && !/^\s*(?:javascript|data|vbscript):/i.test(image)) {
         const img = el('img'); img.src = image; img.alt = prop.name || prop.id; img.loading = 'lazy'; card.append(img);
       }
+      else card.append(el('p', t('참조 이미지 대기', 'Reference image pending'), 'prop-muted'));
       if (prop.description) card.append(el('p', prop.description));
       card.append(el('p', stateText(state), 'prop-state'));
       const history = el('details'); history.append(el('summary', t('변경 이력과 등장 샷', 'History and appearances')));

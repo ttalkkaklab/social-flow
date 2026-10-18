@@ -1119,6 +1119,11 @@ window.SB_DOC = {
   ],
   speechPlanVersion: 1, // explicit line ids, speakers and delivery on new boards
   performanceTimingVersion: 1, // new boards time independent actions before production
+  // Canonical asset sheets belong in scenes.js SB_DOC, not a second editable copy here.
+  // props: [{id, name, description, imageUrl, tracking}], propContinuity: {...}
+  // locations: [{id, name, description, layout, lighting, invariants, imageUrl, sheetPath, manifest}]
+  // Shots link planning locations with visual.locationId; visual.location binds a built set.
+  // assetSheetNotes: {characters: "Not applicable: ...", props: "...", locations: "..."}
   narratorCharacterId: "", // required — one id from characters above
 
   // Promise ledger — what the episode promises and the shot that keeps each promise
@@ -4638,6 +4643,47 @@ window.STORYBOARD_READY = (async function () {
     });
     h += "</div>";
   }
+
+  /* Background/location planning sheets work without a generated set or WebGL. */
+  function locationSheetsHtml(doc, shots) {
+    var ko = LANG === "ko";
+    var word = function (a, b) { return ko ? a : b; };
+    var entries = Array.isArray(doc.locations) ? doc.locations : [];
+    var html = '<section class="prop-sheet" id="location-sheets"><h2>' +
+      word("배경·장소 시트", "Background / location sheets") + '</h2>';
+    var safePath = function (value) {
+      if (typeof value !== "string" || !value.trim() || /[\x00-\x20]/.test(value)) return false;
+      return !/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(value) || /^https?:\/\//i.test(value);
+    };
+    if (!entries.length) {
+      return html + '<p>' + esc((doc.assetSheetNotes || {}).locations ||
+        word("배경·장소 시트를 아직 작성하지 않았습니다.", "Background/location sheets have not been written yet.")) + '</p></section>';
+    }
+    entries.forEach(function (entry) {
+      html += '<article class="prop-card" id="location-sheet-' + esc(encodeURIComponent(entry.id || "")) + '"><h3>' +
+        esc(entry.name || entry.id) + '</h3><code>' + esc(entry.id) + '</code>';
+      if (safePath(entry.imageUrl)) {
+        html += '<img loading="lazy" src="' + esc(entry.imageUrl) + '" alt="' + esc(entry.name || entry.id) + '">';
+      } else html += '<p class="prop-muted">' + word("참조 이미지 대기", "Reference image pending") + '</p>';
+      [["description", word("공간 설명", "Description")], ["layout", word("배치·동선", "Layout / movement")],
+        ["lighting", word("시간·조명", "Time / lighting")], ["invariants", word("고정 요소", "Invariants")]].forEach(function (field) {
+        var value = entry[field[0]];
+        if (Array.isArray(value)) value = value.join(" · ");
+        html += '<p><b>' + field[1] + '</b> · ' + esc(value || word("작성 대기", "Pending")) + '</p>';
+      });
+      [["sheetPath", word("공용 장소 시트", "Shared location sheet")], ["manifest", word("세트 데이터", "Set manifest")]].forEach(function (field) {
+        if (safePath(entry[field[0]])) html += '<p><a href="' + esc(entry[field[0]]) + '">' + field[1] + '</a></p>';
+      });
+      var links = [];
+      shots.forEach(function (shot, index) {
+        if ((shot.visual || {}).locationId === entry.id) links.push('<a href="#shot-' + (index + 1) + '">' +
+          esc(word("샷 ", "Shot ") + (index + 1) + " · " + (shot.title || shot.id || "")) + '</a>');
+      });
+      html += '<p>' + (links.length ? links.join(" · ") : word("연결된 샷 없음", "No linked shots")) + '</p></article>';
+    });
+    return html + '</section>';
+  }
+  h += locationSheetsHtml(DOC, SCENES);
 
   /* ══ Contract · sources · platforms ══ */
   h += '<h2 class="sec" id="contract">' + esc(T.contractHead) +

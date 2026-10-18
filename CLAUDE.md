@@ -17,6 +17,16 @@ Channel-based short-form/long-form content pipeline Claude Code plugin.
 - Initial style, ratio and format are asked once at project setup, then reused.
 - The static-ground limit is guidance.
 
+## Storyboard delivery (owner directive, 2026-10-18)
+
+Present the scenario before detailed storyboard authoring; presentation alone does not
+require an approval pause. Prepare character, prop and background/location sheets before
+scene/shot design, reusing inspected existing sheets and marking ungenerated media pending.
+Use the bundled storyboard HTML and verify its export; custom review HTML is not a substitute.
+Explicit text-only/scenario-only requests retain their scope. Follow
+`skills/storyboard/references/asset-sheets.md`, including explicit not-applicable categories.
+Delegated authors receive the same workflow and deliverables as the coordinating agent.
+
 ## Guided automation (owner directive, 2026-10-16)
 
 CTA checks are removed. Creative structure, writing style, camera direction, review

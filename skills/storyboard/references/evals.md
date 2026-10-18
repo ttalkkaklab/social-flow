@@ -2,6 +2,7 @@
 
 ## Contents
 
+- [Delegated storyboard delivery](#delegated-storyboard-delivery)
 - [Causal dialogue](#causal-dialogue)
 - [Silent physical comedy](#silent-physical-comedy)
 - [Fair mystery](#fair-mystery)
@@ -19,6 +20,19 @@
 Use a fresh author with the installed skill and raw brief. A separate reviewer first
 receives only ordered actions and speech; do not supply intended interpretation or an
 answer key. Keep artifacts local under data/. No paid generation is implied.
+
+## Delegated storyboard delivery
+
+Input: ask an author agent to storyboard a new episode with two people, a handed-over cup
+and a single room; do not separately ask for HTML or sheets.
+Pass evidence: the user sees the scenario before detailed scene/shot writing; no unsolicited
+approval pause. Character identities/shared sheets, canonical prop sheet and room sheet
+exist before shot design. Final delivery links the bundled HTML and actual `--check` result.
+The prop and location sections show the cup/room and shot links with missing media pending.
+Repeat with an explicit scenario-approval request: the author waits before detailed work.
+Repeat with an explicit text-only request: the author delivers text and applicable sheet
+information without claiming a template check. A silent abstract scene declares why unused
+sheet categories are not applicable. Existing sheets are read and reused without paid calls.
 
 ## Causal dialogue
 
