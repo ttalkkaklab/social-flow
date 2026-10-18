@@ -90,6 +90,21 @@ Use this as a thinking aid, not a demand to make characters explain themselves a
 
 ## 3. Write complete scenes before cutting them into shots
 
+For dialogue-led work and existing-story rewrites, read [causal dialogue and situational
+comedy](references/causal-dialogue.md). Check what triggers each consequential line, what
+the speaker can actually infer and what their response makes happen next. A rewrite
+revisits the existing ending as well as the revised opening. For a content-only request,
+deliver a readable sequence of acted scenes without generating images or inheriting
+old media approvals; score only that layer with a rubric fixed before authoring.
+
+Content-only branch: retain place/time, entrances, listening distance and prop handling
+needed to understand the events. Defer camera specifications, renderer selection, image
+prompts, voice production and measured timings in steps 4–5. Deliver the canonical text
+data and a readable scene sequence/HTML labelled as a content plan; these are sufficient
+for this scoped request. Keep old production plans attached to their old revision. In
+step 6 run only checks applicable to the chosen content format and verify its export;
+do not invent production fields merely to clear a full production-board checker.
+
 Write each scene as continuous observable action and attributed speech. Include entrances,
 objects being passed, interruptions, listener responses and meaningful silence where they
 change the event. Decide the initial situation, pressure, character's choice and resulting

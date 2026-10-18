@@ -1,5 +1,21 @@
 # Storyboard behavioral evaluations
 
+## Contents
+
+- [Causal dialogue](#causal-dialogue)
+- [Silent physical comedy](#silent-physical-comedy)
+- [Fair mystery](#fair-mystery)
+- [Duration pressure](#duration-pressure)
+- [Boundary](#boundary)
+- [Continuous tray action](#continuous-tray-action)
+- [Legacy spatial plan](#legacy-spatial-plan)
+- [Production boundary](#production-boundary)
+- [A newcomer who knows too much](#a-newcomer-who-knows-too-much)
+- [Clear but inert comedy](#clear-but-inert-comedy)
+- [Revised opening with a stale ending](#revised-opening-with-a-stale-ending)
+- [Costly agreement and foreseeable mishap](#costly-agreement-and-foreseeable-mishap)
+- [Overexplained repair](#overexplained-repair)
+
 Use a fresh author with the installed skill and raw brief. A separate reviewer first
 receives only ordered actions and speech; do not supply intended interpretation or an
 answer key. Keep artifacts local under data/. No paid generation is implied.
@@ -57,3 +73,45 @@ Input: plan connected shots before any video exists, with a supplied planned end
 Pass evidence: the ending stays planned. Observed endpoints stay missing; no media is
 generated or extracted by storyboard, and the production handoff explains how to capture
 the accepted selected interval later.
+
+## A newcomer who knows too much
+
+Input: a visitor recognizes a worker, then announces the worker's secret role without
+having heard the arrangement. Rewrite the scene without changing its intended discovery.
+Pass evidence: recognition and further inference have distinct available cues; the visitor
+has a reason to arrive and speak. The repair need not explain the entire relationship.
+
+## Clear but inert comedy
+
+Input: a comedy draft explains every connection but its jokes can be moved between speakers.
+Pass evidence: different pursuits or methods generate the complication; the audience can
+anticipate and follow its reversal. The review quotes comic events, not just clear exposition.
+No joke count, mandatory punchline ending or universal three-beat formula.
+
+## Revised opening with a stale ending
+
+Input: a whole-episode rewrite with an improved opening, an unchanged legacy tail and old
+review references. Ask for content only.
+Pass evidence: the author reads and revisits the tail, preserves canon, fixes consequential
+knowledge gaps, and refreshes addressees/references. New text has no inherited media approval.
+A blind reviewer scores the entire new content using a pre-fixed content rubric; images and
+audio stay unreviewed. Failed iterations lead to a reusable plugin change and an installed
+skill reload before the author resumes, not a coordinator-written answer-key script.
+
+## Costly agreement and foreseeable mishap
+
+Input: a paid substitute knowingly takes a serious risk, then ignores a known visitor;
+the synopsis alone explains the substitute's secret motive and the time being bought.
+Pass evidence: the performance supplies a specific proportionate reason to accept and
+the present benefit of the interval. The mishap follows a readable flaw, competing need
+or disrupted precaution. No automatic poverty/trauma backstory or exhaustive security
+lecture. Repeated comic refusals vary stakes or tactics rather than restating the same joke.
+
+## Overexplained repair
+
+Input: a revision now explains every link but announces its exact punchline and spends
+several beats on routine agreement paperwork; the named goal feels like a checklist item.
+Pass evidence: one economical behavior gives the goal personal weight, precautions retain
+readable risk without automatically naming the coming joke, and routine completion is
+compressed while contested terms and actual prop transfers survive. Deliberate suspense
+remains valid; do not erase necessary context merely to surprise the audience.

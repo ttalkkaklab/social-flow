@@ -49,6 +49,21 @@ Record this first reading before opening the author metadata. This separation ma
 than whether the prose uses a particular form. The renderer's technical labels are not
 information the audience sees, unless the plan explicitly presents them.
 
+For dialogue comedy, also record where the audience forms an expectation, which specific
+response changes it, and whether a character's attempted solution creates the next
+complication. Quote the event; "funny tone" is not evidence. Trace a newcomer's business
+and distinguish recognizing a person from knowing their secret. Ask why the speaker says
+this now to this listener, and whether nearby people could hear it. Do not demand a prior
+biography when an entrance cue suffices, or replace inference and subtext with exposition.
+Read unchanged tails after a partial revision; prior scores cover only their own revision.
+
+For risky agreements, distinguish informed consent from a sufficiently specific motive:
+quote what makes the cost worthwhile for this person, without inventing hidden canon.
+For time-buying plans, identify what the interval enables. Do not require a complete
+future resolution. If characters foresee the comic hazard, inspect their precaution,
+competing priority or legible flaw before the mishap. Repetition earns comic credit when
+it changes pressure, tactic, status or consequence rather than merely restating a trait.
+
 ## 2. Compare intent and inspect the handoff
 
 Now read the selected scenario, actual identities, STORY, STRUCTURE, visual plan and relevant
@@ -112,6 +127,14 @@ Do not score unprovided layers. A candidate without shots can receive a scenario
 with staging marked provisional; it cannot establish a finished-board score. A requested
 benchmark supplies the full board after the blind read. Assess every story separately;
 a strong average cannot cover one weak story.
+
+For an explicitly content-only comedy review, use the caller's frozen content rubric.
+Without another supplied rubric, use causality/comprehension 25, knowledge/motivation 20,
+situational comedy 20, setup/payoff 20 and dialogue/rhythm 15. This yields a content score,
+not a finished visual-board score. Evaluate comic pursuit, anticipation, escalation and
+surprise from actual events; mere absence of contradictions does not earn comedy points.
+Do not invent media deductions or claim measured audience enjoyment. Preserve the initial
+blind read, then compare canon and the full text before final grading.
 
 A P0 is a defect that makes a decisive event unintelligible or unearned: contradictory world
 rule, essential unsupported factual claim, undisclosed fiction presented as fact, unknown

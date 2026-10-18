@@ -1,0 +1,17 @@
+{
+  "installedAt": "2026-10-18T10:16:07.261Z",
+  "source": "/tmp/social-flow-causal-comedy-install-01b",
+  "plan": "/Users/zeans/.local/state/social-flow-props/plan-2026-10-18T10-16-03-562Z.json",
+  "installations": [
+    {
+      "target": "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.118.0",
+      "backup": "/Users/zeans/.local/state/social-flow-props/backups/2026-10-18T10-16-03-562Z/0",
+      "verifiedFiles": 4
+    },
+    {
+      "target": "/Users/zeans/.claude/plugins/cache/social-flow/social-flow/0.118.0",
+      "backup": "/Users/zeans/.local/state/social-flow-props/backups/2026-10-18T10-16-03-562Z/1",
+      "verifiedFiles": 4
+    }
+  ]
+}
