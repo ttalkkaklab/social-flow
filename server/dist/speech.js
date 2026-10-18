@@ -1,3 +1,5 @@
+import { routingContext } from './video-routing.js';
+import { speechVideoCapabilities } from './video-registry.js';
 /** Model-independent dialogue addressing, revision tracking and media dependencies. */
 import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync, writeFileSync, renameSync, mkdirSync, existsSync } from 'node:fs';
@@ -248,6 +250,15 @@ export function manageSpeech(args) {
             throw new Error('Video planning uses all lines in the shot; remove line filters');
         for (const { line } of selected)
             actingSchema.nullable().optional().parse(line.acting);
+        const episode = dirname(dirname(file));
+        if (existsSync(join(episode, '.work/model-settings.json'))) {
+            const { selection } = routingContext(episode, args.shotId);
+            const verified = speechVideoCapabilities(selection.engine, selection.model || selection.engine);
+            if (args.capabilities && (args.capabilities.provider !== verified.provider || args.capabilities.model !== verified.model ||
+                args.capabilities.audioConditioning !== verified.audioConditioning || args.capabilities.lipSync !== verified.lipSync || args.capabilities.postLipSync !== verified.postLipSync))
+                throw new Error('Caller capabilities disagree with selected adapter registry');
+            args = { ...args, capabilities: verified };
+        }
         plan = speechVideoPlan({ ...scene, narration: selected.map(({ line }) => ({ ...line, audio: currentAudio(line, character(line.speaker)) ? line.audio : undefined })) }, args.capabilities);
         const continuityContract = nodeModule.createRequire(import.meta.url)('../../skills/storyboard/references/shot-continuity.js');
         plan = { ...plan, continuity: continuityContract.plan(win, scenes.indexOf(scene), dirname(file)) };

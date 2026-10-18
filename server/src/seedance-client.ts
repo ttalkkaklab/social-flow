@@ -1,3 +1,4 @@
+import { recordVideoSubmission, recordVideoTokens } from './video-events.js';
 /**
  * ByteDance Seedance video generation client (BytePlus ModelArk).
  *
@@ -900,6 +901,7 @@ function toResponse(
   task: TaskStatus,
   taskId: string,
 ): SeedanceGenerationResponse {
+  recordVideoTokens(task.usage?.completion_tokens);
   return {
     success: true,
     videoPath,
@@ -930,6 +932,7 @@ export async function generateFromText(
   try {
     console.error(`[Seedance] Starting text-to-video generation... (model: ${request.model})`);
     const taskId = await createTask(apiKey, buildBody(request, []));
+    recordVideoSubmission(taskId);
 
     const saved = await awaitVideoAndSave(
       apiKey,
@@ -964,6 +967,7 @@ export async function generateFromImage(
     if (request.lastImagePath) console.error(`[Seedance] Last frame: ${request.lastImagePath}`);
 
     const taskId = await createTask(apiKey, buildBody(request, images));
+    recordVideoSubmission(taskId);
 
     const saved = await awaitVideoAndSave(
       apiKey,
@@ -1032,6 +1036,7 @@ export async function generateWithReferences(
       if (audioUris.length > 0) console.error(`[Seedance] Reference audio: ${request.referenceAudioPaths.join(', ')}`);
 
       const taskId = await createTask(apiKey, buildBody(request, parts));
+      recordVideoSubmission(taskId);
 
       const saved = await awaitVideoAndSave(
         apiKey,
