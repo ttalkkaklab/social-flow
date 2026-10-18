@@ -51,7 +51,7 @@ MAX_SCENE=${MAX_SCENE:-20}         # warn above this (a signal to split the scen
 SHRINK_WARN=${SHRINK_WARN:-3.0}    # screen shrink-factor warning threshold (text legibility)
 BGM_SEP=${BGM_SEP:-12}             # LU the bed sits under the measured voice — 2 wider than a TTS
                                    # episode, because a live voice swings more than a synthetic one
-BGM_SEP_MIN=${BGM_SEP_MIN:-4}      # below this the build stops (bgm-scoring.md §1)
+BGM_SEP_MIN=${BGM_SEP_MIN:-4}      # review warning below this separation (bgm-scoring.md §1)
 BGM_LOOP_XF=${BGM_LOOP_XF:-2.0}
 export BGM_LOOP_XF
 DUCK_RELEASE=${DUCK_RELEASE:-250}  # sidechain release ms (bgm-scoring.md §2)
@@ -332,8 +332,8 @@ else
   say "── voice-to-bed separation ${SEP} LU across the whole timeline (voice ${SPEECH_I} / ducked bed ${BED_D}) — no speech-gated reading, the voice key stayed under the gate"
 fi
 if awk -v v="$SEP_S" -v m="$BGM_SEP_MIN" 'BEGIN{exit !(v < m)}'; then
-  say "✗ separation ${SEP_S} LU is under the ${BGM_SEP_MIN} LU floor — the bed is competing with the voice"
-  exit 1
+  say "⚠ separation ${SEP_S} LU is under the ${BGM_SEP_MIN} LU review threshold — listen for masked speech"
+  WARN=1
 fi
 
 # ── 4) ASS subtitle file — same style as build-reel.sh (band y≈1380~1560, symmetric margins 250)

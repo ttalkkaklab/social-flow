@@ -15,7 +15,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
-const { mixFindings, mixEnvironment } = require('./sound-mix-contract.js');
+const { mixFindings, mixEnvironment, musicEnvelopeFindings } = require('./sound-mix-contract.js');
 const assetResolver = path.resolve(__dirname, '../../channel/references/resolve-asset.py');
 
 function die(message) { process.stderr.write(`compile-sound-plan: ${message}\n`); process.exit(1); }
@@ -37,11 +37,15 @@ const mixErrors = mixFindings(music.$mix);
 if (mixErrors.length) die(`window.MUSIC.$mix: ${mixErrors.join('; ')}`);
 fs.mkdirSync(work, { recursive: true });
 const markerFile = path.join(work, 'sound-plan.json');
-const ownedNames = new Set(['bgm.tsv', 'sfx.tsv', 'amb.tsv', 'silence.tsv', 'sound.env']);
+const ownedNames = new Set(['bgm.tsv', 'sfx.tsv', 'amb.tsv', 'silence.tsv', 'music-gain.tsv', 'sound.env']);
 let previous = {};
 if (fs.existsSync(markerFile)) {
   try { previous = record(JSON.parse(fs.readFileSync(markerFile, 'utf8')).files); }
   catch { die(`${markerFile} is not valid JSON`); }
+}
+for (const [idx, shot] of scenes.entries()) {
+  const errors = musicEnvelopeFindings(shot?.sound?.musicGain, shot?.duration, shot?.type);
+  if (errors.length) die(`shot ${idx + 1}: ${errors.join('; ')}`);
 }
 const removed = [], warnings = [], generated = {};
 const digest = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
@@ -70,7 +74,7 @@ function cleanPrevious() {
 
 const extended = Object.keys(mix).length > 0 || scenes.some((shot) => {
   const sound = record(shot && shot.sound);
-  return Array.isArray(sound.effects) || Array.isArray(sound.silence);
+  return Array.isArray(sound.effects) || Array.isArray(sound.silence) || sound.musicGain !== undefined;
 });
 if (!extended) {
   cleanPrevious();
@@ -111,10 +115,11 @@ function cueFile(name) {
   return file;
 }
 
-const bgm = [], effects = [], ambience = [], silence = [];
+const bgm = [], effects = [], ambience = [], silence = [], musicGain = [];
 const intensitySeparation = { subtle: 10, normal: 6, strong: 3 };
 scenes.forEach((shot, idx) => {
   const sound = record(shot && shot.sound);
+  if (sound.musicGain) musicGain.push([idx, JSON.stringify(sound.musicGain)]);
   if (sound.cue) {
     const cue = safeCell(sound.cue, `shot ${idx + 1} sound.cue`);
     if (!Object.prototype.hasOwnProperty.call(music, cue) || cue === '$mix') die(`shot ${idx + 1} names unknown music cue "${cue}"`);
@@ -167,6 +172,7 @@ writeRows('bgm.tsv', bgm);
 writeRows('sfx.tsv', effects);
 writeRows('amb.tsv', ambience);
 writeRows('silence.tsv', silence);
+writeRows('music-gain.tsv', musicGain);
 
 const env = mixEnvironment(mix);
 if (env.length) writeOwned('sound.env', env.join('\n') + '\n');
