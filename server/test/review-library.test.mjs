@@ -83,7 +83,7 @@ test('exports offline characters, indexes and the SAME storyboard shell with rel
     assert.ok(detail.includes('Template match does not certify image readiness'));
     assert.ok(detail.includes('review-panel-face'));
     assert.equal(result.visualReview, 'not_reviewed');
-    assert.ok(existsSync(join(f.dir, 'assets/review/WantedSansVariable.woff2')));
+    assert.ok(existsSync(join(f.dir, 'assets/review/fonts/InterVariable.woff2')));
     assert.ok(readFileSync(join(f.dir, 'assets/characters/index.html'), 'utf8').includes('href="hero/index.html"'));
     const alias = readFileSync(join(f.dir, 'storyboards/one/index.html'), 'utf8');
     assert.ok(alias.includes('<base href="../../episodes/one/storyboard/">'));

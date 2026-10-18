@@ -1,0 +1,52 @@
+[
+  {
+    "width": 320,
+    "scrollWidth": 305,
+    "overflow": []
+  },
+  {
+    "width": 390,
+    "scrollWidth": 375,
+    "overflow": []
+  },
+  {
+    "width": 768,
+    "scrollWidth": 753,
+    "overflow": []
+  },
+  {
+    "width": 1024,
+    "scrollWidth": 1009,
+    "overflow": []
+  },
+  {
+    "width": 1440,
+    "scrollWidth": 1425,
+    "overflow": []
+  },
+  {
+    "textScale": "200% root font size",
+    "width": 390,
+    "scrollWidth": 375,
+    "overflows": []
+  },
+  {
+    "reducedTransparency": {
+      "background": "rgb(255, 255, 255)",
+      "blur": "none"
+    }
+  },
+  {
+    "print": {
+      "closed": 0,
+      "background": "none",
+      "sidebar": "none"
+    }
+  },
+  {
+    "afterprintClosed": 13
+  },
+  {
+    "reducedMotion": "0s"
+  }
+]

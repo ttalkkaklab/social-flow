@@ -1,0 +1,125 @@
+[
+  {
+    "shot": 1,
+    "fonts": [
+      {
+        "familyName": "Pretendard Variable",
+        "postScriptName": "PretendardVariable-Regular",
+        "isCustomFont": true,
+        "glyphCount": 19
+      },
+      {
+        "familyName": "Inter Variable",
+        "postScriptName": "InterVariable_opsz100000_wght",
+        "isCustomFont": true,
+        "glyphCount": 6
+      }
+    ]
+  },
+  {
+    "shot": 2,
+    "fonts": [
+      {
+        "familyName": "Inter Variable",
+        "postScriptName": "InterVariable_opsz100000_wght",
+        "isCustomFont": true,
+        "glyphCount": 61
+      }
+    ]
+  },
+  {
+    "shot": 3,
+    "fonts": [
+      {
+        "familyName": "Noto Sans JP Thin",
+        "postScriptName": "NotoSansJP-Thin_Regular",
+        "isCustomFont": true,
+        "glyphCount": 27
+      },
+      {
+        "familyName": "Inter Variable",
+        "postScriptName": "InterVariable_opsz100000_wght",
+        "isCustomFont": true,
+        "glyphCount": 2
+      }
+    ]
+  },
+  {
+    "shot": 4,
+    "fonts": [
+      {
+        "familyName": "Inter Variable",
+        "postScriptName": "InterVariable_opsz100000_wght",
+        "isCustomFont": true,
+        "glyphCount": 2
+      },
+      {
+        "familyName": "Noto Sans SC Thin",
+        "postScriptName": "NotoSansSC-Thin_Regular",
+        "isCustomFont": true,
+        "glyphCount": 24
+      }
+    ]
+  },
+  {
+    "shot": 5,
+    "fonts": [
+      {
+        "familyName": "Inter Variable",
+        "postScriptName": "InterVariable_opsz100000_wght",
+        "isCustomFont": true,
+        "glyphCount": 2
+      },
+      {
+        "familyName": "Noto Sans TC Thin",
+        "postScriptName": "NotoSansTC-Thin_Regular",
+        "isCustomFont": true,
+        "glyphCount": 24
+      }
+    ]
+  },
+  {
+    "shot": 6,
+    "fonts": [
+      {
+        "familyName": "Inter Variable",
+        "postScriptName": "InterVariable_opsz100000_wght",
+        "isCustomFont": true,
+        "glyphCount": 72
+      }
+    ]
+  },
+  {
+    "shot": 7,
+    "fonts": [
+      {
+        "familyName": "Inter Variable",
+        "postScriptName": "InterVariable_opsz100000_wght",
+        "isCustomFont": true,
+        "glyphCount": 86
+      }
+    ]
+  },
+  {
+    "shot": 8,
+    "fonts": [
+      {
+        "familyName": "Inter Variable",
+        "postScriptName": "InterVariable_opsz100000_wght",
+        "isCustomFont": true,
+        "glyphCount": 79
+      }
+    ]
+  },
+  {
+    "shot": 9,
+    "fonts": [
+      {
+        "familyName": "Inter Variable",
+        "postScriptName": "InterVariable_opsz100000_wght",
+        "isCustomFont": true,
+        "glyphCount": 82
+      }
+    ]
+  }
+]
