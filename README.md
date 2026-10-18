@@ -361,7 +361,7 @@ the whole projection rather than a bill that has already partly arrived.
 
 | Capability | Free / on-device | Paid | Costs money unless… |
 |---|---|---|---|
-| **Images** | `image_local_generate` — Z-Image Turbo via mflux, $0. Optional: `mlx_image_*` when MLX Core is running. Under Codex or Grok the CLI's own `image_gen` is the setup-time recommendation, on the subscription allowance | `gpt_image_*` — OpenAI, per image by quality | …you accept no text in the frame. Local generation breaks Korean glyphs apart, so covers and any text-bearing frame need GPT Image or a host tool. The saved image model in `.social-flow/models.json` decides; nothing reroutes a frame on its own |
+| **Images** | `image_local_generate` — Z-Image Turbo via mflux, $0. Optional: `mlx_image_*` when MLX Core is running. Initial image setup recommends ASTRA GenAI (`astra-genai` / `z-image-turbo`); local mflux is an explicit alternative | `gpt_image_*` — OpenAI, per image by quality | …you accept no text in the frame. Local generation breaks Korean glyphs apart, so covers and any text-bearing frame need GPT Image or a host tool. The saved image model in `.social-flow/models.json` decides; nothing reroutes a frame on its own |
 | **Video** | deterministic HTML motion slides rendered locally with headless Chrome. Optional: `mlx_video_generate` (24fps, RAM-capped). Under Grok the CLI's own `image_to_video` is the setup-time recommendation (1–15 s, 720p ceiling, subscription allowance) | Veo 3.1 (Gemini) per second · Seedance (ModelArk) per second | …you use the HTML motion lane or the Grok host lane. The saved video model decides the paid engine. A channel can prohibit stills and still spend zero on generated video; Ken Burns does not count as true motion. mlx_video is not the default and is not on the Veo/Seedance face-policy table |
 | **Speech (TTS)** | Your own recording | Gemini TTS or ElevenLabs `eleven_v4` | Generate with the saved voice and record provenance. No automatic paid speech review; local TTS is removed. |
 | **Transcription (STT)** | `stt_local_transcribe` — Qwen3-ASR via mlx, $0 (whisper.cpp fallback) | none | never — there is no paid STT path here |
@@ -482,9 +482,10 @@ API keys travel the same way as under Claude — shell environment variables whe
 a shell, and `~/.config/social-flow/.env` where there is none (the ChatGPT desktop app, Cowork).
 
 **The saved model choice governs there too.** Codex and Grok ship their own `image_gen` (Grok also `image_edit`), and Grok
-ships `image_to_video` and `reference_to_video`; at first setup in a working directory those host
-tools are the recommended default, saved in `.social-flow/models.json` as `engine:"host"` and
-billed on the subscription allowance with `image.host` / `video.host` ledger lines at $0. A saved
+ships `image_to_video` and `reference_to_video`. Initial image setup recommends ASTRA GenAI
+(`astra-genai` / `z-image-turbo`); readable-text images require GPT Image 2. Video setup
+recommends a supported host tool. An explicitly selected host tool is saved as `engine:"host"`
+and logged on the subscription allowance with `image.host` / `video.host` ledger lines at $0. A saved
 API engine wins over host detection, and a fallback after a failed host call is asked for, never
 silent. Claude Code has no such tools, so the engine tables above apply there. The storyboard
 records the saved providers in `window.PRODUCTION.imageProvider` and `videoProvider`
@@ -738,8 +739,8 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Open data | `datago_search` / `datago_detail` / `datago_file_download` | data.go.kr (no auth — search·detail·raw file) |
 | Open data | `datago_file_fetch` / `datago_api_call` | odcloud · apis.data.go.kr (auth key + **per-API usage application** required) |
 | Image routing | `image_catalog` / `image_plan` / `image_execute` / `image_status` | Saved image selection, model-specific capability checks, atomic cost reservations, duplicate protection and measured output receipts. [Routing contract](skills/_shared/image-routing.md). Host execution stays external. |
-| Image generation | `image_local_generate` | Z-Image Turbo on-device via mflux (**no API key, no network, no billing — a $0 choice for the saved image model**; under Codex and Grok the CLI's own `image_gen` is the setup-time recommendation. Needs Apple Silicon + `uv tool install --python 3.12 mflux`; first call downloads 31GB of weights. No text inside images — Korean jamo break up) |
-| Image generation | `mlx_image_generate` / `mlx_image_edit` | MLX Core / mlx-serve on loopback (**no vendor bill**. Optional lane — default stays Z-Image. Inspect actual Hangul. Model-specific edit/variation/alpha contracts apply. Fail closed if :11234 is down; this plugin never launches the app. `brew install --cask mlx-core`) |
+| Image generation | `image_local_generate` | Z-Image Turbo on-device via mflux (**no API key, no network, no billing — a $0 choice for the saved image model**; initial image setup recommends ASTRA GenAI; local mflux is an explicit alternative. Needs Apple Silicon + `uv tool install --python 3.12 mflux`; first call downloads 31GB of weights. No text inside images — Korean jamo break up) |
+| Image generation | `mlx_image_generate` / `mlx_image_edit` | MLX Core / mlx-serve on loopback (**no vendor bill**. Optional local lane — initial image setup recommends ASTRA GenAI. Inspect actual Hangul. Model-specific edit/variation/alpha contracts apply. Fail closed if :11234 is down; this plugin never launches the app. `brew install --cask mlx-core`) |
 | Image generation | `gpt_image_text2img` / `gpt_image_img2img` | OpenAI GPT Image (OPENAI_API_KEY — **saved selection takes precedence**: model-dependent sizes, up to 16 references, mask inpainting, usage receipts; GPT Image 2 transparent output is preview) |
 | Video generation | `veo_text2video` / `veo_img2video` / `veo_extension` / `veo_reference` | Veo 3.1 (GEMINI_API_KEY — 720p–4k, 4/6/8s grid; **native audio, local-file extension, and live-person reference** are this engine's edge) |
 | Video generation | `omni_text2video` / `omni_img2video` / `omni_extend` / `omni_edit` | Gemini Omni 1.1 Flash (GEMINI_API_KEY, Interactions API — 360p–4k, **any whole 3–10s**, and the only lane that **edits a clip by instruction** or extends a local mp4 to a 40s cumulative cap. **Billed flat ~$1.01 per call** — measured against the spend counter, not per second as the pricing page reads — so a 3s draft costs more than a full 8s veo-3.1-lite shot; worth it at the full 10s or for the edit lane, never for a short cut. No reference-image or negative-prompt field, and its person policy is unmeasured — photoreal faces stay on `veo_img2video`) |

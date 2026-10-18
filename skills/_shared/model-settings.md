@@ -103,10 +103,16 @@ prices. A configured credential does not guarantee a successful generation.
    Use the installed video-model selection reference and cost tables. Explain the
    change each option makes. The host is the recommended initial choice when it
    supports the requested job; the user can explicitly choose an API instead.
-2. **Image model.** Offer the host image tool first when available, then supported
-   GPT Image, Z-Image and MLX options. Explain reference editing, readable text,
-   cost and quality controls. Store an explicit API choice even when a host tool
-   is present. No later cover/points heuristic can substitute another model.
+2. **Image model.** Recommend **ASTRA GenAI** first for images without readable
+   text: save `engine:"astra-genai", model:"z-image-turbo"` after the user's choice.
+   This is the GenAI gateway, not local mflux (`engine:"zimage"`). Check
+   `ASTRA_GENAI_API_KEY` and follow [GenAI setup](astra-genai.md); missing credentials
+   lead to that setup, never a silent local substitution. Gateway pricing must be
+   verified, not described as free. Offer host/GPT Image or local MLX/mflux only as
+   explicit alternatives; do not ask a separate local Z-Image setup question by default.
+   Explain reference editing, readable text, cost and quality controls. Images that
+   display or preserve readable text require `gpt-image-2` under the scoped exception
+   above. Reuse saved choices; this recommendation does not migrate existing projects.
 
 3. **TTS needed?** Ask whether this project needs separately generated speech.
    If not, save `models.speech:{engine:"none"}` and skip speech model, voice and

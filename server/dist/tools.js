@@ -1581,7 +1581,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend — use bl
     },
     {
         name: 'image_local_generate',
-        title: 'Image generation (local · Z-Image — default)',
+        title: 'Image generation (local · Z-Image — explicit local choice)',
         annotations: HINT.generateLocal,
         description: 'Generate a text-only image locally with Z-Image Turbo via mflux. Requires the mflux executable and downloaded model weights; first use may download weights. No per-call API bill. This adapter does not expose upstream img2img or LoRA. Use the saved engine; never automatically substitute gpt_image_text2img after failure. Korean text quality requires inspection. Returns a local PNG path and requested generation settings. Use imageContext for configured production.',
         inputSchema: {
