@@ -5,6 +5,7 @@ description: >
 argument-hint: "<channel> <topic> [platformCSV|auto]"
 allowed-tools: ["mcp__social-flow__host_review", "mcp__social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__social-flow__acting_review", "mcp__social-flow__tts_review_acting", "mcp__social-flow__capability_status", "Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__music_generate_advanced", "mcp__social-flow__stock_search", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__astra_img2video", "mcp__social-flow__astra_keyframe_video", "mcp__social-flow__astra_audio2video", "mcp__social-flow__astra_ic_lora", "mcp__social-flow__astra_video_retake", "mcp__social-flow__astra_video_capabilities", "mcp__social-flow__astra_video_list_uploads", "mcp__social-flow__astra_video_delete_upload", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
 ---
+For motion-graphic shots, follow [motion type selection and design](../storyboard/references/motion-graphics.md): persist `shot.motionGraphic`, choose the type from viewer intent and available evidence, and keep style, choreography and renderer separate. Built-in abstract scenes use the installed `prepare-motion-graphic.js`; asset-dependent types retain their authored or mesh routes.
 Follow [host evaluation](../_shared/host-review.md). Use local episode files under `data/<channel>/episodes/<topic>/`.
 For narrated or mixed scenes, apply [visual grounding](../storyboard/references/narration-visual-grounding.md) before source images, including host calls and full-video: enumerate all editorial cuts and inspect repetition across the whole episode; never propagate a chapter score to shots; compare actual pixels with the line, visual purpose and opening state; repair weak conte before motion and carry its action into the provider request.
 For action-led episodes, carry the storyboard's [action direction](../storyboard/references/action-direction.md)
@@ -218,7 +219,6 @@ Follow [delivery preflight and continuation](references/delivery-continuation.md
   combination, **stop** and tell the user — saving each scene as its own file opens the
   mixed-shooting path. Run it anyway and you shoot all 12 minutes only to die at the final
   canvas check.
-
   **Mixed shooting** puts filmed and generated scenes on one timeline — the builder is the
   same `build-reel.sh` as a generated episode, and only the filmed scenes go through the
   extra prep in §3.5. Slide scenes (`visual.slide`) and all-live-voice episodes
@@ -227,7 +227,6 @@ Follow [delivery preflight and continuation](references/delivery-continuation.md
 - Prepare the working directory: create `.work/{cards,broll,motion,pcm,fonts}` and settle
   the platform list (the CSV argument, or profile §4's publish platforms).
 - **Settle the format — write `.work/format.env`. Don't skip it.**
-
   ```bash
   PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
   node $PG/format-resolve.js storyboard/scenes.js --sh > .work/format.env

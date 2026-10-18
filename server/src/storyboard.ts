@@ -86,6 +86,10 @@ interface CameraContract {
 export function cameraContract(): CameraContract {
   return loadFromHere(join(REFERENCES_DIR, 'production-mode.js')) as CameraContract;
 }
+export function motionGraphicTypes(): string[] {
+  const registry = loadFromHere(join(REFERENCES_DIR, 'motion-graphics.js')) as { TYPES: Record<string, unknown> };
+  return Object.keys(registry.TYPES);
+}
 export function renderPurposes(): string[] {
   const routing = loadFromHere(join(REFERENCES_DIR, 'render-routing.js')) as { PURPOSES: Record<string, string> };
   return Object.keys(routing.PURPOSES);
@@ -216,6 +220,15 @@ export const shotSchema = z
         coverage: coverageSchema.optional(),
         lineNeutral: z.literal(true).optional(),
         lineCrossing: z.record(z.unknown()).optional(),
+        motionGraphic: z.object({
+          version: z.literal(1),
+          type: z.string().refine(value => motionGraphicTypes().includes(value), 'unknown motion graphic type'),
+          intent: z.string().optional(), reason: z.string().optional(),
+          evidence: z.enum(['data', 'recording', 'reenactment', 'metaphor']),
+          style: z.object({ palette: z.string(), reason: z.string().optional() }).passthrough(),
+          beats: z.array(z.object({ at: z.number().min(0).max(1), action: z.string() }).passthrough()).optional(),
+          content: z.record(z.unknown()).optional(),
+        }).passthrough().optional(),
         render: z.object({ mode: tuple(V.RENDER_MODES), purpose: z.string().optional(), reason: z.string().optional() }).passthrough().optional(),
       })
       .passthrough()

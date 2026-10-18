@@ -2,12 +2,12 @@
 (function(root){
  'use strict';
  const productionMode = () => typeof module === 'object' && module.exports ? require('./production-mode.js') : root.PRODUCTION_MODE;
- const PURPOSES={portrait:'still_camera',atmosphere:'still_camera',place:'still_camera',detail:'still_camera',human_process:'character_html',mechanism:'object_html',physical_state:'object_html',comparison:'data_graph',trend:'data_graph',share:'data_graph',distribution:'data_graph',geographic:'data_graph',timeline:'data_graph',live_action:'generated_video',evidence_quote:'editorial_html',verdict:'editorial_html',archive:'stock_video'};
+ const PURPOSES={motion_explanation:'motion_html',portrait:'still_camera',atmosphere:'still_camera',place:'still_camera',detail:'still_camera',human_process:'character_html',mechanism:'object_html',physical_state:'object_html',comparison:'data_graph',trend:'data_graph',share:'data_graph',distribution:'data_graph',geographic:'data_graph',timeline:'data_graph',live_action:'generated_video',evidence_quote:'editorial_html',verdict:'editorial_html',archive:'stock_video'};
  // A purpose's default route comes first; free real footage may stand in where the actual place, era or action carries the cut (render-routing.md §Routes).
- const ALTERNATIVES={live_action:['stock_video'],atmosphere:['stock_video'],place:['stock_video']};
+ const ALTERNATIVES={comparison:['motion_html'],trend:['motion_html'],share:['motion_html'],timeline:['motion_html'],live_action:['stock_video'],atmosphere:['stock_video'],place:['stock_video']};
  // The still lane's nine window moves (still-camera.js state()); tilt is the vertical pan — the scale-by-time move of L13.
  const STILL_CAMERA_EFFECTS=['focus-in','rack-focus','approach','pull','pan','tilt','push','reveal','parallax'];
- const LABELS={still_camera:'정지 이미지 · 카메라 무빙',character_html:'3D 캐릭터 · HTML',object_html:'3D 사물 · HTML',data_graph:'수치·그래프 · HTML',generated_video:'영상 생성',editorial_html:'짧은 인용·결론 · HTML',stock_video:'외부 영상 · 무료 소재'};
+ const LABELS={motion_html:'모션그래픽 · HTML',still_camera:'정지 이미지 · 카메라 무빙',character_html:'3D 캐릭터 · HTML',object_html:'3D 사물 · HTML',data_graph:'수치·그래프 · HTML',generated_video:'영상 생성',editorial_html:'짧은 인용·결론 · HTML',stock_video:'외부 영상 · 무료 소재'};
  const CHARTS={comparison:['bar','dot'],trend:['line'],share:['stacked-bar','donut','pie'],distribution:['histogram'],geographic:['map'],timeline:['timeline']};
  const text=x=>typeof x==='string'&&!!x.trim();
  function exempt(scene){return scene.type==='outro'||(scene.visual?.reuse===undefined&&!scene.visual?.video&&(['recording','screencast'].includes(scene.visual?.source)||scene.visual?.picture==='recording'))}
@@ -132,6 +132,12 @@
   else if(fullVideo&&r.mode!=='stock_video'){if(r.mode!=='generated_video')warn(r.purpose+' requires generated_video, not '+r.mode)}
   else if(options.length&&!options.includes(r.mode)&&!(drone&&r.purpose==='place'&&r.mode==='generated_video'))warn(r.purpose+' requires '+options.join(' or ')+', not '+r.mode);
   if(!text(r.reason))warn('reason must explain why this treatment conveys the cut');
+  if(scene.shot?.motionGraphic){
+   const mg=typeof module==='object'&&module.exports?require('./motion-graphics.js'):root.MOTION_GRAPHICS;
+   if(mg){const result=mg.inspect(scene);result.errors.forEach(bad);result.advice.forEach(warn);}
+   else warn('motion-graphics.js is missing from this storyboard');
+  }
+  if(r.mode==='motion_html'&&!scene.shot?.motionGraphic)bad('motion_html needs shot.motionGraphic');
   const info=scene.shot?.infoType;
   if(info==='statistic'&&!['comparison','trend','share','distribution','geographic'].includes(r.purpose))warn('statistic needs a quantitative purpose');
   if(info==='timeline'&&r.purpose!=='timeline')warn('timeline needs a timeline purpose');
@@ -199,7 +205,7 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
     if(slide&&slide.kind!=='camera')bad('a still-camera HTML wrapper must use kind camera, not an explanation kind');
     if(!slide||slide.kind!=='camera'||slide.motion!==true)bad('still camera needs the shared camera HTML runtime for a verifiable image and camera handoff');
    }
-   if(['character_html','object_html','data_graph'].includes(r.mode)){
+   if(['character_html','object_html','data_graph','motion_html'].includes(r.mode)){
     if(generated)bad('an explanation cannot hand off to generated video');
     if(!slide||slide.kind!=='diagram'||slide.motion!==true||slide.treatment!=='editorial')bad('explanation needs an editorial motion diagram');
     if(r.mode==='data_graph'&&(slide?.subject?.kind!=='data'||slide?.object))bad('graph explanation needs a data subject without a physical 3D object');
@@ -333,7 +339,7 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
    if(key){const shots=reasons.get(key)||[];shots.push(i+1);reasons.set(key,shots)}
    if(r?.mode==='editorial_html'||slide?.subject?.kind==='type'||slide?.kind==='kinetic'){
     textCount++;textSeconds+=Number.isFinite(s.duration)?s.duration:0;
-    if(!r||r.mode!=='editorial_html')errors.push('shot '+(i+1)+': text-led slides must use editorial_html; motionBeats cannot turn typography into subject motion');
+    if(!r||!['editorial_html','motion_html'].includes(r.mode))errors.push('shot '+(i+1)+': text-led slides must use editorial_html; motionBeats cannot turn typography into subject motion');
     if(s.duration>8)errors.push('shot '+(i+1)+': text-led slide exceeds 8 seconds');
    }
   });

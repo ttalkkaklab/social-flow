@@ -78864,7 +78864,7 @@ import * as path4 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.115.4",
+  version: "0.116.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -80877,6 +80877,10 @@ function contract() {
 function cameraContract() {
   return loadFromHere(join4(REFERENCES_DIR, "production-mode.js"));
 }
+function motionGraphicTypes() {
+  const registry2 = loadFromHere(join4(REFERENCES_DIR, "motion-graphics.js"));
+  return Object.keys(registry2.TYPES);
+}
 function renderPurposes() {
   const routing = loadFromHere(join4(REFERENCES_DIR, "render-routing.js"));
   return Object.keys(routing.PURPOSES);
@@ -80997,6 +81001,16 @@ var shotSchema = external_exports.object({
     coverage: coverageSchema.optional(),
     lineNeutral: external_exports.literal(true).optional(),
     lineCrossing: external_exports.record(external_exports.unknown()).optional(),
+    motionGraphic: external_exports.object({
+      version: external_exports.literal(1),
+      type: external_exports.string().refine((value) => motionGraphicTypes().includes(value), "unknown motion graphic type"),
+      intent: external_exports.string().optional(),
+      reason: external_exports.string().optional(),
+      evidence: external_exports.enum(["data", "recording", "reenactment", "metaphor"]),
+      style: external_exports.object({ palette: external_exports.string(), reason: external_exports.string().optional() }).passthrough(),
+      beats: external_exports.array(external_exports.object({ at: external_exports.number().min(0).max(1), action: external_exports.string() }).passthrough()).optional(),
+      content: external_exports.record(external_exports.unknown()).optional()
+    }).passthrough().optional(),
     render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: external_exports.string().optional(), reason: external_exports.string().optional() }).passthrough().optional()
   }).passthrough().optional(),
   sound: external_exports.record(external_exports.unknown()).optional()
@@ -86905,6 +86919,13 @@ var shotCameraInput = (() => {
   }
 })();
 var enumInput = (values, description) => ({ type: "string", ...values?.length ? { enum: values } : {}, description });
+var motionTypes = (() => {
+  try {
+    return motionGraphicTypes();
+  } catch {
+    return [];
+  }
+})();
 var purposes = (() => {
   try {
     return renderPurposes();
@@ -86962,6 +86983,22 @@ var storyboardShotInput = {
         angle: { type: "string", description: "Camera angle. Recommended vocabulary is in the directing skill." },
         infoType: { type: "string", description: "Information carried by the shot; must agree with its purpose. Recommended vocabulary is in the directing skill." },
         feel: { type: "string", description: "What the viewer should feel before choosing framing and movement." },
+        motionGraphic: {
+          type: "object",
+          additionalProperties: true,
+          required: ["version", "type", "evidence", "style"],
+          description: "Motion design plan. Read motion-graphics.md, choose from intent and inputs, record why alternatives lose. Does not replace render mode or camera. Built-in SVG examples use motion_html; physical subjects retain mesh routes.",
+          properties: {
+            version: { type: "integer", enum: [1], description: "Motion plan schema version." },
+            type: enumInput(motionTypes, "Semantic motion family, independent of palette and transition effects."),
+            intent: { type: "string", description: "One viewer takeaway." },
+            reason: { type: "string", description: "Content-specific choice and rejected alternative." },
+            evidence: enumInput(["data", "recording", "reenactment", "metaphor"], "Evidence provenance; never present a mock UI as an actual recording."),
+            style: { type: "object", description: "Palette and subject-specific visual direction.", additionalProperties: true, properties: { palette: enumInput(["editorial", "botanical", "plum", "midnight"], "Built-in palette; retain channel identity."), reason: { type: "string", description: "Why this visual direction suits the subject." } } },
+            beats: { type: "array", description: "Editorial timing intentions; authored slides can implement custom timing.", items: { type: "object", description: "One meaningful change.", required: ["at", "action"], properties: { at: { type: "number", minimum: 0, maximum: 1, description: "Normalized shot time, zero to one." }, action: { type: "string", description: "Visible change or result-reading hold." } } } },
+            content: { type: "object", additionalProperties: true, description: "Type-specific source data; see motion-graphics.md. Preserve exact source values." }
+          }
+        },
         eyeline: eyelineInput,
         composition: compositionInput,
         depth: depthInput,
@@ -100427,7 +100464,7 @@ for (const name of DURATION_TOOLS) {
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.115.4" },
+  { name: "social-flow", version: "0.116.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

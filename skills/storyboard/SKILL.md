@@ -9,6 +9,8 @@ description: >
 argument-hint: "<channel> <topic or topic hint>"
 allowed-tools: ["mcp__social-flow__host_review", "mcp__social-flow__project_manage", "mcp__social-flow__location_manage", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics"]
 ---
+For motion-graphic shots, follow [motion type selection and design](references/motion-graphics.md): persist `shot.motionGraphic`, choose the type from viewer intent and available evidence, and keep style, choreography and renderer separate. Built-in abstract scenes use the installed `prepare-motion-graphic.js`; asset-dependent types retain their authored or mesh routes.
+
 Follow [host evaluation](../_shared/host-review.md) for every requested review.
 
 

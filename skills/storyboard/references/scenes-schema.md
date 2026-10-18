@@ -3730,3 +3730,7 @@ New boards follow [character-led scenarios](character-scenarios.md). `narration[
 production speech array for both dialogue and narration, with explicit `speaker` IDs. Shot
 `performance` records ordered actions and speech-group references; STORY references use event
 indices. A silent action can deliver the opening, payoff or close. The thesis need not be spoken.
+
+## Motion graphic plan (version 1)
+
+Optional `shot.motionGraphic` records the semantic type independently of `render.mode`. New motion-graphic shots follow [motion-graphics.md](motion-graphics.md). The shared catalog and MCP storyboard input expose type, intent, reason, evidence, style, beats and content. `motion_html` executes seekable abstract motion scenes; it does not replace physical mesh or recorded-evidence routes. Existing boards without this field retain their previous behavior.

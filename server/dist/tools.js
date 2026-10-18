@@ -1,5 +1,5 @@
 import { DURATION_TOOLS } from './video-duration.js';
-import { cameraContract, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
+import { cameraContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 import { ASTRA_VIDEO_FAST_DIMENSION_STEP, ASTRA_VIDEO_GUIDANCE_RANGES, guidanceToolKey, ASTRA_VIDEO_IC_LORA_ADAPTERS, ASTRA_VIDEO_LORAS, ASTRA_VIDEO_MAX_LORA_STRENGTH, ASTRA_VIDEO_MAX_REFERENCE_PIXELS, ASTRA_VIDEO_MAX_STG_BLOCK, ASTRA_VIDEO_MAX_STG_BLOCKS, ASTRA_VIDEO_FRAME_LIMITS, ASTRA_VIDEO_MAX_PIXELS, ASTRA_VIDEO_MAX_SEED, ASTRA_VIDEO_MIN_FRAMES, } from './astra-video-client.js';
 import { DEFAULT_SEEDANCE_DURATION, DEFAULT_SEEDANCE_MODEL, DEFAULT_SEEDANCE_REFERENCE_MODEL, DEFAULT_SEEDANCE_RESOLUTION, SEEDANCE_FPS, SEEDANCE_REFERENCE_MODELS, VALID_SEEDANCE_MODELS, VALID_SEEDANCE_RATIOS, VALID_SEEDANCE_RESOLUTIONS, } from './seedance-client.js';
@@ -759,6 +759,12 @@ const shotCameraInput = (() => {
     }
 })();
 const enumInput = (values, description) => ({ type: 'string', ...(values?.length ? { enum: values } : {}), description });
+const motionTypes = (() => { try {
+    return motionGraphicTypes();
+}
+catch {
+    return [];
+} })();
 const purposes = (() => { try {
     return renderPurposes();
 }
@@ -809,6 +815,18 @@ const storyboardShotInput = {
                 angle: { type: 'string', description: 'Camera angle. Recommended vocabulary is in the directing skill.' },
                 infoType: { type: 'string', description: 'Information carried by the shot; must agree with its purpose. Recommended vocabulary is in the directing skill.' },
                 feel: { type: 'string', description: 'What the viewer should feel before choosing framing and movement.' },
+                motionGraphic: {
+                    type: 'object', additionalProperties: true, required: ['version', 'type', 'evidence', 'style'],
+                    description: 'Motion design plan. Read motion-graphics.md, choose from intent and inputs, record why alternatives lose. Does not replace render mode or camera. Built-in SVG examples use motion_html; physical subjects retain mesh routes.',
+                    properties: {
+                        version: { type: 'integer', enum: [1], description: 'Motion plan schema version.' }, type: enumInput(motionTypes, 'Semantic motion family, independent of palette and transition effects.'),
+                        intent: { type: 'string', description: 'One viewer takeaway.' }, reason: { type: 'string', description: 'Content-specific choice and rejected alternative.' },
+                        evidence: enumInput(['data', 'recording', 'reenactment', 'metaphor'], 'Evidence provenance; never present a mock UI as an actual recording.'),
+                        style: { type: 'object', description: 'Palette and subject-specific visual direction.', additionalProperties: true, properties: { palette: enumInput(['editorial', 'botanical', 'plum', 'midnight'], 'Built-in palette; retain channel identity.'), reason: { type: 'string', description: 'Why this visual direction suits the subject.' } } },
+                        beats: { type: 'array', description: 'Editorial timing intentions; authored slides can implement custom timing.', items: { type: 'object', description: 'One meaningful change.', required: ['at', 'action'], properties: { at: { type: 'number', minimum: 0, maximum: 1, description: 'Normalized shot time, zero to one.' }, action: { type: 'string', description: 'Visible change or result-reading hold.' } } } },
+                        content: { type: 'object', additionalProperties: true, description: 'Type-specific source data; see motion-graphics.md. Preserve exact source values.' }
+                    }
+                },
                 eyeline: eyelineInput, composition: compositionInput, depth: depthInput,
                 render: {
                     type: 'object', additionalProperties: true, required: ['mode'],

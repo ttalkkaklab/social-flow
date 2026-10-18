@@ -1,0 +1,22 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><title>Motion graphic</title>
+<style>
+@font-face{font-family:MotionInter;src:url('assets/InterVariable.woff2') format('woff2');font-weight:100 900;font-display:block}
+@font-face{font-family:MotionKorean;src:url('assets/PretendardVariable.woff2') format('woff2');font-weight:100 900;font-display:block}
+*{box-sizing:border-box}html,body{margin:0;overflow:hidden}main{width:100%;height:100%}
+</style><main id="stage"></main>
+<script src="../scenes.js"></script><script src="assets/motion-graphics.js"></script><script src="assets/motion-graphic-runtime.js"></script>
+<script>
+const SLIDE_SHOT = 1;
+const S=window.SCENES[SLIDE_SHOT-1],portrait=window.FORMAT!=='youtube-long-16x9',W=portrait?1080:1920,H=portrait?1920:1080;
+document.body.style.width=W+'px';document.body.style.height=H+'px';
+let segments=(S.narration?.length?S.narration:[{}]).map(()=>S.duration*1000/Math.max(1,S.narration?.length||1));
+const stage=document.getElementById('stage');
+const layers=segments.map((_,i)=>{const el=document.createElement('div');el.dataset.rg=i+1;el.dataset.primitive='state-transform';el.style.cssText='position:absolute;inset:0';stage.append(el);return el;});
+window.__seek=(ms,g=1)=>{const elapsed=segments.slice(0,g-1).reduce((a,b)=>a+b,0)+ms,total=segments.reduce((a,b)=>a+b,0);layers.forEach((el,i)=>el.style.display=i===g-1?'block':'none');layers[g-1].innerHTML=MOTION_GRAPHIC_RUNTIME.render(S,Math.max(0,Math.min(1,elapsed/total)),{portrait});};
+window.__setSegs=map=>{segments=segments.map((v,i)=>map[i+1]>0?map[i+1]:v);};
+window.__groups=()=>[{rg:0,dur:0},...segments.map((dur,i)=>({rg:i+1,dur}))];
+window.__size=()=>({w:W,h:H});
+window.__meta=()=>({hold:0,stray:document.getAnimations().length,infinite:0,broken:[],fonts:document.fonts.check('500 32px MotionKorean','가독성')&&document.fonts.check('500 32px MotionInter','123')});
+window.__ready=()=>window._ready||(window._ready=(async()=>{const errors=MOTION_GRAPHICS.validateContent(S);if(errors.length)throw Error(errors.join('; '));await Promise.all([document.fonts.load('500 32px MotionKorean','가독성'),document.fonts.load('500 32px MotionInter','123')]);await document.fonts.ready;window.__seek(0);})());
+window.__ready();
+</script></html>
