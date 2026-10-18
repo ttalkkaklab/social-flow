@@ -1,0 +1,99 @@
+{
+  "passed": true,
+  "targets": [
+    {
+      "root": "/Users/zeans/.local/state/social-flow-installed/builds/0.115.4-sound.1",
+      "matches": {
+        "README.md": true,
+        "server/dist/astra-shot-runtime.bundle.js": true,
+        "server/dist/astra-shot-runtime.js": true,
+        "server/dist/bundle.js": true,
+        "server/src/astra-shot-runtime.ts": true,
+        "skills/produce/SKILL.md": true,
+        "skills/produce/references/build-reel.sh": true,
+        "skills/produce/references/check-tts-quality.js": true,
+        "skills/produce/references/compile-sound-plan.js": true,
+        "skills/produce/references/compose-speech.js": true,
+        "skills/produce/references/full-video.md": true,
+        "skills/produce/references/prepare-astra-shot.js": true,
+        "skills/produce/references/video-generation.md": true,
+        "skills/produce/references/video-model-selection.md": true,
+        "skills/storyboard/references/check-scenes.js": true,
+        "skills/storyboard/references/scenes-schema.md": true,
+        "skills/storyboard/references/spatial-prompts.js": true,
+        "server/src/video-sound.ts": true,
+        "server/dist/video-sound.js": true,
+        "skills/produce/references/prepare-source-audio.js": true,
+        "skills/produce/references/prepare-video-sound.js": true,
+        "skills/produce/references/video-sound.md": true,
+        "server/test/video-sound.test.mjs": true,
+        "server/test/installed-video-sound-smoke.mjs": true
+      }
+    },
+    {
+      "root": "/Users/zeans/.claude/plugins/cache/social-flow/social-flow/0.115.4-sound.1",
+      "matches": {
+        "README.md": true,
+        "server/dist/astra-shot-runtime.bundle.js": true,
+        "server/dist/astra-shot-runtime.js": true,
+        "server/dist/bundle.js": true,
+        "server/src/astra-shot-runtime.ts": true,
+        "skills/produce/SKILL.md": true,
+        "skills/produce/references/build-reel.sh": true,
+        "skills/produce/references/check-tts-quality.js": true,
+        "skills/produce/references/compile-sound-plan.js": true,
+        "skills/produce/references/compose-speech.js": true,
+        "skills/produce/references/full-video.md": true,
+        "skills/produce/references/prepare-astra-shot.js": true,
+        "skills/produce/references/video-generation.md": true,
+        "skills/produce/references/video-model-selection.md": true,
+        "skills/storyboard/references/check-scenes.js": true,
+        "skills/storyboard/references/scenes-schema.md": true,
+        "skills/storyboard/references/spatial-prompts.js": true,
+        "server/src/video-sound.ts": true,
+        "server/dist/video-sound.js": true,
+        "skills/produce/references/prepare-source-audio.js": true,
+        "skills/produce/references/prepare-video-sound.js": true,
+        "skills/produce/references/video-sound.md": true,
+        "server/test/video-sound.test.mjs": true,
+        "server/test/installed-video-sound-smoke.mjs": true
+      }
+    },
+    {
+      "root": "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.115.4-sound.1",
+      "matches": {
+        "README.md": true,
+        "server/dist/astra-shot-runtime.bundle.js": true,
+        "server/dist/astra-shot-runtime.js": true,
+        "server/dist/bundle.js": true,
+        "server/src/astra-shot-runtime.ts": true,
+        "skills/produce/SKILL.md": true,
+        "skills/produce/references/build-reel.sh": true,
+        "skills/produce/references/check-tts-quality.js": true,
+        "skills/produce/references/compile-sound-plan.js": true,
+        "skills/produce/references/compose-speech.js": true,
+        "skills/produce/references/full-video.md": true,
+        "skills/produce/references/prepare-astra-shot.js": true,
+        "skills/produce/references/video-generation.md": true,
+        "skills/produce/references/video-model-selection.md": true,
+        "skills/storyboard/references/check-scenes.js": true,
+        "skills/storyboard/references/scenes-schema.md": true,
+        "skills/storyboard/references/spatial-prompts.js": true,
+        "server/src/video-sound.ts": true,
+        "server/dist/video-sound.js": true,
+        "skills/produce/references/prepare-source-audio.js": true,
+        "skills/produce/references/prepare-video-sound.js": true,
+        "skills/produce/references/video-sound.md": true,
+        "server/test/video-sound.test.mjs": true,
+        "server/test/installed-video-sound-smoke.mjs": true
+      }
+    }
+  ],
+  "metadataOverrides": [
+    ".claude-plugin/plugin.json",
+    "plugin.json",
+    "manifest.json",
+    ".claude-plugin/marketplace.json"
+  ],
+  "installationVersion": "0.115.4-sound.1"
+}

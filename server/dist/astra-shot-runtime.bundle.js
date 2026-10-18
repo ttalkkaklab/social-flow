@@ -3204,12 +3204,12 @@ var ZodTuple = class _ZodTuple extends ZodType {
     });
   }
 };
-ZodTuple.create = (schemas, params) => {
-  if (!Array.isArray(schemas)) {
+ZodTuple.create = (schemas2, params) => {
+  if (!Array.isArray(schemas2)) {
     throw new Error("You must pass an array of schemas to z.tuple([ ... ])");
   }
   return new ZodTuple({
-    items: schemas,
+    items: schemas2,
     typeName: ZodFirstPartyTypeKind.ZodTuple,
     rest: null,
     ...processCreateParams(params)
@@ -6735,6 +6735,254 @@ function rawChars(args) {
 function charUnits(args) {
   return Math.round(rawChars(args) / 1e3 * 1e3) / 1e3;
 }
+
+// src/video-client.ts
+var VALID_VIDEO_MODELS = [
+  "veo-3.1-generate-preview",
+  // top quality (default) — 720p $0.40/s
+  "veo-3.1-fast-generate-preview",
+  // low latency, low cost — 720p $0.10/s (4x cheaper than default)
+  "veo-3.1-lite-generate-preview"
+  // cheapest — 720p $0.05/s (8x cheaper). No 4K/Extension/Reference
+];
+var DEFAULT_VIDEO_MODEL = "veo-3.1-fast-generate-preview";
+var VALID_VIDEO_ASPECT_RATIOS = ["16:9", "9:16"];
+var VALID_VIDEO_RESOLUTIONS = ["720p", "1080p", "4k"];
+var API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
+var FILES_URI_PREFIX = `${API_BASE_URL}/files/`;
+var HANDLE_LIFETIME_MS = 48 * 60 * 60 * 1e3;
+var DurationSchema = external_exports.union([external_exports.literal(4), external_exports.literal(6), external_exports.literal(8)]).optional().default(8);
+function validateResolutionConstraints(model, resolution, durationSeconds, ctx) {
+  if ((resolution === "1080p" || resolution === "4k") && durationSeconds !== 8) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["durationSeconds"],
+      message: `${resolution} resolution is only supported at 8s duration (requested: ${durationSeconds}s).`
+    });
+  }
+  if (resolution === "4k" && model === "veo-3.1-lite-generate-preview") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["resolution"],
+      message: "veo-3.1-lite-generate-preview does not support 4k (720p/1080p only)."
+    });
+  }
+}
+function rejectLiteNegativePrompt(negativePrompt, model, ctx) {
+  if (negativePrompt && model === "veo-3.1-lite-generate-preview") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["negativePrompt"],
+      message: "negativePrompt is not accepted on veo-3.1-lite-generate-preview (the API returns 400). Write the exclusion into the prompt as positive description, or use veo-3.1-fast-generate-preview."
+    });
+  }
+}
+function rejectLiteModel(feature, model, ctx) {
+  if (model === "veo-3.1-lite-generate-preview") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["model"],
+      message: `${feature} is not supported on veo-3.1-lite-generate-preview. Use veo-3.1-generate-preview or veo-3.1-fast-generate-preview.`
+    });
+  }
+}
+var negativePromptSchema2 = external_exports.string().max(500).optional().describe(
+  `Comma-separated noun or adjective phrases to exclude (e.g. "wall, frame, text overlay"). Never use instructive language such as "no" or "don't" \u2014 the API docs reject that form.`
+);
+var text2VideoSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required"),
+  negativePrompt: negativePromptSchema2,
+  model: external_exports.enum(VALID_VIDEO_MODELS).optional().default(DEFAULT_VIDEO_MODEL),
+  aspectRatio: external_exports.enum(VALID_VIDEO_ASPECT_RATIOS).optional().default("16:9"),
+  resolution: external_exports.enum(VALID_VIDEO_RESOLUTIONS).optional().default("720p"),
+  durationSeconds: DurationSchema,
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+}).superRefine((data, ctx) => {
+  validateResolutionConstraints(data.model, data.resolution, data.durationSeconds, ctx);
+  rejectLiteNegativePrompt(data.negativePrompt, data.model, ctx);
+});
+var img2VideoSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required"),
+  negativePrompt: negativePromptSchema2,
+  sourceImagePath: external_exports.string().min(1, "Source image path is required"),
+  lastImagePath: external_exports.string().optional(),
+  model: external_exports.enum(VALID_VIDEO_MODELS).optional().default(DEFAULT_VIDEO_MODEL),
+  aspectRatio: external_exports.enum(VALID_VIDEO_ASPECT_RATIOS).optional().default("16:9"),
+  resolution: external_exports.enum(VALID_VIDEO_RESOLUTIONS).optional().default("720p"),
+  durationSeconds: DurationSchema,
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+}).superRefine((data, ctx) => {
+  validateResolutionConstraints(data.model, data.resolution, data.durationSeconds, ctx);
+  rejectLiteNegativePrompt(data.negativePrompt, data.model, ctx);
+});
+var videoExtensionSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required"),
+  sourceVideoPath: external_exports.string().min(1, "Source video path is required"),
+  sourceVideoUri: external_exports.string().startsWith(FILES_URI_PREFIX, `Source video URI must start with ${FILES_URI_PREFIX}`).optional(),
+  model: external_exports.enum(VALID_VIDEO_MODELS).optional().default(DEFAULT_VIDEO_MODEL),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+}).superRefine((data, ctx) => rejectLiteModel("video extension", data.model, ctx));
+var referenceVideoSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required"),
+  referenceImagePaths: external_exports.array(external_exports.string()).min(1, "At least one reference image is required").max(3, "Maximum 3 reference images allowed"),
+  model: external_exports.enum(VALID_VIDEO_MODELS).optional().default(DEFAULT_VIDEO_MODEL),
+  aspectRatio: external_exports.enum(VALID_VIDEO_ASPECT_RATIOS).optional().default("16:9"),
+  resolution: external_exports.enum(VALID_VIDEO_RESOLUTIONS).optional().default("720p"),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+}).superRefine((data, ctx) => {
+  rejectLiteModel("reference images", data.model, ctx);
+  validateResolutionConstraints(data.model, data.resolution, 8, ctx);
+});
+
+// src/omni-client.ts
+var VALID_OMNI_ASPECT_RATIOS = ["16:9", "9:16"];
+var VALID_OMNI_RESOLUTIONS = ["360p", "720p", "1080p", "4k"];
+var durationSchema2 = external_exports.number().int().min(3).max(10).optional().default(8);
+var resolutionSchema = external_exports.enum(VALID_OMNI_RESOLUTIONS).optional().default("720p");
+var aspectRatioSchema = external_exports.enum(VALID_OMNI_ASPECT_RATIOS).optional().default("16:9");
+var omniText2VideoSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required"),
+  aspectRatio: aspectRatioSchema,
+  resolution: resolutionSchema,
+  durationSeconds: durationSchema2,
+  seed: external_exports.number().int().optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+});
+var omniImg2VideoSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required"),
+  sourceImagePath: external_exports.string().min(1, "Source image path is required"),
+  lastImagePath: external_exports.string().optional(),
+  aspectRatio: aspectRatioSchema,
+  resolution: resolutionSchema,
+  durationSeconds: durationSchema2,
+  seed: external_exports.number().int().optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+});
+var continuationFields = {
+  prompt: external_exports.string().min(1, "Prompt is required"),
+  previousInteractionId: external_exports.string().optional(),
+  sourceVideoPath: external_exports.string().optional(),
+  resolution: resolutionSchema,
+  seed: external_exports.number().int().optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+};
+function requireOneSource(data, ctx) {
+  const given = [data.previousInteractionId, data.sourceVideoPath].filter(Boolean).length;
+  if (given !== 1) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["previousInteractionId"],
+      message: "Give exactly one source: previousInteractionId (an interaction from an earlier omni_* call) or sourceVideoPath (a local mp4 of at most 10 seconds)."
+    });
+  }
+}
+var omniExtendSchema = external_exports.object({ ...continuationFields, durationSeconds: durationSchema2 }).superRefine(requireOneSource);
+var omniEditSchema = external_exports.object(continuationFields).superRefine(requireOneSource);
+
+// src/video-sound.ts
+var effectSchema = external_exports.object({
+  id: external_exports.string().min(1).optional(),
+  description: external_exports.string().min(1).optional(),
+  trigger: external_exports.string().min(1).optional(),
+  delivery: external_exports.enum(["auto", "native", "input", "post"]).optional(),
+  sfx: external_exports.string().min(1).optional(),
+  atSeconds: external_exports.number().finite().nonnegative().optional(),
+  separationLu: external_exports.number().finite().min(0).max(30).optional(),
+  intensity: external_exports.enum(["subtle", "normal", "strong"]).optional()
+}).strict();
+var schemas = {
+  veo_text2video: text2VideoSchema,
+  veo_img2video: img2VideoSchema,
+  veo_reference: referenceVideoSchema,
+  veo_extension: videoExtensionSchema,
+  seedance_text2video: seedanceText2VideoSchema,
+  seedance_img2video: seedanceImg2VideoSchema,
+  seedance_reference: seedanceReferenceSchema,
+  astra_text2video: astraText2VideoSchema,
+  astra_img2video: astraImg2VideoSchema,
+  astra_audio2video: astraAudio2VideoSchema,
+  astra_keyframe_video: astraKeyframeVideoSchema,
+  omni_text2video: omniText2VideoSchema,
+  omni_img2video: omniImg2VideoSchema,
+  omni_extend: omniExtendSchema,
+  omni_edit: omniEditSchema
+};
+function prepareVideoSound(tool, input, sound = {}) {
+  const schema = schemas[tool];
+  if (!schema) throw new Error("Unsupported sound adapter: " + tool);
+  external_exports.string().min(1).parse(input.prompt);
+  const effects = external_exports.array(effectSchema).parse(sound.effects ?? []);
+  const ids = effects.flatMap((effect) => effect.id ? [effect.id] : []);
+  if (new Set(ids).size !== ids.length) throw new Error("Effect ids must be unique within the shot");
+  if (sound.audioSource !== void 0 && !["video", "speech"].includes(String(sound.audioSource)))
+    throw new Error("sound.audioSource must be video or speech");
+  const fixedInput = tool === "astra_audio2video";
+  let nativeAudio = !fixedInput;
+  if (tool.startsWith("seedance_")) {
+    const model = input.model ?? (tool === "seedance_reference" ? DEFAULT_SEEDANCE_REFERENCE_MODEL : DEFAULT_SEEDANCE_MODEL);
+    const spec = SEEDANCE_MODEL_SPECS[model];
+    if (!spec) throw new Error("Unknown Seedance model: " + String(model));
+    nativeAudio = spec.audio;
+  }
+  const resolved = effects.map((effect) => {
+    const requested = effect.delivery ?? (effect.sfx ? "post" : "auto");
+    const delivery2 = requested === "auto" ? nativeAudio && input.generateAudio !== false && sound.audioSource !== "speech" ? "native" : "post" : requested;
+    if (delivery2 === "native" && (!nativeAudio || input.generateAudio === false))
+      throw new Error("Native SFX unavailable in this mode or explicitly disabled; use post");
+    if (delivery2 === "input" && !fixedInput)
+      throw new Error("Input SFX require ASTRA audio2video; reference audio is not a preserved soundtrack");
+    if (delivery2 !== "post" && sound.audioSource === "speech")
+      throw new Error("Native/input SFX require audioSource=video; replacing it with speech discards the effects");
+    if (delivery2 !== "post" && (!effect.description || !effect.trigger))
+      throw new Error("Native/input effects need description and trigger");
+    return { ...effect, delivery: delivery2 };
+  });
+  const native = resolved.filter((effect) => effect.delivery === "native");
+  const conditioned = resolved.filter((effect) => effect.delivery === "input");
+  if (sound.audioSource === "video" && (input.generateAudio === false || !nativeAudio && !fixedInput))
+    throw new Error("audioSource=video conflicts with a silent output; select speech/post or enable supported audio");
+  if (native.length && /Audio:\s*silent\b/i.test(String(input.prompt)))
+    throw new Error("Native SFX conflict with Audio: silent in the prompt; revise the authored sound direction");
+  if (sound.sfx && resolved.some((effect) => effect.delivery !== "post" && effect.sfx === sound.sfx))
+    throw new Error("The same effect cannot belong to the native/input soundtrack and the legacy post cue");
+  const args = { ...input };
+  if ((native.length || conditioned.length || sound.audioSource === "video") && (tool.startsWith("seedance_") || tool.startsWith("astra_"))) {
+    if (input.generateAudio === false) throw new Error("Cannot discard the requested input soundtrack");
+    args.generateAudio = true;
+  }
+  const clauses = native.map((effect) => `${effect.trigger}: ${effect.description}.`);
+  const nativePrompt = `Audio: ${clauses.join(" ")} Only diegetic scene sounds.`;
+  if (clauses.length && !String(input.prompt).includes(nativePrompt)) args.prompt = `${input.prompt}
+${nativePrompt}`;
+  const inputPrompt = `The supplied non-speech sounds come from these actions, not mouths: ${conditioned.map((effect) => `${effect.trigger}: ${effect.description}`).join("; ")}.`;
+  if (conditioned.length && !String(args.prompt).includes(inputPrompt)) args.prompt = `${args.prompt}
+${inputPrompt}`;
+  const parsed = schema.parse(args);
+  const unknown = Object.keys(args).filter((key) => !(key in parsed));
+  if (unknown.length) throw new Error("Unsupported adapter arguments: " + unknown.join(", "));
+  const audioSource = native.length || conditioned.length ? "video" : sound.audioSource;
+  const warnings = [];
+  if (conditioned.length) warnings.push("Input effects must already be mixed into audioPath. This planner does not synthesize or mix them; inspect their action and mouth alignment.");
+  if (resolved.some((effect) => effect.delivery === "post" && (!effect.sfx || effect.atSeconds === void 0)))
+    warnings.push("Post effects need an asset and an observed shot-relative atSeconds before assembly.");
+  if (native.length) warnings.push("Native audio is a mixed soundtrack. Do not overlay a second dialogue track; inspect missing or unwanted effects before acceptance.");
+  return {
+    tool,
+    arguments: parsed,
+    sound: { ...sound, ...audioSource ? { audioSource } : {}, effects: resolved },
+    capabilities: { nativeAudio, inputAudio: fixedInput ? "preserved" : tool === "seedance_reference" ? "reference" : "none" },
+    warnings,
+    review: "not_reviewed",
+    generated: false
+  };
+}
 export {
   astraAudio2VideoSchema,
   astraImg2VideoSchema,
@@ -6743,6 +6991,7 @@ export {
   generateFromImage,
   generateFromKeyframes,
   manageSpeech,
+  prepareVideoSound,
   priceOf,
   readBoard,
   resolveVideoDuration,

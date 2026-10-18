@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "root": "/Users/zeans/orca/workspaces/social-flow/finback",
+  "silent": true,
+  "postRows": 1,
+  "atSeconds": 2.2,
+  "nativeRms": 0,
+  "postRms": 0.4485930178292357,
+  "beforePostRms": 0,
+  "review": "not_reviewed",
+  "coverage": "Signal-level final MP4 placement and source retention; no listening claim"
+}

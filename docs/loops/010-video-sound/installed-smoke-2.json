@@ -1,0 +1,23 @@
+{
+  "root": "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.115.4",
+  "passed": true,
+  "fixture": "synthetic timed impulse; not a provider render or perceptual review",
+  "review": "not_reviewed",
+  "checks": [
+    "fresh installed request planning and board write",
+    "Seedance audio enabled",
+    "actual builder source extraction",
+    "native cue omitted from post manifest",
+    "final MP4 impulse at 1.5s",
+    "quiet interval preserved"
+  ],
+  "pulseRms": 0.8871047898212508,
+  "quietRms": 0,
+  "files": {
+    "server/dist/astra-shot-runtime.bundle.js": "38ccf23418b08147da0bf7228a401fa9bfe5278741280c7e9f46c31379f763b7",
+    "skills/produce/references/build-reel.sh": "2ef74ec6bef4a407dfd8f44bc4993eafe21f1d85f2f5726f19db55fde9e26d19",
+    "skills/produce/references/prepare-source-audio.js": "3573efe6ed8be4c864338920f86c79ff0edde84ba9cd55b901742d84437c0517"
+  },
+  "output": "/tmp/social-flow-sound-installed-2/work/reel.mp4",
+  "outputSha256": "13447c06f7f7f5f82d4f68c313ec270e5637ba02f82e8f2fb3ad406d99723207"
+}

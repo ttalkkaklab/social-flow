@@ -198,6 +198,17 @@ function check(work, board) {
     if(win.SB_DOC?.speechPlanVersion===1 && (s.narration||[]).some(n=>n.delivery==='on_screen') && s.visual?.video && !binding)throw new Error('On-screen dialogue needs a video speech binding for card '+i);
     // The actual scene WAV must be tied to these lines, not merely accompanied by other WAVs.
     const lines=(s.narration||[]).filter(n=>(n.tts||'').trim());
+    if (s.sound?.audioSource === 'video') {
+      const extraction = (read(path.join(work, 'source-audio.json')) || []).find(item => item.card === String(i));
+      if (!extraction || extraction.audio !== audio || extraction.audioSha256 !== media[audio] ||
+          hash(fs.readFileSync(extraction.video)) !== extraction.sourceSha256)
+        throw new Error('Missing or stale source soundtrack extraction for card ' + i);
+      if (binding && path.resolve(extraction.video) !== path.resolve(binding.videoPath))
+        throw new Error('Source soundtrack differs from bound speech video for card ' + i);
+      media[extraction.video] = extraction.sourceSha256;
+      warnings.push('card ' + i + ': source soundtrack retained; perceptual audio quality not_reviewed');
+      continue; // Line/voice/video provenance above still applies; this WAV was extracted, not TTS-composed.
+    }
     const receipt=read(audio+'.generation.json')||read(audio+'.quality.json');
     if(win.SB_DOC?.speechPlanVersion===1 && lines.length && win.VOICE!=='user') {
       if(new Set(lines.map(n=>n.speaker)).size!==1 && receipt?.generator!=='speech_compose')throw new Error('Multi-speaker shots need separately attached lines and speech_compose receipt');

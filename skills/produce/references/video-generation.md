@@ -63,7 +63,8 @@ storyboard defect: send it back.
 - **A b-roll slot goes to Veo** — by absolute rule 9 that stretch uses the sound the clip
   came with. Veo's native audio is better, and dropping in a silent clip makes those 4
   seconds go quiet.
-- **A motion background (`visual.video`) can go to Seedance** — the builder lays down the
+- For authored effects, [model-aware effects](video-sound.md) overrides the silent defaults below. Preserve the source soundtrack only when selected; pinned external speech uses post effects.
+- **A motion background without source-audio intent (`visual.video`) can go to Seedance** — the builder lays down the
   video track only and **throws the clip's sound away**. There's no reason to pay Veo prices
   for sound you'll discard, and Veo only makes 1080p at 8 seconds while Seedance makes
   exactly the seconds you ask for and charges for exactly that.

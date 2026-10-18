@@ -1435,6 +1435,12 @@ function check(win, fmt, opts) {
       else effects.forEach((effect, ei) => {
         const at = `${where} sound.effects[${ei}]`;
         if (!effect || typeof effect !== 'object' || Array.isArray(effect)) { bad(at, 'an effect is { sfx, atSeconds?, intensity?, separationLu? }'); return; }
+        if (effect.delivery !== undefined && !['auto', 'native', 'input', 'post'].includes(effect.delivery)) bad(at, 'delivery is auto | native | input | post');
+        if (['auto', 'native', 'input'].includes(effect.delivery)) {
+          if (!effect.description || !effect.trigger) bad(at, 'described effects need description and trigger');
+          if (effect.delivery !== 'auto' && s.sound.audioSource !== 'video') bad(at, 'native/input effects need sound.audioSource=video');
+          return;
+        }
         const id = typeof effect.sfx === 'string' ? effect.sfx.trim() : '';
         if (!id) bad(at, 'has no sfx');
         else {

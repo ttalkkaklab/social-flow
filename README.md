@@ -13,6 +13,10 @@ capture helper records the actual source frame and detects stale trims or replac
 clips; the image prompt assembler attaches a current endpoint as a state reference.
 Legacy boards expose missing blocking and inferred connections as advice. Assembly
 exports paired boundary PNGs beside playback excerpts, without claiming visual approval.
+Shot sound intent now routes by model and mode through `prepare-video-sound.js`: native
+audio where supported, supplied audio for explicit LTX conditioning, and timed post
+effects otherwise. See [model-aware effects](skills/produce/references/video-sound.md).
+
 The bundled `skills/produce/references/prepare-astra-shot.js` prepares each real ASTRA
 request from the whole shot, its authored opening and composed speech. It preserves the
 resolved performance prompt in its receipt, uses unlabelled camera/action prose for LTX,

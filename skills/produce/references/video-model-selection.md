@@ -521,7 +521,7 @@ pass the argument.
 **3. `generateAudio`'s vendor default is `true`; ours is `false`.**
 Narration is added separately via `tts_*`, so a model-generated voice makes two layers. On
 top of that, 1.5 pro with audio on costs **exactly 2×** ($1.2 → $2.4/1M tokens). The tool
-default is flipped to `false` — leave it. The one exception is a reference-audio call: a voice
+default is flipped to `false` for separate narration. Authored native effects use [model-aware effects](video-sound.md) to enable it explicitly and preserve the source soundtrack. Another exception is a reference-audio call: a voice
 reference into a silent clip has nothing to shape, so `seedance_reference` rejects
 `referenceAudioPaths` with `generateAudio: false` before the call.
 

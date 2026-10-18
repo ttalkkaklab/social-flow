@@ -206,7 +206,10 @@ function assemble(win, index, dir) {
     const onReferenceRoute = previz && (v.video.engine || v.engine || 'seedance') !== 'host' && previzHandoff(scene) === 'reference_video';
     const clip = PROMPT.clipAssemble({ engine: promptEngine, camera, motion: motionText(d) + (performanceDirection ? '\nOrdered performance: ' + performanceDirection : ''), locks: lock,
       ...(onReferenceRoute ? { scene: previzPreamble(previz) } : {}),
-      audio: 'silent; narration is supplied separately' });
+      audio: scene.sound?.effects?.some(effect => ['auto', 'native'].includes(effect.delivery)) &&
+        scene.sound.audioSource !== 'speech' && (scene.sound.audioSource === 'video' || !scene.narration?.some(line => text(line.tts)))
+        ? 'scene effects follow visible actions; use the prepared sound plan'
+        : 'silent; narration is supplied separately' });
     const problems = [...clip.hits.map(h => `"${h.match}" (${h.why})`), ...clip.negHits.map(h => `negative directive "${h}"`),
       ...clip.timeHits, ...clip.hanHits.map(h => `Korean "${h}"`), ...(clip.lockMissing ? ['no consistency lock'] : [])];
     if (problems.length) throw new Error('The motion prompt fails the Seedance prompt gate that check-scenes.js runs: ' + problems.join('; ') +
