@@ -83,7 +83,7 @@ test('untrusted technique ids and repeated malformed entries cannot crash diagno
 });
 test('source viewpoints and actual spatial video routes consume authored techniques',()=>{
   const spatial=require('../../skills/storyboard/references/spatial-prompts.js');
-  const scene={type:'points',duration:4,shot:{videoDesign:{look:'realistic',before:'A witness stands behind a desk.',action:'The witness raises one hand.',after:'The hand is raised.',continuity:'The desk stays in place.',motion:{kind:'subject_action',subject:'witness',visibleChange:'The hand rises.',beats:[{at:0,state:'Hand down.'},{at:3,state:'The hand is raised.'}]}}},visual:{camera:{movement:'static',speed:'',framing:'Waist-up witness and foreground envelope.',end:'Witness sharp beyond the envelope.'},video:{engine:'seedance'}}};
+  const scene={type:'points',duration:4,shot:{videoDesign:{look:'realistic',before:'A witness stands behind a desk.',action:'The witness raises one hand.',after:'The hand is raised.',continuity:'The desk stays in place.',motion:{kind:'subject_action',subject:'witness',visibleChange:'The hand rises.',beats:[{at:0,state:'Hand down.'},{at:3,state:'The hand is raised.'}]}}},visual:{camera:{movement:'static',speed:'',framing:'Waist-up witness, focus on RUBY_RING in the foreground.',end:'After the hand rises, shift focus over two seconds from RUBY_RING to LISTENING_DETECTIVE beyond the desk.'},video:{engine:'seedance'}}};
   const board={PRODUCTION:{mode:'full_video',style:{preset:'photoreal',world:'A quiet room.',materials:'Wood and cloth.',palette:'Brown and grey.',lighting:'Window light.',camera:'Natural perspective.'}},SCENES:[scene]};
   for(const engine of ['seedance','astra']){
     scene.visual.video.engine=engine;scene.shot.techniques=[];
@@ -92,6 +92,9 @@ test('source viewpoints and actual spatial video routes consume authored techniq
     const after=spatial.assemble(board,0);
     assert.notEqual(after.motionPrompt,before.motionPrompt);
     assert.match(after.motionPrompt,/Shift sharp focus/);
+    assert.match(after.sourcePrompt,/focus on RUBY_RING/);
+    assert.match(after.motionPrompt,/After the hand rises, shift focus over two seconds from RUBY_RING to LISTENING_DETECTIVE/);
+    assert.match(after.endFramePrompt,/LISTENING_DETECTIVE/);
     assert.match(after.sourcePrompt,/View the subject from behind/);
     assert.match(after.sourcePrompt,/distinct depths/);
     assert.match(after.sourcePrompt,/Opening frame: medium shot, waist up/);

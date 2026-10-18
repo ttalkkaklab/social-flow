@@ -2,6 +2,8 @@
 
 ## Contents
 
+- [Camera direction without effect cycling](#camera-direction-without-effect-cycling)
+
 - [Delegated storyboard delivery](#delegated-storyboard-delivery)
 - [Causal dialogue](#causal-dialogue)
 - [Silent physical comedy](#silent-physical-comedy)
@@ -177,3 +179,26 @@ events; it does not silently promote the alternative or overwrite shared identit
 source episode and relevant resulting state are recorded in storyboard.md when useful.
 The explainer adds no invented personal conflict or therapeutic arc. Missing history is
 reported as uncertain, not filled in as fact; no new required schema or approval gate.
+
+
+## Camera direction without effect cycling
+
+Input: give a fresh author a tiny button press; evidence in the foreground and a witness
+stopping in the background; a departure that exposes an empty chair; two walking speakers;
+a held two-shot with conflicting quiet reactions; and a proposed overhead orbit inside a
+low room with no narrative reason. Ask for camera plans only, with no assets or spending.
+
+Pass evidence: the author preserves finger contact and both quiet reactions, motivates
+any focus change with named near/far targets and an action cue, identifies what the
+wider departure frame reveals, preserves the walking listener and screen direction, and
+rejects an unmotivated or physically unsupported move. A critic assesses the plans from
+the events rather than requiring one prescribed move per case. Do not force all six to
+move or all six to hold. Compare opening, cue, attention change and landing, then check
+that consumed camera fields carry those decisions into prompts. A reason-only focus
+target is incomplete. Empty lexical diagnostics cannot certify paraphrased boilerplate.
+
+Repeat mechanical checks with a missing camera, malformed technique records, copied
+static reasons plus different angle reasons, repeated landings with varied rationales,
+still-camera effects, and action text copied as purpose. These produce advice without
+throwing or creating an execution gate. Preserve reused clips, stock, shared outros and
+explicit content-only plans. This evaluates planning and handoff, never unseen footage.

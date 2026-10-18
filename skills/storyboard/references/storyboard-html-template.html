@@ -3120,6 +3120,8 @@ window.STORYBOARD_READY = (async function () {
     window.STRUCTURE_CONTRACT.guidedCheck(window).forEach(function (f) { flag(f.level === "bad" ? "bad" : "warn", f.where, f.what); });
   else if (window.STRUCTURE !== undefined)
     flag("bad", "structure", "Missing structure-contract.js — copy it beside scenes.js; without it the sequence → scene → shot rules are not checked");
+  if (window.PRODUCTION_MODE && window.PRODUCTION_MODE.cameraDirectionWarnings)
+    window.PRODUCTION_MODE.cameraDirectionWarnings(SCENES).forEach(function (message) { flag("warn", T.where.production, message); });
   if (window.PRODUCTION) {
     if (!window.PRODUCTION_MODE) flag("bad", T.where.production, "Missing production-mode.js");
     else {

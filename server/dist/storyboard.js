@@ -284,6 +284,7 @@ export function readStoryboard(args) {
         note: 'This response reads plans and recorded reviews only. Open referenced assets and verify current evidence before reporting visual quality or review validity.' };
     const continuity = loadFromHere(join(REFERENCES_DIR, 'shot-continuity.js'));
     result.continuityFindings = continuity.check(win, dirname(file));
+    result.cameraDirectionFindings = cameraContract().cameraDirectionWarnings(win.SCENES).map(what => ({ level: 'warn', where: 'camera direction', what }));
     result.techniqueFindings = (win.SCENES || []).flatMap((scene, index) => techniqueContract().findings(scene).map(what => ({ level: 'warn', where: 'shot ' + (index + 1), what })));
     if (args.includeContext)
         result.reviewContext = {

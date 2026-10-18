@@ -66553,6 +66553,7 @@ var require_production_mode = __commonJS({
         properties: {
           preset: { type: "string", enum: Object.keys(CAMERA_PRESETS), description: "Optional shot preset. Omit on ordinary camera shots; drone-flythrough is continuous travel through a 3D location." },
           variant: { type: "string", enum: Object.keys(CAMERA_PRESETS["drone-flythrough"].variants), description: "cinematic keeps the horizon level; fpv uses authored bank at bends. Required with drone-flythrough." },
+          purpose: { type: "string", description: "Shot-specific reason for this camera choice. Review context only; executable targets, focus order and timing belong in framing/end, not only here or in technique reasons." },
           movement: { type: "string", description: "One camera move in vendor vocabulary, chosen from shot.feel (directing-grammar \xA74\u2013\xA75): static \xB7 dolly in/out \xB7 zoom in/out (lens only) \xB7 dolly zoom in/out \xB7 pan left/right \xB7 tilt up/down \xB7 whip pan \xB7 truck left/right \xB7 pedestal up/down \xB7 crane up/down \xB7 arc shot \xB7 tracking \xB7 handheld \xB7 aerial. Not push in, orbit, boom or a Korean word (storyboard_check enforces the vocabulary and the conditions below). A pan, tilt, truck, pedestal or dolly is a sentence from framing to end, so end must differ from framing. A whip pan needs the hit in sound.sfx or visual.audio. A dolly zoom needs shot.depth deep (the background that stretches), a stationary subject, with a scene-specific purpose. For drone shots copy the trajectory-derived value from drone-previz.js." },
           speed: { type: "string", description: "Movement pace as slow, steady or fast \u2014 never inside movement, never a word the viewer cannot see (very slow, subtle). Empty on static. Generated from the trajectory on drone shots." },
           framing: { type: "string", description: "Opening composition \u2014 what the camera holds before the move starts (hold in). Generated from the trajectory on drone shots." },
@@ -66781,6 +66782,44 @@ var require_production_mode = __commonJS({
           warnings.push(`a fast ${move.key} strobes at 24 fps when the background holds vertical lines (posts, window frames); if it reads broken, widen the framing and come closer rather than slowing down (L13)`);
         return warnings;
       }
+      function cameraDirectionWarnings(scenes) {
+        const planned = (Array.isArray(scenes) ? scenes : []).map((scene, index) => ({ scene, index })).filter(({ scene }) => scene && scene.type !== "outro" && !reused(scene) && ["generated_video", "still_camera"].includes(scene.shot?.render?.mode));
+        const notes = [], reasons = /* @__PURE__ */ new Map(), endings = /* @__PURE__ */ new Map();
+        const remember = (map, value, index) => {
+          if (!text3(value)) return;
+          const key = normalize2(value);
+          if (!map.has(key)) map.set(key, /* @__PURE__ */ new Set());
+          map.get(key).add(index + 1);
+        };
+        for (const { scene, index } of planned) {
+          const still = scene.shot.render.mode === "still_camera";
+          const camera = (still ? scene.shot.render.camera : scene.visual?.camera) || {};
+          const choices = (Array.isArray(scene.shot?.techniques) ? scene.shot.techniques : []).filter((t2) => typeof t2?.id === "string" && t2.id.startsWith("camera."));
+          if (!text3(still ? camera.effect : camera.movement))
+            notes.push(`[camera-plan-missing] shot ${index + 1}: choose a motivated camera ${still ? "effect" : "movement or hold"} before image prompts; do not fill static as a default`);
+          const written = choices.map((t2) => t2.reason).filter(text3);
+          const purpose = still ? camera.reason : camera.purpose;
+          if (text3(purpose)) written.push(purpose);
+          if (!written.length) notes.push(`[camera-purpose-missing] shot ${index + 1}: explain why this camera choice serves this action, discovery or reaction`);
+          for (const reason of written) {
+            remember(reasons, reason, index);
+          }
+          const action = [scene.shot?.info, scene.visual?.action, scene.shot?.videoDesign?.action].filter(text3).map(normalize2);
+          if (written.some((reason) => action.includes(normalize2(reason))))
+            notes.push(`[camera-purpose-action-copy] shot ${index + 1}: action text repeats as camera rationale; explain what the viewpoint, focus or movement makes noticeable`);
+          if (!still) remember(endings, camera.end, index);
+        }
+        for (const shots of reasons.values()) {
+          if (shots.size > 1) notes.push(`[camera-purpose-repeated] shots ${Array.from(shots).join(", ")}: repeated camera rationale component; review each beat and write what framing, focus or movement lets the viewer notice. Do not rotate effects to silence this advice`);
+        }
+        for (const shots of endings.values()) {
+          if (shots.size >= 3) notes.push(`[camera-end-repeated] shots ${Array.from(shots).join(", ")}: same camera landing across several cuts; inspect whether it describes the actual final picture or copied hold text. Intentional repeated setups remain valid`);
+        }
+        const generatedShots = planned.filter(({ scene }) => scene.shot.render.mode === "generated_video");
+        if (generatedShots.length > 1 && generatedShots.every(({ scene }) => staticCamera(scene.visual?.camera)))
+          notes.push("[camera-all-static] Every planned generated shot holds the camera. Review attention shifts, reveals and travel; retain motivated holds and rack focus, with shot-specific reasons. No moving-shot quota applies");
+        return notes;
+      }
       function episodeMoveErrors(scenes) {
         const seen = /* @__PURE__ */ new Map(), notes = [];
         for (const [index, scene] of (scenes || []).entries()) {
@@ -66978,6 +67017,7 @@ var require_production_mode = __commonJS({
       }
       function check2(win, { requireSelection = false, requireApproval = false, draft = false, generatedVideoMax, advice = [] } = {}) {
         const p = win.PRODUCTION, errors = Array.from(win.SCENES || []).flatMap((s2, i2) => reuseErrors(s2).map((e2) => `shot ${i2 + 1}: ${e2}`));
+        advice.push(...cameraDirectionWarnings(win.SCENES));
         if (!p) return requireSelection || (win.SCENES || []).some(reused) ? errors.concat(["Choose a production mode with a six-option cost comparison before generation"]) : errors;
         if (!MODES[p.mode]) errors.push("PRODUCTION.mode must be one of " + CHOICES.join(", ") + " (hook_only, stills_only and hybrid are legacy)");
         if (p.renderRatioVersion !== void 0 && p.renderRatioVersion !== 1) errors.push("renderRatioVersion must be 1");
@@ -67129,7 +67169,7 @@ var require_production_mode = __commonJS({
           generatedVideoMax: production.mode === "hook_only" ? 1 + scenes.filter(reused).length : RATIOS[production.mode] ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2)
         };
       }
-      const api = { resolveVideoChoice, BANDS, ratioMode, ratioBounds, ratioErrors, videoRender, bandContract, CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, videoCap, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, ASTRA_RESOLUTION, ASTRA_WIDE_RESOLUTION, astraResolution, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check: check2, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
+      const api = { resolveVideoChoice, BANDS, ratioMode, ratioBounds, ratioErrors, videoRender, bandContract, CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, videoCap, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, ASTRA_RESOLUTION, ASTRA_WIDE_RESOLUTION, astraResolution, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check: check2, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, cameraDirectionWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
       if (typeof module === "object" && module.exports) module.exports = api;
       else root.PRODUCTION_MODE = api;
     })(typeof window === "object" ? window : globalThis);
@@ -86447,6 +86487,7 @@ function readStoryboard(args) {
   };
   const continuity = loadFromHere2(join6(REFERENCES_DIR, "shot-continuity.js"));
   result.continuityFindings = continuity.check(win, dirname4(file));
+  result.cameraDirectionFindings = cameraContract().cameraDirectionWarnings(win.SCENES).map((what) => ({ level: "warn", where: "camera direction", what }));
   result.techniqueFindings = (win.SCENES || []).flatMap((scene, index) => techniqueContract().findings(scene).map((what) => ({ level: "warn", where: "shot " + (index + 1), what })));
   if (args.includeContext) result.reviewContext = {
     story: win.STORY || null,
