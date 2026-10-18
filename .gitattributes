@@ -1,0 +1,2 @@
+# Preserve upstream license text, including its original line endings and spacing.
+skills/storyboard/references/motion-fonts/*-OFL.txt -whitespace

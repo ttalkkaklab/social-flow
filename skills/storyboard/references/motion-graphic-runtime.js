@@ -49,7 +49,7 @@ function render(scene,p,{portrait=false,onFont,boardTheme}={}){
  const titleSize=expressive?(resolved.id==='playful'?44:38):portrait?(resolved?.id==='playful'?96:Math.min(theme?.type.title||54,64)):(theme?.type.title||58),titleY=portrait?150:(theme?.layout.titleY||130),titleRows=rowsFor(c.title,titleSize,wide,theme?.type.weight||620,'title',fontFace(c.title,'title',theme?.type.weight||620));
  const header=wrap(pad,titleY,c.title,titleSize,wide,C.ink,theme?.type.weight||620,expressive&&resolved.id==='campaign'?'body':'title'),subY=titleY+(titleRows.length-1)*titleSize*1.45+70;
  y=Math.max(y,subY+95);
- const footer=c.source||(m.evidence==='reenactment'?'설명용 재현 · 실제 기록 아님':m.evidence==='metaphor'&&m.type!=='kinetic_type'?'개념을 설명하는 시각적 비유':'');
+ const footer=c.source||(m.evidence==='reenactment'?'설명용 재현 · 실제 기록 아님':m.evidence==='metaphor'&&(!theme||m.type!=='kinetic_type')?'개념을 설명하는 시각적 비유':'');
  out+=rect(0,0,W,H,C.paper,0)+`<g letter-spacing="${theme?.type.tracking||0}">${header}</g>`;
  if(c.subtitle)out+=wrap(pad,subY,c.subtitle,28,wide,C.muted);
  if(theme&&m.type==='comparison'&&c.values.length<=3){
@@ -107,7 +107,7 @@ function render(scene,p,{portrait=false,onFont,boardTheme}={}){
  }else if(m.type==='trend'){
    const vals=c.values,max=Math.max(...vals.map(v=>v.value)),base=y+h,left=x+76,plotW=wide-76-(theme?24:0),step=plotW/(vals.length-1);
    [0,.5,1].forEach(f=>{out+=line(left,y+h*(1-f),W-pad,y+h*(1-f));out+=text(left-22,y+h*(1-f)+8,Number((max*f).toPrecision(3)),24,C.muted,450,'end');});
-   const pts=vals.map((v,i)=>[left+step*i,base-h*v.value/max]),q=at(.07,theme?.id==='report'?.66:.75)*(vals.length-1);
+   const pts=vals.map((v,i)=>[left+step*i,base-h*v.value/max]),q=at(theme?.id==='report'?.07:.1,theme?.id==='report'?.66:.75)*(vals.length-1);
    let path=`M${pts[0][0]} ${pts[0][1]}`;
    for(let i=1;i<pts.length;i++){const a=clamp(q-i+1);if(a>0)path+=`L${pts[i-1][0]+(pts[i][0]-pts[i-1][0])*a} ${pts[i-1][1]+(pts[i][1]-pts[i-1][1])*a}`;}
    out+=`<path d="${path}" fill="none" stroke="${C.accent}" stroke-width="6" stroke-linejoin="round"/>`;
@@ -157,11 +157,11 @@ function render(scene,p,{portrait=false,onFont,boardTheme}={}){
    if(theme){out+=line(ax+30,ay+78,ax+bw-30,ay+78,C.soft,2);}
    out+=text(ax+30,ay+54,c.inputLabel||'입력',28,C.muted);
    if(!c.mappings)out+=wrap(ax+30,ay+125,c.input,theme?42:portrait?35:33,bw-60,C.ink,500);
-   out+=`<g opacity="${q}" transform="translate(0 ${20*(1-q)})">`+rect(bx,by,bw,bh,outputPaper,theme?theme.layout.radius:18)+text(bx+30,by+54,c.outputLabel||'결과',28,outputInk,450,'start',c.mappings?at(.66,.76):1)+(c.mappings?'':wrap(bx+30,by+125,c.output,theme?42:portrait?35:33,bw-60,outputInk,500))+'</g>';
+   out+=`<g opacity="${q}" transform="translate(0 ${20*(1-q)})">`+rect(bx,by,bw,bh,outputPaper,theme?theme.layout.radius:18)+text(bx+30,by+54,c.outputLabel||'결과',28,outputInk,450,'start',c.mappings?(theme?at(.35,.45):at(.66,.76)):1)+(c.mappings?'':wrap(bx+30,by+125,c.output,theme?42:portrait?35:33,bw-60,outputInk,500))+'</g>';
    if(c.mappings)c.mappings.forEach((item,i)=>{
      if(theme&&item.fields?.length){
-       const local=clamp((p-.08-i*.84/c.mappings.length)/(.84/c.mappings.length)),phase=(a,b)=>ease((local-a)/(b-a));
-       const sx=ax+30,sy=ay+125+i*68,ex=bx+30,ey=by+125+i*68,travel=phase(.05,.42),reorder=phase(.42,.8),finish=phase(.8,1);
+       const local=clamp((p-.45-i*.44/c.mappings.length)/(.44/c.mappings.length)),phase=(a,b)=>ease((local-a)/(b-a));
+       const sx=ax+30,sy=ay+125+i*68,ex=bx+30,ey=by+125+i*68,travel=at(.08,.45),reorder=phase(0,.7),finish=phase(.7,1);
        out+=text(sx,sy,item.from,30,C.muted,450);
        item.fields.forEach((value,fieldIndex)=>{
          const font=fontFace(value,'body',500),startOffset=measure(item.from.slice(0,item.from.indexOf(value)),30,500,'body',font),endOffset=measure(item.to.slice(0,item.to.indexOf(value)),30,500,'body',font);
