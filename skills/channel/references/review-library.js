@@ -200,7 +200,7 @@ function exportChannel(channelDirectory, { check = false } = {}) {
     body += `<section class="character-appearance" id="appearance" aria-labelledby="appearance-title"><div class="character-section-heading"><h2 id="appearance-title">${t('외형과 이미지', 'Appearance and images')}</h2>${panelStatus(slots)}</div><div class="review-panels">`;
     for (const [key, words] of Object.entries(label)) body += `<figure class="review-panel-${key}">${slots[key] ? zoomImage(file, path.join(folder, slots[key]), character.name + ' ' + words[0]) : empty('이미지 미등록', 'No image yet')}<figcaption>${t(...words)}</figcaption></figure>`;
     body += '</div>';
-    body += `<details class="review-detail character-media"><summary>${t('이미지 규격과 확인 항목', 'Image format and checks')}${media.findings.length ? ` <span class="character-count">${media.findings.length}</span>` : ''}</summary><p>${t('공용 캐릭터 이미지 · 정면·후면 2:3, 얼굴 1:1. 템플릿 일치는 이미지 완성 판정이 아닙니다.', 'Shared character references · front/back 2:3, face 1:1. Template match does not certify image readiness.')}</p>`;
+    body += `<details class="review-detail character-media"><summary>${t('이미지 규격과 확인 항목', 'Image format and checks')}${media.findings.length ? ` <span class="character-count">${media.findings.length}</span>` : ''}</summary><p>${t('공용 캐릭터 이미지 · 머리 없는 정면·후면 2:3, 얼굴 클로즈업 1:1. 템플릿 일치는 이미지 완성 판정이 아닙니다.', 'Shared character references · headless front/back 2:3, face close-up 1:1. Template match does not certify image readiness.')}</p>`;
     if (media.findings.length) body += `<ul class="review-media-findings">${media.findings.map(f => `<li>${t(f.messageKo || f.message, f.message)}</li>`).join('')}</ul>`;
     body += '</details>';
     const appearances = boards.filter(board => {

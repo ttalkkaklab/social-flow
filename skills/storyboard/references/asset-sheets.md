@@ -10,6 +10,8 @@ Images, voice samples and 3D renders may be pending; planning does not authorize
   Read/create `assets/characters/<id>/identity.md`, export the shared character sheet, and
   bind the selected identities through `cast.json` and `SB_DOC.characters`. Include identity,
   appearance, wardrobe, behavior and speech/voice choices, marking unresolved fields honestly.
+  New visual sheets use headless front/back mannequin panels and one face close-up;
+  follow the linked character-panel contract for generation and legacy reuse.
 - **Props:** use [prop continuity](prop-continuity.md). Write canonical `SB_DOC.props` in
   `scenes.js`: stable id, name, concrete appearance/material/scale, references and tracking.
   For handled/transferred props, establish `propContinuity` initial ownership, custody,
