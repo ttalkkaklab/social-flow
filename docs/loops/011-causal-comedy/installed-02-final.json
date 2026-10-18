@@ -1,0 +1,29 @@
+[
+  {
+    "root": "/Users/zeans/orca/workspaces/social-flow/orca",
+    "files": {
+      "skills/storyboard/SKILL.md": "a77ee055a781e5eafb3013fe3ba6cb6e87f15b5d627d6108ed73557e342459a4",
+      "skills/storyboard/references/causal-dialogue.md": "37d749c3c2f879eee465c26a95a8b53862dcca968150f1fc12f9fc8395dd5006",
+      "skills/storyboard/references/evals.md": "205e3d570e1a821489f6566f79c10e8ac54c54ed255e32adedb3d6f93a749198",
+      "agents/storyboard-reviewer.md": "76e077b4cea6205cbf618f6bf982564e8c1ea9cf5f42a8d7f4208b9eefc278c5"
+    }
+  },
+  {
+    "root": "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.118.0",
+    "files": {
+      "skills/storyboard/SKILL.md": "a77ee055a781e5eafb3013fe3ba6cb6e87f15b5d627d6108ed73557e342459a4",
+      "skills/storyboard/references/causal-dialogue.md": "37d749c3c2f879eee465c26a95a8b53862dcca968150f1fc12f9fc8395dd5006",
+      "skills/storyboard/references/evals.md": "205e3d570e1a821489f6566f79c10e8ac54c54ed255e32adedb3d6f93a749198",
+      "agents/storyboard-reviewer.md": "76e077b4cea6205cbf618f6bf982564e8c1ea9cf5f42a8d7f4208b9eefc278c5"
+    }
+  },
+  {
+    "root": "/Users/zeans/.claude/plugins/cache/social-flow/social-flow/0.118.0",
+    "files": {
+      "skills/storyboard/SKILL.md": "a77ee055a781e5eafb3013fe3ba6cb6e87f15b5d627d6108ed73557e342459a4",
+      "skills/storyboard/references/causal-dialogue.md": "37d749c3c2f879eee465c26a95a8b53862dcca968150f1fc12f9fc8395dd5006",
+      "skills/storyboard/references/evals.md": "205e3d570e1a821489f6566f79c10e8ac54c54ed255e32adedb3d6f93a749198",
+      "agents/storyboard-reviewer.md": "76e077b4cea6205cbf618f6bf982564e8c1ea9cf5f42a8d7f4208b9eefc278c5"
+    }
+  }
+]
