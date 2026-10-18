@@ -43,6 +43,20 @@ test('character catalogue uses reference artwork without claiming panel readines
     html = readFileSync(index, 'utf8');
     assert.ok(html.includes('src="hero/body.png"'));
     assert.ok(!html.includes('Reference image'));
+    f.write('assets/characters/hero/face.png', 'portrait');
+    exportChannel(f.dir);
+    html = readFileSync(index, 'utf8');
+    assert.ok(html.includes('src="hero/face.png"'));
+    assert.ok(html.includes('review-character-portrait'));
+    assert.ok(!html.includes('src="hero/body.png"'));
+    rmSync(join(f.dir, 'assets/characters/hero/face.png'));
+    writeFileSync(join(f.root, 'outside.png'), 'outside');
+    symlinkSync(join(f.root, 'outside.png'), join(f.dir, 'assets/characters/hero/face.png'));
+    exportChannel(f.dir);
+    html = readFileSync(index, 'utf8');
+    assert.ok(!html.includes('src="hero/face.png"'));
+    assert.ok(!html.includes('review-character-portrait'));
+    assert.ok(html.includes('src="hero/body.png"'));
   } finally { f.clean(); }
 });
 
