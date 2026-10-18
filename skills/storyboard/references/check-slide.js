@@ -154,14 +154,14 @@ function checkDir(dir, only, opts) {
 
     if (scene?.shot?.render?.mode === 'motion_html' && slide?.renderer === 'motion-svg-v1') {
       const registry = require('./motion-graphics.js');
-      registry.validateContent(scene).forEach(message => fail(base, message));
+      registry.validateContent(scene,global.window.THEME?.motionGraphicTheme).forEach(message => fail(base, message));
       require('./render-routing.js').checkScene(scene).forEach(message => fail(base, message));
       const expected = fs.readFileSync(path.join(__dirname, 'motion-graphic-template.html'), 'utf8').replace('const SLIDE_SHOT = 1;', `const SLIDE_SHOT = ${no};`);
       if (src !== expected) fail(base, 'motion HTML must match the shared motion-graphic template');
       const fontRoot = path.resolve(__dirname, '../../channel', 'references', 'review-assets', 'fonts');
-      for (const name of ['motion-graphics.js','motion-graphic-runtime.js','InterVariable.woff2','PretendardVariable.woff2']) {
+      for (const name of ['motion-graphics.js','motion-graphic-runtime.js','motion-font-data.js','motion-fonts.js','InterVariable.woff2','PretendardVariable.woff2',...fs.readdirSync(path.join(__dirname,'motion-fonts')).filter(n=>/\.(ttf|txt)$/.test(n))]) {
         const asset = path.join(slidesDir, 'assets', name);
-        const original = path.join(name.endsWith('.woff2') ? fontRoot : __dirname, name);
+        const original = path.join(name.endsWith('.woff2') ? fontRoot : /\.(ttf|txt)$/.test(name) ? path.join(__dirname,'motion-fonts') : __dirname, name);
         if (!fs.existsSync(asset) || !fs.readFileSync(asset).equals(fs.readFileSync(original))) fail(base, 'missing or stale motion asset: ' + name);
       }
       continue; // Canonical runtime above owns composition; do not apply inline-authoring heuristics.
