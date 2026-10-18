@@ -58,3 +58,19 @@ video source ranges and exposes missing/short media; inventory catches within-bl
 and protocol-relative remote references. Author rebuilds scenes from the installed plugin.
 Rebased baseline by fast-forward to current dev b7bdd43 without changing unrelated files.
 Full build/contracts:2177 tests in196 suites passed; lint16 rules across21 skills passed.
+
+Iteration 2 independent result: mean99.20, minimum86.5,46/46 panels inspected,
+P0=0, P1=1, P2=4. The average does not satisfy the per-shot criterion. Findings:
+a redundant final close-up, reused comparison images, return-recipient identity and
+book/purse details. The frozen verdict is retained unchanged.
+
+Iteration 3: added exact identifying-detail checks, whole-transaction participant
+continuity and explicit removal of redundant inserts without deleting narration or
+inventing outcomes. This is guidance only. Skill lint and diff checks pass; executable
+code is unchanged since the2177-test passing run. Installed the8-file overlay on both
+Mac caches at2026-10-18T00:27:39.758Z, verified every hash, then requested author reload.
+
+Baseline calibration: the earlier53.4 was a preliminary representative-image assessment.
+A later auditable independent43-shot baseline review uses the frozen50/35/15 rubric and
+scores82.16 (minimum46). Keep both records; use the auditable per-shot baseline in the
+comparison table, not the preliminary number as a mechanically comparable improvement.

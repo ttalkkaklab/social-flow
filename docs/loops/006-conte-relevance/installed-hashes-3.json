@@ -1,0 +1,66 @@
+[
+  {
+    "file": "agents/storyboard-reviewer.md",
+    "sourceSha256": "267ae662a371dd3d7ec7a4e2c18b441b45cdb36bd9c6c5cb88791c061c0f16cc",
+    "installedSha256": {
+      "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.115.4": "267ae662a371dd3d7ec7a4e2c18b441b45cdb36bd9c6c5cb88791c061c0f16cc",
+      "/Users/zeans/.claude/plugins/cache/social-flow/social-flow/0.115.3": "267ae662a371dd3d7ec7a4e2c18b441b45cdb36bd9c6c5cb88791c061c0f16cc"
+    }
+  },
+  {
+    "file": "skills/_shared/host-review.md",
+    "sourceSha256": "12bbe0a222796bc19e5401d07ce36ed773525b623f064fed9bc00c4a94b39b0a",
+    "installedSha256": {
+      "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.115.4": "12bbe0a222796bc19e5401d07ce36ed773525b623f064fed9bc00c4a94b39b0a",
+      "/Users/zeans/.claude/plugins/cache/social-flow/social-flow/0.115.3": "12bbe0a222796bc19e5401d07ce36ed773525b623f064fed9bc00c4a94b39b0a"
+    }
+  },
+  {
+    "file": "skills/channel/references/review-assets/review.css",
+    "sourceSha256": "a59f34fb092a6dbfbfb224464d9a5ce404305e82711fdf3a8e00c9ad3256921a",
+    "installedSha256": {
+      "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.115.4": "a59f34fb092a6dbfbfb224464d9a5ce404305e82711fdf3a8e00c9ad3256921a",
+      "/Users/zeans/.claude/plugins/cache/social-flow/social-flow/0.115.3": "a59f34fb092a6dbfbfb224464d9a5ce404305e82711fdf3a8e00c9ad3256921a"
+    }
+  },
+  {
+    "file": "skills/produce/SKILL.md",
+    "sourceSha256": "8685ee95eb1ae70b44b0ee334de2b1eec15ab40baa0182a13df2bfba171a40e5",
+    "installedSha256": {
+      "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.115.4": "8685ee95eb1ae70b44b0ee334de2b1eec15ab40baa0182a13df2bfba171a40e5",
+      "/Users/zeans/.claude/plugins/cache/social-flow/social-flow/0.115.3": "8685ee95eb1ae70b44b0ee334de2b1eec15ab40baa0182a13df2bfba171a40e5"
+    }
+  },
+  {
+    "file": "skills/storyboard/SKILL.md",
+    "sourceSha256": "0192f506c765e870cc887d6301b469c04baf022298fa349fc180bcad3d4af1ea",
+    "installedSha256": {
+      "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.115.4": "0192f506c765e870cc887d6301b469c04baf022298fa349fc180bcad3d4af1ea",
+      "/Users/zeans/.claude/plugins/cache/social-flow/social-flow/0.115.3": "0192f506c765e870cc887d6301b469c04baf022298fa349fc180bcad3d4af1ea"
+    }
+  },
+  {
+    "file": "skills/storyboard/references/narration-visual-grounding.md",
+    "sourceSha256": "f119c1d2361463dd2b5daab9a2d514c9bb97d688e33ff3976dcd8fcc89a2ba5b",
+    "installedSha256": {
+      "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.115.4": "f119c1d2361463dd2b5daab9a2d514c9bb97d688e33ff3976dcd8fcc89a2ba5b",
+      "/Users/zeans/.claude/plugins/cache/social-flow/social-flow/0.115.3": "f119c1d2361463dd2b5daab9a2d514c9bb97d688e33ff3976dcd8fcc89a2ba5b"
+    }
+  },
+  {
+    "file": "skills/storyboard/references/storyboard-html-template.html",
+    "sourceSha256": "8a5405d0ea535dde865809a2b17bb3f4385eb62abc716db1941c841b011ef81a",
+    "installedSha256": {
+      "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.115.4": "8a5405d0ea535dde865809a2b17bb3f4385eb62abc716db1941c841b011ef81a",
+      "/Users/zeans/.claude/plugins/cache/social-flow/social-flow/0.115.3": "8a5405d0ea535dde865809a2b17bb3f4385eb62abc716db1941c841b011ef81a"
+    }
+  },
+  {
+    "file": "skills/storyboard/references/visual-coverage-audit.js",
+    "sourceSha256": "71f63371e91656aa975feb4f0462b35197cb818b82b3d549fb068f536f44b539",
+    "installedSha256": {
+      "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.115.4": "71f63371e91656aa975feb4f0462b35197cb818b82b3d549fb068f536f44b539",
+      "/Users/zeans/.claude/plugins/cache/social-flow/social-flow/0.115.3": "71f63371e91656aa975feb4f0462b35197cb818b82b3d549fb068f536f44b539"
+    }
+  }
+]

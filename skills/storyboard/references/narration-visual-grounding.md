@@ -203,3 +203,17 @@ not created a new run of identical tables, source pages or close-ups. A callback
 juxtapose concrete earlier evidence with a new consequence, not repeat a familiar label.
 For a long still, add another panel only when it supplies necessary new information; do
 not claim that future camera movement fixes an image that currently adds nothing.
+
+When a prop survives an edit, compare its identifying details rather than its category:
+the same book means the same diagram orientation and page layout, not merely another
+face diagram; the same purse includes its cord, knot and ornaments, not only its colour.
+Check participant roles across the entire exchange. A return recipient must be visibly
+identifiable as the earlier requester or payer when that continuity carries the meaning;
+a matching sleeve in one adjacent image is insufficient if the original participant differs.
+
+An insert earns its place through newly legible evidence or a changed state, not tighter
+framing alone. A side-by-side reuse earns only the information its comparison adds; do not
+count both old pictures as new information. If an added panel repeats the same instant,
+remove it and preserve the complete narration and timing, or author a supported next
+reaction. Never invent a completed exercise, successful outcome or historical action just
+to make a second panel different. Reinspect the resulting duration and sequence honestly.
