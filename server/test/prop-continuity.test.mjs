@@ -84,6 +84,9 @@ test('MCP schema exposes propSheet and rejects invalid ledger at the shared gate
   sheet.continuity.events[0].from.holderId = 'b';
   const result = applyPatch(win, {path:'.', propSheet:sheet, dryRun:true, draft:true});
   assert.match(JSON.stringify(result.findings), /Stale from/);
+  const advertised = TOOLS.find(t=>t.name==='storyboard_apply').inputSchema.properties;
+  assert.ok(advertised.propSheet.properties.continuity.properties.events);
+  assert.ok(advertised.expectedSha256);
 });
 test('CLI validates atomically, refuses stale writes, backs up approval, preserves globals', () => {
   const dir = mkdtempSync(join(tmpdir(), 'props-'));
@@ -133,11 +136,6 @@ test('appearance-only props reach snapshots and still prompts without invented c
   assert.match(api.prompt(win,0), /A blue vase/);
   const result = still.assemble({scene:'A table',propPrompt:api.prompt(win,0)});
   assert.match(result.prompt,/A blue vase/);
-});
-test('advertised MCP editing schema exposes both propSheet and concurrency hash', () => {
-  const properties = TOOLS.find(t=>t.name==='storyboard_apply').inputSchema.properties;
-  assert.ok(properties.propSheet.properties.continuity.properties.events);
-  assert.ok(properties.expectedSha256);
 });
 test('actual still CLI includes custody and reference snapshot', () => {
   const dir = mkdtempSync(join(tmpdir(),'props-still-'));

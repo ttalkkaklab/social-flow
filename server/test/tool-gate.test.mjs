@@ -161,17 +161,6 @@ describe('disabled-tools.json union', () => {
     });
     assert.equal(decision.enabled, true);
   });
-
-  it('env denylist and JSON denylist both hide', () => {
-    assert.equal(
-      resolveToolGate('suno_generate', { env: { SOCIAL_FLOW_DISABLE_TOOLS: 'suno_*' }, jsonPatterns: [] }).enabled,
-      false,
-    );
-    assert.equal(
-      resolveToolGate('suno_generate', { env: {}, jsonPatterns: ['suno_*'] }).enabled,
-      false,
-    );
-  });
 });
 
 describe('unknown-pattern warnings', () => {

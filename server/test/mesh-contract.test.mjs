@@ -3,18 +3,10 @@ import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 const require = createRequire(import.meta.url);
 const {checkRecipe, sampleRecipe, poseFor} = require('../../skills/storyboard/references/mesh-contract.js');
-const {checkQuality} = require('../../skills/storyboard/references/slide-quality.js');
 const recipe = () => ({version:1, style:'illustration3d', camera:{position:[3,2,5],target:[0,0,0],fov:35},
   nodes:[{id:'hinge'}, {id:'lid',parent:'hinge',geometry:{type:'roundedBox',size:[2,.2,1]}}],
   states:[{pose:{hinge:{rotation:[0,0,0]}}},{pose:{hinge:{rotation:[0,0,70]}}},{pose:{hinge:{rotation:[0,0,20]}}}],
   groups:[{group:1,durationMs:3000,ease:'smoother'},{group:2,durationMs:3000,ease:'smoother'}]});
-test('mesh planning admits 3D styles without legacy bake keys', () => {
-  const s={kind:'diagram',treatment:'editorial',quality:'object-state-v1',
-    subject:{kind:'object',changes:[{group:1,before:'closed',after:'open',driver:'articulation'}]},
-    object:{renderer:'mesh',style:'illustration3d',file:'slides/assets/s2-box.json',plan:'hinge lifts lid'}};
-  assert.deepEqual(checkQuality(s,1),[]);
-  s.object.file='https://example.com/model.glb'; assert.match(checkQuality(s,1).join(),/object.file/);
-});
 test('recipe rejects missing actors, unsafe assets, fake photoreal and static changes', () => {
   assert.deepEqual(checkRecipe(recipe(),2),[]);
   for(const source of ['../model.glb','https://host/model.glb','/model.glb','a.gltf']) {

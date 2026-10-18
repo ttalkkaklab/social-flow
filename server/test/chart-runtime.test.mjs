@@ -7,7 +7,7 @@ const routing=require('../../skills/storyboard/references/render-routing.js');
 const {checkMap}=routing;
 const checkScene=(scene,options={})=>{const advice=[];return routing.checkScene(scene,{...options,advice}).concat(advice);};
 const checkData=(data,segments,options={})=>{const advice=[];return routing.checkData(data,segments,{...options,advice}).concat(advice);};
-const {render,sectorPath,mapGeometry,project}=require('../../skills/storyboard/references/chart-runtime.js');
+const {render,sectorPath,mapGeometry,project,wrapLabel}=require('../../skills/storyboard/references/chart-runtime.js');
 const data=()=>({chart:'donut',unit:'%',baseline:0,total:100,title:'Composition',source:'Test fixture',values:[{label:'A',value:25},{label:'B',value:75}],beats:[{group:1,focus:['A'],insight:'A is one quarter.'},{group:2,focus:['B'],insight:'B is three quarters.'}]});
 const scene=d=>({type:'points',duration:6,narration:d.beats.map(b=>({tts:b.insight})),shot:{infoType:'statistic',render:{mode:'data_graph',purpose:d.chart==='map'?'geographic':'share',reason:'Explain the source relationship.',data:d}}});
 const feature=(id,coordinates)=>({type:'Feature',id,properties:{},geometry:{type:'Polygon',coordinates}});
@@ -113,7 +113,6 @@ test('portrait floors and row clearance reduce bar and donut capacity without sh
  }
 });
 test('labels break at spaces, shared domains hold and reject clipped values',()=>{
- const {wrapLabel}=require('../../skills/storyboard/references/chart-runtime.js');
  assert.deepEqual(wrapLabel('서울특별시 강남구 역삼제일동',10),['서울특별시 강남구','역삼제일동']);
  const d=data();d.chart='bar';d.domain=[0,100];assert.deepEqual(checkData(d,2),[]);
  const chart=render(d);assert.match(chart,/>100<\/text>/);
@@ -136,21 +135,8 @@ test('the scenes CLI rejects changed or missing domains only inside a comparable
   assert.equal(run().findings.some(f=>f.what.includes('consecutive charts')),false);
   b.shot.render.data.domain=[0,200];assert.ok(run().findings.some(f=>f.what.includes('consecutive charts')));
   delete b.shot.render.data.domain;assert.ok(run().findings.some(f=>f.what.includes('consecutive charts')));
+  delete a.shot.render.data.domain;assert.ok(run().findings.some(f=>/consecutive charts.*explicit shared data.domain/.test(f.what)));
   b.shot.render.data.unit='different';assert.equal(run().findings.some(f=>f.what.includes('consecutive charts')),false);
- }finally{rmSync(folder,{recursive:true,force:true});}
-});
-
-
-test('comparable charts cannot both omit domain and silently use independent automatic scales',async()=>{
- const {mkdtempSync,writeFileSync,rmSync}=await import('node:fs');
- const {tmpdir}=await import('node:os');const {join}=await import('node:path');const {spawnSync}=await import('node:child_process');
- const folder=mkdtempSync(join(tmpdir(),'chart-domain-absent-'));
- try{
-  const a=scene({...data(),chart:'bar',values:[{label:'A',value:10},{label:'B',value:20}]}),b=structuredClone(a);
-  b.shot.render.data.values=[{label:'A',value:1000},{label:'B',value:2000}];
-  const run=()=>{writeFileSync(join(folder,'scenes.js'),'window.FORMAT="shorts-9x16";window.SCENES='+JSON.stringify([a,b])+';');const child=spawnSync(process.execPath,[fileURLToPath(new URL('../../skills/storyboard/references/check-scenes.js',import.meta.url)),folder,'--draft','--json'],{encoding:'utf8'});return parseSceneReport(child);};
-  assert.ok(run().findings.some(f=>/consecutive charts.*explicit shared data.domain/.test(f.what)));
-  a.shot.render.data.domain=b.shot.render.data.domain=[0,2000];assert.equal(run().findings.some(f=>f.what.includes('consecutive charts')),false);
  }finally{rmSync(folder,{recursive:true,force:true});}
 });
 
@@ -167,3 +153,79 @@ function parseSceneReport(child) {
  assert.equal(child.status,report.violations?1:0,child.stderr);
  return report;
 }
+
+const staged=()=>({chart:'stacked-bar',title:'Accounts',source:'Fixture',unit:'nyang',baseline:0,total:200,values:[{label:'Spent',value:70},{label:'Balance',value:130}],beats:[{group:1,focus:['Spent'],insight:'70 of 200 was spent.'}],reveal:{totalLabel:'Received',total:{startMs:0,endMs:1200},parts:[{label:'Spent',startMs:2600,endMs:4200},{label:'Balance',startMs:4400,endMs:4900}]}});
+const draw=(d,t)=>render(d,{width:1000,height:440,wide:true,elapsedMs:t});
+const parts=svg=>[...svg.matchAll(/data-mark="part" data-label="([^"]+)" x="([^"]+)" y="[^"]+" width="([^"]+)"/g)].map(m=>({label:m[1],x:+m[2],width:+m[3]}));
+test('staged shares reveal total before parts and keep the exact 35/65 scale',()=>{
+ const d=staged();assert.deepEqual(checkData(d,1),[]);
+ assert.deepEqual(parts(draw(d,1500)).map(p=>p.width),[0,0]);
+ const halfway=parts(draw(d,3400));assert.ok(halfway[0].width>0&&halfway[0].width<350);assert.equal(halfway[1].width,0);
+ assert.deepEqual(parts(draw(d,5000)),[{label:'Spent',x:0,width:350},{label:'Balance',x:350,width:650}]);
+ assert.doesNotMatch(draw(d,1500),/>70 nyang</);assert.match(draw(d,5000),/>70 nyang</);assert.match(draw(d,5000),/>130 nyang</);
+});
+test('random seeks produce the same state and never overshoot or change source figures',()=>{
+ const d=staged(),expected=new Map();
+ for(let t=0;t<=5540;t+=33) {const svg=draw(d,t);expected.set(t,svg);const p=parts(svg);assert.ok(p[0].width>=0&&p[0].width<=350);assert.ok(p[1].width>=0&&p[1].width<=650);assert.doesNotMatch(svg,/NaN|Infinity/);}
+ for(const t of [...expected.keys()].reverse())assert.equal(draw(d,t),expected.get(t));
+ assert.equal(draw(d,5000),draw(d,5500));
+});
+test('invalid and overlapping reveal windows are rejected',()=>{
+ for(const edit of [d=>d.reveal.parts[0].endMs=0,d=>d.reveal.parts[1].startMs=2700,d=>d.reveal.parts[1].label='unknown',d=>d.reveal.total.endMs=NaN,d=>d.chart='bar']){
+  const d=staged();edit(d);assert.ok(checkData(d,1).length);
+ }
+});
+test('liquid-glass preserves exact source widths and changes no unrelated chart',()=>{
+ const d=staged();d.material='liquid-glass';assert.deepEqual(checkData(d,1),[]);
+ const final=draw(d,5000);assert.match(final,/glass-specular/);
+ assert.deepEqual(parts(final),[{label:'Spent',x:0,width:350},{label:'Balance',x:350,width:650}]);
+ assert.doesNotMatch(draw(d,1500),/>70 nyang</);
+ const ordinary=staged();assert.doesNotMatch(draw(ordinary,5000),/glass-specular/);
+ for(let t=0;t<5540;t+=33){const p=parts(draw(d,t));assert.ok(p[0].width<=350&&p[1].width<=650);assert.equal(draw(d,t),draw(d,t));}
+ const unsupported=staged();unsupported.material='unknown';assert.match(checkData(unsupported,1).join(),/material/);
+ unsupported.material='liquid-glass';delete unsupported.reveal;assert.match(checkData(unsupported,1).join(),/staged/);
+});
+test('measured segment timing replaces estimates before reveal validation',async()=>{
+ const {readFileSync}=await import('node:fs');const vm=await import('node:vm');
+ const d=staged();d.reveal.parts[1].endMs=6000;d.beats.push({group:2,focus:['Balance'],insight:'Balance'});
+ const element=()=>({style:{setProperty(){}},classList:{toggle(){}},dataset:{},appendChild(){},parentElement:{appendChild(){}}});
+ const elements=new Map(),get=id=>{if(!elements.has(id))elements.set(id,element());return elements.get(id)};
+ const w={FORMAT:'youtube-long-16x9',SCENES:[{duration:10,narration:[{},{}],shot:{render:{data:d}}}]};
+ const html=readFileSync(new URL('../../skills/storyboard/references/chart-slide-template.html',import.meta.url),'utf8');
+ const script=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].at(-1)[1];
+ vm.runInNewContext(script,{window:w,document:{documentElement:element(),body:element(),getElementById:get,createElement:element,fonts:{ready:Promise.resolve()},getAnimations:()=>[]},CHART_RUNTIME:{colors:()=>({}),render:()=>''},RENDER_ROUTING:{checkScene:()=>[]},URLSearchParams,location:{search:''},getComputedStyle:()=>({getPropertyValue:k=>k==='--grow'?'1000':'400'})});
+ await w.__ready();
+ assert.throws(()=>w.__validateTiming(),/exceeds/);
+ w.__setSegs({1:7000,2:3000});assert.doesNotThrow(()=>w.__validateTiming());
+ assert.throws(()=>w.__setSegs({1:5000,2:5000}),/exceeds/);
+});
+
+test('later staged groups transfer focus while preserving exact shares on random seeks',()=>{
+ for(const material of [undefined,'liquid-glass']){
+  const d=staged();d.material=material;d.beats.push({group:2,focus:['Balance'],insight:'Balance'});
+  assert.deepEqual(checkData(d,2),[]);
+  const frame=t=>render(d,{width:1000,height:440,wide:true,group:2,elapsedMs:t});
+  const start=frame(0),middle=frame(200),end=frame(400);
+  assert.notEqual(start,middle);assert.notEqual(middle,end);
+  for(const svg of [start,middle,end])assert.deepEqual(parts(svg),[{label:'Spent',x:0,width:350},{label:'Balance',x:350,width:650}]);
+  const focus=svg=>[...svg.matchAll(/data-mark="focus"[^>]*opacity="([^"]+)"/g)].map(m=>+m[1]);
+  assert.deepEqual(focus(start),[.18,0]);assert.deepEqual(focus(end),[0,.18]);
+  assert.equal(frame(200),middle);assert.equal(frame(0),start);
+ }
+});
+
+test('choropleth focus outlines use the structural hair floor in both formats',()=>{
+ const data={chart:'map',values:[{label:'A',regionId:'a',value:25}],beats:[{focus:['A'],insight:'A'}],map:{mode:'choropleth',geojson:{type:'FeatureCollection',features:[{type:'Feature',id:'a',properties:{},geometry:{type:'Polygon',coordinates:[[[0,0],[2,0],[2,2],[0,2],[0,0]]]}}]}}};
+ for(const wide of [false,true]){
+  const svg=render(data,{wide});
+  assert.match(svg,new RegExp('data-stroke-role="hair"[^>]*fill="none"[^>]*stroke-width="'+(wide?2:3)+'"'));
+ }
+});
+
+for(const chart of ['bar','dot','line','histogram'])test(`${chart} has a rule baseline and hair grid in both formats`,()=>{
+ const data={chart,values:[{label:'A',value:10,date:'2020-01-01'},{label:'B',value:30,date:'2021-01-01'}],beats:[{focus:['A'],insight:'A'}]};
+ for(const wide of [false,true]){
+  const lines=[...render(data,{wide}).matchAll(/<line data-stroke-role="([^"]+)"[^>]*stroke-width="([^"]+)"/g)];
+  assert.deepEqual(lines.slice(0,5).map(m=>[m[1],Number(m[2])]),[['rule',wide?4:6],...Array.from({length:4},()=>['hair',wide?2:3])]);
+ }
+});

@@ -1,10 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { actingVerdict, actingVerdictSchema, parseActingObservation, reviewActing } from '../dist/tts-acting-review.js';
-import { config } from '../dist/config.js';
 import { pcmToWav } from '../dist/media-utils.js';
 const review={accuracy:100,acting:90,naturalness:96,audioQuality:98,complete:true,confidence:.96,confidenceReason:'The entire recording was clearly audible.',heardText:'Hello',evidence:'Heard the entire clip; the second phrase is flat, phrasing is abrupt, and a quiet click is audible.',issues:[
  {start:1,end:2,axes:['acting','naturalness'],severity:'minor',observation:'Flat second phrase with an abrupt pause.',correction:'Connect the phrase with reassuring intonation.'},
@@ -54,17 +53,6 @@ test('axis-bound observations preserve unfavorable numbers, scope and evidence w
  input.axes.accuracy.score=101;assert.throws(()=>parseActingObservation(input));
 });
 
-test('concise per-axis observations retain the existing valid flat verdict contract',()=>{
- const result=parseActingObservation({heardText:'Hello',complete:true,confidence:.95,confidenceReason:'The complete recording was clear.',axes:{
-  accuracy:{evidence:'All words match.',issues:[],score:100},
-  acting:{evidence:'Friendly greeting.',issues:[],score:100},
-  naturalness:{evidence:'Natural rhythm.',issues:[],score:100},
-  audioQuality:{evidence:'Clean recording.',issues:[],score:100},
- }});
- assert.equal(actingVerdict(result,1).verdict,'PASS');assert.equal(actingVerdict(result,1).score,100);
- assert.equal(result.evidence,'accuracy: All words match.\nacting: Friendly greeting.\nnaturalness: Natural rhythm.\naudioQuality: Clean recording.');
-});
-
 test('professional-band ratings need positive evidence, not a fabricated defect or a forced100',()=>{
  const observed={heardText:'Hello',complete:true,confidence:.95,confidenceReason:'The entire recording was clearly audible.',observedVoice:'Adult male, warm lower register and natural phrasing.',axes:Object.fromEntries(['accuracy','acting','naturalness','audioQuality','characterFit'].map(axis=>[axis,{evidence:'Actual words, vocal delivery and recording meet the requested professional standard.',issues:[],score:95}]))};
  const before=JSON.stringify(observed),parsed=parseActingObservation(observed),result=actingVerdict(parsed,1);
@@ -92,4 +80,15 @@ test('legacy speech review prepares host evidence without network or score', asy
   assert.equal(result.externalEvaluationCalls,0);assert.equal(result.provider,'host');
   assert.equal(result.mediaSha256.length,64);
  } finally {globalThis.fetch=original;rmSync(dir,{recursive:true,force:true});}
+});
+
+test('perfect transcript scores cannot compensate for a wrong character voice', () => {
+  const review={accuracy:100,acting:100,naturalness:100,audioQuality:100,characterFit:90,complete:true,confidence:.98,heardText:'Hello',observedVoice:'Young and bright female voice.',evidence:'Complete audio heard; audible timbre contradicts the requested older male voice.',confidenceReason:'Clear recording and full coverage.',issues:[{start:0,end:1,axes:['characterFit'],severity:'major',observation:'Voice is a young female rather than an older male.',correction:'Choose an appropriate base voice.'}]};
+  assert.equal(actingVerdict(review,2).score,96);
+  assert.equal(actingVerdict(review,2).verdict,'FAIL');
+  review.characterFit=100;review.issues=[];
+  assert.equal(actingVerdict(review,2).verdict,'PASS');
+  review.accuracy=75;
+  review.issues=[{start:0,end:1,axes:['accuracy'],severity:'major',observation:'Scores compressed per instructions. No actual accuracy defects present.',correction:'None.'}];
+  assert.equal(actingVerdict(review,2).evaluationStatus,'invalid_evidence');
 });

@@ -80,7 +80,6 @@ test('every price key the mapping can emit exists in prices.tsv', () => {
     ['tts_generate', { text: 'x', model: 'gemini-2.5-flash-preview-tts' }],
     ['tts_generate', { text: 'x', model: 'gemini-2.5-pro-preview-tts' }],
     ['tts_elevenlabs_generate', { text: 'x', model: 'eleven_v4' }],
-    ['tts_elevenlabs_generate', { text: 'x', model: 'eleven_v4' }],
     ['tts_elevenlabs_dialogue', { text: 'x', model: 'eleven_v4' }],
     // Music
     ['music_generate_clip', {}],

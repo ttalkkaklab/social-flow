@@ -52,14 +52,6 @@ test('groups bind source bytes, ordered manifest, 24fps trims and output30fps ha
  s.visual.video.groupPlan.groups[1].in=3.001;
  assert.throws(()=>groups.compile(s,dir),/too short/,'rounded trim cannot overrun the source');
 }));
-test('source81 frames covers body95 plus6 output30fps handle, without adding handle twice',()=>withSources(({dir,a,s})=>{
- const file=path.join(dir,'short.mp4');ff(['-i',a,'-frames:v','81','-c:v','libx264',file]);
- s.narration=[s.narration[0]];s.visual.video.groupPlan={fps:30,bodyFrames:95,groups:[{segment:0,startFrame:0,clip:file,sha256:groups.hash(file),in:0}]};
- assert.equal(groups.compile(s,dir,{handleFrames:6}).groups[0].frames,101);
- assert.throws(()=>groups.compile(s,dir,{handleFrames:7}),/too short/);
- const e=edits.preview([s,{type:'points',transition:'jcut',edit:{transitionSeconds:.2}}]);assert.equal(e[0].handle,.2);
- assert.equal(edits.preview([s,{type:'points',transition:'dip',edit:{pre:0}}])[0].handle,0);
-}));
 test('common builder renders direct group cut, trims and live handle; provenance catches substitutions', {timeout:60000},()=>withSources(({dir,s})=>{
  const plan=groups.compile(s,dir,{handleFrames:8});
  renderPlan(dir,plan);
@@ -90,13 +82,14 @@ test('common builder renders direct group cut, trims and live handle; provenance
 }));
 
 // Sharp frame changes expose a one-source-frame error that low-motion footage hides.
-for(const options of [
+const variants=[
  {sourceFps:24,secondFps:24,fps:30,in:1.5},
  {sourceFps:24,secondFps:25,fps:30,in:1.501},
  {sourceFps:25,secondFps:60,fps:30,in:1.501},
  {sourceFps:60,secondFps:24,fps:30,in:1.501},
  {sourceFps:'30000/1001',secondFps:25,fps:24,in:1.001},
-])test(`output-frame references match alternating ${options.sourceFps}/${options.secondFps}fps → ${options.fps}fps, trim ${options.in}, body and handle EOF`,{timeout:60000},()=>withSources(({dir,s,b})=>{
+];
+for(const options of variants)test(`output-frame references match alternating ${options.sourceFps}/${options.secondFps}fps → ${options.fps}fps, trim ${options.in}, body and handle EOF`,{timeout:60000},()=>withSources(({dir,s,b})=>{
  const p=s.visual.video.groupPlan;
  p.fps=options.fps;p.bodyFrames=2*p.fps;p.groups[1].startFrame=p.fps;
  p.groups[0].in=options.in;p.groups[1].in=options.in;
@@ -119,11 +112,13 @@ for(const options of [
  assert.equal(plan.groups[0].sourceIn,Math.ceil(options.in*sourceFps-1e-6)/sourceFps);
  // Alter the pixels actually rendered while preserving the declared runtime/proof.
  // A byte-consistent manifest alone must not bless a different source or in-point.
- const other=structuredClone(plan);other.groups[0].file=b;
- renderPlan(dir,other);
- assert.throws(()=>groups.verifyRendered(dir,dir,scenes,proof),/differs from declared trimmed source/);
  const shifted=structuredClone(plan);shifted.groups[0].sourceIn+=1/sourceFps;
  renderPlan(dir,shifted);
+ assert.throws(()=>groups.verifyRendered(dir,dir,scenes,proof),/differs from declared trimmed source/);
+ // A substituted source and a corrupt handle EOF do not depend on the frame-rate pair; prove them once.
+ if(options!==variants[0])return;
+ const other=structuredClone(plan);other.groups[0].file=b;
+ renderPlan(dir,other);
  assert.throws(()=>groups.verifyRendered(dir,dir,scenes,proof),/differs from declared trimmed source/);
  renderPlan(dir,plan);
  // Corrupt only the handle EOF: first/middle samples remain untouched.
@@ -136,7 +131,7 @@ for(const options of [
 test('source24fps physical EOF covers body95 plus6 output30fps handle with no padding', {timeout:60000},()=>withSources(({dir,a,s})=>{
  const file=path.join(dir,'short.mp4');ff(['-i',a,'-frames:v','81','-c:v','libx264',file]);
  s.narration=[s.narration[0]];s.visual.video.groupPlan={fps:30,bodyFrames:95,groups:[{segment:0,startFrame:0,clip:file,sha256:groups.hash(file),in:0}]};
- const plan=groups.compile(s,dir,{handleFrames:6});
+ const plan=groups.compile(s,dir,{handleFrames:6});assert.equal(plan.groups[0].frames,101);
  const scenes=[s,{type:'points',transition:'jcut',edit:{transitionSeconds:.2}}];
  writeFileSync(path.join(dir,'cards.tsv'),'0\tvoice.wav\t0\tnone\n1\tvoice.wav\t0\tnone\n');edits.write(dir,scenes);
  writeFileSync(path.join(dir,'work/groups0.json'),JSON.stringify(plan));

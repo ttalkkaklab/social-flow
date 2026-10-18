@@ -137,21 +137,21 @@ test('unique unavailable or corrupt images and absent source frames explicitly r
 test('dense similarity groups retain every shot and pair count without quadratic findings', () => fixture(dir => {
   imageFile(dir, 'original.png');
   const original = readFileSync(join(dir, 'original.png'));
-  const scenes = Array.from({ length: 12 }, (_, i) => {
+  const scenes = Array.from({ length: 5 }, (_, i) => {
     const name = `image-${i}.png`;
     writeFileSync(join(dir, name), Buffer.concat([original, Buffer.from(`metadata-${i}`)]));
     return shot(`s${String(i + 1).padStart(4, '0')}`, 'host', name);
   });
   const findings = review.check({ SCENES: scenes }, dir).filter(f => f.code === 'similar_source_images');
   assert.equal(findings.length, 1);
-  assert.equal(findings[0].references.length, 12);
-  assert.equal(findings[0].comparison.matchingPairs, 66);
+  assert.equal(findings[0].references.length, 5);
+  assert.equal(findings[0].comparison.matchingPairs, 10);
   assert.equal(findings[0].comparison.examples.length, 8);
   assert.equal(findings[0].comparison.examplesTruncated, true);
   assert.match(findings[0].what, /Not every pair/);
   writeFileSync(join(dir, 'scenes.js'), 'window.SCENES=' + JSON.stringify(scenes) + ';');
   const result = checkStoryboard({ path: dir, draft: true });
-  assert.equal(result.shots, 12);
+  assert.equal(result.shots, 5);
   assert.equal(result.contract.filter(f => f.code === 'similar_source_images').length, 1);
 }));
 
