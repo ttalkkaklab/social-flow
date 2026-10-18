@@ -1,10 +1,10 @@
 # Asset sheets before shot design
 
-Prepare all three categories after the scenario direction is known and before detailed
-scene/shot authoring. Shared character identities are read earlier for casting. Existing
-sheets are reused after inspection; new or changed subjects need drafts before continuing.
-A sheet records concrete design decisions, not only a name or an empty placeholder.
-Images, voice samples and 3D renders may be pending; planning does not authorize paid media.
+Follow [production order](../../_shared/production-workflow.md). Complete project setup,
+then character text/images before text storyboard authoring. Derive props from that text
+and complete their text/images, then backgrounds, before composing the image storyboard.
+Inspect and reuse existing sheets. Pending media cannot complete a visual stage; missing
+spending authorization blocks new media rather than silently bypassing the stage.
 
 - **Characters:** follow [character identity](../../channel/references/character-identity.md).
   Read/create `assets/characters/<id>/identity.md`, export the shared character sheet, and
@@ -21,7 +21,7 @@ Images, voice samples and 3D renders may be pending; planning does not authorize
   one-off backgrounds and abstract stages. Each entry has `id`, `name`, `description`,
   `layout` (entrances, landmarks, actor/object positions and movement space), `lighting`
   (time/weather/light), `invariants` (what stays consistent), and optional `imageUrl`,
-  `sheetPath`, `manifest`. Missing media is pending. Use `visual.locationId` to reference
+  `sheetPath`, `manifest`. Missing media blocks completion of the background stage. Use `visual.locationId` to reference
   this planning sheet. It does not replace the production `visual.location` binding.
   For built sets, also follow [location assets](location-assets.md); link the real manifest
   and its shared views. A written location sheet does not require Blender or a 3D render.

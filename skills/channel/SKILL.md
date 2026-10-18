@@ -8,8 +8,13 @@ description: >
   platforms, fact-check policy — the identity file every storyboard, produce and publish
   run opens first; engines, SNS targets, visual style and ratio live in .social-flow/models.json.
 argument-hint: "[add|list|update|serve|character] [channel-name]"
-allowed-tools: ["mcp__social-flow__tts_gemini_38", "mcp__plugin_social-flow_social-flow__tts_gemini_38", "mcp__social-flow__tts_voice_design", "mcp__plugin_social-flow_social-flow__tts_voice_design", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__stt_local_transcribe", "mcp__plugin_social-flow_social-flow__stt_local_transcribe", "mcp__social-flow__character_voice_audition", "mcp__plugin_social-flow_social-flow__character_voice_audition", "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_generate"]
+allowed-tools: ["mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__tts_gemini_38", "mcp__plugin_social-flow_social-flow__tts_gemini_38", "mcp__social-flow__tts_voice_design", "mcp__plugin_social-flow_social-flow__tts_voice_design", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__stt_local_transcribe", "mcp__plugin_social-flow_social-flow__stt_local_transcribe", "mcp__social-flow__character_voice_audition", "mcp__plugin_social-flow_social-flow__character_voice_audition", "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_generate"]
 ---
+
+Follow [production order](../_shared/production-workflow.md). Project setup precedes
+all episode work. Complete each artifact stage before the next; pending media cannot
+complete a visual stage. Preserve actual spending authorization.
+
 **Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 
 

@@ -1,3 +1,4 @@
+import { requireWorkflow } from './production-workflow.js';
 /**
  * Storyboard module — the sequence → scene → shot data behind four tools
  * (storyboard_read · storyboard_apply · storyboard_check · scenario_check).
@@ -593,6 +594,7 @@ export function applyPatch(win, patch) {
 /** storyboard_apply — read, patch, validate, write unless a violation or a dry run. */
 export function applyStoryboard(args) {
     const file = scenesPath(args.path);
+    requireWorkflow(dirname(file), 'text');
     const exists = existsSync(file);
     let header = [];
     let win = {};

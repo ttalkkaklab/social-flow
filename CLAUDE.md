@@ -17,15 +17,22 @@ Channel-based short-form/long-form content pipeline Claude Code plugin.
 - Initial style, ratio and format are asked once at project setup, then reused.
 - The static-ground limit is guidance.
 
-## Storyboard delivery (owner directive, 2026-10-18)
+## Production order (owner directive, 2026-10-19)
 
-Present the scenario before detailed storyboard authoring; presentation alone does not
-require an approval pause. Prepare character, prop and background/location sheets before
-scene/shot design, reusing inspected existing sheets and marking ungenerated media pending.
-Use the bundled storyboard HTML and verify its export; custom review HTML is not a substitute.
-Explicit text-only/scenario-only requests retain their scope. Follow
-`skills/storyboard/references/asset-sheets.md`, including explicit not-applicable categories.
-Delegated authors receive the same workflow and deliverables as the coordinating agent.
+Project setup must be ready before any episode authoring. Then complete characters
+(text + images), text storyboard (content, dialogue and narration), props (text + images),
+backgrounds (text + images), image storyboard, and finally video, in that order.
+Use `production_workflow` to register and complete each stage. Actual files and their
+hashes are required; pending images do not complete a visual stage. Changed upstream
+files require rewind and revalidation of downstream stages. Reuse inspected artifacts;
+never regenerate solely to migrate an existing episode. This ordering is an explicit
+execution contract and overrides the older guidance-only rule for production order.
+Explicit text-only requests stop at text; missing required images are reported, not
+silently skipped or generated without spending authorization. Empty character, prop or
+background categories need an explicit not-applicable reason. Present the scenario
+before detailed text authoring; presentation does not add an approval pause.
+Use the bundled storyboard HTML and verify its export. Delegated authors use the same
+order and deliverables. See `skills/_shared/production-workflow.md`.
 
 ## Guided automation (owner directive, 2026-10-16)
 

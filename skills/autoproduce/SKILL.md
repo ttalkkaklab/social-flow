@@ -7,7 +7,7 @@ description: >
   plans shots and content-led timing, then produces the media within saved choices and
   spending limits. Storyboard stops at a plan; produce builds an existing approved board.
 argument-hint: "<channel> \"<topic>\" [unattended <platform>]"
-allowed-tools: ["mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__music_plan", "mcp__plugin_social-flow_social-flow__music_plan", "mcp__social-flow__music_execute", "mcp__plugin_social-flow_social-flow__music_execute", "mcp__social-flow__music_status", "mcp__plugin_social-flow_social-flow__music_status", "mcp__social-flow__music_generate_song", "mcp__plugin_social-flow_social-flow__music_generate_song", "mcp__social-flow__music_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__music_elevenlabs_generate", "mcp__social-flow__suno_generate", "mcp__plugin_social-flow_social-flow__suno_generate", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
+allowed-tools: ["mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__music_plan", "mcp__plugin_social-flow_social-flow__music_plan", "mcp__social-flow__music_execute", "mcp__plugin_social-flow_social-flow__music_execute", "mcp__social-flow__music_status", "mcp__plugin_social-flow_social-flow__music_status", "mcp__social-flow__music_generate_song", "mcp__plugin_social-flow_social-flow__music_generate_song", "mcp__social-flow__music_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__music_elevenlabs_generate", "mcp__social-flow__suno_generate", "mcp__plugin_social-flow_social-flow__suno_generate", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
   "WebSearch", "WebFetch",
   "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search",
   "mcp__social-flow__serp_news_search", "mcp__plugin_social-flow_social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__plugin_social-flow_social-flow__serp_naver_search",
@@ -60,8 +60,9 @@ adapters; do not silently switch provider or voice. Generated video goes through
 direct adapter call.
 
 Prepare shared identities and export the [character sheets](../channel/references/character-identity.md#prepare-the-shared-sheet-before-episode-authoring)
-before casting. Missing images stay pending. New stories do not need generated portraits
-before writing, and no hidden media spending is part of drafting.
+before text authoring. Follow [production order](../_shared/production-workflow.md):
+project setup, character text/images, text storyboard, prop text/images, background
+text/images, image storyboard, then video. Missing authorization blocks generation.
 
 For growth-loop calls, read the calling platform's `growth-plan.md` and follow
 [unattended lifecycle](references/unattended-lifecycle.md) for channel locking, topic
@@ -74,7 +75,8 @@ not inherit a publishing schedule or automatic queue authorization.
    draft; compare causal alternatives only when a decision needs them or the user asks.
    No human selection pause is needed when automatic selection is already authorized. Record that it was an
    automatic choice; never call it a user approval. Follow storyboard's scenario-preview
-   rule and prepare all three asset sheet categories before detailed scene/shot authoring.
+   rule. Complete character sheets before text; finish props and backgrounds after text
+   and before the image storyboard. Advance production_workflow at each boundary.
    Delegated writers receive the same skill, sheet and shared-template contract.
 2. Write complete scenes before shots. Inspect character knowledge, decisive motivation,
    setup/payoff and prop/spatial continuity. Plan listener responses and silence alongside

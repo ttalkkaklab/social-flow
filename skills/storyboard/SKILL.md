@@ -7,7 +7,7 @@ description: >
   action and attributed speech, then plans shots and content-led timing. Saves the local
   review board. Produce builds an approved board; autoproduce runs both unattended.
 argument-hint: "<channel> <topic or topic hint>"
-allowed-tools: ["mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__plugin_social-flow_social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__storyboard_apply", "mcp__plugin_social-flow_social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__plugin_social-flow_social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__plugin_social-flow_social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__plugin_social-flow_social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__plugin_social-flow_social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__plugin_social-flow_social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__plugin_social-flow_social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__plugin_social-flow_social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__plugin_social-flow_social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__plugin_social-flow_social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__plugin_social-flow_social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics", "mcp__plugin_social-flow_social-flow__suno_generate_lyrics"]
+allowed-tools: ["mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__plugin_social-flow_social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__storyboard_apply", "mcp__plugin_social-flow_social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__plugin_social-flow_social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__plugin_social-flow_social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__plugin_social-flow_social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__plugin_social-flow_social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__plugin_social-flow_social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__plugin_social-flow_social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__plugin_social-flow_social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__plugin_social-flow_social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__plugin_social-flow_social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__plugin_social-flow_social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics", "mcp__plugin_social-flow_social-flow__suno_generate_lyrics"]
 ---
 For motion-graphic shots, follow [motion type selection and design](references/motion-graphics.md): persist `shot.motionGraphic` with a common `THEME.motionGraphicTheme` when the episode needs consistency and contextual `style.theme` (`auto` or an explicit channel theme), choose the type from viewer intent and available evidence, and keep style, choreography and renderer separate. Built-in abstract scenes use the installed `prepare-motion-graphic.js`; asset-dependent types retain their authored or mesh routes.
 
@@ -25,8 +25,11 @@ text; do not generate assets merely to test a planning choice.
 
 ## Required authoring and delivery order
 
-For a new storyboard: present the scenario → prepare character, prop and background/location
-sheets → write complete scenes → plan shots → export the bundled review template.
+First complete project setup and follow [production order](../_shared/production-workflow.md).
+Prepare characters with text and images → present the scenario → write the text storyboard
+with actions, dialogue and narration → prepare prop text/images → background text/images
+→ compose the image storyboard → export the bundled review template. Produce handles
+authorized media calls; do not jump from a text plan directly to video.
 Scenario presentation is a progress update, not an approval request. In an interactive
 session, show the premise, characters, causal sequence, ending and selection reason before
 writing the detailed board. Continue unless the user requested selection/approval first;
@@ -70,7 +73,8 @@ The order is **causal story → complete scenes → audience comprehension → s
 staging → action/speech timing → production handoff**. A vertical canvas does not set
 runtime. Do not open with a target duration, shot count or one-line-per-shot allocation.
 Preserve explicit user limits, approved spending and actual adapter constraints.
-Nothing is generated by this skill. Stop at the requested planning artifact.
+This skill authors the plans; use produce for authorized media at each visual stage.
+Stop at the requested artifact without bypassing required earlier stages.
 
 ## 1. Reuse the project's choices and shared cast
 
@@ -78,9 +82,8 @@ Read the channel profile and project settings. Follow [project initialization](.
 and [model settings](../_shared/model-settings.md) for missing preferences only; reuse the
 saved genre, visual style, model, production ratio, output format and voice choices.
 Create the episode with `project_manage episode` or its CLI and preserve its snapshot.
-A resumed board retains its choices. Missing production settings or services need not
-prevent a local text-only draft when the user requested one; label unresolved production
-choices and never fabricate authorization or a supported model.
+A resumed board retains its choices. Complete missing project settings before any authoring, including text-only drafts.
+Never fabricate authorization or a supported model.
 
 Use `capability_status` before planning a model-dependent handoff. The selected directory
 models control provider choice; host-tool availability alone does not replace them.
@@ -90,13 +93,13 @@ Keep canvas selection separate from length: `window.FORMAT` remains the renderer
 
 Follow [character preparation](../channel/references/character-identity.md#prepare-the-shared-sheet-before-episode-authoring).
 Read actual identities, export shared sheets and snapshot the available pool in `cast.json`.
-Images may be pending. Cast only needed people, with specific wants and distinct speech;
+Complete required character images before text authoring. Cast only needed people, with specific wants and distinct speech;
 select a narrator only when the expression needs one. Do not invent existing IDs or voices.
 Before shot design, complete the three sheet categories using
 [asset sheet preparation](references/asset-sheets.md). This includes one-off characters,
 story-relevant props and every background/location, not only recurring assets. Reuse actual
-existing sheets; create missing drafts. Missing images stay pending and do not authorize
-paid generation. Do not proceed with an applicable sheet category silently omitted.
+existing sheets; finish props and backgrounds after the text storyboard. Missing images
+block completion of their visual stage and do not authorize paid generation. Do not proceed with an applicable sheet category silently omitted.
 
 Store local plans under `data/<channel>/episodes/<topic>/storyboard/` following
 [the destination contract](references/storyboard-target.md). No planning artifacts under
@@ -140,7 +143,7 @@ Content-only branch: retain place/time, entrances, listening distance and prop h
 needed to understand the events. Defer camera specifications, renderer selection, image
 prompts, voice production and measured timings in steps 4–5. Deliver the canonical text
 data and a readable scene sequence labelled as a content plan; these are sufficient
-only for an explicit content-only request. Prepare the applicable asset sheets first.
+only for an explicit content-only request. Complete character sheets first; derive prop and background sheets after this text stage.
 If delivering HTML, use the shared template; ordinary storyboard requests still need it. Keep old production plans attached to their old revision. In
 step 6 run only checks applicable to the chosen content format and verify its export;
 do not invent production fields merely to clear a full production-board checker.

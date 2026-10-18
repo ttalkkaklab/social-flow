@@ -1,3 +1,4 @@
+import { requireWorkflow, workflowRevision } from './production-workflow.js';
 import * as fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
@@ -118,6 +119,7 @@ export function checkVideoEnvironment(tool) {
 }
 export function planVideo(raw) {
     const input = videoPlanSchema.parse(raw);
+    requireWorkflow(input.episode, 'video');
     const context = routingContext(input.episode, input.shotId);
     const { selection } = context;
     const tool = input.tool || Object.entries(VIDEO_ADAPTERS).find(([, a]) => a.engine === selection.engine && a.operation === input.operation)?.[0];
@@ -126,7 +128,7 @@ export function planVideo(raw) {
     if (selection.engine === 'host') {
         if (input.tool)
             throw new Error('model_selection_mismatch: host has no server adapter');
-        const body = { version: 1, episode: context.episode, shotId: input.shotId, requestId: input.requestId,
+        const body = { workflowRevision: workflowRevision(input.episode), version: 1, episode: context.episode, shotId: input.shotId, requestId: input.requestId,
             tool: 'host_external', args: input.args, selection, source: context.source, contextRevision: context.revision,
             inputs: {}, quote: { reserveUsd: 0, estimatedUsd: 0, revision: 'host-allowance-v1', basis: 'External host allowance; limits and actual tool schema must be checked by host; not API enforcement' }, execution: 'host_handoff' };
         const plan = { ...body, id: hash(body) };
@@ -152,7 +154,7 @@ export function planVideo(raw) {
             throw new Error('model_selection_mismatch: retake inherits source dimensions; select the source resolution');
     }
     const quote = quoteVideo(tool, args);
-    const body = { version: 1, episode: context.episode, shotId: input.shotId, requestId: input.requestId, tool, args,
+    const body = { workflowRevision: workflowRevision(input.episode), version: 1, episode: context.episode, shotId: input.shotId, requestId: input.requestId, tool, args,
         sourceArgs: input.args, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
         selection, source: context.source, contextRevision: context.revision, inputs, quote, execution: 'server' };
     const plan = { ...body, id: hash(body) };
@@ -184,6 +186,9 @@ export async function executeVideo(raw, dispatch) {
         throw new Error('Invalid video plan');
     if (plan.execution === 'host_handoff')
         throw new Error('host_handoff_required: use the selected host CLI; no API substitution');
+    requireWorkflow(episode, 'video');
+    if (plan.workflowRevision !== workflowRevision(episode))
+        throw new Error('workflow_plan_stale: prepare a new video plan');
     const context = routingContext(episode, plan.shotId);
     if (context.revision !== plan.contextRevision)
         throw new Error('video_plan_stale: selection or authorization changed');
@@ -309,6 +314,7 @@ export async function routeLegacyVideo(tool, raw, dispatch) {
         return executeVideo({ episode: plan.episode, planId: plan.id }, dispatch);
     }
     const output = canonical(path.resolve(typeof args.outputPath === 'string' ? args.outputPath : process.cwd()));
+    requireWorkflow(output, 'video');
     let dir = output;
     for (;;) {
         if (fs.existsSync(path.join(dir, '.social-flow/models.json')) && CHANNEL_ASSET_RE.test(path.relative(dir, output).split(path.sep).join('/')))
