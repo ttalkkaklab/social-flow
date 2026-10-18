@@ -9,15 +9,14 @@ import { z } from 'zod';
 import { disabledToolPatterns, disabledToolsFile } from './config.js';
 import { resolveToolGate } from './tool-gate.js';
 import { bareFilenameSchema } from './media-utils.js';
-import * as gemini from './tts-client.js';
-import * as eleven from './elevenlabs-client.js';
+import { prepareSpeech, SPEECH_GENERATORS } from './tts-adapters.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
 import { SPACING_POLICY, respace, splitSentences } from './sentence-spacing.js';
 const exec = promisify(execFile);
 export const QUALITY_POLICY = 'speech-quality-v1';
 export const REVIEW_API_VERSION = process.env.SOCIAL_FLOW_TTS_REVIEW_API_VERSION?.trim() || 'v1';
 export const REVIEW_MODEL = process.env.SOCIAL_FLOW_TTS_REVIEW_MODEL?.trim() || 'gemini-3.8-flash';
-export const GENERATORS = ['tts_generate', 'tts_multi_speaker', 'tts_gemini_38', 'tts_elevenlabs_generate', 'tts_elevenlabs_dialogue'];
+export const GENERATORS = SPEECH_GENERATORS;
 /**
  * The dictation check — a blind transcription of the take, compared to the script by character
  * error rate — runs only when the user asked for it (owner directive 2026-10-04). Off, the
@@ -168,51 +167,14 @@ export function prepareGeneration(request) {
         }
         args.seed = seed;
     }
-    let spoken, parsed, run, spacing = false, seed;
-    switch (request.generator) {
-        // Single-voice engines without a vendor alignment get one from the local aligner (applySentenceSpacing), so their sentences are spaced like an ElevenLabs take.
-        case 'tts_generate': {
-            const p = gemini.ttsGenerateSchema.parse(args);
-            parsed = p;
-            spoken = p.text;
-            run = () => gemini.generateSpeech(p);
-            spacing = true;
-            break;
-        }
-        case 'tts_multi_speaker': {
-            const p = gemini.ttsMultiSpeakerSchema.parse(args);
-            parsed = p;
-            spoken = p.script.split('\n').map(line => { const name = p.speakers.find(s => line.trimStart().startsWith(s.speakerName + ':')); return name ? line.trimStart().slice(name.speakerName.length + 1) : line; }).join(' ');
-            run = () => gemini.generateDialogue(p);
-            break;
-        }
-        case 'tts_gemini_38': {
-            const p = gemini.gemini38TtsSchema.parse(args);
-            parsed = p;
-            spoken = p.turns.map(turn => turn.text.replace(/<[^>]+>/g, '')).join(' ');
-            run = () => gemini.generateGemini38Speech(p);
-            spacing = !p.speakers;
-            break;
-        }
-        // Timestamps cost nothing extra and are what the sentence spacing reads, so the checked lane always asks for them.
-        case 'tts_elevenlabs_generate': {
-            const p = eleven.elevenLabsGenerateSchema.parse({ ...args, timestamps: true });
-            parsed = p;
-            spoken = p.text.replace(/\[[^\]]*\]/g, '');
-            run = (o) => eleven.generateElevenLabsSpeech({ ...p, ...(o?.seed !== undefined ? { seed: o.seed } : {}) });
-            spacing = true;
-            seed = p.seed;
-            break;
-        }
-        case 'tts_elevenlabs_dialogue': {
-            const p = eleven.elevenLabsDialogueSchema.parse(args);
-            parsed = p;
-            spoken = p.inputs.map(i => i.text.replace(/\[[^\]]*\]/g, '')).join(' ');
-            run = (o) => eleven.generateElevenLabsDialogue({ ...p, ...(o?.seed !== undefined ? { seed: o.seed } : {}) });
-            seed = p.seed;
-            break;
-        }
-    }
+    const selected = prepareSpeech(request.generator, {
+        ...args, ...(request.generator === 'tts_elevenlabs_generate' ? { timestamps: true } : {}),
+    });
+    const parsed = selected.args, spoken = selected.spokenText, spacing = selected.singleSpeaker;
+    const seed = typeof parsed.seed === 'number' ? parsed.seed : undefined;
+    const run = (overrides) => prepareSpeech(request.generator, {
+        ...parsed, ...(overrides?.seed !== undefined && request.generator.startsWith('tts_elevenlabs_') ? { seed: overrides.seed } : {}),
+    }).run();
     if (normalizeSpeech(spoken) !== normalizeSpeech(request.expectedText))
         throw new Error('expectedText must match the complete spoken generation text; only punctuation, spacing, speaker labels and ElevenLabs acting tags may differ');
     if ('outputFormat' in parsed && !String(parsed.outputFormat).startsWith('wav_'))

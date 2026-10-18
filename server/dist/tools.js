@@ -885,6 +885,16 @@ const CHARACTER_TARGET_PROPERTY = { type: 'object', additionalProperties: false,
     }, required: ['vocalGender', 'perceivedAge', 'timbre', 'pace', 'register', 'habits', 'emotionalRange', 'traits'] };
 export const TOOLS = [
     {
+        name: 'tts_route', title: 'Speech model routing', annotations: HINT.generate,
+        description: 'Discover implemented speech models, plan a selected generator, or execute it with durable request identity. Use capabilities without credentials; plan validates generation without network or writes. execute needs generator, generation.outputPath and requestId, reuses matching completed audio, and refuses changed or uncertain prior requests. Returns capabilities or audioPath, receiptPath, attempts and not_reviewed; no listening, model fallback or automatic retries. Use speech_manage plan_audio for pinned character/acting arguments. Only implemented Gemini and ElevenLabs v4 adapters are available. Raw tools remain compatible and share execution checks. Plans do not quote or authorize spending.',
+        inputSchema: { type: 'object', additionalProperties: false, properties: {
+                action: { type: 'string', enum: ['capabilities', 'plan', 'execute'], description: 'Read capabilities, validate a pure plan, or submit one explicitly identified take.' },
+                generator: { type: 'string', enum: [...GENERATORS], description: 'Exact implemented raw synthesis tool. Required for plan and execute.' },
+                generation: { type: 'object', description: 'Exact arguments of the selected raw generator; unsupported controls fail validation.' },
+                requestId: { type: 'string', pattern: '^[A-Za-z0-9_-]{1,100}$', description: 'Unique logical take ID. Reuse only for the same request in the same output directory.' },
+            }, required: ['action'] },
+    },
+    {
         "name": "host_review",
         "title": "Prepare and record host media evaluation",
         "annotations": {

@@ -6,8 +6,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { createRequire } from 'node:module';
 import { ttsSchema } from './character-tts.js';
 import { actingSchema, compileActing } from './speech-acting.js';
-import { elevenLabsGenerateSchema, generateElevenLabsSpeech } from './elevenlabs-client.js';
-import { gemini38TtsSchema, generateGemini38Speech, generateSpeech, ttsGenerateSchema } from './tts-client.js';
+import { prepareSpeech } from './tts-adapters.js';
 import { disabledToolPatterns, disabledToolsFile } from './config.js';
 import { resolveToolGate } from './tool-gate.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
@@ -105,10 +104,7 @@ export async function manageVoiceAudition(args: Args) {
         const started = Date.now();
         let result: { success: boolean; audioPath?: string; error?: string; characterCost?: number; requestId?: string } | undefined;
         try {
-          result = compiled.generator === 'tts_elevenlabs_generate'
-            ? await generateElevenLabsSpeech(elevenLabsGenerateSchema.parse(generation))
-            : compiled.generator === 'tts_gemini_38' ? await generateGemini38Speech(gemini38TtsSchema.parse(generation))
-              : await generateSpeech(ttsGenerateSchema.parse(generation));
+          result = await prepareSpeech(compiled.generator, generation).run();
         } finally {
           const price = priceOf(compiled.generator, generation);
           const event = { ts: new Date().toISOString(), tool: compiled.generator, ok: result?.success === true, ms: Date.now() - started,
