@@ -3,7 +3,7 @@ import { z } from 'zod';
 import * as fs from 'node:fs';
 import { createHash } from 'node:crypto';
 import { bareFilenameSchema, resolveOutputFile } from './media-utils.js';
-import { astraGenaiBaseUrl, requestGenai, downloadGenaiResult, requireAstraGenaiKey, genaiImageUriSchema, genaiSourceUri } from './astra-genai-client.js';
+import { GenaiRequestError, astraGenaiBaseUrl, requestGenai, downloadGenaiResult, requireAstraGenaiKey, genaiImageUriSchema, genaiSourceUri } from './astra-genai-client.js';
 import { atomicJson } from './routing-files.js';
 import { verifyImageFile, imageMetadata } from './image-media.js';
 export const GENAI_IMAGE_ROUTE = '/v1/dashscope/api/v1/services/aigc/multimodal-generation/generation';
@@ -60,6 +60,15 @@ const responseSchema = z.object({
             message: z.object({ content: z.array(z.object({ image: z.string().optional(), text: z.string().optional() }).passthrough()) }).passthrough(),
         }).passthrough()).length(1) }).passthrough(),
 }).passthrough();
+export class GenaiImageOutputError extends Error {
+    requestId;
+    usage;
+    constructor(message, requestId, usage) {
+        super(message);
+        this.requestId = requestId;
+        this.usage = usage;
+    }
+}
 export async function generateGenaiImage(input, operation = 'text') {
     const args = (operation === 'edit' ? genaiImageEditSchema : genaiImageSchema).parse(input);
     requireAstraGenaiKey();
@@ -72,18 +81,35 @@ export async function generateGenaiImage(input, operation = 'text') {
         throw new Error('GenAI image output/receipt already exists; inspect the receipt before any new generation.');
     fs.writeFileSync(receiptPath, JSON.stringify({ baseUrl: astraGenaiBaseUrl(), fingerprint, imagePath, status: 'submitting' }), { flag: 'wx', mode: 0o600 });
     let promptExtension;
-    const raw = await requestGenai('POST', GENAI_IMAGE_ROUTE, body, 30 * 60_000, headers => {
-        const value = headers.get('x-prompt-extend');
-        if (value === 'applied' || value === 'fallback')
-            promptExtension = value;
-    });
+    let raw;
+    try {
+        raw = await requestGenai('POST', GENAI_IMAGE_ROUTE, body, 30 * 60_000, headers => {
+            const value = headers.get('x-prompt-extend');
+            if (value === 'applied' || value === 'fallback')
+                promptExtension = value;
+        });
+    }
+    catch (error) {
+        atomicJson(receiptPath, { baseUrl: astraGenaiBaseUrl(), fingerprint, imagePath,
+            status: error instanceof GenaiRequestError && error.terminal ? 'failed' : 'submission_unknown',
+            error: error instanceof Error ? error.message : String(error) });
+        throw error;
+    }
     atomicJson(receiptPath, { baseUrl: astraGenaiBaseUrl(), fingerprint, imagePath, status: 'received', response: raw, promptExtension });
-    return recoverGenaiImage(receiptPath);
+    try {
+        return await recoverGenaiImage(receiptPath);
+    }
+    catch (error) {
+        const received = responseSchema.safeParse(raw);
+        if (received.success)
+            throw new GenaiImageOutputError(error instanceof Error ? error.message : String(error), received.data.request_id, received.data.usage);
+        throw error;
+    }
 }
 /** Retry only the download from a durable provider response; never regenerate. */
 export async function recoverGenaiImage(receiptPath) {
     const receipt = z.object({ baseUrl: z.string(), fingerprint: z.string(), imagePath: z.string(),
-        status: z.enum(['submitting', 'received', 'completed']), response: z.unknown().optional(),
+        status: z.enum(['submitting', 'submission_unknown', 'failed', 'received', 'completed']), response: z.unknown().optional(),
         output: z.object({ sha256: z.string() }).passthrough().optional(), requestId: z.string().optional(), usage: z.unknown().optional(), usedPrompt: z.string().optional(), promptExtension: z.enum(['applied', 'fallback']).optional(),
     }).passthrough().parse(JSON.parse(fs.readFileSync(receiptPath, 'utf8')));
     if (receipt.baseUrl !== astraGenaiBaseUrl())
@@ -95,6 +121,8 @@ export async function recoverGenaiImage(receiptPath) {
             throw new Error('GenAI cached image changed');
         return { imagePath, requestId: receipt.requestId, usage: receipt.usage, usedPrompt: receipt.usedPrompt, promptExtension: receipt.promptExtension, output, review: 'not_reviewed' };
     }
+    if (receipt.status === 'failed')
+        throw new Error('GenAI image request failed; inspect billing before a new request');
     if (receipt.status !== 'received')
         throw new Error('GenAI image submission is ambiguous; inspect provider usage before retrying');
     const response = responseSchema.parse(receipt.response);

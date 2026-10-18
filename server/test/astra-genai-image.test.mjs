@@ -59,3 +59,22 @@ test('prompt expansion evidence survives completed image recovery', async t => {
     assert.equal((await recoverGenaiImage(result.imagePath + '.astra-genai.json')).promptExtension, state);
   }
 });
+
+test('rejected and ambiguous submissions persist distinct durable statuses without retries', async t => {
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'genai-failure-'));
+  const original=globalThis.fetch,key=config.astraGenaiApiKey;config.astraGenaiApiKey='fixture';
+  t.after(()=>{globalThis.fetch=original;config.astraGenaiApiKey=key;fs.rmSync(dir,{recursive:true,force:true});});
+  for (const [name,status,body,expected] of [
+    ['rejected',400,{code:'InvalidParameter'},'failed'],
+    ['terminal',500,{request_id:'r1',status:'failed'},'failed'],
+    ['gateway',502,{error:'bad gateway'},'submission_unknown'],
+    ['timeout',408,{},'submission_unknown'],
+  ]) {
+    let calls=0;globalThis.fetch=async()=>{calls++;return Response.json(body,{status});};
+    const args={...base,outputPath:dir,filename:name+'.png'};
+    await assert.rejects(generateGenaiImage(args));
+    assert.equal(JSON.parse(fs.readFileSync(joinReceipt(dir,name))).status,expected);
+    await assert.rejects(generateGenaiImage(args));assert.equal(calls,1);
+  }
+});
+function joinReceipt(dir,name) { return path.join(dir,name+'.png.astra-genai.json'); }

@@ -65,7 +65,10 @@ function inspectPanels(folder, fallback = {}) {
 }
 function boardPanelFindings(win, boardDir, channelDir) {
   const entries = win?.SB_DOC?.characters || [];
-  const chars = Array.isArray(entries) ? entries : Object.entries(entries).map(([id, c]) => ({ ...c, id }));
+  const chars = Array.isArray(entries) ? [...entries] : Object.entries(entries).map(([id, c]) => ({ ...c, id }));
+  for (const id of Object.keys(win?.PRODUCTION?.cast || {})) {
+    if (!chars.some(c => c?.id === id)) chars.push({ id });
+  }
   const findings = [];
   const sceneFiles = (win?.SCENES || []).flatMap(s => [s.visual?.bg, s.visual?.source, s.bg]).filter(s => typeof s === 'string');
   const sceneHashes = new Set(sceneFiles.map(name => localFile(boardDir, name)).filter(Boolean).map(sha));
@@ -77,6 +80,16 @@ function boardPanelFindings(win, boardDir, channelDir) {
     const manifestFile = localFile(channelDir, path.relative(channelDir, path.join(folder, 'panels.json')));
     if (manifestFile) {
       try { registered = JSON.parse(fs.readFileSync(manifestFile, 'utf8')).panels || {}; } catch { registered = {}; }
+    }
+    for (const [slot, entry] of Object.entries(registered || {})) {
+      const source = entry?.purpose === 'character_reference' && entry.view === slot && localFile(folder, entry.file);
+      const linked = c.panels?.[slot] || (slot === 'front' && c.panels?.body);
+      if (source && !(typeof linked === 'string' && linked.trim())) findings.push({
+        characterId: c.id, domain: 'image-reference-missing', slot, source,
+        field: `SB_DOC.characters.${c.id}.panels.${slot}`,
+        messageKo: `${c.id} 배역의 ${slot} 참조가 비어 있습니다. 공용 이미지: ${source}`,
+        message: `${c.id}: shared ${slot} image exists at ${source}, but storyboard panels.${slot} is empty`,
+      });
     }
     for (const [slot, name] of Object.entries(c.panels || {})) {
       const file = typeof name === 'string' ? path.resolve(boardDir, name) : '';

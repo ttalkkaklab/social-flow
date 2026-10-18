@@ -5,7 +5,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, describe, it } from 'node:test';
@@ -608,4 +608,22 @@ it('production vocabulary and apply schema support all six ratios and reject unk
   }
   assert.equal(storyboardApplySchema.safeParse({path:'x',globals:{PRODUCTION:{mode:'video_99'}}}).success,false);
   assert.equal(storyboardApplySchema.safeParse({path:'x',globals:{PRODUCTION:{mode:'no_video',renderRatioVersion:2}}}).success,false);
+});
+
+it('readiness separates configuration, corrupt files, missing cast links and unreviewed visuals', () => {
+  const root=tmp(),dir=join(root,'episodes/one/storyboard'),shared=join(root,'assets/characters/hero');
+  mkdirSync(dir,{recursive:true});mkdirSync(shared,{recursive:true});
+  writeFileSync(join(shared,'identity.md'),'# Hero');writeFileSync(join(shared,'face.png'),'broken');
+  writeFileSync(join(shared,'panels.json'),JSON.stringify({schemaVersion:1,panels:{face:{file:'face.png',purpose:'character_reference',view:'face'}}}));
+  const win={SCENES:[],PRODUCTION:{cast:{hero:{}}},SB_DOC:{characters:[]}};
+  writeFileSync(join(dir,'scenes.js'),serializeBoard(win));
+  let result=readStoryboard(storyboardReadSchema.parse({path:dir})).readiness;
+  assert.notEqual(result.configuration.status,'ready');
+  assert.equal(result.references.status,'needs_attention');
+  assert.equal(result.references.findings[0].domain,'image-reference-missing');
+  win.SB_DOC.characters=[{id:'hero',panels:{face:'../../../assets/characters/hero/face.png'}}];
+  writeFileSync(join(dir,'scenes.js'),serializeBoard(win));
+  result=readStoryboard(storyboardReadSchema.parse({path:dir})).readiness;
+  assert.equal(result.assets[0].file,'present');assert.equal(result.assets[0].decoding,'failed');
+  assert.equal(result.visualReview,'not_reviewed');
 });

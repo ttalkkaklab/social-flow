@@ -3121,6 +3121,11 @@ function main() {
   require('./location-assets.js').check(win, path.dirname(scenesPath), {ready: !draft}).forEach(f => findings.push(f));
   require('../../channel/references/character-sheet.js').sourceErrors(win, path.dirname(scenesPath)).forEach(what =>
     findings.push({ level: 'bad', where: 'character identity', what }));
+  const boardDir = path.dirname(scenesPath);
+  const episodeRoot = path.dirname(path.dirname(boardDir));
+  const channelDir = path.basename(episodeRoot) === 'episodes' ? path.dirname(episodeRoot) : profilePath ? path.dirname(profilePath) : null;
+  if (channelDir) require('../../channel/references/character-panels.js').boardPanelFindings(win, boardDir, channelDir).forEach(f =>
+    findings.push({ level: 'warn', where: f.field || `character ${f.characterId}`, what: `[${f.domain}] ${f.message}` }));
   const episodeAdvice = [];
   require('./render-routing.js').checkEpisode(win, {advice: episodeAdvice}).forEach(what =>
     findings.push({ level: 'bad', where: 'visual direction', what }));

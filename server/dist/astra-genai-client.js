@@ -11,6 +11,16 @@ export function requireAstraGenaiKey() {
         throw new Error('ASTRA_GENAI_API_KEY is required: issue a gateway token in the GenAI console; ASTRA_VIDEO is a separate credential.');
     return config.astraGenaiApiKey;
 }
+/** Only explicit rejection or terminal provider evidence releases a generation slot. */
+export class GenaiRequestError extends Error {
+    terminal;
+    httpStatus;
+    constructor(message, terminal, httpStatus) {
+        super(message);
+        this.terminal = terminal;
+        this.httpStatus = httpStatus;
+    }
+}
 /** No automatic POST retries: a disconnected request may already be generating. */
 export async function requestGenai(method, route, body, timeoutMs = 60_000, onResponse) {
     const key = requireAstraGenaiKey();
@@ -22,7 +32,13 @@ export async function requestGenai(method, route, body, timeoutMs = 60_000, onRe
     const text = await response.text();
     if (!response.ok) {
         const detail = text.replaceAll(key, '[redacted]').slice(0, 2000);
-        throw new Error(`ASTRA GenAI HTTP ${response.status}: ${detail}`);
+        let terminal = response.status >= 400 && response.status < 500 && ![408, 409, 425].includes(response.status);
+        try {
+            const evidence = JSON.parse(text);
+            terminal ||= typeof evidence.request_id === 'string' && ['failed', 'FAILED', 'error'].includes(evidence.status ?? evidence.output?.task_status);
+        }
+        catch { /* A gateway error page is not terminal provider evidence. */ }
+        throw new GenaiRequestError(`ASTRA GenAI HTTP ${response.status}: ${detail}`, terminal, response.status);
     }
     onResponse?.(response.headers);
     try {
