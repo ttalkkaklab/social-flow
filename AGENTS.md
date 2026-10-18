@@ -40,6 +40,15 @@ because a fallback lane rotted in place — six `chrome-devtools` tools and eigh
 `claude-in-chrome` tools sat in `allowed-tools` for versions after the servers were
 gone from every machine that runs this plugin.
 
+## Images containing text
+
+For every new image generation or edit that must display or preserve readable text,
+use **GPT Image 2 (`gpt-image-2`)**. This owner directive (2026-10-18) overrides saved
+image defaults and the host-first lane above. Verify the host model or use the
+plugin GPT Image adapter; never assume `host-managed` identifies GPT Image 2.
+See [CLAUDE.md](CLAUDE.md) and [image routing](skills/_shared/image-routing.md) for
+scoped selection, unavailable-model handling and text inspection.
+
 ## Skill frontmatter
 
 - **`description` is the routing surface.** Codex truncates it to about 76

@@ -27,12 +27,21 @@ before deciding whether regeneration is needed. Prompt refresh does not authoriz
 
 ## 1. Which engine, and why
 
+**Text-bearing images use GPT Image 2 (owner directive, 2026-10-18).** For every
+new still or edit that must display or preserve readable text, follow the
+[mandatory text-image selection](../../_shared/image-routing.md#images-containing-text-gpt-image-2-required).
+Use `gpt-image-2` even when the saved default is Z-Image or the host has its own
+image tool. A host qualifies only if its actual model is verifiably GPT Image 2.
+Apply this exception before the saved-choice and host-first recommendations below,
+record the scoped choice, and inspect the actual lettering after generation.
+If GPT Image 2 is unavailable, report it without automatic model substitution.
+
 For server image calls, follow [image routing](../../_shared/image-routing.md).
 Read `image_catalog`, plan the exact operation, then execute the saved plan. Existing
 raw tools accept `imageContext`; configured production cannot bypass selection using
 a raw tool. The same service handles episode shots and workspace branding assets.
 The catalog and adapter contracts supersede historical model-capability claims in
-this recipe. Saved choice always wins over the initial recommendations below.
+this recipe. Saved choice wins over the initial recommendations below except for the mandatory text-image rule above.
 GPT Image 2 supports preview transparency; mini accepts low input fidelity. MLX
 editing, strength-based variation and alpha support differ by installed model family.
 Do not add unexposed options or infer model quality from a successful contract check.

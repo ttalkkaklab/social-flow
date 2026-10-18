@@ -2,6 +2,7 @@ import { z } from 'zod';
 import * as veo from './video-client.js';
 import * as seedance from './seedance-client.js';
 import * as astra from './astra-video-client.js';
+import { GENAI_VIDEO_MODELS, genaiTextToVideoSchema, genaiImageToVideoSchema } from './astra-genai-video.js';
 import * as omni from './omni-client.js';
 import * as mlx from './mlx-serve-client.js';
 import { resolveVideoDuration } from './video-duration.js';
@@ -23,6 +24,8 @@ export const VIDEO_ADAPTERS: Readonly<Record<string, VideoAdapter>> = Object.fre
   seedance_text2video: entry('seedance', 'byteplus', 'text', seedance.seedanceText2VideoSchema),
   seedance_img2video: entry('seedance', 'byteplus', 'image', seedance.seedanceImg2VideoSchema),
   seedance_reference: entry('seedance', 'byteplus', 'reference', seedance.seedanceReferenceSchema),
+  astra_genai_text2video: entry('astra-genai', 'genai-ltx-v2', 'text', genaiTextToVideoSchema),
+  astra_genai_img2video: entry('astra-genai', 'genai-ltx-v2', 'image', genaiImageToVideoSchema),
   astra_text2video: entry('astra', 'self-hosted-ltx', 'text', astra.astraText2VideoSchema),
   astra_img2video: entry('astra', 'self-hosted-ltx', 'image', astra.astraImg2VideoSchema),
   astra_keyframe_video: entry('astra', 'self-hosted-ltx', 'keyframe', astra.astraKeyframeVideoSchema),
@@ -58,6 +61,7 @@ export function videoCatalog() {
     adapters: Object.entries(VIDEO_ADAPTERS).map(([tool, a]) => ({ tool, engine: a.engine, deployment: a.deployment, operation: a.operation,
       voice: videoVoiceCapabilities(tool),
       fields: keys(a.schema), modelConstraints: a.engine === 'seedance' ? seedance.SEEDANCE_MODEL_SPECS :
+        a.engine === 'astra-genai' ? { models: GENAI_VIDEO_MODELS, note: 'Explicit duration and resolution; server validates deployment limits. No supplied audio, keyframes or LoRA.' } :
         a.engine === 'veo' ? { models: veo.VALID_VIDEO_MODELS, resolutions: veo.VALID_VIDEO_RESOLUTIONS, note: 'Use video_plan for cross-field constraints' } :
         { note: 'Use video_plan; deployment-specific schema is authoritative' } })),
     host: { execution: 'external', note: 'Host tools are outside MCP enforcement; never claim an API gate protects their calls.' },
@@ -82,7 +86,7 @@ export function speechVideoCapabilities(provider: string, model: string) {
     return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, evidence: 'Gemini Veo has no external audio input' };
   if (provider === 'seedance' && Object.hasOwn(seedance.SEEDANCE_MODEL_SPECS, model))
     return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, evidence: 'Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed' };
-  if (['host', 'mlx', 'omni'].includes(provider))
+  if (['host', 'mlx', 'omni', 'astra-genai'].includes(provider))
     return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, evidence: 'No verified external-speech synchronization adapter; voiceover remains available' };
   throw new Error('No verified speech synchronization contract for selected deployment/model');
 }

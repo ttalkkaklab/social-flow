@@ -9,9 +9,9 @@ const SETTINGS_FILE = '.social-flow/models.json';
 const SNAPSHOT_FILE = '.work/model-settings.json';
 const VIDEO_TYPES = require('./video-types.json').types;
 const ENGINES = {
-  video: ['host', 'seedance', 'veo', 'astra', 'mlx', 'omni'],
+  video: ['host', 'seedance', 'veo', 'astra', 'astra-genai', 'mlx', 'omni'],
   speech: ['gemini', 'elevenlabs'],
-  image: ['host', 'gpt-image', 'zimage', 'mlx'],
+  image: ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai'],
   music: ['lyria', 'suno-api', 'elevenlabs', 'mlx'],
 };
 const RETIRED_ELEVENLABS_MODELS = ['eleven_multilingual_v2', 'eleven_v3', 'eleven_v3_conversational', 'eleven_flash_v2_5', 'eleven_turbo_v2_5'];
@@ -72,7 +72,7 @@ function validateModels(models, partial = false, allowRetiredSpeech = false) {
         if (!catalog.gptModels.includes(choice.model)) throw new Error('Unsupported image model; consult image_catalog');
         if (choice.quality !== undefined && !['auto', 'low', 'medium', 'high'].includes(choice.quality)) throw new Error('Invalid image quality');
       } else if (choice.engine !== 'host' && choice.quality !== undefined) {
-        throw new Error('Image quality tiers are not supported by the selected local adapter');
+        throw new Error('Image quality tiers are not supported by the selected adapter');
       }
       if (choice.engine === 'host' && choice.model !== 'host-managed') throw new Error('Host image model must be host-managed');
     }

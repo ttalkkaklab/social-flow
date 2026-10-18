@@ -25,6 +25,16 @@ precedence over automatic host detection, economy/quality routing, per-cut model
 escalation and repeated model questions in older skill sections. It is an explicit
 user-choice exception to host-first routing, not permission for a silent fallback.
 
+## Text-bearing image exception
+
+Owner directive, 2026-10-18: any new generated or edited image that must display or
+preserve readable text uses **GPT Image 2 (`gpt-image-2`)**, regardless of the saved
+image default or host-first recommendation. Apply the scoped selection described
+in [image routing](image-routing.md#images-containing-text-gpt-image-2-required)
+before planning and quoting. This includes text on reference products. Do not
+rewrite unrelated defaults or regenerate existing assets. Report unavailability
+without substituting another model; an unspecified host model is not GPT Image 2.
+
 ## Resolve the directory and read first
 
 Use the working directory the user selected (normally the project root containing
@@ -140,7 +150,9 @@ JSON
 
 The file is `.social-flow/models.json`, schema version 1. Store no credentials.
 `engine` is required in each category; `model` is required for selectable engines.
-ASTRA and Z-Image use fixed server models, so omit `model` for them.
+Legacy `astra` and local `zimage` use fixed server models, so omit `model` for them.
+The separate `astra-genai` engine requires `model` for both video and image.
+See [GenAI adapters](astra-genai.md) for credentials, explicit budget reservations and recovery.
 For a host with no model selector use `host-managed`, a label rather than a claimed
 vendor model/version. Also record `host` (for example `codex` or `grok`); verify
 that the same CLI and tool are available on resume. A different CLI requires an

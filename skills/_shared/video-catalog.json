@@ -850,6 +850,72 @@
       }
     },
     {
+      "tool": "astra_genai_text2video",
+      "engine": "astra-genai",
+      "deployment": "genai-ltx-v2",
+      "operation": "text",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "prompt",
+        "model",
+        "duration",
+        "resolution",
+        "fps",
+        "generateAudio",
+        "cameraMotion",
+        "reserveUsd",
+        "outputPath",
+        "filename"
+      ],
+      "modelConstraints": {
+        "models": [
+          "ltx-2.5-22b-distilled",
+          "ltx-2.5-22b-dev"
+        ],
+        "note": "Explicit duration and resolution; server validates deployment limits. No supplied audio, keyframes or LoRA."
+      }
+    },
+    {
+      "tool": "astra_genai_img2video",
+      "engine": "astra-genai",
+      "deployment": "genai-ltx-v2",
+      "operation": "image",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "prompt",
+        "model",
+        "duration",
+        "resolution",
+        "fps",
+        "generateAudio",
+        "cameraMotion",
+        "reserveUsd",
+        "outputPath",
+        "filename",
+        "imageUri",
+        "lastFrameUri"
+      ],
+      "modelConstraints": {
+        "models": [
+          "ltx-2.5-22b-distilled",
+          "ltx-2.5-22b-dev"
+        ],
+        "note": "Explicit duration and resolution; server validates deployment limits. No supplied audio, keyframes or LoRA."
+      }
+    },
+    {
       "tool": "astra_text2video",
       "engine": "astra",
       "deployment": "self-hosted-ltx",

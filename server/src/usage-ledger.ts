@@ -208,6 +208,7 @@ export function priceOf(
     try { args = resolveVideoDuration(tool, args).args; }
     catch (error) { return { key: null, quantity: null, note: 'Invalid duration plan: ' + String(error) }; }
   }
+  if (tool.startsWith('astra_genai_')) return { key: tool === 'astra_genai_text2img' ? 'image.astra-genai' : 'video.astra-genai', quantity: null, note: 'Gateway pricing unverified; managed reservation is authoritative, not a measured bill' };
   if (tool.startsWith('veo_')) {
     const tier = VEO_TIER[str(args.model, 'veo-3.1-fast-generate-preview')];
     const resolution = str(args.resolution, '720p');
@@ -387,6 +388,7 @@ export function isBillableTool(tool: string): boolean {
   // Catalogue reads cost nothing and belong in no ledger.
   if (tool === 'tts_list_voices' || tool === 'tts_elevenlabs_voices' || tool === 'music_list_options') return false;
   return (
+    (tool.startsWith('astra_genai_') && tool !== 'astra_genai_video_status') ||
     tool.startsWith('veo_') ||
     tool.startsWith('omni_') ||
     tool.startsWith('seedance_') ||

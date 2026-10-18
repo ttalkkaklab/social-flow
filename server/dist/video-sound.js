@@ -3,6 +3,7 @@ import { z } from 'zod';
 import * as veo from './video-client.js';
 import * as seedance from './seedance-client.js';
 import * as astra from './astra-video-client.js';
+import { genaiTextToVideoSchema, genaiImageToVideoSchema } from './astra-genai-video.js';
 import * as omni from './omni-client.js';
 const effectSchema = z.object({
     id: z.string().min(1).optional(),
@@ -19,6 +20,7 @@ const schemas = {
     veo_reference: veo.referenceVideoSchema, veo_extension: veo.videoExtensionSchema,
     seedance_text2video: seedance.seedanceText2VideoSchema,
     seedance_img2video: seedance.seedanceImg2VideoSchema, seedance_reference: seedance.seedanceReferenceSchema,
+    astra_genai_text2video: genaiTextToVideoSchema, astra_genai_img2video: genaiImageToVideoSchema,
     astra_text2video: astra.astraText2VideoSchema, astra_img2video: astra.astraImg2VideoSchema,
     astra_audio2video: astra.astraAudio2VideoSchema, astra_keyframe_video: astra.astraKeyframeVideoSchema,
     omni_text2video: omni.omniText2VideoSchema, omni_img2video: omni.omniImg2VideoSchema,

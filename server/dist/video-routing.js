@@ -13,6 +13,7 @@ import { atomicJson, videoTransaction } from './video-state.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
 import { OMNI_MODEL } from './omni-client.js';
 import { videoEvents } from './video-events.js';
+import { getGenaiVideoStatus } from './astra-genai-video.js';
 import { prepareVideoVoice } from './video-voice.js';
 const load = createRequire(import.meta.url);
 const shared = fileURLToPath(new URL('../../skills/_shared/video-selection.js', import.meta.url));
@@ -111,7 +112,7 @@ export function checkVideoEnvironment(tool) {
         throw new Error('video_tool_disabled: ' + gate.reason);
     const engine = VIDEO_ADAPTERS[tool]?.engine;
     const ready = engine === 'seedance' ? Boolean(config.arkApiKey) : engine === 'astra' ? Boolean(config.astraVideoApiKey) :
-        engine === 'mlx' ? mlxServeConfigured() : Boolean(config.geminiApiKey);
+        engine === 'astra-genai' ? Boolean(config.astraGenaiApiKey) : engine === 'mlx' ? mlxServeConfigured() : Boolean(config.geminiApiKey);
     if (!ready)
         throw new Error('video_provider_unconfigured: ' + engine);
 }
@@ -323,14 +324,33 @@ export async function routeLegacyVideo(tool, raw, dispatch) {
     return dispatch(tool, args);
 }
 /** Read persisted receipts without polling or issuing a provider request. */
-export function videoStatus(raw) {
-    const input = z.object({ episode: z.string().min(1), requestId: idSchema }).strict().parse(raw);
+export async function videoStatus(raw) {
+    const input = z.object({ episode: z.string().min(1), requestId: idSchema, action: z.enum(['read', 'refresh']).default('read') }).strict().parse(raw);
     const episode = fs.realpathSync(input.episode);
     const file = path.join(episode, '.work/video-routing/state.json');
     if (!fs.existsSync(file))
         return { requestId: input.requestId, status: 'not_started' };
     const state = JSON.parse(fs.readFileSync(file, 'utf8'));
     const job = state.jobs?.[input.requestId];
+    if (input.action === 'refresh' && job) {
+        if (!['astra_genai_text2video', 'astra_genai_img2video'].includes(job.tool))
+            throw new Error('video_refresh_unsupported: use provider-specific recovery');
+        const plan = JSON.parse(fs.readFileSync(path.join(episode, '.work/video-routing/plans', job.planId + '.json'), 'utf8'));
+        const { id, ...body } = plan;
+        if (id !== job.planId || hash(body) !== id || plan.episode !== episode || plan.tool !== job.tool)
+            throw new Error('Invalid recovery plan');
+        checkVideoEnvironment(plan.tool);
+        const receiptPath = path.join(String(plan.args.outputPath), String(plan.args.filename)) + '.astra-genai.json';
+        const result = await getGenaiVideoStatus({ receiptPath, download: true });
+        if (job.providerId && result.jobId !== job.providerId)
+            throw new Error('GenAI recovery job ID mismatch');
+        if (result.downloaded) {
+            const response = { content: [{ type: 'text', text: JSON.stringify({ ...result, receiptPath }) }] };
+            videoTransaction(episode, current => Object.assign(current.jobs[input.requestId], { status: 'completed', providerId: result.jobId, result: response, updatedAt: new Date().toISOString() }));
+            return videoStatus({ episode, requestId: input.requestId });
+        }
+        return { ...job, providerStatus: result.status, recovery: 'Poll this same request with action:refresh; do not resubmit.' };
+    }
     return job ? { ...job, recovery: job.status === 'completed' ? 'Reuse result; no new generation.' :
             'Inspect providerId at the selected provider. Keep the reservation until billing and terminal status are reconciled. Do not change requestId or delete state to retry.' } :
         { requestId: input.requestId, status: 'not_started' };

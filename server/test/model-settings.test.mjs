@@ -219,3 +219,12 @@ test('optional music choices persist into snapshots and reject invented provider
   assert.throws(() => settings.validateModels({ music: { engine: 'suno-api', model: 'V5' } }, true));
   assert.throws(() => settings.validateModels({ music: { engine: 'lyria', model: 'music_v2_5' } }, true));
 });
+
+test('GenAI is a separate model-selecting engine; legacy Astra remains fixed-model', () => {
+  const video = { engine:'astra-genai', model:'ltx-2.5-22b-dev', resolution:'1280x704' };
+  const image = { engine:'astra-genai', model:'z-image-turbo' };
+  assert.doesNotThrow(()=>settings.validateModels({video,image,speech:models.speech}));
+  assert.throws(()=>settings.validateModels({video:{engine:'astra-genai'}},true),/model is required/);
+  assert.doesNotThrow(()=>settings.validateModels({video:{engine:'astra'}},true));
+  assert.throws(()=>settings.validateModels({video:{engine:'astra',model:video.model}},true),/fixed server model/);
+});

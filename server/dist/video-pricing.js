@@ -16,6 +16,11 @@ const roundUp = (n) => Math.ceil(n * 1e6) / 1e6;
 export function quoteVideo(tool, args) {
     const prices = readFileSync(PRICE_FILE, 'utf8');
     const revision = createHash('sha256').update(prices + JSON.stringify(TOKEN_RATES)).digest('hex');
+    if (tool.startsWith('astra_genai_')) {
+        if (typeof args.reserveUsd !== 'number' || !Number.isFinite(args.reserveUsd) || args.reserveUsd < 0)
+            throw new Error('genai_quote_required: supply an explicit reserveUsd; no published gateway price is assumed');
+        return { reserveUsd: args.reserveUsd, estimatedUsd: args.reserveUsd, basis: 'Caller reservation; gateway pricing unverified, not a provider invoice cap', revision };
+    }
     if (tool.startsWith('astra_') || tool === 'mlx_video_generate')
         return { reserveUsd: 0, estimatedUsd: 0, basis: 'Self-hosted: no API charge; infrastructure excluded', revision };
     if (tool.startsWith('seedance_')) {
