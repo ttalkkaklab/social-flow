@@ -12,6 +12,8 @@
  */
 
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { createInterface } from 'node:readline';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
@@ -1534,4 +1536,39 @@ describe('server version declaration', () => {
       `the version initialize announces (${declared}) differs from the package version (${pkg}) — clients see a version that is not real`,
     );
   });
+});
+
+it('bundled MCP server dispatches reference payloads above 10 MiB', { timeout: 20_000 }, async (t) => {
+  const child = spawn(process.execPath, [fileURLToPath(new URL('../dist/bundle.js', import.meta.url))], {
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+  const lines = createInterface({ input: child.stdout });
+  const exited = new Promise(resolve => child.once('exit', resolve));
+  t.after(async () => { lines.close(); child.kill(); await exited; });
+  child.stderr.resume();
+  const responses = lines[Symbol.asyncIterator]();
+  const send = message => child.stdin.write(JSON.stringify(message) + '\n');
+  const receive = async () => {
+    const line = await responses.next();
+    assert.equal(line.done, false, 'server closed before responding');
+    return JSON.parse(line.value);
+  };
+  send({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {
+    protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'transport-test', version: '1' },
+  } });
+  assert.equal((await receive()).id, 1);
+  send({ jsonrpc: '2.0', method: 'notifications/initialized' });
+  // An unknown tool proves dispatch without invoking a provider or spending money.
+  const request = { jsonrpc: '2.0', id: 2, method: 'tools/call', params: {
+    name: 'transport_test_unknown', arguments: {
+      sourceImagesBase64: Array(3).fill(Buffer.alloc(3 * 1024 * 1024).toString('base64')),
+    },
+  } };
+  assert.ok(Buffer.byteLength(JSON.stringify(request)) > 10 * 1024 * 1024);
+  send(request);
+  const response = await receive();
+  assert.equal(response.id, 2);
+  assert.equal(response.error.code, -32602);
+  send({ jsonrpc: '2.0', id: 3, method: 'ping' });
+  assert.deepEqual(await receive(), { jsonrpc: '2.0', id: 3, result: {} });
 });

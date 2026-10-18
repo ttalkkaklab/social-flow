@@ -813,6 +813,13 @@ configured it disables both publishing and auto-authoring (the loop won't start
 tunnels, and it won't spend money making a video with no way out).
 
 Generation tools run **inside this plugin — no external MCP server required**.
+
+The bundled MCP server accepts incoming messages up to **128 MiB**, including
+Base64 reference images. Base64 adds roughly one third to the original file size;
+this transport limit is separate from model-specific image limits. Older builds
+used the MCP SDK's 10 MiB default and could close the connection before a
+multi-reference image request reached the provider. Restart the plugin's MCP
+server after updating. A host application's own message limit still applies.
 Keys cover hosted models: OPENAI_API_KEY for images, GEMINI_API_KEY for Gemini
 video/voice/music, ARK_API_KEY for Seedance and ELEVENLABS_API_KEY for ElevenLabs.
 Local image, STT, music and video tools retain their own capability requirements.

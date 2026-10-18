@@ -143,7 +143,11 @@ async function main() {
     process.exitCode = result.success === true ? 0 : 1;
     return;
   }
-  const transport = new StdioServerTransport();
+  // Multi-reference image calls carry base64 (~4/3 of the source bytes). The SDK's
+  // 10 MiB default closes stdin before these calls can reach the image adapter.
+  const transport = new StdioServerTransport(process.stdin, process.stdout, {
+    maxBufferSize: 128 * 1024 * 1024,
+  });
   await server.connect(transport);
   // stdout is reserved for the MCP protocol — logs go to stderr only
   console.error('social-flow MCP server started');

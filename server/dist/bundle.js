@@ -106150,7 +106150,9 @@ async function main() {
     process.exitCode = result.success === true ? 0 : 1;
     return;
   }
-  const transport = new StdioServerTransport();
+  const transport = new StdioServerTransport(process.stdin, process.stdout, {
+    maxBufferSize: 128 * 1024 * 1024
+  });
   await server.connect(transport);
   console.error("social-flow MCP server started");
   const snsEnabled = enabledPlatforms();
