@@ -60,6 +60,13 @@ export const techniqueSelectionSchema = z.array(z.object({
         ctx.addIssue({ code: z.ZodIssueCode.custom, message });
 });
 function nonEmptyTechniqueId() { return z.string().trim().min(1).describe('Stable id from storyboard_read techniqueCatalog'); }
+export function motionThemeContract() {
+    return loadFromHere(join(REFERENCES_DIR, 'motion-graphics.js'));
+}
+export function motionGraphicTypes() {
+    const registry = loadFromHere(join(REFERENCES_DIR, 'motion-graphics.js'));
+    return Object.keys(registry.TYPES);
+}
 export function renderPurposes() {
     const routing = loadFromHere(join(REFERENCES_DIR, 'render-routing.js'));
     return Object.keys(routing.PURPOSES);
@@ -182,6 +189,21 @@ export const shotSchema = z
         coverage: coverageSchema.optional(),
         lineNeutral: z.literal(true).optional(),
         lineCrossing: z.record(z.unknown()).optional(),
+        motionGraphic: z.object({
+            version: z.literal(1),
+            type: z.string().refine(value => motionGraphicTypes().includes(value), 'unknown motion graphic type'),
+            intent: z.string().optional(), reason: z.string().optional(),
+            evidence: z.enum(['data', 'recording', 'reenactment', 'metaphor']),
+            style: z.object({ palette: z.string().optional(), reason: z.string().optional(),
+                theme: z.object({
+                    id: z.string().refine(value => value === 'auto' || Object.hasOwn(motionThemeContract().THEMES, value), 'unknown motion theme'),
+                    context: z.enum(['research', 'software', 'education', 'campaign', 'storytelling', 'friendly']).optional(),
+                    reason: z.string().optional(),
+                }).passthrough().optional(),
+            }).passthrough(),
+            beats: z.array(z.object({ at: z.number().min(0).max(1), action: z.string() }).passthrough()).optional(),
+            content: z.record(z.unknown()).optional(),
+        }).passthrough().optional(),
         render: z.object({ mode: tuple(V.RENDER_MODES), purpose: z.string().optional(), reason: z.string().optional() }).passthrough().optional(),
     })
         .passthrough()
@@ -398,6 +420,9 @@ export function applyPatch(win, patch) {
                 throw new Error(`set ${k} through the dedicated fields, not globals`);
             next[k] = v;
         }
+    const boardMotionTheme = next.THEME?.motionGraphicTheme;
+    if (boardMotionTheme)
+        motionThemeContract().resolveTheme({ type: 'process', style: { theme: boardMotionTheme } });
     if (patch.propSheet)
         next.SB_DOC = { ...(next.SB_DOC ?? {}),
             props: patch.propSheet.props, propContinuity: patch.propSheet.continuity };
@@ -550,7 +575,7 @@ export function applyPatch(win, patch) {
     });
     if (next.STRUCTURE)
         next.STRUCTURE = { ...next.STRUCTURE, nextShotId };
-    next.SCENES = shots.map((shot) => ({ ...shot })); // sync() writes sceneSlug/sequence — never into the caller's objects
+    next.SCENES = shots.map((shot) => shot.shot?.motionGraphic && (shot.shot.motionGraphic.style.theme || next.THEME?.motionGraphicTheme) ? motionThemeContract().applyTheme({ ...shot }, next.THEME?.motionGraphicTheme) : { ...shot }); // sync() writes sceneSlug/sequence — never into the caller's objects
     const findings = [];
     if (!shots.length)
         findings.push({ level: 'bad', where: 'board', what: 'the board has no shots' });

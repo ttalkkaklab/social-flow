@@ -104,6 +104,19 @@ export const techniqueSelectionSchema = z.array(z.object({
 });
 function nonEmptyTechniqueId() { return z.string().trim().min(1).describe('Stable id from storyboard_read techniqueCatalog'); }
 
+
+interface MotionThemeContract {
+  THEMES: Record<string, unknown>;
+  resolveTheme(plan: unknown): unknown;
+  applyTheme(scene: Shot, boardTheme?: unknown): Shot;
+}
+export function motionThemeContract(): MotionThemeContract {
+  return loadFromHere(join(REFERENCES_DIR, 'motion-graphics.js')) as MotionThemeContract;
+}
+export function motionGraphicTypes(): string[] {
+  const registry = loadFromHere(join(REFERENCES_DIR, 'motion-graphics.js')) as { TYPES: Record<string, unknown> };
+  return Object.keys(registry.TYPES);
+}
 export function renderPurposes(): string[] {
   const routing = loadFromHere(join(REFERENCES_DIR, 'render-routing.js')) as { PURPOSES: Record<string, string> };
   return Object.keys(routing.PURPOSES);
@@ -235,6 +248,21 @@ export const shotSchema = z
         coverage: coverageSchema.optional(),
         lineNeutral: z.literal(true).optional(),
         lineCrossing: z.record(z.unknown()).optional(),
+        motionGraphic: z.object({
+          version: z.literal(1),
+          type: z.string().refine(value => motionGraphicTypes().includes(value), 'unknown motion graphic type'),
+          intent: z.string().optional(), reason: z.string().optional(),
+          evidence: z.enum(['data', 'recording', 'reenactment', 'metaphor']),
+          style: z.object({ palette: z.string().optional(), reason: z.string().optional(),
+            theme: z.object({
+              id: z.string().refine(value => value === 'auto' || Object.hasOwn(motionThemeContract().THEMES, value), 'unknown motion theme'),
+              context: z.enum(['research','software','education','campaign','storytelling','friendly']).optional(),
+              reason: z.string().optional(),
+            }).passthrough().optional(),
+          }).passthrough(),
+          beats: z.array(z.object({ at: z.number().min(0).max(1), action: z.string() }).passthrough()).optional(),
+          content: z.record(z.unknown()).optional(),
+        }).passthrough().optional(),
         render: z.object({ mode: tuple(V.RENDER_MODES), purpose: z.string().optional(), reason: z.string().optional() }).passthrough().optional(),
       })
       .passthrough()
@@ -472,6 +500,8 @@ export function applyPatch(win: Board, patch: StoryboardApplyArgs): { win: Board
     if (k === 'SCENES' || k === 'STRUCTURE') throw new Error(`set ${k} through the dedicated fields, not globals`);
     next[k] = v;
   }
+  const boardMotionTheme = (next.THEME as Record<string, unknown> | undefined)?.motionGraphicTheme;
+  if (boardMotionTheme) motionThemeContract().resolveTheme({ type: 'process', style: { theme: boardMotionTheme } });
   if (patch.propSheet) next.SB_DOC = { ...(next.SB_DOC as Record<string, unknown> ?? {}),
     props: patch.propSheet.props, propContinuity: patch.propSheet.continuity };
   if (patch.set) { if (patch.set.structure) next.STRUCTURE = patch.set.structure; next.SCENES = patch.set.shots.slice(); }
@@ -604,7 +634,7 @@ export function applyPatch(win: Board, patch: StoryboardApplyArgs): { win: Board
     return { id, ...shot };
   });
   if (next.STRUCTURE) next.STRUCTURE = { ...next.STRUCTURE, nextShotId };
-  next.SCENES = shots.map((shot) => ({ ...shot }));  // sync() writes sceneSlug/sequence — never into the caller's objects
+  next.SCENES = shots.map((shot) => shot.shot?.motionGraphic && (shot.shot.motionGraphic.style.theme || (next.THEME as Record<string, unknown> | undefined)?.motionGraphicTheme) ? motionThemeContract().applyTheme({ ...shot }, (next.THEME as Record<string, unknown> | undefined)?.motionGraphicTheme) : { ...shot });  // sync() writes sceneSlug/sequence — never into the caller's objects
 
   const findings: Finding[] = [];
   if (!shots.length) findings.push({ level: 'bad', where: 'board', what: 'the board has no shots' });

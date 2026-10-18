@@ -4,12 +4,27 @@ import { createRequire } from 'node:module';
 import { readFileSync, writeFileSync, mkdtempSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createHash } from 'node:crypto';
 const require = createRequire(import.meta.url);
 const { GROUPS, identityErrors, identityCharacter, direction, boardIdentityErrors } = require('../../skills/_shared/character-identity.js');
 const { handoff } = require('../../skills/channel/references/character-sheet.js');
 const source = readFileSync(new URL('../../skills/channel/references/character-identity-example.md', import.meta.url), 'utf8');
 const doc = () => JSON.parse(source.match(/```json\s*\n([\s\S]*?)```/)[1]);
 const markdown = d => '# Mori\n\n```json\n' + JSON.stringify(d) + '\n```';
+
+test('character handoff exports the chosen audition sample with pinned voice settings and bytes',t=>{
+ const root=mkdtempSync(join(tmpdir(),'sf-voice-handoff-')),folder=join(root,'mori');mkdirSync(folder);
+ t.after(()=>rmSync(root,{recursive:true,force:true}));
+ const d=doc(),audio=join(folder,'chosen.wav'),manifest=join(folder,'audition.json'),file=join(folder,'identity.md');
+ writeFileSync(audio,'chosen voice');writeFileSync(join(folder,'voice.wav'),'obsolete voice');
+ const sha256=createHash('sha256').update('chosen voice').digest('hex');
+ d.voiceSelection={candidateId:'2',auditionPath:manifest,audioSha256:sha256};
+ writeFileSync(manifest,JSON.stringify({candidates:[{id:'2',tts:d.tts,audioPath:audio,audioSha256:sha256}]}));writeFileSync(file,markdown(d));
+ const compiled=handoff(file);assert.equal(compiled.voiceReference.sha256,sha256);assert.deepEqual(compiled.voiceReference.tts,compiled.tts);
+ assert.match(compiled.voiceReference.path,/chosen.wav$/);
+ writeFileSync(audio,'tampered');assert.equal(handoff(file).voiceReference.sha256,sha256,'runtime validates the recorded hash when used');
+ rmSync(manifest);const missing=handoff(file);assert.equal(missing.voiceReference,undefined);assert.ok(missing.voiceReferenceWarning);
+});
 
 test('every catalog field is required, typed, status-aware and placeholder-resistant', () => {
   assert.deepEqual(identityErrors(doc().character), []);

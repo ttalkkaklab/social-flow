@@ -247,3 +247,7 @@ Minimum source dimensions are `ceil(W × peakZoom / 1.5)` × `ceil(H × peakZoom
 `visual.camera.speed` selects very slow (default), slow, fast or very fast; fast shots
 last at most 6 seconds and very fast shots at most 5. Pan/tilt retain authored endpoints;
 window travel is diagnostic rather than a zoom-speed acceptance test.
+
+### Motion graphic scenes
+
+`motion_html` supports abstract diagrams and UI reenactments with `shot.motionGraphic`; see [motion-graphics.md](motion-graphics.md). `motion_explanation` is the general purpose, while quantitative purposes may also use this route. Choose the semantic type first; do not infer it from the renderer. Physical mechanisms retain mesh routes and real recordings retain their source.

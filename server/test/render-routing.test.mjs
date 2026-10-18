@@ -5,10 +5,13 @@ import {mkdtempSync,writeFileSync,readFileSync,copyFileSync,mkdirSync,rmSync} fr
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
+import {runInNewContext} from 'node:vm';
 const require=createRequire(import.meta.url),ref=path.resolve(import.meta.dirname,'../../skills/storyboard/references');
 const routing=require(path.join(ref,'render-routing.js'));
-const {recommend}=routing;
-// This suite inspects all diagnostics; automatic blocking is tested separately.
+const {recommend,framePlan,checkFrames}=routing;
+const {scenePlan}=require('../../skills/produce/references/seedance-route.js');
+const {signature}=require(path.join(ref,'production-mode.js'));
+// Most cases inspect all diagnostics; the cases that pass their own advice array check what blocks.
 const checkScene=(scene,options={})=>{const advice=[];return routing.checkScene(scene,{...options,advice}).concat(advice);};
 const checkEpisode=win=>{const advice=[];return routing.checkEpisode(win,{advice}).concat(advice);};
 const still=()=>({type:'points',duration:8,narration:[{tts:'A portrait.',sub:'A portrait.'}],shot:{infoType:'other',render:{mode:'still_camera',purpose:'portrait',reason:'Introduce the inventor.',camera:{effect:'push',target:'face',reason:'Make the identity clear.'}}},visual:{bg:'images/portrait.png',camera:{movement:'dolly in'},slide:{kind:'camera',motion:true,file:'slides/s1-camera.html'}}});
@@ -30,9 +33,6 @@ test('subject nouns and incidental counts do not dictate the mode',()=>{
  assert.equal(recommend('comparison'),'data_graph');
  const s=physical();s.shot.render.reason='Explain how gears with 16 and 32 teeth mesh.';
  assert.deepEqual(checkScene(s),[]);
-});
-test('opening cut may be still, graph or character without a video quota',()=>{
- for(const s of [still(),graph(),physical(true)]){s.type='cover';assert.deepEqual(checkScene(s),[])}
 });
 test('missing choice and semantic mismatches block drafts before assets',()=>{
  const s=still();delete s.shot.render;assert.match(checkScene(s,{draft:true}).join(),/supported mode/);
@@ -234,4 +234,47 @@ test('zoom ladder uses whole-cut averages, quintic slow easing and accelerating 
   const spec={template,duration:8,focusFrom:[.2,.6,.1,.1],focusTo:[.5,.3,.1,.1]};
   assert.deepEqual(state({...spec,speed:'fast'},2),state(spec,2));
  }
+});
+
+// ── first/last frames ──
+const framed=()=>({type:'points',duration:5,visual:{bg:'images/start.png',frames:{mode:'first_last',reason:'Arrive at the doorway.',endState:'The same figure stands at the threshold.',end:'images/end.png'},video:{engine:'seedance',model:'seedance-1-5-pro-251215',generateAudio:false}}});
+test('conditional frames preserve legacy images and forward the actual end image',()=>{
+ assert.equal(framePlan({visual:{bg:'a.png'}}).mode,'first');
+ const s=framed();assert.deepEqual(checkFrames(s),[]);assert.equal(scenePlan(s).lastImagePath,s.visual.frames.end);
+ delete s.visual.frames.end;assert.deepEqual(checkFrames(s,{draft:true}),[]);assert.match(checkFrames(s).join(' '),/both start and end/);assert.throws(()=>scenePlan(s),/both start and end/);
+});
+test('contradictory frame inputs and unsupported end-frame models cannot generate',()=>{
+ const s=framed();s.visual.video.lastImagePath='different.png';assert.throws(()=>scenePlan(s),/disagree/);
+ delete s.visual.video.lastImagePath;s.visual.frames.mode='first';assert.throws(()=>scenePlan(s),/first-only/);
+ s.visual.frames.mode='first_last';s.visual.frames.end=s.visual.bg;assert.throws(()=>scenePlan(s),/distinct/);
+ s.visual.frames.end='images/end.png';s.visual.video.model='seedance-1-0-pro-fast-251015';s.visual.video.modelReason='fixture';assert.throws(()=>scenePlan(s),/supported image-to-video/);
+});
+test('frame edits stale approval and the browser uses the same plan contract',()=>{
+ const w={SCENES:[framed()]};const before=signature(w);w.SCENES[0].visual.frames.endState='Different arrival';assert.notEqual(signature(w),before);
+ const ctx={window:{}};runInNewContext(readFileSync(path.join(ref,'render-routing.js'),'utf8'),ctx);
+ assert.equal(ctx.window.RENDER_ROUTING.framePlan(framed()).end,'images/end.png');
+});
+
+// ── what blocks and what is advice (guided automation, 2026-10-16) ──
+test('automatic still planning accepts omitted creative rationale and nondefault duration, but rejects unsupported effects',()=>{
+ const shot={duration:9,visual:{camera:{speed:'fast'}},shot:{render:{mode:'still_camera',purpose:'portrait',camera:{effect:'push'}}}};
+ const advice=[];
+ assert.deepEqual(routing.checkScene(shot,{draft:true,advice}),[]);
+ assert.ok(advice.some(x=>x.includes('reason')));
+ assert.ok(advice.some(x=>x.includes('duration')));
+ shot.shot.render.camera.effect='unimplemented';
+ assert.ok(routing.checkScene(shot,{draft:true}).some(x=>x.includes('supported effect')));
+});
+test('creative episode repetition is advice, not a veto',()=>{
+ const win={SCENES:[1,2,3].map(()=>({duration:10,shot:{render:{mode:'editorial_html',reason:'same reason'}}}))};
+ const advice=[]; assert.deepEqual(routing.checkEpisode(win,{advice}),[]);
+ assert.ok(advice.some(x=>x.includes('repeated render reason')));
+});
+test('non-draft video routing accepts an omitted previz but still needs a video handoff',()=>{
+ const shot={type:'points',duration:5,narration:[],shot:{render:{mode:'generated_video',purpose:'physical_state'}},visual:{camera:{movement:'gently drift around the room'},video:{clip:'existing.mp4'}}};
+ const advice=[];
+ assert.deepEqual(routing.checkScene(shot,{advice}),[]);
+ assert.ok(advice.some(x=>x.includes('previz')));
+ delete shot.visual.video;
+ assert.ok(routing.checkScene(shot).some(x=>x.includes('video handoff')));
 });

@@ -1,5 +1,10 @@
 # Generated video — engines, prompt grammar, per-slot recipes
 
+For character speech, [voice-continuity.md](voice-continuity.md) supplements the
+recipes below. Use managed `video_plan` with the complete cast handoff. Its compiled
+voice mapping supplements the stored prompt without changing the selected model.
+Native imitation is separate from exact supplied-WAV synchronization.
+
 Read this **before the first generated-video call of an episode**. An episode whose
 scenes are all still backgrounds never needs it — produce §3's cover-background recipe
 is enough there.
@@ -63,7 +68,8 @@ storyboard defect: send it back.
 - **A b-roll slot goes to Veo** — by absolute rule 9 that stretch uses the sound the clip
   came with. Veo's native audio is better, and dropping in a silent clip makes those 4
   seconds go quiet.
-- **A motion background (`visual.video`) can go to Seedance** — the builder lays down the
+- For authored effects, [model-aware effects](video-sound.md) overrides the silent defaults below. Preserve the source soundtrack only when selected; pinned external speech uses post effects.
+- **A motion background without source-audio intent (`visual.video`) can go to Seedance** — the builder lays down the
   video track only and **throws the clip's sound away**. There's no reason to pay Veo prices
   for sound you'll discard, and Veo only makes 1080p at 8 seconds while Seedance makes
   exactly the seconds you ask for and charges for exactly that.

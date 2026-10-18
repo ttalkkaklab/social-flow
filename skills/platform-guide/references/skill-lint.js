@@ -19,7 +19,11 @@
  * allowed-tools named one tool still saw all 218). That silence is exactly why
  * this rule exists. Six `chrome-devtools` entries and eighteen `claude-in-chrome`
  * entries survived several releases after those servers were gone from every
- * machine that runs this plugin, because nothing ever failed.
+ * machine that runs this plugin, because nothing ever failed. The same silence hid
+ * a second gap: a marketplace install names this server's tools
+ * `mcp__plugin_social-flow_social-flow__*`, and Claude Code permission rules match a
+ * plugin server only in that form, so the bare `mcp__social-flow__*` names pre-approved
+ * nothing there. Every tool is now listed in both spellings.
  *
  * **The numbers written into prose.** Every plugin manifest (MANIFESTS below), the
  * server package and the README all state a version or a tool count. Duplicate
@@ -43,8 +47,10 @@ const CODEX_VISIBLE = 76;
 const DESCRIPTION_MAX = 1024;
 /** Browser automation that is not this project's lane (AGENTS.md §Tool lanes). */
 const BANNED_TOOLING = ['claude-in-chrome', 'chrome-devtools'];
-/** The only MCP server a skill may name. */
+/** The only MCP server a skill may name — as a project .mcp.json or Codex calls it. */
 const OWN_MCP_PREFIX = 'mcp__social-flow__';
+/** The same server installed as a Claude Code plugin (code.claude.com/docs/en/permissions). */
+const PLUGIN_MCP_PREFIX = 'mcp__plugin_social-flow_social-flow__';
 /**
  * A ceiling on SKILL.md, not a target. produce and storyboard sit near it because
  * most of what they carry runs on every episode — moving that to a reference costs an
@@ -275,14 +281,21 @@ const RULES = [
     },
   },
   {
-    name: 'allowed-tools names only this plugin\'s MCP server',
+    name: 'allowed-tools names only this plugin\'s MCP server, in both spellings',
     run() {
       const bad = [];
       for (const s of loadSkills()) {
         if (s.tools === undefined) { bad.push(`${s.rel}: allowed-tools is not a JSON array`); continue; }
         if (s.tools === null) continue; // no allowed-tools is allowed
+        const listed = new Set(s.tools);
         for (const t of s.tools) {
-          if (t.startsWith('mcp__') && !t.startsWith(OWN_MCP_PREFIX)) bad.push(`${s.rel}: ${t}`);
+          if (!t.startsWith('mcp__')) continue;
+          const tool = t.startsWith(PLUGIN_MCP_PREFIX) ? t.slice(PLUGIN_MCP_PREFIX.length)
+            : t.startsWith(OWN_MCP_PREFIX) ? t.slice(OWN_MCP_PREFIX.length) : null;
+          if (tool === null) { bad.push(`${s.rel}: ${t}`); continue; }
+          for (const twin of [OWN_MCP_PREFIX + tool, PLUGIN_MCP_PREFIX + tool]) {
+            if (!listed.has(twin)) bad.push(`${s.rel}: ${t} has no ${twin}`);
+          }
         }
       }
       return { ok: bad.length === 0, detail: bad };
@@ -455,6 +468,20 @@ const RULES = [
         }
         for (const m of text.matchAll(/ships (\d+) tools/g)) {
           if (Number(m[1]) !== n) bad.push(`${rel}: "ships ${m[1]} tools", server has ${n}`);
+        }
+      }
+      return { ok: bad.length === 0, detail: [...new Set(bad)] };
+    },
+  },
+  {
+    // AGENTS.md and README.md still said 18 skills when skills/ held 21.
+    name: 'the skill count in the prose matches skills/',
+    run() {
+      const n = skillNames().length;
+      const bad = [];
+      for (const rel of ['README.md', 'AGENTS.md', ...MANIFESTS]) {
+        for (const m of read(path.join(ROOT, rel)).matchAll(/(\d+)\s+skills\b/g)) {
+          if (Number(m[1]) !== n) bad.push(`${rel}: says ${m[1]} skills, skills/ has ${n}`);
         }
       }
       return { ok: bad.length === 0, detail: [...new Set(bad)] };

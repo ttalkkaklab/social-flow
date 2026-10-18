@@ -326,3 +326,17 @@ test('audio handoff forwards controls and rejects unsupported LoRA without editi
   video.lora = ['slow-motion']; save();
   await assert.rejects(prepare(dir, { shotId: 's0001', audioPath: audio }), /lora is not supported by audio2video/);
 });
+
+test('keyframe sound planning distinguishes authored mute from legacy defaults, including empty effects', async t => {
+  const {dir,scene,save}=fixture(t);
+  scene.visual.frames={mode:'first_last',end:'start.png',keyframes:[{atSeconds:.5,image:'start.png'}]};
+  for(const effects of [[],[{delivery:'auto',description:'Tray clack',trigger:'At desk contact'}],[{delivery:'native',description:'Tray clack',trigger:'At desk contact'}]]) {
+    scene.sound={audioSource:'video',effects};save();
+    const result=await prepare(dir,{shotId:scene.id});
+    assert.equal(result.arguments.generateAudio,true);assert.equal(result.soundPlan.sound.audioSource,'video');
+  }
+  scene.sound={effects:[{delivery:'auto',description:'Tray clack',trigger:'At desk contact'}]};save();
+  assert.equal((await prepare(dir,{shotId:scene.id})).soundPlan.sound.effects[0].delivery,'native');
+  scene.visual.video.generateAudio=false;scene.sound={audioSource:'video',effects:[]};save();
+  await assert.rejects(prepare(dir,{shotId:scene.id}),/silent output/);
+});

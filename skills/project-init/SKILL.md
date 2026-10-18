@@ -8,7 +8,7 @@ description: >
   and format together. For only a channel profile or character edit use channel;
   storyboard plans an episode and autoproduce builds one.
 argument-hint: "[init|status|update] [project-directory]"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__project_manage", "mcp__social-flow__capability_status", "mcp__social-flow__sns_account_check", "mcp__social-flow__character_voice_audition", "mcp__social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__sns_account_check", "mcp__plugin_social-flow_social-flow__sns_account_check", "mcp__social-flow__character_voice_audition", "mcp__plugin_social-flow_social-flow__character_voice_audition", "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_voices"]
 ---
 
 # Project setup

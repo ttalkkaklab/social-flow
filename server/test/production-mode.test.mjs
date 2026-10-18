@@ -1348,7 +1348,7 @@ test('a changed or unconfirmed ASTRA price cannot enter the free-call exclusion'
   t.after(() => rmSync(isolated, { recursive: true, force: true }));
   // Copy only reference code and price data; neither the real table nor ep10c is edited.
   cpSync(path.join(root, 'skills'), path.join(isolated, 'skills'), { recursive: true,
-    filter: file => !path.extname(file) || /\.(?:js|sh|tsv)$/.test(file) });
+    filter: file => !path.extname(file) || /\.(?:js|json|sh|tsv)$/.test(file) });
   const priceFile = path.join(isolated, 'skills/autoproduce/references/prices.tsv');
   const original = readFileSync(priceFile, 'utf8');
   const checker = path.join(isolated, 'skills/produce/references/check-production.js');

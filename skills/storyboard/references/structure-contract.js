@@ -48,7 +48,7 @@
   const HOOK_TYPES = ['fear', 'empathy', 'curiosity', 'spoiler'];
   const HOOK_FORMS = ['paradox', 'gap', 'payoff', 'identify', 'number', 'secret'];
   const ARCS = ['answer-first', 'story'];
-  const RENDER_MODES = ['still_camera', 'character_html', 'object_html', 'data_graph', 'generated_video', 'editorial_html', 'stock_video'];
+  const RENDER_MODES = ['motion_html', 'still_camera', 'character_html', 'object_html', 'data_graph', 'generated_video', 'editorial_html', 'stock_video'];
   const LINE_CROSSING_METHODS = ['camera_move', 'subject_move', 'neutral', 'intentional'];
   const TRANSITION_RE = /^(jcut|cut|dissolve|dip|dip:white|iris|blur|zoom|push:(l2r|r2l|u2d|d2u)|whip:(l2r|r2l|u2d|d2u))$/;
   /* Shots that sit in the playback line and belong to a scene. broll is spliced by `after`
@@ -98,7 +98,7 @@
   const MEASURE_RE = /\d+(\.\d+)?\s?(%|퍼센트|배|명|건|원|분|초|시간|킬로|kg|그램|g|미터|m|도|개|년|배)/;
   const NIGHT_RE = /밤|새벽|저녁|자정|해\s?질/; const NIGHT_CUE_RE = /스탠드|조명|불빛|어두|깜깜|커튼|창밖|시계|달빛|취침|잠들|불을\s?끄|불이\s?꺼|밤|저녁|새벽/;
   const MORNING_RE = /아침|오전|낮|정오|한낮/; const MORNING_CUE_RE = /햇살|햇빛|아침|창으로\s?든|커튼\s?사이|알람|시계|낮|밝은|환한/;
-  const EXPLAIN_MODES = ['data_graph', 'editorial_html', 'object_html', 'character_html'];
+  const EXPLAIN_MODES = ['motion_html', 'data_graph', 'editorial_html', 'object_html', 'character_html'];
   const NO_PERSON_RE = /(인물|사람)\s?(없음|없는|없이|은\s?없|이\s?없)/g;
   const GAZE_RE = /[을를]\s?(향해|향한|향하|보며|보고|바라보|마주|쳐다보|올려다보|내려다보)|바라봄|마주\s?봄|주시/;
   const grams = v => { const c = bare(v); const g = new Set(); for (let i = 0; i < c.length - 1; i++) g.add(c.slice(i, i + 2)); return g; };
@@ -163,7 +163,7 @@
   }
   function eyelineNeeded(s) {
     const sh = s && s.shot || {};
-    return !!(PLACED(s) && !sh.lineNeutral && !(sh.render && ['data_graph', 'editorial_html', 'object_html'].includes(sh.render.mode)) &&
+    return !!(PLACED(s) && !sh.lineNeutral && !(sh.render && ['motion_html', 'data_graph', 'editorial_html', 'object_html'].includes(sh.render.mode)) &&
       (sh.space && text(sh.space.line) || ['pov', 'ots', 'reaction'].includes(sh.size)));
   }
   function checkEyelines(shots, draft) {
@@ -253,7 +253,7 @@
   }
   function compositionNeeded(s) {
     const sh = s && s.shot || {}, e = sh.eyeline;
-    if (!s || ['data_graph', 'editorial_html'].includes(sh.render && sh.render.mode)) return false;
+    if (!s || ['motion_html', 'data_graph', 'editorial_html'].includes(sh.render && sh.render.mode)) return false;
     return !!(e && !['none', 'pov'].includes(e.mode) || sh.space && text(sh.space.facing) || ['mcu', 'cu', 'choker', 'ots', 'reaction', 'two', 'three'].includes(sh.size));
   }
   function checkCompositions(shots, draft) {

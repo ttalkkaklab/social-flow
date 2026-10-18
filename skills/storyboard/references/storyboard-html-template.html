@@ -1027,6 +1027,7 @@
     a { color: inherit; }
     .fr, .badge, .tl-seg { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
+.motion-plan{flex-basis:100%;padding:12px 0;font-size:13px;line-height:1.5}.motion-plan p{margin:4px 0}.motion-plan small{opacity:.7}
 </style>
 <link rel="stylesheet" href="./review.css">
 </head>
@@ -1040,6 +1041,7 @@
 <script src="./source-context.js"></script>
 <script src="./prop-continuity.js"></script>
 <script src="./render-routing.js"></script>
+<script src="./motion-graphics.js"></script>
 <script src="./production-mode.js"></script>
 <script src="./style-samples.js"></script>
 <script src="./structure-contract.js"></script>
@@ -1290,7 +1292,7 @@ window.STORYBOARD_READY = (async function () {
                    overhead: "straight down from above — a map of the scene, no face",
                    dutch: "the horizon tilted — unease, something is off" },
       render: { still_camera: "still + camera move", character_html: "3D character HTML", object_html: "3D object HTML",
-                data_graph: "data graph HTML", editorial_html: "quote · verdict HTML", generated_video: "AI video", stock_video: "stock clip",
+                motion_html: "motion graphic HTML", data_graph: "data graph HTML", editorial_html: "quote · verdict HTML", generated_video: "AI video", stock_video: "stock clip",
                 recording: "recording", asset: "shared asset", slide: "HTML slide" },
       renderHint: { still_camera: "a photo — the only motion is the camera (push, pull, rack focus)",
                     character_html: "HTML animation — a 3D doll acts the task on the studio stage",
@@ -1636,7 +1638,7 @@ window.STORYBOARD_READY = (async function () {
                    overhead: "바로 위에서 수직으로 — 장면의 지도, 얼굴은 없다",
                    dutch: "수평선을 기울인다 — 불안, 뭔가 어긋났다" },
       render: { still_camera: "사진 카메라 무빙", character_html: "3D 캐릭터 HTML", object_html: "3D 사물 HTML",
-                data_graph: "그래프 HTML", editorial_html: "인용·결론 HTML", generated_video: "AI 영상", stock_video: "외부 영상",
+                motion_html: "모션그래픽 HTML", data_graph: "그래프 HTML", editorial_html: "인용·결론 HTML", generated_video: "AI 영상", stock_video: "외부 영상",
                 recording: "녹화분", asset: "공용 소재", slide: "HTML 슬라이드" },
       renderHint: { still_camera: "사진 한 장 — 움직이는 건 카메라뿐 (푸시·풀·초점 이동)",
                     character_html: "HTML 애니메이션 — 3D 인형이 스튜디오 판 위에서 동작을 연기한다",
@@ -2231,6 +2233,7 @@ window.STORYBOARD_READY = (async function () {
                   '<path d="M8.5 27.5h15M8.5 27.5l2.3-2.3M8.5 27.5l2.3 2.3M23.5 27.5l-2.3-2.3M23.5 27.5l-2.3 2.3"/>',
     character_html: ICON_PERSON(16, 2, 52, { arms: "up" }),
     object_html: '<path d="M16 5l10 5.5v11L16 27 6 21.5v-11z"/><path d="M6 10.5l10 5.5 10-5.5M16 16v11"/>',
+    motion_html: '<path d="M6 16h20M18 8l8 8-8 8"/>',
     data_graph: '<rect x="5" y="17" width="5" height="9" rx="1.5"/><rect x="13.5" y="9" width="5" height="17" rx="1.5"/>' +
                 '<rect x="22" y="13" width="5" height="13" rx="1.5"/>',
     editorial_html: '<path d="M6 7v18"/><path d="M11 10h15M11 16h15M11 22h9"/>',
@@ -2306,7 +2309,7 @@ window.STORYBOARD_READY = (async function () {
       '<span class="sz"><b>' + esc(T.styleName[st.preset] || (st.preset + " ?")) + "</b></span></span>";
   }
   var RENDER_FAMILY = { generated_video: "video", stock_video: "video", recording: "video", still_camera: "photo",
-                        character_html: "html", object_html: "html", data_graph: "html", editorial_html: "html", slide: "html",
+                        character_html: "html", object_html: "html", motion_html: "html", data_graph: "html", editorial_html: "html", slide: "html",
                         asset: "asset" };
   function renderIcon(mode) {
     var d = RENDER_ICON[mode];
@@ -2322,7 +2325,7 @@ window.STORYBOARD_READY = (async function () {
   function sizeKey() {
     var order = ["els", "ls", "fs", "mfs", "ms", "mcu", "cu", "choker", "ecu", "insert",
                  "two", "three", "ots", "pov", "back", "cutaway", "reaction"];
-    var routes = ["generated_video", "stock_video", "still_camera", "character_html", "object_html", "data_graph", "editorial_html", "recording", "asset"];
+    var routes = ["generated_video", "stock_video", "still_camera", "character_html", "object_html", "data_graph", "motion_html", "editorial_html", "recording", "asset"];
     return '<div class="size-key"><span class="kt">' + esc(T.sizeKey) + "</span>" +
       order.map(function (k) {
         return '<span class="k" data-tip="' + esc(sizeTitle(k)) + '">' + sizeIcon(k) + '<span>' + esc(T.size[k] || k) + "</span></span>";
@@ -2969,6 +2972,13 @@ window.STORYBOARD_READY = (async function () {
   h += '<div class="doc-kicker">' + esc(DOC.channelName || DOC.channel || THEME.brand) +
        (DOC.series ? " · " + esc(DOC.series) : "") + "</div>";
   h += '<h1 class="doc-title">' + esc(DOC.displayTitle || DOC.topic || "") + "</h1>";
+  if (THEME.motionGraphicTheme) {
+    var commonMotion = THEME.motionGraphicTheme;
+    var commonMotionInfo = window.MOTION_GRAPHICS && MOTION_GRAPHICS.THEMES[commonMotion.id];
+    h += '<p class="review-video-type">' + esc(LANG === 'ko' ? '공통 모션 테마: ' : 'Common motion theme: ') +
+      esc(commonMotionInfo ? commonMotionInfo.label : commonMotion.id) +
+      (commonMotion.reason ? ' · ' + esc(commonMotion.reason) : '') + '</p>';
+  }
   var videoType = window.PRODUCTION && window.PRODUCTION.videoType;
   if (videoType && videoType.id) {
     var typeNames = (window.REVIEW_VIDEO_TYPES || {})[videoType.id] || {};
@@ -3261,7 +3271,7 @@ window.STORYBOARD_READY = (async function () {
       (byScene[g.scene] || (byScene[g.scene] = [])).push({ s: s, i: i, g: g });
     });
     var CLOSE_OPEN = { mcu: 1, cu: 1, choker: 1, ecu: 1, insert: 1 }, PAYS = { els: 1, ls: 1, ws: 1, mfs: 1, two: 1 };
-    var EXPLAIN_MODES = { data_graph: 1, editorial_html: 1, object_html: 1, character_html: 1 };
+    var EXPLAIN_MODES = { motion_html: 1, data_graph: 1, editorial_html: 1, object_html: 1, character_html: 1 };
     var seenWide = {};
     Object.keys(byScene).forEach(function (sc) {
       var rows = byScene[sc], seenInfo = {};
@@ -4218,6 +4228,11 @@ window.STORYBOARD_READY = (async function () {
     var rmode = renderModeOf(s, g);
     if (rmode) gram += tile(renderIcon(rmode), T.render[rmode] || (rmode + " ?"),
                             renderTitle(rmode) + (g.render && g.render.reason ? "\n\n" + g.render.reason : ""), !T.render[rmode]);
+    var mg = s.shot && s.shot.motionGraphic;
+    if (mg) {
+      var mt = window.MOTION_GRAPHICS && window.MOTION_GRAPHICS.TYPES[mg.type];
+      h += '<div class="motion-plan"><strong>' + esc(mt ? (LANG === 'ko' ? mt.label : mt.id) : mg.type) + '</strong><p>' + esc(mg.intent || '') + '</p><p>' + esc(mg.reason || '') + '</p><small>' + esc(mg.evidence || '') + ' · ' + esc(mg.style && mg.style.theme ? ((mg.style.theme.resolved && mg.style.theme.resolved.id) || mg.style.theme.id) : mg.style && mg.style.palette || '') + '</small>' + (mg.style && mg.style.theme && mg.style.theme.resolved ? '<p>' + esc(mg.style.theme.resolved.reason) + '</p>' : '') + '</div>';
+    }
     /* A shot that left the episode style (shot.style) shows its own preset here, with the reason and
        the user's approval record — the reader must see where the look changes before approving. */
     var so = s.shot && s.shot.style;
@@ -4801,6 +4816,10 @@ window.STORYBOARD_READY = window.STORYBOARD_READY.then(async function () {
     });
   }
   document.documentElement.dataset.reviewReady = 'true';
+  if (/^#shot-\d+$/.test(location.hash)) {
+    const target = document.getElementById(location.hash.slice(1));
+    if (target && typeof target.scrollIntoView === 'function') target.scrollIntoView({block:'start'});
+  }
 }).catch(function (error) {
   const notice = document.createElement('p');
   notice.className = 'error-box'; notice.setAttribute('role', 'alert');

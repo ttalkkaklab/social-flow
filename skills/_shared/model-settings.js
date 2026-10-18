@@ -9,7 +9,7 @@ const SETTINGS_FILE = '.social-flow/models.json';
 const SNAPSHOT_FILE = '.work/model-settings.json';
 const VIDEO_TYPES = require('./video-types.json').types;
 const ENGINES = {
-  video: ['host', 'seedance', 'veo', 'astra', 'mlx'],
+  video: ['host', 'seedance', 'veo', 'astra', 'mlx', 'omni'],
   speech: ['gemini', 'elevenlabs'],
   image: ['host', 'gpt-image', 'zimage', 'mlx'],
 };
@@ -63,6 +63,16 @@ function validateModels(models, partial = false, allowRetiredSpeech = false) {
     if (choice.engine !== 'host' && choice.host !== undefined) throw new Error(`${kind}.host is only valid for a host engine`);
     if (!fixed && !nonempty(choice.model)) throw new Error(`${kind}.model is required`);
     if (fixed && choice.model !== undefined) throw new Error(`${kind}.${choice.engine} uses a fixed server model; omit model`);
+    if (kind === 'image') {
+      if (choice.engine === 'gpt-image') {
+        const catalog = require('./image-catalog.json');
+        if (!catalog.gptModels.includes(choice.model)) throw new Error('Unsupported image model; consult image_catalog');
+        if (choice.quality !== undefined && !['auto', 'low', 'medium', 'high'].includes(choice.quality)) throw new Error('Invalid image quality');
+      } else if (choice.engine !== 'host' && choice.quality !== undefined) {
+        throw new Error('Image quality tiers are not supported by the selected local adapter');
+      }
+      if (choice.engine === 'host' && choice.model !== 'host-managed') throw new Error('Host image model must be host-managed');
+    }
     if (kind === 'speech' && choice.engine === 'elevenlabs' && choice.model !== 'eleven_v4' && !retired) throw new Error('ElevenLabs speech requires eleven_v4');
   }
   return models;
@@ -183,6 +193,14 @@ module.exports = { SETTINGS_FILE, SNAPSHOT_FILE, VIDEO_TYPES, validateVideoType,
 if (require.main === module) {
   try {
     const [command, workspace, argument] = process.argv.slice(2);
+    if (command === 'image-catalog') {
+      console.log(JSON.stringify(require('./image-catalog.json'), null, 2));
+      process.exit(0);
+    }
+    if (command === 'catalog') {
+      console.log(JSON.stringify(require('./video-catalog.json'), null, 2));
+      process.exit(0);
+    }
     if (command === 'types') {
       console.log(JSON.stringify(VIDEO_TYPES, null, 2));
       process.exit(0);

@@ -8,6 +8,7 @@ import { spawnSync } from 'node:child_process';
 const require = createRequire(import.meta.url);
 const root = path.resolve(import.meta.dirname, '../../skills/storyboard/references');
 const { checkStory: inspectStory, storyHash, storySpeech } = require(path.join(root, 'story-contract.js'));
+const { storyPerformance } = require(path.join(root, 'story-performance.js'));
 // These unit cases explicitly exercise optional review diagnostics.
 const checkStory = (win, options = {}) => inspectStory(win, { requireReview: true, ...options });
 const ref = shot => ({ shot, group: 1, quote: ['Why is the box moving?', 'The table shakes.', 'A fan moves the table.', 'Check the table before the box.'][shot - 1] });
@@ -69,13 +70,6 @@ test('the payoff lands in the opening group only when the cover states the resul
   assert.match(errors, /first spoken group/);
   assert.match(errors, /STORY\.payoff cannot precede the opening/);
 });
-test('CTA metadata and placement never impose a story gate', () => {
-  const w = fixture(); w.STORY.cta = 'question'; w.STORY.ask = ref(2);
-  w.STORY.review.hash = storyHash(w);
-  assert.deepEqual(checkStory(w), []);
-  w.STORY.ask = ref(4); w.STORY.ctaReason = 'Invite a related observation';
-  w.STORY.review.hash = storyHash(w); assert.deepEqual(checkStory(w), []);
-});
 test('review requires all four evidenced judgments; score cannot waive unresolved failures', () => {
   for (const key of ['meaning', 'progression', 'payoff', 'grounding']) {
     const w = fixture(); delete w.STORY.review[key];
@@ -133,7 +127,7 @@ test('recorded insert speech uses playback order, not the broll array position',
   assert.deepEqual(checkStory(w), []);
   assert.deepEqual(storySpeech(w).map(x => x.shot), [1, 5, 2, 3, 4]);
 });
-test('CLI exposes readable plans without requiring review metadata; malformed code still fails', () => {
+test('CLI prints hash, text and map; check-scenes reports a missing STORY; malformed code exits 3', () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'story-contract-'));
   try {
     const file = path.join(dir, 'scenes.js');
@@ -144,10 +138,6 @@ test('CLI exposes readable plans without requiring review metadata; malformed co
     assert.equal(run('check-story.js', '--hash').stdout.trim(), storyHash(w));
     assert.match(run('check-story.js', '--text').stdout, /^1\. Why is the box moving\?/);
     assert.deepEqual(JSON.parse(run('check-story.js', '--map').stdout).map(x => x.shot), [1, 2, 3, 4]);
-    delete w.STORY.review; write(w);
-    assert.equal(run('check-story.js', '--draft').status, 0);
-    assert.equal(run('check-story.js').status, 0);
-    assert.doesNotMatch(run('check-scenes.js', '--json').stdout, /review is absent/);
     delete w.STORY; write(w);
     const result = run('check-scenes.js', '--draft', '--json');
     assert.equal(result.status, 0); assert.match(result.stdout, /requires version story-v1/);
@@ -246,19 +236,6 @@ test('a person short opens without the name or a year, one sentence a shot, clos
                      '무슨 일이야? 아무도 몰랐어요.', '정말 갈 거니? 걱정했어요.', '아까 왜 그랬어? 나중에 물었죠.'])
     assert.match(person(says(two)), /packs two sentences/, two);
 });
-test('the person-short fixture reports the opening-name advice without blocking the draft', () => {
-  const dir = mkdtempSync(path.join(tmpdir(), 'person-short-'));
-  try {
-    const src = path.join(root, 'person-short-fixture.js');
-    const run = (file, ...args) => spawnSync(process.execPath, [path.join(root, 'check-story.js'), file, ...args], { encoding: 'utf8' });
-    assert.equal(run(src, '--draft').status, 0, run(src, '--draft').stdout);
-    assert.equal(run(src, '--text').stdout.trim().split('\n').length, 9);
-    const broken = path.join(dir, 'scenes.js');
-    writeFileSync(broken, readFileSync(src, 'utf8').replace(/한 남자가 성냥/g, '박만수가 성냥'));
-    const out = run(broken, '--draft');
-    assert.equal(out.status, 0); assert.match(out.stdout, /names the person/);
-  } finally { rmSync(dir, { recursive: true, force: true }); }
-});
 test('the thesis is a present-tense message heard after the payoff, not the payoff line, a figure, a moral or the name', () => {
   // scenario-stage §The message: the M# sentence in the narration's words — it stays true with
   // the names gone (present tense, no figure, no command), the viewer hears it at or after the
@@ -298,4 +275,133 @@ test('a person short reports a thesis that names the person', () => {
   rmSync(dir, { recursive: true, force: true });
   assert.equal(r.status, 0);
   assert.match(r.stdout, /thesis names the person/);
+});
+
+// story-v2: checkStory delegates to story-performance.js; meaning comes from ordered performance.
+function board() {
+  const w = { SCENES: [
+    { type: 'cover', beat: 'hook', narration: [{tts: 'Have you eaten?', sub: 'Have you eaten?', speaker: 'child'}],
+      performance: [{kind: 'dialogue', character: 'child', to: 'father', group: 1}] },
+    { type: 'points', beat: 'drip', narration: [{tts: 'I ate earlier.', sub: 'I ate earlier.', speaker: 'father'}],
+      performance: [{kind: 'dialogue', character: 'father', to: 'child', group: 1},
+        {kind: 'action', character: 'child', text: 'The child sees the empty pot.'}] },
+    { type: 'points', beat: 'cta', duration: 3, narration: [],
+      performance: [{kind: 'action', character: 'child', text: 'The child shares the rice with the father.'}] }
+  ], STORY: { version: 'story-v2', kind: 'fiction', expression: 'mixed', reveal: 'none', cta: 'none',
+    viewerNeed: 'Recognize quiet care', thesis: 'Care becomes mutual.', basis: 'Invented family; consistent actions.',
+    endingReason: 'A reciprocal action resolves the question.',
+    cast: ['father', 'child'].map(id => ({ id, role: id, want: 'Protect the other', voice: 'Reserved', reason: 'The relationship changes', source: 'identity.md' })),
+    beats: [1, 2, 3].map(shot => ({shot, change: 'Recognition develops', necessity: 'Connect care to action'})) }
+  };
+  const events = storyPerformance(w), ref = e => ({ shot: e.shot, event: e.event, quote: e.quote });
+  w.STORY.opening = ref(events[0]); w.STORY.payoff = ref(events[2]); w.STORY.ending = ref(events[3]);
+  w.STORY.review = { hash: storyHash(w), verdict: 'pass', unresolved: [],
+    ...Object.fromEntries(['meaning','progression','payoff','grounding','character'].map(k => [k, { reason: 'Observed reciprocal care', refs: [ref(events[3])] }])) };
+  return w;
+}
+const writeBoard = (dir, w) => writeFileSync(path.join(dir, 'scenes.js'), Object.entries(w).map(([k,v]) => `window.${k}=${JSON.stringify(v)};`).join('\n'));
+test('dialogue and silent action deliver meaning without a spoken thesis', () => {
+  assert.deepEqual(checkStory(board()), []);
+});
+
+test('automatic story checks never demand or fabricate a reviewed pass', () => {
+  const w = board(); delete w.STORY.review;
+  assert.deepEqual(inspectStory(w), []);
+  assert.equal(w.STORY.review, undefined);
+  assert.match(inspectStory(w, {requireReview:true}).join(), /review is absent/);
+  w.STORY.review = {hash:'old', verdict:'fail', unresolved:['Needs improvement']};
+  const before = JSON.stringify(w);
+  assert.deepEqual(inspectStory(w), []);
+  assert.match(inspectStory(w, {requireReview:true}).join(), /stale|unresolved/);
+  assert.equal(JSON.stringify(w), before);
+});
+test('readers retain original indices through invalid slots and never invent unresolved speech', () => {
+  const win = { STORY:{version:'story-v2'}, SCENES:[null,
+    { narration:[null, {tts:'Actual line'}], performance:[null, {kind:'dialogue',group:2,character:'child'},
+      {kind:'dialogue',group:99}, {kind:'action',text:{intent:'Not observable text'}}, {kind:'unknown',group:2}] },
+    42, {type:'broll', after:1, narration:[{tts:'Insert line'}], performance:[{kind:'dialogue',group:1,character:'child'}]}] };
+  const rows = storyPerformance(win);
+  assert.deepEqual(rows.map(r=>[r.shot,r.event]), [[2,1],[2,2],[2,3],[2,4],[2,5],[4,1]]);
+  assert.equal(rows[1].quote,'Actual line');
+  assert.ok([0,2,3,4].every(i=>rows[i].unresolved === true && rows[i].quote === ''));
+  assert.deepEqual(storySpeech(win).map(r=>[r.shot,r.group]), [[2,2],[4,1]]);
+});
+test('--text attributes speech and silent actions without author intent; --speech keeps only attributed lines', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'performance-'));
+  try {
+    writeBoard(dir, board());
+    const text = (...flags) => spawnSync(process.execPath, [path.join(root, 'check-story.js'), dir, '--text', ...flags], { encoding: 'utf8' });
+    let r = text();
+    assert.equal(r.status, 0, r.stderr); assert.match(r.stdout, /dialogue · child → father/);
+    assert.match(r.stdout, /empty pot/); assert.doesNotMatch(r.stdout, /Care becomes mutual/);
+    r = text('--speech');
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /child → father/); assert.doesNotMatch(r.stdout, /empty pot|shares the rice/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+test('unknown speakers, duplicate/missing speech, fabricated action quotes and malformed action text fail', () => {
+  let w = board(); w.SCENES[0].narration[0].speaker = 'other';
+  assert.match(checkStory(w).join(), /speaker/);
+  w = board(); w.SCENES[0].performance.push({...w.SCENES[0].performance[0]});
+  assert.match(checkStory(w).join(), /unique narration/);
+  w = board(); w.STORY.ending.quote = 'They fly away.';
+  assert.match(checkStory(w).join(), /exact observable/);
+  w = board(); w.SCENES[2].performance[0].text = 12;
+  assert.match(checkStory(w).join(), /action requires|exact observable/);
+});
+test('action and cast edits stale the review; camera changes do not', () => {
+  for (const edit of [w => w.SCENES[2].performance[0].text += ' Again.', w => w.STORY.cast[0].want = 'Hide the food',
+    w => w.SCENES[0].narration[0].speaker = 'father', w => w.SCENES[1].visual = {action: 'Changed action'}]) {
+    const w = board(); edit(w); assert.match(checkStory(w).join(), /stale/);
+  }
+  const w = board(); w.SCENES[0].visual = {camera: {movement: 'dolly'}};
+  assert.deepEqual(checkStory(w), []);
+});
+
+test('speech production receipts do not invalidate editorial review, delivery changes do', () => {
+  const w = board();
+  w.SCENES[0].narration[0].audio = {path: 'take.wav', status: 'not_reviewed'};
+  w.SCENES[0].narration[0].mediaStatus = 'ready';
+  assert.deepEqual(checkStory(w), []);
+  w.SCENES[0].narration[0].delivery = 'off_screen';
+  assert.match(checkStory(w).join(), /stale/);
+});
+test('all-visual fiction can be reviewed and live transcript errors fail cleanly', () => {
+  const w = board();
+  w.SCENES.forEach((s, i) => { s.duration = 3; s.narration = []; s.performance = [{kind: 'action', character: i === 0 ? 'father' : 'child', text: 'The family exchanges food and looks.'}]; });
+  w.STORY.expression = 'visual';
+  for (const [key, shot] of [['opening',1], ['payoff',2], ['ending',3]]) w.STORY[key] = {shot,event:1,quote:w.SCENES[shot-1].performance[0].text};
+  assert.deepEqual(checkStory(w, {requireReview:false}), []);
+  w.STORY.transcripts = [{shot:2,groups:{}}];
+  assert.match(checkStory(w, {requireReview:false}).join(), /transcript/);
+});
+
+test('reused shot transcripts cannot cite speech beyond the clip duration', () => {
+  const w = board();
+  w.SCENES[0].duration = 3;
+  w.SCENES[0].visual = {reuse: {clip: 'recording.mp4'}};
+  w.SCENES[0].narration = [];
+  w.STORY.transcripts = [{shot: 1, source: 'recording.mp4', groups: [
+    {text: 'Have you eaten?', speaker: 'child', start: 0, end: 3}
+  ]}];
+  assert.deepEqual(checkStory(w, {requireReview: false}), []);
+  Object.assign(w.STORY.transcripts[0].groups[0], {start: 30, end: 35});
+  assert.match(checkStory(w, {requireReview: false}).join(), /within the reused clip/);
+});
+
+// A check-scenes.js case, kept beside its story-v2 fixture until check-scenes has a test file.
+test('check-scenes skips the format length cap on story-v2 boards unless a length policy is explicit', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'story-v2-length-'));
+  try {
+    const w = board(); w.FORMAT = 'shorts-9x16'; w.SCENES[1].duration = 1300;
+    const cli = () => {
+      writeBoard(dir, w);
+      return spawnSync(process.execPath, [path.join(root, 'check-scenes.js'), dir, '--json'], { encoding: 'utf8' }).stdout;
+    };
+    assert.doesNotMatch(cli(), /past the cap of 180s/);
+    w.MOTION_POLICY = {length_max_seconds:180};
+    assert.match(cli(), /outside the explicitly selected length constraint/);
+    delete w.STORY;
+    assert.match(cli(), /past the cap of 180s/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });

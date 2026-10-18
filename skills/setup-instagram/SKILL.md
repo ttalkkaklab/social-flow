@@ -10,7 +10,7 @@ description: >
   SNS_TOKEN_DIR/[slug]/instagram_token and verifies it with sns_account_check. Resumable —
   it detects what is already done and continues from the first unfinished step.
 argument-hint: "<channel> [status|signup|brand|token]"
-allowed-tools: ["mcp__social-flow__project_manage", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check"]
+allowed-tools: ["mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check", "mcp__plugin_social-flow_social-flow__sns_account_check"]
 ---
 **Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 

@@ -1,6 +1,6 @@
 'use strict';
 const motion = require('./measure-motion.js');
-const EXPLANATORY = new Set(['character_html', 'object_html', 'data_graph']);
+const EXPLANATORY = new Set(['character_html', 'object_html', 'data_graph', 'motion_html']);
 const VIDEO = new Set(['generated_video', 'stock_video']);
 const IMAGE = /\.(png|jpe?g|webp|avif|gif)(?:[?#].*)?$/i;
 

@@ -138,9 +138,7 @@ test('design CLI separates legacy content readiness from shell drift; content re
     assert.deepEqual(exported.warnings, exported.contentWarnings.map(w => w.message));
     const clean = run(designCli, board);
     assert.equal(clean.status, 0, clean.stdout + clean.stderr);
-    assert.match(clean.stdout, /PASS.*shared storyboard template/);
     assert.match(clean.stderr, /Content readiness \[identity\]/);
-    assert.match(clean.stderr, /does not certify content readiness/);
     const strict = run(libraryCli, f.dir);
     assert.equal(strict.status, 0);
     const report = JSON.parse(strict.stdout);
@@ -161,23 +159,6 @@ test('design CLI separates legacy content readiness from shell drift; content re
   } finally { f.clean(); }
 });
 
-test('review pass is separate from asset presence and becomes stale when an input changes', () => {
-  const f = fixture();
-  try {
-    const folder = join(f.dir, 'assets/characters/hero');
-    const inputHashes = Object.fromEntries(['identity.md', 'body.png', 'back.png', 'face.png'].map(name => [name, createHash('sha256').update(readFileSync(join(folder, name))).digest('hex')]));
-    f.write('assets/characters/hero/review.json', JSON.stringify({ score: 95, iteration: 2, critical: 0, inputHashes }));
-    exportChannel(f.dir);
-    assert.ok(readFileSync(join(folder, 'index.html'), 'utf8').includes('Review passed'));
-    assert.ok(readFileSync(join(folder, '../index.html'), 'utf8').includes('95/100'));
-    f.write('assets/characters/hero/face.png', 'revised image');
-    exportChannel(f.dir);
-    const html = readFileSync(join(folder, 'index.html'), 'utf8');
-    assert.ok(html.includes('independent review needed'));
-    assert.ok(!html.includes('Review passed'));
-    assert.ok(html.includes('Available'));
-  } finally { f.clean(); }
-});
 test('review uses the recorded threshold while preserving the legacy threshold and critical gate', () => {
   const f = fixture();
   try {
@@ -188,8 +169,8 @@ test('review uses the recorded threshold while preserving the legacy threshold a
       exportChannel(f.dir);
       return readFileSync(join(folder, 'index.html'), 'utf8');
     };
-    assert.ok(render({ threshold: 90 }).includes('Review passed'));
-    assert.ok(render({ threshold: 90 }).includes('threshold 90'));
+    const passed = render({ threshold: 90 });
+    assert.ok(passed.includes('Review passed') && passed.includes('threshold 90'));
     assert.ok(render({}).includes('Revision required'));
     assert.ok(render({ threshold: 90, critical: 1 }).includes('Revision required'));
     assert.ok(render({ threshold: null }).includes('no independent review'));
@@ -210,7 +191,7 @@ test('missing character voice is visible and makes the delivery check fail even 
 });
 
 
-test('voice sample, transcript evidence and their removal invalidate a character review', () => {
+test('a review passes on its recorded input hashes; a changed image, voice sample or transcript, or a removed sample, makes it stale', () => {
   const f = fixture();
   try {
     const folder = join(f.dir, 'assets/characters/hero');
@@ -220,10 +201,13 @@ test('voice sample, transcript evidence and their removal invalidate a character
     f.write('assets/characters/hero/review.json', JSON.stringify({ score: 95, iteration: 1, critical: 0, inputHashes }));
     const html = () => { exportChannel(f.dir); return readFileSync(join(folder, 'index.html'), 'utf8'); };
     assert.ok(html().includes('Review passed'));
-    for (const name of ['voice.wav', 'sample.txt', 'voice-accuracy.json']) {
+    assert.ok(readFileSync(join(folder, '../index.html'), 'utf8').includes('95/100'));
+    for (const name of ['face.png', 'voice.wav', 'sample.txt', 'voice-accuracy.json']) {
+      const reviewed = readFileSync(join(folder, name));
       f.write('assets/characters/hero/' + name, 'different speaker or text');
-      assert.ok(html().includes('independent review needed'), name);
-      f.write('assets/characters/hero/' + name, 'reviewed fixture');
+      const stale = html();
+      assert.ok(stale.includes('independent review needed') && !stale.includes('Review passed') && stale.includes('Available'), name);
+      f.write('assets/characters/hero/' + name, reviewed);
     }
     rmSync(join(folder, 'voice.wav'));
     assert.ok(html().includes('independent review needed'));

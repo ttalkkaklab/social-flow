@@ -1,0 +1,22 @@
+{
+  "installedAt": "2026-10-18T07:12:37.277Z",
+  "source": "/tmp/social-flow-sound-stage-final",
+  "plan": "/Users/zeans/.local/state/social-flow-props/plan-2026-10-18T07-12-34-723Z.json",
+  "installations": [
+    {
+      "target": "/Users/zeans/.local/state/social-flow-installed/builds/0.115.4-sound.1",
+      "backup": "/Users/zeans/.local/state/social-flow-props/backups/2026-10-18T07-12-34-723Z/0",
+      "verifiedFiles": 991
+    },
+    {
+      "target": "/Users/zeans/.claude/plugins/cache/social-flow/social-flow/0.115.4-sound.1",
+      "backup": "/Users/zeans/.local/state/social-flow-props/backups/2026-10-18T07-12-34-723Z/1",
+      "verifiedFiles": 991
+    },
+    {
+      "target": "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.115.4-sound.1",
+      "backup": "/Users/zeans/.local/state/social-flow-props/backups/2026-10-18T07-12-34-723Z/2",
+      "verifiedFiles": 991
+    }
+  ]
+}

@@ -235,7 +235,7 @@ describe('mlx generate — mocked fetch', () => {
         assert.equal(body.model, 'krea');
         assert.equal(body.size, '1024x1024');
         assert.ok(!('default' in body));
-        return jsonResponse(200, { data: [{ b64_json: Buffer.from('png-bytes').toString('base64') }] });
+        return jsonResponse(200, { data: [{ b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=' }] });
       }
       throw new Error(`unexpected ${path}`);
     };
@@ -249,7 +249,8 @@ describe('mlx generate — mocked fetch', () => {
         filename: 'out.png',
       });
       assert.equal(result.success, true, result.error);
-      assert.equal(readFileSync(join(dir, 'out.png')).toString(), 'png-bytes');
+      assert.equal(result.width, 1);
+      assert.equal(result.height, 1); // Actual PNG, not requested 1024x1024.
       assert.equal(loadBodies.length, 1);
       assert.deepEqual(loadBodies[0], { model: 'krea' });
       assert.ok(!('default' in loadBodies[0]));
@@ -268,13 +269,13 @@ describe('mlx generate — mocked fetch', () => {
       urls.push(path);
       if (path.endsWith('/health')) return jsonResponse(200, { ok: true });
       if (path.endsWith('/v1/models')) {
-        return jsonResponse(200, { data: [{ id: 'krea', state: 'ready', capabilities: ['image'] }] });
+        return jsonResponse(200, { data: [{ id: 'Mage-Flow-Edit-Turbo', state: 'ready', capabilities: ['image'] }] });
       }
       if (path.endsWith('/v1/images/generations')) {
         const body = JSON.parse(String(opts.body));
         assert.equal(body.mode, 'edit');
         assert.equal(typeof body.image, 'string');
-        return jsonResponse(200, { data: [{ b64_json: Buffer.from('edited').toString('base64') }] });
+        return jsonResponse(200, { data: [{ b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=' }] });
       }
       throw new Error(`unexpected ${path}`);
     };
@@ -282,7 +283,8 @@ describe('mlx generate — mocked fetch', () => {
       const result = await editMlxImage({ prompt: 'night', imagePath: src, outputPath: dir, filename: 'e.png' });
       assert.equal(result.success, true, result.error);
       assert.ok(urls.every((u) => !u.includes('/v1/images/edits')));
-      assert.equal(readFileSync(join(dir, 'e.png')).toString(), 'edited');
+      assert.equal(result.width, 1);
+      assert.equal(result.height, 1);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

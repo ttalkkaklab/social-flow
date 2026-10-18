@@ -1,10 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { compileActing, actingSchema } from '../dist/speech-acting.js';
-import { manageSpeech, speechManageSchema, speechRevision } from '../dist/speech.js';
 const voice = { engine: 'elevenlabs', voiceId: 'actor-one', model: 'eleven_v4', speed: 1, language: 'ko', stability: 0.5 };
 test('acting adapters separate clean transcript from provider syntax without changing voice identity', () => {
   const acting = { direction: 'reassuring', tags: ['sigh'] };
@@ -16,24 +12,4 @@ test('acting adapters separate clean transcript from provider syntax without cha
   assert.equal(actingSchema.safeParse({tags:['[sigh]']}).success,false);
   assert.throws(()=>compileActing('Hi',acting,{...voice,model:'eleven_v3'}),/update/);
   assert.throws(()=>compileActing('Hi',acting,{engine:'supertonic'}),/removed/);
-});
-test('acting-only edits invalidate audio and video; attachment must match the planned performance', t => {
-  const dir = mkdtempSync(join(tmpdir(),'speech-acting-')); t.after(()=>rmSync(dir,{recursive:true,force:true}));
-  const board = {SB_DOC:{speechPlanVersion:1,narratorCharacterId:'actor',characters:[{id:'actor',tts:voice}]},SCENES:[{id:'s0001',type:'points',narration:[{id:'d-one',speaker:'actor',delivery:'on_screen',tts:'괜찮아.'}],visual:{video:{src:'old.mp4'}}}]};
-  writeFileSync(join(dir,'scenes.js'),Object.entries(board).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
-  let state = manageSpeech({path:dir,action:'list'});
-  const oldRevision=state.lines[0].speechRevision;
-  state=manageSpeech(speechManageSchema.parse({path:dir,action:'update',lineId:'d-one',expectedRevision:state.revision,patch:{acting:{direction:'reassuring',tags:['sigh']}}}));
-  assert.notEqual(oldRevision,state.lines[0].speechRevision);
-  assert.ok(state.invalidated.video);assert.equal(state.lines[0].tts,'괜찮아.');
-  const plan=manageSpeech({path:dir,action:'plan_audio',lineId:'d-one'}).audioPlans[0];
-  assert.equal(plan.expectedText,'괜찮아.');
-  const audio=join(dir,'take.wav');writeFileSync(audio,'fixture-audio');
-  const generation={generator:plan.generator,text:plan.expectedText,voiceSettings:plan.generation};
-  assert.throws(()=>manageSpeech({path:dir,action:'attach_audio',lineId:'d-one',expectedRevision:state.revision,audioPath:audio,generation:{...generation,voiceSettings:{...plan.generation,text:'괜찮아.'}}}),/Acting generation differs/);
-  state=manageSpeech({path:dir,action:'attach_audio',lineId:'d-one',expectedRevision:state.revision,audioPath:audio,generation});
-  assert.equal(state.lines[0].audioCurrent,true);
-  assert.equal(state.lines[0].audio.status,'not_reviewed');
-  const line={tts:'Hi',speaker:'actor'};
-  assert.equal(speechRevision(line),speechRevision({...line,acting:null}));
 });

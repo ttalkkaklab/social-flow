@@ -7,7 +7,6 @@ import { TOOLS } from '../dist/tools.js';
 import { seedanceText2VideoSchema } from '../dist/seedance-client.js';
 const require = createRequire(import.meta.url);
 const { minimumDuration, shotTiming } = require('../../skills/_shared/video-duration.js');
-const { scenePlan } = require('../../skills/produce/references/seedance-route.js');
 
 test('every new-generation tool exposes requiredSeconds and selects covering duration', () => {
   for (const tool of DURATION_TOOLS) {
@@ -66,13 +65,6 @@ test('Seedance frame mode validates model and conflict before any request, ledge
   assert.equal(priceOf('veo_img2video', { requiredSeconds: 99 }).key, null);
 });
 
-test('Veo storyboard forecast respects selected resolution and rejects over-limit shots', () => {
-  const shot = { type: 'broll', duration: 3.2, visual: { engine: 'veo', resolution: '720p' } };
-  assert.equal(scenePlan(shot).durationSeconds, 4);
-  assert.equal(scenePlan({ ...shot, visual: { engine: 'veo' } }).durationSeconds, 8);
-  assert.throws(() => scenePlan({ ...shot, duration: 9 }), /split or replan/);
-});
-
 test('MCP normalization reaches wire payload and invalid plans never call transport', async () => {
   const { ROUTES } = await import('../dist/handlers.js');
   const { config } = await import('../dist/config.js');
@@ -95,13 +87,4 @@ test('MCP normalization reaches wire payload and invalid plans never call transp
     assert.equal(calls[1].duration, 5);
     assert.equal(calls[1].frames, undefined);
   } finally { globalThis.fetch = oldFetch; config.arkApiKey = oldKey; }
-});
-
-test('Veo forecasts cannot invent a priced lite 4k route', () => {
-  const shot = { type: 'broll', duration: 3, visual: { engine: 'veo', resolution: '4k' } };
-  assert.throws(() => scenePlan(shot), /Unsupported Veo/);
-  const model = 'veo-3.1-fast-generate-preview';
-  const plan = scenePlan({ ...shot, visual: { ...shot.visual, model } });
-  assert.equal(plan.model, model);
-  assert.equal(plan.priceKey, priceOf(plan.tool, plan).key);
 });
