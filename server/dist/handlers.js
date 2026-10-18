@@ -1,3 +1,5 @@
+import { IMAGE_ADAPTERS, imageCatalog } from './image-registry.js';
+import { planImage, imagePlanSummary, executeImage, routeLegacyImage, imageStatus } from './image-routing.js';
 import { videoStatus } from './video-routing.js';
 import { planVideo, executeVideo, routeLegacyVideo } from './video-routing.js';
 import { VIDEO_ADAPTERS, videoCatalog } from './video-registry.js';
@@ -695,7 +697,7 @@ export const ROUTES = {
                 summary += `\nFile save failed: ${formatError(saveError)}`;
             }
         }
-        return imageResult(summary, result.base64, result.mimeType);
+        return { ...imageResult(summary, result.base64, result.mimeType), imageReceipt: { usage: result.usage, requestId: result.requestId } };
     },
     gpt_image_img2img: async (args) => {
         const request = parseArgs(image.img2ImgSchema, args);
@@ -715,7 +717,7 @@ export const ROUTES = {
                 summary += `\nFile save failed: ${formatError(saveError)}`;
             }
         }
-        return imageResult(summary, result.base64, result.mimeType);
+        return { ...imageResult(summary, result.base64, result.mimeType), imageReceipt: { usage: result.usage, requestId: result.requestId } };
     },
     // Local generation (Z-Image Turbo) — runs on-device as a subprocess. No key, network, or billing.
     // Unlike gpt_image it carries no base64 block — this tool always writes a local
@@ -1414,3 +1416,12 @@ ROUTES.video_catalog = async () => text(JSON.stringify(videoCatalog(), null, 2))
 ROUTES.video_plan = async (args) => text(JSON.stringify(planVideo(args), null, 2));
 ROUTES.video_execute = args => executeVideo(args, dispatchVideo);
 ROUTES.video_status = async (args) => text(JSON.stringify(videoStatus(args), null, 2));
+// Existing tools are compatibility entrypoints into the same image service.
+const imageDispatch = Object.fromEntries(Object.keys(IMAGE_ADAPTERS).map(name => [name, ROUTES[name]]));
+const dispatchImage = (name, args) => imageDispatch[name](args);
+for (const name of Object.keys(IMAGE_ADAPTERS))
+    ROUTES[name] = args => routeLegacyImage(name, args, dispatchImage);
+ROUTES.image_catalog = async () => text(JSON.stringify(imageCatalog(), null, 2));
+ROUTES.image_plan = async (args) => text(JSON.stringify(imagePlanSummary(planImage(args)), null, 2));
+ROUTES.image_execute = args => executeImage(args, dispatchImage);
+ROUTES.image_status = async (args) => text(JSON.stringify(imageStatus(args), null, 2));
