@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {groupTextRows, percentileContrast} from '../../skills/produce/references/slide-legibility.mjs';
+import vm from 'node:vm';
+import {groupTextRows, percentileContrast, measureSlideDOM, roleFontFloor} from '../../skills/produce/references/slide-legibility.mjs';
 
 const glyph=(y,h=81.5,char='가',x=176)=>({x,y,w:56.78,h,char,px:68});
 test('six overlapping line boxes remain six rows (measured kinetic fixture)',()=>{
@@ -37,8 +38,6 @@ test('the 50 percent row boundary rejects both zero and full-overlap mutants',()
  assert.equal(groupTextRows([glyph(0,100),glyph(50.01,100)]).length,2);
 });
 
-import vm from 'node:vm';
-import {measureSlideDOM} from '../../skills/produce/references/slide-legibility.mjs';
 function measureStrokes(wide, values) {
  class SVGElement {}
  const elements=values.map(([role,px,name='line'])=>Object.assign(new SVGElement(),{id:role||'fallback',localName:name,dataset:role?{strokeRole:role}:{},px,parentElement:null,getClientRects:()=>[{}]}));
@@ -61,20 +60,39 @@ test('markers preserve glyph/focus strokes while unclassified lines retain struc
  }
 });
 
-import {createRequire} from 'node:module';
-const {render}=createRequire(import.meta.url)('../../skills/storyboard/references/chart-runtime.js');
-test('choropleth focus outlines use the structural hair floor in both formats',()=>{
- const data={chart:'map',values:[{label:'A',regionId:'a',value:25}],beats:[{focus:['A'],insight:'A'}],map:{mode:'choropleth',geojson:{type:'FeatureCollection',features:[{type:'Feature',id:'a',properties:{},geometry:{type:'Polygon',coordinates:[[[0,0],[2,0],[2,2],[0,2],[0,0]]]}}]}}};
- for(const wide of [false,true]){
-  const svg=render(data,{wide});
-  assert.match(svg,new RegExp('data-stroke-role="hair"[^>]*fill="none"[^>]*stroke-width="'+(wide?2:3)+'"'));
+// Only foot/description are emitted as data-type-role; label/title are value-contract locks.
+// kicker/word/word2 floors are covered through their selectors below.
+const floors={foot:[28,24],description:[44,32],label:[54,40],title:[76,56]};
+for(const [role,pair] of Object.entries(floors))test(`${['foot','description'].includes(role)?'emitted font role':'font value contract'} ${role} stays ${pair.join('/')}`,()=>{
+ for(const [i,wide] of [false,true].entries()){
+  assert.equal(roleFontFloor(role,wide),pair[i]);
+  if(!['foot','description'].includes(role))continue;
+  const el={id:'sample',dataset:{typeRole:role},parentElement:null,closest:s=>s==='[data-type-role]'?el:null,matches:()=>false};
+  const node={textContent:'A',parentElement:el};let read=false;
+  const context={window:{FORMAT:wide?'youtube-long-16x9':'shorts-9x16'},NodeFilter:{SHOW_TEXT:4},document:{getElementById:()=>({querySelectorAll:()=>[]}),createTreeWalker:()=>({nextNode:()=>read?null:(read=true,node)}),createRange:()=>({setStart(){},setEnd(){},getBoundingClientRect:()=>({x:0,y:0,width:10,height:20})})},getComputedStyle:()=>({display:'block',visibility:'visible',opacity:'1',fontSize:String(pair[i])})};
+  const measured=vm.runInNewContext(`(${measureSlideDOM})(${groupTextRows},${roleFontFloor})`,context);
+  assert.equal(measured.textSamples[0].floor,pair[i]);
+  assert.equal(measured.min_text_px.px,pair[i]);
+  assert.equal(measured.textSamples.filter(s=>s.px<s.floor).length,0);
  }
 });
 
-for(const chart of ['bar','dot','line','histogram'])test(`${chart} has a rule baseline and hair grid in both formats`,()=>{
- const data={chart,values:[{label:'A',value:10,date:'2020-01-01'},{label:'B',value:30,date:'2021-01-01'}],beats:[{focus:['A'],insight:'A'}]};
- for(const wide of [false,true]){
-  const lines=[...render(data,{wide}).matchAll(/<line data-stroke-role="([^"]+)"[^>]*stroke-width="([^"]+)"/g)];
-  assert.deepEqual(lines.slice(0,5).map(m=>[m[1],Number(m[2])]),[['rule',wide?4:6],...Array.from({length:4},()=>['hair',wide?2:3])]);
+function measureElement(selectors, role, wide, px) {
+ const el={id:'sample',dataset:role?{typeRole:role}:{},parentElement:null,closest:s=>s==='[data-type-role]'?(role?el:null):s.split(',').some(part=>selectors.includes(part))?el:null,matches:s=>selectors.includes(s)};
+ const node={textContent:'A',parentElement:el};let read=false;
+ const context={window:{FORMAT:wide?'youtube-long-16x9':'shorts-9x16'},NodeFilter:{SHOW_TEXT:4},document:{getElementById:()=>({querySelectorAll:()=>[]}),createTreeWalker:()=>({nextNode:()=>read?null:(read=true,node)}),createRange:()=>({setStart(){},setEnd(){},getBoundingClientRect:()=>({x:0,y:0,width:10,height:20})})},getComputedStyle:()=>({display:'block',visibility:'visible',opacity:'1',fontSize:String(px)})};
+ return vm.runInNewContext(`(${measureSlideDOM})(${groupTextRows},${roleFontFloor})`,context);
+}
+for(const [selector,pair] of [['#source',[28,24]],['.foot',[28,24]],['#eyebrow',[34,26]],['.kicker',[34,26]],['#insight',[44,32]],['.desc',[44,32]],['.sub',[44,32]],['.word2',[68,50]],['.word',[124,92]],['unclassified',[28,24]]])test(`font selection branch ${selector} picks the role floor in both formats`,()=>{
+ for(const [i,wide] of [false,true].entries()){
+  const normal=measureElement([selector],undefined,wide,pair[i]);
+  assert.equal(normal.textSamples[0].floor,pair[i]);
+  assert.equal(normal.textSamples.filter(s=>s.px<s.floor).length,0);
+  const small=measureElement([selector],undefined,wide,pair[i]-1);
+  assert.equal(small.textSamples.filter(s=>s.px<s.floor).length,1);
  }
+});
+test('explicit role contract precedence and reachable unknown-role fallback',()=>{
+ assert.equal(measureElement(['.word'],'label',false,54).textSamples[0].floor,54);
+ assert.equal(measureElement(['.word'],'unknown',true,92).textSamples[0].floor,92);
 });

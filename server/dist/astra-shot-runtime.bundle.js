@@ -3204,12 +3204,12 @@ var ZodTuple = class _ZodTuple extends ZodType {
     });
   }
 };
-ZodTuple.create = (schemas, params) => {
-  if (!Array.isArray(schemas)) {
+ZodTuple.create = (schemas2, params) => {
+  if (!Array.isArray(schemas2)) {
     throw new Error("You must pass an array of schemas to z.tuple([ ... ])");
   }
   return new ZodTuple({
-    items: schemas,
+    items: schemas2,
     typeName: ZodFirstPartyTypeKind.ZodTuple,
     rest: null,
     ...processCreateParams(params)
@@ -4209,6 +4209,22 @@ function contract() {
 function cameraContract() {
   return loadFromHere(join(REFERENCES_DIR, "production-mode.js"));
 }
+function techniqueContract() {
+  return loadFromHere(join(REFERENCES_DIR, "film-techniques.js"));
+}
+var techniqueSelectionSchema = external_exports.array(external_exports.object({
+  id: nonEmptyTechniqueId(),
+  reason: external_exports.string().trim().min(1).describe("Why this technique serves this shot\u2019s information or action")
+}).strict()).superRefine((value, ctx) => {
+  for (const message of techniqueContract().validate(value))
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+});
+function nonEmptyTechniqueId() {
+  return external_exports.string().trim().min(1).describe("Stable id from storyboard_read techniqueCatalog");
+}
+function motionThemeContract() {
+  return loadFromHere(join(REFERENCES_DIR, "motion-graphics.js"));
+}
 function motionGraphicTypes() {
   const registry = loadFromHere(join(REFERENCES_DIR, "motion-graphics.js"));
   return Object.keys(registry.TYPES);
@@ -4307,6 +4323,7 @@ var shotSchema = external_exports.object({
   chapter: external_exports.string().optional(),
   after: external_exports.number().int().nonnegative().optional(),
   shot: external_exports.object({
+    techniques: techniqueSelectionSchema.optional(),
     feel: external_exports.string().optional(),
     size: external_exports.string().optional(),
     angle: external_exports.string().optional(),
@@ -4328,7 +4345,15 @@ var shotSchema = external_exports.object({
       intent: external_exports.string().optional(),
       reason: external_exports.string().optional(),
       evidence: external_exports.enum(["data", "recording", "reenactment", "metaphor"]),
-      style: external_exports.object({ palette: external_exports.string(), reason: external_exports.string().optional() }).passthrough(),
+      style: external_exports.object({
+        palette: external_exports.string().optional(),
+        reason: external_exports.string().optional(),
+        theme: external_exports.object({
+          id: external_exports.string().refine((value) => value === "auto" || Object.hasOwn(motionThemeContract().THEMES, value), "unknown motion theme"),
+          context: external_exports.enum(["research", "software", "education", "campaign", "storytelling", "friendly"]).optional(),
+          reason: external_exports.string().optional()
+        }).passthrough().optional()
+      }).passthrough(),
       beats: external_exports.array(external_exports.object({ at: external_exports.number().min(0).max(1), action: external_exports.string() }).passthrough()).optional(),
       content: external_exports.record(external_exports.unknown()).optional()
     }).passthrough().optional(),
@@ -4341,6 +4366,7 @@ var storyboardReadSchema = external_exports.object({
   path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
   level: readLevelSchema.default("shots").describe("outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots = every shot summarised under its scene \xB7 full = the raw shot objects too"),
   shotId: external_exports.string().min(1).optional().describe("Stable shot ID to inspect, with its raw plan and neighboring shot IDs"),
+  includeTechniques: external_exports.boolean().default(true).describe("Return canonical technique ids, purposes, icons and provider instructions"),
   includeContext: external_exports.boolean().default(true).describe("Include STORY, PRODUCTION and SB_DOC as unverified review context")
 });
 var storyboardCheckSchema = external_exports.object({
@@ -4462,7 +4488,7 @@ var scenarioCheckResultSchema = external_exports.object({
 });
 
 // src/video-routing.ts
-import { createRequire as createRequire2 } from "node:module";
+import { createRequire as createRequire3 } from "node:module";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
 // src/config.ts
@@ -5047,7 +5073,7 @@ import * as path3 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.116.0",
+  version: "0.118.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -5056,7 +5082,7 @@ var package_default = {
     node: ">=20"
   },
   scripts: {
-    build: "tsc && node build-video-catalog.mjs && npm run bundle && npm run bundle:shot && npm run bundle:mesh",
+    build: "tsc && node build-video-catalog.mjs && node build-image-catalog.mjs && npm run bundle && npm run bundle:shot && npm run bundle:mesh",
     start: "node dist/index.js",
     test: "node --test test/*.test.mjs",
     check: "npm run build && npm test",
@@ -6207,6 +6233,28 @@ function requireOneSource(data, ctx) {
 var omniExtendSchema = external_exports.object({ ...continuationFields, durationSeconds: durationSchema2 }).superRefine(requireOneSource);
 var omniEditSchema = external_exports.object(continuationFields).superRefine(requireOneSource);
 
+// src/image-models.ts
+function mlxImageFamily(model = "") {
+  if (/qwen.*image.*2[.-]1/i.test(model)) return "qwen-2.1";
+  if (/mage[-_]?flow/i.test(model)) return /edit/i.test(model) ? "mage-edit" : "mage";
+  if (/krea[-_]?2/i.test(model)) return "krea";
+  if (/flux[.-]?2[-_]?klein/i.test(model)) return "flux-klein";
+  return "unknown";
+}
+function validateMlxImageOperation(model, operation, args) {
+  const family = mlxImageFamily(model);
+  if (operation === "edit" && !["flux-klein", "mage-edit", "qwen-2.1"].includes(family))
+    throw new Error("image_operation_unsupported: select an identified editing pack");
+  if (operation === "variation" && !["flux-klein", "krea"].includes(family))
+    throw new Error("image_operation_unsupported: this pack has no verified strength-based variation");
+  if (args.transparent === true && family !== "qwen-2.1")
+    throw new Error("image_transparency_unsupported: transparent requires Qwen-Image-2.1");
+  const refs = Array.isArray(args.refImagePaths) ? args.refImagePaths.length : 0;
+  if (refs > (family === "qwen-2.1" ? 9 : 3)) throw new Error("image_reference_limit");
+  if (family === "qwen-2.1" && /turbo/i.test(model || "") && args.steps !== void 0 && args.steps !== 8)
+    throw new Error("image_schedule_fixed: Qwen Turbo uses its saved 8-step schedule");
+}
+
 // src/mlx-serve-client.ts
 var MLX_LOAD_TIMEOUT_MS = 10 * 6e4;
 var MLX_IMAGE_TIMEOUT_MS = 15 * 6e4;
@@ -6232,9 +6280,9 @@ var MLX_VIDEO_FPS = 24;
 var MIN_MLX_MUSIC_SECONDS = 10;
 var MAX_MLX_MUSIC_SECONDS = 600;
 var DEFAULT_MLX_MUSIC_SECONDS = 30;
-var MAX_MLX_IMAGE_REFS = 3;
+var MAX_MLX_IMAGE_REFS = 9;
 var imageDimension = external_exports.number().int().min(MIN_MLX_IMAGE_DIMENSION).max(MAX_MLX_IMAGE_DIMENSION).refine((v) => v % MLX_IMAGE_DIMENSION_STEP === 0, {
-  message: `width/height must be a multiple of ${MLX_IMAGE_DIMENSION_STEP} (for 9:16 that's 1088\xD71920, not 1080\xD71920). FLUX.2-klein is fixed at 1024\xD71024 \u2014 pick a Krea/Mage-Flow model for other sizes.`
+  message: `width/height must be a multiple of ${MLX_IMAGE_DIMENSION_STEP} (for 9:16 that's 1088\xD71920, not 1080\xD71920). Model and installed backend may impose additional size constraints.`
 });
 var videoDimension = external_exports.number().int().min(MIN_MLX_VIDEO_DIMENSION).max(MAX_MLX_VIDEO_DIMENSION).refine((v) => v % MLX_VIDEO_DIMENSION_STEP_ONE_STAGE === 0, {
   message: `width/height must be a multiple of ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE} (LTX grid), and of ${MLX_VIDEO_DIMENSION_STEP} unless you pass pipeline:"one_stage". 1080 is on neither grid \u2014 use 1088\xD71920 or the default 768\xD71280.`
@@ -6242,26 +6290,46 @@ var videoDimension = external_exports.number().int().min(MIN_MLX_VIDEO_DIMENSION
 var mlxImageGenerateSchema = external_exports.object({
   prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
   model: external_exports.string().min(1).optional(),
+  transparent: external_exports.boolean().optional(),
   width: imageDimension.optional().default(DEFAULT_MLX_IMAGE_SIZE),
   height: imageDimension.optional().default(DEFAULT_MLX_IMAGE_SIZE),
-  steps: external_exports.number().int().min(1).max(50).optional(),
+  steps: external_exports.number().int().min(1).max(100).optional(),
   seed: external_exports.number().int().min(0).optional(),
   imagePath: external_exports.string().min(1).optional(),
   strength: external_exports.number().min(0).max(1).optional(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("image").optional()
+}).superRefine((value, ctx) => {
+  if (value.width === void 0 !== (value.height === void 0)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: "Send width and height together" });
+  if (value.model) {
+    try {
+      validateMlxImageOperation(value.model, "imagePath" in value && value.imagePath ? "refImagePaths" in value ? "edit" : "variation" : "text", value);
+    } catch (error) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: String(error) });
+    }
+  }
 });
 var mlxImageEditSchema = external_exports.object({
   prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
   imagePath: external_exports.string().min(1, "imagePath is required"),
   refImagePaths: external_exports.array(external_exports.string().min(1)).max(MAX_MLX_IMAGE_REFS).optional(),
   model: external_exports.string().min(1).optional(),
+  transparent: external_exports.boolean().optional(),
   width: imageDimension.optional(),
   height: imageDimension.optional(),
-  steps: external_exports.number().int().min(1).max(50).optional(),
+  steps: external_exports.number().int().min(1).max(100).optional(),
   seed: external_exports.number().int().min(0).optional(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("image").optional()
+}).superRefine((value, ctx) => {
+  if (value.width === void 0 !== (value.height === void 0)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: "Send width and height together" });
+  if (value.model) {
+    try {
+      validateMlxImageOperation(value.model, "edit", value);
+    } catch (error) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: String(error) });
+    }
+  }
 });
 var mlxMusicGenerateSchema = external_exports.object({
   prompt: external_exports.string().min(1, "Prompt is required").max(4e3),
@@ -6628,11 +6696,15 @@ function charUnits(args) {
 // src/video-pricing.ts
 var PRICE_FILE = fileURLToPath2(new URL("../../skills/autoproduce/references/prices.tsv", import.meta.url));
 
-// src/video-routing.ts
+// src/video-voice.ts
+import { createRequire as createRequire2 } from "node:module";
 var load = createRequire2(import.meta.url);
+
+// src/video-routing.ts
+var load2 = createRequire3(import.meta.url);
 var shared = fileURLToPath3(new URL("../../skills/_shared/video-selection.js", import.meta.url));
 var modelSettings = fileURLToPath3(new URL("../../skills/_shared/model-settings.js", import.meta.url));
-var routingContext = (episode, shotId) => load(shared).readVideoContext(episode, shotId);
+var routingContext = (episode, shotId) => load2(shared).readVideoContext(episode, shotId);
 var idSchema = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var videoPlanSchema = external_exports.object({
   episode: external_exports.string().min(1),
@@ -6671,8 +6743,8 @@ function compileActing(text, acting, voice) {
 }
 
 // src/tts-models.ts
-import { createRequire as createRequire4 } from "node:module";
-var shared2 = () => createRequire4(import.meta.url)("../../skills/_shared/tts-models.js");
+import { createRequire as createRequire5 } from "node:module";
+var shared2 = () => createRequire5(import.meta.url)("../../skills/_shared/tts-models.js");
 function resolveTtsModel(provider, model) {
   return shared2().resolveTtsModel(provider, model);
 }
@@ -6980,6 +7052,104 @@ function manageSpeech(args) {
   }
   return { revision: hash(readFileSync4(file)), changed, invalidated, plan, timing, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
+
+// src/video-sound.ts
+var effectSchema = external_exports.object({
+  id: external_exports.string().min(1).optional(),
+  description: external_exports.string().min(1).optional(),
+  trigger: external_exports.string().min(1).optional(),
+  delivery: external_exports.enum(["auto", "native", "input", "post"]).optional(),
+  sfx: external_exports.string().min(1).optional(),
+  atSeconds: external_exports.number().finite().nonnegative().optional(),
+  separationLu: external_exports.number().finite().min(0).max(30).optional(),
+  intensity: external_exports.enum(["subtle", "normal", "strong"]).optional()
+}).strict();
+var schemas = {
+  veo_text2video: text2VideoSchema,
+  veo_img2video: img2VideoSchema,
+  veo_reference: referenceVideoSchema,
+  veo_extension: videoExtensionSchema,
+  seedance_text2video: seedanceText2VideoSchema,
+  seedance_img2video: seedanceImg2VideoSchema,
+  seedance_reference: seedanceReferenceSchema,
+  astra_text2video: astraText2VideoSchema,
+  astra_img2video: astraImg2VideoSchema,
+  astra_audio2video: astraAudio2VideoSchema,
+  astra_keyframe_video: astraKeyframeVideoSchema,
+  omni_text2video: omniText2VideoSchema,
+  omni_img2video: omniImg2VideoSchema,
+  omni_extend: omniExtendSchema,
+  omni_edit: omniEditSchema
+};
+function prepareVideoSound(tool, input, sound = {}) {
+  const schema = schemas[tool];
+  if (!schema) throw new Error("Unsupported sound adapter: " + tool);
+  external_exports.string().min(1).parse(input.prompt);
+  const effects = external_exports.array(effectSchema).parse(sound.effects ?? []);
+  const ids = effects.flatMap((effect) => effect.id ? [effect.id] : []);
+  if (new Set(ids).size !== ids.length) throw new Error("Effect ids must be unique within the shot");
+  if (sound.audioSource !== void 0 && !["video", "speech"].includes(String(sound.audioSource)))
+    throw new Error("sound.audioSource must be video or speech");
+  const fixedInput = tool === "astra_audio2video";
+  let nativeAudio = !fixedInput;
+  if (tool.startsWith("seedance_")) {
+    const model = input.model ?? (tool === "seedance_reference" ? DEFAULT_SEEDANCE_REFERENCE_MODEL : DEFAULT_SEEDANCE_MODEL);
+    const spec = SEEDANCE_MODEL_SPECS[model];
+    if (!spec) throw new Error("Unknown Seedance model: " + String(model));
+    nativeAudio = spec.audio;
+  }
+  const resolved = effects.map((effect) => {
+    const requested = effect.delivery ?? (effect.sfx ? "post" : "auto");
+    const delivery2 = requested === "auto" ? nativeAudio && input.generateAudio !== false && sound.audioSource !== "speech" ? "native" : "post" : requested;
+    if (delivery2 === "native" && (!nativeAudio || input.generateAudio === false))
+      throw new Error("Native SFX unavailable in this mode or explicitly disabled; use post");
+    if (delivery2 === "input" && !fixedInput)
+      throw new Error("Input SFX require ASTRA audio2video; reference audio is not a preserved soundtrack");
+    if (delivery2 !== "post" && sound.audioSource === "speech")
+      throw new Error("Native/input SFX require audioSource=video; replacing it with speech discards the effects");
+    if (delivery2 !== "post" && (!effect.description || !effect.trigger))
+      throw new Error("Native/input effects need description and trigger");
+    return { ...effect, delivery: delivery2 };
+  });
+  const native = resolved.filter((effect) => effect.delivery === "native");
+  const conditioned = resolved.filter((effect) => effect.delivery === "input");
+  if (sound.audioSource === "video" && (input.generateAudio === false || !nativeAudio && !fixedInput))
+    throw new Error("audioSource=video conflicts with a silent output; select speech/post or enable supported audio");
+  if (native.length && /Audio:\s*silent\b/i.test(String(input.prompt)))
+    throw new Error("Native SFX conflict with Audio: silent in the prompt; revise the authored sound direction");
+  if (sound.sfx && resolved.some((effect) => effect.delivery !== "post" && effect.sfx === sound.sfx))
+    throw new Error("The same effect cannot belong to the native/input soundtrack and the legacy post cue");
+  const args = { ...input };
+  if ((native.length || conditioned.length || sound.audioSource === "video") && (tool.startsWith("seedance_") || tool.startsWith("astra_"))) {
+    if (input.generateAudio === false) throw new Error("Cannot discard the requested input soundtrack");
+    args.generateAudio = true;
+  }
+  const clauses = native.map((effect) => `${effect.trigger}: ${effect.description}.`);
+  const nativePrompt = `Audio: ${clauses.join(" ")} Only diegetic scene sounds.`;
+  if (clauses.length && !String(input.prompt).includes(nativePrompt)) args.prompt = `${input.prompt}
+${nativePrompt}`;
+  const inputPrompt = `The supplied non-speech sounds come from these actions, not mouths: ${conditioned.map((effect) => `${effect.trigger}: ${effect.description}`).join("; ")}.`;
+  if (conditioned.length && !String(args.prompt).includes(inputPrompt)) args.prompt = `${args.prompt}
+${inputPrompt}`;
+  const parsed = schema.parse(args);
+  const unknown = Object.keys(args).filter((key) => !(key in parsed));
+  if (unknown.length) throw new Error("Unsupported adapter arguments: " + unknown.join(", "));
+  const audioSource = native.length || conditioned.length ? "video" : sound.audioSource;
+  const warnings = [];
+  if (conditioned.length) warnings.push("Input effects must already be mixed into audioPath. This planner does not synthesize or mix them; inspect their action and mouth alignment.");
+  if (resolved.some((effect) => effect.delivery === "post" && (!effect.sfx || effect.atSeconds === void 0)))
+    warnings.push("Post effects need an asset and an observed shot-relative atSeconds before assembly.");
+  if (native.length) warnings.push("Native audio is a mixed soundtrack. Do not overlay a second dialogue track; inspect missing or unwanted effects before acceptance.");
+  return {
+    tool,
+    arguments: parsed,
+    sound: { ...sound, ...audioSource ? { audioSource } : {}, effects: resolved },
+    capabilities: { nativeAudio, inputAudio: fixedInput ? "preserved" : tool === "seedance_reference" ? "reference" : "none" },
+    warnings,
+    review: "not_reviewed",
+    generated: false
+  };
+}
 export {
   astraAudio2VideoSchema,
   astraImg2VideoSchema,
@@ -6988,6 +7158,7 @@ export {
   generateFromImage,
   generateFromKeyframes,
   manageSpeech,
+  prepareVideoSound,
   priceOf,
   readBoard,
   resolveVideoDuration,

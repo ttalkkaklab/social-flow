@@ -57,6 +57,12 @@ The composer's file/timing checks are not listening QA.
 
 ## Common voice layer
 
+Read [voice-continuity.md](voice-continuity.md) for the character-to-video handoff.
+`video_plan` compiles stable acoustic descriptions and available Seedance sample
+bindings from the pinned cast. Keep its voice-identity, dialogue, speaker-assignment
+and lip-sync findings separate. Native reference-voice imitation does not establish
+exact synchronization with a finished WAV, so the adapter table below still applies.
+
 Use [TTS routing](../../_shared/tts-routing.md) for model capabilities, pure payload
 planning and restart-safe execution. Raw synthesis tools share the execution checks;
 only `tts_route execute` accepts a stable request ID for replay protection.
@@ -206,19 +212,15 @@ the actual audio and video against these line directions and report evidence and
 differences. Code checks, prompts and still frames cannot certify prosody or continuous
 acting; keep media that was not played/listened to explicitly `not_reviewed`.
 
-For an explicitly requested paid audiovisual evaluation, `acting_review` can inspect a
-local clip against the actual scene direction and expected speech. Supply requestedBy and
-reason from that request, preserve the authorized budget, and call it only for that review
-scope. It prepares host-review evidence for the executing host to inspect (no upload to an
-external evaluator, host-review.md) and writes a receipt; it is never part of default speech
-generation. Receipts use a shared content-hash cache at `~/.cache/social-flow/acting-reviews`
-(or `SOCIAL_FLOW_ACTING_REVIEW_CACHE_DIR`), so copying a take does not create a new review.
-They are local provenance records, not tamper-proof attestations. Audio-only results do not
-certify facial expression, body action or lip sync.
-Reuse the receipt for unchanged media/direction, including a failing result; improve the
-take before evaluating it again. Report pass/fail/unverified and unresolved findings as
-returned. A requested 95-point target is an evaluation criterion, not permission to invent
-a passing score, reroll identical media, spend without a limit or block unrelated production.
+For an explicitly requested audiovisual review, prepare the evidence with `host_review`
+(`acting_review` is its legacy alias). It probes the local clip, extracts timestamped frames
+and returns `not_reviewed` evidence; the host then inspects it against the actual scene
+direction and expected speech. Nothing is uploaded and no external evaluator is called.
+Supply requestedBy from that request and call it only for that review scope; it is never
+part of default speech generation. Audio-only evidence does not certify facial expression,
+body action or lip sync. Report what the host actually observed, unresolved findings
+included. A requested 95-point target is an evaluation criterion, not permission to invent
+a passing score, reroll identical media or block unrelated production.
 
 ## Speech purpose boundaries
 

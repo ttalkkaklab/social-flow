@@ -928,7 +928,7 @@ and `camera-slide-template.html`; its image and effect parameters come from scen
 | `beat` | optional on long-form, required on a short | short: `hook` \| `drip` \| `cta`. long-form: `hook` \| `hooking` \| `result` \| `body` \| `turn` \| `cta` (`turn` on the story arc only). See §playback order above |
 | `arc` | long-form cover only | `answer-first` (default) \| `story` — which playback order a long-form episode walks. Ignored on a short. See §playback order above |
 | `shot` | recommended | `{ feel, size, angle, why, info, infoType, share, shareType, space }` — below. `feel` and `infoType` are written **before** `size`·`angle`·`space`·`camera` are chosen (directing-grammar §5) |
-| `sound` | optional | `{ cue, drop, sfx, ambience }` — what the audience hears under this shot (§music cues · §sound effects). Narrated shots only (`cover`, `points`, `quote`); `broll` and `outro` aren't cards, so there is nothing for a cue to key to |
+| `sound` | optional | `{ cue, drop, sfx, ambience, effects, audioSource }` — what the audience hears under this shot (§music cues · §sound effects). Cards only (`cover`, `points`, `quote`); `broll` and `outro` aren't cards. For model-owned effects and source audio, follow [model-aware effects](../../produce/references/video-sound.md). |
 
 ```js
 shot: {
@@ -1004,9 +1004,8 @@ shot: {
 - If `info` matches another shot in the same scene, that shot can be dropped. That's what
   coverage design is.
 - When you open on a close-up, pay back "where are we" with a wide or medium in the next shot.
-- **The close-up is rationed** — one close-up (`cu`·`choker`·`ecu`) per scene, `choker`/`ecu` once or twice per episode,
-  one `dutch` per episode with its reason written on the shot. The check strip warns past those
-  counts (directing-grammar §6).
+- Close-up and Dutch-angle use follows the scene's information and intended effect.
+  Legacy quota diagnostics are advice, not a success criterion or required frequency.
 - **Hook cuts and speech clips sit at `eye`** unless a reason is written — the one angle rule with
   a measurement behind it.
 - produce runs fine on an old `scenes.js` without these fields. Only the human document and the
@@ -1862,7 +1861,7 @@ The rules that applied to the old one-string camera line now apply per slot:
   → the pace lives in `speed`). Per move: a pan, tilt, truck, pedestal, dolly or zoom names two
   different pictures in `framing` and `end`; a whip pan carries its hit in `sound.sfx` or
   `visual.audio`; a dolly zoom names its direction, carries `shot.depth` deep with the planes
-  that stretch, keeps `shot.composition.movement` stationary, and is written once per episode
+  that stretch, keeps `shot.composition.movement` stationary, and has a scene-specific purpose
   (`[dolly-zoom-twice]`). Warnings: a dolly zoom over 5 s, a whip pan over 4 s, a `fast` pan
   or tilt (24 fps strobing against vertical lines).
 - **Vendor vocabulary only** — `dolly in` not `push in`, `arc shot` not `orbit`. `push` appears 0
@@ -1870,7 +1869,7 @@ The rules that applied to the old one-string camera line now apply per slot:
   background is a previz cut on Seedance and has no Veo route, §motion background).
 - **`movement` holds one move.** Two is the ceiling on 1.5 Pro (a b-roll or speech slot that landed on Seedance), and the
   one-move-per-cut rule is Seedance 2.0's alone — write a second move only with a reason. On a
-  deliberate long take (10s+) it is one, no exception.
+  deliberate long take (10s+) start with one clear move; compound moves need a supported adapter and explicit path.
 - **No seconds in any slot** — length is `duration` (§cut length).
 - **A move the viewer can see, on a generated shot.** `very slow`, `subtle`, `gentle`, `tiny`,
   `slight`, `barely`, `restrained`, `quiet`, `hold composition` and `breathing only` are refused
@@ -1878,8 +1877,8 @@ The rules that applied to the old one-string camera line now apply per slot:
   got clips whose every frame repeats the last. Write `slow`/`steady`/`fast`, or `static` on
   purpose. `visual.video.cameraFixed:true` is legal only under `movement: "static"`. The still
   lane keeps its own ladder (`very slow` for explain) — its move is the builder's, not the model's.
-  Full video adds episode rules: static on at most one shot in three, never twice in a row, and
-  wide framing on at most half (full-video.md §Camera dynamics).
+  Consecutive static or wide shots are valid when they serve the action. Judge actual
+  subject motion and legibility rather than imposing a camera-motion quota.
 - **No exclusions in any slot** — that is Veo's `negativePrompt` argument, and for Seedance it
   means re-describing the scene so the thing doesn't appear (§motion background).
 - **The move is chosen from `shot.feel`, and it supports the feel rather than carrying it.**
@@ -3840,6 +3839,30 @@ New boards follow [character-led scenarios](character-scenarios.md). `narration[
 production speech array for both dialogue and narration, with explicit `speaker` IDs. Shot
 `performance` records ordered actions and speech-group references; STORY references use event
 indices. A silent action can deliver the opening, payoff or close. The thesis need not be spoken.
+
+
+### Semantic technique selections
+
+`shot.techniques` stores `[{id, reason}]` selected from `film-techniques.js`.
+The id names a real technique; reason explains this shot's information or action.
+The catalogue covers character references, camera movement/angle/viewpoint/focus,
+framing and timing. Each entry owns a distinct SVG, label, use, instruction and
+legacy field mapping. `storyboard_read` returns it by default; the HTML exporter
+ships `film-techniques.js` and `film-techniques.json` offline beside `scenes.js`.
+
+Select one starting framing and one timing purpose, plus the references and camera
+attributes actually needed. Do not select every technique to increase variety.
+Keep `shot.size`, `shot.angle`, `visual.camera` and selected techniques consistent.
+Angles, focus and viewpoint may coexist with movement. `camera.rack-focus` is
+independent of `camera.static`; selecting both means a fixed camera shifting focus.
+The video prompt compiler includes selected camera instructions. Character and
+framing entries describe source-image requirements; timing examples never override
+measured speech/performance or provider duration constraints. Unknown ids fail input
+validation; creative conflicts are advisory and remain visible for correction.
+
+Canonical sizes: MFS = mid-thigh; MS = waist-up; MCU = chest-up. Old composition
+keys remain readable; new shots use the distance key and spell out OTS/two-shot/POV
+in framing. Editing a selection does not certify or regenerate existing media.
 
 ## Motion graphic plan (version 1)
 

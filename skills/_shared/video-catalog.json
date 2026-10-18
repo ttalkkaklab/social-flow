@@ -6,6 +6,13 @@
       "engine": "veo",
       "deployment": "gemini-api",
       "operation": "text",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
       "fields": [
         "prompt",
         "negativePrompt",
@@ -35,6 +42,13 @@
       "engine": "veo",
       "deployment": "gemini-api",
       "operation": "image",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
       "fields": [
         "prompt",
         "negativePrompt",
@@ -66,6 +80,13 @@
       "engine": "veo",
       "deployment": "gemini-api",
       "operation": "reference",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
       "fields": [
         "prompt",
         "referenceImagePaths",
@@ -94,6 +115,13 @@
       "engine": "veo",
       "deployment": "gemini-api",
       "operation": "extend",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "source_final_second",
+        "review": "not_reviewed"
+      },
       "fields": [
         "prompt",
         "sourceVideoPath",
@@ -121,6 +149,13 @@
       "engine": "seedance",
       "deployment": "byteplus",
       "operation": "text",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
       "fields": [
         "prompt",
         "model",
@@ -347,6 +382,13 @@
       "engine": "seedance",
       "deployment": "byteplus",
       "operation": "image",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
       "fields": [
         "prompt",
         "model",
@@ -575,6 +617,13 @@
       "engine": "seedance",
       "deployment": "byteplus",
       "operation": "reference",
+      "voice": {
+        "voiceReference": "model_dependent",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
       "fields": [
         "prompt",
         "model",
@@ -805,6 +854,13 @@
       "engine": "astra",
       "deployment": "self-hosted-ltx",
       "operation": "text",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
       "fields": [
         "prompt",
         "tier",
@@ -834,6 +890,13 @@
       "engine": "astra",
       "deployment": "self-hosted-ltx",
       "operation": "image",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
       "fields": [
         "prompt",
         "tier",
@@ -865,6 +928,13 @@
       "engine": "astra",
       "deployment": "self-hosted-ltx",
       "operation": "keyframe",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
       "fields": [
         "prompt",
         "images",
@@ -890,6 +960,13 @@
       "engine": "astra",
       "deployment": "self-hosted-ltx",
       "operation": "audio",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "audio_conditioned_reencoded",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
       "fields": [
         "prompt",
         "audioPath",
@@ -923,6 +1000,13 @@
       "engine": "astra",
       "deployment": "self-hosted-ltx",
       "operation": "control",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
       "fields": [
         "prompt",
         "adapter",
@@ -950,6 +1034,13 @@
       "engine": "astra",
       "deployment": "self-hosted-ltx",
       "operation": "retake",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
       "fields": [
         "prompt",
         "sourceVideoPath",
@@ -969,6 +1060,13 @@
       "engine": "omni",
       "deployment": "gemini-interactions",
       "operation": "text",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
       "fields": [
         "prompt",
         "aspectRatio",
@@ -987,6 +1085,13 @@
       "engine": "omni",
       "deployment": "gemini-interactions",
       "operation": "image",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
       "fields": [
         "prompt",
         "sourceImagePath",
@@ -1007,6 +1112,13 @@
       "engine": "omni",
       "deployment": "gemini-interactions",
       "operation": "extend",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "previous_interaction_id",
+        "review": "not_reviewed"
+      },
       "fields": [
         "prompt",
         "previousInteractionId",
@@ -1026,6 +1138,13 @@
       "engine": "omni",
       "deployment": "gemini-interactions",
       "operation": "edit",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
       "fields": [
         "prompt",
         "previousInteractionId",
@@ -1044,6 +1163,13 @@
       "engine": "mlx",
       "deployment": "local-mlx",
       "operation": "text",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
       "fields": [
         "prompt",
         "model",

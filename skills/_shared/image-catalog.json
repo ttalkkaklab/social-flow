@@ -1,0 +1,174 @@
+{
+  "version": 1,
+  "revision": "2026-10-18",
+  "adapters": [
+    {
+      "tool": "gpt_image_text2img",
+      "engine": "gpt-image",
+      "operation": "text",
+      "fields": [
+        "prompt",
+        "model",
+        "size",
+        "quality",
+        "background",
+        "outputFormat",
+        "savePath"
+      ]
+    },
+    {
+      "tool": "gpt_image_img2img",
+      "engine": "gpt-image",
+      "operation": "edit",
+      "fields": [
+        "prompt",
+        "sourceImagesBase64",
+        "sourceMimeType",
+        "maskBase64",
+        "model",
+        "size",
+        "quality",
+        "background",
+        "outputFormat",
+        "inputFidelity",
+        "savePath"
+      ]
+    },
+    {
+      "tool": "image_local_generate",
+      "engine": "zimage",
+      "operation": "text",
+      "fields": [
+        "prompt",
+        "width",
+        "height",
+        "steps",
+        "seed",
+        "quantize",
+        "outputPath",
+        "filename"
+      ]
+    },
+    {
+      "tool": "mlx_image_generate",
+      "engine": "mlx",
+      "operation": "text",
+      "fields": [
+        "prompt",
+        "model",
+        "transparent",
+        "width",
+        "height",
+        "steps",
+        "seed",
+        "imagePath",
+        "strength",
+        "outputPath",
+        "filename"
+      ]
+    },
+    {
+      "tool": "mlx_image_edit",
+      "engine": "mlx",
+      "operation": "edit",
+      "fields": [
+        "prompt",
+        "imagePath",
+        "refImagePaths",
+        "model",
+        "transparent",
+        "width",
+        "height",
+        "steps",
+        "seed",
+        "outputPath",
+        "filename"
+      ]
+    }
+  ],
+  "gptModels": [
+    "gpt-image-2",
+    "gpt-image-1.5",
+    "gpt-image-1",
+    "gpt-image-1-mini",
+    "gpt-image-2-2026-04-21",
+    "gpt-image-1.5-2025-12-16"
+  ],
+  "gptContracts": {
+    "gpt-image-2": {
+      "shutdown": null,
+      "flexibleSize": true,
+      "transparency": "preview",
+      "fidelity": [],
+      "rates": {
+        "text": 5,
+        "image": 8,
+        "output": 30
+      }
+    },
+    "gpt-image-1.5": {
+      "shutdown": "2026-12-01",
+      "flexibleSize": false,
+      "transparency": "supported",
+      "fidelity": [
+        "low",
+        "high"
+      ],
+      "rates": {
+        "text": 5,
+        "image": 8,
+        "output": 32
+      }
+    },
+    "gpt-image-1": {
+      "shutdown": "2026-10-23",
+      "flexibleSize": false,
+      "transparency": "supported",
+      "fidelity": [
+        "low",
+        "high"
+      ],
+      "rates": {
+        "text": 5,
+        "image": 10,
+        "output": 40
+      }
+    },
+    "gpt-image-1-mini": {
+      "shutdown": "2026-12-01",
+      "flexibleSize": false,
+      "transparency": "supported",
+      "fidelity": [
+        "low"
+      ],
+      "rates": {
+        "text": 2,
+        "image": 2.5,
+        "output": 8
+      }
+    }
+  },
+  "mlx": {
+    "families": [
+      "flux-klein",
+      "krea",
+      "mage",
+      "mage-edit",
+      "qwen-2.1"
+    ],
+    "note": "Installed pack and backend determine availability. Unknown packs support basic text only until capabilities are registered; use image_plan."
+  },
+  "host": {
+    "execution": "host_handoff",
+    "model": "host-managed",
+    "note": "External tools/allowance are not enforced by MCP. No API fallback."
+  },
+  "unimplemented": [
+    "gpt-image-2.5-sunburst",
+    "gpt-image-2.5-flare",
+    "bfl-api",
+    "krea-api",
+    "qwen-model-studio",
+    "xai-images-api"
+  ]
+}

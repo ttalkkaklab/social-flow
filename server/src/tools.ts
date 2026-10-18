@@ -1,7 +1,9 @@
+import { GPT_IMAGE_MODELS } from './image-models.js';
+import { IMAGE_ADAPTERS } from './image-registry.js';
 import { VIDEO_ADAPTERS } from './video-registry.js';
 import { DURATION_TOOLS } from './video-duration.js';
 import { CHANNEL_SLUG_RE } from './config.js';
-import { cameraContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
+import { techniqueContract, cameraContract, motionThemeContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 
@@ -971,6 +973,9 @@ const shotCameraInput = (() => {
   catch { return { type: 'object', description: 'Camera contract unavailable: restore skills/storyboard/references/production-mode.js' }; }
 })();
 const enumInput = (values: string[] | undefined, description: string) => ({ type: 'string', ...(values?.length ? { enum: values } : {}), description });
+const techniqueIds = (() => { try { return techniqueContract().entries.map(entry => String(entry.id)); } catch { return []; } })();
+
+const motionThemes = (() => { try { return Object.keys(motionThemeContract().THEMES); } catch { return []; } })();
 const motionTypes = (() => { try { return motionGraphicTypes(); } catch { return []; } })();
 const purposes = (() => { try { return renderPurposes(); } catch { return []; } })();
 const stillCameraEffects = (() => { try { return stillCameraEffectList(); } catch { return []; } })();
@@ -1003,7 +1008,11 @@ const storyboardShotInput = {
       type: 'object', additionalProperties: true,
       description: 'Shot grammar and production route. Render mode chooses how to build the shot; visual.camera chooses how it is filmed; shot.depth chooses how many planes the viewer may read at once (L11).',
       properties: {
-        size: { type: 'string', description: 'Framing size. Recommended vocabulary is in the directing skill.' },
+        techniques: { type: 'array', description: 'Authored choices from storyboard_read techniqueCatalog. Persist each technique id and this shot’s reason. Match size/angle/camera fields to its fields; provider prompts consume its instructions. Icons do not verify actual footage.', items: { type: 'object', additionalProperties: false, required: ['id','reason'], properties: {
+          id: { type: 'string', ...(techniqueIds.length ? { enum: techniqueIds } : {}), description: 'Stable semantic technique id, including independent focus and viewpoint choices.' },
+          reason: { type: 'string', minLength: 1, description: 'The visible information or action that motivates this selection.' },
+        } } },
+        size: { type: 'string', description: 'Canonical framing size: mfs=mid-thigh, ms=waist-up. Keep two-shot/POV roles in separate technique or framing prose.' },
         angle: { type: 'string', description: 'Camera angle. Recommended vocabulary is in the directing skill.' },
         infoType: { type: 'string', description: 'Information carried by the shot; must agree with its purpose. Recommended vocabulary is in the directing skill.' },
         feel: { type: 'string', description: 'What the viewer should feel before choosing framing and movement.' },
@@ -1014,7 +1023,7 @@ const storyboardShotInput = {
             version: { type: 'integer', enum: [1], description: 'Motion plan schema version.' }, type: enumInput(motionTypes, 'Semantic motion family, independent of palette and transition effects.'),
             intent: { type: 'string', description: 'One viewer takeaway.' }, reason: { type: 'string', description: 'Content-specific choice and rejected alternative.' },
             evidence: enumInput(['data', 'recording', 'reenactment', 'metaphor'], 'Evidence provenance; never present a mock UI as an actual recording.'),
-            style: { type: 'object', description: 'Palette and subject-specific visual direction.', additionalProperties: true, properties: { palette: enumInput(['editorial','botanical','plum','midnight'], 'Built-in palette; retain channel identity.'), reason: { type: 'string', description: 'Why this visual direction suits the subject.' } } },
+            style: { type: 'object', description: 'Palette and subject-specific visual direction.', additionalProperties: true, properties: { theme: { type: 'object', additionalProperties: true, required: ['id'], description: 'Coherent motion design system. Use auto for contextual selection; an explicit id overrides automatic selection. storyboard_apply persists the resolved theme and reason.', properties: { id: enumInput(['auto', ...motionThemes], 'Theme selection, independent of semantic motion type.'), context: enumInput(['research','software','education','campaign','storytelling','friendly'], 'Communication context; overrides the type-based default in auto mode.'), reason: {type:'string',description:'Why an explicit theme suits the audience and subject.'} } }, palette: enumInput(['editorial','botanical','plum','midnight'], 'Built-in palette; retain channel identity.'), reason: { type: 'string', description: 'Why this visual direction suits the subject.' } } },
             beats: { type: 'array', description: 'Editorial timing intentions; authored slides can implement custom timing.', items: { type: 'object', description: 'One meaningful change.', required: ['at','action'], properties: { at: { type: 'number', minimum: 0, maximum: 1, description: 'Normalized shot time, zero to one.' }, action: { type: 'string', description: 'Visible change or result-reading hold.' } } } },
             content: { type: 'object', additionalProperties: true, description: 'Type-specific source data; see motion-graphics.md. Preserve exact source values.' }
           }
@@ -1096,6 +1105,29 @@ const CHARACTER_TARGET_PROPERTY = { type: 'object', additionalProperties: false,
   ...Object.fromEntries(['timbre','pace','register','habits','emotionalRange'].map(key=>[key,{type:['string','null'],maxLength:2000,description:`Confirmed character ${key}, e.g. low clear voice or measured phrasing; null means unknown.`}])),
   traits: {type:'array',maxItems:20,description:'Character tendencies as context, e.g. ["restrained and precise"]. Do not demand every trait in one short line.',items:{type:'string',maxLength:2000}}
 }, required:['vocalGender','perceivedAge','timbre','pace','register','habits','emotionalRange','traits'] };
+
+/**
+ * MCP server instructions (InitializeResult.instructions). With tool search on, Claude Code
+ * loads only tool names and this text at session start, so this is how the model learns
+ * which of ~100 names to search for and which route a job takes. Claude Code cuts it at
+ * 4,096 characters, so the routing comes first. Every backticked tool name is checked
+ * against TOOLS by the contract test.
+ */
+export const SERVER_INSTRUCTIONS = `social-flow plans, produces and publishes short- and long-form videos for SNS channels. When tool definitions are deferred, search by task using the words at the end.
+
+Start: \`capability_status\` shows which providers are configured on this machine; \`project_manage\` holds the saved project settings (models, visual style, ratio, SNS targets). Reuse saved choices instead of asking again.
+
+Episode video: \`video_catalog\` → \`video_plan\` → \`video_execute\`, and \`video_status\` after an interruption. The provider tools (veo_*, seedance_*, astra_*, omni_*, mlx_video_generate) are the adapters that route calls; call one directly only when the user names it.
+
+Storyboard: \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_route\` and the tts_* tools generate. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
+
+Images: \`image_catalog\` → \`image_plan\` → \`image_execute\`, then \`image_status\` after interruption. Preserve the saved model choice; legacy image adapters require imageContext for configured production. Host selections remain external handoffs. Music: music_*, suno_*. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
+
+SNS: run \`sns_account_check\` first; publish tools appear only for platforms with a credential file. \`threads_publish\`, \`instagram_publish\`, \`facebook_publish\`, \`youtube_publish\` and \`sns_comment_reply\` are public the moment they run — call them only with the user's approval for that post or inside a growth-plan.md standing authorization.
+
+Spending: generation tools bill the provider and write the episode ledger. Saved defaults and budget caps are not approval to spend; stay inside the authorization the user gave.
+
+Search words: 영상 video clip, 이미지 image, 음성 TTS narration voice, 음악 BGM music, 효과음 SFX, 스토리보드 storyboard, 업로드 게시 publish, 댓글 comment, 인사이트 insights, 트렌드 topic research.`;
 
 export const TOOLS: Tool[] = [
   {
@@ -1251,7 +1283,7 @@ export const TOOLS: Tool[] = [
 },
   {
     name: 'tts_review_acting', title: 'Explicitly requested adversarial audio review', annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: "Create local review evidence for the host LLM. Use for requested listening, acting or camera review. Returns status=not_reviewed, score=null, mediaPath, timestamped frame paths when visual, SHA256, duration in seconds, rubric and nextAction; it does not judge or upload media. Open evidence with native host capabilities and record observations with host_review. Unsupported modalities remain unverified. Do NOT use for synthesis \u2014 use the selected raw generator. No external evaluation call or automatic fallback.",
+    description: "Legacy alias of host_review prepare for one speech take (audioPath, expectedText, direction, optional characterTarget): returns local evidence for the host LLM to listen to. Use only when an existing plan or script already calls tts_review_acting after the user asked for an acting review of a line; new reviews use host_review. Returns status=not_reviewed, score=null, mediaPath, SHA256, duration in seconds, rubric and nextAction; outputPath is ignored. It does not judge, upload or call an external evaluator. Do NOT use for synthesis — use speech_manage and the selected generator.",
     inputSchema: { type: 'object', additionalProperties: false, properties: {
       audioPath: { type: 'string', description: 'Actual local audio path.' }, expectedText: { type: 'string', maxLength: 4000, description: 'Clean expected spoken words, without acting tags.' },
       direction: { type: 'string', maxLength: 2000, description: 'Requested scene intent and audible performance changes.' }, language: { type: 'string', default: 'ko', description: 'Spoken language.' },
@@ -1627,13 +1659,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend — use bl
     name: 'gpt_image_text2img',
     title: 'Image generation (text → image)',
     annotations: HINT.generate,
-    description: `Generate an image from a text prompt using OpenAI GPT Image models.
-
-Use when the image must contain legible text — posters, labels, UI mockups, signage, title cards — or when a quality boost over the local default is worth paying for. The local engine breaks Korean glyphs (measured: "딸깍연구소" came out as "달닥연구소"); every text-bearing image belongs here. Strengths: reliable text rendering inside the image, strong photorealism, and exact custom WIDTHxHEIGHT resolutions (e.g. "1088x1920" for 9:16 — gpt-image-2 only, edges multiple of 16).
-Do NOT use as the first choice for text-free images (cover backgrounds, b-roll, draft exploration) — the plugin's default path is image_local_generate (local Z-Image, free); this tool bills per image. Do NOT use to edit or compose existing images — use gpt_image_img2img.
-Note: gpt-image-2 (default) does NOT support transparent backgrounds; transparent requires the deprecated gpt-image-1/1.5 and png/webp output. Size/quality/background constraints are enforced per model — see each parameter.
-
-Returns: the generated image as MCP image content (always base64), plus a text block with model, size, quality, and the saved file path when savePath is given.`,
+    description: 'Generate one image with the selected OpenAI GPT Image API model. Use for a new image; use gpt_image_img2img for references or masks. OPENAI_API_KEY required; billed text/image input and output. Saved image selection takes precedence over default recommendations. GPT Image 2 transparency is preview; retired models fail without substitution. Returns base64 image, saved path when requested, and provider usage receipt. For configured production use image_plan/image_execute or imageContext.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1645,7 +1671,7 @@ Returns: the generated image as MCP image content (always base64), plus a text b
         model: {
           type: 'string',
           description: 'OpenAI GPT Image model (default: "gpt-image-2")',
-          enum: ['gpt-image-2', 'gpt-image-1.5', 'gpt-image-1', 'gpt-image-1-mini'],
+          enum: [...GPT_IMAGE_MODELS],
           default: 'gpt-image-2',
         },
         size: {
@@ -1663,7 +1689,7 @@ Returns: the generated image as MCP image content (always base64), plus a text b
         background: {
           type: 'string',
           description:
-            'Background mode (default: "opaque"). "transparent" is NOT supported by gpt-image-2 (use gpt-image-1 / gpt-image-1.5) and requires a png or webp output.',
+            'Background mode (default: "opaque"). "transparent" requires PNG/WebP; GPT Image 2 support is preview.',
           enum: ['opaque', 'transparent', 'auto'],
           default: 'opaque',
         },
@@ -1685,13 +1711,7 @@ Returns: the generated image as MCP image content (always base64), plus a text b
     name: 'gpt_image_img2img',
     title: 'Image edit & compose (image → image)',
     annotations: HINT.generate,
-    description: `Edit or compose images using OpenAI GPT Image models (multi-reference + optional mask).
-
-Use when the user asks to inpaint a masked region, combine multiple reference images (1-16 via sourceImagesBase64) into one output, or edit while preserving fine input details such as faces and logos (이미지 합성, 인페인팅, 이미지 수정, 배경 교체).
-Do NOT use for text-to-image from scratch — use gpt_image_text2img.
-Mask: optional PNG with alpha channel, same dimensions as the first source image; fully transparent pixels are the regions to regenerate (applied to the first image only). gpt-image-2 (default) always runs at high input fidelity — do not pass inputFidelity for it.
-
-Returns: the edited image as MCP image content (always base64, in the requested outputFormat), plus a text block with model, size, quality, mask/fidelity flags, and the saved file path when savePath is given.`,
+    description: 'Edit or compose an image with up to 16 references and an optional PNG mask using OpenAI GPT Image. Use gpt_image_text2img for text-only generation. OPENAI_API_KEY required; billed input and output. inputFidelity: low/high for 1 and 1.5, low only for mini, omit for 2. Transparent output requires PNG/WebP. Returns image and provider usage. Saved selection is binding; use imageContext for configured production.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1720,7 +1740,7 @@ Returns: the edited image as MCP image content (always base64, in the requested 
         model: {
           type: 'string',
           description: 'OpenAI GPT Image model (default: "gpt-image-2")',
-          enum: ['gpt-image-2', 'gpt-image-1.5', 'gpt-image-1', 'gpt-image-1-mini'],
+          enum: [...GPT_IMAGE_MODELS],
           default: 'gpt-image-2',
         },
         size: {
@@ -1738,7 +1758,7 @@ Returns: the edited image as MCP image content (always base64, in the requested 
         background: {
           type: 'string',
           description:
-            'Background mode (default: "opaque"). "transparent" is NOT supported by gpt-image-2 (use gpt-image-1 / gpt-image-1.5) and requires a png or webp output.',
+            'Background mode (default: "opaque"). "transparent" requires PNG/WebP; GPT Image 2 support is preview.',
           enum: ['opaque', 'transparent', 'auto'],
           default: 'opaque',
         },
@@ -1750,7 +1770,7 @@ Returns: the edited image as MCP image content (always base64, in the requested 
         },
         inputFidelity: {
           type: 'string',
-          description: 'How strongly to preserve fine details (faces, logos, layout) of the input images. Only for gpt-image-1 / gpt-image-1.5 (API default: "low"). Do NOT set for gpt-image-2 (always high fidelity, parameter rejected) or gpt-image-1-mini (unsupported).',
+          description: 'How strongly to preserve fine details (faces, logos, layout) of the input images. Use low/high for gpt-image-1 or 1.5, low only for mini. Omit for gpt-image-2 and its snapshot (always high fidelity).',
           enum: ['high', 'low'],
         },
         savePath: {
@@ -1765,13 +1785,7 @@ Returns: the edited image as MCP image content (always base64, in the requested 
     name: 'image_local_generate',
     title: 'Image generation (local · Z-Image — default)',
     annotations: HINT.generateLocal,
-    description: `Generate an image from a text prompt **on this machine** using Z-Image Turbo (6B, Apache 2.0) via mflux — no API key, no network, no per-image cost.
-
-This is the DEFAULT image generation path of this plugin. Use for any text-free image: cover backgrounds, b-roll stills, branding drafts, mood exploration, bulk candidate batches (이미지 생성, 커버 배경). Measured on this class of machine (M4 Max): 1024×1024 in ~2–3.5 min and 1088×1920 (9:16) in ~7.5 min under heavy load — minutes, not seconds, with 32–39GB peak memory; avoid running alongside video renders.
-Do NOT use when the image must contain legible text — Korean glyphs break (measured: "딸깍연구소" rendered as "달닥연구소"); any text-bearing image (poster, label, title card) and any quality-critical shot goes to gpt_image_text2img instead. Do NOT use to edit existing images — gpt_image_img2img.
-Requires mflux (\`uv tool install --python 3.12 mflux\`; Apple Silicon only); set MFLUX_ZIMAGE_BIN if the binary lives elsewhere. The first call downloads the ~31GB weight repository to ~/.cache/huggingface — the tool extends its own timeout by an hour for that download, so a very slow first call is normal, not stuck.
-
-Returns: a text block with the saved .png path, resolution, steps, seed, quantization, and generation time.`,
+    description: 'Generate a text-only image locally with Z-Image Turbo via mflux. Requires the mflux executable and downloaded model weights; first use may download weights. No per-call API bill. This adapter does not expose upstream img2img or LoRA. Use the saved engine; never automatically substitute gpt_image_text2img after failure. Korean text quality requires inspection. Returns a local PNG path and requested generation settings. Use imageContext for configured production.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1828,13 +1842,7 @@ Returns: a text block with the saved .png path, resolution, steps, seed, quantiz
     name: 'mlx_image_generate',
     title: 'Image generation (local · MLX Core)',
     annotations: HINT.generateLocal,
-    description: `Generate an image on this machine via MLX Core / mlx-serve (HTTP to 127.0.0.1:11234). No vendor bill. This plugin never launches the app — if :11234 is down the call fails closed with a brew install --cask mlx-core hint.
-
-Use as an optional local image lane when MLX Core is running and an image model is downloaded (FLUX.2-klein is fixed at 1024×1024; Krea/Mage-Flow accept any multiple of ${MLX_IMAGE_DIMENSION_STEP} in ${MIN_MLX_IMAGE_DIMENSION}–${MAX_MLX_IMAGE_DIMENSION}, so 9:16 is 1088×1920 not 1080×1920). Optional imagePath is img2img (strength 0–1).
-Do NOT use as the default path — that stays image_local_generate (Z-Image). Do NOT use when the image must contain legible Korean text — Hangul still goes to gpt_image_text2img (measured: local engines break jamo). Do NOT POST /v1/load-model with default:true; this tool never does that, because it would steal the chat model the app is serving. Shares the GPU with Z-Image (32–39GB peak) and LTX video — don't run them together.
-Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve on PATH (or MLX_SERVE_URL). A non-loopback bind may need MLX_SERVE_API_KEY.
-
-Returns: a text block with the saved .png path, model, size, and generation time.`,
+    description: 'Generate a local image or a supported strength-based variation through a running MLX Core / mlx-serve. No vendor bill; this plugin never launches the app. Model IDs come from the installed server. Known family capabilities are checked; Mage uses mlx_image_edit instead of variation. transparent is available only for Qwen-Image-2.1 and compatible server versions. Saved engine choice wins; gpt_image_text2img is a separate paid adapter. Returns a path and measured output dimensions. Use imageContext for configured production.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1898,13 +1906,7 @@ Returns: a text block with the saved .png path, model, size, and generation time
     name: 'mlx_image_edit',
     title: 'Image edit (local · MLX Core)',
     annotations: HINT.generateLocal,
-    description: `Edit an existing image on this machine via MLX Core / mlx-serve. Posts JSON to /v1/images/generations with mode:"edit" (not multipart /v1/images/edits). No vendor bill. This plugin never launches the app.
-
-Use when you have a source PNG to change and MLX Core is running with an image-edit model. Up to ${MAX_MLX_IMAGE_REFS} extra reference images (refImagePaths). image_local_generate (Z-Image) has no edit lane, so this is the local alternative to gpt_image_img2img.
-Do NOT use for text-to-image from scratch — use mlx_image_generate or image_local_generate. Do NOT use when the result must contain legible Korean text — that stays gpt_image_img2img / gpt_image_text2img. Do NOT treat this as the default image path.
-Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve on PATH (or MLX_SERVE_URL). brew install --cask mlx-core if :11234 is down.
-
-Returns: a text block with the saved .png path, model, and generation time.`,
+    description: 'Edit a local source image through MLX Core / mlx-serve, using JSON mode:edit. Select an identified FLUX.2-klein, Mage-Flow Edit or Qwen-Image-2.1 pack. Qwen accepts 9 additional references, other known packs 3. Krea supports variations through mlx_image_generate, not this editing contract. No vendor bill; no automatic app launch or gpt_image_img2img fallback. Returns saved PNG and actual output dimensions; requested size may be a pixel budget. Use imageContext for configured production.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -3498,8 +3500,8 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
 
   // ── Speech synthesis (Google Gemini TTS — ported from the fect-mcp tts module) ─────────
   {
-    name: 'tts_review_final', title: 'Prepare host-review evidence for assembled speech', annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: "Create local review evidence for the host LLM when a listening, acting or camera review was requested; nothing listens, scores or transcribes automatically. Returns status=not_reviewed, score=null, mediaPath, timestamped frame paths when visual, SHA256, duration in seconds, rubric and nextAction; it does not judge or upload media. Open evidence with native host capabilities and record observations with host_review. Unsupported modalities remain unverified. Do NOT use for synthesis \u2014 use the selected raw generator. No external evaluation call or automatic fallback.",
+    name: 'tts_review_final', title: 'Review assembled speech', annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    description: "Legacy alias of host_review prepare for the assembled episode audio (mediaPath of the final media, the full expectedText, optional segments): returns local evidence for the host LLM to listen to end to end. Use only when the user asks for a final listening review and an existing plan already calls tts_review_final; new reviews use host_review. Returns status=not_reviewed, score=null, mediaPath, SHA256, duration in seconds, rubric, nextAction and the segments as sent. It does not judge, upload or call an external evaluator, and assembly never waits on it. Do NOT use for synthesis.",
     inputSchema: { type: 'object', additionalProperties: false, properties: {
       mediaPath: { type: 'string', description: 'Absolute path of the final media that ships.' },
       segments: { type: 'array', minItems: 1, maxItems: 1000, description: 'Optional: complete spoken sentences in playback order on the final timeline. First starts at 0; each extends to the next start (last to audio EOF), at most 60 seconds each. Joined text must equal expectedText. Returned with the evidence so the host review can check chapter boundaries of a long episode.', items: { type: 'object', additionalProperties: false, required: ['startSeconds','expectedText'], properties: { startSeconds: { type: 'number', minimum: 0, description: 'Start of this complete sentence on the final audio timeline; the first is 0.' }, expectedText: { type: 'string', minLength: 1, maxLength: 1000, description: 'Complete spoken sentence, including intended phonetic number/name spelling.' } } } },
@@ -5068,7 +5070,7 @@ Returns revision, ordered matching lines with generationPlan and voice/audio has
     name: 'acting_review',
     title: 'Review performance or cinematography from actual media',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: "Create local review evidence for the host LLM. Use for requested listening, acting or camera review. Returns status=not_reviewed, score=null, mediaPath, timestamped frame paths when visual, SHA256, duration in seconds, rubric and nextAction; it does not judge or upload media. Open evidence with native host capabilities and record observations with host_review. Unsupported modalities remain unverified. Do NOT use for synthesis \u2014 use the selected raw generator. No external evaluation call or automatic fallback.",
+    description: "Legacy alias of host_review prepare for one clip or audio file: probes the media, extracts timestamped frames when visual and returns evidence for the host LLM to inspect. Use only when an existing plan or script already calls acting_review for a requested performance or cinematography review (mode audiovisual, audio or video; focus performance or cinematography); new reviews use host_review. Returns status=not_reviewed, score=null, mediaPath, SHA256, duration in seconds, rubric and nextAction. It does not judge or upload media. Unsupported modalities remain unverified. No external evaluation call. Do NOT use for synthesis — use the selected raw generator.",
     inputSchema: {
       type: 'object', additionalProperties: false, properties: {
         mediaPath: { type: 'string', minLength: 1, description: 'Local clip/audio file, e.g. /Volumes/data/story/meleon/test/shot-21.mp4.' },
@@ -5088,6 +5090,8 @@ Returns revision, ordered matching lines with generationPlan and voice/audio has
     annotations: HINT.local,
     description: `Read an episode's scenes.js and return it as a tree: sequences (purpose · question · payoff) → scenes (place · time · event · charge · turn · out) → shots (stable id · ordered actions and attributed speech · feel · info · render · character/location/prop references · media plan). Reads the file only; no API call.
 
+The default techniqueCatalog provides the four filmmaking elements and per-technique selection guidance. Store intentional choices as shot.techniques:[{id,reason}] and keep existing camera/size/angle fields consistent.
+
 Use it before editing an existing board, and after storyboard_apply to see the board the way the approval page groups it. level=outline is enough to plan a change; level=full carries every raw shot object (large — one shot is ~40 fields).
 Do NOT use it to validate — storyboard_check runs the contract. A board with no window.STRUCTURE comes back with every shot under unplacedShots; write the structure with storyboard_apply.
 
@@ -5100,6 +5104,7 @@ Returns: JSON — { file, mediaBaseDirectory, sha256, version, format, shots, se
         path: { type: 'string', description: 'The storyboard directory (data/<channel>/episodes/<topic>/storyboard/) or its scenes.js' },
         level: { type: 'string', enum: ['outline', 'scenes', 'shots', 'full'], description: 'outline = sequences with scene numbers · scenes = scene cards with shot numbers · shots (default) = every shot summarised under its scene · full = raw shot objects too' },
         shotId: { type: 'string', description: 'Stable shot ID; adds raw selectedShot with scene and neighboring IDs without removing the overall flow. Unknown or duplicate IDs fail.' },
+        includeTechniques: { type: 'boolean', description: 'Default true: return canonical techniqueCatalog with ids, purposes, unique icons, provider instructions, current selections and conflicting-plan advice.' },
         includeContext: { type: 'boolean', description: 'Default true: return STORY, PRODUCTION and SB_DOC for character, background, prop and scenario inspection. Recorded evidence is not verified by this read.' },
       },
       required: ['path'],
@@ -5153,7 +5158,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         removeShotIds: { type: 'array', items: { type: 'string', pattern: '^s\\d{4,}$', description: 'A stable shot id' }, description: 'Shot ids to drop (resolved before inserts). Not with the position fields in the same patch' },
         removeScenes: { type: 'array', items: { type: 'number', description: 'Scene number' }, description: 'Scene numbers to drop from STRUCTURE.scenes and from every sequence' },
         removeSequences: { type: 'array', items: { type: 'string', description: 'Sequence id' }, description: 'Sequence ids to drop' },
-        globals: { type: 'object', description: 'Other window.* blocks to set — FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. MUSIC.$mix is optional sound-design metadata; SFX keeps logical asset ids only. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1.' },
+        globals: { type: 'object', description: 'Other window.* blocks to set — FORMAT, THEME (motionGraphicTheme: {id: auto or theme id, context?, reason?} sets the common motion theme; explicit shot ids or contexts override it), COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. MUSIC.$mix is optional sound-design metadata; SFX keeps logical asset ids only. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1.' },
         expectedSha256: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'Current scenes.js hash from storyboard_read; required when editing propSheet on an existing board.' },
         propSheet: { type: 'object', additionalProperties: false, required: ['props'], description: 'Replace the complete prop sheet atomically. Keep other editorial metadata. Changes validate story-time custody and invalidate approval; original file is backed up.', properties: {
           props: { type: 'array', description: 'Complete prop registry for this board', items: { type: 'object', additionalProperties: true, required: ['id'], properties: {
@@ -5263,7 +5268,7 @@ for (const tool of TOOLS) {
 TOOLS.push(
   { name: 'video_catalog', title: 'Inspect installed video adapters', description: 'List installed video adapter contracts, deployment identifiers and supported operations. Read-only; no generation or live authentication probe. Use before video_plan; model availability is configuration, not a successful API test.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } },
-  { name: 'video_plan', title: 'Plan a video with saved model settings', description: 'Prepare an episode video request from its saved model selection and explicit overrides. Validates the adapter payload and local input files, pins prices and input hashes, and saves a plan without generating media. Returns plan ID, selected tool, provenance and reserved-cost estimate; unsupported routes fail without fallback. Use video_execute after reviewing the plan under existing spending authorization.',
+  { name: 'video_plan', title: 'Plan a video with saved model settings', description: 'Prepare an episode video request from saved model selection and explicit overrides. Compiles pinned character voice descriptions and Seedance voice-reference mappings, reports voiceContinuity limits without claiming a listening review, validates the final adapter payload, and pins prices and local input hashes. No media generation. Returns a plan ID, provenance and cost estimate; use video_execute under existing spending authorization. Re-plan after speech, voice or reference edits. Exact supplied-speech synchronization is separate from native voice imitation.',
     inputSchema: { ...videoContextSchema, properties: { ...videoContextSchema.properties,
       operation: { type: 'string', enum: ['text','image','reference','audio','keyframe','control','extend','edit','retake'], description: 'Operation; the selected engine determines the tool.' },
       tool: { type: 'string', description: 'Optional exact installed adapter tool, checked against the saved selection.' },
@@ -5278,3 +5283,39 @@ TOOLS.push({ name: 'video_status', title: 'Read a saved video request receipt',
   description: 'Read the local status, reservation, provider request ID and cached result of a managed video request. Does not contact a provider or resubmit. Use after interruption; ambiguous requests keep their reservation until explicit provider and billing reconciliation.',
   inputSchema: { type: 'object', additionalProperties: false, properties: { episode: { type: 'string', description: 'Absolute episode directory.' }, requestId: { type: 'string', description: 'Original logical request ID from video_plan.' } }, required: ['episode','requestId'] },
   annotations: { readOnlyHint: true, openWorldHint: false } });
+
+const imageContextSchema = { type: 'object' as const, additionalProperties: false,
+  properties: { directory: { type: 'string', description: 'Absolute episode or configured workspace directory.' },
+    assetId: { type: 'string', description: 'Stable shot or asset ID.' }, requestId: { type: 'string', description: 'Stable logical attempt ID; reuse on retry.' },
+    reserveUsd: { type: 'number', minimum: 0, description: 'Positive total input+output estimate for API calls; zero for local/host. Not a provider invoice cap.' } },
+  required: ['directory', 'assetId', 'requestId'] };
+for (const tool of TOOLS) {
+  if (!IMAGE_ADAPTERS[tool.name]) continue;
+  tool.inputSchema.properties = { ...tool.inputSchema.properties, imageContext: { ...imageContextSchema, description: 'Managed image context: binds saved selection, spending limits and duplicate protection.' } };
+  if (tool.name.startsWith('mlx_image_')) {
+    Object.assign(tool.inputSchema.properties, { transparent: { type: 'boolean', description: 'Qwen-Image-2.1 only; preserve native PNG alpha. Requires compatible installed backend.' } });
+    const steps = tool.inputSchema.properties.steps as Record<string, unknown>;
+    steps.maximum = 100;
+    steps.description = 'Requested steps (1–100). Qwen 2.1 Turbo accepts only 8; actual backend schedule may differ.';
+  }
+}
+TOOLS.push(
+  { name: 'image_catalog', title: 'Inspect image adapters and models',
+    description: 'Read installed image adapter contracts, model retirement dates and capability boundaries. No provider request or model loading. Research-only APIs are listed as unimplemented. Use image_plan to validate a concrete request.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } },
+  { name: 'image_plan', title: 'Plan an image with saved selection',
+    description: 'Prepare an image request for an episode or workspace asset. Resolves saved selection and explicit overrides, checks adapter capabilities and image inputs, pins hashes and an API reservation estimate, then saves a local plan. No generation. Returns plan ID and provenance without echoing base64 inputs. Host plans require external handoff. Use image_execute for server adapters.',
+    inputSchema: { ...imageContextSchema, properties: { ...imageContextSchema.properties,
+      operation: { type: 'string', enum: ['text', 'edit', 'variation'], description: 'Requested operation; selected model determines its adapter.' },
+      tool: { type: 'string', description: 'Optional exact adapter name; must match saved selection.' },
+      args: { type: 'object', additionalProperties: true, description: 'Adapter fields. Saved model/quality are inherited; conflicting or unknown fields fail.' } } },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false } },
+  { name: 'image_execute', title: 'Execute an authorized image plan',
+    description: 'Execute a saved image plan with atomic budget/concurrency reservations and duplicate protection. Revalidates selection, input hashes and adapter contract before dispatch. Records provider usage, actual output dimensions/hash and not_reviewed quality. Completed requests reuse receipts; ambiguous submissions never auto-retry. API execution incurs charges; host plans cannot run here.',
+    inputSchema: { type: 'object', additionalProperties: false, properties: { directory: { type: 'string', description: 'Absolute directory from image_plan.' }, planId: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'Saved plan ID.' } }, required: ['directory', 'planId'] },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true } },
+  { name: 'image_status', title: 'Inspect or reconcile an image receipt',
+    description: 'Read a local image receipt without contacting providers. action:reconcile closes a submission_unknown or interrupted submitting request as failed only after the caller supplies terminal/billing evidence and spentUsd. It does not resubmit, certify quality or recover a missing image. Completed requests are immutable. Do not reconcile a request still running at the provider.',
+    inputSchema: { type: 'object', additionalProperties: false, properties: { directory: { type: 'string', description: 'Absolute directory.' }, requestId: { type: 'string', description: 'Original request ID.' }, action: { type: 'string', enum: ['read', 'reconcile'], description: 'Defaults to read.' }, executorStopped: { type: 'boolean', description: 'Required true to reconcile submitting: verify the executor has exited and provider is terminal. A live local owner is rejected.' }, evidence: { type: 'string', description: 'For reconcile: actual terminal status and billing evidence reference.' }, spentUsd: { type: 'number', minimum: 0, description: 'For reconcile: verified total charge, including failed generation.' } }, required: ['directory', 'requestId'] },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false } },
+);

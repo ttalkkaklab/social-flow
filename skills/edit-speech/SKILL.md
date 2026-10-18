@@ -7,7 +7,7 @@ description: >
   Finds stable shot and line ids, preserves other characters and reports affected outputs.
   Storyboard plans a new episode; produce builds it; this skill repairs an existing one.
 argument-hint: "<channel> <episode> <shot, character or quoted line> <change>"
-allowed-tools: ["mcp__social-flow__host_review", "mcp__social-flow__tts_voice_design", "mcp__social-flow__tts_list_voices", "mcp__social-flow__speech_manage", "mcp__social-flow__acting_review", "mcp__social-flow__tts_review_acting", "mcp__social-flow__storyboard_read", "mcp__social-flow__storyboard_check", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__astra_audio2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__veo_reference"]
+allowed-tools: ["mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__tts_voice_design", "mcp__plugin_social-flow_social-flow__tts_voice_design", "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "mcp__social-flow__acting_review", "mcp__plugin_social-flow_social-flow__acting_review", "mcp__social-flow__tts_review_acting", "mcp__plugin_social-flow_social-flow__tts_review_acting", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__storyboard_check", "mcp__plugin_social-flow_social-flow__storyboard_check", "mcp__social-flow__tts_generate", "mcp__plugin_social-flow_social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__plugin_social-flow_social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__astra_audio2video", "mcp__plugin_social-flow_social-flow__astra_audio2video", "mcp__social-flow__seedance_reference", "mcp__plugin_social-flow_social-flow__seedance_reference", "mcp__social-flow__veo_reference", "mcp__plugin_social-flow_social-flow__veo_reference"]
 ---
 Follow [host evaluation](../_shared/host-review.md) for every requested review.
 
@@ -19,6 +19,16 @@ For model routing, follow [model settings](../_shared/model-settings.md). Correc
 reuse the episode's snapshot, explicit overrides and pinned speaker voice; a newer
 directory default does not change an existing take's model. Change it only when
 the user requests that change. Never silently fall back to another speech engine.
+
+When the user asks to apply the current character sheet, read that character's
+shared `voice-selection.json` and identity `tts`, then compare engine, model and
+voice ID with `SB_DOC.characters`. That request authorizes updating the named
+characters' episode voice pins; a stale episode pin is not the requested voice.
+Back up the board, record the scoped change and regenerate affected requested
+media. Assert that each `plan_audio` result and actual generation receipt match
+the selected sheet before attaching audio. Report other affected episode lines
+as stale if they are outside the requested rebuild. A sample-only voice edit or
+an unrelated directory-default change still preserves existing episode pins.
 
 Use `speech_manage action:list` on the existing board. Filter by shotId, speaker id/name,
 or quoted text. Shot numbers are display positions; stable shotId and lineId are the edit
@@ -78,8 +88,9 @@ new character dialogue or voices. Do not silently turn a user's dialogue into na
 If the user explicitly requests testing or an adversarial improvement loop, review the
 actual media as authorized and preserve the measured findings. A schema or planning pass
 does not establish improved acting; report unheard/unplayed output as `not_reviewed`.
-An explicitly requested paid evaluation may use `acting_review` under the authorized
-budget, as described in the speech contract. Do not call it in ordinary edit-speech runs.
+An explicitly requested review prepares evidence with `host_review` (`acting_review` and
+`tts_review_acting` are its legacy aliases); no external evaluator is called. Do not call
+them in ordinary edit-speech runs.
 
 Generation receipts keep actual API arguments in voiceSettings. For Gemini,
 which has no language argument, put the declared text language in generation.language

@@ -21,17 +21,18 @@ argument-hint: "<channel> [init|tick|status]"
 # forbidden (§Absolute rules 1).
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
   "WebSearch", "WebFetch",
-  "mcp__social-flow__sns_account_check", "mcp__social-flow__sns_comment_inbox",
-  "mcp__social-flow__youtube_insights", "mcp__social-flow__youtube_publish",
-  "mcp__social-flow__youtube_update", "mcp__social-flow__sns_comment_reply",
-  "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search",
-  "mcp__social-flow__serp_news_search", "mcp__social-flow__youtube_topic_scout",
-  "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img",
-  "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit",
-  "mcp__social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue",
-  "mcp__social-flow__tts_list_voices",
-  "mcp__social-flow__veo_img2video",
-  "mcp__social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate"]
+  "mcp__social-flow__sns_account_check", "mcp__plugin_social-flow_social-flow__sns_account_check", "mcp__social-flow__sns_comment_inbox", "mcp__plugin_social-flow_social-flow__sns_comment_inbox",
+  "mcp__social-flow__youtube_insights", "mcp__plugin_social-flow_social-flow__youtube_insights", "mcp__social-flow__youtube_publish", "mcp__plugin_social-flow_social-flow__youtube_publish",
+  "mcp__social-flow__youtube_update", "mcp__plugin_social-flow_social-flow__youtube_update",
+  "mcp__social-flow__sns_comment_reply", "mcp__plugin_social-flow_social-flow__sns_comment_reply",
+  "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search",
+  "mcp__social-flow__serp_news_search", "mcp__plugin_social-flow_social-flow__serp_news_search", "mcp__social-flow__youtube_topic_scout", "mcp__plugin_social-flow_social-flow__youtube_topic_scout",
+  "mcp__social-flow__image_local_generate", "mcp__plugin_social-flow_social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__plugin_social-flow_social-flow__gpt_image_text2img",
+  "mcp__social-flow__mlx_image_generate", "mcp__plugin_social-flow_social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__plugin_social-flow_social-flow__mlx_image_edit",
+  "mcp__social-flow__tts_generate", "mcp__plugin_social-flow_social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_dialogue",
+  "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices",
+  "mcp__social-flow__veo_img2video", "mcp__plugin_social-flow_social-flow__veo_img2video",
+  "mcp__social-flow__music_generate_clip", "mcp__plugin_social-flow_social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate", "mcp__plugin_social-flow_social-flow__mlx_music_generate"]
 ---
 **Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 

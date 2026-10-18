@@ -1,6 +1,6 @@
 'use strict';
 
-// Planning constraints mirror the server table; seedance-routing.test.mjs checks drift.
+// Planning constraints mirror the server table; seedance-route.test.mjs checks drift.
 const MODELS = {
   'seedance-1-5-pro-251215': { family: '1-5-pro', duration: [4, 12], resolutions: ['480p', '720p', '1080p'], images: 0, videos: 0, audio: true },
   'dreamina-seedance-2-0-260128': { family: '2-0', duration: [4, 15], resolutions: ['480p', '720p', '1080p', '4k'], images: 9, videos: 3, audio: true },
@@ -15,7 +15,7 @@ const { checkFrames, framePlan, previzHandoff } = require('../../storyboard/refe
 
 // A model may render a resolution the price table has no row for. Forecasting silently drops
 // such a shot, so the plan is rejected here instead. Mirrors autoproduce/references/prices.tsv;
-// seedance-routing.test.mjs checks the drift.
+// seedance-route.test.mjs checks the drift.
 const PRICED = new Set([
   'seedance.1-0-pro-fast.1080p', 'seedance.1-0-pro-fast.720p',
   'seedance.1-5-pro-silent.1080p', 'seedance.1-5-pro-silent.720p',

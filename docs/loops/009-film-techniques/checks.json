@@ -1,0 +1,24 @@
+{
+  "fullCheck": {
+    "command": "npm run check --prefix server",
+    "tests": 2218,
+    "passed": 2218,
+    "failed": 0,
+    "log": "/tmp/film-full-check5.log"
+  },
+  "skillLint": {
+    "command": "node skills/platform-guide/references/skill-lint.js",
+    "log": "/tmp/film-skill-lint-final.log"
+  },
+  "installedSmoke": "/tmp/film-installed-existing-smoke.log",
+  "techniqueRead": {
+    "shots": 28,
+    "catalog": 45,
+    "selections": 170,
+    "findings": []
+  },
+  "guideStyle": {
+    "method": "ASTRA checker on HTML-extracted Korean prose, line by line; whole-HTML scan interrupted after pathological runtime",
+    "findings": []
+  }
+}

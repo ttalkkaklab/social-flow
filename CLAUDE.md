@@ -288,6 +288,33 @@ Save episodes under `data/<channel>/episodes/<topic>/storyboard/`. Use the bundl
 HTML template and local scenes.js. Keep approvals, research and production records
 locally. Follow `skills/storyboard/references/storyboard-design.md`.
 
+## Tests — few, one file per module (user directive, 2026-10-18)
+
+`server/test/` grew from 9 files on 2026-08-23 to 126 files and 2,314 cases on
+2026-10-18, mostly because every task added its own file named after its directive.
+This section overrides the test-writing defaults of TDD, test-scenario and similar skills.
+
+- **One file per module.** `render-routing.js` (or `render-routing.ts`) is tested in
+  `server/test/render-routing.test.mjs`. Add cases to the module's file; create a file
+  only for a new module. `test-layout.test.mjs` fails on a test file whose name matches
+  no module and lists the few cross-cutting exceptions.
+- **Test what changed.** Add a case only for behavior the change adds or alters and no
+  existing case covers. A bug fix adds one regression case. A directive is not a test
+  list: don't restate CLAUDE.md or a skill as assertions, and don't test skill prose.
+- **Removed behavior takes its tests with it.** When a directive drops a gate, delete
+  the gate's cases. Add a "never requires X" case only after X actually came back.
+- **Assert structure, not prose.** Check a finding's level or code, returned fields or
+  the exit status. Match message wording only where the wording is the contract.
+- **Cheapest level that proves it.** Call the function directly. Keep one spawned-CLI or
+  ffmpeg case per command path, on synthetic fixtures a few frames long.
+- **No real waiting.** `npm test` runs in about 30 s. Advance the clock instead of
+  sleeping through polls and rate limits (see the top of `astra-video-client.test.mjs`)
+  and clear every timer a case starts.
+- **Readable over DRY.** Inputs that decide the result stay in the test body. Shared
+  setup is a factory with defaults, not a `beforeEach` that hides them.
+
+Background and sources: `docs/research/2026-10-18-test-class-practices/README.md`.
+
 ## GitHub authentication
 
 For this repository, prefer `TTALKKAKLAB_GITHUB_TOKEN`. Apply it to both `GH_TOKEN`

@@ -1,0 +1,25 @@
+{
+  "surface": "report",
+  "kind": "md",
+  "chars": 2409,
+  "sentences": 24,
+  "findings": [],
+  "quoted_findings": 0,
+  "metrics": [
+    {
+      "id": "M-long",
+      "line": 1,
+      "label": "장문 부재 — 24문장 중 최장 5자 (90자 넘는 문장이 없다)",
+      "detail": [
+        "같은 길이의 문장이 이어지면 기계 낭독처럼 들린다. 설명이 이어지는 대목 한둘은 붙여서 길게 쓴다."
+      ],
+      "penalty": 5
+    }
+  ],
+  "score": 95,
+  "s1": 0,
+  "s2": 0,
+  "s3": 0,
+  "verdict": "PASS",
+  "exit_code": 0
+}

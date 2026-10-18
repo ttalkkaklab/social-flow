@@ -27,6 +27,17 @@ before deciding whether regeneration is needed. Prompt refresh does not authoriz
 
 ## 1. Which engine, and why
 
+For server image calls, follow [image routing](../../_shared/image-routing.md).
+Read `image_catalog`, plan the exact operation, then execute the saved plan. Existing
+raw tools accept `imageContext`; configured production cannot bypass selection using
+a raw tool. The same service handles episode shots and workspace branding assets.
+The catalog and adapter contracts supersede historical model-capability claims in
+this recipe. Saved choice always wins over the initial recommendations below.
+GPT Image 2 supports preview transparency; mini accepts low input fidelity. MLX
+editing, strength-based variation and alpha support differ by installed model family.
+Do not add unexposed options or infer model quality from a successful contract check.
+
+
 First resolve [directory model settings](../../_shared/model-settings.md). Use the
 episode snapshot's image engine/model/quality and explicit user overrides for every
 new still. The host preference and API table below are first-setup recommendations

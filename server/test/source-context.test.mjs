@@ -71,7 +71,7 @@ test('silent fiction and legacy direct calls need no new fields',()=>{
   assert.match(result.sourcePrompt,/Opening state: The boy holds a closed book/);
   assert.doesNotMatch(result.sourcePrompt,/spokenMeaning/);
   const legacy=bg.assemble({size:'ms',scene:'A closed book.',tail:''});
-  assert.equal(legacy.prompt,'medium shot, frame bottom at mid-thigh, at eye level. A closed book.');
+  assert.equal(legacy.prompt,'medium shot, waist up, at eye level. A closed book.');
   assert.deepEqual(legacy.hits,[]);
 });
 

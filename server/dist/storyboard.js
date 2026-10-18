@@ -49,6 +49,20 @@ export function contract() {
 export function cameraContract() {
     return loadFromHere(join(REFERENCES_DIR, 'production-mode.js'));
 }
+export function techniqueContract() {
+    return loadFromHere(join(REFERENCES_DIR, 'film-techniques.js'));
+}
+export const techniqueSelectionSchema = z.array(z.object({
+    id: nonEmptyTechniqueId(),
+    reason: z.string().trim().min(1).describe('Why this technique serves this shot’s information or action'),
+}).strict()).superRefine((value, ctx) => {
+    for (const message of techniqueContract().validate(value))
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+});
+function nonEmptyTechniqueId() { return z.string().trim().min(1).describe('Stable id from storyboard_read techniqueCatalog'); }
+export function motionThemeContract() {
+    return loadFromHere(join(REFERENCES_DIR, 'motion-graphics.js'));
+}
 export function motionGraphicTypes() {
     const registry = loadFromHere(join(REFERENCES_DIR, 'motion-graphics.js'));
     return Object.keys(registry.TYPES);
@@ -159,6 +173,7 @@ export const shotSchema = z
     after: z.number().int().nonnegative().optional(),
     shot: z
         .object({
+        techniques: techniqueSelectionSchema.optional(),
         feel: z.string().optional(),
         size: z.string().optional(),
         angle: z.string().optional(),
@@ -179,7 +194,13 @@ export const shotSchema = z
             type: z.string().refine(value => motionGraphicTypes().includes(value), 'unknown motion graphic type'),
             intent: z.string().optional(), reason: z.string().optional(),
             evidence: z.enum(['data', 'recording', 'reenactment', 'metaphor']),
-            style: z.object({ palette: z.string(), reason: z.string().optional() }).passthrough(),
+            style: z.object({ palette: z.string().optional(), reason: z.string().optional(),
+                theme: z.object({
+                    id: z.string().refine(value => value === 'auto' || Object.hasOwn(motionThemeContract().THEMES, value), 'unknown motion theme'),
+                    context: z.enum(['research', 'software', 'education', 'campaign', 'storytelling', 'friendly']).optional(),
+                    reason: z.string().optional(),
+                }).passthrough().optional(),
+            }).passthrough(),
             beats: z.array(z.object({ at: z.number().min(0).max(1), action: z.string() }).passthrough()).optional(),
             content: z.record(z.unknown()).optional(),
         }).passthrough().optional(),
@@ -195,6 +216,7 @@ export const storyboardReadSchema = z.object({
     path: z.string().min(1).describe('The storyboard directory, or its scenes.js'),
     level: readLevelSchema.default('shots').describe('outline = sequences with scene numbers · scenes = scene cards with shot numbers · shots = every shot summarised under its scene · full = the raw shot objects too'),
     shotId: z.string().min(1).optional().describe('Stable shot ID to inspect, with its raw plan and neighboring shot IDs'),
+    includeTechniques: z.boolean().default(true).describe('Return canonical technique ids, purposes, icons and provider instructions'),
     includeContext: z.boolean().default(true).describe('Include STORY, PRODUCTION and SB_DOC as unverified review context'),
 });
 /** Read plans and recorded evidence without claiming to have inspected media or validated reviews. */
@@ -204,6 +226,12 @@ export function readStoryboard(args) {
     result.file = file;
     result.mediaBaseDirectory = dirname(file);
     result.sha256 = sha256;
+    if (args.includeTechniques !== false)
+        result.techniqueCatalog = {
+            version: techniqueContract().VERSION, entries: techniqueContract().entries,
+            selections: (win.SCENES || []).map((scene, i) => ({ id: scene.id, no: i + 1,
+                techniques: scene.shot?.techniques || [], findings: techniqueContract().findings(scene) })),
+        };
     const doc = win.SB_DOC;
     if (doc?.props || doc?.propContinuity)
         result.propSheet = { props: doc.props, continuity: doc.propContinuity };
@@ -211,6 +239,7 @@ export function readStoryboard(args) {
         note: 'This response reads plans and recorded reviews only. Open referenced assets and verify current evidence before reporting visual quality or review validity.' };
     const continuity = loadFromHere(join(REFERENCES_DIR, 'shot-continuity.js'));
     result.continuityFindings = continuity.check(win, dirname(file));
+    result.techniqueFindings = (win.SCENES || []).flatMap((scene, index) => techniqueContract().findings(scene).map(what => ({ level: 'warn', where: 'shot ' + (index + 1), what })));
     if (args.includeContext)
         result.reviewContext = {
             story: win.STORY || null, production: win.PRODUCTION || null, document: doc || null,
@@ -391,6 +420,9 @@ export function applyPatch(win, patch) {
                 throw new Error(`set ${k} through the dedicated fields, not globals`);
             next[k] = v;
         }
+    const boardMotionTheme = next.THEME?.motionGraphicTheme;
+    if (boardMotionTheme)
+        motionThemeContract().resolveTheme({ type: 'process', style: { theme: boardMotionTheme } });
     if (patch.propSheet)
         next.SB_DOC = { ...(next.SB_DOC ?? {}),
             props: patch.propSheet.props, propContinuity: patch.propSheet.continuity };
@@ -543,7 +575,7 @@ export function applyPatch(win, patch) {
     });
     if (next.STRUCTURE)
         next.STRUCTURE = { ...next.STRUCTURE, nextShotId };
-    next.SCENES = shots.map((shot) => ({ ...shot })); // sync() writes sceneSlug/sequence — never into the caller's objects
+    next.SCENES = shots.map((shot) => shot.shot?.motionGraphic && (shot.shot.motionGraphic.style.theme || next.THEME?.motionGraphicTheme) ? motionThemeContract().applyTheme({ ...shot }, next.THEME?.motionGraphicTheme) : { ...shot }); // sync() writes sceneSlug/sequence — never into the caller's objects
     const findings = [];
     if (!shots.length)
         findings.push({ level: 'bad', where: 'board', what: 'the board has no shots' });

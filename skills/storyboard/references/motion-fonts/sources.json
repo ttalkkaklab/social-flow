@@ -1,0 +1,45 @@
+[
+  {
+    "family": "blackhansans",
+    "url": "https://raw.githubusercontent.com/google/fonts/main/ofl/blackhansans/BlackHanSans-Regular.ttf",
+    "sha256": "31960809284026681774a8e52dc19ebcad26cf69b0ad9d560f288296fbb52739",
+    "license": "https://raw.githubusercontent.com/google/fonts/main/ofl/blackhansans/OFL.txt"
+  },
+  {
+    "family": "gowunbatang",
+    "url": "https://raw.githubusercontent.com/google/fonts/main/ofl/gowunbatang/GowunBatang-Bold.ttf",
+    "sha256": "dbfcaa646e5831e7478524924f02906f550285a5050699b4e38c9950b3ec4b94",
+    "license": "https://raw.githubusercontent.com/google/fonts/main/ofl/gowunbatang/OFL.txt"
+  },
+  {
+    "family": "dongle",
+    "url": "https://raw.githubusercontent.com/google/fonts/main/ofl/dongle/Dongle-Bold.ttf",
+    "sha256": "944c498c0d1a1832ab36f173b1b3aa5ae77b2a914e00c4d79e05338fae36472d",
+    "license": "https://raw.githubusercontent.com/google/fonts/main/ofl/dongle/OFL.txt"
+  },
+  {
+    "family": "spacegrotesk",
+    "url": "https://raw.githubusercontent.com/google/fonts/main/ofl/spacegrotesk/SpaceGrotesk%5Bwght%5D.ttf",
+    "sha256": "acad6de1fc93436f5c0f1f4137751ef04f1aea3063e7036535970ffcfbd79f72",
+    "license": "https://raw.githubusercontent.com/google/fonts/main/ofl/spacegrotesk/OFL.txt"
+  },
+  {
+    "family": "robotoflex",
+    "url": "https://raw.githubusercontent.com/google/fonts/main/ofl/robotoflex/RobotoFlex%5BGRAD%2CXOPQ%2CXTRA%2CYOPQ%2CYTAS%2CYTDE%2CYTFI%2CYTLC%2CYTUC%2Copsz%2Cslnt%2Cwdth%2Cwght%5D.ttf",
+    "sha256": "9b523f7d82593df0107173849ebb8c817471a1df4b4fb2c3cbf40cfd810c8281",
+    "license": "https://raw.githubusercontent.com/google/fonts/main/ofl/robotoflex/OFL.txt"
+  },
+  {
+    "family": "paperlogy",
+    "url": "https://github.com/Freesentation/paperlogy/raw/refs/heads/main/Paperlogy-1.001.zip",
+    "member": "Paperlogy-7Bold.ttf",
+    "sha256": "7effb892621474e9c2a9112f482eb87dd25b65a470e5ae5971be5a68d89ad89b",
+    "license": "https://raw.githubusercontent.com/Freesentation/paperlogy/main/OFL%20license.txt"
+  },
+  {
+    "family": "jua",
+    "url": "https://raw.githubusercontent.com/google/fonts/main/ofl/jua/Jua-Regular.ttf",
+    "sha256": "769677aef240bfc3b9965f2b50748075bff885e6c6992fc591a3fb268279f898",
+    "license": "https://raw.githubusercontent.com/google/fonts/main/ofl/jua/OFL.txt"
+  }
+]

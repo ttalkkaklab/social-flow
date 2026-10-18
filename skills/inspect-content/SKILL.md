@@ -8,7 +8,7 @@ description: >
   Channel creates reusable assets; storyboard plans new episodes; produce builds
   approved episodes; edit-speech changes lines; review-recent reports published metrics.
 argument-hint: "<channel> [episode] [character, background, prop, shot or whole story]"
-allowed-tools: ["mcp__social-flow__host_review", "mcp__social-flow__storyboard_read", "mcp__social-flow__storyboard_check", "mcp__social-flow__location_manage", "mcp__social-flow__capability_status"]
+allowed-tools: ["mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__storyboard_check", "mcp__plugin_social-flow_social-flow__storyboard_check", "mcp__social-flow__location_manage", "mcp__plugin_social-flow_social-flow__location_manage", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status"]
 ---
 Follow [host evaluation](../_shared/host-review.md) for every requested review.
 

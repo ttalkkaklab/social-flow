@@ -31,6 +31,40 @@ function fixture(t, video = selection, auth = {}) {
  return {root,episode,board,save,plan,execute,state};
 }
 const result={content:[{type:'text',text:'fixture media'}]};
+test('managed voice guidance is sent once; changed dialogue or pinned voice invalidates the saved plan',async t=>{
+ const f=fixture(t);
+ f.board.SB_DOC={characters:[{id:'hero',tts:{engine:'gemini',voiceId:'Kore',language:'ko',speed:1,voiceDirection:'Low dry Seoul voice.'}}]};
+ f.board.SCENES[0].narration=[{id:'line-1',speaker:'hero',delivery:'on_screen',tts:'Hello'}];f.save();
+ const p=f.plan();let calls=0;
+ await f.execute(p,async(tool,args)=>{calls++;assert.equal((args.prompt.match(/Voice continuity guidance/g)||[]).length,1);return result;});
+ await f.execute(p,async()=>{calls++;return result;});assert.equal(calls,1);
+ const q=f.plan('next');f.board.SCENES[0].narration[0].tts='Changed words';f.save();
+ await assert.rejects(f.execute(q,async()=>{calls++;return result;}),/stale/);assert.equal(calls,1);
+ const r=f.plan('next');f.board.SB_DOC.characters[0].tts.voiceId='Orus';f.save();
+ await assert.rejects(f.execute(r,async()=>result),/stale/);
+});
+test('managed Seedance reference plan pins automatically added audio and sends mapped arguments',async t=>{
+ const f=fixture(t,{engine:'seedance',model:'dreamina-seedance-2-5-260628',resolution:'720p'});
+ const old=config.arkApiKey;config.arkApiKey='fixture';t.after(()=>config.arkApiKey=old);
+ const audio=path.join(f.episode,'hero.wav'),img=path.join(f.episode,'hero.png');fs.writeFileSync(audio,'voice');fs.writeFileSync(img,'image');
+ f.board.SB_DOC={characters:[{id:'hero',tts:{engine:'gemini',voiceId:'Kore',language:'ko',speed:1},voiceReference:{path:audio,imagePaths:[img]}}]};
+ f.board.SCENES[0].narration=[{id:'l1',speaker:'hero',delivery:'on_screen',tts:'Hello'}];f.save();
+ const p=planVideo({episode:f.episode,shotId:'s1',requestId:'voice',operation:'reference',args:{prompt:'Hero says hello.',generateAudio:true,referenceImagePaths:[img]}});
+ assert.ok(p.inputs[audio]);assert.equal(p.voiceContinuity.speakers[0].audioIndex,1);
+ await f.execute(p,async(tool,args)=>{assert.deepEqual(args.referenceAudioPaths,[audio]);assert.match(args.prompt,/@Audio 1/);return result;});
+ const q=planVideo({episode:f.episode,shotId:'s1',requestId:'changed',tool:p.tool,args:p.sourceArgs});
+ fs.writeFileSync(audio,'different voice');await assert.rejects(f.execute(q,async()=>result),/stale/);
+});
+test('auto-added samples still obey 2.0 reference image requirements and audio-count limits',t=>{
+ const f=fixture(t,{engine:'seedance',model:'dreamina-seedance-2-0-260128',resolution:'720p'});
+ const audio=path.join(f.episode,'hero.wav'),img=path.join(f.episode,'hero.png');fs.writeFileSync(audio,'voice');fs.writeFileSync(img,'image');
+ f.board.SB_DOC={characters:[{id:'hero',tts:{engine:'gemini',voiceId:'Kore',language:'ko',speed:1},voiceReference:{path:audio}}]};
+ f.board.SCENES[0].narration=[{id:'l1',speaker:'hero',delivery:'on_screen',tts:'Hello'}];f.save();
+ const plan=args=>planVideo({episode:f.episode,shotId:'s1',requestId:'limits',operation:'reference',args:{prompt:'Hero speaks.',generateAudio:true,...args}});
+ assert.throws(()=>plan({}),/reference image/);
+ const extras=[1,2,3].map(n=>{const p=path.join(f.episode,`extra-${n}.wav`);fs.writeFileSync(p,'audio');return p;});
+ assert.throws(()=>plan({referenceImagePaths:[img],referenceAudioPaths:extras}),/at most 3/);
+});
 test('snapshot wins over current defaults; explicit shot replaces episode override', t=>{
  const f=fixture(t); const current=settings.readSettings(f.root);
  settings.saveSettings(f.root,{video:{...selection,model:'veo-3.1-generate-preview'}},{expectedRevision:current.revision,request:'Change future defaults'});

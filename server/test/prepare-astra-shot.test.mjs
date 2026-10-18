@@ -49,7 +49,7 @@ test('resolved four-second action excludes stale eight-second design timing with
     startSeconds: 0, endSeconds: 4 }] };
   const prompt = motionPrompt(scene, plan), timeline = motionTimeline(scene, plan);
   assert.match(prompt, /From 0 to 4 seconds, Walk for two seconds/);
-  assert.match(prompt, /shot finishes with this state: The tray rests/);
+  assert.match(prompt, /shot finishes with this state and holds it until the cut: The tray rests/);
   assert.doesNotMatch(prompt, /first four|still holds|At 6.5|At 8/);
   assert.ok(timeline.warnings.some(message => message.includes('6.5s falls outside')));
   assert.ok(timeline.warnings.some(message => message.includes('8s falls outside')));
@@ -325,4 +325,18 @@ test('audio handoff forwards controls and rejects unsupported LoRA without editi
   assert.equal(readFileSync(file, 'utf8'), before);
   video.lora = ['slow-motion']; save();
   await assert.rejects(prepare(dir, { shotId: 's0001', audioPath: audio }), /lora is not supported by audio2video/);
+});
+
+test('keyframe sound planning distinguishes authored mute from legacy defaults, including empty effects', async t => {
+  const {dir,scene,save}=fixture(t);
+  scene.visual.frames={mode:'first_last',end:'start.png',keyframes:[{atSeconds:.5,image:'start.png'}]};
+  for(const effects of [[],[{delivery:'auto',description:'Tray clack',trigger:'At desk contact'}],[{delivery:'native',description:'Tray clack',trigger:'At desk contact'}]]) {
+    scene.sound={audioSource:'video',effects};save();
+    const result=await prepare(dir,{shotId:scene.id});
+    assert.equal(result.arguments.generateAudio,true);assert.equal(result.soundPlan.sound.audioSource,'video');
+  }
+  scene.sound={effects:[{delivery:'auto',description:'Tray clack',trigger:'At desk contact'}]};save();
+  assert.equal((await prepare(dir,{shotId:scene.id})).soundPlan.sound.effects[0].delivery,'native');
+  scene.visual.video.generateAudio=false;scene.sound={audioSource:'video',effects:[]};save();
+  await assert.rejects(prepare(dir,{shotId:scene.id}),/silent output/);
 });

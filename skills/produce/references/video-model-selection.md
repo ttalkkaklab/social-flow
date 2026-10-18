@@ -331,7 +331,7 @@ Reference/voice requirements cannot be dropped just to fit the cap.
 | Consistent person video from a **real person's photo** | `veo_reference` — Seedance 2.x rejects live-action faces *(untested)* |
 | **Character/product** consistency from several photos | `seedance_reference` · 2.5 (up to 30 images) — Veo is 3 images, fixed 8s |
 | Transfer a **sketch/toon style** by reference | `seedance_reference` — Veo 3.1 doesn't support `referenceType: "style"` |
-| A character must **speak in its fixed voice** inside a generated clip | `seedance_reference` · `dreamina-seedance-2-5-260628` · `referenceAudioPaths: [characters/<id>/voice.wav]` · `generateAudio: true` — Veo takes no audio reference. Imitation, not cloning: describe the voice in words too (§The character panels) |
+| A character's **voice sample should guide native speech** | Use `seedance_reference` on the saved compatible 2.x model with `generateAudio:true`. `video_plan` maps pinned character samples to their actual reference indices. See [voice-continuity.md](voice-continuity.md): sample imitation is separate from exact supplied-WAV synchronization; Veo has no audio reference. |
 | The source image contains a **child** | The Veo image→video lane is blocked (underage block) — the Seedance 1.x side is unverified |
 | A length **other than 4/6/8s** | `seedance_*` — takes 2–30s in 1s steps |
 | **21:9 / 4:3 / 1:1 / 3:4** frame | `seedance_*` — Veo only has 16:9 and 9:16 |
@@ -523,7 +523,7 @@ pass the argument.
 **3. `generateAudio`'s vendor default is `true`; ours is `false`.**
 Narration is added separately via `tts_*`, so a model-generated voice makes two layers. On
 top of that, 1.5 pro with audio on costs **exactly 2×** ($1.2 → $2.4/1M tokens). The tool
-default is flipped to `false` — leave it. The one exception is a reference-audio call: a voice
+default is flipped to `false` for separate narration. Authored native effects use [model-aware effects](video-sound.md) to enable it explicitly and preserve the source soundtrack. Another exception is a reference-audio call: a voice
 reference into a silent clip has nothing to shape, so `seedance_reference` rejects
 `referenceAudioPaths` with `generateAudio: false` before the call.
 
@@ -570,7 +570,8 @@ hand over the two or three the shot actually needs:
 data/<channel>/assets/characters/<id>/
   identity.md   # the canonical description — look, marks, expression, voice, veo verdict
   face.png      # face close-up — neutral, minimal shoulders, plain background. The headshot the vendor asks for
-  body.png      # full body, front, HEADLESS — body, clothes, shoes. No face
+  body.png      # canonical front panel: complete head-to-shoes body, clothes and shoes
+  costume.png   # optional derived costume-only input; not a baseline front panel
   back.png      # full body, back, no face — required for every new reference set
   front.png     # legacy: full body with the head on. Fallback when the panels don't exist yet
   voice.wav     # the fixed voice sample — 5–10 s of speech in the character's register, no music or effects. Reference audio for cuts the model voices
@@ -583,22 +584,13 @@ Keep body, back and face reference images locally. All three must be stored befo
 a new character reference set is complete; optional extra images serve specific poses/details. Never build a combined sheet out of the panels — the moment two
 angles share one image, this whole section's warning applies again.
 
-**Why the front panel is headless.** The face is already carried by `face.png` at a much larger
-size, so a head on the body panel is the same information twice, and the more human figures a
-reference set carries the more readily the model reads them as several people — the doppelgänger
-failure. **This part is a creator practice, not vendor guidance**: ByteDance documents the
-two-image set but says nothing about removing the head from the full body. Treat it as our
-working default and settle it with an A/B (same shot, headless body vs `front.png`, ID drift
-compared over a few 8-second cuts) — the open question is already logged in the camera research.
-
-An outside practitioner reaches the same failure mode from the other direction `[course]`.
-Higgsfield's course keeps the three-panel sheet as one image, but the step it insists on is
-erasing the face from the full-body panel — "more than one face and Seedance wobbles; by the
-fifth scene your lead is a stranger." So the two sources disagree on the container (one sheet
-vs separate files) and agree on the rule underneath: **one face per reference set.** Their
-container isn't ours to copy — their platform saves the sheet as a named Element and matches it
-by tag, which is not what a raw `referenceImages` array does, and ByteDance's own warning
-against multi-angle assets is `[vendor]`. Keep the panels split; take the confirmation.
+**Baseline and adapter inputs are separate.** The shared front panel follows
+`../../channel/references/character-panels.md`: retain the complete head and shoes.
+A face-erased or headless costume reference is an optional derived input for a
+specific adapter experiment, never the default baseline and never relabelled as
+`front`. Keep the original, record why the derivative is used and compare actual
+identity drift. Multiple panels in the review sheet do not imply a multi-panel
+image should be submitted as one video start frame.
 
 **Light the sheet flat** `[course]`. A reference sheet gets rejected on lighting far more often
 than on likeness, and every shot generated from it inherits the fault. What passes: soft

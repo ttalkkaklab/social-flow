@@ -20,12 +20,13 @@ import {
   checkStoryboard,
   contract,
   readBoard,
+  readStoryboard,
   sceneSchema,
   scenarioCheckSchema,
-  sequenceSchema,
   serializeBoard,
   shotSchema,
   storyboardApplySchema,
+  storyboardReadSchema,
   structureSchema,
 } from '../dist/storyboard.js';
 import { TOOLS } from '../dist/tools.js';
@@ -58,13 +59,7 @@ describe('storyboard schemas', () => {
   it('scene creative fields are optional; typed identity and unknown keys stay checked', () => {
     assert.ok(sceneSchema.safeParse(scene(1)).success);
     assert.ok(sceneSchema.safeParse({ ...scene(1), place: '' }).success);
-    assert.ok(sceneSchema.safeParse({ ...scene(1), charge: { open: '+', close: 'up' } }).success);
     assert.ok(!sceneSchema.safeParse({ ...scene(1), mood: 'x' }).success, 'a typo key is refused');
-  });
-  it('a sequence binds scenes under one purpose', () => {
-    assert.ok(sequenceSchema.safeParse({ id: 'q1', title: 't', purpose: 'p', scenes: [1] }).success);
-    assert.ok(sequenceSchema.safeParse({ id: 'q1', title: 't', purpose: 'p', scenes: [] }).success);
-    assert.ok(sequenceSchema.safeParse({ id: 'q1', title: 't', scenes: [1] }).success, 'purpose is creative guidance');
   });
   it('shot adapter values stay typed while creative vocabulary passes through', () => {
     assert.ok(shotSchema.safeParse(board()[1]).success);
@@ -72,13 +67,8 @@ describe('storyboard schemas', () => {
     assert.ok(!shotSchema.safeParse({ ...board()[1], id: 's007' }).success);
     assert.ok(shotSchema.safeParse({ ...board()[1], shot: { size: 'wide' } }).success);
     assert.ok(!shotSchema.safeParse({ ...board()[1], transition: 'push:left' }).success);
-    assert.ok(shotSchema.safeParse({ ...board()[1], beat: 'middle' }).success);
     const extra = shotSchema.safeParse({ ...board()[1], visual: { video: { engine: 'veo' } }, edit: { reason: 'x' } });
     assert.ok(extra.success && extra.data.edit.reason === 'x');
-    assert.ok(shotSchema.safeParse({ ...board()[1], shot: { ...board()[1].shot, coverage: { azimuth: 35 } } }).success);
-    assert.ok(shotSchema.safeParse({ ...board()[1], shot: { ...board()[1].shot, lineCrossing: { method: 'camera_move', from: 'A left, B right', to: 'B left, A right', reason: '카메라가 선을 지나간다' } } }).success);
-    assert.ok(shotSchema.safeParse({ ...board()[1], shot: { ...board()[1].shot, coverage: { azimuth: 181 } } }).success);
-    assert.ok(shotSchema.safeParse({ ...board()[1], shot: { ...board()[1].shot, lineCrossing: { method: 'teleport', from: 'A', to: 'B', reason: 'x' } } }).success);
   });
   it('the vocabularies come from structure-contract.js, the file check-scenes.js pins', () => {
     assert.ok(existsSync(CONTRACT_FILE));
@@ -291,6 +281,14 @@ describe('file round trip', () => {
     assert.ok(!dry.written && !dry.findings.some((f) => f.level === 'bad'));
     assert.equal(readFileSync(join(dir, 'scenes.js'), 'utf8'), before);
   });
+  it('a sparse plan without STRUCTURE saves and checks clean; an invalid eyeline reference is refused', () => {
+    const dir = tmp();
+    const r = applyStoryboard(storyboardApplySchema.parse({ path: dir, set: { shots: [{ type: 'points', duration: 5, narration: [{ tts: 'The door closes.' }], beat: 'quiet-ending', shot: { size: 'invented-framing' } }] } }));
+    assert.ok(!r.findings.some(f => f.level === 'bad'), JSON.stringify(r));
+    assert.equal(checkStoryboard({ path: dir, draft: true }).violations, 0);
+    const invalid = applyStoryboard(storyboardApplySchema.parse({ path: dir, set: { shots: [{ type: 'points', shot: { eyeline: { matchShot: 9 } } }] } }));
+    assert.ok(invalid.findings.some(f => f.level === 'bad' && f.what.includes('matchShot')));
+  });
   it('a dry run never writes into the caller\'s shot objects', () => {
     const shots = board();
     const win = { FORMAT: 'shorts-9x16', COMPREHENSION: comprehension, STRUCTURE: structure([scene(1), scene(2)]), SCENES: shots };
@@ -362,6 +360,13 @@ describe('checkStoryboard', () => {
     // No duplicate: the deferred finding lands once, not as bad in one list and later in the other.
     assert.ok(!r.contract.some((f) => /adjacent picture cut/.test(f.what)), JSON.stringify(r.contract));
   });
+  it('counts an unsupported render route or a negative duration as a violation', () => {
+    const dir = tmp();
+    for (const shot of [{ type: 'points', shot: { render: { mode: 'made_up' } } }, { type: 'points', duration: -1 }]) {
+      writeFileSync(join(dir, 'scenes.js'), 'window.SCENES=' + JSON.stringify([shot]) + ';');
+      assert.ok(checkStoryboard({ path: dir, draft: true }).violations > 0, JSON.stringify(shot));
+    }
+  });
   it('allows missing shot ids but reports one duplicate id', () => {
     const dir = tmp();
     const base = { FORMAT: 'shorts-9x16', COMPREHENSION: comprehension, STRUCTURE: structure([scene(1), scene(2)]), SCENES: board() };
@@ -406,6 +411,101 @@ describe('tool surface', () => {
     const tree = JSON.parse(out.content[0].text);
     assert.equal(tree.sequences[0].scenes[1].shots.length, 2);
     await assert.rejects(ROUTES.storyboard_apply({ path: dir, scene: [scene(1)] }), /unknown argument/);
+  });
+});
+
+describe('storyboard_read inspection', () => {
+  const readWin = () => ({
+    STORY: { version: 'story-v2', thesis: 'Trust is shown by returning a borrowed watch', review: { hash: 'old', verdict: 'pass' } },
+    PRODUCTION: { cast: [{ id: 'child', image: 'characters/child.png' }] },
+    SB_DOC: { characters: [{ id: 'child', source: 'identity.md' }], props: [{ id: 'watch', description: 'Silver watch' }] },
+    SCENES: [
+      { id: 's0001', type: 'points', narration: [], performance: [{ kind: 'action', character: 'child', text: 'She returns the watch.' }],
+        shot: { location: { manifest: 'locations/workshop/location.json', stateId: 'day' } },
+        visual: { character: 'child', props: ['watch'], propUsage: [{ propId: 'watch', start: { day: 1, order: 1 }, end: { day: 1, order: 2 } }], bg: 'images/scene-1.png' } },
+      { id: 's0002', type: 'points', narration: [{ id: 'line-2', speaker: 'father', tts: 'I knew you would.', delivery: 'on_screen' }],
+        performance: [{ kind: 'action', character: 'father', text: 'He smiles.' }, { kind: 'dialogue', character: 'father', to: 'child', group: 1 }] },
+    ],
+  });
+  const withBoard = (fn, win = readWin()) => {
+    const dir = tmp();
+    writeFileSync(join(dir, 'scenes.js'), Object.entries(win).map(([key, value]) => `window.${key}=${JSON.stringify(value)};`).join('\n'));
+    return fn(dir);
+  };
+  it('default shot summary preserves silent action, ordered dialogue and all asset domains', () => {
+    const tree = contract().outline(readWin(), 'shots');
+    const [silent, dialogue] = tree.unplacedShots;
+    assert.equal(silent.id, 's0001');
+    assert.equal(silent.narration, '');
+    assert.equal(silent.performance[0].text, 'She returns the watch.');
+    assert.deepEqual(dialogue.performance.map(e => e.kind), ['action', 'dialogue']);
+    assert.equal(dialogue.performance[1].speaker, 'father');
+    assert.equal(dialogue.performance[1].text, 'I knew you would.');
+    assert.equal(dialogue.performance[1].lineId, 'line-2');
+    assert.equal(silent.references.characters, 'child');
+    assert.equal(silent.references.location.stateId, 'day');
+    assert.deepEqual(silent.references.props, ['watch']);
+    assert.equal(silent.references.propUsage[0].propId, 'watch');
+    assert.equal(silent.media.bg, 'images/scene-1.png');
+  });
+  it('invalid performance group is visible and never silently receives invented dialogue', () => {
+    const win = readWin(); win.SCENES[1].performance[1].group = 99;
+    const event = contract().outline(win, 'shots').unplacedShots[1].performance[1];
+    assert.equal(event.unresolvedGroup, true);
+    assert.equal(event.text, null);
+    assert.equal(event.speaker, null);
+  });
+  it('read includes scenario, cast, settings and existing review without claiming verification', () => withBoard(dir => {
+    const result = readStoryboard(storyboardReadSchema.parse({ path: dir }));
+    assert.equal(result.reviewContext.story.review.verdict, 'pass');
+    assert.equal(result.reviewContext.evidenceStatus, 'not_verified');
+    assert.equal(result.inspection.mediaViewed, false);
+    assert.equal(result.reviewContext.document.characters[0].id, 'child');
+    assert.equal(result.reviewContext.production.cast[0].image, 'characters/child.png');
+    assert.equal(result.mediaBaseDirectory, dir);
+    assert.match(result.sha256, /^[a-f0-9]{64}$/);
+    assert.equal(result.propSheet.props[0].id, 'watch');
+    assert.equal(readStoryboard(storyboardReadSchema.parse({ path: dir, includeContext: false })).reviewContext, undefined);
+  }));
+  it('stable shot inspection preserves the whole flow and finds neighbors after reorder', () => {
+    const win = readWin(); win.SCENES.reverse();
+    withBoard(dir => {
+      const result = readStoryboard(storyboardReadSchema.parse({ path: dir, shotId: 's0001' }));
+      assert.equal(result.selectedShot.no, 2);
+      assert.equal(result.selectedShot.shot.id, 's0001');
+      assert.deepEqual(result.selectedShot.previous, { id: 's0002', no: 1 });
+      assert.equal(result.selectedShot.next, null);
+      assert.equal(result.unplacedShots.length, 2);
+      assert.throws(() => readStoryboard(storyboardReadSchema.parse({ path: dir, shotId: 'missing' })), /found 0/);
+    }, win);
+  });
+  it('duplicate shot IDs fail targeted inspection instead of inspecting the wrong shot', () => {
+    const win = readWin(); win.SCENES[1].id = 's0001';
+    withBoard(dir => assert.throws(() => readStoryboard(storyboardReadSchema.parse({ path: dir, shotId: 's0001' })), /found 2/), win);
+  });
+  it('legacy narration stays visible without invented performance ordering or speakers', () => {
+    const row = contract().outline({ SCENES: [{ type: 'points', narration: [{ sub: 'Legacy line' }] }] }, 'shots').unplacedShots[0];
+    assert.equal(row.id, null);
+    assert.equal(row.narration, 'Legacy line');
+    assert.equal(row.speech[0].speaker, null);
+    assert.deepEqual(row.performance, []);
+  });
+  it('inspection neighbors follow b-roll placement and the closing outro, not storage order', () => {
+    const win = readWin();
+    win.SCENES.push({ id: 's0003', type: 'broll', after: 0, narration: [], performance: [{ kind: 'action', character: 'child', text: 'The watch falls.' }] });
+    win.SCENES.push({ id: 's0004', type: 'outro', narration: [] });
+    win.SCENES.push({ id: 's0005', type: 'broll', after: 99, narration: [] });
+    withBoard(dir => {
+      const result = readStoryboard(storyboardReadSchema.parse({ path: dir, shotId: 's0003' }));
+      assert.deepEqual(result.playback.map(row => row.id), ['s0001','s0003','s0002','s0004']);
+      assert.deepEqual(result.unscheduledShots.map(row => row.id), ['s0005']);
+      assert.deepEqual(result.selectedShot.previous, { id: 's0001', no: 1 });
+      assert.deepEqual(result.selectedShot.next, { id: 's0002', no: 2 });
+      assert.equal(result.selectedShot.playbackPosition, 2);
+      const orphan = readStoryboard(storyboardReadSchema.parse({ path: dir, shotId: 's0005' }));
+      assert.equal(orphan.selectedShot.playbackPosition, null);
+      assert.equal(orphan.selectedShot.previous, null);
+    }, win);
   });
 });
 

@@ -19,11 +19,11 @@ argument-hint: "<channel> [init|tick|status]"
 # HITL at init is the standing authorization that replaces per-post approval.
 # Calling a publish tool without a plan is forbidden (§Absolute rules, 1).
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
-  "mcp__social-flow__sns_account_check", "mcp__social-flow__sns_comment_inbox",
-  "mcp__social-flow__threads_insights", "mcp__social-flow__threads_search",
-  "mcp__social-flow__threads_draft_create", "mcp__social-flow__threads_review_submit",
-  "mcp__social-flow__threads_publish", "mcp__social-flow__sns_comment_reply",
-  "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img"]
+  "mcp__social-flow__sns_account_check", "mcp__plugin_social-flow_social-flow__sns_account_check", "mcp__social-flow__sns_comment_inbox", "mcp__plugin_social-flow_social-flow__sns_comment_inbox",
+  "mcp__social-flow__threads_insights", "mcp__plugin_social-flow_social-flow__threads_insights", "mcp__social-flow__threads_search", "mcp__plugin_social-flow_social-flow__threads_search",
+  "mcp__social-flow__threads_draft_create", "mcp__plugin_social-flow_social-flow__threads_draft_create", "mcp__social-flow__threads_review_submit", "mcp__plugin_social-flow_social-flow__threads_review_submit",
+  "mcp__social-flow__threads_publish", "mcp__plugin_social-flow_social-flow__threads_publish", "mcp__social-flow__sns_comment_reply", "mcp__plugin_social-flow_social-flow__sns_comment_reply",
+  "mcp__social-flow__image_local_generate", "mcp__plugin_social-flow_social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__plugin_social-flow_social-flow__gpt_image_text2img"]
 ---
 **Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 

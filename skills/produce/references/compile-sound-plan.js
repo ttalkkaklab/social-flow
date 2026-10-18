@@ -81,6 +81,18 @@ if (!extended) {
   process.exit(0);
 }
 
+// An explicit new owner must not inherit an untracked (or human-edited) effect row.
+// Keep the user's file intact and require reconciliation instead of silently doubling sound.
+const explicitSourceEffects = scenes.some(shot => Array.isArray(shot?.sound?.effects) &&
+  shot.sound.effects.some(effect => ['native', 'input'].includes(effect?.delivery)));
+const oldEffectsFile = path.join(work, 'sfx.tsv');
+if (explicitSourceEffects && fs.existsSync(oldEffectsFile)) {
+  const bytes = fs.readFileSync(oldEffectsFile);
+  const hasEffects = bytes.toString('utf8').split(/\r?\n/).some(row => row.trim() && !row.startsWith('#') && row.split('\t')[2]?.trim());
+  if (hasEffects && previous['sfx.tsv'] !== digest(bytes))
+    die('native/input ownership conflicts with unmanaged or edited sfx.tsv; reconcile its effect rows explicitly (file preserved)');
+}
+
 function catalog(kind, id) {
   const clean = safeCell(id, `${kind} asset id`);
   const result = spawnSync('python3', [assetResolver, channel, kind, clean], { encoding: 'utf8' });
@@ -115,7 +127,17 @@ scenes.forEach((shot, idx) => {
   }
   if (sound.sfx) effects.push([idx, 0, sfxFile(String(sound.sfx)), 'on', '', '']);
   if (Array.isArray(sound.effects)) { sound.effects.forEach((effect, ei) => {
-    const item = record(effect), id = safeCell(item.sfx, `shot ${idx + 1} sound.effects[${ei}].sfx`);
+    const item = record(effect);
+    if (['native', 'input'].includes(item.delivery)) {
+      if (sound.audioSource !== 'video') die(`shot ${idx + 1}: ${item.delivery} effects require audioSource=video`);
+      if (item.sfx && sound.sfx === item.sfx) die(`shot ${idx + 1}: native/input effect also appears in legacy sound.sfx`);
+      return; // Already in the card soundtrack; never place the same effect twice.
+    }
+    if (item.delivery !== undefined && item.delivery !== 'post') die(`shot ${idx + 1}: resolve effect delivery with prepare-video-sound.js before assembly`);
+    if (item.delivery === 'post' && (typeof item.atSeconds !== 'number' || !Number.isFinite(item.atSeconds)))
+      die(`shot ${idx + 1}: post effect needs observed atSeconds`);
+    if (typeof item.sfx !== 'string' || !item.sfx.trim()) die(`shot ${idx + 1}: post effect needs an sfx asset`);
+    const id = safeCell(item.sfx, `shot ${idx + 1} sound.effects[${ei}].sfx`);
     const offset = finite(item.atSeconds, 0);
     const separation = item.separationLu === undefined
       ? intensitySeparation[item.intensity || 'normal']

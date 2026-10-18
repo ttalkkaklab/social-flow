@@ -7,9 +7,9 @@ description: >
   action and attributed speech, then plans shots and content-led timing. Saves the local
   review board. Produce builds an approved board; autoproduce runs both unattended.
 argument-hint: "<channel> <topic or topic hint>"
-allowed-tools: ["mcp__social-flow__host_review", "mcp__social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__social-flow__speech_manage", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics"]
+allowed-tools: ["mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__plugin_social-flow_social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__storyboard_apply", "mcp__plugin_social-flow_social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__plugin_social-flow_social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__plugin_social-flow_social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__plugin_social-flow_social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__plugin_social-flow_social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__plugin_social-flow_social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__plugin_social-flow_social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__plugin_social-flow_social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__plugin_social-flow_social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__plugin_social-flow_social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__plugin_social-flow_social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics", "mcp__plugin_social-flow_social-flow__suno_generate_lyrics"]
 ---
-For motion-graphic shots, follow [motion type selection and design](references/motion-graphics.md): persist `shot.motionGraphic`, choose the type from viewer intent and available evidence, and keep style, choreography and renderer separate. Built-in abstract scenes use the installed `prepare-motion-graphic.js`; asset-dependent types retain their authored or mesh routes.
+For motion-graphic shots, follow [motion type selection and design](references/motion-graphics.md): persist `shot.motionGraphic` with a common `THEME.motionGraphicTheme` when the episode needs consistency and contextual `style.theme` (`auto` or an explicit channel theme), choose the type from viewer intent and available evidence, and keep style, choreography and renderer separate. Built-in abstract scenes use the installed `prepare-motion-graphic.js`; asset-dependent types retain their authored or mesh routes.
 
 Follow [host evaluation](../_shared/host-review.md) for every requested review.
 
@@ -176,6 +176,11 @@ The storyboard plans source/end states, references, blocking and motion; produce
 and inspects them. Missing images are pending, never visually approved. Read
 [blender-previz.md](references/blender-previz.md) when planning a generated cut's previz
 and [shot speech](../produce/references/shot-speech.md) for line IDs, speaker/delivery and acting.
+Preserve the complete character handoff, including any selected `voiceReference`.
+Follow [voice continuity](../produce/references/voice-continuity.md) when planning
+native dialogue: repeat pinned acoustic identity, keep scene emotion separate, and
+bind each speaker to their own sample. A voice reference does not establish exact
+synchronization with the finished TTS WAV.
 
 ## 5. Derive time from the performance
 
@@ -253,3 +258,15 @@ See [evaluation cases](references/evals.md) for behavioral regression exercises.
 
 For independent motion examples use [animation-review.md](../produce/references/animation-review.md)
 instead of inventing an episode. For existing supplied recordings use the ingest contract.
+
+
+## Four filmmaking elements and semantic technique choices
+
+Read the catalogue returned by `storyboard_read` (`includeTechniques:true`) before
+choosing techniques. Persist each purposeful choice as `shot.techniques:[{id,reason}]`.
+The shared source is [film-techniques.js](references/film-techniques.js); exported boards also
+carry the complete catalogue as JSON and an accessible icon legend. Choose from
+information/action needs, not a diversity quota. Match canonical MS (waist-up), MFS
+(mid-thigh), reference panels and camera fields. A static rack-focus cut selects
+both ids so the focus change survives the camera icon and provider prompt.
+Review actual images and footage before claiming the planned technique was achieved.

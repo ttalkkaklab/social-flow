@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { atomicJson } from './routing-files.js';
+export { atomicJson } from './routing-files.js';
 import { fileURLToPath } from 'node:url';
 
 export interface VideoJob {
@@ -18,16 +19,6 @@ export interface VideoJob {
   updatedAt: string;
 }
 export interface VideoState { version: 1; openingSpendUsd?: number; jobs: Record<string, VideoJob> }
-export function atomicJson(file: string, value: unknown): void {
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  const temporary = file + '.' + randomUUID() + '.tmp';
-  try {
-    fs.writeFileSync(temporary, JSON.stringify(value, null, 2) + '\n', { mode: 0o600, flag: 'wx' });
-    const fd = fs.openSync(temporary, 'r');
-    try { fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
-    fs.renameSync(temporary, file);
-  } finally { if (fs.existsSync(temporary)) fs.unlinkSync(temporary); }
-}
 /** Import old video spend exactly once. Unknown historical costs require explicit reconciliation. */
 function historicalSpend(episode: string): number {
   const events = path.join(episode, '.work/events.jsonl');

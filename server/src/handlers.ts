@@ -1,3 +1,5 @@
+import { IMAGE_ADAPTERS, imageCatalog } from './image-registry.js';
+import { planImage, imagePlanSummary, executeImage, routeLegacyImage, imageStatus } from './image-routing.js';
 import { videoStatus } from './video-routing.js';
 import { planVideo, executeVideo, routeLegacyVideo } from './video-routing.js';
 import { VIDEO_ADAPTERS, videoCatalog } from './video-registry.js';
@@ -125,6 +127,32 @@ function seedanceMeta(result: {
   return `Model: ${result.model}\nRatio: ${result.ratio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds (${result.durationSource || 'provider reported; probe output'})${tokens}\nTask ID: ${result.taskId}`;
 }
 
+/** Platform error JSON fits well inside this; anything longer is an HTML error page or a dump. */
+const API_ERROR_BODY_MAX = 4000;
+
+/**
+ * A failed platform call as the agent should read it: the next step first, then the
+ * platform's own body, capped. Claude Code shows only the head and tail of a long error,
+ * and a bare status code tells the agent nothing about what to do. requestRaw reports a
+ * timeout as 504 and an unreachable host as 502, so a publish that "failed" with a 5xx
+ * may still have gone out — retrying blind can post twice.
+ */
+export function apiErrorText(result: ApiResult): string {
+  const { status, body } = result;
+  const next =
+    status === 401 || status === 403
+      ? 'The platform refused the credential or permission. Run sns_account_check for this channel; an expired token needs its setup skill (setup-threads, setup-instagram, setup-youtube).'
+      : status === 404
+        ? 'The target ID was not found. Re-read IDs from the latest inbox, insights or publish log instead of reusing an old one.'
+        : status === 429
+          ? 'Rate limited. Wait before the next call; do not retry in a loop.'
+          : status >= 500
+            ? 'Upstream or network failure. Retry later — but for a publish or reply, check the platform or output/publish-log.md first: the post may already be live.'
+            : 'The platform rejected the request. Fix the field the body names; the same arguments fail the same way.';
+  const shown = body.length > API_ERROR_BODY_MAX ? `${body.slice(0, API_ERROR_BODY_MAX)}… (${body.length - API_ERROR_BODY_MAX} more chars cut)` : body;
+  return `HTTP ${status} — ${next}\n${shown}`;
+}
+
 /**
  * Platform API result → MCP tool result.
  *
@@ -136,7 +164,7 @@ function seedanceMeta(result: {
  */
 function fromApi(result: ApiResult, note?: string): ToolResult {
   if (!result.ok) {
-    return text(`HTTP ${result.status}\n${result.body}`, true);
+    return text(apiErrorText(result), true);
   }
   // The note attaches to the success path only — if a failed publish carried a
   // "published" notice, the caller would report the failure as success and skip
@@ -787,7 +815,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
         summary += `\nFile save failed: ${formatError(saveError)}`;
       }
     }
-    return imageResult(summary, result.base64, result.mimeType);
+    return { ...imageResult(summary, result.base64, result.mimeType), imageReceipt: { usage: result.usage, requestId: result.requestId } };
   },
   gpt_image_img2img: async (args) => {
     const request = parseArgs(image.img2ImgSchema, args);
@@ -805,7 +833,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
         summary += `\nFile save failed: ${formatError(saveError)}`;
       }
     }
-    return imageResult(summary, result.base64, result.mimeType);
+    return { ...imageResult(summary, result.base64, result.mimeType), imageReceipt: { usage: result.usage, requestId: result.requestId } };
   },
   // Local generation (Z-Image Turbo) — runs on-device as a subprocess. No key, network, or billing.
   // Unlike gpt_image it carries no base64 block — this tool always writes a local
@@ -1569,3 +1597,12 @@ ROUTES.video_plan = async args => text(JSON.stringify(planVideo(args), null, 2))
 ROUTES.video_execute = args => executeVideo(args, dispatchVideo);
 
 ROUTES.video_status = async args => text(JSON.stringify(videoStatus(args), null, 2));
+
+// Existing tools are compatibility entrypoints into the same image service.
+const imageDispatch = Object.fromEntries(Object.keys(IMAGE_ADAPTERS).map(name => [name, ROUTES[name]]));
+const dispatchImage = (name: string, args: Record<string, unknown>) => imageDispatch[name](args);
+for (const name of Object.keys(IMAGE_ADAPTERS)) ROUTES[name] = args => routeLegacyImage(name, args, dispatchImage);
+ROUTES.image_catalog = async () => text(JSON.stringify(imageCatalog(), null, 2));
+ROUTES.image_plan = async args => text(JSON.stringify(imagePlanSummary(planImage(args)), null, 2));
+ROUTES.image_execute = args => executeImage(args, dispatchImage);
+ROUTES.image_status = async args => text(JSON.stringify(imageStatus(args), null, 2));

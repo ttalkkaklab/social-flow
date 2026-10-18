@@ -92,9 +92,10 @@ function motionPrompt(scene, plan) {
   const span = (start, end) => Number.isFinite(start) && Number.isFinite(end)
     ? concurrentLine ? ' During the supplied spoken line,' : ` From ${at(start)} to ${at(end)} seconds,` : '';
   const instructions = [
-    'Keep the exact people, location and visual style of the supplied opening image.',
+    'One continuous uninterrupted shot. Keep the exact people, location and visual style of the supplied opening image.',
     redact(design.before),
     redact(camera.framing),
+    require('../../storyboard/references/film-techniques.js').instructions(scene),
     require('../../storyboard/references/production-mode.js').moveOf(camera)?.family === 'static'
       ? 'The camera stays fixed with identical framing, angle, focal length and background scale. ' + redact(camera.end)
       : redact([camera.movement, camera.speed, camera.end].filter(Boolean).join('. ')),
@@ -120,8 +121,8 @@ function motionPrompt(scene, plan) {
     instructions.push((Number.isFinite(beat.at) ? `At ${at(beat.at)} seconds, ` : '') + redact(beat.state));
     seen.add(beat.state);
   }
-  if (design.after) instructions.push('The shot finishes with this state: ' + redact(design.after));
-  if (design.continuity) instructions.push(redact(design.continuity));
+  if (design.continuity) instructions.push('Preserve these continuity conditions throughout: ' + redact(design.continuity));
+  if (design.after) instructions.push('The shot finishes with this state and holds it until the cut: ' + redact(design.after));
   instructions.push('All surfaces stay unlettered and unobstructed, exactly as in the supplied image.');
   return instructions.filter(Boolean).map(text => text.trim()).join(' ');
 }
@@ -219,6 +220,14 @@ async function prepare(target, options) {
     images: keyframeImages(scene, dir, args.numFrames, frameRate) });
   if (video.numFrames !== undefined && video.numFrames !== args.numFrames)
     warnings.push('Stored numFrames differs from the optimized request. Refresh previz and quote before submitting a new generation.');
+  const sound = { ...scene.sound };
+  if (sound.audioSource === undefined && scene.narration?.some(line => (line.tts || '').trim())) sound.audioSource = 'speech';
+  const soundArgs = { ...args };
+  // The legacy keyframe fallback is not an authored request to suppress sound.
+  if (hasKeyframes && video.generateAudio === undefined) delete soundArgs.generateAudio;
+  const soundPlan = scene.sound?.audioSource !== undefined || Array.isArray(scene.sound?.effects)
+    ? adapter.prepareVideoSound(tool, soundArgs, sound) : undefined;
+  if (soundPlan) { args = soundPlan.arguments; warnings.push(...soundPlan.warnings); }
   const digest = value => createHash('sha256').update(value).digest('hex');
   const source = { path: imagePath, sha256: digest(fs.readFileSync(imagePath)), frameIdx: 0,
     role: 'authored_opening', opening: scene.shot?.videoDesign?.before || null };
@@ -232,7 +241,7 @@ async function prepare(target, options) {
     state: index > 0 && index < args.images.length - 1 ? scene.visual.frames.keyframes[index - 1].state || null : null,
   })) : undefined;
   return { shotId: scene.id, boardRevision: response.revision, performanceRevision: plan.performanceRevision,
-    tool, arguments: args, source, ...(keyframes ? { keyframes } : {}),
+    tool, arguments: args, source, ...(soundPlan ? { soundPlan } : {}), ...(keyframes ? { keyframes } : {}),
     performancePrompt: plan.videoPrompt,
     continuity: handoff, warnings, requestedSeconds: optimized.timing.requestedSeconds, durationPlan: optimized.timing, quote: adapter.priceOf(tool, args), coverage, audioSeconds, review: 'not_reviewed',
     instructions: 'Use these arguments unchanged. References describe state; audio2video submits only the authored opening. Inspect the output, select its trim, capture its actual endpoint, then stage the next opening. No generation was performed.' };

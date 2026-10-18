@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="캐릭터 시트, 카메라 프롬프트, 프레임 사이즈, 컷 길이를 장면의 목적에 맞춰 설계하는 AI 영화 제작 가이드">
+<title>AI 영화 제작의 네 가지 기본 요소 | 실무 분석</title>
+<style> :root{--ink:#22384b;--muted:#536b7a;--line:#cbd9e0;--blue:#256c89;--paper:#fff;--wash:#edf3f6;--accent:#a85531}*{box-sizing:border-box}html{scroll-behavior:auto;scroll-padding-top:28px}body{margin:0;background:#f3f6f8;color:var(--ink);font:17px/1.85 "Apple SD Gothic Neo","Malgun Gothic",sans-serif}a{color:var(--blue);text-underline-offset:4px}a:focus-visible{outline:3px solid var(--accent);outline-offset:5px}.skip{position:absolute;top:-80px}.skip:focus{top:10px;background:white;padding:10px;z-index:5}.layout{display:grid;grid-template-columns:215px minmax(0,1000px);gap:50px;max-width:1345px;margin:auto;padding:0 30px}nav{position:sticky;top:35px;align-self:start;margin-top:52px;font-size:14px}nav p{font-weight:700}nav a{display:block;padding:9px 0;text-decoration:none;color:var(--muted)}nav a:hover{color:var(--blue)}main{min-width:0;background:white;padding:52px 48px 35px}header{padding-bottom:35px;border-bottom:3px solid var(--ink)}.meta{color:var(--muted);font-size:14px}.lead{font-size:21px;max-width:36em}h1{font-size:clamp(32px,4.4vw,55px);line-height:1.2;letter-spacing:-.045em;margin:25px 0}h2{font-size:31px;line-height:1.35;letter-spacing:-.035em;margin:0 0 18px}h3{font-size:20px;line-height:1.5;margin:25px 0 8px}p{margin:12px 0 18px}section{padding:46px 0;border-bottom:1px solid var(--line)}.kicker{color:var(--blue);font-size:15px;font-weight:700;margin-bottom:10px}.note{background:var(--wash);padding:18px 22px;border-left:4px solid var(--blue);margin:24px 0;font-size:15px}.note p:last-child{margin-bottom:0}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.duo{display:grid;grid-template-columns:1fr 1fr;gap:28px}figure{margin:22px 0}.diagram-scroll{overflow-x:auto}.diagram-scroll svg{min-width:650px}svg{display:block;width:100%;height:auto}figcaption{font-size:14px;line-height:1.7;color:var(--muted);padding-top:10px}.sheet figure{margin:0}.sheet svg{height:275px;background:var(--wash)}.frame{margin:0;border:1px solid var(--line);border-radius:5px;overflow:hidden}.frame svg{width:100%;height:180px;background:var(--wash)}.frame figcaption{padding:15px}.frame h3{margin:3px 0 8px;font-size:18px;color:var(--ink)}.frame p{margin:0 0 8px}.frame span{font-size:13px;font-weight:bold;color:var(--blue)}.frame small{font-size:13px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#eef3f5;border-radius:5px;padding:22px;font:15px/1.85 "Apple SD Gothic Neo","Malgun Gothic",sans-serif;border:1px solid var(--line)}.table-wrap{overflow-x:auto;margin:22px 0}table{border-collapse:collapse;width:100%;font-size:14px;line-height:1.7}th{text-align:left;background:var(--wash);font-weight:700}th,td{padding:12px;border-bottom:1px solid var(--line);vertical-align:top}table.camera{min-width:730px}table.camera td:first-child{white-space:nowrap;font-size:12px;color:var(--muted)}table.camera td:nth-child(2){font-weight:700;min-width:95px}ul,ol{padding-left:24px}li{margin-bottom:9px}.flow{display:flex;gap:10px;flex-wrap:wrap;margin:24px 0}.flow span{background:var(--wash);padding:8px 14px;border-radius:4px;font-size:14px}.sources li{font-size:14px}footer{font-size:13px;color:var(--muted);padding-top:25px}@media(max-width:1000px){.layout{grid-template-columns:165px minmax(0,1fr);gap:20px;padding:0 18px}main{padding:35px 26px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sheet{grid-template-columns:repeat(3,minmax(0,1fr))}.sheet svg{height:210px}}@media(max-width:680px){.layout{display:block;padding:0}nav{position:static;margin:0;padding:16px 22px;background:var(--wash);display:flex;gap:6px 16px;flex-wrap:wrap}nav p{width:100%;margin:0}nav a{padding:2px 0}main{padding:30px 20px}.lead{font-size:18px}h2{font-size:26px}section{padding:35px 0}.grid{gap:12px}.sheet{grid-template-columns:1fr}.sheet svg{height:280px}.duo{grid-template-columns:1fr;gap:4px}.frame svg{height:155px}.frame figcaption{padding:10px}.frame h3{font-size:16px}.note{padding:15px}.table-wrap{margin-right:-4px}pre{font-size:14px;padding:15px}}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}@media print{body{background:white;font-size:11pt}.layout{display:block;padding:0;max-width:none}nav,.skip{display:none}main{padding:0}section{padding:24px 0}h1{font-size:32pt}h2{font-size:22pt}h2,h3{break-after:avoid}figure,pre,tr,.note{break-inside:avoid}.grid{grid-template-columns:repeat(3,1fr)}.table-wrap{overflow:visible}table.camera{min-width:0}a{color:inherit}svg{max-height:250px}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>
+</head>
+<body>
+<a class="skip" href="#main">본문으로 이동</a>
+<div class="layout">
+<nav aria-label="문서 목차">
+<p>AI 영화 제작 노트</p>
+<a href="#overview">분석의 관점</a>
+<a href="#character">1. 캐릭터 시트</a>
+<a href="#camera">2. 카메라 프롬프트</a>
+<a href="#framing">3. 프레임 사이즈</a>
+<a href="#duration">4. 컷 듀레이션</a>
+<a href="#example">한 장면에 적용하기</a>
+<a href="#sources">출처와 확인 범위</a>
+</nav>
+<main id="main">
+<header>
+<p class="meta">제작 실무 가이드 · 2026. 10. 18.</p>
+<h1>AI 영화 제작의<br>네 가지 기본 요소</h1>
+<p class="lead">같은 인물을 유지하고, 시선을 이끌고,<br>알맞은 거리에서 필요한 시간만 보여 주기.</p>
+<p>캐릭터 시트 · 카메라 프롬프트 · 프레임 사이즈 · 컷 듀레이션을 장면의 목적에 맞춰 고르는 방법을 정리했다. 각 요소의 제작법과 실패를 줄이는 방법을 함께 다룬다.</p>
+</header>
+<section id="overview">
+<p class="kicker">분석의 관점</p>
+<h2>먼저 정할 것은 “이 컷에서 무엇을 알게 할까”다</h2>
+<p>네 요소는 서로 연결된다. 얼굴이 중요한 장면이면 얼굴 참조와 가까운 구도가 필요하고 움직임도 표정을 읽을 만큼 차분해야 한다. 공간을 소개하는 장면이면 인물의 얼굴보다 배치와 이동 경로에 시간을 쓴다.</p>
+<div class="flow">
+<span>장면의 목적</span>
+<span>인물 참조</span>
+<span>시작·종료 구도</span>
+<span>카메라 움직임</span>
+<span>컷 길이</span>
+</div>
+<div class="note">
+<strong>자료를 읽는 기준</strong>
+<p>이 문서는 사용자가 제공한 영상 요약을 바탕으로 작성했다. 유튜브 본문과 자막을 직접 확보하지 못했으므로 영상 전체를 시청한 분석이나 발언 검증으로 보지 않는다. 아래 제작 절차·프롬프트·도해는 이를 실무에 적용하려고 작성한 제안이다. 도해는 원본 영상 캡처가 아니다.</p>
+</div>
+<p>“한 컷에 카메라 무브먼트 하나”, “대사 컷 7~10초” 같은 기준은 시작점을 고르는 데 유용하다. 모든 모델과 장르에 통하는 고정 규칙으로 쓰면 연출 선택이 좁아진다. 한 장면씩 시험하고 실제 결과로 조정한다.</p>
+</section>
+<section id="character">
+<p class="kicker">1 / 인물의 일관성</p>
+<h2>캐릭터 시트: 다음 컷에서도 같은 사람으로 보이게</h2>
+<p>시트는 인물의 기준 자료다. 정면 전신은 비율과 의상, 후면 전신은 뒤태와 의상 구조, 얼굴 확대는 이목구비를 알려 준다. 한 장에 정보를 많이 넣기보다 각 참조의 역할을 명확히 정한다.</p>
+<div class="grid sheet">
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 380" role="img" aria-label="동일 캐릭터의 정면 예시 도해">
+<rect x="-2000" y="-2000" width="4000" height="4000" fill="#e9eff2"/>
+<path d="M-200 353 H600" stroke="#aabecb"/>
+<g stroke="#243e53" stroke-width="2.5" stroke-linejoin="round">
+<path d="M123 169 L116 255 112 340 141 340 151 245 161 340 190 340 184 251 177 169" fill="#354e68"/>
+<path d="M112 337 L109 350 143 350 143 337 M160 337 L160 350 195 350 190 337" fill="#203141"/>
+<path d="M122 83 Q101 88 95 111 L82 182 97 188 119 128 119 196 181 196 181 128 203 188 218 182 204 111 Q198 88 178 83" fill="#b9693e"/>
+<path d="M139 82 L150 119 163 82" fill="#e9eef0"/>
+<path d="M123 86 L137 129 150 119 165 131 178 86 M150 120 L150 196" fill="none"/>
+<path d="M139 65 L139 88 Q150 97 163 88 L163 65" fill="#d8a885"/>
+<ellipse cx="151" cy="46" rx="26" ry="33" fill="#dfb391"/>
+<path d="M126 45 Q115 12 145 9 Q183 3 179 44 L169 28 Q146 38 132 30 Z" fill="#293545"/>
+<path d="M134 47 L142 47 M158 47 L166 47 M151 48 L148 58 153 59 M141 67 Q150 72 160 66" fill="none"/>
+<circle cx="139" cy="48" r="1.6"/>
+<circle cx="162" cy="48" r="1.6"/>
+</g>
+</svg>
+<figcaption>
+<strong>정면 전신</strong>
+<br>키 비율·어깨·옷 길이·신발</figcaption>
+</figure>
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 380" role="img" aria-label="동일 캐릭터의 후면 예시 도해">
+<rect x="-2000" y="-2000" width="4000" height="4000" fill="#e9eff2"/>
+<path d="M-200 353 H600" stroke="#aabecb"/>
+<g stroke="#243e53" stroke-width="2.5" stroke-linejoin="round">
+<path d="M123 169 L116 255 112 340 141 340 151 245 161 340 190 340 184 251 177 169" fill="#354e68"/>
+<path d="M112 337 L109 350 143 350 143 337 M160 337 L160 350 195 350 190 337" fill="#203141"/>
+<path d="M122 83 Q101 88 95 111 L82 182 97 188 119 128 119 196 181 196 181 128 203 188 218 182 204 111 Q198 88 178 83" fill="#b9693e"/>
+
+<path d="M150 90 L150 196" fill="none"/>
+<path d="M139 65 L139 88 Q150 97 163 88 L163 65" fill="#d8a885"/>
+<ellipse cx="151" cy="46" rx="26" ry="33" fill="#293545"/>
+<path d="M126 45 Q115 12 145 9 Q183 3 179 44 L169 28 Q146 38 132 30 Z" fill="#293545"/>
+</g>
+</svg>
+<figcaption>
+<strong>후면 전신</strong>
+<br>뒤쪽 실루엣·의상·헤어 형태</figcaption>
+</figure>
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="106 0 90 100" role="img" aria-label="동일 캐릭터의 정면 예시 도해">
+<rect x="-2000" y="-2000" width="4000" height="4000" fill="#e9eff2"/>
+<path d="M-200 353 H600" stroke="#aabecb"/>
+<g stroke="#243e53" stroke-width="2.5" stroke-linejoin="round">
+<path d="M123 169 L116 255 112 340 141 340 151 245 161 340 190 340 184 251 177 169" fill="#354e68"/>
+<path d="M112 337 L109 350 143 350 143 337 M160 337 L160 350 195 350 190 337" fill="#203141"/>
+<path d="M122 83 Q101 88 95 111 L82 182 97 188 119 128 119 196 181 196 181 128 203 188 218 182 204 111 Q198 88 178 83" fill="#b9693e"/>
+<path d="M139 82 L150 119 163 82" fill="#e9eef0"/>
+<path d="M123 86 L137 129 150 119 165 131 178 86 M150 120 L150 196" fill="none"/>
+<path d="M139 65 L139 88 Q150 97 163 88 L163 65" fill="#d8a885"/>
+<ellipse cx="151" cy="46" rx="26" ry="33" fill="#dfb391"/>
+<path d="M126 45 Q115 12 145 9 Q183 3 179 44 L169 28 Q146 38 132 30 Z" fill="#293545"/>
+<path d="M134 47 L142 47 M158 47 L166 47 M151 48 L148 58 153 59 M141 67 Q150 72 160 66" fill="none"/>
+<circle cx="139" cy="48" r="1.6"/>
+<circle cx="162" cy="48" r="1.6"/>
+</g>
+</svg>
+<figcaption>
+<strong>얼굴 확대</strong>
+<br>눈·코·입·헤어라인·피부 특징</figcaption>
+</figure>
+</div>
+<p class="meta">설명용 인물 도해. 동일 캐릭터의 참조 역할을 보여 주며 실제 생성 결과나 얼굴 일관성 검증 자료는 아니다.</p>
+<h3>만드는 순서</h3>
+<ol>
+<li>
+<strong>고정할 특징부터 적는다.</strong> 얼굴형, 눈썹, 헤어스타일, 체형, 의상 색과 소재, 액세서리 위치를 짧게 기록한다.</li>
+<li>
+<strong>대표 얼굴 한 장을 선택한다.</strong> 그 얼굴을 참조해 전신과 후면을 만든다. 각각 독립 생성한 세 장을 모으면 서로 다른 사람이 될 수 있다.</li>
+<li>
+<strong>같은 조건으로 맞춘다.</strong> 중립 표정, 균일한 조명, 단순한 배경을 쓴다. 전신 정면과 후면의 키·옷 길이도 대조한다.</li>
+<li>
+<strong>시트와 개별 이미지를 함께 보관한다.</strong> 전체 시트는 사람이 검토할 때 편하다. 생성 입력은 모델이 지원하는 참조 형식에 맞춰 개별 패널을 쓸 수 있다.</li>
+<li>
+<strong>장면의 시작 이미지를 만든다.</strong> 시트로 정체성을 유지하면서 장면의 조명·배경·자세를 만든 뒤 그 이미지를 영상화한다.</li>
+</ol>
+<div class="duo">
+<div>
+<h3>어떤 상황에 무엇을 쓰나</h3>
+<ul>
+<li>대화·감정 컷: 얼굴 참조를 우선한다.</li>
+<li>걷기·춤·전신 액션: 정면 전신과 의상 참조를 쓴다.</li>
+<li>추격·뒤돌아섬: 후면 참조를 추가한다.</li>
+<li>측면·회전: 필요할 때 측면이나 3/4 얼굴을 보충한다.</li>
+</ul>
+</div>
+<div>
+<h3>실패를 줄이는 노하우</h3>
+<ul>
+<li>패널마다 인물 특징이 같은지 눈으로 비교한다.</li>
+<li>옷에 복잡한 문구·문양을 넣으면 컷마다 달라질 수 있다.</li>
+<li>여러 패널을 영상의 첫 프레임으로 그대로 쓰지 않는다. 장면 이미지 한 장을 먼저 만든다.</li>
+<li>다음 컷의 자세·시선·소품 위치는 직전 컷의 끝과 맞춘다.</li>
+</ul>
+</div>
+</div>
+<div class="note">
+<strong>“민머리 마네킹”의 역할은 구분하자</strong>
+<p>제공된 요약의 표현만으로 원본이 의도한 범위를 확정할 수 없다. 의상·체형 전용 자료에 마네킹을 쓰는 방식은 가능하지만 얼굴과 머리카락까지 유지하려면 실제 캐릭터의 얼굴·헤어 참조가 따로 필요하다. 민머리 처리를 모든 캐릭터 시트의 필수 조건으로 삼지 않는다.</p>
+</div>
+<h3>장면 이미지용 지시 예시</h3>
+<pre>참조 인물의 얼굴형, 짧은 검은 머리, 갈색 코트와 체형을 유지한다.
+장면에는 이 인물 한 명이 있다.
+밤의 기차역에서 정면을 향해 서 있다. 차가운 천장 조명.
+머리부터 발끝까지 보이는 전신 구도. 배경은 기차역으로 구성한다.</pre>
+<p>고정 문장은 모델의 동일 인물 보존을 보장하지 않는다. 결과가 달라지면 긴 설명을 계속 붙이기 전에 참조 이미지의 선명도와 장면의 난도를 확인한다.</p>
+</section>
+<section id="camera">
+<p class="kicker">2 / 관객의 시선</p>
+<h2>카메라 프롬프트: 무엇을 향해 어떻게 움직일까</h2>
+<p>장면 묘사는 누가 어디서 무엇을 하는지 설명한다. 카메라 지시문은 그 장면을 어떻게 볼지 설명한다. 두 항목을 분리하면 같은 장면에서 카메라 연출만 바꿔 비교하기 쉽다.</p>
+<h3>네 가지 항목으로 설계한다</h3>
+<ol>
+<li>
+<strong>Movement / 움직임:</strong> 카메라가 인물 쪽으로 곧게 다가간다.</li>
+<li>
+<strong>Speed / 속도:</strong> 6초 동안 천천히 일정하게 이동한다.</li>
+<li>
+<strong>Framing / 구도:</strong> 눈높이를 유지하고 얼굴을 화면 중앙에 둔다.</li>
+<li>
+<strong>End / 종료:</strong> 미디엄 샷에서 클로즈업으로 접근한 뒤 멈춘다.</li>
+</ol>
+<p>프레이밍에는 이동 중 유지할 조건과 바뀔 조건을 나눠 적는다. “인물 크기를 유지한다”와 “MS에서 CU로 접근한다”를 동시에 쓰면 목표가 충돌한다. 종료에는 카메라의 마지막 위치, 최종 구도와 멈춘 상태를 적는다.</p>
+<figure>
+<div class="diagram-scroll" role="region" aria-label="가로로 스크롤할 수 있는 설명 도해" tabindex="0"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 350" role="img" aria-label="달리 인은 카메라 위치가 바뀌고 줌 인은 위치를 유지하는 비교 도해">
+<defs>
+<marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+<path d="M0 0 L6 3 0 6" fill="#256c89"/>
+</marker>
+</defs>
+<rect width="900" height="340" fill="#edf3f6"/>
+<g fill="#243e53" font-family="sans-serif" font-size="18">
+<text x="30" y="35">달리 인 · 위치 이동</text>
+<text x="480" y="35">줌 인 · 같은 위치</text>
+</g>
+<g stroke="#9bb1bd" fill="none">
+<path d="M30 290 L190 65 250 65 420 290 M480 290 L640 65 700 65 870 290"/>
+<path d="M50 260 H410 M85 210 H375 M120 160 H340 M500 260 H860 M535 210 H825 M570 160 H790"/>
+</g>
+<g fill="#b9693e">
+<circle cx="220" cy="115" r="21"/>
+<path d="M194 146 H246 L255 210 H185Z"/>
+<circle cx="670" cy="115" r="21"/>
+<path d="M644 146 H696 L705 210 H635Z"/>
+</g>
+<g fill="#243e53">
+<rect x="120" y="263" width="48" height="28" rx="4"/>
+<path d="M168 269 L185 260 V292 L168 284Z"/>
+<rect x="230" y="225" width="48" height="28" rx="4" opacity=".45"/>
+<rect x="650" y="263" width="48" height="28" rx="4"/>
+</g>
+<g fill="none" stroke="#256c89" stroke-width="4" marker-end="url(#arrow)">
+<path d="M172 248 L228 225"/>
+<path d="M667 252 L650 175"/>
+<path d="M682 252 L696 175"/>
+</g>
+<g fill="#243e53" font-family="sans-serif" font-size="16">
+<text x="30" y="325">가까운 물체와 먼 배경의 상대 크기가 달라짐</text>
+<text x="480" y="325">원근 관계는 유지하고 보이는 범위를 좁힘</text>
+</g>
+</svg></div>
+<figcaption>설명용 도해. 달리는 위치를 바꾸므로 원근 관계가 달라진다. 같은 위치에서 줌만 바꾸면 원근 관계는 유지한다. 흔히 말하는 배경 압축은 촬영 거리와 프레이밍 조건을 함께 봐야 한다.</figcaption>
+</figure>
+<h3>목적별 카메라 선택표</h3>
+<p>아래 20개 항목은 제공된 요약의 목록을 유지하되 선택 기준을 보완했다. 이동·각도·시점·초점은 서로 다른 속성이다. “로우 앵글 + 달리 인”처럼 함께 쓸 수 있다. 스태틱 샷은 이 목록 밖의 기본 비교 기준으로 둔다.</p>
+<div class="table-wrap">
+<table class="camera">
+<thead>
+<tr>
+<th scope="col">목적</th>
+<th scope="col">기법</th>
+<th scope="col">무엇이 변하나</th>
+<th scope="col">어울리는 상황</th>
+<th scope="col">지시할 내용·주의점</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>접근</td>
+<td>달리 인</td>
+<td>실제로 피사체에 접근</td>
+<td>깨달음, 관객의 관심 집중</td>
+<td>시작 MS → 끝 CU처럼 끝 크기를 지정한다.</td>
+</tr>
+<tr>
+<td>접근</td>
+<td>슬로 줌 인</td>
+<td>위치를 고정하고 화각을 좁힘</td>
+<td>멀리서 지켜보는 긴장</td>
+<td>피사체와 배경을 함께 확대한다. 달리와 구분한다.</td>
+</tr>
+<tr>
+<td>접근</td>
+<td>돌리 줌</td>
+<td>이동과 반대 방향 줌을 연동</td>
+<td>충격, 현실감의 흔들림</td>
+<td>인물 크기 유지가 목표다. 짧은 시험 컷부터 만든다.</td>
+</tr>
+<tr>
+<td>이동</td>
+<td>아크 샷</td>
+<td>인물 주위를 곡선으로 이동</td>
+<td>등장, 관계나 공간 공개</td>
+<td>처음에는 작은 회전각으로 시도한다. 360°는 필수가 아니다.</td>
+</tr>
+<tr>
+<td>이동</td>
+<td>사이드 트래킹</td>
+<td>옆에서 나란히 이동</td>
+<td>걷기, 달리기, 이동 리듬</td>
+<td>인물과의 거리·속도를 맞추고 진행 방향 여백을 둔다.</td>
+</tr>
+<tr>
+<td>이동</td>
+<td>팔로우 샷</td>
+<td>뒤에서 따라감</td>
+<td>탐색, 추격, 공간 진입</td>
+<td>인물과 카메라의 간격, 도착 지점을 지정한다.</td>
+</tr>
+<tr>
+<td>이동</td>
+<td>리버스 트래킹</td>
+<td>앞에서 물러나며 촬영</td>
+<td>걸으며 나누는 대화</td>
+<td>눈높이와 인물 크기를 유지한다. 두 사람 간격도 적는다.</td>
+</tr>
+<tr>
+<td>이동</td>
+<td>휩 팬</td>
+<td>급격히 수평 회전</td>
+<td>전환, 급작스러운 시선 이동</td>
+<td>시작·종료 대상을 명시한다. 빠른 팬과 이동을 혼동하지 않는다.</td>
+</tr>
+<tr>
+<td>높이</td>
+<td>크레인 업</td>
+<td>카메라가 위로 상승</td>
+<td>장면 마무리, 공간 공개</td>
+<td>상승 중 렌즈 방향을 별도로 적는다. 항상 수평일 필요는 없다.</td>
+</tr>
+<tr>
+<td>높이</td>
+<td>드론 풀백</td>
+<td>뒤로 물러나면서 상승</td>
+<td>공간 규모, 엔딩</td>
+<td>인물이 얼마나 작아지고 무엇이 새로 보일지 지정한다.</td>
+</tr>
+<tr>
+<td>높이</td>
+<td>로우 앵글</td>
+<td>아래에서 올려다봄</td>
+<td>위압감, 권력, 영웅적 등장</td>
+<td>낮은 위치 자체는 움직임이 아니다. 정지샷과도 결합한다.</td>
+</tr>
+<tr>
+<td>높이</td>
+<td>하이 앵글</td>
+<td>위에서 내려다봄</td>
+<td>고립, 취약함, 감시</td>
+<td>감정은 연기와 공간에도 달렸다. 높이만으로 확정하지 않는다.</td>
+</tr>
+<tr>
+<td>높이</td>
+<td>오버헤드</td>
+<td>수직으로 내려다봄</td>
+<td>위치 관계, 동선, 패턴</td>
+<td>인물 얼굴보다 배치가 잘 읽힌다. 바닥 구조를 준비한다.</td>
+</tr>
+<tr>
+<td>시점</td>
+<td>핸드헬드</td>
+<td>손으로 든 듯 미세하게 흔들림</td>
+<td>현장감, 불안한 관찰</td>
+<td>흔들림의 강도를 낮게 시작한다. 과한 흔들림으로 오류를 숨기지 않는다.</td>
+</tr>
+<tr>
+<td>시점</td>
+<td>스노리캠</td>
+<td>몸에 고정된 듯 인물을 따라감</td>
+<td>패닉, 취기, 주관적 혼란</td>
+<td>얼굴의 화면 위치를 유지하고 배경이 움직이게 지시한다.</td>
+</tr>
+<tr>
+<td>시점</td>
+<td>1인칭 POV</td>
+<td>인물의 눈으로 봄</td>
+<td>문 열기, 발견, 직접 체험</td>
+<td>손이 필요하면 손과 물체의 접촉을 단순하게 설계한다.</td>
+</tr>
+<tr>
+<td>시점</td>
+<td>리어 샷</td>
+<td>뒤에서 인물을 봄</td>
+<td>표정 숨기기, 기다림</td>
+<td>후면 의상·헤어 참조를 쓴다. 고정 여부는 따로 지정한다.</td>
+</tr>
+<tr>
+<td>초점·변형</td>
+<td>더치 앵글</td>
+<td>수평선을 기울임</td>
+<td>불균형, 위기</td>
+<td>20°는 예시다. 장면에 맞게 기울기를 고른다.</td>
+</tr>
+<tr>
+<td>초점·변형</td>
+<td>랙 포커스</td>
+<td>전경과 배경 사이 초점 이동</td>
+<td>단서 공개, 관심 대상 변경</td>
+<td>두 대상이 시작 이미지에 보여야 한다. 초점 이동 순서를 적는다.</td>
+</tr>
+<tr>
+<td>공간 통과</td>
+<td>푸시 패스트</td>
+<td>전경을 지나 공간 안으로 이동</td>
+<td>문 너머 공개, 공간 연결</td>
+<td>문틀·전경·도착 공간을 구체화한다. 명칭보다 경로를 설명한다.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3>한 컷에 하나의 주된 움직임으로 시작한다</h3>
+<p>처음부터 회전·상승·줌·초점 이동을 한꺼번에 넣으면 어떤 지시가 실패했는지 찾기 어렵다. 스태틱 샷으로 장면을 확인한 뒤 한 가지 움직임을 추가하고 속도나 도착 구도를 바꿔 본다. 돌리 줌처럼 두 동작이 정의에 포함되는 기법은 하나의 연동된 목표로 설명한다.</p>
+<p>Runway 공식 가이드도 단순한 핵심 움직임에서 시작해 필요한 세부 조건을 추가하는 방식을 권한다. 이는 해당 모델의 지침이며 다른 모델에서도 같은 성공률을 보장하는 규칙은 아니다. <a href="https://help.runwayml.com/hc/en-us/articles/48324313115155-Image-to-Video-Prompting-Guide">공식 이미지→영상 프롬프트 가이드</a>
+</p>
+<h3>깨달음 장면의 프롬프트 예시</h3>
+<pre>장면: 갈색 코트의 인물이 편지를 읽다가 시선을 든다.
+Movement: 카메라가 인물을 향해 곧게 달리 인한다.
+Speed: 천천히 일정하게 접근한다.
+Framing: 눈높이와 얼굴의 중앙 배치를 유지한다.
+End: 허리 위 미디엄 샷에서 얼굴 클로즈업에 도달한 뒤 멈춘다.</pre>
+<p>이 형식은 설계용이다. 실제 모델에는 지원 형식에 맞춰 자연스러운 한 문단으로 전달해도 된다. 속도를 늦춘다고 인물의 연기까지 슬로모션이 되는 것은 아니므로 카메라 속도와 인물 동작 속도를 따로 설명한다.</p>
+</section>
+<section id="framing">
+<p class="kicker">3 / 정보와 감정의 거리</p>
+<h2>프레임 사이즈: 관객에게 무엇까지 보여 줄까</h2>
+<p>넓게 찍으면 위치와 동작을 읽기 쉽고 가까이 찍으면 표정과 디테일을 읽기 쉽다. 같은 인물과 배경을 유지한 아래 도해에서 화면 크기만 비교해 보자. 실제 촬영에서는 렌즈와 카메라 거리도 인상에 영향을 준다.</p>
+<div class="grid">
+<figure class="frame">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-600 -300 1500 1000" role="img" aria-label="동일 캐릭터의 정면 예시 도해">
+<rect x="-2000" y="-2000" width="4000" height="4000" fill="#e9eff2"/>
+<path d="M-200 353 H600" stroke="#aabecb"/>
+<g stroke="#243e53" stroke-width="2.5" stroke-linejoin="round">
+<path d="M123 169 L116 255 112 340 141 340 151 245 161 340 190 340 184 251 177 169" fill="#354e68"/>
+<path d="M112 337 L109 350 143 350 143 337 M160 337 L160 350 195 350 190 337" fill="#203141"/>
+<path d="M122 83 Q101 88 95 111 L82 182 97 188 119 128 119 196 181 196 181 128 203 188 218 182 204 111 Q198 88 178 83" fill="#b9693e"/>
+<path d="M139 82 L150 119 163 82" fill="#e9eef0"/>
+<path d="M123 86 L137 129 150 119 165 131 178 86 M150 120 L150 196" fill="none"/>
+<path d="M139 65 L139 88 Q150 97 163 88 L163 65" fill="#d8a885"/>
+<ellipse cx="151" cy="46" rx="26" ry="33" fill="#dfb391"/>
+<path d="M126 45 Q115 12 145 9 Q183 3 179 44 L169 28 Q146 38 132 30 Z" fill="#293545"/>
+<path d="M134 47 L142 47 M158 47 L166 47 M151 48 L148 58 153 59 M141 67 Q150 72 160 66" fill="none"/>
+<circle cx="139" cy="48" r="1.6"/>
+<circle cx="162" cy="48" r="1.6"/>
+</g>
+</svg>
+<figcaption>
+<span>ELS</span>
+<h3>익스트림 롱샷</h3>
+<p>인물보다 장소가 먼저 읽힌다.</p>
+<small>광활한 공간, 고립, 오프닝</small>
+</figcaption>
+</figure>
+<figure class="frame">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-100 -40 500 440" role="img" aria-label="동일 캐릭터의 정면 예시 도해">
+<rect x="-2000" y="-2000" width="4000" height="4000" fill="#e9eff2"/>
+<path d="M-200 353 H600" stroke="#aabecb"/>
+<g stroke="#243e53" stroke-width="2.5" stroke-linejoin="round">
+<path d="M123 169 L116 255 112 340 141 340 151 245 161 340 190 340 184 251 177 169" fill="#354e68"/>
+<path d="M112 337 L109 350 143 350 143 337 M160 337 L160 350 195 350 190 337" fill="#203141"/>
+<path d="M122 83 Q101 88 95 111 L82 182 97 188 119 128 119 196 181 196 181 128 203 188 218 182 204 111 Q198 88 178 83" fill="#b9693e"/>
+<path d="M139 82 L150 119 163 82" fill="#e9eef0"/>
+<path d="M123 86 L137 129 150 119 165 131 178 86 M150 120 L150 196" fill="none"/>
+<path d="M139 65 L139 88 Q150 97 163 88 L163 65" fill="#d8a885"/>
+<ellipse cx="151" cy="46" rx="26" ry="33" fill="#dfb391"/>
+<path d="M126 45 Q115 12 145 9 Q183 3 179 44 L169 28 Q146 38 132 30 Z" fill="#293545"/>
+<path d="M134 47 L142 47 M158 47 L166 47 M151 48 L148 58 153 59 M141 67 Q150 72 160 66" fill="none"/>
+<circle cx="139" cy="48" r="1.6"/>
+<circle cx="162" cy="48" r="1.6"/>
+</g>
+</svg>
+<figcaption>
+<span>LS</span>
+<h3>롱샷</h3>
+<p>전신 주변에 넉넉한 공간을 둔다.</p>
+<small>인물 위치와 이동 경로</small>
+</figcaption>
+</figure>
+<figure class="frame">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -5 300 370" role="img" aria-label="동일 캐릭터의 정면 예시 도해">
+<rect x="-2000" y="-2000" width="4000" height="4000" fill="#e9eff2"/>
+<path d="M-200 353 H600" stroke="#aabecb"/>
+<g stroke="#243e53" stroke-width="2.5" stroke-linejoin="round">
+<path d="M123 169 L116 255 112 340 141 340 151 245 161 340 190 340 184 251 177 169" fill="#354e68"/>
+<path d="M112 337 L109 350 143 350 143 337 M160 337 L160 350 195 350 190 337" fill="#203141"/>
+<path d="M122 83 Q101 88 95 111 L82 182 97 188 119 128 119 196 181 196 181 128 203 188 218 182 204 111 Q198 88 178 83" fill="#b9693e"/>
+<path d="M139 82 L150 119 163 82" fill="#e9eef0"/>
+<path d="M123 86 L137 129 150 119 165 131 178 86 M150 120 L150 196" fill="none"/>
+<path d="M139 65 L139 88 Q150 97 163 88 L163 65" fill="#d8a885"/>
+<ellipse cx="151" cy="46" rx="26" ry="33" fill="#dfb391"/>
+<path d="M126 45 Q115 12 145 9 Q183 3 179 44 L169 28 Q146 38 132 30 Z" fill="#293545"/>
+<path d="M134 47 L142 47 M158 47 L166 47 M151 48 L148 58 153 59 M141 67 Q150 72 160 66" fill="none"/>
+<circle cx="139" cy="48" r="1.6"/>
+<circle cx="162" cy="48" r="1.6"/>
+</g>
+</svg>
+<figcaption>
+<span>FS</span>
+<h3>풀샷</h3>
+<p>머리부터 발끝까지 보여 준다.</p>
+<small>의상, 춤, 전신 액션</small>
+</figcaption>
+</figure>
+<figure class="frame">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="35 0 230 270" role="img" aria-label="동일 캐릭터의 정면 예시 도해">
+<rect x="-2000" y="-2000" width="4000" height="4000" fill="#e9eff2"/>
+<path d="M-200 353 H600" stroke="#aabecb"/>
+<g stroke="#243e53" stroke-width="2.5" stroke-linejoin="round">
+<path d="M123 169 L116 255 112 340 141 340 151 245 161 340 190 340 184 251 177 169" fill="#354e68"/>
+<path d="M112 337 L109 350 143 350 143 337 M160 337 L160 350 195 350 190 337" fill="#203141"/>
+<path d="M122 83 Q101 88 95 111 L82 182 97 188 119 128 119 196 181 196 181 128 203 188 218 182 204 111 Q198 88 178 83" fill="#b9693e"/>
+<path d="M139 82 L150 119 163 82" fill="#e9eef0"/>
+<path d="M123 86 L137 129 150 119 165 131 178 86 M150 120 L150 196" fill="none"/>
+<path d="M139 65 L139 88 Q150 97 163 88 L163 65" fill="#d8a885"/>
+<ellipse cx="151" cy="46" rx="26" ry="33" fill="#dfb391"/>
+<path d="M126 45 Q115 12 145 9 Q183 3 179 44 L169 28 Q146 38 132 30 Z" fill="#293545"/>
+<path d="M134 47 L142 47 M158 47 L166 47 M151 48 L148 58 153 59 M141 67 Q150 72 160 66" fill="none"/>
+<circle cx="139" cy="48" r="1.6"/>
+<circle cx="162" cy="48" r="1.6"/>
+</g>
+</svg>
+<figcaption>
+<span>MFS</span>
+<h3>미디엄 풀샷</h3>
+<p>대체로 허벅지~무릎 부근까지 담는다.</p>
+<small>손과 허리 주변 동작, 대치</small>
+</figcaption>
+</figure>
+<figure class="frame">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="55 0 190 205" role="img" aria-label="동일 캐릭터의 정면 예시 도해">
+<rect x="-2000" y="-2000" width="4000" height="4000" fill="#e9eff2"/>
+<path d="M-200 353 H600" stroke="#aabecb"/>
+<g stroke="#243e53" stroke-width="2.5" stroke-linejoin="round">
+<path d="M123 169 L116 255 112 340 141 340 151 245 161 340 190 340 184 251 177 169" fill="#354e68"/>
+<path d="M112 337 L109 350 143 350 143 337 M160 337 L160 350 195 350 190 337" fill="#203141"/>
+<path d="M122 83 Q101 88 95 111 L82 182 97 188 119 128 119 196 181 196 181 128 203 188 218 182 204 111 Q198 88 178 83" fill="#b9693e"/>
+<path d="M139 82 L150 119 163 82" fill="#e9eef0"/>
+<path d="M123 86 L137 129 150 119 165 131 178 86 M150 120 L150 196" fill="none"/>
+<path d="M139 65 L139 88 Q150 97 163 88 L163 65" fill="#d8a885"/>
+<ellipse cx="151" cy="46" rx="26" ry="33" fill="#dfb391"/>
+<path d="M126 45 Q115 12 145 9 Q183 3 179 44 L169 28 Q146 38 132 30 Z" fill="#293545"/>
+<path d="M134 47 L142 47 M158 47 L166 47 M151 48 L148 58 153 59 M141 67 Q150 72 160 66" fill="none"/>
+<circle cx="139" cy="48" r="1.6"/>
+<circle cx="162" cy="48" r="1.6"/>
+</g>
+</svg>
+<figcaption>
+<span>MS</span>
+<h3>미디엄 샷</h3>
+<p>허리 위를 담는다.</p>
+<small>대화와 상체 행동</small>
+</figcaption>
+</figure>
+<figure class="frame">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="77 0 150 145" role="img" aria-label="동일 캐릭터의 정면 예시 도해">
+<rect x="-2000" y="-2000" width="4000" height="4000" fill="#e9eff2"/>
+<path d="M-200 353 H600" stroke="#aabecb"/>
+<g stroke="#243e53" stroke-width="2.5" stroke-linejoin="round">
+<path d="M123 169 L116 255 112 340 141 340 151 245 161 340 190 340 184 251 177 169" fill="#354e68"/>
+<path d="M112 337 L109 350 143 350 143 337 M160 337 L160 350 195 350 190 337" fill="#203141"/>
+<path d="M122 83 Q101 88 95 111 L82 182 97 188 119 128 119 196 181 196 181 128 203 188 218 182 204 111 Q198 88 178 83" fill="#b9693e"/>
+<path d="M139 82 L150 119 163 82" fill="#e9eef0"/>
+<path d="M123 86 L137 129 150 119 165 131 178 86 M150 120 L150 196" fill="none"/>
+<path d="M139 65 L139 88 Q150 97 163 88 L163 65" fill="#d8a885"/>
+<ellipse cx="151" cy="46" rx="26" ry="33" fill="#dfb391"/>
+<path d="M126 45 Q115 12 145 9 Q183 3 179 44 L169 28 Q146 38 132 30 Z" fill="#293545"/>
+<path d="M134 47 L142 47 M158 47 L166 47 M151 48 L148 58 153 59 M141 67 Q150 72 160 66" fill="none"/>
+<circle cx="139" cy="48" r="1.6"/>
+<circle cx="162" cy="48" r="1.6"/>
+</g>
+</svg>
+<figcaption>
+<span>MCU</span>
+<h3>미디엄 클로즈업</h3>
+<p>가슴 위를 담는다.</p>
+<small>대사와 표정의 균형</small>
+</figcaption>
+</figure>
+<figure class="frame">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="103 0 100 100" role="img" aria-label="동일 캐릭터의 정면 예시 도해">
+<rect x="-2000" y="-2000" width="4000" height="4000" fill="#e9eff2"/>
+<path d="M-200 353 H600" stroke="#aabecb"/>
+<g stroke="#243e53" stroke-width="2.5" stroke-linejoin="round">
+<path d="M123 169 L116 255 112 340 141 340 151 245 161 340 190 340 184 251 177 169" fill="#354e68"/>
+<path d="M112 337 L109 350 143 350 143 337 M160 337 L160 350 195 350 190 337" fill="#203141"/>
+<path d="M122 83 Q101 88 95 111 L82 182 97 188 119 128 119 196 181 196 181 128 203 188 218 182 204 111 Q198 88 178 83" fill="#b9693e"/>
+<path d="M139 82 L150 119 163 82" fill="#e9eef0"/>
+<path d="M123 86 L137 129 150 119 165 131 178 86 M150 120 L150 196" fill="none"/>
+<path d="M139 65 L139 88 Q150 97 163 88 L163 65" fill="#d8a885"/>
+<ellipse cx="151" cy="46" rx="26" ry="33" fill="#dfb391"/>
+<path d="M126 45 Q115 12 145 9 Q183 3 179 44 L169 28 Q146 38 132 30 Z" fill="#293545"/>
+<path d="M134 47 L142 47 M158 47 L166 47 M151 48 L148 58 153 59 M141 67 Q150 72 160 66" fill="none"/>
+<circle cx="139" cy="48" r="1.6"/>
+<circle cx="162" cy="48" r="1.6"/>
+</g>
+</svg>
+<figcaption>
+<span>CU</span>
+<h3>클로즈업</h3>
+<p>얼굴 중심으로 어깨 일부를 담는다.</p>
+<small>표정의 변화, 반응</small>
+</figcaption>
+</figure>
+<figure class="frame">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="122 23 58 58" role="img" aria-label="동일 캐릭터의 정면 예시 도해">
+<rect x="-2000" y="-2000" width="4000" height="4000" fill="#e9eff2"/>
+<path d="M-200 353 H600" stroke="#aabecb"/>
+<g stroke="#243e53" stroke-width="2.5" stroke-linejoin="round">
+<path d="M123 169 L116 255 112 340 141 340 151 245 161 340 190 340 184 251 177 169" fill="#354e68"/>
+<path d="M112 337 L109 350 143 350 143 337 M160 337 L160 350 195 350 190 337" fill="#203141"/>
+<path d="M122 83 Q101 88 95 111 L82 182 97 188 119 128 119 196 181 196 181 128 203 188 218 182 204 111 Q198 88 178 83" fill="#b9693e"/>
+<path d="M139 82 L150 119 163 82" fill="#e9eef0"/>
+<path d="M123 86 L137 129 150 119 165 131 178 86 M150 120 L150 196" fill="none"/>
+<path d="M139 65 L139 88 Q150 97 163 88 L163 65" fill="#d8a885"/>
+<ellipse cx="151" cy="46" rx="26" ry="33" fill="#dfb391"/>
+<path d="M126 45 Q115 12 145 9 Q183 3 179 44 L169 28 Q146 38 132 30 Z" fill="#293545"/>
+<path d="M134 47 L142 47 M158 47 L166 47 M151 48 L148 58 153 59 M141 67 Q150 72 160 66" fill="none"/>
+<circle cx="139" cy="48" r="1.6"/>
+<circle cx="162" cy="48" r="1.6"/>
+</g>
+</svg>
+<figcaption>
+<span>BCU</span>
+<h3>빅 클로즈업</h3>
+<p>얼굴이 프레임 대부분을 채운다.</p>
+<small>감정이 바뀌는 결정적 순간</small>
+</figcaption>
+</figure>
+<figure class="frame">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="129 40 44 24" role="img" aria-label="동일 캐릭터의 정면 예시 도해">
+<rect x="-2000" y="-2000" width="4000" height="4000" fill="#e9eff2"/>
+<path d="M-200 353 H600" stroke="#aabecb"/>
+<g stroke="#243e53" stroke-width="2.5" stroke-linejoin="round">
+<path d="M123 169 L116 255 112 340 141 340 151 245 161 340 190 340 184 251 177 169" fill="#354e68"/>
+<path d="M112 337 L109 350 143 350 143 337 M160 337 L160 350 195 350 190 337" fill="#203141"/>
+<path d="M122 83 Q101 88 95 111 L82 182 97 188 119 128 119 196 181 196 181 128 203 188 218 182 204 111 Q198 88 178 83" fill="#b9693e"/>
+<path d="M139 82 L150 119 163 82" fill="#e9eef0"/>
+<path d="M123 86 L137 129 150 119 165 131 178 86 M150 120 L150 196" fill="none"/>
+<path d="M139 65 L139 88 Q150 97 163 88 L163 65" fill="#d8a885"/>
+<ellipse cx="151" cy="46" rx="26" ry="33" fill="#dfb391"/>
+<path d="M126 45 Q115 12 145 9 Q183 3 179 44 L169 28 Q146 38 132 30 Z" fill="#293545"/>
+<path d="M134 47 L142 47 M158 47 L166 47 M151 48 L148 58 153 59 M141 67 Q150 72 160 66" fill="none"/>
+<circle cx="139" cy="48" r="1.6"/>
+<circle cx="162" cy="48" r="1.6"/>
+</g>
+</svg>
+<figcaption>
+<span>ECU</span>
+<h3>익스트림 클로즈업</h3>
+<p>눈이나 입 등 일부를 확대한다.</p>
+<small>단서, 미세한 반응, 디테일</small>
+</figcaption>
+</figure>
+</div>
+<p class="meta">9가지 크기를 비교하는 설명용 크롭 도해. 실제 렌즈 원근을 재현한 촬영 예시는 아니다.</p>
+<div class="note">
+<strong>절단선은 명칭보다 구체적으로 쓴다</strong>
+<p>샷 명칭의 경계는 자료마다 다르다. 카우보이 샷은 일반적으로 허벅지 중간 부근부터 머리까지 담는 구도를 뜻하므로 “무릎 아래 절단”을 공통 정의로 쓰지 않는다. 얼굴 확대는 빅 클로즈업 또는 타이트 클로즈업으로 설명하고 “딥 클로즈업”은 보편적 표준명으로 단정하지 않는다. <a href="https://www.adobe.com/creativecloud/video/production/cinematography/camera-shots-and-angles/cowboy-shot.html">Adobe의 카우보이 샷 설명</a>
+</p>
+</div>
+<h3>장면에 맞게 고르는 방법</h3>
+<ul>
+<li>
+<strong>공간을 처음 보여 준다:</strong> LS나 ELS로 입구·출구와 인물 위치를 제시한다. 장소를 이미 아는 장면마다 반복할 필요는 없다.</li>
+<li>
+<strong>손의 행동이 사건을 만든다:</strong> 손이 프레임 안에 들어오는 MS나 별도 인서트를 쓴다. MCU에서 손짓이 항상 보이는 것은 아니다.</li>
+<li>
+<strong>대사 속 관계를 보여 준다:</strong> 두 사람의 거리와 자세가 중요하면 넓게, 말에 대한 반응이 중요하면 CU로 접근한다.</li>
+<li>
+<strong>감정의 정점을 만든다:</strong> CU·BCU를 앞선 넓은 컷과 비교해 쓴다. 처음부터 끝까지 얼굴을 꽉 채우면 크기 변화의 효과가 줄어든다.</li>
+<li>
+<strong>전신 동작을 보여 준다:</strong> FS를 기본으로 잡고 발·손이 움직일 공간을 확보한다. 관절에 딱 맞춘 어색한 절단을 피한다.</li>
+</ul>
+<h3>연결할 때의 노하우</h3>
+<p>LS → MS → CU는 장소·행동·감정을 순서대로 보여 주는 한 가지 방법이다. 반대로 단서의 ECU로 시작한 뒤 LS로 장소를 공개할 수도 있다. 컷을 바꿀 때 인물의 시선 방향과 화면 속 위치를 맞추고 의도 없이 좌우가 뒤집히지 않게 한다.</p>
+<pre>고정된 눈높이 미디엄 샷.
+인물의 머리부터 허리까지 보인다.
+인물은 화면 왼쪽 1/3에 서 있고 오른쪽을 바라본다.
+시선 방향인 화면 오른쪽에 여백을 둔다.
+편지를 쥔 두 손이 화면 안에 보인다.</pre>
+</section>
+<section id="duration">
+<p class="kicker">4 / 장면이 읽히는 시간</p>
+<h2>컷 듀레이션: 변화 하나가 완성될 만큼</h2>
+<p>컷 길이는 관객이 정보를 알아보고 반응할 시간을 정한다. “길면 붕괴한다”만으로 자르면 연기가 급해진다. 길이와 함께 동작 수, 접촉, 회전, 가림, 등장인물 수를 살펴본다. 짧아도 복잡한 손동작은 실패할 수 있다.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th scope="col">컷 목적</th>
+<th scope="col">요약의 시작 범위</th>
+<th scope="col">길이를 정할 때 볼 것</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>사물·인서트</td>
+<td>3~4초</td>
+<td>관객이 단서를 알아볼 수 있는가. 텍스트를 읽어야 하면 실제 읽는 시간을 잰다.</td>
+</tr>
+<tr>
+<td>인물 이동·액션</td>
+<td>5~7초</td>
+<td>출발→행동→도착 중 이 컷이 맡는 동작이 끝나는가.</td>
+</tr>
+<tr>
+<td>표정·대사</td>
+<td>7~10초</td>
+<td>실제 대사 길이와 대사 전후 반응 시간을 합친다.</td>
+</tr>
+<tr>
+<td>공간 설정</td>
+<td>5~8초</td>
+<td>장소와 인물 위치가 읽히는가. 공간이 단순하면 더 짧게 써도 된다.</td>
+</tr>
+<tr>
+<td>의도적 롱테이크</td>
+<td>10초 이상</td>
+<td>시간을 끊지 않는 연출 이유가 있는가. 동선과 모델 지원 길이를 먼저 확인한다.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="meta">위 범위는 제공된 요약의 경험적 기준이다. 모델별 권장 길이나 붕괴를 막는 검증된 임계값을 뜻하지 않는다.</p>
+<h3>생성 길이와 최종 편집 길이를 따로 잡는다</h3>
+<p>편집에 6초가 필요해도 모델이 지원하는 길이와 앞뒤 여유를 고려해 더 길게 생성할 수 있다. 생성한 전 구간을 모두 쓸 필요는 없다. 반대로 필요한 대사나 동작이 클립 밖으로 잘렸다면 프레임 고정이나 느린 재생만으로 자연스럽게 복구하기 어렵다.</p>
+<figure>
+<div class="diagram-scroll" role="region" aria-label="가로로 스크롤할 수 있는 설명 도해" tabindex="0"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 220" role="img" aria-label="8초 생성 영상에서 앞뒤 1초를 빼고 가운데 6초를 편집에 쓰는 타임라인 예시">
+<rect width="900" height="210" fill="#edf3f6"/>
+<g font-family="sans-serif" font-size="18" fill="#243e53">
+<text x="25" y="35">8초 생성 클립의 편집 예시</text>
+</g>
+<g transform="translate(25 65)">
+<rect width="850" height="65" rx="5" fill="#ccd9e0"/>
+<rect x="106" width="638" height="65" fill="#256c89"/>
+<g fill="white" font-family="sans-serif" font-size="18">
+<text x="340" y="40">최종 컷 6초</text>
+</g>
+<g fill="#243e53" font-family="sans-serif" font-size="16">
+<text y="95">0초</text>
+<text x="100" y="95">1초</text>
+<text x="725" y="95">7초</text>
+<text x="825" y="95">8초</text>
+<text x="0" y="125">앞 여유 1초</text>
+<text x="725" y="125">뒤 여유 1초</text>
+</g>
+</g>
+</svg></div>
+<figcaption>설명용 타임라인. 앞뒤 1초는 예시이며 모델의 지원 길이·예산·연기에 맞춰 조절한다.</figcaption>
+</figure>
+<h3>실무에서는 이렇게 계산한다</h3>
+<ol>
+<li>
+<strong>이 컷의 변화 하나를 적는다.</strong> 예: “편지를 읽고 상대를 의심한다.”</li>
+<li>
+<strong>연기와 음성을 실제로 재 본다.</strong> 준비 1초 + 대사 4초 + 반응 1초라면 편집 목표는 약 6초다.</li>
+<li>
+<strong>한 컷에서 감당할 행동을 줄인다.</strong> 문을 열고 걷고 편지를 집어 읽고 놀라는 장면은 문 열기 / 편지 발견 / 반응으로 나눠 본다.</li>
+<li>
+<strong>생성 후 쓸 구간을 고른다.</strong> 시작·중간·끝을 확인하고 얼굴, 손, 소품, 의상과 움직임이 안정적인 구간을 선택한다.</li>
+</ol>
+<p>롱테이크는 이동이 하나라는 이유만으로 쉬워지지 않는다. 카메라 앞을 가리는 물체, 새로 공개되는 공간, 손과 물체의 접촉도 난도를 올린다. 연속 시간이 서사에 필요할 때 선택하고 같은 효과를 여러 컷으로 얻을 수 있는지도 비교한다.</p>
+</section>
+<section id="example">
+<p class="kicker">적용 예시</p>
+<h2>“역에서 편지를 읽고 누군가를 발견한다”</h2>
+<p>아래는 네 요소를 함께 설계한 23초짜리 예시다. 시간은 최종 편집 목표이며 영상에서 추출한 장면이 아니다. 인물은 짧은 검은 머리, 갈색 코트, 밝은 셔츠로 통일한다.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th scope="col">컷·목적</th>
+<th scope="col">캐릭터 참조</th>
+<th scope="col">프레임·카메라</th>
+<th scope="col">편집 목표</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. 역과 인물 위치</td>
+<td>정면 전신</td>
+<td>LS / 스태틱. 기둥 옆에 서 있는 인물.</td>
+<td>5초</td>
+</tr>
+<tr>
+<td>2. 편지라는 단서</td>
+<td>의상 소매·소품 별도 참조</td>
+<td>손과 봉투 CU / 스태틱. 글자 대신 봉투의 표식으로 식별.</td>
+<td>3초</td>
+</tr>
+<tr>
+<td>3. 표정의 변화</td>
+<td>얼굴 + 정면 의상</td>
+<td>MS → CU / 느린 달리 인. 읽다가 시선을 듦.</td>
+<td>7초</td>
+</tr>
+<tr>
+<td>4. 시선의 대상 공개</td>
+<td>후면 + 상대 인물 별도 참조</td>
+<td>어깨 너머 구도 / 전경 어깨에서 멀리 선 상대에게 랙 포커스.</td>
+<td>5초</td>
+</tr>
+<tr>
+<td>5. 눈빛의 반응</td>
+<td>얼굴</td>
+<td>타이트 CU / 스태틱. 상대를 확인한 반응.</td>
+<td>3초</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>4번 컷은 두 인물과 서로 다른 초점 거리를 다룬다. 첫 이미지에 둘을 명확히 배치하고 초점 이동이 불안정하면 상대 인물의 별도 컷으로 바꾼다. 카메라 기법을 지키는 것보다 관객이 시선의 대상을 이해하는지가 우선이다.</p>
+<h3>생성 결과를 보고 고치는 순서</h3>
+<ul>
+<li>
+<strong>사람이 달라졌다:</strong> 얼굴·의상 참조가 같은지 확인하고 장면 조명과 회전을 단순하게 만든다.</li>
+<li>
+<strong>카메라가 엉뚱하게 움직인다:</strong> 상충하는 지시를 빼고 시작 구도·이동 경로·끝 구도를 한 가지씩 명시한다.</li>
+<li>
+<strong>행동이 안 보인다:</strong> 프레임을 넓히거나 인서트를 추가한다. 손을 쓰는 장면에서 얼굴만 확대하지 않는다.</li>
+<li>
+<strong>컷이 늘어진다:</strong> 정보가 전달된 뒤의 반복을 줄인다. 반응이 중요한 컷은 그 반응이 끝나는 지점까지 본다.</li>
+<li>
+<strong>컷 사이가 튄다:</strong> 앞 컷의 마지막 자세, 시선, 소품 위치와 다음 컷의 시작 상태를 비교한다.</li>
+</ul>
+<div class="note">
+<strong>한 컷 작성 양식</strong>
+<pre>목적: 관객이 무엇을 새로 알게 되는가?
+참조: 얼굴 / 전신 / 후면 / 소품 중 무엇이 필요한가?
+행동: 시작 상태 → 핵심 행동 → 종료 상태
+구도: 시작 크기 → 종료 크기 / 시선·여백
+카메라: Movement / Speed / Framing / End
+시간: 실제 대사·행동 길이 / 편집 목표 / 생성 길이
+연결: 직전 컷의 끝과 맞출 자세·방향·소품</pre>
+</div>
+</section>
+<section id="plugin">
+<p class="kicker">social-flow 반영</p>
+<h2>스토리보드에서 기법을 선택하는 방식</h2>
+<p>플러그인은 캐릭터 참조 4개, 카메라 기법 27개, 프레임 크기 9개, 컷 시간 목적 5개를 하나의 사전으로 관리한다. 각 항목에는 고유 ID, 개별 아이콘, 사용 상황과 생성 지시가 있다. 카메라 27개에는 본문의 20개 기법 외에 고정·눈높이와 방향별 이동도 포함했다.</p>
+<div class="table-wrap"><table><thead><tr><th>요소</th><th>저장·실행 방식</th><th>확인할 결과</th></tr></thead><tbody>
+<tr><td>캐릭터 시트</td><td>정면·후면·얼굴·의상 참조의 목적을 선택 이유와 함께 저장한다.</td><td>아이콘과 실제 첨부 이미지가 맞는지 확인한다.</td></tr>
+<tr><td>카메라</td><td>기법 ID와 네 가지 카메라 지시를 함께 쓴다. 생성 경로가 해당 기법의 뜻을 프롬프트에 넣는다.</td><td>이동 방향, 고정 상태, 초점 시작·끝을 실제 영상과 비교한다.</td></tr>
+<tr><td>프레임</td><td>MS는 허리 위, MFS는 허벅지 중간으로 통일했다. 인원 수는 절단선과 별개다.</td><td>손과 소품이 필요한 컷에서 해당 동작이 화면 안에 있는지 본다.</td></tr>
+<tr><td>시간</td><td>권장 범위는 참고값이다. 실측 대사·행동과 편집 여유로 생성 길이를 계산한다.</td><td>말끝과 반응이 잘리지 않고 반복 동작으로 시간을 채우지 않는지 본다.</td></tr>
+</tbody></table></div>
+<pre>shot.techniques: [
+  { id: "camera.static", reason: "서로 다른 깊이의 두 인물을 고정 구도로 보여 준다." },
+  { id: "camera.rack-focus", reason: "전경 봉투에서 뒤쪽 목격자로 관심을 옮긴다." },
+  { id: "framing.ms", reason: "얼굴과 봉투를 든 손을 함께 보여 준다." }
+]</pre>
+<p>스토리보드는 기법 사전과 선택 이유를 오프라인으로 저장한다. LLM은 <code>storyboard_read</code>의 <code>techniqueCatalog</code>에서 같은 설명을 읽는다. 고정 카메라나 더치 앵글의 횟수를 강제하지 않고 각 컷에 필요한 기법을 고른다.</p>
+<div class="note">아이콘은 제작 계획이다. 선택한 기법이 실제로 구현됐다는 뜻은 아니다. 생성 영상의 동일성·동작·연결·대사·편집을 별도로 검토해야 한다. 현재 반복 검증 기록은 <a href="../../loops/009-film-techniques/rubric-proposal.md">평가 기준 제안</a>과 함께 관리하며 95점 달성을 아직 선언하지 않았다.</div>
+</section>
+<section id="sources">
+<p class="kicker">근거와 범위</p>
+<h2>출처와 확인 범위</h2>
+<ol class="sources">
+<li>
+<a href="https://www.youtube.com/watch?v=sHs0_iZJxHk">사용자가 지정한 유튜브 영상</a> — 원본 링크. 본문·자막은 직접 확보하지 못했다. 타임스탬프나 직접 인용을 만들지 않았다.</li>
+<li>
+<strong>사용자가 제공한 상세 요약</strong> — 네 가지 제작 요소, 20개 카메라 기법, 9개 프레임 분류, 컷 길이 범위의 주된 입력. 요약의 [1]~[8]은 연결된 서지가 없어 문서의 인용 번호로 재사용하지 않았다.</li>
+<li>
+<a href="https://wjdrlans10.tistory.com/46">동일 영상을 출처로 적은 제3자 정리</a> — 카메라 4요소와 목록의 대응을 보조 확인했다. 원본 검증을 대체하지 않으며 이 문서의 실무 제안을 그 글의 주장으로 돌리지 않는다.</li>
+<li>
+<a href="https://help.runwayml.com/hc/en-us/articles/48324313115155-Image-to-Video-Prompting-Guide">Runway: Image to Video Prompting Guide</a> — 핵심 움직임에서 시작해 조건을 추가하는 모델별 지침을 확인했다.</li>
+<li>
+<a href="https://www.adobe.com/creativecloud/video/production/cinematography/camera-shots-and-angles/cowboy-shot.html">Adobe: Cowboy shot</a> — 카우보이 샷의 일반적인 프레임 범위를 확인했다.</li>
+</ol>
+<p class="meta">모든 예시 프롬프트와 벡터 도해는 이 문서용으로 작성했다. 예시를 실제 영상 모델로 생성하거나 성공률을 측정하지 않았다. 외부 이미지·폰트·스크립트 없이 HTML 파일 하나로 열 수 있다.</p>
+</section>
+<footer>AI 영화 제작 실무 분석 · social-flow / docs / guides / ai-film-four-elements</footer>
+</main>
+</div>
+</body>
+</html>

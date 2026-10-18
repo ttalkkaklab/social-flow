@@ -127,7 +127,7 @@
   // variation" and got clips whose every frame repeats the last; ep411 (2026-09-09) asked for
   // "slow dolly in" on wide miniature stages and read as stills on a phone. The camera slots
   // name a move the viewer can see, in vendor vocabulary: dolly in, truck right, arc shot,
-  // pedestal up, at slow / steady / fast — or static, chosen, on at most a third of the shots.
+  // pedestal up, at slow / steady / fast — or static, chosen for the scene.
 
   // Shot camera presets are independent of the episode's material/illustration style.
   const CAMERA_PRESETS = { 'drone-flythrough': { label: '드론 경로 비행', variants: { cinematic: '부드러운 항공 촬영', fpv: '기울어지는 FPV' } } };
@@ -139,7 +139,7 @@
     properties: {
       preset: { type: 'string', enum: Object.keys(CAMERA_PRESETS), description: 'Optional shot preset. Omit on ordinary camera shots; drone-flythrough is continuous travel through a 3D location.' },
       variant: { type: 'string', enum: Object.keys(CAMERA_PRESETS['drone-flythrough'].variants), description: 'cinematic keeps the horizon level; fpv uses authored bank at bends. Required with drone-flythrough.' },
-      movement: { type: 'string', description: 'One camera move in vendor vocabulary, chosen from shot.feel (directing-grammar §4–§5): static · dolly in/out · zoom in/out (lens only) · dolly zoom in/out · pan left/right · tilt up/down · whip pan · truck left/right · pedestal up/down · crane up/down · arc shot · tracking · handheld · aerial. Not push in, orbit, boom or a Korean word (storyboard_check enforces the vocabulary and the conditions below). A pan, tilt, truck, pedestal or dolly is a sentence from framing to end, so end must differ from framing. A whip pan needs the hit in sound.sfx or visual.audio. A dolly zoom needs shot.depth deep (the background that stretches), a stationary subject, and happens once per episode. For drone shots copy the trajectory-derived value from drone-previz.js.' },
+      movement: { type: 'string', description: 'One camera move in vendor vocabulary, chosen from shot.feel (directing-grammar §4–§5): static · dolly in/out · zoom in/out (lens only) · dolly zoom in/out · pan left/right · tilt up/down · whip pan · truck left/right · pedestal up/down · crane up/down · arc shot · tracking · handheld · aerial. Not push in, orbit, boom or a Korean word (storyboard_check enforces the vocabulary and the conditions below). A pan, tilt, truck, pedestal or dolly is a sentence from framing to end, so end must differ from framing. A whip pan needs the hit in sound.sfx or visual.audio. A dolly zoom needs shot.depth deep (the background that stretches), a stationary subject, with a scene-specific purpose. For drone shots copy the trajectory-derived value from drone-previz.js.' },
       speed: { type: 'string', description: 'Movement pace as slow, steady or fast — never inside movement, never a word the viewer cannot see (very slow, subtle). Empty on static. Generated from the trajectory on drone shots.' },
       framing: { type: 'string', description: 'Opening composition — what the camera holds before the move starts (hold in). Generated from the trajectory on drone shots.' },
       end: { type: 'string', description: 'Closing composition — where the move settles and holds (hold out); on a pan, tilt, truck, pedestal or dolly it names a different picture from framing. Generated from the trajectory on drone shots.' },
@@ -286,7 +286,6 @@
   }
 
   const NEUTERED = /\b(?:very|extremely|almost|ever so)\s+(?:slow|slight|small|subtle|gentle)|\b(?:barely|hardly|imperceptibl[ey]|subtle|subtly|tiny|minimal|micro|slight|slightly|gentle|gently|restrained|quiet)\b|\bhold(?:ing)?\s+(?:the\s+)?(?:composition|frame|shot)\b|\block(?:ed)?[- ]off\b|\bbreathing only\b/i;
-  const WIDE = /\b(?:wide|establishing|extreme long|long shot|full[- ]body figures|small figures)\b/i;
   // The move families a generated shot may declare, in the vendor's words (video-model-selection
   // §Camera), and what each one has to bring with it (directing-grammar §4, film-directing course
   // L13 pan·tilt · L14 dolly·truck·tracking · L15 dolly zoom, 2026-08-28 ~ 08-30). `movement` opens
@@ -365,12 +364,20 @@
       warnings.push(`a fast ${move.key} strobes at 24 fps when the background holds vertical lines (posts, window frames); if it reads broken, widen the framing and come closer rather than slowing down (L13)`);
     return warnings;
   }
-  // L15 — the trick is spent once: the second time the audience watches the camera, not the person.
+  // Repetition is judged by what each shot reveals, not a per-episode quota.
   // Takes the whole board so the numbers it prints are board shot numbers.
   function episodeMoveErrors(scenes) {
-    const at = (scenes || []).map((s, i) => eligible(s) && !reused(s) && s.visual?.video && moveOf(s.visual?.camera)?.family === 'dollyzoom' ? i + 1 : 0).filter(Boolean);
-    return at.length > 1 ? [`[dolly-zoom-twice] shots ${at.join(', ')} each ask for a dolly zoom — it is spent once per episode (directing-grammar §4); keep the shot where the world turns over, and write another move on the rest`] : [];
+    const seen = new Map(), notes = [];
+    for (const [index, scene] of (scenes || []).entries()) {
+      if (moveOf(scene.visual?.camera)?.family !== 'dollyzoom') continue;
+      const purpose = String(scene.shot?.info || scene.shot?.why || '').trim();
+      if (!purpose) { notes.push(`shot ${index + 1}: explain what this dolly zoom reveals`); continue; }
+      if (seen.has(purpose)) notes.push(`shots ${seen.get(purpose)} and ${index + 1}: repeated dolly zoom with identical information; inspect whether the second beat adds anything`);
+      seen.set(purpose, index + 1);
+    }
+    return notes;
   }
+
   function cameraErrors(scene, {advice=[]} = {}) {
     const v = scene.visual || {}, camera = v.camera || {}, errors = droneSceneErrors(scene,{advice});
     const span = [camera.movement, camera.speed].filter(text).join(' ');
@@ -678,24 +685,6 @@
       run.push({ key, shot: i + 1 });
       if (run.length === 3) advice.push('shots ' + run.map(r => r.shot).join(', ') + ': the same framing and camera move three times in a row; change size, angle or move for a reason');
     });
-    // A full-video episode is carried by the camera as much as by the subject. ep411 held a
-    // static or slow camera on wide miniature stages for 8 of 15 shots and measured like a
-    // slideshow (2026-09-09): the camera moves on at least two of every three shots, never
-    // stands still twice in a row, and at least half the shots come closer than wide.
-    const generated = (win.SCENES || []).map((s, i) => ({ s, shot: i + 1 })).filter(({ s }) => eligible(s) && !reused(s));
-    if (generated.length >= 3) {
-      const statics = generated.filter(({ s }) => staticCamera(s.visual?.camera));
-      if (statics.length * 3 > generated.length)
-        advice.push(`${statics.length} of ${generated.length} shots hold a static camera; a full-video episode moves the camera on at least two of every three shots`);
-      generated.forEach(({ s, shot }, k) => {
-        if (k && staticCamera(s.visual?.camera) && staticCamera(generated[k - 1].s.visual?.camera))
-          advice.push(`shots ${generated[k - 1].shot}, ${shot}: two static cameras in a row; move on one of them`);
-      });
-      const conventional = generated.filter(({s}) => !isDrone(s.visual?.camera) || droneSceneErrors(s).length);
-      const wide = conventional.filter(({ s }) => WIDE.test(String(s.visual?.camera?.framing || '')));
-      if (wide.length * 2 > conventional.length)
-        advice.push(`${wide.length} of ${conventional.length} shots are framed wide; small figures on a wide stage read as a still on a phone — bring at least half the shots to medium or close`);
-    }
     return errors;
   }
   function policy(base, production, scenes) {

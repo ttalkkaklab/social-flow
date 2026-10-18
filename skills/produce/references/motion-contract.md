@@ -36,7 +36,7 @@ add blinking, lower a global threshold or animate an unrelated background just t
 Present real findings under [assembly-video-hitl.md](assembly-video-hitl.md): they are recorded
 warnings tied to the reported inputs, not an approval. A new finding on the final output is reported as new.
 
-Regression comparisons live in `server/test/motion-contract.test.mjs`. They compare lossless
+Regression comparisons live in `server/test/measure-motion.test.mjs`. They compare lossless
 rendered frames with H.264 output and retain the background-only counterexample: a numeric
 pass cannot establish semantic motion. Actual HTML helper captures use the optional local
 fixture runner documented in that test. The tests do not replace watching the episode.

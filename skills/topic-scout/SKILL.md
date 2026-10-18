@@ -12,8 +12,8 @@ description: >
   autoproduce and grow-youtube topic pool.
 argument-hint: "<channel> [seed query]"
 allowed-tools: ["Read", "Write", "Glob", "Bash", "AskUserQuestion",
-  "mcp__social-flow__youtube_topic_scout", "mcp__social-flow__sns_issue_scout",
-  "mcp__social-flow__serp_trending_now"]
+  "mcp__social-flow__youtube_topic_scout", "mcp__plugin_social-flow_social-flow__youtube_topic_scout", "mcp__social-flow__sns_issue_scout", "mcp__plugin_social-flow_social-flow__sns_issue_scout",
+  "mcp__social-flow__serp_trending_now", "mcp__plugin_social-flow_social-flow__serp_trending_now"]
 ---
 **Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 

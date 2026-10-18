@@ -1,0 +1,31 @@
+{
+  "checkedAt": "2026-10-18T05:53:26.503526+00:00",
+  "githubAccount": "ttalkkaklab",
+  "pushPermission": true,
+  "devHead": "2966cc67f13c976e40234ce42dff0e0b8b4f7933",
+  "workHead": "a62538956149004676f590accdfa8ac0a1fe2978",
+  "mainWorktreeDirtyFiles": [
+    ".gitignore",
+    "AGENTS.md",
+    "CLAUDE.md"
+  ],
+  "overlapWithDev": [
+    "README.md",
+    "server/dist/astra-shot-runtime.bundle.js",
+    "server/dist/bundle.js",
+    "server/dist/tools.js",
+    "server/src/tools.ts",
+    "server/test/storyboard-html.test.mjs",
+    "server/test/visual-direction.test.mjs",
+    "skills/storyboard/references/storyboard-html-template.html",
+    "skills/storyboard/references/storyboard-html.js"
+  ],
+  "mergeExecuted": false,
+  "cleanupExecuted": false,
+  "nextSteps": [
+    "Complete authorized quality loop with honest media evidence.",
+    "Integrate latest dev changes without overwriting other sessions; rebuild generated bundles and rerun checks.",
+    "Merge to dev after completion; preserve existing main-worktree edits while updating.",
+    "Remove only this task worktree after all artifacts are preserved."
+  ]
+}

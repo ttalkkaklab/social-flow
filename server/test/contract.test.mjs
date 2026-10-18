@@ -26,8 +26,8 @@ import {
   snsCredentialFile,
   snsTokenDir,
 } from '../dist/config.js';
-import { SNS_PLATFORM_BY_TOOL, TOOLS } from '../dist/tools.js';
-import { ROUTES, threadsTextLength } from '../dist/handlers.js';
+import { SERVER_INSTRUCTIONS, SNS_PLATFORM_BY_TOOL, TOOLS } from '../dist/tools.js';
+import { ROUTES, apiErrorText, threadsTextLength } from '../dist/handlers.js';
 import { STOCK_PROVIDERS, STOCK_MEDIA, STOCK_ORIENTATIONS, STOCK_MAX_LIMIT } from '../dist/stock-client.js';
 import {
   DEFAULT_GEMINI_38_TTS_MODEL,
@@ -109,6 +109,16 @@ describe('tool surface', () => {
     assert.equal(byName.size, TOOLS.length, 'duplicate tool name');
   });
 
+  // The model picks a tool by its description. Two tools with the same text leave it a coin
+  // toss — acting_review, tts_review_acting and tts_review_final shared one until 0.118.0.
+  it('descriptions are unique', () => {
+    const seen = new Map();
+    for (const tool of TOOLS) {
+      assert.equal(seen.get(tool.description), undefined, `${tool.name} repeats ${seen.get(tool.description)}'s description`);
+      seen.set(tool.description, tool.name);
+    }
+  });
+
   for (const tool of TOOLS) {
     describe(tool.name, () => {
       it('name follows the snake_case namespace convention', () => {
@@ -120,6 +130,8 @@ describe('tool surface', () => {
         assert.ok(tool.title.trim().length > 0, 'title is empty');
         assert.ok(tool.title.length <= 60, `title too long (${tool.title.length} chars)`);
         assert.ok((tool.description ?? '').trim().length >= 40, 'description missing or too short');
+        // Claude Code cuts an upfront tool description at 4,096 characters; the rest never reaches the model.
+        assert.ok(tool.description.length <= 4096, `description too long (${tool.description.length} chars)`);
       });
 
       it('inputSchema is a valid object schema', () => {
@@ -362,34 +374,16 @@ describe('mlx_* tools', () => {
     'mlx_3d_generate',
   ];
 
-  it('all five mlx tools are listed and routed as local generation', () => {
+  it('all five mlx tools are listed as local generation', () => {
     for (const name of MLX) {
       const tool = byName.get(name);
       assert.ok(tool, `missing tool ${name}`);
-      assert.equal(typeof ROUTES[name], 'function', `missing route ${name}`);
       assert.equal(tool.annotations.openWorldHint, false, `${name} must be generateLocal`);
       assert.equal(tool.annotations.readOnlyHint, false);
       assert.equal(tool.annotations.destructiveHint, false);
-      assert.match(tool.description, /brew install --cask mlx-core/);
-      assert.match(tool.description, /never launches the app/);
+      if (!name.startsWith('mlx_image_')) assert.match(tool.description, /brew install --cask mlx-core/);
+      if (!name.startsWith('mlx_image_')) assert.match(tool.description, /never launches the app/);
     }
-  });
-
-  it('the mlx family pattern hides exactly the five mlx tools', () => {
-    const hidden = TOOLS.filter((tool) => isToolDisabled(tool.name, ['mlx_*'])).map((t) => t.name).sort();
-    assert.deepEqual(hidden, [...MLX].sort());
-  });
-
-  it('image lane stays default-local and Hangul stays gpt_image', () => {
-    const gen = byName.get('mlx_image_generate');
-    const edit = byName.get('mlx_image_edit');
-    assert.match(gen.description, /image_local_generate/);
-    assert.match(gen.description, /gpt_image_text2img/);
-    assert.match(gen.description, /1088×1920/);
-    assert.match(gen.description, /default:true/);
-    assert.match(edit.description, /mode:"edit"/);
-    assert.match(edit.description, /gpt_image_img2img/);
-    assert.equal(gen.inputSchema.properties.width.default, 1024);
   });
 
   it('music defaults instrumental and names the lyrics 400', () => {
@@ -409,33 +403,6 @@ describe('mlx_* tools', () => {
     assert.equal(video.inputSchema.properties.width.default, 768);
     assert.equal(video.inputSchema.properties.height.default, 1280);
     assert.equal(video.inputSchema.properties.numFrames.default, 49);
-  });
-
-  it('3d is GLB-only and says the pipeline has no consumer', () => {
-    const mesh = byName.get('mlx_3d_generate');
-    assert.match(mesh.description, /GLB/);
-    assert.match(mesh.description, /HTML mesh lane consumes embedded GLB/);
-    assert.match(mesh.description, /approved physical-object slide plan/);
-    assert.ok((mesh.inputSchema.required ?? []).includes('imagePath'));
-  });
-});
-
-describe('suno_* tools', () => {
-  const SUNO = ['suno_generate', 'suno_generate_sound', 'suno_generate_lyrics', 'suno_credits'];
-
-  it('all four suno tools are listed and routed', () => {
-    for (const name of SUNO) {
-      assert.ok(TOOLS.some((tool) => tool.name === name), `missing tool ${name}`);
-      assert.equal(typeof ROUTES[name], 'function', `missing route ${name}`);
-    }
-  });
-
-  it('suno_generate describes the third-party REST and does not claim an official Suno API', () => {
-    const tool = TOOLS.find((t) => t.name === 'suno_generate');
-    assert.match(tool.description, /sunoapi\.org/);
-    assert.match(tool.description, /no public self-serve API/);
-    assert.match(tool.description, /SUNO_API_KEY/);
-    assert.match(tool.description, /does not block music_/);
   });
 });
 
@@ -721,14 +688,6 @@ describe('YouTube per-format caption contract (16:9 long-form lane)', () => {
   it('names the long-form branch', () => {
     assert.match(yt().inputSchema.properties.caption.description, /16:9|long-form/);
   });
-
-  it('guides long-form toward chapter timestamps', () => {
-    assert.match(yt().inputSchema.properties.caption.description, /chapter|timestamp/i);
-  });
-
-  it('the thumbnail description speaks to landscape long-form too', () => {
-    assert.match(yt().inputSchema.properties.thumbnailFilePath.description, /landscape/);
-  });
 });
 
 describe('Threads post-media contract', () => {
@@ -756,12 +715,6 @@ describe('Threads post-media contract', () => {
   it('the videoUrl description asks for the burned-in copy', () => {
     // Threads has no subtitle parameter, so a clean master ships without subtitles
     assert.match(props().videoUrl.description, /subtitle-burned|burned-in/i, 'videoUrl does not ask for the burn-in');
-  });
-
-  it('the tool description does not fall back to the link-reply strategy', () => {
-    // if the old strategy ("body + full-video link reply") lingers in the
-    // description, callers publish one more reply and the video goes out twice
-    assert.doesNotMatch(th().description, /link reply|the link in a reply/, 'the old link-reply strategy lingers in the description');
   });
 
   it('argument name matches IG (the video of a post = videoUrl)', () => {
@@ -897,17 +850,9 @@ describe('single-source constants', () => {
 });
 
 describe('supported speech surface', () => {
-  it('removed local synthesis and v2 voice conversion cannot be listed or called', () => {
-    for (const name of ['tts_local_generate', 'mlx_tts_generate', 'voice_lock_apply']) {
-      assert.equal(byName.has(name), false, name);
-      assert.equal(ROUTES[name], undefined, name);
-    }
-  });
-
-  it('Gemini, ElevenLabs v4 and character auditions have live handlers', () => {
+  it('Gemini, ElevenLabs v4 and character auditions are listed; ElevenLabs is pinned to v4', () => {
     for (const name of ['tts_generate', 'tts_multi_speaker', 'tts_gemini_38', 'tts_list_voices', 'tts_elevenlabs_generate', 'tts_elevenlabs_dialogue', 'tts_elevenlabs_voices', 'character_voice_audition']) {
       assert.ok(byName.has(name), name);
-      assert.equal(typeof ROUTES[name], 'function', name);
     }
     for (const name of ['tts_elevenlabs_generate', 'tts_elevenlabs_dialogue']) {
       const props = byName.get(name).inputSchema.properties;
@@ -958,7 +903,6 @@ describe('speech lane separation (ElevenLabs)', () => {
     const item = dialogue.inputSchema.properties.inputs.items;
     assert.ok(item.required.includes('voiceId') && item.required.includes('text'));
     assert.equal(dialogue.inputSchema.properties.inputs.maxItems, ELEVENLABS_DIALOGUE_MAX_INPUTS);
-    assert.deepEqual(dialogue.inputSchema.properties.model.enum, ['eleven_v4']);
   });
 
   it('the output contract names the RIFF default and warns that mp3 is not builder input', () => {
@@ -1010,24 +954,13 @@ describe('image lane separation (local · OpenAI)', () => {
     assert.equal(local.annotations.readOnlyHint, false);
   });
 
-  it('the local tool description gives the mflux install and binary override', () => {
-    assert.match(local.description, /uv tool install --python 3\.12 mflux/, 'no install guidance');
-    assert.match(local.description, /MFLUX_ZIMAGE_BIN/, 'no binary path override method');
-  });
 
-  it('the local tool description warns about the large first-call download', () => {
-    // call it unaware of the 31GB and you misread it as "stuck" and kill it — flag the download in advance
-    assert.match(local.description, /31GB/, 'no weight-download warning');
-  });
 
-  it('routes text-bearing images to gpt_image — with the measured Korean evidence', () => {
-    assert.match(local.description, /gpt_image_text2img/, 'no billed-lane guidance');
-    assert.match(local.description, /딸깍연구소/, 'no measured Korean-rendering evidence');
-  });
 
-  it('the gpt_image description gives the reverse routing (the default is local)', () => {
-    assert.match(paid.description, /image_local_generate/, 'no local-default-lane guidance');
-  });
+
+
+
+
 
   it('the generation nudge in serp_image_search points at both lanes', () => {
     assert.match(byName.get('serp_image_search').description, /image_local_generate/);
@@ -1537,6 +1470,46 @@ describe('multi-channel token resolution', () => {
       assert.ok(CHANNEL_SLUG_RE.test(channel), `${channel} is a regular slug`);
       assert.doesNotThrow(() => snsCredentialFile('YOUTUBE', channel));
     }
+  });
+});
+
+/**
+ * With tool search on, Claude Code loads only tool names and these instructions at session
+ * start, and it cuts the instructions at 4,096 characters. A tool name the server no longer
+ * ships would send the model searching for nothing.
+ */
+describe('server instructions', () => {
+  it('fit in what Claude Code loads at session start', () => {
+    assert.ok(SERVER_INSTRUCTIONS.length > 0);
+    assert.ok(SERVER_INSTRUCTIONS.length <= 4096, `${SERVER_INSTRUCTIONS.length} chars`);
+  });
+
+  it('name only tools the server ships', () => {
+    const named = [...SERVER_INSTRUCTIONS.matchAll(/`([a-z][a-z0-9]*(?:_[a-z0-9]+)+)`/g)].map((m) => m[1]);
+    assert.ok(named.length > 0, 'instructions name no tools');
+    for (const name of named) assert.ok(byName.has(name), `instructions name unknown tool ${name}`);
+  });
+});
+
+/**
+ * A failed SNS call used to come back as `HTTP 403` plus the raw body. Claude Code shows only
+ * the head and tail of a long error, so the next step goes first and the body is capped.
+ */
+describe('apiErrorText', () => {
+  it('puts the next step before the upstream body', () => {
+    const out = apiErrorText({ ok: false, status: 403, body: '{"error":"expired"}' });
+    assert.match(out, /^HTTP 403 — .*sns_account_check/);
+    assert.ok(out.endsWith('{"error":"expired"}'));
+  });
+
+  it('warns that a failed publish may already be live on 5xx', () => {
+    assert.match(apiErrorText({ ok: false, status: 504, body: 'Request timed out' }), /may already be live/);
+  });
+
+  it('caps a long body', () => {
+    const out = apiErrorText({ ok: false, status: 500, body: 'x'.repeat(10_000) });
+    assert.ok(out.length < 4500, `${out.length} chars`);
+    assert.match(out, /more chars cut/);
   });
 });
 

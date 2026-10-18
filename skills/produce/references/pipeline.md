@@ -120,17 +120,15 @@ falls back silently and no short video loops or freezes to fill its window.
 
 ## Three TTS failure modes and responses (Gemini TTS, field-tested)
 
-Narration is generated with the raw engine tool and recorded `not_reviewed` (shot-speech.md,
-owner directive 2026-10-16); `tts_generate_checked` and its proofs are historical and no longer
-gate assembly. These failure shapes still occur; answer them within the pinned voice and the
-episode's attempt allowance, never by switching the profile model. After any audio replacement,
-write a new generation receipt beside the WAV.
+Speech follows [shot-speech.md](shot-speech.md) (owner directive 2026-10-16): generate with
+the selected raw TTS tool, record provenance and `not_reviewed`, and continue. No speech
+proof, listening pass or review gates assembly. The failures below are about the request
+itself; none of them authorizes extra takes or a change of the profile's model.
 
 1. **Duration degeneration** — a short script can contain minutes of trailing silence.
-   Measure the WAV (`ffprobe`); a take far longer than its text supports is regenerated once with
-   the raw tool and a new receipt.
+   Measure the WAV duration against the line; regenerate only that line, once, and report it.
 2. **`No content parts in response`** — the Gemini client retries its request at fixed settings.
-   If it still fails, report the actual cause and stop that card. Do not change the profile's model
+   If it still fails, report the line as failed. Do not change the profile's model
    or rewrite the script merely to make the request succeed.
 3. **`INTERNAL 500`** — provider retries stay inside the client. Persistent failure is
    unverified, not an instruction to spend three more takes.
