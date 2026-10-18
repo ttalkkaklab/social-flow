@@ -4,7 +4,7 @@
   "targetScore": 95,
   "iterationLimit": "user requested repeat until >=95",
   "pluginStatus": "Full check 2245/2245; final prompt de-duplication targeted test10/10; skill lint passed; fifth local installation and installed smoke passed",
-  "mediaStatus": "Six new speech lines generated and attached; four measured scene2 previz clips attached; ASTRA batch rendering s0201 through s0204 using saved settings.",
+  "mediaStatus": "Original scene 2 final delivered, but its pinned voices differed from current character sheets. Corrected Gemini speech for all six scene 2 lines is attached; ASTRA regeneration is in progress.",
   "scope": "all 28 storyboard shots; initial connected scene 2 proposed",
   "score": null,
   "objectiveGatePrevious": {
@@ -13,8 +13,8 @@
     "fail": 0
   },
   "pending": [
-    "Four scene2 video render completions",
-    "Full audiovisual perception/review"
+    "Complete corrected Gemini scene 2 video generation and final assembly",
+    "Merge plugin into dev, update main worktree and remove task worktree"
   ],
   "mergeRequested": {
     "target": "dev",
@@ -23,7 +23,7 @@
     "condition": "only after target achievement"
   },
   "newPaidSpeechCalls": 6,
-  "executionState": "resumed",
+  "executionState": "correcting_character_voice",
   "blockedAudit": {
     "checkedAt": "2026-10-18T05:58:00.828094+00:00",
     "recurrence": "Same pending rubric confirmation and speech spending ceiling persisted across at least three consecutive goal turns. Independent integration, installation and verification work has completed.",
@@ -47,10 +47,19 @@
     "approvedBy": "허용 할테니 진행해.",
     "approvedAt": "2026-10-18T05:59:09.349523+00:00"
   },
-  "speechStatus": "Six lines generated, provenance attached, four shots retimed and composed.",
+  "speechStatus": "Six replacement lines use current character-sheet Gemini voice IDs; provider receipts and attachment revisions saved in .work/film-voice-correction.",
   "pluginReview": {
     "score": 98,
     "P0": 0,
     "report": "plugin-review-2.md"
-  }
+  },
+  "activeRender": {
+    "session": 73378,
+    "launcher": "/tmp/film-correct-render.py",
+    "verifiedAt": "2026-10-18T08:49:17.907118+00:00",
+    "status": "running",
+    "work": "/Volumes/data/story/meleon/data/gyeongseong-family-farce/episodes/ep01-fake-bride/.work/film-voice-correction"
+  },
+  "commit": "dc67ca9",
+  "evaluationInstruction": "User requested final file without evaluation; do not claim footage score."
 }
