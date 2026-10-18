@@ -63,7 +63,7 @@ function musicEnvelopeFindings(points, duration, type) {
   for (const point of points) {
     const t = point?.atSeconds, gain = point?.gainDb;
     if (typeof t !== 'number' || !Number.isFinite(t) || t < 0 || t <= previous ||
-        (Number.isFinite(Number(duration)) && t > Number(duration)) || Number(t.toFixed(3)) !== t)
+        (Number.isFinite(Number(duration)) && t > Number(duration) + 1e-9) || Number(t.toFixed(3)) !== t)
       findings.push('musicGain times must increase, use whole milliseconds and fit inside the shot');
     if (typeof gain !== 'number' || !Number.isFinite(gain) || gain < -60 || gain > 12)
       findings.push('musicGain gainDb must be between -60 and 12');

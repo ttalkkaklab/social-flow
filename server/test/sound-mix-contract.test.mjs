@@ -130,6 +130,7 @@ test('cue crossfade and bed/ambience separation boundaries use the real bed comp
 test('authored music curve changes measured PCM gain and resets outside its shot', () => {
   const dir = fixture();
   try {
+    assert.doesNotThrow(() => musicEnvelopeFilter([[10, 13.2, [{atSeconds:0,gainDb:-6},{atSeconds:3.2,gainDb:0}]]]));
     const filter = musicEnvelopeFilter([[1, 3, [{atSeconds:0,gainDb:-12},{atSeconds:1,gainDb:-6}]]]);
     const pcm = command('ffmpeg', ['-v','error','-f','lavfi','-i','sine=frequency=220:sample_rate=48000:duration=4',
       '-af', filter + 'anull', '-f','f32le','-'], {encoding:null}).stdout;
