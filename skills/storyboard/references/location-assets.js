@@ -59,12 +59,20 @@ function plan(win,index,dir,{ready=false}={}){
     if(previz.locationBinding.fingerprint!==fingerprint)throw new Error('location previz is stale; rebuild it from the current set/camera/blocking');
     if(fileHash(safe(dir,previz.firstFrame))!==previz.locationBinding.frameSha256||fileHash(safe(dir,previz.clip))!==previz.sha256)throw new Error('location previz bytes changed; rebuild it');
   }
+  let spatial=null;
+  if(fresh&&r.spatial){
+    const reportPath=safe(dir,r.spatial.path);
+    if(fileHash(reportPath)!==r.spatial.sha256)throw new Error('location spatial bytes changed');
+    spatial=read(reportPath);
+    if(spatial.fingerprint!==fingerprint)throw new Error('location spatial report is stale');
+  }
   const {m,b,camera}=ctx;
   function promptFor(phase){
     const stateId=phase==='end'?(b.endStateId||b.stateId):b.stateId;
     return `Keep exactly the supplied location composition and object inventory. Surface texture polish may not add plants, furniture, art, openings or props. Visible set inventory: ${[...new Set(C.resolvedObjects(m,stateId).filter(o=>o.visible!==false).map(o=>o.label))].join(', ')}. Location ${m.name}, revision ${m.revision}. State: ${m.states[stateId].label}. The location reference controls architecture, fixed objects, materials and their spatial relationships. Preserve: ${m.invariants.join('; ')}. Required landmarks: ${b.mustShow.join(', ')}. ${C.blockingPrompt(b.blocking,phase)}`;
   }
   return {id:m.id,name:m.name,revision:m.revision,manifestSha256:b.manifestSha256,stateId:b.stateId,state:m.states[b.stateId],states:m.states,camera,
+    spatial,spatialAsset:fresh?r.spatial||null:null,
     fingerprint,fresh,approved:fresh&&r.approval?.fingerprint===fingerprint&&r.approval?.evidenceSha256===digest({frames:r.frames,renderer:r.renderer||null}),
     invariants:m.invariants,mustShow:b.mustShow,objects:C.resolvedObjects(m,b.stateId),baseObjects:m.objects,blocking:b.blocking||null,
     startActors:C.actorsAt(b.blocking,'start'),endActors:C.actorsAt(b.blocking,'end'),endStateId:b.endStateId||b.stateId,
@@ -84,10 +92,20 @@ function render(win,index,dir){
   const fingerprint=signature(ctx),relative='locations/'+ctx.s.id+'-'+fingerprint.slice(0,16)+'-'+crypto.randomBytes(4).toString('hex'),output=safe(dir,relative);
   if(!ctx.s.id||!/^s\d{4,}$/.test(ctx.s.id))throw new Error('stable shot id required');
   const cameras={start:ctx.camera,end:{...ctx.camera,...(ctx.camera.end||{}),end:undefined}};
+  // Auxiliary views keep endpoint poses and use the same immutable set.
+  const points=ctx.m.objects.flatMap(o=>[o.position.map((v,i)=>v-o.size[i]/2),o.position.map((v,i)=>v+o.size[i]/2)]);
+  for(const a of ctx.b.blocking?.actors||[])for(const p of [a.start,a.end||a.start])points.push(p.position,p.position.map((v,i)=>v+(i===2?a.height:0)));
+  const lo=[0,1,2].map(i=>Math.min(...points.map(p=>p[i]))),hi=[0,1,2].map(i=>Math.max(...points.map(p=>p[i])));
+  const target=lo.map((v,i)=>(v+hi[i])/2),distance=Math.hypot(...hi.map((v,i)=>v-lo[i]))*2+1;
+  for(const phase of ['start','end']){
+    const base={...cameras[phase],end:undefined,lensMm:35};
+    cameras[phase+'-top']={...base,target,position:[target[0],target[1]-.001,target[2]+distance]};
+    cameras[phase+'-side']={...base,target,position:[target[0]+distance,target[1],target[2]]};
+  }
   // Clean endpoints share one source set and use their authored actor and object states.
-  try{blender({...renderJob(ctx),action:'render',cameras,output});}catch(e){fs.rmSync(output,{recursive:true,force:true});throw e;}
+  try{blender({...renderJob(ctx),action:'render',cameras,output,fingerprint});}catch(e){fs.rmSync(output,{recursive:true,force:true});throw e;}
   const frames=Object.fromEntries(Object.keys(cameras).map(k=>[k,{path:relative+'/'+k+'.png',sha256:fileHash(path.join(output,k+'.png'))}]));
-  ctx.s.visual={...ctx.s.visual,location:{fingerprint,frames,renderer:'blender',renderedAt:new Date().toISOString()}};
+  ctx.s.visual={...ctx.s.visual,location:{fingerprint,frames,spatial:{path:relative+'/spatial.json',sha256:fileHash(path.join(output,'spatial.json'))},renderer:'blender',renderedAt:new Date().toISOString()}};
   return ctx.s.visual.location;
 }
 function renderJob(ctx){return {manifest:ctx.m,blend:safe(path.dirname(ctx.p),ctx.m.assets.blend.path),stateId:ctx.b.stateId,endStateId:ctx.b.endStateId||ctx.b.stateId,blocking:ctx.b.blocking||null};}
@@ -96,6 +114,7 @@ function previz(win,index,dir,{seconds,fps=24}){
   if(win.PRODUCTION?.previz?.renderer&&win.PRODUCTION.previz.renderer!=='blender')throw new Error('location previz renders with Blender; with a three.js renderer plan the shared set with the previz template or stills');
   if(!ctx.s.visual?.video||!ctx.s.visual?.camera?.movement)throw new Error('previz needs an existing video plan and camera movement');
   if(!Number.isInteger(fps)||fps<24||fps>60||!Number.isFinite(seconds)||seconds<=0||Math.abs(seconds*fps-Math.round(seconds*fps))>1e-6||seconds*fps>3000)throw new Error('previz needs 24..60 fps and a finite duration of 1..3000 whole frames');
+  const prior=plan(win,index,dir);
   const video=ctx.s.visual.video,engine=video.engine||ctx.s.visual.engine||'seedance';
   if(engine==='astra'&&video.numFrames!==undefined){if(fps!==(video.frameRate??24)||Math.abs(seconds-video.numFrames/fps)>1e-6)throw new Error('ASTRA previz timing must match numFrames/frameRate');}
   else if(!Number.isInteger(seconds)||seconds<2)throw new Error('previz seconds must be whole and at least 2 on this video route');
@@ -108,7 +127,7 @@ function previz(win,index,dir,{seconds,fps=24}){
     camera:{movement:ctx.s.visual.camera.movement},locationBinding:{fingerprint,frameSha256:frames.start.sha256},
     actors:(ctx.b.blocking?.actors||[]).map(actor=>({color:actor.color,is:win.PRODUCTION?.cast?.[actor.id]?.name||actor.id})),
     handoff:engine==='seedance'&&!/^seedance-1-/.test(video.model||'')?'reference_video':'frame_and_prompt'};
-  ctx.s.visual.location={fingerprint,frames,renderer:'blender',renderedAt:new Date().toISOString()};
+  ctx.s.visual.location={fingerprint,frames:{...(prior.fresh?prior.frames:{}),...frames},...(prior.spatialAsset?{spatial:prior.spatialAsset}:{}),renderer:'blender',renderedAt:new Date().toISOString()};
   ctx.s.visual.video.previz=record;
   return record;
 }
@@ -124,7 +143,7 @@ function approve(win,index,dir,{reviewer,notes}){
 }
 function references(win,index,dir){
   const p=plan(win,index,dir,{ready:true});if(!p)return null;
-  return {...p,paths:[path.resolve(dir,p.frames.start.path)],endPaths:[path.resolve(dir,p.frames.end.path)],roles:['location geometry, camera and authored character blocking; excludes character appearance'],binding:{fingerprint:p.fingerprint,manifestSha256:p.manifestSha256,frameSha256:p.frames.start.sha256}};
+  return {...p,spatialPaths:p.spatial?Object.values(p.frames).map(f=>path.resolve(dir,f.path)):[],paths:[path.resolve(dir,p.frames.start.path)],endPaths:[path.resolve(dir,p.frames.end.path)],roles:['location geometry, camera and authored character blocking; excludes character appearance'],binding:{fingerprint:p.fingerprint,manifestSha256:p.manifestSha256,frameSha256:p.frames.start.sha256}};
 }
 function applyCamera(win,patch,dir){
   if(patch.version!==1||!['location-camera','location-state'].includes(patch.type))throw new Error('unknown location patch');
@@ -192,5 +211,6 @@ async function run(args){
   else throw new Error('unknown location action');
   saveBoard(p,win);return result;
 }
-module.exports={digest,fileHash,load,build,sheet,context,signature,plan,bind,render,previz,renderJob,approve,references,receipt,reviewResult,applyCamera,check,preview,run,saveBoard};
+function detailFilename(topic,id){return digest([topic,id]).slice(0,24)+'.html';}
+module.exports={detailFilename,digest,fileHash,load,build,sheet,context,signature,plan,bind,render,previz,renderJob,approve,references,receipt,reviewResult,applyCamera,check,preview,run,saveBoard};
 if(require.main===module)run(read(process.argv[2])).then(r=>console.log(JSON.stringify(r,null,2))).catch(e=>{console.error(e.message);process.exitCode=1;});

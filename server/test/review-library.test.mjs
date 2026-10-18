@@ -305,6 +305,14 @@ test('prop and background catalogues preserve episode scope, local media and nav
     assert.ok(props.includes('src="../../episodes/one/storyboard/cup.png"'));
     const backgrounds = readFileSync(join(f.dir, 'assets/locations/index.html'), 'utf8');
     assert.ok(backgrounds.includes('Door on left'));
+    const L=require('../../skills/storyboard/references/location-assets.js'),detailName=L.detailFilename('one','room');
+    assert.ok(backgrounds.includes('details/'+detailName));
+    const detail=readFileSync(join(f.dir,'assets/locations/details',detailName),'utf8');
+    assert.ok(detail.includes('No bound 3D set'));
+    assert.ok(detail.includes('../../review/location-review-runtime.js'));
+    assert.notEqual(detailName,L.detailFilename('two','room'));
+    assert.ok(readFileSync(join(f.dir,'episodes/one/storyboard/review-files.js'),'utf8').includes(detailName));
+
     assert.ok(backgrounds.includes('Reference image pending'));
     const layout = readFileSync(join(f.dir, 'episodes/one/storyboard/review-layout.js'), 'utf8');
     for (const kind of ['props', 'locations']) assert.ok(layout.includes(`../../../assets/${kind}/index.html`));

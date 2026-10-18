@@ -42,6 +42,7 @@ function storyboardHtml(directory, check = false) {
   const available = ['storyboard.md', 'script.md', 'research.md', 'scenes.js'].filter(name => fs.existsSync(path.join(dir, name)));
   const win = fs.existsSync(path.join(dir, 'scenes.js')) ? require('../../autoproduce/references/cost-preview.js').readScenes(path.join(dir, 'scenes.js')) : null;
   const locationData = win ? require('./location-assets.js').preview(win, dir) : [];
+  const locationLinks=Object.fromEntries((win?.SB_DOC?.locations||[]).map(e=>[e.id,'../../../assets/locations/details/'+require('./location-assets.js').detailFilename(path.basename(path.dirname(dir)),e.id)]));
   const portraits = {};
   const typeLabels = Object.fromEntries(require('../../_shared/video-types.json').types.map(type => [type.id, type.label]));
   const characters = win?.SB_DOC?.characters || [];
@@ -52,7 +53,8 @@ function storyboardHtml(directory, check = false) {
     if (fs.existsSync(path.resolve(dir, face))) portraits[id] = face;
   }
   const panelFindings = win ? require('../../channel/references/character-panels.js').boardPanelFindings(win, dir, path.resolve(dir, '../../..')) : [];
-  const reviewData = 'window.REVIEW_PANEL_FINDINGS = ' + JSON.stringify(panelFindings).replace(/</g, '\\u003c') + ';\n' +
+  const reviewData = 'window.LOCATION_DETAIL_LINKS = '+JSON.stringify(locationLinks).replace(/</g,'\\u003c')+';\n' +
+    'window.REVIEW_PANEL_FINDINGS = ' + JSON.stringify(panelFindings).replace(/</g, '\\u003c') + ';\n' +
     'window.REVIEW_FILES = ' + JSON.stringify(available) + ';\n' +
     'window.REVIEW_CHARACTER_PORTRAITS = ' + JSON.stringify(portraits).replace(/</g, '\\u003c') + ';\n' +
     'window.REVIEW_VIDEO_TYPES = ' + JSON.stringify(typeLabels).replace(/</g, '\\u003c') + ';\n';

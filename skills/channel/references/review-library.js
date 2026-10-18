@@ -6,6 +6,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { listChannels, listStoryboards, listCharacters, characterDetail, insideReal } = require('./serve.js');
+const locations = require('../../storyboard/references/location-assets.js');
+const LOCATION_ASSETS = path.join(__dirname, '../../storyboard/references');
 const MARKER = '<!-- social-flow:review-library:v1 -->';
 const ASSETS = path.join(__dirname, 'review-assets');
 const { FONT_ASSETS } = require('./review-fonts.js');
@@ -257,7 +259,29 @@ function exportChannel(channelDirectory, { check = false } = {}) {
         const details = fields.map(([key, labelKo, labelEn]) => field(t(labelKo, labelEn), Array.isArray(entry[key]) ? entry[key].join(' · ') : entry[key])).join('');
         const source = path.join(folder, 'storyboard.html');
         const link = regular(dir, source) ? `<a href="${rel(file, source)}#${anchor}">${t('스토리보드에서 보기', 'View in storyboard')}</a>` : t('검토 HTML 미등록', 'Review HTML not supplied');
-        items += `<article class="review-card" data-card data-search="${esc((name + ' ' + (entry.id || '') + ' ' + board.title).toLocaleLowerCase())}">${preview}<div class="review-card-body"><h2>${esc(name)}</h2><p>${esc(board.title)} · ${esc(entry.id)}</p><p>${esc(entry.description || '')}</p><dl>${details}</dl>${link}</div></article>`;
+        let detailLink = '';
+        if (kind === 'locations') {
+          const detailFile = path.join(dir, 'assets', 'locations', 'details', locations.detailFilename(board.topic, entry.id));
+          const win = boardWindows.get(board.topic);
+          const shotIds = new Set((win?.SCENES || []).filter(s => s.shot?.location?.id === entry.id || s.visual?.locationId === entry.id).map(s => s.id));
+          const views = locations.preview(win || {}, folder).filter(v => shotIds.has(v.shotId)).map(v => {
+            if (v.error) return v;
+            return {...v, glb: rel(detailFile, path.resolve(folder, v.glb)),
+              frames: Object.fromEntries(Object.entries(v.frames).map(([k,f]) => [k,{...f,path:rel(detailFile,path.resolve(folder,f.path))}])),
+              spatialAsset: v.spatialAsset ? {...v.spatialAsset,path:rel(detailFile,path.resolve(folder,v.spatialAsset.path))} : null,
+              resultImage: v.resultImage ? rel(detailFile,path.resolve(folder,v.resultImage)) : null};
+          });
+          for (const name of ['location-review-runtime.js','location-review.css']) put(path.join(dir,'assets','review',name), fs.readFileSync(path.join(LOCATION_ASSETS,name)));
+          const media = target && regular(dir,target) ? zoomImage(detailFile,target,name) : empty('참조 이미지 대기','Reference image pending');
+          const viewer = views.length ? '<div id="location-viewer-host"></div>' : empty('연결된 3D 세트가 없습니다. 장소 세트를 만들고 샷에 연결하세요.','No bound 3D set. Build a location and bind a shot.');
+          render(detailFile, name, 'locations', heading(esc(name),esc(entry.description || '')) + media + '<dl>'+details+'</dl>'+viewer+
+            `<p><a href="${rel(detailFile,file)}">${t('배경 시트 목록','Background sheets')}</a></p>`+
+            `<link rel="stylesheet" href="${rel(detailFile,path.join(dir,'assets/review/location-review.css'))}">`+
+            `<script>window.LOCATION_REVIEW=${JSON.stringify(views).replace(/</g,'\\u003c')};</script>`+
+            `<script defer src="${rel(detailFile,path.join(dir,'assets/review/location-review-runtime.js'))}"></script>`);
+          detailLink = `<a class="review-primary-link" href="${rel(file,detailFile)}">${t('배경 상세 · 3D 공간','Background detail · 3D space')}</a>`;
+        }
+        items += `<article class="review-card" data-card data-search="${esc((name + ' ' + (entry.id || '') + ' ' + board.title).toLocaleLowerCase())}">${preview}<div class="review-card-body"><h2>${esc(name)}</h2><p>${esc(board.title)} · ${esc(entry.id)}</p><p>${esc(entry.description || '')}</p><dl>${details}</dl>${detailLink}${link}</div></article>`;
       }
     }
     render(file, en, kind, heading(t(ko, en), t('에피소드별 시트를 모아 봅니다.', 'Browse sheets by episode.')) + searchBox() + `<div class="review-grid review-catalog">${items}</div><div data-no-results${count ? ' hidden' : ''}>${empty(count ? '검색 조건에 맞는 시트가 없습니다.' : '등록된 시트가 없습니다.', count ? 'No sheets match your search.' : 'No sheets yet.')}</div>`);

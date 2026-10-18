@@ -4676,10 +4676,15 @@ window.STORYBOARD_READY = (async function () {
       [["sheetPath", word("공용 장소 시트", "Shared location sheet")], ["manifest", word("세트 데이터", "Set manifest")]].forEach(function (field) {
         if (safePath(entry[field[0]])) html += '<p><a href="' + esc(entry[field[0]]) + '">' + field[1] + '</a></p>';
       });
+      var detailLink = (window.LOCATION_DETAIL_LINKS || {})[entry.id];
+      if (safePath(detailLink)) html += '<p><a href="' + esc(detailLink) + '">' + word('배경 상세 · 3D 공간', 'Background detail · 3D space') + '</a></p>';
       var links = [];
       shots.forEach(function (shot, index) {
-        if ((shot.visual || {}).locationId === entry.id) links.push('<a href="#shot-' + (index + 1) + '">' +
+        if ((shot.visual || {}).locationId === entry.id || ((shot.shot || {}).location || {}).id === entry.id) links.push('<a href="#shot-' + (index + 1) + '">' +
           esc(word("샷 ", "Shot ") + (index + 1) + " · " + (shot.title || shot.id || "")) + '</a>');
+      });
+      (window.LOCATION_REVIEW || []).filter(function (v) { return v.id === entry.id; }).forEach(function (v) {
+        html += '<p><a href="#locations" data-location-shot="' + esc(v.shotId) + '">' + esc(word('3D 인물 배치 · ', '3D blocking · ') + v.shotId) + '</a></p>';
       });
       html += '<p>' + (links.length ? links.join(" · ") : word("연결된 샷 없음", "No linked shots")) + '</p></article>';
     });
