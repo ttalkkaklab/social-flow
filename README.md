@@ -273,12 +273,13 @@ the shared location controls composition. Actual generated images still need ins
   (System Settings → Privacy & Security)
 - API keys and platform credentials — see the next section for what each one unlocks
 
-> **Load-path caveat**: the skills name MCP tools as `mcp__social-flow__*` — the server's
-> logical name. A marketplace install prefixes them per plugin, so the live names read
-> `mcp__plugin_social-flow_social-flow__*` (measured on Claude Code 2.1.251). Skill
-> `allowed-tools` is advisory, so both spellings work; check the real names with `/mcp`
-> when you call a tool by hand. `data/` is created relative to the **session cwd**, not
-> the plugin root.
+> **Load-path caveat**: a marketplace install prefixes the server's tools per plugin, so
+> the live names read `mcp__plugin_social-flow_social-flow__*` (measured on Claude Code
+> 2.1.251); a project `.mcp.json` or Codex names them `mcp__social-flow__*`. Every tool
+> stays callable under either name, but pre-approval is a permission rule, and Claude Code
+> matches a plugin server only in the plugin form — so each skill's `allowed-tools` lists
+> both spellings. Check the real names with `/mcp` when you call a tool by hand. `data/` is
+> created relative to the **session cwd**, not the plugin root.
 
 ## API keys — what each one unlocks
 
@@ -444,7 +445,7 @@ grok plugin install https://github.com/ttalkkaklab/social-flow.git --trust
 # ChatGPT on the web or mobile. The public directory takes local-MCP plugins from approved
 # partners only, so the marketplace is the route. Both files hold to their schemas; how
 # codex 0.162 and the desktop app load the pair is unmeasured.
-# Codex CLI — the 18 skills load; MCP tools don't wire up yet (measured on codex 0.147.0)
+# Codex CLI — the skills load; MCP tools don't wire up yet (measured on codex 0.147.0)
 codex plugin marketplace add ttalkkaklab/social-flow
 codex plugin add social-flow@social-flow
 
