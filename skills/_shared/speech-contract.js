@@ -11,13 +11,17 @@ function compileActing(text, acting, voice) {
   voice={...voice};
   for(const key of ['voiceId','model','stylePrompt','voiceDirection'])if(typeof voice[key]==='string')voice[key]=voice[key].trim();
   if(typeof voice.language==='string')voice.language=require('./character-voice.js').normalizeLanguage(voice.language);
+  const {resolveTtsModel}=require('./tts-models.js');
+  if (!['gemini','elevenlabs'].includes(voice.engine)) throw new Error('Choose a supported engine: Gemini or ElevenLabs v4; local TTS has been removed');
+  if (voice.engine==='elevenlabs' && voice.model!==undefined && voice.model!=='eleven_v4') throw new Error('Explicitly update this character to eleven_v4 before generating new speech');
+  const contract=resolveTtsModel(voice.engine,voice.model);
   const performance = acting || {};
   const {actingErrors,resolvedStyle,directionSupport}=require('./scene-acting.js');
   const errors=actingErrors(acting);if(errors.length)throw new Error(errors.join('; '));
   const direction=resolvedStyle(voice,acting),support=directionSupport(voice,acting);
-  if (!support.supported && voice.engine === 'gemini' && voice.voiceDirection) throw new Error(support.warnings.join('; '));
+  if (!support.supported && voice.engine === 'gemini') throw new Error(support.warnings.join('; '));
   const tags = performance.tags || [];
-  if (voice.engine === 'elevenlabs') {
+  if (contract.direction === 'inline') {
     if (voice.model !== undefined && voice.model !== 'eleven_v4') throw new Error('Explicitly update this character to eleven_v4 before generating new speech');
     const controls = [performance.direction?.trim(), ...tags].filter(Boolean).map(tag => `[${tag}]`).join(' ');
     return { generator: 'tts_elevenlabs_generate', generation: {
@@ -27,7 +31,7 @@ function compileActing(text, acting, voice) {
       ...(voice.similarity !== undefined ? { similarity: voice.similarity } : {}),
     } };
   }
-  if (voice.engine === 'gemini' && String(voice.model).startsWith('gemini-3.8-')) {
+  if (contract.direction === 'metadata') {
     const events = tags.map(tag => `<${tag}>`).join(' ');
     return { generator: 'tts_gemini_38', generation: {
       model: voice.model, voice: voice.voiceId,
@@ -42,7 +46,7 @@ function compileActing(text, acting, voice) {
       ...(stylePrompt ? { stylePrompt } : {}),
     } };
   }
-  throw new Error('Speech supports Gemini and ElevenLabs v4 only; local TTS has been removed');
+  throw new Error('Choose a supported engine: Gemini or ElevenLabs v4; local TTS has been removed');
 }
 
 module.exports = { speechRevision, compileActing };

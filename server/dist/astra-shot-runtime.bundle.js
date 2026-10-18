@@ -6651,8 +6651,15 @@ var actingSchema = external_exports.object({
   tags: external_exports.array(external_exports.string().trim().min(1).max(60).regex(/^[A-Za-z][A-Za-z ,'-]*$/, "Use bare English vocal tag names")).max(6).optional()
 }).strict();
 function compileActing(text, acting, voice) {
-  const shared2 = nodeModule2.createRequire(import.meta.url)("../../skills/_shared/speech-contract.js");
-  return shared2.compileActing(text, actingSchema.parse(acting || {}), voice);
+  const shared3 = nodeModule2.createRequire(import.meta.url)("../../skills/_shared/speech-contract.js");
+  return shared3.compileActing(text, actingSchema.parse(acting || {}), voice);
+}
+
+// src/tts-models.ts
+import { createRequire as createRequire4 } from "node:module";
+var shared2 = () => createRequire4(import.meta.url)("../../skills/_shared/tts-models.js");
+function resolveTtsModel(provider, model) {
+  return shared2().resolveTtsModel(provider, model);
 }
 
 // src/speech.ts
@@ -6696,7 +6703,8 @@ function speechAudioPlan(line, character) {
   const direction = actingContract().directionSupport(voice, line.acting);
   const language = validator.normalizeLanguage(voice.language);
   const compiled = compileActing(line.tts, line.acting || void 0, { ...voice, language });
-  return { ...compiled, arguments: compiled.generation, expectedText: line.tts, speechRevision: speechRevision(line, character), language, direction, review: "not_reviewed" };
+  const modelContract = resolveTtsModel(String(voice.engine), typeof voice.model === "string" ? voice.model.trim() : void 0);
+  return { ...compiled, capabilities: modelContract, arguments: compiled.generation, expectedText: line.tts, speechRevision: speechRevision(line, character), language, direction, review: "not_reviewed" };
 }
 function inspectionAudioPlan(line, character) {
   if (!character?.tts) return { available: false, warnings: ["Missing pinned character voice"], review: "not_reviewed" };

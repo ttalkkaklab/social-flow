@@ -10,6 +10,7 @@ import { execFileSync } from 'node:child_process';
 const voiceContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/character-voice.js');
 import { readBoard, serializeBoard } from './storyboard.js';
 import { actingSchema, compileActing } from './speech-acting.js';
+import { resolveTtsModel } from './tts-models.js';
 import { ASTRA_VIDEO_MAX_PROMPT_CHARS } from './astra-video-client.js';
 const actingContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/scene-acting.js');
 export { actingSchema } from './speech-acting.js';
@@ -53,7 +54,8 @@ export function speechAudioPlan(line, character) {
     const direction = actingContract().directionSupport(voice, line.acting);
     const language = validator.normalizeLanguage(voice.language);
     const compiled = compileActing(line.tts, line.acting || undefined, { ...voice, language });
-    return { ...compiled, arguments: compiled.generation, expectedText: line.tts, speechRevision: speechRevision(line, character), language, direction, review: 'not_reviewed' };
+    const modelContract = resolveTtsModel(String(voice.engine), typeof voice.model === 'string' ? voice.model.trim() : undefined);
+    return { ...compiled, capabilities: modelContract, arguments: compiled.generation, expectedText: line.tts, speechRevision: speechRevision(line, character), language, direction, review: 'not_reviewed' };
 }
 function inspectionAudioPlan(line, character) {
     if (!character?.tts)

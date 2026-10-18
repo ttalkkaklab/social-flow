@@ -102,8 +102,7 @@ test('raw audio plans satisfy each adapter schema without unsupported style para
  const variants=[['gemini',voice,ttsGenerateSchema],['gemini38',{...voice,model:'gemini-3.8-flash-tts',stylePrompt:undefined},gemini38TtsSchema],['eleven',{engine:'elevenlabs',voiceId:'voice123',language:'ko',speed:1,model:'eleven_v4',stability:0.4,similarity:0.8},elevenLabsGenerateSchema]];
  for(const [name,tts,schema] of variants){const plan=speechAudioPlan(line,{id:'a',tts});assert.ok(schema.safeParse(plan.arguments).success,name);assert.deepEqual(plan.arguments,plan.generation);if(name==='eleven'){assert.equal(plan.direction.supported,false);assert.ok(plan.direction.warnings.length);assert.equal(plan.arguments.stability,0.4);assert.equal(plan.arguments.similarity,0.8);assert.equal(plan.arguments.text,line.tts);}else assert.equal(plan.direction.supported,true);}
  for(const engine of ['supertonic','mlx'])assert.throws(()=>speechAudioPlan(line,{id:'a',tts:{engine,voiceId:'old',language:'ko',speed:1}}),/supported engine/);
- const tooLong=speechAudioPlan({tts:'Hello',acting:{vocal:'a'.repeat(600)}},{id:'a',tts:{...voice,stylePrompt:undefined,model:'gemini-3.8-flash-tts'}});
- assert.equal(tooLong.direction.supported,false);assert.equal(tooLong.arguments.turns[0].style,undefined);assert.ok(gemini38TtsSchema.safeParse(tooLong.arguments).success);
+ assert.throws(()=>speechAudioPlan({tts:'Hello',acting:{vocal:'a'.repeat(600)}},{id:'a',tts:{...voice,stylePrompt:undefined,model:'gemini-3.8-flash-tts'}}),/500 characters/);
  const {generationVoiceErrors}=require('../../skills/_shared/character-voice.js');
  const v38={...voice,stylePrompt:undefined,model:'gemini-3.8-flash-tts'},plan=speechAudioPlan(line,{id:'a',tts:v38});
  assert.deepEqual(generationVoiceErrors(v38,{generator:plan.generator,voiceSettings:plan.arguments,text:line.tts,language:'ko'},line),[]);

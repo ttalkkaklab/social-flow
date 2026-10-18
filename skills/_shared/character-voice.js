@@ -2,8 +2,9 @@
 
 const GEMINI_VOICES = new Set('Zephyr Puck Charon Kore Fenrir Leda Orus Aoede Callirrhoe Autonoe Enceladus Iapetus Umbriel Algieba Despina Erinome Algenib Rasalgethi Laomedeia Achernar Alnilam Schedar Gacrux Pulcherrima Achird Zubenelgenubi Vindemiatrix Sadachbia Sadaltager Sulafat'.split(' '));
 
-const GEMINI_MODELS = new Set(['gemini-2.5-flash-preview-tts','gemini-2.5-pro-preview-tts','gemini-3.1-flash-tts-preview','gemini-3.8-flash-tts','gemini-3.8-flash-lite-tts']);
-const ELEVENLABS_MODELS = new Set(['eleven_v4']);
+const {TTS_MODELS}=require('./tts-models.js');
+const GEMINI_MODELS=new Set(TTS_MODELS.filter(m=>m.provider==='gemini').map(m=>m.model));
+const ELEVENLABS_MODELS=new Set(TTS_MODELS.filter(m=>m.provider==='elevenlabs').map(m=>m.model));
 function normalizeLanguage(value) {
   const raw=typeof value==='string'?value.trim().toLowerCase():'';
   return ({korean:'ko',english:'en',japanese:'ja',chinese:'zh',spanish:'es',french:'fr',portuguese:'pt'})[raw]||raw;
