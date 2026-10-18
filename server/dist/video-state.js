@@ -18,7 +18,7 @@ function historicalSpend(episode) {
     const quantities = new Map();
     for (const line of fs.readFileSync(events, 'utf8').split('\n').filter(Boolean)) {
         const event = JSON.parse(line);
-        if (event.tool === 'astra_genai_text2img')
+        if (['astra_genai_text2img', 'astra_genai_edit'].includes(event.tool))
             continue;
         if (!/^(veo_|seedance_|omni_|mlx_video|astra_)/.test(event.tool || ''))
             continue;

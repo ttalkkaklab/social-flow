@@ -12,7 +12,7 @@ import { readImageMetadata, verifyImageFile } from './image-media.js';
 import { config, mfluxZImageBin, mlxServeConfigured, disabledToolPatterns, disabledToolsFile } from './config.js';
 import { resolveToolGate } from './tool-gate.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
-import { recoverGenaiImage } from './astra-genai-image.js';
+import { recoverGenaiImage, buildGenaiImageBody, genaiImageSchema, genaiImageEditSchema } from './astra-genai-image.js';
 const load = createRequire(import.meta.url);
 const selectionHelper = fileURLToPath(new URL('../../skills/_shared/image-selection.js', import.meta.url));
 export const imageContext = (directory, assetId) => load(selectionHelper).readImageContext(directory, assetId);
@@ -56,6 +56,8 @@ function inputFiles(args, directory) {
     };
     if (typeof args.imagePath === 'string')
         args.imagePath = resolve(args.imagePath);
+    if (typeof args.maskPath === 'string')
+        args.maskPath = resolve(args.maskPath);
     if (Array.isArray(args.refImagePaths))
         args.refImagePaths = args.refImagePaths.map(v => resolve(String(v)));
     return inputs;
@@ -117,6 +119,8 @@ export function planImage(raw) {
             throw new Error('image_output_outside_directory');
     }
     const inputs = selection.engine === 'host' ? {} : inputFiles(args, context.directory);
+    if (selection.engine === 'astra-genai')
+        buildGenaiImageBody((tool === 'astra_genai_edit' ? genaiImageEditSchema : genaiImageSchema).parse(args));
     if (outputFile && Object.hasOwn(inputs, outputFile))
         throw new Error('image_output_overwrites_input');
     const quote = imageQuote(selection.engine, selection.model, input.reserveUsd);
@@ -280,7 +284,7 @@ export function imageStatus(raw) {
 async function refreshGenaiImage(directory, requestId) {
     const state = readImageState(directory);
     const job = state?.jobs[requestId];
-    if (!job || job.tool !== 'astra_genai_text2img')
+    if (!job || !['astra_genai_text2img', 'astra_genai_edit'].includes(job.tool))
         throw new Error('image_refresh_unsupported: requires an existing GenAI image request');
     const plan = JSON.parse(fs.readFileSync(path.join(directory, '.work/image-routing/plans', job.planId + '.json'), 'utf8'));
     const { id, ...body } = plan;

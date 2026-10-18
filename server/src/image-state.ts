@@ -21,7 +21,7 @@ export function readImageState(directory: string): ImageState | undefined {
 function hasHistory(directory: string): boolean {
   const events = path.join(directory, '.work/events.jsonl');
   if (fs.existsSync(events)) for (const line of fs.readFileSync(events, 'utf8').split('\n').filter(Boolean)) {
-    if (/^(gpt_image_|image_local_|mlx_image_|astra_genai_text2img$)/.test(JSON.parse(line).tool || '')) return true;
+    if (/^(gpt_image_|image_local_|mlx_image_|astra_genai_(text2img|edit)$)/.test(JSON.parse(line).tool || '')) return true;
   }
   const tally = path.join(directory, '.work/cost-tally.tsv');
   return fs.existsSync(tally) && /^image\./m.test(fs.readFileSync(tally, 'utf8'));

@@ -6187,6 +6187,17 @@ function annotateReceipt(videoPath, extra) {
   fs2.renameSync(temp, receiptPath);
 }
 
+// src/astra-genai-client.ts
+var genaiImageUriSchema = external_exports.string().min(1).refine((value) => {
+  if (/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(value)) return true;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}, "Use a public HTTPS PNG/JPEG URL or PNG/JPEG data URI");
+
 // src/astra-genai-video.ts
 var GENAI_VIDEO_MODELS = ["ltx-2.5-22b-distilled", "ltx-2.5-22b-dev"];
 var GENAI_CAMERA_MOTIONS = ["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"];
@@ -6206,7 +6217,39 @@ var genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
   imageUri: external_exports.string().min(1),
   lastFrameUri: external_exports.string().min(1).nullable().optional()
 });
-var operationSchema = external_exports.enum(["text-to-video", "image-to-video"]);
+var genaiMsrSchema = external_exports.object({
+  prompt: external_exports.string().trim().min(1).max(2e3),
+  references: external_exports.array(external_exports.object({
+    imageUri: genaiImageUriSchema.optional(),
+    imagePath: external_exports.string().min(1).optional(),
+    background: external_exports.boolean().default(false)
+  }).strict().refine(
+    (ref) => Number(!!ref.imageUri) + Number(!!ref.imagePath) === 1,
+    "Supply exactly one imageUri or imagePath"
+  )).min(1).max(5),
+  referenceStrength: external_exports.number().finite().min(0).max(1).default(1),
+  referenceFrames: external_exports.union([external_exports.literal(25), external_exports.literal(33)]).default(33),
+  width: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1536),
+  height: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1024),
+  numFrames: external_exports.number().int().min(25).max(361).refine((n) => (n - 1) % 8 === 0).optional(),
+  duration: external_exports.number().finite().gt(0).max(360).optional(),
+  frameRate: external_exports.number().finite().min(1).max(60).default(24),
+  seed: external_exports.number().int().min(0).max(2147483647).default(42),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
+}).strict().superRefine((args, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  const backgrounds = args.references.filter((ref) => ref.background).length;
+  if (backgrounds > 1 || args.references.length - backgrounds > 4) issue("MSR supports at most four subjects and one background");
+  if (args.width * args.height > 2064384) issue("MSR maximum is 2,064,384 pixels");
+  if (args.duration !== void 0) {
+    if (args.numFrames !== void 0) issue("Omit numFrames when using duration");
+    const frames = 1 + 8 * Math.ceil((args.duration * args.frameRate - 1) / 8 - 0.5 - 1e-9);
+    if (frames < 25 || frames > 361) issue("MSR duration must round to 25..361 frames");
+  }
+});
+var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "msr"]);
 var receiptSchema = external_exports.object({
   version: external_exports.literal(1),
   baseUrl: external_exports.string(),
@@ -6511,6 +6554,7 @@ var VIDEO_ADAPTERS = Object.freeze({
   seedance_reference: entry("seedance", "byteplus", "reference", seedanceReferenceSchema),
   astra_genai_text2video: entry("astra-genai", "genai-ltx-v2", "text", genaiTextToVideoSchema),
   astra_genai_img2video: entry("astra-genai", "genai-ltx-v2", "image", genaiImageToVideoSchema),
+  astra_genai_msr: entry("astra-genai", "genai-ltx-msr", "reference", genaiMsrSchema),
   astra_text2video: entry("astra", "self-hosted-ltx", "text", astraText2VideoSchema),
   astra_img2video: entry("astra", "self-hosted-ltx", "image", astraImg2VideoSchema),
   astra_keyframe_video: entry("astra", "self-hosted-ltx", "keyframe", astraKeyframeVideoSchema),
@@ -6610,7 +6654,7 @@ function priceOf(tool, args = {}) {
       return { key: null, quantity: null, note: "Invalid duration plan: " + String(error) };
     }
   }
-  if (tool.startsWith("astra_genai_")) return { key: tool === "astra_genai_text2img" ? "image.astra-genai" : "video.astra-genai", quantity: null, note: "Gateway pricing unverified; managed reservation is authoritative, not a measured bill" };
+  if (tool.startsWith("astra_genai_")) return { key: ["astra_genai_text2img", "astra_genai_edit"].includes(tool) ? "image.astra-genai" : "video.astra-genai", quantity: null, note: "Gateway pricing unverified; managed reservation is authoritative, not a measured bill" };
   if (tool.startsWith("veo_")) {
     const tier = VEO_TIER[str(args.model, "veo-3.1-fast-generate-preview")];
     const resolution = str(args.resolution, "720p");
@@ -7120,6 +7164,7 @@ var schemas = {
   seedance_reference: seedanceReferenceSchema,
   astra_genai_text2video: genaiTextToVideoSchema,
   astra_genai_img2video: genaiImageToVideoSchema,
+  astra_genai_msr: genaiMsrSchema,
   astra_text2video: astraText2VideoSchema,
   astra_img2video: astraImg2VideoSchema,
   astra_audio2video: astraAudio2VideoSchema,
@@ -7139,7 +7184,7 @@ function prepareVideoSound(tool, input, sound = {}) {
   if (sound.audioSource !== void 0 && !["video", "speech"].includes(String(sound.audioSource)))
     throw new Error("sound.audioSource must be video or speech");
   const fixedInput = tool === "astra_audio2video";
-  let nativeAudio = !fixedInput;
+  let nativeAudio = !fixedInput && tool !== "astra_genai_msr";
   if (tool.startsWith("seedance_")) {
     const model = input.model ?? (tool === "seedance_reference" ? DEFAULT_SEEDANCE_REFERENCE_MODEL : DEFAULT_SEEDANCE_MODEL);
     const spec = SEEDANCE_MODEL_SPECS[model];

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import * as veo from './video-client.js';
 import * as seedance from './seedance-client.js';
 import * as astra from './astra-video-client.js';
-import { genaiTextToVideoSchema, genaiImageToVideoSchema } from './astra-genai-video.js';
+import { genaiTextToVideoSchema, genaiImageToVideoSchema, genaiMsrSchema } from './astra-genai-video.js';
 import * as omni from './omni-client.js';
 const effectSchema = z.object({
     id: z.string().min(1).optional(),
@@ -21,6 +21,7 @@ const schemas = {
     seedance_text2video: seedance.seedanceText2VideoSchema,
     seedance_img2video: seedance.seedanceImg2VideoSchema, seedance_reference: seedance.seedanceReferenceSchema,
     astra_genai_text2video: genaiTextToVideoSchema, astra_genai_img2video: genaiImageToVideoSchema,
+    astra_genai_msr: genaiMsrSchema,
     astra_text2video: astra.astraText2VideoSchema, astra_img2video: astra.astraImg2VideoSchema,
     astra_audio2video: astra.astraAudio2VideoSchema, astra_keyframe_video: astra.astraKeyframeVideoSchema,
     omni_text2video: omni.omniText2VideoSchema, omni_img2video: omni.omniImg2VideoSchema,
@@ -38,7 +39,7 @@ export function prepareVideoSound(tool, input, sound = {}) {
     if (sound.audioSource !== undefined && !['video', 'speech'].includes(String(sound.audioSource)))
         throw new Error('sound.audioSource must be video or speech');
     const fixedInput = tool === 'astra_audio2video';
-    let nativeAudio = !fixedInput;
+    let nativeAudio = !fixedInput && tool !== 'astra_genai_msr';
     if (tool.startsWith('seedance_')) {
         const model = input.model ?? (tool === 'seedance_reference' ? seedance.DEFAULT_SEEDANCE_REFERENCE_MODEL : seedance.DEFAULT_SEEDANCE_MODEL);
         const spec = seedance.SEEDANCE_MODEL_SPECS[model];

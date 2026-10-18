@@ -3,9 +3,9 @@ import { z } from 'zod';
 import * as fs from 'node:fs';
 import { createHash } from 'node:crypto';
 import { bareFilenameSchema, resolveOutputFile } from './media-utils.js';
-import { astraGenaiBaseUrl, requestGenai, downloadGenaiResult, requireAstraGenaiKey } from './astra-genai-client.js';
+import { astraGenaiBaseUrl, requestGenai, downloadGenaiResult, requireAstraGenaiKey, genaiImageUriSchema, genaiSourceUri } from './astra-genai-client.js';
 import { atomicJson } from './routing-files.js';
-import { verifyImageFile } from './image-media.js';
+import { verifyImageFile, imageMetadata } from './image-media.js';
 export const GENAI_IMAGE_ROUTE = '/v1/dashscope/api/v1/services/aigc/multimodal-generation/generation';
 export const genaiImageSchema = z.object({
     model: z.string().min(1),
@@ -13,12 +13,45 @@ export const genaiImageSchema = z.object({
     size: z.string().min(1).default('1024*1536'),
     seed: z.number().int().min(0).max(2147483647).nullable().optional(),
     promptExtend: z.boolean().default(false),
+    steps: z.number().int().min(1).max(12).optional(),
     outputPath: z.string().optional(),
     filename: bareFilenameSchema('image').refine(name => name.endsWith('.png'), 'Use a .png filename').optional(),
 }).strict();
+export const genaiImageEditSchema = genaiImageSchema.extend({
+    mode: z.enum(['img2img', 'inpaint']),
+    size: z.string().min(1).optional(),
+    imageUri: genaiImageUriSchema.optional(),
+    imagePath: z.string().min(1).optional(),
+    maskUri: genaiImageUriSchema.optional(),
+    maskPath: z.string().min(1).optional(),
+    strength: z.number().finite().gt(0).max(1).optional(),
+}).strict().superRefine((args, ctx) => {
+    const issue = (message) => ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+    if (Number(!!args.imageUri) + Number(!!args.imagePath) !== 1)
+        issue('Supply exactly one imageUri or imagePath');
+    const masks = Number(!!args.maskUri) + Number(!!args.maskPath);
+    if (args.mode === 'inpaint' ? masks !== 1 : masks !== 0)
+        issue('Only inpaint requires exactly one maskUri or maskPath');
+});
 export function buildGenaiImageBody(args) {
-    return { model: args.model, input: { messages: [{ role: 'user', content: [{ text: args.prompt }] }] },
-        parameters: { size: args.size, prompt_extend: args.promptExtend, ...(args.seed === undefined ? {} : { seed: args.seed }) } };
+    const edit = 'mode' in args ? args : undefined;
+    const content = [{ text: args.prompt }];
+    const source = edit ? genaiSourceUri(edit.imageUri, edit.imagePath) : undefined;
+    const mask = edit?.mode === 'inpaint' ? genaiSourceUri(edit.maskUri, edit.maskPath) : undefined;
+    if (source)
+        content.push({ image: source });
+    if (source?.startsWith('data:') && mask?.startsWith('data:')) {
+        const sourceSize = imageMetadata(Buffer.from(source.slice(source.indexOf(',') + 1), 'base64'));
+        const maskSize = imageMetadata(Buffer.from(mask.slice(mask.indexOf(',') + 1), 'base64'));
+        if (sourceSize.width !== maskSize.width || sourceSize.height !== maskSize.height)
+            throw new Error('GenAI mask dimensions must match the source');
+    }
+    return { model: args.model, input: { messages: [{ role: 'user', content }],
+            ...(mask ? { mask } : {}) },
+        parameters: { ...(args.size === undefined ? {} : { size: args.size }), prompt_extend: args.promptExtend,
+            ...(args.seed === undefined ? {} : { seed: args.seed }),
+            ...(args.steps === undefined ? {} : { num_inference_steps: args.steps }),
+            ...(edit ? { mode: edit.mode, ...(edit.strength === undefined ? {} : { strength: edit.strength }) } : {}) } };
 }
 // DashScope provider response envelope; never reinterpret arbitrary JSON as a successful image.
 const responseSchema = z.object({
@@ -27,8 +60,8 @@ const responseSchema = z.object({
             message: z.object({ content: z.array(z.object({ image: z.string().optional(), text: z.string().optional() }).passthrough()) }).passthrough(),
         }).passthrough()).length(1) }).passthrough(),
 }).passthrough();
-export async function generateGenaiImage(input) {
-    const args = genaiImageSchema.parse(input);
+export async function generateGenaiImage(input, operation = 'text') {
+    const args = (operation === 'edit' ? genaiImageEditSchema : genaiImageSchema).parse(input);
     requireAstraGenaiKey();
     const imagePath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.png`, 'image');
     const receiptPath = imagePath + '.astra-genai.json';
@@ -38,15 +71,20 @@ export async function generateGenaiImage(input) {
     if (fs.existsSync(receiptPath) || fs.existsSync(imagePath))
         throw new Error('GenAI image output/receipt already exists; inspect the receipt before any new generation.');
     fs.writeFileSync(receiptPath, JSON.stringify({ baseUrl: astraGenaiBaseUrl(), fingerprint, imagePath, status: 'submitting' }), { flag: 'wx', mode: 0o600 });
-    const raw = await requestGenai('POST', GENAI_IMAGE_ROUTE, body, 30 * 60_000);
-    atomicJson(receiptPath, { baseUrl: astraGenaiBaseUrl(), fingerprint, imagePath, status: 'received', response: raw });
+    let promptExtension;
+    const raw = await requestGenai('POST', GENAI_IMAGE_ROUTE, body, 30 * 60_000, headers => {
+        const value = headers.get('x-prompt-extend');
+        if (value === 'applied' || value === 'fallback')
+            promptExtension = value;
+    });
+    atomicJson(receiptPath, { baseUrl: astraGenaiBaseUrl(), fingerprint, imagePath, status: 'received', response: raw, promptExtension });
     return recoverGenaiImage(receiptPath);
 }
 /** Retry only the download from a durable provider response; never regenerate. */
 export async function recoverGenaiImage(receiptPath) {
     const receipt = z.object({ baseUrl: z.string(), fingerprint: z.string(), imagePath: z.string(),
         status: z.enum(['submitting', 'received', 'completed']), response: z.unknown().optional(),
-        output: z.object({ sha256: z.string() }).passthrough().optional(), requestId: z.string().optional(), usage: z.unknown().optional(),
+        output: z.object({ sha256: z.string() }).passthrough().optional(), requestId: z.string().optional(), usage: z.unknown().optional(), usedPrompt: z.string().optional(), promptExtension: z.enum(['applied', 'fallback']).optional(),
     }).passthrough().parse(JSON.parse(fs.readFileSync(receiptPath, 'utf8')));
     if (receipt.baseUrl !== astraGenaiBaseUrl())
         throw new Error('GenAI image receipt belongs to a different server');
@@ -55,7 +93,7 @@ export async function recoverGenaiImage(receiptPath) {
         const output = verifyImageFile(imagePath);
         if (output.sha256 !== receipt.output?.sha256)
             throw new Error('GenAI cached image changed');
-        return { imagePath, requestId: receipt.requestId, usage: receipt.usage, output, review: 'not_reviewed' };
+        return { imagePath, requestId: receipt.requestId, usage: receipt.usage, usedPrompt: receipt.usedPrompt, promptExtension: receipt.promptExtension, output, review: 'not_reviewed' };
     }
     if (receipt.status !== 'received')
         throw new Error('GenAI image submission is ambiguous; inspect provider usage before retrying');
@@ -76,7 +114,8 @@ export async function recoverGenaiImage(receiptPath) {
         }
         else
             fs.linkSync(temp, imagePath);
-        const result = { imagePath, requestId: response.request_id, usage: response.usage, output, review: 'not_reviewed' };
+        const usedPrompt = response.output.choices[0].message.content.find(item => item.text !== undefined)?.text;
+        const result = { imagePath, usedPrompt, promptExtension: receipt.promptExtension, requestId: response.request_id, usage: response.usage, output, review: 'not_reviewed' };
         atomicJson(receiptPath, { baseUrl: astraGenaiBaseUrl(), fingerprint, ...result, status: 'completed' });
         return result;
     }

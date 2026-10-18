@@ -12,8 +12,30 @@
         "size",
         "seed",
         "promptExtend",
+        "steps",
         "outputPath",
         "filename"
+      ]
+    },
+    {
+      "tool": "astra_genai_edit",
+      "engine": "astra-genai",
+      "operation": "edit",
+      "fields": [
+        "model",
+        "prompt",
+        "size",
+        "seed",
+        "promptExtend",
+        "steps",
+        "outputPath",
+        "filename",
+        "mode",
+        "imageUri",
+        "imagePath",
+        "maskUri",
+        "maskPath",
+        "strength"
       ]
     },
     {
@@ -100,6 +122,19 @@
       ]
     }
   ],
+  "genai": {
+    "edits": [
+      "img2img",
+      "inpaint"
+    ],
+    "sourceImages": 1,
+    "steps": [
+      1,
+      12
+    ],
+    "promptExtend": "Optional shared-LLM rewrite; failures use the original prompt. Keep false for precise reference instructions.",
+    "note": "Use GPT Image 2 for readable text. No multi-image fusion."
+  },
   "gptModels": [
     "gpt-image-2",
     "gpt-image-1.5",

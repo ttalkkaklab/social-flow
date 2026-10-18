@@ -119,7 +119,6 @@ test('GenAI image planning requires a reservation and recovery preserves provide
   const key=config.astraGenaiApiKey;config.astraGenaiApiKey='fixture';t.after(()=>config.astraGenaiApiKey=key);
   assert.throws(()=>f.plan(),/quote_required/);
   const p=f.plan('genai',{}, {reserveUsd:0.1});assert.equal(p.tool,'astra_genai_text2img');
-  assert.throws(()=>f.plan('edit',{}, {operation:'edit',reserveUsd:0}),/operation_unsupported/);
   await assert.rejects(f.run(p,async (_tool,args)=>{
     output(args);
     const { readImageMetadata } = await import('../dist/image-media.js');
@@ -130,4 +129,18 @@ test('GenAI image planning requires a reservation and recovery preserves provide
   const job=await imageStatus({directory:f.dir,requestId:'genai',action:'refresh'});
   assert.equal(job.status,'completed');assert.equal(job.providerId,'image-provider-1');assert.equal(job.reserveUsd,0.1);
   await f.run(p,async()=>assert.fail('must reuse recovered image'));
+});
+
+test('GenAI edit plans bind source and mask files and refuse stale inputs', async t => {
+  const f = fixture(t, { engine: 'astra-genai', model: 'z-image-turbo' }, { reference: 'fixture', maxUsd: 1 });
+  fs.writeFileSync(path.join(f.dir, 'source.png'), png); fs.writeFileSync(path.join(f.dir, 'mask.png'), png);
+  const badMask = Buffer.from(png); badMask.writeUInt32BE(2, 16);
+  fs.writeFileSync(path.join(f.dir, 'bad-mask.png'), badMask);
+  assert.throws(() => f.plan('invalid', { mode: 'inpaint', imagePath: 'source.png', maskPath: 'bad-mask.png' }, { operation: 'edit', reserveUsd: 0.1 }), /dimensions/);
+  assert.equal(fs.existsSync(path.join(f.dir, '.work/image-routing/state.json')), false);
+  const plan = f.plan('edit', { mode: 'inpaint', imagePath: 'source.png', maskPath: 'mask.png', steps: 9 }, { operation: 'edit', reserveUsd: 0.1 });
+  assert.equal(plan.tool, 'astra_genai_edit'); assert.equal(Object.keys(plan.inputs).length, 2);
+  assert.equal(plan.args.size, undefined); assert.equal(plan.quote.reserveUsd, 0.1);
+  fs.writeFileSync(path.join(f.dir, 'mask.png'), Buffer.concat([png, Buffer.from('changed')]));
+  await assert.rejects(f.run(plan, async () => assert.fail('stale input must not generate')), /stale/);
 });

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { genaiImageSchema } from './astra-genai-image.js';
+import { genaiImageSchema, genaiImageEditSchema } from './astra-genai-image.js';
 import { text2ImageSchema, img2ImgSchema } from './image-client.js';
 import { mlxImageGenerateSchema, mlxImageEditSchema } from './mlx-serve-client.js';
 import { zimageGenerateSchema } from './zimage-client.js';
@@ -7,6 +7,7 @@ import { GPT_IMAGE_MODELS, GPT_IMAGE_CONTRACTS, assertImageModelAvailable, valid
 import { validateImageBase64 } from './image-media.js';
 export const IMAGE_ADAPTERS = Object.freeze({
     astra_genai_text2img: { engine: 'astra-genai', operation: 'text', schema: genaiImageSchema },
+    astra_genai_edit: { engine: 'astra-genai', operation: 'edit', schema: genaiImageEditSchema },
     gpt_image_text2img: { engine: 'gpt-image', operation: 'text', schema: text2ImageSchema },
     gpt_image_img2img: { engine: 'gpt-image', operation: 'edit', schema: img2ImgSchema },
     image_local_generate: { engine: 'zimage', operation: 'text', schema: zimageGenerateSchema },
@@ -48,6 +49,7 @@ export function parseImageArgs(tool, input) {
 export function imageCatalog() {
     return { version: 1, revision: '2026-10-18',
         adapters: Object.entries(IMAGE_ADAPTERS).map(([tool, entry]) => ({ tool, engine: entry.engine, operation: entry.operation, fields: fields(entry.schema) })),
+        genai: { edits: ['img2img', 'inpaint'], sourceImages: 1, steps: [1, 12], promptExtend: 'Optional shared-LLM rewrite; failures use the original prompt. Keep false for precise reference instructions.', note: 'Use GPT Image 2 for readable text. No multi-image fusion.' },
         gptModels: GPT_IMAGE_MODELS, gptContracts: GPT_IMAGE_CONTRACTS,
         mlx: { families: ['flux-klein', 'krea', 'mage', 'mage-edit', 'qwen-2.1'],
             note: 'Installed pack and backend determine availability. Unknown packs support basic text only until capabilities are registered; use image_plan.' },

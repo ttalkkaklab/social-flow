@@ -2,7 +2,7 @@ import { z } from 'zod';
 import * as veo from './video-client.js';
 import * as seedance from './seedance-client.js';
 import * as astra from './astra-video-client.js';
-import { GENAI_VIDEO_MODELS, genaiTextToVideoSchema, genaiImageToVideoSchema } from './astra-genai-video.js';
+import { GENAI_VIDEO_MODELS, genaiTextToVideoSchema, genaiImageToVideoSchema, genaiMsrSchema } from './astra-genai-video.js';
 import * as omni from './omni-client.js';
 import * as mlx from './mlx-serve-client.js';
 import { resolveVideoDuration } from './video-duration.js';
@@ -26,6 +26,7 @@ export const VIDEO_ADAPTERS: Readonly<Record<string, VideoAdapter>> = Object.fre
   seedance_reference: entry('seedance', 'byteplus', 'reference', seedance.seedanceReferenceSchema),
   astra_genai_text2video: entry('astra-genai', 'genai-ltx-v2', 'text', genaiTextToVideoSchema),
   astra_genai_img2video: entry('astra-genai', 'genai-ltx-v2', 'image', genaiImageToVideoSchema),
+  astra_genai_msr: entry('astra-genai', 'genai-ltx-msr', 'reference', genaiMsrSchema),
   astra_text2video: entry('astra', 'self-hosted-ltx', 'text', astra.astraText2VideoSchema),
   astra_img2video: entry('astra', 'self-hosted-ltx', 'image', astra.astraImg2VideoSchema),
   astra_keyframe_video: entry('astra', 'self-hosted-ltx', 'keyframe', astra.astraKeyframeVideoSchema),
@@ -61,6 +62,7 @@ export function videoCatalog() {
     adapters: Object.entries(VIDEO_ADAPTERS).map(([tool, a]) => ({ tool, engine: a.engine, deployment: a.deployment, operation: a.operation,
       voice: videoVoiceCapabilities(tool),
       fields: keys(a.schema), modelConstraints: a.engine === 'seedance' ? seedance.SEEDANCE_MODEL_SPECS :
+        tool === 'astra_genai_msr' ? { note: 'Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. No supplied speech or audio controls.' } :
         a.engine === 'astra-genai' ? { models: GENAI_VIDEO_MODELS, note: 'Explicit duration and resolution; server validates deployment limits. No supplied audio, keyframes or LoRA.' } :
         a.engine === 'veo' ? { models: veo.VALID_VIDEO_MODELS, resolutions: veo.VALID_VIDEO_RESOLUTIONS, note: 'Use video_plan for cross-field constraints' } :
         { note: 'Use video_plan; deployment-specific schema is authoritative' } })),

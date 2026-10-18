@@ -16,6 +16,13 @@ Follow [host evaluation](../_shared/host-review.md) for every requested review.
 
 # Storyboard: make the story understandable, then plan its images
 
+For saved GenAI selections, use [GenAI operation selection](../_shared/astra-genai.md)
+while preparing sheets and shots. Plan img2img for whole-image changes, inpaint for
+local corrections and MSR for character/outfit/prop/background continuity in video.
+Record the source, mask or numbered reference roles and the intended operation.
+MSR references are not first/last frames. Preserve the GPT Image 2 rule for readable
+text; do not generate assets merely to test a planning choice.
+
 ## Required authoring and delivery order
 
 For a new storyboard: present the scenario → prepare character, prop and background/location

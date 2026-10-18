@@ -65326,6 +65326,37 @@ var require_video_catalog = __commonJS({
           }
         },
         {
+          tool: "astra_genai_msr",
+          engine: "astra-genai",
+          deployment: "genai-ltx-msr",
+          operation: "reference",
+          voice: {
+            voiceReference: "unsupported",
+            suppliedSpeech: "unsupported",
+            exactAudioPreservation: false,
+            voiceContinuation: "unsupported",
+            review: "not_reviewed"
+          },
+          fields: [
+            "prompt",
+            "references",
+            "referenceStrength",
+            "referenceFrames",
+            "width",
+            "height",
+            "numFrames",
+            "duration",
+            "frameRate",
+            "seed",
+            "reserveUsd",
+            "outputPath",
+            "filename"
+          ],
+          modelConstraints: {
+            note: "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. No supplied speech or audio controls."
+          }
+        },
+        {
           tool: "astra_text2video",
           engine: "astra",
           deployment: "self-hosted-ltx",
@@ -82049,6 +82080,7 @@ import { execFileSync as execFileSync2 } from "node:child_process";
 import { setTimeout as sleep3 } from "node:timers/promises";
 
 // src/astra-genai-client.ts
+import { readFileSync as readFileSync4 } from "node:fs";
 function astraGenaiBaseUrl() {
   return (process.env.ASTRA_GENAI_URL || "https://genai.astravision.co.kr").replace(/\/+$/, "");
 }
@@ -82056,7 +82088,7 @@ function requireAstraGenaiKey() {
   if (!config.astraGenaiApiKey) throw new Error("ASTRA_GENAI_API_KEY is required: issue a gateway token in the GenAI console; ASTRA_VIDEO is a separate credential.");
   return config.astraGenaiApiKey;
 }
-async function requestGenai(method, route, body, timeoutMs = 6e4) {
+async function requestGenai(method, route, body, timeoutMs = 6e4, onResponse) {
   const key = requireAstraGenaiKey();
   const response = await fetch(astraGenaiBaseUrl() + route, {
     method,
@@ -82070,6 +82102,7 @@ async function requestGenai(method, route, body, timeoutMs = 6e4) {
     const detail = text3.replaceAll(key, "[redacted]").slice(0, 2e3);
     throw new Error(`ASTRA GenAI HTTP ${response.status}: ${detail}`);
   }
+  onResponse?.(response.headers);
   try {
     return JSON.parse(text3);
   } catch {
@@ -82082,6 +82115,27 @@ async function downloadGenaiResult(uri) {
   const response = await fetch(url, { redirect: "error", signal: AbortSignal.timeout(12e4) });
   if (!response.ok) throw new Error(`ASTRA GenAI result download failed (HTTP ${response.status}); reuse the existing job, do not regenerate.`);
   return Buffer.from(await response.arrayBuffer());
+}
+var genaiImageUriSchema = external_exports.string().min(1).refine((value) => {
+  if (/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(value)) return true;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}, "Use a public HTTPS PNG/JPEG URL or PNG/JPEG data URI");
+function genaiSourceUri(uri, file) {
+  if (uri !== void 0) {
+    genaiImageUriSchema.parse(uri);
+    if (uri.startsWith("https:")) return uri;
+  }
+  if (!uri && !file) throw new Error("GenAI source requires an image URI or local path");
+  const bytes = uri ? Buffer.from(uri.slice(uri.indexOf(",") + 1), "base64") : readFileSync4(file), meta = imageMetadata(bytes);
+  if (uri && !uri.startsWith(`data:${meta.mimeType};base64,`)) throw new Error("GenAI data URI MIME does not match image");
+  if (!["image/png", "image/jpeg"].includes(meta.mimeType) || meta.bytes > 32 * 1024 * 1024 || meta.width > 4096 || meta.height > 4096)
+    throw new Error("GenAI source must be PNG/JPEG, at most 32 MiB and 4096 pixels per side");
+  return `data:${meta.mimeType};base64,${bytes.toString("base64")}`;
 }
 
 // src/routing-files.ts
@@ -82150,6 +82204,51 @@ var genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
   imageUri: external_exports.string().min(1),
   lastFrameUri: external_exports.string().min(1).nullable().optional()
 });
+var genaiMsrSchema = external_exports.object({
+  prompt: external_exports.string().trim().min(1).max(2e3),
+  references: external_exports.array(external_exports.object({
+    imageUri: genaiImageUriSchema.optional(),
+    imagePath: external_exports.string().min(1).optional(),
+    background: external_exports.boolean().default(false)
+  }).strict().refine(
+    (ref) => Number(!!ref.imageUri) + Number(!!ref.imagePath) === 1,
+    "Supply exactly one imageUri or imagePath"
+  )).min(1).max(5),
+  referenceStrength: external_exports.number().finite().min(0).max(1).default(1),
+  referenceFrames: external_exports.union([external_exports.literal(25), external_exports.literal(33)]).default(33),
+  width: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1536),
+  height: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1024),
+  numFrames: external_exports.number().int().min(25).max(361).refine((n) => (n - 1) % 8 === 0).optional(),
+  duration: external_exports.number().finite().gt(0).max(360).optional(),
+  frameRate: external_exports.number().finite().min(1).max(60).default(24),
+  seed: external_exports.number().int().min(0).max(2147483647).default(42),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
+}).strict().superRefine((args, ctx) => {
+  const issue2 = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  const backgrounds = args.references.filter((ref) => ref.background).length;
+  if (backgrounds > 1 || args.references.length - backgrounds > 4) issue2("MSR supports at most four subjects and one background");
+  if (args.width * args.height > 2064384) issue2("MSR maximum is 2,064,384 pixels");
+  if (args.duration !== void 0) {
+    if (args.numFrames !== void 0) issue2("Omit numFrames when using duration");
+    const frames = 1 + 8 * Math.ceil((args.duration * args.frameRate - 1) / 8 - 0.5 - 1e-9);
+    if (frames < 25 || frames > 361) issue2("MSR duration must round to 25..361 frames");
+  }
+});
+function buildGenaiMsrBody(args) {
+  return {
+    prompt: args.prompt,
+    references: args.references.map((ref) => ({ image_uri: genaiSourceUri(ref.imageUri, ref.imagePath), background: ref.background })),
+    reference_strength: args.referenceStrength,
+    reference_frames: args.referenceFrames,
+    width: args.width,
+    height: args.height,
+    frame_rate: args.frameRate,
+    seed: args.seed,
+    ...args.duration === void 0 ? { num_frames: args.numFrames ?? 121 } : { duration: args.duration }
+  };
+}
 function buildGenaiVideoBody(args) {
   return {
     prompt: args.prompt,
@@ -82163,7 +82262,7 @@ function buildGenaiVideoBody(args) {
     ...args.lastFrameUri === void 0 ? {} : { last_frame_uri: args.lastFrameUri }
   };
 }
-var operationSchema = external_exports.enum(["text-to-video", "image-to-video"]);
+var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "msr"]);
 var receiptSchema = external_exports.object({
   version: external_exports.literal(1),
   baseUrl: external_exports.string(),
@@ -82190,7 +82289,7 @@ async function getGenaiVideoStatus(input) {
     if (createHash3("sha256").update(bytes2).digest("hex") !== receipt.sha256) throw new Error("GenAI cached output changed");
     return { jobId: receipt.jobId, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
   }
-  const route = `/v1/ltx/v2/${receipt.operation}/${encodeURIComponent(receipt.jobId)}`;
+  const route = `${genaiVideoRoute(receipt.operation)}/${encodeURIComponent(receipt.jobId)}`;
   const job = statusSchema.parse(await requestGenai("GET", route));
   if (job.id !== receipt.jobId) throw new Error("GenAI status job ID mismatch");
   if (job.status === "failed") throw new Error(`GenAI video ${receipt.jobId} failed: ${JSON.stringify(job.error ?? "No details").slice(0, 1e3)}`);
@@ -82214,10 +82313,13 @@ async function getGenaiVideoStatus(input) {
   }
   return { jobId: receipt.jobId, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
 }
+function genaiVideoRoute(operation) {
+  return operation === "msr" ? "/v1/ltx/msr" : `/v1/ltx/v2/${operation}`;
+}
 async function generateGenaiVideo(operation, input) {
-  const args = (operation === "text-to-video" ? genaiTextToVideoSchema : genaiImageToVideoSchema).parse(input);
+  const args = (operation === "msr" ? genaiMsrSchema : operation === "text-to-video" ? genaiTextToVideoSchema : genaiImageToVideoSchema).parse(input);
   requireAstraGenaiKey();
-  const body = buildGenaiVideoBody(args);
+  const body = "references" in args ? buildGenaiMsrBody(args) : buildGenaiVideoBody(args);
   const fingerprint = createHash3("sha256").update(JSON.stringify(body)).digest("hex");
   const videoPath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.mp4`, "video");
   const receiptPath = videoPath + ".astra-genai.json";
@@ -82231,7 +82333,7 @@ async function generateGenaiVideo(operation, input) {
     if (fs5.existsSync(videoPath)) throw new Error("GenAI output already exists");
     const receipt = { version: 1, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, status: "submitting" };
     fs5.writeFileSync(receiptPath, JSON.stringify(receipt), { flag: "wx", mode: 384 });
-    const accepted = external_exports.object({ id: external_exports.string().min(1) }).passthrough().parse(await requestGenai("POST", `/v1/ltx/v2/${operation}`, body));
+    const accepted = external_exports.object({ id: external_exports.string().min(1) }).passthrough().parse(await requestGenai("POST", genaiVideoRoute(operation), body));
     atomicJson(receiptPath, { ...receipt, jobId: accepted.id, status: "submitted" });
     recordVideoSubmission(accepted.id);
   }
@@ -82283,15 +82385,65 @@ var GENAI_TOOLS = [
   {
     name: "astra_genai_text2img",
     title: "Generate a GenAI DashScope image",
-    description: "Generate one PNG through the ASTRA GenAI DashScope route. Use image_plan/image_execute with an explicit reserveUsd for configured production. Requires ASTRA_GENAI_API_KEY. Text-only, at most 800 characters; no editing, references, masks, steps or quantization. Distinct from local image_local_generate. Saves the provider response before download; never retries an ambiguous generation automatically.",
+    description: "Generate one PNG through the ASTRA GenAI DashScope route. Use image_plan/image_execute with an explicit reserveUsd for configured production. Requires ASTRA_GENAI_API_KEY. Text-only, at most 800 characters. For a source image use astra_genai_edit (img2img or masked inpaint); no multi-image fusion. Images containing readable text require GPT Image 2. Distinct from local image_local_generate. Saves the provider response before download; never retries an ambiguous generation automatically.",
     inputSchema: { type: "object", properties: {
       model: { type: "string", description: "Deployed DashScope image model ID; provider names do not prove availability on this gateway." },
       prompt: { type: "string", minLength: 1, maxLength: 800, description: "Single text prompt, at most 800 characters; never silently truncated." },
       size: { type: "string", default: "1024*1536", description: "Provider size in WIDTH*HEIGHT notation; deployment validates supported sizes." },
       seed: { type: ["integer", "null"], minimum: 0, maximum: 2147483647, description: "Optional provider random seed; null delegates to the provider." },
-      promptExtend: { type: "boolean", default: false, description: "Request provider prompt expansion; unsupported deployments may reject it." },
+      promptExtend: { type: "boolean", default: false, description: "Expand a short descriptive prompt with the shared LLM; failure uses the original. Leave false for exact reference instructions. Returns usedPrompt." },
+      steps: { type: "integer", minimum: 1, maximum: 12, description: "Denoising steps (server default 9)." },
       ...output
     }, required: ["model", "prompt"], additionalProperties: false },
+    annotations: generation
+  },
+  {
+    name: "astra_genai_edit",
+    title: "Edit a GenAI image or masked region",
+    description: "Transform one source PNG/JPEG with img2img or repaint its mask with inpaint. Use image_plan operation edit and image_execute for configured production. Requires ASTRA_GENAI_API_KEY. Supply exactly one imagePath or imageUri; inpaint also needs exactly one maskPath or maskUri. White mask pixels (grayscale >=128) change, black stays. Local files become data URIs; HTTPS sources are fetched by the gateway. No multi-reference fusion. Use GPT Image 2 when readable text must appear or survive. Recovery downloads the saved response without regenerating.",
+    inputSchema: { type: "object", properties: {
+      model: { type: "string", description: "Deployed image model, normally z-image-turbo." },
+      prompt: { type: "string", minLength: 1, maxLength: 800, description: "Requested changes and features to retain." },
+      mode: { type: "string", enum: ["img2img", "inpaint"], description: "img2img changes the source globally; inpaint changes the masked region." },
+      imagePath: { type: "string", description: "Local source PNG/JPEG; mutually exclusive with imageUri." },
+      imageUri: { type: "string", description: "Public HTTPS PNG/JPEG or data URI; mutually exclusive with imagePath." },
+      maskPath: { type: "string", description: "Inpaint-only local mask with the source dimensions; mutually exclusive with maskUri." },
+      maskUri: { type: "string", description: "Inpaint-only HTTPS/data mask with the source dimensions; mutually exclusive with maskPath." },
+      size: { type: "string", description: "Optional WIDTH*HEIGHT cover/center crop. Omit to retain source dimensions within server limits." },
+      strength: { type: "number", exclusiveMinimum: 0, maximum: 1, description: "Change strength; server defaults img2img 0.6, inpaint 1.0." },
+      steps: { type: "integer", minimum: 1, maximum: 12, description: "Denoising steps; server default 9." },
+      seed: { type: ["integer", "null"], minimum: 0, maximum: 2147483647, description: "Optional reproducibility seed." },
+      promptExtend: { type: "boolean", default: false, description: "Optional rewrite with original-prompt fallback. Keep false for precise edits; usedPrompt reports the actual prompt." },
+      ...output
+    }, required: ["model", "prompt", "mode"], additionalProperties: false },
+    annotations: generation
+  },
+  {
+    name: "astra_genai_msr",
+    title: "Generate an LTX video from subject and background references",
+    description: "Combine character, clothing, object and background references in one MSR video through ASTRA GenAI. Use video_plan operation reference and video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Up to four subject images and one background; place the background last and number prompt images in that order. Local PNG/JPEG files become data URIs. MSR is a server-selected deployment with no model parameter, independent of saved LTX v2 weights. It cannot pin first/last frames or condition on recorded speech; use img2video for frame control. Saves a job receipt and resumes via video_status without resubmission.",
+    inputSchema: { type: "object", properties: {
+      prompt: { type: "string", minLength: 1, maxLength: 2e3, description: "Action and reference roles, e.g. person in image 1 wearing the jacket in image 2." },
+      references: { type: "array", minItems: 1, maxItems: 5, description: "At most four subjects and one background. Exactly one URI or path per reference.", items: {
+        type: "object",
+        properties: {
+          imageUri: { type: "string", description: "Public HTTPS PNG/JPEG or data URI." },
+          imagePath: { type: "string", description: "Local PNG/JPEG path, instead of imageUri." },
+          background: { type: "boolean", default: false, description: "Marks the single background reference; put it last." }
+        },
+        additionalProperties: false
+      } },
+      referenceStrength: { type: "number", minimum: 0, maximum: 1, default: 1, description: "Reference adherence strength." },
+      referenceFrames: { type: "integer", enum: [25, 33], default: 33, description: "MSR reference frame count." },
+      width: { type: "integer", minimum: 64, maximum: 1920, multipleOf: 64, default: 1536, description: "Output width; width times height must not exceed 2,064,384." },
+      height: { type: "integer", minimum: 64, maximum: 1920, multipleOf: 64, default: 1024, description: "Output height." },
+      numFrames: { type: "integer", minimum: 25, maximum: 361, description: "8k+1 frames, default 121. Omit when duration is supplied." },
+      duration: { type: "number", exclusiveMinimum: 0, maximum: 360, description: "Seconds rounded to the nearest 8k+1 frames (ties shorter), which must fit 25..361. Mutually exclusive with numFrames." },
+      frameRate: { type: "number", minimum: 1, maximum: 60, default: 24, description: "Output frames per second." },
+      seed: { type: "integer", minimum: 0, maximum: 2147483647, default: 42, description: "Reproducibility seed." },
+      reserveUsd: video.reserveUsd,
+      ...output
+    }, required: ["prompt", "references", "reserveUsd"], additionalProperties: false },
     annotations: generation
   },
   {
@@ -82316,14 +82468,49 @@ var genaiImageSchema = external_exports.object({
   size: external_exports.string().min(1).default("1024*1536"),
   seed: external_exports.number().int().min(0).max(2147483647).nullable().optional(),
   promptExtend: external_exports.boolean().default(false),
+  steps: external_exports.number().int().min(1).max(12).optional(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("image").refine((name) => name.endsWith(".png"), "Use a .png filename").optional()
 }).strict();
+var genaiImageEditSchema = genaiImageSchema.extend({
+  mode: external_exports.enum(["img2img", "inpaint"]),
+  size: external_exports.string().min(1).optional(),
+  imageUri: genaiImageUriSchema.optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  maskUri: genaiImageUriSchema.optional(),
+  maskPath: external_exports.string().min(1).optional(),
+  strength: external_exports.number().finite().gt(0).max(1).optional()
+}).strict().superRefine((args, ctx) => {
+  const issue2 = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (Number(!!args.imageUri) + Number(!!args.imagePath) !== 1) issue2("Supply exactly one imageUri or imagePath");
+  const masks = Number(!!args.maskUri) + Number(!!args.maskPath);
+  if (args.mode === "inpaint" ? masks !== 1 : masks !== 0) issue2("Only inpaint requires exactly one maskUri or maskPath");
+});
 function buildGenaiImageBody(args) {
+  const edit = "mode" in args ? args : void 0;
+  const content = [{ text: args.prompt }];
+  const source = edit ? genaiSourceUri(edit.imageUri, edit.imagePath) : void 0;
+  const mask = edit?.mode === "inpaint" ? genaiSourceUri(edit.maskUri, edit.maskPath) : void 0;
+  if (source) content.push({ image: source });
+  if (source?.startsWith("data:") && mask?.startsWith("data:")) {
+    const sourceSize = imageMetadata(Buffer.from(source.slice(source.indexOf(",") + 1), "base64"));
+    const maskSize = imageMetadata(Buffer.from(mask.slice(mask.indexOf(",") + 1), "base64"));
+    if (sourceSize.width !== maskSize.width || sourceSize.height !== maskSize.height)
+      throw new Error("GenAI mask dimensions must match the source");
+  }
   return {
     model: args.model,
-    input: { messages: [{ role: "user", content: [{ text: args.prompt }] }] },
-    parameters: { size: args.size, prompt_extend: args.promptExtend, ...args.seed === void 0 ? {} : { seed: args.seed } }
+    input: {
+      messages: [{ role: "user", content }],
+      ...mask ? { mask } : {}
+    },
+    parameters: {
+      ...args.size === void 0 ? {} : { size: args.size },
+      prompt_extend: args.promptExtend,
+      ...args.seed === void 0 ? {} : { seed: args.seed },
+      ...args.steps === void 0 ? {} : { num_inference_steps: args.steps },
+      ...edit ? { mode: edit.mode, ...edit.strength === void 0 ? {} : { strength: edit.strength } } : {}
+    }
   };
 }
 var responseSchema = external_exports.object({
@@ -82333,8 +82520,8 @@ var responseSchema = external_exports.object({
     message: external_exports.object({ content: external_exports.array(external_exports.object({ image: external_exports.string().optional(), text: external_exports.string().optional() }).passthrough()) }).passthrough()
   }).passthrough()).length(1) }).passthrough()
 }).passthrough();
-async function generateGenaiImage(input) {
-  const args = genaiImageSchema.parse(input);
+async function generateGenaiImage(input, operation = "text") {
+  const args = (operation === "edit" ? genaiImageEditSchema : genaiImageSchema).parse(input);
   requireAstraGenaiKey();
   const imagePath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.png`, "image");
   const receiptPath = imagePath + ".astra-genai.json";
@@ -82343,8 +82530,12 @@ async function generateGenaiImage(input) {
   if (fs6.existsSync(receiptPath) || fs6.existsSync(imagePath))
     throw new Error("GenAI image output/receipt already exists; inspect the receipt before any new generation.");
   fs6.writeFileSync(receiptPath, JSON.stringify({ baseUrl: astraGenaiBaseUrl(), fingerprint, imagePath, status: "submitting" }), { flag: "wx", mode: 384 });
-  const raw = await requestGenai("POST", GENAI_IMAGE_ROUTE, body, 30 * 6e4);
-  atomicJson(receiptPath, { baseUrl: astraGenaiBaseUrl(), fingerprint, imagePath, status: "received", response: raw });
+  let promptExtension;
+  const raw = await requestGenai("POST", GENAI_IMAGE_ROUTE, body, 30 * 6e4, (headers) => {
+    const value = headers.get("x-prompt-extend");
+    if (value === "applied" || value === "fallback") promptExtension = value;
+  });
+  atomicJson(receiptPath, { baseUrl: astraGenaiBaseUrl(), fingerprint, imagePath, status: "received", response: raw, promptExtension });
   return recoverGenaiImage(receiptPath);
 }
 async function recoverGenaiImage(receiptPath) {
@@ -82356,14 +82547,16 @@ async function recoverGenaiImage(receiptPath) {
     response: external_exports.unknown().optional(),
     output: external_exports.object({ sha256: external_exports.string() }).passthrough().optional(),
     requestId: external_exports.string().optional(),
-    usage: external_exports.unknown().optional()
+    usage: external_exports.unknown().optional(),
+    usedPrompt: external_exports.string().optional(),
+    promptExtension: external_exports.enum(["applied", "fallback"]).optional()
   }).passthrough().parse(JSON.parse(fs6.readFileSync(receiptPath, "utf8")));
   if (receipt.baseUrl !== astraGenaiBaseUrl()) throw new Error("GenAI image receipt belongs to a different server");
   const { imagePath, fingerprint } = receipt;
   if (receipt.status === "completed") {
     const output2 = verifyImageFile(imagePath);
     if (output2.sha256 !== receipt.output?.sha256) throw new Error("GenAI cached image changed");
-    return { imagePath, requestId: receipt.requestId, usage: receipt.usage, output: output2, review: "not_reviewed" };
+    return { imagePath, requestId: receipt.requestId, usage: receipt.usage, usedPrompt: receipt.usedPrompt, promptExtension: receipt.promptExtension, output: output2, review: "not_reviewed" };
   }
   if (receipt.status !== "received") throw new Error("GenAI image submission is ambiguous; inspect provider usage before retrying");
   const response = responseSchema.parse(receipt.response);
@@ -82378,7 +82571,8 @@ async function recoverGenaiImage(receiptPath) {
     if (fs6.existsSync(imagePath)) {
       if (verifyImageFile(imagePath).sha256 !== output2.sha256) throw new Error("GenAI image output conflicts with download");
     } else fs6.linkSync(temp, imagePath);
-    const result = { imagePath, requestId: response.request_id, usage: response.usage, output: output2, review: "not_reviewed" };
+    const usedPrompt = response.output.choices[0].message.content.find((item) => item.text !== void 0)?.text;
+    const result = { imagePath, usedPrompt, promptExtension: receipt.promptExtension, requestId: response.request_id, usage: response.usage, output: output2, review: "not_reviewed" };
     atomicJson(receiptPath, { baseUrl: astraGenaiBaseUrl(), fingerprint, ...result, status: "completed" });
     return result;
   } finally {
@@ -82776,6 +82970,7 @@ ${tail}` : ""}`));
 // src/image-registry.ts
 var IMAGE_ADAPTERS = Object.freeze({
   astra_genai_text2img: { engine: "astra-genai", operation: "text", schema: genaiImageSchema },
+  astra_genai_edit: { engine: "astra-genai", operation: "edit", schema: genaiImageEditSchema },
   gpt_image_text2img: { engine: "gpt-image", operation: "text", schema: text2ImageSchema },
   gpt_image_img2img: { engine: "gpt-image", operation: "edit", schema: img2ImgSchema },
   image_local_generate: { engine: "zimage", operation: "text", schema: zimageGenerateSchema },
@@ -82816,6 +83011,7 @@ function imageCatalog() {
     version: 1,
     revision: "2026-10-18",
     adapters: Object.entries(IMAGE_ADAPTERS).map(([tool, entry2]) => ({ tool, engine: entry2.engine, operation: entry2.operation, fields: fields(entry2.schema) })),
+    genai: { edits: ["img2img", "inpaint"], sourceImages: 1, steps: [1, 12], promptExtend: "Optional shared-LLM rewrite; failures use the original prompt. Keep false for precise reference instructions.", note: "Use GPT Image 2 for readable text. No multi-image fusion." },
     gptModels: GPT_IMAGE_MODELS,
     gptContracts: GPT_IMAGE_CONTRACTS,
     mlx: {
@@ -85668,6 +85864,7 @@ var VIDEO_ADAPTERS = Object.freeze({
   seedance_reference: entry("seedance", "byteplus", "reference", seedanceReferenceSchema),
   astra_genai_text2video: entry("astra-genai", "genai-ltx-v2", "text", genaiTextToVideoSchema),
   astra_genai_img2video: entry("astra-genai", "genai-ltx-v2", "image", genaiImageToVideoSchema),
+  astra_genai_msr: entry("astra-genai", "genai-ltx-msr", "reference", genaiMsrSchema),
   astra_text2video: entry("astra", "self-hosted-ltx", "text", astraText2VideoSchema),
   astra_img2video: entry("astra", "self-hosted-ltx", "image", astraImg2VideoSchema),
   astra_keyframe_video: entry("astra", "self-hosted-ltx", "keyframe", astraKeyframeVideoSchema),
@@ -85705,7 +85902,7 @@ function videoCatalog() {
       operation: a.operation,
       voice: videoVoiceCapabilities(tool),
       fields: keys(a.schema),
-      modelConstraints: a.engine === "seedance" ? SEEDANCE_MODEL_SPECS : a.engine === "astra-genai" ? { models: GENAI_VIDEO_MODELS, note: "Explicit duration and resolution; server validates deployment limits. No supplied audio, keyframes or LoRA." } : a.engine === "veo" ? { models: VALID_VIDEO_MODELS, resolutions: VALID_VIDEO_RESOLUTIONS, note: "Use video_plan for cross-field constraints" } : { note: "Use video_plan; deployment-specific schema is authoritative" }
+      modelConstraints: a.engine === "seedance" ? SEEDANCE_MODEL_SPECS : tool === "astra_genai_msr" ? { note: "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. No supplied speech or audio controls." } : a.engine === "astra-genai" ? { models: GENAI_VIDEO_MODELS, note: "Explicit duration and resolution; server validates deployment limits. No supplied audio, keyframes or LoRA." } : a.engine === "veo" ? { models: VALID_VIDEO_MODELS, resolutions: VALID_VIDEO_RESOLUTIONS, note: "Use video_plan for cross-field constraints" } : { note: "Use video_plan; deployment-specific schema is authoritative" }
     })),
     host: { execution: "external", note: "Host tools are outside MCP enforcement; never claim an API gate protects their calls." },
     unimplemented: ["minimax-h3-api", "ltx-official-api"]
@@ -85790,7 +85987,7 @@ function evaluateWindowScript(source, options = {}) {
 }
 
 // src/storyboard.ts
-import { existsSync as existsSync11, mkdirSync as mkdirSync3, readFileSync as readFileSync11, renameSync as renameSync3, statSync as statSync6, unlinkSync as unlinkSync2, writeFileSync as writeFileSync10 } from "node:fs";
+import { existsSync as existsSync11, mkdirSync as mkdirSync3, readFileSync as readFileSync12, renameSync as renameSync3, statSync as statSync6, unlinkSync as unlinkSync2, writeFileSync as writeFileSync10 } from "node:fs";
 import * as nodeModule from "node:module";
 import { basename as basename6, dirname as dirname3, join as join6, resolve as resolve3 } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -86107,7 +86304,7 @@ function readBoard(target) {
   const file = scenesPath(target);
   if (!existsSync11(file)) throw new Error(`no scenes.js at ${file}`);
   if (!statSync6(file).isFile()) throw new Error(`${file} is not a file`);
-  const src = readFileSync11(file, "utf8");
+  const src = readFileSync12(file, "utf8");
   const header = [];
   for (const line of src.split("\n")) {
     if (/^\s*\/\//.test(line)) header.push(line.trim());
@@ -86322,7 +86519,7 @@ function applyStoryboard(args) {
   if (exists) ({ header, win } = readBoard(file));
   else if (!args.set) throw new Error(`no scenes.js at ${file} \u2014 a new board is written with \`set\` (structure + shots)`);
   else if (!existsSync11(dirname3(file))) throw new Error(`directory does not exist: ${dirname3(file)}`);
-  const original = exists ? readFileSync11(file, "utf8") : "";
+  const original = exists ? readFileSync12(file, "utf8") : "";
   const originalHash = createHash6("sha256").update(original).digest("hex");
   const previousDoc = win.SB_DOC;
   const incomingDoc = args.globals?.SB_DOC;
@@ -86349,7 +86546,7 @@ function applyStoryboard(args) {
   const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
   try {
     if (changesProps && exists) {
-      if (createHash6("sha256").update(readFileSync11(file)).digest("hex") !== originalHash) throw new Error("head_moved");
+      if (createHash6("sha256").update(readFileSync12(file)).digest("hex") !== originalHash) throw new Error("head_moved");
       const history = join6(dirname3(file), ".prop-history");
       mkdirSync3(history, { recursive: true });
       const backup = join6(history, originalHash + ".js");
@@ -86471,7 +86668,7 @@ import { writeFileSync as writeFileSync13 } from "node:fs";
 // src/tts-execution.ts
 import { AsyncLocalStorage as AsyncLocalStorage2 } from "node:async_hooks";
 import { createHash as createHash7, randomUUID as randomUUID2 } from "node:crypto";
-import { accessSync as accessSync2, constants as constants2, existsSync as existsSync12, lstatSync, mkdirSync as mkdirSync4, readFileSync as readFileSync12, realpathSync as realpathSync2, renameSync as renameSync4, rmSync as rmSync5, writeFileSync as writeFileSync12 } from "node:fs";
+import { accessSync as accessSync2, constants as constants2, existsSync as existsSync12, lstatSync, mkdirSync as mkdirSync4, readFileSync as readFileSync13, realpathSync as realpathSync2, renameSync as renameSync4, rmSync as rmSync5, writeFileSync as writeFileSync12 } from "node:fs";
 import { tmpdir as tmpdir3 } from "node:os";
 import { extname as extname6, join as join8, resolve as resolve4 } from "node:path";
 
@@ -86664,12 +86861,12 @@ async function executeSpeech(generator, args, run) {
   let releaseOutput, releaseSlot;
   try {
     if (existsSync12(receiptPath)) {
-      const prior = JSON.parse(readFileSync12(receiptPath, "utf8"));
+      const prior = JSON.parse(readFileSync13(receiptPath, "utf8"));
       if (prior.fingerprint !== fingerprint) throw new Error("Speech requestId was already used with different arguments");
       if (prior.status !== "completed") throw new Error("Speech request outcome is uncertain or failed; inspect receipt before a new explicit requestId");
-      if (digest(readFileSync12(prior.result.audioPath)) !== prior.audioSha256) throw new Error("Recorded speech audio changed or is missing");
+      if (digest(readFileSync13(prior.result.audioPath)) !== prior.audioSha256) throw new Error("Recorded speech audio changed or is missing");
       for (const artifact of prior.artifacts || []) {
-        if (digest(readFileSync12(artifact.path)) !== artifact.sha256) throw new Error("Recorded speech sidecar changed or is missing");
+        if (digest(readFileSync13(artifact.path)) !== artifact.sha256) throw new Error("Recorded speech sidecar changed or is missing");
       }
       return { ...prior.result, receiptPath, review: "not_reviewed", replayed: true };
     }
@@ -86707,12 +86904,12 @@ async function executeSpeech(generator, args, run) {
       const result = await run({ outputPath, filename });
       if (!result.success || !result.audioPath) throw new Error(result.error || "Speech provider returned no audio");
       if (realpathSync2(result.audioPath) !== audioPath) throw new Error("Speech provider returned an unexpected output path");
-      const bytes = readFileSync12(audioPath);
+      const bytes = readFileSync13(audioPath);
       const durationSeconds = validateSpeechAudio(bytes, extname6(audioPath).slice(1));
       const artifacts = ["alignmentPath", "usageReceiptPath"].flatMap((field) => {
         const file = result[field];
         if (typeof file !== "string") return [];
-        return [{ path: file, sha256: digest(readFileSync12(file)) }];
+        return [{ path: file, sha256: digest(readFileSync13(file)) }];
       });
       const completed = { ...result, receiptPath, attempts: 1, review: "not_reviewed" };
       writeReceipt(receiptPath, { ...record2, status: "completed", artifacts, audioSha256: digest(bytes), durationSeconds, result: completed });
@@ -87211,7 +87408,7 @@ async function generateGemini38Speech(request) {
 var import_tts_speed_policy = __toESM(require_tts_speed_policy(), 1);
 import { execFile as execFile4 } from "node:child_process";
 import { createHash as createHash8, randomUUID as randomUUID3 } from "node:crypto";
-import { closeSync as closeSync2, existsSync as existsSync14, mkdirSync as mkdirSync6, openSync as openSync2, readFileSync as readFileSync13, renameSync as renameSync5, rmSync as rmSync6, writeFileSync as writeFileSync15 } from "node:fs";
+import { closeSync as closeSync2, existsSync as existsSync14, mkdirSync as mkdirSync6, openSync as openSync2, readFileSync as readFileSync14, renameSync as renameSync5, rmSync as rmSync6, writeFileSync as writeFileSync15 } from "node:fs";
 import path11 from "node:path";
 import { promisify as promisify2 } from "node:util";
 
@@ -87944,7 +88141,7 @@ function priceOf(tool, args = {}) {
       return { key: null, quantity: null, note: "Invalid duration plan: " + String(error2) };
     }
   }
-  if (tool.startsWith("astra_genai_")) return { key: tool === "astra_genai_text2img" ? "image.astra-genai" : "video.astra-genai", quantity: null, note: "Gateway pricing unverified; managed reservation is authoritative, not a measured bill" };
+  if (tool.startsWith("astra_genai_")) return { key: ["astra_genai_text2img", "astra_genai_edit"].includes(tool) ? "image.astra-genai" : "video.astra-genai", quantity: null, note: "Gateway pricing unverified; managed reservation is authoritative, not a measured bill" };
   if (tool.startsWith("veo_")) {
     const tier = VEO_TIER[str3(args.model, "veo-3.1-fast-generate-preview")];
     const resolution = str3(args.resolution, "720p");
@@ -88404,7 +88601,7 @@ async function applySentenceSpacing(output2, request, align) {
   try {
     if (existsSync14(alignmentPath)) {
       try {
-        if (JSON.parse(readFileSync13(alignmentPath, "utf8")).engine === "asr-aligner") rmSync6(alignmentPath, { force: true });
+        if (JSON.parse(readFileSync14(alignmentPath, "utf8")).engine === "asr-aligner") rmSync6(alignmentPath, { force: true });
       } catch {
         rmSync6(alignmentPath, { force: true });
       }
@@ -88415,11 +88612,11 @@ async function applySentenceSpacing(output2, request, align) {
       if (aligned.matched < aligned.letters * 0.8) throw new Error(`aligner matched ${aligned.matched}/${aligned.letters} script letters; transcript "${aligned.transcript.slice(0, 60)}"`);
       writeFileSync15(alignmentPath, JSON.stringify({ engine: "asr-aligner", generator: request.generator, text: request.expectedText, transcript: aligned.transcript, matched: aligned.matched, letters: aligned.letters, alignment: aligned.alignment }, null, 2));
     }
-    const sidecar = JSON.parse(readFileSync13(alignmentPath, "utf8"));
+    const sidecar = JSON.parse(readFileSync14(alignmentPath, "utf8"));
     const alignment = sidecar.alignment;
     if (!alignment?.characters?.length) return { skipped: "alignment sidecar carries no characters" };
     const segments = request.segments ?? splitSentences(alignment.characters.join(""));
-    const result = respace(readFileSync13(output2), alignment, segments, { pause: request.sentencePause, playbackSpeed: request.playbackSpeed });
+    const result = respace(readFileSync14(output2), alignment, segments, { pause: request.sentencePause, playbackSpeed: request.playbackSpeed });
     writeFileSync15(output2, result.wav);
     const meta = { policy: SPACING_POLICY, source: sidecar.engine === "asr-aligner" ? "asr-aligner" : "vendor", pause: request.sentencePause, playbackSpeed: request.playbackSpeed, lead: result.lead, gaps: result.gaps, inserted: result.inserted, boundaries: result.boundaries, duration: result.duration, segmentsFrom: request.segments ? "request" : "sentence-final punctuation" };
     writeFileSync15(alignmentPath, JSON.stringify({ ...sidecar, alignment: result.alignment, vendor_alignment: sidecar.vendor_alignment ?? sidecar.alignment, respaced: meta }, null, 2));
@@ -88480,7 +88677,7 @@ async function generateCheckedSpeech(input, dependencies) {
   }
   try {
     if (existsSync14(proofFile)) {
-      const old = JSON.parse(readFileSync13(proofFile, "utf8"));
+      const old = JSON.parse(readFileSync14(proofFile, "utf8"));
       if (Object.entries(base).every(([key, value]) => key === "model" || key === "voiceSettings" && old[key] === void 0 || JSON.stringify(old[key]) === JSON.stringify(value))) {
         if (!Array.isArray(old.attempts) || old.attempts.length > 3) throw new Error("Invalid attempt history");
         attempts.push(...old.attempts.map((take) => ({ ...take, model: take.model ?? old.model })));
@@ -88490,12 +88687,12 @@ async function generateCheckedSpeech(input, dependencies) {
         const transcriptSatisfied = transcriptRecorded && (!request.transcriptCheck || storedTranscript !== null);
         if (last?.duplicateOf) return save3("fail", { error: "Identical rejected audio already stopped this request; correct the episode pronunciation or delivery plan" });
         if (request.rejectTake) {
-          if (!last || last.audioSha256 !== request.rejectTake.audioSha256 || !existsSync14(output2) || sha256(readFileSync13(output2)) !== request.rejectTake.audioSha256) throw new Error("The rejected take is not the current audio; inspect the current file before requesting another retake");
+          if (!last || last.audioSha256 !== request.rejectTake.audioSha256 || !existsSync14(output2) || sha256(readFileSync14(output2)) !== request.rejectTake.audioSha256) throw new Error("The rejected take is not the current audio; inspect the current file before requesting another retake");
           last.authorRejection = request.rejectTake.reason;
           last.pending = false;
           last.failures = [...Array.isArray(last.failures) ? last.failures : [], "Rejected during final listening: " + request.rejectTake.reason];
         }
-        if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && transcriptSatisfied && existsSync14(output2) && old.audioSha256 === sha256(readFileSync13(output2)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, storedTranscript, reviewSchema.parse(last.review), last.signal.duration).length) {
+        if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && transcriptSatisfied && existsSync14(output2) && old.audioSha256 === sha256(readFileSync14(output2)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, storedTranscript, reviewSchema.parse(last.review), last.signal.duration).length) {
           if (old.voiceSettings === void 0) save3("pass", { audioSha256: old.audioSha256 });
           const lastSpacing = last.spacing;
           return {
@@ -88508,7 +88705,7 @@ async function generateCheckedSpeech(input, dependencies) {
             spacing: !prepared.spacing ? "not applicable" : lastSpacing?.skipped ? "skipped: " + String(lastSpacing.skipped) : "applied"
           };
         }
-        if (!request.rejectTake && (old.model !== REVIEW_MODEL || !transcriptSatisfied) && old.status === "pass" && last && existsSync14(output2) && last.audioSha256 === sha256(readFileSync13(output2))) {
+        if (!request.rejectTake && (old.model !== REVIEW_MODEL || !transcriptSatisfied) && old.status === "pass" && last && existsSync14(output2) && last.audioSha256 === sha256(readFileSync14(output2))) {
           last.previousReviews = [
             ...Array.isArray(last.previousReviews) ? last.previousReviews : [],
             { model: last.model, transcript: last.transcript, review: last.review, failures: last.failures, signal: last.signal, cer: last.cer, transcriptCheck: last.transcriptCheck ?? null }
@@ -88523,7 +88720,7 @@ async function generateCheckedSpeech(input, dependencies) {
     await deps.preflight();
     while (true) {
       let take = attempts.at(-1);
-      const resumeReview = take?.pending === true && typeof take.audioSha256 === "string" && existsSync14(output2) && take.audioSha256 === sha256(readFileSync13(output2));
+      const resumeReview = take?.pending === true && typeof take.audioSha256 === "string" && existsSync14(output2) && take.audioSha256 === sha256(readFileSync14(output2));
       if (!resumeReview) {
         if (attempts.length >= request.maxAttempts) break;
         const attempt = attempts.length + 1;
@@ -88556,7 +88753,7 @@ async function generateCheckedSpeech(input, dependencies) {
           rmSync6(sentencesPathFor(output2), { force: true });
           take.spacing = { skipped: "engine has no alignment" };
         }
-        take.audioSha256 = sha256(readFileSync13(output2));
+        take.audioSha256 = sha256(readFileSync14(output2));
         save3("unverified");
         const duplicate = attempts.slice(0, -1).find((a) => a.audioSha256 === take.audioSha256 && a.pending === false && Array.isArray(a.failures) && a.failures.length);
         if (duplicate) {
@@ -88573,7 +88770,7 @@ async function generateCheckedSpeech(input, dependencies) {
         listened.review = reviewSchema.parse(listened.review);
         failures = reviewFailures(request.expectedText, listened.transcript, listened.review, signal.duration);
       }
-      if (audioSha256 !== sha256(readFileSync13(output2))) throw new Error("Audio changed during review");
+      if (audioSha256 !== sha256(readFileSync14(output2))) throw new Error("Audio changed during review");
       Object.assign(take, {
         pending: false,
         audioSha256,
@@ -88599,7 +88796,7 @@ async function generateCheckedSpeech(input, dependencies) {
 
 // src/qwen3-asr-client.ts
 import { execFile as execFile5 } from "node:child_process";
-import { existsSync as existsSync15, mkdirSync as mkdirSync7, mkdtempSync as mkdtempSync3, readFileSync as readFileSync14, renameSync as renameSync6, rmSync as rmSync7 } from "node:fs";
+import { existsSync as existsSync15, mkdirSync as mkdirSync7, mkdtempSync as mkdtempSync3, readFileSync as readFileSync15, renameSync as renameSync6, rmSync as rmSync7 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
 import { basename as basename8, extname as extname8, join as join9 } from "node:path";
 var QWEN3_ASR_MODELS = ["Qwen/Qwen3-ASR-1.7B", "Qwen/Qwen3-ASR-0.6B"];
@@ -88833,7 +89030,7 @@ ${tail}` : ""}`));
   }
   let parsed;
   try {
-    parsed = parseCliJson(readFileSync14(cliJsonPath, "utf8"));
+    parsed = parseCliJson(readFileSync15(cliJsonPath, "utf8"));
   } catch (error2) {
     rmSync7(scratchDir, { recursive: true, force: true });
     const message = error2 instanceof Error ? error2.message : String(error2);
@@ -88858,7 +89055,7 @@ ${tail}` : ""}`));
 
 // src/blender-bridge.ts
 import { execFile as execFile6 } from "node:child_process";
-import { existsSync as existsSync16, mkdtempSync as mkdtempSync4, readFileSync as readFileSync15, rmSync as rmSync8, writeFileSync as writeFileSync16 } from "node:fs";
+import { existsSync as existsSync16, mkdtempSync as mkdtempSync4, readFileSync as readFileSync16, rmSync as rmSync8, writeFileSync as writeFileSync16 } from "node:fs";
 import { tmpdir as tmpdir4 } from "node:os";
 import { dirname as dirname4, extname as extname9, join as join10, resolve as resolve5 } from "node:path";
 var BLENDER_PROXY_KINDS = ["person", "dog", "car", "box", "cylinder", "sphere"];
@@ -89185,7 +89382,7 @@ ${stderr}`.split("\n").filter((l) => l.trim().length > 0);
       );
     });
     if (existsSync16(resultPath)) {
-      const raw = JSON.parse(readFileSync15(resultPath, "utf-8"));
+      const raw = JSON.parse(readFileSync16(resultPath, "utf-8"));
       if (raw.ok) return { success: true, result: raw.result };
       return { success: false, error: `${raw.error ?? "Blender reported an error"}${raw.trace ? `
 ${raw.trace}` : ""}` };
@@ -96240,7 +96437,7 @@ function readImageState(directory2) {
 function hasHistory2(directory2) {
   const events = path15.join(directory2, ".work/events.jsonl");
   if (fs16.existsSync(events)) for (const line of fs16.readFileSync(events, "utf8").split("\n").filter(Boolean)) {
-    if (/^(gpt_image_|image_local_|mlx_image_|astra_genai_text2img$)/.test(JSON.parse(line).tool || "")) return true;
+    if (/^(gpt_image_|image_local_|mlx_image_|astra_genai_(text2img|edit)$)/.test(JSON.parse(line).tool || "")) return true;
   }
   const tally = path15.join(directory2, ".work/cost-tally.tsv");
   return fs16.existsSync(tally) && /^image\./m.test(fs16.readFileSync(tally, "utf8"));
@@ -96317,6 +96514,7 @@ function inputFiles2(args, directory2) {
     return resolved;
   };
   if (typeof args.imagePath === "string") args.imagePath = resolve12(args.imagePath);
+  if (typeof args.maskPath === "string") args.maskPath = resolve12(args.maskPath);
   if (Array.isArray(args.refImagePaths)) args.refImagePaths = args.refImagePaths.map((v) => resolve12(String(v)));
   return inputs;
 }
@@ -96364,6 +96562,8 @@ function planImage(raw) {
     if (!withinDirectory(context2.directory, outputFile)) throw new Error("image_output_outside_directory");
   }
   const inputs = selection.engine === "host" ? {} : inputFiles2(args, context2.directory);
+  if (selection.engine === "astra-genai")
+    buildGenaiImageBody((tool === "astra_genai_edit" ? genaiImageEditSchema : genaiImageSchema).parse(args));
   if (outputFile && Object.hasOwn(inputs, outputFile)) throw new Error("image_output_overwrites_input");
   const quote = imageQuote(selection.engine, selection.model, input.reserveUsd);
   const body = {
@@ -96538,7 +96738,7 @@ function imageStatus(raw) {
 async function refreshGenaiImage(directory2, requestId) {
   const state = readImageState(directory2);
   const job = state?.jobs[requestId];
-  if (!job || job.tool !== "astra_genai_text2img") throw new Error("image_refresh_unsupported: requires an existing GenAI image request");
+  if (!job || !["astra_genai_text2img", "astra_genai_edit"].includes(job.tool)) throw new Error("image_refresh_unsupported: requires an existing GenAI image request");
   const plan2 = JSON.parse(fs17.readFileSync(path16.join(directory2, ".work/image-routing/plans", job.planId + ".json"), "utf8"));
   const { id, ...body } = plan2;
   if (id !== job.planId || routingHash(body) !== id || plan2.directory !== directory2 || plan2.outputFile !== job.outputFile || plan2.tool !== job.tool)
@@ -96567,7 +96767,7 @@ import { fileURLToPath as fileURLToPath6 } from "node:url";
 import { createHash as createHash12 } from "node:crypto";
 
 // src/video-pricing.ts
-import { readFileSync as readFileSync21 } from "node:fs";
+import { readFileSync as readFileSync22 } from "node:fs";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 import { createHash as createHash10 } from "node:crypto";
 var PRICE_FILE = fileURLToPath4(new URL("../../skills/autoproduce/references/prices.tsv", import.meta.url));
@@ -96581,7 +96781,7 @@ var TOKEN_RATES = {
 };
 var roundUp = (n) => Math.ceil(n * 1e6) / 1e6;
 function quoteVideo(tool, args) {
-  const prices = readFileSync21(PRICE_FILE, "utf8");
+  const prices = readFileSync22(PRICE_FILE, "utf8");
   const revision = createHash10("sha256").update(prices + JSON.stringify(TOKEN_RATES)).digest("hex");
   if (tool.startsWith("astra_genai_")) {
     if (typeof args.reserveUsd !== "number" || !Number.isFinite(args.reserveUsd) || args.reserveUsd < 0)
@@ -96637,7 +96837,7 @@ function historicalSpend(episode) {
   const quantities = /* @__PURE__ */ new Map();
   for (const line of fs18.readFileSync(events, "utf8").split("\n").filter(Boolean)) {
     const event = JSON.parse(line);
-    if (event.tool === "astra_genai_text2img") continue;
+    if (["astra_genai_text2img", "astra_genai_edit"].includes(event.tool)) continue;
     if (!/^(veo_|seedance_|omni_|mlx_video|astra_)/.test(event.tool || "")) continue;
     const price = prices.get(event.key);
     if (typeof event.quantity !== "number" || !Number.isFinite(event.quantity) || event.quantity < 0 || price === void 0 || !Number.isFinite(price))
@@ -96690,7 +96890,7 @@ function videoTransaction(episode, update) {
 
 // src/video-voice.ts
 import { createHash as createHash11 } from "node:crypto";
-import { existsSync as existsSync22, readFileSync as readFileSync23, realpathSync as realpathSync5 } from "node:fs";
+import { existsSync as existsSync22, readFileSync as readFileSync24, realpathSync as realpathSync5 } from "node:fs";
 import path18 from "node:path";
 import { createRequire as createRequire5 } from "node:module";
 var load3 = createRequire5(import.meta.url);
@@ -96698,7 +96898,7 @@ var object3 = (value) => value && typeof value === "object" && !Array.isArray(va
 var text = (value) => typeof value === "string" ? value.trim() : "";
 var stable2 = (value) => Array.isArray(value) ? value.map(stable2) : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, v]) => [key, stable2(v)])) : value;
 var hash = (value) => createHash11("sha256").update(JSON.stringify(stable2(value))).digest("hex");
-var fileHash = (file) => createHash11("sha256").update(readFileSync23(file)).digest("hex");
+var fileHash = (file) => createHash11("sha256").update(readFileSync24(file)).digest("hex");
 function voiceDescription(character) {
   const tts = object3(character.tts), speech = object3(object3(character.character).speech);
   const confirmed = (key) => {
@@ -96730,7 +96930,7 @@ function voiceReference(character, context2, warnings) {
     const candidate2 = path18.join(path18.dirname(identity), "voice.wav");
     if (existsSync22(identity) && existsSync22(candidate2)) {
       const { identityVoice } = load3("../../skills/_shared/character-voice.js");
-      if (hash(identityVoice(readFileSync23(identity, "utf8"))) !== hash(character.tts)) {
+      if (hash(identityVoice(readFileSync24(identity, "utf8"))) !== hash(character.tts)) {
         warnings.push(`${character.id}: shared voice.wav belongs to different current TTS settings; attach a sample for this episode's pinned voice.`);
         return void 0;
       }
@@ -96752,7 +96952,7 @@ function prepareVideoVoice(tool, input, context2) {
   const characters = Array.isArray(raw) ? raw.map(object3) : Object.entries(object3(raw)).map(([id, value]) => ({ ...object3(value), id }));
   const visual = object3(context2.shot.visual);
   const nativeSlot = Boolean(visual.clip) || context2.shot.type === "broll";
-  const audible = tool.startsWith("veo_") || tool.startsWith("omni_") || (tool.startsWith("astra_") ? args.generateAudio !== false : args.generateAudio === true);
+  const audible = tool !== "astra_genai_msr" && (tool.startsWith("veo_") || tool.startsWith("omni_") || (tool.startsWith("astra_") ? args.generateAudio !== false : args.generateAudio === true));
   const native = tool !== "astra_audio2video" && audible && (nativeSlot || lines.some((line) => line.delivery === "on_screen"));
   const spec = SEEDANCE_MODEL_SPECS[args.model];
   const limitedPromptLanguage = tool.startsWith("seedance_") && !String(args.model).includes("2-5");
@@ -96891,12 +97091,12 @@ function bindSelection3(tool, input, selection) {
     args.maxAttempts = 1;
   }
   if (selection.engine === "omni" && selection.model !== OMNI_MODEL) throw new Error("model_selection_mismatch: fixed Omni deployment");
-  if (selection.model) {
+  if (selection.model && tool !== "astra_genai_msr") {
     if (args.model !== void 0 && args.model !== selection.model) throw new Error("model_selection_mismatch: model differs from saved selection");
     if (selection.engine !== "omni") args.model = selection.model;
   }
   if (selection.resolution && tool !== "astra_video_retake") {
-    if (["astra", "mlx"].includes(selection.engine)) {
+    if (tool === "astra_genai_msr" || ["astra", "mlx"].includes(selection.engine)) {
       const match2 = /^(\d+)x(\d+)$/.exec(selection.resolution);
       if (!match2) throw new Error("Local selection resolution must be WIDTHxHEIGHT");
       for (const [key, n] of [["width", Number(match2[1])], ["height", Number(match2[2])]]) {
@@ -96953,6 +97153,7 @@ function planVideo(raw) {
   args.outputPath = output2;
   args.filename ??= `video-${input.requestId}.mp4`;
   const inputs = inputFiles3(args, context2.episode);
+  if (tool === "astra_genai_msr") buildGenaiMsrBody(genaiMsrSchema.parse(args));
   if (tool === "astra_video_retake" && selection.resolution) {
     const probe2 = JSON.parse(execFileSync8("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", String(args.sourceVideoPath)], { encoding: "utf8", timeout: 15e3 }));
     const stream = probe2.streams?.[0];
@@ -97152,7 +97353,7 @@ async function videoStatus(raw) {
   const state = JSON.parse(fs19.readFileSync(file, "utf8"));
   const job = state.jobs?.[input.requestId];
   if (input.action === "refresh" && job) {
-    if (!["astra_genai_text2video", "astra_genai_img2video"].includes(job.tool)) throw new Error("video_refresh_unsupported: use provider-specific recovery");
+    if (!["astra_genai_text2video", "astra_genai_img2video", "astra_genai_msr"].includes(job.tool)) throw new Error("video_refresh_unsupported: use provider-specific recovery");
     const plan2 = JSON.parse(fs19.readFileSync(path19.join(episode, ".work/video-routing/plans", job.planId + ".json"), "utf8"));
     const { id, ...body } = plan2;
     if (id !== job.planId || hash2(body) !== id || plan2.episode !== episode || plan2.tool !== job.tool) throw new Error("Invalid recovery plan");
@@ -97528,7 +97729,7 @@ async function reviewActing(input) {
 
 // src/voice-audition.ts
 import { createHash as createHash15, randomUUID as randomUUID6 } from "node:crypto";
-import { appendFileSync as appendFileSync3, existsSync as existsSync25, mkdirSync as mkdirSync15, readFileSync as readFileSync25, writeFileSync as writeFileSync19, renameSync as renameSync7 } from "node:fs";
+import { appendFileSync as appendFileSync3, existsSync as existsSync25, mkdirSync as mkdirSync15, readFileSync as readFileSync26, writeFileSync as writeFileSync19, renameSync as renameSync7 } from "node:fs";
 import { dirname as dirname5, join as join11, resolve as resolve7 } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { createRequire as createRequire9 } from "node:module";
@@ -97663,7 +97864,7 @@ function preview(audition) {
 async function manageVoiceAudition(args) {
   if (args.action === "create" || args.action === "plan") {
     const identityPath = resolve7(args.identityPath);
-    const source2 = readFileSync25(identityPath, "utf8");
+    const source2 = readFileSync26(identityPath, "utf8");
     const blocks = [...source2.matchAll(/```json\s*\n([\s\S]*?)```/g)].map((m2) => JSON.parse(m2[1]));
     if (blocks.filter((b) => b.character !== void 0).length !== 1) throw new Error("Create the character identity JSON before auditioning; tts may be absent until selection");
     const target = characterVoiceTarget(source2, args.voiceProfile);
@@ -97710,7 +97911,7 @@ async function manageVoiceAudition(args) {
           recordUsage(outputPath, event);
         }
         if (!result.success || !result.audioPath) throw new Error(result.error || "Candidate generation returned no audio");
-        const bytes = readFileSync25(result.audioPath);
+        const bytes = readFileSync26(result.audioPath);
         if (bytes.subarray(0, 4).toString() !== "RIFF" || bytes.length <= 44) throw new Error("Candidate must be a nonempty WAV");
         const { compiled: _compiled, ...record2 } = choice;
         audition2.candidates.push({ ...record2, id, audioPath: result.audioPath, audioSha256: hash3(bytes), generation: { generator: compiled.generator, arguments: generation2, result } });
@@ -97727,7 +97928,7 @@ async function manageVoiceAudition(args) {
     }
   }
   const auditionPath = resolve7(args.auditionPath);
-  const audition = JSON.parse(readFileSync25(auditionPath, "utf8"));
+  const audition = JSON.parse(readFileSync26(auditionPath, "utf8"));
   if (audition.version !== 1) throw new Error("Unsupported audition manifest");
   if (args.action === "read") return { auditionPath, ...audition };
   if (audition.status !== "ready" || audition.candidates.length !== 3) throw new Error("Select only from a complete, unselected three-voice audition");
@@ -97744,8 +97945,8 @@ async function manageVoiceAudition(args) {
   }
   if ((actual.voiceId || actual.voice || actual.voiceName) !== config3.voiceId || actual.model !== config3.model || config3.engine === "elevenlabs" && (recorded.generator !== "tts_elevenlabs_generate" || actual.languageCode !== config3.language || actual.stability !== config3.stability || actual.similarity !== config3.similarity) || config3.engine === "gemini" && !["tts_generate", "tts_gemini_38"].includes(recorded.generator || ""))
     throw new Error("Candidate voice settings differ from the recorded generation; create a new audition");
-  for (const c of audition.candidates) if (!existsSync25(c.audioPath) || hash3(readFileSync25(c.audioPath)) !== c.audioSha256) throw new Error("Audition audio changed; regenerate or restore original audio before selection");
-  const source = readFileSync25(audition.identityPath, "utf8");
+  for (const c of audition.candidates) if (!existsSync25(c.audioPath) || hash3(readFileSync26(c.audioPath)) !== c.audioSha256) throw new Error("Audition audio changed; regenerate or restore original audio before selection");
+  const source = readFileSync26(audition.identityPath, "utf8");
   if (hash3(source) !== audition.identitySha256) throw new Error("Character identity changed after audition; create a new audition for the current character");
   const selection = { candidateId: chosen.id, userSelection: args.userSelection, at: (/* @__PURE__ */ new Date()).toISOString(), auditionPath, audioSha256: chosen.audioSha256 };
   let replaced = false;
@@ -97832,7 +98033,7 @@ function manageProject(args) {
 
 // src/speech.ts
 import { createHash as createHash16, randomUUID as randomUUID7 } from "node:crypto";
-import { readFileSync as readFileSync26, writeFileSync as writeFileSync20, renameSync as renameSync8, mkdirSync as mkdirSync16, existsSync as existsSync26 } from "node:fs";
+import { readFileSync as readFileSync27, writeFileSync as writeFileSync20, renameSync as renameSync8, mkdirSync as mkdirSync16, existsSync as existsSync26 } from "node:fs";
 import { dirname as dirname7, resolve as resolve9, join as join13 } from "node:path";
 import * as nodeModule6 from "node:module";
 import { execFileSync as execFileSync9 } from "node:child_process";
@@ -97862,7 +98063,7 @@ function speechRevision(line, character) {
 }
 function currentAudio(line, character) {
   try {
-    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync26(line.audio.path) && hash4(readFileSync26(line.audio.path)) === line.audio.sha256;
+    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync26(line.audio.path) && hash4(readFileSync27(line.audio.path)) === line.audio.sha256;
   } catch {
     return false;
   }
@@ -97893,7 +98094,7 @@ function audioProvenanceStatus(line, character) {
   const voice = character?.tts;
   const historical = ["supertonic", "mlx"].includes(String(voice?.engine)) || voice?.engine === "elevenlabs" && ["eleven_v3", "eleven_v3_conversational", "eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_turbo_v2_5"].includes(String(voice?.model));
   try {
-    if (historical && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && hash4(readFileSync26(line.audio.path)) === line.audio.sha256) return "preserved_historical_recording_unverified";
+    if (historical && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && hash4(readFileSync27(line.audio.path)) === line.audio.sha256) return "preserved_historical_recording_unverified";
   } catch {
   }
   return "stale_or_missing";
@@ -97926,7 +98127,7 @@ function speechVideoPlan(input, capabilities) {
 function manageSpeech(args) {
   args = speechManageSchema.parse(args);
   const { file, win, header } = readBoard(args.path);
-  const before = readFileSync26(file, "utf8");
+  const before = readFileSync27(file, "utf8");
   const revision = hash4(before);
   const mutates = ["prepare", "update", "attach_audio", "attach_video", "retime"].includes(args.action);
   if (mutates && args.expectedRevision !== revision) throw new Error("Read speech first and supply its current expectedRevision; the storyboard may have changed");
@@ -97996,7 +98197,7 @@ function manageSpeech(args) {
       const voice = character(line.speaker)?.tts;
       const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation, line);
       if (voiceErrors.length) throw new Error("Generation arguments do not match the pinned character voice: " + voiceErrors.join("; "));
-      const bytes = readFileSync26(audioPath);
+      const bytes = readFileSync27(audioPath);
       if (!bytes.length) throw new Error("Audio file is empty");
       const priorAudio = line.audio;
       const audioHash = hash4(bytes), lineRevision = speechRevision(line, character(line.speaker));
@@ -98065,10 +98266,10 @@ function manageSpeech(args) {
     if (args.action === "attach_video") {
       if (!args.videoPath) throw new Error("videoPath is required");
       const videoPath = resolve9(dirname7(file), args.videoPath);
-      const bytes = readFileSync26(videoPath);
+      const bytes = readFileSync27(videoPath);
       if (!bytes.length) throw new Error("Video file is empty");
       const audio = selected.map(({ line }) => {
-        if (!line.audio || line.audio.revision !== speechRevision(line, character(line.speaker)) || hash4(readFileSync26(line.audio.path)) !== line.audio.sha256) throw new Error("Generate and attach current speech before binding video");
+        if (!line.audio || line.audio.revision !== speechRevision(line, character(line.speaker)) || hash4(readFileSync27(line.audio.path)) !== line.audio.sha256) throw new Error("Generate and attach current speech before binding video");
         const errors = voiceContract().generationVoiceErrors(character(line.speaker)?.tts, line.audio.generation, line);
         if (line.audio.generation.text !== line.tts || errors.length) throw new Error("Speech generation evidence changed: " + errors.join("; "));
         return { lineId: line.id, sha256: line.audio.sha256, revision: line.audio.revision };
@@ -98085,7 +98286,7 @@ function manageSpeech(args) {
       if (args.reuse && !tailTrim) throw new Error("Tail trim requires identical bound audio, unchanged speech/action starts and semantics, and a shorter end. Regenerate changed speech or staging.");
       let quality = { review: "not_reviewed", camera: "not_reviewed", lipSync: "not_reviewed" };
       try {
-        const receipt = JSON.parse(readFileSync26(videoPath + ".astra-job.json", "utf8"));
+        const receipt = JSON.parse(readFileSync27(videoPath + ".astra-job.json", "utf8"));
         if (receipt.sha256 === videoSha256) quality = { ...quality, speechSync: receipt.speechSync || null, selection: receipt.selection || null };
         else if (!receipt.sha256 && receipt.videoPath === videoPath)
           quality = { ...quality, unverifiedSpeechSync: receipt.speechSync || null, receiptBinding: "unverified" };
@@ -98131,18 +98332,18 @@ function manageSpeech(args) {
     const backup = join13(work, revision + ".js");
     if (!existsSync26(backup)) writeFileSync20(backup, before);
     const nextSource = serializeBoard(win, header);
-    if (hash4(readFileSync26(file)) !== revision) throw new Error("Storyboard changed during speech edit");
+    if (hash4(readFileSync27(file)) !== revision) throw new Error("Storyboard changed during speech edit");
     const tmp = file + "." + randomUUID7() + ".tmp";
     writeFileSync20(tmp, nextSource);
     renameSync8(tmp, file);
   }
-  return { revision: hash4(readFileSync26(file)), changed, invalidated, plan: plan2, timing, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  return { revision: hash4(readFileSync27(file)), changed, invalidated, plan: plan2, timing, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/acting-review.ts
 import { execFile as execFile8 } from "node:child_process";
 import { createHash as createHash17, randomUUID as randomUUID8 } from "node:crypto";
-import { existsSync as existsSync27, mkdirSync as mkdirSync17, readFileSync as readFileSync27, realpathSync as realpathSync8, renameSync as renameSync9, rmSync as rmSync10, statSync as statSync11, writeFileSync as writeFileSync21 } from "node:fs";
+import { existsSync as existsSync27, mkdirSync as mkdirSync17, readFileSync as readFileSync28, realpathSync as realpathSync8, renameSync as renameSync9, rmSync as rmSync10, statSync as statSync11, writeFileSync as writeFileSync21 } from "node:fs";
 import path21 from "node:path";
 import { homedir as homedir5 } from "node:os";
 import { promisify as promisify4 } from "node:util";
@@ -98211,7 +98412,7 @@ var hash5 = (data) => createHash17("sha256").update(data).digest("hex");
 var currentHash = (file) => {
   try {
     const stat4 = statSync11(file);
-    return stat4.isFile() && stat4.size <= MAX_BYTES ? hash5(readFileSync27(file)) : null;
+    return stat4.isFile() && stat4.size <= MAX_BYTES ? hash5(readFileSync28(file)) : null;
   } catch {
     return null;
   }
@@ -98475,7 +98676,7 @@ async function reviewActing2(input, deps) {
   const mediaPath = realpathSync8(request.mediaPath);
   const stat4 = statSync11(mediaPath);
   if (!stat4.isFile() || stat4.size === 0 || stat4.size > MAX_BYTES) throw new Error("Review requires a nonempty media file no larger than 12 MiB");
-  const bytes = readFileSync27(mediaPath);
+  const bytes = readFileSync28(mediaPath);
   const probe2 = await deps.probe(mediaPath);
   if (!Number.isFinite(probe2.duration) || probe2.duration <= 0 || probe2.duration > 120) throw new Error("Review requires media duration within (0, 120] seconds");
   if (request.mode !== "video" && !probe2.audio) throw new Error("Requested audio review requires an audio track");
@@ -98488,7 +98689,7 @@ async function reviewActing2(input, deps) {
   let receiptPath = path21.join(directory2, `${requestSha256}.json`);
   mkdirSync17(directory2, { recursive: true, mode: 448 });
   const readMatchingReceipt = (file, expectedHash, retryOf2) => {
-    const cached2 = cachedReceiptSchema.parse(JSON.parse(readFileSync27(file, "utf8")));
+    const cached2 = cachedReceiptSchema.parse(JSON.parse(readFileSync28(file, "utf8")));
     const cachedDirection = hash5(JSON.stringify({ direction: cached2.request.direction, expectedText: cached2.request.expectedText, mode: cached2.request.mode }));
     if (cached2.request.focus !== request.focus || cached2.policy !== policy || cached2.model !== ACTING_REVIEW_MODEL || cached2.mediaSha256 !== mediaSha256 || cached2.directionSha256 !== directionSha256 || cached2.requestSha256 !== expectedHash || cachedDirection !== directionSha256 || cached2.retryOf !== retryOf2 || cached2.request.retryTransportFailure !== Boolean(retryOf2) || JSON.stringify(cached2.media) !== JSON.stringify(probe2)) throw new Error("Cached receipt identity does not match this review");
     return cached2;
@@ -98595,7 +98796,7 @@ async function reviewActing2(input, deps) {
 
 // src/threads-gate.ts
 import { createHash as createHash18, randomUUID as randomUUID9 } from "node:crypto";
-import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync18, readFileSync as readFileSync28, realpathSync as realpathSync9, renameSync as renameSync10, statSync as statSync12, writeFileSync as writeFileSync22 } from "node:fs";
+import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync18, readFileSync as readFileSync29, realpathSync as realpathSync9, renameSync as renameSync10, statSync as statSync12, writeFileSync as writeFileSync22 } from "node:fs";
 import { dirname as dirname8, join as join14, resolve as resolve10 } from "node:path";
 import { fileURLToPath as fileURLToPath8 } from "node:url";
 import { spawnSync as spawnSync3 } from "node:child_process";
@@ -98654,7 +98855,7 @@ function save2(draft) {
   renameSync10(temp, file);
 }
 function load5(id) {
-  const value = JSON.parse(readFileSync28(draftLocation(id).file, "utf8"));
+  const value = JSON.parse(readFileSync29(draftLocation(id).file, "utf8"));
   draftSchema.parse(value);
   if (value.draftId !== id || value.channel !== draftLocation(id).channel || threadsBodyHash(value.body, value.selfReply) !== value.bodyHash) {
     throw new Error("Draft body hash mismatch; create a new draft");
@@ -98744,7 +98945,7 @@ function checkThreadsEpisode(input) {
     if (!board.startsWith(episode + "/") || !statSync12(board).isFile()) throw new Error("Missing episode storyboard");
     const approvalPath = realpathSync9(join14(episode, "threads-publish-approval.json"));
     if (dirname8(approvalPath) !== episode) throw new Error("Invalid episode approval path");
-    const approval = JSON.parse(readFileSync28(approvalPath, "utf8"));
+    const approval = JSON.parse(readFileSync29(approvalPath, "utf8"));
     if (approval.approved !== true) throw new Error("Episode publishing approval required");
     for (const key of ["caption", "selfReply", "imageUrl", "videoUrl", "linkUrl", "replyToId"]) {
       if ((approval[key] ?? "") !== (input[key] ?? "")) throw new Error(`Episode approval mismatch: ${key}`);
@@ -101912,7 +102113,7 @@ async function checkAccounts(channel) {
 
 // src/tts-final-quality.ts
 import { execFile as execFile9 } from "node:child_process";
-import { existsSync as existsSync30, mkdtempSync as mkdtempSync5, readFileSync as readFileSync29, rmSync as rmSync11, writeFileSync as writeFileSync23, renameSync as renameSync11, openSync as openSync6, closeSync as closeSync6 } from "node:fs";
+import { existsSync as existsSync30, mkdtempSync as mkdtempSync5, readFileSync as readFileSync30, rmSync as rmSync11, writeFileSync as writeFileSync23, renameSync as renameSync11, openSync as openSync6, closeSync as closeSync6 } from "node:fs";
 import { tmpdir as tmpdir6 } from "node:os";
 import path22 from "node:path";
 import { promisify as promisify5 } from "node:util";
@@ -101948,22 +102149,22 @@ async function reviewFinalSpeech(input, deps) {
     const result = { ...base, status, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
     const staging = path22.join(temp, "proof.json");
     writeFileSync23(staging, JSON.stringify(result, null, 2) + "\n");
-    writeFileSync23(proofPath + ".tmp", readFileSync29(staging));
+    writeFileSync23(proofPath + ".tmp", readFileSync30(staging));
     renameSync11(proofPath + ".tmp", proofPath);
     return { success: status === "pass", status, proofPath, ...extra };
   }
   try {
-    base = { ...base, mediaSha256: sha256(readFileSync29(media)), textSha256: sha256(normalizeSpeech(request.expectedText)) };
+    base = { ...base, mediaSha256: sha256(readFileSync30(media)), textSha256: sha256(normalizeSpeech(request.expectedText)) };
     const wav = path22.join(temp, "final.flac");
     await exec4("ffmpeg", ["-y", "-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", "24000", "-c:a", "flac", wav], { timeout: 6e4 });
-    base.audioSha256 = sha256(readFileSync29(wav));
-    if (sha256(readFileSync29(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
-    if (readFileSync29(wav).length > chapters.LIMIT) {
+    base.audioSha256 = sha256(readFileSync30(wav));
+    if (sha256(readFileSync30(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
+    if (readFileSync30(wav).length > chapters.LIMIT) {
       return await reviewChapters(request, media, wav, temp, base, proofPath, save3, deps);
     }
-    if (sha256(readFileSync29(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
+    if (sha256(readFileSync30(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
     if (existsSync30(proofPath)) {
-      const old = JSON.parse(readFileSync29(proofPath, "utf8"));
+      const old = JSON.parse(readFileSync30(proofPath, "utf8"));
       const same = Object.entries(base).every(([k, v]) => ["mediaSha256", "expectedText"].includes(k) || old[k] === v);
       if (old.audioSha256 === base.audioSha256 && old.textSha256 === base.textSha256 && old.status === "fail") return save3("fail", { reused: true, signal: old.signal, transcript: old.transcript, transcriptCheck: transcriptCheck ?? old.transcriptCheck ?? null, failures: old.failures, review: old.review, error: "This exact final audio already failed; fix the audio before another listening review" });
       if (same && old.status === "pass" && (!transcriptCheck || typeof old.transcript === "string")) {
@@ -101992,7 +102193,7 @@ async function reviewFinalSpeech(input, deps) {
     const result = await deps.listen(wav, reviewRequest, true);
     failures.push(...reviewFailures(request.expectedText, result.transcript, result.review, signal.duration));
     if ((result.review.continuity ?? 0) < 95 || !result.review.continuityEvidence) failures.push("Episode continuity below 95 or missing listening evidence");
-    if (sha256(readFileSync29(media)) !== base.mediaSha256) throw new Error("Final media changed during listening");
+    if (sha256(readFileSync30(media)) !== base.mediaSha256) throw new Error("Final media changed during listening");
     return save3(failures.length ? "fail" : "pass", { signal, ...result, transcriptCheck: transcriptCheck ?? null, failures });
   } catch (error2) {
     const failure2 = { error: error2 instanceof Error ? error2.message : String(error2) };
@@ -102008,7 +102209,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
   const pcm = chapters.decode(wav), totalSamples = pcm.length / chapters.BYTES;
   const planned = chapters.plan(request.segments, totalSamples, request.expectedText);
   const identity = { policy: chapters.POLICY, sampleRate: chapters.RATE, totalSamples, pcmSha256: chapters.hash(pcm), segments: request.segments, transcriptCheck: request.transcriptCheck ?? null };
-  const old = existsSync30(proofPath) ? JSON.parse(readFileSync29(proofPath, "utf8")) : null;
+  const old = existsSync30(proofPath) ? JSON.parse(readFileSync30(proofPath, "utf8")) : null;
   const pieces = [];
   const commit = (status, extra = {}) => save3(status, { ...identity, pieces, manifestSha256: chapters.manifest({ ...identity, pieces }), ...extra });
   if (old?.pcmSha256 === identity.pcmSha256 && old.textSha256 === base.textSha256 && old.status === "fail") {
@@ -102026,7 +102227,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
       const raw = path22.join(temp, "piece.pcm"), file = path22.join(temp, "piece.flac");
       writeFileSync23(raw, samples);
       await exec4("ffmpeg", ["-y", "-v", "error", "-f", "s32le", "-ar", String(chapters.RATE), "-ac", "1", "-i", raw, "-map_metadata", "-1", "-c:a", "flac", file], { timeout: 6e4 });
-      const payload = readFileSync29(file);
+      const payload = readFileSync30(file);
       if (payload.length > chapters.LIMIT || !chapters.decode(file).equals(samples)) throw new Error("Chapter encoding exceeded the limit or changed PCM samples");
       const binding = { ...piece, pcmSha256: chapters.hash(samples), audioSha256: chapters.hash(payload), payloadBytes: payload.length, model: REVIEW_MODEL, transcriptCheck: request.transcriptCheck ?? null };
       const reusable = old?.pcmSha256 === identity.pcmSha256 && old.textSha256 === base.textSha256 && old.language === request.language && old.delivery === request.delivery && old.manifestSha256 === chapters.manifest(old);
@@ -102054,7 +102255,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
         evidence = { ...evidence, status: failures2.length ? "fail" : "pass", failures: failures2 };
       }
       pieces.push(evidence);
-      if (sha256(readFileSync29(media)) !== base.mediaSha256) throw new Error("Final media changed during chapter listening");
+      if (sha256(readFileSync30(media)) !== base.mediaSha256) throw new Error("Final media changed during chapter listening");
       commit("unverified");
     }
     const failures = pieces.flatMap((p) => p.failures.map((f3) => `${p.kind} ${p.index}: ${f3}`));
@@ -103787,7 +103988,7 @@ function capabilityStatus() {
           provider: "astra-genai (LTX v2 gateway)",
           configured: has2(config.astraGenaiApiKey),
           needs: "ASTRA_GENAI_API_KEY",
-          note: "astra_genai_text2video \xB7 astra_genai_img2video \xB7 astra_genai_video_status; separate gateway token, no supplied audio or LoRA; configuration is not a live check"
+          note: "astra_genai_text2video \xB7 astra_genai_img2video \xB7 astra_genai_msr (four subjects + background) \xB7 astra_genai_video_status; separate gateway token, no supplied audio or LoRA; configuration is not a live check"
         },
         {
           provider: "astra video (self-hosted LTX-2.5)",
@@ -103804,7 +104005,7 @@ function capabilityStatus() {
           provider: "astra-genai (DashScope gateway)",
           configured: has2(config.astraGenaiApiKey),
           needs: "ASTRA_GENAI_API_KEY",
-          note: "astra_genai_text2img \u2014 one PNG from text, 800-character prompt limit; gateway model availability requires verification"
+          note: "astra_genai_text2img / astra_genai_edit \u2014 text, single-source img2img/inpaint, optional prompt expansion, 800-character prompt limit; gateway model availability requires verification"
         },
         {
           provider: "z-image (local, mflux)",
@@ -104802,6 +105003,11 @@ Length is unchanged from the input.`
   //    message — never the request headers, which is where the key lives.
   astra_genai_text2video: async (args) => text2(JSON.stringify(await generateGenaiVideo("text-to-video", args))),
   astra_genai_img2video: async (args) => text2(JSON.stringify(await generateGenaiVideo("image-to-video", args))),
+  astra_genai_msr: async (args) => text2(JSON.stringify(await generateGenaiVideo("msr", args))),
+  astra_genai_edit: async (args) => {
+    const result = await generateGenaiImage(args, "edit");
+    return { ...text2(JSON.stringify(result)), imageReceipt: result };
+  },
   astra_genai_text2img: async (args) => {
     const result = await generateGenaiImage(args);
     return { ...text2(JSON.stringify(result)), imageReceipt: result };
