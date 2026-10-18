@@ -3,6 +3,20 @@
   "revision": "2026-10-18",
   "adapters": [
     {
+      "tool": "astra_genai_text2img",
+      "engine": "astra-genai",
+      "operation": "text",
+      "fields": [
+        "model",
+        "prompt",
+        "size",
+        "seed",
+        "promptExtend",
+        "outputPath",
+        "filename"
+      ]
+    },
+    {
       "tool": "gpt_image_text2img",
       "engine": "gpt-image",
       "operation": "text",

@@ -1,6 +1,11 @@
 import { gptImageContract } from './image-models.js';
 /** No output-only flat price is presented as a total bill. */
 export function imageQuote(engine: string, model: string | undefined, reserveUsd?: number) {
+  if (engine === 'astra-genai') {
+    if (reserveUsd === undefined || !Number.isFinite(reserveUsd) || reserveUsd < 0)
+      throw new Error('image_quote_required: supply explicit reserveUsd for GenAI; pricing is unverified');
+    return { reserveUsd, basis: 'Caller reservation; gateway pricing unverified, not a provider invoice cap', revision: '2026-10-18' };
+  }
   if (engine !== 'gpt-image') {
     if (reserveUsd !== undefined && reserveUsd !== 0) throw new Error('Local/host API reservation must be zero');
     return { reserveUsd: 0, basis: 'No separate API bill; hardware/subscription excluded', revision: '2026-10-18' };

@@ -15,6 +15,8 @@
         "OPENAI_API_KEY": "${OPENAI_API_KEY:-}",
         "ARK_API_KEY": "${ARK_API_KEY:-}",
         "ARK_BASE_URL": "${ARK_BASE_URL:-}",
+        "ASTRA_GENAI_API_KEY": "${ASTRA_GENAI_API_KEY:-}",
+        "ASTRA_GENAI_URL": "${ASTRA_GENAI_URL:-}",
         "ASTRA_VIDEO": "${ASTRA_VIDEO:-}",
         "ASTRA_VIDEO_URL": "${ASTRA_VIDEO_URL:-}",
         "MLX_SERVE_URL": "${MLX_SERVE_URL:-}",

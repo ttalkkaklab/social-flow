@@ -644,7 +644,7 @@
         bad(hostVideo ? 'the host video tool tops out at 720p; write resolution:"720p" and generateAudio:false with separate narration'
           : astraVideo ? 'ASTRA renders on a 64-pixel grid; write resolution:"' + astra.source + '" (the edit scales it to ' + astra.edit + ') and generateAudio:false with separate narration'
                       : 'write the chosen model\'s resolution (' + wantRes + ') and generateAudio:false with separate narration');
-      if (!['host','astra','seedance','veo','mlx','omni'].includes(selectedEngine) || (!managedChoice && v.video?.engine !== selectedEngine))
+      if (!['host','astra','astra-genai','seedance','veo','mlx','omni'].includes(selectedEngine) || (!managedChoice && v.video?.engine !== selectedEngine))
         bad(hostVideo ? 'videoProvider:host routes every full_video cut to engine:"host" (the CLI\'s own image_to_video)'
           : astraVideo ? 'videoProvider:astra routes every full_video cut to engine:"astra" (our own LTX-2.5 box)'
                       : 'full_video must use its selected deployed video engine');

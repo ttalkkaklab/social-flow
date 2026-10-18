@@ -4549,6 +4549,8 @@ var config = {
    * because that is what the server's operators issue it under.
    */
   astraVideoApiKey: process.env.ASTRA_VIDEO || "",
+  /** Unified gateway token; never substitute the legacy ASTRA_VIDEO key. */
+  astraGenaiApiKey: process.env.ASTRA_GENAI_API_KEY || "",
   /**
    * YouTube Data API key (youtube_topic_scout's preferred public-query path).
    * Unlike OAuth it doesn't spend your channel's quota. Without it, falls back to
@@ -6170,6 +6172,44 @@ function annotateReceipt(videoPath, extra) {
   fs2.renameSync(temp, receiptPath);
 }
 
+// src/astra-genai-video.ts
+var GENAI_VIDEO_MODELS = ["ltx-2.5-22b-distilled", "ltx-2.5-22b-dev"];
+var GENAI_CAMERA_MOTIONS = ["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"];
+var genaiTextToVideoSchema = external_exports.object({
+  prompt: external_exports.string().min(1).max(5e3),
+  model: external_exports.enum(GENAI_VIDEO_MODELS),
+  duration: external_exports.number().int().nullable(),
+  resolution: external_exports.string().min(1),
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
+  generateAudio: external_exports.boolean().default(true),
+  cameraMotion: external_exports.enum(GENAI_CAMERA_MOTIONS).nullable().optional(),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
+}).strict();
+var genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
+  imageUri: external_exports.string().min(1),
+  lastFrameUri: external_exports.string().min(1).nullable().optional()
+});
+var operationSchema = external_exports.enum(["text-to-video", "image-to-video"]);
+var receiptSchema = external_exports.object({
+  version: external_exports.literal(1),
+  baseUrl: external_exports.string(),
+  operation: operationSchema,
+  fingerprint: external_exports.string(),
+  videoPath: external_exports.string(),
+  jobId: external_exports.string().min(1).optional(),
+  status: external_exports.enum(["submitting", "submitted", "completed"]),
+  sha256: external_exports.string().optional()
+}).strict();
+var statusSchema = external_exports.object({
+  id: external_exports.string().min(1),
+  status: external_exports.enum(["pending", "processing", "completed", "failed"]),
+  result: external_exports.object({ video_url: external_exports.string().min(1) }).passthrough().nullish(),
+  error: external_exports.unknown().optional()
+}).passthrough();
+var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
+
 // src/omni-client.ts
 var VALID_OMNI_ASPECT_RATIOS = ["16:9", "9:16"];
 var VALID_OMNI_RESOLUTIONS = ["360p", "720p", "1080p", "4k"];
@@ -6454,6 +6494,8 @@ var VIDEO_ADAPTERS = Object.freeze({
   seedance_text2video: entry("seedance", "byteplus", "text", seedanceText2VideoSchema),
   seedance_img2video: entry("seedance", "byteplus", "image", seedanceImg2VideoSchema),
   seedance_reference: entry("seedance", "byteplus", "reference", seedanceReferenceSchema),
+  astra_genai_text2video: entry("astra-genai", "genai-ltx-v2", "text", genaiTextToVideoSchema),
+  astra_genai_img2video: entry("astra-genai", "genai-ltx-v2", "image", genaiImageToVideoSchema),
   astra_text2video: entry("astra", "self-hosted-ltx", "text", astraText2VideoSchema),
   astra_img2video: entry("astra", "self-hosted-ltx", "image", astraImg2VideoSchema),
   astra_keyframe_video: entry("astra", "self-hosted-ltx", "keyframe", astraKeyframeVideoSchema),
@@ -6472,7 +6514,7 @@ function speechVideoCapabilities(provider, model) {
     return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "Gemini Veo has no external audio input" };
   if (provider === "seedance" && Object.hasOwn(SEEDANCE_MODEL_SPECS, model))
     return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed" };
-  if (["host", "mlx", "omni"].includes(provider))
+  if (["host", "mlx", "omni", "astra-genai"].includes(provider))
     return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "No verified external-speech synchronization adapter; voiceover remains available" };
   throw new Error("No verified speech synchronization contract for selected deployment/model");
 }
@@ -6553,6 +6595,7 @@ function priceOf(tool, args = {}) {
       return { key: null, quantity: null, note: "Invalid duration plan: " + String(error) };
     }
   }
+  if (tool.startsWith("astra_genai_")) return { key: tool === "astra_genai_text2img" ? "image.astra-genai" : "video.astra-genai", quantity: null, note: "Gateway pricing unverified; managed reservation is authoritative, not a measured bill" };
   if (tool.startsWith("veo_")) {
     const tier = VEO_TIER[str(args.model, "veo-3.1-fast-generate-preview")];
     const resolution = str(args.resolution, "720p");
@@ -7056,6 +7099,8 @@ var schemas = {
   seedance_text2video: seedanceText2VideoSchema,
   seedance_img2video: seedanceImg2VideoSchema,
   seedance_reference: seedanceReferenceSchema,
+  astra_genai_text2video: genaiTextToVideoSchema,
+  astra_genai_img2video: genaiImageToVideoSchema,
   astra_text2video: astraText2VideoSchema,
   astra_img2video: astraImg2VideoSchema,
   astra_audio2video: astraAudio2VideoSchema,

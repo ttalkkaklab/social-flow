@@ -33,6 +33,7 @@ function historicalSpend(episode: string): number {
   const quantities = new Map<string, number>();
   for (const line of fs.readFileSync(events, 'utf8').split('\n').filter(Boolean)) {
     const event = JSON.parse(line);
+    if (event.tool === 'astra_genai_text2img') continue;
     if (!/^(veo_|seedance_|omni_|mlx_video|astra_)/.test(event.tool || '')) continue;
     const price = prices.get(event.key);
     if (typeof event.quantity !== 'number' || !Number.isFinite(event.quantity) || event.quantity < 0 || price === undefined || !Number.isFinite(price))

@@ -609,10 +609,10 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 108 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 112 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions — 108 tools, including voice auditions and opt-in acting review
+│       ├── tools.ts             # tool definitions — 112 tools, including voice auditions and opt-in acting review
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -679,12 +679,12 @@ Episodes are saved only under `data/<channel>/episodes/<topic>/`. Open
 media and publication logs stay in the local episode directory; no destination
 selection or workspace key is required.
 
-## MCP tool surface (108 tools)
+## MCP tool surface (112 tools)
 
 `project_manage`: options · status · init · update · episode. Local project setup
 with genre, models, style, ratio, format and SNS records; no generation or publishing.
 
-**`tools/list` does not show all 108.** The credential-gated publish, review and insights tools
+**`tools/list` does not show all 112.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
@@ -716,6 +716,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Seedance (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images plus reference audio — a character's fixed voice (`referenceAudioPaths`, 2.x) — plus reference video (`referenceVideoPaths`, 2.x): the 3D previz as `Video 1`, the vendor's clay-model reference — every generated cut pre-renders in Blender or three.js first (user directive 2026-09-11), so the camera path and timing land as planned; a local clip is served through `MEDIA_UPLOAD_URL` or a cloudflared quick tunnel for the life of the task. Audio can be turned off, so silent cuts are cheap — $0.23 for 1080p 4s vs $0.64 on Veo lite. Every generated motion background is a previz cut on the 2.x grade the user chose (`PRODUCTION.videoModel`); 1.5 Pro serves only b-roll or speech slots that land on Seedance; fixed voice or over nine reference images use 2.5. The storyboard records the reason and forecasts that model's cost. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | Video generation | `mlx_video_generate` | MLX Core / mlx-serve (24fps rgb8 muxed to mp4 with ffmpeg. Default 768×1280, RAM-capped at 800MB decoded RGB. Not the default path and not on the Veo/Seedance face-policy table. Pack install, request grid and measured render times: [LTX 2.5 runbook](docs/mlx-ltx-2.5.md)) |
 | Video generation | `astra_text2video` / `astra_img2video` / `astra_keyframe_video` / `astra_audio2video` / `astra_ic_lora` / `astra_video_retake` | ASTRA video API (`ASTRA_VIDEO`, self-hosted LTX-2.5 — **our own box, so no per-call bill and no vendor policy**, but it renders ONE job at a time: 66–184s each plus queue, which makes it the batch lane rather than the interactive one. Six tools over the server modes; `tier` picks generate·guided·guided_fast·guided_hq, and `astra_ic_lora` runs one reference still or clip through an IC-LoRA adapter (adapters, `guidance`, `conditioning_mask`, `skip_stage_2`, `{name, strength}` lora entries and `generateAudio` are live since the 2026-10-17 server change). The only lane with `lora` adapters (`cinemagraph` · `slow-motion`, generate only), with a keyframe mode that passes through 2–8 supplied stills at chosen frame indices, and with a retake mode that re-rolls one time span of an existing clip. Length is frames (8k+1, 25–361 on every mode, the server's published ceiling); `duration` in seconds is converted to the nearest 8k+1 by the tool. `astra_video_capabilities` reads the live server's own limits; sizes sit on a 64-pixel grid with a 2,064,384-pixel ceiling, so 9:16 is **1024×1920** — 1088×1920 exceeds the area ceiling at every frame count, and 1080×1920 is off-grid. Clips carry 48kHz stereo AAC; `audio2video` carries the supplied sound re-encoded, rather than a newly generated track. Stereo (2-channel) input is required: mono is refused at upload because it fails in the engine audio encoder. With no duration, numFrames or audioMaxDuration, the client explicitly sends 121 frames (~5.04s) for compatibility because server omission metadata conflicts; `audioMaxDuration: 8` selects 185 frames (~7.71s) at 24fps. `generateAudio: false` strips the sound after generation (same GPU time). `expectLipSync: true` (on-screen speech only) measures with ffmpeg whether the picture moves with the supplied speech and re-renders with a new seed when it does not, up to `maxAttempts` (default 2); it never fails the call and leaves phoneme-level sync, the speaking person and voice identity `not_reviewed`. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
+| Unified ASTRA GenAI | `astra_genai_text2video` / `astra_genai_img2video` / `astra_genai_text2img` / `astra_genai_video_status` | Separate `astra-genai` engine and `ASTRA_GENAI_API_KEY` gateway token. LTX v2 text/image video and DashScope text-only PNG; no legacy audio2video, LoRA or retake. Managed plans require an explicit cost reservation. [Configuration and recovery](skills/_shared/astra-genai.md). |
 | ASTRA upload management | `astra_video_list_uploads` / `astra_video_delete_upload` | List uploads with no arguments; delete one with `uploadId` after user approval. Requires `ASTRA_VIDEO` and server endpoint support. Uploads expire after 24h, with 200 files per key. Unsupported endpoints and invalid responses return errors; live verification is pending. |
 | Common speech routing | `tts_route` | Read capabilities, validate a plan, or execute with a stable request ID. Existing raw tools share model, payload, output and concurrency checks. [TTS layers and recovery](skills/_shared/tts-routing.md). |
 | Optional checked narration | `tts_generate_checked` | Legacy single-take synthesis wrapper with no automatic listening, scoring or retakes. New production uses raw generators and records `not_reviewed`. |

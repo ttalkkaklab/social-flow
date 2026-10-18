@@ -252,3 +252,26 @@ test('unrelated billable tools retain normal accounting with stray videoContext'
  assert.equal(isManagedVideoCall('veo_text2video',{videoContext:{episode:'/tmp/e'}}),true);
  assert.equal(isManagedVideoCall('veo_text2video',{prompt:'Standalone'}),false);
 });
+
+test('GenAI selection binds its model and reservation; managed recovery completes without another submission', async t => {
+ const { videoStatus } = await import('../dist/video-routing.js');
+ const { createHash } = await import('node:crypto');
+ const { astraGenaiBaseUrl } = await import('../dist/astra-genai-client.js');
+ const f=fixture(t,{engine:'astra-genai',model:'ltx-2.5-22b-distilled',resolution:'1280x704'});
+ const old=config.astraGenaiApiKey;config.astraGenaiApiKey='fixture';t.after(()=>config.astraGenaiApiKey=old);
+ const args={prompt:'A boat crosses a lake.',duration:5,reserveUsd:0.25};
+ const make=extra=>planVideo({episode:f.episode,shotId:'s1',requestId:'genai',operation:'text',args:{...args,...extra}});
+ assert.throws(()=>make({reserveUsd:undefined}));
+ const p=make();assert.equal(p.tool,'astra_genai_text2video');assert.equal(p.quote.reserveUsd,0.25);
+ assert.equal(p.args.model,'ltx-2.5-22b-distilled');assert.equal(p.args.resolution,'1280x704');
+ assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'speech',operation:'audio',args}),/no adapter/);
+ let calls=0;
+ await assert.rejects(f.execute(p,async (_tool,input)=>{
+   calls++;recordVideoSubmission('recover-1');fs.mkdirSync(input.outputPath,{recursive:true});
+   const file=path.join(input.outputPath,input.filename);fs.writeFileSync(file,'verified-adapter-result');
+   fs.writeFileSync(file+'.astra-genai.json',JSON.stringify({version:1,baseUrl:astraGenaiBaseUrl(),operation:'text-to-video',fingerprint:'fixture',videoPath:file,jobId:'recover-1',status:'completed',sha256:createHash('sha256').update(fs.readFileSync(file)).digest('hex')}));
+   throw new Error('caller interrupted');
+ }),/interrupted/);
+ assert.equal((await videoStatus({episode:f.episode,requestId:'genai',action:'refresh'})).status,'completed');
+ await f.execute(p,async()=>assert.fail('must reuse recovered result'));assert.equal(calls,1);
+});

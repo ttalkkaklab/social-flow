@@ -444,7 +444,7 @@ function motionKind(scene) {
 function engineOf(scene) {
   const v = (scene && scene.visual) || {};
   const named = (v.video && v.video.engine) || (v.clip && v.clip.engine) || v.engine;
-  if (named === 'veo' || named === 'seedance' || named === 'host' || named === 'astra') return named;   // host: the CLI's own video tool; astra: our LTX-2.5 box
+  if (named === 'veo' || named === 'seedance' || named === 'host' || named === 'astra' || named === 'astra-genai') return named;   // host: the CLI's own video tool; astra: our LTX-2.5 box
   if (scene && (scene.type === 'broll' || scene.type === 'quote')) return 'veo';
   return 'seedance';
 }
