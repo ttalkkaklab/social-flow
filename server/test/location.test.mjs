@@ -1,3 +1,4 @@
+import {runInNewContext} from 'node:vm';
 import {Vector3} from 'three';
 import {createActors,updateActors} from '../location-actors.mjs';
 import {test} from 'node:test';
@@ -257,4 +258,18 @@ test('web proxies share endpoint origins, height, gaze and Blender linear yaw',(
   assert.deepEqual(a.root.position.toArray(),end[0].position);assert.equal(a.gaze.visible,false);
   updateActors(model,start.map(x=>({...x,gazeTarget:'prop'})),end,0,[{id:'prop',position:[0,0,3]}]);
   assert.ok(a.gaze.visible);assert.ok(Number.isFinite(a.head.quaternion.w));
+});
+
+test('timeline endpoint state matches exports and intermediate states cannot be exported',()=>{
+  const source=fs.readFileSync(new URL('../location-review-runtime.mjs',import.meta.url),'utf8');
+  const handler=source.split('\n').find(line=>line.trim().startsWith('time.oninput='));
+  const ctx={time:{value:'0'},e:{stateId:'day',endStateId:'open'},stateSelect:{},phase:{},stateExport:{},lens:{},info:{},
+    original:{lensMm:35,position:[0,0,2],target:[0,1,1]},
+    applyState:()=>{},refreshActors:()=>{},setCamera:()=>{},size:()=>{},word:(ko,en)=>en};
+  runInNewContext(handler,ctx);
+  for(const [value,phase,state,disabled] of [[100,'end','open',false],[50,'between','day',true],[0,'start','day',false]]){
+    ctx.time.value=String(value);ctx.time.oninput();
+    assert.equal(ctx.phase.value,phase);assert.equal(ctx.stateSelect.value,state);
+    assert.equal(ctx.selectedState,state);assert.equal(ctx.stateExport.disabled,disabled);
+  }
 });
