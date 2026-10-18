@@ -1,0 +1,28 @@
+cd server && npm run check
+exit: 0
+ℹ tests 2213
+ℹ suites 196
+ℹ pass 2213
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 180949.990542
+
+node skills/platform-guide/references/skill-lint.js
+exit: 0
+skill-lint: 16 rules hold across 21 skills
+
+Targeted typography/storyboard/visual-direction tests after final font warning/subtitle changes:
+exit: 0
+ℹ tests 25
+ℹ suites 0
+ℹ pass 25
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 411.450708
+
+git diff --check
+exit: 0

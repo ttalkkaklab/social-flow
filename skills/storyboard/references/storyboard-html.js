@@ -7,7 +7,8 @@ const path = require('node:path');
 
 const HELPERS = ['source-context.js', 'render-routing.js', 'production-mode.js', 'structure-contract.js', 'style-samples.js', 'shot-direction.js', 'review-layout.js', 'prop-continuity.js', 'prop-sheet.js', 'location-contract.js', 'location-review-runtime.js', 'location-review.css'];
 const REVIEW_ASSETS = path.join(__dirname, '..', '..', 'channel', 'references', 'review-assets');
-const ASSETS = ['review.css', 'WantedSansVariable.woff2', 'OFL.txt'];
+const { FONT_ASSETS } = require('../../channel/references/review-fonts.js');
+const ASSETS = ['review.css', ...FONT_ASSETS];
 const TITLE = /<title>[^]*?<\/title>/g;
 const METADATA = /\/\* ✎ SB_DOC BEGIN[^]*?\/\* ✎ SB_DOC END \*\//g;
 
@@ -63,7 +64,10 @@ function storyboardHtml(directory, check = false) {
   });
   if (check) return changed.map(([name]) => name);
   fs.mkdirSync(dir, { recursive: true });
-  for (const [name, content] of changed) fs.writeFileSync(path.join(dir, name), content);
+  for (const [name, content] of changed) {
+    fs.mkdirSync(path.dirname(path.join(dir, name)), { recursive: true });
+    fs.writeFileSync(path.join(dir, name), content);
+  }
   return changed.map(([name]) => name);
 }
 

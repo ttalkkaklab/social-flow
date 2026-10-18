@@ -11,7 +11,7 @@ node "$CLAUDE_PLUGIN_ROOT/skills/storyboard/references/storyboard-html.js" "<epi
 ```
 
 Refresh preserves the title and metadata and copies the current runtime, CSS and
-bundled font. Fill the metadata after first creation, then refresh the library copy.
+bundled fonts and licenses. Fill the metadata after first creation, then refresh the library copy.
 Before delivery, run:
 
 ```bash
@@ -33,7 +33,8 @@ uses local files.
 
 The shared generator is the only review renderer. Channel library copies use a relative base URL to the same episode assets.
 
-The review uses a neutral palette, bundled Wanted Sans, a 240px desktop sidebar and
+The review uses a light Liquid Glass navigation layer, bundled Inter/Pretendard/
+regional Noto Sans, a 240px desktop navigation column and
 shot-first reading order. Below 1024px navigation moves above the document. Frames
 and dialogue precede camera details; checks and costs stay reachable from the audit
 shortcut. Print expands the review disclosures. Preserve all metadata, previews,
@@ -51,3 +52,10 @@ not overlays burned onto the video. Refresh existing boards with the same genera
 Character changes refresh `skills/channel/references/review-library.js <channelDir>`.
 Follow [local review design](../../channel/references/local-review-design.md) for
 shared assets, historical design provenance and viewport/interaction regression checks.
+
+Typography is independent of the UI language picker: set `SB_DOC.contentLanguage`
+to `ko`, `en`, `ja`, `zh-Hans`, `zh-Hant`, `vi`, `de`, `fr` or `es`. Optional
+`SB_DOC.shotLanguages` maps one-based shot numbers to language overrides. Preserve
+explicit region tags for Han text; glyph shape cannot identify its language reliably.
+Font selection covers the review and its inline frame approximation, not embedded
+HTML slide documents or the final video renderer.

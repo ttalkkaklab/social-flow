@@ -79,7 +79,7 @@
        timeline slots, swatches */
     --accent-ink: #1d4ed8;
 
-    /* Type scale — 1.25 ratio */
+    /* Legacy component sizes; shared review typography defines the document scale. */
     --t-micro: 11px; --t-cap: 12px; --t-aux: 13px; --t-body: 15px;
     --t-scene: 17px; --t-lead: 19px; --t-title: 29px;
     /* Spacing rhythm — 4px grid */
@@ -90,7 +90,7 @@
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
-    font: var(--t-body)/1.65 "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", system-ui, sans-serif;
+    font: var(--t-body)/1.65 var(--review-font, sans-serif);
     -webkit-font-smoothing: antialiased;
     font-variant-numeric: tabular-nums;
   }
@@ -594,7 +594,7 @@
     position: relative; width: var(--fw); aspect-ratio: 9 / 16; overflow: hidden;
     background: var(--ink); border-radius: calc(var(--fw) * .05);
     border: 1px solid var(--line);
-    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+    font-family: var(--review-font, sans-serif);
     color: #fff; text-align: center; line-height: 1.2;
   }
   .fr .fbg { position: absolute; inset: 0; background-size: cover; background-position: center; }
@@ -1024,9 +1024,10 @@
 </style>
 <link rel="stylesheet" href="./review.css">
 </head>
-<body class="subs">
+<body class="subs review-board">
 <main class="wrap"><div id="app"><noscript>This document renders by loading scenes.js — please turn JavaScript on.</noscript></div></main>
 
+<script src="./review-typography.js"></script>
 <script src="./review-files.js"></script>
 <script src="./scenes.js"></script>
 <script>window.SCENE_SB_DOC = window.SB_SCENES_DOC = window.SB_DOC;</script>
@@ -1046,6 +1047,8 @@ window.SB_DOC = {
   topic: "{{topic slug}}",
   displayTitle: "{{topic display name — e.g. Building a social page, part 1 · profile image}}",
   series: "{{series label, or an empty string — e.g. Building a social page (1/3)}}",
+  // Authored language (independent of the English/Korean UI). Optional shotLanguages: { "1": "ja" }.
+  contentLanguage: "ko",
   status: "draft",                       // draft | approved | produced | published — kept in sync with the storyboard.md frontmatter
   created: "{{YYYY-MM-DD}}",
   outro: { seconds: 9, note: "shared outro — assets/outro/default.mp4" },   // null if there is none
@@ -1163,7 +1166,7 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
 </script>
 <script>
 /* ⚙ RENDERER — the shared part of the template. Off-limits (change styles and check logic in the template). */
-(function () {
+window.STORYBOARD_READY = (async function () {
   "use strict";
   var app = document.getElementById("app");
   if (!window.SCENES || !window.THEME) {
@@ -1934,6 +1937,7 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
     T[k] = Object.assign({}, STRINGS.en[k], (STRINGS[LANG] || {})[k]);
   });
   document.documentElement.lang = LANG;
+  var fontFailures = await window.ReviewTypography.prepare(DOC, SCENES);
 
   /* ── Author-language heuristics ──
      These read scenes.js, which is written in the channel's language — not the reviewer's — so
@@ -2090,7 +2094,7 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
       '<div class="speech-meta"><b>' + esc(name) + '</b>' + (narrator ? '<span>' + esc(T.speechNarrator) + '</span>' : '') +
       '<span class="speech-delivery">' + esc(T.speechDelivery[delivery] || delivery) + '</span></div>' +
       '<div class="speech-bubble"><p class="speech-text">' + esc(n.tts || n.sub || '') + '</p>' +
-      (n.sub && strip(n.tts) !== strip(n.sub) ? '<div class="sub-diff"><b>' + esc(T.subtitleLabel) + '</b> ' + esc(n.sub) + '</div>' : '') + '</div>' +
+      (n.sub && strip(n.tts) !== strip(n.sub) ? '<div class="sub-diff"><b>' + esc(T.subtitleLabel) + '</b> ' + '<span class="speech-subtitle">' + esc(n.sub) + '</span></div>' : '') + '</div>' +
       (n.deliveryReason ? '<p class="speech-reason">' + esc(n.deliveryReason) + '</p>' : '') +
       '<div class="speech-reference">' + (index + 1) + (n.id ? ' · ' + esc(n.id) : '') + ' · ' + esc(T.chars(netLen(n.tts || n.sub))) + '</div>' +
       '</div></div>';
@@ -2614,7 +2618,7 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
     var cls = "fr t-" + esc(s.type) + (recOf(s) ? " rec" : "") + (light ? " light" : "") +
               (WIDE ? " wide" : "") +
               (hasClip ? " fclip" : "") + (tier ? " tight" + tier : "");
-    var h = '<div class="' + cls + '">';
+    var h = '<div lang="' + esc(window.ReviewTypography.contentLanguage(DOC, s, SCENES.indexOf(s))) + '" class="' + cls + '">';
     if (bg) h += '<div class="fbg" style="background-image:url(\'' + esc(bg) + '\')"></div>';
     // Owner directive 2026-08-25: no top/bottom gradient scrim on any cut.
     // overlay none is the picture alone — even an empty text slot lays a film over the preview.
@@ -4776,14 +4780,37 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
   if (safe) safe.addEventListener("change", function () { document.body.classList.toggle("safe", safe.checked); });
   if (subs) subs.addEventListener("change", function () { document.body.classList.toggle("subs", subs.checked); });
 
+  window.ReviewTypography.apply(DOC, SCENES);
+  if (fontFailures.length) {
+    var notice = document.createElement('p');
+    notice.className = 'review-font-warning'; notice.setAttribute('role', 'status');
+    notice.textContent = (LANG === 'ko' ? '일부 글꼴을 불러오지 못했습니다: ' : 'Some fonts could not load: ') + fontFailures.join(', ');
+    app.prepend(notice);
+  }
   var who = DOC.channelName || DOC.channel || THEME.brand || "";
   document.title = (DOC.displayTitle || DOC.topic || "Storyboard") + (who ? " — Storyboard · " + who : " — Storyboard");
 })();
 </script>
-<script src="./review-layout.js"></script>
-<script src="./prop-sheet.js"></script>
 <link rel="stylesheet" href="./location-review.css">
 <script src="./location-review-data.js"></script>
-<script src="./location-review-runtime.js"></script>
+<script>
+// Mount dependent views only after font metrics and storyboard rendering settle.
+window.STORYBOARD_READY = window.STORYBOARD_READY.then(async function () {
+  for (const src of ['./review-layout.js', './prop-sheet.js', './location-review-runtime.js']) {
+    await new Promise(function (resolve, reject) {
+      const script = document.createElement('script');
+      script.src = src; script.onload = resolve; script.onerror = reject;
+      document.body.appendChild(script);
+    });
+  }
+  document.documentElement.dataset.reviewReady = 'true';
+}).catch(function (error) {
+  const notice = document.createElement('p');
+  notice.className = 'error-box'; notice.setAttribute('role', 'alert');
+  notice.textContent = 'Review could not finish loading. Refresh the storyboard with storyboard-html.js.';
+  document.getElementById('app').prepend(notice);
+  console.error(error);
+});
+</script>
 </body>
 </html>
