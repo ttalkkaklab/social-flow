@@ -172,6 +172,11 @@ The storyboard plans source/end states, references, blocking and motion; produce
 and inspects them. Missing images are pending, never visually approved. Read
 [blender-previz.md](references/blender-previz.md) when planning a generated cut's previz
 and [shot speech](../produce/references/shot-speech.md) for line IDs, speaker/delivery and acting.
+Preserve the complete character handoff, including any selected `voiceReference`.
+Follow [voice continuity](../produce/references/voice-continuity.md) when planning
+native dialogue: repeat pinned acoustic identity, keep scene emotion separate, and
+bind each speaker to their own sample. A voice reference does not establish exact
+synchronization with the finished TTS WAV.
 
 ## 5. Derive time from the performance
 

@@ -1,5 +1,10 @@
 # Generated video — engines, prompt grammar, per-slot recipes
 
+For character speech, [voice-continuity.md](voice-continuity.md) supplements the
+recipes below. Use managed `video_plan` with the complete cast handoff. Its compiled
+voice mapping supplements the stored prompt without changing the selected model.
+Native imitation is separate from exact supplied-WAV synchronization.
+
 Read this **before the first generated-video call of an episode**. An episode whose
 scenes are all still backgrounds never needs it — produce §3's cover-background recipe
 is enough there.

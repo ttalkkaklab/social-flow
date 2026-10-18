@@ -4473,7 +4473,7 @@ var scenarioCheckResultSchema = external_exports.object({
 });
 
 // src/video-routing.ts
-import { createRequire as createRequire2 } from "node:module";
+import { createRequire as createRequire3 } from "node:module";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
 // src/config.ts
@@ -6639,10 +6639,14 @@ function charUnits(args) {
 // src/video-pricing.ts
 var PRICE_FILE = fileURLToPath2(new URL("../../skills/autoproduce/references/prices.tsv", import.meta.url));
 
-// src/video-routing.ts
+// src/video-voice.ts
+import { createRequire as createRequire2 } from "node:module";
 var load = createRequire2(import.meta.url);
+
+// src/video-routing.ts
+var load2 = createRequire3(import.meta.url);
 var shared = fileURLToPath3(new URL("../../skills/_shared/video-selection.js", import.meta.url));
-var routingContext = (episode, shotId) => load(shared).readVideoContext(episode, shotId);
+var routingContext = (episode, shotId) => load2(shared).readVideoContext(episode, shotId);
 var idSchema = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var videoPlanSchema = external_exports.object({
   episode: external_exports.string().min(1),
@@ -6681,8 +6685,8 @@ function compileActing(text, acting, voice) {
 }
 
 // src/tts-models.ts
-import { createRequire as createRequire4 } from "node:module";
-var shared2 = () => createRequire4(import.meta.url)("../../skills/_shared/tts-models.js");
+import { createRequire as createRequire5 } from "node:module";
+var shared2 = () => createRequire5(import.meta.url)("../../skills/_shared/tts-models.js");
 function resolveTtsModel(provider, model) {
   return shared2().resolveTtsModel(provider, model);
 }
