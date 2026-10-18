@@ -90,7 +90,14 @@
   app.appendChild(shotSection);
   // The planned rhythm belongs beside the shots, not hidden in planning notes.
   var rhythm = notes.querySelector('.direction-rhythm');
-  if (rhythm) shots.insertAdjacentElement('afterend', rhythm);
+  if (rhythm) {
+    var timing = disclosure(words('컷 길이와 흐름', 'Shot timing and rhythm'));
+    timing.classList.add('review-timing');
+    var timingSummary = rhythm.querySelector('p');
+    if (timingSummary) timing.firstChild.textContent = timingSummary.textContent;
+    timing.appendChild(rhythm);
+    shots.insertAdjacentElement('afterend', timing);
+  }
   if (style) app.appendChild(style);
   app.appendChild(checks); app.appendChild(notes);
   checks.id = 'review-checks'; notes.id = 'review-notes';

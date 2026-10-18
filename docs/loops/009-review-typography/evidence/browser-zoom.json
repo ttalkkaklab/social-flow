@@ -1,0 +1,17 @@
+{
+  "method": "Native Meta+0 then five Meta+= browser shortcuts",
+  "before": {
+    "width": 390,
+    "height": 1000,
+    "dpr": 2,
+    "visual": 1
+  },
+  "after": {
+    "width": 390,
+    "height": 1000,
+    "dpr": 2,
+    "visual": 1,
+    "scrollWidth": 375,
+    "overflow": []
+  }
+}

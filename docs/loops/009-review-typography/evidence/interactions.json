@@ -1,0 +1,25 @@
+{
+  "print": {
+    "closed": 0,
+    "sidebar": "none",
+    "background": "none"
+  },
+  "languages": {
+    "ui": "en",
+    "script": [
+      "ko",
+      "en",
+      "ja",
+      "zh-Hans",
+      "zh-Hant",
+      "vi",
+      "de",
+      "fr",
+      "es"
+    ]
+  },
+  "checks": {
+    "open": true,
+    "focused": "review-checks"
+  }
+}
