@@ -3204,12 +3204,12 @@ var ZodTuple = class _ZodTuple extends ZodType {
     });
   }
 };
-ZodTuple.create = (schemas, params) => {
-  if (!Array.isArray(schemas)) {
+ZodTuple.create = (schemas2, params) => {
+  if (!Array.isArray(schemas2)) {
     throw new Error("You must pass an array of schemas to z.tuple([ ... ])");
   }
   return new ZodTuple({
-    items: schemas,
+    items: schemas2,
     typeName: ZodFirstPartyTypeKind.ZodTuple,
     rest: null,
     ...processCreateParams(params)
@@ -6994,6 +6994,104 @@ function manageSpeech(args) {
   }
   return { revision: hash(readFileSync4(file)), changed, invalidated, plan, timing, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
+
+// src/video-sound.ts
+var effectSchema = external_exports.object({
+  id: external_exports.string().min(1).optional(),
+  description: external_exports.string().min(1).optional(),
+  trigger: external_exports.string().min(1).optional(),
+  delivery: external_exports.enum(["auto", "native", "input", "post"]).optional(),
+  sfx: external_exports.string().min(1).optional(),
+  atSeconds: external_exports.number().finite().nonnegative().optional(),
+  separationLu: external_exports.number().finite().min(0).max(30).optional(),
+  intensity: external_exports.enum(["subtle", "normal", "strong"]).optional()
+}).strict();
+var schemas = {
+  veo_text2video: text2VideoSchema,
+  veo_img2video: img2VideoSchema,
+  veo_reference: referenceVideoSchema,
+  veo_extension: videoExtensionSchema,
+  seedance_text2video: seedanceText2VideoSchema,
+  seedance_img2video: seedanceImg2VideoSchema,
+  seedance_reference: seedanceReferenceSchema,
+  astra_text2video: astraText2VideoSchema,
+  astra_img2video: astraImg2VideoSchema,
+  astra_audio2video: astraAudio2VideoSchema,
+  astra_keyframe_video: astraKeyframeVideoSchema,
+  omni_text2video: omniText2VideoSchema,
+  omni_img2video: omniImg2VideoSchema,
+  omni_extend: omniExtendSchema,
+  omni_edit: omniEditSchema
+};
+function prepareVideoSound(tool, input, sound = {}) {
+  const schema = schemas[tool];
+  if (!schema) throw new Error("Unsupported sound adapter: " + tool);
+  external_exports.string().min(1).parse(input.prompt);
+  const effects = external_exports.array(effectSchema).parse(sound.effects ?? []);
+  const ids = effects.flatMap((effect) => effect.id ? [effect.id] : []);
+  if (new Set(ids).size !== ids.length) throw new Error("Effect ids must be unique within the shot");
+  if (sound.audioSource !== void 0 && !["video", "speech"].includes(String(sound.audioSource)))
+    throw new Error("sound.audioSource must be video or speech");
+  const fixedInput = tool === "astra_audio2video";
+  let nativeAudio = !fixedInput;
+  if (tool.startsWith("seedance_")) {
+    const model = input.model ?? (tool === "seedance_reference" ? DEFAULT_SEEDANCE_REFERENCE_MODEL : DEFAULT_SEEDANCE_MODEL);
+    const spec = SEEDANCE_MODEL_SPECS[model];
+    if (!spec) throw new Error("Unknown Seedance model: " + String(model));
+    nativeAudio = spec.audio;
+  }
+  const resolved = effects.map((effect) => {
+    const requested = effect.delivery ?? (effect.sfx ? "post" : "auto");
+    const delivery2 = requested === "auto" ? nativeAudio && input.generateAudio !== false && sound.audioSource !== "speech" ? "native" : "post" : requested;
+    if (delivery2 === "native" && (!nativeAudio || input.generateAudio === false))
+      throw new Error("Native SFX unavailable in this mode or explicitly disabled; use post");
+    if (delivery2 === "input" && !fixedInput)
+      throw new Error("Input SFX require ASTRA audio2video; reference audio is not a preserved soundtrack");
+    if (delivery2 !== "post" && sound.audioSource === "speech")
+      throw new Error("Native/input SFX require audioSource=video; replacing it with speech discards the effects");
+    if (delivery2 !== "post" && (!effect.description || !effect.trigger))
+      throw new Error("Native/input effects need description and trigger");
+    return { ...effect, delivery: delivery2 };
+  });
+  const native = resolved.filter((effect) => effect.delivery === "native");
+  const conditioned = resolved.filter((effect) => effect.delivery === "input");
+  if (sound.audioSource === "video" && (input.generateAudio === false || !nativeAudio && !fixedInput))
+    throw new Error("audioSource=video conflicts with a silent output; select speech/post or enable supported audio");
+  if (native.length && /Audio:\s*silent\b/i.test(String(input.prompt)))
+    throw new Error("Native SFX conflict with Audio: silent in the prompt; revise the authored sound direction");
+  if (sound.sfx && resolved.some((effect) => effect.delivery !== "post" && effect.sfx === sound.sfx))
+    throw new Error("The same effect cannot belong to the native/input soundtrack and the legacy post cue");
+  const args = { ...input };
+  if ((native.length || conditioned.length || sound.audioSource === "video") && (tool.startsWith("seedance_") || tool.startsWith("astra_"))) {
+    if (input.generateAudio === false) throw new Error("Cannot discard the requested input soundtrack");
+    args.generateAudio = true;
+  }
+  const clauses = native.map((effect) => `${effect.trigger}: ${effect.description}.`);
+  const nativePrompt = `Audio: ${clauses.join(" ")} Only diegetic scene sounds.`;
+  if (clauses.length && !String(input.prompt).includes(nativePrompt)) args.prompt = `${input.prompt}
+${nativePrompt}`;
+  const inputPrompt = `The supplied non-speech sounds come from these actions, not mouths: ${conditioned.map((effect) => `${effect.trigger}: ${effect.description}`).join("; ")}.`;
+  if (conditioned.length && !String(args.prompt).includes(inputPrompt)) args.prompt = `${args.prompt}
+${inputPrompt}`;
+  const parsed = schema.parse(args);
+  const unknown = Object.keys(args).filter((key) => !(key in parsed));
+  if (unknown.length) throw new Error("Unsupported adapter arguments: " + unknown.join(", "));
+  const audioSource = native.length || conditioned.length ? "video" : sound.audioSource;
+  const warnings = [];
+  if (conditioned.length) warnings.push("Input effects must already be mixed into audioPath. This planner does not synthesize or mix them; inspect their action and mouth alignment.");
+  if (resolved.some((effect) => effect.delivery === "post" && (!effect.sfx || effect.atSeconds === void 0)))
+    warnings.push("Post effects need an asset and an observed shot-relative atSeconds before assembly.");
+  if (native.length) warnings.push("Native audio is a mixed soundtrack. Do not overlay a second dialogue track; inspect missing or unwanted effects before acceptance.");
+  return {
+    tool,
+    arguments: parsed,
+    sound: { ...sound, ...audioSource ? { audioSource } : {}, effects: resolved },
+    capabilities: { nativeAudio, inputAudio: fixedInput ? "preserved" : tool === "seedance_reference" ? "reference" : "none" },
+    warnings,
+    review: "not_reviewed",
+    generated: false
+  };
+}
 export {
   astraAudio2VideoSchema,
   astraImg2VideoSchema,
@@ -7002,6 +7100,7 @@ export {
   generateFromImage,
   generateFromKeyframes,
   manageSpeech,
+  prepareVideoSound,
   priceOf,
   readBoard,
   resolveVideoDuration,

@@ -45,6 +45,7 @@ function compose(work,board) {
   for(let row=0;row<rows.length;row++) {
     if(!rows[row].trim()||rows[row].startsWith('#'))continue;
     const fields=rows[row].split('\t'),scene=win.SCENES[Number(fields[0])];
+    if(scene?.sound?.audioSource==='video')continue; // Its single soundtrack is extracted by prepare-source-audio.js.
     const lines=(scene?.narration||[]).filter(n=>(n.tts||'').trim());
     if(scene)checkSilentTiming(scene,board,win.SB_DOC?.performanceTimingVersion,path.resolve(work,fields[1]));
     if(!lines.length||(lines.length===1&&!lines.some(n=>n.acting!=null)&&!scene.performance?.some(event=>event.kind==='action')))continue;

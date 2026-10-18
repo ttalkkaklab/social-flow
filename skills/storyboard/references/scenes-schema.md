@@ -860,7 +860,7 @@ and `camera-slide-template.html`; its image and effect parameters come from scen
 | `beat` | optional on long-form, required on a short | short: `hook` \| `drip` \| `cta`. long-form: `hook` \| `hooking` \| `result` \| `body` \| `turn` \| `cta` (`turn` on the story arc only). See §playback order above |
 | `arc` | long-form cover only | `answer-first` (default) \| `story` — which playback order a long-form episode walks. Ignored on a short. See §playback order above |
 | `shot` | recommended | `{ feel, size, angle, why, info, infoType, share, shareType, space }` — below. `feel` and `infoType` are written **before** `size`·`angle`·`space`·`camera` are chosen (directing-grammar §5) |
-| `sound` | optional | `{ cue, drop, sfx, ambience }` — what the audience hears under this shot (§music cues · §sound effects). Narrated shots only (`cover`, `points`, `quote`); `broll` and `outro` aren't cards, so there is nothing for a cue to key to |
+| `sound` | optional | `{ cue, drop, sfx, ambience, effects, audioSource }` — what the audience hears under this shot (§music cues · §sound effects). Cards only (`cover`, `points`, `quote`); `broll` and `outro` aren't cards. For model-owned effects and source audio, follow [model-aware effects](../../produce/references/video-sound.md). |
 
 ```js
 shot: {

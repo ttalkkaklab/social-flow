@@ -182,7 +182,7 @@ the same `clipAssemble` recipe as every other clip in this pipeline: the camera 
 four slots (`framing, speed movement, ending on end`; a travelling move reads `framing, pauses, then
 speed movement, settling on end` — the hold on each end; a static camera has no speed), the
 subject action with its beats in words, a consistency lock that carries the look and the
-episode camera language, and `Audio: silent`. Store it as `visual.video.prompt`. Before
+episode camera language, and audio direction. Described native effects use the [sound planner](video-sound.md); separate narration keeps `Audio: silent`. Store it as `visual.video.prompt`. Before
 returning on the Seedance lane, the helper runs the Seedance prompt gate that `check-scenes.js` runs on every
 stored Seedance prompt (Korean outside dialogue quotes, a negative directive, a timecode or digit
 seconds, a missing lock) and fails with the reason instead of emitting a prompt the board
@@ -362,7 +362,7 @@ plan reaches the model; never replace it with a global "static or subtle drift" 
    On the API lane each cut records its selected model and resolution. A 2.x reference-video
    cut uses `seedance_reference` with the previz clip as `referenceVideoPaths`; 1.5 Pro uses
    `seedance_img2video` with a `frame_and_prompt` previz and no reference arrays. Either uses
-   `generateAudio:false`. `PRODUCTION.videoModel` records the default or `model:"mixed"`;
+   `generateAudio:false` for separate narration; authored native effects use [model-aware effects](video-sound.md) to enable audio and retain the source soundtrack. `PRODUCTION.videoModel` records the default or `model:"mixed"`;
    `video-model-options.js` prints comparison costs before calls. Keep spoken narration
    on the channel voice. An upgrade requires a priced plan and approval; never silently escalate.
 5. Keep every attempt; set `visual.video.clip` to the chosen file. Append actual billed usage
