@@ -916,6 +916,40 @@
       }
     },
     {
+      "tool": "astra_genai_audio2video",
+      "engine": "astra-genai",
+      "deployment": "genai-ltx-v2",
+      "operation": "audio",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "audio_conditioned_reencoded",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "prompt",
+        "model",
+        "resolution",
+        "fps",
+        "audioPath",
+        "audioUri",
+        "imagePath",
+        "imageUri",
+        "lastFramePath",
+        "lastFrameUri",
+        "reserveUsd",
+        "outputPath",
+        "filename"
+      ],
+      "modelConstraints": {
+        "models": [
+          "ltx-2.5-22b-dev"
+        ],
+        "note": "Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters."
+      }
+    },
+    {
       "tool": "astra_genai_msr",
       "engine": "astra-genai",
       "deployment": "genai-ltx-msr",

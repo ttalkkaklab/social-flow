@@ -17,7 +17,7 @@ const video = {
 const generation = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true };
 export const GENAI_TOOLS = [
     { name: 'astra_genai_text2video', title: 'Generate GenAI LTX video from text',
-        description: 'Generate and save an MP4 through the unified ASTRA GenAI LTX v2 gateway. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY, a separate gk_ token from ASTRA_VIDEO. Persists job identity before polling; recover the same receipt after timeout. Supports text only, not supplied audio, LoRA, retake or keyframes. Legacy astra_text2video remains a separate server adapter.',
+        description: 'Generate and save an MP4 through the unified ASTRA GenAI LTX v2 gateway. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY, a separate gk_ token from ASTRA_VIDEO. Persists job identity before polling; recover the same receipt after timeout. Supports text only; for a supplied audio track use astra_genai_audio2video. No LoRA, retake or keyframes. Legacy astra_text2video remains a separate server adapter.',
         inputSchema: { type: 'object', properties: video, required: ['prompt', 'model', 'duration', 'resolution', 'reserveUsd'], additionalProperties: false }, annotations: generation },
     { name: 'astra_genai_img2video', title: 'Generate GenAI LTX video from an image URI',
         description: 'Animate an image URI through ASTRA GenAI LTX v2 and save an MP4. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Pass a server-supported image URI, never a local path or legacy upload ID; this adapter does not upload files. Supports optional last-frame URI, not intermediate keyframes or supplied speech. Unsupported provider options return errors without fallback.',
@@ -25,6 +25,20 @@ export const GENAI_TOOLS = [
                 imageUri: { type: 'string', description: 'Provider-supported source image URI; gateway validates URI schemes and access. No local file upload is performed.' },
                 lastFrameUri: { type: ['string', 'null'], description: 'Optional final-frame URI; gateway validates model support.' },
             }, required: ['prompt', 'model', 'duration', 'resolution', 'reserveUsd', 'imageUri'], additionalProperties: false }, annotations: generation },
+    { name: 'astra_genai_audio2video', title: 'Generate GenAI LTX video driven by an audio track',
+        description: 'Render a clip whose length and motion follow a supplied speech or sound track through ASTRA GenAI LTX v2 audio-to-video, then save an MP4. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. The output length equals the audio length (local maximum 361 frames: 15.04 s at 24 fps, 14.44 s at 25, 7.52 s at 48, 7.22 s at 50; longer audio returns 422). Mono or stereo only; three or more channels return 422 instead of a downmix. The sample rate is kept, so only AAC standard rates 7350-96000 Hz (e.g. 48000, 44100) are accepted; others such as 192000 return 422. The gateway copies the backend soundtrack without a second encode, but the backend encodes it once, so the result is not bit-identical to the input. Only ltx-2.5-22b-dev runs this pipeline; no duration, generateAudio, cameraMotion, seed or frame controls. Lip-sync quality is unmeasured; inspect mouths before acceptance. Persists job identity before polling; recover with astra_genai_video_status.',
+        inputSchema: { type: 'object', properties: {
+                prompt: { ...video.prompt, description: 'Speaker, setting and action. Required even with an image; the local backend accepts at most 2000 characters (longer returns 422).' },
+                model: { type: 'string', enum: ['ltx-2.5-22b-dev'], description: 'Only the two-stage dev pipeline runs audio-to-video; distilled returns 422.' },
+                resolution: video.resolution, fps: video.fps,
+                audioPath: { type: 'string', description: 'Local .wav/.mp3/.m4a/.ogg/.opus sent as a data URI; at most about 11.25 MB (15,000,000 base64 characters); sample rate 7350-96000 Hz standard values. Mutually exclusive with audioUri.' },
+                audioUri: { type: 'string', description: 'Public HTTPS audio (gateway fetches up to 32 MiB) or an audio/wav, audio/mpeg, audio/mp4 or audio/ogg data URI with at most 15,000,000 base64 characters.' },
+                imagePath: { type: 'string', description: 'Optional local PNG/JPEG first frame; mutually exclusive with imageUri.' },
+                imageUri: { type: 'string', description: 'Optional public HTTPS PNG/JPEG or data URI first frame.' },
+                lastFramePath: { type: 'string', description: 'Optional local PNG/JPEG final frame; requires a first image.' },
+                lastFrameUri: { type: 'string', description: 'Optional HTTPS/data PNG/JPEG final frame; requires a first image. Placed on the last frame kept after trimming to the audio.' },
+                reserveUsd: video.reserveUsd, ...output,
+            }, required: ['prompt', 'model', 'resolution', 'reserveUsd'], additionalProperties: false }, annotations: generation },
     { name: 'astra_genai_text2img', title: 'Generate a GenAI DashScope image',
         description: 'Generate one PNG through the ASTRA GenAI DashScope route. Use image_plan/image_execute with an explicit reserveUsd for configured production. Requires ASTRA_GENAI_API_KEY. Text-only, at most 800 characters. For a source image use astra_genai_edit (img2img or masked inpaint); no multi-image fusion. Images containing readable text require GPT Image 2. Distinct from local image_local_generate. Saves the provider response before download; never retries an ambiguous generation automatically.',
         inputSchema: { type: 'object', properties: {

@@ -6849,22 +6849,22 @@ var init_from = __esm({
     init_file();
     init_fetch_blob();
     ({ stat } = fs4);
-    blobFromSync = (path25, type) => fromBlob(statSync3(path25), path25, type);
-    blobFrom = (path25, type) => stat(path25).then((stat4) => fromBlob(stat4, path25, type));
-    fileFrom = (path25, type) => stat(path25).then((stat4) => fromFile(stat4, path25, type));
-    fileFromSync = (path25, type) => fromFile(statSync3(path25), path25, type);
-    fromBlob = (stat4, path25, type = "") => new fetch_blob_default([new BlobDataItem({
-      path: path25,
+    blobFromSync = (path26, type) => fromBlob(statSync3(path26), path26, type);
+    blobFrom = (path26, type) => stat(path26).then((stat4) => fromBlob(stat4, path26, type));
+    fileFrom = (path26, type) => stat(path26).then((stat4) => fromFile(stat4, path26, type));
+    fileFromSync = (path26, type) => fromFile(statSync3(path26), path26, type);
+    fromBlob = (stat4, path26, type = "") => new fetch_blob_default([new BlobDataItem({
+      path: path26,
       size: stat4.size,
       lastModified: stat4.mtimeMs,
       start: 0
     })], { type });
-    fromFile = (stat4, path25, type = "") => new file_default([new BlobDataItem({
-      path: path25,
+    fromFile = (stat4, path26, type = "") => new file_default([new BlobDataItem({
+      path: path26,
       size: stat4.size,
       lastModified: stat4.mtimeMs,
       start: 0
-    })], basename(path25), { type, lastModified: stat4.mtimeMs });
+    })], basename(path26), { type, lastModified: stat4.mtimeMs });
     BlobDataItem = class _BlobDataItem {
       #path;
       #start;
@@ -12045,7 +12045,7 @@ var require_util2 = __commonJS({
     exports.getWellKnownCertificateConfigFileLocation = getWellKnownCertificateConfigFileLocation;
     var fs21 = __require("fs");
     var os4 = __require("os");
-    var path25 = __require("path");
+    var path26 = __require("path");
     var WELL_KNOWN_CERTIFICATE_CONFIG_FILE = "certificate_config.json";
     var CLOUDSDK_CONFIG_DIRECTORY = "gcloud";
     function snakeToCamel(str8) {
@@ -12138,8 +12138,8 @@ var require_util2 = __commonJS({
       }
     }
     function getWellKnownCertificateConfigFileLocation() {
-      const configDir = process.env.CLOUDSDK_CONFIG || (_isWindows() ? path25.join(process.env.APPDATA || "", CLOUDSDK_CONFIG_DIRECTORY) : path25.join(process.env.HOME || "", ".config", CLOUDSDK_CONFIG_DIRECTORY));
-      return path25.join(configDir, WELL_KNOWN_CERTIFICATE_CONFIG_FILE);
+      const configDir = process.env.CLOUDSDK_CONFIG || (_isWindows() ? path26.join(process.env.APPDATA || "", CLOUDSDK_CONFIG_DIRECTORY) : path26.join(process.env.HOME || "", ".config", CLOUDSDK_CONFIG_DIRECTORY));
+      return path26.join(configDir, WELL_KNOWN_CERTIFICATE_CONFIG_FILE);
     }
     function _isWindows() {
       return os4.platform().startsWith("win");
@@ -14085,7 +14085,7 @@ var require_getCredentials = __commonJS({
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getCredentials = getCredentials;
-    var path25 = __require("path");
+    var path26 = __require("path");
     var fs21 = __require("fs");
     var util_1 = __require("util");
     var errorWithCode_1 = require_errorWithCode();
@@ -14157,7 +14157,7 @@ var require_getCredentials = __commonJS({
        * @returns An instance of a class that implements ICredentialsProvider.
        */
       static create(keyFilePath) {
-        const keyFileExtension = path25.extname(keyFilePath);
+        const keyFileExtension = path26.extname(keyFilePath);
         switch (keyFileExtension) {
           case ExtensionFiles.JSON:
             return new JsonCredentialsProvider(keyFilePath);
@@ -17526,7 +17526,7 @@ var require_googleauth = __commonJS({
     var gaxios_1 = require_src2();
     var gcpMetadata = require_src4();
     var os4 = __require("os");
-    var path25 = __require("path");
+    var path26 = __require("path");
     var crypto_1 = require_crypto3();
     var computeclient_1 = require_computeclient();
     var idtokenclient_1 = require_idtokenclient();
@@ -17811,19 +17811,19 @@ var require_googleauth = __commonJS({
         if (!configDir) {
           if (this._isWindows()) {
             if (process.env["APPDATA"]) {
-              configDir = path25.join(process.env["APPDATA"], "gcloud");
+              configDir = path26.join(process.env["APPDATA"], "gcloud");
             }
           } else {
             const home = process.env["HOME"];
             if (home) {
-              configDir = path25.join(home, ".config", "gcloud");
+              configDir = path26.join(home, ".config", "gcloud");
             }
           }
         }
         if (!configDir) {
           return null;
         }
-        const location = path25.join(configDir, "application_default_credentials.json");
+        const location = path26.join(configDir, "application_default_credentials.json");
         if (!fs21.existsSync(location)) {
           return null;
         }
@@ -18178,7 +18178,7 @@ var require_googleauth = __commonJS({
         if (this.jsonContent) {
           return this._cacheClientFromJSON(this.jsonContent, this.clientOptions);
         } else if (this.keyFilename) {
-          const filePath = path25.resolve(this.keyFilename);
+          const filePath = path26.resolve(this.keyFilename);
           const stream = fs21.createReadStream(filePath);
           return await this.fromStreamAsync(stream, this.clientOptions);
         } else if (this.apiKey) {
@@ -33433,7 +33433,7 @@ async function $do$q(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path25 = pathToFunc("/{api_version}/agents")(pathParams);
+  const path26 = pathToFunc("/{api_version}/agents")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -33464,7 +33464,7 @@ async function $do$q(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -33508,7 +33508,7 @@ async function $do$p(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path25 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
+  const path26 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -33538,7 +33538,7 @@ async function $do$p(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -33582,7 +33582,7 @@ async function $do$o(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path25 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
+  const path26 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -33612,7 +33612,7 @@ async function $do$o(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -33654,7 +33654,7 @@ async function $do$n(client, api_version, page_size, page_token, parent, options
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path25 = pathToFunc("/{api_version}/agents")(pathParams);
+  const path26 = pathToFunc("/{api_version}/agents")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token,
@@ -33689,7 +33689,7 @@ async function $do$n(client, api_version, page_size, page_token, parent, options
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     query,
     body,
@@ -33730,7 +33730,7 @@ async function $do$m(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path25 = pathToFunc("/{api_version}/environments")(pathParams);
+  const path26 = pathToFunc("/{api_version}/environments")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -33761,7 +33761,7 @@ async function $do$m(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -33805,7 +33805,7 @@ async function $do$l(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path25 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
+  const path26 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -33835,7 +33835,7 @@ async function $do$l(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -33879,7 +33879,7 @@ async function $do$k(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path25 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
+  const path26 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -33909,7 +33909,7 @@ async function $do$k(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -33950,7 +33950,7 @@ async function $do$j(client, api_version, page_size, page_token, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path25 = pathToFunc("/{api_version}/environments")(pathParams);
+  const path26 = pathToFunc("/{api_version}/environments")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token
@@ -33984,7 +33984,7 @@ async function $do$j(client, api_version, page_size, page_token, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     query,
     body,
@@ -34011,14 +34011,14 @@ async function $do$j(client, api_version, page_size, page_token, options) {
   }
   return [result, { status: "complete", request: req, response }];
 }
-function environmentsFilesList(client, environment3, path25, api_version, page_size, page_token, recursive, options) {
-  return new APIPromise($do$i(client, environment3, path25, api_version, page_size, page_token, recursive, options));
+function environmentsFilesList(client, environment3, path26, api_version, page_size, page_token, recursive, options) {
+  return new APIPromise($do$i(client, environment3, path26, api_version, page_size, page_token, recursive, options));
 }
-async function $do$i(client, environment3, path25, api_version, page_size, page_token, recursive, options) {
+async function $do$i(client, environment3, path26, api_version, page_size, page_token, recursive, options) {
   var _a4, _b, _c;
   const input = {
     environment: environment3,
-    path: path25,
+    path: path26,
     api_version,
     page_size,
     page_token,
@@ -34117,7 +34117,7 @@ async function $do$h(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path25 = pathToFunc("/{api_version}/interactions/{id}/cancel")(pathParams);
+  const path26 = pathToFunc("/{api_version}/interactions/{id}/cancel")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -34147,7 +34147,7 @@ async function $do$h(client, id, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -34190,7 +34190,7 @@ async function $do$g(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path25 = pathToFunc("/{api_version}/interactions")(pathParams);
+  const path26 = pathToFunc("/{api_version}/interactions")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: ((_b = input === null || input === void 0 ? void 0 : input.body) === null || _b === void 0 ? void 0 : _b.stream) ? "text/event-stream" : "application/json"
@@ -34221,7 +34221,7 @@ async function $do$g(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -34271,7 +34271,7 @@ async function $do$f(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path25 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
+  const path26 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -34301,7 +34301,7 @@ async function $do$f(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -34351,7 +34351,7 @@ async function $do$e(client, id, api_version, include_input, last_event_id, stre
       charEncoding: "percent"
     })
   };
-  const path25 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
+  const path26 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
   const query = encodeFormQuery({
     "include_input": payload.include_input,
     "last_event_id": payload.last_event_id,
@@ -34386,7 +34386,7 @@ async function $do$e(client, id, api_version, include_input, last_event_id, stre
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     query,
     body,
@@ -34433,7 +34433,7 @@ async function $do$d(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path25 = pathToFunc("/{api_version}/triggers")(pathParams);
+  const path26 = pathToFunc("/{api_version}/triggers")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -34464,7 +34464,7 @@ async function $do$d(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -34508,7 +34508,7 @@ async function $do$c(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path25 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path26 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -34538,7 +34538,7 @@ async function $do$c(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -34582,7 +34582,7 @@ async function $do$b(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path25 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path26 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -34612,7 +34612,7 @@ async function $do$b(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -34658,7 +34658,7 @@ async function $do$a(client, trigger_id, api_version, page_size, page_token, opt
       charEncoding: "percent"
     })
   };
-  const path25 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
+  const path26 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload.page_size,
     "page_token": payload.page_token
@@ -34692,7 +34692,7 @@ async function $do$a(client, trigger_id, api_version, page_size, page_token, opt
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     query,
     body,
@@ -34735,7 +34735,7 @@ async function $do$9(client, api_version, filter, page_size, page_token, options
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path25 = pathToFunc("/{api_version}/triggers")(pathParams);
+  const path26 = pathToFunc("/{api_version}/triggers")(pathParams);
   const query = encodeFormQuery({
     "filter": payload === null || payload === void 0 ? void 0 : payload.filter,
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
@@ -34770,7 +34770,7 @@ async function $do$9(client, api_version, filter, page_size, page_token, options
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     query,
     body,
@@ -34815,7 +34815,7 @@ async function $do$8(client, trigger_id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path25 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
+  const path26 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -34845,7 +34845,7 @@ async function $do$8(client, trigger_id, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -34890,7 +34890,7 @@ async function $do$7(client, id, body, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path25 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path26 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -34921,7 +34921,7 @@ async function $do$7(client, id, body, api_version, options) {
     security: requestSecurity,
     method: "PATCH",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -34961,7 +34961,7 @@ async function $do$6(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path25 = pathToFunc("/{api_version}/webhooks")(pathParams);
+  const path26 = pathToFunc("/{api_version}/webhooks")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -34992,7 +34992,7 @@ async function $do$6(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -35036,7 +35036,7 @@ async function $do$5(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path25 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path26 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -35066,7 +35066,7 @@ async function $do$5(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -35110,7 +35110,7 @@ async function $do$4(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path25 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path26 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -35140,7 +35140,7 @@ async function $do$4(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -35181,7 +35181,7 @@ async function $do$3(client, api_version, page_size, page_token, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path25 = pathToFunc("/{api_version}/webhooks")(pathParams);
+  const path26 = pathToFunc("/{api_version}/webhooks")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token
@@ -35215,7 +35215,7 @@ async function $do$3(client, api_version, page_size, page_token, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     query,
     body,
@@ -35261,7 +35261,7 @@ async function $do$2(client, id, api_version, body, options) {
       charEncoding: "percent"
     })
   };
-  const path25 = pathToFunc("/{api_version}/webhooks/{id}:ping")(pathParams);
+  const path26 = pathToFunc("/{api_version}/webhooks/{id}:ping")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -35292,7 +35292,7 @@ async function $do$2(client, id, api_version, body, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -35337,7 +35337,7 @@ async function $do$1(client, id, api_version, body, options) {
       charEncoding: "percent"
     })
   };
-  const path25 = pathToFunc("/{api_version}/webhooks/{id}:rotateSigningSecret")(pathParams);
+  const path26 = pathToFunc("/{api_version}/webhooks/{id}:rotateSigningSecret")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -35368,7 +35368,7 @@ async function $do$1(client, id, api_version, body, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -35414,7 +35414,7 @@ async function $do(client, id, api_version, update_mask, body, options) {
       charEncoding: "percent"
     })
   };
-  const path25 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path26 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const query = encodeFormQuery({
     "update_mask": payload.update_mask
   });
@@ -35448,7 +35448,7 @@ async function $do(client, id, api_version, update_mask, body, options) {
     security: requestSecurity,
     method: "PATCH",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path25,
+    path: path26,
     headers,
     query,
     body: body$,
@@ -38568,7 +38568,7 @@ var init_node = __esm({
           params
         );
         const urlParams = body["_url"];
-        const path25 = formatMap("{model}:batchGenerateContent", urlParams);
+        const path26 = formatMap("{model}:batchGenerateContent", urlParams);
         const batch = body["batch"];
         const inputConfig = batch["inputConfig"];
         const requestsWrapper = inputConfig["requests"];
@@ -38589,7 +38589,7 @@ var init_node = __esm({
         delete body["config"];
         delete body["_url"];
         delete body["_query"];
-        return { path: path25, body };
+        return { path: path26, body };
       }
       // Helper function to get the first GCS URI
       getGcsUri(src) {
@@ -38645,16 +38645,16 @@ var init_node = __esm({
       async createInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createBatchJobParametersToVertex(this.apiClient, params);
-          path25 = formatMap("batchPredictionJobs", body["_url"]);
+          path26 = formatMap("batchPredictionJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -38669,12 +38669,12 @@ var init_node = __esm({
           });
         } else {
           const body = createBatchJobParametersToMldev(this.apiClient, params);
-          path25 = formatMap("{model}:batchGenerateContent", body["_url"]);
+          path26 = formatMap("{model}:batchGenerateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -38699,18 +38699,18 @@ var init_node = __esm({
       async createEmbeddingsInternal(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createEmbeddingsBatchJobParametersToMldev(this.apiClient, params);
-          path25 = formatMap("{model}:asyncBatchEmbedContent", body["_url"]);
+          path26 = formatMap("{model}:asyncBatchEmbedContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -38739,16 +38739,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getBatchJobParametersToVertex(this.apiClient, params);
-          path25 = formatMap("batchPredictionJobs/{name}", body["_url"]);
+          path26 = formatMap("batchPredictionJobs/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -38763,12 +38763,12 @@ var init_node = __esm({
           });
         } else {
           const body = getBatchJobParametersToMldev(this.apiClient, params);
-          path25 = formatMap("batches/{name}", body["_url"]);
+          path26 = formatMap("batches/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -38796,16 +38796,16 @@ var init_node = __esm({
        */
       async cancel(params) {
         var _a4, _b, _c, _d;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = cancelBatchJobParametersToVertex(this.apiClient, params);
-          path25 = formatMap("batchPredictionJobs/{name}:cancel", body["_url"]);
+          path26 = formatMap("batchPredictionJobs/{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -38814,12 +38814,12 @@ var init_node = __esm({
           });
         } else {
           const body = cancelBatchJobParametersToMldev(this.apiClient, params);
-          path25 = formatMap("batches/{name}:cancel", body["_url"]);
+          path26 = formatMap("batches/{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -38831,16 +38831,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listBatchJobsParametersToVertex(params);
-          path25 = formatMap("batchPredictionJobs", body["_url"]);
+          path26 = formatMap("batchPredictionJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -38863,12 +38863,12 @@ var init_node = __esm({
           });
         } else {
           const body = listBatchJobsParametersToMldev(params);
-          path25 = formatMap("batches", body["_url"]);
+          path26 = formatMap("batches", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -38905,16 +38905,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteBatchJobParametersToVertex(this.apiClient, params);
-          path25 = formatMap("batchPredictionJobs/{name}", body["_url"]);
+          path26 = formatMap("batchPredictionJobs/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -38935,12 +38935,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteBatchJobParametersToMldev(this.apiClient, params);
-          path25 = formatMap("batches/{name}", body["_url"]);
+          path26 = formatMap("batches/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -38999,16 +38999,16 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createCachedContentParametersToVertex(this.apiClient, params);
-          path25 = formatMap("cachedContents", body["_url"]);
+          path26 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -39022,12 +39022,12 @@ var init_node = __esm({
           });
         } else {
           const body = createCachedContentParametersToMldev(this.apiClient, params);
-          path25 = formatMap("cachedContents", body["_url"]);
+          path26 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -39055,16 +39055,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getCachedContentParametersToVertex(this.apiClient, params);
-          path25 = formatMap("{name}", body["_url"]);
+          path26 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -39078,12 +39078,12 @@ var init_node = __esm({
           });
         } else {
           const body = getCachedContentParametersToMldev(this.apiClient, params);
-          path25 = formatMap("{name}", body["_url"]);
+          path26 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -39111,16 +39111,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteCachedContentParametersToVertex(this.apiClient, params);
-          path25 = formatMap("{name}", body["_url"]);
+          path26 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -39143,12 +39143,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteCachedContentParametersToMldev(this.apiClient, params);
-          path25 = formatMap("{name}", body["_url"]);
+          path26 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -39188,16 +39188,16 @@ var init_node = __esm({
       async update(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = updateCachedContentParametersToVertex(this.apiClient, params);
-          path25 = formatMap("{name}", body["_url"]);
+          path26 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -39211,12 +39211,12 @@ var init_node = __esm({
           });
         } else {
           const body = updateCachedContentParametersToMldev(this.apiClient, params);
-          path25 = formatMap("{name}", body["_url"]);
+          path26 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -39233,16 +39233,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listCachedContentsParametersToVertex(params);
-          path25 = formatMap("cachedContents", body["_url"]);
+          path26 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -39265,12 +39265,12 @@ var init_node = __esm({
           });
         } else {
           const body = listCachedContentsParametersToMldev(params);
-          path25 = formatMap("cachedContents", body["_url"]);
+          path26 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -39601,18 +39601,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listFilesParametersToMldev(params);
-          path25 = formatMap("files", body["_url"]);
+          path26 = formatMap("files", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -39638,18 +39638,18 @@ var init_node = __esm({
       async createInternal(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createFileParametersToMldev(params);
-          path25 = formatMap("upload/v1beta/files", body["_url"]);
+          path26 = formatMap("upload/v1beta/files", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -39684,18 +39684,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getFileParametersToMldev(params);
-          path25 = formatMap("files/{file}", body["_url"]);
+          path26 = formatMap("files/{file}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -39725,18 +39725,18 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteFileParametersToMldev(params);
-          path25 = formatMap("files/{file}", body["_url"]);
+          path26 = formatMap("files/{file}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -39762,18 +39762,18 @@ var init_node = __esm({
       async registerFilesInternal(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = internalRegisterFilesParametersToMldev(params);
-          path25 = formatMap("files:register", body["_url"]);
+          path26 = formatMap("files:register", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -39929,13 +39929,13 @@ var init_node = __esm({
           throw new Error("HTTP options are not correctly set.");
         }
       }
-      constructUrl(path25, httpOptions, prependProjectLocation) {
+      constructUrl(path26, httpOptions, prependProjectLocation) {
         const urlElement = [this.getRequestUrlInternal(httpOptions)];
         if (prependProjectLocation) {
           urlElement.push(this.getBaseResourcePath());
         }
-        if (path25 !== "") {
-          urlElement.push(path25);
+        if (path26 !== "") {
+          urlElement.push(path26);
         }
         const url = new URL(`${urlElement.join("/")}`);
         return url;
@@ -40228,8 +40228,8 @@ var init_node = __esm({
           file: fileToUpload
         };
         const fileName = this.getFileName(file);
-        const path25 = formatMap("upload/v1beta/files", body["_url"]);
-        const uploadUrl = await this.fetchUploadUrl(path25, fileToUpload.sizeBytes, fileToUpload.mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
+        const path26 = formatMap("upload/v1beta/files", body["_url"]);
+        const uploadUrl = await this.fetchUploadUrl(path26, fileToUpload.sizeBytes, fileToUpload.mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
         return uploader.upload(file, uploadUrl, this);
       }
       /**
@@ -40253,13 +40253,13 @@ var init_node = __esm({
         if (mimeType === void 0 || mimeType === "") {
           throw new Error("Can not determine mimeType. Please provide mimeType in the config.");
         }
-        const path25 = `upload/v1beta/${fileSearchStoreName}:uploadToFileSearchStore`;
+        const path26 = `upload/v1beta/${fileSearchStoreName}:uploadToFileSearchStore`;
         const fileName = this.getFileName(file);
         const body = {};
         if (config3 != null) {
           uploadToFileSearchStoreConfigToMldev(config3, body);
         }
-        const uploadUrl = await this.fetchUploadUrl(path25, sizeBytes, mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
+        const uploadUrl = await this.fetchUploadUrl(path26, sizeBytes, mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
         return uploader.uploadToFileSearchStore(file, uploadUrl, this);
       }
       /**
@@ -40272,7 +40272,7 @@ var init_node = __esm({
         const downloader = this.clientOptions.downloader;
         await downloader.download(params, this);
       }
-      async fetchUploadUrl(path25, sizeBytes, mimeType, fileName, body, configHttpOptions) {
+      async fetchUploadUrl(path26, sizeBytes, mimeType, fileName, body, configHttpOptions) {
         var _a4;
         let httpOptions = {};
         if (configHttpOptions) {
@@ -40285,7 +40285,7 @@ var init_node = __esm({
           };
         }
         const httpResponse = await this.request({
-          path: path25,
+          path: path26,
           body: JSON.stringify(body),
           httpMethod: "POST",
           httpOptions
@@ -41299,16 +41299,16 @@ var init_node = __esm({
       async generateContentInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateContentParametersToVertex(this.apiClient, params);
-          path25 = formatMap("{model}:generateContent", body["_url"]);
+          path26 = formatMap("{model}:generateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -41331,12 +41331,12 @@ var init_node = __esm({
           });
         } else {
           const body = generateContentParametersToMldev(this.apiClient, params);
-          path25 = formatMap("{model}:generateContent", body["_url"]);
+          path26 = formatMap("{model}:generateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -41362,17 +41362,17 @@ var init_node = __esm({
       async generateContentStreamInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateContentParametersToVertex(this.apiClient, params);
-          path25 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
+          path26 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           const apiClient = this.apiClient;
           response = apiClient.requestStream({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -41408,13 +41408,13 @@ var init_node = __esm({
           });
         } else {
           const body = generateContentParametersToMldev(this.apiClient, params);
-          path25 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
+          path26 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           const apiClient = this.apiClient;
           response = apiClient.requestStream({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -41474,17 +41474,17 @@ var init_node = __esm({
       async embedContentInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = embedContentParametersPrivateToVertex(this.apiClient, params, params);
           const endpointUrl = tIsVertexEmbedContentModel(params.model) ? "{model}:embedContent" : "{model}:predict";
-          path25 = formatMap(endpointUrl, body["_url"]);
+          path26 = formatMap(endpointUrl, body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -41507,12 +41507,12 @@ var init_node = __esm({
           });
         } else {
           const body = embedContentParametersPrivateToMldev(this.apiClient, params);
-          path25 = formatMap("{model}:batchEmbedContents", body["_url"]);
+          path26 = formatMap("{model}:batchEmbedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -41541,16 +41541,16 @@ var init_node = __esm({
       async generateImagesInternal(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateImagesParametersToVertex(this.apiClient, params);
-          path25 = formatMap("{model}:predict", body["_url"]);
+          path26 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -41581,16 +41581,16 @@ var init_node = __esm({
       async editImageInternal(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = editImageParametersInternalToVertex(this.apiClient, params);
-          path25 = formatMap("{model}:predict", body["_url"]);
+          path26 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -41621,16 +41621,16 @@ var init_node = __esm({
       async upscaleImageInternal(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = upscaleImageAPIParametersInternalToVertex(this.apiClient, params);
-          path25 = formatMap("{model}:predict", body["_url"]);
+          path26 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -41682,16 +41682,16 @@ var init_node = __esm({
       async recontextImage(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = recontextImageParametersToVertex(this.apiClient, params);
-          path25 = formatMap("{model}:predict", body["_url"]);
+          path26 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -41733,16 +41733,16 @@ var init_node = __esm({
       async segmentImage(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = segmentImageParametersToVertex(this.apiClient, params);
-          path25 = formatMap("{model}:predict", body["_url"]);
+          path26 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -41772,16 +41772,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getModelParametersToVertex(this.apiClient, params);
-          path25 = formatMap("{name}", body["_url"]);
+          path26 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -41796,12 +41796,12 @@ var init_node = __esm({
           });
         } else {
           const body = getModelParametersToMldev(this.apiClient, params);
-          path25 = formatMap("{name}", body["_url"]);
+          path26 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -41819,16 +41819,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listModelsParametersToVertex(this.apiClient, params);
-          path25 = formatMap("{models_url}", body["_url"]);
+          path26 = formatMap("{models_url}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -41851,12 +41851,12 @@ var init_node = __esm({
           });
         } else {
           const body = listModelsParametersToMldev(this.apiClient, params);
-          path25 = formatMap("{models_url}", body["_url"]);
+          path26 = formatMap("{models_url}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -41899,16 +41899,16 @@ var init_node = __esm({
       async update(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = updateModelParametersToVertex(this.apiClient, params);
-          path25 = formatMap("{model}", body["_url"]);
+          path26 = formatMap("{model}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -41923,12 +41923,12 @@ var init_node = __esm({
           });
         } else {
           const body = updateModelParametersToMldev(this.apiClient, params);
-          path25 = formatMap("{name}", body["_url"]);
+          path26 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -41957,16 +41957,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteModelParametersToVertex(this.apiClient, params);
-          path25 = formatMap("{name}", body["_url"]);
+          path26 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -41989,12 +41989,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteModelParametersToMldev(this.apiClient, params);
-          path25 = formatMap("{name}", body["_url"]);
+          path26 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -42036,16 +42036,16 @@ var init_node = __esm({
       async countTokens(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = countTokensParametersToVertex(this.apiClient, params);
-          path25 = formatMap("{model}:countTokens", body["_url"]);
+          path26 = formatMap("{model}:countTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -42068,12 +42068,12 @@ var init_node = __esm({
           });
         } else {
           const body = countTokensParametersToMldev(this.apiClient, params);
-          path25 = formatMap("{model}:countTokens", body["_url"]);
+          path26 = formatMap("{model}:countTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -42117,16 +42117,16 @@ var init_node = __esm({
       async computeTokens(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = computeTokensParametersToVertex(this.apiClient, params);
-          path25 = formatMap("{model}:computeTokens", body["_url"]);
+          path26 = formatMap("{model}:computeTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -42157,16 +42157,16 @@ var init_node = __esm({
       async generateVideosInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateVideosParametersToVertex(this.apiClient, params);
-          path25 = formatMap("{model}:predictLongRunning", body["_url"]);
+          path26 = formatMap("{model}:predictLongRunning", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -42183,12 +42183,12 @@ var init_node = __esm({
           });
         } else {
           const body = generateVideosParametersToMldev(this.apiClient, params);
-          path25 = formatMap("{model}:predictLongRunning", body["_url"]);
+          path26 = formatMap("{model}:predictLongRunning", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -42293,16 +42293,16 @@ var init_node = __esm({
       async getVideosOperationInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getOperationParametersToVertex(params);
-          path25 = formatMap("{operationName}", body["_url"]);
+          path26 = formatMap("{operationName}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -42314,12 +42314,12 @@ var init_node = __esm({
           return response;
         } else {
           const body = getOperationParametersToMldev(params);
-          path25 = formatMap("{operationName}", body["_url"]);
+          path26 = formatMap("{operationName}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -42334,16 +42334,16 @@ var init_node = __esm({
       async fetchPredictVideosOperationInternal(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = fetchPredictOperationParametersToVertex(params);
-          path25 = formatMap("{resourceName}:fetchPredictOperation", body["_url"]);
+          path26 = formatMap("{resourceName}:fetchPredictOperation", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -42449,20 +42449,20 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("The client.tokens.create method is only supported by the Gemini Developer API.");
         } else {
           const body = createAuthTokenParametersToMldev(this.apiClient, params);
-          path25 = formatMap("auth_tokens", body["_url"]);
+          path26 = formatMap("auth_tokens", body["_url"]);
           queryParams = body["_query"];
           delete body["config"];
           delete body["_url"];
           delete body["_query"];
           const transformedBody = convertBidiSetupToTokenSetup(body, params.config);
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(transformedBody),
             httpMethod: "POST",
@@ -42494,18 +42494,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getDocumentParametersToMldev(params);
-          path25 = formatMap("{name}", body["_url"]);
+          path26 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -42526,18 +42526,18 @@ var init_node = __esm({
        */
       async delete(params) {
         var _a4, _b;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteDocumentParametersToMldev(params);
-          path25 = formatMap("{name}", body["_url"]);
+          path26 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -42549,18 +42549,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listDocumentsParametersToMldev(params);
-          path25 = formatMap("{parent}/documents", body["_url"]);
+          path26 = formatMap("{parent}/documents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -42677,18 +42677,18 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createFileSearchStoreParametersToMldev(this.apiClient, params);
-          path25 = formatMap("fileSearchStores", body["_url"]);
+          path26 = formatMap("fileSearchStores", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -42711,18 +42711,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getFileSearchStoreParametersToMldev(params);
-          path25 = formatMap("{name}", body["_url"]);
+          path26 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -42743,18 +42743,18 @@ var init_node = __esm({
        */
       async delete(params) {
         var _a4, _b;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteFileSearchStoreParametersToMldev(params);
-          path25 = formatMap("{name}", body["_url"]);
+          path26 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -42766,18 +42766,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listFileSearchStoresParametersToMldev(params);
-          path25 = formatMap("fileSearchStores", body["_url"]);
+          path26 = formatMap("fileSearchStores", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -42797,18 +42797,18 @@ var init_node = __esm({
       async uploadToFileSearchStoreInternal(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = uploadToFileSearchStoreParametersToMldev(params);
-          path25 = formatMap("upload/v1beta/{file_search_store_name}:uploadToFileSearchStore", body["_url"]);
+          path26 = formatMap("upload/v1beta/{file_search_store_name}:uploadToFileSearchStore", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -42836,18 +42836,18 @@ var init_node = __esm({
       async importFile(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = importFileParametersToMldev(params);
-          path25 = formatMap("{file_search_store_name}:importFile", body["_url"]);
+          path26 = formatMap("{file_search_store_name}:importFile", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -43291,16 +43291,16 @@ var init_node = __esm({
       }
       _createRequest(context2, conf, options) {
         var _a4, _b, _c, _d, _e;
-        const { method, path: path25, query, headers: opHeaders, security } = conf;
+        const { method, path: path26, query, headers: opHeaders, security } = conf;
         const base = (_a4 = conf.baseURL) !== null && _a4 !== void 0 ? _a4 : this._baseURL;
         if (!base) {
           return ERR(new InvalidRequestError("No base URL provided for operation"));
         }
         const baseURL = new URL(base);
         let reqURL;
-        if (path25) {
+        if (path26) {
           baseURL.pathname = baseURL.pathname.replace(/\/+$/, "") + "/";
-          reqURL = new URL(path25, baseURL);
+          reqURL = new URL(path26, baseURL);
           if (!reqURL.search && baseURL.search) {
             reqURL.search = baseURL.search;
           }
@@ -43712,8 +43712,8 @@ var init_node = __esm({
       /**
        * Retrieves file metadata or directory contents from an environment's snapshot. To download file contents directly, pass ?alt=media or use the files.download helper.
        */
-      list(environment3, path25, params, options) {
-        return unwrapAsAPIPromise(environmentsFilesList(this, environment3, path25, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, params === null || params === void 0 ? void 0 : params.recursive, options));
+      list(environment3, path26, params, options) {
+        return unwrapAsAPIPromise(environmentsFilesList(this, environment3, path26, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, params === null || params === void 0 ? void 0 : params.recursive, options));
       }
     };
     Environments = class extends ClientSDK {
@@ -44121,8 +44121,8 @@ var init_node = __esm({
         this.resolveClient = resolveClient;
       }
       async list(params, options) {
-        const { environment: environment3, path: path25, page_size, page_token, recursive, api_version } = params;
-        return unwrapWithSdkHttpResponse(environmentsFilesList(this.resolveClient(api_version), environment3, path25, api_version, page_size, page_token, recursive, toGoogleGenAIRequestOptions(options)));
+        const { environment: environment3, path: path26, page_size, page_token, recursive, api_version } = params;
+        return unwrapWithSdkHttpResponse(environmentsFilesList(this.resolveClient(api_version), environment3, path26, api_version, page_size, page_token, recursive, toGoogleGenAIRequestOptions(options)));
       }
     };
     GeminiNextGenEnvironments = class {
@@ -44297,16 +44297,16 @@ var init_node = __esm({
       async getInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getTuningJobParametersToVertex(params);
-          path25 = formatMap("{name}", body["_url"]);
+          path26 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -44327,12 +44327,12 @@ var init_node = __esm({
           });
         } else {
           const body = getTuningJobParametersToMldev(params);
-          path25 = formatMap("{name}", body["_url"]);
+          path26 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -44356,16 +44356,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listTuningJobsParametersToVertex(params);
-          path25 = formatMap("tuningJobs", body["_url"]);
+          path26 = formatMap("tuningJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -44404,16 +44404,16 @@ var init_node = __esm({
       async cancel(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = cancelTuningJobParametersToVertex(params);
-          path25 = formatMap("{name}:cancel", body["_url"]);
+          path26 = formatMap("{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -44436,12 +44436,12 @@ var init_node = __esm({
           });
         } else {
           const body = cancelTuningJobParametersToMldev(params);
-          path25 = formatMap("{name}:cancel", body["_url"]);
+          path26 = formatMap("{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -44467,16 +44467,16 @@ var init_node = __esm({
       async tuneInternal(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createTuningJobParametersPrivateToVertex(params, params);
-          path25 = formatMap("tuningJobs", body["_url"]);
+          path26 = formatMap("tuningJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -44502,18 +44502,18 @@ var init_node = __esm({
       async tuneMldevInternal(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createTuningJobParametersPrivateToMldev(params);
-          path25 = formatMap("tunedModels", body["_url"]);
+          path26 = formatMap("tunedModels", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -44537,16 +44537,16 @@ var init_node = __esm({
       async validateReward(params) {
         var _a4, _b;
         let response;
-        let path25 = "";
+        let path26 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = validateRewardParametersToVertex(params);
-          path25 = formatMap("{parent}/tuningJobs:validateReinforcementTuningReward", body["_url"]);
+          path26 = formatMap("{parent}/tuningJobs:validateReinforcementTuningReward", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path25,
+            path: path26,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48133,8 +48133,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path25) {
-      let input = path25;
+    function removeDotSegments(path26) {
+      let input = path26;
       const output2 = [];
       let nextSlash = -1;
       let len = 0;
@@ -48386,8 +48386,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path25, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path25 && path25 !== "/" ? path25 : void 0;
+        const [path26, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path26 && path26 !== "/" ? path26 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -51191,7 +51191,7 @@ var require_discriminator = __commonJS({
       error: error2,
       code(cxt) {
         const { gen, data, schema, parentSchema, it } = cxt;
-        const { oneOf } = parentSchema;
+        const { oneOf: oneOf2 } = parentSchema;
         if (!it.opts.discriminator) {
           throw new Error("discriminator: requires discriminator option");
         }
@@ -51200,7 +51200,7 @@ var require_discriminator = __commonJS({
           throw new Error("discriminator: requires propertyName");
         if (schema.mapping)
           throw new Error("discriminator: mapping is not supported");
-        if (!oneOf)
+        if (!oneOf2)
           throw new Error("discriminator: requires oneOf keyword");
         const valid = gen.let("valid", false);
         const tag = gen.const("tag", (0, codegen_1._)`${data}${(0, codegen_1.getProperty)(tagName)}`);
@@ -51228,8 +51228,8 @@ var require_discriminator = __commonJS({
           const oneOfMapping = {};
           const topRequired = hasRequired(parentSchema);
           let tagRequired = true;
-          for (let i2 = 0; i2 < oneOf.length; i2++) {
-            let sch = oneOf[i2];
+          for (let i2 = 0; i2 < oneOf2.length; i2++) {
+            let sch = oneOf2[i2];
             if ((sch === null || sch === void 0 ? void 0 : sch.$ref) && !(0, util_1.schemaHasRulesButRef)(sch, it.self.RULES)) {
               const ref = sch.$ref;
               sch = compile_1.resolveRef.call(it.self, it.schemaEnv.root, it.baseId, ref);
@@ -54007,17 +54007,17 @@ var init_resource = __esm({
 function encodeURIPath(str8) {
   return str8.replace(/[^A-Za-z0-9\-._~!$&'()*+,;=:@]+/g, encodeURIComponent);
 }
-var EMPTY, createPathTagFunction, path6;
+var EMPTY, createPathTagFunction, path7;
 var init_path = __esm({
   "node_modules/openai/internal/utils/path.mjs"() {
     init_error();
     EMPTY = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.create(null));
-    createPathTagFunction = (pathEncoder = encodeURIPath) => function path25(statics, ...params) {
+    createPathTagFunction = (pathEncoder = encodeURIPath) => function path26(statics, ...params) {
       if (statics.length === 1)
         return statics[0];
       let postPath = false;
       const invalidSegments = [];
-      const path26 = statics.reduce((previousValue, currentValue, index) => {
+      const path27 = statics.reduce((previousValue, currentValue, index) => {
         if (/[?#]/.test(currentValue)) {
           postPath = true;
         }
@@ -54034,7 +54034,7 @@ var init_path = __esm({
         }
         return previousValue + currentValue + (index === params.length ? "" : encoded);
       }, "");
-      const pathOnly = path26.split(/[?#]/, 1)[0];
+      const pathOnly = path27.split(/[?#]/, 1)[0];
       const invalidSegmentPattern = /(?<=^|\/)(?:\.|%2e){1,2}(?=\/|$)/gi;
       let match2;
       while ((match2 = invalidSegmentPattern.exec(pathOnly)) !== null) {
@@ -54055,12 +54055,12 @@ var init_path = __esm({
         }, "");
         throw new OpenAIError(`Path parameters result in path with invalid segments:
 ${invalidSegments.map((e2) => e2.error).join("\n")}
-${path26}
+${path27}
 ${underline}`);
       }
-      return path26;
+      return path27;
     };
-    path6 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
+    path7 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
   }
 });
 
@@ -54087,7 +54087,7 @@ var init_messages = __esm({
        * ```
        */
       list(completionID, query = {}, options) {
-        return this._client.getAPIList(path6`/chat/completions/${completionID}/messages`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path7`/chat/completions/${completionID}/messages`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -55825,7 +55825,7 @@ var init_completions = __esm({
        * ```
        */
       retrieve(completionID, options) {
-        return this._client.get(path6`/chat/completions/${completionID}`, {
+        return this._client.get(path7`/chat/completions/${completionID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -55844,7 +55844,7 @@ var init_completions = __esm({
        * ```
        */
       update(completionID, body, options) {
-        return this._client.post(path6`/chat/completions/${completionID}`, {
+        return this._client.post(path7`/chat/completions/${completionID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -55880,7 +55880,7 @@ var init_completions = __esm({
        * ```
        */
       delete(completionID, options) {
-        return this._client.delete(path6`/chat/completions/${completionID}`, {
+        return this._client.delete(path7`/chat/completions/${completionID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -55990,7 +55990,7 @@ var init_admin_api_keys = __esm({
        * ```
        */
       retrieve(keyID, options) {
-        return this._client.get(path6`/organization/admin_api_keys/${keyID}`, {
+        return this._client.get(path7`/organization/admin_api_keys/${keyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56025,7 +56025,7 @@ var init_admin_api_keys = __esm({
        * ```
        */
       delete(keyID, options) {
-        return this._client.delete(path6`/organization/admin_api_keys/${keyID}`, {
+        return this._client.delete(path7`/organization/admin_api_keys/${keyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56106,7 +56106,7 @@ var init_certificates = __esm({
        * ```
        */
       retrieve(certificateID, query = {}, options) {
-        return this._client.get(path6`/organization/certificates/${certificateID}`, {
+        return this._client.get(path7`/organization/certificates/${certificateID}`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56124,7 +56124,7 @@ var init_certificates = __esm({
        * ```
        */
       update(certificateID, body, options) {
-        return this._client.post(path6`/organization/certificates/${certificateID}`, {
+        return this._client.post(path7`/organization/certificates/${certificateID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56158,7 +56158,7 @@ var init_certificates = __esm({
        * ```
        */
       delete(certificateID, options) {
-        return this._client.delete(path6`/organization/certificates/${certificateID}`, {
+        return this._client.delete(path7`/organization/certificates/${certificateID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56291,7 +56291,7 @@ var init_invites = __esm({
        * ```
        */
       retrieve(inviteID, options) {
-        return this._client.get(path6`/organization/invites/${inviteID}`, {
+        return this._client.get(path7`/organization/invites/${inviteID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56326,7 +56326,7 @@ var init_invites = __esm({
        * ```
        */
       delete(inviteID, options) {
-        return this._client.delete(path6`/organization/invites/${inviteID}`, {
+        return this._client.delete(path7`/organization/invites/${inviteID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56372,7 +56372,7 @@ var init_roles = __esm({
        * ```
        */
       retrieve(roleID, options) {
-        return this._client.get(path6`/organization/roles/${roleID}`, {
+        return this._client.get(path7`/organization/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56388,7 +56388,7 @@ var init_roles = __esm({
        * ```
        */
       update(roleID, body, options) {
-        return this._client.post(path6`/organization/roles/${roleID}`, {
+        return this._client.post(path7`/organization/roles/${roleID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56423,7 +56423,7 @@ var init_roles = __esm({
        * ```
        */
       delete(roleID, options) {
-        return this._client.delete(path6`/organization/roles/${roleID}`, {
+        return this._client.delete(path7`/organization/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56476,7 +56476,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       retrieve(alertID, options) {
-        return this._client.get(path6`/organization/spend_alerts/${alertID}`, {
+        return this._client.get(path7`/organization/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56502,7 +56502,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       update(alertID, body, options) {
-        return this._client.post(path6`/organization/spend_alerts/${alertID}`, {
+        return this._client.post(path7`/organization/spend_alerts/${alertID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56534,7 +56534,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       delete(alertID, options) {
-        return this._client.delete(path6`/organization/spend_alerts/${alertID}`, {
+        return this._client.delete(path7`/organization/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56832,7 +56832,7 @@ var init_roles2 = __esm({
        * ```
        */
       create(groupID, body, options) {
-        return this._client.post(path6`/organization/groups/${groupID}/roles`, {
+        return this._client.post(path7`/organization/groups/${groupID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56852,7 +56852,7 @@ var init_roles2 = __esm({
        */
       retrieve(roleID, params, options) {
         const { group_id } = params;
-        return this._client.get(path6`/organization/groups/${group_id}/roles/${roleID}`, {
+        return this._client.get(path7`/organization/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56871,7 +56871,7 @@ var init_roles2 = __esm({
        * ```
        */
       list(groupID, query = {}, options) {
-        return this._client.getAPIList(path6`/organization/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path7`/organization/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns an organization role from a group within the organization.
@@ -56887,7 +56887,7 @@ var init_roles2 = __esm({
        */
       delete(roleID, params, options) {
         const { group_id } = params;
-        return this._client.delete(path6`/organization/groups/${group_id}/roles/${roleID}`, {
+        return this._client.delete(path7`/organization/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56917,7 +56917,7 @@ var init_users = __esm({
        * ```
        */
       create(groupID, body, options) {
-        return this._client.post(path6`/organization/groups/${groupID}/users`, {
+        return this._client.post(path7`/organization/groups/${groupID}/users`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56937,7 +56937,7 @@ var init_users = __esm({
        */
       retrieve(userID, params, options) {
         const { group_id } = params;
-        return this._client.get(path6`/organization/groups/${group_id}/users/${userID}`, {
+        return this._client.get(path7`/organization/groups/${group_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56956,7 +56956,7 @@ var init_users = __esm({
        * ```
        */
       list(groupID, query = {}, options) {
-        return this._client.getAPIList(path6`/organization/groups/${groupID}/users`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path7`/organization/groups/${groupID}/users`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Removes a user from a group.
@@ -56972,7 +56972,7 @@ var init_users = __esm({
        */
       delete(userID, params, options) {
         const { group_id } = params;
-        return this._client.delete(path6`/organization/groups/${group_id}/users/${userID}`, {
+        return this._client.delete(path7`/organization/groups/${group_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57027,7 +57027,7 @@ var init_groups = __esm({
        * ```
        */
       retrieve(groupID, options) {
-        return this._client.get(path6`/organization/groups/${groupID}`, {
+        return this._client.get(path7`/organization/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57044,7 +57044,7 @@ var init_groups = __esm({
        * ```
        */
       update(groupID, body, options) {
-        return this._client.post(path6`/organization/groups/${groupID}`, {
+        return this._client.post(path7`/organization/groups/${groupID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57079,7 +57079,7 @@ var init_groups = __esm({
        * ```
        */
       delete(groupID, options) {
-        return this._client.delete(path6`/organization/groups/${groupID}`, {
+        return this._client.delete(path7`/organization/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57112,7 +57112,7 @@ var init_api_keys = __esm({
        */
       retrieve(apiKeyID, params, options) {
         const { project_id } = params;
-        return this._client.get(path6`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
+        return this._client.get(path7`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57131,7 +57131,7 @@ var init_api_keys = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path6`/organization/projects/${projectID}/api_keys`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path7`/organization/projects/${projectID}/api_keys`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes an API key from the project.
@@ -57150,7 +57150,7 @@ var init_api_keys = __esm({
        */
       delete(apiKeyID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path6`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
+        return this._client.delete(path7`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57181,7 +57181,7 @@ var init_certificates2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path6`/organization/projects/${projectID}/certificates`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path7`/organization/projects/${projectID}/certificates`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Activate certificates at the project level.
@@ -57200,7 +57200,7 @@ var init_certificates2 = __esm({
        * ```
        */
       activate(projectID, body, options) {
-        return this._client.getAPIList(path6`/organization/projects/${projectID}/certificates/activate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path7`/organization/projects/${projectID}/certificates/activate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deactivate certificates at the project level. You can atomically and
@@ -57218,7 +57218,7 @@ var init_certificates2 = __esm({
        * ```
        */
       deactivate(projectID, body, options) {
-        return this._client.getAPIList(path6`/organization/projects/${projectID}/certificates/deactivate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path7`/organization/projects/${projectID}/certificates/deactivate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
@@ -57243,7 +57243,7 @@ var init_data_retention2 = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path6`/organization/projects/${projectID}/data_retention`, {
+        return this._client.get(path7`/organization/projects/${projectID}/data_retention`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57261,7 +57261,7 @@ var init_data_retention2 = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path6`/organization/projects/${projectID}/data_retention`, {
+        return this._client.post(path7`/organization/projects/${projectID}/data_retention`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57290,7 +57290,7 @@ var init_hosted_tool_permissions = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path6`/organization/projects/${projectID}/hosted_tool_permissions`, {
+        return this._client.get(path7`/organization/projects/${projectID}/hosted_tool_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57307,7 +57307,7 @@ var init_hosted_tool_permissions = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path6`/organization/projects/${projectID}/hosted_tool_permissions`, {
+        return this._client.post(path7`/organization/projects/${projectID}/hosted_tool_permissions`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57336,7 +57336,7 @@ var init_model_permissions = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path6`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.get(path7`/organization/projects/${projectID}/model_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57354,7 +57354,7 @@ var init_model_permissions = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path6`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.post(path7`/organization/projects/${projectID}/model_permissions`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57372,7 +57372,7 @@ var init_model_permissions = __esm({
        * ```
        */
       delete(projectID, options) {
-        return this._client.delete(path6`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.delete(path7`/organization/projects/${projectID}/model_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57403,7 +57403,7 @@ var init_rate_limits = __esm({
        * ```
        */
       listRateLimits(projectID, query = {}, options) {
-        return this._client.getAPIList(path6`/organization/projects/${projectID}/rate_limits`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path7`/organization/projects/${projectID}/rate_limits`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Updates a project rate limit.
@@ -57419,7 +57419,7 @@ var init_rate_limits = __esm({
        */
       updateRateLimit(rateLimitID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path6`/organization/projects/${project_id}/rate_limits/${rateLimitID}`, {
+        return this._client.post(path7`/organization/projects/${project_id}/rate_limits/${rateLimitID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57450,7 +57450,7 @@ var init_roles3 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path6`/projects/${projectID}/roles`, {
+        return this._client.post(path7`/projects/${projectID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57470,7 +57470,7 @@ var init_roles3 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id } = params;
-        return this._client.get(path6`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.get(path7`/projects/${project_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57489,7 +57489,7 @@ var init_roles3 = __esm({
        */
       update(roleID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path6`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.post(path7`/projects/${project_id}/roles/${roleID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57509,7 +57509,7 @@ var init_roles3 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path6`/projects/${projectID}/roles`, NextCursorPage, {
+        return this._client.getAPIList(path7`/projects/${projectID}/roles`, NextCursorPage, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57529,7 +57529,7 @@ var init_roles3 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path6`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.delete(path7`/projects/${project_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57567,7 +57567,7 @@ var init_spend_alerts2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path6`/organization/projects/${projectID}/spend_alerts`, {
+        return this._client.post(path7`/organization/projects/${projectID}/spend_alerts`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57587,7 +57587,7 @@ var init_spend_alerts2 = __esm({
        */
       retrieve(alertID, params, options) {
         const { project_id } = params;
-        return this._client.get(path6`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.get(path7`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57615,7 +57615,7 @@ var init_spend_alerts2 = __esm({
        */
       update(alertID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path6`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.post(path7`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57635,7 +57635,7 @@ var init_spend_alerts2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path6`/organization/projects/${projectID}/spend_alerts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path7`/organization/projects/${projectID}/spend_alerts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a project spend alert.
@@ -57651,7 +57651,7 @@ var init_spend_alerts2 = __esm({
        */
       delete(alertID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path6`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.delete(path7`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57679,7 +57679,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path6`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.get(path7`/organization/projects/${projectID}/spend_limit`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57701,7 +57701,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path6`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.post(path7`/organization/projects/${projectID}/spend_limit`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57719,7 +57719,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       delete(projectID, options) {
-        return this._client.delete(path6`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.delete(path7`/organization/projects/${projectID}/spend_limit`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57750,7 +57750,7 @@ var init_roles4 = __esm({
        */
       create(groupID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path6`/projects/${project_id}/groups/${groupID}/roles`, {
+        return this._client.post(path7`/projects/${project_id}/groups/${groupID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57770,7 +57770,7 @@ var init_roles4 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id, group_id } = params;
-        return this._client.get(path6`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
+        return this._client.get(path7`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57791,7 +57791,7 @@ var init_roles4 = __esm({
        */
       list(groupID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.getAPIList(path6`/projects/${project_id}/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path7`/projects/${project_id}/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns a project role from a group within a project.
@@ -57807,7 +57807,7 @@ var init_roles4 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id, group_id } = params;
-        return this._client.delete(path6`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
+        return this._client.delete(path7`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57843,7 +57843,7 @@ var init_groups2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path6`/organization/projects/${projectID}/groups`, {
+        return this._client.post(path7`/organization/projects/${projectID}/groups`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57863,7 +57863,7 @@ var init_groups2 = __esm({
        */
       retrieve(groupID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.get(path6`/organization/projects/${project_id}/groups/${groupID}`, {
+        return this._client.get(path7`/organization/projects/${project_id}/groups/${groupID}`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57883,7 +57883,7 @@ var init_groups2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path6`/organization/projects/${projectID}/groups`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path7`/organization/projects/${projectID}/groups`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Revokes a group's access to a project.
@@ -57899,7 +57899,7 @@ var init_groups2 = __esm({
        */
       delete(groupID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path6`/organization/projects/${project_id}/groups/${groupID}`, {
+        return this._client.delete(path7`/organization/projects/${project_id}/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57930,7 +57930,7 @@ var init_api_keys2 = __esm({
        */
       create(serviceAccountID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path6`/organization/projects/${project_id}/service_accounts/${serviceAccountID}/api_keys`, { body, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.post(path7`/organization/projects/${project_id}/service_accounts/${serviceAccountID}/api_keys`, { body, ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
@@ -57964,7 +57964,7 @@ var init_service_accounts = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path6`/organization/projects/${projectID}/service_accounts`, {
+        return this._client.post(path7`/organization/projects/${projectID}/service_accounts`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57984,7 +57984,7 @@ var init_service_accounts = __esm({
        */
       retrieve(serviceAccountID, params, options) {
         const { project_id } = params;
-        return this._client.get(path6`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, {
+        return this._client.get(path7`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58003,7 +58003,7 @@ var init_service_accounts = __esm({
        */
       update(serviceAccountID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path6`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { body, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.post(path7`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { body, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Returns a list of service accounts in the project.
@@ -58019,7 +58019,7 @@ var init_service_accounts = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path6`/organization/projects/${projectID}/service_accounts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path7`/organization/projects/${projectID}/service_accounts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a service account from the project.
@@ -58038,7 +58038,7 @@ var init_service_accounts = __esm({
        */
       delete(serviceAccountID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path6`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.delete(path7`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
     ServiceAccounts.APIKeys = APIKeys2;
@@ -58067,7 +58067,7 @@ var init_roles5 = __esm({
        */
       create(userID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path6`/projects/${project_id}/users/${userID}/roles`, {
+        return this._client.post(path7`/projects/${project_id}/users/${userID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58087,7 +58087,7 @@ var init_roles5 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id, user_id } = params;
-        return this._client.get(path6`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
+        return this._client.get(path7`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58108,7 +58108,7 @@ var init_roles5 = __esm({
        */
       list(userID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.getAPIList(path6`/projects/${project_id}/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path7`/projects/${project_id}/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns a project role from a user within a project.
@@ -58124,7 +58124,7 @@ var init_roles5 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id, user_id } = params;
-        return this._client.delete(path6`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
+        return this._client.delete(path7`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58161,7 +58161,7 @@ var init_users2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path6`/organization/projects/${projectID}/users`, {
+        return this._client.post(path7`/organization/projects/${projectID}/users`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58181,7 +58181,7 @@ var init_users2 = __esm({
        */
       retrieve(userID, params, options) {
         const { project_id } = params;
-        return this._client.get(path6`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.get(path7`/organization/projects/${project_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58200,7 +58200,7 @@ var init_users2 = __esm({
        */
       update(userID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path6`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.post(path7`/organization/projects/${project_id}/users/${userID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58220,7 +58220,7 @@ var init_users2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path6`/organization/projects/${projectID}/users`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path7`/organization/projects/${projectID}/users`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a user from the project.
@@ -58239,7 +58239,7 @@ var init_users2 = __esm({
        */
       delete(userID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path6`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.delete(path7`/organization/projects/${project_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58327,7 +58327,7 @@ var init_projects = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path6`/organization/projects/${projectID}`, {
+        return this._client.get(path7`/organization/projects/${projectID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58344,7 +58344,7 @@ var init_projects = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path6`/organization/projects/${projectID}`, {
+        return this._client.post(path7`/organization/projects/${projectID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58381,7 +58381,7 @@ var init_projects = __esm({
        * ```
        */
       archive(projectID, options) {
-        return this._client.post(path6`/organization/projects/${projectID}/archive`, {
+        return this._client.post(path7`/organization/projects/${projectID}/archive`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58423,7 +58423,7 @@ var init_roles6 = __esm({
        * ```
        */
       create(userID, body, options) {
-        return this._client.post(path6`/organization/users/${userID}/roles`, {
+        return this._client.post(path7`/organization/users/${userID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58443,7 +58443,7 @@ var init_roles6 = __esm({
        */
       retrieve(roleID, params, options) {
         const { user_id } = params;
-        return this._client.get(path6`/organization/users/${user_id}/roles/${roleID}`, {
+        return this._client.get(path7`/organization/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58462,7 +58462,7 @@ var init_roles6 = __esm({
        * ```
        */
       list(userID, query = {}, options) {
-        return this._client.getAPIList(path6`/organization/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path7`/organization/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns an organization role from a user within the organization.
@@ -58478,7 +58478,7 @@ var init_roles6 = __esm({
        */
       delete(roleID, params, options) {
         const { user_id } = params;
-        return this._client.delete(path6`/organization/users/${user_id}/roles/${roleID}`, {
+        return this._client.delete(path7`/organization/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58511,7 +58511,7 @@ var init_users3 = __esm({
        * ```
        */
       retrieve(userID, options) {
-        return this._client.get(path6`/organization/users/${userID}`, {
+        return this._client.get(path7`/organization/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58526,7 +58526,7 @@ var init_users3 = __esm({
        * ```
        */
       update(userID, body, options) {
-        return this._client.post(path6`/organization/users/${userID}`, {
+        return this._client.post(path7`/organization/users/${userID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58561,7 +58561,7 @@ var init_users3 = __esm({
        * ```
        */
       delete(userID, options) {
-        return this._client.delete(path6`/organization/users/${userID}`, {
+        return this._client.delete(path7`/organization/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58763,7 +58763,7 @@ var init_batches = __esm({
        * Retrieves a batch.
        */
       retrieve(batchID, options) {
-        return this._client.get(path6`/batches/${batchID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path7`/batches/${batchID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * List your organization's batches.
@@ -58781,7 +58781,7 @@ var init_batches = __esm({
        * (if any) available in the output file.
        */
       cancel(batchID, options) {
-        return this._client.post(path6`/batches/${batchID}/cancel`, {
+        return this._client.post(path7`/batches/${batchID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -58818,7 +58818,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       retrieve(assistantID, options) {
-        return this._client.get(path6`/assistants/${assistantID}`, {
+        return this._client.get(path7`/assistants/${assistantID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -58830,7 +58830,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       update(assistantID, body, options) {
-        return this._client.post(path6`/assistants/${assistantID}`, {
+        return this._client.post(path7`/assistants/${assistantID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -58856,7 +58856,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       delete(assistantID, options) {
-        return this._client.delete(path6`/assistants/${assistantID}`, {
+        return this._client.delete(path7`/assistants/${assistantID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -58995,7 +58995,7 @@ var init_sessions2 = __esm({
        * ```
        */
       cancel(sessionID, options) {
-        return this._client.post(path6`/chatkit/sessions/${sessionID}/cancel`, {
+        return this._client.post(path7`/chatkit/sessions/${sessionID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59024,7 +59024,7 @@ var init_threads = __esm({
        * ```
        */
       retrieve(threadID, options) {
-        return this._client.get(path6`/chatkit/threads/${threadID}`, {
+        return this._client.get(path7`/chatkit/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59060,7 +59060,7 @@ var init_threads = __esm({
        * ```
        */
       delete(threadID, options) {
-        return this._client.delete(path6`/chatkit/threads/${threadID}`, {
+        return this._client.delete(path7`/chatkit/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59080,7 +59080,7 @@ var init_threads = __esm({
        * ```
        */
       listItems(threadID, query = {}, options) {
-        return this._client.getAPIList(path6`/chatkit/threads/${threadID}/items`, ConversationCursorPage, {
+        return this._client.getAPIList(path7`/chatkit/threads/${threadID}/items`, ConversationCursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
@@ -59136,7 +59136,7 @@ var init_input_items = __esm({
        */
       list(responseID, params = {}, options) {
         const { betas, ...query } = params ?? {};
-        return this._client.getAPIList(path6`/responses/${responseID}/input_items?beta=true`, CursorPage, {
+        return this._client.getAPIList(path7`/responses/${responseID}/input_items?beta=true`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([
@@ -59217,7 +59217,7 @@ var init_responses = __esm({
       }
       retrieve(responseID, params = {}, options) {
         const { betas, ...query } = params ?? {};
-        return this._client.get(path6`/responses/${responseID}?beta=true`, {
+        return this._client.get(path7`/responses/${responseID}?beta=true`, {
           query,
           ...options,
           headers: buildHeaders([
@@ -59240,7 +59240,7 @@ var init_responses = __esm({
        */
       delete(responseID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.delete(path6`/responses/${responseID}?beta=true`, {
+        return this._client.delete(path7`/responses/${responseID}?beta=true`, {
           ...options,
           headers: buildHeaders([
             { Accept: "*/*", ...betas?.toString() != null ? { "openai-beta": betas?.toString() } : void 0 },
@@ -59263,7 +59263,7 @@ var init_responses = __esm({
        */
       cancel(responseID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.post(path6`/responses/${responseID}/cancel?beta=true`, {
+        return this._client.post(path7`/responses/${responseID}/cancel?beta=true`, {
           ...options,
           headers: buildHeaders([
             { ...betas?.toString() != null ? { "openai-beta": betas?.toString() } : void 0 },
@@ -59321,7 +59321,7 @@ var init_messages2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       create(threadID, body, options) {
-        return this._client.post(path6`/threads/${threadID}/messages`, {
+        return this._client.post(path7`/threads/${threadID}/messages`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59335,7 +59335,7 @@ var init_messages2 = __esm({
        */
       retrieve(messageID, params, options) {
         const { thread_id } = params;
-        return this._client.get(path6`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.get(path7`/threads/${thread_id}/messages/${messageID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59348,7 +59348,7 @@ var init_messages2 = __esm({
        */
       update(messageID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path6`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.post(path7`/threads/${thread_id}/messages/${messageID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59361,7 +59361,7 @@ var init_messages2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       list(threadID, query = {}, options) {
-        return this._client.getAPIList(path6`/threads/${threadID}/messages`, CursorPage, {
+        return this._client.getAPIList(path7`/threads/${threadID}/messages`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59375,7 +59375,7 @@ var init_messages2 = __esm({
        */
       delete(messageID, params, options) {
         const { thread_id } = params;
-        return this._client.delete(path6`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.delete(path7`/threads/${thread_id}/messages/${messageID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59401,7 +59401,7 @@ var init_steps = __esm({
        */
       retrieve(stepID, params, options) {
         const { thread_id, run_id, ...query } = params;
-        return this._client.get(path6`/threads/${thread_id}/runs/${run_id}/steps/${stepID}`, {
+        return this._client.get(path7`/threads/${thread_id}/runs/${run_id}/steps/${stepID}`, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59415,7 +59415,7 @@ var init_steps = __esm({
        */
       list(runID, params, options) {
         const { thread_id, ...query } = params;
-        return this._client.getAPIList(path6`/threads/${thread_id}/runs/${runID}/steps`, CursorPage, {
+        return this._client.getAPIList(path7`/threads/${thread_id}/runs/${runID}/steps`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -60004,7 +60004,7 @@ var init_runs = __esm({
       }
       create(threadID, params, options) {
         const { include, ...body } = params;
-        return this._client.post(path6`/threads/${threadID}/runs`, {
+        return this._client.post(path7`/threads/${threadID}/runs`, {
           query: { include },
           body,
           ...options,
@@ -60021,7 +60021,7 @@ var init_runs = __esm({
        */
       retrieve(runID, params, options) {
         const { thread_id } = params;
-        return this._client.get(path6`/threads/${thread_id}/runs/${runID}`, {
+        return this._client.get(path7`/threads/${thread_id}/runs/${runID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60034,7 +60034,7 @@ var init_runs = __esm({
        */
       update(runID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path6`/threads/${thread_id}/runs/${runID}`, {
+        return this._client.post(path7`/threads/${thread_id}/runs/${runID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -60047,7 +60047,7 @@ var init_runs = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       list(threadID, query = {}, options) {
-        return this._client.getAPIList(path6`/threads/${threadID}/runs`, CursorPage, {
+        return this._client.getAPIList(path7`/threads/${threadID}/runs`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -60061,7 +60061,7 @@ var init_runs = __esm({
        */
       cancel(runID, params, options) {
         const { thread_id } = params;
-        return this._client.post(path6`/threads/${thread_id}/runs/${runID}/cancel`, {
+        return this._client.post(path7`/threads/${thread_id}/runs/${runID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60140,7 +60140,7 @@ var init_runs = __esm({
       }
       submitToolOutputs(runID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path6`/threads/${thread_id}/runs/${runID}/submit_tool_outputs`, {
+        return this._client.post(path7`/threads/${thread_id}/runs/${runID}/submit_tool_outputs`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -60208,7 +60208,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       retrieve(threadID, options) {
-        return this._client.get(path6`/threads/${threadID}`, {
+        return this._client.get(path7`/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60220,7 +60220,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       update(threadID, body, options) {
-        return this._client.post(path6`/threads/${threadID}`, {
+        return this._client.post(path7`/threads/${threadID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -60233,7 +60233,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       delete(threadID, options) {
-        return this._client.delete(path6`/threads/${threadID}`, {
+        return this._client.delete(path7`/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60334,7 +60334,7 @@ var init_content = __esm({
        */
       retrieve(fileID, params, options) {
         const { container_id } = params;
-        return this._client.get(path6`/containers/${container_id}/files/${fileID}/content`, {
+        return this._client.get(path7`/containers/${container_id}/files/${fileID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -60368,14 +60368,14 @@ var init_files = __esm({
        * a JSON request with a file ID.
        */
       create(containerID, body, options) {
-        return this._client.post(path6`/containers/${containerID}/files`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path7`/containers/${containerID}/files`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
       /**
        * Retrieve Container File
        */
       retrieve(fileID, params, options) {
         const { container_id } = params;
-        return this._client.get(path6`/containers/${container_id}/files/${fileID}`, {
+        return this._client.get(path7`/containers/${container_id}/files/${fileID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60384,7 +60384,7 @@ var init_files = __esm({
        * List Container files
        */
       list(containerID, query = {}, options) {
-        return this._client.getAPIList(path6`/containers/${containerID}/files`, CursorPage, {
+        return this._client.getAPIList(path7`/containers/${containerID}/files`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -60395,7 +60395,7 @@ var init_files = __esm({
        */
       delete(fileID, params, options) {
         const { container_id } = params;
-        return this._client.delete(path6`/containers/${container_id}/files/${fileID}`, {
+        return this._client.delete(path7`/containers/${container_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60431,7 +60431,7 @@ var init_containers = __esm({
        * Retrieve Container
        */
       retrieve(containerID, options) {
-        return this._client.get(path6`/containers/${containerID}`, {
+        return this._client.get(path7`/containers/${containerID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60450,7 +60450,7 @@ var init_containers = __esm({
        * Delete Container
        */
       delete(containerID, options) {
-        return this._client.delete(path6`/containers/${containerID}`, {
+        return this._client.delete(path7`/containers/${containerID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60474,7 +60474,7 @@ var init_items = __esm({
        */
       create(conversationID, params, options) {
         const { include, ...body } = params;
-        return this._client.post(path6`/conversations/${conversationID}/items`, {
+        return this._client.post(path7`/conversations/${conversationID}/items`, {
           query: { include },
           body,
           ...options,
@@ -60486,7 +60486,7 @@ var init_items = __esm({
        */
       retrieve(itemID, params, options) {
         const { conversation_id, ...query } = params;
-        return this._client.get(path6`/conversations/${conversation_id}/items/${itemID}`, {
+        return this._client.get(path7`/conversations/${conversation_id}/items/${itemID}`, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -60496,14 +60496,14 @@ var init_items = __esm({
        * List all items for a conversation with the given ID.
        */
       list(conversationID, query = {}, options) {
-        return this._client.getAPIList(path6`/conversations/${conversationID}/items`, ConversationCursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path7`/conversations/${conversationID}/items`, ConversationCursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
       /**
        * Delete an item from a conversation with the given IDs.
        */
       delete(itemID, params, options) {
         const { conversation_id } = params;
-        return this._client.delete(path6`/conversations/${conversation_id}/items/${itemID}`, {
+        return this._client.delete(path7`/conversations/${conversation_id}/items/${itemID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60535,7 +60535,7 @@ var init_conversations = __esm({
        * Get a conversation
        */
       retrieve(conversationID, options) {
-        return this._client.get(path6`/conversations/${conversationID}`, {
+        return this._client.get(path7`/conversations/${conversationID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60544,7 +60544,7 @@ var init_conversations = __esm({
        * Update a conversation
        */
       update(conversationID, body, options) {
-        return this._client.post(path6`/conversations/${conversationID}`, {
+        return this._client.post(path7`/conversations/${conversationID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -60554,7 +60554,7 @@ var init_conversations = __esm({
        * Delete a conversation. Items in the conversation will not be deleted.
        */
       delete(conversationID, options) {
-        return this._client.delete(path6`/conversations/${conversationID}`, {
+        return this._client.delete(path7`/conversations/${conversationID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60628,7 +60628,7 @@ var init_output_items = __esm({
        */
       retrieve(outputItemID, params, options) {
         const { eval_id, run_id } = params;
-        return this._client.get(path6`/evals/${eval_id}/runs/${run_id}/output_items/${outputItemID}`, {
+        return this._client.get(path7`/evals/${eval_id}/runs/${run_id}/output_items/${outputItemID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60638,7 +60638,7 @@ var init_output_items = __esm({
        */
       list(runID, params, options) {
         const { eval_id, ...query } = params;
-        return this._client.getAPIList(path6`/evals/${eval_id}/runs/${runID}/output_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path7`/evals/${eval_id}/runs/${runID}/output_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -60664,7 +60664,7 @@ var init_runs2 = __esm({
        * schema specified in the config of the evaluation.
        */
       create(evalID, body, options) {
-        return this._client.post(path6`/evals/${evalID}/runs`, {
+        return this._client.post(path7`/evals/${evalID}/runs`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -60675,7 +60675,7 @@ var init_runs2 = __esm({
        */
       retrieve(runID, params, options) {
         const { eval_id } = params;
-        return this._client.get(path6`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.get(path7`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60684,7 +60684,7 @@ var init_runs2 = __esm({
        * Get a list of runs for an evaluation.
        */
       list(evalID, query = {}, options) {
-        return this._client.getAPIList(path6`/evals/${evalID}/runs`, CursorPage, {
+        return this._client.getAPIList(path7`/evals/${evalID}/runs`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -60695,7 +60695,7 @@ var init_runs2 = __esm({
        */
       delete(runID, params, options) {
         const { eval_id } = params;
-        return this._client.delete(path6`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.delete(path7`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60705,7 +60705,7 @@ var init_runs2 = __esm({
        */
       cancel(runID, params, options) {
         const { eval_id } = params;
-        return this._client.post(path6`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.post(path7`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60744,13 +60744,13 @@ var init_evals = __esm({
        * Get an evaluation by ID.
        */
       retrieve(evalID, options) {
-        return this._client.get(path6`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path7`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Update certain properties of an evaluation.
        */
       update(evalID, body, options) {
-        return this._client.post(path6`/evals/${evalID}`, { body, ...options, __security: { bearerAuth: true } });
+        return this._client.post(path7`/evals/${evalID}`, { body, ...options, __security: { bearerAuth: true } });
       }
       /**
        * List evaluations for a project.
@@ -60766,7 +60766,7 @@ var init_evals = __esm({
        * Delete an evaluation.
        */
       delete(evalID, options) {
-        return this._client.delete(path6`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path7`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
       }
     };
     Evals.Runs = Runs2;
@@ -60821,7 +60821,7 @@ var init_files2 = __esm({
        * Returns information about a specific file.
        */
       retrieve(fileID, options) {
-        return this._client.get(path6`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path7`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Returns a list of files.
@@ -60837,13 +60837,13 @@ var init_files2 = __esm({
        * Delete a file and remove it from all vector stores.
        */
       delete(fileID, options) {
-        return this._client.delete(path6`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path7`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Returns the contents of the specified file.
        */
       content(fileID, options) {
-        return this._client.get(path6`/files/${fileID}/content`, {
+        return this._client.get(path7`/files/${fileID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -60983,7 +60983,7 @@ var init_permissions = __esm({
        * ```
        */
       create(fineTunedModelCheckpoint, body, options) {
-        return this._client.getAPIList(path6`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path7`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * **NOTE:** This endpoint requires an [admin API key](../admin-api-keys).
@@ -60994,7 +60994,7 @@ var init_permissions = __esm({
        * @deprecated Retrieve is deprecated. Please swap to the paginated list method instead.
        */
       retrieve(fineTunedModelCheckpoint, query = {}, options) {
-        return this._client.get(path6`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, {
+        return this._client.get(path7`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -61017,7 +61017,7 @@ var init_permissions = __esm({
        * ```
        */
       list(fineTunedModelCheckpoint, query = {}, options) {
-        return this._client.getAPIList(path6`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path7`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * **NOTE:** This endpoint requires an [admin API key](../admin-api-keys).
@@ -61039,7 +61039,7 @@ var init_permissions = __esm({
        */
       delete(permissionID, params, options) {
         const { fine_tuned_model_checkpoint } = params;
-        return this._client.delete(path6`/fine_tuning/checkpoints/${fine_tuned_model_checkpoint}/permissions/${permissionID}`, { ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.delete(path7`/fine_tuning/checkpoints/${fine_tuned_model_checkpoint}/permissions/${permissionID}`, { ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
@@ -61084,7 +61084,7 @@ var init_checkpoints2 = __esm({
        * ```
        */
       list(fineTuningJobID, query = {}, options) {
-        return this._client.getAPIList(path6`/fine_tuning/jobs/${fineTuningJobID}/checkpoints`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path7`/fine_tuning/jobs/${fineTuningJobID}/checkpoints`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -61137,7 +61137,7 @@ var init_jobs = __esm({
        * ```
        */
       retrieve(fineTuningJobID, options) {
-        return this._client.get(path6`/fine_tuning/jobs/${fineTuningJobID}`, {
+        return this._client.get(path7`/fine_tuning/jobs/${fineTuningJobID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -61171,7 +61171,7 @@ var init_jobs = __esm({
        * ```
        */
       cancel(fineTuningJobID, options) {
-        return this._client.post(path6`/fine_tuning/jobs/${fineTuningJobID}/cancel`, {
+        return this._client.post(path7`/fine_tuning/jobs/${fineTuningJobID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -61190,7 +61190,7 @@ var init_jobs = __esm({
        * ```
        */
       listEvents(fineTuningJobID, query = {}, options) {
-        return this._client.getAPIList(path6`/fine_tuning/jobs/${fineTuningJobID}/events`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path7`/fine_tuning/jobs/${fineTuningJobID}/events`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
       /**
        * Pause a fine-tune job.
@@ -61203,7 +61203,7 @@ var init_jobs = __esm({
        * ```
        */
       pause(fineTuningJobID, options) {
-        return this._client.post(path6`/fine_tuning/jobs/${fineTuningJobID}/pause`, {
+        return this._client.post(path7`/fine_tuning/jobs/${fineTuningJobID}/pause`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -61219,7 +61219,7 @@ var init_jobs = __esm({
        * ```
        */
       resume(fineTuningJobID, options) {
-        return this._client.post(path6`/fine_tuning/jobs/${fineTuningJobID}/resume`, {
+        return this._client.post(path7`/fine_tuning/jobs/${fineTuningJobID}/resume`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -61333,7 +61333,7 @@ var init_models = __esm({
        * the owner and permissioning.
        */
       retrieve(model, options) {
-        return this._client.get(path6`/models/${model}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path7`/models/${model}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Lists the currently available models, and provides basic information about each
@@ -61347,7 +61347,7 @@ var init_models = __esm({
        * delete a model.
        */
       delete(model, options) {
-        return this._client.delete(path6`/models/${model}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path7`/models/${model}`, { ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -61390,7 +61390,7 @@ var init_calls = __esm({
        * ```
        */
       accept(callID, body, options) {
-        return this._client.post(path6`/realtime/calls/${callID}/accept`, {
+        return this._client.post(path7`/realtime/calls/${callID}/accept`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -61406,7 +61406,7 @@ var init_calls = __esm({
        * ```
        */
       hangup(callID, options) {
-        return this._client.post(path6`/realtime/calls/${callID}/hangup`, {
+        return this._client.post(path7`/realtime/calls/${callID}/hangup`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -61423,7 +61423,7 @@ var init_calls = __esm({
        * ```
        */
       refer(callID, body, options) {
-        return this._client.post(path6`/realtime/calls/${callID}/refer`, {
+        return this._client.post(path7`/realtime/calls/${callID}/refer`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -61439,7 +61439,7 @@ var init_calls = __esm({
        * ```
        */
       reject(callID, body = {}, options) {
-        return this._client.post(path6`/realtime/calls/${callID}/reject`, {
+        return this._client.post(path7`/realtime/calls/${callID}/reject`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -62258,7 +62258,7 @@ var init_input_items2 = __esm({
        * ```
        */
       list(responseID, query = {}, options) {
-        return this._client.getAPIList(path6`/responses/${responseID}/input_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path7`/responses/${responseID}/input_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -62325,7 +62325,7 @@ var init_responses2 = __esm({
         });
       }
       retrieve(responseID, query = {}, options) {
-        return this._client.get(path6`/responses/${responseID}`, {
+        return this._client.get(path7`/responses/${responseID}`, {
           query,
           ...options,
           stream: query?.stream ?? false,
@@ -62348,7 +62348,7 @@ var init_responses2 = __esm({
        * ```
        */
       delete(responseID, options) {
-        return this._client.delete(path6`/responses/${responseID}`, {
+        return this._client.delete(path7`/responses/${responseID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62376,7 +62376,7 @@ var init_responses2 = __esm({
        * ```
        */
       cancel(responseID, options) {
-        return this._client.post(path6`/responses/${responseID}/cancel`, {
+        return this._client.post(path7`/responses/${responseID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62417,7 +62417,7 @@ var init_content2 = __esm({
        * Download a skill zip bundle by its ID.
        */
       retrieve(skillID, options) {
-        return this._client.get(path6`/skills/${skillID}/content`, {
+        return this._client.get(path7`/skills/${skillID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -62441,7 +62441,7 @@ var init_content3 = __esm({
        */
       retrieve(version2, params, options) {
         const { skill_id } = params;
-        return this._client.get(path6`/skills/${skill_id}/versions/${version2}/content`, {
+        return this._client.get(path7`/skills/${skill_id}/versions/${version2}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -62471,14 +62471,14 @@ var init_versions = __esm({
        * Create a new immutable skill version.
        */
       create(skillID, body = {}, options) {
-        return this._client.post(path6`/skills/${skillID}/versions`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path7`/skills/${skillID}/versions`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
       /**
        * Get a specific skill version.
        */
       retrieve(version2, params, options) {
         const { skill_id } = params;
-        return this._client.get(path6`/skills/${skill_id}/versions/${version2}`, {
+        return this._client.get(path7`/skills/${skill_id}/versions/${version2}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62487,7 +62487,7 @@ var init_versions = __esm({
        * List skill versions for a skill.
        */
       list(skillID, query = {}, options) {
-        return this._client.getAPIList(path6`/skills/${skillID}/versions`, CursorPage, {
+        return this._client.getAPIList(path7`/skills/${skillID}/versions`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -62498,7 +62498,7 @@ var init_versions = __esm({
        */
       delete(version2, params, options) {
         const { skill_id } = params;
-        return this._client.delete(path6`/skills/${skill_id}/versions/${version2}`, {
+        return this._client.delete(path7`/skills/${skill_id}/versions/${version2}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62536,13 +62536,13 @@ var init_skills = __esm({
        * Get a skill by its ID.
        */
       retrieve(skillID, options) {
-        return this._client.get(path6`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path7`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Update the default version pointer for a skill.
        */
       update(skillID, body, options) {
-        return this._client.post(path6`/skills/${skillID}`, {
+        return this._client.post(path7`/skills/${skillID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -62562,7 +62562,7 @@ var init_skills = __esm({
        * Delete a skill by its ID.
        */
       delete(skillID, options) {
-        return this._client.delete(path6`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path7`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
       }
     };
     Skills.Content = Content2;
@@ -62592,7 +62592,7 @@ var init_parts = __esm({
        * [complete the Upload](https://platform.openai.com/docs/api-reference/uploads/complete).
        */
       create(uploadID, body, options) {
-        return this._client.post(path6`/uploads/${uploadID}/parts`, multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path7`/uploads/${uploadID}/parts`, multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
     };
   }
@@ -62643,7 +62643,7 @@ var init_uploads3 = __esm({
        * Returns the Upload object with status `cancelled`.
        */
       cancel(uploadID, options) {
-        return this._client.post(path6`/uploads/${uploadID}/cancel`, {
+        return this._client.post(path7`/uploads/${uploadID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62666,7 +62666,7 @@ var init_uploads3 = __esm({
        * object.
        */
       complete(uploadID, body, options) {
-        return this._client.post(path6`/uploads/${uploadID}/complete`, {
+        return this._client.post(path7`/uploads/${uploadID}/complete`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -62716,7 +62716,7 @@ var init_file_batches = __esm({
        * Create a vector store file batch.
        */
       create(vectorStoreID, body, options) {
-        return this._client.post(path6`/vector_stores/${vectorStoreID}/file_batches`, {
+        return this._client.post(path7`/vector_stores/${vectorStoreID}/file_batches`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62728,7 +62728,7 @@ var init_file_batches = __esm({
        */
       retrieve(batchID, params, options) {
         const { vector_store_id } = params;
-        return this._client.get(path6`/vector_stores/${vector_store_id}/file_batches/${batchID}`, {
+        return this._client.get(path7`/vector_stores/${vector_store_id}/file_batches/${batchID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62740,7 +62740,7 @@ var init_file_batches = __esm({
        */
       cancel(batchID, params, options) {
         const { vector_store_id } = params;
-        return this._client.post(path6`/vector_stores/${vector_store_id}/file_batches/${batchID}/cancel`, {
+        return this._client.post(path7`/vector_stores/${vector_store_id}/file_batches/${batchID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62758,7 +62758,7 @@ var init_file_batches = __esm({
        */
       listFiles(batchID, params, options) {
         const { vector_store_id, ...query } = params;
-        return this._client.getAPIList(path6`/vector_stores/${vector_store_id}/file_batches/${batchID}/files`, CursorPage, {
+        return this._client.getAPIList(path7`/vector_stores/${vector_store_id}/file_batches/${batchID}/files`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62853,7 +62853,7 @@ var init_files3 = __esm({
        * [vector store](https://platform.openai.com/docs/api-reference/vector-stores/object).
        */
       create(vectorStoreID, body, options) {
-        return this._client.post(path6`/vector_stores/${vectorStoreID}/files`, {
+        return this._client.post(path7`/vector_stores/${vectorStoreID}/files`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62865,7 +62865,7 @@ var init_files3 = __esm({
        */
       retrieve(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.get(path6`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.get(path7`/vector_stores/${vector_store_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62876,7 +62876,7 @@ var init_files3 = __esm({
        */
       update(fileID, params, options) {
         const { vector_store_id, ...body } = params;
-        return this._client.post(path6`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.post(path7`/vector_stores/${vector_store_id}/files/${fileID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62887,7 +62887,7 @@ var init_files3 = __esm({
        * Returns a list of vector store files.
        */
       list(vectorStoreID, query = {}, options) {
-        return this._client.getAPIList(path6`/vector_stores/${vectorStoreID}/files`, CursorPage, {
+        return this._client.getAPIList(path7`/vector_stores/${vectorStoreID}/files`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62902,7 +62902,7 @@ var init_files3 = __esm({
        */
       delete(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.delete(path6`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.delete(path7`/vector_stores/${vector_store_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62978,7 +62978,7 @@ var init_files3 = __esm({
        */
       content(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.getAPIList(path6`/vector_stores/${vector_store_id}/files/${fileID}/content`, Page, {
+        return this._client.getAPIList(path7`/vector_stores/${vector_store_id}/files/${fileID}/content`, Page, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -63021,7 +63021,7 @@ var init_vector_stores = __esm({
        * Retrieves a vector store.
        */
       retrieve(vectorStoreID, options) {
-        return this._client.get(path6`/vector_stores/${vectorStoreID}`, {
+        return this._client.get(path7`/vector_stores/${vectorStoreID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -63031,7 +63031,7 @@ var init_vector_stores = __esm({
        * Modifies a vector store.
        */
       update(vectorStoreID, body, options) {
-        return this._client.post(path6`/vector_stores/${vectorStoreID}`, {
+        return this._client.post(path7`/vector_stores/${vectorStoreID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -63053,7 +63053,7 @@ var init_vector_stores = __esm({
        * Delete a vector store.
        */
       delete(vectorStoreID, options) {
-        return this._client.delete(path6`/vector_stores/${vectorStoreID}`, {
+        return this._client.delete(path7`/vector_stores/${vectorStoreID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -63064,7 +63064,7 @@ var init_vector_stores = __esm({
        * filter.
        */
       search(vectorStoreID, body, options) {
-        return this._client.getAPIList(path6`/vector_stores/${vectorStoreID}/search`, Page, {
+        return this._client.getAPIList(path7`/vector_stores/${vectorStoreID}/search`, Page, {
           body,
           method: "post",
           ...options,
@@ -63098,7 +63098,7 @@ var init_videos = __esm({
        * Fetch the latest metadata for a generated video.
        */
       retrieve(videoID, options) {
-        return this._client.get(path6`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path7`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * List recently generated videos for the current project.
@@ -63114,7 +63114,7 @@ var init_videos = __esm({
        * Permanently delete a completed or failed video and its stored assets.
        */
       delete(videoID, options) {
-        return this._client.delete(path6`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path7`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Create a character from an uploaded video.
@@ -63128,7 +63128,7 @@ var init_videos = __esm({
        * Streams the rendered video content for the specified video job.
        */
       downloadContent(videoID, query = {}, options) {
-        return this._client.get(path6`/videos/${videoID}/content`, {
+        return this._client.get(path7`/videos/${videoID}/content`, {
           query,
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
@@ -63153,7 +63153,7 @@ var init_videos = __esm({
        * Fetch a character.
        */
       getCharacter(characterID, options) {
-        return this._client.get(path6`/videos/characters/${characterID}`, {
+        return this._client.get(path7`/videos/characters/${characterID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -63162,7 +63162,7 @@ var init_videos = __esm({
        * Create a remix of a completed video using a refreshed prompt.
        */
       remix(videoID, body, options) {
-        return this._client.post(path6`/videos/${videoID}/remix`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path7`/videos/${videoID}/remix`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
     };
   }
@@ -63610,9 +63610,9 @@ var init_client = __esm({
         this.apiKey = token;
         return true;
       }
-      buildURL(path25, query, defaultBaseURL) {
+      buildURL(path26, query, defaultBaseURL) {
         const baseURL = !__classPrivateFieldGet(this, _OpenAI_instances, "m", _OpenAI_baseURLOverridden).call(this) && defaultBaseURL || this.baseURL;
-        const url = isAbsoluteURL(path25) ? new URL(path25) : new URL(baseURL + (baseURL.endsWith("/") && path25.startsWith("/") ? path25.slice(1) : path25));
+        const url = isAbsoluteURL(path26) ? new URL(path26) : new URL(baseURL + (baseURL.endsWith("/") && path26.startsWith("/") ? path26.slice(1) : path26));
         const defaultQuery = this.defaultQuery();
         const pathQuery = Object.fromEntries(url.searchParams);
         if (!isEmptyObj(defaultQuery) || !isEmptyObj(pathQuery)) {
@@ -63642,24 +63642,24 @@ var init_client = __esm({
        */
       async prepareRequest(request, { url, options }) {
       }
-      get(path25, opts) {
-        return this.methodRequest("get", path25, opts);
+      get(path26, opts) {
+        return this.methodRequest("get", path26, opts);
       }
-      post(path25, opts) {
-        return this.methodRequest("post", path25, opts);
+      post(path26, opts) {
+        return this.methodRequest("post", path26, opts);
       }
-      patch(path25, opts) {
-        return this.methodRequest("patch", path25, opts);
+      patch(path26, opts) {
+        return this.methodRequest("patch", path26, opts);
       }
-      put(path25, opts) {
-        return this.methodRequest("put", path25, opts);
+      put(path26, opts) {
+        return this.methodRequest("put", path26, opts);
       }
-      delete(path25, opts) {
-        return this.methodRequest("delete", path25, opts);
+      delete(path26, opts) {
+        return this.methodRequest("delete", path26, opts);
       }
-      methodRequest(method, path25, opts) {
+      methodRequest(method, path26, opts) {
         return this.request(Promise.resolve(opts).then((opts2) => {
-          return { method, path: path25, ...opts2 };
+          return { method, path: path26, ...opts2 };
         }));
       }
       request(options, remainingRetries = null) {
@@ -63784,8 +63784,8 @@ var init_client = __esm({
         }));
         return { response, options, controller, requestLogID, retryOfRequestLogID, startTime };
       }
-      getAPIList(path25, Page2, opts) {
-        return this.requestAPIList(Page2, opts && "then" in opts ? opts.then((opts2) => ({ method: "get", path: path25, ...opts2 })) : { method: "get", path: path25, ...opts });
+      getAPIList(path26, Page2, opts) {
+        return this.requestAPIList(Page2, opts && "then" in opts ? opts.then((opts2) => ({ method: "get", path: path26, ...opts2 })) : { method: "get", path: path26, ...opts });
       }
       requestAPIList(Page2, options) {
         const request = this.makeRequest(options, null, void 0);
@@ -63879,8 +63879,8 @@ var init_client = __esm({
       }
       async buildRequest(inputOptions, { retryCount = 0 } = {}) {
         const options = { ...inputOptions };
-        const { method, path: path25, query, defaultBaseURL } = options;
-        const url = this.buildURL(path25, query, defaultBaseURL);
+        const { method, path: path26, query, defaultBaseURL } = options;
+        const url = this.buildURL(path26, query, defaultBaseURL);
         if ("timeout" in options)
           validatePositiveInteger("timeout", options.timeout);
         options.timeout = options.timeout ?? this.timeout;
@@ -64329,13 +64329,13 @@ var require_tts_speed_policy = __commonJS({
   "../skills/produce/references/tts-speed-policy.js"(exports, module) {
     "use strict";
     var fs21 = __require("node:fs");
-    var path25 = __require("node:path");
+    var path26 = __require("node:path");
     function authorizeSpeed2(work, scope, factor) {
       if (!["generation", "final"].includes(scope) || !Number.isFinite(factor) || factor < 0.5 || factor > 3) {
         throw new Error("Invalid TTS speed scope or factor");
       }
       if (factor === 1) return null;
-      const file = path25.resolve(work, "speed-authorization.json");
+      const file = path26.resolve(work, "speed-authorization.json");
       let record2;
       try {
         record2 = JSON.parse(fs21.readFileSync(file, "utf8"));
@@ -65323,6 +65323,40 @@ var require_video_catalog = __commonJS({
               "ltx-2.5-22b-dev"
             ],
             note: "Explicit duration and resolution; server validates deployment limits. No supplied audio, keyframes or LoRA."
+          }
+        },
+        {
+          tool: "astra_genai_audio2video",
+          engine: "astra-genai",
+          deployment: "genai-ltx-v2",
+          operation: "audio",
+          voice: {
+            voiceReference: "unsupported",
+            suppliedSpeech: "audio_conditioned_reencoded",
+            exactAudioPreservation: false,
+            voiceContinuation: "unsupported",
+            review: "not_reviewed"
+          },
+          fields: [
+            "prompt",
+            "model",
+            "resolution",
+            "fps",
+            "audioPath",
+            "audioUri",
+            "imagePath",
+            "imageUri",
+            "lastFramePath",
+            "lastFrameUri",
+            "reserveUsd",
+            "outputPath",
+            "filename"
+          ],
+          modelConstraints: {
+            models: [
+              "ltx-2.5-22b-dev"
+            ],
+            note: "Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters."
           }
         },
         {
@@ -68222,7 +68256,7 @@ var require_compose_speech = __commonJS({
   "../skills/produce/references/compose-speech.js"(exports, module) {
     "use strict";
     var fs21 = __require("node:fs");
-    var path25 = __require("node:path");
+    var path26 = __require("node:path");
     var { execFileSync: execFileSync11 } = __require("node:child_process");
     var { createHash: createHash21 } = __require("node:crypto");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
@@ -68240,7 +68274,7 @@ var require_compose_speech = __commonJS({
     function sceneTiming(scene, board, performanceTimingVersion) {
       const actions = (scene.performance || []).filter((event) => event.kind === "action");
       const legacy = performanceTimingVersion !== 1 && actions.length > 0 && !actions.some((event) => event.durationSeconds !== void 0 || event.withGroup !== void 0);
-      const plan2 = planScenePerformance(legacy ? scene.narration : scene, (line) => duration3(path25.resolve(board, line.audio.path)));
+      const plan2 = planScenePerformance(legacy ? scene.narration : scene, (line) => duration3(path26.resolve(board, line.audio.path)));
       if (legacy) {
         plan2.timing = "legacy_speech_only";
         plan2.warnings.push("Legacy speech clock preserved; independent action timing is unverified. Stage actions and set durationSeconds/withGroup before adopting scene timing.");
@@ -68258,19 +68292,19 @@ var require_compose_speech = __commonJS({
       if (duration3(audio) + 0.03 < timing.durationSeconds) throw new Error("Silent scene audio is shorter than planned action timing");
     }
     function compose(work, board) {
-      work = path25.resolve(work);
-      board = path25.resolve(board);
-      const file = path25.join(board, "scenes.js"), win = evaluateWindowScript2(fs21.readFileSync(file, "utf8"), { filename: file });
+      work = path26.resolve(work);
+      board = path26.resolve(board);
+      const file = path26.join(board, "scenes.js"), win = evaluateWindowScript2(fs21.readFileSync(file, "utf8"), { filename: file });
       if (win.SB_DOC?.speechPlanVersion !== 1) return [];
       const cast = Array.isArray(win.SB_DOC.characters) ? win.SB_DOC.characters : Object.entries(win.SB_DOC.characters || {}).map(([id, c]) => ({ ...c, id }));
-      const cards = path25.join(work, "cards.tsv"), rows = fs21.readFileSync(cards, "utf8").split(/\r?\n/);
+      const cards = path26.join(work, "cards.tsv"), rows = fs21.readFileSync(cards, "utf8").split(/\r?\n/);
       const outputs = [];
       for (let row = 0; row < rows.length; row++) {
         if (!rows[row].trim() || rows[row].startsWith("#")) continue;
         const fields2 = rows[row].split("	"), scene = win.SCENES[Number(fields2[0])];
         if (scene?.sound?.audioSource === "video") continue;
         const lines = (scene?.narration || []).filter((n) => (n.tts || "").trim());
-        if (scene) checkSilentTiming(scene, board, win.SB_DOC?.performanceTimingVersion, path25.resolve(work, fields2[1]));
+        if (scene) checkSilentTiming(scene, board, win.SB_DOC?.performanceTimingVersion, path26.resolve(work, fields2[1]));
         if (!lines.length || lines.length === 1 && !lines.some((n) => n.acting != null) && !scene.performance?.some((event) => event.kind === "action")) continue;
         const inputs = [], filters = [];
         lines.forEach((line, i2) => {
@@ -68278,7 +68312,7 @@ var require_compose_speech = __commonJS({
           errors.push(...generationVoiceErrors(voice, line.audio?.generation, line));
           if (errors.length) throw new Error(line.id + ": " + errors.join("; "));
           if (!line.audio || line.audio.generation.text !== line.tts || line.audio.revision !== hash7(JSON.stringify(speechRevisionPayload(line, voice)))) throw new Error("Attach current audio for " + line.id);
-          const source = path25.resolve(board, line.audio.path);
+          const source = path26.resolve(board, line.audio.path);
           if (hash7(fs21.readFileSync(source)) !== line.audio.sha256) throw new Error("Audio changed for " + line.id);
           inputs.push("-i", source);
         });
@@ -68288,7 +68322,7 @@ var require_compose_speech = __commonJS({
           filters.push(`[${i2}:a]aresample=48000,aformat=sample_fmts=s16:channel_layouts=mono,adelay=${Math.round(interval.speechStartSeconds * 48e3)}S:all=1[a${i2}]`);
         });
         filters.push(lines.map((_, i2) => `[a${i2}]`).join("") + `amix=inputs=${lines.length}:normalize=0,apad,atrim=duration=${timing.durationSeconds}[out]`);
-        const output2 = path25.join(work, `c${fields2[0]}-speech.wav`), tmp = output2 + ".tmp.wav";
+        const output2 = path26.join(work, `c${fields2[0]}-speech.wav`), tmp = output2 + ".tmp.wav";
         try {
           execFileSync11("ffmpeg", ["-y", "-v", "error", ...inputs, "-filter_complex", filters.join(";"), "-map", "[out]", "-c:a", "pcm_s16le", tmp], { timeout: 12e4 });
           fs21.renameSync(tmp, output2);
@@ -68297,7 +68331,7 @@ var require_compose_speech = __commonJS({
         }
         const receipt = { generator: "speech_compose", audioSha256: hash7(fs21.readFileSync(output2)), lineIds: lines.map((n) => n.id), lineSources: lineSources(lines), expectedText: lines.map((n) => n.tts).join(". "), durationSeconds: duration3(output2), intervals, timing: timing.timing, warnings: timing.warnings, status: "not_reviewed" };
         fs21.writeFileSync(output2 + ".generation.json", JSON.stringify(receipt, null, 2) + "\n");
-        fields2[1] = path25.basename(output2);
+        fields2[1] = path26.basename(output2);
         rows[row] = fields2.join("	");
         outputs.push({ shotId: scene.id, audioPath: output2, ...receipt });
       }
@@ -68321,7 +68355,7 @@ var require_check_tts_quality = __commonJS({
   "../skills/produce/references/check-tts-quality.js"(exports, module) {
     "use strict";
     var fs21 = __require("node:fs");
-    var path25 = __require("node:path");
+    var path26 = __require("node:path");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
     var { createHash: createHash21 } = __require("node:crypto");
     var { speechRevision: speechRevision2 } = require_speech_contract();
@@ -68387,30 +68421,30 @@ var require_check_tts_quality = __commonJS({
     }
     function decide(work, warnings, inputs) {
       const fingerprint = hash7(JSON.stringify({ inputs, warnings }));
-      const approval = read3(path25.join(work, APPROVAL));
+      const approval = read3(path26.join(work, APPROVAL));
       const approved = warnings.length > 0 && approval?.kind === "user" && approval.fingerprint === fingerprint && typeof approval.reference === "string" && approval.reference.trim().length > 0 && Number.isFinite(Date.parse(approval.at));
       const report = { fingerprint, warnings, inputs, approved: Boolean(approved), approval: approved ? approval : null, status: warnings.length ? approved ? "approved-with-warnings" : "awaiting-user" : "pass" };
-      fs21.writeFileSync(path25.join(work, REPORT), JSON.stringify(report, null, 2) + "\n");
+      fs21.writeFileSync(path26.join(work, REPORT), JSON.stringify(report, null, 2) + "\n");
       for (const warning of warnings) console.error("TTS warning: " + warning);
-      if (warnings.length && !approved) throw new Error("TTS checks need HITL: show " + path25.join(work, REPORT) + " to the user. After explicit approval, record it with check-tts-quality.js approve; then rerun.");
+      if (warnings.length && !approved) throw new Error("TTS checks need HITL: show " + path26.join(work, REPORT) + " to the user. After explicit approval, record it with check-tts-quality.js approve; then rerun.");
       if (approved) console.error("User approved these TTS warnings; continuing.");
       return report;
     }
     function approve(work, reference) {
-      work = path25.resolve(work);
+      work = path26.resolve(work);
       if (typeof reference !== "string" || !reference.trim()) throw new Error("An explicit user approval reference is required");
-      const report = read3(path25.join(work, REPORT));
+      const report = read3(path26.join(work, REPORT));
       if (!report?.warnings?.length || !report.fingerprint) throw new Error("Run the TTS check and present the warnings before recording approval");
-      fs21.writeFileSync(path25.join(work, APPROVAL), JSON.stringify({ kind: "user", fingerprint: report.fingerprint, reference, at: (/* @__PURE__ */ new Date()).toISOString() }, null, 2) + "\n");
+      fs21.writeFileSync(path26.join(work, APPROVAL), JSON.stringify({ kind: "user", fingerprint: report.fingerprint, reference, at: (/* @__PURE__ */ new Date()).toISOString() }, null, 2) + "\n");
     }
-    var lastReport = (work) => read3(path25.join(path25.resolve(work), REPORT));
+    var lastReport = (work) => read3(path26.join(path26.resolve(work), REPORT));
     function checkLegacy(work, board) {
-      work = path25.resolve(work);
-      board = path25.resolve(board);
-      const scenesFile = path25.join(board, "scenes.js");
+      work = path26.resolve(work);
+      board = path26.resolve(board);
+      const scenesFile = path26.join(board, "scenes.js");
       const win = evaluateWindowScript2(fs21.readFileSync(scenesFile, "utf8"), { filename: scenesFile });
       if (!Array.isArray(win.SCENES)) throw new Error("SCENES missing");
-      const rows = fs21.readFileSync(path25.join(work, "cards.tsv"), "utf8").split(/\r?\n/).filter((l) => l.trim() && !l.startsWith("#")).map((l) => l.split("	"));
+      const rows = fs21.readFileSync(path26.join(work, "cards.tsv"), "utf8").split(/\r?\n/).filter((l) => l.trim() && !l.startsWith("#")).map((l) => l.split("	"));
       const expected = win.SCENES.map((s2, i2) => ({ s: s2, i: i2 })).filter(({ s: s2 }) => !["broll", "outro"].includes(s2.type));
       if (JSON.stringify(rows.map((r2) => r2[0])) !== JSON.stringify(expected.map(({ i: i2 }) => String(i2)))) throw new Error("card order differs from SCENES");
       const media = {}, warnings = [], inputs = {};
@@ -68419,7 +68453,7 @@ var require_check_tts_quality = __commonJS({
       const texts = spoken.map((s2) => s2.text);
       const episodeSettings = /* @__PURE__ */ new Map();
       for (const [k, { s: s2, i: i2 }] of expected.entries()) {
-        const file = path25.resolve(work, rows[k][1]);
+        const file = path26.resolve(work, rows[k][1]);
         media[file] = hash7(fs21.readFileSync(file));
         const text3 = (s2.narration || []).map((n) => n.tts || "").join(". ");
         const live = win.VOICE === "user" || s2.visual?.source === "recording" && !normalize2(text3) || s2.visual?.source === "screencast" && s2.visual?.sync === true;
@@ -68457,17 +68491,17 @@ var require_check_tts_quality = __commonJS({
       return media;
     }
     function check2(work, board) {
-      work = path25.resolve(work);
-      board = path25.resolve(board);
-      const file = path25.join(board, "scenes.js");
+      work = path26.resolve(work);
+      board = path26.resolve(board);
+      const file = path26.join(board, "scenes.js");
       const win = evaluateWindowScript2(fs21.readFileSync(file, "utf8"), { filename: file });
       if (!Array.isArray(win.SCENES)) throw new Error("SCENES missing");
-      const rows = fs21.readFileSync(path25.join(work, "cards.tsv"), "utf8").split(/\r?\n/).filter((l) => l.trim() && !l.startsWith("#")).map((l) => l.split("	"));
+      const rows = fs21.readFileSync(path26.join(work, "cards.tsv"), "utf8").split(/\r?\n/).filter((l) => l.trim() && !l.startsWith("#")).map((l) => l.split("	"));
       const expected = win.SCENES.map((s2, i2) => ({ s: s2, i: i2 })).filter(({ s: s2 }) => !["broll", "outro"].includes(s2.type));
       if (JSON.stringify(rows.map((r2) => r2[0])) !== JSON.stringify(expected.map(({ i: i2 }) => String(i2)))) throw new Error("card order differs from SCENES");
       const media = {}, warnings = [];
       for (const [k, { s: s2, i: i2 }] of expected.entries()) {
-        const audio = path25.resolve(work, rows[k][1]);
+        const audio = path26.resolve(work, rows[k][1]);
         const bytes = fs21.readFileSync(audio);
         if (!bytes.length) throw new Error("Empty audio for card " + i2);
         require_compose_speech().checkSilentTiming(s2, board, win.SB_DOC?.performanceTimingVersion, audio);
@@ -68482,7 +68516,7 @@ var require_check_tts_quality = __commonJS({
             const voice = cast.find((c) => c.id === line.speaker)?.tts;
             const revision = speechRevision2(line, { tts: voice });
             if (line.audio.revision !== revision) throw new Error("Dialogue or voice changed: " + line.id);
-            const source = path25.resolve(board, line.audio.path);
+            const source = path26.resolve(board, line.audio.path);
             if (hash7(fs21.readFileSync(source)) !== line.audio.sha256) throw new Error("Dialogue audio changed: " + line.id);
             media[source] = line.audio.sha256;
             if (!line.audio.generation || line.audio.generation.text !== line.tts) throw new Error("Missing dialogue generation receipt: " + line.id);
@@ -68492,7 +68526,7 @@ var require_check_tts_quality = __commonJS({
         const binding = s2.visual?.video?.speechBinding;
         if (binding) {
           if (s2.visual.video.engine && binding.provider !== s2.visual.video.engine || s2.visual.video.model && binding.model !== s2.visual.video.model) throw new Error("Video adapter changed for card " + i2);
-          if (path25.resolve(board, s2.visual.video.clip || "") !== path25.resolve(binding.videoPath) || hash7(fs21.readFileSync(binding.videoPath)) !== binding.videoSha256) throw new Error("Bound video changed for card " + i2);
+          if (path26.resolve(board, s2.visual.video.clip || "") !== path26.resolve(binding.videoPath) || hash7(fs21.readFileSync(binding.videoPath)) !== binding.videoSha256) throw new Error("Bound video changed for card " + i2);
           const audio2 = (s2.narration || []).map((n) => ({ lineId: n.id, sha256: n.audio?.sha256, revision: n.audio?.revision }));
           if (JSON.stringify(binding.audio) !== JSON.stringify(audio2)) throw new Error("Video speech binding is stale for card " + i2);
           const payload = require_scene_acting().scenePerformancePayload(s2);
@@ -68503,10 +68537,10 @@ var require_check_tts_quality = __commonJS({
         if (win.SB_DOC?.speechPlanVersion === 1 && (s2.narration || []).some((n) => n.delivery === "on_screen") && s2.visual?.video && !binding) throw new Error("On-screen dialogue needs a video speech binding for card " + i2);
         const lines = (s2.narration || []).filter((n) => (n.tts || "").trim());
         if (s2.sound?.audioSource === "video") {
-          const extraction = (read3(path25.join(work, "source-audio.json")) || []).find((item) => item.card === String(i2));
+          const extraction = (read3(path26.join(work, "source-audio.json")) || []).find((item) => item.card === String(i2));
           if (!extraction || extraction.audio !== audio || extraction.audioSha256 !== media[audio] || hash7(fs21.readFileSync(extraction.video)) !== extraction.sourceSha256)
             throw new Error("Missing or stale source soundtrack extraction for card " + i2);
-          if (binding && path25.resolve(extraction.video) !== path25.resolve(binding.videoPath))
+          if (binding && path26.resolve(extraction.video) !== path26.resolve(binding.videoPath))
             throw new Error("Source soundtrack differs from bound speech video for card " + i2);
           media[extraction.video] = extraction.sourceSha256;
           warnings.push("card " + i2 + ": source soundtrack retained; perceptual audio quality not_reviewed");
@@ -68533,16 +68567,16 @@ var require_check_tts_quality = __commonJS({
           authorizeSpeed2(work, "final", receipt.playbackSpeed ?? 1);
         }
       }
-      fs21.writeFileSync(path25.join(work, REPORT), JSON.stringify({ status: "not_reviewed", policy: "speech-provenance-v1", warnings, inputs: media, approved: false }, null, 2) + "\n");
+      fs21.writeFileSync(path26.join(work, REPORT), JSON.stringify({ status: "not_reviewed", policy: "speech-provenance-v1", warnings, inputs: media, approved: false }, null, 2) + "\n");
       return media;
     }
     function checkTempo(work, speed, min = 1, max = 1) {
       if ([min, max].some((n) => Number(n) !== 1)) throw new Error("Per-card tempo changes are forbidden; assembly is fixed at 1.0");
       authorizeSpeed2(work, "final", Number(speed));
-      const cards = path25.join(work, "cards.tsv");
+      const cards = path26.join(work, "cards.tsv");
       if (!fs21.existsSync(cards)) return;
       const generated = fs21.readFileSync(cards, "utf8").split(/\r?\n/).filter((l) => l.trim() && !l.startsWith("#")).some((l) => {
-        const p = path25.resolve(work, l.split("	")[1]) + ".quality.json";
+        const p = path26.resolve(work, l.split("	")[1]) + ".quality.json";
         return fs21.existsSync(p) && JSON.parse(fs21.readFileSync(p, "utf8")).generator === "tts_elevenlabs_generate";
       });
       if (generated && [speed, min, max].some((n) => Number(n) !== 1)) throw new Error("ElevenLabs narration forbids post-synthesis tempo changes; set SPEED=1 and ATEMPO_MIN=ATEMPO_MAX=1, use generation.speed");
@@ -68553,7 +68587,7 @@ var require_check_tts_quality = __commonJS({
         const [command, work, arg] = process.argv.slice(2);
         if (command === "approve") approve(work, arg);
         else {
-          const dir = command === "check" ? work : command, board = (command === "check" ? arg : work) || path25.resolve(dir, "../storyboard");
+          const dir = command === "check" ? work : command, board = (command === "check" ? arg : work) || path26.resolve(dir, "../storyboard");
           if (!dir) throw new Error("usage: check-tts-quality.js check <workdir> [storyboard] | approve <workdir> <user approval reference>");
           check2(dir, board);
           const report = lastReport(dir);
@@ -69134,8 +69168,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path25, errorMaps, issueData } = params;
-  const fullPath = [...path25, ...issueData.path || []];
+  const { data, path: path26, errorMaps, issueData } = params;
+  const fullPath = [...path26, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -69251,11 +69285,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path25, key) {
+  constructor(parent, value, path26, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path25;
+    this._path = path26;
     this._key = key;
   }
   get path() {
@@ -74794,8 +74828,8 @@ async function editMlxImage(request) {
   const src = fileToBase64(request.imagePath);
   if (!src.ok) return { success: false, error: src.error };
   const refs = [];
-  for (const path25 of request.refImagePaths ?? []) {
-    const ref = fileToBase64(path25);
+  for (const path26 of request.refImagePaths ?? []) {
+    const ref = fileToBase64(path26);
     if (!ref.ok) return { success: false, error: ref.error };
     refs.push(ref.b64);
   }
@@ -75320,10 +75354,10 @@ function assignProp(target, prop, value) {
     configurable: true
   });
 }
-function getElementAtPath(obj, path25) {
-  if (!path25)
+function getElementAtPath(obj, path26) {
+  if (!path26)
     return obj;
-  return path25.reduce((acc, key) => acc?.[key], obj);
+  return path26.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys2 = Object.keys(promisesObj);
@@ -75643,11 +75677,11 @@ function aborted(x2, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path25, issues) {
+function prefixIssues(path26, issues) {
   return issues.map((iss) => {
     var _a4;
     (_a4 = iss).path ?? (_a4.path = []);
-    iss.path.unshift(path25);
+    iss.path.unshift(path26);
     return iss;
   });
 }
@@ -82465,6 +82499,7 @@ var MUSIC_TOOLS = [
 // src/astra-genai-video.ts
 import { createHash as createHash4 } from "node:crypto";
 import * as fs6 from "node:fs";
+import * as path6 from "node:path";
 import { execFileSync as execFileSync3 } from "node:child_process";
 import { setTimeout as sleep3 } from "node:timers/promises";
 
@@ -82571,6 +82606,60 @@ var genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
   imageUri: external_exports.string().min(1),
   lastFrameUri: external_exports.string().min(1).nullable().optional()
 });
+var GENAI_AUDIO_TYPES = { ".wav": "audio/wav", ".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".ogg": "audio/ogg", ".opus": "audio/ogg" };
+var GENAI_AUDIO_DATA_URI_MAX = 15e6;
+var oneOf = (a, b) => Number(a !== void 0) + Number(b !== void 0);
+var genaiAudioToVideoSchema = external_exports.object({
+  prompt: external_exports.string().trim().min(1).max(5e3),
+  model: external_exports.literal("ltx-2.5-22b-dev"),
+  resolution: external_exports.string().min(1),
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
+  audioPath: external_exports.string().min(1).optional(),
+  audioUri: external_exports.string().min(1).optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  imageUri: genaiImageUriSchema.optional(),
+  lastFramePath: external_exports.string().min(1).optional(),
+  lastFrameUri: genaiImageUriSchema.optional(),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
+}).strict().superRefine((args, ctx) => {
+  const issue2 = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (oneOf(args.audioPath, args.audioUri) !== 1) issue2("Supply exactly one audioPath or audioUri");
+  if (oneOf(args.imagePath, args.imageUri) > 1) issue2("Supply at most one imagePath or imageUri");
+  if (oneOf(args.lastFramePath, args.lastFrameUri) > 1) issue2("Supply at most one lastFramePath or lastFrameUri");
+  if (oneOf(args.lastFramePath, args.lastFrameUri) && !oneOf(args.imagePath, args.imageUri)) issue2("A last frame requires a first image");
+});
+function genaiAudioUri(uri, file) {
+  if (uri !== void 0) {
+    if (/^https:/.test(uri)) {
+      const url = new URL(uri);
+      if (url.username || url.password) throw new Error("GenAI audio URL must not carry credentials");
+      return uri;
+    }
+    const match2 = /^data:([^;,]+);base64,([A-Za-z0-9+/]+=*)$/.exec(uri);
+    if (!match2 || !Object.values(GENAI_AUDIO_TYPES).includes(match2[1])) throw new Error("GenAI audio must be HTTPS or an audio/wav, audio/mpeg, audio/mp4 or audio/ogg data URI");
+    if (match2[2].length > GENAI_AUDIO_DATA_URI_MAX) throw new Error("GenAI audio data URI exceeds 15,000,000 base64 characters; use an HTTPS URL");
+    return uri;
+  }
+  const type = GENAI_AUDIO_TYPES[path6.extname(file).toLowerCase()];
+  if (!type) throw new Error("GenAI audioPath must be .wav, .mp3, .m4a, .ogg or .opus");
+  if (4 * Math.ceil(fs6.statSync(file).size / 3) > GENAI_AUDIO_DATA_URI_MAX) throw new Error("GenAI audioPath exceeds the 15,000,000-character data URI limit (about 11.25 MB); use audioUri with HTTPS");
+  return `data:${type};base64,${fs6.readFileSync(file).toString("base64")}`;
+}
+function buildGenaiAudioBody(args) {
+  const image = oneOf(args.imagePath, args.imageUri) ? genaiSourceUri(args.imageUri, args.imagePath) : void 0;
+  const last = oneOf(args.lastFramePath, args.lastFrameUri) ? genaiSourceUri(args.lastFrameUri, args.lastFramePath) : void 0;
+  return {
+    audio_uri: genaiAudioUri(args.audioUri, args.audioPath),
+    prompt: args.prompt,
+    model: args.model,
+    resolution: args.resolution,
+    fps: args.fps,
+    ...image === void 0 ? {} : { image_uri: image },
+    ...last === void 0 ? {} : { last_frame_uri: last }
+  };
+}
 var genaiMsrSchema = external_exports.object({
   prompt: external_exports.string().trim().min(1).max(2e3),
   references: external_exports.array(external_exports.object({
@@ -82629,7 +82718,7 @@ function buildGenaiVideoBody(args) {
     ...args.lastFrameUri === void 0 ? {} : { last_frame_uri: args.lastFrameUri }
   };
 }
-var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "msr"]);
+var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "msr"]);
 var receiptSchema = external_exports.object({
   version: external_exports.literal(1),
   baseUrl: external_exports.string(),
@@ -82684,9 +82773,9 @@ function genaiVideoRoute(operation) {
   return operation === "msr" ? "/v1/ltx/msr" : `/v1/ltx/v2/${operation}`;
 }
 async function generateGenaiVideo(operation, input) {
-  const args = (operation === "msr" ? genaiMsrSchema : operation === "text-to-video" ? genaiTextToVideoSchema : genaiImageToVideoSchema).parse(input);
+  const args = (operation === "msr" ? genaiMsrSchema : operation === "audio-to-video" ? genaiAudioToVideoSchema : operation === "text-to-video" ? genaiTextToVideoSchema : genaiImageToVideoSchema).parse(input);
   requireAstraGenaiKey();
-  const body = "references" in args ? buildGenaiMsrBody(args) : buildGenaiVideoBody(args);
+  const body = "references" in args ? buildGenaiMsrBody(args) : operation === "audio-to-video" ? buildGenaiAudioBody(args) : buildGenaiVideoBody(args);
   const fingerprint = createHash4("sha256").update(JSON.stringify(body)).digest("hex");
   const videoPath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.mp4`, "video");
   const receiptPath = videoPath + ".astra-genai.json";
@@ -82734,7 +82823,7 @@ var GENAI_TOOLS = [
   {
     name: "astra_genai_text2video",
     title: "Generate GenAI LTX video from text",
-    description: "Generate and save an MP4 through the unified ASTRA GenAI LTX v2 gateway. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY, a separate gk_ token from ASTRA_VIDEO. Persists job identity before polling; recover the same receipt after timeout. Supports text only, not supplied audio, LoRA, retake or keyframes. Legacy astra_text2video remains a separate server adapter.",
+    description: "Generate and save an MP4 through the unified ASTRA GenAI LTX v2 gateway. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY, a separate gk_ token from ASTRA_VIDEO. Persists job identity before polling; recover the same receipt after timeout. Supports text only; for a supplied audio track use astra_genai_audio2video. No LoRA, retake or keyframes. Legacy astra_text2video remains a separate server adapter.",
     inputSchema: { type: "object", properties: video, required: ["prompt", "model", "duration", "resolution", "reserveUsd"], additionalProperties: false },
     annotations: generation
   },
@@ -82747,6 +82836,26 @@ var GENAI_TOOLS = [
       imageUri: { type: "string", description: "Provider-supported source image URI; gateway validates URI schemes and access. No local file upload is performed." },
       lastFrameUri: { type: ["string", "null"], description: "Optional final-frame URI; gateway validates model support." }
     }, required: ["prompt", "model", "duration", "resolution", "reserveUsd", "imageUri"], additionalProperties: false },
+    annotations: generation
+  },
+  {
+    name: "astra_genai_audio2video",
+    title: "Generate GenAI LTX video driven by an audio track",
+    description: "Render a clip whose length and motion follow a supplied speech or sound track through ASTRA GenAI LTX v2 audio-to-video, then save an MP4. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. The output length equals the audio length (local maximum 361 frames: 15.04 s at 24 fps, 14.44 s at 25, 7.52 s at 48, 7.22 s at 50; longer audio returns 422). Mono or stereo only; three or more channels return 422 instead of a downmix. The sample rate is kept, so only AAC standard rates 7350-96000 Hz (e.g. 48000, 44100) are accepted; others such as 192000 return 422. The gateway copies the backend soundtrack without a second encode, but the backend encodes it once, so the result is not bit-identical to the input. Only ltx-2.5-22b-dev runs this pipeline; no duration, generateAudio, cameraMotion, seed or frame controls. Lip-sync quality is unmeasured; inspect mouths before acceptance. Persists job identity before polling; recover with astra_genai_video_status.",
+    inputSchema: { type: "object", properties: {
+      prompt: { ...video.prompt, description: "Speaker, setting and action. Required even with an image; the local backend accepts at most 2000 characters (longer returns 422)." },
+      model: { type: "string", enum: ["ltx-2.5-22b-dev"], description: "Only the two-stage dev pipeline runs audio-to-video; distilled returns 422." },
+      resolution: video.resolution,
+      fps: video.fps,
+      audioPath: { type: "string", description: "Local .wav/.mp3/.m4a/.ogg/.opus sent as a data URI; at most about 11.25 MB (15,000,000 base64 characters); sample rate 7350-96000 Hz standard values. Mutually exclusive with audioUri." },
+      audioUri: { type: "string", description: "Public HTTPS audio (gateway fetches up to 32 MiB) or an audio/wav, audio/mpeg, audio/mp4 or audio/ogg data URI with at most 15,000,000 base64 characters." },
+      imagePath: { type: "string", description: "Optional local PNG/JPEG first frame; mutually exclusive with imageUri." },
+      imageUri: { type: "string", description: "Optional public HTTPS PNG/JPEG or data URI first frame." },
+      lastFramePath: { type: "string", description: "Optional local PNG/JPEG final frame; requires a first image." },
+      lastFrameUri: { type: "string", description: "Optional HTTPS/data PNG/JPEG final frame; requires a first image. Placed on the last frame kept after trimming to the audio." },
+      reserveUsd: video.reserveUsd,
+      ...output
+    }, required: ["prompt", "model", "resolution", "reserveUsd"], additionalProperties: false },
     annotations: generation
   },
   {
@@ -83843,14 +83952,14 @@ async function generateWithReferences(request) {
 // src/seedance-client.ts
 import { execFile as execFile3 } from "node:child_process";
 import * as fs10 from "node:fs";
-import * as path8 from "node:path";
+import * as path9 from "node:path";
 
 // src/media-publish.ts
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import * as fs9 from "node:fs";
 import * as http3 from "node:http";
-import * as path7 from "node:path";
+import * as path8 from "node:path";
 var MIME = {
   ".mp4": "video/mp4",
   ".mov": "video/quicktime",
@@ -83892,13 +84001,13 @@ async function publishViaUpload(filePaths, config3) {
   for (const filePath of filePaths) {
     const response = await fetch(config3.endpoint, {
       method: "POST",
-      headers: { "x-api-key": config3.key, "Content-Type": MIME[path7.extname(filePath).toLowerCase()] || "application/octet-stream" },
+      headers: { "x-api-key": config3.key, "Content-Type": MIME[path8.extname(filePath).toLowerCase()] || "application/octet-stream" },
       body: fs9.readFileSync(filePath),
       signal: AbortSignal.timeout(config3.timeoutMs)
     });
     const body = await response.text();
     if (response.status !== 201) {
-      throw new Error(`media hosting refused ${path7.basename(filePath)}: HTTP ${response.status} \u2014 ${body.slice(0, 300)}`);
+      throw new Error(`media hosting refused ${path8.basename(filePath)}: HTTP ${response.status} \u2014 ${body.slice(0, 300)}`);
     }
     let url = "";
     try {
@@ -83913,7 +84022,7 @@ async function publishViaUpload(filePaths, config3) {
 }
 function serveLocally(filePaths) {
   const token = randomBytes(16).toString("hex");
-  const routes = filePaths.map((p, i2) => `/${token}/${i2}/${encodeURIComponent(path7.basename(p))}`);
+  const routes = filePaths.map((p, i2) => `/${token}/${i2}/${encodeURIComponent(path8.basename(p))}`);
   const byRoute = new Map(routes.map((r2, i2) => [r2, filePaths[i2]]));
   const server2 = http3.createServer((req, res) => {
     const file = byRoute.get((req.url || "").split("?")[0]);
@@ -83928,7 +84037,7 @@ function serveLocally(filePaths) {
       res.writeHead(404).end();
       return;
     }
-    const type = MIME[path7.extname(file).toLowerCase()] || "application/octet-stream";
+    const type = MIME[path8.extname(file).toLowerCase()] || "application/octet-stream";
     const range = /^bytes=(\d+)-(\d*)$/.exec(req.headers.range || "");
     let start = 0;
     let end = size - 1;
@@ -84309,12 +84418,12 @@ var seedanceReferenceSchema = external_exports.object({
       });
     }
     for (const filePath of data.referenceVideoPaths) {
-      const ext = path8.extname(filePath).toLowerCase();
+      const ext = path9.extname(filePath).toLowerCase();
       if (!SEEDANCE_REFERENCE_VIDEO_EXTENSIONS.includes(ext)) {
         ctx.addIssue({
           code: external_exports.ZodIssueCode.custom,
           path: ["referenceVideoPaths"],
-          message: `Reference video must be mp4 or mov (got "${ext}" in ${path8.basename(filePath)}).`
+          message: `Reference video must be mp4 or mov (got "${ext}" in ${path9.basename(filePath)}).`
         });
       }
     }
@@ -84351,12 +84460,12 @@ var seedanceReferenceSchema = external_exports.object({
     });
   }
   for (const filePath of data.referenceAudioPaths) {
-    const ext = path8.extname(filePath).toLowerCase();
+    const ext = path9.extname(filePath).toLowerCase();
     if (!SEEDANCE_REFERENCE_AUDIO_EXTENSIONS.includes(ext)) {
       ctx.addIssue({
         code: external_exports.ZodIssueCode.custom,
         path: ["referenceAudioPaths"],
-        message: `Reference audio must be wav or mp3 (got "${ext}" in ${path8.basename(filePath)}).`
+        message: `Reference audio must be wav or mp3 (got "${ext}" in ${path9.basename(filePath)}).`
       });
     }
   }
@@ -84430,7 +84539,7 @@ function readImageDataUri(filePath) {
   const stats = fs10.statSync(filePath);
   if (stats.size > MAX_INPUT_IMAGE_BYTES) {
     throw new Error(
-      `Input image too large: ${path8.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 30MB)`
+      `Input image too large: ${path9.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 30MB)`
     );
   }
   const buffer = fs10.readFileSync(filePath);
@@ -84455,7 +84564,7 @@ function assertRequestBudget(uris) {
   }
 }
 function audioMimeFromExtension(filePath) {
-  return path8.extname(filePath).toLowerCase() === ".mp3" ? "audio/mp3" : "audio/wav";
+  return path9.extname(filePath).toLowerCase() === ".mp3" ? "audio/mp3" : "audio/wav";
 }
 function loadReferenceAudio(filePaths) {
   return filePaths.map((filePath) => {
@@ -84464,7 +84573,7 @@ function loadReferenceAudio(filePaths) {
     const stats = fs10.statSync(filePath);
     if (stats.size > MAX_INPUT_AUDIO_BYTES) {
       throw new Error(
-        `Reference audio too large: ${path8.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 15MB)`
+        `Reference audio too large: ${path9.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 15MB)`
       );
     }
     return `data:${audioMimeFromExtension(filePath)};base64,${fs10.readFileSync(filePath).toString("base64")}`;
@@ -84501,7 +84610,7 @@ async function checkReferenceVideos(filePaths, spec, model) {
   for (const filePath of filePaths) {
     validateFilePath(filePath, { allowedExtensions: SEEDANCE_REFERENCE_VIDEO_EXTENSIONS });
     if (!fs10.existsSync(filePath)) throw new Error(`Reference video not found: ${filePath}`);
-    const name = path8.basename(filePath);
+    const name = path9.basename(filePath);
     const stats = fs10.statSync(filePath);
     if (stats.size > MAX_INPUT_VIDEO_BYTES) {
       throw new Error(`Reference video too large: ${name} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 200MB)`);
@@ -84548,13 +84657,13 @@ async function checkReferenceAudioDurations(filePaths, spec, model) {
     const seconds = await probeAudioSeconds(filePath);
     if (seconds === null) {
       console.error(
-        `[Seedance] ffprobe unavailable \u2014 skipping the duration check for ${path8.basename(filePath)} (${model}: ${minSeconds}~${maxSeconds}s per clip, ${spec.totalSeconds}s total)`
+        `[Seedance] ffprobe unavailable \u2014 skipping the duration check for ${path9.basename(filePath)} (${model}: ${minSeconds}~${maxSeconds}s per clip, ${spec.totalSeconds}s total)`
       );
       continue;
     }
     if (seconds < minSeconds || seconds > maxSeconds) {
       throw new Error(
-        `Reference audio ${path8.basename(filePath)} is ${seconds.toFixed(1)}s \u2014 ${model} accepts ${minSeconds}~${maxSeconds}s per clip.`
+        `Reference audio ${path9.basename(filePath)} is ${seconds.toFixed(1)}s \u2014 ${model} accepts ${minSeconds}~${maxSeconds}s per clip.`
       );
     }
     total += seconds;
@@ -84715,7 +84824,7 @@ async function generateWithReferences2(request) {
 // src/astra-video-client.ts
 import { createHash as createHash6, randomInt } from "node:crypto";
 import * as fs11 from "node:fs";
-import * as path9 from "node:path";
+import * as path10 from "node:path";
 
 // package.json
 var package_default = {
@@ -85681,7 +85790,7 @@ var CONTENT_TYPE_BY_EXTENSION = {
   ".mp3": { contentType: "audio/mpeg", kind: "audio" }
 };
 function uploadContentType(filePath) {
-  const ext = path9.extname(filePath).toLowerCase();
+  const ext = path10.extname(filePath).toLowerCase();
   const found = CONTENT_TYPE_BY_EXTENSION[ext];
   if (!found) {
     throw new Error(
@@ -85691,13 +85800,13 @@ function uploadContentType(filePath) {
   return found;
 }
 async function uploadFile(filePath) {
-  const resolved = path9.resolve(filePath);
+  const resolved = path10.resolve(filePath);
   if (!fs11.existsSync(resolved)) throw new Error(`File not found: ${filePath}`);
   const { contentType, kind } = uploadContentType(resolved);
   const bytes = fs11.statSync(resolved).size;
   const limit2 = ASTRA_VIDEO_UPLOAD_LIMITS[kind];
   if (bytes > limit2) {
-    throw new Error(`${path9.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit2} bytes.`);
+    throw new Error(`${path10.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit2} bytes.`);
   }
   await waitForUploadSlot();
   const headers = authHeaders2();
@@ -85715,7 +85824,7 @@ async function uploadFile(filePath) {
       return { ok: false, status: 502, body: `Upload unreachable: ${message}` };
     }
   });
-  if (!result.ok) throw redactedFailure(`upload of ${path9.basename(resolved)}`, result.status, result.body);
+  if (!result.ok) throw redactedFailure(`upload of ${path10.basename(resolved)}`, result.status, result.body);
   const parsed = JSON.parse(result.body);
   return {
     uploadId: parsed.upload_id,
@@ -86259,6 +86368,7 @@ var VIDEO_ADAPTERS = Object.freeze({
   seedance_reference: entry("seedance", "byteplus", "reference", seedanceReferenceSchema),
   astra_genai_text2video: entry("astra-genai", "genai-ltx-v2", "text", genaiTextToVideoSchema),
   astra_genai_img2video: entry("astra-genai", "genai-ltx-v2", "image", genaiImageToVideoSchema),
+  astra_genai_audio2video: entry("astra-genai", "genai-ltx-v2", "audio", genaiAudioToVideoSchema),
   astra_genai_msr: entry("astra-genai", "genai-ltx-msr", "reference", genaiMsrSchema),
   astra_text2video: entry("astra", "self-hosted-ltx", "text", astraText2VideoSchema),
   astra_img2video: entry("astra", "self-hosted-ltx", "image", astraImg2VideoSchema),
@@ -86297,7 +86407,7 @@ function videoCatalog() {
       operation: a.operation,
       voice: videoVoiceCapabilities(tool),
       fields: keys(a.schema),
-      modelConstraints: a.engine === "seedance" ? SEEDANCE_MODEL_SPECS : tool === "astra_genai_msr" ? { note: "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. No supplied speech or audio controls." } : a.engine === "astra-genai" ? { models: GENAI_VIDEO_MODELS, note: "Explicit duration and resolution; server validates deployment limits. No supplied audio, keyframes or LoRA." } : a.engine === "veo" ? { models: VALID_VIDEO_MODELS, resolutions: VALID_VIDEO_RESOLUTIONS, note: "Use video_plan for cross-field constraints" } : { note: "Use video_plan; deployment-specific schema is authoritative" }
+      modelConstraints: a.engine === "seedance" ? SEEDANCE_MODEL_SPECS : tool === "astra_genai_msr" ? { note: "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. No supplied speech or audio controls." } : tool === "astra_genai_audio2video" ? { models: ["ltx-2.5-22b-dev"], note: "Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters." } : a.engine === "astra-genai" ? { models: GENAI_VIDEO_MODELS, note: "Explicit duration and resolution; server validates deployment limits. No supplied audio, keyframes or LoRA." } : a.engine === "veo" ? { models: VALID_VIDEO_MODELS, resolutions: VALID_VIDEO_RESOLUTIONS, note: "Use video_plan for cross-field constraints" } : { note: "Use video_plan; deployment-specific schema is authoritative" }
     })),
     host: { execution: "external", note: "Host tools are outside MCP enforcement; never claim an API gate protects their calls." },
     unimplemented: ["minimax-h3-api", "ltx-official-api"]
@@ -86308,7 +86418,7 @@ function videoVoiceCapabilities(tool) {
   if (!adapter2) throw new Error("Unsupported video tool: " + tool);
   return {
     voiceReference: tool === "seedance_reference" ? "model_dependent" : "unsupported",
-    suppliedSpeech: tool === "astra_audio2video" ? "audio_conditioned_reencoded" : "unsupported",
+    suppliedSpeech: ["astra_audio2video", "astra_genai_audio2video"].includes(tool) ? "audio_conditioned_reencoded" : "unsupported",
     exactAudioPreservation: false,
     voiceContinuation: tool === "omni_extend" ? "previous_interaction_id" : tool === "veo_extension" ? "source_final_second" : "unsupported",
     review: "not_reviewed"
@@ -86382,7 +86492,7 @@ function evaluateWindowScript(source, options = {}) {
 }
 
 // src/storyboard.ts
-import { existsSync as existsSync12, mkdirSync as mkdirSync4, readFileSync as readFileSync13, renameSync as renameSync3, statSync as statSync7, unlinkSync as unlinkSync3, writeFileSync as writeFileSync10 } from "node:fs";
+import { existsSync as existsSync12, mkdirSync as mkdirSync4, readFileSync as readFileSync13, renameSync as renameSync3, statSync as statSync8, unlinkSync as unlinkSync3, writeFileSync as writeFileSync10 } from "node:fs";
 import * as nodeModule2 from "node:module";
 import { basename as basename6, dirname as dirname4, join as join6, resolve as resolve4 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
@@ -86592,7 +86702,7 @@ function boardReadiness(win, boardDir) {
   const characters = Array.isArray(entries) ? entries : Object.entries(entries).map(([id, c]) => ({ ...c, id }));
   const assets = characters.flatMap((c) => Object.entries(c.panels ?? {}).map(([slot, name]) => {
     const file = typeof name === "string" && name.trim() ? resolve4(boardDir, name) : null;
-    const present = !!file && existsSync12(file) && statSync7(file).isFile();
+    const present = !!file && existsSync12(file) && statSync8(file).isFile();
     let decoding = "not_verified";
     if (present) {
       try {
@@ -86741,7 +86851,7 @@ function scenesPath(target) {
 function readBoard(target) {
   const file = scenesPath(target);
   if (!existsSync12(file)) throw new Error(`no scenes.js at ${file}`);
-  if (!statSync7(file).isFile()) throw new Error(`${file} is not a file`);
+  if (!statSync8(file).isFile()) throw new Error(`${file} is not a file`);
   const src = readFileSync13(file, "utf8");
   const header = [];
   for (const line of src.split("\n")) {
@@ -87109,7 +87219,7 @@ import { AsyncLocalStorage as AsyncLocalStorage2 } from "node:async_hooks";
 import { createHash as createHash8, randomUUID as randomUUID2 } from "node:crypto";
 import { accessSync as accessSync2, constants as constants2, existsSync as existsSync13, lstatSync, mkdirSync as mkdirSync5, readFileSync as readFileSync14, realpathSync as realpathSync3, renameSync as renameSync4, rmSync as rmSync5, writeFileSync as writeFileSync12 } from "node:fs";
 import { tmpdir as tmpdir3 } from "node:os";
-import { extname as extname6, join as join8, resolve as resolve5 } from "node:path";
+import { extname as extname7, join as join8, resolve as resolve5 } from "node:path";
 
 // src/tts-models.ts
 import { createRequire as createRequire3 } from "node:module";
@@ -87284,7 +87394,7 @@ async function executeSpeech(generator, args, run) {
   mkdirSync5(outputPath, { recursive: true });
   accessSync2(outputPath, constants2.W_OK);
   const directory2 = realpathSync3(outputPath), audioPath = join8(directory2, filename);
-  const stem = audioPath.slice(0, -extname6(audioPath).length);
+  const stem = audioPath.slice(0, -extname7(audioPath).length);
   for (const file of [audioPath, stem + ".alignment.json", audioPath + ".provider-usage.json"]) {
     try {
       if (lstatSync(file).isSymbolicLink()) throw new Error("Speech output must not be a symlink");
@@ -87344,7 +87454,7 @@ async function executeSpeech(generator, args, run) {
       if (!result.success || !result.audioPath) throw new Error(result.error || "Speech provider returned no audio");
       if (realpathSync3(result.audioPath) !== audioPath) throw new Error("Speech provider returned an unexpected output path");
       const bytes = readFileSync14(audioPath);
-      const durationSeconds = validateSpeechAudio(bytes, extname6(audioPath).slice(1));
+      const durationSeconds = validateSpeechAudio(bytes, extname7(audioPath).slice(1));
       const artifacts = ["alignmentPath", "usageReceiptPath"].flatMap((field) => {
         const file = result[field];
         if (typeof file !== "string") return [];
@@ -87848,12 +87958,12 @@ var import_tts_speed_policy = __toESM(require_tts_speed_policy(), 1);
 import { execFile as execFile4 } from "node:child_process";
 import { createHash as createHash9, randomUUID as randomUUID3 } from "node:crypto";
 import { closeSync as closeSync3, existsSync as existsSync15, mkdirSync as mkdirSync7, openSync as openSync3, readFileSync as readFileSync15, renameSync as renameSync5, rmSync as rmSync6, writeFileSync as writeFileSync15 } from "node:fs";
-import path12 from "node:path";
+import path13 from "node:path";
 import { promisify as promisify2 } from "node:util";
 
 // src/elevenlabs-client.ts
 import * as fs13 from "node:fs";
-import * as path10 from "node:path";
+import * as path11 from "node:path";
 var ELEVENLABS_MODELS = ["eleven_v4"];
 var DEFAULT_ELEVENLABS_MODEL = "eleven_v4";
 var ELEVENLABS_DIALOGUE_MODEL = DEFAULT_ELEVENLABS_MODEL;
@@ -87934,7 +88044,7 @@ function extensionForFormat(format) {
 function checkFilenameMatchesFormat(value, ctx) {
   if (!value.filename) return;
   const expected = extensionForFormat(value.outputFormat);
-  if (path10.extname(value.filename).toLowerCase() !== expected) {
+  if (path11.extname(value.filename).toLowerCase() !== expected) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
       path: ["filename"],
@@ -88027,7 +88137,7 @@ var elevenLabsSfxSchema = external_exports.object({
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("audio").optional()
 }).superRefine((data, ctx) => {
-  if (data.filename && path10.extname(data.filename).toLowerCase() !== sfxExtensionForFormat(data.outputFormat)) {
+  if (data.filename && path11.extname(data.filename).toLowerCase() !== sfxExtensionForFormat(data.outputFormat)) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
       path: ["filename"],
@@ -88159,13 +88269,13 @@ function wavDurationSeconds(buffer) {
   return void 0;
 }
 function alignmentPathFor(audioPath) {
-  const ext = path10.extname(audioPath);
+  const ext = path11.extname(audioPath);
   return `${audioPath.slice(0, audioPath.length - ext.length)}.alignment.json`;
 }
 function saveTimestamped(body, outputDir, filename, extra) {
   if (!body.audio_base64) throw new Error("with-timestamps response carried no audio_base64");
   const audio = decodeSpeechBase64(body.audio_base64);
-  const duration3 = validateSpeechAudio(audio, path10.extname(filename).slice(1));
+  const duration3 = validateSpeechAudio(audio, path11.extname(filename).slice(1));
   validateSpeechAlignment(body.alignment, duration3);
   validateSpeechAlignment(body.normalized_alignment, duration3);
   validateSpeechSegments(body.voice_segments, duration3, extra.inputs);
@@ -88176,7 +88286,7 @@ function saveTimestamped(body, outputDir, filename, extra) {
     JSON.stringify(
       {
         ...extra,
-        audio: path10.basename(audioPath),
+        audio: path11.basename(audioPath),
         alignment: body.alignment ?? null,
         normalized_alignment: body.normalized_alignment ?? null,
         ...body.voice_segments ? { voice_segments: body.voice_segments } : {}
@@ -88252,7 +88362,7 @@ async function synthesizeElevenLabsDialogue(request) {
         enable_logging: request.enableLogging ?? true,
         ...meta
       });
-      console.error(`[ElevenLabs] Dialogue saved to: ${saved.audioPath} (+ ${path10.basename(saved.alignmentPath)})`);
+      console.error(`[ElevenLabs] Dialogue saved to: ${saved.audioPath} (+ ${path11.basename(saved.alignmentPath)})`);
       return {
         success: true,
         warnings,
@@ -88268,7 +88378,7 @@ async function synthesizeElevenLabsDialogue(request) {
       };
     }
     const audio = Buffer.from(await response.arrayBuffer());
-    validateSpeechAudio(audio, path10.extname(filename).slice(1));
+    validateSpeechAudio(audio, path11.extname(filename).slice(1));
     const audioPath = saveAudioFile(outputDir, filename, audio);
     console.error(`[ElevenLabs] Dialogue saved to: ${audioPath}`);
     return {
@@ -88366,7 +88476,7 @@ async function generateElevenLabsSoundEffect(request) {
     };
     const sidecarPath = audioPath.replace(/\.(wav|mp3)$/i, "") + ".json";
     fs13.writeFileSync(sidecarPath, JSON.stringify(sidecar, null, 2) + "\n", "utf8");
-    console.error(`[ElevenLabs] Sound effect saved to: ${audioPath} (+ ${path10.basename(sidecarPath)})`);
+    console.error(`[ElevenLabs] Sound effect saved to: ${audioPath} (+ ${path11.basename(sidecarPath)})`);
     return {
       success: true,
       audioPath,
@@ -88465,8 +88575,8 @@ function prepareSpeech(generator, generation2) {
 // src/usage-ledger.ts
 import { execFileSync as execFileSync6 } from "node:child_process";
 import { appendFileSync, existsSync as existsSync14, mkdirSync as mkdirSync6 } from "node:fs";
-import path11 from "node:path";
-var EPISODE_MARKER = path11.join("storyboard", "scenes.js");
+import path12 from "node:path";
+var EPISODE_MARKER = path12.join("storyboard", "scenes.js");
 var MAX_WALK_UP = 6;
 function episodePathArg(args) {
   for (const name of ["outputPath", "savePath"]) {
@@ -88479,17 +88589,17 @@ function findEpisodeDir(outputPath) {
   if (!outputPath || typeof outputPath !== "string") return null;
   let dir;
   try {
-    dir = path11.resolve(outputPath);
+    dir = path12.resolve(outputPath);
   } catch {
     return null;
   }
   for (let i2 = 0; i2 <= MAX_WALK_UP; i2++) {
     try {
-      if (existsSync14(path11.join(dir, EPISODE_MARKER))) return dir;
+      if (existsSync14(path12.join(dir, EPISODE_MARKER))) return dir;
     } catch {
       return null;
     }
-    const parent = path11.dirname(dir);
+    const parent = path12.dirname(dir);
     if (parent === dir) return null;
     dir = parent;
   }
@@ -88498,8 +88608,8 @@ function findEpisodeDir(outputPath) {
 function recordUsage(outputPath, event) {
   const episodeDir = findEpisodeDir(outputPath);
   if (!episodeDir) return null;
-  const workDir = path11.join(episodeDir, ".work");
-  const file = path11.join(workDir, "events.jsonl");
+  const workDir = path12.join(episodeDir, ".work");
+  const file = path12.join(workDir, "events.jsonl");
   try {
     mkdirSync6(workDir, { recursive: true });
     appendFileSync(file, JSON.stringify(event) + "\n", { encoding: "utf8", flag: "a" });
@@ -89059,7 +89169,7 @@ async function applySentenceSpacing(output2, request, align) {
     writeFileSync15(output2, result.wav);
     const meta = { policy: SPACING_POLICY, source: sidecar.engine === "asr-aligner" ? "asr-aligner" : "vendor", pause: request.sentencePause, playbackSpeed: request.playbackSpeed, lead: result.lead, gaps: result.gaps, inserted: result.inserted, boundaries: result.boundaries, duration: result.duration, segmentsFrom: request.segments ? "request" : "sentence-final punctuation" };
     writeFileSync15(alignmentPath, JSON.stringify({ ...sidecar, alignment: result.alignment, vendor_alignment: sidecar.vendor_alignment ?? sidecar.alignment, respaced: meta }, null, 2));
-    writeFileSync15(sentencesPathFor(output2), JSON.stringify({ version: 1, ...meta, audio: path12.basename(output2), audioSha256: sha256(result.wav), sentences: result.sentences }, null, 2) + "\n");
+    writeFileSync15(sentencesPathFor(output2), JSON.stringify({ version: 1, ...meta, audio: path13.basename(output2), audioSha256: sha256(result.wav), sentences: result.sentences }, null, 2) + "\n");
     return meta;
   } catch (error2) {
     return { skipped: error2 instanceof Error ? error2.message : String(error2) };
@@ -89079,8 +89189,8 @@ async function generateCheckedSpeech(input, dependencies) {
     generation: (0, import_tts_speed_policy.authorizeSpeed)(request.outputPath, "generation", Number(prepared.args.speed ?? 1)),
     final: (0, import_tts_speed_policy.authorizeSpeed)(request.outputPath, "final", request.playbackSpeed)
   };
-  const output2 = path12.resolve(request.outputPath, request.filename), proofFile = output2 + ".quality.json";
-  mkdirSync7(path12.dirname(output2), { recursive: true });
+  const output2 = path13.resolve(request.outputPath, request.filename), proofFile = output2 + ".quality.json";
+  mkdirSync7(path13.dirname(output2), { recursive: true });
   const lockFile = proofFile + ".lock";
   let lock2;
   try {
@@ -89186,7 +89296,7 @@ async function generateCheckedSpeech(input, dependencies) {
             detail: { ...generated?.requestId ? { requestId: generated.requestId } : {} }
           });
         }
-        if (!generated.success || path12.resolve(generated.audioPath || generated.path || "") !== output2) throw new Error(generated.error || "Generator did not return the requested audio path");
+        if (!generated.success || path13.resolve(generated.audioPath || generated.path || "") !== output2) throw new Error(generated.error || "Generator did not return the requested audio path");
         if (prepared.spacing) take.spacing = await applySentenceSpacing(output2, request, deps.align);
         else {
           rmSync6(sentencesPathFor(output2), { force: true });
@@ -89237,7 +89347,7 @@ async function generateCheckedSpeech(input, dependencies) {
 import { execFile as execFile5 } from "node:child_process";
 import { existsSync as existsSync16, mkdirSync as mkdirSync8, mkdtempSync as mkdtempSync3, readFileSync as readFileSync16, renameSync as renameSync6, rmSync as rmSync7 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
-import { basename as basename8, extname as extname8, join as join9 } from "node:path";
+import { basename as basename8, extname as extname9, join as join9 } from "node:path";
 var QWEN3_ASR_MODELS = ["Qwen/Qwen3-ASR-1.7B", "Qwen/Qwen3-ASR-0.6B"];
 var DEFAULT_QWEN3_ASR_MODEL = "Qwen/Qwen3-ASR-1.7B";
 var QWEN3_ASR_LANGUAGES = [
@@ -89353,7 +89463,7 @@ If installed elsewhere, point QWEN3_ASR_BIN at the executable (e.g. QWEN3_ASR_BI
 The first call downloads ~3.4GB of Qwen3-ASR-1.7B weights (plus the ForcedAligner) to ~/.cache/huggingface. Until it is installed, ingest uses the whisper.cpp fallback.`;
 }
 var qwen3AsrTranscribeSchema = external_exports.object({
-  audioPath: external_exports.string().min(1, "audioPath is required").refine((p) => !p.includes(".."), { message: 'audioPath must not contain ".."' }).refine((p) => AUDIO_INPUT_EXTENSIONS.includes(extname8(p).toLowerCase()), {
+  audioPath: external_exports.string().min(1, "audioPath is required").refine((p) => !p.includes(".."), { message: 'audioPath must not contain ".."' }).refine((p) => AUDIO_INPUT_EXTENSIONS.includes(extname9(p).toLowerCase()), {
     message: `audioPath extension must be one of: ${AUDIO_INPUT_EXTENSIONS.join(", ")}`
   }),
   language: external_exports.string().optional().default(DEFAULT_QWEN3_ASR_LANGUAGE).transform((value) => canonicalizeLanguage(value)),
@@ -89462,7 +89572,7 @@ ${tail}` : ""}`));
     console.error(`[Qwen3-ASR] Error: ${message.split("\n")[0]}`);
     return { success: false, error: message };
   }
-  const cliJsonPath = join9(scratchDir, `${basename8(request.audioPath, extname8(request.audioPath))}.json`);
+  const cliJsonPath = join9(scratchDir, `${basename8(request.audioPath, extname9(request.audioPath))}.json`);
   if (!existsSync16(cliJsonPath)) {
     rmSync7(scratchDir, { recursive: true, force: true });
     return { success: false, error: `mlx-qwen3-asr exited without producing JSON (looked for ${cliJsonPath})` };
@@ -89496,7 +89606,7 @@ ${tail}` : ""}`));
 import { execFile as execFile6 } from "node:child_process";
 import { existsSync as existsSync17, mkdtempSync as mkdtempSync4, readFileSync as readFileSync17, rmSync as rmSync8, writeFileSync as writeFileSync16 } from "node:fs";
 import { tmpdir as tmpdir4 } from "node:os";
-import { dirname as dirname5, extname as extname9, join as join10, resolve as resolve6 } from "node:path";
+import { dirname as dirname5, extname as extname10, join as join10, resolve as resolve6 } from "node:path";
 var BLENDER_PROXY_KINDS = ["person", "dog", "car", "box", "cylinder", "sphere"];
 var BLENDER_INTERPOLATIONS = ["LINEAR", "BEZIER", "CONSTANT"];
 var BLENDER_PREVIZ_ENGINES = ["workbench", "eevee"];
@@ -89538,7 +89648,7 @@ var frameNumber = external_exports.number().int().min(0).max(1e6);
 var blenderName = external_exports.string().min(1).refine((n) => Buffer.byteLength(n, "utf8") <= MAX_BLENDER_NAME, { message: `a Blender object name is at most ${MAX_BLENDER_NAME} bytes of UTF-8` }).refine((n) => !n.includes("/") && !n.includes("\\"), { message: "a Blender object name cannot contain path separators" });
 var evenPixels = (min) => external_exports.number().int().min(min).max(4096).multipleOf(2, "must be an even number of pixels (H.264)");
 var hexColor = external_exports.string().regex(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "color must be a hex triplet such as #4a90d9");
-var blendPath = external_exports.string().min(1, "blendPath is required").refine((p) => !p.includes(".."), { message: 'blendPath must not contain ".."' }).refine((p) => extname9(p).toLowerCase() === ".blend", { message: "blendPath must end in .blend" }).transform((p) => resolve6(p));
+var blendPath = external_exports.string().min(1, "blendPath is required").refine((p) => !p.includes(".."), { message: 'blendPath must not contain ".."' }).refine((p) => extname10(p).toLowerCase() === ".blend", { message: "blendPath must end in .blend" }).transform((p) => resolve6(p));
 var blenderSceneReadSchema = external_exports.object({ blendPath });
 var proxySchema = external_exports.object({
   name: blenderName,
@@ -89551,7 +89661,7 @@ var proxySchema = external_exports.object({
   color: hexColor.optional()
 });
 var importSchema = external_exports.object({
-  glbPath: external_exports.string().min(1).refine((p) => !p.includes(".."), { message: 'glbPath must not contain ".."' }).refine((p) => [".glb", ".gltf"].includes(extname9(p).toLowerCase()), { message: "glbPath must end in .glb or .gltf" }).transform((p) => resolve6(p)),
+  glbPath: external_exports.string().min(1).refine((p) => !p.includes(".."), { message: 'glbPath must not contain ".."' }).refine((p) => [".glb", ".gltf"].includes(extname10(p).toLowerCase()), { message: "glbPath must end in .glb or .gltf" }).transform((p) => resolve6(p)),
   name: blenderName,
   location: vec3.optional().default([0, 0, 0]),
   rotationDeg: vec3.optional().default([0, 0, 0]),
@@ -89680,7 +89790,7 @@ var blenderPoseKeySchema = external_exports.object({
     frames.add(k.frame);
   }
 });
-var motionPath = external_exports.string().min(1, "motionPath is required").refine((p) => !p.includes(".."), { message: 'motionPath must not contain ".."' }).refine((p) => BLENDER_MOTION_FORMATS.includes(extname9(p).toLowerCase()), { message: `motionPath must end in ${BLENDER_MOTION_FORMATS.join(" or ")}` }).transform((p) => resolve6(p));
+var motionPath = external_exports.string().min(1, "motionPath is required").refine((p) => !p.includes(".."), { message: 'motionPath must not contain ".."' }).refine((p) => BLENDER_MOTION_FORMATS.includes(extname10(p).toLowerCase()), { message: `motionPath must end in ${BLENDER_MOTION_FORMATS.join(" or ")}` }).transform((p) => resolve6(p));
 var blenderMotionImportSchema = external_exports.object({
   blendPath,
   object: blenderName,
@@ -89720,7 +89830,7 @@ var blenderRenderPrevizSchema = external_exports.object({
       ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["frameEnd"], message: `a previz is at most ${MAX_PREVIZ_FRAMES} frames` });
     }
   }
-  if (extname9(data.filename).toLowerCase() !== ".mp4") {
+  if (extname10(data.filename).toLowerCase() !== ".mp4") {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["filename"], message: "the previz clip is written as .mp4 (H.264)" });
   }
 });
@@ -96452,7 +96562,7 @@ for (const tool of TOOLS) {
 
 // src/music-routing.ts
 import * as fs16 from "node:fs";
-import path15 from "node:path";
+import path16 from "node:path";
 import os from "node:os";
 import { execFileSync as execFileSync8 } from "node:child_process";
 import { createRequire as createRequire4 } from "node:module";
@@ -96460,7 +96570,7 @@ import { fileURLToPath as fileURLToPath3 } from "node:url";
 
 // src/music-state.ts
 import * as fs14 from "node:fs";
-import path13 from "node:path";
+import path14 from "node:path";
 var money = external_exports.number().finite().nonnegative();
 var musicJobSchema = external_exports.object({
   outputFile: external_exports.string(),
@@ -96482,21 +96592,21 @@ var musicJobSchema = external_exports.object({
 }).strict();
 var stateSchema2 = external_exports.object({ version: external_exports.literal(1), openingSpendUsd: money, jobs: external_exports.record(musicJobSchema) }).strict();
 function readMusicState(directory2) {
-  const file = path13.join(directory2, ".work/music-routing/state.json");
+  const file = path14.join(directory2, ".work/music-routing/state.json");
   return fs14.existsSync(file) ? stateSchema2.parse(JSON.parse(fs14.readFileSync(file, "utf8"))) : void 0;
 }
 function hasHistory(directory2) {
-  const events = path13.join(directory2, ".work/events.jsonl");
+  const events = path14.join(directory2, ".work/events.jsonl");
   if (fs14.existsSync(events)) for (const line of fs14.readFileSync(events, "utf8").split("\n").filter(Boolean)) {
     if (/^(music_generate|music_elevenlabs_|suno_generate|mlx_music_)/.test(JSON.parse(line).tool || "")) return true;
   }
-  const tally = path13.join(directory2, ".work/cost-tally.tsv");
+  const tally = path14.join(directory2, ".work/cost-tally.tsv");
   return fs14.existsSync(tally) && /^music\./m.test(fs14.readFileSync(tally, "utf8"));
 }
 function musicTransaction(directory2, openingSpendUsd, update) {
-  const folder = path13.join(directory2, ".work/music-routing");
+  const folder = path14.join(directory2, ".work/music-routing");
   fs14.mkdirSync(folder, { recursive: true });
-  const lock2 = path13.join(folder, "state.lock");
+  const lock2 = path14.join(folder, "state.lock");
   let fd;
   try {
     fd = fs14.openSync(lock2, "wx", 384);
@@ -96510,7 +96620,7 @@ function musicTransaction(directory2, openingSpendUsd, update) {
       state = { version: 1, openingSpendUsd: openingSpendUsd ?? 0, jobs: {} };
     }
     const result = update(state);
-    atomicJson(path13.join(folder, "state.json"), stateSchema2.parse(state));
+    atomicJson(path14.join(folder, "state.json"), stateSchema2.parse(state));
     return result;
   } finally {
     fs14.closeSync(fd);
@@ -96520,7 +96630,7 @@ function musicTransaction(directory2, openingSpendUsd, update) {
 
 // src/music-media.ts
 import * as fs15 from "node:fs";
-import path14 from "node:path";
+import path15 from "node:path";
 import { createHash as createHash10, randomUUID as randomUUID4 } from "node:crypto";
 import { execFileSync as execFileSync7 } from "node:child_process";
 function readMusicMetadata(file) {
@@ -96549,7 +96659,7 @@ function readMusicMetadata(file) {
   };
 }
 function normalizeMusicFile(source, target) {
-  fs15.mkdirSync(path14.dirname(target), { recursive: true });
+  fs15.mkdirSync(path15.dirname(target), { recursive: true });
   const temporary = target + "." + randomUUID4() + ".wav";
   try {
     execFileSync7(
@@ -96622,7 +96732,7 @@ function environment(tool) {
 function inputFiles(args, directory2) {
   const inputs = {};
   const resolve12 = (file) => {
-    const resolved = fs16.realpathSync(path15.resolve(directory2, file));
+    const resolved = fs16.realpathSync(path16.resolve(directory2, file));
     if (!fs16.statSync(resolved).isFile()) throw new Error("music_input_not_file");
     inputs[resolved] = readMusicMetadata(resolved).sha256;
     return resolved;
@@ -96650,12 +96760,12 @@ function planMusic(raw) {
   if (!tool) throw new Error("music_model_unsupported");
   gate(tool);
   const args = parseMusicArgs(tool, bindSelection(tool, input.args, selection));
-  const folder = canonicalPath(path15.resolve(context2.directory, typeof args.outputPath === "string" ? args.outputPath : ".work/music"));
+  const folder = canonicalPath(path16.resolve(context2.directory, typeof args.outputPath === "string" ? args.outputPath : ".work/music"));
   const filename = typeof args.filename === "string" ? args.filename : `${input.requestId}.wav`;
   if (!filename.endsWith(".wav")) throw new Error("music_output_requires_wav");
-  const outputFile = canonicalPath(path15.join(folder, filename));
+  const outputFile = canonicalPath(path16.join(folder, filename));
   if (!withinDirectory(context2.directory, outputFile)) throw new Error("music_output_outside_directory");
-  args.outputPath = canonicalPath(path15.join(context2.directory, ".work/music-routing/raw", input.requestId));
+  args.outputPath = canonicalPath(path16.join(context2.directory, ".work/music-routing/raw", input.requestId));
   args.filename = ["music_generate_song", "music_generate_clip", "music_elevenlabs_generate", "suno_generate"].includes(tool) ? "source.mp3" : "source.wav";
   if (!withinDirectory(context2.directory, String(args.outputPath))) throw new Error("music_raw_output_outside_directory");
   const inputs = inputFiles(args, context2.directory);
@@ -96680,7 +96790,7 @@ function planMusic(raw) {
     quote
   };
   const plan2 = { ...body, id: routingHash(body) };
-  atomicJson(path15.join(context2.directory, ".work/music-routing/plans", plan2.id + ".json"), plan2);
+  atomicJson(path16.join(context2.directory, ".work/music-routing/plans", plan2.id + ".json"), plan2);
   return plan2;
 }
 function musicPlanSummary(plan2) {
@@ -96690,7 +96800,7 @@ function musicPlanSummary(plan2) {
 async function executeMusic(raw, dispatch) {
   gate("music_execute");
   const input = musicExecuteSchema.parse(raw), directory2 = fs16.realpathSync(input.directory);
-  const plan2 = JSON.parse(fs16.readFileSync(path15.join(directory2, ".work/music-routing/plans", input.planId + ".json"), "utf8"));
+  const plan2 = JSON.parse(fs16.readFileSync(path16.join(directory2, ".work/music-routing/plans", input.planId + ".json"), "utf8"));
   const { id, ...body } = plan2;
   if (id !== input.planId || routingHash(body) !== id || plan2.directory !== directory2) throw new Error("music_plan_invalid");
   gate(plan2.tool);
@@ -96745,7 +96855,7 @@ async function executeMusic(raw, dispatch) {
     });
     if (result.isError) throw new Error("music_adapter_failed: " + JSON.stringify(result.content));
     if (!plan2.outputFile) throw new Error("music_output_missing");
-    const sourceFile = receipt?.audioPath || path15.join(String(plan2.args.outputPath), String(plan2.args.filename));
+    const sourceFile = receipt?.audioPath || path16.join(String(plan2.args.outputPath), String(plan2.args.filename));
     if (!withinDirectory(canonicalPath(String(plan2.args.outputPath)), canonicalPath(sourceFile))) throw new Error("music_source_outside_request");
     const output2 = normalizeMusicFile(sourceFile, plan2.outputFile);
     const response = { ...result, content: [...result.content, { type: "text", text: "Music output: " + JSON.stringify(output2) }], musicReceipt: { ...receipt, output: output2, review: "not_reviewed" } };
@@ -96781,11 +96891,11 @@ async function routeLegacyMusic(tool, raw, dispatch) {
     return executeMusic({ directory: plan2.directory, planId: plan2.id }, dispatch);
   }
   for (const location of [args.outputPath, process.cwd()].filter((v) => typeof v === "string")) {
-    let dir = canonicalPath(path15.resolve(location));
+    let dir = canonicalPath(path16.resolve(location));
     for (; ; ) {
-      if (fs16.existsSync(path15.join(dir, ".work/model-settings.json")) || fs16.existsSync(path15.join(dir, ".social-flow/models.json")) || fs16.existsSync(path15.join(dir, "storyboard/scenes.js")))
+      if (fs16.existsSync(path16.join(dir, ".work/model-settings.json")) || fs16.existsSync(path16.join(dir, ".social-flow/models.json")) || fs16.existsSync(path16.join(dir, "storyboard/scenes.js")))
         throw new Error("music_context_required: pass directory, assetId and requestId for configured production");
-      const parent = path15.dirname(dir);
+      const parent = path16.dirname(dir);
       if (parent === dir) break;
       dir = parent;
     }
@@ -96835,7 +96945,7 @@ function musicStatus(raw) {
 
 // src/image-routing.ts
 import * as fs18 from "node:fs";
-import path17 from "node:path";
+import path18 from "node:path";
 import os2 from "node:os";
 import { createRequire as createRequire5 } from "node:module";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
@@ -96867,7 +96977,7 @@ function imageUsageUsd(model, usage) {
 
 // src/image-state.ts
 import * as fs17 from "node:fs";
-import path16 from "node:path";
+import path17 from "node:path";
 var money2 = external_exports.number().finite().nonnegative();
 var imageJobSchema = external_exports.object({
   outputFile: external_exports.string(),
@@ -96889,21 +96999,21 @@ var imageJobSchema = external_exports.object({
 }).strict();
 var stateSchema3 = external_exports.object({ version: external_exports.literal(1), openingSpendUsd: money2, jobs: external_exports.record(imageJobSchema) }).strict();
 function readImageState(directory2) {
-  const file = path16.join(directory2, ".work/image-routing/state.json");
+  const file = path17.join(directory2, ".work/image-routing/state.json");
   return fs17.existsSync(file) ? stateSchema3.parse(JSON.parse(fs17.readFileSync(file, "utf8"))) : void 0;
 }
 function hasHistory2(directory2) {
-  const events = path16.join(directory2, ".work/events.jsonl");
+  const events = path17.join(directory2, ".work/events.jsonl");
   if (fs17.existsSync(events)) for (const line of fs17.readFileSync(events, "utf8").split("\n").filter(Boolean)) {
     if (/^(gpt_image_|image_local_|mlx_image_|astra_genai_(text2img|edit)$)/.test(JSON.parse(line).tool || "")) return true;
   }
-  const tally = path16.join(directory2, ".work/cost-tally.tsv");
+  const tally = path17.join(directory2, ".work/cost-tally.tsv");
   return fs17.existsSync(tally) && /^image\./m.test(fs17.readFileSync(tally, "utf8"));
 }
 function imageTransaction(directory2, openingSpendUsd, update) {
-  const folder = path16.join(directory2, ".work/image-routing");
+  const folder = path17.join(directory2, ".work/image-routing");
   fs17.mkdirSync(folder, { recursive: true });
-  const lock2 = path16.join(folder, "state.lock");
+  const lock2 = path17.join(folder, "state.lock");
   let fd;
   try {
     fd = fs17.openSync(lock2, "wx", 384);
@@ -96917,7 +97027,7 @@ function imageTransaction(directory2, openingSpendUsd, update) {
       state = { version: 1, openingSpendUsd: openingSpendUsd ?? 0, jobs: {} };
     }
     const result = update(state);
-    atomicJson(path16.join(folder, "state.json"), stateSchema3.parse(state));
+    atomicJson(path17.join(folder, "state.json"), stateSchema3.parse(state));
     return result;
   } finally {
     fs17.closeSync(fd);
@@ -96959,14 +97069,14 @@ function environment2(tool) {
   if (engine === "mlx" && !mlxServeConfigured()) throw new Error("image_provider_unconfigured: MLX Core");
   if (engine === "zimage") {
     const bin = mfluxZImageBin();
-    const found = bin.includes(path17.sep) ? fs18.existsSync(bin) : (process.env.PATH || "").split(path17.delimiter).some((dir) => fs18.existsSync(path17.join(dir, bin)));
+    const found = bin.includes(path18.sep) ? fs18.existsSync(bin) : (process.env.PATH || "").split(path18.delimiter).some((dir) => fs18.existsSync(path18.join(dir, bin)));
     if (!found) throw new Error("image_provider_unconfigured: mflux");
   }
 }
 function inputFiles2(args, directory2) {
   const inputs = {};
   const resolve12 = (file) => {
-    const resolved = fs18.realpathSync(path17.resolve(directory2, file));
+    const resolved = fs18.realpathSync(path18.resolve(directory2, file));
     if (!fs18.statSync(resolved).isFile()) throw new Error("image_input_not_file");
     inputs[resolved] = readImageMetadata(resolved).sha256;
     return resolved;
@@ -97008,15 +97118,15 @@ function planImage(raw) {
     if (input.operation === "variation" && (selection.engine !== "mlx" || !args.imagePath)) throw new Error("image_variation_requires_source");
     const ext = args.outputFormat === "jpeg" ? "jpg" : String(args.outputFormat || "png");
     if (selection.engine === "gpt-image") {
-      outputFile = canonicalPath(path17.resolve(context2.directory, typeof args.savePath === "string" ? args.savePath : `.work/images/${input.requestId}.${ext}`));
+      outputFile = canonicalPath(path18.resolve(context2.directory, typeof args.savePath === "string" ? args.savePath : `.work/images/${input.requestId}.${ext}`));
       args.savePath = outputFile;
     } else {
-      const folder = canonicalPath(path17.resolve(context2.directory, typeof args.outputPath === "string" ? args.outputPath : ".work/images"));
+      const folder = canonicalPath(path18.resolve(context2.directory, typeof args.outputPath === "string" ? args.outputPath : ".work/images"));
       args.outputPath = folder;
       args.filename ??= `${input.requestId}.png`;
-      outputFile = canonicalPath(path17.join(folder, String(args.filename)));
+      outputFile = canonicalPath(path18.join(folder, String(args.filename)));
     }
-    const extension2 = path17.extname(outputFile).toLowerCase();
+    const extension2 = path18.extname(outputFile).toLowerCase();
     if (!(selection.engine === "gpt-image" ? ext === "jpg" ? [".jpg", ".jpeg"] : ["." + ext] : [".png"]).includes(extension2)) throw new Error("image_output_extension_mismatch");
     if (!withinDirectory(context2.directory, outputFile)) throw new Error("image_output_outside_directory");
   }
@@ -97045,7 +97155,7 @@ function planImage(raw) {
     execution: selection.engine === "host" ? "host_handoff" : "server"
   };
   const plan2 = { ...body, id: routingHash(body) };
-  atomicJson(path17.join(context2.directory, ".work/image-routing/plans", plan2.id + ".json"), plan2);
+  atomicJson(path18.join(context2.directory, ".work/image-routing/plans", plan2.id + ".json"), plan2);
   return plan2;
 }
 function imagePlanSummary(plan2) {
@@ -97073,7 +97183,7 @@ function imageExecutionResult(plan2, status, receipt, output2) {
 async function executeImage(raw, dispatch) {
   gate2("image_execute");
   const input = imageExecuteSchema.parse(raw), directory2 = fs18.realpathSync(input.directory);
-  const plan2 = JSON.parse(fs18.readFileSync(path17.join(directory2, ".work/image-routing/plans", input.planId + ".json"), "utf8"));
+  const plan2 = JSON.parse(fs18.readFileSync(path18.join(directory2, ".work/image-routing/plans", input.planId + ".json"), "utf8"));
   const { id, ...body } = plan2;
   if (id !== input.planId || routingHash(body) !== id || plan2.directory !== directory2) throw new Error("image_plan_invalid");
   requireWorkflow(directory2, "image", plan2.assetId, plan2.outputFile);
@@ -97179,11 +97289,11 @@ async function routeLegacyImage(tool, raw, dispatch) {
   }
   for (const location of [args.savePath, args.outputPath, process.cwd()].filter((v) => typeof v === "string")) {
     if (workflowEpisode(location)) throw new Error("image_context_required: use the episode workflow");
-    let dir = canonicalPath(path17.resolve(location));
+    let dir = canonicalPath(path18.resolve(location));
     for (; ; ) {
-      if (fs18.existsSync(path17.join(dir, ".work/model-settings.json")) || fs18.existsSync(path17.join(dir, ".social-flow/models.json")) || fs18.existsSync(path17.join(dir, "storyboard/scenes.js")))
+      if (fs18.existsSync(path18.join(dir, ".work/model-settings.json")) || fs18.existsSync(path18.join(dir, ".social-flow/models.json")) || fs18.existsSync(path18.join(dir, "storyboard/scenes.js")))
         throw new Error("image_context_required: pass directory, assetId and requestId for configured production");
-      const parent = path17.dirname(dir);
+      const parent = path18.dirname(dir);
       if (parent === dir) break;
       dir = parent;
     }
@@ -97235,7 +97345,7 @@ async function refreshGenaiImage(directory2, requestId) {
   const state = readImageState(directory2);
   const job = state?.jobs[requestId];
   if (!job || !["astra_genai_text2img", "astra_genai_edit"].includes(job.tool)) throw new Error("image_refresh_unsupported: requires an existing GenAI image request");
-  const plan2 = JSON.parse(fs18.readFileSync(path17.join(directory2, ".work/image-routing/plans", job.planId + ".json"), "utf8"));
+  const plan2 = JSON.parse(fs18.readFileSync(path18.join(directory2, ".work/image-routing/plans", job.planId + ".json"), "utf8"));
   const { id, ...body } = plan2;
   if (id !== job.planId || routingHash(body) !== id || plan2.directory !== directory2 || plan2.outputFile !== job.outputFile || plan2.tool !== job.tool)
     throw new Error("image_recovery_plan_invalid");
@@ -97261,7 +97371,7 @@ async function refreshGenaiImage(directory2, requestId) {
 // src/video-routing.ts
 import * as fs20 from "node:fs";
 import { execFileSync as execFileSync9 } from "node:child_process";
-import path20 from "node:path";
+import path21 from "node:path";
 import { createRequire as createRequire7 } from "node:module";
 import { fileURLToPath as fileURLToPath7 } from "node:url";
 import { createHash as createHash13 } from "node:crypto";
@@ -97320,11 +97430,11 @@ function quoteVideo(tool, args) {
 
 // src/video-state.ts
 import * as fs19 from "node:fs";
-import path18 from "node:path";
+import path19 from "node:path";
 import { fileURLToPath as fileURLToPath6 } from "node:url";
 function historicalSpend(episode) {
-  const events = path18.join(episode, ".work/events.jsonl");
-  const tally = path18.join(episode, ".work/cost-tally.tsv");
+  const events = path19.join(episode, ".work/events.jsonl");
+  const tally = path19.join(episode, ".work/cost-tally.tsv");
   if (!fs19.existsSync(events)) {
     if (fs19.existsSync(tally) && fs19.readFileSync(tally, "utf8").trim()) throw new Error("Historical cost tally needs reconciliation before routing migration");
     return 0;
@@ -97362,9 +97472,9 @@ function historicalSpend(episode) {
   return total;
 }
 function videoTransaction(episode, update) {
-  const directory2 = path18.join(episode, ".work/video-routing");
+  const directory2 = path19.join(episode, ".work/video-routing");
   fs19.mkdirSync(directory2, { recursive: true });
-  const lock2 = path18.join(directory2, "state.lock");
+  const lock2 = path19.join(directory2, "state.lock");
   let fd;
   try {
     fd = fs19.openSync(lock2, "wx", 384);
@@ -97372,7 +97482,7 @@ function videoTransaction(episode, update) {
     throw new Error("video_state_busy: another transaction holds the lock; retry this local operation");
   }
   try {
-    const file = path18.join(directory2, "state.json");
+    const file = path19.join(directory2, "state.json");
     const state = fs19.existsSync(file) ? JSON.parse(fs19.readFileSync(file, "utf8")) : { version: 1, openingSpendUsd: historicalSpend(episode), jobs: {} };
     if (state.version !== 1 || !state.jobs || typeof state.jobs !== "object" || Array.isArray(state.jobs)) throw new Error("Invalid video state; repair explicitly");
     if (!Number.isFinite(state.openingSpendUsd ?? 0) || (state.openingSpendUsd ?? 0) < 0) throw new Error("Invalid opening spend");
@@ -97391,7 +97501,7 @@ function videoTransaction(episode, update) {
 // src/video-voice.ts
 import { createHash as createHash12 } from "node:crypto";
 import { existsSync as existsSync23, readFileSync as readFileSync25, realpathSync as realpathSync6 } from "node:fs";
-import path19 from "node:path";
+import path20 from "node:path";
 import { createRequire as createRequire6 } from "node:module";
 var load3 = createRequire6(import.meta.url);
 var object3 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
@@ -97420,14 +97530,14 @@ function voiceReference(character, context2, warnings) {
   }
   let file = text(declared.path);
   if (file) {
-    file = path19.resolve(context2.episode, "storyboard", file);
+    file = path20.resolve(context2.episode, "storyboard", file);
     if (declared.tts && hash(declared.tts) !== hash(character.tts))
       throw new Error(`voice_reference_stale: ${character.id} sample uses different pinned TTS settings`);
   } else if (/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(text(character.id))) {
     let channel = context2.episode;
-    while (!existsSync23(path19.join(channel, "profile.md")) && path19.dirname(channel) !== channel) channel = path19.dirname(channel);
-    const identity = path19.join(channel, "assets/characters", text(character.id), "identity.md");
-    const candidate2 = path19.join(path19.dirname(identity), "voice.wav");
+    while (!existsSync23(path20.join(channel, "profile.md")) && path20.dirname(channel) !== channel) channel = path20.dirname(channel);
+    const identity = path20.join(channel, "assets/characters", text(character.id), "identity.md");
+    const candidate2 = path20.join(path20.dirname(identity), "voice.wav");
     if (existsSync23(identity) && existsSync23(candidate2)) {
       const { identityVoice } = load3("../../skills/_shared/character-voice.js");
       if (hash(identityVoice(readFileSync25(identity, "utf8"))) !== hash(character.tts)) {
@@ -97444,6 +97554,7 @@ function voiceReference(character, context2, warnings) {
   if (provenance === "legacy_sample_unverified") warnings.push(`${character.id}: sample identity is unverified; a file name or hash is not a listening review.`);
   return { path: absolute, sha256: sha2562, provenance };
 }
+var SUPPLIED_AUDIO_TOOLS = /* @__PURE__ */ new Set(["astra_audio2video", "astra_genai_audio2video"]);
 function prepareVideoVoice(tool, input, context2) {
   const args = { ...input };
   const lines = (Array.isArray(context2.shot.narration) ? context2.shot.narration : []).map(object3).filter((line) => text(line.tts));
@@ -97453,18 +97564,19 @@ function prepareVideoVoice(tool, input, context2) {
   const visual = object3(context2.shot.visual);
   const nativeSlot = Boolean(visual.clip) || context2.shot.type === "broll";
   const audible = tool !== "astra_genai_msr" && (tool.startsWith("veo_") || tool.startsWith("omni_") || (tool.startsWith("astra_") ? args.generateAudio !== false : args.generateAudio === true));
-  const native = tool !== "astra_audio2video" && audible && (nativeSlot || lines.some((line) => line.delivery === "on_screen"));
+  const supplied = SUPPLIED_AUDIO_TOOLS.has(tool);
+  const native = !supplied && audible && (nativeSlot || lines.some((line) => line.delivery === "on_screen"));
   const spec = SEEDANCE_MODEL_SPECS[args.model];
   const limitedPromptLanguage = tool.startsWith("seedance_") && !String(args.model).includes("2-5");
   const reference = native && tool === "seedance_reference" && Boolean(spec?.referenceAudio);
-  const strategy = tool === "astra_audio2video" ? "supplied_audio" : reference ? "reference_voice" : native ? "prompt_voice" : "external_tts";
+  const strategy = supplied ? "supplied_audio" : reference ? "reference_voice" : native ? "prompt_voice" : "external_tts";
   const warnings = [];
   const speakers = [];
   const nativeLines = nativeSlot ? lines : lines.filter((line) => line.delivery === "on_screen");
   const ids = [...new Set((native ? nativeLines : lines).map((line) => text(line.speaker) || text(doc.narratorCharacterId)))];
   const prompt = [];
-  const audioPaths = Array.isArray(args.referenceAudioPaths) ? args.referenceAudioPaths.map((value) => realpathSync6(path19.resolve(context2.episode, String(value)))) : [];
-  const imagePaths = Array.isArray(args.referenceImagePaths) ? args.referenceImagePaths.map((value) => realpathSync6(path19.resolve(context2.episode, String(value)))) : [];
+  const audioPaths = Array.isArray(args.referenceAudioPaths) ? args.referenceAudioPaths.map((value) => realpathSync6(path20.resolve(context2.episode, String(value)))) : [];
+  const imagePaths = Array.isArray(args.referenceImagePaths) ? args.referenceImagePaths.map((value) => realpathSync6(path20.resolve(context2.episode, String(value)))) : [];
   for (const id of ids) {
     const matches = characters.filter((character2) => character2.id === id);
     if (!id || matches.length !== 1 || !Object.keys(object3(matches[0].tts)).length) {
@@ -97484,7 +97596,7 @@ function prepareVideoVoice(tool, input, context2) {
         }
         speaker.audioIndex = index + 1;
         const owned = object3(character.voiceReference).imagePaths;
-        const ownedPaths = Array.isArray(owned) ? owned.map((value) => realpathSync6(path19.resolve(context2.episode, "storyboard", String(value)))) : [];
+        const ownedPaths = Array.isArray(owned) ? owned.map((value) => realpathSync6(path20.resolve(context2.episode, "storyboard", String(value)))) : [];
         speaker.imageIndices = imagePaths.flatMap((file, i2) => ownedPaths.includes(file) ? [i2 + 1] : []);
         if (imagePaths.length && !speaker.imageIndices.length) warnings.push(`${id}: no explicit image ownership matched the request; add voiceReference.imagePaths to bind this speaker to the correct Image N.`);
         const marker = String(args.model).includes("2-5") ? "@" : "";
@@ -97556,14 +97668,14 @@ var videoPlanSchema = external_exports.object({
 }).strict();
 var videoExecuteSchema = external_exports.object({ episode: external_exports.string().min(1), planId: external_exports.string().regex(/^[a-f0-9]{64}$/) }).strict();
 function within(root, file) {
-  const relative = path20.relative(root, file);
-  return relative === "" || !relative.startsWith(".." + path20.sep) && relative !== ".." && !path20.isAbsolute(relative);
+  const relative = path21.relative(root, file);
+  return relative === "" || !relative.startsWith(".." + path21.sep) && relative !== ".." && !path21.isAbsolute(relative);
 }
 function canonical2(file) {
   if (fs20.existsSync(file)) return fs20.realpathSync(file);
-  const parent = path20.dirname(file);
+  const parent = path21.dirname(file);
   if (parent === file) throw new Error("Cannot resolve path");
-  return path20.join(canonical2(parent), path20.basename(file));
+  return path21.join(canonical2(parent), path21.basename(file));
 }
 function inputFiles3(args, episode) {
   const files3 = {};
@@ -97571,7 +97683,7 @@ function inputFiles3(args, episode) {
     if (Array.isArray(value)) return value.map((v) => visit(v, key.endsWith("Paths") ? key.slice(0, -1) : key));
     if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, visit(v, k)]));
     if (typeof value === "string" && key.endsWith("Path") && key !== "outputPath") {
-      const absolute = fs20.realpathSync(path20.resolve(episode, value));
+      const absolute = fs20.realpathSync(path21.resolve(episode, value));
       if (!fs20.statSync(absolute).isFile()) throw new Error("Input is not a regular file: " + key);
       files3[absolute] = createHash13("sha256").update(fs20.readFileSync(absolute)).digest("hex");
       return absolute;
@@ -97644,18 +97756,19 @@ function planVideo(raw) {
       execution: "host_handoff"
     };
     const plan3 = { ...body2, id: hash2(body2) };
-    atomicJson(path20.join(context2.episode, ".work/video-routing/plans", plan3.id + ".json"), plan3);
+    atomicJson(path21.join(context2.episode, ".work/video-routing/plans", plan3.id + ".json"), plan3);
     return plan3;
   }
   if (!tool) throw new Error("Selected deployment has no adapter for this operation");
   const voice = prepareVideoVoice(tool, bindSelection3(tool, input.args, selection), context2);
   const args = parseVideoArgs(tool, voice.args);
-  const output2 = canonical2(path20.resolve(context2.episode, typeof args.outputPath === "string" ? args.outputPath : ".work/video"));
+  const output2 = canonical2(path21.resolve(context2.episode, typeof args.outputPath === "string" ? args.outputPath : ".work/video"));
   if (!within(context2.episode, output2)) throw new Error("Video output must stay inside the selected episode");
   args.outputPath = output2;
   args.filename ??= `video-${input.requestId}.mp4`;
   const inputs = inputFiles3(args, context2.episode);
   if (tool === "astra_genai_msr") buildGenaiMsrBody(genaiMsrSchema.parse(args));
+  if (tool === "astra_genai_audio2video") buildGenaiAudioBody(genaiAudioToVideoSchema.parse(args));
   if (tool === "astra_video_retake" && selection.resolution) {
     const probe2 = JSON.parse(execFileSync9("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", String(args.sourceVideoPath)], { encoding: "utf8", timeout: 15e3 }));
     const stream = probe2.streams?.[0];
@@ -97681,7 +97794,7 @@ function planVideo(raw) {
     execution: "server"
   };
   const plan2 = { ...body, id: hash2(body) };
-  atomicJson(path20.join(context2.episode, ".work/video-routing/plans", plan2.id + ".json"), plan2);
+  atomicJson(path21.join(context2.episode, ".work/video-routing/plans", plan2.id + ".json"), plan2);
   return plan2;
 }
 function authorization(context2) {
@@ -97708,7 +97821,7 @@ function authorization(context2) {
 }
 async function executeVideo(raw, dispatch) {
   const request = videoExecuteSchema.parse(raw), episode = fs20.realpathSync(request.episode);
-  const plan2 = JSON.parse(fs20.readFileSync(path20.join(episode, ".work/video-routing/plans", request.planId + ".json"), "utf8"));
+  const plan2 = JSON.parse(fs20.readFileSync(path21.join(episode, ".work/video-routing/plans", request.planId + ".json"), "utf8"));
   const { id, ...body } = plan2;
   if (id !== request.planId || hash2(body) !== id || plan2.episode !== episode) throw new Error("Invalid video plan");
   if (plan2.execution === "host_handoff") throw new Error("host_handoff_required: use the selected host CLI; no API substitution");
@@ -97806,10 +97919,10 @@ async function dispatchChannelAsset(tool, args, root, output2, dispatch) {
     ok = !result.isError;
     return result;
   } finally {
-    const assets = path20.join(root, ...path20.relative(root, output2).split(path20.sep).slice(0, 3));
-    const file = path20.join(assets, ".work/video-requests.jsonl");
+    const assets = path21.join(root, ...path21.relative(root, output2).split(path21.sep).slice(0, 3));
+    const file = path21.join(assets, ".work/video-requests.jsonl");
     try {
-      fs20.mkdirSync(path20.dirname(file), { recursive: true });
+      fs20.mkdirSync(path21.dirname(file), { recursive: true });
       fs20.appendFileSync(file, JSON.stringify({
         ts: (/* @__PURE__ */ new Date()).toISOString(),
         kind: "channel_asset",
@@ -97836,35 +97949,35 @@ async function routeLegacyVideo(tool, raw, dispatch) {
     const plan2 = planVideo({ ...ctx, tool, args });
     return executeVideo({ episode: plan2.episode, planId: plan2.id }, dispatch);
   }
-  const output2 = canonical2(path20.resolve(typeof args.outputPath === "string" ? args.outputPath : process.cwd()));
+  const output2 = canonical2(path21.resolve(typeof args.outputPath === "string" ? args.outputPath : process.cwd()));
   requireWorkflow(output2, "video");
   let dir = output2;
   for (; ; ) {
-    if (fs20.existsSync(path20.join(dir, ".social-flow/models.json")) && CHANNEL_ASSET_RE.test(path20.relative(dir, output2).split(path20.sep).join("/")))
+    if (fs20.existsSync(path21.join(dir, ".social-flow/models.json")) && CHANNEL_ASSET_RE.test(path21.relative(dir, output2).split(path21.sep).join("/")))
       return dispatchChannelAsset(tool, args, dir, output2, dispatch);
-    if (fs20.existsSync(path20.join(dir, ".work/model-settings.json")) || fs20.existsSync(path20.join(dir, ".social-flow/models.json")))
+    if (fs20.existsSync(path21.join(dir, ".work/model-settings.json")) || fs20.existsSync(path21.join(dir, ".social-flow/models.json")))
       throw new Error("video_context_required: pass episode, shotId and requestId for configured production");
-    const parent = path20.dirname(dir);
+    const parent = path21.dirname(dir);
     if (parent === dir) break;
     dir = parent;
   }
-  if (fs20.existsSync(path20.join(process.cwd(), ".social-flow/models.json"))) throw new Error("video_context_required");
+  if (fs20.existsSync(path21.join(process.cwd(), ".social-flow/models.json"))) throw new Error("video_context_required");
   return dispatch(tool, args);
 }
 async function videoStatus(raw) {
   const input = external_exports.object({ episode: external_exports.string().min(1), requestId: idSchema3, action: external_exports.enum(["read", "refresh"]).default("read") }).strict().parse(raw);
   const episode = fs20.realpathSync(input.episode);
-  const file = path20.join(episode, ".work/video-routing/state.json");
+  const file = path21.join(episode, ".work/video-routing/state.json");
   if (!fs20.existsSync(file)) return { requestId: input.requestId, status: "not_started" };
   const state = JSON.parse(fs20.readFileSync(file, "utf8"));
   const job = state.jobs?.[input.requestId];
   if (input.action === "refresh" && job) {
-    if (!["astra_genai_text2video", "astra_genai_img2video", "astra_genai_msr"].includes(job.tool)) throw new Error("video_refresh_unsupported: use provider-specific recovery");
-    const plan2 = JSON.parse(fs20.readFileSync(path20.join(episode, ".work/video-routing/plans", job.planId + ".json"), "utf8"));
+    if (!["astra_genai_text2video", "astra_genai_img2video", "astra_genai_audio2video", "astra_genai_msr"].includes(job.tool)) throw new Error("video_refresh_unsupported: use provider-specific recovery");
+    const plan2 = JSON.parse(fs20.readFileSync(path21.join(episode, ".work/video-routing/plans", job.planId + ".json"), "utf8"));
     const { id, ...body } = plan2;
     if (id !== job.planId || hash2(body) !== id || plan2.episode !== episode || plan2.tool !== job.tool) throw new Error("Invalid recovery plan");
     checkVideoEnvironment(plan2.tool);
-    const receiptPath = path20.join(String(plan2.args.outputPath), String(plan2.args.filename)) + ".astra-genai.json";
+    const receiptPath = path21.join(String(plan2.args.outputPath), String(plan2.args.filename)) + ".astra-genai.json";
     const result = await getGenaiVideoStatus({ receiptPath, download: true });
     if (job.providerId && result.jobId !== job.providerId) throw new Error("GenAI recovery job ID mismatch");
     if (result.downloaded) {
@@ -97926,9 +98039,9 @@ async function routeSpeech(input) {
 import { execFile as execFile7 } from "node:child_process";
 import { promisify as promisify3 } from "node:util";
 import { createHash as createHash14, randomUUID as randomUUID5 } from "node:crypto";
-import { createReadStream as createReadStream3, mkdirSync as mkdirSync14, realpathSync as realpathSync8, statSync as statSync11, writeFileSync as writeFileSync17 } from "node:fs";
+import { createReadStream as createReadStream3, mkdirSync as mkdirSync14, realpathSync as realpathSync8, statSync as statSync12, writeFileSync as writeFileSync17 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
-import path21 from "node:path";
+import path22 from "node:path";
 var exec2 = promisify3(execFile7);
 var axis = external_exports.enum(["composition", "camera", "direction", "continuity", "physicalNaturalness", "facialNaturalness", "speechAccuracy", "vocalEmotion", "audioQuality", "lipSync"]);
 var hostReviewSchema = external_exports.object({
@@ -97957,7 +98070,7 @@ async function digest3(file) {
 }
 async function hostReview(input) {
   const r2 = hostReviewSchema.parse(input), file = realpathSync8(r2.mediaPath);
-  if (!statSync11(file).isFile() || !statSync11(file).size) throw new Error("Provide a nonempty local media file");
+  if (!statSync12(file).isFile() || !statSync12(file).size) throw new Error("Provide a nonempty local media file");
   const mediaSha256 = await digest3(file);
   const { stdout } = await exec2("ffprobe", ["-v", "error", "-show_format", "-show_streams", "-of", "json", file], { maxBuffer: 4 * 1024 * 1024 });
   const probe2 = JSON.parse(stdout), duration3 = Number(probe2.format.duration);
@@ -97983,7 +98096,7 @@ async function hostReview(input) {
   if (r2.action === "prepare") {
     const frames = [];
     if (r2.mode !== "audio") {
-      const directory3 = path21.join(homedir4(), ".cache", "social-flow", "host-reviews", "evidence", mediaSha256, randomUUID5());
+      const directory3 = path22.join(homedir4(), ".cache", "social-flow", "host-reviews", "evidence", mediaSha256, randomUUID5());
       mkdirSync14(directory3, { recursive: true, mode: 448 });
       const timing = await exec2("ffprobe", [
         "-v",
@@ -98001,7 +98114,7 @@ async function hostReview(input) {
       if (!timestamps.length) throw new Error("Video has no readable presentation timestamps");
       for (let i2 = 0; i2 < 8; i2++) {
         const seconds = timestamps[Math.floor((timestamps.length - 1) * i2 / 7)];
-        const output2 = path21.join(directory3, `frame-${i2}.jpg`);
+        const output2 = path22.join(directory3, `frame-${i2}.jpg`);
         await exec2("ffmpeg", [
           "-v",
           "error",
@@ -98017,7 +98130,7 @@ async function hostReview(input) {
           "2",
           output2
         ], { timeout: 3e4 });
-        if (!statSync11(output2).size) throw new Error("Frame extraction produced an empty image");
+        if (!statSync12(output2).size) throw new Error("Frame extraction produced an empty image");
         frames.push({ seconds, path: output2 });
       }
     }
@@ -98048,9 +98161,9 @@ async function hostReview(input) {
     if (o.axis === "lipSync" && !(hasVideo && hasAudio)) throw new Error("Lip sync requires audiovisual playback");
   }
   if (await digest3(file) !== mediaSha256) throw new Error("Media changed while recording observations");
-  const directory2 = path21.join(homedir4(), ".cache", "social-flow", "host-reviews");
+  const directory2 = path22.join(homedir4(), ".cache", "social-flow", "host-reviews");
   mkdirSync14(directory2, { recursive: true, mode: 448 });
-  const receiptPath = path21.join(directory2, `${mediaSha256}-${randomUUID5()}.json`);
+  const receiptPath = path22.join(directory2, `${mediaSha256}-${randomUUID5()}.json`);
   const result = {
     ...base,
     status: r2.observations.some((o) => o.score !== null) ? "observed" : "unverified",
@@ -98839,8 +98952,8 @@ function manageSpeech(args) {
 // src/acting-review.ts
 import { execFile as execFile8 } from "node:child_process";
 import { createHash as createHash18, randomUUID as randomUUID8 } from "node:crypto";
-import { existsSync as existsSync28, mkdirSync as mkdirSync18, readFileSync as readFileSync29, realpathSync as realpathSync9, renameSync as renameSync9, rmSync as rmSync10, statSync as statSync12, writeFileSync as writeFileSync21 } from "node:fs";
-import path22 from "node:path";
+import { existsSync as existsSync28, mkdirSync as mkdirSync18, readFileSync as readFileSync29, realpathSync as realpathSync9, renameSync as renameSync9, rmSync as rmSync10, statSync as statSync13, writeFileSync as writeFileSync21 } from "node:fs";
+import path23 from "node:path";
 import { homedir as homedir5 } from "node:os";
 import { promisify as promisify4 } from "node:util";
 var exec3 = promisify4(execFile8);
@@ -98907,7 +99020,7 @@ var actingObservationSchema = external_exports.object({
 var hash5 = (data) => createHash18("sha256").update(data).digest("hex");
 var currentHash = (file) => {
   try {
-    const stat4 = statSync12(file);
+    const stat4 = statSync13(file);
     return stat4.isFile() && stat4.size <= MAX_BYTES ? hash5(readFileSync29(file)) : null;
   } catch {
     return null;
@@ -99170,7 +99283,7 @@ async function reviewActing2(input, deps) {
   actingReviewTimeout(request.focus);
   const policy = request.focus === "cinematography" ? CINEMATOGRAPHY_POLICY : request.mode === "audio" ? AUDIO_POLICY : VISUAL_POLICY;
   const mediaPath = realpathSync9(request.mediaPath);
-  const stat4 = statSync12(mediaPath);
+  const stat4 = statSync13(mediaPath);
   if (!stat4.isFile() || stat4.size === 0 || stat4.size > MAX_BYTES) throw new Error("Review requires a nonempty media file no larger than 12 MiB");
   const bytes = readFileSync29(mediaPath);
   const probe2 = await deps.probe(mediaPath);
@@ -99181,8 +99294,8 @@ async function reviewActing2(input, deps) {
   if (currentHash(mediaPath) !== mediaSha256) throw new Error("Source media changed during probe; review was not sent");
   const directionSha256 = hash5(JSON.stringify({ direction: request.direction, expectedText: request.expectedText, mode: request.mode }));
   let requestSha256 = hash5(JSON.stringify({ mediaSha256, directionSha256, model: ACTING_REVIEW_MODEL, policy }));
-  const directory2 = path22.resolve(deps.cacheDirectory || process.env.SOCIAL_FLOW_ACTING_REVIEW_CACHE_DIR?.trim() || path22.join(homedir5(), ".cache", "social-flow", "acting-reviews"));
-  let receiptPath = path22.join(directory2, `${requestSha256}.json`);
+  const directory2 = path23.resolve(deps.cacheDirectory || process.env.SOCIAL_FLOW_ACTING_REVIEW_CACHE_DIR?.trim() || path23.join(homedir5(), ".cache", "social-flow", "acting-reviews"));
+  let receiptPath = path23.join(directory2, `${requestSha256}.json`);
   mkdirSync18(directory2, { recursive: true, mode: 448 });
   const readMatchingReceipt = (file, expectedHash, retryOf2) => {
     const cached2 = cachedReceiptSchema.parse(JSON.parse(readFileSync29(file, "utf8")));
@@ -99198,7 +99311,7 @@ async function reviewActing2(input, deps) {
       throw new Error("Transport retry requires an unchanged original timeout/abort receipt with no observation; reviewed or rejected observations cannot be rerolled");
     retryOf = requestSha256;
     requestSha256 = hash5(JSON.stringify({ retryOf, attempt: 1, policy: "transport-retry-v1" }));
-    receiptPath = path22.join(directory2, `${requestSha256}.json`);
+    receiptPath = path23.join(directory2, `${requestSha256}.json`);
   }
   if (existsSync28(receiptPath)) {
     try {
@@ -99238,7 +99351,7 @@ async function reviewActing2(input, deps) {
   const sourceChanged = currentMediaSha256 !== mediaSha256;
   if (sourceChanged) result = unverified([...result.failures, "Source media changed during review; evidence binds only uploaded bytes"]);
   try {
-    recordUsage(path22.dirname(mediaPath), {
+    recordUsage(path23.dirname(mediaPath), {
       ts: (/* @__PURE__ */ new Date()).toISOString(),
       tool: "acting_review",
       ok: review !== null,
@@ -99292,7 +99405,7 @@ async function reviewActing2(input, deps) {
 
 // src/threads-gate.ts
 import { createHash as createHash19, randomUUID as randomUUID9 } from "node:crypto";
-import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync19, readFileSync as readFileSync30, realpathSync as realpathSync10, renameSync as renameSync10, statSync as statSync13, writeFileSync as writeFileSync22 } from "node:fs";
+import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync19, readFileSync as readFileSync30, realpathSync as realpathSync10, renameSync as renameSync10, statSync as statSync14, writeFileSync as writeFileSync22 } from "node:fs";
 import { dirname as dirname8, join as join14, resolve as resolve10 } from "node:path";
 import { fileURLToPath as fileURLToPath8 } from "node:url";
 import { spawnSync as spawnSync3 } from "node:child_process";
@@ -99436,9 +99549,9 @@ function checkThreadsEpisode(input) {
     const topic = channelSchema.parse(input.episodeRef);
     const root = realpathSync10(join14(process.cwd(), "data", channel, "episodes"));
     const episode = realpathSync10(join14(root, topic));
-    if (dirname8(episode) !== root || !statSync13(episode).isDirectory()) throw new Error("Invalid episode directory");
+    if (dirname8(episode) !== root || !statSync14(episode).isDirectory()) throw new Error("Invalid episode directory");
     const board = realpathSync10(join14(episode, "storyboard", "scenes.js"));
-    if (!board.startsWith(episode + "/") || !statSync13(board).isFile()) throw new Error("Missing episode storyboard");
+    if (!board.startsWith(episode + "/") || !statSync14(board).isFile()) throw new Error("Missing episode storyboard");
     const approvalPath = realpathSync10(join14(episode, "threads-publish-approval.json"));
     if (dirname8(approvalPath) !== episode) throw new Error("Invalid episode approval path");
     const approval = JSON.parse(readFileSync30(approvalPath, "utf8"));
@@ -99776,9 +99889,9 @@ var OPENAPI_CODE_HELP = {
 };
 async function callOpenApi(input) {
   const key = requireDataGoKrKey();
-  const path25 = input.path.replace(/^\/+/, "");
-  if (path25.includes("..") || path25.includes("://")) return err("path only accepts a route under apis.data.go.kr (e.g. 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst)");
-  const url = `${OPENAPI_BASE}/${path25}${buildQuery({ ...input.params, serviceKey: key })}`;
+  const path26 = input.path.replace(/^\/+/, "");
+  if (path26.includes("..") || path26.includes("://")) return err("path only accepts a route under apis.data.go.kr (e.g. 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst)");
+  const url = `${OPENAPI_BASE}/${path26}${buildQuery({ ...input.params, serviceKey: key })}`;
   const res = await requestRaw("get", url, { "User-Agent": BROWSER_UA });
   const body = res.body;
   if (/^\s*Unauthorized\s*$/i.test(body)) return err(`apis.data.go.kr: ${OPENAPI_AUTH_HELP}`);
@@ -100767,7 +100880,7 @@ import {
   writeFileSync as nodeWriteFileSync
 } from "node:fs";
 import { open as nodeOpen, readFile, stat as stat3 } from "node:fs/promises";
-import { basename as basename9, dirname as dirname9, extname as extname10, join as join16 } from "node:path";
+import { basename as basename9, dirname as dirname9, extname as extname11, join as join16 } from "node:path";
 function enabledPlatforms() {
   const channelDirs = listChannelDirs();
   return SNS_PLATFORMS.filter(
@@ -101358,19 +101471,19 @@ var YT_THUMB_MIME_BY_EXT = {
 var YT_THUMB_MAX_BYTES = 2 * 1024 * 1024;
 var CAPTION_MAX_BYTES_YT = 100 * 1024 * 1024;
 var CAPTION_MAX_BYTES_FB = 200 * 1024;
-async function readCaptionFile(path25, maxBytes) {
-  if (extname10(path25).toLowerCase() !== ".srt") {
-    return { error: fail2(400, `Caption file must be .srt (SubRip): ${path25}`) };
+async function readCaptionFile(path26, maxBytes) {
+  if (extname11(path26).toLowerCase() !== ".srt") {
+    return { error: fail2(400, `Caption file must be .srt (SubRip): ${path26}`) };
   }
   let bytes;
   try {
-    bytes = await readFile(path25);
+    bytes = await readFile(path26);
   } catch (error2) {
     return { error: fail2(400, `Cannot read caption file: ${error2 instanceof Error ? error2.message : String(error2)}`) };
   }
-  if (bytes.byteLength === 0) return { error: fail2(400, `Caption file is empty: ${path25}`) };
+  if (bytes.byteLength === 0) return { error: fail2(400, `Caption file is empty: ${path26}`) };
   if (bytes.byteLength > maxBytes) {
-    return { error: fail2(400, `Caption file exceeds ${maxBytes} bytes: ${path25} (${bytes.byteLength} bytes)`) };
+    return { error: fail2(400, `Caption file exceeds ${maxBytes} bytes: ${path26} (${bytes.byteLength} bytes)`) };
   }
   return { bytes };
 }
@@ -101575,7 +101688,7 @@ async function publishYoutube(input) {
   if (input.privacyStatus === "public") {
     throw new Error('YouTube uploads start private (owner directive 2026-08-19/2026-10-18): upload with privacyStatus "private" or "unlisted", then flip to public with youtube_update after checking the watch page');
   }
-  const mimeType = YT_VIDEO_MIME_BY_EXT[extname10(input.videoFilePath).toLowerCase()];
+  const mimeType = YT_VIDEO_MIME_BY_EXT[extname11(input.videoFilePath).toLowerCase()];
   if (!mimeType) return fail2(400, `Unsupported video extension: ${input.videoFilePath} (.mp4/.mov)`);
   let videoSize;
   let videoMtimeMs;
@@ -101590,7 +101703,7 @@ async function publishYoutube(input) {
   }
   let thumb;
   if (input.thumbnailFilePath) {
-    const thumbMime = YT_THUMB_MIME_BY_EXT[extname10(input.thumbnailFilePath).toLowerCase()];
+    const thumbMime = YT_THUMB_MIME_BY_EXT[extname11(input.thumbnailFilePath).toLowerCase()];
     if (!thumbMime) {
       return fail2(400, `Unsupported thumbnail extension: ${input.thumbnailFilePath} (.jpg/.jpeg/.png)`);
     }
@@ -102611,7 +102724,7 @@ async function checkAccounts(channel) {
 import { execFile as execFile9 } from "node:child_process";
 import { existsSync as existsSync31, mkdtempSync as mkdtempSync5, readFileSync as readFileSync31, rmSync as rmSync11, writeFileSync as writeFileSync23, renameSync as renameSync11, openSync as openSync7, closeSync as closeSync7 } from "node:fs";
 import { tmpdir as tmpdir6 } from "node:os";
-import path23 from "node:path";
+import path24 from "node:path";
 import { promisify as promisify5 } from "node:util";
 var chapters = __toESM(require_final_speech_chapters(), 1);
 var exec4 = promisify5(execFile9);
@@ -102625,7 +102738,7 @@ var finalSpeechSchema = external_exports.object({
   segments: external_exports.array(external_exports.object({ startSeconds: external_exports.number().finite().nonnegative(), expectedText: external_exports.string().trim().min(1).max(1e3) }).strict()).min(1).max(1e3).optional()
 }).strict();
 async function reviewFinalSpeech(input, deps) {
-  const request = finalSpeechSchema.parse(input), media = path23.resolve(request.mediaPath);
+  const request = finalSpeechSchema.parse(input), media = path24.resolve(request.mediaPath);
   if (!deps) {
     const { segments: segments2, mediaPath: _path, ...brief } = request;
     return { ...await hostReview({ mediaPath: media, mode: "audio", brief: JSON.stringify(brief) }), segments: segments2 ?? [] };
@@ -102638,12 +102751,12 @@ async function reviewFinalSpeech(input, deps) {
   } catch {
     return { success: false, status: "unverified", error: "Final speech review is already locked" };
   }
-  const temp = mkdtempSync5(path23.join(tmpdir6(), "speech-final-"));
+  const temp = mkdtempSync5(path24.join(tmpdir6(), "speech-final-"));
   let base = { version: 1, policy: "final-speech-v1", model: REVIEW_MODEL, ...identity, mediaPath: media };
   let singleReviewStarted = false;
   function save3(status, extra) {
     const result = { ...base, status, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
-    const staging = path23.join(temp, "proof.json");
+    const staging = path24.join(temp, "proof.json");
     writeFileSync23(staging, JSON.stringify(result, null, 2) + "\n");
     writeFileSync23(proofPath + ".tmp", readFileSync31(staging));
     renameSync11(proofPath + ".tmp", proofPath);
@@ -102651,7 +102764,7 @@ async function reviewFinalSpeech(input, deps) {
   }
   try {
     base = { ...base, mediaSha256: sha256(readFileSync31(media)), textSha256: sha256(normalizeSpeech(request.expectedText)) };
-    const wav = path23.join(temp, "final.flac");
+    const wav = path24.join(temp, "final.flac");
     await exec4("ffmpeg", ["-y", "-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", "24000", "-c:a", "flac", wav], { timeout: 6e4 });
     base.audioSha256 = sha256(readFileSync31(wav));
     if (sha256(readFileSync31(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
@@ -102680,7 +102793,7 @@ async function reviewFinalSpeech(input, deps) {
         expectedText: request.expectedText.slice(0, 4e3),
         language: request.language,
         delivery: request.delivery,
-        outputPath: path23.dirname(media),
+        outputPath: path24.dirname(media),
         filename: "final.wav"
       }),
       expectedText: request.expectedText,
@@ -102720,7 +102833,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
   try {
     for (const piece of planned) {
       const samples = pcm.subarray(piece.startSample * chapters.BYTES, piece.endSample * chapters.BYTES);
-      const raw = path23.join(temp, "piece.pcm"), file = path23.join(temp, "piece.flac");
+      const raw = path24.join(temp, "piece.pcm"), file = path24.join(temp, "piece.flac");
       writeFileSync23(raw, samples);
       await exec4("ffmpeg", ["-y", "-v", "error", "-f", "s32le", "-ar", String(chapters.RATE), "-ac", "1", "-i", raw, "-map_metadata", "-1", "-c:a", "flac", file], { timeout: 6e4 });
       const payload = readFileSync31(file);
@@ -102741,7 +102854,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
           expectedText: piece.expectedText,
           language: request.language,
           delivery: request.delivery,
-          outputPath: path23.dirname(media),
+          outputPath: path24.dirname(media),
           filename: "final.wav"
         }), transcriptCheck: request.transcriptCheck };
         const result = await deps.listen(file, reviewRequest, true);
@@ -103625,9 +103738,9 @@ function isShortEnough(seconds, duration3) {
   if (seconds == null) return true;
   return seconds <= 180;
 }
-async function youtubeGet(path25, params, auth) {
+async function youtubeGet(path26, params, auth) {
   const query = auth.kind === "key" ? { ...params, key: auth.key } : params;
-  const url = `${YT_DATA_BASE2}/${path25}${buildQuery(query)}`;
+  const url = `${YT_DATA_BASE2}/${path26}${buildQuery(query)}`;
   try {
     const res = await fetch(url, {
       method: "GET",
@@ -103639,7 +103752,7 @@ async function youtubeGet(path25, params, auth) {
     return { ok: false, status: res.status, body: maskKey4(text3) };
   } catch (error2) {
     const message = error2 instanceof Error ? error2.message : String(error2);
-    return fail3(502, `YouTube Data API call failed (${path25}): ${maskKey4(message)}`);
+    return fail3(502, `YouTube Data API call failed (${path26}): ${maskKey4(message)}`);
   }
 }
 function chunk2(items, size) {
@@ -104438,13 +104551,13 @@ ${errors.join("\n")}`);
 
 // src/capability-status.ts
 import { existsSync as existsSync32 } from "node:fs";
-import path24 from "node:path";
+import path25 from "node:path";
 import os3 from "node:os";
 var has2 = (v) => Boolean(v && v.length > 0);
 var binOk = (p) => {
   try {
-    if (p.includes(path24.sep)) return existsSync32(p);
-    return (process.env.PATH || "").split(path24.delimiter).some((dir) => dir && existsSync32(path24.join(dir, p)));
+    if (p.includes(path25.sep)) return existsSync32(p);
+    return (process.env.PATH || "").split(path25.delimiter).some((dir) => dir && existsSync32(path25.join(dir, p)));
   } catch {
     return false;
   }
@@ -104484,7 +104597,7 @@ function capabilityStatus() {
           provider: "astra-genai (LTX v2 gateway)",
           configured: has2(config.astraGenaiApiKey),
           needs: "ASTRA_GENAI_API_KEY",
-          note: "astra_genai_text2video \xB7 astra_genai_img2video \xB7 astra_genai_msr (four subjects + background) \xB7 astra_genai_video_status; separate gateway token, no supplied audio or LoRA; configuration is not a live check"
+          note: "astra_genai_text2video \xB7 astra_genai_img2video \xB7 astra_genai_audio2video (audio-length clip, mono/stereo, 7350-96000 Hz, data URI \u226415,000,000 base64 chars) \xB7 astra_genai_msr (four subjects + background) \xB7 astra_genai_video_status; separate gateway token, no LoRA; configuration is not a live check"
         },
         {
           provider: "astra video (self-hosted LTX-2.5)",
@@ -104958,7 +105071,7 @@ var instagramPublishSchema = external_exports.object({
   videoUrl: external_exports.string().url().optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
-  const issue2 = (path25, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path25], message });
+  const issue2 = (path26, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path26], message });
   if (!v.imageUrls && !v.videoUrl) issue2("imageUrls", "INSTAGRAM requires imageUrls (1-10) or videoUrl (reel)");
   if (v.imageUrls && v.videoUrl) issue2("videoUrl", "imageUrls and videoUrl are mutually exclusive");
   if (v.videoUrl && !isVideoUrl(v.videoUrl)) issue2("videoUrl", "videoUrl must be a .mp4/.mov URL");
@@ -104978,7 +105091,7 @@ var facebookPublishSchema = external_exports.object({
   linkUrl: external_exports.string().url().optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
-  const issue2 = (path25, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path25], message });
+  const issue2 = (path26, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path26], message });
   if (v.imageUrls && v.videoUrl) issue2("videoUrl", "imageUrls and videoUrl are mutually exclusive");
   if (v.videoUrl && !isVideoUrl(v.videoUrl)) issue2("videoUrl", "videoUrl must be a .mp4/.mov URL");
   if (v.linkUrl && (v.imageUrls || v.videoUrl)) issue2("linkUrl", "linkUrl is for text-only posts (no media)");
@@ -105499,6 +105612,7 @@ Length is unchanged from the input.`
   //    message — never the request headers, which is where the key lives.
   astra_genai_text2video: async (args) => text2(JSON.stringify(await generateGenaiVideo("text-to-video", args))),
   astra_genai_img2video: async (args) => text2(JSON.stringify(await generateGenaiVideo("image-to-video", args))),
+  astra_genai_audio2video: async (args) => text2(JSON.stringify(await generateGenaiVideo("audio-to-video", args))),
   astra_genai_msr: async (args) => text2(JSON.stringify(await generateGenaiVideo("msr", args))),
   astra_genai_edit: async (args) => {
     const result = await generateGenaiImage(args, "edit");

@@ -15,6 +15,7 @@ of packaging, signs and lettered clothing; apply the scoped image-model override
 | Preserve a character, outfit, prop and setting in a moving shot | video `reference` / `astra_genai_msr` | Reuse inspected character, clothing, prop and location sheets; up to four subject images plus one background. |
 | Animate a particular first frame or reach a final frame | video `image` / `astra_genai_img2video` | Source URI and optional last-frame URI. MSR references do not pin temporal frames. |
 | Motion without identity references | video `text` / `astra_genai_text2video` | Explicit action, timing and camera intent. |
+| A clip that follows a recorded speech or sound track | video `audio` / `astra_genai_audio2video` | One mono/stereo audio file; optional first/last image. The clip length equals the audio. |
 
 Actively consider these operations during asset and shot planning. Prefer a targeted
 edit when the existing asset already fits most of the shot. Prefer MSR when continuity
@@ -114,6 +115,20 @@ The v2 tools retain explicit `duration` (integer or null) and `resolution`, opti
 `imageUri` and optional `lastFrameUri`; it does not upload local files. The gateway
 validates deployment limits. Do not send MSR fields to v2 or reuse legacy upload IDs.
 
+Audio-to-video takes exactly one `audioPath` (local `.wav`/`.mp3`/`.m4a`/`.ogg`/`.opus`,
+sent as a data URI) or `audioUri` (HTTPS, or an `audio/wav`, `audio/mpeg`, `audio/mp4`
+or `audio/ogg` data URI), plus `prompt`, `model` `ltx-2.5-22b-dev` (distilled is 422),
+`resolution` and `fps`. Optional first image `imagePath`/`imageUri` and last frame
+`lastFramePath`/`lastFrameUri` (needs a first image). There is no `duration`,
+`generateAudio` or `cameraMotion`: the output length equals the audio, up to 361
+frames (15.04 s at 24 fps, 14.44 s at 25, 7.52 s at 48, 7.22 s at 50; longer is 422).
+A data URI may carry at most 15,000,000 base64 characters (about 11.25 MB of audio);
+use HTTPS for larger files. Three or more channels are 422, never downmixed. The sample rate is not
+changed: only AAC standard rates 7350–96000 Hz (e.g. 48000, 44100) pass; others such
+as 192000 are 422. The
+soundtrack is the supplied audio after one backend encode, not a bit-identical copy.
+Lip-sync quality is not yet measured on this gateway; inspect mouths before acceptance.
+
 ## Recovery and evidence
 
 Generation POSTs are never retried automatically. Each output has a private
@@ -128,6 +143,6 @@ signed result URLs. Existing outputs are not overwritten and cached hashes must 
 
 Contract: [gateway docs](https://genai.astravision.co.kr/docs) and
 [OpenAPI](https://genai.astravision.co.kr/openapi.json), pinned in
-`server/test/fixtures/astra-genai-openapi-20261018.json`. Response parsing follows
+`server/test/fixtures/astra-genai-openapi-20261020.json`. Response parsing follows
 LTX `id/status/result.video_url` and DashScope `request_id/output.choices/usage`.
 Contract tests use synthetic media and mocked transport, not live GPU generation.

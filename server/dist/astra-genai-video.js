@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import { createHash } from 'node:crypto';
 import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { bareFilenameSchema, resolveOutputFile } from './media-utils.js';
@@ -26,6 +27,62 @@ export const genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
     imageUri: z.string().min(1),
     lastFrameUri: z.string().min(1).nullable().optional(),
 });
+// Gateway contract (genai-gateway#13): four data URI MIME types, 15,000,000 base64 characters.
+export const GENAI_AUDIO_TYPES = { '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.ogg': 'audio/ogg', '.opus': 'audio/ogg' };
+export const GENAI_AUDIO_DATA_URI_MAX = 15_000_000;
+const oneOf = (a, b) => Number(a !== undefined) + Number(b !== undefined);
+export const genaiAudioToVideoSchema = z.object({
+    prompt: z.string().trim().min(1).max(5000),
+    model: z.literal('ltx-2.5-22b-dev'),
+    resolution: z.string().min(1),
+    fps: z.union([z.literal(24), z.literal(25), z.literal(48), z.literal(50)]).default(24),
+    audioPath: z.string().min(1).optional(), audioUri: z.string().min(1).optional(),
+    imagePath: z.string().min(1).optional(), imageUri: genaiImageUriSchema.optional(),
+    lastFramePath: z.string().min(1).optional(), lastFrameUri: genaiImageUriSchema.optional(),
+    reserveUsd: z.number().finite().nonnegative(),
+    outputPath: z.string().optional(),
+    filename: bareFilenameSchema('video').refine(name => name.endsWith('.mp4'), 'Use an .mp4 filename').optional(),
+}).strict().superRefine((args, ctx) => {
+    const issue = (message) => ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+    if (oneOf(args.audioPath, args.audioUri) !== 1)
+        issue('Supply exactly one audioPath or audioUri');
+    if (oneOf(args.imagePath, args.imageUri) > 1)
+        issue('Supply at most one imagePath or imageUri');
+    if (oneOf(args.lastFramePath, args.lastFrameUri) > 1)
+        issue('Supply at most one lastFramePath or lastFrameUri');
+    if (oneOf(args.lastFramePath, args.lastFrameUri) && !oneOf(args.imagePath, args.imageUri))
+        issue('A last frame requires a first image');
+});
+/** Local audio becomes a data URI; HTTPS sources are fetched by the gateway. */
+export function genaiAudioUri(uri, file) {
+    if (uri !== undefined) {
+        if (/^https:/.test(uri)) {
+            const url = new URL(uri);
+            if (url.username || url.password)
+                throw new Error('GenAI audio URL must not carry credentials');
+            return uri;
+        }
+        const match = /^data:([^;,]+);base64,([A-Za-z0-9+/]+=*)$/.exec(uri);
+        if (!match || !Object.values(GENAI_AUDIO_TYPES).includes(match[1]))
+            throw new Error('GenAI audio must be HTTPS or an audio/wav, audio/mpeg, audio/mp4 or audio/ogg data URI');
+        if (match[2].length > GENAI_AUDIO_DATA_URI_MAX)
+            throw new Error('GenAI audio data URI exceeds 15,000,000 base64 characters; use an HTTPS URL');
+        return uri;
+    }
+    const type = GENAI_AUDIO_TYPES[path.extname(file).toLowerCase()];
+    if (!type)
+        throw new Error('GenAI audioPath must be .wav, .mp3, .m4a, .ogg or .opus');
+    // base64 of n bytes is 4*ceil(n/3) characters; reject before reading a large file.
+    if (4 * Math.ceil(fs.statSync(file).size / 3) > GENAI_AUDIO_DATA_URI_MAX)
+        throw new Error('GenAI audioPath exceeds the 15,000,000-character data URI limit (about 11.25 MB); use audioUri with HTTPS');
+    return `data:${type};base64,${fs.readFileSync(file).toString('base64')}`;
+}
+export function buildGenaiAudioBody(args) {
+    const image = oneOf(args.imagePath, args.imageUri) ? genaiSourceUri(args.imageUri, args.imagePath) : undefined;
+    const last = oneOf(args.lastFramePath, args.lastFrameUri) ? genaiSourceUri(args.lastFrameUri, args.lastFramePath) : undefined;
+    return { audio_uri: genaiAudioUri(args.audioUri, args.audioPath), prompt: args.prompt, model: args.model, resolution: args.resolution, fps: args.fps,
+        ...(image === undefined ? {} : { image_uri: image }), ...(last === undefined ? {} : { last_frame_uri: last }) };
+}
 export const genaiMsrSchema = z.object({
     prompt: z.string().trim().min(1).max(2000),
     references: z.array(z.object({
@@ -75,7 +132,7 @@ export function buildGenaiVideoBody(args) {
         ...(args.lastFrameUri === undefined ? {} : { last_frame_uri: args.lastFrameUri }),
     };
 }
-const operationSchema = z.enum(['text-to-video', 'image-to-video', 'msr']);
+const operationSchema = z.enum(['text-to-video', 'image-to-video', 'audio-to-video', 'msr']);
 const receiptSchema = z.object({
     version: z.literal(1), baseUrl: z.string(), operation: operationSchema, fingerprint: z.string(),
     videoPath: z.string(), jobId: z.string().min(1).optional(),
@@ -135,9 +192,11 @@ function genaiVideoRoute(operation) {
     return operation === 'msr' ? '/v1/ltx/msr' : `/v1/ltx/v2/${operation}`;
 }
 export async function generateGenaiVideo(operation, input) {
-    const args = (operation === 'msr' ? genaiMsrSchema : operation === 'text-to-video' ? genaiTextToVideoSchema : genaiImageToVideoSchema).parse(input);
+    const args = (operation === 'msr' ? genaiMsrSchema : operation === 'audio-to-video' ? genaiAudioToVideoSchema
+        : operation === 'text-to-video' ? genaiTextToVideoSchema : genaiImageToVideoSchema).parse(input);
     requireAstraGenaiKey();
-    const body = 'references' in args ? buildGenaiMsrBody(args) : buildGenaiVideoBody(args);
+    const body = 'references' in args ? buildGenaiMsrBody(args) : operation === 'audio-to-video'
+        ? buildGenaiAudioBody(args) : buildGenaiVideoBody(args);
     const fingerprint = createHash('sha256').update(JSON.stringify(body)).digest('hex');
     const videoPath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.mp4`, 'video');
     const receiptPath = videoPath + '.astra-genai.json';

@@ -80,7 +80,7 @@ export function capabilityStatus(): {
         { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
           note: 'mlx_video_generate — 24fps rgb8 muxed to mp4, RAM-capped; not the default path' },
         { provider: 'astra-genai (LTX v2 gateway)', configured: has(config.astraGenaiApiKey), needs: 'ASTRA_GENAI_API_KEY',
-          note: 'astra_genai_text2video · astra_genai_img2video · astra_genai_msr (four subjects + background) · astra_genai_video_status; separate gateway token, no supplied audio or LoRA; configuration is not a live check' },
+          note: 'astra_genai_text2video · astra_genai_img2video · astra_genai_audio2video (audio-length clip, mono/stereo, 7350-96000 Hz, data URI ≤15,000,000 base64 chars) · astra_genai_msr (four subjects + background) · astra_genai_video_status; separate gateway token, no LoRA; configuration is not a live check' },
         { provider: 'astra video (self-hosted LTX-2.5)', configured: has(config.astraVideoApiKey), needs: 'ASTRA_VIDEO',
           note: 'astra_text2video · astra_img2video · astra_keyframe_video · astra_audio2video · astra_ic_lora · astra_video_retake · astra_video_capabilities · astra_video_list_uploads · astra_video_delete_upload (upload management requires server endpoint support; configuration is not a live check) — our own box, no per-call bill, but ONE render at a time (66-184s each plus queue); the batch lane, not the interactive one' },
       ],

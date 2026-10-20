@@ -985,6 +985,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   //    message — never the request headers, which is where the key lives.
   astra_genai_text2video: async args => text(JSON.stringify(await generateGenaiVideo('text-to-video', args))),
   astra_genai_img2video: async args => text(JSON.stringify(await generateGenaiVideo('image-to-video', args))),
+  astra_genai_audio2video: async args => text(JSON.stringify(await generateGenaiVideo('audio-to-video', args))),
   astra_genai_msr: async args => text(JSON.stringify(await generateGenaiVideo('msr', args))),
   astra_genai_edit: async args => {
     const result = await generateGenaiImage(args, 'edit');

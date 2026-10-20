@@ -15,7 +15,7 @@ function setup(t) {
   return dir;
 }
 test('provider body follows the published gateway fields and preserves required null duration', () => {
-  const api = JSON.parse(fs.readFileSync(new URL('./fixtures/astra-genai-openapi-20261018.json', import.meta.url)));
+  const api = JSON.parse(fs.readFileSync(new URL('./fixtures/astra-genai-openapi-20261020.json', import.meta.url)));
   const args = genaiImageToVideoSchema.parse({ ...base, duration: null, imageUri: 'https://example.com/start.png', lastFrameUri: null, cameraMotion: 'static' });
   const body = buildGenaiVideoBody(args), schema = api.components.schemas.ImageVideo;
   assert.ok(schema.required.every(key => Object.hasOwn(body, key)));
@@ -61,7 +61,7 @@ test('MSR validates slots, geometry and frame timing against its independent con
   const ref = { imageUri: 'https://example.com/person.png' };
   const args = { prompt: 'Person in image 1 walks in image 2.', references: [ref, { ...ref, background: true }], reserveUsd: 0 };
   const body = buildGenaiMsrBody(genaiMsrSchema.parse({ ...args, duration: 5 }));
-  const api = JSON.parse(fs.readFileSync(new URL('./fixtures/astra-genai-openapi-20261018.json', import.meta.url)));
+  const api = JSON.parse(fs.readFileSync(new URL('./fixtures/astra-genai-openapi-20261020.json', import.meta.url)));
   assert.ok(Object.keys(body).every(key => key in api.components.schemas.MsrVideo.properties));
   assert.equal(body.duration, 5); assert.equal(body.num_frames, undefined); assert.equal(body.model, undefined);
   assert.equal(body.references[1].background, true);
@@ -92,4 +92,48 @@ test('MSR recovery uses the MSR route and never submits twice', async t => {
     return Response.json({ id: 'msr-job', status: 'processing' });
   };
   assert.equal((await getGenaiVideoStatus({ receiptPath, download: false })).status, 'processing');
+});
+
+test('audio-to-video follows the gateway AudioVideo contract and its data URI limits', async t => {
+  const { genaiAudioToVideoSchema, buildGenaiAudioBody, genaiAudioUri, GENAI_AUDIO_DATA_URI_MAX } = await import('../dist/astra-genai-video.js');
+  const dir = setup(t), wav = path.join(dir, 'line.wav');
+  execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'sine=d=0.2', '-ac', '1', wav]);
+  const api = JSON.parse(fs.readFileSync(new URL('./fixtures/astra-genai-openapi-20261020.json', import.meta.url)));
+  assert.ok(api.paths['/v1/ltx/v2/audio-to-video/{job_id}'].get);
+  const schema = api.components.schemas.AudioVideo;
+  const audio = { prompt: 'A presenter speaks to camera.', model: 'ltx-2.5-22b-dev', resolution: '1280x720', reserveUsd: 0 };
+  const body = buildGenaiAudioBody(genaiAudioToVideoSchema.parse({ ...audio, audioPath: wav, imageUri: 'https://example.com/a.png', lastFrameUri: 'https://example.com/b.png' }));
+  assert.ok(schema.required.every(key => Object.hasOwn(body, key)));
+  assert.ok(Object.keys(body).every(key => Object.hasOwn(schema.properties, key)));
+  assert.equal(body.audio_uri, `data:audio/wav;base64,${fs.readFileSync(wav).toString('base64')}`);
+  assert.equal(body.fps, 24); assert.equal(body.last_frame_uri, 'https://example.com/b.png');
+  for (const extra of [{}, { audioPath: wav, audioUri: 'https://example.com/a.wav' }, { audioPath: wav, model: 'ltx-2.5-22b-distilled' },
+    { audioPath: wav, prompt: '  ' }, { audioPath: wav, duration: 6 }, { audioPath: wav, generateAudio: true }, { audioPath: wav, cameraMotion: 'static' },
+    { audioPath: wav, lastFrameUri: 'https://example.com/b.png' }, { audioPath: wav, fps: 30 }])
+    assert.equal(genaiAudioToVideoSchema.safeParse({ ...audio, ...extra }).success, false, JSON.stringify(Object.keys(extra)));
+  assert.equal(GENAI_AUDIO_DATA_URI_MAX, 15_000_000);
+  assert.ok(genaiAudioUri('data:audio/ogg;base64,' + 'A'.repeat(15_000_000)));
+  assert.throws(() => genaiAudioUri('data:audio/ogg;base64,' + 'A'.repeat(15_000_004)), /15,000,000/);
+  assert.throws(() => genaiAudioUri('data:audio/x-wav;base64,AAAA'), /audio\/wav/);
+  assert.throws(() => genaiAudioUri(undefined, path.join(dir, 'line.flac')), /\.wav/);
+});
+
+test('audio-to-video submits and recovers on its own route, keeping the soundtrack switchless', async t => {
+  const dir = setup(t), wav = path.join(dir, 'line.wav');
+  execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'sine=d=0.2', wav]);
+  const routes = [];
+  globalThis.fetch = async (url, options) => {
+    routes.push(`${options.method} ${new URL(url).pathname}`);
+    if (options.method === 'POST') return Response.json({ id: 'a2v-1' }, { status: 202 });
+    return Response.json({ id: 'a2v-1', status: 'failed', error: { message: 'stub' } });
+  };
+  const args = { prompt: 'A presenter speaks.', model: 'ltx-2.5-22b-dev', resolution: '1280x720', reserveUsd: 0, audioPath: wav, outputPath: dir, filename: 'a2v.mp4' };
+  await assert.rejects(generateGenaiVideo('audio-to-video', args), /a2v-1 failed/);
+  assert.deepEqual(routes, ['POST /v1/ltx/v2/audio-to-video', 'GET /v1/ltx/v2/audio-to-video/a2v-1']);
+  assert.equal(parseVideoArgs('astra_genai_audio2video', args).audioPath, wav);
+  const { videoVoiceCapabilities } = await import('../dist/video-registry.js');
+  assert.equal(videoVoiceCapabilities('astra_genai_audio2video').suppliedSpeech, 'audio_conditioned_reencoded');
+  const { prepareVideoSound } = await import('../dist/video-sound.js');
+  const prepared = prepareVideoSound('astra_genai_audio2video', args, { audioSource: 'video' });
+  assert.equal(prepared.arguments.generateAudio, undefined); assert.equal(prepared.capabilities.inputAudio, 'preserved');
 });
