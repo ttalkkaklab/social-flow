@@ -97554,6 +97554,7 @@ function voiceReference(character, context2, warnings) {
   if (provenance === "legacy_sample_unverified") warnings.push(`${character.id}: sample identity is unverified; a file name or hash is not a listening review.`);
   return { path: absolute, sha256: sha2562, provenance };
 }
+var SUPPLIED_AUDIO_TOOLS = /* @__PURE__ */ new Set(["astra_audio2video", "astra_genai_audio2video"]);
 function prepareVideoVoice(tool, input, context2) {
   const args = { ...input };
   const lines = (Array.isArray(context2.shot.narration) ? context2.shot.narration : []).map(object3).filter((line) => text(line.tts));
@@ -97563,11 +97564,12 @@ function prepareVideoVoice(tool, input, context2) {
   const visual = object3(context2.shot.visual);
   const nativeSlot = Boolean(visual.clip) || context2.shot.type === "broll";
   const audible = tool !== "astra_genai_msr" && (tool.startsWith("veo_") || tool.startsWith("omni_") || (tool.startsWith("astra_") ? args.generateAudio !== false : args.generateAudio === true));
-  const native = tool !== "astra_audio2video" && audible && (nativeSlot || lines.some((line) => line.delivery === "on_screen"));
+  const supplied = SUPPLIED_AUDIO_TOOLS.has(tool);
+  const native = !supplied && audible && (nativeSlot || lines.some((line) => line.delivery === "on_screen"));
   const spec = SEEDANCE_MODEL_SPECS[args.model];
   const limitedPromptLanguage = tool.startsWith("seedance_") && !String(args.model).includes("2-5");
   const reference = native && tool === "seedance_reference" && Boolean(spec?.referenceAudio);
-  const strategy = tool === "astra_audio2video" ? "supplied_audio" : reference ? "reference_voice" : native ? "prompt_voice" : "external_tts";
+  const strategy = supplied ? "supplied_audio" : reference ? "reference_voice" : native ? "prompt_voice" : "external_tts";
   const warnings = [];
   const speakers = [];
   const nativeLines = nativeSlot ? lines : lines.filter((line) => line.delivery === "on_screen");
