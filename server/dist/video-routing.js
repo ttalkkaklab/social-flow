@@ -14,7 +14,7 @@ import { atomicJson, videoTransaction } from './video-state.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
 import { OMNI_MODEL } from './omni-client.js';
 import { videoEvents } from './video-events.js';
-import { getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody } from './astra-genai-video.js';
+import { getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema } from './astra-genai-video.js';
 import { prepareVideoVoice } from './video-voice.js';
 const load = createRequire(import.meta.url);
 const shared = fileURLToPath(new URL('../../skills/_shared/video-selection.js', import.meta.url));
@@ -147,6 +147,8 @@ export function planVideo(raw) {
     const inputs = inputFiles(args, context.episode);
     if (tool === 'astra_genai_msr')
         buildGenaiMsrBody(genaiMsrSchema.parse(args));
+    if (tool === 'astra_genai_audio2video')
+        buildGenaiAudioBody(genaiAudioToVideoSchema.parse(args));
     if (tool === 'astra_video_retake' && selection.resolution) {
         const probe = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'json', String(args.sourceVideoPath)], { encoding: 'utf8', timeout: 15_000 }));
         const stream = probe.streams?.[0];
@@ -341,7 +343,7 @@ export async function videoStatus(raw) {
     const state = JSON.parse(fs.readFileSync(file, 'utf8'));
     const job = state.jobs?.[input.requestId];
     if (input.action === 'refresh' && job) {
-        if (!['astra_genai_text2video', 'astra_genai_img2video', 'astra_genai_msr'].includes(job.tool))
+        if (!['astra_genai_text2video', 'astra_genai_img2video', 'astra_genai_audio2video', 'astra_genai_msr'].includes(job.tool))
             throw new Error('video_refresh_unsupported: use provider-specific recovery');
         const plan = JSON.parse(fs.readFileSync(path.join(episode, '.work/video-routing/plans', job.planId + '.json'), 'utf8'));
         const { id, ...body } = plan;

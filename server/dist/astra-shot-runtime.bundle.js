@@ -6379,6 +6379,28 @@ var genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
   imageUri: external_exports.string().min(1),
   lastFrameUri: external_exports.string().min(1).nullable().optional()
 });
+var oneOf = (a, b) => Number(a !== void 0) + Number(b !== void 0);
+var genaiAudioToVideoSchema = external_exports.object({
+  prompt: external_exports.string().trim().min(1).max(5e3),
+  model: external_exports.literal("ltx-2.5-22b-dev"),
+  resolution: external_exports.string().min(1),
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
+  audioPath: external_exports.string().min(1).optional(),
+  audioUri: external_exports.string().min(1).optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  imageUri: genaiImageUriSchema.optional(),
+  lastFramePath: external_exports.string().min(1).optional(),
+  lastFrameUri: genaiImageUriSchema.optional(),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
+}).strict().superRefine((args, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (oneOf(args.audioPath, args.audioUri) !== 1) issue("Supply exactly one audioPath or audioUri");
+  if (oneOf(args.imagePath, args.imageUri) > 1) issue("Supply at most one imagePath or imageUri");
+  if (oneOf(args.lastFramePath, args.lastFrameUri) > 1) issue("Supply at most one lastFramePath or lastFrameUri");
+  if (oneOf(args.lastFramePath, args.lastFrameUri) && !oneOf(args.imagePath, args.imageUri)) issue("A last frame requires a first image");
+});
 var genaiMsrSchema = external_exports.object({
   prompt: external_exports.string().trim().min(1).max(2e3),
   references: external_exports.array(external_exports.object({
@@ -6411,7 +6433,7 @@ var genaiMsrSchema = external_exports.object({
     if (frames < 25 || frames > 361) issue("MSR duration must round to 25..361 frames");
   }
 });
-var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "msr"]);
+var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "msr"]);
 var receiptSchema = external_exports.object({
   version: external_exports.literal(1),
   baseUrl: external_exports.string(),
@@ -6716,6 +6738,7 @@ var VIDEO_ADAPTERS = Object.freeze({
   seedance_reference: entry("seedance", "byteplus", "reference", seedanceReferenceSchema),
   astra_genai_text2video: entry("astra-genai", "genai-ltx-v2", "text", genaiTextToVideoSchema),
   astra_genai_img2video: entry("astra-genai", "genai-ltx-v2", "image", genaiImageToVideoSchema),
+  astra_genai_audio2video: entry("astra-genai", "genai-ltx-v2", "audio", genaiAudioToVideoSchema),
   astra_genai_msr: entry("astra-genai", "genai-ltx-msr", "reference", genaiMsrSchema),
   astra_text2video: entry("astra", "self-hosted-ltx", "text", astraText2VideoSchema),
   astra_img2video: entry("astra", "self-hosted-ltx", "image", astraImg2VideoSchema),
@@ -7326,6 +7349,7 @@ var schemas = {
   seedance_reference: seedanceReferenceSchema,
   astra_genai_text2video: genaiTextToVideoSchema,
   astra_genai_img2video: genaiImageToVideoSchema,
+  astra_genai_audio2video: genaiAudioToVideoSchema,
   astra_genai_msr: genaiMsrSchema,
   astra_text2video: astraText2VideoSchema,
   astra_img2video: astraImg2VideoSchema,
@@ -7345,7 +7369,7 @@ function prepareVideoSound(tool, input, sound = {}) {
   if (new Set(ids).size !== ids.length) throw new Error("Effect ids must be unique within the shot");
   if (sound.audioSource !== void 0 && !["video", "speech"].includes(String(sound.audioSource)))
     throw new Error("sound.audioSource must be video or speech");
-  const fixedInput = tool === "astra_audio2video";
+  const fixedInput = tool === "astra_audio2video" || tool === "astra_genai_audio2video";
   let nativeAudio = !fixedInput && tool !== "astra_genai_msr";
   if (tool.startsWith("seedance_")) {
     const model = input.model ?? (tool === "seedance_reference" ? DEFAULT_SEEDANCE_REFERENCE_MODEL : DEFAULT_SEEDANCE_MODEL);
@@ -7375,7 +7399,7 @@ function prepareVideoSound(tool, input, sound = {}) {
   if (sound.sfx && resolved.some((effect) => effect.delivery !== "post" && effect.sfx === sound.sfx))
     throw new Error("The same effect cannot belong to the native/input soundtrack and the legacy post cue");
   const args = { ...input };
-  if ((native.length || conditioned.length || sound.audioSource === "video") && (tool.startsWith("seedance_") || tool.startsWith("astra_"))) {
+  if ((native.length || conditioned.length || sound.audioSource === "video") && (tool.startsWith("seedance_") || tool.startsWith("astra_")) && tool !== "astra_genai_audio2video") {
     if (input.generateAudio === false) throw new Error("Cannot discard the requested input soundtrack");
     args.generateAudio = true;
   }

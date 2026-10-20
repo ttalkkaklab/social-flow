@@ -281,7 +281,8 @@ test('GenAI selection binds its model and reservation; managed recovery complete
  assert.throws(()=>make({reserveUsd:undefined}));
  const p=make();assert.equal(p.tool,'astra_genai_text2video');assert.equal(p.quote.reserveUsd,0.25);
  assert.equal(p.args.model,'ltx-2.5-22b-distilled');assert.equal(p.args.resolution,'1280x704');
- assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'speech',operation:'audio',args}),/no adapter/);
+ // Audio-to-video exists on GenAI but has no duration; its length comes from the audio.
+ assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'speech',operation:'audio',args}),/Unsupported astra_genai_audio2video argument: duration/);
  let calls=0;
  await assert.rejects(f.execute(p,async (_tool,input)=>{
    calls++;recordVideoSubmission('recover-1');fs.mkdirSync(input.outputPath,{recursive:true});
