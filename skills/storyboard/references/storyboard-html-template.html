@@ -948,7 +948,7 @@
     .scene-title { font-size: 20px; line-height: 1.45; }
     .scene-head { gap: 10px 12px; }
     .scene-checks { gap: 6px; }
-    .conti { --fw: 216px; margin-top: 20px; }
+    .conti { --fw: 280px; margin-top: 20px; }
     .conti-row { align-items: start; gap: clamp(20px, 3vw, 36px); }
     .conti-row.has-frame-pair { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
     .frame-inputs { width: 100%; max-width: 480px; gap: 16px; }
@@ -999,6 +999,10 @@
     .scenario-card.wide { grid-column: auto; }
   }
 
+  .shot-plan-details, .performance-details { font-size: var(--t-aux); margin-top: var(--s3); }
+  .shot-plan-details > summary, .performance-details > summary { cursor: pointer; min-height: 44px; align-content: center; color: var(--muted); }
+  .representative-frame-label { font-size: var(--t-aux); color: var(--muted); }
+  @media screen and (max-width: 600px) { .conti .panel { width: min(100%, 280px); margin-inline: auto; } }
   @media print {
     /* Paper is always white — someone reading in dark mode still prints on the light palette.
        Switching only the background to white and leaving dark text colors prints white on
@@ -1820,7 +1824,7 @@ window.STORYBOARD_READY = (async function () {
       brollAudio: "소리", brollOut: "산출물", brollNarration: "나레이션",
       vtRecording: "녹화 화면", vtOutro: "공용 아웃트로 mp4",
       vtSpeechClip: function (eng) { return "말하는 클립 · " + eng; },
-      vtImgToVideo: function (eng) { return "그림→영상 · " + eng; },
+      vtImgToVideo: function (eng) { return eng === "unselected" ? "영상 모델 미선택" : "그림→영상 · " + eng; },
       vtTyping: "타이핑 영상 · 코드 렌더", vtArt: "삽화", vtStill: "정지 배경", vtStock: "외부 영상",
       revealNo: function (n) { return "공개 " + n; },
       screenText: "화면 글자", noScreenText: "화면 글자 없음 — 그림만",
@@ -4315,6 +4319,7 @@ window.STORYBOARD_READY = (async function () {
     h += '<span class="scene-checks">' + sceneChips[i] + "</span></div>";
     var directionAt = directionOrder.findIndex(function (o) { return o.i === i; });
     h += window.SHOT_DIRECTION.summary(s, i, directionAt > 0 ? directionOrder[directionAt - 1].s : null, LANG, DOC);
+    h += '<details class="shot-plan-details"><summary>' + (LANG === 'ko' ? '촬영 계획 보기' : 'Shot plan') + '</summary>';
     h += window.FILM_TECHNIQUES.tiles(s, LANG);
     if (gram) h += '<div class="shot-grammar">' + gram + "</div>";
     // The picture and overlay badges are gone from here — the render tile above says what
@@ -4334,9 +4339,11 @@ window.STORYBOARD_READY = (async function () {
             : (genStill(s) && !FILL_FRAME[g.size] ? '<span class="shot-info shot-feel miss"><b>' + esc(T.spaceLabel) + "</b>" + esc(T.spaceMissing) + "</span>" : "")) +
          "</div>";
 
-    h += productionCutsHtml(s);
+    h += '</details>';
+    h += '<p class="shot-generation-flow">' + esc(LANG === 'ko' ? '배경 + 캐릭터 → 샷 이미지 → 영상' : 'Background + characters → shot image → video') + '</p>';
+    h += '<h4 class="shot-output-title">' + esc(LANG === 'ko' ? '샷 이미지' : 'Shot image') + '</h4>';
     h += '<p class="representative-frame-label">' + esc(LANG === 'ko'
-      ? '아래는 대표 프레임·자막 배치입니다. 전체 제작 컷 검토를 대신하지 않습니다.'
+      ? '대표 프레임 미리보기 · 제작 컷은 아래에서 별도 검토합니다.'
       : 'Below: representative frame and caption layout. This does not replace review of all production cuts.') + '</p>';
 
     if (s.type === "broll") {
@@ -4443,13 +4450,14 @@ window.STORYBOARD_READY = (async function () {
         if (lines) cell += '<div class="cut-sec">' + esc(T.audioSec) + "</div>" + lines;
 
         if (k === 0 && window.STORY && window.STORY.version === "story-v2") {
-          cell += '<div class="cut-sec">Story performance</div>';
+          cell += '<details class="performance-details"><summary>' + (LANG === 'ko' ? '연기·동선 상세' : 'Performance details') + '</summary>';
           (s.performance || []).forEach(function(e) {
             var speech = narr[e.group - 1] || {};
             var words = e.kind === "action" ? e.text : (speech.sub || speech.tts || "");
-            cell += '<div class="cut-line"><div class="b"><b>' + esc(e.character) + ' · ' + esc(e.kind) +
-              (e.to ? ' → ' + esc(e.to) : '') + '</b> ' + esc(words) + '</div></div>';
+            cell += '<div class="cut-line"><div class="b"><b>' + esc(castName(e.character)) + ' · ' + esc(LANG === 'ko' ? (e.kind === 'action' ? '행동' : '대사') : e.kind) +
+              (e.to ? ' → ' + esc(castName(e.to)) : '') + '</b> ' + esc(words) + '</div></div>';
           });
+          cell += '</details>';
         }
 
         // This path diagram belongs to the plan, never to the rendered footage.
@@ -4501,6 +4509,11 @@ window.STORYBOARD_READY = (async function () {
           frame(s, st, k, f.tier || 0, f.statScale || 0) + "</figure>" +
           '<div class="cut">' + cell + "</div></div>";
       }).join("") + "</div>";
+
+      h += '<div id="image-references-' + esc(s.id || '') + '"></div>';
+      var producedCuts = productionCutsHtml(s);
+      if (vis.video) h += '<h4 class="shot-output-title shot-video-title">' + esc(LANG === 'ko' ? '영상 생성' : 'Video generation') + '</h4>';
+      h += producedCuts || (vis.video ? '<p class="shot-references__note">' + esc(LANG === 'ko' ? '등록된 제작 영상이 없습니다. 샷 이미지로 영상을 생성하는 단계입니다.' : 'No production video registered. The shot image is the input for video generation.') + '</p>' : '');
 
       // The same note is not repeated on every scene — only the first time.
       if (!recOf(s) && s.type === "points" && narr.length && narr.length !== states.length && !carryNoted) {
@@ -4684,7 +4697,7 @@ window.STORYBOARD_READY = (async function () {
           esc(word("샷 ", "Shot ") + (index + 1) + " · " + (shot.title || shot.id || "")) + '</a>');
       });
       (window.LOCATION_REVIEW || []).filter(function (v) { return v.id === entry.id; }).forEach(function (v) {
-        html += '<p><a href="#locations" data-location-shot="' + esc(v.shotId) + '">' + esc(word('3D 인물 배치 · ', '3D blocking · ') + v.shotId) + '</a></p>';
+        html += '<p><a href="#location-shot-' + esc(v.shotId) + '" data-location-shot="' + esc(v.shotId) + '">' + esc(word('샷 배경 구도 · ', 'Shot background composition · ') + v.shotId) + '</a></p>';
       });
       html += '<p>' + (links.length ? links.join(" · ") : word("연결된 샷 없음", "No linked shots")) + '</p></article>';
     });

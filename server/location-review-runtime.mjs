@@ -9,6 +9,7 @@ function node(tag,text,parent,cls){const n=document.createElement(tag);if(text)n
 function button(text,parent,fn){const b=node('button',text,parent);b.type='button';b.onclick=fn;return b;}
 function url(p){const u=new URL(p,document.baseURI);if(!['file:','http:','https:'].includes(u.protocol))throw Error('Unsupported asset URL');return u.href;}
 function mount(){
+  if(document.getElementById('shots')&&!document.getElementById('location-viewer-host')){mountShotFrames();return;}
   if(!entries.length)return;
   const section=node('section',null,null,'location-review');section.id='locations';
   const app=document.getElementById('location-viewer-host')||document.getElementById('app')||document.body;
@@ -22,6 +23,73 @@ function mount(){
   select.onchange=choose;choose();if(location.hash==='#locations')section.scrollIntoView();
   document.addEventListener('click',ev=>{const link=ev.target.closest('[data-location-shot]');if(!link)return;const i=entries.findIndex(e=>e.shotId===link.dataset.locationShot);if(i>=0){select.value=i;choose();section.scrollIntoView();}});
   const nav=document.querySelector('.review-sidebar nav');if(nav){const a=node('a',word('장소','Locations'),nav);a.href='#locations';}
+}
+function mountShotFrames(){
+  (window.SCENES||[]).forEach((scene,index)=>{
+    const e=entries.find(entry=>entry.shotId===scene.id)||{shotId:scene.id};
+    const shot=document.getElementById('shot-'+(index+1));if(index<0||!shot)return;
+    const host=document.getElementById('image-references-'+e.shotId)||shot;
+    const section=node('section',null,host,'shot-references');
+    section.id='location-shot-'+e.shotId;
+    const background=node('div',null,section,'shot-background');
+    const header=node('div',null,background,'shot-references__header');
+    node('h3',word('사용 배경','Background'),header,'shot-references__title');
+    const detail=(window.LOCATION_DETAIL_LINKS||{})[e.id];
+    if(detail){const link=node('a',word('배경 시트','Background sheet'),header,'shot-references__link');link.href=url(detail);}
+    if(e.error)node('p',e.error,background,'shot-references__note');
+    function photo(frame,label,parent){
+      const figure=node('figure',null,parent,'shot-references__item'),link=node('a',null,figure,'shot-references__photo');
+      link.href=url(frame.path);link.target='_blank';link.rel='noopener';
+      const img=node('img',null,link);img.src=link.href;img.loading='lazy';img.alt=e.shotId+' · '+label;
+      node('figcaption',label,figure,'shot-references__caption');
+    }
+    if(e.fresh&&e.frames?.start){
+      photo(e.frames.start,word('샷 구도','Shot composition'),background);
+      if(e.frames.end){
+        const end=node('details',null,background,'shot-background__end');
+        node('summary',word('끝 구도 보기 · 선택 참조','End composition · optional'),end);
+        photo(e.frames.end,word('끝 구도','End composition'),end);
+      }
+    }else node('p',e.id?word('이 샷의 구도 캡처가 필요합니다.','This shot needs a composition capture.'):word('연결된 배경이 없습니다.','No background linked.'),background,'shot-references__note');
+    const people=node('div',null,section,'shot-characters');
+    node('h3',word('등장 캐릭터','Characters'),people,'shot-references__title');
+    const portraits=node('div',null,people,'shot-characters__portraits');
+    const cast=(window.SB_DOC||{}).characters||[];
+    const characters=Array.isArray(cast)?cast:Object.entries(cast).map(([id,c])=>({id,...c}));
+    const used=scene.visual?.character||[];
+    const seen=new Set();
+    for(const ref of Array.isArray(used)?used:[used]){
+      const id=typeof ref==='string'?ref:ref.id,c=characters.find(c=>c.id===id);if(!c||seen.has(id))continue;seen.add(id);
+      const path=c.panels?.face||c.panels?.body||c.panels?.back;
+      const card=node('div',null,portraits,'shot-character');
+      let pinned=false;
+      const trigger=button('',card,()=>{pinned=!pinned;setOpen(pinned);});trigger.className='shot-character__portrait';
+      trigger.setAttribute('aria-label',(c.name||id)+word(' 상세',' details'));
+      if(path){const img=node('img',null,trigger);img.src=url(path);img.loading='lazy';img.alt=c.name||id;}
+      else node('span',c.name||id,trigger);
+      const info=node('div',null,card,'shot-character__info');
+      info.id='character-info-'+e.shotId+'-'+seen.size;
+      trigger.setAttribute('aria-controls',info.id);
+      function setOpen(open){info.hidden=!open;trigger.setAttribute('aria-expanded',String(open));}
+      setOpen(false);
+      card.addEventListener('pointerenter',ev=>{if(ev.pointerType==='mouse')setOpen(true);});
+      card.addEventListener('pointerleave',ev=>{if(ev.pointerType==='mouse'&&!pinned&&!card.contains(document.activeElement))setOpen(false);});
+      card.addEventListener('focusout',ev=>{if(!card.contains(ev.relatedTarget)){pinned=false;setOpen(false);}});
+      card.addEventListener('keydown',ev=>{if(ev.key==='Escape'){pinned=false;setOpen(false);trigger.focus();}});
+      document.addEventListener('click',ev=>{if(!card.contains(ev.target)){pinned=false;setOpen(false);}});
+      node('strong',c.name||id,info);
+      if(c.role)node('p',c.role,info);
+      const identity=c.character?.identity?.summary?.value;
+      const outfit=c.character?.physical?.outfit?.value;
+      if(typeof identity==='string')node('p',identity,info);
+      if(typeof outfit==='string')node('p',outfit,info);
+      for(const key of ['face','body','back'])if(c.panels?.[key]){
+        const link=node('a',({face:word('얼굴','Face'),body:word('전신','Body'),back:word('뒷모습','Back')})[key],info);
+        link.href=url(c.panels[key]);link.target='_blank';link.rel='noopener';
+      }
+    }
+    if(!seen.size)node('p',word('등장 캐릭터가 없습니다.','No characters in this shot.'),people,'shot-references__note');
+  });
 }
 function view(e,host){
   if(e.error){node('p',e.error,host,'location-error');return ()=>{};}
