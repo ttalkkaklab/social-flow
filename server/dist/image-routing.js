@@ -122,7 +122,7 @@ export function planImage(raw) {
             throw new Error('image_output_outside_directory');
     }
     requireWorkflow(input.directory, 'image', input.assetId, outputFile);
-    requireCompositionReference(input.directory, input.assetId, args);
+    requireCompositionReference(input.directory, input.assetId, args, outputFile);
     const inputs = selection.engine === 'host' ? {} : inputFiles(args, context.directory);
     if (selection.engine === 'astra-genai')
         buildGenaiImageBody((tool === 'astra_genai_edit' ? genaiImageEditSchema : genaiImageSchema).parse(args));
@@ -155,7 +155,7 @@ export async function executeImage(raw, dispatch) {
     if (id !== input.planId || routingHash(body) !== id || plan.directory !== directory)
         throw new Error('image_plan_invalid');
     requireWorkflow(directory, 'image', plan.assetId, plan.outputFile);
-    requireCompositionReference(directory, plan.assetId, plan.args);
+    requireCompositionReference(directory, plan.assetId, plan.args, plan.outputFile);
     if (plan.workflowRevision !== workflowRevision(directory))
         throw new Error('workflow_plan_stale: prepare a new image plan');
     if (plan.execution === 'host_handoff')

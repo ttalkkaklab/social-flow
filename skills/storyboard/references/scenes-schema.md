@@ -84,7 +84,7 @@ report missing mappings; they do not certify the scene's artistic quality.
 - [Production mode — `window.PRODUCTION`](#production-mode-windowproduction)
   - [Episode visual style selection](#episode-visual-style-selection)
   - [Bundled full-video style references](#bundled-full-video-style-references)
-  - [Conditional start/end images](#conditional-startend-images)
+  - [Shot image inputs](#shot-image-inputs)
 - [Fields common to every shot](#fields-common-to-every-shot)
   - [narration segments](#narration-segments)
   - [title is a spoken hook · narration explains in polite register (user directive, 2026-08-13)](#title-is-a-spoken-hook-narration-explains-in-polite-register-user-directive-2026-08-13)
@@ -843,15 +843,62 @@ The preset stays constant while `cutType` describes subject treatment and dramat
 that composition. `style.worlds[videoDesign.worldId]` optionally selects a set-specific world sentence;
 the required `style.world` is the fallback.
 
-### Conditional start/end images
+### Shot image inputs
 
-Use `visual.frames: {mode:"first"|"first_last", reason, endState?, end?}` for new generated
-shots. `visual.bg` supplies the start frame. Two-frame shots require `endState` during planning
-and a distinct `end` image before video generation. The approval page displays both images;
-`seedance-route.js` forwards `end` as `lastImagePath`. Follow
-[render-routing.md](render-routing.md#start-and-end-frame-planning) for the selection and
-continuity rules. Legacy boards without `frames` retain their original single-frame display,
-unless an existing `lastImagePath` supplies a second frame.
+New generated shots declare `visual.frames` and `visual.references` (an empty array
+means no extra conditioning). Keep the number of images tied to visible requirements,
+not the model's maximum slot count.
+
+```js
+visual: {
+  bg: 'images/s1-start.png', // compatibility with still renderers; same file as frames.start
+  frames: {
+    mode: 'first_last', // first | first_last | reference
+    start: 'images/s1-start.png',
+    end: 'images/s1-end.png',
+    reason: 'Control the handoff and its final resting position.',
+    endState: 'The cup rests on the table; both hands have released it.'
+  },
+  references: [
+    { id: 'hero-costume', path: '../../../assets/characters/hero/front.png',
+      role: 'character', use: 'image', purpose: 'Preserve the blue collar in both frame images.' },
+    { id: 'cup-shape', path: 'assets/cup.png', role: 'prop', use: 'image',
+      purpose: 'Keep the handle and ceramic pattern through the handoff.' }
+  ]
+}
+```
+
+`frames.start` is explicit; legacy `visual.bg`, `src` and `imagePair.start` remain
+fallbacks. If both `frames.start` and `bg` exist they must agree. `first_last` needs
+distinct start/end paths before production. Draft paths may be pending. Existing
+boards without these fields retain their legacy behavior.
+
+`references[]` entries have a unique `id` (reserved: start, end, keyframe-*), local
+`path` relative to scenes.js, `role` (character, prop, background, style, composition,
+continuity), `use` (image, video, both) and concrete `purpose`. Image use feeds the
+opening and ending still prompt arguments; video use feeds the actual video adapter.
+The array order is the submitted image order. Do not duplicate the legacy
+`referenceImagePaths`; if supplied it must exactly match video/both paths.
+
+`mode:reference` deliberately selects appearance conditioning without pinned temporal
+frames. Use video/both references, including the opening picture as a named reference
+when its appearance matters. A picture used as a reference is not a locked first
+frame. Installed first/last adapters do not accept additional video references in the
+same request: keep those assets as image-only inputs to frame production, or explicitly
+replan as reference mode. Never silently remove an endpoint or convert its meaning.
+The selected adapter schema enforces its actual image counts and model restrictions.
+
+The review page shows start/end, intermediate images, all references, their roles and
+intended uses. These labels describe the plan, not proof of submission or visual quality.
+`video_plan` compiles supported adapter inputs and returns `imageBindings` with paths,
+roles, use, dimensions, byte count, MIME type, hashes and `submitted` (planned adapter
+inclusion). Host plans return an unverified mapping handoff and `submitted:false`;
+the caller must verify the real host schema and preserve every intended input.
+
+Register the primary image as workflow `entry.image` and every other frame/reference
+as `entry.images[]` under the same cut ID. Completion decodes and hashes the whole
+inventory; image review covers it. A structured video plan refuses unreviewed files.
+Changed images or image plans invalidate saved video plans before provider dispatch.
 
 ### ASTRA intermediate contact frames
 
@@ -881,8 +928,8 @@ contact or usable output. Inspect the continuous result.
 
 The normal first/last adapter remains unchanged when `keyframes` is absent.
 Audio-conditioned shots reject intermediate frames because `audio2video` cannot
-accept them. Inspect these images directly; the standard board preview displays
-opening/ending images and does not certify intermediate states.
+accept them. The standard board preview displays intermediate images and their time/state alongside
+opening/ending images. Inspect them and the continuous result; display is not certification.
 
 ## Fields common to every shot
 

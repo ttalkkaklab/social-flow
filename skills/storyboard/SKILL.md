@@ -252,6 +252,12 @@ quotas. Choose the medium that can deliver the event. Maintain the saved visual 
 subtitles or explanatory marks burned into video. Explanatory graphics use their supported
 HTML/diagram route; full-video episodes follow [full-video](../produce/references/full-video.md).
 
+For every new generated shot, declare `visual.frames` with explicit start/end planning
+and `visual.references` (empty when none). Each extra image has id, path, role, use
+(image/video/both) and purpose, as defined in [shot image inputs](references/scenes-schema.md#shot-image-inputs).
+Plan reference mode explicitly when using appearance conditioning without pinned frames.
+Do not fill every available model slot or silently drop unsupported combinations.
+
 The storyboard plans source/end states, references, blocking and motion; produce builds
 and inspects them. Missing images are pending, never visually approved. Read
 [blender-previz.md](references/blender-previz.md) when planning a generated cut's previz

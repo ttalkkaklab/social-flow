@@ -456,6 +456,7 @@
   .frame-inputs { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; align-self: start; }
   .frame-inputs.single { grid-template-columns: 1fr; width: var(--fw); }
   .frame-inputs figure { margin: 0; min-width: 0; }
+  .frame-inputs .reference-input img { height: 144px; aspect-ratio: auto; }
   .frame-inputs img { width: 100%; aspect-ratio: 9 / 16; object-fit: contain; background: var(--sunk); border-radius: 8px; display: block; }
   .frame-inputs.wide img { aspect-ratio: 16 / 9; }
   .frame-inputs video { width: 100%; aspect-ratio: 9 / 16; object-fit: contain; background: var(--sunk); border-radius: 8px; display: block; }
@@ -1420,6 +1421,7 @@ window.STORYBOARD_READY = (async function () {
       prodTerms: function (rate, cap, attempts) { return "Assumed KRW/USD: " + rate + ". Approved video budget: $" + cap + ". Total attempts per clip: " + attempts + "."; },
       prodRows: "Model, resolution and cost per shot", prodShot: "Shot ", withAudio: "with audio", silent: "silent",
       prodOutside: function (label) { return "Selected mode: " + label + ". It generates no video, so it is not one of the four options compared above."; },
+      refImage: "Still generation only", refVideo: "Video conditioning plan", refBoth: "Still + video conditioning plan",
       framePending: "Image pending", frameStart: "Start frame", frameEnd: "End frame", framePreviz: "Previz · Video 1 (camera and timing)", framePrevizFirst: "Previz frame 1 (the still's composition)",
       frameChange: "Subject change", frameEndState: "End state: ",
 
@@ -1762,6 +1764,7 @@ window.STORYBOARD_READY = (async function () {
       prodTerms: function (rate, cap, attempts) { return "원화 환산 가정: 1달러=" + rate + "원. 승인 예산: $" + cap + ". 장면당 총 시도 한도: " + attempts + "회."; },
       prodRows: "장면별 모델·해상도·생성비", prodShot: "장면 ", withAudio: "음성 포함", silent: "무음",
       prodOutside: function (label) { return "선택한 방식: " + label + ". 생성 영상이 없어 위 네 가지 비교에는 들어가지 않습니다."; },
+      refImage: "이미지 제작에 사용", refVideo: "영상 참조로 전달 예정", refBoth: "이미지·영상에 사용 예정",
       framePending: "이미지 생성 예정", frameStart: "시작 프레임", frameEnd: "끝 프레임", framePreviz: "프리비즈 · Video 1 (카메라·타이밍)", framePrevizFirst: "프리비즈 1번 프레임 (스틸의 구도)",
       frameChange: "피사체 변화", frameEndState: "끝 상태: ",
 
@@ -2549,7 +2552,7 @@ window.STORYBOARD_READY = (async function () {
       else if (s.type === "quote" && v.clip && typeof v.clip === "object") slot = ["quote", route(v.clip.engine || v.engine, "veo"), Number(s.duration) || 8];
       if (slot) {
         var config = Object.assign({}, v, slot[0] === "motion" ? v.video : slot[0] === "quote" ? v.clip : {});
-        var fields = ["model", "modelPurpose", "modelReason", "resolution", "generateAudio", "realFaceInput", "referenceImagePaths", "referenceAudioPaths", "previz"];
+        var fields = ["model", "modelPurpose", "modelReason", "resolution", "generateAudio", "realFaceInput", "referenceImagePaths", "referenceAudioPaths", "previz", "frames", "references"];
         var settings = fields.map(function (key) { return config[key] === undefined ? null : config[key]; });
         parts.push((i + 1) + ":" + slot.join("/") + ":" + encodeURIComponent(JSON.stringify(settings)));
       }
@@ -4477,17 +4480,26 @@ window.STORYBOARD_READY = (async function () {
           }
         }
         var previz = vis.video && vis.video.previz;
-        var explicitFrames = vis.frames || vis.video && vis.video.lastImagePath || vis.imagePair || previz;
+        var imageRefs = window.RENDER_ROUTING ? window.RENDER_ROUTING.imageReferences(s) : [];
+        var explicitFrames = imageRefs.length || vis.frames || vis.video && vis.video.lastImagePath || vis.imagePair || previz;
         if (explicitFrames && k === 0) {
           var fp = window.RENDER_ROUTING.framePlan(s);
-          var frameInput = function (src, label) {
-            return '<figure><figcaption>' + esc(label) + '</figcaption>' + (src
+          var frameInput = function (src, label, reference) {
+            if (typeof src !== 'string' || /^[a-z][a-z0-9+.-]*:|^[/\\]{2}|[\x00-\x1f]/i.test(src)) src = '';
+            return '<figure' + (reference ? ' class="reference-input"' : '') + '><figcaption>' + esc(label) + '</figcaption>' + (src
               ? '<a href="' + esc(src) + '" target="_blank" rel="noopener"><img src="' + esc(src) + '" alt="' + esc(label) + '" loading="lazy"></a>'
               : '<div class="pending-frame">' + esc(T.framePending) + '</div>') + '</figure>';
           };
-          var pair = fp.mode === 'first_last' || !!previz;
-          var inputs = frameInput(fp.start, T.frameStart);
+          var pair = fp.mode === 'first_last' || !!previz || imageRefs.length > 0 || !!vis.frames?.keyframes?.length;
+          var inputs = fp.mode === 'reference' ? '' : frameInput(fp.start, T.frameStart);
           if (fp.mode === 'first_last') inputs += frameInput(fp.end, T.frameEnd);
+          (vis.frames && Array.isArray(vis.frames.keyframes) ? vis.frames.keyframes : []).forEach(function (key, i) {
+            inputs += frameInput(key.image, 'Keyframe ' + (i + 1) + ' · ' + key.atSeconds + 's · ' + key.state);
+          });
+          imageRefs.forEach(function (ref, i) {
+            var use = ref.use === 'image' ? T.refImage : ref.use === 'both' ? T.refBoth : T.refVideo;
+            inputs += frameInput(ref.path, (i + 1) + '. ' + ref.id + ' · ' + ref.role + ' · ' + use + ' · ' + ref.purpose, true);
+          });
           // Only reference_video sends this clip to the vendor; LTX and host lanes use its frame and prompt.
           var previzLabel = previz && previz.handoff === 'frame_and_prompt' ? T.framePreviz.replace(' · Video 1', '') : T.framePreviz;
           if (previz) inputs += '<figure><figcaption>' + esc(previzLabel) + '</figcaption>' + (previz.clip

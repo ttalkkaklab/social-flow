@@ -198,10 +198,12 @@ For every newly authored image-to-video shot, set `visual.frames.mode` to `first
 opening/closing, assembly, removal or another visible state change must be controlled. Write
 `endState` before generating images. Use `first` for a mood shot or subtle ambient motion with
 no required destination. The decision is per shot, independent of hybrid/full-video choice —
-with one rule on top since 0.73.0: a previz cut (every generated motion background) is `first`
-only, because the reference route takes no `last_frame`; its destination is the previz's own
-last frame, which the clip follows. `first_last` remains for a slot without a previz (a b-roll
-on Seedance 1.x or Veo).
+with a route-specific constraint: reference-video handoffs do not pin temporal endpoints.
+For new structured plans, use `mode:"reference"` and list the opening image as a video
+reference when needed. A frame-and-prompt previz may still use first_last if its adapter
+supports an ending frame. See [shot image inputs](scenes-schema.md#shot-image-inputs) for
+explicit start paths, extra reference roles/uses, workflow inventory and provider mapping.
+The example below is a legacy reference-video record; new boards use the structured fields.
 
 ```js
 visual: {
@@ -222,7 +224,7 @@ visual: {
 
 The previz block is optional (§A previz can guide a generated video cut); the model is the
 saved directory selection in `PRODUCTION.videoModel` (model-settings.md). Note the
-end frame: a previz cut cannot carry `first_last` — the reference route takes no `last_frame` —
+end frame: a reference-video previz cut cannot carry `first_last` — the reference route takes no `last_frame` —
 so on a previz cut `frames.mode` is `first` and the destination is the previz's own last frame.
 
 `visual.bg` is the start image. `visual.frames.end` is the end image; the Seedance router
