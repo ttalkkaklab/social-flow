@@ -26,3 +26,10 @@ For an entirely still/HTML project, register its actual rendered motion output, 
 placeholder. Record files, durations and provenance; do not mark motion quality as passed.
 Complete video only after readable video streams exist. Stop before assembly and hand
 clips to review-cut-videos. Raw speech generation keeps its separate provenance policy.
+
+Read [shot image inputs](../storyboard/references/scenes-schema.md#shot-image-inputs).
+Use the args returned by video_plan: it maps authored start/end and video/both references,
+checks adapter limits and returns imageBindings with file hashes and dimensions. Compare
+that inventory with the board. A host handoff has unverified mapping, not a submission
+receipt; inspect the actual host schema before attaching all intended files. Unsupported
+combinations require an explicit plan correction, never dropped references or a model switch.

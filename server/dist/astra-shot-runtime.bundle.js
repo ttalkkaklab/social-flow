@@ -109,6 +109,7 @@ function manageProject(args) {
 // src/production-workflow.ts
 import * as fs2 from "node:fs";
 import path2 from "node:path";
+import { createRequire as createRequire2 } from "node:module";
 import { createHash } from "node:crypto";
 
 // node_modules/zod/v3/external.js
@@ -4178,7 +4179,7 @@ var STAGES = [
 ];
 var IMAGE_STAGES = ["characters", "props", "backgrounds", "blender_composition", "image_storyboard"];
 var stageSchema = external_exports.enum(STAGES);
-var entrySchema = external_exports.object({ id: external_exports.string().min(1), text: external_exports.string().min(1), image: external_exports.string().min(1).optional(), blend: external_exports.string().min(1).optional(), video: external_exports.string().min(1).optional() }).strict();
+var entrySchema = external_exports.object({ images: external_exports.array(external_exports.string().min(1)).optional(), id: external_exports.string().min(1), text: external_exports.string().min(1), image: external_exports.string().min(1).optional(), blend: external_exports.string().min(1).optional(), video: external_exports.string().min(1).optional() }).strict();
 var recordSchema = external_exports.object({ stage: stageSchema, entries: external_exports.array(entrySchema), notApplicable: external_exports.string().optional(), criteriaHash: external_exports.string().optional(), hashes: external_exports.record(external_exports.string()).optional() }).strict();
 var stateSchema = external_exports.object({ version: external_exports.literal(2), completed: external_exports.array(recordSchema), active: recordSchema.optional(), rubrics: external_exports.record(external_exports.string()).default({}) }).strict();
 var workflowSchema = external_exports.object({
@@ -4222,7 +4223,7 @@ function read(episode) {
     if (record.stage !== STAGES[i] || !record.hashes) throw new Error("workflow_invalid_state");
     validateRecord(record);
     for (const entry2 of record.entries) {
-      for (const file of [entry2.text, entry2.image, entry2.blend, entry2.video].filter(Boolean)) {
+      for (const file of [entry2.text, entry2.image, ...entry2.images ?? [], entry2.blend, entry2.video].filter(Boolean)) {
         if (!/^[a-f0-9]{64}$/.test(record.hashes[file] ?? "")) throw new Error("workflow_invalid_state");
       }
     }
@@ -4246,6 +4247,7 @@ function validateRecord(record) {
     if (ids.has(entry2.id)) throw new Error("workflow_duplicate_asset_id");
     ids.add(entry2.id);
     if (IMAGE_STAGES.includes(record.stage) ? !entry2.image : entry2.image !== void 0) throw new Error("workflow_artifacts_required: image required only for image stages");
+    if (entry2.images && record.stage !== "image_storyboard") throw new Error("workflow_images_only_for_storyboard");
     if (record.stage === "blender_composition" ? !entry2.blend : entry2.blend !== void 0) throw new Error("workflow_blender_required");
     if (record.stage === "video" ? !entry2.video : entry2.video !== void 0) throw new Error("workflow_video_required");
   }
@@ -4296,9 +4298,10 @@ function requireWorkflow(directory, kind, assetId, outputFile) {
     const active = state.active;
     const entry2 = active?.entries.find((item) => item.id === assetId);
     if (!active || !["characters", "props", "backgrounds", "image_storyboard"].includes(active.stage) || !entry2?.image) throw new Error("workflow_out_of_order: begin the current image stage and register assetId");
-    if (outputFile && canonicalPath(outputFile) !== entry2.image) throw new Error("workflow_output_mismatch: use the registered image path");
+    if (outputFile && ![entry2.image, ...entry2.images ?? []].includes(canonicalPath(outputFile))) throw new Error("workflow_output_mismatch: use the registered image path");
   }
 }
+var loadImagePlan = createRequire2(import.meta.url);
 
 // src/storyboard.ts
 import { createHash as createHash2 } from "node:crypto";
@@ -4650,7 +4653,7 @@ var scenarioCheckResultSchema = external_exports.object({
 });
 
 // src/video-routing.ts
-import { createRequire as createRequire4 } from "node:module";
+import { createRequire as createRequire6 } from "node:module";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 
 // src/config.ts
@@ -6971,15 +6974,19 @@ function charUnits(args) {
 // src/video-pricing.ts
 var PRICE_FILE = fileURLToPath3(new URL("../../skills/autoproduce/references/prices.tsv", import.meta.url));
 
+// src/video-image-inputs.ts
+import { createRequire as createRequire4 } from "node:module";
+var load = createRequire4(import.meta.url);
+
 // src/video-voice.ts
-import { createRequire as createRequire3 } from "node:module";
-var load = createRequire3(import.meta.url);
+import { createRequire as createRequire5 } from "node:module";
+var load2 = createRequire5(import.meta.url);
 
 // src/video-routing.ts
-var load2 = createRequire4(import.meta.url);
+var load3 = createRequire6(import.meta.url);
 var shared = fileURLToPath4(new URL("../../skills/_shared/video-selection.js", import.meta.url));
 var modelSettings = fileURLToPath4(new URL("../../skills/_shared/model-settings.js", import.meta.url));
-var routingContext = (episode, shotId) => load2(shared).readVideoContext(episode, shotId);
+var routingContext = (episode, shotId) => load3(shared).readVideoContext(episode, shotId);
 var idSchema = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var videoPlanSchema = external_exports.object({
   episode: external_exports.string().min(1),
@@ -7018,8 +7025,8 @@ function compileActing(text, acting, voice) {
 }
 
 // src/tts-models.ts
-import { createRequire as createRequire6 } from "node:module";
-var shared2 = () => createRequire6(import.meta.url)("../../skills/_shared/tts-models.js");
+import { createRequire as createRequire8 } from "node:module";
+var shared2 = () => createRequire8(import.meta.url)("../../skills/_shared/tts-models.js");
 function resolveTtsModel(provider, model) {
   return shared2().resolveTtsModel(provider, model);
 }

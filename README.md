@@ -1157,3 +1157,12 @@ All seven stage skills accept an existing episode path. Unchanged media is reuse
 a review request never authorizes paid regeneration or publishing. See
 [the fixed workflow](skills/_shared/production-workflow.md) for all stage skills,
 receipt fields, migration, rewind and capability limits.
+
+### Shot image input planning
+
+Shots can separately author opening/ending frames and role-labelled extra references.
+`visual.references[]` distinguishes still-production inputs from direct video conditioning;
+`video_plan` maps supported inputs, reports dimensions/hashes and refuses unsupported
+combinations or unreviewed assets. The offline board displays every planned image,
+including intermediate keyframes. Workflow image inventories and reviews cover the full
+set. Host handoffs report unverified mapping. See [shot image inputs](skills/storyboard/references/scenes-schema.md#shot-image-inputs).

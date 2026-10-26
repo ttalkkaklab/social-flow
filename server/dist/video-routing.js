@@ -1,4 +1,4 @@
-import { requireWorkflow, workflowRevision } from './production-workflow.js';
+import { requireReviewedImages, requireWorkflow, workflowRevision } from './production-workflow.js';
 import * as fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
@@ -15,6 +15,7 @@ import { priceOf, recordUsage } from './usage-ledger.js';
 import { OMNI_MODEL } from './omni-client.js';
 import { videoEvents } from './video-events.js';
 import { getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema } from './astra-genai-video.js';
+import { hasStructuredImages, prepareVideoImages } from './video-image-inputs.js';
 import { prepareVideoVoice } from './video-voice.js';
 const load = createRequire(import.meta.url);
 const shared = fileURLToPath(new URL('../../skills/_shared/video-selection.js', import.meta.url));
@@ -128,16 +129,22 @@ export function planVideo(raw) {
     if (selection.engine === 'host') {
         if (input.tool)
             throw new Error('model_selection_mismatch: host has no server adapter');
+        const images = prepareVideoImages('host_external', input.args, context.shot, context.episode);
+        if (hasStructuredImages(context.shot))
+            requireReviewedImages(context.episode, (images.imageBindings ?? []).map(binding => binding.path));
         const body = { workflowRevision: workflowRevision(input.episode), version: 1, episode: context.episode, shotId: input.shotId, requestId: input.requestId,
-            tool: 'host_external', args: input.args, selection, source: context.source, contextRevision: context.revision,
-            inputs: {}, quote: { reserveUsd: 0, estimatedUsd: 0, revision: 'host-allowance-v1', basis: 'External host allowance; limits and actual tool schema must be checked by host; not API enforcement' }, execution: 'host_handoff' };
+            tool: 'host_external', args: input.args, ...(images.imageBindings ? { imageBindings: images.imageBindings, imageHandoff: images.imageHandoff } : {}), selection, source: context.source, contextRevision: context.revision,
+            inputs: Object.fromEntries((images.imageBindings ?? []).map(binding => [binding.path, binding.sha256])), quote: { reserveUsd: 0, estimatedUsd: 0, revision: 'host-allowance-v1', basis: 'External host allowance; limits and actual tool schema must be checked by host; not API enforcement' }, execution: 'host_handoff' };
         const plan = { ...body, id: hash(body) };
         atomicJson(path.join(context.episode, '.work/video-routing/plans', plan.id + '.json'), plan);
         return plan;
     }
     if (!tool)
         throw new Error('Selected deployment has no adapter for this operation');
-    const voice = prepareVideoVoice(tool, bindSelection(tool, input.args, selection), context);
+    const images = prepareVideoImages(tool, bindSelection(tool, input.args, selection), context.shot, context.episode);
+    if (hasStructuredImages(context.shot))
+        requireReviewedImages(context.episode, (images.imageBindings ?? []).map(binding => binding.path));
+    const voice = prepareVideoVoice(tool, images.args, context);
     const args = parseVideoArgs(tool, voice.args);
     const output = canonical(path.resolve(context.episode, typeof args.outputPath === 'string' ? args.outputPath : '.work/video'));
     if (!within(context.episode, output))
@@ -145,6 +152,8 @@ export function planVideo(raw) {
     args.outputPath = output;
     args.filename ??= `video-${input.requestId}.mp4`;
     const inputs = inputFiles(args, context.episode);
+    for (const binding of images.imageBindings ?? [])
+        inputs[binding.path] = binding.sha256;
     if (tool === 'astra_genai_msr')
         buildGenaiMsrBody(genaiMsrSchema.parse(args));
     if (tool === 'astra_genai_audio2video')
@@ -157,6 +166,7 @@ export function planVideo(raw) {
     }
     const quote = quoteVideo(tool, args);
     const body = { workflowRevision: workflowRevision(input.episode), version: 1, episode: context.episode, shotId: input.shotId, requestId: input.requestId, tool, args,
+        ...(images.imageBindings ? { imageBindings: images.imageBindings } : {}),
         sourceArgs: input.args, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
         selection, source: context.source, contextRevision: context.revision, inputs, quote, execution: 'server' };
     const plan = { ...body, id: hash(body) };

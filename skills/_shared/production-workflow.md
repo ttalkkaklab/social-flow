@@ -161,3 +161,13 @@ the earliest changed artifact stage, edit, and complete/review its descendants i
 Unchanged files may be reused but changed hashes require fresh review. Rewind archives
 state and existing review text, leaves all media intact and preserves frozen rubric hashes.
 A review-only command stops at its own boundary; it does not regenerate downstream media.
+
+## Multiple images per cut
+
+For image_storyboard, keep one entry per cut ID: `image` is the primary file and
+`images` lists additional ending/intermediate images and appearance references.
+The inventory must cover every structured `visual.frames`/`visual.references` path.
+All registered images are decoded, hashed and covered by image_review. Generation may
+write any registered image for the cut; an unregistered output is refused. Video plans
+with structured references can use only reviewed files. Existing one-image records remain
+readable; migration must reuse inspected assets and rewind affected stages.
