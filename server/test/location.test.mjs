@@ -273,3 +273,22 @@ test('timeline endpoint state matches exports and intermediate states cannot be 
     assert.equal(ctx.selectedState,state);assert.equal(ctx.stateExport.disabled,disabled);
   }
 });
+
+test('storyboard mounts captures by stable shot id and withholds stale frames',()=>{
+  const source=fs.readFileSync(new URL('../location-review-runtime.mjs',import.meta.url),'utf8');
+  const roots={'shot-1':{children:[]},'shot-2':{children:[]}};
+  const node=(tag,text,parent,cls)=>{const el={tag,text,cls,children:[],setAttribute(){},addEventListener(){},scrollLeft:0,clientWidth:300,scrollWidth:600,scrollBy(options){this.scrollLeft+=options.left;}};parent?.children.push(el);return el;};
+  const ctx={node,button:(text,parent,fn)=>{const b=node('button',text,parent);b.onclick=fn;return b;},ResizeObserver:class {observe(){}},word:(ko,en)=>en,url:p=>p,document:{getElementById:id=>roots[id],addEventListener(){}},
+    window:{matchMedia:()=>({matches:true}),SCENES:[{id:'s0002'},{id:'s0001',visual:{character:'actor'}}],SB_DOC:{characters:[{id:'actor',name:'Actor',panels:{face:'face.png'}}]},LOCATION_DETAIL_LINKS:{room:'room.html'}},
+    entries:[{shotId:'s0001',id:'room',name:'Room',revision:1,state:{label:'Day'},fresh:true,frames:{start:{path:'one.png'},end:{path:'two.png'},'start-top':{path:'top.png'}}},
+      {shotId:'s0002',id:'room',name:'Room',revision:1,state:{label:'Day'},fresh:false,frames:{start:{path:'stale.png'}}}]};
+  runInNewContext(source.slice(source.indexOf('function mountShotFrames(){'),source.indexOf('function view('))+'\nmountShotFrames();',ctx);
+  const flatten=n=>[n,...n.children.flatMap(flatten)];
+  assert.deepEqual(flatten(roots['shot-2']).filter(n=>n.tag==='img').map(n=>n.src),['one.png','two.png','face.png']);
+  assert.equal(flatten(roots['shot-1']).filter(n=>n.tag==='img').length,0);
+  assert.ok(flatten(roots['shot-2']).some(n=>n.tag==='a'&&n.href==='room.html'));
+  assert.ok(flatten(roots['shot-2']).some(n=>n.cls==='shot-background__end'&&n.tag==='details'));
+  assert.equal(flatten(roots['shot-2']).filter(n=>n.className==='shot-character__portrait').length,1);
+  assert.ok(flatten(roots['shot-2']).some(n=>n.cls==='shot-character__info'));
+
+});
