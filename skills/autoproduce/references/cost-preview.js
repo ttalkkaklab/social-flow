@@ -338,7 +338,7 @@ function costFingerprint(scenes) {
     else if (s.type === "quote" && v.clip && typeof v.clip === "object") slot = ["quote", route(v.clip.engine || v.engine, "veo"), Number(s.duration) || 8];
     if (slot) {
       var config = Object.assign({}, v, slot[0] === "motion" ? v.video : slot[0] === "quote" ? v.clip : {});
-      var fields = ["model", "modelPurpose", "modelReason", "resolution", "generateAudio", "realFaceInput", "referenceImagePaths", "referenceAudioPaths", "previz"];
+      var fields = ["model", "modelPurpose", "modelReason", "resolution", "generateAudio", "realFaceInput", "referenceImagePaths", "referenceAudioPaths", "previz", "frames", "references"];
       var settings = fields.map(function (key) { return config[key] === undefined ? null : config[key]; });
       parts.push((i + 1) + ":" + slot.join("/") + ":" + encodeURIComponent(JSON.stringify(settings)));
     }

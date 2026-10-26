@@ -29,7 +29,7 @@ function readVideoContext(episode, shotId) {
   for (const change of overrides) if (change.video) settings.validateModels({ video: change.video }, true);
   if (snapshot || source.endsWith('_override')) settings.validateModels({ video: selection }, true);
   return { episode: root, shotId, selection, source, snapshotRevision: snapshot?.revision || null,
-    revision: hash({ selection, source, snapshotRevision: snapshot?.revision, overrides, authorization: production.videoAuthorization,
+    revision: hash({ selection, source, snapshotRevision: snapshot?.revision, overrides, imagePlan: { frames: shot.visual?.frames, references: shot.visual?.references, bg: shot.visual?.bg }, authorization: production.videoAuthorization,
       budget: production.videoBudgetUsd, approval: production.approval, maxAttempts: production.maxAttempts }),
     production, board, shot };
 }

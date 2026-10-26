@@ -1449,3 +1449,29 @@ test('camera advice survives incomplete inputs and detects copied components in 
   assert.deepEqual(runtimeMode.cameraDirectionWarnings([null, {type: 'outro'}, {shot: {render: {mode: 'stock_video'}}},
     make({visual: {reuse: {}}}), {type: 'points', narration: []}]), []);
 });
+
+test('authored image references reach opening and ending image generation with stable role numbering',()=>{
+ const win=fixture(),s=win.SCENES[0];
+ s.visual.frames={mode:'first',reason:'Atmosphere'};
+ s.visual.references=[{id:'costume',path:'costume.png',role:'character',use:'image',purpose:'Keep the blue collar'},
+  {id:'motion',path:'motion.png',role:'continuity',use:'video',purpose:'Match the movement'}];
+ const output=assemble(win,0,'/board');
+ assert.ok(output.sourceImageArgs.referenced_image_paths.includes('/board/costume.png'));
+ assert.ok(!output.sourceImageArgs.referenced_image_paths.includes('/board/motion.png'));
+ assert.deepEqual(output.endFrameImageArgs.referenced_image_paths,[path.resolve('/board',s.visual.bg),'/board/costume.png']);
+ assert.match(output.endFramePrompt,/Attached image 2 — character \(costume\): Keep the blue collar/);
+ assert.match(output.endFramePrompt,/Image 1 is the generated opening frame/);
+ assert.match(output.sourcePrompt,/character \(costume\): Keep the blue collar/);
+});
+
+
+test('structured ending handoff always attaches opening, with empty or omitted extra references',()=>{
+ for(const references of [[],undefined]) {
+  const win=fixture(),s=win.SCENES[0];
+  delete s.visual.bg;s.visual.frames={mode:'first_last',start:'start.png',end:'end.png'};
+  if(references!==undefined)s.visual.references=references;
+  const output=assemble(win,0,'/board');
+  assert.deepEqual(output.endFrameImageArgs,{referenced_image_paths:['/board/start.png']});
+  assert.equal(output.endFrameReady,true);
+ }
+});

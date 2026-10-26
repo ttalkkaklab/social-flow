@@ -309,3 +309,20 @@ test('managed MSR plans select reference operation and bind dimensions and local
   fs.appendFileSync(ref, 'changed');
   await assert.rejects(f.execute(p, async () => assert.fail('stale reference must not generate')), /stale/);
 });
+
+test('managed storyboard images reach dispatch and cannot change after planning or bypass review',async t=>{
+ const f=fixture(t);
+ const first=path.join(f.episode,'workflow/image_storyboard.png'),last=path.join(f.episode,'workflow/image_storyboard-s2.png');
+ f.board.SCENES[0].visual={frames:{mode:'first_last',start:first,end:last},references:[]};f.save();
+ const p=planVideo({episode:f.episode,shotId:'s1',requestId:'authored',operation:'image',args:{prompt:'Move',durationSeconds:8}});
+ assert.equal(p.imageBindings.length,2);let calls=0;
+ await f.execute(p,async(tool,args)=>{calls++;assert.equal(args.sourceImagePath,first);assert.equal(args.lastImagePath,last);return result;});
+ assert.equal(calls,1);
+ const q=planVideo({episode:f.episode,shotId:'s1',requestId:'stale',operation:'image',args:{prompt:'Move',durationSeconds:8}});
+ f.board.SCENES[0].visual.frames.end=first;f.save();await assert.rejects(f.execute(q,async()=>assert.fail()),/stale/);
+ const unreviewed=path.join(f.episode,'unreviewed.png');fs.copyFileSync(last,unreviewed);
+ f.board.SCENES[0].visual.frames.end=unreviewed;f.save();
+ assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'unreviewed',operation:'image',args:{prompt:'Move'}}),/not_reviewed/);
+ delete f.board.SCENES[0].visual.references;f.save();
+ assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'no-refs',operation:'image',args:{prompt:'Move'}}),/not_reviewed/);
+});

@@ -538,7 +538,7 @@
         return { type: s.type, duration: s.duration, narration: s.narration,
           ...(reused(s) ? { reuse: v.reuse } : {}),
           render: s.shot?.render, design: s.shot?.videoDesign, cutType: s.shot?.cutType,
-          frames: v.frames, imagePair: v.imagePair, styleRole: v.styleRole, stylePack: v.stylePack,
+          frames: v.frames, references: v.references, imagePair: v.imagePair, styleRole: v.styleRole, stylePack: v.stylePack,
           bg: v.bg, bgPrompt: v.bgPrompt, camera: v.camera, action: v.action, video, engine: v.engine,
           prompt: v.prompt, clip: typeof v.clip === 'object' ? v.clip : undefined,
           source: v.source, license: v.license, file: typeof v.clip === 'string' ? v.clip : undefined };

@@ -278,3 +278,16 @@ test('non-draft video routing accepts an omitted previz but still needs a video 
  delete shot.visual.video;
  assert.ok(routing.checkScene(shot).some(x=>x.includes('video handoff')));
 });
+
+test('structured references distinguish draft slots, uses, legacy aliases and explicit frame modes',()=>{
+ const s={visual:{frames:{mode:'first_last',start:'start.png',end:'end.png'},references:[{id:'hero',role:'character',use:'image',purpose:'Preserve costume',path:'hero.png'}]}};
+ assert.deepEqual(checkFrames(s),[]);assert.equal(framePlan(s).start,'start.png');
+ s.visual.bg='different.png';assert.match(checkFrames(s).join(),/start.*disagree/);delete s.visual.bg;
+ s.visual.references[0].path='';assert.deepEqual(checkFrames(s,{draft:true}),[]);assert.match(checkFrames(s).join(),/path/);
+ s.visual.references[0].path='javascript:alert(1)';assert.match(checkFrames(s,{draft:true}).join(),/local image/);
+ s.visual.references[0].path='hero.png';s.visual.references.push({...s.visual.references[0]});assert.match(checkFrames(s).join(),/unique id/);
+ s.visual.references.pop();s.visual.frames={mode:'reference'};assert.match(checkFrames(s).join(),/needs video/);
+ s.visual.references[0].use='video';assert.deepEqual(checkFrames(s),[]);
+ s.visual.video={referenceImagePaths:['wrong.png']};assert.match(checkFrames(s).join(),/disagree/);
+ const w={SCENES:[s]},old=signature(w);s.visual.references[0].purpose='Preserve face';assert.notEqual(signature(w),old);
+});

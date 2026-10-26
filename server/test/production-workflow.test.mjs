@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { manageWorkflow, requireWorkflow, requireReviewedVideos } from '../dist/production-workflow.js';
+import { manageWorkflow, requireCompositionReference, requireWorkflow, requireReviewedVideos } from '../dist/production-workflow.js';
 import { planVideo } from '../dist/video-routing.js';
 import { planImage, executeImage } from '../dist/image-routing.js';
 import { setupProject, completeWorkflow, stageFixture, fileHash, png } from './workflow-fixture.mjs';
@@ -152,4 +152,41 @@ test('delivery requires complete actual video playback review; sampled frames ca
  assert.throws(()=>requireReviewedVideos(f.episode,{}),/delivery_media_required/);
  fs.appendFileSync(videos[0].video,'changed');
  assert.throws(()=>requireWorkflow(f.episode,'delivery'),/stale/);
+});
+
+test('image storyboard inventories include every authored frame and reference under its cut ID',t=>{
+ const f=fixture(t);setupProject(f.root);completeWorkflow(f.episode);
+ f.call({action:'rewind',stage:'image_storyboard'});
+ const entries=stageFixture(f.episode,'image_storyboard');
+ const dir=path.join(f.episode,'storyboard');fs.mkdirSync(dir,{recursive:true});
+ const end=path.join(dir,'end.png'),hero=path.join(dir,'hero.png');fs.writeFileSync(end,png);fs.writeFileSync(hero,png);
+ fs.writeFileSync(path.join(dir,'scenes.js'),'window.SCENES='+JSON.stringify([{id:'s1',visual:{frames:{mode:'first_last',start:entries[0].image,end:'end.png'},references:[{id:'hero',path:'hero.png',role:'character',use:'image',purpose:'Keep identity'}]}}])+';');
+ assert.throws(()=>f.call({action:'complete',stage:'image_storyboard'}),/inventory_missing/);
+ f.call({action:'rewind',stage:'image_storyboard'});entries[0].images=[end,hero];
+ f.call({action:'begin',stage:'image_storyboard',entries});
+ requireWorkflow(f.episode,'image','s1',end);
+ const done=f.call({action:'complete',stage:'image_storyboard'});
+ assert.equal(done.completed.at(-1).hashes[end],fileHash(end));assert.equal(done.completed.at(-1).hashes[hero],fileHash(hero));
+ stageFixture(f.episode,'image_review');f.call({action:'complete',stage:'image_review'});
+ fs.appendFileSync(hero,'changed');assert.throws(()=>f.call({action:'status'}),/workflow_stale/);
+});
+
+
+test('direct image plans cannot omit authored appearance references or the opening source for an endpoint',t=>{
+ const f=fixture(t);setupProject(f.root);completeWorkflow(f.episode);f.call({action:'rewind',stage:'image_storyboard'});
+ const entries=stageFixture(f.episode,'image_storyboard');
+ const state=f.call({action:'status'}),composition=state.completed.find(r=>r.stage==='blender_composition').entries[0].image;
+ const dir=path.join(f.episode,'storyboard');fs.mkdirSync(dir,{recursive:true});
+ const hero=path.join(dir,'hero.png'),end=path.join(dir,'end.png');fs.writeFileSync(hero,png);
+ // Different bytes ensure base64 matching cannot mistake the fixture's identical PNGs for each other.
+ fs.appendFileSync(hero,'appearance');
+ fs.writeFileSync(path.join(dir,'scenes.js'),'window.SCENES='+JSON.stringify([{id:'s1',visual:{frames:{mode:'first_last',start:entries[0].image,end:'end.png'},references:[{id:'hero',path:'hero.png',role:'character',use:'image',purpose:'Keep identity'}]}}])+';');
+ assert.throws(()=>requireCompositionReference(f.episode,'s1',{referenced_image_paths:[composition]},end),/image_reference_required/);
+ assert.throws(()=>requireCompositionReference(f.episode,'s1',{referenced_image_paths:[composition,hero]},end),/image_reference_required/);
+ assert.doesNotThrow(()=>requireCompositionReference(f.episode,'s1',{referenced_image_paths:[composition,hero,entries[0].image]},end));
+ assert.doesNotThrow(()=>requireCompositionReference(f.episode,'s1',{sourceImagesBase64:[composition,hero,entries[0].image].map(file=>fs.readFileSync(file).toString('base64'))},end));
+ const boardFile=path.join(dir,'scenes.js');
+ fs.writeFileSync(boardFile,'window.SCENES='+JSON.stringify([{id:'s1',visual:{frames:{mode:'first_last',start:entries[0].image,end:'end.png'}}}])+';');
+ assert.throws(()=>requireCompositionReference(f.episode,'s1',{referenced_image_paths:[composition]},end),/image_reference_required/);
+ assert.doesNotThrow(()=>requireCompositionReference(f.episode,'s1',{referenced_image_paths:[composition,entries[0].image]},end));
 });

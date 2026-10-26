@@ -34,7 +34,7 @@ function keyframeImages(scene, dir, numFrames, frameRate) {
   const frames = scene.visual.frames, keys = frames?.keyframes;
   if (!Array.isArray(keys) || keys.length < 1 || keys.length > 6 || frames.mode !== 'first_last' || !frames.end)
     throw new Error('ASTRA intermediate keyframes require first_last, an end image and 1–6 intermediate images (8 total maximum)');
-  const images = [{ imagePath: localImage(dir, scene.visual.bg), frameIdx: 0, strength: scene.visual.video.strength ?? 1 }];
+  const images = [{ imagePath: localImage(dir, require('../../storyboard/references/render-routing.js').framePlan(scene).start), frameIdx: 0, strength: scene.visual.video.strength ?? 1 }];
   let previous = 0;
   for (const key of keys) {
     if (!key || !Number.isFinite(key.atSeconds) || key.atSeconds <= 0 || key.atSeconds >= scene.duration)
@@ -148,7 +148,7 @@ async function prepare(target, options) {
   const response = manageSpeech({ path: file, action: 'plan_video', shotId: scene.id, capabilities: caps });
   const plan = response.plan;
   const video = scene.visual.video;
-  const imagePath = localImage(dir, scene.visual.bg);
+  const imagePath = localImage(dir, require('../../storyboard/references/render-routing.js').framePlan(scene).start);
   const [width, height] = String(video.resolution || '').split('x').map(Number);
   const frameRate = video.frameRate ?? 24;
   const seconds = Number(scene.duration);

@@ -204,3 +204,19 @@ test('review HTML surfaces camera advice without promoting it to execution failu
   assert.ok(findings.some(f => f.what.startsWith('[camera-plan-missing]')));
   assert.ok(findings.every(f => f.level === 'warn'));
 });
+
+test('shot review displays additional references, usage, intermediate states and safe pending images',()=>{
+ const template=readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html',import.meta.url),'utf8');
+ const start=template.indexOf('        var previz = vis.video && vis.video.previz;');
+ const end=template.indexOf('        return \'<div class="conti-row"><figure',start);
+ const routing=require('../../skills/storyboard/references/render-routing.js');
+ const s={visual:{frames:{mode:'first_last',start:'start.png',end:'end.png',keyframes:[{image:'mid.png',atSeconds:1,state:'Contact'}]},references:[{id:'hero',path:'hero.png',role:'character',use:'image',purpose:'Keep <costume>'}]}};
+ const render=()=>runInNewContext('(function(){'+template.slice(start,end)+'})()',{
+  s,vis:s.visual,k:0,WIDE:false,cell:'cut',window:{RENDER_ROUTING:routing},
+  T:{frameStart:'Start',frameEnd:'End',framePending:'Pending',refImage:'Still only',refVideo:'Video',refBoth:'Both'},
+  esc:v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('"','&quot;')});
+ const html=render();for(const name of ['start.png','end.png','mid.png','hero.png'])assert.ok(html.includes('src="'+name+'"'));
+ assert.match(html,/Still only/);assert.match(html,/Keep &lt;costume>/);assert.match(html,/1s · Contact/);
+ s.visual.references[0].path='javascript:alert(1)';assert.doesNotMatch(render(),/href="javascript:/);assert.match(render(),/Pending/);
+ s.visual.frames={mode:'reference'};assert.doesNotMatch(render(),/>Start</);
+});

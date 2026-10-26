@@ -1,5 +1,7 @@
 import * as fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { execFileSync } from 'node:child_process';
@@ -12,7 +14,7 @@ export const STAGES = ['characters', 'text_storyboard', 'context_review', 'props
 const REVIEWS = ['context_review', 'camera_review', 'image_review', 'video_review'];
 const IMAGE_STAGES = ['characters', 'props', 'backgrounds', 'blender_composition', 'image_storyboard'];
 const stageSchema = z.enum(STAGES);
-const entrySchema = z.object({ id: z.string().min(1), text: z.string().min(1), image: z.string().min(1).optional(), blend: z.string().min(1).optional(), video: z.string().min(1).optional() }).strict();
+const entrySchema = z.object({ images: z.array(z.string().min(1)).optional(), id: z.string().min(1), text: z.string().min(1), image: z.string().min(1).optional(), blend: z.string().min(1).optional(), video: z.string().min(1).optional() }).strict();
 const recordSchema = z.object({ stage: stageSchema, entries: z.array(entrySchema), notApplicable: z.string().optional(), criteriaHash: z.string().optional(), hashes: z.record(z.string()).optional() }).strict();
 const stateSchema = z.object({ version: z.literal(2), completed: z.array(recordSchema), active: recordSchema.optional(), rubrics: z.record(z.string()).default({}) }).strict();
 export const workflowSchema = z.object({
@@ -57,7 +59,7 @@ function read(episode: string): State {
     if (record.stage !== STAGES[i] || !record.hashes) throw new Error('workflow_invalid_state');
     validateRecord(record);
     for (const entry of record.entries) {
-      for (const file of [entry.text, entry.image, entry.blend, entry.video].filter(Boolean) as string[]) {
+      for (const file of [entry.text, entry.image, ...(entry.images ?? []), entry.blend, entry.video].filter(Boolean) as string[]) {
         if (!/^[a-f0-9]{64}$/.test(record.hashes[file] ?? '')) throw new Error('workflow_invalid_state');
       }
     }
@@ -81,6 +83,7 @@ function validateRecord(record: z.infer<typeof recordSchema>): void {
     if (ids.has(entry.id)) throw new Error('workflow_duplicate_asset_id');
     ids.add(entry.id);
     if (IMAGE_STAGES.includes(record.stage) ? !entry.image : entry.image !== undefined) throw new Error('workflow_artifacts_required: image required only for image stages');
+    if (entry.images && record.stage !== 'image_storyboard') throw new Error('workflow_images_only_for_storyboard');
     if (record.stage === 'blender_composition' ? !entry.blend : entry.blend !== undefined) throw new Error('workflow_blender_required');
     if (record.stage === 'video' ? !entry.video : entry.video !== undefined) throw new Error('workflow_video_required');
   }
@@ -152,7 +155,7 @@ function verifyReview(state: State, stage: string, file: string, hashes: Record<
   if (stage === 'camera_review' && !Object.keys(review.inputs).some(input => !Object.hasOwn(state.completed.find(record => record.stage === source)!.hashes!, input))) throw new Error('workflow_camera_plan_required');
 }
 /** Require the Blender composition as a real image input, not prompt prose. */
-export function requireCompositionReference(directory: string, assetId: string, args: Record<string, unknown>): void {
+export function requireCompositionReference(directory: string, assetId: string, args: Record<string, unknown>, outputFile?: string): void {
   const episode = workflowEpisode(directory);
   if (!episode) return;
   const state = read(episode);
@@ -161,7 +164,25 @@ export function requireCompositionReference(directory: string, assetId: string, 
   const image = state.completed.find(record => record.stage === 'blender_composition')!.entries.find(entry => entry.id === assetId)?.image;
   const inputs = [args.imagePath, ...(Array.isArray(args.refImagePaths) ? args.refImagePaths : []),
     ...(Array.isArray(args.referenced_image_paths) ? args.referenced_image_paths : [])];
-  if (!image || !inputs.some(input => typeof input === 'string' && canonicalPath(path.resolve(directory, input)) === image)) throw new Error('workflow_composition_reference_required');
+  const supplied = (file: string) => inputs.some(input => typeof input === 'string' && canonicalPath(path.resolve(directory, input)) === file) ||
+    (Array.isArray(args.sourceImagesBase64) && args.sourceImagesBase64.some(value => typeof value === 'string' &&
+      createHash('sha256').update(Buffer.from(value, 'base64')).digest('hex') === digest(file)));
+  if (!image || !supplied(image)) throw new Error('workflow_composition_reference_required');
+  const boardFile = path.join(episode, 'storyboard/scenes.js');
+  if (!fs.existsSync(boardFile)) return;
+  const vm = loadImagePlan(fileURLToPath(new URL('../../skills/_shared/scenes-vm.js', import.meta.url)));
+  const routing = loadImagePlan(fileURLToPath(new URL('../../skills/storyboard/references/render-routing.js', import.meta.url)));
+  const board = vm.evaluateWindowScript(fs.readFileSync(boardFile, 'utf8'), { filename: boardFile });
+  const shot = (board.SCENES ?? []).find((item: { id?: string; shot?: { id?: string } }) => String(item.id ?? item.shot?.id) === assetId);
+  if (!shot || !routing.hasStructuredImages(shot)) return;
+  const errors: string[] = routing.checkImageReferences(shot);
+  if (errors.length) throw new Error('workflow_image_plan_invalid: ' + errors.join('; '));
+  const expected: string[] = routing.imageReferences(shot).filter((ref: { use: string }) => ['image', 'both'].includes(ref.use)).map((ref: { path: string }) => ref.path);
+  const frames = routing.framePlan(shot);
+  if (outputFile && frames.end && canonicalPath(path.resolve(path.dirname(boardFile), frames.end)) === canonicalPath(outputFile)) expected.unshift(frames.start);
+  for (const file of expected) {
+    if (!file || !supplied(canonicalPath(path.resolve(path.dirname(boardFile), file)))) throw new Error('workflow_image_reference_required: ' + file);
+  }
 }
 export function manageWorkflow(raw: unknown) {
   const input = workflowSchema.parse(raw), episode = fs.realpathSync(input.episode);
@@ -191,6 +212,7 @@ export function manageWorkflow(raw: unknown) {
         if (state.active || input.stage !== STAGES[state.completed.length]) throw new Error(`workflow_out_of_order: next ${state.active?.stage ?? STAGES[state.completed.length] ?? 'done'}`);
         const record = { stage: stageSchema.parse(input.stage), entries: (input.entries ?? []).map(entry => ({ ...entry,
           text: canonicalPath(path.resolve(episode, entry.text)), ...(entry.image ? { image: canonicalPath(path.resolve(episode, entry.image)) } : {}),
+          ...(entry.images ? { images: entry.images.map(file => canonicalPath(path.resolve(episode, file))) } : {}),
           ...(entry.blend ? { blend: canonicalPath(path.resolve(episode, entry.blend)) } : {}),
           ...(entry.video ? { video: canonicalPath(path.resolve(episode, entry.video)) } : {}),
         })), ...(input.notApplicable ? { notApplicable: input.notApplicable } : {}) };
@@ -207,6 +229,7 @@ export function manageWorkflow(raw: unknown) {
       } else if (input.action === 'complete') {
         if (!state.active || state.active.stage !== input.stage) throw new Error('workflow_out_of_order: begin this stage first');
         validateRecord(state.active);
+        if (state.active.stage === 'image_storyboard') verifyImageInventory(episode, state.active);
         const hashes: Record<string, string> = {};
         for (const entry of state.active.entries) {
           if (!fs.readFileSync(entry.text, 'utf8').trim()) throw new Error('workflow_empty_text: ' + entry.text);
@@ -223,7 +246,7 @@ export function manageWorkflow(raw: unknown) {
             if (!probe.streams?.some((stream: { codec_type: string }) => stream.codec_type === 'video') || !(Number(probe.format?.duration) > 0)) throw new Error('workflow_video_invalid');
             hashes[entry.video] = digest(entry.video);
           }
-          if (entry.image) { verifyImageFile(entry.image); hashes[entry.image] = digest(entry.image); }
+          for (const image of new Set([entry.image, ...(entry.images ?? [])].filter(Boolean) as string[])) { verifyImageFile(image); hashes[image] = digest(image); }
         }
         state.completed.push({ ...state.active, hashes });
         delete state.active;
@@ -256,7 +279,7 @@ export function requireWorkflow(directory: string, kind: 'image' | 'video' | 'te
     const active = state.active;
     const entry = active?.entries.find(item => item.id === assetId);
     if (!active || !['characters', 'props', 'backgrounds', 'image_storyboard'].includes(active.stage) || !entry?.image) throw new Error('workflow_out_of_order: begin the current image stage and register assetId');
-    if (outputFile && canonicalPath(outputFile) !== entry.image) throw new Error('workflow_output_mismatch: use the registered image path');
+    if (outputFile && ![entry.image, ...(entry.images ?? [])].includes(canonicalPath(outputFile))) throw new Error('workflow_output_mismatch: use the registered image path');
   }
 }
 
@@ -277,4 +300,37 @@ export function requireReviewedVideos(directory: string, media: Record<string, s
 export function workflowRevision(directory: string): string | undefined {
   const episode = workflowEpisode(directory);
   return episode && fs.existsSync(stateFile(episode)) ? digest(stateFile(episode)) : undefined;
+}
+
+const loadImagePlan = createRequire(import.meta.url);
+/** Each new structured shot registers all its temporal and appearance images under the same cut ID. */
+function verifyImageInventory(episode: string, record: z.infer<typeof recordSchema>): void {
+  const file = path.join(episode, 'storyboard/scenes.js');
+  if (!fs.existsSync(file)) return;
+  const vm = loadImagePlan(fileURLToPath(new URL('../../skills/_shared/scenes-vm.js', import.meta.url)));
+  const routing = loadImagePlan(fileURLToPath(new URL('../../skills/storyboard/references/render-routing.js', import.meta.url)));
+  const board = vm.evaluateWindowScript(fs.readFileSync(file, 'utf8'), { filename: file });
+  for (const shot of board.SCENES ?? []) {
+    if (!routing.hasStructuredImages(shot)) continue;
+    const errors: string[] = routing.checkFrames(shot);
+    if (errors.length) throw new Error('workflow_image_plan_invalid: ' + errors.join('; '));
+    const entry = record.entries.find(item => item.id === String(shot.id ?? shot.shot?.id));
+    if (!entry) throw new Error('workflow_image_inventory_missing_cut');
+    const frames = routing.framePlan(shot);
+    const expected: string[] = [frames.start, frames.end, ...(shot.visual.frames?.keyframes ?? []).map((item: { image: string }) => item.image),
+      ...routing.imageReferences(shot).map((item: { path: string }) => item.path)].filter(Boolean);
+    const registered = new Set([entry.image, ...(entry.images ?? [])]);
+    for (const image of expected) if (!registered.has(canonicalPath(path.resolve(path.dirname(file), image))))
+      throw new Error('workflow_image_inventory_missing: ' + image);
+  }
+}
+/** New image plans can submit only files covered by the completed image review. */
+export function requireReviewedImages(episode: string, files: string[]): void {
+  const managed = workflowEpisode(episode);
+  if (!managed) return;
+  const state = read(managed);
+  verifyPrevious(state);
+  const images = state.completed.find(record => record.stage === 'image_storyboard');
+  if (!state.completed.some(record => record.stage === 'image_review') || !images) throw new Error('workflow_image_review_required');
+  for (const file of files) if (images.hashes?.[file] !== digest(file)) throw new Error('workflow_image_not_reviewed: ' + file);
 }

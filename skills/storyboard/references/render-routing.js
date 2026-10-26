@@ -34,23 +34,66 @@
  }
  function framePlan(scene){
   const v=scene.visual||{}, f=v.frames||{}, end=f.end||v.video?.lastImagePath||v.lastImagePath||v.imagePair?.end||'';
-  return {mode:f.mode||(end?'first_last':'first'),start:v.bg||v.src||v.imagePair?.start||'',end,reason:f.reason||'',endState:f.endState||''};
+  return {mode:f.mode||(end?'first_last':'first'),start:f.start||v.bg||v.src||v.imagePair?.start||'',end,reason:f.reason||'',endState:f.endState||''};
  }
  function checkFrames(scene,{draft=false,advice=[]}={}){
   const v=scene.visual||{},f=v.frames,p=framePlan(scene),errors=[];
   const bad=s=>errors.push('visual.frames: '+s);
   if(f){
-   if(!['first','first_last'].includes(f.mode))bad('mode must be first or first_last');
+   if(!['first','first_last','reference'].includes(f.mode))bad('mode must be first, first_last or reference');
    if(!text(f.reason))advice.push('visual.frames: record why this shot needs one or two frames');
    if(f.mode==='first_last'&&!text(f.endState))advice.push('visual.frames: describe the visible final state');
   }
+  const starts=[v.frames?.start,v.bg,v.imagePair?.start].filter(Boolean);
+  if(v.frames?.start&&new Set(starts).size>1)bad('the displayed start frame and visual.bg disagree');
   const ends=[v.frames?.end,v.video?.lastImagePath,v.lastImagePath,v.imagePair?.end].filter(Boolean);
   if(new Set(ends).size>1)bad('the displayed end frame and generation lastImagePath disagree');
-  if(p.mode==='first'&&p.end)bad('first-only mode cannot carry an end frame');
+  if(['first','reference'].includes(p.mode)&&p.end)bad('first-only mode cannot carry an end frame');
   if(p.mode==='first_last'){
    if(!draft&&(!text(p.start)||!text(p.end)))bad('both start and end images are required before generation');
    if(p.start&&p.start===p.end)bad('start and end must be distinct images');
   }
+  return errors.concat(checkImageReferences(scene,{draft}));
+ }
+ // References describe conditioning assets, never implicit temporal frames.
+ const IMAGE_ROLES=['character','prop','background','style','composition','continuity'];
+ const IMAGE_USES=['image','video','both'];
+ function hasStructuredImages(scene){return scene.visual?.frames?.start!==undefined||scene.visual?.references!==undefined;}
+ function imageReferences(scene){
+  const v=scene.visual||{};
+  if(Array.isArray(v.references))return v.references;
+  const settings=v.video||(typeof v.clip==='object'?v.clip:v);
+  return (Array.isArray(settings.referenceImagePaths)?settings.referenceImagePaths:[]).map((p,i)=>({id:'legacy-'+(i+1),path:p,role:'continuity',use:'video',purpose:'Legacy reference; role not authored',legacy:true}));
+ }
+ function checkImageReferences(scene,{draft=false}={}){
+  const v=scene.visual||{},errors=[],bad=s=>errors.push('visual.references: '+s);
+  if(v.references===undefined)return errors;
+  if(!Array.isArray(v.references)){bad('must be an array');return errors;}
+  if(!v.frames||!['first','first_last','reference'].includes(v.frames.mode))bad('declare visual.frames.mode for explicit input planning');
+  const ids=new Set();
+  v.references.forEach((ref,i)=>{
+   if(!ref||typeof ref!=='object'||Array.isArray(ref)){bad('entry '+i+' must be an object');return;}
+   if(!text(ref.id)||['start','end'].includes(ref.id)||/^keyframe-/.test(ref.id)||ids.has(ref.id))bad('entry '+i+' needs a unique id');
+   ids.add(ref.id);
+   if(!IMAGE_ROLES.includes(ref.role))bad('entry '+i+' needs a supported role');
+   if(!IMAGE_USES.includes(ref.use))bad('entry '+i+' needs use image, video or both');
+   if(!text(ref.purpose))bad('entry '+i+' needs a concrete purpose');
+   if(!draft&&!text(ref.path))bad('entry '+i+' needs an image path before generation');
+   if(ref.path!==undefined&&(typeof ref.path!=='string'||/^[a-z][a-z0-9+.-]*:|^[/\\]{2}|[\x00-\x1f]/i.test(ref.path)))bad('entry '+i+' must use a local image path');
+  });
+  if(v.frames?.keyframes!==undefined){
+   if(!Array.isArray(v.frames.keyframes)||!v.frames.keyframes.length||v.frames.keyframes.length>6||v.frames.mode!=='first_last')bad('keyframes need first_last with 1..6 intermediate states');
+   else v.frames.keyframes.forEach((key,i)=>{
+    if(!key||typeof key!=='object'||!Number.isFinite(key.atSeconds)||key.atSeconds<=0||!text(key.state)||(!draft&&!text(key.image)))bad('keyframe '+i+' needs time, state and image');
+   });
+  }
+  const settings=v.video||(typeof v.clip==='object'?v.clip:v);
+  if(settings.referenceImagePaths!==undefined){
+   const paths=v.references.filter(r=>r&&['video','both'].includes(r.use)).map(r=>r.path);
+   if(JSON.stringify(paths)!==JSON.stringify(settings.referenceImagePaths))bad('legacy referenceImagePaths disagree with authored video references');
+  }
+  if(v.frames?.mode==='reference'&&!v.references.some(r=>r&&['video','both'].includes(r.use)))bad('reference mode needs video references');
+  if(v.frames?.mode==='first'&&!draft&&!text(framePlan(scene).start))bad('first mode needs a start image');
   return errors;
  }
  /* The previz lane (blender-previz.md §6). Every generated_video cut pre-renders its camera and
@@ -348,7 +391,7 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
   if((!long&&textCount>2)||(long&&total>0&&textSeconds/total>0.2))errors.push('text-led slides dominate: at most 2 per short, or 20% of generated duration in long-form; use source images, acted processes or actual charts where the content calls for them');
   advice.push(...errors); return [];
  }
- const api={PURPOSES,ALTERNATIVES,LABELS,STILL_CAMERA_EFFECTS,CHARTS,PREVIZ_RENDERERS,PREVIZ_HANDOFFS,recommend,modesFor,checkLicense,exempt,framePlan,checkFrames,checkPreviz,previzHandoff,checkScene,checkData,checkMap,checkEpisode};
+ const api={PURPOSES,ALTERNATIVES,LABELS,STILL_CAMERA_EFFECTS,CHARTS,PREVIZ_RENDERERS,PREVIZ_HANDOFFS,IMAGE_ROLES,IMAGE_USES,hasStructuredImages,imageReferences,checkImageReferences,recommend,modesFor,checkLicense,exempt,framePlan,checkFrames,checkPreviz,previzHandoff,checkScene,checkData,checkMap,checkEpisode};
 
  if(typeof module==='object'&&module.exports)module.exports=api;else root.RENDER_ROUTING=api;
 })(typeof window==='object'?window:globalThis);

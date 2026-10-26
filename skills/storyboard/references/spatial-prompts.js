@@ -144,7 +144,11 @@ function assemble(win, index, dir) {
   const propReferenceImages = propSnapshot.filter(p => p.visible).flatMap(p => p.references.map(r => dir ? path.resolve(dir, r.path) : r.path));
   const continuityContract = require('./shot-continuity.js');
   const continuity = continuityContract.plan(win, index, dir);
-  const sourceReferenceImages = [...new Set([...(locationRef?.paths || []), ...(previzFrame ? [previzFrame] : []), ...(continuity?.referenceImages || []), ...(pack?.referenceImagePaths || []), ...castReferenceImages.map(ref => ref.path), ...propReferenceImages])];
+  const authoredReferences = require('./render-routing.js').imageReferences(scene).filter(ref => ['image', 'both'].includes(ref.use));
+  const referenceErrors = require('./render-routing.js').checkImageReferences(scene);
+  if (referenceErrors.length) throw new Error(referenceErrors.join('; '));
+  const authoredPaths = authoredReferences.map(ref => dir ? path.resolve(dir, ref.path) : ref.path);
+  const sourceReferenceImages = [...new Set([...(locationRef?.paths || []), ...(previzFrame ? [previzFrame] : []), ...(continuity?.referenceImages || []), ...(pack?.referenceImagePaths || []), ...castReferenceImages.map(ref => ref.path), ...propReferenceImages, ...authoredPaths])];
   const spatialWarnings = locationRef && previz && !previz.locationBinding ? ['Standalone previz is not bound to this location. Compare its camera and blocking or rebuild with location_manage action previz; the location render controls source composition.'] : [];
   const compositionLock = locationRef
     ? 'Composition lock: the first attached image is the shared 3D location render. Keep its camera, architecture, framing and authored character placement and orientation. Render surfaces and visible characters in the episode style. Other references supply appearance or motion planning; keep the location composition when they differ.'
@@ -161,7 +165,7 @@ function assemble(win, index, dir) {
   const propPrompt = require('./prop-continuity.js').prompt(win, index);
   const sourceTechnique = require('./film-techniques.js').sourceInstructions(scene);
   const videoTechnique = require('./film-techniques.js').instructions(scene);
-  const source = [...(propPrompt ? [propPrompt] : []), canvas + ', edge-to-edge composition.',
+  const source = [...authoredReferences.map((ref, i) => 'Attached image ' + (sourceReferenceImages.indexOf(authoredPaths[i]) + 1) + ' — ' + ref.role + ' (' + ref.id + '): ' + ref.purpose), ...(propPrompt ? [propPrompt] : []), canvas + ', edge-to-edge composition.',
     'Opening state: ' + (d.before || ''),
     sourceContext.guidance(sourceContext.context(scene, win.STORY)),
     ...continuityContract.sourceGuidance(continuity, sourceReferenceImages),
@@ -224,8 +228,18 @@ function assemble(win, index, dir) {
   // The vendor rejects the request above this length, so it stays a hard stop.
   if (engine === 'astra' && motionPrompt?.length > 2000)
     throw new Error('ASTRA motion prompt including performance exceeds 2000 characters; shorten descriptions or split at a natural action boundary, preserving every action');
+  const structuredImages = require('./render-routing.js').hasStructuredImages(scene);
+  const opening = require('./render-routing.js').framePlan(scene).start;
+  const openingPath = opening ? (dir ? path.resolve(dir, opening) : opening) : null;
   const locationEndReady = !locationRef || !!(locationRef.resultImage && v.bg && path.resolve(dir,v.bg)===path.resolve(dir,locationRef.resultImage));
-  return { warnings, continuity, spatialWarnings, propSnapshot, propReferenceImages, endFrameImageArgs: locationRef && locationEndReady ? {referenced_image_paths: [path.resolve(dir,v.bg), ...locationRef.endPaths]} : {}, endFrameReady: locationEndReady, locationEndReferenceImages: locationRef?.endPaths || [], locationBinding: locationRef?.binding || null, locationReferenceRoles: locationRef?.roles || [], sourcePrompt: source, stylePreset: preset, cutType, castIds,
+  const endReferenceImages = locationRef && locationEndReady
+    ? [...new Set([openingPath, ...locationRef.endPaths, ...authoredPaths].filter(Boolean))]
+    : (authoredPaths.length || structuredImages) && openingPath && locationEndReady ? [...new Set([openingPath, ...authoredPaths])] : [];
+  const endReferenceGuidance = authoredReferences.map((ref, i) => {
+    const index = endReferenceImages.indexOf(authoredPaths[i]);
+    return index < 0 ? '' : 'Attached image ' + (index + 1) + ' — ' + ref.role + ' (' + ref.id + '): ' + ref.purpose;
+  }).filter(Boolean).join('\n');
+  return { warnings, continuity, spatialWarnings, propSnapshot, propReferenceImages, endFrameImageArgs: endReferenceImages.length ? {referenced_image_paths: endReferenceImages} : {}, endFrameReady: locationEndReady && (!(authoredPaths.length || structuredImages) || !!openingPath), locationEndReferenceImages: locationRef?.endPaths || [], locationBinding: locationRef?.binding || null, locationReferenceRoles: locationRef?.roles || [], sourcePrompt: source, stylePreset: preset, cutType, castIds,
     styleBinding: pack?.binding || null,
     styleGuidePath: pack?.guidePath || null,
     castReferenceImages,
@@ -233,7 +247,7 @@ function assemble(win, index, dir) {
     // The previz frame goes first, followed by the pack image and the episode cast images.
     sourceImageArgs: sourceReferenceImages.length ? { referenced_image_paths: sourceReferenceImages } : {},
     previzFirstFrame: previzFrame,
-    endFramePrompt: (locationRef ? 'Image 1 is the generated opening frame; image 2 is the location endpoint render. Preserve image 1 appearance while using image 2 for the final camera, architecture and authored character state. ' + locationRef.endPrompt + '\n' : '') + 'Edit the supplied opening image into this final state: ' + (after || '') + '\n' + treatment + '\n' + lock +
+    endFramePrompt: (endReferenceGuidance ? endReferenceGuidance + '\nImage 1 is the generated opening frame. Preserve its appearance and use the other images only for their stated roles.\n' : '') + (locationRef ? 'Image 1 is the generated opening frame; image 2 is the location endpoint render. Preserve image 1 appearance while using image 2 for the final camera, architecture and authored character state. ' + locationRef.endPrompt + '\n' : '') + 'Edit the supplied opening image into this final state: ' + (after || '') + '\n' + treatment + '\n' + lock +
       '\nPreserve lighting. Follow the planned camera endpoint: ' + (camera.end || camera.framing || ''),
     motionPrompt };
 }

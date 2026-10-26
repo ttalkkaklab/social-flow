@@ -1,0 +1,87 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { prepareVideoImages } from '../dist/video-image-inputs.js';
+import { parseVideoArgs } from '../dist/video-registry.js';
+import { createRequire } from 'node:module';
+import { png } from './workflow-fixture.mjs';
+function fixture(t) {
+ const root=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'image-inputs-')));
+ t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
+ fs.mkdirSync(path.join(root,'storyboard'));
+ for(const name of ['start','end','hero','room','mid'])fs.writeFileSync(path.join(root,'storyboard',name+'.png'),png);
+ return root;
+}
+const ref=(id='hero',use='video',role='character')=>({id,path:id+'.png',role,use,purpose:'Preserve '+id+' appearance'});
+const shot=(mode='first_last',references=[])=>({visual:{frames:{mode,...(mode==='reference'?{}:{start:'start.png'}),...(mode==='first_last'?{end:'end.png'}:{})},references}});
+test('frame mappings use board-relative files, decoded metadata and explicit use:image references',t=>{
+ const root=fixture(t),s=shot('first_last',[ref('hero','image')]);
+ for(const [tool,start,end] of [['veo_img2video','sourceImagePath','lastImagePath'],['seedance_img2video','sourceImagePath','lastImagePath'],['astra_img2video','firstFramePath','lastFramePath'],['astra_genai_audio2video','imagePath','lastFramePath'],['mlx_video_generate','firstFrameImagePath','lastFrameImagePath']]) {
+  const p=prepareVideoImages(tool,{prompt:'Move'},s,root);
+  assert.equal(p.args[start],path.join(root,'storyboard/start.png'));assert.equal(p.args[end],path.join(root,'storyboard/end.png'));
+  assert.equal(p.imageBindings.length,3);assert.equal(p.imageBindings[2].submitted,false);
+  assert.equal(p.imageBindings[0].width,1);assert.match(p.imageBindings[0].sha256,/^[a-f0-9]{64}$/);
+ }
+ const genai=prepareVideoImages('astra_genai_img2video',{prompt:'Move',model:'ltx-2.5-22b-dev',resolution:'720p',duration:5,reserveUsd:0},s,root);
+ assert.match(genai.args.imageUri,/^data:image\/png;base64,/);assert.match(genai.args.lastFrameUri,/^data:image\/png;base64,/);
+ assert.doesNotThrow(()=>parseVideoArgs('astra_genai_img2video',genai.args));
+});
+test('reference-only inputs keep order and roles; installed adapters enforce their actual limits',t=>{
+ const root=fixture(t),s=shot('reference',[ref(),ref('room','both','background')]);
+ const p=prepareVideoImages('seedance_reference',{prompt:'Walk',model:'dreamina-seedance-2-0-260128'},s,root);
+ assert.deepEqual(p.args.referenceImagePaths,['hero','room'].map(n=>path.join(root,'storyboard',n+'.png')));
+ assert.match(p.args.prompt,/Image 2 \(room, background\)/);assert.equal(p.args.lastImagePath,undefined);
+ assert.doesNotThrow(()=>parseVideoArgs('seedance_reference',p.args));
+ const msr=prepareVideoImages('astra_genai_msr',{prompt:'Walk',width:768,height:1280,duration:5,reserveUsd:0},s,root);
+ assert.equal(msr.args.references[1].background,true);assert.doesNotThrow(()=>parseVideoArgs('astra_genai_msr',msr.args));
+ s.visual.references=Array.from({length:10},(_,i)=>({...ref(),id:'hero'+i}));
+ const tooMany=prepareVideoImages('seedance_reference',{prompt:'Walk',model:'dreamina-seedance-2-0-260128'},s,root);
+ assert.throws(()=>parseVideoArgs('seedance_reference',tooMany.args),/at most 9/);
+});
+test('missing, corrupt, conflicting, extra and unsupported image constraints fail without dispatch',t=>{
+ const root=fixture(t);
+ assert.throws(()=>prepareVideoImages('seedance_reference',{prompt:'x'},shot('first_last',[ref()]),root),/cannot combine/);
+ assert.throws(()=>prepareVideoImages('astra_audio2video',{},shot(),root),/cannot carry/);
+ assert.throws(()=>prepareVideoImages('veo_reference',{},shot('reference',[ref('hero','video','style')]),root),/not style/);
+ assert.throws(()=>prepareVideoImages('astra_genai_msr',{},shot('reference',[ref('room','video','background'),ref()]),root),/background must be last/);
+ assert.throws(()=>prepareVideoImages('veo_text2video',{},shot('first'),root),/cannot carry/);
+ assert.throws(()=>prepareVideoImages('veo_img2video',{sourceImagePath:'storyboard/hero.png'},shot(),root),/mismatch/);
+ assert.throws(()=>prepareVideoImages('veo_img2video',{lastImagePath:'storyboard/end.png'},shot('first'),root),/unplanned/);
+ const missing=shot('reference',[{...ref(),path:'absent.png'}]);assert.throws(()=>prepareVideoImages('veo_reference',{},missing,root),/ENOENT/);
+ fs.writeFileSync(path.join(root,'storyboard/hero.png'),'corrupt');assert.throws(()=>prepareVideoImages('veo_reference',{},shot('reference',[ref()]),root),/image_invalid/);
+});
+test('timed intermediate frames bind exact indices; duplicates and unsupported adapters are refused',t=>{
+ const root=fixture(t),s=shot();s.visual.frames.keyframes=[{image:'mid.png',atSeconds:1,state:'Contact established',strength:.8}];
+ const p=prepareVideoImages('astra_keyframe_video',{prompt:'Move',numFrames:121,frameRate:24},s,root);
+ assert.deepEqual(p.args.images.map(i=>i.frameIdx),[0,24,120]);assert.doesNotThrow(()=>parseVideoArgs('astra_keyframe_video',p.args));
+ assert.throws(()=>prepareVideoImages('astra_img2video',{},s,root),/intermediate/);
+ s.visual.frames.keyframes[0].atSeconds=5;assert.throws(()=>prepareVideoImages('astra_keyframe_video',{numFrames:121},s,root),/inside/);
+});
+test('host plans expose a hashed inventory without claiming provider submission; old raw calls stay unchanged',t=>{
+ const root=fixture(t),p=prepareVideoImages('host_external',{prompt:'Move'},shot('first_last',[ref()]),root);
+ assert.equal(p.imageBindings.length,3);assert.ok(p.imageBindings.every(i=>!i.submitted));assert.match(p.imageHandoff,/unverified/);
+ const legacy={visual:{bg:'old.png',frames:{mode:'first'},video:{referenceImagePaths:['old.png']}}};
+ assert.deepEqual(prepareVideoImages('seedance_reference',{referenceImagePaths:['old.png']},legacy,root).args,{referenceImagePaths:['old.png']});
+ const raw={prompt:'legacy',sourceImagePath:'external.png'};assert.equal(prepareVideoImages('veo_img2video',raw,{},root).args,raw);
+});
+
+test('ASTRA ending frame uses the adapter duration conversion rather than a second rounding rule',t=>{
+ const root=fixture(t),s=shot();s.visual.frames.keyframes=[{image:'mid.png',atSeconds:1,state:'Contact'}];
+ const p=prepareVideoImages('astra_keyframe_video',{prompt:'Move',duration:4.2,frameRate:24},s,root);
+ assert.deepEqual(p.args.images.map(i=>i.frameIdx),[0,24,96]);
+ assert.equal(parseVideoArgs('astra_keyframe_video',p.args).numFrames,97);
+});
+
+
+test('compiled intermediate inputs agree with the existing ASTRA preparation helper including strengths',t=>{
+ const root=fixture(t),s=shot();s.duration=5;s.visual.video={strength:.75};
+ s.visual.frames.keyframes=[{image:'mid.png',atSeconds:1,state:'Contact'}];
+ const {keyframeImages}=createRequire(import.meta.url)('../../skills/produce/references/prepare-astra-shot.js');
+ const images=keyframeImages(s,path.join(root,'storyboard'),121,24);
+ const p=prepareVideoImages('astra_keyframe_video',{prompt:'Move',numFrames:121,frameRate:24,images},s,root);
+ assert.deepEqual(p.args.images,images);
+ s.visual.frames.keyframes[0].atSeconds=5;
+ assert.throws(()=>prepareVideoImages('astra_keyframe_video',{numFrames:129},s,root),/time and state/);
+});
