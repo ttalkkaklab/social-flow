@@ -26,9 +26,10 @@
                   capture-frames.sh appends this parameter via FORMAT_ENV's URL_FMT.
       ?probe=1    paints the whole canvas #FF00FF — build-reel.sh's canvas probe reads the
                   four corners to see whether the CSS canvas followed the window size.
-      footage scene (a lower third over a clip the user shot) — title + caption + source,
-                  aligned to the bottom left of the zone. What it skips past is the band at
-                  the bottom of the screen, not somebody's face.
+      footage scene (a clip the user shot, visual.source === 'recording') — the legacy lower-third
+                  layout (title + caption + source, bottom left of the zone) is still wired for a
+                  board that authors text on a recording, but nothing is typed over a moving picture
+                  (owner 2026-10-17): leave those fields empty and the render draws nothing.
   ■ URL parameters (the capture-frames.sh / capture-reveals.sh contract):
       ?i=<n>        scene index (from 0)
       &reveal=<k>   cumulative elements (title, source, cover) are opaque for group k and

@@ -113,18 +113,17 @@ chmod 600 ~/.config/social-flow/<channel-slug>/*
    | Scope | What it opens | When it's needed |
    |---|---|---|
    | `youtube.upload` | `youtube_publish` upload | publishing (required) |
-   | `youtube.force-ssl` | **subtitle upload (`captionFilePath`)** + reading comments and replying | **publishing (required)** · growth loop |
+   | `youtube.force-ssl` | subtitle upload (`captionFilePath`, only when the user requests tracks) + reading comments and replying | requested subtitle tracks · growth loop |
    | `youtube.readonly` | the channel and video queries in `youtube_insights` | growth loop |
    | `yt-analytics.readonly` | period metrics (views, watch time, subscriber change) | growth loop |
    | `yt-analytics-monetary.readonly` | revenue metrics (`includeRevenue: true`) | optional |
 
-   **`force-ssl` is now needed for publishing too** — this pipeline doesn't burn
-   subtitles into the video, it uploads them separately with `captions.insert`, and
-   that call is rejected by the upload-only `youtube.upload`. Publish with an old
-   token that only has upload turned on and **the video goes up while the subtitles
-   fail** (`captionWarning`). At that point the video is already public, so don't
-   republish — reissue the token with the procedure below and then upload just the
-   subtitles from Studio.
+   **`force-ssl` is needed only when the user requests subtitle tracks** — the delivered
+   video is subtitle-free, and a requested track goes up separately with
+   `captions.insert`, which the upload-only `youtube.upload` rejects. Publish with an
+   upload-only token and **the video goes up (private, publish rule 9) while the
+   requested track fails** (`captionWarning`). Don't republish — reissue the token with
+   the procedure below and attach the track from Studio before flipping public, or later.
 
    **A token already issued for publishing doesn't have the four above** — a scope
    error on the first call to a subtitle or growth tool is normal, and the error

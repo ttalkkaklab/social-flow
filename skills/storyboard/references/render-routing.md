@@ -8,17 +8,22 @@
 - [Connecting to the builder](#connecting-to-the-builder)
 - [Limits on graphs and video](#limits-on-graphs-and-video)
   - [Donut, pie and map choices](#donut-pie-and-map-choices)
+- [A previz can guide a generated video cut](#a-previz-can-guide-a-generated-video-cut)
 - [Start and end frame planning](#start-and-end-frame-planning)
 
 ## Decision order
 
-Read the approved production mode in `window.PRODUCTION` first. `video_50`, `video_30` and `hook_only` follow the order
-below while meeting the selected new-cut minimum or opening-hook-only constraint. Existing
-`hybrid` approvals retain their 1–2 clip cap. `full_video` keeps each cut's real `purpose` and `infoType` and uses `generated_video`
+Read the saved production ratio in `window.PRODUCTION` first. The partial ratios (`video_80`,
+`video_50`, `video_30`, `video_lt10`) follow the order below inside the band's upper count; the
+ratio is a planning target, not a minimum, so when purpose routing yields fewer video cuts than
+the target, report the shortfall. Resumed legacy `hook_only` approvals keep the opening-hook-only
+constraint and existing `hybrid` approvals retain their 1–2 clip cap. `full_video` keeps each
+cut's real `purpose` and `infoType` and uses `generated_video`
 for every new scene: the model's action and the camera move explain the cut, and
 `videoDesign` records the opening state, the action, the final state, continuity and the
-review criteria. All four choices' estimated generation cost and retry cost are shown in HITL
-first; the cost and approval contract is [production-mode.md](production-mode.md).
+review criteria. The six ratios' estimated generation and retry costs are shown at first setup
+or on an explicit change; per episode only the quote and the spending approval remain. The cost
+and approval contract is [production-mode.md](production-mode.md).
 
 Read the narration and write down the one thing the viewer must learn from this cut. Do not
 start from the nouns that appear or from the APIs available. Answer these questions, then
@@ -33,10 +38,8 @@ write `shot.render`.
    is not enough and consider generated video: complex expressions, cloth, a crowd in motion.
 5. Does real footage of it exist — the actual place, the actual era, the actual event? A free
    stock or archive clip beats a generated one when reality is the point, and costs nothing.
-   With a portal key, ask `portal_assets_search` first (the owner's global library — Gemini
-   B-roll already cleared for use; `portal_assets_get` hands back the license record and the
-   footage name); with no hit, run `stock_search`, keep an item only when its license record
-   says commercial and modify. Either way route the cut as `stock_video`. A stock photograph feeds a still-camera cut the same
+   Use `stock_search` and keep a clip only when its license
+   says commercial and modify. Then route the cut as `stock_video`. A stock photograph feeds a still-camera cut the same
    way: `visual.bg` under `images/stock/` plus `visual.license`, no `bgPrompt`.
 6. Is the point who a person is, a mood, a place or a clue? Use a still with a camera move
    that fits the purpose.
@@ -58,6 +61,7 @@ their source and stay outside this classification.
 | A short quotation or verdict | `evidence_quote`, `verdict` | `editorial_html` | A quotation with its source; a verdict in a few words. |
 | Continuous action that carries the meaning | `live_action` | `generated_video` | Cloth in the wind, or a person's movement, when that movement is the point. |
 | Real footage of the actual place, era or event | `archive` (this route only); `live_action`, `atmosphere` and `place` may take it instead of their default | `stock_video` | A 1950 newsreel of the street; a real launch from the NASA library; a real market at dawn from Pexels. The license record travels with the cut (scenes-schema §stock material). |
+| An abstract diagram or UI reenactment | `motion_explanation` (quantitative purposes may take it instead of `data_graph`) | `motion_html` | A flow between services, a queue filling, a before/after pair; `shot.motionGraphic` names the type ([motion-graphics.md](motion-graphics.md)). |
 
 Stills also record `camera.effect`, `target` and `reason` — nine effects: `focus-in` ·
 `rack-focus` · `approach` · `pull` · `pan` · `tilt` · `push` (the plain slow zoom-in, still-camera.js's
@@ -92,9 +96,10 @@ shot: {
 ```
 
 Apply the repetition limits and per-scene review in [visual-direction.md](visual-direction.md).
-Copying one reason across three or more cuts fails the check. Text-led screens are at most two
-per short and at most 20% of generated cut length in long-form. One cut lasts at most 8
-seconds; `motionBeats` cannot get around that. `evidence_quote` records
+Copying one reason across three or more cuts is flagged as advice. Text-led screens are at most two
+per short and at most 20% of generated cut length in long-form, and a text-led cut
+(`editorial_html`, kinetic type) lasts at most 8 seconds as guidance; `motionBeats` do not turn
+typography into subject motion. Other cuts take the time their action needs. `evidence_quote` records
 `evidence:{source,quote}`; to show the document itself, use a still-camera cut.
 
 Every generated cut needs `mode`, `purpose` and `reason`; recordings and the shared outro are
@@ -125,8 +130,9 @@ the sentence, so compare the narration with the reasons once more before approva
 | `object_html` | The same mesh path, without characters the explanation does not need. |
 | `data_graph` | `subject.kind:"data"` moves values and relations. A graph is never a decorative 3D object. |
 | `editorial_html` | `kind:"diagram"`, `motion:true`, `treatment:"editorial"`, `subject.kind:"type"` for a short quotation or verdict. |
-| `generated_video` | `visual.video` or a video cut, with the reason in `visual.why`, and its 3D previz in `visual.video.previz` (§Every generated video cut is previz-guided). The existing engine, cost and reference-image rules apply; under `PRODUCTION.videoProvider:"host"` the slot is `engine:"host"` (the CLI's own `image_to_video`) and the previz shapes the still and the prompt. |
-| `stock_video` | `visual.source: "stock"` and `visual.clip` under `footage/` — the same supplied-file lane as a recording. Produce downloads and normalizes it, drops its audio and trims from `visual.in`; TTS, subtitles and BGM run over it, nothing is drawn on it. It bills nothing and sits outside the generated-video cap. |
+| `generated_video` | `visual.video` or a video cut, with the reason in `visual.why`, and an optional 3D previz in `visual.video.previz` (§A previz can guide a generated video cut). The existing engine, cost and reference-image rules apply; under `PRODUCTION.videoProvider:"host"` the slot is `engine:"host"` (the CLI's own `image_to_video`) and a previz, when used, shapes the still and the prompt. |
+| `stock_video` | `visual.source: "stock"` and `visual.clip` under `footage/` — the same supplied-file lane as a recording. Produce downloads and normalizes it, drops its audio and trims from `visual.in`; TTS and BGM run over it, nothing is drawn on it. It bills nothing and sits outside the generated-video cap. |
+| `motion_html` | `visual.slide` with `kind:"diagram"`, `motion:true`, `treatment:"editorial"`, `renderer:"motion-svg-v1"` and `shot.motionGraphic`; built-in types render through `prepare-motion-graphic.js` ([motion-graphics.md](motion-graphics.md)). |
 
 Camera HTML copies [camera-slide-template.html](camera-slide-template.html) and changes only
 `SLIDE_SHOT` to the cut number; copy [still-camera.js](still-camera.js) into `slides/assets/`.
@@ -153,7 +159,8 @@ counts against the cap nor frees a slot for one more generated cut. The first cu
 `hook_video` is off by default. When a channel switched it on explicitly, design an opening
 that needs continuous action while keeping that constraint. Every generated-video cut needs a
 reason a still or a controllable HTML action would not do. Do not add an unrelated
-character, graph or clip to meet a budget or a motion ratio.
+character, graph or clip to meet a budget or a motion ratio; when purpose routing lands below
+the chosen ratio's target, report the shortfall with the board — it is not an error.
 
 ### Donut, pie and map choices
 
@@ -164,22 +171,25 @@ as per-region colour, counts as circle area. Boundaries and coordinates need a s
 region with no data is hatched, which is different from zero. Each format's data contract and
 examples are in [chart-design.md](chart-design.md).
 
-## Every generated video cut is previz-guided
+## A previz can guide a generated video cut
 
-Every `generated_video` cut with a `visual.video` slot pre-renders its camera and blocking in
-3D first (user directive 2026-09-11) — a Blender previz through the `blender_*` bridge or a
-three.js previz through `previz-template.html` — rendered at the cut's billed length, 24 fps,
-and stored as `visual.video.previz` with `renderer`, `clip`, `firstFrame`, `sha256`, `fps`,
-`seconds` and `camera.movement`. `checkScene` refuses the cut without it after the draft pass;
-`checkPreviz` refuses a renderer other than `blender`/`threejs`, a clip that is not a local mp4
-rendered at whole seconds and 24–60 fps, a first frame that is not a local png, a missing hash,
-a `camera.movement` that differs from `visual.camera.movement`, and — on the Seedance route
-(`handoff:"reference_video"`, `modelPurpose:"previz"`) — a `referenceImagePaths[0]` that is not
-the source still, an end frame, or a prompt that does not bind `Video 1` and `Image 1` and
-close the clay read with "Do not reference its visual content". On `engine:"host"` the handoff
-is `frame_and_prompt`: the still is edited from the first frame and the prompt carries the
-move. Imported clips (`visual.reuse`) carry none. The contract, both renderers, the first-frame
-still and the prompt skeleton are in [blender-previz.md](blender-previz.md) §6.
+A `generated_video` cut with a `visual.video` slot may pre-render its camera and blocking in
+3D first — a Blender previz through the `blender_*` bridge or a three.js previz through
+`previz-template.html` — rendered at the cut's billed length, 24 fps, and stored as
+`visual.video.previz` with `renderer`, `clip`, `firstFrame`, `sha256`, `fps`, `seconds` and
+`camera.movement`. The previz is optional (owner decision 2026-10-18): it helps when the model
+takes a reference clip (Seedance 2.x `reference_video`); on `frame_and_prompt` adapters it is
+advice only. `checkScene` advises when a cut has none after the draft pass. When a record
+exists, `checkPreviz` flags a renderer other than `blender`/`threejs`, a clip that is not a
+local mp4 rendered at whole seconds and 24–60 fps, a first frame that is not a local png, a
+missing hash, a `camera.movement` that differs from `visual.camera.movement`, and — on the
+Seedance route (`handoff:"reference_video"`, `modelPurpose:"previz"`) — a `referenceImagePaths[0]`
+that is not the source still, an end frame, or a prompt that does not bind `Video 1` and
+`Image 1` and close the clay read with "Do not reference its visual content". On `engine:"host"`
+the handoff is `frame_and_prompt`: the still is edited from the first frame and the prompt
+carries the move. Imported clips (`visual.reuse`) carry none. The renderer comes from the saved
+`production.previzRenderer`; both renderers, the first-frame still and the prompt skeleton are
+in [blender-previz.md](blender-previz.md) §6.
 
 ## Start and end frame planning
 
@@ -188,10 +198,12 @@ For every newly authored image-to-video shot, set `visual.frames.mode` to `first
 opening/closing, assembly, removal or another visible state change must be controlled. Write
 `endState` before generating images. Use `first` for a mood shot or subtle ambient motion with
 no required destination. The decision is per shot, independent of hybrid/full-video choice —
-with one rule on top since 0.73.0: a previz cut (every generated motion background) is `first`
-only, because the reference route takes no `last_frame`; its destination is the previz's own
-last frame, which the clip follows. `first_last` remains for a slot without a previz (a b-roll
-on Seedance 1.x or Veo).
+with a route-specific constraint: reference-video handoffs do not pin temporal endpoints.
+For new structured plans, use `mode:"reference"` and list the opening image as a video
+reference when needed. A frame-and-prompt previz may still use first_last if its adapter
+supports an ending frame. See [shot image inputs](scenes-schema.md#shot-image-inputs) for
+explicit start paths, extra reference roles/uses, workflow inventory and provider mapping.
+The example below is a legacy reference-video record; new boards use the structured fields.
 
 ```js
 visual: {
@@ -210,9 +222,9 @@ visual: {
 }
 ```
 
-The previz block is what makes this a legal generated cut (§Every generated video cut is
-previz-guided); the model is the grade the user chose in `PRODUCTION.videoModel`. Note the
-end frame: a previz cut cannot carry `first_last` — the reference route takes no `last_frame` —
+The previz block is optional (§A previz can guide a generated video cut); the model is the
+saved directory selection in `PRODUCTION.videoModel` (model-settings.md). Note the
+end frame: a reference-video previz cut cannot carry `first_last` — the reference route takes no `last_frame` —
 so on a previz cut `frames.mode` is `first` and the destination is the previz's own last frame.
 
 `visual.bg` is the start image. `visual.frames.end` is the end image; the Seedance router
@@ -246,6 +258,12 @@ the still-camera default. Follow [drone-flythrough.md](drone-flythrough.md).
 
 Still-camera sources must satisfy `max(W/sw,H/sh) × peakZoom <= 1.5`.
 Minimum source dimensions are `ceil(W × peakZoom / 1.5)` × `ceil(H × peakZoom / 1.5)`.
-`visual.camera.speed` selects very slow (default), slow, fast or very fast; fast shots
-last at most 6 seconds and very fast shots at most 5. Pan/tilt retain authored endpoints;
+On still-camera cuts `visual.camera.speed` selects very slow (default), slow, fast or very
+fast; fast shots last at most 6 seconds and very fast shots at most 5. Generated-video cuts use
+the other vocabulary — slow, steady or fast, a pace the viewer can see (production-mode.js);
+the two routes do not share speed words. Pan/tilt retain authored endpoints;
 window travel is diagnostic rather than a zoom-speed acceptance test.
+
+### Motion graphic scenes
+
+`motion_html` supports abstract diagrams and UI reenactments with `shot.motionGraphic`; see [motion-graphics.md](motion-graphics.md). `motion_explanation` is the general purpose, while quantitative purposes may also use this route. Choose the semantic type first; do not infer it from the renderer. Physical mechanisms retain mesh routes and real recordings retain their source.

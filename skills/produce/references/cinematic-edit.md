@@ -45,9 +45,10 @@ edit: {
 Use it to avoid an idle generated lead-in and choose the visible action that fits the line.
 `check-production.js --ready` measures where each accepted clip starts to move
 (`measure-motion.js`): when the onset is past the first second and `edit.in` is 0, the card
-would open on a still, so set `edit.in` to the onset or regenerate. A clip more than three
-seconds longer than its card is refused for the same reason unless `edit.in` skips into the
-action — generate at the card length instead (ep411 cut 10-second clips at 4–9 seconds, in=0).
+would open on a still, so set `edit.in` to the onset or revise the shot within the budget; both
+are reported as warnings. A clip more than three seconds longer than its card draws the same
+warning unless `edit.in` skips into the action — generate at the card length instead (ep411 cut
+10-second clips at 4–9 seconds, in=0).
 Do not use it on authored slide reveal groups or sync footage. `pre` and `post` control
 added narration margins (0..2 seconds). Default pre is zero, post is 0.12 seconds; dip has
 0.30 seconds of pre. Source-recorded breaths still count, so listen before adding a pause.
@@ -109,11 +110,15 @@ little visible motion for inspection; it does not claim aesthetic approval.
 samples a second on a proxy) and writes the numbers into `assembled-check.json`: a clip card
 that stands still over 2 seconds or repeats its picture on more than half its samples, or an
 authored slide that repeats on more than 60% of its samples or holds one plate past the
-channel plate limit (ceiling 8 seconds), stops the build. Still cards with a Ken Burns move
-are not gated here; the builder already refuses a still without a move.
+channel plate limit (ceiling 8 seconds), is recorded as a warning (`semanticReview: not_reviewed`)
+and the build continues. Still cards with a Ken Burns move are not measured here; the builder
+warns on a still without a move and names a planned `intentional_still`.
 
 Watch every file in `work/seams/`, which contains the final master's boundary excerpts with
-sound. Also watch the entire final clean and subtitled exports at normal speed. Record in
+sound and paired PNGs of the actual outgoing/incoming boundary frames. The image hashes,
+frame numbers and `not_reviewed` state are in `edit-check.json`; extraction is not visual
+approval. Revisit both neighbours after a crop, trim or replacement. Also watch the entire
+final clean export at normal speed. Record in
 `edit-review.md` the master hash, boundaries inspected, observed action continuity, voice
 spacing, visible defects and their resolution. Check:
 
@@ -122,7 +127,7 @@ spacing, visible defects and their resolution. Check:
 - Faces, geography, gaze and motion direction remain understandable.
 - Lighting, colour and shot size change deliberately; no accidental flash or black frame.
 - Narration flows across related shots and breathes at actual thought or chapter boundaries.
-- Subtitles follow the voice, and music or effects support the cut without masking words.
+- Music or effects support the cut without masking words (a requested sidecar's cues follow the voice).
 
 If a join feels wrong, fix the source trim, neighbouring composition or timing first. Rebuild
 and review the same boundary. More effects are not a substitute for an intelligible edit.

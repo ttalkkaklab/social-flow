@@ -24,7 +24,7 @@ storyboard (script) → user shoots (ingest record) → transcribe/align (ingest
 ```
 y 190–460    title block — screencast-overlay.html capture (kicker+title; cover adds the stat)
 y ≥460       recording band — width 1080 fit, height cap BAND_MAX_H (900), center BAND_CY (880)
-y 1380–1560  burned-in subtitle band — same style as build-reel.sh (symmetric 250 margins)
+y 1380–1560  clear picture area — no burned subtitles
 ```
 
 The overlay's y=460 lower bound and the builder's `BAND_MIN_Y=460` are a **paired contract** —
@@ -79,7 +79,7 @@ FORMAT_ENV="$PWD/.work/format.env" \
 #    and only the builder's asset precheck catches it — after all 12 minutes are captured.
 # ③ write .work/edit.json from alignment.json + overlay paths, prepare BGM (.work/bgm.wav)
 # ④ build — pass THEME.ink as BG
-BG="#0b1020" $REF/build-screencast.sh .work   # → reel.mp4 (clean) · reel-sub.mp4 (burn-in) · subs.srt · cover.jpg · build-report.txt
+BG="#0b1020" $REF/build-screencast.sh .work   # → reel.mp4 (clean) · optional subs.srt · cover.jpg · build-report.txt
 ```
 
 - After capturing overlays, confirm `window.__overflow === 0` via the `--dump-dom` capture (produce §4) or by eye
@@ -103,8 +103,9 @@ BG="#0b1020" $REF/build-screencast.sh .work   # → reel.mp4 (clean) · reel-sub
   line, so the outro tail still comes out at 1.0x; with `OUTRO=0` there is no tail and the whole
   file speeds up. The default factor is 1.0, which preserves the
   user's recorded voice and timing. This builder has no rate normalization of its own.
-  A channel-selected 1.2x raises a take at the 5~6 characters/s shooting standard to 6.0~7.2,
-  which can exceed the final 6.2 characters/s gate. Profile.md §2 can override the default.
+  A user-requested 1.2x (`.work/speed-authorization.json`, tts-speed.md) raises a take at the 5~6
+  characters/s shooting standard to 6.0~7.2, which can exceed the 6.2 characters/s check on a
+  requested SRT sidecar. A profile.md §2 value is not that request.
 - From here on, phone-mode review, platform text, and the quality gates follow produce
   SKILL.md §8–10 unchanged.
 

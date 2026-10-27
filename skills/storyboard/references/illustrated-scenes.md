@@ -35,7 +35,8 @@ props laid on top are not a substitute for a cute 3D doll performing the action.
    or a far landscape.
 3. Match the light direction, exposure, colour temperature and floor viewpoint of the 3D
    character, objects and background.
-4. Reserve the space for title and subtitles at image-generation time. Never put text over a
+4. Reserve the space for the title and keep the lower safe zone clear at image-generation
+   time; no burned subtitles are planned (the master is clean, 2026-10-17). Never put text over a
    face.
 5. Separate quiet breathing, head and wrist motion from the action the sentence describes.
    Large actions use a rigged model or separately produced motion material.

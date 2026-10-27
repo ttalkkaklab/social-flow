@@ -25,8 +25,7 @@ autoproduce:                # when the queue runs dry the loop authors directly 
   duplicate_threshold: 0.5  # duplicate-verdict threshold (check-duplicate.py) — raise only for series channels
   max_cost_per_video: 1.00  # USD — passes the economy baseline ($0.27–0.29) and one lite b-roll promotion ($0.91–0.93); with a hook on the mini grade below the promotion needs 1.50, on 2.0 1080p 3.70
   daily_cost_cap: 2.00      # USD — two economy episodes with one promotion, or one episode with a mini hook and a promotion; a single episode must fit under it
-  previz_renderer: threejs  # threejs | blender — the standing answer to PRODUCTION.previz (every generated cut is a 3D previz cut); absent = the loop plans no generated cut
-  video_model: "dreamina-seedance-2-0-mini-260615 720p"   # a Seedance 2.x grade + resolution, the standing answer to PRODUCTION.videoModel (video-model-options.js prices the grades); absent = no generated cut
+  # previz_renderer / video_model — optional overrides, not prerequisites; `.social-flow/models.json` governs the renderer and the video model (model-settings.md · unattended-lifecycle.md#authorization-and-limits)
   weekly_cap: 7.00          # USD
   mark_queues: ["instagram"]  # queues to stamp on authoring success — only platforms with an approved growth plan
 ---
@@ -39,18 +38,15 @@ autoproduce:                # when the queue runs dry the loop authors directly 
 The platform crawls it directly, so local paths and authenticated URLs don't
 work. The loop can't produce this URL by itself, so pick one of three.
 
-**The file to serve is the subtitle burn-in build (`video-sub.mp4`).** Other
-platforms take the subtitles as a separate file, but the IG container has no
-subtitle parameter — upload the clean master (`video.mp4`) and the subtitles
-vanish entirely. The builder cuts both from the same source; just pick the
-right one for hosting.
+**Serve the clean master (`video.mp4`) without burned subtitles.** Instagram receives
+no separate subtitle file. Never substitute a historical burned-in version.
 
 - **`base_url`** — stable hosting exists. The URL is built deterministically
-  as `<media_base_url>/<topic slug>/video-sub.mp4`. Putting the file there is
+  as `<media_base_url>/<topic slug>/video.mp4`. Putting the file there is
   a human's job.
 - **`staged`** — the human queuing the topic writes `video_url:` directly in
   the storyboard.md frontmatter. URLs may differ per topic but **must point at
-  the burn-in build**.
+  the clean master**.
 - **`off`** — no stable hosting (temporary tunnels, etc.). **The loop doesn't
   publish**; it handles the inbox and observes metrics only, and puts the
   queue level in the tick report. Publishing is done by a human via
@@ -74,7 +70,7 @@ How to queue — add to the storyboard.md frontmatter.
 ```yaml
 queue_instagram: ready
 queue_at: 2026-08-11        # oldest goes first when there are several (file mtime if omitted)
-video_url: https://…/video-sub.mp4   # only with media_hosting: staged (subtitle burn-in build)
+video_url: https://…/video.mp4   # only with media_hosting: staged (clean master without subtitles)
 ```
 
 **Why the marker is `queue_instagram:`, not `queue:`** — `queue:` is
@@ -107,15 +103,16 @@ topic_keywords: ["Vietnam visa", "expat paperwork"]   # only with topic_source: 
 ```
 
 - **Cost** — per-episode cap `max_cost_per_video`; daily and weekly totals
-  accrue in the channel-shared `data/<channel>/growth/autoproduce.json`. The
-  ladder and promotion conditions:
-  `skills/autoproduce/references/cost-tiers.md` is the source of truth, and
-  Instagram's promotion trigger is a trend — the last 3 episodes' average
-  `reels_skip_rate` up 5+ points against the previous 3 (no absolute threshold,
-  revised 2026-08-15).
-- **Quality** — only episodes that pass every machine gate (fact check, style,
-  storyboard-review copy, images, build report, content-reviewer P0, cost)
-  become `queue_instagram: ready`; one failure means `hold`.
+  accrue in the channel-shared `data/<channel>/growth/autoproduce.json`.
+  Engines follow `.social-flow/models.json` (model-settings.md);
+  `skills/autoproduce/references/cost-tiers.md` prices the grades and is not a
+  promotion rule — no metric trend switches an engine.
+- **Quality** — reviews (fact check, style, storyboard-review, content-reviewer)
+  are recorded as findings with the episode and never hold it. `queue_instagram:
+  hold` is for a technical delivery failure (the build or its media missing), a
+  cost cap hit or missing authorization
+  (`skills/autoproduce/references/unattended-lifecycle.md#completion`), and
+  waits for a human.
 - **Duplicates** — before authoring, `check-duplicate.py` compares the
   candidate against all of the channel's existing topics. A different slug but
   the same story reworded drops the candidate (threshold
@@ -155,7 +152,7 @@ topic_keywords: ["Vietnam visa", "expat paperwork"]   # only with topic_source: 
 ## Originality (the line that keeps account eligibility)
 
 Publish targets are **our pipeline's outputs**
-(`output/video/video-sub.mp4`) only. Videos taken from elsewhere, files with
+(`output/video/video.mp4`) only. Videos taken from elsewhere, files with
 another platform's watermark left on, speed-only re-edits: never queued —
 fail the originality verdict and it's not one post, the whole account drops
 out of non-follower recommendations (playbook §Losing eligibility).

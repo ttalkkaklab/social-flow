@@ -1,0 +1,26 @@
+/* Local variable faces; CJK region is selected by authored language, not UI locale. */
+:root {
+  --review-font-latin: "Inter", "Pretendard", "Noto Sans SC", sans-serif;
+  --review-font-ko: "Inter", "Pretendard", "Noto Sans SC", sans-serif;
+  --review-font-ja: "Inter", "Noto Sans JP", "Pretendard", sans-serif;
+  --review-font-sc: "Inter", "Noto Sans SC", "Pretendard", sans-serif;
+  --review-font-tc: "Inter", "Noto Sans TC", "Pretendard", sans-serif;
+  --review-font: var(--review-font-latin);
+}
+:where([lang]):lang(ko) { --review-font: var(--review-font-ko); }
+:where([lang]):lang(ja) { --review-font: var(--review-font-ja); }
+:where([lang]):lang(zh) { --review-font: var(--review-font-sc); }
+:where([lang]):is(:lang(zh-Hant), :lang(zh-TW), :lang(zh-HK), :lang(zh-MO)) {
+  --review-font: var(--review-font-tc);
+}
+:where([lang]):is(:lang(en), :lang(vi), :lang(de), :lang(fr), :lang(es), :lang(und)) {
+  --review-font: var(--review-font-latin);
+}
+:where([lang]) {
+  font-family: var(--review-font);
+  font-optical-sizing: auto;
+}
+:where([lang]):is(:lang(ja), :lang(zh)) {
+  word-break: normal;
+  line-break: strict;
+}

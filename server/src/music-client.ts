@@ -83,8 +83,8 @@ const durationSchema = z.number().min(5).max(300).default(30);
 /** weight is any non-zero value (the API spec has no ±1 bounds) */
 const weightedPromptSchema = z.object({
   text: z.string().min(1, 'Prompt text is required'),
-  weight: z.number().refine((v) => v !== 0, 'Weight must be a non-zero value').default(1.0),
-});
+  weight: z.number().finite().refine((v) => v !== 0, 'Weight must be a non-zero value').default(1.0),
+}).strict();
 
 /** Lyria RealTime MusicGenerationConfig */
 const musicConfigSchema = z.object({
@@ -100,7 +100,7 @@ const musicConfigSchema = z.object({
   muteDrums: z.boolean().optional(),
   onlyBassAndDrums: z.boolean().optional(),
   musicGenerationMode: z.enum(MUSIC_GENERATION_MODES).optional(),
-});
+}).strict();
 
 /** Generate from a single prompt (RealTime) */
 export const musicGenerateSchema = z.object({
@@ -175,7 +175,7 @@ export async function generateClip(request: MusicClipRequest): Promise<MusicResp
     const interaction = await genai.interactions.create({
       model: LYRIA_CLIP_MODEL,
       input: request.prompt,
-    });
+    }, { maxRetries: 0, timeout: 600000 });
 
     // The 2026-05 schema overhaul of the Interactions API replaced the flat
     // outputs[] with steps[].content[] (SDK below 2.0 is rejected by the server

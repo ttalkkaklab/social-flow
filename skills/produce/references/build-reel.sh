@@ -11,13 +11,14 @@
 #                         in/out/auto zoom over the whole card by the card's span: span= when written,
 #                         else KB_RATE × card seconds capped at KB_ZMAX (the baked text stays in the zone).
 #                         zoom=none skips Ken Burns — for footage that already moves, like filmed clips.
-#                         Refused on a still card (every segment visual an image): a still never sits
-#                         frozen under the voice (owner directive 2026-09-03).
+#                         Warned on a still card (every segment visual an image): a still sitting frozen under
+#                         the voice is reported with ⚠ and the build continues (camera direction is guidance,
+#                         owner 2026-10-16; a planned motionIntent intentional_still is named in the line).
 #                         zoom=punch lands ZOOM_SPAN (3.5%) inside the first PUNCH_D seconds (ease-out), then
 #                         keeps creeping to the card's span — the cover-card move (the hook contract wants
 #                         movement inside 0–3s, and nothing sits frozen after the hit).
 #                         zoom=hold keeps a fixed scale with no zoom motion — the base for drift=1
-#                         (pure handheld) or a pan= travel. A bare hold is refused on a still card too.
+#                         (pure handheld) or a pan= travel. A bare hold draws the same warning on a still card.
 #                         All zoom/pan motion is eased (smoothstep) — KB_EASE=linear restores the old ramp.
 #                         Column 5 opts is "k=v,k=v" (optional — 4-column files run unchanged today):
 #                           sync=1        a card whose audio is one body with the picture (live voice
@@ -90,9 +91,10 @@
 #                         default) and the file is here (total length = feature + outro). OUTRO=0
 #                         muxes the feature alone; OUTRO=1 with no file stops the build
 #   <workdir>/fonts/    : (optional) subtitle fonts ttf/otf — libass can't read woff2
+# SILENT=1 with OUTRO=0 builds a silent film; narration and any bgm.wav must be zero-valued,
+# and no authored music/effect/ambience cues may be present.
 # Output: <workdir>/reel.mp4 (clean master without subtitles — for platforms that take a separate subtitle file)
-#         <workdir>/reel-sub.mp4 (burned-in copy — for platforms with no subtitle-file path, skipped when BURN=0)
-#         <workdir>/subs.srt (subtitle file handed to the publish tools as-is), subs.ass (burn-in source)
+#         <workdir>/subs.srt (subtitle file handed to the publish tools as-is), subs.ass (optional sidecar)
 #         <workdir>/cover.jpg, build-report.txt
 #
 # Sync principle (v3):
@@ -111,7 +113,13 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # grab before cd (path to
 WORKDIR="${1:?usage: build-reel.sh <workdir>}"
 # Resolve the supplied board before changing directories; both gates inspect the same plan.
 STORYBOARD=$(node -e 'console.log(require("path").resolve(process.argv[1]))' "${2:-$WORKDIR/../storyboard}")
+node "$HERE/../../../server/dist/bundle.js" --workflow-check-delivery "$STORYBOARD"
+[ -f "$STORYBOARD/scenes.js" ] || { echo "source storyboard/scenes.js is required; pass the storyboard directory as build-reel.sh argument 2" >&2; exit 1; }
+[ "${SILENT:-0}" != "1" ] || node "$HERE/silent-plan.js" "$STORYBOARD/scenes.js"
+node "$HERE/compose-speech.js" "$WORKDIR" "$STORYBOARD" >/dev/null
+node "$HERE/prepare-source-audio.js" "$WORKDIR" "$STORYBOARD" >/dev/null
 node "$HERE/verify-build-plan.js" "$WORKDIR" "$STORYBOARD"
+node "$HERE/../../../server/dist/bundle.js" --workflow-check-delivery "$STORYBOARD" "$WORKDIR/build-plan-check.json"
 # A normal board is <channel>/episodes/<topic>/storyboard. Proof fixtures may put storyboard/
 # directly under their channel root, so fall back to the storyboard parent in that shape.
 CHANNEL_DIR=$(node -e 'const p=require("path"), s=p.resolve(process.argv[1]), episode=p.dirname(s), episodes=p.dirname(episode); console.log(p.basename(episodes)==="episodes"?p.dirname(episodes):p.dirname(s))' "$STORYBOARD")
@@ -119,7 +127,7 @@ CHANNEL_DIR=$(node -e 'const p=require("path"), s=p.resolve(process.argv[1]), ep
 # values. Removing a field must remove its previous row instead of reviving stale audio.
 node "$HERE/compile-sound-plan.js" "$STORYBOARD/scenes.js" "$WORKDIR" "$CHANNEL_DIR"
 cd "$WORKDIR"
-VIDEO_WARNINGS_APPROVED=$(node -e 'console.log(require(process.argv[1]).videoGate.approved ? 1 : 0)' "$PWD/build-plan-check.json")
+VIDEO_WARNINGS_APPROVED=$(node -e 'console.log(require(process.argv[1]).videoGate.continueWithWarnings ? 1 : 0)' "$PWD/build-plan-check.json")
 # verify-build-plan.js writes production-preflight.json after the video warning/HITL check.
 REUSED_VIDEO_SHOTS=$(node -e 'const p=require(process.argv[1]); console.log((p.reusedShots || []).join(" "))' "$PWD/production-preflight.json")
 
@@ -157,12 +165,15 @@ awk -v f="$SPEED" 'BEGIN{exit !(f >= 0.5 && f <= 3.0)}' \
 RATE_LO=${RATE_LO:-$(awk -v f="$SPEED" 'BEGIN{printf "%.2f", 3.2 / f}')}
 RATE_HI=${RATE_HI:-$(awk -v f="$SPEED" 'BEGIN{printf "%.2f", 6.2 / f}')}
 BGM_SEP=${BGM_SEP:-10}             # LU the bed sits under the measured speech loudness (see bgm-scoring.md)
-BGM_SEP_MIN=${BGM_SEP_MIN:-4}      # below this the build stops — the music is competing with the voice
+BGM_SEP_MIN=${BGM_SEP_MIN:-4}      # review warning below this separation; never an execution gate
 BGM_LOOP_XF=${BGM_LOOP_XF:-2.0}    # crossfade when a cue is shorter than its span
 BGM_CUE_XF=${BGM_CUE_XF:-2.0}      # crossfade between two cues (bgm.tsv)
 export BGM_LOOP_XF BGM_CUE_XF
 DUCK_RELEASE=${DUCK_RELEASE:-250}  # sidechain release ms — guides put 200–500, 400–700 if it pumps (bgm-scoring.md §2)
 DUCK_ATTACK=${DUCK_ATTACK:-20}     # sidechain attack ms
+DUCK_THRESHOLD=${DUCK_THRESHOLD:-0.02}
+DUCK_MIX=${DUCK_MIX:-1}
+DUCK_LOOKAHEAD=${DUCK_LOOKAHEAD:-0}
 DUCK_RATIO=${DUCK_RATIO:-8}        # sidechain ratio — measured ~16 LU of ducking on a TTS voice (bgm-scoring.md §2)
 BGM_HOOK_LU=${BGM_HOOK_LU:-6}      # extra LU the bed sits under BGM_SEP during card 0 — the hook opens over a quieter bed
 BGM_HOOK_R=${BGM_HOOK_R:-2.0}      # ramp back to the resting level, starting at card 1. 0 = no hook attenuation
@@ -194,7 +205,7 @@ KB_RATE=${KB_RATE:-0.04}           # default still zoom per second when no span=
 KB_ZMAX=${KB_ZMAX:-1.075}          # cap on the default's total scale. Text is baked into a still card, so a centre
                                    #   zoom pushes every edge of the text zone outward, and the cap is the tightest of
                                    #   the three. Portrait, zone y 190~1350 · x 176~904, canvas centre 960:
-                                   #     bottom  390*z+960 <= 1380 (the burned-in subtitle band, line 1201) -> z <= 1.0769
+                                   #     bottom  390*z+960 <= 1380 (the reserved platform UI margin, line 1201) -> z <= 1.0769
                                    #     top     -770*z+960 = 132 at 1.075, still under the phone's status bar
                                    #     side    the 640px hero stat ends at x 884, inside the 890 action-bar icons
                                    #   The bottom edge is what binds. Landscape has its zone bottom (y 795) sitting on
@@ -206,8 +217,8 @@ W=${W:-1080}                       # canvas width — the format decides
 H=${H:-1920}                       # canvas height
 ZOOM_BASE=${ZOOM_BASE:-1620x2880}  # Ken Burns source resolution (1.5x the canvas)
 ZB=${ZOOM_BASE/x/:}                # ffmpeg scale= uses colon notation, so convert once
-SUB=${SUB:-1}                      # 1=generate subtitle data (subs.srt·subs.ass), 0=no subtitles
-BURN=${BURN:-1}                    # 1=also produce burned-in reel-sub.mp4, 0=clean master only
+SUB=${SUB:-0}                      # opt-in sidecar files only; no subtitle overlay
+BURN=0                             # user directive: never burn captions into video
 SUB_FONT=${SUB_FONT:-Pretendard}   # fontconfig fallback when fonts/ has no ttf
 OUTRO_ASSET=${OUTRO_ASSET:-outro.mp4}   # outro to join — a different file per format
 OUTRO=${OUTRO:-1}                  # 1=join the outro (default), 0=the channel's shortform_outro is off
@@ -270,7 +281,7 @@ autotimes() { node "$HERE/subtitle-clock.js" "$TOTF" "$FRAMES" "$FPS" "$(srttime
 
 [ -f cards.tsv ] || { echo "cards.tsv missing"; exit 1; }
 [ -f segs.tsv ] || { echo "segs.tsv missing"; exit 1; }
-[ -f bgm.wav ] || { echo "bgm.wav missing"; exit 1; }
+[ "${SILENT:-0}" = "1" ] || [ -f bgm.wav ] || { echo "bgm.wav missing"; exit 1; }
 
 say "── make-reels build v3 ($(basename "$WORKDIR"))"
 
@@ -372,13 +383,24 @@ if [ "$DIMBAD" = 1 ] || [ "$DIMWARN" = 1 ]; then
   fi
   WARN=1
 fi
-# A still never sits frozen under the voice (owner directive 2026-09-03). A card whose every
+# A still never sits frozen under the voice without a ⚠ line (owner directive 2026-09-03; guidance since 2026-10-16). A card whose every
 # segment visual is an image is a still card, and it needs a camera move: in/out/auto/punch,
 # a pan= travel, or hold+drift=1. zoom=none and a bare hold are for footage that already
 # moves. Checked here, before the first ffmpeg, with the loop's column-3 parsing. The same
 # pass writes stillcards.txt — the card list the KB_RATE default below applies to, so a
 # filmed card with no span= keeps the ZOOM_SPAN floor instead of the still ladder's push.
 : > stillcards.txt
+# Cards whose scene plans an intentional still (motion-production.md) — the frozen-still warning names them.
+# Guarded so a harness that runs this block without the board (set -u) keeps working; the list is then empty.
+STILL_INTENT_CARDS=""
+if [ -n "${STORYBOARD:-}" ] && [ -f "${STORYBOARD}/scenes.js" ]; then
+  STILL_INTENT_CARDS=$(node -e '
+const fs=require("fs"),{evaluateWindowScript}=require(process.argv[2]);
+const win=evaluateWindowScript(fs.readFileSync(process.argv[1],"utf8"),{filename:process.argv[1]});
+const still=x=>!!x&&x.type==="intentional_still";
+console.log((win.SCENES||[]).flatMap((s,i)=>still(s.visual?.motionIntent)||still(s.shot?.render?.motionIntent)||(s.productionPlan?.cuts||[]).some(c=>still(c?.motionIntent))?[i]:[]).join(" "));
+' "$STORYBOARD/scenes.js" "${HERE:-.}/../../_shared/scenes-vm.js" 2>/dev/null || true)
+fi
 while IFS=$'\t' read -r _CI _ _ _CZ _CO; do
   [ -z "${_CI:-}" ] && continue
   STILLCARD=1; SEENVIS=0
@@ -399,8 +421,9 @@ while IFS=$'\t' read -r _CI _ _ _CZ _CO; do
     hold) case ",${_CO:-}," in *,drift=1,*|*,pan=*) continue ;; esac ;;
     *) continue ;;
   esac
-  say "✗ card $_CI: a still card with zoom=${_CZ:-auto} — a still never sits frozen under the voice. Use in|out|auto|punch, pan=<dir>, or hold+drift=1 (none and a bare hold are for footage that already moves)"
-  exit 1
+  case " $STILL_INTENT_CARDS " in *" $_CI "*) INTENT=" (planned motionIntent intentional_still)";; *) INTENT="";; esac
+  say "⚠ card $_CI: a still card with zoom=${_CZ:-auto} sits frozen under the voice${INTENT} — camera direction is guidance (owner 2026-10-16); use in|out|auto|punch, pan=<dir>, or hold+drift=1 unless the still is planned (none and a bare hold are for footage that already moves)"
+  WARN=1
 done < cards.resolved.tsv
 
 # Per-segment sfx + BGM gating (optional) — sfx.tsv:
@@ -415,6 +438,7 @@ CHAPTSV=""; [ -f chapters.tsv ] && CHAPTSV=chapters.tsv
 : > work/chapstart.tsv
 : > work/sfx.list
 : > work/bgmgate.list
+: > work/music-gain.list
 
 N=0
 TOTF=0                              # cumulative frames (source of absolute subtitle times — holds because concat is sample-exact)
@@ -553,6 +577,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   #   so then only resample.
   if head -c 4 "$SRC" | LC_ALL=C grep -q RIFF; then INARGS=(-i "$SRC")
   else INARGS=(-f s16le -ar 24000 -ac 1 -i "$SRC"); fi
+  ACTED_AUDIO=$(node -e 'const fs=require("fs");const p=process.argv[1]+".generation.json";console.log(fs.existsSync(p)&&JSON.parse(fs.readFileSync(p,"utf8")).generator==="speech_compose"?1:0)' "$SRC")
   if [ "$SYNC" -eq 1 ]; then
     MEANV=$(ffmpeg -hide_banner "${INARGS[@]}" -af volumedetect -f null - 2>&1 | sed -n 's/.*mean_volume: \([-0-9.]*\) dB/\1/p')
     if [ -n "$MEANV" ] && awk -v v="$MEANV" 'BEGIN{exit !(v > -50)}'; then
@@ -563,6 +588,9 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
       SYNCNOTE="silent clip — normalization skipped"
     fi
     MUTE=1   # bypasses the audio machine below (rate/warnings/atempo) entirely — sound and picture are one body
+  elif [ "$ACTED_AUDIO" -eq 1 ]; then
+    # The composition already contains measured anticipation and reaction intervals.
+    ffmpeg -y -v error "${INARGS[@]}" -af "loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000" -ac 1 -ar 48000 "work/t$IDX.wav"
   elif [ "$MUTE" -eq 1 ]; then
     ffmpeg -y -v error "${INARGS[@]}" -af "aresample=48000" -ac 1 -ar 48000 "work/t$IDX.wav"
   else
@@ -627,6 +655,9 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
       HB=$(python3 "$HERE/snap-boundaries.py" "$SIDE" "work/silin$IDX.txt" "$M" --tempo "$F" --wav "$SRC" 2>"work/snap$IDX.txt" || true)
       [ -z "$HB" ] && { say "⚠ card $IDX sentence sidecar did not match the detected pauses ($(head -1 "work/snap$IDX.txt")) — using the longest pauses instead."; WARN=1; }
     fi
+    if [ "$ACTED_AUDIO" -eq 1 ]; then
+      HB=$(node -e 'const r=require(require("path").resolve(process.argv[1]+".generation.json"));const n=Number(process.argv[2]);if(r.intervals.length!==n)throw Error("Composed speech intervals differ from subtitle groups");console.log(r.intervals.slice(1).map(i=>i.startSeconds).join(" "))' "$SRC" "$M")
+    fi
     if [ -n "$HB" ]; then
       BLIST="$HB "
       BMETHOD="sidecar $((M-1))/$NSIL"
@@ -653,7 +684,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   # ── 5) Fix the card duration + assemble sample-accurate audio (same as v2 — the source of zero drift)
   D0=$(awk -v p="$CPRE" -v l="$L" -v q="$CPOST" 'BEGIN{printf "%.6f", p+l+q}')
   D1=$(awk -v d="$D0" -v m="$CMIN" 'BEGIN{printf "%.6f", (d>m)?d:m}')
-  FRAMES=$(awk -v d="$D1" -v f="$FPS" 'BEGIN{n=d*f; printf "%d", (n==int(n))?n:int(n)+1}')
+  FRAMES=$(node "$HERE/frame-clock.js" "$D1" "$FPS")
   D=$(awk -v n="$FRAMES" -v f="$FPS" 'BEGIN{printf "%.6f", n/f}')
   # Subtitle inputs use this measured frame clock, not the storyboard's estimated
   # duration. Check and snapshot before encoding any card audio or video.
@@ -1013,6 +1044,14 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
     done
   fi
 
+  # Resolve authored music curves against the actual rendered shot duration.
+  if [ -f music-gain.tsv ]; then
+    while IFS=$'\t' read -r _ POINTS; do
+      END=$(awk -v s="$CS0" -v d="$D" 'BEGIN{printf "%.4f", s+d}')
+      printf '%s\t%s\t%s\n' "$CS0" "$END" "$POINTS" >> work/music-gain.list
+    done < <(awk -F'\t' -v i="$IDX" '$1==i' music-gain.tsv)
+  fi
+
   # Shot-relative, music-only silence windows. Narration and room tone keep playing.
   if [ -n "$SILTSV" ]; then
     while IFS=$'\t' read -r _ SS SE SCOPE; do
@@ -1044,11 +1083,36 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
         say "⚠ card $IDX: no forced aligner at $QWEN3_ASR_BIN — word cues fall back to char-count proportion (uv tool install --python 3.12 \"mlx-qwen3-asr[aligner]\")"; WARN=1
       fi
     fi
+    ACTED_STARTS=(); ACTED_ENDS=()
+    if [ "${ACTED_AUDIO:-0}" -eq 1 ]; then
+      # Caption only the measured speech, not its anticipation or reaction silence.
+      COMPOSED_CUES=$(node - "$SRC" "$M" "$L" <<'JS'
+const fs=require('fs');
+const [source,count,duration]=process.argv.slice(2);
+const receipt=JSON.parse(fs.readFileSync(source+'.generation.json','utf8'));
+if(receipt.generator!=='speech_compose'||!Array.isArray(receipt.intervals)||receipt.intervals.length!==Number(count))throw Error('Composed speech intervals differ from subtitle groups');
+let previousEnd=0;
+for(const interval of receipt.intervals){
+  const {speechStartSeconds:start,speechEndSeconds:end}=interval;
+  if(!Number.isFinite(start)||!Number.isFinite(end)||start<previousEnd||end<=start||end>Number(duration)+0.001)throw Error('Invalid composed speech subtitle interval');
+  console.log(start+'\t'+end);previousEnd=end;
+}
+JS
+      )
+      while IFS=$'\t' read -r SPEECH_START SPEECH_END; do
+        ACTED_STARTS+=("$SPEECH_START"); ACTED_ENDS+=("$SPEECH_END")
+      done <<< "$COMPOSED_CUES"
+    fi
     for ((j=0; j<M; j++)); do
+      if [ "${ACTED_AUDIO:-0}" -eq 1 ]; then
+        ST=$(awk -v cs="$CS" -v p="$CPRE" -v s="${ACTED_STARTS[$j]}" 'BEGIN{printf "%.3f",cs+p+s}')
+        EN=$(awk -v cs="$CS" -v p="$CPRE" -v e="${ACTED_ENDS[$j]}" 'BEGIN{printf "%.3f",cs+p+e}')
+      else
       if [ "$j" -eq 0 ]; then ST=$(awk -v cs="$CS" -v p="$CPRE" 'BEGIN{s=p-0.15; if(s<0)s=0; printf "%.3f", cs+s}')
       else ST=$(awk -v cs="$CS" -v p="$CPRE" -v b="${BARR[$((j-1))]}" 'BEGIN{printf "%.3f", cs+p+b}'); fi
       if [ "$j" -lt $((M-1)) ]; then EN=$(awk -v cs="$CS" -v p="$CPRE" -v b="${BARR[$j]}" 'BEGIN{printf "%.3f", cs+p+b-0.06}')
       else EN=$(awk -v cs="$CS" -v p="$CPRE" -v l="$L" -v d="$D" 'BEGIN{e=p+l+0.45; if(e>d)e=d; printf "%.3f", cs+e}'); fi
+      fi
       TXT=$(printf '%s' "${SARR[$j]}" | sed 's/[{}\\]//g')
       if [ -n "$TXT" ]; then
         # Bound each format's final tick against integer frames. ST/EN and the
@@ -1060,12 +1124,16 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
           # voice span: a detected boundary is the END of the pause (the next sentence's first
           # sound), so the window closes at that pause's START — the silin line whose end is
           # the boundary. A proportional-fallback boundary has no pause and stays as it is.
+          if [ "${ACTED_AUDIO:-0}" -eq 1 ]; then
+            SPS="$ST"; SPE="$EN"
+          else
           if [ "$j" -eq 0 ]; then PB=0; else PB="${BARR[$((j-1))]}"; fi
           SPS=$(awk -v cs="$CS" -v p="$CPRE" -v b="$PB" 'BEGIN{printf "%.3f", cs+p+b}')
           if [ "$j" -lt $((M-1)) ]; then
             SPE=$(awk -v cs="$CS" -v p="$CPRE" -v b="${BARR[$j]}" 'BEGIN{e=b} FILENAME!="" && ($2-b)<0.002 && ($2-b)>-0.002 {e=$1} END{printf "%.3f", cs+p+e}' "work/silin$IDX.txt" 2>/dev/null \
                   || awk -v cs="$CS" -v p="$CPRE" -v b="${BARR[$j]}" 'BEGIN{printf "%.3f", cs+p+b}')
           else SPE=$(awk -v cs="$CS" -v p="$CPRE" -v l="$L" 'BEGIN{printf "%.3f", cs+p+l}'); fi
+          fi
           AOFF=$(awk -v cs="$CS" -v p="$CPRE" 'BEGIN{printf "%.3f", cs+p}')
           python3 "$HERE/word-cues.py" "$ST" "$EN" "$SPS" "$SPE" "$SUB_WORD_MIN" "$TXT" ${ALIGNJ:+--align "$ALIGNJ" --offset "$AOFF" --tts "${TARR[$j]}"} $PHRASE_ARG ${SUB_ACCENT:+--accent "$SUB_ACCENT" --accent-words "$SUB_ACCENT_WORDS"} |
             while IFS=$'\t' read -r WS WE WT; do
@@ -1077,7 +1145,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
         else
           printf 'Dialogue: 0,%s,%s,Sub,,0,0,0,,{\\fad(160,120)}%s\n' "$ASS_ST" "$ASS_EN" "$TXT" >> work/subs.body
         fi
-        # Print the SRT from the same ST/EN/TXT — burn-in and subtitle file share one source, so they can't drift apart.
+        # Print the SRT from the same ST/EN/TXT — ASS and SRT sidecars share one source, so they can't drift apart.
         # The fade tag ({\fad}) is ASS-only, so it's dropped (SRT doesn't know formatting tags).
         SRTN=$((SRTN+1))
         printf '%d\n%s --> %s\n%s\n\n' "$SRTN" "$SRT_ST" "$SRT_EN" "$TXT" >> work/subs.srtbody
@@ -1184,7 +1252,20 @@ DRIFT=$(awk -v a="$VT" -v b="$NT" 'BEGIN{d=a-b; if(d<0)d=-d; printf "%.4f", d}')
 say "── main part: video ${VT}s / narration ${NT}s / drift ${DRIFT}s"
 awk -v d="$DRIFT" 'BEGIN{exit !(d<=0.002)}' || { say "✗ drift over the 2ms tolerance — build stopped"; exit 1; }
 
-# ── 9.5) The music bed — conditioned, cue-sequenced, seam-free, exactly as long as the feature.
+# ── 9.5) The music bed and explicit silent-film branch.
+# SILENT=1 is an explicit silent-film mix, not a loudness normalization target.
+if [ "${SILENT:-0}" = "1" ]; then
+  node "$HERE/silent-plan.js" "$STORYBOARD/scenes.js"
+  [ "$OUTRO" = "0" ] || { say "SILENT=1 requires OUTRO=0"; exit 1; }
+  for PLAN in bgm.tsv sfx.tsv amb.tsv; do
+    if [ -f "$PLAN" ] && awk 'NF && $0 !~ /^#/ {found=1} END {exit !found}' "$PLAN"; then
+      say "SILENT=1 conflicts with authored sound plan $PLAN"; exit 1
+    fi
+  done
+  bash "$HERE/silent-mix.sh" work/narration.wav work/mix.wav "${PWD}/bgm.wav"
+  say "── explicit silent mix: zero-valued narration, no music/effects, no loudness score"
+else
+# The music bed — conditioned, cue-sequenced, seam-free, exactly as long as the feature.
 #   The old mix multiplied whatever file the channel handed over by a fixed 0.28, so the gap
 #   between the voice and the music was whatever that file happened to be: across 11 episodes the
 #   source beds measured -4.2 to +1.0 dBTP. Here the speech is measured first and the bed is set
@@ -1193,7 +1274,16 @@ awk -v d="$DRIFT" 'BEGIN{exit !(d<=0.002)}' || { say "✗ drift over the 2ms tol
 #   mix anyway, so only the distance between the two survives to the listener.
 SPEECH_I=$(ffmpeg -hide_banner -nostats -i work/narration.wav -af loudnorm=print_format=json -f null - 2>&1 \
   | tr -d ' \t"' | awk -F: '$1=="input_i"{gsub(/,/,"",$2); print $2}')
-BED_I=$(awk -v s="$SPEECH_I" -v d="$BGM_SEP" 'BEGIN{printf "%.2f", s-d}')
+# A silent primary track is valid for post-only Foley. It cannot be the gain reference:
+# -inf minus any separation would mute every otherwise audible effect.
+MIX_REFERENCE_I=$SPEECH_I
+if [ "$SPEECH_I" = "-inf" ]; then
+  MIX_REFERENCE_I=-16
+  say "── primary audio is silent; effects/ambience use a -16 LUFS mix reference (not measured speech)"
+else
+  case "$SPEECH_I" in ''|*[!0-9.+-]*) say "✗ cannot measure primary audio"; exit 1;; esac
+fi
+BED_I=$(awk -v s="$MIX_REFERENCE_I" -v d="$BGM_SEP" 'BEGIN{printf "%.2f", s-d}')
 
 : > work/bgmcue.list
 if [ -f bgm.tsv ]; then
@@ -1246,7 +1336,7 @@ if [ -s work/sfx.list ]; then
   SI=(-f lavfi -t "$NT" -i "anullsrc=r=48000:cl=mono"); SFC=""; SMIX="[0:a]"; SN2=1
   while IFS=$'\t' read -r ST SP SSEP; do
     SSEP=${SSEP:-$SFX_SEP}
-    SFX_T=$(awk -v s="$SPEECH_I" -v d="$SSEP" 'BEGIN{printf "%.2f", s-d}')
+    SFX_T=$(awk -v s="$MIX_REFERENCE_I" -v d="$SSEP" 'BEGIN{printf "%.2f", s-d}')
     read -r SM SPK <<< "$(sfx_measure "$SP")"
     case "$SM" in ''|*[!0-9.+-]*) say "✗ sfx: could not measure $SP"; exit 1;; esac
     awk -v m="$SM" 'BEGIN{exit !(m > -60)}' || { say "✗ sfx: $SP is silent (max momentary ${SM} LUFS)"; exit 1; }
@@ -1285,7 +1375,7 @@ if [ -n "$AMBTSV" ]; then
     if ! awk -v s="$CUE0" 'BEGIN{exit !(s < 0.001)}'; then
       { printf '0.0000\t-\n'; cat work/ambcue.list; } > work/ambcue.tmp; mv work/ambcue.tmp work/ambcue.list
     fi
-    AMB_I=$(awk -v s="$SPEECH_I" -v d="$AMB_SEP" 'BEGIN{printf "%.2f", s-d}')
+    AMB_I=$(awk -v s="$MIX_REFERENCE_I" -v d="$AMB_SEP" 'BEGIN{printf "%.2f", s-d}')
     BED_LOOP_OK=1 "$HERE/bgm-bed.sh" work/amb.wav "$NT" "$AMB_I" work/ambcue.list > work/amb.log 2>&1 \
       || { cat work/amb.log; say "✗ the ambience bed failed to render"; exit 1; }
     while IFS= read -r L; do say "$L"; done < work/amb.log
@@ -1297,6 +1387,15 @@ fi
 # 10b) BGM mute — multiply a gate in per window. A hard cut makes the music stop dead, so there's a
 #      ${BGM_GATE_R}s ramp. gate = max(falling slope, rising slope) — 1 outside the window, 0 inside.
 BGMGATE=""
+MUSICGAIN=""
+if [ -s work/music-gain.list ]; then
+  MUSICGAIN=$(node "$HERE/sound-mix-contract.js" work/music-gain.list)
+fi
+# Advance only the detector; voice and picture keep their original timestamps.
+DUCKKEY=""
+if awk -v m="$DUCK_LOOKAHEAD" 'BEGIN{exit !(m > 0)}'; then
+  DUCKKEY="atrim=start=$(awk -v m="$DUCK_LOOKAHEAD" 'BEGIN{print m/1000}'),asetpts=PTS-STARTPTS,apad,"
+fi
 if [ -s work/bgmgate.list ]; then
   BGMGATE=$(awk -F'\t' -v r="$BGM_GATE_R" '
     {if(r==0) printf "%snot(between(t\\,%s\\,%s))", (NR>1?"*":""), $1, $2;
@@ -1343,13 +1442,14 @@ fi
 #      head and tail fades, the gate windows, then ducking. bed-ducked.wav is tapped off for the
 #      separation check below — measuring it after the amix would be measuring the voice too.
 ffmpeg -y -v error -i work/narration.wav -i work/bed.wav $SFXIN $AMBIN -filter_complex "
-  [0:a]aformat=channel_layouts=stereo,asplit=2[vo_key][vo_raw];
+  [0:a]aformat=channel_layouts=stereo,asplit=2[vo_detect][vo_raw];
+  [vo_detect]${DUCKKEY}anull[vo_key];
   ${SFXIN:+[2:a]aformat=channel_layouts=stereo[sfxa];}
   $AMBLEG
   $VOMIX
-  [1:a]atrim=0:$NT,asetpts=PTS-STARTPTS,${BEDEQ}
+  [1:a]atrim=0:$NT,asetpts=PTS-STARTPTS,${BEDEQ}${MUSICGAIN}
        afade=t=in:st=0:d=1.2,${FADEOUT}${HOOKVOL}anull$BGMGATE[bgv];
-  [bgv][vo_key]sidechaincompress=threshold=0.02:ratio=$DUCK_RATIO:attack=$DUCK_ATTACK:release=$DUCK_RELEASE:makeup=1,
+  [bgv][vo_key]sidechaincompress=threshold=$DUCK_THRESHOLD:mix=$DUCK_MIX:ratio=$DUCK_RATIO:attack=$DUCK_ATTACK:release=$DUCK_RELEASE:makeup=1,
        asplit=2[duck][duckqa];
   ${FINALMIX},
        loudnorm=I=$FINAL_LUFS:TP=$FINAL_TP:LRA=$FINAL_LRA,aresample=48000[out]
@@ -1374,13 +1474,17 @@ measure_i() {   # measure_i <file> [filter_complex-with-loudnorm] — integrated
     V=$(ffmpeg -hide_banner -nostats -i "$1" -af loudnorm=print_format=json -f null - 2>&1 \
       | tr -d ' \t"' | awk -F: '$1=="input_i"{gsub(/,/,"",$2); print $2}')
   fi
-  case "$V" in ''|*[!0-9.+-]*) echo "";; *) echo "$V";; esac
+  case "$V" in -inf) echo "-inf";; ''|*[!0-9.+-]*) echo "";; *) echo "$V";; esac
 }
 BED_D=$(measure_i work/bed-ducked.wav)
 BED_S=$(measure_i work/bed-ducked.wav \
-  "[1:a]aformat=channel_layouts=stereo[k];[0:a][k]sidechaingate=threshold=0.02:ratio=9000:range=0:attack=1:release=50,loudnorm=print_format=json")
+  "[1:a]aformat=channel_layouts=stereo[k];[0:a][k]sidechaingate=threshold=$DUCK_THRESHOLD:ratio=9000:range=0:attack=1:release=50,loudnorm=print_format=json")
+if [ "$BED_D" = "-inf" ] || [ "$SPEECH_I" = "-inf" ]; then
+  say "── voice-to-bed separation not applicable: primary audio or ducked bed is silent"
+else
+[ -n "$BED_D" ] || { say "✗ cannot measure the ducked bed"; exit 1; }
 SEP=$(awk -v s="$SPEECH_I" -v b="$BED_D" 'BEGIN{printf "%.1f", s-b}')
-if [ -n "$BED_S" ]; then
+if [ -n "$BED_S" ] && [ "$BED_S" != "-inf" ]; then
   SEP_S=$(awk -v s="$SPEECH_I" -v b="$BED_S" 'BEGIN{printf "%.1f", s-b}')
   DEPTH=$(awk -v v="$SEP_S" -v d="$BGM_SEP" 'BEGIN{printf "%.1f", v-d}')
   say "── voice-to-bed separation ${SEP_S} LU while the voice is up (bed ${BED_S} LUFS, ducking depth ≈ ${DEPTH} LU) · ${SEP} LU across the whole timeline (speech ${SPEECH_I} / ducked bed ${BED_D})"
@@ -1390,13 +1494,16 @@ else
   say "── voice-to-bed separation ${SEP} LU across the whole timeline (speech ${SPEECH_I} / ducked bed ${BED_D}) — no speech-gated reading, the voice key stayed under the gate"
 fi
 if awk -v v="$SEP_S" -v m="$BGM_SEP_MIN" 'BEGIN{exit !(v < m)}'; then
-  say "✗ separation ${SEP_S} LU is under the ${BGM_SEP_MIN} LU floor — the bed is competing with the voice"
-  exit 1
+  say "⚠ separation ${SEP_S} LU is under the ${BGM_SEP_MIN} LU review threshold — listen for masked speech"
+  WARN=1
 elif awk -v v="$SEP_S" -v d="$BGM_SEP" 'BEGIN{exit !(v < d + 1)}'; then
   # Ducking can only widen the gap, so a speech-gated reading at the resting distance means the
   # sidechain never fired — the key went silent, or the bed reached the mix around it.
   say "⚠ separation ${SEP_S} LU under speech is no wider than the ${BGM_SEP} LU resting distance — the ducking isn't firing"
   WARN=1
+fi
+fi
+
 fi
 
 # ── 11) ASS subtitle file — band y≈1380~1560 (a contract with the template's bottom safe zone,
@@ -1405,7 +1512,6 @@ fi
 #      the screen's center (measured 60px); at 168 a long single line crosses the action bar's start
 #      line x≈890 (measured 907px); at 200 the clearance drops to 39~61px, the smallest of any screen
 #      element — 250 puts it in the same clearance band as the list and hero
-SUBFILTER=""
 if [ "$SUB" = "1" ] && [ -s work/subs.body ]; then
   {
     printf "[Script Info]\nScriptType: v4.00+\nPlayResX: ${W}\nPlayResY: ${H}\nWrapStyle: 0\nScaledBorderAndShadow: yes\n\n"
@@ -1416,21 +1522,16 @@ if [ "$SUB" = "1" ] && [ -s work/subs.body ]; then
     printf '[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n'
     cat work/subs.body
   } > subs.ass
-  if [ -d fonts ] && ls fonts/*.[to]tf >/dev/null 2>&1; then SUBFILTER="subtitles=subs.ass:fontsdir=fonts"
-  else SUBFILTER="subtitles=subs.ass"; fi
   # Publish SRT — line endings are CRLF (the original SubRip spec). Nobody has confirmed the platform
   # parsers accept LF, so this follows the spec. The one blank line at the end of the file marks the
   # last cue's end, so it stays.
   awk '{printf "%s\r\n", $0}' work/subs.srtbody > subs.srt
   ASSN=$(grep -c '^Dialogue:' work/subs.body || true)
-  say "── subtitles: ${SRTN} lines in subs.srt · ${ASSN} burn-in cues (${SUB_MODE} mode) / font $SUB_FONT"
+  say "── subtitles: ${SRTN} lines in subs.srt · ${ASSN} sidecar cues (${SUB_MODE} mode) / font $SUB_FONT"
 fi
 
 # ── 12) Render + outro splice (no subtitles over the outro) — never -shortest (same as v2)
-#      Subtitles go up as a separate file by default, so **the clean master is reel.mp4**. The burn-in
-#      is a separate artifact for platforms with no subtitle-file path (IG Reels); it isn't a
-#      re-encode of reel.mp4 but a second pass from the same source — no second-generation encoding,
-#      both files are first-generation.
+#      The final video has no captions; requested subtitle files stay separate.
 # Split into video and audio halves — the outro splice encodes the picture on its own
 # and then stream-copies it, so the two halves have to be usable separately.
 VENC=(-c:v libx264 -profile:v high -level 4.1 -preset slow -crf 19 -pix_fmt yuv420p
@@ -1471,46 +1572,34 @@ if outro_on; then
   AUDSRC="work/asplice.wav"
 fi
 
-# The faded outro is identical for the clean and burned-in renders, so build it once.
+# Render the faded outro once for the clean master.
 if outro_on; then
   ffmpeg -y -v error -i "$OUTRO_ASSET" \
     -vf "fade=t=in:st=0:d=$XFADE,setsar=1,format=yuv420p" -an "${VENC[@]}" work/outro-fade.mp4
 fi
 
-render() {                          # $1=output file  $2=subtitle filter (empty string = no burn-in)
-  local OUT="$1" SF="${2:-}"
+render() {                          # $1=clean output file; subtitles stay separate
+  local OUT="$1"
   if outro_on; then
-    # Subtitles ride the feature only — the outro carries none, so SF goes on the feature.
     # Both pieces get the same VENC so the concat demuxer can stream-copy them.
     ffmpeg -y -v error -i work/video.mp4 \
-      -vf "${SF:+$SF,}fade=t=out:st=$FO:d=$XFADE,setsar=1,format=yuv420p" \
+      -vf "fade=t=out:st=$FO:d=$XFADE,setsar=1,format=yuv420p" \
       -an "${VENC[@]}" "work/body-$(basename "$OUT" .mp4).mp4"
     printf "file '%s'\nfile '%s'\n" "body-$(basename "$OUT" .mp4).mp4" "outro-fade.mp4" \
       > "work/join-$(basename "$OUT" .mp4).txt"
     ffmpeg -y -v error -f concat -safe 0 -i "work/join-$(basename "$OUT" .mp4).txt" -i "$AUDSRC" \
-      -map 0:v -map 1:a -c:v copy "${AENC[@]}" -movflags +faststart "$OUT"
-  elif [ -n "$SF" ]; then
-    ffmpeg -y -v error -i work/video.mp4 -i "$AUDSRC" -filter_complex "[0:v]$SF[v]" \
-      -map "[v]" -map 1:a "${ENC[@]}" "$OUT"
+      -map 0:v -map 1:a -c:v copy "${AENC[@]}" -sn -movflags +faststart "$OUT"
   else
-    ffmpeg -y -v error -i work/video.mp4 -i "$AUDSRC" -map 0:v -map 1:a "${ENC[@]}" "$OUT"
+    ffmpeg -y -v error -i work/video.mp4 -i "$AUDSRC" -map 0:v -map 1:a "${ENC[@]}" -sn "$OUT"
   fi
 }
 
-render reel.mp4 ""
+render reel.mp4
 if outro_on; then say "── outro splice: black fade ${XFADE}s @ ${FO}s → total ${VDUR}s"
 else say "── no outro (OUTRO=0, the channel ships without one): muxing the main part alone"; fi
 
 rm -f reel-sub.mp4
-if [ "$BURN" = "1" ] && [ -n "$SUBFILTER" ]; then
-  render reel-sub.mp4 "$SUBFILTER"
-  say "── burn-in reel-sub.mp4: for platforms that can't take a subtitle file (the clean master is reel.mp4)"
-elif [ "$BURN" = "1" ]; then
-  say "⚠ BURN=1 but there's no subtitle data, so no burn-in was made (SUB=$SUB)"
-  WARN=1
-else
-  say "── burn-in skipped (BURN=0) — only correct when every publish target takes a subtitle file"
-fi
+say "── clean video only; optional subtitles remain separate files"
 
 # ── 13) Final verification (same as v2)
 RV=$(ffprobe -v error -select_streams v -show_entries stream=duration -of csv=p=0 reel.mp4)
@@ -1563,19 +1652,8 @@ avgate() {    # $1=file $2=role
   say "── $ROLE splice check: duration ${V}s (expected ${VDUR}s) · A/V gap $(awk -v a="$V" -v b="$A" 'BEGIN{d=a-b; if(d<0)d=-d; printf "%.3f", d}')s · PTS pile-ups 0${SPREAD:+ · seam ramp ${SPREAD}}"
 }
 avgate reel.mp4 "reel.mp4"
-# The burn-in comes from the same source through the same filter chain, so its duration must match the
-# clean copy — a mismatch means one of the two files is a leftover from an older build (which ships a
-# different video to different platforms).
-if [ -f reel-sub.mp4 ]; then
-  SV=$(ffprobe -v error -select_streams v -show_entries stream=duration -of csv=p=0 reel-sub.mp4)
-  if awk -v a="$RV" -v b="$SV" 'BEGIN{exit (a-b<0.05 && b-a<0.05) ? 0 : 1}'; then
-    say "── reel-sub.mp4: video ${SV}s (matches the clean copy)"
-  else
-    say "✗ reel-sub.mp4 duration ${SV}s ≠ reel.mp4 ${RV}s — not from the same build"; exit 1
-  fi
-  avgate reel-sub.mp4 "reel-sub.mp4"
-fi
-# The subtitle file goes straight to the publish tools — if it's empty here, that only surfaces at publish
+
+# Requested subtitle sidecars must contain cues before a separate upload.
 if [ "$SUB" = "1" ]; then
   if [ -s subs.srt ]; then say "── subs.srt: ${SRTN} cues / $(wc -c < subs.srt | tr -d ' ') bytes (FB cap 200K)"
   else say "✗ SUB=1 but subs.srt is empty — check the subtitle-text column in segs.tsv"; exit 1; fi

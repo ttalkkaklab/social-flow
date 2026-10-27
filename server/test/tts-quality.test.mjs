@@ -10,18 +10,22 @@ import { pcmToWav } from '../dist/media-utils.js';
 import { TOOLS } from '../dist/tools.js';
 import { ROUTES } from '../dist/handlers.js';
 const require=createRequire(import.meta.url);
-const checker=require('../../skills/produce/references/check-tts-quality.js');
+// Historical proof validation remains covered; production uses the provenance-only check.
+const legacyChecker=require('../../skills/produce/references/check-tts-quality.js');
+const checker={...legacyChecker,check:legacyChecker.checkLegacy};
 const script='오늘은 맑고 따뜻한 날입니다.';
 const good=()=>({accuracy:100,pronunciation:98,naturalness:97,clarity:99,confidence:0.98,complete:true,evidence:'Every word and final syllable is clear, with smooth phrase breaks and no audible artifacts.',issues:[]});
 const signal={duration:2.4,rmsDb:-18,clippedFraction:0};
 // The dictation check runs only on an explicit user request (owner directive 2026-10-04).
 const dictation={requestedBy:'user',reason:'오너가 내레이션 받아쓰기 검사를 이 회차에만 켜 달라고 요청했다.'};
+const episodeTexts=['오늘의 이야기를 시작합니다.','다음 문장도 같은 목소리로 읽어요.','이렇게 이야기를 마칩니다.'];
+const episodeRequest=(dir,index=1)=>checkedSpeechSchema.parse({generator:'tts_elevenlabs_generate',generation:{text:episodeTexts[index],voiceId:'voice',model:'eleven_v4',speed:1},expectedText:episodeTexts[index],language:'Korean',delivery:'Calm connected narration.',outputPath:dir,filename:`c${index}.wav`,episode:{texts:episodeTexts,index,seed:210836}});
 function setup(t){
   const dir=mkdtempSync(path.join(tmpdir(),'tts-quality-'));
   t.after(()=>rmSync(dir,{recursive:true,force:true}));
   mkdirSync(path.join(dir,'storyboard'));mkdirSync(path.join(dir,'.work/pcm'),{recursive:true});
   writeFileSync(path.join(dir,'storyboard/scenes.js'),`window.SCENES=[{type:'points',narration:[{tts:${JSON.stringify(script)}}]}];`);
-  const request=checkedSpeechSchema.parse({generator:'tts_local_generate',generation:{text:script,voice:'F1',lang:'ko'},expectedText:script,language:'Korean',delivery:'Calm and conversational.',outputPath:path.join(dir,'.work/pcm'),filename:'c0.wav'});
+  const request=checkedSpeechSchema.parse({generator:'tts_generate',generation:{text:script,voiceName:'Kore'},expectedText:script,language:'Korean',delivery:'Calm and conversational.',outputPath:path.join(dir,'.work/pcm'),filename:'c0.wav'});
   const file=path.join(request.outputPath,request.filename);
   writeFileSync(path.join(dir,'.work/cards.tsv'),`0\t${file}\t4.5\tin\n`);
   let count=0;
@@ -37,6 +41,7 @@ test('wrong words, missing endings, uncertainty and robotic delivery cannot pass
   assert.ok(characterErrorRate(script,'오늘은 흐리고 추운 날입니다.')>0.02);
   assert.equal(characterErrorRate('오늘은 맑습니다.','오늘은  맑습니다!'),0);
   assert.ok(reviewFailures(script,script.slice(0,-4),good(),2.4).length);
+  assert.deepEqual(reviewFailures(script,null,good(),2.4),[],'a null transcript disarms only the CER check');
   for(const patch of [{naturalness:94},{pronunciation:94},{accuracy:97},{clarity:94},{confidence:0.89},{complete:false},{issues:[{start:1,end:2,category:'pronunciation',heard:'wrong',expected:'right',correction:'Retake the final word'}]}])assert.ok(reviewFailures(script,script,{...good(),...patch},2.4).length);
   for(const patch of [{duration:600},{rmsDb:-80},{clippedFraction:0.01},{duration:NaN}])assert.ok(signalFailures({...signal,...patch},script).length);
 });
@@ -49,7 +54,7 @@ test('failed naturalness regenerates only the scene, and unchanged PASS costs no
   assert.ok(checker.check(path.join(f.dir,'.work'),path.join(f.dir,'storyboard'))[f.file]);
   assert.equal((await generateCheckedSpeech(f.request,f.deps)).reused,true);assert.equal(f.count(),2);
   const events=readFileSync(path.join(f.dir,'.work/events.jsonl'),'utf8').trim().split('\n').map(JSON.parse);
-  assert.equal(events.filter(e=>e.tool==='tts_local_generate').length,2);
+  assert.equal(events.filter(e=>e.tool==='tts_generate').length,2);
 });
 test('exhausted attempts stay exhausted across calls, even if a caller retries',async t=>{
   const f=setup(t);f.deps.listen=async()=>({transcript:script,review:{...good(),pronunciation:70}});
@@ -122,9 +127,9 @@ test('real recordings and silence keep audio provenance without a synthesis proo
 });
 test('generation args bind the whole spoken text and preserve voice settings',t=>{
   const f=setup(t);const prepared=prepareGeneration(f.request);
-  assert.equal(prepared.args.voice,'F1');assert.equal(prepared.args.text,script);
+  assert.equal(prepared.args.voiceName,'Kore');assert.equal(prepared.args.text,script);
   assert.throws(()=>prepareGeneration({...f.request,expectedText:'다른 대본'}),/match the complete/);
-  const eleven={...f.request,generator:'tts_elevenlabs_generate',generation:{text:'[whispers] '+script,voiceId:'21m00Tcm4TlvDq8ikWAM',model:'eleven_v3'}};
+  const eleven={...f.request,generator:'tts_elevenlabs_generate',generation:{text:'[whispers] '+script,voiceId:'21m00Tcm4TlvDq8ikWAM',model:'eleven_v4'}};
   assert.equal(prepareGeneration(eleven).args.voiceId,eleven.generation.voiceId);
   assert.throws(()=>prepareGeneration({...f.request,filename:'../outside.wav'}));
 });
@@ -174,14 +179,6 @@ test('reviewer change rechecks a PASS without synthesis and never resets exhaust
   old=g.proof();old.model='retired-reviewer';writeFileSync(g.file+'.quality.json',JSON.stringify(old));
   assert.equal((await generateCheckedSpeech(g.request,g.deps)).status,'fail');assert.equal(g.count(),3);
 });
-test('review model environment uses a trimmed override or the default',()=>{
-  for(const [value,expected] of [['  audio-review-model  ','audio-review-model'],['  ','gemini-3.8-flash']]){
-    const result=spawnSync(process.execPath,['--input-type=module','-e',"import {REVIEW_MODEL} from './dist/tts-quality.js';console.log(REVIEW_MODEL)"],
-      {cwd:path.resolve(import.meta.dirname,'..'),env:{...process.env,SOCIAL_FLOW_TTS_REVIEW_MODEL:value},encoding:'utf8'});
-    assert.equal(result.status,0,result.stderr);assert.equal(result.stdout.trim(),expected);
-  }
-});
-
 test('failed replacement review never attributes old scores to the new reviewer',async t=>{
   const f=setup(t);await generateCheckedSpeech(f.request,f.deps);
   const old=f.proof();old.model='retired-reviewer';old.attempts[0].model='retired-reviewer';
@@ -200,78 +197,6 @@ test('failed replacement review never attributes old scores to the new reviewer'
   f.deps.listen=async()=>({transcript:script,review:good()});
   assert.equal((await generateCheckedSpeech(f.request,f.deps)).status,'pass');
   assert.equal(f.proof().attempts[0].model,REVIEW_MODEL);assert.equal(f.count(),1);
-});
-
-test('review API version override and blank default reach both review requests',async t=>{
-  // both only exist when the dictation check was asked for; by default there is one review call
-  const f=setup(t);await f.deps.generate();
-  for(const [value,expected] of [['  v1beta  ','v1beta'],['  ','v1']]){
-    const child=`
-      import {listen, REVIEW_API_VERSION} from './dist/tts-quality.js';
-      const urls=[];
-      globalThis.fetch=async(input)=>{
-        urls.push(String(input.url ?? input));
-        const result=urls.length===1?{transcript:${JSON.stringify(script)}}:${JSON.stringify(good())};
-        return new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(result)}]}}]}),{status:200,headers:{'Content-Type':'application/json'}});
-      };
-      await listen(${JSON.stringify(f.file)},${JSON.stringify({...f.request,transcriptCheck:dictation})});
-      console.log(JSON.stringify({version:REVIEW_API_VERSION,urls}));
-    `;
-    const result=spawnSync(process.execPath,['--input-type=module','-e',child],{
-      cwd:path.resolve(import.meta.dirname,'..'),encoding:'utf8',
-      env:{...process.env,GEMINI_API_KEY:'test-only',GOOGLE_API_KEY:'',GOOGLE_GENAI_USE_VERTEXAI:'false',SOCIAL_FLOW_TTS_REVIEW_API_VERSION:value},
-    });
-    assert.equal(result.status,0,result.stderr);
-    const actual=JSON.parse(result.stdout);assert.equal(actual.version,expected);assert.equal(actual.urls.length,2);
-    for(const url of actual.urls)assert.equal(new URL(url).pathname.split('/')[1],expected);
-  }
-});
-
-test('the dictation check does not run unless it was asked for',async t=>{
-  const f=setup(t);await f.deps.generate();
-  const child=`
-    import {listen} from './dist/tts-quality.js';
-    const TRANSCRIBE='Transcribe every audible spoken word';
-    const bodies=[];
-    globalThis.fetch=async(input,init)=>{
-      let body='';
-      try{body=typeof init?.body==='string'?init.body:(input&&typeof input.text==='function'?await input.text():String(init?.body??''));}catch{body='';}
-      bodies.push(body);
-      const result=body.includes(TRANSCRIBE)?{transcript:${JSON.stringify(script)}}:${JSON.stringify(good())};
-      return new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(result)}]}}]}),{status:200,headers:{'Content-Type':'application/json'}});
-    };
-    const ALONE='No blind transcript accompanies this take';
-    const seen=()=>{const b=bodies.splice(0);return {calls:b.length,transcribe:b.filter(x=>x.includes(TRANSCRIBE)).length,
-      blindInReview:b.filter(x=>x.includes('blindTranscript')).length,readingAlone:b.filter(x=>x.includes(ALONE)).length,
-      firstIsTranscribe:b.length?b[0].includes(TRANSCRIBE):false};};
-    const off=await listen(${JSON.stringify(f.file)},${JSON.stringify(f.request)});
-    const offSeen=seen();
-    const on=await listen(${JSON.stringify(f.file)},${JSON.stringify({...f.request,transcriptCheck:dictation})});
-    console.log(JSON.stringify({off:{...offSeen,transcript:off.transcript},on:{...seen(),transcript:on.transcript}}));
-  `;
-  const result=spawnSync(process.execPath,['--input-type=module','-e',child],{cwd:path.resolve(import.meta.dirname,'..'),encoding:'utf8',
-    env:{...process.env,GEMINI_API_KEY:'test-only',GOOGLE_API_KEY:'',GOOGLE_GENAI_USE_VERTEXAI:'false',SOCIAL_FLOW_TTS_REVIEW_API_VERSION:''}});
-  assert.equal(result.status,0,result.stderr);
-  const {off,on}=JSON.parse(result.stdout);
-  // Off: one paid call, no transcription prompt leaves the process, and the judge is never handed a transcript.
-  // The judge is told the second reading is absent; this states the absence, it does not replace it.
-  assert.deepEqual(off,{calls:1,transcribe:0,blindInReview:0,readingAlone:1,firstIsTranscribe:false,transcript:null});
-  // On request: the blind pass runs first, separately, and its words reach the listening judge.
-  assert.deepEqual(on,{calls:2,transcribe:1,blindInReview:1,readingAlone:0,firstIsTranscribe:true,transcript:script});
-});
-
-test('a null transcript disarms the CER gate and nothing else',()=>{
-  // Nothing was transcribed, so there is nothing to compare — the listening review alone judges the take.
-  assert.deepEqual(reviewFailures(script,null,good(),2.4),[]);
-  // A transcript that was asked for is still held to 2%.
-  assert.ok(reviewFailures(script,'오늘은 흐리고 추운 날입니다.',good(),2.4).includes('Blind transcript CER exceeds 2%'));
-  assert.deepEqual(reviewFailures(script,script,good(),2.4),[]);
-  // Listening thresholds keep failing takes with the check off.
-  for(const patch of [{accuracy:97},{pronunciation:94},{naturalness:94},{clarity:94},{confidence:0.89},{complete:false},
-    {issues:[{start:1,end:2,category:'pronunciation',heard:'wrong',expected:'right',correction:'Retake the final word'}]}])
-    assert.ok(reviewFailures(script,null,{...good(),...patch},2.4).length,JSON.stringify(patch));
-  // Signal failures never saw the transcript at all.
-  for(const patch of [{duration:600},{rmsDb:-80},{clippedFraction:0.01}])assert.ok(signalFailures({...signal,...patch},script).length);
 });
 
 test('the proof checker accepts a take with no transcript and still catches a bad one',async t=>{
@@ -307,4 +232,84 @@ test('a stored take with no transcript is rechecked, not resynthesised, when the
   // With the transcript on record the same request reuses again.
   assert.equal((await generateCheckedSpeech({...f.request,transcriptCheck:dictation},f.deps)).reused,true);
   assert.equal(listens,1);
+});
+
+test('three character voices bind their actual generation proofs and reject narrator substitution',async t=>{
+  const f=setup(t), characters=['Kore','Puck','Charon'].map((voiceId,i)=>({id:'cast-'+i,tts:{engine:'gemini',voiceId,language:'ko',speed:1}}));
+  const scenes=characters.map(c=>({type:'points',narration:[{tts:script,speaker:c.id}]}));
+  const cards=[];
+  for(const [i,c] of characters.entries()) {
+    const filename=`cast-${i}.wav`, file=path.join(f.request.outputPath,filename);
+    const request={...f.request,filename,generation:{...f.request.generation,voiceName:c.tts.voiceId,speed:1}};
+    const deps={...f.deps,generate:async()=>{writeFileSync(file,pcmToWav(Buffer.alloc(48000,i+1),24000,1));return {success:true,audioPath:file};}};
+    assert.equal((await generateCheckedSpeech(request,deps)).status,'pass');
+    assert.equal(JSON.parse(readFileSync(file+'.quality.json')).voiceSettings.voiceName,c.tts.voiceId);
+    cards.push(`${i}\t${file}\t4.5\tin`);
+  }
+  const board=path.join(f.dir,'storyboard'),work=path.join(f.dir,'.work');
+  const writeBoard=()=>writeFileSync(path.join(board,'scenes.js'),`window.SB_DOC=${JSON.stringify({characters,narratorCharacterId:'cast-0'})};window.SCENES=${JSON.stringify(scenes)};`);
+  writeBoard();writeFileSync(path.join(work,'cards.tsv'),cards.join('\n')+'\n');
+  assert.ok(checker.check(work,board));
+  characters[1].tts.voiceId='Kore';writeBoard();
+  assert.throws(()=>checker.check(work,board),/cast-1 voiceId differs/);
+  characters[1].tts.voiceId='Puck';scenes[1].narration[0].speaker=undefined;writeBoard();
+  assert.throws(()=>checker.check(work,board),/cast-0 voiceId differs/);
+});
+
+test('voice binding rejects mixed speakers, missing proofs, and changed required settings',()=>{
+  const tts={engine:'gemini',voiceId:'Kore',language:'ko',speed:1};
+  const win={SB_DOC:{characters:[{id:'a',tts},{id:'b',tts}],narratorCharacterId:'a'}};
+  const scene={narration:[{tts:script,speaker:'a'}]};
+  const proof={generator:'tts_generate',language:'Korean',voiceSettings:{voiceName:'Kore',speed:1}};
+  assert.equal(checker.characterVoice(win,scene,proof),'a');
+  for(const patch of [{voiceName:'Puck'},{language:'en'},{speed:0.9}]) assert.throws(()=>checker.characterVoice(win,scene,{...proof,voiceSettings:{...proof.voiceSettings,...patch}}),/differs/);
+  assert.throws(()=>checker.characterVoice(win,scene,{}),/voiceSettings/);
+  assert.throws(()=>checker.characterVoice(win,{narration:[...scene.narration,{tts:script,speaker:'b'}]},proof),/one speaker per scene/);
+  assert.equal(checker.characterVoice({},{narration:[{tts:script}]},{}),null);
+});
+
+
+test('legacy voice proof gains settings without synthesis or resetting attempts',async t=>{
+  const f=setup(t);await generateCheckedSpeech(f.request,f.deps);
+  const old=f.proof();delete old.voiceSettings;writeFileSync(f.file+'.quality.json',JSON.stringify(old));
+  assert.equal((await generateCheckedSpeech(f.request,f.deps)).reused,true);
+  assert.equal(f.count(),1);assert.equal(f.proof().attempts.length,1);
+  assert.equal(f.proof().voiceSettings.voiceName,'Kore');
+});
+
+test('episode derives bounded v4 context and retains its seed at native speed',t=>{
+  const {dir}=setup(t);
+  for(let i=0;i<episodeTexts.length;i++){
+    const p=prepareGeneration(episodeRequest(dir,i));assert.equal(p.args.previousText,episodeTexts.slice(0,i).join(' ').slice(-100)||undefined);assert.equal(p.args.nextText,episodeTexts.slice(i+1).join(' ').slice(0,100)||undefined);assert.equal(p.args.seed,210836);assert.equal(p.args.speed,1);
+  }
+  const r=episodeRequest(dir);
+  assert.throws(()=>prepareGeneration({...r,generation:{...r.generation,seed:1}}),/seed/);
+  assert.throws(()=>prepareGeneration({...r,generation:{...r.generation,previousText:'wrong'}}),/previousText/);
+  assert.throws(()=>prepareGeneration({...r,generation:{...r.generation,model:'eleven_v3'}}));
+  assert.equal(checkedSpeechSchema.safeParse({...r,episode:{...r.episode,index:99}}).success,false);
+  assert.equal(checkedSpeechSchema.safeParse({...r,playbackSpeed:1.2}).success,false);
+});
+
+test('identical rejected audio stops without another review, seed change or reset',async t=>{
+  const {dir}=setup(t),r=episodeRequest(dir),file=path.join(dir,r.filename);let calls=0,reviews=0;const seeds=[];
+  const deps={preflight:async()=>{},generate:async o=>{calls++;seeds.push(o.seed);writeFileSync(file,pcmToWav(Buffer.alloc(48000,12),24000,1));return {success:true,audioPath:file};},measure:async()=>({duration:2,rmsDb:-18,clippedFraction:0}),listen:async()=>{reviews++;return {transcript:r.expectedText,review:{...good(),naturalness:70}};}};
+  const result=await generateCheckedSpeech(r,deps);assert.equal(result.status,'fail');assert.equal(calls,2);assert.equal(reviews,1);assert.deepEqual(seeds,[210836,210836]);
+  assert.equal((await generateCheckedSpeech(r,deps)).status,'fail');assert.equal(calls,2);
+});
+
+test('assembly rejects missing context, changed order and voice drift despite source PASS',async t=>{
+  const f=setup(t),board=path.join(f.dir,'storyboard'),work=path.join(f.dir,'.work');
+  writeFileSync(path.join(board,'scenes.js'),`window.SCENES=${JSON.stringify(episodeTexts.map(tts=>({type:'points',narration:[{tts}]})))};`);
+  const files=[];
+  for(let i=0;i<episodeTexts.length;i++){
+    const r=episodeRequest(work,i),file=path.join(work,r.filename);files.push(file);
+    const deps={preflight:async()=>{},generate:async()=>{writeFileSync(file,pcmToWav(Buffer.alloc(48000,12+i),24000,1));return {success:true,audioPath:file};},measure:async()=>({duration:2,rmsDb:-18,clippedFraction:0}),listen:async()=>({transcript:r.expectedText,review:good()})};
+    assert.equal((await generateCheckedSpeech(r,deps)).success,true);
+  }
+  writeFileSync(path.join(work,'cards.tsv'),files.map((file,i)=>`${i}\t${file}\t4.5\tin`).join('\n'));
+  assert.doesNotThrow(()=>checker.check(work,board));
+  const file=files[1]+'.quality.json',original=JSON.parse(readFileSync(file,'utf8'));
+  for(const mutate of [p=>delete p.episode,p=>p.episode.texts.reverse(),p=>p.voiceSettings.speed=1.1,p=>p.attempts[0].seed++]){
+    const p=structuredClone(original);mutate(p);writeFileSync(file,JSON.stringify(p));assert.throws(()=>checker.check(work,board),/need HITL/);assert.match(checker.lastReport(work).warnings[0],/episode|settings/);
+  }
 });

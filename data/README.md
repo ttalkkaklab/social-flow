@@ -1,5 +1,11 @@
 # data/ — content data root
 
+The selected working directory (normally the parent of `data/`) stores shared
+project identity, genre, video/speech/image selections, visual style, video ratio,
+output format and SNS connection records in `.social-flow/models.json`. Each episode
+stores its inherited copy in `.work/model-settings.json`. These are local settings,
+never committed. Initialize with `/social-flow:project-init`; credentials stay outside the project. See [model settings](../skills/_shared/model-settings.md).
+
 The **per-channel directories** the user operates live under here — one channel
 (brand) is one directory, and its output publishes to multiple SNS platforms
 (Threads·Instagram·Facebook·YouTube). The structure maps 1:1 to the pipeline's

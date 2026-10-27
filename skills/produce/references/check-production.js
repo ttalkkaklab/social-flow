@@ -12,21 +12,27 @@ function assetPath(storyboard, file) {
   return path.resolve(file.startsWith('.work/') ? path.dirname(storyboard) : storyboard, file);
 }
 function hashFile(storyboard, file) { return digest(fs.readFileSync(assetPath(storyboard, file))); }
+function previzOnDisk(storyboard, previz) { return Boolean(previz && typeof previz.clip === 'string' && previz.clip.trim() && fs.existsSync(assetPath(storyboard, previz.clip))); }
 function shotDigest(win, index) {
   return digest(mode.signature({ ...win, SCENES: [win.SCENES[index]] }));
 }
 function readReviews(work) {
   const file = path.join(work, 'video-review.json');
-  return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { shots: [] };
+  if (!fs.existsSync(file)) return {shots:[]};
+  try { const value=JSON.parse(fs.readFileSync(file,'utf8')); return value && typeof value==='object' ? value : {shots:[],readWarning:'Review record is not an object'}; }
+  catch (error) { return {shots:[],readWarning:'Unreadable optional review: '+error.message}; }
 }
 function videoFile(scene) { return mode.reused(scene) ? scene.visual.reuse.clip : scene.visual.video.clip; }
-// Every generated still was looked at for content and style separately (visual-style.md): the record
-// is .work/still-review.json { shots: [{ shot, imageSha256, preset, styleMatch, reviewer, at, evidence }] }.
-// A still that does not match its preset is remade, or the shot's style is changed with the user's
-// approval (shot.style) and the new still reviewed again — never assembled as it is.
+// A generated still that was looked at for content and style (visual-style.md) has a record in
+// .work/still-review.json { shots: [{ shot, imageSha256, preset, styleMatch, reviewer, at, evidence }] }.
+// The record is evidence: a missing or stale one is reported as not_reviewed (warning), never written
+// without looking. A still that does not match its preset is remade, or the shot's style is changed
+// with the user's approval (shot.style) and the new still reviewed again.
 function readStillReviews(work) {
   const file = path.join(work, 'still-review.json');
-  return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { shots: [] };
+  if (!fs.existsSync(file)) return {shots:[]};
+  try { const value=JSON.parse(fs.readFileSync(file,'utf8')); return value && typeof value==='object' ? value : {shots:[],readWarning:'Review record is not an object'}; }
+  catch (error) { return {shots:[],readWarning:'Unreadable optional review: '+error.message}; }
 }
 function generatedStill(scene) {
   const v = scene.visual || {};
@@ -36,8 +42,8 @@ function generatedStill(scene) {
 function stillReviewErrors(win, index, storyboard, reviews) {
   const scene = win.SCENES[index], preset = mode.shotStyle(win, index).preset;
   if (!mode.STYLES[preset]) return [];
-  const matches = (reviews.shots || []).filter(r => r.shot === index + 1), review = matches[0];
-  if (matches.length !== 1) return ['one current still review is required in still-review.json (content and style, visual-style.md)'];
+  const matches = (reviews.shots || []).filter(r => r.shot === index + 1), review = matches[0] || {};
+  if (matches.length !== 1) return ['no current still review in still-review.json; style and content remain not_reviewed'];
   const errors = [];
   let sha; try { sha = hashFile(storyboard, scene.visual.bg); } catch (e) { return [e.message]; }
   if (review.imageSha256 !== sha) errors.push('still review is stale; look at the current image and record it again');
@@ -60,7 +66,7 @@ function motionMetrics(work, file, sha256) {
   return saved[sha256];
 }
 // The review says a person saw the subject move; the measurement says how much of the clip
-// actually moves. Both hold before a clip enters the timeline (full-video.md §Measured motion).
+// actually moves. Both are reported as warnings before a clip enters the timeline (full-video.md §Measured motion).
 function motionGateErrors(scene, metrics, clipSeconds) {
   const remedy = mode.reused(scene) ? 'select and review an existing clip with visible motion; re-trim the source and update its import record if needed' : 'revise the action or camera move within the approved generation budget';
   const errors = motion.findings(metrics, 'video').map(f => 'measured motion: ' + f + '; ' + remedy);
@@ -81,11 +87,12 @@ function accepted(win, index, storyboard, review) {
   }
   if (mode.reused(scene)) return review && review.planDigest === shotDigest(win, index) &&
     review.videoSha256 === scene.visual.reuse.sha256 && review.videoSha256 === hashFile(storyboard, videoFile(scene));
+  // A previz is optional (2026-10-18): a declared clip that is not on disk is reported as a warning by check(), not a stale review.
   const previz = scene.visual.video.previz;
   return review && review.planDigest === shotDigest(win, index) &&
     review.sourceSha256 === hashFile(storyboard, scene.visual.bg) &&
     (!framePlan(scene).end || review.endSha256 === hashFile(storyboard, framePlan(scene).end)) &&
-    (!previz || previz.sha256 === hashFile(storyboard, previz.clip)) &&
+    (!previzOnDisk(storyboard, previz) || previz.sha256 === hashFile(storyboard, previz.clip)) &&
     review.videoSha256 === hashFile(storyboard, scene.visual.video.clip);
 }
 function motionReviewErrors(scene, review) {
@@ -155,14 +162,53 @@ function freeAstraMusicExclusion(win, option, spent, ledger, beforeCall) {
         /^[0-9]+(?:\.[0-9]+)?$/.test(quantity) && Number.isFinite(Number(quantity));
     });
 }
-function check(storyboard, { requireSelection = false, ready = false, beforeCall = null, manifest = false, workdir = null } = {}) {
+function check(storyboard, { requireSelection = false, ready = false, beforeCall = null, manifest = false, workdir = null, assemblyOnly = false } = {}) {
   storyboard = path.resolve(storyboard);
   const win = cost.readScenes(path.join(storyboard, 'scenes.js'));
-  const errors = mode.check(win, { requireSelection, requireApproval: true });
-  if (!win.PRODUCTION) return { errors, active: false };
-  if (errors.length) return { errors, active: true };
+  const imageReview = require('../../storyboard/references/shot-image-review.js').check(win, storyboard);
+  const continuityReview = require('../../storyboard/references/shot-continuity.js').check(win, storyboard);
+  const imageWarnings = [...imageReview, ...continuityReview].map(f => f.where + ': ' + f.what);
+  for (const [index, scene] of win.SCENES.entries()) {
+    const binding = scene.visual?.video?.speechBinding;
+    if (!binding) continue;
+    const quality = binding.quality;
+    if ((quality?.speechSync || quality?.unverifiedSpeechSync)?.status === 'no_sync')
+      imageWarnings.push('shot ' + (index + 1) + ': selected footage has an unresolved speech-motion synchronization warning; phoneme lip-sync is not verified' + (quality?.receiptBinding === 'unverified' ? ' (legacy receipt is not hash-bound)' : ''));
+    if (quality?.selection?.status === 'provisional')
+      imageWarnings.push('shot ' + (index + 1) + ': automatic candidate selection is provisional; camera, blocking and phoneme lip-sync are not reviewed');
+  }
+  if (assemblyOnly) {
+    const errors=[], warnings=['Visual quality review is advisory; assembly does not certify unseen media.', ...imageWarnings];
+    const reusedShots=[];
+    for (const [index,scene] of win.SCENES.entries()) {
+      try {
+        if (mode.reused(scene)) { validateReuseAsset(storyboard,scene,win.FORMAT); reusedShots.push(index); }
+        if (scene.visual?.video?.groupPlan!==undefined) {
+          require('./video-groups.js').compile(scene,storyboard,{mode:win.PRODUCTION?.mode});
+          continue;
+        }
+        const declared=scene.visual?.video?.clip || scene.visual?.renderedFile || scene.visual?.clip;
+        if (typeof declared!=='string') continue; // Slides and recording inputs are checked by the manifest compiler.
+        const file=assetPath(storyboard,declared);
+        const probe=spawnSync('ffprobe',['-v','error','-select_streams','v:0','-show_entries','stream=width,height:format=duration','-of','json',file],{encoding:'utf8'});
+        if(probe.status!==0) throw new Error('ffprobe could not read the video');
+        const media=JSON.parse(probe.stdout), stream=media.streams?.[0];
+        if(!stream || !(stream.width>0) || !(stream.height>0)) throw new Error('Video has no usable dimensions');
+        if(!(Number(media.format?.duration)+.05>=scene.duration)) throw new Error('clip is shorter than the shot; never loop, reverse or freeze-pad');
+      } catch(error) { errors.push('shot '+(index+1)+': '+error.message); }
+    }
+    return {active:true,errors,warnings,reusedShots,imageReview,continuityReview};
+  }
+  const warnings = [...imageWarnings];
+  const errors = mode.check(win, { requireSelection, requireApproval: beforeCall !== null, advice: warnings });
+  const locations = require('../../storyboard/references/location-assets.js');
+  const locationScope = beforeCall !== null ? {...win, SCENES: win.SCENES[beforeCall-1] ? [win.SCENES[beforeCall-1]] : []} : win;
+  for (const finding of locations.check(locationScope, storyboard, {ready:ready || beforeCall!==null}))
+    (finding.level === 'bad' ? errors : warnings).push(finding.where + ': ' + finding.what);
+  if (!win.PRODUCTION) return { errors, warnings, imageReview, continuityReview, active: false };
+  if (errors.length) return { errors, warnings, imageReview, continuityReview, active: true };
   if (beforeCall !== null && win.SCENES[beforeCall - 1] && mode.reused(win.SCENES[beforeCall - 1]))
-    return { active: true, errors: ['A reused clip cannot be selected for a new video API call'] };
+    return { active: true, warnings, imageReview, continuityReview, errors: ['A reused clip cannot be selected for a new video API call'] };
   // Imports already exist at selection time. Check bytes and dimensions even before other assets.
   for (const [index, scene] of win.SCENES.entries()) {
     if (!mode.reused(scene)) continue;
@@ -170,15 +216,15 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
     catch (e) { errors.push('shot ' + (index + 1) + ': ' + e.message); }
   }
   const work = workdir ? path.resolve(workdir) : path.join(path.dirname(storyboard), '.work'), p = win.PRODUCTION;
-  // stills_only holds no generated clip (production-mode.md): there is no priced option, no quote
-  // to approve and no retry estimate. Imported clips, the ledger and the still reviews still hold.
-  const priced = p.mode !== 'stills_only';
+  // no_video (and legacy stills_only) holds no generated clip (production-mode.md): there is no priced
+  // option, no quote to approve and no retry estimate. Imported clips, the ledger and the still reviews still hold.
+  const priced = !['no_video', 'stills_only'].includes(p.mode);
   const current = priced ? quote(win) : null;
   const option = priced ? current.options[p.mode] : { provisional: false, retryHighUsd: 0, rows: [] };
   if (priced) {
-    if (option.provisional) errors.push('The selected mode still has a provisional quote; finish its shot plan before approval');
-    if (p.approval.quoteFingerprint !== current.quoteFingerprint)
-      errors.push('Approved cost quote is stale: re-quote the changed plan/prices and obtain approval before generation');
+    if (option.provisional) (beforeCall !== null ? errors : warnings).push('The selected mode still has a provisional quote; finish its shot plan before generation');
+    if (p.approval?.quoteFingerprint !== current.quoteFingerprint)
+      (beforeCall !== null ? errors : warnings).push('Approved cost quote is stale: re-quote the changed plan/prices and obtain approval before generation');
     if (option.retryHighUsd > p.videoBudgetUsd + 1e-9)
       errors.push('Retry-inclusive video estimate exceeds the approved episode budget');
   }
@@ -186,14 +232,15 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
   const spent = fs.existsSync(ledger) ? cost.runReport(ledger) : { exit: 0, items: [] };
   const excludedMusic = !requireSelection && !ready && !manifest && errors.length === 0 &&
     freeAstraMusicExclusion(win, option, spent, ledger, beforeCall);
-  const warnings = excludedMusic ? spent.unresolved.map(message =>
-    message + ' — excluded BGM cost; episode cost report still exits 1') : [];
+  if (excludedMusic) warnings.push(...spent.unresolved.map(message =>
+    message + ' — excluded BGM cost; episode cost report still exits 1'));
   if (spent.exit && !excludedMusic) errors.push('Actual cost ledger has unresolved prices');
   if (cost.videoSpent(spent.items) > p.videoBudgetUsd + 1e-9) errors.push('Actual video spend exceeds the approved budget');
   const reviews = readReviews(work);
-  if (!Array.isArray(reviews.shots)) errors.push('video-review.json needs a shots array');
+  if (reviews.readWarning) warnings.push(reviews.readWarning);
+  if (!Array.isArray(reviews.shots)) { warnings.push('video-review.json needs a shots array; video quality is unverified'); reviews.shots=[]; }
   if (beforeCall !== null && !priced) {
-    errors.push('stills_only generates no video; no shot can be selected for a video API call — choose a cost mode first');
+    errors.push(p.mode + ' generates no video; no shot can be selected for a video API call — choose a video ratio with generated cuts first');
   } else if (beforeCall !== null) {
     const row = option.rows.find(r => r.shot === beforeCall);
     if (!row) errors.push('Requested shot has no priced video generation');
@@ -215,56 +262,59 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
   }
   if (ready) {
     const stills = readStillReviews(work);
-    if (!Array.isArray(stills.shots)) errors.push('still-review.json needs a shots array');
+    if (stills.readWarning) warnings.push(stills.readWarning);
+    if (!Array.isArray(stills.shots)) { warnings.push('still-review.json needs a shots array; still quality is unverified'); stills.shots=[]; }
     win.SCENES.forEach((scene, index) => {
       if (mode.eligible(scene) && generatedStill(scene))
-        stillReviewErrors(win, index, storyboard, stills).forEach(m => errors.push('shot ' + (index + 1) + ': ' + m));
+        stillReviewErrors(win, index, storyboard, stills).forEach(m => warnings.push('shot ' + (index + 1) + ': ' + m));
       if (!mode.reused(scene) && !(mode.full(p) && mode.eligible(scene))) return;
       const prefix = 'shot ' + (index + 1) + ': ', bad = msg => errors.push(prefix + msg);
-      const matches = (reviews.shots || []).filter(r => r.shot === index + 1), review = matches[0];
+      const warn = msg => warnings.push(prefix + msg);
+      const matches = (reviews.shots || []).filter(r => r.shot === index + 1), review = matches[0] || {};
       if(scene.visual?.video?.groupPlan!==undefined){
         try {
           const edit=require('./edit-plan.js').preview(win.SCENES,{videoWarningsApproved:true}).find(e=>e.card===index);
           const p=scene.visual.video.groupPlan;
           const plan=require('./video-groups.js').compile(scene,storyboard,{mode:win.PRODUCTION?.mode,handleFrames:Math.ceil(edit.handle*p.fps-1e-6)});
-          if(matches.length!==1||!accepted(win,index,storyboard,review))bad('group video review is missing or stale; inspect every current trimmed source');
+          if(matches.length!==1||!accepted(win,index,storyboard,review))warn('group video review is missing or stale; inspect every current trimmed source');
           for(const g of plan.groups){
             const label='group '+(g.segment+1)+': ';
             resolutionErrors(scene,{width:g.width,height:g.height},win.FORMAT).forEach(e=>bad(label+e));
             const used=g.frames/plan.fps;
             const m=motion.measure(g.file,{start:g.sourceIn,seconds:used});
-            motionGateErrors({...scene,duration:used,edit:{in:0}},m,used).forEach(e=>bad(label+e));
+            motionGateErrors({...scene,duration:used,edit:{in:0}},m,used).forEach(e=>warn(label+e));
             const r=review?.groups?.[g.segment];
-            if(r?.playback!==true||!r.reviewer||!Number.isFinite(Date.parse(r.at)))bad(label+'record full trimmed playback inspection, reviewer and time');
+            if(r?.playback!==true||!r.reviewer||!Number.isFinite(Date.parse(r.at)))warn(label+'record full trimmed playback inspection, reviewer and time');
             for(const key of ['composition','materials','continuity','action','camera','referenceMatch'])
-              if(typeof r?.[key]!=='string'||r[key].trim().length<12)bad(label+'review needs concrete evidence for '+key);
-            if(!Array.isArray(r?.defects)||r.defects.length)bad(label+'unresolved visual defects');
+              if(typeof r?.[key]!=='string'||r[key].trim().length<12)warn(label+'review needs concrete evidence for '+key);
+            if(!Array.isArray(r?.defects)||r.defects.length)warn(label+'unresolved visual defects');
             const seeks=r?.seeks;
-            if(!Array.isArray(seeks)||seeks.length<3||seeks.some(t=>!Number.isFinite(t)||t<g.sourceIn||t>g.sourceIn+used)||!seeks.some(t=>t<=g.sourceIn+used*.15)||!seeks.some(t=>t>=g.sourceIn+used*.85)||!seeks.some(t=>t>=g.sourceIn+used*.4&&t<=g.sourceIn+used*.6))bad(label+'inspect start, middle and end of the source interval');
-            motionReviewErrors({...scene,duration:used},r||{}).forEach(e=>bad(label+e));
+            if(!Array.isArray(seeks)||seeks.length<3||seeks.some(t=>!Number.isFinite(t)||t<g.sourceIn||t>g.sourceIn+used)||!seeks.some(t=>t<=g.sourceIn+used*.15)||!seeks.some(t=>t>=g.sourceIn+used*.85)||!seeks.some(t=>t>=g.sourceIn+used*.4&&t<=g.sourceIn+used*.6))warn(label+'inspect start, middle and end of the source interval');
+            motionReviewErrors({...scene,duration:used},r||{}).forEach(e=>warn(label+e));
           }
         } catch(e){bad(e.message);}
         return;
       }
-      if (matches.length !== 1) { bad('one current video review is required; inspect this existing clip and record the review without generating a replacement'); return; }
+      if (matches.length !== 1) warn('one current video review is required for quality certification; quality remains unverified.');
+      if (scene.visual?.video?.previz && !previzOnDisk(storyboard, scene.visual.video.previz)) warn('previz file missing; previz is optional');
       try {
-        if (!accepted(win, index, storyboard, review)) bad('review is stale; inspect the current image, clip and shot plan');
+        if (!accepted(win, index, storyboard, review)) warn('review is stale; inspect the current image, clip and shot plan');
         const probe = spawnSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries',
           'stream=width,height:format=duration', '-of', 'json', assetPath(storyboard, videoFile(scene))], { encoding: 'utf8' });
         if (probe.status !== 0) throw new Error('ffprobe could not read the video');
         const media = JSON.parse(probe.stdout), stream = media.streams?.[0];
         resolutionErrors(scene, stream, win.FORMAT).forEach(bad);
         if (!(Number(media.format?.duration) + .05 >= scene.duration)) bad('clip is shorter than the shot; never loop, reverse or freeze-pad');
-        motionGateErrors(scene, motionMetrics(work, assetPath(storyboard, videoFile(scene)), hashFile(storyboard, videoFile(scene))), Number(media.format?.duration)).forEach(bad);
-        if (review.playback !== true || !review.reviewer || !Number.isFinite(Date.parse(review.at))) bad('record full playback inspection, reviewer and time');
+        motionGateErrors(scene, motionMetrics(work, assetPath(storyboard, videoFile(scene)), hashFile(storyboard, videoFile(scene))), Number(media.format?.duration)).forEach(warn);
+        if (review.playback !== true || !review.reviewer || !Number.isFinite(Date.parse(review.at))) warn('record full playback inspection, reviewer and time');
         for (const key of ['composition', 'materials', 'continuity', 'action', 'camera', 'referenceMatch'])
-          if (typeof review[key] !== 'string' || review[key].trim().length < 12) bad('review needs concrete evidence for ' + key);
-        motionReviewErrors(scene, review).forEach(bad);
-        if (!Array.isArray(review.defects) || review.defects.length) bad('unresolved visual defects block production');
+          if (typeof review[key] !== 'string' || review[key].trim().length < 12) warn('review needs concrete evidence for ' + key);
+        motionReviewErrors(scene, review).forEach(warn);
+        if (!Array.isArray(review.defects) || review.defects.length) warn('unresolved visual defects recorded; quality not_reviewed');
         const seeks = review.seeks;
         if (!Array.isArray(seeks) || seeks.length < 3 || seeks.some(t => !Number.isFinite(t) || t < 0 || t > scene.duration) ||
             !seeks.some(t => t <= scene.duration * .15) || !seeks.some(t => t >= scene.duration * .85) ||
-            !seeks.some(t => t >= scene.duration * .4 && t <= scene.duration * .6)) bad('inspect start, middle and end frames with valid seek times');
+            !seeks.some(t => t >= scene.duration * .4 && t <= scene.duration * .6)) warn('inspect start, middle and end frames with valid seek times');
       } catch (e) { bad(e.message); }
     });
   }
@@ -290,10 +340,10 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
         errors.push('Plain-video segments must use only the approved clip, without overlays or freeze/palindrome wrappers: shot ' + (index + 1));
     }
   }
-  return { active: true, mode: p.mode, generatedShots, reusedShots, plainVideoShots, errors, warnings, costReport: { exit: spent.exit, unresolved: spent.unresolved || [] }, quote: current };
+  return { active: true, mode: p.mode, generatedShots, reusedShots, plainVideoShots, errors, warnings, imageReview, continuityReview, costReport: { exit: spent.exit, unresolved: spent.unresolved || [] }, quote: current };
 }
-// A zero-video board reaches this gate with no quote and no approval; every other mode still
-// owes both. The fixture boards live in a temp dir so the checker runs its real file path.
+// A zero-video board reaches this gate with no quote and no approval; every other mode owes the
+// spending approval before a video call. The fixture boards live in a temp dir so the checker runs its real file path.
 function selftest() {
   const os = require('os');
   const board = production => {
@@ -313,17 +363,19 @@ function selftest() {
       '];', ''].join('\n'));
     return path.join(dir, 'storyboard');
   };
-  const stills = { mode: 'stills_only', imageProvider: 'host', videoBudgetUsd: 0, maxAttempts: 1,
+  const zero = { mode: 'no_video', renderRatioVersion: 1, imageProvider: 'host', videoBudgetUsd: 0, maxAttempts: 1,
     style: { preset: 'cinematic-miniature', selection: { kind: 'standing', reference: 'profile.md §3' } } };
   let fails = 0;
   const ok = (name, pass) => { console.log((pass ? 'ok   ' : 'FAIL ') + name); if (!pass) fails++; };
-  ok('stills_only passes the production gate without a cost approval', (() => {
-    const r = check(board(stills));
+  ok('no_video passes the production gate without a cost approval', (() => {
+    const r = check(board(zero));
     return r.active && !r.errors.length && r.quote === null && !r.generatedShots.length;
   })());
-  ok('stills_only refuses a video API call', check(board(stills), { beforeCall: 2 }).errors
+  ok('no_video refuses a video API call', check(board(zero), { beforeCall: 2 }).errors
+    .some(e => /no_video generates no video/.test(e)));
+  ok('legacy stills_only still refuses a video API call', check(board({ ...zero, mode: 'stills_only', renderRatioVersion: undefined }), { beforeCall: 2 }).errors
     .some(e => /stills_only generates no video/.test(e)));
-  ok('a cost mode still owes its approval', check(board({ ...stills, mode: 'hook_only', videoBudgetUsd: 10 })).errors
+  ok('a cost mode owes its spending approval before a video call', check(board({ ...zero, mode: 'video_50', videoBudgetUsd: 10 }), { beforeCall: 2 }).errors
     .some(e => /PRODUCTION\.approval needs/.test(e)));
   console.log(fails ? 'check-production selftest: ' + fails + ' failed' : 'check-production selftest OK');
   process.exitCode = fails ? 1 : 0;

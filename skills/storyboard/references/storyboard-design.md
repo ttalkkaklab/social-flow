@@ -1,16 +1,8 @@
-# Storyboard review design
+# Local storyboard review design
 
-The ttalkkakstory storyboard screen is the visual reference for both portal and
-local review. Choosing local HTML changes storage only. It never authorizes a
-different layout, palette, type scale, shot card, or section order. Episode art
-style and `THEME` describe the video, not a custom review interface.
-
-## One local renderer
-
-Use [storyboard-html-template.html](storyboard-html-template.html) for every review,
-including episodes that sync with the portal. Edit only `<title>` and the marked
-`SB_DOC` metadata block. Scene data stays in `scenes.js`. Do not generate a new HTML
-page from prose or patch CSS in an individual episode.
+Use [storyboard-html-template.html](storyboard-html-template.html) for every review.
+Edit only `<title>` and the marked `SB_DOC` metadata block. Scene data stays in
+`scenes.js`. Episode art style and `THEME` describe the video, not a custom review UI.
 
 Create or refresh the review with the bundled script:
 
@@ -18,52 +10,57 @@ Create or refresh the review with the bundled script:
 node "$CLAUDE_PLUGIN_ROOT/skills/storyboard/references/storyboard-html.js" "<episodeDir>/storyboard"
 ```
 
-On refresh it preserves the existing title and `SB_DOC` block, replaces the review
-shell with the current template, and copies its runtime helpers, shared review CSS and bundled font. It never
-reads a key or calls the portal. Fill the metadata after first creation. Before
-delivery in either mode, run:
+Refresh preserves the title and metadata and copies the current runtime, CSS and
+bundled fonts and licenses. Fill the metadata after first creation, then refresh the library copy.
+Before delivery, run:
 
 ```bash
 node "$CLAUDE_PLUGIN_ROOT/skills/storyboard/references/storyboard-html.js" "<episodeDir>/storyboard" --check
 ```
 
-A failed check means the episode's layout/runtime has drifted from the bundled
-template. Refresh, inspect, and check again. Do not waive it because the episode
-is local or has no API key.
+A failed check means the episode's layout/runtime or library files have drifted, or
+the library has a structural problem such as missing/unsupported storyboard HTML.
+Identity and voice readiness warnings are printed separately as `Content readiness`
+and do not fail this design check when the exported files match. They remain visible
+in the library and in `exportChannel().warnings` and `contentWarnings`; they are not
+a content pass. Standalone `review-library.js <channelDir> --check` still fails on
+every warning, including incomplete legacy character identities and voices. Do not
+invent structured identity data to make a shell check pass.
 
-## Updating the portal design
+When the episode's layout/runtime has drifted from the bundled template, refresh,
+inspect, and check again. Do not waive it because the episode
+uses local files.
 
-When the portal's review screen changes, update this shared template and its
-helpers in the same change, using the actual portal components/styles or an
-authenticated rendered screen as the reference. Record the source revision and
-compare the same episode in both views: header and navigation, sequence/scene
-groups, shot frames and media, narration, camera/sound details, status and cost.
-Inspect desktop and narrow widths, empty media, and populated media. Use the
-repository's browser and screenshot lanes.
+The shared generator is the only review renderer, including content-plan HTML.
+Prepare [asset sheets](asset-sheets.md) before shot authoring. The review displays canonical
+`SB_DOC.props` with custody/history and `SB_DOC.locations` with layout, lighting, invariants,
+reference images and shot links. `visual.locationId` links a shot to its planning sheet;
+Blender's `visual.location` remains a separate production binding. An absent sheet displays
+as missing; `SB_DOC.assetSheetNotes` supplies explicit not-applicable reasons. Channel library copies use a relative base URL to the same episode assets.
 
-The local template check proves consistency across generated HTML copies; it
-does **not** prove visual parity with a remote portal release. If the portal
-source/screen is unavailable, preserve the bundled design and report that parity
-could not be verified. Do not describe a guessed layout as matching the portal.
-Ship the template in the plugin so keyless users never need a portal connection
-to render or review a board.
+The review uses a light Liquid Glass navigation layer, bundled Inter/Pretendard/
+regional Noto Sans, a 240px desktop navigation column and
+shot-first reading order. Below 1024px navigation moves above the document. Frames
+and dialogue precede camera details; checks and costs stay reachable from the audit
+shortcut. Print expands the review disclosures. Preserve all metadata, previews,
+checks and event handlers when changing layout.
 
-## Offline library and portal source (2026-10-15)
+Each spoken line shows its speaker's profile image and name, delivery label, and speech
+bubble in the existing reveal order. Prefer the explicit face panel, then an existing channel
+face image, then the production cast image; a missing image shows the speaker's initial.
+An absent speaker is displayed as unassigned unless a legacy narrator was explicitly set.
+Keep spoken wording, alternate subtitle wording and optional `deliveryReason` visible.
+Narrator-only explainers are supported; drama distinguishes on-screen dialogue from
+purposeful off-screen lines. Silent shots show “No dialogue”. These are review elements,
+not overlays burned onto the video. Refresh existing boards with the same generator.
 
-The shell now uses the portal's neutral palette, Wanted Sans 1.0.3, left-aligned
-240px sidebar and shot-first reading order. Source: ttalkkak-story `d29f1a6`
-(2026-10-11), DESIGN.md 1.2.0, CharacterForm, CharacterCard, PageShell and ShotTree.
-`review-layout.js` rearranges existing rendered nodes; all checks, costs, scene
-previews, metadata and event handlers remain available. The closed checks summary
-shows the actual warning/error totals. Printing expands the review disclosures.
-The local review remains read-only and does not impersonate portal editing controls.
+Character changes refresh `skills/channel/references/review-library.js <channelDir>`.
+Follow [local review design](../../channel/references/local-review-design.md) for
+shared assets, historical design provenance and viewport/interaction regression checks.
 
-When invoked on `data/<channel>/episodes/<topic>/storyboard`, storyboard-html.js also
-exports/checks the channel library. After editing SB_DOC, run it again so the copy
-at `storyboards/<topic>/index.html` is current. That copy adds only a relative base
-URL to the SAME renderer, never an independently authored storyboard UI.
-
-Character changes call `skills/channel/references/review-library.js <channelDir>`.
-Shared review assets live under the channel skill’s `review-assets/` directory.
-See `skills/channel/references/local-review-design.md` for provenance and scope.
-A local template pass still does not certify parity with a newer portal deployment.
+Typography is independent of the UI language picker: set `SB_DOC.contentLanguage`
+to `ko`, `en`, `ja`, `zh-Hans`, `zh-Hant`, `vi`, `de`, `fr` or `es`. Optional
+`SB_DOC.shotLanguages` maps one-based shot numbers to language overrides. Preserve
+explicit region tags for Han text; glyph shape cannot identify its language reliably.
+Font selection covers the review and its inline frame approximation, not embedded
+HTML slide documents or the final video renderer.

@@ -79,7 +79,7 @@
        timeline slots, swatches */
     --accent-ink: #1d4ed8;
 
-    /* Type scale — 1.25 ratio */
+    /* Legacy component sizes; shared review typography defines the document scale. */
     --t-micro: 11px; --t-cap: 12px; --t-aux: 13px; --t-body: 15px;
     --t-scene: 17px; --t-lead: 19px; --t-title: 29px;
     /* Spacing rhythm — 4px grid */
@@ -90,7 +90,7 @@
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
-    font: var(--t-body)/1.65 "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", system-ui, sans-serif;
+    font: var(--t-body)/1.65 var(--review-font, sans-serif);
     -webkit-font-smoothing: antialiased;
     font-variant-numeric: tabular-nums;
   }
@@ -456,6 +456,7 @@
   .frame-inputs { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; align-self: start; }
   .frame-inputs.single { grid-template-columns: 1fr; width: var(--fw); }
   .frame-inputs figure { margin: 0; min-width: 0; }
+  .frame-inputs .reference-input img { height: 144px; aspect-ratio: auto; }
   .frame-inputs img { width: 100%; aspect-ratio: 9 / 16; object-fit: contain; background: var(--sunk); border-radius: 8px; display: block; }
   .frame-inputs.wide img { aspect-ratio: 16 / 9; }
   .frame-inputs video { width: 100%; aspect-ratio: 9 / 16; object-fit: contain; background: var(--sunk); border-radius: 8px; display: block; }
@@ -509,6 +510,12 @@
   .shot-angle.angle-dutch, .shot-angle.angle-low, .shot-angle.angle-high, .shot-angle.angle-overhead { color: var(--accent-ink); }
   .shot-why { font-size: 0.8em; color: var(--muted); margin-left: 0.4em; }
   .shot-grammar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); margin: var(--s2) 0 0; }
+  .technique-tiles { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0; }
+  .technique-tile { flex: 1 1 180px; max-width: 350px; border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+  .technique-tile summary { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+  .technique-tile summary svg { flex: 0 0 40px; }
+  .technique-tile p { font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
+  .technique-library { margin: 20px 0; padding: 16px; border: 1px solid var(--line); }
   .shot-size { display: inline-flex; align-items: center; gap: 8px; cursor: default; border: 0; padding: 0; letter-spacing: 0; }
   .shot-size .size-ico { width: 32px; height: 32px; border-radius: 23%; }
   .shot-size .sz { display: flex; flex-direction: column; line-height: 1.15; }
@@ -594,7 +601,7 @@
     position: relative; width: var(--fw); aspect-ratio: 9 / 16; overflow: hidden;
     background: var(--ink); border-radius: calc(var(--fw) * .05);
     border: 1px solid var(--line);
-    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+    font-family: var(--review-font, sans-serif);
     color: #fff; text-align: center; line-height: 1.2;
   }
   .fr .fbg { position: absolute; inset: 0; background-size: cover; background-position: center; }
@@ -942,7 +949,7 @@
     .scene-title { font-size: 20px; line-height: 1.45; }
     .scene-head { gap: 10px 12px; }
     .scene-checks { gap: 6px; }
-    .conti { --fw: 216px; margin-top: 20px; }
+    .conti { --fw: 280px; margin-top: 20px; }
     .conti-row { align-items: start; gap: clamp(20px, 3vw, 36px); }
     .conti-row.has-frame-pair { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
     .frame-inputs { width: 100%; max-width: 480px; gap: 16px; }
@@ -993,6 +1000,10 @@
     .scenario-card.wide { grid-column: auto; }
   }
 
+  .shot-plan-details, .performance-details { font-size: var(--t-aux); margin-top: var(--s3); }
+  .shot-plan-details > summary, .performance-details > summary { cursor: pointer; min-height: 44px; align-content: center; color: var(--muted); }
+  .representative-frame-label { font-size: var(--t-aux); color: var(--muted); }
+  @media screen and (max-width: 600px) { .conti .panel { width: min(100%, 280px); margin-inline: auto; } }
   @media print {
     /* Paper is always white — someone reading in dark mode still prints on the light palette.
        Switching only the background to white and leaving dark text colors prints white on
@@ -1021,18 +1032,26 @@
     a { color: inherit; }
     .fr, .badge, .tl-seg { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
+.motion-plan{flex-basis:100%;padding:12px 0;font-size:13px;line-height:1.5}.motion-plan p{margin:4px 0}.motion-plan small{opacity:.7}
 </style>
 <link rel="stylesheet" href="./review.css">
 </head>
-<body class="subs">
+<body class="subs review-board">
 <main class="wrap"><div id="app"><noscript>This document renders by loading scenes.js — please turn JavaScript on.</noscript></div></main>
 
+<script src="./review-typography.js"></script>
 <script src="./review-files.js"></script>
 <script src="./scenes.js"></script>
+<script>window.SCENE_SB_DOC = window.SB_SCENES_DOC = window.SB_DOC;</script>
+<script src="./source-context.js"></script>
+<script src="./prop-continuity.js"></script>
 <script src="./render-routing.js"></script>
+<script src="./motion-graphics.js"></script>
 <script src="./production-mode.js"></script>
 <script src="./style-samples.js"></script>
 <script src="./structure-contract.js"></script>
+<script src="./film-techniques.js"></script>
+<script src="./shot-direction.js"></script>
 <script>
 /* ✎ SB_DOC BEGIN — fill in this block only (editorial metadata that is not in scenes.js).
    Scene titles, dialogue, bullets, shot and duration are never written here — scenes.js is the SoT. */
@@ -1042,6 +1061,8 @@ window.SB_DOC = {
   topic: "{{topic slug}}",
   displayTitle: "{{topic display name — e.g. Building a social page, part 1 · profile image}}",
   series: "{{series label, or an empty string — e.g. Building a social page (1/3)}}",
+  // Authored language (independent of the English/Korean UI). Optional shotLanguages: { "1": "ja" }.
+  contentLanguage: "ko",
   status: "draft",                       // draft | approved | produced | published — kept in sync with the storyboard.md frontmatter
   created: "{{YYYY-MM-DD}}",
   outro: { seconds: 9, note: "shared outro — assets/outro/default.mp4" },   // null if there is none
@@ -1101,6 +1122,13 @@ window.SB_DOC = {
     //             back: "../../../assets/characters/claude/back.png" },
     //   note: "no lettered wordmark · voice is profile §2 Leda", veo: "" }
   ],
+  speechPlanVersion: 1, // explicit line ids, speakers and delivery on new boards
+  performanceTimingVersion: 1, // new boards time independent actions before production
+  // Canonical asset sheets belong in scenes.js SB_DOC, not a second editable copy here.
+  // props: [{id, name, description, imageUrl, tracking}], propContinuity: {...}
+  // locations: [{id, name, description, layout, lighting, invariants, imageUrl, sheetPath, manifest}]
+  // Shots link planning locations with visual.locationId; visual.location binds a built set.
+  // assetSheetNotes: {characters: "Not applicable: ...", props: "...", locations: "..."}
   narratorCharacterId: "", // required — one id from characters above
 
   // Promise ledger — what the episode promises and the shot that keeps each promise
@@ -1153,17 +1181,18 @@ window.SB_DOC = {
   recheck: []
 };
 /* ✎ SB_DOC END */
+window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
 </script>
 <script>
 /* ⚙ RENDERER — the shared part of the template. Off-limits (change styles and check logic in the template). */
-(function () {
+window.STORYBOARD_READY = (async function () {
   "use strict";
   var app = document.getElementById("app");
   if (!window.SCENES || !window.THEME) {
     app.innerHTML = '<div class="error-box">Could not load scenes.js — open this file inside the storyboard/ directory, next to scenes.js.</div>';
     return;
   }
-  var THEME = window.THEME, SCENES = window.SCENES, DOC = window.SB_DOC || {};
+  var THEME = window.THEME, SCENES = window.SCENES, DOC = Object.assign({}, window.SB_DOC || {}, window.SB_SCENES_DOC || {});
   var MUSIC = window.MUSIC || null;   // named music cues — absent means one bed all the way through
 
   /* ══ Format mirror ══
@@ -1198,6 +1227,7 @@ window.SB_DOC = {
   var FMT_KEY = FMT_MIRROR[window.FORMAT] ? window.FORMAT : "shorts-9x16";
   var FMT = FMT_MIRROR[FMT_KEY];
   var WIDE = FMT_KEY === "youtube-long-16x9";
+  var STORY_V2 = window.STORY && window.STORY.version === "story-v2";
 
   /* ══ Language ══
      This document is what a person reads before approving an episode, and the plugin is
@@ -1272,7 +1302,7 @@ window.SB_DOC = {
                    overhead: "straight down from above — a map of the scene, no face",
                    dutch: "the horizon tilted — unease, something is off" },
       render: { still_camera: "still + camera move", character_html: "3D character HTML", object_html: "3D object HTML",
-                data_graph: "data graph HTML", editorial_html: "quote · verdict HTML", generated_video: "AI video", stock_video: "stock clip",
+                motion_html: "motion graphic HTML", data_graph: "data graph HTML", editorial_html: "quote · verdict HTML", generated_video: "AI video", stock_video: "stock clip",
                 recording: "recording", asset: "shared asset", slide: "HTML slide" },
       renderHint: { still_camera: "a photo — the only motion is the camera (push, pull, rack focus)",
                     character_html: "HTML animation — a 3D doll acts the task on the studio stage",
@@ -1288,14 +1318,14 @@ window.SB_DOC = {
                   ls: "far, wide · whole body with room — where this is, how many, how far apart (the establishing shot)",
                   ws: "same as the long shot",
                   fs: "full body · crown to toes — the whole body acting: dance, fight, walk",
-                  mfs: "knee shot, cowboy · cut at mid-shin — two people and the distance between them",
-                  ms: "cut at mid-thigh · upper body, hands explaining, the conversation default",
+                  mfs: "cowboy · cut at mid-thigh — two people and the distance between them",
+                  ms: "waist-up · upper body, hands explaining, the conversation default",
                   mcu: "bust shot · cut at mid-chest — talking to camera; hook, anchor, interview",
                   cu: "the face fills the frame, crown cropped — the one line; one per scene",
                   choker: "eyes and mouth only — the peak of tension; once or twice an episode",
                   ecu: "eyes only, fingertips only — the detail at the peak",
                   insert: "a thing, a hand, a screen, no face — one picture instead of three lines",
-                  two: "two people in one frame (cut at mid-shin)",
+                  two: "two people in one frame; specify their crop",
                   three: "three in one frame — shows the group, not the place",
                   ots: "over a shoulder — the near shoulder in front, the other face (mcu)",
                   pov: "point of view · what that person sees — write the distance in shot.why",
@@ -1313,7 +1343,7 @@ window.SB_DOC = {
       hookForm: { paradox: "paradox", gap: "leave a blank", payoff: "result first",
                   identify: "that is me", number: "number · frame", secret: "secret told" },
       cam: { movement: "movement", speed: "speed", framing: "framing", end: "end frame" },
-      panel: { face: "face", body: "body · no head", back: "from behind",
+      panel: { face: "face", body: "headless front mannequin", back: "headless rear mannequin",
                front: "FRONT · legacy", real: "LIVE ACTION" },
       deviceSteps: ["claim", "act", "result"],
 
@@ -1379,6 +1409,8 @@ window.SB_DOC = {
       arcDefault: "answer first (default)",
       draft: "draft",
       mainLen: function (v) { return "main body " + v + "s"; },
+      plannedLen: "Content-based estimated length", explicitLength: "Explicit length constraints",
+      minimum: "minimum ", maximum: "maximum ", contentTiming: "Time for speech, actions and reactions; estimates until media are measured",
       withOutro: function (v) { return "with the outro ≈" + v + "s"; },
 
       // ── production mode (window.PRODUCTION) and frame inputs ──
@@ -1389,6 +1421,7 @@ window.SB_DOC = {
       prodTerms: function (rate, cap, attempts) { return "Assumed KRW/USD: " + rate + ". Approved video budget: $" + cap + ". Total attempts per clip: " + attempts + "."; },
       prodRows: "Model, resolution and cost per shot", prodShot: "Shot ", withAudio: "with audio", silent: "silent",
       prodOutside: function (label) { return "Selected mode: " + label + ". It generates no video, so it is not one of the four options compared above."; },
+      refImage: "Still generation only", refVideo: "Video conditioning plan", refBoth: "Still + video conditioning plan",
       framePending: "Image pending", frameStart: "Start frame", frameEnd: "End frame", framePreviz: "Previz · Video 1 (camera and timing)", framePrevizFirst: "Previz frame 1 (the still's composition)",
       frameChange: "Subject change", frameEndState: "End state: ",
 
@@ -1407,7 +1440,7 @@ window.SB_DOC = {
 
       // ── section menu ──
       nav: { audit: "Checks", scenario: "Scenario", timeline: "Timeline", promises: "Promises", shots: "Shots",
-             cost: "Cost", cast: "Cast", contract: "Contract", prep: "Shooting prep",
+             cost: "Cost", cast: "Episode cast", contract: "Contract", prep: "Shooting prep",
              sources: "Sources", platforms: "Platforms", recheck: "Recheck" },
 
       // ── scenario handoff ──
@@ -1455,7 +1488,9 @@ window.SB_DOC = {
       vtTyping: "typing video · code render", vtArt: "illustration", vtStill: "still background", vtStock: "stock clip",
       revealNo: function (n) { return "reveal " + n; },
       screenText: "Screen text", noScreenText: "no screen text — the picture alone",
-      audioSec: "Sound", subtitleLabel: "Subtitle",
+      audioSec: "Dialogue / voice", subtitleLabel: "Subtitle",
+      speechDelivery: { on_screen: "On-screen dialogue", off_screen: "Off-screen dialogue", voiceover: "Voiceover", unspecified: "Delivery not specified" },
+      speechUnassigned: "Unassigned speaker", speechNarrator: "Narrator", speechSilent: "No dialogue",
       carryNote: function (states, lines) {
         return "The screen changes " + states + " times but there are " + lines +
                " sentences — one sentence will cover two subtitles, and which one is settled at production."; },
@@ -1497,8 +1532,8 @@ window.SB_DOC = {
       signatureNote: " — once only · no other shot's title says this line again (§7)",
 
       // ── cast ──
-      castHead: "Cast",
-      castAside: "the reference set — face first, then body (array order is weight)",
+      castHead: "Episode cast",
+      castAside: "shared identity references; scene images belong to shots",
       castShots: "Shots", castScopes: "Scope",
 
       // ── contract ──
@@ -1614,7 +1649,7 @@ window.SB_DOC = {
                    overhead: "바로 위에서 수직으로 — 장면의 지도, 얼굴은 없다",
                    dutch: "수평선을 기울인다 — 불안, 뭔가 어긋났다" },
       render: { still_camera: "사진 카메라 무빙", character_html: "3D 캐릭터 HTML", object_html: "3D 사물 HTML",
-                data_graph: "그래프 HTML", editorial_html: "인용·결론 HTML", generated_video: "AI 영상", stock_video: "외부 영상",
+                motion_html: "모션그래픽 HTML", data_graph: "그래프 HTML", editorial_html: "인용·결론 HTML", generated_video: "AI 영상", stock_video: "외부 영상",
                 recording: "녹화분", asset: "공용 소재", slide: "HTML 슬라이드" },
       renderHint: { still_camera: "사진 한 장 — 움직이는 건 카메라뿐 (푸시·풀·초점 이동)",
                     character_html: "HTML 애니메이션 — 3D 인형이 스튜디오 판 위에서 동작을 연기한다",
@@ -1630,14 +1665,14 @@ window.SB_DOC = {
                   ls: "와이드, 먼 · 전신에 여유 — 어디인지·몇 명인지·얼마나 떨어졌는지 (설정샷)",
                   ws: "롱숏과 같다",
                   fs: "전신 · 머리끝부터 발끝까지 — 몸 전체 동작, 춤·격투·걸음",
-                  mfs: "니숏, 카우보이숏 · 정강이 중간에서 자른다 — 두 사람과 그 사이 거리",
-                  ms: "허벅지 중간에서 자른다 — 상반신과 손짓, 대화 기본값",
+                  mfs: "니숏, 카우보이숏 · 허벅지 중간에서 자른다 — 두 사람과 그 사이 거리",
+                  ms: "허리에서 자른다 — 상반신과 손짓, 대화 기본값",
                   mcu: "바스트숏 · 가슴 중간에서 자른다 — 카메라 보고 말하기, 훅·앵커·인터뷰",
                   cu: "얼굴이 화면을 채운다, 정수리는 잘림 — 그 한 마디, 씬당 하나",
                   choker: "눈과 입만 — 긴장의 정점, 회차에 한두 번",
                   ecu: "눈만·손끝만 — 정점의 디테일",
                   insert: "물건·손·화면만, 얼굴 없음 — 그림 하나가 대사 세 줄을 대신한다",
-                  two: "둘을 한 프레임에 (정강이 중간에서 자른다)",
+                  two: "둘을 한 프레임에 (절단 위치는 별도로 지정)",
                   three: "셋을 한 프레임에 — 무리는 보이지만 장소는 못 깐다",
                   ots: "어깨 너머 — 앞사람 어깨가 앞에, 상대 얼굴은 미디엄 클로즈업",
                   pov: "시점숏 · 그 사람이 본 것 — 거리는 shot.why 에 적는다",
@@ -1653,7 +1688,7 @@ window.SB_DOC = {
       hookForm: { paradox: "역설", gap: "빈칸 남기기", payoff: "결과 먼저", identify: "내 얘기네",
                   number: "숫자·틀", secret: "비밀 공개" },
       cam: { movement: "움직임", speed: "속도", framing: "프레임", end: "끝 프레임" },
-      panel: { face: "얼굴", body: "몸 · 머리 없음", back: "뒷모습",
+      panel: { face: "얼굴", body: "정면 전신 · 머리 포함", back: "뒷모습",
                front: "FRONT · legacy", real: "LIVE ACTION" },
       deviceSteps: ["주장", "행동", "결과"],
 
@@ -1717,6 +1752,8 @@ window.SB_DOC = {
       arcDefault: "결론 먼저 (기본)",
       draft: "초안",
       mainLen: function (v) { return "본편 " + v + "초"; },
+      plannedLen: "내용 기준 예상 길이", explicitLength: "지정한 길이 조건",
+      minimum: "최소 ", maximum: "최대 ", contentTiming: "말과 행동, 반응에 필요한 시간 · 실제 음성과 영상 측정 전에는 예상값",
       withOutro: function (v) { return "아웃트로 포함 ≈" + v + "초"; },
 
       // ── production mode (window.PRODUCTION) and frame inputs ──
@@ -1727,6 +1764,7 @@ window.SB_DOC = {
       prodTerms: function (rate, cap, attempts) { return "원화 환산 가정: 1달러=" + rate + "원. 승인 예산: $" + cap + ". 장면당 총 시도 한도: " + attempts + "회."; },
       prodRows: "장면별 모델·해상도·생성비", prodShot: "장면 ", withAudio: "음성 포함", silent: "무음",
       prodOutside: function (label) { return "선택한 방식: " + label + ". 생성 영상이 없어 위 네 가지 비교에는 들어가지 않습니다."; },
+      refImage: "이미지 제작에 사용", refVideo: "영상 참조로 전달 예정", refBoth: "이미지·영상에 사용 예정",
       framePending: "이미지 생성 예정", frameStart: "시작 프레임", frameEnd: "끝 프레임", framePreviz: "프리비즈 · Video 1 (카메라·타이밍)", framePrevizFirst: "프리비즈 1번 프레임 (스틸의 구도)",
       frameChange: "피사체 변화", frameEndState: "끝 상태: ",
 
@@ -1745,7 +1783,7 @@ window.SB_DOC = {
 
       // ── section menu ──
       nav: { audit: "점검", scenario: "시나리오", timeline: "시간표", promises: "약속", shots: "샷 구성",
-             cost: "비용", cast: "등장인물", contract: "계약", prep: "촬영 준비",
+             cost: "비용", cast: "이번 편 출연진", contract: "계약", prep: "촬영 준비",
              sources: "출처", platforms: "플랫폼", recheck: "재확인" },
 
       // ── 시나리오 인계 ──
@@ -1789,11 +1827,13 @@ window.SB_DOC = {
       brollAudio: "소리", brollOut: "산출물", brollNarration: "나레이션",
       vtRecording: "녹화 화면", vtOutro: "공용 아웃트로 mp4",
       vtSpeechClip: function (eng) { return "말하는 클립 · " + eng; },
-      vtImgToVideo: function (eng) { return "그림→영상 · " + eng; },
+      vtImgToVideo: function (eng) { return eng === "unselected" ? "영상 모델 미선택" : "그림→영상 · " + eng; },
       vtTyping: "타이핑 영상 · 코드 렌더", vtArt: "삽화", vtStill: "정지 배경", vtStock: "외부 영상",
       revealNo: function (n) { return "공개 " + n; },
       screenText: "화면 글자", noScreenText: "화면 글자 없음 — 그림만",
-      audioSec: "소리", subtitleLabel: "자막",
+      audioSec: "대사·음성", subtitleLabel: "자막",
+      speechDelivery: { on_screen: "화면 속 대사", off_screen: "화면 밖 대사", voiceover: "보이스오버", unspecified: "발화 방식 미지정" },
+      speechUnassigned: "화자 미지정", speechNarrator: "나레이터", speechSilent: "대사 없음",
       carryNote: function (states, lines) {
         return "화면은 " + states + "번 바뀌는데 문장은 " + lines +
                "개예요 — 한 문장이 자막 두 개를 물게 되고, 어느 쪽인지는 제작 때 정해집니다."; },
@@ -1835,8 +1875,8 @@ window.SB_DOC = {
       signatureNote: " — 한 번만 · 다른 샷의 제목이 이 말을 바꿔 말하지 않는다 (§7)",
 
       // ── cast ──
-      castHead: "등장인물",
-      castAside: "참고 그림 묶음 — 얼굴 먼저, 그다음 몸 (배열 순서가 비중)",
+      castHead: "이번 편 출연진",
+      castAside: "공용 외형 참조 · 장면 이미지는 각 샷에서 확인",
       castShots: "샷", castScopes: "범위",
 
       // ── contract ──
@@ -1918,6 +1958,7 @@ window.SB_DOC = {
     T[k] = Object.assign({}, STRINGS.en[k], (STRINGS[LANG] || {})[k]);
   });
   document.documentElement.lang = LANG;
+  var fontFailures = await window.ReviewTypography.prepare(DOC, SCENES);
 
   /* ── Author-language heuristics ──
      These read scenes.js, which is written in the channel's language — not the reviewer's — so
@@ -1957,6 +1998,50 @@ window.SB_DOC = {
      is assembled out of them here and stored (§clip prompt), and produce sends it verbatim,
      so a slot left empty is a defect here, not there. */
   var CAM_SLOTS = ["movement", "speed", "framing", "end"];
+  // Production cuts are the review unit; a representative frame cannot certify them.
+  function productionCutsHtml(s) {
+    var cuts = s.productionPlan && s.productionPlan.cuts;
+    if (!Array.isArray(cuts) || !cuts.length) return '';
+    var ko = LANG === 'ko';
+    var heading = ko ? '제작 컷 전체' : 'All production cuts';
+    var rows = cuts.map(function (entry, index) {
+      var cut = entry || {};
+      var src = typeof cut.path === 'string' ? cut.path : '';
+      var local = src && !/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(src);
+      var duration = Number.isFinite(cut.seconds) && cut.seconds > 0 ? cut.seconds + 's' : (ko ? '길이 미확인' : 'Duration unknown');
+      var label = (ko ? '컷 ' : 'Cut ') + (index + 1) + ' · ' + (cut.kind || '?') + ' · ' + duration;
+      var media = '';
+      var fail = ko ? '파일을 표시할 수 없습니다. 경로를 확인하세요.' : 'Cannot display this file. Check its path.';
+      if (local && /\.(?:mp4|webm|mov|m4v)$/i.test(src)) {
+        var from = cut.start === undefined ? 0 : cut.start;
+        var validRange = Number.isFinite(from) && from >= 0 && Number.isFinite(cut.seconds) && cut.seconds > 0;
+        var rangeError = ko ? '재생 구간을 확인할 수 없습니다. 원본 길이와 시작·종료 시간을 확인하세요.' : 'Cannot verify this range. Check source duration and start/end times.';
+        var end = validRange ? from + cut.seconds : 0;
+        var handlers = validRange
+          ? ' onloadedmetadata="if(this.duration &lt; Number(this.dataset.end)){this.nextElementSibling.hidden=false;}this.currentTime=Number(this.dataset.start)"' +
+            ' onplay="if(this.currentTime &lt; Number(this.dataset.start)||this.currentTime >= Number(this.dataset.end)){this.currentTime=Number(this.dataset.start)}"' +
+            ' ontimeupdate="if(this.currentTime &lt; Number(this.dataset.start)){this.currentTime=Number(this.dataset.start)}if(this.currentTime >= Number(this.dataset.end)){this.pause();if(this.currentTime > Number(this.dataset.end)){this.currentTime=Number(this.dataset.end)}}"'
+          : '';
+        media = '<video src="' + esc(src) + '" controls playsinline preload="metadata" data-start="' + (validRange ? from : '') +
+          '" data-end="' + (validRange ? end : '') + '" aria-label="' + esc(label) + '"' + handlers +
+          ' onerror="this.nextElementSibling.textContent=this.dataset.error;this.nextElementSibling.hidden=false" data-error="' + esc(fail) + '"></video>' +
+          '<p class="production-cut-error"' + (validRange ? ' hidden' : '') + '>' + esc(rangeError) + '</p>' +
+          '<p>' + esc(ko ? '원본 구간 미리보기 · 최종 편집 효과는 포함하지 않습니다.' : 'Source range preview · final edit effects are not included.') + '</p>';
+      } else if (local && /\.(?:png|jpe?g|webp|gif|avif|svg)$/i.test(src)) {
+        media = '<a href="' + esc(src) + '" target="_blank" rel="noopener"><img src="' + esc(src) + '" alt="' + esc(label) + '" loading="lazy" onerror="this.parentNode.nextElementSibling.hidden=false"></a>' +
+          '<p class="production-cut-error" hidden>' + esc(fail) + '</p>';
+      } else {
+        media = '<p>' + esc(ko ? '미리보기 없음 · 실제 파일 검토 필요' : 'No preview · inspect the actual file') + '</p>';
+      }
+      var start = Number.isFinite(cut.start) ? ' · ' + (ko ? '시작 ' : 'Start ') + cut.start + 's' : '';
+      return '<figure class="production-cut" data-cut-index="' + index + '"><figcaption>' + esc(label + start) + '</figcaption>' + media +
+        '<p class="production-cut-path">' + esc(src || (ko ? '경로 없음' : 'Missing path')) + '</p></figure>';
+    }).join('');
+    return '<section class="production-cut-review" aria-label="' + esc(heading) + '"><h4>' + esc(heading) + ' · ' + cuts.length +
+      '</h4><p>' + esc(ko ? '등록된 컷을 순서대로 표시합니다. 표시 여부와 검토 통과 여부는 별개입니다. 영상은 직접 재생해서 확인하세요.' :
+      'Every declared cut appears in order. Display does not mean review approval. Play each video to inspect it.') + '</p><div class="production-cut-grid">' + rows + '</div></section>';
+  }
+
   function camOf(s) { return (s.visual && s.visual.camera) || null; }
   function camHtml(cam) {
     if (!cam) return "";
@@ -2006,10 +2091,34 @@ window.SB_DOC = {
   function charsOf(s) {
     return charEntries(s).map(function (e) { return e.id; });
   }
-  var CAST = (DOC.characters || []).filter(function (c) { return c && c.id; });
+  var castEntries = DOC.characters || [];
+  var CAST = (Array.isArray(castEntries) ? castEntries : Object.keys(castEntries).map(function (id) {
+    return Object.assign({}, castEntries[id], { id: id });
+  })).filter(function (c) { return c && c.id; });
   function castName(id) {
     for (var i = 0; i < CAST.length; i++) if (CAST[i].id === id) return CAST[i].name || id;
     return id;
+  }
+  function speechHtml(n, index) {
+    var speakerId = n.speaker || (DOC.speechPlanVersion === 1 ? undefined : DOC.narratorCharacterId);
+    var character = CAST.find(function (c) { return c.id === speakerId; }) || {};
+    var name = castName(speakerId) || T.speechUnassigned;
+    var narrator = !!speakerId && speakerId === DOC.narratorCharacterId;
+    var delivery = n.delivery || (narrator ? 'voiceover' : 'unspecified');
+    var productionCast = (window.PRODUCTION && window.PRODUCTION.cast || {})[speakerId] || {};
+    var portrait = productionCast.image || (character.panels || {}).face ||
+      (window.REVIEW_CHARACTER_PORTRAITS || {})[speakerId];
+    var avatar = '<span class="speech-avatar" aria-hidden="true"><span>' + esc(Array.from(name)[0]) + '</span>' +
+      (portrait ? '<img src="' + esc(portrait) + '" alt="" loading="lazy" onerror="this.hidden=true">' : '') + '</span>';
+    return '<div class="speech-turn" data-speaker="' + esc(speakerId || '') + '" data-delivery="' + esc(delivery) + '"' +
+      (n.id ? ' data-line-id="' + esc(n.id) + '"' : '') + '>' + avatar + '<div class="speech-content">' +
+      '<div class="speech-meta"><b>' + esc(name) + '</b>' + (narrator ? '<span>' + esc(T.speechNarrator) + '</span>' : '') +
+      '<span class="speech-delivery">' + esc(T.speechDelivery[delivery] || delivery) + '</span></div>' +
+      '<div class="speech-bubble"><p class="speech-text">' + esc(n.tts || n.sub || '') + '</p>' +
+      (n.sub && strip(n.tts) !== strip(n.sub) ? '<div class="sub-diff"><b>' + esc(T.subtitleLabel) + '</b> ' + '<span class="speech-subtitle">' + esc(n.sub) + '</span></div>' : '') + '</div>' +
+      (n.deliveryReason ? '<p class="speech-reason">' + esc(n.deliveryReason) + '</p>' : '') +
+      '<div class="speech-reference">' + (index + 1) + (n.id ? ' · ' + esc(n.id) : '') + ' · ' + esc(T.chars(netLen(n.tts || n.sub))) + '</div>' +
+      '</div></div>';
   }
   /** One line of screen text in the scene-frame row's right column — arguments come in pre-escaped */
   function capline(t, d, f2, num) {
@@ -2053,7 +2162,7 @@ window.SB_DOC = {
   function overlayOf(s) { return (s.visual && s.visual.overlay) || inferredOverlay(s); }
   /* Shot-size pictograms (directing-grammar §2 · §2.1). One 32×32 frame and a line figure drawn
      100 units tall — head 3–27, torso 34–72, legs 72–98 — scaled so the frame's bottom edge lands
-     where that size cuts a person (mid-shin · mid-thigh · mid-chest, never a joint). Anything
+     where that size cuts a person (mid-thigh · waist · mid-chest, never a joint). Anything
      outside the viewBox is simply not drawn, so the frame does the cropping. The stroke stays 2px
      at every scale (vector-effect), so a far figure and a near one share one line weight. */
   var SIZE_ICON = (function () {
@@ -2108,6 +2217,7 @@ window.SB_DOC = {
     };
     return { sizes: D, angles: A, person: person, dot: dot };
   })();
+  Object.assign(SIZE_ICON.sizes, window.FILM_TECHNIQUES.SIZE_GLYPHS);
   var ANGLE_ICON = SIZE_ICON.angles;
   var ICON_PERSON = SIZE_ICON.person, ICON_DOT = SIZE_ICON.dot;
   SIZE_ICON = SIZE_ICON.sizes;
@@ -2118,7 +2228,7 @@ window.SB_DOC = {
     var d = SIZE_ICON[size];
     return d ? '<svg class="size-ico f-' + SIZE_FAMILY[size] + '" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>" : "";
   }
-  function sizeTitle(size) { return (T.size[size] || size) + " — " + (T.sizeHint[size] || ""); }
+  function sizeTitle(size) { var e = window.FILM_TECHNIQUES.byId["framing." + size]; return e ? e.label[LANG] + " — " + e.instruction : (T.size[size] || size) + " — " + (T.sizeHint[size] || ""); }
   function angleIcon(a) {
     var d = ANGLE_ICON[a];
     return d ? '<svg class="size-ico a-cam" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>" : "";
@@ -2135,6 +2245,7 @@ window.SB_DOC = {
                   '<path d="M8.5 27.5h15M8.5 27.5l2.3-2.3M8.5 27.5l2.3 2.3M23.5 27.5l-2.3-2.3M23.5 27.5l-2.3 2.3"/>',
     character_html: ICON_PERSON(16, 2, 52, { arms: "up" }),
     object_html: '<path d="M16 5l10 5.5v11L16 27 6 21.5v-11z"/><path d="M6 10.5l10 5.5 10-5.5M16 16v11"/>',
+    motion_html: '<path d="M6 16h20M18 8l8 8-8 8"/>',
     data_graph: '<rect x="5" y="17" width="5" height="9" rx="1.5"/><rect x="13.5" y="9" width="5" height="17" rx="1.5"/>' +
                 '<rect x="22" y="13" width="5" height="13" rx="1.5"/>',
     editorial_html: '<path d="M6 7v18"/><path d="M11 10h15M11 16h15M11 22h9"/>',
@@ -2210,7 +2321,7 @@ window.SB_DOC = {
       '<span class="sz"><b>' + esc(T.styleName[st.preset] || (st.preset + " ?")) + "</b></span></span>";
   }
   var RENDER_FAMILY = { generated_video: "video", stock_video: "video", recording: "video", still_camera: "photo",
-                        character_html: "html", object_html: "html", data_graph: "html", editorial_html: "html", slide: "html",
+                        character_html: "html", object_html: "html", motion_html: "html", data_graph: "html", editorial_html: "html", slide: "html",
                         asset: "asset" };
   function renderIcon(mode) {
     var d = RENDER_ICON[mode];
@@ -2226,7 +2337,7 @@ window.SB_DOC = {
   function sizeKey() {
     var order = ["els", "ls", "fs", "mfs", "ms", "mcu", "cu", "choker", "ecu", "insert",
                  "two", "three", "ots", "pov", "back", "cutaway", "reaction"];
-    var routes = ["generated_video", "stock_video", "still_camera", "character_html", "object_html", "data_graph", "editorial_html", "recording", "asset"];
+    var routes = ["generated_video", "stock_video", "still_camera", "character_html", "object_html", "data_graph", "motion_html", "editorial_html", "recording", "asset"];
     return '<div class="size-key"><span class="kt">' + esc(T.sizeKey) + "</span>" +
       order.map(function (k) {
         return '<span class="k" data-tip="' + esc(sizeTitle(k)) + '">' + sizeIcon(k) + '<span>' + esc(T.size[k] || k) + "</span></span>";
@@ -2275,6 +2386,7 @@ window.SB_DOC = {
   function personOnScreen(s, spaceText) {
     if (charsOf(s).length || s.type === "cover") return true;
     var t = (spaceText || "") + " " + ((s.visual && s.visual.bgPrompt) || "");
+    if (window.SFSourceContext) t = window.SFSourceContext.withoutContext(t);
     // "face" is not in the list — "face not visible" / "face turned away" are the exclusion wordings.
     return /\b(?:person|people|woman|women|man|men|girl|boy|child|children|kid|adult|worker|student|customer|speaker|figure|hands?)\b/i.test(t);
   }
@@ -2285,6 +2397,7 @@ window.SB_DOC = {
   /* Same three patterns as assemble-bg-prompt.js BANNED — its --selftest fails if these drift. */
   function bannedSpaceHits(text) {
     if (!text) return [];
+    if (window.SFSourceContext) text = window.SFSourceContext.withoutContext(text);
     var hits = [];
     if (/\b(?:left|right|front|back|rear) view of\b/i.test(text)) hits.push("camera-inference (\"left view of\")");
     if (/\b(?:from|to|on|at) (?:the |a |an )?(?:(?!(?:camera|viewer|frame|picture)(?:'s|’s))[\w-]+(?:'s|’s) (?:own )?(?:left|right|front|back|rear)|(?:his|her|its|their) (?:own )?(?:left|right))\b/i.test(text)) hits.push("allocentric (\"from X's right\", \"to her left\")");
@@ -2356,7 +2469,10 @@ window.SB_DOC = {
   var isLine = SCENES.some(function (s) {
     return (s.narration || []).some(function (n) { return n.img; }); });
   var main = SCENES.filter(function (s) { return s.type !== "outro"; });
-  var total = main.reduce(function (a, s) { return a + (s.duration || 0); }, 0);
+  var total = main.reduce(function (a, s) { return a + (window.SHOT_DIRECTION.secondsOf(s) || 0); }, 0);
+  var totalUnknown = main.filter(function (s) { return window.SHOT_DIRECTION.secondsOf(s) === null; }).length;
+  var partialLength = (LANG === "ko" ? "확정된 계획 " : "Known planned ") + durTxt(total) +
+    (LANG === "ko" ? " · 길이 미정 " : " · unknown ") + totalUnknown;
   // The channel profile is copied into scenes.js so this file:// review page can enforce the
   // same contract as check-scenes.js. Declared here because the length band reads it long
   // before the generated-video cap does.
@@ -2364,10 +2480,11 @@ window.SB_DOC = {
   // The outro is a shared mp4, so its length lives outside scenes.js — SB_DOC.outro is the
   // source of truth, and even without it an outro scene still shows the splice on the timeline
   var hasOutro = SCENES.some(function (s) { return s.type === "outro"; });
-  var outroSec = DOC.outro ? DOC.outro.seconds || 0 : 0;
+  var outroSec = window.SHOT_DIRECTION.secondsOf({ type: "outro" }, DOC) || 0;
   var outroUnknown = hasOutro && !outroSec;
   var cover = SCENES[0] && SCENES[0].type === "cover" ? SCENES[0] : null;
-  var order = playbackOrder(main);
+  var directionOrder = window.SHOT_DIRECTION.playbackEntries(SCENES);
+  var order = directionOrder.filter(function (o) { return o.s.type !== 'outro'; });
   var SCENARIO = DOC.scenario && typeof DOC.scenario === "object" ? DOC.scenario : null;
 
   /* ── Check-strip collector ──
@@ -2435,7 +2552,7 @@ window.SB_DOC = {
       else if (s.type === "quote" && v.clip && typeof v.clip === "object") slot = ["quote", route(v.clip.engine || v.engine, "veo"), Number(s.duration) || 8];
       if (slot) {
         var config = Object.assign({}, v, slot[0] === "motion" ? v.video : slot[0] === "quote" ? v.clip : {});
-        var fields = ["model", "modelPurpose", "modelReason", "resolution", "generateAudio", "realFaceInput", "referenceImagePaths", "referenceAudioPaths", "previz"];
+        var fields = ["model", "modelPurpose", "modelReason", "resolution", "generateAudio", "realFaceInput", "referenceImagePaths", "referenceAudioPaths", "previz", "frames", "references"];
         var settings = fields.map(function (key) { return config[key] === undefined ? null : config[key]; });
         parts.push((i + 1) + ":" + slot.join("/") + ":" + encodeURIComponent(JSON.stringify(settings)));
       }
@@ -2524,7 +2641,7 @@ window.SB_DOC = {
     var cls = "fr t-" + esc(s.type) + (recOf(s) ? " rec" : "") + (light ? " light" : "") +
               (WIDE ? " wide" : "") +
               (hasClip ? " fclip" : "") + (tier ? " tight" + tier : "");
-    var h = '<div class="' + cls + '">';
+    var h = '<div lang="' + esc(window.ReviewTypography.contentLanguage(DOC, s, SCENES.indexOf(s))) + '" class="' + cls + '">';
     if (bg) h += '<div class="fbg" style="background-image:url(\'' + esc(bg) + '\')"></div>';
     // Owner directive 2026-08-25: no top/bottom gradient scrim on any cut.
     // overlay none is the picture alone — even an empty text slot lays a film over the preview.
@@ -2656,10 +2773,10 @@ window.SB_DOC = {
       // The long-form shooting lane has no scene cap (recSceneMax: null) — one continuous
       // recording arriving as one scene is the normal path, and a cap would force the user to
       // chop up a natural take.
-      if (FMT.recSceneMax !== null && s.duration > FMT.recSceneMax) {
+      if (!STORY_V2 && FMT.recSceneMax !== null && s.duration > FMT.recSceneMax) {
         chips.push(badge("bad", T.overSec(FMT.recSceneMax)));
         flag("bad", T.shotCap(no), "length " + s.duration + "s — the shooting-mode scene cap is " + FMT.recSceneMax + "s");
-      } else if (s.duration && s.duration < 8) {
+      } else if (!STORY_V2 && s.duration && s.duration < 8) {
         chips.push(badge("warn", T.underEightSec));
         flag("warn", T.shotCap(no), "length " + s.duration + "s — shooting-mode scenes target 8s or more");
       }
@@ -2749,6 +2866,8 @@ window.SB_DOC = {
         // behavior as absolute rule 9). A still-background cover with empty narration drops to
         // the violation branch below.
         chips.push(badge("", T.clipAudio));
+      } else if (window.STORY && window.STORY.version === "story-v2" && (s.performance || []).some(function(e) { return e.kind === "action"; })) {
+        chips.push(badge("", "Visual action"));
       } else {
         chips.push(badge("bad", T.noNarration));
         flag("bad", T.shotCap(no), "narration is empty — it holds " + (s.duration || "?") + " seconds with no sound");
@@ -2759,7 +2878,7 @@ window.SB_DOC = {
         chips.push(badge("warn", T.sentence(sentBand)));
         flag("warn", T.shotCap(no), T.sentBandFlag(maxSent > FMT.sentMax, maxSent, FMT.sentMin, sentBand));
       }
-      if (s.duration > FMT.sceneMax) {
+      if (!STORY_V2 && s.duration > FMT.sceneMax) {
         chips.push(badge("warn", T.overSec(FMT.sceneMax)));
         flag("warn", T.shotCap(no), "length " + s.duration + "s — the generated-mode scene cap is " + FMT.sceneMax + "s");
       }
@@ -2865,29 +2984,47 @@ window.SB_DOC = {
   h += '<div class="doc-kicker">' + esc(DOC.channelName || DOC.channel || THEME.brand) +
        (DOC.series ? " · " + esc(DOC.series) : "") + "</div>";
   h += '<h1 class="doc-title">' + esc(DOC.displayTitle || DOC.topic || "") + "</h1>";
+  if (THEME.motionGraphicTheme) {
+    var commonMotion = THEME.motionGraphicTheme;
+    var commonMotionInfo = window.MOTION_GRAPHICS && MOTION_GRAPHICS.THEMES[commonMotion.id];
+    h += '<p class="review-video-type">' + esc(LANG === 'ko' ? '공통 모션 테마: ' : 'Common motion theme: ') +
+      esc(commonMotionInfo ? commonMotionInfo.label : commonMotion.id) +
+      (commonMotion.reason ? ' · ' + esc(commonMotion.reason) : '') + '</p>';
+  }
+  var videoType = window.PRODUCTION && window.PRODUCTION.videoType;
+  if (videoType && videoType.id) {
+    var typeNames = (window.REVIEW_VIDEO_TYPES || {})[videoType.id] || {};
+    h += '<p class="review-video-type">' + esc(LANG === 'ko' ? '영상 유형: ' : 'Video type: ') +
+      esc(typeNames[LANG] || typeNames.en || videoType.id) +
+      (videoType.detail ? ' · ' + esc(videoType.detail) : '') + '</p>';
+  }
 
-  /* The channel may narrow the short-form band from either end (profile.md length_min_seconds /
-     length_max_seconds, copied into window.MOTION_POLICY). Long-form keeps the preset's own band,
-     the way check-scenes.js gates the same pair, so the page and the CLI give one verdict. The
-     format's hard cap is not a channel field — 180s is the platform limit and FMT keeps it. */
+  /* New stories derive length from performance. Only supplied constraints apply;
+     preset runtime and shot-count bands remain visible on legacy boards. */
   var lenOverride = function (v) {
-    return !WIDE && v !== null && v !== undefined && Number.isFinite(Number(v)) ? Number(v) : null; };
-  var lenMin = lenOverride(MP.lengthMin) !== null ? lenOverride(MP.lengthMin) : FMT.totalMin;
-  var lenMax = lenOverride(MP.lengthMax) !== null ? lenOverride(MP.lengthMax) : FMT.totalMax;
-  var lenChannel = lenMin !== FMT.totalMin || lenMax !== FMT.totalMax;
-  var lenCls = total >= lenMin && total <= lenMax ? "ok"
+    return v !== null && v !== undefined && Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : null; };
+  var rawMin = lenOverride(MP.length_min_seconds !== undefined ? MP.length_min_seconds : MP.lengthMin);
+  var rawMax = lenOverride(MP.length_max_seconds !== undefined ? MP.length_max_seconds : MP.lengthMax);
+  var lenMin = STORY_V2 ? rawMin : !WIDE && rawMin !== null ? rawMin : FMT.totalMin;
+  var lenMax = STORY_V2 ? rawMax : !WIDE && rawMax !== null ? rawMax : FMT.totalMax;
+  var lenChannel = STORY_V2 ? rawMin !== null || rawMax !== null : lenMin !== FMT.totalMin || lenMax !== FMT.totalMax;
+  var lenCls = STORY_V2 ? "" : total >= lenMin && total <= lenMax ? "ok"
              : total <= FMT.totalHard ? "warn" : "bad";
-  var lenBand = durTxt(lenMin) + "~" + durTxt(lenMax);
-  if (lenCls === "bad")
+  var lenBand = [lenMin !== null ? T.minimum + durTxt(lenMin) : "",
+                 lenMax !== null ? T.maximum + durTxt(lenMax) : ""].filter(Boolean).join(" · ");
+  if (STORY_V2) {
+    if ((!totalUnknown && lenMin !== null && total < lenMin) || (lenMax !== null && total > lenMax)) {
+      lenCls = "warn";
+      flag("warn", T.where.length, "Planned duration " + durTxt(total) + " — outside explicit length constraints: " + lenBand);
+    }
+  } else if (lenCls === "bad")
     flag("bad", T.where.length, "main body " + durTxt(total) + " — past the cap of " + durTxt(FMT.totalHard));
-  else if (lenCls === "warn")
+  else if (!totalUnknown && lenCls === "warn")
     flag("warn", T.where.length, "main body " + durTxt(total) + " — outside the " +
          (lenChannel ? "channel band " : "default ") + lenBand +
          " (going over needs a design reason; cap " + durTxt(FMT.totalHard) + ")");
 
-  // Shot count has a format band too — a long-form built on short-form shot counts stretches
-  // single scenes out to minutes.
-  if (main.length < FMT.sceneCountMin || main.length > FMT.sceneCountMax)
+  if (!STORY_V2 && (main.length < FMT.sceneCountMin || main.length > FMT.sceneCountMax))
     flag("warn", T.where.shotCount, "main body " + main.length + " shots — the " + (T.fmt[FMT_KEY] || FMT.label) + " band is " +
          FMT.sceneCountMin + "~" + FMT.sceneCountMax + " shots");
 
@@ -2913,7 +3050,7 @@ window.SB_DOC = {
     // 2026-09-05 every timeline · statistic · principle beat is an editorial slide outside any cap.
   }
 
-  if (window.RENDER_ROUTING) window.RENDER_ROUTING.checkEpisode(window).forEach(function (message) { flag("bad", "Visual direction", message); });
+  if (window.RENDER_ROUTING) window.RENDER_ROUTING.checkEpisode(window, {advice: []}).forEach(function (message) { flag("bad", "Visual direction", message); });
 
   SCENES.forEach(function (s, i) {
     var v = (s && s.visual) || {}, sl = v.slide;
@@ -2933,8 +3070,7 @@ window.SB_DOC = {
     // of truth, and format-lint.js's crossCheckShareContract compares this copy against it, so a
     // sixth word goes into the checker first, then here, then the linter runs.
     var shareType = s && s.shot && s.shot.shareType;
-    if (shareType && ["fact", "verdict", "line", "checklist", "none"].indexOf(shareType) < 0)
-      flag("bad", T.shotCap(i + 1), "shot.shareType \"" + shareType + "\" is outside fact · verdict · line · checklist · none");
+
     if (s.type !== "broll" && s.type !== "outro") {
       if (infoTypes.indexOf(infoType) < 0)
         flag("bad", T.shotCap(i + 1), "shot.infoType must be other, timeline, statistic, or principle");
@@ -2988,13 +3124,15 @@ window.SB_DOC = {
     ? Number(MP.generatedVideoMax) : FMT.videoMax;
   // The sequence → scene → shot rules, the same ones storyboard_apply and check-scenes.js run.
   if (window.STRUCTURE !== undefined && window.STRUCTURE_CONTRACT)
-    window.STRUCTURE_CONTRACT.check(window).forEach(function (f) { flag(f.level === "bad" ? "bad" : "warn", f.where, f.what); });
+    window.STRUCTURE_CONTRACT.guidedCheck(window).forEach(function (f) { flag(f.level === "bad" ? "bad" : "warn", f.where, f.what); });
   else if (window.STRUCTURE !== undefined)
     flag("bad", "structure", "Missing structure-contract.js — copy it beside scenes.js; without it the sequence → scene → shot rules are not checked");
+  if (window.PRODUCTION_MODE && window.PRODUCTION_MODE.cameraDirectionWarnings)
+    window.PRODUCTION_MODE.cameraDirectionWarnings(SCENES).forEach(function (message) { flag("warn", T.where.production, message); });
   if (window.PRODUCTION) {
     if (!window.PRODUCTION_MODE) flag("bad", T.where.production, "Missing production-mode.js");
     else {
-      window.PRODUCTION_MODE.check(window).forEach(function (message) { flag("bad", T.where.production, message); });
+      window.PRODUCTION_MODE.check(window, {advice: []}).forEach(function (message) { flag("bad", T.where.production, message); });
       policyVideoMax = window.PRODUCTION_MODE.policy({ generatedVideoMax: policyVideoMax }, window.PRODUCTION, SCENES).generatedVideoMax;
     }
   }
@@ -3147,7 +3285,7 @@ window.SB_DOC = {
       (byScene[g.scene] || (byScene[g.scene] = [])).push({ s: s, i: i, g: g });
     });
     var CLOSE_OPEN = { mcu: 1, cu: 1, choker: 1, ecu: 1, insert: 1 }, PAYS = { els: 1, ls: 1, ws: 1, mfs: 1, two: 1 };
-    var EXPLAIN_MODES = { data_graph: 1, editorial_html: 1, object_html: 1, character_html: 1 };
+    var EXPLAIN_MODES = { motion_html: 1, data_graph: 1, editorial_html: 1, object_html: 1, character_html: 1 };
     var seenWide = {};
     Object.keys(byScene).forEach(function (sc) {
       var rows = byScene[sc], seenInfo = {};
@@ -3220,15 +3358,15 @@ window.SB_DOC = {
     mainOrder.forEach(function (o) {
       var b = beatOf(o.s);
       if (LONG_BEATS[b]) {
-        flag("bad", T.where.order, "shot " + (o.i + 1) + " carries beat:\"" + b + "\" — a short walks hook → drip → cta (scenes-schema §playback order)");
+        flag("bad", T.where.order, "shot " + (o.i + 1) + " carries beat:\"" + b + "\" — consider hook → development → ending (scenes-schema §playback order)");
         orderOk = false; orderBad = true;
       } else if (!o.s.beat && o.s.type !== "cover") {
-        flag("bad", T.where.order, "shot " + (o.i + 1) + " has no beat — a short labels every shot hook · drip · cta");
+        flag("bad", T.where.order, "shot " + (o.i + 1) + " has no beat — label beats when useful for reviewing the flow");
         orderOk = false; orderBad = true;
       }
     });
     if (!firstBeat.drip) {
-      flag("bad", T.where.order, "there is no drip shot — after the hook, 1–n shots pay curiosity in stages (beat:\"drip\") before the CTA");
+      flag("bad", T.where.order, "there is no drip shot — after the hook, 1–n shots pay curiosity in stages (beat:\"drip\") before the ending");
       orderOk = false; orderBad = true;
     }
     if (mainOrder.length) {
@@ -3238,36 +3376,12 @@ window.SB_DOC = {
         orderOk = false; orderBad = true;
       }
     }
-    var lastMain = mainOrder.length ? mainOrder[mainOrder.length - 1] : null;
-    if (lastMain && beatOf(lastMain.s) !== "cta") {
-      flag("bad", T.where.order, "the last narrated shot is not the CTA — a short ends on beat:\"cta\" (an outro asset is not the spoken close)");
-      orderOk = false; orderBad = true;
-    } else if (lastMain) {
-      var ctaSpoken = (lastMain.s.narration || []).map(function (seg) {
-        return (seg && (seg.sub || seg.tts)) || "";
-      }).join("").replace(/\s/g, "");
-      if (!ctaSpoken) {
-        flag("bad", T.where.order, "the last narrated shot is the CTA but has no narration — a short ends on a spoken close");
-        orderOk = false; orderBad = true;
-      } else if (compactLetters(((lastMain.s.shot || {}).share) || "").length < 8) {
-        // The 8-compacted-character floor is check-scenes.js's number (its share-trigger check);
-        // format-lint.js's crossCheckShareContract reads both numbers and compares them, so the
-        // floor moves in the checker first and here second, with the linter run after.
-        // An ask stays optional; a forwardable thing does not — an ask requests behaviour from
-        // the viewer, while a forwardable thing is one sentence, figure or verdict they can pass
-        // on as-is. Asking to be shared is an ask, not a trigger.
-        flag("bad", T.where.share, "the close has no share trigger — write shot.share on the beat:\"cta\" shot: the one sentence, figure or verdict a viewer would forward as-is");
-        orderOk = false; orderBad = true;
-      }
-    }
     mainOrder.forEach(function (o, pos) {
       var b = beatOf(o.s);
       if (b === "hook" && pos !== 0) {
         flag("bad", T.where.order, "shot " + (o.i + 1) + " carries beat:\"hook\" — the cover opens the episode");
         orderOk = false; orderBad = true;
-      } else if (b === "cta" && pos !== mainOrder.length - 1) {
-        flag("bad", T.where.order, "a beat comes after the cta — the cta is the very end");
-        orderOk = false; orderBad = true;
+
       }
     });
     // A short-form cover may state the result — hookType "spoiler" and hookForm "payoff" are
@@ -3522,7 +3636,7 @@ window.SB_DOC = {
      shot.feel was framed before anyone said what the audience should feel there; the
      rationing rules catch the close-up spent twice and the dutch used twice. Warnings — the
      reviewer's camera mode and the person at the approval step weigh them. */
-  var feelGaps = 0, sizeUnknown = 0, chokerEcu = 0, dutchCount = 0, cuPerScene = {};
+  var feelGaps = 0, sizeUnknown = 0;
   SCENES.forEach(function (s, i) {
     if (s.type === "outro") return;
     var g = grammarOf(s, i);
@@ -3540,22 +3654,9 @@ window.SB_DOC = {
     if (g.angle && !T.angle[g.angle]) {
       flag("warn", T.shotCap(i + 1), 'shot.angle "' + g.angle + '" is outside the vocabulary — eye · high · low · overhead · dutch (directing-grammar §3)');
     }
-    if (CLOSE_SIZES[g.size]) {
-      var key = String(g.scene);
-      cuPerScene[key] = (cuPerScene[key] || 0) + 1;
-      if (cuPerScene[key] === 2)
-        flag("warn", "Scene S#" + key, "a second close-up in the same scene — the close-up is a command, and a command repeated stops being heard. One cu per scene, on the line that matters (directing-grammar §6)");
-    }
-    if (g.size === "choker" || g.size === "ecu") {
-      chokerEcu++;
-      if (chokerEcu === 3)
-        flag("warn", T.shotCap(i + 1), "a third choker / extreme close-up in the episode — once or twice is the ration (directing-grammar §6)");
-    }
-    if (g.angle === "dutch") {
-      dutchCount++;
-      if (dutchCount === 2)
-        flag("warn", T.shotCap(i + 1), "a second dutch angle — the tilt lands once and then reads as the new horizon; one per episode, with its reason written on the shot (directing-grammar §3)");
-    }
+    window.FILM_TECHNIQUES.findings(s).forEach(function (message) {
+      flag("warn", T.shotCap(i + 1), message);
+    });
   });
 
   /* Frame space — the floor plan of a generated still (directing-grammar §3.5). Older files
@@ -3902,8 +4003,8 @@ window.SB_DOC = {
           (cover.hookType ? T.outsideFour(cover.hookType) : T.strategyNotWritten))) : "") +
        badge((DOC.status || "draft") === "draft" ? "" : "ok", (DOC.status || "draft") === "draft" ? T.draft : DOC.status) +
        (DOC.created ? badge("", DOC.created) : "") +
-       badge(lenCls, T.mainLen(Math.round(total * 10) / 10)) +
-       (outroSec ? badge("", T.withOutro(total + outroSec)) : "") +
+       badge(totalUnknown ? "warn" : lenCls, totalUnknown ? partialLength : (STORY_V2 ? T.plannedLen + " " + durTxt(total) : T.mainLen(Math.round(total * 10) / 10))) +
+       (!totalUnknown && outroSec ? badge("", T.withOutro(total + outroSec)) : "") +
        badge("", T.shotsN(main.length)) +
        (hasSceneField ? badge("", (function () {
          var seen = {};
@@ -4063,28 +4164,8 @@ window.SB_DOC = {
   /* ══ Timeline ══ */
   h += '<h2 class="sec" id="timeline">' + esc(T.timelineHead) +
        '<span class="aside">' + esc(T.timelineAside) + "</span></h2>";
-  h += '<div class="timeline">';
-  // Drawn in playback order — b-roll sits at the end of the array but actually cuts in after
-  // its `after` scene (scenes-schema §broll: putting it mid-array throws off every capture index)
-  // order was already computed in the header checks
-  var acc = 0, marks = [];
-  order.forEach(function (o) {
-    var d = Math.max(0.1, o.s.duration || 1);
-    marks.push({ at: acc, d: d });
-    acc += d;
-    h += '<div class="tl-seg ' + esc(o.s.type) + '" style="flex:' + d + '" title="' +
-         esc(strip(o.s.title || o.s.type)) + '">#' + (o.i + 1) + "<small>" + esc(T.sec(o.s.duration || "?")) + "</small></div>";
-  });
-  if (outroSec || outroUnknown)
-    h += '<div class="tl-seg outro" style="flex:' + (outroSec || 9) + '" title="' +
-         esc((DOC.outro && DOC.outro.note) || T.sharedOutro) + '">' + esc(T.outroLabel) + "<small>" +
-         esc(outroSec ? T.sec(outroSec) : T.lengthNotWritten) + "</small></div>";
-  h += "</div>";
-  h += '<div class="tl-ruler">' + marks.map(function (m) {
-    return '<span style="flex:' + m.d + '">' + esc(T.sec(Math.round((m.at) * 10) / 10)) + "</span>"; }).join("") +
-    (outroSec ? '<span style="flex:' + outroSec + '">' + esc(T.sec(Math.round((acc) * 10) / 10)) + "</span>" +
-      '<span style="flex:0 0 auto">' + esc(T.sec(Math.round((acc + outroSec) * 10) / 10)) + "</span>"
-      : '<span style="flex:0 0 auto">' + esc(T.sec(Math.round((acc) * 10) / 10)) + "</span>") + "</div>";
+  h += window.FILM_TECHNIQUES.legend(LANG);
+  h += window.SHOT_DIRECTION.timeline(SCENES, LANG, DOC);
   if (outroUnknown) flag("warn", T.where.outro, "there is an outro scene but no SB_DOC.outro length — it does not count toward the total");
 
   /* ══ Promise ledger ══ — drawn only when SB_DOC.craft has content (the checks ran in the header) */
@@ -4143,14 +4224,16 @@ window.SB_DOC = {
     // When one scene holds several shots, they attach to that scene's first shot only.
     var sceneKey = g.scene, firstOfScene = item === grp.items[0];
     var narr = s.narration || [];
-    h += '<article class="scene"><div class="scene-head">';
+    h += '<article class="scene" id="shot-' + no + '"><div class="scene-head">';
     h += '<span class="scene-no">' + esc(T.shotCap(no)) + " · " + esc(T.type[s.type] || s.type) + "</span>";
+    if (s.visual && s.visual.video && s.visual.video.speechStatus === 'stale')
+      h += '<span class="cut-carry">' + (LANG === 'ko' ? '이전 영상 참고용 · 대사 변경 후 재제작 필요' : 'Previous take only · dialogue changed, rebuild required') + '</span>';
     // Shot grammar — size tile, angle and render tile — sits on its own row under the head so
     // the head keeps the number, title and beat tags. Icons only: the term, its meaning and
     // this shot's why / render.reason are the tile's tooltip; the legend above names every icon.
     var gram = "";
     function tile(icon, label, tip, unknown) {
-      return '<span class="shot-size' + (unknown ? " unknown" : "") + '" data-tip="' + esc(tip) + '">' +
+      return '<span tabindex="0" role="img" aria-label="' + esc(tip) + '" class="shot-size' + (unknown ? " unknown" : "") + '" data-tip="' + esc(tip) + '">' +
              (icon || '<span class="sz"><b>' + esc(label) + "</b></span>") + "</span>";
     }
     if (g.size) gram += tile(sizeIcon(g.size), T.size[g.size] || (g.size + " ?"),
@@ -4159,6 +4242,11 @@ window.SB_DOC = {
     var rmode = renderModeOf(s, g);
     if (rmode) gram += tile(renderIcon(rmode), T.render[rmode] || (rmode + " ?"),
                             renderTitle(rmode) + (g.render && g.render.reason ? "\n\n" + g.render.reason : ""), !T.render[rmode]);
+    var mg = s.shot && s.shot.motionGraphic;
+    if (mg) {
+      var mt = window.MOTION_GRAPHICS && window.MOTION_GRAPHICS.TYPES[mg.type];
+      h += '<div class="motion-plan"><strong>' + esc(mt ? (LANG === 'ko' ? mt.label : mt.id) : mg.type) + '</strong><p>' + esc(mg.intent || '') + '</p><p>' + esc(mg.reason || '') + '</p><small>' + esc(mg.evidence || '') + ' · ' + esc(mg.style && mg.style.theme ? ((mg.style.theme.resolved && mg.style.theme.resolved.id) || mg.style.theme.id) : mg.style && mg.style.palette || '') + '</small>' + (mg.style && mg.style.theme && mg.style.theme.resolved ? '<p>' + esc(mg.style.theme.resolved.reason) + '</p>' : '') + '</div>';
+    }
     /* A shot that left the episode style (shot.style) shows its own preset here, with the reason and
        the user's approval record — the reader must see where the look changes before approving. */
     var so = s.shot && s.shot.style;
@@ -4232,6 +4320,10 @@ window.SB_DOC = {
       h += '<span class="scene-beat beat-promise' + (t.cls ? " " + t.cls : "") + '">' + esc(t.text) + "</span>";
     });
     h += '<span class="scene-checks">' + sceneChips[i] + "</span></div>";
+    var directionAt = directionOrder.findIndex(function (o) { return o.i === i; });
+    h += window.SHOT_DIRECTION.summary(s, i, directionAt > 0 ? directionOrder[directionAt - 1].s : null, LANG, DOC);
+    h += '<details class="shot-plan-details"><summary>' + (LANG === 'ko' ? '촬영 계획 보기' : 'Shot plan') + '</summary>';
+    h += window.FILM_TECHNIQUES.tiles(s, LANG);
     if (gram) h += '<div class="shot-grammar">' + gram + "</div>";
     // The picture and overlay badges are gone from here — the render tile above says what
     // moves, and the overlay reads off the frame itself.
@@ -4249,6 +4341,13 @@ window.SB_DOC = {
          (spaceTextOf(g.space) ? '<span class="shot-info"><b>' + esc(T.spaceLabel) + "</b>" + esc(spaceTextOf(g.space)) + "</span>"
             : (genStill(s) && !FILL_FRAME[g.size] ? '<span class="shot-info shot-feel miss"><b>' + esc(T.spaceLabel) + "</b>" + esc(T.spaceMissing) + "</span>" : "")) +
          "</div>";
+
+    h += '</details>';
+    h += '<p class="shot-generation-flow">' + esc(LANG === 'ko' ? '배경 + 캐릭터 → 샷 이미지 → 영상' : 'Background + characters → shot image → video') + '</p>';
+    h += '<h4 class="shot-output-title">' + esc(LANG === 'ko' ? '샷 이미지' : 'Shot image') + '</h4>';
+    h += '<p class="representative-frame-label">' + esc(LANG === 'ko'
+      ? '대표 프레임 미리보기 · 제작 컷은 아래에서 별도 검토합니다.'
+      : 'Below: representative frame and caption layout. This does not replace review of all production cuts.') + '</p>';
 
     if (s.type === "broll") {
       var v = s.visual || {};
@@ -4345,15 +4444,24 @@ window.SB_DOC = {
         if (st.carry && st.seg >= 0)
           lines += '<div class="cut-carry">line ' + (st.seg + 1) + " carries over — only the screen (the caption) changes</div>";
         segRows[k].forEach(function (j) {
-          var n = narr[j], same = strip(n.tts) === strip(n.sub);
-          lines += '<div class="cut-line"><span class="k">' + (j + 1) + '</span><div class="b">' + esc(n.tts) +
-            '<span class="len"> · ' + esc(T.chars(netLen(n.tts))) + "</span>" +
-            (same ? "" : '<div class="sub-diff"><b>' + esc(T.subtitleLabel) + "</b> " + esc(n.sub) + "</div>") +
-            "</div></div>";
+          lines += speechHtml(narr[j], j);
         });
         if (!lines && s.type === "quote" && vis.clip)
           lines = '<div class="cut-carry">speech clip — the actor speaks, so there is no TTS narration</div>';
+        if (!lines && !narr.length && k === 0 && !recOf(s))
+          lines = '<div class="speech-silent">' + esc(T.speechSilent) + '</div>';
         if (lines) cell += '<div class="cut-sec">' + esc(T.audioSec) + "</div>" + lines;
+
+        if (k === 0 && window.STORY && window.STORY.version === "story-v2") {
+          cell += '<details class="performance-details"><summary>' + (LANG === 'ko' ? '연기·동선 상세' : 'Performance details') + '</summary>';
+          (s.performance || []).forEach(function(e) {
+            var speech = narr[e.group - 1] || {};
+            var words = e.kind === "action" ? e.text : (speech.sub || speech.tts || "");
+            cell += '<div class="cut-line"><div class="b"><b>' + esc(castName(e.character)) + ' · ' + esc(LANG === 'ko' ? (e.kind === 'action' ? '행동' : '대사') : e.kind) +
+              (e.to ? ' → ' + esc(castName(e.to)) : '') + '</b> ' + esc(words) + '</div></div>';
+          });
+          cell += '</details>';
+        }
 
         // This path diagram belongs to the plan, never to the rendered footage.
         if (k === 0 && window.PRODUCTION_MODE && window.PRODUCTION_MODE.isDrone(vis.camera)) {
@@ -4372,17 +4480,26 @@ window.SB_DOC = {
           }
         }
         var previz = vis.video && vis.video.previz;
-        var explicitFrames = vis.frames || vis.video && vis.video.lastImagePath || vis.imagePair || previz;
+        var imageRefs = window.RENDER_ROUTING ? window.RENDER_ROUTING.imageReferences(s) : [];
+        var explicitFrames = imageRefs.length || vis.frames || vis.video && vis.video.lastImagePath || vis.imagePair || previz;
         if (explicitFrames && k === 0) {
           var fp = window.RENDER_ROUTING.framePlan(s);
-          var frameInput = function (src, label) {
-            return '<figure><figcaption>' + esc(label) + '</figcaption>' + (src
+          var frameInput = function (src, label, reference) {
+            if (typeof src !== 'string' || /^[a-z][a-z0-9+.-]*:|^[/\\]{2}|[\x00-\x1f]/i.test(src)) src = '';
+            return '<figure' + (reference ? ' class="reference-input"' : '') + '><figcaption>' + esc(label) + '</figcaption>' + (src
               ? '<a href="' + esc(src) + '" target="_blank" rel="noopener"><img src="' + esc(src) + '" alt="' + esc(label) + '" loading="lazy"></a>'
               : '<div class="pending-frame">' + esc(T.framePending) + '</div>') + '</figure>';
           };
-          var pair = fp.mode === 'first_last' || !!previz;
-          var inputs = frameInput(fp.start, T.frameStart);
+          var pair = fp.mode === 'first_last' || !!previz || imageRefs.length > 0 || !!vis.frames?.keyframes?.length;
+          var inputs = fp.mode === 'reference' ? '' : frameInput(fp.start, T.frameStart);
           if (fp.mode === 'first_last') inputs += frameInput(fp.end, T.frameEnd);
+          (vis.frames && Array.isArray(vis.frames.keyframes) ? vis.frames.keyframes : []).forEach(function (key, i) {
+            inputs += frameInput(key.image, 'Keyframe ' + (i + 1) + ' · ' + key.atSeconds + 's · ' + key.state);
+          });
+          imageRefs.forEach(function (ref, i) {
+            var use = ref.use === 'image' ? T.refImage : ref.use === 'both' ? T.refBoth : T.refVideo;
+            inputs += frameInput(ref.path, (i + 1) + '. ' + ref.id + ' · ' + ref.role + ' · ' + use + ' · ' + ref.purpose, true);
+          });
           // Only reference_video sends this clip to the vendor; LTX and host lanes use its frame and prompt.
           var previzLabel = previz && previz.handoff === 'frame_and_prompt' ? T.framePreviz.replace(' · Video 1', '') : T.framePreviz;
           if (previz) inputs += '<figure><figcaption>' + esc(previzLabel) + '</figcaption>' + (previz.clip
@@ -4404,6 +4521,11 @@ window.SB_DOC = {
           frame(s, st, k, f.tier || 0, f.statScale || 0) + "</figure>" +
           '<div class="cut">' + cell + "</div></div>";
       }).join("") + "</div>";
+
+      h += '<div id="image-references-' + esc(s.id || '') + '"></div>';
+      var producedCuts = productionCutsHtml(s);
+      if (vis.video) h += '<h4 class="shot-output-title shot-video-title">' + esc(LANG === 'ko' ? '영상 생성' : 'Video generation') + '</h4>';
+      h += producedCuts || (vis.video ? '<p class="shot-references__note">' + esc(LANG === 'ko' ? '등록된 제작 영상이 없습니다. 샷 이미지로 영상을 생성하는 단계입니다.' : 'No production video registered. The shot image is the input for video generation.') + '</p>' : '');
 
       // The same note is not repeated on every scene — only the first time.
       if (!recOf(s) && s.type === "points" && narr.length && narr.length !== states.length && !carryNoted) {
@@ -4535,6 +4657,8 @@ window.SB_DOC = {
       h += "</div><div>";
       h += '<div class="cast-name">' + esc(c.name || c.id) + " <code>" + esc(c.id) + "</code>" +
            (c.veo === "banned" ? " " + badge("bad", "veo banned") : "") + "</div>";
+      if (/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c.id || "")) h += '<p><a href="../../../assets/characters/' + encodeURIComponent(c.id) + '/index.html">' + esc(LANG === "ko" ? "공용 캐릭터 시트" : "Shared character sheet") + '</a></p>';
+      (window.REVIEW_PANEL_FINDINGS || []).filter(function (f) { return f.characterId === c.id; }).forEach(function (f) { h += '<p class="cast-note">' + esc(LANG === 'ko' ? f.messageKo || f.message : f.message) + '</p>'; });
       if (c.role) h += '<div class="cast-role">' + mark(c.role) + "</div>";
       if (c.note) h += '<div class="cast-note">' + mark(c.note) + "</div>";
       h += '<div class="cast-shots"><b>' + esc(T.castShots) + "</b>" +
@@ -4547,6 +4671,52 @@ window.SB_DOC = {
     h += "</div>";
   }
 
+  /* Background/location planning sheets work without a generated set or WebGL. */
+  function locationSheetsHtml(doc, shots) {
+    var ko = LANG === "ko";
+    var word = function (a, b) { return ko ? a : b; };
+    var entries = Array.isArray(doc.locations) ? doc.locations : [];
+    var html = '<section class="prop-sheet" id="location-sheets"><h2>' +
+      word("배경·장소 시트", "Background / location sheets") + '</h2>';
+    var safePath = function (value) {
+      if (typeof value !== "string" || !value.trim() || /[\x00-\x20]/.test(value)) return false;
+      return !/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(value) || /^https?:\/\//i.test(value);
+    };
+    if (!entries.length) {
+      return html + '<p>' + esc((doc.assetSheetNotes || {}).locations ||
+        word("배경·장소 시트를 아직 작성하지 않았습니다.", "Background/location sheets have not been written yet.")) + '</p></section>';
+    }
+    entries.forEach(function (entry) {
+      html += '<article class="prop-card" id="location-sheet-' + esc(encodeURIComponent(entry.id || "")) + '"><h3>' +
+        esc(entry.name || entry.id) + '</h3><code>' + esc(entry.id) + '</code>';
+      if (safePath(entry.imageUrl)) {
+        html += '<img loading="lazy" src="' + esc(entry.imageUrl) + '" alt="' + esc(entry.name || entry.id) + '">';
+      } else html += '<p class="prop-muted">' + word("참조 이미지 대기", "Reference image pending") + '</p>';
+      [["description", word("공간 설명", "Description")], ["layout", word("배치·동선", "Layout / movement")],
+        ["lighting", word("시간·조명", "Time / lighting")], ["invariants", word("고정 요소", "Invariants")]].forEach(function (field) {
+        var value = entry[field[0]];
+        if (Array.isArray(value)) value = value.join(" · ");
+        html += '<p><b>' + field[1] + '</b> · ' + esc(value || word("작성 대기", "Pending")) + '</p>';
+      });
+      [["sheetPath", word("공용 장소 시트", "Shared location sheet")], ["manifest", word("세트 데이터", "Set manifest")]].forEach(function (field) {
+        if (safePath(entry[field[0]])) html += '<p><a href="' + esc(entry[field[0]]) + '">' + field[1] + '</a></p>';
+      });
+      var detailLink = (window.LOCATION_DETAIL_LINKS || {})[entry.id];
+      if (safePath(detailLink)) html += '<p><a href="' + esc(detailLink) + '">' + word('배경 상세 · 3D 공간', 'Background detail · 3D space') + '</a></p>';
+      var links = [];
+      shots.forEach(function (shot, index) {
+        if ((shot.visual || {}).locationId === entry.id || ((shot.shot || {}).location || {}).id === entry.id) links.push('<a href="#shot-' + (index + 1) + '">' +
+          esc(word("샷 ", "Shot ") + (index + 1) + " · " + (shot.title || shot.id || "")) + '</a>');
+      });
+      (window.LOCATION_REVIEW || []).filter(function (v) { return v.id === entry.id; }).forEach(function (v) {
+        html += '<p><a href="#location-shot-' + esc(v.shotId) + '" data-location-shot="' + esc(v.shotId) + '">' + esc(word('샷 배경 구도 · ', 'Shot background composition · ') + v.shotId) + '</a></p>';
+      });
+      html += '<p>' + (links.length ? links.join(" · ") : word("연결된 샷 없음", "No linked shots")) + '</p></article>';
+    });
+    return html + '</section>';
+  }
+  h += locationSheetsHtml(DOC, SCENES);
+
   /* ══ Contract · sources · platforms ══ */
   h += '<h2 class="sec" id="contract">' + esc(T.contractHead) +
        '<span class="aside">' + esc(T.contractAside) + '</span></h2><table class="grid"><tbody>';
@@ -4555,13 +4725,20 @@ window.SB_DOC = {
        (FMT_KEY === "youtube-long-16x9"
          ? ' <span class="aside">' + esc(T.cWideNote) + "</span>" : "") +
        "</td></tr>";
-  h += "<tr><th>" + esc(T.cMainLen) + "</th><td>" + durTxt(total) + esc(T.cRecommend) +
-       durTxt(lenMin) + "~" + durTxt(lenMax) +
-       (lenChannel ? ' <span class="aside">' + esc(T.cChannelBand) + "</span>" : "") +
-       esc(T.cCap) + durTxt(FMT.totalHard) +
-       (outroSec ? esc(T.cWithOutro) + durTxt(total + outroSec) : "") + "</td></tr>";
-  h += "<tr><th>" + esc(T.cShotCount) + "</th><td>" + esc(T.shotsN(main.length)) + esc(T.cShotsRecommend) +
-       esc(T.shotsN(FMT.sceneCountMin + "~" + FMT.sceneCountMax)) + "</td></tr>";
+  if (STORY_V2) {
+    h += "<tr><th>" + esc(T.plannedLen) + "</th><td>" + (totalUnknown ? esc(partialLength) : durTxt(total)) +
+         (!totalUnknown && outroSec ? esc(T.cWithOutro) + durTxt(total + outroSec) : "") + "</td></tr>";
+    if (lenChannel) h += "<tr><th>" + esc(T.explicitLength) + "</th><td>" + esc(lenBand) + "</td></tr>";
+    h += "<tr><th>" + esc(T.cShotCount) + "</th><td>" + esc(T.shotsN(main.length)) + "</td></tr>";
+  } else {
+    h += "<tr><th>" + esc(T.cMainLen) + "</th><td>" + (totalUnknown ? esc(partialLength) : durTxt(total)) + esc(T.cRecommend) +
+         durTxt(lenMin) + "~" + durTxt(lenMax) +
+         (lenChannel ? ' <span class="aside">' + esc(T.cChannelBand) + "</span>" : "") +
+         esc(T.cCap) + durTxt(FMT.totalHard) +
+         (!totalUnknown && outroSec ? esc(T.cWithOutro) + durTxt(total + outroSec) : "") + "</td></tr>";
+    h += "<tr><th>" + esc(T.cShotCount) + "</th><td>" + esc(T.shotsN(main.length)) + esc(T.cShotsRecommend) +
+         esc(T.shotsN(FMT.sceneCountMin + "~" + FMT.sceneCountMax)) + "</td></tr>";
+  }
   if (cover) {
     h += "<tr><th>" + esc(T.cCoverTitle) + "</th><td>" + mark(cover.title) + esc(T.onScreenOf(dispLen(cover.title), 16)) + "</td></tr>";
     h += "<tr><th>" + esc(T.cArc) + "</th><td>" + (!WIDE
@@ -4588,7 +4765,7 @@ window.SB_DOC = {
     if (cover.statLabel) h += "<tr><th>" + esc(T.cStatLabel) + "</th><td>" + esc(cover.statLabel) + esc(T.onScreenOf(dispLen(cover.statLabel), 18)) + "</td></tr>";
   }
   h += "<tr><th>" + esc(T.cRate) + "</th><td>" +
-     esc(allRec ? T.rateAllRec : hasRec ? T.rateMixed : T.rateGen(FMT.sceneMax)) + "</td></tr>";
+     esc(STORY_V2 ? T.contentTiming : allRec ? T.rateAllRec : hasRec ? T.rateMixed : T.rateGen(FMT.sceneMax)) + "</td></tr>";
   h += "<tr><th>" + esc(T.cTheme) + "</th><td>" + ["accent", "accent2", "ink"].map(function (k) {
     return '<span class="swatch" style="background:' + esc(THEME[k]) + '"></span><code>' + esc(THEME[k]) + "</code>"; }).join(" &nbsp; ") +
     " &nbsp; " + esc(T.cChannel) + "<code>" + esc(THEME.brand) + "</code></td></tr>";
@@ -4693,10 +4870,41 @@ window.SB_DOC = {
   if (safe) safe.addEventListener("change", function () { document.body.classList.toggle("safe", safe.checked); });
   if (subs) subs.addEventListener("change", function () { document.body.classList.toggle("subs", subs.checked); });
 
+  window.ReviewTypography.apply(DOC, SCENES);
+  if (fontFailures.length) {
+    var notice = document.createElement('p');
+    notice.className = 'review-font-warning'; notice.setAttribute('role', 'status');
+    notice.textContent = (LANG === 'ko' ? '일부 글꼴을 불러오지 못했습니다: ' : 'Some fonts could not load: ') + fontFailures.join(', ');
+    app.prepend(notice);
+  }
   var who = DOC.channelName || DOC.channel || THEME.brand || "";
   document.title = (DOC.displayTitle || DOC.topic || "Storyboard") + (who ? " — Storyboard · " + who : " — Storyboard");
 })();
 </script>
-<script src="./review-layout.js"></script>
+<link rel="stylesheet" href="./location-review.css">
+<script src="./location-review-data.js"></script>
+<script>
+// Mount dependent views only after font metrics and storyboard rendering settle.
+window.STORYBOARD_READY = window.STORYBOARD_READY.then(async function () {
+  for (const src of ['./review-layout.js', './prop-sheet.js', './location-review-runtime.js']) {
+    await new Promise(function (resolve, reject) {
+      const script = document.createElement('script');
+      script.src = src; script.onload = resolve; script.onerror = reject;
+      document.body.appendChild(script);
+    });
+  }
+  document.documentElement.dataset.reviewReady = 'true';
+  if (/^#shot-\d+$/.test(location.hash)) {
+    const target = document.getElementById(location.hash.slice(1));
+    if (target && typeof target.scrollIntoView === 'function') target.scrollIntoView({block:'start'});
+  }
+}).catch(function (error) {
+  const notice = document.createElement('p');
+  notice.className = 'error-box'; notice.setAttribute('role', 'alert');
+  notice.textContent = 'Review could not finish loading. Refresh the storyboard with storyboard-html.js.';
+  document.getElementById('app').prepend(notice);
+  console.error(error);
+});
+</script>
 </body>
 </html>

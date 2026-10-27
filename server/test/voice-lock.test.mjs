@@ -7,10 +7,9 @@ import { spawnSync } from 'node:child_process';
 process.env.ELEVENLABS_API_KEY = 'test-key';
 const { applyVoiceLock, convertVoice, voiceLockApplySchema, VOICE_LOCK_TOOLS } = await import('../dist/voice-lock.js');
 const { voiceLockConfigSchema } = await import('../dist/voice-lock-config.js');
-const { setCharacterTts, characterTtsSetSchema } = await import('../dist/portal-characters.js');
 const { pcmToWav } = await import('../dist/media-utils.js');
 const ffmpeg = spawnSync('ffmpeg', ['-version']).status === 0;
-const SAMPLE_URL = 'https://story.ttalkkaklab.com/api/workspaces/pundago/characters/mina/voice-sample';
+const SAMPLE_URL = 'https://example.com/voice.wav';
 function wav(seconds = 1) {
   const pcm = Buffer.alloc(seconds * 24000 * 2);
   for (let i = 0; i < pcm.length / 2; i++) pcm.writeInt16LE(Math.round(Math.sin(i * 0.1) * 4000), i * 2);
@@ -37,34 +36,19 @@ test('STS multipart contract, PCM wrapping and no retry on failure', async () =>
     assert.equal(calls, 2);
   } finally { globalThis.fetch = original; }
 });
-test('config defaults and tts_set preserves or replaces the voiceLock object', async () => {
-  let current = { id: '66666666-6666-4666-8666-666666666666', tts: { engine: 'elevenlabs', voiceId: 'pinned', voiceLock: voiceLockConfigSchema.parse({ referenceAudioUrl: SAMPLE_URL }) } };
-  const client = { getCharacter: async () => ({ data: current }), updateCharacter: async (id, patch) => { current = { ...current, ...patch }; return { data: current }; } };
-  await setCharacterTts(client, characterTtsSetSchema.parse({ id: current.id, speed: 1.1 }));
-  assert.equal(current.tts.voiceLock.referenceAudioUrl, SAMPLE_URL);
-  await setCharacterTts(client, characterTtsSetSchema.parse({ id: current.id, voiceLock: { enabled: false } }));
-  assert.equal(current.tts.voiceLock.enabled, false);
-  assert.equal(current.tts.voiceLock.referenceAudioUrl, undefined);
-  assert.equal(current.tts.voiceId, 'pinned');
-  assert.equal(voiceLockConfigSchema.parse({}).enabled, true);
-  assert.throws(() => voiceLockConfigSchema.parse({ model: 'eleven_multilingual_v2' }));
-  assert.equal(VOICE_LOCK_TOOLS[0].annotations.idempotentHint, false);
-});
 test('referenceAudioUrl takes absolute http(s) URLs only', () => {
   for (const url of [SAMPLE_URL, 'http://127.0.0.1:3000/voice.wav']) assert.equal(voiceLockConfigSchema.parse({ referenceAudioUrl: url }).referenceAudioUrl, url);
   assert.equal(voiceLockConfigSchema.parse({ referenceAudioUrl: `  ${SAMPLE_URL}  ` }).referenceAudioUrl, SAMPLE_URL);
-  for (const url of ['/sample.wav', 'sample.wav', 'data/mina/voice.wav', '/Users/me/voice.wav', 'file:///Users/me/voice.wav', 'story.ttalkkaklab.com/voice.wav'])
+  for (const url of ['/sample.wav', 'sample.wav', 'data/mina/voice.wav', '/Users/me/voice.wav', 'file:///Users/me/voice.wav', 'example.com/voice.wav'])
     assert.throws(() => voiceLockConfigSchema.parse({ referenceAudioUrl: url }), /absolute http\(s\) URL/, url);
   assert.equal(voiceLockConfigSchema.parse({}).referenceAudioUrl, undefined);
-  assert.equal(characterTtsSetSchema.parse({ id: '66666666-6666-4666-8666-666666666666', voiceLock: { referenceAudioUrl: SAMPLE_URL } }).voiceLock.referenceAudioUrl, SAMPLE_URL);
-  assert.throws(() => characterTtsSetSchema.parse({ id: '66666666-6666-4666-8666-666666666666', voiceLock: { referenceAudioUrl: '/sample.wav' } }), /absolute http\(s\) URL/);
 });
 for (const scenario of ['pass', 'source-mismatch', 'output-mismatch', 'drift', 'asr-failure', 'api-failure', 'disabled', 'wrong-engine']) {
   test(`voice-lock ${scenario}: artifacts and paid-call boundary`, { skip: !ffmpeg }, async () => {
     const dir = mkdtempSync(join(tmpdir(), 'sf-voice-lock-'));
     const sourcePath = join(dir, 'in.wav'); writeFileSync(sourcePath, wav());
     let conversions = 0, transcriptions = 0;
-    const input = voiceLockApplySchema.parse({ sourcePath, outputPath: join(dir, 'out'), shotId: 'S01', characterId: 'mina', expectedText: '안녕하세요', inputKind: 'single_speaker', tts: { engine: scenario === 'wrong-engine' ? 'gemini' : 'elevenlabs', voiceId: 'pinned', ...(scenario === 'disabled' ? { voiceLock: { enabled: false } } : {}) } });
+    const input = voiceLockApplySchema.parse({ sourcePath, outputPath: join(dir, 'out'), shotId: 'S01', characterId: 'mina', expectedText: '안녕하세요', inputKind: 'single_speaker', tts: { engine: scenario === 'wrong-engine' ? 'gemini' : 'elevenlabs', voiceId: scenario === 'wrong-engine' ? 'Kore' : 'pinned', language: 'ko', speed: 1, ...(scenario === 'disabled' ? { voiceLock: { enabled: false } } : {}) } });
     try {
       const result = await applyVoiceLock(input, {
         convert: async () => { conversions++; if (scenario === 'api-failure') throw Error('API unavailable'); return { audio: wav(scenario === 'drift' ? 1.5 : 1) }; },
@@ -91,7 +75,7 @@ test('video pass copies the picture stream and preserves input across reruns', {
     const made = spawnSync('ffmpeg', ['-v','error','-f','lavfi','-i','color=c=blue:s=64x64:r=24:d=1','-i',audio,'-c:v','libx264','-c:a','aac','-shortest',video]);
     assert.equal(made.status, 0, String(made.stderr));
     const original = readFileSync(video);
-    const input = voiceLockApplySchema.parse({ sourcePath:video, outputPath:join(dir,'out'), shotId:'S01', characterId:'mina', expectedText:'안녕하세요', inputKind:'single_speaker', tts:{engine:'elevenlabs',voiceId:'pinned'} });
+    const input = voiceLockApplySchema.parse({ sourcePath:video, outputPath:join(dir,'out'), shotId:'S01', characterId:'mina', expectedText:'안녕하세요', inputKind:'single_speaker', tts:{engine:'elevenlabs',voiceId:'pinned',language:'ko',speed:1} });
     const deps = { convert:async()=>({audio:wav()}), transcribe:async()=> '안녕하세요' };
     const first = await applyVoiceLock(input,deps), second = await applyVoiceLock(input,deps);
     assert.equal(first.status,'passed'); assert.equal(second.status,'passed');
@@ -100,4 +84,15 @@ test('video pass copies the picture stream and preserves input across reruns', {
     assert.equal(pictureHash(first.videoPath),pictureHash(video));
     assert.deepEqual(readFileSync(video),original);
   } finally { rmSync(dir,{recursive:true,force:true}); }
+});
+
+
+test('voice lock requires the complete character sheet and advertises the same contract', () => {
+  const args={sourcePath:'in.wav',outputPath:'out',shotId:'S01',characterId:'mina',expectedText:'안녕하세요',inputKind:'single_speaker'};
+  const tts={engine:'elevenlabs',voiceId:'pinned',language:'ko',speed:1};
+  assert.equal(voiceLockApplySchema.safeParse({...args,tts}).success,true);
+  for(const key of ['engine','voiceId','language','speed']) {
+    assert.equal(voiceLockApplySchema.safeParse({...args,tts:{...tts,[key]:undefined}}).success,false);
+    assert.ok(VOICE_LOCK_TOOLS[0].inputSchema.properties.tts.required.includes(key));
+  }
 });

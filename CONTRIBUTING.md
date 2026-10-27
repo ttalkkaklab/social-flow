@@ -40,6 +40,12 @@ backend API calls them, every tool carries annotations and an outputSchema, enum
 match their source-of-truth constants, and generated-file paths are validated. Add
 your tool to the contract test's expectations in the same PR.
 
+**Adding tests.** Tests live in `server/test/`, one file per module, named after it
+(`render-routing.js` → `render-routing.test.mjs`). Add cases to that file for the
+behavior your change adds or alters; a bug fix adds one regression case. Assert on
+returned structure, not message prose, and delete the tests of behavior you remove.
+CLAUDE.md's "Tests" section has the full rules.
+
 **Changing a skill.** Skills are prompt documents; their `SKILL.md` frontmatter
 `description` is what makes Claude pick the skill, so treat it as an interface, not
 prose. Keep the existing bilingual pattern — English description with the Korean

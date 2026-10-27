@@ -1,0 +1,24 @@
+{
+  "version": "0.114.0-shot-images.1",
+  "stage": "/Users/zeans/.local/state/social-flow-shot-images/builds/0.114.0-shot-images.1",
+  "installations": [
+    {
+      "host": ".codex",
+      "root": "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.114.0-shot-images.1",
+      "checkedFiles": 797,
+      "mismatches": [],
+      "freshMcpPassed": true,
+      "bundleSha256": "b740103b9c2de7908f8ab462c4c2abdb940a04a97d71819d69e56f2d5b311c5c"
+    },
+    {
+      "host": ".claude",
+      "root": "/Users/zeans/.claude/plugins/cache/social-flow/social-flow/0.114.0-shot-images.1",
+      "checkedFiles": 797,
+      "mismatches": [
+        ".orphaned_at"
+      ],
+      "freshMcpPassed": true,
+      "bundleSha256": "b740103b9c2de7908f8ab462c4c2abdb940a04a97d71819d69e56f2d5b311c5c"
+    }
+  ]
+}

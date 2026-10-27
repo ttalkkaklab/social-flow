@@ -1,69 +1,118 @@
 ---
 name: produce
 description: >
-  Builds the video and the per-platform text from an already-approved storyboard. Use when the user asks to "영상 만들어", "콘텐츠 제작", "produce the video", "플랫폼별 콘텐츠 만들어", or right after a storyboard is approved. Turns the approved scenes.js under data/[channel]/episodes/[topic]/storyboard/ into a narrated 9:16 video at 1080x1920/30fps — generated backgrounds, TTS narration, BGM with ducking, kinetic subtitles, brand outro — plus the Threads, Instagram, Facebook and YouTube text under the episode's output/, checked on a phone viewport before publishing. Where recording/alignment.json exists it cuts the user's own screen recording instead of generating scenes. Boundary — storyboard plans and stops for approval, produce starts after it, autoproduce runs both unattended.
+  Builds the video and the per-platform text from an already-approved storyboard. Use when the user asks to "영상 만들어", "콘텐츠 제작", "produce the video", "플랫폼별 콘텐츠 만들어", or right after a storyboard is approved. Turns the approved scenes.js under data/[channel]/episodes/[topic]/storyboard/ into the subtitle-free video in the project's saved format and video ratio — generated or imported clips, stills under camera moves, HTML motion slides, TTS or character speech, BGM with ducking, brand outro — plus the Threads, Instagram, Facebook and YouTube text under the episode's output/, checked on a phone viewport before publishing. Where recording/alignment.json exists it cuts the user's own screen recording instead of generating scenes. Boundary — storyboard plans and stops for approval, produce starts after it, autoproduce runs both unattended.
 argument-hint: "<channel> <topic> [platformCSV|auto]"
-allowed-tools: ["mcp__social-flow__portal_api_episodes_episode_shots_shot_voice_lock_put", "mcp__social-flow__voice_lock_apply", "mcp__social-flow__portal_character_get", "mcp__social-flow__portal_channel_sync", "mcp__social-flow__capability_status", "mcp__social-flow__portal_assets_search", "mcp__social-flow__portal_assets_get", "mcp__social-flow__portal_shot_media_upload", "mcp__social-flow__portal_render_allocation", "mcp__social-flow__portal_episode_artifacts_sync", "Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_generate_checked", "mcp__social-flow__tts_review_final", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__music_generate_advanced", "mcp__social-flow__stock_search", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__astra_img2video", "mcp__social-flow__astra_keyframe_video", "mcp__social-flow__astra_audio2video", "mcp__social-flow__astra_video_retake", "mcp__social-flow__astra_video_list_uploads", "mcp__social-flow__astra_video_delete_upload", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_tts_generate", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
+allowed-tools: ["mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__music_plan", "mcp__plugin_social-flow_social-flow__music_plan", "mcp__social-flow__music_execute", "mcp__plugin_social-flow_social-flow__music_execute", "mcp__social-flow__music_status", "mcp__plugin_social-flow_social-flow__music_status", "mcp__social-flow__music_generate_song", "mcp__plugin_social-flow_social-flow__music_generate_song", "mcp__social-flow__music_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__music_elevenlabs_generate", "mcp__social-flow__image_catalog", "mcp__plugin_social-flow_social-flow__image_catalog", "mcp__social-flow__image_plan", "mcp__plugin_social-flow_social-flow__image_plan", "mcp__social-flow__image_execute", "mcp__plugin_social-flow_social-flow__image_execute", "mcp__social-flow__image_status", "mcp__plugin_social-flow_social-flow__image_status", "mcp__social-flow__video_catalog", "mcp__plugin_social-flow_social-flow__video_catalog", "mcp__social-flow__video_plan", "mcp__plugin_social-flow_social-flow__video_plan", "mcp__social-flow__video_execute", "mcp__plugin_social-flow_social-flow__video_execute", "mcp__social-flow__video_status", "mcp__plugin_social-flow_social-flow__video_status", "mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__plugin_social-flow_social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "mcp__social-flow__acting_review", "mcp__plugin_social-flow_social-flow__acting_review", "mcp__social-flow__tts_review_acting", "mcp__plugin_social-flow_social-flow__tts_review_acting", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__plugin_social-flow_social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__plugin_social-flow_social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__tts_elevenlabs_voices", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__plugin_social-flow_social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__plugin_social-flow_social-flow__music_generate_clip", "mcp__social-flow__music_generate_advanced", "mcp__plugin_social-flow_social-flow__music_generate_advanced", "mcp__social-flow__stock_search", "mcp__plugin_social-flow_social-flow__stock_search", "mcp__social-flow__suno_generate", "mcp__plugin_social-flow_social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__plugin_social-flow_social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__plugin_social-flow_social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__plugin_social-flow_social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__plugin_social-flow_social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__plugin_social-flow_social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__plugin_social-flow_social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__plugin_social-flow_social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__plugin_social-flow_social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__plugin_social-flow_social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__plugin_social-flow_social-flow__seedance_reference", "mcp__social-flow__astra_img2video", "mcp__plugin_social-flow_social-flow__astra_img2video", "mcp__social-flow__astra_keyframe_video", "mcp__plugin_social-flow_social-flow__astra_keyframe_video", "mcp__social-flow__astra_audio2video", "mcp__plugin_social-flow_social-flow__astra_audio2video", "mcp__social-flow__astra_ic_lora", "mcp__plugin_social-flow_social-flow__astra_ic_lora", "mcp__social-flow__astra_video_retake", "mcp__plugin_social-flow_social-flow__astra_video_retake", "mcp__social-flow__astra_video_capabilities", "mcp__plugin_social-flow_social-flow__astra_video_capabilities", "mcp__social-flow__astra_video_list_uploads", "mcp__plugin_social-flow_social-flow__astra_video_list_uploads", "mcp__social-flow__astra_video_delete_upload", "mcp__plugin_social-flow_social-flow__astra_video_delete_upload", "mcp__social-flow__mlx_image_generate", "mcp__plugin_social-flow_social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__plugin_social-flow_social-flow__mlx_image_edit", "mcp__social-flow__mlx_music_generate", "mcp__plugin_social-flow_social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__plugin_social-flow_social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate", "mcp__plugin_social-flow_social-flow__mlx_3d_generate", "mcp__social-flow__astra_genai_text2video", "mcp__plugin_social-flow_social-flow__astra_genai_text2video", "mcp__social-flow__astra_genai_img2video", "mcp__plugin_social-flow_social-flow__astra_genai_img2video", "mcp__social-flow__astra_genai_text2img", "mcp__plugin_social-flow_social-flow__astra_genai_text2img", "mcp__social-flow__astra_genai_edit", "mcp__plugin_social-flow_social-flow__astra_genai_edit", "mcp__social-flow__astra_genai_msr", "mcp__plugin_social-flow_social-flow__astra_genai_msr", "mcp__social-flow__astra_genai_video_status", "mcp__plugin_social-flow_social-flow__astra_genai_video_status"]
 ---
+Follow [production order](../_shared/production-workflow.md): setup first, then complete each artifact stage in order under actual spending authorization.
+For the unified `astra-genai` engine, follow [GenAI adapters](../_shared/astra-genai.md). For each GenAI asset, choose text generation, source transformation or masked correction; for each GenAI clip, consider MSR when identity/outfit/prop/background continuity matters. Reuse inspected sheets and record reference roles. Keep precise edits unexpanded and use prompt expansion for short descriptive prompts. Readable text still requires GPT Image 2. Keep legacy `astra` selections on their original server. For motion-graphic shots, follow [motion type selection and design](../storyboard/references/motion-graphics.md): persist `shot.motionGraphic` with a common `THEME.motionGraphicTheme` when the episode needs consistency and contextual `style.theme` (`auto` or an explicit channel theme), choose the type from viewer intent and available evidence, and keep style, choreography and renderer separate. Built-in abstract scenes use the installed `prepare-motion-graphic.js`; asset-dependent types retain their authored or mesh routes.
+Follow [host evaluation](../_shared/host-review.md). Use local episode files under `data/<channel>/episodes/<topic>/`.
+For episode video, follow the [shared routing contract](../_shared/video-routing.md): inspect `video_catalog`, save a `video_plan`, then call `video_execute` under existing spending authorization. Legacy video tools need `videoContext`. After interruption, inspect `video_status` with the same request ID; never switch provider or invent a retry ID to bypass a pending job. Host plans remain external handoffs.
+For narrated or mixed scenes, apply [visual grounding](../storyboard/references/narration-visual-grounding.md) before source images, including host calls and full-video: enumerate all editorial cuts and inspect repetition across the whole episode; never propagate a chapter score to shots; compare actual pixels with the line, visual purpose and opening state; repair weak conte before motion and carry its action into the provider request.
+For action-led episodes, carry the storyboard's [action direction](../storyboard/references/action-direction.md)
+into generation and editing. Compare the actual clip with the planned camera and
+action; camera icons and a successful API response do not verify footage quality. Use `storyboard_read` techniqueCatalog and persist `shot.techniques:[{id,reason}]`; [film-techniques.js](../storyboard/references/film-techniques.js) owns icons, selection guidance and provider instructions. Keep fields consistent; inspect actual footage before certifying a technique.
+Before source images or video, complete the storyboard's required camera-direction pass if the production plan still has generic static defaults. Preserve motivated holds; carry the selected framing, focus endpoints and move into the prompt and any spatial references. Reassemble prompts after camera edits and report unverified footage honestly. For connected shots, follow [shot continuity](../storyboard/references/shot-continuity.md).
+Capture the preceding accepted clip's selected endpoint before authoring the next opening;
+use the spatial assembler's actual reference-image arguments. After any crop, trim or
+replacement, inspect that shot with both neighbours and refresh stale endpoint evidence.
+Keep planned endings separate from observed footage and respect each adapter's real inputs.
+Behavior examples: [continuity evaluations](references/evals.md).
+For an intentionally silent film, use `SILENT=1 OUTRO=0` with the canonical builder.
+Supply sample-exact zero-valued timing WAVs; omit music, effect and ambience cues.
+The builder verifies silence and preserves the frame clock without loudness scoring.
+**Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; outside the fixed cut workflow, scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
+For tracked props, read [prop continuity](../storyboard/references/prop-continuity.md). Resolve the shot snapshot before prompts, preserve reference versions and record the snapshot with generated assets; verify the actual holder and condition in images and clips.
+**New authoring contract (2026-10-16):** Read [character-led scenarios](../storyboard/references/character-scenarios.md) first. New scenarios use `scenario-v2` and boards use `story-v2`: cast existing characters (including narrators), choose evidence/fiction/adapted, write observable actions and attributed speech, and review the whole performance. Its type-specific grounding and rubric replace the legacy research quotas, forced wow/engine mix, spoken-message and narration-only requirements below. Legacy unversioned scenarios and story-v1 boards keep their existing checks. Production voice, budget and publishing consent are unchanged.
 # Per-platform content production — data/[channel]/episodes/[topic]/output/
-Before any portal call, follow [storyboard-target.md](../storyboard/references/storyboard-target.md) and reuse the episode destination. Local mode skips every portal step below and omits media-tool `portal` arguments, even with a key. Only in chosen portal mode, before reading `profile.md`, call `portal_channel_sync` with `action: "pull"`; a 409 conflict stops the run, while a missing key, network error, 401 or 5xx gets one warning line before local-only work continues. For pending portal render requests, follow [the six-ratio allocation contract](../storyboard/references/production-mode.md): `portal_render_allocation` read → host LLM reasons over every shot → submit requestId/baseRevisionNo and all assignments → pull. New choices persist `PRODUCTION.renderRatioVersion:1`; neither a pending request nor ratio selection approves spending.
-Turn the approved storyboard (`storyboard/scenes.js`) into a narrated video and per-platform text. **Assembly video warnings use HITL:** follow [assembly-video-hitl.md](references/assembly-video-hitl.md). Show failed video/visual-plan checks to the user; their explicit approval permits assembly of the current inputs. This exception overrides pre-assembly quality holds below. Preserve warnings and resume without asking again. **Speech warnings use HITL the same way:** follow [tts-hitl.md](references/tts-hitl.md). A failed scene take or final listening verdict is shown to the user with its scores and defects; their explicit approval permits assembly and delivery of the current takes.
-**scenes.js is the only data source** for screens, narration, subtitles and captions. **HITL records:** Record assembly, speech and slide-fallback answers with their actual warning evidence. Follow [the decision record contract](../storyboard/references/portal-decisions.md); preserve actual provenance and reuse existing authorization. This adds no approval gate.
+**Fixed cut workflow:** Follow [production workflow](../_shared/production-workflow.md): seven stage skills own independent reviews and Blender/image/video stages, including existing boards. This skill supplies shared mechanics; guidance-only policies cannot waive those stages. On direct invocation, resume the next required stage through its skill before generation or assembly.
+**Owner directive (2026-10-17): every delivered video is subtitle-free, including speech.**
+This supersedes older burned-subtitle exceptions and rendering recipes below. Use the clean
+master on every platform. No subtitle/caption typography may be generated into clips or
+burned during editing. Keep exact dialogue for audio checks and optional separate YouTube
+subtitle files only when requested; existing subtitle files do not authorize uploading them.
+Use the selected adapter's prepared request and its no-visible-text policy. For ASTRA,
+use [render-astra-shot.js](references/render-astra-shot.js) after composing speech. It calls
+[prepare-astra-shot.js](references/prepare-astra-shot.js), pads a separate transport WAV
+and records a provisional candidate without changing the authored shot clock. It carries the performance timing
+into a motion prompt without literal dialogue or screenplay labels. `plan_video` remains
+the performance plan; its structured `videoPrompt` is not ASTRA's final provider prompt.
+Do not paste literal dialogue into an audio-conditioned video prompt; the supplied WAV
+carries the exact spoken words.
+Inspect actual clips for accidental text; a no-text prompt alone does not prove clean frames.
+**Speech production override (2026-10-16):** Read [shot-speech.md](references/shot-speech.md).
+Read [voice-continuity.md](references/voice-continuity.md); keep the complete cast (including `voiceReference`) in `SB_DOC.characters` before `video_plan`. Inspect its `voiceContinuity` mapping and warnings; native imitation does not synchronize the finished WAV or add a listening gate.
+Generate with raw TTS tools; do not run automatic speech reviews, dictation, voice-lock ASR,
+or listening approval. The provenance-only builder proceeds with `not_reviewed` speech.
+Older checked-TTS/listening recipes below are historical and do not govern new work.
+Use explicit per-line speakers including narrator; resolve video via adapter capabilities.
+Later corrections use edit-speech and `speech_manage`. For scene emotion, use each line's `acting` and `speech_manage action:plan_audio`; preserve
+voice identity while passing the resolved line direction to the raw generator. The same
+direction and reaction timing inform `plan_video`, its prompt and the scene's starting image.
+Before TTS, separate declaration/question speech purposes and compare each compiled request with its line; preserve listening/reaction order inside the shot. See [speech purpose boundaries](references/shot-speech.md#speech-purpose-boundaries) and [speech intent evaluations](references/speech-intent-evals.md).
+Do not group different emotions or nonconsecutive shots by source image and cut the result
+into arbitrary audio-length slices. See shot-speech.md for timing and continuity details.
+Turn the approved storyboard (`storyboard/scenes.js`) into a narrated video and per-platform text. **Assembly video warnings:** follow [assembly-video-hitl.md](references/assembly-video-hitl.md). Show failed video/visual-plan checks with the output and record them in the build record; the existing assembly authorization covers them and no new approval is asked. This replaces pre-assembly quality holds below. Preserve warnings and resume without asking.
+**scenes.js is the only data source** for screens, narration, captions and any requested subtitle sidecar. **Records:** Record assembly and slide-fallback decisions with their actual warning evidence. Preserve actual provenance in local files and reuse existing authorization. This adds no approval gate.
 ```
 data/<channel>/episodes/<topic>/
 ├── storyboard/          # input (has to be in the approved state)
 ├── .work/               # intermediates (gitignore — cards/ broll/ pcm/ manifest)
 └── output/
-    ├── video/           # video.mp4 (clean) · video-sub.mp4 (burned-in) · subs.srt · cover.jpg · build-report.txt
+    ├── video/           # video.mp4 (subtitle-free) · cover.jpg · build-report.txt · delivery-proof.json · cost-report.txt
     ├── threads/post.md  # 반말 (casual) body + video link on the last line (no attached image)
     ├── instagram/caption.md
     ├── facebook/post.md
     └── youtube/meta.md  # title · description · tags · thumbnail
 ```
 For independent visual samples, use the installed planner and builder in [animation-review.md](references/animation-review.md). Fix plugin sources and rebuild; never substitute episode-specific scripts. This review mode has its own input contract and does not mark an episode publishable.
-Follow [portal shot media order](references/portal-shot-media.md) only in chosen portal mode with a configured key: render previz → upload/checkpoint → video call → upload output; upload source images and TTS as each completes. Missing keys keep local-only mode.
 ## Absolute rules
-Read [production-mode.md](../storyboard/references/production-mode.md) at entry: present the six render-ratio choices **with first-pass and retry-inclusive costs and the budget cap**, then persist the user's selection. Reuse an existing approval on resume. Run `check-production.js storyboard/ --selection` before assets.
+Read [production-mode.md](../storyboard/references/production-mode.md) at entry. The six video-ratio ids (`full_video` · `video_80` · `video_50` · `video_30` · `video_lt10` · `no_video`) are the project's saved video ratio in `.social-flow/models.json`, written into `PRODUCTION.mode` with `renderRatioVersion:1` when the episode is created; the six-choice menu belongs to project-init or an explicit change request, not to every episode. The per-episode step is the cost quote and its spending approval: present the first-pass and retry-inclusive costs and the budget cap, bind the approval to that quote, and reuse an existing approval on resume. The ratio is a planning target and the cost ceiling — the band's upper bound and the budget are enforced; fewer generated cuts than the target is reported, never padded. Run `check-production.js storyboard/ --selection` before assets.
+For shot effects, follow [model-aware effects](references/video-sound.md): prepare the selected adapter request, persist effect ownership, preserve native/input soundtracks, and resolve post effects against the actual contact frame. Never duplicate an effect across native audio and the post manifest. Read [production-mode.md](../storyboard/references/production-mode.md) at entry: present the six render-ratio choices **with first-pass and retry-inclusive costs and the budget cap**, then persist the user's selection. Reuse an existing approval on resume. Run `check-production.js storyboard/ --selection` before assets.
 For imported generated clips, follow [the reuse input contract](../storyboard/references/scenes-schema.md#existing-generated-clip-input-visualreuse). Skip source-image and video generation for `visual.reuse`; never send that shot to an API. Existing 720p clips are eligible; the 1080p output canvas is not a source minimum. Repair missing metadata with [inspect-reuse.js](references/inspect-reuse.js) and review the existing playback. Missing old records do not authorize paid regeneration. Run `check-production.js storyboard/ --before-call N` before every new video call in either mode. Before assembly, run `check-production.js storyboard/ --ready --manifest`; hybrid imports require current playback reviews too, and every generated still needs its style read in `.work/still-review.json` ([still-generation.md](references/still-generation.md) §3). `--ready` also measures every accepted clip with [measure-motion.js](references/measure-motion.js) (full-video.md §Measured motion): a clip that reads as a still, or one whose action starts after the first second with `edit.in` at 0, never enters the timeline, and `verify-assembled.js` measures every card of the assembled reel the same way.
-For `PRODUCTION.mode:"full_video"`, use [full-video.md](references/full-video.md) instead of the hybrid visual steps below. Its source images, spatial prompts, separate narration, video QA and plain-video manifest override the hybrid slot cap, person requirement and HTML-only explanation rules; the no-marks-over-video rule still applies. [spatial-prompts.js](../storyboard/references/spatial-prompts.js) assembles every source and motion prompt from `videoDesign`, the four `visual.camera` slots and the episode style, and runs the Seedance prompt gate before returning. For partial ratios, use generated video for at least the selected share of new cuts (round up) and the normal visual steps for the rest. Hook-only generates the opening hook alone. The episode choice overrides the old generated-slot cap; keep hybrid only for existing approvals.
+Before every new video request, follow [video-duration.md](references/video-duration.md): calculate measured source coverage and request the shortest supported duration. Preserve the selected model/resolution and refresh the quote and previz when timing changes.
+For `PRODUCTION.mode:"full_video"`, use [full-video.md](references/full-video.md) instead of the hybrid visual steps below. Its source images, spatial prompts, separate narration, video QA and plain-video manifest override the hybrid slot cap, person requirement and HTML-only explanation rules; the no-marks-over-video rule still applies. [spatial-prompts.js](../storyboard/references/spatial-prompts.js) assembles every source and motion prompt from `videoDesign`, the four `visual.camera` slots and the episode style, and on the Seedance lane returns the Seedance wording advice in its `warnings` array (read it before storing the prompt). For partial ratios the selected share of new cuts is the target and the cost ceiling: plan generated video up to the band's upper bound and the budget, use the normal visual steps for the rest, and report when fewer cuts than the target are generated (the lower bound is not enforced). The episode choice overrides the old generated-slot cap; `hook_only`, `stills_only` and `hybrid` are legacy ids kept only for resumed boards.
 Before assets, apply [render-routing.md](../storyboard/references/render-routing.md). `shot.render` selects a supported mode; run `check-scenes.js` to verify the handoff. Do not collapse still-camera, character, object and data-graph cuts into one HTML choice. Camera HTML uses `kind:"camera"` and the shared camera template; it is not true subject motion. Read [visual-direction.md](../storyboard/references/visual-direction.md) for episode repetition limits and the playback review. Data graphs, including donut/pie compositions and geographic maps, use [chart-design.md](../storyboard/references/chart-design.md), the shared SVG template and source-linked focus beats. Never substitute a numeric card for a chart.
-Read [story-quality.md](../storyboard/references/story-quality.md) and run `node ${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-story.js storyboard/` before any generation or capture. Missing or stale reviews block production, including old boards; never rewrite approved narration silently. Then read [retention-direction.md](../storyboard/references/retention-direction.md) §2–§5 with the handoff. Resolve visible changes and sound events to scenes.js and supported controls. Preserve payoff, cost cap and voice; derive a missing handoff table without changing the narration. `beat:"cta"` permits a close with no ask. An ask stays optional; a forwardable thing does not — an ask requests behaviour from the viewer, while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking to be shared is an ask, not a trigger.
-1. **No distorting facts** — narration and captions only recompose facts already in
-   scenes.js. Don't collapse a range to its upper bound, and don't invent numbers.
+For explanatory graphics, follow [motion production](references/motion-production.md). Use the shared chart preparation and renderer commands; a looped PNG is a static asset, even when its container is MP4. Keep planned mode and actual subcuts consistent. Run the same motion diagnostics on the encoded sample and assembled timeline, preserve warnings, and report semantic review separately from image scores and pixel measurements.
+Use [story-quality.md](../storyboard/references/story-quality.md) to improve the story. Run its diagnostic checker when useful, rather than before every generation or capture. Report missing or stale reviews without blocking authorized production; explain material narration changes. Then read [retention-direction.md](../storyboard/references/retention-direction.md) §2–§5 with the handoff. Resolve visible changes and sound events to scenes.js and supported controls. Preserve payoff, cost cap and voice; derive a missing handoff table without changing the narration. `beat:"cta"` permits a close with no ask. CTA presence, wording, placement and share metadata are optional. A memorable fact, image or line can strengthen the ending when it fits the story.
+1. **No distorting facts** — narration and captions only recompose facts already in scenes.js. Don't collapse a range to its upper bound, and don't invent numbers.
 2. **No copy-paste crossposting** — "share the facts, never the sentences."
    Redesign the register, the endings, and the information density for each platform (the platform-guide playbook).
-3. **Plain language** — screen text, narration, subtitles, captions, all of it. It has to
+3. **Plain language** — screen text, narration, captions, all of it. It has to
    land heard by ear alone. **The screen doesn't restate what the audio just said**
    (user directive 2026-08-14) — an empty `title` or `bullets` in scenes.js is not a
    defect. The render never fills an empty field on its own and never manufactures a
    caption out of the narration (scenes-schema §Screen text only when needed).
 4. **Korean with no AI tells** — apply platform-guide `references/korean-style.md` to every
-   visible sentence. `check-style.py` makes the call, and an S1 blocks publishing.
-5. **Generated video follows the selected mode** — full-video may explain physical mechanisms and spatial changes. No staged documentary reenactments, no
-   real people, no national symbols, no staged news screens. Cards (static text) are code-rendered only.
+   visible sentence. Use `check-style.py` findings as editing suggestions; a style label alone does not block an authorized operation.
+5. **Generated video follows the selected mode** — full-video may explain physical mechanisms and spatial changes. A reenactment is allowed when the board
+   marks it (`STORY.adaptationBoundary`, the adapted lane); never a generated likeness of a real person, a national symbol or a fake news screen. Cards (static text) are code-rendered only.
 6. **Branding belongs in the outro** — no logo or badge in the body (a brand eating the first 3
    seconds is a skip signal). Under `shortform_outro: off` the episode carries no logo at all: the avatar and the handle do that job.
-7. **The TTS voice is fixed** — don't change a single character of profile.md §2's voiceName and stylePrompt.
+7. **The TTS identity is fixed** — preserve the pinned engine, model and voice ID/name.
+   Resolve each line's emotion and delivery from `acting`; the character stylePrompt is only
+   its baseline. Use `plan_audio` arguments so a confused question does not inherit a sales smile. Follow [acting prompts](references/acting-prompts.md).
 8. **Generated video comes from an image** — don't use `veo_text2video`. The order is always
-   approved image provider → keep the PNG in `storyboard/images/` → the selected image-to-video engine.
-   With `PRODUCTION.imageProvider:"host"` (Codex, Grok) the still comes from the host `image_gen`, and with `videoProvider:"host"` (Grok) the clip comes from the host `image_to_video` — the plugin's API tools are the fallback the user is asked about, never a silent one (still-generation §1, video-model-selection §The host video tool comes first).
+   the saved image model (`.social-flow/models.json`, the episode snapshot) → keep the PNG in `storyboard/images/` → the saved video model through `video_plan` → `video_execute`.
+   `PRODUCTION.imageProvider` / `videoProvider` record whether that saved choice is a host tool (`host`) or an API/local engine (`api`, `astra`); a missing or failed tool is reported and an explicit exception is asked for, never a silent substitute (still-generation §1, model-settings.md).
    The image is the reference point for reproducing a shot: if the video isn't right,
-   rerun it off the same PNG with only the motion prompt changed. Video made straight from
+   reuse that PNG only if its opening still fits both neighbours; otherwise repair the
+   opening state before retrying. Video made straight from
    text gives a different scene every time even from the same prompt, so there's nothing
    to go back to. **Never delete `storyboard/images/*.png`** — delete them and that episode can't be rebuilt.
 9. **Don't lay narration over a stretch where generated video plays** — that stretch uses
    **the sound the clip came with**. Put TTS on top and the two sounds fight, and the
    synthetic voice flattens the generated clip's sense of space. That scene is
-   `narration: []` with no subtitles either (§6 has to push the subtitle timecodes back by
-   that much). **This rule is about b-roll inserts** — on a motion-background scene
+   `narration: []`. **This rule is about b-roll inserts** — on a motion-background scene
    (scenes-schema §Motion background, `visual.video`) the builder uses only the video
-   track, so the clip's sound gets dropped and the narration and subtitles stay as they are.
+   track, so the clip's sound gets dropped and the narration stays.
 10. **The cover's (first screen's) text is code-rendered only** — the engine never draws
    the title. **Veo can't write Hangul** (user confirmed 2026-08-11), and the cover is a
    screen of nothing but the hook title and the hero number, so broken glyphs write off the
    whole episode. **The opening treatment follows `shot.render`**; video is optional unless the channel explicitly
-   enables `hook_video`. A selected motion background is made from the cover still (§3, silent
-   seedance by default, the builder keeps only the video track so narration and the
+   enables `hook_video`. A selected motion background is made from the cover still (§3, on the saved
+   video model with its audio off; the builder keeps only the video track so narration and the
    code-rendered title stay), or **a real recorded clip** (2026-08-15 — scrolling the
    finished site, running the tool, as the cover **background**; the movement in the first
    frame is aimed at the 84.8–93.8% skip rates measured in practice). The clip has to be a
@@ -83,42 +132,44 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    from rule 11, unchanged), or **the topic itself** (the result screen or product screenshot
    the episode is about — for dev and tool channels, where the evidence is a screen rather
    than a person. "Expertise shows in evidence, not in claims", 2026-08-15).
-   Either way make it at `quality: "high"`, and if channel profile §3 sets a different art
+   Either way make it on the saved image model at its saved quality (on a host tool, the lowest
+   available quality — still-generation.md §1), and if channel profile §3 sets a different art
    style, that wins. The text is still code-rendered (rule 10) — this rule is about the background picture.
    **A b-roll source is the same file as the background of the scene it attaches to
    (`after`)** — the photo the previous scene showed as a still starts moving, so one image
    does two jobs. For an opening b-roll (`after: 0`) that file is the cover background. For
-   a body b-roll it's that points scene's background, and **that one image gets made with
-   `gpt_image_text2img` (high) or the host image tool rather than local Z-Image** — it's veo's input, so a blurry
-   source makes a blurry video, and with nothing in it for the clip to move the model invents motion (rule 11).
-   **Generated-video slots follow the approved channel motion policy.** Count b-roll and
-   motion-background scenes (`visual.video`) together. The format default is 2, and **on a
-   short both are optional**. Each selected cut writes `visual.why` because continuous motion
-   carries its content; a profile may override the cap with
-   `generated_video_max`. Every other cut is a still under its camera move — every still
-   card carries a Ken Burns move (§6), the build refuses a frozen one, and one still holds
-   one cut at most (`max_static_ground_seconds`, default 8 s; a longer cut swaps the still per
-   sentence) — or an HTML motion slide, which never spends a paid slot. A plate on an `other`
-   beat standing past that limit is a storyboard defect, not something produce papers over
-   (a slide with a movement per group runs that clock per group). The channel's
-   `video_budget_usd` (plugin default $10 per episode, billed and projected together) is the
-   ceiling `cost-preview.js` enforces. Produce never lowers a profile motion floor to save a
-   call; it stops when the approved storyboard cannot meet both the floor and the cap. The
-   contract's source of truth is scenes-schema §Channel true-motion policy.
+   a body b-roll it's that points scene's background, and that one image is made on the saved
+   image model like every other still — it is the video model's input, so a blurry source makes a
+   blurry video, and with nothing in it for the clip to move the model invents motion (rule 11);
+   a saved engine that cannot deliver a usable source is reported for an explicit exception.
+   **Generated-video slots follow the episode's selected video ratio and explicit budget.** Count
+   b-roll and motion-background scenes (`visual.video`) together: the band's upper bound and
+   `PRODUCTION.videoBudgetUsd` are the ceiling, and a channel's `generated_video_max` or
+   `video_budget_usd` is a ceiling only, never a quota or a spending approval. Each selected cut
+   writes `visual.why` because continuous motion carries its content. Every other cut is a still
+   under its camera move — every still card carries a Ken Burns move (§6); the build warns on a
+   frozen one and continues, naming a planned `motionIntent: intentional_still` — and one still
+   holds one cut at most (`max_static_ground_seconds`, default 8 s; a longer cut swaps the still
+   per sentence) — or an HTML motion slide, which never spends a paid slot. A plate on an `other`
+   beat standing past that limit is reported as a warning for the board to fix (a slide with a
+   movement per group runs that clock per group). Produce never adds video to reach a motion
+   floor; when the approved storyboard plans fewer generated cuts than the target it reports that.
+   The policy fields are described in scenes-schema §Channel true-motion policy.
 13. **Generation that costs money runs only after the plan is checked** — the cover
    background and the b-roll need a plan in the storyboard first (source prompt, motion,
-   used length + why), and you check it yourself before calling the still or clip generator (host tool,
-   gpt_image high, veo, seedance): no still life as a source, no real person, the target person on a
+   used length + why), and you check it yourself before calling the still or clip generator (the
+   saved image and video models): no still life as a source, no real person, the target person on a
    target channel, no text expected from the engine, the exclusions written, a duration the
-   cut earns, no minor in frame, the engine the route names. The content-reviewer plan-mode
+   cut earns, no minor in frame, the saved engine for that lane. The content-reviewer plan-mode
    read of 0.49 is no longer part of the flow (six million tokens a call, measured); it
-   stays available when the user asks for it. A plan that fails a point gets fixed before the call — don't burn veo money on a bad source.
+   stays available when the user asks for it. A plan that fails a point gets fixed before the call — don't spend video money on a bad source.
 14. **The photo is the lead on screen — no slide (PPT) look.** Scene text lives inside the
    top and bottom bands only: points uses the top block (title + **one caption at a time** +
-   source), cover uses the bottom block, and the bottom subtitles say what the narration
-   says. Don't build boxes, slabs, or full-screen dims across the middle of the frame — the
+   source), cover uses the bottom block, and nothing else is typed over the picture. Don't build
+   boxes, UI slabs or full-screen dims across the middle of a photo-backed points frame — the
    background photo showing through is what makes it a video; cover it and it's a slide
-   (user's note 2026-08-12, "too PPT-ish"). Gradient scrims are off altogether
+   (user's note 2026-08-12, "too PPT-ish"; the lit slabs of the studio-stage slide in CLAUDE.md
+   are a different object and this sentence does not concern them). Gradient scrims are off altogether
    (owner 2026-08-25 — no top/bottom bars; the template's `scrim=` parameter draws nothing).
    Since the photo has become the screen itself, make points backgrounds **photoreal shots
    of the subject** rather than metaphorical still lifes, and change the shot wherever the
@@ -126,54 +177,58 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    On a channel whose motion policy forbids stills, the photo is source material rather than
    the finished screen: place it full-frame in `visual.slide.motion:true` and animate the
    subject or evidence named by `visual.action`. A whole-photo zoom or pan is still Ken Burns
-   and does not qualify. `check-scenes.js` blocks the build before capture when this contract is not met.
+   and does not qualify. `check-scenes.js` reports this contract before capture.
 15. **Every episode runs the final pace pass — the pass is not optional.** After the build (and
-   after any clip splice) `references/speedup.sh` writes the one deliverable set and checks the
-   speech rate on its retimed subtitles. The default factor is **1.0x**, which preserves the pace of the finished build. A channel may set
-   another factor in profile.md §2, and either way the shipped result has to stay at or below
-   **6.2 spoken characters/s overall and per substantive cue**.
-   The outro stays at 1.0x when the channel splices one. What goes to `output/` is `reel-fast.mp4` ·
-   `reel-sub-fast.mp4` · `subs-fast.srt`, never the pre-pass files.
+   after any clip splice) `references/speedup.sh` writes the one deliverable set and, when an SRT
+   sidecar was requested (`SUB=1`), checks the speech rate on the retimed cues. The factor is
+   **1.0x** unless the episode carries an explicit user request in `.work/speed-authorization.json`
+   (tts-speed.md); a channel profile value is not that request. With a sidecar the shipped result
+   has to stay at or below **6.2 spoken characters/s overall and per substantive cue**; without one
+   the rate check is skipped and the report says so.
+   The outro stays at 1.0x when the channel splices one. What goes to `output/video/` is
+   `.work/reel-fast.mp4` as `video.mp4` plus `delivery-proof.json`, never the pre-pass files; an SRT
+   goes along only when it was requested.
 16. **Nothing is drawn over video; hybrid explanations use HTML** (user directive
-   2026-09-05 — it outranks every other rule here and in every reference doc; CLAUDE.md
-   §Nothing is drawn over video. An approved full-video episode lifts only the HTML
-   requirement, never the ban on marks). No arrow, route, X, ring, hatch, bracket, dot, label or
+   2026-09-05, CLAUDE.md §Nothing is drawn over video — an absolute content rule: no production
+   mode, reference recipe or quality finding lifts it. An approved full-video episode lifts only
+   the HTML requirement, never the ban on marks). No arrow, route, X, ring, hatch, bracket, dot, label or
    callout goes over a generated clip, a motion background, a b-roll, a quote clip or a
-   recording; the burned subtitle is the only type on a moving picture. A cut that needs an
+   recording; subtitles and captions are also forbidden on the moving picture. A cut that needs an
    arrow, a figure or a principle is `kind:"diagram", motion:true, treatment:"editorial"` on
    the studio stage, with a rendered object when a thing is the subject, built to the quality
    of `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`. The footage slide
    (`treatment:"footage"`) is retired and the checkers reject it.
 ## Procedure
-
 ### 1. Check the inputs
-
-- Confirm `status: approved` in the `storyboard/storyboard.md` frontmatter — otherwise stop
-  and point the user at `/social-flow:storyboard` for approval first.
+Read [model settings](../_shared/model-settings.md) before media calls. Reuse the
+episode's model snapshot and explicit overrides; for a new episode run directory
+setup only if missing. Preserve legacy approved choices rather than overwriting
+them. Use the selected video, speech and image models throughout production, even
+when later recipes recommend another engine. No repeated model question or silent fallback.
+Follow [delivery preflight and continuation](references/delivery-continuation.md) before generating assets and on every resume. Clips alone are never completion.
+- Confirm `status: approved` in the `storyboard/storyboard.md` frontmatter — that approval is the
+  spending boundary for this episode's generation; without it stop and point the user at
+  `/social-flow:storyboard`. Existing reviews must satisfy the fixed cut workflow before downstream generation.
 - Load `data/<channel>/profile.md` (voice, theme, platforms, `shortform_outro` — `on` if absent).
 - **Identify the source**: three paths, decided by `window.FORMAT` and the scenes'
   `visual.source`.
-
   | Condition | Path |
   |---|---|
   | `recording/alignment.json` present + portrait | **Shooting edit** — `references/screencast-pipeline.md` |
   | filmed scenes (`visual.source==="recording"`) mixed in | **Mixed shooting** — this document as-is + §3.5 |
   | anything else | generated (§2–7) |
-
   **The shooting-edit path** follows `references/screencast-pipeline.md` §Edit procedure
   instead of §2–7 (overlay capture → edit.json → build-screencast.sh — no TTS, no generated
   backgrounds, no reveals; the voice is the user's own). The artifact names (reel.mp4 ·
-  reel-sub.mp4 · subs.srt · cover.jpg · build-report.txt) are the same, so §7.5–10 (the speed
-  pass, phone QA, platform text, quality gate) run unchanged — **a shooting edit ships sped up
+  cover.jpg · build-report.txt; requested SRT separately) are the same, so §7.5–10 (the speed
+  pass, phone QA, platform text, completion report) run unchanged — **a shooting edit ships sped up
   too**, and `speedup.sh` reads the xfade join that builder makes on its own. Use screencast-pipeline.md's gate table.
-
   **`alignment.json` + landscape doesn't work.** `build-screencast.sh`'s band constants
   (BAND_MAX_H 900 · BAND_CY 880 · BAND_MIN_Y 460) and its background compositing are
   absolute portrait pixels and can't move to a landscape canvas. If you hit this
   combination, **stop** and tell the user — saving each scene as its own file opens the
   mixed-shooting path. Run it anyway and you shoot all 12 minutes only to die at the final
   canvas check.
-
   **Mixed shooting** puts filmed and generated scenes on one timeline — the builder is the
   same `build-reel.sh` as a generated episode, and only the filmed scenes go through the
   extra prep in §3.5. Slide scenes (`visual.slide`) and all-live-voice episodes
@@ -182,7 +237,6 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
 - Prepare the working directory: create `.work/{cards,broll,motion,pcm,fonts}` and settle
   the platform list (the CSV argument, or profile §4's publish platforms).
 - **Settle the format — write `.work/format.env`. Don't skip it.**
-
   ```bash
   PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
   node $PG/format-resolve.js storyboard/scenes.js --sh > .work/format.env
@@ -237,13 +291,14 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
   ```
 
   `check-slide.js storyboard/ --require-all` runs at the **end of §3.6**, once the slides have
-  been authored — running it here would fail on every episode. It keeps a declared motion frame
-  from reaching the build as a missing HTML file. Timeline, statistic, and principle slides are checked again while rendering: every
-  `motionBeats` primitive (actor + rule on a principle) must exist in that group's DOM. A missing camera slot or an
-  unresolvable b-roll `after` fails the first command. Fix a blocker before the build rather
+  been authored — running it here would fail on every episode. It fails (exit 1) only on a missing
+  file, a template mismatch, the retired `treatment:"footage"` or an unknown kind/act word; its design
+  and metadata rules print as ⚠ warnings with exit 0. Timeline, statistic, and principle slides are checked again while rendering: every
+  `motionBeats` primitive (actor + rule on a principle) must exist in that group's DOM. A parse error or
+  an unresolvable reference (a b-roll `after` that names no shot) fails the first command; every other
+  finding prints as a warning. Fix a blocker before the build rather
   than discovering it 12 minutes into capture. `.work/` survives between sessions on purpose,
   so a resumed run reuses the captures and TSV manifests already there.
-
 ### 1.5 Generate the stills
 
 **This is where the episode starts costing money.** The storyboard planned every still and
@@ -252,13 +307,15 @@ when it ends. **Skip the whole section on the shooting-edit path** (the screen i
 recording); a **mixed** episode still generates the stills its generated scenes name. Slide
 scenes have no still here either — their screen is HTML, authored at §3.6.
 
+**Persistent locations:** Before source images, follow [location assets](../storyboard/references/location-assets.md). Render the bound set/camera and complete actor start/end blocking; inspect consecutive cuts and the advisory continuity findings. Use `mcp__social-flow__location_manage` action `previz` for motion so its clip and source composition share that same spatial plan. Forward the assembler's actual image inputs with the location composition first; cast sheets supply appearance. Read spatialWarnings for legacy independent previz. Camera, actor or endpoint changes require fresh references; actual reviews remain optional and honestly recorded.
+
 **The plan clears rule 13 first.** Go through each `bgPrompt` and the footage stills against
 absolute rule 13's list with profile.md §3 open for the target person — no still life as a
 source, no real person, no text expected from an engine that can't write it, the exclusions
 written, no minor in frame. The storyboard checked this against a plan; you are checking it
 against the call that is about to go out.
 
-**A stock photograph is not generated**: a `visual.source: "stock"` still names its file under `images/stock/` and carries `visual.license`; download it from the record's `url` (or the `stock_search` file URL) into that exact name — a record with `provider: "ttalkkakstory"` comes down through `portal_assets_get` (`download: true`, `episodeDir`, the `shot` number for a clip), which verifies the sha256 and skips a file already there — and log the date beside the license in `.work/decisions.tsv`. Then generate the rest, **resending each stored `visual.bgPrompt` verbatim**, and **look at every
+**A stock photograph is not generated**: a `visual.source: "stock"` still names its file under `images/stock/` and carries `visual.license`; download it from the record's `url` (or the `stock_search` file URL) into that exact name and log the date beside the license in `.work/decisions.tsv`. Then generate the rest, **resending each stored `visual.bgPrompt` verbatim**, and **look at every
 picture that comes back** before moving on — a wrong still is the cheapest thing in this
 pipeline to catch and the most expensive to carry, since §3 turns it into a clip.
 
@@ -294,7 +351,7 @@ The §6 manifest references these file paths directly, so follow the naming belo
 motion-background scenes from scenes.js against the rule's list, with profile.md §3 open for
 the target person, and only then start the generation calls. The stills those clips are made
 from already exist and were already looked at (§1.5); an engine question about a still belongs
-there, in [still-generation.md](references/still-generation.md). **With `videoProvider:"host"` every clip in this section is a host `image_to_video` call** — same source PNG, same stored prompt, `video.host` in the ledger; the `veo_*` / `seedance_*` recipes are the API lane.
+there, in [still-generation.md](references/still-generation.md). **Every clip request in this section goes `video_catalog` → `video_plan` → `video_execute`** (`video_status` on resume) on the saved video model — except the audio-conditioned ASTRA cut, which the 2026-10-17 block above sends through `render-astra-shot.js`. With `videoProvider:"host"` the plan returns a `host_handoff` for the host `image_to_video` — same source PNG, same stored prompt, `video.host` in the ledger. A direct `veo_*` / `seedance_*` / `omni_*` / `astra_*` call appears only as the adapter the plan selected and must carry `videoContext: {episode, shotId, requestId}`; a configured workspace refuses one without it (`video_context_required`).
 
 **What the storyboard already settled — pass it through, don't re-decide it.** These values
 arrive from scenes.js already chosen and already reviewed. Inventing a replacement at call time
@@ -306,8 +363,9 @@ means generating something nobody approved.
   clip), assembled by `assemble-bg-prompt.js --clip` in the planned route's grammar and
   machine-checked there. One scene is one call, and the prompt is the reviewed artifact — the
   call adds only the arguments the API takes separately: `negativePrompt` from the stored
-  `negative` noun list (Veo lanes only), the reference images from `visual.character`,
-  `durationSeconds` from `duration`. **To regenerate a clip, resend the stored prompt as-is**;
+  `negative` noun list (Veo fast/standard only — lite takes none, so its exclusions stay in the
+  prompt body), the reference images from `visual.character`, and `requiredSeconds` from
+  `plan-video-duration.js` (video-duration.md; never beside `durationSeconds`). **To regenerate a clip, resend the stored prompt as-is**;
   when a camera slot or the motion changed, rerun the assembler from the fields rather than
   editing the string by hand — the same discipline as `bgPrompt`.
 
@@ -323,7 +381,7 @@ means generating something nobody approved.
   Then append the subject motion, and for b-roll the audio line. **An empty `end` is a storyboard
   defect, not something to fill in here** — send it back. Older episodes carry a single
   `visual.motion` string instead; use that as-is.
-- **`shot.composition` owns framing room.** Source prompts and filming scripts read the record. Check headroom, gaze space, travel space and subtitle clearance in actual frames and motion endpoints; image-to-video inherits the approved source composition. **`shot.depth` owns focus** the same way: shallow names the one sharp plane, deep lists every plane that must read; check the actual still and clip, and treat a still-camera focus mask that blurs two objects at one distance differently, or a soft key subject, as a failed cut rather than a look.
+- **`shot.composition` owns framing room.** Source prompts and filming scripts read the record. Check headroom, gaze space, travel space and unobstructed framing in actual frames and motion endpoints; image-to-video inherits the approved source composition. **`shot.depth` owns focus** the same way: shallow names the one sharp plane, deep lists every plane that must read; check the actual still and clip, and treat a still-camera focus mask that blurs two objects at one distance differently, or a soft key subject, as a failed cut rather than a look.
 - **`shot.eyeline` owns gaze.** Read the scene plan before source images. `assemble-bg-prompt.js --from` includes it in source prompts; the shooting script prints the marker. Compare linked images and final boundary playback for direction, eye height and target distance. Keep the image-to-video prompt from restating locked space.
 - **`shot.feel`·`shot.size`·`shot.angle`·`shot.space` — the shot grammar.** The storyboard wrote
   what the audience should feel on each shot and chose the size, the angle and the frame space
@@ -343,7 +401,7 @@ means generating something nobody approved.
   scene and mood sentences lifted from the stored string (they sit between the `From the
   camera:` sentence and the exclusions — and `--no-person` again when the stored string reads
   "the subject" instead of a body) rather than editing the string by hand.
-
+- Follow [character-identity.md](../channel/references/character-identity.md) for cast directions: recompile current identities, compare source hashes, and apply image/video/dialogue/voice guidance to their respective generation lanes.
 - **`visual.character` — who is on screen.** Use `PRODUCTION.cast[id].image` when present;
   otherwise resolve the id to the channel panel directory:
 
@@ -354,24 +412,26 @@ means generating something nobody approved.
   Keep source-image order as previz, style pack, episode cast. **Inside channel panels, order is
   weight**: front/three-quarter shots use face then body, close-ups use face alone,
   rear shots use back (add face only when visible). Store all three views for new characters. No panels yet means falling back to that character's `front.png`; a live-action
-  character keeps its single image (`real.png`). Drawn character → `seedance_reference`,
-  photoreal person → `veo_reference` (**3 images max**, validated in code). The full rule is
+  character keeps its single image (`real.png`). The reference lane is the saved video model's
+  (`seedance_reference` or `veo_reference` as the plan selects; Veo takes **3 images max**, validated
+  in code) — a saved model that cannot take the required references is reported for an explicit
+  exception, not swapped. The full rule is
   [video-model-selection.md](references/video-model-selection.md) §The character panels.
 
-  **After model-generated speech, run the [character voice-lock pass](references/voice-lock.md).**
+  For character speech, follow [shot-speech.md](references/shot-speech.md); no voice-lock ASR or listening gate.
   **The character's voice travels the same way.** `$CH/voice.wav` is the fixed voice sample
   (`resolve-asset.py "$CHANNEL_DIR" voice claude`; §6). When the model voices the cut —
   `generateAudio: true` on `seedance_reference`, which is a b-roll slot routed to Seedance or a
   lip-synced speaking cut — pass it as `referenceAudioPaths` and bind it in the prompt right
   after the reference list: `@Image 1-2 are Claude and speak with the voice of @Audio 1`. Two
   speakers, two clips, one sentence each; `@Audio N` is the Nth entry of `referenceAudioPaths`.
-  The route is `dreamina-seedance-2-5-260628` — the only model whose guide documents the
-  per-character mapping, and the 2.0 series takes no audio-only input. Veo has no audio
-  reference; keep its speaking cuts consistent with the voice-lock pass below. A cut voiced
-  by TTS in the build needs no voice reference at all — the sample exists so the model-voiced
-  lane and the TTS lane match the voice `identity.md` pins (profile §2). Imitation, not cloning: also describe the voice in words
-  (gender, age, texture, pace, mood) and keep the lines in the sample's tone — the vendor's own
-  FAQ says the result drifts otherwise.
+  Use the saved compatible Seedance selection: 2.5 documents explicit mapping; 2.0/Fast/Mini accept reference audio with an image. Do not silently switch grades.
+  `video_plan` preserves reference indices and maps pinned samples.
+  Veo has no audio reference; select an explicit speech synchronization adapter under
+  shot-speech.md when the finished WAV must drive the mouth. A cut voiced
+  by TTS in the build needs no voice reference; native speech can approximate the pinned voice (profile §2). This is imitation,
+  not cloning: repeat authored timbre/accent separately from each line's emotion and
+  recording environment. Unknown acoustic traits stay unknown.
 
   An entry written as `{ id, scope }` carries its **jurisdiction** — copy that clause into the
   prompt's reference list verbatim (`@mouse — controls the helmet and body only`). Don't
@@ -380,8 +440,8 @@ means generating something nobody approved.
 
 - **`duration` — the used length.** On a generated clip this is what the cut needs
   (scenes-schema §cut length), not a default: an insert is 3–4s, a face carrying emotion is
-  7–10s. **Ask for exactly that** — Seedance makes and bills the seconds you request, so
-  `durationSeconds` is the used length, **clamped to the routed model's server floor**: 1.5 pro takes 4–12s, so a 3-second scene requests 4 and the build cuts at the scene boundary.
+  7–10s. **Ask for exactly that** — send `requiredSeconds` from `plan-video-duration.js`
+  ([video-duration.md](references/video-duration.md)), never a bare `durationSeconds` beside it; Seedance makes and bills the seconds you request, and the router clamps them to the saved model's floor (1.5 pro takes 4–12s, so a 3-second scene bills 4 and the build cuts at the scene boundary).
   Veo's reference lane is the exception the other way, pinned at 8s, so there you generate 8 and trim. Handing a model more seconds than the idea holds is how the
   middle of a clip goes dead — it fills the time it is given.
 
@@ -390,28 +450,32 @@ means generating something nobody approved.
   <clip>.artifacts.json` (silent = a card clip planned `generateAudio:false`, sound = a b-roll
   whose own audio ships, speech = a quote clip): one frame a second through OCR for burned
   text, the audio track against the plan, the local ASR for a line the prompt never wrote.
-  Exit 2 lists findings, and a finding is a **warning under HITL** with the same standing as
-  the assembly video checks (CLAUDE.md, 2026-09-14): show the frame time and the words, and
-  the user regenerates off the same PNG with the artifact negatives (`subtitles, text,
-  captions, logo, watermark` in Veo's `negativePrompt`, "keep it subtitle-free" in a Seedance
-  lock, `no speech, no dialogue` in the `Audio:` sentence) or accepts with the warning in the
-  build record. Type on the picture never ships unflagged (video-generation §what the clip
-  brought back).
+  Exit 2 lists findings. Accidental type on the picture breaks the subtitle-free delivery rule, so
+  fix it within the existing authorization — crop the clip, or replace it off the same PNG with the
+  artifact locks (`subtitles, text, captions, logo, watermark` in `negativePrompt` on Veo
+  fast/standard; lite takes none, so there the exclusions go into the prompt body; "keep it
+  subtitle-free" in a Seedance lock; `no speech, no dialogue` in the `Audio:` sentence) — and record
+  the finding with the frame time and words in the build record. No approval is asked; only a
+  replacement that needs new spend goes through the budget check (`--before-call`)
+  (video-generation §what the clip brought back).
 
-- **`visual.video.previz` — the 3D previz every generated cut carries** (user directive 2026-09-11; `check-scenes.js` refuses a cut without it). On the Seedance reference-video route pass the `generation` object's `referenceVideoPaths` to `seedance_reference` resolved from the storyboard directory like `referenceImagePaths` — never a re-rendered or substituted clip (its bytes are hash-bound to the approval; `check-production.js` refuses a mismatch); on Seedance 1.x or a host video tool (`handoff:"frame_and_prompt"`) the still edited from `previz.firstFrame` and the stored prompt carry it. Either way check the result against the previz — a contact sheet at 0/25/50/75/100 % and an edge overlay — before accepting it ([blender-previz.md](../storyboard/references/blender-previz.md) §6.4, §6.7). **The model is the user's choice, asked before any video call**: `PRODUCTION.videoModel` holds it (storyboard §1.7, production-mode.md §Two more questions); on an older board without the record, print `video-model-options.js storyboard/` and ask with AskUserQuestion, record the episode default or `model:"mixed"` and each cut's selected model and resolution, re-quote and re-approve before the first call — `check-production.js` refuses the call until then.
+- **`visual.video.previz` — optional.** A previz helps camera and blocking when the saved model takes a reference clip (Seedance 2.x `reference_video`): pass the `generation` object's `referenceVideoPaths` to `seedance_reference` resolved from the storyboard directory like `referenceImagePaths` — never a re-rendered or substituted clip (its bytes are hash-bound; `check-production.js` flags a mismatch as stale). On a `frame_and_prompt` adapter (Seedance 1.x, Veo, a host tool, ASTRA) it is advice only: the still edited from `previz.firstFrame` and the stored prompt carry its composition. No checker refuses a generated cut without one; when `.social-flow/models.json` has `production.previzRenderer` use that renderer, otherwise pick one and record it as an assistant decision. When a previz exists, check the result against it — a contact sheet at 0/25/50/75/100 % and an edge overlay ([blender-previz.md](../storyboard/references/blender-previz.md) §6.4, §6.7). **Reuse the user's saved model choice**: `PRODUCTION.videoModel` holds it (directory model settings and storyboard §1.7). Populate a new board from its snapshot without another model question; preserve older boards' actual approved choices. Use `video-model-options.js storyboard/` only during first setup or an explicit requested change. Record each cut's selected model/resolution and recalculate costs when the user changes them; retain actual spending authorization.
 
-**Use the Seedance `generation` arguments from `cost-preview.js --json`; resolve errors and re-estimate retries before spending. Which engine, prompt, and per-slot recipe** —
-[video-generation.md](references/video-generation.md). It carries the face → sound → grid
-route between `veo_*` and `seedance_*`, each engine's prompt shape, and the per-slot recipes
-for b-roll, motion backgrounds and quote speaking clips. **Read it before the first
+**Use the `generation` arguments from `cost-preview.js --json` as the `video_plan` operation args; resolve errors and re-estimate retries before spending. Prompt shape and per-slot recipe** —
+[video-generation.md](references/video-generation.md). The engine is the saved video model;
+that document's face → sound → grid route is first-setup advice, while each engine's prompt
+shape and the per-slot recipes for b-roll, motion backgrounds and quote speaking clips apply
+to the saved one. **Read it before the first
 generated-video call**; an episode of still backgrounds skips it whole.
 `mlx_video_generate` is a separate local clip (24 fps, RAM-capped, ffmpeg mux) — it is
 not on that face-policy table and is not the default. `mlx_3d_generate` writes a GLB consumed by the HTML mesh lane
 ([mesh-objects.md](../storyboard/references/mesh-objects.md)); inspect the model and its materials before use.
 Follow [illustrated-scenes.md](../storyboard/references/illustrated-scenes.md): people/mood cuts use still-camera motion; explanations use recognizable 3D objects in contextual settings, with matching cute 3D characters performing the task when needed. Match still-camera direction to the cut’s purpose; character scenes default to no marks, mechanism scenes use brief, legible part callouts.
+All `still_camera` cuts use the unchanged shared camera HTML template and runtime, including push/pan. Non-slide video handoffs declare `visual.renderedFile` (or `visual.clip`) relative to the storyboard; assembly must use that exact file. Drone shots follow [drone-flythrough.md](../storyboard/references/drone-flythrough.md). Keep attachments and rights evidence locally.
 
 - **Cover background = b-roll source (one image, `storyboard/images/scene-1.png`)**:
-  `gpt_image_text2img`, `size: "1088x1920"`, **`quality: "high"`**. **Photoreal style, with a
+  the saved image model at the format's size preset (`1088x1920` on gpt_image for shorts) and its
+  saved quality (still-generation.md §1). **Photoreal style, with a
   person only when the shot needs one** (absolute rules 11·12 — no demographic default),
   an angle that puts the channel's subject at the center, a scene that shows the topic at a
   glance. Inherit profile §3's mood, its required negative instructions, and the
@@ -433,20 +497,19 @@ Follow [illustrated-scenes.md](../storyboard/references/illustrated-scenes.md): 
     # assets/audio/bgm/default.wav and register it with its provenance in the note:
     #   resolve-asset.py --ensure data/<channel> bgm default audio/bgm/default.wav "lyria-clip · <prompt> · <date>"
     # (assets-catalog-template.md — the note is what answers a claim or a rights question later)
-    : # default: music_generate_clip (Lyria, 30s instrumental) → .work/bgm.wav
+    : # saved music model: music_plan → music_execute → .work/bgm.wav
   fi
   ```
-  **Before generating, ask the portal library** (chosen portal mode with a configured key): `portal_assets_search` `type: ["music"]` with the episode's mood words as `query` (required — AND over words; add `tags` only to narrow); when a bed fits, `portal_assets_get` `download: true` puts it at `.work/portal/<sourceId>.m4a` — ffmpeg it (`-vn -ac 2 -ar 48000`) to `.work/bgm.wav` and note the asset id in `.work/decisions.tsv`. No hit or no key: the generation above.
 
   **With `window.MUSIC`**, one file per cue. `base` (or the channel's shared bed when there is no
   `base`) becomes `.work/bgm.wav`; every other cue becomes `.work/bgm-<name>.wav`. A cue with
   `asset` comes from `resolve-asset.py <channel dir> bgm <id>` instead of being generated. A cue
-  with `prompts` (a weighted blend, scenes-schema §music cues) goes to `music_generate_advanced`; a cue with `prompt` goes to `music_generate` — after `portal_assets_search` `type: ["music"]` on the cue's words has answered nothing. A library bed the search does return goes through `portal_assets_get` `download: true` to `.work/portal/<sourceId>.m4a` and ffmpeg (`-vn -ac 2 -ar 48000`) writes it straight to that cue's file — `.work/bgm.wav` for `base`, `.work/bgm-<name>.wav` otherwise. **Do not put the local path in the cue's `asset`**: `asset` is a channel catalog id that `resolve-asset.py` resolves, and a path there fails or silently falls back to the channel's `default.wav`. A `sound.sfx` id the channel catalog lacks can come from the library the same way — copy the downloaded file to `data/<channel>/assets/audio/sfx/<id>.wav` and register it with `--ensure` exactly as §SFX below does for a generated one.
+  with `prompts` uses weighted control only when the saved model is Lyria RealTime. Translate musical intent into the selected adapter schema; never switch engines to fit a cue field. **Do not put the local path in the cue's `asset`**: `asset` is a channel catalog id that `resolve-asset.py` resolves, and a path there fails or silently falls back to the channel's `default.wav`.
   **Ask for the length the cue has to fill** — trimmed TTS of its shots + ~1 s a shot of card
   padding + the 2 s handover (bgm-scoring.md §2; the last cue needs no handover). A cue that
   comes up short loops at the boundary and `bed.log` prints the exact span to regenerate at.
 
-  On a legacy board without `$mix`, `sound.effects` or `sound.silence`, continue to write **`.work/bgm.tsv`** by hand — `idx <TAB> audio-file`, one row per shot that changes the cue:
+  On a legacy board without `$mix`, `sound.effects` or `sound.silence` or `sound.musicGain`, continue to write **`.work/bgm.tsv`** by hand — `idx <TAB> audio-file`, one row per shot that changes the cue:
   ```
   4	bgm-tense.wav
   ```
@@ -456,11 +519,13 @@ Follow [illustrated-scenes.md](../storyboard/references/illustrated-scenes.md): 
   A shot with `sound.drop` becomes an `sfx.tsv` row per segment of that shot, audio column empty
   and `bgm` set to `off` (§sfx below). A shot with `sound.sfx` becomes one row on **seg 0** — the
   shot's first frame — with the path `resolve-asset.py <channel dir> sfx <id>` returns.
-  `build-reel.sh` runs `compile-sound-plan.js` before reading `sound.env`. On an extended board, do not hand-write `bgm.tsv` · `sfx.tsv` · `amb.tsv` · `silence.tsv` or `sound.env`: the compiler records their hashes in `.work/sound-plan.json`.
+  `build-reel.sh` runs `compile-sound-plan.js` before reading `sound.env`. On an extended board, do not hand-write `bgm.tsv` · `sfx.tsv` · `amb.tsv` · `silence.tsv` · `music-gain.tsv` or `sound.env`: the compiler records their hashes in `.work/sound-plan.json`.
   It removes only a stale file whose hash still matches that marker; human edits are kept with a warning, and a markerless legacy board stays byte-identical.
   **The level is not a knob here.** The builder measures the narration and sets the bed
-  `BGM_SEP` LU under it (10 by default), clamps the bed's true peak, and stops the build if the
-  voice-to-bed separation **while the voice is up** lands under 4 LU. The hook is handled there
+  `BGM_SEP` LU under it (10 by default), clamps the bed's true peak, and warns if the
+  voice-to-bed separation **while the voice is up** lands under the configured review threshold.
+  Use `sound.musicGain` for shot-relative gain curves and `$mix.ducking` for threshold,
+  wet mix and detector lookahead as well as ratio/attack/release. Existing boards keep their defaults. The hook is handled there
   too: card 0 sits a further `BGM_HOOK_LU` (6) down and ramps back from card 1, so the opening
   needs no drone cue. So the prompt only has to make the bed *fit* — the established wording is
   "leaves space for a spoken voiceover, no melody in the vocal frequency range". The build
@@ -470,19 +535,16 @@ Follow [illustrated-scenes.md](../storyboard/references/illustrated-scenes.md): 
   `DUCK_ATTACK` / `DUCK_RELEASE`. Where those numbers come from, and which parts of this are
   evidence and which are our own practice: [bgm-scoring.md](references/bgm-scoring.md).
 
-  | Job | Tool | Key |
-  |---|---|---|
-  | A cue that has to fit a span, or a seed to reproduce | `music_generate` / `music_generate_advanced` (5–300s) | `GEMINI_API_KEY` |
-  | A bed with no span to fit | `music_generate_clip` 30s, the builder extends it | `GEMINI_API_KEY` |
-  | A local instrumental bed (optional) | `mlx_music_generate` (`instrumental: true`) | MLX Core on :11234 |
-  | Narration-under bed (Suno) | `suno_generate_sound` loop + BPM. `filename: "bgm.wav"` | `SUNO_API_KEY` |
-  | The song IS the content | `suno_generate` (customMode; lyrics from `suno_generate_lyrics` or written) | `SUNO_API_KEY` |
-
-  Default BGM is Lyria. `mlx_music_generate` is the $0 understudy when MLX Core is
-  running — it is not the default, and unattended still takes the Lyria clip.
-  Sung vocals fight the voiceover, so `suno_generate` is
-  for episodes where the song itself is the piece. There is no official Suno
-  API (2026-08); `suno_*` talks to sunoapi.org.
+  Follow [music routing](../_shared/music-routing.md): `music_catalog → music_plan →
+  music_execute`, with `music_status` after interruptions. The episode snapshot's
+  `models.music` selects Lyria, ElevenLabs, sunoapi.org or an installed MLX music pack.
+  Missing music settings require only that choice; they do not invalidate old boards.
+  Reuse existing BGM before generating. Use instrumental settings for narration beds.
+  Reserve the authorized music allocation before each paid call, including both Suno
+  variants. Never switch providers after a failure. The router returns verified 48 kHz
+  stereo WAV and measured duration with `not_reviewed`; listening is not an execution gate.
+  `suno-api` means sunoapi.org, not the official Suno Platform. The retired V5 sound
+  adapter is disabled; choose a saved V6 model and an instrumental `suno_generate` plan.
 
 - **SFX**: the storyboard's `window.SFX` and each shot's `sound.sfx` (scenes-schema §sound
   effects). Every id becomes a file in the **channel** catalog, not `.work/` — an effect is
@@ -557,8 +619,8 @@ because a key was missing. A fallback that reaches the deliverable without a lin
 an unexplained difference between the storyboard's plan and the video.
 
 ```bash
-printf 'produce\tmusic_source\tepisode BGM\tmusic_generate_clip\t30s Lyria clip, builder extends; rejected suno (sung vocals fight the voiceover)\n' >> .work/decisions.tsv
-printf 'produce\tfallback\tmotion background i3\thold\tARK_API_KEY absent — a previz cut has no Veo route; waiting for the key (or the host lane); recorded in build-report.txt\n' >> .work/decisions.tsv
+printf 'produce\tmusic_source\tepisode BGM\tmusic_execute\tsaved music model; instrumental bed; measured output\n' >> .work/decisions.tsv
+printf 'produce\tfallback\tmotion background i3\thold\tARK_API_KEY absent for the saved Seedance model — waiting for the key, no silent engine switch; recorded in build-report.txt\n' >> .work/decisions.tsv
 ```
 
 ### 3.5 Take in the filmed clips (mixed-shooting episodes only)
@@ -572,7 +634,7 @@ is in [optional-lanes.md](references/optional-lanes.md) §3.5. **Stock clips** (
 arts are generated images, and no image is made before approval). What arrived from the
 storyboard is the plan in `visual.slide`: the kind, the `labels`, the `motionBeats`, the
 `arts` list, and the `object` when the slide carries a rendered thing. Follow
-[object-state-quality.md](../storyboard/references/object-state-quality.md) and [slide-authoring.md](../storyboard/references/slide-authoring.md); their plan, pixel and visual-review gates are required. Build in this
+[object-state-quality.md](../storyboard/references/object-state-quality.md) and [slide-authoring.md](../storyboard/references/slide-authoring.md) as guidance for plan, pixels and visual review; the operational requirements are `check-slide.js --require-all` (every registered slide file exists) and the renderer's input contract. Build in this
 order.
 
 1. **Generate `slide.arts` first** when the array is set — `slides/assets/s<shot>-<slug>.png`,
@@ -599,18 +661,22 @@ order.
    ```
 
    This is the `--require-all` run §1 deferred: every registered slide file now has to exist.
-   Render the key-state sheet with `render-motion-slide.mjs --sheet --png-only --keep-frames`
-   and stop on either failure. Timeline, statistic and principle frames must match every
-   `motionBeats` primitive with the same group's `data-primitive` — a label reveal cannot
-   stand in for the promised explanation.
+   `check-slide.js` fails (exit 1) only on a missing file, a template mismatch, the retired
+   `treatment:"footage"` or an unknown kind/act word; its design and metadata rules print as ⚠
+   warnings with exit 0, and `render-motion-slide.mjs` prints them again and keeps rendering.
+   Render the key-state sheet with `render-motion-slide.mjs --sheet --png-only --keep-frames`;
+   it stops only on its own input contract — timeline, statistic and principle frames must match
+   every `motionBeats` primitive with the same group's `data-primitive`, since a label reveal
+   cannot stand in for the promised explanation.
 4. **Read the sheet yourself** — `sheet/g<k>-end.png` for the last group of every slide:
    everything the scene claims is on it, inside the zone, the ground is a plate and not a flat
    fill, and no photo with an animated rectangle stands in for a diagram (slide-design.md
-   §1·§6). Re-author once if it fails. Before capture, independently review at least one
-   sample of every `slide.kind` used in the episode with `slide-reviewer`; supply the
-   scenes, narration, sheet and summary in one batch. Require score ≥95 and P0=0, and
+   §1·§6). Re-author once if it fails. When the user asks for it, or a concrete uncertainty
+   remains, review a sample of the affected `slide.kind` with `slide-reviewer`, supplying the
+   scenes, narration, sheet and summary in one batch; use the reviewer’s concrete findings to improve the slide, and
    record reviewer, sample and evidence in storyboard.md. Review only changed failed samples again.
-   If a cut still fails, present its sheet to the user rather than shipping or replacing it.
+   A slide that still looks wrong after the re-author ships with the finding recorded in the build
+   record and the completion report; it is not held for approval.
 
 Then the capture: authored HTML screens get captured like any other card, and an
 all-live-voice episode takes its audio from `voice/` instead of the TTS in §5. Both lanes are
@@ -691,15 +757,15 @@ Run it on each scene's **last** reveal state — that one carries the most text.
 `ovf=0` means the zone still spills after the template's own tight1–3 shrink, so cut the copy
 or push a line into the next state.
 
-### 5. Generate and check the TTS (one scene per checked call)
+### 5. Generate the TTS
 
 **An all-live-voice episode (`window.VOICE === "user"`) skips this whole section** — every
-card's audio comes from the clips (§3.5) and `voice/` (§3.6). The style gate already
-passed back in the storyboard.
+card's audio comes from the clips (§3.5) and `voice/` (§3.6). The style check already
+ran back in the storyboard.
 
-**Look at the style before anything gets read aloud.** Narration passes by once with no
-rewind, and subtitle and card text can't be fixed after publishing. Check the three surfaces
-before the TTS calls.
+**Run the style check before anything gets read aloud** — its findings are editing suggestions
+(rule 4). Narration passes by once with no rewind, and card text can't be fixed after publishing,
+so read the three surfaces before the TTS calls.
 
 ```bash
 PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
@@ -710,100 +776,72 @@ for S in narration subtitle screen; do
 done
 ```
 
-Read `gate_exit` as it is — 0 pass / 1 warning / 2 S1 detected / 3 gate never ran
-(extraction failure, bad path) / 4 not Korean, so the gate declined to judge.
-**Neither 3 nor 4 is a pass.** On 3, fix the path and run again. On 4 the checker read the
+Read `gate_exit` as it is — 0 clean / 1 warning / 2 S1 found / 3 the checker never ran
+(extraction failure, bad path) / 4 not Korean, so it declined to judge.
+**Neither 3 nor 4 is a clean read.** On 3, fix the path and run again. On 4 the checker read the
 text and found it isn't Korean — every rule in it is Korean-specific — so that surface is
-**unchecked** and a person has to read it. For English, run the tell checks listed in README and
-name every unchecked surface in the approval prompt.
+**unchecked** and a person reads it. For English, run the tell checks listed in README and
+name every unchecked surface in the completion report.
 On a 1 with `quote-exempt N` in the header line, confirm that quote against research.md — a
-video freezes the subtitles and cards in place, so an unconfirmed quote loses its quotation
+video freezes the cards in place, so an unconfirmed quote loses its quotation
 marks and gets rewritten in our own words.
 
 **Don't add `| head` or `| sed` to shrink the output.** Add one and `$?` becomes that
 command's instead of the checker's, so a FAIL with 6 S1 hits shows as `gate_exit=0`
 (field-tested). If you must pipe, put `set -o pipefail` in front.
 
-On exit 2, **fix scenes.js** and start again from here — fixing only `.work/text-*.txt`
-leaves it out of step with the video (scenes.js is the single source). When fixing, leave
-numbers and proper nouns alone and work on the grain of the sentence.
+On exit 2, read each hit as a suggestion: when you take it, edit **scenes.js** (fixing only
+`.work/text-*.txt` leaves it out of step with the video — scenes.js is the single source), leave
+numbers and proper nouns alone, work on the grain of the sentence, and explain a change that alters
+meaning; an S1 label alone does not stop the TTS calls (rule 4).
 
-Use `tts_generate_checked` for every generated scene; read `references/tts-quality.md` first.
-The calls below describe `generator` and `generation`; raw TTS has no assembly proof. A take
-that ends `fail` after its attempts is not the end of the episode: present its findings and
-follow `references/tts-hitl.md` — the user decides whether it ships. The blind-transcription (STT) check and its 2% CER gate do not run (owner directive 2026-10-04): the proof records `transcript: null` and the listening review judges the take. Pass `transcriptCheck` only when the user actually asked for dictation on that call.
+Follow [shot-speech.md](references/shot-speech.md). Resolve each explicit speaker from
+SB_DOC.characters and use `speech_manage action:plan_audio` to obtain its raw TTS arguments
+with the current line's acting direction. Do not replace those arguments with a generic
+character stylePrompt. Store stable line ids,
+generation receipts and audio hashes with `speech_manage`. Keep raw API arguments in
+voiceSettings; declare text language separately when the API auto-detects it. No automatic
+listening, STT, scores, retry-to-pass loop or human listening approval runs by default;
+an explicitly requested review/improvement loop may inspect actual media and report findings.
 
-Resolve every checked call from `window.SB_DOC`: `speaker` selects that character id and its absence selects `SB_DOC.narratorCharacterId`. The matched `tts` supplies `generator` and `generation`: map `voiceId` to Gemini `voiceName`, Supertonic/MLX `voice`, or ElevenLabs `voiceId`, and pass model, speed, language and stylePrompt only when accepted. Portal voice data overrides profile §2; unknown speakers, missing narrator/characters, or missing TTS stop production.
-One checked call per scene when all segments share a character — join their `tts` sentences with periods into `.work/pcm/c<n>.wav`. For changes, synthesize each contiguous speaker run with its character settings, join in order with the standard sentence pause, apply the same speech-quality gate, and resample differing engine rates before joining.
-Don't split a scene into several calls by sentence (the voice varies between calls). Pass the
-same `tts` sentences as `segments`. Default `generation.speed` and `playbackSpeed` to 1.0;
-non-1 values require the episode's explicit user request under `references/tts-speed.md`.
-On every single-voice take the wrapper lays a fixed pause at each segment boundary and
-writes `c<n>.wav.sentences.json` for reveal/cue timing (`references/tts-quality.md` §Sentence spacing) —
-ElevenLabs from its own timestamps, Supertonic·Gemini·mlx from the local forced aligner.
-A scene of one sentence is one call, and one call restarts the voice: measured 2026-09-15 on the
-pundago voice, three sentences as three calls reviewed at continuity 94 · naturalness 92 against
-96 · 95 for the same three in one call. When consecutive sentences are one breath, keep them in
-one scene as several segments (each segment still gets its own clip or reveal).
-
-**For a board without portal character voice data, profile §2 decides the engine.** A new channel's narration default is `tts_local_generate`
-(Supertonic, local) — no key, no quota, and 0 cost however many times you rerun the episode,
-so regenerating is free. Only lines that need a style instruction, meaning shots where an
-emotion has to be acted, go to `tts_generate` (Gemini). The local side has no stylePrompt.
-A profile with `engine: elevenlabs` calls `tts_elevenlabs_generate` with the profile's
-voiceId · model · stability (and seed, if pinned) and leaves `outputFormat` at its default
-`wav_24000` — mono 24kHz WAV, the same spec as Gemini, so the builder reads it as-is. The
-checked wrapper adds `timestamps` and preserves one episode seed on every retake. Pass
-`episode: {texts, index, seed}` so it derives the neighboring scene text automatically.
-For v3, the wrapper omits unsupported text context; final listening checks the scene joins. **Pundago keeps its fixed ElevenLabs narrator:** `L4az9Gb378GIycFl2nAB`, `eleven_multilingual_v2`, speed `1.0`. `tts_gemini_38` only supports cuts that specifically need turn-level emotional acting, inline vocal events, or a two-person conversation; do not replace the episode narrator or profile default.
-Set `SPEED=1` and `generation.speed=1`. Any non-1 synthesis rate requires the explicit human request in [tts-speed.md](references/tts-speed.md). Assembly always preserves 1.0x.
-Keep names intact and pin pronunciation dictionaries; see `references/tts-quality.md`.
-**Never pass an mp3_* outputFormat for narration**: build-reel.sh reads any non-RIFF audio
-file as raw PCM and that card becomes noise. A scene with three or more speakers goes to
-`tts_elevenlabs_dialogue` in one call (no per-speaker stitching, no 0.75s gaps). Audio tags
-for acted lines (`[whispers]`, `[laughs]`) only work on `eleven_v3`, and the v3 cap is 5,000
-characters per call — scenes are far under it.
-
-**An existing profile with no engine field counts as `gemini` and keeps the voiceName written
-there.** Don't switch it over just because local is the default — a channel a few episodes in
-would change narrators mid-run. A move to local happens only when the user updates profile §2
-and names the engine.
-
-**Don't mix engines with different sample rates inside one video** — 44.1kHz (local) and
-24kHz (Gemini · ElevenLabs default) on one timeline break the concatenation. Gemini and
-ElevenLabs at `wav_24000` share a spec and can sit on one timeline; local can't join either
-without resampling one side before the build. `mlx_tts_generate` is an optional local
-voice when MLX Core is up — never a silent fallback for the engine pinned in profile §2.
-
-**Mandatory speech quality gate.** The checked tool measures the WAV, transcribes without
-the script and separately reviews pronunciation, accuracy, naturalness and clarity. It retries
-failed takes at the same settings, at most three takes total. Only `status: pass` with a current
-`.wav.quality.json` may proceed. `fail` or `unverified` stops production. Include paid review
-even for local synthesis in the allowance; do not silently reset exhausted attempts.
+A shot may contain several speakers. Keep each line's speaker, pinned voice and receipt;
+use the shared composer to place their takes in performance order. Cut on the scene's
+staging or a real adapter constraint, not on every speaker change.
+Use WAV, preserve the selected voice and speed, and resample differing sample rates before
+assembly. The current builder cannot concatenate MP3 as PCM. Keep speech at speed 1 unless
+the user requested another speed under [tts-speed.md](references/tts-speed.md).
+Generate each stable line as a take; combine consecutive lines into the scene WAV and record
+its ordered lineIds, expectedText and actual audioSha256. For single-line shots, use the bound
+WAV directly when no reaction padding or independent action is planned. For directed,
+multi-line or action-bearing scenes, attach all line audio first; build-reel invokes
+[compose-speech.js](references/compose-speech.js) to place measured speech and ordered action
+intervals on one timeline. New boards carry `SB_DOC.performanceTimingVersion:1` and need
+finite independent-action timing before composition. Optional subtitle sidecars align to
+measured speech intervals; the video stays clean. Run that
+same composer before audio-conditioned video generation so video uses the padded WAV. Subtitle timing follows the
+actual WAV; file and timing checks do not listen.
+Keep ElevenLabs seed, stability and pronunciation dictionaries fixed across retakes when
+pinned. Never switch engines silently after an API failure.
+For v4 request sizing, language codes, IPA and optional continuity/clone/logging controls,
+follow [ElevenLabs v4](../_shared/elevenlabs-v4.md). Preserve the returned request ID for
+later targeted retakes; `timestamps:true` also saves it in the alignment sidecar.
 
 Once the whole scene is out, write a line to the ledger. **The quantity is chars÷1000, not
 the character count** — the unit price is per 1,000 characters, so writing 412 characters as
-`412` inflates it 1000×. It doesn't show on the local engine at price 0, but on a Gemini
-channel it becomes a wrong billing figure outright. A regenerated scene gets one more line
+`412` inflates it 1000×. An incorrect unit produces a wrong billing figure. A regenerated scene gets one more line
 for its share.
 
 ```bash
-# local (Supertonic) channel — 1,840 characters across all scenes
-printf 'tts.local\t1.840\tproduce: narration, 5 scenes, 1840 chars\n' >> .work/cost-tally.tsv
 # on a Gemini channel, use the key for the model (flash by default)
 printf 'tts.gemini-flash\t1.840\tproduce: narration, 5 scenes, 1840 chars\n' >> .work/cost-tally.tsv
 # on an ElevenLabs channel the quantity is the response's "Character cost" ÷ 1000 (the vendor's
 # metered count — it sits below the raw character count, measured), key by model family
 printf 'tts.elevenlabs\t1.120\tproduce: narration, 5 scenes, character cost 1120\n' >> .work/cost-tally.tsv
-# (flash_v2_5 / v3_conversational → tts.elevenlabs-flash)
 ```
 
-If the local engine fails with "Python interpreter not found" or
-"No module named 'supertonic'", **stop right there and ask the user to install it.** Don't
-quietly switch to Gemini — the video gets made with a changed voice, and the speaker differs
-from episode to episode. The same rule covers ElevenLabs: a key, permission, quota, or
-`output_format_not_allowed` error stops the run and goes to the user — no silent fallback to
-another engine.
+A Gemini or ElevenLabs key, permission, quota, or output-format error stops generation
+and reports the actual cause; never silently fall back to another engine or older model.
+ElevenLabs speech uses `eleven_v4` only. Local TTS engines are removed.
 
 ### 6. Write the manifest + build
 
@@ -835,8 +873,8 @@ camera (`KB_EASE=linear` restores the old ramp). `auto` alternates in/out card t
 |---|---|---|
 | `in` / `out` / `auto` | eased zoom over the whole card — `span=` when written, else, **on a still card**, `KB_RATE` 4%/s × card seconds capped at a 1.075 total scale (`KB_ZMAX`, where the card's baked text still stops above the subtitle band). A card holding a clip keeps the 3.5% floor — the clip already moves | the default — `auto` unless the scene says otherwise |
 | `punch` | 3.5% lands in the first 0.4s (ease-out), then keeps creeping to the card's span by the cut — never a frozen tail | the cover card — the hook contract wants movement inside 0–3s |
-| `hold` | fixed scale, no zoom motion | the base for `drift=1` (pure handheld) or a `pan=` travel — never alone on a still: the build refuses a frozen still card |
-| `none` | no Ken Burns at all, source untouched | **a filmed clip already moves** — a zoom on top shakes the frame. Filmed cards are usually `none` + `sync=1`. Never on a still card — the build refuses it |
+| `hold` | fixed scale, no zoom motion | the base for `drift=1` (pure handheld) or a `pan=` travel — not alone on a still: the build warns on a frozen still card and continues (a planned `motionIntent: intentional_still` is named in the warning) |
+| `none` | no Ken Burns at all, source untouched | **a filmed clip already moves** — a zoom on top shakes the frame. Filmed cards are usually `none` + `sync=1`. Not on a still card — the build warns and continues (a planned `intentional_still` is named) |
 
 **The 5th cards.tsv column (options) is `k=v,k=v`.** It's optional; existing 4-column files keep working. Two-value options use `:` inside the value — `,` stays the k=v separator.
 
@@ -876,36 +914,8 @@ After assembly, inspect `edit-check.json`, play every `work/seams/` excerpt with
 record observations in `edit-review.md` with the final master hash. The machine checks frame
 counts and applied joins; the review checks whether the edit actually feels continuous.
 
-**Word cues — `SUB_MODE=word`.** The burn-in shows **one 어절 at a time**, a hard swap every
-half second, sitting on the 65% line in a 60px glyph with no fade — the subtitle grammar of
-the reference short measured in docs/research/2026-08-29-one-world-word-cue (164 swaps in
-85 s, 1.23 words per cue, 0.47 s median). The words get real times: the builder runs the
-forced aligner once per card on the trimmed narration (`QWEN3_ASR_BIN`, about 3 s for a 7 s
-card), `references/word-cues.py` maps each display word onto the heard characters through
-the TTS spelling (so "2020년" lands where "이천이십 년" was said, whatever the spacing), and a
-word that would flash by under `SUB_WORD_MIN` (0.28 s) is glued to the next. **Measured on
-ep07**: all 27 segments aligned (23 at 100% character match, the lowest 79%), and the cue
-start of every sentence-opening word sat within 0.07 s of the energy-based speech onset
-(mean 0.02 s, 18 sentences — a different signal from the aligner, so this is an independent
-check). Without the aligner the words spread by character count over the speech window,
-and that path measured 0.42 s off on average, 1.18 s at worst — it prints a warning and is
-not the lane. `subs.srt` keeps whole sentences either way (the publish tracks stay
-readable); only the burn-in changes. The Word style is `SUB_WORD_SIZE` (84 — Pretendard
-draws a Hangul glyph at ~0.71× the size) and `SUB_WORD_MV` (640, the 65% line); the `Sub`
-style and its format-lint mirrors are untouched. Default stays `sentence` — a channel
-switches with `SUB_MODE=word` on the build line. `SUB_ACCENT=RRGGBB` with `SUB_ACCENT_WORDS="<name> <aliases>"` colours the year (`1592년` · `16세기` · a dated day) and the named person in word and phrase mode and leaves every other word white — the history-short subtitle grammar of storyboard's [person-short.md](../storyboard/references/person-short.md); the SRT stays plain.
-
-**Phrase cues — `SUB_MODE=phrase`.** One line of **3~6 어절** at a time, no second line, on
-the same aligner as word mode: `word-cues.py --phrase 12` joins consecutive words while the
-line stays within `SUB_PHRASE_MAX` characters (spaces dropped), so each line lands on its
-first word's onset. The `Phrase` style has its own side margins (`SUB_PHRASE_ML`/`MR` 64 —
-952px; the sentence style's 250/250 wraps a 92px line in two). This is the subtitle grammar of the reference history short measured
-2026-09-02 (65 cues in 114 s, 4.4 words per cue, a new line every 1.75 s, one ~66px glyph
-line at 63% of the frame height, a thin outline, no box). The `Phrase` style is
-`SUB_PHRASE_SIZE` (92 — ≈66px Hangul), `SUB_PHRASE_MV` (680 — the 63% line) and
-`SUB_PHRASE_OUT` (4). It is the mode for an episode cut fast on generated clips: a 2-line 50px
-sentence under a 2-second cut reads as a caption on a photo, a one-line phrase reads as part
-of the picture. The SRT keeps whole sentences.
+**Legacy sidecar styling — `SUB_MODE=word|phrase` and the `SUB_*` variables.** They shape only the ASS layout of a
+requested `SUB=1` sidecar (the word/phrase grammar measured in docs/research 2026-08-29 and 2026-09-02); nothing is burned, and the SRT keeps whole sentences.
 
 **The still move comes from the storyboard, not from taste.** A still's
 `visual.camera.movement` (when the storyboard wrote one — directing-grammar §5's Still
@@ -913,9 +923,10 @@ column is where it picks) maps onto column 4/5 like this: `dolly in`/`zoom in` �
 `focus=` at the subject when it isn't centred), `dolly out` → `out`, `handheld` → `hold` +
 `drift=1`, `truck`/pan wording → `pan=<dir>`, and the cover card takes `punch`. A still with
 no camera written stays `auto` — most cards should. `static` or `hold` on a still is not a
-move — the least a still gets is `hold` + `drift=1`, and `build-reel.sh` refuses a still card
-written `none` or a bare `hold` (a still never sits frozen under the voice — owner directive
-2026-09-03). The same restraint as generated video:
+move — the least a still gets is `hold` + `drift=1`, and `build-reel.sh` warns on a still card
+written `none` or a bare `hold` and continues (a still sitting frozen under the voice is a board
+defect to fix — owner directive 2026-09-03, guidance since 2026-10-16 — unless the cut is a planned
+`motionIntent: intentional_still`, motion-production.md, which the warning names). The same restraint as generated video:
 the move supports the scene's feel, it doesn't decorate it.
 
 **The still's `speed` word sets the size of the move.** The beat→rate ladder is
@@ -955,7 +966,8 @@ the picture slips by exactly that difference.
 
 **The segment visual for a filmed scene** is
 `@.work/footage/<name>.mov::.work/cards/a<idx>.png` — play the clip once from its first frame
-(`@`) with the lower-third alpha PNG over it. A live-voice scene has one segment, so `@` is
+(`@`) with the scene's alpha PNG over it; that PNG carries no lettering (nothing is typed over a
+moving picture, so a filmed scene's text fields stay empty) and exists for the manifest shape. A live-voice scene has one segment, so `@` is
 right; when a narration-covering scene has several segments, drop the `@` and repeat the same
 path (the builder joins the playback with `-ss`).
 
@@ -1031,7 +1043,8 @@ if [ -d data/<channel>/assets/fonts ]; then
 fi
 ```
 
-resolve finds an old `assets/outro.mp4` too. For subtitle fonts, copy the ttf files from
+resolve finds an old `assets/outro.mp4` too. For the fonts of a requested subtitle sidecar's
+ASS styling (nothing is burned), copy the ttf files from
 `assets/fonts/` into `.work/fonts/` (woff2 won't work — without them the fontconfig fallback
 still gets you publish quality).
 
@@ -1041,14 +1054,14 @@ made it from `window.SFX` and registered it — so an id that fails to resolve h
 that was skipped, not a file to invent.
 
 ```bash
-$REF/build-reel.sh .work storyboard/    # → .work/reel.mp4 (clean) · reel-sub.mp4 (burned-in) · subs.srt · cover.jpg · build-report.txt
+$REF/build-reel.sh .work storyboard/    # → subtitle-free reel.mp4 · cover.jpg · build-report.txt; optional sidecar with SUB=1
 ```
 
-**You get two videos, not one.** This pipeline's principle is to keep subtitles out of the
-video and upload them as a separate file — subtitles stay fixable after publishing, viewers
-can turn them off, and YouTube even auto-translates from that file. Burned-in subtitles turn
-a single typo into a re-encode and a repost. So `reel.mp4` is the clean master with no
-subtitles, and `subs.srt` goes to the publish tools alongside it.
+**Deliver the clean master on every platform.** No burned-in variant is required or
+selected. If separate YouTube subtitles are requested, generate an SRT sidecar with
+`SUB=1`; it never becomes pixels or an embedded subtitle stream in the video. Upload
+that track separately when publishing to YouTube. Do not infer a subtitle request
+from a legacy profile, a stale SRT or the presence of a `reel-sub` file.
 
 #### Splicing in the b-roll (when §3 made one — inside the approved channel cap)
 
@@ -1056,11 +1069,12 @@ The procedure — trim + loudness + bed per slot in one re-encode, then the spli
 slot's `after` scene — is [broll-splice.md](references/broll-splice.md). It runs after
 the build finishes and before §7; the builder only splices the outro.
 
-### 7. The build report gate
+### 7. Read the build report
 
 Read `build-report.txt` and rule on it — **drift has to be 0.0000s**, and `missing reveal state` /
-`last reveal state unused` mean don't proceed. The full verdict table is in
-`references/pipeline.md` §Build report gate table. Total length: the channel's band
+`last reveal state unused` mean don't proceed. The line-by-line table is in
+`references/pipeline.md` §Build report gate table; its speech-rate and first-cue rows apply only
+when an SRT sidecar was requested, and its review rows are evidence, not holds. Total length: the channel's band
 (`length_min_seconds`/`length_max_seconds`); unset, the preset's 35–120s stands, of which 35–75s is
 the recommendation, and 180s is the platform's own cap — **measured after the §7.5 speed pass**,
 which is the file that ships. Confirm that `cover.jpg` is a frame where the hero number has
@@ -1073,54 +1087,57 @@ time and rebuild (or re-extract the still with ffmpeg).
 saved narration and final playback. Default to 1.0 even when the profile says otherwise.
 Never invent approval or change speed to satisfy a duration or quality target.
 
-The final pace pass exists so every source — narration, generated clips, filmed clips, subtitles,
-and chapters — follows one timeline after the build and any splice. It always runs even at 1.0x.
+The final pace pass exists so every source — narration, generated clips, filmed clips, any requested
+subtitle sidecar, and chapters — follows one timeline after the build and any splice. It always runs even at 1.0x.
 The builder has trimmed and loudness-normalized card speech at the engine's own pace; this pass
 is the only tempo change the voice goes through.
 
 ```bash
-$REF/speedup.sh .work        # → .work/reel-fast.mp4 · reel-sub-fast.mp4 · subs-fast.srt · chapters-fast.txt
+$REF/speedup.sh .work        # → .work/reel-fast.mp4 · optional subs-fast.srt · chapters-fast.txt
 $REF/speedup.sh .work 1.2    # only with an explicit user request for final x1.2 in .work/speed-authorization.json
 ```
 
 - **The default is 1.0x.** An explicit user request may choose another factor for the whole feature — narration,
-  cards, filmed clips, b-roll, and BGM — but the final subtitle-rate gate still decides whether
-  it can ship. At `1.0`, the pass copies the build through under the `-fast` names.
+  cards, filmed clips, b-roll, and BGM — and, when an SRT sidecar was requested, the final speech-rate
+  check on the retimed cues still has to pass. At `1.0`, the pass copies the build through under the `-fast` names.
 - **The outro stays at 1.0x.** It's a brand asset with its own cut and sonic logo, so the pass finds
   the boundary from the outro file's own duration and rejoins the tail untouched. Under `OUTRO=0`
   there is no tail: `no outro tail (OUTRO=0)` is the right result there, not a dropped splice.
-- **Subtitles and chapters are retimed by the pass** (`subs-fast.srt`, `chapters-fast.txt`) —
+- **A requested subtitle sidecar and the chapters are retimed by the pass** (`subs-fast.srt`, `chapters-fast.txt`) —
   don't hand the build's `subs.srt` to publish; those cues belong to the un-sped timeline.
 - **It reads the un-sped files and writes new names**, so running it again with another factor
   recomputes from the original instead of stacking passes.
-- **The factor moves the writing-stage band too.** The 6.2 characters/s gate measures the *sped-up*
-  subtitles, so a card written at `r` ships at `r × factor`. `build-reel.sh` divides its whole
+- **The factor moves the writing-stage band too.** With a requested SRT sidecar the 6.2 characters/s check measures the *sped-up*
+  cues, so a card written at `r` ships at `r × factor`. `build-reel.sh` divides its whole
   `[3.2, 6.2]` band by the same `SPEED` and warns outside it — **[3.2, 6.2] at the 1.0x default**. Read that
-  band as an early warning, not the gate itself: the builder counts the TTS script over the
-  trimmed card audio, while the gate counts the subtitle text over cue time after the pass,
+  band as an early warning, not the check itself: the builder counts the TTS script over the
+  trimmed card audio, while the pass counts the sidecar text over cue time,
   so the two numbers differ by design. Its chapter minimum becomes `10 × factor` so a boundary still
   clears 10s on the shipped file. The build does not stretch a card toward the target rate
   (assembly is fixed at 1.0x and ignores legacy `ATEMPO_MIN`/`ATEMPO_MAX` settings), so this pass is the only tempo change the voice goes through, and the factor
-  has to clear the gate on the engine's own pace. If the rate fails, shorten the script
+  has to clear the check on the engine's own pace. If the rate fails, shorten the script
   or report the failure; never change speed without the user's explicit request.
 - **A profile alone does not authorize speed changes.** Both synthesis and final playback
   stay at 1.0 without the matching episode request record. When both are authorized,
-  their factors multiply and the final SRT must pass the rate check.
+  their factors multiply and a requested final SRT must pass the rate check.
 - The pass appends its own line to `build-report.txt` (`── speedup x1.00: passed through …` at the
   default; a user-requested 1.2x prints `── speedup x1.20 (reel.mp4): 62.0s → 52.2s (feature …)`),
-  reports the shipped timeline's opening cue (`── first cue …s`, a ⚠ past 1.0s) with the t=0 still in
+  with a requested sidecar also reports the shipped timeline's opening cue (`── first cue …s`, a ⚠ past 1.0s) and saves the t=0 still in
   `.work/qa/first-frame.png`, and exits 1 when the measured length doesn't match feature/factor +
-  tail or `check-final-speech-rate.py` finds more than 6.2 characters/s. **No marker line or
-  final-rate PASS line means the episode is not ready to publish** (pipeline.md gate table).
+  tail or, with a sidecar, `check-final-speech-rate.py` finds more than 6.2 characters/s. **The default
+  clean build is ready when the `── speedup x…` marker is in `build-report.txt` and `delivery-proof.json`
+  verifies.** The speech-rate verdict is a `PASS final speech rate` line, or the skip marker
+  `── no subtitle sidecar requested; subtitle-based rate check skipped` when no SRT was requested;
+  `episode-state.js` accepts either.
 - **Length contracts are read after the pass.** The channel's band — unset, the preset's 35–120s — describes the shipped file.
 - With chapters, watch for the `⚠ … under 10s` line in `build-report.txt` — at a user-requested 1.2x a boundary
   that was 10s apart comes out 8.3s and YouTube drops the whole chapter list. `build-reel.sh` now
   demands `10 × factor` up front, so this only fires on a build made before that. Merge those
   chapters and rebuild.
 
-### 8. Phone-mode QA (required before publishing)
+### 8. Phone-mode QA guidance
 
-Run retention-direction.md §5 on the final video and save `.work/experience-review.md` for §10's reviewer. Frame checks verify layout; watching motion and listening verify timing, payoff and intelligibility. An unavailable check is unverified and holds publishing readiness.
+Run retention-direction.md §5 on the final video and save `.work/experience-review.md` for §10's reviewer. Frame and motion checks verify layout, timing and payoff. Speech stays not_reviewed and does not create a listening or approval hold.
 
 Copy `reel-qa.html` into `.work/` and shoot it **on a phone viewport with the platform UI
 overlay**, again with the headless Chrome the captures use. `?frame=1` draws the 390×844
@@ -1132,17 +1149,16 @@ REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
 # FORMAT_ENV is cleared on purpose — the script sources it and would put CAP_W back
 # to 1080. The QA harness is a phone mockup, not a 1080×1920 frame.
 FORMAT_ENV= CAP_W=470 CAP_H=920 $REF/capture-frames.sh \
-  "file://$PWD/.work/reel-qa.html?v=./reel-sub-fast.mp4&ui=ig&fit=crop&zone=1&frame=1&t=<sec>" \
+  "file://$PWD/.work/reel-qa.html?v=./reel-fast.mp4&ui=ig&fit=crop&zone=1&frame=1&t=<sec>" \
   .work/qa/s<n>.png
 ```
 
 One shot per scene at the reveal-complete moment, plus one at `&t=0` — a cover's reveal-complete
-frame is not its first, and the pass already saved that moment as `.work/qa/first-frame.png`. Then
-read the PNGs. **QA runs on the final burn-in (`reel-sub-fast.mp4`)** — that's the file that
-ships. The default 1.0x preserves subtitle timing; a faster channel setting may make a previously
-readable subtitle disappear. The clean one has no subtitles, so you can't see clipping or
-intrusion, and the burned-in one is what actually goes to IG. Check: action bar (x≈890) intrusion
-/ subtitle centering / hero number clipping / can you tell the topic from the first frame alone /
+frame is not its first (with a requested sidecar the pass already saved that moment as `.work/qa/first-frame.png`). Then
+read the PNGs. **QA runs on the clean final `reel-fast.mp4` that ships.** Check that
+speech clips have no subtitles, captions or accidental typography at any point.
+Inspect framing, action bar intrusion, clipping and whether the first frame establishes
+the topic. Also check
 **whether the background photo shows through the middle of the frame** (a box or dim outside the
 bands is the slide look — a violation of absolute rule 14). On a problem: fix the template →
 regenerate frame.html → recapture only that state → rebuild.
@@ -1192,30 +1208,24 @@ and the link URL only. The link slot is the IG reels permalink, whose value isn'
 publish time — leave a placeholder like `<IG_REELS_URL>` in `post.md` and let publish fill in
 the real URL. Save each under `output/<platform>/`, and finalize the video and cover with
 `cp .work/reel-fast.mp4 output/video/video.mp4` ·
-`cp .work/reel-sub-fast.mp4 output/video/video-sub.mp4` ·
-`cp .work/subs-fast.srt output/video/subs.srt` · `cp .work/cover.jpg output/video/cover.jpg` ·
+`cp .work/cover.jpg output/video/cover.jpg` ·
 `cp .work/build-report.txt output/video/` ·
 `cp .work/delivery-proof.json output/video/` (publish checks the final files against these
 hashes; an ad hoc export or stale copy cannot substitute for the checked assembly).
 **The `-fast` files are the deliverables** (§7.5) — copy `reel.mp4` or `subs.srt` here and the
-episode ships un-sped with subtitles on the wrong timeline. On a long-form episode the chapter
+episode ships at the wrong pace. Copy `subs-fast.srt` to `subs.srt` only for a requested separate YouTube track. On a long-form episode the chapter
 file goes over under its published name too: `cp .work/chapters-fast.txt output/video/chapters.txt`
 (publish reads `output/video/chapters.txt`, so leaving the build's original there ships the
 pre-speed timestamps).
-**Publishing is complete only with all three files** — the clean version and the subtitle file
-go to YouTube and Facebook, the burned-in version to Instagram. Miss one and the subtitles
-disappear on that platform.
+**All platforms receive the same subtitle-free `video.mp4`.** A stale
+`video-sub.mp4` is never selected. Separate YouTube caption tracks are optional and
+require the user's request; language defaults alone do not enable them. Preserve
+source dialogue and timing for such a future request.
 
-#### Multi-language subtitles (only when the profile lists them)
+### 10. Completion report
 
-Extra `.srt` tracks beyond the channel language, and how the platforms take them:
-[optional-lanes.md](references/optional-lanes.md) §From §9. **A profile with one language
-skips this.**
-### 10. Quality gate + completion report
-
-Delegate artifact verification to the content-reviewer agent (Agent) — hand over video frame
-screenshots (**taken from the sped-up burn-in `reel-sub-fast.mp4`** — the clean one has no subtitles, so
-typos and clipping aren't visible), the per-platform copy, scenes.js, §8's `.work/experience-review.md`,
+When the user asks for an independent read, or a concrete issue needs one, delegate artifact verification to the content-reviewer agent (Agent) — hand over video frame
+screenshots (**taken from the clean final `reel-fast.mp4`**; verify no accidental subtitles or typography), the per-platform copy, scenes.js, §8's `.work/experience-review.md`,
 `build-report.txt` and the storyboard's hand-to-produce table (the reviewer's P0-11 needs all three), and get back P0
 detections (typos, clipping, factual mismatch, platform taboos, copy-pasted sentences,
 unexplained jargon, AI tells, a result given away in the title or description) and axis scores.
@@ -1225,21 +1235,17 @@ delegation prompt — the reviewer
 treats those numbers as the source of truth and doesn't override them with its own impression.
 If the channel skips research, state that in the delegation prompt too (the reviewer scores copy
 out of 85 and rescales the tail to 100).
-**One read, on an episode that is going to be published** — a test build, or a version the
-user has said is not going out, skips this delegation (the phone QA in §8 and the checkers in
-§5·§9 still run). Apply its directives; if the tail (`CONTENT_REVIEW:`) came back under copy
-95 or with P0 > 0, don't delegate again — report the unresolved findings to the user as they
-are and let them decide (0.50.0 — one read, measured at 8.6 million tokens).
+Use an independent read when it can resolve a concrete issue. Apply useful
+findings within scope and report unresolved limitations. Scores, review counts
+and missing reviews do not require another approval or prevent authorized work.
 
 **First-3-seconds check** (2026-08-15, forced by the measured skip rates — the author's own read, not the reviewer's):
 
-- [ ] Actually **watch** the 0–3s opening and `.work/qa/first-frame.png` — a real subject or movement
-      in the first frame, not a title card holding still, plus a word on screen inside the first second
-      (the report's `── first cue` line; a ⚠ there is fixed in the board, not in the pass)
-- [ ] Actually **listen** to the first segment's TTS — if it sounds like a robot reading,
-      regenerate that scene through the checked gate and rebuild (the number one cause of drop-off on faceless content is
-      the opening voice quality. A skip happens within 3 seconds, so the first sentence's voice
-      is the hook)
+- [ ] Actually **watch** the 0–3s opening (and `.work/qa/first-frame.png` when the pass saved one) — a real subject or movement
+      in the first frame, not a title card holding still
+- [ ] If the user requests speech review, listen to the relevant segment and
+      make targeted corrections within the authorized budget. Otherwise record
+      `not_reviewed`; do not automatically regenerate speech for a quality score.
 
 **Cost totals (required)** — turn the episode ledger into a report and put the result in the
 completion report. Storyboard images through this video sit in one file, so this is where a
@@ -1294,7 +1300,7 @@ Cost — what this episode ran to (stills → video)
 
 **Don't just report a total of $0.** If the images exist and the total is 0, they weren't made
 for free — someone skipped writing them into the ledger. An episode that used only local
-images and local TTS really can be 0, and then the report shows those lines — check whether
+local images really can be 0, and then the report shows those lines — check whether
 the 0 comes from lines that are there or lines that are missing, then report it.
 
 **Read the decision log back beside the cost.** The two answer one question together — what it
@@ -1306,37 +1312,33 @@ $REF/decisions.sh .work/decisions.tsv        # exit 1 means a bad line, not "no 
 
 Report every `fallback` and each `engine_selection` or `voice_selection` marked `revised`, so the user can see where production differs from the approved plan.
 
-On a pass, update storyboard.md to `status: produced`, present the artifact table (paths,
+When the report is written, update storyboard.md to `status: produced`, present the artifact table (paths,
 length, platforms) together with the cost summary, and point the user at
-`/social-flow:publish`. If this episode chose portal mode and its channel key is configured (README §The ttalkkakstory portal), call `portal_storyboard_save` once more with
-the episode directory's absolute path (the board may have moved since approval — regenerated prompts,
-slide plans). Then call `portal_images_upload` with `episodeDir` and `stage: "produced"`; inspect `skipped` and partial failures. On 409/unknown checkpoint, keep the recovery copy and side-pull/merge; do not blindly retry images. See README §The ttalkkakstory portal. Call `portal_episode_artifacts_sync` after the final platform files, cover and `.work/cost-tally.tsv` exist. It stores the exact copy, links the cover and compares the measured cost with the approved budget on the episode page; an unknown price stays visible and leaves the budget verdict open. Then call `portal_episode_status` with `status: "produced"` and the `episodeId` the save returned; `.portal.json` supplies that id on the save, so a retitled board updates the same portal record. Keep `portal_episode`/`portal_url` aligned with the save result before setting the status. Tools absent: one line, move on.
-A call that errors: report it in one line. Retry an ordinary 409 once only after resolving its cause. **Exclude `portal_images_upload`:** on 409 or an unknown checkpoint, keep its recovery copy, side-pull/merge and save with the explicit base; never retry images blindly.
-Finish the report and the `status: produced` file update regardless — the portal is a mirror, not a gate.
+`/social-flow:publish`.
 
 ## Additional Resources
 
 ### Reference Files
 
-- **`references/pipeline.md`** — build contract · report gate verdict table · the three TTS failure modes · palindrome loop · collected field-tested pitfalls
+- **`references/pipeline.md`** — build contract · build-report line table · the three TTS failure shapes · palindrome loop · collected field-tested pitfalls
 - **`references/screencast-pipeline.md`** — the shooting-edit path: edit.json contract · edit procedure · gates · pitfalls (replaces §2–7 when alignment.json exists)
-- **`references/build-screencast.sh`** — the shooting-edit builder (scene cut → crop → 9:16 composite → subtitle burn-in → BGM ducking → outro, drift 0)
+- **`references/build-screencast.sh`** — the shooting-edit builder (scene cut → crop → 9:16 clean composite → BGM ducking → outro, drift 0)
 - **`references/cut-screencast.sh`** — the screencast-splice cutter (§3.7): one window of a screen recording → focus crop → fit onto the canvas over `THEME.ink`, warning when the picture shrinks past legibility or the clip outruns its card. One card inside an ordinary episode, not a whole-episode mode
 - **`references/screencast-overlay.html`** — scene title alpha overlay renderer (top block y 190–460, scenes.js injected)
 - **`references/video-template.html`** — 1080×1920 scene renderer (THEME injection · reveal · alpha · safe zone · overflow guard)
-- **`references/build-reel.sh`** — the compositing pipeline SoT (silence trim → loudnorm → boundary detection → reveal xfade → Ken Burns → subtitles → outro splice)
+- **`references/build-reel.sh`** — the compositing pipeline SoT (silence trim → loudnorm → boundary detection → reveal xfade → Ken Burns → optional SRT sidecar → outro splice)
 - **`references/broll-splice.md`** — the b-roll splice: per-slot trim + loudness + bed in one re-encode, then the insert at each `after` scene (§6)
-- **`references/check-clip-artifacts.js`** — what a returned clip brought back that nobody asked for: burned text (OCR, one frame a second), a soundtrack on a clip planned silent, a spoken line (local ASR); `--selftest` renders its own fixtures. Findings are HITL warnings (§3)
+- **`references/check-clip-artifacts.js`** — what a returned clip brought back that nobody asked for: burned text (OCR, one frame a second), a soundtrack on a clip planned silent, a spoken line (local ASR); `--selftest` renders its own fixtures. Findings are warnings fixed within the authorization (§3)
 - **`references/bgm-bed.sh`** — renders the music bed the mix lays under the voice: every cue measured and gained to one distance under the narration, a short cue crossfaded onto itself instead of butt-joined, cue changes crossfaded. Called by both builders and by the b-roll premix
 - **`references/bgm-scoring.md`** — where the bed's numbers come from, which of them are published listening tests and which are our own practice, and the widely-quoted figures that failed verification
 - **`references/build-outro.sh`** — generates the channel's shared outro
-- **`references/speedup.sh`** — the required final pace pass (§7.5). Uses 1.0 unless the episode has an explicit user request for another factor while leaving the outro at 1.0x, retimes `subs.srt` and `chapters.txt`, verifies the measured length, and blocks a final speech rate over 6.2 characters/s. Reads the pre-pass set and writes `-fast` names, so it never stacks
-- **`references/check-final-speech-rate.py`** — measures Unicode letters and numbers on `subs-fast.srt`; catches a whole-video speed factor that made otherwise valid cards too dense to follow
-- **`references/splice-clip.sh`** — post-build clip insertion (b-roll up to 2 slots · series stinger). Takes several `<clip> <T>` pairs and splices them in **a single run** (split it into two calls and the first splice is erased), handles clean and burned-in separately, shifts each subtitle cue by the sum of the measured lengths of the insertions before it, and checks for cues straddling T and for matching lengths
+- **`references/speedup.sh`** — the required final pace pass (§7.5). Uses 1.0 unless the episode has an explicit user request for another factor while leaving the outro at 1.0x, retimes a requested `subs.srt` and `chapters.txt`, verifies the measured length, and writes the speech-rate verdict — a PASS line, or the skip marker when no SRT was requested (a requested sidecar over 6.2 characters/s fails). Reads the pre-pass set and writes `-fast` names, so it never stacks
+- **`references/check-final-speech-rate.py`** — (requested sidecar only) measures Unicode letters and numbers on `subs-fast.srt`; catches a whole-video speed factor that made otherwise valid cards too dense to follow
+- **`references/splice-clip.sh`** — post-build clip insertion (b-roll up to 2 slots · series stinger). Takes several `<clip> <T>` pairs and splices them in **a single run** (split it into two calls and the first splice is erased), uses the clean master, shifts each requested sidecar subtitle cue by the sum of the measured lengths of the insertions before it, and checks for cues straddling T and for matching lengths
 - **`references/capture-frames.sh` / `capture-reveals.sh`** — headless capture (state count derived automatically)
 - **`references/render-motion-slide.mjs`** — motion-slide renderer (§3.6): one clip per reveal group, headless Chrome over the DevTools pipe with no npm dependency, every frame seeked to an exact time so a re-render is byte-identical; `--sheet` writes the frames the §3.6 sheet read looks at. It renders **every authored screen** — diagram, kinetic type, character act — since all it asks a page for is the seek contract
-- **`references/tts-hitl.md`** — speech findings as warnings: the `check-tts-quality.js` and `check-final-tts.js` reports, the `approve` commands and what an approval binds to
-- **`references/snap-boundaries.py`** — the checked take's sentence sidecar snapped to the detected pauses, bound to the WAV's hash (build-reel §4)
+- **`references/shot-speech.md`** — explicit speakers, generation receipts, replaceable video adapters and targeted corrections
+- **`references/snap-boundaries.py`** — the take's sentence sidecar snapped to the detected pauses, bound to the WAV's hash (build-reel §4)
 - **`references/reveal-timing.py`** — reveal timing derived backwards from the narration's pauses
 - **`references/frame-persona-clip.py`** — unifies speaking-clip framing + palindrome
 - **`references/reel-qa.html`** — the phone-mode QA harness (IG/YT UI mockups · crop reproduction · safe-zone guides)
@@ -1345,4 +1347,3 @@ Finish the report and the `status: produced` file update regardless — the port
 - **`../autoproduce/references/decision-log.md`** — the episode decision log (`.work/decisions.tsv`) storyboard starts and produce carries on: engine, voice, music and every fallback, with what each one replaced. `decisions.sh` reads it back for the §10 report
 - **`../autoproduce/references/cost-tally.md`** — the episode cost ledger convention (the file §3 and §5 write and §10 totals). The price source of truth `prices.tsv` and the calculator `cost-report.sh` sit in the same directory
 - **`../channel/references/resolve-asset.py`** — looks up the shared outro, BGM, sound effects, and character sheet (catalog + default path + the old `assets/outro.mp4`)
-All `still_camera` cuts use the unchanged shared camera HTML template and runtime, including push/pan. Non-slide video handoffs declare `visual.renderedFile` (or `visual.clip`) relative to the storyboard; assembly must use that exact file. Drone shots follow [drone-flythrough.md](../storyboard/references/drone-flythrough.md). Attachment sync and rights evidence: follow [portal attachments](references/portal-attachments.md). Check `attachments.complete` before removing local originals. Retry files only with `portal_attachments_sync`.

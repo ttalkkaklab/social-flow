@@ -1,7 +1,8 @@
 # Measurements to structure — reading channel Analytics into a storyboard decision
 
-Where the storyboard skill's §4 sends you when `grow-youtube` output or YouTube Analytics
-records exist for the channel. Each item is settled in one line **before authoring** and
+Read this when `grow-youtube` output or YouTube Analytics records exist for the channel
+(the storyboard skill's §1 reads the channel first; legacy-authoring.md §4 is where older
+boards linked it). Each item is settled in one line **before authoring** and
 written into the `storyboard.md` design rationale and `SB_DOC.seriesNote`.
 
 Numbers rank episodes, not sentences — the point of every item below is to name which layer

@@ -5,11 +5,9 @@ const {evaluateWindowScript}=require('../../_shared/scenes-vm.js');
 const {execFileSync}=require('node:child_process'),{createHash}=require('node:crypto');
 const hash=f=>createHash('sha256').update(fs.readFileSync(f)).digest('hex');
 const motion=require('./measure-motion.js');
-// Every card on the assembled reel is measured (measure-motion.js). A clip card fails the video
-// limits, an authored slide card fails when most of it repeats the previous picture or one
-// plate stands longer than the channel plate limit (ceiling 8s). A still card is not gated
-// here: its Ken Burns move is below the proxy's eye, and build-reel.sh already refuses a
-// still without a move. The numbers are written into assembled-check.json.
+const expectation=require('./motion-expectation.js');
+// Measure every card, retaining proxy motion findings as quality warnings.
+// Read/decode/timing errors still fail; a low difference score is not proof of a freeze.
 function cardMotion(work,scenes,policy){
   const master=path.join(work,'reel.mp4');
   const rate=execFileSync('ffprobe',['-v','error','-select_streams','v:0','-show_entries','stream=avg_frame_rate','-of','csv=p=0',master],{encoding:'utf8'}).trim();
@@ -18,15 +16,18 @@ function cardMotion(work,scenes,policy){
   const rows=fs.readFileSync(path.join(work,'work/edit-timeline.tsv'),'utf8').trim().split('\n').map(l=>l.split('\t'));
   const stillLimit=motion.plateStillLimit(policy),cards=[],problems=[];
   for(const [id,start,frames] of rows){
-    const s=scenes[+id],v=s?.visual||{};
-    const kind=v.video||v.reuse!==undefined||['ai-video','recording'].includes(v.picture)?'video':v.slide?'card':null;
-    const m=motion.measure(master,{start:+start/fps,seconds:+frames/fps});
-    const findings=kind?motion.findings(m,kind,{stillLimit}):[];
-    cards.push({card:+id,kind:kind||'still',...m,findings});
-    findings.forEach(f=>problems.push('card '+id+': '+f));
+    const s=scenes[+id];
+    if(!s)throw new Error('timeline references an unknown card: '+id);
+    const assessed=expectation.assess(master,s,{start:+start/fps,seconds:+frames/fps,policy,fps});
+    const single=assessed.windows.length===1?assessed.windows[0]:null;
+    const kind=single?({video:'video',explanatory:'card',still_camera:'still',intentional_still:'still'}[single.kind]||'unknown'):'mixed';
+    // Keep legacy aggregate fields for report readers; findings always use cut windows.
+    const aggregate=single?single.measured:motion.measure(master,{start:+start/fps,seconds:+frames/fps});
+    cards.push({card:+id,kind,...aggregate,...assessed,findings:assessed.warnings});
+    assessed.warnings.forEach(f=>problems.push('card '+id+': '+f));
   }
-  if(problems.length)throw new Error('measured motion on the assembled reel — '+problems.join('; ')+'. Fix the source clip, slide or in-point and rebuild; no still-like card ships');
-  return {sampleFps:motion.SAMPLE_FPS,plateStillLimit:stillLimit,cards};
+  for(const problem of problems) console.error('Assembled motion warning: '+problem);
+  return {sampleFps:motion.SAMPLE_FPS,plateStillLimit:stillLimit,cards,warnings:problems,semanticReview:'not_reviewed',status:problems.length?'needs-review':'no-proxy-findings'};
 }
 const duration=f=>{
   const n=Number(execFileSync('ffprobe',['-v','error','-select_streams','v:0','-show_entries','stream=duration','-of','csv=p=0',f],{encoding:'utf8'}).trim());
@@ -66,7 +67,7 @@ function check(work,delivery,burned,subtitles){
     const verified=masters(work),inserted=scenes.some(s=>s.type==='broll');
     const expectedNames=inserted?SPLICED:BASE;
     const names=[delivery,burned,subtitles];
-    if(names.some((f,i)=>!f||path.resolve(work,f)!==path.join(work,expectedNames[i])))throw new Error('delivery must use the checked clean, burned and subtitle set');
+    if(names.some((f,i)=>!f||path.resolve(work,f)!==path.join(work,expectedNames[i])))throw new Error('delivery must name the checked set: the clean master plus the fixed reel-sub/subs names (both sidecar files are optional)');
     if(inserted){
       const splice=JSON.parse(fs.readFileSync(path.join(work,'splice-check.json'),'utf8'));
       if(splice.assembledSha256!==hash(path.join(work,'assembled-check.json'))||!splice.outputs||SPLICED.some(f=>!Object.hasOwn(splice.outputs,f))||!splice.outputs['reel-spliced.mp4'])throw new Error('missing or stale splice proof');
@@ -79,10 +80,14 @@ function check(work,delivery,burned,subtitles){
   const first=proof.cards[0],planned=scenes[first].duration;
   const actual=duration(path.join(work,'work',`v${first}.mp4`));
   if(!Number.isFinite(planned)||Math.abs(actual-planned)>.5)throw new Error(`opening is ${actual}s but the plan says ${planned}s; reconcile measured narration and trim before assembly`);
-  for(const i of proof.cards)if(scenes[i].shot?.render?.mode==='editorial_html'&&duration(path.join(work,'work',`v${i}.mp4`))>8.07)throw new Error('text-led card '+i+' exceeds 8 seconds after encoding');
-  if(fs.existsSync(path.join(work,'reel-sub.mp4'))&&Math.abs(duration(path.join(work,'reel-sub.mp4'))-duration(master))>.07)throw new Error('clean and burned masters differ in duration');
+  if(fs.existsSync(path.join(work,'reel-sub.mp4'))&&Math.abs(duration(path.join(work,'reel-sub.mp4'))-duration(master))>.07)throw new Error('clean master and the legacy reel-sub.mp4 differ in duration');
   require('./check-edit-timeline.js').check(work);
   const measured=cardMotion(work,scenes,policy);
+  // Guidance, not a gate (owner 2026-10-16): a text-led card past 8 seconds is recorded for review and the build continues.
+  for(const i of proof.cards)if(scenes[i].shot?.render?.mode==='editorial_html'&&duration(path.join(work,'work',`v${i}.mp4`))>8.07){
+    const w='card '+i+': text-led card runs past 8 seconds after encoding; split it or shorten the line when the read drags';
+    measured.warnings.push(w);measured.status='needs-review';console.error('Assembled warning: '+w);
+  }
   fs.writeFileSync(path.join(work,'assembled-check.json'),JSON.stringify({editCheckSha256:hash(path.join(work,'edit-check.json')),groupCheckSha256:scenes.some(s=>s.visual?.video?.groupPlan!==undefined)?hash(path.join(work,'group-check.json')):null,outputs:hashes(work,BASE),duration:duration(master),opening:actual,plannedOpening:planned,motion:measured},null,2)+'\n');
 }
 function splice(work,args,finish=false){

@@ -167,13 +167,13 @@ test('missing/mutated subtitle bytes invalidate checked input, output and warnin
     f.cards('subs=one.tsv,subs-mode='+mode);f.write('0\t1.8\t그대로의 자막입니다.\n');
     const p=f.proof(),snapshot=gate.snapshot(f.work,f.board);
     assert.equal(p.mediaSha256[f.file],hash(f.file));
-    assert.throws(()=>gate.decide(f.work,f.board,['fixture warning'],snapshot),/HITL/);
+    assert.equal(gate.decide(f.work,f.board,['fixture warning'],snapshot).approved,false);
     gate.approve(f.work,'Fixture explicit warning approval');
     assert.equal(gate.decide(f.work,f.board,['fixture warning'],snapshot).approved,true);
     f.write('0\t1.7\t그대로의 자막입니다.\n');
     assert.throws(()=>subs.match(f.work,f.scenes,p),/stale subtitle/);
     const r=f.render({mode});assert.notEqual(r.status,0);assert.equal(r.srt,'');assert.equal(r.ass,'');
-    assert.throws(()=>gate.decide(f.work,f.board,['fixture warning'],gate.snapshot(f.work,f.board)),/HITL/);
+    assert.equal(gate.decide(f.work,f.board,['fixture warning'],gate.snapshot(f.work,f.board)).approved,false);
     const stale={...p,mediaSha256:{}};assert.throws(()=>subs.match(f.work,f.scenes,stale),/missing or stale/);
     rmSync(f.file);assert.throws(()=>subs.media(f.work,f.scenes),/ENOENT/);
   }
@@ -211,11 +211,11 @@ test('fresh build-plan CLI binds the file; final assembly rejects removed proof 
   writeFileSync(f.source,`window.FORMAT='youtube-long-16x9';window.PRODUCTION={mode:'full_video'};window.SCENES=${JSON.stringify(f.scenes)};`);
   writeFileSync(path.join(f.work,'segs.tsv'),`0\t0\t${clip}\t\t그대로의 자막입니다.\n`);
   const run=name=>spawnSync(process.execPath,[path.join(ref,name),f.work,f.board],{encoding:'utf8',env:{...process.env,W:'160',H:'90'}});
-  let r=run('verify-build-plan.js');assert.notEqual(r.status,0);assert.match(r.stderr,/HITL/);
-  gate.approve(f.work,'Synthetic integration fixture warning approval');
-  r=run('verify-build-plan.js');assert.equal(r.status,0,r.stdout+r.stderr);
+  let r=run('verify-build-plan.js');assert.equal(r.status,0,r.stdout+r.stderr);
   const record=path.join(f.work,'build-plan-check.json'),proof=JSON.parse(readFileSync(record));
   assert.equal(proof.mediaSha256[f.file],hash(f.file));
+  assert.equal(proof.videoGate.approved,false);
+  assert.equal(proof.videoGate.continueWithWarnings,true);
   const final=()=>spawnSync(process.execPath,[path.join(ref,'verify-assembled.js'),f.work],{encoding:'utf8'});
   const noSubs={...proof,mediaSha256:{...proof.mediaSha256}};delete noSubs.mediaSha256[f.file];
   writeFileSync(record,JSON.stringify(noSubs));

@@ -53,6 +53,7 @@ async function capture({ chrome, url, output, width, height, alpha = false }) {
       expression: `(async () => {
         if (document.readyState !== 'complete') await new Promise(resolve => addEventListener('load', resolve, {once:true}));
         await document.fonts.ready;
+        if (window.STORYBOARD_READY) await window.STORYBOARD_READY;
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         return {width: innerWidth, height: innerHeight, dpr: devicePixelRatio};
       })()` });

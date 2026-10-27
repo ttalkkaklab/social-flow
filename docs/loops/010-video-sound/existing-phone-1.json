@@ -1,0 +1,20 @@
+{
+  "card": "0",
+  "shotId": "phone",
+  "originalAudio": "unused.wav",
+  "originalSync": [],
+  "video": "/Volumes/data/story/meleon/data/gyeongseong-family-farce/episodes/ep01-fake-bride/output/video/phone-hangup-sfx-test.mp4",
+  "sourceSha256": "45528749912a38e55517c76cdf164e6b3aa379e948212bfa1ad0c65f44a8a089",
+  "audio": "/tmp/social-flow-sound-existing-phone/.source-audio/45528749912a38e55517c76cdf164e6b3aa379e948212bfa1ad0c65f44a8a089.wav",
+  "audioSha256": "6568477a2a187c38ad04bcf557bc1ef8dbbc992cdebb6603b9e6b8b0ce18aaa0",
+  "seconds": 5.041667,
+  "review": "not_reviewed",
+  "passed": true,
+  "checks": [
+    "existing telephone video untouched",
+    "installed extraction has identical decoded PCM",
+    "single sync soundtrack selected"
+  ],
+  "originalSha256": "45528749912a38e55517c76cdf164e6b3aa379e948212bfa1ad0c65f44a8a089",
+  "pcmSha256": "a4fdd5da6d347b91a1770d3babdbdca472119473cd912a06e312e10c08762de5"
+}

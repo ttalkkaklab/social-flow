@@ -1,0 +1,24 @@
+[
+  {
+    "name": "storyboard_read",
+    "arguments": {
+      "path": "/Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/data/review-lab-melusine-20261016/final-guided/gate-webtoon/episodes/gate-beyond-rewrite/storyboard",
+      "level": "full"
+    }
+  },
+  {
+    "name": "storyboard_read",
+    "arguments": {
+      "path": "/Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/data/review-lab-melusine-20261016/final-guided/gate-webtoon/episodes/gate-beyond-rewrite/storyboard",
+      "level": "full",
+      "shotId": "s0021"
+    }
+  },
+  {
+    "name": "storyboard_check",
+    "arguments": {
+      "path": "/Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/data/review-lab-melusine-20261016/final-guided/gate-webtoon/episodes/gate-beyond-rewrite/storyboard",
+      "draft": true
+    }
+  }
+]

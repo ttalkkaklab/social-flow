@@ -79,7 +79,7 @@ one-off episode file. Author titles, values, beats and sources in `scenes.js`.
 - `THEME.chartAccent` may supply one six-digit hex accent. It emphasizes the discussed marks;
   axes and reading text retain their high-contrast ink. A full rainbow is not a category key.
 - Portrait uses a headline above a large chart. Landscape places the explanation beside
-  the chart. Both reserve the format's subtitle area. Direct labels reduce legend hunting.
+  the chart. Both keep the format's lower safe area clear (the master carries no subtitles). Direct labels reduce legend hunting.
 - Bars start from zero, including signed data. Time spacing reflects elapsed time. Values
   of a million or more use compact numeric notation; choose `decimals` to match source precision.
 - Initial geometry reveals with a smooth ease. Subsequent groups keep the geometry and
@@ -170,3 +170,50 @@ unit and purpose. A sequence of two or more comparable cuts must declare an iden
 explicit domain on every cut; omitting it on both cuts is invalid. Map and timeline are excluded.
 `lo <= min(0, values)`, `hi >= max(0, values)`, and `hi > lo`; both endpoints are finite.
 Without a domain a standalone cut derives its extent from the source values.
+
+## Timed part-to-whole reveals
+
+A `stacked-bar` can reveal the total first and its parts at authored speech-relative
+windows. Use this when a simultaneous entrance would disclose the whole explanation
+before it is spoken. All windows are milliseconds within narration group 1:
+
+```js
+reveal: {
+  totalLabel: 'Received',
+  total: {startMs: 0, endMs: 1400},
+  parts: [
+    {label: 'Spent', startMs: 2600, endMs: 4200},
+    {label: 'Balance', startMs: 4400, endMs: 4900}
+  ]
+}
+```
+
+Each part names one source value exactly once. Windows are finite, positive-length,
+non-overlapping and after the total; all must fit the first measured narration segment.
+The shared template rejects overrun after `--segs` is applied. Geometry grows on the fixed
+total scale; numeric labels show exact source values, never synthetic intermediate amounts.
+Later narration groups preserve the completed geometry. Optional `data.kicker` supplies
+a short contextual heading. A readable final hold is useful; do not stretch every motion
+across the whole sentence merely to reduce the still-frame metric.
+
+Prepare the canonical slide with
+[prepare-chart-slide.js](../../produce/references/prepare-chart-slide.js), then use the
+[production and diagnostic workflow](../../produce/references/motion-production.md).
+
+## Liquid Glass material
+
+The user's 2026-10-18 design direction prefers Apple-inspired Liquid Glass for explanatory
+motion graphics: restrained translucency, specular edges and depth, crisp dark text, a small
+palette and purposeful motion. This overrides the earlier blanket ban on glass/gradients
+for this selected material. Do not place translucent text over footage or distort data to
+imitate elastic UI controls. Historical archive material retains its own treatment.
+
+Set `data.material:'liquid-glass'` on staged stacked bars. This supported implementation
+uses a cool light surface, a tinted glass total rail and source-proportional parts; the
+figure text stays opaque. Other chart types retain the paper/ink renderer until a shared,
+reviewed material implementation exists. Do not claim they already support glass or silently
+substitute another chart type. The canonical template remains checked byte-for-byte.
+
+Design review scores sophistication, purposeful dynamism, simplicity and legibility
+separately from engineering checks. Review exact encoded frames and timing, not just HTML
+or a poster. A successful build, low frozen-share number or image score is not design approval.

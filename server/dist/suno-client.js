@@ -1,18 +1,12 @@
 /**
  * Suno music client — sunoapi.org REST (Kie.ai family).
  *
- * Suno Inc. has no public self-serve API as of 2026-08 (the official product
- * is the consumer app and Studio). This module wraps the third-party REST
- * that fills that gap — Bearer key, async generate (POST → taskId → poll →
+ * Suno Platform now advertises an official API; its authenticated contract has
+ * not been verified here. This module exclusively wraps the third-party REST — Bearer key, async generate (POST → taskId → poll →
  * mp3). MCP stdio has no webhook server, so callBackUrl is a dummy and we
  * finish by polling.
  *
- * Same slot as Lyria (music-client), different job:
- * - Lyria 3 Clip: fixed 30s instrumental BGM, $0.04/clip, one call
- * - Suno generate: two sung tracks, 2–8 min, ~12 credits/call (≈$0.06)
- * - Suno sounds: loopable bed/ambience with BPM and key (V5 only)
- *
- * Result URLs expire after 15 days, so files are saved locally as soon as
+ * Result URLs expire after 14 days, so files are saved locally as soon as
  * polling finishes. The API key is checked at call time (config.requireSunoKey).
  */
 import { spawnSync } from 'node:child_process';
@@ -20,8 +14,8 @@ import * as path from 'node:path';
 import { z } from 'zod';
 import { requireSunoKey, sunoBaseUrl } from './config.js';
 import { bareFilenameSchema, saveAudioFile } from './media-utils.js';
-export const SUNO_MODELS = ['V4', 'V4_5', 'V4_5PLUS', 'V4_5ALL', 'V5', 'V5_5'];
-export const DEFAULT_SUNO_MODEL = 'V5';
+export const SUNO_MODELS = ['V4', 'V4_5', 'V4_5PLUS', 'V4_5ALL', 'V5', 'V5_5', 'V6', 'V6_MINI', 'V6_WILD'];
+export const DEFAULT_SUNO_MODEL = 'V6';
 /** Sounds tasks accept V5 only (vendor constraint). */
 export const SUNO_SOUND_MODEL = 'V5';
 export const SUNO_SOUND_KEYS = [
@@ -57,6 +51,7 @@ const DONE_STATUSES = new Set(['SUCCESS', 'FIRST_SUCCESS']);
 // ── schemas ────────────────────────────────────────────────────
 export const sunoGenerateSchema = z.object({
     prompt: z.string().min(1).optional(),
+    lyrics: z.string().min(1).max(5000).optional(),
     customMode: z.boolean().default(false),
     instrumental: z.boolean().default(false),
     style: z.string().optional(),
@@ -213,7 +208,7 @@ function lyricsFromRecord(info) {
 async function downloadBuffer(url) {
     const response = await fetch(url);
     if (!response.ok) {
-        throw new Error(`Failed to download audio: HTTP ${response.status} (URLs expire after 15 days)`);
+        throw new Error(`Failed to download audio: HTTP ${response.status} (URLs expire after 14 days)`);
     }
     return Buffer.from(await response.arrayBuffer());
 }
@@ -327,7 +322,26 @@ async function pollLyrics(taskId) {
     throw new Error(`Lyrics timed out (${(LYRICS_MAX_POLLS * LYRICS_POLL_INTERVAL_MS) / 60_000} minutes). Task ${taskId}`);
 }
 // ── public API ─────────────────────────────────────────────────
-function assertGenerateArgs(request) {
+export function assertGenerateArgs(request) {
+    if (['V6', 'V6_MINI', 'V6_WILD'].includes(request.model)) {
+        if (request.customMode) {
+            if (!request.style && !request.lyrics && !request.negativeTags)
+                throw new Error('Custom mode requires style, lyrics or negativeTags');
+            if (request.title && request.title.length > 80)
+                throw new Error('title exceeds 80 characters');
+        }
+        else {
+            if (!request.style && !request.lyrics)
+                throw new Error('Non-custom mode requires style or lyrics');
+            if (request.prompt && request.prompt.length > 3000)
+                throw new Error('prompt exceeds 3000 characters');
+            if (request.duration !== undefined || request.title || request.negativeTags || request.vocalGender || request.personaId || request.personaModel)
+                throw new Error('Custom-only fields require customMode:true');
+        }
+        if (request.negativeTags && request.negativeTags.length > 1000)
+            throw new Error('negativeTags exceeds 1000 characters');
+        return;
+    }
     const custom = request.customMode === true;
     const instrumental = request.instrumental === true;
     if (!custom) {
@@ -346,14 +360,9 @@ function assertGenerateArgs(request) {
         throw new Error('duration is only supported when model is V5_5 and customMode is true');
     }
 }
-/**
- * Full song — exactly two tracks per call.
- *
- * customMode=false: the model writes lyrics and style from prompt alone.
- * customMode=true + instrumental=false: prompt is sung as the lyrics.
- * customMode=true + instrumental=true: no vocals; style and title required.
- */
+/** Two variants per call. V6 accepts style or lyrics; custom controls are validated before submission. */
 export async function generateMusic(request) {
+    let taskId;
     try {
         assertGenerateArgs(request);
         const model = request.model ?? DEFAULT_SUNO_MODEL;
@@ -366,9 +375,11 @@ export async function generateMusic(request) {
         };
         if (request.prompt)
             body.prompt = request.prompt;
+        if (request.lyrics)
+            body.lyrics = request.lyrics;
+        if (request.style)
+            body.style = request.style;
         if (customMode) {
-            if (request.style)
-                body.style = request.style;
             if (request.title)
                 body.title = request.title;
         }
@@ -384,7 +395,7 @@ export async function generateMusic(request) {
             body.personaModel = request.personaModel;
         console.error(`[Suno] Generating music... (model: ${model}, customMode: ${customMode}, instrumental: ${body.instrumental})`);
         const created = await sunoFetch('/api/v1/generate', { method: 'POST', body: JSON.stringify(body) });
-        const taskId = taskIdFrom(created.data);
+        taskId = taskIdFrom(created.data);
         const info = await pollRecord(taskId, {
             intervalMs: POLL_INTERVAL_MS,
             maxPolls: MAX_POLLS,
@@ -398,7 +409,7 @@ export async function generateMusic(request) {
     catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         console.error(`[Suno] Error: ${message}`);
-        return { success: false, error: message };
+        return { success: false, taskId, error: message };
     }
 }
 /**
@@ -480,22 +491,13 @@ export async function getCredits() {
 /** Model card — no API call. suno_credits / music_list_options style text. */
 export function modelGuide() {
     return [
-        'Suno models (sunoapi.org — third-party REST, not an official Suno Inc. API):',
-        '',
-        '  V4        Best audio quality, up to 4 minutes. Prompt 3000 / style 200 / title 80 chars.',
-        '  V4_5      Smarter prompts, up to 8 minutes. Prompt 5000 / style 1000 / title 100.',
-        '  V4_5PLUS  Richer tones, up to 8 minutes. Same limits as V4_5.',
-        '  V4_5ALL   Better song structure, up to 8 minutes. Title 80 chars.',
-        `  V5        Default. Faster generation, up to 8 minutes. Same limits as V4_5.`,
-        '  V5_5      Voice-customized. Only this model accepts duration (10–360s) in customMode.',
-        '',
-        'WHEN TO USE WHICH TOOL',
-        '- Vocal song / jingle / original track as the content itself → suno_generate (customMode true, prompt = lyrics).',
-        '- Narration-under BGM bed, looping → suno_generate_sound (loop + optional BPM/key) or Lyria music_generate_clip ($0.04, 30s, no extra key).',
-        '- Exact duration 5–300s or seed reproducibility → music_generate / music_generate_advanced (Lyria RealTime). Suno cannot hit an exact second except V5_5 customMode duration.',
-        '',
-        'Each suno_generate call returns TWO tracks. Files stay on sunoapi.org for 15 days — this tool downloads them immediately.',
-        'Credits: generate ≈ 12 credits/call (≈ $0.06 at $0.005/credit). Check suno_credits before a batch.',
+        'sunoapi.org third-party music API, not the official Suno Platform.',
+        'Supported: V6, V6_MINI, V6_WILD. Legacy V4/V5 families are retired.',
+        'Use music_catalog and the saved models.music through music_plan → music_execute.',
+        'Custom mode requires style, lyrics or negativeTags; duration 10–360 seconds.',
+        'Non-custom mode requires style or lyrics; prompt alone is insufficient.',
+        'Two tracks per request; downloaded immediately (provider retention: 14 days).',
+        'Check suno_credits and current account pricing; do not assume historical credit rates.',
     ].join('\n');
 }
 export const SUNO_DUMMY_CALLBACK_URL = DUMMY_CALLBACK_URL;

@@ -21,8 +21,9 @@ Well-known files are found even without a row in the table below.
 - sfx / `<id>` → `audio/sfx/<id>.wav`
 - character / `<id>` → `characters/<id>/`
   — inside it: `identity.md` (the canonical description), `face.png` (face close-up),
-  `body.png` (full body, front, no head), `back.png` (full body, back, no face — required),
-  `front.png` (legacy full body with the head). The reference set handed to generation is
+  `body.png` (headless front mannequin, build and wardrobe — `character-identity.md`),
+  `back.png` (matching headless rear mannequin — required), `front.png` (legacy front
+  filename; inspect existing contents before reuse). The reference set handed to generation is
   face → body; never paste the panels into one sheet (`video-model-selection.md` §The character panels).
   `voice.wav` is the character's fixed voice sample — 5–10 s of speech in the character's
   register, cut from the voice `identity.md` pins, no music or effects. produce hands it to

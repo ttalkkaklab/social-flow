@@ -1,26 +1,33 @@
 ---
 name: channel
 description: >
-  Creates and edits the per-channel profile.md that every other skill reads first. Use
+  Creates channel profiles and reusable character sheets; stops before episodes. Use
   when the user asks to "채널 만들어", "채널 추가", "채널 목록", "프로파일 수정", "add a channel", "set up a
-  content channel", or wants to create or update the channel directory under data/. Writes
-  data/[slug]/profile.md — target audience, tone, TTS voice, visual theme, target
-  platforms, fact-check policy — the source of truth every storyboard, produce and publish
-  run opens before anything else.
-argument-hint: "[add|list|update|serve] [channel-name]"
-allowed-tools: ["mcp__social-flow__portal_channel_sync", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__portal_character_list", "mcp__social-flow__portal_character_get", "mcp__social-flow__portal_character_create", "mcp__social-flow__portal_character_update", "mcp__social-flow__portal_character_delete", "mcp__social-flow__portal_character_image_upload", "mcp__social-flow__portal_character_extra_delete", "mcp__social-flow__portal_character_tts_set"]
+  content channel", "캐릭터 만들어", "캐릭터 시트 수정", or wants to create or update the channel directory under data/. For full workspace defaults (SNS, genre, style, video ratio) use project-init. Writes
+  data/[slug]/profile.md — target audience, tone, pinned voice IDs, visual theme, target
+  platforms, fact-check policy — the identity file every storyboard, produce and publish
+  run opens first; engines, SNS targets, visual style and ratio live in .social-flow/models.json.
+argument-hint: "[add|list|update|serve|character] [channel-name]"
+allowed-tools: ["mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__tts_gemini_38", "mcp__plugin_social-flow_social-flow__tts_gemini_38", "mcp__social-flow__tts_voice_design", "mcp__plugin_social-flow_social-flow__tts_voice_design", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__stt_local_transcribe", "mcp__plugin_social-flow_social-flow__stt_local_transcribe", "mcp__social-flow__character_voice_audition", "mcp__plugin_social-flow_social-flow__character_voice_audition", "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_generate"]
 ---
 
-**HITL records:** Keep channel answers in profile.md and follow the existing channel-sync contract. Follow [the decision record contract](../storyboard/references/portal-decisions.md); preserve actual provenance and reuse existing authorization. This adds no approval gate.
+Follow [production order](../_shared/production-workflow.md). Project setup precedes
+all episode work. Complete each artifact stage before the next; pending media cannot
+complete a visual stage. Preserve actual spending authorization.
+
+**Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
+
+
+**HITL records:** Keep channel answers in profile.md. Preserve actual provenance in local files and reuse existing authorization. This adds no approval gate.
 
 
 # Channel management — data/[channel]/profile.md
 
-For `update`, call `portal_channel_sync` with `action: "pull"` before reading the profile.
-A 409 conflict stops the edit. A missing key, network error, 401 or 5xx gets one warning line,
-then continue with the local files. After `add` or `update` changes `profile.md`, call
-`portal_channel_sync` with `action: "push"`; use `projectId` on that first call only when the
-portal project name is not exactly the channel slug. The tool pins the mapping after success.
+For an entire project setup use [project-init](../project-init/SKILL.md), which
+collects shared preferences and creates this layout with `project_manage`. A
+channel-only request still follows this skill without forcing full project setup.
+When project-init authors a new profile, use the choices already collected there,
+especially the speech engine and target platforms; do not ask them again.
 
 A channel is the top-level unit of the social-flow pipeline — one **content channel
 (brand)** the user runs maps to one directory under `data/`, and its output gets
@@ -44,11 +51,12 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
 
 ## Argument parsing
 
-`[add|list|update|serve] [channel-name]`
+`[add|list|update|serve|character] [channel-name]`
 
 - `add <name>` — create a new channel (procedure below)
 - `list` — Glob for `data/*/profile.md` and report channel, description, and publish platforms as a table
 - `update <name>` — read the existing profile.md and edit only the fields the user specifies
+- `character <channel> <id>` — create or update the reusable character using [character-identity.md](references/character-identity.md); read existing identity first and preserve unspecified fields. Export and check the local review library after changes.
 - `serve` — open the channel browser in the browser (procedure below)
 - With no argument, show the current state via `list`, then ask what to do next
 
@@ -64,19 +72,30 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
    - Target audience (who watches, and in what moment)
    - Tone (polite explanatory (존댓말) / casual punchy (반말) / documentary
      narration, etc.) — the register decided here is the source of truth for every
-     output that follows. The style gate doesn't change this register; it only
+     output that follows. The style check doesn't change this register; it only
      strips AI tells (platform-guide `references/korean-style.md`)
    - Publish platforms (threads / instagram / facebook / youtube)
    - Fact-check policy (informational=research required / creative·daily-life=skip)
 
-3. **Assign the TTS voice** — from the `mcp__social-flow__tts_list_voices` result
-   or the voice examples in `references/profile-template.md`, propose the engine
-   (`local` Supertonic is the default — zero cost; `gemini` only when acted emotion
-   is the channel's identity) and one voice that fits the tone, and pin down the
-   stylePrompt. **Once fixed, never
-   change voiceName·stylePrompt** — Gemini TTS interprets style directions as
-   natural language, so if the wording drifts, the voice changes from episode to
-   episode. Change them only when the user explicitly says so.
+3. **Assign the TTS voice** — use `tts_list_voices` for Gemini or
+   `tts_elevenlabs_voices` for the ElevenLabs account. Follow the saved speech model;
+   ElevenLabs permits `eleven_v4` only. Local TTS is removed. Pin the voice ID and
+   identity settings. Keep line-specific emotion in `narration[].acting`, not the
+   character's identity. Follow [acting prompts](../produce/references/acting-prompts.md).
+   Change the identity voice only when the user requests it.
+   A new character's voice is auditioned only when the user requests character work
+   (`character`, or an explicit voice request): generate real samples with distinct voices
+   (three is the usual audition), one shared Korean sample and the selected engine/model,
+   show the playable candidates, wait for the user's selection, then save the selected
+   voice settings/reference audio to the identity and sheet. During `add` and project-init
+   the voice stays pending and no sample is billed. Pending drafts must not label a
+   candidate as confirmed.
+
+
+   If the working directory already has [model settings](../_shared/model-settings.md),
+   use its speech engine/model when proposing a new voice instead of the default
+   above. Do not start full media-model setup for a channel-only request. Preserve
+   existing pinned voices; resolve conflicts when the user starts episode production.
 
 4. **Fix the visual theme** — propose colors that fit the THEME contract of
    `video-template.html` (accent/accent2/ink/brand). The default is dark cinematic
@@ -99,11 +118,11 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
    channel has a reason to hold a tighter band — omitted, the format's own band applies.
 
    **Channel copy (description·bio) is outgoing copy** — the setup skills upload
-   this text as the platform bio verbatim. After writing it, run the style gate
-   (check-style `--surface screen`), then delegate to the growth-post-reviewer
-   agent as a `standalone` surface; only copy that scores **≥95 with p0=0** goes
-   into profile.md (up to 3 rounds; if it falls short, show the findings and
-   refine together with the user).
+   this text as the platform bio verbatim. After writing it, run check-style
+   (`--surface screen`) and use its findings as suggestions. On the user's request, or
+   when a line reads off and you want an independent read, delegate to the
+   growth-post-reviewer agent as a `standalone` surface and fold the useful findings
+   into the copy with the user; a score decides nothing here.
 
    **Shared-asset catalog** — copy `data/<slug>/assets/catalog.md` from
    `references/assets-catalog-template.md`. Don't create empty kind folders.
@@ -135,9 +154,9 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
 
 7. **Report** — show the full generated profile.md and point to the next steps:
    if there's no profile image (logo) yet, first `/social-flow:branding <channel>`
-   (4 candidates → HITL direction pick → adversarial convergence); once the logo
+   (4 candidates → HITL direction pick → review on request); once the logo
    is fixed, optionally `/social-flow:intro <channel>` (a channel intro video
-   where the character acts — 4 concepts HITL → veo generation), then pick a
+   where the character acts — 4 concepts HITL → generation with the saved video model), then pick a
    market-validated topic with `/social-flow:topic-scout <channel>` and go to
    `/social-flow:storyboard <channel> <topic>`.
 
@@ -154,8 +173,8 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
    measures against, so a board that drew no flag last week comes back flagged today
    (`check-scenes.js` and the approval strip warn outside the band; only the 180s platform
    cap fails). Neither touches an episode that is already built.
-   If the channel copy (description·bio) changed, pass the same gate as add
-   step 5 again (check-style + growth-post-reviewer `standalone` ≥95·p0=0).
+   If the channel copy (description·bio) changed, run the same optional check as add
+   step 5 again (style diagnostics as suggestions; a reviewer read on request).
 3. Report before/after as a table.
 
 ## serve procedure
@@ -202,6 +221,44 @@ node "$CLAUDE_PLUGIN_ROOT/skills/channel/references/serve.js" data --port 8400
 
 ## Local review HTML (required after character edits)
 
+For every new or updated character, follow [character-identity.md](references/character-identity.md). The structured identity is required in addition to the pinned voice below.
+For dramatic characters, apply [character depth](../storyboard/references/character-depth.md)
+when filling existing personality, relationship and acting fields. Connect tendencies to
+choices and costs instead of accumulating adjectives. Preserve existing canon and keep
+episode-specific pressure separate from the shared identity; no extra JSON keys are required.
+
+Export the bundled sheet before any episode candidates or scene images, including drafts with pending media. Follow [panel specifications](references/character-panels.md) for purpose, canvas ratio and subject size. Never hand-author the review HTML.
+
+Every confirmed character sheet includes its selected `tts` in the identity JSON.
+Before the voice audition (requested character work), the draft may omit `tts`; do not
+substitute the following example as a confirmed voice. After selection, the block includes:
+
+```json
+{"tts":{"engine":"gemini","model":"gemini-3.8-flash-tts","voiceId":"Charon","language":"ko","speed":1}}
+```
+
+This is an example, not a default for the cast. Choose and pin each character's
+voice; include model/stylePrompt when the engine uses them. Silent characters still
+need a voice configuration for reuse. Narrator settings do not substitute for a
+character voice. Copy this exact `tts` into `SB_DOC.characters`.
+Keep dialogue speaker IDs attached to their characters; voice settings alone do not
+author dialogue or lip sync. Missing or invalid settings produce content diagnostics and
+prevent the sheet from displaying a review pass; template freshness is checked separately. Existing sheets need migration,
+not an invented voice.
+
+For a new character or a changed voice, generate `voice.wav` from a short Korean
+sample (or the explicitly selected language) using that exact configuration. Save
+`sample.txt`, the generation request/result and the WAV SHA-256 next to the sheet.
+A failed or unavailable engine means the voice is pending, not ready. Do not silently
+substitute the channel narrator, another engine or a stock sample. Reuse an existing
+sample only when its text, voice settings and hash still match.
+When the user requests speech accuracy, run `stt_local_transcribe` without supplying
+the expected text as context, compare the transcript with `sample.txt`, and save the
+transcript, normalization method and character error rate. Fix omissions or incorrect
+words and rerun the check. Transcription checks wording; it does not establish acting,
+timbre or pronunciation quality. Report those limits and never invent a listening pass.
+A voice setting alone does not prove that the generated sample speaks correctly.
+
 After creating or updating character identity, panels or voice, run:
 
 ```bash
@@ -211,7 +268,7 @@ node "$CLAUDE_PLUGIN_ROOT/skills/channel/references/review-library.js" "data/<ch
 
 Deliver `data/<channel>/assets/characters/index.html` for the complete cast and
 `assets/characters/<id>/index.html` for each sheet. They open directly with file://;
-no portal key or HTTP server is needed. Each sheet shows basic identity, three
+no HTTP server is needed. Each sheet shows basic identity, three
 required image slots (front/body, back, face), optional extras, voice.wav and the
 full identity document. Keep `identity.md` and media as the source; do not edit
 exported HTML. Named voice/appearance/role fields are read from identity.md.
@@ -222,10 +279,12 @@ Keep changing scores, thresholds and pending/passed state in this record, not in
 can contradict a later review or user threshold change and invalidate its input hash.
 `score` (0–100), `iteration` (positive integer), `critical` (nonnegative integer),
 and `inputHashes` mapping identity.md/body.png/back.png/face.png to their reviewed
-SHA-256 values. Optional `threshold` (integer 1–100, legacy default 95) records the
+SHA-256 values. Include `voice.wav`, `sample.txt` and `voice-accuracy.json` whenever
+present; adding, removing or changing one invalidates the review. Record what the
+review actually assessed and any listening limitations. Optional `threshold` (integer 1–100, legacy default 95) records the
 user's chosen passing score; do not lower it without their instruction. Write only
 an actual review result. A score at or above that threshold with zero critical
-defects displays a pass only while all four hashes match. Changed inputs
+defects displays a pass only while all reviewed hashes match. Changed inputs
 display a request for re-review; missing/invalid records display draft status.
 
 The same export updates `storyboards/index.html` and
@@ -237,25 +296,13 @@ output symlinks are refused, never overwritten. Keep the channel folder together
 when copying it to another machine. Design source and limits:
 [local-review-design.md](references/local-review-design.md).
 
-## register procedure (portal characters)
-
-When the channel has a ttalkkakstory portal key, its characters live on the portal too —
-the record the storyboard import and the narration lane read. Register or refresh them
-with the `portal_character_*` tools after the local `assets/characters/<id>/` folder is
-final: `portal_character_create` with `identityDir` (key from the folder, name·역할·생김새
-from `identity.md`), then generate and upload all three required views with
-`portal_character_image_upload`: `body.png` → `view:"front"` (full body without a face),
-`back.png` → `view:"back"` (back full body without a face), and `face.png` → `view:"face"`
-(face close-up). Keep one view per file, the same clothing, proportions and visual style.
-Use `view:"extra"` and an explanatory `label` only for optional poses or details.
-Verify `portal_character_get.imagesComplete` (by `id`) before reporting the reference set ready,
-then use `portal_character_tts_set` with the channel's voice. Steps, field mapping and the update/delete rules:
-`references/portal-characters.md`. No key → the tools answer one line; skip the step.
 
 ## Rules
 
-- **profile.md is the only SoT** — don't keep tone·voice·theme in session memory
-  or other files. The storyboard/produce/publish skills always read this file first.
+- **profile.md is the SoT for identity, tone, theme and pinned voice IDs** — don't keep
+  them in session memory or other files. Engines, SNS targets, visual style and video
+  ratio live in `.social-flow/models.json` (project-init). The storyboard/produce/publish
+  skills read both first.
 - **Platform signatures stay within platform grammar** — define hashtags·CTA
   within the platform-guide skill's playbook limits (Threads hashtags ≤1,
   YouTube 3~5, etc.).
@@ -270,6 +317,12 @@ then use `portal_character_tts_set` with the channel's voice. Steps, field mappi
 - **`references/profile-template.md`** — standard profile.md template (section structure, THEME contract, voice examples)
 - **`references/assets-catalog-template.md`** — `assets/catalog.md` starter (kind+id table)
 - **`references/resolve-asset.py`** — resolve shared assets via catalog + well-known paths (`--ensure` adds a row, `--selftest`)
-- **`references/portal-characters.md`** — registering the channel's characters on the ttalkkakstory portal with `portal_character_*` (create from `identityDir`, image, TTS block, update, delete)
 - **`references/review-library.js`** — exports offline character sheets, both indexes and episode review pages; `--check` detects stale output
 - **`references/serve.js`** — the channel browser over HTTP: `/api/channels`, `/api/channels/<slug>/storyboards`, `/api/channels/<slug>/characters[/<id>]`, and `/files/<slug>/…` static from `data/` (dot segments refused, Range for audio/video). Zero dependencies, `--selftest`
+
+## Character voice age and identity changes
+
+For character samples or a request to sound older/younger, follow
+[Gemini voice design](../_shared/gemini-voice-design.md). Route sample-only edits
+to the character identity and sheet; do not rebuild episode media unless requested.
+Do not claim an age correction after changing only turn style with the same voice ID.

@@ -36,8 +36,9 @@ hypothetical; the section that catches each one is named inline.
   door`, and `1.5 m apart` are the three forms that fail (directing-grammar §3.5). Write the
   visible result in `shot.space` and run the assembler. A motion prompt that re-describes the
   sides the still already drew redesigns the scene.
-- **scenes.js isn't a living file** — after approval it's the settled version produce consumes.
-  To change it during production, start from a storyboard revision and re-approval.
+- **scenes.js isn't a living file** — after the handoff it's the settled version produce consumes.
+  To change it during production, make a storyboard revision; only a revision that changes the
+  cost quote needs its spending approval again.
 - **A profile rule is not episode folklore** — never call it legacy or replace it with a
   convenient format default in `storyboard.md`. When the two contracts disagree, stop before
   authoring and ask which one changes; record that choice in the revised profile or format.

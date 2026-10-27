@@ -1,0 +1,40 @@
+{
+  "alias": {
+    "base": "http://127.0.0.1:8768/episodes/multilingual/storyboard/",
+    "fonts": [
+      "Inter",
+      "Pretendard",
+      "Noto Sans JP",
+      "Noto Sans SC",
+      "Noto Sans TC"
+    ],
+    "target": "shot-5",
+    "lang": "zh-Hant",
+    "errors": 0,
+    "requests": [
+      "http://127.0.0.1:8768/episodes/multilingual/storyboard/typography-faces.css",
+      "http://127.0.0.1:8768/episodes/multilingual/storyboard/review-typography.css",
+      "http://127.0.0.1:8768/episodes/multilingual/storyboard/fonts/InterVariable.woff2",
+      "http://127.0.0.1:8768/episodes/multilingual/storyboard/fonts/PretendardVariable.woff2",
+      "http://127.0.0.1:8768/episodes/multilingual/storyboard/fonts/NotoSansJPVariable.woff2",
+      "http://127.0.0.1:8768/episodes/multilingual/storyboard/fonts/NotoSansSCVariable.woff2",
+      "http://127.0.0.1:8768/episodes/multilingual/storyboard/fonts/NotoSansTCVariable.woff2",
+      "http://127.0.0.1:8768/episodes/multilingual/storyboard/scene.png"
+    ]
+  },
+  "offline": {
+    "ready": "true",
+    "fonts": [
+      "Inter",
+      "Pretendard",
+      "Noto Sans JP",
+      "Noto Sans SC",
+      "Noto Sans TC"
+    ],
+    "network": []
+  },
+  "keyboard": {
+    "focused": "review-skip",
+    "outline": "solid"
+  }
+}

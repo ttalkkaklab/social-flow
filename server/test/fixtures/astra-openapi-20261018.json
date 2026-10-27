@@ -1,0 +1,2119 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "LTX 영상 API",
+    "version": "ltx-api/1.1",
+    "description": "LTX-2.5 자체 운영 API. 모르는 이름은 400 으로 거절한다. 실효 상한·막는 조합은 `GET /v1/models` 가 정본이다. `model` 은 `mode` 대신 쓰는 별칭이다(fast=generate · pro=guided_hq) — 공식 호스팅 API 의 같은 이름 모델이 아니라 이 서버 파이프라인의 이름이고, `mode` 와 같이 오면 400 이다."
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearer": []
+    }
+  ],
+  "paths": {
+    "/v1/jobs": {
+      "post": {
+        "summary": "작업 접수",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "title": "generate",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "mode",
+                      "prompt"
+                    ],
+                    "properties": {
+                      "auto_duration": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "min_seconds": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "default": 1.0
+                          },
+                          "max_seconds": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          }
+                        },
+                        "description": "예측기가 고르는 최대는 121프레임"
+                      },
+                      "duration": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "exclusiveMinimum": 0.875,
+                        "maximum": 15.208333333333334,
+                        "description": "초. 가장 가까운 8k+1 프레임(같은 거리면 짧은 쪽)으로 바꾼다 — 24fps 에서 5초→121. 범위는 frame_rate 에 따라 바뀌고 여기 적힌 수는 기본 frame_rate 기준이다. num_frames·auto_duration 과 셋 중 하나. null = 생략(자동 길이는 auto_duration 으로)"
+                      },
+                      "frame_rate": {
+                        "type": "number",
+                        "minimum": 1.0,
+                        "maximum": 60.0,
+                        "default": 24.0
+                      },
+                      "generate_audio": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "false 면 생성 뒤 결과 mp4 에서 소리 흐름을 뺀다(후처리). 엔진에 소리를 끄는 인자가 없어 GPU 시간은 같다"
+                      },
+                      "hdr": {
+                        "enum": [
+                          "SRGB_LINEAR",
+                          "ACESCG",
+                          "ACESCCT",
+                          null
+                        ],
+                        "description": "BT.2020/HLG 출력. 이미지·참조·원본 입력과 같이 못 쓴다"
+                      },
+                      "height": {
+                        "type": "integer",
+                        "minimum": 64,
+                        "maximum": 1920,
+                        "multipleOf": 64,
+                        "default": 1024
+                      },
+                      "images": {
+                        "type": "array",
+                        "minItems": 0,
+                        "maxItems": 8,
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "upload_id",
+                            "frame_idx",
+                            "strength"
+                          ],
+                          "properties": {
+                            "upload_id": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{32}$"
+                            },
+                            "frame_idx": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "strength": {
+                              "type": "number",
+                              "minimum": 0.0,
+                              "maximum": 1.0
+                            },
+                            "crf": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 0,
+                              "maximum": 51
+                            }
+                          }
+                        }
+                      },
+                      "lora": {
+                        "type": "array",
+                        "maxItems": 2,
+                        "items": {
+                          "oneOf": [
+                            {
+                              "enum": [
+                                "cinemagraph",
+                                "slow-motion"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "name"
+                              ],
+                              "properties": {
+                                "name": {
+                                  "enum": [
+                                    "cinemagraph",
+                                    "slow-motion"
+                                  ]
+                                },
+                                "strength": {
+                                  "type": "number",
+                                  "minimum": 0.0,
+                                  "maximum": 2.0,
+                                  "default": 1.0
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      "mode": {
+                        "type": "string",
+                        "const": "generate"
+                      },
+                      "num_frames": {
+                        "type": "integer",
+                        "minimum": 25,
+                        "maximum": 361,
+                        "description": "8k+1"
+                      },
+                      "num_generated_keyframes": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 16
+                      },
+                      "prompt": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                      },
+                      "seed": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2147483647,
+                        "default": 42
+                      },
+                      "width": {
+                        "type": "integer",
+                        "minimum": 64,
+                        "maximum": 1920,
+                        "multipleOf": 64,
+                        "default": 1536
+                      }
+                    }
+                  },
+                  {
+                    "title": "guided",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "mode",
+                      "prompt"
+                    ],
+                    "properties": {
+                      "auto_duration": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "min_seconds": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "default": 1.0
+                          },
+                          "max_seconds": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          }
+                        },
+                        "description": "예측기가 고르는 최대는 121프레임"
+                      },
+                      "duration": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "exclusiveMinimum": 0.875,
+                        "maximum": 15.208333333333334,
+                        "description": "초. 가장 가까운 8k+1 프레임(같은 거리면 짧은 쪽)으로 바꾼다 — 24fps 에서 5초→121. 범위는 frame_rate 에 따라 바뀌고 여기 적힌 수는 기본 frame_rate 기준이다. num_frames·auto_duration 과 셋 중 하나. null = 생략(자동 길이는 auto_duration 으로)"
+                      },
+                      "frame_rate": {
+                        "type": "number",
+                        "minimum": 1.0,
+                        "maximum": 60.0,
+                        "default": 24.0
+                      },
+                      "generate_audio": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "false 면 생성 뒤 결과 mp4 에서 소리 흐름을 뺀다(후처리). 엔진에 소리를 끄는 인자가 없어 GPU 시간은 같다"
+                      },
+                      "guidance": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "video_cfg_guidance_scale": {
+                            "type": "number",
+                            "minimum": 1.0,
+                            "maximum": 15.0,
+                            "description": "`--video-cfg-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "video_stg_guidance_scale": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 5.0,
+                            "description": "`--video-stg-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "video_rescale_scale": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 1.0,
+                            "description": "`--video-rescale-scale` — 생략하면 엔진 기본값"
+                          },
+                          "video_stg_blocks": {
+                            "type": "array",
+                            "minItems": 1,
+                            "maxItems": 8,
+                            "uniqueItems": true,
+                            "items": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 47
+                            },
+                            "description": "`--video-stg-blocks` — 생략하면 엔진 기본값"
+                          },
+                          "video_skip_step": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 10,
+                            "description": "`--video-skip-step` — 생략하면 엔진 기본값"
+                          },
+                          "a2v_guidance_scale": {
+                            "type": "number",
+                            "minimum": 1.0,
+                            "maximum": 10.0,
+                            "description": "`--a2v-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "audio_cfg_guidance_scale": {
+                            "type": "number",
+                            "minimum": 1.0,
+                            "maximum": 15.0,
+                            "description": "`--audio-cfg-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "audio_stg_guidance_scale": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 5.0,
+                            "description": "`--audio-stg-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "audio_rescale_scale": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 1.0,
+                            "description": "`--audio-rescale-scale` — 생략하면 엔진 기본값"
+                          },
+                          "audio_stg_blocks": {
+                            "type": "array",
+                            "minItems": 1,
+                            "maxItems": 8,
+                            "uniqueItems": true,
+                            "items": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 47
+                            },
+                            "description": "`--audio-stg-blocks` — 생략하면 엔진 기본값"
+                          },
+                          "audio_skip_step": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 10,
+                            "description": "`--audio-skip-step` — 생략하면 엔진 기본값"
+                          },
+                          "v2a_guidance_scale": {
+                            "type": "number",
+                            "minimum": 1.0,
+                            "maximum": 10.0,
+                            "description": "`--v2a-guidance-scale` — 생략하면 엔진 기본값"
+                          }
+                        }
+                      },
+                      "hdr": {
+                        "enum": [
+                          "SRGB_LINEAR",
+                          "ACESCG",
+                          "ACESCCT",
+                          null
+                        ],
+                        "description": "BT.2020/HLG 출력. 이미지·참조·원본 입력과 같이 못 쓴다"
+                      },
+                      "height": {
+                        "type": "integer",
+                        "minimum": 64,
+                        "maximum": 1920,
+                        "multipleOf": 64,
+                        "default": 1024
+                      },
+                      "images": {
+                        "type": "array",
+                        "minItems": 0,
+                        "maxItems": 8,
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "upload_id",
+                            "frame_idx",
+                            "strength"
+                          ],
+                          "properties": {
+                            "upload_id": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{32}$"
+                            },
+                            "frame_idx": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "strength": {
+                              "type": "number",
+                              "minimum": 0.0,
+                              "maximum": 1.0
+                            },
+                            "crf": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 0,
+                              "maximum": 51
+                            }
+                          }
+                        }
+                      },
+                      "mode": {
+                        "type": "string",
+                        "const": "guided"
+                      },
+                      "negative_prompt": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "maxLength": 2000
+                      },
+                      "num_frames": {
+                        "type": "integer",
+                        "minimum": 25,
+                        "maximum": 361,
+                        "description": "8k+1"
+                      },
+                      "num_generated_keyframes": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 16
+                      },
+                      "num_inference_steps": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 1,
+                        "maximum": 50
+                      },
+                      "prompt": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                      },
+                      "seed": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2147483647,
+                        "default": 42
+                      },
+                      "width": {
+                        "type": "integer",
+                        "minimum": 64,
+                        "maximum": 1920,
+                        "multipleOf": 64,
+                        "default": 1536
+                      }
+                    }
+                  },
+                  {
+                    "title": "guided_fast",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "mode",
+                      "prompt"
+                    ],
+                    "properties": {
+                      "auto_duration": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "min_seconds": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "default": 1.0
+                          },
+                          "max_seconds": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          }
+                        },
+                        "description": "예측기가 고르는 최대는 121프레임"
+                      },
+                      "duration": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "exclusiveMinimum": 0.875,
+                        "maximum": 15.208333333333334,
+                        "description": "초. 가장 가까운 8k+1 프레임(같은 거리면 짧은 쪽)으로 바꾼다 — 24fps 에서 5초→121. 범위는 frame_rate 에 따라 바뀌고 여기 적힌 수는 기본 frame_rate 기준이다. num_frames·auto_duration 과 셋 중 하나. null = 생략(자동 길이는 auto_duration 으로)"
+                      },
+                      "frame_rate": {
+                        "type": "number",
+                        "minimum": 1.0,
+                        "maximum": 60.0,
+                        "default": 24.0
+                      },
+                      "generate_audio": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "false 면 생성 뒤 결과 mp4 에서 소리 흐름을 뺀다(후처리). 엔진에 소리를 끄는 인자가 없어 GPU 시간은 같다"
+                      },
+                      "guidance": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "video_cfg_guidance_scale": {
+                            "type": "number",
+                            "minimum": 1.0,
+                            "maximum": 15.0,
+                            "description": "`--video-cfg-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "video_stg_guidance_scale": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 5.0,
+                            "description": "`--video-stg-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "video_rescale_scale": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 1.0,
+                            "description": "`--video-rescale-scale` — 생략하면 엔진 기본값"
+                          },
+                          "video_stg_blocks": {
+                            "type": "array",
+                            "minItems": 1,
+                            "maxItems": 8,
+                            "uniqueItems": true,
+                            "items": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 47
+                            },
+                            "description": "`--video-stg-blocks` — 생략하면 엔진 기본값"
+                          },
+                          "video_skip_step": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 10,
+                            "description": "`--video-skip-step` — 생략하면 엔진 기본값"
+                          },
+                          "a2v_guidance_scale": {
+                            "type": "number",
+                            "minimum": 1.0,
+                            "maximum": 10.0,
+                            "description": "`--a2v-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "audio_cfg_guidance_scale": {
+                            "type": "number",
+                            "minimum": 1.0,
+                            "maximum": 15.0,
+                            "description": "`--audio-cfg-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "audio_stg_guidance_scale": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 5.0,
+                            "description": "`--audio-stg-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "audio_rescale_scale": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 1.0,
+                            "description": "`--audio-rescale-scale` — 생략하면 엔진 기본값"
+                          },
+                          "audio_stg_blocks": {
+                            "type": "array",
+                            "minItems": 1,
+                            "maxItems": 8,
+                            "uniqueItems": true,
+                            "items": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 47
+                            },
+                            "description": "`--audio-stg-blocks` — 생략하면 엔진 기본값"
+                          },
+                          "audio_skip_step": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 10,
+                            "description": "`--audio-skip-step` — 생략하면 엔진 기본값"
+                          },
+                          "v2a_guidance_scale": {
+                            "type": "number",
+                            "minimum": 1.0,
+                            "maximum": 10.0,
+                            "description": "`--v2a-guidance-scale` — 생략하면 엔진 기본값"
+                          }
+                        }
+                      },
+                      "hdr": {
+                        "enum": [
+                          "SRGB_LINEAR",
+                          "ACESCG",
+                          "ACESCCT",
+                          null
+                        ],
+                        "description": "BT.2020/HLG 출력. 이미지·참조·원본 입력과 같이 못 쓴다"
+                      },
+                      "height": {
+                        "type": "integer",
+                        "minimum": 32,
+                        "maximum": 1920,
+                        "multipleOf": 32,
+                        "default": 512
+                      },
+                      "images": {
+                        "type": "array",
+                        "minItems": 0,
+                        "maxItems": 8,
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "upload_id",
+                            "frame_idx",
+                            "strength"
+                          ],
+                          "properties": {
+                            "upload_id": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{32}$"
+                            },
+                            "frame_idx": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "strength": {
+                              "type": "number",
+                              "minimum": 0.0,
+                              "maximum": 1.0
+                            },
+                            "crf": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 0,
+                              "maximum": 51
+                            }
+                          }
+                        }
+                      },
+                      "mode": {
+                        "type": "string",
+                        "const": "guided_fast"
+                      },
+                      "negative_prompt": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "maxLength": 2000
+                      },
+                      "num_frames": {
+                        "type": "integer",
+                        "minimum": 25,
+                        "maximum": 361,
+                        "description": "8k+1"
+                      },
+                      "num_generated_keyframes": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 16
+                      },
+                      "num_inference_steps": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 1,
+                        "maximum": 50
+                      },
+                      "prompt": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                      },
+                      "seed": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2147483647,
+                        "default": 42
+                      },
+                      "width": {
+                        "type": "integer",
+                        "minimum": 32,
+                        "maximum": 1920,
+                        "multipleOf": 32,
+                        "default": 768
+                      }
+                    }
+                  },
+                  {
+                    "title": "keyframe",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "mode",
+                      "prompt",
+                      "images"
+                    ],
+                    "properties": {
+                      "duration": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "exclusiveMinimum": 0.875,
+                        "maximum": 15.208333333333334,
+                        "description": "초. 가장 가까운 8k+1 프레임(같은 거리면 짧은 쪽)으로 바꾼다 — 24fps 에서 5초→121. 범위는 frame_rate 에 따라 바뀌고 여기 적힌 수는 기본 frame_rate 기준이다. num_frames·auto_duration 과 셋 중 하나. null = 생략(자동 길이는 auto_duration 으로)"
+                      },
+                      "frame_rate": {
+                        "type": "number",
+                        "minimum": 1.0,
+                        "maximum": 60.0,
+                        "default": 24.0
+                      },
+                      "generate_audio": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "false 면 생성 뒤 결과 mp4 에서 소리 흐름을 뺀다(후처리). 엔진에 소리를 끄는 인자가 없어 GPU 시간은 같다"
+                      },
+                      "guidance": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "video_cfg_guidance_scale": {
+                            "type": "number",
+                            "minimum": 1.0,
+                            "maximum": 15.0,
+                            "description": "`--video-cfg-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "video_stg_guidance_scale": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 5.0,
+                            "description": "`--video-stg-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "video_rescale_scale": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 1.0,
+                            "description": "`--video-rescale-scale` — 생략하면 엔진 기본값"
+                          },
+                          "video_stg_blocks": {
+                            "type": "array",
+                            "minItems": 1,
+                            "maxItems": 8,
+                            "uniqueItems": true,
+                            "items": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 47
+                            },
+                            "description": "`--video-stg-blocks` — 생략하면 엔진 기본값"
+                          },
+                          "video_skip_step": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 10,
+                            "description": "`--video-skip-step` — 생략하면 엔진 기본값"
+                          },
+                          "a2v_guidance_scale": {
+                            "type": "number",
+                            "minimum": 1.0,
+                            "maximum": 10.0,
+                            "description": "`--a2v-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "audio_cfg_guidance_scale": {
+                            "type": "number",
+                            "minimum": 1.0,
+                            "maximum": 15.0,
+                            "description": "`--audio-cfg-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "audio_stg_guidance_scale": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 5.0,
+                            "description": "`--audio-stg-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "audio_rescale_scale": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 1.0,
+                            "description": "`--audio-rescale-scale` — 생략하면 엔진 기본값"
+                          },
+                          "audio_stg_blocks": {
+                            "type": "array",
+                            "minItems": 1,
+                            "maxItems": 8,
+                            "uniqueItems": true,
+                            "items": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 47
+                            },
+                            "description": "`--audio-stg-blocks` — 생략하면 엔진 기본값"
+                          },
+                          "audio_skip_step": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 10,
+                            "description": "`--audio-skip-step` — 생략하면 엔진 기본값"
+                          },
+                          "v2a_guidance_scale": {
+                            "type": "number",
+                            "minimum": 1.0,
+                            "maximum": 10.0,
+                            "description": "`--v2a-guidance-scale` — 생략하면 엔진 기본값"
+                          }
+                        }
+                      },
+                      "hdr": {
+                        "enum": [
+                          null
+                        ],
+                        "description": "BT.2020/HLG 출력. 이미지·참조·원본 입력과 같이 못 쓴다"
+                      },
+                      "height": {
+                        "type": "integer",
+                        "minimum": 64,
+                        "maximum": 1920,
+                        "multipleOf": 64,
+                        "default": 1024
+                      },
+                      "images": {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 8,
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "upload_id",
+                            "frame_idx",
+                            "strength"
+                          ],
+                          "properties": {
+                            "upload_id": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{32}$"
+                            },
+                            "frame_idx": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "strength": {
+                              "type": "number",
+                              "minimum": 0.0,
+                              "maximum": 1.0
+                            },
+                            "crf": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 0,
+                              "maximum": 51
+                            }
+                          }
+                        }
+                      },
+                      "mode": {
+                        "type": "string",
+                        "const": "keyframe"
+                      },
+                      "negative_prompt": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "maxLength": 2000
+                      },
+                      "num_frames": {
+                        "type": "integer",
+                        "minimum": 25,
+                        "maximum": 361,
+                        "description": "8k+1"
+                      },
+                      "num_inference_steps": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 1,
+                        "maximum": 50
+                      },
+                      "prompt": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                      },
+                      "seed": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2147483647,
+                        "default": 42
+                      },
+                      "width": {
+                        "type": "integer",
+                        "minimum": 64,
+                        "maximum": 1920,
+                        "multipleOf": 64,
+                        "default": 1536
+                      }
+                    }
+                  },
+                  {
+                    "title": "audio2video",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "mode",
+                      "prompt",
+                      "audio_upload_id"
+                    ],
+                    "properties": {
+                      "audio_max_duration": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "exclusiveMinimum": 0
+                      },
+                      "audio_start_time": {
+                        "type": "number",
+                        "minimum": 0.0,
+                        "default": 0.0
+                      },
+                      "audio_upload_id": {
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{32}$"
+                      },
+                      "duration": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "exclusiveMinimum": 0.875,
+                        "maximum": 15.208333333333334,
+                        "description": "초. 가장 가까운 8k+1 프레임(같은 거리면 짧은 쪽)으로 바꾼다 — 24fps 에서 5초→121. 범위는 frame_rate 에 따라 바뀌고 여기 적힌 수는 기본 frame_rate 기준이다. num_frames·auto_duration 과 셋 중 하나. null = 생략(자동 길이는 auto_duration 으로)"
+                      },
+                      "frame_rate": {
+                        "type": "number",
+                        "minimum": 1.0,
+                        "maximum": 60.0,
+                        "default": 24.0
+                      },
+                      "generate_audio": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "false 면 생성 뒤 결과 mp4 에서 소리 흐름을 뺀다(후처리). 엔진에 소리를 끄는 인자가 없어 GPU 시간은 같다"
+                      },
+                      "guidance": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "video_cfg_guidance_scale": {
+                            "type": "number",
+                            "minimum": 1.0,
+                            "maximum": 15.0,
+                            "description": "`--video-cfg-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "video_stg_guidance_scale": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 5.0,
+                            "description": "`--video-stg-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "video_rescale_scale": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 1.0,
+                            "description": "`--video-rescale-scale` — 생략하면 엔진 기본값"
+                          },
+                          "video_stg_blocks": {
+                            "type": "array",
+                            "minItems": 1,
+                            "maxItems": 8,
+                            "uniqueItems": true,
+                            "items": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 47
+                            },
+                            "description": "`--video-stg-blocks` — 생략하면 엔진 기본값"
+                          },
+                          "video_skip_step": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 10,
+                            "description": "`--video-skip-step` — 생략하면 엔진 기본값"
+                          },
+                          "a2v_guidance_scale": {
+                            "type": "number",
+                            "minimum": 1.0,
+                            "maximum": 10.0,
+                            "description": "`--a2v-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "audio_cfg_guidance_scale": {
+                            "type": "number",
+                            "minimum": 1.0,
+                            "maximum": 15.0,
+                            "description": "`--audio-cfg-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "audio_stg_guidance_scale": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 5.0,
+                            "description": "`--audio-stg-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "audio_rescale_scale": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 1.0,
+                            "description": "`--audio-rescale-scale` — 생략하면 엔진 기본값"
+                          },
+                          "audio_stg_blocks": {
+                            "type": "array",
+                            "minItems": 1,
+                            "maxItems": 8,
+                            "uniqueItems": true,
+                            "items": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 47
+                            },
+                            "description": "`--audio-stg-blocks` — 생략하면 엔진 기본값"
+                          },
+                          "audio_skip_step": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 10,
+                            "description": "`--audio-skip-step` — 생략하면 엔진 기본값"
+                          },
+                          "v2a_guidance_scale": {
+                            "type": "number",
+                            "minimum": 1.0,
+                            "maximum": 10.0,
+                            "description": "`--v2a-guidance-scale` — 생략하면 엔진 기본값"
+                          }
+                        }
+                      },
+                      "hdr": {
+                        "enum": [
+                          "SRGB_LINEAR",
+                          "ACESCG",
+                          "ACESCCT",
+                          null
+                        ],
+                        "description": "BT.2020/HLG 출력. 이미지·참조·원본 입력과 같이 못 쓴다"
+                      },
+                      "height": {
+                        "type": "integer",
+                        "minimum": 64,
+                        "maximum": 1920,
+                        "multipleOf": 64,
+                        "default": 1024
+                      },
+                      "images": {
+                        "type": "array",
+                        "minItems": 0,
+                        "maxItems": 8,
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "upload_id",
+                            "frame_idx",
+                            "strength"
+                          ],
+                          "properties": {
+                            "upload_id": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{32}$"
+                            },
+                            "frame_idx": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "strength": {
+                              "type": "number",
+                              "minimum": 0.0,
+                              "maximum": 1.0
+                            },
+                            "crf": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 0,
+                              "maximum": 51
+                            }
+                          }
+                        }
+                      },
+                      "mode": {
+                        "type": "string",
+                        "const": "audio2video"
+                      },
+                      "negative_prompt": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "maxLength": 2000
+                      },
+                      "num_frames": {
+                        "type": "integer",
+                        "minimum": 25,
+                        "maximum": 361,
+                        "description": "8k+1"
+                      },
+                      "num_inference_steps": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 1,
+                        "maximum": 50
+                      },
+                      "prompt": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                      },
+                      "seed": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2147483647,
+                        "default": 42
+                      },
+                      "width": {
+                        "type": "integer",
+                        "minimum": 64,
+                        "maximum": 1920,
+                        "multipleOf": 64,
+                        "default": 1536
+                      }
+                    }
+                  },
+                  {
+                    "title": "ingredients",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "mode",
+                      "prompt",
+                      "references"
+                    ],
+                    "properties": {
+                      "conditioning_mask": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "additionalProperties": false,
+                        "required": [
+                          "upload_id"
+                        ],
+                        "properties": {
+                          "upload_id": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{32}$"
+                          },
+                          "strength": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 1.0,
+                            "default": 1.0
+                          }
+                        },
+                        "description": "video/mp4 업로드. 참조와 같은 프레임 수(1 또는 8k+1)"
+                      },
+                      "duration": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "exclusiveMinimum": 0.875,
+                        "maximum": 15.208333333333334,
+                        "description": "초. 가장 가까운 8k+1 프레임(같은 거리면 짧은 쪽)으로 바꾼다 — 24fps 에서 5초→121. 범위는 frame_rate 에 따라 바뀌고 여기 적힌 수는 기본 frame_rate 기준이다. num_frames·auto_duration 과 셋 중 하나. null = 생략(자동 길이는 auto_duration 으로)"
+                      },
+                      "frame_rate": {
+                        "type": "number",
+                        "minimum": 1.0,
+                        "maximum": 60.0,
+                        "default": 24.0
+                      },
+                      "generate_audio": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "false 면 생성 뒤 결과 mp4 에서 소리 흐름을 뺀다(후처리). 엔진에 소리를 끄는 인자가 없어 GPU 시간은 같다"
+                      },
+                      "hdr": {
+                        "enum": [
+                          null
+                        ],
+                        "description": "BT.2020/HLG 출력. 이미지·참조·원본 입력과 같이 못 쓴다"
+                      },
+                      "height": {
+                        "type": "integer",
+                        "minimum": 64,
+                        "maximum": 1920,
+                        "multipleOf": 64,
+                        "default": 1024
+                      },
+                      "images": {
+                        "type": "array",
+                        "minItems": 0,
+                        "maxItems": 8,
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "upload_id",
+                            "frame_idx",
+                            "strength"
+                          ],
+                          "properties": {
+                            "upload_id": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{32}$"
+                            },
+                            "frame_idx": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "strength": {
+                              "type": "number",
+                              "minimum": 0.0,
+                              "maximum": 1.0
+                            },
+                            "crf": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 0,
+                              "maximum": 51
+                            }
+                          }
+                        }
+                      },
+                      "mode": {
+                        "type": "string",
+                        "const": "ingredients"
+                      },
+                      "num_frames": {
+                        "type": "integer",
+                        "minimum": 25,
+                        "maximum": 361,
+                        "description": "8k+1"
+                      },
+                      "prompt": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                      },
+                      "references": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 1,
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "upload_id"
+                          ],
+                          "properties": {
+                            "upload_id": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{32}$"
+                            },
+                            "strength": {
+                              "type": "number",
+                              "minimum": 0.0,
+                              "maximum": 1.0,
+                              "default": 1.0
+                            }
+                          }
+                        }
+                      },
+                      "seed": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2147483647,
+                        "default": 42
+                      },
+                      "skip_stage_2": {
+                        "type": "boolean",
+                        "default": false
+                      },
+                      "width": {
+                        "type": "integer",
+                        "minimum": 64,
+                        "maximum": 1920,
+                        "multipleOf": 64,
+                        "default": 1536
+                      }
+                    }
+                  },
+                  {
+                    "title": "ic_lora",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "mode",
+                      "prompt",
+                      "adapter",
+                      "references"
+                    ],
+                    "properties": {
+                      "adapter": {
+                        "enum": [
+                          "clean-plate",
+                          "colorization",
+                          "day-to-night",
+                          "deblur",
+                          "decompression",
+                          "ingredients",
+                          "pixel-upscaler-x2",
+                          "water-simulation"
+                        ]
+                      },
+                      "conditioning_mask": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "additionalProperties": false,
+                        "required": [
+                          "upload_id"
+                        ],
+                        "properties": {
+                          "upload_id": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{32}$"
+                          },
+                          "strength": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 1.0,
+                            "default": 1.0
+                          }
+                        },
+                        "description": "video/mp4 업로드. 참조와 같은 프레임 수(1 또는 8k+1)"
+                      },
+                      "duration": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "exclusiveMinimum": 0.875,
+                        "maximum": 15.208333333333334,
+                        "description": "초. 가장 가까운 8k+1 프레임(같은 거리면 짧은 쪽)으로 바꾼다 — 24fps 에서 5초→121. 범위는 frame_rate 에 따라 바뀌고 여기 적힌 수는 기본 frame_rate 기준이다. num_frames·auto_duration 과 셋 중 하나. null = 생략(자동 길이는 auto_duration 으로)"
+                      },
+                      "frame_rate": {
+                        "type": "number",
+                        "minimum": 1.0,
+                        "maximum": 60.0,
+                        "default": 24.0
+                      },
+                      "generate_audio": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "false 면 생성 뒤 결과 mp4 에서 소리 흐름을 뺀다(후처리). 엔진에 소리를 끄는 인자가 없어 GPU 시간은 같다"
+                      },
+                      "hdr": {
+                        "enum": [
+                          null
+                        ],
+                        "description": "BT.2020/HLG 출력. 이미지·참조·원본 입력과 같이 못 쓴다"
+                      },
+                      "height": {
+                        "type": "integer",
+                        "minimum": 64,
+                        "maximum": 1920,
+                        "multipleOf": 64,
+                        "default": 1024
+                      },
+                      "images": {
+                        "type": "array",
+                        "minItems": 0,
+                        "maxItems": 8,
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "upload_id",
+                            "frame_idx",
+                            "strength"
+                          ],
+                          "properties": {
+                            "upload_id": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{32}$"
+                            },
+                            "frame_idx": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "strength": {
+                              "type": "number",
+                              "minimum": 0.0,
+                              "maximum": 1.0
+                            },
+                            "crf": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 0,
+                              "maximum": 51
+                            }
+                          }
+                        }
+                      },
+                      "mode": {
+                        "type": "string",
+                        "const": "ic_lora"
+                      },
+                      "num_frames": {
+                        "type": "integer",
+                        "minimum": 25,
+                        "maximum": 361,
+                        "description": "8k+1"
+                      },
+                      "prompt": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                      },
+                      "references": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 1,
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "upload_id"
+                          ],
+                          "properties": {
+                            "upload_id": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{32}$"
+                            },
+                            "strength": {
+                              "type": "number",
+                              "minimum": 0.0,
+                              "maximum": 1.0,
+                              "default": 1.0
+                            }
+                          }
+                        }
+                      },
+                      "seed": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2147483647,
+                        "default": 42
+                      },
+                      "skip_stage_2": {
+                        "type": "boolean",
+                        "default": false
+                      },
+                      "width": {
+                        "type": "integer",
+                        "minimum": 64,
+                        "maximum": 1920,
+                        "multipleOf": 64,
+                        "default": 1536
+                      }
+                    }
+                  },
+                  {
+                    "title": "guided_hq",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "mode",
+                      "prompt"
+                    ],
+                    "properties": {
+                      "auto_duration": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "min_seconds": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "default": 1.0
+                          },
+                          "max_seconds": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          }
+                        },
+                        "description": "예측기가 고르는 최대는 121프레임"
+                      },
+                      "duration": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "exclusiveMinimum": 0.875,
+                        "maximum": 15.208333333333334,
+                        "description": "초. 가장 가까운 8k+1 프레임(같은 거리면 짧은 쪽)으로 바꾼다 — 24fps 에서 5초→121. 범위는 frame_rate 에 따라 바뀌고 여기 적힌 수는 기본 frame_rate 기준이다. num_frames·auto_duration 과 셋 중 하나. null = 생략(자동 길이는 auto_duration 으로)"
+                      },
+                      "frame_rate": {
+                        "type": "number",
+                        "minimum": 1.0,
+                        "maximum": 60.0,
+                        "default": 24.0
+                      },
+                      "generate_audio": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "false 면 생성 뒤 결과 mp4 에서 소리 흐름을 뺀다(후처리). 엔진에 소리를 끄는 인자가 없어 GPU 시간은 같다"
+                      },
+                      "guidance": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "video_cfg_guidance_scale": {
+                            "type": "number",
+                            "minimum": 1.0,
+                            "maximum": 15.0,
+                            "description": "`--video-cfg-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "video_stg_guidance_scale": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 5.0,
+                            "description": "`--video-stg-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "video_rescale_scale": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 1.0,
+                            "description": "`--video-rescale-scale` — 생략하면 엔진 기본값"
+                          },
+                          "video_stg_blocks": {
+                            "type": "array",
+                            "minItems": 1,
+                            "maxItems": 8,
+                            "uniqueItems": true,
+                            "items": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 47
+                            },
+                            "description": "`--video-stg-blocks` — 생략하면 엔진 기본값"
+                          },
+                          "video_skip_step": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 10,
+                            "description": "`--video-skip-step` — 생략하면 엔진 기본값"
+                          },
+                          "a2v_guidance_scale": {
+                            "type": "number",
+                            "minimum": 1.0,
+                            "maximum": 10.0,
+                            "description": "`--a2v-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "audio_cfg_guidance_scale": {
+                            "type": "number",
+                            "minimum": 1.0,
+                            "maximum": 15.0,
+                            "description": "`--audio-cfg-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "audio_stg_guidance_scale": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 5.0,
+                            "description": "`--audio-stg-guidance-scale` — 생략하면 엔진 기본값"
+                          },
+                          "audio_rescale_scale": {
+                            "type": "number",
+                            "minimum": 0.0,
+                            "maximum": 1.0,
+                            "description": "`--audio-rescale-scale` — 생략하면 엔진 기본값"
+                          },
+                          "audio_stg_blocks": {
+                            "type": "array",
+                            "minItems": 1,
+                            "maxItems": 8,
+                            "uniqueItems": true,
+                            "items": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 47
+                            },
+                            "description": "`--audio-stg-blocks` — 생략하면 엔진 기본값"
+                          },
+                          "audio_skip_step": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 10,
+                            "description": "`--audio-skip-step` — 생략하면 엔진 기본값"
+                          },
+                          "v2a_guidance_scale": {
+                            "type": "number",
+                            "minimum": 1.0,
+                            "maximum": 10.0,
+                            "description": "`--v2a-guidance-scale` — 생략하면 엔진 기본값"
+                          }
+                        }
+                      },
+                      "hdr": {
+                        "enum": [
+                          "SRGB_LINEAR",
+                          "ACESCG",
+                          "ACESCCT",
+                          null
+                        ],
+                        "description": "BT.2020/HLG 출력. 이미지·참조·원본 입력과 같이 못 쓴다"
+                      },
+                      "height": {
+                        "type": "integer",
+                        "minimum": 64,
+                        "maximum": 1920,
+                        "multipleOf": 64,
+                        "default": 1024
+                      },
+                      "images": {
+                        "type": "array",
+                        "minItems": 0,
+                        "maxItems": 8,
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "upload_id",
+                            "frame_idx",
+                            "strength"
+                          ],
+                          "properties": {
+                            "upload_id": {
+                              "type": "string",
+                              "pattern": "^[0-9a-f]{32}$"
+                            },
+                            "frame_idx": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "strength": {
+                              "type": "number",
+                              "minimum": 0.0,
+                              "maximum": 1.0
+                            },
+                            "crf": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 0,
+                              "maximum": 51
+                            }
+                          }
+                        }
+                      },
+                      "mode": {
+                        "type": "string",
+                        "const": "guided_hq"
+                      },
+                      "negative_prompt": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "maxLength": 2000
+                      },
+                      "num_frames": {
+                        "type": "integer",
+                        "minimum": 25,
+                        "maximum": 361,
+                        "description": "8k+1"
+                      },
+                      "num_generated_keyframes": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 16
+                      },
+                      "num_inference_steps": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 1,
+                        "maximum": 50
+                      },
+                      "prompt": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                      },
+                      "seed": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2147483647,
+                        "default": 42
+                      },
+                      "width": {
+                        "type": "integer",
+                        "minimum": 64,
+                        "maximum": 1920,
+                        "multipleOf": 64,
+                        "default": 1536
+                      }
+                    }
+                  },
+                  {
+                    "title": "retake",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "mode",
+                      "prompt",
+                      "video_upload_id",
+                      "start_time",
+                      "end_time"
+                    ],
+                    "properties": {
+                      "end_time": {
+                        "type": "number"
+                      },
+                      "generate_audio": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "false 면 생성 뒤 결과 mp4 에서 소리 흐름을 뺀다(후처리). 엔진에 소리를 끄는 인자가 없어 GPU 시간은 같다"
+                      },
+                      "hdr": {
+                        "enum": [
+                          null
+                        ],
+                        "description": "BT.2020/HLG 출력. 이미지·참조·원본 입력과 같이 못 쓴다"
+                      },
+                      "mode": {
+                        "type": "string",
+                        "const": "retake"
+                      },
+                      "prompt": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                      },
+                      "seed": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2147483647,
+                        "default": 42
+                      },
+                      "start_time": {
+                        "type": "number",
+                        "minimum": 0.0
+                      },
+                      "video_upload_id": {
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{32}$"
+                      }
+                    }
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "mode"
+                }
+              }
+            }
+          },
+          "x-model-aliases": {
+            "fast": "generate",
+            "pro": "guided_hq"
+          },
+          "description": "`mode` 대신 `model` 을 줄 수 있다 — 서버가 대응 mode 로 바꾼 뒤 그 mode 의 스키마로 거른다. 둘을 같이 주면 400"
+        },
+        "responses": {
+          "202": {
+            "description": "접수됨 — `Location` 이 조회 주소"
+          },
+          "400": {
+            "description": "오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/jobs/{job_id}": {
+      "get": {
+        "summary": "작업 상태",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{32}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "상태·접수한 요청"
+          },
+          "401": {
+            "description": "오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/jobs/{job_id}/result": {
+      "get": {
+        "summary": "결과 영상(Range 지원)",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{32}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "video/mp4"
+          },
+          "409": {
+            "description": "아직 끝나지 않았다"
+          },
+          "401": {
+            "description": "오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/uploads": {
+      "post": {
+        "summary": "파일 올리기(24시간 보관)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "audio/mpeg": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "audio/wav": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/jpeg": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "video/mp4": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "`upload_id`"
+          },
+          "400": {
+            "description": "오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/models": {
+      "get": {
+        "summary": "실효 상한·mode 별 허용 이름(capability)",
+        "responses": {
+          "200": {
+            "description": "capability"
+          },
+          "401": {
+            "description": "오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "summary": "이 문서",
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3.1"
+          },
+          "401": {
+            "description": "오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

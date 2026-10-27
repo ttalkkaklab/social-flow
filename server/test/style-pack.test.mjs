@@ -43,18 +43,20 @@ test('selected photoreal and webtoon styles reach both frame prompts and motion 
   const p=assemble(w,0);
   for(const key of ['sourcePrompt','endFramePrompt','motionPrompt']) assert.match(p[key],pattern);
   assert.deepEqual(p.sourceImageArgs,{});assert.deepEqual(p.sourceReferenceImages,[]);assert.equal(p.styleBinding,null);
-  w.PRODUCTION.style.referencePack='tactile-miniature-v1';assert.throws(()=>assemble(w,0),/Remove the miniature/);
+  w.PRODUCTION.style.referencePack='tactile-miniature-v1';assert.match(assemble(w,0).warnings.join(),/Remove the miniature/);
  }
 });
 test('a conflicting shot look cannot silently change the selected episode style',()=>{
- const w=plan();w.PRODUCTION.style.preset='webtoon';assert.throws(()=>assemble(w,0),/conflicts/);
+ // A look that disagrees with the selected style is reported, never silently restyled (warning since 2026-10-18).
+ const w=plan();w.PRODUCTION.style.preset='webtoon';assert.match(assemble(w,0).warnings.join(),/conflicts/);
  w.PRODUCTION.style.preset='unknown';assert.throws(()=>assemble(w,0),/Unknown visual style/);
 });
 test('style choice and its evidence are checked before assets and bound to the quote',()=>{
  const {check}=require('../../skills/storyboard/references/production-mode.js');
  const w=plan();Object.assign(w.PRODUCTION,{videoBudgetUsd:10,maxAttempts:3});
  w.PRODUCTION.style.preset='photoreal';
- assert.ok(check(w,{draft:true}).some(x=>x.includes('HITL')));
+ const advice=[]; assert.deepEqual(check(w,{draft:true,advice}),[]);
+ assert.ok(advice.some(x=>x.includes('PRODUCTION.style.selection')));
  w.PRODUCTION.style.selection={kind:'user',reference:'User selected photoreal for this episode.'};
  assert.deepEqual(check(w,{draft:true}),[]);
  const before=signature(w);w.PRODUCTION.style.preset='webtoon';assert.notEqual(signature(w),before);

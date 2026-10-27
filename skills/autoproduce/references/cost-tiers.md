@@ -1,238 +1,76 @@
-# The model ladder — start cheap, move up only when the metrics say so
+# Price reference — what a generated episode costs
 
 > **Freshness** — verified 2026-08-15 · source: vendor pricing pages plus our own measured
 > runs; the numbers themselves live in [prices.tsv](prices.tsv), which this file never copies ·
 > recheck every 90 days.
 
-The default for an automated episode is **a build that never calls a video
-generation tool**. Three or four still images with Ken Burns on top, plus
-narration, subtitles, and BGM. About **$0.27–0.29** per episode (the cover
-background is the meta image, so quality high — absolute rule 12. It's this
-build's biggest cost item). One Veo call from here nearly quintuples the
-price, so the metrics decide whether to make it.
+This document explains how an episode's cost is read and projected. **No price numbers
+live here** — `prices.tsv` is the source of truth and `cost-report.sh` reads only that.
+Write a number in two places and one of them always goes stale.
 
-This document sets the ladder and the escalation conditions. **No price
-numbers live here** — `prices.tsv` is the source of truth and `cost-report.sh`
-reads only that. Write a number in two places and one of them always goes
-stale.
+Engines are not chosen here either. Every new still, clip and speech line uses the models
+saved in `.social-flow/models.json` ([model settings](../../_shared/model-settings.md)),
+snapshotted into `PRODUCTION.modelSettings`. A metric trend, a cost rung or a cheaper row
+in the price table never switches an engine; only the user changes a saved model. The
+unattended loop's two production choices — video model and previz renderer — are satisfied
+by `models.json` (`models.video`, `production.previzRenderer`); a growth plan's
+`video_model` / `previz_renderer` fields are optional overrides.
 
 ## Contents
 
-- [Why Ken Burns is the default](#why-ken-burns-is-the-default)
-- [Economy baseline (the automated-authoring default)](#economy-baseline-the-automated-authoring-default)
-- [Escalation — one opening b-roll slot](#escalation-one-opening-b-roll-slot)
-- [What autonomous authoring doesn't use](#what-autonomous-authoring-doesnt-use)
-- [The cap — over it, drop the escalation and go economy baseline](#the-cap-over-it-drop-the-escalation-and-go-economy-baseline)
+- [Where the money goes](#where-the-money-goes)
+- [Choosing cuts before pricing them](#choosing-cuts-before-pricing-them)
+- [The cap — a ceiling, not a quota](#the-cap-a-ceiling-not-a-quota)
 - [Non-money budgets — search quotas](#non-money-budgets-search-quotas)
 - [When updating a price](#when-updating-a-price)
 
-## Why Ken Burns is the default
+## Where the money goes
 
-Veo 3.1 makes at most 8 seconds per call. Fill a 60-second video with
-generated footage alone and you're pulling eight clips and stitching them —
-and the stitching edit layer is needed anyway. That leaves exactly one
-question — **which slot gets generated video.**
-The evidence and Veo hard specs are canonical in the
-[AI video production guide](../../../docs/guides/ai-video-production/index.html).
-That document's §9 notes that "without a per-episode budget there is no
-principled way to decide which scene gets generated video." This document
-fills that blank.
+| Layer | Billed as | Notes |
+|---|---|---|
+| Stills — cover, scene stills, slide art plates | the saved image model's `image.*` row | host tool at $0 on the allowance; gpt-image by its saved quality tier; Z-Image and MLX at $0. `cost-preview.js` reads the saved model for every still |
+| Generated video | the saved video model's row (`seedance.*`, `veo.*`, `video.host`, `video.astra`, `video.mlx`) | Veo bills generated length (1080p is 8s-only, so a 4s cut pays 8); Seedance bills the requested seconds; a reference-video lane bills input plus output seconds |
+| Narration | `tts.gemini-*` or `tts.elevenlabs*` by the saved speech model | quantity is characters ÷ 1000; ElevenLabs logs the metered header, not the text length (cost-tally.md) |
+| BGM | one 30s `music.lyria-clip` | variable-length `music.lyria-realtime` has no confirmed price, so its row is `?` and the report stops on it |
+| Ken Burns stills, HTML motion slides, ffmpeg assembly | free | the builder's work; no vendor call |
+
+Measured points worth keeping as history: a still-only short with one gpt high cover ran
+about $0.27–0.29; a 6 s previz-guided hook on Seedance 2.0 mini 720p about $0.54 and
+$2.74 on 2.0 1080p; a Veo lite 1080p 8 s b-roll added $0.64. In blind-arena
+testing Veo standard, fast and lite were statistically identical, so the quality that
+money buys there does not measure (video-model-selection §quality).
+
+## Choosing cuts before pricing them
 
 Choose the treatment before estimating its cost. Use
 [render-routing.md](../../storyboard/references/render-routing.md) for each cut, including the
-opening. Still-camera, character HTML, object HTML and data-graph cuts do not consume generated
-video slots. Generate video only for essential continuous motion. The cap is a ceiling; unused
-slots stay unused. A channel may explicitly require a video opening, but this is no longer the
-plugin default. Recalculate from the selected assets with `cost-preview.js`.
+opening. Still-camera, character HTML, object HTML and data-graph cuts consume no generated
+video. Generate video only for essential continuous motion. The episode's ratio choice
+([production-mode.md](../../storyboard/references/production-mode.md)) is the planning target
+and the cost ceiling: fewer generated cuts than the target is reported, never padded. A channel
+may explicitly require a video opening (`hook_video: on` in the profile); it is not the plugin
+default. Recalculate from the selected assets with `cost-preview.js`.
 
-## Economy baseline (the automated-authoring default)
+## The cap — a ceiling, not a quota
 
-Under Codex or Grok the host `image_gen` replaces both image rows, and under Grok the host
-`image_to_video` replaces the hook row, at $0 on the subscription allowance (owner directive
-2026-09-07); the rows below are the Claude Code path.
+A growth plan's `max_cost_per_video` (template default **$1.00** since 2026-09-05; plans
+written earlier carry $0.30) is the per-episode spending authorization of an unattended
+episode. The profile's `video_budget_usd` (plugin default $10) bounds generated video in the
+storyboard check. Neither is a target to spend up to.
 
-| Layer | What's used | Notes |
-|---|---|---|
-| Cover background | `gpt_image_text2img` quality **`high`**, 1088x1920, 1 image | Photoreal scene in the episode's visual-style preset, a person only when the shot needs one (rule 11) — the cover frame becomes the thumbnail as-is (absolute rule 12) and is the source of the hook motion background; on escalated episodes it doubles as the b-roll source |
-| Optional selected video hook | `seedance_reference` with the cut's 3D previz as the reference clip, silent, on the standing 2.x grade — input plus output seconds billed: **about $0.54 at 6 s on 2.0 mini 720p**, $2.74 on 2.0 1080p | Only when `shot.render` selects video or the channel explicitly enables `hook_video`, **and** the growth plan's `autoproduce:` block names `previz_renderer` and `video_model` (autoproduce §5) — the two HITL choices the unattended loop cannot ask. The builder keeps only the video track, so narration and the code-rendered title stay. No `ARK_API_KEY`: no hook video — a previz cut has no Veo fallback |
-| Points backgrounds | `image_local_generate` (local Z-Image) 1088x1920, **2–4 images** — **$0** | The photo is the star (absolute rule 14) — captions use only the top band so the photo shows in full. Change the shot when the content axis changes. Only machines without mflux fall back to `gpt_image_text2img` quality `low` ($0.007/image) |
-| Motion (body) | ffmpeg Ken Burns still lane (eased zoom · focus · pan · punch · drift, 4%/s capped at 1.075) + HTML motion slides | The builder already does this — one still per cut, at most 8 s on one still. Use the chosen per-cut route; there is no required number of generated clips |
-| Narration | whatever engine profile §2 says | `local` (Supertonic) costs 0; `gemini` bills per 1,000 characters |
-| BGM | one 30s `music_generate_clip` | The builder crossfades it onto itself to reach length. Variable-length generation has no confirmed price, so it isn't used — which also means the economy tier takes one bed, not cues |
-| Subtitles | the builder emits `subs.srt`·`subs.ass` together | free |
-
-The following historical example includes a selected video hook; it is not a required baseline.
-With points backgrounds moved to local Z-Image (2026-08-12), that share
-($0.007 × 2–4 images) drops out — a local-TTS channel runs **about $0.81–0.83** per
-episode (1 high image + a 6 s previz-guided hook on 2.0 mini 720p + 1 BGM clip; about
-$3.00 on 2.0 1080p; there is no Veo fallback for the hook); a Gemini-engine channel adds **$0.015** for a
-400-character narration. Before the hook became video (2026-09-05) the same
-baseline was about $0.26. The image-count cap stops being about cost (pick
-2–4 purely on screen rhythm); on the mflux-missing fallback (gpt low) add
-$0.007 per image.
-
-> **Never switch engines on your own.** "Narration costs 0" is true only when
-> the channel is already set to `local`. Move a `gemini` channel to local
-> because it's cheaper and **the narrator turns into a different person
-> partway through the channel's run** — the exact accident the produce skill
-> forbids. Engine changes happen only when the user edits profile §2.
-
-## Escalation — one opening b-roll slot
-
-**The schema allows 2 slots (scenes-schema §broll), but the unattended path
-escalates at most 1 on its own** — the opening b-roll in the segment after the
-cover. Veo bills on generated length (8s), so one more slot doubles the
-episode's spend — a call a human makes when approving the storyboard, not
-something the unattended loop decides autonomously. If a human-approved
-storyboard has 2 slots written in, then **make both as written** — quietly
-dropping an approved scene over cost makes the video diverge from the plan
-(that episode's budget is guarded separately by §the cap).
-
-`veo_img2video` animates that slot's source PNG (for the opening slot, the
-cover background).
-
-```
-model veo-3.1-lite-generate-preview · 1080p · 8s generation · 9:16
-Used length is the broll scene's duration (default 4s) — produce §6 cuts only the head of the original.
-The source must be the already-made cover-background PNG — veo_text2video is never used (absolute rule 8),
-and the plan passes the author's rule-13 check first.
-Prompt = the storyboard's stored visual.prompt, sent verbatim (scenes-schema §clip prompt);
-fallback on older files is English, motion only — re-describing the person, background, or lighting
-already visible in the source image degrades the result (Google's official image-to-video guidance).
-Camera in veo vocabulary — a closing-in shot is dolly in, not push in.
-e.g. "very slow dolly in, nearly static camera, subtle particle drift.
-     Audio: quiet room tone, no music, no speech."
-```
-
-Existing 720p clips follow the `visual.reuse` source contract. New Seedance or host
-clips follow the selected model resolution. The Veo 1080p preference below applies
-only to new Veo b-roll requests; missing old metadata never requires regeneration.
-
-Billing is on **generated length (8s)** — using only 4 doesn't cut the cost.
-Cutting it would mean dropping to 720p (4s and 6s generation allowed), which
-the 1080×1920 body would need upscaled, so it isn't used (user decision
-2026-08-11 — "if it needs upscaling, just use 1080").
-
-**The cover's text never escalates.** Veo can't write Korean, so the cover
-(hook title, hero figure) is code-rendered (produce absolute rule 10) over the
-baseline's silent motion background. The b-roll attaches **after** the cover
-and is the one generated cut the short has left (format cap 2).
-
-**No narration over that segment** — the video's own sound plays (absolute
-rule 9). That saves one scene's worth of TTS calls. In exchange there's one
-more `splice-clip.sh` splice step, and **no palindrome loops** (forward +
-reverse means the audio plays backwards).
-
-1080p·8s generation costs more than 720p·4s. It's still the combination, for
-two reasons — the body is 1080×1920 so 720p would need upscaling, and the API
-allows 1080p only at 8 seconds. "Only as much as needed" happens in the **used
-length** (the trim), not in generation.
-
-**Escalation conditions are observed values, and the verdict is a trend, not
-an absolute threshold** (revised 2026-08-15). With an absolute threshold (say,
-skip over 55), a channel whose measured numbers sit above it permanently — our
-own channel's four reels all measured 84.8–93.8 — turns the unattended loop
-into **every episode escalated = every episode at 5x cost**, and that money
-doesn't fix the problem, because the b-roll attaches *after* the cover while
-the skipping happens *inside* it. So the three verdicts become:
-
-| Platform | Metric | Escalation verdict |
-|---|---|---|
-| YouTube | `averageViewPercentage` | last-3-episode average **down 5+ points from the previous 3** |
-| Instagram | `reels_skip_rate` | last-3-episode average **up 5+ points from the previous 3** |
-| Common | under 6 published episodes (no comparison window) | **no escalation** |
-
-**`reels_skip_rate` arrives as a percentage, not a 0–1 ratio** — measured
-values print like 85.5 (2026-08-15, our own channel's reels). Same unit as
-`averageViewPercentage`.
-
-**Right after a hook-contract revision, unattended escalation is frozen** —
-from the cover segment-① contract (scenes-schema §segment ① is a promise to
-the viewer, 2026-08-15) until 3 new-baseline episodes accumulate, skip the
-escalation verdict entirely and run economy baseline only. Once the hook
-changes, earlier episodes' metrics are no comparison.
-
-Escalation is **per episode** — if the condition stays true the next episode
-escalates too, but nothing locks into an "escalated mode" automatically.
-
-## What autonomous authoring doesn't use
-
-These aren't excluded over money. They're excluded because **they need
-judgment**.
-
-- **`veo-3.1-generate-preview` (standard) · 1080p · 4K** — 8 seconds of
-  standard is $3.20 per episode. Sixty times the economy baseline is not a
-  decision for an unattended loop. And the price isn't the only problem — in
-  blind-arena testing, standard is statistically identical to lite and fast,
-  so the quality that money buys doesn't measure (video-model-selection
-  §quality).
-- **`veo_reference` (character speech clips) · `veo_extension`** — the lite
-  tier doesn't support them at all, and character acting is footage a human
-  should look at.
-- **`seedance_*` beyond the hook slot** — the one Seedance call the unattended
-  loop makes is the silent hook motion background, and only when the cut plan
-  or an explicit `hook_video` selects it (§The economy tier). The escalation
-  slot is the opening b-roll, and that segment **uses the clip's own audio**
-  under produce absolute rule 9 — put the cheaper silent engine there and 4
-  seconds go quiet, a swap that hurts the result, not the wallet. The prices
-  sit in `prices.tsv`'s `seedance.*` rows, so when a human uses Seedance
-  elsewhere in a storyboard the tally works as-is. The decision table's source
-  of truth is `skills/produce/references/video-model-selection.md`.
-- **`suno_*` (sung full songs and loop beds)** — about $0.06 and 2–3 minutes
-  per call, and vocals fight the narration. The unattended path stays on the
-  30-second `music_generate_clip` instrumental. An episode where the song is
-  the content goes through the human produce path's `suno_generate`.
-- **Emotive acted narration** — mix two TTS engines in one video and the
-  differing sample rates break the concatenation (ElevenLabs at its default
-  `wav_24000` matches Gemini's 24kHz and could share a timeline; local 44.1kHz
-  can't join either). A topic with shots that need acting is **not
-  automated-authoring material** — a human starts it with
-  `/social-flow:storyboard`.
-- **Quality escalation for points backgrounds** — no text goes into
-  backgrounds (negative directives block it, and all screen text is
-  code-rendered). Only on a P0 finding that a background is smeared,
-  regenerate once at `medium` for that episode alone, and **re-run the cap
-  verdict before regenerating** — a medium
-  regeneration (+$0.05) sits inside the $1.00 template cap but busts a plan
-  still at the old $0.30. On exit 2, don't
-  regenerate; report that P0 to a human as unresolved.
-  (The cover background is already high, so it never escalates.)
-
-## The cap — over it, drop the escalation and go economy baseline
-
-The plan's `max_cost_per_video` (template default **$1.00** since 2026-09-05;
-plans written earlier carry $0.30) is the per-episode cap. With the cover
-background at high (absolute rule 12) the economy baseline is ~$0.27–0.29;
-a channel that switched `hook_video` on (with standing previz and model answers) adds the
-hook clip (~$0.54 on 2.0 mini 720p, ~$2.74 on 2.0 1080p). $1.00 **passes the still
-baseline and the mini hook**. A lite·1080p·8s escalation adds $0.64: with `hook_video`
-off that lands at ~$0.91–0.93, inside $1.00, so the default cap allows one lite escalation;
-with a mini hook on it lands at ~$1.45–1.47, so that cap has to rise to **$1.50 or
-more** to let it through, and a 2.0 1080p hook needs **$3.70** (before 2026-08-15 escalation was fast at $1.23 with
-a $1.30 cap — the three tiers' quality differences fell inside the confidence
-interval in blind-arena testing, so we dropped to the cheapest tier.
-`max_cost_per_video` itself is a user setting). The unattended loop never
-decides a cap raise — until the user raises it in the plan, episodes are made
-at economy baseline even while the escalation condition is true (and the
-completion report says so). **A plan still at $0.30 fails the baseline itself**:
-there is no tier under the baseline to drop to while the profile's `hook_video`
-is on — the storyboard declares `visual.video` on the cover and `check-scenes.js`
-rejects a still hook — so the tick stops before spending, keeps the lock
-release, and the report names the plan's cap as the reason. Two ways out, both
-user settings: raise `max_cost_per_video` to $1.00 or more, or set
-`hook_video: off` in the profile, which makes the still cover with the `punch`
-the legal hook again (~$0.27 baseline).
-
-**The cap verdict happens before spending.** At the moment escalation is
-decided, run `cost-report.sh --cap` on the projected tally; on exit 2, cancel
-the escalation and go economy baseline. Don't abort — there's no reason not to
-make the episode cheaply when you can.
+**The cap verdict happens before spending** — the procedure and the priority between the
+saved ratio and the plan's caps are in
+[unattended-lifecycle.md#cap-check](unattended-lifecycle.md#cap-check). Over the cap, reduce
+the plan under the same saved models; never switch engines. If a profile's `hook_video: on`
+asks for a clip the cap cannot pay for, the tick stops before spending and names the cap in
+its report; the two ways out are both user settings — raise `max_cost_per_video`, or set
+`hook_video: off` so the still cover with the `punch` move opens the episode again.
 
 The estimate is `.work/cost-estimate.tsv` and the actual ledger is
 `.work/cost-tally.tsv` — separate files (mix them in one and the post-hoc
-report counts the same spend twice). **Mid-generation re-verdicts also use the
-estimate file** — when you decide to regenerate, put that line on the estimate
-and rerun `--cap`. Judge against the actual ledger and the spend that hasn't
+report counts the same spend twice). Mid-generation re-verdicts also use the
+estimate file: when you decide to regenerate, put that line on the estimate
+and rerun `--cap`. Judge against the actual ledger alone and the spend that hasn't
 gone out yet (BGM, narration) is missing, the total looks small, and a
 cap-busting regeneration passes.
 
@@ -247,19 +85,18 @@ unconfirmed price (`?`) and the total can look like 0. That doesn't mean free
 — it means the math didn't happen.
 
 Daily and weekly cumulative caps accumulate in the channel-shared
-`data/<channel>/growth/autoproduce.json`, and the growth loop checks them
-before authoring (SKILL.md §load · lock · budget).
+`data/<channel>/growth/autoproduce.json`; the growth loop checks them before authoring
+([daily cap](unattended-lifecycle.md#daily-cap) · [cap check](unattended-lifecycle.md#cap-check)).
 
 ## Non-money budgets — search quotas
 
-What the research stage spends isn't money — it's quota. Run out and that
-day's research is blocked, so spend it as carefully as the ladder.
+What the research stage spends isn't money — it's quota. These are guidance for spending
+it well, not a search count to hit or a limit that discards a topic.
 
-- **`naver_search`, 25,000/day** — the first tool for Korean material. Start
-  here.
+- **`naver_search`, 25,000/day** — the first tool for Korean material. Start here.
 - **Built-in WebSearch** — general-purpose and international.
-- **`serp_*`, 250/month (free)** — precision searches only. **At most 2 per
-  automated episode**. Don't repeat the same search with a different tool.
+- **`serp_*`, 250/month (free)** — precision searches; about two per automated episode is
+  the usual need. Don't repeat the same search with a different tool.
 
 ## When updating a price
 

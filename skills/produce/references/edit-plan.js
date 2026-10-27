@@ -27,8 +27,9 @@ function compile(scenes, text, {videoWarningsApproved=false}={}) {
     const opts = parseOptions(rows[k][4]), edit = s.edit === undefined ? {} : s.edit;
     if (!edit || typeof edit !== 'object' || Array.isArray(edit)) throw new Error('shot '+(i+1)+': edit must be an object');
     for (const key of Object.keys(edit)) if (!['in','pre','post','transitionSeconds','reason','continuity'].includes(key)) throw new Error('Unknown edit field: '+key);
-    const t = s.transition === undefined && k===0 ? 'cut' : s.transition;
-    if (!(carry.test(t) || ['cut','dip','dip:white'].includes(t))) throw new Error('shot '+(i+1)+': choose a transition in scenes.js');
+    // A missing transition is a cut on every shot (check-scenes.js reports the omission at plan time).
+    const t = s.transition === undefined ? 'cut' : s.transition;
+    if (!(carry.test(t) || ['cut','dip','dip:white'].includes(t))) throw new Error('shot '+(i+1)+': unknown transition "'+t+'"; choose a transition in scenes.js');
     if (k===0 && carry.test(t)) throw new Error('First shot cannot carry a previous picture');
     const enter = t==='dip'?'black':t==='dip:white'?'white':t;
     const join = seconds(edit.transitionSeconds, carry.test(t)?durations[t.split(':')[0]]:0, 'transitionSeconds', .8);

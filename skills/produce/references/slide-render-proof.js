@@ -15,7 +15,7 @@ function writeProof(html,out,source,rows,fps){
 }
 function verifyClip(clip,html,group){
   const proofFile=path.join(path.dirname(clip),'render-proof.json');
-  if(!fs.existsSync(proofFile))throw new Error('missing render-proof.json for '+clip+'; render the checked slide with render-motion-slide.mjs');
+  if(!fs.existsSync(proofFile))throw new Error('missing render-proof.json for '+clip+'; render the slide with render-motion-slide.mjs first — the proof binds this clip to its source bytes (an assembly input, not a quality verdict)');
   const proof=JSON.parse(fs.readFileSync(proofFile,'utf8'));
   if(proof.version!==1||proof.html!==path.resolve(html)||JSON.stringify(proof.inputs)!==JSON.stringify(inputs(html)))throw new Error('stale or unrelated slide sources for '+clip);
   const output=proof.outputs?.find(r=>r.group===group&&r.file===path.basename(clip));

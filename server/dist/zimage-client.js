@@ -14,10 +14,10 @@
  * ## Why a subprocess
  *
  * mflux is an Apple MLX-based Python package with no Node bindings. Same judgment
- * as Supertonic (supertonic-client.ts) — a resident model worker takes on lifecycle
+ * as other local generation clients — a resident model worker takes on lifecycle
  * management and memory residency (measured peak 32~39GB), so until the need is
  * proven by measurement, a stateless subprocess is the right call. Unlike
- * Supertonic we use the CLI directly rather than an inline snippet, because the
+ * clients that embed Python, we use the CLI directly rather than an inline snippet because the
  * uv tool install of mflux is an executable with its own isolated venv — there's
  * no interpreter to pick — and the CLI has no extra information (like a duration)
  * to return beyond the result file path.

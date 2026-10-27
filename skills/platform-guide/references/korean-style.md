@@ -5,12 +5,17 @@ on-screen text, platform copy, titles, descriptions, reply copy. Platform gramma
 (register, length, hashtags) is set by `platform-playbook.md`; the grain of the
 sentences themselves is set by this document.
 
-**The target is outgoing text.** Plugin-internal docs (SKILL.md, agent definitions,
-README) are not gated. Instructions are actually more precise with contrast and
-emphasis structures, so holding them to the same standard makes the rules fight
-their own purpose. Checks run on outgoing text — `output/` artifacts, `scenes.js` narration, growth drafts, channel bios and intro taglines.
+**The checker's target is outgoing text.** The script runs on `output/` artifacts,
+`scenes.js` narration, growth drafts, channel bios and intro taglines. Plugin-internal
+docs (SKILL.md, agent definitions, README, code comments) are not run through it —
+instructions are more precise with contrast and emphasis structures, so holding them to
+every rule would make the rules fight their own purpose. The D8 ban alone follows the
+writer into docs, comments, commit messages and responses: the writer scans for it
+with the snippet in CLAUDE.md §Style ban, by hand, not through this checker's exit code.
 
-`check-style.py` delivers the verdict. This document holds the why behind each fix.
+`check-style.py` delivers the findings. This document holds the why behind each fix.
+Findings are suggestions the writer fixes or justifies; the exit code reports severity
+and never decides on its own whether authorized work continues (owner directive 2026-10-16).
 
 ## Contents
 
@@ -48,7 +53,7 @@ scroll. One translationese sentence and they think "ah, an ad" and swipe on.
 
 ## Severity
 
-- **S1** — one occurrence is a tell. Remove unconditionally.
+- **S1** — one occurrence is a tell. Remove; this is the strongest signal the checker has.
 - **S2** — once or twice is fine; repetition is a tell. Judged by density.
 - **S3** — not a problem on its own; counted only when it overlaps other patterns.
   E1~E3 are advisory exceptions with no score deduction.
@@ -116,7 +121,7 @@ targets.
 | D5 | 혁신적인·획기적인·새로운 지평·게임체인저 | Delete. Emphasize with numbers, not modifiers | S2 |
 | D6 | Empty modifiers (매우·굉장히·효과적으로·원활하게·다양한·성공적으로) | Delete | S2 |
 | D7 | Hollow rhetoric ("물결 속에서"·"균형점을 찾아가는"·"답은 간단합니다") | Replace with concrete facts and numbers, or delete | S2 |
-| D8 | Report-register stative verb endings — 나뉩니다/나뉜다·갈립니다/갈린다/갈려요·남습니다/남는다·**남긴다/남깁니다** | Make the target the subject, concretely — "추천이 갈려요" → "미용실마다 다른 색을 권해요", "둘로 나뉩니다" → "두 갈래예요", "근거를 남긴다" → "근거를 적어 둔다" | S1 |
+| D8 | Report-register stative verb endings — 나뉩니다/나뉜다·갈립니다/갈린다/갈려요·남습니다/남는다·**남긴다/남깁니다**, plus the written and polite past (갈렸다·갈렸습니다·나뉘었다·나뉘었습니다); the spoken past (갈렸어요·나뉘었어요) is not a target | Make the target the subject, concretely — "추천이 갈려요" → "미용실마다 다른 색을 권해요", "둘로 나뉩니다" → "두 갈래예요", "근거를 남긴다" → "근거를 적어 둔다" | S1 |
 | D9 | **Written-register declarative ending `-ㄴ다/-는다`** (spoken surfaces only) — "화면이 나온다"·"주소부터 준다"·"이렇게 친다" | Casual spoken form — "화면이 나와"·"주소부터 줘"·"이렇게 쳐" | S2 |
 | D9b | Diary-style past ending `-았다/었다/였다/했다` (spoken surfaces only) | "만들었다" → "만들었어". One is tolerated (from the second) | S2 |
 | D10 | **Sentence closed on a bare noun** — "~해냈을 리 없다는 것." · "~을 물은 것." (spoken surfaces only) | Finish the sentence with a verb — say who did what | S1 |
@@ -136,19 +141,22 @@ status report. People say "적어 둔다"·"메모해 둔다". Only the present 
 
 **What is and isn't caught** (measured):
 
-- Caught — endings ("둘로 나뉩니다."·"로그에 남긴다.") · **quotes and reported
-  speech** ("갈린다는 게 문제야"·"남는다고 했다"). Quotes are caught to block the
-  bypass of keeping the same recital register while avoiding the ending. The user
-  directive said "never", so it wasn't loosened.
+- Caught — endings ("둘로 나뉩니다."·"로그에 남긴다.") · the written and polite past
+  ("추천이 갈렸다."·"의견이 나뉘었습니다.") · **quotes and reported speech** ("갈린다는
+  게 문제야"·"남는다고 했다"). Quotes are caught to close the bypass of keeping the
+  same recital register while avoiding the ending.
 - Not caught — adnominals ("갈리는 이유" — headline phrasing) · conditionals
   ("나뉜다면") · colloquial past and imperatives ("후기 남겼어"·"메모 남겨 둬"·
-  "3일 남았어요") · **'헷갈리다'** ("헷갈렸어요" — an everyday word. The '갈-' stems
-  are caught only word-initially or as '엇갈-'; a false positive found while porting
-  to fect-persona).
+  "3일 남았어요") · **spoken past** ("추천이 갈렸어요"·"둘로 나뉘었어요" — CLAUDE.md
+  §Style ban lists spoken past tense as an exception; the checker followed it on
+  2026-10-18) · **'헷갈리다'** ("헷갈렸어요" — an everyday word. The '갈-' stems are
+  caught only word-initially or as '엇갈-'; a false positive found while porting to
+  fect-persona).
 
 This rule applies **not just to content copy but to our own responses, skill docs,
-and commit messages** (user directive). The full plugin-doc cleanup happened on
-2026-08-12.
+and commit messages** (user directive) — there the writer holds it with the CLAUDE.md
+scan, since the checker runs on outgoing text only (see the top of this document). The
+full plugin-doc cleanup happened on 2026-08-12.
 
 ### D9 — written-register declarative endings (spoken surfaces only)
 
@@ -162,11 +170,11 @@ the Namuwiki entry on written style draws is exactly this — spoken casual is
 "반갑다고 했어", written style is "반가움을 표하였다". Nobody says "요즘은 주소부터
 준다" to the colleague next to them. They say "요즘은 주소부터 줘".
 
-**How it differs from D8.** D8 blocks the report-register endings of specific verbs
+**How it differs from D8.** D8 flags the report-register endings of specific verbs
 (나뉘다·갈리다·남다) by vocabulary. D9 looks at **the closing register itself** —
 whatever the vocabulary, closing in written style on a spoken surface is caught.
 When this rule went in, a logo post we had already published dropped to 4 S1s (that
-post had passed the gate at 94 under the old rules).
+post had passed the checker at 94 under the old rules).
 
 **How it discriminates.** Caught only when the preceding syllable's final consonant
 is ㄴ (index 4). `-ㄴ다/-는다` is an **ending that attaches to verbs only** (it's
@@ -180,9 +188,9 @@ sample), D9 was the only S1 on 6 of them (11%) — a 270k-view Pilates story ("�
 직감했다"), a third-person narrative, a numbered buy-list ("9.22 까지 매수한다") — and
 none was translationese: `-ㄴ다` closing is the normal register of Korean narrative and
 list prose, and the checker's suggested fix ("직감했어") would have broken the posts.
-Under S1 the gate rejected 16% of the sample; with D9 and T1 at S2 it rejects 4%, and
-the remaining two are `C1`. The owner's call (2026-09-20) was to keep the rule visible
-as a warning and stop it rejecting (RESEARCH/CHECK_STYLE_FALSE_BLOCK_RATE_20260920.md
+Under S1 the checker returned exit 2 on 16% of the sample; with D9 and T1 at S2 it does
+on 4%, and the remaining two are `C1`. The owner's call (2026-09-20) was to keep the rule
+visible as a warning and stop it returning exit 2 (RESEARCH/CHECK_STYLE_FALSE_BLOCK_RATE_20260920.md
 in the leader workspace). T1 moved with it: it fired alone on 1 of 56 (2%), and the fix
 is a two-character deletion — a warning is enough.
 
@@ -328,7 +336,8 @@ preserving causality and natural rhythm within the existing length limits.
 **E1~E3 are context-review suggestions (S3), with no score deduction or blocking verdict.**
 Their word lists cannot judge audience knowledge, technical precision or natural speech.
 Read the full sentence and keep, replace or explain the word with a concrete reason.
-An E match alone is never P0 and never orders a rewrite. Other S1 rules still block.
+An E match alone is never P0 and never orders a rewrite. Other S1 rules still return
+exit 2 — a strong suggestion to fix the sentence, not a block on authorized work.
 
 | ID | Candidate wording | Possible edit when meaning and voice survive | Severity |
 |---|---|---|---|
@@ -425,7 +434,7 @@ message" — a head-on collision with Do-NOT.
 word opened the exemption (measured). The checker excludes exactly these forms.
 
 **The list is a code constant and doesn't grow per channel.** Move it into channel
-profiles and the gate's criteria fork with every new channel, making it
+profiles and the checker's criteria fork with every new channel, making it
 unmaintainable. Sources on other channels (finance, IT, etc.) get exempted as-is by
 writing a URL or "X에 따르면". Keep adding nouns and the moment a common word slips
 in, the list itself becomes a two-char bypass.
@@ -446,16 +455,17 @@ original.** Put "시행령 원문은 이렇다" right before the quote and it's 
 
 **If the source can't be named at all, unwrap the quote into reported speech.**
 Sometimes you can't write who said it (an anonymous tip, someone who'd be in
-trouble if named). Leaving the quotation marks on keeps the S1 alive and blocks at
-exit 2, and editing someone else's sentence is distortion. Move it into our own
-words instead: `"급하시면 직접 가셔도 되는데, 서류는 제가 갖고 있어요."` → `서류를
-자기가 갖고 있으니 같이 가야 한다고 했습니다.` — the facts survive and the style
-gate passes.
+trouble if named). Leaving the quotation marks on keeps the S1 alive (exit 2), and
+editing someone else's sentence is distortion. Move it into our own words instead:
+`"급하시면 직접 가셔도 되는데, 서류는 제가 갖고 있어요."` → `서류를 자기가 갖고
+있으니 같이 가야 한다고 했습니다.` — the facts survive and the checker passes.
 
 ## Principles when fixing
 
-**Only subtract.** Never plant metaphors, clichés, or quotes that weren't there.
-Erasing an AI tell by inserting "기록적인 성과를 거두었다" is fresh contamination.
+**Prefer deletion.** Never plant metaphors, clichés, or quotes that weren't there.
+Erasing an AI tell by inserting "기록적인 성과를 거두었다" is fresh contamination. What
+may be added is a fact or qualifier the sentence needs to stay true — a date, a
+denominator, the source of a claim — never colour.
 
 **Never change meaning.** Don't touch a single character of numbers, dates, or
 proper nouns. Collapsing a range to its upper bound is also distortion
@@ -484,7 +494,7 @@ two manuscripts differing only in subject each scored 100/100 while overlapping
 0.77 with each other. Batches are measured separately by `check-batch.py` (see
 Using the checker below).
 
-**No measurement shows rule-based gates raise human ratings.** Two rounds found no
+**No measurement shows rule-based checks raise human ratings.** Two rounds found no
 corpus study measuring the effect of regex style checking. It's kept anyway, for a
 different reason — it beats self-assessment (an agent grading its own prose on
 "does this sound human" passes itself almost every time). But when adding a new
@@ -563,10 +573,10 @@ no process and are safe.
 
 The reason for `extract-text.js` is that `scenes.js` isn't a CommonJS module but a
 `window.SCENES` global. Reading it with `require()` directly dies, the redirected
-file comes out empty, and the gate passes silently.
+file comes out empty, and the check passes silently.
 
 `--doc` is only for when you want to **inspect** internal documents like this one
-(they're not gate targets — see scope at the top). It masks rule tables and command
+(they're not check targets — see scope at the top). It masks rule tables and command
 examples to cut false positives. Never use it on produced copy — tables and
 backticks all become slop hideouts.
 
@@ -576,9 +586,9 @@ Branch on the exit code.
 |---|---|---|
 | 0 | Pass | Proceed |
 | 1 | Warn — S2 accumulation **or a quote exemption applied** | Fix it; if not fixing, report to the user with reasons. If the header shows `quote-exempt N`, first check whether that quote is real |
-| 2 | Fail — S1 found | Fix and re-run. The only exception is violations inside a source-identified quote, which drop from the score and get reported as exit 1 instead |
-| 3 | Execution error — empty input, missing path, analysis failure | Check input and paths, retry. Never skip the gate |
-| 4 | Skip — the surface's rules are all off for this text (reply-gate §exit codes) | Nothing to fix; the reviewer read still runs |
+| 2 | S1 found | The strongest suggestion the checker makes: fix the sentence and re-run, or justify keeping it in the record. It never stops authorized work by itself. Violations inside a source-identified quote drop from the score and get reported as exit 1 instead |
+| 3 | Execution error — empty input, missing path, analysis failure | Check input and paths, retry. Never skip the check |
+| 4 | Skip — the text is not Korean, so these rules have nothing to say about it (`check-style.py` header) | Nothing to fix; the copy is `not_applicable` for this checker and the reviewer read still runs |
 
 **If `--selftest` is red, don't trust the verdicts in this table.** Get it back to
 green first, then check the copy. A PASS from a checker with broken rules isn't a
@@ -608,8 +618,10 @@ three cases (missing, corrupted, wrong path) at once.
 Reading a broken install as "S1 on every surface" means rewriting perfectly fine
 copy. The stderr lines `usage:` and `can't open file` also tell them apart.
 
-**The checker's output is canonical.** Don't override it with an agent's own
-"looks fine to me" judgment.
+**The checker is the reference for what it measures.** Its findings are suggestions:
+read each flagged sentence, then fix it or write down why it stays. Don't wave a
+finding away with "looks fine to me" without having read the sentence, and don't
+treat the exit code as a verdict on whether the work may continue.
 
 After changing rules (regexes, thresholds, surface config), run `--selftest`. The
 built-in fixtures check three things — does it catch slop, does it pass clean

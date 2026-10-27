@@ -1,12 +1,15 @@
 #!/usr/bin/env node
+import { manageWorkflow, requireWorkflow, requireReviewedVideos } from './production-workflow.js';
+import { isManagedMusicCall } from './music-registry.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } from '@modelcontextprotocol/sdk/types.js';
-import { config, disabledToolPatterns, disabledToolsFile, listChannelDirs, portalConfigured } from './config.js';
+import { config, disabledToolPatterns, disabledToolsFile, listChannelDirs } from './config.js';
 import { describeToolGate, resolveToolGate, warnUnknownPatterns } from './tool-gate.js';
-import { SNS_PLATFORM_BY_TOOL, TOOLS } from './tools.js';
-import { PORTAL_TOOL_NAMES } from './portal-tools.js';
+import { SERVER_INSTRUCTIONS, SNS_PLATFORM_BY_TOOL, TOOLS } from './tools.js';
 import { ROUTES } from './handlers.js';
+import { isManagedImageCall } from './image-registry.js';
+import { isManagedVideoCall } from './video-registry.js';
 import { enabledPlatforms } from './sns-client.js';
 import { episodePathArg, isBillableTool, priceOf, recordUsage } from './usage-ledger.js';
 import { readFileSync as readFinalRequest } from 'node:fs';
@@ -15,7 +18,7 @@ import { reviewFinalSpeech } from './tts-final-quality.js';
 // package.json's version and every plugin manifest in skill-lint.js's MANIFESTS (it checks that they agree).
 // If the two drift, the version clients see stops matching the actual package, so bump this
 // line together with package.json (the contract test checks that the two agree).
-const server = new Server({ name: 'social-flow', version: '0.112.0' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'social-flow', version: '0.120.0' }, { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS });
 // Per-platform publish tools are exposed only for platforms that have a credential file
 // (default tokens ∪ channel directories) — this is evaluated per request, so adding a token
 // file takes effect without a server restart. Every handler stays registered, so calling a
@@ -23,20 +26,13 @@ const server = new Server({ name: 'social-flow', version: '0.112.0' }, { capabil
 // On top of that, env (SOCIAL_FLOW_*) and <SNS_TOKEN_DIR>/disabled-tools.json turn
 // individual tools off by name (trailing "*" covers a family) — also read per
 // request, and CallTool refuses them too.
-// The portal_* tools follow the same rule on the ttalkkakstory key: listed only while a
-// ttalkkakstory.json (flat or under a channel) or the TTALKKAKSTORY_* env exists, so a
-// plugin with no portal key shows the skills nothing and they stay in local-file mode.
 server.setRequestHandler(ListToolsRequestSchema, async () => {
     const enabled = new Set(enabledPlatforms());
     const jsonPatterns = disabledToolPatterns();
-    const portalTools = new Set(PORTAL_TOOL_NAMES);
-    const portalOn = portalConfigured();
     return {
         tools: TOOLS.filter((tool) => {
             if (!resolveToolGate(tool.name, { jsonPatterns, jsonFile: disabledToolsFile }).enabled)
                 return false;
-            if (portalTools.has(tool.name))
-                return portalOn;
             const platform = SNS_PLATFORM_BY_TOOL[tool.name];
             return platform === undefined || enabled.has(platform);
         }),
@@ -69,7 +65,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         // at the one point every call passes through, so it does not depend on a skill remembering
         // to append a line after the fact (usage-ledger.ts explains where it lands and why).
         // A failed call is recorded too — a retry after a failure can still have been billed.
-        if (isBillableTool(name)) {
+        if (isBillableTool(name) && !isManagedVideoCall(name, args) && !isManagedImageCall(name, args) && !isManagedMusicCall(name, args)) {
             const callArgs = (args ?? {});
             const startedAt = Date.now();
             let ok = false;
@@ -89,6 +85,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     quantity,
                     ...(note ? { note } : {}),
                     detail: {
+                        ...(typeof callArgs.requiredSeconds === 'number'
+                            ? { requiredSeconds: callArgs.requiredSeconds }
+                            : {}),
                         ...(typeof callArgs.model === 'string' ? { model: callArgs.model } : {}),
                         ...(typeof callArgs.resolution === 'string' ? { resolution: callArgs.resolution } : {}),
                         ...(typeof callArgs.durationSeconds === 'number'
@@ -123,6 +122,22 @@ const gracefulShutdown = async () => {
 process.once('SIGINT', gracefulShutdown);
 process.once('SIGTERM', gracefulShutdown);
 async function main() {
+    if (process.argv[2] === '--workflow') {
+        console.log(JSON.stringify(manageWorkflow(JSON.parse(readFinalRequest(process.argv[3], 'utf8'))), null, 2));
+        return;
+    }
+    if (process.argv[2] === '--workflow-check-delivery') {
+        requireWorkflow(process.argv[3], 'delivery');
+        if (process.argv[4]) {
+            const manifest = JSON.parse(readFinalRequest(process.argv[4], 'utf8'));
+            requireReviewedVideos(process.argv[3], manifest.videoSha256 ?? {});
+        }
+        return;
+    }
+    if (process.argv[2] === '--workflow-check-video') {
+        requireWorkflow(process.argv[3], 'video');
+        return;
+    }
     if (process.argv[2] === '--review-final') {
         const gate = resolveToolGate('tts_review_final', { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
         if (!gate.enabled)
@@ -132,7 +147,11 @@ async function main() {
         process.exitCode = result.success === true ? 0 : 1;
         return;
     }
-    const transport = new StdioServerTransport();
+    // Multi-reference image calls carry base64 (~4/3 of the source bytes). The SDK's
+    // 10 MiB default closes stdin before these calls can reach the image adapter.
+    const transport = new StdioServerTransport(process.stdin, process.stdout, {
+        maxBufferSize: 128 * 1024 * 1024,
+    });
     await server.connect(transport);
     // stdout is reserved for the MCP protocol — logs go to stderr only
     console.error('social-flow MCP server started');
@@ -146,19 +165,17 @@ async function main() {
     console.error(`Credentials: serpapi key ${config.serpApiKey ? 'set' : 'MISSING (serp_* and sns_issue_scout tools will fail)'}, ` +
         `naver keys ${config.naverClientId && config.naverClientSecret ? 'set' : 'MISSING (naver_search will fail)'}, ` +
         `data.go.kr key ${config.dataGoKrApiKey ? 'set' : 'MISSING (datago_file_fetch/datago_api_call will fail — search/detail/download still work)'}, ` +
-        `gemini key ${config.geminiApiKey ? 'set' : 'MISSING (veo_*/omni_*/tts_generate/tts_multi_speaker/tts_gemini_38/music_* will fail — tts_local_generate does not need it)'}, ` +
+        `gemini key ${config.geminiApiKey ? 'set' : 'MISSING (veo_*/omni_*/tts_generate/tts_multi_speaker/tts_gemini_38/music_* will fail)'}, ` +
         `openai key ${config.openaiApiKey ? 'set' : 'MISSING (gpt_image_* image generation tools will fail — image_local_generate does not need it)'}, ` +
         `ark key ${config.arkApiKey ? 'set' : 'MISSING (seedance_* video generation tools will fail — veo_* does not need it)'}, ` +
         `suno key ${config.sunoApiKey ? 'set' : 'MISSING (suno_* will fail — music_*(Lyria) does not need it)'}, ` +
-        `elevenlabs key ${config.elevenLabsApiKey ? 'set' : 'MISSING (tts_elevenlabs_* and sfx_elevenlabs_generate will fail — tts_generate/tts_local_generate do not need it)'}, ` +
-        `local tts python ${process.env.SUPERTONIC_PYTHON ? process.env.SUPERTONIC_PYTHON : 'python3 (default — set SUPERTONIC_PYTHON for a virtualenv)'}, ` +
+        `elevenlabs key ${config.elevenLabsApiKey ? 'set' : 'MISSING (tts_elevenlabs_* and sfx_elevenlabs_generate will fail — tts_generate does not need it)'}, ` +
         `local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : '~/.local/bin/mflux-generate-z-image-turbo (default — set MFLUX_ZIMAGE_BIN if elsewhere)'}, ` +
         `local stt mlx-qwen3-asr ${process.env.QWEN3_ASR_BIN ? process.env.QWEN3_ASR_BIN : '~/.local/bin/mlx-qwen3-asr (default — set QWEN3_ASR_BIN if elsewhere)'}, ` +
         `mlx-serve ${process.env.MLX_SERVE_URL ? process.env.MLX_SERVE_URL : 'http://127.0.0.1:11234 (default — MLX Core.app / mlx-serve; this plugin never launches the app)'}, ` +
         `youtube data key ${config.youtubeApiKey ? 'set' : 'MISSING (youtube_topic_scout falls back to OAuth youtube.readonly)'}, ` +
         `sns platforms ${snsEnabled.length > 0 ? snsEnabled.join(',') : 'none'} (credential files found — others hidden from ListTools), ` +
         `sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(',')}]`).join(' ') : 'none (flat/default tokens only)'}, ` +
-        `ttalkkakstory portal key ${portalConfigured() ? 'set (portal_* tools listed)' : 'MISSING (portal_* hidden — episodes stay local files; save <SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json to mirror)'}, ` +
         describeToolGate(toolNames, process.env, jsonPatterns));
 }
 main().catch((error) => {

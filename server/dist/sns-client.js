@@ -1091,6 +1091,10 @@ async function queryResumeOffset(sessionUrl, total, mimeType) {
     }
 }
 export async function publishYoutube(input) {
+    // Every upload starts private; the flip to public is youtube_update after the watch page is checked.
+    if (input.privacyStatus === 'public') {
+        throw new Error('YouTube uploads start private (owner directive 2026-08-19/2026-10-18): upload with privacyStatus "private" or "unlisted", then flip to public with youtube_update after checking the watch page');
+    }
     const mimeType = YT_VIDEO_MIME_BY_EXT[extname(input.videoFilePath).toLowerCase()];
     if (!mimeType)
         return fail(400, `Unsupported video extension: ${input.videoFilePath} (.mp4/.mov)`);
@@ -1196,7 +1200,7 @@ export async function publishYoutube(input) {
                         categoryId: input.categoryId ?? '22',
                     },
                     status: {
-                        privacyStatus: input.privacyStatus ?? 'public',
+                        privacyStatus: input.privacyStatus ?? 'private',
                         // COPPA self-declaration — hardcoding it would falsely declare kids' content, so it comes from input
                         selfDeclaredMadeForKids: input.madeForKids ?? false,
                         // Synthetic-media disclosure — this pipeline's video and music are generated, so default true

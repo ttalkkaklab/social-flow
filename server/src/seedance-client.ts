@@ -1,3 +1,4 @@
+import { recordVideoSubmission, recordVideoTokens } from './video-events.js';
 /**
  * ByteDance Seedance video generation client (BytePlus ModelArk).
  *
@@ -241,6 +242,11 @@ export const SEEDANCE_REAL_FACE_MODELS = VALID_SEEDANCE_MODELS.filter(
 export const DEFAULT_SEEDANCE_RESOLUTION: SeedanceResolution = '720p';
 export const DEFAULT_SEEDANCE_DURATION = 5; // the only common default that fits every model's duration range
 export const SEEDANCE_FPS = 24; // fixed across all models
+// BytePlus Create task API: fractional length is supported on 1.0 only.
+export const SEEDANCE_FRAME_MODELS = ['seedance-1-0-pro-250528', 'seedance-1-0-pro-fast-251015'] as const;
+export const SEEDANCE_MIN_FRAMES = 29;
+export const SEEDANCE_MAX_FRAMES = 289;
+export const SEEDANCE_FRAME_STEP = 4;
 
 const POLL_INTERVAL_MS = 10_000;
 const MAX_POLLS = 90; // 15-minute max wait — 2.5's 30s clips take longer than Veo
@@ -263,7 +269,8 @@ const commonFields = {
   prompt: z.string().min(1, 'Prompt is required'),
   model: z.enum(VALID_SEEDANCE_MODELS as [SeedanceModel, ...SeedanceModel[]]).optional().default(DEFAULT_SEEDANCE_MODEL),
   resolution: z.enum(VALID_SEEDANCE_RESOLUTIONS).optional().default(DEFAULT_SEEDANCE_RESOLUTION),
-  durationSeconds: z.number().int().optional().default(DEFAULT_SEEDANCE_DURATION),
+  durationSeconds: z.number().int().optional(),
+  frames: z.number().int().min(SEEDANCE_MIN_FRAMES).max(SEEDANCE_MAX_FRAMES).optional(),
   generateAudio: z.boolean().optional().default(false),
   watermark: z.boolean().optional().default(false),
   seed: z.number().int().min(-1).max(2147483647).optional(),
@@ -276,7 +283,8 @@ type CommonInput = {
   prompt: string;
   model: SeedanceModel;
   resolution: SeedanceResolution;
-  durationSeconds: number;
+  durationSeconds?: number;
+  frames?: number;
   generateAudio: boolean;
   seed?: number;
   cameraFixed?: boolean;
@@ -328,7 +336,12 @@ function validateCommon(data: CommonInput, ctx: z.RefinementCtx): void {
   }
 
   const [minDuration, maxDuration] = spec.duration;
-  if (data.durationSeconds < minDuration || data.durationSeconds > maxDuration) {
+  if (data.frames !== undefined) {
+    if (!(SEEDANCE_FRAME_MODELS as readonly string[]).includes(data.model) || (data.frames - 1) % SEEDANCE_FRAME_STEP !== 0)
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['frames'], message: 'frames requires Seedance 1.0 pro/pro-fast and 25+4n frames in 29..289' });
+    if (data.durationSeconds !== undefined)
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['durationSeconds'], message: 'frames and durationSeconds are mutually exclusive' });
+  } else if ((data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) < minDuration || (data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) > maxDuration) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['durationSeconds'],
@@ -368,7 +381,8 @@ export const seedanceText2VideoSchema = z
     ...commonFields,
     ratio: z.enum(VALID_SEEDANCE_RATIOS).optional().default('16:9'),
   })
-  .superRefine(validateCommon);
+  .superRefine(validateCommon)
+  .transform(data => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
 
 // Image-to-Video request schema (first frame · first+last frame)
 export const seedanceImg2VideoSchema = z
@@ -390,7 +404,8 @@ export const seedanceImg2VideoSchema = z
         message: `${data.model} accepts a first frame only — for first+last frame interpolation use seedance-1-0-pro-250528 or later.`,
       });
     }
-  });
+  })
+  .transform(data => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
 
 // Reference image request schema (2.x only — omni reference)
 //
@@ -519,7 +534,7 @@ export const seedanceReferenceSchema = z
         message: 'Reference audio with generateAudio: false produces a silent video, so the voice reference has nothing to shape. Set generateAudio: true.',
       });
     }
-  });
+  }).transform(data => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
 
 export type SeedanceText2VideoRequest = z.infer<typeof seedanceText2VideoSchema>;
 export type SeedanceImg2VideoRequest = z.infer<typeof seedanceImg2VideoSchema>;
@@ -534,6 +549,7 @@ export interface SeedanceGenerationResponse {
   ratio?: string;
   resolution?: string;
   duration?: number;
+  durationSource?: 'requested_frames' | 'provider_reported' | 'requested_seconds';
   /** Token count the vendor bills on — this, not an estimated price conversion, is the actual billing basis */
   completionTokens?: number;
   taskId?: string;
@@ -562,7 +578,8 @@ interface CreateTaskBody {
   content: ContentPart[];
   ratio: string;
   resolution: string;
-  duration: number;
+  duration?: number;
+  frames?: number;
   generate_audio?: boolean;
   watermark: boolean;
   seed?: number;
@@ -862,7 +879,7 @@ function buildBody(
     content: [{ type: 'text', text: request.prompt }, ...parts],
     ratio: request.ratio,
     resolution: request.resolution,
-    duration: request.durationSeconds,
+    ...(request.frames === undefined ? { duration: request.durationSeconds } : { frames: request.frames }),
     watermark: request.watermark,
   };
   // The vendor default for generate_audio is true. Passing it to a silent-only
@@ -879,11 +896,12 @@ function buildBody(
 
 /** Assemble the success response — the actual generation result (values the vendor returned) wins. */
 function toResponse(
-  request: { prompt: string; model: SeedanceModel; ratio: SeedanceRatio; resolution: SeedanceResolution; durationSeconds: number },
+  request: { prompt: string; model: SeedanceModel; ratio: SeedanceRatio; resolution: SeedanceResolution; durationSeconds: number; frames?: number },
   videoPath: string,
   task: TaskStatus,
   taskId: string,
 ): SeedanceGenerationResponse {
+  recordVideoTokens(task.usage?.completion_tokens);
   return {
     success: true,
     videoPath,
@@ -891,7 +909,8 @@ function toResponse(
     model: request.model,
     ratio: task.ratio ?? request.ratio,
     resolution: task.resolution ?? request.resolution,
-    duration: task.duration ?? request.durationSeconds,
+    duration: request.frames !== undefined ? request.frames / SEEDANCE_FPS : task.duration ?? request.durationSeconds,
+    durationSource: request.frames !== undefined ? 'requested_frames' : task.duration !== undefined ? 'provider_reported' : 'requested_seconds',
     completionTokens: task.usage?.completion_tokens,
     taskId,
   };
@@ -913,6 +932,7 @@ export async function generateFromText(
   try {
     console.error(`[Seedance] Starting text-to-video generation... (model: ${request.model})`);
     const taskId = await createTask(apiKey, buildBody(request, []));
+    recordVideoSubmission(taskId);
 
     const saved = await awaitVideoAndSave(
       apiKey,
@@ -947,6 +967,7 @@ export async function generateFromImage(
     if (request.lastImagePath) console.error(`[Seedance] Last frame: ${request.lastImagePath}`);
 
     const taskId = await createTask(apiKey, buildBody(request, images));
+    recordVideoSubmission(taskId);
 
     const saved = await awaitVideoAndSave(
       apiKey,
@@ -1015,6 +1036,7 @@ export async function generateWithReferences(
       if (audioUris.length > 0) console.error(`[Seedance] Reference audio: ${request.referenceAudioPaths.join(', ')}`);
 
       const taskId = await createTask(apiKey, buildBody(request, parts));
+      recordVideoSubmission(taskId);
 
       const saved = await awaitVideoAndSave(
         apiKey,

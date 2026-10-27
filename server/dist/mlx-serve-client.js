@@ -15,6 +15,8 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { z } from 'zod';
+import { validateMlxImageOperation } from './image-models.js';
+import { readImageMetadata } from './image-media.js';
 import { mlxServeApiKey, mlxServeUrl } from './config.js';
 import { requestBytes, requestRaw } from './http.js';
 import { bareFilenameSchema, pcmToWav, resolveOutputFile, saveAudioFile, saveMediaFile } from './media-utils.js';
@@ -22,7 +24,6 @@ export const MLX_HEALTH_TIMEOUT_MS = 3_000;
 export const MLX_MODELS_TIMEOUT_MS = 10_000;
 export const MLX_LOAD_TIMEOUT_MS = 10 * 60_000;
 export const MLX_IMAGE_TIMEOUT_MS = 15 * 60_000;
-export const MLX_TTS_TIMEOUT_MS = 5 * 60_000;
 export const MLX_MUSIC_TIMEOUT_MS = 10 * 60_000;
 export const MLX_VIDEO_TIMEOUT_MS = 20 * 60_000;
 export const MLX_MESH_TIMEOUT_MS = 15 * 60_000;
@@ -48,8 +49,7 @@ export const MLX_VIDEO_FPS = 24;
 export const MIN_MLX_MUSIC_SECONDS = 10;
 export const MAX_MLX_MUSIC_SECONDS = 600;
 export const DEFAULT_MLX_MUSIC_SECONDS = 30;
-export const MAX_MLX_TTS_CHARS = 8_000;
-export const MAX_MLX_IMAGE_REFS = 3;
+export const MAX_MLX_IMAGE_REFS = 9; // Qwen 2.1; other known packs allow 3 extra references.
 function authHeaders() {
     const key = mlxServeApiKey();
     return key ? { Authorization: `Bearer ${key}` } : {};
@@ -81,7 +81,7 @@ const imageDimension = z
     .min(MIN_MLX_IMAGE_DIMENSION)
     .max(MAX_MLX_IMAGE_DIMENSION)
     .refine((v) => v % MLX_IMAGE_DIMENSION_STEP === 0, {
-    message: `width/height must be a multiple of ${MLX_IMAGE_DIMENSION_STEP} (for 9:16 that's 1088×1920, not 1080×1920). FLUX.2-klein is fixed at 1024×1024 — pick a Krea/Mage-Flow model for other sizes.`,
+    message: `width/height must be a multiple of ${MLX_IMAGE_DIMENSION_STEP} (for 9:16 that's 1088×1920, not 1080×1920). Model and installed backend may impose additional size constraints.`,
 });
 const videoDimension = z
     .number()
@@ -94,34 +94,50 @@ const videoDimension = z
 export const mlxImageGenerateSchema = z.object({
     prompt: z.string().min(1, 'Prompt is required').max(32_000),
     model: z.string().min(1).optional(),
+    transparent: z.boolean().optional(),
     width: imageDimension.optional().default(DEFAULT_MLX_IMAGE_SIZE),
     height: imageDimension.optional().default(DEFAULT_MLX_IMAGE_SIZE),
-    steps: z.number().int().min(1).max(50).optional(),
+    steps: z.number().int().min(1).max(100).optional(),
     seed: z.number().int().min(0).optional(),
     imagePath: z.string().min(1).optional(),
     strength: z.number().min(0).max(1).optional(),
     outputPath: z.string().optional(),
     filename: bareFilenameSchema('image').optional(),
+}).superRefine((value, ctx) => {
+    if ((value.width === undefined) !== (value.height === undefined))
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Send width and height together' });
+    if (value.model) {
+        try {
+            validateMlxImageOperation(value.model, 'imagePath' in value && value.imagePath ? ('refImagePaths' in value ? 'edit' : 'variation') : 'text', value);
+        }
+        catch (error) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: String(error) });
+        }
+    }
 });
 export const mlxImageEditSchema = z.object({
     prompt: z.string().min(1, 'Prompt is required').max(32_000),
     imagePath: z.string().min(1, 'imagePath is required'),
     refImagePaths: z.array(z.string().min(1)).max(MAX_MLX_IMAGE_REFS).optional(),
     model: z.string().min(1).optional(),
+    transparent: z.boolean().optional(),
     width: imageDimension.optional(),
     height: imageDimension.optional(),
-    steps: z.number().int().min(1).max(50).optional(),
+    steps: z.number().int().min(1).max(100).optional(),
     seed: z.number().int().min(0).optional(),
     outputPath: z.string().optional(),
     filename: bareFilenameSchema('image').optional(),
-});
-export const mlxTtsGenerateSchema = z.object({
-    input: z.string().min(1, 'input is required').max(MAX_MLX_TTS_CHARS),
-    model: z.string().min(1).optional(),
-    voice: z.string().min(1).optional(),
-    refAudioPath: z.string().min(1).optional(),
-    outputPath: z.string().optional(),
-    filename: bareFilenameSchema('audio').optional(),
+}).superRefine((value, ctx) => {
+    if ((value.width === undefined) !== (value.height === undefined))
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Send width and height together' });
+    if (value.model) {
+        try {
+            validateMlxImageOperation(value.model, 'edit', value);
+        }
+        catch (error) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: String(error) });
+        }
+    }
 });
 export const mlxMusicGenerateSchema = z
     .object({
@@ -459,6 +475,7 @@ async function postImage(body, outFile) {
     return {
         success: true,
         path: outFile,
+        ...readImageMetadata(outFile),
         model: typeof body.model === 'string' ? body.model : undefined,
         elapsedSeconds: Math.round((Date.now() - startedAt) / 1000),
     };
@@ -470,11 +487,14 @@ export async function generateMlxImage(request) {
     const resolved = await resolveModel('image', request.model);
     if (!resolved.ok)
         return { success: false, error: resolved.error };
+    validateMlxImageOperation(resolved.model, request.imagePath ? 'variation' : 'text', request);
     const body = {
         prompt: request.prompt,
         model: resolved.model,
         size: `${request.width}x${request.height}`,
     };
+    if (request.transparent !== undefined)
+        body.transparent = request.transparent;
     if (request.steps !== undefined)
         body.steps = request.steps;
     if (request.seed !== undefined)
@@ -490,9 +510,7 @@ export async function generateMlxImage(request) {
     const outFile = resolveOutputFile(request.outputPath || process.cwd(), request.filename || `mlx_image_${Date.now()}.png`, 'image');
     const result = await postImage(body, outFile);
     if (result.success) {
-        result.width = request.width;
-        result.height = request.height;
-        result.steps = request.steps;
+        // Requested steps are not measured execution metadata (e.g. Qwen Turbo schedule).
         result.seed = request.seed;
         result.model = resolved.model;
     }
@@ -505,6 +523,7 @@ export async function editMlxImage(request) {
     const resolved = await resolveModel('image', request.model);
     if (!resolved.ok)
         return { success: false, error: resolved.error };
+    validateMlxImageOperation(resolved.model, 'edit', request);
     const src = fileToBase64(request.imagePath);
     if (!src.ok)
         return { success: false, error: src.error };
@@ -523,6 +542,8 @@ export async function editMlxImage(request) {
     };
     if (request.width && request.height)
         body.size = `${request.width}x${request.height}`;
+    if (request.transparent !== undefined)
+        body.transparent = request.transparent;
     if (request.steps !== undefined)
         body.steps = request.steps;
     if (request.seed !== undefined)
@@ -533,9 +554,7 @@ export async function editMlxImage(request) {
     const result = await postImage(body, outFile);
     if (result.success) {
         result.model = resolved.model;
-        result.width = request.width;
-        result.height = request.height;
-        result.steps = request.steps;
+        // Requested steps are not measured execution metadata (e.g. Qwen Turbo schedule).
         result.seed = request.seed;
     }
     return result;
@@ -551,44 +570,6 @@ function jsonErrorFromBytes(bytes, contentType, status) {
     if (!bytes.length)
         return `HTTP ${status}: empty body`;
     return undefined;
-}
-export async function generateMlxTts(request) {
-    const health = await mlxHealth();
-    if (!health.ok)
-        return { success: false, error: health.error };
-    const resolved = await resolveModel('audio', request.model);
-    if (!resolved.ok)
-        return { success: false, error: resolved.error };
-    const body = { input: request.input, model: resolved.model };
-    if (request.voice)
-        body.voice = request.voice;
-    if (request.refAudioPath) {
-        const clip = fileToBase64(request.refAudioPath);
-        if (!clip.ok)
-            return { success: false, error: clip.error };
-        body.ref_audio = clip.b64;
-    }
-    const startedAt = Date.now();
-    const res = await requestBytes('post', `${mlxServeUrl()}/v1/audio/speech`, authHeaders(), body, MLX_TTS_TIMEOUT_MS);
-    if (!res.ok) {
-        const text = res.bytes.toString('utf8');
-        if (isUnreachable(res.status, text))
-            return { success: false, error: mlxDownHint(text) };
-        return { success: false, error: translateUpstream(`HTTP ${res.status}: ${text.slice(0, 1_000)}`) };
-    }
-    const jsonErr = jsonErrorFromBytes(res.bytes, res.contentType, res.status);
-    if (jsonErr)
-        return { success: false, error: jsonErr };
-    if (!wavLooksValid(res.bytes)) {
-        return { success: false, error: `TTS response is not a WAV (got ${res.contentType || 'unknown type'}, ${res.bytes.length} bytes)` };
-    }
-    const outFile = saveAudioFile(request.outputPath || process.cwd(), request.filename || `mlx_tts_${Date.now()}.wav`, res.bytes);
-    return {
-        success: true,
-        path: outFile,
-        model: resolved.model,
-        elapsedSeconds: Math.round((Date.now() - startedAt) / 1000),
-    };
 }
 export async function generateMlxMusic(request) {
     const health = await mlxHealth();

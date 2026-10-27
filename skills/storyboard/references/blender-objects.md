@@ -105,9 +105,9 @@ slide: {
 | `samples` · `fps` | ✅ | the bake arguments (8–1024 · 15/24/30); the sidecar records them and `check-slide.js` compares |
 | `plan` | ✅ | what the object does on which sentence — the approval page reads this line |
 
-`check-scenes.js` (through `slide-quality.js`) refuses a blender object without these, and
-`check-slide.js` refuses a sheet whose sidecar came from a different recipe, engine, samples
-or fps — the sidecar carries the recipe's SHA-256, so editing the recipe means rebaking.
+`check-scenes.js` (through `slide-quality.js`) reports a blender object missing these as a
+finding, and `check-slide.js` fails a sheet whose sidecar came from a different recipe, engine,
+samples or fps — the sidecar carries the recipe's SHA-256, so editing the recipe means rebaking.
 
 ## 3. Probe first, for this machine's minutes per cut
 
@@ -123,8 +123,9 @@ rate (the first render after an install compiles the Metal kernels once — 108 
 and the probe prints that separately), then renders the motion's endpoint frames and prints
 the fit line: the cell the crop will make, the sheet's megapixels against the cap, and
 whether the ink touches a canvas edge (the object or its shadow would be clipped — enlarge
-`--cell` or pull the camera back). Show the forecast line in the HITL that approves the
-object plan, alongside the cost lines production-mode.md already shows: the bake is ₩0 but
+`--cell` or pull the camera back). Show the forecast line with the object plan in the
+storyboard, alongside the cost lines production-mode.md already shows (no approval step for
+this local work): the bake is ₩0 but
 it is minutes of the user's machine, and on a base M2 mini (10 GPU cores against 40) expect
 roughly four times the M4 Max figure. Lower `--samples` (32 is fine for an illustration
 style) before lowering `--fps`; the directive is subject motion at the capture rate.

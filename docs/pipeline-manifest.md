@@ -63,10 +63,13 @@ pipeline.js        SoT — STAGES · GATES · REVIEWERS · LANES
 - `STAGES` — the ladder, each rung with a `done` predicate, the skill that finishes it, and
   the `next` command. Predicates are a three-form mini-grammar (`has:`, `status:`,
   `scenes:`) evaluated against the facts `episode-state.js` already collects.
-- `GATES` — every gate in the pipeline, attended and unattended, with the skill and section
-  it lives in, what it checks, and what happens on failure. The eight unattended gates
-  carry autoproduce's own gate numbers so the table and the data can be compared row by row.
-- `REVIEWERS` — the five reviewer agents, their surfaces, score bars, and verdict tails.
+- `GATES` — the step catalog: every check in the pipeline, attended and unattended, with the
+  skill and section it lives in, what it measures, and how its findings are recorded. Since
+  2026-10-16 the rows describe evidence, not stops: no score bar, review round or creative
+  finding holds a queue or aborts authoring; only authorization, budget and technical
+  delivery failures do.
+- `REVIEWERS` — the five reviewer agents, their surfaces and verdict tails (`bar: null` — a
+  score is evidence, not an acceptance threshold).
 - `LANES` — produce §1's three routing paths (generated · screencast · mixed), the axis
   model written as data instead of as a table only a human reads.
 

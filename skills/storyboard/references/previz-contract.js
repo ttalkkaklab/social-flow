@@ -28,7 +28,9 @@
     const errors = [], bad = (s) => errors.push(s);
     if (!spec || typeof spec !== 'object' || Array.isArray(spec)) return ['PREVIZ must be an object'];
     if (!Number.isInteger(spec.fps) || spec.fps < 24 || spec.fps > 60) bad('fps must be an integer 24–60 (24 for frame-for-frame QA)');
-    if (!Number.isInteger(spec.seconds) || spec.seconds < 2) bad('seconds must be a whole number of seconds, 2 or more — the cut length the vendor bills');
+    const frames = spec.seconds * spec.fps;
+    if (!Number.isFinite(spec.seconds) || spec.seconds <= 0 || !Number.isSafeInteger(Math.round(frames)) || Math.round(frames) < 1 || Math.abs(frames - Math.round(frames)) > 1e-8)
+      bad('seconds must be finite, positive, and span a whole number of frames at fps');
     if (!Number.isInteger(spec.width) || !Number.isInteger(spec.height) || spec.width % 2 || spec.height % 2 || spec.width < 2 || spec.height < 2)
       bad('width and height must be even integers — the format canvas (1080×1920 or 1920×1080)');
     const cam = spec.camera;
@@ -73,7 +75,7 @@
   function checkKeys(keys, where, each, spec) {
     const errors = [];
     if (!Array.isArray(keys) || !keys.length) return [where + ' needs keys — one key is a locked-off pose, two or more are a move'];
-    const last = Number.isInteger(spec.fps) && Number.isInteger(spec.seconds) ? spec.fps * spec.seconds : null;
+    const last = Number.isInteger(spec.fps) && Number.isFinite(spec.seconds) ? Math.round(spec.fps * spec.seconds) : null;
     const frames = new Set();
     keys.forEach((k, i) => {
       const at = where + '.keys[' + i + ']';
@@ -114,7 +116,7 @@
   }
   /* The page's local time → the 1-based frame, clamped to the cut. Frame 1 is t = 0. */
   function frameAt(spec, tMs) {
-    const last = spec.fps * spec.seconds;
+    const last = Math.round(spec.fps * spec.seconds);
     return Math.min(last, Math.max(1, 1 + Math.round(tMs / 1000 * spec.fps)));
   }
   /* Blender (x right, y away, z up) → three.js (x right, y up, z toward the viewer). */

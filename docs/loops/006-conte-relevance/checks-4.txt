@@ -1,0 +1,7 @@
+Merged latest dev cabfbc2 (motion-graphics PR486) without conflicts.
+server npm run check:2209 tests,196 suites,2209 pass,0 fail.
+skill-lint:16 rules across21 skills passed. git diff --check passed.
+Full log:/tmp/social-flow-conte-check-4.log
+Intermediate dev cache sync includes latest dev motion-reference dependencies; storyboard author entrypoint/grounding/template/audit hashes unchanged from iteration3.
+Iteration4 board screenshot verified via capture-frames.sh CAPTURE_PIPE=1 on both file and loopback HTTP URLs, showing actual shot16 all-cut image. Initial raw-headless snapshot was blank before rendering; not used as visual evidence.
+Iteration5 direct original-backup comparison:43/43 narration tts/sub arrays unchanged;43/43 shot durations unchanged; total320.38 seconds.49 frozen file hashes and4 installed author input hashes verified.

@@ -75,7 +75,7 @@ const FORMATS = {
       statGuard: 0.1898,
     },
 
-    // build-reel.sh:452-454 ASS header · Style Sub
+    // Optional ASS sidecar header · never used as a video filter.
     sub: {
       playResX: 1080,
       playResY: 1920,
@@ -130,7 +130,7 @@ const FORMATS = {
     // never enters the pan chain.
     kenburns: { zoomSpan: 0.035, panZoomMin: 1.06, panZoomMax: 1.35, panAllowed: false },
 
-    burn: true, // build-reel.sh:66 BURN defaults to 1
+    burn: false, // User directive: final videos never contain burned subtitles.
 
     // capture-frames.sh:13. urlFormat absent = today's behavior of no format= in the URL
     capture: { w: 1080, h: 1920, urlFormat: null },
@@ -150,7 +150,8 @@ const FORMATS = {
     introAsset: 'intro-master.mp4',
     stingerAsset: 'intro-stinger.mp4',
 
-    outputs: ['reel.mp4', 'reel-sub.mp4', 'subs.srt', 'cover.jpg'],
+    outputs: ['reel.mp4', 'cover.jpg'],
+    optionalOutputs: ['subs.srt', 'subs.ass'],
     platforms: ['youtube', 'instagram', 'threads', 'facebook'],
     queueKeys: ['queue', 'queue_instagram'],
     hashtags: { required: ['#Shorts'], forbidden: [] },
@@ -283,7 +284,7 @@ const FORMATS = {
     // is §7.1's pan ceiling — travel = W(z-1), so 1.35 means exactly 35%.
     kenburns: { zoomSpan: 0.035, panZoomMin: 1.06, panZoomMax: 1.35, panAllowed: true },
 
-    burn: false, // YouTube gets a clean master + subs.srt
+    burn: false, // Clean master; SRT is a separate opt-in upload.
 
     capture: { w: 1920, h: 1080, urlFormat: 'wide' },
 
@@ -299,7 +300,8 @@ const FORMATS = {
     introAsset: 'intro-master-16x9.mp4',
     stingerAsset: 'intro-stinger-16x9.mp4',
 
-    outputs: ['reel.mp4', 'subs.srt', 'cover.jpg', 'thumbnail.jpg'],
+    outputs: ['reel.mp4', 'cover.jpg', 'thumbnail.jpg'],
+    optionalOutputs: ['subs.srt', 'subs.ass'],
     platforms: ['youtube'],
     queueKeys: ['queue_youtube_long'],
     hashtags: { required: [], forbidden: ['#Shorts'] },

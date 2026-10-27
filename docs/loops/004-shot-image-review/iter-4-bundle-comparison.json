@@ -1,0 +1,12 @@
+{
+  "currentInstalledSha256": "b42224cda09f42cab6b21fbcf15744e7a498fe7179880975686f20536be0f871",
+  "freshRebuildSha256": "a98bc59468ca4b6f451414a447a00ce8d7dd7298805b11f5c91367d891f003b2",
+  "equalAfterModuleLabelNormalization": true,
+  "normalizations": [
+    "server/node_modules/ -> node_modules/",
+    "source-file comment headings -> src/",
+    "staged skills module labels -> ../skills/",
+    "package.json comment heading"
+  ],
+  "scope": "Only comment headings and CommonJS module labels differ from a fresh rebuild. Writer of the intermediate bundle was not identified."
+}

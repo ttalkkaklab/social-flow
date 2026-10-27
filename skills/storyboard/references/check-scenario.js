@@ -96,6 +96,12 @@ function analyse(src, research, opts = {}) {
   const { meta: m, body, errors } = parseScenario(src), findings = [];
   const add = (rule, what, level = 'bad') => findings.push({ level, where: opts.where || 'scenario', what: rule + ' ' + what });
   errors.forEach(e => add('S1', e));
+  if (m.version === 'scenario-v2') {
+    const result = require('./scenario-v2.js').checkScenarioV2(m, body, research, opts);
+    result.findings.unshift(...findings);
+    return result;
+  }
+  if (m.version !== undefined) add('S1', 'unsupported scenario version');
   const required = ['channel','topic','direction','message','wow','wow_type','wow_belief','wow_truth','wow_lands',
     'engine_primary','engine_secondary','reveal','structure','arc','anchors','claims','score','p0','round','frozen'];
   required.forEach(k => {
@@ -109,7 +115,7 @@ function analyse(src, research, opts = {}) {
   if (!Number.isInteger(m.round) || m.round < 0) add('S1', 'round must be a nonnegative integer');
   ['score','p0'].forEach(k => { if (m[k] != null && (!Number.isInteger(m[k]) || m[k] < 0 || (k === 'score' && m[k] > 100))) add('S1', k + ' must be empty or a valid nonnegative integer'); });
   const anchors = m.anchors && typeof m.anchors === 'object' && !Array.isArray(m.anchors) ? m.anchors : {};
-  ['hook_first','closing_line','forwardable','cta'].forEach(k => { if (!text(anchors[k])) add('S1', 'anchors.' + k + ' must be a nonempty string'); });
+  ['hook_first','closing_line','forwardable'].forEach(k => { if (!text(anchors[k])) add('S1', 'anchors.' + k + ' must be a nonempty string'); });
   const claims = Array.isArray(m.claims) ? m.claims : [];
   if (!claims.length || claims.some(n => !Number.isInteger(n) || n <= 0)) add('S1', 'claims must be a nonempty array of positive integers');
   if (!research) add('S2', 'research.md not found beside the file or in its parent');
@@ -122,19 +128,19 @@ function analyse(src, research, opts = {}) {
   const truthRefs = [...text(m.wow_truth).matchAll(/#(\d+)/g)].map(x => Number(x[1]));
   if (!text(m.wow_belief) || !text(m.wow_truth) || !truthRefs.length || truthRefs.some(n => !claims.includes(n) || !r.claims.has(n)) || IGNORANCE.test(text(m.wow_truth)))
     add('S3', 'belief and truth required; truth must cite a declared Verified claim and not end on ignorance');
-  const parts = sections(body);
-  const expected = ['^주제$', ...ITEMS.slice(1).map(s => '^' + s + ' — feel ([+−-]?[0-3]) · (\\S.*)$')];
-  if (parts.length !== 7 || expected.some((re, i) => !new RegExp(re).test(parts[i]?.header || '')))
-    add('S4', 'exactly seven fixed headings in order, with six feel signs (−3..+3) and feelings, required');
+  const parts = sections(body).filter(p => !/^CTA(?:$| — feel )/.test(p.header));
+  const expected = ['^주제$', ...ITEMS.slice(1, 6).map(s => '^' + s + ' — feel ([+−-]?[0-3]) · (\\S.*)$')];
+  if (parts.length !== 6 || expected.some((re, i) => !new RegExp(re).test(parts[i]?.header || '')))
+    add('S4', 'Suggested six narrative headings and five feel signs differ; another readable outline is allowed', 'warn');
   // Name lookup also measures legacy pages without their feel suffix; it never clears S4.
   const item = name => parts.find(p => p.header === name || p.header.startsWith(name + ' — feel '))?.body || '';
-  const feels = ITEMS.slice(1).map(name => {
+  const feels = ITEMS.slice(1, 6).map(name => {
     const p = parts.find(p => p.header.startsWith(name + ' — feel '));
     const f = p?.header.match(/ — feel ([+−-]?[0-3]) · \S/);
     return f ? Number(f[1].replace('−','-')) : NaN;
   });
   const landing = ITEMS.indexOf(m.wow_lands) - 1;
-  if (feels.some(n => !Number.isFinite(n))) add('S5', 'six feel signs could not be read', 'warn');
+  if (feels.some(n => !Number.isFinite(n))) add('S5', 'five feel signs could not be read', 'warn');
   else {
     const max = Math.max(...feels), min = Math.min(...feels);
     if (landing < 1 || !feels.slice(0, landing).includes(min) || feels[landing] !== max || feels[4] < max - 1)
@@ -148,42 +154,66 @@ function analyse(src, research, opts = {}) {
   if (!prose(item(m.wow_lands))) add('S6', 'landing must have a nonempty final sentence');
   if (m.engine_primary === m.engine_secondary) add('S7', 'primary and secondary engines must differ');
   if (IGNORANCE.test(item('주제'))) add('S8', 'topic ends on ignorance');
-  [['hook_first','훅'],['closing_line','마무리'],['forwardable','마무리'],['cta','CTA']].forEach(([key,name]) => {
+  [['hook_first','훅'],['closing_line','마무리'],['forwardable','마무리']].forEach(([key,name]) => {
     if (!text(anchors[key]) || !compact(item(name)).includes(compact(anchors[key]))) add('S9', key + ' must occur verbatim in ' + name);
   });
-  if (anchors.cta === '없음' && !compact(item('CTA')).replace(/^없음[\s.。:—–-]*/, '').length) add('S9', 'CTA 없음 needs a reason');
   const bodyOnly = prose(body);
   if (/(?:샷|shot|scene)\s*#?\s*\d+|카메라|camera|프롬프트|\bprompt\b|\d+(?:\.\d+)?\s*(?:초|seconds?\b|sec\b)|\b\d+(?:\.\d+)?s\b|글자\s*수|character\s*count|\d+\s*(?:자|chars?\b)|\b(?:BGM|SFX|LUFS|BPM|ducking|sound\.cue|sound\.drop)\b|더킹|음악\s*큐|효과음\s*(?:시점|큐)/i.test(bodyOnly))
     add('S10', 'shot numbers, cameras, prompts, timing, character counts and sound production values belong on the board');
-  if (/구독|좋아요|\bsubscribe\b|\blike\b/i.test(item('CTA'))) add('S11', 'CTA must not ask for subscriptions or likes');
-  if (!opts.long) ITEMS.slice(1).forEach((name, i) => {
+  if (!opts.long) ITEMS.slice(1, 6).forEach((name, i) => {
     const length = [...compact(item(name))].length, limit = BANDS[i + 1];
     if (length > limit) add('S12', name + ': ' + length + ' characters exceeds short band ' + limit, 'warn');
   });
   if (opts.chosen) {
     if (r.chosen.length !== 1 || r.chosen[0] !== m.direction) add('S12', 'scenario direction must equal research Chosen: D#');
-    if (opts.hasScenes && !text(m.frozen)) add('S12', 'scenario.md beside scenes.js requires frozen stamp');
+    if (opts.hasScenes && !text(m.frozen)) add('S12', 'scenario.md beside scenes.js has no freeze stamp; provenance can be recorded without blocking authoring', 'warn');
   }
   return { meta:m, findings };
 }
 function checkPath(target) {
   if (!fs.existsSync(target)) throw Error('path not found: ' + target);
   const directory = fs.statSync(target).isDirectory();
-  const files = directory ? ['d1.md','d2.md','d3.md'].map(f => path.join(target, f)) : [target];
-  const findings = [], engines = [], directions = [];
+  const files = directory ? fs.readdirSync(target).filter(f => /^d\d+\.md$/.test(f)).sort((a,b) => Number(a.slice(1,-3))-Number(b.slice(1,-3))).map(f => path.join(target, f)) : [target];
+  if (!files.length) throw Error('No candidate Markdown files found: ' + target);
+  const findings = [], engines = [], directions = [], stories = [], openings = new Map();
   for (const file of files) {
     if (!fs.existsSync(file)) { findings.push({level:'bad', where:file, what:'S7 missing candidate'}); continue; }
     const research = researchAt(file), dir = research ? path.dirname(research) : path.dirname(file);
     const fmt = formatOf(dir);
     const src = fs.readFileSync(file, 'utf8'), m = parseScenario(src).meta;
+    const directory = path.basename(path.dirname(file)) === 'candidates' ? path.dirname(path.dirname(file)) : path.dirname(file);
+    let pool;
+    if (m.version === 'scenario-v2') {
+      try { pool = JSON.parse(fs.readFileSync(path.join(directory, 'cast.json'), 'utf8')).characters; } catch (_) { pool = undefined; }
+    }
     const result = analyse(src, research ? fs.readFileSync(research, 'utf8') : null, {
-      where:file, long:fmt ? fmt.format === 'youtube-long-16x9' : ['answer-first','story'].includes(m.arc),
+      directory, pool, where:file, long:fmt ? fmt.format === 'youtube-long-16x9' : ['answer-first','story'].includes(m.arc),
       chosen:path.basename(file) === 'scenario.md', hasScenes:fs.existsSync(path.join(path.dirname(file), 'scenes.js'))
     });
-    findings.push(...result.findings); engines.push(result.meta.engine_primary); directions.push(result.meta.direction);
+    if (result.data) {
+      const { difference, ...story } = result.data;
+      stories.push(JSON.stringify(story));
+      const signature = require('./scenario-v2.js').observableOpeningSignature(result.data);
+      if (signature) openings.set(signature, [...(openings.get(signature) || []), path.basename(file)]);
+    }
+    // Candidate count, story formulas and reviewer bookkeeping guide the author. Keep
+    // parse/type/reference failures distinct so automation never loses readable inputs.
+    const structuralV2 = /exactly one scenario-json|Unexpected|JSON|must contain an object|beats must be an array|beat must be an object|needs events|events need kind and text|event character is not cast|dialogue needs an addressee|unknown dialogue addressee|each event needs|factual events require existing|character is not in channel pool|cast.*(?:array|unique)|source.*(?:missing|not found)/i;
+    const parseErrors = parseScenario(src).errors;
+    findings.push(...result.findings.map(f => {
+      if (f.level !== 'bad') return f;
+      const keep = m.version === 'scenario-v2' ? structuralV2.test(f.what)
+        : parseErrors.some(message => f.what === 'S1 ' + message);
+      return keep ? f : {...f, level:'warn'};
+    })); engines.push(result.meta.engine_primary); directions.push(result.meta.direction);
   }
-  if (directory && (new Set(engines).size !== 3 || !engines.every(e => ENGINES.includes(e)))) findings.push({level:'bad',where:target,what:'S7 d1–d3 require three different primary engines'});
-  if (directory && directions.some((d,i) => d !== 'D' + (i+1))) findings.push({level:'bad',where:target,what:'S7 d1–d3 must carry D1–D3 respectively'});
+  if (directory && !files.every(f => fs.existsSync(f) && parseScenario(fs.readFileSync(f, 'utf8')).meta.version === 'scenario-v2') && (new Set(engines).size !== 3 || !engines.every(e => ENGINES.includes(e)))) findings.push({level:'warn',where:target,what:'S7 Consider different candidate engines when useful; candidate count is optional'});
+  if (directory && stories.length > 1 && new Set(stories).size !== stories.length) findings.push({level:'warn',where:target,what:'V2 duplicate story candidates — consider changing the situation, choice or payoff'});
+  if (directory) for (const names of openings.values()) {
+    if (names.length > 1) findings.push({level:'warn',where:target,
+      what:'V2 shared causal opening: ' + names.join(', ') + ' have identical observable event sequences in hook and developments 1–3; compare their situation, decisive choice, consequence and payoff before selecting. This warning does not establish semantic equivalence or reject shared cast/settings.'});
+  }
+  if (directory && directions.some((d,i) => d !== path.basename(files[i], '.md').toUpperCase())) findings.push({level:'warn',where:target,what:'S7 candidate direction differs from its filename; reconcile the labels when useful'});
   return { files, violations:findings.filter(f => f.level === 'bad').length, warnings:findings.filter(f => f.level === 'warn').length, findings };
 }
 
@@ -191,7 +221,7 @@ function checkPath(target) {
 // The board remains the production source of truth. Legacy pages without anchors skip.
 function checkAnchors(win, scenario, spokenText) {
   const parsed = parseScenario(scenario), m = parsed.meta;
-  if (!m.anchors) return [];
+  if (m.version === 'scenario-v2' || !m.anchors) return [];
   const out = [], warn = what => out.push({level:'warn',where:'scenario',what:'S13 ' + what});
   if (parsed.errors.length) warn('invalid scenario frontmatter: ' + parsed.errors.join('; '));
   const a = m.anchors, scenes = (win.SCENES || []).filter(s => s.type !== 'outro');
@@ -211,8 +241,8 @@ function selftest() {
   assert.equal(checkPath(path.join(fixture,'pass/candidates')).violations, 0);
   assert.equal(checkPath(path.join(fixture,'pass/scenario.md')).violations, 0);
   const bad = checkPath(path.join(fixture,'fail/candidates'));
-  assert(bad.violations > 0);
-  assert(checkPath(path.join(fixture,'fail/scenario.md')).violations > 0);
+  assert(bad.warnings > 0);
+  assert(checkPath(path.join(fixture,'fail/scenario.md')).warnings > 0);
   const src = fs.readFileSync(path.join(fixture,'pass/candidates/d1.md'),'utf8');
   const research = fs.readFileSync(path.join(fixture,'pass/research.md'),'utf8');
   const has = (s, rule, opts) => analyse(s,research,opts).findings.some(f => f.what.startsWith(rule + ' '));
@@ -227,9 +257,9 @@ function selftest() {
   assert(has(src.replace('  closing_line: "힘을 쓸 곳을 고른다."','  closing_line: "다른 문장"'),'S9'));
   assert(has(src + '\n카메라 프롬프트 샷 3','S10'));
   assert(has(src + '\nBGM 88 BPM, sound.cue tense, 더킹 10 LUFS','S10'));
-  assert(has(src + '\n구독해 주세요.','S11'));
-  assert(has(src + '\n' + '가'.repeat(100),'S12'));
-  assert(!has(src + '\n' + '가'.repeat(100),'S12',{long:true}));
+  assert(!has(src + '\n구독해 주세요.','S11'));
+  assert(has(src.replace('## CTA', '가'.repeat(100) + '\n## CTA'),'S12'));
+  assert(!has(src.replace('## CTA', '가'.repeat(100) + '\n## CTA'),'S12',{long:true}));
   assert(has(src,'S12',{chosen:true,hasScenes:true}));
   assert(has(src.replace('frozen:\n','frozen: # stamped later\n'),'S12',{chosen:true,hasScenes:true}));
   assert.equal(parseScenario(src.replace('wow_type: 반전','wow_type: 반전\nwow_type: 숫자')).errors.length,1);
@@ -251,13 +281,13 @@ function selftest() {
   edited.SCENES[1].narration[0].sub = 'changed';
   assert.equal(compareAnchors(edited,src).length,1);
   assert(has(src.replace('## 주제','카메라 이동\n## 주제'),'S10'));
-  assert(has(src.replace('  cta: 없음','  cta: ""'),'S1'));
+  assert(!has(src.replace('  cta: 없음','  cta: ""'),'S1'));
   assert.equal(parseScenario('---\nanchors: invalid\n  cta: 없음\n---\n').errors.length,1);
   assert.equal(parseScenario('---\nwow_truth: >\n  첫 줄\n  다음 줄 (#1)\n---\n').meta.wow_truth,'첫 줄 다음 줄 (#1)');
   assert.equal(parseScenario('---\nwow_truth: "첫 줄\n  다음 줄 (#1)"\n---\n').meta.wow_truth,'첫 줄 다음 줄 (#1)');
   assert.equal(parseScenario("---\nwow_lands: '전개 #2' # comment\n---\n").meta.wow_lands,'전개 #2');
   const {spawnSync} = require('child_process');
-  for (const [name, status] of [['pass',0],['fail',1]]) {
+  for (const [name, status] of [['pass',0],['fail',0]]) {
     const run = spawnSync(process.execPath,[__filename,path.join(fixture,name,'candidates'),'--json'],{encoding:'utf8'});
     assert.equal(run.status,status);
     const json = JSON.parse(run.stdout);

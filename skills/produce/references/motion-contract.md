@@ -33,10 +33,16 @@ The final reel is measured again because trims, transitions and re-encoding chan
 When a thin line is essential, inspect the clip and the narrated relation together. If a larger
 subject action better explains it, revise that action and render again. Do not thicken a line,
 add blinking, lower a global threshold or animate an unrelated background just to move a score.
-Present real findings under [assembly-video-hitl.md](assembly-video-hitl.md); an approval covers
-only the reported inputs and warnings. A new finding on the final output must be reported as new.
+Present real findings under [assembly-video-hitl.md](assembly-video-hitl.md): they are recorded
+warnings tied to the reported inputs, not an approval. A new finding on the final output is reported as new.
 
-Regression comparisons live in `server/test/motion-contract.test.mjs`. They compare lossless
+Regression comparisons live in `server/test/measure-motion.test.mjs`. They compare lossless
 rendered frames with H.264 output and retain the background-only counterexample: a numeric
 pass cannot establish semantic motion. Actual HTML helper captures use the optional local
 fixture runner documented in that test. The tests do not replace watching the episode.
+
+Final assembly now resolves expectations with [motion-expectation.js](motion-expectation.js).
+Declared render modes and actual subcuts prevent a PNG-backed explanation from silently
+falling into the still-image exemption. Mixed cards are measured per subcut. Findings are
+warnings, and `semanticReview: not_reviewed` is independent of the proxy status. The supported
+production path is documented in [motion production](motion-production.md).

@@ -1,0 +1,17 @@
+{
+  "installedAt": "2026-10-18T00:27:39.758Z",
+  "source": "/tmp/social-flow-conte-install-3",
+  "plan": "/Users/zeans/.local/state/social-flow-props/plan-2026-10-18T00-27-35-282Z.json",
+  "installations": [
+    {
+      "target": "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.115.4",
+      "backup": "/Users/zeans/.local/state/social-flow-props/backups/2026-10-18T00-27-35-282Z/0",
+      "verifiedFiles": 8
+    },
+    {
+      "target": "/Users/zeans/.claude/plugins/cache/social-flow/social-flow/0.115.3",
+      "backup": "/Users/zeans/.local/state/social-flow-props/backups/2026-10-18T00-27-35-282Z/1",
+      "verifiedFiles": 8
+    }
+  ]
+}

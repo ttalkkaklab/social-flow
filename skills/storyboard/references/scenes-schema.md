@@ -1,16 +1,80 @@
 # scenes.js data contract (SoT)
 
 > Where this file says a reviewer's copy, scene, camera, sound or image mode "reads" or
-> "docks" something, that mode runs only when a user asks for it (0.50.0); in the flow the
-> same check is the author's own read and the checkers. Narration and vocabulary mode are
-> the two reads the flow runs.
+> "docks" something, that is the legacy reviewer's vocabulary (legacy-reviewer.md); a review
+> runs only when the user asks for one or a concrete uncertainty calls for it, and in the flow
+> the same check is the author's own read and the checkers. Reviewer findings are evidence,
+> never a gate (automation-guidance.md).
 
 `data/<channel>/episodes/<topic>/storyboard/scenes.js` — the one data source produce
 consumes after storyboard approval. `video-template.html` loads it with
 `<script src="./scenes.js">`.
 
+## Scope — what binds every board and what is story-v1 guidance
+
+**Runtime contracts for every board** (identifiers, enums, adapter inputs, builder inputs):
+Content-led authoring (story-v2) · Overall structure · Format (the two values, the zone,
+`format-resolve.js`) · Structure (`window.STRUCTURE` field names and the block list) ·
+Production mode (`PRODUCTION` fields, the six ratios, groupPlan, style preset, cast, cutType,
+frames, keyframes) · Fields common to every shot (the field table, `shot.render`, `narration`
+segments with `speechPlanVersion:1`, the `visual` plan enums) · Channel true-motion policy (the
+channel's declared constraints and the budget) · quote · Claim traceability · Scene transition ·
+Camera (vendor vocabulary, one move, no seconds) · Frame space · Character reference · Clip
+audio · Clip prompt · Music cues and Sound effects (the mix contract) · the engine length ranges
+under Cut length · Motion background (model fields, previz record) · broll · outro · chapter ·
+Filmed scenes · Stock material · Screencast splice · the authored-screen lane and every slide
+section · `visual.reuse` · Persistent 3D locations · Character performance (story-v2) · Motion
+graphic plan.
+
+**story-v1 creative rules kept for resumed boards only** — a new board follows
+[character-scenarios.md](character-scenarios.md) and the storyboard SKILL instead, and each of
+these sections opens with a note saying so: Comprehension contract · Grammar units and
+production layers · Where the line falls — the cut test · Playback order · the legacy narration
+example and character caps · title is a spoken hook · cover (opening strategies, hook forms) ·
+hooking · the speech-length formula under Cut length · Authoring verification checklist.
+Composition, Eyeline, Depth of field and Axis crossings are directing metadata the checker
+reports, not blocks.
+
+## Content-led authoring (story-v2)
+
+Write the observable story and complete scenes before splitting shots or estimating
+length. Format bands and historical shot counts below are legacy guidance, not
+new-board quotas. Preserve actual provider/platform limits and explicitly selected
+user constraints. Unknown draft duration is not zero or a reason to rush speech.
+
+New boards set `SB_DOC.performanceTimingVersion:1`. At production this requires
+finite timing for independent actions. Legacy boards without this marker or action
+timing fields can retain their speech-only clock, recorded as unverified action
+timing; this compatibility path does not certify that actions fit the old video.
+
+`performance` is the ordered source for `speech_manage plan_video` and audio
+composition. Speech events reference the existing 1-based `narration` group and
+retain their `character` and `to`. An action uses `{kind:"action", character, text}`.
+Optionally add `durationSeconds` (finite and positive) after staging it. An action
+with `withGroup:1` starts with speech group 1: its duration defaults to that speech
+interval, or its own authored duration may extend it. Concurrent action and speech
+use the longer interval rather than adding both. An independent action without
+a duration keeps the total unknown until production timing is planned.
+
+An event may add `videoDirection`, an adapter-language rendering of its action text
+or speech group's `acting.visual`. Preserve the original text, event order, character
+and addressee; translate every necessary action without adding or omitting events.
+Use this only when the adapter needs different wording: Seedance 1.5/2.0 require
+English or Chinese directions, while Seedance 2.5 accepts Korean. Both spatial and
+speech video planners consume this field; it is included in performance provenance.
+After changing the original action, update its translation too. No automatic
+translation or truncation occurs.
+
+Use `shot.videoDesign.before/action/after`, motion states and `visual.camera` for
+the source frame, visible change and ending composition. These accompany the whole
+performance in the video plan. Do not duplicate actions into a second script or
+replace a listener reaction with a close-up of the speaker. Runtime diagnostics
+report missing mappings; they do not certify the scene's artistic quality.
+
 ## Contents
 
+- [Content-led authoring (story-v2)](#content-led-authoring-story-v2)
+- [Scope — what binds every board and what is story-v1 guidance](#scope-what-binds-every-board-and-what-is-story-v1-guidance)
 - [Overall structure](#overall-structure)
 - [Comprehension contract — `window.COMPREHENSION`](#comprehension-contract-windowcomprehension)
 - [Format — `window.FORMAT`](#format-windowformat)
@@ -20,7 +84,7 @@ consumes after storyboard approval. `video-template.html` loads it with
 - [Production mode — `window.PRODUCTION`](#production-mode-windowproduction)
   - [Episode visual style selection](#episode-visual-style-selection)
   - [Bundled full-video style references](#bundled-full-video-style-references)
-  - [Conditional start/end images](#conditional-startend-images)
+  - [Shot image inputs](#shot-image-inputs)
 - [Fields common to every shot](#fields-common-to-every-shot)
   - [narration segments](#narration-segments)
   - [title is a spoken hook · narration explains in polite register (user directive, 2026-08-13)](#title-is-a-spoken-hook-narration-explains-in-polite-register-user-directive-2026-08-13)
@@ -55,11 +119,17 @@ consumes after storyboard approval. `video-template.html` loads it with
   - [Kinetic type — the words are the picture (`visual.slide.kind: "kinetic"`)](#kinetic-type-the-words-are-the-picture-visualslidekind-kinetic)
   - [Character act — a cast enacts the sentence on screen (`visual.slide.kind: "character"`)](#character-act-a-cast-enacts-the-sentence-on-screen-visualslidekind-character)
 - [Authoring verification checklist (the storyboard skill's self-check before requesting approval)](#authoring-verification-checklist-the-storyboard-skills-self-check-before-requesting-approval)
+- [Existing generated clip input (`visual.reuse`)](#existing-generated-clip-input-visualreuse)
+  - [Importing existing files without old metadata](#importing-existing-files-without-old-metadata)
+  - [Shot camera preset: drone fly-through](#shot-camera-preset-drone-fly-through)
+- [Persistent 3D locations](#persistent-3d-locations)
+- [Character performance (story-v2)](#character-performance-story-v2)
+- [Motion graphic plan (version 1)](#motion-graphic-plan-version-1)
 
 ## Overall structure
 
 ```js
-// approved: 2026-07-29        ← recorded by the storyboard skill at HITL approval
+// approved: 2026-07-29        ← recorded by the storyboard skill when the user approved spending; a stamp never stands in for that authorization
 window.FORMAT = "shorts-9x16"; // format axis — omitted means shorts-9x16 (§format)
 window.VOICE = "user";         // all-live-voice episodes only (§all-live-voice episodes) — omitted means TTS
 window.THEME = {
@@ -68,9 +138,9 @@ window.THEME = {
   ink:     "#0b1020",          // base dark (background, subtitle outline)
   brand:   "channel name"      // brand wording on the outro
 };
-window.COMPREHENSION = { /* the one-question contract — see below */ };
-window.STORY = { /* required story-v1 plan and current review: story-quality.md */ };
-window.PRODUCTION = { /* required on new plans: mode, approved cost quote, cap, attempts; production-mode.md */ };
+window.COMPREHENSION = { /* the one-question contract — see below (story-v1 guidance) */ };
+window.STORY = { /* the story plan — story-v2 shape (version, cast, viewerNeed, thesis, basis, endingReason, kind, expression, review): character-scenarios.md#story-v2-story-example; story-v1 boards: story-quality.md */ };
+window.PRODUCTION = { /* mode (one of the six render ratios) + renderRatioVersion, cost quote, approval, attempts, style, videoModel; production-mode.md */ };
 // window.MUSIC = { … };   // named music cues (§music cues) — leave the line out for one bed all the way through
 window.SCENES = [ /* the shot array — one entry = one shot. Keep the identifier names */ ];
 ```
@@ -81,15 +151,21 @@ Only the human-readable labels move to shot, scene, and sequence.
 
 ## Comprehension contract — `window.COMPREHENSION`
 
-Read [story-quality.md](story-quality.md) for the required `window.STORY` contract and quoted
-review evidence. Draft validation checks the plan; full validation also requires a current
-review. `beat:"cta"` retains its renderer identifier but means the closing beat: an ask or
-question is optional. A concrete payoff must precede any ask. An ask stays optional; a
-forwardable thing does not — an ask requests behaviour from the viewer, while a forwardable
-thing is one sentence, figure or verdict they can pass on as-is. Asking to be shared is an ask,
-not a trigger. On a short the forwardable thing is written as `shot.share` on the `beat:"cta"`
-shot and `check-scenes.js` fails a board without it. (Older act-stage and
-comment-question requirements are gone; an ask is optional everywhere.)
+> story-v1 only — guidance for resumed boards; story-v2 boards follow character-scenarios.md
+> (`STORY.version: "story-v2"`, the whole-performance review). The block's field names stay
+> valid, and `check-scenes.js` reports a missing or over-budget block as a warning.
+
+`window.STORY` is the story plan — on a new board the story-v2 shape in the
+[Story-v2 STORY example](character-scenarios.md#story-v2-story-example); a resumed story-v1
+board keeps the shape in [story-quality.md](story-quality.md). A review record is evidence
+about the board, not a validation requirement: a board with none reads `not_reviewed`, one
+whose inputs changed reads `stale` (automation-guidance.md). `beat:"cta"` retains its renderer
+identifier but means the closing beat: an ask or question is optional. A concrete payoff must
+precede any ask. A forwardable thing — one sentence, figure or verdict the viewer can pass on
+as-is — makes a close travel, and `shot.share` is where a board writes it; it is optional, and
+`check-scenes.js` accepts a close without it (CTA checks are removed, CLAUDE.md 2026-10-16).
+Asking to be shared is an ask, not a trigger. (Older act-stage and comment-question
+requirements are gone; an ask is optional everywhere.)
 
 This block is written in the story pass before a shot gets a camera or a prompt. It makes the
 episode compressible to one question, one answer, and one thing the viewer should retain:
@@ -112,9 +188,10 @@ window.COMPREHENSION = {
 ```
 
 - `question` is the governing viewer question. `answer` closes it. `takeaway` is the synthesis,
-  not the answer repeated with different wording — the forwardable line, cut from the message
-  (`STORY.thesis`, scenario-stage §The message), never the closing picture described. In
-  short-form their non-space character caps are 35, 60, and 45.
+  not the answer repeated with different wording — the line a viewer could carry away, cut from
+  the message (`STORY.thesis`; on a story-v2 board the thesis is delivered by the performance
+  and need not be spoken), never the closing picture described. In
+  short-form the story-v1 non-space character caps were 35, 60, and 45.
 - `branches` lists only questions held across a cut. A question paid inside the same shot is a
   seam and stays out of this array. A short informational episode gets no cross-scene branch;
   it follows the governing question only. A short narrative may carry one. Long-form may carry
@@ -168,7 +245,7 @@ rather than to any channel.
 | Scene length | 4–13s | 6–20s · **no cap in the filmed lane** |
 | Narration characters | cover 40 · body 50 | cover 70 · body 90 |
 | Sentence length | 8–25 chars | 12–40 chars |
-| Subtitles | burned in (BURN=1) | **clean master + `subs.srt`** — not burned |
+| Subtitles | clean master; optional separate SRT | clean master; optional separate SRT |
 | Generated video, combined | 16s (8s × 2 slots) | 40s (8s × 5 slots) |
 | Chapters | none | 5–10 (authored) · 3 or more in the filmed lane (derived) |
 | Ken Burns pan | available — travel = W(z−1) ≈ 130px at 1.12, measured on portrait | used (scale 1.06–1.35) |
@@ -186,6 +263,10 @@ Writing an unknown value stops `format-resolve.js` with `exit 1` — a silent fa
 portrait would only surface after burning 12 minutes' worth of captures.
 
 ## Grammar units and production layers
+
+> story-v1 only — guidance for resumed boards; story-v2 boards follow character-scenarios.md.
+> The unit names (sequence · scene · shot · reveal) and their `STRUCTURE`/`SCENES[]` homes are
+> runtime vocabulary on every board; the shot counts and the coverage floor are not.
 
 One short is a book, a sequence is a paragraph, a scene is a sentence, a shot is a word.
 
@@ -237,6 +318,10 @@ window.STRUCTURE = {
 ```
 
 ### Where the line falls — the cut test
+
+> story-v1 only — guidance for resumed boards; story-v2 boards follow character-scenarios.md
+> §Complete scenes before shots. The `STRUCTURE` field names and the block list at the end of
+> this section are runtime contracts on every board.
 
 Six boards written from an earlier draft of this section all cut in the same wrong places
 (2026-09-10, seven scenarios, adversarial review): a diagram became a place, a topic change
@@ -353,8 +438,9 @@ answer to each.
    `info` still names what this shot adds (the changed meaning), not the cover's. A callback —
    a character repeating an earlier shot's info so that the repetition is itself the event
    ("청소 모드라고 말씀드렸잖아요") — is a line of the scene whose event or turn it carries, not
-   a repeat. `COMPREHENSION.takeaway` is a line a shot says, as a rule
-   in the last scene — a takeaway no shot says is a note.
+   a repeat. On a story-v1 board `COMPREHENSION.takeaway` is a line a shot says, as a rule
+   in the last scene; on a story-v2 board the thesis need not be spoken — a silent action can
+   deliver the close (§Character performance).
 8. **`question` is the one the sequence's later scenes pay, and a shot asks it out loud.** A
    question only the structure holds is not open — the viewer never hears it. Out loud means a
    line is a question — "…까요", "…나요", "얼마나 다를까 싶어서" — not the statement paraphrased;
@@ -375,8 +461,10 @@ answer to each.
    `COMPREHENSION.answer` completes, and the scenes after it are aftermath. A short's one
    sequence usually shares its question with `COMPREHENSION.question` and pays it in the scene
    before the CTA or in the CTA's own scene.
-9. **Scenes and shots scale with the running time.** A 45–75 s short has 2–4 scenes; a
-   10-minute long-form 8–15. Every scene has at least two shots at two sizes — one wide
+9. **Scenes and shots scale with the running time** (story-v1 guidance — a story-v2 board cuts
+   by what the audience needs to notice, storyboard SKILL §4, and `check-scenes.js` skips these
+   bands there). A 45–75 s short had 2–4 scenes; a 10-minute long-form 8–15. Each scene usually
+   wants two shots at two sizes — one wide
    (`els·ls·fs·mfs`) that sets the place and one close (`mcu·cu·choker·ecu·insert`) that pays
    the moment — and the cover's scene and the CTA's scene are not exempt: the cover is the
    close of its scene, the next shot sets the place, and the CTA returns to the cover's frame
@@ -413,8 +501,9 @@ answer to each.
     explanation screen `size` is the framing of the drawn subject (`ls` the whole mechanism,
     `cu` the detail, `insert` a bare chart) and `shot.space` is skipped; every generated or
     filmed picture shot writes `shot.space`. The values a chart will draw live in
-    `visual.slide.data` (§4b); the 4a `shot.info` is the one thing the line says. A measured
-    value the viewer must read is `infoType:"statistic"` on an HTML screen, never video.
+    `visual.slide.data` (§Slide scenes); `shot.info` is the one thing the line says. Outside
+    `full_video`, a measured value the viewer must read is `infoType:"statistic"` on an HTML
+    screen rather than a generated clip (§fields common to every shot, `infoType`).
     `render.purpose:"share"` is a composition chart and has nothing to do with `shot.share`.
     `space.line` — any scene with two people, or a person and what they look at or handle, in
     frame together across two or more shots, writes it on the first shot that has them and
@@ -463,24 +552,28 @@ with no `STRUCTURE` warns only, so older episodes still build.
 
 ## Playback order — format picks the skeleton
 
+> story-v1 only — guidance for resumed boards; story-v2 boards follow character-scenarios.md
+> (a silent action can open, pay off or close; beat count and fixed headings are suggestions).
+> The `beat` and `arc` enums at the end of this section are runtime identifiers on every board.
+
 **`window.FORMAT` picks the skeleton.** Short-form and long-form do not share a beat list.
 
 ### Short-form (`shorts-9x16`, the default) — hook → drip (1–n) → cta
 
-A short is three acts, always. `arc` is ignored; `hooking` · `result` · `body` · `turn` on a
-short are defects, not aliases. `check-scenes.js` hard-fails them.
+A story-v1 short is three acts. `arc` is ignored on a short; `hooking` · `result` · `body` ·
+`turn` there are long-form beats, and `check-scenes.js` reports them as warnings.
 
 | `beat` | Name | What it does | Where |
 |---|---|---|---|
-| `hook` | cover | Gives a reason to stay in the first 3 seconds — a gap the viewer feels, or the result stated outright. All four `hookType` values and all six `hookForm` values are open on a short; a `spoiler` cover **may** speak `COMPREHENSION.answer`, a cover on the other three does not. Inside the first second the topic word or the figure is legible, the movement has started, and the first subtitle cue is up. No logo, no intro sting, no greeting | `type:"cover"` — it's the cover even unwritten |
-| `drip` | curiosity stage | **1–n shots, n ≥ 1.** Under a gap cover each shot except the last pays one piece of the answer and opens the next gap in the same breath (scenario-craft §5), and the last drip is the first place the answer is complete. Under a `spoiler` cover the answer is already out, so the drips carry the evidence, the how and the consequence that make it hold up, each one still opening the next question. Typically 2–5, so the 4–12 shot band still holds | usually `type:"points"` |
-| `cta` | close | The last **narrated** shot delivers the closing meaning and names one forwardable thing in `shot.share` — the sentence, figure or verdict a viewer would pass on as-is. A relevant ask after the answer is optional; the forwardable thing is not. Subscribe/like is banned, and asking to be shared is an ask rather than a trigger. Write the last sentence and the last frame together — where the story loops, the closing line hands back to the cover's first line. A shared outro asset is not this beat, and on a channel with `shortform_outro: off` this shot's last frame is the file's last frame | last narrated shot — write `beat:"cta"` |
+| `hook` | cover | Gives a reason to stay in the first 3 seconds — a gap the viewer feels, or the result stated outright. All four `hookType` values and all six `hookForm` values are open on a short; a `spoiler` cover **may** speak `COMPREHENSION.answer`, a cover on the other three does not. Inside the first second the topic word or the figure is legible and the movement has started (no subtitles in the delivered video). No logo, no intro sting, no greeting | `type:"cover"` — it's the cover even unwritten |
+| `drip` | curiosity stage | **1–n shots, n ≥ 1.** Under a gap cover each shot except the last pays one piece of the answer and opens the next gap in the same breath (scenario-craft §5), and the last drip is the first place the answer is complete. Under a `spoiler` cover the answer is already out, so the drips carry the evidence, the how and the consequence that make it hold up, each one still opening the next question. Typically 2–5 on a story-v1 board | usually `type:"points"` |
+| `cta` | close | The last **narrated** shot delivers the closing meaning. A forwardable thing in `shot.share` — the sentence, figure or verdict a viewer would pass on as-is — and a relevant ask after the answer are both optional (CTA checks are removed, 2026-10-16). Subscribe/like is banned, and asking to be shared is an ask rather than a trigger. Write the last sentence and the last frame together — where the story loops, the closing line hands back to the cover's first line. A shared outro asset is not this beat, and on a channel with `shortform_outro: off` this shot's last frame is the file's last frame | last narrated shot — write `beat:"cta"` |
 
 The four drop-off jobs map onto those three beats:
 
 | Job | Short-form beat | What it has to do | What kills it |
 |---|---|---|---|
-| **stop** | `hook` | 0–3 s: big title, a strong first frame, movement already in it — the cover's treatment comes from `shot.render` like any other cut (§cover), a gap the viewer can feel or a result worth staying for. Inside the first second the title and the figure are legible and the first subtitle cue is on screen | a first frame the thumb slides past; nothing legible in the first second; a first subtitle cue that arrives after 1.0 s |
+| **stop** | `hook` | 0–3 s: big title, a strong first frame, movement already in it — the cover's treatment comes from `shot.render` like any other cut (§cover), a gap the viewer can feel or a result worth staying for. Inside the first second the title and the figure are legible on the authored screen (the delivered video has no subtitles) | a first frame the thumb slides past; nothing legible in the first second |
 | **hold** | `drip` (every shot except the last drip) | pay one piece, open the next — the viewer is never done wondering. Every cut chosen by purpose (`shot.render`) — a still under its camera move, an HTML motion slide, or generated video where the movement is the content, inside the channel's generated-video ceiling | a drip that only explains; under a gap cover, dumping the whole answer on drip 1; a still that stands frozen |
 | **satisfy** | last `drip` | `COMPREHENSION.answer` is complete by here — under a gap cover this is the first place it lands, under a `spoiler` cover it is where the stated result has been made to hold up | a hook the drips can't keep; ending on explanation with no complete answer |
 | **close** | `cta` | after the answer, an earned closing line, one forwardable thing named in `shot.share`, and an optional relevant ask — the last sentence and the last frame designed together | an unpaid promise replaced with a poll or teaser; a close nobody would screenshot or quote; ending on the shared outro alone (which an outro-off channel cannot do at all) |
@@ -577,17 +670,18 @@ different on purpose — the cover is the moment, the result is what it became �
 cta's frame that points back at the cover.
 
 Left unwritten, the renderer reads it this way. `type:"cover"` → hook, `type:"outro"` → cta
-(long-form only — a short still needs a spoken `beat:"cta"`), `sequence` opening with `풀기`·
+(long-form only — on a short the last narrated shot is the close), `sequence` opening with `풀기`·
 `호기심`·`단계` → drip, `결과` → result, `기획`·`방법`·`내용` → body, `문제`·`후킹` → hooking,
-`전환`·`반전` → turn. `check-scenes.js` and `storyboard.html` hard-fail a short that is missing
-drip or a spoken CTA, that opens on hooking/result/body/turn, that dumps `COMPREHENSION.answer`
-on a cover riding **neither** `hookType:"spoiler"` **nor** `hookForm:"payoff"`, or whose
-`beat:"cta"` shot carries no `shot.share`. `spoiler` and `payoff` are legal on a short — either
-one puts the result at 0 s, so either one excuses the dump. On long-form they keep
-the arc checks: first shot isn't the cover, no hooking or the shot after the cover isn't
-hooking (warning); on answer-first, body before result is a violation; on a story arc, result
-before body or before the turn is a violation. The promise ledger (`SB_DOC.craft`, storyboard
-SKILL §6) is checked in the same strip — a loop with no payer, a cover promise paid off the
+`전환`·`반전` → turn. `check-scenes.js` and `storyboard.html` report a short that is missing
+drip or a `beat:"cta"` close, that opens on hooking/result/body/turn, or that dumps
+`COMPREHENSION.answer` on a cover riding **neither** `hookType:"spoiler"` **nor**
+`hookForm:"payoff"` — warnings for the author, not a block, and a close without `shot.share` or
+a spoken ask is accepted (CTA checks are removed, CLAUDE.md 2026-10-16). `spoiler` and `payoff`
+are legal on a short — either one puts the result at 0 s, so either one excuses the dump. On
+long-form the arc reads are the same kind of warning: first shot isn't the cover, no hooking or
+the shot after the cover isn't hooking; on answer-first, body before result; on a story arc,
+result before body or before the turn. The promise ledger (`SB_DOC.craft`, storyboard
+SKILL §6) is read in the same strip — a loop with no payer, a cover promise paid off the
 last drip (short) or the result (long-form), a plant paid in a different frame than it was
 planted in.
 
@@ -599,18 +693,21 @@ sequence: "풀기 1"                 // sequence head. Used with beat, the docum
 
 ## Production mode — `window.PRODUCTION`
 
-Use [production-mode.md](production-mode.md) for the HITL choice and machine fields. Show all four
-choices (100% 이상, 50% 이상, 30% 이상, 훅만 영상) with video-only first-pass/retry costs
-and the explicit cap before assets. `video_50` and `video_30` enforce minimum shares of new
-cuts rounded up; `hook_only` generates only the opening hook. Other new cuts use purpose-routed
-HTML/still-camera scenes. Existing `hybrid` approvals retain their 1–2 clip rule. A channel whose
-`generated_video_max` is 0 is never shown the comparison at all: its board writes the derived
-`stills_only`, which carries the visual style with no clip, no `visual.reuse`, no quote and no
-cost approval ([production-mode.md](production-mode.md) §stills_only). The choices stay four. `full_video` uses every new scene as
-`visual.video` and the selected episode style, including physical explanations; this replaces
-only the hybrid renderer and generated-count restrictions below. `MOTION_POLICY` remains the
-channel snapshot. Actual approval binds the quote fingerprint; changing inputs requires a new
-quote. `check-production.js` blocks missing/stale approval and over-budget calls.
+Use [production-mode.md](production-mode.md) for the machine fields and the six render ratios
+(`full_video` · `video_80` · `video_50` · `video_30` · `video_lt10` · `no_video`). A new board
+inherits `mode` from the project snapshot in `.social-flow/models.json` and writes
+`renderRatioVersion: 1` beside it; the saved ratio is a standing preference and is not asked
+again (CLAUDE.md 2026-10-16). The ratio is a planning target and the cost ceiling: the band's
+upper bound and the episode budget are enforced, the lower bound is not — fewer generated cuts
+than the target is reported, never padded with unneeded video and never an error (owner
+decision 2026-10-18). Other new cuts use purpose-routed HTML/still-camera scenes. `hook_only`,
+`stills_only` and `hybrid` are legacy ids that only a resumed board carries; a channel whose
+`generated_video_max` is 0 keeps writing the derived `stills_only` (production-mode.md
+§stills_only). `full_video` uses every new scene as `visual.video` and the selected episode
+style, including physical explanations; this replaces only the hybrid renderer and
+generated-count restrictions below. `MOTION_POLICY` remains the channel snapshot. Actual
+approval binds the quote fingerprint; changing inputs requires a new quote.
+`check-production.js` blocks missing/stale approval and over-budget calls.
 `imageProvider` and `videoProvider` (`host` | `api`) record which lane generates — `host` where
 the CLI running the skill ships the tool (`image_gen` on Codex and Grok, `image_to_video` on
 Grok), otherwise `api`; an absent field reads as `api` (production-mode.md).
@@ -624,7 +721,8 @@ from them through the same recipe and prompt gate as every other clip. Keep real
 infoType/purpose, data evidence and narration. The source PNG, stored motion prompt and
 optional `visual.frames.end` drive the same spatial action. Runtime output path is
 `visual.video.clip`. Use the resolution `PRODUCTION.videoModel` records (720p on the 2.0
-fast/mini grades, 1080p otherwise) and audio false; only burned subtitles overlay the video. The selected style replaces the generic photo rule. A verified recording or shared
+fast/mini grades, 1080p otherwise) and audio false; nothing overlays the video, subtitles
+included. The selected style replaces the generic photo rule. A verified recording or shared
 outro retains its source. Full-video quality evidence is in `.work/video-review.json`, tied to
 the actual source and clip hashes, checked before the build.
 
@@ -675,18 +773,21 @@ Before authoring, follow [visual-style.md](visual-style.md). Both production mod
 `PRODUCTION.style.preset`: one of `cinematic-miniature`, `photoreal`, `webtoon`, `claymation`,
 `paper-cutout`, `ink-wash`, `toon-3d` or `arcade-2d` (`production-mode.js` `STYLES`), with the actual
 `selection: { kind: "user" | "standing", reference: "actual choice or plan" }`.
-The `spatial-explainer` preset is accepted for existing boards only. New episodes require HITL.
-`production-mode.js` refuses a board without `style.preset` and its `selection` in every mode, the
-story pass (`--draft`) included; the six detail fields (`reference`, `world`, `materials`, `palette`,
-`lighting`, `camera`) become required once the board holds a generated cut, because
+The `spatial-explainer` preset is accepted for existing boards only. New episodes inherit the
+preset from the project snapshot (`.social-flow/models.json`, `selection.kind:"standing"`) and
+ask only when no saved or explicit episode choice exists (CLAUDE.md 2026-10-16).
+`production-mode.js` reports a board without `style.preset` and its `selection`, the story pass
+(`--draft`) included; the six detail fields (`reference`, `world`, `materials`, `palette`,
+`lighting`, `camera`) are needed once the board holds a generated cut, because
 `spatial-prompts.js` assembles every source and motion prompt from them.
 
 A single shot leaves the episode preset only through `shot.style` — `{ preset, reason,
-selection: { kind: "user", reference }, materials?, palette?, lighting? }` — written after the
-user approved that shot in HITL (visual-style.md §Per-shot style). Its `videoDesign.look` then
+selection: { kind: "user", reference }, materials?, palette?, lighting? }` — with the user's
+explicit choice recorded in `selection` (visual-style.md §Per-shot style); an automatic run
+keeps the episode preset rather than inventing an override. Its `videoDesign.look` then
 follows the shot's preset. Every generated still's `visual.bgPrompt` carries the treatment
-sentence of the preset the shot carries; `check-scenes.js` refuses one that does not
-(`[style-missing]`) and an override without the user's record (`[shot-style]`).
+sentence of the preset the shot carries; `check-scenes.js` reports one that does not
+(`[style-missing]`) and an override without the user's record (`[shot-style]`, advice).
 Use `videoDesign.look: "realistic"` for photoreal, `"webtoon"` for webtoon, `"clay"`, `"papercut"`,
 `"inkwash"`, `"toon3d"` and `"arcade"` for the five prompt-only presets; only cinematic-miniature attaches
 the miniature pack. Source, end-frame and motion prompts carry the selected treatment.
@@ -726,33 +827,119 @@ episode opts in through `PRODUCTION.cast` or any cut type:
 
 | Value | Picture treatment | Cast behavior |
 |---|---|---|
-| `action` | full or medium figure with action space | `visual.character` required when the episode has cast |
-| `reaction` | watchers in a medium or medium-close view | `visual.character` required when the episode has cast |
-| `insert` | hands, feet or one prop in macro framing | `visual.character` required; face stays outside frame |
+| `action` | the contact or movement at the authored shot size; a hand action may be an insert | reference only characters visible in this shot |
+| `reaction` | the response at the authored shot size, from a hand tightening to a face or group | reference only characters visible in this shot |
+| `insert` | hands, feet, props or their relationship at the authored framing and depth | `visual.character` may be null for props only; reference a visible hand/foot owner when needed; face stays outside frame |
 | `document` | written record as a physical object | cast omitted |
 | `map` | overhead terrain, route and landmarks | cast omitted |
 | `scenery` | wide place, light or transition view | cast omitted |
 
-The preset stays constant while `cutType` changes composition, lens emphasis and material
-detail. `style.worlds[videoDesign.worldId]` optionally selects a set-specific world sentence;
+Narration speakers and people mentioned in dialogue do not imply an on-screen character.
+A pure object insert may use `visual.character: null` even when the episode has cast.
+A visible hand or foot may reference its owner for partial identity without adding their face.
+
+The preset stays constant while `cutType` describes subject treatment and dramatic function.
+`shot.size`, visible subjects and `shot.space` own the crop; action/reaction never overrides
+that composition. `style.worlds[videoDesign.worldId]` optionally selects a set-specific world sentence;
 the required `style.world` is the fallback.
 
-### Conditional start/end images
+### Shot image inputs
 
-Use `visual.frames: {mode:"first"|"first_last", reason, endState?, end?}` for new generated
-shots. `visual.bg` supplies the start frame. Two-frame shots require `endState` during planning
-and a distinct `end` image before video generation. The approval page displays both images;
-`seedance-route.js` forwards `end` as `lastImagePath`. Follow
-[render-routing.md](render-routing.md#start-and-end-frame-planning) for the selection and
-continuity rules. Legacy boards without `frames` retain their original single-frame display,
-unless an existing `lastImagePath` supplies a second frame.
+New generated shots declare `visual.frames` and `visual.references` (an empty array
+means no extra conditioning). Keep the number of images tied to visible requirements,
+not the model's maximum slot count.
+
+```js
+visual: {
+  bg: 'images/s1-start.png', // compatibility with still renderers; same file as frames.start
+  frames: {
+    mode: 'first_last', // first | first_last | reference
+    start: 'images/s1-start.png',
+    end: 'images/s1-end.png',
+    reason: 'Control the handoff and its final resting position.',
+    endState: 'The cup rests on the table; both hands have released it.'
+  },
+  references: [
+    { id: 'hero-costume', path: '../../../assets/characters/hero/front.png',
+      role: 'character', use: 'image', purpose: 'Preserve the blue collar in both frame images.' },
+    { id: 'cup-shape', path: 'assets/cup.png', role: 'prop', use: 'image',
+      purpose: 'Keep the handle and ceramic pattern through the handoff.' }
+  ]
+}
+```
+
+`frames.start` is explicit; legacy `visual.bg`, `src` and `imagePair.start` remain
+fallbacks. If both `frames.start` and `bg` exist they must agree. `first_last` needs
+distinct start/end paths before production. Draft paths may be pending. Existing
+boards without these fields retain their legacy behavior.
+
+`references[]` entries have a unique `id` (reserved: start, end, keyframe-*), local
+`path` relative to scenes.js, `role` (character, prop, background, style, composition,
+continuity), `use` (image, video, both) and concrete `purpose`. Image use feeds the
+opening and ending still prompt arguments; video use feeds the actual video adapter.
+The array order is the submitted image order. Do not duplicate the legacy
+`referenceImagePaths`; if supplied it must exactly match video/both paths.
+
+`mode:reference` deliberately selects appearance conditioning without pinned temporal
+frames. Use video/both references, including the opening picture as a named reference
+when its appearance matters. A picture used as a reference is not a locked first
+frame. Installed first/last adapters do not accept additional video references in the
+same request: keep those assets as image-only inputs to frame production, or explicitly
+replan as reference mode. Never silently remove an endpoint or convert its meaning.
+The selected adapter schema enforces its actual image counts and model restrictions.
+
+The review page shows start/end, intermediate images, all references, their roles and
+intended uses. These labels describe the plan, not proof of submission or visual quality.
+`video_plan` compiles supported adapter inputs and returns `imageBindings` with paths,
+roles, use, dimensions, byte count, MIME type, hashes and `submitted` (planned adapter
+inclusion). Host plans return an unverified mapping handoff and `submitted:false`;
+the caller must verify the real host schema and preserve every intended input.
+
+Register the primary image as workflow `entry.image` and every other frame/reference
+as `entry.images[]` under the same cut ID. Completion decodes and hashes the whole
+inventory; image review covers it. A structured video plan refuses unreviewed files.
+Changed images or image plans invalidate saved video plans before provider dispatch.
+
+### ASTRA intermediate contact frames
+
+For an ASTRA silent or offscreen-voice shot whose contact order needs an authored
+intermediate image, keep `visual.frames.mode:"first_last"`, `visual.bg` and
+`visual.frames.end`. Add `visual.frames.keyframes` with 1–6 entries:
+
+```js
+keyframes: [
+  { atSeconds: 1.0, image: 'images/tray-contact.png',
+    state: 'Tray base rests on the desk; both hands still grip.', strength: 1 },
+  { atSeconds: 1.5, image: 'images/tray-release.png',
+    state: 'The supported tray stays fixed as both hands release.', strength: 1 }
+]
+```
+
+`atSeconds` is a source-clip time, strictly inside the planned shot duration.
+The preparation helper rounds it to the nearest frame at the chosen frame rate;
+indices must remain distinct, increasing and inside the opening/ending indices.
+`image` is a local path relative to the board. Optional `strength` is 0–1;
+`state` records the authored state in provenance. Keep timed performance consistent
+with every image. This explicitly selects `astra_keyframe_video`: opening at frame
+zero, intermediate images at authored indices and ending at the final optimized
+request frame, with no more than eight images total. Preparation returns image
+hashes, actual indices and a fresh quote; image constraints do not prove physical
+contact or usable output. Inspect the continuous result.
+
+The normal first/last adapter remains unchanged when `keyframes` is absent.
+Audio-conditioned shots reject intermediate frames because `audio2video` cannot
+accept them. The standard board preview displays intermediate images and their time/state alongside
+opening/ending images. Inspect them and the continuous result; display is not certification.
 
 ## Fields common to every shot
 
 Every generated cut declares `shot.render` using [render-routing.md](render-routing.md).
-The supported modes are `still_camera`, `character_html`, `object_html`, `data_graph`,
-`generated_video`, the limited `editorial_html` quote/verdict route, and `stock_video` (a free
-stock or archive clip with its `visual.license` record, §stock material).
+The supported modes (`render-routing.js` `PURPOSES`) are `still_camera`, `character_html`,
+`object_html`, `data_graph`, `motion_html` (a seekable abstract motion scene, §Motion graphic
+plan), `generated_video`, the limited `editorial_html` quote/verdict route, and `stock_video` (a
+free stock or archive clip with its `visual.license` record, §stock material). `editorial_html`
+is a route for text-led quotes and verdicts; `visual.slide.treatment:"editorial"` is a slide
+treatment any HTML route may carry (§Motion diagram treatments).
 [visual-direction.md](visual-direction.md) defines repetition and text-duration limits;
 [chart-design.md](chart-design.md) defines data, focus beats and the shared chart renderer. The purpose and reason are required before assets; `infoType` remains
 the explanation category, while `render.mode` names the actual production route.
@@ -762,8 +949,8 @@ wants the handoff):
 
 | Field | Required | Description |
 |---|---|---|
-| `mode` | ✅ | one of the seven routes above |
-| `purpose` | ✅ | `portrait` · `atmosphere` · `place` · `detail` · `human_process` · `mechanism` · `physical_state` · `comparison` · `trend` · `share` · `distribution` · `geographic` · `timeline` · `live_action` · `evidence_quote` · `verdict` · `archive` — each has a default route (render-routing.md §Routes) |
+| `mode` | ✅ | one of the eight routes above |
+| `purpose` | ✅ | `motion_explanation` · `portrait` · `atmosphere` · `place` · `detail` · `human_process` · `mechanism` · `physical_state` · `comparison` · `trend` · `share` · `distribution` · `geographic` · `timeline` · `live_action` · `evidence_quote` · `verdict` · `archive` — each has a default route (render-routing.md §Routes; the list is `render-routing.js` `PURPOSES`) |
 | `reason` | ✅ | why this treatment conveys the cut; one generic reason repeated across the episode fails visual-direction |
 | `camera` | ✅ on `still_camera` | `{effect, target, reason}` — `effect` one of `focus-in` · `rack-focus` · `approach` · `pull` · `pan` · `tilt` · `push` · `reveal` · `parallax`; `focusTo` (and `focusFrom` for rack-focus) as normalized `[x, y, rx, ry]` from the actual image; `pan` and `tilt` travel from `focusFrom` to `focusTo` (both required, and different — a pan is a sentence from A to B, L13; `tilt` is the vertical pan, the scale-by-time move); `layersPlan` and, before production, `layers` for reveal/parallax |
 | `action` | ✅ on `character_html` · `object_html` · `generated_video` · `stock_video` | the visible subject change, before and after |
@@ -780,7 +967,7 @@ and `camera-slide-template.html`; its image and effect parameters come from scen
 | `type` | ✅ | `cover` \| `points` \| `quote` \| `broll` \| `outro` — the role (`hooking` is also accepted as a type, but write `beat: "hooking"` on a `points`/`quote` shot instead, §hooking) |
 | `narration` | ✅ (except `broll`, `outro`) | Segment array `[{tts, sub}, ...]` — one sentence = one segment = one reveal |
 | `visual` | ✅ | The visual plan object (below) |
-| `duration` | recommended | Target seconds — narration characters / the format's `pacing.rate` (4.5 by default; `check-scenes.js` estimates a missing duration as characters / rate + 0.85), 13s is planning guidance. The builder lays the card at the engine's own pace (5.3–6.4 chars/s measured on Supertonic 1.05, produce §7.5), so this is an estimate, not the audio length. A generated-video shot takes its length from what the cut is for instead (§cut length) |
+| `duration` | recommended | Target seconds — narration characters / the format's `pacing.rate` (4.5 by default; `check-scenes.js` estimates a missing duration as characters / rate + 0.85), 13s is planning guidance. The builder lays the card at the engine's own pace (measure the selected voice’s actual WAV), so this is an estimate, not the audio length. A generated-video shot takes its length from what the cut is for instead (§cut length) |
 | `scene` | recommended | Grammar scene number. Same value for the same place and time. Without it the renderer assumes one scene per entry |
 | `sceneSlug` | recommended when `scene` is set | `"place / time"` — e.g. `"salon chair / day"` |
 | `sequence` | optional | Sequence name. Only when one episode has two purposes |
@@ -788,7 +975,7 @@ and `camera-slide-template.html`; its image and effect parameters come from scen
 | `beat` | optional on long-form, required on a short | short: `hook` \| `drip` \| `cta`. long-form: `hook` \| `hooking` \| `result` \| `body` \| `turn` \| `cta` (`turn` on the story arc only). See §playback order above |
 | `arc` | long-form cover only | `answer-first` (default) \| `story` — which playback order a long-form episode walks. Ignored on a short. See §playback order above |
 | `shot` | recommended | `{ feel, size, angle, why, info, infoType, share, shareType, space }` — below. `feel` and `infoType` are written **before** `size`·`angle`·`space`·`camera` are chosen (directing-grammar §5) |
-| `sound` | optional | `{ cue, drop, sfx, ambience }` — what the audience hears under this shot (§music cues · §sound effects). Narrated shots only (`cover`, `points`, `quote`); `broll` and `outro` aren't cards, so there is nothing for a cue to key to |
+| `sound` | optional | `{ cue, drop, sfx, ambience, effects, audioSource }` — what the audience hears under this shot (§music cues · §sound effects). Cards only (`cover`, `points`, `quote`); `broll` and `outro` aren't cards. For model-owned effects and source audio, follow [model-aware effects](../../produce/references/video-sound.md). |
 
 ```js
 shot: {
@@ -816,27 +1003,41 @@ shot: {
   `feel`. A `feel` that restates `info` ("that it's one command") is unset.
 - **`infoType` routes the explanation before a visual is chosen.** Use `timeline` for ordered
   periods or dated events, `statistic` for a measured count·rate·share·comparison, `principle`
-  for a cause, mechanism, or state change, and `other` for every remaining beat. The first three
-  are always full-frame seekable HTML motion diagrams on the studio stage — **never video**
-  (user directive 2026-09-05, CLAUDE.md §Nothing is drawn over video; it outranks every other
-  rule in this file). They cannot fall back to a still, a clip with marks or labels over it,
-  kinetic type, or a photo with moving annotations. When a thing is the subject the slide
-  carries a rendered object (`slide.object`); the bar is
+  for a cause, mechanism, or state change, and `other` for every remaining beat. Outside
+  `full_video`, the first three are full-frame seekable HTML motion diagrams on the studio
+  stage, never a generated clip (user directive 2026-09-05, CLAUDE.md §Nothing is drawn over
+  video) — they cannot fall back to a still, kinetic type, or a photo with moving annotations.
+  A `full_video` board renders them as generated scenes instead (§Production mode; the
+  cinematic-miniature branch in CLAUDE.md). What no mode relaxes is the no-marks rule: nothing
+  is drawn over a moving picture, in any ratio and any style. When a thing is the subject the
+  slide carries a rendered object (`slide.object`); the bar is
   `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`. If one shot needs two
   types, split the shot; one authored frame carries one visual argument.
 - **`share` is what the viewer would forward.** One sentence, figure or verdict they can pass
   on as-is, written the way `info` is written — the words themselves, not a description of
-  them. It is **required on a short's `beat:"cta"` shot** and optional on every other shot and
-  on long-form, where the act beat already asks for a share-worthy fact (§playback order).
-  `check-scenes.js` fails a short whose closing shot has no `share` or whose `share` is shorter
-  than 8 compacted characters. An ask stays optional; a forwardable thing does not — an ask
-  requests behaviour from the viewer, while a forwardable thing is one sentence, figure or
-  verdict they can pass on as-is. Asking to be shared is an ask, not a trigger. "Share this
-  with someone" in a `share` slot is the engagement bait the subscribe/like ban exists for.
+  them. It is **optional on every shot**, the close included (CLAUDE.md 2026-10-16: CTA checks
+  are removed); `check-scenes.js` accepts a short whose closing shot has no `share`, and only
+  the vocabulary of `shareType` is checked when one is written. A forwardable thing still makes
+  a close travel — write one when the story has it. An ask stays optional too — an ask requests
+  behaviour from the viewer, while a forwardable thing is one sentence, figure or verdict they
+  can pass on as-is. Asking to be shared is an ask, not a trigger. "Share this with someone" in
+  a `share` slot is the engagement bait the subscribe/like ban exists for.
 - **`shareType` names its shape** — `fact` (a figure or a checkable claim), `verdict` (a
   judgment worth arguing with), `line` (a quotable sentence), `checklist` (a short list someone
   screenshots), `none` (this shot has nothing to forward). Optional, the way `infoType` is a
   vocabulary beside `info`.
+- **Size serves readable information.** Choose new information → primary subject →
+  necessary visible extent → size. Two-shot, OTS and POV name arrangement or viewpoint,
+  so also describe their actual crop. Keep `shot.size` and `visual.camera.framing` consistent;
+  a wide scene must not depend on an unreadably small gesture. See
+  [size guidance](directing-grammar.md#size-follows-the-information-the-viewer-must-read).
+- **Function does not set the crop.** `cutType: action` or `reaction` does not force a
+  full, medium or face shot. `size`, visible subjects and `space` describe the composition.
+  Keep these consistent with `videoDesign` and the previz. Author `feel`, visible actor
+  placement and `edit.post` per beat rather than filling every shot with episode defaults.
+  See [distinct-shot guidance](directing-grammar.md#distinct-shots-carry-distinct-information)
+  for boundaries, deliberate repetition and the previz/source/clip comparison. These are
+  review criteria, not a numerical diversity gate or new required metadata.
 - **Feel first, dials second.** Write `feel`, then pick `size`·`angle` (and `space` on a
   generated still, `camera` on a generated shot, `duration` on a clip) from the
   directing-grammar §5 table — the row is a default, and leaving it means writing why on the
@@ -850,9 +1051,8 @@ shot: {
 - If `info` matches another shot in the same scene, that shot can be dropped. That's what
   coverage design is.
 - When you open on a close-up, pay back "where are we" with a wide or medium in the next shot.
-- **The close-up is rationed** — one close-up (`cu`·`choker`·`ecu`) per scene, `choker`/`ecu` once or twice per episode,
-  one `dutch` per episode with its reason written on the shot. The check strip warns past those
-  counts (directing-grammar §6).
+- Close-up and Dutch-angle use follows the scene's information and intended effect.
+  Legacy quota diagnostics are advice, not a success criterion or required frequency.
 - **Hook cuts and speech clips sit at `eye`** unless a reason is written — the one angle rule with
   a measurement behind it.
 - produce runs fine on an old `scenes.js` without these fields. Only the human document and the
@@ -860,19 +1060,63 @@ shot: {
 
 ### narration segments
 
+Optional `acting: {direction?: string, tags?: string[]}` records per-line performance;
+keep its bare tags separate from spoken words and subtitles. See
+[acting prompts](../../produce/references/acting-prompts.md).
+
+New boards set `SB_DOC.speechPlanVersion:1`. The array includes both narration and character
+dialogue in spoken order. Each entry requires unique stable `id`, explicit character `speaker`
+and `delivery: "voiceover" | "on_screen" | "off_screen"`. Narrator is a character with pinned
+TTS settings. Omitted speakers are a legacy import convention only. Example:
+
 ```js
 narration: [
-  { tts: "사천칠백만 동이 기준입니다.", sub: "4,700만 동이 기준입니다.", speaker: "mina" },
-  { tts: "안 내면 과태료가 붙습니다.",  sub: "안 내면 과태료가 붙습니다." }
+  { id: "d-intro", speaker: "narrator", delivery: "voiceover", tts: "The door opened.", sub: "The door opened." },
+  { id: "d-warning", speaker: "mina", delivery: "on_screen", tts: "Stay here.", sub: "Stay here.", acting: { direction: "firm, reassuring", tags: [] } }
+]
+```
+
+Choose delivery from the story: an explainer can be all narrator `voiceover`; drama uses
+`on_screen` for visible characters physically speaking to each other. Reserve `off_screen`
+for a motivated listener reaction, insert or speaker outside the frame. Visible narrators,
+inner thoughts and text messages may use `voiceover`; physical presentation to camera uses
+`on_screen`. Optional `deliveryReason` explains an exception on the review card. Do not
+replace an entire dramatic exchange with closed-mouth action to avoid lip synchronization.
+The review renders lines in order with the speaker's profile image, name and delivery label
+beside a speech bubble. A shot without lines displays “No dialogue”; it does not acquire a
+narrator automatically. See [shot speech](../../produce/references/shot-speech.md).
+
+Alongside the supported `direction` and `tags`, optional per-line `acting` contains `context`, `intent`, `emotion`, `vocal` and `visual`
+strings (at most 1,000 characters each), plus `leadInSeconds` and `tailOutSeconds`
+(finite numbers from 0 to 5, default zero). These describe this line's situation,
+purpose, emotion, audible delivery, visible action and reaction time. They do not
+change the character's pinned voice ID. Scene vocal direction overrides baseline
+style rather than appending incompatible emotions. `speech_manage action:plan_audio`
+resolves supported generator arguments; `plan_video` carries the same acting context.
+Legacy lines without `acting` keep baseline delivery. Neither the field nor a successful
+plan certifies the resulting expression or prosody. See the speech contract for examples.
+
+The board may describe exchanges; before the current single-speaker scene builder runs,
+split speaker changes into consecutive shots preserving these line ids.
+
+> The example and the character caps below are story-v1 guidance for resumed boards. A
+> `speechPlanVersion:1` board writes every entry in the shape above — `id`, `speaker`,
+> `delivery` — and takes its length from the performance (storyboard SKILL §5).
+
+```js
+narration: [
+  { id: "d-fee", speaker: "mina", delivery: "on_screen", tts: "사천칠백만 동이 기준입니다.", sub: "4,700만 동이 기준입니다." },
+  { id: "d-fine", speaker: "narrator", delivery: "voiceover", tts: "안 내면 과태료가 붙습니다.", sub: "안 내면 과태료가 붙습니다." }
 ]
 ```
 
 - `tts` — Korean phonetic spelling (numbers and loanwords as they sound: "4,700만"→"사천칠백만",
   "eTax"→"이택스")
-- `sub` — the subtitle's original notation (numbers and proper nouns kept as written)
-- `speaker` (optional) — `SB_DOC.characters[].id`. Omit it only for the
-  `SB_DOC.narratorCharacterId` voice. A non-empty value must resolve; save never silently falls
-  back after a typo or rename.
+- `sub` — the sentence's written notation (numbers and proper nouns kept as written); the
+  delivered video carries no subtitles, and a sidecar is made from it only on request
+- `speaker` — `SB_DOC.characters[].id`; required on a `speechPlanVersion:1` board (the narrator
+  is a character too). Legacy imports without it resolve to the `SB_DOC.narratorCharacterId`
+  voice. A non-empty value must resolve; save never silently falls back after a typo or rename.
 - `img`, `imgPrompt` (optional) — **per-line illustration mode**: when attaching one
   illustration per segment, write the path and the generation prompt (the scene-content part).
   When the storyboard.html renderer detects these fields it switches to illustration mode,
@@ -894,17 +1138,19 @@ narration: [
   moves the information forward, or it puts evidence on the table. A segment that does none
   of the three (a greeting, a restatement, a "so as you can see", a transition that carries
   nothing) is cut, not polished — in the body every second has to do one of the three (user
-  directive, 2026-08-23). Copy mode reads for it (P0-11).
-- **Subtitles are read with the sound off** — most short-form is watched muted. One segment is
-  one subtitle: 4–7 words, which is the 8–25-character band above; high contrast on the
-  builder's band (y 1380–1560, inside the bottom safe zone — platform-playbook §7); nothing the
-  viewer has to hear to follow. If a line only works with the voice, the subtitle isn't doing
-  its job.
+  directive, 2026-08-23).
+- **The delivered video has no subtitles** (produce 2026-10-17). One segment is one spoken
+  sentence, 8–25 characters, and the picture carries what a muted viewer needs — the topic word
+  and the figure on an authored screen, the action in frame. A subtitle file is a separate
+  sidecar made only on request.
 - **One sentence = one reveal = one visual change**, and that is the 2–4 s cadence that keeps
   attention — don't merge two sentences into one reveal to save a caption, and don't let a
   stretch run past ~4 s with nothing changing on screen (§playback order, the cadence note).
 
 ### title is a spoken hook · narration explains in polite register (user directive, 2026-08-13)
+
+> story-v1 only — guidance for resumed boards; story-v2 boards follow character-scenarios.md.
+> The korean-style register rules (D8 · D9) still apply to every Korean surface.
 
 Every scene's on-screen title is written as **what the viewer blurts out inwardly** — a
 casual-register exclamation, question, or piece of hearsay.
@@ -936,12 +1182,12 @@ narration carry that information. How the three surfaces divide the work:
 
 ```js
 visual: {
-  picture: "still",                  // still | ai-video | recording | asset | slide — the screen body
-  overlay: "html",                   // html | none — HTML staging over the screen
+  picture: "still",                  // still | ai-video | recording | stock | asset | slide — the screen body
+  overlay: "html",                   // html | none — HTML staging over the screen (none on every video cut)
   bg: "images/scene-1.png",          // generated background (produced at the storyboard stage)
   bgPrompt: "…",                     // the prompt used to generate it (record for regeneration and audit)
-  motion: "very slow dolly in",      // cover only: the veo camera direction for the opening b-roll
-                                     // written in veo vocabulary — push and orbit appear 0 times in the canonical docs
+  motion: "slow dolly in",           // legacy one-string camera line for an opening b-roll; new boards write the four visual.camera slots (§camera)
+                                     // written in vendor vocabulary — push and orbit appear 0 times in the canonical docs
   video: null,                       // points only: the motion-background shot marker (§motion background) — omitted for stills
   clip: null,                        // quote: the speech clip plan (below) · stock_video: the footage/ path (§stock material)
   source: null,                      // "recording" (§filmed scenes) | "screencast" (§screencast splice) | "stock" (§stock material) — where the picture came from
@@ -958,7 +1204,7 @@ title and figure in HTML over a still photo is the default. Don't merge the two 
 
 | `picture` | Screen body | The structural clue |
 |---|---|---|
-| `still` | Still photo or illustration. The builder always adds a Ken Burns move — a frozen still is refused at build | `visual.bg` present, no `video` or `clip` |
+| `still` | Still photo or illustration. A `still_camera` cut moves through `shot.render.camera` and the camera HTML runtime; a card that reaches the builder as a bare image gets the builder's Ken Burns move — a frozen still is refused at build | `visual.bg` present, no `video` or `clip` |
 | `ai-video` | Generated video — motion background, b-roll, speech clip | `type==="broll"`, or `visual.video`, or `visual.clip` |
 | `recording` | **A clip the user filmed themselves** (§filmed scenes), or one window of a screen recording spliced into an otherwise generated episode (§screencast splice) | `visual.source==="recording"` \| `"screencast"` |
 | `stock` | **A free stock or archive clip** the storyboard found and produce downloads (§stock material). A stock photograph is a `still` with `visual.source==="stock"` | `visual.source==="stock"` with `visual.clip` |
@@ -1003,8 +1249,8 @@ window.MOTION_POLICY = {
 };
 ```
 
-**Fitting the board to `videoBudgetUsd`** (storyboard §5; `cost-preview.js` answers `!!` and
-exit 1 over it). Every generated clip of the episode — b-roll, motion backgrounds, quote
+**Fitting the board to `videoBudgetUsd`** (storyboard SKILL §6, validate and deliver the plan;
+`cost-preview.js` answers `!!` and exit 1 over it). Every generated clip of the episode — b-roll, motion backgrounds, quote
 clips — is billed and projected together; stills, TTS and music are outside it. **Fit first,
 then ask**: the user is shown a number that fits, never one to trim on the spot. The ladder,
 cheapest loss first:
@@ -1020,10 +1266,10 @@ cheapest loss first:
    shot's clip (`visual.reuse` — the field check-scenes and cost-preview read); a reused shot
    is a copied file, so `cost-preview.js` drops it from the forecast and the fingerprint.
 3. **Drop the B of an `A|B` sub-reveal** whose sentence reads on one picture.
-4. **Resolution stays what `PRODUCTION.videoModel` records** and the shot count stays one per
-   sentence — a cheaper grade is the user's choice at the model question, never a silent
-   downgrade; the budget is spent on the picture the viewer sees, not saved by holding a
-   picture longer.
+4. **Resolution stays what `PRODUCTION.videoModel` records** (the model saved in
+   `.social-flow/models.json`) and the shot count stays what the performance needs — a cheaper
+   grade is a change the user makes to the saved settings, never a silent downgrade; the
+   budget is spent on the picture the viewer sees, not saved by holding a picture longer.
 
 One yes covers the episode's generated shots; a shot added later is asked again, against the
 headroom the preview printed.
@@ -1045,25 +1291,27 @@ off with it, but an episode always has a length, so `check-scenes.js` names it a
 error instead of quietly handing the preset band back. `check-scenes.js` and the approval page
 then read the band the same way: every shot but the outro asset (b-roll included, because a
 b-roll plays), a warning outside the band, and a violation past the hard cap. The shot band
-(4–12) does not move with them: a 40-second episode is still 4–12 shots.
+(4–12) does not move with them; it is story-v1 guidance, and a story-v2 board's shot count
+follows its performance (`check-scenes.js` skips the band there).
 
-**The last four have plugin-wide defaults** (owner directives 2026-09-03 — "the viewer has to
-feel a video: image changes, animation, camera moves" — and 2026-09-05 — "the hook is video,
-one more cut at most, the rest is a still under a camera move or an HTML slide animation")
-and apply even to a channel that declares no motion policy; a profile may raise, lower, or
-switch each off with `off`:
+**The last four have plugin-wide defaults** (owner directive 2026-09-03 — "the viewer has to
+feel a video: image changes, animation, camera moves"; the 2026-09-06 choose-by-purpose directive
+replaced the earlier mandatory video hook) and apply even to a channel that declares no motion
+policy; a profile may raise, lower, or switch each off with `off`:
 
 - **`hook_video` (false)** — no mandatory generated-video opening. Every cut, including the
   cover, uses `shot.render` from [render-routing.md](render-routing.md). An explicitly enabled
   channel policy still requires a moving opening; design essential continuous action for it.
   Video caps and budget are ceilings, not quotas. Every generated cut writes `visual.why`.
-- **`max_static_ground_seconds` (8)** — one still may hold one cut. The clock resets only
+- **`max_static_ground_seconds` (8)** — guidance, not a gate (owner decision 2026-10-18):
+  one still comfortably holds one cut. The clock resets only
   when the picture itself changes: a generated clip (a motion background, a b-roll, a quote
   clip), a recording, or a new still under the next sentence (`narration[].img`). Captions, a
   counting number, ambient drift and a callout do not reset it; the still's camera move is
   what makes the cut read as footage (the builder refuses a frozen still), and it is the
-  reason the limit is a whole cut — 8 s is the top of the directing-grammar §5 length column.
-  A cut longer than that swaps the still per sentence or splits. An HTML plate is one
+  reason the guide is a whole cut — 8 s is the top of the directing-grammar §5 length column.
+  A cut that runs longer usually swaps the still per sentence or splits; `check-scenes.js`
+  and the slide read report the estimate as a finding. An HTML plate is one
   picture for its whole length, so a plate is a one-sentence card by construction. **A
   motion slide with one `motionBeats` entry per narration group** changes the picture every
   group — the primitive lands, the object moves, the value counts — so the clock runs per
@@ -1076,7 +1324,7 @@ switch each off with `off`:
   text-plate cap; static-ground duration and consecutive-still limits still apply to them.
 - **`video_budget_usd` (10)** — what one episode may spend on generated video, billed and
   projected together (`cost-preview.js` reads it and returns `!!` + exit 1 over the line;
-  storyboard §5 fits the board before asking). Stills, TTS and music sit outside it.
+  storyboard SKILL §6 fits the board before asking). Stills, TTS and music sit outside it.
 
 True motion is a b-roll or video clip, a motion background, a recording or screencast, or a
 motion slide when its kind appears in `allowedKinds`. Ken Burns, a camera move over one image,
@@ -1085,8 +1333,9 @@ shot also needs `visual.action` to say what visibly changes in the subject. A ca
 is not an action. The ratio counts playback cuts and excludes the shared outro; b-roll is placed
 at its `after` position before consecutive-still spans are measured.
 
-The format preset owns the generated-video cap when the profile has no override. Raising the cap
-does not approve the spend: the storyboard cost panel still lists every generated slot before
+The saved render ratio's band (`PRODUCTION.mode`, production-mode.md) is the generated-video
+ceiling, and a profile `generated_video_max` caps it further when declared. Raising either does
+not approve the spend: the storyboard cost panel still lists every generated slot before
 production starts.
 
 To prohibit stills completely, set `minTrueMotion: 1`, `maxConsecutiveStills: 0` and
@@ -1098,6 +1347,10 @@ zooming the whole photo, ambient drift, subtitle animation and reveal swaps rema
 ## Contracts by type
 
 ### cover — on a short, a gap or the result; on long-form, the result or the moment
+
+> story-v1 only — guidance for resumed boards; story-v2 boards follow character-scenarios.md
+> (the opening may be a silent action, and no `hookType`/`hookForm` is required). The `cover`
+> type, its field names and the thumbnail still stay runtime identifiers on every board.
 
 ```js
 {
@@ -1116,10 +1369,10 @@ zooming the whole photo, ambient drift, subtitle animation and reveal swaps rema
   statLabel: "미신고 과태료 상한",            // qualifier within 18 chars
   narration: [ {tts,sub}, {tts,sub} ],      // 2 segments — ① the hook ② the hero stat
   visual: {
-    picture: "ai-video", overlay: "html",   // example only when shot.render selects generated_video
+    picture: "ai-video", overlay: "none",   // example only when shot.render selects generated_video — nothing is drawn over the clip
     bg: "images/scene-1.png", bgPrompt: "…",  // the cover still — the thumbnail and the engine's source
-    video: { prompt: "…", clip: ".work/motion/motion-i0.mp4" },   // §motion background — silent seedance by default, title still code-rendered on top
-    camera: { movement: "dolly in", speed: "very slow", framing: "chest-up", end: "subject centred" }
+    video: { prompt: "…", clip: ".work/motion/motion-i0.mp4" },   // §motion background — silent clip on the saved video model; the title lives in the thumbnail still and the platform text
+    camera: { movement: "dolly in", speed: "slow", framing: "chest-up", end: "subject centred" }   // slow · steady · fast on a generated shot
   }
 }
 ```
@@ -1133,13 +1386,13 @@ zooming the whole photo, ambient drift, subtitle animation and reveal swaps rema
   "안 하면 과태료" in the example above is fear (`fear`).
 - hookType: the strategy this episode's opening rides — one of `fear` · `empathy` ·
   `curiosity` · `spoiler` (showing the ending). Written on the cover shot only.
-  Without it `storyboard.html` warns, and if none of the four is in the opening, it's a
-  reviewer P0.
+  Without it `storyboard.html` warns. The four are a menu for choosing the opening on purpose,
+  not a rubric — a story-v2 opening may be a silent action (storyboard-reviewer.md).
 - hookForm: **how** the first line is built — one of the six forms in §the six hook forms
   (`paradox` · `gap` · `payoff` · `identify` · `number` · `secret`). `hookType` is why the viewer
   stops (the stimulus); `hookForm` is the shape the title and segment ① take to deliver it.
   Written on the cover shot. Without it `storyboard.html` warns; a form that doesn't serve
-  the stimulus is a reviewer correction directive.
+  the stimulus is a note for the author.
 - **The first frame has no logo, no intro sting, no greeting.** The stop is decided in 0–3 s:
   a big title (≤16 chars, the gradient chip), a strong first frame (on a short: the gap, the
   person, the figure — or, on a `spoiler` cover, the finished answer; on long-form answer-first:
@@ -1148,11 +1401,10 @@ zooming the whole photo, ambient drift, subtitle animation and reveal swaps rema
   video. An explicit channel `hook_video` setting remains a constraint. Branding lives in the
   outro and the channel intro never sits in front of a short.
 - **The first second is the floor under that.** On a short, at t=0 the topic word or the figure
-  is already legible, the movement has already started, and the first subtitle cue is on screen
-  inside 1.0 s. Long-form answer-first already carries the same clause below; a `story` cover is
-  carved out of it, since its opening moment is deliberately slow. After the encode the builder
-  measures the first cue's start time and warns past 1.0 s — a warning rather than a failure,
-  because by then the episode is already built.
+  is already legible and the movement has already started (the delivered video has no subtitles,
+  so the picture and the first spoken word carry the first second). Long-form answer-first
+  already carries the same clause below; a `story` cover is carved out of it, since its opening
+  moment is deliberately slow.
 - reveal mapping: rg1=title ← segment ①, rg2=stat ← segment ②. The manifest opens on rg1, so
   the title is already on screen in the first rendered frame; there is no background-only state
   in front of it.
@@ -1161,7 +1413,7 @@ zooming the whole photo, ambient drift, subtitle animation and reveal swaps rema
 
 **On a short the cover opens a gap or states the result.** A gap cover's first frame and
 segment ① name a loss, a stake, or a question the viewer already feels, and they do not speak
-`COMPREHENSION.answer` — `check-scenes.js` hard-fails a gap cover whose spoken text carries the
+`COMPREHENSION.answer` — `check-scenes.js` reports a gap cover whose spoken text carries the
 compacted answer (8 letters or more), and the last drip is the first place that answer is
 complete. A result-first cover writes `hookType:"spoiler"` (usually with `hookForm:"payoff"`)
 and is expected to speak the answer, so the answer-dump check stands down for it; the drips
@@ -1184,10 +1436,11 @@ one contract — **the first sentence gives the listener a reason to stay.** Tha
 one of the four opening strategies below.
 
 **Don't open with the speaker reporting their own situation** — a first sentence announcing the
-speaker's actions or plans ("I tried ~", "I'm going to ~", "today I'll introduce ~") is a
-reviewer copy-mode P0. There's no reason to stay after hearing it. The same content keeps the
+speaker's actions or plans ("I tried ~", "I'm going to ~", "today I'll introduce ~") gives no
+reason to stay after hearing it. The same content keeps the
 contract with the word order flipped — "클로드 코드로 홈페이지를 만들어 봤습니다" →
-"순서 하나 바꿨더니 홈페이지가 달라졌습니다".
+"순서 하나 바꿨더니 홈페이지가 달라졌습니다". A story-v2 character telling another character
+their own situation is dialogue, not a report (storyboard-reviewer.md).
 
 Evidence: the 2026 Reels skip-rate benchmark averages 25–35%, and even educational content sits
 normally at 30–40%, while our own channel measured 84.8–93.8% across 4 episodes that opened with
@@ -1200,8 +1453,9 @@ and empathy.
 The opening rides **one or more** of the four: cover title + segment ①, then the first drip on
 a short, or hooking on long-form. Write which one it rode on the cover shot as `hookType`.
 Overlapping two is fine — the first frame showing the ending while segment ① opens on fear,
-say — and in that case `hookType` records what the sound (segment ①) rides. **An opening with
-none of the four is a reviewer copy-mode P0.** All four are open on a short.
+say — and in that case `hookType` records what the sound (segment ①) rides. An opening that
+rides none of the four is worth a second look at why the viewer stays; it is not a defect by
+itself. All four are open on a short.
 
 | `hookType` | Strategy | What it hooks | Segment ① example |
 |---|---|---|---|
@@ -1307,6 +1561,9 @@ reviewer correction directive (the strategy P0 stays the four).
 
 ### hooking — long-form only. The shot after the cover
 
+> story-v1 only — guidance for resumed boards; story-v2 boards follow character-scenarios.md.
+> The `beat:"hooking"` identifier stays valid on long-form.
+
 **Short-form does not use this beat.** After the cover a short walks `drip` shots, then `cta`
 (§playback order). `beat:"hooking"` on a short is a violation.
 
@@ -1407,8 +1664,8 @@ as `quote` when it's a character asking a question. Either way, write `beat: "ho
 
 - **The photo is the star** (produce absolute rule 14) — it isn't a slide where bullets stack
   into a list; the top block carries the title, the source, and **one active caption**. One line
-  per caption is best — `t` ≤ 12 chars, `d` ≤ 22 chars recommended. The narration and subtitles
-  say the detail.
+  per caption is best — `t` ≤ 12 chars, `d` ≤ 22 chars recommended. The narration says the
+  detail.
 - **Bullet count ≠ sentence count, but reveals go one bullet at a time** — reading several
   bullets as one sentence is normal, but their appearance on screen is split one at a time by
   produce's sub-reveals (the `A|B` notation).
@@ -1435,7 +1692,7 @@ When you **do** use on-screen text:
 | Text meant to be copied | Commands, prompts, addresses. Anything where one wrong character breaks it |
 
 When **not** to — a caption that shortens a narration sentence and moves it to the screen. The
-subtitles already do that.
+voice already says it.
 
 - A scene with one segment has **zero** captions (caption k ← segment k+1, so it works out that
   way arithmetically too). Keeping a short scene that's just picture passing by is good for the
@@ -1470,7 +1727,7 @@ subtitles already do that.
 ```
 
 - On the alpha capture only the top signature (name + role) renders — the quotation itself is
-  said by the narration and subtitles.
+  said by the narration.
 - No synthesizing a real person's face or voice. Characters only in styles that can't be
   mistaken for live action.
 
@@ -1514,8 +1771,9 @@ the field appears only where there is a table to point at.
 ```
 
 **Every shot after the first carries one.** The join is chosen from what happened between
-the two shots, one boundary at a time, and `check-scenes.js` fails a shot that has none (the
-field is written in 4b, so `--draft` reports it as later). There is no count budget and no
+the two shots, one boundary at a time, and `check-scenes.js` reports a shot that has none (the
+field is written when the shots are staged — SKILL.md §4 — so `--draft` reports it as later);
+the builder itself never guesses a missing transition (`edit-plan.js`). There is no count budget and no
 boundary where a visible join is forbidden: a join that fits its boundary is never one too
 many, and one that does not fit is wrong at any count. The first shot has nothing in front of
 it, so it takes `"dip"` (it opens out of black), `"cut"`, or nothing.
@@ -1613,9 +1871,11 @@ A `static` camera has no speed to state: leave `speed` empty there, and the asse
 reads `static camera`. `speed` reads on a still too — it sets how hard the window moves, on the beat ladder in
 directing-grammar §4 (still lane): `very slow` for explain, `slow` for the payoff, `fast` /
 `very fast` for action and CTA cards, which also accelerate to the cut point. produce §6
-converts the word into the card's `span=`/`ease=` knobs. A still with no camera keeps the
-alternating default drift — most should. `static` is not a still move: a still never sits
-frozen under the voice (owner directive 2026-09-03) — `check-scenes.js` refuses `static`/`hold`
+converts the word into the card's `span=`/`ease=` knobs. A still's move is chosen by the cut's
+purpose (`shot.render.camera`, render-routing.md — introduce a face with focus-in, inspect a
+detail then a face with rack focus, approach, pull back for context), never by the card's
+odd/even index (CLAUDE.md §Physical subjects). `static` is not a still move: a still never sits
+frozen under the voice (owner directive 2026-09-03) — `check-scenes.js` reports `static`/`hold`
 on a still, and `build-reel.sh` refuses a still card with `zoom=none` or a bare `hold`; the
 frozen frame is for footage that already moves. The reason it is
 written here and not at generation time: **the four values are settled before the first call
@@ -1648,7 +1908,7 @@ The rules that applied to the old one-string camera line now apply per slot:
   → the pace lives in `speed`). Per move: a pan, tilt, truck, pedestal, dolly or zoom names two
   different pictures in `framing` and `end`; a whip pan carries its hit in `sound.sfx` or
   `visual.audio`; a dolly zoom names its direction, carries `shot.depth` deep with the planes
-  that stretch, keeps `shot.composition.movement` stationary, and is written once per episode
+  that stretch, keeps `shot.composition.movement` stationary, and has a scene-specific purpose
   (`[dolly-zoom-twice]`). Warnings: a dolly zoom over 5 s, a whip pan over 4 s, a `fast` pan
   or tilt (24 fps strobing against vertical lines).
 - **Vendor vocabulary only** — `dolly in` not `push in`, `arc shot` not `orbit`. `push` appears 0
@@ -1656,7 +1916,7 @@ The rules that applied to the old one-string camera line now apply per slot:
   background is a previz cut on Seedance and has no Veo route, §motion background).
 - **`movement` holds one move.** Two is the ceiling on 1.5 Pro (a b-roll or speech slot that landed on Seedance), and the
   one-move-per-cut rule is Seedance 2.0's alone — write a second move only with a reason. On a
-  deliberate long take (10s+) it is one, no exception.
+  deliberate long take (10s+) start with one clear move; compound moves need a supported adapter and explicit path.
 - **No seconds in any slot** — length is `duration` (§cut length).
 - **A move the viewer can see, on a generated shot.** `very slow`, `subtle`, `gentle`, `tiny`,
   `slight`, `barely`, `restrained`, `quiet`, `hold composition` and `breathing only` are refused
@@ -1664,8 +1924,8 @@ The rules that applied to the old one-string camera line now apply per slot:
   got clips whose every frame repeats the last. Write `slow`/`steady`/`fast`, or `static` on
   purpose. `visual.video.cameraFixed:true` is legal only under `movement: "static"`. The still
   lane keeps its own ladder (`very slow` for explain) — its move is the builder's, not the model's.
-  Full video adds episode rules: static on at most one shot in three, never twice in a row, and
-  wide framing on at most half (full-video.md §Camera dynamics).
+  Consecutive static or wide shots are valid when they serve the action. Judge actual
+  subject motion and legibility rather than imposing a camera-motion quota.
 - **No exclusions in any slot** — that is Veo's `negativePrompt` argument, and for Seedance it
   means re-describing the scene so the thing doesn't appear (§motion background).
 - **The move is chosen from `shot.feel`, and it supports the feel rather than carrying it.**
@@ -1673,8 +1933,10 @@ The rules that applied to the old one-string camera line now apply per slot:
   `zoom in`, travel → `truck`, presence → `handheld`, closing → `pedestal up` …). The measured
   part is narrow — a move on its own didn't change what viewers felt (p=.84, camera research
   §07); what it raised was immersion, on cuts whose character wasn't set yet. So size, angle,
-  the picture and the sound carry the feel, the move makes the audience move with it, and for
-  most body shots `movement: "static"` is the honest answer. The finding is a move that
+  the picture and the sound carry the feel, the move makes the audience move with it, and on a
+  partial-ratio board most body shots can honestly say `movement: "static"` — in `full_video`,
+  where every scene is a clip, the §Camera dynamics ration above (static on at most one shot in
+  three, never twice in a row) applies instead. The finding is a move that
   **contradicts** the declared feel, or a feel left to ride on the move alone.
 
 `shot.size` and `shot.angle` are different axes and stay where they are — `size` is where the
@@ -1708,7 +1970,8 @@ when two people (or a person and what they look at) share the scene — that is 
 sentence the shooting script prints. Slide scenes have no still, so they skip this block.
 
 The words, the banned forms, and the assembly order live in `directing-grammar.md` §3.5.
-`assemble-bg-prompt.js` is the machine form: storyboard §5 runs it with
+`assemble-bg-prompt.js` is the machine form: the storyboard runs it when the shot plan is written
+(SKILL.md §4) with
 `--scene`·`--mood`·`--exclude` and stores the full stdout as `bgPrompt`; produce reruns it only
 when a `shot` field changed on a still it regenerates (a plain regeneration resends the stored
 string). produce assembles a video prompt from the camera slots and adds nothing from `space` —
@@ -1754,8 +2017,8 @@ do not require eye height. A POV normally has no visible face. An ECU of eyes ca
 `headroom:"cropped"`; an object insert uses `subjectKind:"object"`.
 
 **Compatibility:** a scene with no composition records gets warnings on recognizable face,
-facing or gaze cuts. Once a scene uses composition, missing relevant records block full
-checks (draft defers them). Presence detection uses shot size, space.facing and eyeline;
+facing or gaze cuts. Once a scene uses composition, a missing relevant record is reported in the
+full check (draft defers it). Presence detection uses shot size, space.facing and eyeline;
 it cannot discover undeclared actors or action from pixels. Explicit invalid fields always fail.
 
 Standard lateral gaze must reserve lookRoom on the gaze side; lateral travel must reserve
@@ -1878,9 +2141,9 @@ of the axis. It is not `shot.angle`, which only records camera height. Two adjac
 in one scene that change size by fewer than two ranks need azimuths at least 30 degrees apart, or
 the incoming shot names `coverage.action` for the visible action that hides the cut. The rule
 re-films one subject: `two`·`three`·`ots`·`pov`·`back`·`cutaway`·`reaction` have no rank and are
-outside it, and a shot whose `lineCrossing` passes its checks is its own escape. The full check blocks a
-missing or insufficient record; the story pass (`draft` on `storyboard_apply` and
-`storyboard_check`) defers it until camera work.
+outside it, and a shot whose `lineCrossing` passes its checks is its own escape. The full check
+reports a missing or insufficient record as a warning (`structure-contract.js`); the story pass
+(`draft` on `storyboard_apply` and `storyboard_check`) defers it until camera work.
 
 produce runs fine on an old `scenes.js` without `space`. The check strip warns; camera mode
 scores the gap; image mode compares the PNG to `layout` and `facing` when they are written.
@@ -1950,7 +2213,7 @@ What to write depends on whether the clip's own sound survives the build:
 | The shot | What its audio does | What to write |
 |---|---|---|
 | `broll` | kept — `narration` is empty and the clip's own sound plays (absolute rule 9) | what the viewer should hear: room tone, one texture, no speech |
-| motion background (`visual.video`) | discarded — TTS, subtitles and BGM carry on over it | write it anyway; the model composes a calmer clip when it isn't left to invent a soundtrack |
+| motion background (`visual.video`) | discarded — TTS and BGM carry on over it | write it anyway; the model composes a calmer clip when it isn't left to invent a soundtrack |
 | `quote` speech clip | the character speaking is the point | what is heard besides the voice — the room, and nothing else |
 
 ### Clip prompt — one scene, one call, the prompt stored here
@@ -2053,7 +2316,7 @@ window.MUSIC = {
     ambienceSeparationLu: 15,          // room tone under the speech (amb.tsv)
     cueCrossfadeSeconds: 2,
     hook: { attenuationLu: 6, releaseSeconds: 2 },
-    ducking: { ratio: 8, attackMs: 20, releaseMs: 250 },
+    ducking: { ratio: 8, attackMs: 20, releaseMs: 250, threshold: 0.02, mix: 1, lookaheadMs: 0 },
     endingFadeSeconds: 2.2,
     silenceRampSeconds: 0.3
   },
@@ -2092,6 +2355,7 @@ Per shot:
 ```js
 sound: {
   cue:  "tense",    // the bed changes to this cue here and stays until another shot changes it
+  musicGain: [{ atSeconds: 0, gainDb: -6 }, { atSeconds: 2, gainDb: 0 }],
   drop: false,      // true = the bed goes silent under this shot (0.30s ramp, not a cut)
   sfx:  "whoosh-soft",  // a key in window.SFX (or a channel sfx catalog id), heard at the shot's first frame (§sound effects)
   ambience: "room-office", // a loop in window.SFX — the room tone starts here and holds until a shot names another or ends it with null
@@ -2111,15 +2375,14 @@ When adding `effects` or `silence` to an existing `sound` object, merge the new 
 its `sfx`, `cue`, `drop` and `ambience` values unless the storyboard intentionally changes them.
 `effects[].sfx` uses the same logical id as the legacy `sound.sfx`: a key in `window.SFX`, or a
 channel SFX catalog id when the book is absent. It does not introduce `sfxId`, a file path or a URL.
-Likewise, music continues to use cue names and each cue's existing `asset` id. The attachment
-record owned by the portal stores the physical file and rights metadata; the board stores design
+Likewise, music continues to use cue names and each cue's existing `asset` id. The local asset catalog stores file paths and rights metadata; the board stores design
 and logical ids only.
 
 `window.MUSIC.$mix` is reserved metadata, not a cue. Every member is optional. Omitted values take
 the builder's existing defaults, and omitting `$mix` entirely leaves a legacy board on its old
 manifest and mix path. `targetLufs` and `truePeakDbtp` are this project's delivery values; YouTube's
 public help describes Stable volume but does not publish a numeric upload target. `bedSeparationLu`
-sets the music below measured narration; `minimumSeparationLu` is the speech-time build floor.
+sets the music below measured narration; `minimumSeparationLu` is a speech-time review warning, never an execution gate.
 `ambienceSeparationLu` does the same for the room-tone bed (`AMB_SEP`, 15 by default), which is laid
 once and never ducked.
 
@@ -2131,26 +2394,31 @@ cue-span precision and avoiding crossfades shorter than an audio sample. Zero `c
 ending fade, zero `silenceRampSeconds` makes a hard mute window, and zero
 `hook.releaseSeconds` disables hook attenuation. Omitting these settings preserves the builder's
 existing defaults. Bed and ambience separation are gain targets; measured speech-to-bed separation
-still has to satisfy the requested floor after mixing.
-
-Empty `$mix` keys are filled from the channel's portal defaults (`GET /projects/{id}/sound`) when
-`portal_episode_music_update` writes the board — key by key, nested blocks included, and only where
-the episode said nothing. Whatever the episode already carries wins, so the resolution order is shot
-> episode `$mix` > project `sound` > the builder's defaults, and the board stays the single place
-anything reads it from. The fill is a snapshot: changing the project defaults later does not reach an
-episode that has already been written, which is what keeps a rebuild reproducible. The tool reports
-the keys it filled as `filledFromProjectSound`, on a failed write as well as a saved one, so a
-board the checker rejected shows whether a project default is what broke it. Keys with a
-cross-field rule fill as one block: an episode that wrote either `bedSeparationLu` or
-`minimumSeparationLu` gets neither from the project, because filling half the pair can produce
-a `$mix` that contradicts itself and fails the whole write.
+is reported against the requested review threshold after mixing.
 
 `drop` carries the same card restriction the silence window carries — `broll` and `outro` are
 refused. An outro drop put in to clear room for the brand sting used to spend one of the two
 reversal places below.
 
+`sound.musicGain` is an optional, shot-relative array of `{atSeconds, gainDb}` points.
+It starts at zero seconds, increases strictly in time (whole milliseconds), and stays inside
+both the planned and actual rendered duration. Gain spans -60 to +12 dB relative to the
+measured bed. The builder interpolates linearly in dB, holds the last point to the shot end,
+and resets to 0 dB on the next shot. Match endpoints across adjacent shots to avoid a jump.
+It affects music only, before ducking; silence/drop still wins. Use it for an entrance,
+a restrained explanation or a swell after speech. It does not separate instruments.
+Only narrated cards support it; b-roll and outro keep their separate audio paths.
+
+`ducking.threshold` controls detector sensitivity (linear amplitude, 0.001–1).
+`ducking.mix` blends compressed and dry bed (0–1); 0 disables ducking, 1 is legacy full wet.
+`ducking.lookaheadMs` (0–500) advances only the detector, never the voice or picture.
+These controls do not recognize sentences; use an authored curve across a deliberate pause.
+Legacy settings remain unchanged. For a new dialogue-heavy drama, compare ratio 3,
+releaseMs 600, lookaheadMs 120 and mix 0.7 against the legacy mix; these are listening
+starting points, not standards or guaranteed attenuation depths.
+
 **Reversal places are a short's budget of two.** A shot with `drop: true`, or one carrying any
-`silence` window, is one reversal place, and `check-scenes.js` refuses a third **on a short**.
+`silence` window, is one reversal place, and `check-scenes.js` reports a third **on a short**.
 Long-form carries no reversal ceiling — the KB sentence this comes from is about shorts
 ("같은 쇼츠에서 두 번 이상은 피한다"), and a 10-minute episode has room for more (decision 2026-10-02). The unit is the
 shot, so a card that both drops the bed and empties a window still counts once. Impacts are not
@@ -2266,8 +2534,15 @@ only figures here with published listening tests behind them. Where a cue change
 
 ### Cut length (`duration`) — decided by what the cut is for
 
-A shot carrying narration takes its length from the speech — narration characters / 4.5, capped at
-13s. That math is fixed; TTS, reveals and subtitles are synced to it.
+> story-v1 only — guidance for resumed boards; story-v2 boards follow character-scenarios.md and
+> derive time from the performance (storyboard SKILL §5). The engine length ranges below apply
+> to every board.
+
+A shot carrying narration took its length from the speech on story-v1 boards — narration
+characters / 4.5, capped at 13s — and that number is a legacy estimate, not the audio length
+(the `duration` row in §fields common to every shot). A story-v2 board times the shot from the
+measured speech and the independent actions (`performance`, `SB_DOC.performanceTimingVersion:1`);
+reveals are laid under the measured clock.
 
 **A generated video clip is a different question.** Its length is a design choice, and the model
 fills whatever time it is handed: ask 8 seconds for a 4-second idea and it invents the other 4 —
@@ -2304,9 +2579,10 @@ the tail at the scene boundary.
 ### Motion background (`visual.video`) — a scene background from image to video
 
 **Seedance model selection** — store `modelPurpose` (`standard`, `complex-motion`,
-`reference`, `fixed-voice`), `modelReason`, `realFaceInput`, optional exact `model`, and
-`resolution` beside the clip prompt; `modelReason` is optional. A motion background carries
-a previz and chooses its model per cut. Seedance 1.x uses `frame_and_prompt`; 2.x can use
+`reference`, `fixed-voice`, or `previz` when a previz clip rides as the reference video),
+`modelReason`, `realFaceInput`, optional exact `model`, and
+`resolution` beside the clip prompt; `modelReason` is optional. A motion background chooses its
+model per cut and may carry a previz. Seedance 1.x uses `frame_and_prompt`; 2.x can use
 `reference_video`. `PRODUCTION.videoModel` records the default or `model:"mixed"`. Reference panels select 2.0 (2.5 above
 nine images); fixed reference voice selects 2.5 on b-roll/speaking slots only. Reference paths are `referenceImagePaths` and
 `referenceAudioPaths`, relative to this storyboard directory or absolute. A source still
@@ -2314,20 +2590,24 @@ alone stays on image-to-video. The full contract is produce `video-model-selecti
 §Seedance per-cut selection. Check-scenes validates it and cost-preview returns the exact
 resolved generation settings.
 
-**The previz — on every generated cut** (user directive 2026-09-11) — `previz: { renderer,
+**The previz — optional on a generated cut** (owner decision 2026-10-18) — `previz: { renderer,
 clip, firstFrame, sha256, fps, seconds, camera: { movement }, handoff?, actors?, blend? }`: a
 Blender (`renderer:"blender"`) or three.js (`"threejs"`) previz rendered at the billed length
-(whole seconds, 24 fps, clean mp4, one flat colour per actor). `camera.movement` is the move the
-clip performs and must equal `visual.camera.movement`; `firstFrame` is frame 1, the composition
-the source still is edited from. On the Seedance route (`modelPurpose: "previz"`,
-`handoff: "reference_video"`) the clip rides as `Video 1` and `referenceImagePaths[0]` must be
+(whole seconds, 24 fps, clean mp4, one flat colour per actor). It helps camera and blocking when
+the model takes a reference clip — Seedance 2.x with `modelPurpose: "previz"`,
+`handoff: "reference_video"`: the clip rides as `Video 1` and `referenceImagePaths[0]` must be
 the source still (`Image 1 is the first frame`); no end frame, since the reference lane cannot
 carry `last_frame`; the prompt binds both and closes the clay read with `Do not reference its
-visual content`, and the vendor bills the previz seconds alongside the output seconds. On
-`engine: "host"` the handoff is `frame_and_prompt` — the still and the prompt carry the previz.
-`check-scenes.js` refuses a `generated_video` cut with a `visual.video` slot and no previz
-(deferred in `--draft`); b-roll and speech clips ride the Veo sound lane and carry none. Contract, both renderers and the prompt skeleton: `blender-previz.md` §6.
-Example of an eligible action hook:
+visual content`, and the vendor bills the previz seconds alongside the output seconds. For a
+`frame_and_prompt` adapter (Seedance 1.x, `engine: "host"`) it is advice only: the still and the
+prompt carry what the previz worked out. `camera.movement` is the move the clip performs and
+must equal `visual.camera.movement`; `firstFrame` is frame 1, the composition the source still is
+edited from. `check-scenes.js` advises on a `generated_video` cut without one and never refuses
+it; the renderer comes from `production.previzRenderer` in `.social-flow/models.json`, and when
+none is saved the author picks one and records it as an assistant decision. B-roll and speech
+clips on the Veo sound lane carry none. Contract, both renderers and the prompt skeleton:
+`blender-previz.md` §6. Example of an eligible action hook (no previz — the 1.5-grade
+`frame_and_prompt` shape):
 
 ```js
 video: {
@@ -2337,6 +2617,9 @@ video: {
   prompt: "…", clip: ".work/motion/motion-i0.mp4"
 }
 ```
+
+With a previz on a 2.x grade the same slot adds `modelPurpose: "previz"` and the `previz` record
+above.
 
 Use the same fields in `visual` for b-roll and `visual.clip` for speaking clips.
 An actual photoreal face, including a generated face, is ineligible for 2.x. Keep such
@@ -2349,23 +2632,24 @@ an action on 1.5 or a compatible Veo route instead.
   duration: 8,                        // one playthrough of the clip covers the scene — veo 8s, seedance 4–15s (2.0 grades) / 4–30s (2.5) on the previz route
   narration: [ {tts, sub}, … ],       // kept — unlike b-roll, only the background moves while you talk
   visual: {
-    picture: "ai-video", overlay: "html",
-    bg: "images/scene-3.png",         // the veo parameter — gpt_image high · the §broll source clause (photorealistic people) applies as-is
+    picture: "ai-video", overlay: "none",   // nothing is drawn over the clip
+    bg: "images/scene-3.png",         // the source still — made with the saved image model in the episode's style preset (§broll source clause)
     bgPrompt: "…",
     video: {
-      prompt: "chest-up, very slow dolly in, ending on subject centred. hair swaying gently. Audio: quiet room tone, no music, no speech.",
+      prompt: "chest-up, slow dolly in, ending on subject centred. hair swaying gently. Audio: quiet room tone, no music, no speech.",
                                            // the stored final clip prompt (§clip prompt) — camera span from visual.camera + subject motion + the audio sentence
-      negative: "",                        // unused on a motion background since the previz uses the selected Seedance model (no Veo fallback); b-roll on veo fast/standard sends it as negativePrompt, lite never
+      negative: "",                        // unused on a motion background on the selected Seedance model (no Veo fallback); b-roll on veo fast/standard sends it as negativePrompt, lite never
       clip: ".work/motion/motion-i2.mp4"   // produce output record — motion-i<scene index>.mp4
     },
-    camera: { movement: "dolly in", speed: "very slow", framing: "chest-up", end: "subject centred" }
+    camera: { movement: "dolly in", speed: "slow", framing: "chest-up", end: "subject centred" }   // slow · steady · fast on a generated shot
   }
 }
 ```
 
 This takes the image the storyboard already showed, **makes a video from it as a parameter, and
-lays it under the scene background**. The caption and subtitle overlays go on top via the alpha
-capture (produce §4, §6).
+lays it under the scene** — and nothing goes on top of it: no caption, title or subtitle
+(CLAUDE.md §Nothing is drawn over video; produce 2026-10-17). Text the viewer must read belongs
+on its own authored screen.
 
 **The storyboard picks the planned route, and produce validates it** — the route is
 deterministic from facts the storyboard already writes (who is in the source, whether the slot
@@ -2420,10 +2704,10 @@ either way (absolute rule 10); this is about words that live inside the picture.
   reason written in `visual.why`. A place to show only the picture with nothing said is
   `broll` (spliced between scenes); **when the background has to move while you talk, that's
   a motion background**. Every other spoken beat is a still under its camera move (the still
-  lane — one still per cut, at most `maxStaticGroundSeconds`, a longer cut swaps the still per
-  sentence with `narration[].img`) or an HTML motion slide, and the channel's true-motion
-  floor and still-run limits still have to be met. Video buys cost and seam risk; the format
-  cap of 2 and the per-episode `videoBudgetUsd` are the ceiling.
+  lane — one still per cut, `maxStaticGroundSeconds` as the guide, a longer cut swaps the still
+  per sentence with `narration[].img`) or an HTML motion slide, and the channel's true-motion
+  floor and still-run limits still have to be met. Video buys cost and seam risk; the saved
+  render ratio's band and the per-episode `videoBudgetUsd` are the ceiling.
 - **Start from the shot's `feel`, not from "this scene is heavy, so push the camera in"** — read
   the directing-grammar §5 row for that feel and take its move; the picture (`bgPrompt`), the
   size and the angle carry the tone, the move supports it (a move on its own didn't change
@@ -2448,25 +2732,26 @@ either way (absolute rule 10); this is about words that live inside the picture.
   makes the next set of metrics unable to separate what worked (the same logic as cost-tiers
   §promotion freeze — that one is the unattended loop, this one is human planning). Experiment
   one slot at a time once the baseline is set.
-- **The combined generated-video cap — this section is the source of truth**: the selected
-  format supplies the default, and `generated_video_max` in the channel profile may override
-  it. Count b-roll slots + motion-background scenes together; quote speech clips do not count.
-  Going over the effective cap gets a red badge from the `storyboard.html` check strip.
+- **The combined generated-video ceiling** is the saved render ratio's band (`PRODUCTION.mode`
+  with `renderRatioVersion: 1`, production-mode.md) and, when the channel profile declares one,
+  `generated_video_max`. The ratio is a planning target and the cost ceiling: the band's upper
+  bound and the budget are enforced, the lower bound is not — fewer generated cuts than the
+  target is reported, never padded with video. Count b-roll slots + motion-background scenes
+  together; quote speech clips do not count. Going over the ceiling gets a red badge from the
+  `storyboard.html` check strip.
 - **On any scene the cut plan routes to video** — since 2026-09-06 the cover goes through the
   same `shot.render` choice as every other cut (§cover), and a channel's `hook_video` may require
   it; before that (2026-08-15) a video cover needed a per-episode user directive. For quote,
-  `clip` plays that role. The body of absolute rule 10 stands —
-  **the text is still a code-rendered overlay** and generated video isn't trusted with text.
-  Two contracts come attached when using a video cover: **anchor the text at the top** (there's
-  no guarantee the center stays empty when the subject moves — the template does this
-  automatically when it sees a cover with `visual.video`), and if you leave the narration
-  empty, that stretch **uses the clip's own audio** (the same behavior as absolute rule 9, so
-  no subtitles either). No scrim backs the text up any more — gradient scrims are off (owner
-  2026-08-25) — so check the clip's top stays dark or plain enough for white type before
-  committing to a video cover.
-- **Narration and subtitles are kept** — absolute rule 9 (use the video's audio, no narration) is
+  `clip` plays that role. **Nothing is drawn over the clip** — no title, hero stat or caption
+  (CLAUDE.md §Nothing is drawn over video): a video cover's title lives in the thumbnail still
+  and the platform text, a figure the viewer must read gets its own authored screen, and
+  generated video isn't trusted with text inside the picture either (absolute rule 10). If you
+  leave the narration empty, that stretch **uses the clip's own audio** (the same behavior as
+  absolute rule 9).
+- **Narration is kept** — absolute rule 9 (use the video's audio, no narration) is
   about b-roll **splice stretches**. For a motion background the builder uses only the video
-  track, so the clip's audio is discarded and TTS, subtitles, and BGM carry on.
+  track, so the clip's audio is discarded and TTS and BGM carry on; the delivered video has no
+  subtitles, and a subtitle file is a sidecar made only on request.
 - **Not combined with per-line illustrations (`narration[].img`)** — a motion background lays one
   video across the whole scene, so per-segment background swapping can't hold (the alpha capture
   has only text). To turn an illustration-mode scene into video, use the single representative
@@ -2474,8 +2759,9 @@ either way (absolute rule 10); this is about words that live inside the picture.
 - Keep `duration` inside one clip — made with Veo it's fixed at 8s, so anything inside that is
   covered by one clip; Seedance makes only as many seconds as you ask and bills that much, but
   the 2.0 grades take **4–15s** and 2.5 **4–30s** (server-validated), and the check strip warns past the
-  route's cap. The narration math (characters / 4.5, capped 13s) can outrun that cap — a
-  13-second narration on a motion background is a storyboard defect: trim the narration or
+  route's cap. A long performance can outrun that cap — the legacy estimate (characters / 4.5)
+  shows it early, the measured speech and action timing (storyboard SKILL §5) shows it exactly —
+  and a 13-second sentence on a motion background is a storyboard defect: trim the narration or
   split the scene. A clip shorter than its scene loops, and the loop shows its seam.
 - The plan check is the same as b-roll's (absolute rule 13) — go through the rule's list
   yourself before calling veo; the plan-mode delegation of 0.49 is not part of the flow.
@@ -2496,7 +2782,7 @@ either way (absolute rule 10); this is about words that live inside the picture.
     src: "images/scene-1.png",       // the same file as `SCENES[after]`'s visual.bg — absolute rules 8 and 12
     clip: ".work/broll/broll-a0-mixed.mp4",   // the trim + loudnorm + BGM mix (the 8s original is broll-a0.mp4)
     camera: {                                 // §camera — the span of the stored prompt is assembled from these four
-      movement: "dolly in", speed: "very slow",
+      movement: "dolly in", speed: "slow",    // a generated shot takes slow · steady · fast — `very slow` is the still lane's word
       framing: "chest-up on the subject", end: "subject centred at mid-frame"
     },
     audio: "quiet studio room tone with a faint fabric rustle, no music, no speech",
@@ -2539,21 +2825,21 @@ opening and the other sits where a run of still cuts is dragging.
   cover's own moving form is the motion background under its title (§cover).
 - `src` is **the same file as `SCENES[after]`'s `visual.bg`** (absolute rule 12) — the transition
   is the photo the previous scene showed as a still starting to move, so one image does two jobs.
-  It has to be a PNG of a photorealistic person scene (Korean women by default, per the profile §3
-  target) made at `quality: "high"`, and since it's the reference point for reproduction, don't
-  delete it.
-- **Make the background of a scene with b-roll attached with `gpt_image_text2img` (high)** — the
-  default engine for points backgrounds is the local Z-Image (§5 engine split), but images that
-  become veo input are the exception. A blurry source makes a blurry video and wastes the veo
-  spend. A still life with no people is out too (absolute rule 11 — the model finds nothing to
-  move and the 8 seconds look like a still frame).
+  It is a PNG in the episode's visual-style preset (a photoreal person scene only when the preset
+  is photoreal; who is in frame comes from the story and the cast, not from a default
+  demographic), and since it's the reference point for reproduction, don't delete it.
+- **Make the background of a scene with b-roll attached with the image model saved in
+  `.social-flow/models.json`** (model-settings.md) — the same model as every other still; no
+  recipe here substitutes another engine. Ask it for a sharp source: a blurry source makes a
+  blurry video and wastes the video spend. A still life with no subject that can move is out too
+  (absolute rule 11 — the model finds nothing to move and the 8 seconds look like a still frame).
 - **Filename convention**: the 8s original is `.work/broll/broll-a<after>.mp4`, the trim + mix is
   `.work/broll/broll-a<after>-mixed.mp4`. Putting `after` in the name keeps the two slots from
   overwriting each other. Older episodes' `cover-broll.mp4` and `cover-broll-mixed.mp4` remain
   valid.
 - **Check these scenes and the cover bgPrompt against absolute rule 13's list before any
-  generation call** — don't call image or video generation (image_local_generate, gpt_image
-  high, veo) on a plan that fails a point. The plan-mode delegation of 0.49 is not called.
+  generation call** — don't call image or video generation (the saved image and video models,
+  through `video_plan`) on a plan that fails a point. The plan-mode delegation of 0.49 is not called.
 
 ### outro — a brand close with a next value (reference only)
 
@@ -2569,10 +2855,11 @@ opening and the other sits where a run of still cuts is dragging.
   `"구독해 주세요"`. For a serial, say the result they'll get in the next episode; for a one-off,
   say one line of channel value about continuing to solve the same problem. If the shared outro
   video has fixed wording, promise the next result in the main body's last narration instead.
-- **The outro never carries the share trigger.** `shot.share` lives on the spoken `beat:"cta"`
-  shot, because a channel can switch the outro off and the forwardable thing has to survive
-  that. The closing meaning works the same way — the outro carries the brand, the `beat:"cta"`
-  shot carries the close.
+- **The outro never carries the share trigger.** When a board writes `shot.share`, it lives on
+  the `beat:"cta"` shot, because a channel can switch the outro off and the forwardable thing
+  has to survive that; the field itself is optional (§fields common to every shot). The closing
+  meaning works the same way — the outro carries the brand, the `beat:"cta"` shot carries the
+  close.
 - **On short-form the outro is a channel choice.** `shortform_outro` in `profile.md` front
   matter is `on` (the default when the key is absent) or `off`. With it off, no `type:"outro"`
   entry is written at all, `SB_DOC.outro` is null, and the `beat:"cta"` shot's last frame is
@@ -2636,8 +2923,8 @@ in one episode.
   scene: 4, sceneSlug: "terminal / day",
   beat: "result",
   shot: { feel: "relief — it really runs", size: "ms", angle: "eye", info: "that one command really runs the whole thing" },
-  title: "이게 진짜 도는 화면이야",          // the spoken hook that appears in the lower third
-  bullets: [{ t: "명령 한 줄", d: "나머지는 알아서 돈다" }],
+  title: "",                                  // nothing is drawn over a recording (§no text over the recording)
+  bullets: [],
   duration: 24,                               // filmed scenes have no cap
   narration: [],                              // empty when using the live voice (the two lanes below)
   visual: {
@@ -2710,18 +2997,14 @@ per scene.
 `voice/` sits at the same level as `footage/` (the episode root), and the storyboard decides
 the filenames and prints them in script.md — the same rule as the filmed clips.
 
-#### On-screen text sits in the lower third
+#### No text over the recording
 
-A filmed scene's `title`, `bullets`, and `footnote` sit in a **band at the bottom left**. They
-don't fill the zones like a generated scene does, because the part the user is demoing is the
-upper screen — covering it with text hides what the cut is showing. The top 60% of the
-screen stays clear throughout, and no scrim backs the band (gradient scrims are off — owner
-2026-08-25), so the footage itself keeps the lower third readable.
-
-- Captions are still **one at a time** (a swap). Being a filmed scene doesn't mean lining several
-  up.
-- A filmed scene with no text at all is normal — if the screen is already saying it, leave it
-  empty.
+Nothing is drawn over a filmed clip — no `title`, `bullets`, `footnote` band, no subtitle
+(CLAUDE.md §Nothing is drawn over video; produce 2026-10-17). The recording is the whole
+picture; what the sound has to say, the narration says, and a figure the viewer must read
+goes to its own authored screen before or after the clip. A subtitle file is a separate
+sidecar made only on request. The fields may stay in the shot for the approval page and
+script.md; leave them empty on a filmed scene.
 
 #### Don't film in portrait
 
@@ -2790,10 +3073,9 @@ Rules that follow from the route:
 - **A stock clip is a supplied file, not a generated slot.** It sits outside
   `generated_video_max`, bills nothing, and does not free a slot for one more generated cut
   either. On a short it satisfies the hook rule the way a recording does.
-- **Its audio is discarded.** TTS, subtitles and BGM run over it as over a motion background.
+- **Its audio is discarded.** TTS and BGM run over it as over a motion background.
   A clip whose own sound is the point is the user's recording, not a stock cut.
-- **Nothing is drawn over it** — the rule above every other rule. The burned subtitle is the
-  only type on it.
+- **Nothing is drawn over it** — the no-marks rule covers every moving picture, a stock clip included. A subtitle file is a separate sidecar made only on request.
 - **Credits go into the platform text.** Every `attributionRequired: true` record is listed
   under a 출처 line at the end of the YouTube description and of the Instagram and Facebook
   captions; produce §6 collects them. Pexels, Pixabay and government works get the same line
@@ -2830,7 +3112,7 @@ still TTS, the card is still an ordinary card, and only the picture comes from a
   scene: 3, sceneSlug: "the terminal / day",
   beat: "result",
   shot: { feel: "relief — it really runs", size: "insert", angle: "eye", info: "that one command runs the whole thing" },
-  title: "명령 한 줄이면 끝이야",
+  title: "",                        // nothing is drawn over the recording — the screen itself is the picture
   duration: 7,
   narration: [ /* ordinary TTS segments — the recording is muted under them */ ],
   visual: {
@@ -2887,9 +3169,9 @@ shot, baked into clips by seek-rendering, checked by `check-slide.js`, and judge
 
 Everything else is shared and does not change per kind: the file naming
 (`slides/s<shot number>-<slug>.html`), reveal groups 1:1 with narration segments, the state rule,
-the determinism contract, the zone, no `bg`/`bgPrompt`, no §5 image generation, the design gate
-at score ≥ 95 with p0 = 0. **A new kind is a new template and new design rules — not a new
-pipeline.**
+the determinism contract, the zone, no `bg`/`bgPrompt`, no §5 image generation, the author's
+sheet read against slide-design.md §6 (a reviewer score on request, with no acceptance
+threshold). **A new kind is a new template and new design rules — not a new pipeline.**
 
 Two rules bind every kind:
 
@@ -2947,12 +3229,13 @@ slide.**
 | `slide.role` | ✅ on `treatment:"editorial"` | `evidence` · `relationship` · `mechanism` · `timeline` · `statistic` · `transition` · `verdict` |
 | `slide.motif` | ✅ on `treatment:"editorial"` | The episode-wide visual device repeated across authored frames: signal line, evidence stamp, paper tear, date rail, or another concrete device |
 | `slide.motionBeats` | ✅ when `shot.infoType` is `timeline` · `statistic` · `principle` | One `{group, primitive}` per narration group. The declared primitive has to exist in the rendered DOM for the same group |
-| `slide.quality` | required on editorial diagrams | `"object-state-v1"`. The planning gate rejects missing or unknown contracts, including draft boards. See `object-state-quality.md` |
-| `slide.subject` | required on editorial diagrams | `{kind:"object"\|"data"\|"type", changes:[{group,before,after,driver}]}`. One observable change per narration segment. Physical subjects require `slide.object`; camera motion and settle do not qualify. `object-state-quality.md` defines the drivers and production review |
+| `slide.quality` | recommended on editorial diagrams | `"object-state-v1"`. `check-scenes.js` and `check-slide.js` report a missing plan as a warning; an unknown version is an error (`slide-quality.js`). See `object-state-quality.md` |
+| `slide.subject` | recommended on editorial diagrams | `{kind:"object"\|"data"\|"type", changes:[{group,before,after,driver}]}`. One observable change per narration segment is the guide (a different count is a warning); the shape of each change — group order, distinct before/after, a driver the kind allows — is checked. Physical subjects use `slide.object`; camera motion and settle do not qualify. `object-state-quality.md` defines the drivers and production review |
 | `slide.object` | optional on `treatment:"editorial"` | A **rendered object** (`rendered-object.md`, slide-design.md §9) — `{ file, shape, keys, frames, plan }`. `file` is the baked sheet `slides/assets/s<shot>-<slug>.png`; `shape` a name in `bake-object.py` (`disc`); `keys` and `frames` the bake arguments, so the sheet is reproducible from this file; `plan` what the object does on which sentence. With `renderer:"mesh"` the object is a mesh recipe drawn by the browser (`mesh-objects.md`: `{ renderer, file, style, plan }`); with `renderer:"blender"` the same recipe is baked by Blender Cycles into a sheet (`blender-objects.md`: `{ renderer, file, sheet, style, engine, samples, fps, plan }`). The groups where the object arrives or recedes declare `object-move` in `motionBeats`. Baked at the slide authoring step, before `check-slide.js` |
 
-The frame design is part of what the user approves, so storyboard renders and reviews key
-states before §7. Author only text already present in `title`, `bullets`, and `slide.labels`.
+The plan — `plan`, `labels`, `motionBeats`, `arts` — is what the storyboard delivers; the HTML
+is authored, rendered and read in produce §3.6, after the board is approved (slide-authoring.md).
+Author only text already present in `title`, `bullets`, and `slide.labels`.
 
 - A slide scene has no `bg` or `bgPrompt` — it drops out of produce §1.5's stills and their
   image check; a missing `scene-N.png` there is not a defect.
@@ -2968,10 +3251,13 @@ A moving diagram states which of three jobs HTML is doing. `check-scenes.js` and
 `check-slide.js` reject an omitted treatment so a still photo with a moving box cannot quietly
 stand in for a designed frame.
 
-`"editorial"` means **HTML is the frame**. It composes archival documents, dates, maps, source
-labels, type, lines, masks, and evidence into one screen. Use it when the viewer must compare two
-claims, follow cause and effect, understand a mechanism, read a timeline, cross a transition, or
-feel the verdict land. A short informational episode uses as many editorial frames as its cuts need (no fixed
+`"editorial"` means **HTML is the frame** — a slide *treatment*, not a render route. It composes
+archival documents, dates, maps, source labels, type, lines, masks, and evidence into one screen.
+Use it when the viewer must compare two claims, follow cause and effect, understand a mechanism,
+read a timeline, cross a transition, or feel the verdict land; the cut's `shot.render.mode` is
+still chosen by purpose (`object_html` for a mechanism, `data_graph` for a measured comparison,
+`motion_html` for an abstract motion scene), and only the text-led quote or verdict cut takes the
+limited `editorial_html` route (§fields common to every shot). A short informational episode uses as many editorial frames as its cuts need (no fixed
 count — CLAUDE.md §Choose each cut by purpose). Give them one shared `motif`; vary the composition and let the motif provide continuity. Two to four atomic
 moves may happen across the scene, but only one primary read changes at a time.
 
@@ -2979,7 +3265,7 @@ An editorial frame is not a text treatment for a photo. When it uses a local sca
 symbol, that raster is one plate inside a constructed visual argument. Put at least two authored
 actors or relations on screen — for example, two paper fragments converging on a source card, a
 date rail joining documents, or a signal line linking an eye gesture and a hand gesture to a
-clearly labelled online interpretation. `check-slide.js` blocks a raster-only editorial file;
+clearly labelled online interpretation. `check-slide.js` warns on a raster-only editorial file;
 the author's read of the rendered sheet (produce §3.6) judges the result; `slide-reviewer`
 grades it to the same rubric when the user asks for that read.
 
@@ -2989,17 +3275,17 @@ the studio stage** (user directive 2026-09-05 — nothing is drawn over video; C
 runs; a thing is a rendered object (`slide.object`, §9 of slide-design.md); the bar is
 `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`. These slides sit outside
 `htmlPlateMax`, and because every group declares a movement the static-ground clock runs per
-group. `check-scenes.js` rejects another visual, `check-slide.js --require-all` rejects a
-missing HTML file, and `render-motion-slide.mjs` rejects a declared movement that is absent
-from the rendered frame:
+group. `check-scenes.js` reports another visual on these types, `check-slide.js --require-all`
+fails a missing HTML file, and `render-motion-slide.mjs` stops on a declared movement that is
+absent from the rendered frame:
 
 `object-move` is the primitive of a rendered object (`slide.object`) arriving, turning or receding —
 allowed on all three types, because the sentence's value can be the thing itself.
 
-| `shot.infoType` | Required `slide.role` | Allowed `motionBeats[].primitive` |
+| `shot.infoType` | Required `slide.role` | Allowed `motionBeats[].primitive` (`check-scenes.js` `INFO_PRIMITIVES`) |
 |---|---|---|
-| `timeline` | `timeline` | `date-enter` · `range-grow` · `event-link` · `object-move` |
-| `statistic` | `statistic` | `count-up` · `bar-grow` · `dot-fill` · `axis-draw` · `object-move` |
+| `timeline` | `timeline` | `date-enter` · `range-grow` · `event-link` · `object-move` · `chart-reveal` (the shared chart renderer, chart-design.md) |
+| `statistic` | `statistic` | `count-up` · `bar-grow` · `dot-fill` · `axis-draw` · `object-move` · `chart-reveal` |
 | `principle` | `mechanism` | `flow-trace` · `node-enter` · `state-transform` · `shape-enter` · `shape-draw` · `shape-travel` · `object-move` |
 
 Groups start at 1 and map to narration segments in order. One group declares one primary
@@ -3043,10 +3329,11 @@ unchanged photo is not subject action and fails the slide review.
 ### Footage treatment — retired 2026-09-05 (`visual.slide.treatment: "footage"`)
 
 **Nothing is drawn over video** (user directive 2026-09-05, CLAUDE.md §Nothing is drawn over
-video — it outranks every rule in this file). The footage treatment of 0.47–0.53 — one generated
-clip per reveal group with wordless marks (a route, an arrow, an X, a ring, hatching, brackets,
-a dot) and `labels` drawn over it — is retired. `check-scenes.js` and `check-slide.js` reject
-`treatment:"footage"` outright, whatever else the scene carries.
+video — the no-marks rule covers every moving picture, and nothing in this file relaxes it). The
+footage treatment of 0.47–0.53 — one generated clip per reveal group with wordless marks (a
+route, an arrow, an X, a ring, hatching, brackets, a dot) and `labels` drawn over it — is
+retired. `check-slide.js` fails `treatment:"footage"` outright, whatever else the scene carries,
+and `check-scenes.js` reports it.
 
 What replaces it:
 
@@ -3057,8 +3344,7 @@ What replaces it:
   sentence runs; the thing is a baked render whose movement is the sentence. The quality bar is
   `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`.
 - **An event, a place, an action** is a motion background (`visual.video`) or a b-roll clip —
-  the generated picture alone, the burned subtitle the only type on it. No mark, no label, no
-  callout, no matte.
+  the generated picture alone. No mark, no label, no callout, no matte, no subtitle.
 
 The clip helpers (`h.footage` · `h.matte` · `h.mark.*` on a clip ground) stay in the template
 as history and are not called by the flow; `footage-lane.md`, `footage-frames.sh` and
@@ -3093,7 +3379,7 @@ motion costs comprehension. So the lane is deliberately narrow — beats, not am
         { group: 1, driver: "value",    before: "0",        after: "27" },
         { group: 2, driver: "relation", before: "27 alone", after: "27 against 30 at 81%" },
         { group: 3, driver: "relation", before: "two bars", after: "three bars, 37 full, source shown" } ] },
-      // what moves on which sentence — §7 approval reads this line
+      // what moves on which sentence — the approval page reads this line
       plan: "① 27 counts up as the hero number · ② the 30 bar grows to 81% · ③ the 37 bar grows to full and the source line enters",
       motionBeats: [
         { group: 1, primitive: "count-up" },
@@ -3224,10 +3510,11 @@ on it.
   (a supporting shape). When `slide.arts` is set, default `renderKinetic` places the first art
   on group 1 then the title with `in` — that pair is one event. Type-only (a verdict, a cross)
   skips arts.
-- **Don't put the subtitle on screen.** The subtitle band is already reading that sentence; a
-  screen that repeats it word for word says everything twice and gives the eye nothing to do.
-  What lands on screen is what survives the trim — `title`, `bullets`, `labels`. A screen
-  phrase identical to its segment's `sub` is a P0 on the sheet read.
+- **Don't put the narration on screen.** The voice is already saying that sentence (the
+  delivered video carries no subtitles); a screen that repeats it word for word says everything
+  twice and gives the eye nothing to do. What lands on screen is what survives the trim —
+  `title`, `bullets`, `labels`. A screen phrase identical to its segment's narration sentence
+  (`sub` is its written form) is a P0 on the sheet read.
 - **One big phrase per slide**: at most three rendered hero lines, two for a max-size quote or supporting phrase, and four text lines on the screen. Past that it
   is a paragraph, and a paragraph belongs to the narration.
 - **One effect kind per slide** — `mask` is the default; `drop` (from above) and `wipe` (left to right, for
@@ -3291,7 +3578,7 @@ the claim.
   begins, and it is why poses don't accumulate across cuts.
 - **The character never carries the fact alone.** The value, the claim, the name are written on
   screen and checked like any other screen text; the figure reacts to them. A slide where the
-  only thing conveying the point is a gesture has nothing for the style gate or the reviewer to
+  only thing conveying the point is a gesture has nothing for the style check or the reviewer to
   read.
 - **A maximum of three actors, no lip sync.** Entering, surrounding, escorting and a reversible
   restraint are allowed because they state the event. A walk cycle, a mouth moving to narration,
@@ -3301,6 +3588,11 @@ the claim.
   deciding, being surprised.
 
 ## Authoring verification checklist (the storyboard skill's self-check before requesting approval)
+
+> story-v1 only — guidance for resumed boards; story-v2 boards follow character-scenarios.md and
+> storyboard SKILL §6. The identifier, enum and file-shape items below (FORMAT, filenames,
+> `transition`, stock licenses, camera slots, stored prompts, MOTION_POLICY copy) still apply to
+> every board.
 
 The machine-measurable items below (character counts, speech rate, scene length, total length,
 cover title, frame overflow, hero stat width, the b-roll contract, negative directives in a clip
@@ -3326,7 +3618,8 @@ strip says no violations.
       checked against the portrait contract, and it passes
 - [ ] Shot count and total length are inside the format band (§format table · the source of truth
       is `formats.js`)
-      - Short-form: hook + drip (1–n) + spoken CTA = **4–12 shots** inside the channel's band
+      - Short-form: the story-v1 band was **4–12 shots** (hook + drip + close); a story-v2
+        board takes its shot count from the performance. The length band is the channel's
         (`length_min_seconds` / `length_max_seconds`, §Channel true-motion policy; unset, the
         preset's 35–120s stands, of which **35–75s** is the recommendation), 180s hard cap —
         the YouTube Shorts limit, not a channel field
@@ -3348,13 +3641,13 @@ strip says no violations.
       count, a bar, a step) and not ambience, and no scene relies on continuous motion — that
       is footage, not a slide. Groups are 1:1 with narration segments unless `A|B` sub-reveals
       are written
-- [ ] **Every moving diagram has `slide.treatment`.** Short informational episodes use 1–3
-      `editorial` frames with a valid `role` and one repeated `motif`; `photo-action` frames name
-      a real subject/evidence change in both `visual.action` and `slide.plan`. A photo with a
-      moving box or line does not count
+- [ ] **Every moving diagram has `slide.treatment`.** An `editorial` frame carries a `role` and
+      the episode's repeated `motif` — as many frames as the cuts need, no fixed count (§Motion
+      diagram treatments); `photo-action` frames name a real subject/evidence change in both
+      `visual.action` and `slide.plan`. A photo with a moving box or line does not count
 - [ ] **No `treatment:"footage"` anywhere, and nothing drawn over any clip** (directive
-      2026-09-05) — a motion background or b-roll carries the picture and the burned subtitle
-      only
+      2026-09-05) — a motion background or b-roll carries the picture alone, no text and no
+      subtitle (produce 2026-10-17)
 - [ ] **Every narrated shot declares `shot.infoType`.** `timeline`, `statistic`, and `principle`
       use the required moving editorial diagram on the studio stage, mapped role, and one
       allowed `motionBeats` primitive per narration group — a rendered object when a thing is
@@ -3400,14 +3693,13 @@ strip says no violations.
 - [ ] **On a short the cover opens a gap or states the result, and says which** — a gap cover
       keeps `COMPREHENSION.answer` out of its spoken text; a result-first cover writes
       `hookType:"spoiler"` and may speak the answer. Either way something legible is on screen
-      and already moving at t=0 and the first subtitle cue is up inside 1.0 s. On long-form
+      and already moving at t=0 (the delivered video carries no subtitles). On long-form
       answer-first, builds, tutorials, and before/after comparisons show the finished result in
       the first frame; on a story arc the first frame is the moment it went wrong and the ending
       stays out of it
-- [ ] **The closing shot names one forwardable thing** — the `beat:"cta"` shot of a short has
-      `shot.share`: the sentence, figure or verdict a viewer would pass on as-is, 8 compacted
-      characters or more, with `shot.shareType` when its shape is worth recording. An ask is
-      still optional; this is not an ask
+- [ ] **The close is earned** — the last narrated shot (`beat:"cta"`) lands the closing meaning.
+      `shot.share` (the sentence, figure or verdict a viewer would pass on as-is) and an ask are
+      both optional; `check-scenes.js` accepts a close without either
 - [ ] **Playback order matches the format** — **short: hook → drip (1–n) → cta**, n ≥ 1, last
       narrated shot is `beat:"cta"` (an outro asset is not the spoken close, and on a channel
       with `shortform_outro: off` there is no outro entry at all), no
@@ -3428,19 +3720,17 @@ strip says no violations.
       period
 - [ ] tts/sub notation split done (numbers, loanwords)
 - [ ] No distortion of numeric ranges (a range stays a range)
-- [ ] Every factual claim matches a verification-passed entry in research.md, research.md was
-      finished **before** the first scene was written (storyboard SKILL §2 — two passes with a
-      pick in between: first research → three messages → one topic cut from each into three
-      directions → additional research · first pass logs ten or more searches · sufficiency:
-      floor 3 verified claims, 5+ on a short, 12+ on a long-form, every question answered or
-      written off, one `Chosen:` direction), and no claim sits on a written-off question
+- [ ] Every factual claim matches a verification-passed entry in research.md, and no claim sits
+      on a written-off question. Research the claims the story presents as facts, as many as
+      that story needs — no search count, message count or claim floor (character-scenarios.md
+      §Choose content and expression separately; storyboard SKILL §2); fiction needs no citations
 - [ ] **The cover has `hookForm`** (`paradox`·`gap`·`payoff`·`identify`·`number`·`secret`) and the
       title and segment ① take that shape, and the shot that pays it does pay it — the last drip
       (short) or the result (long-form) on a withholding form, the cover itself on `payoff` (a
       gap closed, a secret revealed, a number counted out — §the six hook forms). All six are
       open on a short. The first frame has no logo, no intro, no greeting and reads inside the
       first second; every narration segment opens curiosity, moves the information forward, or
-      puts evidence down; one sentence = one subtitle = one reveal (§narration segments)
+      puts evidence down; one sentence = one segment = one reveal (§narration segments)
 - [ ] Plain-language principle — no unexplained jargon, no over-compression
 - [ ] No AI tells — exit 0 on all three surfaces (0 S1 findings left):
       ```bash
@@ -3455,15 +3745,16 @@ strip says no violations.
       pass, it's the gate not running. Catching it here means no rework at produce §5
 - [ ] bgPrompt includes the mandatory negative directions; generated images have no text and no
       national symbols
-- [ ] points backgrounds: photorealistic topic shots + a new cut whenever the content axis turns
-      (no reusing one image across every scene — produce absolute rule 14), captions `t` ≤ 12 chars
-      · `d` ≤ 22 chars
+- [ ] points backgrounds: topic shots in the episode's visual-style preset (photoreal only when
+      the preset is photoreal) + a new cut whenever the content axis turns (no reusing one image
+      across every scene — produce absolute rule 14), captions `t` ≤ 12 chars · `d` ≤ 22 chars
 - [ ] **On-screen text doesn't duplicate the sound** — no caption or title summarizing what the
       narration says. No text written to fill a slot (§on-screen text only when needed). Empty
       `title`, `footnote`, and `bullets` are normal, not defects
 - [ ] **Sound plan** (§music cues) — every `sound.cue` names a key that exists in `window.MUSIC`,
-      no shot carries `cue` and `drop` together, and the drop count is what the episode can carry
-      (one in a short). `window.MUSIC` missing entirely is a valid single-bed episode, not a gap.
+      no shot carries `cue` and `drop` together, and the reversal places (a drop or a silence
+      window) stay inside a short's budget of two (§music cues — usually one reads best).
+      `window.MUSIC` missing entirely is a valid single-bed episode, not a gap.
       Every shot that becomes a generated video has `visual.audio` (§clip audio)
 - [ ] THEME matches profile.md §3
 - [ ] **`window.MOTION_POLICY` matches the profile frontmatter** when the channel declares one.
@@ -3472,16 +3763,17 @@ strip says no violations.
 - [ ] Every `visual.source: "stock"` cut carries `visual.license` (commercial and modify true, the
       credit text when `attributionRequired`) and, before production, its file under `footage/` or
       `images/stock/`; a stock clip is not counted as a generated slot
-- [ ] Generated video (`broll` + `visual.video` combined) stays inside the format default or the
-      profile's explicit `generated_video_max` override (§motion background) · the rule-13
-      plan check done
+- [ ] Generated video (`broll` + `visual.video` combined) stays inside the ceiling — the saved
+      render ratio's band (`PRODUCTION.mode`, production-mode.md) and, when the profile declares
+      one, `generated_video_max`; fewer generated cuts than the target is a report, not a defect
+      (§motion background) · the rule-13 plan check done
 - [ ] If you placed `broll` scenes — the two slots' `after` differ · each slot has `narration: []`
-      · `src` is the same real PNG as `SCENES[after].visual.bg` (that image made with gpt_image
-      high as a photorealistic person scene) · `duration` (used length) is 8 or under with a
-      comment giving the reason (not stretched with a palindrome)
+      · `src` is the same real PNG as `SCENES[after].visual.bg` (made with the image model saved
+      in `.social-flow/models.json`, in the episode's visual-style preset) · `duration` (used
+      length) is 8 or under with a comment giving the reason (not stretched with a palindrome)
 - [ ] If you placed a `visual.video` scene — points type · `duration` inside the route's one-call
       cap (veo 8 · seedance 2.0 grades 4–15, 2.5 4–30, server-validated) · `narration[].img`
-      unused · the source `bg` is a real PNG (gpt_image high)
+      unused · the source `bg` is a real PNG from the saved image model
 - [ ] **Every generated-video shot stores its final prompt and route** (§clip prompt) —
       `visual.prompt` / `visual.video.prompt` / `visual.clip.prompt` assembled with
       `assemble-bg-prompt.js --clip --engine <route>` and stored whole, exclusion nouns in the
@@ -3497,17 +3789,6 @@ strip says no violations.
 - [ ] **Every generated-video shot says what it sounds like in `visual.audio`** (§clip audio) —
       left blank, the engine invents speech under the narration. A clip planned silent
       (`generateAudio:false`, every full-video cut) has nothing to describe and skips this check
-
-
-### Conditional start/end images
-
-Use `visual.frames: {mode:"first"|"first_last", reason, endState?, end?}` for new generated
-shots. `visual.bg` supplies the start frame. Two-frame shots require `endState` during planning
-and a distinct `end` image before video generation. The approval page displays both images;
-`seedance-route.js` forwards `end` as `lastImagePath`. Follow
-[render-routing.md](render-routing.md#start-and-end-frame-planning) for the selection and
-continuity rules. Legacy boards without `frames` retain their original single-frame display,
-unless an existing `lastImagePath` supplies a second frame.
 
 ## Existing generated clip input (`visual.reuse`)
 
@@ -3566,7 +3847,8 @@ costs stay at $0; metadata repair is not a generation request.
 
 Reuse keeps the current screen policy: `shot.render.mode:'generated_video'`,
 `purpose:'live_action'`, `motionEssential:true`, `action`, `whyNotStill`, `visual.why`,
-and `shot.videoDesign.motion` remain required. Subtitles are the only overlay. Do not
+and `shot.videoDesign.motion` remain required. Nothing is drawn over the imported clip —
+no title, caption or subtitle; a subtitle file is a separate sidecar made only on request. Do not
 combine this handoff with `visual.video`, `clip`, `renderedFile`, `source`, `slide`,
 `engine` or `prompt`, or use it on a quote, b-roll or outro entry.
 
@@ -3580,10 +3862,11 @@ count toward generation and retries even when the output file already exists.
 `check-production --selection` verifies file hash, dimensions and duration before any
 assets. Approval fingerprints include the import metadata. `--before-call N` rejects an
 imported shot, and `seedance-route.scenePlan` returns no generation plan for it.
-`--ready` requires a current `video-review.json` entry for each imported cut, even in
-hybrid mode: `planDigest`, `videoSha256`, full playback, reviewer/time, start/middle/end
-seeks, motion evidence, six concrete visual observations and no unresolved defects.
-It does not require the old generation's source image. This validates recorded review
+`--ready` reads `video-review.json` for each imported cut, even in hybrid mode —
+`planDigest`, `videoSha256`, full playback, reviewer/time, start/middle/end seeks, motion
+evidence, concrete visual observations and open defects — and reports a missing or stale
+entry as `not_reviewed` with a warning (`check-production.js`); it never fabricates a pass.
+It does not need the old generation's source image. This validates recorded review
 evidence; it does not automatically judge visual quality or authenticate the reviewer.
 
 The assembly manifest uses the exact imported clip without wrappers, overlays or zoom.
@@ -3602,3 +3885,50 @@ with times relative to the trimmed file. Review the final sound and subtitle tim
 episode look. Its trajectory generates the four camera slots and both previz camera paths.
 Follow [drone-flythrough.md](drone-flythrough.md) for the schema, preparation command,
 plan binding and review. It is not a ninth episode style or a Google Earth importer.
+
+## Persistent 3D locations
+
+`shot.location` binds a versioned location manifest, state, numerical camera and required object IDs. `visual.location` stores rendered references, approval, generation receipt and pixel review. Use `location_manage` to author these records; do not fabricate hashes or approvals. See [location-assets.md](location-assets.md) for the schema, browser proposal workflow and generation handoff. Boards without location bindings remain compatible.
+
+Optional `shot.location.blocking` holds persistent actors with complete start/end world
+poses (floor position, body yaw, gaze target and held object IDs), plus an optional action
+axis. `endStateId` selects the closing set state. Related cuts use `continuityGroup`;
+an incoming `continuityBreak` explains intentional discontinuity. Cross-shot differences
+produce advisory findings. Render this plan before generating images. The location
+`previz` action writes both source references and `visual.video.previz.locationBinding`
+from the same set, camera and blocking; changed inputs or clip bytes invalidate the binding.
+
+## Character performance (story-v2)
+
+New boards follow [character-led scenarios](character-scenarios.md). `narration[]` remains the
+production speech array for both dialogue and narration, with explicit `speaker` IDs. Shot
+`performance` records ordered actions and speech-group references; STORY references use event
+indices. A silent action can deliver the opening, payoff or close. The thesis need not be spoken.
+
+
+### Semantic technique selections
+
+`shot.techniques` stores `[{id, reason}]` selected from `film-techniques.js`.
+The id names a real technique; reason explains this shot's information or action.
+The catalogue covers character references, camera movement/angle/viewpoint/focus,
+framing and timing. Each entry owns a distinct SVG, label, use, instruction and
+legacy field mapping. `storyboard_read` returns it by default; the HTML exporter
+ships `film-techniques.js` and `film-techniques.json` offline beside `scenes.js`.
+
+Select one starting framing and one timing purpose, plus the references and camera
+attributes actually needed. Do not select every technique to increase variety.
+Keep `shot.size`, `shot.angle`, `visual.camera` and selected techniques consistent.
+Angles, focus and viewpoint may coexist with movement. `camera.rack-focus` is
+independent of `camera.static`; selecting both means a fixed camera shifting focus.
+The video prompt compiler includes selected camera instructions. Character and
+framing entries describe source-image requirements; timing examples never override
+measured speech/performance or provider duration constraints. Unknown ids fail input
+validation; creative conflicts are advisory and remain visible for correction.
+
+Canonical sizes: MFS = mid-thigh; MS = waist-up; MCU = chest-up. Old composition
+keys remain readable; new shots use the distance key and spell out OTS/two-shot/POV
+in framing. Editing a selection does not certify or regenerate existing media.
+
+## Motion graphic plan (version 1)
+
+Optional `shot.motionGraphic` records the semantic type independently of `render.mode`. New motion-graphic shots follow [motion-graphics.md](motion-graphics.md). The shared catalog and MCP storyboard input expose type, intent, reason, evidence, style, beats and content. `motion_html` executes seekable abstract motion scenes; it does not replace physical mesh or recorded-evidence routes. Existing boards without this field retain their previous behavior.

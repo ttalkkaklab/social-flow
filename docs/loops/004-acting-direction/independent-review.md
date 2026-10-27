@@ -1,0 +1,29 @@
+# Independent acceptance review
+
+**PASS — 100/100 on the frozen implementation rubric, zero unresolved P0 defects.** Reviewed 2026-10-16T16:50:30.496591+00:00. The accepted representative media scores **95 on every applicable axis**; 100 is the implementation/evidence rubric total, not a claim of perfect acting.
+
+The rubric in [loop.md](loop.md) was not changed. This acceptance covers package `0.114.1-acting.6`, its exercised paths, and the separate take 6 sample for shot s021. It does not certify the unfinished original episode or every future generation.
+
+| Frozen criterion | Award | Evidence |
+|---|---:|---|
+| Functional end state | 30/30 | All six 5-point paths exercised: scene direction with pinned identity; request/receipt validation; acting-only invalidation; shared visual direction and shot boundary; materialized reaction timing; legacy/unsupported-engine honesty. |
+| Installed and media verification | 35/35 | All five 7-point items met: independently rehashed Mac installs and fresh MCP processes; installed regression; actual speech review; actual audiovisual review; independent asset-bound verification with retained timestamped failures. |
+| Objective regression gates | 20/20 | Final `npm run check`: 1,970 passes, 188 suites, zero failures. Skill lint: 16 rules across 21 skills. Meaningful regressions cover each corrected path. |
+| Root cause addressed | 10/10 | Per-line direction reaches speech and video plans without replacing identity. Guidance rejects a fixed cheerful baseline and unrelated cuts batched only by shared image. |
+| Scope honesty | 5/5 | Original 342 files unchanged; separate test artifacts; USD8.00 conservative Gemini reservations within USD10 ceiling; unsuccessful takes retained; no invented listening or whole-episode claim. |
+
+I independently compared all 826 frozen package file hashes against both the Codex and Claude Code caches: zero mismatches. I also ran `installed-acting-smoke.mjs` against each installed cache in a fresh MCP process. Both passed update, plan, attachment, wrong-style/wrong-voice rejection, timing and invalidation checks. Installed bundle SHA-256: `c23a9f90c729064e095be2eb2b8ab59cf892789041c2b0cda12789a76f76725c`.
+
+The `.6` reviewer, speech runtime, scene-acting helper and speech compiler match the `.5` files used for the final paid review byte-for-byte. The intervening changes concern package version, format defaults, tests and documentation. No additional review of unchanged media was needed for that packaging update.
+
+The audio sample is 2.080 seconds, SHA-256 `ec40fbccc2904a08d1ca853bbeabfa91a1110426e31558c676d56ee57c3b09cb`. Gemini 3.1 Pro assessed situation, vocal emotion and speech accuracy at 95 each, confidence 0.95, full audio coverage, and no findings. The audiovisual sample is 3.375 seconds, SHA-256 `7fe7829eb6fe704af9c25505f30f5b69a758333037165b8792bf4026f46e53d7`. Its policy-v6 review scored all six axes at 95, confidence 0.95, full audio/video coverage, no findings and `visibleCaptions:false`. Both use the same dialogue and scene brief. I independently verified file hashes, actual stream types/durations and immutable receipt contents. My sampled-frame inspection found separate hands on the table, screen-left gaze, a questioning expression, changing mouth shapes followed by closure, and no visible captions in those samples. Full listening, continuous motion and perceptual lip-sync judgments are the model critic's observations, not a claim that I directly listened.
+
+The no-caption requirement is also exercised mechanically: main and screencast mux tests preserve audio while ignoring legacy `BURN=1`, never read ASS/SRT into video filters, and output no subtitle stream. Splice, pace and delivery tests reject stale burned derivatives. Format defaults disable sidecars and burning; separately requested SRT remains optional. Optional caption timing tests emit ASS/SRT only inside measured speech intervals, including a five-second anticipation gap.
+
+Adversarial findings corrected during this review include historical inspection failures; stale inner request text; voice/language alias masking; omitted-acting dialogue composition; captions appearing during reaction silence; and the new visual prompt dropping legacy cues, speaker or delivery roles. Independent repros and focused tests confirmed the fixes. The final objective run supersedes the earlier failing run; failures were not relabeled as passes.
+
+Rejected media and evaluator failures remain in the local archive. Examples: baseline clasped hands/exaggerated shock at 0–1.71 seconds; take 1b closed mouth during speech at 0.6–1.9 seconds; take 3 repeated dialogue at 0–3.5 seconds. Baseline and take 1 were evaluated again after v2 rejected invalid confidence values; those v3 outcomes also remained unverified/failing. This was evaluator-schema repair, not a successful-score substitution. Take 6 changed the performance input before its Pro evaluation. The later v5-to-v6 review of the same video addressed the user's newly added no-caption requirement and preserved the earlier receipt.
+
+Durable local evidence: `/Users/zeans/.local/state/social-flow-acting/final-evidence/` contains the final checks and installation records; `/Volumes/data/story/meleon/plugin-tests/acting-2026-10-17/` contains media, exact requests, receipts, failures and budget reservations. [independent-review.json](independent-review.json) records paths, scores and hashes. Reservations are conservative spending controls, not a verified provider invoice. Local receipts are provenance records, not tamper-proof attestations.
+
+Original episode verification independently compared 342 files under `/Volumes/data/story/meleon/data/meleon/episodes/interview-live` against the pre-task manifest: zero missing or changed files. Direct ChatGPT app UI inspection was unavailable; enabled catalog and fresh MCP evidence must not be described as a direct ChatGPT UI test.

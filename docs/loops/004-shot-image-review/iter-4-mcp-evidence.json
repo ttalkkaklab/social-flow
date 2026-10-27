@@ -1,0 +1,28 @@
+{
+  "codex": {
+    "passed": true,
+    "serverVersion": {
+      "name": "social-flow",
+      "version": "0.114.0-shot-images.4"
+    },
+    "bundleSha256": "b42224cda09f42cab6b21fbcf15744e7a498fe7179880975686f20536be0f871",
+    "freshProcess": true,
+    "verifiedBy": "independent adversarial reviewer",
+    "receipt": "/Users/zeans/orca/workspaces/social-flow/dovekie/.work/shot-image-loop/iter-4-codex-mcp-final.json",
+    "supersedes": "iter-4-mcp-evidence-initial.json",
+    "note": "MCP transport and similarity evidence verified; original legacy board still has contract violations."
+  },
+  "claude": {
+    "passed": true,
+    "serverVersion": {
+      "name": "social-flow",
+      "version": "0.114.0-shot-images.4"
+    },
+    "bundleSha256": "b42224cda09f42cab6b21fbcf15744e7a498fe7179880975686f20536be0f871",
+    "freshProcess": true,
+    "verifiedBy": "independent adversarial reviewer",
+    "receipt": "/Users/zeans/orca/workspaces/social-flow/dovekie/.work/shot-image-loop/iter-4-claude-mcp-final.json",
+    "supersedes": "iter-4-mcp-evidence-initial.json",
+    "note": "MCP transport and similarity evidence verified; original legacy board still has contract violations."
+  }
+}

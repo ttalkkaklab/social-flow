@@ -12,14 +12,12 @@ channel: <channel slug>
 topic: <topic slug>
 status: draft            # draft | approved | produced | published
 created: <YYYY-MM-DD>
-portal_episode: <uuid>   # optional — written at approval by portal_storyboard_save after the user chose portal mode and the channel key is configured
-portal_url: <url>        # optional — the portal page of that episode
 ---
 
 # <topic display name> — Storyboard
 
 - **Channel**: <display name> (`data/<slug>/profile.md`)
-- **Expected total length**: <NN>s (main <N> shots + outro, or main alone when the channel's `shortform_outro` is off)
+- **Estimated length**: <NN>s, derived from the performance (main <N> shots + outro, or main alone when the channel's `shortform_outro` is off) — an estimate, not a target
 - **Core message**: <the one sentence this video delivers>
 - **Playback**: short: hook → drip (1–n) → cta (no `arc`). long-form: <answer-first / story> (`arc: <answer-first|story>`) — answer-first: cover → hooking → result → body; story: cover → hooking → body → turn → result
 - **Opening strategy**: <fear / empathy / curiosity / spoiler> (`hookType: <fear|empathy|curiosity|spoiler>`) — <one line on how the title and segment ① carry that stimulus; all four are open on a short, and a spoiler cover may state the result on screen while the platform title still withholds it>
@@ -109,15 +107,16 @@ What the document shows:
   length, and frame overflow: whether the recorded `picture`/`overlay` match the structure,
   whether `shot.info` within the same scene overlaps, whether `shot.infoType` routes timelines,
   statistics, and principles to their required motion HTML contract, and whether the playback order matches
-  the format — **short: hook → drip → cta** (missing drip or spoken CTA, or a long-form beat,
-  is a violation), **long-form answer-first: cover → hooking → result → body** (body before
+  the format — **short: hook → drip → cta** (a spoken CTA is optional and a narrative ending
+  may be a drip; a long-form beat on a short is a warning), **long-form answer-first: cover → hooking → result → body** (body before
   result is a violation, a `turn` beat a warning), **story: cover → hooking → body → turn →
   result** (result before body or before the turn is a violation; no turn, no result, or the
   shot before the payoff not being the turn is a warning). A first shot that isn't the cover is
   a violation, and so is a short cover that dumps the answer **without declaring a result-first
   opening** — `spoiler` and `payoff` are legal on a short, and a cover carrying either
-  `hookType:"spoiler"` or `hookForm:"payoff"` is expected to speak the answer. A short whose `beat:"cta"` shot carries no `shot.share` (or one
-  under 8 compacted characters) is a violation under the **share trigger** heading. On
+  `hookType:"spoiler"` or `hookForm:"payoff"` is expected to speak the answer. `shot.share` on the
+  closing shot is optional on every format; a missing or short one is not a violation under the
+  **share trigger** heading. On
   long-form a missing hooking shot, or the shot after the cover not being the hooking shot,
   is a warning (scenes-schema §hooking). A missing cover `hookType`, or
   a value outside the four, is an opening-strategy warning (§the four opening strategies —
@@ -133,9 +132,9 @@ The mode (shooting/generated) is auto-detected from `visual.source`, the illustr
 from `narration[].img`. Shooting mode has one overlay per shot, so a single reveal row. The
 timeline slots are shots, and b-roll plugs in at the playback position `after` sets.
 
-**Check items** — character counts, speech rate, scene length, total length (against the
-channel's band — `length_min_seconds` / `length_max_seconds`; unset, the preset's 35–120s
-stands), cover title 16 chars, statLabel 18 chars, playback order (short: hook → drip → cta · long-form answer-first
+**Check items** — character counts, speech rate, scene length, total length (against an
+explicit channel band — `length_min_seconds` / `length_max_seconds`; unset, no band applies and
+the preset's 35–120s is legacy guidance), cover title 16 chars, statLabel 18 chars, playback order (short: hook → drip → cta · long-form answer-first
 cover → hooking → result → body · story cover → hooking → body → turn → result), plus:
 
 - **Frame overflow** — draws each reveal on a 1080px canvas and measures whether text
@@ -236,9 +235,9 @@ Chosen: D1 (<YYYY-MM-DD>) — <one line why, including the engine>
 
 ## Sufficiency                                    # the exit of SKILL §2 — checked before §4 opens
 
-verified claims: <N> (floor 3 — aim 5+ short / 12+ long) · questions answered: <n>/<total> · written off: <list>
+verified claims: <N> (guidance: enough to carry every factual event; fiction needs none) · questions answered: <n>/<total> · written off: <list>
 
-## Search history                                # one row per search — §2.1 floor 10; the checker also counts against 2 × questions
+## Search history                                # one row per search — no floor; the checker reports counts
 
 | Tool | Query | Result summary |
 |---|---|---|
@@ -248,7 +247,7 @@ verified claims: <N> (floor 3 — aim 5+ short / 12+ long) · questions answered
 
 ## Status transitions
 
-`draft` → (HITL approval) → `approved` → (produce done) → `produced` → (publish done) → `published`
+`draft` → (the user's choice, or the recorded standing/assistant decision — no intermediate HITL for local work) → `approved` → (produce done) → `produced` → (publish done) → `published`
 
 Each skill updates `status` in the storyboard.md frontmatter when its stage completes — the
 directory alone tells you where the pipeline stands.

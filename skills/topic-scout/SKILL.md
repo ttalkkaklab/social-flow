@@ -12,11 +12,13 @@ description: >
   autoproduce and grow-youtube topic pool.
 argument-hint: "<channel> [seed query]"
 allowed-tools: ["Read", "Write", "Glob", "Bash", "AskUserQuestion",
-  "mcp__social-flow__youtube_topic_scout", "mcp__social-flow__sns_issue_scout",
-  "mcp__social-flow__serp_trending_now"]
+  "mcp__social-flow__youtube_topic_scout", "mcp__plugin_social-flow_social-flow__youtube_topic_scout", "mcp__social-flow__sns_issue_scout", "mcp__plugin_social-flow_social-flow__sns_issue_scout",
+  "mcp__social-flow__serp_trending_now", "mcp__plugin_social-flow_social-flow__serp_trending_now"]
 ---
+**Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 
-**HITL records:** Keep selected and banned phrases in channel keyword files; these are not episode approvals. Follow [the decision record contract](../storyboard/references/portal-decisions.md); preserve actual provenance and reuse existing authorization. This adds no approval gate.
+
+**HITL records:** Keep selected and banned phrases in channel keyword files; these are not episode approvals. Preserve actual provenance in local files and reuse existing authorization. This adds no approval gate.
 
 
 # Finding market-validated topics

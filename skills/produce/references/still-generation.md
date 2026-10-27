@@ -1,19 +1,25 @@
 # Still generation — the images the storyboard planned
 
+**Automatic execution:** [Automation guidance](../../_shared/automation-guidance.md) supersedes creative quality gates, repeated approvals and review-score requirements here. Keep the concrete guidance and truthful review state. Enforce only actual runtime dependencies and the scope of external-action authorization.
+
+
 The procedure for produce §1.5. The storyboard decided every still's prompt, engine and size
 and generated nothing (storyboard §5, owner directive 2026-09-04 — a plan the user rejects
 must cost nothing). This file is the execution half: which engine each still goes to, how the
 call is made, what disqualifies the picture that comes back, and what gets written into the
 ledger.
 
-**Nothing here re-decides the plan.** `visual.bgPrompt` arrives assembled and machine-checked;
-resend it as-is. A changed `shot` field is the one reason to rerun `assemble-bg-prompt.js`, and
-then only from the fields — never by editing the stored string by hand.
+`visual.bgPrompt` arrives from the authored plan. Reuse it only while the narration meaning,
+visual purpose, factual/reconstruction boundary, opening and referenced assets still agree.
+If inspection finds a mismatch, correct the relevant plan fields within the requested scope
+and reassemble the affected source prompt; do not patch only the stored string. A changed
+camera is not the only reason to refresh it. Inspect unchanged pixels against revised words
+before deciding whether regeneration is needed. Prompt refresh does not authorize new spending.
 
 ## Contents
 
 - [1. Which engine, and why](#1-which-engine-and-why)
-  - [The host image tool comes first](#the-host-image-tool-comes-first-owner-directive-2026-09-07)
+  - [The host image tool comes first](#when-the-saved-image-selection-uses-the-host)
   - [The API table](#the-api-table-claude-code-or-imageproviderapi)
 - [2. Making the calls](#2-making-the-calls)
 - [3. The image check](#3-the-image-check)
@@ -21,7 +27,33 @@ then only from the fields — never by editing the stored string by hand.
 
 ## 1. Which engine, and why
 
-### The host image tool comes first (owner directive 2026-09-07)
+**Text-bearing images use GPT Image 2 (owner directive, 2026-10-18).** For every
+new still or edit that must display or preserve readable text, follow the
+[mandatory text-image selection](../../_shared/image-routing.md#images-containing-text-gpt-image-2-required).
+Use `gpt-image-2` even when the saved default is Z-Image or the host has its own
+image tool. A host qualifies only if its actual model is verifiably GPT Image 2.
+Apply this exception before the saved-choice and host-first recommendations below,
+record the scoped choice, and inspect the actual lettering after generation.
+If GPT Image 2 is unavailable, report it without automatic model substitution.
+
+For server image calls, follow [image routing](../../_shared/image-routing.md).
+Read `image_catalog`, plan the exact operation, then execute the saved plan. Existing
+raw tools accept `imageContext`; configured production cannot bypass selection using
+a raw tool. The same service handles episode shots and workspace branding assets.
+The catalog and adapter contracts supersede historical model-capability claims in
+this recipe. Saved choice wins over the initial recommendations below except for the mandatory text-image rule above.
+GPT Image 2 supports preview transparency; mini accepts low input fidelity. MLX
+editing, strength-based variation and alpha support differ by installed model family.
+Do not add unexposed options or infer model quality from a successful contract check.
+
+
+First resolve [directory model settings](../../_shared/model-settings.md). Use the
+episode snapshot's image engine/model/quality and explicit user overrides for every
+new still. Initial image setup recommends ASTRA GenAI (`astra-genai` / `z-image-turbo`);
+the host and local adapters below apply only when selected. A saved API/local choice overrides host detection;
+missing tools, failed calls and unsupported edits do not authorize substitution.
+
+### When the saved image selection uses the host
 
 The storyboard wrote `PRODUCTION.imageProvider` from the tool list of the CLI it ran in
 (storyboard §1): `"host"` where the CLI ships `image_gen` — Codex, Grok — and `"api"` on Claude
@@ -39,11 +71,25 @@ allowance, $0 — a quota is not a price). Two CLIs, two mechanics:
   and `image_edit` for anything with a reference image (`image` takes an absolute path; the
   character panels go face first, then body). Both return the saved file's absolute path; copy
   it to `storyboard/images/scene-<n>.png`. Hangul rendering is unmeasured on this tool: make a
-  text-bearing frame once, read the glyphs, and only a broken read moves that frame to
-  `gpt_image_text2img` — with the ledger line and one sentence in `build-report.txt`.
+  text-bearing frame once and read the glyphs; a broken read is reported in `build-report.txt` and
+  the user is asked for an explicit exception before any other engine is billed — no silent switch.
 
 A host call that fails, or a tool that is missing, is put to the user before any separately
 billed API call — a fallback nobody approved is money nobody approved.
+
+**Host image quality preference (owner directive, 2026-10-16).** Request the lowest
+available generation quality from the host image tool, including images used as LTX or
+other video-model references. Keep the approved `bgPrompt` verbatim and append this
+execution instruction separately: "Use the lowest available generation quality. Preserve
+the requested dimensions, composition, subject identity and required readable details."
+If the host exposes a quality parameter, select its lowest supported value. Codex
+`image_gen` currently exposes no such parameter: this is a prompt preference, not a
+verified low-tier setting or a guarantee of lower cost or latency. Do not invent a
+quality argument or report that the tool actually used `low` without tool evidence.
+Keep the planned visual style and source-resolution requirements; do not request blur,
+reduced detail or a rough sketch as a substitute for a quality setting. Video generation
+and upscaling do not guarantee correction of source-image defects. Apply the existing
+image checks. This preference does not change the separately billed API table below.
 
 **A generated-video cut's still is edited from its previz first frame** (user directive
 2026-09-11, storyboard blender-previz.md §6.6). `spatial-prompts.js --shot N` returns
@@ -53,6 +99,14 @@ tool as the reference — Grok `image_edit` (`image` = the frame), Codex `image_
 `view_image` on the frame, `gpt_image_img2img` on the API lane — so the camera, framing and
 subject positions of the clip's frame 1 are the still's. A still designed from the prompt
 alone and a previz that starts elsewhere hand the video model two different first frames.
+
+For a bound persistent location, prepare shared set/camera/actor blocking before image
+generation (storyboard §4b). `location_manage` action `previz` writes the location reference
+and previz first frame together. The source assembler puts that location composition first,
+deduplicates the shared image and assigns cast sheets to appearance only. Read returned
+`spatialWarnings` when a legacy standalone previz is also attached; compare or rebuild it
+from the shared plan. End-frame prompts use the closing actor and set state, not the opening
+one. These references guide the model; inspect actual generated images for layout and gaze.
 
 ### The API table (Claude Code, or `imageProvider:"api"`)
 
@@ -66,7 +120,7 @@ Measured 2026-08-12 (`docs/research/2026-08-12-local-image-generation`).
 
 | Still | Engine | Price | Why |
 |---|---|---|---|
-| points backgrounds | `image_local_generate` (Z-Image) | $0 | the default; a few minutes each, so queue them sequentially |
+| points backgrounds | `image_local_generate` (Z-Image) | $0 | only when selected; queue local calls sequentially |
 | cover background (scene-1) | `gpt_image_text2img` `quality:"high"` | $0.22 | it is the thumbnail *and* veo's input — the quality clause |
 | any screen with text in it | `gpt_image_text2img` | per quality | the local engine breaks Korean jamo ("딸깍연구소" → "달닥연구소") |
 | a scene with `visual.character` | `gpt_image_img2img` | per quality | the panels are the input, not a description |
@@ -76,15 +130,16 @@ the default, into the scene. Follow it. **A departure invented at call time gene
 something nobody approved.**
 
 `mlx_image_generate` / `mlx_image_edit` are an optional extra local lane when MLX Core is up.
-They do not replace Z-Image as the default and they do not take Hangul; the plugin never
+They require an explicit local selection; readable text uses GPT Image 2; the plugin never
 launches the app, so a down `:11234` fails closed. On a machine without mflux,
-`image_local_generate` fails with install instructions — fall back to `gpt_image_text2img`
-(quality `"low"`) for that episode only, and say so in the completion report.
+`image_local_generate` fails with install instructions — report the unavailable
+selected engine and request an explicit alternative before any GPT Image call.
 
 **Backgrounds that become video sources** — a scene with b-roll attached, a motion-background
-scene — are made on gpt high or the host image tool, never the local engine, with something
+scene — are made on the saved image model at its saved quality (model-settings.md), with something
 in frame for the clip to move (rule 11 — a person only when the shot needs one). Blurry or
-static, and those 8 seconds look like a still frame.
+static, and those 8 seconds look like a still frame; a saved engine that cannot deliver a usable
+source is reported for an explicit exception.
 
 ## 2. Making the calls
 
@@ -125,11 +180,20 @@ Save each one as `storyboard/images/scene-<n>.png`, `<n>` counting from 1 — th
 the strip calls "Shot n". Slide scenes have no still here (their screen is HTML, authored at
 §3.6), and shooting mode has none at all.
 
+**Generate from the shot plan, not an actor lookup.** Apply
+[opening-frame planning](../../storyboard/references/visual-direction.md#plan-each-opening-frame-before-assigning-images).
+Use shared face/body/location references to preserve identity and geography while the shot
+plan controls framing, pose, expression and visible prop state. Do not bind `host.png` to
+every host line or copy one portrait into separately numbered files. When editing a previous
+scene image, explicitly describe the new composition and opening state; preserving the
+character does not mean preserving the previous camera. Intentional return shots may reuse
+an image after checking that it depicts the planned moment and recording why reuse fits.
+
 **A character scene is a reference call.** Resolve the id to its panel directory and pass the
-views the shot needs as separate reference inputs: face + body (portal front) for front/three-quarter
+views the shot needs as separate reference inputs: face + body for front/three-quarter
 shots, face alone for a facial close-up, and back for rear shots (add face only if visible).
 Optional extra panels need a shot-specific reason. A new reference set must contain all three
-required views even when the current shot uses only one; see channel/references/portal-characters.md.
+required views even when the current shot uses only one..
 
 ```bash
 CH=$(python3 ${CLAUDE_PLUGIN_ROOT}/skills/channel/references/resolve-asset.py "$CHANNEL_DIR" character claude)
@@ -148,10 +212,23 @@ gets designed out of the scene sentence instead.
 
 ## 3. The image check
 
+Apply [content grounding](../../storyboard/references/narration-visual-grounding.md#inspect-content-separately-from-appearance)
+before judging style. Describe what the pixels actually show, then compare with the line,
+shot purpose and opening state. Record content fit and its limits in existing review notes;
+the styleMatch field below only describes style. An expressive face in the right room is
+not evidence of a narrated event. Keep source-image inspection separate from future motion.
+
+Compare all source images in playback order and compare recurring characters together before
+video generation. Open the actual paths declared by the board, including legacy filenames;
+`scene-*.png` alone may miss them. Read the shot-image warnings from `check-scenes.js` and
+resolve the creative question: an intentional return shot, or an accidentally repeated
+portrait? Inspect similar-looking files too: byte hashes cannot detect re-encoded copies or
+small expression edits. Record the observed framing/action, not merely a filename or hash.
+
 **Look at the picture that came out.** Open every `images/scene-*.png` (and the
 `narration[].img` files in illustration mode) once with Read against that scene's `shot.info`
-and narration. The criterion is right, not pretty. No reviewer is delegated — the image review
-of 0.49 cost six million tokens a read (measured) and your own look costs nothing. Shooting
+and narration. The criterion is right, not pretty. For cut storyboard images, review-cut-images uses a fresh independent host reviewer
+under the fixed production workflow. The author cannot certify their own corrections. Shooting
 mode skips this entirely.
 
 For cinematic-miniature, also read the bundled [style guide](../../storyboard/assets/styles/tactile-miniature-v1/STYLE.md).
@@ -172,8 +249,9 @@ photo in ink-wash — each is a mismatch (visual-style.md). Write the read to
               "evidence": "Drawn skin and cloth, clean contour lines, cel-shaded background." }] }
 ```
 
-`check-production.js --ready` refuses assembly for a generated still without a current entry,
-with `styleMatch:false`, or reviewed against another preset than the shot now carries. A
+`check-production.js --ready` reports a generated still without a current entry, with
+`styleMatch:false`, or reviewed against another preset than the shot now carries as a
+`not_reviewed`/`stale` warning; the record is written only after actually looking. A
 mismatch is remade in the shot's preset. When the preset itself is wrong for this picture, that
 is the user's call: ask with AskUserQuestion, and only their approval writes `shot.style`
 (visual-style.md §Per-shot style) — then the prompt is reassembled, the still regenerated and
@@ -186,18 +264,19 @@ What disqualifies an image:
 - a baked-in pseudo-character or a lookalike glyph
 - readable text (unless the scene asked for it and went to gpt)
 - a real person on a channel that generates its people
-- a bright lower third that will drown the subtitles
+- a bright lower third under the cover's code-rendered bottom text block
 
 **Remake only what fails, once.** Add the correction on top of the original prompt — don't
 re-describe it wholesale, which loses the elements that had passed. Props with text engraved
 on them (keyboards, calculators, signboards) can't be blocked with negative directions; taking
 the object out of the composition is the answer.
 
-**If the remake still looks wrong, don't buy a third attempt.** Put it to the user with
-AskUserQuestion — the picture, what is wrong with it, and the options [ship it / one more
-remake / change the scene]. Under storyboard's old §5.5 this landed on the approval screen;
-after the split there is no later screen, so this is where a human looks. On the unattended
-path (autoproduce §6.5) the same situation writes `queue_*: hold` at wrap-up instead.
+**If the remake still looks wrong, don't buy a third attempt on your own.** Ship the better of
+the two with the finding recorded in `build-report.txt` and the completion report, or change the
+scene within the plan; a third paid attempt needs remaining spending authorization and is offered
+as an option in the report, not asked as an approval. Unattended runs
+([unattended-lifecycle.md#image-check](../../autoproduce/references/unattended-lifecycle.md#image-check))
+ship the best attempt and report the limitation; a still that merely looks wrong writes no queue hold.
 
 ## 4. The ledger
 

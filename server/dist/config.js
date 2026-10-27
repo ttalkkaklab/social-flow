@@ -88,8 +88,8 @@ export const config = {
     /**
      * ElevenLabs API key (required by the tts_elevenlabs_* speech tools) — https://elevenlabs.io/app/settings/api-keys
      *
-     * The third speech lane next to Gemini (tts_generate) and on-device Supertonic
-     * (tts_local_generate). Keys can be restricted per permission — synthesis needs
+     * The hosted speech lane alongside Gemini (tts_generate).
+     * Keys can be restricted per permission — synthesis needs
      * `text_to_speech`, the voice listing needs `voices_read`.
      */
     elevenLabsApiKey: process.env.ELEVENLABS_API_KEY || '',
@@ -101,6 +101,8 @@ export const config = {
      * because that is what the server's operators issue it under.
      */
     astraVideoApiKey: process.env.ASTRA_VIDEO || '',
+    /** Unified gateway token; never substitute the legacy ASTRA_VIDEO key. */
+    astraGenaiApiKey: process.env.ASTRA_GENAI_API_KEY || '',
     /**
      * YouTube Data API key (youtube_topic_scout's preferred public-query path).
      * Unlike OAuth it doesn't spend your channel's quota. Without it, falls back to
@@ -122,24 +124,9 @@ export function arkBaseUrl() {
     return (process.env.ARK_BASE_URL || 'https://ark.ap-southeast.bytepluses.com/api/v3').replace(/\/+$/, '');
 }
 /**
- * Python interpreter that runs the local TTS (Supertonic).
- *
- * Unlike the other credentials, **startup works without it** — it falls back to
- * `python3`, and if that's missing or the package isn't installed, the call fails
- * at invocation time with install instructions (supertonic-client).
- *
- * Not auto-discovering venv paths is deliberate. Scanning `./venv`/`./.venv` would
- * be convenient, but silently picking up a different virtualenv per repo creates
- * "yesterday's voice is a different voice today" failures. Which interpreter to use
- * is decided explicitly, never inferred.
- */
-export function supertonicPython() {
-    return process.env.SUPERTONIC_PYTHON || 'python3';
-}
-/**
  * mflux CLI executable that runs local image generation (Z-Image Turbo).
  *
- * Same principle as supertonicPython — startup works without it, and the call fails
+ * Startup works without it, and the call fails
  * at invocation time with install instructions (zimage-client). The default is uv
  * tool's deterministic install path. There is no PATH-scanning fallback — silent
  * auto-discovery turns into "what worked yesterday gives different results today".
@@ -294,115 +281,6 @@ export function listChannelDirs() {
         .filter((dir) => dir.platforms.length > 0)
         .sort((a, b) => a.channel.localeCompare(b.channel));
 }
-/**
- * ttalkkakstory portal credential — the workspace API key the `portal_*` tools call the
- * portal with (owner directive 2026-09-21: the plugin itself calls the portal API by key;
- * before that the portal's own MCP server had to be registered by hand in user settings).
- *
- * The file sits next to the SNS tokens and resolves in the same two layers:
- *
- *   <SNS_TOKEN_DIR>/<channel slug>/ttalkkakstory.json   ← channel given (one workspace per channel)
- *   <SNS_TOKEN_DIR>/ttalkkakstory.json                  ← no channel, or the channel has no file
- *   TTALKKAKSTORY_API_URL · _WORKSPACE · _API_KEY env    ← neither file exists
- *
- * Unlike the SNS tokens the channel layer **does** fall through to the flat file — a
- * workspace usually holds several channels, and one team key is the common case. The
- * `portal_workspace_check` tool says which file answered, so a wrong-workspace save is
- * visible before anything is written. A key is issued on the portal at
- * `/{workspace}/settings/api-keys` (admin+), which also prints this file ready to save.
- *
- *   { "apiKey": "tks_…" } — apiUrl, workspace and holder are optional.
- */
-export const DEFAULT_PORTAL_API_URL = 'https://story.ttalkkaklab.com';
-export const PORTAL_CREDENTIAL_FILENAME = 'ttalkkakstory.json';
-export function portalCredentialFile(channel) {
-    if (!channel)
-        return join(snsTokenDir, PORTAL_CREDENTIAL_FILENAME);
-    if (!CHANNEL_SLUG_RE.test(channel)) {
-        throw new Error(`Invalid channel slug: "${channel}" — only kebab-case is allowed (same convention as data/<slug>).`);
-    }
-    return join(snsTokenDir, channel, PORTAL_CREDENTIAL_FILENAME);
-}
-function readPortalCredentialFile(file) {
-    let raw;
-    try {
-        raw = readFileSync(file, 'utf8');
-    }
-    catch (error) {
-        // Only a *missing* file means "not configured". A file that exists but cannot be read
-        // (EACCES, EISDIR, an I/O error) must stop here — falling through to the flat file
-        // would pick another workspace's key for this channel (review P1).
-        const code = error.code;
-        if (code === 'ENOENT' || code === 'ENOTDIR')
-            return null;
-        throw new Error(`${file} exists but could not be read (${code ?? 'unknown error'}) — fix the file instead of relying on a fallback.`);
-    }
-    let parsed;
-    try {
-        parsed = JSON.parse(raw);
-    }
-    catch {
-        // No parser message here — it quotes the offending text, which in a credential file is
-        // part of the key (review P2).
-        throw new Error(`${file} is not valid JSON — expected { "apiKey": "tks_…" }.`);
-    }
-    const o = (parsed && typeof parsed === 'object' ? parsed : {});
-    const str = (k) => (typeof o[k] === 'string' ? o[k].trim() : '');
-    const apiUrl = str('apiUrl') || str('api_url') || (process.env.TTALKKAKSTORY_API_URL || '').trim() || DEFAULT_PORTAL_API_URL;
-    const workspace = str('workspace');
-    const apiKey = str('apiKey') || str('api_key');
-    const missing = [!apiKey && 'apiKey'].filter(Boolean);
-    if (missing.length > 0) {
-        throw new Error(`${file} is missing ${missing.join(', ')} — expected { "apiKey": "tks_…" }.`);
-    }
-    const holder = str('holder');
-    return { apiUrl, workspace, apiKey, ...(holder ? { holder } : {}), source: file };
-}
-/**
- * Channel → credential, or null when nothing is configured (the caller turns that into
- * the one-line "no portal key" message; the skills carry on in local-file mode).
- * A present-but-broken file throws — a half-read key must not fall through to the
- * flat file and land an episode in the other workspace.
- */
-export function portalCredential(channel) {
-    if (channel) {
-        const perChannel = readPortalCredentialFile(portalCredentialFile(channel));
-        if (perChannel)
-            return perChannel;
-    }
-    const flat = readPortalCredentialFile(portalCredentialFile());
-    if (flat)
-        return flat;
-    const apiUrl = (process.env.TTALKKAKSTORY_API_URL || '').trim() || DEFAULT_PORTAL_API_URL;
-    const workspace = (process.env.TTALKKAKSTORY_WORKSPACE || '').trim();
-    const apiKey = (process.env.TTALKKAKSTORY_API_KEY || '').trim();
-    if (apiKey) {
-        const holder = (process.env.TTALKKAKSTORY_HOLDER || '').trim();
-        return { apiUrl, workspace, apiKey, ...(holder ? { holder } : {}), source: 'env' };
-    }
-    return null;
-}
-/**
- * True when any portal credential exists — the ListTools gate for `portal_*`, evaluated per
- * request like the SNS platform gate. Files are only tested for existence here (a broken
- * file still shows the tools, and the call reports what is wrong with it).
- */
-export function portalConfigured() {
-    if (existsSync(portalCredentialFile()))
-        return true;
-    if (process.env.TTALKKAKSTORY_API_KEY?.trim())
-        return true;
-    let entries;
-    try {
-        entries = readdirSync(snsTokenDir, { withFileTypes: true })
-            .filter((entry) => entry.isDirectory() && CHANNEL_SLUG_RE.test(entry.name))
-            .map((entry) => entry.name);
-    }
-    catch {
-        return false;
-    }
-    return entries.some((channel) => existsSync(portalCredentialFile(channel)));
-}
 /** Tool on/off file — a JSON array of tool-name patterns; a trailing "*" covers a family ("seedance_*"). */
 export const disabledToolsFile = join(snsTokenDir, 'disabled-tools.json');
 /**
@@ -496,7 +374,7 @@ export function requireElevenLabsKey() {
         throw new Error('ELEVENLABS_API_KEY is not set. tts_elevenlabs_* speech tools and sfx_elevenlabs_generate require an ElevenLabs API key ' +
             '(https://elevenlabs.io/app/settings/api-keys — a restricted key needs the text_to_speech permission, ' +
             'plus voices_read for tts_elevenlabs_voices and sound generation for sfx_elevenlabs_generate). ' +
-            'Without it, tts_generate/tts_multi_speaker (Gemini, GEMINI_API_KEY) and tts_local_generate (on-device, no key) still work.');
+            'Without it, tts_generate/tts_multi_speaker (Gemini, GEMINI_API_KEY) still work.');
     }
     return config.elevenLabsApiKey;
 }

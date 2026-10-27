@@ -1,0 +1,75 @@
+{
+  "root": "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.115.4",
+  "passed": true,
+  "checks": [
+    {
+      "tool": "veo_text2video",
+      "args": {},
+      "expected": "native",
+      "passed": true
+    },
+    {
+      "tool": "omni_text2video",
+      "args": {},
+      "expected": "native",
+      "passed": true
+    },
+    {
+      "tool": "seedance_text2video",
+      "args": {},
+      "expected": "native",
+      "passed": true
+    },
+    {
+      "tool": "seedance_text2video",
+      "args": {
+        "model": "seedance-1-0-pro-250528"
+      },
+      "expected": "post",
+      "passed": true
+    },
+    {
+      "tool": "seedance_text2video",
+      "args": {
+        "generateAudio": false
+      },
+      "expected": "post",
+      "passed": true
+    },
+    {
+      "tool": "astra_text2video",
+      "args": {},
+      "expected": "native",
+      "passed": true
+    },
+    {
+      "tool": "astra_audio2video",
+      "args": {
+        "audioPath": "/tmp/composed.wav"
+      },
+      "expected": "post",
+      "passed": true
+    },
+    {
+      "case": "explicit input ownership and physical sound prompt",
+      "passed": true
+    },
+    {
+      "tool": "veo_text2video",
+      "case": "reference is not preserved input",
+      "passed": true
+    },
+    {
+      "tool": "seedance_reference",
+      "case": "reference is not preserved input",
+      "passed": true
+    },
+    {
+      "tool": "omni_text2video",
+      "case": "reference is not preserved input",
+      "passed": true
+    }
+  ],
+  "bundleSha256": "38ccf23418b08147da0bf7228a401fa9bfe5278741280c7e9f46c31379f763b7",
+  "coverage": "Installed adapter planning only; no cloud rendering, upload or perceptual judgment."
+}
