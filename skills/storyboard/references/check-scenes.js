@@ -47,7 +47,7 @@ const FORMAT_RESOLVE = path.resolve(SELF_DIR, '..', '..', 'platform-guide', 'ref
    checker and the assembler can never disagree about what a seedance prompt may say. */
 const PROMPT = require(path.join(SELF_DIR, 'assemble-bg-prompt.js'));
 const { scenePlan } = require('../../produce/references/seedance-route.js');
-const { mixFindings } = require('../../produce/references/sound-mix-contract.js');
+const { mixFindings, musicEnvelopeFindings } = require('../../produce/references/sound-mix-contract.js');
 const { assemble: assembleSpatialPrompt } = require('./spatial-prompts.js');
 const { APPEARANCE_WORDS } = require('./cut-treatments.js');
 
@@ -444,7 +444,7 @@ function motionKind(scene) {
 function engineOf(scene) {
   const v = (scene && scene.visual) || {};
   const named = (v.video && v.video.engine) || (v.clip && v.clip.engine) || v.engine;
-  if (named === 'veo' || named === 'seedance' || named === 'host' || named === 'astra') return named;   // host: the CLI's own video tool; astra: our LTX-2.5 box
+  if (named === 'veo' || named === 'seedance' || named === 'host' || named === 'astra' || named === 'astra-genai') return named;   // host: the CLI's own video tool; astra: our LTX-2.5 box
   if (scene && (scene.type === 'broll' || scene.type === 'quote')) return 'veo';
   return 'seedance';
 }
@@ -455,18 +455,19 @@ function engineOf(scene) {
    never a directive, because this engine has no negativePrompt argument; and it closes with
    a consistency lock. The checks are assemble-bg-prompt.js's own, so a prompt that clears
    this checker is one the assembler would have written. */
-function seedancePromptFindings(prompt, engine) {
+function seedancePromptFindings(prompt, engine, model) {
   const text = String(prompt || '').trim();
   if (engine !== 'seedance' || !text) return [];
   const out = [];
   // The Audio: sentence is exempt from the negative check — "no music, no speech" is a state.
   const audioAt = text.search(/Audio\s*:/i);
   const body = audioAt >= 0 ? text.slice(0, audioAt) : text;
-  PROMPT.hangulHits(text, 'seedance').forEach((h) => out.push(
+  const promptEngine = model === 'dreamina-seedance-2-5-260628' ? 'seedance-2.5' : 'seedance';
+  PROMPT.hangulHits(text, promptEngine).forEach((h) => out.push(
     `the stored clip prompt carries Korean ("${h}") — a seedance body reads Chinese or English; Korean goes inside the quotes of a dialogue line`));
   PROMPT.negDirectiveHits(body, 'seedance').forEach((h) => out.push(
     `the stored clip prompt gives a negative directive ("${h}") — Seedance has no negativePrompt argument: re-describe the scene and put what must hold into the consistency lock`));
-  PROMPT.timingHits(body, 'seedance').forEach((h) => out.push(`the stored clip prompt carries ${h}`));
+  PROMPT.timingHits(body, promptEngine).forEach((h) => out.push(`the stored clip prompt carries ${h}`));
   if (PROMPT.lockMissing(text, 'seedance')) out.push(
     'the stored clip prompt has no consistency lock — a seedance clip closes with the sentence that says what holds in every frame ' +
     '("the subject stays exactly consistent with the input frame; appearance, proportions and materials hold"), ' +
@@ -487,7 +488,6 @@ function playbackShots(scenes) {
   return out;
 }
 
-const PEOPLE_CUT_TYPES = ['action', 'reaction', 'insert'];
 const EMPTY_CUT_TYPES = ['document', 'map', 'scenery'];
 const APPEARANCE_PATTERNS = APPEARANCE_WORDS.map((word) => ({
   word,
@@ -556,8 +556,6 @@ function perShotLookFindings(win, { bad, machine, warn }) {
         });
       }
 
-      if (PEOPLE_CUT_TYPES.includes(cutType) && Object.keys(cast).length && !refs.length)
-        bad(where, `[character-missing] ${cutType} cuts need visual.character when PRODUCTION.cast is not empty`);
       if (EMPTY_CUT_TYPES.includes(cutType) && refs.length)
         warn(where, `[character-on-empty-cut] ${cutType} cuts omit cast sheets and should not carry visual.character`);
 
@@ -609,6 +607,9 @@ function check(win, fmt, opts) {
   const machine = (where, what) => out.push({ level: draft ? 'later' : 'bad', where, what });
   const warn = (where, what) => out.push({ level: 'warn', where, what });
 
+  require('../../_shared/character-voice.js').boardVoiceErrors(win)
+    .forEach(message => bad('character voice', message));
+
   const pacing = fmt.pacing || {};
   const formatVideoMax = fmt.video && Number.isFinite(Number(fmt.video.generatedSecondsMax))
     ? Math.floor(Number(fmt.video.generatedSecondsMax) / 8) : 2;
@@ -618,15 +619,35 @@ function check(win, fmt, opts) {
      PRODUCTION's own overrides — production-mode reads the generated-video cap from it so a
      board is not judged by whether it spelled the key snake_case or camelCase. */
   const channelPolicy = (opts && opts.policy) || normalizeMotionPolicy(win.MOTION_POLICY || null, formatVideoMax, 'window.MOTION_POLICY', pacing, isShort);
-  productionMode.check(win, { draft, generatedVideoMax: channelPolicy.generatedVideoMax })
+  const productionAdvice = [];
+  productionMode.check(win, { draft, generatedVideoMax: channelPolicy.generatedVideoMax, advice: productionAdvice })
     .forEach(message => bad('production mode', message));
+  productionAdvice.forEach(message => warn('production guidance', message));
   perShotLookFindings(win, { bad, machine, warn });
+  if (win.STORY?.version === 'story-v2') {
+    const registry = Array.isArray(win.SB_DOC?.characters) ? win.SB_DOC.characters : Object.entries(win.SB_DOC?.characters || {}).map(([id, c]) => ({ ...c, id }));
+    for (const c of Array.isArray(win.STORY.cast) ? win.STORY.cast : []) {
+      if (!registry.some(entry => entry.id === c?.id))
+        machine('story cast', 'selected character ' + c?.id + ' must be in SB_DOC.characters');
+    }
+    scenes.forEach((scene, i) => {
+      if (!(scene.narration || []).length && win.STORY.transcripts?.some(item => item.shot === i + 1)) return;
+      try {
+        const plan = require('../../_shared/scene-acting.js').planScenePerformance(scene);
+        plan.warnings.forEach(message => warn('shot ' + (i + 1), message));
+      } catch (error) { machine('shot ' + (i + 1), error.message); }
+    });
+  }
+
   /* Sequence → scene → shot (structure-contract.js) — the same rules storyboard_apply refuses
      to write past. A board with no window.STRUCTURE only warns here: old boards still build. */
-  require('./structure-contract.js').check(win, { draft }).forEach(f => {
+  require('./structure-contract.js').guidedCheck(win, { draft }).forEach(f => {
     if (f.level === 'bad') bad(f.where, f.what);
     else if (f.level === 'later') machine(f.where, f.what);
     else warn(f.where, f.what);
+  });
+  require('./prop-continuity.js').check(win).forEach(f => {
+    if (f.level === 'bad') bad(f.where, f.what); else warn(f.where, f.what);
   });
   const motionPolicy = productionMode.policy(channelPolicy, win.PRODUCTION, scenes);
   const main = scenes.filter((s) => s.type !== 'broll' && s.type !== 'outro');
@@ -637,9 +658,9 @@ function check(win, fmt, opts) {
   /* The preset spells the shot band `sceneCountMin`/`sceneCountMax` (formats.js §3.2), which is
      also what the approval page's strip reads. This check asked for `shotMin`/`shotMax` — keys
      no preset has ever emitted — so it never fired until 2026-09-07. */
-  if (pacing.sceneCountMin && main.length < pacing.sceneCountMin)
+  if (win.STORY?.version !== 'story-v2' && pacing.sceneCountMin && main.length < pacing.sceneCountMin)
     warn('episode', `${main.length} main shots — the ${fmt.label} band is ${pacing.sceneCountMin}~${pacing.sceneCountMax}`);
-  if (pacing.sceneCountMax && main.length > pacing.sceneCountMax)
+  if (win.STORY?.version !== 'story-v2' && pacing.sceneCountMax && main.length > pacing.sceneCountMax)
     warn('episode', `${main.length} main shots — the ${fmt.label} band is ${pacing.sceneCountMin}~${pacing.sceneCountMax}`);
 
   /* Total length against the channel's band, with the preset's underneath it (`length_min_seconds`
@@ -655,9 +676,16 @@ function check(win, fmt, opts) {
   const bandFloor = isShort && Number.isFinite(motionPolicy.lengthMin) ? motionPolicy.lengthMin : pacing.totalMin;
   const bandCeil = isShort && Number.isFinite(motionPolicy.lengthMax) ? motionPolicy.lengthMax : pacing.totalMax;
   const lenTxt = (v) => `${Math.round(v * 10) / 10}s`;
-  if (played > 0 && Number.isFinite(pacing.totalHard) && played > pacing.totalHard)
+  if (win.STORY?.version === 'story-v2') {
+    const raw = win.MOTION_POLICY || {};
+    const minimum = Number(raw.length_min_seconds ?? raw.lengthMin);
+    const maximum = Number(raw.length_max_seconds ?? raw.lengthMax);
+    if (played > 0 && ((minimum > 0 && played < minimum) || (maximum > 0 && played > maximum)))
+      warn('episode', 'Planned duration ' + lenTxt(played) + ' is outside the explicitly selected length constraint; revise the scope or split the episode without deleting necessary actions.');
+  }
+  if (win.STORY?.version !== 'story-v2' && played > 0 && Number.isFinite(pacing.totalHard) && played > pacing.totalHard)
     bad('episode', `main body ${lenTxt(played)} — past the cap of ${lenTxt(pacing.totalHard)}`);
-  else if (played > 0 && Number.isFinite(bandFloor) && Number.isFinite(bandCeil) &&
+  else if (win.STORY?.version !== 'story-v2' && played > 0 && Number.isFinite(bandFloor) && Number.isFinite(bandCeil) &&
            (played < bandFloor || played > bandCeil))
     warn('episode', `main body ${lenTxt(played)} — outside the ` +
                     `${bandFloor !== pacing.totalMin || bandCeil !== pacing.totalMax ? 'channel band' : 'default'} ` +
@@ -755,12 +783,12 @@ function check(win, fmt, opts) {
 
   /* ── Playback order ──
      Format picks the skeleton (scenes-schema §playback order).
-       short-form   hook → drip (1–n) → cta     — always. `arc` is ignored.
+       short-form   hook → drip (1–n), optional cta. `arc` is ignored.
        long-form    two arcs walk one skeleton:
                     answer-first  cover → hooking → result → body → cta
                     story         cover → hooking → body → turn → result → cta
      A short that writes hooking/result/body/turn is a defect, not an alias. An outro asset
-     is the CTA on long-form only; a short needs a spoken `beat:"cta"` as the last narrated
+     can carry an optional CTA label; no format requires a spoken CTA on its last narrated
      shot. storyboard.html's check strip carries the same rule.
 
      A short-form cover may state the result. `hookType:"spoiler"` and `hookForm:"payoff"` are
@@ -788,31 +816,18 @@ function check(win, fmt, opts) {
     if (mainBeats.length) {
       if (mainBeats[0].beat !== 'hook')
         bad('episode', 'the hook beat is not the first shot — a short opens on the cover');
-      const last = mainBeats[mainBeats.length - 1];
-      if (last.beat !== 'cta')
-        bad('episode', 'a short ends on a spoken CTA — the last narrated shot is beat:"cta" ' +
-                      '(an outro asset is not the spoken close)');
-      else if (!spokenText(scenes[last.i - 1]).trim())
-        bad('episode', 'a short ends on a spoken CTA — the last narrated shot has no narration');
-      /* An ask stays optional; a forwardable thing does not — an ask requests behaviour from the
-         viewer, while a forwardable thing is one sentence, figure or verdict they can pass on
-         as-is. Asking to be shared is an ask, not a trigger. */
-      else if (compactLength(((scenes[last.i - 1] || {}).shot || {}).share) < 8)
-        bad('episode', 'the close has no share trigger — write shot.share on the beat:"cta" shot: ' +
-                      'the one sentence, figure or verdict a viewer would forward as-is');
       const dripCount = mainBeats.filter((s) => s.beat === 'drip').length;
       if (dripCount < 1)
         bad('episode', 'a short has no drip beat — after the hook, 1–n shots pay curiosity in stages ' +
-                      '(beat:"drip") before the CTA');
+                      '(beat:"drip") before the ending');
       mainBeats.forEach((s, pos) => {
         if (LONG_FORM_BEATS.indexOf(s.beat) !== -1)
-          bad('shot ' + s.i, `beat "${s.beat}" belongs to long-form — a short walks hook → drip → cta`);
+          bad('shot ' + s.i, `beat "${s.beat}" belongs to long-form — a short walks hook → development → ending`);
         else if (!s.beat)
-          bad('shot ' + s.i, 'no beat — a short labels every shot hook · drip · cta');
+          bad('shot ' + s.i, 'no beat — label beats when useful for reviewing the flow');
         else if (s.beat === 'hook' && pos !== 0)
           bad('shot ' + s.i, 'the hook beat is not the first shot — the cover opens the episode');
-        else if (s.beat === 'cta' && pos !== mainBeats.length - 1)
-          bad('episode', 'a beat comes after the cta — the cta is the very end');
+
         else if (s.beat === 'drip' && pos === 0)
           bad('shot ' + s.i, 'a short opens on the hook, not a drip');
       });
@@ -838,10 +853,7 @@ function check(win, fmt, opts) {
       else if (first.hook !== -1 && first.hooking !== first.hook + 1)
         warn('episode', 'hooking is not the shot right after the cover (scenes-schema §hooking)');
 
-      if (first.cta === -1)
-        warn('episode', 'no cta beat and no outro — the episode ends without the next value');
-      else if (first.cta !== beated.length - 1 && beated.slice(first.cta + 1).some((s) => s.beat !== 'cta'))
-        bad('episode', 'a beat comes after the cta — the cta is the very end');
+
 
       if (arc === 'story') {
         if (first.turn === -1)
@@ -912,7 +924,7 @@ function check(win, fmt, opts) {
   {
     const CLOSE_OPEN = ['mcu', 'cu', 'choker', 'ecu', 'insert'];
     const PAYS = ['els', 'ls', 'ws', 'mfs', 'two'];
-    const EXPLAIN = ['data_graph', 'editorial_html', 'object_html', 'character_html'];
+    const EXPLAIN = ['motion_html', 'data_graph', 'editorial_html', 'object_html', 'character_html'];
     const isScreen = (s) => s.shot && s.shot.render && EXPLAIN.indexOf(s.shot.render.mode) !== -1;
     const byScene = new Map();
     scenes.forEach((s, i) => {
@@ -940,7 +952,7 @@ function check(win, fmt, opts) {
      (30-degree / two-step-size rule). Filmed cards are the vlog exception, and so is an
      HTML explanation screen (shot.render.mode) — the whole picture changes there. */
   const isExplainScreen = (s) => s.shot && s.shot.render &&
-    ['data_graph', 'editorial_html', 'object_html', 'character_html'].indexOf(s.shot.render.mode) !== -1;
+    ['motion_html', 'data_graph', 'editorial_html', 'object_html', 'character_html'].indexOf(s.shot.render.mode) !== -1;
   for (let i = 1; i < scenes.length; i++) {
     const prev = scenes[i - 1], cur = scenes[i];
     if (!isStillCard(prev) || !isStillCard(cur)) continue;
@@ -1119,8 +1131,11 @@ function check(win, fmt, opts) {
     const shot = s.shot || {};
     try { require('../../produce/references/video-groups.js').declaration(s,{mode:win.PRODUCTION?.mode}); }
     catch(e) { bad(where,e.message); }
-    if ((opts && opts.requireRenderPlan) || shot.render)
-      require('./render-routing.js').checkScene(s, { draft, production: win.PRODUCTION, format:win.FORMAT }).forEach(message => bad(where, message));
+    if ((opts && opts.requireRenderPlan) || shot.render) {
+      const renderAdvice = [];
+      require('./render-routing.js').checkScene(s, { draft, production: win.PRODUCTION, format:win.FORMAT, advice: renderAdvice }).forEach(message => bad(where, message));
+      renderAdvice.forEach(message => warn(where, message));
+    }
 
     if (!s.type) { bad(where, 'no type'); return; }
     if (TYPES.indexOf(s.type) === -1) bad(where, `type "${s.type}" is outside ${TYPES.join(' · ')}`);
@@ -1146,12 +1161,12 @@ function check(win, fmt, opts) {
     }
     /* The forwardable thing. Required on a short's close (checked once at episode level), free
        to appear anywhere else; the label is optional and only has to come from the vocabulary. */
-    if (String(shot.shareType || '').trim() && SHARE_TYPES.indexOf(shot.shareType) === -1)
-      bad(where, `shot.shareType "${shot.shareType}" is outside ${SHARE_TYPES.join(' · ')}`);
+
 
     const slide = v.slide;
-    require('./slide-quality.js').checkQuality(slide, (s.narration || []).length)
-      .forEach(message => bad(where, message));
+    const slideQuality = require('./slide-quality.js');
+    slideQuality.checkQuality(slide, (s.narration || []).length)
+      .forEach(message => (slideQuality.ADVISORY.has(message) ? warn : bad)(where, message));
     if (slide && slide.motion === true && (slide.kind || 'diagram') === 'diagram') {
       if (!String(slide.treatment || '').trim()) {
         machine(where, 'motion diagram has no slide.treatment — choose editorial when HTML owns the frame, or photo-action when the photographed subject itself changes');
@@ -1180,7 +1195,7 @@ function check(win, fmt, opts) {
        against the rendered DOM. */
     if (INFO_ROLE[shot.infoType] && !productionMode.full(win.PRODUCTION)) {
       const expectedRole = INFO_ROLE[shot.infoType];
-      const allowed = INFO_PRIMITIVES[shot.infoType];
+      const allowed = shot.render?.mode === 'motion_html' ? [...INFO_PRIMITIVES[shot.infoType], 'state-transform'] : INFO_PRIMITIVES[shot.infoType];
       if (!slide) {
         machine(where, `${shot.infoType} beat has no visual.slide — it must be a seekable editorial HTML slide on the studio stage; nothing is drawn over video (directive 2026-09-05)`);
       } else if (slide.treatment === 'footage') {
@@ -1260,7 +1275,7 @@ function check(win, fmt, opts) {
         // A b-roll is a generated shot, so the engine is billed for a length it has to be given
         // (§cut length); scenePlan rejects the shot without one.
         warn(where, 'no duration');
-      } else if (pacing.sceneMin && (dur < pacing.sceneMin || dur > pacing.sceneMax)) {
+      } else if (win.STORY?.version !== 'story-v2' && pacing.sceneMin && (dur < pacing.sceneMin || dur > pacing.sceneMax)) {
         warn(where, `duration ${dur}s — the ${fmt.label} band is ${pacing.sceneMin}~${pacing.sceneMax}s`);
       }
     }
@@ -1307,12 +1322,15 @@ function check(win, fmt, opts) {
       });
       // A move the viewer cannot see, a provider camera lock under a written move, a move outside
       // the vendor vocabulary or one missing what it needs (production-mode.js — L13–L15 rules).
-      productionMode.cameraErrors(s).forEach((e) => machine(where, e));
+      require('./film-techniques.js').findings(s).forEach(message => warn(where, message));
+      const cameraAdvice=[];
+      productionMode.cameraErrors(s,{advice:cameraAdvice}).forEach((e) => machine(where, e));
+      cameraAdvice.forEach((e) => warn(where, e));
       productionMode.cameraWarnings(s).forEach((w) => warn(where, w));
       const prompt = v.prompt || (v.video && v.video.prompt) ||
                      (v.clip && typeof v.clip === 'object' && v.clip.prompt);
       if (!prompt) machine(where, 'no stored clip prompt — produce sends this verbatim (scenes-schema §clip prompt)');
-      else seedancePromptFindings(prompt, engineOf(s)).forEach((f) => machine(where, f));
+      else seedancePromptFindings(prompt, engineOf(s), s.visual?.video?.model).forEach((f) => machine(where, f));
       // A clip planned silent (generateAudio:false — every full-video cut) has nothing to describe.
       if (!v.audio && s.type !== 'quote' && !(v.video && v.video.generateAudio === false))
         warn(where, 'no visual.audio — the engine invents a soundtrack under the narration');
@@ -1419,6 +1437,12 @@ function check(win, fmt, opts) {
       else effects.forEach((effect, ei) => {
         const at = `${where} sound.effects[${ei}]`;
         if (!effect || typeof effect !== 'object' || Array.isArray(effect)) { bad(at, 'an effect is { sfx, atSeconds?, intensity?, separationLu? }'); return; }
+        if (effect.delivery !== undefined && !['auto', 'native', 'input', 'post'].includes(effect.delivery)) bad(at, 'delivery is auto | native | input | post');
+        if (['auto', 'native', 'input'].includes(effect.delivery)) {
+          if (!effect.description || !effect.trigger) bad(at, 'described effects need description and trigger');
+          if (effect.delivery !== 'auto' && s.sound.audioSource !== 'video') bad(at, 'native/input effects need sound.audioSource=video');
+          return;
+        }
         const id = typeof effect.sfx === 'string' ? effect.sfx.trim() : '';
         if (!id) bad(at, 'has no sfx');
         else {
@@ -1449,6 +1473,8 @@ function check(win, fmt, opts) {
     // room for the brand sting was spending one of the episode's two reversal places.
     if (s.sound && s.sound.drop === true && (s.type === 'broll' || s.type === 'outro'))
       bad(where, `sound.drop on a ${s.type} — not a card`);
+
+    for (const finding of musicEnvelopeFindings(s.sound?.musicGain, s.duration, s.type)) bad(where, finding);
 
     // Explicit music-only silence windows preserve narration and room tone. Full digital silence
     // is not represented here because it would also erase the words the shot is meant to carry.
@@ -1660,6 +1686,7 @@ function selftest() {
     Object.assign({ policy: defaultPolicy }, opts || {}));
   const has = (findings, re) => findings.some((f) => re.test(f.what));
   const bads = (findings) => findings.filter((f) => f.level === 'bad');
+  const advice = (findings) => findings.filter((f) => f.level === 'warn' || f.level === 'later');
 
   const goodShot = {
     type: 'points', duration: 6, beat: 'drip', transition: 'jcut',
@@ -1988,8 +2015,8 @@ function selftest() {
                    null, { policy: hookPolicy, draft: true })), /visual\.clip/) &&
      has(bads(run([videoCover, Object.assign({}, stockScene, { visual: { source: 'stock', license: stockLicense } }), ctaShot],
                   null, { policy: hookPolicy })), /visual\.clip under footage/));
-  ok('a portrait purpose cannot take the stock route',
-     has(bads(run([videoCover, Object.assign({}, stockScene, { shot: Object.assign({}, stockScene.shot,
+  ok('a portrait purpose gets advice about the stock route',
+     has(advice(run([videoCover, Object.assign({}, stockScene, { shot: Object.assign({}, stockScene.shot,
        { render: Object.assign({}, stockScene.shot.render, { purpose: 'portrait' }) }) }), ctaShot], null, { policy: hookPolicy })), /requires still_camera/));
   const statFootage = Object.assign({}, footageScene({ slide: { labels: ['34개'] } }), {
     shot: Object.assign({}, goodShot.shot, { infoType: 'statistic' }) });
@@ -2159,26 +2186,26 @@ function selftest() {
     { no: 1, place: '방', time: '낮', event: 'A가 B를 본다', charge: { open: '-', close: '+' }, turn: '의심 → 안심', out: '가' },
     { no: 2, place: '방', time: '낮', event: 'A와 B가 마주 선다', charge: { open: '-', close: '+' }, turn: '의심 → 안심', out: '가' }
   ], sequences: [{ id: 'q1', title: '대화', purpose: '둘 사이의 긴장을 푼다', scenes: [1, 2] }] };
-  ok('an unexplained line flip is a violation',
-     has(bads(run([cover, axis('A left, B right', 0), axis('B left, A right', 40), ctaShot], { STRUCTURE: axisStructure })), /space\.line changes/));
+  ok('an unexplained line flip is advisory',
+     has(advice(run([cover, axis('A left, B right', 0), axis('B left, A right', 40), ctaShot], { STRUCTURE: axisStructure })), /space\.line changes/));
   ok('a declared camera crossing with matching sides passes',
      !has(bads(run([cover, axis('A left, B right', 0), axis('B left, A right', 40, { lineCrossing: { method: 'camera_move', from: 'A left, B right', to: 'B left, A right', reason: '카메라가 화면 안에서 두 사람 사이를 지난다' } }), ctaShot], { STRUCTURE: axisStructure })), /lineCrossing|space\.line changes/));
   ok('a neutral crossing needs its marked bridge shot',
-     has(bads(run([cover, axis('A left, B right', 0), Object.assign({}, goodShot, { scene: 2, shot: Object.assign({}, goodShot.shot, { size: 'ms', info: 'neutral', space: { frame: 'camera', layout: 'A와 B 정면', facing: '두 사람이 카메라를 정면으로 본다' }, lineNeutral: true, coverage: { action: 'A가 고개를 든다' } }) }), axis('B left, A right', 40, { lineCrossing: { method: 'neutral', from: 'A left, B right', to: 'B left, A right', reason: '정면 샷을 지나 새쪽으로 옮긴다', bridgeShot: 99 } }), ctaShot], { STRUCTURE: axisStructure })), /neutral crossing/));
+     has(advice(run([cover, axis('A left, B right', 0), Object.assign({}, goodShot, { scene: 2, shot: Object.assign({}, goodShot.shot, { size: 'ms', info: 'neutral', space: { frame: 'camera', layout: 'A와 B 정면', facing: '두 사람이 카메라를 정면으로 본다' }, lineNeutral: true, coverage: { action: 'A가 고개를 든다' } }) }), axis('B left, A right', 40, { lineCrossing: { method: 'neutral', from: 'A left, B right', to: 'B left, A right', reason: '정면 샷을 지나 새쪽으로 옮긴다', bridgeShot: 99 } }), ctaShot], { STRUCTURE: axisStructure })), /neutral crossing/));
   const intentional = (from, to, azimuth) => axis(to, azimuth, { lineCrossing: { method: 'intentional', from, to, reason: '방향 감각이 흔들리게 만든다' } });
-  ok('three intentional crossings in one episode are a violation',
-     has(bads(run([cover, axis('A left, B right', 0), intentional('A left, B right', 'B left, A right', 40), intentional('B left, A right', 'A left, B right', 0), intentional('A left, B right', 'B left, A right', 40), ctaShot], { STRUCTURE: axisStructure })), /3 intentional 180° crossings/));
+  ok('three intentional crossings in one episode are advisory',
+     has(advice(run([cover, axis('A left, B right', 0), intentional('A left, B right', 'B left, A right', 40), intentional('B left, A right', 'A left, B right', 0), intentional('A left, B right', 'B left, A right', 40), ctaShot], { STRUCTURE: axisStructure })), /3 intentional 180° crossings/));
   ok('a 30 degree bearing, an action cut and a two-step size change pass',
      bads(run([cover, axis('A left, B right', 0), axis('A left, B right', 35), ctaShot], { STRUCTURE: axisStructure })).filter(f => /adjacent picture cut|camera azimuth/.test(f.what)).length === 0 &&
      bads(run([cover, axis('A left, B right', 0), axis('A left, B right', 0, { coverage: { action: 'A가 잔을 든다' } }), ctaShot], { STRUCTURE: axisStructure })).filter(f => /adjacent picture cut|camera azimuth/.test(f.what)).length === 0 &&
      bads(run([cover, Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { size: 'ls', coverage: undefined }) }), Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { size: 'mfs', coverage: undefined }) }), ctaShot], { STRUCTURE: axisStructure })).filter(f => /adjacent picture cut|camera azimuth/.test(f.what)).length === 0);
-  ok('a one-step change without an escape route and a 25 degree move are violations',
-     has(bads(run([cover, Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { coverage: undefined }) }), Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { size: 'mcu', coverage: undefined }) }), ctaShot], { STRUCTURE: axisStructure })), /adjacent picture cut/) &&
-     has(bads(run([cover, axis('A left, B right', 0), axis('A left, B right', 25), ctaShot], { STRUCTURE: axisStructure })), /camera azimuth changes 25/));
+  ok('a one-step change without an escape route and a 25 degree move are advisory',
+     has(advice(run([cover, Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { coverage: undefined }) }), Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { size: 'mcu', coverage: undefined }) }), ctaShot], { STRUCTURE: axisStructure })), /adjacent picture cut/) &&
+     has(advice(run([cover, axis('A left, B right', 0), axis('A left, B right', 25), ctaShot], { STRUCTURE: axisStructure })), /camera azimuth changes 25/));
   ok('a crossing on a shot with no line, or on the first line, is a finding and not an escape',
-     has(bads(run([cover, Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { space: { frame: 'camera', layout: 'A와 B', facing: '서로 마주 본다' }, coverage: undefined }) }),
+     has(advice(run([cover, Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { space: { frame: 'camera', layout: 'A와 B', facing: '서로 마주 본다' }, coverage: undefined }) }),
                    Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { space: { frame: 'camera', layout: 'A와 B', facing: '서로 마주 본다' }, coverage: undefined, lineCrossing: { foo: 1 } }) }), ctaShot], { STRUCTURE: axisStructure })), /needs space\.line on the same shot/) &&
-     has(bads(run([cover, axis('A left, B right', 0, { lineCrossing: { method: 'intentional', from: 'x', to: 'A left, B right', reason: 'r' } }), axis('A left, B right', 40), ctaShot], { STRUCTURE: axisStructure })), /first shot with a line/));
+     has(advice(run([cover, axis('A left, B right', 0, { lineCrossing: { method: 'intentional', from: 'x', to: 'A left, B right', reason: 'r' } }), axis('A left, B right', 40), ctaShot], { STRUCTURE: axisStructure })), /first shot with a line/));
   ok('camera-continuity records wait for the story pass to end',
      !has(bads(run([cover, axis('A left, B right', 0), axis('B left, A right', 40), ctaShot], { STRUCTURE: axisStructure }, { draft: true })), /space\.line changes|adjacent picture cut/) &&
      has(run([cover, axis('A left, B right', 0), axis('B left, A right', 40), ctaShot], { STRUCTURE: axisStructure }, { draft: true }), /space\.line changes/));
@@ -2187,15 +2214,15 @@ function selftest() {
   const beat = (b, over) => Object.assign({}, goodShot, { beat: b }, over || {});
   const longCover = Object.assign({}, cover, { arc: 'answer-first' });
   const afOK = [longCover, beat('hooking'), beat('result'), beat('body'), beat('cta')];
-  ok('a well-ordered short is hook → drip → cta', bads(run(shortOK)).length === 0);
+  ok('a well-ordered short is hook → development → ending', bads(run(shortOK)).length === 0);
   ok('a short with no drip is a violation',
      has(bads(run([cover, ctaShot])), /no drip beat/));
   ok('hooking on a short is a violation',
      has(bads(run([cover, beat('hooking'), goodShot, ctaShot])), /belongs to long-form/));
-  ok('a short without a spoken CTA is a violation',
-     has(bads(run([cover, goodShot, goodShot, goodShot])), /spoken CTA/));
+  ok('a short without a spoken CTA is allowed',
+     !has(bads(run([cover, goodShot, goodShot, goodShot])), /spoken CTA/));
   ok('an outro is not the spoken CTA on a short',
-     has(bads(run([cover, goodShot, goodShot, { type: 'outro', visual: {} }])), /spoken CTA/));
+     !has(bads(run([cover, goodShot, goodShot, { type: 'outro', visual: {} }])), /spoken CTA/));
   // The twist reveal moves forward (owner directive) — a short-form cover may state the result.
   ok('spoiler is legal on a short',
      bads(run([Object.assign({}, cover, { hookType: 'spoiler' }), goodShot, goodShot, ctaShot])).length === 0);
@@ -2215,8 +2242,8 @@ function selftest() {
      has(bads(run([Object.assign({}, cover, {
        narration: [{ tts: '한 가지가 달라졌어요.', sub: '한 가지가 달라졌어요.' }]
      }), goodShot, goodShot, ctaShot])), /dumps COMPREHENSION\.answer/));
-  ok('a beat after the cta on a short is a violation',
-     has(bads(run([cover, goodShot, ctaShot, goodShot])), /after the cta/));
+  ok('a beat after the cta on a short is allowed',
+     !has(bads(run([cover, goodShot, ctaShot, goodShot])), /after the cta/));
   ok('an unlabeled middle shot on a short is a violation',
      has(bads(run([cover, Object.assign({}, goodShot, { beat: undefined }), goodShot, ctaShot])),
          /no beat/));
@@ -2227,8 +2254,8 @@ function selftest() {
   ok('a short that opens on a drip is a violation',
      has(bads(run([Object.assign({}, cover, { beat: 'drip' }), goodShot, goodShot, ctaShot])),
          /opens on the hook/));
-  ok('a mute CTA on a short is a violation',
-     has(bads(run([cover, goodShot, goodShot, Object.assign({}, ctaShot, { narration: [] })])),
+  ok('a mute CTA on a short is allowed',
+     !has(bads(run([cover, goodShot, goodShot, Object.assign({}, ctaShot, { narration: [] })])),
          /no narration/));
   ok('turn on a short is a violation',
      has(bads(run([cover, beat('turn'), goodShot, ctaShot])), /belongs to long-form/));
@@ -2237,16 +2264,16 @@ function selftest() {
 
   // ── the forwardable thing ──
   const noShareCta = Object.assign({}, ctaShot, { shot: Object.assign({}, goodShot.shot) });
-  ok('a short whose close has no share trigger is a violation',
-     has(bads(run([cover, goodShot, goodShot, noShareCta])), /share trigger/));
-  ok('a share trigger under 8 letters is a violation',
-     has(bads(run([cover, goodShot, goodShot, Object.assign({}, ctaShot, {
+  ok('a short whose close has no share trigger is allowed',
+     !has(bads(run([cover, goodShot, goodShot, noShareCta])), /share trigger/));
+  ok('a share trigger under 8 letters is allowed',
+     !has(bads(run([cover, goodShot, goodShot, Object.assign({}, ctaShot, {
        shot: Object.assign({}, ctaShot.shot, { share: '좋아요!' }) })])), /share trigger/));
   ok('long-form does not demand a share trigger on the close',
      !has(bads(runLong([longCover, beat('hooking'), beat('result'), beat('body'), beat('cta')])),
           /share trigger/));
-  ok('an invented shareType is a violation',
-     has(bads(run([cover, goodShot, goodShot, Object.assign({}, ctaShot, {
+  ok('an invented shareType is allowed',
+     !has(bads(run([cover, goodShot, goodShot, Object.assign({}, ctaShot, {
        shot: Object.assign({}, ctaShot.shot, { shareType: 'forward' }) })])), /shot\.shareType "forward"/));
   ok('every shareType word passes',
      SHARE_TYPES.every((t) => !has(bads(run([cover, goodShot, goodShot, Object.assign({}, ctaShot, {
@@ -2270,11 +2297,11 @@ function selftest() {
   ok('the payoff before the turn is a violation',
      has(bads(runLong([st, beat('hooking'), beat('body'), beat('result'), beat('turn'), beat('cta')])),
          /result comes before the turn/));
-  ok('a beat after the cta is a violation',
-     has(bads(runLong([longCover, beat('hooking'), beat('result'), beat('cta'), beat('body')])),
+  ok('a beat after the cta is allowed',
+     !has(bads(runLong([longCover, beat('hooking'), beat('result'), beat('cta'), beat('body')])),
          /after the cta/));
-  ok('an episode with no cta is flagged',
-     has(runLong([longCover, beat('hooking'), beat('result'), beat('body')]), /no cta beat/));
+  ok('an episode with no cta is allowed',
+     !has(runLong([longCover, beat('hooking'), beat('result'), beat('body')]), /no cta beat/));
   ok('an outro scene counts as the cta on long-form',
      !has(runLong([longCover, beat('hooking'), beat('result'), beat('body'),
                    { type: 'outro', visual: {} }]), /no cta beat/));
@@ -2617,19 +2644,19 @@ function selftest() {
     ok('a scene with no wide warns',
        has(run([at(cover, 1), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { size: 'cu', info: '둘' }) }), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /no wide/));
     ok('a shot whose scene the structure does not define fails',
-       has(bads(run(board, { STRUCTURE: structure([scene(1)]) })), /scene 2 is not in STRUCTURE/));
-    ok('a scene in no sequence fails',
-       has(bads(run(board, { STRUCTURE: structure([scene(1), scene(2)], [{ id: 'q1', title: 't', purpose: 'p', scenes: [1] }]) })), /belongs to no sequence/));
+       has(bads(run(board, { STRUCTURE: structure([scene(1)]) })), /scene reference does not exist/));
+    ok('a scene in no sequence warns',
+       has(advice(run(board, { STRUCTURE: structure([scene(1), scene(2)], [{ id: 'q1', title: 't', purpose: 'p', scenes: [1] }]) })), /belongs to no sequence/));
     ok('the same charge at both ends is a nonevent warning',
        has(run(board, { STRUCTURE: structure([scene(1, { charge: { open: '+', close: '+' } }), scene(2)]) }), /nonevent/));
     ok('deepening into the same pole is a turn', !has(run(board, { STRUCTURE: structure([scene(1, { charge: { open: '-', close: '--' } }), scene(2)]) }), /nonevent|deepens/));
     ok('"++" on a "-" open is a big swing, not a violation', !has(bads(run(board, { STRUCTURE: structure([scene(1, { charge: { open: '-', close: '++' }, out: '가' }), clean[1]]) })), /charge/));
-    ok('a scene split by another scene fails',
-       has(bads(run([at(cover, 1), at(goodShot, 2, wide), at(goodShot, 1, wide), at(ctaShot, 2)], { STRUCTURE: structure([scene(1), scene(2)]) })), /split by another scene/));
-    ok('shots that play the sequences out of order fail',
-       has(bads(run(board, { STRUCTURE: structure([scene(1), scene(2)], [{ id: 'q1', title: 't', purpose: 'p', scenes: [2, 1] }]) })), /one order/));
-    ok('a stale sceneSlug fails',
-       has(bads(run([at(cover, 1, { sceneSlug: '다른 곳 / 밤' })].concat(board.slice(1)), { STRUCTURE: structure([scene(1), scene(2)]) })), /sceneSlug .* differs/));
+    ok('a scene split by another scene warns',
+       has(advice(run([at(cover, 1), at(goodShot, 2, wide), at(goodShot, 1, wide), at(ctaShot, 2)], { STRUCTURE: structure([scene(1), scene(2)]) })), /split by another scene/));
+    ok('shots that play the sequences out of order warn',
+       has(advice(run(board, { STRUCTURE: structure([scene(1), scene(2)], [{ id: 'q1', title: 't', purpose: 'p', scenes: [2, 1] }]) })), /one order/));
+    ok('a stale sceneSlug warns',
+       has(advice(run([at(cover, 1, { sceneSlug: '다른 곳 / 밤' })].concat(board.slice(1)), { STRUCTURE: structure([scene(1), scene(2)]) })), /sceneSlug .* differs/));
     ok('one size across a scene is a coverage warning',
        has(run([at(cover, 1), at(goodShot, 1), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1), scene(2)]) }), /coverage is two sizes/));
     ok('a repeated shot.info anywhere on the board is a coverage warning',
@@ -2720,8 +2747,8 @@ function selftest() {
        !has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { narration: [{ tts: '안 돼요' }], shot: Object.assign({}, wide.shot, { info: '연출 — 그가 결국 버튼을 누른다' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /shares almost nothing/));
     ok('an info that ends on a delivery verb warns',
        has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { info: '가 라는 여운으로 마무리한다' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /ends on a delivery verb/));
-    ok('a share the cta shot does not say warns',
-       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, Object.assign({}, wide, { shot: Object.assign({}, ctaShot.shot, { size: 'ls', info: '다른 정보', share: '전혀 다른 문장이에요' }) }))], { STRUCTURE: structure(clean) }), /is not a line this shot says/));
+    ok('a share the cta shot does not say is allowed',
+       !has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, Object.assign({}, wide, { shot: Object.assign({}, ctaShot.shot, { size: 'ls', info: '다른 정보', share: '전혀 다른 문장이에요' }) }))], { STRUCTURE: structure(clean) }), /is not a line this shot says/));
     ok('a long-form board with few scenes warns',
        has(run([at(cover, 1), at(goodShot, 1, wide)].concat(Array.from({ length: 8 }, (_, i) => at(goodShot, i < 4 ? 1 : 2, { shot: Object.assign({}, goodShot.shot, { info: '정보 ' + i }) }))).concat([at(ctaShot, 2, wide)]), { STRUCTURE: structure(clean), FORMAT: 'youtube-long-16x9' }), /scenes on a long-form board/));
     ok('a long-form board with one sequence warns',
@@ -2736,8 +2763,8 @@ function selftest() {
        has(run([at(cover, 1, { narration: [{ tts: '그냥 숫자가 아니라 지혜예요' }] }), at(goodShot, 1, Object.assign({}, wide, { narration: [{ tts: '지혜가 담긴 값이에요' }] })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1, { turn: '그냥 숫자 → 지혜가 담긴 값', out: '가' }), clean[1]]) }), /appears only denied or as a what-if/));
     ok('an explanation screen unrelated to its scene warns even when a neighbour reads it back',
        has(run([at(cover, 1, { narration: [{ tts: '배터리는 38분 갔어요' }] }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { info: '배터리가 광고 60분 대신 38분 간다', render: { mode: 'data_graph', purpose: 'comparison', reason: 'r' } }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1, { event: '화자가 먼지통을 비운다', turn: '답답 → 후련', out: '가' }), clean[1]]) }), /shares nothing with scene 1's event, turn or place/));
-    ok('a hand-back shot whose staged info is a gesture warns',
-       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, Object.assign({}, wide, { shot: Object.assign({}, ctaShot.shot, { size: 'ls', info: '연출 — 세종이 옅게 미소 짓는다' }) }))], { STRUCTURE: structure(clean) }), /is a gesture or a framing note/));
+    ok('a hand-back shot whose staged info is a gesture is allowed',
+       !has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, Object.assign({}, wide, { shot: Object.assign({}, ctaShot.shot, { size: 'ls', info: '연출 — 세종이 옅게 미소 짓는다' }) }))], { STRUCTURE: structure(clean) }), /is a gesture or a framing note/));
     ok('a purpose that binds two objects with 와/과 warns',
        has(run(board, { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '구할 방법과 점주의 심정을 세운다', scenes: [1, 2] }]) }), /binds two objects/));
     ok('a wide size on a close layout warns',
@@ -2781,8 +2808,8 @@ function selftest() {
       motionEssential: true, action: 'cloth lifts', whyNotStill: 'the change is continuous' } }),
     visual: { bg: 'images/scene-2.png', why: 'continuous motion', audio: 'wind',
       camera: { movement: 'dolly in', speed: 'slow', framing: 'medium', end: 'the gate' }, video } });
-  ok('a generated_video cut without a previz is a violation after the draft',
-     has(bads(run([cover, videoCut({ prompt: SEEDANCE_PROMPT }), goodShot, ctaShot])), /pre-renders its camera and blocking in 3D/));
+  ok('a generated_video cut without a previz is advisory after the draft',
+     has(advice(run([cover, videoCut({ prompt: SEEDANCE_PROMPT }), goodShot, ctaShot])), /previz can guide camera and blocking/));
   ok('the previz waits for the camera pass (--draft)',
      !has(bads(run([cover, videoCut({ prompt: SEEDANCE_PROMPT }), goodShot, ctaShot], null, { draft: true })), /pre-renders/));
   ok('a previz on the host lane needs handoff frame_and_prompt and nothing Seedance asks for',
@@ -2802,8 +2829,8 @@ function selftest() {
                          narration: [{ sub: '가' }], visual: {} });   // no transition either — 4b writes it
   const skelCover = Object.assign(skel('hook'), { hookType: 'fear', hookForm: 'gap' });
   const skeleton = [skelCover, skel('drip'), skel('drip'), skel('cta')];
-  ok('a story-pass skeleton passes with --draft',
-     bads(run(skeleton, null, { draft: true })).length === 0);
+  ok('a story-pass skeleton without executable tts fails even with --draft',
+     has(bads(run(skeleton, null, { draft: true })), /narration group 1 requires text/));
   ok('the same skeleton fails without --draft',
      has(bads(run(skeleton)), /no tts/));
   ok('the CLI render gate rejects a skeleton that never chose a treatment',
@@ -2851,10 +2878,10 @@ function selftest() {
   // ── the move is a vendor word with what it needs (L13–L15, production-mode.js) ──
   const moveShot = (camera, over) => Object.assign({}, goodShot, {
     visual: Object.assign({ video: { prompt: SEEDANCE_PROMPT }, audio: 'wind', camera }, over || {}) });
-  ok('a generated shot whose move is a practitioner word is a violation with the vendor word',
-     has(bads(run([cover, moveShot({ movement: 'push in', speed: 'slow', framing: 'the desk', end: 'the door' }), goodShot, ctaShot])), /write "dolly in"/));
-  ok('a pan whose two ends are the same picture is a violation',
-     has(bads(run([cover, moveShot({ movement: 'pan left', speed: 'slow', framing: 'the desk', end: 'the desk' }), goodShot, ctaShot])), /has nowhere to go/));
+  ok('a generated shot whose move is a practitioner word is advisory with the vendor word',
+     has(advice(run([cover, moveShot({ movement: 'push in', speed: 'slow', framing: 'the desk', end: 'the door' }), goodShot, ctaShot])), /write "dolly in"/));
+  ok('a pan whose two ends are the same picture is advisory',
+     has(advice(run([cover, moveShot({ movement: 'pan left', speed: 'slow', framing: 'the desk', end: 'the desk' }), goodShot, ctaShot])), /has nowhere to go/));
   ok('"no speech, no dialogue, no voice-over" in visual.audio is the exclusion sentence, not a spoken line',
      !has(run([cover, moveShot({ movement: 'dolly in', speed: 'slow', framing: 'a', end: 'b' }, { audio: 'city traffic, no music, no speech, no dialogue, no voice-over' }), goodShot, ctaShot]), /spoken line/) &&
      has(run([cover, moveShot({ movement: 'dolly in', speed: 'slow', framing: 'a', end: 'b' }, { audio: 'a narrator says the line' }), goodShot, ctaShot]), /spoken line/));
@@ -2874,6 +2901,9 @@ function selftest() {
      engineOf({ type: 'broll', visual: { engine: 'astra' } }) === 'astra');
   ok('an astra clip prompt is not held to the Seedance grammar',
      seedancePromptFindings('she turns to the window', 'astra').length === 0);
+  ok('stored Seedance 2.5 prompts preserve its Korean direction support',
+     seedancePromptFindings('소포를 내려놓는다. The subject stays consistent.', 'seedance', 'dreamina-seedance-2-5-260628').length === 0 &&
+     seedancePromptFindings('소포를 내려놓는다. The subject stays consistent.', 'seedance', 'seedance-1-5-pro-251215').some(f => f.includes('Korean')));
   ok('a board that names the model instead of the lane still falls back to the type default',
      engineOf({ type: 'points', visual: { video: { engine: 'ltx' } } }) === 'seedance');
 
@@ -2995,10 +3025,16 @@ function selftest() {
     return lookHas(perShot(repeated), 'bad', /\[appearance-redefined\].*sleeve/) &&
       !lookHas(perShot(perShotFixture()), 'bad', /\[appearance-redefined\]/);
   })());
-  ok('character-missing rejects an empty people cut and accepts an episode cast reference', (() => {
-    const missing = perShotFixture(); delete missing.SCENES[0].visual.character;
-    return lookHas(perShot(missing), 'bad', /\[character-missing\]/) &&
-      !lookHas(perShot(perShotFixture()), 'bad', /\[character-missing\]/);
+  ok('off-screen cast does not force a character into an object insert or action', (() => {
+    return ['insert', 'action', 'reaction'].every(cutType => {
+      const board = perShotFixture();
+      board.SCENES[0].shot.cutType = cutType;
+      board.SCENES[0].visual.character = null;
+      board.SCENES[0].narration = [{ speaker: 'yi', tts: 'He has set the table.', delivery: 'voiceover' }];
+      const findings = perShot(board);
+      return !lookHas(findings, 'bad', /\[character-missing\]/) &&
+        !lookHas(findings, 'warn', /\[character-missing\]/);
+    }) && !lookHas(perShot(perShotFixture()), 'bad', /\[character-missing\]/);
   })());
   ok('character-on-empty-cut warns on a document cast and accepts an empty document', (() => {
     const carried = perShotFixture(); carried.SCENES[0].shot.cutType = 'document';
@@ -3011,7 +3047,7 @@ function selftest() {
     return lookHas(perShot(stale), 'warn', /\[bgPrompt-stale\]/) &&
       !lookHas(perShot(perShotFixture()), 'warn', /\[bgPrompt-stale\]/);
   })());
-  ok('style-missing refuses a still whose prompt lacks the episode treatment, and follows an approved per-shot preset', (() => {
+  ok('style-missing advises on treatment and optional per-shot selection provenance', (() => {
     const pm = require('./production-mode.js');
     const handwritten = perShotFixture(); handwritten.SCENES[0].visual.bgPrompt = 'Medium full shot, the officer crosses the yard.';
     const bare = perShot(handwritten);
@@ -3021,14 +3057,16 @@ function selftest() {
     over.SCENES[0].shot.videoDesign.look = 'inkwash';
     over.SCENES[0].visual.bgPrompt = assembleSpatialPrompt(over, 0).sourcePrompt;
     const stale = perShotFixture(); stale.SCENES[0].shot.style = over.SCENES[0].shot.style; stale.SCENES[0].shot.videoDesign.look = 'inkwash';
-    // An override without the user's record is refused by production-mode.js, not silently applied.
+    // An override without a selection record gets advice from production-mode.js; the preset still applies.
     const unapproved = perShotFixture(); unapproved.SCENES[0].shot.style = { preset: 'ink-wash', reason: 'x' };
+    const selectionAdvice=[];
+    const selectionErrors=pm.check(unapproved, { draft: true, advice:selectionAdvice });
     return lookHas(bare, 'bad', /\[style-missing\].*episode style "photoreal"/) &&
       !lookHas(perShot(perShotFixture()), 'bad', /\[style-missing\]/) &&
       over.SCENES[0].visual.bgPrompt.includes(pm.STYLES['ink-wash'].prompt) &&
       !lookHas(perShot(over), 'bad', /\[style-missing\]/) &&
       lookHas(perShot(stale), 'bad', /\[style-missing\].*per-shot style "ink-wash"/) &&
-      pm.check(unapproved, { draft: true }).some(e => /\[shot-style\].*HITL approval/.test(e)) &&
+      selectionErrors.length === 0 && selectionAdvice.some(e => /\[shot-style\].*shot\.style\.selection/.test(e)) &&
       !pm.check(over, { draft: true }).some(e => /\[shot-style\]/.test(e));
   })());
   ok('worldId-unmapped warns on a missing set and accepts a mapped set', (() => {
@@ -3057,6 +3095,15 @@ function main() {
 
   const draft = argv.indexOf('--draft') !== -1;
   const win = readScenes(scenesPath);
+  const executionProblems = require('./structure-contract.js').executionCheck(win);
+  if (executionProblems.length) {
+    const result = { shots: Array.isArray(win.SCENES) ? win.SCENES.length : 0, draft,
+      violations: executionProblems.length, warnings: 0, deferred: 0, findings: executionProblems };
+    process.stdout.write(argv.includes('--json') ? JSON.stringify(result, null, 2) + '\n'
+      : executionProblems.map(f => f.where + ': ' + f.what).join('\n') + '\n');
+    process.exitCode = 1;
+    return;
+  }
   const fmt = formatOf(scenesPath);
   const formatVideoMax = fmt.video && Number.isFinite(Number(fmt.video.generatedSecondsMax))
     ? Math.floor(Number(fmt.video.generatedSecondsMax) / 8) : 2;
@@ -3069,13 +3116,25 @@ function main() {
   const scenePolicy = normalizeMotionPolicy(win.MOTION_POLICY || null, formatVideoMax, 'window.MOTION_POLICY', fmt.pacing, isShort);
   const effectivePolicy = profileHasPolicy ? profilePolicy
     : normalizeMotionPolicy(null, formatVideoMax, 'format default', fmt.pacing, isShort);
-  const findings = check(win, fmt, { draft, policy: effectivePolicy, requireRenderPlan: true,
+  let findings = check(win, fmt, { draft, policy: effectivePolicy, requireRenderPlan: true,
                                      channelDir: profilePath ? path.dirname(profilePath) : null });
-  require('./render-routing.js').checkEpisode(win).forEach(what =>
+  require('./location-assets.js').check(win, path.dirname(scenesPath), {ready: !draft}).forEach(f => findings.push(f));
+  require('../../channel/references/character-sheet.js').sourceErrors(win, path.dirname(scenesPath)).forEach(what =>
+    findings.push({ level: 'bad', where: 'character identity', what }));
+  const boardDir = path.dirname(scenesPath);
+  const episodeRoot = path.dirname(path.dirname(boardDir));
+  const channelDir = path.basename(episodeRoot) === 'episodes' ? path.dirname(episodeRoot) : profilePath ? path.dirname(profilePath) : null;
+  if (channelDir) require('../../channel/references/character-panels.js').boardPanelFindings(win, boardDir, channelDir).forEach(f =>
+    findings.push({ level: 'warn', where: f.field || `character ${f.characterId}`, what: `[${f.domain}] ${f.message}` }));
+  const episodeAdvice = [];
+  require('./render-routing.js').checkEpisode(win, {advice: episodeAdvice}).forEach(what =>
     findings.push({ level: 'bad', where: 'visual direction', what }));
-  // Draft validates the plan; full production also requires a current evidence-backed read.
-  require('./story-contract.js').checkStory(win, { requireReview: !draft }).forEach(what =>
-    findings.push({ level: 'bad', where: 'story quality', what }));
+  episodeAdvice.forEach(what => findings.push({level: 'warn', where: 'visual direction', what}));
+  findings.push(...require('./shot-image-review.js').check(win, path.dirname(scenesPath)));
+  findings.push(...require('./shot-continuity.js').check(win, path.dirname(scenesPath)));
+  // Story quality guides the next pass; review metadata never gates automatic production.
+  require('./story-contract.js').checkStory(win, { requireReview: false }).forEach(what =>
+    findings.push({ level: 'warn', where: 'story quality', what }));
 
   profilePolicy.errors.forEach((what) => findings.push({ level: 'bad', where: 'profile motion policy', what }));
   scenePolicy.errors.forEach((what) => findings.push({ level: draft ? 'later' : 'bad',
@@ -3106,6 +3165,9 @@ function main() {
   if (fs.existsSync(scenarioPath)) {
     findings.push(...require('./check-scenario.js').checkAnchors(win, fs.readFileSync(scenarioPath, 'utf8'), spokenText));
   }
+  // Planning diagnostics inform the agent; runtime adapters validate actual execution inputs.
+  // Fatal parse/address errors returned above are distinct from editorial completeness.
+  findings = findings.map(f => ({ ...f, level: f.level === 'later' ? 'later' : 'warn' }));
   const bad = findings.filter((f) => f.level === 'bad');
   const warn = findings.filter((f) => f.level === 'warn');
   const later = findings.filter((f) => f.level === 'later');
@@ -3115,7 +3177,8 @@ function main() {
       format: fmt.format, shots: win.SCENES.length, draft,
       violations: bad.length, warnings: warn.length, deferred: later.length, findings
     }, null, 2) + '\n');
-    process.exit(bad.length ? 1 : 0);
+    process.exitCode = bad.length ? 1 : 0;
+    return;
   }
 
   const lines = ['scenes.js contract — ' + fmt.label + ' · ' + win.SCENES.length + ' shots' +
@@ -3151,7 +3214,7 @@ function main() {
     lines.push('  ' + later.length + ' machine-layer check(s) deferred to §4b — run again without --draft there.');
   }
   process.stdout.write(lines.join('\n') + '\n');
-  process.exit(bad.length ? 1 : 0);
+  process.exitCode = bad.length ? 1 : 0;
 }
 
 module.exports = { spokenText };

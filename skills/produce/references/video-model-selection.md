@@ -29,8 +29,7 @@ rather than dropped. The engine stays opt-in: nothing routes here unless the boa
 ASTRA's `fast` tier is a lower-resolution draft that finishes sooner than `guided`; measured at
 121s, it was slower than the default pipeline's 66s. Automatic duration selection stops at 121
 frames and its rounded range must contain an 8k+1 frame count. Direct `numFrames` accepts
-25-193 on the same grid under the live server ceiling (2026-09-30); the client keeps
-`guided` and `fast` capped at 121. For `astra_audio2video`,
+25-361 on the same grid on every mode, the live server ceiling (`/v1/models`, 2026-10-17). For `astra_audio2video`,
 choose `numFrames` or `audioMaxDuration`, never both; the tool also checks that `audioStartTime`
 is before the uploaded track ends. Retakes check source frames, 32-pixel dimensions and the
 requested end time against uploaded metadata before submission.
@@ -39,7 +38,7 @@ The front door has returned 403 for a runtime-default User-Agent, so every ASTRA
 `User-Agent: social-flow/<version>`. Per key, uploads are limited to 10/min and jobs to 5/min and
 60/hour; the waiting queue holds 20 jobs, and `/v1/jobs` bodies stop at 1 MiB.
 
-Uploads expire after 24 hours and each key has a storage ceiling of **20 uploads / 1 GiB**.
+Uploads expire after 24 hours and each key has a storage ceiling of **200 files** (live 2026-10-18 contract).
 Use `astra_video_list_uploads` with no arguments to find ids, then
 `astra_video_delete_upload({uploadId: "the-exact-id"})` only for inputs no longer needed
 by queued/running jobs or planned reuse. Deleting an upload does not delete a local source file.
@@ -61,8 +60,7 @@ multiple of neither 64 nor 32. The edit may add padding instead of scaling when 
 
 For image-conditioned calls, the server blocks **generate: {121,129,137}** at
 width 1280 (measured at heights 704/768) and **guided: {121}** at width 1280 (measured at height 704). Guided 129 and 137 succeeded at 1280x704 in server probes (the only guided size probed);
-the client's existing guided ceiling is still 121. The client requires 1536x1024 for guided images,
-so the guided 1280x704 probes are not client alternatives. Within current client limits use
+the guided client ceiling is now 361 like every mode. Guided and hq sizes follow the server grid and pixel ceiling; unmeasured sizes are not quality guarantees. Within current client limits use
 generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at
 121 frames also succeeded. The image-conditioned warning does not apply to `astra_text2video`: text-only
 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause.
@@ -146,18 +144,19 @@ correction in PR comment `5978877144`. The 25.3 output observation above follows
 the reviewer's inspection of frames 0/20/40/60/85 from job
 `d9924624e3474c6482ce698fb9645e50`; it supersedes the earlier obscured-mouth claim.
 
-Clips carry AAC (48kHz stereo) with no audio-off argument. **audio2video carries the supplied
+Clips carry AAC (48kHz stereo); `generateAudio: false` strips it after generation (same render time). **audio2video carries the supplied
 WAV re-encoded as AAC**, rather than newly generated sound: job `558632165cfe4678a631eb460bf89457`
 measured 100ms RMS Pearson correlation 0.99997 at zero lag. Use stereo (2-channel) input;
-mono WAV passes upload and job acceptance (202) but fails during generation. With neither
-`numFrames` nor `audioMaxDuration`, the server uses 121 frames (~5.04s at 24fps), even for an
+mono WAV is refused at upload because it fails in the engine's audio encoder. With no
+`duration`, `numFrames` or `audioMaxDuration`, the client explicitly sends 121 frames (~5.04s at 24fps) for compatibility, even for an
 8-second WAV. `numFrames` fixes the length; `audioMaxDuration: 8` selects 185 frames (~7.71s)
 at 24fps after rounding, so it can trim the tail. Drop or duck the output track in the edit
 when laying another narration or BGM over it.
 
-This document is the source of truth for choosing between the two engines. Tool descriptions
-carry their own summaries of it, and `skills/autoproduce/references/prices.tsv` is the source
-of truth for unit prices.
+This document describes the two API engines' capabilities and prompt grammar; which engine an
+episode uses is the saved directory model (model-settings.md), and the comparisons here serve first
+setup and explicit change requests. Tool descriptions carry their own summaries of it, and
+`skills/autoproduce/references/prices.tsv` is the source of truth for unit prices.
 
 Reference date 2026-08-15. The Seedance side was verified by opening the official BytePlus
 ModelArk docs directly, with the write-up in `docs/api-reference/seedance.html`. The Veo prices
@@ -183,16 +182,22 @@ cross-engine multipliers below stand.
 - [Prompt grammar — the two engines differ](#prompt-grammar-the-two-engines-differ)
   - [Positive locks — what an exclusion turns into on Seedance](#positive-locks-what-an-exclusion-turns-into-on-seedance)
   - [The batch-failure ladder — which level to change](#the-batch-failure-ladder-which-level-to-change)
-- [Camera — this section is the source of truth for engine vocabulary and routing](#camera-this-section-is-the-source-of-truth-for-engine-vocabulary-and-routing)
+- [Camera — this section is the source of truth for engine vocabulary and routing](#camera-engine-vocabulary-and-moves-per-cut)
 - [What Seedance can't do](#what-seedance-cant-do)
 - [Key setup](#key-setup)
 
 ## The host video tool comes first
 
-**Rule 0 (owner directive 2026-09-07).** When the CLI running produce ships its own video
-tool, that tool is the default route for every generated clip, and the four rules below choose
-between the API engines only where the episode wrote `videoProvider:"api"` or the cut wrote a
-reason the host tool cannot serve. Today that CLI is **Grok**: `image_to_video` (one source
+For a configured workspace, [directory model settings](../../_shared/model-settings.md)
+take precedence: reuse the episode snapshot's video engine/model/resolution. The
+host default and per-cut recommendations below guide first setup only. Do not
+replace a saved choice because another host, cheaper tier or faster engine is now
+available. A capability mismatch needs an explicit user exception before switching.
+
+**Rule 0 (owner directive 2026-09-07; a first-setup recommendation since 2026-10-16).** When
+the CLI running produce ships its own video tool, recommend that tool at directory setup; once
+`.social-flow/models.json` holds a video model, that saved choice is the route, and the four rules
+below inform first setup or an explicit change request only. Today that CLI is **Grok**: `image_to_video` (one source
 image, `duration` 1–15 s, `resolution` 480p or 720p, the aspect follows the source image) and
 `reference_to_video` (several reference images, `duration` 6 or 10 s, preset `voices` for a
 speaking subject). Codex and Claude Code ship no video tool, so `videoProvider` is `"api"` there.
@@ -246,8 +251,9 @@ and people don't prefer it. If you need reference images, extension, or 4K, lite
 those, so step up to fast; if you don't need those three, it's **lite**. The standard tier is
 only for when a human explicitly picks it.
 
-**3. If the slot discards the sound, Seedance silent; if the slot uses the sound, Veo.** The
-reasoning is §The one axis that splits them, below.
+**3. (First setup) If the slot discards the sound, Seedance silent fits; if the slot uses the
+sound, Veo fits.** Once a model is saved it serves both slots; the reasoning is §The one axis that
+splits them, below.
 
 **4. Don't make an unevaluated model the default for an important cut.** 2.5 · 2.0 fast ·
 2.0 mini · 1.0 pro fast are on no public arena at all (§Quality). If you want one because it's
@@ -278,7 +284,7 @@ Store the selection fields beside the prompt: `visual.video` for motion backgrou
 | `referenceAudioPaths` | Planned fixed-voice samples; forces the 2.5 speaking/b-roll route |
 | `previz` | `{ renderer, clip, firstFrame, sha256, fps, seconds, camera: { movement }, handoff?, actors?, blend? }` with `modelPurpose:"previz"` — the clip rendered at the billed length, `referenceImagePaths[0]` the source still, no end frame; billed as input + output seconds on the `…-video` price rows. On `engine:"host"` the same record carries `handoff:"frame_and_prompt"` and none of the Seedance fields |
 | `model` | Optional exact model ID; omit to use the purpose-based selection. An explicit override must pass the same capability checks |
-| `resolution` | Defaults to `1080p`; do not choose a 720p-only tier for a 1080p episode |
+| `resolution` | The saved resolution for this model (720p allowed, CLAUDE.md 2026-09-12); the final canvas scales the source |
 
 For complex motion with a photoreal face, keep 1.5 or choose a compatible Veo route;
 do not remove the face or change the shot merely to qualify for 2.x. When 1.5 is chosen,
@@ -287,8 +293,9 @@ in `modelReason`. Multi-reference/voice requirements with a photoreal face must 
 replanned on a compatible route before generating.
 
 Produce reads each Seedance row's `generation` object from `cost-preview.js --json` and
-uses its `tool`, `model`, `resolution`, `durationSeconds`, `generateAudio`, and reference
-paths in the API call. Resolve relative reference paths from the storyboard directory.
+uses its `tool`, `model`, `resolution`, `generateAudio`, and reference paths as the `video_plan`
+operation args, with `requiredSeconds` from `plan-video-duration.js` for the length
+(video-duration.md; the legacy `durationSeconds` is not sent beside it). Resolve relative reference paths from the storyboard directory.
 Add the stored prompt and source/output paths. Do not send planning fields such as
 `modelPurpose`, `modelReason`, `realFaceInput`, `priceKey`, or `kind` as tool arguments.
 `seedance_img2video` takes the existing source still; `seedance_reference` takes the
@@ -301,13 +308,12 @@ model, purpose, resolution, audio, or references invalidates the cost snapshot. 
 price combinations block a budget verdict instead of using the 1.5 price. Forecasts use
 list prices, including 2.5 at 1080p, so expiring discounts cannot understate the budget.
 
-Keep upgrades inside the episode budget and existing approval scope. Unattended runs make
-a hook only on the growth plan's standing `video_model` (a supported model; with none, no generated
-hook at all), and may pick a compatible model for the requirements above only when the full
-revised estimate fits the authorized cap. Do not make a paid A/B comparison by default.
-If a compatible 1.5 clip on a b-roll or speech slot repeatedly misses an essential action, a 2.0 retry is an escalation:
-record the failure and reason, retain the spent ledger, and recalculate the remaining budget
-before calling. Reference/voice requirements cannot be dropped just to fit the cap.
+Keep upgrades inside the episode budget and existing approval scope. Unattended runs use the
+saved directory model like attended ones; a legacy growth-plan `video_model` does not override it.
+Do not make a paid A/B comparison by default. If a saved-model clip repeatedly misses an essential
+action, or the saved model cannot take a required reference or voice input, report the limitation
+with the spent ledger and request an explicit exception before any other model is billed.
+Reference/voice requirements cannot be dropped just to fit the cap.
 
 ## One-line decisions
 
@@ -320,12 +326,12 @@ before calling. Reference/voice requirements cannot be dropped just to fit the c
 | You must **reproduce the composition** of a source picture | First/last frames (`sourceImagePath`+`lastImagePath`), not reference images — both engines. References carry look and style, not composition |
 | **Any generated_video cut** — every one carries a 3D previz (user directive 2026-09-11) | `seedance_reference` · 2.x · the Blender or three.js previz as `referenceVideoPaths` (`modelPurpose:"previz"`, `handoff:"reference_video"`), the source still as `Image 1` — the vendor's clay-model reference; input plus output seconds billed. Seedance 1.x and host tools use the previz first frame and camera/blocking prompt instead of uploading its clip (`handoff:"frame_and_prompt"`, storyboard blender-previz.md §6.7) |
 | **Register a character once and keep calling it** | Only the Seedance asset library (`asset://`) — Veo has no registry; it's base64 inline per request |
-| **A cut with dialogue/sound effects** | `veo_text2video` / `veo_img2video` — Veo's audio is better |
+| **A cut with dialogue/sound effects** | `veo_img2video` — Veo's audio is better (produce rule 8: never `veo_text2video`) |
 | **Extending** an existing Veo clip | `veo_extension` — Seedance has no counterpart tool |
 | Consistent person video from a **real person's photo** | `veo_reference` — Seedance 2.x rejects live-action faces *(untested)* |
 | **Character/product** consistency from several photos | `seedance_reference` · 2.5 (up to 30 images) — Veo is 3 images, fixed 8s |
 | Transfer a **sketch/toon style** by reference | `seedance_reference` — Veo 3.1 doesn't support `referenceType: "style"` |
-| A character must **speak in its fixed voice** inside a generated clip | `seedance_reference` · `dreamina-seedance-2-5-260628` · `referenceAudioPaths: [characters/<id>/voice.wav]` · `generateAudio: true` — Veo takes no audio reference. Imitation, not cloning: describe the voice in words too (§The character panels) |
+| A character's **voice sample should guide native speech** | Use `seedance_reference` on the saved compatible 2.x model with `generateAudio:true`. `video_plan` maps pinned character samples to their actual reference indices. See [voice-continuity.md](voice-continuity.md): sample imitation is separate from exact supplied-WAV synchronization; Veo has no audio reference. |
 | The source image contains a **child** | The Veo image→video lane is blocked (underage block) — the Seedance 1.x side is unverified |
 | A length **other than 4/6/8s** | `seedance_*` — takes 2–30s in 1s steps |
 | **21:9 / 4:3 / 1:1 / 3:4** frame | `seedance_*` — Veo only has 16:9 and 9:16 |
@@ -517,7 +523,7 @@ pass the argument.
 **3. `generateAudio`'s vendor default is `true`; ours is `false`.**
 Narration is added separately via `tts_*`, so a model-generated voice makes two layers. On
 top of that, 1.5 pro with audio on costs **exactly 2×** ($1.2 → $2.4/1M tokens). The tool
-default is flipped to `false` — leave it. The one exception is a reference-audio call: a voice
+default is flipped to `false` for separate narration. Authored native effects use [model-aware effects](video-sound.md) to enable it explicitly and preserve the source soundtrack. Another exception is a reference-audio call: a voice
 reference into a silent clip has nothing to shape, so `seedance_reference` rejects
 `referenceAudioPaths` with `generateAudio: false` before the call.
 
@@ -564,35 +570,31 @@ hand over the two or three the shot actually needs:
 data/<channel>/assets/characters/<id>/
   identity.md   # the canonical description — look, marks, expression, voice, veo verdict
   face.png      # face close-up — neutral, minimal shoulders, plain background. The headshot the vendor asks for
-  body.png      # full body, front, HEADLESS — body, clothes, shoes. No face
-  back.png      # full body, back, no face — required for every new reference set
+  body.png      # canonical front panel: headless mannequin, build, clothes and shoes
+  costume.png   # optional wardrobe variant; baseline body/back already omit the head
+  back.png      # matching headless rear mannequin — required for every new reference set
   front.png     # legacy: full body with the head on. Fallback when the panels don't exist yet
   voice.wav     # the fixed voice sample — 5–10 s of speech in the character's register, no music or effects. Reference audio for cuts the model voices
 ```
 
 **Front-facing reference set: `[face.png, body.png]`, in that order.** That is the vendor's headshot +
-full body, and array order is weight, so the face leads. Add `back.png` only for a shot where the
-character is seen from behind; a pure rear shot uses back alone, and a facial close-up uses face alone.
-Portal slots map body → front, back → back, face → face. All three must be stored before
+body-reference pairing, with our headless wardrobe panel and the face first. Add
+`back.png` for rear views. A rear shot still needs the head design from `face.png`
+(or a separate approved rear-head reference); do not send the headless back alone.
+A facial close-up uses face alone. State that body panels supply wardrobe/build,
+while the face supplies the complete head; the scene depicts a complete character.
+Keep body, back and face reference images locally. All three must be stored before
 a new character reference set is complete; optional extra images serve specific poses/details. Never build a combined sheet out of the panels — the moment two
 angles share one image, this whole section's warning applies again.
 
-**Why the front panel is headless.** The face is already carried by `face.png` at a much larger
-size, so a head on the body panel is the same information twice, and the more human figures a
-reference set carries the more readily the model reads them as several people — the doppelgänger
-failure. **This part is a creator practice, not vendor guidance**: ByteDance documents the
-two-image set but says nothing about removing the head from the full body. Treat it as our
-working default and settle it with an A/B (same shot, headless body vs `front.png`, ID drift
-compared over a few 8-second cuts) — the open question is already logged in the camera research.
-
-An outside practitioner reaches the same failure mode from the other direction `[course]`.
-Higgsfield's course keeps the three-panel sheet as one image, but the step it insists on is
-erasing the face from the full-body panel — "more than one face and Seedance wobbles; by the
-fifth scene your lead is a stranger." So the two sources disagree on the container (one sheet
-vs separate files) and agree on the rule underneath: **one face per reference set.** Their
-container isn't ours to copy — their platform saves the sheet as a named Element and matches it
-by tag, which is not what a raw `referenceImages` array does, and ByteDance's own warning
-against multi-angle assets is `[vendor]`. Keep the panels split; take the confirmation.
+**Baseline and adapter inputs are separate.** The shared front panel follows
+`../../channel/references/character-panels.md`: front and back omit the head;
+the face close-up is the single facial identity reference. This is our authoring
+convention, not a vendor API constraint. Preserve legacy originals and inspect
+actual identity drift. For a first-frame image-to-video adapter, compose a complete
+scene image using these references first; never use a headless panel as the literal
+opening frame. Multiple panels in the review sheet do not imply a multi-panel
+image should be submitted as one video start frame.
 
 **Light the sheet flat** `[course]`. A reference sheet gets rejected on lighting far more often
 than on likeness, and every shot generated from it inherits the fault. What passes: soft
@@ -762,8 +764,8 @@ write them in whatever order reads well.
 **Exclusion directives are the most common mistake.** Write "no ~" in the body and that noun
 tends to get drawn — there's a field-tested local-image case where `"no maps"` produced maps
 (4 of 4 failed), and the Veo prompt guide itself marks directive phrasing not recommended.
-The server's four `veo_*` tools expose the `negativePrompt` argument, so route all exclusions
-there.
+On Veo fast/standard route all exclusions into the `negativePrompt` argument; lite takes none (the
+API returns 400), so there every exclusion stays in the prompt body as positive description.
 
 **Portrait must be explicit on Veo** — `aspectRatio` defaults to `16:9` and only two values
 are allowed. A portrait start image doesn't carry it over. Developer-forum reports exist of
@@ -862,7 +864,7 @@ the differentiator.
 
 ---
 
-## Camera — this section is the source of truth for engine vocabulary and routing
+## Camera — engine vocabulary and moves per cut
 
 This section owns **which word each engine understands and how many moves a model takes per
 cut**. Which technique a shot should use — the size, the angle, the move, the length and the
@@ -955,3 +957,16 @@ export ARK_API_KEY="..."   # https://ai.byteplus.com/ark/region:ap-southeast-1/a
 The region is `ap-southeast-1` (Singapore), the only one. `ARK_BASE_URL` can override it, but
 the video models live only in that region, so normally leave it alone. Without this key,
 `veo_*` still runs on `GEMINI_API_KEY` — the two engines don't block each other.
+
+
+ASTRA contract update (2026-10-18): the live audio2video capability field says omitted
+length follows audio, but its contract_notes still say 121 frames. The plugin therefore
+sends its historical 121-frame default explicitly when duration, numFrames and
+audioMaxDuration are absent. Use audioMaxDuration to follow a bounded audio span.
+Length selectors are mutually exclusive. HDR is available on text2video and audio2video
+without imagePath; downstream assembly must preserve its BT.2020/HLG 10-bit color.
+The shot preparation helper forwards authored tier, guidance, LoRA strength, inference
+steps and generateAudio when the selected mode supports them. Unsupported tier/LoRA
+choices on audio/keyframe shots produce an actionable error instead of being discarded.
+Upload listing/deletion are provisional extensions, absent from the six official OpenAPI
+routes; availability is not promised by the generation contract.

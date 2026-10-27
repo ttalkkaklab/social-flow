@@ -1,14 +1,20 @@
 # Story quality: evidence, meaning, ending, then an optional CTA
 
-Apply this contract to every model and authoring route, including skip-research channels,
+**Automatic execution:** [Automation guidance](../../_shared/automation-guidance.md) supersedes creative quality gates, repeated approvals and review-score requirements here. Keep the concrete guidance and truthful review state. Enforce only actual runtime dependencies and the scope of external-action authorization.
+
+
+**Scope (2026-10-16):** this file is the story-v1 contract (`STORY.version: story-v1`). New boards use story-v2: read [character-led scenarios](character-scenarios.md) first and its [Story-v2 STORY example](character-scenarios.md#story-v2-story-example) for the `window.STORY` shape (event references `{shot, event, quote}`, five review axes, kinds evidence · fiction · adapted). The guidance below on evidence, meaning and ending still helps on any board as review prompts; the schema, group references and checks are story-v1. Production voice, budget, destination and publishing consent are unchanged.
+
+
+On a story-v1 board apply this contract to every model and authoring route, including skip-research channels,
 recordings, test episodes and revisions. Read it before candidates or narration. It overrides
 older requirements for a closing question, modern parallels, high-arousal emotions or a twist.
 Keep existing beat identifiers and production limits: `beat:"cta"` is the closing beat,
-not a requirement to ask the viewer for something. An ask stays optional; a forwardable thing
-does not — an ask requests behaviour from the viewer, while a forwardable thing is one sentence,
-figure or verdict they can pass on as-is. Asking to be shared is an ask, not a trigger. On a
-short that forwardable thing is `shot.share` on the closing shot, and `check-scenes.js` fails a
-board without it.
+not a requirement to ask the viewer for something. An ask stays optional, and so does the
+forwardable thing — an ask requests behaviour from the viewer, while a forwardable thing is one
+sentence, figure or verdict they can pass on as-is. Asking to be shared is an ask, not a trigger.
+On a short the forwardable thing may be named in the closing shot's `shot.share`; the field is
+optional and `check-scenes.js` allows a board without it.
 
 ## Contents
 
@@ -37,11 +43,11 @@ board without it.
 3. Choose the evidence, action, demonstration or punchline that delivers that content.
    Design the ending before polishing the opening: the close is the 「그날 이후로」 picture —
    where the world stands after the reversal — and over it the message line, heard once, at or
-   after the payoff (`STORY.thesis`; the checker requires a spoken group to carry it). A
+   after the payoff (`STORY.thesis`; the story-v1 checker reports when no spoken group at or after the payoff carries it). A
    resolution, demonstrated limit or completed joke can be that picture; a moral (~하자 ·
    ~해야 한다) is not the line, and neither is the reversal said again or the picture described.
-4. Create an opening whose question this ending can answer. Compare three content angles,
-   not three adjectives. Pay a useful piece early. Suspense-led shorts defer the whole answer.
+4. Create an opening whose question this ending can answer. Compare as many content angles
+   as the decision needs, not adjectives. Pay a useful piece early. Suspense-led shorts defer the whole answer.
    A short may also state its result in the first seconds (`hookType:"spoiler"`); attention then
    rests on the evidence, the how and the consequence, the same way answer-first long-form
    sustains it. Choose the lane from the material, and say in `STORY.endingReason` what the
@@ -53,11 +59,11 @@ board without it.
 6. Default to no CTA. If an ask helps, put it after the promise is paid and connect it to
    the actual choice or useful next action. A generic poll or next-episode teaser cannot
    substitute for this episode's answer. Never force every sentence into a cliffhanger. An ask
-   stays optional; a forwardable thing does not — an ask requests behaviour from the viewer,
+   stays optional, and so does the forwardable thing — an ask requests behaviour from the viewer,
    while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking
-   to be shared is an ask, not a trigger. On a short, name that forwardable thing in the
-   closing shot's `shot.share`, whether or not the episode ends with an ask; on long-form the
-   act beat already asks for it and no checker demands the field.
+   to be shared is an ask, not a trigger. When the episode has a forwardable thing, name it in
+   the closing shot's `shot.share`, whether or not the episode ends with an ask; no checker
+   demands the field on either format.
 
 Keep the seven candidate headings. Under 주제 write the specific content and its evidence
 basis, separating interpretation. Use 전개 #1–#3 for necessary developments; modern parallels
@@ -135,7 +141,7 @@ already carrying approved narration keep the existing `VOICE:"user"` route.
 
 1. Before camera work run `node check-story.js storyboard/ --draft`, or the existing
    `check-scenes.js storyboard/ --draft`. Missing story decisions, references, scene purposes
-   and a CTA before payoff are hard failures even on a draft.
+   and a CTA before payoff are reported as diagnostics on a draft; fix them in the next pass.
 2. In the existing narration review, read the spoken lines before the declared thesis.
    Extract them with `check-story.js storyboard/ --text`, which merges live transcripts in
    playback order. Use `--map` privately to map sentence numbers back to shot/group references.
@@ -144,11 +150,12 @@ already carrying approved narration keep the existing `VOICE:"user"` route.
    exact narration quotes and specific reasons: **meaning**, **progression**, **payoff**,
    **grounding**. Does it say something concrete? Does each development earn the next?
    Does the answer pay the opening before any ask? Does the interpretation fit the evidence?
-3. Pass all four with no unresolved substantive findings. A score of 95 cannot waive failure.
+3. Resolve substantive findings in the next pass; a score neither waives nor blocks.
    Use the existing reviewer and retry budget, not another scoring loop. If delegation is
    unavailable, record an explicit self-review; never pretend another model read it. Grounding
    cannot pass merely because the author says a claim is sourced. Do not repair missing
-   spoken content with captions, music or slides. Stop before generation on an unresolved read.
+   spoken content with captions, music or slides. An unresolved read is recorded as a finding
+   (`not_reviewed` when no read happened) and does not stop authoring.
 
 Record the review in `STORY.review` after the read:
 
@@ -164,7 +171,7 @@ Record the review in `STORY.review` after the read:
 ```
 
 Run `node check-story.js storyboard/` after recording the read. Full `check-scenes.js`
-also requires this evidence before production. The hash covers narration, subtitles, screen
+reports missing review evidence as a warning (`not_reviewed`); it does not require it. The hash covers narration, subtitles, screen
 copy, the closing shot's `shot.share`, order, beats, comprehension and story decisions, not
 review or camera/audio settings — rewriting the forwardable thing after the read invalidates
 the review the same way rewriting a sentence does.
@@ -172,7 +179,7 @@ Vocabulary edits invalidate it: recheck the affected meaning and the whole causa
 record the fresh read, then update the hash. Never refresh only the hash to silence a failure.
 
 Existing boards have no silent exemption. Derive their contract from the actual words and
-review them. If passing requires rewriting approved narration, use the normal approval path;
-unattended episodes stay on hold. Do not modify delivered videos or old artifacts merely to
+review them. If a finding needs a narration rewrite, use the normal revision path;
+unattended episodes continue with the finding reported. Do not modify delivered videos or old artifacts merely to
 make plugin tests pass. Report structural checks separately from editorial judgment and
 observed audience results: no checker proves entertainment value or predicts completion rates.

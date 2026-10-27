@@ -23,6 +23,6 @@ export const VOICE_LOCK_PROPERTY = {
         enabled: { type: 'boolean', default: true, description: 'Apply to model-generated speech' },
         model: { type: 'string', enum: [VOICE_LOCK_MODEL], default: VOICE_LOCK_MODEL, description: 'Speech-to-speech model; independent of the TTS model' },
         removeBackgroundNoise: { type: 'boolean', default: true, description: 'Remove background noise from the dialogue input' },
-        referenceAudioUrl: { type: 'string', format: 'uri', maxLength: 2000, description: 'Portal reference sample URL for preview/comparison, e.g. https://story.ttalkkaklab.com/api/workspaces/<workspace>/characters/<id>/voice-sample; must be an absolute http(s) URL, a local or relative path is rejected; does not create or clone a voice' },
+        referenceAudioUrl: { type: 'string', format: 'uri', maxLength: 2000, description: 'Reference sample URL for preview/comparison; must be an absolute http(s) URL, a local or relative path is rejected; does not create or clone a voice' },
     }, additionalProperties: false,
 };

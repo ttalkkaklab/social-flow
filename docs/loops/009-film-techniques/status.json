@@ -1,0 +1,65 @@
+{
+  "objective": "Four filmmaking elements, storyboard technique icons, installed-tool handoff and real Meleon footage >=95 without P0",
+  "rubricStatus": "user_confirmed",
+  "targetScore": 95,
+  "iterationLimit": "user requested repeat until >=95",
+  "pluginStatus": "Full check 2245/2245; final prompt de-duplication targeted test10/10; skill lint passed; fifth local installation and installed smoke passed",
+  "mediaStatus": "Original scene 2 final delivered, but its pinned voices differed from current character sheets. Corrected Gemini speech for all six scene 2 lines is attached; ASTRA regeneration is in progress.",
+  "scope": "all 28 storyboard shots; initial connected scene 2 proposed",
+  "score": null,
+  "objectiveGatePrevious": {
+    "tests": 2245,
+    "pass": 2245,
+    "fail": 0
+  },
+  "pending": [
+    "Complete corrected Gemini scene 2 video generation and final assembly",
+    "Merge plugin into dev, update main worktree and remove task worktree"
+  ],
+  "mergeRequested": {
+    "target": "dev",
+    "mainWorktree": "/Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow",
+    "cleanupWorktree": "/Users/zeans/orca/workspaces/social-flow/cusk",
+    "condition": "only after target achievement"
+  },
+  "newPaidSpeechCalls": 6,
+  "executionState": "correcting_character_voice",
+  "blockedAudit": {
+    "checkedAt": "2026-10-18T05:58:00.828094+00:00",
+    "recurrence": "Same pending rubric confirmation and speech spending ceiling persisted across at least three consecutive goal turns. Independent integration, installation and verification work has completed.",
+    "completionClaimed": false,
+    "missingEvidence": [
+      "User-confirmed frozen scoring rubric",
+      "Spending ceiling for missing scene 2 speech",
+      "Full audiovisual review supporting both >=95 scores"
+    ],
+    "preserved": [
+      "Working tree changes and pre-integration stash",
+      "Generated media and project backups",
+      "Local installation backups"
+    ],
+    "mergeExecuted": false,
+    "cleanupExecuted": false
+  },
+  "speechBudget": {
+    "currency": "USD",
+    "maxAdditional": 1,
+    "approvedBy": "허용 할테니 진행해.",
+    "approvedAt": "2026-10-18T05:59:09.349523+00:00"
+  },
+  "speechStatus": "Six replacement lines use current character-sheet Gemini voice IDs; provider receipts and attachment revisions saved in .work/film-voice-correction.",
+  "pluginReview": {
+    "score": 98,
+    "P0": 0,
+    "report": "plugin-review-2.md"
+  },
+  "activeRender": {
+    "session": 73378,
+    "launcher": "/tmp/film-correct-render.py",
+    "verifiedAt": "2026-10-18T08:49:17.907118+00:00",
+    "status": "running",
+    "work": "/Volumes/data/story/meleon/data/gyeongseong-family-farce/episodes/ep01-fake-bride/.work/film-voice-correction"
+  },
+  "commit": "dc67ca9",
+  "evaluationInstruction": "User requested final file without evaluation; do not claim footage score."
+}

@@ -7,8 +7,10 @@ description: >
   writes a chart-first HTML report under data/[channel]/growth/review-recent.html, and
   opens it.
 argument-hint: "<channel> [limit]"
-allowed-tools: ["Read", "Write", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__content_feedback"]
+allowed-tools: ["Read", "Write", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__content_feedback", "mcp__plugin_social-flow_social-flow__content_feedback"]
 ---
+**Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
+
 
 # Feedback on recent posts — HTML report
 

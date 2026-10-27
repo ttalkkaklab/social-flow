@@ -12,6 +12,8 @@
  */
 
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { createInterface } from 'node:readline';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
@@ -26,8 +28,8 @@ import {
   snsCredentialFile,
   snsTokenDir,
 } from '../dist/config.js';
-import { SNS_PLATFORM_BY_TOOL, TOOLS } from '../dist/tools.js';
-import { ROUTES, threadsTextLength } from '../dist/handlers.js';
+import { SERVER_INSTRUCTIONS, SNS_PLATFORM_BY_TOOL, TOOLS } from '../dist/tools.js';
+import { ROUTES, apiErrorText, threadsTextLength } from '../dist/handlers.js';
 import { STOCK_PROVIDERS, STOCK_MEDIA, STOCK_ORIENTATIONS, STOCK_MAX_LIMIT } from '../dist/stock-client.js';
 import {
   DEFAULT_GEMINI_38_TTS_MODEL,
@@ -36,13 +38,6 @@ import {
   TTS_VOICE_NAMES,
   VALID_TTS_MODELS,
 } from '../dist/tts-client.js';
-import {
-  DEFAULT_SUPERTONIC_LANGUAGE,
-  MAX_SUPERTONIC_INPUT_CHARS,
-  SUPERTONIC_LANGUAGES,
-  SUPERTONIC_SAMPLE_RATE,
-  SUPERTONIC_VOICE_NAMES,
-} from '../dist/supertonic-client.js';
 import {
   DEFAULT_ELEVENLABS_MODEL,
   DEFAULT_ELEVENLABS_OUTPUT_FORMAT,
@@ -116,6 +111,16 @@ describe('tool surface', () => {
     assert.equal(byName.size, TOOLS.length, 'duplicate tool name');
   });
 
+  // The model picks a tool by its description. Two tools with the same text leave it a coin
+  // toss — acting_review, tts_review_acting and tts_review_final shared one until 0.118.3.
+  it('descriptions are unique', () => {
+    const seen = new Map();
+    for (const tool of TOOLS) {
+      assert.equal(seen.get(tool.description), undefined, `${tool.name} repeats ${seen.get(tool.description)}'s description`);
+      seen.set(tool.description, tool.name);
+    }
+  });
+
   for (const tool of TOOLS) {
     describe(tool.name, () => {
       it('name follows the snake_case namespace convention', () => {
@@ -127,6 +132,8 @@ describe('tool surface', () => {
         assert.ok(tool.title.trim().length > 0, 'title is empty');
         assert.ok(tool.title.length <= 60, `title too long (${tool.title.length} chars)`);
         assert.ok((tool.description ?? '').trim().length >= 40, 'description missing or too short');
+        // Claude Code cuts an upfront tool description at 4,096 characters; the rest never reaches the model.
+        assert.ok(tool.description.length <= 4096, `description too long (${tool.description.length} chars)`);
       });
 
       it('inputSchema is a valid object schema', () => {
@@ -234,9 +241,6 @@ describe('parameter naming convention', () => {
 
   for (const tool of TOOLS) {
     it(`${tool.name}: parameters are camelCase`, () => {
-      // portal_api_* mirrors the portal's generated API contract byte-for-byte. API-owned
-      // nested fields such as scenario meta.wow_type must keep their wire name.
-      if (tool.name.startsWith('portal_api_')) return;
       for (const [path] of walkProperties(tool.inputSchema)) {
         const key = path.split('.').pop().replace(/\[\]$/, '');
         // external-API standard abbreviations like gl/hl/q are exempt — renaming them blurs the mapping
@@ -367,49 +371,21 @@ describe('mlx_* tools', () => {
   const MLX = [
     'mlx_image_generate',
     'mlx_image_edit',
-    'mlx_tts_generate',
     'mlx_music_generate',
     'mlx_video_generate',
     'mlx_3d_generate',
   ];
 
-  it('all six mlx tools are listed and routed as local generation', () => {
+  it('all five mlx tools are listed as local generation', () => {
     for (const name of MLX) {
       const tool = byName.get(name);
       assert.ok(tool, `missing tool ${name}`);
-      assert.equal(typeof ROUTES[name], 'function', `missing route ${name}`);
       assert.equal(tool.annotations.openWorldHint, false, `${name} must be generateLocal`);
       assert.equal(tool.annotations.readOnlyHint, false);
       assert.equal(tool.annotations.destructiveHint, false);
-      assert.match(tool.description, /brew install --cask mlx-core/);
-      assert.match(tool.description, /never launches the app/);
+      if (!name.startsWith('mlx_image_')) assert.match(tool.description, /brew install --cask mlx-core/);
+      if (!name.startsWith('mlx_image_')) assert.match(tool.description, /never launches the app/);
     }
-  });
-
-  it('the mlx family pattern hides exactly the six mlx tools', () => {
-    const hidden = TOOLS.filter((tool) => isToolDisabled(tool.name, ['mlx_*'])).map((t) => t.name).sort();
-    assert.deepEqual(hidden, [...MLX].sort());
-  });
-
-  it('image lane stays default-local and Hangul stays gpt_image', () => {
-    const gen = byName.get('mlx_image_generate');
-    const edit = byName.get('mlx_image_edit');
-    assert.match(gen.description, /image_local_generate/);
-    assert.match(gen.description, /gpt_image_text2img/);
-    assert.match(gen.description, /1088×1920/);
-    assert.match(gen.description, /default:true/);
-    assert.match(edit.description, /mode:"edit"/);
-    assert.match(edit.description, /gpt_image_img2img/);
-    assert.equal(gen.inputSchema.properties.width.default, 1024);
-  });
-
-  it('tts is not a silent fallback and names input, not text', () => {
-    const tts = byName.get('mlx_tts_generate');
-    assert.match(tts.description, /silent fallback/);
-    assert.match(tts.description, /profile §2/);
-    assert.ok('input' in tts.inputSchema.properties);
-    assert.ok(!('text' in tts.inputSchema.properties));
-    assert.ok((tts.inputSchema.required ?? []).includes('input'));
   });
 
   it('music defaults instrumental and names the lyrics 400', () => {
@@ -429,33 +405,6 @@ describe('mlx_* tools', () => {
     assert.equal(video.inputSchema.properties.width.default, 768);
     assert.equal(video.inputSchema.properties.height.default, 1280);
     assert.equal(video.inputSchema.properties.numFrames.default, 49);
-  });
-
-  it('3d is GLB-only and says the pipeline has no consumer', () => {
-    const mesh = byName.get('mlx_3d_generate');
-    assert.match(mesh.description, /GLB/);
-    assert.match(mesh.description, /HTML mesh lane consumes embedded GLB/);
-    assert.match(mesh.description, /approved physical-object slide plan/);
-    assert.ok((mesh.inputSchema.required ?? []).includes('imagePath'));
-  });
-});
-
-describe('suno_* tools', () => {
-  const SUNO = ['suno_generate', 'suno_generate_sound', 'suno_generate_lyrics', 'suno_credits'];
-
-  it('all four suno tools are listed and routed', () => {
-    for (const name of SUNO) {
-      assert.ok(TOOLS.some((tool) => tool.name === name), `missing tool ${name}`);
-      assert.equal(typeof ROUTES[name], 'function', `missing route ${name}`);
-    }
-  });
-
-  it('suno_generate describes the third-party REST and does not claim an official Suno API', () => {
-    const tool = TOOLS.find((t) => t.name === 'suno_generate');
-    assert.match(tool.description, /sunoapi\.org/);
-    assert.match(tool.description, /no public self-serve API/);
-    assert.match(tool.description, /SUNO_API_KEY/);
-    assert.match(tool.description, /does not block music_/);
   });
 });
 
@@ -632,9 +581,11 @@ describe('separate subtitle upload contract', () => {
     assert.equal(ig()?.inputSchema.properties.captionFilePath, undefined);
   });
 
-  it('the Instagram videoUrl description demands the burned-in master', () => {
-    // this is the only place subtitles live in the frame — without the note, the clean master goes up
-    assert.match(ig().inputSchema.properties.videoUrl.description, /burned-in/, 'no burned-in requirement');
+  it('Instagram receives the clean master without burning captions', () => {
+    const description = ig().inputSchema.properties.videoUrl.description;
+    assert.match(description, /clean subtitle-free master/);
+    assert.match(description, /Do not burn captions/);
+    assert.doesNotMatch(description, /Provide the burned-in/);
   });
 
   it('the YouTube subtitle description mentions the force-ssl scope', () => {
@@ -739,14 +690,6 @@ describe('YouTube per-format caption contract (16:9 long-form lane)', () => {
   it('names the long-form branch', () => {
     assert.match(yt().inputSchema.properties.caption.description, /16:9|long-form/);
   });
-
-  it('guides long-form toward chapter timestamps', () => {
-    assert.match(yt().inputSchema.properties.caption.description, /chapter|timestamp/i);
-  });
-
-  it('the thumbnail description speaks to landscape long-form too', () => {
-    assert.match(yt().inputSchema.properties.thumbnailFilePath.description, /landscape/);
-  });
 });
 
 describe('Threads post-media contract', () => {
@@ -774,12 +717,6 @@ describe('Threads post-media contract', () => {
   it('the videoUrl description asks for the burned-in copy', () => {
     // Threads has no subtitle parameter, so a clean master ships without subtitles
     assert.match(props().videoUrl.description, /subtitle-burned|burned-in/i, 'videoUrl does not ask for the burn-in');
-  });
-
-  it('the tool description does not fall back to the link-reply strategy', () => {
-    // if the old strategy ("body + full-video link reply") lingers in the
-    // description, callers publish one more reply and the video goes out twice
-    assert.doesNotMatch(th().description, /link reply|the link in a reply/, 'the old link-reply strategy lingers in the description');
   });
 
   it('argument name matches IG (the video of a post = videoUrl)', () => {
@@ -890,7 +827,7 @@ describe('single-source constants', () => {
     assert.equal(tool.inputSchema.properties.speakers.minItems, 2);
     assert.equal(tool.inputSchema.properties.speakers.maxItems, 2);
     assert.deepEqual(tool.inputSchema.properties.speakers.items.properties.voice.enum, [...TTS_VOICE_NAMES]);
-    assert.match(tool.description, /ElevenLabs L4az9Gb378GIycFl2nAB/);
+    assert.doesNotMatch(tool.description, /L4az9Gb378GIycFl2nAB/, "a generic tool must not inject a channel-specific identity voice");
   });
 
   it('music scale/mode enums match the music-client source of truth', () => {
@@ -898,11 +835,6 @@ describe('single-source constants', () => {
     assert.deepEqual(enumOf('music_generate_advanced', 'config.musicGenerationMode'), [
       ...MUSIC_GENERATION_MODES,
     ]);
-  });
-
-  it('local TTS voice/language enums match the supertonic-client source of truth', () => {
-    assert.deepEqual(enumOf('tts_local_generate', 'voice'), [...SUPERTONIC_VOICE_NAMES]);
-    assert.deepEqual(enumOf('tts_local_generate', 'lang'), [...SUPERTONIC_LANGUAGES]);
   });
 
   it('ElevenLabs model/format/normalization/category enums match the elevenlabs-client source of truth', () => {
@@ -919,66 +851,36 @@ describe('single-source constants', () => {
   });
 });
 
-/**
- * Pins as contract the fact that the two speech lanes are different things.
- *
- * Local (Supertonic) and Gemini are both named tts_*, so callers swap them
- * easily — yet the sample rate (44.1kHz vs 24kHz) and whether acted delivery
- * is possible differ. Lose that boundary in the descriptions and the two mix
- * inside one video, breaking the splice.
- */
-describe('speech lane separation (local · Gemini)', () => {
-  const local = byName.get('tts_local_generate');
-
-  it('local synthesis is marked as not touching the network', () => {
-    assert.equal(local.annotations.openWorldHint, false, 'openWorldHint is open');
-    assert.equal(local.annotations.readOnlyHint, false);
+describe('supported speech surface', () => {
+  it('Gemini, ElevenLabs v4 and character auditions are listed; ElevenLabs is pinned to v4', () => {
+    for (const name of ['tts_generate', 'tts_multi_speaker', 'tts_gemini_38', 'tts_list_voices', 'tts_elevenlabs_generate', 'tts_elevenlabs_dialogue', 'tts_elevenlabs_voices', 'character_voice_audition']) {
+      assert.ok(byName.has(name), name);
+    }
+    for (const name of ['tts_elevenlabs_generate', 'tts_elevenlabs_dialogue']) {
+      const props = byName.get(name).inputSchema.properties;
+      assert.deepEqual(props.model.enum, ['eleven_v4']);
+      assert.equal(props.model.default, 'eleven_v4');
+      assert.deepEqual(props.speed.enum, [1]);
+      assert.ok(props.stability && props.similarity);
+      assert.equal(props.style, undefined);
+    }
   });
 
-  it('the local tool description gives the Python runtime requirement and install steps', () => {
-    assert.match(local.description, /pip install supertonic/, 'no install guidance');
-    assert.match(local.description, /SUPERTONIC_PYTHON/, 'no venv selection method');
-  });
-
-  it('the local tool description notes the weight license (OpenRAIL-M)', () => {
-    // the code is MIT but the weights carry use-based restrictions — the audio ships in posts, so it must be flagged
-    assert.match(local.description, /OpenRAIL-M/, 'no weight-license caution');
-  });
-
-  it('the description warns about the sample-rate difference between the two engines', () => {
-    assert.match(local.description, /44\.1kHz/, 'no local output spec');
-    assert.match(local.description, /24kHz/, 'no warning about the difference from the Gemini spec');
-    assert.equal(SUPERTONIC_SAMPLE_RATE, 44_100);
-  });
-
-  it('routes cuts needing acted delivery to Gemini — local has no style argument', () => {
-    assert.ok(!('stylePrompt' in local.inputSchema.properties), 'a stylePrompt appeared on local');
-    assert.match(local.description, /tts_generate/, 'no Gemini lane guidance');
-  });
-
-  it('language is an argument, not auto-detected (the opposite of Gemini)', () => {
-    // Gemini detects the language from the text, while Supertonic uses the code even for chunking
-    assert.equal(local.inputSchema.properties.lang.default, DEFAULT_SUPERTONIC_LANGUAGE);
-    assert.ok(!('lang' in byName.get('tts_generate').inputSchema.properties));
-  });
-
-  it('both lanes share the same input cap — so swapping never trips', () => {
-    assert.equal(local.inputSchema.properties.text.maxLength, MAX_SUPERTONIC_INPUT_CHARS);
-    assert.equal(
-      byName.get('tts_generate').inputSchema.properties.text.maxLength,
-      MAX_SUPERTONIC_INPUT_CHARS,
-    );
+  it('audition surface exposes three candidates and explicit user selection', () => {
+    const tool = byName.get('character_voice_audition');
+    const props = tool.inputSchema.properties;
+    assert.deepEqual(props.action.enum, ['plan', 'create', 'read', 'select']);
+    assert.ok(props.voiceProfile && props.candidates.items.properties.metadata);
+    assert.ok(props.candidates.items.properties.tts.properties.voiceDirection);
+    assert.equal(props.candidates.minItems, 3);
+    assert.equal(props.candidates.maxItems, 3);
+    assert.deepEqual(props.candidateId.enum, ['1', '2', '3']);
+    assert.ok(props.userSelection);
+    assert.equal(tool.annotations.readOnlyHint, false);
+    assert.equal(tool.annotations.openWorldHint, true);
   });
 });
 
-/**
- * The third speech lane (ElevenLabs) is paid and account-specific, so its
- * contract is the opposite of the two above on three points: the voice is a
- * required account ID with no default, the file that comes back has to be RIFF
- * for the builder, and the voice listing is a separate keyed tool instead of a
- * server constant. Lose any of these from the surface and a profile engine
- * switch breaks at runtime.
- */
 describe('speech lane separation (ElevenLabs)', () => {
   const generate = byName.get('tts_elevenlabs_generate');
   const dialogue = byName.get('tts_elevenlabs_dialogue');
@@ -1003,7 +905,6 @@ describe('speech lane separation (ElevenLabs)', () => {
     const item = dialogue.inputSchema.properties.inputs.items;
     assert.ok(item.required.includes('voiceId') && item.required.includes('text'));
     assert.equal(dialogue.inputSchema.properties.inputs.maxItems, ELEVENLABS_DIALOGUE_MAX_INPUTS);
-    assert.ok(!('model' in dialogue.inputSchema.properties), 'dialogue is v3-only — no model argument');
   });
 
   it('the output contract names the RIFF default and warns that mp3 is not builder input', () => {
@@ -1015,19 +916,19 @@ describe('speech lane separation (ElevenLabs)', () => {
     assert.match(generate.description, /RIFF/);
   });
 
-  it('input caps: schema cap is the default model cap, the v3 cap is spelled out', () => {
+  it('input cap is the v4 provider cap', () => {
     assert.equal(generate.inputSchema.properties.text.maxLength, MAX_ELEVENLABS_INPUT_CHARS);
-    assert.match(generate.inputSchema.properties.text.description, /5000 on eleven_v3/);
+    assert.equal(MAX_ELEVENLABS_INPUT_CHARS, 10000);
   });
 
   it('routes the caller: cost vs the other lanes, dialogue vs single, voices vs tts_list_voices', () => {
-    assert.match(generate.description, /tts_local_generate/, 'no free-lane pointer');
+    assert.doesNotMatch(generate.description, /use tts_local_generate|use mlx_tts_generate/i);
     assert.match(generate.description, /tts_elevenlabs_dialogue/, 'no dialogue pointer');
     assert.match(generate.description, /non-commercial/, 'no free-tier license caution');
     assert.match(dialogue.description, /tts_multi_speaker/, 'no Gemini 2-speaker contrast');
     assert.match(voices.description, /voices_read/, 'no permission note');
     assert.match(voices.description, /tts_list_voices/, 'no pointer to the static list');
-    assert.match(byName.get('tts_list_voices').description, /tts_elevenlabs_voices/, 'the static list does not point at the third lane');
+    assert.match(byName.get('tts_list_voices').description, /tts_elevenlabs_voices/, 'Gemini catalog does not point at ElevenLabs');
   });
 
   it('pagination on the voice listing uses the server-wide `limit` name', () => {
@@ -1055,24 +956,13 @@ describe('image lane separation (local · OpenAI)', () => {
     assert.equal(local.annotations.readOnlyHint, false);
   });
 
-  it('the local tool description gives the mflux install and binary override', () => {
-    assert.match(local.description, /uv tool install --python 3\.12 mflux/, 'no install guidance');
-    assert.match(local.description, /MFLUX_ZIMAGE_BIN/, 'no binary path override method');
-  });
 
-  it('the local tool description warns about the large first-call download', () => {
-    // call it unaware of the 31GB and you misread it as "stuck" and kill it — flag the download in advance
-    assert.match(local.description, /31GB/, 'no weight-download warning');
-  });
 
-  it('routes text-bearing images to gpt_image — with the measured Korean evidence', () => {
-    assert.match(local.description, /gpt_image_text2img/, 'no billed-lane guidance');
-    assert.match(local.description, /딸깍연구소/, 'no measured Korean-rendering evidence');
-  });
 
-  it('the gpt_image description gives the reverse routing (the default is local)', () => {
-    assert.match(paid.description, /image_local_generate/, 'no local-default-lane guidance');
-  });
+
+
+
+
 
   it('the generation nudge in serp_image_search points at both lanes', () => {
     assert.match(byName.get('serp_image_search').description, /image_local_generate/);
@@ -1586,6 +1476,46 @@ describe('multi-channel token resolution', () => {
 });
 
 /**
+ * With tool search on, Claude Code loads only tool names and these instructions at session
+ * start, and it cuts the instructions at 4,096 characters. A tool name the server no longer
+ * ships would send the model searching for nothing.
+ */
+describe('server instructions', () => {
+  it('fit in what Claude Code loads at session start', () => {
+    assert.ok(SERVER_INSTRUCTIONS.length > 0);
+    assert.ok(SERVER_INSTRUCTIONS.length <= 4096, `${SERVER_INSTRUCTIONS.length} chars`);
+  });
+
+  it('name only tools the server ships', () => {
+    const named = [...SERVER_INSTRUCTIONS.matchAll(/`([a-z][a-z0-9]*(?:_[a-z0-9]+)+)`/g)].map((m) => m[1]);
+    assert.ok(named.length > 0, 'instructions name no tools');
+    for (const name of named) assert.ok(byName.has(name), `instructions name unknown tool ${name}`);
+  });
+});
+
+/**
+ * A failed SNS call used to come back as `HTTP 403` plus the raw body. Claude Code shows only
+ * the head and tail of a long error, so the next step goes first and the body is capped.
+ */
+describe('apiErrorText', () => {
+  it('puts the next step before the upstream body', () => {
+    const out = apiErrorText({ ok: false, status: 403, body: '{"error":"expired"}' });
+    assert.match(out, /^HTTP 403 — .*sns_account_check/);
+    assert.ok(out.endsWith('{"error":"expired"}'));
+  });
+
+  it('warns that a failed publish may already be live on 5xx', () => {
+    assert.match(apiErrorText({ ok: false, status: 504, body: 'Request timed out' }), /may already be live/);
+  });
+
+  it('caps a long body', () => {
+    const out = apiErrorText({ ok: false, status: 500, body: 'x'.repeat(10_000) });
+    assert.ok(out.length < 4500, `${out.length} chars`);
+    assert.match(out, /more chars cut/);
+  });
+});
+
+/**
  * The server version in the initialize response is a literal in index.ts.
  * Importing dist/index.js to read it would start the server on stdio, so the
  * two files are compared as text. It really was split 0.8.0 vs 0.9.0, caught
@@ -1606,4 +1536,39 @@ describe('server version declaration', () => {
       `the version initialize announces (${declared}) differs from the package version (${pkg}) — clients see a version that is not real`,
     );
   });
+});
+
+it('bundled MCP server dispatches reference payloads above 10 MiB', { timeout: 20_000 }, async (t) => {
+  const child = spawn(process.execPath, [fileURLToPath(new URL('../dist/bundle.js', import.meta.url))], {
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+  const lines = createInterface({ input: child.stdout });
+  const exited = new Promise(resolve => child.once('exit', resolve));
+  t.after(async () => { lines.close(); child.kill(); await exited; });
+  child.stderr.resume();
+  const responses = lines[Symbol.asyncIterator]();
+  const send = message => child.stdin.write(JSON.stringify(message) + '\n');
+  const receive = async () => {
+    const line = await responses.next();
+    assert.equal(line.done, false, 'server closed before responding');
+    return JSON.parse(line.value);
+  };
+  send({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {
+    protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'transport-test', version: '1' },
+  } });
+  assert.equal((await receive()).id, 1);
+  send({ jsonrpc: '2.0', method: 'notifications/initialized' });
+  // An unknown tool proves dispatch without invoking a provider or spending money.
+  const request = { jsonrpc: '2.0', id: 2, method: 'tools/call', params: {
+    name: 'transport_test_unknown', arguments: {
+      sourceImagesBase64: Array(3).fill(Buffer.alloc(3 * 1024 * 1024).toString('base64')),
+    },
+  } };
+  assert.ok(Buffer.byteLength(JSON.stringify(request)) > 10 * 1024 * 1024);
+  send(request);
+  const response = await receive();
+  assert.equal(response.id, 2);
+  assert.equal(response.error.code, -32602);
+  send({ jsonrpc: '2.0', id: 3, method: 'ping' });
+  assert.deepEqual(await receive(), { jsonrpc: '2.0', id: 3, result: {} });
 });

@@ -20,18 +20,20 @@ argument-hint: "<channel> [init|tick|status]"
 # Calling a publish tool without a plan is forbidden (§Absolute rules 1).
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
   "WebSearch", "WebFetch",
-  "mcp__social-flow__sns_account_check", "mcp__social-flow__sns_comment_inbox",
-  "mcp__social-flow__instagram_insights", "mcp__social-flow__instagram_publish",
-  "mcp__social-flow__sns_comment_reply",
-  "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search",
-  "mcp__social-flow__serp_news_search",
-  "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img",
-  "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit",
-  "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue",
-  "mcp__social-flow__tts_list_voices", "mcp__social-flow__mlx_tts_generate",
-  "mcp__social-flow__veo_img2video",
-  "mcp__social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate"]
+  "mcp__social-flow__sns_account_check", "mcp__plugin_social-flow_social-flow__sns_account_check", "mcp__social-flow__sns_comment_inbox", "mcp__plugin_social-flow_social-flow__sns_comment_inbox",
+  "mcp__social-flow__instagram_insights", "mcp__plugin_social-flow_social-flow__instagram_insights", "mcp__social-flow__instagram_publish", "mcp__plugin_social-flow_social-flow__instagram_publish",
+  "mcp__social-flow__sns_comment_reply", "mcp__plugin_social-flow_social-flow__sns_comment_reply",
+  "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search",
+  "mcp__social-flow__serp_news_search", "mcp__plugin_social-flow_social-flow__serp_news_search",
+  "mcp__social-flow__image_local_generate", "mcp__plugin_social-flow_social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__plugin_social-flow_social-flow__gpt_image_text2img",
+  "mcp__social-flow__mlx_image_generate", "mcp__plugin_social-flow_social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__plugin_social-flow_social-flow__mlx_image_edit",
+  "mcp__social-flow__tts_generate", "mcp__plugin_social-flow_social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_dialogue",
+  "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices",
+  "mcp__social-flow__veo_img2video", "mcp__plugin_social-flow_social-flow__veo_img2video",
+  "mcp__social-flow__music_generate_clip", "mcp__plugin_social-flow_social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate", "mcp__plugin_social-flow_social-flow__mlx_music_generate"]
 ---
+**Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
+
 
 # Instagram growth loop — one autonomous tick
 
@@ -76,8 +78,9 @@ do-not-cite list.
 1. **No publishing without a plan** — if
    `data/<channel>/growth/instagram/growth-plan.md` is missing or its
    frontmatter isn't `status: approved`, call no publish tool. The plan is the
-   standing authorization — if out-of-scope publishing is needed, ask the user
-   to update the plan.
+   standing authorization the publish tools' descriptions refer to
+   (`growth-plan.md` status: approved) — if out-of-scope publishing is needed,
+   ask the user to update the plan.
 2. **No publishing a reel without `queue_instagram: ready`** — queue
    eligibility is only topics whose storyboard.md frontmatter `status` is
    `produced` **or** `published` with `queue_instagram: ready`. produced only
@@ -85,9 +88,13 @@ do-not-cite list.
    decided by the `queue_instagram` marker. Why `published` counts toward
    eligibility is in §3 (when another platform publishes first, the status
    flips). The marker is stamped by a human or by §2.5's autoproduce.
-   Autoproduce stamps `ready` only on episodes that passed every machine gate,
-   and `hold` if even one failed. And autoproduce itself runs only when the
-   plan's `autoproduce.enabled` turned it on.
+   Autoproduce stamps `ready` on an episode it finished building, with the
+   review findings recorded beside it; `hold` is for a technical delivery
+   failure (the build or its media missing), a cost cap hit or missing
+   authorization (`skills/autoproduce/references/unattended-lifecycle.md#completion`)
+   — creative scores and style findings never hold an episode.
+   And autoproduce itself runs only when the plan's `autoproduce.enabled`
+   turned it on.
 3. **Never change `status:` as a publish result** — even on success, all this
    loop updates is `queue_instagram`. Flip it to `status: published` and
    grow-youtube's queue eligibility (`status: produced`) disappears — the same
@@ -113,11 +120,12 @@ do-not-cite list.
    it doesn't end with one post — **the whole account** drops out of
    non-follower recommendations.
 7. **No plaintext token exposure** — tokens live only in files under
-   `~/.config/social-flow/<channel-slug>/`. Don't store whole API responses in
-   state.json or growth-log.md (needed fields only).
+   `<SNS_TOKEN_DIR>/<slug>/` (default `~/.config/social-flow/<slug>/`). Don't store
+   whole API responses in state.json or growth-log.md (needed fields only).
 8. **Hard caps** — publishing up to the plan's slot count (max 3/day);
    autoproduce up to `daily_produce_cap` (default 1) and the cost caps — never
-   past **2 episodes/day** for this plan (autoproduce absolute rule 7). Only
+   past **2 episodes/day** for this plan
+   (`skills/autoproduce/references/unattended-lifecycle.md#daily-cap`). Only
    inbox replies are uncapped.
 9. **Every tool call sets `channel: <channel-slug>`** — channel tokens only, no
    default-token fallback (prevents posting to the wrong account).
@@ -201,9 +209,9 @@ The template and state schema are in `references/growth-plan-template.md`.
    Publishing goes out only by the public-URL rule written in the plan, and
    with hosting `off` it doesn't publish. Stop by stopping /loop; change scope
    by editing the plan."* If autoproduce is on, add one line: *"When the queue
-   runs dry, the loop picks a topic and builds a reel itself, and if it passes
-   machine verification it publishes before a human sees it. It stays within
-   N episodes/day and $X per episode."*
+   runs dry, the loop picks a topic, builds a reel itself and publishes it
+   before a human sees it; review findings are recorded with the episode, not
+   a precondition. It stays within N episodes/day and $X per episode."*
 5. Initialize `state.json`, write the growth-log.md header.
 
 ## tick — autonomous cycle (default mode)
@@ -226,10 +234,12 @@ comment, pass the inbox response's `parentCommentId` as the commentId. Dedup
 is guaranteed by the inbox's `answeredByUs` filter (if a top-level comment's
 children include ours, it counts as handled).
 
-**Both gates run before the reply goes out** — the machine style check
-(`check-style.py --surface reply`) and then the growth-post-reviewer agent, batched once
-per tick. Only copy with score ≥95 and p0=0 gets sent, fixes are by deletion only, and a
-reply that hasn't cleared in 3 rounds is skipped and logged. The contract, the exact
+**Two reads help before the reply goes out** — the style check
+(`check-style.py --surface reply`) and the growth-post-reviewer agent, batched once
+per tick. Use concrete copy findings to revise within the existing reply authorization.
+A reply stays unsent only for an unresolved factual or context problem or missing
+authorization; a creative shortfall is revised, not a reason to skip, and there is no
+round count. Log the reason whenever a reply is not sent. The context to read, the exact
 command, and what to attach per platform: [reply-gate.md](../platform-guide/references/reply-gate.md).
 
 Instagram's row in that table: attach the original comment and **the caption of our post**
@@ -292,19 +302,21 @@ only):
    `weekly_cap`
 3. Today's authoring count **for this plan** (success and failure included,
    autoproduce.json `counts.<platform>`) below **min(`daily_produce_cap`, 2)** —
-   2 is the per-platform hard cap (autoproduce absolute rule 7). Other
-   platform loops' authoring doesn't count here
+   2 is the per-platform daily cap (`skills/autoproduce/references/unattended-lifecycle.md#daily-cap`).
+   Other platform loops' authoring doesn't count here
 4. The channel lock (`data/<channel>/growth/.autoproduce.lock`) can be taken —
    if not, the YouTube loop is authoring, so just move on
 
 On pass, Read `${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/SKILL.md` and **follow
 the unattended-mode procedure as written** — the invocation is
-`autoproduce <channel> unattended instagram` (no topic: the plan's `topic_source` decides). Pass the metrics read in §2 as the
-tier-judgment input — the judgment is a **trend**, not an absolute threshold
-(the last 3 episodes' average `reels_skip_rate` up 5%p or more against the
-previous 3, in percentage points). No promotion under 6 published episodes, or
-before a new baseline has accrued after a hook-contract revision
-(source of truth: autoproduce `references/cost-tiers.md`).
+`autoproduce <channel> unattended instagram` (no topic: the plan's `topic_source` decides). Engines follow the saved
+directory model settings in `.social-flow/models.json` (`skills/_shared/model-settings.md`);
+no metric trend promotes a cut to another engine, and `cost-tiers.md` prices the
+grades rather than choosing them. The budget rule is the cap check
+(`skills/autoproduce/references/unattended-lifecycle.md#cap-check`): over the cap,
+the plan shrinks under the same saved models. Pass the §2 metrics (skip rate,
+average watch time) along as observations for the human's planning, not as an
+engine switch.
 
 **On authoring success, stamp every platform queue in the plan's
 `autoproduce.mark_queues`.** One 9:16 master goes out to both platforms —
@@ -313,17 +325,16 @@ build per platform and the cost doubles. But stamp **approved platforms only**
 
 **The loop cannot create the hosting URL** (rule 4). With
 `media_hosting: base_url`, the authored episode's public URL is determined as
-`<media_base_url>/<topic slug>/video-sub.mp4`, but **putting the file there is
+`<media_base_url>/<topic slug>/video.mp4`, but **putting the file there is
 a human's job**. So §3 rarely publishes right after autoproduce — being
 blocked at the URL check (§3-4) is the normal case; put
 "authored · awaiting upload" in the tick report so a human uploads the file.
 
-On failure, it depends on where it fell. Failed at the research gate: drop the
-topic and move to the next candidate, but after two drops give up authoring
-for this tick. Built the video and then failed a quality gate: leave it at
-`queue_instagram: hold` and **never rebuild the same topic**. However it ends,
-**record the cost spent so far in `autoproduce.json`** — count without the
-failures and the budget becomes infinite.
+When research is insufficient, narrow unsupported claims or choose a supported
+candidate. Preserve completed work and actual findings; creative quality scores
+alone do not drop the topic or hold its queue. Record all spend, including failed
+attempts, in `autoproduce.json`. Missing hosting inputs, actual budget limits and
+publication authorization remain operational boundaries.
 
 ### 3. Slot publishing (queue drain)
 
@@ -353,16 +364,13 @@ Pre-publish checks:
 1. **Look for an existing INSTAGRAM row in `output/publish-log.md`.** If
    present, the topic already went out via the publish skill: don't publish,
    clean up to `queue_instagram: done`, and report (this closes the gap opened
-   by widening the gate to `published`).
+   by widening eligibility to `published`).
 2. `output/instagram/caption.md` exists — the caption body is read from here.
 3. Resolve the video's public URL — with `media_hosting: base_url` it's
-   `<media_base_url>/<topic slug>/**video-sub.mp4**`; with `staged`, the
-   frontmatter `video_url`. **IG gets the subtitle burn-in build** — other
-   platforms take the subtitles as a separate file, but the IG container has
-   no subtitle parameter, so uploading the clean build (`video.mp4`) loses the
-   subtitles entirely (publish skill rule 8). A `staged` `video_url` must also
-   point at the burn-in build; if the filename ends in `video.mp4`, check with
-   a human.
+   `<media_base_url>/<topic slug>/**video.mp4**`; with `staged`, the
+   frontmatter `video_url`. **IG receives the clean master with no burned subtitles.**
+   Never select a historical `video-sub.mp4` or add captions because Instagram lacks
+   a separate subtitle parameter. Verify that a staged URL references the clean master.
 4. `curl -sI <URL>` to **confirm 200 and a video MIME**. On failure, don't
    publish and report the reason (the file isn't on the hosting yet — a human
    handles it).
@@ -400,7 +408,7 @@ Account Status check date. No publishing.
 If autoproduce is on, also report from `autoproduce.json`: today's and this
 week's spend against the caps, the topic-pool level, the topics stuck at
 `queue_instagram: hold`, and **the topics authored but not yet uploaded to
-hosting** — neither ever publishes without a human's hands.
+hosting** — report the actual missing input or authorization.
 
 ## Error handling (the loop keeps running)
 

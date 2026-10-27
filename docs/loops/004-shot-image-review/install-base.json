@@ -1,0 +1,6 @@
+{
+  "preservedBase": "/Users/zeans/.local/state/social-flow-shot-images/preserved-0.114.0",
+  "baseVersion": "0.114.0",
+  "supersededTrial": "0.113.0-shot-images.1",
+  "reason": "Existing cache path had newer 0.114.0 content; preserve that content and overlay only this task patch."
+}

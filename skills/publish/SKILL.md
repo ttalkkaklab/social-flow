@@ -5,27 +5,37 @@ description: >
   user asks to "게시해", "올려줘", "SNS 게시", "publish to social", "스레드/인스타/페북/유튜브에 올려", or once
   production is done. Takes the per-platform content under
   data/[channel]/episodes/[topic]/output/ through account checks and public media hosting,
-  stops at a mandatory human approval gate, publishes through the social-flow platform
-  tools as an immediate public post, and records the permalinks in publish-log.md.
+  stops for the user's publishing authorization, publishes through the social-flow platform
+  tools (Threads, Instagram and Facebook post at once; YouTube uploads private and flips
+  public with youtube_update), and records the permalinks in publish-log.md.
 argument-hint: "<channel> <topic> [platformCSV|auto]"
 # *_publish/facebook_comment are deliberately left un-pre-approved — the native
 # permission prompt on every irreversible publish call has to act as a second line of
 # defense, separate from the HITL approval gate.
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check", "mcp__social-flow__capability_status", "mcp__social-flow__portal_publication_record", "mcp__social-flow__portal_episode_status"]
+allowed-tools: ["mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check", "mcp__plugin_social-flow_social-flow__sns_account_check", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status"]
 ---
+**Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 
-**HITL records:** Record final platform approval separately from actual publication outcomes. Follow [the decision record contract](../storyboard/references/portal-decisions.md); preserve actual provenance and reuse existing authorization. This adds no approval gate.
+
+Use local episode files under `data/<channel>/episodes/<topic>/`.
 
 
-# Platform publishing — public immediately after HITL approval
+**HITL records:** Record the user's platform approval separately from actual publication outcomes. Preserve actual provenance in local files and reuse existing authorization. Publishing needs the user's authorization; quality reviews add no gate.
 
-Reuse the episode destination from [storyboard-target.md](../storyboard/references/storyboard-target.md). Local mode keeps publish records locally and skips every portal call below, even if a key or old portal ID exists. A legacy episode without a choice resolves the destination before any portal call; publishing approval does not imply portal consent.
+
+# Platform publishing — after the user's approval
+
 
 Publishes the finished artifacts in `output/` with the per-platform publish tools.
-**The publish tools have no review gate, so calling one = instantly public.** This
-skill's approval gate (§2) and the native permission prompt that fires on every
-publish call (never pre-approved) are the two lines of defense. Don't nudge the user
+**Threads, Instagram and Facebook post the moment the tool is called; YouTube uploads
+private (rule 9).** The user's approval (§1) and the native permission prompt that fires on
+every publish call (never pre-approved) are the two lines of defense. Don't nudge the user
 into promoting that prompt to "always allow".
+
+**Owner directive (2026-10-17): upload the clean, subtitle-free video on every platform,
+even when characters speak.** Never select a stale video-sub/reel-sub file. Separate
+YouTube subtitle tracks are optional when the user requests them; do not infer consent
+from profile languages or an SRT already on disk. This overrides older subtitle recipes.
 
 ## Absolute rules (violation = stop immediately)
 
@@ -47,7 +57,7 @@ into promoting that prompt to "always allow".
    ration episode publishes).
 6. **Threads carries the video on the post, FB puts the link in the first comment** —
    a Threads video episode goes out in one call: the casual spoken-style body (no link)
-   as `caption` plus the public URL of the subtitle-burned cut as `videoUrl` (user
+   as `caption` plus the public URL of the clean subtitle-free master as `videoUrl` (user
    directive 2026-08-19). Don't attach the video as a reply. Only an episode that can't
    carry a video falls back to a self-reply link.
    No link in the body either — the first two link-in-body posts got 9 and 21 views, a
@@ -60,17 +70,16 @@ into promoting that prompt to "always allow".
    from the wrong account — a server contract). If you get an error saying the channel
    has no token, walk the user through the channel-directory procedure in
    `references/token-setup.md`.
-8. **Video and subtitles go up separately** — platforms that take a subtitle file
-   (YouTube · Facebook) get the clean master (`video.mp4`) plus `subs.srt`. The
-   burned-in cut (`video-sub.mp4`) is what **Instagram and Threads** use — neither has a
-   path that accepts a subtitle file, so burning them into the picture is the only way.
-   The §2 table is canonical for which file goes where; mix them up and YouTube ends up
-   with subtitles twice over, or IG loses them entirely. When `output/video/` holds
-   per-language files (`subs.en.srt` …), every one goes up as its own track —
-   `captionTracks` on YouTube, `captionFiles` on Facebook (default language first).
+8. **Every platform gets `video.mp4`, with no subtitles inside the video.**
+   Instagram and Threads have no separate subtitle parameter; publish the clean master
+   there too. When the user requests YouTube subtitles, pass `captionFilePath` or
+   `captionTracks` for separate viewer-selectable tracks. Otherwise omit caption inputs.
+   Existing sidecars and legacy burned-in files do not change this choice.
 9. **Every YouTube upload starts private — no exceptions** (user directive 2026-08-19).
    Call `youtube_publish` with **`privacyStatus: "private"`**, attach everything the
-   cover needs, and only then flip to public with `youtube_update`. Publishing straight
+   cover needs, and only then flip to public with `youtube_update`. The server uploads
+   private by default and rejects a `public` request (`unlisted` stays allowed); growth
+   loops run the same flip with `youtube_update` under their approved plan. Publishing straight
    to public exposes a mid-sentence frame as the first thing anyone sees while you are
    still attaching the cover. This holds for short-form and long-form alike; the
    long-form specifics are rule 10.
@@ -141,22 +150,22 @@ into promoting that prompt to "always allow".
   | | Short-form 9:16 | YouTube long-form 16:9 |
   |---|---|---|
   | Where it goes | four platforms | **YouTube alone** |
-  | Files needed | `video.mp4` · `video-sub.mp4` · `subs.srt` | `video.mp4` · `subs.srt` · `chapters.txt` |
+  | Files needed | `video.mp4`; optional requested YouTube SRT | `video.mp4` · `chapters.txt`; optional requested YouTube SRT |
   | Hashtags | 3–5 including `#Shorts` | **no `#Shorts`** — it gets misfiled as a short |
   | First publish | upload private, set the portrait frame, then public (rule 9) | **upload private, check, then public** (§3-2) |
   | Portrait surface | `oar*` required (rule 9) | n/a — for landscape the thumbnail is the surface |
 
-  Long-form having no burned-in copy (`video-sub.mp4`) isn't a defect — `BURN=0` is
-  that format's contract, and YouTube takes `subs.srt` and toggles it on and off.
+  Every format uses the clean master. When requested, YouTube receives a separate
+  `subs.srt` track that viewers can enable or disable.
 - **Confirm the episode is actually finished**, not just marked finished.
 
   ```bash
   REF=${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references
-  node $REF/episode-state.js .        # from the episode directory · exit 1 = blocked
+  node $REF/episode-state.js .        # from the episode directory · exit 1 = a delivery blocker
   ```
 
-  The check also verifies `output/video/delivery-proof.json` against the delivered video,
-  subtitles and source storyboard. A separate export without current assembly provenance
+  The check also verifies `output/video/delivery-proof.json` against the delivered files
+  and source storyboard. A separate export without current assembly provenance
   must be rebuilt through the common builder and final pace pass. For a large final speech
   payload, the embedded chapter manifest must cover every original audio sample and every
   chapter join. The same preflight rejects a missing/unverified chapter, boundary gap,
@@ -164,19 +173,17 @@ into promoting that prompt to "always allow".
 
   Exit 1 here means the directory promised something it never delivered — a video with no
   per-platform text, a `queue_*: ready` marker with no video behind it, **an `output/` still
-  holding the pre-pass build** (the final pace pass in produce §7.5 is required; the check reads
-  both the `── speedup x…` and `PASS final speech rate` lines in
-  `output/video/build-report.txt`). Publishing is the irreversible step,
-  so a blocker gets resolved or explained to the user before §1, never worked around.
+  holding the pre-pass build** (the pace pass in produce §7.5 writes the `── speedup x…` line
+  to `output/video/build-report.txt`, then a `PASS final speech rate` line for a requested
+  sidecar or the `subtitle-based rate check skipped` marker without one — the default,
+  subtitle-free delivery). These blockers are technical, not quality verdicts. Publishing is
+  the irreversible step, so resolve or explain one to the user before §1 rather than working
+  around it.
 - Confirm the `output/` artifacts exist and that `storyboard.md` says
   `status: produced` — otherwise point them at `/social-flow:produce` first.
-  **Short-form** needs all three files — `output/video/video.mp4` (clean) ·
-  `video-sub.mp4` (burned-in) · `subs.srt`. Per-language `subs.<lang>.srt` files exist
-  only when profile.md §4 lists subtitle languages beyond the default — take every one
-  that's there. A missing burned-in copy or subtitle file
-  means it's an old build. Check whether it was built with `SUB`/`BURN` off, and if
-  not, send it back to `/social-flow:produce` for a rebuild (never publish without
-  subtitles).
+  Both formats require `output/video/video.mp4`, the subtitle-free master.
+  A missing burned-in copy or SRT is not a defect. Include an SRT only for a requested
+  separate YouTube track; retain other historical assets without selecting them.
 - Call `sns_account_check` **with `channel: <channel-slug>`** to check this channel's
   per-platform token status — **confirm and report which account is publishing from
   that result** (the account comes from that channel token's /me, not from a setting).
@@ -205,31 +212,30 @@ node ${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-meta.js output
 # Don't append | head to shorten the output — $? becomes that command's and a FAIL reads as 0
 ```
 
-`check-meta.js` exit 2 goes back to produce the same way an S1 does — a meta.md
-outside the playbook §6 layout, an angle bracket in the title, a preset hashtag
-missing, or `COMPREHENSION.answer` copied into the title or description. Its
-exit 1 goes into the gate prompt as is — but only when the output ends with a
-`CHECK_META: exit=1 …` line. A broken install exits 1 too, with a node stack and
-no tail, and that is **unchecked, not one warning**.
+`check-meta.js` exit 2 (a meta.md outside the playbook §6 layout, an angle bracket in
+the title, a preset hashtag missing, or `COMPREHENSION.answer` copied into the title or
+description) and exit 1 both go into the approval prompt as findings for the user to
+weigh — but only when the output ends with a `CHECK_META: exit=…` line. A broken
+install exits 1 too, with a node stack and no tail, and that is **unchecked, not one
+warning**.
 
 On exit 4 the copy isn't Korean and the checker declined to judge it — that surface is
 **unchecked, not clean**. Say so in the approval prompt by name, so the person approving
 knows they are the only reader it got.
 
-On exit 2 (S1) don't take it to the gate; send it back to `/social-flow:produce` to be
-fixed — editing the sentence on the spot here breaks rule 4. Put exit 1 (warning) into
-the gate prompt as is and let the user judge. **If the header line has `quote-exempt N`,
-list those N separately in the prompt** — they're violations the checker excluded from
-the verdict without knowing whether the source is genuine. If it really is quoting a
-source, publish as is; if we wrote the sentence and only wrapped it in quotes, send it
-back to produce. exit 3 means the gate didn't run — fix the path and run it again, and
+Exit 2 (S1) and exit 1 (warning) both go into the approval prompt as suggestions, with
+the flagged lines quoted, and the user judges; a style finding never sends the copy back
+to produce on its own. A fix the user wants is applied and the copy re-presented (rule 4).
+**If the header line has `quote-exempt N`, list those N separately in the prompt** —
+they're violations the checker excluded from the verdict without knowing whether the
+source is genuine, so say whether each one quotes a real source or is our own sentence
+in quotes. exit 3 means the checker didn't run — fix the path and run it again, and
 if you can't, state "style unverified" in the prompt. If the checker file itself is
 missing, python returns 2, so the existence check line above tells them apart.
 
 Present the final version for each platform with AskUserQuestion — the full body/caption,
-the media **local paths** (they differ per platform: YT and FB get `video.mp4`+`subs.srt`,
-IG and Threads get `video-sub.mp4`), the
-subtitle cue count, the hashtags, the FB first-comment copy, all of it; the account it
+the media **local paths** (every platform gets `video.mp4`; YouTube gets a separate
+SRT only when requested), the hashtags, the FB first-comment copy, all of it; the account it
 will publish to (from the account check); and the style-check results (per-surface exit
 and score, number of quote exemptions). Options: [publish everything / some platforms
 only / revise and re-present / stop]. **Passing this gate is the approval to actually
@@ -249,18 +255,18 @@ URL** — the platform crawls it, so local paths and authenticated URLs won't do
 (YouTube is the one exception: it uploads the local file, so no hosting needed).
 **Subtitle files are passed as local paths on every platform** — they aren't hosted.
 
-Which file goes up differs per platform. This table is the source of truth.
+Use the same subtitle-free master on every platform.
 
-| Platform | Video | Subtitles | Why |
-| --- | --- | --- | --- |
-| YouTube | `video.mp4` (local path) | `captionFilePath: subs.srt` — with extra languages, `captionTracks` listing every `subs.<lang>.srt` | uploaded as separate tracks via `captions.insert` — replaceable after publishing, viewer-selectable per language, and the source for auto-translation |
-| Facebook | `video.mp4` (public URL) | `captionFilePath: subs.srt` — with extra languages, `captionFiles` (default locale first) | the `/{video_id}/captions` edge, one upload per locale |
-| Instagram | **`video-sub.mp4`** (public URL) | none — burned into the picture | the container has no subtitle parameter |
-| Threads | **`video-sub.mp4`** (public URL) | none — burned into the picture | the video rides on the post (`videoUrl`). The container takes no subtitle parameter, so it uses the same burn-in as IG. The video never goes in a reply |
+| Platform | Video | Separate subtitles |
+| --- | --- | --- |
+| YouTube | `video.mp4` local path | Only when requested: `captionFilePath` or `captionTracks` |
+| Facebook | `video.mp4` public URL | Omit caption inputs unless separately requested |
+| Instagram | `video.mp4` public URL | None; do not burn subtitles into the video |
+| Threads | `video.mp4` public URL | None; do not burn subtitles into the video |
 
-The hosting directory needs **both the burned-in copy and the clean copy** — IG and
-Threads share the burn-in, FB takes the clean copy. The filenames differ, so they can
-sit in one directory together; check each one for a 200 with `curl -sI`.
+Host only the selected clean master and verify its public URL. Never choose a legacy
+`video-sub.mp4` because it happens to exist. Caption text in an Instagram/Threads post
+is platform copy, not permission to draw subtitles into the video.
 
 - Use the hosting method named in profile.md §4. **If none is set, hold the publish and
   ask the user which hosting to use.**
@@ -288,8 +294,9 @@ permalink, say).
 1. **YouTube**: `youtube_publish` — title/description from `output/youtube/meta.md`,
    `videoFilePath`=output/video/**video.mp4** (the clean copy),
    **`thumbnailFilePath`=cover.jpg required** (leave it out and a random frame becomes
-   the thumbnail), **`captionFilePath`=output/video/subs.srt required** — and when
-   per-language files exist, pass **`captionTracks`** instead, listing every
+   the thumbnail). **Only for requested separate YouTube subtitles**, pass
+   `captionFilePath`=output/video/subs.srt; for requested multiple languages pass
+   **`captionTracks`** instead, listing the requested
    `subs.<lang>.srt` with its BCP-47 code (`[{filePath: …/subs.srt, language: "ko"},
    {filePath: …/subs.en.srt, language: "en"}, …]`; the two arguments are mutually
    exclusive).
@@ -302,7 +309,8 @@ permalink, say).
    subtitles are 400 **per track** (three languages = 1,200), so upload each language
    once per episode. `captionLanguages` in the response says which tracks went up, and
    a per-language `captionWarning` ("en: …") means only that language failed — upload
-   just it in YouTube Studio.
+   just it in YouTube Studio. No standalone existing-video caption-upload MCP tool
+   is exposed here; never call youtube_publish again merely to add or repair a track.
    **Don't set `containsSyntheticMedia`** (it defaults to true). This pipeline uses Veo
    video and Lyria music, so it falls under AI disclosure, and YouTube states that
    disclosure doesn't affect reach or monetization eligibility while warning that
@@ -339,7 +347,7 @@ permalink, say).
    and report completion. Only if the user explicitly says they'll do it later do you
    record it as open, along with the videoId.
 2. **Instagram**: `instagram_publish` — `videoUrl` is the public URL of the
-   **burned-in copy (video-sub.mp4)** + caption. This is the only place the subtitles
+   **clean subtitle-free master (video.mp4)** + platform caption text. No subtitles
    are baked into the picture.
 3. **Threads**: before calling, record the actual §1 human approval in
    `data/<channel>/episodes/<topic>/threads-publish-approval.json`. Use JSON with
@@ -352,7 +360,7 @@ permalink, say).
 
    Call `threads_publish(channel, episodeRef: <topic>, ...)` — the approved body
    (no link) as `caption` and the
-   public URL of the burned-in copy (`video-sub.mp4`) as `videoUrl`. **One call finishes
+   public URL of the clean subtitle-free master (`video.mp4`) as `videoUrl`. **One call finishes
    it** — no reply. The video container transcodes, so the tool waits up to 2 minutes
    for FINISHED.
 
@@ -368,10 +376,11 @@ permalink, say).
    root ID and a warning: record the partial result and do not republish the root.
    Threads is complete only when both posts succeed.
 4. **Facebook**: `facebook_publish` — `videoUrl` is the public URL of the **clean copy
-   (video.mp4)**, `captionFilePath`=output/video/subs.srt (a local path — with extra
-   languages pass `captionFiles` instead, **default locale first**: `[{filePath:
+   (video.mp4)**. Omit subtitle parameters by default. Only if separate Facebook
+   subtitles were also requested, use `captionFilePath`=output/video/subs.srt or
+   `captionFiles` for requested languages, **default locale first**: `[{filePath:
    …/subs.srt, locale: "ko_KR"}, {filePath: …/subs.en.srt, locale: "en_US"}, …]`;
-   FB locales are the underscore form, not BCP-47), plus the
+   FB locales are the underscore form, not BCP-47. Include the
    body → then **publish the first comment (source/related link) immediately** with
    `facebook_comment` using the postId from the response. A `captionWarning` doesn't
    invalidate the publish — FB processes video asynchronously, so it may have caught
@@ -385,14 +394,14 @@ aren't touched at all (preset `platforms: ["youtube"]`).
 
 1. Call `youtube_publish` with **`privacyStatus: "private"`**.
    `videoFilePath`=`video.mp4` (clean) · `thumbnailFilePath`=`cover.jpg` ·
-   `captionFilePath`=`subs.srt` (or `captionTracks` when per-language files exist —
-   same rule as the short-form step). `caption` (the description) carries the **chapter
+   Only when YouTube subtitles are requested, add `captionFilePath`=`subs.srt` or
+   `captionTracks` for the requested languages; otherwise omit them. `caption` (the description) carries the **chapter
    timestamps** — `output/video/chapters.txt` is that list, built from the builder's
    measured times, with `00:00` as the first line and three or more entries. Add
    hashtags if you like, but **never `#Shorts`.**
 2. Open `https://www.youtube.com/watch?v=<videoId>` and **look at four things** —
    (1) has the quality come up to the final resolution (if it's still processing,
-   wait), (2) does the subtitle track turn on, (3) do the description's chapters draw
+   wait), (2) if requested, does the separate subtitle track turn on, (3) do the description's chapters draw
    as segments on the scrubber, (4) is the thumbnail our cover.
 3. Once all four pass, flip it to `privacyStatus: "public"` with `youtube_update`.
    **On a video you're touching for the first time, call it with `dryRun: true` first**
@@ -417,8 +426,8 @@ subtitles only, so this pipeline cannot upload dubs. Two real paths:
 
 - **YouTube auto-dubbing** — on channels where YouTube has enabled the multi-language
   feature (https://support.google.com/youtube/answer/13338784) YouTube generates
-  dubbed audio itself. The subtitle tracks this skill uploads are what seed the
-  translation quality, so publishing with captions is the lever this pipeline controls.
+  dubbed audio itself. Subtitle tracks the user requested and this skill uploaded seed
+  that translation quality; a track is never added for this reason without the request.
 - **Custom dub tracks** go up by hand in YouTube Studio (up to 30 languages; an
   audio-only file about the length of the video). The long-form private stage (§3-2)
   is the moment — attach the tracks while the video is private, then flip public.
@@ -451,7 +460,7 @@ the most frequent failure in this skill.
       `oardefault.jpg`).
 - [ ] **YouTube — private actually became public.** Read `privacyStatus` back from the
       `youtube_update` response. Don't flip it while anything above is still open.
-- [ ] **YouTube — every subtitle track attached.** No `captionWarning`,
+- [ ] **YouTube — every requested subtitle track attached (skip when none requested).** No `captionWarning`,
       `captionLanguages` in the response lists every language you passed, and CC shows
       on the watch page.
 - [ ] **Threads — the video is on the post** (rule 6). Open the permalink and confirm it
@@ -471,8 +480,11 @@ it and report the rest as done.
 
 When you reply to comments after publishing (`sns_comment_reply`), check the copy
 first as well. For THREADS, create a `surface: "reply"` draft with its parent
-comment ID as `replyToId`, submit its voice review, then pass that `draftId` to
-`sns_comment_reply`; the server applies the same configured gate as grow-threads.
+comment ID as `replyToId` (`threads_draft_create` returns `draftId` + `bodyHash`), then
+pass that `draftId` with `channel` to `sns_comment_reply`. The server verifies only that
+the posted body hashes to the draft's hash, the channel matches and the reply target
+matches; the draft needs no review. `threads_review_submit` records reviews as hash-bound
+evidence and never blocks, and `check-style.py` findings come back as suggestions.
 The episode fallback self-reply above is already handled in its approved call.
 A reply is person-to-person talk, which is where AI phrasing gets
 spotted fastest — golden-hour response isn't a reason to skip the check.
@@ -482,30 +494,20 @@ printf '%s\n' "$reply_copy" | \
   python3 ${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-style.py --surface reply -
 ```
 
-Copy that clears the checker goes to the growth-post-reviewer agent (the `inbox_reply`
-surface, with the original comment and our post body attached) — **publish only copy
-that scores ≥95 with p0=0.** If it falls short, fix it by removing only what the
-correction directs, up to three rounds; if it still falls short, don't send it and
-write the reason into the publish log.
+Use a growth-post-reviewer read when it helps resolve wording or context concerns.
+Keep the original comment and post body available. A score or fixed review-round count
+does not decide whether to send; the actual reply authorization and runtime inputs do.
+Record unresolved findings without claiming a passing review.
 
 - Record in `data/<channel>/episodes/<topic>/output/publish-log.md`: a table of
   timestamp, platform, post id, permalink, caption summary, and the approver's decision.
   **Write the §4 checklist beside it, item by item, as O/X** — an open item has to
   survive in the log for the next person to finish it.
-- In chosen portal mode with a configured key, after each platform publish succeeds, call `portal_publication_record` with the returned
-  post ID and permanent link, the approval record, timestamp and SHA-256 of the exact caption.
-  One platform failing does not erase the successful records. If the tool is absent, keep the
-  local publish log; if it errors, report the error beside that platform and preserve the link.
 - **A change someone wants after publishing goes into the log, not into the video**
   (rule 11) — write what they asked for and why under the episode's row, and the next
   episode carries the fix. Comment replies are the exception; they're the post-publish
   work, and the copy check above covers them.
-- Update `storyboard.md` to `status: published`. If the episode chose portal mode and its channel key is configured (README §The ttalkkakstory portal), call
-  `portal_episode_status` with `status: "published"` only after every successful platform has
-  a `portal_publication_record`, using the `episodeId` in `storyboard.md`'s
-  `portal_episode` frontmatter (written at approval); without that field,
-  `portal_storyboard_save` on the episode directory's absolute path returns it. Tools absent: one line, move on. A call that errors: report the
-  message in one line, retry a 409 once, and never hold the final report on it.
+- Update `storyboard.md` to `status: published`.
 - If you used a temporary tunnel, verify the teardown per §1, then give the final
   report as a platform/permalink table.
 
@@ -515,3 +517,14 @@ write the reason into the publish log.
 
 - **`references/token-setup.md`** — per-platform credential issuance, file conventions, refresh procedures (Threads/IG 60 days · FB indefinite · YouTube OAuth)
 - **`references/shorts-surface-adb.md`** — setting the YouTube shorts portrait surface (`oar*`) frame: the channel-dedicated AVD + adb procedure, its traps, and the oardefault verdict
+
+## Project SNS preferences
+
+Read the episode settings snapshot when present. Its `sns` records identify target
+platforms and the expected account IDs; explicit current publishing instructions
+still govern scope. Recheck live identity with `sns_account_check` before upload.
+Resolve an account-ID mismatch with the user before publishing to another account.
+Credentials stay in the external channel token directory; `credentialRef` never
+contains a token. After verification, refresh the workspace SNS record through
+`project_manage update` if it targets this channel, preserving other platforms and
+all existing episode snapshots. Pending connection state does not authorize upload.

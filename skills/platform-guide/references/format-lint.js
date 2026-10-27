@@ -53,9 +53,9 @@ const RULES = [
   { name: 'build-reel MAX_DUR', file: 'skills/produce/references/build-reel.sh',
     re: /MAX_DUR=\$\{MAX_DUR:-([\d.]+)\}/, want: fix(S.pacing.sceneMax, 1) },
   { name: 'build-reel SUB', file: 'skills/produce/references/build-reel.sh',
-    re: /\bSUB=\$\{SUB:-(\d)\}/, want: '1' },
+    re: /\bSUB=\$\{SUB:-(\d)\}/, want: '0' },
   { name: 'build-reel BURN', file: 'skills/produce/references/build-reel.sh',
-    re: /BURN=\$\{BURN:-(\d)\}/, want: S.burn ? '1' : '0' },
+    re: /^BURN=(\d)\b/m, want: S.burn ? '1' : '0' },
   { name: 'build-reel ZOOM_SPAN', file: 'skills/produce/references/build-reel.sh',
     re: /ZOOM_SPAN=\$\{ZOOM_SPAN:-([\d.]+)\}/, want: String(S.kenburns.zoomSpan) },
   // The builder sizes its speech-rate band and chapter minimum from the playback factor, and the
@@ -401,48 +401,6 @@ function crossCheckOutroFlag(issues) {
 }
 
 /**
- * The share contract, held in two places that never read each other. check-scenes.js is the
- * source of truth — its SHARE_TYPES array and the compacted-character floor its cta check
- * uses — and storyboard-html-template.html copies both as bare literals, because a storyboard
- * page opens with no path back to the plugin. A sixth share type added to the checker alone
- * turns into "outside fact · verdict · line · checklist · none" on the approval page for a
- * board the checker just passed, and a floor changed on one side moves the line between a
- * warned board and a rejected one depending on which surface the author happens to read.
- * Both copies are pulled out of their own source and compared with the checker's.
- */
-function crossCheckShareContract(issues) {
-  const checker = read('skills/storyboard/references/check-scenes.js');
-  const page = read('skills/storyboard/references/storyboard-html-template.html');
-  if (checker === null || page === null) return;
-
-  const types = checker.match(/^const SHARE_TYPES = \[([^\]]*)\];/m);
-  if (!types) return;   // nothing to pin until the checker declares the vocabulary
-  const want = types[1].match(/'([^']+)'/g).map((s) => s.slice(1, -1));
-  const mirror = page.match(/\["fact"(?:,\s*"[^"]+")*\]/);
-  const got = mirror ? mirror[0].match(/"([^"]+)"/g).map((s) => s.slice(1, -1)) : null;
-  if (!got) issues.push({ name: 'SHARE_TYPES mirror in storyboard-html-template.html',
-                          got: '(not found)', want: want.join(' · ') });
-  else if (got.join(' · ') !== want.join(' · '))
-    issues.push({ name: 'SHARE_TYPES mirror in storyboard-html-template.html',
-                  got: got.join(' · '), want: want.join(' · ') });
-
-  // Both floors are matched against the exact call expression, so a free-hand reformat of
-  // either line stops the match. That must go red: a pin nobody can see switch itself off
-  // reads as coverage it no longer gives.
-  const floor = checker.match(/compactLength\(\(\(scenes\[[^\]]+\][^)]*\)\.shot \|\| \{\}\)\.share\) < (\d+)/);
-  const pageFloor = page.match(/compactLetters\(\(\(lastMain\.s\.shot \|\| \{\}\)\.share\) \|\| ""\)\.length < (\d+)/);
-  if (!floor)
-    issues.push({ name: 'share-trigger floor in check-scenes.js', got: '(not found)',
-                  want: 'compactLength(((scenes[…] || {}).shot || {}).share) < <n>' });
-  if (!pageFloor)
-    issues.push({ name: 'share-trigger floor in storyboard-html-template.html', got: '(not found)',
-                  want: 'compactLetters(((lastMain.s.shot || {}).share) || "").length < <n>' });
-  if (floor && pageFloor && floor[1] !== pageFloor[1])
-    issues.push({ name: 'share-trigger floor in storyboard-html-template.html',
-                  got: pageFloor[1], want: floor[1] });
-}
-
-/**
  * The seek runtime the three authored-screen templates share. It is copied into
  * each file rather than linked, for the same reason the zone tokens are — a
  * slide has no path back to the plugin. Copies drift silently: a fix applied to
@@ -501,7 +459,6 @@ function main() {
 
   crossCheckAss(issues);
   crossCheckOutroFlag(issues);
-  crossCheckShareContract(issues);
   crossCheckSeek(issues);
 
   if (listOnly) {

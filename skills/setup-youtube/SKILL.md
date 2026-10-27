@@ -10,8 +10,10 @@ description: >
   Spans several days because verification approval is asynchronous — resumable, and a
   status mode reports what is still pending.
 argument-hint: "<channel> [status|verify|create|token]"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check"]
+allowed-tools: ["mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check", "mcp__plugin_social-flow_social-flow__sns_account_check"]
 ---
+**Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
+
 
 # YouTube channel setup — browser HITL
 
@@ -167,15 +169,16 @@ channel, and consent to issue a fresh `refresh_token`. Treat
   | Scope | What it opens | When |
   |---|---|---|
   | `youtube.upload` | video upload | publish (required) |
-  | `youtube.force-ssl` | caption upload + comment reads/replies | publish (required) · growth |
+  | `youtube.force-ssl` | `youtube_update` (the private → public flip) + comment reads/replies + requested caption tracks | publish (required) · growth |
   | `youtube.readonly` | channel/video reads | growth |
   | `yt-analytics.readonly` | period metrics (views, watch time, subscriber change) | growth |
   | `yt-analytics-monetary.readonly` | revenue metrics | optional |
 
-  If `force-ssl` is missing, **the video uploads but only the captions fail**
-  (this pipeline uploads captions separately via `captions.insert`). The first
-  two are enough if you'll only publish, but growing scopes later means
-  reissuing, so turning them all on from the start is recommended.
+  If `force-ssl` is missing, **the video uploads private but stays there** — the
+  flip to public (`youtube_update`), comment replies and any caption track the
+  user requested (`captions.insert`) all need it. The first two scopes are
+  enough if you'll only publish, but growing scopes later means reissuing, so
+  turning them all on from the start is recommended.
 
 ## Save · verify · record
 
@@ -210,3 +213,13 @@ stage, active channel, no token exposure) still apply.
 - **`references/setup-playbook.md`** — ego driving principles, field-tested
   identity verification & channel creation, loopback listener + OAuth code
   exchange & refresh_token issuance sections.
+
+## Persist project connection settings
+
+When this channel matches `project.channel` in the selected workspace, use
+`project_manage status` and update its `sns` category after the real account check.
+Preserve the other platforms. Save enabled/status, verified accountId, public handle
+when available and actual checkedAt; never copy credentials into project JSON.
+Use pending for an incomplete connection. With a legacy model-only workspace,
+continue the requested platform setup and offer project-init for missing project
+preferences; never manufacture them or create another workspace config.

@@ -1,11 +1,13 @@
 # The person short — one person, one turn, a cut per sentence
 
+A story-v1 contract (`STORY.version: story-v1`): story-v2 boards follow
+[character-scenarios.md](character-scenarios.md) and read this file only for the shape.
 A 30–60 s history short about one real person and the one thing that happened to them.
 The shape comes from a survey of seven history shorts channels (2026-09-10 —
 [docs/research/2026-09-10-history-shorts-storytelling](../../../docs/research/2026-09-10-history-shorts-storytelling/));
 what they share is not a topic but a way of opening, turning and closing, and a screen that
-changes with every sentence. None of it adds a beat: the seven items (scenario-stage
-§the seven items) and hook → drip → cta stay. It adds one declaration, `STORY.person`, and
+changes with every sentence. None of it adds a beat: on story-v1 the seven items (scenario-stage
+§the seven items) and hook → drip → cta remain the common shape. It adds one declaration, `STORY.person`, and
 the checks below hang off it. Every other board ignores this file.
 
 ## Contents
@@ -73,11 +75,10 @@ sets `length_max_seconds: 60` in its profile so the band matches the shape, and
   document's own words are the subject. The generated-video cap and the text-plate cap are
   unchanged. A still per sentence under a real camera move (directing-grammar §4 still lane)
   is what these channels cut on, and it costs nothing.
-- **Subtitles are big, low, one word at a time, and only the year and the name change
-  colour.** Build with `SUB_MODE=word` (or `phrase`), `SUB_ACCENT=<THEME accent RRGGBB>` and
-  `SUB_ACCENT_WORDS="<name> <aliases>"`; produce §subtitles has the contract. A year
-  (`1592년` · `16세기` · `1950-06-25`) is coloured automatically, names from the list. Nothing
-  else on the line changes weight or colour.
+- **The master is clean — no burned subtitles** (owner directive 2026-10-17). Deliver a clean
+  master; an SRT is a separate file made only on request. The word-at-a-time subtitles with
+  coloured years and names that the surveyed channels use are an observation about them, not
+  something this plugin builds.
 - **The voice tells it, it does not read it.** The register is the one korean-style D9
   keeps for spoken surfaces — a person telling the story across a table, in the channel's
   politeness level. A sentence that ends in 「-ㄴ다」 is a caption, not a voice.
@@ -140,7 +141,8 @@ the blow is one stroke and not three, whether the close is a picture with the me
 and not a moral, the blow again or the picture described,
 whether a second person gets a name and an arc of their own, and — on a disputed record —
 whether both sides are on the screen and neither is invented. The narration read-through
-(storyboard §4.4) judges those — storyboard-reviewer's narration mode P0-12 lists the five,
+(legacy-authoring.md §4.4 on story-v1; the blind audience read in storyboard SKILL.md §3 on
+story-v2) judges those — storyboard-reviewer's narration mode P0-12 lists the five,
 and it reads them only when STORY declares `person`; the checker only holds the shape.
 
 ## Sources

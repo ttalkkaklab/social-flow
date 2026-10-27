@@ -1,22 +1,22 @@
-import { REVIEW_TOOLS } from './portal-review-tools.js';
-import { UNIT_TOOLS } from './portal-unit-tools.js';
-import { PORTAL_API_TOOLS } from './portal-api-contract.js';
-import { CHANNEL_SLUG_RE } from './config.js';
-import { cameraContract, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
+import { MUSIC_ADAPTERS } from './music-registry.js';
+import { MUSIC_TOOLS } from './music-tools.js';
+import { GENAI_TOOLS } from './astra-genai-tools.js';
+import { GPT_IMAGE_MODELS } from './image-models.js';
+import { IMAGE_ADAPTERS } from './image-registry.js';
+import { VIDEO_ADAPTERS } from './video-registry.js';
+import { DURATION_TOOLS } from './video-duration.js';
+import { techniqueContract, cameraContract, motionThemeContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
-import { DEFAULT_SUPERTONIC_CHUNK_PAUSE, DEFAULT_SUPERTONIC_LANGUAGE, DEFAULT_SUPERTONIC_SPEED, DEFAULT_SUPERTONIC_STEPS, DEFAULT_SUPERTONIC_VOICE, MAX_SUPERTONIC_INPUT_CHARS, MAX_SUPERTONIC_SPEED, SUPERTONIC_LANGUAGES, SUPERTONIC_VOICE_NAMES, } from './supertonic-client.js';
-import { ASTRA_VIDEO_FAST_DIMENSION_STEP, ASTRA_VIDEO_LORAS, ASTRA_VIDEO_FRAME_LIMITS, ASTRA_VIDEO_MAX_PIXELS, ASTRA_VIDEO_MAX_SEED, ASTRA_VIDEO_MIN_FRAMES, } from './astra-video-client.js';
+import { ASTRA_VIDEO_FAST_DIMENSION_STEP, ASTRA_VIDEO_GUIDANCE_RANGES, guidanceToolKey, ASTRA_VIDEO_IC_LORA_ADAPTERS, ASTRA_VIDEO_LORAS, ASTRA_VIDEO_MAX_LORA_STRENGTH, ASTRA_VIDEO_MAX_REFERENCE_PIXELS, ASTRA_VIDEO_MAX_STG_BLOCK, ASTRA_VIDEO_MAX_STG_BLOCKS, ASTRA_VIDEO_FRAME_LIMITS, ASTRA_VIDEO_MAX_PIXELS, ASTRA_VIDEO_MAX_SEED, ASTRA_VIDEO_MIN_FRAMES, } from './astra-video-client.js';
 import { DEFAULT_SEEDANCE_DURATION, DEFAULT_SEEDANCE_MODEL, DEFAULT_SEEDANCE_REFERENCE_MODEL, DEFAULT_SEEDANCE_RESOLUTION, SEEDANCE_FPS, SEEDANCE_REFERENCE_MODELS, VALID_SEEDANCE_MODELS, VALID_SEEDANCE_RATIOS, VALID_SEEDANCE_RESOLUTIONS, } from './seedance-client.js';
 import { DEFAULT_GEMINI_38_TTS_MODEL, DEFAULT_TTS_MODEL, DEFAULT_TTS_TEMPERATURE, DEFAULT_VOICE, GEMINI_38_TTS_MODELS, MAX_GEMINI_38_TTS_INPUT_CHARS, TTS_VOICE_NAMES, VALID_TTS_MODELS, } from './tts-client.js';
-import { GENERATORS, REVIEW_MODEL } from './tts-quality.js';
-import { DEFAULT_ELEVENLABS_MODEL, DEFAULT_ELEVENLABS_OUTPUT_FORMAT, ELEVENLABS_DIALOGUE_MAX_INPUTS, ELEVENLABS_DIALOGUE_MAX_VOICES, ELEVENLABS_DIALOGUE_MODEL, ELEVENLABS_MODELS, ELEVENLABS_MODEL_CHAR_CAPS, ELEVENLABS_OUTPUT_FORMATS, ELEVENLABS_TEXT_NORMALIZATION, ELEVENLABS_VOICE_CATEGORIES, MAX_ELEVENLABS_DIALOGUE_CHARS, MAX_ELEVENLABS_INPUT_CHARS, DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT, DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE, ELEVENLABS_SFX_MODEL, ELEVENLABS_SFX_OUTPUT_FORMATS, ELEVENLABS_SFX_SECONDS, ELEVENLABS_SFX_USD_PER_MINUTE, MAX_ELEVENLABS_SFX_TEXT_CHARS, } from './elevenlabs-client.js';
+import { GENERATORS } from './tts-quality.js';
+import { DEFAULT_ELEVENLABS_MODEL, DEFAULT_ELEVENLABS_OUTPUT_FORMAT, ELEVENLABS_DIALOGUE_MAX_INPUTS, ELEVENLABS_MODELS, ELEVENLABS_LANGUAGE_CODE_PATTERN, ELEVENLABS_OUTPUT_FORMATS, ELEVENLABS_TEXT_NORMALIZATION, ELEVENLABS_VOICE_CATEGORIES, MAX_ELEVENLABS_INPUT_CHARS, DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT, DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE, ELEVENLABS_SFX_MODEL, ELEVENLABS_SFX_OUTPUT_FORMATS, ELEVENLABS_SFX_SECONDS, ELEVENLABS_SFX_USD_PER_MINUTE, MAX_ELEVENLABS_SFX_TEXT_CHARS, } from './elevenlabs-client.js';
 import { DEFAULT_ZIMAGE_QUANTIZE, DEFAULT_ZIMAGE_STEPS, MAX_ZIMAGE_DIMENSION, MIN_ZIMAGE_DIMENSION, ZIMAGE_DIMENSION_STEP, ZIMAGE_QUANTIZE_OPTIONS, } from './zimage-client.js';
 import { DEFAULT_QWEN3_ASR_LANGUAGE, DEFAULT_QWEN3_ASR_MODEL, QWEN3_ASR_LANGUAGES, QWEN3_ASR_MODELS, } from './qwen3-asr-client.js';
 import { BLENDER_INTERPOLATIONS, BLENDER_PREVIZ_ENGINES, BLENDER_PROXY_KINDS, BLENDER_RIG_BONES, BLENDER_ROOT_MOTIONS, DEFAULT_FRAME_END, DEFAULT_FRAME_START, DEFAULT_PREVIZ_ENGINE, DEFAULT_PREVIZ_FILENAME, DEFAULT_PREVIZ_HEIGHT, DEFAULT_PREVIZ_WIDTH, DEFAULT_SCENE_FPS, MAX_PREVIZ_FRAMES, } from './blender-bridge.js';
 import { DEFAULT_SUNO_MODEL, SUNO_MODELS, SUNO_PERSONA_MODELS, SUNO_SOUND_KEYS, SUNO_VOCAL_GENDERS, } from './suno-client.js';
-import { DEFAULT_MLX_IMAGE_SIZE, DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FRAMES, DEFAULT_MLX_VIDEO_HEIGHT, DEFAULT_MLX_VIDEO_WIDTH, MAX_MLX_IMAGE_DIMENSION, MAX_MLX_IMAGE_REFS, MAX_MLX_MUSIC_SECONDS, MAX_MLX_TTS_CHARS, MAX_MLX_VIDEO_DIMENSION, MAX_MLX_VIDEO_FRAMES, MAX_VIDEO_RGB_BYTES, MIN_MLX_IMAGE_DIMENSION, MIN_MLX_MUSIC_SECONDS, MIN_MLX_VIDEO_DIMENSION, MIN_MLX_VIDEO_FRAMES, MLX_IMAGE_DIMENSION_STEP, MLX_VIDEO_DIMENSION_STEP, MLX_VIDEO_DIMENSION_STEP_ONE_STAGE, MLX_VIDEO_FRAME_STEP, MLX_VIDEO_FPS, } from './mlx-serve-client.js';
-import { VOICE_LOCK_PROPERTY } from './voice-lock-config.js';
-import { VOICE_LOCK_TOOLS } from './voice-lock.js';
+import { DEFAULT_MLX_IMAGE_SIZE, DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FRAMES, DEFAULT_MLX_VIDEO_HEIGHT, DEFAULT_MLX_VIDEO_WIDTH, MAX_MLX_IMAGE_DIMENSION, MAX_MLX_IMAGE_REFS, MAX_MLX_MUSIC_SECONDS, MAX_MLX_VIDEO_DIMENSION, MAX_MLX_VIDEO_FRAMES, MAX_VIDEO_RGB_BYTES, MIN_MLX_IMAGE_DIMENSION, MIN_MLX_MUSIC_SECONDS, MIN_MLX_VIDEO_DIMENSION, MIN_MLX_VIDEO_FRAMES, MLX_IMAGE_DIMENSION_STEP, MLX_VIDEO_DIMENSION_STEP, MLX_VIDEO_DIMENSION_STEP_ONE_STAGE, MLX_VIDEO_FRAME_STEP, MLX_VIDEO_FPS, } from './mlx-serve-client.js';
 /**
  * Tool surface definitions (83 tools) — 9 research (incl. stock_search) + 5 open-data +
  * 40 generation (5 image + 12 video + 9 voice + 1 STT + 9 music + 1 mesh +
@@ -127,19 +127,23 @@ const OMNI_ASPECT_RATIO_PROPERTY = {
  * Shared ASTRA video property definitions (self-hosted LTX-2.5).
  *
  * Length is frames rather than seconds and sizes sit on a pixel grid, so the same four
- * numeric levers appear on four of the five tools. astra_video_retake takes none of them —
+ * numeric levers appear on every generation tool but retake. astra_video_retake takes none of them —
  * a retake inherits the source exactly.
  */
-const ASTRA_FRAME_LIMITS_DESCRIPTION = `generate/default: ${ASTRA_VIDEO_FRAME_LIMITS.generate}; guided: ${ASTRA_VIDEO_FRAME_LIMITS.guided}; guided_fast/fast: ${ASTRA_VIDEO_FRAME_LIMITS.guided_fast} (conservative, not generation-tested); keyframe: ${ASTRA_VIDEO_FRAME_LIMITS.keyframe} and audio2video: ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} (server rejects values above 193).`;
+const ASTRA_HDR_PROPERTY = {
+    type: 'string', enum: ['SRGB_LINEAR', 'ACESCG', 'ACESCCT'],
+    description: 'Optional HDR input color space for BT.2020/HLG 10-bit output. Only without visual inputs; audio2video cannot combine hdr with imagePath. Verify color preservation in downstream assembly.',
+};
+const ASTRA_FRAME_LIMITS_DESCRIPTION = `every mode: ${ASTRA_VIDEO_FRAME_LIMITS.generate} (the live server's published ceiling, about 15.0s at 24fps). Longest successful renders in the live job log (2026-10-17): generate 361 at 1280x704 and 193 at 1024x1920; audio2video and keyframe 185 at 1024x1920; ingredients 161 at 1536x1024; guided 193 at 1280x704 text-only; fast, hq and ic_lora never above 121. The server refuses only two known 1280-wide failure bands (see astra_img2video); every other pair outside those measurements is unmeasured — it may fail or run slowly and hold the one-at-a-time queue for up to 1800s.`;
 const astraNumFramesProperty = (mode) => ({
     type: 'integer',
-    description: `Clip length in FRAMES, not seconds: 8k+1, minimum ${ASTRA_VIDEO_MIN_FRAMES}. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} Server default: 121 (~5.0s at 24fps). Off-grid and over-limit values are refused before the call.`,
+    description: `Clip length in FRAMES, not seconds: 8k+1, minimum ${ASTRA_VIDEO_MIN_FRAMES}. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} ${mode === 'audio2video' ? 'Client compatibility default: explicitly sends 121' : 'Server default: 121'} (~5.0s at 24fps). Off-grid and over-limit values are refused before the call.`,
     minimum: ASTRA_VIDEO_MIN_FRAMES,
     maximum: ASTRA_VIDEO_FRAME_LIMITS[mode],
 });
 const ASTRA_AUTO_DURATION_PROPERTY = {
     type: 'object',
-    description: 'Let the server pick the length inside a range instead of naming frames. After seconds are rounded at frameRate, the range must start at frame 1 or later, end at frame 121 or earlier, and contain an 8k+1 value. Ignored when numFrames is also given.',
+    description: 'Let the server pick the length inside a range instead of naming frames. After seconds are rounded at frameRate, the range must start at frame 1 or later, end at frame 121 or earlier, and contain an 8k+1 value. Mutually exclusive with numFrames and duration.',
     properties: {
         minSeconds: { type: 'number', description: 'Shortest acceptable clip length in seconds.' },
         maxSeconds: { type: 'number', description: 'Longest acceptable clip length in seconds.' },
@@ -148,11 +152,11 @@ const ASTRA_AUTO_DURATION_PROPERTY = {
 };
 const ASTRA_WIDTH_PROPERTY = {
     type: 'integer',
-    description: `Frame width in pixels (default: 1536, or 768 on tier "fast"). Must be a multiple of 64 — or of ${ASTRA_VIDEO_FAST_DIMENSION_STEP} within 32-1920 on tier "fast". width * height must not exceed ${ASTRA_VIDEO_MAX_PIXELS}. FOR 9:16 ASK FOR 1024x1920 FIRST. 1088x1920 exceeds the area ceiling at every frame count. The plugin's usual 1080x1920 is REFUSED, because 1080 is not a multiple of 64 or of 32. To fit a 1080x1920 canvas, widen the 1024-pixel output to 1080 (about 5.5%) in the edit or add side padding.`,
+    description: `Frame width in pixels (default: 1536, or 768 on tier "fast"). Must be within 64-1920 and a multiple of 64 — or of ${ASTRA_VIDEO_FAST_DIMENSION_STEP} within 32-1920 on tier "fast". width * height must not exceed ${ASTRA_VIDEO_MAX_PIXELS}. FOR 9:16 ASK FOR 1024x1920 FIRST. 1088x1920 exceeds the area ceiling at every frame count. The plugin's usual 1080x1920 is REFUSED, because 1080 is not a multiple of 64 or of 32. To fit a 1080x1920 canvas, widen the 1024-pixel output to 1080 (about 5.5%) in the edit or add side padding.`,
 };
 const ASTRA_HEIGHT_PROPERTY = {
     type: 'integer',
-    description: `Frame height in pixels (default: 1024, or 512 on tier "fast"). Same grid rule as width, and the same ${ASTRA_VIDEO_MAX_PIXELS}-pixel area ceiling. For 9:16, use 1024x1920 first. 1088x1920 exceeds the area ceiling at every frame count. Never use 1080x1920, whose width is off the grid. To fit a 1080x1920 canvas, widen the 1024-pixel output to 1080 (about 5.5%) in the edit or add side padding.`,
+    description: `Frame height in pixels (default: 1024, or 512 on tier "fast"). Same per-edge range and grid rule as width, and the same ${ASTRA_VIDEO_MAX_PIXELS}-pixel area ceiling. For 9:16, use 1024x1920 first. 1088x1920 exceeds the area ceiling at every frame count. Never use 1080x1920, whose width is off the grid. To fit a 1080x1920 canvas, widen the 1024-pixel output to 1080 (about 5.5%) in the edit or add side padding.`,
 };
 const ASTRA_FRAME_RATE_PROPERTY = {
     type: 'number',
@@ -168,14 +172,71 @@ const ASTRA_SEED_PROPERTY = {
 };
 const ASTRA_LORA_PROPERTY = {
     type: 'array',
-    description: 'Distinct look adapters to load, at most 2. "cinemagraph" freezes the frame except for one moving element; "slow-motion" stretches the action. Duplicate names are refused. Accepted ONLY on tier "default" (mode generate) — any other tier is refused before the call.',
+    description: `Distinct look adapters to load, at most 2. "cinemagraph" freezes the frame except for one moving element; "slow-motion" stretches the action. Give a bare name for strength 1.0, or {name, strength} with strength 0-${ASTRA_VIDEO_MAX_LORA_STRENGTH}. Duplicate names are refused. Accepted ONLY on tier "default" (mode generate) — any other tier is refused before the call.`,
     maxItems: 2,
+    items: {
+        oneOf: [
+            { type: 'string', description: 'Adapter name at strength 1.0.', enum: [...ASTRA_VIDEO_LORAS] },
+            {
+                type: 'object',
+                description: 'Adapter name with an explicit strength.',
+                properties: {
+                    name: { type: 'string', enum: [...ASTRA_VIDEO_LORAS], description: 'Adapter name.' },
+                    strength: { type: 'number', minimum: 0, maximum: ASTRA_VIDEO_MAX_LORA_STRENGTH, description: `Adapter strength, 0-${ASTRA_VIDEO_MAX_LORA_STRENGTH}.` },
+                },
+                required: ['name', 'strength'],
+                additionalProperties: false,
+            },
+        ],
+    },
+};
+/** What each engine knob does (engine `--help`), so an agent can choose without the manual. */
+const ASTRA_GUIDANCE_MEANING = {
+    video_cfg_guidance_scale: 'Prompt adherence for the picture (CFG). Higher follows the prompt more literally but reduces variety; 1.0 = off.',
+    video_stg_guidance_scale: 'Spatio-temporal guidance strength for the picture. Higher sharpens structure and motion coherence but can cost quality; 0.0 = off.',
+    video_rescale_scale: 'Rescales the picture after guidance. Raise it when colours look oversaturated or burnt; 0.0 = off.',
+    video_skip_step: 'Skip diffusion steps for the picture: 0 = none, 1 = every other step, 2 = two of every three. Faster, rougher.',
+    a2v_guidance_scale: 'How strongly the audio drives the picture (audio-to-video cross-attention). Higher may tighten lip-sync; 1.0 = off.',
+    audio_cfg_guidance_scale: 'Prompt adherence for the generated sound. Higher follows the prompt more literally; 1.0 = off.',
+    audio_stg_guidance_scale: 'Spatio-temporal guidance strength for the sound; 0.0 = off.',
+    audio_rescale_scale: 'Rescales the sound after guidance (experimental); 0.0 = off.',
+    audio_skip_step: 'Skip diffusion steps for the sound, same scale as videoSkipStep.',
+    v2a_guidance_scale: 'How strongly the picture drives the sound (video-to-audio cross-attention). Higher may tighten lip-sync; 1.0 = off.',
+};
+const ASTRA_STG_BLOCKS_PROPERTY = {
+    type: 'array',
+    description: `Transformer blocks perturbed by spatio-temporal guidance: 1-${ASTRA_VIDEO_MAX_STG_BLOCKS} distinct integers 0-${ASTRA_VIDEO_MAX_STG_BLOCK}. Only matters while the matching stg scale is above 0 — and on tier "hq" the default list is empty, so turning stg on there also needs a block list (e.g. [28]).`,
+    minItems: 1,
+    maxItems: ASTRA_VIDEO_MAX_STG_BLOCKS,
     uniqueItems: true,
-    items: { type: 'string', description: 'Adapter name.', enum: [...ASTRA_VIDEO_LORAS] },
+    items: { type: 'integer', minimum: 0, maximum: ASTRA_VIDEO_MAX_STG_BLOCK },
+};
+const ASTRA_DURATION_PROPERTY = {
+    type: 'number', exclusiveMinimum: 0,
+    description: 'Clip length in seconds — the easy way to set length. Converted to the nearest 8k+1 frame count at frameRate (the shorter on a tie): at 24fps 1s→25, 2s→49, 4s→97, 5s→121, 8s→193 frames. Give only one of duration, numFrames and autoDuration (or audioMaxDuration); a length outside the mode\'s frame range is refused with the seconds it accepts.',
+};
+const ASTRA_GENERATE_AUDIO_PROPERTY = {
+    type: 'boolean',
+    description: 'false = return a silent mp4 (the sound stream is stripped after generation; render time is the same). Default true. On audio2video false also removes the supplied sound.',
+};
+const ASTRA_GUIDANCE_PROPERTY = {
+    type: 'object',
+    description: 'Optional engine guidance knobs; leave it out unless a render needs correcting — every omitted key keeps the pipeline default, and the defaults are tuned. Typical fixes: ignores the prompt → raise videoCfgGuidanceScale (default 3.0) a little; oversaturated or burnt colours → raise videoRescaleScale or lower videoCfgGuidanceScale; lip-sync loose on audio2video → raise a2vGuidanceScale. Defaults for guided, fast, keyframe and audio2video: videoCfg 3.0 · videoStg 1.0 · videoRescale 0.7 · videoStgBlocks [28] · videoSkipStep 0 · a2v 3.0 · audioCfg 7.0 · audioStg 1.0 · audioRescale 0.7 · audioStgBlocks [28] · audioSkipStep 0 · v2a 3.0. tier "hq" differs: videoStg 0.0 · videoRescale 0.45 · videoStgBlocks [] · audioStg 0.0 · audioRescale 1.0 — so on hq a stg scale does nothing unless you also give its block list. Ranges are the server\'s conservative bounds, not measured quality guidance. Accepted on the step-based modes only (tiers "guided", "fast", "hq", and the keyframe and audio2video tools).',
+    properties: {
+        ...Object.fromEntries(Object.entries(ASTRA_VIDEO_GUIDANCE_RANGES).map(([key, [minimum, maximum]]) => [guidanceToolKey(key), {
+                type: key.endsWith('_skip_step') ? 'integer' : 'number',
+                minimum,
+                maximum,
+                description: `${ASTRA_GUIDANCE_MEANING[key]} Range ${minimum}-${maximum}. Engine flag --${key.replaceAll('_', '-')}.`,
+            }])),
+        videoStgBlocks: ASTRA_STG_BLOCKS_PROPERTY,
+        audioStgBlocks: ASTRA_STG_BLOCKS_PROPERTY,
+    },
+    additionalProperties: false,
 };
 const ASTRA_NEGATIVE_PROMPT_PROPERTY = {
     type: 'string',
-    description: 'What to keep out of the frame, at most 2000 characters. Accepted ONLY on tiers "guided" and "fast" and on the keyframe/audio2video tools — mode generate has no such field and it is refused before the call.',
+    description: 'What to keep out of the frame, at most 2000 characters. Include subtitles, captions, dialogue text, typography, letters, logos and watermarks. Accepted ONLY on tiers "guided" and "fast" and on the keyframe/audio2video tools — mode generate has no such field and it is refused before the call.',
 };
 const ASTRA_STEPS_PROPERTY = {
     type: 'integer',
@@ -283,23 +344,23 @@ const ELEVENLABS_TIMESTAMPS_PROPERTY = {
 };
 const ELEVENLABS_LANGUAGE_CODE_PROPERTY = {
     type: 'string',
-    description: 'ISO 639-1 code to enforce ("ko", "en", "ja"). Only eleven_flash_v2_5 / eleven_turbo_v2_5 / eleven_v3 honor it; eleven_multilingual_v2 detects the language from the text and ignores this. Set it for short Korean lines on flash — a two-word line can be misdetected.',
-    pattern: '^[a-z]{2}$',
+    description: 'Text language, e.g. "ko", "en", "ja". v4 also accepts ast, yue, ceb and fil for languages without a two-letter code. Omit for automatic detection.',
+    pattern: ELEVENLABS_LANGUAGE_CODE_PATTERN,
 };
 const ELEVENLABS_SEED_PROPERTY = {
-    type: 'number',
-    description: 'Deterministic seed 0–4294967295. The same seed, text, voice and settings reproduce the take — keep it when re-rendering one sentence of a finished scene.',
+    type: 'integer',
+    description: 'Best-effort seed 0–4294967295, e.g. 42. Same inputs can still vary; preserve for comparison, never promise deterministic audio.',
     minimum: 0,
     maximum: 4294967295,
 };
 const ELEVENLABS_NORMALIZATION_PROPERTY = {
     type: 'string',
-    description: 'Number/date reading: "auto" (vendor default), "on" (always spell out digits and dates — flash_v2_5 reads them raw otherwise, so turn this on for copy with prices or dates), "off" (never).',
+    description: 'Text normalization: "auto" (vendor default), "on" (normalize numbers and dates), "off" (skip). Example: "on" for a script containing dates.',
     enum: [...ELEVENLABS_TEXT_NORMALIZATION],
 };
 const ELEVENLABS_STABILITY_PROPERTY = {
     type: 'number',
-    description: 'Voice stability 0–1 (vendor default 0.5). Higher is steadier and flatter; lower is more expressive and can wobble between takes. On eleven_v3 this is a 3-way mode, not a slider — 0.0 Creative (audio tags react most, occasional hallucinated words), 0.5 Natural, 1.0 Robust (tags barely react); other values are snapped. Keep it identical across every cut of one video.',
+    description: 'v4 delivery stability 0–1, e.g. 0.5 (vendor default). Lower permits more expressive variation; higher is steadier. Preserve a pinned value across retakes.',
     minimum: 0,
     maximum: 1,
 };
@@ -314,7 +375,7 @@ const MUSIC_DURATION_PROPERTY = {
     default: 30,
 };
 /** Shared tail for the per-platform publish tools — final-copy contract + post-publish report */
-const SNS_HITL_LINE = 'Captions and titles are posted verbatim, with no rewriting — pass the final copy, hashtags included. After publishing, report the permalink from the response to the user.';
+const SNS_HITL_LINE = 'Captions and titles are posted verbatim, with no rewriting — pass the final copy, hashtags included. Publishing needs the user\'s authorization for this post, or an approved standing growth plan (growth-plan.md status: approved) that covers it. After publishing, report the permalink from the response to the user.';
 /**
  * Shared channel (brand) selector property — names the <SNS_TOKEN_DIR>/<slug>/
  * token directory paired with the data/<slug>/ channel.
@@ -665,7 +726,7 @@ const THREADS_SEARCH_OUTPUT = {
 // Keep tool discovery available even when an install has lost its reference tree.
 const eyelineInput = (() => {
     try {
-        return storyboardContract().EYELINE_SCHEMA;
+        return { type: 'object', additionalProperties: true, description: 'Optional gaze plan. Use the directing skill for recommended fields; only a supplied shot reference must resolve.', properties: { matchShot: { type: 'integer', minimum: 1, description: 'Referenced shot position, one-based; must resolve when supplied' } } };
     }
     catch {
         return { type: 'object', description: 'Eyeline contract unavailable: restore skills/storyboard/references/structure-contract.js' };
@@ -673,7 +734,7 @@ const eyelineInput = (() => {
 })();
 const compositionInput = (() => {
     try {
-        return storyboardContract().COMPOSITION_SCHEMA;
+        return { type: 'object', additionalProperties: true, description: 'Optional composition notes. Follow the directing skill; no rationale worksheet is required to author a shot.' };
     }
     catch {
         return { type: 'object', description: 'Composition contract unavailable: restore skills/storyboard/references/structure-contract.js' };
@@ -681,7 +742,7 @@ const compositionInput = (() => {
 })();
 const depthInput = (() => {
     try {
-        return storyboardContract().DEPTH_SCHEMA;
+        return { type: 'object', additionalProperties: true, description: 'Optional depth and readable-plane plan. The skill guides artistic choices.' };
     }
     catch {
         return { type: 'object', description: 'Depth contract unavailable: restore skills/storyboard/references/structure-contract.js' };
@@ -704,6 +765,24 @@ const shotCameraInput = (() => {
     }
 })();
 const enumInput = (values, description) => ({ type: 'string', ...(values?.length ? { enum: values } : {}), description });
+const techniqueIds = (() => { try {
+    return techniqueContract().entries.map(entry => String(entry.id));
+}
+catch {
+    return [];
+} })();
+const motionThemes = (() => { try {
+    return Object.keys(motionThemeContract().THEMES);
+}
+catch {
+    return [];
+} })();
+const motionTypes = (() => { try {
+    return motionGraphicTypes();
+}
+catch {
+    return [];
+} })();
 const purposes = (() => { try {
     return renderPurposes();
 }
@@ -718,7 +797,7 @@ catch {
 } })();
 // The still lane's window move (render-routing.js, still-camera.js) — the camera a photograph gets.
 const stillCameraInput = {
-    type: 'object', additionalProperties: true, required: ['effect', 'target', 'reason'],
+    type: 'object', additionalProperties: true, required: ['effect'],
     description: 'Required on still_camera. The eased window move the builder drives over the photograph: push (slow zoom-in, the default) · pull · approach · focus-in · rack-focus · pan · tilt (L13: a pan or tilt travels from focusFrom to focusTo, the vertical tilt being the scale-by-time move) · reveal · parallax (prepared layers). The ease holds the opening and closing pictures on its own.',
     properties: {
         effect: enumInput(stillCameraEffects, 'The window move. Choose from the cut\'s meaning (directing-grammar §5 Still column), never repeat one on every cut.'),
@@ -745,26 +824,42 @@ const storyboardShotInput = {
         duration: { type: 'number', exclusiveMinimum: 0, description: 'Shot duration in seconds; model duration may round up.' },
         title: { type: 'string', description: 'Visible title where the shot treatment permits it.' },
         narration: { type: 'array', description: 'Approved speech and optional subtitle text, in order.', items: { type: 'object', additionalProperties: true, required: ['tts'], properties: { tts: { type: 'string', description: 'Text to speak.' }, sub: { type: 'string', description: 'Subtitle text; omit to use the speech text.' } } } },
-        beat: enumInput(storyboardVocabulary?.BEATS, 'Narrative beat in playback order.'),
+        beat: { type: 'string', description: 'Narrative beat in playback order. Recommended vocabulary is in the directing skill.' },
         shot: {
             type: 'object', additionalProperties: true,
             description: 'Shot grammar and production route. Render mode chooses how to build the shot; visual.camera chooses how it is filmed; shot.depth chooses how many planes the viewer may read at once (L11).',
             properties: {
-                size: enumInput(storyboardVocabulary?.SIZES, 'Framing size.'),
-                angle: enumInput(storyboardVocabulary?.ANGLES, 'Camera angle.'),
-                infoType: enumInput(storyboardVocabulary?.INFO_TYPES, 'Information carried by the shot; must agree with its purpose.'),
+                techniques: { type: 'array', description: 'Authored choices from storyboard_read techniqueCatalog. Persist each technique id and this shot’s reason. Match size/angle/camera fields to its fields; provider prompts consume its instructions. Icons do not verify actual footage.', items: { type: 'object', additionalProperties: false, required: ['id', 'reason'], properties: {
+                            id: { type: 'string', ...(techniqueIds.length ? { enum: techniqueIds } : {}), description: 'Stable semantic technique id, including independent focus and viewpoint choices.' },
+                            reason: { type: 'string', minLength: 1, description: 'The visible information or action that motivates this selection.' },
+                        } } },
+                size: { type: 'string', description: 'Canonical framing size: mfs=mid-thigh, ms=waist-up. Keep two-shot/POV roles in separate technique or framing prose.' },
+                angle: { type: 'string', description: 'Camera angle. Recommended vocabulary is in the directing skill.' },
+                infoType: { type: 'string', description: 'Information carried by the shot; must agree with its purpose. Recommended vocabulary is in the directing skill.' },
                 feel: { type: 'string', description: 'What the viewer should feel before choosing framing and movement.' },
+                motionGraphic: {
+                    type: 'object', additionalProperties: true, required: ['version', 'type', 'evidence', 'style'],
+                    description: 'Motion design plan. Read motion-graphics.md, choose from intent and inputs, record why alternatives lose. Does not replace render mode or camera. Built-in SVG examples use motion_html; physical subjects retain mesh routes.',
+                    properties: {
+                        version: { type: 'integer', enum: [1], description: 'Motion plan schema version.' }, type: enumInput(motionTypes, 'Semantic motion family, independent of palette and transition effects.'),
+                        intent: { type: 'string', description: 'One viewer takeaway.' }, reason: { type: 'string', description: 'Content-specific choice and rejected alternative.' },
+                        evidence: enumInput(['data', 'recording', 'reenactment', 'metaphor'], 'Evidence provenance; never present a mock UI as an actual recording.'),
+                        style: { type: 'object', description: 'Palette and subject-specific visual direction.', additionalProperties: true, properties: { theme: { type: 'object', additionalProperties: true, required: ['id'], description: 'Coherent motion design system. Use auto for contextual selection; an explicit id overrides automatic selection. storyboard_apply persists the resolved theme and reason.', properties: { id: enumInput(['auto', ...motionThemes], 'Theme selection, independent of semantic motion type.'), context: enumInput(['research', 'software', 'education', 'campaign', 'storytelling', 'friendly'], 'Communication context; overrides the type-based default in auto mode.'), reason: { type: 'string', description: 'Why an explicit theme suits the audience and subject.' } } }, palette: enumInput(['editorial', 'botanical', 'plum', 'midnight'], 'Built-in palette; retain channel identity.'), reason: { type: 'string', description: 'Why this visual direction suits the subject.' } } },
+                        beats: { type: 'array', description: 'Editorial timing intentions; authored slides can implement custom timing.', items: { type: 'object', description: 'One meaningful change.', required: ['at', 'action'], properties: { at: { type: 'number', minimum: 0, maximum: 1, description: 'Normalized shot time, zero to one.' }, action: { type: 'string', description: 'Visible change or result-reading hold.' } } } },
+                        content: { type: 'object', additionalProperties: true, description: 'Type-specific source data; see motion-graphics.md. Preserve exact source values.' }
+                    }
+                },
                 eyeline: eyelineInput, composition: compositionInput, depth: depthInput,
                 render: {
                     type: 'object', additionalProperties: true, required: ['mode'],
-                    description: 'Production route. A drone spatial reveal uses generated_video with purpose place or live_action, motionEssential:true and whyNotStill, including full_video.',
+                    description: 'Production route. Select a supported route; explain artistic choices when useful. The skill guides medium and movement decisions.',
                     properties: {
                         mode: enumInput(storyboardVocabulary?.RENDER_MODES, 'still_camera, generated_video, stock_video, or the supported HTML/data route. This is not the shot camera preset.'),
-                        purpose: enumInput(purposes, 'Why this shot exists. Route compatibility is checked by storyboard_check.'),
+                        purpose: { type: 'string', description: 'Optional purpose for review. The skill guides route selection.' },
                         reason: { type: 'string', description: 'Why this route conveys the intended information.' },
                         action: { type: 'string', description: 'Visible action or spatial reveal.' },
-                        motionEssential: { type: 'boolean', description: 'true when continuous movement is essential. Required true for drone-flythrough.' },
-                        whyNotStill: { type: 'string', description: 'What travel reveals that a still cannot. Required for drone-flythrough.' },
+                        motionEssential: { type: 'boolean', description: 'Optional note that continuous movement is essential.' },
+                        whyNotStill: { type: 'string', description: 'Optional explanation of what travel reveals.' },
                         camera: stillCameraInput
                     }
                 },
@@ -794,474 +889,296 @@ const storyboardShotInput = {
         }
     },
 };
-// ── ttalkkakstory portal tool surface ─────────────────────────────────────────
-// The channel (and so the workspace key) is read off the episode directory's path,
-// data/<channel>/episodes/<topic>; `channel` is for the tools that have no directory to read.
-const PORTAL_CHANNEL_ARG = {
-    type: 'string',
-    description: 'Channel slug (data/<channel>) that picks the key file <SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json. Optional when an episodeDir is given — the slug is read off its path; without either, the flat <SNS_TOKEN_DIR>/ttalkkakstory.json or the TTALKKAKSTORY_* env is used',
+const ELEVENLABS_V4_PROPERTIES = {
+    model: { type: 'string', enum: [...ELEVENLABS_MODELS], default: DEFAULT_ELEVENLABS_MODEL, description: 'Only eleven_v4 is accepted. Never fall back to a legacy model.' },
+    languageCode: ELEVENLABS_LANGUAGE_CODE_PROPERTY,
+    stability: ELEVENLABS_STABILITY_PROPERTY,
+    similarity: { type: 'number', minimum: 0, maximum: 1, description: 'Adherence to the reference voice, e.g. 0.75 (vendor default); maps to settings.similarity. Higher may reduce naturalness.' },
+    similarityBoost: { type: 'number', minimum: 0, maximum: 1, description: 'Deprecated alias for similarity, e.g. 0.75; do not supply both with different values.' },
+    speed: { type: 'number', enum: [1], description: 'Compatibility no-op only. v4 does not accept a numerical speed setting.' },
+    seed: ELEVENLABS_SEED_PROPERTY,
+    previousText: { type: 'string', maxLength: 100, description: 'Prior speech context, e.g. "We arrived."; not synthesized. Provider support can vary.' },
+    nextText: { type: 'string', maxLength: 100, description: 'Following context, e.g. "Then we left."; maps to future_text, not synthesized. Provider support can vary.' },
+    previousRequestIds: { type: 'array', minItems: 1, maxItems: 3, items: { type: 'string', minLength: 1 }, description: 'Real dialogue request IDs for continuity, e.g. ["prior-request-id"]. Last is closest to this take. Requires logging; provider support can vary.' },
+    nextRequestIds: { type: 'array', minItems: 1, maxItems: 3, items: { type: 'string', minLength: 1 }, description: 'Real following dialogue request IDs, e.g. ["next-request-id"], for a middle-clip retake. First is closest. Requires logging; provider support can vary.' },
+    usePvcAsIvc: { type: 'boolean', description: 'Explicitly use the instant-clone version of a professional voice, e.g. true. Omitted uses provider default false. May change expressiveness, latency and voice character; never enable as an automatic fallback.' },
+    enableLogging: { type: 'boolean', description: 'Provider request logging, e.g. true (provider default). false requests Enterprise-only zero retention and disables request stitching; local audio and sidecars are still saved.' },
+    pronunciationDictionaryLocators: { type: 'array', minItems: 1, maxItems: 3, description: 'Pinned dictionary versions, e.g. [{"pronunciationDictionaryId":"dict-id","versionId":"version-id"}].', items: { type: 'object', additionalProperties: false, properties: { pronunciationDictionaryId: { type: 'string', minLength: 1, description: 'Dictionary id from tts_elevenlabs_dictionary.' }, versionId: { type: 'string', minLength: 1, description: 'Version id from tts_elevenlabs_dictionary.' } }, required: ['pronunciationDictionaryId', 'versionId'] } },
+    applyTextNormalization: ELEVENLABS_NORMALIZATION_PROPERTY,
+    outputFormat: ELEVENLABS_OUTPUT_FORMAT_PROPERTY, timestamps: ELEVENLABS_TIMESTAMPS_PROPERTY,
+    outputPath: { type: 'string', description: 'Output directory, e.g. /tmp/speech. Defaults to the working directory.' }, filename: { type: 'string', description: 'Output basename with matching extension, e.g. shot-01.wav. Omit for a generated name.' }
 };
-const PORTAL_EPISODE_ID_ARG = {
-    type: 'string',
-    description: 'Episode id (uuid). Must match every supplied local copy; mismatch is refused before HTTP or file writes. Optional when episodeDir holds .portal.json (written by portal_storyboard_pull · portal_storyboard_save · portal_episode_create)',
-};
-const PORTAL_EPISODE_DIR_ARG = {
-    type: 'string',
-    description: 'Absolute path of data/<channel>/episodes/<topic> (or its storyboard/). Supplies the episode id from .portal.json and the channel for the key. A supplied episodeId must match this copy',
-};
-const PORTAL_STAGE_ENUM = ['researched', 'candidates', 'scenario', 'narration', 'board', 'approved', 'produced', 'published'];
-const PORTAL_CANDIDATE_ENUM = ['D1', 'D2', 'D3'];
-const PORTAL_TOOLS = [
-    ...PORTAL_API_TOOLS,
-    {
-        name: 'portal_workspace_check',
-        title: 'Check the portal key and its workspace',
-        annotations: HINT.read,
-        description: `Resolve the ttalkkakstory portal key for a channel and ask the portal who it is — the workspace the key opens, the role (member), and which file answered (per-channel · flat · env). Call only after the user chose portal integration for this episode. Use capability_status with channel for the local key check before that HITL; this tool makes network calls.
+const ACTING_PROPERTY = { type: 'object', additionalProperties: false, description: 'Per-line performance, separate from character identity. Empty object clears direction.', properties: {
+        direction: { type: 'string', maxLength: 500, description: 'Short plain delivery direction; no bracket markup.' },
+        tags: { type: 'array', maxItems: 6, items: { type: 'string', maxLength: 60 }, description: 'Bare English vocal events prepended to this line, e.g. sigh. Split the line for later changes.' }
+    } };
+const VOICE_PROFILE_PROPERTY = { type: 'object', additionalProperties: false, description: 'Explicit acoustic targets; never infer voice gender from names or roles.', properties: {
+        vocalGender: { type: 'string', enum: ['female', 'male', 'neutral', 'unspecified'], description: 'Desired audible gender, e.g. female; unspecified preserves uncertainty.' },
+        perceivedAge: { type: 'string', maxLength: 100, description: 'Desired age impression, e.g. adult in her fifties; defaults to confirmed character age.' },
+        baselineDirection: { type: 'string', maxLength: 400, description: 'Short habitual delivery, e.g. dry measured phrasing. For Gemini3.8 use the base voice for age/gender/timbre; style cannot change immutable traits. No biography or changing scene emotion.' }
+    } };
+const CHARACTER_TARGET_PROPERTY = { type: 'object', additionalProperties: false, description: 'Acoustic target from character_voice_audition plan. Metadata is intent, never proof of the voice heard.', properties: {
+        vocalGender: { type: 'string', enum: ['female', 'male', 'neutral', 'unspecified'], description: 'Requested audible gender, e.g. female; unspecified skips gender comparison.' },
+        perceivedAge: { type: ['string', 'null'], maxLength: 100, description: 'Plausible perceived age, e.g. 52 years old; null means unknown.' },
+        ...Object.fromEntries(['timbre', 'pace', 'register', 'habits', 'emotionalRange'].map(key => [key, { type: ['string', 'null'], maxLength: 2000, description: `Confirmed character ${key}, e.g. low clear voice or measured phrasing; null means unknown.` }])),
+        traits: { type: 'array', maxItems: 20, description: 'Character tendencies as context, e.g. ["restrained and precise"]. Do not demand every trait in one short line.', items: { type: 'string', maxLength: 2000 } }
+    }, required: ['vocalGender', 'perceivedAge', 'timbre', 'pace', 'register', 'habits', 'emotionalRange', 'traits'] };
+/**
+ * MCP server instructions (InitializeResult.instructions). With tool search on, Claude Code
+ * loads only tool names and this text at session start, so this is how the model learns
+ * which of ~100 names to search for and which route a job takes. Claude Code cuts it at
+ * 4,096 characters, so the routing comes first. Every backticked tool name is checked
+ * against TOOLS by the contract test.
+ */
+export const SERVER_INSTRUCTIONS = `social-flow plans, produces and publishes short- and long-form videos for SNS channels. When tool definitions are deferred, search by task using the words at the end.
 
-The key is issued on the portal at /{workspace}/settings/api-keys (admin+) and saved as <SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json — { "apiKey": "tks_…" }. apiUrl defaults to https://story.ttalkkaklab.com; workspace is resolved from /api/token and an explicit workspace must match the key. With no key anywhere the portal_* tools are hidden and every call answers one line; the episode stays a local file.
+Start: \`capability_status\` shows which providers are configured on this machine; \`project_manage\` holds the saved project settings (models, visual style, ratio, SNS targets). Reuse saved choices instead of asking again.
 
-With episodeDir, also compares the directory's .portal.json (the workspace it is a copy of) with the key's workspace — workspaceMatches:false with a warning means every write to that directory will be refused until the key file or the record is fixed, so the topic does not fork into a second workspace. When the record names an episode, the portal's side comes too: portal { headRevisionNo, stage, status, lease { holder, until, mine } | null } and sync — "portal_ahead" (pull with mode "side" and merge before writing), "local_ahead" (never in the normal flow — syncWarning says how to resync), "in_sync", or "unknown" (no record, or the lookup failed — see portalWarning) — plus pending { sideDir, backups }: a leftover .portal-head/ means a merge was started and not finished, backups counts .portal-local/ directory entries. Missing entries return false/0; unreadable entries, dangling links or wrong entry types return null for the affected field plus pending.warnings { sideDir?, backups? }. Both mismatch messages are preserved in warning when workspace and episode identities conflict together.
+Episode video: \`video_catalog\` → \`video_plan\` → \`video_execute\`, and \`video_status\` after an interruption. The provider tools (veo_*, seedance_*, astra_*, omni_*, mlx_video_generate) are the adapters that route calls; call one directly only when the user names it.
 
-A damaged or unreadable local record returns localWarning, copyOf:null, workspaceMatches:null and sync:"unknown"; pending is still inspected. Pass episodeId explicitly to read the remote head and lease without trusting that record, or use episodeId + channel alone for a remote-only check. Without a trustworthy ID no episode is guessed; portalWarning explains how to request it. A valid local record conflicting with the explicit ID or key workspace skips the episode lookup with a warning. A missing local revision also means sync:"unknown". Diagnostic success does not repair the record or permit writes: other tools keep refusing the damaged state.
+Storyboard: \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_route\` and the tts_* tools generate. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
 
-Returns: JSON — { channel, workspace, resolvedBy: "file"|"token", source, holder, episodeDir?, copyOf?, workspaceMatches?, warning?, localWarning?, portal?, sync?, pending?, portalWarning?, …the portal's /me answer }.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                channel: PORTAL_CHANNEL_ARG,
-                episodeDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic> — checks its .portal.json against the key\'s workspace and picks the channel off the path' },
-                episodeId: { type: 'string', format: 'uuid', description: 'Explicit episode to inspect when local state is damaged or absent; must agree with a readable local record' },
-            },
-        },
-    },
-    {
-        name: 'portal_shot_media_upload',
-        title: 'Upload and link one shot media file',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: 'Upload a source image, end frame, Blender/three.js previz, generated video, whole-shot narration or one narration segment, then checkpoint the shot UUID. Render previz → await this upload → call video generation. Save the episode first. Missing key silently skips. Oversized files alone are skipped and logged to .portal-media-skips.jsonl; production continues. Existing .portal.json must match the workspace and head; conflicts preserve local files and provide recovery instructions. Never regenerate a file just because its upload failed.',
-        inputSchema: { type: 'object', properties: {
-                episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; preferred over ordinal.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' },
-                kind: { type: 'string', enum: ['image', 'end_frame', 'previz', 'video', 'narration', 'narration_segment'], description: 'Shot media role; MP4 for previz/video, WAV/MP3 for narration, PNG/JPEG/WebP for image/end_frame.' }, segmentIndex: { type: 'integer', minimum: 0, description: 'Zero-based narration[] index; required only for narration_segment.' }, file: { type: 'string', description: 'Absolute file or episode-relative path; must stay inside this episode.' },
-            }, required: ['episodeDir', 'kind', 'file'] },
-    },
-    {
-        name: 'portal_storyboard_save',
-        title: 'Upload an episode directory to the portal',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: `Upload data/<channel>/episodes/<topic>/storyboard/ — scenes.js (the shots verbatim, the window.* blocks as episode meta), storyboard.md, research.md, script.md, storyboard.html — to the ttalkkakstory portal under the channel's workspace key. Saving the same episode again updates it (idempotent); the project is the channel, the storyboard is found or created by the episode title (or storyboardTitle for a series). When .portal.json exists, its episodeId updates that same row even if the title changed. The save reads storyboard/decisions.json when present and uploads its evidenced answers as structured decisions, outside meta; a missing sidecar omits the decisions field. The save is also a checkpoint: stage from the argument or storyboard.md's status (approved → approved, otherwise board), baseRevisionNo from .portal.json. A 409 head_moved means another machine saved first — the answer lists what THEY changed since your base (shots · meta · documents): keep your local edits aside, portal_storyboard_pull the head, re-apply all of your changes on it and resolve by hand where the list overlaps them, save again; a 409 leased names who holds the lease and until when.
+Images: \`image_catalog\` → \`image_plan\` → \`image_execute\`, then \`image_status\` after interruption. Preserve the saved model choice; legacy image adapters require imageContext for configured production. Host selections remain external handoffs. Music: music_*, suno_*. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
 
-Writes .portal.json (workspace · storyboardId · episodeId · headRevisionNo) into the episode directory. Returns: JSON — { result: created|updated, storyboardId, episodeId, revisionNo, url, pageUrl, uploaded: { scenes, characters, documents } }.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                episodeDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic> or its storyboard/ — the channel slug on the path picks the key' },
-                project: { type: 'string', description: 'Portal project name. Default: storyboard.md channel, else the channel directory name' },
-                storyboardTitle: { type: 'string', description: 'Group several episodes under one storyboard (a series) by this title. Default: the episode title' },
-                title: { type: 'string', description: 'Episode title override. Default: storyboard.md heading, else the scenes.js header comment, else the directory name' },
-                stage: { type: 'string', enum: PORTAL_STAGE_ENUM, description: 'Checkpoint stage. Default: approved when storyboard.md says status: approved, otherwise board' },
-                baseRevisionNo: { type: 'number', description: 'The last revision this copy saw. Default: .portal.json headRevisionNo. Differs from head → 409 head_moved' },
-                note: { type: 'string', description: 'Revision note, up to 500 characters — e.g. "narration 95 · approved"' },
-            },
-            required: ['episodeDir'],
-        },
-    },
-    {
-        name: 'portal_storyboard_list',
-        title: 'List portal storyboards or their episodes',
-        annotations: HINT.read,
-        description: `List the storyboards in the channel's portal workspace, or — with storyboardId — the episodes under one storyboard. Use it to find the storyboardId that portal_episode_create needs, or to see which topics the portal already holds before starting one locally.
+SNS: run \`sns_account_check\` first; publish tools appear only for platforms with a credential file. \`threads_publish\`, \`instagram_publish\`, \`facebook_publish\`, \`youtube_publish\` and \`sns_comment_reply\` are public the moment they run — call them only with the user's approval for that post or inside a growth-plan.md standing authorization.
 
-Returns: JSON — the portal's paginated list (storyboards with id · title · project · episode counts, or episodes with id · slug · title · stage · headRevisionNo).`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                channel: PORTAL_CHANNEL_ARG,
-                storyboardId: { type: 'string', description: 'List this storyboard\'s episodes instead of the storyboards' },
-                query: { type: 'string', description: 'Title search text' },
-                projectId: { type: 'string', description: 'Only storyboards under this project (uuid)' },
-                page: { type: 'number', description: 'Page number, starting at 1' },
-            },
-        },
-    },
-    {
-        name: 'portal_storyboard_pull',
-        title: 'Download a portal episode into a local directory',
-        annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
-        description: `⚠️ Download an episode from the ttalkkakstory portal after the session-opening HITL. scenes.js is rebuilt from the portal's rows; decisions.json comes from the same head or revision snapshot (including an empty array), never an attachment or ordinary document. Uploaded documents and the chosen scenario arrive beside it. mode replace (default) writes into storyboard/, first copies changed local files to backupDir under .portal-local/, and updates .portal.json. mode side clears and writes sideDir under .portal-head/ while leaving storyboard/ and .portal.json untouched. With revision, every file comes from that revision's snapshot and headRevisionNo is that revision; otherwise it is the portal head. Returns backupDir (null when no local file changed), replaced[], sideDir, and headRevisionNo.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                episodeId: { type: 'string', description: 'Episode id (uuid) — from portal_storyboard_list or .portal.json' },
-                targetDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic>; storyboard/ is created inside. An existing linked target must match episodeId; use a new directory for another episode. The channel slug on the path picks the key' },
-                includeDocuments: { type: 'boolean', description: 'Also write the uploaded documents (storyboard.md · research.md · script.md · storyboard.html). Default true' },
-                revision: { type: 'number', description: 'Pull this revision\'s snapshot instead of head — scenes and documents both from that revision' },
-                mode: { type: 'string', enum: ['replace', 'side'], description: 'replace updates the working copy after backing up changed files; side writes only to storyboard/.portal-head/. Default replace' },
-            },
-            required: ['episodeId', 'targetDir'],
-        },
-    },
-    {
-        name: 'portal_episode_status',
-        title: 'Read or update a portal episode',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: `With no status, stage or title, read the episode including decisions and publication records without changing it. Otherwise move a portal episode forward — status draft → approved → produced → published (produce calls produced when the build passes, publish calls published), or the finer stage; the title can change in the same call. The holder travels with the call, so a lease held by another machine on the same key answers 409 leased.
+Spending: generation tools bill the provider and write the episode ledger. Saved defaults and budget caps are not approval to spend; stay inside the authorization the user gave.
 
-Returns: JSON — the current or updated episode (id, status, stage, title, headRevisionNo; available decisions and publication records on reads).`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                episodeId: PORTAL_EPISODE_ID_ARG,
-                episodeDir: PORTAL_EPISODE_DIR_ARG,
-                channel: PORTAL_CHANNEL_ARG,
-                status: { type: 'string', enum: ['draft', 'approved', 'produced', 'published'], description: 'Publication status to set' },
-                stage: { type: 'string', enum: PORTAL_STAGE_ENUM, description: 'Internal stage to set; status follows it' },
-                title: { type: 'string', description: 'New episode title (1–200 characters)' },
-            },
-        },
-    },
-    {
-        name: 'portal_episode_artifacts_sync',
-        title: 'Sync platform copy, cover and actual costs',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: 'Read output platform copy and .work/cost-tally.tsv from an episode, upload output/video/cover.jpg when present, and store structured outputs plus actual USD cost on the portal. Unknown prices stay explicit and postpone the budget verdict.',
-        inputSchema: { type: 'object', properties: {
-                episodeDir: PORTAL_EPISODE_DIR_ARG,
-                episodeId: { type: 'string', format: 'uuid', description: 'Optional explicit episode ID; must match .portal.json.' },
-                uploadCover: { type: 'boolean', description: 'Upload and link output/video/cover.jpg. Default true.' },
-                outputs: { type: 'array', maxItems: 4, description: 'Optional structured override. Omit to read the standard output/<platform> files.', items: { type: 'object', properties: {
-                            platform: { type: 'string', enum: ['youtube', 'instagram', 'threads', 'facebook'], description: 'Destination platform.' },
-                            title: { type: 'string', description: 'Final platform title, when the platform has one.' }, description: { type: 'string', description: 'Final description or post body.' }, hashtags: { type: 'array', items: { type: 'string' }, description: 'Final hashtags including #.' }, coverMediaId: { type: ['string', 'null'], format: 'uuid', description: 'An already uploaded episode image to use as the cover.' },
-                        }, required: ['platform', 'hashtags'] } },
-            }, required: ['episodeDir'] },
-    },
-    {
-        name: 'portal_publication_record',
-        title: 'Record a published platform post',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: 'Persist one successful platform publication with its post ID, permanent link, approval record, time and caption hash. Call immediately after each platform publish succeeds, before setting the episode status to published.',
-        inputSchema: { type: 'object', properties: {
-                episodeDir: PORTAL_EPISODE_DIR_ARG, episodeId: PORTAL_EPISODE_ID_ARG, channel: PORTAL_CHANNEL_ARG,
-                platform: { type: 'string', enum: ['youtube', 'instagram', 'threads', 'facebook'], description: 'Platform that accepted the post.' }, postId: { type: 'string', description: 'Platform post or video ID returned by the publish call.' }, permalink: { type: 'string', description: 'Permanent public URL returned by the publish call.' }, approvedBy: { type: 'string', description: 'Approval record or approver display name.' }, publishedAt: { type: 'string', format: 'date-time', description: 'Successful publish time in ISO 8601. Defaults to now.' }, captionHash: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'SHA-256 of the exact published caption or description.' },
-            }, required: ['platform', 'postId', 'permalink'] },
-    },
-    {
-        name: 'portal_episode_create',
-        title: 'Create an empty episode row on the portal',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-        description: `Create an episode on the ttalkkakstory portal after the user chose portal integration for this episode — in that mode the portal is the record and the directory a working copy. Key presence alone does not authorize creation; local HTML mode skips this tool. slug is the local directory name (data/<channel>/episodes/<slug>); storyboardId comes from portal_storyboard_list. With episodeDir the directory is created and .portal.json written (headRevisionNo 0), which the later checkpoints read.
-
-Returns: JSON — { id, slug, title, stage, url, pageUrl }.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                storyboardId: { type: 'string', description: 'The storyboard (series) to create the episode under (uuid)' },
-                slug: { type: 'string', description: 'Episode slug = the local directory name under episodes/' },
-                title: { type: 'string', description: 'Episode title (1–200 characters)' },
-                format: { type: 'string', enum: ['shorts-9x16', 'youtube-long-16x9'], description: 'Episode format' },
-                stage: { type: 'string', enum: PORTAL_STAGE_ENUM, description: 'Starting stage. Default researched' },
-                sourceChannelSlug: { type: 'string', description: 'The social-flow channel directory name, recorded on the episode' },
-                episodeDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<slug> — created if missing, .portal.json written there' },
-                channel: PORTAL_CHANNEL_ARG,
-            },
-            required: ['storyboardId', 'slug', 'title'],
-        },
-    },
-    {
-        name: 'portal_episode_checkpoint',
-        title: 'Save a revision when a stage ends',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: `Checkpoint the episode on the portal when a stage ends — candidates after the three scenario pages, scenario after the pick, board after scenes.js is written. With episodeDir, storyboard/decisions.json supplies structured HITL answers even before scenes.js exists; a missing sidecar omits the decisions field. The shots and meta from storyboard/scenes.js (when present) and the standard documents that exist (research.md · storyboard.md · script.md · storyboard.html) go up together; identical content makes no new revision and only moves the stage. baseRevisionNo defaults to .portal.json's head; when it differs from the portal's head the answer is 409 head_moved with what the other machine changed since your base (shots · meta · documents): keep your local edits aside, portal_storyboard_pull the head, re-apply all of your changes on it (the list marks the overlaps to resolve by hand), checkpoint again. Never retry a 409 blind.
-
-Updates .portal.json headRevisionNo. Returns: JSON — { result: "new revision"|"unchanged (stage only)", revisionNo, stage, uploaded: { scenes, documents } }.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                stage: { type: 'string', enum: PORTAL_STAGE_ENUM, description: 'The stage that just ended' },
-                episodeId: PORTAL_EPISODE_ID_ARG,
-                episodeDir: PORTAL_EPISODE_DIR_ARG,
-                channel: PORTAL_CHANNEL_ARG,
-                baseRevisionNo: { type: 'number', description: 'The last revision this copy saw. Default: .portal.json headRevisionNo' },
-                note: { type: 'string', description: 'Revision note, up to 500 characters — e.g. "narration 95 · three candidates"' },
-                documents: { type: 'array', items: { type: 'string', description: 'A filename inside storyboard/' }, description: 'Document filenames to upload from storyboard/. Default: the standard five that exist' },
-            },
-            required: ['stage'],
-        },
-    },
-    {
-        name: 'portal_episode_revisions',
-        title: 'List an episode\'s revisions or read one',
-        annotations: HINT.read,
-        description: `List a portal episode's revisions, newest first — number, stage, note, who saved it and when — or, with revisionNo, read one revision's snapshot (shots · meta · documents). With compareTo (a number or "head"), return what changed from revisionNo (default: the directory's recorded head) to it — shots added/removed/changed with the changed field names, meta keys, and a unified diff per document — plus a one-line summary. Read before portal_episode_restore so the number being restored is the one meant, and after a 409 head_moved to see the full list of what the other side changed (the 409 line is cut at 8 items).
-
-Returns: JSON — the revision list, one revision's snapshot, or { summary, from, to, identical, scenes, meta, documents }.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                episodeId: PORTAL_EPISODE_ID_ARG,
-                episodeDir: PORTAL_EPISODE_DIR_ARG,
-                channel: PORTAL_CHANNEL_ARG,
-                revisionNo: { type: 'number', description: 'Read this revision\'s snapshot instead of listing; with compareTo, the revision to compare from' },
-                compareTo: { type: ['number', 'string'], description: 'Compare revisionNo (or the directory\'s recorded head) to this revision number or "head" — returns the diff instead of the list' },
-            },
-        },
-    },
-    {
-        name: 'portal_episode_restore',
-        title: 'Restore an older revision as a new one',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-        description: `Re-publish an older revision of a portal episode as the new head — history only moves forward, nothing is deleted. Local files and .portal.json stay unchanged, including their base revision. With episodeDir, the result marks localCopy.syncRequired: pull mode "side", review the restored head, merge intended local edits, then save with that pull result's explicit baseRevisionNo. Never advance the local head without synchronizing files.
-
-Returns: JSON — { revisionNo, stage, restoredFrom, localCopy?: { unchanged, syncRequired }, next? }.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                revisionNo: { type: 'number', description: 'The revision to bring back as head' },
-                episodeId: PORTAL_EPISODE_ID_ARG,
-                episodeDir: PORTAL_EPISODE_DIR_ARG,
-                channel: PORTAL_CHANNEL_ARG,
-                note: { type: 'string', description: 'Revision note, up to 500 characters' },
-            },
-            required: ['revisionNo'],
-        },
-    },
-    {
-        name: 'portal_episode_lease',
-        title: 'Take, release or read the episode lease',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: `acquire at the top of a session (and to extend), release when done, status to look. The holder is <key prefix>@<hostname> (TTALKKAKSTORY_HOLDER or the "holder" field of ttalkkakstory.json to change it); the lease's owner is key + holder, so another machine on the same key is someone else. A live lease held by someone else answers 409 with who and until when — wait or ask the user, never force. While it is held, their checkpoint · save · scenario · status calls all answer 409 leased. Default 2 hours.
-
-Returns: JSON — { holder, expiresAt, … } as the portal reports it.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                action: { type: 'string', enum: ['acquire', 'release', 'status'], description: 'acquire = take or extend · release = give back · status = read' },
-                episodeId: PORTAL_EPISODE_ID_ARG,
-                episodeDir: PORTAL_EPISODE_DIR_ARG,
-                channel: PORTAL_CHANNEL_ARG,
-                ttlMinutes: { type: 'number', description: 'Lease length in minutes for acquire (1–1440). Default 120' },
-                force: { type: 'boolean', description: 'release only — take someone else\'s lease away. A workspace key is always member, so the portal refuses this with 409; an admin releases it on the episode page' },
-            },
-            required: ['action'],
-        },
-    },
-    {
-        name: 'portal_scenario_save',
-        title: 'Upload one scenario candidate page',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: `Upload one scenario page — candidates/d1.md … d3.md written on the scenario-stage template, or the chosen scenario.md — to the portal episode. The same candidate saved again is updated; chosen: true picks it (the others are unpicked). The findings in the answer are the portal's in-file checks (S1 · S4 …); the research cross-check stays local (check-scenario.js).
-
-Returns: JSON — { result: created|updated, candidate, chosen, findings[], updatedAt }.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                candidate: { type: 'string', enum: PORTAL_CANDIDATE_ENUM, description: 'Which candidate slot this page is' },
-                file: { type: 'string', description: 'Absolute path of storyboard/candidates/dN.md or storyboard/scenario.md — its episode directory supplies the id and channel' },
-                markdown: { type: 'string', description: 'The page text itself, instead of file' },
-                chosen: { type: 'boolean', description: 'true = this is the pick; the other candidates are unpicked' },
-                episodeId: PORTAL_EPISODE_ID_ARG,
-                episodeDir: PORTAL_EPISODE_DIR_ARG,
-                channel: PORTAL_CHANNEL_ARG,
-            },
-            required: ['candidate'],
-        },
-    },
-    {
-        name: 'portal_scenario_pull',
-        title: 'Download the scenario candidates',
-        annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
-        description: `⚠️ Overwrites local scenario files — never call without the user knowing the directory is a working copy of the portal (HITL at the top of a session). Write the portal episode's candidates to storyboard/candidates/d1.md … and the chosen one to storyboard/scenario.md. With candidate and no targetDir, return that one page's text and write nothing.
-
-Changed local candidates and the chosen scenario are backed up together under storyboard/.portal-local/ before any are replaced. Identical files need no backup.
-
-Returns: JSON — { scenarios: [{ candidate, chosen, score, p0, findings }], written[], backupDir, replaced[] } — or the page text.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                targetDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic>. A linked target must match the source episode. Omit to return text only' },
-                candidate: { type: 'string', enum: PORTAL_CANDIDATE_ENUM, description: 'Only this candidate' },
-                episodeId: PORTAL_EPISODE_ID_ARG,
-                episodeDir: PORTAL_EPISODE_DIR_ARG,
-                channel: PORTAL_CHANNEL_ARG,
-            },
-        },
-    },
-    {
-        name: 'portal_assets_search', title: 'Search the ttalkkakstory global asset library',
-        annotations: HINT.read,
-        description: `Search the portal's global asset library — Gemini B-roll clips, BGM beds, sound effects and images the owner collected, shared by every workspace (any channel's key reads the same library). Ask here **before** stock_search, music_generate_clip or a video generator: a library hit costs nothing and is already cleared for commercial use. query is AND over Korean/English words in title, description, tags and category; tags matches any (or all with tagsMode); type picks video/music/sfx/image; minDurationMs/maxDurationMs and aspect (16:9 · 9:16 · …) fit the cut. Returns { items[{ id, sourceId, type, category, categoryKo, descKo, descEn, tagsKo, tagsEn, mime, byteSize, durationMs, width, height, aspect, ready }], total, hasNext }. Read-only; it downloads nothing — pick an item and call portal_assets_get with download:true. No key → one line, go on to the existing lane.`,
-        inputSchema: { type: 'object', required: ['query'], properties: {
-                channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG,
-                query: { type: 'string', minLength: 2, maxLength: 64, description: 'Words that must all match (Korean or English) — "도시 야경", "rain night"; a category or mood word ("upbeat") also matches the catalog category' },
-                tags: { type: 'array', items: { type: 'string' }, maxItems: 32, description: 'Tag filter (Korean or English); any tag matches unless tagsMode is all' },
-                tagsMode: { type: 'string', enum: ['any', 'all'], description: 'any (default) — one tag is enough · all — every tag must be present' },
-                type: { type: 'array', items: { type: 'string', enum: ['video', 'music', 'sfx', 'image'] }, description: 'video for a stock_video cut · music for a bed · sfx for a one-shot effect · image for a still source' },
-                category: { type: 'array', items: { type: 'string' }, description: 'Catalog category slugs (English)' },
-                minDurationMs: { type: 'integer', minimum: 0, description: 'Shortest clip or bed to keep, in milliseconds' }, maxDurationMs: { type: 'integer', minimum: 0, description: 'Longest clip or bed to keep, in milliseconds' },
-                aspect: { type: 'array', items: { type: 'string', enum: ['16:9', '9:16', '1:1', '4:3', '3:4', 'other'] }, description: '9:16 for a short, 16:9 for long-form' },
-                sort: { type: 'string', enum: ['relevance', 'newest', 'duration', '-duration'], description: 'relevance (default with q) · newest · duration · -duration' },
-                limit: { type: 'integer', minimum: 1, maximum: 100, description: 'Items per page (default 24)' },
-                page: { type: 'integer', minimum: 1, description: 'Page number, 1-based (default 1); hasNext says whether another page exists' },
-            } },
-    },
-    {
-        name: 'portal_assets_get', title: 'Fetch one global asset (metadata, optionally the file)',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: `One asset from the portal's global library by id — the full record (prompt, extra, play/download URLs) plus the visual.license block a supplied cut stores. With download:true and episodeDir it writes the file where produce already looks and verifies the portal's sha256: a video to storyboard/footage/s<shot>-portal-<sourceId>.mp4 (pass shot; the cut stores visual.source "stock", visual.clip and the returned license — render.mode stock_video), music or sfx to .work/portal/<sourceId>.<ext> — produce converts a bed with ffmpeg to .work/bgm.wav (base) or .work/bgm-<cue>.wav and registers an effect in the channel catalog (resolve-asset.py --ensure … sfx <id>); never write this path into window.MUSIC[cue].asset or sound.sfx, those hold channel catalog ids that resolve-asset.py resolves — an image to storyboard/images/stock/portal-<sourceId>.<ext>. A file with the same sha256 already on disk is not downloaded again; a different file at that name is refused, never overwritten. Nothing is generated or billed.`,
-        inputSchema: { type: 'object', required: ['id'], properties: {
-                id: { type: 'string', format: 'uuid', description: 'Asset id from portal_assets_search' },
-                channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG,
-                download: { type: 'boolean', description: 'Write the file into the episode (needs episodeDir)' },
-                shot: { type: 'integer', minimum: 1, maximum: 999, description: 'Scene number for a video cut — names footage/s<shot>-portal-…' },
-            } },
-    },
-    {
-        name: 'portal_attachments_sync', title: 'Sync episode attachments',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: 'Upload missing or changed episode files with original relative paths and optional rights evidence from .portal-attachments.json. Returns incomplete for skipped files; keep local files until complete. No board revision is created.',
-        inputSchema: { type: 'object', properties: { episodeDir: PORTAL_EPISODE_DIR_ARG, episodeId: { type: 'string', description: 'Episode UUID; defaults to the directory portal state.' }, channel: PORTAL_CHANNEL_ARG }, required: ['episodeDir'] },
-    },
-    {
-        name: 'portal_channel_sync', title: 'Sync channel profile and shared assets',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: 'Pull, push or compare a channel profile.md and shared intro, outro, branding and SFX files with one portal project. The first explicit projectId is pinned in data/[channel]/.portal-channel.json; later calls refuse another project. Pull stages and hash-checks every remote file before replacing local files. Push uses the last synced hashes for conflict-safe updates and deletions.',
-        inputSchema: { type: 'object', required: ['action', 'channel'], properties: {
-                action: { type: 'string', enum: ['pull', 'push', 'status'], description: 'pull applies remote changes locally, push sends local changes, status compares hashes without writing.' },
-                channel: PORTAL_CHANNEL_ARG,
-                projectId: { type: 'string', format: 'uuid', description: 'Required once when the portal project name is not exactly the channel slug.' },
-            } },
-    },
-    {
-        name: 'portal_images_upload', title: 'Upload and link local shot images',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-        description: 'After portal_storyboard_save has linked the episode, upload PNG/JPEG/WebP files (5 MiB each), then checkpoint their portalImageId UUIDs with the local base revision. Images upload sequentially. Defaults to storyboard/images/scene-N.* by source array ordinal, retaining shot IDs. Explicit mappings require shotId when present; shotNo is only for legacy shots without IDs. Paths stay inside storyboard/. Missing default images are reported as skipped. Success updates scenes.js and .portal.json; partial failures report uploaded UUIDs and recovery instructions. No automatic conflict retry. No image generation or publishing.',
-        inputSchema: { type: 'object', required: ['episodeDir', 'stage'], properties: {
-                episodeDir: PORTAL_EPISODE_DIR_ARG,
-                stage: { type: 'string', enum: PORTAL_STAGE_ENUM, description: 'Current workflow stage to checkpoint; do not downgrade an approved or produced episode.' },
-                baseRevisionNo: { type: 'integer', minimum: 0, description: 'Explicit merged base; defaults to .portal.json headRevisionNo.' },
-                images: { type: 'array', minItems: 1, maxItems: 500, description: 'Optional explicit shot-to-file mappings. Omit to discover scene-N files.', items: {
-                        type: 'object', required: ['file'], properties: {
-                            shotId: { type: 'string', minLength: 1, description: 'Stable source shot ID (preferred).' },
-                            shotNo: { type: 'integer', minimum: 1, description: '1-based array ordinal, only for shots without IDs.' },
-                            file: { type: 'string', minLength: 1, description: 'File path relative to storyboard/, or an absolute path inside it.' },
-                        }, oneOf: [{ required: ['shotId'], not: { required: ['shotNo'] } }, { required: ['shotNo'], not: { required: ['shotId'] } }],
-                    } },
-            } },
-    },
-    {
-        name: 'portal_render_allocation', title: 'Read or submit the episode render allocation',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-        description: 'Read the pending render ratio request and every shot. The host LLM chooses render.mode by shot purpose within bounds, then submits assignments with requestId and baseRevisionNo. No LLM API or paid asset call occurs here. The portal validates complete shot IDs, video bands, lease and revision, then saves atomically. Read again on conflict; pull the updated board before local edits. Returns request, bounds, shots and instructions on read, or the new revision on submit.',
-        inputSchema: { type: 'object', properties: {
-                episodeId: PORTAL_EPISODE_ID_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, channel: PORTAL_CHANNEL_ARG,
-                requestId: { type: 'string', format: 'uuid', description: 'Exact pending request ID returned by the read; required when submitting.' }, baseRevisionNo: { type: 'integer', minimum: 0, description: 'Read revision; required when submitting. Stale writes are rejected.' },
-                assignments: { type: 'array', description: 'One assignment per returned shot ID; omit to read the pending plan.', minItems: 1, maxItems: 500, items: { type: 'object', required: ['id', 'mode', 'purpose', 'reason'], properties: {
-                            id: { type: 'string', format: 'uuid', description: 'Portal shot row ID from the latest read, never an array position.' }, mode: enumInput(storyboardVocabulary?.RENDER_MODES, 'Shot render route; generated_video and stock_video both count toward the ratio.'),
-                            purpose: { type: 'string', minLength: 1, maxLength: 200, description: 'Shot purpose in the render-routing vocabulary.' }, reason: { type: 'string', minLength: 1, maxLength: 2000, description: 'Specific reason this render mode serves this shot.' },
-                        } } },
-            } },
-    },
-    {
-        name: 'portal_scenario_choose',
-        title: 'Pick one scenario candidate as scenario.md',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: `Make one candidate the episode's scenario on the portal (the others are unpicked); a stage below scenario moves up to scenario. Use it after the user's pick when the pages were uploaded earlier without chosen.
-
-Returns: JSON — { candidate, chosen, findings[] }.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                candidate: { type: 'string', enum: PORTAL_CANDIDATE_ENUM, description: 'The candidate to pick' },
-                episodeId: PORTAL_EPISODE_ID_ARG,
-                episodeDir: PORTAL_EPISODE_DIR_ARG,
-                channel: PORTAL_CHANNEL_ARG,
-            },
-            required: ['candidate'],
-        },
-    },
-    {
-        name: 'portal_character_list', title: 'List the workspace characters on the portal',
-        annotations: { readOnlyHint: true, openWorldHint: true },
-        description: 'The characters of the workspace the key opens — id, projectId (which project holds it), key (the assets/characters/<id> folder name), name, role, appearance, referenceImageUrl, images (front/back/face URLs and extra entries), imagesComplete and the tts block. q searches name and role; key finds one exactly; project (a channel name) lists only that project; 24 per page. Read-only. No key → one line, go on.',
-        inputSchema: { type: 'object', properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, project: { type: 'string', maxLength: 100, description: 'Channel name to list only that project\'s characters (default: the whole workspace)' }, q: { type: 'string', maxLength: 200, description: 'Name or role contains' }, key: { type: 'string', description: 'Exact character key' }, page: { type: 'integer', minimum: 1, description: 'Page number, 24 per page (default 1)' } } },
-    },
-    {
-        name: 'portal_character_get', title: 'Fetch one portal character',
-        annotations: { readOnlyHint: true, openWorldHint: true },
-        description: 'One character by id or by key (exactly one of the two). Returns projectId, images (front/back/face URLs and extra entries), imagesComplete, and the same fields as portal_character_list. A key can exist in several projects: pass project (the channel name) to say which one — without it a shared key is refused rather than picked by order, and the error names the projects holding it. Read-only.',
-        inputSchema: { type: 'object', properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, project: { type: 'string', maxLength: 100, description: 'Channel name the key belongs to — narrows a key that several projects share. Not with id' }, id: { type: 'string', format: 'uuid', description: 'Portal character id' }, key: { type: 'string', description: 'Character key, e.g. the assets/characters/<id> folder name' } } },
-    },
-    {
-        name: 'portal_character_create', title: 'Create a portal character',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-        description: 'Create a character in the workspace. Never a project id: the portal files it under project = the channel name (default: the channel the key was read off, override with project) — the same rule the storyboard import uses, so the character is available to that channel\'s playlists. Pass name and fields directly, or identityDir (assets/characters/<id>) to read the key from the folder name and name/역할/생김새 from identity.md; explicit fields win. file sends one PNG/JPEG/WebP panel (5 MiB) as the front view right after creation; use image_upload for back and face. tts is optional here — portal_character_tts_set fills the owner defaults.',
-        inputSchema: { type: 'object', properties: {
-                channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG,
-                project: { type: 'string', maxLength: 100, description: 'Channel name the character belongs to (default: the key\'s channel)' },
-                identityDir: { type: 'string', description: 'Absolute path of assets/characters/<id> — key from the folder, name/role/appearance from identity.md' },
-                file: { type: 'string', description: 'Absolute path of a PNG/JPEG/WebP reference panel to upload after creating' },
-                key: { type: 'string', description: 'Character key — lowercase letters, digits, hyphens' },
-                name: { type: 'string', maxLength: 100, description: 'Display name' }, role: { type: 'string', maxLength: 500, description: 'Role in the channel, e.g. 진행자' }, appearance: { type: 'string', maxLength: 4000, description: 'Look — the 생김새 line' },
-                referenceImageUrl: { type: 'string', maxLength: 2000, description: 'External image URL; prefer file' },
-                tts: { type: 'object', description: 'Voice block; optional — portal_character_tts_set fills the defaults', properties: { voiceLock: VOICE_LOCK_PROPERTY, engine: { type: 'string', enum: ['gemini', 'supertonic', 'elevenlabs', 'mlx'], description: 'TTS engine' }, voiceId: { type: 'string', description: 'Voice id on that engine' }, model: { type: 'string', description: 'Model name, e.g. eleven_multilingual_v2' }, speed: { type: 'number', minimum: 0.7, maximum: 1.2, description: 'Speaking rate' }, language: { type: 'string', description: 'Language code, e.g. ko' }, stylePrompt: { type: 'string', description: 'Style direction for engines that read one' } }, required: ['engine', 'voiceId'] },
-            } },
-    },
-    {
-        name: 'portal_character_update', title: 'Update a portal character',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: 'Partial update by id — key, name, role, appearance, referenceImageUrl, tts. null clears a nullable field. Fields you leave out stay. For the voice block alone prefer portal_character_tts_set (it fills defaults); for the image prefer portal_character_image_upload.',
-        inputSchema: { type: 'object', required: ['id'], properties: {
-                channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, id: { type: 'string', format: 'uuid', description: 'Portal character id' },
-                key: { type: ['string', 'null'], description: 'Character key; null clears' }, name: { type: 'string', maxLength: 100, description: 'Display name' }, role: { type: ['string', 'null'], maxLength: 500, description: 'Role; null clears' }, appearance: { type: ['string', 'null'], maxLength: 4000, description: 'Look; null clears' },
-                referenceImageUrl: { type: ['string', 'null'], maxLength: 2000, description: 'External image URL; null clears (prefer portal_character_image_upload)' },
-                tts: { type: ['object', 'null'], description: 'Whole voice block; null clears (prefer portal_character_tts_set)', properties: { voiceLock: VOICE_LOCK_PROPERTY, engine: { type: 'string', enum: ['gemini', 'supertonic', 'elevenlabs', 'mlx'], description: 'TTS engine' }, voiceId: { type: 'string', description: 'Voice id on that engine' }, model: { type: 'string', description: 'Model name' }, speed: { type: 'number', description: 'Speaking rate 0.7–1.2' }, language: { type: 'string', description: 'Language code' }, stylePrompt: { type: 'string', description: 'Style direction' } } },
-            } },
-    },
-    {
-        name: 'portal_character_delete', title: 'Delete a portal character',
-        annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
-        description: '⚠️ Delete one character by id on the portal — never call without the user confirming that character (HITL). The portal cascades its playlist registrations, scene links, props it owns and its reference image; a playlist that still narrates with it loses the speaker. Ask the user before deleting a character a playlist still narrates with. Local assets/characters/<id> files are untouched.',
-        inputSchema: { type: 'object', required: ['id'], properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, id: { type: 'string', format: 'uuid', description: 'Portal character id' } } },
-    },
-    {
-        name: 'portal_character_image_upload', title: 'Upload a character reference view',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-        description: 'Upload local PNG/JPEG/WebP, up to 5 MiB. view defaults to front; front/back/face each replace one required slot (same bytes are a no-op). extra appends a new image on every call: do not retry blindly. Front/back are full body without a face, face is a close-up. Verifies sha256; returns imageId, view and authenticated url. Only front updates referenceImageUrl.',
-        inputSchema: { type: 'object', required: ['id', 'file'], properties: {
-                channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG,
-                id: { type: 'string', format: 'uuid', description: 'Portal character id' },
-                file: { type: 'string', description: 'Absolute local image path' },
-                view: { type: 'string', enum: ['front', 'back', 'face', 'extra'], default: 'front', description: 'Required view to replace, or extra to append' },
-                label: { type: 'string', maxLength: 100, description: 'Optional image label' },
-                sort: { type: 'integer', minimum: 0, maximum: 2147483647, description: 'Optional display order, default 0' },
-            } },
-    },
-    {
-        name: 'portal_character_extra_delete', title: 'Delete one extra character image',
-        annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
-        description: '⚠️ never call without explicit user approval to delete the specified image. Delete exactly one optional extra image by imageId from portal_character_get/list images.extra. Required views and local files are untouched.',
-        inputSchema: { type: 'object', required: ['id', 'imageId'], properties: {
-                channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG,
-                id: { type: 'string', format: 'uuid', description: 'Portal character id' },
-                imageId: { type: 'string', format: 'uuid', description: 'Extra image id' },
-            } },
-    },
-    {
-        name: 'portal_character_tts_set', title: 'Set a character\'s TTS voice',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: 'Write the tts block the narration lane reads — engine, voiceId, model, speed (0.7–1.2), language, stylePrompt. Whatever you leave out keeps its current value or falls back to the owner defaults: ElevenLabs voice L4az9Gb378GIycFl2nAB, model eleven_multilingual_v2, speed 1.0. Call with only id to apply the defaults.',
-        inputSchema: { type: 'object', required: ['id'], properties: {
-                channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, id: { type: 'string', format: 'uuid', description: 'Portal character id' },
-                voiceLock: VOICE_LOCK_PROPERTY,
-                engine: { type: 'string', enum: ['gemini', 'supertonic', 'elevenlabs', 'mlx'], description: 'TTS engine (default elevenlabs)' }, voiceId: { type: 'string', maxLength: 128, description: 'Voice id (default L4az9Gb378GIycFl2nAB)' }, model: { type: 'string', maxLength: 128, description: 'Model name (default eleven_multilingual_v2)' },
-                speed: { type: 'number', minimum: 0.7, maximum: 1.2, description: 'Speaking rate (default 1.0)' }, language: { type: 'string', maxLength: 32, description: 'Language code, e.g. ko' }, stylePrompt: { type: 'string', maxLength: 1000, description: 'Style direction for engines that read one' },
-            } },
-    },
-];
+Search words: 영상 video clip, 이미지 image, 음성 TTS narration voice, 음악 BGM music, 효과음 SFX, 스토리보드 storyboard, 업로드 게시 publish, 댓글 comment, 인사이트 insights, 트렌드 topic research.`;
 export const TOOLS = [
-    ...VOICE_LOCK_TOOLS,
-    ...UNIT_TOOLS,
-    ...REVIEW_TOOLS,
+    {
+        name: 'tts_route', title: 'Speech model routing', annotations: HINT.generate,
+        description: 'Discover implemented speech models, plan a selected generator, or execute it with durable request identity. Use capabilities without credentials; plan validates generation without network or writes. execute needs generator, generation.outputPath and requestId, reuses matching completed audio, and refuses changed or uncertain prior requests. Returns capabilities or audioPath, receiptPath, attempts and not_reviewed; no listening, model fallback or automatic retries. Use speech_manage plan_audio for pinned character/acting arguments. Only implemented Gemini and ElevenLabs v4 adapters are available. Raw tools remain compatible and share execution checks. Plans do not quote or authorize spending.',
+        inputSchema: { type: 'object', additionalProperties: false, properties: {
+                action: { type: 'string', enum: ['capabilities', 'plan', 'execute'], description: 'Read capabilities, validate a pure plan, or submit one explicitly identified take.' },
+                generator: { type: 'string', enum: [...GENERATORS], description: 'Exact implemented raw synthesis tool. Required for plan and execute.' },
+                generation: { type: 'object', description: 'Exact arguments of the selected raw generator; unsupported controls fail validation.' },
+                requestId: { type: 'string', pattern: '^[A-Za-z0-9_-]{1,100}$', description: 'Unique logical take ID. Reuse only for the same request in the same output directory.' },
+            }, required: ['action'] },
+    },
+    {
+        "name": "host_review",
+        "title": "Prepare and record host media evaluation",
+        "annotations": {
+            "readOnlyHint": false,
+            "destructiveHint": false,
+            "idempotentHint": false,
+            "openWorldHint": false
+        },
+        "description": "Create local evidence handoffs or save host review observations.\n\nUse for requested adversarial video, camera or speech evaluation. prepare probes local media and extracts eight timestamped frames without judging; record saves an immutable receipt after native host inspection. No external model call, upload, or paid-evaluator fallback. Do NOT use for generation or voice provenance \u2014 use speech_manage. Returns status not_reviewed/observed/unverified, score=null (no aggregate certification), mediaSha256, duration in seconds, and on record receiptPath and per-axis observations. Scores and coverage are host self-reports, never proof of perception. Frames support composition only; motion requires playback and speech requires listening.",
+        "inputSchema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "mediaPath",
+                "brief"
+            ],
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "prepare",
+                        "record"
+                    ],
+                    "default": "prepare", "description": "prepare reads media metadata; record writes a host observation receipt."
+                },
+                "mediaPath": {
+                    "type": "string",
+                    "description": "Local media path, e.g. /tmp/shot.mp4."
+                },
+                "brief": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 24000,
+                    "description": "Requested scene and rubric, e.g. Held camera; woman bows without moving her feet."
+                },
+                "mode": {
+                    "type": "string",
+                    "enum": [
+                        "video",
+                        "audio",
+                        "audiovisual"
+                    ],
+                    "default": "audiovisual", "description": "Requested tracks; choose video for a silent clip."
+                },
+                "mediaSha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$",
+                    "description": "Exact SHA256 from prepare; required for record."
+                },
+                "reviewer": {
+                    "type": "string",
+                    "description": "Actual host model/session identifier, e.g. Codex current session; self-reported."
+                },
+                "coverage": {
+                    "description": "Actual host perception, e.g. sampled_frames; never infer playback.",
+                    "type": "string",
+                    "enum": [
+                        "sampled_frames",
+                        "video_playback",
+                        "audio_playback",
+                        "audiovisual_playback",
+                        "unavailable"
+                    ]
+                },
+                "complete": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "True only after full requested playback; samples cannot claim completion."
+                },
+                "limitations": {
+                    "type": "string",
+                    "maxLength": 4000,
+                    "description": "Actual limits, e.g. Sampled frames only; audio unavailable."
+                },
+                "observations": {
+                    "description": "Timestamped host observations; empty when unavailable.",
+                    "type": "array",
+                    "maxItems": 100,
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                            "axis",
+                            "start",
+                            "end",
+                            "score",
+                            "evidence",
+                            "correction"
+                        ],
+                        "properties": {
+                            "axis": {
+                                "description": "Rubric axis, e.g. composition; motion axes require playback.",
+                                "type": "string",
+                                "enum": [
+                                    "composition",
+                                    "camera",
+                                    "direction",
+                                    "continuity",
+                                    "physicalNaturalness",
+                                    "facialNaturalness",
+                                    "speechAccuracy",
+                                    "vocalEmotion",
+                                    "audioQuality",
+                                    "lipSync"
+                                ]
+                            },
+                            "start": {
+                                "type": "number",
+                                "minimum": 0,
+                                "description": "Observed interval start in seconds, e.g. 1.0."
+                            },
+                            "end": {
+                                "type": "number",
+                                "minimum": 0,
+                                "description": "Observed interval end in seconds, e.g. 2.0."
+                            },
+                            "score": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ],
+                                "minimum": 0,
+                                "maximum": 100,
+                                "description": "Subjective axis score, e.g. 85; null if unverified."
+                            },
+                            "evidence": {
+                                "type": "string",
+                                "minLength": 10,
+                                "description": "Actual observation, e.g. Woman touches the right frame edge at 1.5s."
+                            },
+                            "correction": {
+                                "type": "string",
+                                "description": "Concrete change, e.g. Shift subject left while retaining the doorway."
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    {
+        name: 'tts_review_acting', title: 'Explicitly requested adversarial audio review', annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+        description: "Legacy alias of host_review prepare for one speech take (audioPath, expectedText, direction, optional characterTarget): returns local evidence for the host LLM to listen to. Use only when an existing plan or script already calls tts_review_acting after the user asked for an acting review of a line; new reviews use host_review. Returns status=not_reviewed, score=null, mediaPath, SHA256, duration in seconds, rubric and nextAction; outputPath is ignored. It does not judge, upload or call an external evaluator. Do NOT use for synthesis — use speech_manage and the selected generator.",
+        inputSchema: { type: 'object', additionalProperties: false, properties: {
+                audioPath: { type: 'string', description: 'Actual local audio path.' }, expectedText: { type: 'string', maxLength: 4000, description: 'Clean expected spoken words, without acting tags.' },
+                direction: { type: 'string', maxLength: 2000, description: 'Requested scene intent and audible performance changes.' }, language: { type: 'string', default: 'ko', description: 'Spoken language.' },
+                requestedBy: { type: 'string', maxLength: 1000, description: 'Actual user request for host audio evaluation.' }, outputPath: { type: 'string', description: 'Legacy output directory; host receipts use the host-review cache.' }, characterTarget: CHARACTER_TARGET_PROPERTY
+            }, required: ['audioPath', 'expectedText', 'direction', 'requestedBy', 'outputPath'] }
+    },
+    {
+        name: 'character_voice_audition', title: 'Audition three character voices and save the user choice',
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+        description: 'Create character voice auditions or plan acoustic targets.\n\nUse for casting, sample voices or character voice matching. plan reads confirmed age, timbre, speech and personality without synthesis; compare real provider metadata and expose unknowns. create generates three paid previews, composes a compact Gemini voiceDirection with acting and saves target/metadata/request/hash evidence without changing identity. select requires the actual user choice and verifies hashes before saving its voice settings. Returns target, candidate comparisons, auditionPath, previewPath and selection state. Do NOT use for ordinary dialogue — use speech_manage plan_audio and its raw TTS tool. Never auto-select or score without a requested audio review; inspect partial failures before retrying.',
+        inputSchema: { type: 'object', additionalProperties: false, properties: {
+                action: { type: 'string', enum: ['plan', 'create', 'read', 'select'], description: 'plan reads identity without generating; create generates three choices; read inspects; select saves an explicit user choice.' },
+                identityPath: { type: 'string', description: 'Existing character identity.md with one structured character JSON block. Draft tts may be absent before selection.' },
+                auditionPath: { type: 'string', description: 'Manifest path returned by create; required for read/select.' },
+                sampleText: { type: 'string', minLength: 5, maxLength: 300, description: 'Same natural spoken sample for all three candidates; no tag markup.' },
+                sampleTurns: { type: 'array', minItems: 2, maxItems: 10, description: 'Optional Gemini 3.8 sample excerpts with separate acting. Texts joined with spaces must reproduce sampleText exactly; omit top-level acting. Each turn retains the same candidate voice and stable baseline.', items: { type: 'object', additionalProperties: false, required: ['text'], properties: { text: { type: 'string', minLength: 1, maxLength: 300, description: 'Exact spoken excerpt in sample order, e.g. I will help you.' }, acting: ACTING_PROPERTY } } },
+                acting: ACTING_PROPERTY,
+                voiceProfile: VOICE_PROFILE_PROPERTY,
+                candidates: { type: 'array', minItems: 3, maxItems: 3, description: 'Exactly three distinct voice IDs on one selected engine/model/language.', items: { type: 'object', additionalProperties: false, required: ['label', 'reason', 'tts'], properties: {
+                            label: { type: 'string', maxLength: 100, description: 'Human-readable candidate label.' },
+                            reason: { type: 'string', maxLength: 500, description: 'Why this voice suits the character.' },
+                            metadata: { type: 'object', additionalProperties: false, description: 'Actual voice lookup evidence, e.g. Gemini library metadata; omitted fields stay unknown.', properties: {
+                                    voiceId: { type: 'string', maxLength: 300, description: 'Exact candidate voice ID, e.g. ko-kr-theatrical-1.' },
+                                    source: { type: 'string', enum: ['gemini-library', 'gemini-curated', 'elevenlabs'], description: 'Voice lookup source, e.g. gemini-library; never label inferred facts as provider metadata.' }, retrievedAt: { type: 'string', format: 'date-time', description: 'Actual lookup time, e.g. 2026-10-17T10:00:00Z.' },
+                                    gender: { type: 'string', maxLength: 100, description: 'Provider-reported vocal gender, e.g. female; omit when absent.' }, age: { type: 'string', maxLength: 200, description: 'Provider age label, e.g. 35-year-old; omit when absent.' }, pitch: { type: 'string', maxLength: 100, description: 'Provider pitch label, e.g. low; omit when absent.' }, description: { type: 'string', maxLength: 2000, description: 'Exact provider voice description, e.g. warm low voice; no invented attributes.' }
+                                }, required: ['voiceId', 'source', 'retrievedAt'] },
+                            tts: { type: 'object', description: 'Candidate voice settings saved unchanged only after user selection.', additionalProperties: false, required: ['engine', 'model', 'voiceId', 'language', 'speed'], properties: {
+                                    engine: { type: 'string', enum: ['gemini', 'elevenlabs'], description: 'Selected speech provider.' },
+                                    model: { type: 'string', description: 'Explicit supported Gemini model or eleven_v4.' },
+                                    voiceId: { type: 'string', description: 'Voice ID obtained from lookup; never invent it.' },
+                                    language: { type: 'string', description: 'Text language e.g. ko.' },
+                                    speed: { type: 'number', enum: [1], description: 'Neutral speed only.' },
+                                    stability: { type: 'number', minimum: 0, maximum: 1, description: 'Optional ElevenLabs v4 consistency.' },
+                                    similarity: { type: 'number', minimum: 0, maximum: 1, description: 'Optional ElevenLabs v4 voice similarity.' },
+                                    stylePrompt: { type: 'string', description: 'Only for pre-3.8 Gemini baseline style.' },
+                                    voiceDirection: { type: 'string', maxLength: 400, description: 'Short habitual Gemini delivery; plan/create derives speech pace, register and habits when omitted. Base voice selection carries age, gender and timbre. Preserved alongside scene acting.' }
+                                } }
+                        } } },
+                candidateId: { type: 'string', enum: ['1', '2', '3'], description: 'Candidate selected by the user.' },
+                userSelection: { type: 'string', maxLength: 1000, description: 'Actual user response selecting the candidate. Required for select; never fabricate.' }
+            }, required: ['action'] }
+    },
+    {
+        name: 'location_manage', title: 'Build, bind and review a persistent 3D location',
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+        description: `Create and update local Blender sets, shot blocking and spatial previz.
+
+Use for recurring locations, floor plans, actor facing/gaze and shot continuity before storyboard images. build writes root/id/vN; bind stores manifest/stateId/cameraId plus optional blocking/endStateId/continuityGroup on board/shotId; render writes clean start/end, top/side images and spatial.json (world coordinates, actor distances, five camera visibility samples and gaze blockers on authored meshes); previz uses the same set, camera and actors to write a silent H.264 clip, first/middle/last PNGs and a shot previz record (seconds required, fps defaults to 24). No paid calls.
+Returns: build {manifest,sha256}; render {fingerprint,frames}; previz {clip,blend,firstFrame,sha256,fps,seconds,locationBinding}; references absolute image paths/roles/hashes plus spatial report and spatialPaths for LLM inspection; check ordered findings with level/where/what. ready requires fresh files; actual reviews remain optional. Coordinates: metres, Z up, actors face -Y at zero rotation.
+Do NOT use for independent body posing or to read an arbitrary .blend — use blender_pose_key or blender_scene_read. Read an existing location with action read; see skills/storyboard/references/location-assets.md for camera proposals and generation receipts.`,
+        inputSchema: { type: 'object', required: ['action'], additionalProperties: false, properties: {
+                action: { type: 'string', description: 'Operation; build/sheet/render/previz write local assets, bind/camera/approve/receipt update the board, read/references/check are read-only', enum: ['build', 'read', 'sheet', 'bind', 'render', 'previz', 'approve', 'references', 'camera', 'check', 'receipt', 'review'] },
+                verdict: { type: 'string', enum: ['pass', 'warning', 'fail'], description: 'Observed generation result verdict; review never certifies unseen images' },
+                provider: { type: 'string', description: 'Actual output provider for receipt', enum: ['host', 'api', 'blender'] }, callId: { type: 'string', description: 'Actual tool call or render job identifier' }, referencePaths: { type: 'array', description: 'Absolute paths actually sent to generation', items: { type: 'string' } },
+                spec: { oneOf: [{ type: 'string' }, { type: 'object', additionalProperties: true }], description: 'Location spec file or object for build' },
+                root: { type: 'string', description: 'Channel assets/locations directory' }, manifest: { type: 'string', description: 'location.json path' },
+                output: { type: 'string', description: 'New sheet output directory' }, board: { type: 'string', description: 'scenes.js path' },
+                shotId: { type: 'string', description: 'Stable shot id' }, stateId: { description: 'Registered location state id', type: 'string' }, cameraId: { description: 'Registered numerical camera id', type: 'string' },
+                mustShow: { description: 'Object IDs that must be visible; review actual images', type: 'array', items: { type: 'string' } }, continuityGroup: { description: 'Related shots sharing location continuity', type: 'string' },
+                endStateId: { type: 'string', description: 'Optional registered end state for moving props or doors, e.g. open; omitted holds stateId' },
+                continuityBreak: { type: 'string', minLength: 1, description: 'Reason for a deliberate discontinuity, e.g. time skip to next morning; warnings remain advisory' },
+                seconds: { type: 'number', exclusiveMinimum: 0, description: 'Required previz duration in seconds, e.g. 4; use the billed video length, ASTRA numFrames/frameRate may be fractional' },
+                fps: { type: 'integer', minimum: 24, maximum: 60, description: 'Previz frames per second, e.g. 24 (default); at most 3000 frames' },
+                blocking: { type: 'object', additionalProperties: false, required: ['actors'], description: 'Shared world-space actor states; keep off-camera actors in the set. End omitted holds the complete start pose.', properties: {
+                        axis: { type: 'array', minItems: 2, maxItems: 2, items: { type: 'string' }, description: 'Ordered action-axis endpoints, e.g. [A,B]; actor or set-object IDs' },
+                        actors: { type: 'array', maxItems: 32, description: 'Persistent actor IDs matching cast IDs, e.g. A; body proxies and head gaze, without limb acting', items: { type: 'object', additionalProperties: false, required: ['id', 'height', 'color', 'start'], properties: {
+                                    id: { type: 'string', description: 'Stable cast ID distinct from set object IDs, e.g. A' }, height: { type: 'number', minimum: 0.1, maximum: 10, description: 'Height in metres, e.g. 1.7' }, color: { type: 'string', pattern: '^#[a-fA-F0-9]{6}$', description: 'Proxy colour, e.g. #d0342c; appearance comes from cast sheets' },
+                                    start: { type: 'object', additionalProperties: false, required: ['position', 'rotationZDeg'], description: 'Opening world pose, e.g. position [0,0,0], rotationZDeg 90, gazeTarget B', properties: {
+                                            position: { type: 'array', minItems: 3, maxItems: 3, items: { type: 'number' }, description: 'Floor point XYZ in metres, e.g. [0,0,0]' }, rotationZDeg: { type: 'number', description: 'Body yaw in degrees; 0 faces -Y, 90 faces +X' }, gazeTarget: { type: 'string', description: 'Actor or set-object ID, e.g. B; omitted follows body facing' }, holds: { type: 'array', items: { type: 'string' }, description: 'Held set-object IDs, e.g. [toolbox]; author their physical positions in location states' }
+                                        } },
+                                    end: { type: 'object', additionalProperties: false, required: ['position', 'rotationZDeg'], description: 'Complete closing pose with the same fields as start, e.g. position [1,0,0], rotationZDeg 90; omitted holds start', properties: {
+                                            position: { type: 'array', minItems: 3, maxItems: 3, items: { type: 'number' }, description: 'Floor point XYZ in metres, e.g. [1,0,0]' }, rotationZDeg: { type: 'number', description: 'Body yaw in degrees, e.g. 90' }, gazeTarget: { type: 'string', description: 'Actor or set-object ID, e.g. B' }, holds: { type: 'array', items: { type: 'string' }, description: 'Held set-object IDs, e.g. [toolbox]' }
+                                        } }
+                                } } }
+                    } },
+                reviewer: { description: 'Identity of the actual visual reviewer', type: 'string' }, notes: { description: 'Observed visual findings, not an assumed pass', type: 'string' }, ready: { description: 'Require fresh image files; missing reviews produce warnings', type: 'boolean' },
+                patch: { oneOf: [{ type: 'string' }, { type: 'object', additionalProperties: true }], description: 'Exported camera proposal file or object' }
+            } }
+    },
     // ── Research & fact-checking ──────────────────────────────────────────
     {
         name: 'serp_web_search',
@@ -1382,7 +1299,7 @@ export const TOOLS = [
         name: 'stock_search',
         title: 'Free stock search (Pexels · Pixabay · NASA · Commons)',
         annotations: HINT.read,
-        description: 'Free, commercially usable photos and clips for a cut that needs the real thing — an actual place, era, event or live action — at zero generation cost. Searches Pexels and Pixabay (PEXELS_API_KEY / PIXABAY_API_KEY; a missing key skips that provider with a note), the NASA Image and Video Library and Wikimedia Commons (no key). Every item returns a ready `visual.license` block (provider, page url, license name and url, commercial/modify flags, attribution text, retrievedAt) — store it verbatim on the `visual.source: "stock"` cut; check-scenes.js refuses a stock cut without it. Commons results are filtered to public domain, CC0 and plain CC BY (share-alike, non-commercial and no-derivatives files are dropped and counted) because an edited, monetized cut cannot carry those terms. This tool does not download: fetch `files[0].url` with curl into storyboard/footage/ (video, as footage/s<n>-<provider>-<id>.mp4) or storyboard/images/stock/ (photo); Commons video is WebM and needs an ffmpeg transcode. People, logos and brands in frame stay a separate rights question on every provider; NASA insignia and identifiable current astronauts are excluded from commercial use. English keywords work best on Pexels, Pixabay and NASA. Read-only; Pexels allows 200 requests/hour, Pixabay 100/minute.',
+        description: 'Free, commercially usable photos and clips for a cut that needs the real thing — an actual place, era, event or live action — at zero generation cost. Searches Pexels and Pixabay (PEXELS_API_KEY / PIXABAY_API_KEY; a missing key skips that provider with a note), the NASA Image and Video Library and Wikimedia Commons (no key). Every item returns a ready `visual.license` block (provider, page url, license name and url, commercial/modify flags, attribution text, retrievedAt) — store it verbatim on the `visual.source: "stock"` cut; check-scenes.js warns when the license record is missing. Commons results are filtered to public domain, CC0 and plain CC BY (share-alike, non-commercial and no-derivatives files are dropped and counted) because an edited, monetized cut cannot carry those terms. This tool does not download: fetch `files[0].url` with curl into storyboard/footage/ (video, as footage/s<n>-<provider>-<id>.mp4) or storyboard/images/stock/ (photo); Commons video is WebM and needs an ffmpeg transcode. People, logos and brands in frame stay a separate rights question on every provider; NASA insignia and identifiable current astronauts are excluded from commercial use. English keywords work best on Pexels, Pixabay and NASA. Read-only; Pexels allows 200 requests/hour, Pixabay 100/minute.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -1544,13 +1461,7 @@ export const TOOLS = [
         name: 'gpt_image_text2img',
         title: 'Image generation (text → image)',
         annotations: HINT.generate,
-        description: `Generate an image from a text prompt using OpenAI GPT Image models.
-
-Use when the image must contain legible text — posters, labels, UI mockups, signage, title cards — or when a quality boost over the local default is worth paying for. The local engine breaks Korean glyphs (measured: "딸깍연구소" came out as "달닥연구소"); every text-bearing image belongs here. Strengths: reliable text rendering inside the image, strong photorealism, and exact custom WIDTHxHEIGHT resolutions (e.g. "1088x1920" for 9:16 — gpt-image-2 only, edges multiple of 16).
-Do NOT use as the first choice for text-free images (cover backgrounds, b-roll, draft exploration) — the plugin's default path is image_local_generate (local Z-Image, free); this tool bills per image. Do NOT use to edit or compose existing images — use gpt_image_img2img.
-Note: gpt-image-2 (default) does NOT support transparent backgrounds; transparent requires the deprecated gpt-image-1/1.5 and png/webp output. Size/quality/background constraints are enforced per model — see each parameter.
-
-Returns: the generated image as MCP image content (always base64), plus a text block with model, size, quality, and the saved file path when savePath is given.`,
+        description: 'Generate one image with the selected OpenAI GPT Image API model. Use for a new image; use gpt_image_img2img for references or masks. OPENAI_API_KEY required; billed text/image input and output. Saved image selection takes precedence over default recommendations. GPT Image 2 transparency is preview; retired models fail without substitution. Returns base64 image, saved path when requested, and provider usage receipt. For configured production use image_plan/image_execute or imageContext.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -1562,7 +1473,7 @@ Returns: the generated image as MCP image content (always base64), plus a text b
                 model: {
                     type: 'string',
                     description: 'OpenAI GPT Image model (default: "gpt-image-2")',
-                    enum: ['gpt-image-2', 'gpt-image-1.5', 'gpt-image-1', 'gpt-image-1-mini'],
+                    enum: [...GPT_IMAGE_MODELS],
                     default: 'gpt-image-2',
                 },
                 size: {
@@ -1578,7 +1489,7 @@ Returns: the generated image as MCP image content (always base64), plus a text b
                 },
                 background: {
                     type: 'string',
-                    description: 'Background mode (default: "opaque"). "transparent" is NOT supported by gpt-image-2 (use gpt-image-1 / gpt-image-1.5) and requires a png or webp output.',
+                    description: 'Background mode (default: "opaque"). "transparent" requires PNG/WebP; GPT Image 2 support is preview.',
                     enum: ['opaque', 'transparent', 'auto'],
                     default: 'opaque',
                 },
@@ -1600,13 +1511,7 @@ Returns: the generated image as MCP image content (always base64), plus a text b
         name: 'gpt_image_img2img',
         title: 'Image edit & compose (image → image)',
         annotations: HINT.generate,
-        description: `Edit or compose images using OpenAI GPT Image models (multi-reference + optional mask).
-
-Use when the user asks to inpaint a masked region, combine multiple reference images (1-16 via sourceImagesBase64) into one output, or edit while preserving fine input details such as faces and logos (이미지 합성, 인페인팅, 이미지 수정, 배경 교체).
-Do NOT use for text-to-image from scratch — use gpt_image_text2img.
-Mask: optional PNG with alpha channel, same dimensions as the first source image; fully transparent pixels are the regions to regenerate (applied to the first image only). gpt-image-2 (default) always runs at high input fidelity — do not pass inputFidelity for it.
-
-Returns: the edited image as MCP image content (always base64, in the requested outputFormat), plus a text block with model, size, quality, mask/fidelity flags, and the saved file path when savePath is given.`,
+        description: 'Edit or compose an image with up to 16 references and an optional PNG mask using OpenAI GPT Image. Use gpt_image_text2img for text-only generation. OPENAI_API_KEY required; billed input and output. inputFidelity: low/high for 1 and 1.5, low only for mini, omit for 2. Transparent output requires PNG/WebP. Returns image and provider usage. Saved selection is binding; use imageContext for configured production.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -1635,7 +1540,7 @@ Returns: the edited image as MCP image content (always base64, in the requested 
                 model: {
                     type: 'string',
                     description: 'OpenAI GPT Image model (default: "gpt-image-2")',
-                    enum: ['gpt-image-2', 'gpt-image-1.5', 'gpt-image-1', 'gpt-image-1-mini'],
+                    enum: [...GPT_IMAGE_MODELS],
                     default: 'gpt-image-2',
                 },
                 size: {
@@ -1651,7 +1556,7 @@ Returns: the edited image as MCP image content (always base64, in the requested 
                 },
                 background: {
                     type: 'string',
-                    description: 'Background mode (default: "opaque"). "transparent" is NOT supported by gpt-image-2 (use gpt-image-1 / gpt-image-1.5) and requires a png or webp output.',
+                    description: 'Background mode (default: "opaque"). "transparent" requires PNG/WebP; GPT Image 2 support is preview.',
                     enum: ['opaque', 'transparent', 'auto'],
                     default: 'opaque',
                 },
@@ -1663,7 +1568,7 @@ Returns: the edited image as MCP image content (always base64, in the requested 
                 },
                 inputFidelity: {
                     type: 'string',
-                    description: 'How strongly to preserve fine details (faces, logos, layout) of the input images. Only for gpt-image-1 / gpt-image-1.5 (API default: "low"). Do NOT set for gpt-image-2 (always high fidelity, parameter rejected) or gpt-image-1-mini (unsupported).',
+                    description: 'How strongly to preserve fine details (faces, logos, layout) of the input images. Use low/high for gpt-image-1 or 1.5, low only for mini. Omit for gpt-image-2 and its snapshot (always high fidelity).',
                     enum: ['high', 'low'],
                 },
                 savePath: {
@@ -1676,15 +1581,9 @@ Returns: the edited image as MCP image content (always base64, in the requested 
     },
     {
         name: 'image_local_generate',
-        title: 'Image generation (local · Z-Image — default)',
+        title: 'Image generation (local · Z-Image — explicit local choice)',
         annotations: HINT.generateLocal,
-        description: `Generate an image from a text prompt **on this machine** using Z-Image Turbo (6B, Apache 2.0) via mflux — no API key, no network, no per-image cost.
-
-This is the DEFAULT image generation path of this plugin. Use for any text-free image: cover backgrounds, b-roll stills, branding drafts, mood exploration, bulk candidate batches (이미지 생성, 커버 배경). Measured on this class of machine (M4 Max): 1024×1024 in ~2–3.5 min and 1088×1920 (9:16) in ~7.5 min under heavy load — minutes, not seconds, with 32–39GB peak memory; avoid running alongside video renders.
-Do NOT use when the image must contain legible text — Korean glyphs break (measured: "딸깍연구소" rendered as "달닥연구소"); any text-bearing image (poster, label, title card) and any quality-critical shot goes to gpt_image_text2img instead. Do NOT use to edit existing images — gpt_image_img2img.
-Requires mflux (\`uv tool install --python 3.12 mflux\`; Apple Silicon only); set MFLUX_ZIMAGE_BIN if the binary lives elsewhere. The first call downloads the ~31GB weight repository to ~/.cache/huggingface — the tool extends its own timeout by an hour for that download, so a very slow first call is normal, not stuck.
-
-Returns: a text block with the saved .png path, resolution, steps, seed, quantization, and generation time.`,
+        description: 'Generate a text-only image locally with Z-Image Turbo via mflux. Requires the mflux executable and downloaded model weights; first use may download weights. No per-call API bill. This adapter does not expose upstream img2img or LoRA. Use the saved engine; never automatically substitute gpt_image_text2img after failure. Korean text quality requires inspection. Returns a local PNG path and requested generation settings. Use imageContext for configured production.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -1741,13 +1640,7 @@ Returns: a text block with the saved .png path, resolution, steps, seed, quantiz
         name: 'mlx_image_generate',
         title: 'Image generation (local · MLX Core)',
         annotations: HINT.generateLocal,
-        description: `Generate an image on this machine via MLX Core / mlx-serve (HTTP to 127.0.0.1:11234). No vendor bill. This plugin never launches the app — if :11234 is down the call fails closed with a brew install --cask mlx-core hint.
-
-Use as an optional local image lane when MLX Core is running and an image model is downloaded (FLUX.2-klein is fixed at 1024×1024; Krea/Mage-Flow accept any multiple of ${MLX_IMAGE_DIMENSION_STEP} in ${MIN_MLX_IMAGE_DIMENSION}–${MAX_MLX_IMAGE_DIMENSION}, so 9:16 is 1088×1920 not 1080×1920). Optional imagePath is img2img (strength 0–1).
-Do NOT use as the default path — that stays image_local_generate (Z-Image). Do NOT use when the image must contain legible Korean text — Hangul still goes to gpt_image_text2img (measured: local engines break jamo). Do NOT POST /v1/load-model with default:true; this tool never does that, because it would steal the chat model the app is serving. Shares the GPU with Z-Image (32–39GB peak) and LTX video — don't run them together.
-Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve on PATH (or MLX_SERVE_URL). A non-loopback bind may need MLX_SERVE_API_KEY.
-
-Returns: a text block with the saved .png path, model, size, and generation time.`,
+        description: 'Generate a local image or a supported strength-based variation through a running MLX Core / mlx-serve. No vendor bill; this plugin never launches the app. Model IDs come from the installed server. Known family capabilities are checked; Mage uses mlx_image_edit instead of variation. transparent is available only for Qwen-Image-2.1 and compatible server versions. Saved engine choice wins; gpt_image_text2img is a separate paid adapter. Returns a path and measured output dimensions. Use imageContext for configured production.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -1811,13 +1704,7 @@ Returns: a text block with the saved .png path, model, size, and generation time
         name: 'mlx_image_edit',
         title: 'Image edit (local · MLX Core)',
         annotations: HINT.generateLocal,
-        description: `Edit an existing image on this machine via MLX Core / mlx-serve. Posts JSON to /v1/images/generations with mode:"edit" (not multipart /v1/images/edits). No vendor bill. This plugin never launches the app.
-
-Use when you have a source PNG to change and MLX Core is running with an image-edit model. Up to ${MAX_MLX_IMAGE_REFS} extra reference images (refImagePaths). image_local_generate (Z-Image) has no edit lane, so this is the local alternative to gpt_image_img2img.
-Do NOT use for text-to-image from scratch — use mlx_image_generate or image_local_generate. Do NOT use when the result must contain legible Korean text — that stays gpt_image_img2img / gpt_image_text2img. Do NOT treat this as the default image path.
-Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve on PATH (or MLX_SERVE_URL). brew install --cask mlx-core if :11234 is down.
-
-Returns: a text block with the saved .png path, model, and generation time.`,
+        description: 'Edit a local source image through MLX Core / mlx-serve, using JSON mode:edit. Select an identified FLUX.2-klein, Mage-Flow Edit or Qwen-Image-2.1 pack. Qwen accepts 9 additional references, other known packs 3. Krea supports variations through mlx_image_generate, not this editing contract. No vendor bill; no automatic app launch or gpt_image_img2img fallback. Returns saved PNG and actual output dimensions; requested size may be a pixel budget. Use imageContext for configured production.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -1884,7 +1771,7 @@ Returns: a text block with the saved .png path, model, and generation time.`,
 
 Use when the user asks to create, generate, or make a video, clip, footage, or short ad from a description alone (비디오 생성, 영상 만들어줘). Audio is generated natively: wrap dialogue in double quotes, and describe SFX ("engine roaring") and ambient sound explicitly in the prompt.
 Do NOT use when a source visual exists — use veo_img2video to animate a still image, veo_extension to continue a Veo-generated video, or veo_reference to keep a specific subject consistent from photos.
-Prefer seedance_text2video when you need a length off Veo's 4/6/8-second grid, a ratio other than 16:9 or 9:16, or a much cheaper silent shot; keep Veo when native dialogue audio is the point.
+The Seedance counterpart is seedance_text2video (lengths off the 4/6/8-second grid, 21:9 or 4:3 frames, optional silence); the saved model decides which engine runs.
 Cost lever: the default is now fast ($0.10/s at 720p) because blind-arena Elo shows no measurable quality gap between the tiers; drop to lite ($0.05/s) whenever 4k, extension, and reference images are not needed. Generation is asynchronous and typically takes 1-6 minutes.
 
 Returns: a text block with the saved .mp4 file path, model, aspect ratio, resolution, and duration in seconds. Videos carry an invisible SynthID watermark.`,
@@ -1925,7 +1812,7 @@ Returns: a text block with the saved .mp4 file path, model, aspect ratio, resolu
 
 Use when the user provides an image to bring to life, animate, or add motion to (이미지로 영상 만들기) — e.g. animate a product photo. Provide sourceImagePath as the first frame; optionally add lastImagePath for a smooth transition between two images. The prompt should describe the desired motion.
 Do NOT use for pure text-to-video (use veo_text2video), continuing an existing video (use veo_extension), or subject consistency from reference photos (use veo_reference).
-For a silent b-roll shot from an already-generated background, seedance_img2video bills only the seconds you ask for — a 4-second 1080p shot runs about $0.23 silent against $0.64 on veo-3.1-lite, which must bill 8 seconds at 1080p and cannot turn audio off. Stay on Veo when the clip needs native audio or a later veo_extension.
+The Seedance counterpart is seedance_img2video; the saved model decides which engine runs.
 Person policy, measured 2026-08-15: an adult photoreal face in the source image passes here and holds for the clip, while Seedance 2.x rejects the very same file — so this is the image lane for photoreal people. A face that reads as a MINOR is blocked whether it arrives as a photo or an illustration (Support code 17301594); blocked generations are not billed, so redraw the cut instead of hunting for a way around it.
 For composition control — a subject appearing, vanishing, or changing pose exactly as drawn — pass lastImagePath. Reference images (veo_reference) carry appearance, not layout.
 Generation is asynchronous and typically takes 1-6 minutes.
@@ -2076,7 +1963,7 @@ Returns: a text block with the saved .mp4 file path, reference image list, model
 
 Use when the shot needs a length off Veo's 4/6/8 grid (any whole 3-10 seconds), or when the cut will be edited or extended afterwards — omni_edit and omni_extend continue from the interactionId this returns.
 Do NOT use when a source visual exists — omni_img2video animates a still, omni_extend continues a clip, omni_edit rewrites one.
-COST, measured 2026-09-06: this model bills a FLAT ~$1.01 per call, not per second. A 3-second 360p draft costs the same as a full 10-second 4k render, and more than a whole 8-second veo-3.1-lite shot ($0.40). So never call it for a draft or a short cut — go to veo_text2video or seedance_text2video for those, and come here when you need the full 10 seconds, an off-grid length, or the edit lane. Ask for the seconds you actually want; a shorter clip refunds nothing.
+COST, measured 2026-09-06: this model bills a FLAT ~$1.01 per call, not per second. A 3-second 360p draft costs the same as a full 10-second 4k render. Ask for the seconds you actually want; a shorter clip refunds nothing.
 Audio is always generated and cannot be turned off: wrap dialogue in double quotes and name SFX and ambience in the prompt. There is no negative-prompt field on this model — write exclusions as positive description instead.
 
 Returns: a text block with the saved .mp4 path, the interaction id to continue from, resolution, aspect ratio, and duration.`,
@@ -2112,9 +1999,9 @@ Returns: a text block with the saved .mp4 path, the interaction id to continue f
         annotations: HINT.generate,
         description: `Animate a still image, or interpolate between two images, using Gemini Omni 1.1 Flash.
 
-Use when a generated background or photo has to move and the cut wants an off-grid length, or will be edited afterwards. Pass sourceImagePath as the first frame; add lastImagePath and the model renders the transition between the two. Billing is a flat ~$1.01 per call regardless of length or resolution, so a short cut is cheaper on veo_img2video or seedance_img2video.
+Use when a generated background or photo has to move and the cut wants an off-grid length, or will be edited afterwards. Pass sourceImagePath as the first frame; add lastImagePath and the model renders the transition between the two. Billing is a flat ~$1.01 per call regardless of length or resolution.
 Do NOT use for pure text-to-video (omni_text2video) or for continuing an existing clip (omni_extend).
-veo_img2video remains the lane for a photoreal adult face, whose policy is measured there; Omni's person policy is unmeasured, so route people to Veo until it is. For silent b-roll at a length you pick, seedance_img2video is cheaper still.
+veo_img2video remains the lane for a photoreal adult face, whose policy is measured there; Omni's person policy is unmeasured, so route people to Veo until it is.
 Composition control lives here — a subject appearing, vanishing, or ending in an exact pose — because both frames are yours.
 
 Returns: a text block with the saved .mp4 path, the interaction id to continue from, the source frames, resolution, aspect ratio, and duration.`,
@@ -2210,7 +2097,7 @@ Returns: a text block with the saved .mp4 path, the new interaction id, the sour
 
 Use when a generated cut is right in movement and framing but wrong in content — swap an object, change a colour, drop something from the frame — instead of re-rolling the whole shot and losing the camera move. State the change plainly ("change the persimmon to a green apple, keep the camera move identical"). Source is exactly one of previousInteractionId (an earlier omni_* call) or sourceVideoPath (a local mp4 of at most 10 seconds).
 Do NOT use to make a clip longer — that is omni_extend. Veo has no instruction-edit lane at all, so a Veo clip that needs one comes here by file path.
-The output runs the same length as the input (measured 3.008s in, 3.008s out); aspect ratio is inherited and not settable. Each edit is a fresh generation billed at the flat ~$1.01, not a cheap patch — two edits cost more than re-rolling the shot on Veo.
+The output runs the same length as the input (measured 3.008s in, 3.008s out); aspect ratio is inherited and not settable. Each edit is a fresh generation billed at the flat ~$1.01, not a cheap patch.
 
 Returns: a text block with the saved .mp4 path, the new interaction id, and the source.`,
         inputSchema: {
@@ -2256,11 +2143,11 @@ Returns: a text block with the saved .mp4 path, the new interaction id, and the 
         description: `Generate a video from a text prompt on the self-hosted ASTRA video API (LTX-2.5).
 
 Use when the shot is not time-critical and you would rather not spend vendor money: this server is ours, so a call costs wall clock instead of dollars, and no vendor content policy applies. It is also the only lane with an adapter (lora) for cinemagraph and slow-motion looks.
-Do NOT use when someone is waiting: the box renders ONE job at a time and yours queues behind whatever else is running. A measured 121-frame 1536x1024 render takes about 66s (tier "default"), 169s ("guided"), 121s ("fast") — plus the queue. For an immediate clip go to veo_text2video or seedance_text2video.
-tier picks the pipeline and also which arguments exist: lora only on "default", negativePrompt and numInferenceSteps only on "guided"/"fast". "fast" means a draft that is faster than "guided"; it is not faster than the default pipeline. Passing one to the wrong tier is refused before the call.
-Length is frames, not seconds: numFrames must be 8k+1, minimum 25. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} 121 = about 5.0s at 24fps, the server default. Give autoDuration instead to let the server choose at most 121 frames; the rounded range must contain an 8k+1 value. numFrames wins if both are given.
+Do NOT use when someone is waiting: the box renders ONE job at a time and yours queues behind whatever else is running. A measured 121-frame 1536x1024 render takes about 66s (tier "default"), 169s ("guided"), 121s ("fast") — plus the queue.
+tier picks the pipeline and also which arguments exist: lora only on "default", negativePrompt, numInferenceSteps and guidance only on "guided"/"fast"/"hq". "hq" is the two-stage high-quality pipeline (quality unmeasured). "fast" means a draft that is faster than "guided"; it is not faster than the default pipeline. Passing one to the wrong tier is refused before the call.
+Length is frames, not seconds: numFrames must be 8k+1, minimum 25. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} 121 = about 5.0s at 24fps, the server default. Give autoDuration instead to let the server choose at most 121 frames; the rounded range must contain an 8k+1 value. numFrames and autoDuration are mutually exclusive.
 ${ASTRA_LIMITS_LINE}
-Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off — no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
+Every clip comes back with a generated AAC audio track (48kHz stereo, measured). Set generateAudio: false when the episode lays its own narration or BGM over the clip — the server strips the sound after generation (same render time).
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
         inputSchema: {
@@ -2272,8 +2159,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                 },
                 tier: {
                     type: 'string',
-                    description: 'Pipeline: "default" (generate — the only tier taking lora), "guided" (slower, takes negativePrompt and numInferenceSteps), "fast" (guided_fast — 768x512 draft, 32-pixel grid, faster than guided but not faster than default).',
-                    enum: ['default', 'guided', 'fast'],
+                    description: 'Pipeline — pick by what the shot needs. "default" (generate, ~66s for 121 frames): the fastest and the usual choice; the only tier taking lora. "guided" (~169s): slower, and the tier to use when the picture must follow a detailed prompt or avoid something (negativePrompt), or when you need numInferenceSteps or guidance. "fast" (guided_fast, ~121s): a 768x512 draft of guided on a 32-pixel grid — faster than guided but not faster than default; use it to preview a guided prompt. "hq" (guided_hq): the two-stage high-quality pipeline for a hero shot where render time does not matter; quality unmeasured.',
+                    enum: ['default', 'guided', 'fast', 'hq'],
                     default: 'default',
                 },
                 numFrames: astraNumFramesProperty('generate'),
@@ -2282,9 +2169,13 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                 height: ASTRA_HEIGHT_PROPERTY,
                 frameRate: ASTRA_FRAME_RATE_PROPERTY,
                 seed: ASTRA_SEED_PROPERTY,
+                duration: ASTRA_DURATION_PROPERTY,
+                generateAudio: ASTRA_GENERATE_AUDIO_PROPERTY,
+                hdr: ASTRA_HDR_PROPERTY,
                 lora: ASTRA_LORA_PROPERTY,
                 negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
                 numInferenceSteps: ASTRA_STEPS_PROPERTY,
+                guidance: ASTRA_GUIDANCE_PROPERTY,
                 numGeneratedKeyframes: ASTRA_GENERATED_KEYFRAMES_PROPERTY,
                 outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
                 filename: ASTRA_FILENAME_PROPERTY,
@@ -2299,12 +2190,12 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         description: `Animate a still, or interpolate between a first and a last still, on the self-hosted ASTRA video API.
 
 Use when a generated background or photo has to move and nobody is waiting on it — same trade as astra_text2video: free, ours, one job at a time. Give firstFramePath alone to animate from that frame, or add lastFramePath and the clip lands on it. The tool uploads the files itself; pass local paths, not ids.
-Do NOT use for more than two stills — that is astra_keyframe_video, which pins each image to a frame index. For an immediate clip use veo_img2video or seedance_img2video.
-tier accepts default (generate) or guided only. guided images require 1536x1024 (omitted dimensions use that size); fast images are not enabled. lora is default-only.
-The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. png, jpg and jpeg are accepted, up to 32 MiB each.
-Warning: image-conditioned generate (width 1280, measured at heights 704/768) failure frames: {121,129,137}; guided (width 1280, measured at height 704) failure frames: {121}. Guided 129/137 succeeded at 1280x704 in server probes (the only guided size probed), but the existing client guided ceiling is 121. The client requires 1536x1024 for guided images, so the guided 1280x704 probes are not client alternatives. Within current client limits use generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at 121 frames also succeeded. Text-only 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause. The server owns the failure-band acceptance gate; this warning adds no client-side block.
+Do NOT use for more than two stills — that is astra_keyframe_video, which pins each image to a frame index.
+tier accepts default (generate), guided, or hq (guided_hq — quality unmeasured). guided and hq images use the 64-pixel grid and pixel ceiling (omitted dimensions default to 1536x1024); fast images are not enabled. lora is default-only; negativePrompt and numInferenceSteps are guided-only, and with guidance also hq. Passing one to the wrong tier is refused before the call.
+The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. autoDuration lets the server choose at most 121 frames from a first still alone; it is refused with lastFramePath or numFrames. png, jpg and jpeg are accepted, up to 32 MiB each.
+Warning: image-conditioned generate (width 1280, measured at heights 704/768) failure frames: {121,129,137}; guided (width 1280, measured at height 704) failure frames: {121}. Guided 129/137 succeeded at 1280x704 in server probes (the only guided size probed). Guided and hq sizes follow the server grid and pixel ceiling; unmeasured sizes are not quality guarantees. Within current client limits use generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at 121 frames also succeeded. Text-only 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause. The server owns the failure-band acceptance gate; this warning adds no client-side block.
 ${ASTRA_LIMITS_LINE}
-Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off — no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
+Every clip comes back with a generated AAC audio track (48kHz stereo, measured). Set generateAudio: false when the episode lays its own narration or BGM over the clip — the server strips the sound after generation (same render time).
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
         inputSchema: {
@@ -2315,8 +2206,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                     description: 'What happens between the frames — movement, camera, mood. English recommended. 1-2000 characters.',
                 },
                 tier: {
-                    type: 'string', enum: ['default', 'guided'], default: 'default',
-                    description: 'default (generate), or guided at 1536x1024 only. fast images are unmeasured and not enabled.',
+                    type: 'string', enum: ['default', 'guided', 'hq'], default: 'default',
+                    description: 'default (generate), guided, or hq (guided_hq, quality unmeasured); all follow the 64-pixel grid and pixel ceiling. fast images are unmeasured and not enabled.',
                 },
                 firstFramePath: {
                     type: 'string',
@@ -2331,11 +2222,17 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                     description: 'How strictly the generated frames must match the supplied stills, 0.0-1.0 (default: 1.0 — hold the image exactly).',
                 },
                 numFrames: astraNumFramesProperty('generate'),
+                autoDuration: ASTRA_AUTO_DURATION_PROPERTY,
                 width: ASTRA_WIDTH_PROPERTY,
                 height: ASTRA_HEIGHT_PROPERTY,
                 frameRate: ASTRA_FRAME_RATE_PROPERTY,
                 seed: ASTRA_SEED_PROPERTY,
+                duration: ASTRA_DURATION_PROPERTY,
+                generateAudio: ASTRA_GENERATE_AUDIO_PROPERTY,
                 lora: ASTRA_LORA_PROPERTY,
+                negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
+                numInferenceSteps: ASTRA_STEPS_PROPERTY,
+                guidance: ASTRA_GUIDANCE_PROPERTY,
                 numGeneratedKeyframes: ASTRA_GENERATED_KEYFRAMES_PROPERTY,
                 outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
                 filename: ASTRA_FILENAME_PROPERTY,
@@ -2353,7 +2250,7 @@ Use when the shot has to hit specific compositions in a specific order — a sto
 Do NOT use for one or two stills (astra_img2video is simpler) or when the clip is driven by sound (astra_audio2video).
 frameIdx is 0-based and must be inside the clip: a 121-frame render accepts 0-120. This mode has no length-guessing and no adapters — autoDuration, numGeneratedKeyframes and lora do not exist here and are refused before the call. A measured 121-frame render took about 184s plus queue.
 ${ASTRA_LIMITS_LINE}
-Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off — no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
+Every clip comes back with a generated AAC audio track (48kHz stereo, measured). Set generateAudio: false when the episode lays its own narration or BGM over the clip — the server strips the sound after generation (same render time).
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
         inputSchema: {
@@ -2397,8 +2294,11 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                 height: ASTRA_HEIGHT_PROPERTY,
                 frameRate: ASTRA_FRAME_RATE_PROPERTY,
                 seed: ASTRA_SEED_PROPERTY,
+                duration: ASTRA_DURATION_PROPERTY,
+                generateAudio: ASTRA_GENERATE_AUDIO_PROPERTY,
                 negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
                 numInferenceSteps: ASTRA_STEPS_PROPERTY,
+                guidance: ASTRA_GUIDANCE_PROPERTY,
                 outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
                 filename: ASTRA_FILENAME_PROPERTY,
             },
@@ -2412,25 +2312,26 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         description: `Render a clip driven by an existing audio track on the self-hosted ASTRA video API (mode audio2video).
 
 Use when the picture has to follow a sound you already have — a narration take, a music bed, a recorded effect — instead of the picture being cut to it afterwards. Provide exactly one of audioPath (local .wav/.mp3) or audioUploadId (reuse an existing upload without uploading again). Reused ids have unknown expiry/duration locally, so the server checks them. Optionally give imagePath to pin one portrait to frame 0.
-Do NOT use to add sound to a finished clip: this generates new picture from the audio, it does not mux. The rendered video carries the supplied WAV re-encoded as AAC (48kHz stereo): a measured upload-to-output 100ms RMS Pearson correlation was 0.99997 at zero lag. Input WAV must have two channels; mono passes upload and job acceptance but fails during generation with "expected input[1, 1, 507, 66] to have 2 channels, but got 1 channels instead".
-Choose either numFrames or audioMaxDuration, never both. numFrames fixes the clip length. audioMaxDuration uses the shorter of that value and the audio remaining after audioStartTime, floors seconds × frameRate, then rounds down to 8k+1; more than ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} frames is refused when upload duration is known. audioStartTime must be before the uploaded audio ends. With neither length field, the default is 121 frames (about 5.04s at 24fps), not the source audio length: an 8.000s WAV produced 5.041s of audio. Set numFrames or audioMaxDuration to request a longer span; audioMaxDuration=8.0 at 24fps rounds down to 185 frames (about 7.708s), so grid rounding can still trim the tail. A measured 121-frame render took about 170s plus queue.
+Do NOT use to add sound to a finished clip: this generates new picture from the audio, it does not mux. The rendered video carries the supplied WAV re-encoded as AAC (48kHz stereo): a measured upload-to-output 100ms RMS Pearson correlation was 0.99997 at zero lag. Input audio must have two channels: mono fails in the engine's audio encoder, so the server refuses it at upload (re-encode with ffmpeg -ac 2). The audio after audioStartTime must also cover the video: a WAV more than 0.08s shorter than numFrames/frameRate (121 frames when omitted) dies on a latent shape mismatch, so it is refused after upload and before the job with the length to fix — or pass audioMaxDuration to follow the audio.
+Choose either numFrames or audioMaxDuration, never both. numFrames fixes the clip length. audioMaxDuration uses the shorter of that value and the audio remaining after audioStartTime, floors seconds × frameRate, then rounds down to 8k+1; more than ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} frames is refused when upload duration is known. audioStartTime must be before the uploaded audio ends. With neither length field, the client explicitly sends 121 frames (about 5.04s at 24fps) for compatibility: an 8.000s WAV produced 5.041s of audio. Set numFrames or audioMaxDuration to request a longer span; audioMaxDuration=8.0 at 24fps rounds down to 185 frames (about 7.708s), so grid rounding can still trim the tail. A measured 121-frame render took about 170s plus queue.
+Set expectLipSync:true when every spoken line in the audio belongs to a visible speaker (on_screen). LTX 2.5 sometimes ignores the voice, so after each render ffmpeg compares the picture's motion with the speech loudness; when no region moves with the speech, the same audio, image and prompt render again with a new seed, up to maxAttempts (default 2, each a full render). It never fails the call: the best clip is returned with its findings, and every attempt's seed and measurement are written into its .astra-job.json. It also reports speech cut off by the frame count and a clip audio track that differs from the supplied WAV; another seed fixes neither, so those are reported, not retried. It does not judge phoneme-level lip sync, which visible person spoke, or voice identity, and in medium or wide shots the mouth is too small to measure reliably. Calibrated 2026-10-17 on five real close-ups whose mouths stayed closed (margins −0.23 to −0.08, threshold 0.1); no real clip that followed the voice was available, and a new seed rarely fixed a refusal, so a second failure points at the opening image, prompt or strength. Leave it off for music, effects or off-screen voice.
 ${ASTRA_LIMITS_LINE}
 
-Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
+Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, the request the server recorded and, with expectLipSync, each attempt's speech sync result.`,
         inputSchema: {
             type: 'object',
             properties: {
                 prompt: {
                     type: 'string',
-                    description: 'What the picture shows while the audio plays. English recommended. 1-2000 characters.',
+                    description: 'What the text-free picture shows while the supplied audio plays. Use speech_manage plan_video.videoPrompt; describe action without quoting the spoken dialogue. Explicitly exclude subtitles, captions and typography. English recommended. 1-2000 characters.',
                 },
                 audioPath: {
                     type: 'string',
-                    description: 'Local path to the driving audio (.wav or .mp3, at most 32 MiB). Stereo (2-channel) input required. Mono WAV passes acceptance (202) but fails during generation. Uploaded automatically.',
+                    description: 'Local path to the driving audio (.wav or .mp3, at most 32 MiB). Stereo (2-channel) input required. Mono is refused at upload (it fails in the engine audio encoder); an id uploaded before 2026-10-17 15:00Z can still be mono and fail during generation. Uploaded automatically.',
                 },
                 audioUploadId: {
                     type: 'string', minLength: 1,
-                    description: 'Existing audio upload id, mutually exclusive with audioPath. Stereo (2-channel) input required. Mono WAV passes acceptance (202) but fails during generation. No upload or local source-duration check. Server rejects expired ids.',
+                    description: 'Existing audio upload id, mutually exclusive with audioPath. Stereo (2-channel) input required. Mono is refused at upload (it fails in the engine audio encoder); an id uploaded before 2026-10-17 15:00Z can still be mono and fail during generation. No upload or local source-duration check. Server rejects expired ids.',
                 },
                 imagePath: {
                     type: 'string', minLength: 1,
@@ -2446,20 +2347,90 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                 },
                 audioMaxDuration: {
                     type: 'number',
-                    description: `Maximum seconds to use after audioStartTime. Mutually exclusive with numFrames. With a fresh upload, the shorter of this and remaining audio must produce at most ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} frames on the 8k+1 grid. Reused ids defer duration checks to the server. At 24fps, 8 seconds selects 185 frames (about 7.71s). If both length fields are omitted, the server uses 121 frames (about 5.04s), not the audio length.`,
+                    description: `Maximum seconds to use after audioStartTime. Mutually exclusive with numFrames. With a fresh upload, the shorter of this and remaining audio must produce at most ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} frames on the 8k+1 grid. Reused ids defer duration checks to the server. At 24fps, 8 seconds selects 185 frames (about 7.71s). If duration, numFrames and audioMaxDuration are omitted, the client explicitly sends 121 frames (about 5.04s). Server metadata disagrees about omission; use an explicit length.`,
                 },
                 numFrames: astraNumFramesProperty('audio2video'),
                 width: ASTRA_WIDTH_PROPERTY,
                 height: ASTRA_HEIGHT_PROPERTY,
                 frameRate: ASTRA_FRAME_RATE_PROPERTY,
                 seed: ASTRA_SEED_PROPERTY,
+                duration: ASTRA_DURATION_PROPERTY,
+                generateAudio: ASTRA_GENERATE_AUDIO_PROPERTY,
+                hdr: ASTRA_HDR_PROPERTY,
                 negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
                 numInferenceSteps: ASTRA_STEPS_PROPERTY,
+                guidance: ASTRA_GUIDANCE_PROPERTY,
+                expectLipSync: {
+                    type: 'boolean', default: false,
+                    description: 'true when every spoken line in the audio is said by a visible person. Checks that the picture moves with the speech after each render and re-renders with a new seed when it does not. Off for music, effects or off-screen voice.',
+                },
+                maxAttempts: {
+                    type: 'integer', minimum: 1, maximum: 3, default: 2,
+                    description: 'expectLipSync only: total renders including the first (default 2). Each one is a full render (~170s plus queue) on the one-at-a-time ASTRA box.',
+                },
                 outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
                 filename: ASTRA_FILENAME_PROPERTY,
             },
             required: ['prompt'],
             oneOf: [{ required: ['audioPath'] }, { required: ['audioUploadId'] }],
+        },
+    },
+    {
+        name: 'astra_ic_lora',
+        title: 'ASTRA video generation (IC-LoRA reference → video)',
+        annotations: HINT.generate,
+        description: `Render a clip conditioned on one reference still or clip through an IC-LoRA adapter on the self-hosted ASTRA video API.
+
+Use when an existing picture has to be transformed rather than invented: "ingredients" builds a new clip from the reference's subject; "clean-plate", "colorization", "day-to-night", "deblur", "decompression" and "water-simulation" rework the reference clip; "pixel-upscaler-x2" upscales it (request an output twice the reference size yourself). The server picks the adapter weights from its own catalog — there is no path argument. The tool uploads the reference and the optional mask itself; pass local paths.
+Do NOT use to animate a still from frame 0 (astra_img2video) or to re-roll a span of a clip (astra_video_retake).
+Status: adapter "ingredients" without conditioningMask and skipStage2 runs as the server's existing ingredients mode. Every other adapter runs as mode ic_lora; conditioningMask and skipStage2 are live since the 2026-10-17 server change. Recommended strengths per adapter are unmeasured.
+A reference clip of 2 or more frames above ${ASTRA_VIDEO_MAX_REFERENCE_PIXELS} pixels is refused after upload and before the job, as the server does. skipStage2 skips the second stage, so the output is half resolution. Length: numFrames 8k+1, ${ASTRA_VIDEO_MIN_FRAMES}-${ASTRA_VIDEO_FRAME_LIMITS.ic_lora} (the server ceiling; long references are not generation-tested); there is no autoDuration.
+${ASTRA_LIMITS_LINE}
+
+Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                prompt: {
+                    type: 'string',
+                    description: 'What the output clip shows. English recommended. 1-2000 characters.',
+                },
+                adapter: {
+                    type: 'string',
+                    enum: [...ASTRA_VIDEO_IC_LORA_ADAPTERS],
+                    description: 'What to do with the reference. "ingredients": generate a NEW clip conditioned on a reference sheet — one composite image laying out the characters, objects and look to use (runs today as the ingredients mode). "clean-plate": remove people, pedestrians and vehicles from a reference clip and rebuild the empty background (VFX plate). "colorization": restore natural colour to grayscale, monochrome or desaturated video. "day-to-night": re-render a daytime clip as the same shot at night. "deblur": remove blur from a reference clip. "decompression": remove compression artefacts from low-bit-rate or heavily compressed video. "water-simulation": add water to a clip — rivers, surf, rain, waterfalls, floods, splashes. "pixel-upscaler-x2": creatively upscale a low-resolution clip 2x — request width/height twice the reference size. Every adapter except ingredients runs as mode ic_lora; per-adapter quality and strengths are unmeasured.',
+                },
+                referencePath: {
+                    type: 'string',
+                    description: 'Local reference still or clip (.png/.jpg/.jpeg up to 32 MiB, .mp4 up to 100 MiB). Uploaded automatically.',
+                },
+                referenceStrength: {
+                    type: 'number', minimum: 0, maximum: 1,
+                    description: 'Reference conditioning strength, 0.0-1.0 (server default: 1.0).',
+                },
+                conditioningMaskPath: {
+                    type: 'string',
+                    description: 'Optional local black-and-white .mp4 attention mask over the reference. Uploaded automatically. It must feed as many frames as the reference (a still reference takes a 1-frame mask), and that count, after numFrames caps both, must be 1 or 8k+1 — otherwise it is refused before the job.',
+                },
+                conditioningMaskStrength: {
+                    type: 'number', minimum: 0, maximum: 1,
+                    description: 'Mask strength, 0.0-1.0. Requires conditioningMaskPath.',
+                },
+                skipStage2: {
+                    type: 'boolean',
+                    description: 'Skip the second (upscaling) stage: faster, half-resolution output. Default false.',
+                },
+                numFrames: astraNumFramesProperty('ic_lora'),
+                width: ASTRA_WIDTH_PROPERTY,
+                height: ASTRA_HEIGHT_PROPERTY,
+                frameRate: ASTRA_FRAME_RATE_PROPERTY,
+                seed: ASTRA_SEED_PROPERTY,
+                duration: ASTRA_DURATION_PROPERTY,
+                generateAudio: ASTRA_GENERATE_AUDIO_PROPERTY,
+                outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
+                filename: ASTRA_FILENAME_PROPERTY,
+            },
+            required: ['prompt', 'adapter', 'referencePath'],
         },
     },
     {
@@ -2473,7 +2444,7 @@ Do NOT use to make a clip longer or to change its size: the output inherits the 
 The SOURCE has to be on the grid already — 8k+1 frames, both sides a multiple of 32 — or the server refuses at acceptance. A clip this API produced always qualifies. A measured retake took about 80s plus queue.
 The tool checks the upload response before submission: endTime must not pass source frames/fps, so an invalid source or span does not consume a queue slot.
 ${ASTRA_LIMITS_LINE}
-Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off — no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
+Every clip comes back with a generated AAC audio track (48kHz stereo, measured). Set generateAudio: false when the episode lays its own narration or BGM over the clip — the server strips the sound after generation (same render time).
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
         inputSchema: {
@@ -2496,6 +2467,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                     description: 'Where the re-rolled span ends, in seconds. Must be greater than startTime and no later than the uploaded source duration.',
                 },
                 seed: ASTRA_SEED_PROPERTY,
+                generateAudio: ASTRA_GENERATE_AUDIO_PROPERTY,
                 outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
                 filename: ASTRA_FILENAME_PROPERTY,
             },
@@ -2503,17 +2475,29 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         },
     },
     {
+        name: 'astra_video_capabilities',
+        title: 'ASTRA video capabilities (live limits)',
+        annotations: HINT.read,
+        description: `Read the live ASTRA video server's own capability report (GET /v1/models): for each mode the fields it accepts, frame and pixel ceilings, blocked width/frame combinations, the lora and IC-LoRA catalogs, and the rate limits — the values that process actually enforces right now.
+
+Use before an unusual request (a new adapter, guidance, hq, a large size, a long clip) when you are unsure the server accepts it: the tool descriptions were written for the 2026-10-17 server, and a later server change can differ from them. A field missing from a mode in this report is refused with a 400.
+Do NOT call it before every render — the ordinary arguments are already checked locally, and the server rate-limits queries per minute.
+
+Returns: the server's JSON report verbatim. No arguments.`,
+        inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+    },
+    {
         name: 'astra_video_list_uploads',
         title: 'ASTRA video upload list',
         annotations: HINT.read,
-        description: 'List uploads owned by the configured ASTRA_VIDEO key. No filters or pagination arguments. Uploads expire after 24 hours; the key has a 20-upload / 1 GiB storage ceiling. Requires server GET /v1/uploads support; an unavailable endpoint or invalid response is an error, never an empty list. Server support and response contract still require live verification.',
+        description: 'List uploads owned by the configured ASTRA_VIDEO key. No filters or pagination arguments. Uploads expire after 24 hours; the key has a 200-file storage ceiling (live 2026-10-18 contract). Not in the six official OpenAPI routes. Requires server GET /v1/uploads support; an unavailable endpoint or invalid response is an error, never an empty list. Server support and response contract still require live verification.',
         inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     },
     {
         name: 'astra_video_delete_upload',
         title: 'Delete an ASTRA video upload',
         annotations: HINT.moderate,
-        description: '⚠️ Destructive: never call without user approval for the selected upload (HITL). Permanently delete one upload owned by the configured ASTRA_VIDEO key. List uploads first and choose the exact uploadId; do not delete inputs still needed by queued/running jobs or planned reuse. Requires server DELETE /v1/uploads/<id> support. An unavailable endpoint or unconfirmed response is an error, never a successful deletion. Server support and response contract still require live verification.',
+        description: '⚠️ Destructive: never call without user approval for the selected upload (HITL). Permanently delete one upload owned by the configured ASTRA_VIDEO key. List uploads first and choose the exact uploadId; do not delete inputs still needed by queued/running jobs or planned reuse. Not in the six official OpenAPI routes. Requires server DELETE /v1/uploads/<id> support. An unavailable endpoint or unconfirmed response is an error, never a successful deletion. Server support and response contract still require live verification.',
         inputSchema: {
             type: 'object',
             properties: { uploadId: { type: 'string', minLength: 1, maxLength: 256, pattern: '^[A-Za-z0-9_-]+$', description: 'Exact upload identifier from the list; not a URL or local path.' } },
@@ -2530,7 +2514,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         annotations: HINT.generate,
         description: `Generate a video from a text prompt using ByteDance Seedance (BytePlus ModelArk).
 
-Use when you need a clip that Veo's fixed 4/6/8-second grid cannot express — an odd length (2-30 seconds, any whole second), a 21:9 or 4:3 frame, or simply the cheapest possible shot: a silent 9:16 1080p 5-second clip costs about $0.24 on seedance-1-0-pro-fast, against $0.64 on veo-3.1-lite and $0.96 on veo-3.1-fast (Veo forces an 8-second bill at 1080p and always includes audio). Korean prompts are understood only by dreamina-seedance-2-5; every other model expects English.
+Use when you need a clip that Veo's fixed 4/6/8-second grid cannot express — an odd length (2-30 seconds, any whole second), a 21:9 or 4:3 frame, or a silent shot billed for the requested duration. Korean prompts are understood only by dreamina-seedance-2-5; every other model expects English.
 Do NOT use when you need Veo's native dialogue audio quality or its +7s extension of an existing clip — veo_text2video and veo_extension keep those. When a source visual already exists use seedance_img2video, and for subject consistency from photos use seedance_reference.
 Model choice drives both price and limits; read the model parameter before overriding the default. Generation is asynchronous and typically takes 1-6 minutes.
 
@@ -2538,9 +2522,6 @@ Returns: a text block with the saved .mp4 file path, model, ratio, resolution, d
         inputSchema: {
             type: 'object',
             properties: {
-                portal: { type: 'object', description: 'Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.', properties: {
-                        episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; use this when the shot has an ID.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' }, previzFile: { type: 'string', description: 'Required on video calls; episode-relative or absolute previz mp4.' },
-                    }, required: ['episodeDir'] },
                 prompt: {
                     type: 'string',
                     description: 'Video description. Vendor formula: Subject + Movement + Environment + Camera movement + Aesthetic description + Sound. Write camera as a span, not a verb — "starting frame composition + movement + movement amplitude + ending frame composition" (combos the docs name: Hitchcock = dolly-in/out + zoom-out/in, bullet time = time slowdown + surround). Shot size follows the example word order, "Close-up of the man on the left". Do NOT write timecodes such as "0-3 seconds" — the vendor states precise-timing support is unstable and forcing it degrades the result; cut timing in the edit instead, and write an in-clip state change in words ("in under half a second"). Multi-cut in one call is supported via "Shot 1: ... Shot 2: ..." or "The shot cuts to ..." — open on the wide so the later cuts inherit one floor plan, time each cut by a dialogue or action beat, and give each its own shot size. There is no negativePrompt parameter on this engine: an unwanted element is designed out of the sentence, never forbidden in it, and what must hold goes into a closing positive-locks paragraph ("the lantern stays lit in every cut; only two people ever appear") — the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative. Prompt body must be English or Chinese (Korean only on dreamina-seedance-2-5-260628) — Korean dialogue still works inside quotes on 1.5-pro, which lip-syncs it.',
@@ -2584,9 +2565,6 @@ Returns: a text block with the saved .mp4 file path, source/last frame image pat
         inputSchema: {
             type: 'object',
             properties: {
-                portal: { type: 'object', description: 'Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.', properties: {
-                        episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; use this when the shot has an ID.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' }, previzFile: { type: 'string', description: 'Required on video calls; episode-relative or absolute previz mp4.' },
-                    }, required: ['episodeDir'] },
                 prompt: {
                     type: 'string',
                     description: 'Identity words stay, layout words go — the Seedance image lane is not motion-only (that is Veo\'s rule). Reuse the source image prompt\'s identity words (who and what the subject is), drop the composition words (where things sit — the frame already holds that), add the motion, write camera as a span ("starting frame composition + movement + ending frame composition"), and CLOSE WITH A CONSISTENCY LOCK: "the subject stays exactly consistent with the input frame; appearance, proportions and materials hold; no unrelated elements appear". Re-describe the layout, facing or lighting and the model redesigns the scene. Do NOT write timecodes such as "0-3 seconds" (vendor: precise-timing support is unstable) — an in-clip state change goes in words ("in under half a second"), and the length lives in durationSeconds. English or Chinese only (Korean on dreamina-seedance-2-5 alone, and inside dialogue quotes on 1.5-pro). There is no negativePrompt parameter on this engine: an unwanted element is designed out of the sentence and pinned by the lock, never forbidden in it — the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative.',
@@ -2641,12 +2619,9 @@ Returns: a text block with the saved .mp4 file path, reference image, video and 
         inputSchema: {
             type: 'object',
             properties: {
-                portal: { type: 'object', description: 'Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.', properties: {
-                        episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; use this when the shot has an ID.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' }, previzFile: { type: 'string', description: 'Required on video calls; episode-relative or absolute previz mp4.' },
-                    }, required: ['episodeDir'] },
                 prompt: {
                     type: 'string',
-                    description: 'Scene and subject interactions. The 2.x advanced formula: precise subject + action details + scene/environment + lighting & color tone + camera movement + visual style + image quality + constraints. For multi-cut, write a "Shot 1 / Shot 2 / Shot 3" storyboard and order each shot as camera movement -> subject action and expression -> position change -> audio; open on the wide so the later cuts inherit one floor plan, and time each cut by an action beat. Do NOT put timecodes on the shots — the vendor states precise-timing support is unstable (dreamina-seedance-2-5-260628 alone takes integer-second forms). Close with the constraints slot as a POSITIVE-LOCKS paragraph — what holds in every frame, said positively, with each reference given its scope ("@ocean_location controls water and sky only"; "the lantern stays lit in every cut") — because this engine has no negativePrompt parameter; the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative. English or Chinese only (Korean on dreamina-seedance-2-5-260628 alone; on other models Korean belongs inside dialogue quotes). Unwanted subtitles cannot be fully blocked at 9:16: the vendor notes portrait output hallucinates burned-in text noticeably more often than landscape, so inspect the frames.',
+                    description: 'Scene and subject interactions. The 2.x advanced formula: precise subject + action details + scene/environment + lighting & color tone + camera movement + visual style + image quality + constraints. For multi-cut, write a "Shot 1 / Shot 2 / Shot 3" storyboard and order each shot as camera movement -> subject action and expression -> position change -> audio; open on the wide so the later cuts inherit one floor plan, and time each cut by an action beat. Do NOT put timecodes on the shots — the vendor states precise-timing support is unstable (dreamina-seedance-2-5-260628 alone takes integer-second forms). Close with the constraints slot as a POSITIVE-LOCKS paragraph — what holds in every frame, said positively, with each reference given its scope ("@ocean_location controls water and sky only"; "the lantern stays lit in every cut") — because this engine has no negativePrompt parameter; the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative. English or Chinese only (Korean on dreamina-seedance-2-5-260628 alone; for audio-conditioned speech, use the supplied audio and omit literal dialogue quotes from the visual prompt). Unwanted subtitles cannot be fully blocked at 9:16: the vendor notes portrait output hallucinates burned-in text noticeably more often than landscape, so inspect the frames.',
                 },
                 referenceImagePaths: {
                     type: 'array',
@@ -3270,9 +3245,6 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
         inputSchema: {
             type: 'object',
             properties: {
-                portal: { type: 'object', description: 'Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.', properties: {
-                        episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; use this when the shot has an ID.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' }, previzFile: { type: 'string', description: 'Required on video calls; episode-relative or absolute previz mp4.' },
-                    }, required: ['episodeDir'] },
                 blendPath: { type: 'string', description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
                 outputPath: { type: 'string', description: 'Directory for the mp4 and stills (default: <blend dir>/previz).' },
                 filename: {
@@ -3313,22 +3285,22 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
     },
     // ── Speech synthesis (Google Gemini TTS — ported from the fect-mcp tts module) ─────────
     {
-        name: 'tts_review_final', title: 'Review assembled speech', annotations: HINT.generate,
-        description: 'Listen to the actual final WAV or video, including all sentence transitions and the music mix. Requires accuracy >=98 and pronunciation, naturalness, clarity and continuity >=95, with no defects. Writes a hash-bound .speech-quality.json proof. The blind-transcription (STT) check and its CER <=2% gate do not run unless transcriptCheck carries a user request for them (owner directive 2026-10-04). One paid Gemini review call per payload (two with transcriptCheck); no synthesis. Review outages hold delivery. Supply the complete spoken text including native clip speech. Supports up to 30 minutes and 12,000 script characters, with a lossless FLAC review payload under 14 MiB. Payloads over 14 MiB require final-timeline sentence segments; the tool reviews lossless chapters and every cross-chapter sentence join, then binds all coverage to the complete media. Budget one review per chapter and boundary (two with transcriptCheck).',
+        name: 'tts_review_final', title: 'Review assembled speech', annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+        description: "Legacy alias of host_review prepare for the assembled episode audio (mediaPath of the final media, the full expectedText, optional segments): returns local evidence for the host LLM to listen to end to end. Use only when the user asks for a final listening review and an existing plan already calls tts_review_final; new reviews use host_review. Returns status=not_reviewed, score=null, mediaPath, SHA256, duration in seconds, rubric, nextAction and the segments as sent. It does not judge, upload or call an external evaluator, and assembly never waits on it. Do NOT use for synthesis.",
         inputSchema: { type: 'object', additionalProperties: false, properties: {
                 mediaPath: { type: 'string', description: 'Absolute path of the final media that ships.' },
-                segments: { type: 'array', minItems: 1, maxItems: 1000, description: 'Required when the final FLAC exceeds 14 MiB. Complete spoken sentences in playback order on the final timeline. First starts at 0; each extends to the next start (last to audio EOF), at most 60 seconds each. Joined text must equal expectedText. The tool groups them into bounded chapters and reviews every chapter boundary.', items: { type: 'object', additionalProperties: false, required: ['startSeconds', 'expectedText'], properties: { startSeconds: { type: 'number', minimum: 0, description: 'Start of this complete sentence on the final audio timeline; the first is 0.' }, expectedText: { type: 'string', minLength: 1, maxLength: 1000, description: 'Complete spoken sentence, including intended phonetic number/name spelling.' } } } },
+                segments: { type: 'array', minItems: 1, maxItems: 1000, description: 'Optional: complete spoken sentences in playback order on the final timeline. First starts at 0; each extends to the next start (last to audio EOF), at most 60 seconds each. Joined text must equal expectedText. Returned with the evidence so the host review can check chapter boundaries of a long episode.', items: { type: 'object', additionalProperties: false, required: ['startSeconds', 'expectedText'], properties: { startSeconds: { type: 'number', minimum: 0, description: 'Start of this complete sentence on the final audio timeline; the first is 0.' }, expectedText: { type: 'string', minLength: 1, maxLength: 1000, description: 'Complete spoken sentence, including intended phonetic number/name spelling.' } } } },
                 expectedText: { description: 'Complete spoken text, including speech in clips and the outro.', type: 'string', minLength: 1, maxLength: 12000 },
                 language: { description: 'Spoken language, for example Korean.', type: 'string', minLength: 2, maxLength: 80 },
                 delivery: { description: 'Intended delivery and continuity across the whole episode.', type: 'string', minLength: 1, maxLength: 2000 },
-                transcriptCheck: { type: 'object', additionalProperties: false, required: ['requestedBy', 'reason'], description: 'Present only when the user asked for the blind-transcription (STT) check; omitted, that check does not run and only the listening review judges the take. Carries who asked and their actual words — there is no environment default.', properties: {
+                transcriptCheck: { type: 'object', additionalProperties: false, required: ['requestedBy', 'reason'], description: 'Present only when the user asked for a blind-transcription (STT) check; it is recorded in the evidence brief for the host review. No transcription runs automatically. Carries who asked and their actual words — there is no environment default.', properties: {
                         requestedBy: { type: 'string', minLength: 1, maxLength: 200, description: 'Who asked for the dictation check, e.g. "user".' }, reason: { type: 'string', minLength: 10, maxLength: 1000, description: 'The actual request that turned it on, quoted or referenced.' },
                     } },
             }, required: ['mediaPath', 'expectedText', 'language', 'delivery'] },
     },
     {
         name: 'tts_elevenlabs_dictionary', title: 'Create pronunciation dictionary', annotations: HINT.generate,
-        description: 'Create a versioned ElevenLabs pronunciation dictionary. multilingual_v2 uses aliases; non-English IPA requires eleven_v3. Use for Korean proper names without inserting spaces or deleting the name from the script. Returns pronunciationDictionaryId and versionId to pin in generation.pronunciationDictionaryLocators. Keep aliases faithful to the approved pronunciation; verify actual audio. Requires ElevenLabs dictionary write permission; never changes the voice or existing dictionaries.',
+        description: 'Create a versioned ElevenLabs pronunciation dictionary. v4 supports versioned pronunciation dictionaries. Use for Korean proper names without inserting spaces or deleting the name from the script. Returns pronunciationDictionaryId and versionId to pin in generation.pronunciationDictionaryLocators. Keep aliases faithful to the approved pronunciation; verify actual audio. Requires ElevenLabs dictionary write permission; never changes the voice or existing dictionaries.',
         inputSchema: { type: 'object', additionalProperties: false, properties: {
                 name: { description: 'Descriptive name of the new dictionary.', type: 'string', minLength: 1, maxLength: 200 },
                 rules: { description: 'Approved source spelling and intended spoken aliases.', type: 'array', minItems: 1, maxItems: 100, items: { type: 'object', additionalProperties: false, properties: {
@@ -3341,19 +3313,12 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
     },
     {
         name: 'tts_generate_checked',
-        title: 'Generate and review narration',
+        title: 'Generate narration (raw take, not_reviewed)',
         annotations: HINT.generate,
-        description: `Generate one scene with the pinned TTS engine, review the actual WAV, and regenerate failed takes up to maxAttempts (1–3, including the first take).
-Use for every generated narration scene in produce/autoproduce. Pass the existing generator's arguments in generation, the complete spoken expectedText (phonetic spelling; no acting tags or speaker labels), language, and the profile's intended delivery. Voice and generation settings stay unchanged across attempts; the episode seed stays fixed on every retake (vendor determinism is best-effort). An entire scene is one call; never split it into sentence calls.
-Every single-voice take has its sentences re-spaced before review: a fixed sentencePause of digital silence between sentences (stretched up to 1.0s where a subtitle cue would read faster than 6.0 chars/s after playbackSpeed), a 0.14s lead, speech samples copied as generated (the 12 ms fades stay on the natural gap). tts_elevenlabs_generate is fetched with timestamps and spaced from its own alignment; tts_local_generate, tts_generate and mlx_tts_generate are aligned by the local forced aligner (mlx-qwen3-asr --timestamps) first, so a multi-sentence scene on any engine ships with the same pauses. Pass segments (the scene's narration[].tts list) so the pauses land on the builder's segment boundaries; the wrapper writes <wav>.sentences.json and the .alignment.json for the shipped audio. Generate consecutive sentences in one call whenever they belong to one breath — the engine reads them as one utterance, where one call per sentence restarts the voice at every sentence.
-Checks signal/duration, then ${REVIEW_MODEL} listening scores: accuracy >=98, pronunciation/naturalness/clarity >=95, confidence >=0.9, no audible defects. The blind-transcription (STT) check and its CER <=2% gate do not run unless transcriptCheck carries a user request for them (owner directive 2026-10-04); the proof then records transcript: null. Returns a hash-bound .wav.quality.json proof required by the builder. Missing keys, unavailable reviewer or malformed responses hold production (unverified); exhausted attempts return fail, and that finding goes to the user as a warning they can accept for the current take (skills/produce/references/tts-hitl.md). Scores are operational thresholds, not a guarantee of human judgement.
-Requires ffmpeg and GEMINI_API_KEY even for local synthesis. One paid audio-review call per acoustically valid take (two with transcriptCheck), plus the selected generator's costs. Record the retry-inclusive allowance before calling; review tokens are logged as unpriced until reconciled with provider billing. Do not call again to reset an exhausted attempt budget. Do not use for recordings or native clip speech; retain their final listening QA. Do not change engines/voices or lower thresholds to obtain PASS.`,
+        description: "Generate one speech take with provenance and no automatic listening, scoring or retakes. Use for a legacy checked-TTS call; returns the generation result (file, speaker, voice settings, timing), status=not_reviewed and a host-review next action. Do NOT use for evaluation alone \u2014 use host_review. Paid synthesis uses the selected generator and existing authorization; no evaluation API is called.",
         inputSchema: {
             type: 'object', additionalProperties: false,
             properties: {
-                portal: { type: 'object', description: 'Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.', properties: {
-                        episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; use this when the shot has an ID.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' }, previzFile: { type: 'string', description: 'Required on video calls; episode-relative or absolute previz mp4.' },
-                    }, required: ['episodeDir'] },
                 generator: { type: 'string', enum: [...GENERATORS], description: 'Existing synthesis tool matching profile §2.' },
                 generation: { type: 'object', additionalProperties: true, description: 'Arguments accepted by generator, including its text/script/inputs and pinned voice settings. Outer outputPath and filename control the output.' },
                 expectedText: { type: 'string', minLength: 1, maxLength: 4000, description: 'All spoken narration for this scene, matching narration[].tts. Write numbers as spoken words.' },
@@ -3361,18 +3326,18 @@ Requires ffmpeg and GEMINI_API_KEY even for local synthesis. One paid audio-revi
                 delivery: { type: 'string', minLength: 1, maxLength: 2000, description: 'Intended natural delivery from profile §2, including tone and pacing.' },
                 outputPath: { type: 'string', description: 'Episode PCM directory, normally .work/pcm.' },
                 filename: { type: 'string', description: 'Scene WAV basename, e.g. c0.wav.' },
-                maxAttempts: { type: 'integer', minimum: 1, maximum: 3, default: 3, description: 'First generation plus retakes; set within the approved allowance.' },
-                rejectTake: { type: 'object', additionalProperties: false, required: ['audioSha256', 'reason'], description: 'When final listening finds a defect in a previously checked take, reject that exact WAV and use only remaining attempts. Never waives any check.', properties: {
-                        audioSha256: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'SHA-256 of the current checked WAV, as recorded in its quality proof.' }, reason: { type: 'string', minLength: 10, maxLength: 1000, description: 'Actual time, word or sound defect observed during listening.' },
+                maxAttempts: { type: 'integer', minimum: 1, maximum: 3, default: 3, description: 'Legacy allowance (at most 3). The tool generates once; no automatic retake follows.' },
+                rejectTake: { type: 'object', additionalProperties: false, required: ['audioSha256', 'reason'], description: 'Legacy record of an earlier take the user rejected after listening: which WAV and why. It does not trigger a retake; request a new take explicitly.', properties: {
+                        audioSha256: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'SHA-256 of the rejected WAV, as recorded in its provenance file.' }, reason: { type: 'string', minLength: 10, maxLength: 1000, description: 'Actual time, word or sound defect the user observed.' },
                     } },
-                episode: { type: 'object', additionalProperties: false, description: 'Required for ElevenLabs assembly. Ordered complete scene texts, current index and one fixed seed. Derives previousText/nextText on supported models; v3 omits them and relies on final listening for scene continuity.', properties: {
+                episode: { type: 'object', additionalProperties: false, description: 'Required for ElevenLabs assembly. Ordered complete scene texts, current index and one fixed seed. Derives v4 previousText/nextText, bounded to 100 characters per side. A fixed seed is best effort; nothing listens automatically.', properties: {
                         texts: { description: 'Complete scene texts in playback order.', type: 'array', minItems: 1, maxItems: 80, items: { type: 'string', minLength: 1, maxLength: 4000 } },
                         index: { description: 'Index of this scene in texts, starting at zero.', type: 'integer', minimum: 0 }, seed: { description: 'One seed fixed across the episode and all retakes.', type: 'integer', minimum: 0, maximum: 4294967295 },
                     }, required: ['texts', 'index', 'seed'] },
                 segments: { type: 'array', minItems: 1, maxItems: 80, items: { type: 'string', minLength: 1, maxLength: 1000 }, description: 'The scene\'s narration[].tts sentences in order (joined they read as expectedText). Every single-voice take gets a fixed pause at each segment boundary — the boundary the builder\'s reveals and subtitle cues use. Without it, pauses go after sentence-final punctuation.' },
                 sentencePause: { type: 'number', minimum: 0.25, maximum: 1.5, default: 0.5, description: 'Silence between sentences in the take\'s own timeline, seconds. The builder detects pauses from 0.16s and fits a 0.35s reveal fade inside one.' },
                 playbackSpeed: { type: 'number', minimum: 0.5, maximum: 3, default: 1, description: 'ElevenLabs requires 1: use generation.speed for the requested rate and keep assembly at 1. Other engines require an explicit user request in outputPath/speed-authorization.json for any non-1 factor; this controls subtitle pause sizing.' },
-                transcriptCheck: { type: 'object', additionalProperties: false, required: ['requestedBy', 'reason'], description: 'Present only when the user asked for the blind-transcription (STT) check; omitted, that check does not run and only the listening review judges the take. Carries who asked and their actual words — there is no environment default.', properties: {
+                transcriptCheck: { type: 'object', additionalProperties: false, required: ['requestedBy', 'reason'], description: 'Present only when the user asked for a blind-transcription (STT) check; it is recorded for the host review. No transcription or listening runs automatically. Carries who asked and their actual words — there is no environment default.', properties: {
                         requestedBy: { type: 'string', minLength: 1, maxLength: 200, description: 'Who asked for the dictation check, e.g. "user".' }, reason: { type: 'string', minLength: 10, maxLength: 1000, description: 'The actual request that turned it on, quoted or referenced.' },
                     } },
             },
@@ -3387,7 +3352,7 @@ Requires ffmpeg and GEMINI_API_KEY even for local synthesis. One paid audio-revi
 
 Use when the user asks to read text aloud, narrate, voice-over, or convert text to speech/audio (음성 변환, TTS, 나레이션). 30 voices; 90+ languages are auto-detected from the input text itself (there is no language parameter) — Korean, English, Japanese, Vietnamese and both Simplified (zh-CN) and Traditional (zh-TW) Chinese are all supported. Control delivery with stylePrompt (e.g. "Say cheerfully", "In a spooky whisper").
 Do NOT use for two-person dialogue scripts — use tts_multi_speaker. Unsure which voice fits? Call tts_list_voices first.
-Keep voiceName/stylePrompt/temperature byte-identical across takes of one video — the model re-interprets any wording change and the narrator's voice drifts between cuts. If a script fails repeatedly (the server already retries 3x), switch model to gemini-2.5-pro-preview-tts rather than rewording it.
+Keep the selected model, voiceName and pinned synthesis settings stable. Scene emotion and delivery belong in each line's stylePrompt, resolved by speech_manage plan_audio; do not force one cheerful baseline onto every scene. Reuse that planned direction across retakes unless revising the acting. After repeated failures, report them; do not silently switch the episode's selected model.
 
 Returns: a text block with the saved .wav file path, voice name, and text length.`,
         inputSchema: {
@@ -3424,8 +3389,8 @@ Returns: a text block with the saved .wav file path, voice name, and text length
         description: `Generate acted single-voice or two-speaker speech with Gemini 3.8 TTS through the Interactions API.
 
 Use for emotional acting, per-line delivery changes, vocal events, pauses, and two-person dialogue. Put lasting delivery in each turn's style field. Put point events directly in text with the documented English angle-bracket tags, such as <laugh>, <sigh>, <cough>, <breath>, <short pause>, or <long pause>. For listener backchannels and overlapping speech in two-speaker mode, put pipe segments such as |oh really?| inside the active speaker's text. The text is read verbatim, so never put stage directions in it unless they are a supported tag.
-Single voice accepts a curated name, an extended-library voice, or a voice_ / voicekey_ identifier. Two-speaker mode requires exactly two configured curated voices and every turn must name one configured speaker. Gemini 3.8 supports at most two speakers in one request.
-This is a supporting engine for acted cuts and two-person scenes. The Pundago narration default remains ElevenLabs L4az9Gb378GIycFl2nAB on eleven_multilingual_v2 at speed 1.0. Do not replace that channel default with this tool.
+For a requested age or identity change, create/remix the voice with tts_voice_design first; changing turn style with the same ID is not an identity correction. Single voice accepts a curated name, an extended-library voice, or a voice_ / voicekey_ identifier. Two-speaker mode requires exactly two configured curated voices and every turn must name one configured speaker. Gemini 3.8 supports at most two speakers in one request.
+This is a supporting engine for acted cuts and two-person scenes. The saved speech model stays authoritative; never replace an existing Gemini or ElevenLabs v4 selection automatically.
 
 Returns: a text block with the saved 24kHz mono RIFF WAV path, model, voice or speaker assignments, turn count, and total text length.`,
         inputSchema: {
@@ -3540,283 +3505,66 @@ Returns: a text block with the saved .wav file path, speaker/voice assignments, 
         },
     },
     {
-        name: 'tts_local_generate',
-        title: 'Speech synthesis (local · Supertonic)',
-        annotations: HINT.generateLocal,
-        description: `Convert text to speech **on this machine** using Supertonic 3 — no API key, no network, no quota, no per-character cost.
-
-Use for narration bodies and any bulk voice-over: scene narration in the produce pipeline, long scripts, and repeated takes where API cost or quota would add up. Measured at 6.3x realtime on CPU alone. 10 built-in voices (F1–F5 female, M1–M5 male) across 31 languages; output is 44.1kHz mono WAV and the response includes the exact audio duration, so no ffprobe round-trip is needed for length checks.
-Do NOT use when the line needs acted delivery — there is no style/emotion parameter here, so intro lines, character dialogue, and anything with a stylePrompt belong to tts_generate (Gemini). Do NOT mix both engines inside one video without resampling: this returns 44.1kHz and tts_generate returns 24kHz.
-Requires a local Python runtime with the \`supertonic\` package (pip install supertonic); set SUPERTONIC_PYTHON if it lives in a virtualenv. The first call downloads 385MB of weights to ~/.cache/supertonic3. Model weights are OpenRAIL-M licensed (code is MIT) — commercial use is permitted with use-based restrictions, so review the terms before shipping generated audio.
-
-Returns: a text block with the saved .wav path, voice, language, audio duration, sample rate, and synthesis time.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                text: {
-                    type: 'string',
-                    description: `The text to convert to speech (max ${MAX_SUPERTONIC_INPUT_CHARS} characters — split longer scripts by scene)`,
-                    maxLength: MAX_SUPERTONIC_INPUT_CHARS,
-                },
-                voice: {
-                    type: 'string',
-                    description: `Voice style (default: "${DEFAULT_SUPERTONIC_VOICE}"). F1–F5 are female, M1–M5 male; the vendor publishes no personality labels beyond that. Keep one voice per channel — see data/<slug>/profile.md.`,
-                    enum: [...SUPERTONIC_VOICE_NAMES],
-                    default: DEFAULT_SUPERTONIC_VOICE,
-                },
-                lang: {
-                    type: 'string',
-                    description: `Language code (default: "${DEFAULT_SUPERTONIC_LANGUAGE}"). Unlike tts_generate this is NOT auto-detected — set it, because the code also sets the sentence-group cap (120 characters for Korean, 300 otherwise). Use "na" only for text whose language is unsupported.`,
-                    enum: [...SUPERTONIC_LANGUAGES],
-                    default: DEFAULT_SUPERTONIC_LANGUAGE,
-                },
-                speed: {
-                    type: 'number',
-                    description: `Speech speed 0.7–${MAX_SUPERTONIC_SPEED} (default: ${DEFAULT_SUPERTONIC_SPEED}). Non-1 requires an explicit user request in outputPath/speed-authorization.json (generation scope and exact factor); a channel profile alone is not approval. Keep it identical across every cut of one video. Above 1.2 the model drops syllables (measured), so a faster delivery comes from the produce playback speed pass, not from this value.`,
-                    minimum: 0.7,
-                    maximum: MAX_SUPERTONIC_SPEED,
-                    default: DEFAULT_SUPERTONIC_SPEED,
-                },
-                steps: {
-                    type: 'number',
-                    description: `Quality steps 1–100 (default: ${DEFAULT_SUPERTONIC_STEPS}). Higher is slower with diminishing returns; the default is the vendor's recommended setting.`,
-                    minimum: 1,
-                    maximum: 100,
-                    default: DEFAULT_SUPERTONIC_STEPS,
-                },
-                chunkPause: {
-                    type: 'number',
-                    description: `Silence between sentence groups, seconds (default: ${DEFAULT_SUPERTONIC_CHUNK_PAUSE}). Sentences are grouped up to the language cap and each group is read as one utterance; the model's own 0.4–0.5s of leading and trailing quiet is trimmed off every group, so a join is this pause plus a short margin — not the 1.3s hole the package's chunking left (measured 2026-09-15). The checked lane pads every sentence gap to its sentencePause afterwards.`,
-                    minimum: 0,
-                    maximum: 1.5,
-                    default: DEFAULT_SUPERTONIC_CHUNK_PAUSE,
-                },
-                outputPath: {
-                    type: 'string',
-                    description: 'Directory path to save the audio file (default: current working directory)',
-                },
-                filename: {
-                    type: 'string',
-                    description: 'Filename for the audio file (default: supertonic_<timestamp>.wav)',
-                },
-            },
-            required: ['text'],
-        },
+        name: 'tts_voice_design', title: 'Design a persistent Gemini character voice', annotations: HINT.generate,
+        description: 'Create a paid stored Gemini voice from character age, vocal gender, timbre and accent using POST /v1beta/voices. Use when casting a custom character or changing perceived age/identity; turn style only controls delivery. Optional baseVoice remixes an existing voice. Returns voiceId, local WAV preview, hash, usage and receipt; use that ID with tts_gemini_38. Does not edit character sheets or episodes and does not certify age by listening. Requires GEMINI_API_KEY and a new outputPath per creation; never blindly retry an uncertain call. For catalog discovery use tts_list_voices source:library with filters; for ordinary lines use speech_manage plan_audio.',
+        inputSchema: { type: 'object', additionalProperties: false, properties: {
+                model: { type: 'string', enum: ['gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts'], description: 'Explicit voice creation model.' },
+                displayName: { type: 'string', minLength: 1, maxLength: 100, description: 'Distinct name for later catalog reconciliation.' },
+                prompt: { type: 'string', minLength: 1, maxLength: 4000, description: 'Stable voice identity: perceived age, timbre, accent and baseline delivery; relative changes if baseVoice is supplied.' },
+                languageCode: { type: 'string', minLength: 1, description: 'BCP-47 primary language, e.g. ko-KR.' },
+                gender: { type: 'string', enum: ['male', 'female', 'neutral'], description: 'Perceived vocal gender from character identity.' },
+                baseVoice: { type: 'string', minLength: 1, maxLength: 300, description: 'Optional existing prebuilt voice name or accessible custom voice ID to remix.' },
+                outputPath: { type: 'string', minLength: 1, description: 'New local directory for voice-design.json and voice-preview.wav. Existing receipt prevents duplicate creation.' }
+            }, required: ['model', 'displayName', 'prompt', 'languageCode', 'gender', 'outputPath'] }
     },
     {
-        name: 'mlx_tts_generate',
-        title: 'Speech synthesis (local · MLX Core)',
-        annotations: HINT.generateLocal,
-        description: `Convert text to speech on this machine via MLX Core / mlx-serve POST /v1/audio/speech. Returns raw WAV bytes (this tool does not decode the body as text). No vendor bill. This plugin never launches the app.
-
-Use as an optional local voice when MLX Core is running with an audio model. The OpenAI-compatible field is input (not text). Optional voice name or refAudioPath for a reference clip. Max ${MAX_MLX_TTS_CHARS} characters.
-Do NOT use this as a silent fallback for the channel profile §2 engine — if Supertonic, Gemini, or ElevenLabs is pinned, a missing runtime stops the run and asks the user. Mixing sample rates with tts_local_generate (44.1kHz) or tts_generate (24kHz) on one timeline needs a resample. Do NOT treat this as the default narration path.
-Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve (or MLX_SERVE_URL). brew install --cask mlx-core if :11234 is down.
-
-Returns: a text block with the saved .wav path, model, and generation time.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                input: {
-                    type: 'string',
-                    description: `Text to speak (max ${MAX_MLX_TTS_CHARS} characters). OpenAI-compatible name: input, not text.`,
-                    maxLength: MAX_MLX_TTS_CHARS,
-                },
-                model: {
-                    type: 'string',
-                    description: 'mlx-serve model id. Omit to pick a ready model that advertises capability "audio".',
-                },
-                voice: {
-                    type: 'string',
-                    description: 'Optional voice name the loaded model advertises. Omit for the model default.',
-                },
-                refAudioPath: {
-                    type: 'string',
-                    description: 'Optional reference clip (absolute path, sent as base64) for voice cloning on models that support it.',
-                },
-                outputPath: {
-                    type: 'string',
-                    description: 'Directory path to save the audio (default: current working directory)',
-                },
-                filename: {
-                    type: 'string',
-                    description: 'Filename for the audio (default: mlx_tts_<timestamp>.wav)',
-                },
-            },
-            required: ['input'],
-        },
+        name: 'tts_list_voices', title: 'Gemini voice catalog', annotations: HINT.read,
+        description: 'List Gemini curated voices or query the live extended/custom voice library. source=curated returns the static 30-voice list without API usage. source=library queries GET /v1beta/voices with pageToken/limit and requires GEMINI_API_KEY. Supports languageCode, gender, pitch, persona and description search; preserve filters across pages. There is no numeric age filter: search description text or use tts_voice_design to create/remix an age-appropriate voice. Returns voice IDs and metadata; metadata age is not listening evidence. For ElevenLabs use tts_elevenlabs_voices. This tool does not synthesize audio.',
+        inputSchema: { type: 'object', additionalProperties: false, properties: {
+                source: { type: 'string', enum: ['curated', 'library'], default: 'curated', description: 'Static basic catalog or live voice library.' },
+                languageCode: { type: 'array', items: { type: 'string', minLength: 1 }, description: 'Library-only languageCode filter; multiple values match with OR.' },
+                regionCode: { type: 'array', items: { type: 'string', minLength: 1 }, description: 'Library-only regionCode filter; multiple values match with OR.' },
+                accent: { type: 'array', items: { type: 'string', minLength: 1 }, description: 'Library-only accent filter; multiple values match with OR.' },
+                persona: { type: 'array', items: { type: 'string', minLength: 1 }, description: 'Library-only persona filter; multiple values match with OR.' },
+                context: { type: 'array', items: { type: 'string', minLength: 1 }, description: 'Library-only context filter; multiple values match with OR.' },
+                gender: { type: 'array', items: { type: 'string', enum: ['male', 'female', 'neutral'] }, description: 'Library-only gender filter.' },
+                pitch: { type: 'array', items: { type: 'string', enum: ['low', 'medium', 'high'] }, description: 'Library-only pitch filter.' },
+                type: { type: 'array', items: { type: 'string', enum: ['prebuilt', 'prompted', 'replicated'] }, description: 'Library-only type filter.' },
+                search: { type: 'string', minLength: 1, description: 'Library-only case-insensitive substring search of name and description, at most 2048 UTF-8 bytes; not a numeric age range.' },
+                pageToken: { type: 'string', description: 'Next page token from a prior library response.' },
+                limit: { type: 'integer', minimum: 1, maximum: 100, default: 30, description: 'Maximum library voices per request.' }
+            } }
     },
     {
-        name: 'tts_list_voices',
-        title: 'TTS voice list',
-        annotations: HINT.local,
-        description: `List the built-in voices of the two static TTS engines — 30 Gemini voices with personality traits, plus the 10 local Supertonic voices — and point at the third lane.
-
-Use before tts_generate, tts_multi_speaker, or tts_local_generate when the user has not specified a voice, or asks what voices are available (목소리 종류). Read-only; makes no API call. ElevenLabs voices are account-specific and NOT listed here — call tts_elevenlabs_voices for those.
-Do NOT use to generate audio — use tts_generate (acted delivery) or tts_local_generate (narration, free). The list is static; one call per session is enough. When the channel profile (data/<slug>/profile.md) already fixes a voice, use that instead of picking a new one.
-
-Returns: a text list of the 30 Gemini voice names with one-line personality descriptions (e.g. "Kore — Firm"), followed by the 10 Supertonic voice IDs (F1–F5, M1–M5 — no personality labels are published for these), and a note on which of the three engines to pick.`,
-        inputSchema: {
-            type: 'object',
-            properties: {},
-            required: [],
-        },
-    },
-    // ── Speech synthesis (ElevenLabs — REST, xi-api-key) ─────────────────────────
-    {
-        name: 'tts_elevenlabs_generate',
-        title: 'Speech synthesis (ElevenLabs · single voice)',
-        annotations: HINT.generate,
-        description: `Convert text to single-voice speech with ElevenLabs — the paid third lane for cuts that need acted delivery, a specific cloned or library voice, or per-character timestamps.
-
-Use when the channel profile names engine \`elevenlabs\`, when a line needs inline acting on eleven_v3 (audio tags in the text: "[whispers] 이건 비밀인데요", "[laughs]", "[sarcastic]", "[sighs]" — more precise than a Gemini stylePrompt because the tag sits exactly where the delivery changes), when the voice must be a Voice Library / cloned voice, or when subtitles need exact timing (timestamps: true). Korean is supported on every model here, but quality tracks the VOICE more than the model — an English-trained premade voice reads Korean with an accent; pick a Korean voice from the Voice Library (paid plans) and pin it in profile.md.
-Do NOT use for narration bodies by default — tts_local_generate is free and tts_generate is 1.3–2.6x cheaper; the API rate is $0.10 per 1,000 characters on multilingual_v2 and v3, $0.05 on flash_v2_5 and v3_conversational (the same on every plan; each plan includes a monthly character allowance). Do NOT use for a multi-voice scene — use tts_elevenlabs_dialogue. Do NOT switch voiceId, model, stability or seed between cuts of one video. Free-tier output is non-commercial and needs attribution — check the plan before publishing.
-Per-request caps: ${ELEVENLABS_MODEL_CHAR_CAPS.eleven_v3} characters on eleven_v3, ${ELEVENLABS_MODEL_CHAR_CAPS.eleven_multilingual_v2} on multilingual_v2, ${ELEVENLABS_MODEL_CHAR_CAPS.eleven_flash_v2_5} on flash_v2_5 — one scene per call. previousText/nextText carry the neighboring sentences so a re-rendered cut matches its neighbors' tone. The server retries 429/5xx 3x; a 403 output_format_not_allowed means the plan lacks that format — use wav_24000.
-
-Returns: a text block with the saved audio path (WAV by default — the builder needs RIFF), model, voice, format, duration, the vendor's metered character cost (the character-cost header, the billing quantity), request id, and the alignment sidecar path when timestamps were requested.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                text: {
-                    type: 'string',
-                    description: `The text to convert to speech (max ${MAX_ELEVENLABS_INPUT_CHARS} characters — ${ELEVENLABS_MODEL_CHAR_CAPS.eleven_v3} on eleven_v3; split the script by scene). On eleven_v3, square-bracket audio tags inside the text direct the delivery.`,
-                    maxLength: MAX_ELEVENLABS_INPUT_CHARS,
-                },
+        name: 'tts_elevenlabs_generate', title: 'ElevenLabs v4 single voice', annotations: HINT.generate,
+        description: 'Create a paid single-voice take with eleven_v4 through Text to Dialogue. Use for narration, voiceover or a character line. Put delivery cues in [audio tags] and pronunciation in /IPA/. Returns a local audio path (RIFF WAV by default), available usage/request metadata, warnings and an optional alignment sidecar. Do NOT use to discover voices — use tts_elevenlabs_voices; use tts_elevenlabs_dialogue for multiple voices. Preserve the pinned voice. Free-tier output is non-commercial. No automatic review or model fallback.',
+        inputSchema: { type: 'object', additionalProperties: false, properties: {
+                text: { type: 'string', minLength: 1, maxLength: MAX_ELEVENLABS_INPUT_CHARS, description: 'Spoken text, e.g. "[whispering] Hello."; /IPA/ is supported, SSML is not. Model cap 10000; Dialogue recommends <=2000 total characters to avoid truncation or validation failures. Longer accepted inputs return a warning.' },
                 voiceId: ELEVENLABS_VOICE_ID_PROPERTY,
-                model: {
-                    type: 'string',
-                    description: `TTS model (default: "${DEFAULT_ELEVENLABS_MODEL}" — the vendor default, stable, 10k chars, $0.10/1K). eleven_v3: audio tags and the most expressive read, 5k chars, slow (not real-time), $0.10/1K. eleven_v3_conversational: the v3 family tuned for realtime at half price ($0.05/1K), 5k-char cap applied here; accepted by this tool but not by dialogue. eleven_flash_v2_5: fastest, $0.05/1K, 40k chars, honors languageCode, reads digits raw unless applyTextNormalization is "on". eleven_turbo_v2_5 is deprecated in favor of flash_v2_5 and kept only for existing profiles.`,
-                    enum: [...ELEVENLABS_MODELS],
-                    default: DEFAULT_ELEVENLABS_MODEL,
-                },
-                languageCode: ELEVENLABS_LANGUAGE_CODE_PROPERTY,
-                stability: ELEVENLABS_STABILITY_PROPERTY,
-                similarityBoost: {
-                    type: 'number',
-                    description: 'How closely to track the original voice, 0–1 (vendor default 0.75). Very high values can reproduce artifacts from the voice\'s training sample.',
-                    minimum: 0,
-                    maximum: 1,
-                },
-                style: {
-                    type: 'number',
-                    description: 'Style exaggeration 0–1 (vendor default 0). Raising it adds expressiveness and latency; 0 is the steady choice for narration. multilingual_v2 only — the per-model settings schemas give eleven_v3 {stability} and flash_v2_5 {stability, similarity_boost, speed}, so it is ignored there (use audio tags on v3).',
-                    minimum: 0,
-                    maximum: 1,
-                },
-                speed: {
-                    type: 'number',
-                    description: 'Speaking rate 0.7–1.2 (default 1.0). Non-1 requires an explicit user request in outputPath/speed-authorization.json (generation scope and exact factor); a channel profile alone is not approval. Keep it identical across every cut.',
-                    minimum: 0.7,
-                    maximum: 1.2,
-                },
-                useSpeakerBoost: {
-                    type: 'boolean',
-                    description: 'Boost similarity to the original speaker (vendor default true). Adds a little latency. multilingual_v2 only — ignored on eleven_v3 and flash_v2_5.',
-                },
-                seed: ELEVENLABS_SEED_PROPERTY,
-                pronunciationDictionaryLocators: { type: 'array', minItems: 1, maxItems: 3, description: 'Pinned dictionary IDs and versions from tts_elevenlabs_dictionary. Applied in order.', items: {
-                        type: 'object', additionalProperties: false, properties: { pronunciationDictionaryId: { description: 'Dictionary ID returned by the create tool.', type: 'string', minLength: 1 }, versionId: { description: 'Pinned dictionary version ID.', type: 'string', minLength: 1 } }, required: ['pronunciationDictionaryId', 'versionId'],
-                    } },
-                previousText: {
-                    type: 'string',
-                    description: 'The sentence(s) spoken right before this text in the finished audio — not synthesized, only used so the take continues the neighbor\'s tone. Use when re-rendering one cut of a scene. Not accepted by eleven_v3 (the vendor returns 400; the schema rejects it first).',
-                },
-                nextText: {
-                    type: 'string',
-                    description: 'The sentence(s) spoken right after this text — same purpose as previousText.',
-                },
-                applyTextNormalization: ELEVENLABS_NORMALIZATION_PROPERTY,
-                outputFormat: ELEVENLABS_OUTPUT_FORMAT_PROPERTY,
-                timestamps: ELEVENLABS_TIMESTAMPS_PROPERTY,
-                outputPath: {
-                    type: 'string',
-                    description: 'Directory path to save the audio file (default: current working directory)',
-                },
-                filename: {
-                    type: 'string',
-                    description: 'Filename for the audio file (default: elevenlabs_<timestamp>.wav — .mp3 when outputFormat is mp3_*). The extension must match outputFormat.',
-                },
-            },
-            required: ['text', 'voiceId'],
-        },
+                ...ELEVENLABS_V4_PROPERTIES
+            }, required: ['text', 'voiceId'] }
     },
     {
-        name: 'tts_elevenlabs_dialogue',
-        title: 'Speech synthesis (ElevenLabs · multi-voice dialogue)',
-        annotations: HINT.generate,
-        description: `Voice a multi-speaker scene in ONE request with ElevenLabs text-to-dialogue (eleven_v3, up to ${ELEVENLABS_DIALOGUE_MAX_VOICES} distinct voices) — the lines come out as one continuous take with natural turn-taking.
-
-Use when a scene has more than the 2 speakers tts_multi_speaker allows (the Gemini lane's 3-speaker workaround — one call per speaker plus 0.75s of silence between them — goes away), or when a 2-speaker scene should sound like one conversation rather than stitched cuts. Each line is {text, voiceId}; audio tags inside a line ("[laughs] 그게 말이 돼요?") direct that speaker. With timestamps: true the sidecar also carries voice_segments (which input/voice covers which span) — that is the subtitle speaker map for free.
-Do NOT use for a single narrator — tts_elevenlabs_generate (or the free local lane) is cheaper per call and steadier. Do NOT exceed ~2,000 characters per request even though the hard cap is ${MAX_ELEVENLABS_DIALOGUE_CHARS} — the vendor recommends short requests for quality; split long scenes. The model is fixed to ${ELEVENLABS_DIALOGUE_MODEL} (every other model, v3_conversational included, is rejected). $0.10 per 1,000 characters; free-tier output is non-commercial.
-
-Returns: a text block with the saved audio path (WAV by default), line and voice counts, duration, the vendor's measured character cost, request id, and the alignment sidecar path when timestamps were requested.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                inputs: {
-                    type: 'array',
-                    description: `Ordered dialogue lines. Each line is spoken by its voiceId; consecutive lines may share a voice. 1–${ELEVENLABS_DIALOGUE_MAX_INPUTS} lines, at most ${ELEVENLABS_DIALOGUE_MAX_VOICES} distinct voices, ${MAX_ELEVENLABS_DIALOGUE_CHARS} characters in total (≈2,000 recommended).`,
-                    items: {
-                        type: 'object',
-                        properties: {
-                            text: { type: 'string', description: 'What this speaker says (audio tags allowed, e.g. "[whispers] …")' },
-                            voiceId: ELEVENLABS_VOICE_ID_PROPERTY,
-                        },
-                        required: ['text', 'voiceId'],
-                    },
-                    minItems: 1,
-                    maxItems: ELEVENLABS_DIALOGUE_MAX_INPUTS,
-                },
-                stability: ELEVENLABS_STABILITY_PROPERTY,
-                seed: ELEVENLABS_SEED_PROPERTY,
-                languageCode: ELEVENLABS_LANGUAGE_CODE_PROPERTY,
-                applyTextNormalization: ELEVENLABS_NORMALIZATION_PROPERTY,
-                outputFormat: ELEVENLABS_OUTPUT_FORMAT_PROPERTY,
-                timestamps: ELEVENLABS_TIMESTAMPS_PROPERTY,
-                outputPath: {
-                    type: 'string',
-                    description: 'Directory path to save the audio file (default: current working directory)',
-                },
-                filename: {
-                    type: 'string',
-                    description: 'Filename for the audio file (default: elevenlabs_dialogue_<timestamp>.wav — .mp3 when outputFormat is mp3_*). The extension must match outputFormat.',
-                },
-            },
-            required: ['inputs'],
-        },
+        name: 'tts_elevenlabs_dialogue', title: 'ElevenLabs v4 multi-voice dialogue', annotations: HINT.generate,
+        description: 'Create paid multi-voice dialogue with eleven_v4 for conversations or character exchanges. Each turn has text and voiceId, with optional [audio tags] or /IPA/ in text. REST permits 10 distinct voices. Keep total text <=2000 characters for reliable generation; model cap 10000. Returns a local audio path, available usage/request metadata, warnings and optional timestamps with voice_segments. Do NOT use to discover voices — use tts_elevenlabs_voices. Use tts_elevenlabs_generate for one voice, or tts_multi_speaker for selected Gemini dialogue. Mixed-speaker output requires an explicit dialogue assembly route. No automatic review or model fallback.',
+        inputSchema: { type: 'object', additionalProperties: false, properties: {
+                inputs: { type: 'array', minItems: 1, maxItems: ELEVENLABS_DIALOGUE_MAX_INPUTS, description: 'Ordered turns, e.g. [{"text":"Hello.","voiceId":"your-voice-id"}]. REST permits 10 voices; this plugin accepts up to 50 turns.', items: { type: 'object', additionalProperties: false, properties: {
+                            text: { type: 'string', minLength: 1, description: 'Turn transcript, e.g. "[laughing] Hello."; optional v4 audio tags or /IPA/.' }, voiceId: ELEVENLABS_VOICE_ID_PROPERTY
+                        }, required: ['text', 'voiceId'] } }, ...ELEVENLABS_V4_PROPERTIES
+            }, required: ['inputs'] }
     },
     {
-        name: 'tts_elevenlabs_voices',
-        title: 'ElevenLabs voice list',
-        annotations: HINT.read,
-        description: `List the ElevenLabs voices this account can use — premade, cloned, designed, and Voice Library picks — with IDs, category, labels (gender · age · accent · use case) and verified languages, plus the plan's character usage when the key allows.
-
-Use before tts_elevenlabs_generate / tts_elevenlabs_dialogue when no voiceId is pinned yet, or to find a Korean voice (search: "korean", or read the verified-languages column). Read-only; one GET per call. The Gemini and Supertonic voices are NOT here — tts_list_voices has those. Needs a key with the voices_read permission (a restricted key without it still synthesizes but returns missing_permissions here — then take the ID from the Voice Library page instead).
-Do NOT pick a new voice per episode — pin one in data/<slug>/profile.md §2. The legacy premade voices retire 2026-12-31; prefer the current premade set or a library voice.
-
-Returns: a text list "name — voice_id · category · labels · languages", the total count, whether more pages exist, and (when the key has user_read) the subscription tier with used/total characters and the reset date — Free tier output is non-commercial.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                search: {
-                    type: 'string',
-                    description: 'Substring filter on name, description and labels (e.g. "korean", "calm female"). Omit to list everything.',
-                },
-                category: {
-                    type: 'string',
-                    description: 'Restrict to one category: premade (vendor defaults), cloned (your IVC/PVC), generated (Voice Design), professional (library PVC).',
-                    enum: [...ELEVENLABS_VOICE_CATEGORIES],
-                },
-                limit: {
-                    type: 'number',
-                    description: 'Voices per page 1–100 (default: 30)',
-                    minimum: 1,
-                    maximum: 100,
-                    default: 30,
-                },
-            },
-            required: [],
-        },
+        name: 'tts_elevenlabs_voices', title: 'ElevenLabs voice search and previews', annotations: HINT.read,
+        description: 'Read account voices from /v2/voices, with IDs, descriptions, labels, verified languages and preview URLs. Needs voices_read; optional usage information needs user_read. This is an API lookup; Gemini voices are in tts_list_voices. Follow nextPageToken until hasMore is false. Search language/traits, then generate three matched character previews with character_voice_audition before the user selects their voice.',
+        inputSchema: { type: 'object', additionalProperties: false, properties: {
+                search: { type: 'string', description: 'Search name, description and labels.' },
+                category: { type: 'string', enum: [...ELEVENLABS_VOICE_CATEGORIES], description: 'Account voice category.' },
+                limit: { type: 'integer', minimum: 1, maximum: 100, default: 30, description: 'Page size.' },
+                nextPageToken: { type: 'string', description: 'Continuation token from the previous page.' },
+                languages: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 20, description: 'Language filters, e.g. ["ko"].' },
+                gender: { type: 'string', description: 'Voice gender label filter.' },
+                accent: { type: 'string', description: 'Voice accent label filter.' }
+            } }
     },
     // ── Sound effects (ElevenLabs — text → SFX) ──────────────────────────────
     {
@@ -4186,20 +3934,104 @@ Returns: a text block with the saved .wav path, model, duration, and generation 
         },
     },
     {
+        name: 'production_workflow',
+        title: 'Advance verified production stages',
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+        description: 'Enforce fixed episode order: characters, text_storyboard, context_review, props, backgrounds, camera_review, blender_composition, image_storyboard, image_review, video, video_review. Reviews require independent evidence against current input hashes, a frozen rubric, no unresolved corrections and actual playback for video. Context review reconstructs audience understanding from cited text and cut IDs. Blender compositions must be actual render receipts and actual image-generation references. begin registers artifacts; complete validates them; rewind archives receipts and invalidates descendants. No skip, waiver or alternate renderer. Host tools and arbitrary shell writes remain outside this server boundary.',
+        inputSchema: { type: 'object', additionalProperties: false, required: ['episode', 'action'], properties: {
+                episode: { type: 'string', description: 'Absolute episode directory.' },
+                action: { type: 'string', description: 'Inspect, register, finish or invalidate a stage.', enum: ['status', 'begin', 'complete', 'rewind'] },
+                stage: { type: 'string', description: 'Required for begin, complete and rewind.', enum: ['characters', 'text_storyboard', 'context_review', 'props', 'backgrounds', 'camera_review', 'blender_composition', 'image_storyboard', 'image_review', 'video', 'video_review'] },
+                entries: { type: 'array', description: 'Complete inventory for the stage, required on begin unless notApplicable.', items: { type: 'object', additionalProperties: false, required: ['id', 'text'], properties: {
+                            id: { type: 'string', description: 'Use this exact assetId in image_plan.' },
+                            text: { type: 'string', description: 'Text artifact, review JSON, or Blender composition.json receipt path. Review begin requires criteria path/hash before evaluation.' },
+                            images: { type: 'array', items: { type: 'string' }, description: 'Additional image_storyboard files for this cut: ending, intermediate and appearance references. All are decoded, hashed and included in image review.' },
+                            image: { type: 'string', description: 'Actual or planned image path for asset/image stages. Use the same cut id as camera_review and blender_composition.' },
+                            blend: { type: 'string', description: 'Actual .blend source file for blender_composition only.' },
+                            video: { type: 'string', description: 'Actual or planned video file for video stage only; entry id is video_plan shotId.' },
+                        } } },
+                notApplicable: { type: 'string', description: 'Concrete reason this category has no subjects; entries must be empty.' },
+            } },
+    },
+    {
+        name: 'project_manage',
+        title: 'Set up a multi-episode project',
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+        description: `Create or update local project settings and episode directories.
+
+Use for initial setup (프로젝트 초기 설정), saved genre/style/video ratio, SNS connection records, or a new episode inheriting project defaults. options and status are read-only. init creates missing channel folders, profile, catalog and local .gitignore entries; it preserves existing files and rejects changed preferences. update requires the revision from status and an explicit user request. episode creates a snapshot and directories, returning a new-board handoff; an existing snapshot or legacy board is preserved. All mutations are local, locked and make no network calls.
+Do NOT use to verify credentials — use sns_account_check. Do NOT use to discover live media engines — use capability_status. Never pass token values, generate media, or publish as part of setup. Record connected only after an actual account check; enabled platforms may stay pending.
+Returns JSON: status, missing fields, canonical paths, config and revision; episode returns snapshot and handoff (FORMAT/PRODUCTION/SNS). options returns the supported type, style, ratio and format catalog. Errors report invalid choices, path conflicts or stale revisions without changing existing settings. Settings live in WORKSPACE/.social-flow/models.json; snapshots in EPISODE/.work/model-settings.json.`,
+        inputSchema: {
+            type: 'object', additionalProperties: false,
+            properties: {
+                action: { type: 'string', enum: ['options', 'status', 'init', 'update', 'episode'], description: 'Operation; e.g. status before init or update.' },
+                workspace: { type: 'string', description: 'Explicit absolute existing project root, e.g. /workspace/videos. Required except for options; never infer the plugin install directory.' },
+                request: { type: 'string', description: 'Actual user preference request for init/update, e.g. Use webtoon for future episodes. Not an invented approval.' },
+                expectedRevision: { type: 'string', description: 'Revision returned by status, required for update; e.g. the exact SHA-256 string from the previous result.' },
+                topic: { type: 'string', pattern: '^[a-z0-9][a-z0-9-]{0,63}$', description: 'Episode directory slug for episode, e.g. history-01.' },
+                profileMarkdown: { type: 'string', description: 'Completed channel profile Markdown for a missing profile, e.g. ---\nslug: history\n... . Author from the channel template; an existing different profile is rejected.' },
+                settings: {
+                    type: 'object', additionalProperties: false, description: 'Explicit selected defaults. init needs all fields (existing legacy selections may be reused); update replaces each supplied category except models, which replaces only supplied engines. Example shape is documented in project-init.',
+                    properties: {
+                        project: { type: 'object', additionalProperties: false, description: 'Project identity; e.g. History with channel history.', properties: {
+                                name: { type: 'string', description: 'Display name, e.g. History.' },
+                                channel: { type: 'string', pattern: '^[a-z0-9][a-z0-9-]{0,63}$', description: 'Primary channel slug, e.g. history; immutable after setup.' },
+                            }, required: ['name', 'channel'] },
+                        videoType: { type: 'object', additionalProperties: false, description: 'Saved genre from options, e.g. {id:documentary}.', properties: {
+                                id: { type: 'string', description: 'Type ID from options, e.g. drama or documentary.' },
+                                detail: { type: 'string', description: 'Required for custom, e.g. Documentary with acted historical scenes.' },
+                            }, required: ['id'] },
+                        models: { type: 'object', additionalProperties: false, description: 'Select video and check credentials, then image and check credentials, then decide whether TTS is needed. Use speech:{engine:"none"} to skip TTS; otherwise select speech and check credentials. Music is optional. Use capability_status and host schemas for availability.', properties: Object.fromEntries(['video', 'speech', 'image', 'music'].map(kind => [kind, {
+                                    type: 'object', additionalProperties: false, description: `${kind} selection; fixed engines omit model, host uses host-managed.`,
+                                    properties: {
+                                        engine: { type: 'string', enum: kind === 'video' ? ['host', 'seedance', 'veo', 'astra', 'astra-genai', 'mlx'] : kind === 'speech' ? ['none', 'gemini', 'elevenlabs'] : kind === 'music' ? ['lyria', 'suno-api', 'elevenlabs', 'mlx'] : ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
+                                        model: { type: 'string', description: 'Supported model ID, e.g. host-managed. Omit for astra, zimage and speech engine none.' },
+                                        ...(!['speech', 'music'].includes(kind) ? { host: { type: 'string', description: 'Host CLI when engine is host, e.g. codex.' } } : {}),
+                                        ...(kind === 'video' ? { resolution: { type: 'string', description: 'Supported source resolution, e.g. 720p.' } } : {}),
+                                        ...(kind === 'image' ? { quality: { type: 'string', description: 'Supported quality, e.g. high; a prompt preference on host tools without a quality parameter.' } } : {}),
+                                    }, required: ['engine'],
+                                }])) },
+                        style: { type: 'object', additionalProperties: false, description: 'Visual style, separate from genre and video ratio; e.g. preset:webtoon.', properties: {
+                                preset: { type: 'string', enum: ['cinematic-miniature', 'photoreal', 'webtoon', 'claymation', 'paper-cutout', 'ink-wash', 'toon-3d', 'arcade-2d'], description: 'Supported visual style from options, e.g. webtoon.' },
+                                ...Object.fromEntries(['reference', 'world', 'materials', 'palette', 'lighting', 'camera'].map(key => [key, { type: 'string', description: `Optional standing ${key} direction, e.g. consistent illustrated window light for lighting.` }])),
+                            }, required: ['preset'] },
+                        production: { type: 'object', additionalProperties: false, description: 'Default video ratio and format. A budget is a ceiling, not authorization to spend.', properties: {
+                                mode: { type: 'string', enum: ['full_video', 'video_80', 'video_50', 'video_30', 'video_lt10', 'no_video'], description: 'Six ratio bands: 100%, 80–<100%, 50–<80%, 30–<50%, <10%, 0%. Count shots, not seconds; use existing production rules for integer rounding.' },
+                                renderRatioVersion: { type: 'integer', enum: [1], description: 'Ratio contract version, always 1 for new settings.' },
+                                format: { type: 'string', enum: ['shorts-9x16', 'youtube-long-16x9'], description: 'Output format, e.g. shorts-9x16.' },
+                                previzRenderer: { type: 'string', enum: ['blender', 'threejs'], description: 'Optional saved previz choice; e.g. blender. Ask only when needed and missing.' },
+                                episodeBudgetUsd: { type: 'number', minimum: 0, description: 'Optional per-episode USD ceiling, e.g. 5. Does not replace an actual quote and spending authorization.' },
+                            }, required: ['mode', 'renderRatioVersion', 'format'] },
+                        sns: { type: 'object', additionalProperties: false, description: 'All four platform records, including disabled ones. Replacement updates must preserve unchanged platforms. Never pass credentials.', properties: Object.fromEntries(['threads', 'instagram', 'facebook', 'youtube'].map(platform => [platform, {
+                                    type: 'object', additionalProperties: false, description: `${platform} publishing preference and historical account check.`,
+                                    properties: {
+                                        enabled: { type: 'boolean', description: 'Whether this project targets the platform, e.g. true.' },
+                                        status: { type: 'string', enum: ['pending', 'connected', 'disabled'], description: 'pending until verified by sns_account_check; disabled requires enabled:false.' },
+                                        accountId: { type: 'string', description: 'Verified platform account ID, e.g. UC... for YouTube; required for connected.' },
+                                        handle: { type: 'string', description: 'Optional public handle, e.g. @history.' },
+                                        checkedAt: { type: 'string', description: 'Actual account check ISO timestamp, e.g. 2026-10-16T03:00:00Z; required for connected.' },
+                                        credentialRef: { type: 'string', description: 'External token reference, automatically filled when omitted; e.g. ${SNS_TOKEN_DIR}/history/threads_token. Never a token value.' },
+                                    }, required: ['enabled', 'status'],
+                                }])), required: ['threads', 'instagram', 'facebook', 'youtube'] },
+                    },
+                },
+            }, required: ['action'],
+        },
+    },
+    {
         name: 'capability_status',
         title: 'What this machine can do right now',
         annotations: HINT.local,
-        description: `Report which generation and research capabilities are configured on this machine, grouped by capability with an "N of M configured" count per group, plus the env vars that would unlock the rest. Pass channel to check that channel's storyboard portal key locally (per-channel file → flat file → env), without printing the key or calling the portal. Another channel's key never enables this channel. storyboard_portal reports configured (ask local HTML vs portal HITL before portal calls), missing (local HTML without a question), or invalid (warn and keep local HTML). Reuse an explicit episode choice; tool visibility and key presence are not consent. Without channel, only the flat/env credential is checked.
+        description: `Report which generation and research capabilities are configured on this machine, grouped by capability with an "N of M configured" count per group, plus the env vars that would unlock the rest.
 
 Use it BEFORE planning anything that spends money or depends on a provider — the top of a storyboard, produce, or autoproduce run. Without it, a missing key shows up only when the call fails, which is after the plan was built around a tool that was never going to run: planning two Veo b-roll slots on a machine with no GEMINI_API_KEY costs the review rounds before anyone finds out. Also use it when the user asks what they can make, or why a tool is failing.
 Do NOT use it to test whether a key still works. It reports CONFIGURATION, not reachability — a revoked key reads as configured here and fails at the call. Local engines report only whether their binary resolves (mflux, python3, mlx-qwen3-asr) or whether MLX Core.app / mlx-serve is installed — not whether :11234 is up. Read-only; makes no API call, so one call per session is enough.
 
-Returns: a capability menu — video_generation, image_generation, tts, music_generation, 3d_generation, speech_to_text, stock_footage, research — each listing its providers with the env var or local install each one needs, then the publishing platforms, storyboard_portal configuration for the channel, and the env vars grouped by what each would turn on.`,
+Returns: a capability menu — video_generation, image_generation, tts, music_generation, 3d_generation, speech_to_text, stock_footage, research — each listing its providers with the env var or local install each one needs, then the publishing platforms, the env vars grouped by what each would turn on.`,
         inputSchema: {
             type: 'object',
-            properties: {
-                channel: { type: 'string', pattern: CHANNEL_SLUG_RE.source, description: 'Target channel slug, as in data/<channel>. Checks local portal configuration only; no network request.' },
-            },
+            properties: {},
             required: [],
         },
     },
@@ -4224,47 +4056,41 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
         name: 'suno_generate',
         title: 'Suno full song',
         annotations: HINT.generate,
-        description: `Generate a full Suno song (exactly 2 variants) via sunoapi.org. This is a third-party REST wrapper — Suno Inc. has no public self-serve API as of 2026-08.
-
-Use when the user wants a SUNG song, jingle, or original track with lyrics — the thing Lyria cannot do well. customMode=false: only prompt, the model writes lyrics. customMode=true + instrumental=false: prompt IS the lyrics (write them first with suno_generate_lyrics if needed). customMode=true + instrumental=true: no vocals; style and title required. Default model V5 (up to 8 min). Each call takes 2–3 minutes and returns two mp3 files downloaded locally (remote URLs expire in 15 days).
-Do NOT use as the default narration-under BGM bed — vocals fight the voiceover, and a 3-minute song does not loop cleanly. For looping beds prefer suno_generate_sound or music_generate_clip (Lyria, $0.04, 30s, GEMINI_API_KEY). For an exact duration 5–300s or seed reproducibility use music_generate.
-Requires SUNO_API_KEY. This key being unset does not block music_*(Lyria).
-
-Returns: saved file paths for both tracks, durations, titles, taskId.`,
+        description: 'Generate two song variants through sunoapi.org, a third-party API separate from Suno Platform. Use the saved V6 model via music_plan. Returns downloaded files and task ID; no automatic provider fallback.',
         inputSchema: {
             type: 'object',
             properties: {
                 prompt: {
                     type: 'string',
-                    description: 'In non-custom mode: the idea the model turns into lyrics+music (required, max 3000 chars). In custom mode with vocals: the EXACT lyrics to sing (required, V4 max 3000, V4_5+ max 5000). Omit when customMode+instrumental.',
+                    description: 'Optional prompt; non-custom mode max 3000 characters and also needs style or lyrics. Explicit lyrics take precedence.',
                 },
                 customMode: {
                     type: 'boolean',
-                    description: 'false (default): prompt-only, auto lyrics. true: you supply style+title, and lyrics via prompt unless instrumental.',
+                    description: 'false: requires style or lyrics. true: custom controls; requires style, lyrics or negativeTags.',
                     default: false,
                 },
                 instrumental: {
                     type: 'boolean',
-                    description: 'true = no vocals. In custom mode this drops the lyrics requirement (style+title still required). Default false.',
+                    description: 'true = instrumental, e.g. a narration bed. Default false.',
                     default: false,
                 },
                 style: {
                     type: 'string',
-                    description: 'Genre/style for custom mode (required when customMode=true). V4 max 200 chars, later models max 1000. Example: "calm lo-fi, soft piano, space for voiceover"',
+                    description: 'Music style, usable in either mode. Example: "calm lo-fi, soft piano, space for voiceover"',
                 },
                 title: {
                     type: 'string',
-                    description: 'Track title for custom mode (required when customMode=true). V4/V4_5ALL max 80 chars, others max 100.',
+                    description: 'Optional custom-mode title, at most 80 characters.',
                 },
                 model: {
                     type: 'string',
-                    description: `Suno model (default: "${DEFAULT_SUNO_MODEL}"). V4 ≤4 min; V4_5 / V4_5PLUS / V4_5ALL / V5 / V5_5 ≤8 min. V5_5 is the only model that accepts duration. Pick V5 unless you need V5_5 duration or V4_5ALL structure.`,
+                    description: 'sunoapi.org model ID; current generation supports the V6 family.',
                     enum: [...SUNO_MODELS],
                     default: DEFAULT_SUNO_MODEL,
                 },
                 duration: {
                     type: 'number',
-                    description: 'Length in seconds (10–360). Only valid when model=V5_5 AND customMode=true. Integer.',
+                    description: 'V6 custom-mode length in seconds (10–360). Integer.',
                     minimum: 10,
                     maximum: 360,
                 },
@@ -4283,7 +4109,7 @@ Returns: saved file paths for both tracks, durations, titles, taskId.`,
                 },
                 personaModel: {
                     type: 'string',
-                    description: 'style_persona (default) for Generate Persona ids, voice_persona for Suno Voice ids (V5/V5_5 only).',
+                    description: 'Custom-mode persona type: style_persona or voice_persona. Requires a valid provider persona ID.',
                     enum: [...SUNO_PERSONA_MODELS],
                 },
                 pickTrack: {
@@ -4401,30 +4227,30 @@ Returns: integer credit balance.`,
     {
         name: 'threads_draft_create',
         title: 'Create Threads growth draft',
-        description: 'Store a Threads growth draft before review. Returns draftId and bodyHash (SHA-256 of NFC, LF, trimmed body + selfReply). Edits require a new draft and reviews. No public posting.',
+        description: 'Store a Threads growth draft. Returns draftId and bodyHash (SHA-256 of NFC, LF, trimmed body + selfReply); threads_publish checks the posted body against that hash. Changing the text means a new draft. Reviews are optional evidence. No public posting.',
         annotations: HINT.generate,
         inputSchema: { type: 'object', properties: {
                 channel: SNS_CHANNEL_PROPERTY,
-                body: { type: 'string', minLength: 1, description: 'Draft body.' }, selfReply: { type: 'string', minLength: 1, description: 'Optional information self-reply (voice review only).' },
-                surface: { type: 'string', enum: ['post', 'reply'], description: 'post by default; reply requires replyToId and only voice review.' },
+                body: { type: 'string', minLength: 1, description: 'Draft body.' }, selfReply: { type: 'string', minLength: 1, description: 'Optional information self-reply; part of bodyHash.' },
+                surface: { type: 'string', enum: ['post', 'reply'], description: 'post by default; reply requires replyToId (reviews on a reply use the voice axis only).' },
                 replyToId: { type: 'string', description: 'Required reply target for a reply draft; bound to publication.' },
                 readerMessage: { type: 'string', minLength: 1, description: 'One-sentence summary of the post.' },
                 purpose: { type: 'string', enum: ['fun', 'moved', 'info', 'empathy'], description: 'Exactly one intended reader outcome.' },
-                purposeEvidence: { type: 'string', minLength: 1, description: 'Verbatim body excerpt demonstrating the chosen purpose; whitespace-only normalization.' },
-                flow: { type: 'object', description: 'Reader progression: hook, turn, residue.', properties: {
+                purposeEvidence: { type: 'string', minLength: 1, description: 'Optional verbatim body excerpt demonstrating the chosen purpose; when supplied it must appear in the body (whitespace-only normalization).' },
+                flow: { type: 'object', description: 'Optional reader progression: hook, turn, residue.', properties: {
                         hook: { type: 'string', minLength: 1, description: 'Why the opening holds attention.' },
                         turn: { type: 'string', minLength: 1, description: 'What the middle reveals.' },
                         residue: { type: 'string', minLength: 1, description: 'What the reader takes away.' },
                     }, required: ['hook', 'turn', 'residue'] },
-                comicElements: { description: 'Concrete comic elements in the draft.', type: 'array', items: { type: 'string', minLength: 1 }, minItems: 1 },
+                comicElements: { description: 'Optional concrete comic elements in the draft; a supplied list needs at least one entry.', type: 'array', items: { type: 'string', minLength: 1 }, minItems: 1 },
                 submitter: { type: 'string', description: 'Submitting agent identifier (self-reported).' },
                 submitterContext: { type: 'string', description: 'Submitting session/context identifier (self-reported).' },
-            }, required: ['channel', 'body', 'readerMessage', 'comicElements', 'purpose', 'purposeEvidence', 'flow'] },
+            }, required: ['channel', 'body', 'readerMessage', 'purpose'] },
     },
     {
         name: 'threads_review_submit',
         title: 'Submit Threads draft review',
-        description: 'Record a voice/purpose/flow review; score purpose only against the chosen draft purpose (fun, moved, info, empathy), never against another purpose. Bind the review to bodyHash. A required rubric item scoring zero must be submitted as a P0 finding to block publication; the server does not infer semantic failures from scores. Findings quote actual draft text; only whitespace differences are ignored. No LLM/API is called. Identifiers are self-reported: the server cannot distinguish subagents in the same session or enforce reviewer independence.',
+        description: 'Record a voice/purpose/flow review; score purpose only against the chosen draft purpose (fun, moved, info, empathy), never against another purpose. Bind the review to bodyHash. Findings and scores are recorded as evidence bound to bodyHash; they do not block publishing. Findings quote actual draft text; only whitespace differences are ignored. No LLM/API is called. Identifiers are self-reported: the server cannot distinguish subagents in the same session or enforce reviewer independence.',
         annotations: HINT.generate,
         inputSchema: { type: 'object', properties: {
                 draftId: { description: 'Identifier returned by threads_draft_create.', type: 'string' }, bodyHash: { description: 'Exact reviewed draft hash.', type: 'string', pattern: '^[a-f0-9]{64}$' },
@@ -4434,7 +4260,7 @@ Returns: integer credit balance.`,
                 reviewer: { description: 'Self-reported reviewer identifier.', type: 'string', minLength: 1 }, reviewerContext: { description: 'Self-reported session/context identifier.', type: 'string', minLength: 1 },
                 findings: { description: 'Quoted evidence, including at least one pass finding for a clean review.', type: 'array', minItems: 1, items: { type: 'object', properties: {
                             quote: { description: 'Exact draft excerpt; whitespace differences allowed.', type: 'string', minLength: 1 }, issue: { description: 'Observation supported by the quote.', type: 'string', minLength: 1 },
-                            severity: { description: 'pass for positive evidence; P0 blocks publishing.', type: 'string', enum: ['pass', 'P0', 'P1', 'P2'] },
+                            severity: { description: 'pass for positive evidence; P0/P1/P2 grade a defect as evidence for the author.', type: 'string', enum: ['pass', 'P0', 'P1', 'P2'] },
                         }, required: ['quote', 'issue', 'severity'] } },
             }, required: ['draftId', 'bodyHash', 'axis', 'score', 'reasons', 'improvements', 'reviewer', 'reviewerContext', 'findings'] },
     },
@@ -4443,7 +4269,7 @@ Returns: integer credit balance.`,
         title: '⚠️ Threads publish (immediately public)',
         annotations: HINT.publish,
         outputSchema: publishOutput('postId', 'Threads post id — pass as replyToId to chain a follow-up reply'),
-        description: `⚠️ Direct Threads publishing — posts to the Threads API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). Exactly one of draftId (growth: hash-bound reviews, configured gate.json thresholds and style check) or episodeRef (existing episode and matching approval record) is required. dryRun checks without API calls. Call only right after the user has checked and approved the final copy and media (HITL — never call without approval). A post carries one of four shapes: a video (videoUrl), a single image (imageUrl), a link preview card (linkUrl), or text alone. The three media fields are mutually exclusive — one media_type per post. **Video episodes put the video on the post itself via videoUrl**, so it plays inline in the timeline with nothing to click away to; do not attach the video as a reply or fall back to a bare link (user directive 2026-08-19). Carousels are not supported by this tool. Publish quota: 250 per 24 hours. ${SNS_HITL_LINE}`,
+        description: `⚠️ Direct Threads publishing — posts to the Threads API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). Exactly one of draftId (growth: the published body must match the draft's bodyHash, channel and reply target; check-style.py findings come back as warnings) or episodeRef (existing episode and matching approval record) is required. dryRun checks without API calls. Call only right after the user has checked and approved the final copy and media (HITL — never call without the user's approval or an approved standing growth plan). A post carries one of four shapes: a video (videoUrl), a single image (imageUrl), a link preview card (linkUrl), or text alone. The three media fields are mutually exclusive — one media_type per post. **Video episodes put the video on the post itself via videoUrl**, so it plays inline in the timeline with nothing to click away to; do not attach the video as a reply or fall back to a bare link (user directive 2026-08-19). Carousels are not supported by this tool. Publish quota: 250 per 24 hours. ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -4455,7 +4281,7 @@ Returns: integer credit balance.`,
                 videoUrl: {
                     type: 'string',
                     format: 'uri',
-                    description: 'One publicly reachable video URL (.mp4/.mov) carried by the post itself — mutually exclusive with imageUrl and linkUrl. **This is the default for video episodes.** Give the subtitle-burned cut: the Threads container takes no subtitle file, so burning them into the picture is the only way (same as IG reels). Video containers transcode, and the tool waits up to 2 minutes for FINISHED',
+                    description: 'One publicly reachable video URL (.mp4/.mov) carried by the post itself — mutually exclusive with imageUrl and linkUrl. **This is the default for video episodes.** Use the clean subtitle-free master, including speech videos. Do not select a burned-in copy; Threads has no separate subtitle input. Video containers transcode, and the tool waits up to 2 minutes for FINISHED',
                 },
                 linkUrl: {
                     type: 'string',
@@ -4464,10 +4290,10 @@ Returns: integer credit balance.`,
                 },
                 replyToId: { type: 'string', description: 'Publish as a reply to this post id (own reply chain, or joining someone else\'s post)' },
                 channel: SNS_CHANNEL_PROPERTY,
-                draftId: { type: 'string', description: 'Reviewed growth draft identifier; exclusive with episodeRef.' },
+                draftId: { type: 'string', description: 'Growth draft identifier from threads_draft_create; exclusive with episodeRef.' },
                 episodeRef: { type: 'string', description: 'Episode topic slug under data/<channel>/episodes; requires matching threads-publish-approval.json.' },
-                selfReply: { type: 'string', description: 'Optional reviewed self-reply; posted after the root succeeds.' },
-                dryRun: { type: 'boolean', description: 'Validate all gates without token access or network publishing.' },
+                selfReply: { type: 'string', description: 'Optional self-reply from the draft; posted after the root succeeds.' },
+                dryRun: { type: 'boolean', description: 'Validate the draft binding (body hash, channel, reply target) without publishing; no token access or network call.' },
             },
             required: ['caption', 'channel'],
             oneOf: [{ required: ['draftId'], not: { required: ['episodeRef'] } }, { required: ['episodeRef'], not: { required: ['draftId'] } }],
@@ -4478,7 +4304,7 @@ Returns: integer credit balance.`,
         title: '⚠️ Instagram publish (immediately public)',
         annotations: HINT.publish,
         outputSchema: publishOutput('mediaId', 'Instagram media id'),
-        description: `⚠️ Direct Instagram publishing — posts to the IG API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL — never call without approval). 1-10 images (2+ makes a carousel) **or** one Reels video (mutually exclusive with imageUrls). Images must be **JPEG only** (PNG/MPO/JPS rejected). Images cannot be replaced after publishing (only the caption can be edited). Publish quota: 100 per rolling 24 hours (a carousel counts as 1). ${SNS_HITL_LINE}`,
+        description: `⚠️ Direct Instagram publishing — posts to the IG API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL — never call without the user's approval or an approved standing growth plan). 1-10 images (2+ makes a carousel) **or** one Reels video (mutually exclusive with imageUrls). Images must be **JPEG only** (PNG/MPO/JPS rejected). Images cannot be replaced after publishing (only the caption can be edited). Publish quota: 100 per rolling 24 hours (a carousel counts as 1). ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -4491,7 +4317,7 @@ Returns: integer credit balance.`,
                 videoUrl: {
                     type: 'string',
                     format: 'uri',
-                    description: 'One public Reels video URL (.mp4/.mov) — cannot be used together with imageUrls. **Provide the burned-in subtitle master** — IG Content Publishing has no parameter for a subtitle file, so unlike the platforms that take subtitles separately, subtitles burned into the frame are the only way here',
+                    description: 'One public Reels video URL (.mp4/.mov) — cannot be used together with imageUrls. **Provide the clean subtitle-free master**, including speech videos. Do not burn captions into the picture or select a legacy video-sub file; Instagram has no separate subtitle input',
                 },
                 channel: SNS_CHANNEL_PROPERTY,
             },
@@ -4503,7 +4329,7 @@ Returns: integer credit balance.`,
         title: '⚠️ Facebook Page publish (immediately public)',
         annotations: HINT.publish,
         outputSchema: FACEBOOK_PUBLISH_OUTPUT,
-        description: `⚠️ Direct Facebook Page publishing — posts to the Graph API with the local Page token, **immediately public** (the posting Page is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL — never call without approval). Forms: text / up to 10 images / one video (regular video — not Reels). Video posts **include a subtitle file** (captionFilePath) — this pipeline uploads subtitles separately instead of burning them in, so give videoUrl the clean subtitle-free master, not a burned-in copy. The source link goes **without exception** in the first comment via facebook_comment right after a successful publish, not in the body (linkUrl). ${SNS_HITL_LINE}`,
+        description: `⚠️ Direct Facebook Page publishing — posts to the Graph API with the local Page token, **immediately public** (the posting Page is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL — never call without the user's approval or an approved standing growth plan). Forms: text / up to 10 images / one video (regular video — not Reels). Video posts may include a separate subtitle file (captionFilePath) only when requested — this pipeline uploads subtitles separately instead of burning them in, so give videoUrl the clean subtitle-free master, not a burned-in copy. The source link goes **without exception** in the first comment via facebook_comment right after a successful publish, not in the body (linkUrl). ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -4513,7 +4339,7 @@ Returns: integer credit balance.`,
                     items: { type: 'string', format: 'uri' },
                     description: 'Up to 10 publicly reachable image URLs — cannot be used together with videoUrl',
                 },
-                videoUrl: { type: 'string', format: 'uri', description: 'One public video URL (.mp4/.mov) — cannot be used together with imageUrls. Give the **clean master**, not a burned-in copy (subtitles go separately via captionFilePath)' },
+                videoUrl: { type: 'string', format: 'uri', description: 'One public video URL (.mp4/.mov) — cannot be used together with imageUrls. Give the **clean master**, not a burned-in copy (only separately requested subtitles use captionFilePath)' },
                 captionFilePath: {
                     type: 'string',
                     description: '**Local** absolute path to the subtitle file (.srt, ≤200K) — valid only on videoUrl posts. Unlike the video URL it needs no hosting (direct file upload). It uploads automatically right after a successful publish; if only the subtitles fail, captionWarning is returned (the post stands — do not re-publish). Single-locale shorthand — for two or more languages use captionFiles instead (mutually exclusive)',
@@ -4545,7 +4371,7 @@ Returns: integer credit balance.`,
         title: '⚠️ Facebook comment (immediately public)',
         annotations: HINT.publish,
         outputSchema: publishOutput('commentId', 'Facebook comment id'),
-        description: `⚠️ Direct Facebook Page commenting — adds an **immediately public** comment on the Page's own post with the Page token (the author is the Page itself). There is no separate review gate, so publish only copy the user has approved (HITL — never call without approval). Main use: the link rule of putting the source link in the **first comment** right after a facebook_publish success (first comment instead of a body link — FB comment links are clickable and render previews). Use postId straight from the facebook_publish response. If only the comment failed, retry just this tool (do not re-publish the post — the publish API is non-idempotent). ${SNS_HITL_LINE}`,
+        description: `⚠️ Direct Facebook Page commenting — adds an **immediately public** comment on the Page's own post with the Page token (the author is the Page itself). There is no separate review gate, so publish only copy the user has approved (HITL — never call without the user's approval or an approved standing growth plan). Main use: the link rule of putting the source link in the **first comment** right after a facebook_publish success (first comment instead of a body link — FB comment links are clickable and render previews). Use postId straight from the facebook_publish response. If only the comment failed, retry just this tool (do not re-publish the post — the publish API is non-idempotent). ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -4558,10 +4384,10 @@ Returns: integer credit balance.`,
     },
     {
         name: 'youtube_publish',
-        title: '⚠️ YouTube upload (immediately public)',
+        title: '⚠️ YouTube upload (starts private)',
         annotations: HINT.publish,
         outputSchema: YOUTUBE_PUBLISH_OUTPUT,
-        description: `⚠️ Direct YouTube publishing — uploads a **local video file, immediately public**, with the local OAuth refresh token (the target channel is the token-owning account). There is no separate review gate, so call only right after the user has checked and approved the final copy and video (HITL — never call without approval). Portrait 9:16 videos of 3 minutes or less are auto-classified as Shorts (no separate flag). The only platform that needs no public URL hosting (direct file upload — subtitle files included). **Video and subtitles upload separately** — pass an .srt via captionFilePath and give videoFilePath the clean master with no burned-in subtitles. Uploads draw from the videos.insert-only "Video Uploads" quota bucket — 1 unit per call, 100/day by default, so there is no reason to ration episode publishing (the old "1,600 units = 6/day" limit disappeared in the 2026 quota overhaul). ${SNS_HITL_LINE}`,
+        description: `⚠️ Direct YouTube publishing — uploads a **local video file as a private video** with the local OAuth refresh token (the target channel is the token-owning account). privacyStatus defaults to private and a request for public is rejected: upload private (or unlisted), check the watch page, then flip it public with youtube_update. There is no separate review gate, so call only right after the user has checked and approved the final copy and video (HITL — never call without the user's approval or an approved standing growth plan). Portrait 9:16 videos of 3 minutes or less are auto-classified as Shorts (no separate flag). The only platform that needs no public URL hosting (direct file upload — subtitle files included). **Every video stays subtitle-free.** Give videoFilePath the clean master. Only when the user requests separate YouTube subtitles, pass an .srt via captionFilePath or requested captionTracks; otherwise omit caption inputs. Uploads draw from the videos.insert-only "Video Uploads" quota bucket — 1 unit per call, 100/day by default, so there is no reason to ration episode publishing (the old "1,600 units = 6/day" limit disappeared in the 2026 quota overhaul). ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -4574,7 +4400,7 @@ Returns: integer credit balance.`,
                 },
                 captionFilePath: {
                     type: 'string',
-                    description: 'Absolute path of the subtitle file (.srt) — **pass it by default**. Uploading subtitles separately instead of burning them in means they can be swapped after publishing, viewers can toggle them, and they seed YouTube auto-translation. Give videoFilePath the clean subtitle-free master, not a burned-in copy. The upload needs the **youtube.force-ssl scope** (rejected on the publish-only youtube.upload) and costs a **quota of 400 units** per track — heavy next to the 1-unit video upload, so once per language per episode. If only the subtitles fail, captionWarning is returned and the publish stands (do not re-upload). Single-track shorthand — for two or more languages use captionTracks instead (mutually exclusive)',
+                    description: 'Absolute path of an optional separate subtitle file (.srt) — **pass only when the user requests YouTube subtitles; otherwise omit it**. Uploading subtitles separately instead of burning them in means they can be swapped after publishing, viewers can toggle them, and they seed YouTube auto-translation. Give videoFilePath the clean subtitle-free master, not a burned-in copy. The upload needs the **youtube.force-ssl scope** (rejected on the publish-only youtube.upload) and costs a **quota of 400 units** per track — heavy next to the 1-unit video upload, so once per language per episode. If only the subtitles fail, captionWarning is returned and the publish stands (do not re-upload). Single-track shorthand — for two or more languages use captionTracks instead (mutually exclusive)',
                 },
                 captionLanguage: {
                     type: 'string',
@@ -4590,12 +4416,13 @@ Returns: integer credit balance.`,
                         },
                         required: ['filePath', 'language'],
                     },
-                    description: 'Multi-language subtitle tracks — one captions.insert per entry, so viewers pick their language in the player and each track seeds auto-translation. Mutually exclusive with captionFilePath. Every file is validated before the video upload starts; each track costs 400 quota units, and a failed language comes back in captionWarning with the publish intact (upload just that language in YouTube Studio instead of re-publishing)',
+                    description: 'Optional requested multi-language subtitle tracks — one captions.insert per entry, so viewers pick their language in the player and each track seeds auto-translation. Mutually exclusive with captionFilePath. Every file is validated before the video upload starts; each track costs 400 quota units, and a failed language comes back in captionWarning with the publish intact (upload just that language in YouTube Studio instead of re-publishing)',
                 },
                 privacyStatus: {
                     type: 'string',
                     enum: ['public', 'unlisted', 'private'],
-                    description: 'Privacy (default public)',
+                    default: 'private',
+                    description: 'Privacy (default private; public is rejected — flip with youtube_update)',
                 },
                 categoryId: {
                     type: 'string',
@@ -4621,7 +4448,7 @@ Returns: integer credit balance.`,
         title: '⚠️ YouTube video metadata & privacy update',
         annotations: HINT.moderate,
         outputSchema: YOUTUBE_UPDATE_OUTPUT,
-        description: '⚠️ Edits the privacy, title, or description of an already-published YouTube video (videos.update). **Applies the instant it is called and cannot be undone — never call without human approval.** **This is stage two of the long-form two-stage publish** — upload an 8-15 minute video as privacyStatus "private", have a human check encoding, subtitles, and chapters on the watch page, then flip it public with this tool. Going straight to public, short-form style, means viewers see the failure first. **videos.update overwrites rather than patching**, so this tool first reads the current values via videos.list and merges — fields you did not pass are re-sent as they are now (title, description, tags, language, COPPA declaration, synthetic-media disclosure, all of it). The change is irreversible, so **on a video you have not touched before, call dryRun: true first and eyeball wouldSend.** publishAt (scheduled publish) only takes effect while privacyStatus is private — otherwise a 400 rejection. **Scope**: youtube (read-only youtube.readonly won\'t do, and neither will the publish-only youtube.upload). When missing, the error carries reissue guidance.',
+        description: '⚠️ Edits the privacy, title, or description of an already-published YouTube video (videos.update). **Applies the instant it is called and cannot be undone — never call without human approval or an approved standing growth plan (growth-plan.md status: approved).** **This is the step that flips a private upload public** — every youtube_publish upload starts private; check encoding, thumbnail, metadata and any chapters on the watch page, then flip it public with this tool. Inside the growth loop the same sequence runs under the approved plan. **videos.update overwrites rather than patching**, so this tool first reads the current values via videos.list and merges — fields you did not pass are re-sent as they are now (title, description, tags, language, COPPA declaration, synthetic-media disclosure, all of it). The change is irreversible, so **on a video you have not touched before, call dryRun: true first and eyeball wouldSend.** publishAt (scheduled publish) only takes effect while privacyStatus is private — otherwise a 400 rejection. **Scope**: youtube (read-only youtube.readonly won\'t do, and neither will the publish-only youtube.upload). When missing, the error carries reissue guidance.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -4694,7 +4521,7 @@ Returns: integer credit balance.`,
         title: '⚠️ Reply to inbound comment (immediately public)',
         annotations: HINT.publish,
         outputSchema: COMMENT_REPLY_OUTPUT,
-        description: `⚠️ Replies to an inbound comment — posts an **immediately public** reply with local tokens (the author is the brand account itself). THREADS requires a reviewed surface=reply draftId with matching commentId, voice score and server style check, exactly as threads_publish; dryRun validates without posting. Publish only copy the user has approved (HITL — never call without approval). Use commentId straight from the sns_comment_inbox response. Per-platform contracts: THREADS — a new post carrying reply_to_id is the reply, so chains extend freely down to replies-to-replies / INSTAGRAM — replies attach to **top-level comments only** (to answer a sub-comment, pass its parent commentId — for comments carrying parentCommentId, use that value) / FACEBOOK — a comment on a comment id is the sub-comment / YOUTUBE — also top-level only, but a sub-comment id is accepted: this tool looks up the parent, reattaches at the thread root, and reports where it landed via parentCommentId in the response (needs the youtube.force-ssl scope). On failure, never blindly retry the same call (non-idempotent — duplicate replies). ${SNS_HITL_LINE}`,
+        description: `⚠️ Replies to an inbound comment — posts an **immediately public** reply with local tokens (the author is the brand account itself). THREADS requires a surface=reply draftId whose body and commentId match the draft, exactly as threads_publish (check-style.py findings come back as warnings); dryRun validates without posting. Publish only copy the user has approved (HITL — never call without the user's approval or an approved standing growth plan). Use commentId straight from the sns_comment_inbox response. Per-platform contracts: THREADS — a new post carrying reply_to_id is the reply, so chains extend freely down to replies-to-replies / INSTAGRAM — replies attach to **top-level comments only** (to answer a sub-comment, pass its parent commentId — for comments carrying parentCommentId, use that value) / FACEBOOK — a comment on a comment id is the sub-comment / YOUTUBE — also top-level only, but a sub-comment id is accepted: this tool looks up the parent, reattaches at the thread root, and reports where it landed via parentCommentId in the response (needs the youtube.force-ssl scope). On failure, never blindly retry the same call (non-idempotent — duplicate replies). ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -4702,8 +4529,8 @@ Returns: integer credit balance.`,
                 commentId: { type: 'string', description: 'commentId from sns_comment_inbox (IG must be a top-level comment id — YT also accepts a sub-comment id)' },
                 message: { type: 'string', description: 'Final reply — THREADS ≤500 chars, IG ≤2,200, FB ≤8,000, YT ≤10,000' },
                 channel: SNS_CHANNEL_PROPERTY,
-                draftId: { type: 'string', description: 'Required for THREADS: reviewed reply draft bound to this commentId. Not accepted for other platforms.' },
-                dryRun: { type: 'boolean', description: 'THREADS only: validate the reply gate without credential or API access.' },
+                draftId: { type: 'string', description: 'Required for THREADS: reply draft bound to this commentId. Not accepted for other platforms.' },
+                dryRun: { type: 'boolean', description: 'THREADS only: validate the reply draft binding (body hash, channel, commentId) without credential or API access.' },
             },
             required: ['platform', 'commentId', 'message'],
         },
@@ -4951,36 +4778,86 @@ Returns: integer credit balance.`,
     },
     // ── Storyboard — sequence → scene → shot (skills/storyboard/references/structure-contract.js) ──
     {
-        name: 'storyboard_backups',
-        title: 'Inspect and prune local recovery backups',
-        annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
-        description: '⚠️ Never apply pruning without user approval (HITL). Read-only previews need no approval. Local-only inventory and retention preview for portal recovery backups; no portal key needed. Keeps the newest N backups per kind (board, scenarios, images, attachments), minimum 1. Default is read-only. Show the remove list to the user and use apply:true only when pruning is authorized, with the exact preview plan token in confirm. A changed inventory requires a new preview. Stop other local writers while pruning backups. Unknown names, working files, .portal-head and state are never cleanup targets. UUID media backups use directory modification time; timestamp-named board/scenario backups use their name. Returns entries with paths/files/bytes, ignored paths, remove, reclaimBytes, plan and deleted. Partial deletion errors report deleted paths.',
+        name: 'speech_manage',
+        title: 'Find and revise shot dialogue and audio dependencies',
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+        description: `Update shot dialogue, line acting and local audio/video bindings.
+
+Use for dialogue edits, expression or intonation corrections, stable speaker routing and generation planning. list finds lines; prepare assigns stable ids; update replaces requested line fields; attach_audio returns measured timing; retime updates the complete shot clock from current speech and explicit action edits. attach_video binds generated files; reuse:tail_trim accepts only unchanged audio and performance starts with a shorter tail. plan_audio resolves the pinned voice and each line's scene direction into raw generator arguments; plan_video resolves the selected adapter's capabilities and carries the same acting/timing context. Scene direction overrides baseline style without changing voice identity. Local files only: plans do not generate, listen, score or approve. Read first and pass expectedRevision for writes; unknown speakers, ambiguous targets, stale revisions and unsupported lip-sync routes fail. Keeps source backups.
+
+Do NOT use to generate media: call the planned raw TTS tool or selected video adapter, then attach the result. Do NOT use for read-only whole-story inspection: use storyboard_read instead. Never group different emotional beats or nonconsecutive shots by shared image and slice them into unrelated reactions.
+
+Returns revision, ordered matching lines with generationPlan and voice/audio hashes, invalidated dependencies, audioPlans for plan_audio (generator, generation/arguments aliases, clean expectedText, language and speechRevision), or a video plan with videoPrompt and textPolicy:no_visible_text; performance.text preserves exact speech for verification, never copy it into the visual prompt. Direction warnings disclose unsupported engine controls; generated audio remains not_reviewed. Acting lead-in/tail-out use seconds. Plans and metadata cannot establish audible or visible quality.`,
         inputSchema: {
-            type: 'object',
-            properties: {
-                episodeDir: { type: 'string', description: 'Local episode directory or its storyboard directory.' },
-                keep: { type: 'integer', minimum: 1, maximum: 1000, default: 10, description: 'Newest backups to preserve per kind; at least one.' },
-                apply: { type: 'boolean', default: false, description: 'Delete the reviewed remove list only after user approval; false previews without writes.' },
-                confirm: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'Exact plan token from the reviewed preview.' },
-            },
-            required: ['episodeDir'],
-        },
+            type: 'object', properties: {
+                path: { type: 'string', description: 'Storyboard directory or scenes.js' },
+                action: { type: 'string', description: 'Local operation: list, prepare ids, update a line, attach generated audio/video, plan raw speech arguments, or plan the selected video adapter', enum: ['prepare', 'list', 'update', 'attach_audio', 'plan_audio', 'plan_video', 'attach_video', 'retime'] },
+                shotId: { type: 'string', description: 'Stable shot id, not its display number' }, lineId: { type: 'string', description: 'Stable dialogue id; required for line writes' }, speaker: { type: 'string', description: 'Filter by character id or exact display name' }, query: { type: 'string', description: 'Exact substring of spoken or subtitle text to find' },
+                expectedRevision: { type: 'string', description: 'Current revision from list; required for writes' },
+                patch: { type: 'object', description: 'Only the requested line fields to replace; speaker uses its stable id', properties: {
+                        tts: { type: 'string', description: 'Spoken text with intended pronunciation' }, sub: { type: 'string', description: 'Subtitle display text' }, speaker: { type: 'string', description: 'Stable character id' }, delivery: { type: 'string', description: 'Narration, visible speech, or speech outside frame', enum: ['voiceover', 'on_screen', 'off_screen'] },
+                        acting: { type: ['object', 'null'], description: 'Replace this line\'s entire acting object; null clears it. Does not change the character voice. Omitted fields use no scene override or zero reaction time.', additionalProperties: false, properties: {
+                                ...ACTING_PROPERTY.properties,
+                                context: { type: 'string', minLength: 1, maxLength: 1000, description: 'Immediate situation, e.g. The applicant mistook a sales result for a job offer.' },
+                                intent: { type: 'string', minLength: 1, maxLength: 1000, description: 'What the speaker wants, e.g. Find out what he thinks he passed.' },
+                                emotion: { type: 'string', minLength: 1, maxLength: 1000, description: 'Current emotion/change, e.g. Confusion after celebration.' },
+                                vocal: { type: 'string', minLength: 1, maxLength: 1000, description: 'Audible delivery, e.g. Quiet question, stress passed, no cheering.' },
+                                visual: { type: 'string', minLength: 1, maxLength: 1000, description: 'Visible action and state, e.g. Lower hands, smile fades, look at applicant.' },
+                                leadInSeconds: { type: 'number', minimum: 0, maximum: 5, description: 'Reaction time before this line in seconds, e.g. 0.25; default zero.' },
+                                tailOutSeconds: { type: 'number', minimum: 0, maximum: 5, description: 'Reaction time after this line in seconds, e.g. 0.4; default zero.' }
+                            } }
+                    }, additionalProperties: false },
+                timingPatch: { type: 'object', description: 'Only for retime. Preserve standalone actions unless explicitly edited; provider padding never becomes an action.', additionalProperties: false, properties: {
+                        speechBoundActions: { type: 'boolean', description: 'Explicitly remove inherited durations on withGroup actions so they follow measured speech' },
+                        actions: { type: 'array', description: 'Explicit [zero-based performance index, positive seconds] edits for actions', items: { type: 'array', minItems: 2, maxItems: 2, items: { type: 'number' } } }
+                    } },
+                reuse: { type: 'string', enum: ['tail_trim'], description: 'Only attach_video: preserve existing generated bytes for a verified temporal prefix; rejects changed audio, moved speech, changed action semantics or extension. Does not certify visual quality.' },
+                audioPath: { type: 'string', description: 'Generated audio file; absolute or relative to storyboard directory' }, videoPath: { type: 'string', description: 'New video file to bind to the shot and current audio' },
+                generation: { type: 'object', description: 'Raw TTS request and declared text language; no listening score', properties: { generator: { type: 'string', description: 'Raw TTS tool that generated this file' }, voiceSettings: { type: 'object', description: 'Exact voice and language settings sent to the generator' }, text: { type: 'string', description: 'Exact clean line text; voiceSettings stores the actual tagged provider request from plan_audio' }, language: { type: 'string', description: 'Declared text language, e.g. ko; metadata for engines without a language argument, never an invented API parameter' } }, required: ['generator', 'voiceSettings', 'text'], additionalProperties: false },
+                capabilities: { type: 'object', description: 'Selected adapter capabilities from verified schema/documentation, with evidence', properties: { provider: { type: 'string', description: 'Selected video adapter provider id, matching the shot engine' }, model: { type: 'string', description: 'Selected model id, matching the shot model when set' }, audioConditioning: { type: 'boolean', description: 'Whether the adapter accepts supplied speech as conditioning' }, lipSync: { type: 'boolean', description: 'Whether supplied speech drives visible mouth motion' }, postLipSync: { type: 'boolean', description: 'Whether a separately selected post lip-sync adapter is available' }, evidence: { type: 'string', description: 'Documentation or verified capability record supporting these settings' } }, required: ['provider', 'model', 'audioConditioning', 'lipSync', 'postLipSync', 'evidence'], additionalProperties: false }
+            }, required: ['path', 'action'], additionalProperties: false
+        }
+    },
+    {
+        name: 'acting_review',
+        title: 'Review performance or cinematography from actual media',
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+        description: "Legacy alias of host_review prepare for one clip or audio file: probes the media, extracts timestamped frames when visual and returns evidence for the host LLM to inspect. Use only when an existing plan or script already calls acting_review for a requested performance or cinematography review (mode audiovisual, audio or video; focus performance or cinematography); new reviews use host_review. Returns status=not_reviewed, score=null, mediaPath, SHA256, duration in seconds, rubric and nextAction. It does not judge or upload media. Unsupported modalities remain unverified. No external evaluation call. Do NOT use for synthesis — use the selected raw generator.",
+        inputSchema: {
+            type: 'object', additionalProperties: false, properties: {
+                mediaPath: { type: 'string', minLength: 1, description: 'Local clip/audio file, e.g. /Volumes/data/story/meleon/test/shot-21.mp4.' },
+                expectedText: { type: 'string', maxLength: 8000, default: '', description: 'Exact intended spoken words, e.g. What did you pass? Empty for silent media.' },
+                direction: { type: 'string', minLength: 20, maxLength: 12000, description: 'Scene situation, intent, emotion, audible delivery, visible actions and timing, e.g. Celebration ends; lower hands and quietly ask the applicant what he passed.' },
+                mode: { type: 'string', enum: ['audiovisual', 'audio', 'video'], default: 'audiovisual', description: 'Tracks to inspect; audiovisual requests both sound and picture.' },
+                focus: { type: 'string', enum: ['performance', 'cinematography'], default: 'performance', description: 'Optional assessment scope; cinematography requires mode=video and uses camera/direction/continuity/naturalness evidence rather than emotional acting.' },
+                retryTransportFailure: { type: 'boolean', default: false, description: 'Legacy compatibility field, ignored. Host reviews never call an external evaluator.' },
+                requestedBy: { type: 'string', minLength: 1, maxLength: 200, description: 'Source of explicit user review request, e.g. User request in this session.' },
+                reason: { type: 'string', minLength: 10, maxLength: 1000, description: 'Requested evaluation purpose, e.g. Verify the confused reaction after revising the sales tone.' }
+            }, required: ['mediaPath', 'direction', 'requestedBy', 'reason']
+        }
     },
     {
         name: 'storyboard_read',
         title: 'Read a storyboard as sequences → scenes → shots',
         annotations: HINT.local,
-        description: `Read an episode's scenes.js and return it as a tree: sequences (purpose · question · payoff) → scenes (place · time · event · charge · turn · out) → shots (feel · info · size · angle · render · narration). Reads the file only; no API call.
+        description: `Read an episode's scenes.js and return it as a tree: sequences (purpose · question · payoff) → scenes (place · time · event · charge · turn · out) → shots (stable id · ordered actions and attributed speech · feel · info · render · character/location/prop references · media plan). Reads the file only; no API call.
+
+The default techniqueCatalog provides the four filmmaking elements and per-technique selection guidance. Store intentional choices as shot.techniques:[{id,reason}] and keep existing camera/size/angle fields consistent.
 
 Use it before editing an existing board, and after storyboard_apply to see the board the way the approval page groups it. level=outline is enough to plan a change; level=full carries every raw shot object (large — one shot is ~40 fields).
 Do NOT use it to validate — storyboard_check runs the contract. A board with no window.STRUCTURE comes back with every shot under unplacedShots; write the structure with storyboard_apply.
 
-Returns: JSON — { version, format, shots, sequences[…scenes[…shots]], unplacedShots, splicedShots (broll · outro) }.`,
+For inspection, the default includeContext:true adds reviewContext.story (STORY), production (PRODUCTION) and document (SB_DOC: characters, props, setting and recorded reviews). shotId adds selectedShot with the raw shot, scene and previous/next shot IDs while preserving the whole flow. Referenced asset paths are authored locators, not proof the files exist or have been viewed. inspection.mediaViewed is always false; evidenceStatus is not_verified. Read assets and run their contract checks before declaring continuity or a current review pass.
+
+Returns: JSON — { file, mediaBaseDirectory, sha256, version, format, shots, sequences[…scenes[…shots]], unplacedShots, splicedShots (broll · outro), playback (actual insertion order), unscheduledShots, propSheet?, inspection, reviewContext?, selectedShot? }.`,
         inputSchema: {
             type: 'object',
             properties: {
                 path: { type: 'string', description: 'The storyboard directory (data/<channel>/episodes/<topic>/storyboard/) or its scenes.js' },
                 level: { type: 'string', enum: ['outline', 'scenes', 'shots', 'full'], description: 'outline = sequences with scene numbers · scenes = scene cards with shot numbers · shots (default) = every shot summarised under its scene · full = raw shot objects too' },
+                shotId: { type: 'string', description: 'Stable shot ID; adds raw selectedShot with scene and neighboring IDs without removing the overall flow. Unknown or duplicate IDs fail.' },
+                includeTechniques: { type: 'boolean', description: 'Default true: return canonical techniqueCatalog with ids, purposes, unique icons, provider instructions, current selections and conflicting-plan advice.' },
+                includeContext: { type: 'boolean', description: 'Default true: return STORY, PRODUCTION and SB_DOC for character, background, prop and scenario inspection. Recorded evidence is not verified by this read.' },
             },
             required: ['path'],
         },
@@ -4989,12 +4866,12 @@ Returns: JSON — { version, format, shots, sequences[…scenes[…shots]], unpl
         name: 'storyboard_apply',
         title: 'Write or patch a storyboard with validation',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-        description: `Write a storyboard's scenes.js from a sequence → scene → shot model, or patch part of it, in one call. Every shot is validated against the grammar vocabularies (type · beat · size · angle · infoType · shareType · render.mode · transition), the structure against its rules (one place and time per scene, a charge that turns, every scene in exactly one sequence, shots grouped by scene in sequence order, two sizes per scene), and the derived shot labels (sceneSlug · sequence) are written from the structure. Nothing is written when a violation is found — the findings come back instead. Warnings are written and reported.
+        description: `Write a storyboard's scenes.js from a sequence → scene → shot model, or patch part of it, in one call. Every shot is checked against the shot schema (type and render.mode vocabularies, transition join, stable id format and uniqueness, camera input, line-crossing and motion-graphic records), the structure against its schema (version, typed scenes and sequences), location references are checked, and the derived shot labels (sceneSlug · sequence) are written from the structure. Nothing is written when a violation is found — the findings come back instead. Warnings are written and reported; creative choices (beat, size, angle, charge) are not validated here.
 
 Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard §4), and to change one thing later (scenes / sequences by key, shots by id — shotsById · insertShots.afterId · removeShotIds — or by position, globals for FORMAT · THEME · COMPREHENSION · STORY · PRODUCTION · MUSIC · SFX). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril — it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change — do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
 storyboard_apply assigns stable shot ids (s0001…) and advances STRUCTURE.nextShotId; preserve those ids and do not edit them by hand.
 Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline · shot.composition · shot.depth in the input schema. shot.depth (L11): count what the viewer must read in the frame at once — one thing → shallow with focus (a person's eyes), two or more → deep with the planes listed front to back; a departure needs a reason, and a still_camera focus-in/rack-focus cut cannot be deep. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
-Do NOT pass a shot's visual plan through a summary — pass the object scenes-schema.md defines (visual · shot.space · visual.camera · visual.video …); unknown keys on a shot pass through untouched. Editing an approved board drops its \`// approved:\` line; it is approved again at the HITL gate.
+Do NOT pass a shot's visual plan through a summary — pass the object scenes-schema.md defines (visual · shot.space · visual.camera · visual.video …); unknown keys on a shot pass through untouched. Editing a board drops its stale \`// approved:\` line; existing task authorization is unchanged.
 
 Scene: { no, place, time, event, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? }. Sequence: { id, title, purpose, question?, payoff?, scenes: [no…] }. The reasons for each field are in scenes-schema.md §structure.
 
@@ -5010,7 +4887,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
                         structure: { type: 'object', description: '{ version: "structure-v1", sequences: [...], scenes: [...] }' },
                         shots: { type: 'array', items: storyboardShotInput, description: 'Every shot in playback order — the scenes-schema.md shot object; each playback shot carries `scene`' },
                     },
-                    required: ['structure', 'shots'],
+                    required: ['shots'],
                 },
                 structure: { type: 'object', description: 'Replace window.STRUCTURE only' },
                 sequences: { type: 'array', items: { type: 'object', description: '{ id, title, purpose, question?, payoff?, scenes }' }, description: 'Upsert sequences by id' },
@@ -5033,7 +4910,20 @@ Returns: the file written or not, counts, and findings (! violation · warning).
                 removeShotIds: { type: 'array', items: { type: 'string', pattern: '^s\\d{4,}$', description: 'A stable shot id' }, description: 'Shot ids to drop (resolved before inserts). Not with the position fields in the same patch' },
                 removeScenes: { type: 'array', items: { type: 'number', description: 'Scene number' }, description: 'Scene numbers to drop from STRUCTURE.scenes and from every sequence' },
                 removeSequences: { type: 'array', items: { type: 'string', description: 'Sequence id' }, description: 'Sequence ids to drop' },
-                globals: { type: 'object', description: 'Other window.* blocks to set — FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. MUSIC.$mix is optional sound-design metadata; SFX keeps logical asset ids only. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1.' },
+                globals: { type: 'object', description: 'Other window.* blocks to set — FORMAT, THEME (motionGraphicTheme: {id: auto or theme id, context?, reason?} sets the common motion theme; explicit shot ids or contexts override it), COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. MUSIC.$mix is optional sound-design metadata; SFX keeps logical asset ids only. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1.' },
+                expectedSha256: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'Current scenes.js hash from storyboard_read; required when editing propSheet on an existing board.' },
+                propSheet: { type: 'object', additionalProperties: false, required: ['props'], description: 'Replace the complete prop sheet atomically. Keep other editorial metadata. Changes validate story-time custody and invalidate approval; original file is backed up.', properties: {
+                        props: { type: 'array', description: 'Complete prop registry for this board', items: { type: 'object', additionalProperties: true, required: ['id'], properties: {
+                                    id: { type: 'string', description: 'Stable prop identity' }, name: { type: 'string', description: 'Display name' }, description: { type: 'string', description: 'Stable appearance, material and identifying features' },
+                                    tracking: { type: 'string', description: 'Appearance alone or time-dependent continuity', enum: ['appearance', 'continuity'] }, appearanceVersion: { type: 'string', description: 'Pinned reference appearance revision' },
+                                    references: { type: 'array', description: 'Versioned appearance images, optionally specific to a condition', items: { type: 'object', required: ['path', 'version'], properties: { path: { type: 'string', description: 'Storyboard-relative image path' }, version: { type: 'string', description: 'Reference image version' }, condition: { type: 'string', description: 'State condition this reference depicts' } } } },
+                                } } },
+                        continuity: { type: 'object', description: 'Initial states and ordered story events; omitted for appearance-only registries', required: ['version', 'timelineId', 'initial', 'events'], additionalProperties: true, properties: {
+                                version: { type: 'integer', enum: [1], description: 'Contract version 1' }, timelineId: { type: 'string', description: 'Stable story timeline identity, independent of playback order' },
+                                initial: { type: 'array', items: { type: 'object' }, description: 'Each: {propId,at:{day,order},state:{ownerId,holderId,location,condition}}. owner/holder is a registered character id, null (none) or unknown.' },
+                                events: { type: 'array', items: { type: 'object' }, description: 'Each: {id,propId,kind,at:{day,order},from,to,reason,recordedAt,recordedBy,shotIds?}. Kinds transfer/lend/return/pick_up/put_down/lose/damage/repair/move/correct. from asserts every changed field. Story time is independent of shot order.' },
+                            } },
+                    } },
                 dryRun: { type: 'boolean', description: 'Validate and report, write nothing' },
                 draft: { type: 'boolean', description: 'The story pass (storyboard §4a): camera-continuity records — shot.lineCrossing, shot.coverage — are deferred (later), not violations; leave it off in §4b' },
             },
@@ -5046,7 +4936,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         annotations: HINT.local,
         description: `Run the sequence → scene → shot rules and the full scenes.js contract (check-scenes.js: vocabularies, beat order, camera slots, motion policy, production mode) on a board and return every finding. Reads the file and runs a local script; no API call.
 
-Use it after storyboard_apply and before delegating a reviewer or generating anything — the same command the storyboard skill runs by hand (\`node check-scenes.js storyboard/\`). draft:true is the story pass (§4a): machine-layer absences are deferred and counted, vocabularies and beat order still fail.
+Use it after storyboard_apply and before delegating a reviewer or generating anything — the same command the storyboard skill runs by hand (\`node check-scenes.js storyboard/\`). draft:true is the story pass (§4a): machine-layer absences are deferred and counted; structure/address errors fail, creative findings are warnings.
 Do NOT treat a pass as visual quality — frame overflow, hero-stat width and speech rate are measured on the rendered canvas in storyboard.html's check strip.
 
 Returns: counts (violations · warnings · deferred) and two lists — structure findings, then shot-contract findings — each line "! where what" (violation) or "· where what" (warning).`,
@@ -5063,24 +4953,20 @@ Returns: counts (violations · warnings · deferred) and two lists — structure
         name: 'scenario_check',
         title: 'Check scenario candidates against their contract',
         annotations: HINT.local,
-        description: `Run check-scenario.js on candidates/d1–d3.md or the selected scenario.md and return its machine-readable S1–S12 findings. Reads local scenario and research files and runs a local script; no API call.
+        description: `Check local scenario candidates or a selected story plan.
 
-Use it after writing the three candidates and before showing them for selection, then again on scenario.md before the board is authored. A candidates/ directory includes the S7 set check; a selected scenario.md includes the chosen-direction and frozen checks.
-Do NOT treat a pass as approval of the wording or replace the storyboard review — this checks fields, references, structure, anchors, reveal discipline, length bands and frozen state.
+Use it after drafting the scenario or its candidates, before selection, and on scenario.md before board authoring. Reads local files and runs a local script; no writes or API calls. Legacy scenarios use S1–S12. scenario-v2 reads cast.json and character identity paths, validates actions and attributed speech, and requires research references only for factual assertions; fiction has no search quota.
+Do NOT use for shot/camera validation — use storyboard_check. A pass verifies structure and references, not factual truth, character motivation, entertainment value or user approval.
 
-Returns: JSON — { files, violations, warnings, findings: [{ level, where, what }] }. Every what starts with S1–S12; violations are P0 and warnings do not make the tool fail.`,
+Returns: JSON — { files, violations, warnings, findings: [{ level, where, what }] }, in candidate file order. Findings start with S1–S12 or V2; violations block authoring, warnings do not.`,
         inputSchema: {
             type: 'object',
             properties: {
-                path: { type: 'string', description: 'The candidates/ directory or the selected scenario.md' },
+                path: { type: 'string', description: 'Local candidate directory or selected page, e.g. data/my-channel/episodes/my-topic/storyboard/candidates or data/my-channel/episodes/my-topic/storyboard/scenario.md' },
             },
             required: ['path'],
         },
     },
-    // ── ttalkkakstory portal (workspace API key) ──
-    // Listed only when a portal key exists (config.portalConfigured, per request like the SNS gate).
-    // Every tool answers one line and isError when no key resolves — the skills carry on in local-file mode.
-    ...PORTAL_TOOLS,
 ];
 /**
  * Per-platform publish tool → required credential platform — index.ts uses this
@@ -5088,6 +4974,21 @@ Returns: JSON — { files, violations, warnings, findings: [{ level, where, what
  * (default tokens ∪ channel directories). All handlers stay registered — calling
  * an unconfigured platform directly returns an explicit missing-token error.
  */
+TOOLS.push(...GENAI_TOOLS);
+// New generations can state the coverage needed; exact legacy requests keep their schema.
+for (const tool of TOOLS) {
+    if (!DURATION_TOOLS.includes(tool.name))
+        continue;
+    tool.inputSchema.properties = { ...tool.inputSchema.properties, requiredSeconds: {
+            type: 'number', exclusiveMinimum: 0,
+            description: 'Required source coverage in seconds, e.g. 3.2. Include the measured shot body, source trim and outgoing transition handle. Selects the shortest supported duration without changing model/resolution. Mutually exclusive with duration, durationSeconds, numFrames, frames, autoDuration and audioMaxDuration. Use for new shots; exact legacy requests may retain their explicit length. Over-limit shots must be split; never truncated.',
+        } };
+    if (tool.name === 'seedance_text2video' || tool.name === 'seedance_img2video')
+        tool.inputSchema.properties.frames = {
+            type: 'integer', minimum: 29, maximum: 289, description: 'Exact output frames, 1 mod 4 at 24 fps. Only Seedance 1.0 Pro/Fast. Mutually exclusive with durationSeconds and requiredSeconds. Use requiredSeconds to round upward automatically.',
+        };
+    tool.description += '\nFor shot-length optimization, pass requiredSeconds (e.g. 3.2) instead of a fixed duration/frame count. Returns the required/requested/excess seconds as a duration plan; these are not measured output seconds. Do NOT use this option for extending, editing or retaking existing footage.';
+}
 export const SNS_PLATFORM_BY_TOOL = {
     threads_publish: 'THREADS',
     threads_draft_create: 'THREADS',
@@ -5101,3 +5002,82 @@ export const SNS_PLATFORM_BY_TOOL = {
     youtube_publish: 'YOUTUBE',
     youtube_insights: 'YOUTUBE',
 };
+const videoContextSchema = {
+    type: 'object', additionalProperties: false,
+    properties: { episode: { type: 'string', description: 'Absolute episode directory.' },
+        shotId: { type: 'string', description: 'Stable storyboard shot ID.' },
+        requestId: { type: 'string', description: 'Stable logical attempt ID; reuse after timeout, never invent a retry ID.' } },
+    required: ['episode', 'shotId', 'requestId'],
+};
+for (const tool of TOOLS) {
+    if (VIDEO_ADAPTERS[tool.name]) {
+        // Legacy direct entrypoints: the routing contract comes first in every description.
+        tool.description = `In a configured workspace, episode video goes through video_plan → video_execute; direct calls need videoContext (episode, shotId, requestId), except channel assets under data/<channel>/assets/, which must still match the saved model. ${tool.description}`;
+        tool.inputSchema.properties = { ...tool.inputSchema.properties,
+            videoContext: { ...videoContextSchema, description: 'Production context. Required for configured episodes; applies saved selection, spending authorization, concurrency and duplicate-submission protection.' } };
+    }
+}
+TOOLS.push({ name: 'video_catalog', title: 'Inspect installed video adapters', description: 'List installed video adapter contracts, deployment identifiers and supported operations. Read-only; no generation or live authentication probe. Use before video_plan; model availability is configuration, not a successful API test.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } }, { name: 'video_plan', title: 'Plan a video with saved model settings', description: 'Prepare an episode video request from saved model selection and explicit overrides. Compiles storyboard frames and role-labelled references into adapter inputs; returns imageBindings with dimensions, hashes and planned inclusion (host mapping stays unverified). Refuses unsupported combinations and unreviewed structured images. Compiles pinned character voice descriptions and Seedance voice-reference mappings, reports voiceContinuity limits without claiming a listening review, validates the final adapter payload, and pins prices and local input hashes. No media generation. Returns a plan ID, provenance and cost estimate; use video_execute under existing spending authorization. Re-plan after speech, voice or reference edits. Exact supplied-speech synchronization is separate from native voice imitation.',
+    inputSchema: { ...videoContextSchema, properties: { ...videoContextSchema.properties,
+            operation: { type: 'string', enum: ['text', 'image', 'reference', 'audio', 'keyframe', 'control', 'extend', 'edit', 'retake'], description: 'Operation; the selected engine determines the tool.' },
+            tool: { type: 'string', description: 'Optional exact installed adapter tool, checked against the saved selection.' },
+            args: { type: 'object', additionalProperties: true, description: 'Adapter-specific fields. Omit model/resolution to inherit saved selection; unknown fields fail.' } } },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false } }, { name: 'video_execute', title: 'Execute an authorized video plan', description: 'Execute a saved video_plan under the episode spending authorization. Revalidates selection, inputs, price and provider configuration, reserves budget atomically and records submission identity. Repeated completed requests reuse their result; pending or ambiguous submissions are never resubmitted. API work can incur charges; host-managed video requires an external host handoff.',
+    inputSchema: { type: 'object', additionalProperties: false, properties: { episode: { type: 'string', description: 'Absolute episode directory used by video_plan.' }, planId: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'Plan ID returned by video_plan.' } }, required: ['episode', 'planId'] },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true } });
+TOOLS.push({ name: 'video_status', title: 'Read a saved video request receipt',
+    description: 'Read a managed video receipt. Default action:read is local only. action:refresh queries an existing ASTRA GenAI job, downloads completed media and updates the receipt without generation. Other providers do not support refresh. Use after interruption; ambiguous requests keep their reservation until explicit provider and billing reconciliation.',
+    inputSchema: { type: 'object', additionalProperties: false, properties: { episode: { type: 'string', description: 'Absolute episode directory.' }, requestId: { type: 'string', description: 'Original logical request ID from video_plan.' }, action: { type: 'string', enum: ['read', 'refresh'], default: 'read', description: 'read is local only; refresh recovers an existing GenAI job and can save completed video.' } }, required: ['episode', 'requestId'] },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true } });
+const imageContextSchema = { type: 'object', additionalProperties: false,
+    properties: { directory: { type: 'string', description: 'Absolute episode or configured workspace directory.' },
+        assetId: { type: 'string', description: 'Stable shot or asset ID.' }, requestId: { type: 'string', description: 'Stable logical attempt ID; reuse on retry.' },
+        reserveUsd: { type: 'number', minimum: 0, description: 'Positive total input+output estimate for API calls; zero for local/host. Not a provider invoice cap.' } },
+    required: ['directory', 'assetId', 'requestId'] };
+for (const tool of TOOLS) {
+    if (!IMAGE_ADAPTERS[tool.name])
+        continue;
+    tool.inputSchema.properties = { ...tool.inputSchema.properties, imageContext: { ...imageContextSchema, description: 'Managed image context: binds saved selection, spending limits and duplicate protection.' } };
+    if (tool.name.startsWith('mlx_image_')) {
+        Object.assign(tool.inputSchema.properties, { transparent: { type: 'boolean', description: 'Qwen-Image-2.1 only; preserve native PNG alpha. Requires compatible installed backend.' } });
+        const steps = tool.inputSchema.properties.steps;
+        steps.maximum = 100;
+        steps.description = 'Requested steps (1–100). Qwen 2.1 Turbo accepts only 8; actual backend schedule may differ.';
+    }
+}
+TOOLS.push({ name: 'image_catalog', title: 'Inspect image adapters and models',
+    description: 'Read installed image adapter contracts, model retirement dates and capability boundaries. No provider request or model loading. Research-only APIs are listed as unimplemented. Use image_plan to validate a concrete request.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } }, { name: 'image_plan', title: 'Plan an image with saved selection',
+    description: 'Prepare an image request for an episode or workspace asset. Resolves saved selection and explicit overrides, checks adapter capabilities and image inputs, pins hashes and an API reservation estimate, then saves a local plan. No generation. Returns plan ID and provenance without echoing base64 inputs. Host plans require external handoff. Use image_execute for server adapters.',
+    inputSchema: { ...imageContextSchema, properties: { ...imageContextSchema.properties,
+            operation: { type: 'string', enum: ['text', 'edit', 'variation'], description: 'Requested operation; selected model determines its adapter.' },
+            tool: { type: 'string', description: 'Optional exact adapter name; must match saved selection.' },
+            args: { type: 'object', additionalProperties: true, description: 'Adapter fields. Saved model/quality are inherited; conflicting or unknown fields fail.' } } },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false } }, { name: 'image_execute', title: 'Execute an authorized image plan',
+    description: 'Execute a saved image plan with atomic budget/concurrency reservations and duplicate protection. Revalidates selection, input hashes and adapter contract before dispatch. Returns structuredContent version, status, outputPath, requestId, providerId, usage, output and separate readiness checks alongside text. Completed means decoded output, not production-ready. Records provider usage, actual output dimensions/hash and not_reviewed quality. Completed requests reuse receipts; ambiguous submissions never auto-retry. API execution incurs charges; host plans cannot run here.',
+    inputSchema: { type: 'object', additionalProperties: false, properties: { directory: { type: 'string', description: 'Absolute directory from image_plan.' }, planId: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'Saved plan ID.' } }, required: ['directory', 'planId'] },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true } }, { name: 'image_status', title: 'Inspect or reconcile an image receipt',
+    description: 'Read a local image receipt without contacting providers. action:reconcile settles a failed request or closes a submission_unknown or interrupted submitting request as failed only after the caller supplies terminal/billing evidence and spentUsd. action:refresh recovers a GenAI image download from its saved provider response and updates the managed receipt; it never regenerates. Completed requests are immutable. Do not reconcile a request still running at the provider.',
+    inputSchema: { type: 'object', additionalProperties: false, properties: { directory: { type: 'string', description: 'Absolute directory.' }, requestId: { type: 'string', description: 'Original request ID.' }, action: { type: 'string', enum: ['read', 'reconcile', 'refresh'], description: 'Defaults to local read. refresh recovers a GenAI image download from its saved response without regeneration.' }, executorStopped: { type: 'boolean', description: 'Required true to reconcile submitting: verify the executor has exited and provider is terminal. A live local owner is rejected.' }, evidence: { type: 'string', description: 'For reconcile: actual terminal status and billing evidence reference.' }, spentUsd: { type: 'number', minimum: 0, description: 'For reconcile: verified total charge, including failed generation.' } }, required: ['directory', 'requestId'] },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true } });
+TOOLS.push(...MUSIC_TOOLS);
+const musicContextSchema = { type: 'object', description: 'Managed music context; selection, authorization and stable request ID for an episode or workspace asset.', additionalProperties: false, properties: {
+        directory: { type: 'string', description: 'Absolute episode or workspace directory, e.g. /work/data/demo/episodes/intro.' },
+        assetId: { type: 'string', description: 'Stable cue/asset ID, e.g. base.' },
+        requestId: { type: 'string', description: 'Stable attempt ID, e.g. base-1. Reuse after interruption.' },
+        reserveUsd: { type: 'number', minimum: 0, description: 'Total provider cost estimate for all tracks, e.g. 0.5; zero for local. Not an invoice cap.' },
+    }, required: ['directory', 'assetId', 'requestId'] };
+for (const tool of TOOLS) {
+    if (!MUSIC_ADAPTERS[tool.name])
+        continue;
+    tool.description = 'Generate music with the selected provider. Configured production requires musicContext and routes through music_plan → music_execute. Do NOT use to inspect models — use music_catalog. ' + tool.description;
+    tool.inputSchema.properties = { ...tool.inputSchema.properties, musicContext: musicContextSchema };
+    if (tool.name === 'suno_generate_sound')
+        tool.description = 'Retired V5 sounds adapter; generation is rejected before submission. Use music_catalog and explicitly select a supported V6 instrumental song instead. Does not automatically substitute models.';
+    if (tool.name === 'suno_generate') {
+        tool.inputSchema.properties.model = { type: 'string', enum: ['V6', 'V6_MINI', 'V6_WILD'], default: 'V6', description: 'sunoapi.org third-party model ID, not a Suno Platform identifier.' };
+        tool.inputSchema.properties.lyrics = { type: 'string', maxLength: 5000, description: 'Lyrics, e.g. [Verse] followed by Korean lyrics. Preferred over prompt in custom mode.' };
+        tool.description = 'Generate songs using sunoapi.org, a third-party provider. Configured calls require musicContext. Use music_catalog to inspect choices; do NOT treat this as the Suno Platform official API. Returns local tracks and provider task ID. V6 custom mode requires style, lyrics or negativeTags; duration is 10–360 seconds. Non-custom mode requires style or lyrics; prompt alone is insufficient. Old V4/V5 models are retired.';
+    }
+}

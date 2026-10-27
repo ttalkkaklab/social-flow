@@ -34,6 +34,7 @@ import { execFileSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FRAMES, MLX_VIDEO_FPS } from './mlx-serve-client.js';
+import { resolveVideoDuration } from './video-duration.js';
 /**
  * The marker that says "this is an episode directory".
  *
@@ -153,13 +154,7 @@ export const PRICED_VIDEO_KEYS = new Set([
     'seedance.2-0-video.1080p', 'seedance.2-5-video.720p', 'seedance.2-5-video.1080p',
     'seedance.2-0-fast-video.720p', 'seedance.2-0-mini-video.720p',
 ]);
-const ELEVENLABS_KEY = {
-    eleven_multilingual_v2: 'tts.elevenlabs',
-    eleven_v3: 'tts.elevenlabs',
-    eleven_v3_conversational: 'tts.elevenlabs-flash',
-    eleven_flash_v2_5: 'tts.elevenlabs-flash',
-    eleven_turbo_v2_5: 'tts.elevenlabs-flash',
-};
+const ELEVENLABS_KEY = { eleven_v4: 'tts.elevenlabs' };
 /** Whole seconds of a local media file via ffprobe — null when ffprobe or the file is missing. */
 function probeSeconds(file) {
     try {
@@ -183,7 +178,17 @@ const str = (v, fallback) => (typeof v === 'string' && v ? v : fallback);
  * RealTime has no published unit price at all. Guessing either one would put a number in the
  * ledger that looks measured and isn't — the event still gets written, with a note saying why.
  */
-export function priceOf(tool, args) {
+export function priceOf(tool, args = {}) {
+    if (args.requiredSeconds !== undefined) {
+        try {
+            args = resolveVideoDuration(tool, args).args;
+        }
+        catch (error) {
+            return { key: null, quantity: null, note: 'Invalid duration plan: ' + String(error) };
+        }
+    }
+    if (tool.startsWith('astra_genai_'))
+        return { key: ['astra_genai_text2img', 'astra_genai_edit'].includes(tool) ? 'image.astra-genai' : 'video.astra-genai', quantity: null, note: 'Gateway pricing unverified; managed reservation is authoritative, not a measured bill' };
     if (tool.startsWith('veo_')) {
         const tier = VEO_TIER[str(args.model, 'veo-3.1-fast-generate-preview')];
         const resolution = str(args.resolution, '720p');
@@ -221,9 +226,9 @@ export function priceOf(tool, args) {
         };
     }
     if (tool.startsWith('seedance_')) {
-        const model = str(args.model, 'seedance-1-5-pro-251215');
+        const model = str(args.model, tool === 'seedance_reference' ? 'dreamina-seedance-2-0-260128' : 'seedance-1-5-pro-251215');
         const resolution = str(args.resolution, '720p');
-        const seconds = num(args.durationSeconds, 5);
+        const seconds = typeof args.frames === 'number' ? args.frames / 24 : num(args.durationSeconds, 5);
         // 1.5 pro is the only model whose price splits on audio — silent is exactly half.
         const base = model === 'seedance-1-5-pro-251215'
             ? `1-5-pro-${args.generateAudio === true ? 'audio' : 'silent'}`
@@ -267,19 +272,13 @@ export function priceOf(tool, args) {
     if (tool === 'mlx_image_generate' || tool === 'mlx_image_edit') {
         return { key: 'image.mlx', quantity: 1 };
     }
-    if (tool === 'tts_local_generate') {
-        return { key: 'tts.local', quantity: charUnits(args) };
-    }
-    if (tool === 'mlx_tts_generate') {
-        return { key: 'tts.mlx', quantity: charUnits(args) };
-    }
     if (tool === 'tts_generate' || tool === 'tts_multi_speaker') {
         const model = str(args.model, 'gemini-2.5-flash-preview-tts');
         const tier = model.includes('pro') ? 'pro' : 'flash';
         return { key: `tts.gemini-${tier}`, quantity: charUnits(args) };
     }
     if (tool.startsWith('tts_elevenlabs_')) {
-        const key = ELEVENLABS_KEY[str(args.model, 'eleven_multilingual_v2')] ?? null;
+        const key = ELEVENLABS_KEY[str(args.model, 'eleven_v4')] ?? null;
         return {
             key,
             quantity: null,
@@ -297,6 +296,10 @@ export function priceOf(tool, args) {
                 : 'billed per second of generated audio and no durationSeconds was requested — read the measured duration off the response',
         };
     }
+    if (tool === 'music_generate_song')
+        return { key: 'music.' + String(args.model || 'lyria-3.5'), quantity: 1, note: 'Price unconfirmed; reconcile provider billing' };
+    if (tool === 'music_elevenlabs_generate')
+        return { key: 'music.elevenlabs.' + String(args.modelId || 'music_v2_5'), quantity: 1, note: 'Price unconfirmed; reconcile provider billing' };
     if (tool === 'music_generate_clip')
         return { key: 'music.lyria-clip', quantity: 1 };
     if (tool === 'music_generate' || tool === 'music_generate_advanced') {
@@ -306,6 +309,8 @@ export function priceOf(tool, args) {
             note: 'unit price unconfirmed — the report excludes this item rather than counting it as 0',
         };
     }
+    if (tool === 'suno_generate' && String(args.model).startsWith('V6'))
+        return { key: 'music.suno.' + String(args.model), quantity: 1, note: 'Current V6 price unconfirmed; do not reuse legacy V5 credit rates' };
     if (tool === 'suno_generate')
         return { key: 'music.suno-generate', quantity: 1 };
     if (tool === 'suno_generate_sound')
@@ -314,6 +319,9 @@ export function priceOf(tool, args) {
         return { key: 'music.suno-lyrics', quantity: 1 };
     if (tool === 'mlx_music_generate') {
         return { key: 'music.mlx', quantity: num(args.durationSeconds, DEFAULT_MLX_MUSIC_SECONDS) };
+    }
+    if (['astra_text2video', 'astra_img2video', 'astra_keyframe_video', 'astra_audio2video'].includes(tool)) {
+        return { key: 'video.astra', quantity: num(args.numFrames, 121) / num(args.frameRate, 24), note: 'Self-hosted; hardware and wall-clock costs excluded' };
     }
     if (tool === 'mlx_video_generate') {
         const frames = num(args.numFrames, DEFAULT_MLX_VIDEO_FRAMES);
@@ -353,12 +361,15 @@ function charUnits(args) {
 /** True for the tools whose calls belong in an episode's cost ledger. */
 export function isBillableTool(tool) {
     // This wrapper records each synthesis and review itself, including rejected takes.
-    if (tool === 'tts_generate_checked')
+    if (['tts_route', 'tts_generate_checked', 'character_voice_audition', 'tts_review_acting', 'tts_local_generate', 'mlx_tts_generate'].includes(tool))
+        return false;
+    if (['music_catalog', 'music_plan', 'music_execute', 'music_status'].includes(tool))
         return false;
     // Catalogue reads cost nothing and belong in no ledger.
     if (tool === 'tts_list_voices' || tool === 'tts_elevenlabs_voices' || tool === 'music_list_options')
         return false;
-    return (tool.startsWith('veo_') ||
+    return ((tool.startsWith('astra_genai_') && tool !== 'astra_genai_video_status') ||
+        tool.startsWith('veo_') ||
         tool.startsWith('omni_') ||
         tool.startsWith('seedance_') ||
         tool.startsWith('gpt_image_') ||

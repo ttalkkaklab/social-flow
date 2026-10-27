@@ -2,6 +2,48 @@
 (function (root) {
   'use strict';
   const text = value => typeof value === 'string' && !!value.trim();
+  function resolveVideoChoice(production, shot, snapshotVideo) {
+    const shotId = String(shot.id ?? shot.shot?.id);
+    const object = value => value && typeof value === 'object' && !Array.isArray(value);
+    let selection = snapshotVideo;
+    let source = snapshotVideo ? 'episode_snapshot' : 'legacy_board';
+    if (!selection) {
+      const v = shot.visual?.video;
+      const model = v?.model || production.videoModel?.model;
+      const engine = ['host', 'astra'].includes(production.videoProvider) ? production.videoProvider : v?.engine || (
+        typeof model === 'string' && model.includes('seedance') ? 'seedance' : typeof model === 'string' && model.startsWith('veo-') ? 'veo' : undefined);
+      if (!engine) throw new Error('Legacy board has no explicit video selection; do not inherit current workspace defaults');
+      selection = { engine, ...(!['astra', 'host'].includes(engine) && model ? { model } : {}),
+        ...(v?.resolution || production.videoModel?.resolution ? { resolution: v?.resolution || production.videoModel?.resolution } : {}) };
+    }
+    // Preserve pre-existing per-cut and episode choices before applying scoped changes.
+    if (snapshotVideo) {
+      for (const [choice, origin] of [[production.videoModel, 'board_episode'], [shot.visual?.video, 'board_shot']]) {
+        if (!choice || choice.model === 'mixed') continue;
+        if (!choice.engine && !choice.model && !choice.resolution) continue;
+        const engine = choice.engine || (choice.model?.includes('seedance') ? 'seedance' : choice.model?.startsWith('veo-') ? 'veo' : selection.engine);
+        const next = { ...(engine === selection.engine ? selection : {}), engine, ...Object.fromEntries(['engine','model','resolution','host'].filter(k => choice[k] !== undefined).map(k => [k, choice[k]])) };
+
+        if (next.engine === 'astra' && next.model === 'astra') delete next.model;
+        if (next.engine === 'host' && next.model === 'host') next.model = 'host-managed';
+        if (JSON.stringify(next) !== JSON.stringify(selection)) { selection = next; source = origin; }
+      }
+    }
+    const overrides = production.modelSettings?.overrides || [];
+    if (!Array.isArray(overrides)) throw new Error('modelSettings.overrides must be an array of explicit scoped changes');
+    for (const scope of ['episode', 'shot']) {
+      for (const change of overrides) {
+        if (!object(change) || !['episode', 'shot'].includes(change.scope) || typeof change.request !== 'string' || !change.request.trim())
+          throw new Error('Each model override requires scope and the actual user request');
+        if (change.scope === 'shot' && (typeof change.shotId !== 'string' || !change.shotId)) throw new Error('Shot override needs shotId');
+        if (change.scope !== scope || (scope === 'shot' && change.shotId !== shotId) || !change.video) continue;
+
+        selection = change.video; // Replace the category; never carry old-provider options forward.
+        source = scope + '_override';
+      }
+    }
+    return { selection, source };
+  }
   const CHOICES = ['full_video', 'video_80', 'video_50', 'video_30', 'video_lt10', 'no_video'];
   const CUT_TYPES = ['action', 'reaction', 'insert', 'document', 'map', 'scenery'];
   const MODES = { full_video: '전체 영상', video_80: '80% 이상 영상', video_50: '50% 이상 영상', video_30: '30% 이상 영상', video_lt10: '10% 미만 영상', no_video: '0% 영상', hook_only: '훅만 영상 (기존 승인)', stills_only: '정지 전용 (기존 승인)', hybrid: '혼합 제작 (기존 승인)' };
@@ -16,13 +58,18 @@
     return { min, max: Math.max(min, max) };
   }
   const videoRender = scene => ['generated_video','stock_video'].includes(scene.shot?.render?.mode);
-  function ratioErrors(win) {
+  // The chosen ratio is a planning target and the cost ceiling (owner decision 2026-10-18): the
+  // band's upper count is enforced, the lower count is advice. Fewer video cuts than the target
+  // is reported, never padded with video the story does not need.
+  function ratioErrors(win, { advice = [] } = {}) {
     const scenes = win.SCENES || [], bounds = ratioBounds(win.PRODUCTION?.mode, scenes.length);
     if (!bounds) return [];
     const n = scenes.filter(videoRender).length;
     const missing = scenes.some(s => !s.shot?.render?.mode);
-    return missing ? ['render ratio requires render.mode on every shot'] : n < bounds.min || n > bounds.max
-      ? [`render ratio requires ${bounds.min}–${bounds.max} video shots of ${scenes.length}; got ${n}`] : [];
+    if (missing) return ['render ratio requires render.mode on every shot'];
+    if (n > bounds.max) return [`render ratio allows at most ${bounds.max} video shots of ${scenes.length} under ${win.PRODUCTION.mode}; got ${n}`];
+    if (n < bounds.min) advice.push(`${n} of ${scenes.length} shots are video; the chosen ratio ${win.PRODUCTION.mode} aims at ${bounds.min}–${bounds.max}. That is fine when the story needs no more motion; report the shortfall instead of adding cuts`);
+    return [];
   }
   const bandContract = p => p?.renderRatioVersion === 1 || ['video_80','video_lt10','no_video'].includes(p?.mode);
   // A cut is a shot in the playback line; b-roll is spliced by `after` and is not a cut, so it
@@ -38,21 +85,26 @@
       return hook && newCut(hook) && generated(hook) && cuts.filter(generated).length === 1
         ? [] : ['hook_only requires only the opening hook cut to be generated video'];
     }
-    if (!RATIOS[key]) return [];
-    const minimum = Math.ceil(cuts.length * RATIOS[key]);
-    return cuts.filter(generated).length >= minimum ? [] : [key + ' requires at least ' + minimum + ' of ' + cuts.length + ' new cuts as generated video'];
+    // Legacy percentage approvals carry no minimum either (owner decision 2026-10-18).
+    return [];
   }
-  // Two HITL choices every episode with generated video records (user directive 2026-09-11):
-  // which 3D renderer draws the mandatory previz, and which video model the clips are made on.
+  // The previz renderer and the video model come from .social-flow/models.json (model-settings.md);
+  // a previz is optional, and the board records which renderer drew one when it exists.
   const PREVIZ_RENDERERS = { blender: '블렌더 브릿지 — 관절 마네킹, 모션 캡처', threejs: 'three.js 페이지 — 헤드리스 크롬, 관절 없음' };
   // Suggested models and priced resolutions; each cut may choose its own model and resolution.
-  const VIDEO_MODELS = {
-    'seedance-1-5-pro-251215': { label: 'Seedance 1.5 Pro', resolutions: ['720p', '1080p'] },
-    'dreamina-seedance-2-0-260128': { label: 'Seedance 2.0', resolutions: ['1080p'] },
-    'dreamina-seedance-2-0-fast-260128': { label: 'Seedance 2.0 fast', resolutions: ['720p'] },
-    'dreamina-seedance-2-0-mini-260615': { label: 'Seedance 2.0 mini', resolutions: ['720p'] },
-    'dreamina-seedance-2-5-260628': { label: 'Seedance 2.5', resolutions: ['720p', '1080p'] }
-  };
+  // Node planners consume the build projection of installed adapters. Browser checks do
+  // not present model choices and need no copy of this catalogue.
+  const catalogue = typeof module === 'object' && module.exports
+    ? require('../../_shared/video-catalog.json') : { adapters: [] };
+  const seedanceContract = catalogue.adapters.find(adapter => adapter.tool === 'seedance_img2video');
+  const priced = typeof module === 'object' && module.exports ? require('../../produce/references/seedance-route.js').PRICED : new Set();
+  const VIDEO_MODELS = Object.fromEntries(Object.entries(seedanceContract?.modelConstraints || {})
+    .filter(([model, spec]) => spec.referenceVideos || model === 'seedance-1-5-pro-251215')
+    .map(([model, spec]) => [model, { label: model.replace(/^(dreamina-)?seedance-/, 'Seedance ').replace(/-\d{6}$/, '').replace(/(\d)-(\d)/, '$1.$2').replace(/-/g, ' ').replace(/ pro$/, ' Pro'), resolutions: spec.resolutions.filter(res => {
+      const family = model.replace(/^(dreamina-)?seedance-/, '').replace(/-\d{6}$/, '');
+      return priced.has('seedance.' + family + (model === 'seedance-1-5-pro-251215' ? '-silent.' : '-video.') + res);
+    }) }]).filter(([, spec]) => spec.resolutions.length));
+
   // Our own LTX-2.5 box is not a tier in the table above: it has no price, so nothing to compare.
   // Its dimensions follow the board FORMAT while staying on the 64-pixel grid and below the area ceiling.
   const ASTRA_RESOLUTION = '1024x1920';
@@ -61,7 +113,8 @@
   const astraSize = win => win.FORMAT === 'youtube-long-16x9'
     ? { source: ASTRA_WIDE_RESOLUTION, edit: '1920x1080' }
     : { source: ASTRA_RESOLUTION, edit: '1080x1920' };
-  const selectionRecorded = sel => sel && ['user', 'standing'].includes(sel.kind) && text(sel.reference);
+  // user = answered in HITL · standing = copied from saved settings or a written plan · assistant = chosen by the author when nothing was saved (automation-guidance.md).
+  const selectionRecorded = sel => sel && ['user', 'standing', 'assistant'].includes(sel.kind) && text(sel.reference);
   // The four slots every generated shot stores (scenes-schema §camera); spatial-prompts.js
   // assembles the motion prompt's camera span from them, so nothing else describes the camera.
   const CAMERA_SLOTS = ['movement', 'speed', 'framing', 'end'];
@@ -74,7 +127,7 @@
   // variation" and got clips whose every frame repeats the last; ep411 (2026-09-09) asked for
   // "slow dolly in" on wide miniature stages and read as stills on a phone. The camera slots
   // name a move the viewer can see, in vendor vocabulary: dolly in, truck right, arc shot,
-  // pedestal up, at slow / steady / fast — or static, chosen, on at most a third of the shots.
+  // pedestal up, at slow / steady / fast — or static, chosen for the scene.
 
   // Shot camera presets are independent of the episode's material/illustration style.
   const CAMERA_PRESETS = { 'drone-flythrough': { label: '드론 경로 비행', variants: { cinematic: '부드러운 항공 촬영', fpv: '기울어지는 FPV' } } };
@@ -86,7 +139,8 @@
     properties: {
       preset: { type: 'string', enum: Object.keys(CAMERA_PRESETS), description: 'Optional shot preset. Omit on ordinary camera shots; drone-flythrough is continuous travel through a 3D location.' },
       variant: { type: 'string', enum: Object.keys(CAMERA_PRESETS['drone-flythrough'].variants), description: 'cinematic keeps the horizon level; fpv uses authored bank at bends. Required with drone-flythrough.' },
-      movement: { type: 'string', description: 'One camera move in vendor vocabulary, chosen from shot.feel (directing-grammar §4–§5): static · dolly in/out · zoom in/out (lens only) · dolly zoom in/out · pan left/right · tilt up/down · whip pan · truck left/right · pedestal up/down · crane up/down · arc shot · tracking · handheld · aerial. Not push in, orbit, boom or a Korean word (storyboard_check enforces the vocabulary and the conditions below). A pan, tilt, truck, pedestal or dolly is a sentence from framing to end, so end must differ from framing. A whip pan needs the hit in sound.sfx or visual.audio. A dolly zoom needs shot.depth deep (the background that stretches), a stationary subject, and happens once per episode. For drone shots copy the trajectory-derived value from drone-previz.js.' },
+      purpose: { type: 'string', description: 'Shot-specific reason for this camera choice. Review context only; executable targets, focus order and timing belong in framing/end, not only here or in technique reasons.' },
+      movement: { type: 'string', description: 'One camera move in vendor vocabulary, chosen from shot.feel (directing-grammar §4–§5): static · dolly in/out · zoom in/out (lens only) · dolly zoom in/out · pan left/right · tilt up/down · whip pan · truck left/right · pedestal up/down · crane up/down · arc shot · tracking · handheld · aerial. Not push in, orbit, boom or a Korean word (storyboard_check enforces the vocabulary and the conditions below). A pan, tilt, truck, pedestal or dolly is a sentence from framing to end, so end must differ from framing. A whip pan needs the hit in sound.sfx or visual.audio. A dolly zoom needs shot.depth deep (the background that stretches), a stationary subject, with a scene-specific purpose. For drone shots copy the trajectory-derived value from drone-previz.js.' },
       speed: { type: 'string', description: 'Movement pace as slow, steady or fast — never inside movement, never a word the viewer cannot see (very slow, subtle). Empty on static. Generated from the trajectory on drone shots.' },
       framing: { type: 'string', description: 'Opening composition — what the camera holds before the move starts (hold in). Generated from the trajectory on drone shots.' },
       end: { type: 'string', description: 'Closing composition — where the move settles and holds (hold out); on a pan, tilt, truck, pedestal or dolly it names a different picture from framing. Generated from the trajectory on drone shots.' },
@@ -211,14 +265,14 @@
       return {frame,...s};
     }) };
   }
-  function droneSceneErrors(scene, {draft=false}={}) {
+  function droneSceneErrors(scene, {draft=false,advice=[]}={}) {
     const c=scene.visual?.camera;
     if (!isDrone(c)) return droneErrors(c);
     const e=droneErrors(c), r=scene.shot?.render, d=scene.shot?.videoDesign;
     if (r?.mode!=='generated_video' || !['place','live_action'].includes(r?.purpose)) e.push('drone-flythrough requires generated_video with purpose place or live_action');
-    if (r?.motionEssential!==true || !text(r?.whyNotStill)) e.push('drone-flythrough needs motionEssential and whyNotStill, including in full_video');
-    if (d?.motion?.kind!=='spatial_reveal' || !text(d.motion.visibleChange) || !text(d.motion.reason)) e.push('drone-flythrough needs a justified spatial_reveal with visibleChange');
-    if (['arcade','papercut','inkwash'].includes(d?.look)) e.push('drone-flythrough needs a volumetric look; flat arcade, paper-cutout and ink-wash are incompatible');
+    if (r?.motionEssential!==true || !text(r?.whyNotStill)) advice.push('drone-flythrough needs motionEssential and whyNotStill, including in full_video');
+    if (d?.motion?.kind!=='spatial_reveal' || !text(d.motion.visibleChange) || !text(d.motion.reason)) advice.push('drone-flythrough needs a justified spatial_reveal with visibleChange');
+    if (['arcade','papercut','inkwash'].includes(d?.look)) advice.push('drone-flythrough needs a volumetric look; flat arcade, paper-cutout and ink-wash are incompatible');
     if (!e.length) {
       const slots=droneSlots(c);
       for(const k of CAMERA_SLOTS) if(c[k]!==slots[k]) e.push('drone visual.camera.'+k+' is stale; regenerate it from the trajectory');
@@ -233,7 +287,6 @@
   }
 
   const NEUTERED = /\b(?:very|extremely|almost|ever so)\s+(?:slow|slight|small|subtle|gentle)|\b(?:barely|hardly|imperceptibl[ey]|subtle|subtly|tiny|minimal|micro|slight|slightly|gentle|gently|restrained|quiet)\b|\bhold(?:ing)?\s+(?:the\s+)?(?:composition|frame|shot)\b|\block(?:ed)?[- ]off\b|\bbreathing only\b/i;
-  const WIDE = /\b(?:wide|establishing|extreme long|long shot|full[- ]body figures|small figures)\b/i;
   // The move families a generated shot may declare, in the vendor's words (video-model-selection
   // §Camera), and what each one has to bring with it (directing-grammar §4, film-directing course
   // L13 pan·tilt · L14 dolly·truck·tracking · L15 dolly zoom, 2026-08-28 ~ 08-30). `movement` opens
@@ -312,20 +365,72 @@
       warnings.push(`a fast ${move.key} strobes at 24 fps when the background holds vertical lines (posts, window frames); if it reads broken, widen the framing and come closer rather than slowing down (L13)`);
     return warnings;
   }
-  // L15 — the trick is spent once: the second time the audience watches the camera, not the person.
+  // Mechanical symptoms for author review, never a camera quota or semantic certification.
+  function cameraDirectionWarnings(scenes) {
+    const planned = (Array.isArray(scenes) ? scenes : []).map((scene, index) => ({ scene, index }))
+      .filter(({scene}) => scene && scene.type !== 'outro' && !reused(scene) &&
+        ['generated_video', 'still_camera'].includes(scene.shot?.render?.mode));
+    const notes = [], reasons = new Map(), endings = new Map();
+    const remember = (map, value, index) => {
+      if (!text(value)) return;
+      const key = normalize(value);
+      if (!map.has(key)) map.set(key, new Set());
+      map.get(key).add(index + 1);
+    };
+    for (const {scene, index} of planned) {
+      const still = scene.shot.render.mode === 'still_camera';
+      const camera = (still ? scene.shot.render.camera : scene.visual?.camera) || {};
+      const choices = (Array.isArray(scene.shot?.techniques) ? scene.shot.techniques : [])
+        .filter(t => typeof t?.id === 'string' && t.id.startsWith('camera.'));
+      if (!text(still ? camera.effect : camera.movement))
+        notes.push(`[camera-plan-missing] shot ${index + 1}: choose a motivated camera ${still ? 'effect' : 'movement or hold'} before image prompts; do not fill static as a default`);
+      // Compare components independently: a different angle reason must not hide a copied hold.
+      const written = choices.map(t => t.reason).filter(text);
+      const purpose = still ? camera.reason : camera.purpose;
+      if (text(purpose)) written.push(purpose);
+      if (!written.length) notes.push(`[camera-purpose-missing] shot ${index + 1}: explain why this camera choice serves this action, discovery or reaction`);
+      for (const reason of written) {
+        remember(reasons, reason, index);
+      }
+      const action = [scene.shot?.info, scene.visual?.action, scene.shot?.videoDesign?.action].filter(text).map(normalize);
+      if (written.some(reason => action.includes(normalize(reason))))
+        notes.push(`[camera-purpose-action-copy] shot ${index + 1}: action text repeats as camera rationale; explain what the viewpoint, focus or movement makes noticeable`);
+      if (!still) remember(endings, camera.end, index);
+    }
+    for (const shots of reasons.values()) {
+      if (shots.size > 1) notes.push(`[camera-purpose-repeated] shots ${Array.from(shots).join(', ')}: repeated camera rationale component; review each beat and write what framing, focus or movement lets the viewer notice. Do not rotate effects to silence this advice`);
+    }
+    for (const shots of endings.values()) {
+      if (shots.size >= 3) notes.push(`[camera-end-repeated] shots ${Array.from(shots).join(', ')}: same camera landing across several cuts; inspect whether it describes the actual final picture or copied hold text. Intentional repeated setups remain valid`);
+    }
+    const generatedShots = planned.filter(({scene}) => scene.shot.render.mode === 'generated_video');
+    if (generatedShots.length > 1 && generatedShots.every(({scene}) => staticCamera(scene.visual?.camera)))
+      notes.push('[camera-all-static] Every planned generated shot holds the camera. Review attention shifts, reveals and travel; retain motivated holds and rack focus, with shot-specific reasons. No moving-shot quota applies');
+    return notes;
+  }
+  // Repetition is judged by what each shot reveals, not a per-episode quota.
   // Takes the whole board so the numbers it prints are board shot numbers.
   function episodeMoveErrors(scenes) {
-    const at = (scenes || []).map((s, i) => eligible(s) && !reused(s) && s.visual?.video && moveOf(s.visual?.camera)?.family === 'dollyzoom' ? i + 1 : 0).filter(Boolean);
-    return at.length > 1 ? [`[dolly-zoom-twice] shots ${at.join(', ')} each ask for a dolly zoom — it is spent once per episode (directing-grammar §4); keep the shot where the world turns over, and write another move on the rest`] : [];
+    const seen = new Map(), notes = [];
+    for (const [index, scene] of (scenes || []).entries()) {
+      if (moveOf(scene.visual?.camera)?.family !== 'dollyzoom') continue;
+      const purpose = String(scene.shot?.info || scene.shot?.why || '').trim();
+      if (!purpose) { notes.push(`shot ${index + 1}: explain what this dolly zoom reveals`); continue; }
+      if (seen.has(purpose)) notes.push(`shots ${seen.get(purpose)} and ${index + 1}: repeated dolly zoom with identical information; inspect whether the second beat adds anything`);
+      seen.set(purpose, index + 1);
+    }
+    return notes;
   }
-  function cameraErrors(scene) {
-    const v = scene.visual || {}, camera = v.camera || {}, errors = droneSceneErrors(scene);
+
+  function cameraErrors(scene, {advice=[]} = {}) {
+    const v = scene.visual || {}, camera = v.camera || {}, errors = droneSceneErrors(scene,{advice});
     const span = [camera.movement, camera.speed].filter(text).join(' ');
     const hit = NEUTERED.exec(span);
-    if (hit) errors.push(`visual.camera asks for a move the viewer cannot see ("${hit[0]}"); write a visible move at slow, steady or fast, or choose static`);
+    if (hit) advice.push(`visual.camera asks for a move the viewer cannot see ("${hit[0]}"); write a visible move at slow, steady or fast, or choose static`);
     if (v.video?.cameraFixed === true && !staticCamera(camera))
       errors.push(`visual.video.cameraFixed locks the provider camera while visual.camera.movement is "${camera.movement}"; drop cameraFixed or write static`);
-    return errors.concat(moveErrors(scene));
+    advice.push(...moveErrors(scene));
+    return errors;
   }
   // The final state is written once: the last motion beat on an acted shot, videoDesign.after otherwise.
   function finalState(design) {
@@ -369,15 +474,15 @@
     const own = Object.fromEntries(['materials', 'palette', 'lighting'].filter(k => text(o[k])).map(k => [k, o[k]]));
     return { ...base, ...own, preset: o.preset, override: true, reason: o.reason, selection: o.selection };
   }
-  function shotStyleErrors(scene, index) {
+  function shotStyleErrors(scene, index, {advice=[]} = {}) {
     const o = scene?.shot?.style, tag = '[shot-style] shot ' + (index + 1) + ': ';
     if (o === undefined) return [];
     const errors = [];
     if (!o || typeof o !== 'object' || Array.isArray(o)) return [tag + 'shot.style must be an object with preset, reason and selection'];
     if (!STYLES[o.preset]) errors.push(tag + 'shot.style.preset must be one of ' + Object.keys(STYLES).join(', '));
-    if (!text(o.reason)) errors.push(tag + 'shot.style.reason states why this picture needs another preset than the episode');
-    if (!(o.selection && o.selection.kind === 'user' && text(o.selection.reference)))
-      errors.push(tag + 'a per-shot style leaves the episode style only on the user\'s HITL approval; record it in shot.style.selection { kind: "user", reference }');
+    if (!text(o.reason)) advice.push(tag + 'shot.style.reason states why this picture needs another preset than the episode');
+    if (!selectionRecorded(o.selection))
+      advice.push(tag + 'record who chose the per-shot style in shot.style.selection { kind: "user" | "assistant", reference }');
     Object.keys(o).filter(k => !SHOT_STYLE_KEYS.includes(k)).forEach(k => errors.push(tag + 'shot.style.' + k + ' is not a shot-level field (world and camera language stay episode constants)'));
     return errors;
   }
@@ -410,11 +515,7 @@
       errors.push('A reused clip cannot also declare a generation, recording, slide or alternate file handoff');
     if (v.picture !== 'ai-video' || v.overlay !== 'none') errors.push('Reused generated clips keep picture:ai-video and overlay:none');
     if (scene.title || scene.stat || (scene.bullets || []).length || scene.footnote)
-      errors.push('Reused video allows subtitles only; clear title, stat, bullets and footnote');
-    if (scene.shot?.render?.mode !== 'generated_video' || scene.shot?.render?.purpose !== 'live_action' ||
-        scene.shot?.render?.motionEssential !== true || !text(scene.shot?.render?.whyNotStill) || !text(scene.shot?.render?.action) || !text(v.why))
-      errors.push('Reused video needs essential live_action with action, whyNotStill and visual.why');
-    errors.push(...motionErrors(scene));
+      errors.push('Nothing goes over reused footage; clear title, stat, bullets and footnote');
     return errors;
   }
   // A supplied file — the user's recording, or a free stock clip (visual.source "stock" with a
@@ -437,7 +538,7 @@
         return { type: s.type, duration: s.duration, narration: s.narration,
           ...(reused(s) ? { reuse: v.reuse } : {}),
           render: s.shot?.render, design: s.shot?.videoDesign, cutType: s.shot?.cutType,
-          frames: v.frames, imagePair: v.imagePair, styleRole: v.styleRole, stylePack: v.stylePack,
+          frames: v.frames, references: v.references, imagePair: v.imagePair, styleRole: v.styleRole, stylePack: v.stylePack,
           bg: v.bg, bgPrompt: v.bgPrompt, camera: v.camera, action: v.action, video, engine: v.engine,
           prompt: v.prompt, clip: typeof v.clip === 'object' ? v.clip : undefined,
           source: v.source, license: v.license, file: typeof v.clip === 'string' ? v.clip : undefined };
@@ -466,13 +567,14 @@
     }
     return errors;
   }
-  function check(win, { requireSelection = false, requireApproval = false, draft = false, generatedVideoMax } = {}) {
+  function check(win, { requireSelection = false, requireApproval = false, draft = false, generatedVideoMax, advice = [] } = {}) {
     const p = win.PRODUCTION, errors = Array.from(win.SCENES || []).flatMap((s, i) => reuseErrors(s).map(e => `shot ${i + 1}: ${e}`));
+    advice.push(...cameraDirectionWarnings(win.SCENES));
     if (!p) return requireSelection || (win.SCENES || []).some(reused)
       ? errors.concat(['Choose a production mode with a six-option cost comparison before generation']) : errors;
     if (!MODES[p.mode]) errors.push('PRODUCTION.mode must be one of ' + CHOICES.join(', ') + ' (hook_only, stills_only and hybrid are legacy)');
     if (p.renderRatioVersion !== undefined && p.renderRatioVersion !== 1) errors.push('renderRatioVersion must be 1');
-    if (bandContract(p) && (win.SCENES || []).every(s => s.shot?.render?.mode)) errors.push(...ratioErrors(win));
+    if (bandContract(p) && (win.SCENES || []).every(s => s.shot?.render?.mode)) errors.push(...ratioErrors(win, { advice }));
     // host = the CLI's own media tool (image_gen on Codex and Grok, image_to_video on Grok); absent reads as api.
     if (p.imageProvider !== undefined && !['host', 'api'].includes(p.imageProvider)) errors.push('PRODUCTION.imageProvider must be host or api');
     // astra = our own LTX-2.5 box (video-model-selection §ASTRA). Video only: there is no image lane on it,
@@ -482,19 +584,18 @@
       errors.push('PRODUCTION.videoBudgetUsd must be a finite nonnegative episode cap');
     if (!Number.isInteger(p.maxAttempts) || p.maxAttempts < 1 || p.maxAttempts > 5)
       errors.push('PRODUCTION.maxAttempts must be 1–5 total attempts per clip (including the first)');
-    // stills_only buys no generated video, so there is no cost quote to fingerprint and nothing
-    // for the user to approve; the six-option comparison never ran. Every other mode carries one.
-    if (requireApproval && p.mode !== 'stills_only' && (!p.approval || !['user', 'standing'].includes(p.approval.kind) ||
+    // no_video (and legacy stills_only) buys no generated video, so there is no cost quote to
+    // fingerprint and nothing for the user to approve. Every other mode carries one.
+    if (requireApproval && !['stills_only', 'no_video'].includes(p.mode) && (!p.approval || !['user', 'standing'].includes(p.approval.kind) ||
         !text(p.approval.reference) || !Number.isFinite(Date.parse(p.approval.at)) || !text(p.approval.quoteFingerprint)))
       errors.push('PRODUCTION.approval needs kind, reference, at and the approved cost quoteFingerprint');
     // The visual style is asked before authoring in every production mode (visual-style.md,
     // user directive 2026-09-06): a board without the preset stops here, not only under full_video.
     // spatial-explainer is accepted for boards that predate the presets.
     const chosen = p.style?.preset;
-    if (!chosen) errors.push('Choose an episode visual style (PRODUCTION.style.preset) before authoring; every production mode carries one');
+    if (!chosen) advice.push('Choose an episode visual style (PRODUCTION.style.preset) before authoring; every production mode carries one');
     else if (chosen !== 'spatial-explainer' && !STYLES[chosen]) errors.push('Unknown PRODUCTION.style.preset');
-    if (STYLES[chosen] && (!['user', 'standing'].includes(p.style.selection?.kind) ||
-        !text(p.style.selection?.reference))) errors.push('Record the actual style HITL choice in PRODUCTION.style.selection');
+    if (STYLES[chosen] && !selectionRecorded(p.style.selection)) advice.push('Record where the style came from in PRODUCTION.style.selection (user, standing or assistant, with its reference)');
     if (STYLES[chosen] && !packPresets.includes(chosen) && p.style.referencePack)
       errors.push('Only cinematic-miniature carries the miniature reference pack; drop referencePack for ' + chosen);
     if (p.cast !== undefined) {
@@ -513,32 +614,37 @@
     (win.SCENES || []).forEach((scene, i) => {
       if (scene.shot?.cutType !== undefined && !CUT_TYPES.includes(scene.shot.cutType))
         errors.push('[cutType-unknown] shot ' + (i + 1) + ': shot.cutType must be one of ' + CUT_TYPES.join(', '));
-      shotStyleErrors(scene, i).forEach(e => errors.push(e));
+      shotStyleErrors(scene, i, {advice}).forEach(e => errors.push(e));
     });
-    if (win.RENDER_ALLOCATION?.status === 'pending') errors.push('render allocation is pending; submit the LLM plan before production');
+    if (win.RENDER_ALLOCATION?.status === 'pending') advice.push('render allocation is pending; submit the LLM plan before production');
     if (draft) return errors; // Shot assets/designs are authored after the narration-only draft.
     (win.SCENES || []).forEach((s, i) => {
-      if (eligible(s) && !reused(s) && s.visual?.video) cameraErrors(s).forEach(e => errors.push('shot ' + (i + 1) + ': ' + e));
+      if (eligible(s) && !reused(s) && s.visual?.video) {
+        const cameraAdvice=[];
+        cameraErrors(s,{advice:cameraAdvice}).forEach(e => errors.push('shot ' + (i + 1) + ': ' + e));
+        advice.push(...cameraAdvice.map(e=>'shot ' + (i + 1) + ': ' + e));
+      }
     });
-    episodeMoveErrors(win.SCENES || []).forEach(e => errors.push(e));
-    // A generated cut exists → the previz renderer and the video model were put to the user
-    // (blender-previz.md §6, production-mode.md §When to ask). Nothing renders or bills before that.
+    episodeMoveErrors(win.SCENES || []).forEach(e => advice.push(e));
+    // A generated cut exists → the video model comes from the saved directory selection and the
+    // optional previz names its renderer (model-settings.md, production-mode.md §When to ask).
     const generatedCuts = (win.SCENES || []).filter(s => eligible(s) && !reused(s) && s.visual?.video && s.shot?.render?.mode === 'generated_video');
     if (generatedCuts.length) {
       // spatial-prompts.js assembles every source and motion prompt from these six fields.
       for (const key of ['reference', 'world', 'materials', 'palette', 'lighting', 'camera'])
-        if (!text(p.style?.[key])) errors.push('PRODUCTION.style.' + key + ' is required once a generated cut exists');
-      if (!PREVIZ_RENDERERS[p.previz?.renderer]) errors.push('Ask which 3D previz renderer draws the generated cuts and record it in PRODUCTION.previz.renderer (blender | threejs)');
-      else if (!selectionRecorded(p.previz.selection)) errors.push('Record the actual previz renderer HITL choice in PRODUCTION.previz.selection');
+        if (!text(p.style?.[key])) advice.push('PRODUCTION.style.' + key + ' is required once a generated cut exists');
+      if (!p.previz) advice.push('A 3D previz can help plan camera and blocking; when using one, copy the saved previzRenderer from .social-flow/models.json or record the author\'s pick.');
+      else if (!PREVIZ_RENDERERS[p.previz.renderer]) errors.push('Unsupported PRODUCTION.previz.renderer (blender | threejs)');
+      else if (p.previz && !selectionRecorded(p.previz.selection)) advice.push('Record where the previz renderer came from in PRODUCTION.previz.selection (standing from models.json, or an assistant decision when nothing was saved)');
       const vm = p.videoModel;
       if (p.videoProvider === 'host') {
         if (vm && vm.model !== 'host') errors.push('PRODUCTION.videoModel.model must be host under videoProvider host');
       } else if (p.videoProvider === 'astra') {
         if (vm && vm.model !== 'astra') errors.push('PRODUCTION.videoModel.model must be astra under videoProvider astra');
-      } else if (!vm || !text(vm.model)) errors.push('Ask which video model makes the generated cuts and record it in PRODUCTION.videoModel (an episode default or mixed; each cut records its model and resolution)');
-      // The model HITL exists to pick among priced vendor tiers. Our own boxes have no tiers to price,
-      // so host and astra record no selection; every other value still has to name who chose it.
-      if (vm && !['host', 'astra'].includes(vm.model) && !selectionRecorded(vm.selection)) errors.push('Record the actual video model HITL choice in PRODUCTION.videoModel.selection');
+      } else if (!vm || !text(vm.model)) errors.push('Copy the saved video selection into PRODUCTION.videoModel (model-settings.md); ask only when .social-flow/models.json has no video model');
+      // The selection record names where the model came from. Our own boxes have no tiers to price,
+      // so host and astra record no selection; every other value still names its source.
+      if (vm && !['host', 'astra'].includes(vm.model) && !selectionRecorded(vm.selection)) advice.push('Record where the video model came from in PRODUCTION.videoModel.selection (standing from models.json, or the user\'s explicit choice)');
     }
     errors.push(...coverageErrors(win));
     if (!full(p)) {
@@ -564,11 +670,12 @@
     const style = p.style || {};
     if (!generatedCuts.length)
       for (const key of ['reference', 'world', 'materials', 'palette', 'lighting', 'camera'])
-        if (!text(style[key])) errors.push('PRODUCTION.style.' + key + ' is required');
+        if (!text(style[key])) advice.push('PRODUCTION.style.' + key + ' is required');
     (win.SCENES || []).forEach((s, i) => {
       if (!eligible(s) || reused(s) || (bandContract(p) && s.shot?.render?.mode === 'stock_video')) return;
       const v = s.visual || {}, design = s.shot?.videoDesign || {};
       const bad = message => errors.push('shot ' + (i + 1) + ': ' + message);
+      const warn = message => advice.push('shot ' + (i + 1) + ': ' + message);
       if (s.shot?.render?.mode !== 'generated_video' || !v.video || v.slide || (v.source && v.source !== 'stock') || v.clip)
         bad('full_video needs a narrated visual.video handoff; no slide/still substitution or b-roll splice');
       if (['broll', 'quote'].includes(s.type)) bad('full_video generated cuts use ordinary narrated cards');
@@ -576,7 +683,12 @@
       if (!text(v.bg) || (!text(v.bgPrompt) && v.source !== 'stock')) bad('keep a source image path and its generation prompt');
       if (!text(v.video?.prompt)) bad('store the motion prompt before generation');
       // The host video tool (owner directive 2026-09-07) tops out at 720p and takes every full_video cut.
-      const hostVideo = p.videoProvider === 'host', astraVideo = p.videoProvider === 'astra';
+      let selected;
+      try { selected = resolveVideoChoice(p, s, p.modelSettings?.models?.video); }
+      catch (error) { bad(error.message); return; }
+      const selectedEngine = selected.selection.engine;
+      const managedChoice = Boolean(p.modelSettings?.models?.video) || selected.source.endsWith('_override');
+      const hostVideo = selectedEngine === 'host', astraVideo = selectedEngine === 'astra';
       // ASTRA sizes sit on a 64-pixel grid under a 2,064,384-pixel area ceiling. Read the board's
       // existing FORMAT: portrait renders 1024x1920 and landscape renders 1920x1024, then the edit
       // scales the short edge to the final canvas. Naming a vendor tier label here would be a size
@@ -584,29 +696,29 @@
       // The API lane renders at the resolution the user chose with the model (PRODUCTION.videoModel); 1080p before that record exists.
       const astra = astraSize(win);
       const wantRes = hostVideo ? '720p' : astraVideo ? astra.source : (v.video?.resolution || p.videoModel?.resolution || '1080p');
-      if (v.video?.resolution !== wantRes || v.video?.generateAudio !== false)
+      if (!managedChoice && (v.video?.resolution !== wantRes || (!['veo', 'omni'].includes(selectedEngine) && v.video?.generateAudio !== false)))
         bad(hostVideo ? 'the host video tool tops out at 720p; write resolution:"720p" and generateAudio:false with separate narration'
           : astraVideo ? 'ASTRA renders on a 64-pixel grid; write resolution:"' + astra.source + '" (the edit scales it to ' + astra.edit + ') and generateAudio:false with separate narration'
                       : 'write the chosen model\'s resolution (' + wantRes + ') and generateAudio:false with separate narration');
-      if (v.video?.engine !== (hostVideo ? 'host' : astraVideo ? 'astra' : 'seedance'))
+      if (!['host','astra','astra-genai','seedance','veo','mlx','omni'].includes(selectedEngine) || (!managedChoice && v.video?.engine !== selectedEngine))
         bad(hostVideo ? 'videoProvider:host routes every full_video cut to engine:"host" (the CLI\'s own image_to_video)'
           : astraVideo ? 'videoProvider:astra routes every full_video cut to engine:"astra" (our own LTX-2.5 box)'
-                      : 'full_video uses the priced Seedance image-to-video route');
+                      : 'full_video must use its selected deployed video engine');
       for (const key of ['look', 'worldId', 'before', 'action', 'continuity', 'reject'])
-        if (!text(design[key])) bad('videoDesign.' + key + ' is required');
-      if (design.motion?.kind !== 'subject_action' && !text(design.after)) bad('videoDesign.after is required unless the last motion beat states the final result');
-      if (design.camera !== undefined) bad('videoDesign.camera is retired; the camera lives in the four visual.camera slots');
+        if (!text(design[key])) warn('videoDesign.' + key + ' is required');
+      if (design.motion?.kind !== 'subject_action' && !text(design.after)) warn('videoDesign.after is required unless the last motion beat states the final result');
+      if (design.camera !== undefined) warn('videoDesign.camera is retired; the camera lives in the four visual.camera slots');
       for (const slot of missingCameraSlots(v.camera))
-        bad('visual.camera.' + slot + ' is required; the motion prompt is assembled from the four slots (speed may stay empty on a static camera)');
+        warn('visual.camera.' + slot + ' is recommended; the motion prompt is assembled from the four slots (speed may stay empty on a static camera)');
       if (!ALL_LOOKS.includes(design.look))
-        bad('videoDesign.look must be one of ' + ALL_LOOKS.join(', '));
+        warn('videoDesign.look must be one of ' + ALL_LOOKS.join(', '));
       const shotPreset = shotStyle(win, i).preset;
       if (STYLES[shotPreset] && design.look !== 'archive' && !STYLES[shotPreset].looks.includes(design.look))
-        bad('videoDesign.look conflicts with the selected ' + (shotPreset === style.preset ? 'episode' : 'per-shot') + ' style');
-      motionErrors(s).forEach(bad);
-      if (!Array.isArray(s.narration) || !s.narration.length) bad('a generated cut needs its approved narration');
+        warn('videoDesign.look conflicts with the selected ' + (shotPreset === style.preset ? 'episode' : 'per-shot') + ' style');
+      motionErrors(s).forEach(warn);
+      if (!Array.isArray(s.narration) || !s.narration.length) warn('a generated cut needs its approved narration');
       if (s.title || s.stat || (s.bullets || []).length || s.footnote || !['none', undefined].includes(v.overlay))
-        bad('only burned subtitles go over full-video footage; clear title, bullets, footnote and overlays');
+        bad('nothing goes over full-video footage; clear title, bullets, footnote and overlays');
     });
     // Three identical set-ups in a row read as one long take that keeps restarting. A change of
     // size, angle or move needs a reason, and the reason is the next sentence (full-video.md §Shot plan).
@@ -616,26 +728,8 @@
       const camera = s.visual?.camera || {}, key = normalize(camera.framing) + '|' + normalize(camera.movement);
       if (run.length && run[run.length - 1].key !== key) run.length = 0;
       run.push({ key, shot: i + 1 });
-      if (run.length === 3) errors.push('shots ' + run.map(r => r.shot).join(', ') + ': the same framing and camera move three times in a row; change size, angle or move for a reason');
+      if (run.length === 3) advice.push('shots ' + run.map(r => r.shot).join(', ') + ': the same framing and camera move three times in a row; change size, angle or move for a reason');
     });
-    // A full-video episode is carried by the camera as much as by the subject. ep411 held a
-    // static or slow camera on wide miniature stages for 8 of 15 shots and measured like a
-    // slideshow (2026-09-09): the camera moves on at least two of every three shots, never
-    // stands still twice in a row, and at least half the shots come closer than wide.
-    const generated = (win.SCENES || []).map((s, i) => ({ s, shot: i + 1 })).filter(({ s }) => eligible(s) && !reused(s));
-    if (generated.length >= 3) {
-      const statics = generated.filter(({ s }) => staticCamera(s.visual?.camera));
-      if (statics.length * 3 > generated.length)
-        errors.push(`${statics.length} of ${generated.length} shots hold a static camera; a full-video episode moves the camera on at least two of every three shots`);
-      generated.forEach(({ s, shot }, k) => {
-        if (k && staticCamera(s.visual?.camera) && staticCamera(generated[k - 1].s.visual?.camera))
-          errors.push(`shots ${generated[k - 1].shot}, ${shot}: two static cameras in a row; move on one of them`);
-      });
-      const conventional = generated.filter(({s}) => !isDrone(s.visual?.camera) || droneSceneErrors(s).length);
-      const wide = conventional.filter(({ s }) => WIDE.test(String(s.visual?.camera?.framing || '')));
-      if (wide.length * 2 > conventional.length)
-        errors.push(`${wide.length} of ${conventional.length} shots are framed wide; small figures on a wide stage read as a still on a phone — bring at least half the shots to medium or close`);
-    }
     return errors;
   }
   function policy(base, production, scenes) {
@@ -651,7 +745,7 @@
       // hook_only: the hook plus every imported clip — reuse is outside the count but still a slot.
       generatedVideoMax: production.mode === 'hook_only' ? 1 + scenes.filter(reused).length : RATIOS[production.mode] ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2) };
   }
-  const api = { BANDS, ratioMode, ratioBounds, ratioErrors, videoRender, bandContract, CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, videoCap, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, ASTRA_RESOLUTION, ASTRA_WIDE_RESOLUTION, astraResolution, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
+  const api = { resolveVideoChoice, BANDS, ratioMode, ratioBounds, ratioErrors, videoRender, bandContract, CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, videoCap, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, ASTRA_RESOLUTION, ASTRA_WIDE_RESOLUTION, astraResolution, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, cameraDirectionWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PRODUCTION_MODE = api;
 })(typeof window === 'object' ? window : globalThis);

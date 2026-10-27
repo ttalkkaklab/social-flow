@@ -1,5 +1,10 @@
 # Generated video — engines, prompt grammar, per-slot recipes
 
+For character speech, [voice-continuity.md](voice-continuity.md) supplements the
+recipes below. Use managed `video_plan` with the complete cast handoff. Its compiled
+voice mapping supplements the stored prompt without changing the selected model.
+Native imitation is separate from exact supplied-WAV synchronization.
+
 Read this **before the first generated-video call of an episode**. An episode whose
 scenes are all still backgrounds never needs it — produce §3's cover-background recipe
 is enough there.
@@ -60,18 +65,19 @@ storyboard defect: send it back.
 
 **② Does that stretch use its sound**
 
-- **A b-roll slot goes to Veo** — by absolute rule 9 that stretch uses the sound the clip
-  came with. Veo's native audio is better, and dropping in a silent clip makes those 4
-  seconds go quiet.
-- **A motion background (`visual.video`) can go to Seedance** — the builder lays down the
+- **A b-roll slot runs on the saved video model with its audio on** — by absolute rule 9 that
+  stretch uses the sound the clip came with (Veo's native audio was the first-setup reason to
+  recommend it; a saved model that makes no sound is reported for an explicit exception, not swapped).
+- For authored effects, [model-aware effects](video-sound.md) overrides the silent defaults below. Preserve the source soundtrack only when selected; pinned external speech uses post effects.
+- **A motion background without source-audio intent (`visual.video`) can go to Seedance** — the builder lays down the
   video track only and **throws the clip's sound away**. There's no reason to pay Veo prices
   for sound you'll discard, and Veo only makes 1080p at 8 seconds while Seedance makes
   exactly the seconds you ask for and charges for exactly that.
-  `seedance_reference` (the cut's previz as `referenceVideoPaths`, the still as `Image 1`,
-  `durationSeconds` = the length that scene actually uses, clamped to the model floor · the 2.x
-  grade and resolution on the individual cut · `generateAudio: false`) — every generated
-  motion background is a previz cut (storyboard blender-previz.md §6), and `seedance_img2video`
-  on `seedance-1-5-pro-251215` uses a `frame_and_prompt` previz with no reference arrays.
+  `seedance_reference` (an optional previz as `referenceVideoPaths`, the still as `Image 1`,
+  `requiredSeconds` = the length that scene actually uses, clamped to the model floor · the 2.x
+  grade and resolution on the individual cut · `generateAudio: false`) when the saved model is 2.x
+  (storyboard blender-previz.md §6, previz optional), and `seedance_img2video`
+  on `seedance-1-5-pro-251215` with a `frame_and_prompt` previz and no reference arrays.
   Different cuts may use different models and resolutions.
   For complex-motion, reference, or fixed-voice cuts, apply video-model-selection §Seedance
   per-cut selection and use the resolved forecast generation arguments; never reset an
@@ -104,15 +110,14 @@ to the host lane under an explicit provider choice.
 ([video-model-selection.md](video-model-selection.md) §ASTRA) sends the cut to our LTX-2.5
 server instead of a vendor. It is opt-in per shot and never a default: a call costs no money
 and 66–184s of wall clock, renders one job at a time behind a 20-job queue, and the frame
-ceiling is 193 (`guided`: 121). Use it where the episode can wait; stay on Seedance or Veo
+ceiling is 361 on every mode (the server's `/v1/models` limit; above 121 only some modes and sizes are measured — see the tool's numFrames description). Use it where the episode can wait; stay on Seedance or Veo
 whenever the clip is needed now. The face clauses in ① are unmeasured on this engine — treat
 a photoreal adult face here as unknown rather than permitted, and keep such a cut on Veo.
 Which tool a cut calls is in [full-video.md](full-video.md) §Asset generation step 4.
 
-**Every astra clip comes back with a generated AAC track and no argument turns it off.** The
-board's `generateAudio:false` on this lane is a statement that the episode lays its own
-narration — not a tool argument. Drop or duck the returned track in the edit; a cut that
-expected silence and got none is not a failed generation.
+**Every astra clip comes back with a generated AAC track unless the call passes `generateAudio: false`**,
+which strips it after generation (same render time). Pass it when the board's `generateAudio:false`
+says the episode lays its own narration; otherwise drop or duck the returned track in the edit.
 
 ## Video prompt grammar — it differs by engine
 
@@ -171,9 +176,7 @@ only the summary is here.
   span splitting as a workflow (blog grade — the reference docs never took it up, checked
   2026-08-25).
 - **Dialogue on a Veo call is `speaker says: line` — colon, no quotation marks.** Quotes make
-  the model burn the line into the frame as on-screen text (Best practices, 2026-08-24); our
-  overlays already carry the subtitles, so a burned-in line is a double. Seedance keeps its
-  quotes.
+  the model burn the line into the frame as on-screen text (Best practices, 2026-08-24); the user requires a caption-free picture. For supplied-audio conditioning, describe speech timing and visible mouth action without repeating the dialogue in the visual prompt. Prohibit subtitles, captions and text overlays in each video request.
 - **One clip is one moment** — chaining A-then-B-then-C into one short prompt is the vendor's
   own named failure ("muddled or incomplete"). The storyboard already cut the scene to one
   beat (scenes-schema §clip prompt); don't merge scenes at call time to save calls.
@@ -183,14 +186,13 @@ only the summary is here.
 The cover still is made in produce §1.5 (still-generation.md) when the episode has a
 generated cover. These three are generated only when the episode has that kind of slot.
 
-- **b-roll (the `broll` scenes in scenes.js — the channel's `generated_video_max` is the ceiling, produce rule 12)**: animate each slot's
-  `visual.src` PNG with `veo_img2video` (`aspectRatio: "9:16"` · `resolution: "1080p"` ·
-  `durationSeconds: 8` · **`veo-3.1-lite-generate-preview`**). The case for lite: in the blind
+- **b-roll (the `broll` scenes in scenes.js — the selected ratio band and the explicit budget are the ceiling, produce rule 12; a channel's `generated_video_max` is a ceiling only)**: animate each slot's
+  `visual.src` PNG through `video_plan` → `video_execute` on the saved video model (on a Veo workspace the plan's adapter is `veo_img2video` with `aspectRatio` from the format, the saved `resolution`, `requiredSeconds` from the planner and the saved tier — **`veo-3.1-lite-generate-preview`** when that is the saved choice). The case for lite at first setup: in the blind
   arena the Elo gap across Veo's three tiers is under 20 with overlapping confidence intervals
   (video-model-selection §Quality) — for the same image, fast costs $0.96 per 8 seconds and
   lite $0.64. **One caveat**: the arena scored video and sound together, so audio quality was
   never measured on its own. This slot is where the clip's sound gets used (absolute rule 9),
-  so if a review flags the b-roll **audio** as a P0, remake that episode's clip on fast.
+  so if the b-roll **audio** is the problem, report it and ask for an explicit exception before remaking on another tier.
   Absolute rules 8·10 — the source has to be **an image you already made**, and **the cover
   itself is code-rendered** (Veo can't write Hangul).
   **Make exactly what the storyboard has** — skip a planned slot and an approved scene
@@ -202,10 +204,10 @@ generated cover. These three are generated only when the episode has that kind o
   only to new Veo b-roll requests; missing old metadata never requires regeneration.
 
   - **Generate 8 seconds, use what you need** — on Veo the API only allows 8 seconds at 1080p.
-    The body is 1080×1920, so don't generate at 720p and upscale (user decision 2026-08-11 — if
-    you need an upscale, just use 1080p). The length actually used is the storyboard broll
+    Generate at the saved resolution — 1080p when that is the saved Veo choice (user decision
+    2026-08-11); a saved 720p is not upscaled by hand, the final canvas scales it (CLAUDE.md 2026-09-12). The length actually used is the storyboard broll
     scene's `duration`, and you trim the head of the original right before the splice in §6.
-    **On Seedance ask for the used length directly** (`durationSeconds` = that scene's
+    **On Seedance ask for the used length directly** (`requiredSeconds` = that scene's
     `duration`) — it makes only those seconds, so there is nothing to trim and nothing to pay
     for twice. Keep the 8-second original
     (**`.work/broll/broll-a<after>.mp4`**) — it's the reference point for a retrim.
@@ -232,23 +234,22 @@ generated cover. These three are generated only when the episode has that kind o
 - **Motion background (scenes.js's `visual.video` — inside the combined generated-video
   ceiling)**: animate that scene's `visual.bg` PNG and save it as
   **`.work/motion/motion-i<scene index>.mp4`**.
-  **This is Seedance's slot** (the video engine split above) — `seedance_reference` with the
-  cut's previz (`durationSeconds` = the length that scene uses · the grade in
-  `PRODUCTION.videoModel` · `generateAudio: false`; 1.5 Pro image-to-video is only for a b-roll
-  or speech slot that landed on Seedance, never a motion background). Without `ARK_API_KEY` the
-  cut waits or moves to the host lane — a previz cut has no Veo fallback (no clip input
-  there). Use `visual.video.prompt` verbatim as the prompt — the
+  **The saved video model makes it with its audio off** (`generateAudio: false` · `requiredSeconds`
+  = the length that scene uses · the saved grade and resolution in `PRODUCTION.videoModel`; on a
+  Seedance 2.x choice an optional previz clip rides as the reference, on 1.5 Pro, Veo, a host tool
+  or ASTRA the previz is `frame_and_prompt` advice). Without the saved model's key the cut waits
+  for it; it does not move to another engine without an explicit exception. Use `visual.video.prompt` verbatim as the prompt — the
   stored final clip prompt (camera span, subject motion, the consistency lock, the audio
   sentence; on an older file it holds the motion only, and the camera span is assembled from
   the slots). It never re-describes **the layout, facing or lighting** — the PNG already drew
   them — while the subject's identity words may stay, which is the seedance image lane's own
   pattern (§Video prompt grammar). A stored prompt that reaches here without a consistency
   lock, or with Korean outside a dialogue quote, is a storyboard defect: `check-scenes.js`
-  refuses it before capture and the server refuses the Korean one at the call. The clip's
+  reports it before capture and the server refuses the Korean one at the call. The clip's
   sound goes unused in the build (§6's assembly lays down the video track only), so the audio
-  instruction is optional. The plan gate (absolute rule 13) comes back in the same delegation
-  as the b-roll. **Make exactly what the storyboard has** — the channel's `generated_video_max`, b-roll
-  included, is the ceiling (scenes-schema §Channel true-motion policy).
+  instruction is optional. **Make exactly what the storyboard has** — the selected ratio band and
+  the budget are the ceiling, b-roll included (a channel's `generated_video_max` is a ceiling only;
+  scenes-schema §Channel true-motion policy).
 - **quote speaking clip** (when planned): `veo_reference` (the speaker's panel set — `face.png`
   then `body.png`, 3 images max; 9:16, 720p,
   `veo-3.1-fast-generate-preview` — lite doesn't support reference images, so fast is the
@@ -278,8 +279,8 @@ generated cover. These three are generated only when the episode has that kind o
 A returned clip is checked before it is accepted, not after the build — `check-clip-artifacts.js`
 (produce §3) runs one frame a second through OCR for burned text, compares the audio track with
 what the plan asked for (`--expect silent | sound | speech`) and, when the local Qwen3-ASR is
-installed, listens for a spoken line the prompt never wrote. Findings are HITL warnings with the
-frame time and the words; the fix is the vendor's own artifact lock — `subtitles, text, captions,
-logo, watermark` in Veo's `negativePrompt`, "keep it subtitle-free" in a Seedance lock, `no
+installed, listens for a spoken line the prompt never wrote. Findings are warnings fixed within the
+existing authorization, recorded with the frame time and the words; the fix is the vendor's own artifact lock — `subtitles, text, captions,
+logo, watermark` in `negativePrompt` on Veo fast/standard (lite: in the prompt body), "keep it subtitle-free" in a Seedance lock, `no
 speech, no dialogue` in the `Audio:` sentence — off the same PNG, and a clip that keeps its text
 after that is cropped or replaced, never shipped with type on the picture.

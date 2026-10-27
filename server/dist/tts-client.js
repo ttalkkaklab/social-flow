@@ -13,6 +13,9 @@
  * The API key is validated at call time, not at startup (config.requireGeminiKey).
  */
 import { z } from 'zod';
+import { writeFileSync } from 'node:fs';
+import { executeSpeech } from './tts-execution.js';
+import { decodeSpeechBase64, validateSpeechAudio } from './tts-audio.js';
 import { requireGeminiKey } from './config.js';
 import { requestRaw } from './http.js';
 import { bareFilenameSchema, pcmToWav, saveAudioFile } from './media-utils.js';
@@ -56,6 +59,90 @@ export const TTS_VOICES = {
     Sadaltager: 'Knowledgeable',
     Sulafat: 'Warm',
 };
+/** Curated is offline; library uses the caller's live Gemini Voices API catalog. */
+export const ttsVoicesSchema = z.object({
+    source: z.enum(['curated', 'library']).optional().default('curated'),
+    languageCode: z.array(z.string().min(1)).optional(),
+    regionCode: z.array(z.string().min(1)).optional(),
+    gender: z.array(z.enum(['male', 'female', 'neutral'])).optional(),
+    pitch: z.array(z.enum(['low', 'medium', 'high'])).optional(),
+    accent: z.array(z.string().min(1)).optional(),
+    persona: z.array(z.string().min(1)).optional(),
+    context: z.array(z.string().min(1)).optional(),
+    type: z.array(z.enum(['prebuilt', 'prompted', 'replicated'])).optional(),
+    search: z.string().min(1).refine(value => Buffer.byteLength(value) <= 2048, 'Search exceeds 2048 bytes').optional(),
+    pageToken: z.string().min(1).optional(),
+    // A small tool response is deliberate; the provider itself permits up to 1,000.
+    limit: z.number().int().min(1).max(100).optional().default(30),
+}).strict().superRefine((value, ctx) => {
+    if (value.source === 'curated' && [value.pageToken, value.languageCode, value.regionCode, value.gender, value.pitch, value.accent, value.persona, value.context, value.type, value.search].some(v => v !== undefined)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['pageToken'], message: 'Filters and pageToken are available only for source:library' });
+    }
+});
+const geminiVoiceListBodySchema = z.object({
+    voices: z.array(z.object({
+        id: z.string().min(1),
+        display_name: z.string().optional(),
+        type: z.string().optional(),
+        language_code: z.string().optional(),
+        region_code: z.string().optional(),
+        accent: z.string().optional(),
+        persona: z.string().optional(),
+        context: z.string().optional(),
+        gender: z.string().optional(),
+        pitch: z.string().optional(),
+        description: z.string().optional(),
+    })).optional().default([]),
+    next_page_token: z.string().optional(),
+});
+/** GET /v1beta/voices; wire fields verified against ai.google.dev/api/voices. */
+export async function listTtsVoices(request) {
+    try {
+        const parsed = ttsVoicesSchema.parse(request);
+        if (parsed.source === 'curated') {
+            return {
+                success: true,
+                source: 'curated',
+                voices: Object.entries(TTS_VOICES).map(([id, description]) => ({ id, displayName: id, type: 'prebuilt', description })),
+            };
+        }
+        const params = new URLSearchParams({ page_size: String(parsed.limit) });
+        if (parsed.pageToken)
+            params.set('page_token', parsed.pageToken);
+        for (const [field, values] of Object.entries({ language_code: parsed.languageCode, region_code: parsed.regionCode, gender: parsed.gender, pitch: parsed.pitch, accent: parsed.accent, persona: parsed.persona, context: parsed.context, type: parsed.type })) {
+            for (const value of values || [])
+                params.append(field, value);
+        }
+        if (parsed.search)
+            params.set('search', parsed.search);
+        const response = await requestRaw('get', `https://generativelanguage.googleapis.com/v1beta/voices?${params}`, { 'x-goog-api-key': requireGeminiKey() }, undefined, 30_000);
+        if (!response.ok)
+            return { success: false, source: 'library', error: describeGemini38Error(response.status, response.body) };
+        const body = geminiVoiceListBodySchema.parse(JSON.parse(response.body));
+        return {
+            success: true,
+            source: 'library',
+            voices: body.voices.map(voice => ({
+                id: voice.id,
+                displayName: voice.display_name ?? voice.id,
+                type: voice.type,
+                languageCode: voice.language_code,
+                regionCode: voice.region_code,
+                accent: voice.accent,
+                persona: voice.persona,
+                context: voice.context,
+                gender: voice.gender,
+                pitch: voice.pitch,
+                description: voice.description,
+            })),
+            ...(body.next_page_token ? { nextPageToken: body.next_page_token } : {}),
+            previewNote: 'Gemini ListVoices does not include audio previews. GetVoice provides sample_audio only for stored prompted voices.',
+        };
+    }
+    catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+}
 /** Voice name array — single source for the zod enum and the JSON Schema enum. */
 export const TTS_VOICE_NAMES = Object.keys(TTS_VOICES);
 export const DEFAULT_VOICE = 'Kore';
@@ -78,8 +165,7 @@ export const MAX_TTS_INPUT_CHARS = 16_000;
  */
 export const DEFAULT_TTS_TEMPERATURE = 0.4;
 /** Failures where text tokens come back instead of audio occur at random — the vendor docs call for retries. */
-const MAX_ATTEMPTS = 3;
-const RETRY_BASE_DELAY_MS = 400;
+// Paid synthesis submits once. A transport failure may already have incurred usage.
 /** Default spec for the raw PCM response — when the mimeType parameter carries a real value, that wins. */
 const PCM_FALLBACK_MIME = 'audio/L16;codec=pcm;rate=24000';
 const PCM_CHANNELS = 1;
@@ -96,35 +182,41 @@ export const ttsGenerateSchema = z.object({
     model: modelSchema,
     stylePrompt: z.string().optional(),
     temperature: temperatureSchema,
+    speed: z.literal(1).optional(),
     outputPath: z.string().optional(),
     filename: bareFilenameSchema('audio').optional(),
-});
+}).strict();
 const speakerSchema = z.object({
     speakerName: z.string().min(1, 'Speaker name is required'),
     voiceName: voiceSchema,
-});
+}).strict();
 export const ttsMultiSpeakerSchema = z.object({
     script: z
         .string()
         .min(1, 'Script is required')
         .max(MAX_TTS_INPUT_CHARS, `Script exceeds ${MAX_TTS_INPUT_CHARS} characters (32k-token session limit); split the script`),
-    speakers: z.array(speakerSchema).min(1).max(2, 'Maximum 2 speakers allowed'),
+    speakers: z.array(speakerSchema).min(1).max(2, 'Maximum 2 speakers allowed').refine(speakers => new Set(speakers.map(s => s.speakerName)).size === speakers.length, 'Speaker names must be unique'),
     model: modelSchema,
     stylePrompt: z.string().optional(),
     temperature: temperatureSchema,
+    speed: z.literal(1).optional(),
     outputPath: z.string().optional(),
     filename: bareFilenameSchema('audio').optional(),
-});
+}).strict();
 // ── Internal helpers ─────────────────────────────────────────────
 /** Detect whether a MIME type is container-less raw PCM (Gemini TTS uses audio/L16;codec=pcm;rate=24000). */
 export function isRawPcmMimeType(mimeType) {
     const normalized = mimeType.toLowerCase();
-    return normalized.startsWith('audio/l16') || normalized.includes('codec=pcm');
+    return /^audio\/(?:l16|pcm)(?:;|$)/.test(normalized);
 }
 /** Extract the sample rate from the MIME type parameters (default 24000). */
 export function parseSampleRate(mimeType) {
-    const match = mimeType.match(/rate=(\d+)/);
-    return match ? parseInt(match[1], 10) : 24_000;
+    const match = mimeType.match(/(?:^|;)\s*rate=([^;]*)/i);
+    if (!match)
+        return 24_000;
+    if (!/^\d+$/.test(match[1]))
+        throw new Error('Invalid speech PCM sample rate');
+    return Number(match[1]);
 }
 /**
  * Assemble the style directive and transcript into a synthesis prompt.
@@ -156,55 +248,28 @@ function extensionFromMimeType(mimeType) {
         'audio/aac': 'aac',
         'audio/flac': 'flac',
     };
-    return mimeToExt[mimeType.split(';')[0]] || 'wav';
+    const extension = mimeToExt[mimeType.toLowerCase().split(';')[0]];
+    if (!extension)
+        throw new Error('Unsupported speech audio MIME: ' + mimeType);
+    return extension;
 }
-/**
- * generateContent call + audio extraction (with automatic retries).
- *
- * When all 3 attempts fail, the last error gets a model-swap hint — the failure
- * mode where a script keeps hitting `No content parts in response` on flash but
- * passes on pro in one shot has been measured in practice.
- */
-async function synthesizeWithRetry(model, contentText, speechConfig, temperature) {
+/** One billable submission; uncertain outcomes require an explicit new request. */
+async function synthesizeOnce(model, contentText, speechConfig, temperature) {
     const { GoogleGenAI } = await import('@google/genai');
-    const genai = new GoogleGenAI({ apiKey: requireGeminiKey() });
-    let lastError;
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-        try {
-            const config = {
-                responseModalities: ['AUDIO'],
-                speechConfig,
-                // undefined means the vendor default (1.0). The normal path is the schema default (0.4) being injected.
-                ...(temperature !== undefined ? { temperature } : {}),
-            };
-            const response = await genai.models.generateContent({
-                model,
-                contents: [{ role: 'user', parts: [{ text: contentText }] }],
-                config,
-            });
-            const parts = response.candidates?.[0]?.content?.parts;
-            if (!parts || parts.length === 0)
-                throw new Error('No content parts in response');
-            for (const part of parts) {
-                if (part.inlineData?.data) {
-                    return { data: part.inlineData.data, mimeType: part.inlineData.mimeType || PCM_FALLBACK_MIME };
-                }
-            }
-            // text tokens came back instead of audio — retry this
-            throw new Error('No audio data found in response parts');
-        }
-        catch (error) {
-            lastError = error;
-            if (attempt < MAX_ATTEMPTS - 1) {
-                await new Promise((resolve) => setTimeout(resolve, RETRY_BASE_DELAY_MS * (attempt + 1)));
-            }
-        }
+    const genai = new GoogleGenAI({ apiKey: requireGeminiKey(), httpOptions: { timeout: 120_000, retryOptions: { attempts: 1 } } });
+    const config = {
+        responseModalities: ['AUDIO'], speechConfig,
+        ...(temperature !== undefined ? { temperature } : {}),
+    };
+    const response = await genai.models.generateContent({
+        model, contents: [{ role: 'user', parts: [{ text: contentText }] }], config,
+    });
+    const parts = response.candidates?.[0]?.content?.parts;
+    for (const part of parts || []) {
+        if (part.inlineData?.data)
+            return { data: part.inlineData.data, mimeType: part.inlineData.mimeType || PCM_FALLBACK_MIME };
     }
-    const message = lastError instanceof Error ? lastError.message : String(lastError);
-    const hint = model === DEFAULT_TTS_MODEL
-        ? ' (retried 3x — this script may not pass on flash; retry with model="gemini-2.5-pro-preview-tts")'
-        : ' (retried 3x)';
-    throw new Error(message + hint);
+    throw new Error('No audio data found in response; inspect this attempt before explicitly retrying');
 }
 /**
  * Save the audio payload to a file.
@@ -212,15 +277,18 @@ async function synthesizeWithRetry(model, contentText, speechConfig, temperature
  * - Container formats (mp3 etc.) are saved as-is
  */
 function saveAudio(audio, outputPath, filename, defaultPrefix) {
-    const rawBuffer = Buffer.from(audio.data, 'base64');
+    const rawBuffer = decodeSpeechBase64(audio.data);
+    if (isRawPcmMimeType(audio.mimeType) && (rawBuffer.length % 2 !== 0 || parseSampleRate(audio.mimeType) < 8000 || parseSampleRate(audio.mimeType) > 192000))
+        throw new Error('Invalid speech PCM');
     const isPcm = isRawPcmMimeType(audio.mimeType);
     const fileBuffer = isPcm ? pcmToWav(rawBuffer, parseSampleRate(audio.mimeType), PCM_CHANNELS) : rawBuffer;
     const ext = isPcm ? 'wav' : extensionFromMimeType(audio.mimeType);
+    validateSpeechAudio(fileBuffer, ext);
     return saveAudioFile(outputPath || process.cwd(), filename || `${defaultPrefix}_${Date.now()}.${ext}`, fileBuffer);
 }
 // ── The 2 synthesis functions ────────────────────────────────────
 /** Single-speaker synthesis — narration, voiceover */
-export async function generateSpeech(request) {
+async function generateSpeechImpl(request) {
     const model = request.model || DEFAULT_TTS_MODEL;
     const voiceName = request.voiceName || DEFAULT_VOICE;
     try {
@@ -228,7 +296,7 @@ export async function generateSpeech(request) {
         const speechConfig = {
             voiceConfig: { prebuiltVoiceConfig: { voiceName } },
         };
-        const audio = await synthesizeWithRetry(model, buildStyledPrompt(request.stylePrompt, request.text), speechConfig, request.temperature);
+        const audio = await synthesizeOnce(model, buildStyledPrompt(request.stylePrompt, request.text), speechConfig, request.temperature);
         const audioPath = saveAudio(audio, request.outputPath, request.filename, 'tts');
         console.error(`[TTS] Audio saved to: ${audioPath}`);
         return { success: true, audioPath, text: request.text, voiceName, model };
@@ -240,7 +308,7 @@ export async function generateSpeech(request) {
     }
 }
 /** Two-person dialogue synthesis — interview, podcast format */
-export async function generateDialogue(request) {
+async function generateDialogueImpl(request) {
     const model = request.model || DEFAULT_TTS_MODEL;
     try {
         const speakerNames = request.speakers.map((s) => s.speakerName).join(', ');
@@ -253,7 +321,7 @@ export async function generateDialogue(request) {
                 })),
             },
         };
-        const audio = await synthesizeWithRetry(model, buildStyledPrompt(request.stylePrompt, request.script), speechConfig, request.temperature);
+        const audio = await synthesizeOnce(model, buildStyledPrompt(request.stylePrompt, request.script), speechConfig, request.temperature);
         const audioPath = saveAudio(audio, request.outputPath, request.filename, 'tts_multi');
         console.error(`[TTS] Dialogue audio saved to: ${audioPath}`);
         return { success: true, audioPath, text: `Multi-speaker conversation with: ${speakerNames}`, model };
@@ -276,11 +344,11 @@ const gemini38TurnSchema = z.object({
     text: z.string().min(1, 'Turn text is required').max(MAX_GEMINI_38_TTS_INPUT_CHARS),
     speaker: z.string().min(1).max(100).optional(),
     style: z.string().min(1).max(500).optional(),
-});
+}).strict();
 const gemini38SpeakerSchema = z.object({
     speaker: z.string().min(1, 'Speaker name is required').max(100),
     voice: z.enum(TTS_VOICE_NAMES),
-});
+}).strict();
 export const gemini38TtsSchema = z
     .object({
     turns: z.array(gemini38TurnSchema).min(1, 'At least one turn is required').max(200),
@@ -289,7 +357,7 @@ export const gemini38TtsSchema = z
     speakers: z.array(gemini38SpeakerSchema).length(2, 'Conversational mode requires exactly 2 speakers').optional(),
     outputPath: z.string().optional(),
     filename: bareFilenameSchema('audio').optional(),
-})
+}).strict()
     .superRefine((request, ctx) => {
     const totalChars = request.turns.reduce((sum, turn) => sum + turn.text.length, 0);
     if (totalChars > MAX_GEMINI_38_TTS_INPUT_CHARS) {
@@ -300,6 +368,8 @@ export const gemini38TtsSchema = z
         });
     }
     if (request.speakers) {
+        if (request.voice !== DEFAULT_VOICE)
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['voice'], message: 'voice is a single-speaker control; use speakers[].voice for dialogue' });
         const names = new Set(request.speakers.map((speaker) => speaker.speaker));
         if (names.size !== request.speakers.length) {
             ctx.addIssue({
@@ -410,7 +480,7 @@ export function describeGemini38Error(status, body) {
     return `HTTP ${status}: ${body || '(empty body)'}`;
 }
 /** Gemini 3.8 single-voice or two-speaker synthesis through POST /v1beta/interactions. */
-export async function generateGemini38Speech(request) {
+async function generateGemini38SpeechImpl(request) {
     try {
         const apiKey = requireGeminiKey();
         const response = await requestRaw('post', GEMINI_INTERACTIONS_URL, { 'x-goog-api-key': apiKey }, buildGemini38InteractionBody(request), 120_000);
@@ -426,6 +496,12 @@ export async function generateGemini38Speech(request) {
         }
         const audio = extractGemini38Audio(interaction);
         const audioPath = saveAudio(audio, request.outputPath, request.filename, 'tts_gemini_38');
+        const metadata = interaction;
+        const usageReceiptPath = audioPath + '.provider-usage.json';
+        writeFileSync(usageReceiptPath, JSON.stringify({ provider: 'gemini', model: request.model,
+            interactionId: typeof metadata.id === 'string' ? metadata.id : null,
+            usage: metadata.usage ?? null, usageStatus: metadata.usage == null ? 'not_reported' : 'provider_reported',
+            billingStatus: 'not_an_invoice', recordedAt: new Date().toISOString() }, null, 2) + '\n');
         const speakers = request.speakers?.map((speaker) => speaker.speaker).join(', ');
         return {
             success: true,
@@ -433,11 +509,42 @@ export async function generateGemini38Speech(request) {
             text: speakers ? `Gemini 3.8 conversation with: ${speakers}` : request.turns.map((turn) => turn.text).join('\n'),
             voiceName: speakers ? undefined : request.voice,
             model: request.model,
+            usageReceiptPath,
         };
     }
     catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`[Gemini 3.8 TTS] Error: ${errorMessage}`);
         return { success: false, error: errorMessage };
+    }
+}
+/** All entrypoints validate before credentials, file creation or a paid submission. */
+export async function generateSpeech(request) {
+    try {
+        const parsed = ttsGenerateSchema.parse(request);
+        return await executeSpeech('tts_generate', parsed, output => generateSpeechImpl({ ...parsed, ...output }));
+    }
+    catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+}
+export async function generateDialogue(request) {
+    try {
+        const parsed = ttsMultiSpeakerSchema.parse(request);
+        if (new Set(parsed.speakers.map(s => s.speakerName)).size !== parsed.speakers.length)
+            throw new Error('Speaker names must be unique');
+        return await executeSpeech('tts_multi_speaker', parsed, output => generateDialogueImpl({ ...parsed, ...output }));
+    }
+    catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+}
+export async function generateGemini38Speech(request) {
+    try {
+        const parsed = gemini38TtsSchema.parse(request);
+        return await executeSpeech('tts_gemini_38', parsed, output => generateGemini38SpeechImpl({ ...parsed, ...output }));
+    }
+    catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
 }

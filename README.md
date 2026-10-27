@@ -1,4 +1,92 @@
+Production follows an enforced order: **project setup → characters (text + images) →
+text storyboard (content, dialogue, narration) → props (text + images) → backgrounds
+(text + images) → image storyboard → video**. `production_workflow` verifies files and
+hashes at each boundary; missing or changed prerequisites block managed generation.
+See [scope, migration and host-tool limits](skills/_shared/production-workflow.md).
+
 # social-flow
+
+[Character depth](skills/storyboard/references/character-depth.md) connects shared identities
+to episode choices, personal costs and relationship-specific behavior. Channel, storyboard
+and autoproduce use the same guidance; blind review checks the performed evidence before
+reading author intentions. Existing schemas remain unchanged, and narrators or incidental
+roles do not acquire compulsory subplots or character arcs.
+
+The [filmmaking guide](docs/guides/ai-film-four-elements/index.html) explains character references, camera direction, framing and shot timing. `storyboard_read` exposes the shared 45-entry technique catalogue; `shot.techniques` stores stable IDs with shot-specific reasons. The offline storyboard exports the same catalogue, with a distinct pictogram and explanation for every entry. Camera instructions reach the generic, speech-planning and ASTRA prompt paths. See [technique selection](skills/storyboard/references/film-techniques.md).
+
+Character video requests now compile [voice continuity](skills/produce/references/voice-continuity.md)
+from pinned cast settings. `video_plan` maps Seedance samples to their actual audio
+and image indices, repeats authored Google voice descriptions, and records separate
+unreviewed identity/dialogue/speaker/lip-sync findings. Saved plans become stale when
+speech, voice settings or reference bytes change. Selected audition samples travel
+with the character handoff; no automatic listening gate or paid generation is added.
+
+Motion-graphic shots now persist `shot.motionGraphic`: a semantic type, viewer intent,
+selection reason, evidence, visual direction and timing intent. The shared
+[21-type guide](skills/storyboard/references/motion-graphics.md) distinguishes
+comparisons, workflows, UI demonstrations, mechanisms and other situations.
+Twelve abstract families have a deterministic local SVG renderer with bundled
+role-based fonts and six contextual themes. Physical mechanisms and recorded evidence retain their
+asset routes; a catalog type does not imply an automatic renderer. Storyboard
+cards show the choice and reason. Prepare a built-in scene with
+`node skills/produce/references/prepare-motion-graphic.js BOARD --shot N`.
+
+Storyboards show camera pictograms with visible movement/speed, planned shot lengths
+and incoming cut continuity beside each shot. The length comparison links to the
+original shot cards in playback order and keeps unknown lengths unknown. Camera
+details remain expandable; still effects are labelled separately. These views derive
+from existing fields and do not certify generated motion. See
+[action direction](skills/storyboard/references/action-direction.md).
+
+[Shot continuity](skills/storyboard/references/shot-continuity.md) connects concrete
+opening/closing poses with the preceding accepted clip's selected endpoint. The local
+capture helper records the actual source frame and detects stale trims or replacement
+clips; the image prompt assembler attaches a current endpoint as a state reference.
+Legacy boards expose missing blocking and inferred connections as advice. Assembly
+exports paired boundary PNGs beside playback excerpts, without claiming visual approval.
+Shot sound intent now routes by model and mode through `prepare-video-sound.js`: native
+audio where supported, supplied audio for explicit LTX conditioning, and timed post
+effects otherwise. See [model-aware effects](skills/produce/references/video-sound.md).
+
+The bundled `skills/produce/references/prepare-astra-shot.js` prepares each real ASTRA
+request from the whole shot, its authored opening and composed speech. It preserves the
+resolved performance prompt in its receipt, uses unlabelled camera/action prose for LTX,
+checks duration coverage and records the actual image hash;
+audio2video still conditions on one opening image, not the preceding clip or an entire board.
+
+Start a reusable video project with `/social-flow:project-init <directory>`.
+It saves SNS targets and connection records, video genre, video/speech/image
+models, visual style, video ratio and output format together in
+`.social-flow/models.json`. It creates the channel profile, shared asset catalog
+and episode directory, preserves existing content, and asks only missing choices.
+SNS credentials stay in the external channel token directory; connecting later
+is supported. New episodes inherit a complete settings snapshot, so changing a
+default does not change work in progress. See [project setup](skills/project-init/SKILL.md).
+
+Before episode candidates, prepare shared identities and export the bundled
+**캐릭터 시트 / Character sheets** with `review-library.js`. The storyboard's
+**이번 편 출연진 / Episode cast** links back to those sheets. Missing images remain
+pending. [Panel diagnostics](skills/channel/references/character-panels.md) distinguish
+shared references from scene images and check 2:3 body / 1:1 face canvases and recorded
+subject size. Template freshness alone does not certify visual completion.
+
+`project_manage` provides the same initialization, status, revision-checked update
+and episode creation over MCP; `skills/_shared/project-settings.js` is its CLI.
+Claude Code's read-only SessionStart hook reports missing settings. Other hosts
+use the skill's explicit preflight; neither path silently chooses preferences.
+
+At first setup in a working directory, choose the video type, then the video model
+and its credentials, then the image model and its credentials. Finally choose whether
+separate TTS is needed; if yes, select its model and configure credentials, otherwise
+save `models.speech:{engine:"none"}`. Reuse configured keys, including shared provider
+keys. Host/local engines need their tools available, not a separate API key. The [type catalog](skills/_shared/video-types.md) covers
+drama, comedy, documentary, explainer, tutorial, review, interview, vlog,
+advertisement, music video and custom/hybrid, with each choice's speech direction
+shown before selection. The choices are saved in `.social-flow/models.json`
+and reused for subsequent episodes until you explicitly request a change. Each
+episode snapshots its settings in `.work/model-settings.json`, so a later default
+change does not alter an episode already in progress. An unavailable model is
+reported instead of silently replaced. See [directory model settings](skills/_shared/model-settings.md).
 
 [![check](https://github.com/ttalkkaklab/social-flow/actions/workflows/check.yml/badge.svg)](https://github.com/ttalkkaklab/social-flow/actions/workflows/check.yml)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
@@ -9,12 +97,17 @@ A Claude Code plugin that runs a channel-based short-form/long-form content pipe
 HITL-approved publishing** — over a `data/[channel]/episodes/[topic]/` directory tree.
 
 A **channel** is one content brand you operate: one `data/` directory per channel, with
-tone, voice, theme, and publish targets pinned in `profile.md`. Publish targets:
+tone, theme and pinned character voice IDs in `profile.md`, and publish targets, genre, models, visual style, video
+ratio and format saved once in `.social-flow/models.json`. Publish targets:
 **Threads · Instagram (Reels) · Facebook Pages · YouTube (Shorts and long-form)**.
 
-Before production, HITL offers **100% 이상**, **50% 이상**, **30% 이상** and **훅만 영상**
-(100%, at least 50%, at least 30% of new cuts, or the opening hook only), with model,
-resolution, audio setting, first-pass and retry-inclusive video costs and an explicit budget cap.
+The generated-video share of new cuts is one of six saved ids — `full_video` (전체 영상, 100%),
+`video_80` (80% 이상 영상, 80–<100%), `video_50` (50% 이상 영상, 50–<80%), `video_30` (30% 이상 영상,
+30–<50%), `video_lt10` (10% 미만 영상, <10%) and `no_video` (0% 영상) — chosen once at project setup
+and reused. It is a planning target and the cost ceiling: the band's upper bound and the budget
+are enforced, and fewer generated cuts than the target is reported, never padded. Only an episode
+with no saved value asks, with model, resolution, audio setting, first-pass and retry-inclusive
+video costs and an explicit budget cap.
 The read-only [cost comparison](skills/autoproduce/references/production-cost.js) uses the same
 API price table and routing as production, including minimum billed clip lengths. It labels KRW
 conversion as an assumption and excludes image, voice, editing and tax costs. The
@@ -50,12 +143,12 @@ source-image prompt and shooting script. It counts what the viewer must read at 
 thing → shallow with the sharp plane named, two or more → deep with the planes listed front
 to back. A still-camera focus effect is always shallow. See [depth contract](skills/storyboard/references/scenes-schema.md#depth-of-field-shotdepth-l11).
 
-The visual style is an episode choice the user makes before authoring, in every production
-mode; the checker refuses a board without it. Both prompt assemblers write the preset's
-treatment into every generated still, `check-scenes.js` refuses a still whose prompt lacks it,
-and `check-production.js --ready` refuses assembly until each still's style read is on record.
-One shot leaves the episode preset only through `shot.style`, written after the user approved
-that shot in HITL. See [visual style](skills/storyboard/references/visual-style.md).
+The visual style is saved once in `.social-flow/models.json` (`style.preset`) and reused by every
+episode in every production mode; the checker warns about a board without it. Both prompt
+assemblers write the preset's treatment into every generated still, and `check-scenes.js` warns
+about a still whose prompt lacks it. A style read on a still is evidence (`not_reviewed` when
+absent), not an assembly gate. One shot leaves the episode preset through `shot.style`, an
+authored exception recorded with its reason. See [visual style](skills/storyboard/references/visual-style.md).
 
 Assembly compiles each storyboard transition into the production timeline.
 `storyboard_apply.transitions` changes selected incoming effects without replacing shots.
@@ -67,9 +160,9 @@ frame verification and short playback excerpts for continuity review; see the
 [cinematic editing contract](skills/produce/references/cinematic-edit.md).
 
 Video comes in two formats. The default is 9:16 short-form (1080×1920/30fps), derived
-per platform; YouTube long-form uses 16:9 (1920×1080). You pick the format while
-authoring the storyboard, and a single `window.FORMAT` line in `scenes.js` fixes every
-build constant downstream. Long-form episodes **mix clips you film yourself with
+per platform; YouTube long-form uses 16:9 (1920×1080). The format is saved once at project
+setup (`production.format`) and copied into a single `window.FORMAT` line in `scenes.js` that
+fixes every build constant downstream. Long-form episodes **mix clips you film yourself with
 generated scenes** — where the evidence lives on screen you film it, where the point is
 a mood or a place the pipeline generates an image, and scenes that need words or
 diagrams on screen become **HTML motion slides**, authored and shown as rendered
@@ -81,21 +174,24 @@ with a real 3D object when a thing is the subject. The offline mesh lane renders
 and articulated parts at every frame, with 3D illustration or photoreal materials and refined
 curved arrows ([object authoring](skills/storyboard/references/mesh-objects.md)), held to the quality of
 `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`. Generated video is
-reserved for essential continuous action, with the subtitle as its only type. **Every cut is chosen by purpose** (user directive 2026-09-06):
+reserved for essential continuous action, with no subtitles burned into the picture. **Every cut is chosen by purpose** (user directive 2026-09-06):
 the storyboard reads the narration first and writes `shot.render` — a still under a camera
 move, a 3D character scene, a 3D object scene, a data graph, or generated video — with the
 reason for the choice ([render routing](skills/storyboard/references/render-routing.md)). The
 opening goes through the same choice, so no cut is paid video merely because it starts the
 episode (`hook_video`, default off). Generated video sits under the channel's `video_budget_usd`
-(default $10 an episode), one still holds one cut at most (`max_static_ground_seconds`,
-default 8 s), and a one-picture plate on an ordinary beat is a one-sentence card
-(`html_plate_max`, default 2). Narration defaults to **your own voice on every scene**, so
+(default $10 an episode) and the project's `episodeBudgetUsd` — ceilings the author carries into
+`PRODUCTION.videoAuthorization.maxUsd`, the one value routing enforces ([budget fields](skills/_shared/video-routing.md)).
+One still holding one cut at most (`max_static_ground_seconds`, default 8 s) is guidance, and a
+one-picture plate on an ordinary beat is a one-sentence card (`html_plate_max`, default 2).
+Narration uses the saved speech model (`models.speech`, Gemini or ElevenLabs v4) with explicit
+speakers; in the shooting-script flow it is **your own voice on every scene**, so
 the shooting script (`script.md`) carries the lines for every shot — filmed shots get
 what to show, what to say, and the filename to save it as; the rest are voice-only
 recordings.
 
 Visual direction has [episode checks](skills/storyboard/references/visual-direction.md): copied
-render reasons fail, text-led quote/verdict scenes are limited, and every opening belongs to
+render reasons are flagged, text-led quote/verdict scenes are limited, and every opening belongs to
 the checked timeline. [Data charts](skills/storyboard/references/chart-design.md) use a shared,
 seekable SVG renderer for bars, dots, lines, stacked shares, histograms and timelines. Source
 values, honest scales and narrated focus beats drive the picture. The production builder
@@ -106,16 +202,17 @@ choose supported content and an earned ending before polishing the hook. CTA is 
 An ask stays optional; a forwardable thing does not — an ask requests behaviour from the viewer,
 while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking to be
 shared is an ask, not a trigger. On a short that forwardable thing is `shot.share` on the closing
-shot, and `check-scenes.js` fails a board without it.
-Every spoken scene needs a purpose, and the narration review cites actual lines for meaning,
-progression, payoff and grounding. `check-story.js` and full `check-scenes.js` block missing
-or stale reviews before production; a numeric score cannot waive failure. Existing boards
-need a contract and review before rebuilding, without silently rewriting approved narration.
-These checks enforce the workflow, not a promised audience retention rate.
+shot; it is optional, and `check-scenes.js` allows a board without it.
+Every spoken scene needs a purpose, and a narration review, when one is run, cites actual lines
+for meaning, progression, payoff and grounding. `check-story.js` and full `check-scenes.js` report
+a missing or stale review as `not_reviewed` / `stale` evidence; they do not block production, and
+a numeric score grants nothing. Existing boards keep their contract and review records when
+rebuilding, without silently rewriting approved narration.
+These checks describe the workflow, not a promised audience retention rate.
 A one-person history short declares `STORY.person` and follows
 [person-short.md](skills/storyboard/references/person-short.md): the opening names nobody and
 carries no year, the body is cause → block → one blow, the close is one scene after the blow,
-the picture changes with every sentence, and the subtitle colours only the year and the name.
+the picture changes with every sentence, and optional sidecar subtitles remain separate from the picture.
 A message is a sentence that stays true with the episode's names gone — *what leads to what*,
 present tense, no figure, no name ([scenario-stage.md](skills/storyboard/references/scenario-stage.md)
 §The message): `check-research.js` refuses a past-tense, numbered or hero-named Message cell,
@@ -131,7 +228,7 @@ production, generalized here to per-channel operation.
 > says. What the pipeline is *not* yet is fully language-neutral, so here is the honest
 > state of it:
 >
-> - **The copy style gate is Korean-only.** `check-style.py` implements Korean rules —
+> - **The copy style check is Korean-only.** `check-style.py` implements Korean rules —
 >   translationese, Korean AI stock phrases, Korean sentence endings. Hand it text in
 >   another language and it exits **4 (SKIP)**, saying in as many words that the copy is
 >   *unchecked*, never that it passed. A person has to read that copy. (It used to return
@@ -156,51 +253,72 @@ production, generalized here to per-channel operation.
 >   writes `script.md` — the page you read while filming — with Korean headings, and
 >   `check-research.js` finds a research.md's verification table by Korean heading words.
 
+Storyboards start with complete scenes: a character wants something, an event changes
+what is possible, and a visible choice produces a consequence. The author then divides
+those scenes into shots. There is no default runtime or shot-count quota; staging,
+dialogue and listener reactions determine the length. Actual model clip limits are
+production constraints, handled at natural action boundaries. Read
+[the storyboard workflow](skills/storyboard/SKILL.md) before authoring a new episode.
+
+Reviewers first read only the actions and dialogue the audience will see and hear.
+Private plot explanations cannot repair a missing screen cue. Production planning
+carries essential actions, reactions and object states into the video request, including
+silent beats and action that overlaps speech. Local diagnostics expose omissions; a
+clean schema result does not prove story comprehension or generated video quality.
+
 Independent visual review collections use the installed storyboard planner and production builder:
 [animation review workflow](skills/produce/references/animation-review.md). The JSON-driven collection
 compares still-camera portraits, contextual 3D character scenes and object mechanisms, and records the
 installed entrypoint and asset hashes. These silent previews wait for user feedback and are not
 publishable episodes. Improve reusable plugin templates and rebuild; do not hand-edit their outputs.
 
+## Persistent 3D locations
+
+`location_manage` builds versioned Blender sets, exports GLB, renders multi-view sheets and shot references, binds them to stable shots, and rejects stale references or changed asset bytes. The shared storyboard adds an offline 3D viewer with orbit, top view, wall visibility, object inspection, camera-path scrub and camera proposal export. Spatial image prompts include the location render as a scoped image input; actual review status stays explicit. See [location workflow](skills/storyboard/references/location-assets.md). Blender and a local HTTP server are needed for this workflow. Existing boards are unaffected until a shot binds a location; no paid generation is implicit.
+
+Plan shared space before storyboard images: location bindings now carry actor start/end
+positions, body facing, gaze targets and set endpoint states. The `previz` action renders
+that same set/camera/blocking into both source references and a motion clip. Continuity
+diagnostics warn about position, direction, gaze, custody and action-axis changes across
+related cuts; intentional time skips carry a reason. Cast sheets supply appearance while
+the shared location controls composition. Actual generated images still need inspection.
+
 ## Requirements
 
 - Node 20+, ffmpeg, Google Chrome (headless capture), python3
-- `pip install supertonic` — for `tts_local_generate` (on-device voice). The first call
-  downloads 385MB of weights into `~/.cache/supertonic3` (~24s). If you installed it in
-  a virtualenv, point `SUPERTONIC_PYTHON` at that interpreter. Code is MIT; **the
-  weights are OpenRAIL-M** (commercial use allowed, with use-based restrictions)
 - `uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"` — for `stt_local_transcribe`
   and ingest's Korean STT. The first call downloads ~3.4GB of Qwen3-ASR-1.7B weights
   into `~/.cache/huggingface`. Installed elsewhere, point `QWEN3_ASR_BIN` at it
 - Blender 4.2+ (`brew install --cask blender`, or `BLENDER=<executable>`) — for the seven
   `blender_*` previz tools (camera, blocking and body timing as numbers, rendered headless) and for
-  `bake-blender.py`'s Cycles object sheets. No add-on, no GUI session, no account. Without it the
-  mandatory previz renders in three.js through headless Chrome (`previz-template.html`)
+  `bake-blender.py`'s Cycles object sheets. No add-on, no GUI session, no account. Without it an
+  optional previz renders in three.js through headless Chrome (`previz-template.html`)
 - whisper.cpp (`brew install whisper-cpp`) + `~/.cache/whisper-cpp/ggml-large-v3-turbo.bin`
   — the ingest STT fallback when mlx-qwen3-asr is missing. Recording mode needs
   **Screen Recording and Microphone** permission for your terminal app
   (System Settings → Privacy & Security)
 - API keys and platform credentials — see the next section for what each one unlocks
 
-> **Load-path caveat**: the skills name MCP tools as `mcp__social-flow__*` — the server's
-> logical name. A marketplace install prefixes them per plugin, so the live names read
-> `mcp__plugin_social-flow_social-flow__*` (measured on Claude Code 2.1.251). Skill
-> `allowed-tools` is advisory, so both spellings work; check the real names with `/mcp`
-> when you call a tool by hand. `data/` is created relative to the **session cwd**, not
-> the plugin root.
+> **Load-path caveat**: a marketplace install prefixes the server's tools per plugin, so
+> the live names read `mcp__plugin_social-flow_social-flow__*` (measured on Claude Code
+> 2.1.251); a project `.mcp.json` or Codex names them `mcp__social-flow__*`. Every tool
+> stays callable under either name, but pre-approval is a permission rule, and Claude Code
+> matches a plugin server only in the plugin form — so each skill's `allowed-tools` lists
+> both spellings. Check the real names with `/mcp` when you call a tool by hand. `data/` is
+> created relative to the **session cwd**, not the plugin root.
 
 ## API keys — what each one unlocks
 
 The keys come in two independent groups, and **you can stop after either one**.
 
-**Group 1 — production keys.** These make the video. `OPENAI_API_KEY` renders the
-cover and any frame with text on it (local image generation garbles Korean glyphs, so
-text frames go to GPT Image), and `GEMINI_API_KEY` covers generated video clips,
-acted narration, and BGM. Scene backgrounds default to on-device `image_local_generate`
-and narration synthesis defaults to on-device `tts_local_generate`. Generated narration
-requires `GEMINI_API_KEY` for the mandatory audio quality review, including local synthesis.
-A no-key run can synthesize local audio but cannot pass that narration into the builder.
-Review calls have a separate cost; include them and retakes in the episode allowance.
+**Group 1 — production keys.** These make the video. `OPENAI_API_KEY` unlocks GPT Image, the
+usual saved choice for the cover and any frame with text on it (local image generation garbles
+Korean glyphs); the saved image model in `.social-flow/models.json` decides which engine makes
+each still, not a per-frame heuristic. `GEMINI_API_KEY` covers generated video clips,
+narration, and BGM. On-device `image_local_generate` is a $0 image choice,
+and speech uses the saved Gemini model or ElevenLabs v4 with its own API key.
+Raw speech needs no automatic paid review; record generation provenance and
+`not_reviewed`. Only explicitly requested reviews add reviewer cost.
 For research, `SERPAPI_API_KEY` and the Naver pair are
 optional too; the storyboard skill falls back to WebSearch.
 
@@ -224,8 +342,7 @@ optional, and they're what turns the tool from a video maker into an operator.**
   9:16 or 16:9 video plus per-platform text into
   `data/<channel>/episodes/<topic>/output/`, and you upload those files by hand. Only
   the publishing and growth-loop half is unavailable: the 11 publish/review/insight tools
-  aren't even listed (`tools/list` shows 80 instead of 303 — the 210 `portal_*` tools are
-  gated the same way on a portal key), and the growth skills have
+  aren't listed without credentials, and the growth skills have
   nothing to drive. Explicit tool-disable settings can reduce that list further.
 
 Credentials are per platform, so this is not all-or-nothing — a YouTube-only setup
@@ -250,27 +367,27 @@ the whole projection rather than a bill that has already partly arrived.
 
 | Capability | Free / on-device | Paid | Costs money unless… |
 |---|---|---|---|
-| **Images** | `image_local_generate` — Z-Image Turbo via mflux, $0. Optional: `mlx_image_*` when MLX Core is running. Under Codex or Grok the CLI's own `image_gen` comes first, on the subscription allowance | `gpt_image_*` — OpenAI, per image by quality | …you accept no text in the frame. Local generation breaks Korean glyphs apart, so covers and any text-bearing frame have to go to the paid path. Default stays Z-Image on Claude Code and the host tool on Codex and Grok |
-| **Video** | deterministic HTML motion slides rendered locally with headless Chrome. Optional: `mlx_video_generate` (24fps, RAM-capped). Under Grok the CLI's own `image_to_video` comes first (1–15 s, 720p ceiling, subscription allowance) | Veo 3.1 (Gemini) per second · Seedance (ModelArk) per second | …you use the HTML motion lane or the Grok host lane. A channel can prohibit stills and still spend zero on generated video; Ken Burns does not count as true motion. mlx_video is not the default and is not on the Veo/Seedance face-policy table |
-| **Speech (TTS)** | `tts_local_generate` — Supertonic 3, $0 synthesis. Optional: `mlx_tts_generate` | `tts_generate` / `tts_multi_speaker` — Gemini, per 1,000 chars. Every generated scene also pays the Gemini audio review inside `tts_generate_checked` (two calls per take) | …the scene is your own recording. Local synthesis is free, but the builder only accepts narration with a current review proof, and the review is a paid Gemini call even for local voices. The local engine has no style or emotion control. mlx_tts is never a silent fallback for profile §2 |
+| **Images** | `image_local_generate` — Z-Image Turbo via mflux, $0. Optional: `mlx_image_*` when MLX Core is running. Initial image setup recommends ASTRA GenAI (`astra-genai` / `z-image-turbo`); local mflux is an explicit alternative | `gpt_image_*` — OpenAI, per image by quality | …you accept no text in the frame. Local generation breaks Korean glyphs apart, so covers and any text-bearing frame need GPT Image or a host tool. The saved image model in `.social-flow/models.json` decides; nothing reroutes a frame on its own |
+| **Video** | deterministic HTML motion slides rendered locally with headless Chrome. Optional: `mlx_video_generate` (24fps, RAM-capped). Under Grok the CLI's own `image_to_video` is the setup-time recommendation (1–15 s, 720p ceiling, subscription allowance) | Veo 3.1 (Gemini) per second · Seedance (ModelArk) per second | …you use the HTML motion lane or the Grok host lane. The saved video model decides the paid engine. A channel can prohibit stills and still spend zero on generated video; Ken Burns does not count as true motion. mlx_video is not the default and is not on the Veo/Seedance face-policy table |
+| **Speech (TTS)** | Your own recording | Gemini TTS or ElevenLabs `eleven_v4` | Generate with the saved voice and record provenance. No automatic paid speech review; local TTS is removed. |
 | **Transcription (STT)** | `stt_local_transcribe` — Qwen3-ASR via mlx, $0 (whisper.cpp fallback) | none | never — there is no paid STT path here |
-| **Music (BGM)** | `mlx_music_generate` when MLX Core is running | Lyria clip via Gemini (the default) | …you ship without BGM, or you have MLX Core up with a music model |
+| **Music (BGM)** | Saved MLX music pack or reused channel bed | Saved Lyria / ElevenLabs / sunoapi.org model | …you reuse audio or choose an installed local pack |
 
-A near-zero run is possible: local images, local narration synthesis, local
-transcription, no generated video, no BGM. What still costs money is the audio
-review of every generated narration scene, and what you give up is a proper cover
-frame (it needs rendered text) and background music.
+A near-zero run is possible: local images, local transcription, no generated video, no
+BGM. Speech is the one paid step left (local TTS is removed): raw TTS on the saved model,
+recorded `not_reviewed`, with no paid review. What you give up is a proper cover frame (it
+needs rendered text) and background music.
 
 A realistic paid episode is small. The default economy tier spends about
 **$0.27–0.29** — one high-quality cover image plus one 30-second BGM clip, with
-everything else local — against a per-episode cap the growth plan sets
-(`max_cost_per_video`, template default $1.00) and the pipeline enforces before
-spending, not after. Generated video is the expensive step: a silent previz-guided
-Seedance hook clip takes the episode to about $0.81 on the 2.0 mini grade (about $3.00
-on 2.0 at 1080p) and one 8-second Veo lite escalation adds roughly $0.64, which is why both
-stay off unless the cut needs true motion, hook metrics justify it, the cap allows it, and
-— for the hook — the growth plan names the previz renderer and video model the unattended
-loop cannot ask for.
+everything else local — against the growth plan's per-episode cap
+(`max_cost_per_video`, template default $1.00), one of the spending ceilings beside the
+project's `episodeBudgetUsd`, enforced before spending, not after. Generated video is the
+expensive step: a silent Seedance hook clip takes the episode to about $0.81 on the 2.0 mini
+grade (about $3.00 on 2.0 at 1080p) and one 8-second Veo lite clip adds roughly $0.64, which
+is why generated cuts stay off unless the cut needs true motion and the cap allows it. The
+engine is the saved video model in `.social-flow/models.json`, not a per-cut escalation; an
+unattended loop with no saved settings reports `project_setup_required` instead of guessing.
 
 Prices live in one file, `skills/autoproduce/references/prices.tsv`, each row
 carrying its evidence grade and source. `cost-report.sh` reads only that file and
@@ -355,7 +472,7 @@ grok plugin install https://github.com/ttalkkaklab/social-flow.git --trust
 # ChatGPT on the web or mobile. The public directory takes local-MCP plugins from approved
 # partners only, so the marketplace is the route. Both files hold to their schemas; how
 # codex 0.162 and the desktop app load the pair is unmeasured.
-# Codex CLI — the 18 skills load; MCP tools don't wire up yet (measured on codex 0.147.0)
+# Codex CLI — the skills load; MCP tools don't wire up yet (measured on codex 0.147.0)
 codex plugin marketplace add ttalkkaklab/social-flow
 codex plugin add social-flow@social-flow
 
@@ -370,14 +487,15 @@ ln -sfn /path/to/social-flow ~/.buzz/packs/com.ttalkkaklab.social-flow
 API keys travel the same way as under Claude — shell environment variables where there is
 a shell, and `~/.config/social-flow/.env` where there is none (the ChatGPT desktop app, Cowork).
 
-**Host media tools come first there.** Codex and Grok ship their own `image_gen` (Grok also `image_edit`), and Grok
-ships `image_to_video` and `reference_to_video`; a skill running under those CLIs sends every generated still to the
-host image tool and, under Grok, every generated clip to the host video tool, on the
-subscription allowance and with `image.host` / `video.host` ledger lines at $0. The plugin's
-own image and video tools become the fallback the user is asked about. Claude Code has no such
-tools, so the engine tables above are unchanged there. The storyboard records the detection in
-`window.PRODUCTION.imageProvider` and `videoProvider`; write `api` in either to opt an episode
-out. The Grok video tool tops out at 720p, and the builder scales that onto the 1080p canvas.
+**The saved model choice governs there too.** Codex and Grok ship their own `image_gen` (Grok also `image_edit`), and Grok
+ships `image_to_video` and `reference_to_video`. Initial image setup recommends ASTRA GenAI
+(`astra-genai` / `z-image-turbo`); readable-text images require GPT Image 2. Video setup
+recommends a supported host tool. An explicitly selected host tool is saved as `engine:"host"`
+and logged on the subscription allowance with `image.host` / `video.host` ledger lines at $0. A saved
+API engine wins over host detection, and a fallback after a failed host call is asked for, never
+silent. Claude Code has no such tools, so the engine tables above apply there. The storyboard
+records the saved providers in `window.PRODUCTION.imageProvider` and `videoProvider`
+(`host` | `astra` | `api`). The Grok video tool tops out at 720p, and the builder scales that onto the 1080p canvas.
 
 Work products accumulate under `data/` relative to the session cwd, so the convenient
 setup is to start Claude Code in the directory where you want your content and add
@@ -389,21 +507,25 @@ Story and production share a [direction guide](skills/storyboard/references/rete
 Each development pays part of the opening promise with evidence or a changed expectation.
 The board maps those beats to visible changes, sound events and the final payoff. Production
 checks that map against the finished video at delivery speed, including a listen to the mix.
-Autoproduce keeps its single-bed budget and can use music drops and available sound effects.
-Unverified essential playback checks hold the episode from the publish queue. These are
-editorial checks; completion-rate improvements require audience measurements.
+Autoproduce can reuse multiple music cues or generate them within its authorized allocation.
+Shot-relative music gain curves and configurable ducking shape dialogue and reveals; low
+speech-to-music separation is a review warning, not an assembly gate.
+An unverified playback check is recorded as `not_reviewed`; it does not hold the episode from
+the publish queue. These are editorial checks; completion-rate improvements require audience
+measurements.
 
 ```
+/social-flow:project-init .                # 0. project defaults (once per working directory): SNS targets · genre · models · style · ratio · format → .social-flow/models.json
 /social-flow:channel add my-channel        # 1. channel profile (once)
 /social-flow:branding my-channel           # 1.2 (optional) profile image — 4 candidates → HITL pick → 95-point convergence
 /social-flow:intro my-channel              # 1.3 (optional) channel intro — 4 concepts HITL → 4s veo render → 90-point convergence (spliced after the episode as a closer)
 /social-flow:setup-threads my-channel      # 1.4 (optional) SNS account setup + API tokens — browser HITL, ego lite only (per platform: setup-instagram · setup-youtube)
 /social-flow:ingest my-channel record      # 1.5 (optional) screen+voice recording → timeline — an alternative research source
-/social-flow:storyboard my-channel "July FX swings"   # 2. research → wow points → 3 messages for today's viewer → 3 seven-item scenarios (one topic each, shown with their wow) → pick → more research → scenes [narration read alone, to 95] → [narration approval] → storyboard → [approval] · nothing generated
+/social-flow:storyboard my-channel "July FX swings"   # scenario preview → character/prop/location sheets → complete scenes → shots → shared template + check · no media generation
 /social-flow:produce my-channel 20260729-fx           # 3. video + per-platform text
 /social-flow:publish my-channel 20260729-fx           # 4. [approval] → publish → record permalinks
 /social-flow:grow-threads my-channel init             # 5. (optional) Threads growth plan [approval — standing authorization]
-/loop 30m /social-flow:grow-threads my-channel        #    then an autonomous growth tick every 30m (inbox replies · insights · keyword conversations · judgment-based posting · one push post for a handed-over breakout — 95-point gate)
+/loop 30m /social-flow:grow-threads my-channel        #    then an autonomous growth tick every 30m (inbox replies · insights · keyword conversations · judgment-based posting · one push post for a handed-over breakout — reviews recorded as evidence)
 /social-flow:grow-youtube my-channel init             # 5-b. (optional) YouTube growth plan [approval — standing authorization]
 /loop 1h /social-flow:grow-youtube my-channel         #     then a tick every hour at rest (comment replies · metrics · queue refill authoring · queue publishing · velocity watch → breakout handoff), 15–30m while a watch is open
 /social-flow:grow-instagram my-channel init           # 5-c. (optional) Instagram growth plan [approval — standing authorization]
@@ -411,6 +533,11 @@ editorial checks; completion-rate improvements require audience measurements.
 /social-flow:topic-scout my-channel                   # 1.6 topics the market has already validated — md source of truth + chart HTML
 /social-flow:review-recent my-channel                 # 6. feedback HTML for the last 5 episodes (funnel · bars · next-episode levers)
 ```
+
+Storyboard authors, including delegated agents, follow the same required order. Show the
+scenario before detailed authoring without adding an approval pause unless requested.
+Prepare [character, prop and background/location sheets](skills/storyboard/references/asset-sheets.md)
+before shot design and export the shared review template with its `--check` result.
 
 Each step checks the previous step's output — produce stops on an unapproved
 storyboard, publish stops on unfinished production, and each points you back to the
@@ -424,26 +551,23 @@ them the pipeline ends at `produce` with the finished video and per-platform tex
 **One topic string straight to a finished video** (steps 2–3 with no human approval):
 
 ```
-/social-flow:autoproduce my-channel "July FX swings"   # research → wow points → 3 messages → 3 seven-item scenarios [one batched read] → pick → more research → scenes.js [narration read alone to 95, then its words to 95] → images → TTS → build → output
+/social-flow:autoproduce my-channel "July FX swings"   # scenario → asset sheets → shared storyboard → authorized production → output
 ```
 
-The machine gates stand where the approval gates were — fact verification (3+
-cross-verified claims, three or more wow points and three messages, one topic cut from each), three seven-item
-scenario candidates judged in one batched read
-(curiosity · fear · intrigue · comedy), the narration read on its own and looped to 95 twice
-(the chain, then the words — three reads each, the sentences handed inline), the copy style
-checker and the contract checkers, build report (drift 0), one content-reviewer read at 95
-with P0=0, and a cost cap. The **economy tier is the
-default**: still backgrounds with Ken Burns and HTML motion slides, roughly $0.27–0.29 per
-episode (a silent previz-guided Seedance hook clip, only where the routing or an explicit
-`hook_video` picks video and the plan names the previz renderer and model, takes it to about
-$0.81 on 2.0 mini 720p; plan cap default $1.00);
-only when hook metrics fall below threshold does the
-one b-roll after the cover get promoted to `veo-3.1-lite`. Authoring is capped at **2 episodes
+Without a human, the run keeps the operational contracts — fact verification (3+
+cross-verified claims), the contract checkers, the build report (drift 0) and the cost cap —
+and records everything else as evidence: the batched scenario read (curiosity · fear · intrigue ·
+comedy), narration reads, the copy style checker's findings and a content-reviewer read are
+advice, `not_reviewed` when skipped, never a reason to hold a finished episode. The **economy
+tier is the default**: still backgrounds with Ken Burns and HTML motion slides, roughly
+$0.27–0.29 per episode (a silent Seedance hook clip, only where the routing or an explicit
+`hook_video` picks video, takes it to about $0.81 on 2.0 mini 720p; plan cap default $1.00).
+Generated cuts use the saved video model in `.social-flow/models.json`; no metric promotes a
+b-roll to another engine. Authoring is capped at **2 episodes
 per platform loop per day** (hard cap, counting successes and failures), and
 `check-duplicate.py` compares every candidate topic against the channel's whole back
-catalog to throw out rewordings of things already made. Ladder, promotion rules, and
-unit prices live in `skills/autoproduce/references/`. This is also the skill the
+catalog to throw out rewordings of things already made. Unit prices (and the legacy
+model ladder) live in `skills/autoproduce/references/`. This is also the skill the
 growth loops call when they refill their own queues.
 
 **Threads copy is written for one of two outcomes.** Reach and replies come from
@@ -456,13 +580,13 @@ which `threads_publish`'s `replyToId` already supports. The growth loop reviews 
 one draft and replies to its own post after publishing. See
 [the research](docs/research/2026-09-19-threads-post-styles/README.md).
 
-**Style gate** — wherever Korean text is produced (storyboard authoring, produce
+**Style check** — wherever Korean text is produced (storyboard authoring, produce
 right before TTS and per-platform copy, publish right before approval,
 content-reviewer verification), `check-style.py` deterministically flags AI-sounding
 prose. It catches translationese, stock phrases, assistant-register endings,
-comma-after-connective habits and context-dependent vocabulary suggestions, tiered S1/S2/S3; any
-remaining S1 blocks publishing (exit 2). Each of the 8 surfaces (narration, subtitles, card text, four platform
-copies, comments) has its own thresholds and disabled rules — the gate doesn't fight
+comma-after-connective habits and context-dependent vocabulary suggestions, tiered S1/S2/S3; an S1
+finding is a suggestion (exit 2 is a signal, not a block). Each of the 8 surfaces (narration, subtitles, card text, four platform
+copies, comments) has its own thresholds and disabled rules — the check doesn't fight
 the register the playbook itself demands, like Threads banmal or Facebook's
 case-collecting closers. For video surfaces, `platform-guide/references/extract-text.js` pulls the text out of
 scenes.js.
@@ -471,20 +595,20 @@ scenes.js.
 there is no universal school-grade vocabulary limit. Preserve familiar adult expressions
 and explain necessary terms only when the audience needs the context. E1~E3 matches
 are S3 review suggestions with no score deduction or blocking verdict. A match alone is
-never a reviewer P0. Other S1 defects retain their existing gates. The rule source is
+never a reviewer P0. Other S1 defects are suggestions too; they are reported, not enforced. The rule source is
 `skills/platform-guide/references/korean-style.md` §Eye level.
 
 **Storyboard adversarial reviews** — the checker catches what rules can catch; the
 layer above it is what a person has to read to feel. Overused antithesis, triple
 lists, sermon-style closers, a rhythm where every sentence reads at the same length.
-So the storyboard skill calls the adversarial reviewer `storyboard-reviewer` on the
-narration alone, before any shot has a camera — the spoken sentences, numbered and handed
-to the reviewer inline so it opens no file — and loops each read to 95:
+So the storyboard skill can call the adversarial reviewer `storyboard-reviewer` on the
+narration alone, on request or for a concrete uncertainty, before any shot has a camera — the
+spoken sentences, numbered and handed to the reviewer inline so it opens no file:
 
 | Review | What it reads | Score is |
 |---|---|---|
-| Narration mode (§4.4) | the narration alone, without the picture — does the topic and the content come through | total, **looped to 95, cap 3 reads** |
-| Vocabulary mode (§4.5) | the same sentences — are the words what a person says | **lowest sentence**, **looped to 95, cap 3 reads** |
+| Narration mode (§4.4) | the narration alone, without the picture — does the topic and the content come through | total; a requested improvement loop targets 95, cap 3 reads |
+| Vocabulary mode (§4.5) | the same sentences — are the words what a person says | **lowest sentence**; the same loop on request |
 
 Those are the only reviewer calls in the flow (0.50.0). The six board reads, the plan
 review and the slide loop of 0.49 came out after measuring 358 reviewer runs: a call cost
@@ -494,8 +618,8 @@ now `check-scenes.js`, `check-slide.js`, `check-style.py` and the author's own r
 board, the images and the slide key frames — with anything left over going onto the human
 approval screen, which is the one thing that blocks. The other modes (copy · scene · camera ·
 sound · image), `slide-reviewer` and `content-reviewer` plan mode still exist for a read the
-user asks for by name. autoproduce has no human to decide, so there a chain still short at
-the third read halts authoring.
+user asks for by name. autoproduce has no human to decide, so there a read still short after
+the third pass is recorded as evidence and authoring continues with the best justified draft.
 
 **Storyboard-first shooting flow** (for polished demos and tutorials — the order flips):
 
@@ -519,10 +643,10 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 303 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 122 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions — 93: research 9 + open data 5 + generation 49 + publish 6 + comments 3 + growth insights 5 + growth review 2 + check 2 + blender 7 + storyboard 5
+│       ├── tools.ts             # tool definitions — 122 tools, including voice auditions and opt-in acting review
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -530,16 +654,16 @@ social-flow/
 │       ├── datago-client.ts     # data.go.kr (search·detail·download·odcloud·standard open API)
 │       ├── image-client.ts      # OpenAI GPT Image generation
 │       ├── zimage-client.ts     # Z-Image Turbo on-device generation (mflux/MLX)
-│       ├── mlx-serve-client.ts  # MLX Core / mlx-serve HTTP client (image·edit·tts·music·video·3d)
+│       ├── mlx-serve-client.ts  # MLX Core / mlx-serve HTTP client (image·edit·music·video·3d)
 │       ├── qwen3-asr-client.ts  # Qwen3-ASR on-device STT (mlx-qwen3-asr CLI)
 │       ├── video-client.ts      # Veo 3.1 — t2v·i2v·extension·reference
 │       ├── seedance-client.ts   # Seedance — t2v·i2v·reference (BytePlus ModelArk)
 │       ├── tts-client.ts        # Gemini TTS — single speaker + 2-speaker dialogue
-│       ├── supertonic-client.ts # Supertonic 3 on-device TTS
 │       ├── elevenlabs-client.ts # ElevenLabs TTS — single voice · multi-voice dialogue · voice list (REST)
 │       ├── music-client.ts      # Lyria — 30s clips (batch) + variable length (streaming)
 │       └── media-utils.ts       # path validation · base64 saves · PCM→WAV utils
 ├── skills/
+│   ├── project-init/            # workspace defaults, SNS records and repeatable episode setup
 │   ├── channel/                 # /social-flow:channel — channel & profile management
 │   │   └── references/          #   resolve-asset.py (catalog lookup) · serve.js (channel browser over HTTP — pick a channel, then storyboards or characters; serves data/ so storyboard.html opens in place)
 │   ├── branding/                # /social-flow:branding — channel profile image (4 candidates → HITL pick → adversarial convergence at 95)
@@ -552,12 +676,13 @@ social-flow/
 │   │   └── references/          #   setup-playbook.md (loopback listener · production-stage 7-day expiry trap)
 │   ├── datago/                  # /social-flow:datago — open-data research → collection → seed records
 │   ├── ingest/                  # /social-flow:ingest — screen recording (+voice) → timeline (recording control · STT · scene boundaries · keyframes)
-│   ├── storyboard/              # /social-flow:storyboard — research → wow points (what the viewer believes → what the evidence shows) → 3 messages for today's viewer → 3 seven-item scenarios (one topic each, never "X는 알 수 없다", each shown with its wow) → pick → more research → narration → narration read-through looped to 95 → vocabulary looped to 95 (both inline, ≤3 reads) → [narration approval] → the board (author's read + check-scenes.js) → the image and clip plan → [approval]. No generation call — produce makes the stills, slides and clips
+│   ├── storyboard/              # scenario preview → character/prop/location sheets → complete scenes → shots → bundled review HTML + check; stops before media generation
 │   │   └── references/          #   scenes-schema.md (§structure — sequences · scenes · shots) · structure-contract.js (the rules storyboard_apply · check-scenes.js · storyboard.html share) · directing-grammar.md · motion-slide-template.html (studio ground · slab material · rendered object) · slide-design.md (look · motion tokens · the slide-reviewer rubric) · check-slide.js · rendered-object.md + bake-object.py (an SDF-raymarched object baked to a frame sheet, numpy + Pillow, ₩0 an episode) · blender-objects.md + bake-blender.py (the mesh recipe path-traced by Blender Cycles into the same sheet — real cast shadow, minutes of local GPU per cut, `--probe` forecasts them)
 │   ├── produce/                 # /social-flow:produce — stills (§1.5) → clips → slides (§3.6) → video build + per-platform text
-│   │   └── references/          #   build-reel.sh (SUB_MODE sentence · word · phrase) · speedup.sh (required final pace pass, 1.0 default, ≤6.2 chars/s) · bgm-bed.sh · bgm-scoring.md · video-template.html · render-motion-slide.mjs (motion slide → one clip per reveal group, no npm dependency) · QA harness
-│   ├── autoproduce/             # /social-flow:autoproduce — one topic through research → wow points → 3 messages → 3 seven-item scenarios [scored to 95 on the wow and curiosity · fear · intrigue · comedy, auto-pick unattended] → more research → authoring [narration read alone, to 95] → video (human gates replaced by the machine gates, economy tier default)
-│   │   └── references/          #   cost-tiers.md (model ladder · promotion rules) · prices.tsv (price SoT) · cost-report.sh
+│   │   └── references/          #   build-reel.sh (subtitle-free master; `SUB_MODE` is a legacy burn-in switch the builder ignores) · speedup.sh (required final pace pass, 1.0 default, ≤6.2 chars/s) · bgm-bed.sh · bgm-scoring.md · video-template.html · render-motion-slide.mjs (motion slide → one clip per reveal group, no npm dependency) · QA harness
+│   ├── edit-speech/             # /social-flow:edit-speech — targeted speech corrections for one shot or character (speech_manage · raw TTS · not_reviewed)
+│   ├── autoproduce/             # storyboard workflow → authorized production; scenario presentation does not add an approval pause
+│   │   └── references/          #   cost-tiers.md (legacy model ladder; the saved model governs) · prices.tsv (price SoT) · cost-report.sh
 │   │                            #   cost-tally.md (per-episode cost ledger convention — shared by storyboard/produce)
 │   ├── publish/                 # /social-flow:publish — HITL approval, then platform publishing
 │   ├── grow-threads/            # /social-flow:grow-threads — one autonomous Threads growth tick (init plan = standing authorization, repeat via /loop — growth skills are per-platform)
@@ -567,31 +692,42 @@ social-flow/
 │   ├── grow-instagram/          # /social-flow:grow-instagram — one autonomous Instagram growth tick (comment replies · skip/watch metrics · queue refill authoring · queue publishing — Reels go out only with queue_instagram: ready + a public URL)
 │   │   └── references/          #   growth-playbook.md (two gates · disqualification SoT) · growth-plan-template.md
 │   ├── review-recent/           # /social-flow:review-recent — feedback HTML for the last 5 episodes across YouTube/Instagram (funnel · bars · problem→hypothesis→next episode)
+│   ├── inspect-content/         # read-only review of existing characters, backgrounds, props, scenarios and shot flow
 │   ├── topic-scout/             # /social-flow:topic-scout — market-validated YouTube topics (5× channel median · chart HTML) + an SNS issues section (Threads/X/Instagram mentions · trending searches)
 │   └── platform-guide/          # knowledge skill — platform grammar · video specs · Korean style SoT
-│       └── references/          #   platform-playbook.md · korean-style.md · check-style.py (style gate) · check-meta.js (YouTube meta gate) · extract-text.js · formats.js + format-lint.js · pipeline.js + pipeline-lint.js · skill-lint.js · reply-gate.md · safezone-landscape.md
+│       └── references/          #   platform-playbook.md · korean-style.md · check-style.py (style check) · check-meta.js (YouTube meta check) · extract-text.js · formats.js + format-lint.js · pipeline.js + pipeline-lint.js · skill-lint.js · reply-gate.md · safezone-landscape.md
 ├── agents/
-│   ├── brand-reviewer.md        # adversarial review of profile images & intro videos (95/90-point convergence gates)
+│   ├── brand-reviewer.md        # adversarial review of profile images & intro videos (95/90-point convergence loops when requested)
 │   ├── content-reviewer.md      # adversarial pre-publish verification (one read at produce §10 on publish-bound episodes; plan mode on request)
-│   ├── growth-post-reviewer.md  # adversarial review of growth-loop copy (AI tells · context — 95-point gate)
+│   ├── growth-post-reviewer.md  # adversarial review of growth-loop copy (AI tells · context — score recorded as evidence)
 │   ├── slide-reviewer.md        # adversarial review of a rendered motion slide (design craft · no generated look · motion meaning · legibility — on request since 0.50.0; the flow uses check-slide.js and the author's sheet read)
-│   └── storyboard-reviewer.md   # adversarial storyboard review, 8 modes — the flow calls narration and vocabulary (the spoken sentences alone, handed inline, looped to 95 in ≤3 reads) and, unattended, one batched scenario read; copy / scene / camera / sound / image stay for reads the user asks for by name
+│   └── storyboard-reviewer.md   # adversarial storyboard review, 8 modes — the flow calls narration and vocabulary (the spoken sentences alone, handed inline, on request, ≤3 reads) and, unattended, one batched scenario read; copy / scene / camera / sound / image stay for reads the user asks for by name
 ├── apps/
 │   └── shoot-console/           # macOS SwiftUI recording console for the shooting-script flow (built locally via build-app.sh)
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (303 tools)
+## Local storyboards
 
-**`tools/list` does not show all 303.** The credential-gated publish, review and insights tools
+Episodes are saved only under `data/<channel>/episodes/<topic>/`. Open
+`storyboard/storyboard.html` to review the board. Research, scenarios, approvals,
+media and publication logs stay in the local episode directory; no destination
+selection or workspace key is required. SNS targets, connection records, genre, models,
+visual style, video ratio and format live in the workspace's `.social-flow/models.json`;
+each episode snapshots them in `.work/model-settings.json`, and `profile.md` keeps the
+channel's tone, theme and pinned character voice IDs (the speech model itself is the saved `models.speech`).
+
+## MCP tool surface (122 tools)
+
+`project_manage`: options · status · init · update · episode. Local project setup
+with genre, models, style, ratio, format and SNS records; no generation or publishing.
+
+**`tools/list` does not show all 118.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
 evaluated at list time, so adding a token makes them appear without restarting the
-server. The 210 `portal_*` tools follow the same rule on the ttalkkakstory workspace key
-(`<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, the flat file, or `TTALKKAKSTORY_*`). With
-no tokens and no portal key you'll count 80; explicit tool-disable settings can reduce
-that list further. Hidden tools still have live handlers:
+server. Explicit tool-disable settings can reduce that list further. Hidden tools still have live handlers:
 calling one directly returns a missing-token error rather than failing silently.
 `content_feedback`, `youtube_topic_scout`, and `sns_issue_scout` sit outside the
 platform gate and stay listed without tokens — the YouTube scout needs
@@ -608,34 +744,39 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Research | `stock_search` | Free stock photos and clips — Pexels · Pixabay (`PEXELS_API_KEY` / `PIXABAY_API_KEY`) · NASA Image and Video Library · Wikimedia Commons (no key). Every item returns the `visual.license` block a `visual.source: "stock"` cut stores; Commons is filtered to public domain, CC0 and CC BY. The survey behind it, with license quotes and the Korean public-domain sources: [free stock sources](docs/research/2026-09-07-free-stock-sources/index.html) (Korean) |
 | Open data | `datago_search` / `datago_detail` / `datago_file_download` | data.go.kr (no auth — search·detail·raw file) |
 | Open data | `datago_file_fetch` / `datago_api_call` | odcloud · apis.data.go.kr (auth key + **per-API usage application** required) |
-| Image generation | `image_local_generate` | Z-Image Turbo on-device via mflux (**no API key, no network, no billing — the default path on Claude Code**; under Codex and Grok the CLI's own `image_gen` comes first. Needs Apple Silicon + `uv tool install --python 3.12 mflux`; first call downloads 31GB of weights. No text inside images — Korean jamo break up) |
-| Image generation | `mlx_image_generate` / `mlx_image_edit` | MLX Core / mlx-serve on loopback (**no vendor bill**. Optional lane — default stays Z-Image. Hangul still goes to gpt_image. Fail closed if :11234 is down; this plugin never launches the app. `brew install --cask mlx-core`) |
-| Image generation | `gpt_image_text2img` / `gpt_image_img2img` | OpenAI GPT Image (OPENAI_API_KEY — **the text-and-quality path**: text rendering, arbitrary WIDTHxHEIGHT, up to 16 reference images, mask inpainting) |
+| Image routing | `image_catalog` / `image_plan` / `image_execute` / `image_status` | Saved image selection, model-specific capability checks, atomic cost reservations, duplicate protection and measured output receipts. [Routing contract](skills/_shared/image-routing.md). Host execution stays external. |
+| Image generation | `image_local_generate` | Z-Image Turbo on-device via mflux (**no API key, no network, no billing — a $0 choice for the saved image model**; initial image setup recommends ASTRA GenAI; local mflux is an explicit alternative. Needs Apple Silicon + `uv tool install --python 3.12 mflux`; first call downloads 31GB of weights. No text inside images — Korean jamo break up) |
+| Image generation | `mlx_image_generate` / `mlx_image_edit` | MLX Core / mlx-serve on loopback (**no vendor bill**. Optional local lane — initial image setup recommends ASTRA GenAI. Inspect actual Hangul. Model-specific edit/variation/alpha contracts apply. Fail closed if :11234 is down; this plugin never launches the app. `brew install --cask mlx-core`) |
+| Image generation | `gpt_image_text2img` / `gpt_image_img2img` | OpenAI GPT Image (OPENAI_API_KEY — **saved selection takes precedence**: model-dependent sizes, up to 16 references, mask inpainting, usage receipts; GPT Image 2 transparent output is preview) |
 | Video generation | `veo_text2video` / `veo_img2video` / `veo_extension` / `veo_reference` | Veo 3.1 (GEMINI_API_KEY — 720p–4k, 4/6/8s grid; **native audio, local-file extension, and live-person reference** are this engine's edge) |
 | Video generation | `omni_text2video` / `omni_img2video` / `omni_extend` / `omni_edit` | Gemini Omni 1.1 Flash (GEMINI_API_KEY, Interactions API — 360p–4k, **any whole 3–10s**, and the only lane that **edits a clip by instruction** or extends a local mp4 to a 40s cumulative cap. **Billed flat ~$1.01 per call** — measured against the spend counter, not per second as the pricing page reads — so a 3s draft costs more than a full 8s veo-3.1-lite shot; worth it at the full 10s or for the edit lane, never for a short cut. No reference-image or negative-prompt field, and its person policy is unmeasured — photoreal faces stay on `veo_img2video`) |
-| Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Seedance (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images plus reference audio — a character's fixed voice (`referenceAudioPaths`, 2.x) — plus reference video (`referenceVideoPaths`, 2.x): the 3D previz as `Video 1`, the vendor's clay-model reference — every generated cut pre-renders in Blender or three.js first (user directive 2026-09-11), so the camera path and timing land as planned; a local clip is served through `MEDIA_UPLOAD_URL` or a cloudflared quick tunnel for the life of the task. Audio can be turned off, so silent cuts are cheap — $0.23 for 1080p 4s vs $0.64 on Veo lite. Every generated motion background is a previz cut on the 2.x grade the user chose (`PRODUCTION.videoModel`); 1.5 Pro serves only b-roll or speech slots that land on Seedance; fixed voice or over nine reference images use 2.5. The storyboard records the reason and forecasts that model's cost. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
+| Video routing | `video_catalog` / `video_plan` / `video_execute` / `video_status` | Saved model selection, adapter validation, atomic episode budget reservations and durable request receipts. [Routing contract](skills/_shared/video-routing.md). |
+| Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Seedance (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images plus reference audio — a character's fixed voice (`referenceAudioPaths`, 2.x) — plus reference video (`referenceVideoPaths`, 2.x): an optional 3D previz as `Video 1`, the vendor's clay-model reference — a generated cut may pre-render in Blender or three.js first (user directive 2026-09-11, optional since 2026-10-18), so the camera path and timing land as planned; a local clip is served through `MEDIA_UPLOAD_URL` or a cloudflared quick tunnel for the life of the task. Audio can be turned off, so silent cuts are cheap — $0.23 for 1080p 4s vs $0.64 on Veo lite. Every generated cut uses the saved video model and resolution (`PRODUCTION.videoModel`, from `.social-flow/models.json`); a per-cut change is an explicit user exception in `PRODUCTION.modelSettings.overrides`. The storyboard forecasts that model's cost. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | Video generation | `mlx_video_generate` | MLX Core / mlx-serve (24fps rgb8 muxed to mp4 with ffmpeg. Default 768×1280, RAM-capped at 800MB decoded RGB. Not the default path and not on the Veo/Seedance face-policy table. Pack install, request grid and measured render times: [LTX 2.5 runbook](docs/mlx-ltx-2.5.md)) |
-| Video generation | `astra_text2video` / `astra_img2video` / `astra_keyframe_video` / `astra_audio2video` / `astra_video_retake` | ASTRA video API (`ASTRA_VIDEO`, self-hosted LTX-2.5 — **our own box, so no per-call bill and no vendor policy**, but it renders ONE job at a time: 66–184s each plus queue, which makes it the batch lane rather than the interactive one. Five tools over six server modes; `tier` picks generate·guided·guided_fast. The only lane with `lora` adapters (`cinemagraph` · `slow-motion`, generate only), with a keyframe mode that passes through 2–8 supplied stills at chosen frame indices, and with a retake mode that re-rolls one time span of an existing clip. Length is frames (8k+1, 25–193; guided/fast client ceiling 121) not seconds; sizes sit on a 64-pixel grid with a 2,064,384-pixel ceiling, so 9:16 is **1024×1920** — 1088×1920 exceeds the area ceiling at every frame count, and 1080×1920 is off-grid. Clips carry 48kHz stereo AAC; `audio2video` carries the supplied sound re-encoded, rather than a newly generated track. Stereo (2-channel) input is required: mono WAV passes acceptance but fails generation. With neither length argument, audio2video uses 121 frames (~5.04s), not the source length; `audioMaxDuration: 8` selects 185 frames (~7.71s) at 24fps. There is no audio-off argument. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
-| ASTRA upload management | `astra_video_list_uploads` / `astra_video_delete_upload` | List uploads with no arguments; delete one with `uploadId` after user approval. Requires `ASTRA_VIDEO` and server endpoint support. Uploads expire after 24h, with 20 uploads / 1 GiB per key. Unsupported endpoints and invalid responses return errors; live verification is pending. |
-| Checked narration | `tts_generate_checked` | Generates with the pinned engine and reviews the actual WAV: accuracy, pronunciation, naturalness and clarity. The blind-transcription (STT) check and its 2% CER gate run only when `transcriptCheck` carries a user request for them. Up to three takes (one episode seed stays fixed across retakes); current hash-bound PASS required for assembly. Every single-voice take gets a fixed pause laid in at each sentence boundary — ElevenLabs from its own alignment, the local/Gemini/mlx engines from the local forced aligner — with `<wav>.sentences.json` for the builder. Requires Gemini API review even for local TTS; see [speech quality gate](skills/produce/references/tts-quality.md). |
-| Final speech review | `tts_review_final` | Listens to the assembled media and every sentence transition; continuity and other listening axes must reach 95, accuracy 98. The final hash-bound proof is required for delivery. |
+| Video generation | `astra_text2video` / `astra_img2video` / `astra_keyframe_video` / `astra_audio2video` / `astra_ic_lora` / `astra_video_retake` | ASTRA video API (`ASTRA_VIDEO`, self-hosted LTX-2.5 — **our own box, so no per-call bill and no vendor policy**, but it renders ONE job at a time: 66–184s each plus queue, which makes it the batch lane rather than the interactive one. Six tools over the server modes; `tier` picks generate·guided·guided_fast·guided_hq, and `astra_ic_lora` runs one reference still or clip through an IC-LoRA adapter (adapters, `guidance`, `conditioning_mask`, `skip_stage_2`, `{name, strength}` lora entries and `generateAudio` are live since the 2026-10-17 server change). The only lane with `lora` adapters (`cinemagraph` · `slow-motion`, generate only), with a keyframe mode that passes through 2–8 supplied stills at chosen frame indices, and with a retake mode that re-rolls one time span of an existing clip. Length is frames (8k+1, 25–361 on every mode, the server's published ceiling); `duration` in seconds is converted to the nearest 8k+1 by the tool. `astra_video_capabilities` reads the live server's own limits; sizes sit on a 64-pixel grid with a 2,064,384-pixel ceiling, so 9:16 is **1024×1920** — 1088×1920 exceeds the area ceiling at every frame count, and 1080×1920 is off-grid. Clips carry 48kHz stereo AAC; `audio2video` carries the supplied sound re-encoded, rather than a newly generated track. Stereo (2-channel) input is required: mono is refused at upload because it fails in the engine audio encoder. With no duration, numFrames or audioMaxDuration, the client explicitly sends 121 frames (~5.04s) for compatibility because server omission metadata conflicts; `audioMaxDuration: 8` selects 185 frames (~7.71s) at 24fps. `generateAudio: false` strips the sound after generation (same GPU time). `expectLipSync: true` (on-screen speech only) measures with ffmpeg whether the picture moves with the supplied speech and re-renders with a new seed when it does not, up to `maxAttempts` (default 2); it never fails the call and leaves phoneme-level sync, the speaking person and voice identity `not_reviewed`. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
+| Unified ASTRA GenAI | `astra_genai_text2video` / `astra_genai_img2video` / `astra_genai_text2img` / `astra_genai_edit` / `astra_genai_msr` / `astra_genai_audio2video` / `astra_genai_video_status` | Separate `astra-genai` engine and `ASTRA_GENAI_API_KEY` gateway token. LTX v2 text/image video, MSR with up to four subjects plus a background, and Z-Image text/img2img/inpaint with optional prompt expansion. `astra_genai_audio2video` animates supplied speech: the clip is as long as the audio (up to 361 frames), mono or stereo input at a 7350–96000 Hz AAC standard rate, sent as a data URI of at most 15,000,000 base64 characters or an HTTPS URL. Local edit/MSR references are supported; no LoRA or retake. Managed plans require an explicit cost reservation. [Configuration and recovery](skills/_shared/astra-genai.md). |
+| ASTRA upload management | `astra_video_list_uploads` / `astra_video_delete_upload` | List uploads with no arguments; delete one with `uploadId` after user approval. Requires `ASTRA_VIDEO` and server endpoint support. Uploads expire after 24h, with 200 files per key. Unsupported endpoints and invalid responses return errors; live verification is pending. |
+| Common speech routing | `tts_route` | Read capabilities, validate a plan, or execute with a stable request ID. Existing raw tools share model, payload, output and concurrency checks. [TTS layers and recovery](skills/_shared/tts-routing.md). |
+| Optional checked narration | `tts_generate_checked` | Legacy single-take synthesis wrapper with no automatic listening, scoring or retakes. New production uses raw generators and records `not_reviewed`. |
+| Host media review | `host_review`, `acting_review`, `tts_review_acting`, `tts_review_final` | On request: prepare local media and record the executing host LLM’s actual observations; findings are evidence, not a delivery gate. No external evaluation API. Sampled frames support composition only; unsupported playback or listening stays unverified. |
 | Pronunciation dictionary | `tts_elevenlabs_dictionary` | Creates Korean alias rules and returns pinned dictionary/version IDs for `pronunciationDictionaryLocators`. Keep the source name intact and test the actual pronunciation. |
-| Voice generation | `tts_generate` / `tts_multi_speaker` / `tts_gemini_38` / `tts_list_voices` | Gemini TTS (GEMINI_API_KEY — 30 curated voices, automatic language detection, saves mono 24kHz wav). `tts_gemini_38` uses the Interactions API for turn-level style, inline vocal events, and two-speaker backchannels. |
-| Voice generation | `tts_local_generate` | Supertonic 3 on-device (**no API key, no network** — 10 voices, 31 explicitly specified languages, mono 44.1kHz wav. Needs local python + `pip install supertonic`) |
-| Voice generation | `mlx_tts_generate` | MLX Core / mlx-serve (raw WAV. Optional; never a silent fallback for the engine in profile §2) |
-| Voice generation | `tts_elevenlabs_generate` / `tts_elevenlabs_dialogue` / `tts_elevenlabs_voices` | ElevenLabs (ELEVENLABS_API_KEY — the paid third lane: inline audio-tag acting on eleven_v3, text-to-dialogue with **up to 10 voices in one request**, per-character timestamps for subtitle sync, any cloned or Voice Library voice. Saves mono 24kHz wav by default, so the builder reads it like the Gemini lane. API rate $0.10 per 1,000 characters on v2·v3, $0.05 on flash and v3 conversational, the same on every plan; the Free tier is non-commercial) |
+| Voice identity design | `tts_voice_design` | Create a stored Gemini voice from age, timbre and accent, or remix `baseVoice`. Saves a WAV preview, reusable `voice_` ID and provider usage receipt. See [voice design](skills/_shared/gemini-voice-design.md). |
+| Character voice auditions | `character_voice_audition` | On request: plan acoustic targets from character identity, compare real voice metadata, generate candidates with a stable Gemini voice baseline, and persist only the user-selected voice. |
+| Voice generation | `tts_generate` / `tts_multi_speaker` / `tts_gemini_38` / `tts_list_voices` | Gemini TTS (GEMINI_API_KEY — curated and live library voice lookup, automatic language detection, saves mono 24kHz wav). `tts_gemini_38` uses the Interactions API for turn-level style, inline vocal events, and two-speaker backchannels. |
+| Voice generation | `tts_elevenlabs_generate` / `tts_elevenlabs_dialogue` / `tts_elevenlabs_voices` | ElevenLabs (`ELEVENLABS_API_KEY`). Only `eleven_v4` is allowed for speech. Square-bracket acting tags, Stability/Similarity and timestamped output; no style/speed slider or SSML. Voice listing supports language/gender/accent filters, pagination and preview URLs. Supports /IPA/, documented 3-letter language codes, optional neighbor request IDs, PVC-as-IVC and Enterprise zero retention. Prefer ≤2,000 characters per Dialogue request; the 10,000 model ceiling is not a reliability promise. [v4 API contract](skills/_shared/elevenlabs-v4.md). Use current API pricing and save actual usage. |
 | Sound effects | `sfx_elevenlabs_generate` | ElevenLabs text→SFX (ELEVENLABS_API_KEY — `eleven_text_to_sound_v2`, 0.5–30 s, prompt influence, seamless loops for room-tone beds). The endpoint has no WAV format, so the server asks for PCM and writes the RIFF header itself: a mono 48 kHz WAV the builder reads directly, plus a `.json` provenance sidecar (tool, model, prompt, seconds, request id, date, rights). The storyboard names each effect in `window.SFX` and points shots at it with `sound.sfx`; produce generates each id **once into the channel catalog** (`assets/audio/sfx/<id>.wav`) and later episodes reuse it at $0. $0.12 per minute of generated audio on every plan; the Free tier is non-commercial. Which cuts get one: [scenes-schema §sound effects](skills/storyboard/references/scenes-schema.md#sound-effects-windowsfx-soundsfx) |
 | Speech recognition | `stt_local_transcribe` | Qwen3-ASR on-device via mlx-qwen3-asr/MLX (**no API key, no network, no billing — the default Korean STT**. Needs Apple Silicon + `uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"`; the first call downloads ~3.4GB of weights. ingest runs the same engine and falls back to whisper.cpp without it) |
-| Music generation | `music_generate_clip` / `music_generate` / `music_generate_advanced` / `music_list_options` | Lyria 3 Clip (fixed 30s mp3 — the default BGM path) · Lyria RealTime (5–300s variable wav 48kHz, seed reproducibility). `GEMINI_API_KEY` |
-| Music generation | `suno_generate` / `suno_generate_sound` / `suno_generate_lyrics` / `suno_credits` | sunoapi.org third-party REST (not an official Suno Inc. API). Sung full songs (2 tracks, 2–8 min) · loopable beds with BPM/key · lyrics only · remaining credits. `SUNO_API_KEY`. Autoproduce does not call these |
-| Music generation | `mlx_music_generate` | MLX Core / mlx-serve (WAV. Default instrumental. Optional bed; default BGM stays Lyria) |
+| Music routing | `music_catalog` / `music_plan` / `music_execute` / `music_status` | Saved model selection, native payload validation, budget/concurrency reservation, deduplication and verified 48 kHz stereo WAV. [Contract](skills/_shared/music-routing.md) |
+| Music generation | `music_generate_song` / `music_generate_clip` / `music_generate` / `music_generate_advanced` / `music_list_options` | Google Lyria Clip / 3.5 songs and RealTime control. `GEMINI_API_KEY` |
+| Music generation | `music_elevenlabs_generate` | Official Eleven Music v2 / v2.5; prompt or composition plan. `ELEVENLABS_API_KEY` |
+| Music generation | `suno_generate` / `suno_generate_lyrics` / `suno_credits` | sunoapi.org third-party V6 family, not Suno Platform. V5 `suno_generate_sound` is retired and rejected. `SUNO_API_KEY` |
+| Music generation | `mlx_music_generate` | Exact installed MLX Core music pack, local compute; default instrumental |
 | 3D | `mlx_3d_generate` | MLX Core / mlx-serve (GLB from an image, consumed by the offline HTML mesh slide lane) |
-| 3D previz | `blender_scene_read` / `blender_scene_build` / `blender_camera_set` / `blender_object_animate` / `blender_pose_key` / `blender_motion_import` / `blender_render_previz` | **Mandatory before every generated video cut** (user directive 2026-09-11) — the same plan renders in three.js through `previz-template.html` + `previz-runtime.js` when Blender is not installed. The local Blender, headless (**no API key, no network, no add-on, no GUI** — needs Blender 4.2+). Reads a .blend; builds a set of grey proxies — a person is a jointed mannequin on a 19-bone rig — plus dog·car·box·cylinder·sphere and GLB imports at the cut's frame range and resolution; places and keys the camera by location, look-at target and lens in metres, degrees and mm; keys objects and people's roots through space; poses a person by channel (raise, elbow, knee, bow …) or retargets a BVH/FBX motion-capture clip onto it, scaled, faced and floored; renders a clean H.264 previz plus stamped stills in Workbench or Eevee. Camera, blocking and body timing as numbers, iterated for free before any paid generation, then handed to `seedance_reference` as the reference video — the hand-off (previz → camera and timing, still → first frame, sheets → look, prompt → acting) is in [blender-previz.md](skills/storyboard/references/blender-previz.md) §6 |
+| 3D previz | `blender_scene_read` / `blender_scene_build` / `blender_camera_set` / `blender_object_animate` / `blender_pose_key` / `blender_motion_import` / `blender_render_previz` | **Optional before a generated video cut** (user directive 2026-09-11, optional since 2026-10-18) — the same plan renders in three.js through `previz-template.html` + `previz-runtime.js` when Blender is not installed. The local Blender, headless (**no API key, no network, no add-on, no GUI** — needs Blender 4.2+). Reads a .blend; builds a set of grey proxies — a person is a jointed mannequin on a 19-bone rig — plus dog·car·box·cylinder·sphere and GLB imports at the cut's frame range and resolution; places and keys the camera by location, look-at target and lens in metres, degrees and mm; keys objects and people's roots through space; poses a person by channel (raise, elbow, knee, bow …) or retargets a BVH/FBX motion-capture clip onto it, scaled, faced and floored; renders a clean H.264 previz plus stamped stills in Workbench or Eevee. Camera, blocking and body timing as numbers, iterated for free before any paid generation, then handed through `video_plan` → `video_execute` as the reference video of a Seedance 2.x cut — the hand-off (previz → camera and timing, still → first frame, sheets → look, prompt → acting) is in [blender-previz.md](skills/storyboard/references/blender-previz.md) §6 |
 | Growth review | `threads_draft_create` / `threads_review_submit` | Persist drafts and quote-grounded voice/purpose/flow reviews; no model API calls |
-| Publish | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` / `youtube_update` | Direct platform API calls — **exposed only for platforms with a credential file** (`youtube_update` edits title/description/tags/visibility of an already-uploaded video) |
+| Publish | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` / `youtube_update` | Direct platform API calls — **exposed only for platforms with a credential file**, except `youtube_update`, which is always listed and errors without a token; it edits title/description/tags/visibility of an already-uploaded video and is the only way an upload goes public (`youtube_publish` starts `private`) |
 | Comment inbox | `sns_comment_inbox` / `sns_comment_reply` / `sns_comment_moderate` | Cross-platform normalized inbox · replies · hiding (no deletes). Inbox and replies cover all 4 platforms; hiding excludes YouTube (its API only offers held-for-review, which means something else) |
-| Storyboard | `storyboard_read` / `storyboard_apply` / `storyboard_check` / `storyboard_backups` / `scenario_check` | The episode board as sequences → scenes → shots (`window.STRUCTURE` beside the flat `SCENES` produce reads), plus the scenario input contract. `read` returns the tree at four levels; `apply` writes or patches the board and refuses to write past a violation; `storyboard_check` runs the structure rules plus the full `check-scenes.js` contract; `scenario_check` runs S1–S12 on `candidates/` or `scenario.md` and returns the checker JSON. Local files only — the board rules live in [structure-contract.js](skills/storyboard/references/structure-contract.js), shared with the checker and approval page |
-| Portal | 100 workflow tools such as `portal_storyboard_save`, `portal_episode_lease` and `portal_channel_sync`, plus 110 route tools named `portal_api_<resource>_<operation>` | The ttalkkakstory portal by **workspace API key** (`Authorization: Bearer tks_…`) — the episode and channel-shared assets have remote records while local directories stay working copies. The workflow tools preserve local-file integration and recovery flows. The 110 `portal_api_*` tools are generated from `server/src/portal-api-contract.json`: every workspace-key API route has one named tool with the API's exact path, method and input schema, while all 19 exclusions carry an authentication-boundary reason. Binary downloads require an absolute `targetFile` and never overwrite a file. Delete tools are marked destructive and require user authorization. The key comes from `<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, read off the channel or episode path, so one channel is one workspace; all portal tools are listed only while a key exists. See [the portal section](#the-ttalkkakstory-portal-by-workspace-api-key). |
+| Storyboard | `storyboard_read` / `storyboard_apply` / `storyboard_check` / `scenario_check` | The episode board as sequences → scenes → shots (`window.STRUCTURE` beside the flat `SCENES` produce reads), plus the scenario input contract. `read` returns the tree at four levels; `apply` writes or patches the board and refuses to write past a violation; `storyboard_check` runs the structure rules plus the full `check-scenes.js` contract; `scenario_check` runs S1–S12 on `candidates/` or `scenario.md` and returns the checker JSON. Local files only — the board rules live in [structure-contract.js](skills/storyboard/references/structure-contract.js), shared with the checker and approval page |
 | Capability | `capability_status` | What this machine has configured, grouped by capability with an "N of M" count, plus the env var that would unlock each missing provider. Call it before planning anything that spends money — otherwise a missing key only surfaces when the call fails, after the plan was built around it. Reports configuration, not reachability |
 | Check | `sns_account_check` | Batch /me check across tokens (token values never shown) |
 | Growth insights | `threads_insights` / `threads_search` | Threads insights (account/post metrics) + public keyword search — for grow-threads (`threads_manage_insights` · `threads_keyword_search` scopes) |
@@ -648,62 +789,65 @@ Whatever the backend API calls them (`q`, `display`, `num`, `start`), the server
 the mapping. The contract tests enforce this convention, so new search tools use the
 same names.
 
-Publish tools have no review gate of their own — **a call is an immediate public
-post** — so they only run behind the publish skill's HITL approval gate. The one
-exception is the growth skills' autonomous mode (grow-threads · grow-youtube ·
-grow-instagram), which publishes without per-post approval, but only inside the
-`growth-plan.md` standing authorization approved via HITL at init. grow-threads
-decides its own posting frequency with no daily cap; in exchange, every outgoing text
-passes the adversarial growth-post-reviewer at 95+ with zero P0 (the bar briefly ran
-at 90 and went back to 95 — the P0 condition never moved). The two video platforms
+Publish tools have no review gate of their own — **a Threads, Instagram or Facebook call
+posts immediately; a YouTube upload starts `private` (`unlisted` stays allowed) and goes public only through
+`youtube_update`** — so they run behind the publish skill's HITL approval or inside an approved
+standing growth plan. The growth skills' autonomous mode (grow-threads · grow-youtube ·
+grow-instagram) publishes without per-post approval, but only inside the
+`growth-plan.md` standing authorization approved via HITL at init, and flips a YouTube upload
+public the same way once thumbnail and metadata are confirmed. grow-threads
+decides its own posting frequency with no daily cap; every outgoing text carries its
+`check-style.py` findings and any growth-post-reviewer read as evidence beside the post —
+neither a score nor a P0 label gates it (the 95 bar of earlier versions is history). The two video platforms
 add one more line of defense — only episodes with a queue marker in storyboard.md go
 out, and the markers are per-platform (YouTube `queue: ready` · Instagram
 `queue_instagram: ready`). If they shared one key, whichever loop ran first would
 consume the marker and the other platform would never publish. Two things set
 markers: a human, or — when the plan enables `autoproduce` — the loop itself
 authoring one episode when the queue runs dry. Auto-authored episodes become `ready`
-only after passing the machine gates (fact verification · three scenarios in one batched
-read · the narration read alone to 95, then its words to 95 · style · the contract checkers ·
-build report · one content-reviewer read · cost cap); failing any one leaves them `hold`, waiting for a
-human. grow-instagram publishes only with a public HTTPS URL, and with no hosting
+when the build finished inside the cost cap with verified facts and a clean build report;
+`hold` is reserved for technical, budget or authorization failures, and review findings
+(scenario read · narration reads · style · content-reviewer) travel with the episode as
+evidence. grow-instagram publishes only with a public HTTPS URL, and with no hosting
 configured it disables both publishing and auto-authoring (the loop won't start
 tunnels, and it won't spend money making a video with no way out).
 
-All 38 generation tools run **inside this plugin — no external MCP server required**.
-Two keys cover the hosted ones: OPENAI_API_KEY for images, GEMINI_API_KEY for
-video/voice/music (Seedance adds ARK_API_KEY, ElevenLabs adds ELEVENLABS_API_KEY).
-`image_local_generate` and `tts_local_generate` run on-device and need no key at
-all. The six `mlx_*` tools talk to MLX Core on loopback through this same server —
-skills never curl :11234 themselves.
+Generation tools run **inside this plugin — no external MCP server required**.
 
-Findings from porting the voice/music modules:
+The bundled MCP server accepts incoming messages up to **128 MiB**, including
+Base64 reference images. Base64 adds roughly one third to the original file size;
+this transport limit is separate from model-specific image limits. Older builds
+used the MCP SDK's 10 MiB default and could close the connection before a
+multi-reference image request reached the provider. Restart the plugin's MCP
+server after updating. A host application's own message limit still applies.
+Keys cover hosted models: OPENAI_API_KEY for images, GEMINI_API_KEY for Gemini
+video/voice/music, ARK_API_KEY for Seedance and ELEVENLABS_API_KEY for ElevenLabs.
+Local image, STT, music and video tools retain their own capability requirements.
+Local speech synthesis is removed, including Supertonic and MLX TTS.
 
-- **Narration bodies go to `tts_local_generate` (local); only cuts that need acting
-  go to `tts_generate` (Gemini).** Measured on this machine, Supertonic runs 6.3×
-  realtime on CPU alone at zero per-episode cost. It has no style/emotion controls,
-  so intro lines and character dialogue belong to Gemini. Evidence and a cost
-  comparison across 13 commercial APIs:
-  [local TTS vs commercial APIs](docs/research/2026-08-11-local-tts-and-commercial-api/index.html) (Korean).
-- **The two engines differ in sample rate — local 44.1kHz, Gemini 24kHz.** Mixing
-  them in one video needs resampling. `tts_local_generate` returns audio duration in
-  its response, so scene-length checks don't need a separate ffprobe call.
-- **ElevenLabs is the third speech lane, opt-in per channel** (`engine: elevenlabs` in
-  profile §2) — for acted cuts with inline audio tags (eleven_v3), scenes with 3+
-  speakers (`tts_elevenlabs_dialogue`, one request instead of per-speaker stitching),
-  and subtitle timing (`timestamps: true` writes per-character start/end seconds).
-  Measured against the live API: `output_format` is a query parameter (in the body it
-  is silently ignored); the default `wav_24000` comes back as a real RIFF WAV at the
-  Gemini spec, so **never pass an mp3 format for narration** — build-reel.sh reads any
-  non-RIFF file as raw PCM; `normalized_alignment` romanizes Korean, so the sidecar's
-  `alignment` is the one to read; text-to-dialogue runs on eleven_v3 only. Background:
-  [ElevenLabs API research](docs/research/2026-08-22-elevenlabs-tts-api/index.html) (Korean) ·
-  [API reference](docs/api-reference/elevenlabs-tts.html).
-- **The default BGM path is `music_generate_clip`** (Lyria 3, fixed 30s, ~$0.04 per
-  clip). Use the `music_generate` family only when you need exact length
-  (narration-fitted) or seed reproducibility.
+- **Speech uses the saved Gemini model or ElevenLabs `eleven_v4`.** Every ElevenLabs
+  speech request rejects older model IDs. No failed call silently switches provider.
+- **Identity and acting are separate.** Pin each character's voice ID/model and store
+  line-specific `acting.direction`/`acting.tags` beside spoken text and subtitles.
+  `speech_manage` tracks acting edits as speech revisions. Follow the
+  [acting-prompt guide](skills/produce/references/acting-prompts.md).
+- **Character auditions run on request.** When the user wants options, make real audio
+  candidates with the same sample text and the saved engine/model, play or expose them, and
+  persist the one the user selects; otherwise cast from the saved speech model and record
+  `not_reviewed`. A draft sheet is not a voice choice.
+- **Raw speech has no automatic quality gate.** Save audio and generation provenance
+  with `not_reviewed`. A requested adversarial improvement loop evaluates real audio
+  against its stated target and records each finding; it does not become the default.
+- **Use WAV for assembly.** Keep provider timestamps and actual generated duration;
+  resample sources where required. A mixed-speaker dialogue take still needs a supported
+  scene/line binding before it can enter the current single-speaker scene builder.
+- **BGM follows saved `models.music`** through `music_plan → music_execute`.
+  Existing channel audio is reused first. See the [provider research](docs/research/2026-10-18-music-models/README.md)
+  for official contracts, Korean support evidence and third-party boundaries.
 - **`tts_multi_speaker` on the flash model often rejects short dialogue scripts**
-  (`Model tried to generate text…`). The server retries 3 times; if it still fails,
-  switching to `model: "gemini-2.5-pro-preview-tts"` gets it through (verified).
+  (`Model tried to generate text…`). The server does not retry: report the failure, and change
+  the model only as an explicit user exception recorded in `PRODUCTION.modelSettings.overrides`
+  (`gemini-2.5-pro-preview-tts` accepted the same script when this was verified).
 - Lyria's prompt policy filter is touchy — a "lo-fi/vinyl crackle" combination has
   been blocked; plain descriptions of instruments and mood pass.
 
@@ -724,14 +868,13 @@ works.
 | `PIXABAY_API_KEY` | stock_search (Pixabay) | — | Pixabay API key (pixabay.com/api/docs — free, 100 requests/minute) |
 | `DATA_GO_KR_API_KEY` | datago_file_fetch · api_call | — | data.go.kr auth key (My Page on data.go.kr — beyond the key, each API needs a **per-API usage application**. Search/detail/download work without a key) |
 | `OPENAI_API_KEY` | gpt_image_* | — | OpenAI API key (platform.openai.com/api-keys — image generation) |
-| `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) | veo_* · omni_* · tts_generate · tts_multi_speaker · tts_gemini_38 · music_* | — | Gemini API key (aistudio.google.com/apikey — video, voice, and music generation. `tts_local_generate` works without it) |
+| `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) | veo_* · omni_* · tts_generate · tts_multi_speaker · tts_gemini_38 · music_* | — | Gemini API key (aistudio.google.com/apikey — video, voice, and music generation. ElevenLabs uses its own key) |
 | `ARK_API_KEY` | seedance_* | — | BytePlus ModelArk API key (ai.byteplus.com/ark — the second video engine. Dreamina Seedance 2.x models additionally require **an account balance over $30 or a resource pack** to activate; 1.5 pro and 1.0 have no such gate. `veo_*` works fine without this key) |
 | `SUNO_API_KEY` | suno_* | — | sunoapi.org API key (https://sunoapi.org/api-key — third-party REST, not Gemini and not an official Suno Inc. API). Unset, `music_*(Lyria)` still works |
 | `SUNO_BASE_URL` | | `https://api.sunoapi.org` | Same-spec self-host or regional mirror. Other vendors use different auth/paths — do not point this there |
-| `ELEVENLABS_API_KEY` | tts_elevenlabs_* · sfx_elevenlabs_generate | — | ElevenLabs API key (elevenlabs.io/app/settings/api-keys — a restricted key needs the `text_to_speech` permission, plus `voices_read` for `tts_elevenlabs_voices` and the sound-generation permission for `sfx_elevenlabs_generate`). Unset, `tts_generate` (Gemini) and `tts_local_generate` still work |
+| `ELEVENLABS_API_KEY` | tts_elevenlabs_* · sfx_elevenlabs_generate | — | ElevenLabs API key (elevenlabs.io/app/settings/api-keys — a restricted key needs the `text_to_speech` permission, plus `voices_read` for `tts_elevenlabs_voices` and the sound-generation permission for `sfx_elevenlabs_generate`). Unset, `tts_generate` (Gemini) still works |
 | `ELEVENLABS_BASE_URL` | | `https://api.elevenlabs.io` | Same-spec proxy or the EU residency host (`api.eu.residency.elevenlabs.io`). Normally leave it alone |
 | `ARK_BASE_URL` | | `https://ark.ap-southeast.bytepluses.com/api/v3` | ModelArk region endpoint. The video models only exist in ap-southeast-1, so normally leave it alone |
-| `SUPERTONIC_PYTHON` | | `python3` | Python interpreter for local TTS. Point it at your virtualenv if you used one (e.g. `~/venvs/tts/bin/python`). No venv auto-discovery — quietly picking up a different environment per repo and changing the voice is exactly the accident this avoids |
 | `QWEN3_ASR_BIN` | | `~/.local/bin/mlx-qwen3-asr` | Local STT executable. With the default uv tool install location there is nothing to set |
 | `MLX_SERVE_URL` | mlx_* | `http://127.0.0.1:11234` | MLX Core / mlx-serve HTTP base. This plugin never launches the app; a down server fails closed |
 | `MLX_SERVE_API_KEY` | mlx_* on a non-loopback bind | — | Optional bearer. Loopback needs no key unless the server was started with `--api-key-strict` |
@@ -739,12 +882,10 @@ works.
 | `MFLUX_ZIMAGE_BIN` | image_local_generate | `~/.local/bin/mflux-generate-z-image-turbo` | Local Z-Image executable |
 | `BLENDER` | blender_* | auto-resolved (Blender.app, PATH) | Blender executable or app bundle for the previz tools |
 | `YOUTUBE_API_KEY` | youtube_topic_scout | — | YouTube Data API key (public stats; the OAuth client covers publishing) |
-| `SOCIAL_FLOW_TTS_REVIEW_MODEL` / `_API_VERSION` | tts_generate_checked | `gemini-3.8-flash` | The review model whose verdict is hash-bound to the take |
 | `SOCIAL_FLOW_YT_CHUNK_MB` | youtube_publish | `8` | Resumable-upload chunk size |
 | `HF_HOME` | image_local_generate · stt_local_transcribe | HF default | Hugging Face cache for the local models |
 | `MEDIA_UPLOAD_URL` / `MEDIA_UPLOAD_API_KEY` | grow-threads image posts · Seedance reference-video hosting | — | Media hosting endpoint + key. Threads only accepts images as **public URLs**, so local files need somewhere to live. Anything works that accepts `POST` with an `x-api-key` header + raw bytes, returns `201 {data:{url}}`, and serves that url as unauthenticated public GET (the header of `skills/grow-threads/references/upload-media.sh` is the contract SoT). Unset, only the image step turns off — text posts still go out |
 | `THREADS_TOKEN_FILE` and friends | | `<SNS_TOKEN_DIR>/conventional name` | Per-platform override of the default (flat) path — not applied to channel directories |
-| `TTALKKAKSTORY_API_URL` / `TTALKKAKSTORY_WORKSPACE` / `TTALKKAKSTORY_API_KEY` | portal_* | — | The ttalkkakstory portal key **when no `ttalkkakstory.json` exists** — the file under the channel directory, then the flat one, come first. `TTALKKAKSTORY_HOLDER` renames the lease holder (default `<key prefix>@<hostname>`) |
 
 Credential file convention (mode 600, never committed) — `threads_token` ·
 `instagram_token` · `facebook_page_token` · `youtube-oauth-client.json`.
@@ -774,202 +915,11 @@ the entry (or delete the file) to turn the tools back on. A per-tool env overrid
 can turn one JSON-disabled tool back on for that session. Values split on commas
 or whitespace; a bare `*` matches every tool.
 
-### The ttalkkakstory portal by workspace API key
-
-`portal_render_allocation` reads the episode’s pending six-ratio request and accepts the host LLM’s complete shot-mode assignment with revision checks. The portal UI records the request; no background worker is started.
-
-`portal_channel_sync pull|push|status` keeps `data/<channel>/profile.md` and the shared
-`assets/intro/**`, `assets/outro/**`, `assets/branding/**` and `assets/sfx/**` trees on one
-portal project. An exact project-name match bootstraps automatically; any other name needs one
-explicit `projectId`, which the tool pins in `.portal-channel.json`. Pull downloads and hashes
-every file before replacing anything and backs up changed local files under `.portal-local/`.
-Push compares the last synced hashes before updates, and deletes an absent local asset only
-when the portal still has that exact base hash. A two-sided edit returns 409 instead of choosing
-a winner. Network/auth/server failures at a skill entry warn once and use local files; a 409
-conflict stops that run.
-
-Storyboard first calls `capability_status` with the target `channel`. This reads local
-configuration without a portal request or key disclosure. No key means a local
-`storyboard/storyboard.html`; a configured key triggers a **local HTML / ttalkkakstory HITL**
-before any portal call, including channel sync. A malformed credential warns and uses local
-HTML without trying another channel. Tool visibility is not a channel-specific key check.
-The episode choice in `.storyboard-target.json` carries through produce, autoproduce and
-publish. Existing explicit choices are reused; unattended runs without destination consent
-hold for the same HITL when a key exists. Local mode skips portal calls and optional media
-`portal` arguments even if an old portal ID exists. Both modes use the same review design.
-See [the destination contract](skills/storyboard/references/storyboard-target.md) and
-[the design contract](skills/storyboard/references/storyboard-design.md).
-
-The skills keep an episode on the portal **only when the user chose portal integration and
-the channel has a key** (owner directive 2026-10-10). The plugin's own server calls the portal
-API with it (since 2026-09-21; earlier the portal's MCP server was registered by hand). A key is issued per workspace on the portal at `/{workspace}/settings/api-keys`
-(admin+; the plaintext is shown once, the portal keeps a hash) and that page prints the file
-ready to save:
-
-```
-~/.config/social-flow/<channel>/ttalkkakstory.json      # one channel → one workspace
-~/.config/social-flow/ttalkkakstory.json                # or one key for every channel
-{ "apiKey": "tks_…" }
-```
-
-Only `apiKey` is required, including for the flat file and `TTALKKAKSTORY_API_KEY` env.
-The API URL defaults to `https://story.ttalkkaklab.com`; an optional `apiUrl` in the file
-(or `TTALKKAKSTORY_API_URL` for a custom/local portal) overrides it. Before any workspace
-request, `/api/token` resolves the workspace and caches that result for the server session.
-An optional `workspace` must match the key or the call stops. `portal_workspace_check`
-returns `resolvedBy: "token"` for automatic lookup and `"file"` for an explicitly configured
-workspace (file or env); `source` identifies the credential source. Failed lookups are not cached.
-Deploy a portal with `/api/token` before updating the plugin.
-
-The channel is read off the episode path (`data/<channel>/episodes/<topic>`), the channel file
-falls through to the flat file, and the `TTALKKAKSTORY_*` env is the last resort. Mode 600,
-never committed. `portal_workspace_check` tells which file answered and which workspace the
-key opens — the storyboard skill calls it after the destination choice selects portal mode.
-
-`portal_storyboard_save` requires `SB_DOC.characters` with at least one character, a matching
-`SB_DOC.narratorCharacterId`, and a `tts` object on every character. Narration segment
-`speaker` values are saved as character ids; a name is accepted only at the save boundary, and
-an unmatched value fails instead of falling back. `portal_storyboard_pull` restores the same
-block, and produce uses it for synthesis.
-
-In chosen portal mode with a key the portal is the episode's **source of truth and the local directory a
-working copy** (portal design note, 2026-09-20). The storyboard skill takes a lease and pulls
-at the top of a session (`portal_episode_lease acquire` · `portal_storyboard_pull`, or
-`portal_episode_create` for a topic the portal has never seen), uploads the three candidate
-pages and the pick (`portal_scenario_save`, `chosen: true` for the winner), checkpoints the
-stages (`portal_episode_checkpoint` — `candidates` · `scenario` · `board`), and approval calls
-`portal_storyboard_save` on the episode directory's absolute path — also a checkpoint at
-`approved` — recording the returned `episodeId`/`pageUrl` in `storyboard.md`'s frontmatter
-(`portal_episode` · `portal_url`) and the revision in `.portal.json`; produce saves again and
-syncs platform copy, cover and actual cost (`portal_episode_artifacts_sync`) before it sets
-`produced`; publish records every returned post ID and permanent link (`portal_publication_record`)
-before it sets `published` by that id (`portal_episode_status`). A
-`409 head_moved` means another machine saved first: pull, re-apply, save; a `409 leased` names
-who holds the topic and until when. Without a key the `portal_*` tools are not listed, the
-skills say so in one line and carry on with local files, and an errored call is reported in one
-line — the portal records, it does not gate. The portal repository's own `mcp/` server still
-exists for other clients; this plugin no longer needs it.
-
-Revision comparisons and `409 head_moved` recovery summaries include decision keys as
-`+key` added, `−key` removed and `~key` changed, including revisions that change only decisions.
-Older diff responses without `decisions` keep their existing summary.
-
-Save and checkpoint read `storyboard/decisions.json` as structured HITL answers. Checkpoint
-also works before `scenes.js` exists. A missing sidecar leaves the field out. Pull rebuilds it from the same head
-or historical snapshot as the board, including empty answers, with the existing backup/side-copy
-rules. Documents and attachments cannot overwrite this canonical file. Existing decision-record
-revision checks stay unchanged. See [the decision record contract](skills/storyboard/references/portal-decisions.md)
-for provenance, gate keys and channel records. `portal_episode_status` with no status/stage/title
-reads the episode without changing it; publication results still use `portal_publication_record`.
-
-`storyboard_backups` lists local recovery copies and previews retention with `keep` (default 10,
-minimum 1 per kind). It needs no portal credential. Board/scenario backups use their timestamp name;
-image/attachment backups use directory modification time. Unknown names are reported and preserved.
-To prune an authorized list, pass `apply: true` and the preview's `plan` as `confirm`; changed inventory
-requires a new preview. Working files, state and `.portal-head` are excluded. Pull never prunes automatically.
-Symlinks or unreadable recognized backups stop pruning; an I/O failure during deletion reports which paths
-were already deleted. This is not a transaction across directories; stop other local backup writers before pruning.
-
-Board and scenario pulls reserve a new backup directory before copying. A timestamp collision
-uses another timestamp and never reuses an existing directory, file or symlink. After 100 collisions
-or another directory-creation error, the pull stops before replacing local files or advancing state.
-
-Historical `portal_storyboard_pull` with `mode: "replace"` and documents enabled also removes
-managed documents absent from that revision, after backing them up under `storyboard/.portal-local/`.
-Managed names are the standard board documents, `scenario.md`, and documents listed by the current
-episode. The result lists them in `removed`; unrelated local notes stay untouched. `mode: "side"`
-preserves the working copy, and `includeDocuments: false` replaces the board and canonical decisions without document cleanup.
-
-`portal_scenario_pull` backs up changed local candidates and the chosen `scenario.md` under
-`storyboard/.portal-local/<timestamp>-scenarios/` before replacing any file. Its result includes
-`backupDir` and episode-relative `replaced` paths. Identical files need no backup; candidate filtering
-and text-only reads keep their existing behavior. A failed download, target validation or backup
-leaves the existing scenario files and `.portal.json` untouched.
-
-A missing `.portal.json` is an unlinked copy. An existing unreadable file, dangling
-symlink, malformed JSON, non-object JSON or wrongly typed present field is an
-error, never an unlinked fallback. Optional string fields must be strings and a
-present `headRevisionNo` must be a nonnegative safe integer. Every existing state record needs a nonempty string `episodeId`; all state
-writers supply it or patch an already linked copy. Other missing fields remain
-allowed for legacy/pre-checkpoint records; save/checkpoint/images still require a
-valid recorded or explicit base. Keep a damaged state file and local edits, restore a readable valid backup
-or inspect the portal in a new directory, then repair the original copy. Neither
-an explicit ID/base nor `writePortalState` bypasses a damaged existing record.
-
-The read-only `portal_workspace_check` is the diagnostic exception: it returns
-`localWarning`, `copyOf: null`, `workspaceMatches: null`, `sync: "unknown"` and
-local `pending` when the state cannot be read. Pass an explicit `episodeId` to
-inspect the remote head and lease, or omit the directory and specify ID + channel
-for a remote-only check. Without an ID the tool still answers `/me` and pending,
-with `portal: null` and a `portalWarning`; it never extracts an ID from damaged JSON.
-Readable but conflicting workspace/episode identities skip the episode lookup
-with a warning. No local revision means unknown sync, including valid first-lease
-records. Simultaneous identity mismatches preserve both messages in `warning`.
-`pending.sideDir` and `pending.backups` use false/0 only for missing entries; an
-unreadable entry, dangling link or wrong entry type returns null with a matching
-`pending.warnings.sideDir`/`backups` message. The other field and remote diagnosis
-still answer. Diagnostic success neither repairs local files nor relaxes write guards.
-
-An explicit `episodeId` must agree with `.portal.json` in every supplied local
-copy, including scenario input files and pull targets. Conflicting IDs are refused
-before HTTP or file writes; equal revision numbers do not make two episodes the
-same copy. Use the matching directory, or a fresh unlinked directory for a pull.
-For a remote-only call, omit local directories and files and specify the ID and
-channel. Keep the existing state file and local edits when resolving a mismatch.
-
-`portal_episode_restore` changes the portal head only. Local files and `.portal.json`
-keep their previous base so an immediate save cannot silently overwrite the restored
-head. With `episodeDir`, the result includes `localCopy.syncRequired` and recovery
-steps: side-pull the head, review and merge intended local edits, then save with
-that pull result's explicit `baseRevisionNo`.
-
-Once local shot images exist, call `portal_images_upload` with `episodeDir` and the
-current `stage` after the first `portal_storyboard_save` has created the episode. It
-uploads `storyboard/images/scene-N.{png,jpg,jpeg,webp}` sequentially (PNG/JPEG/WebP,
-5 MiB each), then checkpoints the returned `portalImageId` UUIDs using the copy's
-base revision. N is the 1-based source array ordinal, independent of a shot's `no`.
-An explicit `images: [{ shotId, file }]` mapping uses stable source IDs; `shotNo`
-is accepted only for legacy shots without IDs. Files must resolve inside storyboard/.
-Missing default files are listed as `skipped`; an empty selection is an error.
-The tool adds only UUID references to shots and updates local `scenes.js` and
-`.portal.json` after the checkpoint succeeds. It preserves authored JavaScript and
-keeps recovery copies under `storyboard/.portal-local/images-*/`.
-An upload or checkpoint failure is **not** a completed save: the error includes
-successful uploads, the failed phase and recovery instructions. Identical bytes are
-deduplicated by the portal. On 409 or an unknown checkpoint outcome, side-pull the
-head, merge local edits and recovered image UUIDs, then save with that explicit base.
-A checkpoint success followed by a local write failure reports the saved revision;
-keep local edits and merge the recovery copy rather than retrying blindly.
-
-### Characters on ttalkkakstory
-
-The eight `portal_character_*` tools (portal #96) keep the channel's characters on the
-portal by the same workspace key — the record the narration lane and the storyboard import
-read. **Never a project id**: the portal hides that layer (#88), so `create` files the
-character under `project` = the channel name (default: the channel the key was read off,
-the rule the storyboard import already uses). `list` filters by `q` (name·role) or exact
-`key`; `get` takes `id` or `key`; `create` reads `key`/name/역할/생김새 off
-`identityDir` (`assets/characters/<id>/`, the folder name is the key) with explicit
-fields winning, and `file` sends one PNG/JPEG/WebP panel right after; `update` is a
-partial PATCH (`null` clears); `image_upload` accepts view (default front), label and sort.
-Front/back/face each replace one required slot; extra appends an optional image with a new id.
-`extra_delete` removes one extra by imageId. List/get expose images and imagesComplete.
-Only front sets `referenceImageUrl` to its authenticated URL (no public link), and the returned sha256
-is checked against the file; `tts_set` writes the voice block, filling **only the fields
-the caller leaves out** from the existing block first and then the owner defaults
-(ElevenLabs `L4az9Gb378GIycFl2nAB` · `eleven_multilingual_v2` · speed 1.0) — `speed` alone
-never touches `voiceId`; `delete` removes the record (the portal cascades its image and
-registrations) and the skill asks before deleting a character a playlist still narrates
-with. No key → one line. Procedure: `skills/channel/references/portal-characters.md`.
-
-### Global asset library on ttalkkakstory
-`portal_assets_search` and `portal_assets_get` read the portal's **global** asset library (`/api/assets`, portal #87) — Gemini B-roll clips, BGM beds, sound effects and images the owner collected on the Mac mini and synced up. The library sits outside every workspace: any channel's key returns the same results, and only the owner's admin key can write. In chosen portal mode, storyboard asks it before `stock_search` when a cut wants real footage; produce and autoproduce ask it before `music_generate_clip` for a bed. Search is AND over Korean/English words plus tag, type, category, duration and aspect filters. `get` with `download:true` writes the file into the supplied-file lanes that already exist — video to `storyboard/footage/s<shot>-portal-<sourceId>.mp4` (a `stock_video` cut with `visual.source: "stock"` and the returned `visual.license`, provider `ttalkkakstory`), music and effects to `.work/portal/<sourceId>.<ext>`, images to `storyboard/images/stock/` — and verifies the portal's sha256; an identical file is not fetched twice and a different file at that name is refused. Local mode or no key → skip the portal library and continue with the skill’s existing stock/music rules.
-
-### Shot media on ttalkkakstory
-`portal_shot_media_upload` uploads and checkpoints one episode-local file: source/end-frame image (5 MiB), previz/video MP4 (10 MiB), whole-shot narration or one indexed narration segment as WAV/MP3 (10 MiB each). Save the board first, then use episodeDir and shotId (shotNo only for ID-less shots); `narration_segment` also requires `segmentIndex`. The portal card displays both visual frames and each segment audio player. In chosen portal mode with a configured key, Blender and checked TTS take an optional `portal` target and upload the result immediately; Seedance also requires `portal.previzFile`, uploading and linking it **before** the vendor call. Host/other generation tools use the explicit uploader in the same order. Missing keys silently preserve local-only production. Oversized files alone are skipped with `.portal-media-skips.jsonl`, and production continues; larger files need a later chunked-storage/object-storage extension. Failures preserve generated files and offer upload recovery; do not regenerate media to fix an upload. See [produce order](skills/produce/references/portal-shot-media.md).
-
-
 ## Documentation (docs/)
+
+Latest image model research: **[Image APIs, local models and production tips](docs/research/2026-10-18-image-models/README.md)** — model-by-model official documentation, pricing, retirement dates, generation/editing examples and differences from the current adapters, checked 2026-10-18 (Korean).
+
+Latest video API research: **[MiniMax H3, LTX 2.5, Seedance and Veo API pricing](docs/research/2026-10-18-video-model-api-pricing/README.md)** — official endpoints, model capabilities, per-second/token rates and reference-input charges, checked 2026-10-18 (Korean).
 
 Manuals are bilingual — Korean pages with English siblings (`*.en.html`).
 Full index: **[docs/index.html](docs/index.html)** (Korean) ·
@@ -984,7 +934,7 @@ server calls, and how this implementation honors (or deliberately narrows) each 
 - **[MCP tool spec & best practices](docs/api-reference/mcp-tools.html)** — Tool
   fields, behavior-hint decision table, 7 authoring principles, quality rubric
 - **[Tool quality audit](docs/api-reference/tool-audit.html)** — scores and fixes for
-  the 31 tools as of 2026-07-29 (the 46 added since are unaudited)
+  the 31 tools as of 2026-07-29 (tools added since are unaudited)
 - Individual APIs — [Gemini TTS](docs/api-reference/gemini-tts.html) ·
   [ElevenLabs TTS](docs/api-reference/elevenlabs-tts.html) ·
   [Veo 3.1](docs/api-reference/gemini-veo.html) ·
@@ -1000,11 +950,11 @@ server calls, and how this implementation honors (or deliberately narrows) each 
   [Meta Graph](docs/api-reference/meta-graph.html) ·
   [YouTube Data](docs/api-reference/youtube-data.html)
 
-The on-device engines (`image_local_generate` · `tts_local_generate` ·
-`stt_local_transcribe` · the six `mlx_*` tools) have no
+The on-device engines (`image_local_generate` ·
+`stt_local_transcribe` · the five `mlx_*` tools) have no
 external vendor contract to document, so their evidence lives in research notes instead —
 [local image generation](docs/research/2026-08-12-local-image-generation/index.html) ·
-[local TTS vs commercial APIs](docs/research/2026-08-11-local-tts-and-commercial-api/index.html)
+[historical local TTS research](docs/research/2026-08-11-local-tts-and-commercial-api/index.html)
 (Korean).
 
 ### Guides (docs/guides/)
@@ -1030,8 +980,7 @@ external vendor contract to document, so their evidence lives in research notes 
   the two gates of account standing and per-post auditions, what ranking actually
   predicts, 9 myths that died in verification. The commentary edition of grow-instagram.
 - **[Making short-form video with AI](docs/guides/ai-video-production/index.html)** —
-  where the two video engines diverge, official prompt rules, and when to burn
-  subtitles into the video.
+  where the two video engines diverge, official prompt rules, and how to keep optional subtitle files separate from the video.
 - **[Marketing basics](docs/guides/marketing-basics/index.html)** — the vocabulary a
   marketing beginner needs first.
 - **[Affiliate video compliance](docs/guides/affiliate-video-compliance/index.html)** —
@@ -1041,9 +990,9 @@ external vendor contract to document, so their evidence lives in research notes 
 ## Safety contract (summary)
 
 - **Double HITL gate** — storyboard approval (before production) + publish approval
-  (before going public). No publish tool call without approval. Two narration reads (the chain, then the
-  words) loop to 95 in front of storyboard approval (0.50.0); anything they leave
-  open gets its human look on the approval screen.
+  (before going public). No publish tool call without approval or an approved standing growth
+  plan. Narration reads run on request and their findings sit on the approval screen as evidence
+  (the flow forces no review loop); anything they leave open gets its human look there.
 - **No fact distortion** — time-sensitive values get two independent sources; ranges
   stay ranges.
 - **No cross-post copy-paste** — every platform gets its sentences redesigned.
@@ -1075,66 +1024,145 @@ responsibility (see the disclaimer in LICENSE).
 [Apache License 2.0](LICENSE). Copyright 2026 Zeans.
 
 
-Episode attachments: `portal_attachments_sync` uploads missing/changed files after a board is linked.
-Board import/checkpoint also call it automatically; current-head pull restores original paths and SHA256-verified bytes.
-Current-head pull rechecks the episode revision after all downloads, before writing local files. If the head changed
-or that check fails, the working copy, side copy, backups, attachments and `.portal.json` stay untouched; retry the pull.
-This check also applies with `includeDocuments: false`. Explicit historical revision pulls keep their existing behavior.
-Inspect `attachments.complete` before removing local originals. The per-file maximum is 10 MiB; shared quotas are
-100 MiB/episode and 500 MiB/workspace. Rights evidence in `.portal-attachments.json` is keyed by relative path
-and travels with the file. Scene sound design refers to the returned logical attachment UUID.
-
-### Portal unit editing
-
-The portal also exposes playlist/episode CRUD, sequence/scene/shot CRUD and reorder,
-meta/music/voice settings, narration lines, camera/background/slide/sound/transition
-patches, background/prop registries, audio uploads, scenario deletion, scene search,
-and render-allocation requests. See
-[portal unit tools](skills/storyboard/references/portal-units.md) for identifiers,
-atomic companion edits, validation and conflict recovery. These tools require only
-the credential channel and playlist/episode identifiers, never a project input.
-
-### Decisions and reviewer records
-
-`portal_decision_list` / `portal_decision_record` read and record evidenced HITL choices,
-including `narration_approval`, `board_approval` and `publish_approval`. Pass `episodeId`,
-optional credential `channel`, and for writes `baseRevisionNo` plus `decision`
-(`key`, `value`, `chosenBy`, `source`, optional `options`, `reason`, `decidedAt`).
-Use `chosenBy:user` only for an actual human answer; `source` identifies that evidence.
-Read history with `history:true`. Recording a choice checkpoints the episode; it does
-not publish or authorize additional spending by itself.
-
-`portal_review_list` / `portal_review_record` store actual reviewer observations separately
-from approvals. Writes take `baseRevisionNo` and `review`: `kind` (scenario,
-narration_content, narration_wording, board, content, other), `reviewer`, `score` (0–100),
-`p0` (defect strings, or []), `summary`, `source`. Reviews are bound to the assessed
-revision and survive later saves. Review writes do not advance the head. Both write tools
-honor portal leases and reject stale revisions; read again before deciding whether to retry.
-
-Leading `// approved:` and `// review:` lines in scenes.js survive save/pull through
-portal metadata. They preserve annotations, never invent a human decision. With repeated
-leading markers the last value wins; comments after executable code are not annotations.
-The live cross-repository regression probe is `scripts/test-approval-roundtrip.mjs` in the
-portal repository; the server suite also covers save/pull with a scripted portal.
-
 ### Generated character voice lock
 
-`voice_lock_apply` converts single-speaker generated audio/video to the character’s
-ElevenLabs voice and checks blind transcripts and duration drift. It saves originals,
-new media and a per-shot result report. See the [produce contract](skills/produce/references/voice-lock.md).
+New character speech uses the selected Gemini or ElevenLabs v4 voice before audio-conditioned
+video generation. The older `voice_lock_apply`/v2 speech-to-speech lane is removed.
+Existing recordings remain reusable with their provenance. See the
+[produce contract](skills/produce/references/voice-lock.md).
 
 ### Offline character and storyboard library
 
 `node skills/channel/references/review-library.js data/<channel>` saves a channel
 home, `assets/characters/index.html`, `assets/characters/<id>/index.html`,
-`storyboards/index.html` and `storyboards/<episode>/index.html`. All open directly
-with file://, with bundled Wanted Sans and no portal request. Character sheets
+`assets/props/index.html`, `assets/locations/index.html`, `storyboards/index.html`
+and `storyboards/<episode>/index.html`. The sidebar links to storyboards, character
+sheets, prop sheets and background sheets. Prop and background catalogues read each
+episode’s canonical `SB_DOC` in `scenes.js` and link back to its storyboard. All open directly
+with file://, with bundled Wanted Sans and no network request. Character sheets
 show front/back/face, additional images, identity and voice. Episode pages use the
 same canonical review renderer; production inputs remain in `episodes/`.
 `--check` detects stale/missing exports without writing. Character and storyboard
 skills refresh these views before delivery. The optional channel HTTP browser now
 opens this library; its previous API browser is at `/legacy`.
 
-Portal reference: ttalkkak-story `d29f1a6`, DESIGN.md 1.2.0. See
+See
 [local review design](skills/channel/references/local-review-design.md) for the
 reference, supported offline behavior and visual verification scope.
+
+### Prop sheets and story-time ownership
+
+Storyboards support independent owners and holders, initial states, atomic transfer/loss/damage events, flashbacks, and per-shot state assertions. The shared offline review has prop sheets and character/time filters. MCP edits require the current file hash; CLI edits also back up the original. See [prop continuity](skills/storyboard/references/prop-continuity.md) for authoring, production snapshots.
+
+
+### Character-led scenario authoring
+
+New scenarios select characters from the channel library, including narrators, and develop
+actions, dialogue and narration together. `scenario-v2` separates evidence, fiction and adapted
+content; fictional events need internal consistency, not search quotas or fabricated sources.
+`story-v2` reviews observable performance before camera work and keeps speech in the existing
+`narration[]`/`speaker` production contract. See the [authoring and review contract](skills/storyboard/references/character-scenarios.md).
+Existing unversioned scenarios and story-v1 boards retain their checks.
+
+### Structured character identity
+
+New and updated character sheets carry explicit personality, measurements, speech,
+acting, relationships and continuity fields, each confirmed, pending or not applicable.
+The local compiler generates lane-specific directions; review export refuses a pass
+for incomplete settings. Follow [the character contract](skills/channel/references/character-identity.md).
+Existing sheets need explicit migration; legacy storyboards remain readable.
+
+## Shot dialogue and later corrections
+
+New storyboards assign stable line ids, explicit speakers (narrator included) and delivery
+modes. `speech_manage` lists, prepares, patches and binds audio to dialogue, and plans video
+from adapter capabilities. Per-line `acting` separates situation, intent, emotion, vocal and
+visual direction from the pinned character voice, with optional reaction time before/after
+speech. `plan_audio` returns the selected raw generator arguments and unsupported-control
+warnings; production uses those arguments instead of repeating one generic character tone.
+Video prompts use the same beat and a matching source-image state. Distinct emotional beats
+are not concatenated by shared image and sliced at arbitrary audio boundaries.
+`edit-speech` repairs a requested shot/character without replacing
+unaffected takes. Speech generation has no automatic listening or human approval gate;
+outputs are marked `not_reviewed`. File, voice and timing provenance remain required.
+See [the speech contract](skills/produce/references/shot-speech.md). Video models are
+replaceable: audio-conditioned generation, post lip-sync and off-screen voiceover are separate
+routes; LTX is one adapter, not the common data model.
+
+### Inspect existing content
+
+`inspect-content` reviews existing characters, backgrounds, props, scenarios, individual shots
+and whole-story flow without editing or generating. `storyboard_read` includes silent actions,
+attributed speech, stable shot IDs and optional full context; `shotId` selects a shot with its
+neighbours. Returned metadata and prior review records are explicitly unverified until read.
+
+Creative quality guidance lives in [the shared automation guide](skills/_shared/automation-guidance.md).
+CTA checks are removed. Missing review scores and creative metadata are advice;
+invalid references, unusable media and actual spending authorization remain execution contracts.
+
+### Clean video and optional subtitle tracks (2026-10-17)
+
+Videos contain no burned-in subtitles, even when they contain speech. The builders ignore legacy burn-in switches and never select an old `*-sub.mp4` as the publishing master. Generated performance prompts prohibit caption/text overlays. Optional SRT files stay separate; when requested, YouTube uploads them as viewer-selectable caption tracks. A missing SRT is not a production defect. This user directive replaces earlier subtitle burn-in guidance.
+
+## Host evaluation
+
+`host_review` prepares local media or records timestamped observations from the LLM
+running the plugin. No external evaluation model is called. Legacy `acting_review`,
+`tts_review_acting` and `tts_review_final` prepare the same handoff;
+`tts_generate_checked` generates one take without scoring or automatic retakes.
+Sampled frames support composition only; playback and listening require actual host
+capabilities. Unsupported checks stay unverified. See [the review contract](skills/_shared/host-review.md).
+
+Motion graphics support six contextual design themes: report, product, learning, campaign, story and playful. Set the storyboard default with `THEME.motionGraphicTheme`; individual shots can override it. Set `shot.motionGraphic.style.theme.id` to `auto` (optionally with `context`) or a theme id. Storyboard updates store the resolved choice and reason; the renderer uses the same theme tokens for typography, spacing, color and timing. Palette-only boards retain their existing appearance.
+
+Theme typography bundles Paperlogy, Black Han Sans, Gowun Batang, Dongle, Jua, Space Grotesk and Roboto Flex with OFL notices. Font coverage is checked against bundled cmap data; title fallbacks are recorded, and actual loaded font widths drive wrapping. See [motion design system](docs/design-system/MOTION.md) and [font research](docs/design-system/FONTS.md).
+
+### Image execution and production diagnostics
+
+`image_execute` returns text plus a versioned `structuredContent` object with
+`status`, `outputPath`, `requestId`, `providerId`, `usage`, `output` metadata and
+`readiness`. This covers completed execution, post-dispatch failures, cached results
+and `image_status action:refresh` recovery. Preflight validation still uses the
+normal tool error contract. Unknown usage is `null`, never an assumed zero charge.
+A completed image has passed file and decoding checks; references and visual review
+are separate checks, not a production-ready claim.
+
+Explicit GenAI rejection or terminal failure releases the execution slot. Timeouts
+and ambiguous gateway responses keep `submission_unknown` and block duplicate
+submission. A completed provider response with a failed download releases the slot;
+`refresh` retries the saved download without generating again. Unknown billing keeps
+the budget reservation until `image_status action:reconcile` records actual spending.
+
+`storyboard_read.readiness` reports project configuration, referenced character file
+presence/decoding, reference findings and unreviewed visual quality separately.
+The storyboard checker and shared-sheet export warn when a registered shared panel
+exists but its cast member's storyboard reference is empty, naming the character,
+slot, source file and field to fix. These are project-data diagnostics, not evidence
+that the plugin created the project's incorrect code or settings.
+
+## Fixed cut workflow and existing-board improvement
+
+Cut production uses seven separate skills, coordinated by autoproduce and enforced by
+production_workflow: review-context -> review-camera -> compose-blender ->
+generate-cut-images -> review-cut-images -> generate-cut-videos -> review-cut-videos.
+Character/prop/background sheets remain preparation assets. Required Blender still
+compositions are separate from optional animated video previz. Reviews are independent,
+file-hash-bound and require no unresolved corrections; missing review cannot become pass.
+
+Use `/social-flow:review-context <episode-or-storyboard-path>` to improve an existing
+story from an unbriefed viewer's perspective and stop before camera work. Use
+`/social-flow:review-camera <path>` for direction after context review, or
+`/social-flow:autoproduce <path>` with an explicit end-to-end improvement request.
+All seven stage skills accept an existing episode path. Unchanged media is reused;
+a review request never authorizes paid regeneration or publishing. See
+[the fixed workflow](skills/_shared/production-workflow.md) for all stage skills,
+receipt fields, migration, rewind and capability limits.
+
+### Shot image input planning
+
+Shots can separately author opening/ending frames and role-labelled extra references.
+`visual.references[]` distinguishes still-production inputs from direct video conditioning;
+`video_plan` maps supported inputs, reports dimensions/hashes and refuses unsupported
+combinations or unreviewed assets. The offline board displays every planned image,
+including intermediate keyframes. Workflow image inventories and reviews cover the full
+set. Host handoffs report unverified mapping. See [shot image inputs](skills/storyboard/references/scenes-schema.md#shot-image-inputs).

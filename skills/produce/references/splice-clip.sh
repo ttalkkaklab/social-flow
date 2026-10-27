@@ -14,7 +14,7 @@
 #   T = the time the preceding scene ends. Read the fixed duration from that card's line in build-report.txt.
 #   **Every T is on the original (reel.mp4) timeline** — don't pre-add the length an earlier clip will
 #   push out. This script does the pushing.
-#   Result: <workdir>/reel-spliced.mp4 · reel-sub-spliced.mp4 · subs-spliced.srt
+#   Result: <workdir>/reel-spliced.mp4 · optional subs-spliced.srt sidecar
 #
 # Why frame accuracy matters: subtitles are pinned to absolute times. Insert a clip and every subtitle
 # after that time shifts by the clip's length; if the shift differs from the real insert length, the
@@ -22,9 +22,7 @@
 # (it doesn't trust the nominal length). With two clips, each subtitle cue shifts by **the sum of the
 # measured lengths of the clips inserted before it**.
 #
-# The burn-in needs no shift — its subtitles are already baked into the picture. Splitting and joining
-# it at the same T with the same clips preserves build-reel's ASS styling as-is (re-burning from srt
-# would change the font, position and outline from the original).
+# Only the clean video is spliced. Caption sidecars are optional and never enter the video.
 set -euo pipefail
 export LC_ALL=en_US.UTF-8
 
@@ -46,7 +44,6 @@ N=${#CLIPS[@]}
 
 cd "$WORK"
 [ -f reel.mp4 ] || { echo "✗ reel.mp4 missing — run build-reel.sh first" >&2; exit 1; }
-[ -f subs.srt ] || { echo "✗ subs.srt missing" >&2; exit 1; }
 
 # Format preset — the same contract as the three builders. Read **before** the inline defaults.
 # Without this line the guard runs exactly backwards — a 1920x1080 piece that's correct in landscape
@@ -77,8 +74,8 @@ if [ -f build-plan-check.json ]; then
   PROOF_ARGS=()
   for ((i = 0; i < N; i++)); do PROOF_ARGS+=("${CLIPS[i]}" "${TS[i]}"); done
   node "$HERE/verify-assembled.js" . --splice-start "${PROOF_ARGS[@]}"
-  rm -f reel-spliced.mp4 reel-sub-spliced.mp4 subs-spliced.srt
 fi
+rm -f reel-spliced.mp4 reel-sub-spliced.mp4 subs-spliced.srt
 
 VDUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 reel.mp4)
 say "── main part ${VDUR}s · ${N} inserts"
@@ -115,13 +112,13 @@ if [ "$DIMBAD" = 1 ] && [ "$STRICT_DIM" = 1 ]; then
   exit 1
 fi
 
-ENC=(-c:v libx264 -profile:v high -level 4.1 -pix_fmt yuv420p -r $FPS -c:a aac -ar 48000 -ac 2 -b:a 192k)
+ENC=(-sn -c:v libx264 -profile:v high -level 4.1 -pix_fmt yuv420p -r $FPS -c:a aac -ar 48000 -ac 2 -b:a 192k)
 
 # ── 1) Cut the main part at the insert times (frame-accurate — re-encoded)
 #    Piece boundaries = 0 · T1 · T2 · … · end. There are (number of clips + 1) pieces.
 BOUNDS=(0 "${TS[@]}" "$VDUR")
 NSEG=$((N + 1))
-for V in reel reel-sub; do
+for V in reel; do
   [ -f "$V.mp4" ] || { say "· no $V.mp4 — skipped"; continue; }
   for ((k = 0; k < NSEG; k++)); do
     ST=${BOUNDS[k]}; EN=${BOUNDS[k+1]}
@@ -175,20 +172,21 @@ for ((k = 0; k < NSEG; k++)); do
 done
 say "── $PIECES"
 
-# ── 4) Join them back up (clean and burn-in separately)
-for V in reel reel-sub; do
+# ── 4) Join the clean pieces
+for V in reel; do
   [ -f "splice/${V}-s0.mp4" ] || continue
   : > "splice/list-$V.txt"
   for ((k = 0; k < NSEG; k++)); do
     printf "file '%s-s%d.mp4'\n" "$V" "$k" >> "splice/list-$V.txt"
     [ "$k" -lt "$N" ] && printf "file 'clip%d.mp4'\n" "$k" >> "splice/list-$V.txt"
   done
-  ffmpeg -y -v error -f concat -safe 0 -i "splice/list-$V.txt" -c copy -movflags +faststart "${V}-spliced.mp4"
+  ffmpeg -y -v error -f concat -safe 0 -i "splice/list-$V.txt" -map 0:v:0 -map 0:a:0? -sn -c copy -movflags +faststart "${V}-spliced.mp4"
   OUTD=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "${V}-spliced.mp4")
   say "── ${V}-spliced.mp4 ${OUTD}s (expected $(awk -v d="$VDUR" -v s="$TOTAL_SHIFT" 'BEGIN{printf "%.3f", d + s}')s)"
 done
 
 # ── 5) Subtitle shift — move each cue back by the sum of the measured lengths of the clips inserted before it
+if [ -f subs.srt ]; then
 python3 - "${TS[*]}" "${SHIFTS[*]}" <<'PY'
 import re, sys
 TS = [float(x) for x in sys.argv[1].split()]
@@ -240,6 +238,7 @@ for i, t in enumerate(TS):
 if any(straddle):
     print("⚠ some subtitles straddle a T — move the insert time to a sentence boundary")
 PY
+fi
 
 # ── 5.5) Chapter shift — only when chapters.txt exists
 #   It uses **the same shift_for()** as the subtitles (equals sign included). Chapters only have a
@@ -307,15 +306,6 @@ print(f"── chapters: {moved} of {len(rows)} shifted → chapters-spliced.txt
 CHAPPY
 fi
 
-# ── 6) Duration match check — if the two copies disagree, only the subtitles end up shifted after publishing
-if [ -f reel-sub-spliced.mp4 ]; then
-  CD=$(ffprobe -v error -show_entries format=duration -of csv=p=0 reel-spliced.mp4)
-  SD=$(ffprobe -v error -show_entries format=duration -of csv=p=0 reel-sub-spliced.mp4)
-  awk -v a="$CD" -v b="$SD" 'BEGIN{ d=a-b; if (d<0) d=-d;
-    printf "── duration match check: clean %.3fs vs burn-in %.3fs (diff %.3fs)\n", a, b, d;
-    if (d > 0.05) { print "⚠ the two copies differ in duration — check the spliced pieces"; } }'
-fi
-
 if [ -f build-plan-check.json ]; then node "$HERE/verify-assembled.js" . --splice-finish; fi
 
-say "✓ reel-spliced.mp4 · reel-sub-spliced.mp4 · subs-spliced.srt"
+say "✓ reel-spliced.mp4 · optional subs-spliced.srt sidecar"

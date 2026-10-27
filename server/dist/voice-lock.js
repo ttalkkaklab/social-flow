@@ -9,7 +9,7 @@ import { describeElevenLabsError } from './elevenlabs-client.js';
 import { pcmToWav, validateFilePath } from './media-utils.js';
 import { characterErrorRate, measureSignal, sha256, signalFailures } from './tts-quality.js';
 import { transcribeLocal, qwen3AsrTranscribeSchema } from './qwen3-asr-client.js';
-import { ttsSchema } from './portal-characters.js';
+import { ttsSchema } from './character-tts.js';
 import { VOICE_LOCK_MODEL, VOICE_LOCK_PROPERTY, voiceLockConfigSchema } from './voice-lock-config.js';
 const exec = promisify(execFile);
 export const voiceLockApplySchema = z.object({
@@ -71,7 +71,7 @@ export async function applyVoiceLock(input, dependencies = defaults) {
                 throw new Error('Voice lock requires character tts.engine=elevenlabs and its pinned voiceId');
             if (!/^[A-Za-z0-9_-]{1,64}$/.test(request.tts.voiceId))
                 throw new Error('Invalid ElevenLabs voiceId');
-            const language = qwen3AsrTranscribeSchema.parse({ audioPath: 'source.wav', language: request.tts.language ?? 'ko' }).language;
+            const language = qwen3AsrTranscribeSchema.parse({ audioPath: 'source.wav', language: request.tts.language }).language;
             const sourceCopy = path.join(dir, `source${path.extname(result.sourcePath).toLowerCase()}`);
             copyFileSync(result.sourcePath, sourceCopy);
             const sourceAudio = path.join(dir, 'dialogue.wav');
@@ -115,6 +115,7 @@ export async function applyVoiceLock(input, dependencies = defaults) {
     writeFileSync(result.reportPath, JSON.stringify({ ...result, policy: 'voice-lock-v1', inputKind: request.inputKind, voiceLock: lock, generatedAt: new Date().toISOString() }, null, 2) + '\n', { flag: 'wx' });
     return result;
 }
+// Unregistered legacy: nothing imports this tool list (the voice-lock ASR gate was retired 2026-10-16). Kept for reference only.
 export const VOICE_LOCK_TOOLS = [{
         name: 'voice_lock_apply', title: 'Lock generated dialogue to a character voice',
         description: 'Convert single-speaker model-generated audio/video with ElevenLabs STS. Records source blind ASR and checks converted ASR against approved dialogue (CER <= 2%) and duration drift <= 120 ms. Writes new WAV, optional MP4 and report without overwriting source. Paid conversion runs once after source validation. Separate mixed audio into dialogue stems first. Does not clone voices. passed verifies text and signal, not perceptual identity or lip sync: listen before assembly. Failed findings follow produce speech HITL.',
@@ -123,15 +124,15 @@ export const VOICE_LOCK_TOOLS = [{
                 sourcePath: { type: 'string', description: 'Local single-speaker audio/video file' },
                 outputPath: { type: 'string', description: 'Episode output/voice-lock directory; each attempt gets a new folder' },
                 shotId: { type: 'string', pattern: '^[A-Za-z0-9_-]{1,80}$', description: 'Shot key for the report and folder' },
-                characterId: { type: 'string', description: 'Speaking character id from the board/portal' },
+                characterId: { type: 'string', description: 'Speaking character id from the board' },
                 expectedText: { type: 'string', minLength: 1, maxLength: 4000, description: 'Approved dialogue for comparison; never supplied to blind ASR' },
                 inputKind: { type: 'string', enum: ['single_speaker', 'dialogue_stem'], description: 'Confirm one speaker without background music/effects to preserve; stems must be remixed externally' },
-                tts: { type: 'object', required: ['engine', 'voiceId'], description: 'Pinned character voice block', properties: {
+                tts: { type: 'object', required: ['engine', 'voiceId', 'language', 'speed'], description: 'Complete pinned character voice block from the character sheet', properties: {
                         engine: { type: 'string', enum: ['gemini', 'supertonic', 'elevenlabs', 'mlx'], description: 'Must be elevenlabs when enabled' },
                         voiceId: { type: 'string', description: 'Pinned ElevenLabs voice_id' },
                         model: { type: 'string', description: 'Existing TTS model, not used for STS' },
                         speed: { type: 'number', minimum: 0.7, maximum: 1.2, description: 'Existing TTS speed, not applied to STS' },
-                        language: { type: 'string', description: 'ASR language, default ko' },
+                        language: { type: 'string', description: 'Pinned character language used for ASR' },
                         stylePrompt: { type: 'string', description: 'Existing TTS style, not sent to STS' }, voiceLock: VOICE_LOCK_PROPERTY,
                     } },
             } },

@@ -7,10 +7,10 @@ const spec = () => ({ fps: 24, seconds: 5, width: 1080, height: 1920,
   camera: { lensMm: 35, keys: [{ frame: 1, position: [0, -4, 1.4], target: [0, 0, 1] }, { frame: 120, position: [2, -2, 1.4], target: [0, 0, 1] }] },
   actors: [{ name: 'porter', kind: 'person', color: '#d0342c', height: 1.75, keys: [{ frame: 1, position: [0, 0, 0] }, { frame: 120, position: [1, 0, 0], rotationZDeg: 90 }] },
     { name: 'gate', kind: 'box', size: [2, .3, 2.5], keys: [{ frame: 1, position: [0, 1.5, 0] }] }] });
-test('a previz spec is whole seconds at 24–60 fps on an even canvas, with a lens, keys and actors', () => {
+test('a previz spec spans whole frames at 24–60 fps on an even canvas, with a lens, keys and actors', () => {
   assert.deepEqual(C.checkSpec(spec()), []);
   const cases = [
-    [s => { s.seconds = 4.5; }, /whole number/], [s => { s.fps = 23.976; }, /24–60/], [s => { s.width = 1079; }, /even/],
+    [s => { s.seconds = 5.01; }, /whole number of frames/], [s => { s.fps = 23.976; }, /24–60/], [s => { s.width = 1079; }, /even/],
     [s => { delete s.camera; }, /camera/], [s => { s.camera.lensMm = 4; }, /lensMm/], [s => { s.camera.keys = []; }, /needs keys/],
     [s => { s.camera.keys[1].frame = 1; }, /repeats frame/], [s => { s.camera.keys[1].frame = 200; }, /past the last frame/],
     [s => { s.camera.keys[0].target = s.camera.keys[0].position; }, /differ/], [s => { s.actors = []; }, /at least one/],
@@ -19,6 +19,21 @@ test('a previz spec is whole seconds at 24–60 fps on an even canvas, with a le
     [s => { s.actors[1].name = 'porter'; }, /repeats the name/], [s => { s.actors[0].keys[0].position = [0, 0]; }, /position/],
   ];
   for (const [edit, re] of cases) { const s = spec(); edit(s); assert.match(C.checkSpec(s).join('; '), re); }
+});
+test('LTX frame-grid durations preserve their final key and reject keys beyond it', () => {
+  for (const seconds of [1e-12, NaN, Infinity, 0, -1, '5']) {
+    const s = spec(); s.seconds = seconds;
+    assert.match(C.checkSpec(s).join('; '), /seconds must/);
+  }
+  for (const frames of [25, 121, 145, 193]) {
+    const s = spec(); s.seconds = frames / s.fps;
+    s.camera.keys[1].frame = frames;
+    s.actors[0].keys[1].frame = frames;
+    assert.deepEqual(C.checkSpec(s), []);
+    assert.equal(C.frameAt(s, 999999), frames);
+    s.camera.keys[1].frame = frames + 1;
+    assert.match(C.checkSpec(s).join('; '), /past the last frame/);
+  }
 });
 test('keys interpolate linearly by frame and clamp outside their range, like the bridge', () => {
   const s = spec();

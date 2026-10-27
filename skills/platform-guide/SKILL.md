@@ -7,6 +7,8 @@ description: >
   another social-flow skill needs the posting limits, caption rules, video specs or
   safe-zone numbers. The source of truth is references/platform-playbook.md.
 ---
+**Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
+
 
 # Platform guide — the SoT for grammar and specs
 
@@ -30,12 +32,14 @@ content-reviewer agent all take this skill's playbook as their baseline.
    gets read. The first second is a measurement, not a feeling: after the build,
    the first subtitle cue's start time is read off the shipped SRT, and past
    1.0s it warns (playbook §7).
-4. **Golden-hour replies** — how fast you answer comments in the first 60
-   minutes after publishing decides reach (Buffer's analysis of 1.9M posts:
-   replying lifts engagement Threads +42% / IG +21% / FB +9.5%).
+4. **Golden-hour replies** — answer comments in the first 60 minutes after
+   publishing; the same reactions spread further when they land early (grow-threads
+   `references/growth-playbook.md` §Principles). The one sourced lift figure is
+   Buffer's 10.2M-post Threads set: posts where the author replied to their own
+   post took +42% engagement, the largest of the six platforms it tracks.
 5. **Korean without AI tells** — one sentence of translationese, stock phrasing,
    or assistant-speak makes the whole post read as an ad and get scrolled past.
-   The rules live in `references/korean-style.md`; the verdict comes from
+   The rules live in `references/korean-style.md`; the findings come from
    `references/check-style.py`. Narration, subtitles, copy, titles, and comment
    drafts are all in scope.
 
@@ -45,9 +49,9 @@ content-reviewer agent all take this skill's playbook as their baseline.
 |---|---|---|---|---|
 | Form | text · 1 image · video on the post (`videoUrl`) | reels · carousel ≤10 images | text/image/regular video | Shorts (9:16 ≤3 min) |
 | Body limit | 500 chars | caption 2,200 chars | 5,000 chars | title 100 · description 5,000 |
-| Register | casual spoken, short by default (§3) | hook + save CTA | structured expository | one spoken sentence, result withheld |
-| Links | 1 in body (`linkUrl` card) | caption links not clickable → comment | banned in body → first comment | description OK |
-| Hashtags | ≤1 (ranking weight 0) | 3–5 | 0–2 | 3–5 (#Shorts by preset) |
+| Register | casual spoken, short by default (§3) | hook in the first 125 chars; a save prompt is optional | structured expository | one spoken sentence, result withheld |
+| Links | none in the body — the video rides on the post; a self-reply link only as the fallback (§3) | caption links not clickable → comment | banned in body → first comment | description OK |
+| Hashtags | ≤1 (ranking weight 0) | no fixed count — topic markers in the caption | 0–2 | `#Shorts` required by preset; 3–5 is guidance |
 | Media | video/image as public HTTPS URL | public HTTPS URL | public HTTPS URL | local file upload |
 | Limits | 250 posts/24h | 100 posts/24h | — | 100 uploads/day |
 
@@ -55,10 +59,10 @@ Detailed grammar, copy formulas, the anti-pattern checklist, and video specs
 (safe zones, subtitles, length) are in `references/platform-playbook.md` —
 Read it before writing for any platform, without exception.
 
-## Style gate
+## Style check
 
-After writing or editing any Korean text, run the checker for its surface.
-The code gives the verdict; a human or agent fixes the sentences.
+After writing or editing any Korean copy, run the checker for its surface.
+The code lists the findings; a human or agent reads them and fixes the sentences.
 
 ```bash
 PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
@@ -68,13 +72,16 @@ node $PG/extract-text.js ./storyboard/scenes.js <narration|subtitle|screen> | \
 ```
 
 8 surfaces: `narration` `subtitle` `screen` `threads` `ig` `fb` `yt` `reply`.
-exit 0 pass / 1 warning (S2 accumulation) / 2 fail (S1) / 3 gate did not run
-(empty input · path error) / 4 skip (every rule off for the surface).
+exit 0 pass / 1 warning (S2 accumulation) / 2 S1 found / 3 the check did not run
+(empty input · path error) / 4 skip (the text is not Korean, so the rules have
+nothing to say about it).
 
-**S1 gets fixed and re-run, no exceptions.** exit 3 is not a pass either — fix
-the path and run again. Write paths against `${CLAUDE_PLUGIN_ROOT}`
-(produce·publish run from `data/<channel>/episodes/<topic>/`, so relative paths
-won't resolve).
+**S1 findings are suggestions.** Fix the sentence and re-run, or write down why it
+stays; neither the exit code nor a score decides whether authorized work goes on
+(owner directive 2026-10-16). exit 3 is not a pass — fix the path and run again.
+exit 4 is `not_applicable`, not a pass and not a failure. Write paths against
+`${CLAUDE_PLUGIN_ROOT}` (produce·publish run from `data/<channel>/episodes/<topic>/`,
+so relative paths won't resolve).
 
 The YouTube meta file gets a second, structural check on top of the style one —
 `node $PG/check-meta.js output/youtube/meta.md` reads the playbook §6 layout,
@@ -82,55 +89,39 @@ the title limits, the preset hashtags, the summary voice, and a verbatim copy of
 `COMPREHENSION.answer` (it finds scenes.js from the episode layout). Same exit
 codes. Its 0 is "layout and verbatim leak clean" — a paraphrased result is the
 reviewer's blind read. A short whose cover opens on the result
-(`hookType:"spoiler"`) keeps this gate: the cover may say the answer, the title
+(`hookType:"spoiler"`) keeps this check: the cover may say the answer, the title
 and the description still withhold it (playbook §2). Only long-form answer-first
 episodes skip it.
 
-## Adversarial review gate — the shared contract for outgoing copy
+## Editorial review guidance for outgoing copy
 
-Every piece of Korean copy the plugin authors for the outside world publishes
-only after passing two stages. Stage 1 is the style checker above (the machine
-verdict is the source of truth); stage 2 is an adversarial reviewer agent — it
-tries to refute the copy: does it sound AI-written, and can a first-time reader
-follow the vocabulary. **Publish only at score ≥95 with P0=0**; if the copy
-can't clear that within 3 rounds, don't publish —
-not posting beats posting copy that falls short.
-
-**Storyboard copy is read differently** — as the narration alone, before any
-shot exists, twice: the story read (storyboard §4.4) and the vocabulary read
-(§4.5), each looped to 95 in at most three reads with the sentences handed to
-the reviewer inline. The board itself is not delegated (0.50.0 — the six board
-reads of 0.49 were measured at 2–8 million tokens a call); the checkers and the
-author's own read stand there, and the human approval step in storyboard §7 is
-what blocks. Everything else in the table below keeps the 95 bar.
+Read outgoing copy for factual support, natural language and fit with the channel
+and conversation. A style checker or independent reviewer can help when a concrete
+issue needs another look. Findings and scores inform revisions; no threshold,
+review count or intermediate approval blocks already-authorized work. Record
+missing reviews honestly. Publication and replies still require actual user or
+standing authorization for that external action.
 
 | Outgoing copy | Authored by | Reviewer | Verdict tail |
 |---|---|---|---|
-| Storyboard narration (the spoken sentences alone) | storyboard · autoproduce | storyboard-reviewer narration mode, then vocabulary mode — **looped to 95, cap 3 reads each, sentences inline** | `STORYBOARD_REVIEW` |
+| Storyboard narration (the spoken sentences alone) | storyboard · autoproduce | storyboard-reviewer narration mode, then vocabulary mode — optional reads with the actual actions and attributed speech | `STORYBOARD_REVIEW` |
 | Platform copy (threads · ig · fb · yt) | produce · autoproduce | content-reviewer copy axis | `CONTENT_REVIEW` |
 | Growth copy (new posts · search-driven engagement · inbox replies) | grow-threads · grow-instagram · grow-youtube | growth-post-reviewer | `GROWTH_POST_REVIEW` |
 | Post-publish replies | publish | growth-post-reviewer | `GROWTH_POST_REVIEW` |
 | bio · channel description · tagline | channel · intro | growth-post-reviewer `standalone` | `GROWTH_POST_REVIEW` |
-
-The 95 bar is a user directive from 2026-08-13 (growth copy was lowered to 90
-on 2026-08-12, then restored to 95 by that directive). The storyboard row
-changed shape twice — single board reads on 2026-08-22, then the two narration
-loops with the board reads removed on 2026-09-03 (0.50.0). Don't build a new skill
-with an outgoing-copy path that bypasses the reviewer — when a new surface
-appears, add a row to this table and extend an existing reviewer.
 
 ## Additional Resources
 
 ### Reference Files
 
 - **`references/platform-playbook.md`** — per-platform grammar in detail, copy formulas, video specs, anti-pattern checklist (SoT)
-- **`references/korean-style.md`** — Korean style SoT: AI-tell pattern tables (T·D·C·A·E), severities, per-surface application, delete-only principle
-- **`references/check-style.py`** — deterministic style checker (stdlib only; `--surface` · `--json` · `--doc` · `--selftest`)
-- **`references/check-meta.js`** — the YouTube meta.md gate: the §6 layout, title limits (100 chars · no `<>` · front-loading warning), the format preset's required hashtags, the summary voice, and a verbatim `COMPREHENSION.answer` in the title or description (`--print title|description|tags` · `--selftest`)
-- **`references/pipeline.js`** — pipeline SoT: the stage ladder, every gate (attended and unattended), the reviewer verdict-tail contract, and produce's three build lanes. `episode-state.js` derives an episode's stage from it; `docs/pipeline-manifest.md` explains the design
-- **`references/pipeline-lint.js`** — checks the SKILL.md gate prose against `pipeline.js` (9 rules, read-only; `--list` · `--selftest`)
+- **`references/korean-style.md`** — Korean style SoT: AI-tell pattern tables (T·D·C·A·E), severities, per-surface application, the prefer-deletion principle
+- **`references/check-style.py`** — deterministic style checker (stdlib only; `--surface` · `--json` · `--doc` · `--selftest`); findings are suggestions, exit codes report severity
+- **`references/check-meta.js`** — the YouTube meta.md check: the §6 layout, title limits (100 chars · no `<>` · front-loading warning), the format preset's required hashtags, the summary voice, and a verbatim `COMPREHENSION.answer` in the title or description (`--print title|description|tags` · `--selftest`)
+- **`references/pipeline.js`** — the step catalog: the stage ladder, the checks and reviews on the attended and unattended paths with what each one decides (only operational contracts stop work; reviews file findings), the reviewer verdict-tail contract, and produce's three build lanes. `episode-state.js` derives an episode's stage from it; `docs/pipeline-manifest.md` explains the design
+- **`references/pipeline-lint.js`** — checks the workflow entrypoints and reviewer table against `pipeline.js` (7 rules, read-only; `--list` · `--selftest`)
 - **`references/extract-text.js`** — scenes.js → per-surface text extraction (narration · subtitle · screen; handles the `window.SCENES` global contract)
 - **`references/safezone-landscape.md`** — the 16:9 safe-zone measurements (2026-08-17): x 96/1920 · top 96/1080 · bottom 285/1080, and which surfaces stay provisional. `formats.js`, the video template and the storyboard template all cite it
-- **`references/reply-gate.md`** — the two gates every growth-loop reply passes: `check-style.py --surface reply`, then the growth-post-reviewer agent at ≥95 with p0=0, plus what to attach per platform
+- **`references/reply-gate.md`** — reply context and optional editing diagnostics, with actual sending authorization kept separate
 - **`references/formats.js`** / **`references/format-resolve.js`** / **`references/format-lint.js`** — the format presets, the resolver the builders call, and the linter that holds the inline mirrors to them
-- **`references/skill-lint.js`** — the skill-surface check: routing descriptions, tool lanes, reference links and orphans, manifest parity, the tool count in prose (12 rules; `--list` · `--selftest`)
+- **`references/skill-lint.js`** — the skill-surface check: routing descriptions, tool lanes, reference links and orphans, manifest parity, the tool count in prose (16 rules; `--list` · `--selftest`)

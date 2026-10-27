@@ -14,6 +14,7 @@ tone: 존댓말                # comment-reply tone — 존댓말 (polite) or �
 slots: ["09:00", "21:00"]   # 1–3 publish slots (local time, the target's active hours)
 queue_rule: "status: produced|published + queue: ready"   # queue eligibility (default)
 ai_disclosure: always       # always | per-topic — with always the loop never turns disclosure off
+caption_tracks: []          # separate subtitle tracks the user asked for, BCP-47 codes (e.g. ["ko"]); empty or absent = none — an SRT on disk is not a request
 velocity_watch_minutes: 30  # sampling interval for a fresh video's view counter (0 = no watch) — see §Breakout
 autoproduce:                # when the queue runs dry the loop authors directly (off by default)
   enabled: false            # turning this true widens the loop's authority from publishing to authoring
@@ -23,8 +24,7 @@ autoproduce:                # when the queue runs dry the loop authors directly 
   duplicate_threshold: 0.5  # duplicate-verdict threshold (check-duplicate.py) — raise only for series channels
   max_cost_per_video: 1.00  # USD — passes the economy baseline ($0.27–0.29) and one lite b-roll promotion ($0.91–0.93); with a hook on the mini grade below the promotion needs 1.50, on 2.0 1080p 3.70
   daily_cost_cap: 2.00      # USD — two economy episodes with one promotion, or one episode with a mini hook and a promotion; a single episode must fit under it
-  previz_renderer: threejs  # threejs | blender — the standing answer to PRODUCTION.previz (every generated cut is a 3D previz cut); absent = the loop plans no generated cut
-  video_model: "dreamina-seedance-2-0-mini-260615 720p"   # a Seedance 2.x grade + resolution, the standing answer to PRODUCTION.videoModel (video-model-options.js prices the grades); absent = no generated cut
+  # previz_renderer / video_model — optional overrides, not prerequisites; `.social-flow/models.json` governs the renderer and the video model (model-settings.md · unattended-lifecycle.md#authorization-and-limits)
   weekly_cap: 7.00          # USD
   mark_queues: ["youtube"]  # queues to stamp on authoring success — only platforms with an approved growth plan
 ---
@@ -74,12 +74,16 @@ topic_keywords: ["Vietnam visa", "expat paperwork"]   # only with topic_source: 
 ```
 
 - **Cost** — per-episode cap `max_cost_per_video`; daily and weekly totals
-  accrue in the channel-shared `data/<channel>/growth/autoproduce.json`. The
-  ladder and promotion conditions: `skills/autoproduce/references/cost-tiers.md`
-  is the source of truth.
-- **Quality** — only episodes that pass every machine gate (fact check, style,
-  storyboard-review copy, images, build report, content-reviewer P0, cost)
-  become `queue: ready`; one failure leaves `queue: hold`, waiting for a human.
+  accrue in the channel-shared `data/<channel>/growth/autoproduce.json`.
+  Engines follow `.social-flow/models.json` (model-settings.md);
+  `skills/autoproduce/references/cost-tiers.md` prices the grades and is not a
+  promotion rule — no metric trend switches an engine.
+- **Quality** — reviews (fact check, style, storyboard-review, content-reviewer)
+  are recorded as findings with the episode and never hold it. `queue: hold` is
+  for a technical delivery failure (the build or its media missing), a cost cap
+  hit or missing authorization
+  (`skills/autoproduce/references/unattended-lifecycle.md#completion`), and
+  waits for a human.
 - **Duplicates** — before authoring, `check-duplicate.py` compares the candidate
   against all of the channel's existing topics. A different slug but the same
   story reworded drops the candidate (threshold `duplicate_threshold`,
@@ -148,8 +152,9 @@ rule.
   channel has none yet, so read the first weeks off the growth-log ledger and
   write the real one here.
 - **Edit freeze** — while a window is open the video's title, description,
-  tags, thumbnail, captions and privacy stay as published. The Shorts vertical
-  frame is exempt; it's unfinished publish work rather than an edit.
+  tags, thumbnail, captions and privacy stay as published. The freeze starts at
+  the flip to public (`youtube_update`), which is the last publish step. The
+  Shorts vertical frame is exempt; it's unfinished publish work rather than an edit.
 
 ```yaml
 push_targets: []            # platforms allowed to push a candidate — [] means the loop only records it
@@ -189,6 +194,9 @@ responses.
   "lastTickAt": "2026-08-11T09:30:00+09:00",
   "filledSlots": { "2026-08-11": ["09:00"] },
   "publishedTopics": ["20260811-visa-fee"],
+  "pendingFlip": [
+    { "videoId": "def456", "topic": "20260812-rent-deposit", "uploadedAt": "2026-08-12T09:01:00+09:00" }
+  ],
   "pendingRelatedVideo": [
     { "videoId": "abc123", "topic": "20260811-visa-fee", "publishedAt": "2026-08-11T09:02:00+09:00" }
   ],
@@ -219,6 +227,11 @@ responses.
   re-uploading the same video.** It doubles storyboard.md's `status: published`
   because if the file write fails, the surviving state still blocks the
   duplicate. Keep the latest 200.
+- `pendingFlip` — videos this loop uploaded private whose flip to public has not
+  happened yet (SKILL.md §3). Written the moment `youtube_publish` returns a
+  `videoId`, drained before the next queue scan, cleared on the flip. While an
+  entry exists, its topic is never uploaded again — this is what keeps a failed
+  flip from turning into a duplicate upload.
 - `pendingRelatedVideo` — videos whose Related video isn't linked in Studio
   yet. Remove an entry when the user says it's handled. Entries older than
   30 days are dropped automatically.

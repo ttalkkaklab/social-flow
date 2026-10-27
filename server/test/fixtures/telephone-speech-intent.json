@@ -1,0 +1,33 @@
+{
+  "narration": [
+    {
+      "id": "identify",
+      "speaker": "host",
+      "delivery": "on_screen",
+      "tts": "경찰서 다나카 경부요.",
+      "sub": "경찰서 다나카 경부요.",
+      "acting": {
+        "context": "Answering a telephone call; he is the police officer identifying himself.",
+        "intent": "State his own station, name and rank.",
+        "vocal": "Mature, dry Korean male. Calm official self-identification. Start at natural mid-low pitch; finish 경부요 in a short, firmly falling cadence with no rising question contour."
+      }
+    },
+    {
+      "id": "confirm",
+      "speaker": "host",
+      "delivery": "on_screen",
+      "tts": "독립운동가를 잡게 해주겠다고?",
+      "sub": "독립운동가를 잡게 해주겠다고?",
+      "acting": {
+        "context": "The caller has just offered to help catch an independence activist.",
+        "intent": "Verify the caller's offer.",
+        "vocal": "Same mature, dry Korean male voice. Restrained skeptical confirmation, with natural conversational phrasing and a brief questioning inflection at the end."
+      }
+    }
+  ],
+  "performance": [
+    {"kind": "dialogue", "character": "host", "to": "caller", "group": 1},
+    {"kind": "action", "character": "host", "text": "He listens to the caller's offer.", "durationSeconds": 1},
+    {"kind": "dialogue", "character": "host", "to": "caller", "group": 2}
+  ]
+}

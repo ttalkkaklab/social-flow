@@ -66,6 +66,10 @@ function verify(work, board) {
   const file = path.join(board, 'scenes.js');
   if (!fs.existsSync(file)) throw new Error('source storyboard/scenes.js is required; pass the storyboard directory as build-reel.sh argument 2');
   const win = evaluateWindowScript(fs.readFileSync(file, 'utf8'), {filename:file});
+  const voiceErrors = require('../../_shared/character-voice.js').boardVoiceErrors(win);
+  if (voiceErrors.length) throw new Error(voiceErrors.join('; '));
+  const identityErrors = require('../../channel/references/character-sheet.js').sourceErrors(win, board);
+  if (identityErrors.length) throw new Error(identityErrors.join('; '));
   // Invalid subtitle inputs are not quality warnings and cannot be approved away.
   const subtitleMedia=require('./explicit-subtitles.js').media(work,win.SCENES);
   const videoGate = require('./assembly-video-gate.js').check(work, board);
@@ -73,8 +77,9 @@ function verify(work, board) {
   const cards = fs.readFileSync(path.join(work, 'cards.tsv'), 'utf8').split(/\r?\n/).filter(l=>l.trim()&&!l.startsWith('#'));
   const ids = cards.map(l=>l.split('\t')[0]);
   if (JSON.stringify(ids)!==JSON.stringify(expected.map(String))) throw new Error('cards.tsv does not match SCENES order; no unplanned opening, missing card or duplicate card is allowed');
-  const editResult=require('./edit-plan.js').write(work,win.SCENES,{videoWarningsApproved:videoGate.approved});
-  const mediaSha256={...verifyManifest(work,board,win.SCENES,win.FORMAT,{videoWarningsApproved:videoGate.approved}),...require('./check-tts-quality.js').check(work,board),...subtitleMedia};
+  const editResult=require('./edit-plan.js').write(work,win.SCENES,{videoWarningsApproved:videoGate.continueWithWarnings});
+  const videoSha256=verifyManifest(work,board,win.SCENES,win.FORMAT,{videoWarningsApproved:videoGate.continueWithWarnings});
+  const mediaSha256={...videoSha256,...require('./check-tts-quality.js').check(work,board),...subtitleMedia};
   const hash = p=>createHash('sha256').update(fs.readFileSync(p)).digest('hex');
   const groupPlans={};
   const edits=editResult.plan;
@@ -85,7 +90,7 @@ function verify(work, board) {
     }
   });
   const plugin = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../.claude-plugin/plugin.json'),'utf8'));
-  fs.writeFileSync(path.join(work, 'build-plan-check.json'), JSON.stringify({videoGate,ttsGate:require('./check-tts-quality.js').lastReport(work),mediaSha256,groupPlans,version:plugin.version,storyboard:board,scenesSha256:hash(file),cardsSha256:hash(path.join(work,'cards.tsv')),segsSha256:hash(path.join(work,'segs.tsv')),resolvedCardsSha256:hash(path.join(work,'cards.resolved.tsv')),editPlanSha256:hash(path.join(work,'edit-plan.json')),checks:['check-scenes','check-slide','segment-inputs','edit-plan'],cards:expected},null,2)+'\n');
+  fs.writeFileSync(path.join(work, 'build-plan-check.json'), JSON.stringify({videoGate,videoSha256,ttsGate:require('./check-tts-quality.js').lastReport(work),mediaSha256,groupPlans,version:plugin.version,storyboard:board,scenesSha256:hash(file),cardsSha256:hash(path.join(work,'cards.tsv')),segsSha256:hash(path.join(work,'segs.tsv')),resolvedCardsSha256:hash(path.join(work,'cards.resolved.tsv')),editPlanSha256:hash(path.join(work,'edit-plan.json')),checks:['check-scenes','check-slide','segment-inputs','edit-plan'],cards:expected},null,2)+'\n');
 }
 // The assembly gate re-enters this module for grouped manifest checks during verify().
 // Publish the API before the CLI invokes it, just as a completed require() would.

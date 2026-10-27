@@ -1,0 +1,1387 @@
+{
+ "data": [
+  {
+   "id": "ltx-2.5",
+   "version": null,
+   "enabled": true,
+   "input_types": [
+    "text",
+    "upload"
+   ],
+   "modes_all": [
+    "generate",
+    "guided",
+    "guided_fast",
+    "keyframe",
+    "audio2video",
+    "ingredients",
+    "ic_lora",
+    "guided_hq",
+    "retake"
+   ],
+   "model_aliases": {
+    "fast": "generate",
+    "pro": "guided_hq"
+   },
+   "capability_shape": "range+step+blocked_list",
+   "modes": [
+    {
+     "mode": "generate",
+     "module": "ltx_pipelines.distilled",
+     "allowed_fields": [
+      "auto_duration",
+      "duration",
+      "frame_rate",
+      "generate_audio",
+      "hdr",
+      "height",
+      "images",
+      "lora",
+      "mode",
+      "num_frames",
+      "num_generated_keyframes",
+      "prompt",
+      "seed",
+      "width"
+     ],
+     "width": {
+      "min": 64,
+      "max": 1920,
+      "step": 64,
+      "default": 1536
+     },
+     "height": {
+      "min": 64,
+      "max": 1920,
+      "step": 64,
+      "default": 1024
+     },
+     "max_pixels": 2064384,
+     "hdr": [
+      "SRGB_LINEAR",
+      "ACESCG",
+      "ACESCCT",
+      null
+     ],
+     "frame_rate": {
+      "min": 1.0,
+      "max": 60.0,
+      "default": 24.0
+     },
+     "num_frames": {
+      "min": 25,
+      "max": 361,
+      "step": 8,
+      "offset": 1,
+      "default": 121,
+      "note": "num_frames = step·k + offset"
+     },
+     "images": {
+      "min": 0,
+      "max": 8,
+      "strength": {
+       "min": 0.0,
+       "max": 1.0
+      },
+      "crf": {
+       "min": 0,
+       "max": 51,
+       "nullable": true
+      },
+      "frame_idx": {
+       "min": 0,
+       "max_exclusive": "num_frames"
+      }
+     },
+     "auto_duration": {
+      "supported": true,
+      "max_frames": 121
+     },
+     "duration": {
+      "unit": "seconds",
+      "rounding": "nearest 8k+1 frame, tie → shorter",
+      "exclusive_min": 0.875,
+      "max": 15.208333333333334,
+      "at_frame_rate": 24.0,
+      "exclusive_with": [
+       "num_frames",
+       "auto_duration"
+      ]
+     },
+     "generate_audio": {
+      "default": true,
+      "note": "false = 생성 뒤 소리 흐름을 뺀다(후처리 · GPU 시간 같음)"
+     },
+     "num_generated_keyframes": {
+      "min": 0,
+      "max": 16
+     },
+     "num_inference_steps": null,
+     "negative_prompt": null,
+     "lora": {
+      "catalog": [
+       "cinemagraph",
+       "slow-motion"
+      ],
+      "max": 2,
+      "item": "이름 문자열 또는 {name, strength}",
+      "strength": {
+       "min": 0.0,
+       "max": 2.0,
+       "default": 1.0
+      }
+     }
+    },
+    {
+     "mode": "guided",
+     "module": "ltx_pipelines.ti2vid_two_stages",
+     "allowed_fields": [
+      "auto_duration",
+      "duration",
+      "frame_rate",
+      "generate_audio",
+      "guidance",
+      "hdr",
+      "height",
+      "images",
+      "mode",
+      "negative_prompt",
+      "num_frames",
+      "num_generated_keyframes",
+      "num_inference_steps",
+      "prompt",
+      "seed",
+      "width"
+     ],
+     "width": {
+      "min": 64,
+      "max": 1920,
+      "step": 64,
+      "default": 1536
+     },
+     "height": {
+      "min": 64,
+      "max": 1920,
+      "step": 64,
+      "default": 1024
+     },
+     "max_pixels": 2064384,
+     "hdr": [
+      "SRGB_LINEAR",
+      "ACESCG",
+      "ACESCCT",
+      null
+     ],
+     "frame_rate": {
+      "min": 1.0,
+      "max": 60.0,
+      "default": 24.0
+     },
+     "num_frames": {
+      "min": 25,
+      "max": 361,
+      "step": 8,
+      "offset": 1,
+      "default": 121,
+      "note": "num_frames = step·k + offset"
+     },
+     "images": {
+      "min": 0,
+      "max": 8,
+      "strength": {
+       "min": 0.0,
+       "max": 1.0
+      },
+      "crf": {
+       "min": 0,
+       "max": 51,
+       "nullable": true
+      },
+      "frame_idx": {
+       "min": 0,
+       "max_exclusive": "num_frames"
+      }
+     },
+     "auto_duration": {
+      "supported": true,
+      "max_frames": 121
+     },
+     "duration": {
+      "unit": "seconds",
+      "rounding": "nearest 8k+1 frame, tie → shorter",
+      "exclusive_min": 0.875,
+      "max": 15.208333333333334,
+      "at_frame_rate": 24.0,
+      "exclusive_with": [
+       "num_frames",
+       "auto_duration"
+      ]
+     },
+     "generate_audio": {
+      "default": true,
+      "note": "false = 생성 뒤 소리 흐름을 뺀다(후처리 · GPU 시간 같음)"
+     },
+     "num_generated_keyframes": {
+      "min": 0,
+      "max": 16
+     },
+     "num_inference_steps": {
+      "min": 1,
+      "max": 50,
+      "nullable": true
+     },
+     "negative_prompt": {
+      "max_chars": 2000,
+      "nullable": true
+     },
+     "lora": null,
+     "guidance": {
+      "video_cfg_guidance_scale": {
+       "min": 1.0,
+       "max": 15.0,
+       "type": "num"
+      },
+      "video_stg_guidance_scale": {
+       "min": 0.0,
+       "max": 5.0,
+       "type": "num"
+      },
+      "video_rescale_scale": {
+       "min": 0.0,
+       "max": 1.0,
+       "type": "num"
+      },
+      "video_stg_blocks": {
+       "min": 0,
+       "max": 47,
+       "items": {
+        "max": 8
+       }
+      },
+      "video_skip_step": {
+       "min": 0,
+       "max": 10,
+       "type": "int"
+      },
+      "a2v_guidance_scale": {
+       "min": 1.0,
+       "max": 10.0,
+       "type": "num"
+      },
+      "audio_cfg_guidance_scale": {
+       "min": 1.0,
+       "max": 15.0,
+       "type": "num"
+      },
+      "audio_stg_guidance_scale": {
+       "min": 0.0,
+       "max": 5.0,
+       "type": "num"
+      },
+      "audio_rescale_scale": {
+       "min": 0.0,
+       "max": 1.0,
+       "type": "num"
+      },
+      "audio_stg_blocks": {
+       "min": 0,
+       "max": 47,
+       "items": {
+        "max": 8
+       }
+      },
+      "audio_skip_step": {
+       "min": 0,
+       "max": 10,
+       "type": "int"
+      },
+      "v2a_guidance_scale": {
+       "min": 1.0,
+       "max": 10.0,
+       "type": "num"
+      }
+     }
+    },
+    {
+     "mode": "guided_fast",
+     "module": "ltx_pipelines.ti2vid_one_stage",
+     "allowed_fields": [
+      "auto_duration",
+      "duration",
+      "frame_rate",
+      "generate_audio",
+      "guidance",
+      "hdr",
+      "height",
+      "images",
+      "mode",
+      "negative_prompt",
+      "num_frames",
+      "num_generated_keyframes",
+      "num_inference_steps",
+      "prompt",
+      "seed",
+      "width"
+     ],
+     "width": {
+      "min": 32,
+      "max": 1920,
+      "step": 32,
+      "default": 768
+     },
+     "height": {
+      "min": 32,
+      "max": 1920,
+      "step": 32,
+      "default": 512
+     },
+     "max_pixels": 2064384,
+     "hdr": [
+      "SRGB_LINEAR",
+      "ACESCG",
+      "ACESCCT",
+      null
+     ],
+     "frame_rate": {
+      "min": 1.0,
+      "max": 60.0,
+      "default": 24.0
+     },
+     "num_frames": {
+      "min": 25,
+      "max": 361,
+      "step": 8,
+      "offset": 1,
+      "default": 121,
+      "note": "num_frames = step·k + offset"
+     },
+     "images": {
+      "min": 0,
+      "max": 8,
+      "strength": {
+       "min": 0.0,
+       "max": 1.0
+      },
+      "crf": {
+       "min": 0,
+       "max": 51,
+       "nullable": true
+      },
+      "frame_idx": {
+       "min": 0,
+       "max_exclusive": "num_frames"
+      }
+     },
+     "auto_duration": {
+      "supported": true,
+      "max_frames": 121
+     },
+     "duration": {
+      "unit": "seconds",
+      "rounding": "nearest 8k+1 frame, tie → shorter",
+      "exclusive_min": 0.875,
+      "max": 15.208333333333334,
+      "at_frame_rate": 24.0,
+      "exclusive_with": [
+       "num_frames",
+       "auto_duration"
+      ]
+     },
+     "generate_audio": {
+      "default": true,
+      "note": "false = 생성 뒤 소리 흐름을 뺀다(후처리 · GPU 시간 같음)"
+     },
+     "num_generated_keyframes": {
+      "min": 0,
+      "max": 16
+     },
+     "num_inference_steps": {
+      "min": 1,
+      "max": 50,
+      "nullable": true
+     },
+     "negative_prompt": {
+      "max_chars": 2000,
+      "nullable": true
+     },
+     "lora": null,
+     "guidance": {
+      "video_cfg_guidance_scale": {
+       "min": 1.0,
+       "max": 15.0,
+       "type": "num"
+      },
+      "video_stg_guidance_scale": {
+       "min": 0.0,
+       "max": 5.0,
+       "type": "num"
+      },
+      "video_rescale_scale": {
+       "min": 0.0,
+       "max": 1.0,
+       "type": "num"
+      },
+      "video_stg_blocks": {
+       "min": 0,
+       "max": 47,
+       "items": {
+        "max": 8
+       }
+      },
+      "video_skip_step": {
+       "min": 0,
+       "max": 10,
+       "type": "int"
+      },
+      "a2v_guidance_scale": {
+       "min": 1.0,
+       "max": 10.0,
+       "type": "num"
+      },
+      "audio_cfg_guidance_scale": {
+       "min": 1.0,
+       "max": 15.0,
+       "type": "num"
+      },
+      "audio_stg_guidance_scale": {
+       "min": 0.0,
+       "max": 5.0,
+       "type": "num"
+      },
+      "audio_rescale_scale": {
+       "min": 0.0,
+       "max": 1.0,
+       "type": "num"
+      },
+      "audio_stg_blocks": {
+       "min": 0,
+       "max": 47,
+       "items": {
+        "max": 8
+       }
+      },
+      "audio_skip_step": {
+       "min": 0,
+       "max": 10,
+       "type": "int"
+      },
+      "v2a_guidance_scale": {
+       "min": 1.0,
+       "max": 10.0,
+       "type": "num"
+      }
+     }
+    },
+    {
+     "mode": "keyframe",
+     "module": "ltx_pipelines.keyframe_interpolation",
+     "allowed_fields": [
+      "duration",
+      "frame_rate",
+      "generate_audio",
+      "guidance",
+      "hdr",
+      "height",
+      "images",
+      "mode",
+      "negative_prompt",
+      "num_frames",
+      "num_inference_steps",
+      "prompt",
+      "seed",
+      "width"
+     ],
+     "width": {
+      "min": 64,
+      "max": 1920,
+      "step": 64,
+      "default": 1536
+     },
+     "height": {
+      "min": 64,
+      "max": 1920,
+      "step": 64,
+      "default": 1024
+     },
+     "max_pixels": 2064384,
+     "hdr": [
+      null
+     ],
+     "frame_rate": {
+      "min": 1.0,
+      "max": 60.0,
+      "default": 24.0
+     },
+     "num_frames": {
+      "min": 25,
+      "max": 361,
+      "step": 8,
+      "offset": 1,
+      "default": 121,
+      "note": "num_frames = step·k + offset"
+     },
+     "images": {
+      "min": 2,
+      "max": 8,
+      "strength": {
+       "min": 0.0,
+       "max": 1.0
+      },
+      "crf": {
+       "min": 0,
+       "max": 51,
+       "nullable": true
+      },
+      "frame_idx": {
+       "min": 0,
+       "max_exclusive": "num_frames"
+      }
+     },
+     "auto_duration": {
+      "supported": false
+     },
+     "duration": {
+      "unit": "seconds",
+      "rounding": "nearest 8k+1 frame, tie → shorter",
+      "exclusive_min": 0.875,
+      "max": 15.208333333333334,
+      "at_frame_rate": 24.0,
+      "exclusive_with": [
+       "num_frames",
+       "auto_duration"
+      ]
+     },
+     "generate_audio": {
+      "default": true,
+      "note": "false = 생성 뒤 소리 흐름을 뺀다(후처리 · GPU 시간 같음)"
+     },
+     "num_generated_keyframes": null,
+     "num_inference_steps": {
+      "min": 1,
+      "max": 50,
+      "nullable": true
+     },
+     "negative_prompt": {
+      "max_chars": 2000,
+      "nullable": true
+     },
+     "lora": null,
+     "guidance": {
+      "video_cfg_guidance_scale": {
+       "min": 1.0,
+       "max": 15.0,
+       "type": "num"
+      },
+      "video_stg_guidance_scale": {
+       "min": 0.0,
+       "max": 5.0,
+       "type": "num"
+      },
+      "video_rescale_scale": {
+       "min": 0.0,
+       "max": 1.0,
+       "type": "num"
+      },
+      "video_stg_blocks": {
+       "min": 0,
+       "max": 47,
+       "items": {
+        "max": 8
+       }
+      },
+      "video_skip_step": {
+       "min": 0,
+       "max": 10,
+       "type": "int"
+      },
+      "a2v_guidance_scale": {
+       "min": 1.0,
+       "max": 10.0,
+       "type": "num"
+      },
+      "audio_cfg_guidance_scale": {
+       "min": 1.0,
+       "max": 15.0,
+       "type": "num"
+      },
+      "audio_stg_guidance_scale": {
+       "min": 0.0,
+       "max": 5.0,
+       "type": "num"
+      },
+      "audio_rescale_scale": {
+       "min": 0.0,
+       "max": 1.0,
+       "type": "num"
+      },
+      "audio_stg_blocks": {
+       "min": 0,
+       "max": 47,
+       "items": {
+        "max": 8
+       }
+      },
+      "audio_skip_step": {
+       "min": 0,
+       "max": 10,
+       "type": "int"
+      },
+      "v2a_guidance_scale": {
+       "min": 1.0,
+       "max": 10.0,
+       "type": "num"
+      }
+     }
+    },
+    {
+     "mode": "audio2video",
+     "module": "ltx_pipelines.a2vid_two_stage",
+     "allowed_fields": [
+      "audio_max_duration",
+      "audio_start_time",
+      "audio_upload_id",
+      "duration",
+      "frame_rate",
+      "generate_audio",
+      "guidance",
+      "hdr",
+      "height",
+      "images",
+      "mode",
+      "negative_prompt",
+      "num_frames",
+      "num_inference_steps",
+      "prompt",
+      "seed",
+      "width"
+     ],
+     "width": {
+      "min": 64,
+      "max": 1920,
+      "step": 64,
+      "default": 1536
+     },
+     "height": {
+      "min": 64,
+      "max": 1920,
+      "step": 64,
+      "default": 1024
+     },
+     "max_pixels": 2064384,
+     "hdr": [
+      "SRGB_LINEAR",
+      "ACESCG",
+      "ACESCCT",
+      null
+     ],
+     "frame_rate": {
+      "min": 1.0,
+      "max": 60.0,
+      "default": 24.0
+     },
+     "num_frames": {
+      "min": 25,
+      "max": 361,
+      "step": 8,
+      "offset": 1,
+      "default": null,
+      "note": "num_frames = step·k + offset. audio2video 는 생략하면 소리 길이에서 끌어낸다"
+     },
+     "images": {
+      "min": 0,
+      "max": 8,
+      "strength": {
+       "min": 0.0,
+       "max": 1.0
+      },
+      "crf": {
+       "min": 0,
+       "max": 51,
+       "nullable": true
+      },
+      "frame_idx": {
+       "min": 0,
+       "max_exclusive": "num_frames"
+      }
+     },
+     "auto_duration": {
+      "supported": false
+     },
+     "duration": {
+      "unit": "seconds",
+      "rounding": "nearest 8k+1 frame, tie → shorter",
+      "exclusive_min": 0.875,
+      "max": 15.208333333333334,
+      "at_frame_rate": 24.0,
+      "exclusive_with": [
+       "num_frames",
+       "auto_duration",
+       "audio_max_duration"
+      ]
+     },
+     "generate_audio": {
+      "default": true,
+      "note": "false = 생성 뒤 소리 흐름을 뺀다(후처리 · GPU 시간 같음)"
+     },
+     "num_generated_keyframes": null,
+     "num_inference_steps": {
+      "min": 1,
+      "max": 50,
+      "nullable": true
+     },
+     "negative_prompt": {
+      "max_chars": 2000,
+      "nullable": true
+     },
+     "lora": null,
+     "audio": {
+      "audio_upload_id": "required",
+      "audio_start_time": {
+       "min": 0.0,
+       "default": 0.0
+      },
+      "audio_max_duration": {
+       "exclusive_min": 0.0,
+       "nullable": true,
+       "exclusive_with": "num_frames"
+      },
+      "channels": "스테레오(2채널) — 모노는 올릴 때 400",
+      "covers_video": "wav 는 (길이 − audio_start_time) + 0.08초 < num_frames / frame_rate 면 400"
+     },
+     "guidance": {
+      "video_cfg_guidance_scale": {
+       "min": 1.0,
+       "max": 15.0,
+       "type": "num"
+      },
+      "video_stg_guidance_scale": {
+       "min": 0.0,
+       "max": 5.0,
+       "type": "num"
+      },
+      "video_rescale_scale": {
+       "min": 0.0,
+       "max": 1.0,
+       "type": "num"
+      },
+      "video_stg_blocks": {
+       "min": 0,
+       "max": 47,
+       "items": {
+        "max": 8
+       }
+      },
+      "video_skip_step": {
+       "min": 0,
+       "max": 10,
+       "type": "int"
+      },
+      "a2v_guidance_scale": {
+       "min": 1.0,
+       "max": 10.0,
+       "type": "num"
+      },
+      "audio_cfg_guidance_scale": {
+       "min": 1.0,
+       "max": 15.0,
+       "type": "num"
+      },
+      "audio_stg_guidance_scale": {
+       "min": 0.0,
+       "max": 5.0,
+       "type": "num"
+      },
+      "audio_rescale_scale": {
+       "min": 0.0,
+       "max": 1.0,
+       "type": "num"
+      },
+      "audio_stg_blocks": {
+       "min": 0,
+       "max": 47,
+       "items": {
+        "max": 8
+       }
+      },
+      "audio_skip_step": {
+       "min": 0,
+       "max": 10,
+       "type": "int"
+      },
+      "v2a_guidance_scale": {
+       "min": 1.0,
+       "max": 10.0,
+       "type": "num"
+      }
+     }
+    },
+    {
+     "mode": "ingredients",
+     "module": "ltx_pipelines.ic_lora",
+     "allowed_fields": [
+      "conditioning_mask",
+      "duration",
+      "frame_rate",
+      "generate_audio",
+      "hdr",
+      "height",
+      "images",
+      "mode",
+      "num_frames",
+      "prompt",
+      "references",
+      "seed",
+      "skip_stage_2",
+      "width"
+     ],
+     "width": {
+      "min": 64,
+      "max": 1920,
+      "step": 64,
+      "default": 1536
+     },
+     "height": {
+      "min": 64,
+      "max": 1920,
+      "step": 64,
+      "default": 1024
+     },
+     "max_pixels": 2064384,
+     "hdr": [
+      null
+     ],
+     "frame_rate": {
+      "min": 1.0,
+      "max": 60.0,
+      "default": 24.0
+     },
+     "num_frames": {
+      "min": 25,
+      "max": 361,
+      "step": 8,
+      "offset": 1,
+      "default": 121,
+      "note": "num_frames = step·k + offset"
+     },
+     "images": {
+      "min": 0,
+      "max": 8,
+      "strength": {
+       "min": 0.0,
+       "max": 1.0
+      },
+      "crf": {
+       "min": 0,
+       "max": 51,
+       "nullable": true
+      },
+      "frame_idx": {
+       "min": 0,
+       "max_exclusive": "num_frames"
+      }
+     },
+     "auto_duration": {
+      "supported": false
+     },
+     "duration": {
+      "unit": "seconds",
+      "rounding": "nearest 8k+1 frame, tie → shorter",
+      "exclusive_min": 0.875,
+      "max": 15.208333333333334,
+      "at_frame_rate": 24.0,
+      "exclusive_with": [
+       "num_frames",
+       "auto_duration"
+      ]
+     },
+     "generate_audio": {
+      "default": true,
+      "note": "false = 생성 뒤 소리 흐름을 뺀다(후처리 · GPU 시간 같음)"
+     },
+     "num_generated_keyframes": null,
+     "num_inference_steps": null,
+     "negative_prompt": null,
+     "lora": null,
+     "references": {
+      "min": 1,
+      "max": 1,
+      "strength": {
+       "min": 0.0,
+       "max": 1.0,
+       "default": 1.0
+      }
+     },
+     "conditioning_mask": {
+      "nullable": true,
+      "upload_kind": "video",
+      "strength": {
+       "min": 0.0,
+       "max": 1.0,
+       "default": 1.0
+      },
+      "frames": "참조와 같은 수 · 1 또는 8k+1"
+     },
+     "skip_stage_2": {
+      "default": false,
+      "note": "true 면 출력이 반 해상도"
+     }
+    },
+    {
+     "mode": "ic_lora",
+     "module": "ltx_pipelines.ic_lora",
+     "allowed_fields": [
+      "adapter",
+      "conditioning_mask",
+      "duration",
+      "frame_rate",
+      "generate_audio",
+      "hdr",
+      "height",
+      "images",
+      "mode",
+      "num_frames",
+      "prompt",
+      "references",
+      "seed",
+      "skip_stage_2",
+      "width"
+     ],
+     "width": {
+      "min": 64,
+      "max": 1920,
+      "step": 64,
+      "default": 1536
+     },
+     "height": {
+      "min": 64,
+      "max": 1920,
+      "step": 64,
+      "default": 1024
+     },
+     "max_pixels": 2064384,
+     "hdr": [
+      null
+     ],
+     "frame_rate": {
+      "min": 1.0,
+      "max": 60.0,
+      "default": 24.0
+     },
+     "num_frames": {
+      "min": 25,
+      "max": 361,
+      "step": 8,
+      "offset": 1,
+      "default": 121,
+      "note": "num_frames = step·k + offset"
+     },
+     "images": {
+      "min": 0,
+      "max": 8,
+      "strength": {
+       "min": 0.0,
+       "max": 1.0
+      },
+      "crf": {
+       "min": 0,
+       "max": 51,
+       "nullable": true
+      },
+      "frame_idx": {
+       "min": 0,
+       "max_exclusive": "num_frames"
+      }
+     },
+     "auto_duration": {
+      "supported": false
+     },
+     "duration": {
+      "unit": "seconds",
+      "rounding": "nearest 8k+1 frame, tie → shorter",
+      "exclusive_min": 0.875,
+      "max": 15.208333333333334,
+      "at_frame_rate": 24.0,
+      "exclusive_with": [
+       "num_frames",
+       "auto_duration"
+      ]
+     },
+     "generate_audio": {
+      "default": true,
+      "note": "false = 생성 뒤 소리 흐름을 뺀다(후처리 · GPU 시간 같음)"
+     },
+     "num_generated_keyframes": null,
+     "num_inference_steps": null,
+     "negative_prompt": null,
+     "lora": null,
+     "references": {
+      "min": 1,
+      "max": 1,
+      "strength": {
+       "min": 0.0,
+       "max": 1.0,
+       "default": 1.0
+      }
+     },
+     "conditioning_mask": {
+      "nullable": true,
+      "upload_kind": "video",
+      "strength": {
+       "min": 0.0,
+       "max": 1.0,
+       "default": 1.0
+      },
+      "frames": "참조와 같은 수 · 1 또는 8k+1"
+     },
+     "skip_stage_2": {
+      "default": false,
+      "note": "true 면 출력이 반 해상도"
+     },
+     "adapter": {
+      "required": true,
+      "catalog": [
+       "clean-plate",
+       "colorization",
+       "day-to-night",
+       "deblur",
+       "decompression",
+       "ingredients",
+       "pixel-upscaler-x2",
+       "water-simulation"
+      ]
+     }
+    },
+    {
+     "mode": "guided_hq",
+     "module": "ltx_pipelines.ti2vid_two_stages_hq",
+     "allowed_fields": [
+      "auto_duration",
+      "duration",
+      "frame_rate",
+      "generate_audio",
+      "guidance",
+      "hdr",
+      "height",
+      "images",
+      "mode",
+      "negative_prompt",
+      "num_frames",
+      "num_generated_keyframes",
+      "num_inference_steps",
+      "prompt",
+      "seed",
+      "width"
+     ],
+     "width": {
+      "min": 64,
+      "max": 1920,
+      "step": 64,
+      "default": 1536
+     },
+     "height": {
+      "min": 64,
+      "max": 1920,
+      "step": 64,
+      "default": 1024
+     },
+     "max_pixels": 2064384,
+     "hdr": [
+      "SRGB_LINEAR",
+      "ACESCG",
+      "ACESCCT",
+      null
+     ],
+     "frame_rate": {
+      "min": 1.0,
+      "max": 60.0,
+      "default": 24.0
+     },
+     "num_frames": {
+      "min": 25,
+      "max": 361,
+      "step": 8,
+      "offset": 1,
+      "default": 121,
+      "note": "num_frames = step·k + offset"
+     },
+     "images": {
+      "min": 0,
+      "max": 8,
+      "strength": {
+       "min": 0.0,
+       "max": 1.0
+      },
+      "crf": {
+       "min": 0,
+       "max": 51,
+       "nullable": true
+      },
+      "frame_idx": {
+       "min": 0,
+       "max_exclusive": "num_frames"
+      }
+     },
+     "auto_duration": {
+      "supported": true,
+      "max_frames": 121
+     },
+     "duration": {
+      "unit": "seconds",
+      "rounding": "nearest 8k+1 frame, tie → shorter",
+      "exclusive_min": 0.875,
+      "max": 15.208333333333334,
+      "at_frame_rate": 24.0,
+      "exclusive_with": [
+       "num_frames",
+       "auto_duration"
+      ]
+     },
+     "generate_audio": {
+      "default": true,
+      "note": "false = 생성 뒤 소리 흐름을 뺀다(후처리 · GPU 시간 같음)"
+     },
+     "num_generated_keyframes": {
+      "min": 0,
+      "max": 16
+     },
+     "num_inference_steps": {
+      "min": 1,
+      "max": 50,
+      "nullable": true
+     },
+     "negative_prompt": {
+      "max_chars": 2000,
+      "nullable": true
+     },
+     "lora": null,
+     "guidance": {
+      "video_cfg_guidance_scale": {
+       "min": 1.0,
+       "max": 15.0,
+       "type": "num"
+      },
+      "video_stg_guidance_scale": {
+       "min": 0.0,
+       "max": 5.0,
+       "type": "num"
+      },
+      "video_rescale_scale": {
+       "min": 0.0,
+       "max": 1.0,
+       "type": "num"
+      },
+      "video_stg_blocks": {
+       "min": 0,
+       "max": 47,
+       "items": {
+        "max": 8
+       }
+      },
+      "video_skip_step": {
+       "min": 0,
+       "max": 10,
+       "type": "int"
+      },
+      "a2v_guidance_scale": {
+       "min": 1.0,
+       "max": 10.0,
+       "type": "num"
+      },
+      "audio_cfg_guidance_scale": {
+       "min": 1.0,
+       "max": 15.0,
+       "type": "num"
+      },
+      "audio_stg_guidance_scale": {
+       "min": 0.0,
+       "max": 5.0,
+       "type": "num"
+      },
+      "audio_rescale_scale": {
+       "min": 0.0,
+       "max": 1.0,
+       "type": "num"
+      },
+      "audio_stg_blocks": {
+       "min": 0,
+       "max": 47,
+       "items": {
+        "max": 8
+       }
+      },
+      "audio_skip_step": {
+       "min": 0,
+       "max": 10,
+       "type": "int"
+      },
+      "v2a_guidance_scale": {
+       "min": 1.0,
+       "max": 10.0,
+       "type": "num"
+      }
+     }
+    },
+    {
+     "mode": "retake",
+     "module": "ltx_pipelines.retake",
+     "allowed_fields": [
+      "end_time",
+      "generate_audio",
+      "hdr",
+      "mode",
+      "prompt",
+      "seed",
+      "start_time",
+      "video_upload_id"
+     ],
+     "video_upload_id": "required",
+     "generate_audio": {
+      "default": true,
+      "note": "false = 생성 뒤 소리 흐름을 뺀다(후처리 · GPU 시간 같음)"
+     },
+     "hdr": [
+      null
+     ],
+     "start_time": {
+      "min": 0.0
+     },
+     "end_time": {
+      "exclusive_min": "start_time"
+     },
+     "retake_divisor": 32,
+     "note": "원본 영상의 구간을 다시 만든다. 가로·세로·프레임 수를 본문으로 받지 않고 원본에서 가져온다 — 그래서 width·height·num_frames·images·frame_rate 는 `allowed_fields` 에 없다. 배수 32 와 8k+1 제약은 원본에 걸린다."
+    }
+   ],
+   "blocked_combos": [
+    {
+     "mode": "generate",
+     "width": 1280,
+     "num_frames": [
+      121,
+      129,
+      137
+     ],
+     "requires_image": true,
+     "measured_ok": {
+      "num_frames": [
+       {
+        "num_frames": 113,
+        "measured_at": {
+         "width": 1280,
+         "height": 704
+        }
+       },
+       {
+        "num_frames": 145,
+        "measured_at": {
+         "width": 1280,
+         "height": 704
+        }
+       }
+      ],
+      "width": [
+       {
+        "width": 1024,
+        "measured_at_num_frames": 121
+       },
+       {
+        "width": 1152,
+        "measured_at_num_frames": 121
+       },
+       {
+        "width": 1408,
+        "measured_at_num_frames": 121
+       },
+       {
+        "width": 1536,
+        "measured_at_num_frames": 121
+       }
+      ],
+      "no_image_num_frames": [
+       121
+      ]
+     }
+    },
+    {
+     "mode": "guided",
+     "width": 1280,
+     "num_frames": [
+      121
+     ],
+     "requires_image": true,
+     "measured_ok": {
+      "num_frames": [
+       {
+        "num_frames": 113,
+        "measured_at": {
+         "width": 1280,
+         "height": 704
+        }
+       },
+       {
+        "num_frames": 129,
+        "measured_at": {
+         "width": 1280,
+         "height": 704
+        }
+       },
+       {
+        "num_frames": 137,
+        "measured_at": {
+         "width": 1280,
+         "height": 704
+        }
+       },
+       {
+        "num_frames": 145,
+        "measured_at": {
+         "width": 1280,
+         "height": 704
+        }
+       }
+      ]
+     }
+    }
+   ],
+   "limits": {
+    "max_prompt_chars": 2000,
+    "max_seed": 2147483647,
+    "hdr_spaces": [
+     "SRGB_LINEAR",
+     "ACESCG",
+     "ACESCCT"
+    ],
+    "max_body_bytes": 1048576,
+    "submit_per_min": 5,
+    "submit_per_hour": 60,
+    "query_per_min": 120,
+    "max_queued_or_running": 20,
+    "generation_timeout_seconds": 1800,
+    "upload": {
+     "max_image_bytes": 33554432,
+     "max_video_bytes": 104857600,
+     "max_audio_bytes": 33554432,
+     "ttl_hours": 24,
+     "per_min": 10,
+     "max_files_per_key": 200
+    }
+   },
+   "contract_notes": [
+    "`model`(fast·pro)은 `mode` 대신 쓰는 별칭이다 — fast=generate(distilled 1회, 가장 빠름) · pro=guided_hq(dev + res_2s 2단, 가장 느림). 공식 호스팅 API 의 같은 이름 모델과 같은 모델이 아니다. `mode` 와 같이 오면 400 이다.",
+    "`duration`(초)은 가장 가까운 8k+1 프레임(같은 거리면 짧은 쪽)으로 바꾼다. `num_frames`·`auto_duration`(audio2video 는 `audio_max_duration` 도)과 같이 오면 400 이고, 바꾼 프레임 수에 다른 관문이 그대로 걸린다. 조회 응답 `request` 에 원래 초와 바꾼 `num_frames` 가 둘 다 남는다.",
+    "`generate_audio: false` 는 생성이 끝난 뒤 결과 mp4 에서 소리 흐름을 빼는 후처리다. 엔진에 소리를 끄는 인자가 없어 GPU 시간은 같다. audio2video 에서 false 면 넣은 소리도 빠진다.",
+    "audio2video 의 소리는 스테레오여야 한다 — 모노는 `/v1/uploads` 에서 400 이다(엔진의 소리 인코더가 2채널만 받는다).",
+    "audio2video 에서 쓰일 소리(길이 − `audio_start_time`)가 영상(`num_frames` / `frame_rate`, 생략하면 121프레임)보다 반드시 죽을 만큼 짧으면 접수에서 400 이고, 문구에 고칠 소리 길이·`num_frames` 를 적는다. wav 만 본다(mp3 길이는 추정일 수 있다).",
+    "이 본문은 설계 §4.2 의 `ModelCapability` 꼴이 «아니다». 설계는 허용 조합을 «정확한 tuple 목록» 으로 요구하는데 이 서버가 실제로 집행하는 술어는 «범위 + 배수 + 막는 목록» 이다. tuple 로 펼치면 width·height·num_frames·frame_rate 조합이 수십만 줄이 되고, 무엇보다 그 목록이 «집행하는 술어가 아니게» 된다. 공시는 집행하는 술어여야 하므로 집행 꼴을 그대로 적었다. 이 어긋남은 RESEARCH/DEVOPS_VIDEO_API_GAP_20261002.md §6 ⑷ 에 적힌 그 자리다.",
+    "`version` 이 null 인 것은 설계 §4.2 의 «변경 불가능한 서비스 프로파일 ID» 개념이 아직 없다는 뜻이다. 같은 요청이 다른 가중치에서 돌아도 호출자가 그 사실을 알 길이 없다.",
+    "`parameters_schema`·`output_profiles`·`deprecated_at` 칸은 «없다» — 채울 재료가 없어 비워 두는 쪽을 골랐다. 빈 값을 넣으면 호출자가 그것을 계약으로 읽는다.",
+    "`blocked_combos` 는 상류 디코더 결함으로 «접수에서» 막는 조합이다. 그 표 밖이 전부 성공한다는 뜻이 아니다 — 실제로 잰 점만 `measured_ok` 에 있다.",
+    "설계 §4.2 가 금지한 업로드 입력이 실제 계약의 일부다(`input_types` 에 `upload`). 일곱 영상 mode 가 이미지를 받는다(`keyframe` 은 2장 이상 필수). IC-LoRA 두 mode(`ingredients`·`ic_lora`)는 참조 영상·이미지를 `references` 로 따로 받는다.",
+    "`guidance` 의 범위와 `lora[].strength` 상한은 공식 문서에 없어 엔진 기본값 둘레로 보수적으로 잡은 값이다. `guided_hq` 는 1280 폭을 잰 적이 없어 `blocked_combos` 에 행이 없다 — 안 막는다는 뜻이지 된다는 뜻이 아니다. IC-LoRA 별 권장 strength 는 안 쟀다.",
+    "`hdr` 를 주면 결과 `video.mp4` 가 BT.2020/HLG 10비트로 바뀐다. 업로드가 SDR 만 받으므로 `hdr` 는 이미지·참조·원본 영상 입력과 같이 쓸 수 없다(400).",
+    "여기 적힌 수는 전부 «이 프로세스의 실효값» 이다 — 유닛 파일이 환경변수로 덮어쓴 값이 코드 기본값이 아니라 그대로 나온다."
+   ]
+  }
+ ],
+ "generated_at": "2026-10-17T23:37:39Z"
+}

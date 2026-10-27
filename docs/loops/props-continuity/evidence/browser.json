@@ -1,0 +1,42 @@
+{
+  "at": "2026-10-16T08:10:39.751Z",
+  "url": "file:///Users/zeans/orca/workspaces/social-flow/shrimpfish/data/prop-qa/episodes/ownership/storyboard/storyboard.html?lang=ko#props",
+  "checks": [
+    {
+      "name": "post-damage image matches broken condition",
+      "pass": true
+    },
+    {
+      "name": "flashback owner and holder A with intact reference",
+      "pass": true
+    },
+    {
+      "name": "B has no watch before loan",
+      "pass": true
+    },
+    {
+      "name": "B has watch after loan and damage",
+      "pass": true
+    },
+    {
+      "name": "appearance-only prop displayed",
+      "pass": true
+    },
+    {
+      "name": "history expanded with events and shot link",
+      "pass": true
+    },
+    {
+      "name": "prop to shot focus navigation",
+      "pass": true
+    },
+    {
+      "name": "shot to prop focus navigation",
+      "pass": true
+    },
+    {
+      "name": "mobile no horizontal overflow",
+      "pass": true
+    }
+  ]
+}

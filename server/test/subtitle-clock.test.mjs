@@ -89,3 +89,41 @@ test('31 characters/5 seconds stay at cap; the official checker rejects a bounda
   const clipped=bound(1,200,30,'00:00:00,033','00:00:05,033','0:00:00.03','0:00:05.03');
   const fail=check(...clipped.slice(0,2));assert.equal(fail.status,1);assert.equal(JSON.parse(fail.stdout).peakCueRate,6.201);
 });
+
+for(const mode of ['sentence','word','phrase'])test(`composed ${mode} subtitles exclude anticipation and reaction gaps`,t=>{
+  const dir=fixture(t),board=path.join(dir,'storyboard');mkdirSync(board);
+  const {createHash}=require('node:crypto'),{compose}=require(path.join(ref,'compose-speech.js'));
+  const {speechRevision}=require(path.join(ref,'../../_shared/speech-contract.js'));
+  const voice={engine:'gemini',voiceId:'Kore',language:'ko',speed:1},character={id:'actor',tts:voice};
+  const texts=['첫 번째 문장을 말합니다.','두 번째 대사를 답합니다.'];
+  const lines=texts.map((tts,i)=>{
+    const audio=path.join(dir,`raw${i}.wav`),bytes=Buffer.alloc(44+96000);
+    bytes.write('RIFF');bytes.writeUInt32LE(bytes.length-8,4);bytes.write('WAVEfmt ',8);bytes.writeUInt32LE(16,16);bytes.writeUInt16LE(1,20);bytes.writeUInt16LE(1,22);bytes.writeUInt32LE(48000,24);bytes.writeUInt32LE(96000,28);bytes.writeUInt16LE(2,32);bytes.writeUInt16LE(16,34);bytes.write('data',36);bytes.writeUInt32LE(bytes.length-44,40);
+    // A measured one-second audio take; sound quality is outside this timing test.
+    writeFileSync(audio,bytes);
+    const line={id:`line${i}`,speaker:character.id,delivery:'voiceover',tts,acting:i?{leadInSeconds:1,tailOutSeconds:.5}:{leadInSeconds:5,tailOutSeconds:2}};
+    line.audio={path:audio,sha256:createHash('sha256').update(bytes).digest('hex'),revision:speechRevision(line,character),status:'not_reviewed',generation:{generator:'tts_generate',text:tts,language:'ko',voiceSettings:{text:tts,voiceName:voice.voiceId}}};
+    return line;
+  });
+  const win={SB_DOC:{speechPlanVersion:1,characters:[character]},SCENES:[{id:'shot',narration:lines}]};
+  writeFileSync(path.join(board,'scenes.js'),Object.entries(win).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+  writeFileSync(path.join(dir,'cards.tsv'),'0\traw0.wav\t1\n');
+  const composed=compose(dir,board)[0];assert.equal(composed.durationSeconds,10.5);
+  for(const n of ['subs.body','subs.srtbody'])writeFileSync(path.join(dir,'work',n),'');
+  const q=s=>"'"+s.replaceAll("'","'\\''")+"'";
+  const script=`set -euo pipefail
+${functions}
+HERE=${q(ref)}; FPS=30; TOTF=300; FRAMES=321; D=10.7; L=10.5; SRC=${q(composed.audioPath)}; ACTED_AUDIO=1
+SUB=1; SUBS_MODE=append; SUBSF=''; CPRE=.2; M=2; MUTE=1; IDX=0; SRTN=0; SUB_MODE=${mode}; BARR=(8); SARR=(${texts.map(q).join(' ')}); TARR=(${texts.map(q).join(' ')})
+SUB_WORD_MIN=.1; WSTYLE=Word; PHRASE_ARG=${mode==='phrase'?"'--phrase 6'":"''"}; SUB_ACCENT=''; ALIGN_PID=''; say() { printf '%s\\n' "$1" >&2; }
+${stage}`;
+  const result=spawnSync('bash',['-c',script],{cwd:dir,encoding:'utf8'});assert.equal(result.status,0,result.stderr);
+  const srt=readFileSync(path.join(dir,'work/subs.srtbody'),'utf8'),ass=readFileSync(path.join(dir,'work/subs.body'),'utf8');
+  const expected=[[15200,16200],[19200,20200]];
+  const srtIntervals=[...srt.matchAll(/([^\n]+) --> ([^\n]+)/g)].map(m=>[ticks(m[1],1000),ticks(m[2],1000)]);
+  assert.deepEqual(srtIntervals,expected);
+  const events=ass.trim().split('\n').map(row=>row.split(',').slice(1,3).map(v=>ticks(v,1000)));
+  assert.ok(events.length>=(mode==='sentence'?2:4));
+  for(const [start,end] of events)assert.ok(expected.some(([lo,hi])=>start>=lo&&end<=hi&&start<end),`caption ${start}..${end} leaks into acting silence`);
+  assert.equal(events[0][0],expected[0][0]);assert.equal(events.at(-1)[1],expected[1][1]);
+});

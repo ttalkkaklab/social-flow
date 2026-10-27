@@ -52,17 +52,19 @@ function die(msg) {
 
 const exists = (p) => { try { return fs.existsSync(p); } catch (e) { return false; } };
 // The speed pass (produce §7.5) writes its own line into build-report.txt. An episode whose
-// report has no such line shipped the un-sped build to output/ — subtitles included, on a
-// timeline that no longer matches the picture. null = no report to read, so no verdict.
+// report has no such line shipped the un-sped build to output/, so any requested sidecar or
+// chapter file no longer matches the picture. null = no report to read, so no verdict.
 const hasSpeedMarker = (p) => {
   try { return /── speedup x/.test(fs.readFileSync(p, 'utf8')); } catch (e) { return null; }
 };
 const hasFinalRateMarker = (p) => {
-  // speedup.sh appends, so rerunning at another factor leaves both verdicts in the file. Only the
+  // speedup.sh appends, so rerunning at another factor leaves several verdicts in the file. Only the
   // last one describes the -fast set output/ carries — an earlier PASS must not clear a later FAIL.
+  // Delivery is subtitle-free by default; with no sidecar requested the pass writes the skip marker
+  // instead of a rate verdict, and that marker satisfies the check.
   try {
-    const m = fs.readFileSync(p, 'utf8').match(/(?:PASS|FAIL) final speech rate/g);
-    return m ? m[m.length - 1].startsWith('PASS') : false;
+    const m = fs.readFileSync(p, 'utf8').match(/(?:PASS|FAIL) final speech rate|subtitle-based rate check skipped/g);
+    return m ? !m[m.length - 1].startsWith('FAIL') : false;
   } catch (e) { return null; }
 };
 const isDir = (p) => { try { return fs.statSync(p).isDirectory(); } catch (e) { return false; } };
@@ -168,6 +170,10 @@ function blockers(ep, stage) {
   if (!sc || sc.broken) return out;
 
   if (stage === 'approved' || stage === 'produced') {
+    if (!ep.has.video && ep.has.generatedFootage)
+      out.push(ep.has.generatedFootage + ' generated clip(s) exist but no final video — resume narration, assembly and delivery; clip generation is not completion');
+    if (!ep.has.video && ep.pendingSpeechReview)
+      out.push('speech review allowance pending — resolve the review budget; local synthesis and independent preparation can continue');
     const missingFootage = req.footageFiles.filter((f) => !exists(path.join(ep.dir, f)));
     if (missingFootage.length)
       out.push(missingFootage.length + ' filmed scene file(s) not saved yet — ' +
@@ -212,8 +218,8 @@ function blockers(ep, stage) {
     out.push('output/ holds the un-sped build — the required speed pass never ran ' +
              '(produce §7.5: speedup.sh, then copy the -fast set)');
   if (stage !== 'published' && ep.has.video && ep.has.speechRateChecked === false)
-    out.push('output/ has no final speech-rate PASS — rerun the final pace pass and keep the ' +
-             'shipped subtitle timeline at or below 6.2 characters/s');
+    out.push('output/ has no final speech-rate verdict and no skip marker — rerun the pace pass ' +
+             '(produce §7.5: speedup.sh writes PASS/FAIL for a requested sidecar, the skip line without one)');
 
   return out;
 }
@@ -242,6 +248,7 @@ function inspect(episodeDir) {
       images: lsCount(path.join(sbDir, 'images'), /^scene-\d+\.png$/i),
       slides: lsCount(path.join(sbDir, 'slides'), /\.html$/i),
       footage: lsCount(path.join(dir, 'footage'), /\.(mp4|mov|m4v)$/i),
+      generatedFootage: lsCount(path.join(sbDir, 'footage'), /\.(mp4|mov|m4v)$/i),
       video: exists(path.join(outDir, 'video', 'video.mp4')),
       subs: exists(path.join(outDir, 'video', 'subs.srt')),
       cover: exists(path.join(outDir, 'video', 'cover.jpg')),
@@ -257,6 +264,17 @@ function inspect(episodeDir) {
     }
   };
 
+  const pendingSpeech = path.join(work, 'tts-plan.pending.json');
+  ep.pendingSpeechReview = false;
+  if (exists(pendingSpeech)) {
+    try {
+      ep.pendingSpeechReview = JSON.parse(fs.readFileSync(pendingSpeech, 'utf8')).status === 'approval_pending';
+    } catch (e) {
+      // A malformed checkpoint cannot establish an approval or block unrelated work.
+      ep.checkpointError = 'Cannot read tts-plan.pending.json: ' + e.message;
+    }
+  }
+
   ep.frontmatter = frontmatter(path.join(sbDir, 'storyboard.md')) || {};
   ep.scenesData = readScenes(path.join(sbDir, 'scenes.js'));
   ep.req = ep.scenesData && !ep.scenesData.broken
@@ -266,6 +284,7 @@ function inspect(episodeDir) {
   ep.stage = stageOf(ep);
   ep.next = nextStep(ep, ep.stage);
   ep.blocked = blockers(ep, ep.stage);
+  if (ep.checkpointError) ep.blocked.push(ep.checkpointError);
   return ep;
 }
 
@@ -295,6 +314,7 @@ function render(ep) {
   if (ep.has.images) made.push(ep.has.images + ' image' + (ep.has.images > 1 ? 's' : ''));
   if (ep.has.slides) made.push(ep.has.slides + ' slide' + (ep.has.slides > 1 ? 's' : ''));
   if (ep.has.footage) made.push(ep.has.footage + ' footage file' + (ep.has.footage > 1 ? 's' : ''));
+  if (ep.has.generatedFootage) made.push(ep.has.generatedFootage + ' generated clips');
   if (ep.has.video) made.push('video.mp4');
   if (ep.has.platformText.length) made.push(ep.has.platformText.join('/'));
   if (made.length) L.push('  ' + made.join(' · '));
@@ -401,6 +421,23 @@ function selftest() {
   ok('a ready queue marker with no video is a blocker',
      b.some((x) => /queue_threads/.test(x)));
 
+  {
+    const dir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'episode-resume-'));
+    fs.mkdirSync(path.join(dir, 'storyboard', 'footage'), { recursive: true });
+    fs.mkdirSync(path.join(dir, '.work'));
+    fs.writeFileSync(path.join(dir, 'storyboard', 'scenes.js'), 'window.SCENES=[];');
+    fs.writeFileSync(path.join(dir, 'storyboard', 'storyboard.md'), '---\nstatus: approved\n---\n');
+    fs.writeFileSync(path.join(dir, 'storyboard', 'footage', 'scene-1.mp4'), 'clip');
+    fs.writeFileSync(path.join(dir, '.work', 'tts-plan.pending.json'), '{"status":"approval_pending"}');
+    const ep = inspect(dir);
+    ok('generated clips are counted without promoting the episode to produced', ep.has.generatedFootage === 1 && ep.stage === 'approved');
+    ok('clip-only production reports the missing final assembly', ep.blocked.some(x => /no final video/.test(x)));
+    ok('pending speech allowance is visible on resume', ep.blocked.some(x => /speech review allowance/.test(x)));
+    fs.writeFileSync(path.join(dir, '.work', 'tts-plan.pending.json'), '{"status":"resolved"}');
+    ok('resolved allowance does not keep blocking', !inspect(dir).blocked.some(x => /speech review allowance/.test(x)));
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+
   const sped = (v) => blockers(Object.assign({}, base, {
     has: Object.assign({}, base.has, { video: true, spedUp: v })
   }), 'produced');
@@ -412,8 +449,8 @@ function selftest() {
     has: Object.assign({}, base.has, { video: true, speechRateChecked: v })
   }), 'produced');
   ok('a built video with no final-rate marker is a blocker',
-     rated(false).some((x) => /speech-rate PASS/.test(x)));
-  ok('the final-rate marker clears it', !rated(true).some((x) => /speech-rate PASS/.test(x)));
+     rated(false).some((x) => /speech-rate verdict/.test(x)));
+  ok('the final-rate marker clears it', !rated(true).some((x) => /speech-rate verdict/.test(x)));
   ok('a published episode is past the point of blocking on it',
      !blockers(Object.assign({}, base, {
        has: Object.assign({}, base.has, { video: true, spedUp: false })
@@ -428,6 +465,13 @@ function selftest() {
   ok('a rerun that ends in PASS reads as PASS',
      withReport('── FAIL final speech rate: 6.6\n── PASS final speech rate: 5.0\n') === true);
   ok('a report with no verdict line reads as false', withReport('── speedup x1.20\n') === false);
+  // Subtitle-free delivery (the default) requests no sidecar, so the pass writes a skip marker.
+  ok('the no-sidecar skip marker satisfies the check',
+     withReport('── speedup x1.00\n── no subtitle sidecar requested; subtitle-based rate check skipped\n') === true);
+  ok('a FAIL followed by a rerun without a sidecar reads as satisfied',
+     withReport('── FAIL final speech rate: 6.6\n── speedup x1.00\n── no subtitle sidecar requested; subtitle-based rate check skipped\n') === true);
+  ok('a skip followed by a later FAIL reads as FAIL',
+     withReport('── no subtitle sidecar requested; subtitle-based rate check skipped\n── speedup x1.20\n── FAIL final speech rate: 6.6\n') === false);
   fs.unlinkSync(tmp);
   ok('a missing report has no verdict', hasFinalRateMarker(tmp) === null);
 

@@ -13,9 +13,9 @@
 #   Factor: the argument, else $SPEED, else format.env, else 1.0.
 #
 #   Input — the newest set in the workdir, the same rule output/ copies by:
-#     reel-spliced.mp4 / reel-sub-spliced.mp4 / subs-spliced.srt  when a splice ran
-#     reel.mp4         / reel-sub.mp4         / subs.srt          otherwise
-#   Output: reel-fast.mp4 · reel-sub-fast.mp4 · subs-fast.srt · chapters-fast.txt · qa/first-frame.png
+#     reel-spliced.mp4 / optional subs-spliced.srt  when a splice ran
+#     reel.mp4         / optional subs.srt          otherwise
+#   Output: reel-fast.mp4 · optional subs-fast.srt · chapters-fast.txt · qa/first-frame.png
 #           (cover.jpg is a still — the same frame at any speed, so it carries over untouched)
 #   Reading the un-sped files and writing new names makes the pass idempotent — run it twice with
 #   a different factor and it recomputes from the original instead of stacking passes.
@@ -69,7 +69,7 @@ awk -v f="$SPEED" 'BEGIN{exit !(f >= 0.5 && f <= 3.0)}' \
 say() { printf '%s\n' "$1"; [ -f "$REPORT" ] && printf '%s\n' "$1" >> "$REPORT"; }
 dur() { ffprobe -v error -show_entries format=duration -of csv=p=0 "$1"; }
 check_final_rate() {
-  [ -f subs-fast.srt ] || { say "✗ subs-fast.srt missing — final speech rate cannot be checked"; return 1; }
+  [ -f subs-fast.srt ] || { say "── no subtitle sidecar requested; subtitle-based rate check skipped"; return 0; }
   local RATE_OUT
   if ! RATE_OUT=$(python3 "$HERE/check-final-speech-rate.py" subs-fast.srt --max "$FINAL_SPEECH_RATE_MAX" 2>&1); then
     say "✗ final speech rate exceeds ${FINAL_SPEECH_RATE_MAX} chars/s after the speed pass"
@@ -85,7 +85,7 @@ check_first_cue() {
   local FC V STILL
   FC=$(awk '/ --> /{split($1, t, /[:,]/); printf "%.3f", t[1]*3600 + t[2]*60 + t[3] + t[4]/1000; exit}' subs-fast.srt)
   [ -n "$FC" ] || return 0
-  V=reel-fast.mp4; [ -f reel-sub-fast.mp4 ] && V=reel-sub-fast.mp4
+  V=reel-fast.mp4
   mkdir -p qa
   STILL="no still: ffmpeg couldn't read $V"
   ffmpeg -y -v error -ss 0 -i "$V" -frames:v 1 qa/first-frame.png && STILL="qa/first-frame.png ($V @ 0s)"
@@ -136,8 +136,8 @@ rm -f reel-fast.mp4 reel-sub-fast.mp4 subs-fast.srt chapters-fast.txt delivery-p
 if awk -v f="$SPEED" 'BEGIN{exit !(f == 1)}'; then
   # At 1.0 (the default), ship at the recorded pace. Copy the set through under the
   # -fast names so the finalize step stays one fixed set of paths and the gate still sees its marker.
+  # Never propagate a historical burned-in copy into the delivery set.
   cp -f "$VIN" reel-fast.mp4
-  [ -f "$SIN" ] && cp -f "$SIN" reel-sub-fast.mp4
   [ -f "$TIN" ] && cp -f "$TIN" subs-fast.srt
   [ -f chapters.txt ] && cp -f chapters.txt chapters-fast.txt
   check_final_rate
@@ -209,17 +209,12 @@ speed_one() {                       # $1=input  $2=output
 }
 
 speed_one "$VIN" reel-fast.mp4
-[ -f "$SIN" ] && speed_one "$SIN" reel-sub-fast.mp4
 
 # ── 4) Verify — the measured length has to match feature/factor + tail
 RV=$(dur reel-fast.mp4)
 awk -v a="$RV" -v e="$EXP" -v tol="$SPEED_TOL" 'BEGIN{d=a-e; if(d<0)d=-d; exit !(d <= tol)}' \
   || { say "✗ reel-fast.mp4 is ${RV}s but ${EXP}s was expected — the speed pass didn't take"; exit 1; }
-if [ -f reel-sub-fast.mp4 ]; then
-  SV=$(dur reel-sub-fast.mp4)
-  awk -v a="$RV" -v b="$SV" 'BEGIN{d=a-b; if(d<0)d=-d; exit !(d <= 0.05)}' \
-    || { say "✗ reel-sub-fast.mp4 ${SV}s ≠ reel-fast.mp4 ${RV}s — the two didn't come from the same pass"; exit 1; }
-fi
+
 
 # ── 5) Subtitles and chapters follow the same time map — divided over the feature,
 #      shifted by a constant over the outro tail (a cue there would otherwise slide back into it).

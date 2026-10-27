@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-// Assembly-only HITL: generation and publishing retain their own authorization.
+// Quality advice does not pause assembly; generation and publishing retain authorization.
 const fs = require('node:fs');
 const path = require('node:path');
 const {evaluateWindowScript} = require('../../_shared/scenes-vm.js');
@@ -77,14 +77,16 @@ function assemblyWarnings(work, board, scenes, format) {
 }
 function decide(work, board, warnings, inputs) {
   const fingerprint = hash(JSON.stringify({board,inputs,warnings}));
-  const approval = read(path.join(work,APPROVAL));
+  let approval=null;
+  try { approval=read(path.join(work,APPROVAL)); }
+  catch { console.error('Unreadable optional approval record; no approval is inferred.'); }
   const approved = warnings.length > 0 && approval?.kind === 'user' && approval.fingerprint === fingerprint &&
     typeof approval.reference === 'string' && approval.reference.trim().length > 0 &&
     Number.isFinite(Date.parse(approval.at));
-  const report = {fingerprint,warnings,inputs,approved:Boolean(approved),approval:approved?approval:null,status:warnings.length ? (approved?'approved-with-warnings':'awaiting-user') : 'pass'};
+  const report = {fingerprint,warnings,inputs,approved:Boolean(approved),approval:approved?approval:null,continueWithWarnings:true,status:warnings.length ? (approved?'approved-with-warnings':'continue-with-warnings') : 'pass'};
   fs.writeFileSync(path.join(work,REPORT),JSON.stringify(report,null,2)+'\n');
   for(const warning of warnings) console.error('Video assembly warning: '+warning);
-  if(warnings.length && !approved) throw new Error('Video checks need HITL: show '+path.join(work,REPORT)+' to the user. After explicit approval, record it with assembly-video-gate.js approve; then rerun assembly.');
+  if(warnings.length && !approved) console.error('Continuing with recorded quality warnings; no user approval or visual pass is inferred.');
   if(approved) console.error('User approved these video warnings; continuing assembly.');
   return report;
 }
@@ -92,16 +94,20 @@ function check(work, board) {
   work=path.resolve(work);board=path.resolve(board);
   const warnings=[];
   const ref=path.resolve(__dirname,'../../storyboard/references');
+  const win=evaluateWindowScript(fs.readFileSync(path.join(board,'scenes.js'),'utf8'));
+  const execution=require(path.join(ref,'structure-contract.js')).executionCheck(win);
+  if(execution.length) throw new Error('Invalid assembly inputs: '+execution.map(e=>e.where+': '+e.what).join('; '));
   for(const [script,args] of [['check-scenes.js',[]],['check-slide.js',['--require-all']]]) {
     const run=spawnSync(process.execPath,[path.join(ref,script),board,...args],{encoding:'utf8',maxBuffer:16*1024*1024});
     if(run.error || run.signal || run.status === null) throw new Error('Cannot run '+script+': '+(run.error?.message||run.signal));
+    if(run.status === 3) throw new Error(script+': '+run.stderr);
     if(run.status !== 0) warnings.push(script+':\n'+run.stdout+run.stderr);
   }
   // A checker exception is not a quality verdict: report the execution error directly.
-  const production=require('./check-production.js').check(board,{ready:true,manifest:true,workdir:work});
-  warnings.push(...production.errors.map(e=>'check-production: '+e));
+  const production=require('./check-production.js').check(board,{ready:true,manifest:true,workdir:work,assemblyOnly:true});
+  if(production.errors.length) throw new Error(production.errors.map(e=>'check-production: '+e).join('; '));
+  warnings.push(...(production.warnings || []).map(e=>'check-production: '+e));
   // Mode validation may return early; reuse still needs its manifest indices downstream.
-  const win=evaluateWindowScript(fs.readFileSync(path.join(board,'scenes.js'),'utf8'));
   require('./explicit-subtitles.js').media(work,win.SCENES);
   // Source/trim/clock errors are invalid inputs, never approvable quality warnings.
   win.SCENES.forEach(s=>require('./video-groups.js').declaration(s,{mode:win.PRODUCTION?.mode??null}));

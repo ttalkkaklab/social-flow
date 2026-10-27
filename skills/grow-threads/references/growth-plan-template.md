@@ -48,7 +48,7 @@ The channel's YouTube loop marks an episode a breakout candidate and writes it t
 `data/<channel>/growth/breakout.json`. With `push_allowed: false` the loop only reports that a
 candidate is waiting; `true` is what lets it post about one.
 
-- The push post is a post like any other and clears the same gate. The topic pool above
+- The push post is a post like any other: the same draft record and the same editorial review. The topic pool above
   doesn't cover our own episodes, so this section is what covers them — nothing else does.
 - Link: follows §Link policy. The target is the **YouTube watch URL**, not the IG reel
   permalink the episode fallback uses; sending the reader to the video is the point.
@@ -78,6 +78,10 @@ Never store raw API responses.
     { "videoId": "abc123", "postId": "17841400000000002", "at": "2026-08-11T10:12:00+09:00" }
   ],
   "gateSkippedCommentIds": ["17899876543210987"],
+  "gateSkippedDrafts": [
+    { "at": "2026-08-12T07:30:00+09:00", "topic": "…", "surface": "post", "why": "automation self-exposure with only the tool name removed", "lesson": "…", "reusable": false }
+  ],
+  "recentReplyIds": ["17841400000000003"],
   "keywordCursor": 1,
   "lastInsights": {
     "capturedAt": "2026-08-11T09:30:00+09:00",
@@ -91,12 +95,23 @@ Never store raw API responses.
 - `filledSlots` — recorded only on a successful slot publish. A failed slot
   gets retried by the next tick.
 - `engagedPostIds` — posts where search engagement was **attempted**
-  (successful publishes and 3-round gate-failure skips alike). Keep only the
-  latest 500 (drop the oldest first). Leave the skips out and every tick
+  (successful publishes and drafts not sent alike). Keep only the latest 500
+  (drop the oldest first). Leave the not-sent ones out and every tick
   re-drafts and re-reviews the same post.
-- `gateSkippedCommentIds` — inbox comment ids closed out as not-answered after
-  3 failed gate rounds. Skipped from the next tick on; only reported, so a
-  human can decide whether to answer personally.
+- `gateSkippedCommentIds` — inbox comment ids closed out as not answered. A
+  reply stays unsent only for an unresolved factual or context problem or
+  missing authorization (platform-guide `references/reply-gate.md`); the key
+  name predates that rule and stays for existing state files. Skipped from the
+  next tick on; only reported, with the reason, so a human can decide whether
+  to answer personally.
+- `gateSkippedDrafts` — drafts not sent, with the problem that stopped them
+  (`why`), the surface, an optional `lesson` and whether the topic is `reusable`.
+  SKILL.md §3 reads it before picking a topic, comparing by `why`, not by
+  `topic`. Drop entries once the topic has gone out or is retired.
+- `recentReplyIds` — ids of the replies this loop published (search engagement,
+  inbox, self-replies). §1 queries `/{id}/replies` on them to catch answers the
+  inbox never shows (api-limits.md §4), and the playbook's reply-insights sweep
+  reads them too. Prune the ones the sweeps no longer need.
 - `keywordCursor` — keyword rotation position (from 0, cycling through the
   keyword count).
 - `pushes` — breakout pushes this loop published, one entry per video. It's the

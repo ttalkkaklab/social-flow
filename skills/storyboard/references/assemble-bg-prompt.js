@@ -6,8 +6,8 @@
  * (GenSpace 2025: ~60% on simple views, ~21% on allocentric). This script writes the
  * visible result — what is where in the frame, which way it faces — in the order the
  * still actually gets drawn. storyboard §5 calls it and stores the whole stdout as
- * `visual.bgPrompt`; produce reruns it only when a `shot` field changed on a still it
- * regenerates (a plain regeneration resends the stored string). Motion prompts for
+ * `visual.bgPrompt`; produce reruns it when the shot, spoken meaning or grounding
+ * changes (an unchanged regeneration resends the stored string). Motion prompts for
  * image→video do not go through here — the still already locked the space, and
  * re-describing it makes the engine redesign the scene.
  *
@@ -81,18 +81,11 @@
 const fs = require("fs");
 const path = require("path");
 const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
+const sourceContext = require('./source-context.js');
 
 const SIZE_WORDS = {
-  els: "extreme long shot, person under a tenth of the frame height",
-  ls: "wide shot, full body with room above and below",
-  ws: "wide shot, full body with room above and below",
-  fs: "full shot, head to toe",
-  mfs: "medium full shot, frame bottom at mid-shin",
-  ms: "medium shot, frame bottom at mid-thigh",
-  mcu: "medium close-up, chest up",
-  cu: "close-up, shoulders at the bottom, crown lightly cropped",
-  choker: "choker, forehead to chin",
-  ecu: "extreme close-up",
+  ...require('./film-techniques.js').SIZE_WORDS,
+  ws: require('./film-techniques.js').SIZE_WORDS.ls,
   insert: "insert, the object fills the frame",
   two: "two-shot",
   three: "three-shot",
@@ -235,8 +228,11 @@ function clipAssemble(opts) {
   const dot = s => s.replace(/[.!?\s]*$/, "") + ".";
 
   const parts = [];
+  const techniqueInstructions = require('./film-techniques.js').instructions({shot:{techniques:opts.techniques}});
+  if (techniqueInstructions) parts.push(techniqueInstructions);
   const space = opts.withSpace ? spaceSentence(opts) : "";
   if (space) parts.push(space);
+  if (opts.propPrompt) parts.push(opts.propPrompt);
   if (scene) parts.push(dot(scene));
   const move = isStatic ? "static camera" : ((cam.speed || "").trim() + " " + (cam.movement || "").trim()).trim();
   // A pan, tilt, truck, pedestal, dolly or zoom is a sentence from A to B, and the sentence has a
@@ -248,6 +244,8 @@ function clipAssemble(opts) {
                 cam.end ? (travels ? "settling on " : "ending on ") + String(cam.end).trim() : ""]
     .filter(Boolean).join(", ");
   if (span) parts.push(dot(span));
+  const cameraInvariant = require('../../_shared/scene-acting.js').cameraLock(cam);
+  if (cameraInvariant) parts.push(dot(cameraInvariant));
   if (motion) parts.push(dot(motion));
   if (locks) parts.push(dot(locks));
   if (audio) parts.push(dot(/^audio\s*:/i.test(audio) ? audio : "Audio: " + audio));
@@ -271,7 +269,7 @@ function parseArgs(argv) {
   const out = { _: [] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === "--selftest" || a === "--help" || a === "--space-only" || a === "--no-person" ||
+    if (a === "--json" || a === "--selftest" || a === "--help" || a === "--space-only" || a === "--no-person" ||
         a === "--clip" || a === "--with-space") { out[a.slice(2)] = true; continue; }
     if (a.startsWith("--") && i + 1 < argv.length && !argv[i + 1].startsWith("--")) {
       out[a.slice(2)] = argv[++i];
@@ -285,6 +283,7 @@ function parseArgs(argv) {
 
 function bannedHits(text) {
   if (!text) return [];
+  text = sourceContext.withoutContext(text);
   const hits = [];
   for (const b of BANNED) {
     const m = text.match(b.re);
@@ -331,18 +330,24 @@ function assemble(opts) {
   const parts = [];
   if (sizeWords) parts.push(sizeWords + ", " + angleWords + ".");
   else parts.push(angleWords + ".");
+  const sourceTechnique = require('./film-techniques.js').sourceInstructions({shot:{techniques:opts.techniques}});
+  if (sourceTechnique) parts.push(sourceTechnique);
   if (space) parts.push(space);
+  if (opts.propPrompt) parts.push(opts.propPrompt);
   parts.push(...styleSentences(opts.style));
   if (scene) parts.push(scene.replace(/[.!?\s]*$/, "") + ".");
   if (mood) parts.push(mood.replace(/[.!?\s]*$/, "") + ".");
   if (exclude) parts.push(exclude.replace(/[.!?\s]*$/, "") + ".");
+  if (opts.location) parts.push(opts.location.prompt);
   if (tail) parts.push(tail.replace(/[.!?\s]*$/, "") + ".");
+  const editorial = sourceContext.guidance(opts.sourceContext);
+  if (editorial) parts.push(editorial);
 
   const prompt = parts.join(" ").replace(/\s+/g, " ").replace(/\s+\./g, ".").trim();
 
-  // The whole prompt is checked — a "left view of" in --scene ships to the model just the same.
+  // Check visual directions, including --scene; quoted editorial context is not camera syntax.
   const hits = bannedHits(prompt);
-  return { prompt, space, hits, unknown, size, angle, layout: opts.layout, facing: opts.facing };
+  return { prompt, space, hits, unknown, size, angle, layout: opts.layout, facing: opts.facing, ...(opts.propSnapshot?.length ? {propSnapshot:opts.propSnapshot}:{}), sourceImageArgs:{referenced_image_paths:[...new Set([...(opts.location?.paths || []), ...(opts.sourceImageArgs?.referenced_image_paths || [])])]}, ...(opts.location ? {locationBinding:opts.location.binding}:{}) };
 }
 
 function loadShot(file, index) {
@@ -362,7 +367,14 @@ function loadShot(file, index) {
   const sh = s.shot || {};
   const sp = sh.space || {};
   const v = s.visual || {};
+  const propSnapshot = require('./prop-continuity.js').snapshot(win, i);
+  const propReferenceImages = propSnapshot.filter(p => p.visible).flatMap(p => p.references.map(r => path.resolve(path.dirname(file), r.path)));
   return {
+    location: sh.location ? require('./location-assets.js').references(win, i, path.dirname(path.resolve(file))) : null,
+    propPrompt: require('./prop-continuity.js').prompt(win, i),
+    propSnapshot,
+    sourceImageArgs: propReferenceImages.length ? { referenced_image_paths: propReferenceImages } : {},
+    techniques: sh.techniques,
     size: sh.size,
     angle: sh.angle,
     layout: sp.layout,
@@ -371,6 +383,9 @@ function loadShot(file, index) {
     line: sp.line,
     light: sp.light,
     camera: v.camera || null,
+    scene: typeof sh.videoDesign?.before === 'string' ? sh.videoDesign.before
+      : sh.render?.mode === 'still_camera' && typeof v.action === 'string' ? v.action : undefined,
+    sourceContext: sourceContext.context(s, win.STORY),
     audio: typeof v.audio === "string" ? v.audio : "",
     style: style.preset ? style : null,
     position: "SCENES[" + i + "] = shot " + (i + 1) + " of " + scenes.length + (s.type ? " (" + s.type + ")" : "") +
@@ -445,7 +460,7 @@ function selftest() {
     spaceSentence({ layout: "from the camera, the right-hand door is on the right of frame" }),
     "From the camera: the right-hand door is on the right of frame.");
   eq("sentence ends are normalised",
-    assemble({ size: "ms", scene: "is this it?", tail: "" }).prompt, "medium shot, frame bottom at mid-thigh, at eye level. is this it.");
+    assemble({ size: "ms", scene: "is this it?", tail: "" }).prompt, "medium shot, waist up, at eye level. is this it.");
   ok("out-of-vocabulary size is reported", assemble({ size: "xyz", scene: "x" }).unknown.length === 1);
 
   // No space written (an older scenes.js) — no dangling "From the camera." sentence.
@@ -455,7 +470,7 @@ function selftest() {
 
   // --tail "" turns the tail off; --space-only gives just the sentence.
   eq("empty tail is honoured",
-    assemble({ size: "ms", scene: "x", tail: "" }).prompt, "medium shot, frame bottom at mid-thigh, at eye level. x.");
+    assemble({ size: "ms", scene: "x", tail: "" }).prompt, "medium shot, waist up, at eye level. x.");
   eq("space sentence alone (quote clip)",
     assemble({ size: "mcu", layout: "speaker centred", facing: "faces the camera" }).space,
     "From the camera: speaker centred. faces the camera.");
@@ -628,7 +643,7 @@ function main(argv) {
   }
 
   // A mistyped flag (--scen, --layoutt) would silently drop that value from the prompt.
-  const KNOWN = new Set([...VALUE_FLAGS, "selftest", "help", "space-only", "no-person", "check", "clip", "with-space", "_"]);
+  const KNOWN = new Set([...VALUE_FLAGS, "json", "selftest", "help", "space-only", "no-person", "check", "clip", "with-space", "_"]);
   const unknownFlags = Object.keys(args).filter(k => !KNOWN.has(k));
   if (unknownFlags.length) {
     console.error("assemble-bg-prompt: unknown flag --" + unknownFlags.join(", --") + " — see --help");
@@ -694,7 +709,7 @@ function main(argv) {
     const cam = { ...(opts.camera || {}) };
     ["movement", "speed", "framing", "end"].forEach(k => { if (args[k] !== undefined) cam[k] = args[k]; });
     const r = clipAssemble({
-      camera: cam, engine: args.engine,
+      camera: cam, techniques: opts.techniques, engine: args.engine, propPrompt: opts.propPrompt,
       scene: opts.scene, motion: args.motion, locks: args.locks,
       audio: args.audio !== undefined ? args.audio : opts.audio,
       withSpace: !!args["with-space"],
@@ -716,11 +731,13 @@ function main(argv) {
       bad++;
     }
     if (bad) process.exit(1);
-    process.stdout.write(r.prompt + "\n");
+    process.stdout.write((args.json ? JSON.stringify({ ...r, propSnapshot: opts.propSnapshot || [] }, null, 2) : r.prompt) + "\n");
     return;
   }
 
-  const { prompt, space, hits, unknown } = assemble(opts);
+  const result = assemble(opts);
+  const { prompt, space, hits, unknown } = result;
+  if(opts.location && !args.json && !args["space-only"]){console.error("Bound locations require --json so actual reference image arguments are preserved");process.exit(1);}
   if (unknown.length) {
     console.error("warning: " + unknown.join(", ") + " outside the vocabulary (scenes-schema §shot) — sent to the model as written");
   }
@@ -732,6 +749,7 @@ function main(argv) {
     console.error("note: no shot.space on this shot — the prompt carries size and angle only; " +
       "on a generated still fill layout/facing first (directing-grammar §3.5)");
   }
+  if(args.json){console.log(JSON.stringify(result,null,2));return;}
   process.stdout.write((args["space-only"] ? space : prompt) + "\n");
 }
 

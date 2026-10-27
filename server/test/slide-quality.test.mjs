@@ -16,8 +16,11 @@ const plan = () => ({kind:'diagram', treatment:'editorial', quality:'object-stat
 test('editorial quality is mandatory, with a real subject change per group', () => {
   assert.match(checkQuality({treatment:'editorial'}, 1).join(), /requires quality/);
   assert.deepEqual(checkQuality(plan(), 1), []);
-  const s = plan(); s.subject.changes[0].driver = 'settle';
-  assert.match(checkQuality(s, 1).join(), /not subject changes/);
+  const s = plan();
+  for (const driver of ['settle', 'camera']) {
+    s.subject.changes[0].driver = driver;
+    assert.match(checkQuality(s, 1).join(), /not subject changes/);
+  }
   s.subject.changes[0].driver = 'surface'; s.subject.changes[0].after = 'blank';
   assert.match(checkQuality(s, 1).join(), /distinct/);
   assert.match(checkQuality(plan(), 2).join(), /per narration/);
@@ -36,15 +39,15 @@ test('data and type have valid non-object paths', () => {
     assert.deepEqual(checkQuality(s, 1), []);
   }
 });
-test('quality violations block storyboard drafts before approval', () => {
+test('quality findings advise storyboard drafts without stopping authoring', () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'slide-plan-'));
   try {
     writeFileSync(path.join(dir, 'scenes.js'), 'window.SCENES=' + JSON.stringify([
       {type:'cover', narration:[{tts:'test',sub:'test'}], visual:{slide:{kind:'diagram',motion:true,treatment:'editorial'}}}
     ]) + ';');
     const result = spawnSync(process.execPath, [path.join(root,'check-scenes.js'), dir, '--draft', '--json'], {encoding:'utf8'});
-    assert.notEqual(result.status, 0);
-    assert.match(result.stdout, /"level":\s*"bad"[\s\S]*requires quality/);
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /"level":\s*"warn"[\s\S]*requires quality/);
   } finally { rmSync(dir, {recursive:true, force:true}); }
 });
 test('sheet gate rejects frozen pixels, invisible-only changes, bad geometry and ranges', () => {
@@ -94,6 +97,11 @@ test('an object with no keys is reported, not passed by an empty frozen-keys wal
   const s = plan();
   s.object = {};
   assert.match(checkQuality(s, 1).join(), /slide\.object needs keys/);
-  delete s.object;
-  assert.match(checkQuality(s, 1).join(), /needs slide\.object/);
+});
+test('mesh planning admits 3D styles without legacy bake keys', () => {
+  const s={kind:'diagram',treatment:'editorial',quality:'object-state-v1',
+    subject:{kind:'object',changes:[{group:1,before:'closed',after:'open',driver:'articulation'}]},
+    object:{renderer:'mesh',style:'illustration3d',file:'slides/assets/s2-box.json',plan:'hinge lifts lid'}};
+  assert.deepEqual(checkQuality(s,1),[]);
+  s.object.file='https://example.com/model.glb'; assert.match(checkQuality(s,1).join(),/object.file/);
 });

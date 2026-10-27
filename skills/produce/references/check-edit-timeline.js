@@ -49,13 +49,20 @@ function check(work){
       }
       const clip=path.join(seams,`${String(k).padStart(3,'0')}-${p.transition.replace(':','-')}.mp4`);
       execFileSync('ffmpeg',['-v','error','-y','-ss',String(Math.max(0,at-.65)),'-i',master,'-t',String(Math.min(1.6,.65+(+frames/fps))),'-c:v','libx264','-preset','fast','-crf','20','-c:a','aac',clip]);
+      // Put the actual adjacent master frames together for visual inspection.
+      // A successful export is not a verdict about action or spatial continuity.
+      const pair=clip.replace(/\.mp4$/,'.png');
+      execFileSync('ffmpeg',['-nostdin','-v','error','-y','-ss',Math.max(0,(offset-1.5)/fps).toFixed(9),'-i',master,
+        '-an','-vf','scale=320:-2,tile=2x1:nb_frames=2','-frames:v','1',pair]);
+      const boundaryFrames={path:path.relative(work,pair),sha256:hash(pair),
+        beforeFrame:offset-1,afterFrame:offset,review:'not_reviewed'};
       let handleMotion=null;
       if(p.join){
         const prev=plan.shots[k-1],h=path.join(work,'work',`handle${prev.card}.mp4`),hm=probe(h);
         if(+hm.nb_frames!==Math.ceil(p.join*fps-1e-6))throw new Error('Missing live outgoing frames before card '+p.card);
         handleMotion=difference(frame(h,0),frame(h,Math.max(0,(+hm.nb_frames-1)/fps)));
       }
-      samples.push({card:p.card,at,transition:p.transition,checks,handleMotion,
+      samples.push({card:p.card,at,transition:p.transition,checks,handleMotion,boundaryFrames,
         reviewRequired:handleMotion!==null&&handleMotion<.5?'Little visible motion in outgoing handle; inspect playback':'Inspect action, eyeline, sound and visual continuity',clip:path.relative(work,clip)});
     }
     offset+=+frames;

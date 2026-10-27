@@ -1,0 +1,161 @@
+{
+  "reviewer": "independent adversarial sub-agent /root/adversarial",
+  "reviewedAt": "2026-10-16T16:50:30.496591+00:00",
+  "verdict": "PASS",
+  "rubricScore": 100,
+  "threshold": 95,
+  "p0": 0,
+  "rubricPath": "loop.md",
+  "rubricSha256": "1645965a35452763888b9883af87cdbbc21c41afaccb77d64e6bbb883f1bddcf",
+  "criteria": [
+    {
+      "name": "Functional end state",
+      "points": 30,
+      "maximum": 30,
+      "awardedUnits": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "evidence": [
+        "scene-specific direction preserves pinned identity",
+        "adapter arguments and inner text/voice/language receipts validated",
+        "acting-only edits invalidate dependent audio/video",
+        "shared visual prompt retains legacy cues, speaker, delivery and one-shot boundary",
+        "measured reaction composition and optional sidecar timing exercised",
+        "historical recordings inspectable; unsupported generation disclosed/rejected"
+      ]
+    },
+    {
+      "name": "Installed and media verification",
+      "points": 35,
+      "maximum": 35,
+      "awardedUnits": [
+        7,
+        7,
+        7,
+        7,
+        7
+      ],
+      "evidence": [
+        "826 files rehashed for each Mac cache; independent fresh MCP smoke on both",
+        "installed update/plan/attach/rejection/invalidation regression passes",
+        "actual take6 speech: 95 on all three applicable axes",
+        "actual take6 audiovisual: 95 on all six axes; no visible captions",
+        "independent hash verification; full-media model receipts; timestamped failures retained"
+      ]
+    },
+    {
+      "name": "Objective regression gates",
+      "points": 20,
+      "maximum": 20,
+      "evidence": [
+        "npm run check: 1970 passed, 188 suites, zero failures",
+        "skill-lint: 16 rules across 21 skills",
+        "independent focused runs exercised discovered defects and real mux/caption outputs"
+      ]
+    },
+    {
+      "name": "Root cause addressed",
+      "points": 10,
+      "maximum": 10,
+      "evidence": [
+        "scene direction reaches speech and video plans while identity stays fixed",
+        "docs reject fixed cheerful tone and reference-image-only cross-shot batching"
+      ]
+    },
+    {
+      "name": "Scope honesty",
+      "points": 5,
+      "maximum": 5,
+      "evidence": [
+        "342 original episode files independently hash-verified unchanged",
+        "Gemini conservative reservations USD8.00 within USD10 ceiling; not an invoice",
+        "separate test artifacts and retained unsuccessful evaluations; no claim of direct listening by code verifier or whole-episode completion"
+      ]
+    }
+  ],
+  "packageVersion": "0.114.1-acting.6",
+  "bundleSha256": "c23a9f90c729064e095be2eb2b8ab59cf892789041c2b0cda12789a76f76725c",
+  "installedFilesPerCache": 826,
+  "independentInstallMismatches": [],
+  "freshMcpIndependentlyExercised": [
+    "Codex cache",
+    "Claude Code cache"
+  ],
+  "objectiveEvidence": {
+    "tautog-final-check-13.log": {
+      "path": "/Users/zeans/.local/state/social-flow-acting/final-evidence/tautog-final-check-13.log",
+      "sha256": "f074f2f1d0c09ef0335e0c281db37312fbaadeb1c791cfee4dfbca1e0f0cdeae"
+    },
+    "tautog-final-lint-13.log": {
+      "path": "/Users/zeans/.local/state/social-flow-acting/final-evidence/tautog-final-lint-13.log",
+      "sha256": "95702a8f8f1425119d8dc88857c6ff51f0520f482b2977a8c67e191b011cb6c2"
+    },
+    "installed-final.json": {
+      "path": "/Users/zeans/.local/state/social-flow-acting/final-evidence/installed-final.json",
+      "sha256": "733f7052f845bf9d43854d46deef712c9398437c55db333e1334e8fb7ba206cc"
+    }
+  },
+  "media": [
+    {
+      "type": "audio",
+      "archivePath": "/Volumes/data/story/meleon/plugin-tests/acting-2026-10-17/take6/s021.wav",
+      "sha256": "ec40fbccc2904a08d1ca853bbeabfa91a1110426e31558c676d56ee57c3b09cb",
+      "receipt": "/Volumes/data/story/meleon/plugin-tests/acting-2026-10-17/take6-review-audio-observation.json",
+      "model": "gemini-3.1-pro-preview",
+      "policy": "acting-review-v5",
+      "duration": 2.08,
+      "scores": {
+        "situation": 95,
+        "expression": null,
+        "body": null,
+        "vocalEmotion": 95,
+        "speechAccuracy": 95,
+        "lipSync": null
+      },
+      "confidence": 0.95,
+      "complete": true
+    },
+    {
+      "type": "audiovisual",
+      "archivePath": "/Volumes/data/story/meleon/plugin-tests/acting-2026-10-17/take6/s021.mp4",
+      "sha256": "7fe7829eb6fe704af9c25505f30f5b69a758333037165b8792bf4026f46e53d7",
+      "receipt": "/Volumes/data/story/meleon/plugin-tests/acting-2026-10-17/review-cache/08f1f81cfda838fc947560186e3c6adbbbc9dadf675f5e7f828e1977158baa55.json",
+      "model": "gemini-3.1-pro-preview",
+      "policy": "acting-review-v6",
+      "duration": 3.375,
+      "scores": {
+        "situation": 95,
+        "expression": 95,
+        "body": 95,
+        "vocalEmotion": 95,
+        "speechAccuracy": 95,
+        "lipSync": 95
+      },
+      "confidence": 0.95,
+      "complete": true,
+      "visibleCaptions": false
+    }
+  ],
+  "originalEpisode": {
+    "root": "/Volumes/data/story/meleon/data/meleon/episodes/interview-live",
+    "checkedFiles": 342,
+    "missing": [],
+    "changed": []
+  },
+  "geminiBudget": {
+    "ceilingUsd": 10,
+    "conservativeReservedUsd": 8,
+    "actualInvoiceVerified": false
+  },
+  "limitations": [
+    "Representative shot s021 only, not a completed original episode or a guarantee for future generations.",
+    "Code verifier independently inspected sampled frames, files, hashes, receipts and executable paths; full audio/continuous video judgments are attributed to Gemini, not fabricated direct listening.",
+    "Local receipts are provenance, not tamper-proof attestations.",
+    "Direct ChatGPT app UI inspection was unavailable; package catalog/fresh MCP evidence does not claim a direct ChatGPT UI test."
+  ]
+}

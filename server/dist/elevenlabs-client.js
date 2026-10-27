@@ -1,77 +1,30 @@
-import { authorizeSpeed } from '../../skills/produce/references/tts-speed-policy.js';
 /**
- * ElevenLabs speech client — REST (`xi-api-key`), plain fetch.
- *
- * The **third speech lane**, next to Gemini TTS (tts-client.ts) and on-device
- * Supertonic (supertonic-client.ts). Division of labor (docs/research/2026-08-22-elevenlabs-tts-api):
- *   - Narration bodies            → Supertonic (free) or Gemini ($38/1M chars). Not this one — $50–100/1M chars
- *   - Acted cuts with audio tags  → this one on eleven_v3 ([whispers], [laughs], [sarcastic] inline)
- *   - Dialogue beyond 2 speakers  → this one (text-to-dialogue, up to 10 voices in one request)
- *   - Subtitle sync               → this one (with-timestamps returns per-character start/end seconds)
- *
- * ## What the field tests pinned (2026-08-23, restricted key on the Mac mini)
- *
- * - `output_format` is a **query parameter**. Put it in the JSON body and the API
- *   silently ignores it and returns the default mp3 — measured (audio/mpeg came back).
- * - `wav_24000` returns a real RIFF/WAVE (correct size fields, mono 16-bit). That is
- *   the default here because build-reel.sh sniffs the first four bytes: RIFF is read
- *   as a container, anything else as raw s16le 24k — so an mp3 narration file would be
- *   decoded as noise. 24kHz also matches the Gemini lane byte for byte.
- * - `wav_44100`/`pcm_44100` are Pro-tier-and-above (403 `output_format_not_allowed`);
- *   `wav_48000` is not gated. Measured, not documented.
- * - with-timestamps returns two alignments. `alignment` is the input text character by
- *   character; `normalized_alignment` is the vendor's normalized text — **Korean comes
- *   back romanized** ("annyeo…"), so it can't index the source string. The sidecar
- *   keeps both verbatim; every summary here reads `alignment`.
- * - text-to-dialogue accepts only the v3 family (`model_does_not_support_dialogue` on
- *   multilingual_v2) and its with-timestamps variant adds `voice_segments`.
- * - The bill is the `character-cost` response header, not a local estimate, so it is
- *   reported as measured (same reasoning as completion_tokens on Seedance).
- *
- * The API key is validated at call time, not at startup (config.requireElevenLabsKey).
+ * ElevenLabs REST speech adapter. Speech generation is eleven_v4 only and uses
+ * POST /v1/text-to-dialogue, including a single voice. Directions belong in the
+ * text as audio tags; v4 supports stability and similarity, not style/speed/SSML.
+ * Contract checked against the official OpenAPI and /v1/models on 2026-10-17.
+ * Audio output_format is a query parameter. Timestamp sidecars preserve both
+ * alignments and voice_segments verbatim. No legacy-model fallback is allowed.
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { z } from 'zod';
+import { executeSpeech } from './tts-execution.js';
+import { decodeSpeechBase64, validateSpeechAudio, validateSpeechAlignment, validateSpeechSegments } from './tts-audio.js';
 import { elevenLabsBaseUrl, requireElevenLabsKey } from './config.js';
 import { bareFilenameSchema, pcmToWav, saveAudioFile } from './media-utils.js';
 // ── Constants (source of truth for the tool schemas) ─────────────
-/**
- * TTS-capable models as of 2026-08 (docs /models). v1 models were removed
- * 2026-07-09 and Turbo v2.5 is superseded by Flash v2.5 — kept because the vendor
- * still serves it, so an existing profile that names it keeps working.
- */
-export const ELEVENLABS_MODELS = [
-    'eleven_multilingual_v2', // vendor default for convert — stable, 10k chars, $0.10/1K chars
-    'eleven_v3', // expressive — audio tags, 5k chars, the only dialogue model, $0.10/1K
-    'eleven_v3_conversational', // v3 family tuned for realtime, half price ($0.05/1K) — convert only (dialogue rejects it, measured)
-    'eleven_flash_v2_5', // fastest — 40k chars, $0.05/1K, language_code enforcement
-    'eleven_turbo_v2_5', // deprecated in favor of flash_v2_5 (still served — kept for existing profiles)
-];
-/** Matches the vendor's own convert default — the same request should not sound different here. */
-export const DEFAULT_ELEVENLABS_MODEL = 'eleven_multilingual_v2';
-/** text-to-dialogue rejects every other family (measured: model_does_not_support_dialogue). */
-export const ELEVENLABS_DIALOGUE_MODEL = 'eleven_v3';
-/**
- * Per-request character caps per model (docs /models "Character limits"). v3
- * conversational is not in that table — it gets v3's cap, the conservative read.
- */
-export const ELEVENLABS_MODEL_CHAR_CAPS = {
-    eleven_multilingual_v2: 10_000,
-    eleven_v3: 5_000,
-    eleven_v3_conversational: 5_000,
-    eleven_flash_v2_5: 40_000,
-    eleven_turbo_v2_5: 40_000,
-};
-/**
- * Schema cap = the default model's cap. A static schema can't vary by model, so v3's
- * lower cap is enforced in superRefine — still before the call, so a rejected
- * request costs nothing. Scene narration is a few hundred characters; anything near
- * these numbers is a script that wasn't split.
- */
-export const MAX_ELEVENLABS_INPUT_CHARS = ELEVENLABS_MODEL_CHAR_CAPS[DEFAULT_ELEVENLABS_MODEL];
-/** Dialogue: v3 cap applies to the whole request; the vendor recommends staying under ~2,000. */
-export const MAX_ELEVENLABS_DIALOGUE_CHARS = ELEVENLABS_MODEL_CHAR_CAPS.eleven_v3;
+/** Only the quality-oriented v4 model is enabled; Turbo and legacy models are rejected. */
+export const ELEVENLABS_MODELS = ['eleven_v4'];
+export const DEFAULT_ELEVENLABS_MODEL = 'eleven_v4';
+export const ELEVENLABS_DIALOGUE_MODEL = DEFAULT_ELEVENLABS_MODEL;
+/** GET /v1/models reports 10,000 characters for subscribed v4 requests. */
+export const ELEVENLABS_MODEL_CHAR_CAPS = { eleven_v4: 10_000 };
+export const MAX_ELEVENLABS_INPUT_CHARS = ELEVENLABS_MODEL_CHAR_CAPS.eleven_v4;
+export const MAX_ELEVENLABS_DIALOGUE_CHARS = MAX_ELEVENLABS_INPUT_CHARS;
+/** Dialogue documentation recommends this size even though the model allows 10,000. */
+export const RECOMMENDED_ELEVENLABS_DIALOGUE_CHARS = 2_000;
+/** The REST endpoint permits 10 unique voices; the 50-turn bound is local. */
 export const ELEVENLABS_DIALOGUE_MAX_VOICES = 10;
 export const ELEVENLABS_DIALOGUE_MAX_INPUTS = 50;
 /**
@@ -101,7 +54,7 @@ export const ELEVENLABS_TEXT_NORMALIZATION = ['auto', 'on', 'off'];
 /** GET /v2/voices `category` values. */
 export const ELEVENLABS_VOICE_CATEGORIES = ['premade', 'cloned', 'generated', 'professional'];
 /** Concurrency limit per plan (docs /models; flash doubles it) — quoted in the 429 hint so the caller knows what to do. */
-const CONCURRENCY_HINT = 'Free 2 · Starter 3 · Creator 5 · Pro 10 · Scale/Business 15, twice that on flash';
+const CONCURRENCY_HINT = 'check the concurrency allowance for the account plan';
 const MAX_ATTEMPTS = 3;
 const RETRY_BASE_DELAY_MS = 1_000;
 // ── Request schemas ──────────────────────────────────────────────
@@ -115,18 +68,47 @@ const voiceIdSchema = z
     .regex(/^[A-Za-z0-9_-]{1,64}$/, 'voiceId must be an ElevenLabs voice_id (letters, digits, _ or -)');
 const modelSchema = z.enum(ELEVENLABS_MODELS).optional().default(DEFAULT_ELEVENLABS_MODEL);
 const outputFormatSchema = z.enum(ELEVENLABS_OUTPUT_FORMATS).optional().default(DEFAULT_ELEVENLABS_OUTPUT_FORMAT);
-/** ISO 639-1 as the API wants it ("ko", "en"). Only Flash/Turbo v2.5 and v3 enforce it; multilingual_v2 ignores it. */
-const languageCodeSchema = z.string().regex(/^[a-z]{2}$/, 'languageCode must be a 2-letter ISO 639-1 code (e.g. "ko")').optional();
+/** Model docs also list ISO 639-3 exceptions without a two-letter code. */
+export const ELEVENLABS_LANGUAGE_CODE_PATTERN = '^(?:[a-z]{2}|ast|yue|ceb|fil)$';
+const languageCodeSchema = z.string().regex(new RegExp(ELEVENLABS_LANGUAGE_CODE_PATTERN), 'languageCode must be a 2-letter code (e.g. "ko") or ast, yue, ceb, fil').optional();
 const seedSchema = z.number().int().min(0).max(4_294_967_295).optional();
 const normalizationSchema = z.enum(ELEVENLABS_TEXT_NORMALIZATION).optional();
-/** voice_settings — sent only when at least one is given, so the vendor defaults apply otherwise. */
+/** v4 dialogue settings. The legacy similarityBoost name is an explicit alias. */
 const voiceSettingsFields = {
     stability: z.number().min(0).max(1).optional(),
+    similarity: z.number().min(0).max(1).optional(),
     similarityBoost: z.number().min(0).max(1).optional(),
-    style: z.number().min(0).max(1).optional(),
-    speed: z.number().min(0.7).max(1.2).optional(),
-    useSpeakerBoost: z.boolean().optional(),
+    // Persisted profiles may carry speed:1. It is a no-op and is never sent.
+    speed: z.literal(1, { errorMap: () => ({ message: 'eleven_v4 has no speed control; omit speed or use the legacy neutral value 1' }) }).optional(),
 };
+const continuityFields = {
+    previousText: z.string().max(100).optional(),
+    nextText: z.string().max(100).optional(),
+    previousRequestIds: z.array(z.string().trim().min(1)).min(1).max(3).optional(),
+    nextRequestIds: z.array(z.string().trim().min(1)).min(1).max(3).optional(),
+    pronunciationDictionaryLocators: z.array(z.object({
+        pronunciationDictionaryId: z.string().trim().min(1), versionId: z.string().trim().min(1),
+    }).strict()).min(1).max(3).optional(),
+};
+const requestOptions = {
+    usePvcAsIvc: z.boolean().optional(),
+    enableLogging: z.boolean().optional(),
+};
+function checkRequestLogging(value, ctx) {
+    if (value.enableLogging === false && (value.previousRequestIds?.length || value.nextRequestIds?.length)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['enableLogging'], message: 'Zero retention disables request stitching; omit request IDs or enable logging' });
+    }
+}
+function checkV4Settings(value, ctx) {
+    if (value.similarity !== undefined && value.similarityBoost !== undefined && value.similarity !== value.similarityBoost) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['similarityBoost'], message: 'similarityBoost is a legacy alias of similarity; supply only one value or matching values' });
+    }
+}
+function checkV4Text(text, ctx, field) {
+    if (/<\/?(?:speak|break|phoneme|prosody|emphasis|say-as|sub|voice)(?:\s|[/>])/i.test(text)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: field, message: 'eleven_v4 does not support SSML; use [audio tags], punctuation or pronunciation dictionaries' });
+    }
+}
 const outputFields = {
     outputFormat: outputFormatSchema,
     timestamps: z.boolean().optional().default(false),
@@ -164,52 +146,43 @@ export const elevenLabsGenerateSchema = z
     languageCode: languageCodeSchema,
     ...voiceSettingsFields,
     seed: seedSchema,
-    pronunciationDictionaryLocators: z.array(z.object({
-        pronunciationDictionaryId: z.string().trim().min(1), versionId: z.string().trim().min(1),
-    }).strict()).min(1).max(3).optional(),
-    previousText: z.string().optional(),
-    nextText: z.string().optional(),
+    ...continuityFields,
+    ...requestOptions,
     applyTextNormalization: normalizationSchema,
     ...outputFields,
 })
+    .strict()
     .superRefine((value, ctx) => {
-    const cap = ELEVENLABS_MODEL_CHAR_CAPS[value.model];
-    if (value.text.length > cap) {
-        ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ['text'],
-            message: `${value.model} takes at most ${cap} characters per request (got ${value.text.length}); split the script or pick another model`,
-        });
-    }
-    // Measured: v3 answers 400 unsupported_model to previous_text/next_text — reject before the call.
-    if (value.model === 'eleven_v3' && (value.previousText || value.nextText)) {
-        ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: [value.previousText ? 'previousText' : 'nextText'],
-            message: 'eleven_v3 does not accept previousText/nextText (vendor: "not yet supported") — drop them or use eleven_multilingual_v2',
-        });
-    }
+    checkV4Settings(value, ctx);
+    checkRequestLogging(value, ctx);
+    checkV4Text(value.text, ctx, ['text']);
     checkFilenameMatchesFormat(value, ctx);
 });
 const dialogueInputSchema = z.object({
     text: z.string().min(1, 'Line text is required'),
     voiceId: voiceIdSchema,
-});
+}).strict();
 export const elevenLabsDialogueSchema = z
     .object({
     inputs: z
         .array(dialogueInputSchema)
         .min(1, 'At least one line is required')
         .max(ELEVENLABS_DIALOGUE_MAX_INPUTS, `At most ${ELEVENLABS_DIALOGUE_MAX_INPUTS} lines per request — split the scene`),
-    // `settings` on the dialogue body is {stability} only (spec ModelSettingsResponseModel) —
-    // use_speaker_boost/similarity/style are silently ignored there (measured), so not exposed.
-    stability: z.number().min(0).max(1).optional(),
+    model: modelSchema,
+    ...voiceSettingsFields,
+    ...continuityFields,
+    ...requestOptions,
     seed: seedSchema,
     languageCode: languageCodeSchema,
     applyTextNormalization: normalizationSchema,
     ...outputFields,
 })
+    .strict()
     .superRefine((value, ctx) => {
+    checkV4Settings(value, ctx);
+    checkRequestLogging(value, ctx);
+    for (const [index, line] of value.inputs.entries())
+        checkV4Text(line.text, ctx, ['inputs', index, 'text']);
     const total = value.inputs.reduce((sum, line) => sum + line.text.length, 0);
     if (total > MAX_ELEVENLABS_DIALOGUE_CHARS) {
         ctx.addIssue({
@@ -223,13 +196,17 @@ export const elevenLabsDialogueSchema = z
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ['inputs'],
-            message: `${voices.size} distinct voices; text-to-dialogue allows at most ${ELEVENLABS_DIALOGUE_MAX_VOICES} per request`,
+            message: `${voices.size} distinct voices; this plugin accepts at most ${ELEVENLABS_DIALOGUE_MAX_VOICES} per request`,
         });
     }
     checkFilenameMatchesFormat(value, ctx);
 });
 export const elevenLabsVoicesSchema = z.object({
     search: z.string().min(1).optional(),
+    nextPageToken: z.string().min(1).optional(),
+    languages: z.array(z.string().regex(/^[a-z]{2,3}$/)).min(1).max(20).optional(),
+    gender: z.string().trim().min(1).optional(),
+    accent: z.string().trim().min(1).optional(),
     category: z.enum(ELEVENLABS_VOICE_CATEGORIES).optional(),
     /** Named `limit` like every other paged tool here (server-wide contract); maps to the vendor's page_size. */
     limit: z.number().int().min(1).max(100).optional().default(30),
@@ -363,7 +340,7 @@ export function describeElevenLabsError(httpStatus, bodyText) {
         case 'model_does_not_support_dialogue':
             return `${message} — text-to-dialogue runs on ${ELEVENLABS_DIALOGUE_MODEL} only.`;
         case 'max_character_limit_exceeded':
-            return `${message} — per-request caps: v3 ${ELEVENLABS_MODEL_CHAR_CAPS.eleven_v3}, multilingual_v2 ${ELEVENLABS_MODEL_CHAR_CAPS.eleven_multilingual_v2}, flash_v2_5 ${ELEVENLABS_MODEL_CHAR_CAPS.eleven_flash_v2_5}. Split by scene.`;
+            return `${message} — v4 per-request cap: ${MAX_ELEVENLABS_INPUT_CHARS}. Split by scene.`;
         case 'free_users_not_allowed':
         case 'subscription_required':
             return `${message} — this feature needs a paid plan (https://elevenlabs.io/pricing).`;
@@ -380,13 +357,13 @@ function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 /**
- * Synthesis time scales with text, and v3 is the slow model (not real-time by
+ * Synthesis time scales with text, and v4 is the quality model (not real-time by
  * design). 60s of slack plus 40ms per character, cut off at 5 minutes.
  */
 function timeoutFor(textLength) {
     return Math.min(5 * 60_000, 60_000 + textLength * 40);
 }
-async function elevenFetch(pathAndQuery, init, timeoutMs) {
+async function elevenFetch(pathAndQuery, init, timeoutMs, attempts = MAX_ATTEMPTS) {
     const apiKey = requireElevenLabsKey();
     const url = `${elevenLabsBaseUrl()}${pathAndQuery}`;
     const headers = {
@@ -394,13 +371,13 @@ async function elevenFetch(pathAndQuery, init, timeoutMs) {
         ...(init.body ? { 'Content-Type': 'application/json' } : {}),
     };
     let lastError;
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    for (let attempt = 0; attempt < attempts; attempt++) {
         const response = await fetch(url, { ...init, headers, signal: AbortSignal.timeout(timeoutMs) });
         if (response.ok)
             return response;
         const bodyText = await response.text();
         lastError = new Error(describeElevenLabsError(response.status, bodyText));
-        if (!isRetryable(response.status) || attempt === MAX_ATTEMPTS - 1)
+        if (!isRetryable(response.status) || attempt === attempts - 1)
             break;
         await sleep(RETRY_BASE_DELAY_MS * (attempt + 1));
     }
@@ -458,7 +435,11 @@ function alignmentPathFor(audioPath) {
 function saveTimestamped(body, outputDir, filename, extra) {
     if (!body.audio_base64)
         throw new Error('with-timestamps response carried no audio_base64');
-    const audio = Buffer.from(body.audio_base64, 'base64');
+    const audio = decodeSpeechBase64(body.audio_base64);
+    const duration = validateSpeechAudio(audio, path.extname(filename).slice(1));
+    validateSpeechAlignment(body.alignment, duration);
+    validateSpeechAlignment(body.normalized_alignment, duration);
+    validateSpeechSegments(body.voice_segments, duration, extra.inputs);
     const audioPath = saveAudioFile(outputDir, filename, audio);
     const alignmentPath = alignmentPathFor(audioPath);
     fs.writeFileSync(alignmentPath, JSON.stringify({
@@ -478,112 +459,75 @@ function saveTimestamped(body, outputDir, filename, extra) {
         voiceSegments: body.voice_segments?.length,
     };
 }
-function voiceSettingsFrom(request) {
+/** Build the exact v4 dialogue payload; single-voice callers share this mapping. */
+export function elevenLabsDialogueRequestBody(request) {
     const settings = {};
     if (request.stability !== undefined)
         settings.stability = request.stability;
-    if (request.similarityBoost !== undefined)
-        settings.similarity_boost = request.similarityBoost;
-    if (request.style !== undefined)
-        settings.style = request.style;
-    if (request.speed !== undefined)
-        settings.speed = request.speed;
-    if (request.useSpeakerBoost !== undefined)
-        settings.use_speaker_boost = request.useSpeakerBoost;
-    return Object.keys(settings).length ? settings : undefined;
+    const similarity = request.similarity ?? request.similarityBoost;
+    if (similarity !== undefined)
+        settings.similarity = similarity;
+    return {
+        inputs: request.inputs.map((line) => ({ text: line.text, voice_id: line.voiceId })),
+        model_id: ELEVENLABS_DIALOGUE_MODEL,
+        ...(Object.keys(settings).length ? { settings } : {}),
+        ...(request.seed !== undefined ? { seed: request.seed } : {}),
+        ...(request.languageCode ? { language_code: request.languageCode } : {}),
+        ...(request.previousText ? { previous_text: request.previousText } : {}),
+        ...(request.nextText ? { future_text: request.nextText } : {}),
+        ...(request.previousRequestIds ? { previous_request_ids: request.previousRequestIds } : {}),
+        ...(request.nextRequestIds ? { next_request_ids: request.nextRequestIds } : {}),
+        ...(request.usePvcAsIvc !== undefined ? { use_pvc_as_ivc: request.usePvcAsIvc } : {}),
+        ...(request.pronunciationDictionaryLocators ? { pronunciation_dictionary_locators: request.pronunciationDictionaryLocators.map(d => ({ pronunciation_dictionary_id: d.pronunciationDictionaryId, version_id: d.versionId })) } : {}),
+        ...(request.applyTextNormalization ? { apply_text_normalization: request.applyTextNormalization } : {}),
+    };
 }
-// ── The 3 calls ──────────────────────────────────────────────────
-/** Single-voice synthesis — POST /v1/text-to-speech/{voice_id}[/with-timestamps] */
+/** Single voice uses the v4 dialogue endpoint with one input. */
 export async function generateElevenLabsSpeech(request) {
-    authorizeSpeed(request.outputPath || process.cwd(), 'generation', request.speed ?? 1);
-    const outputDir = request.outputPath || process.cwd();
-    const filename = request.filename || `elevenlabs_${Date.now()}${extensionForFormat(request.outputFormat)}`;
     try {
-        console.error(`[ElevenLabs] Synthesizing... (model: ${request.model}, voice: ${request.voiceId}, ${request.text.length} chars, ${request.outputFormat}${request.timestamps ? ', timestamps' : ''})`);
-        const body = {
-            text: request.text,
-            model_id: request.model,
-            ...(request.languageCode ? { language_code: request.languageCode } : {}),
-            ...(voiceSettingsFrom(request) ? { voice_settings: voiceSettingsFrom(request) } : {}),
-            ...(request.seed !== undefined ? { seed: request.seed } : {}),
-            ...(request.pronunciationDictionaryLocators ? { pronunciation_dictionary_locators: request.pronunciationDictionaryLocators.map(d => ({ pronunciation_dictionary_id: d.pronunciationDictionaryId, version_id: d.versionId })) } : {}),
-            ...(request.previousText ? { previous_text: request.previousText } : {}),
-            ...(request.nextText ? { next_text: request.nextText } : {}),
-            ...(request.applyTextNormalization ? { apply_text_normalization: request.applyTextNormalization } : {}),
-        };
-        const endpoint = `/v1/text-to-speech/${encodeURIComponent(request.voiceId)}${request.timestamps ? '/with-timestamps' : ''}` +
-            `?output_format=${request.outputFormat}`;
-        const response = await elevenFetch(endpoint, { method: 'POST', body: JSON.stringify(body) }, timeoutFor(request.text.length));
-        const meta = readMeta(response);
-        if (request.timestamps) {
-            const saved = saveTimestamped((await response.json()), outputDir, filename, {
-                engine: 'elevenlabs',
-                model: request.model,
-                voice_id: request.voiceId,
-                text: request.text,
-            });
-            console.error(`[ElevenLabs] Audio saved to: ${saved.audioPath} (+ ${path.basename(saved.alignmentPath)})`);
-            return {
-                success: true,
-                audioPath: saved.audioPath,
-                alignmentPath: saved.alignmentPath,
-                model: request.model,
-                outputFormat: request.outputFormat,
-                durationSeconds: wavDurationSeconds(saved.audio),
-                speechEndSeconds: saved.speechEndSeconds,
-                alignedCharacters: saved.alignedCharacters,
-                ...meta,
-            };
-        }
-        const audio = Buffer.from(await response.arrayBuffer());
-        const audioPath = saveAudioFile(outputDir, filename, audio);
-        console.error(`[ElevenLabs] Audio saved to: ${audioPath}`);
-        return {
-            success: true,
-            audioPath,
-            model: request.model,
-            outputFormat: request.outputFormat,
-            durationSeconds: wavDurationSeconds(audio),
-            ...meta,
-        };
+        // Validate here too: callers importing the adapter directly cannot bypass v4-only checks.
+        const { text, voiceId, ...settings } = elevenLabsGenerateSchema.parse(request);
+        const parsed = { text, voiceId, ...settings };
+        return await executeSpeech('tts_elevenlabs_generate', parsed, output => synthesizeElevenLabsDialogue({ ...settings, ...output, inputs: [{ text, voiceId }] }));
     }
     catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        console.error(`[ElevenLabs] Error: ${message.split('\n')[0]}`);
-        return { success: false, error: message };
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
 }
-/** Multi-voice dialogue — POST /v1/text-to-dialogue[/with-timestamps] (eleven_v3) */
-export async function generateElevenLabsDialogue(request) {
-    const outputDir = request.outputPath || process.cwd();
-    const filename = request.filename || `elevenlabs_dialogue_${Date.now()}${extensionForFormat(request.outputFormat)}`;
-    const totalChars = request.inputs.reduce((sum, line) => sum + line.text.length, 0);
+/** Multi-voice dialogue — POST /v1/text-to-dialogue[/with-timestamps] (eleven_v4) */
+async function synthesizeElevenLabsDialogue(request) {
     try {
+        request = elevenLabsDialogueSchema.parse(request);
+        const outputDir = request.outputPath || process.cwd();
+        const filename = request.filename || `elevenlabs_dialogue_${Date.now()}${extensionForFormat(request.outputFormat)}`;
+        const totalChars = request.inputs.reduce((sum, line) => sum + line.text.length, 0);
+        const warnings = totalChars > RECOMMENDED_ELEVENLABS_DIALOGUE_CHARS
+            ? [`Dialogue contains ${totalChars} characters; ElevenLabs recommends at most ${RECOMMENDED_ELEVENLABS_DIALOGUE_CHARS} per request. Longer requests may terminate early or fail validation; split at scene boundaries.`]
+            : [];
         const voices = new Set(request.inputs.map((line) => line.voiceId));
         console.error(`[ElevenLabs] Synthesizing dialogue... (${request.inputs.length} lines, ${voices.size} voices, ${totalChars} chars, ${request.outputFormat})`);
-        const settings = {};
-        if (request.stability !== undefined)
-            settings.stability = request.stability;
-        const body = {
-            inputs: request.inputs.map((line) => ({ text: line.text, voice_id: line.voiceId })),
-            model_id: ELEVENLABS_DIALOGUE_MODEL,
-            ...(Object.keys(settings).length ? { settings } : {}),
-            ...(request.seed !== undefined ? { seed: request.seed } : {}),
-            ...(request.languageCode ? { language_code: request.languageCode } : {}),
-            ...(request.applyTextNormalization ? { apply_text_normalization: request.applyTextNormalization } : {}),
-        };
-        const endpoint = `/v1/text-to-dialogue${request.timestamps ? '/with-timestamps' : ''}?output_format=${request.outputFormat}`;
-        const response = await elevenFetch(endpoint, { method: 'POST', body: JSON.stringify(body) }, timeoutFor(totalChars));
+        const body = elevenLabsDialogueRequestBody(request);
+        const query = new URLSearchParams({ output_format: request.outputFormat });
+        if (request.enableLogging !== undefined)
+            query.set('enable_logging', String(request.enableLogging));
+        const endpoint = `/v1/text-to-dialogue${request.timestamps ? '/with-timestamps' : ''}?${query}`;
+        const response = await elevenFetch(endpoint, { method: 'POST', body: JSON.stringify(body) }, timeoutFor(totalChars), 1);
         const meta = readMeta(response);
         if (request.timestamps) {
             const saved = saveTimestamped((await response.json()), outputDir, filename, {
                 engine: 'elevenlabs',
                 model: ELEVENLABS_DIALOGUE_MODEL,
                 inputs: request.inputs.map((line) => ({ voice_id: line.voiceId, text: line.text })),
+                ...(request.inputs.length === 1 ? { voice_id: request.inputs[0].voiceId, text: request.inputs[0].text } : {}),
+                request: body,
+                output_format: request.outputFormat,
+                enable_logging: request.enableLogging ?? true,
+                ...meta,
             });
             console.error(`[ElevenLabs] Dialogue saved to: ${saved.audioPath} (+ ${path.basename(saved.alignmentPath)})`);
             return {
                 success: true,
+                warnings,
                 audioPath: saved.audioPath,
                 alignmentPath: saved.alignmentPath,
                 model: ELEVENLABS_DIALOGUE_MODEL,
@@ -596,10 +540,12 @@ export async function generateElevenLabsDialogue(request) {
             };
         }
         const audio = Buffer.from(await response.arrayBuffer());
+        validateSpeechAudio(audio, path.extname(filename).slice(1));
         const audioPath = saveAudioFile(outputDir, filename, audio);
         console.error(`[ElevenLabs] Dialogue saved to: ${audioPath}`);
         return {
             success: true,
+            warnings,
             audioPath,
             model: ELEVENLABS_DIALOGUE_MODEL,
             outputFormat: request.outputFormat,
@@ -626,6 +572,14 @@ export async function listElevenLabsVoices(request) {
             params.set('search', request.search);
         if (request.category)
             params.set('category', request.category);
+        if (request.nextPageToken)
+            params.set('next_page_token', request.nextPageToken);
+        for (const language of request.languages ?? [])
+            params.append('language', language);
+        if (request.gender)
+            params.set('gender', request.gender);
+        if (request.accent)
+            params.set('accent', request.accent);
         const response = await elevenFetch(`/v2/voices?${params.toString()}`, { method: 'GET' }, 30_000);
         const body = (await response.json());
         const voices = (body.voices ?? [])
@@ -654,7 +608,7 @@ export async function listElevenLabsVoices(request) {
         catch {
             subscription = undefined; // user_read missing on a restricted key — the listing itself is unaffected
         }
-        return { success: true, voices, totalCount: body.total_count, hasMore: body.has_more, subscription };
+        return { success: true, voices, totalCount: body.total_count, hasMore: body.has_more, nextPageToken: body.next_page_token ?? undefined, subscription };
     }
     catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -739,4 +693,13 @@ export async function createElevenLabsDictionary(input) {
     }, 30000);
     const result = z.object({ id: z.string().min(1), version_id: z.string().min(1) }).parse(await response.json());
     return { pronunciationDictionaryId: result.id, versionId: result.version_id };
+}
+export async function generateElevenLabsDialogue(request) {
+    try {
+        const parsed = elevenLabsDialogueSchema.parse(request);
+        return await executeSpeech('tts_elevenlabs_dialogue', parsed, output => synthesizeElevenLabsDialogue({ ...parsed, ...output }));
+    }
+    catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
 }

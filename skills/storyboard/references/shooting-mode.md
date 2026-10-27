@@ -1,7 +1,8 @@
 # Shooting mode — a filmed episode, and long-form's per-scene mix
 
 Read this **once any scene of the episode is filmed by the user**. A fully generated
-short-form episode — the default — never needs it. The decision itself is storyboard §1.6;
+short-form episode — the default — never needs it. The decision itself belongs to the storyboard
+skill's §1 (reuse the project's choices; legacy-authoring.md §1.6 keeps the old wording);
 this file is what follows from a "filmed" answer.
 
 ## Contents
@@ -16,13 +17,13 @@ shape, `references/shot-script-template.md` for the shooting-script document.
 ## What differs in shooting mode
 
 A topic the user will record themselves, demoing and narrating on screen, is **shooting
-mode** (SKILL §1.6). Confirm with AskUserQuestion when unsure. What differs in shooting mode (the
+mode** (storyboard SKILL §1; legacy-authoring.md §1.6). Confirm with AskUserQuestion when unsure. What differs in shooting mode (the
 `references/shot-script-template.md` contract):
 
 - Scene `visual` is `{ source: "recording", clip, shot, action }` — §5 image generation is
   skipped entirely (the on-screen footage comes from the user's actual recording).
 - narration isn't a TTS script but **the sentences to speak** — the character cap relaxes
-  (40 chars per sentence recommended, derived backwards from an 8–20s scene target).
+  (40 chars per sentence recommended; 8–20 s per scene is guidance, not a target).
 - §6 authors **script.md (the shooting script)** alongside storyboard.md.
 - After approval the hand-off is **recording**, not produce (§7 branch).
 

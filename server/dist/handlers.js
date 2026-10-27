@@ -1,8 +1,22 @@
-import { REVIEW_ROUTES } from './portal-review-tools.js';
-import { UNIT_ROUTES } from './portal-unit-routes.js';
-import { PORTAL_API_ROUTES } from './portal-api-contract.js';
+import { manageWorkflow } from './production-workflow.js';
+import { MUSIC_ADAPTERS, musicCatalog } from './music-registry.js';
+import { planMusic, musicPlanSummary, executeMusic, musicStatus, routeLegacyMusic } from './music-routing.js';
+import { generateLyriaSong, generateElevenMusic } from './music-song-client.js';
+import { IMAGE_ADAPTERS, imageCatalog } from './image-registry.js';
+import { planImage, imagePlanSummary, executeImage, routeLegacyImage, imageStatus } from './image-routing.js';
+import { videoStatus } from './video-routing.js';
+import { planVideo, executeVideo, routeLegacyVideo } from './video-routing.js';
+import { VIDEO_ADAPTERS, videoCatalog } from './video-registry.js';
+import { routeSpeech, speechRouteSchema } from './tts-routing.js';
+import { hostReview } from './host-review.js';
+import { designGeminiVoice, voiceDesignSchema } from './voice-design.js';
+import { reviewActing as reviewTtsActing, actingReviewSchema as ttsActingReviewSchema } from './tts-acting-review.js';
+import { manageVoiceAudition, voiceAuditionSchema } from './voice-audition.js';
+import { manageLocation } from './location.js';
+import { manageProject } from './project.js';
+import { manageSpeech, speechManageSchema } from './speech.js';
+import { reviewActing, actingReviewSchema } from './acting-review.js';
 import { createThreadsDraft, submitThreadsReview, checkThreadsGate, checkThreadsEpisode, gateCall } from './threads-gate.js';
-import { withShotMedia, uploadShotMedia, mediaUploadSchema, portalMediaReport, withoutPortal } from './portal-media.js';
 import { z } from 'zod';
 import * as datago from './datago-client.js';
 import * as elevenlabs from './elevenlabs-client.js';
@@ -15,7 +29,6 @@ import * as seedance from './seedance-client.js';
 import * as serp from './serp-client.js';
 import * as stock from './stock-client.js';
 import * as sns from './sns-client.js';
-import * as supertonic from './supertonic-client.js';
 import * as zimage from './zimage-client.js';
 import * as blender from './blender-bridge.js';
 import * as storyboard from './storyboard.js';
@@ -24,6 +37,8 @@ import * as tts from './tts-client.js';
 import { checkedSpeechSchema, generateCheckedSpeech } from './tts-quality.js';
 import { finalSpeechSchema, reviewFinalSpeech } from './tts-final-quality.js';
 import * as astraVideo from './astra-video-client.js';
+import { generateGenaiVideo, getGenaiVideoStatus, genaiVideoStatusSchema } from './astra-genai-video.js';
+import { generateGenaiImage } from './astra-genai-image.js';
 import * as omni from './omni-client.js';
 import * as video from './video-client.js';
 import { contentFeedback } from './content-feedback.js';
@@ -31,10 +46,7 @@ import { youtubeTopicScout } from './youtube-topic-scout.js';
 import * as snsScout from './sns-issue-scout.js';
 import { formatError, formatFileSize, saveBase64Image } from './media-utils.js';
 import { renderCapabilityStatus } from './capability-status.js';
-import { CHANNEL_SLUG_RE } from './config.js';
-import * as portal from './portal-tools.js';
-import { manageBackups } from './portal-backups.js';
-import { applyVoiceLock, voiceLockApplySchema } from './voice-lock.js';
+import { DURATION_TOOLS, resolveVideoDuration } from './video-duration.js';
 function text(message, isError = false) {
     return { content: [{ type: 'text', text: message }], isError };
 }
@@ -64,7 +76,8 @@ function elevenlabsFormatNote(format) {
 }
 /** Common meta lines for ElevenLabs results — duration, the measured bill, trace id, alignment sidecar. */
 function elevenlabsMeta(result) {
-    return ((result.durationSeconds !== undefined ? `Duration: ${result.durationSeconds}s\n` : '') +
+    return ((result.warnings?.map(warning => `Warning: ${warning}\n`).join('') ?? '') +
+        (result.durationSeconds !== undefined ? `Duration: ${result.durationSeconds}s\n` : '') +
         (result.characterCost !== undefined ? `Character cost: ${result.characterCost} (vendor-metered characters — the billing quantity; log this ÷ 1000 in the cost ledger)\n` : '') +
         (result.latencyMs !== undefined ? `Vendor latency: ${result.latencyMs} ms\n` : '') +
         (result.requestId ? `Request ID: ${result.requestId}\n` : '') +
@@ -77,7 +90,30 @@ function seedanceMeta(result) {
     const tokens = result.completionTokens === undefined
         ? ''
         : `\nBilled tokens: ${result.completionTokens.toLocaleString('en-US')} (completion_tokens — what the vendor bills on)`;
-    return `Model: ${result.model}\nRatio: ${result.ratio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds${tokens}\nTask ID: ${result.taskId}`;
+    return `Model: ${result.model}\nRatio: ${result.ratio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds (${result.durationSource || 'provider reported; probe output'})${tokens}\nTask ID: ${result.taskId}`;
+}
+/** Platform error JSON fits well inside this; anything longer is an HTML error page or a dump. */
+const API_ERROR_BODY_MAX = 4000;
+/**
+ * A failed platform call as the agent should read it: the next step first, then the
+ * platform's own body, capped. Claude Code shows only the head and tail of a long error,
+ * and a bare status code tells the agent nothing about what to do. requestRaw reports a
+ * timeout as 504 and an unreachable host as 502, so a publish that "failed" with a 5xx
+ * may still have gone out — retrying blind can post twice.
+ */
+export function apiErrorText(result) {
+    const { status, body } = result;
+    const next = status === 401 || status === 403
+        ? 'The platform refused the credential or permission. Run sns_account_check for this channel; an expired token needs its setup skill (setup-threads, setup-instagram, setup-youtube).'
+        : status === 404
+            ? 'The target ID was not found. Re-read IDs from the latest inbox, insights or publish log instead of reusing an old one.'
+            : status === 429
+                ? 'Rate limited. Wait before the next call; do not retry in a loop.'
+                : status >= 500
+                    ? 'Upstream or network failure. Retry later — but for a publish or reply, check the platform or output/publish-log.md first: the post may already be live.'
+                    : 'The platform rejected the request. Fix the field the body names; the same arguments fail the same way.';
+    const shown = body.length > API_ERROR_BODY_MAX ? `${body.slice(0, API_ERROR_BODY_MAX)}… (${body.length - API_ERROR_BODY_MAX} more chars cut)` : body;
+    return `HTTP ${status} — ${next}\n${shown}`;
 }
 /**
  * Platform API result → MCP tool result.
@@ -90,7 +126,7 @@ function seedanceMeta(result) {
  */
 function fromApi(result, note) {
     if (!result.ok) {
-        return text(`HTTP ${result.status}\n${result.body}`, true);
+        return text(apiErrorText(result), true);
     }
     // The note attaches to the success path only — if a failed publish carried a
     // "published" notice, the caller would report the failure as success and skip
@@ -157,7 +193,7 @@ function knownKeys(schema) {
     return undefined;
 }
 /**
- * One report shape for all five astra_* routes.
+ * One report shape for every astra_* generation route.
  *
  * The server echoes back the request it actually recorded, defaults filled in — that echo is
  * the only place a caller can see what 121 frames at 24fps became, so it is reported verbatim
@@ -168,6 +204,21 @@ function astraVideoReport(headline, result) {
     return (`${headline}.\n\nFile: ${result.videoPath}\nJob: ${result.jobId} (mode ${result.mode})\n` +
         `Bytes: ${result.bytes}\nElapsed: ${result.elapsedSeconds}s (queue wait included)\n` +
         `Prompt: ${result.prompt}${recorded}`);
+}
+function speechSyncReport(sync) {
+    if (!sync)
+        return '';
+    const lines = sync.attempts.map(({ videoPath, seed, check }, i) => `  attempt ${i + 1}${i === sync.chosen ? ' (provisional candidate)' : ''} · seed ${seed ?? 'server default'} · ${check.status}` +
+        (check.sync ? ` · margin ${check.sync.margin} (best ${check.sync.score} vs chance ${check.sync.chance})` : '') +
+        (check.reason ? ` · ${check.reason}` : '') + ` · ${videoPath}`);
+    const findings = sync.attempts[sync.chosen].check.findings.map((finding) => `  ⚠ ${finding.kind}: ${finding.what}`);
+    const unresolved = sync.attempts[sync.chosen].check.findings.some((finding) => finding.reseed)
+        ? `\nStill no_sync after ${sync.attempts.length} attempt(s); the clip with the best margin is kept as a provisional candidate, not a verified performance. Inspect it, or change the source image or prompt — another seed alone has not helped.`
+        : '';
+    return `\n\nSpeech sync check (picture motion against the supplied speech, ffmpeg only):\n${lines.join('\n')}` +
+        (sync.retryError ? `\n  ${sync.retryError}` : '') +
+        (findings.length ? `\nFindings on the provisional candidate:\n${findings.join('\n')}` : '') + unresolved +
+        `\nNot reviewed: ${sync.attempts[sync.chosen].check.notReviewed.join(', ')}.`;
 }
 // ── research schemas ─────────────────────────────────────────────
 /**
@@ -442,7 +493,8 @@ const youtubePublishSchema = z.object({
     // chapter list too, making it the longest-description path, so block it here —
     // getting a 400 after burning the whole upload costs the quota.
     caption: ytDescription,
-    privacyStatus: z.enum(['public', 'unlisted', 'private']).optional(),
+    // Uploads start private (owner directive 2026-08-19/2026-10-18); publishYoutube rejects 'public'.
+    privacyStatus: z.enum(['public', 'unlisted', 'private']).default('private'),
     // The thumbnail is required — without one an arbitrary frame becomes the cover,
     // and after publishing the Shorts portrait surface can't be reverted via the API
     // (enforced by user directive, 2026-08-13).
@@ -499,7 +551,7 @@ const commentReplySchema = z
 })
     .superRefine((v, ctx) => {
     if (v.platform === 'THREADS' && (!v.draftId || !v.channel)) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'THREADS replies require channel and reviewed reply draftId' });
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'THREADS replies require channel and reply draftId' });
     }
     if (v.platform !== 'THREADS' && (v.draftId !== undefined || v.dryRun !== undefined)) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'draftId and dryRun are supported only for THREADS replies' });
@@ -598,14 +650,15 @@ const snsIssueScoutSchema = z.object({
     limit: z.number().int().min(3).max(30).optional(),
 });
 // ── routing ──────────────────────────────────────────────────────
-const portalRoutes = portal.portalHandlers();
-function fromPortal(r) {
-    return text(r.text, r.isError);
-}
 export const ROUTES = {
-    ...PORTAL_API_ROUTES,
-    ...UNIT_ROUTES,
-    ...REVIEW_ROUTES,
+    project_manage: async (args) => {
+        try {
+            return text(JSON.stringify(manageProject(args), null, 2));
+        }
+        catch (error) {
+            return text(error instanceof Error ? error.message : 'Project setup failed', true);
+        }
+    },
     serp_web_search: async (args) => {
         const result = await serp.webSearch(parseArgs(serpWebSchema, args));
         return text(result.text, result.isError);
@@ -674,7 +727,7 @@ export const ROUTES = {
                 summary += `\nFile save failed: ${formatError(saveError)}`;
             }
         }
-        return imageResult(summary, result.base64, result.mimeType);
+        return { ...imageResult(summary, result.base64, result.mimeType), imageReceipt: { usage: result.usage, requestId: result.requestId } };
     },
     gpt_image_img2img: async (args) => {
         const request = parseArgs(image.img2ImgSchema, args);
@@ -694,7 +747,7 @@ export const ROUTES = {
                 summary += `\nFile save failed: ${formatError(saveError)}`;
             }
         }
-        return imageResult(summary, result.base64, result.mimeType);
+        return { ...imageResult(summary, result.base64, result.mimeType), imageReceipt: { usage: result.usage, requestId: result.requestId } };
     },
     // Local generation (Z-Image Turbo) — runs on-device as a subprocess. No key, network, or billing.
     // Unlike gpt_image it carries no base64 block — this tool always writes a local
@@ -726,14 +779,6 @@ export const ROUTES = {
             (result.width && result.height ? `Size: ${result.width}x${result.height}\n` : '') +
             `Steps: ${result.steps ?? 'model default'}\nSeed: ${result.seed ?? 'random'}\n` +
             `Generation time: ${result.elapsedSeconds}s`);
-    },
-    mlx_tts_generate: async (args) => {
-        const request = parseArgs(mlx.mlxTtsGenerateSchema, args);
-        const result = await mlx.generateMlxTts(request);
-        if (!result.success)
-            return text(`MLX Core TTS failed:\n${result.error}`, true);
-        return text(`Audio generated via MLX Core.\n\nFile: ${result.path}\nModel: ${result.model}\n` +
-            `Synthesis time: ${result.elapsedSeconds}s\nText length: ${request.input.length} chars`);
     },
     mlx_music_generate: async (args) => {
         const request = parseArgs(mlx.mlxMusicGenerateSchema, args);
@@ -827,6 +872,19 @@ export const ROUTES = {
     //    Acceptance and result are separate calls, so the client polls; these routes only
     //    parse, call, and report. Failures arrive as thrown errors carrying the server's own
     //    message — never the request headers, which is where the key lives.
+    astra_genai_text2video: async (args) => text(JSON.stringify(await generateGenaiVideo('text-to-video', args))),
+    astra_genai_img2video: async (args) => text(JSON.stringify(await generateGenaiVideo('image-to-video', args))),
+    astra_genai_audio2video: async (args) => text(JSON.stringify(await generateGenaiVideo('audio-to-video', args))),
+    astra_genai_msr: async (args) => text(JSON.stringify(await generateGenaiVideo('msr', args))),
+    astra_genai_edit: async (args) => {
+        const result = await generateGenaiImage(args, 'edit');
+        return { ...text(JSON.stringify(result)), imageReceipt: result };
+    },
+    astra_genai_text2img: async (args) => {
+        const result = await generateGenaiImage(args);
+        return { ...text(JSON.stringify(result)), imageReceipt: result };
+    },
+    astra_genai_video_status: async (args) => text(JSON.stringify(await getGenaiVideoStatus(genaiVideoStatusSchema.parse(args)))),
     astra_text2video: async (args) => {
         const result = await astraVideo.generateFromText(parseArgs(astraVideo.astraText2VideoSchema, args));
         return text(astraVideoReport('Video generated on the ASTRA video API', result));
@@ -848,7 +906,7 @@ export const ROUTES = {
     astra_audio2video: async (args) => {
         const parsed = parseArgs(astraVideo.astraAudio2VideoSchema, args);
         const result = await astraVideo.generateFromAudio(parsed);
-        return text(`${astraVideoReport('Video generated from audio on the ASTRA video API', result)}\nAudio: ${parsed.audioPath ?? 'reused upload'}\naudioUploadId: ${result.audioUploadId}\nAudio expires at: ${result.audioExpiresAt ?? 'unknown (reused upload or metadata unavailable)'}\nAudio duration (seconds): ${result.audioDuration ?? 'unknown (reused upload or metadata unavailable)'}`);
+        return text(`${astraVideoReport('Video generated from audio on the ASTRA video API', result)}\nAudio: ${parsed.audioPath ?? 'reused upload'}\naudioUploadId: ${result.audioUploadId}\nAudio expires at: ${result.audioExpiresAt ?? 'unknown (reused upload or metadata unavailable)'}\nAudio duration (seconds): ${result.audioDuration ?? 'unknown (reused upload or metadata unavailable)'}${speechSyncReport(result.speechSync)}`);
     },
     astra_video_list_uploads: async (args) => {
         astraVideo.astraVideoListUploadsSchema.parse(args);
@@ -859,6 +917,15 @@ export const ROUTES = {
             return text(error instanceof Error ? error.message : 'ASTRA upload listing failed', true);
         }
     },
+    astra_video_capabilities: async (args) => {
+        parseArgs(astraVideo.astraVideoCapabilitiesSchema, args);
+        try {
+            return text(JSON.stringify(await astraVideo.getCapabilities()));
+        }
+        catch (error) {
+            return text(error instanceof Error ? error.message : 'ASTRA capabilities lookup failed', true);
+        }
+    },
     astra_video_delete_upload: async (args) => {
         const parsed = parseArgs(astraVideo.astraVideoDeleteUploadSchema, args);
         try {
@@ -867,6 +934,13 @@ export const ROUTES = {
         catch (error) {
             return text(error instanceof Error ? error.message : 'ASTRA upload deletion failed', true);
         }
+    },
+    astra_ic_lora: async (args) => {
+        const parsed = parseArgs(astraVideo.astraIcLoraSchema, args);
+        const result = await astraVideo.generateIcLora(parsed);
+        return text(`${astraVideoReport('Video generated through an IC-LoRA adapter on the ASTRA video API', result)}` +
+            `\nAdapter: ${parsed.adapter}\nReference: ${parsed.referencePath}` +
+            (parsed.conditioningMaskPath ? `\nConditioning mask: ${parsed.conditioningMaskPath}` : ''));
     },
     astra_video_retake: async (args) => {
         const parsed = parseArgs(astraVideo.astraVideoRetakeSchema, args);
@@ -880,21 +954,21 @@ export const ROUTES = {
     // billing basis, not a rate-sheet estimate, so per-episode cost tallies should
     // record this number.
     seedance_text2video: async (args) => {
-        const result = await withShotMedia(args, 'video', () => seedance.generateFromText(parseArgs(seedance.seedanceText2VideoSchema, withoutPortal(args))), result => result.videoPath);
+        const result = await seedance.generateFromText(parseArgs(seedance.seedanceText2VideoSchema, args));
         if (!result.success)
             return text(`Seedance video generation failed: ${result.error}`, true);
-        return text(`Video generated successfully!\n\nFile: ${result.videoPath}\n${seedanceMeta(result)}${portalMediaReport(result)}\nPrompt: ${result.prompt}`, Boolean(result.portalMedia?.error));
+        return text(`Video generated successfully!\n\nFile: ${result.videoPath}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`);
     },
     seedance_img2video: async (args) => {
-        const result = await withShotMedia(args, 'video', () => seedance.generateFromImage(parseArgs(seedance.seedanceImg2VideoSchema, withoutPortal(args))), result => result.videoPath);
+        const result = await seedance.generateFromImage(parseArgs(seedance.seedanceImg2VideoSchema, args));
         if (!result.success)
             return text(`Seedance video generation from image failed: ${result.error}`, true);
         const lastImageInfo = result.lastImage ? `\nLast Frame Image: ${result.lastImage}` : '';
         const modeInfo = result.lastImage ? ' (frame interpolation mode)' : '';
-        return text(`Video generated from image${modeInfo} successfully!\n\nOutput: ${result.videoPath}\nFirst Frame Image: ${result.sourceImage}${lastImageInfo}\n${seedanceMeta(result)}${portalMediaReport(result)}\nPrompt: ${result.prompt}`, Boolean(result.portalMedia?.error));
+        return text(`Video generated from image${modeInfo} successfully!\n\nOutput: ${result.videoPath}\nFirst Frame Image: ${result.sourceImage}${lastImageInfo}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`);
     },
     seedance_reference: async (args) => {
-        const result = await withShotMedia(args, 'video', () => seedance.generateWithReferences(parseArgs(seedance.seedanceReferenceSchema, withoutPortal(args))), result => result.videoPath);
+        const result = await seedance.generateWithReferences(parseArgs(seedance.seedanceReferenceSchema, args));
         if (!result.success)
             return text(`Seedance video generation with references failed: ${result.error}`, true);
         const refImagesInfo = result.referenceImages?.length
@@ -906,7 +980,7 @@ export const ROUTES = {
         const refVideoInfo = result.referenceVideos?.length
             ? `\nReference Videos (${result.referenceVideos.length}, ${result.referenceVideoSeconds ?? '?'}s billed as input${result.referenceVideoRoute ? `, served by ${result.referenceVideoRoute}` : ''}):\n  - ${result.referenceVideos.join('\n  - ')}`
             : '';
-        return text(`Video generated with references successfully!\n\nOutput: ${result.videoPath}${refImagesInfo}${refVideoInfo}${refAudioInfo}\n${seedanceMeta(result)}${portalMediaReport(result)}\nPrompt: ${result.prompt}`, Boolean(result.portalMedia?.error));
+        return text(`Video generated with references successfully!\n\nOutput: ${result.videoPath}${refImagesInfo}${refVideoInfo}${refAudioInfo}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`);
     },
     // ── speech synthesis (Gemini TTS) — saves the wav locally, returns path + meta text ──
     // Returns the script length, not the full text — echoing a 16k-char script back
@@ -916,17 +990,17 @@ export const ROUTES = {
         const result = await reviewFinalSpeech(parseArgs(finalSpeechSchema, args));
         return text(JSON.stringify(result, null, 2), result.success !== true);
     },
-    voice_lock_apply: async (args) => {
-        const result = await applyVoiceLock(parseArgs(voiceLockApplySchema, args));
-        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], structuredContent: { ...result }, isError: result.status === 'failed' };
-    },
     tts_elevenlabs_dictionary: async (args) => {
         const result = await elevenlabs.createElevenLabsDictionary(parseArgs(elevenlabs.elevenLabsDictionarySchema, args));
         return text(JSON.stringify(result, null, 2));
     },
     tts_generate_checked: async (args) => {
-        const result = await withShotMedia(args, 'narration', () => generateCheckedSpeech(parseArgs(checkedSpeechSchema, withoutPortal(args))), result => typeof result.audioPath === 'string' ? result.audioPath : undefined);
-        return text(JSON.stringify(result, null, 2), result.success !== true || Boolean(result.portalMedia?.error));
+        const result = await generateCheckedSpeech(parseArgs(checkedSpeechSchema, args));
+        return text(JSON.stringify(result, null, 2), result.success !== true);
+    },
+    tts_route: async (args) => {
+        const result = await routeSpeech(speechRouteSchema.parse(args));
+        return text(JSON.stringify(result, null, 2), 'success' in result && result.success === false);
     },
     tts_generate: async (args) => {
         const request = parseArgs(tts.ttsGenerateSchema, args);
@@ -945,7 +1019,7 @@ export const ROUTES = {
         const voiceInfo = request.speakers
             ? `Speakers:\n${request.speakers.map((speaker) => `  - ${speaker.speaker}: ${speaker.voice}`).join('\n')}`
             : `Voice: ${request.voice}`;
-        return text(`Gemini 3.8 audio generated successfully!\n\nFile: ${result.audioPath}\nModel: ${result.model}\n${voiceInfo}\nTurns: ${request.turns.length}\nText length: ${totalChars} chars`);
+        return text(`Gemini 3.8 audio generated successfully!\n\nFile: ${result.audioPath}\nModel: ${result.model}\n${voiceInfo}\nTurns: ${request.turns.length}\nText length: ${totalChars} chars\nProvider usage receipt: ${result.usageReceiptPath} (reported usage or explicit not_reported; not an invoice)`);
     },
     tts_multi_speaker: async (args) => {
         const request = parseArgs(tts.ttsMultiSpeakerSchema, args);
@@ -956,40 +1030,11 @@ export const ROUTES = {
         return text(`Multi-speaker audio generated successfully!\n\nFile: ${result.audioPath}\nModel: ${result.model}\nSpeakers:\n${speakerInfo}\nScript length: ${request.script.length} chars`);
     },
     // Local synthesis (Supertonic) — runs on-device as a subprocess. No key, network, or quota.
-    tts_local_generate: async (args) => {
-        const request = parseArgs(supertonic.supertonicGenerateSchema, args);
-        const result = await supertonic.generateLocalSpeech(request);
-        if (!result.success)
-            return text(`Local TTS generation failed: ${result.error}`, true);
-        return text(`Audio generated locally!\n\nFile: ${result.audioPath}\nEngine: Supertonic 3 (on-device)\n` +
-            `Voice: ${result.voice}\nLanguage: ${result.lang}\nSpeed: ${request.speed}\n` +
-            `Duration: ${result.durationSeconds}s\nSample rate: ${result.sampleRate} Hz\n` +
-            `Synthesis time: ${result.elapsedSeconds}s\nText length: ${request.text.length} chars`);
+    tts_voice_design: async (args) => {
+        const result = await designGeminiVoice(voiceDesignSchema.parse(args));
+        return text(JSON.stringify(result, null, 2), !result.success);
     },
-    tts_list_voices: async () => {
-        const voiceList = Object.entries(tts.TTS_VOICES)
-            .map(([voice, characteristic]) => `  - ${voice}: ${characteristic}`)
-            .join('\n');
-        return text(`Gemini TTS — ${tts.TTS_VOICE_NAMES.length} voices (tts_generate / tts_multi_speaker):\n\n${voiceList}\n\n` +
-            `Tips for choosing a voice:\n` +
-            `- For professional/business: Kore, Charon, Rasalgethi, Alnilam\n` +
-            `- For friendly/casual: Achird, Puck, Zubenelgenubi, Sulafat\n` +
-            `- For calm/gentle: Achernar, Vindemiatrix, Umbriel\n` +
-            `- For energetic/lively: Fenrir, Sadachbia, Laomedeia\n` +
-            `- For clear narration: Iapetus, Erinome, Schedar\n\n` +
-            `Supertonic 3 — ${supertonic.SUPERTONIC_VOICE_NAMES.length} voices, on-device (tts_local_generate):\n\n` +
-            `  ${supertonic.SUPERTONIC_VOICE_NAMES.join(', ')}\n` +
-            `  Beyond F1–F5 being female and M1–M5 male, the vendor publishes no character labels.\n` +
-            `  Pick by listening — render the same sentence with two or three voices and compare.\n\n` +
-            `ElevenLabs — account-specific voices (tts_elevenlabs_generate / tts_elevenlabs_dialogue):\n\n` +
-            `  Not listed here: premade, cloned and Voice Library voices differ per account. Call tts_elevenlabs_voices ` +
-            `(needs the voices_read permission on the key) and pin the voice_id in the channel profile.\n\n` +
-            `Engine choice: narration bodies and long scripts go to tts_local_generate (zero cost, 6.3x realtime); ` +
-            `short cuts that need acting go to tts_generate (stylePrompt) or tts_elevenlabs_generate on eleven_v3 ` +
-            `(inline audio tags, the dearer of the two); scenes with 3+ speakers go to tts_elevenlabs_dialogue.\n` +
-            `If the channel profile (data/<slug>/profile.md) names a voice, use that value as-is — ` +
-            `a voice that changes every episode breaks the channel's identity.`);
-    },
+    tts_list_voices: async (args) => text(JSON.stringify(await tts.listTtsVoices(tts.ttsVoicesSchema.parse(args)), null, 2)),
     // ── speech synthesis (ElevenLabs) — REST, saves the file locally, returns path + measured cost ──
     // character-cost is the vendor's billing header, so it is reported as measured rather
     // than estimated from a price sheet (the same reasoning as Seedance's token count).
@@ -1044,7 +1089,7 @@ export const ROUTES = {
                 .join(' ');
             const langs = voice.verifiedLanguages.length ? ` · languages: ${voice.verifiedLanguages.join(',')}` : '';
             const desc = voice.description ? ` — ${voice.description.slice(0, 120)}` : '';
-            return `  - ${voice.name} — ${voice.voiceId} · ${voice.category ?? 'unknown'}${labels ? ` · ${labels}` : ''}${langs}${desc}`;
+            return `  - ${voice.name} — ${voice.voiceId} · ${voice.category ?? 'unknown'}${labels ? ` · ${labels}` : ''}${langs}${desc}${voice.previewUrl ? ` · preview: ${voice.previewUrl}` : ''}`;
         });
         const filter = [request.search ? `search="${request.search}"` : '', request.category ? `category=${request.category}` : '']
             .filter(Boolean)
@@ -1056,7 +1101,7 @@ export const ROUTES = {
                 `${sub.tier === 'free' ? ' — FREE tier: output is non-commercial and needs attribution' : ''}\n`
             : 'Plan: not readable with this key (needs user_read) — check the tier at https://elevenlabs.io/app/subscription before publishing commercially\n';
         return text(`ElevenLabs voices — ${voices.length} shown${result.totalCount !== undefined ? ` of ${result.totalCount}` : ''}${filter ? ` (${filter})` : ''}` +
-            `${result.hasMore ? ', more pages exist — narrow with search/category' : ''}:\n\n${lines.join('\n') || '  (none)'}\n\n` +
+            `${result.hasMore ? `, nextPageToken: ${result.nextPageToken ?? '(missing token)'}` : ''}:\n\n${lines.join('\n') || '  (none)'}\n\n` +
             subLine +
             `Pin the chosen voice_id in data/<slug>/profile.md §2 — the legacy premade voices retire 2026-12-31.`);
     },
@@ -1129,15 +1174,17 @@ export const ROUTES = {
             `Next: blender_render_previz to watch it; blender_object_animate on the root for the path across the floor.\n\n${blender.describeScene(r.scene)}`);
     },
     blender_render_previz: async (args) => {
-        const r = await withShotMedia(args, 'previz', () => blender.renderPreviz(parseArgs(blender.blenderRenderPrevizSchema, withoutPortal(args))), result => result.success ? result.videoPath : undefined);
+        const r = await blender.renderPreviz(parseArgs(blender.blenderRenderPrevizSchema, args));
         if (!r.success)
             return text(`Blender previz render failed: ${r.error}`, true);
         const skipped = r.skippedStills.length ? `\nSkipped stills (outside frames ${r.frameStart}–${r.frameEnd}): ${r.skippedStills.join(', ')}` : '';
         return text(`Previz rendered.\n\nFile: ${r.videoPath}\nStills: ${r.stillPaths.join(', ') || '(none)'}${skipped}\n` +
             `Engine: ${r.engine} · ${r.width}×${r.height} @ ${r.fps} fps · frames ${r.frameStart}–${r.frameEnd} (${r.frames} = ${r.seconds}s)\n` +
-            `Render time: ${r.elapsedSeconds}s${portalMediaReport(r)}\n\n` +
-            `Open the stills before judging the move — the stamp shows frame, camera and lens. The clip is a camera and blocking plan, not appearance.`, Boolean(r.portalMedia?.error));
+            `Render time: ${r.elapsedSeconds}s\n\n` +
+            `Open the stills before judging the move — the stamp shows frame, camera and lens. The clip is a camera and blocking plan, not appearance.`);
     },
+    music_generate_song: async (args) => { const r = await generateLyriaSong(args); return { ...text(JSON.stringify(r)), musicReceipt: { audioPath: r.audioPath, requestId: r.providerId } }; },
+    music_elevenlabs_generate: async (args) => { const r = await generateElevenMusic(args); return { ...text(JSON.stringify(r)), musicReceipt: { audioPath: r.audioPath, requestId: r.providerId } }; },
     // ── music generation (Lyria) — 30s batch clip / streaming with an exact duration ──
     music_generate_clip: async (args) => {
         const result = await music.generateClip(parseArgs(music.musicClipSchema, args));
@@ -1174,10 +1221,7 @@ export const ROUTES = {
             : '';
         return text(`Advanced music generated successfully!\n\nFile: ${result.audioPath}\nModel: ${result.model}\nDuration: ${result.durationSeconds} seconds\n\nWeighted Prompts:\n${promptInfo}${configInfo}\n\n48kHz stereo 16-bit WAV.`);
     },
-    capability_status: async (args) => {
-        const a = parseArgs(z.object({ channel: z.string().regex(CHANNEL_SLUG_RE).optional() }), args ?? {});
-        return text(renderCapabilityStatus(a.channel));
-    },
+    capability_status: async () => text(renderCapabilityStatus()),
     music_list_options: async () => {
         const bullets = (items) => items.map((item) => `  - ${item}`).join('\n');
         return text(`Suggested Music Generation Options (non-exhaustive — free text is accepted everywhere):\n\n` +
@@ -1207,15 +1251,15 @@ export const ROUTES = {
         const request = parseArgs(suno.sunoGenerateSchema, args);
         const result = await suno.generateMusic(request);
         if (!result.success)
-            return text(`Suno generation failed: ${result.error}`, true);
+            return { musicReceipt: { requestId: result.taskId }, ...text(`Suno generation failed: ${result.error}`, true) };
         const tracks = result.tracks ?? [];
         const lines = tracks.map((track, index) => `  ${index + 1}. ${track.audioPath}` +
             (track.title ? `  "${track.title}"` : '') +
             (track.durationSeconds ? `  ${Math.round(track.durationSeconds)}s` : '') +
             (track.tags ? `  [${track.tags}]` : ''));
-        return text(`Suno tracks generated.\n\nPrimary: ${result.audioPath}\nModel: ${result.model}\nTask: ${result.taskId}\nTracks (${tracks.length}):\n${lines.join('\n')}\n\n` +
-            `Remote URLs expire in 15 days — these local files are the keepers. ` +
-            `For a bed under narration, pick the instrumental variant and set filename to .wav so it matches .work/bgm.wav.`);
+        return { musicReceipt: { requestId: result.taskId, audioPath: result.audioPath }, ...text(`Suno tracks generated.\n\nPrimary: ${result.audioPath}\nModel: ${result.model}\nTask: ${result.taskId}\nTracks (${tracks.length}):\n${lines.join('\n')}\n\n` +
+                `Remote URLs expire in 14 days — these local files are the keepers. ` +
+                `Managed execution decodes the selected track to the final WAV path.`) };
     },
     suno_generate_sound: async (args) => {
         const request = parseArgs(suno.sunoSoundSchema, args);
@@ -1251,13 +1295,16 @@ export const ROUTES = {
     threads_review_submit: async (args) => text(JSON.stringify(submitThreadsReview(args))),
     threads_publish: async (args) => {
         const input = gateCall('threads_publish', args, () => parseArgs(threadsPublishSchema, args));
+        let styleWarnings;
         if (input.draftId)
-            checkThreadsGate(input);
+            styleWarnings = checkThreadsGate(input).styleWarnings;
         else
             checkThreadsEpisode(input);
+        // Style findings are suggestions: returned with the result, never a reason to withhold the post.
+        const note = (head) => styleWarnings?.length ? `${head}\nStyle suggestions (not blocking):\n${styleWarnings.join('\n')}` : head;
         if (input.dryRun)
-            return fromApi({ ok: true, status: 200, body: JSON.stringify({ platform: 'THREADS', postId: '', dryRun: true, gatePassed: true }) }, 'Dry run: no publishing API called.');
-        return fromApi(await sns.publishThreadsWithSelfReply(input), SNS_PUBLISHED_NOTE);
+            return fromApi({ ok: true, status: 200, body: JSON.stringify({ platform: 'THREADS', postId: '', dryRun: true, gatePassed: true, styleWarnings }) }, note('Dry run: no publishing API called.'));
+        return fromApi(await sns.publishThreadsWithSelfReply(input), note(SNS_PUBLISHED_NOTE));
     },
     instagram_publish: async (args) => {
         const input = parseArgs(instagramPublishSchema, args);
@@ -1358,21 +1405,25 @@ export const ROUTES = {
         const input = parseArgs(threadsSearchSchema, args);
         return fromApi(await sns.threadsKeywordSearch(input));
     },
+    production_workflow: async (args) => text(JSON.stringify(manageWorkflow(args), null, 2)),
     // ── Storyboard ──
-    storyboard_backups: async (args) => {
+    location_manage: async (args) => {
         try {
-            const result = manageBackups(args);
-            return text(JSON.stringify(result, null, 2), Boolean(result.error));
+            return text(JSON.stringify(await manageLocation(args), null, 2));
         }
         catch (error) {
             return text(error instanceof Error ? error.message : String(error), true);
         }
     },
+    character_voice_audition: async (args) => text(JSON.stringify(await manageVoiceAudition(voiceAuditionSchema.parse(args)), null, 2)),
+    tts_review_acting: async (args) => text(JSON.stringify(await reviewTtsActing(ttsActingReviewSchema.parse(args)), null, 2)),
+    speech_manage: async (args) => text(JSON.stringify(manageSpeech(parseArgs(speechManageSchema, args)), null, 2)),
+    host_review: async (args) => text(JSON.stringify(await hostReview(args), null, 2)),
+    acting_review: async (args) => text(JSON.stringify(await reviewActing(parseArgs(actingReviewSchema, args)), null, 2)),
     storyboard_read: async (args) => {
         storyboard.contract(); // a missing structure-contract.js reports itself here, before the argument schema does
         const a = parseArgs(storyboard.storyboardReadSchema, args);
-        const { win } = storyboard.readBoard(a.path);
-        return text(JSON.stringify(storyboard.contract().outline(win, a.level), null, 2));
+        return text(JSON.stringify(storyboard.readStoryboard(a), null, 2));
     },
     storyboard_apply: async (args) => {
         storyboard.contract();
@@ -1382,50 +1433,53 @@ export const ROUTES = {
     storyboard_check: async (args) => {
         storyboard.contract();
         const r = storyboard.checkStoryboard(parseArgs(storyboard.storyboardCheckSchema, args));
-        return text(storyboard.renderCheck(r), r.violations > 0);
+        return text(storyboard.renderCheck(r));
     },
     scenario_check: async (args) => {
         const r = storyboard.checkScenario(parseArgs(storyboard.scenarioCheckSchema, args));
-        return text(JSON.stringify(r, null, 2), r.violations > 0);
+        return text(JSON.stringify(r, null, 2));
     },
-    // ── ttalkkakstory portal (workspace API key) ──
-    // One route per portal endpoint; the handler resolves the key from the channel on the
-    // episode path and answers one line (isError) when there is none — a mirror, not a gate.
-    portal_workspace_check: async (args) => fromPortal(await portalRoutes.workspaceCheck(parseArgs(portal.workspaceCheckSchema, args))),
-    portal_shot_media_upload: async (args) => {
-        try {
-            return text(JSON.stringify(await uploadShotMedia(parseArgs(mediaUploadSchema, args))));
-        }
-        catch (error) {
-            return text(error instanceof Error ? error.message : String(error), true);
-        }
-    },
-    portal_storyboard_save: async (args) => fromPortal(await portalRoutes.storyboardSave(parseArgs(portal.storyboardSaveSchema, args))),
-    portal_storyboard_list: async (args) => fromPortal(await portalRoutes.storyboardList(parseArgs(portal.storyboardListSchema, args))),
-    portal_storyboard_pull: async (args) => fromPortal(await portalRoutes.storyboardPull(parseArgs(portal.storyboardPullSchema, args))),
-    portal_episode_status: async (args) => fromPortal(await portalRoutes.episodeStatus(parseArgs(portal.episodeStatusSchema, args))),
-    portal_episode_artifacts_sync: async (args) => fromPortal(await portalRoutes.episodeArtifactsSync(parseArgs(portal.artifactSyncSchema, args))),
-    portal_publication_record: async (args) => fromPortal(await portalRoutes.publicationRecord(parseArgs(portal.publicationRecordSchema, args))),
-    portal_episode_create: async (args) => fromPortal(await portalRoutes.episodeCreate(parseArgs(portal.episodeCreateSchema, args))),
-    portal_episode_checkpoint: async (args) => fromPortal(await portalRoutes.episodeCheckpoint(parseArgs(portal.episodeCheckpointSchema, args))),
-    portal_episode_revisions: async (args) => fromPortal(await portalRoutes.episodeRevisions(parseArgs(portal.episodeRevisionsSchema, args))),
-    portal_episode_restore: async (args) => fromPortal(await portalRoutes.episodeRestore(parseArgs(portal.episodeRestoreSchema, args))),
-    portal_episode_lease: async (args) => fromPortal(await portalRoutes.episodeLease(parseArgs(portal.episodeLeaseSchema, args))),
-    portal_scenario_save: async (args) => fromPortal(await portalRoutes.scenarioSave(parseArgs(portal.scenarioSaveSchema, args))),
-    portal_scenario_pull: async (args) => fromPortal(await portalRoutes.scenarioPull(parseArgs(portal.scenarioPullSchema, args))),
-    portal_attachments_sync: async (args) => fromPortal(await portalRoutes.attachmentsSync(parseArgs(portal.attachmentsSyncSchema, args))),
-    portal_channel_sync: async (args) => fromPortal(await portalRoutes.channelSync(parseArgs(portal.channelSyncSchema, args))),
-    portal_assets_search: async (args) => fromPortal(await portalRoutes.assetsSearch(parseArgs(portal.assetsSearchSchema, args))),
-    portal_assets_get: async (args) => fromPortal(await portalRoutes.assetsGet(parseArgs(portal.assetsGetSchema, args))),
-    portal_character_list: async (args) => fromPortal(await portalRoutes.characterList(parseArgs(portal.characterListSchema, args))),
-    portal_character_get: async (args) => fromPortal(await portalRoutes.characterGet(parseArgs(portal.characterGetSchema, args))),
-    portal_character_create: async (args) => fromPortal(await portalRoutes.characterCreate(parseArgs(portal.characterCreateSchema, args))),
-    portal_character_update: async (args) => fromPortal(await portalRoutes.characterUpdate(parseArgs(portal.characterUpdateSchema, args))),
-    portal_character_delete: async (args) => fromPortal(await portalRoutes.characterDelete(parseArgs(portal.characterDeleteSchema, args))),
-    portal_character_extra_delete: async (args) => fromPortal(await portalRoutes.characterExtraDelete(parseArgs(portal.characterExtraDeleteSchema, args))),
-    portal_character_image_upload: async (args) => fromPortal(await portalRoutes.characterImageUpload(parseArgs(portal.characterImageUploadSchema, args))),
-    portal_character_tts_set: async (args) => fromPortal(await portalRoutes.characterTtsSet(parseArgs(portal.characterTtsSetSchema, args))),
-    portal_images_upload: async (args) => fromPortal(await portalRoutes.imagesUpload(parseArgs(portal.imageUploadSchema, args))),
-    portal_render_allocation: async (args) => fromPortal(await portalRoutes.renderAllocation(parseArgs(portal.renderAllocationSchema, args))),
-    portal_scenario_choose: async (args) => fromPortal(await portalRoutes.scenarioChoose(parseArgs(portal.scenarioChooseSchema, args))),
 };
+// Normalize before schema validation and before any file upload or paid API call.
+// Keep exact legacy requests intact; new shot calls state their required coverage.
+for (const name of DURATION_TOOLS) {
+    const generate = ROUTES[name];
+    ROUTES[name] = async (input) => {
+        if (!input || typeof input !== 'object' || Array.isArray(input))
+            return generate(input);
+        const { args, timing } = resolveVideoDuration(name, input);
+        const result = await generate(args);
+        if (timing)
+            result.content.push({ type: 'text', text: 'Duration plan (requested, not measured): ' + JSON.stringify(timing) });
+        return result;
+    };
+}
+// All legacy video entrypoints share the routing service. Capture the raw adapters once;
+// video_execute must not recurse through the public wrapper.
+const videoDispatch = Object.fromEntries(Object.keys(VIDEO_ADAPTERS).map(name => [name, ROUTES[name]]));
+const dispatchVideo = (name, args) => videoDispatch[name](args);
+for (const name of Object.keys(VIDEO_ADAPTERS)) {
+    ROUTES[name] = args => routeLegacyVideo(name, args, dispatchVideo);
+}
+ROUTES.video_catalog = async () => text(JSON.stringify(videoCatalog(), null, 2));
+ROUTES.video_plan = async (args) => text(JSON.stringify(planVideo(args), null, 2));
+ROUTES.video_execute = args => executeVideo(args, dispatchVideo);
+ROUTES.video_status = async (args) => text(JSON.stringify(await videoStatus(args), null, 2));
+// Existing tools are compatibility entrypoints into the same image service.
+const imageDispatch = Object.fromEntries(Object.keys(IMAGE_ADAPTERS).map(name => [name, ROUTES[name]]));
+const dispatchImage = (name, args) => imageDispatch[name](args);
+for (const name of Object.keys(IMAGE_ADAPTERS))
+    ROUTES[name] = args => routeLegacyImage(name, args, dispatchImage);
+ROUTES.image_catalog = async () => text(JSON.stringify(imageCatalog(), null, 2));
+ROUTES.image_plan = async (args) => text(JSON.stringify(imagePlanSummary(planImage(args)), null, 2));
+ROUTES.image_execute = args => executeImage(args, dispatchImage);
+ROUTES.image_status = async (args) => text(JSON.stringify(await imageStatus(args), null, 2));
+// Music adapters cannot bypass saved selection or reservations in a configured workspace.
+const musicDispatch = Object.fromEntries(Object.keys(MUSIC_ADAPTERS).map(name => [name, ROUTES[name]]));
+const dispatchMusic = (name, args) => musicDispatch[name](args);
+for (const name of Object.keys(MUSIC_ADAPTERS))
+    ROUTES[name] = args => routeLegacyMusic(name, args, dispatchMusic);
+ROUTES.music_catalog = async () => text(JSON.stringify(musicCatalog(), null, 2));
+ROUTES.music_plan = async (args) => text(JSON.stringify(musicPlanSummary(planMusic(args)), null, 2));
+ROUTES.music_execute = args => executeMusic(args, dispatchMusic);
+ROUTES.music_status = async (args) => text(JSON.stringify(musicStatus(args), null, 2));

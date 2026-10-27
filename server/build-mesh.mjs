@@ -14,3 +14,7 @@ await build({entryPoints:['animation-review-runtime.mjs'], bundle:true, format:'
 await build({entryPoints:['previz-runtime.mjs'], bundle:true, format:'iife', globalName:'PREVIZ_RUNTIME',
   minify:true, legalComments:'eof', banner:{js:'/*\n' + license + '\n*/'},
   outfile:'../skills/storyboard/references/previz-runtime.js'});
+
+await build({entryPoints:['location-review-runtime.mjs'], bundle:true, format:'iife',
+  minify:true, legalComments:'eof', banner:{js:'/*\n' + license + '\n*/'},
+  outfile:'../skills/storyboard/references/location-review-runtime.js'});

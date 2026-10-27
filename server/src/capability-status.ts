@@ -25,7 +25,7 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { blenderBin, config, mfluxZImageBin, mlxServeConfigured, portalCredential, qwen3AsrBin, snsTokenDir, supertonicPython } from './config.js';
+import { blenderBin, config, mfluxZImageBin, mlxServeConfigured, qwen3AsrBin, snsTokenDir } from './config.js';
 import { enabledPlatforms } from './sns-client.js';
 
 export interface ProviderStatus {
@@ -43,28 +43,10 @@ export interface CapabilityStatus {
   providers: ProviderStatus[];
 }
 
-export interface PortalConfigurationStatus {
-  channel: string | null;
-  state: 'configured' | 'missing' | 'invalid';
-  source?: string;
-}
-
-/** Check only the selected channel's local configuration; never resolve a token remotely. */
-export function portalConfigurationStatus(channel?: string): PortalConfigurationStatus {
-  try {
-    const credential = portalCredential(channel);
-    return { channel: channel ?? null, state: credential ? 'configured' : 'missing',
-      ...(credential ? { source: credential.source } : {}) };
-  } catch {
-    // Credential parser messages and values must not become capability output.
-    return { channel: channel ?? null, state: 'invalid' };
-  }
-}
-
 const has = (v: string | undefined): boolean => Boolean(v && v.length > 0);
 /**
  * True when the binary resolves. A path with a separator is checked where it points; a bare
- * name is looked up on PATH, because that is how it will be spawned — `supertonicPython()`
+ * name is looked up on PATH, because that is how it will be spawned — the configured binary
  * returns a plain `python3` unless SUPERTONIC_PYTHON says otherwise.
  */
 const binOk = (p: string): boolean => {
@@ -77,11 +59,10 @@ const binOk = (p: string): boolean => {
   }
 };
 
-export function capabilityStatus(channel?: string): {
+export function capabilityStatus(): {
   capabilities: CapabilityStatus[];
   setupOffers: Array<{ env: string; unlocks: string[] }>;
   sns: { platforms: string[]; tokenDir: string };
-  portal: PortalConfigurationStatus;
 } {
   const gemini = has(config.geminiApiKey);
   const mlx = mlxServeConfigured();
@@ -98,44 +79,44 @@ export function capabilityStatus(channel?: string): {
           note: 'seedance_text2video · seedance_img2video · seedance_reference' },
         { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
           note: 'mlx_video_generate — 24fps rgb8 muxed to mp4, RAM-capped; not the default path' },
+        { provider: 'astra-genai (LTX v2 gateway)', configured: has(config.astraGenaiApiKey), needs: 'ASTRA_GENAI_API_KEY',
+          note: 'astra_genai_text2video · astra_genai_img2video · astra_genai_audio2video (audio-length clip, mono/stereo, 7350-96000 Hz, data URI ≤15,000,000 base64 chars) · astra_genai_msr (four subjects + background) · astra_genai_video_status; separate gateway token, no LoRA; configuration is not a live check' },
         { provider: 'astra video (self-hosted LTX-2.5)', configured: has(config.astraVideoApiKey), needs: 'ASTRA_VIDEO',
-          note: 'astra_text2video · astra_img2video · astra_keyframe_video · astra_audio2video · astra_video_retake · astra_video_list_uploads · astra_video_delete_upload (upload management requires server endpoint support; configuration is not a live check) — our own box, no per-call bill, but ONE render at a time (66-184s each plus queue); the batch lane, not the interactive one' },
+          note: 'astra_text2video · astra_img2video · astra_keyframe_video · astra_audio2video · astra_ic_lora · astra_video_retake · astra_video_capabilities · astra_video_list_uploads · astra_video_delete_upload (upload management requires server endpoint support; configuration is not a live check) — our own box, no per-call bill, but ONE render at a time (66-184s each plus queue); the batch lane, not the interactive one' },
       ],
     },
     {
       capability: 'image_generation',
       providers: [
+        { provider: 'astra-genai (DashScope gateway)', configured: has(config.astraGenaiApiKey), needs: 'ASTRA_GENAI_API_KEY',
+          note: 'astra_genai_text2img / astra_genai_edit — text, single-source img2img/inpaint, optional prompt expansion, 800-character prompt limit; gateway model availability requires verification' },
         { provider: 'z-image (local, mflux)', configured: binOk(mfluxZImageBin()), needs: 'mflux on this machine',
-          note: 'image_local_generate — free, and the default for backgrounds with no text' },
+          note: 'image_local_generate — local text generation; saved image selection takes precedence' },
         { provider: 'gpt-image (OpenAI)', configured: has(config.openaiApiKey), needs: 'OPENAI_API_KEY',
-          note: 'gpt_image_text2img · gpt_image_img2img — the only lane that renders Korean text' },
+          note: 'gpt_image_text2img · gpt_image_img2img — API generation/editing; inspect Korean text in actual results' },
         { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
-          note: 'mlx_image_generate · mlx_image_edit — optional local lane, not the default' },
+          note: 'mlx_image_generate · mlx_image_edit — installed model capabilities vary; inspect image_catalog before image_plan' },
       ],
     },
     {
       capability: 'tts',
       providers: [
-        { provider: 'supertonic (local)', configured: binOk(supertonicPython()),
-          needs: 'python3 on this machine (or SUPERTONIC_PYTHON pointing at a virtualenv)',
-          note: 'tts_local_generate — free, offline, the default narration voice' },
         { provider: 'gemini', configured: gemini, needs: 'GEMINI_API_KEY',
-          note: 'tts_generate · tts_multi_speaker' },
+          note: 'tts_generate · tts_multi_speaker · tts_gemini_38' },
         { provider: 'elevenlabs', configured: has(config.elevenLabsApiKey), needs: 'ELEVENLABS_API_KEY',
-          note: 'tts_elevenlabs_generate · tts_elevenlabs_dialogue · sfx_elevenlabs_generate' },
-        { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
-          note: 'mlx_tts_generate — optional; never a silent fallback for profile §2' },
+          note: 'tts_elevenlabs_generate · tts_elevenlabs_dialogue — eleven_v4 only' },
       ],
     },
     {
       capability: 'music_generation',
       providers: [
+        { provider: 'Eleven Music', configured: has(config.elevenLabsApiKey), needs: 'ELEVENLABS_API_KEY', note: 'Official music_v2 / music_v2_5; select models.music and use music_plan → music_execute' },
         { provider: 'lyria (Gemini)', configured: gemini, needs: 'GEMINI_API_KEY',
-          note: 'music_generate · music_generate_clip' },
-        { provider: 'suno (sunoapi.org)', configured: has(config.sunoApiKey), needs: 'SUNO_API_KEY',
-          note: 'suno_generate — third-party wrapper, not an official Suno API' },
+          note: 'music_generate_song · music_generate_advanced; saved Lyria selection' },
+        { provider: 'suno-api (sunoapi.org third party)', configured: has(config.sunoApiKey), needs: 'SUNO_API_KEY',
+          note: 'suno_generate — V6 family; separate from the official Suno Platform' },
         { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
-          note: 'mlx_music_generate — optional local bed; default BGM stays Lyria' },
+          note: 'mlx_music_generate — exact installed pack from saved music selection' },
       ],
     },
     {
@@ -205,13 +186,12 @@ export function capabilityStatus(channel?: string): {
     capabilities,
     setupOffers: Array.from(offers, ([env, unlocks]) => ({ env, unlocks })),
     sns: { platforms: enabledPlatforms(), tokenDir: snsTokenDir },
-    portal: portalConfigurationStatus(channel),
   };
 }
 
 /** The same picture as a menu a person reads — "N of M configured", then what one key unlocks. */
-export function renderCapabilityStatus(channel?: string): string {
-  const { capabilities, setupOffers, sns, portal } = capabilityStatus(channel);
+export function renderCapabilityStatus(): string {
+  const { capabilities, setupOffers, sns } = capabilityStatus();
   const lines: string[] = ['What this machine can do right now', ''];
   capabilities.forEach((c) => {
     lines.push(`  ${c.capability.padEnd(18)} ${c.configured}/${c.total} configured`);
@@ -224,13 +204,6 @@ export function renderCapabilityStatus(channel?: string): string {
   lines.push(`  publishing         ${sns.platforms.length ? sns.platforms.join(', ') : 'none'}` +
              `  (credential files under ${sns.tokenDir})`);
   lines.push('');
-  lines.push(`  storyboard_portal  ${portal.state} (channel: ${portal.channel ?? 'flat/env only'})`);
-  if (portal.source) lines.push(`      source: ${portal.source}`);
-  lines.push(portal.state === 'configured'
-    ? '      Ask HITL: local HTML or ttalkkakstory integration BEFORE any portal call. A key is not consent; reuse an explicit episode choice.'
-    : portal.state === 'missing'
-      ? '      Use local storyboard.html with the shared portal design; no portal call or setup question.'
-      : '      Portal configuration is invalid. Use local HTML; do not try another channel or expose credential contents.');
   if (setupOffers.length) {
     lines.push('');
     lines.push('  One env var away:');

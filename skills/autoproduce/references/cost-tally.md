@@ -14,7 +14,7 @@ before approval; the report reads them the same way.
 ```
 data/<channel>/episodes/<topic>/.work/cost-tally.tsv     ← the ledger (written by produce)
 data/<channel>/episodes/<topic>/.work/cost-forecast.tsv  ← the projection: stills, slide arts, video slots (storyboard §6, written by cost-preview.js)
-data/<channel>/episodes/<topic>/.work/cost-estimate.tsv  ← the whole-episode projection for the cap verdict (autoproduce §5)
+data/<channel>/episodes/<topic>/.work/cost-estimate.tsv  ← the whole-episode projection for the cap verdict (unattended-lifecycle.md#cap-check)
 data/<channel>/episodes/<topic>/output/video/cost-report.txt  ← the tally result (made by produce §10)
 ```
 
@@ -52,7 +52,7 @@ image.gpt-image-2.high	1	produce: cover background scene-1
 image.local	3	produce: points backgrounds scene-2~4
 image.gpt-image-2.high	1	produce: §1.5 remake scene-1
 veo.lite.1080p	8	produce: b-roll a1 — 8s generated, 4s used
-tts.local	0.412	produce: narration, 412 chars
+tts.gemini-flash	0.412	produce: narration, 412 chars
 music.lyria-clip	1	produce: BGM 30s
 ```
 
@@ -78,14 +78,12 @@ silently.
 | `veo.*` | second | **generated length**. Generate 8s and use only 4s, still `8` (1080p is 8s-only) |
 | `seedance.*` | second | the requested `durationSeconds` as-is. Note the response's `completion_tokens` in the memo |
 | `video.mlx` | second | `numFrames` ÷ 24 (LTX is 24 fps) |
-| `tts.*` | 1000 chars | **characters ÷ 1000**. 412 chars is `0.412`. `mlx_tts_generate` counts `input` |
+| `tts.*` | 1000 chars | **characters ÷ 1000**. 412 chars is `0.412` |
 | `music.lyria-clip` | clip | number of clips |
 | `music.mlx` | second | `durationSeconds` |
 | `3d.mlx` | mesh | 1 per call |
 
-Writing TTS as `412` is the most common mistake. The local engine's price is 0
-so it doesn't show, but make the same mistake on a Gemini channel and that line
-inflates 1,000x.
+Writing TTS as `412` is the most common mistake — that line inflates 1,000x.
 
 Veo invites the opposite mistake — write 4 seconds because you only used 4,
 and half the actual bill disappears. 8-second generation is 1080p's only
@@ -102,7 +100,7 @@ $REF/cost-report.sh .work/cost-tally.tsv > output/video/cost-report.txt; echo "c
 ```
 
 Add `--cap <USD>` only when checking the cap (unattended authoring's pre-spend
-verdict — autoproduce §5).
+verdict — unattended-lifecycle.md#cap-check).
 
 ## Reading exit codes — never read 1 as a pass
 
@@ -110,7 +108,7 @@ verdict — autoproduce §5).
 |---|---|---|
 | 0 | ok | the total is the episode's cost |
 | 1 | verdict unavailable | copy the `!!` lines into your report verbatim (below) |
-| 2 | over the cap | cancel the escalation, back to economy baseline (autoproduce only) |
+| 2 | over the cap | reduce the plan under the same saved models — fewer generated cuts, still or HTML routes for the rest; never pad toward a ratio or swap engines (unattended-lifecycle.md#cap-check) |
 | 3 | input error | fix the path/format first, then rerun |
 
 **exit 1 has two causes, and the responses differ.**
@@ -175,10 +173,11 @@ It reads `scenes.js` for the stills and the video slots, writes the projection t
 this same line format, and runs `cost-report.sh` over both files — so the estimate and the bill
 come out of one calculator reading one price table.
 
-**What it projects, and why only that.** Every scene with a `bgPrompt` bills one image —
-`image.gpt-image-2.high` for the cover and for a still a video engine reads (a b-roll's source
-scene, a motion-background scene), `image.local` at $0 for the rest — and each `slide.arts`
-plate bills one local image. B-roll bills `veo.lite.1080p` at 8 seconds however
+**What it projects, and why only that.** Every scene with a `bgPrompt` and each `slide.arts`
+plate bills one image on the saved image model's row (`PRODUCTION.modelSettings.models.image` —
+`image.host`, `image.gpt-image-2.<quality>` or `image.local`); only a legacy board with no
+saved model keeps the old split of gpt high for the cover and video-source stills, local for
+the rest. B-roll bills `veo.lite.1080p` at 8 seconds however
 short the cut is (1080p generates 8s), a motion background bills the seconds it asks Seedance
 for, and a quote speech clip bills `veo.fast.1080p` at 8 (veo_reference refuses the lite model
 and is pinned to 8s). `visual.engine` / `visual.video.engine` override the route. TTS and music
@@ -196,4 +195,4 @@ slot — the number on the approval screen has to be the number the user is appr
 - `cost-report.sh` — the calculator
 - `cost-preview.js` — the approval-screen preview (spent + projected), writes `.work/cost-forecast.tsv`
 - `board.js` — one page per channel: every episode's stage, blockers, cost and decisions (`data/<channel>/growth/board.html`)
-- `cost-tiers.md` — model ladder, escalation conditions, per-episode cap (unattended authoring)
+- `cost-tiers.md` — price reference: where the money goes, how the cap is read (unattended authoring)

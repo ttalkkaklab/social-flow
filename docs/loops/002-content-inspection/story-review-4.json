@@ -1,0 +1,10 @@
+{
+  "hash": "37f2864065f5c13d5f2284d13447b474aa23acc5448276246ce76a5b44b7be06",
+  "verdict": "pass",
+  "unresolved": [],
+  "meaning": {"reason": "Opening allegiance to power is answered by materially refusing its reward; the locked final door prevents help from becoming instant absolution.", "refs": [{"shot":1,"event":2,"quote":"식민지배 덕에 살 만해진 거지. 약하면 당하는 거고."},{"shot":22,"event":2,"quote":"누가 드나드는지는 더 안 팝니다."}]},
+  "progression": {"reason": "The same red-door route links information sold to police access and arrest; confession follows the observed consequence, then renewed payment forces a decision.","refs":[{"shot":5,"event":1,"quote":"민재가 연화가 드나들던 붉은 문 옆 골목을 가리킨다. 장석주의 펼친 수첩에는 같은 문과 골목 약도가 보인다."},{"shot":9,"event":1,"quote":"같은 붉은 문 앞에서 경찰이 인쇄공을 붙잡고 있다. 민재의 손이 주머니 위에서 멈춘다."}]},
+  "payoff": {"reason":"Returning both rewards is witnessed before a small supervised task is offered. The completed move and still-locked door earn a bounded ending without cancelling the harm.","refs":[{"shot":21,"event":1,"quote":"문밖 돌턱에 열쇠와 봉투가 나란히 놓여 있다. 민재의 손은 비어 있다."},{"shot":27,"event":1,"quote":"같은 꾸러미가 마른 탁자 위에 있다. 민재의 양손은 비었고 연화는 두 걸음 뒤에서 그를 지켜본다. 안쪽 문은 여전히 잠겨 있다."}]},
+  "grounding": {"reason":"The adaptation boundary marks invented people and events as fiction; stored historical material is distinct from live tracking or guaranteed safety. No new visual or speech verification is implied.","refs":[{"shot":15,"event":1,"quote":"안경에 저장한 역사 자료예요."},{"shot":16,"event":1,"quote":"내일 시위 뒤 검거가 있었대요. 지금 이 길이 안전한지는 몰라요."}]},
+  "character": {"reason":"Minjae admits his own sale and gives up its benefits. Yeonhwa retains decisions and access control instead of rewarding remorse with secrets or forgiveness; Jang consistently treats protection as a transaction.","refs":[{"shot":11,"event":2,"quote":"내가 그 길을 알려 줬어요. 이 돈도 받았고요."},{"shot":25,"event":1,"quote":"아직 안 찍은 종이예요. 내 눈앞에서 저 마른 탁자까지만."}]}
+}

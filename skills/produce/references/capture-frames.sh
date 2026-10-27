@@ -37,7 +37,7 @@ fi
 CHROME="${CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}"
 EXTRA=(); [ "$ALPHA" = "1" ] && EXTRA+=(--default-background-color=00000000)
 mkdir -p "$(dirname "$OUT")"; rm -f "$OUT"
-if [ "$CAP_W" -lt 500 ]; then
+if [ "$CAP_W" -lt 500 ] || [ "${CAPTURE_PIPE:-0}" = "1" ]; then
   node "$(dirname "$0")/capture-viewport.js" "$CHROME" "$URL" "$OUT" "$CAP_W" "$CAP_H" "$ALPHA" >/dev/null
 else
 "$CHROME" --headless=new --disable-gpu --window-size=$CAP_W,$CAP_H --hide-scrollbars \

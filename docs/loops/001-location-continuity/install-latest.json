@@ -1,0 +1,897 @@
+{
+  "stamp": "2026-10-16T08-06-56-205Z",
+  "files": [
+    {
+      "host": ".codex",
+      "file": "README.md",
+      "sha256": "50810a0a3bc1166b1a47c6b75d12ab4a3a4d883341034faffe35bbab9e6c9af4"
+    },
+    {
+      "host": ".codex",
+      "file": "server/build-mesh.mjs",
+      "sha256": "dbb0d6209a66700587720dce8f820e52ff1ddf9b56558fcf6e18da1ebb0ab5c2"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/bundle.js",
+      "sha256": "3e32444544f18f20fe0fb9046d00817eeb49cc6a76290f519d253f5932bdfe43"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/handlers.js",
+      "sha256": "7d2656e3e290db1a3373e261e840df6af6ac94aa2ad127331f43d26f546410b3"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/storyboard.js",
+      "sha256": "e4706bfe850d1fdd40017e17570d769456f97523e21d3e035d501c22af3ad1ee"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/tools.js",
+      "sha256": "785e178db3acf4dc99266d76123e849b839e04502328c43c89e60eea079e7eb8"
+    },
+    {
+      "host": ".codex",
+      "file": "server/src/handlers.ts",
+      "sha256": "2b2e56643f530a7a58928d6d077f35fda9305fd47c58f9a3acb53039f27304e8"
+    },
+    {
+      "host": ".codex",
+      "file": "server/src/storyboard.ts",
+      "sha256": "dd767541243878e67b43a16aab1523b9e70ad7692dbaf53364d8e78230000331"
+    },
+    {
+      "host": ".codex",
+      "file": "server/src/tools.ts",
+      "sha256": "0e0ad0eee686deb9c7e04a684999815068ad5a98ae30d815863b95e2183c8dcf"
+    },
+    {
+      "host": ".codex",
+      "file": "server/test/storyboard-html.test.mjs",
+      "sha256": "d2081650bad8d167467a3ddc3228080b1a59534e760eefa67635353dba2101a6"
+    },
+    {
+      "host": ".codex",
+      "file": "skills/produce/SKILL.md",
+      "sha256": "8a54ce12a8296a681441b1db4a1a4a9247e59db271a509c3b381516e97167bc4"
+    },
+    {
+      "host": ".codex",
+      "file": "skills/produce/references/check-production.js",
+      "sha256": "f7025a11d5c9cede4d58881e185728b715f8da69c0526372a86c13815f18e0e8"
+    },
+    {
+      "host": ".codex",
+      "file": "skills/storyboard/SKILL.md",
+      "sha256": "72dc6fde459c707ed29f738fcb17d9e86c6a9043528b89441a50990438eca803"
+    },
+    {
+      "host": ".codex",
+      "file": "skills/storyboard/references/assemble-bg-prompt.js",
+      "sha256": "1d1887afd929f90742fca5f760a31c7a3c46d2a1806a9a22f27cb8c4eeca3097"
+    },
+    {
+      "host": ".codex",
+      "file": "skills/storyboard/references/check-scenes.js",
+      "sha256": "4069a89071c3d4fd0f6459e8ef70cfed69d55785d6503301fa4fd1f5dda2ea01"
+    },
+    {
+      "host": ".codex",
+      "file": "skills/storyboard/references/scenes-schema.md",
+      "sha256": "23c182e0256053a73afca7fdbd2a0b30274aefff4cc4aedeb371e18c489903d4"
+    },
+    {
+      "host": ".codex",
+      "file": "skills/storyboard/references/spatial-prompts.js",
+      "sha256": "57aa1a3a851a66938f59568c05a5de5e6fbf896434bdf766ff394c30374c1734"
+    },
+    {
+      "host": ".codex",
+      "file": "skills/storyboard/references/storyboard-html-template.html",
+      "sha256": "e2a7cc58642a9b9f8a0625bf8511c51f6715a8bce30c059c196dac94f317df42"
+    },
+    {
+      "host": ".codex",
+      "file": "skills/storyboard/references/storyboard-html.js",
+      "sha256": "c0ec1989e457d37b2dbaff91e7be66ac40fa048d4e6bbc97857df83f218d859c"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/location.js",
+      "sha256": "e8d0b5527fe1a0850c6b44ec2b6473ee60ebf9d029dc70ef977e2127e087bea5"
+    },
+    {
+      "host": ".codex",
+      "file": "server/location-review-runtime.mjs",
+      "sha256": "39d7b3c603c55f447ac818d2fa6b1a196cd61d3df6c62ca89883171b8c7a0541"
+    },
+    {
+      "host": ".codex",
+      "file": "server/src/location.ts",
+      "sha256": "44f1df8f90af70b76a210c6411688511c5738bd4567d5d0ba4c9d47b9d5909c6"
+    },
+    {
+      "host": ".codex",
+      "file": "server/test/location.test.mjs",
+      "sha256": "8f18135c5b0c9a6cc1c1affd7ee8af5f7cfefb24d1898a964e6ca3bd636a5f59"
+    },
+    {
+      "host": ".codex",
+      "file": "skills/storyboard/references/location-assets.js",
+      "sha256": "c0afc4e0d615e0750469868b004e01e64e69b88f37405dbdb0484416e419a8ae"
+    },
+    {
+      "host": ".codex",
+      "file": "skills/storyboard/references/location-assets.md",
+      "sha256": "6ebf4635393d2211d2fd1c7b9badf6a93ee4ff659ea9306b30eaa011186e2836"
+    },
+    {
+      "host": ".codex",
+      "file": "skills/storyboard/references/location-blender.py",
+      "sha256": "0638076ab8b6f2bbe5b9bda1b02ad99128be3fe5fa891878a6d947ad377f59c4"
+    },
+    {
+      "host": ".codex",
+      "file": "skills/storyboard/references/location-contract.js",
+      "sha256": "2c03aa28e9b97ba56f68280780781647be4b300c26b295edd30b6b3625f83380"
+    },
+    {
+      "host": ".codex",
+      "file": "skills/storyboard/references/location-example.js",
+      "sha256": "9dcd3020cbc93534c8c7b914d587a3bf722c1d226e04beea27b3f60d268171fb"
+    },
+    {
+      "host": ".codex",
+      "file": "skills/storyboard/references/location-review-runtime.js",
+      "sha256": "f962cea2a598a795e909c956294af8a7620eda9c20cea9a8e735e4f705fb88e0"
+    },
+    {
+      "host": ".codex",
+      "file": "skills/storyboard/references/location-review.css",
+      "sha256": "0dda550b5a4db70c70dc2859b48e42d719d51f3e1432e65ec175677891493284"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/asr-alignment.js",
+      "sha256": "db9771953190309562d038742d81303a0680670a9350ba89164ed84437fe3d47"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/astra-video-client.js",
+      "sha256": "62cdf8a16502a06af28fb26531fc15862c3638a36bedf8e5d4156bf1bf523936"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/blender-bridge.js",
+      "sha256": "45e61afc0c78756cebd4a5ff16a07bf02d1b55648bed214f1e9c8f05c7a8a933"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/capability-status.js",
+      "sha256": "c074cbb4aa5876608909a8055b7f1d38fc104f0386ee29ec2b592757a5aa0743"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/config.js",
+      "sha256": "6575f26ed0ca793b4734ae0eec68cd36dfe7744d4a59a7931f533fbf03b74a93"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/content-feedback-html.js",
+      "sha256": "dea8cdef66267086f76339fe0615ea597011bfbb1cd8b06d95d36a9c192244b7"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/content-feedback.js",
+      "sha256": "87b2c508e593faee3bd083b3778d152cfb8701d639ec4687e376b4c26cd20ce3"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/datago-client.js",
+      "sha256": "f8267245b17931acbeec031b5bc94ac98f0476d76007a7f0c71540d634173c54"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/elevenlabs-client.js",
+      "sha256": "02486cf53ae5a00fc591a7a0da1be79452923eb6b2493224590afd0e456f47b8"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/http.js",
+      "sha256": "0cbc0b79b71e4e79a0db38ba6d6084fa0192bf4ba8806586b31bd29bcfa0ac51"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/image-client.js",
+      "sha256": "049bca6ac0631b0131b05f0e04fe08f55b5d63c7af8fbd752598582c0d8812d2"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/index.js",
+      "sha256": "bb8b44cd1112d169c8042d7dbdc8fc9822efcf6aad5a61416ab7e7a0becf1c76"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/media-publish.js",
+      "sha256": "c37e98b15ce7f2604bb77e9ba0d8fbd07768186b74ad3f7d134f344413a63d00"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/media-utils.js",
+      "sha256": "ef8c43d39b978da75d8e1b9e316417eebfdd85d9c070dd9ec690921b82156a3b"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/mlx-serve-client.js",
+      "sha256": "f37de7d9477b97a1e804571b1a23f34cfcd4789d1e264e6314407ee09169005c"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/music-client.js",
+      "sha256": "eac8cf7206a74dcb7b649d50d961c86a6674712dc73b44301dcd15df93a57094"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/naver-client.js",
+      "sha256": "d82a38d109462799e22f3d4cb77192a79777af19b6d63d249448031aaf86b078"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/omni-client.js",
+      "sha256": "eb2c6c1192686a5c6ada515ceb4c0887a53c5eb5714340f5631ecb8dab5e921b"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/portal-api-contract.js",
+      "sha256": "39397a88269bdebe02425373ad14817e1a4b7ab906f0d3e04a9bf154e8c874f6"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/portal-artifacts.js",
+      "sha256": "1ee5df5aa29ee3c759a99dc42e81658e9675a837596a2f0c490ccb6ba4c83666"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/portal-assets.js",
+      "sha256": "e97c21be080f037c805dd28d2e101c75ae8f2ab423d5c72c9759ecf7b85e29fb"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/portal-attachments.js",
+      "sha256": "623b8c72a70c0062b3e6824f1865fb753c8381852ce4d5d9d98ed9c15544f119"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/portal-backups.js",
+      "sha256": "d2782505a5ed7e6356071804233788325bdbf6ebb5eb25d4199446968543a3a7"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/portal-canonical.js",
+      "sha256": "ee47e1f0f659877090c2f376944e0ad304fdfcc9de8eb2d7e0d86a1ed26e7416"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/portal-channel-sync.js",
+      "sha256": "6a69e3053bced8d644136aea5915d652b4bba9b71152ac2bf37c850d91999086"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/portal-characters.js",
+      "sha256": "1aa16742653e8bd6ea4fc016f20ad1a5aafe8a61ff00db99db108dec2221616b"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/portal-client.js",
+      "sha256": "995ce2f40dee8f91b3a5f942ab0f33953931c6b5644e613cb11f6c4466787999"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/portal-decisions.js",
+      "sha256": "1d4c40f2bf605c6ace9dff2792a125e0d647aa497234d7df3f92b937ebc99a32"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/portal-episode.js",
+      "sha256": "d68c2e162121da7337d040a6915281abf343cd10927daf544e08003a4ec27474"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/portal-images.js",
+      "sha256": "4a543587c4175231b169573f073d9f14637bb41b1d2bdeae2d3bc308fe5a15d5"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/portal-media.js",
+      "sha256": "c623e894588894096ce7b134567a5ecd0a554d42150501c00ce61d9791a2a5f2"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/portal-review-tools.js",
+      "sha256": "30fcb3941a55a93df9a0a277c4d3dd837abcdff395ae3bfa08436ba81091abe3"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/portal-tools.js",
+      "sha256": "e1e3868753236f61c5d9fce7a4e724ba8db23385f4902502a015b864a3469933"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/portal-unit-edit.js",
+      "sha256": "633b9070e34b6d07eb7951106d0f056eae9469288ed4128df81acf31600946df"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/portal-unit-routes.js",
+      "sha256": "da7f7a944f8d220641a04f3b8a64a9cc7db473c7e1f9001045d50d5bb26ad28e"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/portal-unit-tools.js",
+      "sha256": "d011c75667d5c76a64d0305ed62a8e99fa7e9e3e892c6914c4b81f67408852bd"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/prop-transport.js",
+      "sha256": "82a4a4fee5cc49db461349e9742a8ec37bbad1cc3081d66e064f1a7996e36d4a"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/qwen3-asr-client.js",
+      "sha256": "44ffc53c8ecb1d3e849da562e4b0c4ee90639ba18aef050f2dac9abddbe91ed5"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/scenes-vm.js",
+      "sha256": "181ddd77294fa6ded6ed52b79f8a4380cbbd7952a834885087918011be40ea7a"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/seedance-client.js",
+      "sha256": "3099a05d968f63b3c2fe1c20fb7158842af959777714eec91f2ec4ff423f4c88"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/sentence-spacing.js",
+      "sha256": "9323d6fec731f8a2316ca808156882451676c14be9a38758122d66173a546b1e"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/serp-client.js",
+      "sha256": "d754a231172dc182a861bc4a6587abbe17fb2ac6af34b7b4986356e3085d9e5e"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/sns-client.js",
+      "sha256": "0f1be3e1507d0f460298b184b0ccbcfc6b14053c3b2d0ad691e258d743292ae0"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/sns-issue-scout.js",
+      "sha256": "795febf6231995337272bade7abd87078cb2dfbb2cb3686f47bd2b922c10331e"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/speech.js",
+      "sha256": "9d33419dfc4d1263a91b4861ca24708dc9e403c55bccacf1198612c19b5aa4aa"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/stock-client.js",
+      "sha256": "09546e730c3bfb28d8cf865e71d83e83f750cafe7e2b90c71068008d08dacb9f"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/suno-client.js",
+      "sha256": "06c71d34fe9ac6b2437a60cf00f2d3c0aaced781ce366328d4c315749d93afec"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/supertonic-client.js",
+      "sha256": "d97f6d5e3b944857a23c534a02942a00ffca9ca8e6664d72fbd2e058a4030e7e"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/threads-gate.js",
+      "sha256": "c66c06f73d48e36b9364445584322b97f866fb484ee6137ef439a7005c1fe873"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/tool-gate.js",
+      "sha256": "015d21ddda37893297fb6c7a9b1e61ca33fcd3445243120b0528c3f4e28e5474"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/tts-client.js",
+      "sha256": "c9aa64bd7ce58618668be4084eee1228bc4e0119ed64efeeca4e45c196210829"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/tts-final-quality.js",
+      "sha256": "9d88813ef34cda85099352646dd80a51530f57ff498231e92a90c65c9ba3cabe"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/tts-quality.js",
+      "sha256": "afa5ae4912b81dcb10ce1355f119018a760ec71a92554ec2b37169c34d0e8b7f"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/usage-ledger.js",
+      "sha256": "4f54387122d4cae1b3df79d778f287b1bc5308b334de42cf1cc00455caaf4f55"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/video-client.js",
+      "sha256": "c9b614635bc5433d1c91aa16b998fd5bdb991d752722d17fc49144dfd43b22a4"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/voice-lock-config.js",
+      "sha256": "3c6a39c0c6944b55d0123739c4c9a9ebc1511536bab1029f2ef443b46689a208"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/voice-lock.js",
+      "sha256": "730d6af55d73576ec5433cb627717b1e30fb8ea2507a610e06bfa43d87b25a84"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/youtube-topic-scout.js",
+      "sha256": "3880e81e280e6290b5369e75f7d5bce25ab5f9fac75dd8eef5606ed24ec02895"
+    },
+    {
+      "host": ".codex",
+      "file": "server/dist/zimage-client.js",
+      "sha256": "e665de5d57c0e6e1757a525355c32e2a074b416e209d2db74f1d9a694532da1f"
+    },
+    {
+      "host": ".claude",
+      "file": "README.md",
+      "sha256": "50810a0a3bc1166b1a47c6b75d12ab4a3a4d883341034faffe35bbab9e6c9af4"
+    },
+    {
+      "host": ".claude",
+      "file": "server/build-mesh.mjs",
+      "sha256": "dbb0d6209a66700587720dce8f820e52ff1ddf9b56558fcf6e18da1ebb0ab5c2"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/bundle.js",
+      "sha256": "3e32444544f18f20fe0fb9046d00817eeb49cc6a76290f519d253f5932bdfe43"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/handlers.js",
+      "sha256": "7d2656e3e290db1a3373e261e840df6af6ac94aa2ad127331f43d26f546410b3"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/storyboard.js",
+      "sha256": "e4706bfe850d1fdd40017e17570d769456f97523e21d3e035d501c22af3ad1ee"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/tools.js",
+      "sha256": "785e178db3acf4dc99266d76123e849b839e04502328c43c89e60eea079e7eb8"
+    },
+    {
+      "host": ".claude",
+      "file": "server/src/handlers.ts",
+      "sha256": "2b2e56643f530a7a58928d6d077f35fda9305fd47c58f9a3acb53039f27304e8"
+    },
+    {
+      "host": ".claude",
+      "file": "server/src/storyboard.ts",
+      "sha256": "dd767541243878e67b43a16aab1523b9e70ad7692dbaf53364d8e78230000331"
+    },
+    {
+      "host": ".claude",
+      "file": "server/src/tools.ts",
+      "sha256": "0e0ad0eee686deb9c7e04a684999815068ad5a98ae30d815863b95e2183c8dcf"
+    },
+    {
+      "host": ".claude",
+      "file": "server/test/storyboard-html.test.mjs",
+      "sha256": "d2081650bad8d167467a3ddc3228080b1a59534e760eefa67635353dba2101a6"
+    },
+    {
+      "host": ".claude",
+      "file": "skills/produce/SKILL.md",
+      "sha256": "8a54ce12a8296a681441b1db4a1a4a9247e59db271a509c3b381516e97167bc4"
+    },
+    {
+      "host": ".claude",
+      "file": "skills/produce/references/check-production.js",
+      "sha256": "f7025a11d5c9cede4d58881e185728b715f8da69c0526372a86c13815f18e0e8"
+    },
+    {
+      "host": ".claude",
+      "file": "skills/storyboard/SKILL.md",
+      "sha256": "72dc6fde459c707ed29f738fcb17d9e86c6a9043528b89441a50990438eca803"
+    },
+    {
+      "host": ".claude",
+      "file": "skills/storyboard/references/assemble-bg-prompt.js",
+      "sha256": "1d1887afd929f90742fca5f760a31c7a3c46d2a1806a9a22f27cb8c4eeca3097"
+    },
+    {
+      "host": ".claude",
+      "file": "skills/storyboard/references/check-scenes.js",
+      "sha256": "4069a89071c3d4fd0f6459e8ef70cfed69d55785d6503301fa4fd1f5dda2ea01"
+    },
+    {
+      "host": ".claude",
+      "file": "skills/storyboard/references/scenes-schema.md",
+      "sha256": "23c182e0256053a73afca7fdbd2a0b30274aefff4cc4aedeb371e18c489903d4"
+    },
+    {
+      "host": ".claude",
+      "file": "skills/storyboard/references/spatial-prompts.js",
+      "sha256": "57aa1a3a851a66938f59568c05a5de5e6fbf896434bdf766ff394c30374c1734"
+    },
+    {
+      "host": ".claude",
+      "file": "skills/storyboard/references/storyboard-html-template.html",
+      "sha256": "e2a7cc58642a9b9f8a0625bf8511c51f6715a8bce30c059c196dac94f317df42"
+    },
+    {
+      "host": ".claude",
+      "file": "skills/storyboard/references/storyboard-html.js",
+      "sha256": "c0ec1989e457d37b2dbaff91e7be66ac40fa048d4e6bbc97857df83f218d859c"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/location.js",
+      "sha256": "e8d0b5527fe1a0850c6b44ec2b6473ee60ebf9d029dc70ef977e2127e087bea5"
+    },
+    {
+      "host": ".claude",
+      "file": "server/location-review-runtime.mjs",
+      "sha256": "39d7b3c603c55f447ac818d2fa6b1a196cd61d3df6c62ca89883171b8c7a0541"
+    },
+    {
+      "host": ".claude",
+      "file": "server/src/location.ts",
+      "sha256": "44f1df8f90af70b76a210c6411688511c5738bd4567d5d0ba4c9d47b9d5909c6"
+    },
+    {
+      "host": ".claude",
+      "file": "server/test/location.test.mjs",
+      "sha256": "8f18135c5b0c9a6cc1c1affd7ee8af5f7cfefb24d1898a964e6ca3bd636a5f59"
+    },
+    {
+      "host": ".claude",
+      "file": "skills/storyboard/references/location-assets.js",
+      "sha256": "c0afc4e0d615e0750469868b004e01e64e69b88f37405dbdb0484416e419a8ae"
+    },
+    {
+      "host": ".claude",
+      "file": "skills/storyboard/references/location-assets.md",
+      "sha256": "6ebf4635393d2211d2fd1c7b9badf6a93ee4ff659ea9306b30eaa011186e2836"
+    },
+    {
+      "host": ".claude",
+      "file": "skills/storyboard/references/location-blender.py",
+      "sha256": "0638076ab8b6f2bbe5b9bda1b02ad99128be3fe5fa891878a6d947ad377f59c4"
+    },
+    {
+      "host": ".claude",
+      "file": "skills/storyboard/references/location-contract.js",
+      "sha256": "2c03aa28e9b97ba56f68280780781647be4b300c26b295edd30b6b3625f83380"
+    },
+    {
+      "host": ".claude",
+      "file": "skills/storyboard/references/location-example.js",
+      "sha256": "9dcd3020cbc93534c8c7b914d587a3bf722c1d226e04beea27b3f60d268171fb"
+    },
+    {
+      "host": ".claude",
+      "file": "skills/storyboard/references/location-review-runtime.js",
+      "sha256": "f962cea2a598a795e909c956294af8a7620eda9c20cea9a8e735e4f705fb88e0"
+    },
+    {
+      "host": ".claude",
+      "file": "skills/storyboard/references/location-review.css",
+      "sha256": "0dda550b5a4db70c70dc2859b48e42d719d51f3e1432e65ec175677891493284"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/asr-alignment.js",
+      "sha256": "db9771953190309562d038742d81303a0680670a9350ba89164ed84437fe3d47"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/astra-video-client.js",
+      "sha256": "62cdf8a16502a06af28fb26531fc15862c3638a36bedf8e5d4156bf1bf523936"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/blender-bridge.js",
+      "sha256": "45e61afc0c78756cebd4a5ff16a07bf02d1b55648bed214f1e9c8f05c7a8a933"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/capability-status.js",
+      "sha256": "c074cbb4aa5876608909a8055b7f1d38fc104f0386ee29ec2b592757a5aa0743"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/config.js",
+      "sha256": "6575f26ed0ca793b4734ae0eec68cd36dfe7744d4a59a7931f533fbf03b74a93"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/content-feedback-html.js",
+      "sha256": "dea8cdef66267086f76339fe0615ea597011bfbb1cd8b06d95d36a9c192244b7"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/content-feedback.js",
+      "sha256": "87b2c508e593faee3bd083b3778d152cfb8701d639ec4687e376b4c26cd20ce3"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/datago-client.js",
+      "sha256": "f8267245b17931acbeec031b5bc94ac98f0476d76007a7f0c71540d634173c54"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/elevenlabs-client.js",
+      "sha256": "02486cf53ae5a00fc591a7a0da1be79452923eb6b2493224590afd0e456f47b8"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/http.js",
+      "sha256": "0cbc0b79b71e4e79a0db38ba6d6084fa0192bf4ba8806586b31bd29bcfa0ac51"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/image-client.js",
+      "sha256": "049bca6ac0631b0131b05f0e04fe08f55b5d63c7af8fbd752598582c0d8812d2"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/index.js",
+      "sha256": "bb8b44cd1112d169c8042d7dbdc8fc9822efcf6aad5a61416ab7e7a0becf1c76"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/media-publish.js",
+      "sha256": "c37e98b15ce7f2604bb77e9ba0d8fbd07768186b74ad3f7d134f344413a63d00"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/media-utils.js",
+      "sha256": "ef8c43d39b978da75d8e1b9e316417eebfdd85d9c070dd9ec690921b82156a3b"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/mlx-serve-client.js",
+      "sha256": "f37de7d9477b97a1e804571b1a23f34cfcd4789d1e264e6314407ee09169005c"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/music-client.js",
+      "sha256": "eac8cf7206a74dcb7b649d50d961c86a6674712dc73b44301dcd15df93a57094"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/naver-client.js",
+      "sha256": "d82a38d109462799e22f3d4cb77192a79777af19b6d63d249448031aaf86b078"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/omni-client.js",
+      "sha256": "eb2c6c1192686a5c6ada515ceb4c0887a53c5eb5714340f5631ecb8dab5e921b"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/portal-api-contract.js",
+      "sha256": "39397a88269bdebe02425373ad14817e1a4b7ab906f0d3e04a9bf154e8c874f6"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/portal-artifacts.js",
+      "sha256": "1ee5df5aa29ee3c759a99dc42e81658e9675a837596a2f0c490ccb6ba4c83666"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/portal-assets.js",
+      "sha256": "e97c21be080f037c805dd28d2e101c75ae8f2ab423d5c72c9759ecf7b85e29fb"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/portal-attachments.js",
+      "sha256": "623b8c72a70c0062b3e6824f1865fb753c8381852ce4d5d9d98ed9c15544f119"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/portal-backups.js",
+      "sha256": "d2782505a5ed7e6356071804233788325bdbf6ebb5eb25d4199446968543a3a7"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/portal-canonical.js",
+      "sha256": "ee47e1f0f659877090c2f376944e0ad304fdfcc9de8eb2d7e0d86a1ed26e7416"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/portal-channel-sync.js",
+      "sha256": "6a69e3053bced8d644136aea5915d652b4bba9b71152ac2bf37c850d91999086"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/portal-characters.js",
+      "sha256": "1aa16742653e8bd6ea4fc016f20ad1a5aafe8a61ff00db99db108dec2221616b"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/portal-client.js",
+      "sha256": "995ce2f40dee8f91b3a5f942ab0f33953931c6b5644e613cb11f6c4466787999"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/portal-decisions.js",
+      "sha256": "1d4c40f2bf605c6ace9dff2792a125e0d647aa497234d7df3f92b937ebc99a32"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/portal-episode.js",
+      "sha256": "d68c2e162121da7337d040a6915281abf343cd10927daf544e08003a4ec27474"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/portal-images.js",
+      "sha256": "4a543587c4175231b169573f073d9f14637bb41b1d2bdeae2d3bc308fe5a15d5"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/portal-media.js",
+      "sha256": "c623e894588894096ce7b134567a5ecd0a554d42150501c00ce61d9791a2a5f2"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/portal-review-tools.js",
+      "sha256": "30fcb3941a55a93df9a0a277c4d3dd837abcdff395ae3bfa08436ba81091abe3"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/portal-tools.js",
+      "sha256": "e1e3868753236f61c5d9fce7a4e724ba8db23385f4902502a015b864a3469933"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/portal-unit-edit.js",
+      "sha256": "633b9070e34b6d07eb7951106d0f056eae9469288ed4128df81acf31600946df"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/portal-unit-routes.js",
+      "sha256": "da7f7a944f8d220641a04f3b8a64a9cc7db473c7e1f9001045d50d5bb26ad28e"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/portal-unit-tools.js",
+      "sha256": "d011c75667d5c76a64d0305ed62a8e99fa7e9e3e892c6914c4b81f67408852bd"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/prop-transport.js",
+      "sha256": "82a4a4fee5cc49db461349e9742a8ec37bbad1cc3081d66e064f1a7996e36d4a"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/qwen3-asr-client.js",
+      "sha256": "44ffc53c8ecb1d3e849da562e4b0c4ee90639ba18aef050f2dac9abddbe91ed5"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/scenes-vm.js",
+      "sha256": "181ddd77294fa6ded6ed52b79f8a4380cbbd7952a834885087918011be40ea7a"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/seedance-client.js",
+      "sha256": "3099a05d968f63b3c2fe1c20fb7158842af959777714eec91f2ec4ff423f4c88"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/sentence-spacing.js",
+      "sha256": "9323d6fec731f8a2316ca808156882451676c14be9a38758122d66173a546b1e"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/serp-client.js",
+      "sha256": "d754a231172dc182a861bc4a6587abbe17fb2ac6af34b7b4986356e3085d9e5e"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/sns-client.js",
+      "sha256": "0f1be3e1507d0f460298b184b0ccbcfc6b14053c3b2d0ad691e258d743292ae0"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/sns-issue-scout.js",
+      "sha256": "795febf6231995337272bade7abd87078cb2dfbb2cb3686f47bd2b922c10331e"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/speech.js",
+      "sha256": "9d33419dfc4d1263a91b4861ca24708dc9e403c55bccacf1198612c19b5aa4aa"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/stock-client.js",
+      "sha256": "09546e730c3bfb28d8cf865e71d83e83f750cafe7e2b90c71068008d08dacb9f"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/suno-client.js",
+      "sha256": "06c71d34fe9ac6b2437a60cf00f2d3c0aaced781ce366328d4c315749d93afec"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/supertonic-client.js",
+      "sha256": "d97f6d5e3b944857a23c534a02942a00ffca9ca8e6664d72fbd2e058a4030e7e"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/threads-gate.js",
+      "sha256": "c66c06f73d48e36b9364445584322b97f866fb484ee6137ef439a7005c1fe873"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/tool-gate.js",
+      "sha256": "015d21ddda37893297fb6c7a9b1e61ca33fcd3445243120b0528c3f4e28e5474"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/tts-client.js",
+      "sha256": "c9aa64bd7ce58618668be4084eee1228bc4e0119ed64efeeca4e45c196210829"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/tts-final-quality.js",
+      "sha256": "9d88813ef34cda85099352646dd80a51530f57ff498231e92a90c65c9ba3cabe"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/tts-quality.js",
+      "sha256": "afa5ae4912b81dcb10ce1355f119018a760ec71a92554ec2b37169c34d0e8b7f"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/usage-ledger.js",
+      "sha256": "4f54387122d4cae1b3df79d778f287b1bc5308b334de42cf1cc00455caaf4f55"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/video-client.js",
+      "sha256": "c9b614635bc5433d1c91aa16b998fd5bdb991d752722d17fc49144dfd43b22a4"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/voice-lock-config.js",
+      "sha256": "3c6a39c0c6944b55d0123739c4c9a9ebc1511536bab1029f2ef443b46689a208"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/voice-lock.js",
+      "sha256": "730d6af55d73576ec5433cb627717b1e30fb8ea2507a610e06bfa43d87b25a84"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/youtube-topic-scout.js",
+      "sha256": "3880e81e280e6290b5369e75f7d5bce25ab5f9fac75dd8eef5606ed24ec02895"
+    },
+    {
+      "host": ".claude",
+      "file": "server/dist/zimage-client.js",
+      "sha256": "e665de5d57c0e6e1757a525355c32e2a074b416e209d2db74f1d9a694532da1f"
+    }
+  ],
+  "verifiedAt": "2026-10-16T08:10:45.310Z",
+  "note": "Concurrent prop update preserved location code and added prop inputs; hashes record the combined installed state."
+}

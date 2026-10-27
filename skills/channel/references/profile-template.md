@@ -14,7 +14,11 @@ motion_allowed_kinds: ai-video,recording,stock-video,motion-slide
 motion_max_consecutive_stills: off
 motion_max_still_seconds: off
 motion_require_action: false
-generated_video_max: 2
+generated_video_max: 2    # a ceiling for this channel; the episode's ratio choice (PRODUCTION.mode) plans under it
+# max_static_ground_seconds: 8  # optional — one still under its camera move; check-scenes warns past it (default 8)
+# html_plate_max: 2             # optional — static plates on `other` beats per episode (default 2; motion slides sit outside)
+# video_budget_usd: 10          # optional — generated-video spend per episode the storyboard check compares (default 10)
+# hook_video: off               # optional — on requires a video opening; off (default) lets the content choose
 shortform_outro: on       # on | off (absent = on)
 # length_min_seconds: 35  # optional — narrows the short-form band for this channel
 # length_max_seconds: 75  # leave both out and the preset band applies (35–120s on shorts)
@@ -39,25 +43,26 @@ shortform_outro: on       # on | off (absent = on)
 - **Register**: <polite explanatory (존댓말) | casual punchy (반말) | documentary narration | ...>
 - **Narrator personality**: <e.g. a calm news-briefing anchor>
 - **TTS voice (fixed — do not change)**:
-  - Engine: `<local | gemini | elevenlabs>` — the default for narration is `local` (zero cost,
-    6.3x real time); use `gemini` only when acted emotion is the channel's identity, and
-    `elevenlabs` when the channel needs a specific cloned or Voice Library voice, inline
-    audio-tag acting (eleven_v3), or scenes with three or more speakers (paid — about 2.6x Gemini)
-  - With local → voice: `<F1~F5 | M1~M5>` · lang: `ko` · speed: `<0.7~1.2, default 1.0>` —
-    above 1.2 the model drops syllables (measured), so a faster cut comes from the playback speed below
-  - With gemini → voiceName: `<Gemini voice name>` ·
-    stylePrompt: `<the English style direction — reused without changing a character>`
-  - With elevenlabs → voiceId: `<the 20-character voice_id, not the display name>` ·
-    model: `<eleven_multilingual_v2 | eleven_v3 | eleven_flash_v2_5>` ·
-    stability: `<0–1; on eleven_v3 one of 0.0 / 0.5 / 1.0>` · seed: `<optional integer — once set, never changes>` ·
-    outputFormat stays `wav_24000` (the builder needs RIFF; mp3 is not narration input)
+  - Engine: see `.social-flow/models.json` (`models.speech`) — the profile pins only the
+    voice; `gemini` or `elevenlabs` below is whichever that file saved.
+  - With gemini → voiceName: `<Gemini voice name or supported custom voice ID>` ·
+    model: `<selected Gemini TTS model>`. Keep stable identity settings separate
+    from per-line acting. Gemini 3.8 uses turn-level style and inline vocal events.
+  - With elevenlabs → voiceId: `<account voice_id, not display name>` ·
+    model: `eleven_v4` (the only allowed ElevenLabs speech model) ·
+    stability: `<0–1>` · similarity: `<0–1>` · seed: `<optional pinned integer>`.
+    Use square-bracket acting tags; v4 does not accept style/speed sliders or SSML.
+    outputFormat stays `wav_24000` for assembly.
+  - Line performance: store `acting.direction` and optional bare `acting.tags` on
+    each spoken line. See [acting prompts](../../produce/references/acting-prompts.md).
   - Target speaking rate: <characters/sec, default 4.5> — the cards.tsv column; the build always
     preserves 1.0x and ignores this target and legacy `ATEMPO_MIN`/`ATEMPO_MAX` settings. The build's REGEN warning uses the
     ship gate's band [3.2, 6.2] ÷ playback factor, not this value
 - **Playback speed (the post-build pace pass)**: `1.0` — a profile value cannot authorize
   changing TTS speed. Non-1 synthesis or final playback requires an explicit user request
   for the episode, recorded under produce's `references/tts-speed.md` contract. Assembly
-  and the outro always preserve 1.0x. Final subtitle speech must stay under 6.2 characters/s.
+  and the outro always preserve 1.0x. A requested subtitle sidecar is checked at or below
+  6.2 characters/s; the default subtitle-free delivery skips that check.
 
 - **Plain-language principle**: use §1's audience knowledge, §2's voice and supplied
   writing samples. Default to adult non-specialists if unspecified. Preserve ordinary
@@ -82,8 +87,10 @@ scenes sets it to `majority` or a ratio, then narrows `motion_allowed_kinds` as 
 
 `motion_require_action: true` also requires `visual.action` on every qualifying shot. Camera
 movement, Ken Burns, caption swaps, and still-image changes never count as true motion.
-`generated_video_max` overrides the format default only for this channel; the storyboard still
-shows the projected cost before approval. `motion_max_consecutive_stills` and
+`generated_video_max` is this channel's ceiling on generated cuts; the episode's ratio choice
+(`PRODUCTION.mode`) plans under it and the storyboard shows the projected cost before approval.
+`max_static_ground_seconds`, `html_plate_max`, `video_budget_usd` and `hook_video` are the other
+keys `check-scenes.js` reads (one line each in the front matter above). `motion_max_consecutive_stills` and
 `motion_max_still_seconds` stop long static runs even when the episode clears the ratio.
 `length_min_seconds` and `length_max_seconds` narrow the short-form length band for this
 channel — `check-scenes.js` and the approval strip then measure the episode against your
@@ -123,16 +130,16 @@ The THEME contract of video-template.html — it goes into scenes.js as-is:
 
 | Platform | Used | Notes |
 |---|---|---|
-| threads | ✅/❌ | one casual post body with the subtitle-burned video as `videoUrl` (needs public HTTPS hosting, 2026-08-19); growth posts may attach one image |
+| threads | ✅/❌ | one casual post body with the clean video without burned subtitles as `videoUrl` (needs public HTTPS hosting, 2026-08-19); growth posts may attach one image |
 | instagram | ✅/❌ | reels — needs public HTTPS hosting |
 | facebook | ✅/❌ | ordinary video post (not a reel) |
 | youtube | ✅/❌ | shorts — local upload, 100 uploads/day quota |
 
-- **Subtitle languages**: <`ko` for a single-language channel. For multi-language
-  subtitles write `ko (default) · en · vi` — produce translates `subs.srt` into each
-  extra language (`subs.en.srt` …, BCP-47 codes) and publish uploads every one as its
-  own toggleable track on YouTube (`captionTracks`) and Facebook (`captionFiles`).
-  The burned-in copy for IG/Threads stays in the default language>
+- **YouTube subtitle sidecar languages (optional)**: <leave blank unless the user asks
+  for separate YouTube caption tracks; then list them, `ko · en · vi` (BCP-47). produce
+  writes `subs.<lang>.srt` only on that request and publish uploads them as
+  `captionTracks` only when the user requests tracks. The delivered video is
+  subtitle-free on every platform>
 - **Per-platform signature**: <hashtag set, CTA wording — within the platform's grammar>
 - **Public media hosting**: <how to upload publicly over HTTPS for IG/FB — if there
   isn't one, write "undecided" and settle it at publish time. Threads video posts and
@@ -200,27 +207,9 @@ the tools trust.
 | approachable practitioner | Achird | Korean, hands-on field practitioner. Friendly, direct, practical, moderate pace. |
 | weighty senior | Sadaltager | Korean, authoritative senior advisor. Knowledgeable, deliberate, calm weight, moderate pace. |
 
-- stylePrompt is **standardized on "moderate pace"** — the pace is chosen once here and the build ships it as read; nothing time-stretches the voice inside the build.
-- The full voice list is available via `mcp__social-flow__tts_list_voices`.
-
-## Local TTS voices (Supertonic)
-
-Ten voices: `F1`~`F5` (female) and `M1`~`M5` (male). The vendor publishes no
-personality labels, so there's no tone table like the one above — **render the same
-sentence in two or three voices, listen, and pick.** Assigning one per channel and
-pinning it keeps the voice consistent, so being limited to ten fixed voices doesn't
-hurt in practice.
-
-How to audition — render one real narration sentence from that channel (a short
-greeting won't show the texture):
-
-```
-mcp__social-flow__tts_local_generate
-  text: "<two representative narration sentences>"  voice: "F1"  lang: "ko"
-  outputPath: "data/<slug>/assets/scratch"  filename: "voice-test-F1.wav"
-```
-
-Play them with `afplay` to compare, then write the chosen value into §2 above.
+- These examples describe legacy Gemini `stylePrompt`. For Gemini 3.8, choose the identity voice first and put concise delivery cues in each turn’s `style`. Assembly preserves the generated pace.
+- Use `mcp__social-flow__tts_list_voices source:curated` for the basic 30 voices,
+  or `source:library` for the live extended/custom catalog. Follow returned page tokens.
 
 ## ElevenLabs voices
 
@@ -230,14 +219,14 @@ filter for the language:
 
 ```
 mcp__social-flow__tts_elevenlabs_voices
-  search: "korean"   # or category: "premade" / "professional"
+  languages: ["ko"]   # optional search, category, gender, accent, nextPageToken
 ```
 
-Then audition exactly like the local lane, one real narration sentence per candidate:
+When the user requests auditions, generate one representative sentence per candidate:
 
 ```
 mcp__social-flow__tts_elevenlabs_generate
-  text: "<two representative narration sentences>"  voiceId: "<voice_id>"  model: "eleven_multilingual_v2"
+  text: "<two representative narration sentences>"  voiceId: "<voice_id>"  model: "eleven_v4"
   outputPath: "data/<slug>/assets/scratch"  filename: "voice-test-<name>.wav"
 ```
 
@@ -251,5 +240,5 @@ mcp__social-flow__tts_elevenlabs_generate
   needs Starter or above. If the listing call fails with `missing_permissions`, the key
   lacks `voices_read` — take the ID from the Voice Library page instead.
 
-There's no style-direction argument, so the tone comes **from the sentences
-themselves** — cut them short and punctuate properly and the delivery settles.
+Use v4 square-bracket audio tags for performance, for example `[reassuring]` or
+`[whispering]`. Keep tags out of subtitles. See the acting-prompt reference above.

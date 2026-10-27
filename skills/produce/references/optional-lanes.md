@@ -8,7 +8,7 @@ does not have that kind of material, so nothing here is on the common path.
 - [3.5 Take in the filmed clips](#35-take-in-the-filmed-clips-mixed-shooting-episodes-only) — a mixed-shooting episode's footage
 - [3.6 Slide scenes and live-voice audio](#36-slide-scenes-and-live-voice-audio-only-on-episodes-that-have-them) — authored HTML screens and `voice/` recordings
 - [3.7 Screencast splices](#37-screencast-splices-only-on-episodes-that-have-them) — a recorded screen cut into the reel
-- [Multi-language subtitles](#multi-language-subtitles-only-when-the-profile-lists-them) — extra `.srt` tracks beyond the channel language
+- [Multi-language subtitles](#multi-language-subtitle-tracks-only-when-the-user-requests-separate-tracks) — extra `.srt` tracks beyond the channel language
 
 The step numbers are produce's — §3.5, §3.6 and §3.7 keep their place in the procedure,
 and the subtitle lane belongs to §9.
@@ -42,7 +42,7 @@ done
   a file under `footage/` that does not exist yet: download `files[0].url` from the storyboard's
   `stock_search` record (or the page in `visual.license.url`) into that exact name first, then
   normalize it with the loop above — a Commons WebM goes through the same ffmpeg call. Its
-  sound is dropped, so skip the PCM pull and let TTS, subtitles and BGM run over it as over a
+  sound is dropped, so skip the PCM pull and let TTS and BGM run over it as over a
   motion background; `visual.in` is the trim start inside the source. Keep the download
   command and date in `.work/decisions.tsv` beside the license record: the terms that applied
   on the day you fetched the file are the ones you can prove later.
@@ -60,8 +60,11 @@ done
 - **Length check**: on a scene that covers narration, the clip has to be longer than
   `edit.in + narration + edit.pre + edit.post + outgoing handle`. Short sources block assembly;
   shorten/replan the cut or reshoot it. See [cinematic-edit.md](cinematic-edit.md).
-- The overlay is **one alpha capture per scene** (a lower third). Reveal enumeration isn't
-  used on live-voice scenes — what changes on screen is the recording, not our lettering.
+- The overlay is **one alpha capture per scene**, and on a filmed scene it carries no lettering:
+  nothing is typed over a moving picture (owner 2026-10-17), so the scene's `title`/`bullets` stay
+  empty and the PNG exists for the manifest shape (the template's legacy lower-third layout draws
+  nothing for empty fields). Reveal enumeration isn't used on live-voice scenes — what changes on
+  screen is the recording, not our lettering.
 
   ```bash
   FORMAT_ENV="$PWD/.work/format.env" \
@@ -206,10 +209,11 @@ $REF/cut-screencast.sh footage/s3-cli-run.mp4 .work/screencast/s3.mp4 \
 
 ## From §9 — the extra subtitle languages
 
-#### Multi-language subtitles (only when the profile lists them)
+#### Multi-language subtitle tracks (only when the user requests separate tracks)
 
-When profile.md §4 has a **Subtitle languages** line naming languages beyond the
-default (e.g. `ko (default) · en · vi`), translate **`output/video/subs.srt`** — the retimed
+When the user requests separate subtitle tracks in other languages (a profile.md §4
+**Subtitle languages** line such as `ko (default) · en · vi` lists the languages for that request;
+it is not a request by itself), translate **`output/video/subs.srt`** — the retimed
 file the speed pass produced, never `.work/subs.srt` — into each extra language yourself and
 save `output/video/subs.<lang>.srt` (BCP-47 code — `subs.en.srt`, `subs.vi.srt`). Rules:
 
@@ -223,11 +227,11 @@ save `output/video/subs.<lang>.srt` (BCP-47 code — `subs.en.srt`, `subs.vi.srt
 - Keep each cue about as long as the original — a cue that doubles in length overflows
   the two-line subtitle band on the phone surface.
 - These files ride only on the platforms that take a subtitle file (YouTube ·
-  Facebook). The burned-in copy stays in the default language — IG and Threads viewers
-  see that one, so there is no re-render per language.
+  Facebook) only when the user requests separate tracks. Every platform receives the
+  clean picture; IG and Threads do not get burned subtitles.
 
 Run the D2/D9 surface check on each translated file the same way as `subs.srt` when the
-language is Korean; other languages skip the Korean style gate.
+language is Korean; other languages skip the Korean style check.
 
 Right after saving, run the style checker per surface — one Bash call, not an LLM call.
 

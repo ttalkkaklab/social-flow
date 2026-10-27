@@ -18,6 +18,8 @@
         "OPENAI_API_KEY",
         "ARK_API_KEY",
         "ARK_BASE_URL",
+        "ASTRA_GENAI_API_KEY",
+        "ASTRA_GENAI_URL",
         "ASTRA_VIDEO",
         "ASTRA_VIDEO_URL",
         "MLX_SERVE_URL",
@@ -37,11 +39,7 @@
         "YOUTUBE_OAUTH_FILE",
         "SUPERTONIC_PYTHON",
         "MFLUX_ZIMAGE_BIN",
-        "QWEN3_ASR_BIN",
-        "TTALKKAKSTORY_API_URL",
-        "TTALKKAKSTORY_WORKSPACE",
-        "TTALKKAKSTORY_API_KEY",
-        "TTALKKAKSTORY_HOLDER"
+        "QWEN3_ASR_BIN"
       ]
     }
   }

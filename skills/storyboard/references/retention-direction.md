@@ -1,7 +1,13 @@
 # Story, picture and sound that earn the next beat
 
-Read this alongside scenario-stage.md when drafting candidates, and again when building
-the board. Produce and autoproduce carry its decisions into the finished edit. These are
+**Automatic execution:** [Automation guidance](../../_shared/automation-guidance.md) supersedes creative quality gates, repeated approvals and review-score requirements here. Keep the concrete guidance and truthful review state. Enforce only actual runtime dependencies and the scope of external-action authorization.
+
+
+**New authoring contract (2026-10-16):** Read [character-led scenarios](character-scenarios.md) first. New scenarios use `scenario-v2` and boards use `story-v2`: cast existing characters (including narrators), choose evidence/fiction/adapted, write observable actions and attributed speech, and review the whole performance. Its type-specific grounding and rubric replace the legacy research quotas, forced wow/engine mix, spoken-message and narration-only requirements below. Legacy unversioned scenarios and story-v1 boards keep their existing checks. Production voice, budget, destination and publishing consent are unchanged.
+
+
+Read this with character-scenarios.md when drafting the story, and again when building
+the board (scenario-stage.md is the legacy candidate procedure). Produce and autoproduce carry its decisions into the finished edit. These are
 editorial tests, not measured retention predictions. A reviewer score cannot guarantee
 that viewers finish a video.
 
@@ -28,10 +34,10 @@ changes for them when they find it out. Start with a concrete action, contradict
 choice or unresolved result. Let the subject supply the stakes. A quiet discovery can
 carry an episode; fear, comedy and outrage must fit the material and the channel.
 
-Keep scenario-stage's seven items. Apply these tests inside those items, without adding
-another candidate form:
+Apply these tests inside the story's beats, without adding another candidate form:
 
-- Write three openings that differ in their dramatic situation and route to the payoff.
+- When alternatives are needed, write as many openings as the decision needs, each differing
+  in its dramatic situation and route to the payoff.
   Changing only the adjective, question or camera leaves the same candidate underneath.
 - In the hook, make the viewer able to predict something. Put a visible or spoken clue
   beside that prediction. The promise must name a question the episode can actually answer.
@@ -56,8 +62,8 @@ another candidate form:
   episode's debt. If there is a closing question (optional, story-quality.md), keep it brief and answerable from what just happened.
 - Name the one thing a viewer would forward — a fact, a verdict, a line or a short checklist,
   said plainly enough to repeat from memory. Write it into the closing shot's `shot.share`
-  (`shot.shareType`: `fact` · `verdict` · `line` · `checklist` · `none`); on a short that field
-  is required on the `cta` shot. It is a line the episode says, never a request to send it on.
+  (`shot.shareType`: `fact` · `verdict` · `line` · `checklist` · `none`); the field is optional
+  on every format. It is a line the episode says, never a request to send it on.
 
 Read the narration aloud without the board. Mark the first sentence where attention
 could wander and the exact missing development. Cut throat-clearing and duplicated
@@ -66,7 +72,7 @@ do not turn every sentence into a cliffhanger or punchline.
 
 ## 2. Map the promise to the edit
 
-After narration approval, put a compact table under storyboard.md's existing "hand to
+After the performance draft, put a compact table under storyboard.md's existing "hand to
 produce" note. This is an index of decisions, not a second script. Refer to scene and
 narration-group identifiers in scenes.js; never copy the spoken lines into the table.
 For channels that skip scenario research, start here from their approved narration.
@@ -99,7 +105,7 @@ related shots so the viewer can follow the cause and result.
   the channel's `hook_video` setting (off by default) and its generated-video ceiling. Stills can reveal a detail with
   their camera move; HTML motion slides can show a comparison or a mechanism unfolding.
 - Put explanations, arrows, figures and principles on HTML slides. Nothing is drawn over
-  video except the already permitted subtitles and cover treatment. Follow CLAUDE.md.
+  video, subtitles included; the master is clean (produce SKILL.md, 2026-10-17).
 - Cut when the evidence changes, the action completes or the audience's expectation turns.
   Vary shot scale and pace with that job. A proof needs reading time; a reaction may need
   only a moment. Fast cutting, arbitrary shakes and a transition on every sentence cannot
@@ -108,8 +114,8 @@ related shots so the viewer can follow the cause and result.
   before the next idea starts. On video, specify a usable ending state so the edit can
   connect to the following shot without looping an unfinished action.
 - Delete expendable material and recalculate duration. Do not stretch the other shots to
-  restore a target runtime. If a format minimum still applies, add useful sourced material
-  or revise the scope before approval.
+  restore a target runtime. If an explicit user limit still applies, add useful sourced material
+  or revise the scope before production.
 
 ## 4. Score the story with supported controls
 
@@ -120,7 +126,7 @@ automatically improve the scene.
 
 In the table, map every intended event to a supported control:
 
-- `sound.cue` selects a declared window.MUSIC cue at a shot boundary on the attended path.
+- `sound.cue` selects a declared window.MUSIC cue at a shot boundary, including authorized automatic production.
   Resolve asset cues before building and include generated cues in the approved cost plan.
 - `sound.drop: true` removes the bed for the shot. Spend the short's single drop on the
   line that needs room, on the turn for a story arc. This does not mute voice or SFX.
@@ -129,20 +135,22 @@ In the table, map every intended event to a supported control:
   Do not spend the drop on the hook to get a quiet opening.
 - `sound.sfx` names an existing channel asset and plays at the shot's first frame. Use it
   for a visible event or a specific transition, not as a whoosh on every cut. If the impact
-  happens mid-shot, use the documented segment manifest route in produce §6 or omit the
-  effect. Do not claim a word-level cue that the current renderer cannot schedule.
+  happens mid-shot, use `sound.effects[].atSeconds`. This is a shot-relative time, not
+  automatic word alignment. Use `sound.musicGain` for a planned music gain curve.
 - `visual.audio` describes generated clip audio. Motion backgrounds discard that audio;
   an essential sound must have a supported mix route. B-roll keeps its own sound under
   the existing no-narration contract. Never plan dialogue over that slot.
 - Voice delivery follows the profile's engine and voice. Mark emphasis and breathing in
-  the handoff, using only controls that engine supports. For local TTS, adjust sentence
-  boundaries and punctuation and listen to the result; it has no emotion control. Never
-  put acting directions into spoken text or change voice to obtain an effect.
+  the handoff using `narration[].acting` and the selected engine’s supported controls.
+  Follow [acting prompts](../../produce/references/acting-prompts.md). Keep spoken
+  wording and subtitles separate from generated tags; do not change identity voice for an effect.
 
-Autoproduce uses one bed, without window.MUSIC or sound.cue. Design its contrast with
-supported drops, resolved SFX and scene rhythm from the outset. Missing sound assets require
+Autoproduce may reuse multiple existing cues and alternate arrangements. Generate additional
+cues only within the saved model choice and authorized music allocation. One bed is an
+economical option, not a mandatory format. Design contrast with gain curves, cue changes,
+supported drops, resolved SFX and scene rhythm. Missing sound assets require
 a documented substitute or omission that still delivers the beat. If the story depends on
-the unavailable sound, hold the episode. Do not add unpriced generation or exceed the cap.
+the unavailable sound, report that with the output. Do not add unpriced generation or exceed the cap.
 
 ## 5. Check the finished experience
 
@@ -154,19 +162,19 @@ and correction or verified result. This is observation, not a new timeline to ma
    On a short, watch the whole video once without scrubbing. On long-form also watch every
    chapter transition and check each promise's payment. Confirm the table's changes actually
    appear and have enough time to read.
-2. Listen to the delivered mix, including the quietest spoken line, the strongest SFX,
+2. When a listening check is requested, listen to the delivered mix, including the quietest spoken line, the strongest SFX,
    music changes, loop joins and b-roll boundaries. Check voice intelligibility at a modest
    playback volume, harsh transients, clipped syllables, audible seams and an abrupt tail.
    Use the existing measured separation and peak checks as well; a numeric pass alone
    does not establish that the words are intelligible.
-3. Check the payoff with sound off for readable evidence and subtitles, and listen once
+3. Check the payoff with sound off for readable evidence, and listen once
    without the picture for a comprehensible story. Sound-off inspection does not mean
    adding labels to video or repeating all narration in large titles.
 4. Fix the earliest weak beat. For a timing or mix change, rebuild affected output and
    recheck the changed span plus its joins at final speed. A narration change returns to
-   the existing narration/approval rules. Report unavailable playback or listening as
-   unverified. Screenshots cannot verify sound, rhythm or sync; unattended output with an
-   essential unverified experience check stays on hold.
+   the normal revision path. Report unavailable playback or listening as
+   `not_reviewed`. Screenshots cannot verify sound, rhythm or sync; an unverified experience
+   check is reported with the output and does not hold the delivery.
 
 The content reviewer consumes this report with the final frames and build report. Distinguish
 observations from editorial predictions. After publication, compare actual retention and
