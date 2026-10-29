@@ -326,3 +326,18 @@ test('managed storyboard images reach dispatch and cannot change after planning 
  delete f.board.SCENES[0].visual.references;f.save();
  assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'no-refs',operation:'image',args:{prompt:'Move'}}),/not_reviewed/);
 });
+
+test('FastH3 reference plans inherit the model, pin media, and dispatch once at zero API cost', async t => {
+ const model='ddalcu/FastH3-Omni-MLX-Serve-8bit';
+ const f=fixture(t,{engine:'mlx',model,resolution:'768x448'});
+ const old=process.env.MLX_SERVE_URL;process.env.MLX_SERVE_URL='http://127.0.0.1:19998';t.after(()=>{if(old===undefined)delete process.env.MLX_SERVE_URL;else process.env.MLX_SERVE_URL=old;});
+ const image=path.join(f.episode,'ref.png');
+ // A tiny valid PNG suffices for input hashing; this test never generates video.
+ fs.writeFileSync(image,Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j5a8AAAAASUVORK5CYII=','base64'));
+ const p=planVideo({episode:f.episode,shotId:'s1',requestId:'omni',operation:'reference',args:{prompt:'A person waves.',referenceImagePaths:[image],requiredSeconds:5}});
+ assert.equal(p.tool,'fasth3_omni_reference');assert.equal(p.args.numFrames,124);assert.equal(p.args.model,model);
+ assert.equal(p.quote.reserveUsd,0);assert.ok(p.inputs[image]);
+ let calls=0; const dispatch=async(name,args)=>{calls++;assert.equal(name,p.tool);assert.deepEqual(args.referenceImagePaths,[image]);return result;};
+ await f.execute(p,dispatch);await f.execute(p,dispatch);assert.equal(calls,1);
+ assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'wrong',tool:'ltx_video_generate',args:{prompt:'Act.'}}),/model_selection_mismatch/);
+});

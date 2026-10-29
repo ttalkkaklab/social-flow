@@ -11,7 +11,7 @@ const FRAME_FIELDS = {
     veo_img2video: ['sourceImagePath', 'lastImagePath'], seedance_img2video: ['sourceImagePath', 'lastImagePath'],
     omni_img2video: ['sourceImagePath', 'lastImagePath'], astra_img2video: ['firstFramePath', 'lastFramePath'],
     astra_audio2video: ['imagePath'], astra_genai_img2video: ['imageUri', 'lastFrameUri'],
-    astra_genai_audio2video: ['imagePath', 'lastFramePath'], mlx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'],
+    astra_genai_audio2video: ['imagePath', 'lastFramePath'], mlx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'], ltx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'],
 };
 export function hasStructuredImages(shot) {
     return imageRouting().hasStructuredImages(shot);
@@ -83,7 +83,7 @@ export function prepareVideoImages(tool, input, shot, episode) {
         assigned.add(key);
     };
     if (frames.mode === 'reference') {
-        if (!['seedance_reference', 'veo_reference', 'astra_genai_msr'].includes(tool))
+        if (!['seedance_reference', 'veo_reference', 'astra_genai_msr', 'fasth3_omni_reference'].includes(tool))
             throw new Error('image_plan_unsupported: reference mode needs a reference adapter');
         if (tool === 'veo_reference' && videoRefs.some(ref => ['style', 'composition'].includes(ref.role)))
             throw new Error('image_plan_unsupported: Veo references preserve assets, not style or composition');
@@ -94,7 +94,7 @@ export function prepareVideoImages(tool, input, shot, episode) {
             put('references', videoRefs.map((ref, i) => ({ imagePath: paths[i], ...(ref.role === 'background' ? { background: true } : {}) })));
         else
             put('referenceImagePaths', paths);
-        const guidance = videoRefs.map((ref, i) => `Image ${i + 1} (${ref.id}, ${ref.role}): ${ref.purpose}`).join('\n');
+        const guidance = videoRefs.map((ref, i) => `${tool === 'fasth3_omni_reference' ? '<Picture ' + (i + 1) + '>' : 'Image ' + (i + 1)} (${ref.id}, ${ref.role}): ${ref.purpose}`).join('\n');
         args.prompt = String(args.prompt ?? '') + '\nImage reference roles:\n' + guidance;
     }
     else if (keyframes) {

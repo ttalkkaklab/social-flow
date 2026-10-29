@@ -617,19 +617,10 @@ export async function generateMlxMusic(request) {
         elapsedSeconds: Math.round((Date.now() - startedAt) / 1000),
     };
 }
-export async function generateMlxVideo(request) {
-    const health = await mlxHealth();
-    if (!health.ok)
-        return { success: false, error: health.error };
-    if (videoExceedsMemory(request.width, request.height, request.numFrames)) {
-        return { success: false, error: videoMemoryMessage(request.width, request.height, request.numFrames) };
-    }
-    const resolved = await resolveModel('video', request.model);
-    if (!resolved.ok)
-        return { success: false, error: resolved.error };
+export function buildLtxVideoBody(request) {
     const body = {
         prompt: request.prompt,
-        model: resolved.model,
+        model: request.model,
         width: request.width,
         height: request.height,
         num_frames: request.numFrames,
@@ -645,17 +636,92 @@ export async function generateMlxVideo(request) {
     if (request.firstFrameImagePath) {
         const img = fileToBase64(request.firstFrameImagePath);
         if (!img.ok)
-            return { success: false, error: img.error };
+            throw new Error(img.error);
         body.first_frame_image = img.b64;
     }
     if (request.lastFrameImagePath) {
         const img = fileToBase64(request.lastFrameImagePath);
         if (!img.ok)
-            return { success: false, error: img.error };
+            throw new Error(img.error);
         body.last_frame_image = img.b64;
     }
+    return body;
+}
+/** Consume progress so long renders do not hit the HTTP client's idle-header timeout. */
+export async function requestMlxVideo(body) {
+    const url = `${mlxServeUrl()}/v1/video/generations`;
+    if (!body.stream)
+        return requestRaw('post', url, authHeaders(), body, MLX_VIDEO_TIMEOUT_MS);
+    try {
+        const response = await fetch(url, { method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify(body), signal: AbortSignal.timeout(MLX_VIDEO_TIMEOUT_MS) });
+        if (!response.ok || !response.headers.get('content-type')?.includes('text/event-stream'))
+            return { ok: response.ok, status: response.status, body: await response.text() };
+        if (!response.body)
+            throw new Error('Video progress stream has no body');
+        const reader = response.body.getReader(), decoder = new TextDecoder();
+        let parts = [], pendingBytes = 0;
+        try {
+            for (;;) {
+                const { value, done } = await reader.read();
+                const lines = decoder.decode(value, { stream: !done }).split('\n');
+                for (const [index, fragment] of lines.entries()) {
+                    parts.push(fragment);
+                    pendingBytes += fragment.length;
+                    if (pendingBytes > Math.ceil(MAX_VIDEO_RGB_BYTES * 4 / 3) + 16 * 1024 * 1024)
+                        throw new Error('Video progress payload exceeds response limit');
+                    if (index === lines.length - 1)
+                        continue;
+                    const line = parts.join('').trimEnd();
+                    parts = [];
+                    pendingBytes = 0;
+                    if (!line.startsWith('data:'))
+                        continue;
+                    const payload = line.slice(5).trim();
+                    const event = JSON.parse(payload);
+                    if (event.type === 'error')
+                        throw new Error(event.message || 'Video generation failed');
+                    if (event.type === 'complete')
+                        return { ok: true, status: response.status, body: payload };
+                }
+                if (done)
+                    throw new Error('Video stream ended before completion; do not automatically resubmit');
+            }
+        }
+        finally {
+            await reader.cancel();
+            reader.releaseLock();
+        }
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return { ok: false, status: /fetch failed|ECONNREFUSED/i.test(message) ? 502 : 500, body: message };
+    }
+}
+/** Shared MLX-Serve transport and muxing; model contracts own validation and serialization. */
+export async function executeMlxVideo(request, body, acceptsModel) {
+    const health = await mlxHealth();
+    if (!health.ok)
+        return { success: false, error: health.error };
+    let selected = request.model;
+    if (acceptsModel) {
+        if (selected && !acceptsModel(selected))
+            return { success: false, error: 'Model does not match the selected video adapter: ' + selected };
+        if (!selected) {
+            const listed = await listMlxModels();
+            if (!listed.ok)
+                return { success: false, error: listed.error };
+            selected = pickModel((listed.models ?? []).filter(m => acceptsModel(m.id)), 'video')?.id;
+            if (!selected)
+                return { success: false, error: 'No installed model matches the selected video adapter' };
+        }
+    }
+    const resolved = await resolveModel('video', selected);
+    if (!resolved.ok)
+        return { success: false, error: resolved.error };
+    body.model = resolved.model;
     const startedAt = Date.now();
-    const res = await requestRaw('post', `${mlxServeUrl()}/v1/video/generations`, authHeaders(), body, MLX_VIDEO_TIMEOUT_MS);
+    const res = await requestMlxVideo(body);
     if (!res.ok) {
         if (isUnreachable(res.status, res.body))
             return { success: false, error: mlxDownHint(res.body) };
@@ -664,7 +730,9 @@ export async function generateMlxVideo(request) {
     const parsed = parseVideoResponse(res.body);
     if ('error' in parsed)
         return { success: false, error: parsed.error };
-    const outFile = resolveOutputFile(request.outputPath || process.cwd(), request.filename || `mlx_video_${Date.now()}.mp4`, 'video');
+    if (acceptsModel && (parsed.width !== body.width || parsed.height !== body.height || parsed.frames !== body.num_frames || parsed.fps !== 24))
+        return { success: false, error: 'Backend output geometry or frame count differs from the validated request' };
+    const outFile = resolveOutputFile(request.outputPath || process.cwd(), request.filename || `video_${Date.now()}.mp4`, 'video');
     const muxed = await muxRgbToMp4({
         rgb: parsed.rgb,
         width: parsed.width,
@@ -688,6 +756,12 @@ export async function generateMlxVideo(request) {
         durationSeconds: parsed.frames / parsed.fps,
         elapsedSeconds: Math.round((Date.now() - startedAt) / 1000),
     };
+}
+/** Compatibility entry point for the original LTX client. */
+export async function generateMlxVideo(request) {
+    if (videoExceedsMemory(request.width, request.height, request.numFrames))
+        return { success: false, error: videoMemoryMessage(request.width, request.height, request.numFrames) };
+    return executeMlxVideo(request, buildLtxVideoBody(request));
 }
 export async function generateMlx3d(request) {
     const health = await mlxHealth();

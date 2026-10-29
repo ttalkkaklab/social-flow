@@ -1,3 +1,4 @@
+import { fasth3VideoAudioCount } from './fasth3-omni.js';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import path from 'node:path';
@@ -96,19 +97,21 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
   const characters: Record<string, unknown>[] = Array.isArray(raw) ? raw.map(object) : Object.entries(object(raw)).map(([id, value]) => ({ ...object(value), id }));
   const visual = object(context.shot.visual);
   const nativeSlot = Boolean(visual.clip) || context.shot.type === 'broll';
-  const audible = tool !== 'astra_genai_msr' && (tool.startsWith('veo_') || tool.startsWith('omni_') ||
+  const audible = tool !== 'astra_genai_msr' && (tool === 'fasth3_omni_reference' || tool.startsWith('veo_') || tool.startsWith('omni_') ||
     (tool.startsWith('astra_') ? args.generateAudio !== false : args.generateAudio === true));
   const supplied = SUPPLIED_AUDIO_TOOLS.has(tool);
   const native = !supplied && audible && (nativeSlot || lines.some(line => line.delivery === 'on_screen'));
   const spec = SEEDANCE_MODEL_SPECS[args.model as SeedanceModel];
   const limitedPromptLanguage = tool.startsWith('seedance_') && !String(args.model).includes('2-5');
-  const reference = native && tool === 'seedance_reference' && Boolean(spec?.referenceAudio);
+  const reference = native && (tool === 'fasth3_omni_reference' || (tool === 'seedance_reference' && Boolean(spec?.referenceAudio)));
   const strategy = supplied ? 'supplied_audio' : reference ? 'reference_voice' : native ? 'prompt_voice' : 'external_tts';
   const warnings: string[] = [];
   const speakers: SpeakerVoice[] = [];
   const nativeLines = nativeSlot ? lines : lines.filter(line => line.delivery === 'on_screen');
   const ids = [...new Set((native ? nativeLines : lines).map(line => text(line.speaker) || text(doc.narratorCharacterId)))];
   const prompt: string[] = [];
+  const audioOffset = tool === 'fasth3_omni_reference' && Array.isArray(args.referenceVideoPaths)
+    ? fasth3VideoAudioCount(args.referenceVideoPaths.map(file => path.resolve(context.episode, String(file)))) : 0;
   const audioPaths = Array.isArray(args.referenceAudioPaths) ? args.referenceAudioPaths.map(value => realpathSync(path.resolve(context.episode, String(value)))) : [];
   const imagePaths = Array.isArray(args.referenceImagePaths) ? args.referenceImagePaths.map(value => realpathSync(path.resolve(context.episode, String(value)))) : [];
   for (const id of ids) {
@@ -125,15 +128,16 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
       if (speaker.reference) {
         let index = audioPaths.indexOf(speaker.reference.path);
         if (index < 0) { index = audioPaths.length; audioPaths.push(speaker.reference.path); }
-        speaker.audioIndex = index + 1;
+        speaker.audioIndex = index + 1 + audioOffset;
         // Only map images with explicit ownership, never guess from array position.
         const owned = object(character.voiceReference).imagePaths;
         const ownedPaths = Array.isArray(owned) ? owned.map(value => realpathSync(path.resolve(context.episode, 'storyboard', String(value)))) : [];
         speaker.imageIndices = imagePaths.flatMap((file, i) => ownedPaths.includes(file) ? [i + 1] : []);
         if (imagePaths.length && !speaker.imageIndices.length) warnings.push(`${id}: no explicit image ownership matched the request; add voiceReference.imagePaths to bind this speaker to the correct Image N.`);
         const marker = String(args.model).includes('2-5') ? '@' : '';
-        const images = speaker.imageIndices.map(i => `${marker}Image ${i}`).join(', ');
-        prompt.push(`${label} (speaker ${id})${images ? `, shown in ${images},` : ''} uses ${marker}Audio ${speaker.audioIndex} for voice timbre and accent only. Speak the authored shot dialogue, not the sample's words.`);
+        const images = speaker.imageIndices.map(i => tool === 'fasth3_omni_reference' ? `<Picture ${i}>` : `${marker}Image ${i}`).join(', ');
+        const audioLabel = tool === 'fasth3_omni_reference' ? `<Audio ${speaker.audioIndex}>` : `${marker}Audio ${speaker.audioIndex}`;
+        prompt.push(`${label} (speaker ${id})${images ? `, shown in ${images},` : ''} uses ${audioLabel} for voice timbre and accent only. Speak the authored shot dialogue, not the sample's words.`);
       } else warnings.push(`${id}: no pinned voice sample available; reference-voice consistency is not established. Supply character.voiceReference before relying on this voice.`);
     }
     speakers.push(speaker);
@@ -147,7 +151,7 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
   if (reference) {
     args.referenceAudioPaths = audioPaths;
     const mapped = new Set(speakers.map(speaker => speaker.audioIndex));
-    if (audioPaths.some((_, i) => !mapped.has(i + 1))) warnings.push('Some supplied audio references have no character mapping; retain their existing role (for example music) explicitly in the prompt.');
+    if (audioPaths.some((_, i) => !mapped.has(i + 1 + audioOffset))) warnings.push('Some supplied audio references have no character mapping; retain their existing role (for example music) explicitly in the prompt.');
     if (speakers.some(speaker => speaker.reference)) {
       prompt.push('Keep the authored visual roles of reference videos, but do not inherit their voices or dialogue. Use the mapped audio references for speaker identity; keep music and effects separate from speech. Keep each speaker assigned to their own voice reference.');
       warnings.push('Reference voice is imitation, not preservation of the original WAV or exact speech timing.');

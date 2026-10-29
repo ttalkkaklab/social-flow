@@ -1,3 +1,4 @@
+import { fasth3OmniSchema } from './fasth3-omni.js';
 /** Sound intent -> supported adapter arguments. Never generates or reviews media. */
 import { z } from 'zod';
 import * as veo from './video-client.js';
@@ -16,6 +17,7 @@ const effectSchema = z.object({
     intensity: z.enum(['subtle', 'normal', 'strong']).optional(),
 }).strict();
 const schemas = {
+    fasth3_omni_reference: fasth3OmniSchema,
     veo_text2video: veo.text2VideoSchema, veo_img2video: veo.img2VideoSchema,
     veo_reference: veo.referenceVideoSchema, veo_extension: veo.videoExtensionSchema,
     seedance_text2video: seedance.seedanceText2VideoSchema,
@@ -99,6 +101,6 @@ export function prepareVideoSound(tool, input, sound = {}) {
     if (native.length)
         warnings.push('Native audio is a mixed soundtrack. Do not overlay a second dialogue track; inspect missing or unwanted effects before acceptance.');
     return { tool, arguments: parsed, sound: { ...sound, ...(audioSource ? { audioSource } : {}), effects: resolved },
-        capabilities: { nativeAudio, inputAudio: fixedInput ? 'preserved' : tool === 'seedance_reference' ? 'reference' : 'none' },
+        capabilities: { nativeAudio, inputAudio: fixedInput ? 'preserved' : ['seedance_reference', 'fasth3_omni_reference'].includes(tool) ? 'reference' : 'none' },
         warnings, review: 'not_reviewed', generated: false };
 }

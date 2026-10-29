@@ -125,3 +125,12 @@ test('missing selected audition evidence warns without substituting an older sam
   const external=prepareVideoVoice('astra_audio2video',{prompt:'Use supplied speech.',audioUploadId:'a'},ctx);
   assert.equal(external.args.prompt,'Use supplied speech.');
 });
+
+test('FastH3 native voices use Picture and Audio labels without exact lip-sync claims', t => {
+  const ctx=fixture(t), [hero,friend]=ctx.board.SB_DOC.characters;
+  const result=prepareVideoVoice('fasth3_omni_reference', {prompt:'Act.', referenceImagePaths:[hero.voiceReference.imagePaths[0],friend.voiceReference.imagePaths[0]]},ctx);
+  assert.equal(result.voiceContinuity.strategy,'reference_voice');
+  assert.match(result.args.prompt,/hero.*<Picture 1>.*<Audio 1>/);
+  assert.match(result.args.prompt,/friend.*<Picture 2>.*<Audio 2>/);
+  assert.equal(videoVoiceCapabilities('fasth3_omni_reference').exactAudioPreservation,false);
+});

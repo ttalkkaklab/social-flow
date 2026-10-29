@@ -20,7 +20,7 @@ function historicalSpend(episode) {
         const event = JSON.parse(line);
         if (['astra_genai_text2img', 'astra_genai_edit'].includes(event.tool))
             continue;
-        if (!/^(veo_|seedance_|omni_|mlx_video|astra_)/.test(event.tool || ''))
+        if (!/^(veo_|seedance_|omni_|mlx_video|ltx_video|fasth3_omni_|astra_)/.test(event.tool || ''))
             continue;
         const price = prices.get(event.key);
         if (typeof event.quantity !== 'number' || !Number.isFinite(event.quantity) || event.quantity < 0 || price === undefined || !Number.isFinite(price))
