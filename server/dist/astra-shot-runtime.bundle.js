@@ -165,7 +165,7 @@ import path2 from "node:path";
 import { createRequire as createRequire2 } from "node:module";
 import { createHash as createHash2 } from "node:crypto";
 
-// ../../../server/node_modules/zod/v3/external.js
+// node_modules/zod/v3/external.js
 var external_exports = {};
 __export(external_exports, {
   BRAND: () => BRAND,
@@ -277,7 +277,7 @@ __export(external_exports, {
   void: () => voidType
 });
 
-// ../../../server/node_modules/zod/v3/helpers/util.js
+// node_modules/zod/v3/helpers/util.js
 var util;
 (function(util2) {
   util2.assertEqual = (_) => {
@@ -411,7 +411,7 @@ var getParsedType = (data) => {
   }
 };
 
-// ../../../server/node_modules/zod/v3/ZodError.js
+// node_modules/zod/v3/ZodError.js
 var ZodIssueCode = util.arrayToEnum([
   "invalid_type",
   "invalid_literal",
@@ -529,7 +529,7 @@ ZodError.create = (issues) => {
   return error;
 };
 
-// ../../../server/node_modules/zod/v3/locales/en.js
+// node_modules/zod/v3/locales/en.js
 var errorMap = (issue, _ctx) => {
   let message;
   switch (issue.code) {
@@ -632,7 +632,7 @@ var errorMap = (issue, _ctx) => {
 };
 var en_default = errorMap;
 
-// ../../../server/node_modules/zod/v3/errors.js
+// node_modules/zod/v3/errors.js
 var overrideErrorMap = en_default;
 function setErrorMap(map) {
   overrideErrorMap = map;
@@ -641,7 +641,7 @@ function getErrorMap() {
   return overrideErrorMap;
 }
 
-// ../../../server/node_modules/zod/v3/helpers/parseUtil.js
+// node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
   const { data, path: path7, errorMaps, issueData } = params;
   const fullPath = [...path7, ...issueData.path || []];
@@ -751,14 +751,14 @@ var isDirty = (x) => x.status === "dirty";
 var isValid = (x) => x.status === "valid";
 var isAsync = (x) => typeof Promise !== "undefined" && x instanceof Promise;
 
-// ../../../server/node_modules/zod/v3/helpers/errorUtil.js
+// node_modules/zod/v3/helpers/errorUtil.js
 var errorUtil;
 (function(errorUtil2) {
   errorUtil2.errToObj = (message) => typeof message === "string" ? { message } : message || {};
   errorUtil2.toString = (message) => typeof message === "string" ? message : message?.message;
 })(errorUtil || (errorUtil = {}));
 
-// ../../../server/node_modules/zod/v3/types.js
+// node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
   constructor(parent, value, path7, key) {
     this._cachedPath = [];
@@ -5676,7 +5676,8 @@ var package_default = {
     "@google/genai": "^2.21.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
     openai: "^6.46.0",
-    zod: "^3.23.8"
+    zod: "^3.23.8",
+    "zod-to-json-schema": "^3.25.2"
   },
   devDependencies: {
     "@types/node": "^20.14.0",
