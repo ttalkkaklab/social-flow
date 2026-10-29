@@ -64,7 +64,9 @@ function compose(work,board) {
       const interval=intervals.find(item=>item.lineId===line.id);
       filters.push(`[${i}:a]aresample=48000,aformat=sample_fmts=s16:channel_layouts=mono,adelay=${Math.round(interval.speechStartSeconds*48000)}S:all=1[a${i}]`);
     });
-    filters.push(lines.map((_,i)=>`[a${i}]`).join('')+`amix=inputs=${lines.length}:normalize=0,apad,atrim=duration=${timing.durationSeconds}[out]`);
+    const samples=Math.round(timing.durationSeconds*48000);
+    // Bound padding at the source so older ffmpeg schedulers can reach EOF.
+    filters.push(lines.map((_,i)=>`[a${i}]`).join('')+`amix=inputs=${lines.length}:normalize=0,apad=whole_len=${samples},atrim=end_sample=${samples}[out]`);
     const output=path.join(work,`c${fields[0]}-speech.wav`),tmp=output+'.tmp.wav';
     try {execFileSync('ffmpeg',['-nostdin','-y','-v','error','-filter_complex_threads','1',...inputs,'-filter_complex',filters.join(';'),'-map','[out]','-c:a','pcm_s16le',tmp],{timeout:120000});fs.renameSync(tmp,output);} finally {if(fs.existsSync(tmp))fs.unlinkSync(tmp);}
     const receipt={generator:'speech_compose',audioSha256:hash(fs.readFileSync(output)),lineIds:lines.map(n=>n.id),lineSources:lineSources(lines),expectedText:lines.map(n=>n.tts).join('. '),durationSeconds:duration(output),intervals,timing:timing.timing,warnings:timing.warnings,status:'not_reviewed'};
