@@ -214,6 +214,9 @@ test('mlx local calls log at $0 with the matching unit', () => {
   assert.equal(priceOf('mlx_image_generate', {}).quantity, 1);
   assert.equal(priceOf('mlx_music_generate', {}).quantity, 30);
   assert.equal(priceOf('mlx_video_generate', { numFrames: 48 }).quantity, 2);
+  assert.equal(priceOf('mlx_video_generate', {}).quantity, 2.042);
+  assert.equal(priceOf('ltx_video_generate', {}).quantity, 2.042);
+  assert.equal(priceOf('fasth3_omni_reference', {}).quantity, 5.167);
   assert.equal(priceOf('mlx_3d_generate', {}).key, '3d.mlx');
 });
 

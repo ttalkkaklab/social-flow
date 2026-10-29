@@ -1290,7 +1290,7 @@
       }
     },
     {
-      "tool": "mlx_video_generate",
+      "tool": "ltx_video_generate",
       "engine": "mlx",
       "deployment": "local-mlx",
       "operation": "text",
@@ -1317,7 +1317,91 @@
         "filename"
       ],
       "modelConstraints": {
-        "note": "Use video_plan; deployment-specific schema is authoritative"
+        "frames": {
+          "min": 9,
+          "max": 241,
+          "step": 8,
+          "frameRate": 24
+        },
+        "note": "LTX 8k+1 frames; MLX-Serve backend."
+      }
+    },
+    {
+      "tool": "fasth3_omni_reference",
+      "engine": "mlx",
+      "deployment": "local-mlx",
+      "operation": "reference",
+      "voice": {
+        "voiceReference": "supported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "prompt",
+        "model",
+        "width",
+        "height",
+        "numFrames",
+        "steps",
+        "seed",
+        "referenceImagePaths",
+        "referenceVideoPaths",
+        "referenceAudioPaths",
+        "trimReferenceVideos",
+        "referenceSize",
+        "outputPath",
+        "filename"
+      ],
+      "modelConstraints": {
+        "frames": {
+          "min": 124,
+          "max": 362,
+          "step": 17,
+          "frameRate": 24,
+          "frameOffset": 5
+        },
+        "note": "8 steps; 9 images, 3 videos, 3 audios, 12 total; visual reference required; 256 MiB RGB cap; no exact speech preservation."
+      }
+    },
+    {
+      "tool": "mlx_video_generate",
+      "engine": "mlx",
+      "deployment": "local-mlx",
+      "operation": "text",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
+      "deprecated": true,
+      "replacement": "ltx_video_generate",
+      "fields": [
+        "prompt",
+        "model",
+        "width",
+        "height",
+        "numFrames",
+        "steps",
+        "seed",
+        "firstFrameImagePath",
+        "lastFrameImagePath",
+        "pipeline",
+        "decoder",
+        "outputPath",
+        "filename"
+      ],
+      "modelConstraints": {
+        "frames": {
+          "min": 9,
+          "max": 241,
+          "step": 8,
+          "frameRate": 24
+        },
+        "note": "LTX 8k+1 frames; MLX-Serve backend."
       }
     }
   ],

@@ -1,14 +1,14 @@
+import { localVideoStrategy } from './local-video-models.js';
 import { minimumDuration, type DurationLimits } from '../../skills/_shared/video-duration.js';
 import { SEEDANCE_MODEL_SPECS, DEFAULT_SEEDANCE_MODEL, DEFAULT_SEEDANCE_REFERENCE_MODEL, SEEDANCE_FRAME_MODELS, SEEDANCE_MIN_FRAMES, SEEDANCE_MAX_FRAMES, SEEDANCE_FRAME_STEP, SEEDANCE_FPS, type SeedanceModel } from './seedance-client.js';
 import { ASTRA_VIDEO_FRAME_LIMITS, ASTRA_VIDEO_FRAME_STEP, ASTRA_VIDEO_MIN_FRAMES } from './astra-video-client.js';
-import { MIN_MLX_VIDEO_FRAMES, MAX_MLX_VIDEO_FRAMES, MLX_VIDEO_FRAME_STEP, MLX_VIDEO_FPS } from './mlx-serve-client.js';
 
 export const DURATION_TOOLS = [
   'veo_text2video', 'veo_img2video', 'veo_reference',
   'omni_text2video', 'omni_img2video',
   'seedance_text2video', 'seedance_img2video', 'seedance_reference',
   'astra_text2video', 'astra_img2video', 'astra_keyframe_video', 'astra_audio2video',
-  'mlx_video_generate',
+  'mlx_video_generate', 'ltx_video_generate', 'fasth3_omni_reference',
 ] as const;
 
 /** Resolve required playback coverage into the shortest supported request, without I/O. */
@@ -39,7 +39,7 @@ export function resolveVideoDuration(tool: string, input: Record<string, unknown
       throw new Error('frameRate must be finite in 1..60');
     limits = { min: ASTRA_VIDEO_MIN_FRAMES, max: ASTRA_VIDEO_FRAME_LIMITS[mode], step: ASTRA_VIDEO_FRAME_STEP, frameRate };
   } else {
-    limits = { min: MIN_MLX_VIDEO_FRAMES, max: MAX_MLX_VIDEO_FRAMES, step: MLX_VIDEO_FRAME_STEP, frameRate: MLX_VIDEO_FPS };
+    limits = localVideoStrategy(tool)!.frames;
   }
   const timing = minimumDuration(input.requiredSeconds as number, limits);
   const { requiredSeconds: _required, ...args } = input;

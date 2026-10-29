@@ -1,3 +1,4 @@
+import { generateLocalVideo } from './local-video-models.js';
 import { manageWorkflow } from './production-workflow.js';
 import { MUSIC_ADAPTERS, musicCatalog } from './music-registry.js';
 import { planMusic, musicPlanSummary, executeMusic, musicStatus, routeLegacyMusic } from './music-routing.js';
@@ -887,9 +888,17 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
         `Generation time: ${result.elapsedSeconds}s`,
     );
   },
+  ltx_video_generate: async (args) => {
+    const result = await generateLocalVideo('ltx_video_generate', args);
+    return text(JSON.stringify(result), !result.success);
+  },
+  fasth3_omni_reference: async (args) => {
+    const result = await generateLocalVideo('fasth3_omni_reference', args);
+    return text(JSON.stringify(result), !result.success);
+  },
   mlx_video_generate: async (args) => {
     const request = parseArgs(mlx.mlxVideoGenerateSchema, args);
-    const result = await mlx.generateMlxVideo(request);
+    const result = await generateLocalVideo('mlx_video_generate', request);
     if (!result.success) return text(`MLX Core video generation failed:\n${result.error}`, true);
     return text(
       `Video generated via MLX Core.\n\nFile: ${result.path}\nModel: ${result.model}\n` +

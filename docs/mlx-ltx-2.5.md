@@ -1,6 +1,6 @@
 # LTX 2.5 on MLX Core — install runbook
 
-`mlx_video_generate` talks to MLX Core / mlx-serve on `http://127.0.0.1:11234`. This page is
+`ltx_video_generate` talks to MLX Core / mlx-serve on `http://127.0.0.1:11234`. This page is
 the setup the tool assumes. Measurements below come from a MacBook Pro M4 Max (128GB unified,
 macOS 26.6.2) on 2026-09-19; the plugin itself pins no model id — it picks a ready model that
 advertises capability `video`.
@@ -51,7 +51,7 @@ Three things to know:
   does not survive it. Under launchd the same model and the same request ran the full 13 minutes.
   A 768×1280 49-frame clip takes ~13 minutes, so no interactive shell outlives it.
 - `mlx-serve serve` (catalog mode) does **not** register `POST /v1/video/generations`. The
-  request comes back 404 and `mlx_video_generate` reports the server as down for video. Use
+  request comes back 404 and `ltx_video_generate` reports the server as down for video. Use
   `--model <path> --serve`.
 - The model id differs per start mode — the folder name above, `ddalcu/LTX-2.5-…` in catalog
   mode. The server does not validate the `model` field either way (a wrong id still answers
