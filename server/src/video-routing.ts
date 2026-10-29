@@ -1,3 +1,5 @@
+import { buildFasth3Body, fasth3OmniSchema } from './fasth3-omni.js';
+import { localVideoStrategy } from './local-video-models.js';
 import { requireReviewedImages, requireWorkflow, workflowRevision } from './production-workflow.js';
 import * as fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -79,6 +81,8 @@ function inputFiles(args: Record<string, unknown>, episode: string): Record<stri
 function bindSelection(tool: string, input: Record<string, unknown>, selection: Selection): Record<string, unknown> {
   const adapter = VIDEO_ADAPTERS[tool];
   if (!adapter || adapter.engine !== selection.engine) throw new Error('model_selection_mismatch: tool does not match selected engine');
+  const local = localVideoStrategy(tool);
+  if (local && selection.model && !local.acceptsModel(selection.model)) throw new Error('model_selection_mismatch: model does not match video adapter');
   const args = { ...input };
   if (tool === 'astra_audio2video') {
     if (args.maxAttempts !== undefined && args.maxAttempts !== 1)
@@ -120,7 +124,7 @@ export function planVideo(raw: unknown): VideoPlan {
   requireWorkflow(input.episode, 'video', input.shotId);
   const context = routingContext(input.episode, input.shotId);
   const { selection } = context;
-  const tool = input.tool || Object.entries(VIDEO_ADAPTERS).find(([, a]) => a.engine === selection.engine && a.operation === input.operation)?.[0];
+  const tool = input.tool || Object.entries(VIDEO_ADAPTERS).find(([name, a]) => a.engine === selection.engine && a.operation === input.operation && (a.engine !== 'mlx' || !selection.model || localVideoStrategy(name)?.acceptsModel(selection.model)))?.[0];
   if (input.tool && input.operation && VIDEO_ADAPTERS[input.tool]?.operation !== input.operation) throw new Error('Tool and operation disagree');
   if (selection.engine === 'host') {
     if (input.tool) throw new Error('model_selection_mismatch: host has no server adapter');
@@ -145,6 +149,7 @@ export function planVideo(raw: unknown): VideoPlan {
   args.filename ??= `video-${input.requestId}.mp4`;
   const inputs = inputFiles(args, context.episode);
   for (const binding of images.imageBindings ?? []) inputs[binding.path] = binding.sha256;
+  if (tool === 'fasth3_omni_reference') buildFasth3Body(fasth3OmniSchema.parse(args));
   if (tool === 'astra_genai_msr') buildGenaiMsrBody(genaiMsrSchema.parse(args));
   if (tool === 'astra_genai_audio2video') buildGenaiAudioBody(genaiAudioToVideoSchema.parse(args));
   if (tool === 'astra_video_retake' && selection.resolution) {

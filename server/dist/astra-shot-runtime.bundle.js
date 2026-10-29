@@ -54,7 +54,8 @@ var require_video_duration = __commonJS({
         durationSeconds = limits.seconds.find((seconds) => seconds >= requiredSeconds);
       } else if (limits.frameRate !== void 0) {
         const fps = positive(limits.frameRate, "frameRate");
-        numFrames = Math.max(limits.min, 1 + limits.step * Math.ceil((requiredSeconds * fps - 1) / limits.step));
+        const offset = limits.frameOffset ?? 1;
+        numFrames = Math.max(limits.min, offset + limits.step * Math.ceil((requiredSeconds * fps - offset) / limits.step));
         if (numFrames / fps < requiredSeconds) numFrames += limits.step;
         while (numFrames - limits.step >= limits.min && (numFrames - limits.step) / fps >= requiredSeconds)
           numFrames -= limits.step;
@@ -106,11 +107,63 @@ function manageProject(args) {
   return project.manageProject(args);
 }
 
+// src/image-media.ts
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+function imageMetadata(bytes) {
+  let width = 0, height = 0, mimeType = "";
+  if (bytes.length >= 33 && bytes.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex")) && bytes.toString("ascii", 12, 16) === "IHDR") {
+    width = bytes.readUInt32BE(16);
+    height = bytes.readUInt32BE(20);
+    mimeType = "image/png";
+  } else if (bytes.length > 12 && bytes[0] === 255 && bytes[1] === 216) {
+    mimeType = "image/jpeg";
+    for (let i = 2; i + 8 < bytes.length; ) {
+      if (bytes[i] !== 255) break;
+      const marker = bytes[i + 1];
+      if (marker === 255) {
+        i++;
+        continue;
+      }
+      if (marker === 217 || marker === 218) break;
+      const length = bytes.readUInt16BE(i + 2);
+      if (length < 2 || i + 2 + length > bytes.length) break;
+      if ([192, 193, 194, 195, 197, 198, 199, 201, 202, 203, 205, 206, 207].includes(marker)) {
+        height = bytes.readUInt16BE(i + 5);
+        width = bytes.readUInt16BE(i + 7);
+        break;
+      }
+      i += 2 + length;
+    }
+  } else if (bytes.length >= 30 && bytes.toString("ascii", 0, 4) === "RIFF" && bytes.toString("ascii", 8, 12) === "WEBP") {
+    mimeType = "image/webp";
+    const kind = bytes.toString("ascii", 12, 16);
+    if (kind === "VP8X") {
+      width = bytes.readUIntLE(24, 3) + 1;
+      height = bytes.readUIntLE(27, 3) + 1;
+    }
+    if (kind === "VP8L" && bytes[20] === 47) {
+      const bits = bytes.readUInt32LE(21);
+      width = (bits & 16383) + 1;
+      height = (bits >>> 14 & 16383) + 1;
+    }
+    if (kind === "VP8 " && bytes.subarray(23, 26).equals(Buffer.from([157, 1, 42]))) {
+      width = bytes.readUInt16LE(26) & 16383;
+      height = bytes.readUInt16LE(28) & 16383;
+    }
+  }
+  if (!width || !height) throw new Error("image_invalid: expected a readable PNG, JPEG or WebP header");
+  return { width, height, mimeType, bytes: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") };
+}
+function readImageMetadata(file) {
+  return imageMetadata(readFileSync(file));
+}
+
 // src/production-workflow.ts
 import * as fs2 from "node:fs";
 import path2 from "node:path";
 import { createRequire as createRequire2 } from "node:module";
-import { createHash } from "node:crypto";
+import { createHash as createHash2 } from "node:crypto";
 
 // node_modules/zod/v3/external.js
 var external_exports = {};
@@ -4189,7 +4242,7 @@ var workflowSchema = external_exports.object({
   entries: external_exports.array(entrySchema).optional(),
   notApplicable: external_exports.string().optional()
 }).strict();
-var digest = (file) => createHash("sha256").update(fs2.readFileSync(file)).digest("hex");
+var digest = (file) => createHash2("sha256").update(fs2.readFileSync(file)).digest("hex");
 var stateFile = (episode) => path2.join(episode, ".work/production-workflow.json");
 function workflowEpisode(directory) {
   let dir = canonicalPath(path2.resolve(directory));
@@ -4304,7 +4357,7 @@ function requireWorkflow(directory, kind, assetId, outputFile) {
 var loadImagePlan = createRequire2(import.meta.url);
 
 // src/storyboard.ts
-import { createHash as createHash2 } from "node:crypto";
+import { createHash as createHash3 } from "node:crypto";
 
 // src/scenes-vm.ts
 import vm from "node:vm";
@@ -4356,7 +4409,7 @@ function evaluateWindowScript(source, options = {}) {
 }
 
 // src/storyboard.ts
-import { existsSync as existsSync3, mkdirSync as mkdirSync3, readFileSync as readFileSync2, renameSync as renameSync2, statSync as statSync2, unlinkSync as unlinkSync3, writeFileSync as writeFileSync2 } from "node:fs";
+import { existsSync as existsSync3, mkdirSync as mkdirSync3, readFileSync as readFileSync3, renameSync as renameSync2, statSync as statSync2, unlinkSync as unlinkSync3, writeFileSync as writeFileSync2 } from "node:fs";
 import * as nodeModule2 from "node:module";
 import { basename, dirname as dirname2, join, resolve as resolve2 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
@@ -4610,7 +4663,7 @@ function readBoard(target) {
   const file = scenesPath(target);
   if (!existsSync3(file)) throw new Error(`no scenes.js at ${file}`);
   if (!statSync2(file).isFile()) throw new Error(`${file} is not a file`);
-  const src = readFileSync2(file, "utf8");
+  const src = readFileSync3(file, "utf8");
   const header = [];
   for (const line of src.split("\n")) {
     if (/^\s*\/\//.test(line)) header.push(line.trim());
@@ -4623,7 +4676,7 @@ function readBoard(target) {
     throw new Error(`failed to evaluate ${file}: ${e.message}`);
   }
   if (!Array.isArray(win.SCENES)) throw new Error(`${file} has no window.SCENES array`);
-  return { file, header, win, sha256: createHash2("sha256").update(src).digest("hex") };
+  return { file, header, win, sha256: createHash3("sha256").update(src).digest("hex") };
 }
 var GLOBAL_ORDER = ["FORMAT", "VOICE", "THEME", "COMPREHENSION", "STORY", "PRODUCTION", "MOTION_POLICY", "MUSIC", "SFX", "STRUCTURE", "SCENES"];
 function serializeBoard(win, header = []) {
@@ -4652,21 +4705,186 @@ var scenarioCheckResultSchema = external_exports.object({
   }))
 });
 
-// src/video-routing.ts
-import { createRequire as createRequire6 } from "node:module";
-import { fileURLToPath as fileURLToPath4 } from "node:url";
+// src/fasth3-omni.ts
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync as readFileSync4, readdirSync, rmSync, statSync as statSync3 } from "node:fs";
+import { tmpdir } from "node:os";
+import { join as join3 } from "node:path";
+
+// src/media-utils.ts
+import * as fs3 from "node:fs";
+import * as path3 from "node:path";
+var ALLOWED_EXTENSIONS = {
+  image: [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"],
+  video: [".mp4", ".webm", ".mov", ".avi"],
+  audio: [".wav", ".mp3", ".ogg", ".webm", ".aac", ".flac"],
+  json: [".json"],
+  mesh: [".glb"]
+};
+function validateFilePath(filePath, options) {
+  const resolved = path3.resolve(filePath);
+  if (filePath.includes("..")) {
+    throw new Error(`Path traversal detected: ${filePath}`);
+  }
+  if (options?.allowedExtensions) {
+    const ext = path3.extname(resolved).toLowerCase();
+    if (!options.allowedExtensions.includes(ext)) {
+      throw new Error(
+        `File extension "${ext}" is not allowed. Allowed: ${options.allowedExtensions.join(", ")}`
+      );
+    }
+  }
+}
+function resolveOutputFile(outputDir, filename, kind) {
+  if (/[/\\]/.test(filename) || filename.includes("..")) {
+    throw new Error(`filename must be a bare file name without path separators: "${filename}"`);
+  }
+  validateFilePath(filename, { allowedExtensions: ALLOWED_EXTENSIONS[kind] });
+  const dir = path3.resolve(outputDir);
+  fs3.mkdirSync(dir, { recursive: true });
+  return path3.join(dir, filename);
+}
+function bareFilenameSchema(kind) {
+  const allowed = ALLOWED_EXTENSIONS[kind];
+  return external_exports.string().min(1).refine((name) => !/[/\\]/.test(name) && !name.includes(".."), {
+    message: "filename must be a bare file name without path separators (use outputPath for the directory)"
+  }).refine((name) => allowed.includes(path3.extname(name).toLowerCase()), {
+    message: `filename extension must be one of: ${allowed.join(", ")}`
+  });
+}
+
+// src/fasth3-omni.ts
+var FASTH3_OMNI_MODEL = "ddalcu/FastH3-Omni-MLX-Serve-8bit";
+var FASTH3_FRAME_LIMITS = { min: 124, max: 362, step: 17, frameRate: 24, frameOffset: 5 };
+var FASTH3_MAX_RGB_BYTES = 256 * 1024 * 1024;
+var MAX_REQUEST_BYTES = 60 * 1024 * 1024;
+var dimension = external_exports.number().int().min(256).max(1536).refine((n) => n % 32 === 0, "Dimensions must be multiples of 32");
+var paths = (max) => external_exports.array(external_exports.string().min(1)).max(max).default([]);
+var fasth3OmniSchema = external_exports.object({
+  prompt: external_exports.string().min(1).max(32e3).describe("Scene and sound, e.g. The person in <Picture 1> waves; birds chirp. References are numbered per type."),
+  model: external_exports.literal(FASTH3_OMNI_MODEL).default(FASTH3_OMNI_MODEL).describe("Installed FastH3 Omni MLX-Serve pack."),
+  width: dimension.default(768).describe("Output width in pixels, e.g. 768."),
+  height: dimension.default(448).describe("Output height in pixels, e.g. 448."),
+  numFrames: external_exports.number().int().min(124).max(362).default(124).describe("Exact 17k+5 frame count at 24 fps, e.g. 124, 243, 362; RGB output must fit 256 MiB."),
+  steps: external_exports.literal(8).default(8).describe("The trained eight-step schedule."),
+  seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional().describe("Reproducible seed, e.g. 2026."),
+  referenceImagePaths: paths(9).describe('Ordered PNG/JPEG paths, e.g. ["/tmp/character.png"]; <Picture 1> etc.'),
+  referenceVideoPaths: paths(3).describe('Ordered local video paths, e.g. ["/tmp/motion.mp4"]; 2\u201315 seconds each, 15 seconds total. Video sound is included.'),
+  referenceAudioPaths: paths(3).describe('Ordered voice/music paths, e.g. ["/tmp/voice.wav"]; 2\u201315 seconds each. Voice imitation does not preserve exact speech timing.'),
+  trimReferenceVideos: external_exports.boolean().default(false).describe("Allow trimming reference video tails to output length and the 17k+5 ladder; false refuses any trim."),
+  referenceSize: external_exports.enum(["match", "max"]).default("match").describe("match caps references to output area; max preserves more detail at higher memory/time cost."),
+  outputPath: external_exports.string().optional().describe("Output directory, e.g. /tmp/video-test."),
+  filename: bareFilenameSchema("video").optional().describe("MP4 filename, e.g. fasth3.mp4.")
+}).strict().superRefine((v, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (!(v.referenceImagePaths.length + v.referenceVideoPaths.length)) issue("FastH3 Omni needs at least one image or video reference");
+  if (v.referenceImagePaths.length + v.referenceVideoPaths.length + v.referenceAudioPaths.length > 12) issue("At most twelve reference files are supported");
+  if ((v.numFrames - 5) % 17) issue("FastH3 frame counts must be 17k+5");
+  if (v.width * v.height * v.numFrames * 3 > FASTH3_MAX_RGB_BYTES) issue("Decoded RGB exceeds the adapter 256 MiB compatibility limit; reduce dimensions or frames");
+});
+function probe(file) {
+  const data = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration:stream=codec_type", "-of", "json", file], { encoding: "utf8", timeout: 15e3 }));
+  const duration = Number(data.format?.duration);
+  if (!Number.isFinite(duration) || duration < 2 || duration > 15) throw new Error("Reference media must be 2\u201315 seconds: " + file);
+  return { duration, hasAudio: data.streams?.some((s) => s.codec_type === "audio") === true };
+}
+function ffmpeg(args) {
+  execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-nostdin", "-y", ...args], { timeout: 12e4, maxBuffer: 1024 * 1024 });
+}
+function buildFasth3Body(raw) {
+  const r = fasth3OmniSchema.parse(raw);
+  const temp = mkdtempSync(join3(tmpdir(), "fasth3-refs-"));
+  let encodedBytes = 0;
+  const encode = (file) => {
+    encodedBytes += 4 * Math.ceil(statSync3(file).size / 3);
+    if (encodedBytes > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference payload exceeds the 60 MiB upload limit");
+    return readFileSync4(file).toString("base64");
+  };
+  const audio = (file, name, seconds) => {
+    const target = join3(temp, name + ".wav");
+    ffmpeg(["-i", file, "-vn", "-ar", "32000", "-ac", "2", "-c:a", "pcm_s16le", ...seconds === void 0 ? [] : ["-t", String(seconds)], target]);
+    return encode(target);
+  };
+  try {
+    const images = r.referenceImagePaths.map((file) => {
+      if (statSync3(file).size * 4 / 3 > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference image exceeds upload limit");
+      const meta = readImageMetadata(file);
+      if (!["image/png", "image/jpeg"].includes(meta.mimeType)) throw new Error("FastH3 reference images must be PNG or JPEG");
+      return encode(file);
+    });
+    let videoSeconds = 0;
+    const videos = r.referenceVideoPaths.map((file, i) => {
+      const meta = probe(file);
+      videoSeconds += meta.duration;
+      if (videoSeconds > 15) throw new Error("Reference videos exceed fifteen seconds total");
+      const prefix = `video-${i}-`;
+      ffmpeg(["-i", file, "-an", "-vf", "fps=24,scale=768:768:force_original_aspect_ratio=decrease", "-frames:v", "362", join3(temp, prefix + "%04d.jpg")]);
+      const files = readdirSync(temp).filter((f) => f.startsWith(prefix)).sort();
+      const count = Math.min(files.length, r.numFrames);
+      const accepted = count - (count - 5) % 17;
+      if (accepted < 5) throw new Error("Reference video has too few decoded frames");
+      if (accepted < files.length && !r.trimReferenceVideos) throw new Error("Reference video must fit the requested output frame count and 17k+5 ladder; trim it explicitly before submitting");
+      return { frames: files.slice(0, accepted).map((f) => encode(join3(temp, f))), ...meta.hasAudio ? { audio: audio(file, `video-audio-${i}`, accepted / 24) } : {} };
+    });
+    const audios = r.referenceAudioPaths.map((file, i) => {
+      probe(file);
+      return audio(file, `audio-${i}`);
+    });
+    return {
+      stream: true,
+      model: r.model,
+      prompt: r.prompt,
+      width: r.width,
+      height: r.height,
+      num_frames: r.numFrames,
+      steps: r.steps,
+      ...r.seed === void 0 ? {} : { seed: r.seed },
+      ref_image_size: r.referenceSize,
+      ref_images: images,
+      ref_videos: videos,
+      ref_audios: audios
+    };
+  } finally {
+    rmSync(temp, { recursive: true, force: true });
+  }
+}
+
+// src/mlx-serve-client.ts
+import { existsSync as existsSync5, mkdtempSync as mkdtempSync2, readFileSync as readFileSync6, rmSync as rmSync2, writeFileSync as writeFileSync4 } from "node:fs";
+
+// src/image-models.ts
+function mlxImageFamily(model = "") {
+  if (/qwen.*image.*2[.-]1/i.test(model)) return "qwen-2.1";
+  if (/mage[-_]?flow/i.test(model)) return /edit/i.test(model) ? "mage-edit" : "mage";
+  if (/krea[-_]?2/i.test(model)) return "krea";
+  if (/flux[.-]?2[-_]?klein/i.test(model)) return "flux-klein";
+  return "unknown";
+}
+function validateMlxImageOperation(model, operation, args) {
+  const family = mlxImageFamily(model);
+  if (operation === "edit" && !["flux-klein", "mage-edit", "qwen-2.1"].includes(family))
+    throw new Error("image_operation_unsupported: select an identified editing pack");
+  if (operation === "variation" && !["flux-klein", "krea"].includes(family))
+    throw new Error("image_operation_unsupported: this pack has no verified strength-based variation");
+  if (args.transparent === true && family !== "qwen-2.1")
+    throw new Error("image_transparency_unsupported: transparent requires Qwen-Image-2.1");
+  const refs = Array.isArray(args.refImagePaths) ? args.refImagePaths.length : 0;
+  if (refs > (family === "qwen-2.1" ? 9 : 3)) throw new Error("image_reference_limit");
+  if (family === "qwen-2.1" && /turbo/i.test(model || "") && args.steps !== void 0 && args.steps !== 8)
+    throw new Error("image_schedule_fixed: Qwen Turbo uses its saved 8-step schedule");
+}
 
 // src/config.ts
-import { accessSync, constants, existsSync as existsSync4, readFileSync as readFileSync3, readdirSync, statSync as statSync3 } from "node:fs";
+import { accessSync, constants, existsSync as existsSync4, readFileSync as readFileSync5, readdirSync as readdirSync2, statSync as statSync4 } from "node:fs";
 import { homedir } from "node:os";
-import { delimiter, join as join2 } from "node:path";
-function loadEnvFile(file = join2(process.env.SNS_TOKEN_DIR || join2(homedir(), ".config", "social-flow"), ".env")) {
+import { delimiter, join as join4 } from "node:path";
+function loadEnvFile(file = join4(process.env.SNS_TOKEN_DIR || join4(homedir(), ".config", "social-flow"), ".env")) {
   for (const [key, value] of Object.entries(process.env)) {
     if (value && /^\$\{[A-Za-z_][A-Za-z0-9_]*(:-[^}]*)?\}$/.test(value)) delete process.env[key];
   }
   let text;
   try {
-    text = readFileSync3(file, "utf8");
+    text = readFileSync5(file, "utf8");
   } catch {
     return [];
   }
@@ -4740,14 +4958,14 @@ var config = {
   youtubeApiKey: process.env.YOUTUBE_API_KEY || "",
   requestTimeoutMs: 15e3
 };
-var snsTokenDir = process.env.SNS_TOKEN_DIR || join2(homedir(), ".config", "social-flow");
+var snsTokenDir = process.env.SNS_TOKEN_DIR || join4(homedir(), ".config", "social-flow");
 var defaultSnsCredentialFiles = {
-  THREADS: process.env.THREADS_TOKEN_FILE || join2(snsTokenDir, "threads_token"),
-  INSTAGRAM: process.env.INSTAGRAM_TOKEN_FILE || join2(snsTokenDir, "instagram_token"),
-  FACEBOOK: process.env.FACEBOOK_PAGE_TOKEN_FILE || join2(snsTokenDir, "facebook_page_token"),
-  YOUTUBE: process.env.YOUTUBE_OAUTH_FILE || join2(snsTokenDir, "youtube-oauth-client.json")
+  THREADS: process.env.THREADS_TOKEN_FILE || join4(snsTokenDir, "threads_token"),
+  INSTAGRAM: process.env.INSTAGRAM_TOKEN_FILE || join4(snsTokenDir, "instagram_token"),
+  FACEBOOK: process.env.FACEBOOK_PAGE_TOKEN_FILE || join4(snsTokenDir, "facebook_page_token"),
+  YOUTUBE: process.env.YOUTUBE_OAUTH_FILE || join4(snsTokenDir, "youtube-oauth-client.json")
 };
-var disabledToolsFile = join2(snsTokenDir, "disabled-tools.json");
+var disabledToolsFile = join4(snsTokenDir, "disabled-tools.json");
 function astraVideoBaseUrl() {
   return (process.env.ASTRA_VIDEO_URL || "https://video.astravision.co.kr").replace(/\/+$/, "");
 }
@@ -4760,53 +4978,249 @@ function requireAstraVideoKey() {
   return config.astraVideoApiKey;
 }
 
+// src/http.ts
+async function requestRaw(method, url, headers, body, timeoutMs) {
+  const effectiveTimeoutMs = timeoutMs ?? config.requestTimeoutMs;
+  try {
+    const res = await fetch(url, {
+      method: method.toUpperCase(),
+      headers: {
+        ...body !== void 0 ? { "Content-Type": "application/json" } : {},
+        ...headers
+      },
+      body: body !== void 0 ? JSON.stringify(body) : void 0,
+      signal: AbortSignal.timeout(effectiveTimeoutMs)
+    });
+    const text = await res.text();
+    return { ok: res.ok, status: res.status, body: text };
+  } catch (error) {
+    if (error instanceof Error && error.name === "TimeoutError") {
+      return { ok: false, status: 504, body: `Request timed out after ${effectiveTimeoutMs}ms: ${url}` };
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    return { ok: false, status: 502, body: `Upstream unreachable (${url}): ${message}` };
+  }
+}
+
+// src/mlx-serve-client.ts
+var MLX_LOAD_TIMEOUT_MS = 10 * 6e4;
+var MLX_IMAGE_TIMEOUT_MS = 15 * 6e4;
+var MLX_MUSIC_TIMEOUT_MS = 10 * 6e4;
+var MLX_VIDEO_TIMEOUT_MS = 20 * 6e4;
+var MLX_MESH_TIMEOUT_MS = 15 * 6e4;
+var MAX_VIDEO_RGB_BYTES = 800 * 1024 * 1024;
+var MLX_IMAGE_DIMENSION_STEP = 16;
+var MIN_MLX_IMAGE_DIMENSION = 256;
+var MAX_MLX_IMAGE_DIMENSION = 2048;
+var DEFAULT_MLX_IMAGE_SIZE = 1024;
+var MLX_VIDEO_DIMENSION_STEP = 64;
+var MLX_VIDEO_DIMENSION_STEP_ONE_STAGE = 32;
+var MIN_MLX_VIDEO_DIMENSION = 256;
+var MAX_MLX_VIDEO_DIMENSION = 1920;
+var DEFAULT_MLX_VIDEO_WIDTH = 768;
+var DEFAULT_MLX_VIDEO_HEIGHT = 1280;
+var DEFAULT_MLX_VIDEO_FRAMES = 49;
+var MIN_MLX_VIDEO_FRAMES = 9;
+var MAX_MLX_VIDEO_FRAMES = 241;
+var MLX_VIDEO_FRAME_STEP = 8;
+var MLX_VIDEO_FPS = 24;
+var MIN_MLX_MUSIC_SECONDS = 10;
+var MAX_MLX_MUSIC_SECONDS = 600;
+var DEFAULT_MLX_MUSIC_SECONDS = 30;
+var MAX_MLX_IMAGE_REFS = 9;
+var imageDimension = external_exports.number().int().min(MIN_MLX_IMAGE_DIMENSION).max(MAX_MLX_IMAGE_DIMENSION).refine((v) => v % MLX_IMAGE_DIMENSION_STEP === 0, {
+  message: `width/height must be a multiple of ${MLX_IMAGE_DIMENSION_STEP} (for 9:16 that's 1088\xD71920, not 1080\xD71920). Model and installed backend may impose additional size constraints.`
+});
+var videoDimension = external_exports.number().int().min(MIN_MLX_VIDEO_DIMENSION).max(MAX_MLX_VIDEO_DIMENSION).refine((v) => v % MLX_VIDEO_DIMENSION_STEP_ONE_STAGE === 0, {
+  message: `width/height must be a multiple of ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE} (LTX grid), and of ${MLX_VIDEO_DIMENSION_STEP} unless you pass pipeline:"one_stage". 1080 is on neither grid \u2014 use 1088\xD71920 or the default 768\xD71280.`
+});
+var mlxImageGenerateSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
+  model: external_exports.string().min(1).optional(),
+  transparent: external_exports.boolean().optional(),
+  width: imageDimension.optional().default(DEFAULT_MLX_IMAGE_SIZE),
+  height: imageDimension.optional().default(DEFAULT_MLX_IMAGE_SIZE),
+  steps: external_exports.number().int().min(1).max(100).optional(),
+  seed: external_exports.number().int().min(0).optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  strength: external_exports.number().min(0).max(1).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("image").optional()
+}).superRefine((value, ctx) => {
+  if (value.width === void 0 !== (value.height === void 0)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: "Send width and height together" });
+  if (value.model) {
+    try {
+      validateMlxImageOperation(value.model, "imagePath" in value && value.imagePath ? "refImagePaths" in value ? "edit" : "variation" : "text", value);
+    } catch (error) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: String(error) });
+    }
+  }
+});
+var mlxImageEditSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
+  imagePath: external_exports.string().min(1, "imagePath is required"),
+  refImagePaths: external_exports.array(external_exports.string().min(1)).max(MAX_MLX_IMAGE_REFS).optional(),
+  model: external_exports.string().min(1).optional(),
+  transparent: external_exports.boolean().optional(),
+  width: imageDimension.optional(),
+  height: imageDimension.optional(),
+  steps: external_exports.number().int().min(1).max(100).optional(),
+  seed: external_exports.number().int().min(0).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("image").optional()
+}).superRefine((value, ctx) => {
+  if (value.width === void 0 !== (value.height === void 0)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: "Send width and height together" });
+  if (value.model) {
+    try {
+      validateMlxImageOperation(value.model, "edit", value);
+    } catch (error) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: String(error) });
+    }
+  }
+});
+var mlxMusicGenerateSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(4e3),
+  model: external_exports.string().min(1).optional(),
+  lyrics: external_exports.string().max(8e3).optional(),
+  instrumental: external_exports.boolean().optional().default(true),
+  durationSeconds: external_exports.number().int().min(MIN_MLX_MUSIC_SECONDS).max(MAX_MLX_MUSIC_SECONDS).optional().default(DEFAULT_MLX_MUSIC_SECONDS),
+  seed: external_exports.number().int().min(0).optional(),
+  refAudioPath: external_exports.string().min(1).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("audio").optional()
+}).superRefine((value, ctx) => {
+  if (value.instrumental && value.lyrics && value.lyrics.trim().length > 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      message: "instrumental:true cannot be sent beside lyrics \u2014 mlx-serve returns 400. Set instrumental false to sing, or drop lyrics for a bed."
+    });
+  }
+});
+var mlxVideoGenerateSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
+  model: external_exports.string().min(1).optional(),
+  width: videoDimension.optional().default(DEFAULT_MLX_VIDEO_WIDTH),
+  height: videoDimension.optional().default(DEFAULT_MLX_VIDEO_HEIGHT),
+  numFrames: external_exports.number().int().min(MIN_MLX_VIDEO_FRAMES).max(MAX_MLX_VIDEO_FRAMES).optional().default(DEFAULT_MLX_VIDEO_FRAMES),
+  steps: external_exports.number().int().min(1).max(50).optional(),
+  seed: external_exports.number().int().min(0).optional(),
+  firstFrameImagePath: external_exports.string().min(1).optional(),
+  lastFrameImagePath: external_exports.string().min(1).optional(),
+  pipeline: external_exports.enum(["one_stage", "two_stage", "two_stage_hq"]).optional(),
+  decoder: external_exports.enum(["conv", "diffusion"]).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional()
+}).superRefine((value, ctx) => {
+  if (videoExceedsMemory(value.width, value.height, value.numFrames)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      message: videoMemoryMessage(value.width, value.height, value.numFrames)
+    });
+  }
+  if (value.pipeline !== "one_stage") {
+    for (const [field, size] of [["width", value.width], ["height", value.height]]) {
+      if (size % MLX_VIDEO_DIMENSION_STEP !== 0) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: [field],
+          message: `${field} ${size} is off the two-stage LTX grid (multiple of ${MLX_VIDEO_DIMENSION_STEP}). Pass pipeline:"one_stage" to use the ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE}px grid, or round to ${Math.round(size / MLX_VIDEO_DIMENSION_STEP) * MLX_VIDEO_DIMENSION_STEP}.`
+        });
+      }
+    }
+  }
+  if ((value.numFrames - 1) % MLX_VIDEO_FRAME_STEP !== 0) {
+    const below = value.numFrames - (value.numFrames - 1) % MLX_VIDEO_FRAME_STEP;
+    const above = below + MLX_VIDEO_FRAME_STEP;
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["numFrames"],
+      message: `numFrames must be ${MLX_VIDEO_FRAME_STEP}k+1 (${MIN_MLX_VIDEO_FRAMES}, 17, 25, \u2026 ${MAX_MLX_VIDEO_FRAMES}) \u2014 LTX latent depth. ${value.numFrames} is not, and mlx-serve answers 200 with its own default instead of refusing. Use ${below} or ${Math.min(above, MAX_MLX_VIDEO_FRAMES)}.`
+    });
+  }
+});
+var mlx3dGenerateSchema = external_exports.object({
+  imagePath: external_exports.string().min(1, "imagePath is required"),
+  model: external_exports.string().min(1).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("mesh").optional()
+});
+function videoRgbBytes(width, height, frames) {
+  return width * height * frames * 3;
+}
+function videoExceedsMemory(width, height, frames) {
+  return videoRgbBytes(width, height, frames) > MAX_VIDEO_RGB_BYTES;
+}
+function videoMemoryMessage(width, height, frames) {
+  const mb = (videoRgbBytes(width, height, frames) / (1024 * 1024)).toFixed(0);
+  const cap = (MAX_VIDEO_RGB_BYTES / (1024 * 1024)).toFixed(0);
+  return `Decoded RGB would be ~${mb}MB (${width}\xD7${height}\xD7${frames}\xD73), over the ${cap}MB cap. Drop frames or canvas \u2014 1088\xD71920 at 8s/24fps is ~1.2GB and is refused. The default 768\xD71280\xD7${DEFAULT_MLX_VIDEO_FRAMES} stays under the cap.`;
+}
+function fileToBase64(filePath) {
+  if (!existsSync5(filePath)) return { ok: false, error: `File not found: ${filePath}` };
+  try {
+    return { ok: true, b64: readFileSync6(filePath).toString("base64") };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+function buildLtxVideoBody(request) {
+  const body = {
+    prompt: request.prompt,
+    model: request.model,
+    width: request.width,
+    height: request.height,
+    num_frames: request.numFrames
+  };
+  if (request.steps !== void 0) body.steps = request.steps;
+  if (request.seed !== void 0) body.seed = request.seed;
+  if (request.pipeline) body.pipeline = request.pipeline;
+  if (request.decoder) body.decoder = request.decoder;
+  if (request.firstFrameImagePath) {
+    const img = fileToBase64(request.firstFrameImagePath);
+    if (!img.ok) throw new Error(img.error);
+    body.first_frame_image = img.b64;
+  }
+  if (request.lastFrameImagePath) {
+    const img = fileToBase64(request.lastFrameImagePath);
+    if (!img.ok) throw new Error(img.error);
+    body.last_frame_image = img.b64;
+  }
+  return body;
+}
+
+// src/local-video-models.ts
+var LOCAL_VIDEO_MODELS = {
+  ltx_video_generate: {
+    operation: "text",
+    schema: mlxVideoGenerateSchema,
+    defaultFrames: DEFAULT_MLX_VIDEO_FRAMES,
+    frames: { min: MIN_MLX_VIDEO_FRAMES, max: MAX_MLX_VIDEO_FRAMES, step: MLX_VIDEO_FRAME_STEP, frameRate: MLX_VIDEO_FPS },
+    acceptsModel: (id) => /ltx/i.test(id),
+    prepare: (raw) => buildLtxVideoBody(mlxVideoGenerateSchema.parse(raw))
+  },
+  fasth3_omni_reference: {
+    operation: "reference",
+    schema: fasth3OmniSchema,
+    frames: FASTH3_FRAME_LIMITS,
+    defaultFrames: 124,
+    acceptsModel: (id) => id === FASTH3_OMNI_MODEL,
+    prepare: (raw) => buildFasth3Body(fasth3OmniSchema.parse(raw))
+  }
+};
+function localVideoStrategy(tool) {
+  const name = tool === "mlx_video_generate" ? "ltx_video_generate" : tool;
+  return Object.hasOwn(LOCAL_VIDEO_MODELS, name) ? LOCAL_VIDEO_MODELS[name] : void 0;
+}
+
+// src/video-routing.ts
+import { createRequire as createRequire6 } from "node:module";
+import { fileURLToPath as fileURLToPath4 } from "node:url";
+
 // src/video-events.ts
 import { AsyncLocalStorage } from "node:async_hooks";
 var videoEvents = new AsyncLocalStorage();
 function recordVideoSubmission(id) {
   if (id) videoEvents.getStore()?.submitted(id);
-}
-
-// src/media-utils.ts
-import * as fs3 from "node:fs";
-import * as path3 from "node:path";
-var ALLOWED_EXTENSIONS = {
-  image: [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"],
-  video: [".mp4", ".webm", ".mov", ".avi"],
-  audio: [".wav", ".mp3", ".ogg", ".webm", ".aac", ".flac"],
-  json: [".json"],
-  mesh: [".glb"]
-};
-function validateFilePath(filePath, options) {
-  const resolved = path3.resolve(filePath);
-  if (filePath.includes("..")) {
-    throw new Error(`Path traversal detected: ${filePath}`);
-  }
-  if (options?.allowedExtensions) {
-    const ext = path3.extname(resolved).toLowerCase();
-    if (!options.allowedExtensions.includes(ext)) {
-      throw new Error(
-        `File extension "${ext}" is not allowed. Allowed: ${options.allowedExtensions.join(", ")}`
-      );
-    }
-  }
-}
-function resolveOutputFile(outputDir, filename, kind) {
-  if (/[/\\]/.test(filename) || filename.includes("..")) {
-    throw new Error(`filename must be a bare file name without path separators: "${filename}"`);
-  }
-  validateFilePath(filename, { allowedExtensions: ALLOWED_EXTENSIONS[kind] });
-  const dir = path3.resolve(outputDir);
-  fs3.mkdirSync(dir, { recursive: true });
-  return path3.join(dir, filename);
-}
-function bareFilenameSchema(kind) {
-  const allowed = ALLOWED_EXTENSIONS[kind];
-  return external_exports.string().min(1).refine((name) => !/[/\\]/.test(name) && !name.includes(".."), {
-    message: "filename must be a bare file name without path separators (use outputPath for the directory)"
-  }).refine((name) => allowed.includes(path3.extname(name).toLowerCase()), {
-    message: `filename extension must be one of: ${allowed.join(", ")}`
-  });
 }
 
 // src/video-client.ts
@@ -5020,7 +5434,7 @@ var SEEDANCE_MIN_FRAMES = 29;
 var SEEDANCE_MAX_FRAMES = 289;
 var SEEDANCE_FRAME_STEP = 4;
 var MAX_INPUT_IMAGE_BYTES = 30 * 1024 * 1024;
-var MAX_REQUEST_BYTES = 64 * 1024 * 1024;
+var MAX_REQUEST_BYTES2 = 64 * 1024 * 1024;
 var MAX_INPUT_AUDIO_BYTES = 15 * 1024 * 1024;
 var MAX_INPUT_VIDEO_BYTES = 200 * 1024 * 1024;
 var SEEDANCE_REFERENCE_AUDIO_EXTENSIONS = [".wav", ".mp3"];
@@ -5233,7 +5647,7 @@ var seedanceReferenceSchema = external_exports.object({
 }).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
 
 // src/astra-video-client.ts
-import { createHash as createHash3, randomInt } from "node:crypto";
+import { createHash as createHash4, randomInt } from "node:crypto";
 import * as fs4 from "node:fs";
 import * as path5 from "node:path";
 
@@ -5262,7 +5676,8 @@ var package_default = {
     "@google/genai": "^2.21.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
     openai: "^6.46.0",
-    zod: "^3.23.8"
+    zod: "^3.23.8",
+    "zod-to-json-schema": "^3.25.2"
   },
   devDependencies: {
     "@types/node": "^20.14.0",
@@ -5277,30 +5692,6 @@ var package_default = {
     "dist"
   ]
 };
-
-// src/http.ts
-async function requestRaw(method, url, headers, body, timeoutMs) {
-  const effectiveTimeoutMs = timeoutMs ?? config.requestTimeoutMs;
-  try {
-    const res = await fetch(url, {
-      method: method.toUpperCase(),
-      headers: {
-        ...body !== void 0 ? { "Content-Type": "application/json" } : {},
-        ...headers
-      },
-      body: body !== void 0 ? JSON.stringify(body) : void 0,
-      signal: AbortSignal.timeout(effectiveTimeoutMs)
-    });
-    const text = await res.text();
-    return { ok: res.ok, status: res.status, body: text };
-  } catch (error) {
-    if (error instanceof Error && error.name === "TimeoutError") {
-      return { ok: false, status: 504, body: `Request timed out after ${effectiveTimeoutMs}ms: ${url}` };
-    }
-    const message = error instanceof Error ? error.message : String(error);
-    return { ok: false, status: 502, body: `Upstream unreachable (${url}): ${message}` };
-  }
-}
 
 // src/speech-sync-check.ts
 import { spawnSync } from "node:child_process";
@@ -5317,13 +5708,13 @@ var MIN_SPEECH_SECONDS = 1;
 var SYNC_MARGIN = 0.1;
 var NOT_REVIEWED = ["phoneme-level lip sync", "which visible person speaks", "voice identity"];
 var round = (n) => Math.round(n * 1e3) / 1e3;
-function ffmpeg(args) {
+function ffmpeg2(args) {
   const run = spawnSync("ffmpeg", ["-v", "error", "-nostdin", ...args], { maxBuffer: 512 * 1024 * 1024 });
   if (run.error) throw new Error(run.error.code === "ENOENT" ? "ffmpeg is not installed" : run.error.message);
   if (run.status !== 0) throw new Error(`ffmpeg failed: ${String(run.stderr).trim().slice(-300)}`);
   return run.stdout;
 }
-function probe(video) {
+function probe2(video) {
   const run = spawnSync("ffprobe", ["-v", "error", "-show_entries", "stream=codec_type,width,height:format=duration", "-of", "json", video], { encoding: "utf8" });
   if (run.error || run.status !== 0) throw new Error(`ffprobe could not read ${video}`);
   const json = JSON.parse(run.stdout);
@@ -5339,7 +5730,7 @@ function probe(video) {
 function blockMotion(video, width, height) {
   const w = PROXY_WIDTH;
   const h = Math.max(BLOCK, Math.round(height / width * w / BLOCK) * BLOCK);
-  const raw = ffmpeg(["-i", video, "-vf", `fps=${FPS},scale=${w}:${h}:flags=area,format=gray`, "-f", "rawvideo", "-"]);
+  const raw = ffmpeg2(["-i", video, "-vf", `fps=${FPS},scale=${w}:${h}:flags=area,format=gray`, "-f", "rawvideo", "-"]);
   const size = w * h;
   const frames = Math.floor(raw.length / size);
   const cols = w / BLOCK, rows = h / BLOCK;
@@ -5355,7 +5746,7 @@ function blockMotion(video, width, height) {
 }
 function envelope(audio, start, seconds, streamFromVideo = false) {
   const window = [...start ? ["-ss", String(start)] : [], ...seconds !== null ? ["-t", String(seconds)] : []];
-  const pcm = ffmpeg([...window, "-i", audio, ...streamFromVideo ? ["-map", "0:a:0"] : [], "-vn", "-ac", "1", "-ar", "16000", "-f", "s16le", "-"]);
+  const pcm = ffmpeg2([...window, "-i", audio, ...streamFromVideo ? ["-map", "0:a:0"] : [], "-vn", "-ac", "1", "-ar", "16000", "-f", "s16le", "-"]);
   const samples = Math.floor(pcm.length / 2);
   const out = [];
   for (let f = 0; Math.round((f + 1) * 16e3 / FPS) <= samples; f += 1) {
@@ -5433,7 +5824,7 @@ function syncMeasure(motion, env) {
 function checkSpeechSync(opts) {
   const result = { status: "not_measured", findings: [], notReviewed: NOT_REVIEWED };
   try {
-    const clip = probe(opts.videoPath);
+    const clip = probe2(opts.videoPath);
     const start = opts.audioStartTime ?? 0;
     let env;
     if (opts.audioPath) {
@@ -6272,7 +6663,7 @@ async function runJob(mode, prompt, body, outputPath, filename) {
   const { bytes, request, elapsedSeconds } = await awaitResult(jobId);
   fs4.writeFileSync(videoPath, bytes);
   const response = { videoPath, jobId, mode, prompt, bytes: bytes.length, elapsedSeconds, ...request ? { request } : {} };
-  writeReceipt({ ...submitted, ...response, sha256: createHash3("sha256").update(bytes).digest("hex"), status: "completed", completedAt: (/* @__PURE__ */ new Date()).toISOString() });
+  writeReceipt({ ...submitted, ...response, sha256: createHash4("sha256").update(bytes).digest("hex"), status: "completed", completedAt: (/* @__PURE__ */ new Date()).toISOString() });
   return response;
 }
 async function generateFromImage(args) {
@@ -6503,182 +6894,6 @@ function requireOneSource(data, ctx) {
 var omniExtendSchema = external_exports.object({ ...continuationFields, durationSeconds: durationSchema2 }).superRefine(requireOneSource);
 var omniEditSchema = external_exports.object(continuationFields).superRefine(requireOneSource);
 
-// src/image-models.ts
-function mlxImageFamily(model = "") {
-  if (/qwen.*image.*2[.-]1/i.test(model)) return "qwen-2.1";
-  if (/mage[-_]?flow/i.test(model)) return /edit/i.test(model) ? "mage-edit" : "mage";
-  if (/krea[-_]?2/i.test(model)) return "krea";
-  if (/flux[.-]?2[-_]?klein/i.test(model)) return "flux-klein";
-  return "unknown";
-}
-function validateMlxImageOperation(model, operation, args) {
-  const family = mlxImageFamily(model);
-  if (operation === "edit" && !["flux-klein", "mage-edit", "qwen-2.1"].includes(family))
-    throw new Error("image_operation_unsupported: select an identified editing pack");
-  if (operation === "variation" && !["flux-klein", "krea"].includes(family))
-    throw new Error("image_operation_unsupported: this pack has no verified strength-based variation");
-  if (args.transparent === true && family !== "qwen-2.1")
-    throw new Error("image_transparency_unsupported: transparent requires Qwen-Image-2.1");
-  const refs = Array.isArray(args.refImagePaths) ? args.refImagePaths.length : 0;
-  if (refs > (family === "qwen-2.1" ? 9 : 3)) throw new Error("image_reference_limit");
-  if (family === "qwen-2.1" && /turbo/i.test(model || "") && args.steps !== void 0 && args.steps !== 8)
-    throw new Error("image_schedule_fixed: Qwen Turbo uses its saved 8-step schedule");
-}
-
-// src/mlx-serve-client.ts
-var MLX_LOAD_TIMEOUT_MS = 10 * 6e4;
-var MLX_IMAGE_TIMEOUT_MS = 15 * 6e4;
-var MLX_MUSIC_TIMEOUT_MS = 10 * 6e4;
-var MLX_VIDEO_TIMEOUT_MS = 20 * 6e4;
-var MLX_MESH_TIMEOUT_MS = 15 * 6e4;
-var MAX_VIDEO_RGB_BYTES = 800 * 1024 * 1024;
-var MLX_IMAGE_DIMENSION_STEP = 16;
-var MIN_MLX_IMAGE_DIMENSION = 256;
-var MAX_MLX_IMAGE_DIMENSION = 2048;
-var DEFAULT_MLX_IMAGE_SIZE = 1024;
-var MLX_VIDEO_DIMENSION_STEP = 64;
-var MLX_VIDEO_DIMENSION_STEP_ONE_STAGE = 32;
-var MIN_MLX_VIDEO_DIMENSION = 256;
-var MAX_MLX_VIDEO_DIMENSION = 1920;
-var DEFAULT_MLX_VIDEO_WIDTH = 768;
-var DEFAULT_MLX_VIDEO_HEIGHT = 1280;
-var DEFAULT_MLX_VIDEO_FRAMES = 49;
-var MIN_MLX_VIDEO_FRAMES = 9;
-var MAX_MLX_VIDEO_FRAMES = 241;
-var MLX_VIDEO_FRAME_STEP = 8;
-var MLX_VIDEO_FPS = 24;
-var MIN_MLX_MUSIC_SECONDS = 10;
-var MAX_MLX_MUSIC_SECONDS = 600;
-var DEFAULT_MLX_MUSIC_SECONDS = 30;
-var MAX_MLX_IMAGE_REFS = 9;
-var imageDimension = external_exports.number().int().min(MIN_MLX_IMAGE_DIMENSION).max(MAX_MLX_IMAGE_DIMENSION).refine((v) => v % MLX_IMAGE_DIMENSION_STEP === 0, {
-  message: `width/height must be a multiple of ${MLX_IMAGE_DIMENSION_STEP} (for 9:16 that's 1088\xD71920, not 1080\xD71920). Model and installed backend may impose additional size constraints.`
-});
-var videoDimension = external_exports.number().int().min(MIN_MLX_VIDEO_DIMENSION).max(MAX_MLX_VIDEO_DIMENSION).refine((v) => v % MLX_VIDEO_DIMENSION_STEP_ONE_STAGE === 0, {
-  message: `width/height must be a multiple of ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE} (LTX grid), and of ${MLX_VIDEO_DIMENSION_STEP} unless you pass pipeline:"one_stage". 1080 is on neither grid \u2014 use 1088\xD71920 or the default 768\xD71280.`
-});
-var mlxImageGenerateSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
-  model: external_exports.string().min(1).optional(),
-  transparent: external_exports.boolean().optional(),
-  width: imageDimension.optional().default(DEFAULT_MLX_IMAGE_SIZE),
-  height: imageDimension.optional().default(DEFAULT_MLX_IMAGE_SIZE),
-  steps: external_exports.number().int().min(1).max(100).optional(),
-  seed: external_exports.number().int().min(0).optional(),
-  imagePath: external_exports.string().min(1).optional(),
-  strength: external_exports.number().min(0).max(1).optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("image").optional()
-}).superRefine((value, ctx) => {
-  if (value.width === void 0 !== (value.height === void 0)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: "Send width and height together" });
-  if (value.model) {
-    try {
-      validateMlxImageOperation(value.model, "imagePath" in value && value.imagePath ? "refImagePaths" in value ? "edit" : "variation" : "text", value);
-    } catch (error) {
-      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: String(error) });
-    }
-  }
-});
-var mlxImageEditSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
-  imagePath: external_exports.string().min(1, "imagePath is required"),
-  refImagePaths: external_exports.array(external_exports.string().min(1)).max(MAX_MLX_IMAGE_REFS).optional(),
-  model: external_exports.string().min(1).optional(),
-  transparent: external_exports.boolean().optional(),
-  width: imageDimension.optional(),
-  height: imageDimension.optional(),
-  steps: external_exports.number().int().min(1).max(100).optional(),
-  seed: external_exports.number().int().min(0).optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("image").optional()
-}).superRefine((value, ctx) => {
-  if (value.width === void 0 !== (value.height === void 0)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: "Send width and height together" });
-  if (value.model) {
-    try {
-      validateMlxImageOperation(value.model, "edit", value);
-    } catch (error) {
-      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: String(error) });
-    }
-  }
-});
-var mlxMusicGenerateSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required").max(4e3),
-  model: external_exports.string().min(1).optional(),
-  lyrics: external_exports.string().max(8e3).optional(),
-  instrumental: external_exports.boolean().optional().default(true),
-  durationSeconds: external_exports.number().int().min(MIN_MLX_MUSIC_SECONDS).max(MAX_MLX_MUSIC_SECONDS).optional().default(DEFAULT_MLX_MUSIC_SECONDS),
-  seed: external_exports.number().int().min(0).optional(),
-  refAudioPath: external_exports.string().min(1).optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("audio").optional()
-}).superRefine((value, ctx) => {
-  if (value.instrumental && value.lyrics && value.lyrics.trim().length > 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      message: "instrumental:true cannot be sent beside lyrics \u2014 mlx-serve returns 400. Set instrumental false to sing, or drop lyrics for a bed."
-    });
-  }
-});
-var mlxVideoGenerateSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
-  model: external_exports.string().min(1).optional(),
-  width: videoDimension.optional().default(DEFAULT_MLX_VIDEO_WIDTH),
-  height: videoDimension.optional().default(DEFAULT_MLX_VIDEO_HEIGHT),
-  numFrames: external_exports.number().int().min(MIN_MLX_VIDEO_FRAMES).max(MAX_MLX_VIDEO_FRAMES).optional().default(DEFAULT_MLX_VIDEO_FRAMES),
-  steps: external_exports.number().int().min(1).max(50).optional(),
-  seed: external_exports.number().int().min(0).optional(),
-  firstFrameImagePath: external_exports.string().min(1).optional(),
-  lastFrameImagePath: external_exports.string().min(1).optional(),
-  pipeline: external_exports.enum(["one_stage", "two_stage", "two_stage_hq"]).optional(),
-  decoder: external_exports.enum(["conv", "diffusion"]).optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").optional()
-}).superRefine((value, ctx) => {
-  if (videoExceedsMemory(value.width, value.height, value.numFrames)) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      message: videoMemoryMessage(value.width, value.height, value.numFrames)
-    });
-  }
-  if (value.pipeline !== "one_stage") {
-    for (const [field, size] of [["width", value.width], ["height", value.height]]) {
-      if (size % MLX_VIDEO_DIMENSION_STEP !== 0) {
-        ctx.addIssue({
-          code: external_exports.ZodIssueCode.custom,
-          path: [field],
-          message: `${field} ${size} is off the two-stage LTX grid (multiple of ${MLX_VIDEO_DIMENSION_STEP}). Pass pipeline:"one_stage" to use the ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE}px grid, or round to ${Math.round(size / MLX_VIDEO_DIMENSION_STEP) * MLX_VIDEO_DIMENSION_STEP}.`
-        });
-      }
-    }
-  }
-  if ((value.numFrames - 1) % MLX_VIDEO_FRAME_STEP !== 0) {
-    const below = value.numFrames - (value.numFrames - 1) % MLX_VIDEO_FRAME_STEP;
-    const above = below + MLX_VIDEO_FRAME_STEP;
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["numFrames"],
-      message: `numFrames must be ${MLX_VIDEO_FRAME_STEP}k+1 (${MIN_MLX_VIDEO_FRAMES}, 17, 25, \u2026 ${MAX_MLX_VIDEO_FRAMES}) \u2014 LTX latent depth. ${value.numFrames} is not, and mlx-serve answers 200 with its own default instead of refusing. Use ${below} or ${Math.min(above, MAX_MLX_VIDEO_FRAMES)}.`
-    });
-  }
-});
-var mlx3dGenerateSchema = external_exports.object({
-  imagePath: external_exports.string().min(1, "imagePath is required"),
-  model: external_exports.string().min(1).optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("mesh").optional()
-});
-function videoRgbBytes(width, height, frames) {
-  return width * height * frames * 3;
-}
-function videoExceedsMemory(width, height, frames) {
-  return videoRgbBytes(width, height, frames) > MAX_VIDEO_RGB_BYTES;
-}
-function videoMemoryMessage(width, height, frames) {
-  const mb = (videoRgbBytes(width, height, frames) / (1024 * 1024)).toFixed(0);
-  const cap = (MAX_VIDEO_RGB_BYTES / (1024 * 1024)).toFixed(0);
-  return `Decoded RGB would be ~${mb}MB (${width}\xD7${height}\xD7${frames}\xD73), over the ${cap}MB cap. Drop frames or canvas \u2014 1088\xD71920 at 8s/24fps is ~1.2GB and is refused. The default 768\xD71280\xD7${DEFAULT_MLX_VIDEO_FRAMES} stays under the cap.`;
-}
-
 // src/video-duration.ts
 var import_video_duration = __toESM(require_video_duration(), 1);
 var DURATION_TOOLS = [
@@ -6694,7 +6909,9 @@ var DURATION_TOOLS = [
   "astra_img2video",
   "astra_keyframe_video",
   "astra_audio2video",
-  "mlx_video_generate"
+  "mlx_video_generate",
+  "ltx_video_generate",
+  "fasth3_omni_reference"
 ];
 function resolveVideoDuration(tool, input) {
   if (input.requiredSeconds === void 0) return { args: input, timing: null };
@@ -6720,7 +6937,7 @@ function resolveVideoDuration(tool, input) {
       throw new Error("frameRate must be finite in 1..60");
     limits = { min: ASTRA_VIDEO_MIN_FRAMES, max: ASTRA_VIDEO_FRAME_LIMITS[mode], step: ASTRA_VIDEO_FRAME_STEP, frameRate };
   } else {
-    limits = { min: MIN_MLX_VIDEO_FRAMES, max: MAX_MLX_VIDEO_FRAMES, step: MLX_VIDEO_FRAME_STEP, frameRate: MLX_VIDEO_FPS };
+    limits = localVideoStrategy(tool).frames;
   }
   const timing = (0, import_video_duration.minimumDuration)(input.requiredSeconds, limits);
   const { requiredSeconds: _required, ...args } = input;
@@ -6753,6 +6970,7 @@ var VIDEO_ADAPTERS = Object.freeze({
   omni_img2video: entry("omni", "gemini-interactions", "image", omniImg2VideoSchema),
   omni_extend: entry("omni", "gemini-interactions", "extend", omniExtendSchema),
   omni_edit: entry("omni", "gemini-interactions", "edit", omniEditSchema),
+  ...Object.fromEntries(Object.entries(LOCAL_VIDEO_MODELS).map(([tool, model]) => [tool, entry("mlx", "local-mlx", model.operation, model.schema)])),
   mlx_video_generate: entry("mlx", "local-mlx", "text", mlxVideoGenerateSchema)
 });
 function speechVideoCapabilities(provider, model) {
@@ -6770,7 +6988,7 @@ function speechVideoCapabilities(provider, model) {
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
 // src/usage-ledger.ts
-import { execFileSync } from "node:child_process";
+import { execFileSync as execFileSync2 } from "node:child_process";
 import path6 from "node:path";
 var EPISODE_MARKER = path6.join("storyboard", "scenes.js");
 var VEO_TIER = {
@@ -6821,7 +7039,7 @@ var PRICED_VIDEO_KEYS = /* @__PURE__ */ new Set([
 var ELEVENLABS_KEY = { eleven_v4: "tts.elevenlabs" };
 function probeSeconds(file) {
   try {
-    const out = execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], {
+    const out = execFileSync2("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], {
       encoding: "utf8",
       timeout: 15e3,
       stdio: ["ignore", "pipe", "ignore"]
@@ -6946,8 +7164,8 @@ function priceOf(tool, args = {}) {
   if (["astra_text2video", "astra_img2video", "astra_keyframe_video", "astra_audio2video"].includes(tool)) {
     return { key: "video.astra", quantity: num(args.numFrames, 121) / num(args.frameRate, 24), note: "Self-hosted; hardware and wall-clock costs excluded" };
   }
-  if (tool === "mlx_video_generate") {
-    const frames = num(args.numFrames, DEFAULT_MLX_VIDEO_FRAMES);
+  if (localVideoStrategy(tool)) {
+    const frames = num(args.numFrames, localVideoStrategy(tool).defaultFrames);
     return { key: "video.mlx", quantity: Math.round(frames / MLX_VIDEO_FPS * 1e3) / 1e3 };
   }
   if (tool === "mlx_3d_generate") {
@@ -6999,11 +7217,11 @@ var videoPlanSchema = external_exports.object({
 var videoExecuteSchema = external_exports.object({ episode: external_exports.string().min(1), planId: external_exports.string().regex(/^[a-f0-9]{64}$/) }).strict();
 
 // src/speech.ts
-import { createHash as createHash4, randomUUID } from "node:crypto";
-import { readFileSync as readFileSync5, writeFileSync as writeFileSync5, renameSync as renameSync4, mkdirSync as mkdirSync5, existsSync as existsSync6 } from "node:fs";
-import { dirname as dirname4, resolve as resolve5, join as join4 } from "node:path";
+import { createHash as createHash5, randomUUID } from "node:crypto";
+import { readFileSync as readFileSync8, writeFileSync as writeFileSync6, renameSync as renameSync4, mkdirSync as mkdirSync5, existsSync as existsSync7 } from "node:fs";
+import { dirname as dirname4, resolve as resolve5, join as join5 } from "node:path";
 import * as nodeModule4 from "node:module";
-import { execFileSync as execFileSync2 } from "node:child_process";
+import { execFileSync as execFileSync3 } from "node:child_process";
 
 // src/speech-acting.ts
 import * as nodeModule3 from "node:module";
@@ -7051,14 +7269,14 @@ var speechManageSchema = external_exports.object({
   generation: external_exports.object({ generator: external_exports.string().min(1), voiceSettings: external_exports.record(external_exports.unknown()), text: external_exports.string().min(1), language: external_exports.string().min(1).optional() }).strict().optional(),
   capabilities: external_exports.object({ provider: external_exports.string().min(1), model: external_exports.string().min(1), audioConditioning: external_exports.boolean(), lipSync: external_exports.boolean(), postLipSync: external_exports.boolean(), evidence: external_exports.string().min(1) }).strict().optional()
 }).strict();
-var hash = (s) => createHash4("sha256").update(s).digest("hex");
+var hash = (s) => createHash5("sha256").update(s).digest("hex");
 var object = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
 function speechRevision(line, character) {
   return hash(JSON.stringify(actingContract().speechRevisionPayload(line, character?.tts)));
 }
 function currentAudio(line, character) {
   try {
-    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync6(line.audio.path) && hash(readFileSync5(line.audio.path)) === line.audio.sha256;
+    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync7(line.audio.path) && hash(readFileSync8(line.audio.path)) === line.audio.sha256;
   } catch {
     return false;
   }
@@ -7089,15 +7307,15 @@ function audioProvenanceStatus(line, character) {
   const voice = character?.tts;
   const historical = ["supertonic", "mlx"].includes(String(voice?.engine)) || voice?.engine === "elevenlabs" && ["eleven_v3", "eleven_v3_conversational", "eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_turbo_v2_5"].includes(String(voice?.model));
   try {
-    if (historical && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && hash(readFileSync5(line.audio.path)) === line.audio.sha256) return "preserved_historical_recording_unverified";
+    if (historical && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && hash(readFileSync8(line.audio.path)) === line.audio.sha256) return "preserved_historical_recording_unverified";
   } catch {
   }
   return "stale_or_missing";
 }
 function measuredDuration(line) {
-  if (!line.audio || !existsSync6(line.audio.path)) return null;
+  if (!line.audio || !existsSync7(line.audio.path)) return null;
   try {
-    const value = Number(execFileSync2("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
+    const value = Number(execFileSync3("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
     return Number.isFinite(value) && value > 0 ? value : null;
   } catch {
     return null;
@@ -7122,7 +7340,7 @@ function speechVideoPlan(input, capabilities) {
 function manageSpeech(args) {
   args = speechManageSchema.parse(args);
   const { file, win, header } = readBoard(args.path);
-  const before = readFileSync5(file, "utf8");
+  const before = readFileSync8(file, "utf8");
   const revision = hash(before);
   const mutates = ["prepare", "update", "attach_audio", "attach_video", "retime"].includes(args.action);
   if (mutates && args.expectedRevision !== revision) throw new Error("Read speech first and supply its current expectedRevision; the storyboard may have changed");
@@ -7192,7 +7410,7 @@ function manageSpeech(args) {
       const voice = character(line.speaker)?.tts;
       const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation, line);
       if (voiceErrors.length) throw new Error("Generation arguments do not match the pinned character voice: " + voiceErrors.join("; "));
-      const bytes = readFileSync5(audioPath);
+      const bytes = readFileSync8(audioPath);
       if (!bytes.length) throw new Error("Audio file is empty");
       const priorAudio = line.audio;
       const audioHash = hash(bytes), lineRevision = speechRevision(line, character(line.speaker));
@@ -7248,7 +7466,7 @@ function manageSpeech(args) {
     if (args.lineId || args.speaker || args.query) throw new Error("Video planning uses all lines in the shot; remove line filters");
     for (const { line } of selected) actingSchema.nullable().optional().parse(line.acting);
     const episode = dirname4(dirname4(file));
-    if (existsSync6(join4(episode, ".work/model-settings.json"))) {
+    if (existsSync7(join5(episode, ".work/model-settings.json"))) {
       const { selection } = routingContext(episode, args.shotId);
       const verified = speechVideoCapabilities(selection.engine, selection.model || selection.engine);
       if (args.capabilities && (args.capabilities.provider !== verified.provider || args.capabilities.model !== verified.model || args.capabilities.audioConditioning !== verified.audioConditioning || args.capabilities.lipSync !== verified.lipSync || args.capabilities.postLipSync !== verified.postLipSync))
@@ -7261,10 +7479,10 @@ function manageSpeech(args) {
     if (args.action === "attach_video") {
       if (!args.videoPath) throw new Error("videoPath is required");
       const videoPath = resolve5(dirname4(file), args.videoPath);
-      const bytes = readFileSync5(videoPath);
+      const bytes = readFileSync8(videoPath);
       if (!bytes.length) throw new Error("Video file is empty");
       const audio = selected.map(({ line }) => {
-        if (!line.audio || line.audio.revision !== speechRevision(line, character(line.speaker)) || hash(readFileSync5(line.audio.path)) !== line.audio.sha256) throw new Error("Generate and attach current speech before binding video");
+        if (!line.audio || line.audio.revision !== speechRevision(line, character(line.speaker)) || hash(readFileSync8(line.audio.path)) !== line.audio.sha256) throw new Error("Generate and attach current speech before binding video");
         const errors = voiceContract().generationVoiceErrors(character(line.speaker)?.tts, line.audio.generation, line);
         if (line.audio.generation.text !== line.tts || errors.length) throw new Error("Speech generation evidence changed: " + errors.join("; "));
         return { lineId: line.id, sha256: line.audio.sha256, revision: line.audio.revision };
@@ -7281,7 +7499,7 @@ function manageSpeech(args) {
       if (args.reuse && !tailTrim) throw new Error("Tail trim requires identical bound audio, unchanged speech/action starts and semantics, and a shorter end. Regenerate changed speech or staging.");
       let quality = { review: "not_reviewed", camera: "not_reviewed", lipSync: "not_reviewed" };
       try {
-        const receipt = JSON.parse(readFileSync5(videoPath + ".astra-job.json", "utf8"));
+        const receipt = JSON.parse(readFileSync8(videoPath + ".astra-job.json", "utf8"));
         if (receipt.sha256 === videoSha256) quality = { ...quality, speechSync: receipt.speechSync || null, selection: receipt.selection || null };
         else if (!receipt.sha256 && receipt.videoPath === videoPath)
           quality = { ...quality, unverifiedSpeechSync: receipt.speechSync || null, receiptBinding: "unverified" };
@@ -7324,15 +7542,15 @@ function manageSpeech(args) {
     }
     const work = resolve5(dirname4(file), "../.work/speech-history");
     mkdirSync5(work, { recursive: true });
-    const backup = join4(work, revision + ".js");
-    if (!existsSync6(backup)) writeFileSync5(backup, before);
+    const backup = join5(work, revision + ".js");
+    if (!existsSync7(backup)) writeFileSync6(backup, before);
     const nextSource = serializeBoard(win, header);
-    if (hash(readFileSync5(file)) !== revision) throw new Error("Storyboard changed during speech edit");
+    if (hash(readFileSync8(file)) !== revision) throw new Error("Storyboard changed during speech edit");
     const tmp = file + "." + randomUUID() + ".tmp";
-    writeFileSync5(tmp, nextSource);
+    writeFileSync6(tmp, nextSource);
     renameSync4(tmp, file);
   }
-  return { revision: hash(readFileSync5(file)), changed, invalidated, plan, timing, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  return { revision: hash(readFileSync8(file)), changed, invalidated, plan, timing, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/video-sound.ts
@@ -7347,6 +7565,7 @@ var effectSchema = external_exports.object({
   intensity: external_exports.enum(["subtle", "normal", "strong"]).optional()
 }).strict();
 var schemas = {
+  fasth3_omni_reference: fasth3OmniSchema,
   veo_text2video: text2VideoSchema,
   veo_img2video: img2VideoSchema,
   veo_reference: referenceVideoSchema,
@@ -7430,7 +7649,7 @@ ${inputPrompt}`;
     tool,
     arguments: parsed,
     sound: { ...sound, ...audioSource ? { audioSource } : {}, effects: resolved },
-    capabilities: { nativeAudio, inputAudio: fixedInput ? "preserved" : tool === "seedance_reference" ? "reference" : "none" },
+    capabilities: { nativeAudio, inputAudio: fixedInput ? "preserved" : ["seedance_reference", "fasth3_omni_reference"].includes(tool) ? "reference" : "none" },
     warnings,
     review: "not_reviewed",
     generated: false

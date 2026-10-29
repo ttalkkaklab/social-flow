@@ -421,3 +421,21 @@ describe('mlx generate — mocked fetch', () => {
     assert.equal(posted, false);
   });
 });
+
+describe('long video progress stream', () => {
+  it('consumes chunked progress and returns completion; premature EOF fails without resubmission', async () => {
+    const { requestMlxVideo } = await import('../dist/mlx-serve-client.js');
+    const original = globalThis.fetch;
+    let calls = 0;
+    const stream = content => new Response(new ReadableStream({ start(c) {
+      for (let i=0;i<content.length;i+=7) c.enqueue(new TextEncoder().encode(content.slice(i,i+7)));
+      c.close();
+    }}), { headers:{'content-type':'text/event-stream'} });
+    try {
+      globalThis.fetch = async () => { calls++; return stream('data: {"type":"progress","step":1}\r\n\r\ndata: {"type":"complete","frames":124}\n\n'); };
+      const ok=await requestMlxVideo({stream:true});assert.equal(ok.ok,true);assert.equal(JSON.parse(ok.body).frames,124);
+      globalThis.fetch = async () => { calls++; return stream('data: {"type":"progress"}\n\n'); };
+      const failure=await requestMlxVideo({stream:true});assert.equal(failure.ok,false);assert.equal(calls,2);
+    } finally { globalThis.fetch=original; }
+  });
+});

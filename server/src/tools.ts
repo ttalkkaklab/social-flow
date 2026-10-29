@@ -1,3 +1,5 @@
+import { zodToJsonSchema } from 'zod-to-json-schema';
+import { fasth3OmniSchema } from './fasth3-omni.js';
 import { MUSIC_ADAPTERS } from './music-registry.js';
 import { MUSIC_TOOLS } from './music-tools.js';
 import { GENAI_TOOLS } from './astra-genai-tools.js';
@@ -5241,6 +5243,16 @@ Returns: JSON — { files, violations, warnings, findings: [{ level, where, what
  * an unconfigured platform directly returns an explicit missing-token error.
  */
 TOOLS.push(...GENAI_TOOLS);
+const legacyLtxTool = TOOLS.find(tool => tool.name === 'mlx_video_generate')!;
+TOOLS.push({ ...legacyLtxTool, name: 'ltx_video_generate', title: 'Generate an LTX video',
+  description: legacyLtxTool.description!.replace('Generate a video on this machine via MLX Core / mlx-serve.', 'Create an LTX video on this machine using the MLX-Serve backend.') + '\nDo NOT use for FastH3 references — use fasth3_omni_reference. Inspect video_catalog for contracts without generating.',
+  inputSchema: { ...legacyLtxTool.inputSchema } });
+legacyLtxTool.description = 'Deprecated compatibility alias for ltx_video_generate. Use ltx_video_generate for new LTX requests. ' + legacyLtxTool.description;
+TOOLS.push({ name: 'fasth3_omni_reference', title: 'Generate FastH3 Omni video from references',
+  description: 'Create a FastH3 Omni video with sound from local references.\nUse for reference-to-video, character photos, motion clips and voice samples on Apple Silicon. Runs the installed MLX-Serve pack with eight steps; writes MP4 via ffmpeg. Inputs: up to nine PNG/JPEG images, three videos and three audio files, twelve total, with at least one image or video. Videos are decoded at 24 fps; unsupported tail lengths require explicit trimReferenceVideos:true. Video soundtracks precede standalone audio in <Audio N> numbering. Voice samples guide timbre; exact words, lip-sync and original audio preservation are not guaranteed. No cloud request, download or app launch.\nDo NOT use to inspect availability — use video_catalog; for LTX generation use ltx_video_generate. Returns success, local path, model, width/height, frames, fps, durationSeconds, hasAudio and elapsedSeconds; failures include error. Production output still needs playback review.',
+  inputSchema: zodToJsonSchema(fasth3OmniSchema, { $refStrategy: 'none' }) as Tool['inputSchema'],
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false } });
+
 
 // New generations can state the coverage needed; exact legacy requests keep their schema.
 for (const tool of TOOLS) {

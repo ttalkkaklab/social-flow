@@ -1,3 +1,4 @@
+import { localVideoStrategy } from './local-video-models.js';
 /**
  * Usage ledger — every generation call writes itself down, without anyone remembering to.
  *
@@ -34,7 +35,7 @@
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
-import { DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FRAMES, MLX_VIDEO_FPS } from './mlx-serve-client.js';
+import { DEFAULT_MLX_MUSIC_SECONDS, MLX_VIDEO_FPS } from './mlx-serve-client.js';
 import { resolveVideoDuration } from './video-duration.js';
 
 /** One recorded call. `key`/`quantity` are the cost-ledger coordinates when they are knowable. */
@@ -340,8 +341,8 @@ export function priceOf(
   if (['astra_text2video', 'astra_img2video', 'astra_keyframe_video', 'astra_audio2video'].includes(tool)) {
     return { key: 'video.astra', quantity: num(args.numFrames, 121) / num(args.frameRate, 24), note: 'Self-hosted; hardware and wall-clock costs excluded' };
   }
-  if (tool === 'mlx_video_generate') {
-    const frames = num(args.numFrames, DEFAULT_MLX_VIDEO_FRAMES);
+  if (localVideoStrategy(tool)) {
+    const frames = num(args.numFrames, localVideoStrategy(tool)!.defaultFrames);
     return { key: 'video.mlx', quantity: Math.round((frames / MLX_VIDEO_FPS) * 1000) / 1000 };
   }
   if (tool === 'mlx_3d_generate') {
@@ -396,7 +397,7 @@ export function isBillableTool(tool: string): boolean {
     tool.startsWith('tts_') ||
     tool.startsWith('music_') ||
     tool.startsWith('suno_generate') ||
-    tool.startsWith('mlx_') ||
+    tool.startsWith('mlx_') || Boolean(localVideoStrategy(tool)) ||
     tool === 'image_local_generate'
   );
 }
