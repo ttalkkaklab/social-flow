@@ -192,6 +192,15 @@ function check(win,dir,{ready=false}={}){
       }}catch(e){findings.push({level:'bad',where:'shot '+(i+1)+' location',what:e.message});}}
   return findings;
 }
+// A sheet entry opens the whole Blender set without a shot binding: first state, registered cameras, no blocking.
+function sheetView(manifestPath){
+  try{const m=load(manifestPath),stateId=Object.keys(m.states)[0],cameraId=Object.keys(m.cameras)[0];
+    return {sheet:true,shotId:'sheet',title:m.name,id:m.id,name:m.name,revision:m.revision,stateId,endStateId:stateId,state:m.states[stateId],states:m.states,
+      cameras:m.cameras,camera:{...m.cameras[cameraId],end:undefined},invariants:m.invariants,objects:C.resolvedObjects(m,stateId),baseObjects:m.objects,
+      blocking:null,startActors:[],endActors:[],frames:{},spatial:null,spatialAsset:null,resultImage:null,resultReview:null,fresh:false,approved:false,
+      glb:safe(path.dirname(path.resolve(manifestPath)),m.assets.glb.path)};}
+  catch(e){return {sheet:true,shotId:'sheet',title:path.basename(path.dirname(path.dirname(manifestPath))),error:e.message};}
+}
 function preview(win,dir){return (win.SCENES||[]).flatMap((s,i)=>{if(!s.shot?.location)return [];try{return [{shotId:s.id,title:s.title||s.id,...plan(win,i,dir)}];}catch(e){return [{shotId:s.id,title:s.title||s.id,error:e.message}];}});}
 function readBoard(p){const {readScenes}=require('../../autoproduce/references/cost-preview.js');return readScenes(p);}
 function saveBoard(p,win){const content=Object.entries(win).filter(([k])=>/^[A-Z][A-Z0-9_]*$/.test(k)).map(([k,v])=>'window.'+k+' = '+JSON.stringify(v,null,2)+';').join('\n');const tmp=p+'.'+process.pid+'.tmp';fs.writeFileSync(tmp,content+'\n');fs.renameSync(tmp,p);}
@@ -216,5 +225,5 @@ async function run(args){
   saveBoard(p,win);return result;
 }
 function detailFilename(topic,id){return digest([topic,id]).slice(0,24)+'.html';}
-module.exports={detailFilename,digest,fileHash,load,build,sheet,context,signature,plan,bind,render,previz,renderJob,approve,references,receipt,reviewResult,applyCamera,check,preview,run,saveBoard};
+module.exports={detailFilename,digest,fileHash,load,build,sheet,sheetView,context,signature,plan,bind,render,previz,renderJob,approve,references,receipt,reviewResult,applyCamera,check,preview,run,saveBoard};
 if(require.main===module)run(read(process.argv[2])).then(r=>console.log(JSON.stringify(r,null,2))).catch(e=>{console.error(e.message);process.exitCode=1;});

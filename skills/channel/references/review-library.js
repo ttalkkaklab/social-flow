@@ -271,10 +271,16 @@ function exportChannel(channelDirectory, { check = false } = {}) {
               spatialAsset: v.spatialAsset ? {...v.spatialAsset,path:rel(detailFile,path.resolve(folder,v.spatialAsset.path))} : null,
               resultImage: v.resultImage ? rel(detailFile,path.resolve(folder,v.resultImage)) : null};
           });
+          // The sheet's own built set opens first, so a background is explorable before any shot binds it.
+          const manifest = typeof entry.manifest === 'string' && entry.manifest && !/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(entry.manifest) ? path.resolve(folder, entry.manifest) : null;
+          if (manifest && regular(dir, manifest)) {
+            const set = locations.sheetView(manifest);
+            views.unshift(set.error ? set : {...set, glb: rel(detailFile, set.glb)});
+          }
           for (const name of ['location-review-runtime.js','location-review.css']) put(path.join(dir,'assets','review',name), fs.readFileSync(path.join(LOCATION_ASSETS,name)));
           const media = target && regular(dir,target) ? zoomImage(detailFile,target,name) : empty('참조 이미지 대기','Reference image pending');
-          const viewer = views.length ? '<div id="location-viewer-host"></div>' : empty('연결된 3D 세트가 없습니다. 장소 세트를 만들고 샷에 연결하세요.','No bound 3D set. Build a location and bind a shot.');
-          render(detailFile, name, 'locations', heading(esc(name),esc(entry.description || '')) + media + '<dl>'+details+'</dl>'+viewer+
+          const viewer = views.length ? '<div id="location-viewer-host"></div>' : empty('연결된 3D 세트가 없습니다. location_manage build 로 세트를 만들고 시트의 manifest 에 적거나 샷에 연결하세요.','No bound 3D set. Build a location with location_manage, then write its manifest on the sheet or bind a shot.');
+          render(detailFile, name, 'locations', heading(esc(name),esc(entry.description || '')) + media + viewer + '<dl>'+details+'</dl>'+
             `<p><a href="${rel(detailFile,file)}">${t('배경 시트 목록','Background sheets')}</a></p>`+
             `<link rel="stylesheet" href="${rel(detailFile,path.join(dir,'assets/review/location-review.css'))}">`+
             `<script>window.LOCATION_REVIEW=${JSON.stringify(views).replace(/</g,'\\u003c')};</script>`+
