@@ -322,3 +322,27 @@ test('prop and background catalogues preserve episode scope, local media and nav
     assert.ok(readFileSync(join(f.dir, 'assets/props/index.html'), 'utf8').includes('No sheets yet.'));
   } finally { f.clean(); }
 });
+
+test('background detail opens the sheet manifest set before any shot binds it', () => {
+  const f = fixture();
+  try {
+    const L = require('../../skills/storyboard/references/location-assets.js');
+    const { spec } = require('../../skills/storyboard/references/location-example.js');
+    const m = structuredClone(spec); m.assets = {};
+    for (const [k, n] of [['blend', 'source.blend'], ['glb', 'preview.glb']]) { f.write('assets/locations/room/v1/' + n, k); m.assets[k] = { path: n, sha256: L.fileHash(join(f.dir, 'assets/locations/room/v1', n)) }; }
+    f.write('assets/locations/room/v1/location.json', JSON.stringify(m));
+    const doc = { locations: [{ id: 'room', name: 'Room', manifest: '../../../assets/locations/room/v1/location.json' }, { id: 'yard', name: 'Yard' }] };
+    f.write('episodes/one/storyboard/scenes.js', 'window.SCENES = []; window.SB_DOC = ' + JSON.stringify(doc));
+    storyboardHtml(join(f.dir, 'episodes/one/storyboard'));
+    exportChannel(f.dir);
+    const detail = readFileSync(join(f.dir, 'assets/locations/details', L.detailFilename('one', 'room')), 'utf8');
+    assert.ok(detail.includes('id="location-viewer-host"'));
+    const views = JSON.parse(detail.match(/window\.LOCATION_REVIEW=(\[.*?\]);<\/script>/)[1]);
+    assert.equal(views.length, 1); assert.equal(views[0].sheet, true); assert.equal(views[0].glb, '../room/v1/preview.glb');
+    assert.ok(readFileSync(join(f.dir, 'assets/locations/details', L.detailFilename('one', 'yard')), 'utf8').includes('No bound 3D set'));
+    writeFileSync(join(f.dir, 'assets/locations/room/v1/preview.glb'), 'tampered');
+    exportChannel(f.dir);
+    const broken = JSON.parse(readFileSync(join(f.dir, 'assets/locations/details', L.detailFilename('one', 'room')), 'utf8').match(/window\.LOCATION_REVIEW=(\[.*?\]);<\/script>/)[1]);
+    assert.match(broken[0].error, /changed location glb/);
+  } finally { f.clean(); }
+});

@@ -292,3 +292,22 @@ test('storyboard mounts captures by stable shot id and withholds stale frames',(
   assert.ok(flatten(roots['shot-2']).some(n=>n.cls==='shot-character__info'));
 
 });
+
+test('sheet view opens a built set without a shot and reports a broken manifest instead of throwing',()=>fixture(f=>{
+  const view=L.sheetView(f.manifest);
+  assert.equal(view.sheet,true);assert.equal(view.shotId,'sheet');assert.equal(view.stateId,Object.keys(f.m.states)[0]);
+  assert.deepEqual(view.camera,{...f.m.cameras[Object.keys(f.m.cameras)[0]],end:undefined});
+  assert.equal(view.glb,path.join(f.dir,'asset/preview.glb'));assert.equal(view.blocking,null);assert.deepEqual(view.frames,{});
+  fs.appendFileSync(path.join(f.dir,'asset/preview.glb'),'tamper');
+  const broken=L.sheetView(f.manifest);assert.equal(broken.sheet,true);assert.match(broken.error,/changed location glb/);
+}));
+
+test('walk step moves eye and look target together on the floor plane',()=>{
+  const source=fs.readFileSync(new URL('../location-review-runtime.mjs',import.meta.url),'utf8');
+  const line=source.split('\n').find(l=>l.trim().startsWith('function step(forward,right)'));
+  const ctx={THREE:{Vector3},eye:new Vector3(2,3,1.6),cam:{position:new Vector3(2,3,1.6)},orbit:{target:new Vector3(2,3.5,1.6)}};
+  runInNewContext(line+'\nstep(1,0);',ctx);
+  assert.deepEqual(ctx.eye.toArray(),[2,4,1.6]);assert.deepEqual(ctx.cam.position.toArray(),[2,4,1.6]);assert.deepEqual(ctx.orbit.target.toArray(),[2,4.5,1.6]);
+  runInNewContext('step(0,1);',ctx); // right of a +Y facing is +X; height never changes
+  assert.deepEqual(ctx.eye.toArray(),[3,4,1.6]);assert.deepEqual(ctx.orbit.target.toArray(),[3,4.5,1.6]);
+});
