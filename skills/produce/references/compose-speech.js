@@ -66,7 +66,7 @@ function compose(work,board) {
     });
     filters.push(lines.map((_,i)=>`[a${i}]`).join('')+`amix=inputs=${lines.length}:normalize=0,apad,atrim=duration=${timing.durationSeconds}[out]`);
     const output=path.join(work,`c${fields[0]}-speech.wav`),tmp=output+'.tmp.wav';
-    try {execFileSync('ffmpeg',['-nostdin','-y','-v','error','-filter_complex_threads','1',...inputs,'-filter_complex',filters.join(';'),'-map','[out]','-c:a','pcm_s16le',tmp],{timeout:120000});fs.renameSync(tmp,output);} finally {if(fs.existsSync(tmp))fs.unlinkSync(tmp);}
+    try {execFileSync('ffmpeg',['-y','-v','error',...inputs,'-filter_complex',filters.join(';'),'-map','[out]','-c:a','pcm_s16le',tmp],{timeout:120000});fs.renameSync(tmp,output);} finally {if(fs.existsSync(tmp))fs.unlinkSync(tmp);}
     const receipt={generator:'speech_compose',audioSha256:hash(fs.readFileSync(output)),lineIds:lines.map(n=>n.id),lineSources:lineSources(lines),expectedText:lines.map(n=>n.tts).join('. '),durationSeconds:duration(output),intervals,timing:timing.timing,warnings:timing.warnings,status:'not_reviewed'};
     fs.writeFileSync(output+'.generation.json',JSON.stringify(receipt,null,2)+'\n');
     fields[1]=path.basename(output);rows[row]=fields.join('\t');outputs.push({shotId:scene.id,audioPath:output,...receipt});
