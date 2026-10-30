@@ -60,6 +60,10 @@ function read(episode: string): State {
   for (const [i, record] of state.completed.entries()) {
     if (record.stage !== STAGES[i] || !record.hashes) throw new Error('workflow_invalid_state');
     validateRecord(record);
+    if (record.skipped) {
+      const source = state.completed[i - 1];
+      if (source?.stage !== 'image_storyboard' || JSON.stringify(record.hashes) !== JSON.stringify(source.hashes)) throw new Error('workflow_invalid_skip');
+    }
     for (const entry of record.entries) {
       for (const file of [entry.text, entry.image, ...(entry.images ?? []), entry.blend, entry.video].filter(Boolean) as string[]) {
         if (!/^[a-f0-9]{64}$/.test(record.hashes[file] ?? '')) throw new Error('workflow_invalid_state');
@@ -78,7 +82,7 @@ function verifyPrevious(state: State): void {
 }
 function validateRecord(record: z.infer<typeof recordSchema>): void {
   if (record.skipped) {
-    if (record.stage !== 'image_review' || record.entries.length || record.notApplicable) throw new Error('workflow_invalid_skip');
+    if (record.stage !== 'image_review' || record.entries.length || record.notApplicable || record.criteriaHash) throw new Error('workflow_invalid_skip');
     return;
   }
   if (record.notApplicable) {
@@ -200,14 +204,17 @@ export function manageWorkflow(raw: unknown) {
   try { fd = fs.openSync(lock, 'wx'); } catch { throw new Error('workflow_busy: retry after the current transition'); }
   try {
     const state = read(episode);
-    if (input.action === 'rewind') {
-      // Preserve superseded evidence and findings before invalidating descendants.
+    const archive = () => {
       const history = path.join(folder, 'production-workflow-history');
       fs.mkdirSync(history, { recursive: true });
       const reports = Object.fromEntries([...state.completed, ...(state.active ? [state.active] : [])]
         .filter(record => REVIEWS.includes(record.stage)).flatMap(record => record.entries)
         .filter(entry => fs.existsSync(entry.text)).map(entry => [entry.text, fs.readFileSync(entry.text, 'utf8')]));
       atomicJson(path.join(history, `${Date.now()}-${process.hrtime.bigint()}.json`), { state, reports });
+    };
+    if (input.action === 'rewind') {
+      // Preserve superseded evidence and findings before invalidating descendants.
+      archive();
       const index = STAGES.indexOf(stageSchema.parse(input.stage));
       if (index > state.completed.length) throw new Error('workflow_out_of_order');
       state.completed = state.completed.slice(0, index);

@@ -850,6 +850,193 @@
       }
     },
     {
+      "tool": "astra_genai_desktop_text2video",
+      "engine": "astra-genai-desktop",
+      "deployment": "gateway-desktop-v1",
+      "operation": "text",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "model",
+        "prompt",
+        "resolution",
+        "seed",
+        "fps",
+        "cameraMotion",
+        "reserveUsd",
+        "outputPath",
+        "filename",
+        "duration",
+        "aspectRatio",
+        "loras"
+      ],
+      "modelConstraints": {
+        "discovery": "astra_genai_catalog",
+        "note": "Gateway /models and /contracts specify installed matrices. I2V: start/end only; A2V: audio and optional start; keyframes: 1..10. LoRA only on text/keyframes; audio truncation defaults false."
+      }
+    },
+    {
+      "tool": "astra_genai_desktop_img2video",
+      "engine": "astra-genai-desktop",
+      "deployment": "gateway-desktop-v1",
+      "operation": "image",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "model",
+        "prompt",
+        "resolution",
+        "seed",
+        "fps",
+        "cameraMotion",
+        "reserveUsd",
+        "outputPath",
+        "filename",
+        "duration",
+        "aspectRatio",
+        "imagePath",
+        "lastFramePath"
+      ],
+      "modelConstraints": {
+        "discovery": "astra_genai_catalog",
+        "note": "Gateway /models and /contracts specify installed matrices. I2V: start/end only; A2V: audio and optional start; keyframes: 1..10. LoRA only on text/keyframes; audio truncation defaults false."
+      }
+    },
+    {
+      "tool": "astra_genai_desktop_audio2video",
+      "engine": "astra-genai-desktop",
+      "deployment": "gateway-desktop-v1",
+      "operation": "audio",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "audio_conditioned_reencoded",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "model",
+        "prompt",
+        "resolution",
+        "seed",
+        "fps",
+        "cameraMotion",
+        "reserveUsd",
+        "outputPath",
+        "filename",
+        "audioPath",
+        "imagePath",
+        "aspectRatio",
+        "allowAudioTruncation"
+      ],
+      "modelConstraints": {
+        "discovery": "astra_genai_catalog",
+        "note": "Gateway /models and /contracts specify installed matrices. I2V: start/end only; A2V: audio and optional start; keyframes: 1..10. LoRA only on text/keyframes; audio truncation defaults false."
+      }
+    },
+    {
+      "tool": "astra_genai_desktop_extend",
+      "engine": "astra-genai-desktop",
+      "deployment": "gateway-desktop-v1",
+      "operation": "extend",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "model",
+        "prompt",
+        "sourceVideoPath",
+        "targetResolution",
+        "seed",
+        "reserveUsd",
+        "outputPath",
+        "filename",
+        "duration",
+        "mode"
+      ],
+      "modelConstraints": {
+        "discovery": "astra_genai_catalog",
+        "note": "Gateway /models and /contracts specify installed matrices. I2V: start/end only; A2V: audio and optional start; keyframes: 1..10. LoRA only on text/keyframes; audio truncation defaults false."
+      }
+    },
+    {
+      "tool": "astra_genai_desktop_retake",
+      "engine": "astra-genai-desktop",
+      "deployment": "gateway-desktop-v1",
+      "operation": "retake",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "model",
+        "prompt",
+        "sourceVideoPath",
+        "targetResolution",
+        "seed",
+        "reserveUsd",
+        "outputPath",
+        "filename",
+        "duration",
+        "startTime",
+        "mode"
+      ],
+      "modelConstraints": {
+        "discovery": "astra_genai_catalog",
+        "note": "Gateway /models and /contracts specify installed matrices. I2V: start/end only; A2V: audio and optional start; keyframes: 1..10. LoRA only on text/keyframes; audio truncation defaults false."
+      }
+    },
+    {
+      "tool": "astra_genai_desktop_keyframes",
+      "engine": "astra-genai-desktop",
+      "deployment": "gateway-desktop-v1",
+      "operation": "keyframe",
+      "voice": {
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "voiceContinuation": "unsupported",
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "model",
+        "prompt",
+        "resolution",
+        "seed",
+        "fps",
+        "cameraMotion",
+        "reserveUsd",
+        "outputPath",
+        "filename",
+        "duration",
+        "aspectRatio",
+        "loras",
+        "audio",
+        "keyframes"
+      ],
+      "modelConstraints": {
+        "discovery": "astra_genai_catalog",
+        "note": "Gateway /models and /contracts specify installed matrices. I2V: start/end only; A2V: audio and optional start; keyframes: 1..10. LoRA only on text/keyframes; audio truncation defaults false."
+      }
+    },
+    {
       "tool": "astra_genai_text2video",
       "engine": "astra-genai",
       "deployment": "genai-ltx-v2",

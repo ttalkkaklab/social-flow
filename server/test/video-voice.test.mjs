@@ -76,11 +76,12 @@ test('ASTRA preserves the audio-first prompt; exact waveform and lip-sync claims
   assert.equal(videoVoiceCapabilities('astra_text2video').suppliedSpeech,'unsupported');
   assert.equal(videoVoiceCapabilities('astra_audio2video').exactAudioPreservation,false);
 });
-test('both supplied-audio tools keep the prompt and skip native voice guidance',t=>{
+test('supplied-audio tools keep the prompt and skip native voice guidance',t=>{
   const ctx=fixture(t);
-  for (const tool of ['astra_audio2video','astra_genai_audio2video']) {
+  for (const tool of ['astra_audio2video','astra_genai_audio2video','astra_genai_desktop_audio2video']) {
     const result=prepareVideoVoice(tool,{prompt:'Animate supplied speech.',audio_uri:'data:audio/wav;base64,AA=='},ctx);
     assert.equal(result.voiceContinuity.strategy,'supplied_audio',tool);
+    assert.equal(videoVoiceCapabilities(tool).suppliedSpeech,'audio_conditioned_reencoded',tool);
     assert.equal(result.args.prompt,'Animate supplied speech.',tool);
     assert.ok(!result.voiceContinuity.warnings.some(w=>/use audio2video/.test(w)),tool);
   }

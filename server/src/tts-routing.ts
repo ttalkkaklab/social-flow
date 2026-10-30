@@ -20,9 +20,9 @@ export const speechRouteSchema = z.object({
 /** Plans expose capabilities, not creative approval gates or assumed voice quality. */
 export async function routeSpeech(input: z.input<typeof speechRouteSchema>) {
   const request = speechRouteSchema.parse(input);
-  if (request.action === 'capabilities') return { models: getTtsModels(), review: 'not_reviewed' };
+  if (request.action === 'capabilities') return { models: getTtsModels(), gateway: { generator: 'tts_astra_genai', discovery: 'astra_genai_catalog kind:speech', model: 'explicit deployment alias', review: 'not_reviewed' }, review: 'not_reviewed' };
   const prepared = prepareSpeech(request.generator!, request.generation);
-  const model = resolveTtsModel(prepared.generator.startsWith('tts_elevenlabs_') ? 'elevenlabs' : 'gemini', String(prepared.args.model));
+  const model = resolveTtsModel(prepared.generator === 'tts_astra_genai' ? 'astra-genai' : prepared.generator.startsWith('tts_elevenlabs_') ? 'elevenlabs' : 'gemini', String(prepared.args.model));
   const gate = resolveToolGate(prepared.generator, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
   const plan = { generator: prepared.generator, generation: prepared.args, capabilities: model,
     enabled: gate.enabled, gateReason: gate.reason, review: 'not_reviewed',

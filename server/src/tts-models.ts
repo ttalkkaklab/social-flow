@@ -2,8 +2,8 @@ import { createRequire } from 'node:module';
 
 export interface TtsModelContract {
   model: string;
-  provider: 'gemini' | 'elevenlabs';
-  direction: 'legacy' | 'metadata' | 'inline';
+  provider: 'gemini' | 'elevenlabs' | 'astra-genai';
+  direction: 'legacy' | 'metadata' | 'inline' | 'gateway';
   single: string;
   dialogue: string;
   maxSpeakers: number;

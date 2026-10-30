@@ -437,3 +437,7 @@ feat/<name> | fix/<name>  (integration)  →  dev  →  staging  →  main
 Multiple Claude Code sessions work in this repo at the same time.
 Before committing or merging, check `git status` and recently modified files
 (`find . -mmin -30`) so you don't sweep up files another session is editing.
+
+## 워크트리 경로
+
+워크트리는 기본 체크아웃 루트의 `.worktree/<이름>/`에 만든다. 연결된 워크트리에서도 기본 루트를 기준으로 삼는다. `AGENTS.md`의 2026-10-10 사용자 지침을 적용하며 ASTRA나 도구의 기본 경로보다 우선한다.

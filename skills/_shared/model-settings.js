@@ -9,9 +9,9 @@ const SETTINGS_FILE = '.social-flow/models.json';
 const SNAPSHOT_FILE = '.work/model-settings.json';
 const VIDEO_TYPES = require('./video-types.json').types;
 const ENGINES = {
-  video: ['host', 'seedance', 'veo', 'astra', 'astra-genai', 'mlx', 'omni'],
-  speech: ['none', 'gemini', 'elevenlabs'],
-  image: ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai'],
+  video: ['host', 'seedance', 'veo', 'astra', 'astra-genai', 'astra-genai-desktop', 'mlx', 'omni'],
+  speech: ['none', 'gemini', 'elevenlabs', 'astra-genai'],
+  image: ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai', 'astra-genai-native'],
   music: ['lyria', 'suno-api', 'elevenlabs', 'mlx'],
 };
 const RETIRED_ELEVENLABS_MODELS = ['eleven_multilingual_v2', 'eleven_v3', 'eleven_v3_conversational', 'eleven_flash_v2_5', 'eleven_turbo_v2_5'];

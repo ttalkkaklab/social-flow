@@ -1,3 +1,4 @@
+import { NATIVE_GENAI_TOOLS } from './astra-genai-native-tools.js';
 /** Public tool descriptions for the unified gateway, kept separate from legacy ASTRA controls. */
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { GENAI_CAMERA_MOTIONS, GENAI_VIDEO_MODELS } from './astra-genai-video.js';
@@ -19,6 +20,7 @@ const video = {
 };
 const generation = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true };
 export const GENAI_TOOLS: Tool[] = [
+  ...NATIVE_GENAI_TOOLS,
   { name: 'astra_genai_text2video', title: 'Generate GenAI LTX video from text',
     description: 'Generate and save an MP4 through the unified ASTRA GenAI LTX v2 gateway. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY, a separate gk_ token from ASTRA_VIDEO. Persists job identity before polling; recover the same receipt after timeout. Supports text only; for a supplied audio track use astra_genai_audio2video. No LoRA, retake or keyframes. Legacy astra_text2video remains a separate server adapter.',
     inputSchema: { type: 'object', properties: video, required: ['prompt', 'model', 'duration', 'resolution', 'reserveUsd'], additionalProperties: false }, annotations: generation },

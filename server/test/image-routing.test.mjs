@@ -177,3 +177,12 @@ test('completed provider generation with failed download releases the slot and p
   assert.equal((await f.run(f.plan('next'),async (_tool,args)=>output(args))).structuredContent.status,'completed');
   assert.equal(imageStatus({directory:f.dir,requestId:p.requestId,action:'reconcile',spentUsd:0,evidence:'billing receipt'}).status,'failed');
 });
+
+test('native gateway selection routes model-bound edits with hashed references and explicit reservation', async t => {
+  const f=fixture(t,{engine:'astra-genai-native',model:'qwen-image-fast'},{reference:'test',maxUsd:1});
+  fs.writeFileSync(path.join(f.dir,'source.png'),png);
+  const p=f.plan('native',{imagePath:'source.png',refImagePaths:['source.png'],loras:[{id:'style',scale:0}]},{operation:'edit',reserveUsd:0});
+  assert.equal(p.tool,'astra_genai_image_edit');assert.equal(p.args.model,'qwen-image-fast');assert.equal(Object.keys(p.inputs).length,1);
+  const key=config.astraGenaiApiKey;config.astraGenaiApiKey='fixture';t.after(()=>{config.astraGenaiApiKey=key;});
+  await f.run(p,async(tool,args)=>{assert.equal(tool,p.tool);assert.equal(args.refImagePaths[0],path.join(f.dir,'source.png'));return output(args);});
+});

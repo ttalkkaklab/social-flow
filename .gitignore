@@ -47,7 +47,6 @@ tokens.json
 *-token.json
 
 # ── git worktrees (sprint workspaces) ─────────────────────────────
-.worktrees/
 
 # ── Content data ──────────────────────────────────────────────────
 # Channel work products (profile.md·storyboards·images·videos·branding assets) are local artifacts.
@@ -69,6 +68,9 @@ apps/*/build/
 # scratch frames from the 2026-08-16 mouse-character test — local only
 .tmp-mouse-vid/
 node_modules
+
+# Project-local Git worktrees
+/.worktree/
 
 # Local speech execution receipts and active output locks
 .speech-runs/

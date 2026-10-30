@@ -335,6 +335,14 @@ test('managed storyboard images reach dispatch and cannot change after planning 
  assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'no-refs',operation:'image',args:{prompt:'Move'}}),/not_reviewed/);
 });
 
+test('native gateway video settings select the Desktop adapter and preserve audio loss policy',t=>{
+ const f=fixture(t,{engine:'astra-genai-desktop',model:'ltx-2.5-fast',resolution:'270p'});
+ const audio=path.join(f.episode,'line.wav');fs.writeFileSync(audio,'fixture');
+ const p=planVideo({episode:f.episode,shotId:'s1',requestId:'desktop',operation:'audio',args:{prompt:'A speaker',audioPath:audio,reserveUsd:0}});
+ assert.equal(p.tool,'astra_genai_desktop_audio2video');assert.equal(p.args.allowAudioTruncation,false);assert.equal(p.args.model,'ltx-2.5-fast');assert.equal(p.args.resolution,'270p');assert.ok(p.inputs[audio]);
+ assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'wrong',operation:'image',args:{prompt:'ball',imagePath:audio,duration:2,loras:[{ref:'x'}],reserveUsd:0}}));
+});
+
 test('FastH3 reference plans inherit the model, pin media, and dispatch once at zero API cost', async t => {
  const model='ddalcu/FastH3-Omni-MLX-Serve-8bit';
  const f=fixture(t,{engine:'mlx',model,resolution:'768x448'});

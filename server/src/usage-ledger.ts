@@ -209,7 +209,9 @@ export function priceOf(
     try { args = resolveVideoDuration(tool, args).args; }
     catch (error) { return { key: null, quantity: null, note: 'Invalid duration plan: ' + String(error) }; }
   }
-  if (tool.startsWith('astra_genai_')) return { key: ['astra_genai_text2img', 'astra_genai_edit'].includes(tool) ? 'image.astra-genai' : 'video.astra-genai', quantity: null, note: 'Gateway pricing unverified; managed reservation is authoritative, not a measured bill' };
+  if (tool === 'tts_astra_genai') return { key: 'tts.astra-genai', quantity: null, note: 'Gateway speech pricing unverified' };
+  if (tool === 'astra_genai_catalog' || tool === 'astra_genai_desktop_status') return { key: null, quantity: null };
+  if (tool.startsWith('astra_genai_')) return { key: ['astra_genai_text2img', 'astra_genai_edit', 'astra_genai_image_generate', 'astra_genai_image_edit'].includes(tool) ? 'image.astra-genai' : 'video.astra-genai', quantity: null, note: 'Gateway pricing unverified; managed reservation is authoritative, not a measured bill' };
   if (tool.startsWith('veo_')) {
     const tier = VEO_TIER[str(args.model, 'veo-3.1-fast-generate-preview')];
     const resolution = str(args.resolution, '720p');
@@ -384,12 +386,12 @@ function charUnits(args: Record<string, unknown>): number {
 /** True for the tools whose calls belong in an episode's cost ledger. */
 export function isBillableTool(tool: string): boolean {
   // This wrapper records each synthesis and review itself, including rejected takes.
-  if (['tts_route','tts_generate_checked','character_voice_audition','tts_review_acting','tts_local_generate','mlx_tts_generate'].includes(tool)) return false;
+  if (['tts_astra_genai','tts_route','tts_generate_checked','character_voice_audition','tts_review_acting','tts_local_generate','mlx_tts_generate'].includes(tool)) return false;
   if (['music_catalog', 'music_plan', 'music_execute', 'music_status'].includes(tool)) return false;
   // Catalogue reads cost nothing and belong in no ledger.
   if (tool === 'tts_list_voices' || tool === 'tts_elevenlabs_voices' || tool === 'music_list_options') return false;
   return (
-    (tool.startsWith('astra_genai_') && tool !== 'astra_genai_video_status') ||
+    (tool.startsWith('astra_genai_') && !['astra_genai_video_status','astra_genai_catalog','astra_genai_desktop_status'].includes(tool)) ||
     tool.startsWith('veo_') ||
     tool.startsWith('omni_') ||
     tool.startsWith('seedance_') ||

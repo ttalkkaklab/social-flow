@@ -79,6 +79,7 @@ export function capabilityStatus(): {
           note: 'seedance_text2video · seedance_img2video · seedance_reference' },
         { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
           note: 'ltx_video_generate · fasth3_omni_reference — 24fps rgb8 muxed to mp4, RAM-capped; not the default path' },
+        { provider: 'astra-genai-desktop', configured: has(config.astraGenaiApiKey), needs: 'ASTRA_GENAI_API_KEY', note: 'Gateway text/image/audio video, extend/retake/keyframes; discover installed models and LoRA refs with astra_genai_catalog.' },
         { provider: 'astra-genai (LTX v2 gateway)', configured: has(config.astraGenaiApiKey), needs: 'ASTRA_GENAI_API_KEY',
           note: 'astra_genai_text2video · astra_genai_img2video · astra_genai_audio2video (audio-length clip, mono/stereo, 7350-96000 Hz, data URI ≤15,000,000 base64 chars) · astra_genai_msr (four subjects + background) · astra_genai_video_status; separate gateway token, no LoRA; configuration is not a live check' },
         { provider: 'astra video (self-hosted LTX-2.5)', configured: has(config.astraVideoApiKey), needs: 'ASTRA_VIDEO',
@@ -88,6 +89,7 @@ export function capabilityStatus(): {
     {
       capability: 'image_generation',
       providers: [
+        { provider: 'astra-genai-native', configured: has(config.astraGenaiApiKey), needs: 'ASTRA_GENAI_API_KEY', note: 'Model-bound images; up to ten references and registered LoRAs according to image catalog.' },
         { provider: 'astra-genai (DashScope gateway)', configured: has(config.astraGenaiApiKey), needs: 'ASTRA_GENAI_API_KEY',
           note: 'astra_genai_text2img / astra_genai_edit — text, single-source img2img/inpaint, optional prompt expansion, 800-character prompt limit; gateway model availability requires verification' },
         { provider: 'z-image (local, mflux)', configured: binOk(mfluxZImageBin()), needs: 'mflux on this machine',
@@ -101,6 +103,7 @@ export function capabilityStatus(): {
     {
       capability: 'tts',
       providers: [
+        { provider: 'astra-genai', configured: has(config.astraGenaiApiKey), needs: 'ASTRA_GENAI_API_KEY', note: 'tts_astra_genai; discover aliases, voices and capabilities with astra_genai_catalog kind:speech. Configuration is not a health check.' },
         { provider: 'gemini', configured: gemini, needs: 'GEMINI_API_KEY',
           note: 'tts_generate · tts_multi_speaker · tts_gemini_38' },
         { provider: 'elevenlabs', configured: has(config.elevenLabsApiKey), needs: 'ELEVENLABS_API_KEY',

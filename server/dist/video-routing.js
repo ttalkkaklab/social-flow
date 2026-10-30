@@ -1,5 +1,6 @@
 import { buildFasth3Body, fasth3OmniSchema } from './fasth3-omni.js';
 import { localVideoStrategy } from './local-video-models.js';
+import { desktopVideoStatus } from './astra-genai-desktop.js';
 import { requireReviewedImages, requireWorkflow, workflowRevision } from './production-workflow.js';
 import * as fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -89,7 +90,16 @@ function bindSelection(tool, input, selection) {
         if (selection.engine !== 'omni')
             args.model = selection.model;
     }
-    if (selection.resolution && tool !== 'astra_video_retake') {
+    if (selection.resolution && selection.engine === 'astra-genai-desktop' && ['astra_genai_desktop_extend', 'astra_genai_desktop_retake'].includes(tool)) {
+        const match = /^(\d+)x(\d+)$/.exec(selection.resolution);
+        if (match) {
+            const target = { width: Number(match[1]), height: Number(match[2]) };
+            if (args.targetResolution !== undefined && JSON.stringify(args.targetResolution) !== JSON.stringify(target))
+                throw new Error('model_selection_mismatch: targetResolution');
+            args.targetResolution = target;
+        }
+    }
+    else if (selection.resolution && tool !== 'astra_video_retake') {
         if (tool === 'astra_genai_msr' || ['astra', 'mlx'].includes(selection.engine)) {
             const match = /^(\d+)x(\d+)$/.exec(selection.resolution);
             if (!match)
@@ -119,7 +129,7 @@ export function checkVideoEnvironment(tool) {
         throw new Error('video_tool_disabled: ' + gate.reason);
     const engine = VIDEO_ADAPTERS[tool]?.engine;
     const ready = engine === 'seedance' ? Boolean(config.arkApiKey) : engine === 'astra' ? Boolean(config.astraVideoApiKey) :
-        engine === 'astra-genai' ? Boolean(config.astraGenaiApiKey) : engine === 'mlx' ? mlxServeConfigured() : Boolean(config.geminiApiKey);
+        ['astra-genai', 'astra-genai-desktop'].includes(engine) ? Boolean(config.astraGenaiApiKey) : engine === 'mlx' ? mlxServeConfigured() : Boolean(config.geminiApiKey);
     if (!ready)
         throw new Error('video_provider_unconfigured: ' + engine);
 }
@@ -364,7 +374,7 @@ export async function videoStatus(raw) {
     const state = JSON.parse(fs.readFileSync(file, 'utf8'));
     const job = state.jobs?.[input.requestId];
     if (input.action === 'refresh' && job) {
-        if (!['astra_genai_text2video', 'astra_genai_img2video', 'astra_genai_audio2video', 'astra_genai_msr'].includes(job.tool))
+        if (!job.tool.startsWith('astra_genai_desktop_') && !['astra_genai_text2video', 'astra_genai_img2video', 'astra_genai_audio2video', 'astra_genai_msr'].includes(job.tool))
             throw new Error('video_refresh_unsupported: use provider-specific recovery');
         const plan = JSON.parse(fs.readFileSync(path.join(episode, '.work/video-routing/plans', job.planId + '.json'), 'utf8'));
         const { id, ...body } = plan;
@@ -372,7 +382,7 @@ export async function videoStatus(raw) {
             throw new Error('Invalid recovery plan');
         checkVideoEnvironment(plan.tool);
         const receiptPath = path.join(String(plan.args.outputPath), String(plan.args.filename)) + '.astra-genai.json';
-        const result = await getGenaiVideoStatus({ receiptPath, download: true });
+        const result = job.tool.startsWith('astra_genai_desktop_') ? await desktopVideoStatus(receiptPath, true) : await getGenaiVideoStatus({ receiptPath, download: true });
         if (job.providerId && result.jobId !== job.providerId)
             throw new Error('GenAI recovery job ID mismatch');
         if (result.downloaded) {
