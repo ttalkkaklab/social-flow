@@ -6360,6 +6360,13 @@ var astraIcLoraSchema = external_exports.object({
 function icLoraMode(adapter) {
   return adapter === "ingredients" ? "ingredients" : "ic_lora";
 }
+var astraVideoUpscaleSchema = external_exports.object({
+  sourceVideoPath: external_exports.string().trim().min(1, "sourceVideoPath is required"),
+  prompt: promptSchema,
+  referenceStrength: external_exports.number().min(0).max(1).optional(),
+  seed: seedSchema,
+  ...outputFields
+}).strict();
 var ASTRA_VIDEO_SHORT_AUDIO_SLACK = 0.08;
 function checkAudioCoversVideo(usable, numFrames, frameRate, afterStart = false) {
   const videoSeconds = numFrames / frameRate;
@@ -7285,7 +7292,7 @@ var videoExecuteSchema = external_exports.object({ episode: external_exports.str
 // src/speech.ts
 import { createHash as createHash5, randomUUID } from "node:crypto";
 import { readFileSync as readFileSync8, writeFileSync as writeFileSync6, renameSync as renameSync4, mkdirSync as mkdirSync5, existsSync as existsSync7 } from "node:fs";
-import { dirname as dirname4, resolve as resolve5, join as join5 } from "node:path";
+import { dirname as dirname5, resolve as resolve5, join as join5 } from "node:path";
 import * as nodeModule4 from "node:module";
 import { execFileSync as execFileSync3 } from "node:child_process";
 
@@ -7471,7 +7478,7 @@ function manageSpeech(args) {
       }
     } else {
       if (!args.audioPath) throw new Error("audioPath is required");
-      const audioPath = resolve5(dirname4(file), args.audioPath);
+      const audioPath = resolve5(dirname5(file), args.audioPath);
       if (!args.generation || args.generation.text !== line.tts) throw new Error("Attach the actual generation arguments and exact line text");
       const voice = character(line.speaker)?.tts;
       const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation, line);
@@ -7531,7 +7538,7 @@ function manageSpeech(args) {
     if (selected.some(({ line }) => !line.id || !line.speaker || !line.delivery)) throw new Error("Prepare explicit speech before planning video");
     if (args.lineId || args.speaker || args.query) throw new Error("Video planning uses all lines in the shot; remove line filters");
     for (const { line } of selected) actingSchema.nullable().optional().parse(line.acting);
-    const episode = dirname4(dirname4(file));
+    const episode = dirname5(dirname5(file));
     if (existsSync7(join5(episode, ".work/model-settings.json"))) {
       const { selection } = routingContext(episode, args.shotId);
       const verified = speechVideoCapabilities(selection.engine, selection.model || selection.engine);
@@ -7541,10 +7548,10 @@ function manageSpeech(args) {
     }
     plan = speechVideoPlan({ ...scene, narration: selected.map(({ line }) => ({ ...line, audio: currentAudio(line, character(line.speaker)) ? line.audio : void 0 })) }, args.capabilities);
     const continuityContract = nodeModule4.createRequire(import.meta.url)("../../skills/storyboard/references/shot-continuity.js");
-    plan = { ...plan, continuity: continuityContract.plan(win, scenes.indexOf(scene), dirname4(file)) };
+    plan = { ...plan, continuity: continuityContract.plan(win, scenes.indexOf(scene), dirname5(file)) };
     if (args.action === "attach_video") {
       if (!args.videoPath) throw new Error("videoPath is required");
-      const videoPath = resolve5(dirname4(file), args.videoPath);
+      const videoPath = resolve5(dirname5(file), args.videoPath);
       const bytes = readFileSync8(videoPath);
       if (!bytes.length) throw new Error("Video file is empty");
       const audio = selected.map(({ line }) => {
@@ -7606,7 +7613,7 @@ function manageSpeech(args) {
       ids.add(line.id);
       if (!character(line.speaker)?.tts) throw new Error(`Missing pinned voice for ${line.speaker}`);
     }
-    const work = resolve5(dirname4(file), "../.work/speech-history");
+    const work = resolve5(dirname5(file), "../.work/speech-history");
     mkdirSync5(work, { recursive: true });
     const backup = join5(work, revision + ".js");
     if (!existsSync7(backup)) writeFileSync6(backup, before);

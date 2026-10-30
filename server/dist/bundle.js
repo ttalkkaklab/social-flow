@@ -938,7 +938,7 @@ var require_ms = __commonJS({
       options = options || {};
       var type = typeof val;
       if (type === "string" && val.length > 0) {
-        return parse3(val);
+        return parse4(val);
       } else if (type === "number" && isFinite(val)) {
         return options.long ? fmtLong(val) : fmtShort(val);
       }
@@ -946,7 +946,7 @@ var require_ms = __commonJS({
         "val is not a non-empty string or a valid number. val=" + JSON.stringify(val)
       );
     };
-    function parse3(str8) {
+    function parse4(str8) {
       str8 = String(str8);
       if (str8.length > 100) {
         return;
@@ -20811,7 +20811,7 @@ var require_extension = __commonJS({
       if (dest[name] === void 0) dest[name] = [elem];
       else dest[name].push(elem);
     }
-    function parse3(header) {
+    function parse4(header) {
       const offers = /* @__PURE__ */ Object.create(null);
       let params = /* @__PURE__ */ Object.create(null);
       let mustUnescape = false;
@@ -20951,7 +20951,7 @@ var require_extension = __commonJS({
         }).join(", ");
       }).join(", ");
     }
-    module.exports = { format, parse: parse3 };
+    module.exports = { format, parse: parse4 };
   }
 });
 
@@ -20985,7 +20985,7 @@ var require_websocket = __commonJS({
     var {
       EventTarget: { addEventListener, removeEventListener }
     } = require_event_target();
-    var { format, parse: parse3 } = require_extension();
+    var { format, parse: parse4 } = require_extension();
     var { toBuffer } = require_buffer_util();
     var kAborted = /* @__PURE__ */ Symbol("kAborted");
     var protocolVersions = [8, 13];
@@ -21662,7 +21662,7 @@ var require_websocket = __commonJS({
           }
           let extensions;
           try {
-            extensions = parse3(secWebSocketExtensions);
+            extensions = parse4(secWebSocketExtensions);
           } catch (err4) {
             const message = "Invalid Sec-WebSocket-Extensions header";
             abortHandshake(websocket, socket, message);
@@ -21954,7 +21954,7 @@ var require_subprotocol = __commonJS({
   "node_modules/ws/lib/subprotocol.js"(exports, module) {
     "use strict";
     var { tokenChars } = require_validation();
-    function parse3(header) {
+    function parse4(header) {
       const protocols = /* @__PURE__ */ new Set();
       let start = -1;
       let end = -1;
@@ -21990,7 +21990,7 @@ var require_subprotocol = __commonJS({
       protocols.add(protocol);
       return protocols;
     }
-    module.exports = { parse: parse3 };
+    module.exports = { parse: parse4 };
   }
 });
 
@@ -33120,7 +33120,7 @@ function findBoundary(buf, len, from) {
   }
   return null;
 }
-function parseMessage(chunk3, parse3, state, dataRequired) {
+function parseMessage(chunk3, parse4, state, dataRequired) {
   const text3 = new TextDecoder().decode(chunk3);
   const lines = text3.split(/\r\n|\r|\n/);
   const dataLines = [];
@@ -33154,7 +33154,7 @@ function parseMessage(chunk3, parse3, state, dataRequired) {
     ret.data = dataLines.join("\n");
   else if (dataRequired)
     return;
-  return parse3(ret);
+  return parse4(ret);
 }
 function jsonErr(codes, errorClass, options) {
   return Object.assign(Object.assign({}, options), { err: true, enc: "json", codes, errorClass });
@@ -43490,7 +43490,7 @@ var init_node = __esm({
       }
     };
     Stream3 = class extends ReadableStream {
-      constructor(responseBody, parse3, opts) {
+      constructor(responseBody, parse4, opts) {
         var _a4;
         const upstream = responseBody.getReader();
         let buffer = new Uint8Array(4096);
@@ -43526,7 +43526,7 @@ var init_node = __esm({
                   buffer = shrunk;
                 }
                 searchStart = 0;
-                const item = parseMessage(message, parse3, state, dataRequired);
+                const item = parseMessage(message, parse4, state, dataRequired);
                 if (item && !item.done)
                   return downstream.enqueue(item.value);
                 if (item === null || item === void 0 ? void 0 : item.done) {
@@ -48542,7 +48542,7 @@ var require_fast_uri = __commonJS({
         normalizeString(uri, options);
       } else if (typeof uri === "object") {
         uri = /** @type {T} */
-        parse3(serialize(uri, options), options);
+        parse4(serialize(uri, options), options);
       }
       return uri;
     }
@@ -48560,8 +48560,8 @@ var require_fast_uri = __commonJS({
     function resolveComponent(base, relative, options, skipNormalization) {
       const target = {};
       if (!skipNormalization) {
-        base = parse3(serialize(base, options), options);
-        relative = parse3(serialize(relative, options), options);
+        base = parse4(serialize(base, options), options);
+        relative = parse4(serialize(relative, options), options);
       }
       options = options || {};
       if (!options.tolerant && relative.scheme) {
@@ -48805,7 +48805,7 @@ var require_fast_uri = __commonJS({
       }
       return { parsed, malformedAuthorityOrPort };
     }
-    function parse3(uri, opts) {
+    function parse4(uri, opts) {
       return parseWithStatus(uri, opts).parsed;
     }
     function normalizeString(uri, opts) {
@@ -48834,7 +48834,7 @@ var require_fast_uri = __commonJS({
       resolveComponent,
       equal,
       serialize,
-      parse: parse3
+      parse: parse4
     };
     module.exports = fastUri;
     module.exports.default = fastUri;
@@ -68398,14 +68398,14 @@ var require_compose_speech = __commonJS({
     "use strict";
     var fs21 = __require("node:fs");
     var path27 = __require("node:path");
-    var { execFileSync: execFileSync12 } = __require("node:child_process");
+    var { execFileSync: execFileSync13 } = __require("node:child_process");
     var { createHash: createHash21 } = __require("node:crypto");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
     var { actingErrors, speechRevisionPayload, planScenePerformance } = require_scene_acting();
     var { generationVoiceErrors } = require_character_voice();
     var hash7 = (value) => createHash21("sha256").update(value).digest("hex");
     function duration3(file) {
-      const seconds = Number(execFileSync12("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file], { encoding: "utf8", timeout: 1e4 }).trim());
+      const seconds = Number(execFileSync13("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file], { encoding: "utf8", timeout: 1e4 }).trim());
       if (!Number.isFinite(seconds) || seconds <= 0) throw new Error("Unusable speech duration: " + file);
       return seconds;
     }
@@ -68465,7 +68465,7 @@ var require_compose_speech = __commonJS({
         filters.push(lines.map((_, i2) => `[a${i2}]`).join("") + `amix=inputs=${lines.length}:normalize=0,apad,atrim=duration=${timing.durationSeconds}[out]`);
         const output2 = path27.join(work, `c${fields2[0]}-speech.wav`), tmp = output2 + ".tmp.wav";
         try {
-          execFileSync12("ffmpeg", ["-y", "-v", "error", ...inputs, "-filter_complex", filters.join(";"), "-map", "[out]", "-c:a", "pcm_s16le", tmp], { timeout: 12e4 });
+          execFileSync13("ffmpeg", ["-y", "-v", "error", ...inputs, "-filter_complex", filters.join(";"), "-map", "[out]", "-c:a", "pcm_s16le", tmp], { timeout: 12e4 });
           fs21.renameSync(tmp, output2);
         } finally {
           if (fs21.existsSync(tmp)) fs21.unlinkSync(tmp);
@@ -86523,6 +86523,7 @@ async function generateWithReferences2(request) {
 }
 
 // src/astra-video-client.ts
+import { execFileSync as execFileSync5 } from "node:child_process";
 import { createHash as createHash6, randomInt } from "node:crypto";
 import * as fs11 from "node:fs";
 import * as path10 from "node:path";
@@ -87280,6 +87281,62 @@ var astraIcLoraSchema = external_exports.object({
 }).transform(resolveDuration);
 function icLoraMode(adapter2) {
   return adapter2 === "ingredients" ? "ingredients" : "ic_lora";
+}
+var astraVideoUpscaleSchema = external_exports.object({
+  sourceVideoPath: external_exports.string().trim().min(1, "sourceVideoPath is required"),
+  prompt: promptSchema,
+  referenceStrength: external_exports.number().min(0).max(1).optional(),
+  seed: seedSchema,
+  ...outputFields
+}).strict();
+function upscaleGeometry(width, height, frames) {
+  const out = { width: width * 2, height: height * 2 };
+  if (out.width % 64 || out.height % 64) {
+    throw new Error(`pixel-upscaler-x2 needs a source whose sides are multiples of 32 (got ${width}x${height})`);
+  }
+  if (out.width * out.height > ASTRA_VIDEO_MAX_REFERENCE_PIXELS) {
+    throw new Error(`${width}x${height} doubles to ${out.width}x${out.height}, over the ${ASTRA_VIDEO_MAX_REFERENCE_PIXELS}-pixel ceiling for a moving reference; leave the clip to the final canvas scale`);
+  }
+  const numFrames = Math.min(ASTRA_VIDEO_FRAME_LIMITS.ic_lora, frames - (frames - 1) % ASTRA_VIDEO_FRAME_STEP);
+  if (numFrames < ASTRA_VIDEO_MIN_FRAMES) throw new Error(`pixel-upscaler-x2 needs at least ${ASTRA_VIDEO_MIN_FRAMES} frames (got ${frames})`);
+  return { ...out, numFrames };
+}
+async function upscaleVideo(args) {
+  const source = path10.resolve(args.sourceVideoPath);
+  const probe3 = JSON.parse(execFileSync5("ffprobe", [
+    "-v",
+    "error",
+    "-count_frames",
+    "-show_entries",
+    "stream=codec_type,width,height,r_frame_rate,nb_read_frames",
+    "-of",
+    "json",
+    source
+  ], { encoding: "utf8", timeout: 12e4 }));
+  const video2 = probe3.streams?.find((s2) => s2.codec_type === "video");
+  if (!video2) throw new Error(`No video stream in ${source}`);
+  const [num5, den] = String(video2.r_frame_rate).split("/").map(Number);
+  const frames = Number(video2.nb_read_frames), hasAudio = probe3.streams.some((s2) => s2.codec_type === "audio");
+  const geometry = upscaleGeometry(video2.width, video2.height, frames);
+  const result = await generateIcLora(astraIcLoraSchema.parse({
+    prompt: args.prompt,
+    adapter: "pixel-upscaler-x2",
+    referencePath: source,
+    referenceStrength: args.referenceStrength,
+    ...geometry,
+    frameRate: num5 / (den || 1),
+    seed: args.seed,
+    generateAudio: false,
+    outputPath: args.outputPath ?? path10.dirname(source),
+    filename: args.filename ?? `${path10.parse(source).name}-x2.mp4`
+  }));
+  if (hasAudio) {
+    const muxed = `${result.videoPath}.${process.pid}.mux.mp4`;
+    execFileSync5("ffmpeg", ["-v", "error", "-i", result.videoPath, "-i", source, "-map", "0:v", "-map", "1:a", "-c", "copy", "-shortest", muxed], { timeout: 12e4 });
+    fs11.renameSync(muxed, result.videoPath);
+    result.bytes = fs11.statSync(result.videoPath).size;
+  }
+  return { ...result, source: { path: source, width: video2.width, height: video2.height, frames }, droppedFrames: frames - geometry.numFrames, audio: hasAudio ? "source_remuxed" : "none" };
 }
 var ASTRA_VIDEO_SHORT_AUDIO_SLACK = 0.08;
 function checkAudioCoversVideo(usable, numFrames, frameRate, afterStart = false) {
@@ -88146,7 +88203,7 @@ function isManagedVideoCall(tool, input) {
 
 // src/storyboard.ts
 import { createHash as createHash7 } from "node:crypto";
-import { execFileSync as execFileSync5 } from "node:child_process";
+import { execFileSync as execFileSync6 } from "node:child_process";
 
 // src/scenes-vm.ts
 import vm from "node:vm";
@@ -88200,9 +88257,9 @@ function evaluateWindowScript(source, options = {}) {
 // src/storyboard.ts
 import { existsSync as existsSync12, mkdirSync as mkdirSync4, readFileSync as readFileSync14, renameSync as renameSync3, statSync as statSync9, unlinkSync as unlinkSync3, writeFileSync as writeFileSync10 } from "node:fs";
 import * as nodeModule2 from "node:module";
-import { basename as basename6, dirname as dirname4, join as join7, resolve as resolve4 } from "node:path";
+import { basename as basename6, dirname as dirname5, join as join7, resolve as resolve4 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
-var PLUGIN_ROOT = resolve4(dirname4(fileURLToPath3(import.meta.url)), "..", "..");
+var PLUGIN_ROOT = resolve4(dirname5(fileURLToPath3(import.meta.url)), "..", "..");
 var REFERENCES_DIR = join7(PLUGIN_ROOT, "skills", "storyboard", "references");
 var CONTRACT_FILE = join7(REFERENCES_DIR, "structure-contract.js");
 var CHECK_SCENES_FILE = join7(REFERENCES_DIR, "check-scenes.js");
@@ -88390,9 +88447,9 @@ var storyboardReadSchema = external_exports.object({
 function boardReadiness(win, boardDir) {
   let root = boardDir, channel;
   for (; ; ) {
-    if (basename6(root) === "episodes") channel = dirname4(root);
-    if (existsSync12(join7(root, ".social-flow/models.json")) || dirname4(root) === root) break;
-    root = dirname4(root);
+    if (basename6(root) === "episodes") channel = dirname5(root);
+    if (existsSync12(join7(root, ".social-flow/models.json")) || dirname5(root) === root) break;
+    root = dirname5(root);
   }
   let configuration;
   try {
@@ -88432,9 +88489,9 @@ function readStoryboard(args) {
   const { win, file, sha256: sha2562 } = readBoard(args.path);
   const result = contract().outline(win, args.level);
   result.file = file;
-  result.mediaBaseDirectory = dirname4(file);
+  result.mediaBaseDirectory = dirname5(file);
   result.sha256 = sha2562;
-  result.readiness = boardReadiness(win, dirname4(file));
+  result.readiness = boardReadiness(win, dirname5(file));
   if (args.includeTechniques !== false) result.techniqueCatalog = {
     version: techniqueContract().VERSION,
     entries: techniqueContract().entries,
@@ -88453,7 +88510,7 @@ function readStoryboard(args) {
     note: "This response reads plans and recorded reviews only. Open referenced assets and verify current evidence before reporting visual quality or review validity."
   };
   const continuity = loadFromHere2(join7(REFERENCES_DIR, "shot-continuity.js"));
-  result.continuityFindings = continuity.check(win, dirname4(file));
+  result.continuityFindings = continuity.check(win, dirname5(file));
   result.cameraDirectionFindings = cameraContract().cameraDirectionWarnings(win.SCENES).map((what) => ({ level: "warn", where: "camera direction", what }));
   result.techniqueFindings = (win.SCENES || []).flatMap((scene, index) => techniqueContract().findings(scene).map((what) => ({ level: "warn", where: "shot " + (index + 1), what })));
   if (args.includeContext) result.reviewContext = {
@@ -88473,7 +88530,7 @@ function readStoryboard(args) {
     result.selectedShot = {
       no: index + 1,
       shot,
-      continuity: continuity.plan(win, index, dirname4(file)),
+      continuity: continuity.plan(win, index, dirname5(file)),
       scene: win.STRUCTURE?.scenes?.find((scene) => scene.no === shot.scene) || null,
       playbackPosition: position < 0 ? null : position + 1,
       previous: position < 0 ? null : neighbor(position - 1),
@@ -88767,13 +88824,13 @@ function applyPatch(win, patch) {
 }
 function applyStoryboard(args) {
   const file = scenesPath(args.path);
-  requireWorkflow(dirname4(file), "text");
+  requireWorkflow(dirname5(file), "text");
   const exists = existsSync12(file);
   let header = [];
   let win = {};
   if (exists) ({ header, win } = readBoard(file));
   else if (!args.set) throw new Error(`no scenes.js at ${file} \u2014 a new board is written with \`set\` (structure + shots)`);
-  else if (!existsSync12(dirname4(file))) throw new Error(`directory does not exist: ${dirname4(file)}`);
+  else if (!existsSync12(dirname5(file))) throw new Error(`directory does not exist: ${dirname5(file)}`);
   const original = exists ? readFileSync14(file, "utf8") : "";
   const originalHash = createHash7("sha256").update(original).digest("hex");
   const previousDoc = win.SB_DOC;
@@ -88783,7 +88840,7 @@ function applyStoryboard(args) {
     throw new Error("head_moved: propSheet requires the current expectedSha256 from storyboard_read");
   const { win: next, findings, synced } = applyPatch(win, args);
   const location = loadFromHere2(join7(REFERENCES_DIR, "location-assets.js"));
-  findings.push(...location.check(next, dirname4(file)));
+  findings.push(...location.check(next, dirname5(file)));
   const bad = findings.some((f3) => f3.level === "bad");
   const st = next.STRUCTURE;
   const result = {
@@ -88802,7 +88859,7 @@ function applyStoryboard(args) {
   try {
     if (changesProps && exists) {
       if (createHash7("sha256").update(readFileSync14(file)).digest("hex") !== originalHash) throw new Error("head_moved");
-      const history = join7(dirname4(file), ".prop-history");
+      const history = join7(dirname5(file), ".prop-history");
       mkdirSync4(history, { recursive: true });
       const backup = join7(history, originalHash + ".js");
       if (!existsSync12(backup)) writeFileSync10(backup, original, { flag: "wx" });
@@ -88832,7 +88889,7 @@ var scenarioCheckResultSchema = external_exports.object({
 function checkScenario(args, checkFile = CHECK_SCENARIO_FILE) {
   let raw = "";
   try {
-    raw = execFileSync5(process.execPath, [checkFile, args.path, "--json"], {
+    raw = execFileSync6(process.execPath, [checkFile, args.path, "--json"], {
       encoding: "utf8",
       timeout: 6e4,
       stdio: ["ignore", "pipe", "pipe"]
@@ -88865,7 +88922,7 @@ function checkStoryboard(args) {
   if (args.draft) argv.push("--draft");
   let raw = "";
   try {
-    raw = execFileSync5(process.execPath, argv, { encoding: "utf8", timeout: 6e4, maxBuffer: 16 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] });
+    raw = execFileSync6(process.execPath, argv, { encoding: "utf8", timeout: 6e4, maxBuffer: 16 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] });
   } catch (e2) {
     const err4 = e2;
     raw = err4.stdout || "";
@@ -88938,7 +88995,7 @@ function resolveTtsModel(provider, model) {
 }
 
 // src/tts-audio.ts
-import { execFileSync as execFileSync6 } from "node:child_process";
+import { execFileSync as execFileSync7 } from "node:child_process";
 import { mkdtempSync as mkdtempSync3, rmSync as rmSync5, writeFileSync as writeFileSync11 } from "node:fs";
 import { tmpdir as tmpdir3 } from "node:os";
 import { join as join8 } from "node:path";
@@ -88982,7 +89039,7 @@ function validateSpeechAudio(bytes, extension2) {
   try {
     const file = join8(dir, `audio.${extension2}`);
     writeFileSync11(file, bytes);
-    const result = JSON.parse(execFileSync6(
+    const result = JSON.parse(execFileSync7(
       "ffprobe",
       [
         "-v",
@@ -89000,7 +89057,7 @@ function validateSpeechAudio(bytes, extension2) {
     if (!names[extension2] || !String(result.format?.format_name).split(",").includes(names[extension2]) || !result.streams?.some((s2) => s2.codec_type === "audio") || !Number.isFinite(duration3) || duration3 <= 0) {
       throw new Error("Invalid speech audio format or duration");
     }
-    const decoded = execFileSync6(
+    const decoded = execFileSync7(
       "ffmpeg",
       [
         "-v",
@@ -90279,7 +90336,7 @@ function prepareSpeech(generator, generation2) {
 }
 
 // src/usage-ledger.ts
-import { execFileSync as execFileSync7 } from "node:child_process";
+import { execFileSync as execFileSync8 } from "node:child_process";
 import { appendFileSync, existsSync as existsSync14, mkdirSync as mkdirSync6 } from "node:fs";
 import path12 from "node:path";
 var EPISODE_MARKER = path12.join("storyboard", "scenes.js");
@@ -90375,7 +90432,7 @@ var PRICED_VIDEO_KEYS = /* @__PURE__ */ new Set([
 var ELEVENLABS_KEY = { eleven_v4: "tts.elevenlabs" };
 function probeSeconds(file) {
   try {
-    const out = execFileSync7("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], {
+    const out = execFileSync8("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], {
       encoding: "utf8",
       timeout: 15e3,
       stdio: ["ignore", "pipe", "ignore"]
@@ -91312,7 +91369,7 @@ ${tail}` : ""}`));
 import { execFile as execFile6 } from "node:child_process";
 import { existsSync as existsSync17, mkdtempSync as mkdtempSync5, readFileSync as readFileSync18, rmSync as rmSync9, writeFileSync as writeFileSync16 } from "node:fs";
 import { tmpdir as tmpdir5 } from "node:os";
-import { dirname as dirname5, extname as extname10, join as join11, resolve as resolve6 } from "node:path";
+import { dirname as dirname6, extname as extname10, join as join11, resolve as resolve6 } from "node:path";
 var BLENDER_PROXY_KINDS = ["person", "dog", "car", "box", "cylinder", "sphere"];
 var BLENDER_INTERPOLATIONS = ["LINEAR", "BEZIER", "CONSTANT"];
 var BLENDER_PREVIZ_ENGINES = ["workbench", "eevee"];
@@ -91701,7 +91758,7 @@ async function renderPreviz(request) {
   if (!existsSync17(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
-  const outputDir = request.outputPath ? resolve6(request.outputPath) : join11(dirname5(request.blendPath), "previz");
+  const outputDir = request.outputPath ? resolve6(request.outputPath) : join11(dirname6(request.blendPath), "previz");
   const videoPath = resolveOutputFile(outputDir, request.filename, "video");
   const framesForTimeout = request.frameStart !== void 0 && request.frameEnd !== void 0 ? request.frameEnd - request.frameStart + 1 : MAX_PREVIZ_FRAMES;
   const timeoutMs = request.timeoutSeconds ? request.timeoutSeconds * 1e3 : previzTimeoutMs(framesForTimeout, request.engine);
@@ -95520,6 +95577,30 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
     }
   },
   {
+    name: "astra_video_upscale",
+    title: "ASTRA video 2x upscale (pixel-upscaler-x2)",
+    annotations: HINT.generate,
+    description: `Double an existing clip's resolution with the LTX pixel-upscaler-x2 IC-LoRA on the self-hosted ASTRA video API. Use only when the user asks to upscale a clip; the final canvas scale stays the default for a 720p or smaller source.
+
+The tool measures the clip and sends exactly twice its width and height, its frame rate and the largest 8k+1 frame count that fits (trailing frames beyond it are dropped and reported). The source sides must be multiples of 32 and the doubled frame at most ${ASTRA_VIDEO_MAX_REFERENCE_PIXELS} pixels: 512x896 or 896x512 fits, a 720p clip does not. The source soundtrack is copied back onto the result.
+This is a generative re-render, not a scaler. Measured 2026-10-30: with the shot's own description the scene held, but the face, mouth shapes and a prop colour drifted; a bare "upscale" prompt invented content. Inspect identity, lip sync and props against the source before using the result. Not reviewed by the tool.
+${ASTRA_LIMITS_LINE}
+
+Returns: the saved .mp4 path, the job id, source size and frame count, dropped frames and the audio handling.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        sourceVideoPath: { type: "string", description: "Local source clip (.mp4 up to 100 MiB). Uploaded automatically; never overwritten." },
+        prompt: { type: "string", description: "What the clip shows: subject, action, setting and light, as in the shot plan. Required; a one-word prompt invents content. 1-2000 characters." },
+        referenceStrength: { type: "number", minimum: 0, maximum: 1, description: "Reference conditioning strength, 0.0-1.0 (server default: 1.0)." },
+        seed: ASTRA_SEED_PROPERTY,
+        outputPath: { type: "string", description: "Output directory (default: the source clip's directory)." },
+        filename: { type: "string", description: "Bare .mp4 filename (default: <source name>-x2.mp4)." }
+      },
+      required: ["sourceVideoPath", "prompt"]
+    }
+  },
+  {
     name: "astra_video_retake",
     title: "ASTRA video retake (re-roll a span)",
     annotations: HINT.generate,
@@ -98287,7 +98368,7 @@ for (const tool of TOOLS) {
 import * as fs16 from "node:fs";
 import path16 from "node:path";
 import os from "node:os";
-import { execFileSync as execFileSync9 } from "node:child_process";
+import { execFileSync as execFileSync10 } from "node:child_process";
 import { createRequire as createRequire5 } from "node:module";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 
@@ -98355,9 +98436,9 @@ function musicTransaction(directory2, openingSpendUsd, update) {
 import * as fs15 from "node:fs";
 import path15 from "node:path";
 import { createHash as createHash10, randomUUID as randomUUID4 } from "node:crypto";
-import { execFileSync as execFileSync8 } from "node:child_process";
+import { execFileSync as execFileSync9 } from "node:child_process";
 function readMusicMetadata(file) {
-  const result = JSON.parse(execFileSync8(
+  const result = JSON.parse(execFileSync9(
     "ffprobe",
     [
       "-v",
@@ -98385,7 +98466,7 @@ function normalizeMusicFile(source, target) {
   fs15.mkdirSync(path15.dirname(target), { recursive: true });
   const temporary = target + "." + randomUUID4() + ".wav";
   try {
-    execFileSync8(
+    execFileSync9(
       "ffmpeg",
       [
         "-nostdin",
@@ -98445,7 +98526,7 @@ function gate(tool) {
 }
 function environment(tool) {
   gate(tool);
-  for (const binary of ["ffmpeg", "ffprobe"]) execFileSync9(binary, ["-version"], { timeout: 1e4, stdio: "ignore" });
+  for (const binary of ["ffmpeg", "ffprobe"]) execFileSync10(binary, ["-version"], { timeout: 1e4, stdio: "ignore" });
   const engine = MUSIC_ADAPTERS[tool].engine;
   if (engine === "lyria") requireGeminiKey();
   if (engine === "suno-api") requireSunoKey();
@@ -99093,7 +99174,7 @@ async function refreshGenaiImage(directory2, requestId) {
 
 // src/video-routing.ts
 import * as fs20 from "node:fs";
-import { execFileSync as execFileSync10 } from "node:child_process";
+import { execFileSync as execFileSync11 } from "node:child_process";
 import path22 from "node:path";
 import { createRequire as createRequire9 } from "node:module";
 import { fileURLToPath as fileURLToPath9 } from "node:url";
@@ -99672,7 +99753,7 @@ function planVideo(raw) {
   if (tool === "astra_genai_msr") buildGenaiMsrBody(genaiMsrSchema.parse(args));
   if (tool === "astra_genai_audio2video") buildGenaiAudioBody(genaiAudioToVideoSchema.parse(args));
   if (tool === "astra_video_retake" && selection.resolution) {
-    const probe3 = JSON.parse(execFileSync10("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", String(args.sourceVideoPath)], { encoding: "utf8", timeout: 15e3 }));
+    const probe3 = JSON.parse(execFileSync11("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", String(args.sourceVideoPath)], { encoding: "utf8", timeout: 15e3 }));
     const stream = probe3.streams?.[0];
     if (!stream || `${stream.width}x${stream.height}` !== selection.resolution)
       throw new Error("model_selection_mismatch: retake inherits source dimensions; select the source resolution");
@@ -100253,7 +100334,7 @@ async function reviewActing(input) {
 // src/voice-audition.ts
 import { createHash as createHash16, randomUUID as randomUUID6 } from "node:crypto";
 import { appendFileSync as appendFileSync3, existsSync as existsSync26, mkdirSync as mkdirSync16, readFileSync as readFileSync29, writeFileSync as writeFileSync19, renameSync as renameSync7 } from "node:fs";
-import { dirname as dirname6, join as join12, resolve as resolve8 } from "node:path";
+import { dirname as dirname7, join as join12, resolve as resolve8 } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { createRequire as createRequire12 } from "node:module";
 
@@ -100402,7 +100483,7 @@ async function manageVoiceAudition(args) {
       return { ...choice, tts, match: compareVoiceMetadata(target, choice.metadata), ...compiled ? { compiled } : {} };
     });
     if (args.action === "plan") return { identityPath, identitySha256: hash3(source2), target, candidates: planned, review: "not_reviewed", instruction: "Use provider metadata to choose candidates; unknown attributes require auditioning. No audio generated and identity is unchanged." };
-    const outputPath = join12(dirname6(identityPath), "voice-auditions", randomUUID6());
+    const outputPath = join12(dirname7(identityPath), "voice-auditions", randomUUID6());
     mkdirSync16(outputPath, { recursive: true });
     const auditionPath2 = join12(outputPath, "audition.json");
     const audition2 = { version: 1, status: "generating", identityPath, identitySha256: hash3(source2), sampleText: args.sampleText, candidates: [], target, ...args.acting ? { acting: args.acting } : {}, ...args.sampleTurns ? { sampleTurns: args.sampleTurns } : {}, previewPath: join12(outputPath, "index.html") };
@@ -100481,7 +100562,7 @@ async function manageVoiceAudition(args) {
     return "```json\n" + JSON.stringify({ ...value, tts: ttsSchema.parse(chosen.tts), voiceSelection: selection }, null, 2) + "\n```";
   });
   if (!replaced) throw new Error("Missing identity JSON");
-  writeFileSync19(join12(dirname6(auditionPath), "identity-before-selection.md"), source, { flag: "wx" });
+  writeFileSync19(join12(dirname7(auditionPath), "identity-before-selection.md"), source, { flag: "wx" });
   const temporary = audition.identityPath + "." + randomUUID6() + ".tmp";
   writeFileSync19(temporary, next);
   renameSync7(temporary, audition.identityPath);
@@ -100547,9 +100628,9 @@ async function manageLocation(args) {
 // src/speech.ts
 import { createHash as createHash17, randomUUID as randomUUID7 } from "node:crypto";
 import { readFileSync as readFileSync30, writeFileSync as writeFileSync20, renameSync as renameSync8, mkdirSync as mkdirSync17, existsSync as existsSync27 } from "node:fs";
-import { dirname as dirname7, resolve as resolve9, join as join14 } from "node:path";
+import { dirname as dirname8, resolve as resolve9, join as join14 } from "node:path";
 import * as nodeModule6 from "node:module";
-import { execFileSync as execFileSync11 } from "node:child_process";
+import { execFileSync as execFileSync12 } from "node:child_process";
 var voiceContract = () => nodeModule6.createRequire(import.meta.url)("../../skills/_shared/character-voice.js");
 var actingContract = () => nodeModule6.createRequire(import.meta.url)("../../skills/_shared/scene-acting.js");
 var delivery = external_exports.enum(["voiceover", "on_screen", "off_screen"]);
@@ -100615,7 +100696,7 @@ function audioProvenanceStatus(line, character) {
 function measuredDuration(line) {
   if (!line.audio || !existsSync27(line.audio.path)) return null;
   try {
-    const value = Number(execFileSync11("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
+    const value = Number(execFileSync12("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
     return Number.isFinite(value) && value > 0 ? value : null;
   } catch {
     return null;
@@ -100705,7 +100786,7 @@ function manageSpeech(args) {
       }
     } else {
       if (!args.audioPath) throw new Error("audioPath is required");
-      const audioPath = resolve9(dirname7(file), args.audioPath);
+      const audioPath = resolve9(dirname8(file), args.audioPath);
       if (!args.generation || args.generation.text !== line.tts) throw new Error("Attach the actual generation arguments and exact line text");
       const voice = character(line.speaker)?.tts;
       const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation, line);
@@ -100765,7 +100846,7 @@ function manageSpeech(args) {
     if (selected.some(({ line }) => !line.id || !line.speaker || !line.delivery)) throw new Error("Prepare explicit speech before planning video");
     if (args.lineId || args.speaker || args.query) throw new Error("Video planning uses all lines in the shot; remove line filters");
     for (const { line } of selected) actingSchema.nullable().optional().parse(line.acting);
-    const episode = dirname7(dirname7(file));
+    const episode = dirname8(dirname8(file));
     if (existsSync27(join14(episode, ".work/model-settings.json"))) {
       const { selection } = routingContext(episode, args.shotId);
       const verified = speechVideoCapabilities(selection.engine, selection.model || selection.engine);
@@ -100775,10 +100856,10 @@ function manageSpeech(args) {
     }
     plan2 = speechVideoPlan({ ...scene, narration: selected.map(({ line }) => ({ ...line, audio: currentAudio(line, character(line.speaker)) ? line.audio : void 0 })) }, args.capabilities);
     const continuityContract = nodeModule6.createRequire(import.meta.url)("../../skills/storyboard/references/shot-continuity.js");
-    plan2 = { ...plan2, continuity: continuityContract.plan(win, scenes.indexOf(scene), dirname7(file)) };
+    plan2 = { ...plan2, continuity: continuityContract.plan(win, scenes.indexOf(scene), dirname8(file)) };
     if (args.action === "attach_video") {
       if (!args.videoPath) throw new Error("videoPath is required");
-      const videoPath = resolve9(dirname7(file), args.videoPath);
+      const videoPath = resolve9(dirname8(file), args.videoPath);
       const bytes = readFileSync30(videoPath);
       if (!bytes.length) throw new Error("Video file is empty");
       const audio = selected.map(({ line }) => {
@@ -100840,7 +100921,7 @@ function manageSpeech(args) {
       ids.add(line.id);
       if (!character(line.speaker)?.tts) throw new Error(`Missing pinned voice for ${line.speaker}`);
     }
-    const work = resolve9(dirname7(file), "../.work/speech-history");
+    const work = resolve9(dirname8(file), "../.work/speech-history");
     mkdirSync17(work, { recursive: true });
     const backup = join14(work, revision + ".js");
     if (!existsSync27(backup)) writeFileSync20(backup, before);
@@ -101310,7 +101391,7 @@ async function reviewActing2(input, deps) {
 // src/threads-gate.ts
 import { createHash as createHash19, randomUUID as randomUUID9 } from "node:crypto";
 import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync19, readFileSync as readFileSync32, realpathSync as realpathSync11, renameSync as renameSync10, statSync as statSync15, writeFileSync as writeFileSync22 } from "node:fs";
-import { dirname as dirname8, join as join15, resolve as resolve10 } from "node:path";
+import { dirname as dirname9, join as join15, resolve as resolve10 } from "node:path";
 import { fileURLToPath as fileURLToPath10 } from "node:url";
 import { spawnSync as spawnSync3 } from "node:child_process";
 var nonempty = external_exports.string().trim().min(1);
@@ -101362,7 +101443,7 @@ function audit(channel, tool, result, details = {}) {
 }
 function save2(draft) {
   const { file } = draftLocation(draft.draftId);
-  mkdirSync19(dirname8(file), { recursive: true });
+  mkdirSync19(dirname9(file), { recursive: true });
   const temp = `${file}.${randomUUID9()}.tmp`;
   writeFileSync22(temp, JSON.stringify(draft), { mode: 384 });
   renameSync10(temp, file);
@@ -101434,7 +101515,7 @@ function checkThreadsGate(input) {
     if (input.replyToId !== draft.replyToId) throw new Error("Draft reply target mismatch");
     const bodyHash = threadsBodyHash(input.caption, input.selfReply);
     if (bodyHash !== draft.bodyHash) throw new Error("Publish body hash mismatch");
-    const checker = resolve10(dirname8(fileURLToPath10(import.meta.url)), "../../skills/platform-guide/references/check-style.py");
+    const checker = resolve10(dirname9(fileURLToPath10(import.meta.url)), "../../skills/platform-guide/references/check-style.py");
     const styleWarnings = [];
     for (const [body, surface] of [[input.caption, input.replyToId ? "reply" : "threads"], [input.selfReply, "reply"]]) {
       if (!body) continue;
@@ -101453,11 +101534,11 @@ function checkThreadsEpisode(input) {
     const topic = channelSchema.parse(input.episodeRef);
     const root = realpathSync11(join15(process.cwd(), "data", channel, "episodes"));
     const episode = realpathSync11(join15(root, topic));
-    if (dirname8(episode) !== root || !statSync15(episode).isDirectory()) throw new Error("Invalid episode directory");
+    if (dirname9(episode) !== root || !statSync15(episode).isDirectory()) throw new Error("Invalid episode directory");
     const board = realpathSync11(join15(episode, "storyboard", "scenes.js"));
     if (!board.startsWith(episode + "/") || !statSync15(board).isFile()) throw new Error("Missing episode storyboard");
     const approvalPath = realpathSync11(join15(episode, "threads-publish-approval.json"));
-    if (dirname8(approvalPath) !== episode) throw new Error("Invalid episode approval path");
+    if (dirname9(approvalPath) !== episode) throw new Error("Invalid episode approval path");
     const approval = JSON.parse(readFileSync32(approvalPath, "utf8"));
     if (approval.approved !== true) throw new Error("Episode publishing approval required");
     for (const key of ["caption", "selfReply", "imageUrl", "videoUrl", "linkUrl", "replyToId"]) {
@@ -102784,7 +102865,7 @@ import {
   writeFileSync as nodeWriteFileSync
 } from "node:fs";
 import { open as nodeOpen, readFile, stat as stat3 } from "node:fs/promises";
-import { basename as basename9, dirname as dirname9, extname as extname11, join as join17 } from "node:path";
+import { basename as basename9, dirname as dirname10, extname as extname11, join as join17 } from "node:path";
 function enabledPlatforms() {
   const channelDirs = listChannelDirs();
   return SNS_PLATFORMS.filter(
@@ -103508,7 +103589,7 @@ function writeState(filePath, s2) {
       nodeRmSync(p, { force: true });
       return;
     }
-    nodeMkdirSync(dirname9(p), { recursive: true });
+    nodeMkdirSync(dirname10(p), { recursive: true });
     nodeWriteFileSync(p, JSON.stringify(s2), "utf8");
   } catch {
   }
@@ -104780,7 +104861,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
 
 // src/content-feedback.ts
 import { mkdirSync as mkdirSync20, writeFileSync as writeFileSync24 } from "node:fs";
-import { dirname as dirname10, isAbsolute, join as join18, resolve as resolve11 } from "node:path";
+import { dirname as dirname11, isAbsolute, join as join18, resolve as resolve11 } from "node:path";
 
 // src/content-feedback-html.ts
 function escapeHtml(value) {
@@ -105411,7 +105492,7 @@ async function contentFeedback(input) {
     instagram
   };
   if (htmlPath) {
-    mkdirSync20(dirname10(htmlPath), { recursive: true });
+    mkdirSync20(dirname11(htmlPath), { recursive: true });
     writeFileSync24(htmlPath, renderFeedbackHtml(report), "utf8");
   }
   return { ok: true, status: 200, body: JSON.stringify(report) };
@@ -106507,7 +106588,7 @@ function capabilityStatus() {
           provider: "astra video (self-hosted LTX-2.5)",
           configured: has2(config.astraVideoApiKey),
           needs: "ASTRA_VIDEO",
-          note: "astra_text2video \xB7 astra_img2video \xB7 astra_keyframe_video \xB7 astra_audio2video \xB7 astra_ic_lora \xB7 astra_video_retake \xB7 astra_video_capabilities \xB7 astra_video_list_uploads \xB7 astra_video_delete_upload (upload management requires server endpoint support; configuration is not a live check) \u2014 our own box, no per-call bill, but ONE render at a time (66-184s each plus queue); the batch lane, not the interactive one"
+          note: "astra_text2video \xB7 astra_img2video \xB7 astra_keyframe_video \xB7 astra_audio2video \xB7 astra_ic_lora \xB7 astra_video_upscale (pixel-upscaler-x2, 2x of a source up to about 512x896) \xB7 astra_video_retake \xB7 astra_video_capabilities \xB7 astra_video_list_uploads \xB7 astra_video_delete_upload (upload management requires server endpoint support; configuration is not a live check) \u2014 our own box, no per-call bill, but ONE render at a time (66-184s each plus queue); the batch lane, not the interactive one"
         }
       ]
     },
@@ -107596,6 +107677,16 @@ Audio duration (seconds): ${result.audioDuration ?? "unknown (reused upload or m
 Adapter: ${parsed.adapter}
 Reference: ${parsed.referencePath}` + (parsed.conditioningMaskPath ? `
 Conditioning mask: ${parsed.conditioningMaskPath}` : "")
+    );
+  },
+  astra_video_upscale: async (args) => {
+    const result = await upscaleVideo(parseArgs(astraVideoUpscaleSchema, args));
+    return text2(
+      `${astraVideoReport("Clip upscaled 2x through pixel-upscaler-x2 on the ASTRA video API", result)}
+Source: ${result.source.path} (${result.source.width}x${result.source.height}, ${result.source.frames} frames)
+Dropped trailing frames: ${result.droppedFrames}
+Audio: ${result.audio}
+Review: not_reviewed \u2014 compare identity, mouths and props with the source`
     );
   },
   astra_video_retake: async (args) => {

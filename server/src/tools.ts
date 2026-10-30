@@ -2645,6 +2645,30 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
     },
   },
   {
+    name: 'astra_video_upscale',
+    title: 'ASTRA video 2x upscale (pixel-upscaler-x2)',
+    annotations: HINT.generate,
+    description: `Double an existing clip's resolution with the LTX pixel-upscaler-x2 IC-LoRA on the self-hosted ASTRA video API. Use only when the user asks to upscale a clip; the final canvas scale stays the default for a 720p or smaller source.
+
+The tool measures the clip and sends exactly twice its width and height, its frame rate and the largest 8k+1 frame count that fits (trailing frames beyond it are dropped and reported). The source sides must be multiples of 32 and the doubled frame at most ${ASTRA_VIDEO_MAX_REFERENCE_PIXELS} pixels: 512x896 or 896x512 fits, a 720p clip does not. The source soundtrack is copied back onto the result.
+This is a generative re-render, not a scaler. Measured 2026-10-30: with the shot's own description the scene held, but the face, mouth shapes and a prop colour drifted; a bare "upscale" prompt invented content. Inspect identity, lip sync and props against the source before using the result. Not reviewed by the tool.
+${ASTRA_LIMITS_LINE}
+
+Returns: the saved .mp4 path, the job id, source size and frame count, dropped frames and the audio handling.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sourceVideoPath: { type: 'string', description: 'Local source clip (.mp4 up to 100 MiB). Uploaded automatically; never overwritten.' },
+        prompt: { type: 'string', description: 'What the clip shows: subject, action, setting and light, as in the shot plan. Required; a one-word prompt invents content. 1-2000 characters.' },
+        referenceStrength: { type: 'number', minimum: 0, maximum: 1, description: 'Reference conditioning strength, 0.0-1.0 (server default: 1.0).' },
+        seed: ASTRA_SEED_PROPERTY,
+        outputPath: { type: 'string', description: 'Output directory (default: the source clip\'s directory).' },
+        filename: { type: 'string', description: 'Bare .mp4 filename (default: <source name>-x2.mp4).' },
+      },
+      required: ['sourceVideoPath', 'prompt'],
+    },
+  },
+  {
     name: 'astra_video_retake',
     title: 'ASTRA video retake (re-roll a span)',
     annotations: HINT.generate,

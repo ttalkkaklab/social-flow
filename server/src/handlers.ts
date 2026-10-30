@@ -1052,6 +1052,14 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
         (parsed.conditioningMaskPath ? `\nConditioning mask: ${parsed.conditioningMaskPath}` : ''),
     );
   },
+  astra_video_upscale: async (args) => {
+    const result = await astraVideo.upscaleVideo(parseArgs(astraVideo.astraVideoUpscaleSchema, args));
+    return text(
+      `${astraVideoReport('Clip upscaled 2x through pixel-upscaler-x2 on the ASTRA video API', result)}` +
+        `\nSource: ${result.source.path} (${result.source.width}x${result.source.height}, ${result.source.frames} frames)` +
+        `\nDropped trailing frames: ${result.droppedFrames}\nAudio: ${result.audio}\nReview: not_reviewed — compare identity, mouths and props with the source`,
+    );
+  },
   astra_video_retake: async (args) => {
     const parsed = parseArgs(astraVideo.astraVideoRetakeSchema, args);
     const result = await astraVideo.retakeVideo(parsed);

@@ -35,6 +35,7 @@ import { recordVideoSubmission } from './video-events.js';
  * - **The key never leaves this file.** Errors quote the server's message and the HTTP status,
  *   never the request headers — see redactedFailure().
  */
+import { execFileSync } from 'node:child_process';
 import { createHash, randomInt } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -733,6 +734,58 @@ export const astraIcLoraSchema = z
     .transform(resolveDuration);
 export function icLoraMode(adapter) {
     return adapter === 'ingredients' ? 'ingredients' : 'ic_lora';
+}
+/**
+ * astra_video_upscale — the `pixel-upscaler-x2` IC-LoRA with its geometry worked out from the clip.
+ * A generative re-render, not a scaler: measured 2026-10-30, a 512x896 drama clip kept its scene
+ * but the face, mouth shapes and a prop colour drifted; a bare "upscale" prompt invented content.
+ */
+export const astraVideoUpscaleSchema = z
+    .object({
+    sourceVideoPath: z.string().trim().min(1, 'sourceVideoPath is required'),
+    prompt: promptSchema,
+    referenceStrength: z.number().min(0).max(1).optional(),
+    seed: seedSchema,
+    ...outputFields,
+})
+    .strict();
+/** Exactly twice the source on the 64 grid, under the moving-reference ceiling, 8k+1 frames. */
+export function upscaleGeometry(width, height, frames) {
+    const out = { width: width * 2, height: height * 2 };
+    if (out.width % 64 || out.height % 64) {
+        throw new Error(`pixel-upscaler-x2 needs a source whose sides are multiples of 32 (got ${width}x${height})`);
+    }
+    if (out.width * out.height > ASTRA_VIDEO_MAX_REFERENCE_PIXELS) {
+        throw new Error(`${width}x${height} doubles to ${out.width}x${out.height}, over the ${ASTRA_VIDEO_MAX_REFERENCE_PIXELS}-pixel ceiling for a moving reference; leave the clip to the final canvas scale`);
+    }
+    const numFrames = Math.min(ASTRA_VIDEO_FRAME_LIMITS.ic_lora, frames - ((frames - 1) % ASTRA_VIDEO_FRAME_STEP));
+    if (numFrames < ASTRA_VIDEO_MIN_FRAMES)
+        throw new Error(`pixel-upscaler-x2 needs at least ${ASTRA_VIDEO_MIN_FRAMES} frames (got ${frames})`);
+    return { ...out, numFrames };
+}
+export async function upscaleVideo(args) {
+    const source = path.resolve(args.sourceVideoPath);
+    const probe = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-count_frames', '-show_entries',
+        'stream=codec_type,width,height,r_frame_rate,nb_read_frames', '-of', 'json', source], { encoding: 'utf8', timeout: 120_000 }));
+    const video = probe.streams?.find((s) => s.codec_type === 'video');
+    if (!video)
+        throw new Error(`No video stream in ${source}`);
+    const [num, den] = String(video.r_frame_rate).split('/').map(Number);
+    const frames = Number(video.nb_read_frames), hasAudio = probe.streams.some((s) => s.codec_type === 'audio');
+    const geometry = upscaleGeometry(video.width, video.height, frames);
+    const result = await generateIcLora(astraIcLoraSchema.parse({
+        prompt: args.prompt, adapter: 'pixel-upscaler-x2', referencePath: source, referenceStrength: args.referenceStrength,
+        ...geometry, frameRate: num / (den || 1), seed: args.seed, generateAudio: false,
+        outputPath: args.outputPath ?? path.dirname(source), filename: args.filename ?? `${path.parse(source).name}-x2.mp4`,
+    }));
+    // The adapter renders picture only; the source soundtrack goes back on unchanged.
+    if (hasAudio) {
+        const muxed = `${result.videoPath}.${process.pid}.mux.mp4`;
+        execFileSync('ffmpeg', ['-v', 'error', '-i', result.videoPath, '-i', source, '-map', '0:v', '-map', '1:a', '-c', 'copy', '-shortest', muxed], { timeout: 120_000 });
+        fs.renameSync(muxed, result.videoPath);
+        result.bytes = fs.statSync(result.videoPath).size;
+    }
+    return { ...result, source: { path: source, width: video.width, height: video.height, frames }, droppedFrames: frames - geometry.numFrames, audio: hasAudio ? 'source_remuxed' : 'none' };
 }
 /** Validate audio metadata after upload, before consuming a job slot. */
 /** The server's D6 slack: audio up to 0.06s shorter than the video still renders, so only 0.08s+ is refused. */
