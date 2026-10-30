@@ -35,6 +35,7 @@ test('reference-only inputs keep order and roles; installed adapters enforce the
  assert.match(p.args.prompt,/Image 2 \(room, background\)/);assert.equal(p.args.lastImagePath,undefined);
  assert.doesNotThrow(()=>parseVideoArgs('seedance_reference',p.args));
  const msr=prepareVideoImages('astra_genai_msr',{prompt:'Walk',width:768,height:1280,duration:5,reserveUsd:0},s,root);
+ msr.args.references[0].audioUri='https://example.com/voice.wav';
  assert.equal(msr.args.references[1].background,true);assert.doesNotThrow(()=>parseVideoArgs('astra_genai_msr',msr.args));
  s.visual.references=Array.from({length:10},(_,i)=>({...ref(),id:'hero'+i}));
  const tooMany=prepareVideoImages('seedance_reference',{prompt:'Walk',model:'dreamina-seedance-2-0-260128'},s,root);

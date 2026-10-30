@@ -66,7 +66,7 @@ function voiceReference(character, context, warnings) {
  * picN for the first two subjects, so the owned picture decides the slot; references
  * are never reordered because the prompt already numbers the images.
  */
-function msrVoiceSlot(speaker, character, label, refs, context, warnings, prompt) {
+function msrVoiceSlot(speaker, character, label, refs, context, prompt) {
     const owned = object(character.voiceReference).imagePaths;
     const ownedPaths = Array.isArray(owned) ? owned.map(value => realpathSync(path.resolve(context.episode, 'storyboard', String(value)))) : [];
     let subject = 0, index = -1, slot = 0;
@@ -81,19 +81,13 @@ function msrVoiceSlot(speaker, character, label, refs, context, warnings, prompt
         }
     });
     const id = speaker.speaker;
-    if (index < 0) {
-        warnings.push(`${id}: no MSR subject image matches voiceReference.imagePaths; the voice follows the prompt description only.`);
-        return;
-    }
-    if (slot > 2) {
-        warnings.push(`${id}: shown as MSR subject ${slot}; voice samples fit subjects 1 and 2 only, so this voice follows the prompt description.`);
-        return;
-    }
+    if (index < 0)
+        throw new Error(`msr_voice_required: ${id}: no MSR subject image matches voiceReference.imagePaths`);
+    if (slot > 2)
+        throw new Error(`msr_voice_required: ${id} is MSR subject ${slot}; speakers must be subject 1 or 2`);
     const current = text(refs[index].audioPath);
-    if (current && current !== speaker.reference.path) {
-        warnings.push(`${id}: Image ${index + 1} already carries another speaker's sample; no voice was attached.`);
-        return;
-    }
+    if (current && current !== speaker.reference.path)
+        throw new Error(`msr_voice_required: ${id}: Image ${index + 1} already carries another speaker's sample`);
     refs[index].audioPath = speaker.reference.path;
     speaker.audioIndex = slot;
     speaker.imageIndices = [index + 1];
@@ -104,28 +98,32 @@ const SUPPLIED_AUDIO_TOOLS = new Set(['astra_audio2video', 'astra_genai_audio2vi
 export function prepareVideoVoice(tool, input, context) {
     const args = { ...input };
     const lines = (Array.isArray(context.shot.narration) ? context.shot.narration : []).map(object).filter(line => text(line.tts));
+    const msr = tool === 'astra_genai_msr';
+    // MSR only speaks on-screen dialogue in each speaker's sampled voice (user directive 2026-10-30):
+    // no prompt-only voice, no external TTS lane, no silent cut.
+    if (msr) {
+        if (object(context.shot.visual).video && object(object(context.shot.visual).video).voice !== undefined)
+            throw new Error('visual.video.voice is retired: MSR always uses the speaker\'s voice sample');
+        if (!lines.length)
+            throw new Error('msr_dialogue_required: MSR cuts carry on-screen dialogue; use img2video for a cut without speech');
+        if (lines.some(line => line.delivery !== 'on_screen'))
+            throw new Error('msr_dialogue_required: every MSR line is spoken on screen');
+        if (context.msrVoice !== true)
+            throw new Error('msr_voice_unsupported: the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)');
+    }
     if (!lines.length)
         return { args };
     const doc = object(context.board.SB_DOC), raw = doc.characters;
     const characters = Array.isArray(raw) ? raw.map(object) : Object.entries(object(raw)).map(([id, value]) => ({ ...object(value), id }));
     const visual = object(context.shot.visual);
     const nativeSlot = Boolean(visual.clip) || context.shot.type === 'broll';
-    // MSR voices default to the speaker's pinned sample on a gateway that accepts MSR voice
-    // samples; visual.video.voice:'prompt' keeps the voice to the prompt description. On any
-    // other gateway an unchosen MSR cut keeps the external TTS plan it had before.
-    const msr = tool === 'astra_genai_msr';
-    const msrMode = msr ? text(object(visual.video).voice) || 'reference' : '';
-    if (msr && !['reference', 'prompt'].includes(msrMode))
-        throw new Error("visual.video.voice must be 'reference' or 'prompt'");
-    const audible = msr ? context.msrVoice === true || msrMode === 'prompt' :
-        tool === 'fasth3_omni_reference' || tool.startsWith('veo_') || tool.startsWith('omni_') ||
-            (tool.startsWith('astra_') ? args.generateAudio !== false : args.generateAudio === true);
+    const audible = msr || tool === 'fasth3_omni_reference' || tool.startsWith('veo_') || tool.startsWith('omni_') ||
+        (tool.startsWith('astra_') ? args.generateAudio !== false : args.generateAudio === true);
     const supplied = SUPPLIED_AUDIO_TOOLS.has(tool);
     const native = !supplied && audible && (nativeSlot || lines.some(line => line.delivery === 'on_screen'));
     const spec = SEEDANCE_MODEL_SPECS[args.model];
     const limitedPromptLanguage = tool.startsWith('seedance_') && !String(args.model).includes('2-5');
-    const msrVoice = msr && msrMode === 'reference' && context.msrVoice === true;
-    const reference = native && (tool === 'fasth3_omni_reference' || msrVoice || (tool === 'seedance_reference' && Boolean(spec?.referenceAudio)));
+    const reference = native && (tool === 'fasth3_omni_reference' || msr || (tool === 'seedance_reference' && Boolean(spec?.referenceAudio)));
     const strategy = supplied ? 'supplied_audio' : reference ? 'reference_voice' : native ? 'prompt_voice' : 'external_tts';
     const warnings = [];
     const speakers = [];
@@ -137,11 +135,11 @@ export function prepareVideoVoice(tool, input, context) {
     const audioPaths = Array.isArray(args.referenceAudioPaths) ? args.referenceAudioPaths.map(value => realpathSync(path.resolve(context.episode, String(value)))) : [];
     const imagePaths = Array.isArray(args.referenceImagePaths) ? args.referenceImagePaths.map(value => realpathSync(path.resolve(context.episode, String(value)))) : [];
     const msrRefs = msr && Array.isArray(args.references) ? args.references.map(ref => ({ ...object(ref) })) : [];
-    if (msr && msrMode === 'reference' && !msrVoice && (nativeSlot || lines.some(line => line.delivery === 'on_screen')))
-        warnings.push('The GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities); this cut keeps the external TTS plan. Set visual.video.voice to prompt to use the model voice instead.');
     for (const id of ids) {
         const matches = characters.filter(character => character.id === id);
         if (!id || matches.length !== 1 || !Object.keys(object(matches[0].tts)).length) {
+            if (msr)
+                throw new Error(`msr_voice_required: speaker ${id || '(unspecified)'} has no unique pinned voice`);
             warnings.push(`Missing unique pinned voice for speaker ${id || '(unspecified)'}; no voice was invented.`);
             continue;
         }
@@ -150,10 +148,9 @@ export function prepareVideoVoice(tool, input, context) {
         const label = limitedPromptLanguage && /[가-힣]/.test(speaker.name) ? id : speaker.name;
         if (reference && msr) {
             speaker.reference = voiceReference(character, context, warnings);
-            if (speaker.reference)
-                msrVoiceSlot(speaker, character, label, msrRefs, context, warnings, prompt);
-            else
-                warnings.push(`${id}: no pinned voice sample available; the MSR voice follows the prompt description only.`);
+            if (!speaker.reference)
+                throw new Error(`msr_voice_required: ${id} has no pinned voice sample`);
+            msrVoiceSlot(speaker, character, label, msrRefs, context, prompt);
         }
         else if (reference) {
             speaker.reference = voiceReference(character, context, warnings);
@@ -208,7 +205,7 @@ export function prepareVideoVoice(tool, input, context) {
         if (speakers.length > 1)
             warnings.push('Multiple speakers: check assignment and turn-taking separately from timbre; short turns reduce ambiguity but are not a guarantee.');
         if (msr)
-            warnings.push('MSR renders speech and effects into its own soundtrack. Assembly uses it when sound.audioSource is video, the default for on-screen MSR dialogue; set sound.audioSource to speech to keep the pinned TTS track instead.');
+            warnings.push('MSR renders speech and effects into its own soundtrack; assembly uses it as the cut\'s audio.');
         else if (!nativeSlot)
             warnings.push('visual.video assembly uses the external TTS track. Native voice guidance does not synchronize that WAV; use audio2video for exact supplied-speech staging or the existing visual.clip native-audio slot.');
     }

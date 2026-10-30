@@ -103,6 +103,12 @@ prices. A configured credential does not guarantee a successful generation.
    Use the installed video-model selection reference and cost tables. Explain the
    change each option makes. The host is the recommended initial choice when it
    supports the requested job; the user can explicitly choose an API instead.
+   **LTX means MSR (2026-10-30).** When the user chooses LTX, save
+   `{engine:"astra-genai", model:"ltx-2.5-22b-distilled", operation:"reference",
+   resolution:"1792x1024"}` for 16:9 (`1024x1792` for 9:16). Episode cuts then plan
+   MSR with each speaker's voice sample and the dialogue in the prompt
+   ([GenAI MSR](astra-genai.md#msr-and-v2-video)); each speaking character needs a
+   pinned voice sample before cut video generation.
 2. **Image model.** Recommend **ASTRA GenAI** first for images without readable
    text: save `engine:"astra-genai", model:"z-image-turbo"` after the user's choice.
    This is the GenAI gateway, not local mflux (`engine:"zimage"`). Check

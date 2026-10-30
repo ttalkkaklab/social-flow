@@ -103,35 +103,38 @@ Measure actual output duration before assembly; do not assume it covers an exact
 speech duration. `requiredSeconds`, first/last frames, LoRA, retake and a supplied
 speech track are not part of this MSR contract.
 
-MSR renders speech and diegetic effects into its own soundtrack. **Default voice
-(2026-10-30, user directive):** for on-screen dialogue, `video_plan` attaches each
+MSR renders speech and diegetic effects into its own soundtrack. **One voice mode
+(2026-10-30, user directive):** MSR always receives each speaker's voice sample and
+speaks the dialogue written in the prompt. `astra_genai_msr` refuses a request with no
+sample. For on-screen dialogue `video_plan` attaches each
 speaker's pinned `voiceReference` sample to the subject image listed in that
 character's `voiceReference.imagePaths`, as `references[i].audioPath`, and writes
 `Audio N: voice of …, belongs only to Image M` into the prompt. Only subjects 1 and 2
 take a sample (the gateway pairs `audio_ref1`/`audio_ref2` with `pic1`/`pic2`); a
-speaker shown as subject 3 or later stays on the prompt description with a warning.
-References are never reordered. The sample is a timbre reference, at most 10 seconds
+speaker shown as subject 3 or later, a speaker without a pinned sample, a voiceover
+line or a cut without dialogue is a planning error. References are never reordered. The sample is a timbre reference, at most 10 seconds
 of voice with no background sound; the model imitates it and does not preserve it.
 A sample mixed with a music bed spread that bed under the whole tested scene, and a
 clean sample left the room silent apart from the authored effects.
 
-This needs a gateway whose MSR backend accepts samples. `video_plan` asks
-`GET /v1/ltx/msr/capabilities` first; on a gateway without the route or a backend that
-cannot take samples, an MSR cut keeps its previous external-TTS plan and the plan
-warnings say why.
-Choices per shot:
+This needs a gateway whose MSR backend accepts samples. `video_plan` and the tool ask
+`GET /v1/ltx/msr/capabilities` first; a gateway without the route or a backend that
+cannot take samples fails with `msr_voice_unsupported` before anything is submitted.
+`visual.video.voice` is retired and `sound.audioSource:"speech"` is refused on MSR.
+`prepare-video-sound.js` sets `sound.audioSource:"video"` and routes `auto` effects
+into the MSR soundtrack.
 
-| Choice | Board setting | Result |
-|---|---|---|
-| Voice sample (default) | none | Pinned sample on the speaker's subject; MSR soundtrack in the final cut |
-| Prompt voice | `visual.video.voice: "prompt"` | No sample; voice from the authored acoustic description |
-| Pinned TTS track | `sound.audioSource: "speech"` | Final cut keeps the TTS lane; effects move to post |
+**LTX project default (2026-10-30, user directive).** Choosing LTX at project setup
+saves `{engine:"astra-genai", model:"ltx-2.5-22b-distilled", operation:"reference",
+resolution:"1792x1024"}` (16:9; `1024x1792` for 9:16). `video_plan` uses the saved
+`operation` when a call names none, so episode cuts plan MSR. A direct "LTX로 만들어줘"
+request means `astra_genai_msr` with the character image, the character's voice sample
+and the dialogue in the prompt. The v2 operations take a provider `resolution` string,
+and the gateway refused `1792x1024` there (`unknown provider resolution`, 2026-10-30):
+a v2 call in such a project needs its own supported resolution.
 
-`prepare-video-sound.js` asks the same capability. On a gateway that accepts MSR voice
-samples it sets `sound.audioSource:"video"` when every spoken line is `on_screen` and
-routes `auto` effects into the MSR soundtrack. Otherwise, and whenever a voiceover is
-present, it keeps `"speech"` and post effects, so a gateway without MSR voice samples
-behaves exactly as before.
+The gateway acknowledged an MSR submission after 480 seconds while busy (2026-10-30), so
+GenAI video submissions wait up to 15 minutes for the job ID.
 
 Example `video_plan` args for operation `reference` (dimensions inherit selection):
 

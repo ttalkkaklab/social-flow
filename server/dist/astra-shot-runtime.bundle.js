@@ -6751,49 +6751,6 @@ function annotateReceipt(videoPath, extra) {
 }
 
 // src/astra-genai-client.ts
-function astraGenaiBaseUrl() {
-  return (process.env.ASTRA_GENAI_URL || "https://genai.astravision.co.kr").replace(/\/+$/, "");
-}
-function requireAstraGenaiKey() {
-  if (!config.astraGenaiApiKey) throw new Error("ASTRA_GENAI_API_KEY is required: issue a gateway token in the GenAI console; ASTRA_VIDEO is a separate credential.");
-  return config.astraGenaiApiKey;
-}
-var GenaiRequestError = class extends Error {
-  constructor(message, terminal, httpStatus) {
-    super(message);
-    this.terminal = terminal;
-    this.httpStatus = httpStatus;
-  }
-  terminal;
-  httpStatus;
-};
-async function requestGenai(method, route, body, timeoutMs = 6e4, onResponse) {
-  const key = requireAstraGenaiKey();
-  const response = await fetch(astraGenaiBaseUrl() + route, {
-    method,
-    redirect: "error",
-    signal: AbortSignal.timeout(timeoutMs),
-    headers: { Authorization: `Bearer ${key}`, ...body === void 0 ? {} : { "Content-Type": "application/json" } },
-    ...body === void 0 ? {} : { body: JSON.stringify(body) }
-  });
-  const text = await response.text();
-  if (!response.ok) {
-    const detail = text.replaceAll(key, "[redacted]").slice(0, 2e3);
-    let terminal = response.status >= 400 && response.status < 500 && ![408, 409, 425].includes(response.status);
-    try {
-      const evidence = JSON.parse(text);
-      terminal ||= typeof evidence.request_id === "string" && ["failed", "FAILED", "error"].includes(evidence.status ?? evidence.output?.task_status);
-    } catch {
-    }
-    throw new GenaiRequestError(`ASTRA GenAI HTTP ${response.status}: ${detail}`, terminal, response.status);
-  }
-  onResponse?.(response.headers);
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error("ASTRA GenAI returned a non-JSON response; inspect the existing request before retrying.");
-  }
-}
 var genaiImageUriSchema = external_exports.string().min(1).refine((value) => {
   if (/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(value)) return true;
   try {
@@ -6873,6 +6830,8 @@ var genaiMsrSchema = external_exports.object({
   const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
   const backgrounds = args.references.filter((ref) => ref.background).length;
   if (backgrounds > 1 || args.references.length - backgrounds > 4) issue("MSR supports at most four subjects and one background");
+  if (!args.references.some((ref) => oneOf(ref.audioUri, ref.audioPath)))
+    issue("MSR requires a character voice sample on subject 1 or 2; write the dialogue in the prompt");
   let subject = 0;
   for (const ref of args.references) {
     subject += Number(!ref.background);
@@ -6887,19 +6846,6 @@ var genaiMsrSchema = external_exports.object({
     if (frames < 25 || frames > 361) issue("MSR duration must round to 25..361 frames");
   }
 });
-var msrVoiceCache;
-async function refreshGenaiMsrVoice(force = false) {
-  if (!force && msrVoiceCache && Date.now() - msrVoiceCache.at < msrVoiceCache.ttl) return msrVoiceCache.value;
-  let value = false, ttl = 6e4;
-  try {
-    const body = external_exports.object({ voice_references: external_exports.boolean() }).passthrough().parse(await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3));
-    value = body.voice_references;
-    ttl = 6e5;
-  } catch {
-  }
-  msrVoiceCache = { value, at: Date.now(), ttl };
-  return value;
-}
 var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "msr"]);
 var receiptSchema = external_exports.object({
   version: external_exports.literal(1),
@@ -6918,6 +6864,7 @@ var statusSchema = external_exports.object({
   error: external_exports.unknown().optional()
 }).passthrough();
 var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
+var SUBMIT_TIMEOUT_MS2 = 15 * 6e4;
 
 // src/omni-client.ts
 var VALID_OMNI_ASPECT_RATIOS = ["16:9", "9:16"];
@@ -7659,7 +7606,7 @@ var schemas = {
   omni_extend: omniExtendSchema,
   omni_edit: omniEditSchema
 };
-function prepareVideoSound(tool, input, sound = {}, options = {}) {
+function prepareVideoSound(tool, input, sound = {}) {
   const schema = schemas[tool];
   if (!schema) throw new Error("Unsupported sound adapter: " + tool);
   external_exports.string().min(1).parse(input.prompt);
@@ -7669,7 +7616,8 @@ function prepareVideoSound(tool, input, sound = {}, options = {}) {
   if (sound.audioSource !== void 0 && !["video", "speech"].includes(String(sound.audioSource)))
     throw new Error("sound.audioSource must be video or speech");
   const fixedInput = tool === "astra_audio2video" || tool === "astra_genai_audio2video";
-  let nativeAudio = !fixedInput && (tool !== "astra_genai_msr" || options.msrAudio === true);
+  if (tool === "astra_genai_msr" && sound.audioSource === "speech") throw new Error("MSR keeps its own soundtrack; sound.audioSource speech is not allowed");
+  let nativeAudio = !fixedInput;
   if (tool.startsWith("seedance_")) {
     const model = input.model ?? (tool === "seedance_reference" ? DEFAULT_SEEDANCE_REFERENCE_MODEL : DEFAULT_SEEDANCE_MODEL);
     const spec = SEEDANCE_MODEL_SPECS[model];
@@ -7739,7 +7687,6 @@ export {
   prepareVideoSound,
   priceOf,
   readBoard,
-  refreshGenaiMsrVoice,
   requireWorkflow,
   resolveVideoDuration,
   serializeBoard

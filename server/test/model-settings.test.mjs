@@ -227,6 +227,8 @@ test('GenAI is a separate model-selecting engine; legacy Astra remains fixed-mod
   assert.throws(()=>settings.validateModels({video:{engine:'astra-genai'}},true),/model is required/);
   assert.doesNotThrow(()=>settings.validateModels({video:{engine:'astra'}},true));
   assert.throws(()=>settings.validateModels({video:{engine:'astra',model:video.model}},true),/fixed server model/);
+  assert.doesNotThrow(()=>settings.validateModels({video:{...video,resolution:'1792x1024',operation:'reference'}},true));
+  assert.throws(()=>settings.validateModels({video:{...video,operation:'msr'}},true),/video.operation/);
 });
 
 
