@@ -977,7 +977,7 @@
         "filename"
       ],
       "modelConstraints": {
-        "note": "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; a character voice sample on subject 1 or 2 is required and the dialogue goes in the prompt."
+        "note": "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; an optional character voice sample on subject 1 or 2 sets the timbre of that speaker, and the dialogue goes in the prompt."
       }
     },
     {

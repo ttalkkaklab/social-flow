@@ -516,6 +516,14 @@ function perShotLookFindings(win, { bad, machine, warn }) {
   const optIn = production.cast !== undefined || scenes.some((scene) => scene.shot?.cutType !== undefined);
   const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
 
+  // A shot references at most two principal characters (user directive 2026-10-31): MSR conditions
+  // two characters well, and anyone else on screen is an unreferenced extra the model draws.
+  scenes.forEach((scene, index) => {
+    const ids = castIds(scene.visual?.character);
+    if (ids.length > 2)
+      bad(`shot ${index + 1}`, `[character-limit] visual.character lists ${ids.length} principal characters (${ids.join(', ')}); keep two per shot and split the beat into shots, describing anyone else as an unreferenced extra in the action`);
+  });
+
   if (optIn) {
     Object.entries(cast).forEach(([id, entry]) => {
       if (!entry || typeof entry !== 'object' || Array.isArray(entry) || typeof entry.sheet !== 'string') return;
@@ -3035,6 +3043,12 @@ function selftest() {
       return !lookHas(findings, 'bad', /\[character-missing\]/) &&
         !lookHas(findings, 'warn', /\[character-missing\]/);
     }) && !lookHas(perShot(perShotFixture()), 'bad', /\[character-missing\]/);
+  })());
+  ok('character-limit rejects three principal characters in one shot and accepts two', (() => {
+    const three = perShotFixture(); three.SCENES[0].visual.character = ['yi', 'won', { id: 'kim', scope: 'background only' }];
+    const two = perShotFixture(); two.SCENES[0].visual.character = ['yi', 'won'];
+    return lookHas(perShot(three), 'bad', /\[character-limit\].*3 principal/) &&
+      !lookHas(perShot(two), 'bad', /\[character-limit\]/);
   })());
   ok('character-on-empty-cut warns on a document cast and accepts an empty document', (() => {
     const carried = perShotFixture(); carried.SCENES[0].shot.cutType = 'document';

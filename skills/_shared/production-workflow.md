@@ -44,7 +44,8 @@ or visual quality. Independent review and actual generation/publishing authoriza
 
 Storyboard plans the text and shots; produce performs authorized image generation in
 stage order and then video. Autoproduce coordinates both. A text-only request stops after
-the text stage, and an image-board request stops after image_review. If required
+the text stage, and an image-board request stops after image_storyboard (or after
+image_review when the user asked for one). If required
 character media or spending authorization is missing, report the blocked stage. Do not
 silently bypass it or start paid work beyond the user's scope.
 
@@ -63,6 +64,9 @@ The seven stage skills, in order, are [review-context](../review-context/SKILL.m
 [generate-cut-videos](../generate-cut-videos/SKILL.md) and
 [review-cut-videos](../review-cut-videos/SKILL.md).
 Autoproduce coordinates state and invokes them; it does not substitute its own verdict.
+review-cut-images runs only when the user asks for an image review (owner directive,
+2026-10-31). Otherwise `begin video` records image_review as `skipped` over the current
+image hashes; a later image change still makes that record stale and requires a rewind.
 Produce supplies the shared generation, assembly and delivery implementations.
 
 There is no skip, force, waiver or renderer fallback in this sequence. The generation
@@ -167,7 +171,9 @@ A review-only command stops at its own boundary; it does not regenerate downstre
 For image_storyboard, keep one entry per cut ID: `image` is the primary file and
 `images` lists additional ending/intermediate images and appearance references.
 The inventory must cover every structured `visual.frames`/`visual.references` path.
-All registered images are decoded, hashed and covered by image_review. Generation may
-write any registered image for the cut; an unregistered output is refused. Video plans
-with structured references can use only reviewed files. Existing one-image records remain
+All registered images are decoded, hashed and covered by the image_review record,
+reviewed or skipped. Generation may write any registered image for the cut; an
+unregistered output is refused. Video plans with structured references can use only image
+bytes a completed image stage registered (character, prop and background sheets, Blender
+compositions or cut images), once image_review is reviewed or skipped. Existing one-image records remain
 readable; migration must reuse inspected assets and rewind affected stages.

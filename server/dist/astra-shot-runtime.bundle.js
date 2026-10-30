@@ -4233,7 +4233,8 @@ var STAGES = [
 var IMAGE_STAGES = ["characters", "props", "backgrounds", "blender_composition", "image_storyboard"];
 var stageSchema = external_exports.enum(STAGES);
 var entrySchema = external_exports.object({ images: external_exports.array(external_exports.string().min(1)).optional(), id: external_exports.string().min(1), text: external_exports.string().min(1), image: external_exports.string().min(1).optional(), blend: external_exports.string().min(1).optional(), video: external_exports.string().min(1).optional() }).strict();
-var recordSchema = external_exports.object({ stage: stageSchema, entries: external_exports.array(entrySchema), notApplicable: external_exports.string().optional(), criteriaHash: external_exports.string().optional(), hashes: external_exports.record(external_exports.string()).optional() }).strict();
+var skippedSchema = external_exports.object({ requestedBy: external_exports.string().min(1).optional(), request: external_exports.string().trim().min(1), at: external_exports.string().min(1) }).strict();
+var recordSchema = external_exports.object({ stage: stageSchema, entries: external_exports.array(entrySchema), notApplicable: external_exports.string().optional(), skipped: skippedSchema.optional(), criteriaHash: external_exports.string().optional(), hashes: external_exports.record(external_exports.string()).optional() }).strict();
 var stateSchema = external_exports.object({ version: external_exports.literal(2), completed: external_exports.array(recordSchema), active: recordSchema.optional(), rubrics: external_exports.record(external_exports.string()).default({}) }).strict();
 var workflowSchema = external_exports.object({
   episode: external_exports.string().min(1),
@@ -4292,6 +4293,10 @@ function verifyPrevious(state) {
   }
 }
 function validateRecord(record) {
+  if (record.skipped) {
+    if (record.stage !== "image_review" || record.entries.length || record.notApplicable) throw new Error("workflow_invalid_skip");
+    return;
+  }
   if (record.notApplicable) {
     if (!["characters", "props", "backgrounds"].includes(record.stage) || !record.notApplicable.trim() || record.entries.length) throw new Error("workflow_invalid_not_applicable");
   } else if (!record.entries.length) throw new Error("workflow_empty_stage");
@@ -4343,7 +4348,7 @@ function requireWorkflow(directory, kind, assetId, outputFile) {
   } else if (kind === "delivery") {
     if (state.completed.length !== STAGES.length) throw new Error("workflow_out_of_order: complete video_review before assembly or delivery");
   } else if (kind === "video") {
-    if (state.active?.stage !== "video") throw new Error("workflow_out_of_order: complete image_review and begin video");
+    if (state.active?.stage !== "video") throw new Error("workflow_out_of_order: begin video after image_storyboard");
     if (assetId && !state.active.entries.some((entry2) => entry2.id === assetId)) throw new Error("workflow_unknown_cut");
   } else if (kind === "text") {
     if (!state.completed.length) throw new Error("workflow_out_of_order: complete characters before text_storyboard");
@@ -6830,8 +6835,6 @@ var genaiMsrSchema = external_exports.object({
   const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
   const backgrounds = args.references.filter((ref) => ref.background).length;
   if (backgrounds > 1 || args.references.length - backgrounds > 4) issue("MSR supports at most four subjects and one background");
-  if (!args.references.some((ref) => oneOf(ref.audioUri, ref.audioPath)))
-    issue("MSR requires a character voice sample on subject 1 or 2; write the dialogue in the prompt");
   let subject = 0;
   for (const ref of args.references) {
     subject += Number(!ref.background);

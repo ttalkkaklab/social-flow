@@ -847,7 +847,14 @@ the required `style.world` is the fallback.
 
 New generated shots declare `visual.frames` and `visual.references` (an empty array
 means no extra conditioning). Keep the number of images tied to visible requirements,
-not the model's maximum slot count.
+not the model's maximum slot count. MSR (`astra_genai_msr`, `frames.mode:"reference"`) is
+the exception: each of at most two characters defaults to its sheet panels — face close-up,
+headless front, headless back for one; both faces, then both fronts for two — with
+`use:"video"` or `"both"` and the background last
+([GenAI MSR](../../_shared/astra-genai.md#msr-and-v2-video)). An MSR
+reference's `purpose` becomes its `Image N:` description in the prompt, so write what the
+image shows (who, clothing, materials) rather than an instruction, and leave out framing
+words such as close-up: MSR turns them into shots.
 
 ```js
 visual: {
@@ -2159,7 +2166,7 @@ them anywhere in the assembled prompt, the `--scene`·`--mood`·`--exclude` text
 
 ```js
 character: "claude"                  // one character on screen
-character: ["mouse", "claude"]       // two — array order is reference weight, so the shot's subject goes first
+character: ["mouse", "claude"]       // two — array order is reference weight, so the shot's subject goes first; two is the limit
 character: null                      // nobody from the channel cast is on screen
 
 character: [                         // an entry may carry its jurisdiction instead of being a bare id
@@ -2167,6 +2174,13 @@ character: [                         // an entry may carry its jurisdiction inst
   { id: "claude", scope: "appears only in the last second, and its face never transfers to anyone else" }
 ]
 ```
+
+**Two principal characters per shot (user directive, 2026-10-31).** `visual.character` lists at
+most two ids; `check-scenes.js` rejects a third (`[character-limit]`) in draft and full checks.
+When a beat needs three principal characters, split it into shots — the two who act, then the
+reaction or reverse angle — instead of crowding one frame. Extras and unnamed figures stay out
+of `visual.character`; describe them by appearance in `videoDesign.action` and the model draws
+them without a reference.
 
 **`scope` is the reference's jurisdiction** — one clause saying what that reference governs, and
 where it may appear. It exists because a reference leaks: hand over a character sheet and the

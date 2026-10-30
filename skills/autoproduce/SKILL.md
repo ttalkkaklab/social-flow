@@ -86,7 +86,8 @@ stage and does not imply generation or publication authorization.
    [review-camera](../review-camera/SKILL.md).
 3. Invoke [compose-blender](../compose-blender/SKILL.md).
 4. Invoke [generate-cut-images](../generate-cut-images/SKILL.md).
-5. Invoke [review-cut-images](../review-cut-images/SKILL.md).
+5. Invoke [review-cut-images](../review-cut-images/SKILL.md) only when the user asked
+   for an image review; otherwise go straight to video (the server records the skip).
 6. Invoke [generate-cut-videos](../generate-cut-videos/SKILL.md).
 7. Invoke [review-cut-videos](../review-cut-videos/SKILL.md).
 

@@ -106,9 +106,9 @@ prices. A configured credential does not guarantee a successful generation.
    **LTX means MSR (2026-10-30).** When the user chooses LTX, save
    `{engine:"astra-genai", model:"ltx-2.5-22b-distilled", operation:"reference",
    resolution:"1792x1024"}` for 16:9 (`1024x1792` for 9:16). Episode cuts then plan
-   MSR with each speaker's voice sample and the dialogue in the prompt
-   ([GenAI MSR](astra-genai.md#msr-and-v2-video)); each speaking character needs a
-   pinned voice sample before cut video generation.
+   MSR with the dialogue in the prompt and each speaker's pinned voice sample when one
+   exists ([GenAI MSR](astra-genai.md#msr-and-v2-video)); a speaker without a sample is
+   voiced from the prompt.
 2. **Image model.** Recommend **ASTRA GenAI** first for images without readable
    text: save `engine:"astra-genai", model:"z-image-turbo"` after the user's choice.
    This is the GenAI gateway, not local mflux (`engine:"zimage"`). Check

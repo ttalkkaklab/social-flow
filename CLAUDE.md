@@ -42,8 +42,10 @@ generate-cut-videos -> review-cut-videos. Autoproduce coordinates; the server en
 stage completion, current evidence and rewind. Character, prop and background sheets
 remain preparation assets. Context review follows text; props/backgrounds finish before
 camera review. Required Blender still compositions precede cut image generation. Animated
-video previz remains optional. No renderer fallback or review skip is permitted for these
-cut stages. This overrides the earlier guidance-only review policy for this scope.
+video previz remains optional. No renderer fallback is permitted for these cut stages.
+review-cut-images runs only when the user asks for an image review (owner directive,
+2026-10-31); otherwise beginning video records image_review as skipped over the current
+image hashes. This overrides the earlier guidance-only review policy for this scope.
 
 Context review uses a fresh independent reviewer with audience-visible actions and words
 only, before synopsis, motives or author explanations. Test what an unbriefed viewer can
@@ -83,14 +85,30 @@ provenance so the user can request targeted corrections later through `edit-spee
 voice-lock ASR. Follow `skills/produce/references/shot-speech.md`. Narrator and character
 lines use explicit speakers; video models are replaceable adapters with declared capabilities.
 
-## MSR voice and LTX default (user directive, 2026-10-30)
+## MSR voice and LTX default (user directive, 2026-10-30; voice optional 2026-10-31)
 
-MSR has one mode: each speaker's pinned voice sample rides on the subject image that
-shows them (subjects 1–2 only), the dialogue is written in the prompt, and MSR's own
-speech-and-effects soundtrack is the cut's audio. `astra_genai_msr` refuses a request
-without a voice sample, and a gateway whose MSR backend does not accept samples is a
-hard `msr_voice_unsupported` error. There is no prompt-only voice, no external TTS lane
-and no silent MSR cut; a cut without on-screen speech uses img2video.
+MSR renders a cut from subject and background images; any dialogue is written in the
+prompt, and MSR's own speech-and-effects soundtrack is the cut's audio. A speaker's pinned
+voice sample is optional: when the speaker is subject 1 or 2 and the gateway accepts
+samples, the sample rides on that subject image; otherwise the prompt voices the speaker
+and the plan records a warning. A request that sends a sample to a gateway without sample
+support is a hard `msr_voice_unsupported` error. There is no external TTS lane for MSR;
+a cut without dialogue can use MSR or img2video. A character's default MSR references are
+its sheet panels — face close-up, headless front and headless back (2026-10-31): one
+character uses all three; two use each face, then each front; the background goes last.
+At most two characters take references; anyone else on screen is described in the action
+and drawn by the model, and `video_plan` refuses references for a third character
+(`msr_character_limit`). `video_plan` names the panels that show one character and lays the
+prompt out as the model card does: reference descriptions first, then the action, then
+`Audio N (Image M): "…"` lines.
+
+## Two principal characters per shot (user directive, 2026-10-31)
+
+From the storyboard on, a shot's `visual.character` lists at most two principal characters;
+`check-scenes.js` rejects a third (`[character-limit]`). When a beat needs three principal
+characters, split it into shots — pairs, reverse angles or a cutaway — instead of crowding one
+frame. Extras and unnamed figures stay out of `visual.character` and are described by
+appearance in the action, without a reference image.
 Choosing LTX at project setup saves `{engine:"astra-genai", operation:"reference"}`
 with `resolution:"1792x1024"` for 16:9 (`1024x1792` for 9:16), so `video_plan` plans
 MSR when a call names no operation. GenAI submissions wait up to 15 minutes for the

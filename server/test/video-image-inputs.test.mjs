@@ -41,6 +41,19 @@ test('reference-only inputs keep order and roles; installed adapters enforce the
  const tooMany=prepareVideoImages('seedance_reference',{prompt:'Walk',model:'dreamina-seedance-2-0-260128'},s,root);
  assert.throws(()=>parseVideoArgs('seedance_reference',tooMany.args),/at most 9/);
 });
+test('MSR names the character-sheet panels of one character as one subject',t=>{
+ const root=fixture(t),sheet=path.join(root,'assets/characters/kardum');fs.mkdirSync(sheet,{recursive:true});
+ for(const name of ['face','body','back'])fs.writeFileSync(path.join(sheet,name+'.png'),png);
+ fs.writeFileSync(path.join(sheet,'panels.json'),JSON.stringify({panels:{front:{file:'body.png'},back:{file:'back.png'},face:{file:'face.png'}}}));
+ const panel=(id,file)=>({id,path:'../assets/characters/kardum/'+file,role:'character',use:'video',purpose:'Kardum '+id});
+ const s=shot('reference',[panel('face','face.png'),ref(),panel('front','body.png'),panel('back','back.png'),ref('room','video','background')]);
+ const msr=prepareVideoImages('astra_genai_msr',{prompt:'Walk',width:768,height:1280,duration:5,reserveUsd:0},s,root);
+ assert.match(msr.args.prompt,/^Image 1: character, Kardum face\nImage 2: character, Preserve hero appearance\n/);
+ assert.match(msr.args.prompt,/\nImage 5: background, Preserve room appearance\nImage 1 \(face\), Image 3 \(headless front body\), Image 4 \(headless back body\) show one character, kardum.*\n\nWalk$/);
+ assert.doesNotMatch(prepareVideoImages('seedance_reference',{prompt:'Walk',model:'dreamina-seedance-2-0-260128'},s,root).args.prompt,/show one character/);
+ s.visual.references.splice(2,0,{...ref('mid','video','character'),id:'ally'},{...ref('end','video','character'),id:'rival'});
+ assert.throws(()=>prepareVideoImages('astra_genai_msr',{prompt:'Walk',width:768,height:1280,duration:5,reserveUsd:0},s,root),/msr_character_limit: references show 4 characters/);
+});
 test('missing, corrupt, conflicting, extra and unsupported image constraints fail without dispatch',t=>{
  const root=fixture(t);
  assert.throws(()=>prepareVideoImages('seedance_reference',{prompt:'x'},shot('first_last',[ref()]),root),/cannot combine/);
