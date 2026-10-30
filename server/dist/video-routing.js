@@ -16,7 +16,7 @@ import { atomicJson, videoTransaction } from './video-state.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
 import { OMNI_MODEL } from './omni-client.js';
 import { videoEvents } from './video-events.js';
-import { getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema } from './astra-genai-video.js';
+import { getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema, genaiMsrVoiceReferences, refreshGenaiMsrVoice } from './astra-genai-video.js';
 import { hasStructuredImages, prepareVideoImages } from './video-image-inputs.js';
 import { prepareVideoVoice } from './video-voice.js';
 const load = createRequire(import.meta.url);
@@ -149,7 +149,7 @@ export function planVideo(raw) {
     const images = prepareVideoImages(tool, bindSelection(tool, input.args, selection), context.shot, context.episode);
     if (hasStructuredImages(context.shot))
         requireReviewedImages(context.episode, (images.imageBindings ?? []).map(binding => binding.path));
-    const voice = prepareVideoVoice(tool, images.args, context);
+    const voice = prepareVideoVoice(tool, images.args, { ...context, msrVoice: genaiMsrVoiceReferences() });
     const args = parseVideoArgs(tool, voice.args);
     const output = canonical(path.resolve(context.episode, typeof args.outputPath === 'string' ? args.outputPath : '.work/video'));
     if (!within(context.episode, output))
@@ -211,6 +211,8 @@ export async function executeVideo(raw, dispatch) {
     const context = routingContext(episode, plan.shotId);
     if (context.revision !== plan.contextRevision)
         throw new Error('video_plan_stale: selection or authorization changed');
+    if (plan.tool === 'astra_genai_msr')
+        await refreshGenaiMsrVoice();
     const refreshed = planVideo({ episode, shotId: plan.shotId, requestId: plan.requestId, tool: plan.tool, args: plan.sourceArgs ?? plan.args });
     if (refreshed.id !== id)
         throw new Error('video_plan_stale: inputs, price or adapter contract changed');

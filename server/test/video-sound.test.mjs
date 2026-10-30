@@ -114,3 +114,31 @@ test('complete builder keeps post SFX audible when the retained source is silent
     assert.equal(receipt.silent,true);assert.ok(receipt.postRms>.001);assert.ok(receipt.beforePostRms<.0001);
   } finally {rmSync(dir,{recursive:true,force:true});}
 });
+
+test('MSR renders effects natively; on-screen dialogue defaults to its own soundtrack', async () => {
+  const msrArgs = { prompt: 'Man hangs up.', references: [{ imageUri: 'https://example.com/p.png' }], reserveUsd: 0 };
+  const msr = prepareVideoSound('astra_genai_msr', msrArgs, intent, { msrAudio: true });
+  assert.equal(msr.sound.effects[0].delivery, 'native');
+  assert.equal(msr.arguments.generateAudio, undefined);
+  assert.equal(msr.capabilities.inputAudio, 'reference');
+  assert.equal(prepareVideoSound('astra_genai_msr', msrArgs, intent).sound.effects[0].delivery, 'post');
+  const { prepare: prepareSound } = require('../../skills/produce/references/prepare-video-sound.js');
+  const dir = mkdtempSync(join(tmpdir(), 'msr-sound-')), fetch = globalThis.fetch, key = process.env.ASTRA_GENAI_API_KEY;
+  process.env.ASTRA_GENAI_API_KEY = 'fixture'; // read when the runtime bundle first loads
+  try {
+    const scene = { id: 's1', narration: [{ id: 'l1', speaker: 'hero', tts: 'Hello.', delivery: 'on_screen' }], visual: { video: {} }, sound: { effects: intent.effects } };
+    const request = { prompt: 'Man hangs up.', references: [{ imageUri: 'https://example.com/p.png' }], reserveUsd: 0 };
+    const save = () => writeFileSync(join(dir, 'scenes.js'), `window.SCENES=${JSON.stringify([scene])};`);
+    const source = async supported => {
+      globalThis.fetch = async () => supported ? Response.json({ msr: true, voice_references: true }) : new Response('Not Found', { status: 404 });
+      return (await prepareSound(dir, 's1', 'astra_genai_msr', request)).sound;
+    };
+    save();
+    assert.equal((await source(false)).audioSource, 'speech'); // gateway without voice samples keeps TTS
+    const native = await source(true);
+    assert.equal(native.audioSource, 'video');
+    assert.equal(native.effects[0].delivery, 'native');
+    scene.narration[0].delivery = 'voiceover'; save();
+    assert.equal((await source(true)).audioSource, 'speech');
+  } finally { rmSync(dir, { recursive: true, force: true }); globalThis.fetch = fetch; process.env.ASTRA_GENAI_API_KEY = key; }
+});

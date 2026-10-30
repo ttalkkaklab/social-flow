@@ -137,3 +137,25 @@ test('audio-to-video submits and recovers on its own route, keeping the soundtra
   const prepared = prepareVideoSound('astra_genai_audio2video', args, { audioSource: 'video' });
   assert.equal(prepared.arguments.generateAudio, undefined); assert.equal(prepared.capabilities.inputAudio, 'preserved');
 });
+
+test('MSR voice samples ride on subjects 1-2 and the capability check fails closed', async t => {
+  const { genaiMsrSchema, buildGenaiMsrBody, refreshGenaiMsrVoice, genaiMsrVoiceReferences } = await import('../dist/astra-genai-video.js');
+  const dir = setup(t), wav = path.join(dir, 'voice.wav');
+  execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'sine=d=0.2', '-ac', '1', wav]);
+  const ref = { imageUri: 'https://example.com/person.png' }, msr = references => ({ prompt: 'x', reserveUsd: 0, references });
+  const body = buildGenaiMsrBody(genaiMsrSchema.parse(msr([ref, { ...ref, audioPath: wav }, { ...ref, background: true }])));
+  assert.equal(body.references[0].audio_uri, undefined);
+  assert.match(body.references[1].audio_uri, /^data:audio\/wav;base64,/);
+  for (const references of [[ref, { ...ref, background: true, audioPath: wav }], [ref, ref, { ...ref, audioPath: wav }],
+    [{ ...ref, audioPath: wav, audioUri: 'https://example.com/v.wav' }]])
+    assert.equal(genaiMsrSchema.safeParse(msr(references)).success, false);
+  globalThis.fetch = async url => {
+    assert.ok(String(url).endsWith('/v1/ltx/msr/capabilities'));
+    return Response.json({ msr: true, voice_references: true });
+  };
+  assert.equal(await refreshGenaiMsrVoice(true), true);
+  assert.equal(genaiMsrVoiceReferences(), true);
+  globalThis.fetch = async () => new Response('Not Found', { status: 404 }); // a gateway without the route
+  assert.equal(await refreshGenaiMsrVoice(true), false);
+  assert.equal(genaiMsrVoiceReferences(), false);
+});

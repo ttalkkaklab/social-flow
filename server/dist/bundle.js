@@ -65366,7 +65366,7 @@ var require_video_catalog = __commonJS({
           deployment: "genai-ltx-msr",
           operation: "reference",
           voice: {
-            voiceReference: "unsupported",
+            voiceReference: "backend_dependent",
             suppliedSpeech: "unsupported",
             exactAudioPreservation: false,
             voiceContinuation: "unsupported",
@@ -65388,7 +65388,7 @@ var require_video_catalog = __commonJS({
             "filename"
           ],
           modelConstraints: {
-            note: "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. No supplied speech or audio controls."
+            note: "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; subjects 1-2 may carry a voice sample when the gateway MSR backend accepts them."
           }
         },
         {
@@ -84303,11 +84303,14 @@ var genaiMsrSchema = external_exports.object({
   references: external_exports.array(external_exports.object({
     imageUri: genaiImageUriSchema.optional(),
     imagePath: external_exports.string().min(1).optional(),
-    background: external_exports.boolean().default(false)
+    background: external_exports.boolean().default(false),
+    // Voice sample for this subject; the gateway pairs it with the same picture slot.
+    audioUri: external_exports.string().min(1).optional(),
+    audioPath: external_exports.string().min(1).optional()
   }).strict().refine(
     (ref) => Number(!!ref.imageUri) + Number(!!ref.imagePath) === 1,
     "Supply exactly one imageUri or imagePath"
-  )).min(1).max(5),
+  ).refine((ref) => oneOf(ref.audioUri, ref.audioPath) <= 1, "Supply at most one audioUri or audioPath")).min(1).max(5),
   referenceStrength: external_exports.number().finite().min(0).max(1).default(1),
   referenceFrames: external_exports.union([external_exports.literal(25), external_exports.literal(33)]).default(33),
   width: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1536),
@@ -84323,6 +84326,13 @@ var genaiMsrSchema = external_exports.object({
   const issue2 = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
   const backgrounds = args.references.filter((ref) => ref.background).length;
   if (backgrounds > 1 || args.references.length - backgrounds > 4) issue2("MSR supports at most four subjects and one background");
+  let subject = 0;
+  for (const ref of args.references) {
+    subject += Number(!ref.background);
+    if (!oneOf(ref.audioUri, ref.audioPath)) continue;
+    if (ref.background) issue2("MSR voice samples belong to subjects, not the background");
+    else if (subject > 2) issue2("MSR voice samples fit the first two subjects only");
+  }
   if (args.width * args.height > 2064384) issue2("MSR maximum is 2,064,384 pixels");
   if (args.duration !== void 0) {
     if (args.numFrames !== void 0) issue2("Omit numFrames when using duration");
@@ -84333,7 +84343,11 @@ var genaiMsrSchema = external_exports.object({
 function buildGenaiMsrBody(args) {
   return {
     prompt: args.prompt,
-    references: args.references.map((ref) => ({ image_uri: genaiSourceUri(ref.imageUri, ref.imagePath), background: ref.background })),
+    references: args.references.map((ref) => ({
+      image_uri: genaiSourceUri(ref.imageUri, ref.imagePath),
+      background: ref.background,
+      ...oneOf(ref.audioUri, ref.audioPath) ? { audio_uri: genaiAudioUri(ref.audioUri, ref.audioPath) } : {}
+    })),
     reference_strength: args.referenceStrength,
     reference_frames: args.referenceFrames,
     width: args.width,
@@ -84342,6 +84356,22 @@ function buildGenaiMsrBody(args) {
     seed: args.seed,
     ...args.duration === void 0 ? { num_frames: args.numFrames ?? 121 } : { duration: args.duration }
   };
+}
+var msrVoiceCache;
+async function refreshGenaiMsrVoice(force = false) {
+  if (!force && msrVoiceCache && Date.now() - msrVoiceCache.at < msrVoiceCache.ttl) return msrVoiceCache.value;
+  let value = false, ttl = 6e4;
+  try {
+    const body = external_exports.object({ voice_references: external_exports.boolean() }).passthrough().parse(await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3));
+    value = body.voice_references;
+    ttl = 6e5;
+  } catch {
+  }
+  msrVoiceCache = { value, at: Date.now(), ttl };
+  return value;
+}
+function genaiMsrVoiceReferences() {
+  return msrVoiceCache?.value ?? false;
 }
 function buildGenaiVideoBody(args) {
   return {
@@ -84535,7 +84565,7 @@ var GENAI_TOOLS = [
   {
     name: "astra_genai_msr",
     title: "Generate an LTX video from subject and background references",
-    description: "Combine character, clothing, object and background references in one MSR video through ASTRA GenAI. Use video_plan operation reference and video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Up to four subject images and one background; place the background last and number prompt images in that order. Local PNG/JPEG files become data URIs. MSR is a server-selected deployment with no model parameter, independent of saved LTX v2 weights. It cannot pin first/last frames or condition on recorded speech; use img2video for frame control. Saves a job receipt and resumes via video_status without resubmission.",
+    description: "Combine character, clothing, object and background references in one MSR video through ASTRA GenAI. Use video_plan operation reference and video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Up to four subject images and one background; place the background last and number prompt images in that order. Local PNG/JPEG files become data URIs. MSR is a server-selected deployment with no model parameter, independent of saved LTX v2 weights. It cannot pin first/last frames; use img2video for frame control. Speech and effects are rendered natively. Subjects 1 and 2 may carry a voice sample (audioPath or audioUri, at most 10 s, about 5 s used) when the gateway MSR backend accepts them (GET /v1/ltx/msr/capabilities); the model imitates its timbre while speaking the prompt dialogue and does not preserve the sample. Saves a job receipt and resumes via video_status without resubmission.",
     inputSchema: { type: "object", properties: {
       prompt: { type: "string", minLength: 1, maxLength: 2e3, description: "Action and reference roles, e.g. person in image 1 wearing the jacket in image 2." },
       references: { type: "array", minItems: 1, maxItems: 5, description: "At most four subjects and one background. Exactly one URI or path per reference.", items: {
@@ -84543,7 +84573,9 @@ var GENAI_TOOLS = [
         properties: {
           imageUri: { type: "string", description: "Public HTTPS PNG/JPEG or data URI." },
           imagePath: { type: "string", description: "Local PNG/JPEG path, instead of imageUri." },
-          background: { type: "boolean", default: false, description: "Marks the single background reference; put it last." }
+          background: { type: "boolean", default: false, description: "Marks the single background reference; put it last." },
+          audioPath: { type: "string", description: "Local voice sample (wav, mp3, m4a, ogg) for this subject; subjects 1 and 2 only. Voice only, no background sound." },
+          audioUri: { type: "string", description: "HTTPS or audio data URI voice sample, instead of audioPath." }
         },
         additionalProperties: false
       } },
@@ -88081,7 +88113,7 @@ function videoCatalog() {
       voice: videoVoiceCapabilities(tool),
       ...tool === "mlx_video_generate" ? { deprecated: true, replacement: "ltx_video_generate" } : {},
       fields: keys(a.schema),
-      modelConstraints: localVideoStrategy(tool) ? { frames: localVideoStrategy(tool).frames, note: tool === "fasth3_omni_reference" ? "8 steps; 9 images, 3 videos, 3 audios, 12 total; visual reference required; 256 MiB RGB cap; no exact speech preservation." : "LTX 8k+1 frames; MLX-Serve backend." } : a.engine === "seedance" ? SEEDANCE_MODEL_SPECS : tool === "astra_genai_msr" ? { note: "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. No supplied speech or audio controls." } : tool === "astra_genai_audio2video" ? { models: ["ltx-2.5-22b-dev"], note: "Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters." } : a.engine === "astra-genai" ? { models: GENAI_VIDEO_MODELS, note: "Explicit duration and resolution; server validates deployment limits. No supplied audio, keyframes or LoRA." } : a.engine === "veo" ? { models: VALID_VIDEO_MODELS, resolutions: VALID_VIDEO_RESOLUTIONS, note: "Use video_plan for cross-field constraints" } : { note: "Use video_plan; deployment-specific schema is authoritative" }
+      modelConstraints: localVideoStrategy(tool) ? { frames: localVideoStrategy(tool).frames, note: tool === "fasth3_omni_reference" ? "8 steps; 9 images, 3 videos, 3 audios, 12 total; visual reference required; 256 MiB RGB cap; no exact speech preservation." : "LTX 8k+1 frames; MLX-Serve backend." } : a.engine === "seedance" ? SEEDANCE_MODEL_SPECS : tool === "astra_genai_msr" ? { note: "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; subjects 1-2 may carry a voice sample when the gateway MSR backend accepts them." } : tool === "astra_genai_audio2video" ? { models: ["ltx-2.5-22b-dev"], note: "Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters." } : a.engine === "astra-genai" ? { models: GENAI_VIDEO_MODELS, note: "Explicit duration and resolution; server validates deployment limits. No supplied audio, keyframes or LoRA." } : a.engine === "veo" ? { models: VALID_VIDEO_MODELS, resolutions: VALID_VIDEO_RESOLUTIONS, note: "Use video_plan for cross-field constraints" } : { note: "Use video_plan; deployment-specific schema is authoritative" }
     })),
     host: { execution: "external", note: "Host tools are outside MCP enforcement; never claim an API gate protects their calls." },
     unimplemented: ["minimax-h3-api", "ltx-official-api"]
@@ -88091,7 +88123,7 @@ function videoVoiceCapabilities(tool) {
   const adapter2 = VIDEO_ADAPTERS[tool];
   if (!adapter2) throw new Error("Unsupported video tool: " + tool);
   return {
-    voiceReference: tool === "fasth3_omni_reference" ? "supported" : tool === "seedance_reference" ? "model_dependent" : "unsupported",
+    voiceReference: tool === "fasth3_omni_reference" ? "supported" : tool === "seedance_reference" ? "model_dependent" : tool === "astra_genai_msr" ? "backend_dependent" : "unsupported",
     suppliedSpeech: ["astra_audio2video", "astra_genai_audio2video"].includes(tool) ? "audio_conditioned_reencoded" : "unsupported",
     exactAudioPreservation: false,
     voiceContinuation: tool === "omni_extend" ? "previous_interaction_id" : tool === "veo_extension" ? "source_final_second" : "unsupported",
@@ -99365,6 +99397,38 @@ function voiceReference(character, context2, warnings) {
   if (provenance === "legacy_sample_unverified") warnings.push(`${character.id}: sample identity is unverified; a file name or hash is not a listening review.`);
   return { path: absolute, sha256: sha2562, provenance };
 }
+function msrVoiceSlot(speaker, character, label, refs, context2, warnings, prompt) {
+  const owned = object3(character.voiceReference).imagePaths;
+  const ownedPaths = Array.isArray(owned) ? owned.map((value) => realpathSync7(path21.resolve(context2.episode, "storyboard", String(value)))) : [];
+  let subject = 0, index = -1, slot = 0;
+  refs.forEach((ref, i2) => {
+    if (ref.background) return;
+    subject += 1;
+    const file = text(ref.imagePath);
+    if (index < 0 && file && ownedPaths.includes(realpathSync7(path21.resolve(context2.episode, file)))) {
+      index = i2;
+      slot = subject;
+    }
+  });
+  const id = speaker.speaker;
+  if (index < 0) {
+    warnings.push(`${id}: no MSR subject image matches voiceReference.imagePaths; the voice follows the prompt description only.`);
+    return;
+  }
+  if (slot > 2) {
+    warnings.push(`${id}: shown as MSR subject ${slot}; voice samples fit subjects 1 and 2 only, so this voice follows the prompt description.`);
+    return;
+  }
+  const current = text(refs[index].audioPath);
+  if (current && current !== speaker.reference.path) {
+    warnings.push(`${id}: Image ${index + 1} already carries another speaker's sample; no voice was attached.`);
+    return;
+  }
+  refs[index].audioPath = speaker.reference.path;
+  speaker.audioIndex = slot;
+  speaker.imageIndices = [index + 1];
+  prompt.push(`Audio ${slot}: voice of ${label} (speaker ${id}), belongs only to Image ${index + 1}. Use it for timbre and accent only; speak the authored shot dialogue, not the sample's words.`);
+}
 var SUPPLIED_AUDIO_TOOLS = /* @__PURE__ */ new Set(["astra_audio2video", "astra_genai_audio2video"]);
 function prepareVideoVoice(tool, input, context2) {
   const args = { ...input };
@@ -99374,12 +99438,16 @@ function prepareVideoVoice(tool, input, context2) {
   const characters = Array.isArray(raw) ? raw.map(object3) : Object.entries(object3(raw)).map(([id, value]) => ({ ...object3(value), id }));
   const visual = object3(context2.shot.visual);
   const nativeSlot = Boolean(visual.clip) || context2.shot.type === "broll";
-  const audible = tool !== "astra_genai_msr" && (tool === "fasth3_omni_reference" || tool.startsWith("veo_") || tool.startsWith("omni_") || (tool.startsWith("astra_") ? args.generateAudio !== false : args.generateAudio === true));
+  const msr = tool === "astra_genai_msr";
+  const msrMode = msr ? text(object3(visual.video).voice) || "reference" : "";
+  if (msr && !["reference", "prompt"].includes(msrMode)) throw new Error("visual.video.voice must be 'reference' or 'prompt'");
+  const audible = msr ? context2.msrVoice === true || msrMode === "prompt" : tool === "fasth3_omni_reference" || tool.startsWith("veo_") || tool.startsWith("omni_") || (tool.startsWith("astra_") ? args.generateAudio !== false : args.generateAudio === true);
   const supplied = SUPPLIED_AUDIO_TOOLS.has(tool);
   const native = !supplied && audible && (nativeSlot || lines.some((line) => line.delivery === "on_screen"));
   const spec = SEEDANCE_MODEL_SPECS[args.model];
   const limitedPromptLanguage = tool.startsWith("seedance_") && !String(args.model).includes("2-5");
-  const reference = native && (tool === "fasth3_omni_reference" || tool === "seedance_reference" && Boolean(spec?.referenceAudio));
+  const msrVoice = msr && msrMode === "reference" && context2.msrVoice === true;
+  const reference = native && (tool === "fasth3_omni_reference" || msrVoice || tool === "seedance_reference" && Boolean(spec?.referenceAudio));
   const strategy = supplied ? "supplied_audio" : reference ? "reference_voice" : native ? "prompt_voice" : "external_tts";
   const warnings = [];
   const speakers = [];
@@ -99389,6 +99457,9 @@ function prepareVideoVoice(tool, input, context2) {
   const audioOffset = tool === "fasth3_omni_reference" && Array.isArray(args.referenceVideoPaths) ? fasth3VideoAudioCount(args.referenceVideoPaths.map((file) => path21.resolve(context2.episode, String(file)))) : 0;
   const audioPaths = Array.isArray(args.referenceAudioPaths) ? args.referenceAudioPaths.map((value) => realpathSync7(path21.resolve(context2.episode, String(value)))) : [];
   const imagePaths = Array.isArray(args.referenceImagePaths) ? args.referenceImagePaths.map((value) => realpathSync7(path21.resolve(context2.episode, String(value)))) : [];
+  const msrRefs = msr && Array.isArray(args.references) ? args.references.map((ref) => ({ ...object3(ref) })) : [];
+  if (msr && msrMode === "reference" && !msrVoice && (nativeSlot || lines.some((line) => line.delivery === "on_screen")))
+    warnings.push("The GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities); this cut keeps the external TTS plan. Set visual.video.voice to prompt to use the model voice instead.");
   for (const id of ids) {
     const matches = characters.filter((character2) => character2.id === id);
     if (!id || matches.length !== 1 || !Object.keys(object3(matches[0].tts)).length) {
@@ -99398,7 +99469,11 @@ function prepareVideoVoice(tool, input, context2) {
     const character = matches[0];
     const speaker = { speaker: id, name: text(character.name) || id, tts: object3(character.tts), description: voiceDescription(character) };
     const label = limitedPromptLanguage && /[가-힣]/.test(speaker.name) ? id : speaker.name;
-    if (reference) {
+    if (reference && msr) {
+      speaker.reference = voiceReference(character, context2, warnings);
+      if (speaker.reference) msrVoiceSlot(speaker, character, label, msrRefs, context2, warnings, prompt);
+      else warnings.push(`${id}: no pinned voice sample available; the MSR voice follows the prompt description only.`);
+    } else if (reference) {
       speaker.reference = voiceReference(character, context2, warnings);
       if (speaker.reference) {
         let index = audioPaths.indexOf(speaker.reference.path);
@@ -99425,7 +99500,10 @@ function prepareVideoVoice(tool, input, context2) {
     if (native && !text(object3(character.tts).voiceDirection) && !text(object3(character.tts).stylePrompt) && !text(object3(object3(object3(character.character).speech).timbre).value))
       warnings.push(`${id}: no authored acoustic description; the TTS voice ID is not a video-model voice selector.`);
   }
-  if (reference) {
+  if (reference && msr) {
+    args.references = msrRefs;
+    if (speakers.some((speaker) => speaker.audioIndex)) warnings.push("Reference voice is imitation, not preservation of the original WAV or exact speech timing.");
+  } else if (reference) {
     args.referenceAudioPaths = audioPaths;
     const mapped = new Set(speakers.map((speaker) => speaker.audioIndex));
     if (audioPaths.some((_, i2) => !mapped.has(i2 + 1 + audioOffset))) warnings.push("Some supplied audio references have no character mapping; retain their existing role (for example music) explicitly in the prompt.");
@@ -99437,7 +99515,8 @@ function prepareVideoVoice(tool, input, context2) {
   if (native) {
     prompt.push("Keep these speaker identities unchanged. Apply each line's authored emotion separately from stable timbre and accent. Keep non-speaking listeners silent; do not invent dialogue or voiceover.");
     if (speakers.length > 1) warnings.push("Multiple speakers: check assignment and turn-taking separately from timbre; short turns reduce ambiguity but are not a guarantee.");
-    if (!nativeSlot) warnings.push("visual.video assembly uses the external TTS track. Native voice guidance does not synchronize that WAV; use audio2video for exact supplied-speech staging or the existing visual.clip native-audio slot.");
+    if (msr) warnings.push("MSR renders speech and effects into its own soundtrack. Assembly uses it when sound.audioSource is video, the default for on-screen MSR dialogue; set sound.audioSource to speech to keep the pinned TTS track instead.");
+    else if (!nativeSlot) warnings.push("visual.video assembly uses the external TTS track. Native voice guidance does not synchronize that WAV; use audio2video for exact supplied-speech staging or the existing visual.clip native-audio slot.");
   }
   if (tool === "veo_extension") warnings.push("Veo voice continuation needs speech in the last second of the source clip; this planner has not listened to that boundary.");
   if (tool.startsWith("veo_") && native) warnings.push("Veo has no audio-reference input. Reuse the same voice description; prompt guidance cannot lock a TTS voice ID.");
@@ -99581,7 +99660,7 @@ function planVideo(raw) {
   const images = prepareVideoImages(tool, bindSelection3(tool, input.args, selection), context2.shot, context2.episode);
   if (hasStructuredImages(context2.shot))
     requireReviewedImages(context2.episode, (images.imageBindings ?? []).map((binding) => binding.path));
-  const voice = prepareVideoVoice(tool, images.args, context2);
+  const voice = prepareVideoVoice(tool, images.args, { ...context2, msrVoice: genaiMsrVoiceReferences() });
   const args = parseVideoArgs(tool, voice.args);
   const output2 = canonical2(path22.resolve(context2.episode, typeof args.outputPath === "string" ? args.outputPath : ".work/video"));
   if (!within(context2.episode, output2)) throw new Error("Video output must stay inside the selected episode");
@@ -99653,6 +99732,7 @@ async function executeVideo(raw, dispatch) {
   if (plan2.workflowRevision !== workflowRevision(episode)) throw new Error("workflow_plan_stale: prepare a new video plan");
   const context2 = routingContext(episode, plan2.shotId);
   if (context2.revision !== plan2.contextRevision) throw new Error("video_plan_stale: selection or authorization changed");
+  if (plan2.tool === "astra_genai_msr") await refreshGenaiMsrVoice();
   const refreshed = planVideo({ episode, shotId: plan2.shotId, requestId: plan2.requestId, tool: plan2.tool, args: plan2.sourceArgs ?? plan2.args });
   if (refreshed.id !== id) throw new Error("video_plan_stale: inputs, price or adapter contract changed");
   checkVideoEnvironment(plan2.tool);
@@ -108175,7 +108255,11 @@ for (const name of Object.keys(VIDEO_ADAPTERS)) {
   ROUTES[name] = (args) => routeLegacyVideo(name, args, dispatchVideo);
 }
 ROUTES.video_catalog = async () => text2(JSON.stringify(videoCatalog(), null, 2));
-ROUTES.video_plan = async (args) => text2(JSON.stringify(planVideo(args), null, 2));
+ROUTES.video_plan = async (args) => {
+  const raw = args ?? {};
+  if (raw.tool === "astra_genai_msr" || raw.operation === "reference") await refreshGenaiMsrVoice();
+  return text2(JSON.stringify(planVideo(args), null, 2));
+};
 ROUTES.video_execute = (args) => executeVideo(args, dispatchVideo);
 ROUTES.video_status = async (args) => text2(JSON.stringify(await videoStatus(args), null, 2));
 var imageDispatch = Object.fromEntries(Object.keys(IMAGE_ADAPTERS).map((name) => [name, ROUTES[name]]));

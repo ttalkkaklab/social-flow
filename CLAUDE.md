@@ -83,6 +83,15 @@ provenance so the user can request targeted corrections later through `edit-spee
 voice-lock ASR. Follow `skills/produce/references/shot-speech.md`. Narrator and character
 lines use explicit speakers; video models are replaceable adapters with declared capabilities.
 
+## MSR voice default (user directive, 2026-10-30)
+
+For on-screen dialogue in an `astra_genai_msr` cut, attach each speaker's pinned voice
+sample to the subject image that shows them (subjects 1–2 only) and keep MSR's own
+speech-and-effects soundtrack in the cut. `visual.video.voice:"prompt"` and
+`sound.audioSource:"speech"` remain per-shot choices. On a gateway without MSR voice
+support an MSR cut keeps its previous external-TTS plan, with a plan warning.
+See `skills/_shared/astra-genai.md`.
+
 ## Style ban — report-style stative verbs (user directive, 2026-08-12)
 
 Don't close sentences with Korean endings of the

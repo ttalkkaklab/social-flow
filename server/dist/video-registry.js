@@ -62,7 +62,7 @@ export function videoCatalog() {
         adapters: Object.entries(VIDEO_ADAPTERS).map(([tool, a]) => ({ tool, engine: a.engine, deployment: a.deployment, operation: a.operation,
             voice: videoVoiceCapabilities(tool), ...(tool === 'mlx_video_generate' ? { deprecated: true, replacement: 'ltx_video_generate' } : {}),
             fields: keys(a.schema), modelConstraints: localVideoStrategy(tool) ? { frames: localVideoStrategy(tool).frames, note: tool === 'fasth3_omni_reference' ? '8 steps; 9 images, 3 videos, 3 audios, 12 total; visual reference required; 256 MiB RGB cap; no exact speech preservation.' : 'LTX 8k+1 frames; MLX-Serve backend.' } : a.engine === 'seedance' ? seedance.SEEDANCE_MODEL_SPECS :
-                tool === 'astra_genai_msr' ? { note: 'Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. No supplied speech or audio controls.' } :
+                tool === 'astra_genai_msr' ? { note: 'Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; subjects 1-2 may carry a voice sample when the gateway MSR backend accepts them.' } :
                     tool === 'astra_genai_audio2video' ? { models: ['ltx-2.5-22b-dev'], note: 'Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters.' } :
                         a.engine === 'astra-genai' ? { models: GENAI_VIDEO_MODELS, note: 'Explicit duration and resolution; server validates deployment limits. No supplied audio, keyframes or LoRA.' } :
                             a.engine === 'veo' ? { models: veo.VALID_VIDEO_MODELS, resolutions: veo.VALID_VIDEO_RESOLUTIONS, note: 'Use video_plan for cross-field constraints' } :
@@ -77,7 +77,7 @@ export function videoVoiceCapabilities(tool) {
     if (!adapter)
         throw new Error('Unsupported video tool: ' + tool);
     return {
-        voiceReference: tool === 'fasth3_omni_reference' ? 'supported' : tool === 'seedance_reference' ? 'model_dependent' : 'unsupported',
+        voiceReference: tool === 'fasth3_omni_reference' ? 'supported' : tool === 'seedance_reference' ? 'model_dependent' : tool === 'astra_genai_msr' ? 'backend_dependent' : 'unsupported',
         suppliedSpeech: ['astra_audio2video', 'astra_genai_audio2video'].includes(tool) ? 'audio_conditioned_reencoded' : 'unsupported',
         exactAudioPreservation: false,
         voiceContinuation: tool === 'omni_extend' ? 'previous_interaction_id' : tool === 'veo_extension' ? 'source_final_second' : 'unsupported',
