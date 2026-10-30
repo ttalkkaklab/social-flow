@@ -955,7 +955,7 @@
       "deployment": "genai-ltx-msr",
       "operation": "reference",
       "voice": {
-        "voiceReference": "unsupported",
+        "voiceReference": "backend_dependent",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
         "voiceContinuation": "unsupported",
@@ -977,7 +977,7 @@
         "filename"
       ],
       "modelConstraints": {
-        "note": "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. No supplied speech or audio controls."
+        "note": "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; subjects 1-2 may carry a voice sample when the gateway MSR backend accepts them."
       }
     },
     {

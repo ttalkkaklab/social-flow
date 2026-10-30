@@ -88,7 +88,10 @@ export const genaiMsrSchema = z.object({
     references: z.array(z.object({
         imageUri: genaiImageUriSchema.optional(), imagePath: z.string().min(1).optional(),
         background: z.boolean().default(false),
-    }).strict().refine(ref => Number(!!ref.imageUri) + Number(!!ref.imagePath) === 1, 'Supply exactly one imageUri or imagePath')).min(1).max(5),
+        // Voice sample for this subject; the gateway pairs it with the same picture slot.
+        audioUri: z.string().min(1).optional(), audioPath: z.string().min(1).optional(),
+    }).strict().refine(ref => Number(!!ref.imageUri) + Number(!!ref.imagePath) === 1, 'Supply exactly one imageUri or imagePath')
+        .refine(ref => oneOf(ref.audioUri, ref.audioPath) <= 1, 'Supply at most one audioUri or audioPath')).min(1).max(5),
     referenceStrength: z.number().finite().min(0).max(1).default(1),
     referenceFrames: z.union([z.literal(25), z.literal(33)]).default(33),
     width: z.number().int().min(64).max(1920).multipleOf(64).default(1536),
@@ -105,6 +108,16 @@ export const genaiMsrSchema = z.object({
     const backgrounds = args.references.filter(ref => ref.background).length;
     if (backgrounds > 1 || args.references.length - backgrounds > 4)
         issue('MSR supports at most four subjects and one background');
+    let subject = 0;
+    for (const ref of args.references) {
+        subject += Number(!ref.background);
+        if (!oneOf(ref.audioUri, ref.audioPath))
+            continue;
+        if (ref.background)
+            issue('MSR voice samples belong to subjects, not the background');
+        else if (subject > 2)
+            issue('MSR voice samples fit the first two subjects only');
+    }
     if (args.width * args.height > 2064384)
         issue('MSR maximum is 2,064,384 pixels');
     if (args.duration !== undefined) {
@@ -117,11 +130,33 @@ export const genaiMsrSchema = z.object({
 });
 export function buildGenaiMsrBody(args) {
     return { prompt: args.prompt,
-        references: args.references.map(ref => ({ image_uri: genaiSourceUri(ref.imageUri, ref.imagePath), background: ref.background })),
+        references: args.references.map(ref => ({ image_uri: genaiSourceUri(ref.imageUri, ref.imagePath), background: ref.background,
+            ...(oneOf(ref.audioUri, ref.audioPath) ? { audio_uri: genaiAudioUri(ref.audioUri, ref.audioPath) } : {}) })),
         reference_strength: args.referenceStrength, reference_frames: args.referenceFrames,
         width: args.width, height: args.height, frame_rate: args.frameRate, seed: args.seed,
         ...(args.duration === undefined ? { num_frames: args.numFrames ?? 121 } : { duration: args.duration }) };
 }
+let msrVoiceCache;
+/**
+ * Ask the gateway whether its MSR backend takes voice samples. An older gateway
+ * (404), a missing key or an unreachable gateway counts as no. Cached so the plan
+ * and the execute-time replan see the same answer.
+ */
+export async function refreshGenaiMsrVoice(force = false) {
+    if (!force && msrVoiceCache && Date.now() - msrVoiceCache.at < msrVoiceCache.ttl)
+        return msrVoiceCache.value;
+    let value = false, ttl = 60_000;
+    try {
+        const body = z.object({ voice_references: z.boolean() }).passthrough()
+            .parse(await requestGenai('GET', '/v1/ltx/msr/capabilities', undefined, 15_000));
+        value = body.voice_references;
+        ttl = 600_000;
+    }
+    catch { /* Unknown support is treated as unsupported; the plan says so. */ }
+    msrVoiceCache = { value, at: Date.now(), ttl };
+    return value;
+}
+export function genaiMsrVoiceReferences() { return msrVoiceCache?.value ?? false; }
 /** Only provider fields cross the wire; local output/budget controls never do. */
 export function buildGenaiVideoBody(args) {
     return {

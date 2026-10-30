@@ -134,3 +134,36 @@ test('FastH3 native voices use Picture and Audio labels without exact lip-sync c
   assert.match(result.args.prompt,/friend.*<Picture 2>.*<Audio 2>/);
   assert.equal(videoVoiceCapabilities('fasth3_omni_reference').exactAudioPreservation,false);
 });
+test('MSR attaches each pinned sample to the subject that shows its speaker', t => {
+  const ctx = fixture(t), [hero, friend] = ctx.board.SB_DOC.characters;
+  const input = { prompt: 'They talk.', reserveUsd: 0,
+    references: [{ imagePath: friend.voiceReference.imagePaths[0] }, { imagePath: hero.voiceReference.imagePaths[0] }] };
+  const result = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true });
+  assert.equal(input.references[0].audioPath, undefined);
+  assert.deepEqual(result.args.references.map(ref => ref.audioPath), [friend.voiceReference.path, hero.voiceReference.path]);
+  assert.match(result.args.prompt, /Audio 1: voice of friend \(speaker friend\), belongs only to Image 1/);
+  assert.match(result.args.prompt, /Audio 2: voice of hero \(speaker hero\), belongs only to Image 2/);
+  assert.equal(result.args.referenceAudioPaths, undefined);
+  assert.equal(result.voiceContinuity.strategy, 'reference_voice');
+  assert.equal(videoVoiceCapabilities('astra_genai_msr').voiceReference, 'backend_dependent');
+});
+test('MSR keeps its old plan without backend support, the prompt voice by choice, and no sample past subject 2', t => {
+  const ctx = fixture(t), [hero, friend] = ctx.board.SB_DOC.characters;
+  const extra = path.join(ctx.episode, 'extra.png'); fs.writeFileSync(extra, 'image-extra');
+  const input = { prompt: 'They talk.', reserveUsd: 0,
+    references: [{ imagePath: friend.voiceReference.imagePaths[0] }, { imagePath: extra }, { imagePath: hero.voiceReference.imagePaths[0] }] };
+  const third = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true });
+  assert.deepEqual(third.args.references.map(ref => ref.audioPath), [friend.voiceReference.path, undefined, undefined]);
+  assert.match(third.voiceContinuity.warnings.join('\n'), /hero: shown as MSR subject 3/);
+  const unsupported = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: false });
+  assert.equal(unsupported.voiceContinuity.strategy, 'external_tts'); // unchanged without gateway support
+  assert.equal(unsupported.args.prompt, 'They talk.');
+  assert.equal(unsupported.args.references.some(ref => ref.audioPath), false);
+  assert.match(unsupported.voiceContinuity.warnings.join('\n'), /does not accept voice samples/);
+  ctx.shot.visual.video = { voice: 'prompt' };
+  const chosen = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true });
+  assert.equal(chosen.voiceContinuity.strategy, 'prompt_voice');
+  assert.doesNotMatch(chosen.voiceContinuity.warnings.join('\n'), /does not accept/);
+  ctx.shot.visual.video = { voice: 'tts' };
+  assert.throws(() => prepareVideoVoice('astra_genai_msr', input, ctx), /'reference' or 'prompt'/);
+});

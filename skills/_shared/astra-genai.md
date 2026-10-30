@@ -100,9 +100,38 @@ Optional MSR controls: `referenceStrength` 0–1 (default 1), `referenceFrames` 
 Use `numFrames` (25–361, `8k+1`, default 121) **or** `duration` in seconds.
 Duration rounds to the nearest `8k+1` with ties shorter and must fit 25–361 frames.
 Measure actual output duration before assembly; do not assume it covers an exact
-speech duration. `requiredSeconds`, first/last frames, LoRA, retake, supplied speech
-and audio controls are not part of this MSR contract. Audio capabilities are
-unverified, so plan separate speech/effects instead of promising synchronized speech.
+speech duration. `requiredSeconds`, first/last frames, LoRA, retake and a supplied
+speech track are not part of this MSR contract.
+
+MSR renders speech and diegetic effects into its own soundtrack. **Default voice
+(2026-10-30, user directive):** for on-screen dialogue, `video_plan` attaches each
+speaker's pinned `voiceReference` sample to the subject image listed in that
+character's `voiceReference.imagePaths`, as `references[i].audioPath`, and writes
+`Audio N: voice of …, belongs only to Image M` into the prompt. Only subjects 1 and 2
+take a sample (the gateway pairs `audio_ref1`/`audio_ref2` with `pic1`/`pic2`); a
+speaker shown as subject 3 or later stays on the prompt description with a warning.
+References are never reordered. The sample is a timbre reference, at most 10 seconds
+of voice with no background sound; the model imitates it and does not preserve it.
+A sample mixed with a music bed spread that bed under the whole tested scene, and a
+clean sample left the room silent apart from the authored effects.
+
+This needs a gateway whose MSR backend accepts samples. `video_plan` asks
+`GET /v1/ltx/msr/capabilities` first; on a gateway without the route or a backend that
+cannot take samples, an MSR cut keeps its previous external-TTS plan and the plan
+warnings say why.
+Choices per shot:
+
+| Choice | Board setting | Result |
+|---|---|---|
+| Voice sample (default) | none | Pinned sample on the speaker's subject; MSR soundtrack in the final cut |
+| Prompt voice | `visual.video.voice: "prompt"` | No sample; voice from the authored acoustic description |
+| Pinned TTS track | `sound.audioSource: "speech"` | Final cut keeps the TTS lane; effects move to post |
+
+`prepare-video-sound.js` asks the same capability. On a gateway that accepts MSR voice
+samples it sets `sound.audioSource:"video"` when every spoken line is `on_screen` and
+routes `auto` effects into the MSR soundtrack. Otherwise, and whenever a voiceover is
+present, it keeps `"speech"` and post effects, so a gateway without MSR voice samples
+behaves exactly as before.
 
 Example `video_plan` args for operation `reference` (dimensions inherit selection):
 

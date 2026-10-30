@@ -71,7 +71,7 @@ export const GENAI_TOOLS: Tool[] = [
       ...output,
     }, required: ['model', 'prompt', 'mode'], additionalProperties: false }, annotations: generation },
   { name: 'astra_genai_msr', title: 'Generate an LTX video from subject and background references',
-    description: 'Combine character, clothing, object and background references in one MSR video through ASTRA GenAI. Use video_plan operation reference and video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Up to four subject images and one background; place the background last and number prompt images in that order. Local PNG/JPEG files become data URIs. MSR is a server-selected deployment with no model parameter, independent of saved LTX v2 weights. It cannot pin first/last frames or condition on recorded speech; use img2video for frame control. Saves a job receipt and resumes via video_status without resubmission.',
+    description: 'Combine character, clothing, object and background references in one MSR video through ASTRA GenAI. Use video_plan operation reference and video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Up to four subject images and one background; place the background last and number prompt images in that order. Local PNG/JPEG files become data URIs. MSR is a server-selected deployment with no model parameter, independent of saved LTX v2 weights. It cannot pin first/last frames; use img2video for frame control. Speech and effects are rendered natively. Subjects 1 and 2 may carry a voice sample (audioPath or audioUri, at most 10 s, about 5 s used) when the gateway MSR backend accepts them (GET /v1/ltx/msr/capabilities); the model imitates its timbre while speaking the prompt dialogue and does not preserve the sample. Saves a job receipt and resumes via video_status without resubmission.',
     inputSchema: { type: 'object', properties: {
       prompt: { type: 'string', minLength: 1, maxLength: 2000, description: 'Action and reference roles, e.g. person in image 1 wearing the jacket in image 2.' },
       references: { type: 'array', minItems: 1, maxItems: 5, description: 'At most four subjects and one background. Exactly one URI or path per reference.', items: {
@@ -79,6 +79,8 @@ export const GENAI_TOOLS: Tool[] = [
           imageUri: { type: 'string', description: 'Public HTTPS PNG/JPEG or data URI.' },
           imagePath: { type: 'string', description: 'Local PNG/JPEG path, instead of imageUri.' },
           background: { type: 'boolean', default: false, description: 'Marks the single background reference; put it last.' },
+          audioPath: { type: 'string', description: 'Local voice sample (wav, mp3, m4a, ogg) for this subject; subjects 1 and 2 only. Voice only, no background sound.' },
+          audioUri: { type: 'string', description: 'HTTPS or audio data URI voice sample, instead of audioPath.' },
         }, additionalProperties: false,
       } },
       referenceStrength: { type: 'number', minimum: 0, maximum: 1, default: 1, description: 'Reference adherence strength.' },
