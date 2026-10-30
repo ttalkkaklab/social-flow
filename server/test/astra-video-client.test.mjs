@@ -10,6 +10,7 @@
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { execFileSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -62,6 +63,7 @@ import {
   framesForSeconds,
   icLoraMode,
   uploadContentType,
+  upscaleGeometry,
 } from '../dist/astra-video-client.js';
 
 const parseFails = (schema, args) => {
@@ -1044,6 +1046,33 @@ describe('stage 2 — ic_lora, guided_hq, guidance, lora strength', () => {
       // A mask that would trip the engine assert never reaches /v1/jobs either (still reference, clip mask).
       await assert.rejects(ROUTES.astra_ic_lora({ prompt: 'x', adapter: 'deblur', referencePath: path.join(dir, 'r.png'), conditioningMaskPath: path.join(dir, 'm.mp4'), outputPath: dir, filename: 'd.mp4' }), /conditioning mask refused/);
       assert.equal(jobs.length, 2);
+    } finally { globalThis.fetch = oldFetch; config.astraVideoApiKey = oldKey; fs.rmSync(dir, { recursive: true, force: true }); }
+  });
+
+  it('astra_video_upscale doubles the clip, keeps 8k+1 frames and puts the source audio back', async () => {
+    assert.deepEqual(upscaleGeometry(512, 896, 121), { width: 1024, height: 1792, numFrames: 121 });
+    assert.throws(() => upscaleGeometry(768, 1024, 121), /ceiling/);
+    assert.throws(() => upscaleGeometry(500, 896, 121), /multiples of 32/);
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'astra-upscale-'));
+    const oldFetch = globalThis.fetch, oldKey = config.astraVideoApiKey; config.astraVideoApiKey = 'k';
+    const ff = (...args) => execFileSync('ffmpeg', ['-v', 'error', '-y', ...args]);
+    ff('-f', 'lavfi', '-i', 'color=s=64x32:r=24', '-f', 'lavfi', '-i', 'sine', '-frames:v', '27', '-t', '1.125', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', path.join(dir, 'src.mp4'));
+    ff('-f', 'lavfi', '-i', 'color=s=128x64:r=24', '-frames:v', '25', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', path.join(dir, 'out.mp4'));
+    const jobs = [];
+    globalThis.fetch = async (url, init = {}) => {
+      const pathname = new URL(url).pathname;
+      if (pathname === '/v1/uploads') return Response.json({ upload_id: 'v', kind: 'video', bytes: 4, frames: 27, width: 64, height: 32, expires_at: '2026-10-31T00:00:00Z' }, { status: 201 });
+      if (pathname === '/v1/jobs') { jobs.push(JSON.parse(init.body)); return Response.json({ job_id: 'up' }, { status: 202 }); }
+      if (pathname === '/v1/jobs/up') return Response.json({ status: 'succeeded', request: jobs.at(-1) });
+      if (pathname === '/v1/jobs/up/result') return new Response(fs.readFileSync(path.join(dir, 'out.mp4')));
+      throw new Error(`Unexpected mocked route ${pathname}`);
+    };
+    try {
+      const result = await ROUTES.astra_video_upscale({ sourceVideoPath: path.join(dir, 'src.mp4'), prompt: 'a grey wall' });
+      assert.ok(!result.isError);
+      assert.deepEqual([jobs[0].mode, jobs[0].adapter, jobs[0].width, jobs[0].height, jobs[0].num_frames, jobs[0].frame_rate], ['ic_lora', 'pixel-upscaler-x2', 128, 64, 25, 24]);
+      const streams = execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=codec_type', '-of', 'csv=p=0', path.join(dir, 'src-x2.mp4')], { encoding: 'utf8' });
+      assert.deepEqual(streams.trim().split('\n'), ['video', 'audio']);
     } finally { globalThis.fetch = oldFetch; config.astraVideoApiKey = oldKey; fs.rmSync(dir, { recursive: true, force: true }); }
   });
 });
