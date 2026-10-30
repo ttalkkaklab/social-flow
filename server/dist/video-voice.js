@@ -102,7 +102,7 @@ function afterImageBlock(prompt, lines) {
     rows.splice(k, 0, ...lines);
     return rows.join('\n');
 }
-const SUPPLIED_AUDIO_TOOLS = new Set(['astra_audio2video', 'astra_genai_audio2video']);
+const SUPPLIED_AUDIO_TOOLS = new Set(['astra_audio2video', 'astra_genai_audio2video', 'astra_genai_desktop_audio2video']);
 /** Prepare provider arguments before schema validation and pricing. No synthesis or uploads. */
 export function prepareVideoVoice(tool, input, context) {
     const args = { ...input };
@@ -122,8 +122,8 @@ export function prepareVideoVoice(tool, input, context) {
     const characters = Array.isArray(raw) ? raw.map(object) : Object.entries(object(raw)).map(([id, value]) => ({ ...object(value), id }));
     const visual = object(context.shot.visual);
     const nativeSlot = Boolean(visual.clip) || context.shot.type === 'broll';
-    const audible = msr || tool === 'fasth3_omni_reference' || tool.startsWith('veo_') || tool.startsWith('omni_') ||
-        (tool.startsWith('astra_') ? args.generateAudio !== false : args.generateAudio === true);
+    const audible = msr || ((tool !== 'astra_genai_desktop_keyframes' || args.audio === true) && (tool === 'fasth3_omni_reference' || tool.startsWith('veo_') || tool.startsWith('omni_') ||
+        (tool.startsWith('astra_') ? args.generateAudio !== false : args.generateAudio === true)));
     const supplied = SUPPLIED_AUDIO_TOOLS.has(tool);
     const native = !supplied && audible && (nativeSlot || lines.some(line => line.delivery === 'on_screen'));
     const spec = SEEDANCE_MODEL_SPECS[args.model];

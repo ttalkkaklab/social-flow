@@ -9,7 +9,7 @@ export function normalizeCharacterLanguage(value) {
 }
 const ttsFields = {
     voiceLock: voiceLockConfigSchema.optional(),
-    engine: z.enum(['gemini', 'elevenlabs']),
+    engine: z.enum(['gemini', 'elevenlabs', 'astra-genai']),
     voiceId: z.string().trim().min(1).max(300),
     model: z.string().trim().min(1).max(128).optional(),
     speed: z.number().min(0.7).max(1.2),
@@ -20,6 +20,8 @@ const ttsFields = {
     voiceDirection: z.string().trim().min(1).max(400).optional(),
 };
 export const ttsSchema = z.object(ttsFields).superRefine((tts, ctx) => {
+    if (tts.engine === 'astra-genai' && !tts.model)
+        ctx.addIssue({ code: 'custom', path: ['model'], message: 'Gateway speech requires a model alias' });
     if (tts.engine === 'gemini' && !Object.hasOwn(TTS_VOICES, tts.voiceId) && !(tts.model?.startsWith('gemini-3.8-') && /^[A-Za-z][A-Za-z0-9_-]*$/.test(tts.voiceId)))
         ctx.addIssue({ code: 'custom', path: ['voiceId'], message: 'Unknown Gemini voiceId' });
     const issue = (field, message) => ctx.addIssue({ code: 'custom', path: [field], message });
@@ -37,6 +39,6 @@ export const ttsSchema = z.object(ttsFields).superRefine((tts, ctx) => {
                 issue(key, 'This setting is only supported by ElevenLabs');
     if (tts.stylePrompt !== undefined && (tts.engine !== 'gemini' || tts.model?.startsWith('gemini-3.8-')))
         issue('stylePrompt', 'This engine does not accept stylePrompt');
-    if (tts.voiceDirection !== undefined && tts.engine !== 'gemini')
+    if (tts.voiceDirection !== undefined && !['gemini', 'astra-genai'].includes(tts.engine))
         issue('voiceDirection', 'Stable free-text voice direction is supported by Gemini only; match other engines by voice ID');
 });

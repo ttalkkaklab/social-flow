@@ -19,3 +19,9 @@ test('gateway authentication is separate, POST errors are redacted and never ret
   globalThis.fetch = async (_url, options) => { assert.equal(options.headers, undefined); return new Response('media'); };
   assert.equal((await downloadGenaiResult('https://results.example/video.mp4?sig=signed')).toString(), 'media');
 });
+
+test('private media rejects foreign origins and non-asset routes before sending credentials',async()=>{
+ const {requestGenaiMedia}=await import('../dist/astra-genai-client.js');
+ for(const route of ['https://other.example/v1/ltx/desktop/assets/id/bytes','//other.example/a','/v1/ltx/desktop/assets/../secret/bytes','/v1/ltx/desktop/generations/id'])
+   await assert.rejects(requestGenaiMedia(route),/Unsupported/);
+});

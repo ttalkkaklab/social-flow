@@ -19,7 +19,7 @@ argument-hint: "<channel> [init|tick|status]"
 # picks a topic, builds the video, and stamps the queue marker itself (off, and
 # only human-stamped episodes go out). Calling a publish tool without a plan is
 # forbidden (§Absolute rules 1).
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__tts_astra_genai", "mcp__plugin_social-flow_social-flow__tts_astra_genai"]
   "WebSearch", "WebFetch",
   "mcp__social-flow__sns_account_check", "mcp__plugin_social-flow_social-flow__sns_account_check", "mcp__social-flow__sns_comment_inbox", "mcp__plugin_social-flow_social-flow__sns_comment_inbox",
   "mcp__social-flow__youtube_insights", "mcp__plugin_social-flow_social-flow__youtube_insights", "mcp__social-flow__youtube_publish", "mcp__plugin_social-flow_social-flow__youtube_publish",

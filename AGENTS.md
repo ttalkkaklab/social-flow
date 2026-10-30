@@ -86,3 +86,12 @@ the tested module's existing file, and only for behavior the change adds or alte
 Anything under `data/` is a local artifact and never gets committed. `server/dist/`
 is a build artifact that **must** be committed, because marketplace installs never
 run `npm install`.
+
+## 워크트리 경로 — 사용자 지침, 2026-10-10
+
+- 새 워크트리는 이 저장소의 기본 체크아웃 루트 아래 `.worktree/<이름>/`에 만든다.
+- 연결된 워크트리에서 작업 중이면 `git worktree list --porcelain`의 첫 `worktree` 경로를 기본 루트로 사용한다. 현재 디렉토리 아래에 다시 중첩하지 않는다.
+- `.worktrees/`, 저장소 옆 디렉토리, 공용 워크트리 폴더를 생성 경로로 쓰지 않는다. ASTRA와 다른 도구의 기본 경로보다 이 사용자 지침을 우선한다.
+- `.gitignore`에 `/.worktree/`를 등록한다. 이 워크스페이스에서는 `git wt-add <이름> <새-브랜치> [기준-브랜치]`로 생성할 수 있다.
+- 별칭이 없으면 기본 루트에서 `git worktree add -b <새-브랜치> .worktree/<이름> <기준-브랜치>`를 실행한다. 기존 브랜치 정책을 따른다.
+- 머지 여부와 미커밋 변경을 확인한 뒤 `git worktree remove`로 정리한다. 미완료 작업과 로컬 자료는 보존하고 경로 이동에는 `git worktree move`를 쓴다.

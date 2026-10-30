@@ -68,3 +68,26 @@ export function genaiSourceUri(uri?: string, file?: string): string {
     throw new Error('GenAI source must be PNG/JPEG, at most 32 MiB and 4096 pixels per side');
   return `data:${meta.mimeType};base64,${bytes.toString('base64')}`;
 }
+
+/** Authenticated private gateway media; never attach this token to result/CDN URLs. */
+export async function requestGenaiMedia(route: string, body?: FormData | Record<string, unknown>): Promise<Buffer> {
+  if (!/^\/v1\/(audio\/speech|ltx\/desktop\/assets(?:\/[A-Za-z0-9_-]+\/bytes)?)$/.test(route))
+    throw new Error('Unsupported private gateway media route');
+  const key = requireAstraGenaiKey();
+  const form = body instanceof FormData;
+  const response = await fetch(astraGenaiBaseUrl() + route, {
+    method: body === undefined ? 'GET' : 'POST', redirect: 'error', signal: AbortSignal.timeout(30 * 60_000),
+    headers: { Authorization: `Bearer ${key}`, ...(body && !form ? { 'Content-Type': 'application/json' } : {}) },
+    ...(body === undefined ? {} : { body: form ? body : JSON.stringify(body) }),
+  });
+  if (!response.ok) throw new GenaiRequestError(`ASTRA GenAI HTTP ${response.status}: ${(await response.text()).replaceAll(key, '[redacted]').slice(0, 2000)}`,
+    response.status >= 400 && response.status < 500 && ![408, 409, 425].includes(response.status), response.status);
+  return Buffer.from(await response.arrayBuffer());
+}
+
+/** Read deployment configuration without performing inference. */
+export async function genaiCatalog(kind: 'image' | 'speech' | 'video' | 'loras' | 'contracts') {
+  const routes = { image: '/v1/images/models', speech: '/v1/audio/models', video: '/v1/ltx/desktop/models',
+    loras: '/v1/ltx/desktop/loras', contracts: '/v1/ltx/desktop/contracts' };
+  return requestGenai('GET', routes[kind]);
+}

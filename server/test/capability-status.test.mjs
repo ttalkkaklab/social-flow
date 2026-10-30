@@ -12,10 +12,10 @@ test('3d_generation lists blender as a local provider with an install hint', asy
   assert.ok(!capabilityStatus().setupOffers.some((o) => /Blender/i.test(o.env)));
 });
 
-test('speech capabilities expose only hosted Gemini and ElevenLabs v4', async () => {
+test('speech capabilities expose gateway aliases independently of local runtime', async () => {
   const { capabilityStatus } = await import('../dist/capability-status.js');
   const speech = capabilityStatus().capabilities.find(c => c.capability === 'tts');
-  assert.deepEqual(speech.providers.map(p => p.provider), ['gemini', 'elevenlabs']);
-  assert.match(speech.providers[0].note, /tts_gemini_38/);
-  assert.match(speech.providers[1].note, /eleven_v4 only/);
+  assert.deepEqual(speech.providers.map(p => p.provider), ['astra-genai', 'gemini', 'elevenlabs']);
+  assert.match(speech.providers[1].note, /tts_gemini_38/);
+  assert.match(speech.providers[2].note, /eleven_v4 only/);
 });

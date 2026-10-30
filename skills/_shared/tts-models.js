@@ -25,6 +25,12 @@ const models = [
 const TTS_MODELS = Object.freeze(models);
 const TTS_DEFAULT_MODELS = Object.freeze({gemini:'gemini-2.5-flash-preview-tts',elevenlabs:'eleven_v4'});
 function resolveTtsModel(provider, model) {
+  if (provider === 'astra-genai') {
+    if (typeof model !== 'string' || !model.trim() || model.length > 200) throw new Error('Gateway speech requires an explicit model alias');
+    return Object.freeze({model,provider,direction:'gateway',single:'tts_astra_genai',dialogue:'',maxSpeakers:1,maxCharacters:16000,
+      recommendedDialogueCharacters:null,maxStyleCharacters:2000,vocalEvents:false,customVoice:false,numericSpeed:true,timestamps:false,
+      evidence:'Transport envelope only; discover actual voices, speed and instructions at /v1/audio/models. No arbitrary voice upload.'});
+  }
   const selected = model === undefined ? TTS_DEFAULT_MODELS[provider] : model;
   const entry = TTS_MODELS.find(item => item.provider === provider && item.model === selected);
   if (!entry) throw new Error(`Unsupported TTS provider/model: ${provider}/${String(selected)}; no model fallback`);

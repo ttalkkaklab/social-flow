@@ -1,3 +1,4 @@
+import { nativeImageSchema, nativeImageEditSchema } from './astra-genai-native-image.js';
 import { z } from 'zod';
 import { genaiImageSchema, genaiImageEditSchema } from './astra-genai-image.js';
 import { text2ImageSchema, img2ImgSchema } from './image-client.js';
@@ -6,6 +7,8 @@ import { zimageGenerateSchema } from './zimage-client.js';
 import { GPT_IMAGE_MODELS, GPT_IMAGE_CONTRACTS, assertImageModelAvailable, validateMlxImageOperation } from './image-models.js';
 import { validateImageBase64 } from './image-media.js';
 export const IMAGE_ADAPTERS = Object.freeze({
+    astra_genai_image_generate: { engine: 'astra-genai-native', operation: 'text', schema: nativeImageSchema },
+    astra_genai_image_edit: { engine: 'astra-genai-native', operation: 'edit', schema: nativeImageEditSchema },
     astra_genai_text2img: { engine: 'astra-genai', operation: 'text', schema: genaiImageSchema },
     astra_genai_edit: { engine: 'astra-genai', operation: 'edit', schema: genaiImageEditSchema },
     gpt_image_text2img: { engine: 'gpt-image', operation: 'text', schema: text2ImageSchema },

@@ -3,6 +3,47 @@
   "revision": "2026-10-18",
   "adapters": [
     {
+      "tool": "astra_genai_image_generate",
+      "engine": "astra-genai-native",
+      "operation": "text",
+      "fields": [
+        "model",
+        "prompt",
+        "size",
+        "seed",
+        "steps",
+        "guidanceScale",
+        "negativePrompt",
+        "transparent",
+        "loras",
+        "outputPath",
+        "filename"
+      ]
+    },
+    {
+      "tool": "astra_genai_image_edit",
+      "engine": "astra-genai-native",
+      "operation": "edit",
+      "fields": [
+        "model",
+        "prompt",
+        "size",
+        "seed",
+        "steps",
+        "guidanceScale",
+        "negativePrompt",
+        "transparent",
+        "loras",
+        "outputPath",
+        "filename",
+        "imagePath",
+        "refImagePaths",
+        "mode",
+        "strength",
+        "refResolution"
+      ]
+    },
+    {
       "tool": "astra_genai_text2img",
       "engine": "astra-genai",
       "operation": "text",

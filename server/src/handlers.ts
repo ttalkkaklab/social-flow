@@ -40,6 +40,11 @@ import { checkedSpeechSchema, generateCheckedSpeech } from './tts-quality.js';
 import { finalSpeechSchema, reviewFinalSpeech } from './tts-final-quality.js';
 import * as astraVideo from './astra-video-client.js';
 import { generateGenaiVideo, getGenaiVideoStatus, genaiVideoStatusSchema, refreshGenaiMsrVoice } from './astra-genai-video.js';
+import { generateNativeImage } from './astra-genai-native-image.js';
+import { generateDesktopVideo, desktopVideoStatus } from './astra-genai-desktop.js';
+import { genaiSpeechSchema } from './astra-genai-speech.js';
+import { randomUUID } from 'node:crypto';
+import { genaiCatalog } from './astra-genai-client.js';
 import { generateGenaiImage } from './astra-genai-image.js';
 import * as omni from './omni-client.js';
 import * as video from './video-client.js';
@@ -992,6 +997,22 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   //    Acceptance and result are separate calls, so the client polls; these routes only
   //    parse, call, and report. Failures arrive as thrown errors carrying the server's own
   //    message — never the request headers, which is where the key lives.
+  astra_genai_catalog: async args => text(JSON.stringify(await genaiCatalog(z.enum(['image','speech','video','loras','contracts']).parse((args as Record<string, unknown>).kind)))),
+  tts_astra_genai: async args => {
+    const generation = genaiSpeechSchema.parse(args);
+    const result = await routeSpeech({ action: 'execute', generator: 'tts_astra_genai', requestId: generation.requestId || randomUUID(),
+      generation: { ...generation, outputPath: generation.outputPath || process.cwd() } });
+    return text(JSON.stringify(result), 'success' in result && result.success === false);
+  },
+  astra_genai_image_generate: async args => { const result = await generateNativeImage(args); return { ...text(JSON.stringify(result)), imageReceipt: result }; },
+  astra_genai_image_edit: async args => { const result = await generateNativeImage(args, true); return { ...text(JSON.stringify(result)), imageReceipt: result }; },
+  astra_genai_desktop_text2video: async args => text(JSON.stringify(await generateDesktopVideo('text-to-video', args))),
+  astra_genai_desktop_img2video: async args => text(JSON.stringify(await generateDesktopVideo('image-to-video', args))),
+  astra_genai_desktop_audio2video: async args => text(JSON.stringify(await generateDesktopVideo('audio-to-video', args))),
+  astra_genai_desktop_extend: async args => text(JSON.stringify(await generateDesktopVideo('extend', args))),
+  astra_genai_desktop_retake: async args => text(JSON.stringify(await generateDesktopVideo('retake', args))),
+  astra_genai_desktop_keyframes: async args => text(JSON.stringify(await generateDesktopVideo('keyframes', args))),
+  astra_genai_desktop_status: async args => { const input = z.object({receiptPath:z.string().min(1),download:z.boolean().default(false)}).strict().parse(args); return text(JSON.stringify(await desktopVideoStatus(input.receiptPath,input.download))); },
   astra_genai_text2video: async args => text(JSON.stringify(await generateGenaiVideo('text-to-video', args))),
   astra_genai_img2video: async args => text(JSON.stringify(await generateGenaiVideo('image-to-video', args))),
   astra_genai_audio2video: async args => text(JSON.stringify(await generateGenaiVideo('audio-to-video', args))),

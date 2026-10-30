@@ -1,4 +1,5 @@
 import { fasth3OmniSchema } from './fasth3-omni.js';
+import { DESKTOP_SCHEMAS } from './astra-genai-desktop.js';
 /** Sound intent -> supported adapter arguments. Never generates or reviews media. */
 import { z } from 'zod';
 import * as veo from './video-client.js';
@@ -18,6 +19,7 @@ const effectSchema = z.object({
 }).strict();
 const schemas = {
     fasth3_omni_reference: fasth3OmniSchema,
+    ...Object.fromEntries(Object.entries(DESKTOP_SCHEMAS).map(([feature, schema]) => ['astra_genai_desktop_' + ({ 'text-to-video': 'text2video', 'image-to-video': 'img2video', 'audio-to-video': 'audio2video' }[feature] || feature), schema])),
     veo_text2video: veo.text2VideoSchema, veo_img2video: veo.img2VideoSchema,
     veo_reference: veo.referenceVideoSchema, veo_extension: veo.videoExtensionSchema,
     seedance_text2video: seedance.seedanceText2VideoSchema,
@@ -40,11 +42,11 @@ export function prepareVideoSound(tool, input, sound = {}) {
         throw new Error('Effect ids must be unique within the shot');
     if (sound.audioSource !== undefined && !['video', 'speech'].includes(String(sound.audioSource)))
         throw new Error('sound.audioSource must be video or speech');
-    const fixedInput = tool === 'astra_audio2video' || tool === 'astra_genai_audio2video';
+    const fixedInput = ['astra_audio2video', 'astra_genai_audio2video', 'astra_genai_desktop_audio2video'].includes(tool);
     // MSR dialogue lives only in MSR's own soundtrack; a TTS speech lane would replace it.
     if (tool === 'astra_genai_msr' && sound.audioSource === 'speech')
         throw new Error('MSR keeps its own soundtrack; sound.audioSource speech is not allowed');
-    let nativeAudio = !fixedInput;
+    let nativeAudio = !fixedInput && (tool !== 'astra_genai_desktop_keyframes' || input.audio === true);
     if (tool.startsWith('seedance_')) {
         const model = input.model ?? (tool === 'seedance_reference' ? seedance.DEFAULT_SEEDANCE_REFERENCE_MODEL : seedance.DEFAULT_SEEDANCE_MODEL);
         const spec = seedance.SEEDANCE_MODEL_SPECS[model];
@@ -81,7 +83,8 @@ export function prepareVideoSound(tool, input, sound = {}) {
     if ((native.length || conditioned.length || sound.audioSource === 'video') && (tool.startsWith('seedance_') || tool.startsWith('astra_')) && !['astra_genai_audio2video', 'astra_genai_msr'].includes(tool)) {
         if (input.generateAudio === false)
             throw new Error('Cannot discard the requested input soundtrack');
-        args.generateAudio = true;
+        if (!tool.startsWith('astra_genai_desktop_'))
+            args.generateAudio = true;
     }
     const clauses = native.map(effect => `${effect.trigger}: ${effect.description}.`);
     const nativePrompt = `Audio: ${clauses.join(' ')} Only diegetic scene sounds.`;
@@ -104,6 +107,6 @@ export function prepareVideoSound(tool, input, sound = {}) {
     if (native.length)
         warnings.push('Native audio is a mixed soundtrack. Do not overlay a second dialogue track; inspect missing or unwanted effects before acceptance.');
     return { tool, arguments: parsed, sound: { ...sound, ...(audioSource ? { audioSource } : {}), effects: resolved },
-        capabilities: { nativeAudio, inputAudio: fixedInput ? 'preserved' : ['seedance_reference', 'fasth3_omni_reference', 'astra_genai_msr'].includes(tool) ? 'reference' : 'none' },
+        capabilities: { nativeAudio, inputAudio: fixedInput ? (tool === 'astra_genai_desktop_audio2video' ? 'conditioned_reencoded' : 'preserved') : ['seedance_reference', 'fasth3_omni_reference', 'astra_genai_msr'].includes(tool) ? 'reference' : 'none' },
         warnings, review: 'not_reviewed', generated: false };
 }

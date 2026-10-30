@@ -1,4 +1,5 @@
 import { LOCAL_VIDEO_MODELS, localVideoStrategy } from './local-video-models.js';
+import { DESKTOP_SCHEMAS } from './astra-genai-desktop.js';
 import { z } from 'zod';
 import * as veo from './video-client.js';
 import * as seedance from './seedance-client.js';
@@ -25,6 +26,10 @@ export const VIDEO_ADAPTERS: Readonly<Record<string, VideoAdapter>> = Object.fre
   seedance_text2video: entry('seedance', 'byteplus', 'text', seedance.seedanceText2VideoSchema),
   seedance_img2video: entry('seedance', 'byteplus', 'image', seedance.seedanceImg2VideoSchema),
   seedance_reference: entry('seedance', 'byteplus', 'reference', seedance.seedanceReferenceSchema),
+  ...Object.fromEntries(Object.entries(DESKTOP_SCHEMAS).map(([feature, schema]) => [
+    'astra_genai_desktop_' + ({ 'text-to-video': 'text2video', 'image-to-video': 'img2video', 'audio-to-video': 'audio2video' }[feature] || feature),
+    entry('astra-genai-desktop', 'gateway-desktop-v1', ({ 'text-to-video': 'text', 'image-to-video': 'image', 'audio-to-video': 'audio', keyframes: 'keyframe' }[feature] || feature), schema),
+  ])),
   astra_genai_text2video: entry('astra-genai', 'genai-ltx-v2', 'text', genaiTextToVideoSchema),
   astra_genai_img2video: entry('astra-genai', 'genai-ltx-v2', 'image', genaiImageToVideoSchema),
   astra_genai_audio2video: entry('astra-genai', 'genai-ltx-v2', 'audio', genaiAudioToVideoSchema),
@@ -65,6 +70,7 @@ export function videoCatalog() {
     adapters: Object.entries(VIDEO_ADAPTERS).map(([tool, a]) => ({ tool, engine: a.engine, deployment: a.deployment, operation: a.operation,
       voice: videoVoiceCapabilities(tool), ...(tool === 'mlx_video_generate' ? { deprecated: true, replacement: 'ltx_video_generate' } : {}),
       fields: keys(a.schema), modelConstraints: localVideoStrategy(tool) ? { frames: localVideoStrategy(tool)!.frames, note: tool === 'fasth3_omni_reference' ? '8 steps; 9 images, 3 videos, 3 audios, 12 total; visual reference required; 256 MiB RGB cap; no exact speech preservation.' : 'LTX 8k+1 frames; MLX-Serve backend.' } : a.engine === 'seedance' ? seedance.SEEDANCE_MODEL_SPECS :
+        a.engine === 'astra-genai-desktop' ? { discovery: 'astra_genai_catalog', note: 'Gateway /models and /contracts specify installed matrices. I2V: start/end only; A2V: audio and optional start; keyframes: 1..10. LoRA only on text/keyframes; audio truncation defaults false.' } :
         tool === 'astra_genai_msr' ? { note: 'Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; an optional character voice sample on subject 1 or 2 sets the timbre of that speaker, and the dialogue goes in the prompt.' } :
         tool === 'astra_genai_audio2video' ? { models: ['ltx-2.5-22b-dev'], note: 'Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters.' } :
         a.engine === 'astra-genai' ? { models: GENAI_VIDEO_MODELS, note: 'Explicit duration and resolution; server validates deployment limits. No supplied audio, keyframes or LoRA.' } :
@@ -80,13 +86,14 @@ export function videoVoiceCapabilities(tool: string) {
   if (!adapter) throw new Error('Unsupported video tool: ' + tool);
   return {
     voiceReference: tool === 'fasth3_omni_reference' ? 'supported' : tool === 'seedance_reference' ? 'model_dependent' : tool === 'astra_genai_msr' ? 'backend_dependent' : 'unsupported',
-    suppliedSpeech: ['astra_audio2video', 'astra_genai_audio2video'].includes(tool) ? 'audio_conditioned_reencoded' : 'unsupported',
+    suppliedSpeech: ['astra_audio2video', 'astra_genai_audio2video', 'astra_genai_desktop_audio2video'].includes(tool) ? 'audio_conditioned_reencoded' : 'unsupported',
     exactAudioPreservation: false,
     voiceContinuation: tool === 'omni_extend' ? 'previous_interaction_id' : tool === 'veo_extension' ? 'source_final_second' : 'unsupported',
     review: 'not_reviewed',
   };
 }
 export function speechVideoCapabilities(provider: string, model: string) {
+  if (provider === 'astra-genai-desktop') return { provider, model, audioConditioning: true, lipSync: false, postLipSync: false, evidence: 'Gateway A2V reencodes supplied audio; timing/voice identity not guaranteed; installed model capabilities must be checked' };
   if (provider === 'astra') return { provider, model, audioConditioning: true, lipSync: true, postLipSync: false, evidence: 'astra_audio2video adapter contract' };
   if (provider === 'veo' && (veo.VALID_VIDEO_MODELS as readonly string[]).includes(model))
     return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, evidence: 'Gemini Veo has no external audio input' };

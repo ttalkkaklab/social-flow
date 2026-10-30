@@ -15,6 +15,10 @@ existing artifacts are inputs, not automatic passing evidence. Never skip prereq
 Require image_storyboard. Read [image inspection](../produce/references/still-generation.md)
 and [visual grounding](../storyboard/references/narration-visual-grounding.md).
 
+Invoke this stage only when the user requests image review. A video request alone does not
+start a review loop; without a request, begin video records image_review as skipped over the
+current images and keeps any existing findings, never a pass.
+
 An independent reviewer opens every actual image in cut order, compares with the Blender
 compositions and camera plan, then tests audience comprehension against the text. Check
 visible evidence, opening state, prop hands/ownership, actor placement, identity, readable

@@ -1,3 +1,4 @@
+import { buildNativeImageBody, recoverNativeImage } from './astra-genai-native-image.js';
 import { GenaiRequestError } from './astra-genai-client.js';
 import { requireCompositionReference, requireWorkflow, workflowRevision, workflowEpisode } from './production-workflow.js';
 import * as fs from 'node:fs';
@@ -46,7 +47,7 @@ function environment(tool: string): void {
   gate(tool);
   const engine = IMAGE_ADAPTERS[tool].engine;
   if (engine === 'gpt-image' && !config.openaiApiKey) throw new Error('image_provider_unconfigured: OPENAI_API_KEY');
-  if (engine === 'astra-genai' && !config.astraGenaiApiKey) throw new Error('image_provider_unconfigured: ASTRA_GENAI_API_KEY');
+  if (['astra-genai', 'astra-genai-native'].includes(engine) && !config.astraGenaiApiKey) throw new Error('image_provider_unconfigured: ASTRA_GENAI_API_KEY');
   if (engine === 'mlx' && !mlxServeConfigured()) throw new Error('image_provider_unconfigured: MLX Core');
   if (engine === 'zimage') {
     const bin = mfluxZImageBin();
@@ -114,6 +115,7 @@ export function planImage(raw: unknown): ImagePlan {
   requireWorkflow(input.directory, 'image', input.assetId, outputFile);
   requireCompositionReference(input.directory, input.assetId, args, outputFile);
   const inputs = selection.engine === 'host' ? {} : inputFiles(args, context.directory);
+  if (selection.engine === 'astra-genai-native') buildNativeImageBody(args, tool === 'astra_genai_image_edit');
   if (selection.engine === 'astra-genai')
     buildGenaiImageBody((tool === 'astra_genai_edit' ? genaiImageEditSchema : genaiImageSchema).parse(args));
   if (outputFile && Object.hasOwn(inputs, outputFile)) throw new Error('image_output_overwrites_input');
@@ -265,13 +267,13 @@ export function imageStatus(raw: unknown) {
 async function refreshGenaiImage(directory: string, requestId: string) {
   const state = readImageState(directory);
   const job = state?.jobs[requestId];
-  if (!job || !['astra_genai_text2img', 'astra_genai_edit'].includes(job.tool)) throw new Error('image_refresh_unsupported: requires an existing GenAI image request');
+  if (!job || !['astra_genai_text2img', 'astra_genai_edit', 'astra_genai_image_generate', 'astra_genai_image_edit'].includes(job.tool)) throw new Error('image_refresh_unsupported: requires an existing GenAI image request');
   const plan: ImagePlan = JSON.parse(fs.readFileSync(path.join(directory, '.work/image-routing/plans', job.planId + '.json'), 'utf8'));
   const { id, ...body } = plan;
   if (id !== job.planId || routingHash(body) !== id || plan.directory !== directory || plan.outputFile !== job.outputFile || plan.tool !== job.tool)
     throw new Error('image_recovery_plan_invalid');
   gate(plan.tool);
-  const receipt = await recoverGenaiImage(job.outputFile + '.astra-genai.json');
+  const receipt = await (job.tool.startsWith('astra_genai_image_') ? recoverNativeImage : recoverGenaiImage)(job.outputFile + '.astra-genai.json');
   if (receipt.imagePath !== job.outputFile) throw new Error('image_recovery_output_mismatch');
   const result: ToolResult = { content: [{ type: 'text', text: JSON.stringify(receipt) }], imageReceipt: receipt,
     structuredContent: imageExecutionResult(plan, 'completed', receipt, receipt.output) };

@@ -1,4 +1,5 @@
 /** Shared execution boundary for raw tools, auditions and the common speech router. */
+import { astraGenaiBaseUrl, requireAstraGenaiKey } from './astra-genai-client.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash, randomUUID } from 'node:crypto';
 import { accessSync, constants, existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
@@ -47,12 +48,12 @@ export async function executeSpeech<T extends SpeechResult>(
   args: Record<string, unknown>,
   run: (output: { outputPath: string; filename: string }) => Promise<T>,
 ): Promise<T & SpeechResult> {
-  const provider = generator.startsWith('tts_elevenlabs_') ? 'elevenlabs' : 'gemini';
+  const provider = generator === 'tts_astra_genai' ? 'astra-genai' : generator.startsWith('tts_elevenlabs_') ? 'elevenlabs' : 'gemini';
   const contract = resolveTtsModel(provider, String(args.model));
   if (![contract.single, contract.dialogue].includes(generator)) throw new Error('Generator does not implement selected TTS model');
   const gate = resolveToolGate(generator, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
   if (!gate.enabled) throw new Error(`Selected speech generator is disabled: ${gate.reason}`);
-  const key = provider === 'gemini' ? requireGeminiKey() : requireElevenLabsKey();
+  const key = provider === 'astra-genai' ? requireAstraGenaiKey() : provider === 'gemini' ? requireGeminiKey() : requireElevenLabsKey();
   const id = executionId.getStore() || randomUUID();
   const outputPath = resolve(String(args.outputPath || process.cwd()));
   const extension = String(args.outputFormat || 'wav').startsWith('mp3') ? 'mp3' : 'wav';
@@ -71,7 +72,7 @@ export async function executeSpeech<T extends SpeechResult>(
   const runs = join(directory, '.speech-runs');
   mkdirSync(runs, { recursive: true });
   const receiptPath = join(runs, id + '.json');
-  const fingerprint = digest(canonical({ generator, args: { ...args, outputPath: directory } }));
+  const fingerprint = digest(canonical({ generator, ...(provider === 'astra-genai' ? { baseUrl: astraGenaiBaseUrl() } : {}), args: { ...args, outputPath: directory } }));
   const releaseRequest = lock(join(runs, id + '.lock'));
   let releaseOutput: (() => void) | undefined, releaseSlot: (() => void) | undefined;
   try {
@@ -86,6 +87,7 @@ export async function executeSpeech<T extends SpeechResult>(
       return { ...prior.result, receiptPath, review: 'not_reviewed', replayed: true };
     }
     releaseOutput = lock(stem + '.speech-lock');
+    if (provider === 'astra-genai' && existsSync(audioPath)) throw new Error('Speech output already exists; recover its original requestId before new generation');
     const limit = Number(process.env.SOCIAL_FLOW_TTS_MAX_CONCURRENCY || 2);
     if (!Number.isInteger(limit) || limit < 1 || limit > 32) throw new Error('SOCIAL_FLOW_TTS_MAX_CONCURRENCY must be an integer from 1 to 32');
     const slots = join(tmpdir(), `social-flow-tts-${process.getuid?.() ?? 'user'}-${digest(provider + key).slice(0, 24)}`);

@@ -228,3 +228,64 @@ Contract: [gateway docs](https://genai.astravision.co.kr/docs) and
 `server/test/fixtures/astra-genai-openapi-20261020.json`. Response parsing follows
 LTX `id/status/result.video_url` and DashScope `request_id/output.choices/usage`.
 Contract tests use synthetic media and mocked transport, not live GPU generation.
+
+## Model-bound gateway (2026-10-25)
+
+Existing `astra-genai` image/video selections keep the DashScope/LTX v2 contract.
+Choose these explicit engines for the newer gateway; never infer deployment from a
+model name, OS or localhost. All use the same `ASTRA_GENAI_URL` (root, without `/v1`)
+and `ASTRA_GENAI_API_KEY`. Production may run without MLX.
+
+```json
+{
+  "image": {"engine":"astra-genai-native","model":"qwen-image-fast"},
+  "speech": {"engine":"astra-genai","model":"voxcpm2"},
+  "video": {"engine":"astra-genai-desktop","model":"ltx-2.5-fast","resolution":"270p"}
+}
+```
+
+This is a `models` fragment, not a complete project configuration. Replace aliases
+with `astra_genai_catalog kind:image/speech/video` results. Preserve project, SNS,
+style and production fields when updating; existing episode snapshots stay fixed.
+No example grants spending permission. `capability_status` checks credentials only.
+
+- Image `text` selects `astra_genai_image_generate`; `edit` selects
+  `astra_genai_image_edit`. `size` uses `WIDTHxHEIGHT`, not `WIDTH*HEIGHT`.
+  Edits accept `imagePath` plus up to nine `refImagePaths` in order and explicit
+  `mode:edit|variation`. Actual model/protocol support comes from the image catalog.
+  `loras:[{id,scale}]` uses registered IDs, maximum eight, scale 0–2; zero is kept.
+  No masks, prompt expansion, arbitrary LoRA paths or reference dropping.
+  Do not reuse DashScope step defaults: omit steps for the model's saved schedule.
+- Speech uses `tts_astra_genai` with a stable `requestId`, or `tts_route` with
+  that generator. `text` becomes `input`, `maxTokens` becomes `max_tokens` and
+  `outputFormat` becomes `response_format`. The plugin supports WAV/MP3; the model
+  may support fewer. VoxCPM2 requires WAV and speed 1. `voice` is an operator's
+  registered ID; `instructions` require voice-design support. No client reference
+  audio upload or continuation. Character `tts.engine` is `astra-genai`, with an
+  explicit model alias and registered `voiceId`; `voiceDirection` maps to instructions.
+  `speech_manage plan_audio`, auditions and provenance use the same adapter.
+- Desktop video operations `text`, `image`, `audio`, `extend`, `retake`, `keyframe`
+  select the corresponding `astra_genai_desktop_*` tool. Use `video_plan/execute`.
+  The installed offering ID is `ltx-2.5-fast`, never a hosted or v2 checkpoint ID.
+  Resolution/fps/duration combinations are device dependent; inspect the live catalog.
+  I2V takes `imagePath` and optional `lastFramePath` (two temporal references).
+  A2V takes `audioPath` and optional `imagePath`; no last frame or duration override.
+  `allowAudioTruncation` defaults false: pad audio to the next 8k+1 frame boundary
+  or explicitly opt into frame-grid loss. No automatic trim or padding occurs.
+  Extend/retake use `sourceVideoPath` and optional `targetResolution:{width,height}`.
+  Their source dimensions/fps are inherited; a saved p-tier applies to new generation,
+  while an explicit saved WIDTHxHEIGHT becomes the edit cap. The server never upscales.
+  Text/keyframes accept `loras:[{ref,scale}]` from `kind:loras`, scale 0–4.
+  Queued I2V/A2V/edit schemas do not accept LoRAs. Keyframes accept 1–10 ordered
+  `{imagePath,frameIndex,strength}` entries, distinct indices and strengths 0–1;
+  selected model must equal the active model because the direct pipeline uses it.
+  Keyframes use `audio` (default false); other native queued operations do not expose
+  a `generateAudio` switch. No silent audio stripping is added.
+
+The client uploads files as gateway-owned assets and downloads private output with
+that same gateway credential. It never sends the token to external result URLs.
+Generation writes a durable receipt before submission; lost responses stay uncertain.
+Use `image_status action:refresh`, `video_status action:refresh`, or the corresponding
+receipt recovery tool. Do not delete receipts or change request IDs to retry an
+ambiguous generation. The gateway token must retain access to those jobs/assets.
+LoRA compatibility and perceptual voice/video quality still need actual renders.

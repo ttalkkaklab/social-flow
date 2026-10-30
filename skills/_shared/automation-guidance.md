@@ -1,8 +1,11 @@
 # Fixed cut workflow exception
 
 The owner requires the seven [cut workflow stages](production-workflow.md). Their order,
-independent reviews, required Blender compositions and unresolved-correction checks are
-execution prerequisites. The guidance below cannot waive these stages or permit a skip.
+independent reviews and required Blender compositions are execution prerequisites, with
+one explicit exception: image review is a HITL choice when video generation is requested.
+Follow the shared workflow's image-review choice and record an explicit user skip; do not
+infer it from a generic video request or fabricate a pass. The guidance below cannot skip
+other stages.
 This does not authorize spending, publication or automatic speech scoring.
 
 # Automatic work: guidance, evidence and authorization

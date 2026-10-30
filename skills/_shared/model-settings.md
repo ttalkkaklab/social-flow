@@ -124,7 +124,7 @@ prices. A configured credential does not guarantee a successful generation.
    If not, save `models.speech:{engine:"none"}` and skip speech model, voice and
    credential questions. This covers silence, supplied recordings and native video
    audio without a separate TTS call. Do not infer this choice from the genre.
-   If yes, select a **speech model**, then complete its credential check below. Offer available Gemini models or ElevenLabs `eleven_v4` only
+   If yes, select a **speech model**, then complete its credential check below. Offer available Gemini models, ElevenLabs `eleven_v4`, or configured ASTRA GenAI speech aliases
    ([v4 API contract](elevenlabs-v4.md)); v4 Turbo uses a separate realtime WebSocket
    and is not supported by the file-generation tools. Local TTS
    engines are removed; do not offer Supertonic or MLX speech. Keep model selection separate from each
@@ -170,7 +170,7 @@ JSON
 The file is `.social-flow/models.json`, schema version 1. Store no credentials.
 `engine` is required in each category; `model` is required for selectable engines.
 Legacy `astra` and local `zimage` use fixed server models, so omit `model` for them.
-The separate `astra-genai` engine requires `model` for both video and image.
+The separate `astra-genai` engine requires `model`. New gateway image/video contracts use `astra-genai-native` and `astra-genai-desktop`; speech uses `astra-genai`. Discover aliases and supported options before choosing them.
 See [GenAI adapters](astra-genai.md) for credentials, explicit budget reservations and recovery.
 For a host with no model selector use `host-managed`, a label rather than a claimed
 vendor model/version. Also record `host` (for example `codex` or `grok`); verify

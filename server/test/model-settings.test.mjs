@@ -238,3 +238,10 @@ test('explicit no-TTS selection accepts no model and omission still requires set
   const { speech, ...missingSpeech } = models;
   assert.throws(() => settings.validateModels(missingSpeech), /speech.engine/);
 });
+
+test('gateway engines persist exact deployment aliases independently of local runtime',t=>{
+ const root=workspace(t);
+ const selected={image:{engine:'astra-genai-native',model:'qwen-image-fast'},speech:{engine:'astra-genai',model:'voxcpm2'},video:{engine:'astra-genai-desktop',model:'ltx-2.5-fast',resolution:'270p'}};
+ settings.saveSettings(root,selected,{request:'Use the configured gateway',videoType});
+ assert.deepEqual(settings.readSettings(root).config.models,selected);
+});

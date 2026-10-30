@@ -35,7 +35,7 @@ function directionSupport(voice, acting) {
   }
   const stylePrompt=resolvedStyle(voice,acting);
   const gemini38=voice?.engine==='gemini' && voice.model?.trim().startsWith('gemini-3.8-');
-  const supported=!stylePrompt || (voice?.engine==='gemini' && (!gemini38 || stylePrompt.length<=500));
+  const supported=(voice?.engine==='astra-genai' && stylePrompt.length<=2000) || !stylePrompt || (voice?.engine==='gemini' && (!gemini38 || stylePrompt.length<=500));
   return {stylePrompt,supported,warnings:supported?[]:[gemini38?'Resolved acting exceeds the Gemini 3.8 turn style limit of 500 characters; shorten it before generation.':`The selected ${voice?.engine} adapter cannot carry free-text acting direction; review delivery or explicitly choose a capable adapter.`]};
 }
 // Omit absent acting to retain revisions of existing episodes byte-for-byte.

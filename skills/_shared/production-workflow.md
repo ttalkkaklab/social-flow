@@ -69,7 +69,7 @@ review-cut-images runs only when the user asks for an image review (owner direct
 image hashes; a later image change still makes that record stale and requires a rewind.
 Produce supplies the shared generation, assembly and delivery implementations.
 
-There is no skip, force, waiver or renderer fallback in this sequence. The generation
+There is no skip or renderer fallback for the other stages. The generation
 stages stop before their review stage. Reviews use a fresh independent host reviewer;
 the author fixes defects and a reviewer rechecks. No invented numeric score target is
 required: all required corrections must be resolved with actual evidence. Unsupported
