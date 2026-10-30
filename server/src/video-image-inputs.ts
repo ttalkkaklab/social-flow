@@ -28,6 +28,29 @@ const FRAME_FIELDS: Record<string, [string, string?]> = {
   astra_audio2video: ['imagePath'], astra_genai_img2video: ['imageUri', 'lastFrameUri'],
   astra_genai_audio2video: ['imagePath', 'lastFramePath'], mlx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'], ltx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'],
 };
+// No framing words here: "face close-up" in this sentence opened every 2026-10-31 test render on a close-up.
+const PANEL_VIEWS: Record<string, string> = { face: 'face', front: 'headless front body', back: 'headless back body' };
+/**
+ * An MSR slot is an input source, not a declared subject, so name the character-sheet panels
+ * (panels.json) that show one character: the face close-up carries the head, the headless panels
+ * the body and outfit.
+ */
+function msrPanelBinding(paths: string[], refs: ImageReference[]): string {
+  const groups = new Map<string, string[]>();
+  paths.forEach((file, i) => {
+    if (refs[i].role === 'background') return;
+    let panels: Record<string, { file?: string }>;
+    try { panels = JSON.parse(readFileSync(path.join(path.dirname(file), 'panels.json'), 'utf8')).panels ?? {}; } catch { return; }
+    const view = Object.entries(panels).find(([, panel]) => panel.file === path.basename(file))?.[0];
+    if (view && PANEL_VIEWS[view]) groups.set(path.dirname(file), [...(groups.get(path.dirname(file)) ?? []), `Image ${i + 1} (${PANEL_VIEWS[view]})`]);
+  });
+  return [...groups].filter(([, items]) => items.length > 1).map(([folder, items]) =>
+    `${items.join(', ')} show one character, ${path.basename(folder)}: render one complete character with the head and hair from the face and the body and outfit from the headless panels.`).join('\n');
+}
+/** A character-sheet panel counts once per sheet folder; any other character image counts alone. */
+function characterKey(file: string): string {
+  try { readFileSync(path.join(path.dirname(file), 'panels.json')); return path.dirname(file); } catch { return file; }
+}
 export function hasStructuredImages(shot: Record<string, unknown>): boolean {
   return imageRouting().hasStructuredImages(shot);
 }
@@ -95,8 +118,17 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
     const paths = videoRefs.map(ref => bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, true));
     if (tool === 'astra_genai_msr') put('references', videoRefs.map((ref, i) => ({ imagePath: paths[i], ...(ref.role === 'background' ? { background: true } : {}) })));
     else put('referenceImagePaths', paths);
-    const guidance = videoRefs.map((ref, i) => `${tool === 'fasth3_omni_reference' ? '<Picture ' + (i + 1) + '>' : 'Image ' + (i + 1)} (${ref.id}, ${ref.role}): ${ref.purpose}`).join('\n');
-    args.prompt = String(args.prompt ?? '') + '\nImage reference roles:\n' + guidance;
+    if (tool === 'astra_genai_msr') {
+      // Two principal characters take references (user directive 2026-10-31); the model draws anyone else.
+      const characters = new Set(videoRefs.flatMap((ref, i) => ref.role === 'character' ? [characterKey(paths[i])] : []));
+      if (characters.size > 2) throw new Error(`msr_character_limit: references show ${characters.size} characters; reference two principal characters and describe anyone else in the action`);
+      // The model card describes each reference first ("Image 1: ..."), then the action.
+      const binding = msrPanelBinding(paths, videoRefs);
+      args.prompt = [...videoRefs.map((ref, i) => `Image ${i + 1}: ${ref.role}, ${ref.purpose}`), ...(binding ? [binding] : []), '', String(args.prompt ?? '')].join('\n');
+    } else {
+      const guidance = videoRefs.map((ref, i) => `${tool === 'fasth3_omni_reference' ? '<Picture ' + (i + 1) + '>' : 'Image ' + (i + 1)} (${ref.id}, ${ref.role}): ${ref.purpose}`).join('\n');
+      args.prompt = String(args.prompt ?? '') + '\nImage reference roles:\n' + guidance;
+    }
   } else if (keyframes) {
     const fps = Number(args.frameRate ?? 24);
     const count = Number(args.numFrames ?? (args.duration === undefined ? NaN : framesForSeconds(Number(args.duration), fps)));

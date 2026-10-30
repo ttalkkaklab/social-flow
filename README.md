@@ -1147,6 +1147,8 @@ that the plugin created the project's incorrect code or settings.
 Cut production uses seven separate skills, coordinated by autoproduce and enforced by
 production_workflow: review-context -> review-camera -> compose-blender ->
 generate-cut-images -> review-cut-images -> generate-cut-videos -> review-cut-videos.
+review-cut-images runs only when the user asks; otherwise `begin video` records
+image_review as skipped over the current image hashes.
 Character/prop/background sheets remain preparation assets. Required Blender still
 compositions are separate from optional animated video previz. Reviews are independent,
 file-hash-bound and require no unresolved corrections; missing review cannot become pass.

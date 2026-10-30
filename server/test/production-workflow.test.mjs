@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { manageWorkflow, requireCompositionReference, requireWorkflow, requireReviewedVideos } from '../dist/production-workflow.js';
+import { manageWorkflow, requireCompositionReference, requireWorkflow, requireReviewedImages, requireReviewedVideos } from '../dist/production-workflow.js';
 import { planVideo } from '../dist/video-routing.js';
 import { planImage, executeImage } from '../dist/image-routing.js';
 import { setupProject, completeWorkflow, stageFixture, fileHash, png } from './workflow-fixture.mjs';
@@ -116,6 +116,20 @@ test('Blender inventory, receipt and actual composition reference are required b
  assert.throws(()=>requireCompositionReference(f.episode,'s1',{prompt:entries[0].image}),/composition_reference_required/);
  requireCompositionReference(f.episode,'s1',{referenced_image_paths:[entries[0].image]});
  assert.throws(()=>requireWorkflow(f.episode,'video'),/out_of_order/);
+});
+
+test('begin video without a requested image review records image_review as skipped over the current images',t=>{
+ const f=fixture(t);setupProject(f.root);completeWorkflow(f.episode);f.call({action:'rewind',stage:'image_review'});
+ stageFixture(f.episode,'video');
+ const skip=f.call({action:'status'}).completed.find(r=>r.stage==='image_review');
+ const image=path.join(f.episode,'workflow/image_storyboard.png');
+ assert.deepEqual(skip.entries,[]);assert.ok(skip.skipped.request);assert.equal(skip.hashes[image],fileHash(image));
+ requireWorkflow(f.episode,'video','s1');
+ const sheet=path.join(f.episode,'workflow/characters.png'),loose=path.join(f.episode,'loose.png');fs.writeFileSync(loose,png);fs.appendFileSync(loose,'x');
+ requireReviewedImages(f.episode,[sheet,image]);
+ assert.throws(()=>requireReviewedImages(f.episode,[loose]),/workflow_image_not_reviewed/);
+ fs.appendFileSync(image,'changed');
+ assert.throws(()=>f.call({action:'status'}),/workflow_stale: rewind image_storyboard/);
 });
 
 test('legacy completion resumes at context review and never inherits old media approvals',t=>{

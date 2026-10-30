@@ -12,7 +12,7 @@ Own only `video`. Follow [the fixed workflow](../_shared/production-workflow.md)
 for state, evidence, re-entry and stopping conditions. A completed board can re-enter here;
 existing artifacts are inputs, not automatic passing evidence. Never skip prerequisites.
 
-Require image_review. Read [video model selection](../produce/references/video-model-selection.md)
+Require image_storyboard; image_review is done only when the user asked for it. Read [video model selection](../produce/references/video-model-selection.md)
 and [duration planning](../produce/references/video-duration.md).
 
 Register every video cut with its shotId, a stable text plan and actual/planned video path.

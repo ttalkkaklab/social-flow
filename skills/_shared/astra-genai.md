@@ -103,22 +103,72 @@ Measure actual output duration before assembly; do not assume it covers an exact
 speech duration. `requiredSeconds`, first/last frames, LoRA, retake and a supplied
 speech track are not part of this MSR contract.
 
-MSR renders speech and diegetic effects into its own soundtrack. **One voice mode
-(2026-10-30, user directive):** MSR always receives each speaker's voice sample and
-speaks the dialogue written in the prompt. `astra_genai_msr` refuses a request with no
-sample. For on-screen dialogue `video_plan` attaches each
-speaker's pinned `voiceReference` sample to the subject image listed in that
-character's `voiceReference.imagePaths`, as `references[i].audioPath`, and writes
-`Audio N: voice of …, belongs only to Image M` into the prompt. Only subjects 1 and 2
-take a sample (the gateway pairs `audio_ref1`/`audio_ref2` with `pic1`/`pic2`); a
-speaker shown as subject 3 or later, a speaker without a pinned sample, a voiceover
-line or a cut without dialogue is a planning error. References are never reordered. The sample is a timbre reference, at most 10 seconds
-of voice with no background sound; the model imitates it and does not preserve it.
-A sample mixed with a music bed spread that bed under the whole tested scene, and a
-clean sample left the room silent apart from the authored effects.
+MSR renders speech and diegetic effects into its own soundtrack. **Voice samples are
+optional (2026-10-31, user directive).** `video_plan` lays the prompt out as the model
+card does (2026-10-31): the reference block first (`Image N: <role>, <purpose>` per image,
+then the panel sentence, then `Audio N: <name>'s voice, belongs only to Image M.`), a blank
+line, the author's action text, then each authored line the prompt does not already quote,
+as `Image M speaks with visible lip movement synchronized with Audio N while the other
+characters listen silently with their lips closed. Audio N (Image M): "…"`. Write each MSR
+reference's `purpose` as a visible description (who or what, clothing, materials), since
+it becomes that image's description. For on-screen dialogue `video_plan` attaches each
+speaker's pinned `voiceReference` sample to the subject image listed in that character's
+`voiceReference.imagePaths`, as `references[i].audioPath`. Only subjects 1 and 2
+take a sample (the gateway pairs `audio_ref1`/`audio_ref2` with `pic1`/`pic2`). A speaker
+without a pinned sample, a speaker shown as subject 3 or later, or a gateway without sample
+support leaves that speaker voiced from the prompt, with a plan warning; a sample longer
+than five seconds and Korean dialogue also get warnings. A cut without
+dialogue is a valid MSR cut; a voiceover line is a planning error because MSR's soundtrack
+is the cut's audio. References are never reordered. The sample is a timbre reference, at
+most 10 seconds of voice with no background sound; the model imitates it and does not
+preserve it. A sample mixed with a music bed spread that bed under the whole tested scene,
+and a clean sample left the room silent apart from the authored effects.
 
-This needs a gateway whose MSR backend accepts samples. `video_plan` and the tool ask
-`GET /v1/ltx/msr/capabilities` first; a gateway without the route or a backend that
+**Default character references (2026-10-31, user directive).** A character's MSR references
+are its sheet panels from `panels.json`: the face close-up, the headless front and the
+headless back. A slot is an input source, not a declared subject, so `video_plan` adds a
+sentence naming the panels that show one character and taking the head and hair from the
+face close-up.
+One character uses all three panels; two use each face, then each front, so the two
+speakers sit on subjects 1 and 2, where a voice sample can ride. At most two characters take
+references (user directive, 2026-10-31): describe anyone else on screen in the action and let
+the model draw them; `video_plan` refuses references for a third character
+(`msr_character_limit`), and the storyboard keeps two principal characters per shot
+(`[character-limit]`). The background goes last. A test on 2026-10-31
+(Kardum, same prompt and seed) kept one complete orc with the sheet's outfit front and back
+with all three panels; the face alone invented a different armour. The panels-only render
+dropped the topknot, which the face-panel hair instruction addresses.
+
+MSR stages framing words wherever they sit in the prompt. On 2026-10-31 (s0101, seed 42)
+the words "face close-up" in the panel sentence opened every render on a close-up of
+Image 1; the same prompt without them opened wide, and moving the block after the action
+turned the ending into a close-up cut instead. Keep shot sizes out of reference
+descriptions and keep the reference block first.
+
+A shot reference image is possible as one more slot (`role:"composition"`) or as the
+background, but in the same test neither pinned the opening layout, which the model
+recomposed; the subject slot cost the second character's outfit panel and the background
+slot replaced the location. Use image-to-video when the first frame must match. Two
+similar-looking characters (two green orcs) briefly traded outfits at the start of a
+render, the subject blending the paper reports.
+
+Model facts (Licon MSR V2 model card, arXiv 2609.18393, ComfyUI-LTX2.5-MSR 1.2.2). The
+model takes up to five images; the paper trained mostly on two to five and has not
+established more. It takes voice for up to two speakers, on pic1 and pic2; the node keeps a
+hidden third audio input that the card does not support. Each voice slot is a 5-second
+window with a 0.04-second margin: the first five seconds are used, the rest is cut, and a
+shorter clip is not padded. Training captions are English; cross-language voice and unseen
+voices are not established, and the paper reports voice mixing and inherited reference noise.
+The card says ambient sound needs background music in the voice sample; this plugin still
+sends voice-only samples, because a music bed in a sample spread under the whole tested
+scene (2026-10-30), so ambience comes from the effects written in the prompt. The ComfyUI
+text encoder left-pads prompts to at least 1,024 tokens and sets no upper cap; the binding
+limit here is the gateway's 2,000-character MSR prompt. The official two-speaker sample
+splits about 3,700 characters through a PromptRelay node into a reference-description block
+(about 940) and an action script (about 2,700); the gateway bridge encodes one string.
+
+`video_plan` and the tool ask `GET /v1/ltx/msr/capabilities` for sample support; a
+direct request that carries a sample to a gateway without the route or a backend that
 cannot take samples fails with `msr_voice_unsupported` before anything is submitted.
 `visual.video.voice` is retired and `sound.audioSource:"speech"` is refused on MSR.
 `prepare-video-sound.js` sets `sound.audioSource:"video"` and routes `auto` effects
@@ -128,8 +178,8 @@ into the MSR soundtrack.
 saves `{engine:"astra-genai", model:"ltx-2.5-22b-distilled", operation:"reference",
 resolution:"1792x1024"}` (16:9; `1024x1792` for 9:16). `video_plan` uses the saved
 `operation` when a call names none, so episode cuts plan MSR. A direct "LTX로 만들어줘"
-request means `astra_genai_msr` with the character image, the character's voice sample
-and the dialogue in the prompt. The v2 operations take a provider `resolution` string,
+request means `astra_genai_msr` with the character image, the dialogue in the prompt
+and the character's voice sample when one is pinned. The v2 operations take a provider `resolution` string,
 and the gateway refused `1792x1024` there (`unknown provider resolution`, 2026-10-30):
 a v2 call in such a project needs its own supported resolution.
 

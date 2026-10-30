@@ -15,7 +15,9 @@ const REVIEWS = ['context_review', 'camera_review', 'image_review', 'video_revie
 const IMAGE_STAGES = ['characters', 'props', 'backgrounds', 'blender_composition', 'image_storyboard'];
 const stageSchema = z.enum(STAGES);
 const entrySchema = z.object({ images: z.array(z.string().min(1)).optional(), id: z.string().min(1), text: z.string().min(1), image: z.string().min(1).optional(), blend: z.string().min(1).optional(), video: z.string().min(1).optional() }).strict();
-const recordSchema = z.object({ stage: stageSchema, entries: z.array(entrySchema), notApplicable: z.string().optional(), criteriaHash: z.string().optional(), hashes: z.record(z.string()).optional() }).strict();
+// image_review runs only when the user asks (user directive 2026-10-31); otherwise it is recorded as skipped.
+const skippedSchema = z.object({ requestedBy: z.string().min(1).optional(), request: z.string().trim().min(1), at: z.string().min(1) }).strict();
+const recordSchema = z.object({ stage: stageSchema, entries: z.array(entrySchema), notApplicable: z.string().optional(), skipped: skippedSchema.optional(), criteriaHash: z.string().optional(), hashes: z.record(z.string()).optional() }).strict();
 const stateSchema = z.object({ version: z.literal(2), completed: z.array(recordSchema), active: recordSchema.optional(), rubrics: z.record(z.string()).default({}) }).strict();
 export const workflowSchema = z.object({
   episode: z.string().min(1), action: z.enum(['status', 'begin', 'complete', 'rewind']),
@@ -75,6 +77,10 @@ function verifyPrevious(state: State): void {
   }
 }
 function validateRecord(record: z.infer<typeof recordSchema>): void {
+  if (record.skipped) {
+    if (record.stage !== 'image_review' || record.entries.length || record.notApplicable) throw new Error('workflow_invalid_skip');
+    return;
+  }
   if (record.notApplicable) {
     if (!['characters', 'props', 'backgrounds'].includes(record.stage) || !record.notApplicable.trim() || record.entries.length) throw new Error('workflow_invalid_not_applicable');
   } else if (!record.entries.length) throw new Error('workflow_empty_stage');
@@ -209,6 +215,12 @@ export function manageWorkflow(raw: unknown) {
     } else {
       verifyPrevious(state);
       if (input.action === 'begin') {
+        // Without a requested image review, begin video records image_review as skipped over the current images.
+        if (!state.active && input.stage === 'video' && STAGES[state.completed.length] === 'image_review') {
+          const images = state.completed.find(record => record.stage === 'image_storyboard')!;
+          state.completed.push({ stage: 'image_review', entries: [], hashes: { ...images.hashes },
+            skipped: { request: 'image_review not requested; it runs only when the user asks', at: new Date().toISOString() } });
+        }
         if (state.active || input.stage !== STAGES[state.completed.length]) throw new Error(`workflow_out_of_order: next ${state.active?.stage ?? STAGES[state.completed.length] ?? 'done'}`);
         const record = { stage: stageSchema.parse(input.stage), entries: (input.entries ?? []).map(entry => ({ ...entry,
           text: canonicalPath(path.resolve(episode, entry.text)), ...(entry.image ? { image: canonicalPath(path.resolve(episode, entry.image)) } : {}),
@@ -271,7 +283,7 @@ export function requireWorkflow(directory: string, kind: 'image' | 'video' | 'te
   } else if (kind === 'delivery') {
     if (state.completed.length !== STAGES.length) throw new Error('workflow_out_of_order: complete video_review before assembly or delivery');
   } else if (kind === 'video') {
-    if (state.active?.stage !== 'video') throw new Error('workflow_out_of_order: complete image_review and begin video');
+    if (state.active?.stage !== 'video') throw new Error('workflow_out_of_order: begin video after image_storyboard');
     if (assetId && !state.active.entries.some(entry => entry.id === assetId)) throw new Error('workflow_unknown_cut');
   } else if (kind === 'text') {
     if (!state.completed.length) throw new Error('workflow_out_of_order: complete characters before text_storyboard');
@@ -324,13 +336,13 @@ function verifyImageInventory(episode: string, record: z.infer<typeof recordSche
       throw new Error('workflow_image_inventory_missing: ' + image);
   }
 }
-/** New image plans can submit only files covered by the completed image review. */
+/** New video plans can submit only image bytes a completed image stage registered, after image_review (reviewed or skipped). */
 export function requireReviewedImages(episode: string, files: string[]): void {
   const managed = workflowEpisode(episode);
   if (!managed) return;
   const state = read(managed);
   verifyPrevious(state);
-  const images = state.completed.find(record => record.stage === 'image_storyboard');
-  if (!state.completed.some(record => record.stage === 'image_review') || !images) throw new Error('workflow_image_review_required');
-  for (const file of files) if (images.hashes?.[file] !== digest(file)) throw new Error('workflow_image_not_reviewed: ' + file);
+  if (!state.completed.some(record => record.stage === 'image_review')) throw new Error('workflow_image_review_required');
+  const registered = Object.assign({}, ...state.completed.filter(record => IMAGE_STAGES.includes(record.stage)).map(record => record.hashes));
+  for (const file of files) if (registered[file] !== digest(file)) throw new Error('workflow_image_not_reviewed: ' + file);
 }

@@ -65388,7 +65388,7 @@ var require_video_catalog = __commonJS({
             "filename"
           ],
           modelConstraints: {
-            note: "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; a character voice sample on subject 1 or 2 is required and the dialogue goes in the prompt."
+            note: "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; an optional character voice sample on subject 1 or 2 sets the timbre of that speaker, and the dialogue goes in the prompt."
           }
         },
         {
@@ -68398,14 +68398,14 @@ var require_compose_speech = __commonJS({
     "use strict";
     var fs21 = __require("node:fs");
     var path27 = __require("node:path");
-    var { execFileSync: execFileSync13 } = __require("node:child_process");
+    var { execFileSync: execFileSync14 } = __require("node:child_process");
     var { createHash: createHash21 } = __require("node:crypto");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
     var { actingErrors, speechRevisionPayload, planScenePerformance } = require_scene_acting();
     var { generationVoiceErrors } = require_character_voice();
     var hash7 = (value) => createHash21("sha256").update(value).digest("hex");
     function duration3(file) {
-      const seconds = Number(execFileSync13("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file], { encoding: "utf8", timeout: 1e4 }).trim());
+      const seconds = Number(execFileSync14("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file], { encoding: "utf8", timeout: 1e4 }).trim());
       if (!Number.isFinite(seconds) || seconds <= 0) throw new Error("Unusable speech duration: " + file);
       return seconds;
     }
@@ -68465,7 +68465,7 @@ var require_compose_speech = __commonJS({
         filters.push(lines.map((_, i2) => `[a${i2}]`).join("") + `amix=inputs=${lines.length}:normalize=0,apad,atrim=duration=${timing.durationSeconds}[out]`);
         const output2 = path27.join(work, `c${fields2[0]}-speech.wav`), tmp = output2 + ".tmp.wav";
         try {
-          execFileSync13("ffmpeg", ["-y", "-v", "error", ...inputs, "-filter_complex", filters.join(";"), "-map", "[out]", "-c:a", "pcm_s16le", tmp], { timeout: 12e4 });
+          execFileSync14("ffmpeg", ["-y", "-v", "error", ...inputs, "-filter_complex", filters.join(";"), "-map", "[out]", "-c:a", "pcm_s16le", tmp], { timeout: 12e4 });
           fs21.renameSync(tmp, output2);
         } finally {
           if (fs21.existsSync(tmp)) fs21.unlinkSync(tmp);
@@ -73009,7 +73009,8 @@ var REVIEWS = ["context_review", "camera_review", "image_review", "video_review"
 var IMAGE_STAGES = ["characters", "props", "backgrounds", "blender_composition", "image_storyboard"];
 var stageSchema = external_exports.enum(STAGES);
 var entrySchema = external_exports.object({ images: external_exports.array(external_exports.string().min(1)).optional(), id: external_exports.string().min(1), text: external_exports.string().min(1), image: external_exports.string().min(1).optional(), blend: external_exports.string().min(1).optional(), video: external_exports.string().min(1).optional() }).strict();
-var recordSchema = external_exports.object({ stage: stageSchema, entries: external_exports.array(entrySchema), notApplicable: external_exports.string().optional(), criteriaHash: external_exports.string().optional(), hashes: external_exports.record(external_exports.string()).optional() }).strict();
+var skippedSchema = external_exports.object({ requestedBy: external_exports.string().min(1).optional(), request: external_exports.string().trim().min(1), at: external_exports.string().min(1) }).strict();
+var recordSchema = external_exports.object({ stage: stageSchema, entries: external_exports.array(entrySchema), notApplicable: external_exports.string().optional(), skipped: skippedSchema.optional(), criteriaHash: external_exports.string().optional(), hashes: external_exports.record(external_exports.string()).optional() }).strict();
 var stateSchema = external_exports.object({ version: external_exports.literal(2), completed: external_exports.array(recordSchema), active: recordSchema.optional(), rubrics: external_exports.record(external_exports.string()).default({}) }).strict();
 var workflowSchema = external_exports.object({
   episode: external_exports.string().min(1),
@@ -73068,6 +73069,10 @@ function verifyPrevious(state) {
   }
 }
 function validateRecord(record2) {
+  if (record2.skipped) {
+    if (record2.stage !== "image_review" || record2.entries.length || record2.notApplicable) throw new Error("workflow_invalid_skip");
+    return;
+  }
   if (record2.notApplicable) {
     if (!["characters", "props", "backgrounds"].includes(record2.stage) || !record2.notApplicable.trim() || record2.entries.length) throw new Error("workflow_invalid_not_applicable");
   } else if (!record2.entries.length) throw new Error("workflow_empty_stage");
@@ -73206,6 +73211,15 @@ function manageWorkflow(raw) {
     } else {
       verifyPrevious(state);
       if (input.action === "begin") {
+        if (!state.active && input.stage === "video" && STAGES[state.completed.length] === "image_review") {
+          const images = state.completed.find((record3) => record3.stage === "image_storyboard");
+          state.completed.push({
+            stage: "image_review",
+            entries: [],
+            hashes: { ...images.hashes },
+            skipped: { request: "image_review not requested; it runs only when the user asks", at: (/* @__PURE__ */ new Date()).toISOString() }
+          });
+        }
         if (state.active || input.stage !== STAGES[state.completed.length]) throw new Error(`workflow_out_of_order: next ${state.active?.stage ?? STAGES[state.completed.length] ?? "done"}`);
         const record2 = { stage: stageSchema.parse(input.stage), entries: (input.entries ?? []).map((entry2) => ({
           ...entry2,
@@ -73275,7 +73289,7 @@ function requireWorkflow(directory2, kind, assetId, outputFile) {
   } else if (kind === "delivery") {
     if (state.completed.length !== STAGES.length) throw new Error("workflow_out_of_order: complete video_review before assembly or delivery");
   } else if (kind === "video") {
-    if (state.active?.stage !== "video") throw new Error("workflow_out_of_order: complete image_review and begin video");
+    if (state.active?.stage !== "video") throw new Error("workflow_out_of_order: begin video after image_storyboard");
     if (assetId && !state.active.entries.some((entry2) => entry2.id === assetId)) throw new Error("workflow_unknown_cut");
   } else if (kind === "text") {
     if (!state.completed.length) throw new Error("workflow_out_of_order: complete characters before text_storyboard");
@@ -73332,9 +73346,9 @@ function requireReviewedImages(episode, files3) {
   if (!managed) return;
   const state = read(managed);
   verifyPrevious(state);
-  const images = state.completed.find((record2) => record2.stage === "image_storyboard");
-  if (!state.completed.some((record2) => record2.stage === "image_review") || !images) throw new Error("workflow_image_review_required");
-  for (const file of files3) if (images.hashes?.[file] !== digest(file)) throw new Error("workflow_image_not_reviewed: " + file);
+  if (!state.completed.some((record2) => record2.stage === "image_review")) throw new Error("workflow_image_review_required");
+  const registered = Object.assign({}, ...state.completed.filter((record2) => IMAGE_STAGES.includes(record2.stage)).map((record2) => record2.hashes));
+  for (const file of files3) if (registered[file] !== digest(file)) throw new Error("workflow_image_not_reviewed: " + file);
 }
 
 // src/config.ts
@@ -84326,8 +84340,6 @@ var genaiMsrSchema = external_exports.object({
   const issue2 = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
   const backgrounds = args.references.filter((ref) => ref.background).length;
   if (backgrounds > 1 || args.references.length - backgrounds > 4) issue2("MSR supports at most four subjects and one background");
-  if (!args.references.some((ref) => oneOf(ref.audioUri, ref.audioPath)))
-    issue2("MSR requires a character voice sample on subject 1 or 2; write the dialogue in the prompt");
   let subject = 0;
   for (const ref of args.references) {
     subject += Number(!ref.background);
@@ -84458,7 +84470,7 @@ async function generateGenaiVideo(operation, input) {
     recordVideoSubmission(previous.jobId);
   } else {
     if (fs6.existsSync(videoPath)) throw new Error("GenAI output already exists");
-    if (operation === "msr" && !await refreshGenaiMsrVoice(true))
+    if (operation === "msr" && "references" in args && args.references.some((ref) => oneOf(ref.audioUri, ref.audioPath)) && !await refreshGenaiMsrVoice(true))
       throw new Error("msr_voice_unsupported: the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)");
     const receipt = { version: 1, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, status: "submitting" };
     fs6.writeFileSync(receiptPath, JSON.stringify(receipt), { flag: "wx", mode: 384 });
@@ -84570,7 +84582,7 @@ var GENAI_TOOLS = [
   {
     name: "astra_genai_msr",
     title: "Generate an LTX video from subject and background references",
-    description: "Combine character, clothing, object and background references in one MSR video through ASTRA GenAI. Use video_plan operation reference and video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Up to four subject images and one background; place the background last and number prompt images in that order. Local PNG/JPEG files become data URIs. MSR is a server-selected deployment with no model parameter, independent of saved LTX v2 weights. It cannot pin first/last frames; use img2video for frame control. Speech and effects are rendered natively. MSR always speaks: at least one of subjects 1 and 2 must carry a voice sample of the character (audioPath or audioUri, at most 10 s, about 5 s used) and the dialogue goes in the prompt; the model imitates the timbre of the sample and does not preserve it. A gateway whose MSR backend does not accept samples (GET /v1/ltx/msr/capabilities) is refused before submission. Saves a job receipt and resumes via video_status without resubmission.",
+    description: "Combine character, clothing, object and background references in one MSR video through ASTRA GenAI. Use video_plan operation reference and video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Up to four subject images and one background; place the background last and number prompt images in that order. Local PNG/JPEG files become data URIs. MSR is a server-selected deployment with no model parameter, independent of saved LTX v2 weights. It cannot pin first/last frames; use img2video for frame control. Speech and effects are rendered natively. Subjects 1 and 2 may carry an optional voice sample of the character (audioPath or audioUri, at most 10 s, about 5 s used); write any dialogue in the prompt. The model imitates the timbre of the sample and does not preserve it; without a sample the voice follows the prompt. A request with a sample is refused before submission when the gateway MSR backend does not accept samples (GET /v1/ltx/msr/capabilities). Saves a job receipt and resumes via video_status without resubmission.",
     inputSchema: { type: "object", properties: {
       prompt: { type: "string", minLength: 1, maxLength: 2e3, description: "Action and reference roles, e.g. person in image 1 wearing the jacket in image 2." },
       references: { type: "array", minItems: 1, maxItems: 5, description: "At most four subjects and one background. Exactly one URI or path per reference.", items: {
@@ -88175,7 +88187,7 @@ function videoCatalog() {
       voice: videoVoiceCapabilities(tool),
       ...tool === "mlx_video_generate" ? { deprecated: true, replacement: "ltx_video_generate" } : {},
       fields: keys(a.schema),
-      modelConstraints: localVideoStrategy(tool) ? { frames: localVideoStrategy(tool).frames, note: tool === "fasth3_omni_reference" ? "8 steps; 9 images, 3 videos, 3 audios, 12 total; visual reference required; 256 MiB RGB cap; no exact speech preservation." : "LTX 8k+1 frames; MLX-Serve backend." } : a.engine === "seedance" ? SEEDANCE_MODEL_SPECS : tool === "astra_genai_msr" ? { note: "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; a character voice sample on subject 1 or 2 is required and the dialogue goes in the prompt." } : tool === "astra_genai_audio2video" ? { models: ["ltx-2.5-22b-dev"], note: "Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters." } : a.engine === "astra-genai" ? { models: GENAI_VIDEO_MODELS, note: "Explicit duration and resolution; server validates deployment limits. No supplied audio, keyframes or LoRA." } : a.engine === "veo" ? { models: VALID_VIDEO_MODELS, resolutions: VALID_VIDEO_RESOLUTIONS, note: "Use video_plan for cross-field constraints" } : { note: "Use video_plan; deployment-specific schema is authoritative" }
+      modelConstraints: localVideoStrategy(tool) ? { frames: localVideoStrategy(tool).frames, note: tool === "fasth3_omni_reference" ? "8 steps; 9 images, 3 videos, 3 audios, 12 total; visual reference required; 256 MiB RGB cap; no exact speech preservation." : "LTX 8k+1 frames; MLX-Serve backend." } : a.engine === "seedance" ? SEEDANCE_MODEL_SPECS : tool === "astra_genai_msr" ? { note: "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; an optional character voice sample on subject 1 or 2 sets the timbre of that speaker, and the dialogue goes in the prompt." } : tool === "astra_genai_audio2video" ? { models: ["ltx-2.5-22b-dev"], note: "Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters." } : a.engine === "astra-genai" ? { models: GENAI_VIDEO_MODELS, note: "Explicit duration and resolution; server validates deployment limits. No supplied audio, keyframes or LoRA." } : a.engine === "veo" ? { models: VALID_VIDEO_MODELS, resolutions: VALID_VIDEO_RESOLUTIONS, note: "Use video_plan for cross-field constraints" } : { note: "Use video_plan; deployment-specific schema is authoritative" }
     })),
     host: { execution: "external", note: "Host tools are outside MCP enforcement; never claim an API gate protects their calls." },
     unimplemented: ["minimax-h3-api", "ltx-official-api"]
@@ -97131,7 +97143,7 @@ Returns: a text block with the saved .wav path, model, duration, and generation 
     name: "production_workflow",
     title: "Advance verified production stages",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: "Enforce fixed episode order: characters, text_storyboard, context_review, props, backgrounds, camera_review, blender_composition, image_storyboard, image_review, video, video_review. Reviews require independent evidence against current input hashes, a frozen rubric, no unresolved corrections and actual playback for video. Context review reconstructs audience understanding from cited text and cut IDs. Blender compositions must be actual render receipts and actual image-generation references. begin registers artifacts; complete validates them; rewind archives receipts and invalidates descendants. No skip, waiver or alternate renderer. Host tools and arbitrary shell writes remain outside this server boundary.",
+    description: "Enforce fixed episode order: characters, text_storyboard, context_review, props, backgrounds, camera_review, blender_composition, image_storyboard, image_review, video, video_review. Reviews require independent evidence against current input hashes, a frozen rubric, no unresolved corrections and actual playback for video. Context review reconstructs audience understanding from cited text and cut IDs. Blender compositions must be actual render receipts and actual image-generation references. begin registers artifacts; complete validates them; rewind archives receipts and invalidates descendants. image_review runs only when the user asks; otherwise begin video records it as skipped over the current image hashes. No other skip, waiver or alternate renderer. Host tools and arbitrary shell writes remain outside this server boundary.",
     inputSchema: { type: "object", additionalProperties: false, required: ["episode", "action"], properties: {
       episode: { type: "string", description: "Absolute episode directory." },
       action: { type: "string", description: "Inspect, register, finish or invalidate a stage.", enum: ["status", "begin", "complete", "rewind"] },
@@ -99182,7 +99194,7 @@ async function refreshGenaiImage(directory2, requestId) {
 
 // src/video-routing.ts
 import * as fs20 from "node:fs";
-import { execFileSync as execFileSync11 } from "node:child_process";
+import { execFileSync as execFileSync12 } from "node:child_process";
 import path22 from "node:path";
 import { createRequire as createRequire9 } from "node:module";
 import { fileURLToPath as fileURLToPath9 } from "node:url";
@@ -99328,6 +99340,30 @@ var FRAME_FIELDS = {
   mlx_video_generate: ["firstFrameImagePath", "lastFrameImagePath"],
   ltx_video_generate: ["firstFrameImagePath", "lastFrameImagePath"]
 };
+var PANEL_VIEWS = { face: "face", front: "headless front body", back: "headless back body" };
+function msrPanelBinding(paths2, refs) {
+  const groups = /* @__PURE__ */ new Map();
+  paths2.forEach((file, i2) => {
+    if (refs[i2].role === "background") return;
+    let panels;
+    try {
+      panels = JSON.parse(readFileSync26(path20.join(path20.dirname(file), "panels.json"), "utf8")).panels ?? {};
+    } catch {
+      return;
+    }
+    const view = Object.entries(panels).find(([, panel]) => panel.file === path20.basename(file))?.[0];
+    if (view && PANEL_VIEWS[view]) groups.set(path20.dirname(file), [...groups.get(path20.dirname(file)) ?? [], `Image ${i2 + 1} (${PANEL_VIEWS[view]})`]);
+  });
+  return [...groups].filter(([, items]) => items.length > 1).map(([folder, items]) => `${items.join(", ")} show one character, ${path20.basename(folder)}: render one complete character with the head and hair from the face and the body and outfit from the headless panels.`).join("\n");
+}
+function characterKey(file) {
+  try {
+    readFileSync26(path20.join(path20.dirname(file), "panels.json"));
+    return path20.dirname(file);
+  } catch {
+    return file;
+  }
+}
 function hasStructuredImages(shot) {
   return imageRouting().hasStructuredImages(shot);
 }
@@ -99392,8 +99428,15 @@ function prepareVideoImages(tool, input, shot, episode) {
     const paths2 = videoRefs.map((ref) => bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, true));
     if (tool === "astra_genai_msr") put2("references", videoRefs.map((ref, i2) => ({ imagePath: paths2[i2], ...ref.role === "background" ? { background: true } : {} })));
     else put2("referenceImagePaths", paths2);
-    const guidance = videoRefs.map((ref, i2) => `${tool === "fasth3_omni_reference" ? "<Picture " + (i2 + 1) + ">" : "Image " + (i2 + 1)} (${ref.id}, ${ref.role}): ${ref.purpose}`).join("\n");
-    args.prompt = String(args.prompt ?? "") + "\nImage reference roles:\n" + guidance;
+    if (tool === "astra_genai_msr") {
+      const characters = new Set(videoRefs.flatMap((ref, i2) => ref.role === "character" ? [characterKey(paths2[i2])] : []));
+      if (characters.size > 2) throw new Error(`msr_character_limit: references show ${characters.size} characters; reference two principal characters and describe anyone else in the action`);
+      const binding = msrPanelBinding(paths2, videoRefs);
+      args.prompt = [...videoRefs.map((ref, i2) => `Image ${i2 + 1}: ${ref.role}, ${ref.purpose}`), ...binding ? [binding] : [], "", String(args.prompt ?? "")].join("\n");
+    } else {
+      const guidance = videoRefs.map((ref, i2) => `${tool === "fasth3_omni_reference" ? "<Picture " + (i2 + 1) + ">" : "Image " + (i2 + 1)} (${ref.id}, ${ref.role}): ${ref.purpose}`).join("\n");
+      args.prompt = String(args.prompt ?? "") + "\nImage reference roles:\n" + guidance;
+    }
   } else if (keyframes) {
     const fps = Number(args.frameRate ?? 24);
     const count = Number(args.numFrames ?? (args.duration === void 0 ? NaN : framesForSeconds(Number(args.duration), fps)));
@@ -99433,6 +99476,7 @@ function prepareVideoImages(tool, input, shot, episode) {
 // src/video-voice.ts
 import { createHash as createHash12 } from "node:crypto";
 import { existsSync as existsSync23, readFileSync as readFileSync27, realpathSync as realpathSync7 } from "node:fs";
+import { execFileSync as execFileSync11 } from "node:child_process";
 import path21 from "node:path";
 import { createRequire as createRequire8 } from "node:module";
 var load4 = createRequire8(import.meta.url);
@@ -99486,7 +99530,7 @@ function voiceReference(character, context2, warnings) {
   if (provenance === "legacy_sample_unverified") warnings.push(`${character.id}: sample identity is unverified; a file name or hash is not a listening review.`);
   return { path: absolute, sha256: sha2562, provenance };
 }
-function msrVoiceSlot(speaker, character, label, refs, context2, prompt) {
+function msrSubject(character, refs, context2) {
   const owned = object3(character.voiceReference).imagePaths;
   const ownedPaths = Array.isArray(owned) ? owned.map((value) => realpathSync7(path21.resolve(context2.episode, "storyboard", String(value)))) : [];
   let subject = 0, index = -1, slot = 0;
@@ -99499,15 +99543,22 @@ function msrVoiceSlot(speaker, character, label, refs, context2, prompt) {
       slot = subject;
     }
   });
-  const id = speaker.speaker;
-  if (index < 0) throw new Error(`msr_voice_required: ${id}: no MSR subject image matches voiceReference.imagePaths`);
-  if (slot > 2) throw new Error(`msr_voice_required: ${id} is MSR subject ${slot}; speakers must be subject 1 or 2`);
-  const current = text(refs[index].audioPath);
-  if (current && current !== speaker.reference.path) throw new Error(`msr_voice_required: ${id}: Image ${index + 1} already carries another speaker's sample`);
-  refs[index].audioPath = speaker.reference.path;
-  speaker.audioIndex = slot;
-  speaker.imageIndices = [index + 1];
-  prompt.push(`Audio ${slot}: voice of ${label} (speaker ${id}), belongs only to Image ${index + 1}. Use it for timbre and accent only; speak the authored shot dialogue, not the sample's words.`);
+  return { index, slot };
+}
+function sampleSeconds(file) {
+  try {
+    const seconds = Number(execFileSync11("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8", timeout: 15e3 }));
+    return Number.isFinite(seconds) ? seconds : void 0;
+  } catch {
+    return void 0;
+  }
+}
+function afterImageBlock(prompt, lines) {
+  const rows = prompt.split("\n");
+  let k = 0;
+  while (k < rows.length && /^Image \d+[:( ]/.test(rows[k])) k += 1;
+  rows.splice(k, 0, ...lines);
+  return rows.join("\n");
 }
 var SUPPLIED_AUDIO_TOOLS = /* @__PURE__ */ new Set(["astra_audio2video", "astra_genai_audio2video"]);
 function prepareVideoVoice(tool, input, context2) {
@@ -99516,10 +99567,8 @@ function prepareVideoVoice(tool, input, context2) {
   const msr = tool === "astra_genai_msr";
   if (msr) {
     if (object3(context2.shot.visual).video && object3(object3(context2.shot.visual).video).voice !== void 0)
-      throw new Error("visual.video.voice is retired: MSR always uses the speaker's voice sample");
-    if (!lines.length) throw new Error("msr_dialogue_required: MSR cuts carry on-screen dialogue; use img2video for a cut without speech");
+      throw new Error("visual.video.voice is retired: MSR uses the speaker's voice sample when one is pinned");
     if (lines.some((line) => line.delivery !== "on_screen")) throw new Error("msr_dialogue_required: every MSR line is spoken on screen");
-    if (context2.msrVoice !== true) throw new Error("msr_voice_unsupported: the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)");
   }
   if (!lines.length) return { args };
   const doc = object3(context2.board.SB_DOC), raw = doc.characters;
@@ -99542,10 +99591,10 @@ function prepareVideoVoice(tool, input, context2) {
   const audioPaths = Array.isArray(args.referenceAudioPaths) ? args.referenceAudioPaths.map((value) => realpathSync7(path21.resolve(context2.episode, String(value)))) : [];
   const imagePaths = Array.isArray(args.referenceImagePaths) ? args.referenceImagePaths.map((value) => realpathSync7(path21.resolve(context2.episode, String(value)))) : [];
   const msrRefs = msr && Array.isArray(args.references) ? args.references.map((ref) => ({ ...object3(ref) })) : [];
+  const msrAudio = [];
   for (const id of ids) {
     const matches = characters.filter((character2) => character2.id === id);
     if (!id || matches.length !== 1 || !Object.keys(object3(matches[0].tts)).length) {
-      if (msr) throw new Error(`msr_voice_required: speaker ${id || "(unspecified)"} has no unique pinned voice`);
       warnings.push(`Missing unique pinned voice for speaker ${id || "(unspecified)"}; no voice was invented.`);
       continue;
     }
@@ -99553,9 +99602,21 @@ function prepareVideoVoice(tool, input, context2) {
     const speaker = { speaker: id, name: text(character.name) || id, tts: object3(character.tts), description: voiceDescription(character) };
     const label = limitedPromptLanguage && /[가-힣]/.test(speaker.name) ? id : speaker.name;
     if (reference && msr) {
+      const { index, slot } = msrSubject(character, msrRefs, context2);
+      if (index >= 0) speaker.imageIndices = [index + 1];
       speaker.reference = voiceReference(character, context2, warnings);
-      if (!speaker.reference) throw new Error(`msr_voice_required: ${id} has no pinned voice sample`);
-      msrVoiceSlot(speaker, character, label, msrRefs, context2, prompt);
+      const current = index < 0 ? "" : text(msrRefs[index].audioPath);
+      const problem = !speaker.reference ? "no pinned voice sample" : context2.msrVoice !== true ? "the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)" : index < 0 ? "no MSR subject image matches voiceReference.imagePaths" : slot > 2 ? `MSR subject ${slot} takes no sample; only subjects 1 and 2 do` : current && current !== speaker.reference.path ? `Image ${index + 1} already carries another speaker's sample` : "";
+      if (problem) {
+        warnings.push(`${id}: ${problem}; MSR voices this speaker from the prompt.`);
+        delete speaker.reference;
+      } else {
+        msrRefs[index].audioPath = speaker.reference.path;
+        speaker.audioIndex = slot;
+        msrAudio.push(`Audio ${slot}: ${label}'s voice, belongs only to Image ${index + 1}.`);
+        const seconds = sampleSeconds(speaker.reference.path);
+        if (seconds !== void 0 && seconds > 5) warnings.push(`${id}: the voice sample runs ${seconds.toFixed(1)} s; MSR conditions on the first 5 seconds and cuts the rest.`);
+      }
     } else if (reference) {
       speaker.reference = voiceReference(character, context2, warnings);
       if (speaker.reference) {
@@ -99576,7 +99637,7 @@ function prepareVideoVoice(tool, input, context2) {
       } else warnings.push(`${id}: no pinned voice sample available; reference-voice consistency is not established. Supply character.voiceReference before relying on this voice.`);
     }
     speakers.push(speaker);
-    if (native && speaker.description) {
+    if (native && speaker.description && !(msr && speaker.audioIndex)) {
       if (limitedPromptLanguage && /[가-힣]/.test(speaker.description)) warnings.push(`${id}: supply an English or Chinese translation of the pinned acoustic description in the authored prompt; this Seedance schema rejects Korean direction text. The original description stays in this plan.`);
       else prompt.push(`Stable voice for ${label} (speaker ${id}): ${speaker.description}`);
     }
@@ -99585,6 +99646,16 @@ function prepareVideoVoice(tool, input, context2) {
   }
   if (reference && msr) {
     args.references = msrRefs;
+    const bySpeaker = new Map(speakers.map((speaker) => [speaker.speaker, speaker]));
+    const script = lines.filter((line) => !String(args.prompt).includes(text(line.tts))).map((line) => {
+      const id = text(line.speaker) || text(doc.narratorCharacterId), speaker = bySpeaker.get(id);
+      const image = speaker?.imageIndices?.[0], audio = speaker?.audioIndex, direction = text(object3(line.acting).direction);
+      const who = image ? `Image ${image}` : speaker?.name ?? id;
+      return `${who} speaks${direction ? ` (${direction})` : ""} with visible lip movement${audio ? ` synchronized with Audio ${audio}` : ""} while the other characters listen silently with their lips closed. ${audio ? `Audio ${audio} (${who})` : who}: "${text(line.tts)}"`;
+    });
+    prompt.push(...script);
+    if (typeof args.prompt === "string" && msrAudio.length) args.prompt = afterImageBlock(args.prompt, msrAudio.sort());
+    if (lines.some((line) => /[가-힣]/.test(text(line.tts)))) warnings.push("MSR training captions were English; Korean speech and cross-language voice are not established (arXiv 2609.18393).");
     if (speakers.some((speaker) => speaker.audioIndex)) warnings.push("Reference voice is imitation, not preservation of the original WAV or exact speech timing.");
   } else if (reference) {
     args.referenceAudioPaths = audioPaths;
@@ -99596,7 +99667,7 @@ function prepareVideoVoice(tool, input, context2) {
     }
   }
   if (native) {
-    prompt.push("Keep these speaker identities unchanged. Apply each line's authored emotion separately from stable timbre and accent. Keep non-speaking listeners silent; do not invent dialogue or voiceover.");
+    if (!msr) prompt.push("Keep these speaker identities unchanged. Apply each line's authored emotion separately from stable timbre and accent. Keep non-speaking listeners silent; do not invent dialogue or voiceover.");
     if (speakers.length > 1) warnings.push("Multiple speakers: check assignment and turn-taking separately from timbre; short turns reduce ambiguity but are not a guarantee.");
     if (msr) warnings.push("MSR renders speech and effects into its own soundtrack; assembly uses it as the cut's audio.");
     else if (!nativeSlot) warnings.push("visual.video assembly uses the external TTS track. Native voice guidance does not synchronize that WAV; use audio2video for exact supplied-speech staging or the existing visual.clip native-audio slot.");
@@ -99609,7 +99680,7 @@ function prepareVideoVoice(tool, input, context2) {
     if (args.previousInteractionId) warnings.push("Continue the original stored interaction for dialogue; voice continuity remains unreviewed.");
   }
   if (strategy === "supplied_audio") warnings.push("Use the final composed pinned-voice WAV. ASTRA re-encodes supplied audio; mouth motion and speaker identity remain unreviewed.");
-  if (prompt.length && typeof args.prompt === "string") args.prompt += "\n\nVoice continuity guidance:\n" + prompt.join("\n");
+  if (prompt.length && typeof args.prompt === "string") args.prompt += (msr ? "\n\n" : "\n\nVoice continuity guidance:\n") + prompt.join("\n");
   return { args, voiceContinuity: {
     version: 1,
     strategy,
@@ -99756,7 +99827,7 @@ function planVideo(raw) {
   if (tool === "astra_genai_msr") buildGenaiMsrBody(genaiMsrSchema.parse(args));
   if (tool === "astra_genai_audio2video") buildGenaiAudioBody(genaiAudioToVideoSchema.parse(args));
   if (tool === "astra_video_retake" && selection.resolution) {
-    const probe3 = JSON.parse(execFileSync11("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", String(args.sourceVideoPath)], { encoding: "utf8", timeout: 15e3 }));
+    const probe3 = JSON.parse(execFileSync12("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", String(args.sourceVideoPath)], { encoding: "utf8", timeout: 15e3 }));
     const stream = probe3.streams?.[0];
     if (!stream || `${stream.width}x${stream.height}` !== selection.resolution)
       throw new Error("model_selection_mismatch: retake inherits source dimensions; select the source resolution");
@@ -100633,7 +100704,7 @@ import { createHash as createHash17, randomUUID as randomUUID7 } from "node:cryp
 import { readFileSync as readFileSync30, writeFileSync as writeFileSync20, renameSync as renameSync8, mkdirSync as mkdirSync17, existsSync as existsSync27 } from "node:fs";
 import { dirname as dirname8, resolve as resolve9, join as join14 } from "node:path";
 import * as nodeModule6 from "node:module";
-import { execFileSync as execFileSync12 } from "node:child_process";
+import { execFileSync as execFileSync13 } from "node:child_process";
 var voiceContract = () => nodeModule6.createRequire(import.meta.url)("../../skills/_shared/character-voice.js");
 var actingContract = () => nodeModule6.createRequire(import.meta.url)("../../skills/_shared/scene-acting.js");
 var delivery = external_exports.enum(["voiceover", "on_screen", "off_screen"]);
@@ -100699,7 +100770,7 @@ function audioProvenanceStatus(line, character) {
 function measuredDuration(line) {
   if (!line.audio || !existsSync27(line.audio.path)) return null;
   try {
-    const value = Number(execFileSync12("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
+    const value = Number(execFileSync13("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
     return Number.isFinite(value) && value > 0 ? value : null;
   } catch {
     return null;

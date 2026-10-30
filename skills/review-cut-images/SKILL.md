@@ -1,7 +1,7 @@
 ---
 name: review-cut-images
 description: >
-  Reviews and improves cut images; stops before video generation. Use when this production stage is requested or the fixed episode workflow reaches it.
+  Reviews and improves cut images; stops before video generation. Use only when the user asks for an image review; without that request the workflow records image_review as skipped.
 argument-hint: "[episode-or-storyboard-path]"
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read"]
 ---

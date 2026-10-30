@@ -65,7 +65,7 @@ test('MSR validates slots, geometry and frame timing against its independent con
   assert.ok(Object.keys(body).every(key => key in api.components.schemas.MsrVideo.properties));
   assert.equal(body.duration, 5); assert.equal(body.num_frames, undefined); assert.equal(body.model, undefined);
   assert.equal(body.references[1].background, true);
-  for (const extra of [{ references: [ref, { ...ref, background: true }] }, { references: Array(5).fill(ref) }, { references: Array(2).fill({ ...ref, background: true }) }, { width: 1920, height: 1920 }, { numFrames: 120 }, { duration: 5, numFrames: 121 }, { duration: 360 }, { model: base.model }, { references: [{ imagePath: 'x', imageUri: ref.imageUri }] }])
+  for (const extra of [{ references: Array(5).fill(ref) }, { references: Array(2).fill({ ...ref, background: true }) }, { width: 1920, height: 1920 }, { numFrames: 120 }, { duration: 5, numFrames: 121 }, { duration: 360 }, { model: base.model }, { references: [{ imagePath: 'x', imageUri: ref.imageUri }] }])
     assert.equal(genaiMsrSchema.safeParse({ ...args, ...extra }).success, false);
 });
 
@@ -139,13 +139,14 @@ test('audio-to-video submits and recovers on its own route, keeping the soundtra
   assert.equal(prepared.arguments.generateAudio, undefined); assert.equal(prepared.capabilities.inputAudio, 'preserved');
 });
 
-test('MSR voice samples ride on subjects 1-2 and the capability check fails closed', async t => {
+test('MSR voice samples are optional, ride on subjects 1-2, and the capability check fails closed', async t => {
   const { genaiMsrSchema, buildGenaiMsrBody, refreshGenaiMsrVoice, genaiMsrVoiceReferences } = await import('../dist/astra-genai-video.js');
   const dir = setup(t), wav = path.join(dir, 'voice.wav');
   execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'sine=d=0.2', '-ac', '1', wav]);
   const ref = { imageUri: 'https://example.com/person.png' }, msr = references => ({ prompt: 'x', reserveUsd: 0, references });
   const body = buildGenaiMsrBody(genaiMsrSchema.parse(msr([ref, { ...ref, audioPath: wav }, { ...ref, background: true }])));
   assert.equal(body.references[0].audio_uri, undefined);
+  assert.equal(genaiMsrSchema.safeParse(msr([ref])).success, true);
   assert.match(body.references[1].audio_uri, /^data:audio\/wav;base64,/);
   for (const references of [[ref, { ...ref, background: true, audioPath: wav }], [ref, ref, { ...ref, audioPath: wav }],
     [{ ...ref, audioPath: wav, audioUri: 'https://example.com/v.wav' }]])

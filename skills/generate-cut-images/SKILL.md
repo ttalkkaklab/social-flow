@@ -1,7 +1,7 @@
 ---
 name: generate-cut-images
 description: >
-  Generates cut storyboard images; stops before image review. Use when this production stage is requested or the fixed episode workflow reaches it.
+  Generates cut storyboard images; stops before image review or video. Use when this production stage is requested or the fixed episode workflow reaches it.
 argument-hint: "[episode-or-storyboard-path]"
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__image_catalog", "mcp__plugin_social-flow_social-flow__image_catalog", "mcp__social-flow__image_plan", "mcp__plugin_social-flow_social-flow__image_plan", "mcp__social-flow__image_execute", "mcp__plugin_social-flow_social-flow__image_execute", "mcp__social-flow__image_status", "mcp__plugin_social-flow_social-flow__image_status"]
 ---
@@ -24,7 +24,8 @@ satisfy this stage: report it without switching the saved model silently.
 
 Preserve the reviewed opening state, viewpoint and blocking. Generate only authorized
 outputs within actual attempt/budget limits. Register and complete real decodable files;
-a generation receipt is not a quality verdict. Stop and hand images to review-cut-images.
+a generation receipt is not a quality verdict. Stop here; review-cut-images runs only when
+the user asks for an image review.
 
 Read [shot image inputs](../storyboard/references/scenes-schema.md#shot-image-inputs).
 Register the primary cut image as `image` and its ending/intermediate/reference files
