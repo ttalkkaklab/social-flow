@@ -128,7 +128,9 @@ export function planVideo(raw) {
     requireWorkflow(input.episode, 'video', input.shotId);
     const context = routingContext(input.episode, input.shotId);
     const { selection } = context;
-    const tool = input.tool || Object.entries(VIDEO_ADAPTERS).find(([name, a]) => a.engine === selection.engine && a.operation === input.operation && (a.engine !== 'mlx' || !selection.model || localVideoStrategy(name)?.acceptsModel(selection.model)))?.[0];
+    // A saved default operation (an LTX project saves 'reference', i.e. MSR) applies when the call names neither.
+    const operation = input.operation ?? (input.tool ? undefined : selection.operation);
+    const tool = input.tool || Object.entries(VIDEO_ADAPTERS).find(([name, a]) => a.engine === selection.engine && a.operation === operation && (a.engine !== 'mlx' || !selection.model || localVideoStrategy(name)?.acceptsModel(selection.model)))?.[0];
     if (input.tool && input.operation && VIDEO_ADAPTERS[input.tool]?.operation !== input.operation)
         throw new Error('Tool and operation disagree');
     if (selection.engine === 'host') {

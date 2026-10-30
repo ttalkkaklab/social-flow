@@ -83,14 +83,18 @@ provenance so the user can request targeted corrections later through `edit-spee
 voice-lock ASR. Follow `skills/produce/references/shot-speech.md`. Narrator and character
 lines use explicit speakers; video models are replaceable adapters with declared capabilities.
 
-## MSR voice default (user directive, 2026-10-30)
+## MSR voice and LTX default (user directive, 2026-10-30)
 
-For on-screen dialogue in an `astra_genai_msr` cut, attach each speaker's pinned voice
-sample to the subject image that shows them (subjects 1–2 only) and keep MSR's own
-speech-and-effects soundtrack in the cut. `visual.video.voice:"prompt"` and
-`sound.audioSource:"speech"` remain per-shot choices. On a gateway without MSR voice
-support an MSR cut keeps its previous external-TTS plan, with a plan warning.
-See `skills/_shared/astra-genai.md`.
+MSR has one mode: each speaker's pinned voice sample rides on the subject image that
+shows them (subjects 1–2 only), the dialogue is written in the prompt, and MSR's own
+speech-and-effects soundtrack is the cut's audio. `astra_genai_msr` refuses a request
+without a voice sample, and a gateway whose MSR backend does not accept samples is a
+hard `msr_voice_unsupported` error. There is no prompt-only voice, no external TTS lane
+and no silent MSR cut; a cut without on-screen speech uses img2video.
+Choosing LTX at project setup saves `{engine:"astra-genai", operation:"reference"}`
+with `resolution:"1792x1024"` for 16:9 (`1024x1792` for 9:16), so `video_plan` plans
+MSR when a call names no operation. GenAI submissions wait up to 15 minutes for the
+gateway's acknowledgement. See `skills/_shared/astra-genai.md`.
 
 ## Style ban — report-style stative verbs (user directive, 2026-08-12)
 

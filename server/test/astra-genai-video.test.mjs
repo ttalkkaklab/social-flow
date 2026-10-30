@@ -59,22 +59,23 @@ test('completed LTX result downloads verified video and cached recovery needs no
 test('MSR validates slots, geometry and frame timing against its independent contract', async () => {
   const { genaiMsrSchema, buildGenaiMsrBody } = await import('../dist/astra-genai-video.js');
   const ref = { imageUri: 'https://example.com/person.png' };
-  const args = { prompt: 'Person in image 1 walks in image 2.', references: [ref, { ...ref, background: true }], reserveUsd: 0 };
+  const args = { prompt: 'Person in image 1 says hello in image 2.', references: [{ ...ref, audioUri: 'https://example.com/voice.wav' }, { ...ref, background: true }], reserveUsd: 0 };
   const body = buildGenaiMsrBody(genaiMsrSchema.parse({ ...args, duration: 5 }));
   const api = JSON.parse(fs.readFileSync(new URL('./fixtures/astra-genai-openapi-20261020.json', import.meta.url)));
   assert.ok(Object.keys(body).every(key => key in api.components.schemas.MsrVideo.properties));
   assert.equal(body.duration, 5); assert.equal(body.num_frames, undefined); assert.equal(body.model, undefined);
   assert.equal(body.references[1].background, true);
-  for (const extra of [{ references: Array(5).fill(ref) }, { references: Array(2).fill({ ...ref, background: true }) }, { width: 1920, height: 1920 }, { numFrames: 120 }, { duration: 5, numFrames: 121 }, { duration: 360 }, { model: base.model }, { references: [{ imagePath: 'x', imageUri: ref.imageUri }] }])
+  for (const extra of [{ references: [ref, { ...ref, background: true }] }, { references: Array(5).fill(ref) }, { references: Array(2).fill({ ...ref, background: true }) }, { width: 1920, height: 1920 }, { numFrames: 120 }, { duration: 5, numFrames: 121 }, { duration: 360 }, { model: base.model }, { references: [{ imagePath: 'x', imageUri: ref.imageUri }] }])
     assert.equal(genaiMsrSchema.safeParse({ ...args, ...extra }).success, false);
 });
 
 test('MSR recovery uses the MSR route and never submits twice', async t => {
   const dir = setup(t), source = path.join(dir, 'reference.png');
   fs.writeFileSync(source, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=', 'base64'));
-  const args = { prompt: 'The person walks.', references: [{ imagePath: source }], reserveUsd: 0, outputPath: dir, filename: 'msr.mp4' };
+  const args = { prompt: 'The person says hello.', references: [{ imagePath: source, audioUri: 'https://example.com/voice.wav' }], reserveUsd: 0, outputPath: dir, filename: 'msr.mp4' };
   let posts = 0;
   globalThis.fetch = async (url, options) => {
+    if (String(url).endsWith('/capabilities')) return Response.json({ msr: true, voice_references: true });
     if (options.method === 'POST') {
       posts++; assert.ok(String(url).endsWith('/v1/ltx/msr'));
       assert.match(JSON.parse(options.body).references[0].image_uri, /^data:image\/png;base64,/);
@@ -158,4 +159,7 @@ test('MSR voice samples ride on subjects 1-2 and the capability check fails clos
   globalThis.fetch = async () => new Response('Not Found', { status: 404 }); // a gateway without the route
   assert.equal(await refreshGenaiMsrVoice(true), false);
   assert.equal(genaiMsrVoiceReferences(), false);
+  // Without voice support MSR is refused before anything is submitted.
+  await assert.rejects(generateGenaiVideo('msr', { ...msr([{ ...ref, audioPath: wav }]), outputPath: dir, filename: 'novoice.mp4' }), /msr_voice_unsupported/);
+  assert.equal(fs.existsSync(path.join(dir, 'novoice.mp4.astra-genai.json')), false);
 });

@@ -31,8 +31,7 @@ const schemas: Record<string, z.ZodTypeAny> = {
   omni_extend: omni.omniExtendSchema, omni_edit: omni.omniEditSchema,
 };
 
-export function prepareVideoSound(tool: string, input: Record<string, unknown>, sound: Record<string, unknown> = {},
-  options: { msrAudio?: boolean } = {}) {
+export function prepareVideoSound(tool: string, input: Record<string, unknown>, sound: Record<string, unknown> = {}) {
   const schema = schemas[tool];
   if (!schema) throw new Error('Unsupported sound adapter: ' + tool);
   z.string().min(1).parse(input.prompt);
@@ -42,9 +41,9 @@ export function prepareVideoSound(tool: string, input: Record<string, unknown>, 
   if (sound.audioSource !== undefined && !['video', 'speech'].includes(String(sound.audioSource)))
     throw new Error('sound.audioSource must be video or speech');
   const fixedInput = tool === 'astra_audio2video' || tool === 'astra_genai_audio2video';
-  // MSR's soundtrack is verified only on a gateway that advertises MSR voice samples
-  // (the caller checks); elsewhere its effects stay post, as before.
-  let nativeAudio = !fixedInput && (tool !== 'astra_genai_msr' || options.msrAudio === true);
+  // MSR dialogue lives only in MSR's own soundtrack; a TTS speech lane would replace it.
+  if (tool === 'astra_genai_msr' && sound.audioSource === 'speech') throw new Error('MSR keeps its own soundtrack; sound.audioSource speech is not allowed');
+  let nativeAudio = !fixedInput;
   if (tool.startsWith('seedance_')) {
     const model = input.model ?? (tool === 'seedance_reference' ? seedance.DEFAULT_SEEDANCE_REFERENCE_MODEL : seedance.DEFAULT_SEEDANCE_MODEL);
     const spec = seedance.SEEDANCE_MODEL_SPECS[model as seedance.SeedanceModel];

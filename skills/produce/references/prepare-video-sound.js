@@ -16,14 +16,11 @@ async function prepare(board, shotId, tool, request, apply = false) {
   const sound = { ...scene.sound };
   // Exact authored dialogue stays on its existing speech lane unless the board explicitly
   // selects the mixed source soundtrack. Never replace pinned TTS as a side effect of auto SFX.
-  // MSR is the exception on a gateway that accepts MSR voice samples: when every line is
-  // spoken on screen, its own speech-and-effects soundtrack is the default. Without that
-  // support MSR keeps the pinned TTS lane and post effects, as before.
-  const msrAudio = tool === 'astra_genai_msr' && await runtime.refreshGenaiMsrVoice(true);
+  // MSR is the exception: it speaks the dialogue in each speaker's sampled voice, so its own
+  // speech-and-effects soundtrack is the cut's audio.
   const spoken = (scene.narration || []).filter(line => (line.tts || '').trim());
-  if (sound.audioSource === undefined && spoken.length)
-    sound.audioSource = msrAudio && spoken.every(line => line.delivery === 'on_screen') ? 'video' : 'speech';
-  const plan = runtime.prepareVideoSound(tool, request, sound, { msrAudio });
+  if (sound.audioSource === undefined && spoken.length) sound.audioSource = tool === 'astra_genai_msr' ? 'video' : 'speech';
+  const plan = runtime.prepareVideoSound(tool, request, sound);
   if (apply) {
     scene.sound = plan.sound;
     const before = fs.readFileSync(file);

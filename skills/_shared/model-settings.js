@@ -19,7 +19,7 @@ function retiredSpeech(choice) {
   return choice && (['supertonic', 'mlx'].includes(choice.engine) || (choice.engine === 'elevenlabs' && RETIRED_ELEVENLABS_MODELS.includes(choice.model)));
 }
 const FIELDS = {
-  video: ['engine', 'model', 'resolution', 'host'],
+  video: ['engine', 'model', 'resolution', 'host', 'operation'],
   speech: ['engine', 'model'],
   image: ['engine', 'model', 'quality', 'host'],
   music: ['engine', 'model'],
@@ -80,6 +80,9 @@ function validateModels(models, partial = false, allowRetiredSpeech = false) {
       }
       if (choice.engine === 'host' && choice.model !== 'host-managed') throw new Error('Host image model must be host-managed');
     }
+    // The default video_plan operation; adapters exist for these four.
+    if (kind === 'video' && choice.operation !== undefined && !['text', 'image', 'audio', 'reference'].includes(choice.operation))
+      throw new Error('video.operation must be text, image, audio or reference');
     if (kind === 'music' && choice.engine !== 'mlx') {
       const supported = require('./music-catalog.json').models;
       if (!supported.some(m => m.engine === choice.engine && m.model === choice.model)) throw new Error('Unsupported music selection; consult music_catalog');

@@ -97,6 +97,9 @@ export const genaiMsrSchema = z.object({
   const issue = (message: string) => ctx.addIssue({ code: z.ZodIssueCode.custom, message });
   const backgrounds = args.references.filter(ref => ref.background).length;
   if (backgrounds > 1 || args.references.length - backgrounds > 4) issue('MSR supports at most four subjects and one background');
+  // MSR only speaks a character's line in that character's sampled voice (user directive 2026-10-30).
+  if (!args.references.some(ref => oneOf(ref.audioUri, ref.audioPath)))
+    issue('MSR requires a character voice sample on subject 1 or 2; write the dialogue in the prompt');
   let subject = 0;
   for (const ref of args.references) {
     subject += Number(!ref.background);
@@ -200,6 +203,8 @@ export async function getGenaiVideoStatus(input: z.infer<typeof genaiVideoStatus
   return { jobId: receipt.jobId, status: 'completed', videoPath: receipt.videoPath, downloaded: true, review: 'not_reviewed' };
 }
 
+// A busy MSR backend acknowledged a submission after 480 s (2026-10-30); 60 s orphaned jobs.
+const SUBMIT_TIMEOUT_MS = 15 * 60_000;
 function genaiVideoRoute(operation: Operation): string {
   return operation === 'msr' ? '/v1/ltx/msr' : `/v1/ltx/v2/${operation}`;
 }
@@ -221,9 +226,11 @@ export async function generateGenaiVideo(operation: Operation, input: unknown) {
     recordVideoSubmission(previous.jobId);
   } else {
     if (fs.existsSync(videoPath)) throw new Error('GenAI output already exists');
+    if (operation === 'msr' && !await refreshGenaiMsrVoice(true))
+      throw new Error('msr_voice_unsupported: the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)');
     const receipt = { version: 1 as const, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, status: 'submitting' as const };
     fs.writeFileSync(receiptPath, JSON.stringify(receipt), { flag: 'wx', mode: 0o600 });
-    const accepted = z.object({ id: z.string().min(1) }).passthrough().parse(await requestGenai('POST', genaiVideoRoute(operation), body));
+    const accepted = z.object({ id: z.string().min(1) }).passthrough().parse(await requestGenai('POST', genaiVideoRoute(operation), body, SUBMIT_TIMEOUT_MS));
     atomicJson(receiptPath, { ...receipt, jobId: accepted.id, status: 'submitted' });
     recordVideoSubmission(accepted.id);
   }

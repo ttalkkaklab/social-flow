@@ -11,6 +11,7 @@ import { VIDEO_ADAPTERS, videoCatalog } from '../dist/video-registry.js';
 import { videoTransaction } from '../dist/video-state.js';
 import { recordVideoSubmission, recordVideoTokens } from '../dist/video-events.js';
 import { config } from '../dist/config.js';
+import { refreshGenaiMsrVoice } from '../dist/astra-genai-video.js';
 import { ROUTES } from '../dist/handlers.js';
 import { TOOLS } from '../dist/tools.js';
 const require = createRequire(import.meta.url);
@@ -294,18 +295,25 @@ test('GenAI selection binds its model and reservation; managed recovery complete
  await f.execute(p,async()=>assert.fail('must reuse recovered result'));assert.equal(calls,1);
 });
 
-test('managed MSR plans select reference operation and bind dimensions and local references', async t => {
-  const f = fixture(t, { engine: 'astra-genai', model: 'ltx-2.5-22b-distilled', resolution: '1280x704' });
+test('a saved reference operation plans MSR with the speaker sample, dimensions and local references', async t => {
+  const f = fixture(t, { engine: 'astra-genai', model: 'ltx-2.5-22b-distilled', resolution: '1792x1024', operation: 'reference' });
   const ref = path.join(f.episode, 'person.png'); fs.writeFileSync(ref, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=', 'base64'));
+  const voice = path.join(f.episode, 'hero.wav'); fs.writeFileSync(voice, 'voice');
+  f.board.SB_DOC = { characters: [{ id: 'hero', tts: { engine: 'gemini', voiceId: 'Kore', language: 'ko', speed: 1 }, voiceReference: { path: voice, imagePaths: [ref] } }] };
+  f.board.SCENES[0].narration = [{ id: 'l1', speaker: 'hero', delivery: 'on_screen', tts: '안녕하세요' }]; f.save();
+  const key = config.astraGenaiApiKey, fetch = globalThis.fetch; config.astraGenaiApiKey = 'fixture';
+  t.after(() => { config.astraGenaiApiKey = key; globalThis.fetch = fetch; });
+  globalThis.fetch = async () => Response.json({ msr: true, voice_references: true });
+  await refreshGenaiMsrVoice(true);
   fs.writeFileSync(path.join(f.episode, 'invalid.png'), 'not an image');
-  assert.throws(() => planVideo({ episode: f.episode, shotId: 's1', requestId: 'invalid', operation: 'reference', args: { prompt: 'Walk.', references: [{ imagePath: 'invalid.png' }], reserveUsd: 0.25 } }), /image_invalid/);
+  assert.throws(() => planVideo({ episode: f.episode, shotId: 's1', requestId: 'invalid', args: { prompt: 'Walk.', references: [{ imagePath: 'person.png' }, { imagePath: 'invalid.png', background: true }], reserveUsd: 0.25 } }), /image_invalid/);
   assert.equal(fs.existsSync(path.join(f.episode, '.work/video-routing/state.json')), false);
-  const p = planVideo({ episode: f.episode, shotId: 's1', requestId: 'msr', operation: 'reference', args: {
-    prompt: 'Person in image 1 walks.', references: [{ imagePath: 'person.png' }], duration: 5, reserveUsd: 0.25,
+  const p = planVideo({ episode: f.episode, shotId: 's1', requestId: 'msr', args: {
+    prompt: 'Person in image 1 says hello.', references: [{ imagePath: 'person.png' }], duration: 5, reserveUsd: 0.25,
   } });
   assert.equal(p.tool, 'astra_genai_msr'); assert.equal(p.args.model, undefined); assert.equal(p.args.resolution, undefined);
-  assert.equal(p.args.width, 1280); assert.equal(p.args.height, 704); assert.equal(p.args.references[0].imagePath, ref);
-  assert.equal(Object.keys(p.inputs).length, 1); assert.equal(p.quote.reserveUsd, 0.25);
+  assert.equal(p.args.width, 1792); assert.equal(p.args.height, 1024); assert.equal(p.args.references[0].imagePath, ref);
+  assert.equal(p.args.references[0].audioPath, voice); assert.equal(p.quote.reserveUsd, 0.25);
   fs.appendFileSync(ref, 'changed');
   await assert.rejects(f.execute(p, async () => assert.fail('stale reference must not generate')), /stale/);
 });

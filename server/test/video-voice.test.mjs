@@ -147,23 +147,15 @@ test('MSR attaches each pinned sample to the subject that shows its speaker', t 
   assert.equal(result.voiceContinuity.strategy, 'reference_voice');
   assert.equal(videoVoiceCapabilities('astra_genai_msr').voiceReference, 'backend_dependent');
 });
-test('MSR keeps its old plan without backend support, the prompt voice by choice, and no sample past subject 2', t => {
+test('MSR refuses a cut it cannot voice: no gateway support, a speaker past subject 2, a voiceover or a retired voice mode', t => {
   const ctx = fixture(t), [hero, friend] = ctx.board.SB_DOC.characters;
   const extra = path.join(ctx.episode, 'extra.png'); fs.writeFileSync(extra, 'image-extra');
   const input = { prompt: 'They talk.', reserveUsd: 0,
     references: [{ imagePath: friend.voiceReference.imagePaths[0] }, { imagePath: extra }, { imagePath: hero.voiceReference.imagePaths[0] }] };
-  const third = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true });
-  assert.deepEqual(third.args.references.map(ref => ref.audioPath), [friend.voiceReference.path, undefined, undefined]);
-  assert.match(third.voiceContinuity.warnings.join('\n'), /hero: shown as MSR subject 3/);
-  const unsupported = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: false });
-  assert.equal(unsupported.voiceContinuity.strategy, 'external_tts'); // unchanged without gateway support
-  assert.equal(unsupported.args.prompt, 'They talk.');
-  assert.equal(unsupported.args.references.some(ref => ref.audioPath), false);
-  assert.match(unsupported.voiceContinuity.warnings.join('\n'), /does not accept voice samples/);
+  assert.throws(() => prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true }), /msr_voice_required: hero is MSR subject 3/);
+  assert.throws(() => prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: false }), /msr_voice_unsupported/);
+  ctx.shot.narration[0].delivery = 'voiceover';
+  assert.throws(() => prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true }), /msr_dialogue_required/);
   ctx.shot.visual.video = { voice: 'prompt' };
-  const chosen = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true });
-  assert.equal(chosen.voiceContinuity.strategy, 'prompt_voice');
-  assert.doesNotMatch(chosen.voiceContinuity.warnings.join('\n'), /does not accept/);
-  ctx.shot.visual.video = { voice: 'tts' };
-  assert.throws(() => prepareVideoVoice('astra_genai_msr', input, ctx), /'reference' or 'prompt'/);
+  assert.throws(() => prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true }), /retired/);
 });
