@@ -73,8 +73,14 @@ test('every price key the mapping can emit exists in prices.tsv', () => {
     ['sfx_elevenlabs_generate', { durationSeconds: 4 }],
     // Music
     ['music_generate_clip', {}],
+    ['music_generate_song', { model: 'lyria-3-clip-preview' }],
+    ['music_generate_song', { model: 'lyria-3.5' }],
+    ['music_elevenlabs_generate', { modelId: 'music_v2' }],
+    ['music_elevenlabs_generate', { modelId: 'music_v2_5' }],
     ['music_generate', { durationSeconds: 90 }],
-    ['suno_generate', {}],
+    ['suno_generate', { model: 'V6' }],
+    ['suno_generate', { model: 'V6_MINI' }],
+    ['suno_generate', { model: 'V6_WILD' }],
     ['suno_generate_sound', {}],
     ['suno_generate_lyrics', {}],
     ['mlx_music_generate', { durationSeconds: 30 }],
@@ -169,6 +175,12 @@ test('mlx local calls log at $0 with the matching unit', () => {
   assert.equal(priceOf('ltx_video_generate', {}).quantity, 2.042);
   assert.equal(priceOf('fasth3_omni_reference', {}).quantity, 5.167);
   assert.equal(priceOf('mlx_3d_generate', {}).key, '3d.mlx');
+});
+
+test('current music adapters reuse the clip price and never fall back to the legacy Suno rate', () => {
+  assert.equal(priceOf('music_generate_song', { model: 'lyria-3-clip-preview' }).key, 'music.lyria-clip');
+  // A direct suno_generate call that omits model runs on V6.
+  assert.equal(priceOf('suno_generate', {}).key, 'music.suno.V6');
 });
 
 test('an unmeasurable quantity is left null rather than guessed', () => {

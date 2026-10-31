@@ -114,10 +114,19 @@ music.lyria-clip	clip	0.04	official	music_generate_clip — lyria-3-clip-preview
 # cost silently shrinks. The report still prints the total of the remaining items, so write the
 # report line as "total $X + 1 item excluded from the tally (BGM)" (cost-tally.md §reading exit codes).
 music.lyria-realtime	second	?	unconfirmed	music_generate variable length — no Lyria RealTime row in the official price table (checked 2026-08-15)
+# music_generate_song with lyria-3-clip-preview is priced by the music.lyria-clip row above.
+music.lyria-3.5	song	?	unconfirmed	music_generate_song model lyria-3.5 — no confirmed per-song price in this repo (2026-10-31); reconcile provider billing
+# ── Music (ElevenLabs) ───────────────────────────────────────────
+music.elevenlabs.music_v2	song	?	unconfirmed	music_elevenlabs_generate model music_v2 — per-song price not confirmed here (2026-10-31); reconcile provider billing
+music.elevenlabs.music_v2_5	song	?	unconfirmed	music_elevenlabs_generate model music_v2_5 — per-song price not confirmed here (2026-10-31); reconcile provider billing
 # ── Music (Suno / sunoapi.org) ────────────────────────────────────
 # Not an official Suno Inc. API — sunoapi.org (Kie.ai family) third-party.
 # Pack $5 / 1,000 credits = $0.005/credit (sunoapi.org 2026-08).
 music.suno-generate	call	0.06	derived	suno_generate — 12 credits × $0.005 (sunoapi.org $5/1000 pack · Kie.ai 12cr/call)
+# The 12-credit rate above is the retired V4/V5 figure; the current V6 family has no confirmed rate.
+music.suno.V6	call	?	unconfirmed	suno_generate model V6 — credit cost not confirmed (2026-10-31); do not reuse the legacy rate
+music.suno.V6_MINI	call	?	unconfirmed	suno_generate model V6_MINI — credit cost not confirmed (2026-10-31)
+music.suno.V6_WILD	call	?	unconfirmed	suno_generate model V6_WILD — credit cost not confirmed (2026-10-31)
 music.suno-sound	call	?	unconfirmed	suno_generate_sound — credit cost not on the public table (2026-08-20)
 music.suno-lyrics	call	?	unconfirmed	suno_generate_lyrics — credit cost not on the public table (2026-08-20)
 music.mlx	second	0.000	official	mlx_music_generate — MLX Core / mlx-serve on-device. Quantity is durationSeconds. Electricity only

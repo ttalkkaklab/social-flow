@@ -277,6 +277,9 @@ export function priceOf(tool, args = {}) {
                 : 'billed per second of generated audio and no durationSeconds was requested — read the measured duration off the response',
         };
     }
+    // The clip model bills the same per song through either adapter.
+    if (tool === 'music_generate_song' && args.model === 'lyria-3-clip-preview')
+        return { key: 'music.lyria-clip', quantity: 1 };
     if (tool === 'music_generate_song')
         return { key: 'music.' + String(args.model || 'lyria-3.5'), quantity: 1, note: 'Price unconfirmed; reconcile provider billing' };
     if (tool === 'music_elevenlabs_generate')
@@ -290,8 +293,9 @@ export function priceOf(tool, args = {}) {
             note: 'unit price unconfirmed — the report excludes this item rather than counting it as 0',
         };
     }
-    if (tool === 'suno_generate' && String(args.model).startsWith('V6'))
-        return { key: 'music.suno.' + String(args.model), quantity: 1, note: 'Current V6 price unconfirmed; do not reuse legacy V5 credit rates' };
+    // A direct call that omits model runs on the V6 default, so it is priced as V6, not as the legacy rate.
+    if (tool === 'suno_generate' && String(args.model ?? 'V6').startsWith('V6'))
+        return { key: 'music.suno.' + String(args.model ?? 'V6'), quantity: 1, note: 'Current V6 price unconfirmed; do not reuse legacy V5 credit rates' };
     if (tool === 'suno_generate')
         return { key: 'music.suno-generate', quantity: 1 };
     if (tool === 'suno_generate_sound')

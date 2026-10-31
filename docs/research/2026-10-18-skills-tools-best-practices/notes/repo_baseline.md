@@ -310,15 +310,15 @@ README는 툴 104개를 모두 언급하고(누락 0), "104 tools" 주장 3곳�
 ## 7. ASTRA skill-lint 13항목 체크리스트 적용 (6개 스킬 표본 + 21개 자동 항목 요약)
 
 ### Takeaway
-기준은 `/Users/zeans/.claude/plugins/cache/astra/astra-methodology/5.25.0/commands/skill-lint.md`의 13항목이다. 표본 6개(`produce`, `storyboard`, `autoproduce`, `grow-threads`, `publish`, `platform-guide`)에서 공통 약점은 13번(evals 형식)과 9번(부작용 스킬에 `disable-model-invocation` 없음, 정규식은 놓침), 그리고 3번(본문 500줄 초과: `produce`·`grow-threads`·`publish`)이다. 5번(참조 1단계)은 ASTRA의 문자 그대로 검사로는 통과지만, 실제로는 참조 중첩이 넓게 있다.
+기준은 ASTRA skill-lint의 13항목이다. 표본 6개(`produce`, `storyboard`, `autoproduce`, `grow-threads`, `publish`, `platform-guide`)에서 공통 약점은 13번(evals 형식)과 9번(부작용 스킬에 `disable-model-invocation` 없음, 정규식은 놓침), 그리고 3번(본문 500줄 초과: `produce`·`grow-threads`·`publish`)이다. 5번(참조 1단계)은 ASTRA의 문자 그대로 검사로는 통과지만, 실제로는 참조 중첩이 넓게 있다.
 
 ### Cited Findings
-- 체크리스트 원문과 판정 방법: 13개 항목, Auto/Semi/Manual 구분, 심각도(FAIL=명시 규칙 위반, WARN=판단 필요, MANUAL=사람 검토) — `.../5.25.0/commands/skill-lint.md:37-86`
+- 체크리스트 원문과 판정 방법: 13개 항목, Auto/Semi/Manual 구분, 심각도(FAIL=명시 규칙 위반, WARN=판단 필요, MANUAL=사람 검토)
 - ASTRA 문서 내부 불일치(판정 시 주의)
   - 2번 언어 정책: §12.1은 "All skill description fields are written in English"이고 대화형 도메인 스킬은 `description: "..."` 한 줄 — `.../docs/development/skill-best-practices.md:184-193`. 같은 문서 §14 체크리스트는 "interactive skill → Korean `description: "..."` single line" — `skill-best-practices.md:237,240`
-  - 3번 500줄: 심각도 기준은 "WARN (500-line overage)"인데 출력 예시는 "FAIL SKILL.md = 680 lines" — `commands/skill-lint.md:65,84`
-  - 12번: 커맨드는 "No persona agents"(FAIL if `agents/*-persona.md`), §14는 "Persona agent description keeps the … guard prefix" — `commands/skill-lint.md:52`, `skill-best-practices.md:250`
-  - 커맨드는 체크리스트 출처를 "§13"이라 하지만 실제 체크리스트는 §14 — `commands/skill-lint.md:9,37`, `skill-best-practices.md:237`
+  - 3번 500줄: 심각도 기준은 "WARN (500-line overage)"인데 출력 예시는 "FAIL SKILL.md = 680 lines"
+  - 12번: 커맨드는 "No persona agents"(FAIL if `agents/*-persona.md`), §14는 "Persona agent description keeps the … guard prefix" — `skill-best-practices.md:250`
+  - 커맨드는 체크리스트 출처를 "§13"이라 하지만 실제 체크리스트는 §14 — `skill-best-practices.md:237`
 - 표본 판정 — `python3 scratchpad/astra13.py`(커맨드에 적힌 정규식·조건을 그대로 구현) + 수동 확인
 
 | # | 항목 | produce | storyboard | autoproduce | grow-threads | publish | platform-guide |

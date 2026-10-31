@@ -14,7 +14,10 @@ import * as path from 'node:path';
 import { z } from 'zod';
 import { requireSunoKey, sunoBaseUrl } from './config.js';
 import { bareFilenameSchema, saveAudioFile } from './media-utils.js';
-export const SUNO_MODELS = ['V4', 'V4_5', 'V4_5PLUS', 'V4_5ALL', 'V5', 'V5_5', 'V6', 'V6_MINI', 'V6_WILD'];
+/** The models current generation accepts — the one list the registry, validation and tool schema read. */
+export const SUNO_V6_MODELS = ['V6', 'V6_MINI', 'V6_WILD'];
+// Older IDs stay parseable so a request naming one is refused as retired instead of as a typo.
+export const SUNO_MODELS = ['V4', 'V4_5', 'V4_5PLUS', 'V4_5ALL', 'V5', 'V5_5', ...SUNO_V6_MODELS];
 export const DEFAULT_SUNO_MODEL = 'V6';
 /** Sounds tasks accept V5 only (vendor constraint). */
 export const SUNO_SOUND_MODEL = 'V5';
@@ -31,6 +34,13 @@ const LYRICS_POLL_INTERVAL_MS = 5_000;
 const LYRICS_MAX_POLLS = 36; // 3 minutes
 const SOUND_POLL_INTERVAL_MS = 10_000;
 const SOUND_MAX_POLLS = 36; // 6 minutes
+/** Consecutive record-info failures tolerated before a poll gives up; the task is already billed. */
+const POLL_ERROR_LIMIT = 3;
+/** A hung request would leave the job submitting with a live owner, which blocks reconciliation. */
+const API_TIMEOUT_MS = 60_000;
+const DOWNLOAD_TIMEOUT_MS = 300_000;
+/** Envelope codes that reject a request before any task exists (describeSunoError). */
+const REJECTION_CODES = new Set([400, 401, 405, 413, 429, 430, 455]);
 /**
  * Dummy callback for MCP stdio, which has no webhook server.
  *
@@ -47,7 +57,8 @@ const FAILED_STATUSES = new Set([
     'SENSITIVE_WORD_ERROR',
     'FAILED',
 ]);
-const DONE_STATUSES = new Set(['SUCCESS', 'FIRST_SUCCESS']);
+// FIRST_SUCCESS means one track is ready and the other may still have no URL.
+const DONE_STATUSES = new Set(['SUCCESS']);
 // ── schemas ────────────────────────────────────────────────────
 export const sunoGenerateSchema = z.object({
     prompt: z.string().min(1).optional(),
@@ -114,21 +125,28 @@ async function sunoFetch(pathName, init = {}) {
     };
     if (init.body)
         headers['Content-Type'] = 'application/json';
-    const response = await fetch(url, { ...init, headers });
+    const response = await fetch(url, { ...init, headers, signal: AbortSignal.timeout(API_TIMEOUT_MS) });
     const bodyText = await response.text();
     let parsed;
     try {
         parsed = JSON.parse(bodyText);
     }
     catch {
-        throw new Error(response.ok
+        throw Object.assign(new Error(response.ok
             ? `Suno API returned non-JSON: ${bodyText.slice(0, 400)}`
-            : `HTTP ${response.status} — ${bodyText.slice(0, 400)}`);
+            : `HTTP ${response.status} — ${bodyText.slice(0, 400)}`), { httpStatus: response.status });
     }
     if (!response.ok || (parsed.code !== undefined && parsed.code !== 200)) {
-        throw new Error(describeSunoError(parsed.code, parsed.msg, response.status));
+        throw Object.assign(new Error(describeSunoError(parsed.code, parsed.msg, response.status)), { httpStatus: response.status, code: parsed.code });
     }
     return parsed;
+}
+/** A definite rejection of the create call: a rejection code, or an explicit 4xx answer (except timeout/conflict). */
+function isRejection(error) {
+    const { httpStatus, code } = (error ?? {});
+    if (typeof code === 'number' && code !== 200)
+        return REJECTION_CODES.has(code);
+    return typeof httpStatus === 'number' && httpStatus >= 400 && httpStatus < 500 && ![408, 409, 425].includes(httpStatus);
 }
 function taskIdFrom(data) {
     if (typeof data === 'string' && data.length > 0)
@@ -206,7 +224,7 @@ function lyricsFromRecord(info) {
 }
 // ── download · wav transcode ───────────────────────────────────
 async function downloadBuffer(url) {
-    const response = await fetch(url);
+    const response = await fetch(url, { signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS) });
     if (!response.ok) {
         throw new Error(`Failed to download audio: HTTP ${response.status} (URLs expire after 14 days)`);
     }
@@ -230,13 +248,15 @@ function transcodeToWav(src, dest) {
 async function saveTracks(parsed, outputDir, filename, pickTrack) {
     if (parsed.length === 0)
         throw new Error('Task succeeded but no audio URL in response');
+    if (pickTrack >= parsed.length)
+        throw new Error(`Track ${pickTrack} has no audio URL (${parsed.length} returned)`);
     const primaryName = filename || `suno_${Date.now()}.mp3`;
     const stem = stemFromFilename(primaryName);
     const wantWav = extOf(primaryName) === '.wav';
     const tracks = [];
     for (let i = 0; i < parsed.length; i += 1) {
         const item = parsed[i];
-        const isPick = i === pickTrack || (pickTrack >= parsed.length && i === 0);
+        const isPick = i === pickTrack;
         const mp3Name = isPick && !wantWav ? (extOf(primaryName) === '.mp3' ? primaryName : `${stem}.mp3`) : `${stem}_${i === 0 ? 'a' : 'b'}.mp3`;
         const buffer = await downloadBuffer(item.audioUrl);
         const mp3Path = saveAudioFile(outputDir, mp3Name, buffer);
@@ -280,21 +300,32 @@ function isDone(status, tracksReady) {
 }
 async function pollRecord(taskId, opts) {
     let last = {};
+    let failures = 0, settled = 0;
     for (let poll = 1; poll <= opts.maxPolls; poll += 1) {
         console.error(`[Suno] ${opts.label} in progress... (polling ${poll}/${opts.maxPolls}, task ${taskId})`);
         await sleep(opts.intervalMs);
-        const envelope = await sunoFetch(`/api/v1/generate/record-info?taskId=${encodeURIComponent(taskId)}`);
+        let envelope;
+        try {
+            envelope = await sunoFetch(`/api/v1/generate/record-info?taskId=${encodeURIComponent(taskId)}`);
+            failures = 0;
+        }
+        catch (error) {
+            // Maintenance (455), throttling (430) or a dropped connection says nothing about the task.
+            if ((failures += 1) > POLL_ERROR_LIMIT)
+                throw error;
+            continue;
+        }
         last = (asRecord(envelope.data) ?? {});
         const status = last.status;
         const tracks = tracksFromRecord(last);
         if (isTerminalFailure(status)) {
             throw new Error(`Generation ${status}: ${last.errorMessage || last.errorCode || status}`);
         }
-        if (isDone(status, tracks.length > 0))
+        if (isDone(status, tracks.length >= (opts.minTracks ?? 1)))
             return last;
         if (status === 'SUCCESS' || status === 'CALLBACK_EXCEPTION') {
             // Status is success but the URL is not there yet — wait one or two more polls.
-            if (poll > 2) {
+            if ((settled += 1) > 2) {
                 throw new Error(`Task ${status} but no audio URL yet (task ${taskId})`);
             }
         }
@@ -323,42 +354,24 @@ async function pollLyrics(taskId) {
 }
 // ── public API ─────────────────────────────────────────────────
 export function assertGenerateArgs(request) {
-    if (['V6', 'V6_MINI', 'V6_WILD'].includes(request.model)) {
-        if (request.customMode) {
-            if (!request.style && !request.lyrics && !request.negativeTags)
-                throw new Error('Custom mode requires style, lyrics or negativeTags');
-            if (request.title && request.title.length > 80)
-                throw new Error('title exceeds 80 characters');
-        }
-        else {
-            if (!request.style && !request.lyrics)
-                throw new Error('Non-custom mode requires style or lyrics');
-            if (request.prompt && request.prompt.length > 3000)
-                throw new Error('prompt exceeds 3000 characters');
-            if (request.duration !== undefined || request.title || request.negativeTags || request.vocalGender || request.personaId || request.personaModel)
-                throw new Error('Custom-only fields require customMode:true');
-        }
-        if (request.negativeTags && request.negativeTags.length > 1000)
-            throw new Error('negativeTags exceeds 1000 characters');
-        return;
+    if (!SUNO_V6_MODELS.includes(request.model))
+        throw new Error('music_model_retired: select a V6 model explicitly');
+    if (request.customMode) {
+        if (!request.style && !request.lyrics && !request.negativeTags)
+            throw new Error('Custom mode requires style, lyrics or negativeTags');
+        if (request.title && request.title.length > 80)
+            throw new Error('title exceeds 80 characters');
     }
-    const custom = request.customMode === true;
-    const instrumental = request.instrumental === true;
-    if (!custom) {
-        if (!request.prompt)
-            throw new Error('prompt is required when customMode is false');
-        return;
+    else {
+        if (!request.style && !request.lyrics)
+            throw new Error('Non-custom mode requires style or lyrics');
+        if (request.prompt && request.prompt.length > 3000)
+            throw new Error('prompt exceeds 3000 characters');
+        if (request.duration !== undefined || request.title || request.negativeTags || request.vocalGender || request.personaId || request.personaModel)
+            throw new Error('Custom-only fields require customMode:true');
     }
-    if (!request.style)
-        throw new Error('style is required when customMode is true');
-    if (!request.title)
-        throw new Error('title is required when customMode is true');
-    if (!instrumental && !request.prompt) {
-        throw new Error('prompt (lyrics) is required when customMode is true and instrumental is false');
-    }
-    if (request.duration !== undefined && (request.model !== 'V5_5' || !custom)) {
-        throw new Error('duration is only supported when model is V5_5 and customMode is true');
-    }
+    if (request.negativeTags && request.negativeTags.length > 1000)
+        throw new Error('negativeTags exceeds 1000 characters');
 }
 /** Two variants per call. V6 accepts style or lyrics; custom controls are validated before submission. */
 export async function generateMusic(request) {
@@ -396,20 +409,36 @@ export async function generateMusic(request) {
         console.error(`[Suno] Generating music... (model: ${model}, customMode: ${customMode}, instrumental: ${body.instrumental})`);
         const created = await sunoFetch('/api/v1/generate', { method: 'POST', body: JSON.stringify(body) });
         taskId = taskIdFrom(created.data);
-        const info = await pollRecord(taskId, {
-            intervalMs: POLL_INTERVAL_MS,
-            maxPolls: MAX_POLLS,
-            label: 'Music generation',
-        });
-        const parsed = tracksFromRecord(info).filter((t) => t !== undefined);
-        const tracks = await saveTracks(parsed, request.outputPath || process.cwd(), request.filename, request.pickTrack ?? 0);
-        console.error(`[Suno] Saved ${tracks.length} track(s): ${tracks.map((t) => t.audioPath).join(', ')}`);
+        const tracks = await collectTracks(taskId, request);
         return { success: true, taskId, model, tracks, audioPath: tracks[0]?.audioPath };
     }
     catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         console.error(`[Suno] Error: ${message}`);
-        return { success: false, taskId, error: message };
+        // Terminal only while no task exists: once a taskId is back, the provider may still bill it.
+        return { success: false, taskId, error: message, terminal: taskId === undefined && isRejection(error) };
+    }
+}
+async function collectTracks(taskId, request) {
+    const pickTrack = request.pickTrack ?? 0;
+    const info = await pollRecord(taskId, {
+        intervalMs: POLL_INTERVAL_MS,
+        maxPolls: MAX_POLLS,
+        label: 'Music generation',
+        minTracks: pickTrack + 1,
+    });
+    const tracks = await saveTracks(tracksFromRecord(info).filter((t) => t !== undefined), request.outputPath || process.cwd(), request.filename, pickTrack);
+    console.error(`[Suno] Saved ${tracks.length} track(s): ${tracks.map((t) => t.audioPath).join(', ')}`);
+    return tracks;
+}
+/** Re-query an already created task and download its tracks; never submits a new generation. */
+export async function resumeMusic(taskId, request) {
+    try {
+        const tracks = await collectTracks(taskId, request);
+        return { success: true, taskId, tracks, audioPath: tracks[0]?.audioPath };
+    }
+    catch (error) {
+        return { success: false, taskId, error: error instanceof Error ? error.message : String(error) };
     }
 }
 /**

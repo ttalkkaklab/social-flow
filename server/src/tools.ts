@@ -104,7 +104,7 @@ import {
 } from './blender-bridge.js';
 import {
   DEFAULT_SUNO_MODEL,
-  SUNO_MODELS,
+  SUNO_V6_MODELS,
   SUNO_PERSONA_MODELS,
   SUNO_SOUND_KEYS,
   SUNO_VOCAL_GENDERS,
@@ -150,9 +150,10 @@ import {
  * say never to call without user approval.
  *
  * Generation tools: image (gpt_image_*) on OPENAI_API_KEY; speech (tts_*) and
- * music (music_*) on GEMINI_API_KEY. Sung full songs and loopable beds are suno_*
- * (sunoapi.org third-party REST, SUNO_API_KEY). Lyria stays the default
- * 30s instrumental BGM path. Descriptions carry the short-form pipeline context
+ * music (music_*) on GEMINI_API_KEY. Sung full songs are suno_generate
+ * (sunoapi.org third-party REST, SUNO_API_KEY). New music runs music_plan →
+ * music_execute with the saved models.music; sound effects are
+ * sfx_elevenlabs_generate. Descriptions carry the short-form pipeline context
  * (channel profile voice, pinned seeds). Keys are validated at call time.
  *
  * Video engines are the ones that can keep a character's voice (owner directive
@@ -3358,7 +3359,7 @@ Returns: a text block with the saved .wav file path, speaker/voice assignments, 
     description: `Generate one sound effect from a text description with ElevenLabs (${ELEVENLABS_SFX_MODEL}) — the lane that fills a channel's sfx catalog so a shot's \`sound.sfx\` has a file behind it.
 
 Use for the cut effects a storyboard names in window.SFX (scenes-schema §sound effects): a whoosh on a whip transition, a low hit on the line before a drop, a tick or pop when a figure lands on a slide, a riser under a build, a 30-second room-tone loop for a bed. Write the prompt as a description in the vendor's own vocabulary (whoosh · impact · braam · riser · click · texture · ambience), one sound per call, with its shape spelled out ("short soft whoosh, fabric through air, no tail"); set durationSeconds for one-shots (a whoosh 0.6–1.0 s, a hit 1–2 s, a riser 2–4 s) and loop: true with 10–30 s for a bed. promptInfluence above the ${DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE} default reads the prompt more literally; below it, more freely. Save straight into the channel catalog — outputPath data/<channel>/assets/audio/sfx, filename <id>.wav — then register the row with resolve-asset.py --ensure and point its note at the .json sidecar this tool writes next to the file (tool, model, prompt, seconds, request id, date, rights). Generated once, an effect is a channel asset reused at $0 in every later episode.
-Do NOT use for music or a melodic bed — that is music_generate_clip / suno_generate_sound. Do NOT use for a clip's own soundtrack — that is the model's native audio through visual.audio. Do NOT request a loop under 5 s (it seams audibly under narration). The endpoint has no WAV format of its own: the server asks for PCM and writes the RIFF header itself, so the file is a mono 16-bit WAV the builder reads directly; a 403 output_format_not_allowed means the plan lacks that rate — retry with pcm_24000. API pricing is per minute of generated audio, $${ELEVENLABS_SFX_USD_PER_MINUTE.toFixed(2)} on every plan (pricing/api, read 2026-09-16), so a one-second effect is about $0.002; the ledger key is sfx.elevenlabs with the measured seconds as the quantity. Free-tier output is non-commercial and needs attribution — check the plan before publishing.
+Do NOT use for music or a melodic bed — that is music_plan → music_execute with the saved music model. Do NOT use for a clip's own soundtrack — that is the model's native audio through visual.audio. Do NOT request a loop under 5 s (it seams audibly under narration). The endpoint has no WAV format of its own: the server asks for PCM and writes the RIFF header itself, so the file is a mono 16-bit WAV the builder reads directly; a 403 output_format_not_allowed means the plan lacks that rate — retry with pcm_24000. API pricing is per minute of generated audio, $${ELEVENLABS_SFX_USD_PER_MINUTE.toFixed(2)} on every plan (pricing/api, read 2026-09-16), so a one-second effect is about $0.002; the ledger key is sfx.elevenlabs with the measured seconds as the quantity. Free-tier output is non-commercial and needs attribution — check the plan before publishing.
 
 Returns: a text block with the saved WAV path, the provenance sidecar path, the model, format, the measured duration, the USD estimate at the per-minute rate, and the request id.`,
     inputSchema: {
@@ -3467,7 +3468,7 @@ Returns: a text block with the saved .json path, detected language, segment coun
     annotations: HINT.generate,
     description: `Generate a fixed 30-second music clip from a text prompt using Google Lyria 3 (batch, single call).
 
-Use as the DEFAULT for short-form BGM, jingles, and post background music (배경음악, BGM) — cheaper ($0.04/clip) and simpler than the streaming tools. Lyria 3 has no structured parameters: describe genre, instruments, BPM, key, mood, and structure in natural language inside the prompt, optionally with section tags ([Intro] [Verse] [Chorus] [Outro]) or timestamps ("[0:00 - 0:10] Intro: ..."). Can generate vocals and lyrics — add "instrumental only, no vocals" to the prompt if unwanted. Output carries a SynthID audio watermark.
+Use as a standalone 30-second Lyria clip for short-form BGM, jingles, and post background music (배경음악, BGM) — cheaper ($0.04/clip) and simpler than the streaming tools. Not the configured default: music_plan sends a saved lyria-3-clip-preview selection to music_generate_song. Lyria 3 has no structured parameters: describe genre, instruments, BPM, key, mood, and structure in natural language inside the prompt, optionally with section tags ([Intro] [Verse] [Chorus] [Outro]) or timestamps ("[0:00 - 0:10] Intro: ..."). Can generate vocals and lyrics — add "instrumental only, no vocals" to the prompt if unwanted. Output carries a SynthID audio watermark.
 If the request is blocked for "an unspecified policy reason", that is prompt filtering, not a bug — reword the prompt more plainly and retry once rather than repeating the same text.
 Do NOT use when an exact non-30s duration is required, or when the same music must be reproducible — use music_generate / music_generate_advanced (seed) instead. Non-deterministic: the same prompt returns different music each call, so store signature BGM as a reusable asset.
 
@@ -3497,7 +3498,7 @@ Returns: a text block with the saved .mp3 file path (44.1kHz stereo, exactly 30 
     annotations: HINT.generate,
     description: `Generate instrumental music from a text prompt using Google Lyria RealTime (streaming).
 
-Use when the requested duration must be controlled (5-300s) — e.g. matching a narration length. For standard 30-second short-form BGM, prefer music_generate_clip (cheaper, single call). Optionally constrain genre, mood, instruments, BPM (60-200). Genre/mood/instrument values are free text — music_list_options shows suggestions, not a closed list.
+Use when the requested duration must be controlled (5-300s) — e.g. matching a narration length. For a fixed 30-second bed, music_generate_clip is cheaper (single call); configured production uses music_plan with the saved model. Optionally constrain genre, mood, instruments, BPM (60-200). Genre/mood/instrument values are free text — music_list_options shows suggestions, not a closed list.
 Do NOT use for vocals or lyrics — Lyria RealTime is instrumental-only. For a sung song use suno_generate. For blending multiple weighted musical ideas or tuning density/brightness/seed, use music_generate_advanced.
 For BGM under narration, say so in the prompt (e.g. "leaves space for a spoken voiceover, no melody in the vocal frequency range").
 
@@ -3668,7 +3669,7 @@ Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), d
     description: `Generate music on this machine via MLX Core / mlx-serve POST /v1/audio/music-generations. Returns raw WAV. No vendor bill. This plugin never launches the app.
 
 Use as an optional local bed when MLX Core is running with a music model. Default is instrumental:true and durationSeconds ${DEFAULT_MLX_MUSIC_SECONDS} (${MIN_MLX_MUSIC_SECONDS}–${MAX_MLX_MUSIC_SECONDS}). instrumental:true cannot be sent beside lyrics — mlx-serve returns 400; set instrumental false to sing, or drop lyrics for a bed.
-Do NOT use as the default BGM path — that stays music_generate_clip (Lyria, GEMINI_API_KEY). Autoproduce unattended still takes the Lyria clip. Vocals fight voiceover; keep instrumental true under narration.
+Do NOT use in place of the saved music model — new music runs music_plan → music_execute with models.music; the legacy unattended bed still takes music_generate_clip. Vocals fight voiceover; keep instrumental true under narration.
 Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve (or MLX_SERVE_URL). brew install --cask mlx-core if :11234 is down.
 
 Returns: a text block with the saved .wav path, model, duration, and generation time.`,
@@ -3833,7 +3834,7 @@ Returns: a capability menu — video_generation, image_generation, tts, music_ge
     description: `List suggested genres, moods, and instruments for music generation.
 
 Use when the user asks what music styles are available (장르 목록) or wants inspiration. The lists are SUGGESTIONS, not a closed set — all music tools accept free-text descriptions beyond these. Read-only; makes no API call.
-Do NOT use to generate music — use music_generate_clip, music_generate, or music_generate_advanced. The list is static; one call per session is enough.
+Do NOT use to generate music — use music_plan → music_execute. The list is static; one call per session is enough.
 
 Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exhaustive).`,
     inputSchema: {
@@ -3878,7 +3879,7 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
         model: {
           type: 'string',
           description: 'sunoapi.org model ID; current generation supports the V6 family.',
-          enum: [...SUNO_MODELS],
+          enum: [...SUNO_V6_MODELS],
           default: DEFAULT_SUNO_MODEL,
         },
         duration: {
@@ -5143,7 +5144,7 @@ const musicContextSchema = { type: 'object', description: 'Managed music context
   directory: { type: 'string', description: 'Absolute episode or workspace directory, e.g. /work/data/demo/episodes/intro.' },
   assetId: { type: 'string', description: 'Stable cue/asset ID, e.g. base.' },
   requestId: { type: 'string', description: 'Stable attempt ID, e.g. base-1. Reuse after interruption.' },
-  reserveUsd: { type: 'number', minimum: 0, description: 'Total provider cost estimate for all tracks, e.g. 0.5; zero for local. Not an invoice cap.' },
+  reserveUsd: { type: 'number', minimum: 0, description: 'Total provider cost estimate for all tracks, e.g. 0.5. Required and positive for API engines; omit or 0 for local MLX. Not an invoice cap.' },
 }, required: ['directory', 'assetId', 'requestId'] };
 for (const tool of TOOLS) {
   if (!MUSIC_ADAPTERS[tool.name]) continue;
@@ -5151,7 +5152,7 @@ for (const tool of TOOLS) {
   tool.inputSchema.properties = { ...tool.inputSchema.properties, musicContext: musicContextSchema };
   if (tool.name === 'suno_generate_sound') tool.description = 'Retired V5 sounds adapter; generation is rejected before submission. Use music_catalog and explicitly select a supported V6 instrumental song instead. Does not automatically substitute models.';
   if (tool.name === 'suno_generate') {
-    tool.inputSchema.properties.model = { type: 'string', enum: ['V6', 'V6_MINI', 'V6_WILD'], default: 'V6', description: 'sunoapi.org third-party model ID, not a Suno Platform identifier.' };
+    tool.inputSchema.properties.model = { type: 'string', enum: [...SUNO_V6_MODELS], default: DEFAULT_SUNO_MODEL, description: 'sunoapi.org third-party model ID, not a Suno Platform identifier.' };
     tool.inputSchema.properties.lyrics = { type: 'string', maxLength: 5000, description: 'Lyrics, e.g. [Verse] followed by Korean lyrics. Preferred over prompt in custom mode.' };
     tool.description = 'Generate songs using sunoapi.org, a third-party provider. Configured calls require musicContext. Use music_catalog to inspect choices; do NOT treat this as the Suno Platform official API. Returns local tracks and provider task ID. V6 custom mode requires style, lyrics or negativeTags; duration is 10–360 seconds. Non-custom mode requires style or lyrics; prompt alone is insufficient. Old V4/V5 models are retired.';
   }

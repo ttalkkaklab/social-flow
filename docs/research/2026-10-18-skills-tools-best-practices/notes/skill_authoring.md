@@ -51,7 +51,7 @@
 **로컬 가이드와의 차이**
 - ASTRA BP §2는 `name`·`description` 제약을 공식과 같게 적고 `when_to_use` 1,536자 상한도 공식과 일치한다 — [로컬 ASTRA skill-best-practices.md 25–38행](/Users/zeans/.claude/plugins/cache/astra/astra-methodology/5.25.0/docs/development/skill-best-practices.md)
 - superpowers는 "Max 1024 characters total"(97행)을 frontmatter 전체 상한처럼 적는다 — contradicted by [Spec](https://agentskills.io/specification), 표준은 `name` 64자와 `description` 1,024자를 따로 제한한다 — [로컬 writing-skills SKILL.md](/Users/zeans/.claude/plugins/cache/claude-plugins-official/superpowers/7.0.0/skills/writing-skills/SKILL.md)
-- ASTRA skill-lint 8번은 "`allowed-tools` specified … absent = FAIL"로 필수 필드처럼 다루고 BP §2는 "least-privilege principle"로 설명한다 — contradicted by [CC Skills](https://code.claude.com/docs/en/skills): "It does not restrict which tools are available: every tool remains callable". 도구를 실제로 빼는 필드는 `disallowed-tools`다 — [로컬 skill-lint.md 48행](/Users/zeans/.claude/plugins/cache/astra/astra-methodology/5.25.0/commands/skill-lint.md)
+- ASTRA skill-lint 8번은 "`allowed-tools` specified … absent = FAIL"로 필수 필드처럼 다루고 BP §2는 "least-privilege principle"로 설명한다 — contradicted by [CC Skills](https://code.claude.com/docs/en/skills): "It does not restrict which tools are available: every tool remains callable". 도구를 실제로 빼는 필드는 `disallowed-tools`다
 - ASTRA skill-author는 `allowed-tools: Read, Write, Edit, ...`처럼 쉼표로 구분한다. Claude Code는 공백·쉼표 둘 다 받지만 표준은 "space-separated string"이다 — [로컬 skill-author SKILL.md 11행](/Users/zeans/.claude/plugins/cache/astra/astra-methodology/5.25.0/skills/skill-author/SKILL.md); [Spec](https://agentskills.io/specification)
 
 ### Inferences
@@ -268,7 +268,7 @@
 
 **로컬 방법론**
 - superpowers: "**Writing skills IS Test-Driven Development applied to process documentation.**", "NO SKILL WITHOUT A FAILING TEST FIRST"(379행), RED(스킬 없이 압박 시나리오 → 합리화 문구를 그대로 기록) → GREEN(그 위반만 다루는 최소 스킬) → REFACTOR(새 합리화 차단). 문구 마이크로 테스트: 새 컨텍스트 1샘플/호출, "Always include a no-guidance control. If the control doesn't exhibit the failure, there is nothing to fix", "5+ reps per variant"(583행), 플래그된 일치는 사람이 직접 읽기, "Variance is a metric" — [로컬 writing-skills SKILL.md](/Users/zeans/.claude/plugins/cache/claude-plugins-official/superpowers/7.0.0/skills/writing-skills/SKILL.md); 압박 유형(시간, 매몰비용, 권위, 피로)과 메타 테스트는 [로컬 testing-skills-with-subagents.md](/Users/zeans/.claude/plugins/cache/claude-plugins-official/superpowers/7.0.0/skills/writing-skills/testing-skills-with-subagents.md)
-- ASTRA: `references/evals.md`에 "## Scenario" 3개 이상(대표·엣지·오용), 없으면 skill-lint 13번 WARN — [로컬 skill-lint.md 53행](/Users/zeans/.claude/plugins/cache/astra/astra-methodology/5.25.0/commands/skill-lint.md); ASTRA BP §10은 `*-validator`→haiku, `*-reviewer`/`*-analyzer`→sonnet 규약 — [로컬 ASTRA BP](/Users/zeans/.claude/plugins/cache/astra/astra-methodology/5.25.0/docs/development/skill-best-practices.md)
+- ASTRA: `references/evals.md`에 "## Scenario" 3개 이상(대표·엣지·오용), 없으면 skill-lint 13번 WARN; ASTRA BP §10은 `*-validator`→haiku, `*-reviewer`/`*-analyzer`→sonnet 규약 — [로컬 ASTRA BP](/Users/zeans/.claude/plugins/cache/astra/astra-methodology/5.25.0/docs/development/skill-best-practices.md)
 
 ### Inferences
 - 공식 3시나리오는 출력 품질 eval의 하한이고, 트리거 eval은 별도로 약 20쿼리 × 3회가 표준 수치다. 둘을 섞지 말아야 한다(Claude Code 문서가 두 측정을 분리하라고 명시).
