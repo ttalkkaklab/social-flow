@@ -17,7 +17,10 @@ test('confirmed voice targets carry age and acoustic fields without turning biog
   assert.notEqual(characterVoiceTarget(markdown(changed)).perceivedAge,first.perceivedAge);
   assert.equal(characterVoiceTarget(markdown(changed)).baselineDirection,first.baselineDirection,'immutable age belongs to casting, not delivery style');
   changed.character.speech.timbre.value = '낮고 선명한 여성 중음';
-  assert.equal(characterVoiceTarget(markdown(changed)).vocalGender,'female');
+  assert.equal(characterVoiceTarget(markdown(changed)).vocalGender,'female','a voice-specific timbre outranks identity.gender');
+  changed.character.speech.timbre.value = '부드러운 중음'; changed.character.identity.gender.value = '여성';
+  const stated = characterVoiceTarget(markdown(changed));
+  assert.equal(stated.vocalGender,'female'); assert.equal(stated.sources.vocalGender,'character.identity.gender');
   const missing = characterVoiceTarget('```json\n{"character":{"name":"Mrs. Smith"}}\n```');
   assert.equal(missing.vocalGender,'unspecified');
   assert.ok(missing.warnings.length);

@@ -129,6 +129,29 @@
       });
     });
   });
+  // Extra-image slider: buttons step one slide; the controls show only when the track overflows.
+  document.querySelectorAll('[data-gallery]').forEach(function (gallery) {
+    var track = gallery.querySelector('[data-gallery-track]');
+    var slides = track.children;
+    var controls = gallery.querySelector('.character-gallery-controls');
+    var index = gallery.querySelector('[data-gallery-index]');
+    var prev = gallery.querySelector('[data-gallery-prev]');
+    var next = gallery.querySelector('[data-gallery-next]');
+    function step() { return slides.length > 1 ? slides[1].offsetLeft - slides[0].offsetLeft : track.clientWidth; }
+    function sync() {
+      var max = track.scrollWidth - track.clientWidth;
+      controls.hidden = max <= 1;
+      var atEnd = track.scrollLeft >= max - 1;
+      index.textContent = (atEnd ? slides.length : Math.round(track.scrollLeft / step()) + 1) + ' / ' + slides.length;
+      prev.disabled = track.scrollLeft <= 1;
+      next.disabled = atEnd;
+    }
+    prev.addEventListener('click', function () { track.scrollBy({ left: -step() }); });
+    next.addEventListener('click', function () { track.scrollBy({ left: step() }); });
+    track.addEventListener('scroll', sync, { passive: true });
+    window.addEventListener('resize', sync);
+    sync();
+  });
   document.querySelectorAll('[data-image-preview]').forEach(function (link) {
     link.addEventListener('click', function (event) {
       if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;

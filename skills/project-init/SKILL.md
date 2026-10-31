@@ -8,7 +8,7 @@ description: >
   and format together. For only a channel profile or character edit use channel;
   storyboard plans an episode and autoproduce builds one.
 argument-hint: "[init|status|update] [project-directory]"
-allowed-tools: ["mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__sns_account_check", "mcp__plugin_social-flow_social-flow__sns_account_check", "mcp__social-flow__character_voice_audition", "mcp__plugin_social-flow_social-flow__character_voice_audition", "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_voices", "mcp__social-flow__astra_genai_catalog", "mcp__plugin_social-flow_social-flow__astra_genai_catalog"]
+allowed-tools: ["mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__sns_account_check", "mcp__plugin_social-flow_social-flow__sns_account_check", "mcp__social-flow__character_manage", "mcp__plugin_social-flow_social-flow__character_manage", "mcp__social-flow__character_voice_audition", "mcp__plugin_social-flow_social-flow__character_voice_audition", "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_voices", "mcp__social-flow__astra_genai_catalog", "mcp__plugin_social-flow_social-flow__astra_genai_catalog"]
 ---
 
 Follow [production order](../_shared/production-workflow.md). Project setup precedes
@@ -114,7 +114,7 @@ rewriting existing voices or an already-approved episode.
 
 Project settings readiness does not mean character readiness. Before continuing to
 an episode, follow [shared character preparation](../channel/references/character-identity.md#prepare-the-shared-sheet-before-episode-authoring).
-Create/reuse the needed identity drafts and export their bundled sheets before
+Create/reuse the needed identity drafts with `character_manage` (it exports the bundled sheets) before
 candidate writing. Do not generate media during project setup or substitute an
 ad hoc page for the shared sheet. Report absent images as pending.
 

@@ -8,7 +8,7 @@ description: >
   platforms, fact-check policy — the identity file every storyboard, produce and publish
   run opens first; engines, SNS targets, visual style and ratio live in .social-flow/models.json.
 argument-hint: "[add|list|update|serve|character] [channel-name]"
-allowed-tools: ["mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__tts_gemini_38", "mcp__plugin_social-flow_social-flow__tts_gemini_38", "mcp__social-flow__tts_voice_design", "mcp__plugin_social-flow_social-flow__tts_voice_design", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__stt_local_transcribe", "mcp__plugin_social-flow_social-flow__stt_local_transcribe", "mcp__social-flow__character_voice_audition", "mcp__plugin_social-flow_social-flow__character_voice_audition", "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_generate", "mcp__social-flow__astra_genai_catalog", "mcp__plugin_social-flow_social-flow__astra_genai_catalog"]
+allowed-tools: ["mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__tts_gemini_38", "mcp__plugin_social-flow_social-flow__tts_gemini_38", "mcp__social-flow__tts_voice_design", "mcp__plugin_social-flow_social-flow__tts_voice_design", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__stt_local_transcribe", "mcp__plugin_social-flow_social-flow__stt_local_transcribe", "mcp__social-flow__character_manage", "mcp__plugin_social-flow_social-flow__character_manage", "mcp__social-flow__character_voice_audition", "mcp__plugin_social-flow_social-flow__character_voice_audition", "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_generate", "mcp__social-flow__astra_genai_catalog", "mcp__plugin_social-flow_social-flow__astra_genai_catalog"]
 ---
 
 Follow [production order](../_shared/production-workflow.md). Project setup precedes
@@ -56,7 +56,7 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
 - `add <name>` — create a new channel (procedure below)
 - `list` — Glob for `data/*/profile.md` and report channel, description, and publish platforms as a table
 - `update <name>` — read the existing profile.md and edit only the fields the user specifies
-- `character <channel> <id>` — create or update the reusable character using [character-identity.md](references/character-identity.md); read existing identity first and preserve unspecified fields. Export and check the local review library after changes.
+- `character <channel> <id>` — create or update the reusable character with `character_manage` following [character-identity.md](references/character-identity.md): the basics (name, gender, species, age, role, summary, height) are required arguments and every other field is optional. Read the existing identity first and pass only the optional fields that change. The tool exports the sheets; run `--check` after changes.
 - `serve` — open the channel browser in the browser (procedure below)
 - With no argument, show the current state via `list`, then ask what to do next
 
@@ -221,16 +221,16 @@ node "$CLAUDE_PLUGIN_ROOT/skills/channel/references/serve.js" data --port 8400
 
 ## Local review HTML (required after character edits)
 
-For every new or updated character, follow [character-identity.md](references/character-identity.md). The structured identity is required in addition to the pinned voice below.
+For every new or updated character, follow [character-identity.md](references/character-identity.md). Required: the basics, the three sheet panels and the selected voice below; every other identity field is optional.
 For dramatic characters, apply [character depth](../storyboard/references/character-depth.md)
-when filling existing personality, relationship and acting fields. Connect tendencies to
-choices and costs instead of accumulating adjectives. Preserve existing canon and keep
+when filling existing personality, relationship and acting fields. Name tendencies in traits, then
+connect them to choices and costs in flaw, fear and relationships. Preserve existing canon and keep
 episode-specific pressure separate from the shared identity; no extra JSON keys are required.
 
 Export the bundled sheet before any episode candidates or scene images, including drafts with pending media. Follow [panel specifications](references/character-panels.md) for purpose, canvas ratio and subject size. Never hand-author the review HTML.
 
 Every confirmed character sheet includes its selected `tts` in the identity JSON.
-Before the voice audition (requested character work), the draft may omit `tts`; do not
+Before the voice audition (requested character work), the draft keeps `tts: null`; do not
 substitute the following example as a confirmed voice. After selection, the block includes:
 
 ```json
@@ -268,9 +268,9 @@ node "$CLAUDE_PLUGIN_ROOT/skills/channel/references/review-library.js" "data/<ch
 
 Deliver `data/<channel>/assets/characters/index.html` for the complete cast and
 `assets/characters/<id>/index.html` for each sheet. They open directly with file://;
-no HTTP server is needed. Each sheet shows basic identity, three
+no HTTP server is needed. Each sheet shows the required basics, three
 required image slots (front/body, back, face), optional extras, voice.wav and the
-full identity document. Keep `identity.md` and media as the source; do not edit
+specification cards for the optional fields that are present. Keep `identity.md` and media as the source; do not edit
 exported HTML. Named voice/appearance/role fields are read from identity.md.
 
 Optional `review.json` exposes independent review separately from image availability:

@@ -19,13 +19,13 @@ function episodeVoiceOverride(win, tts) {
 
 function handoff(file, { requireSpeech = true } = {}) {
   const source = fs.readFileSync(file, 'utf8');
-  const character = identityCharacter(source, { requireSpeech });
+  const character = identityCharacter(source);
   const name = /^#\s+(.+)$/m.exec(source)?.[1]?.trim();
   if (!name) throw new Error('identity.md needs a # Name heading');
   const id = path.basename(path.dirname(path.resolve(file)));
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) throw new Error('Character folder needs a kebab-case id');
   const tts = identityVoice(source, { optional: !requireSpeech });
-  return { id, name, character, tts, direction: direction(character, { requireSpeech }), identitySha256: createHash('sha256').update(source).digest('hex'), ...selectedVoiceReference(source, tts) };
+  return { id, name, character, tts, direction: direction(character), identitySha256: createHash('sha256').update(source).digest('hex'), ...selectedVoiceReference(source, tts) };
 }
 
 // Reuse the chosen audition's actual bytes, rather than an unrelated old voice.wav.

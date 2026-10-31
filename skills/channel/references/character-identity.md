@@ -18,9 +18,10 @@ silently populate an existing character with the example's biography or voice.
 ## Prepare the shared sheet before episode authoring
 
 Before candidate stories or scene images, inspect `assets/characters/` and read the
-selected identities. Create missing identity drafts using the worked example's
-structure, preserving unknown fields as pending. Export the shared sheets with
-`review-library.js` immediately, even when images or voice samples are missing.
+selected identities. Create missing identity drafts with `character_manage`: the
+basics are required (pending while undecided) and unknown optional fields are omitted.
+The tool exports the shared sheets immediately, even when images or voice samples are
+missing; run `review-library.js` yourself after any other character file change.
 `assets/characters/<id>/index.html` is generated from the bundled review template;
 never hand-author a substitute HTML page or use the episode cast section as the sheet.
 If an unowned HTML page conflicts, preserve it in a sibling backup before explicitly
@@ -34,18 +35,29 @@ match is not a complete character, and media generation still needs authorizatio
 
 ## Author and validate
 
-Use [character-identity-example.md](character-identity-example.md) as a complete
-worked example, not default values. Keep one `# Name` heading and one fenced JSON
-block with `character` and `tts`. The field catalog and validator are
-`../../_shared/character-identity.js`. All catalog fields must be present.
+Write identities with the `character_manage` tool; it takes the basics as required
+arguments and every other field as an optional one, writes `identity.md` and refreshes
+the sheets. [character-identity-example.md](character-identity-example.md) is a complete
+worked example, not default values. The file keeps one `# Name` heading and one fenced
+JSON block with `character` and `tts`. The field catalog and validator are
+`../../_shared/character-identity.js`.
 
-Each field is `{ "status": "confirmed", "value": ... }`, or
-`{ "status": "pending", "value": null, "reason": "what is unresolved" }`.
-Optional fields can use `not_applicable` with null and a meaningful reason.
-Pending is an honest draft, never generation-ready. Do not invent measurements to
+| Kind | Items | Rule |
+|---|---|---|
+| Required basics | name (`# Name`), `identity.gender`, `species`, `age`, `role`, `summary`, `physical.heightCm` | Always present; `pending` while undecided, never `not_applicable` |
+| Required media | face close-up, headless front, headless back panels | The sheet warns when one is missing; `shot_image` refuses (`character_panel_missing`) |
+| Required voice | `tts` (selected voice) | `null` until the user picks an audition; the sheet warns, and `character-sheet.js` refuses a handoff for a character with lines |
+| Optional | every other catalog field, including whole groups | Omit it, confirm it, or mark it `pending`/`not_applicable` with a reason |
+
+Each present field is `{ "status": "confirmed", "value": ... }`, or
+`{ "status": "pending", "value": null, "reason": "what is unresolved" }`, or
+`{ "status": "not_applicable", "value": null, "reason": "why" }` for optional fields.
+A pending basic is an honest draft, never generation-ready; pending optional fields
+do not block generation. Do not invent measurements to
 clear validation. Height uses cm, weight uses kg; stylized subjects may leave weight
 not_applicable. Relative scale specifies what counts toward height (ears, hair, tail).
-Traits pair a tendency with observable behavior. Dialogue examples demonstrate the
+Traits name the tendency alone; the behavior it drives goes into flaw, examples and acting.
+Goal says what the character pursues; motivation says why, or stays not_applicable. Dialogue examples demonstrate the
 register and vocabulary; acting describes emotional reactions and movement.
 Relationships name the other character's id, address and attitude. No relationships
 is not_applicable, not a fake cast member. Record fixed landmarks with anatomical
@@ -54,7 +66,7 @@ a schema check cannot prove anatomy, personality, acting or voice quality.
 
 For dramatic characters, use the character-depth guidance linked from the channel skill.
 Write how a trait affects a choice, when a strength creates a cost, and how the person's
-attitude changes with a particular counterpart. Existing goal/flaw/fear/relationships
+attitude changes with a particular counterpart. Existing goal/motivation/flaw/fear/relationships
 fields can express this without schema additions. Do not require a traumatic past,
 self-deception or a growth arc for every role. An arc describes a possibility until the
 story earns it; a new episode's temporary state does not silently rewrite shared canon.
@@ -100,8 +112,8 @@ for provider mappings and the distinction between sample imitation and exact spe
    audition), using the selected engine/model and the same natural Korean sample from
    `speech.examples`. Present real audio with playback and wait for the user's candidate
    selection. Only then persist that candidate's `tts` and reference audio in the
-   identity/sheet. Project-init and channel `add` leave the voice pending and bill no
-   sample. A pending draft must not claim a confirmed voice.
+   identity/sheet. Project-init and channel `add` leave `tts` null and bill no
+   sample. A draft without a selected voice must not claim a confirmed one.
    Follow [acting prompts and auditions](../../produce/references/acting-prompts.md).
    `direction.voice` guides performance; per-line `acting` does not replace voice identity.
    Use the audition tool's read-only `plan` to extract acoustic targets and compare
@@ -138,7 +150,7 @@ new hashes. Test create and update paths as well as rejected incomplete updates.
 
 For Gemini3.8, age, vocal gender and stable timbre guide base-voice selection and
 actual audition. They cannot be changed with turn style. The derived baseline sends
-only confirmed speech pace, register and habits; keep explicit delivery overrides short.
+only confirmed speech pace, accent, register and habits; keep explicit delivery overrides short.
 
 For an authorized voice identity change, use [Gemini voice design](../../_shared/gemini-voice-design.md).
 Voice Design can create or remix the identity itself; the turn-style limitation above

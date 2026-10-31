@@ -8,6 +8,7 @@ import { GPT_IMAGE_MODELS, assertImageModelAvailable } from './image-models.js';
 import { IMAGE_ADAPTERS } from './image-registry.js';
 import { VIDEO_ADAPTERS } from './video-registry.js';
 import { DURATION_TOOLS } from './video-duration.js';
+import { characterFieldsProperty } from './character-manage.js';
 import { CHANNEL_SLUG_RE } from './config.js';
 import { techniqueContract, cameraContract, motionThemeContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
@@ -1016,6 +1017,8 @@ const ACTING_PROPERTY = { type: 'object', additionalProperties: false, descripti
   direction: { type: 'string', maxLength: 500, description: 'Short plain delivery direction; no bracket markup.' },
   tags: { type: 'array', maxItems: 6, items: { type: 'string', maxLength: 60 }, description: 'Bare English vocal events prepended to this line, e.g. sigh. Split the line for later changes.' }
 } };
+const CHARACTER_PENDING = { type: 'object', additionalProperties: false, required: ['status', 'reason'], description: 'An undecided required basic', properties: {
+  status: { type: 'string', enum: ['pending'], description: 'Always pending' }, reason: { type: 'string', minLength: 1, maxLength: 2000, description: 'What is still undecided, e.g. 나이를 아직 정하지 않았다.' } } };
 const VOICE_PROFILE_PROPERTY = { type: 'object', additionalProperties: false, description: 'Explicit acoustic targets; never infer voice gender from names or roles.', properties: {
   vocalGender: { type: 'string', enum: ['female','male','neutral','unspecified'], description: 'Desired audible gender, e.g. female; unspecified preserves uncertainty.' },
   perceivedAge: { type: 'string', maxLength: 100, description: 'Desired age impression, e.g. adult in her fifties; defaults to confirmed character age.' },
@@ -1211,6 +1214,24 @@ export const TOOLS: Tool[] = [
       direction: { type: 'string', maxLength: 2000, description: 'Requested scene intent and audible performance changes.' }, language: { type: 'string', default: 'ko', description: 'Spoken language.' },
       requestedBy: { type: 'string', maxLength: 1000, description: 'Actual user request for host audio evaluation.' }, outputPath: { type: 'string', description: 'Legacy output directory; host receipts use the host-review cache.' }, characterTarget: CHARACTER_TARGET_PROPERTY
     }, required: ['audioPath','expectedText','direction','requestedBy','outputPath'] }
+  },
+  {
+    name: 'character_manage', title: 'Create or update a shared character identity',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    description: `Write a shared character's identity.md and refresh the channel's character sheets.
+
+Use for a new character or a requested character edit. The sheet's basics are required on every call: name, gender, species, age, role, summary and heightCm; pass {status:"pending",reason} for a basic the user has not decided, never an invented value. Read the existing identity.md first and pass its current basics when only optional fields change. Every other catalog field (personality, speech, acting, story, continuity, other body fields) is optional: omit it to keep it, pass a value to confirm it, {status,reason} for pending or not_applicable, or null to remove it. The tts block, voice selection, voice profile and prose stay untouched; voices come from character_voice_audition, images from image_plan/image_execute.
+Returns {identityPath,id,version,created,missing:{basics,images,voice},sheet}: missing lists pending basics, absent face/front/back panels and an unselected voice, the production requirements still open. No paid calls.
+Do NOT use for voices, images or episode cast handoffs (character-sheet.js compiles those). Refuses a legacy identity.md without a structured JSON block.`,
+    inputSchema: { type: 'object', additionalProperties: false, required: ['identityPath', 'name', 'gender', 'species', 'age', 'role', 'summary', 'heightCm'], properties: {
+      identityPath: { type: 'string', description: 'Absolute <channel>/assets/characters/<kebab-id>/identity.md; created when missing.' },
+      name: { type: 'string', minLength: 1, maxLength: 200, description: 'Display name written as the # heading, e.g. 이도윤.' },
+      ...Object.fromEntries([['gender', 'Gender, e.g. 남성, 여성 or 무성 로봇'], ['species', 'Species or type, e.g. 인간'], ['age', 'Age or age band, e.g. 20대 후반'],
+        ['role', 'Role in the channel, e.g. 주인공'], ['summary', 'One-line summary']].map(([key, description]) => [key, { description: description + '; {status:"pending",reason} while undecided.', anyOf: [
+        { type: 'string', minLength: 1, maxLength: 2000, description: 'Confirmed value' }, CHARACTER_PENDING] }])),
+      heightCm: { description: 'Height in cm, e.g. 178; {status:"pending",reason} while undecided.', anyOf: [{ type: 'number', exclusiveMinimum: 0, description: 'Confirmed height in cm' }, CHARACTER_PENDING] },
+      fields: characterFieldsProperty(),
+    } }
   },
   {
     name: 'character_voice_audition', title: 'Audition three character voices and save the user choice',

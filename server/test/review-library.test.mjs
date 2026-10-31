@@ -70,7 +70,7 @@ function fixture() {
   doc.character.identity.role.value = 'Guide <script>alert(1)</script>';
   doc.character.physical.appearance.value = 'Blue coat';
   write('assets/characters/hero/identity.md', '# Hero\n\n```json\n' + JSON.stringify(doc) + '\n```');
-  for (const name of ['body.png', 'face.png', 'back.png', 'extra.png']) write('assets/characters/hero/' + name, 'fixture');
+  for (const name of ['body.png', 'face.png', 'back.png', 'extra.png']) write('assets/characters/hero/' + name, name);
   write('episodes/one/storyboard/storyboard.md', '---\nstatus: draft\nseries: Series (1/2)\n---\n# Episode one');
   write('episodes/one/storyboard/scenes.js', 'window.SCENES = [];');
   storyboardHtml(join(dir, 'episodes/one/storyboard'));
@@ -90,7 +90,6 @@ test('exports offline characters, indexes and the SAME storyboard shell with rel
     const detail = readFileSync(join(f.dir, 'assets/characters/hero/index.html'), 'utf8');
     for (const name of ['body.png', 'back.png', 'face.png', 'extra.png']) assert.ok(detail.includes(`src="${name}"`));
     assert.ok(detail.includes('Guide &lt;script&gt;alert(1)&lt;/script&gt;'));
-    assert.ok(detail.includes('Blue coat'));
     assert.ok(detail.includes('M1'));
     assert.ok(!detail.includes('fetch('));
     assert.ok(detail.includes('캐릭터 시트 목록'));
@@ -196,11 +195,15 @@ test('structured updates render every field and escape values', () => {
     d.character.version++;d.character.speech.habits.value='Changed <script>bad()</script>';writeDoc();exportChannel(f.dir);
     let html=readFileSync(join(folder,'index.html'),'utf8');
     assert.ok(html.includes('Changed &lt;script&gt;bad()&lt;/script&gt;'));
-    for(const [group,ko] of require('../../skills/_shared/character-identity.js').GROUPS)assert.equal(html.includes(ko), group!=='physical', group);
-    d.character.physical.weightKg={status:'pending',value:null,reason:'Waiting on author'};writeDoc();
-    assert.ok(exportChannel(f.dir).warnings.some(x=>x.includes('weightKg')));
+    for(const [group,ko] of require('../../skills/_shared/character-identity.js').GROUPS)assert.equal(html.includes(ko), ['identity','personality','speech','continuity'].includes(group), group);
+    assert.ok(html.includes('data-ko="배경과 과거"'));
+    // A pending basic warns; an optional field left out drops its row and an emptied card.
+    d.character.physical.heightCm={status:'pending',value:null,reason:'Waiting on author'};delete d.character.physical.weightKg;delete d.character.story;writeDoc();
+    assert.ok(exportChannel(f.dir).warnings.some(x=>x.includes('heightCm')));
+    assert.ok(!exportChannel(f.dir).warnings.some(x=>x.includes('weightKg')||x.includes('story')));
     html=readFileSync(join(folder,'index.html'),'utf8');
     assert.match(html, /data-en="Pending"[^>]*>.*?<\/span><\/span><span class="character-field-reason">Waiting on author<\/span>/);
+    assert.ok(!html.includes('physical.weightKg') && !html.includes('배경과 과거'));
   }finally{f.clean();}
 });
 
@@ -215,7 +218,9 @@ test('character detail keeps structured facts and lists, local transcript and re
     for (const [group, , , fields] of groups) {
       for (const [key] of fields) {
         const shown = group === 'physical' ? ['heightCm', 'weightKg'].includes(key)
-          : group === 'speech' ? ['register', 'habits', 'pace'].includes(key) : true;
+          : group === 'speech' ? ['register', 'habits', 'pace', 'accent'].includes(key)
+          : group === 'story' ? ['background', 'past'].includes(key)
+          : ['identity', 'personality', 'continuity'].includes(group);
         assert.equal(html.includes(`data-character-field="${group}.${key}"`), shown, `${group}.${key}`);
       }
     }
@@ -224,8 +229,14 @@ test('character detail keeps structured facts and lists, local transcript and re
     assert.ok(!html.includes('<script>bad()'));
     // The identity group reads beside the photos; the other groups are cards below.
     assert.ok(html.includes('class="character-fields character-basics"><div class="character-field" data-character-field="identity.'));
-    assert.equal((html.match(/class="character-group ds-card" open/g) || []).length, groups.length - 2);
-    assert.equal((html.match(/class="character-icon"/g) || []).length, groups.length + 1);
+    assert.equal((html.match(/class="character-group ds-card" open/g) || []).length, 4);
+    assert.ok(!html.includes('character-nav'));
+    // The slider skips copies of the sheet panels and shows each extra image once.
+    f.write('assets/characters/hero/face-v2.png', 'face.png');
+    f.write('assets/characters/hero/extra-copy.png', 'extra.png');
+    exportChannel(f.dir);
+    html = readFileSync(file, 'utf8');
+    assert.deepEqual([...html.matchAll(/class="character-gallery-slide"><a data-image-preview href="([^"]+)"/g)].map(m => m[1]), ['extra.png']);
     f.write('assets/characters/hero/identity.md', '# Legacy hero\n**역할**: Guide');
     rmSync(join(f.dir, 'assets/characters/hero/sample.txt'));
     exportChannel(f.dir);
@@ -235,7 +246,7 @@ test('character detail keeps structured facts and lists, local transcript and re
     // No sample yet: the player shows with its play button disabled, without notices.
     assert.match(html, /<div class="character-player ds-panel" data-empty><button class="review-play character-play"[^>]* disabled/);
     assert.ok(!html.includes('Sample transcript not supplied') && !html.includes('tts.voiceId'));
-    assert.ok(html.includes('Full character identity'));
+    assert.ok(!html.includes('character-source'));
   } finally { f.clean(); }
 });
 

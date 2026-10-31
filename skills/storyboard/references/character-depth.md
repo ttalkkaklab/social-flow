@@ -28,12 +28,14 @@ an authorized revision, use its existing fields to connect dispositions with beh
 
 | Existing identity field | Useful content |
 |---|---|
-| `personality.traits` | A tendency, its trigger and a concrete behavior; when useful, show how the same tendency helps and harms. |
-| `personality.goal` | What matters to this person beyond the immediate task. |
+| `personality.traits` | The tendency alone, in a short phrase; the behavior it drives goes into `flaw`, `speech.examples` or `acting.reactions`. |
+| `personality.goal` | What this person is trying to achieve beyond the immediate task. |
+| `personality.motivation` | Why that goal matters to them; unknown reasons stay not_applicable. |
 | `personality.flaw` | A recurring way of pursuing or protecting something that creates a cost; include their self-justification when relevant. |
 | `personality.fear` | What they avoid losing, admitting or becoming, and how that affects a choice. |
 | `story.relationships` | Existing counterpart ID, address and attitude, plus what they seek, conceal or protect with that person. |
-| `story.backstory` | Only history that affects present behavior; unknown history stays unknown. |
+| `story.background` | The character's present position and circumstances in the story world. |
+| `story.past` | Only history that affects present behavior; unknown history stays unknown. |
 | `story.arc` | A possible change or tested conviction, not a compulsory lesson or proof that the change already happened. |
 | `speech.examples` / `acting.reactions` | How this person bargains, avoids, reassures or resists in a specific situation, beyond catchphrases and emotion labels. |
 

@@ -1177,8 +1177,9 @@ function characterRefs(boardDir: string, win: Board, shotId: string, ids: string
   }));
   return views.flatMap(([id, view]) => {
     const panels = (JSON.parse(readFileSync(join(folders.get(id)!, 'panels.json'), 'utf8')) as { panels?: Record<string, { file?: string }> }).panels ?? {};
+    // The sheet panels are required references: a missing view stops the plan rather than dropping it.
     const file = panels[view]?.file;
-    if (!file) return [];
+    if (!file || !existsSync(join(folders.get(id)!, file))) throw new Error(`character_panel_missing: ${id} has no ${view} panel; generate it on the character sheet first`);
     const physical = ((castEntry(win, id)?.character as { physical?: Record<string, { value?: unknown }> } | undefined)?.physical) ?? {};
     const detail = latin(view === 'face' ? physical.appearance?.value : physical.outfit?.value);
     const purpose = (view === 'face' ? `${id}'s face and hair` : `${id}'s outfit, ${view}`) + (detail ? `: ${detail}` : '');
