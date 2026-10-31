@@ -155,6 +155,41 @@ function readImageMetadata(file) {
   return imageMetadata(readFileSync(file));
 }
 
+// src/image-models.ts
+var GPT_IMAGE_MODELS = [
+  "gpt-image-2",
+  "gpt-image-1.5",
+  "gpt-image-1",
+  "gpt-image-1-mini",
+  "gpt-image-2-2026-04-21",
+  "gpt-image-1.5-2025-12-16"
+];
+function gptImageFamily(model2) {
+  if (model2 === "gpt-image-2-2026-04-21") return "gpt-image-2";
+  if (model2 === "gpt-image-1.5-2025-12-16") return "gpt-image-1.5";
+  return model2;
+}
+function mlxImageFamily(model2 = "") {
+  if (/qwen.*image.*2[.-]1/i.test(model2)) return "qwen-2.1";
+  if (/mage[-_]?flow/i.test(model2)) return /edit/i.test(model2) ? "mage-edit" : "mage";
+  if (/krea[-_]?2/i.test(model2)) return "krea";
+  if (/flux[.-]?2[-_]?klein/i.test(model2)) return "flux-klein";
+  return "unknown";
+}
+function validateMlxImageOperation(model2, operation, args) {
+  const family = mlxImageFamily(model2);
+  if (operation === "edit" && !["flux-klein", "mage-edit", "qwen-2.1"].includes(family))
+    throw new Error("image_operation_unsupported: select an identified editing pack");
+  if (operation === "variation" && !["flux-klein", "krea"].includes(family))
+    throw new Error("image_operation_unsupported: this pack has no verified strength-based variation");
+  if (args.transparent === true && family !== "qwen-2.1")
+    throw new Error("image_transparency_unsupported: transparent requires Qwen-Image-2.1");
+  const refs = Array.isArray(args.refImagePaths) ? args.refImagePaths.length : 0;
+  if (refs > (family === "qwen-2.1" ? 9 : 3)) throw new Error("image_reference_limit");
+  if (family === "qwen-2.1" && /turbo/i.test(model2 || "") && args.steps !== void 0 && args.steps !== 8)
+    throw new Error("image_schedule_fixed: Qwen Turbo uses its saved 8-step schedule");
+}
+
 // node_modules/zod/v3/external.js
 var external_exports = {};
 __export(external_exports, {
@@ -4439,41 +4474,6 @@ var responseSchema = external_exports.object({
   }).passthrough()).length(1) }).passthrough()
 }).passthrough();
 
-// src/image-models.ts
-var GPT_IMAGE_MODELS = [
-  "gpt-image-2",
-  "gpt-image-1.5",
-  "gpt-image-1",
-  "gpt-image-1-mini",
-  "gpt-image-2-2026-04-21",
-  "gpt-image-1.5-2025-12-16"
-];
-function gptImageFamily(model2) {
-  if (model2 === "gpt-image-2-2026-04-21") return "gpt-image-2";
-  if (model2 === "gpt-image-1.5-2025-12-16") return "gpt-image-1.5";
-  return model2;
-}
-function mlxImageFamily(model2 = "") {
-  if (/qwen.*image.*2[.-]1/i.test(model2)) return "qwen-2.1";
-  if (/mage[-_]?flow/i.test(model2)) return /edit/i.test(model2) ? "mage-edit" : "mage";
-  if (/krea[-_]?2/i.test(model2)) return "krea";
-  if (/flux[.-]?2[-_]?klein/i.test(model2)) return "flux-klein";
-  return "unknown";
-}
-function validateMlxImageOperation(model2, operation, args) {
-  const family = mlxImageFamily(model2);
-  if (operation === "edit" && !["flux-klein", "mage-edit", "qwen-2.1"].includes(family))
-    throw new Error("image_operation_unsupported: select an identified editing pack");
-  if (operation === "variation" && !["flux-klein", "krea"].includes(family))
-    throw new Error("image_operation_unsupported: this pack has no verified strength-based variation");
-  if (args.transparent === true && family !== "qwen-2.1")
-    throw new Error("image_transparency_unsupported: transparent requires Qwen-Image-2.1");
-  const refs = Array.isArray(args.refImagePaths) ? args.refImagePaths.length : 0;
-  if (refs > (family === "qwen-2.1" ? 9 : 3)) throw new Error("image_reference_limit");
-  if (family === "qwen-2.1" && /turbo/i.test(model2 || "") && args.steps !== void 0 && args.steps !== 8)
-    throw new Error("image_schedule_fixed: Qwen Turbo uses its saved 8-step schedule");
-}
-
 // src/image-client.ts
 var VALID_GPT_IMAGE_MODELS = GPT_IMAGE_MODELS;
 var DEFAULT_MODEL = "gpt-image-2";
@@ -6893,7 +6893,8 @@ var storySequenceSchema = external_exports.object({
     id: nonEmpty.describe('Stable id, e.g. "q1"'),
     title: nonEmpty.describe("The heading the approval page draws"),
     purpose: nonEmpty.describe("The one purpose that binds its scenes"),
-    question: nonEmpty.optional().describe("The dramatic question this stretch opens")
+    question: nonEmpty.optional().describe("The dramatic question this stretch opens"),
+    payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question")
   }).strict()).min(1)
 }).strict();
 var storySceneSchema = external_exports.object({
@@ -6958,7 +6959,7 @@ var shotImageSchema = external_exports.object({
   id: shotIdSchema,
   frame: external_exports.enum(["start", "end"]).default("start").describe("start: the first image; end: the last image of a first_last shot"),
   prompt: nonEmpty.describe("What the frame shows, in English: who is where, doing what, facing which way, expression and light"),
-  location: nonEmpty.optional().describe("SB_DOC.locations id of the place; an earlier call's choice stays when omitted"),
+  location: nonEmpty.optional().describe("SB_DOC.locations id of the place, for the start image; an earlier call's choice stays when omitted, and an end image keeps the start's place"),
   props: external_exports.array(nonEmpty).optional().describe("SB_DOC.props ids seen in the frame; an earlier call's choice stays when omitted"),
   size: external_exports.string().regex(/^\d{3,4}x\d{3,4}$/).optional().describe("Output WIDTHxHEIGHT; default 1536x1024 for a 16:9 board, 1024x1536 otherwise"),
   reserveUsd: external_exports.number().finite().nonnegative().optional()

@@ -1077,7 +1077,7 @@
     const shots = Array.isArray(win.SCENES) ? win.SCENES : [];
     const full = level === 'full';
     const shotRow = (s, i) => {
-      const row = { no: i + 1, id: s.id || null, type: s.type, beat: s.beat, duration: s.duration, after: s.after };
+      const row = { no: i + 1, id: s.id || null, type: s.type, title: s.title, summary: s.summary, beat: s.beat, duration: s.duration, after: s.after };
       if (s.shot) Object.assign(row, {
         feel: s.shot.feel, info: s.shot.info, infoType: s.shot.infoType, size: s.shot.size, angle: s.shot.angle, why: s.shot.why,
         render: s.shot.render && s.shot.render.mode, share: s.shot.share,
@@ -1096,7 +1096,7 @@
           unresolvedGroup: !speech });
       });
       const visual = s.visual || {};
-      row.references = { characters: visual.character || [], location: s.shot && s.shot.location,
+      row.references = { characters: visual.character || [], location: s.shot && s.shot.location || visual.locationId,
         props: visual.props || [], propUsage: visual.propUsage || [] };
       row.media = visual;
       if (s.transition) row.transition = s.transition;
@@ -1263,6 +1263,32 @@
         : frames.mode === 'first_last' && !text(frames.end) ? ['shot ' + (s.id || '?') + ' has no end image'] : [];
     });
   }
+  /** What shot_prompt writes a video prompt from, kept as visual.video.promptBasis: the frame plan,
+      the cast, the on-screen lines (MSR adds its own), the camera move, the focus technique and, on
+      MSR, the size, angle and depth. isFocus(id) names the focus techniques (film-techniques.js). */
+  function promptBasis(s, isFocus) {
+    const p = s && s.shot || {}, v = s && s.visual || {}, cam = v.camera || {};
+    const mode = v.frames && v.frames.mode || 'first', msr = mode === 'reference';
+    return {
+      frames: mode,
+      cast: castOf(s) || [],
+      lines: msr ? [] : (Array.isArray(s.narration) ? s.narration : []).filter(l => l && l.delivery === 'on_screen' && l.tts).map(l => l.speaker + ': ' + l.tts),
+      camera: [cam.movement, cam.speed, cam.target].map(x => x == null ? '' : String(x)).join(' | '),
+      focus: (Array.isArray(p.techniques) ? p.techniques : []).map(t => t && t.id).filter(id => id && isFocus(id)),
+      framing: msr ? [p.size || '', p.angle || '', p.depth ? JSON.stringify(p.depth) : ''] : [],
+    };
+  }
+  /** The lines a video call voices or shows — every line but voiceover — as [speaker, delivery, text]. */
+  function videoLines(s) {
+    return (s && Array.isArray(s.narration) ? s.narration : []).filter(l => l && l.delivery !== 'voiceover').map(l => [l.speaker || '', l.delivery || '', l.tts || '']);
+  }
+  /** The promptBasis parts that changed since shot_prompt wrote the prompt; [] when current or not written by shot_prompt. */
+  function promptDrift(s, isFocus) {
+    const video = s && s.visual && s.visual.video, basis = video && video.promptBasis;
+    if (!basis || typeof video.prompt !== 'string') return [];
+    const now = promptBasis(s, isFocus);
+    return Object.keys(now).filter(k => JSON.stringify(now[k]) !== JSON.stringify(basis[k]));
+  }
   function guidedCheck(win, opts) {
     const blockers = executionCheck(win);
     if (blockers.length) return blockers;
@@ -1271,7 +1297,7 @@
   const PRODUCTION_MODES = ['full_video','video_80','video_50','video_30','video_lt10','no_video'];
   const api = { VERSION, COMPOSITION_SCHEMA, validateComposition, compositionNeeded, checkCompositions, compositionText, DEPTH_SCHEMA, validateDepth, depthNeeded, checkDepths, depthText, EYELINE_SCHEMA, validateEyeline, checkEyelines, eyelineNeeded, eyelineText, VOCAB: { SIZES, ANGLES, TYPES, BEATS, INFO_TYPES, SHARE_TYPES, HOOK_TYPES, HOOK_FORMS, ARCS,
                                   RENDER_MODES, PRODUCTION_MODES, CHARGES_OPEN, CHARGES_CLOSE, TRANSITION_RE },
-                check, executionCheck, guidedCheck, castOf, outlineGaps, castGaps, iconGaps, imageGaps, sync, outline, slugOf, ownerOf };
+                check, executionCheck, guidedCheck, castOf, outlineGaps, castGaps, iconGaps, imageGaps, promptBasis, promptDrift, videoLines, sync, outline, slugOf, ownerOf };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.STRUCTURE_CONTRACT = api;
 })(typeof window === 'object' ? window : globalThis);

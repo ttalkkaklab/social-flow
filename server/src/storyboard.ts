@@ -1,5 +1,6 @@
 import { manageProject } from './project.js';
-import { verifyImageFile } from './image-media.js';
+import { readImageMetadata, verifyImageFile } from './image-media.js';
+import { mlxImageFamily } from './image-models.js';
 import { workflowEpisode } from './production-workflow.js';
 import { imageContext } from './image-routing.js';
 import { readImageState } from './image-state.js';
@@ -75,6 +76,8 @@ interface Contract {
   iconGaps(win: Board): string[];
   depthText(depth: unknown): string;
   imageGaps(win: Board): string[];
+  promptBasis(shot: unknown, isFocus: (id: string) => boolean): Record<string, unknown>;
+  promptDrift(shot: unknown, isFocus: (id: string) => boolean): string[];
   sync(win: Board): number;
   outline(win: Board, level: string): Record<string, unknown>;
   slugOf(scene: { place?: string; time?: string }): string;
@@ -679,6 +682,17 @@ export function applyPatch(win: Board, patch: StoryboardApplyArgs, opts: { outli
   if (next.STRUCTURE) next.STRUCTURE = { ...next.STRUCTURE, nextShotId };
   next.SCENES = shots.map((shot) => shot.shot?.motionGraphic && (shot.shot.motionGraphic.style.theme || (next.THEME as Record<string, unknown> | undefined)?.motionGraphicTheme) ? motionThemeContract().applyTheme({ ...shot }, (next.THEME as Record<string, unknown> | undefined)?.motionGraphicTheme) : { ...shot });  // sync() writes sceneSlug/sequence — never into the caller's objects
 
+  // A prompt rewritten through storyboard_apply no longer comes from its shot_prompt basis (structure-contract.js promptDrift).
+  if (!opts.outline) {
+    const earlier = new Map(originalShots.map((shot) => [shot.id, shot]));
+    next.SCENES = next.SCENES.map((shot) => {
+      const video = (shot.visual as { video?: Record<string, unknown> } | undefined)?.video;
+      const old = (earlier.get(shot.id)?.visual as { video?: Record<string, unknown> } | undefined)?.video;
+      if (!video?.promptBasis || video.prompt === old?.prompt) return shot;
+      const { promptBasis: _basis, ...rest } = video;
+      return { ...shot, visual: { ...shot.visual, video: rest } } as Shot;
+    });
+  }
   const findings: Finding[] = [];
   if (!shots.length && !opts.outline) findings.push({ level: 'bad', where: 'board', what: 'the board has no shots' });
   if ((win.STORY as { authoring?: unknown } | undefined)?.authoring === 'story-first' && (next.STORY as { authoring?: unknown } | undefined)?.authoring !== 'story-first')
@@ -754,6 +768,7 @@ export const storySequenceSchema = z.object({
     title: nonEmpty.describe('The heading the approval page draws'),
     purpose: nonEmpty.describe('The one purpose that binds its scenes'),
     question: nonEmpty.optional().describe('The dramatic question this stretch opens'),
+    payoff: z.number().int().positive().optional().describe('The scene number that answers the question'),
   }).strict()).min(1),
 }).strict();
 export const storySceneSchema = z.object({
@@ -796,7 +811,11 @@ export function writeStorySequences(args: z.infer<typeof storySequenceSchema>): 
   const { win, st } = readOutline(args.path);
   const sequences = upsertBy(st.sequences, args.sequences.map((q) =>
     ({ ...st.sequences.find((old) => old.id === q.id), ...q, scenes: st.sequences.find((old) => old.id === q.id)?.scenes ?? [] })), 'id');
-  return writeOutline(args.path, win, { ...st, sequences });
+  // The payoff is one of the sequence's own scenes (storyboard_check); before its scenes exist there is nothing to compare.
+  const notes: Finding[] = sequences.filter((q) => q.payoff !== undefined && q.scenes.length && !q.scenes.includes(q.payoff))
+    .map((q) => ({ level: 'warn', where: `sequence ${q.id}`, what: `payoff names scene ${q.payoff}, which is outside this sequence — fix it with story_sequence or story_scene` }));
+  const result = writeOutline(args.path, win, { ...st, sequences });
+  return { ...result, findings: [...result.findings, ...notes] };
 }
 
 export function writeStoryScenes(args: z.infer<typeof storySceneSchema>): ApplyResult {
@@ -818,21 +837,35 @@ export function writeStoryShots(args: z.infer<typeof storyShotSchema>): ApplyRes
   if (!st.scenes.length) throw new Error('story_order: write the scenes first with story_scene');
   const order = st.sequences.flatMap((q) => q.scenes);
   const shots: Shot[] = Array.isArray(win.SCENES) ? win.SCENES.slice() : [];
+  // A new or moved shot plays after the last shot of its scene or of any earlier scene.
+  const endOf = (scene: number) => {
+    const rank = order.indexOf(scene);
+    let at = 0;
+    shots.forEach((shot, i) => { if (shot.scene !== undefined && order.indexOf(shot.scene) <= rank) at = i + 1; });
+    return at;
+  };
+  const origin = new Map<Shot, Shot>();
   for (const { id, ...story } of args.shots) {
     if (!order.includes(story.scene)) throw new Error(`story_order: scene ${story.scene} is not in a sequence — write it with story_scene`);
     if (id) {
       const index = shots.findIndex((shot) => shot.id === id);
       if (index < 0) throw new Error(`story_shot: no shot with id ${id} on this board`);
-      shots[index] = { ...shots[index], ...story };
+      const [old] = shots.splice(index, 1), revised = { ...old, ...story };
+      origin.set(revised, origin.get(old) ?? old);
+      shots.splice(old.scene === story.scene ? index : endOf(story.scene), 0, revised);
       continue;
     }
-    // A new shot plays after the last shot of its scene or of any earlier scene.
-    const rank = order.indexOf(story.scene);
-    let at = 0;
-    shots.forEach((shot, i) => { if (shot.scene !== undefined && order.indexOf(shot.scene) <= rank) at = i + 1; });
-    shots.splice(at, 0, { type: 'points', ...story } as Shot);
+    shots.splice(endOf(story.scene), 0, { type: 'points', ...story } as Shot);
   }
-  return writeOutline(args.path, win, st, shots);
+  // eyeline.matchShot names a position, so it follows its shot through inserts and moves (applyPatch does the same).
+  const before = Array.isArray(win.SCENES) ? win.SCENES : [];
+  const position = new Map(shots.map((shot, i) => [origin.get(shot) ?? shot, i + 1]));
+  const renumbered = shots.map((shot) => {
+    const eyeline = shot.shot?.eyeline, target = typeof eyeline?.matchShot === 'number' ? before[eyeline.matchShot - 1] : undefined;
+    const at = target ? position.get(target) : undefined;
+    return eyeline && at && at !== eyeline.matchShot ? { ...shot, shot: { ...shot.shot, eyeline: { ...eyeline, matchShot: at } } } as Shot : shot;
+  });
+  return writeOutline(args.path, win, st, renumbered);
 }
 
 // Step 2: each shot's characters, then each character's lines (user directive 2026-10-31).
@@ -884,16 +917,37 @@ export function writeShotCharacters(args: z.infer<typeof shotCharactersSchema>):
   if (gaps.length) throw new Error('story_order: finish the story first (story_sequence → story_scene → story_shot) — ' + gaps.join('; '));
   const known = castRegistry(args.path, win);
   const shots = (win.SCENES ?? []).slice();
+  const notes: Finding[] = [];
   for (const { id, characters } of args.shots) {
     const index = shotIndex(shots, id, 'shot_characters');
     for (const character of characters) if (!known.has(character)) throw new Error(`cast_unknown: ${character} is not in the episode cast`);
     const visual = (shots[index].visual ?? {}) as Record<string, unknown>;
+    const before = contract().castOf(shots[index]);
     // A kept character keeps its { id, scope } entry.
     const scoped = ([] as unknown[]).concat(visual.character ?? []).filter((e): e is { id: string } => !!e && typeof e === 'object');
     const entries = characters.map((character) => scoped.find((e) => e.id === character) ?? character);
-    shots[index] = { ...shots[index], visual: { ...visual, character: entries.length ? entries : null } };
+    // A character who leaves the frame keeps their lines, now heard off screen; the author revises them if needed.
+    const lines = shots[index].narration ?? [];
+    const left = [...new Set(lines.filter((line) => line.delivery === 'on_screen' && line.speaker && !characters.includes(line.speaker)).map((line) => line.speaker))];
+    // The sheet panels of a character who left go with them — by their sheet folder or the id shot_image gives them
+    // (<shot>-<character>-face|front|back); shot_image composes the new cast's.
+    const gone = (before ?? []).filter((character) => !characters.includes(character));
+    const theirs = (ref: Record<string, unknown>) => gone.some((character) => String(ref.path ?? '').match(/characters\/([^/]+)\//)?.[1] === character
+      || ['face', 'front', 'back'].some((view) => ref.id === `${id}-${character}-${view}`));
+    const references = Array.isArray(visual.references) && gone.length
+      ? (visual.references as Array<Record<string, unknown>>).filter((ref) => ref?.role !== 'character' || !theirs(ref))
+      : visual.references;
+    shots[index] = { ...shots[index], visual: { ...visual, character: entries.length ? entries : null, ...(references !== visual.references ? { references } : {}) },
+      ...(left.length ? { narration: lines.map((line) => line.delivery === 'on_screen' && left.includes(line.speaker) ? { ...line, delivery: 'off_screen' as const } : line) } : {}) };
+    if (left.length) notes.push({ level: 'warn', where: id, what: `${left.join(', ')} left the frame, so their on-screen lines are now off_screen — revise them with shot_dialogue if they should change` });
+    const back = [...new Set(lines.filter((line) => line.delivery === 'off_screen' && line.speaker && characters.includes(line.speaker)).map((line) => line.speaker))];
+    if (back.length) notes.push({ level: 'warn', where: id, what: `${back.join(', ')} ${back.length > 1 ? 'are' : 'is'} in the frame with off_screen lines — set their delivery with shot_dialogue if they speak on screen` });
+    if (before && (visual.frames as { start?: unknown } | undefined)?.start && [...before].sort().join() !== [...characters].sort().join())
+      notes.push({ level: 'warn', where: id, what: 'the start image shows the previous characters — remake it with shot_image' });
+    notes.push(...promptNotes(shots[index]));
   }
-  return writeOutline(args.path, win, st, shots);
+  const result = writeOutline(args.path, win, st, shots);
+  return { ...result, findings: [...result.findings, ...notes] };
 }
 
 export function writeShotDialogue(args: z.infer<typeof shotDialogueSchema>): ApplyResult {
@@ -901,6 +955,7 @@ export function writeShotDialogue(args: z.infer<typeof shotDialogueSchema>): App
   const known = castRegistry(args.path, win);
   const shots = (win.SCENES ?? []).slice();
   type Line = NonNullable<Shot['narration']>[number];
+  const notes: Finding[] = [];
   const used = new Set(shots.flatMap((shot) => (shot.narration ?? []).map((line) => line.id).filter(Boolean)));
   for (const { id, lines } of args.shots) {
     const index = shotIndex(shots, id, 'shot_dialogue');
@@ -921,8 +976,18 @@ export function writeShotDialogue(args: z.infer<typeof shotDialogueSchema>): App
       return { ...(line.id ? old.find((o) => o.id === line.id) : undefined), id: lineId, speaker: line.speaker, delivery, tts: line.tts, sub: line.sub };
     });
     shots[index] = { ...shots[index], narration: next };
+    notes.push(...promptNotes(shots[index]));
   }
-  return writeOutline(args.path, win, st, shots);
+  const result = writeOutline(args.path, win, st, shots);
+  return { ...result, findings: [...result.findings, ...notes] };
+}
+
+// A video prompt shot_prompt wrote goes stale when what it was written from changes (structure-contract.js promptDrift).
+const isFocus = (id: string) => !!(techniqueContract().entries.find((entry) => entry.id === id)?.fields as Record<string, unknown> | undefined)?.focus;
+const DRIFT_WORDS: Record<string, string> = { frames: 'frame plan', cast: 'characters', lines: 'on-screen lines', camera: 'camera move', focus: 'focus', framing: 'size, angle or depth' };
+function promptNotes(shot: Shot): Finding[] {
+  const drift = contract().promptDrift(shot, isFocus);
+  return drift.length ? [{ level: 'warn', where: String(shot.id), what: `the video prompt predates a change of ${drift.map((key) => DRIFT_WORDS[key] ?? key).join(', ')} — rewrite it with shot_prompt` }] : [];
 }
 
 // Step 3: the attributes the review's icon row shows (user directive 2026-10-31).
@@ -952,12 +1017,29 @@ export function writeShotIcons(args: z.infer<typeof shotIconsSchema>): ApplyResu
   const catalog = Object.fromEntries(techniqueContract().entries.map((entry) => [String(entry.id), entry as { category: string; fields: Record<string, string> }]));
   const field = (id: string, name: string) => catalog[id]?.category === 'camera' ? catalog[id].fields[name] : undefined;
   const shots = (win.SCENES ?? []).slice();
+  const notes: Finding[] = [];
   for (const { id, render, size, why, angle, move, focus, depth, frames } of args.shots) {
     const index = shotIndex(shots, id, 'shot_icons');
     const plan = { ...(shots[index].shot ?? {}) } as Record<string, unknown>;
     const visual = { ...(shots[index].visual ?? {}) } as Record<string, unknown>;
+    // What shot_image composed the start image from: size, angle, depth and the framing techniques (sourceInstructions).
+    const framing = () => JSON.stringify([plan.size, plan.angle, plan.depth, ((Array.isArray(plan.techniques) ? plan.techniques : []) as Array<{ id: string }>)
+      .filter((t) => { const entry = catalog[t.id] as { category?: string; fields?: Record<string, unknown> } | undefined;
+        return !!entry && (entry.category === 'framing' || !!entry.fields?.focus || !!entry.fields?.viewpoint || !!entry.fields?.angle); }).map((t) => t.id)]);
+    const framedBefore = framing();
     const routed: Record<string, unknown> = { ...(plan.render as Record<string, unknown> | undefined), ...render };
+    // A new route drops the old route's move: a still cut moves its window (render.camera), any other route moves the camera.
+    const previous = (plan.render as { mode?: string } | undefined)?.mode;
+    if (render && previous && previous !== render.mode) {
+      if (render.mode === 'still_camera') {
+        if (Array.isArray(plan.techniques)) plan.techniques = (plan.techniques as Array<{ id: string }>).filter((t) => !field(t.id, 'movement') && !field(t.id, 'focus'));
+        const { movement: _movement, speed: _speed, target: _target, ...camera } = (visual.camera ?? {}) as Record<string, unknown>;
+        if (visual.camera) visual.camera = Object.keys(camera).length ? camera : undefined;
+      } else if (previous === 'still_camera') delete routed.camera;
+    }
     if (render) plan.render = routed;
+    // why explains the size: a new size without its own why drops the old one.
+    if (size && size !== plan.size && !why) delete plan.why;
     if (size) plan.size = size;
     if (why) plan.why = why;
     if (angle) plan.angle = angle;
@@ -970,25 +1052,48 @@ export function writeShotIcons(args: z.infer<typeof shotIconsSchema>): ApplyResu
     if (move && routed.mode === 'still_camera') {
       // A still cut moves the window over the picture (render-routing.js STILL_CAMERA_EFFECTS).
       if (!stillCameraEffectList().includes(move.id)) throw new Error(`shot_icons ${id}: a still_camera move is one of ${stillCameraEffectList().join(', ')}`);
-      plan.render = { ...routed, camera: { ...(routed.camera as object | undefined), effect: move.id, reason: move.reason, ...(move.target ? { target: move.target } : {}) } };
+      // A different effect brings its own target; the same effect keeps the one it had.
+      const { target: oldTarget, ...still } = (routed.camera ?? {}) as Record<string, unknown>;
+      const target = move.target ?? (still.effect === move.id ? oldTarget : undefined);
+      plan.render = { ...routed, camera: { ...still, effect: move.id, reason: move.reason, ...(target !== undefined ? { target } : {}) } };
     } else if (move) {
       const movement = field(move.id, 'movement');
       if (!movement) throw new Error(`shot_icons ${id}: ${move.id} is not a camera move in the technique catalog`);
+      // The same move: its technique, or — before any move technique was recorded — the authored visual.camera move.
+      const prior = String((visual.camera as { movement?: unknown } | undefined)?.movement ?? '').toLowerCase();
+      const same = techniques.some((t) => t.id === move.id) || (!techniques.some((t) => field(t.id, 'movement')) && prior.startsWith(movement));
       techniques = [...techniques.filter((t) => !field(t.id, 'movement')), { id: move.id, reason: move.reason }];
-      const camera = (visual.camera ?? {}) as Record<string, unknown>;
+      // A different move replaces the old one's speed and target; the same move keeps what it had unless given.
+      const { speed: oldSpeed, target: oldTarget, ...camera } = (visual.camera ?? {}) as Record<string, unknown>;
+      const speed = field(move.id, 'speed') ?? (same ? oldSpeed : undefined), target = move.target ?? (same ? oldTarget : undefined);
       // film-techniques.js findings: visual.camera.movement starts with the technique's movement.
       visual.camera = { ...camera, movement: String(camera.movement ?? '').toLowerCase().startsWith(movement) ? camera.movement : movement,
-        ...(field(move.id, 'speed') ? { speed: field(move.id, 'speed') } : {}), ...(move.target ? { target: move.target } : {}) };
+        ...(speed !== undefined ? { speed } : {}), ...(target !== undefined ? { target } : {}) };
     }
     if (focus !== undefined) {
       if (focus && !field(focus.id, 'focus')) throw new Error(`shot_icons ${id}: ${focus.id} is not a focus technique`);
       techniques = [...techniques.filter((t) => !field(t.id, 'focus')), ...(focus ? [focus] : [])];
     }
     if ((move && routed.mode !== 'still_camera') || focus !== undefined) plan.techniques = techniques;
-    if (frames) visual.frames = { ...(visual.frames as object | undefined), ...frames };
+    if (frames) {
+      const old = (visual.frames ?? {}) as Record<string, unknown>, next: Record<string, unknown> = { ...old, ...frames };
+      // Only a first_last plan carries an end image; any other plan takes it off (the file stays in images/).
+      if (frames.mode !== 'first_last') {
+        if (typeof old.end === 'string') notes.push({ level: 'warn', where: id, what: `the end image ${old.end} is off the shot — a ${frames.mode} plan has no end image` });
+        delete next.end; delete next.endState; delete next.endProps; delete visual.endPrompt;
+      }
+      // MSR also sends the character panels to the video model (use both); other plans use them for the start image only.
+      if ((old.mode === 'reference') !== (frames.mode === 'reference') && Array.isArray(visual.references))
+        visual.references = (visual.references as Array<Record<string, unknown>>).map((ref) => ref?.role === 'character' ? { ...ref, use: frames.mode === 'reference' ? 'both' : 'image' } : ref);
+      visual.frames = next;
+    }
+    if ((visual.frames as { start?: unknown } | undefined)?.start && framing() !== framedBefore)
+      notes.push({ level: 'warn', where: id, what: 'the start image was made for the previous size, angle, depth or focus — remake it with shot_image' });
     shots[index] = { ...shots[index], shot: plan, visual } as Shot;
+    notes.push(...promptNotes(shots[index]));
   }
-  return writeOutline(args.path, win, st, shots);
+  const result = writeOutline(args.path, win, st, shots);
+  return { ...result, findings: [...result.findings, ...notes] };
 }
 
 // Step 4: each shot's start image — and an end image when its frame plan is first_last — composed
@@ -998,7 +1103,7 @@ export const shotImageSchema = z.object({
   id: shotIdSchema,
   frame: z.enum(['start', 'end']).default('start').describe('start: the first image; end: the last image of a first_last shot'),
   prompt: nonEmpty.describe('What the frame shows, in English: who is where, doing what, facing which way, expression and light'),
-  location: nonEmpty.optional().describe('SB_DOC.locations id of the place; an earlier call\'s choice stays when omitted'),
+  location: nonEmpty.optional().describe('SB_DOC.locations id of the place, for the start image; an earlier call\'s choice stays when omitted, and an end image keeps the start\'s place'),
   props: z.array(nonEmpty).optional().describe('SB_DOC.props ids seen in the frame; an earlier call\'s choice stays when omitted'),
   size: z.string().regex(/^\d{3,4}x\d{3,4}$/).optional().describe('Output WIDTHxHEIGHT; default 1536x1024 for a 16:9 board, 1024x1536 otherwise'),
   reserveUsd: z.number().finite().nonnegative().optional(),
@@ -1011,8 +1116,10 @@ export interface ShotImageRequest {
 // Image models that take several pictures in one request; astra-genai edits one picture, zimage none.
 const IMAGE_INPUTS: Record<string, { tool?: string; max: number }> = {
   'gpt-image': { tool: 'gpt_image_img2img', max: 16 }, 'astra-genai-native': { tool: 'astra_genai_image_edit', max: 10 },
-  mlx: { tool: 'mlx_image_edit', max: 10 }, 'astra-genai': { tool: 'astra_genai_edit', max: 1 }, zimage: { max: 0 }, host: { max: Infinity },
+  'astra-genai': { tool: 'astra_genai_edit', max: 1 }, zimage: { max: 0 }, host: { max: Infinity },
 };
+// An MLX edit pack takes the source plus 9 references (Qwen-Image-2.1) or 3 (FLUX.2 klein, Mage-Flow Edit); others do not edit (image-models.ts).
+const MLX_INPUTS: Partial<Record<string, number>> = { 'qwen-2.1': 10, 'flux-klein': 4, 'mage-edit': 4 };
 const latin = (value: unknown) => typeof value === 'string' && value.trim() && !nonEnglishOutsideQuotes(value) ? value.trim() : '';
 function castEntry(win: Board, id: string): Record<string, unknown> | undefined {
   const list = (win.SB_DOC as { characters?: unknown } | undefined)?.characters;
@@ -1051,15 +1158,21 @@ export function shotImageRequest(args: z.infer<typeof shotImageSchema>): ShotIma
   const shots = win.SCENES ?? [];
   const shot = shots[shotIndex(shots, args.id, 'shot_image')];
   const plan = (shot.shot ?? {}) as Record<string, unknown>, visual = (shot.visual ?? {}) as Record<string, unknown>;
-  const frames = (visual.frames ?? {}) as { mode?: string; start?: string };
+  const frames = (visual.frames ?? {}) as { mode?: string; start?: string; endProps?: unknown };
   if (args.frame === 'start') {
     const gaps = contract().iconGaps(win);
     if (gaps.length) throw new Error('story_order: set every shot\'s icon attributes with shot_icons first — ' + gaps.join('; '));
   } else if (frames.mode !== 'first_last') throw new Error(`story_order: ${args.id} plans ${frames.mode ?? 'no'} frames; an end image belongs to a first_last shot (shot_icons frames)`);
   else if (!frames.start) throw new Error(`story_order: make ${args.id}'s start image before its end image`);
+  else if (args.location) throw new Error(`shot_image: ${args.id}'s end image is edited from its start image and keeps its place — remake the start image to change the location`);
+  const route = (plan.render as { mode?: string } | undefined)?.mode;
+  if (route !== 'still_camera' && route !== 'generated_video')
+    throw new Error(`shot_image: ${args.id} is a ${route ?? 'unrouted'} cut; only still_camera and generated_video cuts take a start image`);
   const boardDir = dirname(scenesPath(args.path)), episode = dirname(boardDir);
   const location = args.location ?? (typeof visual.locationId === 'string' ? visual.locationId : undefined);
-  const props = args.props ?? (Array.isArray(visual.props) ? visual.props.filter((id): id is string => typeof id === 'string') : []);
+  // An end image keeps its own props (frames.endProps) — a prop handed over can appear only at the end.
+  const recorded = args.frame === 'end' && Array.isArray(frames.endProps) ? frames.endProps : visual.props;
+  const props = args.props ?? (Array.isArray(recorded) ? recorded.filter((id): id is string => typeof id === 'string') : []);
   const cast = contract().castOf(shot) ?? [];
   const place = location ? docEntry(win, 'locations', location).imageUrl : undefined;
   const refs: ImageRef[] = [
@@ -1086,9 +1199,21 @@ export function shotImageRequest(args: z.infer<typeof shotImageSchema>): ShotIma
     body.charAt(0).toUpperCase() + body.slice(1)].filter(Boolean).join(' ');
 
   const { selection } = imageContext(episode, args.id);
-  const adapter = IMAGE_INPUTS[selection.engine] ?? { max: 0 };
+  const adapter = selection.engine === 'mlx' ? { tool: 'mlx_image_edit', max: MLX_INPUTS[mlxImageFamily(selection.model)] ?? 0 } : IMAGE_INPUTS[selection.engine] ?? { max: 0 };
   if (inputs.length > adapter.max)
-    throw new Error(`image_references_unsupported: the saved image model (${selection.engine}${selection.model ? ' ' + selection.model : ''}) takes ${adapter.max} picture(s); this frame composes ${inputs.length}. Choose a model that takes several pictures (gpt-image, astra-genai-native, mlx) with the user.`);
+    throw new Error(`image_references_unsupported: the saved image model (${selection.engine}${selection.model ? ' ' + selection.model : ''}) takes ${adapter.max} picture(s); this frame composes ${inputs.length}. Choose a model that takes that many with the user (gpt-image up to 16; astra-genai-native or an MLX Qwen-Image-2.1 pack up to 10; MLX FLUX.2 klein or Mage-Flow Edit up to 4).`);
+  // GPT Image declares one MIME type for all its source pictures, so a mixed set goes up as PNG copies in images/inputs/.
+  const mimes = selection.engine === 'gpt-image' ? inputs.map((f) => readImageMetadata(f).mimeType) : [];
+  const toPng = (f: string) => {
+    const out = join(boardDir, 'images', 'inputs', createHash('sha256').update(readFileSync(f)).digest('hex').slice(0, 16) + '.png');
+    if (!existsSync(out)) {
+      mkdirSync(dirname(out), { recursive: true });
+      try { execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', f, out], { timeout: 60_000 }); }
+      catch (error) { throw new Error(`image_inputs_mixed_format: GPT Image takes one format per request and ffmpeg could not convert ${f} to PNG (${(error as Error).message.split('\n')[0]}) — save it as PNG`); }
+    }
+    return out;
+  };
+  const sent = new Set(mimes).size > 1 ? inputs.map((f, i) => mimes[i] === 'image/png' ? f : toPng(f)) : inputs;
   const jobs = readImageState(episode)?.jobs ?? {};
   let k = 1;
   while (existsSync(join(boardDir, 'images', `${args.id}-${args.frame}-v${k}.png`)) || Object.hasOwn(jobs, `${args.id}-${args.frame}-v${k}`)) k += 1;
@@ -1096,15 +1221,15 @@ export function shotImageRequest(args: z.infer<typeof shotImageSchema>): ShotIma
   mkdirSync(dirname(file), { recursive: true });
   const [width, height] = (args.size ?? (/16x9/.test(String(win.FORMAT ?? '')) ? '1536x1024' : '1024x1536')).split('x').map(Number);
   const base64 = (f: string) => readFileSync(f).toString('base64');
-  const edit = inputs.length > 0, tool = edit ? adapter.tool : undefined;
+  const edit = sent.length > 0, tool = edit ? adapter.tool : undefined;
   const output = { outputPath: dirname(file), filename: basename(file) };
   const adapterArgs: Record<string, unknown> =
-    selection.engine === 'host' ? { prompt, referenceImages: inputs, savePath: file, size: `${width}x${height}` }
-    : selection.engine === 'gpt-image' ? { prompt, savePath: file, size: `${width}x${height}`, ...(edit ? { sourceImagesBase64: inputs.map(base64), sourceMimeType: /\.jpe?g$/i.test(inputs[0]) ? 'image/jpeg' : 'image/png' } : {}) }
-    : selection.engine === 'astra-genai' ? { prompt, size: `${width}*${height}`, ...output, ...(edit ? { mode: 'img2img', imagePath: inputs[0] } : {}) }
-    : ['mlx', 'zimage'].includes(selection.engine) ? { prompt, width, height, ...output, ...(edit ? { imagePath: inputs[0], refImagePaths: inputs.slice(1) } : {}) }
-    : { prompt, size: `${width}x${height}`, ...output, ...(edit ? { imagePath: inputs[0], refImagePaths: inputs.slice(1), mode: 'edit' } : {}) };
-  return { episode, assetId: args.id, requestId, ...(tool ? { tool } : {}), operation: edit ? 'edit' : 'text', args: adapterArgs, file, inputs,
+    selection.engine === 'host' ? { prompt, referenceImages: sent, savePath: file, size: `${width}x${height}` }
+    : selection.engine === 'gpt-image' ? { prompt, savePath: file, size: `${width}x${height}`, ...(edit ? { sourceImagesBase64: sent.map(base64), sourceMimeType: readImageMetadata(sent[0]).mimeType || 'image/png' } : {}) }
+    : selection.engine === 'astra-genai' ? { prompt, size: `${width}*${height}`, ...output, ...(edit ? { mode: 'img2img', imagePath: sent[0] } : {}) }
+    : ['mlx', 'zimage'].includes(selection.engine) ? { prompt, width, height, ...output, ...(edit ? { imagePath: sent[0], refImagePaths: sent.slice(1) } : {}) }
+    : { prompt, size: `${width}x${height}`, ...output, ...(edit ? { imagePath: sent[0], refImagePaths: sent.slice(1), mode: 'edit' } : {}) };
+  return { episode, assetId: args.id, requestId, ...(tool ? { tool } : {}), operation: edit ? 'edit' : 'text', args: adapterArgs, file, inputs: sent,
     refs, ...(location ? { location } : {}), props, prompt };
 }
 
@@ -1115,12 +1240,26 @@ export function recordShotImage(args: z.infer<typeof shotImageSchema>, request: 
   const index = shotIndex(shots, args.id, 'shot_image');
   const visual = { ...(shots[index].visual ?? {}) } as Record<string, unknown>;
   const rel = relative(dirname(scenesPath(args.path)), request.file);
-  visual.frames = { ...(visual.frames as object | undefined), [args.frame]: rel };
-  if (args.frame === 'start') Object.assign(visual, { bg: rel, bgPrompt: request.prompt, references: request.refs, props: request.props,
-    ...(request.location ? { locationId: request.location } : {}) });
-  else visual.endPrompt = request.prompt;
+  const frames: Record<string, unknown> = { ...(visual.frames as object | undefined), [args.frame]: rel };
+  const notes: Finding[] = [];
+  if (args.frame === 'start') {
+    Object.assign(visual, { bg: rel, bgPrompt: request.prompt, references: request.refs, props: request.props,
+      ...(request.location ? { locationId: request.location } : {}) });
+    // An end image is edited from its start image, so a new start takes the old end off the shot; the file stays in images/.
+    if (typeof frames.end === 'string') {
+      notes.push({ level: 'warn', where: args.id, what: `the end image ${frames.end} was made from the previous start image and is off the shot — remake it with shot_image frame:"end"` });
+      delete frames.end;
+      delete frames.endProps;
+      delete visual.endPrompt;
+    }
+  } else {
+    visual.endPrompt = request.prompt;
+    frames.endProps = request.props;
+  }
+  visual.frames = frames;
   shots[index] = { ...shots[index], visual } as Shot;
-  return writeOutline(args.path, win, st, shots);
+  const result = writeOutline(args.path, win, st, shots);
+  return { ...result, findings: [...result.findings, ...notes] };
 }
 
 // Step 5: the video prompt, written from the shot's icon attributes, lines and the author's English action.
@@ -1149,7 +1288,11 @@ export function writeShotPrompt(args: z.infer<typeof shotPromptSchema>): ApplyRe
   const movement = String(camera.movement ?? '').trim(), speed = String(camera.speed ?? '').trim();
   const focus = ((plan.techniques ?? []) as Array<{ id: string }>).map((t) => techniqueContract().entries.find((e) => e.id === t.id))
     .find((e) => (e?.fields as Record<string, string> | undefined)?.focus) as { label?: { en?: string } } | undefined;
-  const sentence = (value: string) => value ? value.charAt(0).toUpperCase() + value.slice(1).replace(/[.!?\s]*$/, '') + '.' : '';
+  // A sentence closing on its own quoted line ("Wait.") takes no second period.
+  const sentence = (value: string) => {
+    const text = value.trim(), capped = text.charAt(0).toUpperCase() + text.slice(1);
+    return !text ? '' : /[.!?]["'”’)]+$/.test(capped) ? capped : capped.replace(/[.!?]*$/, '') + '.';
+  };
   // MSR pins no frame, so its prompt carries the framing; video_plan adds MSR's lines with their image bindings.
   const prompt = [
     msr ? sentence([words.SIZE_WORDS[String(plan.size)], words.ANGLE_WORDS[String(plan.angle)]].filter(Boolean).join(', ')) : 'Start from the given first frame.',
@@ -1166,7 +1309,7 @@ export function writeShotPrompt(args: z.infer<typeof shotPromptSchema>): ApplyRe
   ].filter(Boolean).join(' ');
   const foreign = nonEnglishOutsideQuotes(prompt);
   if (foreign) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action, end and sound in English`);
-  shots[index] = { ...shot, visual: { ...visual, video: { ...(visual.video as object | undefined), prompt } } } as Shot;
+  shots[index] = { ...shot, visual: { ...visual, video: { ...(visual.video as object | undefined), prompt, promptBasis: contract().promptBasis(shot, isFocus) } } } as Shot;
   return { ...writeOutline(args.path, win, st, shots), prompt };
 }
 

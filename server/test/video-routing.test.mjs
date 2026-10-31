@@ -105,9 +105,20 @@ test('a shot video runs only after the user approves its plan or every shot; the
  assert.equal(p.args.prompt,'A heron lands on the dock.');
  await assert.rejects(f.execute(p,dispatch),/video_approval_required/);
  approveVideo({episode:f.episode,planIds:[p.id],request:'Shot 1 looks right'});
+ const view=()=>JSON.parse(fs.readFileSync(path.join(f.episode,'storyboard/video-approvals.js'),'utf8').replace(/^window\.VIDEO_APPROVALS = |;\n$/g,''));
+ assert.deepEqual(view().shots.s1,{planId:p.id,at:JSON.parse(fs.readFileSync(path.join(f.episode,'.work/video-routing/approvals.json'))).plans[p.id].at,shown:{prompt:'A heron lands on the dock.',lines:[]}});
  await f.execute(p,dispatch); assert.equal(calls,1);
+ // A plan with its own prompt is marked so; a plan whose shot changed before the yes takes none.
+ approveVideo({episode:f.episode,planIds:[f.plan('c').id],request:'That prompt is fine'});
+ assert.equal(view().shots.s1.shown.callPrompt,true);
+ const stale=planVideo({episode:f.episode,shotId:'s1',requestId:'d',operation:'text',args:{durationSeconds:8}});
+ f.board.SCENES[0].visual.video.prompt='A heron takes off.';f.save();
+ assert.throws(()=>approveVideo({episode:f.episode,planIds:[stale.id],request:'Yes'}),/video_plan_stale/);
+ const spoken=f.plan('e');f.board.SCENES[0].narration=[{speaker:'hero',delivery:'on_screen',tts:'Over here!'}];f.save();
+ assert.throws(()=>approveVideo({episode:f.episode,planIds:[spoken.id],request:'Yes'}),/video_plan_stale/);delete f.board.SCENES[0].narration;f.save();
  await assert.rejects(f.execute(f.plan('b'),dispatch),/video_approval_required/);
  approveVideo({episode:f.episode,auto:true,request:'Make every shot without asking'});
+ assert.equal(view().auto,JSON.parse(fs.readFileSync(path.join(f.episode,'.work/video-routing/approvals.json'))).auto.at);
  await f.execute(f.plan('b'),dispatch); assert.equal(calls,2);
 });
 test('budget and attempts gate before dispatch and include prior successful reservations',async t=>{

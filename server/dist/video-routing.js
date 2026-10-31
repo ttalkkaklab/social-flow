@@ -222,6 +222,18 @@ const approvalsFile = (episode) => path.join(episode, '.work/video-routing/appro
 function readApprovals(episode) {
     return fs.existsSync(approvalsFile(episode)) ? JSON.parse(fs.readFileSync(approvalsFile(episode), 'utf8')) : { plans: {} };
 }
+// The review page cannot read .work, so storyboard/video-approvals.js carries each shot's latest yes (storyboard-html-template.html).
+function writeApprovalView(episode, approvals) {
+    const dir = path.join(episode, 'storyboard');
+    if (!fs.existsSync(path.join(dir, 'scenes.js')))
+        return;
+    const shots = {};
+    for (const [planId, entry] of Object.entries(approvals.plans))
+        if (!shots[entry.shotId] || entry.at >= shots[entry.shotId].at)
+            shots[entry.shotId] = { planId, at: entry.at, ...(entry.shown ? { shown: entry.shown } : {}) };
+    const view = { auto: approvals.auto?.at ?? null, shots };
+    fs.writeFileSync(path.join(dir, 'video-approvals.js'), 'window.VIDEO_APPROVALS = ' + JSON.stringify(view).replace(/</g, '\\u003c') + ';\n');
+}
 export function approveVideo(raw) {
     const input = videoApproveSchema.parse(raw), episode = fs.realpathSync(input.episode);
     const approvals = readApprovals(episode), at = new Date().toISOString();
@@ -231,9 +243,21 @@ export function approveVideo(raw) {
         delete approvals.auto;
     for (const id of input.planIds ?? []) {
         const plan = JSON.parse(fs.readFileSync(path.join(episode, '.work/video-routing/plans', id + '.json'), 'utf8'));
-        approvals.plans[id] = { shotId: plan.shotId, requestId: plan.requestId, request: input.request, at };
+        // A yes covers the plan the user saw; a plan whose shot changed since cannot run (video_execute), so it takes none.
+        const context = routingContext(episode, plan.shotId);
+        if (context.revision !== plan.contextRevision)
+            throw new Error(`video_plan_stale: shot ${plan.shotId}'s frames, prompt, lines or settings changed after this plan — plan it again and show the user the new plan`);
+        const visual = (context.shot.visual ?? {});
+        const used = (plan.sourceArgs ?? plan.args).prompt, fromShot = used === undefined || used === visual.video?.prompt;
+        const shown = Object.fromEntries(Object.entries({ prompt: fromShot ? visual.video?.prompt : undefined, start: visual.frames?.start, end: visual.frames?.end })
+            .filter(([, value]) => typeof value === 'string'));
+        if (!fromShot)
+            shown.callPrompt = true;
+        shown.lines = context.lines;
+        approvals.plans[id] = { shotId: plan.shotId, requestId: plan.requestId, request: input.request, at, shown };
     }
     atomicJson(approvalsFile(episode), approvals);
+    writeApprovalView(episode, approvals);
     return approvals;
 }
 export async function executeVideo(raw, dispatch) {
@@ -250,7 +274,7 @@ export async function executeVideo(raw, dispatch) {
             `then record their yes with video_approve {planIds:["${id}"]}, or auto:true once they approve every shot`);
     const context = routingContext(episode, plan.shotId);
     if (context.revision !== plan.contextRevision)
-        throw new Error('video_plan_stale: selection or authorization changed');
+        throw new Error('video_plan_stale: the shot\'s frames, prompt, lines, selection or authorization changed');
     if (plan.tool === 'astra_genai_msr')
         await refreshGenaiMsrVoice();
     const refreshed = planVideo({ episode, shotId: plan.shotId, requestId: plan.requestId, tool: plan.tool, args: plan.sourceArgs ?? plan.args });
