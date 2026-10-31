@@ -11,7 +11,7 @@ import { ROUTES } from './handlers.js';
 import { isManagedImageCall } from './image-registry.js';
 import { isManagedVideoCall } from './video-registry.js';
 import { enabledPlatforms } from './sns-client.js';
-import { episodePathArg, isBillableTool, priceOf, recordUsage } from './usage-ledger.js';
+import { episodePathArg, isBillableTool, meteredPrice, priceOf, recordUsage } from './usage-ledger.js';
 import { readFileSync as readFinalRequest } from 'node:fs';
 import { reviewFinalSpeech } from './tts-final-quality.js';
 // The server version carried in the initialize response — the plugin release, same value as
@@ -69,13 +69,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             const callArgs = (args ?? {});
             const startedAt = Date.now();
             let ok = false;
+            let result;
             try {
-                const result = await handler(callArgs);
+                result = await handler(callArgs);
                 ok = !result?.isError;
                 return result;
             }
             finally {
-                const { key, quantity, note } = priceOf(name, callArgs);
+                // ElevenLabs handlers attach the vendor-measured amount; it replaces the argument estimate.
+                const { key, quantity, note } = meteredPrice(priceOf(name, callArgs), result?.metered);
                 recordUsage(episodePathArg(callArgs), {
                     ts: new Date().toISOString(),
                     tool: name,

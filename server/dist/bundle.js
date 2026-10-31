@@ -84191,7 +84191,7 @@ import path7 from "node:path";
 // src/tts-execution.ts
 import { AsyncLocalStorage as AsyncLocalStorage2 } from "node:async_hooks";
 import { createHash as createHash6, randomUUID as randomUUID2 } from "node:crypto";
-import { accessSync as accessSync2, constants as constants2, existsSync as existsSync7, lstatSync, mkdirSync as mkdirSync4, readFileSync as readFileSync9, realpathSync as realpathSync3, renameSync as renameSync2, rmSync as rmSync6, writeFileSync as writeFileSync7 } from "node:fs";
+import { accessSync as accessSync2, constants as constants2, existsSync as existsSync7, lstatSync, mkdirSync as mkdirSync4, readFileSync as readFileSync9, realpathSync as realpathSync3, renameSync as renameSync2, rmSync as rmSync6, statSync as statSync5, writeFileSync as writeFileSync7 } from "node:fs";
 import { tmpdir as tmpdir4 } from "node:os";
 import { extname as extname3, join as join7, resolve as resolve2 } from "node:path";
 
@@ -84352,6 +84352,27 @@ function lock(directory2) {
   }
   return () => rmSync6(directory2, { recursive: true, force: true });
 }
+function speechSlotsDir(provider, key) {
+  return join7(tmpdir4(), `social-flow-tts-${process.getuid?.() ?? "user"}-${digest2(provider + key).slice(0, 24)}`);
+}
+function staleSlot(slot) {
+  try {
+    const pid = Number(readFileSync9(join7(slot, "pid"), "utf8"));
+    if (!Number.isInteger(pid) || pid <= 0) throw new Error("unreadable pid");
+    try {
+      process.kill(pid, 0);
+      return false;
+    } catch (error2) {
+      return error2.code === "ESRCH";
+    }
+  } catch {
+    try {
+      return Date.now() - statSync5(slot).mtimeMs > 6e4;
+    } catch {
+      return false;
+    }
+  }
+}
 async function executeSpeech(generator, args, run) {
   const provider = generator === "tts_astra_genai" ? "astra-genai" : generator.startsWith("tts_elevenlabs_") ? "elevenlabs" : "gemini";
   const contract2 = resolveTtsModel(provider, String(args.model));
@@ -84397,19 +84418,24 @@ async function executeSpeech(generator, args, run) {
     if (provider === "astra-genai" && existsSync7(audioPath)) throw new Error("Speech output already exists; recover its original requestId before new generation");
     const limit2 = Number(process.env.SOCIAL_FLOW_TTS_MAX_CONCURRENCY || 2);
     if (!Number.isInteger(limit2) || limit2 < 1 || limit2 > 32) throw new Error("SOCIAL_FLOW_TTS_MAX_CONCURRENCY must be an integer from 1 to 32");
-    const slots = join7(tmpdir4(), `social-flow-tts-${process.getuid?.() ?? "user"}-${digest2(provider + key).slice(0, 24)}`);
+    const slots = speechSlotsDir(provider, key);
     mkdirSync4(slots, { recursive: true });
-    for (let i2 = 0; i2 < limit2; i2++) {
+    for (let i2 = 0; i2 < limit2 && !releaseSlot; i2++) {
       const slot = join7(slots, String(i2));
-      try {
-        mkdirSync4(slot);
-        releaseSlot = () => rmSync6(slot, { recursive: true, force: true });
-        break;
-      } catch (error2) {
-        if (error2.code !== "EEXIST") throw error2;
+      for (const retry2 of [false, true]) {
+        try {
+          mkdirSync4(slot);
+          writeFileSync7(join7(slot, "pid"), String(process.pid));
+          releaseSlot = () => rmSync6(slot, { recursive: true, force: true });
+          break;
+        } catch (error2) {
+          if (error2.code !== "EEXIST") throw error2;
+          if (retry2 || !staleSlot(slot)) break;
+          rmSync6(slot, { recursive: true, force: true });
+        }
       }
     }
-    if (!releaseSlot) throw new Error("Speech provider concurrency limit reached; no request submitted");
+    if (!releaseSlot) throw new Error(`Speech provider concurrency limit reached; no request submitted. Slots held by live processes: ${slots}`);
     const record2 = {
       version: 1,
       requestId: id,
@@ -87928,6 +87954,11 @@ var PRICED_VIDEO_KEYS = /* @__PURE__ */ new Set([
   "seedance.2-0-mini-video.720p"
 ]);
 var ELEVENLABS_KEY = { eleven_v4: "tts.elevenlabs" };
+var GEMINI_UNPRICED = "unit price unconfirmed (? in prices.tsv) \u2014 cost-report.sh flags the line instead of counting it as $0";
+function meteredPrice(price, metered) {
+  const measured = price.key === "sfx.elevenlabs" ? metered?.durationSeconds : price.key?.startsWith("tts.elevenlabs") && typeof metered?.characterCost === "number" ? metered.characterCost / 1e3 : void 0;
+  return typeof measured === "number" && Number.isFinite(measured) ? { key: price.key, quantity: measured } : price;
+}
 function probeSeconds(file) {
   try {
     const out = execFileSync7("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], {
@@ -87996,9 +88027,15 @@ function priceOf(tool2, args = {}) {
   }
   if (tool2 === "tts_generate" || tool2 === "tts_multi_speaker") {
     const model2 = str3(args.model, "gemini-2.5-flash-preview-tts");
+    if (model2 === "gemini-3.1-flash-tts-preview") return { key: "tts.gemini-3.1-flash", quantity: charUnits(args), note: GEMINI_UNPRICED };
     const tier = model2.includes("pro") ? "pro" : "flash";
     return { key: `tts.gemini-${tier}`, quantity: charUnits(args) };
   }
+  if (tool2 === "tts_gemini_38") {
+    const lite = str3(args.model, "gemini-3.8-flash-tts") === "gemini-3.8-flash-lite-tts";
+    return { key: lite ? "tts.gemini-3.8-flash-lite" : "tts.gemini-3.8-flash", quantity: charUnits(args), note: GEMINI_UNPRICED };
+  }
+  if (tool2 === "tts_voice_design") return { key: "tts.gemini-voice-design", quantity: 1, note: GEMINI_UNPRICED };
   if (tool2.startsWith("tts_elevenlabs_")) {
     const key = ELEVENLABS_KEY[str3(args.model, "eleven_v4")] ?? null;
     return {
@@ -88048,8 +88085,9 @@ function rawChars(args) {
   if (typeof args.text === "string") return args.text.length;
   if (typeof args.input === "string") return args.input.length;
   if (typeof args.script === "string") return args.script.length;
-  if (Array.isArray(args.inputs)) {
-    return args.inputs.reduce(
+  const turns = Array.isArray(args.inputs) ? args.inputs : Array.isArray(args.turns) ? args.turns : null;
+  if (turns) {
+    return turns.reduce(
       (sum, t2) => sum + (t2 && typeof t2 === "object" && typeof t2.text === "string" ? t2.text.length : 0),
       0
     );
@@ -88060,10 +88098,10 @@ function charUnits(args) {
   return Math.round(rawChars(args) / 1e3 * 1e3) / 1e3;
 }
 function isBillableTool(tool2) {
-  if (["tts_astra_genai", "tts_route", "tts_generate_checked", "character_voice_audition", "tts_review_acting", "tts_local_generate", "mlx_tts_generate"].includes(tool2)) return false;
+  if (["tts_astra_genai", "tts_route", "tts_generate_checked", "character_voice_audition", "tts_review_acting"].includes(tool2)) return false;
   if (["music_catalog", "music_plan", "music_execute", "music_status"].includes(tool2)) return false;
   if (tool2 === "tts_list_voices" || tool2 === "tts_elevenlabs_voices" || tool2 === "music_list_options") return false;
-  return tool2.startsWith("astra_genai_") && !["astra_genai_video_status", "astra_genai_catalog", "astra_genai_desktop_status"].includes(tool2) || tool2.startsWith("seedance_") || tool2.startsWith("gpt_image_") || tool2.startsWith("tts_") || tool2.startsWith("music_") || tool2.startsWith("suno_generate") || tool2.startsWith("mlx_") || Boolean(localVideoStrategy(tool2)) || tool2 === "image_local_generate";
+  return tool2.startsWith("astra_genai_") && !["astra_genai_video_status", "astra_genai_catalog", "astra_genai_desktop_status"].includes(tool2) || tool2.startsWith("seedance_") || tool2.startsWith("gpt_image_") || tool2.startsWith("tts_") || tool2.startsWith("sfx_") || tool2.startsWith("music_") || tool2.startsWith("suno_generate") || tool2.startsWith("mlx_") || Boolean(localVideoStrategy(tool2)) || tool2 === "image_local_generate";
 }
 
 // src/image-routing.ts
@@ -88455,7 +88493,7 @@ function evaluateWindowScript(source, options = {}) {
 }
 
 // src/storyboard.ts
-import { existsSync as existsSync17, mkdirSync as mkdirSync8, readFileSync as readFileSync17, renameSync as renameSync4, statSync as statSync10, unlinkSync as unlinkSync4, writeFileSync as writeFileSync14 } from "node:fs";
+import { existsSync as existsSync17, mkdirSync as mkdirSync8, readFileSync as readFileSync17, renameSync as renameSync4, statSync as statSync11, unlinkSync as unlinkSync4, writeFileSync as writeFileSync14 } from "node:fs";
 import * as nodeModule3 from "node:module";
 import { basename as basename6, dirname as dirname5, join as join9, relative, resolve as resolve5 } from "node:path";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
@@ -88665,7 +88703,7 @@ function boardReadiness(win, boardDir) {
   const characters = Array.isArray(entries) ? entries : Object.entries(entries).map(([id, c]) => ({ ...c, id }));
   const assets = characters.flatMap((c) => Object.entries(c.panels ?? {}).map(([slot, name]) => {
     const file = typeof name === "string" && name.trim() ? resolve5(boardDir, name) : null;
-    const present = !!file && existsSync17(file) && statSync10(file).isFile();
+    const present = !!file && existsSync17(file) && statSync11(file).isFile();
     let decoding = "not_verified";
     if (present) {
       try {
@@ -88815,7 +88853,7 @@ function scenesPath(target) {
 function readBoard(target) {
   const file = scenesPath(target);
   if (!existsSync17(file)) throw new Error(`no scenes.js at ${file}`);
-  if (!statSync10(file).isFile()) throw new Error(`${file} is not a file`);
+  if (!statSync11(file).isFile()) throw new Error(`${file} is not a file`);
   const src = readFileSync17(file, "utf8");
   const header = [];
   for (const line of src.split("\n")) {
@@ -89884,7 +89922,7 @@ var VALID_TTS_MODELS = [
   "gemini-2.5-pro-preview-tts",
   // high quality · no free tier
   "gemini-3.1-flash-tts-preview"
-  // the only TTS model with streaming · 2x the price
+  // the only TTS model with streaming · price unconfirmed (prices.tsv)
 ];
 var DEFAULT_TTS_MODEL = "gemini-2.5-flash-preview-tts";
 var MAX_TTS_INPUT_CHARS = 16e3;
@@ -90484,7 +90522,7 @@ function describeElevenLabsError(httpStatus, bodyText) {
     case "concurrent_limit_exceeded":
     case "rate_limit_exceeded":
     case "system_busy":
-      return `${message} \u2014 concurrency/rate limit (${CONCURRENCY_HINT}); the server already retried ${MAX_ATTEMPTS}x. Run the scenes one at a time.`;
+      return `${message} \u2014 concurrency/rate limit (${CONCURRENCY_HINT}); paid requests are submitted once and never retried automatically. Run the scenes one at a time.`;
     case "output_format_not_allowed":
       return `${message} \u2014 pick wav_24000 or wav_48000 (every plan) or upgrade the plan.`;
     case "voice_not_found":
@@ -90744,7 +90782,9 @@ async function generateElevenLabsSoundEffect(request) {
     const response = await elevenFetch(
       `/v1/sound-generation?output_format=${request.outputFormat}`,
       { method: "POST", body: JSON.stringify(body) },
-      12e4
+      12e4,
+      1
+      // a paid submission: a 5xx after the vendor started generating may already be billed
     );
     const meta = readMeta(response);
     const raw = Buffer.from(await response.arrayBuffer());
@@ -90803,7 +90843,7 @@ async function createElevenLabsDictionary(input) {
   const response = await elevenFetch("/v1/pronunciation-dictionaries/add-from-rules", {
     method: "POST",
     body: JSON.stringify({ name: request.name, rules: request.rules.map((r2) => ({ type: r2.type, string_to_replace: r2.stringToReplace, ...r2.type === "alias" ? { alias: r2.alias } : { phoneme: r2.phoneme, alphabet: r2.alphabet } })) })
-  }, 3e4);
+  }, 3e4, 1);
   const result = external_exports.object({ id: external_exports.string().min(1), version_id: external_exports.string().min(1) }).parse(await response.json());
   return { pronunciationDictionaryId: result.id, versionId: result.version_id };
 }
@@ -91221,7 +91261,22 @@ async function generateCheckedSpeech(input, dependencies) {
     const gate3 = resolveToolGate(request.generator, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
     if (!gate3.enabled) throw new Error(`Selected generator is disabled: ${gate3.reason}`);
     (0, import_tts_speed_policy.authorizeSpeed)(request.outputPath, "generation", Number(prepared.args.speed ?? 1));
-    const result = await prepared.run();
+    const started = Date.now();
+    let result;
+    try {
+      result = await prepared.run();
+    } finally {
+      const price = meteredPrice(priceOf(request.generator, prepared.args), result);
+      recordUsage(request.outputPath, {
+        ts: (/* @__PURE__ */ new Date()).toISOString(),
+        tool: request.generator,
+        ok: result?.success === true,
+        ms: Date.now() - started,
+        ...price,
+        note: price.note ?? "Checked speech take",
+        detail: { ...result?.requestId ? { requestId: result.requestId } : {} }
+      });
+    }
     return { ...result, status: "not_reviewed", nextAction: "Use host_review only if review was requested. No automatic scoring or retakes." };
   }
   const speedAuthorization = {
@@ -91323,14 +91378,14 @@ async function generateCheckedSpeech(input, dependencies) {
         try {
           generated = await deps.generate(overrides);
         } finally {
-          const price = priceOf(request.generator, prepared.args);
+          const price = meteredPrice(priceOf(request.generator, prepared.args), generated);
           recordUsage(request.outputPath, {
             ts: (/* @__PURE__ */ new Date()).toISOString(),
             tool: request.generator,
             ok: generated?.success === true,
             ms: Date.now() - started,
             key: price.key,
-            quantity: generated?.characterCost !== void 0 ? generated.characterCost / 1e3 : price.quantity,
+            quantity: price.quantity,
             note: `Checked speech attempt ${attempt}`,
             detail: { ...generated?.requestId ? { requestId: generated.requestId } : {} }
           });
@@ -93653,7 +93708,7 @@ var TTS_VOICE_PROPERTY = {
 };
 var TTS_MODEL_PROPERTY = {
   type: "string",
-  description: "TTS model (default: gemini-2.5-flash-preview-tts \u2014 cheapest, free tier). gemini-2.5-pro-preview-tts: higher quality, no free tier, and the fallback when flash keeps returning no audio for a script. gemini-3.1-flash-tts-preview: newest, streaming-capable, 2x price.",
+  description: "TTS model (default: gemini-2.5-flash-preview-tts \u2014 cheapest, free tier). gemini-2.5-pro-preview-tts: higher quality, no free tier, and the fallback when flash keeps returning no audio for a script. gemini-3.1-flash-tts-preview: newest, streaming-capable; unit price unconfirmed in prices.tsv.",
   enum: [...VALID_TTS_MODELS],
   default: DEFAULT_TTS_MODEL
 };
@@ -96348,7 +96403,7 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
       rules: { description: "Approved source spelling and intended spoken aliases.", type: "array", minItems: 1, maxItems: 100, items: { type: "object", additionalProperties: false, properties: {
         stringToReplace: { description: "Source name as written in the narration.", type: "string", minLength: 1, maxLength: 200 },
         alias: { description: "Intended pronunciation in Hangul for an alias rule.", type: "string", minLength: 1, maxLength: 200 },
-        type: { description: "Rule kind; alias by default. Non-English phonemes require v3.", type: "string", enum: ["alias", "phoneme"], default: "alias" },
+        type: { description: "Rule kind; alias by default.", type: "string", enum: ["alias", "phoneme"], default: "alias" },
         phoneme: { description: "Phonetic notation for a phoneme rule.", type: "string", minLength: 1, maxLength: 200 },
         alphabet: { description: "Alphabet of the phoneme rule.", type: "string", enum: ["ipa", "cmu-arpabet"] }
       }, required: ["stringToReplace"] } }
@@ -96380,9 +96435,9 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
           index: { description: "Index of this scene in texts, starting at zero.", type: "integer", minimum: 0 },
           seed: { description: "One seed fixed across the episode and all retakes.", type: "integer", minimum: 0, maximum: 4294967295 }
         }, required: ["texts", "index", "seed"] },
-        segments: { type: "array", minItems: 1, maxItems: 80, items: { type: "string", minLength: 1, maxLength: 1e3 }, description: "The scene's narration[].tts sentences in order (joined they read as expectedText). Every single-voice take gets a fixed pause at each segment boundary \u2014 the boundary the builder's reveals and subtitle cues use. Without it, pauses go after sentence-final punctuation." },
-        sentencePause: { type: "number", minimum: 0.25, maximum: 1.5, default: 0.5, description: "Silence between sentences in the take's own timeline, seconds. The builder detects pauses from 0.16s and fits a 0.35s reveal fade inside one." },
-        playbackSpeed: { type: "number", minimum: 0.5, maximum: 3, default: 1, description: "ElevenLabs requires 1: use generation.speed for the requested rate and keep assembly at 1. Other engines require an explicit user request in outputPath/speed-authorization.json for any non-1 factor; this controls subtitle pause sizing." },
+        segments: { type: "array", minItems: 1, maxItems: 80, items: { type: "string", minLength: 1, maxLength: 1e3 }, description: "Legacy field; the single-take path inserts no pauses. The scene's narration[].tts sentences in order (joined they read as expectedText). Every single-voice take gets a fixed pause at each segment boundary \u2014 the boundary the builder's reveals and subtitle cues use. Without it, pauses go after sentence-final punctuation." },
+        sentencePause: { type: "number", minimum: 0.25, maximum: 1.5, default: 0.5, description: "Legacy field; the single-take path inserts no pauses. Silence between sentences in the take's own timeline, seconds. The builder detects pauses from 0.16s and fits a 0.35s reveal fade inside one." },
+        playbackSpeed: { type: "number", minimum: 0.5, maximum: 3, default: 1, description: "Legacy field; the single-take path does not apply it. ElevenLabs requires 1 \u2014 eleven_v4 has no speed control, so pace goes in [audio tags]. Another engine needs an explicit user request in outputPath/speed-authorization.json for any non-1 factor." },
         transcriptCheck: { type: "object", additionalProperties: false, required: ["requestedBy", "reason"], description: "Present only when the user asked for a blind-transcription (STT) check; it is recorded for the host review. No transcription or listening runs automatically. Carries who asked and their actual words \u2014 there is no environment default.", properties: {
           requestedBy: { type: "string", minLength: 1, maxLength: 200, description: 'Who asked for the dictation check, e.g. "user".' },
           reason: { type: "string", minLength: 10, maxLength: 1e3, description: "The actual request that turned it on, quoted or referenced." }
@@ -96471,7 +96526,7 @@ Returns: a text block with the saved 24kHz mono RIFF WAV path, model, voice or s
           minLength: 1,
           maxLength: 300,
           default: DEFAULT_VOICE,
-          description: "Single-voice selection: curated name, extended-library voice, designed voice_ ID, or replicated voice_ / voicekey_ ID. Ignored when speakers is present."
+          description: "Single-voice selection: curated name, extended-library voice, designed voice_ ID, or replicated voice_ / voicekey_ ID. Omit it when speakers is present \u2014 a voice there is rejected."
         },
         speakers: {
           type: "array",
@@ -96557,7 +96612,7 @@ Returns: a text block with the saved .wav file path, speaker/voice assignments, 
     annotations: HINT.generate,
     description: "Create a paid stored Gemini voice from character age, vocal gender, timbre and accent using POST /v1beta/voices. Use when casting a custom character or changing perceived age/identity; turn style only controls delivery. Optional baseVoice remixes an existing voice. Returns voiceId, local WAV preview, hash, usage and receipt; use that ID with tts_gemini_38. Does not edit character sheets or episodes and does not certify age by listening. Requires GEMINI_API_KEY and a new outputPath per creation; never blindly retry an uncertain call. For catalog discovery use tts_list_voices source:library with filters; for ordinary lines use speech_manage plan_audio.",
     inputSchema: { type: "object", additionalProperties: false, properties: {
-      model: { type: "string", enum: ["gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts"], description: "Explicit voice creation model." },
+      model: { type: "string", enum: [...GEMINI_38_TTS_MODELS], description: "Explicit voice creation model." },
       displayName: { type: "string", minLength: 1, maxLength: 100, description: "Distinct name for later catalog reconciliation." },
       prompt: { type: "string", minLength: 1, maxLength: 4e3, description: "Stable voice identity: perceived age, timbre, accent and baseline delivery; relative changes if baseVoice is supplied." },
       languageCode: { type: "string", minLength: 1, description: "BCP-47 primary language, e.g. ko-KR." },
@@ -99786,7 +99841,7 @@ async function routeSpeech(input) {
   const started = Date.now();
   const result = await withSpeechRequestId(request.requestId, prepared.run);
   if (result.attempts && !result.replayed) {
-    const price = priceOf(prepared.generator, prepared.args);
+    const price = meteredPrice(priceOf(prepared.generator, prepared.args), result);
     recordUsage(episodePathArg(prepared.args), {
       ts: (/* @__PURE__ */ new Date()).toISOString(),
       tool: prepared.generator,
@@ -99803,7 +99858,7 @@ async function routeSpeech(input) {
 import { execFile as execFile7 } from "node:child_process";
 import { promisify as promisify3 } from "node:util";
 import { createHash as createHash16, randomUUID as randomUUID5 } from "node:crypto";
-import { createReadStream as createReadStream3, mkdirSync as mkdirSync15, realpathSync as realpathSync9, statSync as statSync13, writeFileSync as writeFileSync20 } from "node:fs";
+import { createReadStream as createReadStream3, mkdirSync as mkdirSync15, realpathSync as realpathSync9, statSync as statSync14, writeFileSync as writeFileSync20 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
 import path25 from "node:path";
 var exec2 = promisify3(execFile7);
@@ -99834,7 +99889,7 @@ async function digest3(file) {
 }
 async function hostReview(input) {
   const r2 = hostReviewSchema.parse(input), file = realpathSync9(r2.mediaPath);
-  if (!statSync13(file).isFile() || !statSync13(file).size) throw new Error("Provide a nonempty local media file");
+  if (!statSync14(file).isFile() || !statSync14(file).size) throw new Error("Provide a nonempty local media file");
   const mediaSha256 = await digest3(file);
   const { stdout } = await exec2("ffprobe", ["-v", "error", "-show_format", "-show_streams", "-of", "json", file], { maxBuffer: 4 * 1024 * 1024 });
   const probe3 = JSON.parse(stdout), duration4 = Number(probe3.format.duration);
@@ -99894,7 +99949,7 @@ async function hostReview(input) {
           "2",
           output2
         ], { timeout: 3e4 });
-        if (!statSync13(output2).size) throw new Error("Frame extraction produced an empty image");
+        if (!statSync14(output2).size) throw new Error("Frame extraction produced an empty image");
         frames.push({ seconds, path: output2 });
       }
     }
@@ -100280,14 +100335,14 @@ async function manageVoiceAudition(args) {
         try {
           result = await prepareSpeech(compiled.generator, generation2).run();
         } finally {
-          const price = priceOf(compiled.generator, generation2);
+          const price = meteredPrice(priceOf(compiled.generator, generation2), result);
           const event = {
             ts: (/* @__PURE__ */ new Date()).toISOString(),
             tool: compiled.generator,
             ok: result?.success === true,
             ms: Date.now() - started,
             key: price.key,
-            quantity: result?.characterCost !== void 0 ? result.characterCost / 1e3 : price.quantity,
+            quantity: price.quantity,
             note: "Character audition candidate " + id,
             detail: { model: choice2.tts.model || "", voiceId: choice2.tts.voiceId, ...result?.requestId ? { requestId: result.requestId } : {} }
           };
@@ -100730,7 +100785,7 @@ function manageSpeech(args) {
 // src/acting-review.ts
 import { execFile as execFile8 } from "node:child_process";
 import { createHash as createHash20, randomUUID as randomUUID8 } from "node:crypto";
-import { existsSync as existsSync29, mkdirSync as mkdirSync19, readFileSync as readFileSync31, realpathSync as realpathSync10, renameSync as renameSync9, rmSync as rmSync13, statSync as statSync14, writeFileSync as writeFileSync24 } from "node:fs";
+import { existsSync as existsSync29, mkdirSync as mkdirSync19, readFileSync as readFileSync31, realpathSync as realpathSync10, renameSync as renameSync9, rmSync as rmSync13, statSync as statSync15, writeFileSync as writeFileSync24 } from "node:fs";
 import path26 from "node:path";
 import { homedir as homedir5 } from "node:os";
 import { promisify as promisify4 } from "node:util";
@@ -100798,7 +100853,7 @@ var actingObservationSchema = external_exports.object({
 var hash5 = (data) => createHash20("sha256").update(data).digest("hex");
 var currentHash = (file) => {
   try {
-    const stat4 = statSync14(file);
+    const stat4 = statSync15(file);
     return stat4.isFile() && stat4.size <= MAX_BYTES ? hash5(readFileSync31(file)) : null;
   } catch {
     return null;
@@ -101061,7 +101116,7 @@ async function reviewActing2(input, deps) {
   actingReviewTimeout(request.focus);
   const policy = request.focus === "cinematography" ? CINEMATOGRAPHY_POLICY : request.mode === "audio" ? AUDIO_POLICY : VISUAL_POLICY;
   const mediaPath = realpathSync10(request.mediaPath);
-  const stat4 = statSync14(mediaPath);
+  const stat4 = statSync15(mediaPath);
   if (!stat4.isFile() || stat4.size === 0 || stat4.size > MAX_BYTES) throw new Error("Review requires a nonempty media file no larger than 12 MiB");
   const bytes = readFileSync31(mediaPath);
   const probe3 = await deps.probe(mediaPath);
@@ -101183,7 +101238,7 @@ async function reviewActing2(input, deps) {
 
 // src/threads-gate.ts
 import { createHash as createHash21, randomUUID as randomUUID9 } from "node:crypto";
-import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync20, readFileSync as readFileSync32, realpathSync as realpathSync11, renameSync as renameSync10, statSync as statSync15, writeFileSync as writeFileSync25 } from "node:fs";
+import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync20, readFileSync as readFileSync32, realpathSync as realpathSync11, renameSync as renameSync10, statSync as statSync16, writeFileSync as writeFileSync25 } from "node:fs";
 import { dirname as dirname9, join as join15, resolve as resolve10 } from "node:path";
 import { fileURLToPath as fileURLToPath10 } from "node:url";
 import { spawnSync as spawnSync3 } from "node:child_process";
@@ -101327,9 +101382,9 @@ function checkThreadsEpisode(input) {
     const topic = channelSchema.parse(input.episodeRef);
     const root = realpathSync11(join15(process.cwd(), "data", channel, "episodes"));
     const episode = realpathSync11(join15(root, topic));
-    if (dirname9(episode) !== root || !statSync15(episode).isDirectory()) throw new Error("Invalid episode directory");
+    if (dirname9(episode) !== root || !statSync16(episode).isDirectory()) throw new Error("Invalid episode directory");
     const board = realpathSync11(join15(episode, "storyboard", "scenes.js"));
-    if (!board.startsWith(episode + "/") || !statSync15(board).isFile()) throw new Error("Missing episode storyboard");
+    if (!board.startsWith(episode + "/") || !statSync16(board).isFile()) throw new Error("Missing episode storyboard");
     const approvalPath = realpathSync11(join15(episode, "threads-publish-approval.json"));
     if (dirname9(approvalPath) !== episode) throw new Error("Invalid episode approval path");
     const approval = JSON.parse(readFileSync32(approvalPath, "utf8"));
@@ -106595,7 +106650,7 @@ function elevenlabsFormatNote(format) {
 function elevenlabsMeta(result) {
   return (result.warnings?.map((warning) => `Warning: ${warning}
 `).join("") ?? "") + (result.durationSeconds !== void 0 ? `Duration: ${result.durationSeconds}s
-` : "") + (result.characterCost !== void 0 ? `Character cost: ${result.characterCost} (vendor-metered characters \u2014 the billing quantity; log this \xF7 1000 in the cost ledger)
+` : "") + (result.characterCost !== void 0 ? `Character cost: ${result.characterCost} (vendor-metered characters \u2014 the billing quantity; the server writes it \xF7 1000 into .work/events.jsonl, and a hand-written cost-tally line uses the same \xF7 1000)
 ` : "") + (result.latencyMs !== void 0 ? `Vendor latency: ${result.latencyMs} ms
 ` : "") + (result.requestId ? `Request ID: ${result.requestId}
 ` : "") + (result.alignmentPath ? `Alignment: ${result.alignmentPath} (${result.alignedCharacters ?? "?"} characters${result.speechEndSeconds !== void 0 ? `, speech ends at ${result.speechEndSeconds}s` : ""})
@@ -107510,7 +107565,7 @@ Script length: ${request.script.length} chars`
     const request = parseArgs(elevenLabsSfxSchema, args);
     const result = await generateElevenLabsSoundEffect(request);
     if (!result.success) return text2(`ElevenLabs sound effect generation failed: ${result.error}`, true);
-    return text2(
+    return { metered: { durationSeconds: result.durationSeconds }, ...text2(
       `Sound effect generated successfully!
 
 File: ${result.audioPath}
@@ -107523,13 +107578,13 @@ Format: ${result.outputFormat}${elevenlabsFormatNote(result.outputFormat)}
 ` : "") + (result.requestId ? `Request ID: ${result.requestId}
 ` : "") + `Prompt: ${request.text}` + (request.durationSeconds !== void 0 ? ` \xB7 ${request.durationSeconds}s requested` : " \xB7 length chosen by the vendor") + (request.loop ? " \xB7 loop" : "") + `
 Next: for a channel asset, register it \u2014 python3 skills/channel/references/resolve-asset.py --ensure data/<channel> sfx <id> audio/sfx/<id>.wav "elevenlabs ${result.model} \xB7 see <id>.json"`
-    );
+    ) };
   },
   tts_elevenlabs_generate: async (args) => {
     const request = parseArgs(elevenLabsGenerateSchema, args);
     const result = await generateElevenLabsSpeech(request);
     if (!result.success) return text2(`ElevenLabs TTS generation failed: ${result.error}`, true);
-    return text2(
+    return { metered: { characterCost: result.characterCost }, ...text2(
       `Audio generated successfully!
 
 File: ${result.audioPath}
@@ -107537,7 +107592,7 @@ Engine: ElevenLabs ${result.model}
 Voice: ${request.voiceId}
 Format: ${result.outputFormat}${elevenlabsFormatNote(result.outputFormat)}
 ` + elevenlabsMeta(result) + `Text length: ${request.text.length} chars`
-    );
+    ) };
   },
   tts_elevenlabs_dialogue: async (args) => {
     const request = parseArgs(elevenLabsDialogueSchema, args);
@@ -107545,7 +107600,7 @@ Format: ${result.outputFormat}${elevenlabsFormatNote(result.outputFormat)}
     if (!result.success) return text2(`ElevenLabs dialogue generation failed: ${result.error}`, true);
     const voices = new Set(request.inputs.map((line) => line.voiceId));
     const totalChars = request.inputs.reduce((sum, line) => sum + line.text.length, 0);
-    return text2(
+    return { metered: { characterCost: result.characterCost }, ...text2(
       `Dialogue audio generated successfully!
 
 File: ${result.audioPath}
@@ -107554,7 +107609,7 @@ Lines: ${request.inputs.length} (${voices.size} voices)
 Format: ${result.outputFormat}${elevenlabsFormatNote(result.outputFormat)}
 ` + elevenlabsMeta(result) + (result.voiceSegments !== void 0 ? `Voice segments: ${result.voiceSegments}
 ` : "") + `Script length: ${totalChars} chars`
-    );
+    ) };
   },
   tts_elevenlabs_voices: async (args) => {
     const request = parseArgs(elevenLabsVoicesSchema, args);
@@ -108154,12 +108209,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const callArgs = args ?? {};
       const startedAt = Date.now();
       let ok = false;
+      let result;
       try {
-        const result = await handler(callArgs);
+        result = await handler(callArgs);
         ok = !result?.isError;
         return result;
       } finally {
-        const { key, quantity, note } = priceOf(name, callArgs);
+        const { key, quantity, note } = meteredPrice(priceOf(name, callArgs), result?.metered);
         recordUsage(episodePathArg(callArgs), {
           ts: (/* @__PURE__ */ new Date()).toISOString(),
           tool: name,

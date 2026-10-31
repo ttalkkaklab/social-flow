@@ -9,6 +9,7 @@ import { REVIEW_MODEL, checkedSpeechSchema, prepareGeneration, generateCheckedSp
 import { pcmToWav } from '../dist/media-utils.js';
 import { TOOLS } from '../dist/tools.js';
 import { ROUTES } from '../dist/handlers.js';
+import { config } from '../dist/config.js';
 const require=createRequire(import.meta.url);
 // Historical proof validation remains covered; production uses the provenance-only check.
 const legacyChecker=require('../../skills/produce/references/check-tts-quality.js');
@@ -55,6 +56,19 @@ test('failed naturalness regenerates only the scene, and unchanged PASS costs no
   assert.equal((await generateCheckedSpeech(f.request,f.deps)).reused,true);assert.equal(f.count(),2);
   const events=readFileSync(path.join(f.dir,'.work/events.jsonl'),'utf8').trim().split('\n').map(JSON.parse);
   assert.equal(events.filter(e=>e.tool==='tts_generate').length,2);
+});
+test('the production take records its spend under the generator, with the metered characters',async t=>{
+  const f=setup(t);const request=episodeRequest(path.join(f.dir,'.work/pcm'));
+  const savedFetch=globalThis.fetch,savedKey=config.elevenLabsApiKey;config.elevenLabsApiKey='test-key';
+  const alignment={characters:['안'],character_start_times_seconds:[0],character_end_times_seconds:[0.1]};
+  globalThis.fetch=async()=>new Response(JSON.stringify({audio_base64:pcmToWav(Buffer.alloc(48000),24000,1).toString('base64'),alignment,normalized_alignment:alignment}),{headers:{'content-type':'application/json','character-cost':'12'}});
+  try{
+    const result=await generateCheckedSpeech(request);
+    assert.equal(result.success,true,result.error);assert.equal(result.status,'not_reviewed');
+  }finally{globalThis.fetch=savedFetch;config.elevenLabsApiKey=savedKey;}
+  const events=readFileSync(path.join(f.dir,'.work/events.jsonl'),'utf8').trim().split('\n').map(JSON.parse);
+  assert.equal(events.length,1);assert.equal(events[0].tool,'tts_elevenlabs_generate');
+  assert.equal(events[0].key,'tts.elevenlabs');assert.equal(events[0].quantity,0.012);
 });
 test('exhausted attempts stay exhausted across calls, even if a caller retries',async t=>{
   const f=setup(t);f.deps.listen=async()=>({transcript:script,review:{...good(),pronunciation:70}});

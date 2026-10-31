@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { episodePathArg, priceOf, recordUsage } from './usage-ledger.js';
+import { episodePathArg, meteredPrice, priceOf, recordUsage } from './usage-ledger.js';
 import { prepareSpeech, SPEECH_GENERATORS } from './tts-adapters.js';
 import { getTtsModels, resolveTtsModel } from './tts-models.js';
 import { withSpeechRequestId } from './tts-execution.js';
@@ -38,7 +38,7 @@ export async function routeSpeech(input) {
     const started = Date.now();
     const result = await withSpeechRequestId(request.requestId, prepared.run);
     if (result.attempts && !result.replayed) {
-        const price = priceOf(prepared.generator, prepared.args);
+        const price = meteredPrice(priceOf(prepared.generator, prepared.args), result);
         recordUsage(episodePathArg(prepared.args), { ts: new Date().toISOString(), tool: prepared.generator,
             ok: result.success, ms: Date.now() - started, ...price, detail: { model: String(prepared.args.model), requestId: request.requestId, receiptPath: result.receiptPath || '' } });
     }

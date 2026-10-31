@@ -91,6 +91,10 @@ tts.local	1000 chars	0.000	official	Supertonic local — no network, no key. Ele
 tts.mlx	1000 chars	0.000	official	mlx_tts_generate — MLX Core / mlx-serve on-device. Quantity is input chars ÷ 1000. Electricity only
 tts.gemini-flash	1000 chars	0.038	derived	$38/1M chars (docs/research/2026-08-11-local-tts-and-commercial-api)
 tts.gemini-pro	1000 chars	0.076	derived	$76/1M chars — fallback when flash refuses
+tts.gemini-3.1-flash	1000 chars	?	unconfirmed	gemini-3.1-flash-tts-preview — no sourced price in this repo; billed as its own row, not as 2.5 flash
+tts.gemini-3.8-flash	1000 chars	?	unconfirmed	tts_gemini_38 gemini-3.8-flash-tts — no sourced price in this repo; the call's provider-usage receipt holds the reported usage
+tts.gemini-3.8-flash-lite	1000 chars	?	unconfirmed	tts_gemini_38 gemini-3.8-flash-lite-tts — no sourced price in this repo
+tts.gemini-voice-design	call	?	unconfirmed	tts_voice_design POST /v1beta/voices — no sourced price in this repo; voice-design.json is the call receipt
 # ElevenLabs API pricing (elevenlabs.io/pricing/api, read 2026-08-23): $0.10 per 1,000 characters on multilingual_v2·v3,
 # $0.05 on flash_v2_5·v3_conversational, the same on every plan. The response header character-cost is the vendor's
 # metered quantity and sits below the raw count (Korean 18 chars → 10, measured) — log that header ÷ 1000, not the text length.

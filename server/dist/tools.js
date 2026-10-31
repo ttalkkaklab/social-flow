@@ -249,7 +249,7 @@ const TTS_VOICE_PROPERTY = {
 };
 const TTS_MODEL_PROPERTY = {
     type: 'string',
-    description: 'TTS model (default: gemini-2.5-flash-preview-tts — cheapest, free tier). gemini-2.5-pro-preview-tts: higher quality, no free tier, and the fallback when flash keeps returning no audio for a script. gemini-3.1-flash-tts-preview: newest, streaming-capable, 2x price.',
+    description: 'TTS model (default: gemini-2.5-flash-preview-tts — cheapest, free tier). gemini-2.5-pro-preview-tts: higher quality, no free tier, and the fallback when flash keeps returning no audio for a script. gemini-3.1-flash-tts-preview: newest, streaming-capable; unit price unconfirmed in prices.tsv.',
     enum: [...VALID_TTS_MODELS],
     default: DEFAULT_TTS_MODEL,
 };
@@ -2898,7 +2898,7 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
                 name: { description: 'Descriptive name of the new dictionary.', type: 'string', minLength: 1, maxLength: 200 },
                 rules: { description: 'Approved source spelling and intended spoken aliases.', type: 'array', minItems: 1, maxItems: 100, items: { type: 'object', additionalProperties: false, properties: {
                             stringToReplace: { description: 'Source name as written in the narration.', type: 'string', minLength: 1, maxLength: 200 }, alias: { description: 'Intended pronunciation in Hangul for an alias rule.', type: 'string', minLength: 1, maxLength: 200 },
-                            type: { description: 'Rule kind; alias by default. Non-English phonemes require v3.', type: 'string', enum: ['alias', 'phoneme'], default: 'alias' },
+                            type: { description: 'Rule kind; alias by default.', type: 'string', enum: ['alias', 'phoneme'], default: 'alias' },
                             phoneme: { description: 'Phonetic notation for a phoneme rule.', type: 'string', minLength: 1, maxLength: 200 },
                             alphabet: { description: 'Alphabet of the phoneme rule.', type: 'string', enum: ['ipa', 'cmu-arpabet'] },
                         }, required: ['stringToReplace'] } },
@@ -2927,9 +2927,9 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
                         texts: { description: 'Complete scene texts in playback order.', type: 'array', minItems: 1, maxItems: 80, items: { type: 'string', minLength: 1, maxLength: 4000 } },
                         index: { description: 'Index of this scene in texts, starting at zero.', type: 'integer', minimum: 0 }, seed: { description: 'One seed fixed across the episode and all retakes.', type: 'integer', minimum: 0, maximum: 4294967295 },
                     }, required: ['texts', 'index', 'seed'] },
-                segments: { type: 'array', minItems: 1, maxItems: 80, items: { type: 'string', minLength: 1, maxLength: 1000 }, description: 'The scene\'s narration[].tts sentences in order (joined they read as expectedText). Every single-voice take gets a fixed pause at each segment boundary — the boundary the builder\'s reveals and subtitle cues use. Without it, pauses go after sentence-final punctuation.' },
-                sentencePause: { type: 'number', minimum: 0.25, maximum: 1.5, default: 0.5, description: 'Silence between sentences in the take\'s own timeline, seconds. The builder detects pauses from 0.16s and fits a 0.35s reveal fade inside one.' },
-                playbackSpeed: { type: 'number', minimum: 0.5, maximum: 3, default: 1, description: 'ElevenLabs requires 1: use generation.speed for the requested rate and keep assembly at 1. Other engines require an explicit user request in outputPath/speed-authorization.json for any non-1 factor; this controls subtitle pause sizing.' },
+                segments: { type: 'array', minItems: 1, maxItems: 80, items: { type: 'string', minLength: 1, maxLength: 1000 }, description: 'Legacy field; the single-take path inserts no pauses. The scene\'s narration[].tts sentences in order (joined they read as expectedText). Every single-voice take gets a fixed pause at each segment boundary — the boundary the builder\'s reveals and subtitle cues use. Without it, pauses go after sentence-final punctuation.' },
+                sentencePause: { type: 'number', minimum: 0.25, maximum: 1.5, default: 0.5, description: 'Legacy field; the single-take path inserts no pauses. Silence between sentences in the take\'s own timeline, seconds. The builder detects pauses from 0.16s and fits a 0.35s reveal fade inside one.' },
+                playbackSpeed: { type: 'number', minimum: 0.5, maximum: 3, default: 1, description: 'Legacy field; the single-take path does not apply it. ElevenLabs requires 1 — eleven_v4 has no speed control, so pace goes in [audio tags]. Another engine needs an explicit user request in outputPath/speed-authorization.json for any non-1 factor.' },
                 transcriptCheck: { type: 'object', additionalProperties: false, required: ['requestedBy', 'reason'], description: 'Present only when the user asked for a blind-transcription (STT) check; it is recorded for the host review. No transcription or listening runs automatically. Carries who asked and their actual words — there is no environment default.', properties: {
                         requestedBy: { type: 'string', minLength: 1, maxLength: 200, description: 'Who asked for the dictation check, e.g. "user".' }, reason: { type: 'string', minLength: 10, maxLength: 1000, description: 'The actual request that turned it on, quoted or referenced.' },
                     } },
@@ -3017,7 +3017,7 @@ Returns: a text block with the saved 24kHz mono RIFF WAV path, model, voice or s
                     minLength: 1,
                     maxLength: 300,
                     default: DEFAULT_VOICE,
-                    description: 'Single-voice selection: curated name, extended-library voice, designed voice_ ID, or replicated voice_ / voicekey_ ID. Ignored when speakers is present.',
+                    description: 'Single-voice selection: curated name, extended-library voice, designed voice_ ID, or replicated voice_ / voicekey_ ID. Omit it when speakers is present — a voice there is rejected.',
                 },
                 speakers: {
                     type: 'array',
@@ -3101,7 +3101,7 @@ Returns: a text block with the saved .wav file path, speaker/voice assignments, 
         name: 'tts_voice_design', title: 'Design a persistent Gemini character voice', annotations: HINT.generate,
         description: 'Create a paid stored Gemini voice from character age, vocal gender, timbre and accent using POST /v1beta/voices. Use when casting a custom character or changing perceived age/identity; turn style only controls delivery. Optional baseVoice remixes an existing voice. Returns voiceId, local WAV preview, hash, usage and receipt; use that ID with tts_gemini_38. Does not edit character sheets or episodes and does not certify age by listening. Requires GEMINI_API_KEY and a new outputPath per creation; never blindly retry an uncertain call. For catalog discovery use tts_list_voices source:library with filters; for ordinary lines use speech_manage plan_audio.',
         inputSchema: { type: 'object', additionalProperties: false, properties: {
-                model: { type: 'string', enum: ['gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts'], description: 'Explicit voice creation model.' },
+                model: { type: 'string', enum: [...GEMINI_38_TTS_MODELS], description: 'Explicit voice creation model.' },
                 displayName: { type: 'string', minLength: 1, maxLength: 100, description: 'Distinct name for later catalog reconciliation.' },
                 prompt: { type: 'string', minLength: 1, maxLength: 4000, description: 'Stable voice identity: perceived age, timbre, accent and baseline delivery; relative changes if baseVoice is supplied.' },
                 languageCode: { type: 'string', minLength: 1, description: 'BCP-47 primary language, e.g. ko-KR.' },
