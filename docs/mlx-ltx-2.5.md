@@ -88,12 +88,11 @@ the load has not been separated from the diffusion. Budget from these numbers; d
 warm start nobody has measured.
 
 Scaling is not linear — a linear estimate from the pack's own benchmark was off by 3.8× and
-6×. Treat this as a batch-render lane: it does not replace `veo_*` / `seedance_*` for a cut
-with a deadline. It earns its place when the clip must not leave the machine, or when there
+6×. Treat this as a batch-render lane: it does not replace `seedance_*` / `astra_genai_*` for a
+cut with a deadline. It earns its place when the clip must not leave the machine, or when there
 is time to spare and no budget.
 
-Audio comes back with the video (16kHz, 2 channels), which `veo_*` also does and
-`seedance_*` does not. It arrives a frame shorter than the picture, so the mux does not pass
+Audio comes back with the video (16kHz, 2 channels). It arrives a frame shorter than the picture, so the mux does not pass
 `-shortest` — that flag used to drop the final frame.
 
 ## 5. License

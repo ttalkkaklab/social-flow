@@ -4,7 +4,7 @@ import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { SEEDANCE_MODEL_SPECS, type SeedanceModel } from './seedance-client.js';
+import { VIDEO_ADAPTERS } from './video-registry.js';
 
 const load = createRequire(import.meta.url);
 const object = (value: unknown): Record<string, unknown> =>
@@ -33,7 +33,7 @@ interface SpeakerVoice {
 }
 export interface VoiceContinuity {
   version: 1;
-  strategy: 'external_tts' | 'supplied_audio' | 'reference_voice' | 'prompt_voice';
+  strategy: 'external_tts' | 'supplied_audio' | 'reference_voice';
   revision: string;
   speakers: SpeakerVoice[];
   warnings: string[];
@@ -120,8 +120,6 @@ function afterImageBlock(prompt: string, lines: string[]): string {
   return rows.join('\n');
 }
 
-const SUPPLIED_AUDIO_TOOLS = new Set(['astra_audio2video', 'astra_genai_audio2video', 'astra_genai_desktop_audio2video']);
-
 /** Prepare provider arguments before schema validation and pricing. No synthesis or uploads. */
 export function prepareVideoVoice(tool: string, input: Record<string, unknown>, context: VoiceContext): {
   args: Record<string, unknown>; voiceContinuity?: VoiceContinuity;
@@ -141,14 +139,20 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
   const characters: Record<string, unknown>[] = Array.isArray(raw) ? raw.map(object) : Object.entries(object(raw)).map(([id, value]) => ({ ...object(value), id }));
   const visual = object(context.shot.visual);
   const nativeSlot = Boolean(visual.clip) || context.shot.type === 'broll';
-  const audible = msr || ((tool !== 'astra_genai_desktop_keyframes' || args.audio === true) && (tool === 'fasth3_omni_reference' || tool.startsWith('veo_') || tool.startsWith('omni_') ||
+  const audible = msr || ((tool !== 'astra_genai_desktop_keyframes' || args.audio === true) && (tool === 'fasth3_omni_reference' ||
     (tool.startsWith('astra_') ? args.generateAudio !== false : args.generateAudio === true)));
-  const supplied = SUPPLIED_AUDIO_TOOLS.has(tool);
-  const native = !supplied && audible && (nativeSlot || lines.some(line => line.delivery === 'on_screen'));
-  const spec = SEEDANCE_MODEL_SPECS[args.model as SeedanceModel];
+  const lane = VIDEO_ADAPTERS[tool]?.voice ?? 'none';
+  const supplied = lane === 'supplied';
+  const onScreen = lines.some(line => line.delivery === 'on_screen');
+  const native = !supplied && audible && (nativeSlot || onScreen);
+  // Voice gate (owner directive 2026-10-31): a character the viewer hears or sees speak needs a voice
+  // lane. An adapter without one renders only cuts whose lines are external TTS over a non-speaking picture.
+  if (lane === 'none' && (native || onScreen))
+    throw new Error(`voice_lane_required: ${tool} cannot keep a character's voice. Render this spoken cut with a reference adapter ` +
+      `(astra_genai_msr, seedance_reference, fasth3_omni_reference) or an audio2video adapter${onScreen ? '' : ', or set generateAudio:false and keep the lines as TTS voiceover'}.`);
   const limitedPromptLanguage = tool.startsWith('seedance_') && !String(args.model).includes('2-5');
-  const reference = native && (tool === 'fasth3_omni_reference' || msr || (tool === 'seedance_reference' && Boolean(spec?.referenceAudio)));
-  const strategy = supplied ? 'supplied_audio' : reference ? 'reference_voice' : native ? 'prompt_voice' : 'external_tts';
+  const reference = native && lane === 'reference';
+  const strategy = supplied ? 'supplied_audio' : reference ? 'reference_voice' : 'external_tts';
   const warnings: string[] = [];
   const speakers: SpeakerVoice[] = [];
   const nativeLines = nativeSlot ? lines : lines.filter(line => line.delivery === 'on_screen');
@@ -244,13 +248,6 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
     if (speakers.length > 1) warnings.push('Multiple speakers: check assignment and turn-taking separately from timbre; short turns reduce ambiguity but are not a guarantee.');
     if (msr) warnings.push('MSR renders speech and effects into its own soundtrack; assembly uses it as the cut\'s audio.');
     else if (!nativeSlot) warnings.push('visual.video assembly uses the external TTS track. Native voice guidance does not synchronize that WAV; use audio2video for exact supplied-speech staging or the existing visual.clip native-audio slot.');
-  }
-  if (tool === 'veo_extension') warnings.push('Veo voice continuation needs speech in the last second of the source clip; this planner has not listened to that boundary.');
-  if (tool.startsWith('veo_') && native) warnings.push('Veo has no audio-reference input. Reuse the same voice description; prompt guidance cannot lock a TTS voice ID.');
-  if (tool.startsWith('omni_') && native) {
-    warnings.push('Omni API does not support Flow @Voice ingredients or uploaded audio references. Reference-video audio cannot lock the speaker.');
-    if (tool === 'omni_extend' && !args.previousInteractionId) throw new Error('Omni spoken continuation requires previousInteractionId, not a re-uploaded speaking clip');
-    if (args.previousInteractionId) warnings.push('Continue the original stored interaction for dialogue; voice continuity remains unreviewed.');
   }
   if (strategy === 'supplied_audio') warnings.push('Use the final composed pinned-voice WAV. ASTRA re-encodes supplied audio; mouth motion and speaker identity remain unreviewed.');
   if (prompt.length && typeof args.prompt === 'string') args.prompt += (msr ? '\n\n' : '\n\nVoice continuity guidance:\n') + prompt.join('\n');

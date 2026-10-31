@@ -42,7 +42,7 @@ function layout(root, channel) {
 function status(root) {
   const saved = read(root);
   const missing = config.missingProjectFields(saved.config);
-  if (saved.status === 'migration_required') missing.push('models.speech');
+  if (saved.status === 'migration_required') missing.push(...saved.retired);
   const paths = saved.config?.project ? layout(root, saved.config.project.channel) : undefined;
   if (paths) for (const [key, file] of Object.entries(paths)) if (!fs.existsSync(file)) missing.push(key);
   return {

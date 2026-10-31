@@ -51,7 +51,7 @@ export function toolOverrideVar(name) {
  *
  * `*` = everything, `suno_*` = prefix, anything else is a case-insensitive exact
  * match. A star in the middle is not a wildcard — prefix matching already covers
- * the families (suno_ · veo_ · music_).
+ * the families (suno_ · seedance_ · music_).
  */
 export function matchesPattern(name, pattern) {
     const needle = name.toLowerCase();
@@ -80,7 +80,7 @@ function parseFlag(raw, source) {
         return false;
     throw new Error(`Invalid ${source}="${raw}" — use 1/0, on/off, or true/false.`);
 }
-/** `suno_generate=0,veo_*=off` — a token without `=` is rejected. */
+/** `suno_generate=0,seedance_*=off` — a token without `=` is rejected. */
 export function parseToolFlags(raw) {
     const out = new Map();
     if (!raw || !raw.trim())
@@ -88,7 +88,7 @@ export function parseToolFlags(raw) {
     for (const item of parsePatternList(raw)) {
         const eq = item.indexOf('=');
         if (eq <= 0 || eq === item.length - 1) {
-            throw new Error(`Invalid ${FLAGS_VAR} entry "${item}" — use name=on|off (example: suno_generate=0,veo_*=off).`);
+            throw new Error(`Invalid ${FLAGS_VAR} entry "${item}" — use name=on|off (example: suno_generate=0,seedance_*=off).`);
         }
         const key = item.slice(0, eq).trim();
         const value = item.slice(eq + 1).trim();
@@ -97,7 +97,7 @@ export function parseToolFlags(raw) {
     return out;
 }
 function flagFor(name, flags) {
-    // Exact match beats a prefix — `veo_*=off` and `veo_img2video=on` can coexist.
+    // Exact match beats a prefix — `seedance_*=off` and `seedance_img2video=on` can coexist.
     let prefixHit;
     for (const [pattern, raw] of flags) {
         if (!matchesPattern(name, pattern))

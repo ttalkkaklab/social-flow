@@ -368,7 +368,7 @@ the whole projection rather than a bill that has already partly arrived.
 | Capability | Free / on-device | Paid | Costs money unless… |
 |---|---|---|---|
 | **Images** | `image_local_generate` — Z-Image Turbo via mflux, $0. Optional: `mlx_image_*` when MLX Core is running. Initial image setup recommends ASTRA GenAI (`astra-genai` / `z-image-turbo`); local mflux is an explicit alternative | `gpt_image_*` — OpenAI, per image by quality | …you accept no text in the frame. Local generation breaks Korean glyphs apart, so covers and any text-bearing frame need GPT Image or a host tool. The saved image model in `.social-flow/models.json` decides; nothing reroutes a frame on its own |
-| **Video** | deterministic HTML motion slides rendered locally with headless Chrome. Optional: `ltx_video_generate` (24fps, RAM-capped). Under Grok the CLI's own `image_to_video` is the setup-time recommendation (1–15 s, 720p ceiling, subscription allowance) | Veo 3.1 (Gemini) per second · Seedance (ModelArk) per second | …you use the HTML motion lane or the Grok host lane. The saved video model decides the paid engine. A channel can prohibit stills and still spend zero on generated video; Ken Burns does not count as true motion. mlx_video is not the default and is not on the Veo/Seedance face-policy table |
+| **Video** | deterministic HTML motion slides rendered locally with headless Chrome. Optional: `ltx_video_generate` (24fps, RAM-capped). Under Grok the CLI's own `image_to_video` is the setup-time recommendation (1–15 s, 720p ceiling, subscription allowance) | Seedance 2.x (ModelArk) per second · ASTRA GenAI (LTX) | …you use the HTML motion lane or the Grok host lane. The saved video model decides the paid engine. A channel can prohibit stills and still spend zero on generated video; Ken Burns does not count as true motion. mlx_video is not the default and is not on the Seedance face-policy table |
 | **Speech (TTS)** | Your own recording | Gemini TTS or ElevenLabs `eleven_v4` | Generate with the saved voice and record provenance. No automatic paid speech review; local TTS is removed. |
 | **Transcription (STT)** | `stt_local_transcribe` — Qwen3-ASR via mlx, $0 (whisper.cpp fallback) | none | never — there is no paid STT path here |
 | **Music (BGM)** | Saved MLX music pack or reused channel bed | Saved Lyria / ElevenLabs / sunoapi.org model | …you reuse audio or choose an installed local pack |
@@ -384,8 +384,7 @@ everything else local — against the growth plan's per-episode cap
 (`max_cost_per_video`, template default $1.00), one of the spending ceilings beside the
 project's `episodeBudgetUsd`, enforced before spending, not after. Generated video is the
 expensive step: a silent Seedance hook clip takes the episode to about $0.81 on the 2.0 mini
-grade (about $3.00 on 2.0 at 1080p) and one 8-second Veo lite clip adds roughly $0.64, which
-is why generated cuts stay off unless the cut needs true motion and the cap allows it. The
+grade (about $3.00 on 2.0 at 1080p), which is why generated cuts stay off unless the cut needs true motion and the cap allows it. The
 engine is the saved video model in `.social-flow/models.json`, not a per-cut escalation; an
 unattended loop with no saved settings reports `project_setup_required` instead of guessing.
 
@@ -518,7 +517,7 @@ measurements.
 /social-flow:project-init .                # 0. project defaults (once per working directory): SNS targets · genre · models · style · ratio · format → .social-flow/models.json
 /social-flow:channel add my-channel        # 1. channel profile (once)
 /social-flow:branding my-channel           # 1.2 (optional) profile image — 4 candidates → HITL pick → 95-point convergence
-/social-flow:intro my-channel              # 1.3 (optional) channel intro — 4 concepts HITL → 4s veo render → 90-point convergence (spliced after the episode as a closer)
+/social-flow:intro my-channel              # 1.3 (optional) channel intro — 4 concepts HITL → 4s render on the saved video model → 90-point convergence (spliced after the episode as a closer)
 /social-flow:setup-threads my-channel      # 1.4 (optional) SNS account setup + API tokens — browser HITL, ego lite only (per platform: setup-instagram · setup-youtube)
 /social-flow:ingest my-channel record      # 1.5 (optional) screen+voice recording → timeline — an alternative research source
 /social-flow:storyboard my-channel "July FX swings"   # scenario preview → character/prop/location sheets → complete scenes → shots → shared template + check · no media generation
@@ -643,10 +642,10 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 136 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 128 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions — 136 tools, including voice auditions and opt-in acting review
+│       ├── tools.ts             # tool definitions — 128 tools, including voice auditions and opt-in acting review
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -656,8 +655,7 @@ social-flow/
 │       ├── zimage-client.ts     # Z-Image Turbo on-device generation (mflux/MLX)
 │       ├── mlx-serve-client.ts  # MLX Core / mlx-serve HTTP client (image·edit·music·video·3d)
 │       ├── qwen3-asr-client.ts  # Qwen3-ASR on-device STT (mlx-qwen3-asr CLI)
-│       ├── video-client.ts      # Veo 3.1 — t2v·i2v·extension·reference
-│       ├── seedance-client.ts   # Seedance — t2v·i2v·reference (BytePlus ModelArk)
+│       ├── seedance-client.ts   # Seedance 2.x — t2v·i2v·reference (BytePlus ModelArk)
 │       ├── tts-client.ts        # Gemini TTS — single speaker + 2-speaker dialogue
 │       ├── elevenlabs-client.ts # ElevenLabs TTS — single voice · multi-voice dialogue · voice list (REST)
 │       ├── music-client.ts      # Lyria — 30s clips (batch) + variable length (streaming)
@@ -667,7 +665,7 @@ social-flow/
 │   ├── channel/                 # /social-flow:channel — channel & profile management
 │   │   └── references/          #   resolve-asset.py (catalog lookup) · serve.js (channel browser over HTTP — pick a channel, then storyboards or characters; serves data/ so storyboard.html opens in place)
 │   ├── branding/                # /social-flow:branding — channel profile image (4 candidates → HITL pick → adversarial convergence at 95)
-│   ├── intro/                   # /social-flow:intro — channel intro video (4 concepts HITL → veo character acting → name reveal + sonic logo → 90-point convergence)
+│   ├── intro/                   # /social-flow:intro — channel intro video (4 concepts HITL → character acting → name reveal + sonic logo → 90-point convergence)
 │   ├── setup-threads/           # /social-flow:setup-threads — Threads account setup + API hookup (browser HITL — signup·branding·Meta app·60-day token, state detection & resume)
 │   │   └── references/          #   setup-playbook.md (CDP recipes · token exchange · 60-day renewal)
 │   ├── setup-instagram/         # /social-flow:setup-instagram — Instagram account setup + API hookup (browser HITL — professional conversion · Instagram Login OAuth · 60-day token)
@@ -718,12 +716,12 @@ visual style, video ratio and format live in the workspace's `.social-flow/model
 each episode snapshots them in `.work/model-settings.json`, and `profile.md` keeps the
 channel's tone, theme and pinned character voice IDs (the speech model itself is the saved `models.speech`).
 
-## MCP tool surface (136 tools)
+## MCP tool surface (128 tools)
 
 `project_manage`: options · status · init · update · episode. Local project setup
 with genre, models, style, ratio, format and SNS records; no generation or publishing.
 
-**`tools/list` does not show all 118.** The credential-gated publish, review and insights tools
+**`tools/list` does not show all 128.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
@@ -749,12 +747,10 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Image generation | `image_local_generate` | Z-Image Turbo on-device via mflux (**no API key, no network, no billing — a $0 choice for the saved image model**; initial image setup recommends ASTRA GenAI; local mflux is an explicit alternative. Needs Apple Silicon + `uv tool install --python 3.12 mflux`; first call downloads 31GB of weights. No text inside images — Korean jamo break up) |
 | Image generation | `mlx_image_generate` / `mlx_image_edit` | MLX Core / mlx-serve on loopback (**no vendor bill**. Optional local lane — initial image setup recommends ASTRA GenAI. Inspect actual Hangul. Model-specific edit/variation/alpha contracts apply. Fail closed if :11234 is down; this plugin never launches the app. `brew install --cask mlx-core`) |
 | Image generation | `gpt_image_text2img` / `gpt_image_img2img` | OpenAI GPT Image (OPENAI_API_KEY — **saved selection takes precedence**: model-dependent sizes, up to 16 references, mask inpainting, usage receipts; GPT Image 2 transparent output is preview) |
-| Video generation | `veo_text2video` / `veo_img2video` / `veo_extension` / `veo_reference` | Veo 3.1 (GEMINI_API_KEY — 720p–4k, 4/6/8s grid; **native audio, local-file extension, and live-person reference** are this engine's edge) |
-| Video generation | `omni_text2video` / `omni_img2video` / `omni_extend` / `omni_edit` | Gemini Omni 1.1 Flash (GEMINI_API_KEY, Interactions API — 360p–4k, **any whole 3–10s**, and the only lane that **edits a clip by instruction** or extends a local mp4 to a 40s cumulative cap. **Billed flat ~$1.01 per call** — measured against the spend counter, not per second as the pricing page reads — so a 3s draft costs more than a full 8s veo-3.1-lite shot; worth it at the full 10s or for the edit lane, never for a short cut. No reference-image or negative-prompt field, and its person policy is unmeasured — photoreal faces stay on `veo_img2video`) |
-| Video routing | `video_catalog` / `video_plan` / `video_execute` / `video_status` | Saved model selection, adapter validation, atomic episode budget reservations and durable request receipts. [Routing contract](skills/_shared/video-routing.md). |
-| Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Seedance (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images plus reference audio — a character's fixed voice (`referenceAudioPaths`, 2.x) — plus reference video (`referenceVideoPaths`, 2.x): an optional 3D previz as `Video 1`, the vendor's clay-model reference — a generated cut may pre-render in Blender or three.js first (user directive 2026-09-11, optional since 2026-10-18), so the camera path and timing land as planned; a local clip is served through `MEDIA_UPLOAD_URL` or a cloudflared quick tunnel for the life of the task. Audio can be turned off, so silent cuts are cheap — $0.23 for 1080p 4s vs $0.64 on Veo lite. Every generated cut uses the saved video model and resolution (`PRODUCTION.videoModel`, from `.social-flow/models.json`); a per-cut change is an explicit user exception in `PRODUCTION.modelSettings.overrides`. The storyboard forecasts that model's cost. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
+| Video routing | `video_catalog` / `video_plan` / `video_execute` / `video_status` | Saved model selection, adapter validation, atomic episode budget reservations and durable request receipts. [Routing contract](skills/_shared/video-routing.md). A spoken cut needs a voice lane — `reference` (`astra_genai_msr`, `seedance_reference`, `fasth3_omni_reference` take a per-character voice sample) or `supplied` (the audio2video tools animate a pinned TTS track); on any other adapter `video_plan` refuses it with `voice_lane_required`, while narration over a non-speaking picture runs anywhere. Veo, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31 because none takes a voice reference: a saved choice of one reports `migration_required`, and their existing clips stay reusable. |
+| Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Dreamina Seedance 2.x (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images plus reference audio — a character's fixed voice (`referenceAudioPaths`) — plus reference video (`referenceVideoPaths`): an optional 3D previz as `Video 1`, the vendor's clay-model reference — a generated cut may pre-render in Blender or three.js first (user directive 2026-09-11, optional since 2026-10-18), so the camera path and timing land as planned; a local clip is served through `MEDIA_UPLOAD_URL` or a cloudflared quick tunnel for the life of the task. Audio can be turned off. Seedance 2.x rejects real human faces, so photoreal real-person sources go to an LTX lane. Every generated cut uses the saved video model and resolution (`PRODUCTION.videoModel`, from `.social-flow/models.json`); a per-cut change is an explicit user exception in `PRODUCTION.modelSettings.overrides`. The storyboard forecasts that model's cost. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | Video references | `fasth3_omni_reference` | FastH3 Omni via MLX-Serve: image/video/audio references, eight steps, video with sound. [Setup and adapter contract](docs/fasth3-omni.md) |
-| Video generation | `ltx_video_generate` | MLX Core / mlx-serve (24fps rgb8 muxed to mp4 with ffmpeg. Default 768×1280, RAM-capped at 800MB decoded RGB. Not the default path and not on the Veo/Seedance face-policy table. Pack install, request grid and measured render times: [LTX 2.5 runbook](docs/mlx-ltx-2.5.md)) |
+| Video generation | `ltx_video_generate` | MLX Core / mlx-serve (24fps rgb8 muxed to mp4 with ffmpeg. Default 768×1280, RAM-capped at 800MB decoded RGB. Not the default path and not on the Seedance face-policy table. Pack install, request grid and measured render times: [LTX 2.5 runbook](docs/mlx-ltx-2.5.md)) |
 | Video generation | `astra_text2video` / `astra_img2video` / `astra_keyframe_video` / `astra_audio2video` / `astra_ic_lora` / `astra_video_upscale` / `astra_video_retake` | ASTRA video API (`ASTRA_VIDEO`, self-hosted LTX-2.5 — **our own box, so no per-call bill and no vendor policy**, but it renders ONE job at a time: 66–184s each plus queue, which makes it the batch lane rather than the interactive one. Seven tools over the server modes; `tier` picks generate·guided·guided_fast·guided_hq, and `astra_ic_lora` runs one reference still or clip through an IC-LoRA adapter (adapters, `guidance`, `conditioning_mask`, `skip_stage_2`, `{name, strength}` lora entries and `generateAudio` are live since the 2026-10-17 server change). The only lane with `lora` adapters (`cinemagraph` · `slow-motion`, generate only), with a keyframe mode that passes through 2–8 supplied stills at chosen frame indices, and with a retake mode that re-rolls one time span of an existing clip. `astra_video_upscale` doubles a clip through the `pixel-upscaler-x2` adapter, sizing the request from the clip and copying its soundtrack back; it is a generative re-render for sources up to about 512×896 ([upscale-video](skills/upscale-video/SKILL.md)). Length is frames (8k+1, 25–361 on every mode, the server's published ceiling); `duration` in seconds is converted to the nearest 8k+1 by the tool. `astra_video_capabilities` reads the live server's own limits; sizes sit on a 64-pixel grid with a 2,064,384-pixel ceiling, so 9:16 is **1024×1920** — 1088×1920 exceeds the area ceiling at every frame count, and 1080×1920 is off-grid. Clips carry 48kHz stereo AAC; `audio2video` carries the supplied sound re-encoded, rather than a newly generated track. Stereo (2-channel) input is required: mono is refused at upload because it fails in the engine audio encoder. With no duration, numFrames or audioMaxDuration, the client explicitly sends 121 frames (~5.04s) for compatibility because server omission metadata conflicts; `audioMaxDuration: 8` selects 185 frames (~7.71s) at 24fps. `generateAudio: false` strips the sound after generation (same GPU time). `expectLipSync: true` (on-screen speech only) measures with ffmpeg whether the picture moves with the supplied speech and re-renders with a new seed when it does not, up to `maxAttempts` (default 2); it never fails the call and leaves phoneme-level sync, the speaking person and voice identity `not_reviewed`. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | Unified ASTRA GenAI | `astra_genai_text2video` / `astra_genai_img2video` / `astra_genai_text2img` / `astra_genai_edit` / `astra_genai_msr` / `astra_genai_audio2video` / `astra_genai_video_status` | Separate `astra-genai` engine and `ASTRA_GENAI_API_KEY` gateway token. LTX v2 text/image video, MSR with up to four subjects plus a background (speech and effects rendered natively; subjects 1–2 take the speaker's pinned voice sample by default when the gateway supports it), and Z-Image text/img2img/inpaint with optional prompt expansion. `astra_genai_audio2video` animates supplied speech: the clip is as long as the audio (up to 361 frames), mono or stereo input at a 7350–96000 Hz AAC standard rate, sent as a data URI of at most 15,000,000 base64 characters or an HTTPS URL. Local edit/MSR references are supported; no LoRA or retake. Managed plans require an explicit cost reservation. [Configuration and recovery](skills/_shared/astra-genai.md). |
 | ASTRA GenAI model-bound gateway | `astra_genai_catalog` / `astra_genai_image_generate` / `astra_genai_image_edit` / `tts_astra_genai` / `astra_genai_desktop_text2video` / `astra_genai_desktop_img2video` / `astra_genai_desktop_audio2video` / `astra_genai_desktop_extend` / `astra_genai_desktop_retake` / `astra_genai_desktop_keyframes` / `astra_genai_desktop_status` | Explicit `astra-genai-native` image, `astra-genai` speech and `astra-genai-desktop` video engines on the newer gateway (same `ASTRA_GENAI_URL` and `ASTRA_GENAI_API_KEY`). The catalog lists installed aliases and LoRAs; see `skills/_shared/astra-genai.md` (Model-bound gateway). |
@@ -824,7 +820,7 @@ used the MCP SDK's 10 MiB default and could close the connection before a
 multi-reference image request reached the provider. Restart the plugin's MCP
 server after updating. A host application's own message limit still applies.
 Keys cover hosted models: OPENAI_API_KEY for images, GEMINI_API_KEY for Gemini
-video/voice/music, ARK_API_KEY for Seedance and ELEVENLABS_API_KEY for ElevenLabs.
+voice/music, ARK_API_KEY for Seedance and ELEVENLABS_API_KEY for ElevenLabs.
 Local image, STT, music and video tools retain their own capability requirements.
 Local speech synthesis is removed, including Supertonic and MLX TTS.
 
@@ -871,8 +867,8 @@ works.
 | `PIXABAY_API_KEY` | stock_search (Pixabay) | — | Pixabay API key (pixabay.com/api/docs — free, 100 requests/minute) |
 | `DATA_GO_KR_API_KEY` | datago_file_fetch · api_call | — | data.go.kr auth key (My Page on data.go.kr — beyond the key, each API needs a **per-API usage application**. Search/detail/download work without a key) |
 | `OPENAI_API_KEY` | gpt_image_* | — | OpenAI API key (platform.openai.com/api-keys — image generation) |
-| `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) | veo_* · omni_* · tts_generate · tts_multi_speaker · tts_gemini_38 · music_* | — | Gemini API key (aistudio.google.com/apikey — video, voice, and music generation. ElevenLabs uses its own key) |
-| `ARK_API_KEY` | seedance_* | — | BytePlus ModelArk API key (ai.byteplus.com/ark — the second video engine. Dreamina Seedance 2.x models additionally require **an account balance over $30 or a resource pack** to activate; 1.5 pro and 1.0 have no such gate. `veo_*` works fine without this key) |
+| `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) | tts_generate · tts_multi_speaker · tts_gemini_38 · music_* | — | Gemini API key (aistudio.google.com/apikey — voice and music generation. ElevenLabs uses its own key) |
+| `ARK_API_KEY` | seedance_* | — | BytePlus ModelArk API key (ai.byteplus.com/ark — Dreamina Seedance 2.x video. The models require **an account balance over $30 or a resource pack** to activate. The LTX lanes work without this key) |
 | `SUNO_API_KEY` | suno_* | — | sunoapi.org API key (https://sunoapi.org/api-key — third-party REST, not Gemini and not an official Suno Inc. API). Unset, `music_*(Lyria)` still works |
 | `SUNO_BASE_URL` | | `https://api.sunoapi.org` | Same-spec self-host or regional mirror. Other vendors use different auth/paths — do not point this there |
 | `ELEVENLABS_API_KEY` | tts_elevenlabs_* · sfx_elevenlabs_generate | — | ElevenLabs API key (elevenlabs.io/app/settings/api-keys — a restricted key needs the `text_to_speech` permission, plus `voices_read` for `tts_elevenlabs_voices` and the sound-generation permission for `sfx_elevenlabs_generate`). Unset, `tts_generate` (Gemini) still works |
@@ -905,12 +901,12 @@ tools listed** (union of flat and channel directories). Issuance and renewal:
 1. Environment (per session — list these in `.mcp.json` `env` so the host passes
    them through). Highest first:
    - `SOCIAL_FLOW_TOOL_<NAME>` — one tool (`SOCIAL_FLOW_TOOL_SUNO_GENERATE=off`)
-   - `SOCIAL_FLOW_TOOL_FLAGS` — several tools in one line (`suno_generate=0,veo_*=off`)
+   - `SOCIAL_FLOW_TOOL_FLAGS` — several tools in one line (`suno_generate=0,seedance_*=off`)
    - `SOCIAL_FLOW_TOOLS` — allowlist; if set, only the listed names/families stay on
    - `SOCIAL_FLOW_DISABLE_TOOLS` — denylist (`suno_*,seedance_*`)
 2. `<SNS_TOKEN_DIR>/disabled-tools.json` — a JSON array of tool names, where a
    trailing `*` covers a family. For example `["seedance_*"]` turns off all three
-   Seedance video tools while keeping `veo_*` on. Persistent across sessions.
+   Seedance video tools while keeping `astra_*` on. Persistent across sessions.
 
 A listed tool disappears from ListTools and direct calls get an explicit refusal.
 The JSON file is read per request, so edits apply without a server restart; remove
@@ -922,7 +918,7 @@ or whitespace; a bare `*` matches every tool.
 
 Latest image model research: **[Image APIs, local models and production tips](docs/research/2026-10-18-image-models/README.md)** — model-by-model official documentation, pricing, retirement dates, generation/editing examples and differences from the current adapters, checked 2026-10-18 (Korean).
 
-Latest video API research: **[MiniMax H3, LTX 2.5, Seedance and Veo API pricing](docs/research/2026-10-18-video-model-api-pricing/README.md)** — official endpoints, model capabilities, per-second/token rates and reference-input charges, checked 2026-10-18 (Korean).
+Latest video API research: **[Video model API pricing](docs/research/2026-10-18-video-model-api-pricing/README.md)** — official endpoints, model capabilities, per-second/token rates and reference-input charges, checked 2026-10-18 (Korean).
 
 Manuals are bilingual — Korean pages with English siblings (`*.en.html`).
 Full index: **[docs/index.html](docs/index.html)** (Korean) ·
@@ -940,8 +936,6 @@ server calls, and how this implementation honors (or deliberately narrows) each 
   the 31 tools as of 2026-07-29 (tools added since are unaudited)
 - Individual APIs — [Gemini TTS](docs/api-reference/gemini-tts.html) ·
   [ElevenLabs TTS](docs/api-reference/elevenlabs-tts.html) ·
-  [Veo 3.1](docs/api-reference/gemini-veo.html) ·
-  [Veo people & reference policy](docs/api-reference/veo-portrait.html) ·
   [Seedance](docs/api-reference/seedance.html) ·
   [Seedance people & asset policy](docs/api-reference/seedance-portrait.html) ·
   [Lyria](docs/api-reference/gemini-lyria.html) ·

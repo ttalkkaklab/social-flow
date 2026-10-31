@@ -1,6 +1,6 @@
 import { recordVideoSubmission } from './video-events.js';
 /**
- * ASTRA video API client — the self-hosted LTX lane next to Veo, Seedance and Omni.
+ * ASTRA video API client — the self-hosted LTX lane next to the ASTRA GenAI gateway and Seedance.
  *
  * One server (default https://video.astravision.co.kr) running an LTX-2.5 pipeline behind
  * a queue. Unlike every other video lane in this server it is *ours*: no per-call billing,

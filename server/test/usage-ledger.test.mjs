@@ -48,23 +48,7 @@ function makeEpisode() {
 test('every price key the mapping can emit exists in prices.tsv', () => {
   const known = priceKeys();
   const calls = [
-    // Veo — three tiers x the resolutions each supports
-    ['veo_text2video', { model: 'veo-3.1-lite-generate-preview', resolution: '720p' }],
-    ['veo_img2video', { model: 'veo-3.1-lite-generate-preview', resolution: '1080p' }],
-    ['veo_text2video', { model: 'veo-3.1-fast-generate-preview', resolution: '720p' }],
-    ['veo_img2video', { model: 'veo-3.1-fast-generate-preview', resolution: '1080p' }],
-    ['veo_text2video', { model: 'veo-3.1-fast-generate-preview', resolution: '4k' }],
-    ['veo_text2video', { model: 'veo-3.1-generate-preview', resolution: '720p' }],
-    ['veo_text2video', { model: 'veo-3.1-generate-preview', resolution: '1080p' }],
-    ['veo_text2video', { model: 'veo-3.1-generate-preview', resolution: '4k' }],
-    ['veo_reference', { model: 'veo-3.1-fast-generate-preview', resolution: '1080p' }],
-    // Seedance — 1.5 pro splits on audio, the rest are one row per resolution
-    ['seedance_img2video', { model: 'seedance-1-5-pro-251215', resolution: '1080p' }],
-    ['seedance_img2video', { model: 'seedance-1-5-pro-251215', resolution: '720p' }],
-    ['seedance_img2video', { model: 'seedance-1-5-pro-251215', resolution: '1080p', generateAudio: true }],
-    ['seedance_text2video', { model: 'seedance-1-0-pro-fast-251015', resolution: '1080p' }],
-    ['seedance_text2video', { model: 'seedance-1-0-pro-fast-251015', resolution: '720p' }],
-    ['seedance_text2video', { model: 'seedance-1-0-pro-250528', resolution: '1080p' }],
+    // Seedance — one row per model and resolution
     ['seedance_reference', { model: 'dreamina-seedance-2-0-260128', resolution: '1080p' }],
     ['seedance_reference', { model: 'dreamina-seedance-2-5-260628', resolution: '720p' }],
     ['seedance_text2video', { model: 'dreamina-seedance-2-0-fast-260128', resolution: '720p' }],
@@ -100,25 +84,12 @@ test('every price key the mapping can emit exists in prices.tsv', () => {
   assert.deepEqual(missing, [], 'price keys absent from prices.tsv');
 });
 
-test('Veo bills the generated length, not the requested one', () => {
-  // 1080p and 4k generate 8 seconds whatever was asked for; veo_reference is pinned to 8.
-  assert.equal(priceOf('veo_img2video', { resolution: '1080p', durationSeconds: 4 }).quantity, 8);
-  assert.equal(priceOf('veo_img2video', { resolution: '4k', durationSeconds: 4 }).quantity, 8);
-  assert.equal(priceOf('veo_reference', { resolution: '720p', durationSeconds: 4 }).quantity, 8);
-  // 720p on the image/text lanes really does take the grid length.
-  assert.equal(priceOf('veo_img2video', { resolution: '720p', durationSeconds: 4 }).quantity, 4);
-});
-
-test('Seedance bills exactly the seconds requested, and 1.5 pro splits on audio', () => {
-  const silent = priceOf('seedance_img2video', {
-    model: 'seedance-1-5-pro-251215', resolution: '1080p', durationSeconds: 6,
+test('Seedance bills exactly the seconds requested', () => {
+  const clip = priceOf('seedance_img2video', {
+    model: 'dreamina-seedance-2-0-260128', resolution: '1080p', durationSeconds: 6,
   });
-  assert.equal(silent.key, 'seedance.1-5-pro-silent.1080p');
-  assert.equal(silent.quantity, 6);
-  const audio = priceOf('seedance_img2video', {
-    model: 'seedance-1-5-pro-251215', resolution: '1080p', durationSeconds: 6, generateAudio: true,
-  });
-  assert.equal(audio.key, 'seedance.1-5-pro-audio.1080p');
+  assert.equal(clip.key, 'seedance.2-0.1080p');
+  assert.equal(clip.quantity, 6);
 });
 
 test('speech is recorded per 1,000 characters, not per character', () => {
@@ -139,17 +110,10 @@ test('a model and resolution nobody priced comes back null, not as an invented k
   // The composed key has to exist in prices.tsv or the ledger is unusable: cost-report.sh
   // answers an unknown key with exit 1, which costs the episode its whole cost verdict. Every
   // combination the clients accept is walked here — the vocabularies genuinely do not line up
-  // (480p everywhere with no 480p row, 1-5-pro-audio priced at 1080p only, no veo.lite.4k).
+  // (480p everywhere with no 480p row).
   const known = priceKeys();
   const combos = [
-    ...['veo-3.1-lite-generate-preview', 'veo-3.1-fast-generate-preview', 'veo-3.1-generate-preview']
-      .flatMap((model) => ['720p', '1080p', '4k'].map((resolution) =>
-        ['veo_text2video', { model, resolution }])),
-    ...['omni_text2video', 'omni_img2video', 'omni_extend', 'omni_edit']
-      .flatMap((tool) => ['360p', '720p', '1080p', '4k'].map((resolution) =>
-        [tool, { resolution, durationSeconds: 5 }])),
-    ...['seedance-1-5-pro-251215', 'seedance-1-0-pro-250528', 'seedance-1-0-pro-fast-251015',
-        'dreamina-seedance-2-5-260628', 'dreamina-seedance-2-0-260128',
+    ...['dreamina-seedance-2-5-260628', 'dreamina-seedance-2-0-260128',
         'dreamina-seedance-2-0-fast-260128', 'dreamina-seedance-2-0-mini-260615']
       .flatMap((model) => ['480p', '720p', '1080p', '4k'].flatMap((resolution) =>
         [false, true].map((generateAudio) =>
@@ -174,39 +138,14 @@ test('a model and resolution nobody priced comes back null, not as an invented k
   // the mapping does not know about would keep being recorded as an unpriced call forever.
   const reachable = new Set(combos.map(([tool, args]) => priceOf(tool, args).key).filter(Boolean));
   const unreachable = [...known]
-    .filter((k) => /^(veo|seedance|omni)\./.test(k))
+    // Rows for retired engines stay for earlier ledgers; no new call composes them.
+    .filter((k) => /^seedance\./.test(k) && !/^seedance\.1-/.test(k))
     .filter((k) => !reachable.has(k));
   assert.deepEqual(unreachable, [], 'priced rows no call can reach — add them to PRICED_VIDEO_KEYS');
   // The guard must not swallow the whole matrix — the routes the skills actually use still price.
   assert.equal(priceOf('seedance_img2video',
-    { model: 'seedance-1-5-pro-251215', resolution: '1080p', durationSeconds: 6 }).key,
-    'seedance.1-5-pro-silent.1080p');
-  assert.equal(priceOf('veo_img2video',
-    { model: 'veo-3.1-lite-generate-preview', resolution: '1080p' }).key, 'veo.lite.1080p');
-});
-
-test('an extension is billed for the 7 seconds it adds', () => {
-  // veo_extension has no durationSeconds in its schema, so the 8s default used to apply —
-  // 14% over on every extension call.
-  const ext = priceOf('veo_extension', { model: 'veo-3.1-fast-generate-preview' });
-  assert.equal(ext.key, 'veo.fast.720p');
-  assert.equal(ext.quantity, 7);
-  assert.match(ext.note, /unconfirmed/);
-});
-
-test('omni is billed per call, so a shorter clip saves nothing', () => {
-  // Measured 2026-09-06: a 3s 360p call moved the spend counter $1.01, the same amount the
-  // meter reports for every call. Recording seconds here would under-report a 3s cut 3x.
-  for (const seconds of [3, 5, 10]) {
-    const r = priceOf('omni_text2video', { resolution: '360p', durationSeconds: seconds });
-    assert.equal(r.key, 'omni.360p');
-    assert.equal(r.quantity, 1, `${seconds}s should still be one billed call`);
-    assert.match(r.note, /flat per-call/);
-  }
-  assert.equal(priceOf('omni_img2video', {}).key, 'omni.720p', 'the default resolution is 720p');
-  assert.equal(priceOf('omni_edit', { resolution: '720p' }).quantity, 1);
-  assert.equal(priceOf('omni_extend', { resolution: '720p', durationSeconds: 6 }).quantity, 1);
-  assert.equal(isBillableTool('omni_extend'), true);
+    { model: 'dreamina-seedance-2-5-260628', resolution: '1080p', durationSeconds: 6 }).key,
+    'seedance.2-5.1080p');
 });
 
 test('mlx local calls log at $0 with the matching unit', () => {
@@ -276,7 +215,7 @@ test('events append as whole JSON lines', () => {
 });
 
 test('only generation tools are recorded', () => {
-  for (const t of ['veo_img2video', 'seedance_text2video', 'gpt_image_text2img',
+  for (const t of ['seedance_text2video', 'gpt_image_text2img',
                    'image_local_generate', 'tts_generate', 'tts_elevenlabs_generate',
                    'music_generate_clip', 'suno_generate',
                    'mlx_image_generate', 'mlx_image_edit',

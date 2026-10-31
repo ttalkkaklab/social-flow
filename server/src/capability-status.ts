@@ -5,8 +5,8 @@
  *
  * Today a missing key surfaces one way only: you call the tool, it fails, and the error
  * message explains what to set. That message is well written — but it arrives **after** the
- * plan was made around a tool that was never going to run. A storyboard that plans two Veo
- * b-roll slots on a machine with no `GEMINI_API_KEY` has already spent the review rounds
+ * plan was made around a tool that was never going to run. A storyboard that plans two Seedance
+ * b-roll slots on a machine with no `ARK_API_KEY` has already spent the review rounds
  * before anyone finds out.
  *
  * The server knows the answer before any of that. It reads the same environment at startup to
@@ -71,12 +71,8 @@ export function capabilityStatus(): {
     {
       capability: 'video_generation',
       providers: [
-        { provider: 'veo (Gemini)', configured: gemini, needs: 'GEMINI_API_KEY',
-          note: 'veo_text2video · veo_img2video · veo_reference · veo_extension' },
-        { provider: 'gemini omni (Gemini)', configured: gemini, needs: 'GEMINI_API_KEY',
-          note: 'omni_text2video · omni_img2video · omni_extend · omni_edit — 360p drafts, 3-10s lengths, instruction editing' },
         { provider: 'seedance (BytePlus ModelArk)', configured: has(config.arkApiKey), needs: 'ARK_API_KEY',
-          note: 'seedance_text2video · seedance_img2video · seedance_reference' },
+          note: 'seedance_text2video · seedance_img2video · seedance_reference (Seedance 2.x; spoken cuts need seedance_reference with voice samples)' },
         { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
           note: 'ltx_video_generate · fasth3_omni_reference — 24fps rgb8 muxed to mp4, RAM-capped; not the default path' },
         { provider: 'astra-genai-desktop', configured: has(config.astraGenaiApiKey), needs: 'ASTRA_GENAI_API_KEY', note: 'Gateway text/image/audio video, extend/retake/keyframes; discover installed models and LoRA refs with astra_genai_catalog.' },

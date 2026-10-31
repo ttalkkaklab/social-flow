@@ -1136,14 +1136,14 @@ change, still swap, and ambient drift are not subject action. On a motion slide,
 appears in `visual.slide.plan` and maps to the narration groups.
 
 In scope, **on generated shots on top**: `broll` shots, motion-background scenes (`visual.video`),
-and `quote` speech clips (`visual.clip`) — anything produce will hand to `veo_*` or `seedance_*`
+and `quote` speech clips (`visual.clip`) — anything produce will hand to a video adapter
 — the four slots, the vendor words, one move chosen from the feel, the cut length, the engine
 fit, and **the stored clip prompt** (scenes-schema §clip prompt): each generated shot is one
 API call whose final prompt is stored on the shot (`visual.prompt` · `visual.video.prompt` ·
-`visual.clip.prompt`) in the planned route's grammar (`visual.engine` or the type default —
-b-roll → veo, motion background → seedance, speech clip → veo_reference — or the host video tool
+`visual.clip.prompt`) in the planned route's grammar (`visual.engine`, Seedance when absent, or the host video tool
 when `PRODUCTION.videoProvider` is `host`, CLAUDE.md §Host media tools first); produce sends it
-verbatim, so what you read here is what the model gets. On a still, `camera.movement` picks the builder's Ken Burns move (the still lane — eased
+verbatim, so what you read here is what the model gets. A slot that still names `engine:"veo"`
+keeps its existing clip under `visual.reuse` or picks a supported engine. On a still, `camera.movement` picks the builder's Ken Burns move (the still lane — eased
 zoom towards a focus point, pan, cover punch, handheld drift; directing-grammar §5 Still
 column) and `speed` sets how hard the window moves (the §4 still-lane beat ladder — the two
 fast rows are rationed like the close-up, so read a `fast`/`very fast` still against its
@@ -1180,20 +1180,19 @@ finding; a silent departure is.
 - **P0-2 another slot is empty** — `movement`, `speed` or `framing` left blank. `static` is a
   decision; blank is a slot nobody decided.
 - **P0-3 words the engine doesn't know** — `push in` where it should be `dolly in`, `orbit`
-  where it should be `arc shot`, `zoom in` where the camera moves rather than the lens. `push`
-  appears 0 times in the canonical Veo text.
+  where it should be `arc shot`, `zoom in` where the camera moves rather than the lens.
 - **P0-4 more than one move in `movement`** with no reason written beside it. On a long take
   (10s+) it is one move, no exception.
 - **P0-5 seconds inside a slot** ("3-second dolly in"). Length lives in `duration`, and a
   number in the slot specifies it twice.
-- **P0-6 an exclusion inside a slot** ("no text", "without letterboxing"). Exclusions are Veo's
-  `negativePrompt` argument; on Seedance they mean re-describing the scene so the thing has no
-  place to appear.
+- **P0-6 an exclusion inside a slot** ("no text", "without letterboxing"). Exclusions mean
+  re-describing the scene so the thing has no place to appear.
 - **P0-7 the length fights the purpose** — a face carrying a line at 3s, an object insert at
   12s, a long take holding two moves. The §cut length table is the yardstick. Also flag a
   Seedance shot asking for more seconds than it will use: that engine bills what you request.
-- **P0-8 engine misassignment** — a drawn character routed to `veo_reference`, a real face
-  routed to Seedance 2.x (it refuses them), more than 3 references on Veo, or a
+- **P0-8 engine misassignment** — new generation planned on Veo, Gemini Omni or Seedance 1.x (`video_engine_unsupported`), a
+  real face routed to Seedance 2.x (it refuses them; photoreal real people go to an LTX lane),
+  a spoken cut on an adapter without a voice lane (`voice_lane_required`), or a
   `visual.character` id that isn't in the channel cast (profile §2 · `assets/characters/<id>/`).
   An entry may be a bare id or `{ id, scope }` — read the id out of either form.
 - **P0-9 the camera direction is buried in the description** — written inside `bgPrompt` or the
@@ -1211,11 +1210,9 @@ finding; a silent departure is.
   is two instructions fighting. The prompt is assembled from the slots
   (`assemble-bg-prompt.js --clip`) — when they disagree, one of them was edited by hand.
 - **P0-12 timing grammar wrong for the route** — a timecode (`[00:04]`) or digit seconds in a
-  seedance-routed prompt (2.0 self-reports unstable precision timing), digit seconds on a veo
-  route (spans are written `[00:00-00:02]` there), or a `duration` outside the routed engine's
-  server grid — veo takes 4/6/8s (1080p/4K and the reference lane 8s only), the default
-  seedance 1.5 pro takes 4–12s. In-clip state changes are written in words ("in under half a
-  second") on either route.
+  seedance-routed prompt (2.0 self-reports unstable precision timing), or a `duration` outside
+  the routed engine's server grid — Seedance 2.0 grades take 4–15s, 2.5 takes 4–30s. In-clip
+  state changes are written in words ("in under half a second").
 - **P0-13 fake action under an action-required motion policy** — `visual.action` merely renames
   a camera move, whole-photo zoom or pan, caption change, still swap, or ambient drift. The field
   has to say what the subject or evidence visibly does; a motion slide also names that change in
@@ -1240,7 +1237,7 @@ shot/reverse-shot or POV/reaction sequence; do not penalize each reply as emphas
 | Feel written and served | 30 | `shot.feel` is a feeling (not a restated `info`, not "cinematic"/"dynamic"); `size` and `angle` match the directing-grammar §5 row for it, or a reason for leaving the row is written on the shot; the size also shows what `info` needs (§2.1 — the establishing shot of a scene wide, the line that matters on the face, the object as an insert); the hook cut and speech clips sit at `eye`; on a generated still, `shot.space` is in the camera frame with `layout` and (when a person is on screen) `facing` as the visible result, no banned language | every shot |
 | Rationing and sequencing | 10 | this shot doesn't break the across-shot rules — a second close-up (`cu`·`choker`·`ecu`) in the scene, a third `choker`/`ecu` in the episode, a second `dutch` or one without its reason, a close-up opening not paid back by the next shot, a wide under 1.5× the close beside it, a later shot of the scene that flips `space.line` without a legal 180° crossing written (directing-grammar §6 rule 11), a shot after the first with no `transition`, a `jcut` where time, place or attention moved between the two shots, a join that says something other than what happened between them (the ordered table in scenes-schema §scene transition), consecutive stills of the same size and angle in one scene (directing-grammar §6 rule 16) | every shot |
 | Slots complete, in the engine's own words, one move chosen from the feel | 30 | four slots filled, vendor vocabulary, one move, and the move sits in the §4–§5 rows for that feel (a `dolly in` on "loss" or a `dolly out` on "realisation" contradicts it); the stored clip prompt exists, says what the slots say, and keeps the route's timing grammar | generated shots |
-| Length fits the purpose | 15 | matches the §cut length table and the feel row, it is the length that will be used, and it sits inside the routed engine's server grid (veo 4/6/8 · 1.5 pro 4–12s) | generated shots |
+| Length fits the purpose | 15 | matches the §cut length table and the feel row, it is the length that will be used, and it sits inside the routed engine's server grid (Seedance 2.0 grades 4–15s · 2.5 4–30s) | generated shots |
 | Engine and reference fit | 10 | the right lane for what's on screen, references inside the cap, cast ids real | generated shots |
 | An `end` worth stopping on | 5 | names a composition the frame can actually land on, not a mood | generated shots |
 
@@ -1383,7 +1380,7 @@ full marks on the first axis — what gets docked is a scene that didn't say.
 ## Sound findings
 | Scene | What it will sound like now | Finding |
 |---|---|---|
-| 2 | veo clip, audio unwritten | the engine will invent speech under the narration |
+| 2 | generated clip, audio unwritten | the engine will invent speech under the narration |
 | 6 | 딸깍맨 in Kore | profile §2 casts 딸깍맨 as Charon |
 
 ## P0 list
@@ -1534,7 +1531,7 @@ Render integrity: NN/30 (evidence: …)
 Screen design: NN/30 (evidence: …)
 
 ## Correction directives (in priority order — concrete enough to move into a regeneration prompt)
-1. <file> — <what's wrong> → <what to do> (for `veo_*` move negated nouns into `negativePrompt`; the image tools have no such argument — design the element out of the scene sentence)
+1. <file> — <what's wrong> → <what to do> (no video or image tool takes a negative argument — design the element out of the scene sentence)
 
 ## Previous findings resolved? (only when a user-requested change came back)
 - <finding> → resolved | unresolved

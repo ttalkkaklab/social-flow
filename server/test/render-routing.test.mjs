@@ -237,7 +237,7 @@ test('zoom ladder uses whole-cut averages, quintic slow easing and accelerating 
 });
 
 // ── first/last frames ──
-const framed=()=>({type:'points',duration:5,visual:{bg:'images/start.png',frames:{mode:'first_last',reason:'Arrive at the doorway.',endState:'The same figure stands at the threshold.',end:'images/end.png'},video:{engine:'seedance',model:'seedance-1-5-pro-251215',generateAudio:false}}});
+const framed=()=>({type:'points',duration:5,visual:{bg:'images/start.png',frames:{mode:'first_last',reason:'Arrive at the doorway.',endState:'The same figure stands at the threshold.',end:'images/end.png'},video:{engine:'seedance',model:'dreamina-seedance-2-0-260128',generateAudio:false,realFaceInput:false}}});
 test('conditional frames preserve legacy images and forward the actual end image',()=>{
  assert.equal(framePlan({visual:{bg:'a.png'}}).mode,'first');
  const s=framed();assert.deepEqual(checkFrames(s),[]);assert.equal(scenePlan(s).lastImagePath,s.visual.frames.end);
@@ -247,7 +247,6 @@ test('contradictory frame inputs and unsupported end-frame models cannot generat
  const s=framed();s.visual.video.lastImagePath='different.png';assert.throws(()=>scenePlan(s),/disagree/);
  delete s.visual.video.lastImagePath;s.visual.frames.mode='first';assert.throws(()=>scenePlan(s),/first-only/);
  s.visual.frames.mode='first_last';s.visual.frames.end=s.visual.bg;assert.throws(()=>scenePlan(s),/distinct/);
- s.visual.frames.end='images/end.png';s.visual.video.model='seedance-1-0-pro-fast-251015';s.visual.video.modelReason='fixture';assert.throws(()=>scenePlan(s),/supported image-to-video/);
 });
 test('frame edits stale approval and the browser uses the same plan contract',()=>{
  const w={SCENES:[framed()]};const before=signature(w);w.SCENES[0].visual.frames.endState='Different arrival';assert.notEqual(signature(w),before);

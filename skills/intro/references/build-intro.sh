@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Channel intro render — normalizes the veo source to 1080×1920/30fps, layers the
+# Channel intro render — normalizes the generated source to 1080×1920/30fps, layers the
 # channel-name text plate slide-in + real-pixel lockup crossfade + aligned sonic-logo
 # mix on top to build the master, then derives the stinger.
 #
 # Usage: build-intro.sh <workdir>
-#   <workdir>/intro-raw.mp4  : final veo render (9:16 — any resolution, normalized to 1080×1920)
+#   <workdir>/intro-raw.mp4  : final generated render (9:16 — any resolution, normalized to 1080×1920)
 #   <workdir>/lockup.png     : 1080×1920 full lockup (background+character+channel name — lockup-template full capture)
 #   <workdir>/text-plate.png : (optional) transparent text plate (text-mode alpha capture) —
 #                              when present, slides in from TEXT_AT (channel-name reveal)
-#   <workdir>/sonic.wav      : (optional) sonic logo — mixed aligned at SONIC_AT, veo audio ducked under it
+#   <workdir>/sonic.wav      : (optional) sonic logo — mixed aligned at SONIC_AT, source audio ducked under it
 # Output: <workdir>/intro-master.mp4 · intro-stinger.mp4 · frames/ (review frames)
 #
 # Encoding matches the build-outro.sh final-mux family — usable as an xfade splice input for main videos.
@@ -23,7 +23,7 @@ TRIM_START=${TRIM_START:-0}      # cut a stalled opening (seconds) — to tighte
 LOCKUP_XF=${LOCKUP_XF:-0.6}      # real-pixel lockup crossfade length — final fix for generation distortion
 HOLD=${HOLD:-0.8}                # ending freeze hold — lets the lockup sink in (best practice 0.5–1s)
 STINGER=${STINGER:-2.5}          # stinger length — tail cut of the master (≤2.5s for short-form splicing)
-AUDIO=${AUDIO:-native}           # native = keep veo audio | none = drop veo audio
+AUDIO=${AUDIO:-native}           # native = keep the clip's audio | none = drop it
 FADE_OUT=${FADE_OUT:-0.5}        # audio ending fade — keeps the sonic-logo tail, only cleans the very end
 SONIC_VOL=${SONIC_VOL:-1.0}      # sonic-logo gain (balance before the final loudnorm)
 ROOMTONE=${ROOMTONE:-0}          # 1 = mix a low-level room-tone bed across the whole clip (avoids silent starts and abrupt cutoffs)
@@ -46,7 +46,7 @@ mkdir -p frames
 
 # ── input array + variable indexes (text-plate/sonic join the inputs only when present)
 HAS_AUDIO=$(ffprobe -v error -select_streams a -show_entries stream=codec_type -of csv=p=0 intro-raw.mp4 | head -1)
-[ "$AUDIO" = "native" ] && [ -z "$HAS_AUDIO" ] && { echo "warning: no veo audio — ignoring"; AUDIO=none; }
+[ "$AUDIO" = "native" ] && [ -z "$HAS_AUDIO" ] && { echo "warning: no source audio — ignoring"; AUDIO=none; }
 IN=(-ss "$TRIM_START" -i intro-raw.mp4 -loop 1 -framerate "$FPS" -t "$D" -i lockup.png)
 IDX=2; TP_IDX=""; SN_IDX=""
 if [ -f text-plate.png ]; then IN+=(-loop 1 -framerate "$FPS" -t "$D" -i text-plate.png); TP_IDX=$IDX; IDX=$((IDX+1)); fi
@@ -65,7 +65,7 @@ VF+="[1:v]format=rgba,fade=t=in:st=${ST}:d=${LOCKUP_XF}:alpha=1[lk];
      ${BASE}[lk]overlay=0:0:format=auto,
      tpad=stop_mode=clone:stop_duration=${HOLD},format=yuv420p[v]"
 
-# ── audio graph — 4 paths across veo audio × sonic logo, unified at loudnorm -14
+# ── audio graph — 4 paths across source audio × sonic logo, unified at loudnorm -14
 AF=""; AMAP=""
 if [ "$AUDIO" = "native" ]; then
   AF+="[0:a]asetpts=PTS-STARTPTS,aformat=channel_layouts=stereo,aresample=48000,

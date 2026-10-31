@@ -39,14 +39,13 @@
  *       # the produce §3 recipe) + subject motion + positive locks + the visual.audio
  *       # sentence. storyboard §4 stores the stdout whole (scenes-schema §clip prompt);
  *       # produce sends it verbatim. --engine picks the machine checks: seedance blocks
- *       # timecodes (2.0 responds to shot numbers only; 1.5 pro shows none in any
- *       # example) and digit seconds; veo allows [mm:ss] timestamps and blocks digit
- *       # seconds; seedance-2.5 takes integer-second forms ("0-3 seconds", "[1s-4s]").
+ *       # timecodes (2.0 responds to shot numbers only) and digit seconds;
+ *       # seedance-2.5 takes integer-second forms ("0-3 seconds", "[1s-4s]").
  *       # State changes are written in words on every route: "in under half a second".
  *       # Negative directives are blocked except the Audio: sentence ("no music, no
  *       # speech" is the established wording) and, on seedance routes, the vendor's
  *       # artifact classes (subtitles·text·logo·watermark·bgm — 2.0 guide templates
- *       # them). A seedance route takes two more rules the veo route doesn't:
+ *       # them). A seedance route takes two more rules:
  *       # **the body carries no Korean** (Chinese or English only; Korean lives inside
  *       # the quotes of a dialogue line, or the shot routes to seedance-2.5) and
  *       # **--locks is required** — the image lane closes with a consistency lock, which
@@ -68,7 +67,7 @@
  * Owner 2026-08-25: never ask for a letterbox / lower-third fade / top-bottom gradient.
  * The image tools (gpt_image_text2img, image_local_generate) have
  * no exclusion argument, so --exclude goes into the body as the short noun list the
- * profile requires; only veo_* takes a separate negativePrompt.
+ * profile requires.
  *
  * stdout is the assembled prompt (or OK on --check). Banned language anywhere in the
  * assembled prompt — the space slots, --scene, --mood, --exclude — prints to stderr and
@@ -137,9 +136,8 @@ const BANNED = [
 ];
 
 // ── Clip mode — the generated-video prompt checks ──
-// Negative directives in the body draw the noun instead (measured 4 of 4 on images; Veo's
-// own guide marks the form not recommended) — exclusions are Veo's negativePrompt argument,
-// and on Seedance a re-description plus positive locks. The Audio: sentence is exempt:
+// Negative directives in the body draw the noun instead (measured 4 of 4 on images) —
+// on Seedance an exclusion becomes a re-description plus positive locks. The Audio: sentence is exempt:
 // "no music, no speech" is a state description, the established wording (scenes-schema
 // §clip audio). Edit directives about cutting keep whichever negation word carries them.
 // storyboard-html-template.html carries NEG_RE/NEG_OK verbatim (negHits) — the selftest
@@ -150,8 +148,7 @@ const NEG_OK = /^(cut|cuts|camera cuts|timecode|timecodes|timecode splits|refere
 const NEG_RE = /\b(no|not|avoid|avoids|never|don't|dont|doesn't|won't)\b[ \t]*([a-z' \t-]{0,24})/gi;
 // On a seedance route the vendor's own 2.0 guide templates directive negatives for the
 // artifact classes only — subtitles, on-frame text, logos, watermarks (2.5 adds audio/BGM).
-// Everything else stays positive re-description. On veo every exclusion is the
-// negativePrompt argument, so no body negative is exempt there.
+// Everything else stays positive re-description.
 const ARTIFACT_OK = /(subtitle|caption|text|logo|watermark|bgm)/;
 function negDirectiveHits(text, engine) {
   if (!text) return [];
@@ -169,24 +166,23 @@ function negDirectiveHits(text, engine) {
   return out;
 }
 // Timecodes and digit seconds. Seedance 2.0 self-reports unstable precision timing, so a
-// Seedance-routed prompt takes neither; Veo 3.1 presents [mm:ss] interval prompting as a
-// workflow, so on veo the timestamp form passes and only bare digit seconds are blocked
-// (in-clip state changes are written in words on both engines: "in under half a second").
+// Seedance-routed prompt takes neither (in-clip state changes are written in words:
+// "in under half a second").
 // Bracketed spans and zero-led clock times only — "9:16" is a ratio, not a timecode.
 const TIMESTAMP_RE = /\[\d{1,2}:\d{2}(?:\s*[-–~]\s*\d{1,2}:\d{2})?\]|\b0\d?:\d{2}\b/;
 const DIGIT_SECONDS_RE = /\b(\d{1,3})(?:\.\d+)?\s*(s|secs?|seconds?)\b/gi;
 function timingHits(text, engine) {
   const hits = [];
   if (!text) return hits;
-  if (TIMESTAMP_RE.test(text) && engine !== "veo")
-    hits.push("clock timecode — 2.0 responds to shot numbers, not timestamps, and 1.5 pro shows none in any example; order beats by description and cut in the edit (on seedance-2.5 write integer-second forms, on veo [mm:ss] is the workflow)");
+  if (TIMESTAMP_RE.test(text))
+    hits.push("clock timecode — 2.0 responds to shot numbers, not timestamps; order beats by description and cut in the edit (on seedance-2.5 write integer-second forms)");
   if (engine === "seedance-2.5") return hits;   // 2.5 officially takes integer-second timestamps ("0-3 seconds", "[1s-4s]", "at the 2-second mark")
   let m;
   DIGIT_SECONDS_RE.lastIndex = 0;
   while ((m = DIGIT_SECONDS_RE.exec(text)) !== null) {
     // A bare "s" on a number over 19 is a decade ("80s film look"), not a length.
     if (m[2].toLowerCase() === "s" && Number(m[1]) > 19) continue;
-    hits.push("digit seconds (\"" + m[0] + "\") — length lives in `duration`; an in-clip state change is written in words (\"in under half a second\")" + (engine === "veo" ? ", or as a [mm:ss] span on Veo" : ""));
+    hits.push("digit seconds (\"" + m[0] + "\") — length lives in `duration`; an in-clip state change is written in words (\"in under half a second\")");
     break;
   }
   return hits;
@@ -194,8 +190,7 @@ function timingHits(text, engine) {
 
 // ── The two rules only the Seedance lane has ──
 // Language: the prompt body reads Chinese or English. dreamina-seedance-2-5 is the one model
-// that takes Korean, and on 1.5 pro Korean belongs **inside the quotes of a dialogue line** —
-// the model lip-syncs that. So Hangul outside quotes fails a seedance route here, and
+// that takes Korean; elsewhere Korean belongs **inside the quotes of a dialogue line**. So Hangul outside quotes fails a seedance route here, and
 // seedance-client.ts refuses the same call at the boundary.
 const QUOTED_RE = /"[^"]*"|“[^”]*”|「[^」]*」/g;
 const HANGUL_RE = /[가-힣]+(?:[ \t]+[가-힣]+)*/;
@@ -531,27 +526,25 @@ function selftest() {
     c1.prompt,
     "chest-up on the subject, pauses, then very slow dolly in, settling on subject centred at mid-frame. steam curling off the cup. the notepad's three lines stay identical in every frame. Audio: quiet room tone, no music, no speech.");
   ok("clip: a move that does not travel (handheld) keeps the plain span",
-    clipAssemble({ camera: { movement: "handheld", speed: "steady", framing: "chest-up", end: "the same" }, engine: "veo" })
+    clipAssemble({ camera: { movement: "handheld", speed: "steady", framing: "chest-up", end: "the same" }, engine: "seedance" })
       .prompt.startsWith("chest-up, steady handheld, ending on the same."));
   eq("clip: 'no music, no speech' in the Audio sentence is exempt", c1.negHits.length, 0);
   eq("clip: clean prompt has no timing hits", c1.timeHits.length, 0);
   eq("clip: all four slots present", c1.missing.length, 0);
 
   ok("clip: static camera drops the speed word",
-    clipAssemble({ camera: { movement: "static", speed: "n/a", framing: "wide on the desk", end: "unchanged" }, engine: "veo" })
+    clipAssemble({ camera: { movement: "static", speed: "n/a", framing: "wide on the desk", end: "unchanged" }, engine: "seedance" })
       .prompt.startsWith("wide on the desk, static camera, ending on unchanged."));
   ok("clip: missing end is reported",
-    clipAssemble({ camera: { movement: "pan", speed: "slow", framing: "wide" }, engine: "veo" }).missing.indexOf("end") >= 0);
+    clipAssemble({ camera: { movement: "pan", speed: "slow", framing: "wide" }, engine: "seedance" }).missing.indexOf("end") >= 0);
   ok("clip: negative directive in the body is caught",
-    clipAssemble({ camera: camA, engine: "veo", motion: "no sudden moves, hands resting" }).negHits.length > 0);
+    clipAssemble({ camera: camA, engine: "seedance", motion: "no sudden moves, hands resting" }).negHits.length > 0);
   ok("clip: the cut line's negation is allowed",
     clipAssemble({ camera: camA, engine: "seedance", locks: "Sequence of cuts, no timecodes — cuts only at the specified points, the camera does not cut on its own" }).negHits.length === 0);
   ok("clip: timecode blocked on seedance",
     clipAssemble({ camera: camA, engine: "seedance", motion: "at [00:04] the door closes" }).timeHits.length > 0);
-  eq("clip: timestamp allowed on veo",
-    clipAssemble({ camera: camA, engine: "veo", motion: "[00:00-00:02] she looks up, [00:02-00:06] the door closes" }).timeHits.length, 0);
-  ok("clip: digit seconds blocked on both",
-    clipAssemble({ camera: camA, engine: "veo", motion: "the light comes up over 2 seconds" }).timeHits.length > 0);
+  ok("clip: digit seconds blocked",
+    clipAssemble({ camera: camA, engine: "seedance", motion: "the light comes up over 2 seconds" }).timeHits.length > 0);
   eq("clip: a state change in words passes",
     clipAssemble({ camera: camA, engine: "seedance", motion: "the visor snaps shut in under half a second" }).timeHits.length, 0);
   eq("clip: 9:16 is a ratio, not a timecode",
@@ -559,15 +552,13 @@ function selftest() {
   eq("clip: a decade is not a length",
     clipAssemble({ camera: camA, engine: "seedance", motion: "soft 80s film look on the highlights" }).timeHits.length, 0);
   ok("clip: --with-space prepends the From-the-camera sentence",
-    clipAssemble({ camera: camA, engine: "veo", withSpace: true, layout: "speaker centred", facing: "faces the camera" })
+    clipAssemble({ camera: camA, engine: "seedance", withSpace: true, layout: "speaker centred", facing: "faces the camera" })
       .prompt.startsWith("From the camera: speaker centred. faces the camera."));
   ok("clip: banned space language still caught",
-    clipAssemble({ camera: camA, engine: "veo", motion: "left view of the desk" }).hits.length > 0);
-  // Artifact-class negatives — vendor-templated on seedance (2.0 guide), negativePrompt-only on veo.
+    clipAssemble({ camera: camA, engine: "seedance", motion: "left view of the desk" }).hits.length > 0);
+  // Artifact-class negatives — vendor-templated on seedance (2.0 guide).
   eq("clip: 'avoid generating any text or subtitles' passes on seedance",
     clipAssemble({ camera: camA, engine: "seedance", locks: "avoid generating any text or subtitles, do not generate a watermark" }).negHits.length, 0);
-  ok("clip: the same line is caught on veo (belongs in negativePrompt)",
-    clipAssemble({ camera: camA, engine: "veo", locks: "avoid generating any text or subtitles" }).negHits.length > 0);
   ok("clip: a non-artifact negative is still caught on seedance",
     clipAssemble({ camera: camA, engine: "seedance", motion: "no sudden moves" }).negHits.length > 0);
   // seedance-2.5 takes integer-second timestamp forms; the clock form stays blocked.
@@ -586,12 +577,8 @@ function selftest() {
   eq("clip: seedance-2.5 reads Korean",
     clipAssemble({ camera: camA, engine: "seedance-2.5", motion: "컵에서 김이 오른다",
       locks: "the notepad stays identical" }).hanHits.length, 0);
-  eq("clip: Korean on a veo route is not this check's business",
-    clipAssemble({ camera: camA, engine: "veo", motion: "컵에서 김이 오른다" }).hanHits.length, 0);
   eq("clip: a seedance clip with no lock is caught",
     clipAssemble({ camera: camA, engine: "seedance", motion: "steam curling off the cup" }).lockMissing, true);
-  eq("clip: veo needs no lock (its exclusions ride in negativePrompt)",
-    clipAssemble({ camera: camA, engine: "veo", motion: "steam curling off the cup" }).lockMissing, false);
 
   // Drift guard — storyboard-html-template.html carries the same three regexes.
   const tpl = path.join(__dirname, "storyboard-html-template.html");
@@ -701,8 +688,8 @@ function main(argv) {
   }
 
   if (args.clip) {
-    if (args.engine !== "seedance" && args.engine !== "veo" && args.engine !== "seedance-2.5") {
-      console.error("assemble-bg-prompt: --clip needs --engine seedance|veo|seedance-2.5 — the timing checks differ per route");
+    if (args.engine !== "seedance" && args.engine !== "seedance-2.5") {
+      console.error("assemble-bg-prompt: --clip needs --engine seedance|seedance-2.5 — the timing checks differ per route");
       process.exit(2);
     }
     // Slot overrides beat the file — the same precedence as the space flags above.
@@ -721,7 +708,7 @@ function main(argv) {
     if (!r.prompt) { console.error("assemble-bg-prompt: nothing to assemble — no slots, motion, locks or audio"); process.exit(2); }
     let bad = 0;
     r.hits.forEach(h => { console.error("banned: \"" + h.match + "\" — " + h.why); bad++; });
-    r.negHits.forEach(h => { console.error("banned: \"" + h + "\" — negative directive in the body; Veo takes exclusions in negativePrompt, Seedance wants the scene re-described plus positive locks"); bad++; });
+    r.negHits.forEach(h => { console.error("banned: \"" + h + "\" — negative directive in the body; re-describe the scene and close with positive locks"); bad++; });
     r.timeHits.forEach(h => { console.error("banned: " + h); bad++; });
     r.hanHits.forEach(h => { console.error("banned: Korean in the body (\"" + h + "\") — a seedance prompt reads Chinese or English; Korean goes inside the quotes of a dialogue line, or the shot routes to seedance-2.5"); bad++; });
     if (r.lockMissing) {

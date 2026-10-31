@@ -166,7 +166,7 @@ ffmpeg -i <mp4> -af volumedetect -f null - 2>&1 | grep -E "max_volume|mean_volum
 Award points only with evidence from actually viewing the frames and measuring the audio.
 For findings fixable with post-processing knobs (TRIM_START, TEXT_AT, SONIC_AT,
 etc.), mark the fix directive **"fixable in post"** — it lets the delegator skip
-the cost of a veo regeneration.
+the cost of a video regeneration.
 
 ## Output format (same structure as profile mode; only the tail changes)
 
@@ -179,7 +179,7 @@ Brand fidelity: NN/35 (evidence: …)
 Motion quality: NN/35 (evidence: …)
 Composition & delivery: NN/30 (evidence: …)
 
-## Fix directives (priority order — concrete enough to carry into a veo prompt or post-processing knob)
+## Fix directives (priority order — concrete enough to carry into a video prompt or post-processing knob)
 1. <segment/location> — <symptom> → <directive> (whether fixable in post)
 
 ## Resolution of previous findings (only when there was a previous round)

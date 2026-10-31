@@ -27,8 +27,8 @@ const clause = value => String(value ?? '').trim().replace(/[.!?\s]*$/, '');
 function missing_(fields) {
   return Object.entries(fields).filter(([, value]) => !text(value)).map(([name]) => 'Missing ' + name);
 }
-/* Beats are ordered by description, never by a clock: Seedance 1.5 Pro shows no timestamps in any
-   vendor example and 2.0 self-reports unstable precision timing (scenes-schema §clip prompt). The
+/* Beats are ordered by description, never by a clock: Seedance 2.0 self-reports unstable
+   precision timing (scenes-schema §clip prompt). The
    seconds stay in the plan for the playback review, which compares observed states at those times. */
 function beatsInWords(beats) {
   return beats.map((b, i) => (i === 0 ? 'At first' : i === beats.length - 1 ? 'Finally' : 'Then') + ', ' + clause(b.state)).join('. ');

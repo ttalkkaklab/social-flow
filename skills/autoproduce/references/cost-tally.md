@@ -51,7 +51,7 @@ key <TAB> quantity <TAB> memo
 image.gpt-image-2.high	1	produce: cover background scene-1
 image.local	3	produce: points backgrounds scene-2~4
 image.gpt-image-2.high	1	produce: §1.5 remake scene-1
-veo.lite.1080p	8	produce: b-roll a1 — 8s generated, 4s used
+seedance.2-0-fast.720p	4	produce: b-roll a1 — 4s requested
 tts.gemini-flash	0.412	produce: narration, 412 chars
 music.lyria-clip	1	produce: BGM 30s
 ```
@@ -75,7 +75,6 @@ silently.
 | Key | Unit | How to write it |
 |---|---|---|
 | `image.*` | image | number of images made (`image.local` and `image.mlx` are $0) |
-| `veo.*` | second | **generated length**. Generate 8s and use only 4s, still `8` (1080p is 8s-only) |
 | `seedance.*` | second | the requested `durationSeconds` as-is. Note the response's `completion_tokens` in the memo |
 | `video.mlx` | second | `numFrames` ÷ 24 (LTX is 24 fps) |
 | `tts.*` | 1000 chars | **characters ÷ 1000**. 412 chars is `0.412` |
@@ -84,10 +83,6 @@ silently.
 | `3d.mlx` | mesh | 1 per call |
 
 Writing TTS as `412` is the most common mistake — that line inflates 1,000x.
-
-Veo invites the opposite mistake — write 4 seconds because you only used 4,
-and half the actual bill disappears. 8-second generation is 1080p's only
-option.
 
 ## The report
 
@@ -177,10 +172,8 @@ come out of one calculator reading one price table.
 plate bills one image on the saved image model's row (`PRODUCTION.modelSettings.models.image` —
 `image.host`, `image.gpt-image-2.<quality>` or `image.local`); only a legacy board with no
 saved model keeps the old split of gpt high for the cover and video-source stills, local for
-the rest. B-roll bills `veo.lite.1080p` at 8 seconds however
-short the cut is (1080p generates 8s), a motion background bills the seconds it asks Seedance
-for, and a quote speech clip bills `veo.fast.1080p` at 8 (veo_reference refuses the lite model
-and is pinned to 8s). `visual.engine` / `visual.video.engine` override the route. TTS and music
+the rest. A generated clip bills the seconds it
+requests on its route's row. `visual.engine` / `visual.video.engine` override the route. TTS and music
 stay out: `music.lyria-realtime` has no published price, so including it would make every
 forecast return exit 1 and show nothing.
 

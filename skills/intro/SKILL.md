@@ -11,7 +11,7 @@ description: >
   under data/[slug]/assets/intro/. Boundary — branding makes the still profile image, this
   makes the moving opening.
 argument-hint: "<channel> [extra instructions]"
-allowed-tools: ["mcp__social-flow__image_catalog", "mcp__plugin_social-flow_social-flow__image_catalog", "mcp__social-flow__image_plan", "mcp__plugin_social-flow_social-flow__image_plan", "mcp__social-flow__image_execute", "mcp__plugin_social-flow_social-flow__image_execute", "mcp__social-flow__image_status", "mcp__plugin_social-flow_social-flow__image_status", "mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__gpt_image_text2img", "mcp__plugin_social-flow_social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__plugin_social-flow_social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__plugin_social-flow_social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__plugin_social-flow_social-flow__veo_reference", "mcp__social-flow__music_generate_clip", "mcp__plugin_social-flow_social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate", "mcp__plugin_social-flow_social-flow__mlx_music_generate", "mcp__social-flow__tts_generate", "mcp__plugin_social-flow_social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__astra_genai_catalog", "mcp__plugin_social-flow_social-flow__astra_genai_catalog", "mcp__social-flow__tts_astra_genai", "mcp__plugin_social-flow_social-flow__tts_astra_genai"]
+allowed-tools: ["mcp__social-flow__image_catalog", "mcp__plugin_social-flow_social-flow__image_catalog", "mcp__social-flow__image_plan", "mcp__plugin_social-flow_social-flow__image_plan", "mcp__social-flow__image_execute", "mcp__plugin_social-flow_social-flow__image_execute", "mcp__social-flow__image_status", "mcp__plugin_social-flow_social-flow__image_status", "mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__gpt_image_text2img", "mcp__plugin_social-flow_social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__plugin_social-flow_social-flow__gpt_image_img2img", "mcp__social-flow__astra_genai_img2video", "mcp__plugin_social-flow_social-flow__astra_genai_img2video", "mcp__social-flow__astra_img2video", "mcp__plugin_social-flow_social-flow__astra_img2video", "mcp__social-flow__seedance_img2video", "mcp__plugin_social-flow_social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__plugin_social-flow_social-flow__seedance_reference", "mcp__social-flow__astra_genai_msr", "mcp__plugin_social-flow_social-flow__astra_genai_msr", "mcp__social-flow__music_generate_clip", "mcp__plugin_social-flow_social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate", "mcp__plugin_social-flow_social-flow__mlx_music_generate", "mcp__social-flow__tts_generate", "mcp__plugin_social-flow_social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__astra_genai_catalog", "mcp__plugin_social-flow_social-flow__astra_genai_catalog", "mcp__social-flow__tts_astra_genai", "mcp__plugin_social-flow_social-flow__tts_astra_genai"]
 ---
 Follow [host evaluation](../_shared/host-review.md) for every requested review.
 
@@ -36,13 +36,13 @@ lives in `references/intro-playbook.md` — the SoT. **Read it before starting.*
 ```
 data/<slug>/assets/intro/
 ├── .work/                          # intermediates (not committed)
-│   ├── brief.md                    # 4 concepts + pick + veo prompt record
+│   ├── brief.md                    # 4 concepts + pick + video prompt record
 │   ├── lockup.html                 # lockup card instance (template substitution)
 │   ├── lockup.png                  # full lockup (background+character+channel name) 1080×1920
 │   ├── text-plate.png              # transparent text plate (channel-name reveal)
-│   ├── char-card.png               # character card (no text — veo lastImagePath)
+│   ├── char-card.png               # character card (no text — video first/last frame)
 │   ├── open-frame.png              # (per concept) opening keyframe
-│   ├── intro-raw.mp4               # veo render (regenerations: intro-raw-r2.mp4 …)
+│   ├── intro-raw.mp4               # video render (regenerations: intro-raw-r2.mp4 …)
 │   ├── sonic.wav                   # sonic-logo working copy
 │   ├── frames/                     # review frames (from build-intro.sh)
 │   └── preview.html                # browser preview (candidate/final check)
@@ -71,7 +71,7 @@ data/<slug>/assets/intro/
 - Check whether `GEMINI_API_KEY` is set. Without it `music_generate_clip`
   fails; if MLX Core is up, `mlx_music_generate` can still write the sonic
   logo (2–3s instrumental). If both are down, announce in §2 that the run
-  will proceed with veo native sound only, no sonic logo.
+  will proceed with the clip's native sound only, no sonic logo.
 
 ### 2. Design 4 concepts → HITL pick
 
@@ -155,30 +155,26 @@ server binds the call to the saved video model and resolution (a different engin
 `model_selection_mismatch`) and logs it to `data/<slug>/assets/.work/video-requests.jsonl`.
 
 - **Host video model** — the host `image_to_video` makes it: `char-card.png` as the
-  source, `duration` 4, 720p, `video.host` in the ledger. The veo lines below describe
-  the Veo API lane for a saved Veo model; another saved API model uses its own
-  image-to-video call with the same source, length and prompt rules.
-- **Default (4-second standard — user-confirmed)**: `veo_img2video` —
-  `sourceImagePath` = **`char-card.png`** (first frame = final pose card),
-  aspectRatio `9:16`, resolution `720p`, durationSeconds **`4`**, model = the saved
-  Veo grade (Lite is 1/8 the cost of the quality model). 4 seconds
-  is **720p-only** and `lastImagePath` interpolation is **rejected** (measured
-  400 — playbook §8.5). Put "the framing and crop never change" + "returns to
-  the exact starting pose by the 3-second mark" in the prompt; ending
-  alignment is guaranteed by the §7 lockup crossfade. The build upscales the
-  720p source to 1080×1920.
-- **Long version (trailer use only)**: durationSeconds `8` + resolution
-  `1080p` + `lastImagePath` = char-card (first+last interpolation; the §4
-  opening keyframe may be used).
-- **Mascot-acting-focused concepts**: `veo_reference` — the logo master
-  (+ 1–2 other angles if available) as referenceImagePaths, 9:16. Its strength
-  is keeping the character on-model.
+  source, `duration` 4, 720p, `video.host` in the ledger.
+- **Default (4-second standard — user-confirmed)**: the saved model's image-to-video
+  call (`astra_genai_img2video`, `astra_img2video` or `seedance_img2video`) —
+  source = **`char-card.png`** (first frame = final pose card), 9:16, 4 seconds, the
+  saved resolution. An intro has no dialogue, so any adapter works. Put "the framing
+  and crop never change" + "returns to the exact starting pose by the 3-second mark"
+  in the prompt; ending alignment is guaranteed by the §7 lockup crossfade, and the
+  build normalizes the source to 1080×1920.
+- **Long version (trailer use only)**: 8 seconds, with char-card as `lastFramePath`
+  where the adapter takes one (`astra_*` image-to-video).
+- **Mascot-acting-focused concepts**: the saved engine's reference call
+  (`seedance_reference`, `astra_genai_msr`) — the logo master (+ 1–2 other angles
+  if available) as references, 9:16. Its strength is keeping the character on-model.
 - The prompt follows the playbook §5 L.O.G.O. skeleton: character preservation
   rules → the concept's single gesture (with per-second timing) → motion SFX
   description → "ends settled in the exact pose of the final frame, last
-  second nearly static". **Exclusions go in the `negativePrompt` argument, not
-  the body** — `text, letters, captions, subtitles, music, background score` +
-  the profile's banned subjects as noun phrases (playbook §5).
+  second nearly static". **Exclusions go in a `negativePrompt` argument where the
+  adapter has one (`astra_*` guided tiers), never the body** — `text, letters,
+  captions, subtitles, music, background score` + the profile's banned subjects
+  as noun phrases (playbook §5).
   Save as `.work/intro-raw.mp4`.
 
 ### 6. Sonic logo
@@ -188,7 +184,7 @@ branding = repetition). Otherwise generate the concept's sonic-logo
 description (playbook §7 — rise→impact→tail, 2–3s, no vocals) with
 `music_generate_clip` (Lyria) and save as `.work/sonic.wav`. If
 `GEMINI_API_KEY` is unset, try `mlx_music_generate` (instrumental, ~3s).
-If that fails too, skip this step (veo native sound only).
+If that fails too, skip this step (the clip's native sound only).
 
 **Voice tag (optional — when the user wants one)**: premix a TTS reading of
 the channel name, delivered with impact, into the sting. Generate with
@@ -221,7 +217,7 @@ lockup crossfade → hold → aligned sonic-logo mix (-14 LUFS). Knobs
 | `TEXT_AT` / `SONIC_AT` | landing −1.2s / −0.2s | fine-tune reveal and sonic-logo timing |
 | `LOCKUP_XF` / `HOLD` | 0.6 / 0.8 | lockup transition, ending hold |
 | `STINGER` | 2.5 | stinger length |
-| `AUDIO` / `SONIC_VOL` | native / 1.0 | drop veo audio / sonic-logo gain |
+| `AUDIO` / `SONIC_VOL` | native / 1.0 | drop the clip's audio / sonic-logo gain |
 
 ### 8. Optional adversarial review (brand-reviewer intro mode)
 
@@ -284,7 +280,7 @@ short-form content**). Note that uploading to platform channel pages
   are reported as they came; no score manipulation, no fabricated review, no
   regeneration spent on a verdict label alone.
 - **Channel-name and tagline text is never left to the generative model** —
-  every video call puts `text` in `negativePrompt`, and text is handled by the
+  `text` goes in `negativePrompt` where the adapter has one, and text is handled by the
   lockup card and plate (deterministic render). Writing "no text" in the body
   makes letters appear instead.
 - **The sonic logo is a channel asset** — once confirmed, reuse it across all

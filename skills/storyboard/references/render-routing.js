@@ -109,7 +109,7 @@
  function previzHandoff(scene){
   const v=scene.visual||{},video=v.video||{},p=video.previz||{};
   const engine=video.engine||v.engine||'seedance';
-  return p.handoff||(engine==='host'||/^seedance-1-/.test(video.model||'')?'frame_and_prompt':'reference_video');
+  return p.handoff||(engine==='host'?'frame_and_prompt':'reference_video');
  }
  function checkPreviz(scene,{draft=false,production=null,advice=[]}={}){
   const v=scene.visual||{},video=v.video,p=video&&video.previz,errors=[];

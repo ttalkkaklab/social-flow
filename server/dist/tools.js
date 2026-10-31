@@ -10,7 +10,7 @@ import { DURATION_TOOLS } from './video-duration.js';
 import { techniqueContract, cameraContract, motionThemeContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 import { ASTRA_VIDEO_FAST_DIMENSION_STEP, ASTRA_VIDEO_GUIDANCE_RANGES, guidanceToolKey, ASTRA_VIDEO_IC_LORA_ADAPTERS, ASTRA_VIDEO_LORAS, ASTRA_VIDEO_MAX_LORA_STRENGTH, ASTRA_VIDEO_MAX_REFERENCE_PIXELS, ASTRA_VIDEO_MAX_STG_BLOCK, ASTRA_VIDEO_MAX_STG_BLOCKS, ASTRA_VIDEO_FRAME_LIMITS, ASTRA_VIDEO_MAX_PIXELS, ASTRA_VIDEO_MAX_SEED, ASTRA_VIDEO_MIN_FRAMES, } from './astra-video-client.js';
-import { DEFAULT_SEEDANCE_DURATION, DEFAULT_SEEDANCE_MODEL, DEFAULT_SEEDANCE_REFERENCE_MODEL, DEFAULT_SEEDANCE_RESOLUTION, SEEDANCE_FPS, SEEDANCE_REFERENCE_MODELS, VALID_SEEDANCE_MODELS, VALID_SEEDANCE_RATIOS, VALID_SEEDANCE_RESOLUTIONS, } from './seedance-client.js';
+import { DEFAULT_SEEDANCE_DURATION, DEFAULT_SEEDANCE_MODEL, DEFAULT_SEEDANCE_RESOLUTION, SEEDANCE_FPS, VALID_SEEDANCE_MODELS, VALID_SEEDANCE_RATIOS, VALID_SEEDANCE_RESOLUTIONS, } from './seedance-client.js';
 import { DEFAULT_GEMINI_38_TTS_MODEL, DEFAULT_TTS_MODEL, DEFAULT_TTS_TEMPERATURE, DEFAULT_VOICE, GEMINI_38_TTS_MODELS, MAX_GEMINI_38_TTS_INPUT_CHARS, TTS_VOICE_NAMES, VALID_TTS_MODELS, } from './tts-client.js';
 import { GENERATORS } from './tts-quality.js';
 import { DEFAULT_ELEVENLABS_MODEL, DEFAULT_ELEVENLABS_OUTPUT_FORMAT, ELEVENLABS_DIALOGUE_MAX_INPUTS, ELEVENLABS_MODELS, ELEVENLABS_LANGUAGE_CODE_PATTERN, ELEVENLABS_OUTPUT_FORMATS, ELEVENLABS_TEXT_NORMALIZATION, ELEVENLABS_VOICE_CATEGORIES, MAX_ELEVENLABS_INPUT_CHARS, DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT, DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE, ELEVENLABS_SFX_MODEL, ELEVENLABS_SFX_OUTPUT_FORMATS, ELEVENLABS_SFX_SECONDS, ELEVENLABS_SFX_USD_PER_MINUTE, MAX_ELEVENLABS_SFX_TEXT_CHARS, } from './elevenlabs-client.js';
@@ -37,22 +37,20 @@ import { DEFAULT_MLX_IMAGE_SIZE, DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FR
  * say never to call without user approval.
  *
  * Generation tools are ported from fect-mcp-server — image (gpt_image_*,
- * OPENAI_API_KEY) comes from the gpt-image module; video (veo_*), speech
- * (tts_*), and music (music_*) come from the video/tts/music modules, all
- * three on GEMINI_API_KEY. Sung full songs and loopable beds are suno_*
+ * OPENAI_API_KEY) comes from the gpt-image module; speech (tts_*) and music
+ * (music_*) come from the tts/music modules, both on GEMINI_API_KEY. Sung full songs and loopable beds are suno_*
  * (sunoapi.org third-party REST, SUNO_API_KEY). Lyria stays the default
  * 30s instrumental BGM path. Descriptions inherit the originals, minus
  * cross-references to tools this server doesn't have, plus the short-form
  * pipeline context (channel profile voice, pinned seeds). Keys are validated
  * at call time.
  *
- * Video alone has two engines — veo_* (Google Veo 3.1, GEMINI_API_KEY) and
- * seedance_* (ByteDance Seedance, ARK_API_KEY). They are not substitutes;
- * each is good at different jobs, and the source of truth for which to use
- * when is skills/produce/references/video-model-selection.md. Each tool
- * description carries its own summary of that decision table — a caller who
- * sees only the tool list, without reading the skill doc, still has to be
- * able to pick an engine.
+ * Video engines are the ones that can keep a character's voice (owner directive
+ * 2026-10-31): LTX through the ASTRA gateways and local runtimes, and Seedance 2.x
+ * (ARK_API_KEY). Veo, Gemini Omni and Seedance 1.x left the plugin because none of
+ * them takes a voice reference. The source of truth for which to use when is
+ * skills/produce/references/video-model-selection.md; each tool description carries
+ * its own summary so a caller who sees only the tool list can still pick an engine.
  *
  * Voice, scale, and mode lists derive from the canonical constants in each
  * client module — copying a 30-entry list into the schema invites the
@@ -64,67 +62,6 @@ import { DEFAULT_MLX_IMAGE_SIZE, DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FR
  * description prose reaches only the model, never the approval UI.
  * The verdict table in docs/api-reference/mcp-tools.html §7 is the source of truth.
  */
-/**
- * Shared Veo property definitions (Veo 3.1 family).
- *
- * Why the default is fast rather than standard is written down in the
- * DEFAULT_VIDEO_MODEL comment in video-client.ts — the three tiers are
- * statistically tied on blind-arena Elo.
- */
-const VEO_MODEL_PROPERTY = {
-    type: 'string',
-    description: 'Veo model (default: "veo-3.1-fast-generate-preview"). Blind-arena Elo puts the three tiers within overlapping confidence intervals on every board — the tier buys features and resolution, not measurably better video — so pick the CHEAPEST tier that has the features you need. lite is 1/2 the cost of fast and 1/8 of standard but drops 4k, extension, and reference images; standard costs 4x fast for no measured preference gain.',
-    enum: ['veo-3.1-generate-preview', 'veo-3.1-fast-generate-preview', 'veo-3.1-lite-generate-preview'],
-    default: 'veo-3.1-fast-generate-preview',
-};
-const VEO_RESOLUTION_PROPERTY = {
-    type: 'string',
-    description: 'Output resolution (default: "720p"). 1080p and 4k require durationSeconds=8; 4k is not supported by the lite model.',
-    enum: ['720p', '1080p', '4k'],
-    default: '720p',
-};
-const VEO_DURATION_PROPERTY = {
-    type: 'number',
-    description: 'Clip length in seconds (default: 8). 1080p/4k output requires 8.',
-    enum: [4, 6, 8],
-    default: 8,
-};
-/**
- * Exclusions — sent through this field, never in the prompt body.
- *
- * The official docs pin the grammar: comma-separated noun/adjective phrases,
- * not instructions. Writing "no ~" in the body tends to draw the very noun
- * (measured on local images: 4 out of 4 failed).
- */
-const VEO_NEGATIVE_PROMPT_PROPERTY = {
-    type: 'string',
-    description: 'What to keep OUT of the frame, as comma-separated noun or adjective phrases: "wall, frame, on-screen text, subtitles". Accepted by the API on veo-3.1 fast/standard only — veo-3.1-lite rejects it (400, measured 2026-08-26), so on lite write the exclusion into the prompt as positive description; veo_reference and veo_extension have no such field (400, measured 2026-08-15). Do NOT write instructions such as "no walls" or "don\'t show walls" — Google\'s prompt guide names that form as not recommended, and writing an exclusion into the prompt body tends to summon the very noun you named. Put every exclusion here instead of in prompt.',
-};
-/**
- * Shared Gemini Omni property definitions (gemini-omni-1.1-flash).
- *
- * Omni is one model with a task mode, so there is no tier to choose — the levers are
- * resolution and length. 360p has no counterpart on Veo and exists for drafts.
- */
-const OMNI_RESOLUTION_PROPERTY = {
-    type: 'string',
-    description: 'Output resolution (default: "720p"). Resolution does not change the bill — every call costs the same flat amount — so 360p buys only speed; 1080p and 4k are upscales of the generated frames, not native renders.',
-    enum: ['360p', '720p', '1080p', '4k'],
-    default: '720p',
-};
-const OMNI_DURATION_PROPERTY = {
-    type: 'number',
-    description: 'Clip length in whole seconds, 3 to 10 (default: 8). Unlike Veo there is no 4/6/8 grid — any integer in range is accepted, and 11 is rejected by the API.',
-    minimum: 3,
-    maximum: 10,
-    default: 8,
-};
-const OMNI_ASPECT_RATIO_PROPERTY = {
-    type: 'string',
-    description: 'Aspect ratio of the generated video (default: "16:9")',
-    enum: ['16:9', '9:16'],
-    default: '16:9',
-};
 /**
  * Shared ASTRA video property definitions (self-hosted LTX-2.5).
  *
@@ -264,46 +201,37 @@ const ASTRA_LIMITS_LINE = 'Uploads: 10/min per key. Job acceptance: 5/min and 60
 /**
  * Shared Seedance property definitions (BytePlus ModelArk) — lists and
  * defaults derive from the capability table in seedance-client.ts. Per-model
- * constraints (resolution, duration, audio, seed) can't be expressed in a
+ * constraints (resolution, duration, references) can't be expressed in a
  * single schema enum, so the client's superRefine rejects them before the call.
  */
 const SEEDANCE_MODEL_PROPERTY = {
     type: 'string',
-    description: `Seedance model (default: "${DEFAULT_SEEDANCE_MODEL}" — the cheapest model that reaches 1080p, accepts photoreal human faces as input, supports seed, and has no balance gate — every ModelArk model still needs console activation). ` +
-        'Quality, from the Artificial Analysis blind image-to-video arena: dreamina-seedance-2-0-260128 ranks 1st overall (Elo 1,198), the three Veo 3.1 tiers sit at 1,066-1,086, and seedance-1-5-pro-251215 is the arena baseline at 1,000 — so 2.0 is clearly the best Seedance, and 1.5 pro trades roughly a 59:41 preference against Veo for about a third of the price. ' +
-        'dreamina-seedance-2-5-260628, the 2.0 fast/mini variants, and seedance-1-0-pro-fast-251015 have NO public evaluation at all — prefer them only for cost or for a capability the tested models lack, not for a shot that matters. ' +
-        'The 2.x models REJECT input images containing real human faces and need account balance > $30 to activate, which rules them out for photoreal-person sources.',
+    description: `Seedance model (default: "${DEFAULT_SEEDANCE_MODEL}" — rank 1 on the Artificial Analysis blind image-to-video arena, Elo 1,198, and it outputs 1080p and 4k; every ModelArk model still needs console activation). ` +
+        'dreamina-seedance-2-5-260628 and the 2.0 fast/mini variants have NO public evaluation — prefer them only for cost or for a capability 2.0 lacks (2.5: more than 9 references, more than 15 seconds, Korean prompts). ' +
+        'Every model REJECTS input images containing real human faces and needs account balance > $30 to activate.',
     enum: [...VALID_SEEDANCE_MODELS],
     default: DEFAULT_SEEDANCE_MODEL,
 };
 const SEEDANCE_RESOLUTION_PROPERTY = {
     type: 'string',
-    description: `Output resolution (default: "${DEFAULT_SEEDANCE_RESOLUTION}"). Support differs per model — 1080p needs 2.5, 2.0, 1.5 pro, or 1.0 pro/fast; 4k is 2.0 only; the 2.0 fast/mini models top out at 720p.`,
+    description: `Output resolution (default: "${DEFAULT_SEEDANCE_RESOLUTION}"). Support differs per model — 1080p needs 2.5 or 2.0; 4k is 2.0 only; the 2.0 fast/mini models top out at 720p.`,
     enum: [...VALID_SEEDANCE_RESOLUTIONS],
     default: DEFAULT_SEEDANCE_RESOLUTION,
 };
 const SEEDANCE_DURATION_PROPERTY = {
     type: 'number',
-    description: `Clip length in seconds (default: ${DEFAULT_SEEDANCE_DURATION}). Range differs per model — 2.5 accepts 4-30, the 2.0 series 4-15, 1.5 pro 4-12, and 1.0 pro/fast 2-12. Frame rate is fixed at ${SEEDANCE_FPS} fps. Cost scales linearly with duration.`,
+    description: `Clip length in seconds (default: ${DEFAULT_SEEDANCE_DURATION}). Range differs per model — 2.5 accepts 4-30, the 2.0 series 4-15. Frame rate is fixed at ${SEEDANCE_FPS} fps. Cost scales linearly with duration.`,
     default: DEFAULT_SEEDANCE_DURATION,
 };
 const SEEDANCE_AUDIO_PROPERTY = {
     type: 'boolean',
-    description: 'Generate a soundtrack with the video (default: false — this pipeline adds narration separately with tts_*, and on seedance-1-5-pro audio doubles the price). The vendor default is true; set it to true only when you want the model to voice the clip. The 1.0 pro/fast models are silent-only and reject true.',
+    description: 'Generate a soundtrack with the video (default: false — this pipeline adds narration separately with tts_*). The vendor default is true. A character who speaks in the clip goes through seedance_reference with the speaker\'s voice sample; video_plan refuses spoken cuts on the text and image lanes.',
     default: false,
 };
 const SEEDANCE_WATERMARK_PROPERTY = {
     type: 'boolean',
     description: 'Burn a visible "AI Generated" mark into the bottom-right corner (default: false).',
     default: false,
-};
-const SEEDANCE_SEED_PROPERTY = {
-    type: 'number',
-    description: 'Random seed, -1 to 2147483647 (default -1). Supported only by seedance-1-5-pro and the 1.0 pro/fast models — the 2.x models reject it, so the reference lane has no seed at all. The API reference calls it a random seed and does not promise that the same seed reproduces the same video: do NOT build shot-to-shot consistency on it. Consistency belongs on reference images (seedance_reference) or first+last frames.',
-};
-const SEEDANCE_CAMERA_FIXED_PROPERTY = {
-    type: 'boolean',
-    description: 'Ask the model to hold the camera still. Supported only by seedance-1-5-pro and the 1.0 pro/fast models — on 2.x, describe the camera in the prompt instead.',
 };
 const SEEDANCE_RATIO_VALUES = [...VALID_SEEDANCE_RATIOS];
 /** Shared TTS property definitions (Gemini TTS) — lists derive from the tts-client.ts source of truth */
@@ -936,7 +864,7 @@ export const SERVER_INSTRUCTIONS = `social-flow plans, produces and publishes sh
 
 Start: \`capability_status\` shows which providers are configured on this machine; \`project_manage\` holds the saved project settings (models, visual style, ratio, SNS targets). Reuse saved choices instead of asking again.
 
-Episode video: \`video_catalog\` → \`video_plan\` → \`video_execute\`, and \`video_status\` after an interruption. The provider tools (veo_*, seedance_*, astra_*, omni_*, mlx_video_generate) are the adapters that route calls; call one directly only when the user names it.
+Episode video: \`video_catalog\` → \`video_plan\` → \`video_execute\`, and \`video_status\` after an interruption. The provider tools (seedance_*, astra_*, ltx_video_generate, fasth3_omni_reference) are the adapters that route calls; call one directly only when the user names it.
 
 Storyboard: \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_route\` and the tts_* tools generate. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
 
@@ -1764,376 +1692,6 @@ Do NOT use for independent body posing or to read an arbitrary .blend — use bl
             required: ['prompt', 'imagePath'],
         },
     },
-    // ── Video generation (Google Veo 3.1 — ported from the fect-mcp video module) ──────────
-    {
-        name: 'veo_text2video',
-        title: 'Video generation (text → video)',
-        annotations: HINT.generate,
-        description: `Generate a video with native audio from a text prompt using Google Veo 3.1.
-
-Use when the user asks to create, generate, or make a video, clip, footage, or short ad from a description alone (비디오 생성, 영상 만들어줘). Audio is generated natively: wrap dialogue in double quotes, and describe SFX ("engine roaring") and ambient sound explicitly in the prompt.
-Do NOT use when a source visual exists — use veo_img2video to animate a still image, veo_extension to continue a Veo-generated video, or veo_reference to keep a specific subject consistent from photos.
-The Seedance counterpart is seedance_text2video (lengths off the 4/6/8-second grid, 21:9 or 4:3 frames, optional silence); the saved model decides which engine runs.
-Cost lever: the default is now fast ($0.10/s at 720p) because blind-arena Elo shows no measurable quality gap between the tiers; drop to lite ($0.05/s) whenever 4k, extension, and reference images are not needed. Generation is asynchronous and typically takes 1-6 minutes.
-
-Returns: a text block with the saved .mp4 file path, model, aspect ratio, resolution, and duration in seconds. Videos carry an invisible SynthID watermark.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                prompt: {
-                    type: 'string',
-                    description: 'Descriptive text prompt for video generation (English recommended)',
-                },
-                negativePrompt: VEO_NEGATIVE_PROMPT_PROPERTY,
-                model: VEO_MODEL_PROPERTY,
-                aspectRatio: {
-                    type: 'string',
-                    description: 'Aspect ratio of the generated video (default: "16:9")',
-                    enum: ['16:9', '9:16'],
-                    default: '16:9',
-                },
-                resolution: VEO_RESOLUTION_PROPERTY,
-                durationSeconds: VEO_DURATION_PROPERTY,
-                outputPath: {
-                    type: 'string',
-                    description: 'Directory path to save the generated video (default: current working directory)',
-                },
-                filename: {
-                    type: 'string',
-                    description: 'Filename for the generated video (default: video_<timestamp>.mp4)',
-                },
-            },
-            required: ['prompt'],
-        },
-    },
-    {
-        name: 'veo_img2video',
-        title: 'Video generation (image → video)',
-        annotations: HINT.generate,
-        description: `Animate a still image into a video (first frame, or first+last frame interpolation) using Google Veo 3.1.
-
-Use when the user provides an image to bring to life, animate, or add motion to (이미지로 영상 만들기) — e.g. animate a product photo. Provide sourceImagePath as the first frame; optionally add lastImagePath for a smooth transition between two images. The prompt should describe the desired motion.
-Do NOT use for pure text-to-video (use veo_text2video), continuing an existing video (use veo_extension), or subject consistency from reference photos (use veo_reference).
-The Seedance counterpart is seedance_img2video; the saved model decides which engine runs.
-Person policy, measured 2026-08-15: an adult photoreal face in the source image passes here and holds for the clip, while Seedance 2.x rejects the very same file — so this is the image lane for photoreal people. A face that reads as a MINOR is blocked whether it arrives as a photo or an illustration (Support code 17301594); blocked generations are not billed, so redraw the cut instead of hunting for a way around it.
-For composition control — a subject appearing, vanishing, or changing pose exactly as drawn — pass lastImagePath. Reference images (veo_reference) carry appearance, not layout.
-Generation is asynchronous and typically takes 1-6 minutes.
-
-Returns: a text block with the saved .mp4 file path, source/last frame image paths, model, aspect ratio, resolution, and duration in seconds.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                prompt: {
-                    type: 'string',
-                    description: 'Text description for video animation/motion',
-                },
-                negativePrompt: VEO_NEGATIVE_PROMPT_PROPERTY,
-                sourceImagePath: {
-                    type: 'string',
-                    description: 'Absolute path to the first frame (starting) image file',
-                },
-                lastImagePath: {
-                    type: 'string',
-                    description: 'Optional: Absolute path to the last frame (ending) image file. When provided, the video will smoothly transition from the first image to this last image.',
-                },
-                model: VEO_MODEL_PROPERTY,
-                aspectRatio: {
-                    type: 'string',
-                    description: 'Aspect ratio of the generated video (default: "16:9")',
-                    enum: ['16:9', '9:16'],
-                    default: '16:9',
-                },
-                resolution: VEO_RESOLUTION_PROPERTY,
-                durationSeconds: VEO_DURATION_PROPERTY,
-                outputPath: {
-                    type: 'string',
-                    description: 'Directory path to save the generated video (default: current working directory)',
-                },
-                filename: {
-                    type: 'string',
-                    description: 'Filename for the generated video (default: video_<timestamp>.mp4)',
-                },
-            },
-            required: ['prompt', 'sourceImagePath'],
-        },
-    },
-    {
-        name: 'veo_extension',
-        title: 'Video extension (+7s)',
-        annotations: HINT.generate,
-        description: `Extend a Veo-generated video by adding 7 seconds of new content per call.
-
-Use when the user asks to continue, lengthen, or extend a video that was previously generated by Veo (비디오 연장, 이어서 만들기). Up to 20 extensions per video; input must be a Veo output at 720p, 16:9, and 141 seconds or shorter. A 9:16 vertical clip is refused outright (\`Aspect ratio of the input video must be 16:9, but got: 9:16\`, measured 2026-09-06) — a vertical short cannot be lengthened this way, so shoot the extra seconds as separate cuts.
-The API extends the copy it still holds on its own server, not the bytes of your file: the clip must have been generated by one of these veo_* tools and still carry its \`<name>.mp4.veo.json\` handle, which the server keeps for 48 hours. A clip with no handle, or one downloaded from anywhere else, cannot be extended at all — generate it again.
-Do NOT use on videos not generated by Veo, and do NOT use the lite model (unsupported). For a brand-new scene use veo_text2video instead. Seedance has no equivalent for local files — its video input accepts only public URLs — so extension of a local clip always lands here.
-Output is always 720p and keeps the input's 16:9. Voice cannot be effectively extended if absent from the last 1 second of the input. Takes 1-6 minutes.
-
-Returns: a text block with the saved .mp4 file path, source video path, model, resolution, and the added duration (+7 seconds).`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                prompt: {
-                    type: 'string',
-                    description: 'Text description for the video continuation',
-                },
-                sourceVideoPath: {
-                    type: 'string',
-                    description: 'Absolute path to the source video file to extend (must be a Veo-generated 720p video, 141 seconds or shorter, saved with its .veo.json handle)',
-                },
-                sourceVideoUri: {
-                    type: 'string',
-                    description: 'Files API uri of the source clip (https://generativelanguage.googleapis.com/v1beta/files/...). Only needed when the .veo.json handle beside the file is missing — normally leave it out.',
-                },
-                model: {
-                    type: 'string',
-                    description: 'Veo model (default: "veo-3.1-fast-generate-preview"). The lite model does NOT support extension. Blind-arena Elo has fast and standard statistically tied, so standard only buys 4k here.',
-                    enum: ['veo-3.1-generate-preview', 'veo-3.1-fast-generate-preview'],
-                    default: 'veo-3.1-fast-generate-preview',
-                },
-                outputPath: {
-                    type: 'string',
-                    description: 'Directory path to save the extended video (default: current working directory)',
-                },
-                filename: {
-                    type: 'string',
-                    description: 'Filename for the extended video (default: video_extended_<timestamp>.mp4)',
-                },
-            },
-            required: ['prompt', 'sourceVideoPath'],
-        },
-    },
-    {
-        name: 'veo_reference',
-        title: 'Video generation (reference images · fixed 8s)',
-        annotations: HINT.generate,
-        description: `Generate an 8-second video that keeps subjects from 1-3 reference images consistent, using Google Veo 3.1.
-
-Use when the user wants a video featuring a specific person, character, product, or garment shown in reference photos — fashion videos, brand/product marketing, consistent character animation (캐릭터 일관성, 제품 영상). Provide 1-3 clear, well-lit reference images (multiple angles improve consistency) and a detailed prompt describing the scene and interactions.
-Do NOT use the lite model (unsupported). To animate a single image as-is use veo_img2video; for free-form generation use veo_text2video.
-This is the reference tool for REAL people — Seedance's seedance_reference rejects real human faces, while it accepts far more reference images (up to 30) and a free duration, so route drawn characters and products there. The person policy here is documented as the same allow_adult contract veo_img2video runs under, but it is unmeasured on this mode; only the image lane was probed.
-Reference images are ASSET only: they preserve ONE subject's appearance, NOT the layout of the picture. For a cut that must match a drawn composition use veo_img2video with sourceImagePath + lastImagePath. Veo 3.1 has no style reference at all — the official docs send style images to the experimental veo-2.0 model, so route sketch or toon style transfer to seedance_reference instead.
-Duration is fixed at 8 seconds when reference images are used. Takes 1-6 minutes.
-
-Returns: a text block with the saved .mp4 file path, reference image list, model, aspect ratio, resolution, and duration.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                prompt: {
-                    type: 'string',
-                    description: 'Detailed text description of the video scene and subject interactions',
-                },
-                referenceImagePaths: {
-                    type: 'array',
-                    items: {
-                        type: 'string',
-                    },
-                    minItems: 1,
-                    maxItems: 3,
-                    description: 'Array of 1-3 absolute paths to reference images. These images guide the video generation to preserve subject appearance.',
-                },
-                model: {
-                    type: 'string',
-                    description: 'Veo model (default: "veo-3.1-fast-generate-preview"). The lite model does NOT support reference images. Blind-arena Elo has fast and standard statistically tied, so standard only buys 4k here.',
-                    enum: ['veo-3.1-generate-preview', 'veo-3.1-fast-generate-preview'],
-                    default: 'veo-3.1-fast-generate-preview',
-                },
-                aspectRatio: {
-                    type: 'string',
-                    description: 'Aspect ratio of the generated video (default: "16:9")',
-                    enum: ['16:9', '9:16'],
-                    default: '16:9',
-                },
-                resolution: VEO_RESOLUTION_PROPERTY,
-                outputPath: {
-                    type: 'string',
-                    description: 'Directory path to save the generated video (default: current working directory)',
-                },
-                filename: {
-                    type: 'string',
-                    description: 'Filename for the generated video (default: video_ref_<timestamp>.mp4)',
-                },
-            },
-            required: ['prompt', 'referenceImagePaths'],
-        },
-    },
-    // ── Video generation (Gemini Omni 1.1 Flash — the Interactions API lane) ──────────
-    {
-        name: 'omni_text2video',
-        title: 'Omni video generation (text → video)',
-        annotations: HINT.generate,
-        description: `Generate a video with native audio from a text prompt using Gemini Omni 1.1 Flash.
-
-Use when the shot needs a length off Veo's 4/6/8 grid (any whole 3-10 seconds), or when the cut will be edited or extended afterwards — omni_edit and omni_extend continue from the interactionId this returns.
-Do NOT use when a source visual exists — omni_img2video animates a still, omni_extend continues a clip, omni_edit rewrites one.
-COST, measured 2026-09-06: this model bills a FLAT ~$1.01 per call, not per second. A 3-second 360p draft costs the same as a full 10-second 4k render. Ask for the seconds you actually want; a shorter clip refunds nothing.
-Audio is always generated and cannot be turned off: wrap dialogue in double quotes and name SFX and ambience in the prompt. There is no negative-prompt field on this model — write exclusions as positive description instead.
-
-Returns: a text block with the saved .mp4 path, the interaction id to continue from, resolution, aspect ratio, and duration.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                prompt: {
-                    type: 'string',
-                    description: 'Descriptive text prompt for video generation (English recommended)',
-                },
-                aspectRatio: OMNI_ASPECT_RATIO_PROPERTY,
-                resolution: OMNI_RESOLUTION_PROPERTY,
-                durationSeconds: OMNI_DURATION_PROPERTY,
-                seed: {
-                    type: 'number',
-                    description: 'Optional decoding seed for reproducibility.',
-                },
-                outputPath: {
-                    type: 'string',
-                    description: 'Directory path to save the generated video (default: current working directory)',
-                },
-                filename: {
-                    type: 'string',
-                    description: 'Filename for the generated video (default: omni_<timestamp>.mp4)',
-                },
-            },
-            required: ['prompt'],
-        },
-    },
-    {
-        name: 'omni_img2video',
-        title: 'Omni video generation (image → video)',
-        annotations: HINT.generate,
-        description: `Animate a still image, or interpolate between two images, using Gemini Omni 1.1 Flash.
-
-Use when a generated background or photo has to move and the cut wants an off-grid length, or will be edited afterwards. Pass sourceImagePath as the first frame; add lastImagePath and the model renders the transition between the two. Billing is a flat ~$1.01 per call regardless of length or resolution.
-Do NOT use for pure text-to-video (omni_text2video) or for continuing an existing clip (omni_extend).
-veo_img2video remains the lane for a photoreal adult face, whose policy is measured there; Omni's person policy is unmeasured, so route people to Veo until it is.
-Composition control lives here — a subject appearing, vanishing, or ending in an exact pose — because both frames are yours.
-
-Returns: a text block with the saved .mp4 path, the interaction id to continue from, the source frames, resolution, aspect ratio, and duration.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                prompt: {
-                    type: 'string',
-                    description: 'Text description of the motion to add',
-                },
-                sourceImagePath: {
-                    type: 'string',
-                    description: 'Absolute path to the first frame (starting) image file',
-                },
-                lastImagePath: {
-                    type: 'string',
-                    description: 'Optional: absolute path to the last frame image. When given, the video renders the transition from the first image to this one.',
-                },
-                aspectRatio: OMNI_ASPECT_RATIO_PROPERTY,
-                resolution: OMNI_RESOLUTION_PROPERTY,
-                durationSeconds: OMNI_DURATION_PROPERTY,
-                seed: {
-                    type: 'number',
-                    description: 'Optional decoding seed for reproducibility.',
-                },
-                outputPath: {
-                    type: 'string',
-                    description: 'Directory path to save the generated video (default: current working directory)',
-                },
-                filename: {
-                    type: 'string',
-                    description: 'Filename for the generated video (default: omni_<timestamp>.mp4)',
-                },
-            },
-            required: ['prompt', 'sourceImagePath'],
-        },
-    },
-    {
-        name: 'omni_extend',
-        title: 'Omni video extension (3-10s per call, 40s cumulative)',
-        annotations: HINT.generate,
-        description: `Continue a clip with Gemini Omni 1.1 Flash, adding 3-10 seconds of new content per call.
-
-Use when a shot has to run longer than one generation. Name the source exactly one of two ways: previousInteractionId, from an earlier omni_* call in this session, or sourceVideoPath, a local mp4 of at most 10 seconds. Google caps the cumulative length at 40 seconds.
-Do NOT expect only the new tail back — the saved file is the WHOLE cut, input included (measured: a 3s clip extended by 8s came back 11s), so do not concatenate it onto the source yourself.
-Against veo_extension: that one adds a fixed 7s, takes only Veo output, and needs a Veo model tier; this one takes any mp4 you have, adds a length you pick, and works on Omni output. Each call is a flat ~$1.01 whatever it adds, so add the full 10 seconds when you can. Aspect ratio is not settable here — the input video's ratio wins.
-
-Returns: a text block with the saved .mp4 path, the new interaction id, the source, and the seconds added.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                prompt: {
-                    type: 'string',
-                    description: 'What happens next — describe the continuation ("the camera keeps pushing in as the door opens").',
-                },
-                previousInteractionId: {
-                    type: 'string',
-                    description: 'Interaction id returned by an earlier omni_* call. Give this OR sourceVideoPath, not both.',
-                },
-                sourceVideoPath: {
-                    type: 'string',
-                    description: 'Absolute path to a local mp4 of at most 10 seconds. Give this OR previousInteractionId, not both.',
-                },
-                resolution: OMNI_RESOLUTION_PROPERTY,
-                durationSeconds: {
-                    type: 'number',
-                    description: 'Seconds of NEW content to add, 3 to 10 (default: 8). The returned file is the whole cut, so it runs source + this.',
-                    minimum: 3,
-                    maximum: 10,
-                    default: 8,
-                },
-                seed: {
-                    type: 'number',
-                    description: 'Optional decoding seed for reproducibility.',
-                },
-                outputPath: {
-                    type: 'string',
-                    description: 'Directory path to save the extended video (default: current working directory)',
-                },
-                filename: {
-                    type: 'string',
-                    description: 'Filename for the extended video (default: omni_<timestamp>.mp4)',
-                },
-            },
-            required: ['prompt'],
-        },
-    },
-    {
-        name: 'omni_edit',
-        title: 'Omni video edit (instruction, same length)',
-        annotations: HINT.generate,
-        description: `Rewrite what is inside a clip by instruction, keeping its length, using Gemini Omni 1.1 Flash.
-
-Use when a generated cut is right in movement and framing but wrong in content — swap an object, change a colour, drop something from the frame — instead of re-rolling the whole shot and losing the camera move. State the change plainly ("change the persimmon to a green apple, keep the camera move identical"). Source is exactly one of previousInteractionId (an earlier omni_* call) or sourceVideoPath (a local mp4 of at most 10 seconds).
-Do NOT use to make a clip longer — that is omni_extend. Veo has no instruction-edit lane at all, so a Veo clip that needs one comes here by file path.
-The output runs the same length as the input (measured 3.008s in, 3.008s out); aspect ratio is inherited and not settable. Each edit is a fresh generation billed at the flat ~$1.01, not a cheap patch.
-
-Returns: a text block with the saved .mp4 path, the new interaction id, and the source.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                prompt: {
-                    type: 'string',
-                    description: 'The change to make, stated plainly. Say what to keep as well as what to change.',
-                },
-                previousInteractionId: {
-                    type: 'string',
-                    description: 'Interaction id returned by an earlier omni_* call. Give this OR sourceVideoPath, not both.',
-                },
-                sourceVideoPath: {
-                    type: 'string',
-                    description: 'Absolute path to a local mp4 of at most 10 seconds. Give this OR previousInteractionId, not both.',
-                },
-                resolution: OMNI_RESOLUTION_PROPERTY,
-                seed: {
-                    type: 'number',
-                    description: 'Optional decoding seed for reproducibility.',
-                },
-                outputPath: {
-                    type: 'string',
-                    description: 'Directory path to save the edited video (default: current working directory)',
-                },
-                filename: {
-                    type: 'string',
-                    description: 'Filename for the edited video (default: omni_<timestamp>.mp4)',
-                },
-            },
-            required: ['prompt'],
-        },
-    },
     // ── Video generation (ASTRA video API — self-hosted LTX-2.5) ──────────────
     // The only lane that is ours: no per-call bill, no vendor policy, weights on our box.
     // It renders one job at a time, so it is the batch lane, not the interactive one.
@@ -2531,17 +2089,17 @@ Returns: the server's JSON report verbatim. No arguments.`,
             additionalProperties: false,
         },
     },
-    // ── Video generation (ByteDance Seedance — BytePlus ModelArk) ─────────────
-    // The second engine sharing Veo's slot. The source of truth for which to use
-    // when is skills/produce/references/video-model-selection.md.
+    // ── Video generation (ByteDance Seedance 2.x — BytePlus ModelArk) ─────────
+    // The source of truth for which engine to use when is
+    // skills/produce/references/video-model-selection.md.
     {
         name: 'seedance_text2video',
         title: 'Video generation (text → video, Seedance)',
         annotations: HINT.generate,
         description: `Generate a video from a text prompt using ByteDance Seedance (BytePlus ModelArk).
 
-Use when you need a clip that Veo's fixed 4/6/8-second grid cannot express — an odd length (2-30 seconds, any whole second), a 21:9 or 4:3 frame, or a silent shot billed for the requested duration. Korean prompts are understood only by dreamina-seedance-2-5; every other model expects English.
-Do NOT use when you need Veo's native dialogue audio quality or its +7s extension of an existing clip — veo_text2video and veo_extension keep those. When a source visual already exists use seedance_img2video, and for subject consistency from photos use seedance_reference.
+Use for a cut no character speaks in: any whole-second length from 4 to 30, a 21:9 or 4:3 frame, billed for the requested duration. Korean prompts are understood only by dreamina-seedance-2-5; every other model expects English.
+Do NOT use for a cut where a character speaks — that needs the speaker's voice sample through seedance_reference (or astra_genai_msr). When a source visual already exists use seedance_img2video, and for subject consistency from photos use seedance_reference.
 Model choice drives both price and limits; read the model parameter before overriding the default. Generation is asynchronous and typically takes 1-6 minutes.
 
 Returns: a text block with the saved .mp4 file path, model, ratio, resolution, duration, and the billed completion token count.`,
@@ -2550,7 +2108,7 @@ Returns: a text block with the saved .mp4 file path, model, ratio, resolution, d
             properties: {
                 prompt: {
                     type: 'string',
-                    description: 'Video description. Vendor formula: Subject + Movement + Environment + Camera movement + Aesthetic description + Sound. Write camera as a span, not a verb — "starting frame composition + movement + movement amplitude + ending frame composition" (combos the docs name: Hitchcock = dolly-in/out + zoom-out/in, bullet time = time slowdown + surround). Shot size follows the example word order, "Close-up of the man on the left". Do NOT write timecodes such as "0-3 seconds" — the vendor states precise-timing support is unstable and forcing it degrades the result; cut timing in the edit instead, and write an in-clip state change in words ("in under half a second"). Multi-cut in one call is supported via "Shot 1: ... Shot 2: ..." or "The shot cuts to ..." — open on the wide so the later cuts inherit one floor plan, time each cut by a dialogue or action beat, and give each its own shot size. There is no negativePrompt parameter on this engine: an unwanted element is designed out of the sentence, never forbidden in it, and what must hold goes into a closing positive-locks paragraph ("the lantern stays lit in every cut; only two people ever appear") — the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative. Prompt body must be English or Chinese (Korean only on dreamina-seedance-2-5-260628) — Korean dialogue still works inside quotes on 1.5-pro, which lip-syncs it.',
+                    description: 'Video description. Vendor formula: Subject + Movement + Environment + Camera movement + Aesthetic description + Sound. Write camera as a span, not a verb — "starting frame composition + movement + movement amplitude + ending frame composition" (combos the docs name: Hitchcock = dolly-in/out + zoom-out/in, bullet time = time slowdown + surround). Shot size follows the example word order, "Close-up of the man on the left". Do NOT write timecodes such as "0-3 seconds" — the vendor states precise-timing support is unstable and forcing it degrades the result; cut timing in the edit instead, and write an in-clip state change in words ("in under half a second"). Multi-cut in one call is supported via "Shot 1: ... Shot 2: ..." or "The shot cuts to ..." — open on the wide so the later cuts inherit one floor plan, time each cut by a dialogue or action beat, and give each its own shot size. There is no negativePrompt parameter on this engine: an unwanted element is designed out of the sentence, never forbidden in it, and what must hold goes into a closing positive-locks paragraph ("the lantern stays lit in every cut; only two people ever appear") — the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative. Prompt body must be English or Chinese (Korean only on dreamina-seedance-2-5-260628).',
                 },
                 model: SEEDANCE_MODEL_PROPERTY,
                 ratio: {
@@ -2563,8 +2121,6 @@ Returns: a text block with the saved .mp4 file path, model, ratio, resolution, d
                 durationSeconds: SEEDANCE_DURATION_PROPERTY,
                 generateAudio: SEEDANCE_AUDIO_PROPERTY,
                 watermark: SEEDANCE_WATERMARK_PROPERTY,
-                seed: SEEDANCE_SEED_PROPERTY,
-                cameraFixed: SEEDANCE_CAMERA_FIXED_PROPERTY,
                 outputPath: {
                     type: 'string',
                     description: 'Directory path to save the generated video (default: current working directory)',
@@ -2583,9 +2139,9 @@ Returns: a text block with the saved .mp4 file path, model, ratio, resolution, d
         annotations: HINT.generate,
         description: `Animate a still image into a video (first frame, or first+last frame interpolation) using ByteDance Seedance.
 
-Use for the cheap b-roll lane of this pipeline: animating an already-generated cover or point background PNG. ratio defaults to "adaptive" so the source image is not center-cropped — pass an explicit ratio only when you intend a different frame. Billing follows the requested duration, so ask for the length you will actually cut in.
-The default model (seedance-1-5-pro) accepts photoreal human faces. The dreamina-seedance-2.5/2.0 models REJECT input images containing real human faces, so never route a photoreal-person background through them.
-Do NOT use for pure text-to-video (use seedance_text2video) or for subject consistency across several photos (use seedance_reference). Veo's veo_img2video remains the choice when you want its native audio or Veo-only extension afterwards.
+Use for a b-roll cut no character speaks in: animating an already-generated cover or point background PNG. ratio defaults to "adaptive" so the source image is not center-cropped — pass an explicit ratio only when you intend a different frame. Billing follows the requested duration, so ask for the length you will actually cut in.
+Every Seedance model REJECTS input images containing real human faces, so never route a photoreal-person background through it.
+Do NOT use for pure text-to-video (use seedance_text2video), for subject consistency across several photos, or for a cut where a character speaks (both use seedance_reference).
 
 Returns: a text block with the saved .mp4 file path, source/last frame image paths, model, ratio, resolution, duration, and the billed completion token count.`,
         inputSchema: {
@@ -2593,7 +2149,7 @@ Returns: a text block with the saved .mp4 file path, source/last frame image pat
             properties: {
                 prompt: {
                     type: 'string',
-                    description: 'Identity words stay, layout words go — the Seedance image lane is not motion-only (that is Veo\'s rule). Reuse the source image prompt\'s identity words (who and what the subject is), drop the composition words (where things sit — the frame already holds that), add the motion, write camera as a span ("starting frame composition + movement + ending frame composition"), and CLOSE WITH A CONSISTENCY LOCK: "the subject stays exactly consistent with the input frame; appearance, proportions and materials hold; no unrelated elements appear". Re-describe the layout, facing or lighting and the model redesigns the scene. Do NOT write timecodes such as "0-3 seconds" (vendor: precise-timing support is unstable) — an in-clip state change goes in words ("in under half a second"), and the length lives in durationSeconds. English or Chinese only (Korean on dreamina-seedance-2-5 alone, and inside dialogue quotes on 1.5-pro). There is no negativePrompt parameter on this engine: an unwanted element is designed out of the sentence and pinned by the lock, never forbidden in it — the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative.',
+                    description: 'Identity words stay, layout words go — the Seedance image lane is not motion-only. Reuse the source image prompt\'s identity words (who and what the subject is), drop the composition words (where things sit — the frame already holds that), add the motion, write camera as a span ("starting frame composition + movement + ending frame composition"), and CLOSE WITH A CONSISTENCY LOCK: "the subject stays exactly consistent with the input frame; appearance, proportions and materials hold; no unrelated elements appear". Re-describe the layout, facing or lighting and the model redesigns the scene. Do NOT write timecodes such as "0-3 seconds" (vendor: precise-timing support is unstable) — an in-clip state change goes in words ("in under half a second"), and the length lives in durationSeconds. English or Chinese only (Korean on dreamina-seedance-2-5 alone). There is no negativePrompt parameter on this engine: an unwanted element is designed out of the sentence and pinned by the lock, never forbidden in it — the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative.',
                 },
                 sourceImagePath: {
                     type: 'string',
@@ -2601,7 +2157,7 @@ Returns: a text block with the saved .mp4 file path, source/last frame image pat
                 },
                 lastImagePath: {
                     type: 'string',
-                    description: 'Optional: Absolute path to the last frame (ending) image file for a smooth interpolation. Not supported by seedance-1-0-pro-fast-251015 (first frame only).',
+                    description: 'Optional: Absolute path to the last frame (ending) image file for a smooth interpolation.',
                 },
                 model: SEEDANCE_MODEL_PROPERTY,
                 ratio: {
@@ -2614,8 +2170,6 @@ Returns: a text block with the saved .mp4 file path, source/last frame image pat
                 durationSeconds: SEEDANCE_DURATION_PROPERTY,
                 generateAudio: SEEDANCE_AUDIO_PROPERTY,
                 watermark: SEEDANCE_WATERMARK_PROPERTY,
-                seed: SEEDANCE_SEED_PROPERTY,
-                cameraFixed: SEEDANCE_CAMERA_FIXED_PROPERTY,
                 outputPath: {
                     type: 'string',
                     description: 'Directory path to save the generated video (default: current working directory)',
@@ -2630,15 +2184,15 @@ Returns: a text block with the saved .mp4 file path, source/last frame image pat
     },
     {
         name: 'seedance_reference',
-        title: 'Video generation (reference images, Seedance 2.x)',
+        title: 'Video generation (reference images and voices, Seedance 2.x)',
         annotations: HINT.generate,
         description: `Generate a video that keeps subjects from reference images consistent, using Dreamina Seedance 2.x.
 
-Use when a character, product, or garment must stay the same across the shot and you have several photos of it (캐릭터 일관성, 제품 영상). dreamina-seedance-2-5-260628 takes 1-30 reference images and up to 30 seconds; the 2.0 series takes 1-9 and up to 15 seconds. Unlike veo_reference the length is not pinned to 8 seconds.
-Do NOT pass reference images containing real human faces — the 2.x models reject them; use veo_reference for real people. The seedance-1-5-pro and 1.0 models do not accept reference images at all and are rejected before the call. These models also need account balance > $30 to activate.
-References carry the artistic STYLE through along with the subject. That is the feature when you want a sketch or toon look transferred — this is the only style-transfer lane in the plugin, since Veo 3.1 dropped style references — and a defect when you only wanted the layout: a storyboard frame passed here returns its drawing style, not its composition. For composition use seedance_img2video with sourceImagePath + lastImagePath.
+Use when a character, product, or garment must stay the same across the shot and you have several photos of it (캐릭터 일관성, 제품 영상), and for every Seedance cut where a character speaks: each speaker gets their image and voice sample, as MSR does on LTX. dreamina-seedance-2-5-260628 takes 1-30 reference images and up to 30 seconds; the 2.0 series takes 1-9 and up to 15 seconds.
+Do NOT pass reference images containing real human faces — every Seedance model rejects them. These models also need account balance > $30 to activate.
+References carry the artistic STYLE through along with the subject. That is the feature when you want a sketch or toon look transferred — this is the only style-transfer lane in the plugin — and a defect when you only wanted the layout: a storyboard frame passed here returns its drawing style, not its composition. For composition use seedance_img2video with sourceImagePath + lastImagePath.
 Do NOT feed a three-view or multi-view character sheet. ByteDance's own docs advise against it twice: the model reads the separate angles as separate people, which worsens identity drift and produces duplicate characters in one frame. Send a headshot (face only, neutral expression, minimal shoulders and background) plus one full-body shot instead — the docs call those two sufficient. Order is weight: put the asset that must be matched most precisely first in the array.
-Reference AUDIO gives a character a fixed voice. Pass the clip in referenceAudioPaths with generateAudio: true and bind it in the prompt the way the 2.5 guide does — "Images 1-2 are Character 1 and correspond to Audio 1; Image 3 is Character 2 and speaks with the voice of Audio 2" (@Image N and @Audio N are each list's own order). Route this to dreamina-seedance-2-5-260628: only its guide documents the per-character mapping and only it takes audio-only input; the 2.0 series takes at most 3 clips and needs an image alongside. A channel character's fixed voice sample lives at data/<channel>/assets/characters/<id>/voice.wav. Veo has no audio reference at all.
+Reference AUDIO gives a character a fixed voice. Pass the clip in referenceAudioPaths with generateAudio: true and bind it in the prompt the way the 2.5 guide does — "Images 1-2 are Character 1 and correspond to Audio 1; Image 3 is Character 2 and speaks with the voice of Audio 2" (@Image N and @Audio N are each list's own order). Route this to dreamina-seedance-2-5-260628: only its guide documents the per-character mapping and only it takes audio-only input; the 2.0 series takes at most 3 clips and needs an image alongside. A channel character's fixed voice sample lives at data/<channel>/assets/characters/<id>/voice.wav; video_plan binds it from the character's voiceReference.
 Reference VIDEO hands over camera movement, blocking and motion timing — the Blender previz lane (blender_render_previz → referenceVideoPaths). The vendor's own "3D clay-model reference" recipe: a grey primitive render, each actor its own flat colour, no stamp or gizmos, 24 fps, a whole number of seconds equal to durationSeconds; the styled source still goes first in referenceImagePaths ("Image 1 is the first frame" — first_frame cannot be mixed with a reference video); the prompt names "Video 1" as the ONLY reference for camera, shot rhythm, subject trajectory and blocking, maps each coloured model to its Image, and says "Do not reference its visual content". The vendor takes video by public URL only, so a local file is published for the life of the task — through MEDIA_UPLOAD_URL when set, else a cloudflared quick tunnel — and released afterwards. Input seconds are billed alongside output seconds at a lower per-token rate.
 
 Returns: a text block with the saved .mp4 file path, reference image, video and audio lists, model, ratio, resolution, duration, and the billed completion token count.`,
@@ -2675,9 +2229,9 @@ Returns: a text block with the saved .mp4 file path, reference image, video and 
                 },
                 model: {
                     type: 'string',
-                    description: `Seedance model (default: "${DEFAULT_SEEDANCE_REFERENCE_MODEL}" — the only reference-capable model with independent quality data: rank 1 on the Artificial Analysis blind image-to-video arena, and it also outputs 1080p and 4k). Only the 2.x models accept reference images. Switch to dreamina-seedance-2-5-260628 when you actually need more than 9 reference images or more than 15 seconds — it is untested in every public arena, so do not pick it for a shot that matters without comparing first. fast and mini trade quality for cost and are likewise untested.`,
-                    enum: [...SEEDANCE_REFERENCE_MODELS],
-                    default: DEFAULT_SEEDANCE_REFERENCE_MODEL,
+                    description: `Seedance model (default: "${DEFAULT_SEEDANCE_MODEL}" — the only model with independent quality data: rank 1 on the Artificial Analysis blind image-to-video arena, and it also outputs 1080p and 4k). Switch to dreamina-seedance-2-5-260628 when you actually need more than 9 reference images or more than 15 seconds — it is untested in every public arena, so do not pick it for a shot that matters without comparing first. fast and mini trade quality for cost and are likewise untested.`,
+                    enum: [...VALID_SEEDANCE_MODELS],
+                    default: DEFAULT_SEEDANCE_MODEL,
                 },
                 ratio: {
                     type: 'string',
@@ -2711,7 +2265,7 @@ Returns: a text block with the saved .mp4 file path, reference image, video and 
         description: `Generate a video on this machine via MLX Core / mlx-serve. The server returns raw rgb8 frames (plus optional PCM), which this tool muxes to mp4 with ffmpeg (libx264 yuv420p). No vendor bill. This plugin never launches the app.
 
 Use as an optional local clip when MLX Core is running with a video model (LTX 2.5 MLX pack — install runbook in docs/mlx-ltx-2.5.md). Default canvas is ${DEFAULT_MLX_VIDEO_WIDTH}×${DEFAULT_MLX_VIDEO_HEIGHT} at ${DEFAULT_MLX_VIDEO_FRAMES} frames / ${MLX_VIDEO_FPS} fps (~2s). Width/height must be a multiple of ${MLX_VIDEO_DIMENSION_STEP} (two-stage LTX grid), or of ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE} when you pass pipeline:"one_stage" — 1080 is on neither grid; use 1088×1920 or the default. numFrames is ${MLX_VIDEO_FRAME_STEP}k+1 (${MIN_MLX_VIDEO_FRAMES}, 17, … ${DEFAULT_MLX_VIDEO_FRAMES} …): any other count is answered 200 with the server's own default. Decoded RGB is capped at ${Math.round(MAX_VIDEO_RGB_BYTES / (1024 * 1024))}MB — 1088×1920 at 8s/24fps is ~1.2GB and is refused. lastFrameImagePath needs at least ${MIN_MLX_VIDEO_FRAMES} frames.
-Do NOT use this as the default generated-video path — that stays veo_* / seedance_* per video-model-selection.md. Do NOT put this tool on the Veo/Seedance face-policy table; it is a separate local engine. Output is ${MLX_VIDEO_FPS} fps; produce's builder is 30 fps, so a splice re-encodes. ffmpeg must be on PATH. Shares the GPU with Z-Image and the chat model — LTX wants 24GB+ on its own.
+Do NOT use this as the default generated-video path — that follows the saved model per video-model-selection.md, and video_plan refuses spoken cuts here (no voice lane). Output is ${MLX_VIDEO_FPS} fps; produce's builder is 30 fps, so a splice re-encodes. ffmpeg must be on PATH. Shares the GPU with Z-Image and the chat model — LTX wants 24GB+ on its own.
 Requires Apple Silicon, macOS 26.2+, MLX Core.app or mlx-serve (or MLX_SERVE_URL), and ffmpeg. brew install --cask mlx-core if :11234 is down.
 
 Returns: a text block with the saved .mp4 path, model, size, frame count, fps, and whether audio was muxed.`,
@@ -4011,7 +3565,7 @@ Returns JSON: status, missing fields, canonical paths, config and revision; epis
                         models: { type: 'object', additionalProperties: false, description: 'Select video and check credentials, then image and check credentials, then decide whether TTS is needed. Use speech:{engine:"none"} to skip TTS; otherwise select speech and check credentials. Music is optional. Use capability_status and host schemas for availability.', properties: Object.fromEntries(['video', 'speech', 'image', 'music'].map(kind => [kind, {
                                     type: 'object', additionalProperties: false, description: `${kind} selection; fixed engines omit model, host uses host-managed.`,
                                     properties: {
-                                        engine: { type: 'string', enum: kind === 'video' ? ['host', 'seedance', 'veo', 'astra', 'astra-genai', 'astra-genai-desktop', 'mlx', 'omni'] : kind === 'speech' ? ['none', 'gemini', 'elevenlabs', 'astra-genai'] : kind === 'music' ? ['lyria', 'suno-api', 'elevenlabs', 'mlx'] : ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai', 'astra-genai-native'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
+                                        engine: { type: 'string', enum: kind === 'video' ? ['host', 'seedance', 'astra', 'astra-genai', 'astra-genai-desktop', 'mlx'] : kind === 'speech' ? ['none', 'gemini', 'elevenlabs', 'astra-genai'] : kind === 'music' ? ['lyria', 'suno-api', 'elevenlabs', 'mlx'] : ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai', 'astra-genai-native'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
                                         model: { type: 'string', description: 'Supported model ID, e.g. host-managed. Omit for astra, zimage and speech engine none.' },
                                         ...(!['speech', 'music'].includes(kind) ? { host: { type: 'string', description: 'Host CLI when engine is host, e.g. codex.' } } : {}),
                                         ...(kind === 'video' ? { resolution: { type: 'string', description: 'Supported source resolution, e.g. 720p; MSR takes WIDTHxHEIGHT, e.g. 1792x1024.' },
@@ -4052,7 +3606,7 @@ Returns JSON: status, missing fields, canonical paths, config and revision; epis
         annotations: HINT.local,
         description: `Report which generation and research capabilities are configured on this machine, grouped by capability with an "N of M configured" count per group, plus the env vars that would unlock the rest.
 
-Use it BEFORE planning anything that spends money or depends on a provider — the top of a storyboard, produce, or autoproduce run. Without it, a missing key shows up only when the call fails, which is after the plan was built around a tool that was never going to run: planning two Veo b-roll slots on a machine with no GEMINI_API_KEY costs the review rounds before anyone finds out. Also use it when the user asks what they can make, or why a tool is failing.
+Use it BEFORE planning anything that spends money or depends on a provider — the top of a storyboard, produce, or autoproduce run. Without it, a missing key shows up only when the call fails, which is after the plan was built around a tool that was never going to run: planning two Seedance b-roll slots on a machine with no ARK_API_KEY costs the review rounds before anyone finds out. Also use it when the user asks what they can make, or why a tool is failing.
 Do NOT use it to test whether a key still works. It reports CONFIGURATION, not reachability — a revoked key reads as configured here and fails at the call. Local engines report only whether their binary resolves (mflux, python3, mlx-qwen3-asr) or whether MLX Core.app / mlx-serve is installed — not whether :11234 is up. Read-only; makes no API call, so one call per session is enough.
 
 Returns: a capability menu — video_generation, image_generation, tts, music_generation, 3d_generation, speech_to_text, stock_footage, research — each listing its providers with the env var or local install each one needs, then the publishing platforms, the env vars grouped by what each would turn on.`,
@@ -4462,7 +4016,7 @@ Returns: integer credit balance.`,
                 },
                 containsSyntheticMedia: {
                     type: 'boolean',
-                    description: 'Synthetic-media self-disclosure — **default true** (this pipeline uses Veo video and Lyria music). YouTube requires disclosure for realistic-looking AI-generated or altered content (AI-generated music, realistic generated footage of real places or people) and warns that habitual non-disclosure brings forced labels, removal, and YPP suspension. It also states outright that disclosure "does not affect exposure or monetization eligibility", so when in doubt leaving it on costs nothing. It may be set false only for clearly exempt uses — script/title/thumbnail generation, subtitle generation, idea generation, cloning your own voice, non-realistic animation or fantasy footage, color grading and beauty filters.',
+                    description: 'Synthetic-media self-disclosure — **default true** (this pipeline uses generated video and Lyria music). YouTube requires disclosure for realistic-looking AI-generated or altered content (AI-generated music, realistic generated footage of real places or people) and warns that habitual non-disclosure brings forced labels, removal, and YPP suspension. It also states outright that disclosure "does not affect exposure or monetization eligibility", so when in doubt leaving it on costs nothing. It may be set false only for clearly exempt uses — script/title/thumbnail generation, subtitle generation, idea generation, cloning your own voice, non-realistic animation or fantasy footage, color grading and beauty filters.',
                     default: true,
                 },
                 channel: SNS_CHANNEL_PROPERTY,
@@ -5019,10 +4573,6 @@ for (const tool of TOOLS) {
             type: 'number', exclusiveMinimum: 0,
             description: 'Required source coverage in seconds, e.g. 3.2. Include the measured shot body, source trim and outgoing transition handle. Selects the shortest supported duration without changing model/resolution. Mutually exclusive with duration, durationSeconds, numFrames, frames, autoDuration and audioMaxDuration. Use for new shots; exact legacy requests may retain their explicit length. Over-limit shots must be split; never truncated.',
         } };
-    if (tool.name === 'seedance_text2video' || tool.name === 'seedance_img2video')
-        tool.inputSchema.properties.frames = {
-            type: 'integer', minimum: 29, maximum: 289, description: 'Exact output frames, 1 mod 4 at 24 fps. Only Seedance 1.0 Pro/Fast. Mutually exclusive with durationSeconds and requiredSeconds. Use requiredSeconds to round upward automatically.',
-        };
     tool.description += '\nFor shot-length optimization, pass requiredSeconds (e.g. 3.2) instead of a fixed duration/frame count. Returns the required/requested/excess seconds as a duration plan; these are not measured output seconds. Do NOT use this option for extending, editing or retaking existing footage.';
 }
 export const SNS_PLATFORM_BY_TOOL = {

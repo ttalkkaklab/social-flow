@@ -736,7 +736,7 @@
     font-size: calc(var(--fw) * .03); color: rgba(255,255,255,.55); font-weight: 600;
     letter-spacing: .06em;
   }
-  /* Speech-clip slot — produce lays a veo clip over this stretch, so there is no picture yet.
+  /* Speech-clip slot — produce lays a generated speech clip over this stretch, so there is no picture yet.
      The scrim is lifted in the middle, so the slot carries its own contrast to keep from
      matching the background. At the same specificity as `.f-band` it would lose on source
      order, so both classes are used together. */
@@ -1120,7 +1120,7 @@ window.SB_DOC = {
     //   panels: { face: "../../../assets/characters/claude/face.png",
     //             body: "../../../assets/characters/claude/body.png",
     //             back: "../../../assets/characters/claude/back.png" },
-    //   note: "no lettered wordmark · voice is profile §2 Leda", veo: "" }
+    //   note: "no lettered wordmark · voice is profile §2 Leda" }
   ],
   speechPlanVersion: 1, // explicit line ids, speakers and delivery on new boards
   performanceTimingVersion: 1, // new boards time independent actions before production
@@ -2056,17 +2056,15 @@ window.STORYBOARD_READY = (async function () {
     var v = s.visual || {};
     return s.type === "broll" || !!v.video || !!(v.clip && v.clip.prompt);
   }
-  /* The planned route (scenes-schema §clip prompt) — visual.engine overrides the type default:
-     b-roll keeps its sound so it defaults to veo, a motion background discards it so seedance,
-     a speech clip defaults to veo_reference (a drawn speaker writes engine: "seedance"). The
-     stored prompt is written in this route's grammar, and the timing checks follow it. */
+  /* The planned route (scenes-schema §clip prompt) — visual.engine overrides the default,
+     seedance (Veo left on 2026-10-31: no voice reference). The stored prompt is written in this
+     route's grammar, and the timing checks follow it. */
   function engineOf(s) {
     var v = s.visual || {};
     /* A motion background may name its route on the video object itself — the same place the
        cost panel reads it from. check-scenes.js engineOf resolves it in this order too. */
     var named = (v.video && v.video.engine) || (v.clip && v.clip.engine) || v.engine;
-    if (named === "veo" || named === "seedance" || named === "host") return named;   // host: the CLI's own video tool
-    if (s.type === "broll" || s.type === "quote") return "veo";
+    if (named === "seedance" || named === "host") return named;   // host: the CLI's own video tool
     return "seedance";
   }
   /* The stored final clip prompt — one home per type (scenes-schema §clip prompt). */
@@ -2546,10 +2544,10 @@ window.STORYBOARD_READY = (async function () {
       var s = scenes[i] || {}, v = s.visual || {};
       if (v.reuse !== undefined) parts.push((i + 1) + ":reuse:" + encodeURIComponent(JSON.stringify(v.reuse)));
       var slot = null;
-      var route = function (named, fallback) { return named === "host" || named === "veo" || named === "seedance" ? named : fallback; };
-      if (s.type === "broll") slot = ["broll", route(v.engine, "veo"), Number(s.duration) || 0];
+      var route = function (named, fallback) { return named === "host" || named === "seedance" ? named : fallback; };
+      if (s.type === "broll") slot = ["broll", route(v.engine, "seedance"), Number(s.duration) || 0];
       else if (v.video) slot = ["motion", route(v.video.engine || v.engine, "seedance"), Number(s.duration) || 0];
-      else if (s.type === "quote" && v.clip && typeof v.clip === "object") slot = ["quote", route(v.clip.engine || v.engine, "veo"), Number(s.duration) || 8];
+      else if (s.type === "quote" && v.clip && typeof v.clip === "object") slot = ["quote", route(v.clip.engine || v.engine, "seedance"), Number(s.duration) || 8];
       if (slot) {
         var config = Object.assign({}, v, slot[0] === "motion" ? v.video : slot[0] === "quote" ? v.clip : {});
         var fields = ["model", "modelPurpose", "modelReason", "resolution", "generateAudio", "realFaceInput", "referenceImagePaths", "referenceAudioPaths", "previz", "frames", "references"];
@@ -2890,10 +2888,9 @@ window.STORYBOARD_READY = (async function () {
         if (s.type !== "points" && s.type !== "cover")
           flag("bad", T.shotCap(no), "a motion background (visual.video) is points-only — it cannot be used on " + s.type);
         // One scene = one call, so the routed engine's server-validated range caps the scene
-        // (scenes-schema §clip prompt). The default route 1.5 pro takes 4–12s — the old 15s
-        // figure was Seedance 2.0's. Veo is fixed at 8. The real danger is a clip shorter
-        // than its scene: it loops, and the loop shows its seam.
-        var mbCap = engineOf(s) === "veo" ? 8 : engineOf(s) === "host" ? 15 : 12;   // host image_to_video takes 1–15 s
+        // (scenes-schema §clip prompt). The default route Seedance 2.0 takes 4–15s. The real
+        // danger is a clip shorter than its scene: it loops, and the loop shows its seam.
+        var mbCap = 15;   // Seedance 2.0 and host image_to_video both stop at 15 s
         if (s.duration > mbCap)
           flag("warn", T.shotCap(no), "motion background " + s.duration + "s — past the " + engineOf(s) +
                " route's one-call cap (" + mbCap + "s; server-validated), so the clip loops and the seam shows. Trim the narration, split the scene, or route to a model that takes it");
@@ -3510,9 +3507,8 @@ window.STORYBOARD_READY = (async function () {
   });
 
   /* Negative directives in a generated clip's prompt (video-model-selection §positive locks).
-     Write "no ~" in the body and the model tends to draw that noun — Veo takes exclusions in the
-     negativePrompt argument, Seedance has no such argument and wants the scene re-described plus
-     a positive-locks tail. Scanned: visual.video.prompt, visual.clip.prompt, the four camera
+     Write "no ~" in the body and the model tends to draw that noun — Seedance has no exclusion
+     argument and wants the scene re-described plus a positive-locks tail. Scanned: visual.video.prompt, visual.clip.prompt, the four camera
      slots. NOT scanned — bgPrompt (the image tools have no exclusion argument, so
      assemble-bg-prompt.js --exclude ships the noun list in the body by design) and visual.audio
      (a sound absence is a description: "no music, no speech"). Edit directives about cutting are
@@ -3539,9 +3535,8 @@ window.STORYBOARD_READY = (async function () {
   SCENES.forEach(function (s, i) {
     var v = s.visual || {}, cam = camOf(s) || {}, fields = [];
     // Prompts from both sources — the scene's own and the footage lane's per-group shots
-    // (clipPrompts, below). This strip warns on a negative directive on either route, since a
-    // Veo exclusion belongs in the negativePrompt argument; check-scenes.js blocks only the
-    // seedance route, where there is no such argument to move it to.
+    // (clipPrompts, below). This strip warns on a negative directive on every route;
+    // check-scenes.js blocks only the seedance route.
     clipPrompts(s, i).forEach(function (f) {
       if (f.prompt) fields.push([f.where, f.prompt, f.eng]);
     });
@@ -3550,7 +3545,7 @@ window.STORYBOARD_READY = (async function () {
     });
     var shots = (v.slide && Array.isArray(v.slide.shots)) ? v.slide.shots : [];
     shots.forEach(function (sh, j) {
-      var sc = sh.camera || {}, eng = (sh.engine || v.engine) === "veo" ? "veo" : "seedance";
+      var sc = sh.camera || {}, eng = "seedance";
       CAM_SLOTS.forEach(function (slot) {
         if (typeof sc[slot] === "string" && sc[slot]) fields.push(["shots[" + j + "]'s camera." + slot, sc[slot], eng]);
       });
@@ -3561,7 +3556,7 @@ window.STORYBOARD_READY = (async function () {
       var hits = negHits(audioAt >= 0 ? f[1].slice(0, audioAt) : f[1], f[2]);
       if (!hits.length) return;
       flag("warn", T.shotCap(i + 1), f[0] + ' carries a negative directive ("' + hits.join('", "') +
-           '") — on Veo exclusions belong in the negativePrompt argument, on Seedance re-describe the scene and close with positive locks; only the artifact classes (subtitles·text·logo·watermark·bgm) may stay negative there (video-model-selection §positive locks)');
+           '") — re-describe the scene and close with positive locks; only the artifact classes (subtitles·text·logo·watermark·bgm) may stay negative there (video-model-selection §positive locks)');
     });
   });
 
@@ -3586,7 +3581,7 @@ window.STORYBOARD_READY = (async function () {
     var shots = (v.slide && Array.isArray(v.slide.shots)) ? v.slide.shots : [];
     shots.forEach(function (sh, j) {
       out.push({ cap: T.shotCap(i + 1), prompt: String(sh.prompt || ""),
-                 eng: (sh.engine || v.engine) === "veo" ? "veo" : (sh.engine || v.engine) === "host" ? "host" : "seedance",
+                 eng: (sh.engine || v.engine) === "host" ? "host" : "seedance",
                  where: "shots[" + j + "]'s prompt" });
     });
     return out;
@@ -3600,7 +3595,7 @@ window.STORYBOARD_READY = (async function () {
         return;
       }
       if (eng === "seedance" && TIME_RE.test(p))
-        flag("warn", f.cap, f.where + " carries a timecode on a seedance route — 2.0 self-reports unstable precision timing; cut in the edit, or write visual.engine: \"veo\" where [mm:ss] is a workflow");
+        flag("warn", f.cap, f.where + " carries a timecode on a seedance route — 2.0 self-reports unstable precision timing; cut in the edit");
       var m; SECS_RE.lastIndex = 0;
       while ((m = SECS_RE.exec(p)) !== null) {
         if (m[2].toLowerCase() === "s" && Number(m[1]) > 19) continue;   // "80s film look" is a decade
@@ -4084,7 +4079,7 @@ window.STORYBOARD_READY = (async function () {
         h += '<p>' + esc(T.prodOutside(T.prodModes[window.PRODUCTION.mode] || window.PRODUCTION.mode)) + '</p>';
       var selectedRows = (selectedOption && selectedOption.rows) || [];
       h += (selectedRows.length ? '<details><summary>' + esc(T.prodRows) + '</summary><ul>' : '') + selectedRows.map(function (r) {
-        var g = r.generation || {}, model = g.model === 'seedance-1-5-pro-251215' ? 'Seedance 1.5 Pro' : g.model || r.key;
+        var g = r.generation || {}, model = g.model || r.key;
         return '<li>' + esc(T.prodShot) + r.shot + ' · ' + esc(model) + ' · ' + esc(g.resolution || '') +
           ' · ' + esc(g.generateAudio ? T.withAudio : T.silent) + ' · ' + r.seconds + 's · $' + r.usd.toFixed(3) + '</li>';
       }).join('') + (selectedRows.length ? '</ul></details>' : '') + '</section>';
@@ -4096,11 +4091,11 @@ window.STORYBOARD_READY = (async function () {
     var money = function (n) { return "$" + (Number(n) || 0).toFixed(2); };
     var slotRows = SCENES.map(function (s, i) {
       var v = s.visual || {};
-      var route = function (named, fallback) { return named === "host" || named === "veo" || named === "seedance" ? named : fallback; };
-      if (s.type === "broll") return { n: i + 1, what: "b-roll", eng: route(v.engine, "veo") };
+      var route = function (named, fallback) { return named === "host" || named === "seedance" ? named : fallback; };
+      if (s.type === "broll") return { n: i + 1, what: "b-roll", eng: route(v.engine, "seedance") };
       if (v.video) return { n: i + 1, what: T.motionBg, eng: route(v.video.engine || v.engine, "seedance") };
       if (s.type === "quote" && v.clip && typeof v.clip === "object")
-        return { n: i + 1, what: T.speechClipRow + (s.speaker ? " · " + s.speaker : ""), eng: route(v.clip.engine || v.engine, "veo") };
+        return { n: i + 1, what: T.speechClipRow + (s.speaker ? " · " + s.speaker : ""), eng: route(v.clip.engine || v.engine, "seedance") };
       return null;
     }).filter(Boolean);
 
@@ -4356,7 +4351,7 @@ window.STORYBOARD_READY = (async function () {
         '<div class="meta">' +
         "<div><b>" + esc(T.brollPicture) + "</b>AI video — generated with the source photo as the parameter</div>" +
         "<div><b>" + esc(T.brollOverlay) + "</b>no overlay — the audio the video carries</div>" +
-        "<div><b>" + esc(T.brollWhere) + "</b>right after shot " + ((s.after || 0) + 1) + " ends · using " + (s.duration || "?") + "s (Veo: the front of the 8s original · Seedance: generated at this length)</div>" +
+        "<div><b>" + esc(T.brollWhere) + "</b>right after shot " + ((s.after || 0) + 1) + " ends · using " + (s.duration || "?") + "s (generated at this length)</div>" +
         (v.src ? "<div><b>" + esc(T.brollSrc) + "</b><code>" + esc(v.src) + "</code> — the same file as the background of shot " + ((s.after || 0) + 1) + "</div>" : "") +
         (camOf(s) ? "<div><b>" + esc(T.brollCamera) + "</b>" + camHtml(camOf(s)) + "</div>"
                   : v.motion ? "<div><b>" + esc(T.brollMotion) + "</b>" + esc(v.motion) + "</div>" : "") +
@@ -4560,7 +4555,7 @@ window.STORYBOARD_READY = (async function () {
         else if (vis.motion)
           meta += '<div class="row"><b>' + esc(T.metaMotion) + '</b><div class="v">' + esc(vis.motion) + "</div></div>";
         if (vis.video) {
-          // Motion-background scene — this image becomes the parameter for veo img2video (scenes-schema §motion background)
+          // Motion-background scene — this image becomes the img2video source frame (scenes-schema §motion background)
           meta += '<div class="row"><b>' + esc(T.metaVideo) + '</b><div class="v">' +
                T.videoFromStill(esc((vis.video && vis.video.engine) || engineOf(s)), esc(vis.bg || "?")) +
                (vis.video.clip ? " → <code>" + esc(vis.video.clip) + "</code>" : "") + "</div></div>";
@@ -4655,8 +4650,7 @@ window.STORYBOARD_READY = (async function () {
       });
       if (!drawn) h += '<div class="cast-panel"><div class="lb">no panel path written</div></div>';
       h += "</div><div>";
-      h += '<div class="cast-name">' + esc(c.name || c.id) + " <code>" + esc(c.id) + "</code>" +
-           (c.veo === "banned" ? " " + badge("bad", "veo banned") : "") + "</div>";
+      h += '<div class="cast-name">' + esc(c.name || c.id) + " <code>" + esc(c.id) + "</code></div>";
       if (/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c.id || "")) h += '<p><a href="../../../assets/characters/' + encodeURIComponent(c.id) + '/index.html">' + esc(LANG === "ko" ? "공용 캐릭터 시트" : "Shared character sheet") + '</a></p>';
       (window.REVIEW_PANEL_FINDINGS || []).filter(function (f) { return f.characterId === c.id; }).forEach(function (f) { h += '<p class="cast-note">' + esc(LANG === 'ko' ? f.messageKo || f.message : f.message) + '</p>'; });
       if (c.role) h += '<div class="cast-role">' + mark(c.role) + "</div>";

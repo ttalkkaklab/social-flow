@@ -293,7 +293,7 @@ for C in cards/reveals.tsv reveals.tsv; do [ -f "$C" ] && { RTOTAL="$C"; break; 
 [ -n "$RTOTAL" ] || say "· no reveals.tsv — state completeness runs the skipped-state check only (capture with capture-reveals.sh)"
 
 # ── 0.5) Canvas probe + asset dimension precheck
-#   Today both accidents blow up in §12, i.e. after the TTS/image/veo budget is spent.
+#   Today both accidents blow up in §12, i.e. after the TTS/image/video budget is spent.
 #   Catch them here within 3 seconds. Silent on pass — the gate speaks only on violation.
 
 # Probe: the CSS canvas didn't follow the window. frame.html?probe=1 paints the whole canvas

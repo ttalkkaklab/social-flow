@@ -154,7 +154,7 @@ export function saveAudioFile(outputDir: string, filename: string, data: Buffer)
  * zod schema for the filename argument — applies the same rules as resolveOutputFile,
  * but **before the call**.
  *
- * With validation only at save time, a generation that takes 1-6 minutes like Veo finishes
+ * With validation only at save time, a generation that takes 1-6 minutes finishes
  * completely before the filename gets rejected, throwing away the time and the money.
  * Save-time validation stays as the backstop.
  */

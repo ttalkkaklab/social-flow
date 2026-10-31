@@ -21,7 +21,7 @@ function shot() {
       {at:2,position:[8,-5,7],target:[2,10,4],rollDeg:20,label:'the ridge'},
       {at:4,position:[0,15,6],target:[0,25,3],rollDeg:0,label:'the bridge'}],
       proxies:[{name:'bridge',kind:'box',size:[12,2,4],keys:[{frame:1,position:[0,25,0]}]}, {name:'ridge',kind:'box',size:[8,8,8],keys:[{frame:1,position:[-6,5,0]}]}]}},
-      video:{engine:'seedance',modelPurpose:'previz',model:'seedance-1-5-pro-251215',resolution:'720p',generateAudio:false}}};
+      video:{engine:'seedance',modelPurpose:'previz',model:'dreamina-seedance-2-0-fast-260128',resolution:'720p',generateAudio:false,realFaceInput:false}}};
 }
 function planned(){const s=shot(), p=prepare(s);s.visual.camera=p.camera;s.visual.video.previz={renderer:'threejs',clip:'previz/drone.mp4',firstFrame:'previz/start.png',sha256:'a'.repeat(64),seconds:4,fps:24,camera:p.previzCamera,handoff:'frame_and_prompt'};return {s,p};}
 test('one trajectory produces a continuous path, slots, and compatible Blender/three.js keys',()=>{

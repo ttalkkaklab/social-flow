@@ -2,11 +2,9 @@ import { fasth3OmniSchema } from './fasth3-omni.js';
 import { DESKTOP_SCHEMAS } from './astra-genai-desktop.js';
 /** Sound intent -> supported adapter arguments. Never generates or reviews media. */
 import { z } from 'zod';
-import * as veo from './video-client.js';
 import * as seedance from './seedance-client.js';
 import * as astra from './astra-video-client.js';
 import { genaiTextToVideoSchema, genaiImageToVideoSchema, genaiAudioToVideoSchema, genaiMsrSchema } from './astra-genai-video.js';
-import * as omni from './omni-client.js';
 const effectSchema = z.object({
     id: z.string().min(1).optional(),
     description: z.string().min(1).optional(),
@@ -20,16 +18,12 @@ const effectSchema = z.object({
 const schemas = {
     fasth3_omni_reference: fasth3OmniSchema,
     ...Object.fromEntries(Object.entries(DESKTOP_SCHEMAS).map(([feature, schema]) => ['astra_genai_desktop_' + ({ 'text-to-video': 'text2video', 'image-to-video': 'img2video', 'audio-to-video': 'audio2video' }[feature] || feature), schema])),
-    veo_text2video: veo.text2VideoSchema, veo_img2video: veo.img2VideoSchema,
-    veo_reference: veo.referenceVideoSchema, veo_extension: veo.videoExtensionSchema,
     seedance_text2video: seedance.seedanceText2VideoSchema,
     seedance_img2video: seedance.seedanceImg2VideoSchema, seedance_reference: seedance.seedanceReferenceSchema,
     astra_genai_text2video: genaiTextToVideoSchema, astra_genai_img2video: genaiImageToVideoSchema,
     astra_genai_audio2video: genaiAudioToVideoSchema, astra_genai_msr: genaiMsrSchema,
     astra_text2video: astra.astraText2VideoSchema, astra_img2video: astra.astraImg2VideoSchema,
     astra_audio2video: astra.astraAudio2VideoSchema, astra_keyframe_video: astra.astraKeyframeVideoSchema,
-    omni_text2video: omni.omniText2VideoSchema, omni_img2video: omni.omniImg2VideoSchema,
-    omni_extend: omni.omniExtendSchema, omni_edit: omni.omniEditSchema,
 };
 export function prepareVideoSound(tool, input, sound = {}) {
     const schema = schemas[tool];
@@ -48,7 +42,7 @@ export function prepareVideoSound(tool, input, sound = {}) {
         throw new Error('MSR keeps its own soundtrack; sound.audioSource speech is not allowed');
     let nativeAudio = !fixedInput && (tool !== 'astra_genai_desktop_keyframes' || input.audio === true);
     if (tool.startsWith('seedance_')) {
-        const model = input.model ?? (tool === 'seedance_reference' ? seedance.DEFAULT_SEEDANCE_REFERENCE_MODEL : seedance.DEFAULT_SEEDANCE_MODEL);
+        const model = input.model ?? seedance.DEFAULT_SEEDANCE_MODEL;
         const spec = seedance.SEEDANCE_MODEL_SPECS[model];
         if (!spec)
             throw new Error('Unknown Seedance model: ' + String(model));

@@ -170,9 +170,9 @@ async function main() {
     `Credentials: serpapi key ${config.serpApiKey ? 'set' : 'MISSING (serp_* and sns_issue_scout tools will fail)'}, ` +
       `naver keys ${config.naverClientId && config.naverClientSecret ? 'set' : 'MISSING (naver_search will fail)'}, ` +
       `data.go.kr key ${config.dataGoKrApiKey ? 'set' : 'MISSING (datago_file_fetch/datago_api_call will fail — search/detail/download still work)'}, ` +
-      `gemini key ${config.geminiApiKey ? 'set' : 'MISSING (veo_*/omni_*/tts_generate/tts_multi_speaker/tts_gemini_38/music_* will fail)'}, ` +
+      `gemini key ${config.geminiApiKey ? 'set' : 'MISSING (tts_generate/tts_multi_speaker/tts_gemini_38/music_* will fail)'}, ` +
       `openai key ${config.openaiApiKey ? 'set' : 'MISSING (gpt_image_* image generation tools will fail — image_local_generate does not need it)'}, ` +
-      `ark key ${config.arkApiKey ? 'set' : 'MISSING (seedance_* video generation tools will fail — veo_* does not need it)'}, ` +
+      `ark key ${config.arkApiKey ? 'set' : 'MISSING (seedance_* video generation tools will fail)'}, ` +
       `suno key ${config.sunoApiKey ? 'set' : 'MISSING (suno_* will fail — music_*(Lyria) does not need it)'}, ` +
       `elevenlabs key ${config.elevenLabsApiKey ? 'set' : 'MISSING (tts_elevenlabs_* and sfx_elevenlabs_generate will fail — tts_generate does not need it)'}, ` +
       `local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : '~/.local/bin/mflux-generate-z-image-turbo (default — set MFLUX_ZIMAGE_BIN if elsewhere)'}, ` +

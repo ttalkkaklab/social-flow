@@ -8,7 +8,7 @@
 #   key <TAB> quantity <TAB> memo
 #   e.g. image.gpt-image-2.high	1	storyboard: cover background scene-1
 #       image.local	3	storyboard: points backgrounds scene-2~4
-#       veo.lite.1080p	8	produce: b-roll a1 — 8s generated, 4s used
+#       seedance.2-0.1080p	4	produce: b-roll a1
 #       tts.local	0.412	produce: narration, 412 chars
 #       music.lyria-clip	1	produce: BGM 30s
 #
@@ -16,9 +16,9 @@
 #   unit, not a count. tts.* is per 1,000 characters, so 412 chars is 0.412.
 #   Write 412 and the line is off by 1,000x (invisible on local at $0, but on
 #   the gemini channel it shows up as the actual bill).
-#   veo.* is **generated length** — generate 8s and use only 4s, still write 8
-#   (1080p is 8s-only). seedance.* is the requested seconds as-is. Put the
-#   measured completion_tokens in the memo column.
+#   seedance.* is the requested seconds as-is. Put the measured
+#   completion_tokens in the memo column. (veo.* rows on earlier ledgers were
+#   the generated length.)
 #
 # Prefix the memo column with `storyboard:` / `produce:` — the report table
 # then reads per stage. The conventions' source of truth is cost-tally.md.

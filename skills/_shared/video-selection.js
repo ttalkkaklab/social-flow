@@ -26,8 +26,9 @@ function readVideoContext(episode, shotId) {
   const { resolveVideoChoice } = require('../storyboard/references/production-mode.js');
   const { selection, source } = resolveVideoChoice(production, shot, snapshot?.config.models.video);
   const overrides = production.modelSettings?.overrides || [];
-  for (const change of overrides) if (change.video) settings.validateModels({ video: change.video }, true);
-  if (snapshot || source.endsWith('_override')) settings.validateModels({ video: selection }, true);
+  // A retired engine loads here so video_plan can refuse it as video_engine_unsupported.
+  for (const change of overrides) if (change.video) settings.validateModels({ video: change.video }, true, true);
+  if (snapshot || source.endsWith('_override')) settings.validateModels({ video: selection }, true, true);
   return { episode: root, shotId, selection, source, snapshotRevision: snapshot?.revision || null,
     revision: hash({ selection, source, snapshotRevision: snapshot?.revision, overrides, imagePlan: { frames: shot.visual?.frames, references: shot.visual?.references, bg: shot.visual?.bg }, authorization: production.videoAuthorization,
       budget: production.videoBudgetUsd, approval: production.approval, maxAttempts: production.maxAttempts }),

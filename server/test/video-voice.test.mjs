@@ -55,19 +55,19 @@ test('silent backgrounds and voiceovers do not gain paid references or fabricate
   const result=prepareVideoVoice('seedance_reference',{model:'dreamina-seedance-2-5-260628',prompt:'Act.',generateAudio:false},ctx);
   assert.equal(result.args.prompt,'Act.');assert.equal(result.args.referenceAudioPaths,undefined);
   assert.equal(result.voiceContinuity.strategy,'external_tts');
-  assert.equal(prepareVideoVoice('veo_text2video',{prompt:'Act.'},ctx).args.prompt,'Act.');
+  assert.equal(prepareVideoVoice('astra_genai_text2video',{prompt:'Act.'},ctx).args.prompt,'Act.');
 });
-test('ASTRA native audio defaults on while explicit silence and supplied speech keep their contracts',t=>{
+test('an adapter without a voice lane refuses spoken cuts; silent narration b-roll still passes',t=>{
   const ctx=fixture(t);
-  for (const tool of ['astra_text2video','astra_img2video','astra_keyframe_video','astra_ic_lora','astra_video_retake']) {
-    for (const setting of [{},{generateAudio:true},{generateAudio:false}]) {
-      const result=prepareVideoVoice(tool,{prompt:'Act.',...setting},ctx);
-      assert.equal(result.voiceContinuity.strategy,setting.generateAudio===false?'external_tts':'prompt_voice');
-      if (setting.generateAudio===false) assert.equal(result.args.prompt,'Act.');
-      else assert.match(result.args.prompt,/Low dry voice, Seoul accent/);
-      assert.equal(result.args.generateAudio,setting.generateAudio);
-    }
-  }
+  for (const tool of ['astra_text2video','astra_img2video','astra_genai_img2video','seedance_img2video','ltx_video_generate'])
+    for (const setting of [{},{generateAudio:true},{generateAudio:false}])
+      assert.throws(()=>prepareVideoVoice(tool,{prompt:'Act.',...setting},ctx),/voice_lane_required/,tool);
+  ctx.shot.type='broll';ctx.shot.visual={};ctx.shot.narration.forEach(l=>l.delivery='voiceover');
+  assert.throws(()=>prepareVideoVoice('astra_genai_img2video',{prompt:'Act.'},ctx),/voice_lane_required.*generateAudio:false/);
+  const silent=prepareVideoVoice('astra_genai_img2video',{prompt:'Act.',generateAudio:false},ctx);
+  assert.equal(silent.voiceContinuity.strategy,'external_tts');assert.equal(silent.args.prompt,'Act.');
+  assert.equal(videoVoiceCapabilities('astra_genai_img2video').dialogue,'refused');
+  assert.equal(videoVoiceCapabilities('seedance_reference').lane,'reference');
 });
 test('ASTRA preserves the audio-first prompt; exact waveform and lip-sync claims stay separate',t=>{
   const ctx=fixture(t);const result=prepareVideoVoice('astra_audio2video',{prompt:'Animate supplied speech.',audioUploadId:'a'},ctx);
@@ -86,22 +86,11 @@ test('supplied-audio tools keep the prompt and skip native voice guidance',t=>{
     assert.ok(!result.voiceContinuity.warnings.some(w=>/use audio2video/.test(w)),tool);
   }
 });
-test('Veo adds stable identity but not TTS selectors; Omni rejects uploaded spoken extension',t=>{
-  const ctx=fixture(t);
-  const veo=prepareVideoVoice('veo_extension',{prompt:'Continue the dialogue.'},ctx);
-  assert.match(veo.args.prompt,/Low dry voice, Seoul accent/);
-  assert.match(veo.voiceContinuity.warnings.join(),/last second/);
-  assert.equal(veo.args.seed,undefined);assert.equal(veo.args.referenceAudioPaths,undefined);
-  assert.throws(()=>prepareVideoVoice('omni_extend',{prompt:'Continue.',sourceVideoPath:'video.mp4'},ctx),/previousInteractionId/);
-  const omni=prepareVideoVoice('omni_extend',{prompt:'Continue.',previousInteractionId:'stored-id',seed:7},ctx);
-  assert.equal(omni.args.previousInteractionId,'stored-id');assert.equal(omni.args.seed,7);
-  assert.match(omni.voiceContinuity.warnings.join(),/Flow @Voice/);
-});
 test('speech identity, acting and reference changes alter the voice revision',t=>{
-  const ctx=fixture(t);const input={prompt:'Act.'};
-  const before=prepareVideoVoice('veo_text2video',input,ctx);
+  const ctx=fixture(t);const input={model:'dreamina-seedance-2-5-260628',prompt:'Act.',generateAudio:true};
+  const before=prepareVideoVoice('seedance_reference',input,ctx);
   ctx.shot.narration[0].acting={direction:'quiet question'};
-  const after=prepareVideoVoice('veo_text2video',input,ctx);
+  const after=prepareVideoVoice('seedance_reference',input,ctx);
   assert.notEqual(before.voiceContinuity.revision,after.voiceContinuity.revision);
   assert.equal(before.args.prompt,after.args.prompt,'scene acting must not overwrite stable identity');
 });
