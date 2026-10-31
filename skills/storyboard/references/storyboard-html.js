@@ -8,7 +8,7 @@ const path = require('node:path');
 const HELPERS = ['source-context.js', 'render-routing.js', 'motion-graphics.js', 'production-mode.js', 'structure-contract.js', 'style-samples.js', 'film-techniques.js', 'shot-direction.js', 'review-layout.js', 'prop-continuity.js', 'prop-sheet.js', 'location-contract.js', 'location-review-runtime.js', 'location-review.css'];
 const REVIEW_ASSETS = path.join(__dirname, '..', '..', 'channel', 'references', 'review-assets');
 const { FONT_ASSETS } = require('../../channel/references/review-fonts.js');
-const ASSETS = ['review.css', ...FONT_ASSETS];
+const ASSETS = ['design-system.css', 'review.css', ...FONT_ASSETS];
 const TITLE = /<title>[^]*?<\/title>/g;
 const METADATA = /\/\* ✎ SB_DOC BEGIN[^]*?\/\* ✎ SB_DOC END \*\//g;
 

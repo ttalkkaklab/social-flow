@@ -5,18 +5,18 @@ Historical source components: `src/components/ui/page.tsx`, `globals.css`,
 `features/characters/components/character-card.tsx`, `character-form.tsx`,
 `character-image-slots.tsx`, and `features/storyboard/components/shot-tree.tsx`.
 
-- Palette: background #fcfcfd, text #18181b, secondary text #52525b,
-  separators #e4e4e7, actions #2563eb, positive state #147a4b.
+- Tokens: every color, radius, shadow, type size and spacing value comes from
+  `review-assets/design-system.css`, measured from the storyboard detail screen
+  (2026-10-31). Rationale and token table: [design system](../../../docs/design-system/DESIGN.md).
 - Typography: local Inter 4.1, Pretendard Variable 1.3.9 and Noto Sans JP/SC/TC
   variable fonts, each with its OFL license. See the current typography section below.
-- Shared CSS declares color and size tokens once; all review components use them.
-  Responsive thresholds are 640px, 768px and 1024px (max-width rules use one pixel
+- Responsive thresholds are 640px, 768px and 1024px (max-width rules use one pixel
   below the threshold). The brand name is 20px.
 - Layout: 240px sidebar, left-aligned content, 32px desktop / 20px mobile padding,
   28px desktop / 22px mobile titles. Navigation flows above the content below 1024px so a tablet does not lose
   240px of reading space to a rail. Content can grow to 1280px.
-- Character detail: appearance (front/back/face plus extras), basics, voice and
-  full identity. Offline sheets are read-only; they do not offer server mutations.
+- Character detail: photos with identity and voice, extras, the remaining
+  identity groups and the full identity source. Offline sheets are read-only; they do not offer server mutations.
 - Storyboard: shots first, style next, then checks/costs and reference disclosures.
   Existing renderer nodes and validation remain intact. Source and alias use one
   template with local frame/reveal previews.
@@ -29,6 +29,13 @@ link current records. Production inputs are never moved.
 
 A template comparison proves the local copies agree. Verify 1440px and 390px
 renders when changing the shared design.
+
+## Contents
+
+- [Generator refinement (2026-10-16)](#generator-refinement-2026-10-16)
+- [Character detail refinement (2026-10-16)](#character-detail-refinement-2026-10-16)
+- [Multilingual typography and Liquid Glass (2026-10-18)](#multilingual-typography-and-liquid-glass-2026-10-18)
+- [Library pages on the design system (2026-10-31)](#library-pages-on-the-design-system-2026-10-31)
 
 ## Generator refinement (2026-10-16)
 
@@ -55,15 +62,27 @@ See [the scored UX review](../../../docs/design-system/screen-quality/review-gen
 
 ## Character detail refinement (2026-10-16)
 
-The `.character-sheet` surface uses the actual summary below the name, followed by
-compact ID/version/review metadata. Three labeled pictogram links lead to artwork,
-the specification and voice. Existing storyboard type pictograms are preserved.
+The `.character-sheet` surface shows the name with its ID. Labeled pictogram links
+lead to the identity block and the specification. Existing storyboard type pictograms
+are preserved.
 Section icons are decorative SVGs paired with visible translated text.
 
 - Use a 1120px reading canvas with 16px body text and a 72ch maximum for values.
-  Keep references uncropped, with matching 2:3 body stages and a 1:1 face stage. Below
-  640px the front reference spans the row; back and face share the next row.
-- Render every structured identity field once in the specification, using
+  The sheet opens with the storyboard cast card's layout (2026-10-31): a lit 2:3 stage
+  shows one panel (face first, filling the frame; front and back uncropped), a thumbnail
+  strip picks another. The right column is the identity group ("기본 설정": name, ID,
+  species, age, role, summary) with the voice sample, transcript and voice settings right
+  below it; the remaining groups follow as cards. Version, review status, panel
+  registration and image-check findings are not shown on the sheet or its catalogue card
+  (2026-10-31); `--check` still reports them. Each thumbnail links to its file without
+  JavaScript. Below 768px the stage, strip and identity column stack.
+- The sheet borrows the storyboard detail's surfaces (2026-10-31): the hero, each
+  specification group, additional images and the source are 20–24px glass cards;
+  group and voice titles carry an accent icon tile like the video settings bar; section
+  links sit in the storyboard's sunk tab track; the voice sample is a speech bubble.
+- Render each shown identity field once (identity, height and weight beside the photos;
+  the rest in the specification). The body group is not shown; the speech group shows
+  register, habits and pace only (2026-10-31). Use
   label/value rows instead of form-like boxes. Arrays are semantic lists. Native
   disclosures start open, retain keyboard controls and show pending counts even
   when collapsed. Pending/inapplicable reasons stay beside their status.
@@ -84,12 +103,12 @@ character content review or imply that matching the template certifies the art.
 
 ## Multilingual typography and Liquid Glass (2026-10-18)
 
-This section supersedes the earlier visual token values. The canvas is #f2f5f9
-with a static cool light field. Floating navigation uses 78% white, a white rim,
-24px blur and a restrained shadow. Shot cards use 94% white without blur. Text stays
-#18181b, secondary text #4b5565, separators #dce2eb and actions #2563eb.
+The canvas is a static cool light field. Floating navigation uses the glass surface,
+a white rim, 24px blur and the float shadow. Shot cards use the reading surface
+without blur. Values: `design-system.css`.
 
-Inter supplies Latin (English, Vietnamese, German, French and Spanish). Pretendard
+Font stacks are design-system tokens (`--ds-font-*`); `review-typography.css` picks
+one by authored language. Inter supplies Latin (English, Vietnamese, German, French and Spanish). Pretendard
 supplies Korean. Noto Sans JP/SC/TC supplies Japanese, Simplified and Traditional
 Chinese. All faces and individual OFL files travel with generated boards and library
 copies via `review-fonts.js`; no CDN or installed font is required. Provenance and
@@ -110,3 +129,10 @@ alternatives. Fonts settle before preview measurements and dependent views mount
 
 Research, screenshots and independent evaluation:
 [typography review](../../../docs/loops/009-review-typography/research.md).
+
+## Library pages on the design system (2026-10-31)
+
+Headers use the storyboard document title. Search sits in a glass bar. Catalogue,
+hub and character cards are glass cards with sunk media wells, hairline fact rows
+and arrow links; covers fill their well. Location detail pages keep
+`location-review.css` and the 3D runtime.
