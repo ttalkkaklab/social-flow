@@ -89336,12 +89336,13 @@ function recordShotImage(args, request) {
   shots[index] = { ...shots[index], visual };
   return writeOutline(args.path, win, st, shots);
 }
+var MUSIC_WORD = /\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i;
 var shotPromptSchema = external_exports.object({
   path: outlinePath,
   id: shotIdSchema,
   action: nonEmpty.describe("What happens in the shot, in English: the subjects' movement from the opening picture"),
   end: nonEmpty.optional().describe("The closing picture, in English"),
-  sound: nonEmpty.optional().describe("Ambient sound and effects, in English; the shot's lines come from shot_dialogue")
+  sound: nonEmpty.optional().describe(`Ambient sound and effects, in English; the shot's lines come from shot_dialogue. "no music" is added unless it names music`)
 }).strict();
 function writeShotPrompt(args) {
   const { win, st } = readOutline(args.path);
@@ -89367,7 +89368,8 @@ function writeShotPrompt(args) {
     sentence(args.action),
     ...msr ? [] : (shot.narration ?? []).filter((line) => line.delivery === "on_screen" && line.tts).map((line) => sentence(`${latin(String(castEntry(win, String(line.speaker))?.name ?? "")) || line.speaker} says: "${line.tts}"`)),
     frames.mode === "first_last" ? sentence(`End on the given last frame${args.end ? ": " + args.end : ""}`) : args.end ? sentence(`End on ${args.end}`) : "",
-    args.sound ? sentence(`Audio: ${args.sound}`) : ""
+    // The builder lays the episode bed under every cut; a clip that makes its own music doubles it.
+    sentence(`Audio: ${args.sound ? args.sound + (MUSIC_WORD.test(args.sound) ? "" : ", no music") : "no music"}`)
   ].filter(Boolean).join(" ");
   const foreign = nonEnglishOutsideQuotes(prompt);
   if (foreign) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action, end and sound in English`);
@@ -97862,7 +97864,7 @@ Returns: the file written and the prompt.`,
         id: { type: "string", pattern: "^s\\d{4,}$", description: "Stable shot id" },
         action: { type: "string", description: "What happens in the shot, in English: the subjects' movement from the opening picture" },
         end: { type: "string", description: "The closing picture, in English" },
-        sound: { type: "string", description: "Ambient sound and effects, in English; the shot's lines come from shot_dialogue" }
+        sound: { type: "string", description: `Ambient sound and effects, in English; the shot's lines come from shot_dialogue. "no music" is added unless it names music \u2014 the episode bed is laid in assembly` }
       },
       required: ["path", "id", "action"]
     }

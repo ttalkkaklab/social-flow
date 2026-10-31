@@ -6968,7 +6968,7 @@ var shotPromptSchema = external_exports.object({
   id: shotIdSchema,
   action: nonEmpty.describe("What happens in the shot, in English: the subjects' movement from the opening picture"),
   end: nonEmpty.optional().describe("The closing picture, in English"),
-  sound: nonEmpty.optional().describe("Ambient sound and effects, in English; the shot's lines come from shot_dialogue")
+  sound: nonEmpty.optional().describe(`Ambient sound and effects, in English; the shot's lines come from shot_dialogue. "no music" is added unless it names music`)
 }).strict();
 var scenarioCheckResultSchema = external_exports.object({
   files: external_exports.array(external_exports.string()),
