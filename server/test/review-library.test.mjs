@@ -4,7 +4,6 @@ import { createRequire } from 'node:module';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, symlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 const require = createRequire(import.meta.url);
 const { exportChannel } = require('../../skills/channel/references/review-library.js');
@@ -31,6 +30,7 @@ test('character catalogue uses reference artwork without claiming panel readines
     html = readFileSync(index, 'utf8');
     assert.match(html, /<audio[^>]+src="hero\/voice.wav"/);
     assert.ok(html.includes('data-audio-toggle="voice-hero"'));
+    assert.match(readFileSync(join(f.dir, 'assets/characters/hero/index.html'), 'utf8'), /<div class="character-player ds-panel"><audio id="voice-hero" preload="metadata" src="voice.wav"><\/audio><button class="review-play character-play"[^>]*data-audio-toggle="voice-hero"/);
     assert.ok(!/<a\b[^>]*>(?:(?!<\/a>)[\s\S])*<button/.test(html), 'play button must not navigate');
     rmSync(join(f.dir, 'assets/characters/hero/voice.wav'));
     symlinkSync(join(f.root, 'outside.wav'), join(f.dir, 'assets/characters/hero/voice.wav'));
@@ -94,8 +94,8 @@ test('exports offline characters, indexes and the SAME storyboard shell with rel
     assert.ok(detail.includes('M1'));
     assert.ok(!detail.includes('fetch('));
     assert.ok(detail.includes('캐릭터 시트 목록'));
-    assert.ok(detail.includes('Template match does not certify image readiness'));
-    assert.ok(detail.includes('review-panel-face'));
+    assert.ok(detail.includes('class="character-stage" data-kind="face"'));
+    assert.equal((detail.match(/class="character-thumb"/g) || []).length, 3);
     assert.equal(result.visualReview, 'not_reviewed');
     assert.ok(existsSync(join(f.dir, 'assets/review/fonts/InterVariable.woff2')));
     assert.ok(readFileSync(join(f.dir, 'assets/characters/index.html'), 'utf8').includes('href="hero/index.html"'));
@@ -173,82 +173,34 @@ test('design CLI separates legacy content readiness from shell drift; content re
   } finally { f.clean(); }
 });
 
-test('review uses the recorded threshold while preserving the legacy threshold and critical gate', () => {
-  const f = fixture();
-  try {
-    const folder = join(f.dir, 'assets/characters/hero');
-    const inputHashes = Object.fromEntries(['identity.md', 'body.png', 'back.png', 'face.png'].map(name => [name, createHash('sha256').update(readFileSync(join(folder, name))).digest('hex')]));
-    const render = extra => {
-      f.write('assets/characters/hero/review.json', JSON.stringify({ score: 92, iteration: 1, critical: 0, inputHashes, ...extra }));
-      exportChannel(f.dir);
-      return readFileSync(join(folder, 'index.html'), 'utf8');
-    };
-    const passed = render({ threshold: 90 });
-    assert.ok(passed.includes('Review passed') && passed.includes('threshold 90'));
-    assert.ok(render({}).includes('Revision required'));
-    assert.ok(render({ threshold: 90, critical: 1 }).includes('Revision required'));
-    assert.ok(render({ threshold: null }).includes('no independent review'));
-  } finally { f.clean(); }
-});
-
-test('missing character voice is visible and makes the delivery check fail even after export', () => {
+test('missing character voice is reported by the delivery check even after export', () => {
   const f = fixture();
   try {
     f.write('assets/characters/hero/identity.md', '# Hero\n**목소리**: use channel profile');
     const result = exportChannel(f.dir);
     assert.ok(result.warnings.some(w => /hero.*tts/.test(w)));
     const html = readFileSync(join(f.dir, 'assets/characters/hero/index.html'), 'utf8');
-    assert.ok(html.includes('Character settings incomplete'));
-    assert.ok(!html.includes('Voice settings follow'));
+    assert.ok(!html.includes('Character settings incomplete'));
     assert.ok(exportChannel(f.dir, { check: true }).warnings.length);
   } finally { f.clean(); }
 });
 
 
-test('a review passes on its recorded input hashes; a changed image, voice sample or transcript, or a removed sample, makes it stale', () => {
-  const f = fixture();
-  try {
-    const folder = join(f.dir, 'assets/characters/hero');
-    for (const name of ['voice.wav', 'sample.txt', 'voice-accuracy.json']) f.write('assets/characters/hero/' + name, 'reviewed fixture');
-    const names = ['identity.md', 'body.png', 'back.png', 'face.png', 'voice.wav', 'sample.txt', 'voice-accuracy.json'];
-    const inputHashes = Object.fromEntries(names.map(name => [name, createHash('sha256').update(readFileSync(join(folder, name))).digest('hex')]));
-    f.write('assets/characters/hero/review.json', JSON.stringify({ score: 95, iteration: 1, critical: 0, inputHashes }));
-    const html = () => { exportChannel(f.dir); return readFileSync(join(folder, 'index.html'), 'utf8'); };
-    assert.ok(html().includes('Review passed'));
-    assert.ok(readFileSync(join(folder, '../index.html'), 'utf8').includes('95/100'));
-    for (const name of ['face.png', 'voice.wav', 'sample.txt', 'voice-accuracy.json']) {
-      const reviewed = readFileSync(join(folder, name));
-      f.write('assets/characters/hero/' + name, 'different speaker or text');
-      const stale = html();
-      assert.ok(stale.includes('independent review needed') && !stale.includes('Review passed') && stale.includes('Available'), name);
-      f.write('assets/characters/hero/' + name, reviewed);
-    }
-    rmSync(join(folder, 'voice.wav'));
-    assert.ok(html().includes('independent review needed'));
-  } finally { f.clean(); }
-});
-
-test('structured updates render every field, escape values and make prior reviews stale', () => {
+test('structured updates render every field and escape values', () => {
   const f=fixture();
   try {
     const folder=join(f.dir,'assets/characters/hero');
     const d=JSON.parse(identityBlock);
     const writeDoc=()=>f.write('assets/characters/hero/identity.md','# Hero\n```json\n'+JSON.stringify(d)+'\n```');
     writeDoc();
-    const names=['identity.md','body.png','back.png','face.png'];
-    const inputHashes=Object.fromEntries(names.map(n=>[n,createHash('sha256').update(readFileSync(join(folder,n))).digest('hex')]));
-    f.write('assets/characters/hero/review.json',JSON.stringify({score:96,iteration:1,critical:0,inputHashes}));
-    exportChannel(f.dir);assert.ok(readFileSync(join(folder,'index.html'),'utf8').includes('Review passed'));
     d.character.version++;d.character.speech.habits.value='Changed <script>bad()</script>';writeDoc();exportChannel(f.dir);
     let html=readFileSync(join(folder,'index.html'),'utf8');
     assert.ok(html.includes('Changed &lt;script&gt;bad()&lt;/script&gt;'));
-    assert.ok(html.includes('independent review needed'));
-    for(const [,ko] of require('../../skills/_shared/character-identity.js').GROUPS)assert.ok(html.includes(ko));
+    for(const [group,ko] of require('../../skills/_shared/character-identity.js').GROUPS)assert.equal(html.includes(ko), group!=='physical', group);
     d.character.physical.weightKg={status:'pending',value:null,reason:'Waiting on author'};writeDoc();
     assert.ok(exportChannel(f.dir).warnings.some(x=>x.includes('weightKg')));
     html=readFileSync(join(folder,'index.html'),'utf8');
     assert.match(html, /data-en="Pending"[^>]*>.*?<\/span><\/span><span class="character-field-reason">Waiting on author<\/span>/);
-    assert.ok(!html.includes('Review passed'));
   }finally{f.clean();}
 });
 
@@ -261,20 +213,28 @@ test('character detail keeps structured facts and lists, local transcript and re
     let html = readFileSync(file, 'utf8');
     const groups = require('../../skills/_shared/character-identity.js').GROUPS;
     for (const [group, , , fields] of groups) {
-      for (const [key] of fields) assert.ok(html.includes(`data-character-field="${group}.${key}"`));
+      for (const [key] of fields) {
+        const shown = group === 'physical' ? ['heightCm', 'weightKg'].includes(key)
+          : group === 'speech' ? ['register', 'habits', 'pace'].includes(key) : true;
+        assert.equal(html.includes(`data-character-field="${group}.${key}"`), shown, `${group}.${key}`);
+      }
     }
     assert.match(html, /<dd><ul><li>/);
     assert.ok(html.includes('Sample &lt;script&gt;bad()&lt;/script&gt;'));
     assert.ok(!html.includes('<script>bad()'));
-    assert.equal((html.match(/class="character-group" open/g) || []).length, groups.length);
-    assert.equal((html.match(/class="character-icon"/g) || []).length, groups.length + 4);
+    // The identity group reads beside the photos; the other groups are cards below.
+    assert.ok(html.includes('class="character-fields character-basics"><div class="character-field" data-character-field="identity.'));
+    assert.equal((html.match(/class="character-group ds-card" open/g) || []).length, groups.length - 2);
+    assert.equal((html.match(/class="character-icon"/g) || []).length, groups.length + 1);
     f.write('assets/characters/hero/identity.md', '# Legacy hero\n**역할**: Guide');
     rmSync(join(f.dir, 'assets/characters/hero/sample.txt'));
     exportChannel(f.dir);
     html = readFileSync(file, 'utf8');
-    for (const id of ['appearance', 'identity', 'voice']) assert.ok(html.includes(`id="${id}"`));
-    assert.ok(html.includes('Sample transcript not supplied'));
-    assert.ok(html.includes('Voice sample not supplied'));
+    for (const id of ['appearance', 'voice']) assert.ok(html.includes(`id="${id}"`));
+    assert.ok(!html.includes('href="#identity"'));
+    // No sample yet: the player shows with its play button disabled, without notices.
+    assert.match(html, /<div class="character-player ds-panel" data-empty><button class="review-play character-play"[^>]* disabled/);
+    assert.ok(!html.includes('Sample transcript not supplied') && !html.includes('tts.voiceId'));
     assert.ok(html.includes('Full character identity'));
   } finally { f.clean(); }
 });
@@ -293,7 +253,7 @@ test('prop and background catalogues preserve episode scope, local media and nav
     exportChannel(f.dir);
     for (const kind of ['props', 'locations']) {
       const html = readFileSync(join(f.dir, 'assets', kind, 'index.html'), 'utf8');
-      assert.equal((html.match(/class="review-card" data-card/g) || []).length, 2);
+      assert.equal((html.match(/class="review-card ds-card" data-card/g) || []).length, 2);
       assert.ok(html.includes('aria-current="page"'));
       assert.ok(html.includes('../../episodes/one/storyboard/storyboard.html#'));
       assert.ok(html.includes('../../episodes/two/storyboard/storyboard.html#'));

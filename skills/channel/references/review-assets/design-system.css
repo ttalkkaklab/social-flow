@@ -1,0 +1,222 @@
+/* social-flow review design system — tokens and primitives taken from the storyboard detail
+   screen. Source of truth: docs/design-system/DESIGN.md. The storyboard template aliases its
+   own tokens to these; review.css and the library pages build on them. Language font
+   selection lives in review-typography.css. A channel THEME overrides only --ds-accent, --ds-accent2, --ds-ink. */
+:root {
+  /* Color — channel */
+  --ds-accent: #3f6cff;
+  --ds-accent2: #7b4dff;
+  --ds-ink: #0b1020;
+  --ds-accent-ink: #1d4ed8;   /* letters on light surfaces; pure accent stays on shapes */
+  --ds-link: #2563eb;
+  --ds-nav-current: #1648a0;
+
+  /* Color — neutrals */
+  --ds-canvas: #f2f5f9;
+  --ds-canvas-glow-1: #dce8f9;
+  --ds-canvas-glow-2: #e5e9f4;
+  --ds-surface: #ffffff;
+  --ds-surface-reading: rgb(255 255 255 / 0.94);
+  --ds-surface-glass: rgb(255 255 255 / 0.78);
+  --ds-glass-border: rgb(255 255 255 / 0.96);
+  --ds-sunk: #f4f4f5;
+  --ds-bubble: #f0f3f8;
+  --ds-badge-dark: #1d2330;
+  --ds-text: #18181b;
+  --ds-muted: #4b5565;
+  --ds-line: #dce2eb;
+  --ds-hair: #ebebee;
+  --ds-input: #767680;
+  --ds-control-border: #b7c2d2;
+  --ds-track: rgb(24 24 27 / 0.05);
+  --ds-nav-current-bg: rgb(255 255 255 / 0.92);
+  --ds-surface-soft: rgb(255 255 255 / 0.75);
+  --ds-surface-opaque: #f8faff;
+  --ds-print-line: #ccc;
+
+  /* Color — status */
+  --ds-ok: #147a4b;
+  --ds-warn: #855400;
+  --ds-bad: #b52f24;
+  --ds-warn-ink: #763d00;
+  --ds-warn-surface: #fff4df;
+
+  /* Radius */
+  --ds-radius-2xs: 4px;
+  --ds-radius-badge: 7px;
+  --ds-radius-bar: 18px;
+  --ds-radius-xs: 6px;
+  --ds-radius-sm: 8px;
+  --ds-radius-tile: 10px;
+  --ds-radius-md: 12px;
+  --ds-radius-panel: 14px;
+  --ds-radius-lg: 16px;
+  --ds-radius-card: 20px;
+  --ds-radius-hero: 24px;
+  --ds-radius-pill: 999px;
+
+  /* Elevation */
+  --ds-shadow-glass: 0 4px 20px rgb(33 54 85 / 0.045), inset 0 1px 0 #fff;
+  --ds-shadow-glass-strong: 0 4px 20px rgb(33 54 85 / 0.05), inset 0 1px 0 #fff;
+  --ds-shadow-glass-hover: 0 6px 24px rgb(33 54 85 / 0.09), inset 0 1px 0 #fff;
+  --ds-shadow-band: 0 2px 10px rgb(33 54 85 / 0.04);
+  --ds-shadow-band-hover: 0 4px 16px rgb(33 54 85 / 0.08);
+  --ds-shadow-float: 0 8px 32px rgb(33 54 85 / 0.08), 0 1px 3px rgb(33 54 85 / 0.06), inset 0 1px 0 #fff;
+  --ds-shadow-paper: 0 1px 2px rgba(18, 20, 24, 0.05), 0 12px 28px -22px rgba(18, 20, 24, 0.35);
+  --ds-shadow-raised: 0 1px 2px rgb(0 0 0 / 0.12);
+  --ds-shadow-tile: inset 0 1px 0 rgb(255 255 255 / 0.3), 0 2px 5px color-mix(in srgb, var(--ds-accent) 30%, transparent);
+  --ds-fill-accent: linear-gradient(150deg, color-mix(in srgb, var(--ds-accent) 80%, #fff), var(--ds-accent));
+  --ds-fill-accent-hover: linear-gradient(150deg, color-mix(in srgb, var(--ds-accent) 70%, #fff), var(--ds-accent));
+  --ds-shadow-nav-current: 0 2px 8px rgb(35 65 110 / 0.08), inset 0 1px 0 #fff;
+
+  /* Type families — faces bundled in fonts/ (manifest.json), declared in typography-faces.css.
+     Inter carries Latin (en, vi, fr, de, es); Pretendard Korean; Noto Sans JP/SC/TC regional
+     CJK. review-typography.css picks the stack from the authored language. */
+  --ds-font-latin: "Inter", "Pretendard", "Noto Sans SC", sans-serif;
+  --ds-font-ko: "Inter", "Pretendard", "Noto Sans SC", sans-serif;
+  --ds-font-ja: "Inter", "Noto Sans JP", "Pretendard", sans-serif;
+  --ds-font-sc: "Inter", "Noto Sans SC", "Pretendard", sans-serif;
+  --ds-font-tc: "Inter", "Noto Sans TC", "Pretendard", sans-serif;
+  --ds-font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Type scale */
+  --ds-text-micro: 11px;
+  --ds-text-cap: 12px;
+  --ds-text-aux: 13px;
+  --ds-text-body: 15px;
+  --ds-text-ui: 14px;
+  --ds-text-dialogue: 16px;
+  --ds-text-shot-sm: 18px;
+  --ds-text-scene: 17px;
+  --ds-text-shot: 20px;
+  --ds-text-heading: 22px;
+  --ds-text-display: 28px;
+  --ds-text-lead: 19px;
+  --ds-text-title: 29px;
+  --ds-tracking-kicker: 0.12em;
+  --ds-tracking-label: 0.05em;
+  --ds-tracking-subtle: -0.01em;
+  --ds-tracking-snug: -0.02em;
+  --ds-tracking-display: -0.025em;
+  --ds-tracking-tight: -0.035em;
+  --ds-title-size: clamp(1.75rem, 2.6vw, 2.25rem);
+  --ds-list-indent: 1.2em;
+
+  /* Spacing — 4px grid */
+  --ds-s1: 4px;
+  --ds-s2: 8px;
+  --ds-s3: 12px;
+  --ds-s4: 16px;
+  --ds-s5: 24px;
+  --ds-s6: 36px;
+  --ds-s7: 56px;
+
+  /* Hit target — every control is at least this tall */
+  --ds-tap: 44px;
+
+  /* Strokes and fixed sizes */
+  --ds-hairline: 1px;
+  --ds-ring: 2px;
+  --ds-press: 1px;
+  --ds-inset-xs: 3px;
+  --ds-tile: 34px;
+  --ds-tile-pad: 7px;
+  --ds-icon: 20px;
+  --ds-chevron: 9px;
+  --ds-chevron-lift: -3px;
+  --ds-chevron-drop: 2px;
+  --ds-gap-xs: 2px;
+  --ds-gap-sm: 5px;
+  --ds-chip-pad: 10px;
+  --ds-blur: 24px;
+  --ds-row-min: 64px;
+  --ds-row-tall: 72px;
+  --ds-thumb: 64px;
+  --ds-strip: 72px;
+  --ds-stage: 340px;
+  --ds-label-col-sm: 96px;
+  --ds-label-col: 140px;
+  --ds-chip-min: 110px;
+  --ds-empty-min: 200px;
+  --ds-card-min-sm: 240px;
+  --ds-card-min: 250px;
+  --ds-rail: 224px;
+  --ds-page-pad: 40px;
+  --ds-page-max: 1280px;   /* every review page: storyboard, sheets, lists, hub */
+
+  /* Motion */
+  --ds-duration: 160ms;
+}
+
+/* Primitives for pages outside the storyboard template. The template keeps its own
+   component classes on these tokens, so a primitive never overrides a storyboard rule. */
+
+/* Glass card — .view-setup / .scene */
+.ds-card {
+  border: var(--ds-hairline) solid var(--ds-glass-border);
+  border-radius: var(--ds-radius-card);
+  background: var(--ds-surface-reading);
+  box-shadow: var(--ds-shadow-glass);
+}
+.ds-card-hero { border-radius: var(--ds-radius-hero); }
+
+/* Accent icon tile — .view-setup-ico; a white 19px icon sits inside */
+.ds-tile {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--ds-tile);
+  height: var(--ds-tile);
+  border-radius: var(--ds-radius-tile);
+  background: var(--ds-fill-accent);
+  box-shadow: var(--ds-shadow-tile);
+  color: var(--ds-surface);
+}
+
+/* Kicker — .seq-kicker */
+.ds-kicker {
+  color: var(--ds-accent-ink);
+  font-size: var(--ds-text-micro);
+  font-weight: 700;
+  letter-spacing: var(--ds-tracking-kicker);
+  text-transform: uppercase;
+}
+
+/* Pill — .scene-dur */
+.ds-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-gap-sm);
+  padding: var(--ds-inset-xs) var(--ds-chip-pad);
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-sunk);
+  color: var(--ds-muted);
+  font-size: var(--ds-text-cap);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sunk panel — .shot-refs */
+.ds-panel { padding: var(--ds-s3) var(--ds-s4); border-radius: var(--ds-radius-panel); background: var(--ds-sunk); }
+.ds-panel-head { display: flex; align-items: baseline; gap: var(--ds-s2); margin-bottom: var(--ds-s2); color: var(--ds-muted); font-size: var(--ds-text-cap); }
+.ds-panel-head b { color: var(--ds-text); }
+.ds-panel-count { margin-left: auto; color: var(--ds-text); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* Tab track — .shot-tab-nav */
+.ds-tabs { display: flex; flex-wrap: wrap; gap: var(--ds-gap-xs); width: max-content; max-width: 100%; padding: var(--ds-inset-xs); border-radius: var(--ds-radius-md); background: var(--ds-track); }
+
+/* Chevron — .view-setup-head::after; rotate with [open] */
+.ds-chevron {
+  flex: none;
+  width: var(--ds-chevron);
+  height: var(--ds-chevron);
+  margin: 0 var(--ds-gap-sm) 0 auto;
+  border: solid var(--ds-muted);
+  border-width: 0 var(--ds-ring) var(--ds-ring) 0;
+  transform: translateY(var(--ds-chevron-lift)) rotate(45deg);
+  transition: transform var(--ds-duration);
+}
+[open] > summary > .ds-chevron { transform: translateY(var(--ds-chevron-drop)) rotate(225deg); }
+
+/* Chip — .cs-chips a */
+.ds-chip { padding: var(--ds-gap-xs) var(--ds-s2); border: var(--ds-hairline) solid var(--ds-hair); border-radius: var(--ds-radius-xs); background: var(--ds-sunk); color: var(--ds-muted); font-size: var(--ds-text-cap); }

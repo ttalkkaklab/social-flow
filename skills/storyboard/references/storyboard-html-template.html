@@ -62,28 +62,28 @@
 <title>{{topic display name}} — Storyboard · {{channel name}}</title>
 <style>
   /* ── Tokens ──────────────────────────────────────────────
-     The channel colors (--accent/--accent2/--ink) are overwritten by the renderer from THEME.
-     The document palette is neutral — color carries only the channel accent and the
+     Every value comes from the shared design system (design-system.css, loaded through
+     review.css; docs/design-system/DESIGN.md). These names are the template's aliases.
+     The renderer writes THEME's channel colors over --accent/--accent2/--ink and their
+     --ds-* sources. The palette is neutral — color carries only the channel accent and the
      verdicts (ok/warn/bad). */
   :root {
     color-scheme: light;   /* fixed light — native checkboxes included (2026-08-14) */
-    --accent: #3f6cff; --accent2: #7b4dff; --ink: #0b1020;
+    --accent: var(--ds-accent); --accent2: var(--ds-accent2); --ink: var(--ds-ink);
 
-    --bg: #fcfcfd; --card: #ffffff; --sunk: #f4f4f5;
-    --text: #18181b; --muted: #52525b; --faint: #52525b;
-    --line: #e4e4e7; --hair: #ebebee;
-    --ok: #0f6d43; --warn: #855400; --bad: #b52f24;
-    --shadow: 0 1px 2px rgba(18,20,24,.05), 0 12px 28px -22px rgba(18,20,24,.35);
+    --bg: var(--ds-canvas); --card: var(--ds-surface); --sunk: var(--ds-sunk);
+    --text: var(--ds-text); --muted: var(--ds-muted); --faint: var(--ds-muted);
+    --line: var(--ds-line); --hair: var(--ds-hair);
+    --ok: var(--ds-ok); --warn: var(--ds-warn); --bad: var(--ds-bad);
+    --shadow: var(--ds-shadow-paper);
     /* Links and emphasis push the channel color toward the text color to keep body-text
        legibility — the pure accent goes only where there are no letters: badge dots,
        timeline slots, swatches */
-    --accent-ink: #1d4ed8;
+    --accent-ink: var(--ds-accent-ink);
 
-    /* Legacy component sizes; shared review typography defines the document scale. */
-    --t-micro: 11px; --t-cap: 12px; --t-aux: 13px; --t-body: 15px;
-    --t-scene: 17px; --t-lead: 19px; --t-title: 29px;
-    /* Spacing rhythm — 4px grid */
-    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 36px; --s7: 56px;
+    --t-micro: var(--ds-text-micro); --t-cap: var(--ds-text-cap); --t-aux: var(--ds-text-aux); --t-body: var(--ds-text-body);
+    --t-scene: var(--ds-text-scene); --t-lead: var(--ds-text-lead); --t-title: var(--ds-text-title);
+    --s1: var(--ds-s1); --s2: var(--ds-s2); --s3: var(--ds-s3); --s4: var(--ds-s4); --s5: var(--ds-s5); --s6: var(--ds-s6); --s7: var(--ds-s7);
     /* Preview frame width */
     --fw: 164px;
   }
@@ -155,9 +155,9 @@
   .style-card.unknown .st b { color: var(--warn-ink, var(--accent-ink)); }
   /* View settings — the episode look, the preview switches and the shot legend, one card above the shots */
   .view-setup {
-    margin: var(--s5) 0 0; padding: 0; overflow: hidden; border: 1px solid var(--review-glass-border, var(--line));
-    border-radius: var(--review-glass-radius, 20px); background: var(--review-reading-surface, var(--card));
-    box-shadow: 0 4px 20px rgb(33 54 85 / .045), inset 0 1px 0 #fff;
+    margin: var(--s5) 0 0; padding: 0; overflow: hidden; border: 1px solid var(--ds-glass-border);
+    border-radius: var(--ds-radius-hero); background: var(--ds-surface-reading);
+    box-shadow: var(--ds-shadow-glass);
   }
   .view-setup-head {
     display: flex; align-items: center; gap: var(--s3); min-height: 44px; padding: 16px 28px;
@@ -513,12 +513,12 @@
   .seq { margin: var(--s5) 0 0; }
   .seq-head {
     display: flex; align-items: flex-start; gap: var(--s4); padding: 22px 28px; list-style: none; cursor: pointer;
-    border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line)); border-radius: 24px;
+    border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line)); border-radius: var(--ds-radius-hero);
     background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 13%, var(--card)), color-mix(in srgb, var(--accent) 4%, var(--card)) 60%);
-    box-shadow: 0 4px 20px rgb(33 54 85 / .05), inset 0 1px 0 #fff; transition: box-shadow .15s;
+    box-shadow: var(--ds-shadow-glass-strong); transition: box-shadow .15s;
   }
   .seq-head::-webkit-details-marker { display: none; }
-  .seq-head:hover { box-shadow: 0 6px 24px rgb(33 54 85 / .09), inset 0 1px 0 #fff; }
+  .seq-head:hover { box-shadow: var(--ds-shadow-glass-hover); }
   .seq-head:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   .seq-no {
     display: grid; place-items: center; flex: none; width: 48px; height: 48px; border-radius: 14px;
@@ -558,16 +558,16 @@
   .scene-band + .scene-band { margin-top: var(--s5); }
   .scene-band-head {
     position: relative; display: flex; align-items: flex-start; gap: var(--s4); padding: 16px 20px 16px 22px;
-    border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--line)); border-radius: 16px;
+    border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--line)); border-radius: var(--ds-radius-lg);
     background: linear-gradient(100deg, color-mix(in srgb, var(--accent) 6%, var(--card)), var(--card) 65%);
-    box-shadow: 0 2px 10px rgb(33 54 85 / .04); list-style: none; cursor: pointer; transition: box-shadow .15s;
+    box-shadow: var(--ds-shadow-band); list-style: none; cursor: pointer; transition: box-shadow .15s;
   }
   .scene-band-head::before {
     content: ""; position: absolute; left: -1px; top: 14px; bottom: 14px; width: 3px; border-radius: 0 3px 3px 0;
     background: var(--accent);
   }
   .scene-band-head::-webkit-details-marker { display: none; }
-  .scene-band-head:hover { box-shadow: 0 4px 16px rgb(33 54 85 / .08); }
+  .scene-band-head:hover { box-shadow: var(--ds-shadow-band-hover); }
   .scene-band-head:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   .scene-band-head .sn {
     display: grid; place-content: center; flex: none; width: 42px; height: 42px; border-radius: 12px;
@@ -614,7 +614,7 @@
   .scene-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s2) 14px; padding-bottom: 14px; border-bottom: 1px solid var(--hair, #eceef2); }
   .scene-no {
     display: grid; place-content: center; flex: none; width: 40px; height: 40px; border-radius: 11px;
-    background: #1d2330; color: #fff; text-align: center; line-height: 1; font-variant-numeric: tabular-nums;
+    background: var(--ds-badge-dark); color: #fff; text-align: center; line-height: 1; font-variant-numeric: tabular-nums;
   }
   .scene-no small { font-size: 8.5px; font-weight: 700; letter-spacing: .08em; color: rgb(255 255 255 / .62); }
   .scene-no b { margin-top: 2px; color: #fff; font-size: 15px; font-weight: 750; letter-spacing: -.01em; }
@@ -680,7 +680,7 @@
   .shot-frame img, .shot-frame-empty { display: block; width: 100%; aspect-ratio: 9 / 16; border-radius: 12px; object-fit: cover; background: var(--sunk); box-shadow: 0 1px 3px rgb(0 0 0 / .08); }
   .shot-frames.wide .shot-frame img, .shot-frames.wide .shot-frame-empty { aspect-ratio: 16 / 9; }
   .shot-frame-empty { display: grid; place-items: center; padding: 12px; box-sizing: border-box; border: 1.5px dashed var(--line); box-shadow: none; background: transparent; color: var(--faint); font-size: var(--t-cap); text-align: center; }
-  .shot-refs { padding: var(--s3); border-radius: 14px; background: var(--sunk); }
+  .shot-refs { padding: var(--s3); border-radius: var(--ds-radius-panel); background: var(--sunk); }
   .shot-refs-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: var(--s2); font-size: var(--t-cap); color: var(--muted); }
   .shot-refs-head b { color: var(--text); }
   .shot-refs-count { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); }
@@ -2285,9 +2285,9 @@ window.STORYBOARD_READY = (async function () {
   }
   var root = document.documentElement.style;
   // A missing value would go straight in as --accent: undefined and void every color-mix
-  if (THEME.accent) root.setProperty("--accent", THEME.accent);
-  if (THEME.accent2) root.setProperty("--accent2", THEME.accent2);
-  if (THEME.ink) root.setProperty("--ink", THEME.ink);
+  ["accent", "accent2", "ink"].forEach(function (k) {
+    if (THEME[k]) { root.setProperty("--" + k, THEME[k]); root.setProperty("--ds-" + k, THEME[k]); }
+  });
 
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
@@ -3545,8 +3545,9 @@ window.STORYBOARD_READY = (async function () {
     return word === key ? esc(word) : esc(word) + " (<code>" + esc(key) + "</code>)";
   }
   h += "<header>";
-  h += '<div class="doc-kicker">' + esc(DOC.channelName || DOC.channel || THEME.brand) +
-       (DOC.series ? " · " + esc(DOC.series) : "") + "</div>";
+  var channelName = DOC.channelName || DOC.channel || THEME.brand;
+  h += '<div class="doc-kicker">' + esc(channelName) +
+       (DOC.series && DOC.series !== channelName ? " · " + esc(DOC.series) : "") + "</div>";
   h += '<h1 class="doc-title">' + esc(DOC.displayTitle || DOC.topic || "") + "</h1>";
   if (THEME.motionGraphicTheme) {
     var commonMotion = THEME.motionGraphicTheme;

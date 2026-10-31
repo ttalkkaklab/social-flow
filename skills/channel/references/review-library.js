@@ -4,20 +4,23 @@
 // Static, offline views of the existing channel data. Reads local files only.
 const fs = require('node:fs');
 const path = require('node:path');
-const { createHash } = require('node:crypto');
 const { listChannels, listStoryboards, listCharacters, characterDetail, insideReal } = require('./serve.js');
 const locations = require('../../storyboard/references/location-assets.js');
 const LOCATION_ASSETS = path.join(__dirname, '../../storyboard/references');
 const MARKER = '<!-- social-flow:review-library:v1 -->';
 const ASSETS = path.join(__dirname, 'review-assets');
 const { FONT_ASSETS } = require('./review-fonts.js');
-const ASSET_NAMES = ['review.css', 'review.js', ...FONT_ASSETS];
+const ASSET_NAMES = ['design-system.css', 'review.css', 'review.js', ...FONT_ASSETS];
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const t = (ko, en) => `<span data-ko="${esc(ko)}" data-en="${esc(en)}">${esc(ko)}</span>`;
 const rel = (from, to) => path.relative(path.dirname(from), to).split(path.sep).map(part => encodeURIComponent(part)).join('/') || './';
 const { GROUPS, identityCharacter, identityErrors } = require('../../_shared/character-identity.js');
 const { inspectPanels, boardPanelFindings } = require('./character-panels.js');
-const label = { front: ['정면', 'Front'], back: ['후면', 'Back'], face: ['얼굴', 'Face'] };
+const label = { front: ['머리 없는 앞면', 'Headless front'], back: ['머리 없는 뒷면', 'Headless back'], face: ['얼굴 클로즈업', 'Face close-up'] };
+const short = { front: ['앞면', 'Front'], back: ['후면', 'Back'], face: ['얼굴', 'Face'] };
+const BASIC_PHYSICAL = ['heightCm', 'weightKg'];
+// Groups the sheet shows in part; the rest of each group stays in the identity source.
+const SHEET_FIELDS = { speech: ['register', 'habits', 'pace'] };
 
 function regular(root, file) {
   return fs.existsSync(file) && insideReal(root, file) && fs.statSync(file).isFile();
@@ -35,32 +38,6 @@ function panels(character) {
     back: files.find(f => /^(back|rear)\.(png|jpe?g|webp)$/i.test(f)),
     face: files.find(f => /^(face|head|head-closeup)\.(png|jpe?g|webp)$/i.test(f)),
   };
-}
-function panelStatus(slots) {
-  return '<div class="review-status">' + Object.entries(label).map(([key, words]) =>
-    `<span class="${slots[key] ? 'review-ok' : ''}">${slots[key] ? '✓' : '○'} ${t(...words)} ${slots[key] ? t('등록됨', 'Available') : t('미등록', 'Missing')}</span>`).join('') + '</div>';
-}
-function reviewStatus(root, folder) {
-  const fallback = t('초안 · 독립 평가 기록 없음', 'Draft · no independent review');
-  const source = read(root, path.join(folder, 'review.json'));
-  if (!source) return fallback;
-  try {
-    const review = JSON.parse(source);
-    const threshold = review.threshold === undefined ? 95 : review.threshold;
-    if (!Number.isInteger(threshold) || threshold < 1 || threshold > 100) return fallback;
-    if (!Number.isInteger(review.score) || review.score < 0 || review.score > 100 || !Number.isInteger(review.iteration) || review.iteration < 1 || !Number.isInteger(review.critical) || review.critical < 0) return fallback;
-    const reviewedFiles = ['identity.md', 'body.png', 'back.png', 'face.png'];
-    for (const name of ['voice.wav', 'sample.txt', 'voice-accuracy.json']) {
-      if (regular(root, path.join(folder, name)) || Object.hasOwn(review.inputHashes || {}, name)) reviewedFiles.push(name);
-    }
-    const current = reviewedFiles.every(name => {
-      const file = path.join(folder, name);
-      return regular(root, file) && review.inputHashes?.[name] === createHash('sha256').update(fs.readFileSync(file)).digest('hex');
-    });
-    if (!current) return t('수정됨 · 독립 재평가 필요', 'Changed · independent review needed');
-    const passed = review.score >= threshold && review.critical === 0;
-    return t(`${passed ? '평가 통과' : '수정 필요'} · ${review.score}/100 · 기준 ${threshold} · ${review.iteration}차`, `${passed ? 'Review passed' : 'Revision required'} · ${review.score}/100 · threshold ${threshold} · round ${review.iteration}`);
-  } catch (_) { return fallback; }
 }
 function shell({ file, channelDir, channel, title, section, body }) {
   const assets = path.join(channelDir, 'assets', 'review');
@@ -98,7 +75,7 @@ function identityValue(f) {
   if (f.status !== 'confirmed') return `<span class="character-field-state">${f.status === 'pending' ? t('미정', 'Pending') : t('해당 없음', 'Not applicable')}</span><span class="character-field-reason">${esc(f.reason)}</span>`;
   return Array.isArray(f.value) ? `<ul>${f.value.map(value => `<li>${esc(value)}</li>`).join('')}</ul>` : esc(f.value);
 }
-function searchBox() { return `<div class="review-tools"><label>${t('검색', 'Search')} <input type="search" data-search></label></div>`; }
+function searchBox() { return `<div class="review-tools ds-card"><label>${t('검색', 'Search')} <input type="search" data-search></label></div>`; }
 function zoomImage(file, target, alt) { return `<a data-image-preview href="${rel(file, target)}" aria-label="${esc(alt)} · 원본 보기 / View original">${image(file, target, alt)}<span class="review-image-action">${t("원본 보기", "View original")}</span></a>`; }
 function image(file, target, alt, cover = false) { return `<img class="review-image${cover ? ' review-cover' : ''}" src="${rel(file, target)}" alt="${esc(alt)}" loading="lazy">`; }
 
@@ -195,49 +172,61 @@ function exportChannel(channelDirectory, { check = false } = {}) {
     try { characterIdentity = identityCharacter(source, { ready: false }); identityError = identityErrors(characterIdentity).join("; "); if (identityError) contentWarning(character.id, 'identity', identityError); }
     catch (error) { identityError = error.message; contentWarning(character.id, 'identity', identityError); }
     if (characterIdentity) { role = characterIdentity.identity.role.value || role; appearance = characterIdentity.physical.appearance.value || appearance; }
-    const review = `<p class="review-status">${identityError ? t('캐릭터 설정 보완 필요', 'Character settings incomplete') : voiceError ? t('음성 설정 필요', 'Voice settings required') : reviewStatus(dir, folder)}</p>`;
-    const summary = characterIdentity?.identity.summary.value || role;
     let body = `<article class="character-sheet"><a class="review-crumb" href="../index.html">${t('캐릭터 시트 목록', 'Character sheets')}</a>`;
-    body += `<header class="character-header" id="basics"><div><h1>${esc(character.name)}</h1><p class="character-intro">${esc(summary)}</p></div><div class="character-meta"><span>${t('캐릭터 ID', 'Character ID')} <b>${esc(character.id)}</b></span>${characterIdentity ? `<span>${t('설정 버전', 'Version')} <b>${characterIdentity.version}</b></span>` : ''}</div>${review}</header>`;
-    body += `<nav class="character-nav" aria-label="${esc('시트 섹션 / Sheet sections')}">${[['appearance', 'appearance', '외형', 'Appearance'], ['identity', 'identity', '상세 설정', 'Specification'], ['voice', 'speech', '목소리', 'Voice']].map(([id, icon, ko, en]) => `<a href="#${id}">${characterIcon(icon)}${t(ko, en)}</a>`).join('')}</nav>`;
-    body += `<section class="character-appearance" id="appearance" aria-labelledby="appearance-title"><div class="character-section-heading"><h2 id="appearance-title">${t('외형과 이미지', 'Appearance and images')}</h2>${panelStatus(slots)}</div><div class="review-panels">`;
-    for (const [key, words] of Object.entries(label)) body += `<figure class="review-panel-${key}">${slots[key] ? zoomImage(file, path.join(folder, slots[key]), character.name + ' ' + words[0]) : empty('이미지 미등록', 'No image yet')}<figcaption>${t(...words)}</figcaption></figure>`;
-    body += '</div>';
-    body += `<details class="review-detail character-media"><summary>${t('이미지 규격과 확인 항목', 'Image format and checks')}${media.findings.length ? ` <span class="character-count">${media.findings.length}</span>` : ''}</summary><p>${t('공용 캐릭터 이미지 · 머리 없는 정면·후면 2:3, 얼굴 클로즈업 1:1. 템플릿 일치는 이미지 완성 판정이 아닙니다.', 'Shared character references · headless front/back 2:3, face close-up 1:1. Template match does not certify image readiness.')}</p>`;
-    if (media.findings.length) body += `<ul class="review-media-findings">${media.findings.map(f => `<li>${t(f.messageKo || f.message, f.message)}</li>`).join('')}</ul>`;
-    body += '</details>';
-    const appearances = boards.filter(board => {
-      const cast = boardWindows.get(board.topic)?.SB_DOC?.characters || [];
-      return Array.isArray(cast) ? cast.some(c => c.id === character.id) : Object.hasOwn(cast, character.id);
-    });
-    if (appearances.length) body += `<p>${t('출연 에피소드', 'Episodes')} · ${appearances.map(b => `<a href="${rel(file, path.join(dir, 'episodes', b.topic, 'storyboard', 'storyboard.html'))}#cast">${esc(b.title)}</a>`).join(' · ')}</p>`;
+    // Photos on the left; the identity group ("기본 설정") reads on the right.
+    const keys = ['face', 'front', 'back'].filter(key => slots[key]);
+    // "기본 설정": the identity group plus height and weight, beside the photos.
+    const [, groupKo, groupEn, identityFields] = GROUPS[0];
+    const basicFields = [...identityFields.map(f => ['identity', ...f]), ...GROUPS.find(([g]) => g === 'physical')[3].filter(([key]) => BASIC_PHYSICAL.includes(key)).map(f => ['physical', ...f])];
+    const basics = characterIdentity
+      ? basicFields.map(([group, key, labelKo, labelEn]) => `<div class="character-field" data-character-field="${group}.${key}"><dt>${t(labelKo, labelEn)}</dt><dd>${identityValue(characterIdentity[group][key])}</dd></div>`).join('')
+      : field(t('설명 · 역할', 'Description / role'), role) + field(t('외형', 'Appearance'), appearance);
+    // The voice sample plays right under the identity rows.
+    const voiceFile = path.join(folder, 'voice.wav');
+    const hasVoice = regular(dir, voiceFile);
+    const voiceId = 'voice-' + character.id;
+    const voiceMeta = voice ? [voice.engine, voice.voiceId].filter(Boolean).join(' · ') : '';
+    const sample = read(dir, path.join(folder, 'sample.txt')).trim();
+    // One player: the sample plays in place; before it exists the button stays disabled.
+    let voiceHtml = `<section class="character-voice" id="voice" aria-labelledby="voice-title"><h2 id="voice-title"><span class="ds-tile">${characterIcon('speech')}</span>${t('캐릭터 목소리', 'Character voice')}</h2>`;
+    voiceHtml += `<div class="character-player ds-panel"${hasVoice ? '' : ' data-empty'}>${hasVoice ? `<audio id="${esc(voiceId)}" preload="metadata" src="${rel(file, voiceFile)}"></audio>` : ''}`;
+    voiceHtml += `<button class="review-play character-play" type="button" data-voice-name="${esc(character.name)}"${hasVoice ? ` data-audio-toggle="${esc(voiceId)}"` : ' disabled'} aria-label="${esc(character.name)} · ${hasVoice ? '음성 재생' : '음성 샘플 없음'}" title="${hasVoice ? '음성 재생' : '음성 샘플 없음'}"><svg class="review-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><svg class="review-pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg></button>`;
+    voiceHtml += `<div class="character-player-body"><div class="character-player-head"><b>${t('샘플 목소리', 'Voice sample')}</b>${voiceMeta ? `<span>${esc(voiceMeta)}</span>` : ''}</div><div class="character-player-track" aria-hidden="true"><span data-audio-progress></span></div></div>`;
+    voiceHtml += `<span class="character-player-time" data-audio-time>${hasVoice ? '0:00' : '–:––'}</span></div>`;
+    if (sample) voiceHtml += `<blockquote class="character-sample"><p>${esc(sample)}</p></blockquote>`;
+    voiceHtml += '</section>';
+    body += `<section class="character-hero ds-card ds-card-hero" id="appearance" aria-labelledby="character-name">`;
+    if (keys.length) {
+      const first = path.join(folder, slots[keys[0]]);
+      body += `<div class="character-stage" data-kind="${keys[0]}"><a data-image-preview href="${rel(file, first)}" aria-label="${esc(character.name + ' ' + label[keys[0]][0])} · 원본 보기 / View original">${image(file, first, character.name + ' ' + label[keys[0]][0])}<span class="review-image-action">${t('원본 보기', 'View original')}</span></a><span class="character-pill">${t(...label[keys[0]])}</span></div>`;
+      if (keys.length > 1) body += `<div class="character-strip" role="group" aria-label="${esc('패널 고르기 / Pick a panel')}">${keys.map((key, k) => `<a class="character-thumb" data-kind="${key}" href="${rel(file, path.join(folder, slots[key]))}" data-alt="${esc(character.name + ' ' + label[key][0])}" data-label-ko="${esc(label[key][0])}" data-label-en="${esc(label[key][1])}"${k ? '' : ' aria-current="true"'}><span class="character-thumb-art"><img src="${rel(file, path.join(folder, slots[key]))}" alt="" loading="lazy"></span>${t(...short[key])}</a>`).join('')}</div>`;
+    } else body += `<div class="character-stage character-stage-empty">${empty('이미지 미등록', 'No image yet')}</div>`;
+    body += `<div class="character-info"><header class="character-header" id="basics"><span class="ds-kicker">${t(groupKo, groupEn)}</span><h1 id="character-name">${esc(character.name)} <code>${esc(character.id)}</code></h1></header><dl class="character-fields character-basics">${basics}</dl>${voiceHtml}</div></section>`;
+    const sections = [['appearance', 'identity', groupKo, groupEn], ...(characterIdentity ? [['identity', 'personality', '상세 설정', 'Specification']] : [])];
+    body += `<nav class="character-nav" aria-label="${esc('시트 섹션 / Sheet sections')}">${sections.map(([id, icon, ko, en]) => `<a href="#${id}">${characterIcon(icon)}${t(ko, en)}</a>`).join('')}</nav>`;
     const extras = character.images.filter(im => !Object.values(slots).includes(im.file) && regular(dir, path.join(folder, im.file)));
-    if (extras.length) body += `<details class="character-extra"><summary>${t('추가 이미지', 'Additional images')} <span class="character-count">${extras.length}</span></summary><div class="review-panels">${extras.map(im => `<figure>${zoomImage(file, path.join(folder, im.file), im.file)}<figcaption>${esc(im.file)}</figcaption></figure>`).join('')}</div></details>`;
-    body += '</section>';
+    if (extras.length) body += `<details class="character-extra ds-card"><summary>${t('추가 이미지', 'Additional images')} <span class="character-count">${extras.length}</span><span class="ds-chevron" aria-hidden="true"></span></summary><div class="review-panels">${extras.map(im => `<figure>${zoomImage(file, path.join(folder, im.file), im.file)}<figcaption>${esc(im.file)}</figcaption></figure>`).join('')}</div></details>`;
     if (characterIdentity) {
       body += `<section class="character-specification" id="identity" aria-labelledby="identity-title"><div class="character-section-heading"><h2 id="identity-title">${t('캐릭터 상세 설정', 'Character specification')}</h2><span>${t('항목을 눌러 접거나 펼칠 수 있습니다.', 'Select a group to collapse or expand it.')}</span></div>`;
-      for (const [group, ko, en, fields] of GROUPS) {
+      // Height and weight read in the identity block; the other body fields are not shown.
+      for (const [group, ko, en, groupFields] of GROUPS.slice(1).filter(([group]) => group !== 'physical')) {
+        const fields = SHEET_FIELDS[group] ? groupFields.filter(([key]) => SHEET_FIELDS[group].includes(key)) : groupFields;
         const pending = fields.filter(([key]) => characterIdentity[group][key].status === 'pending').length;
-        body += `<details class="character-group" open><summary><h3>${characterIcon(group)}${t(ko, en)}</h3>${pending ? `<span class="character-pending">${t('미정', 'Pending')} ${pending}</span>` : ''}<span class="character-chevron" aria-hidden="true"></span></summary><dl class="character-fields">` + fields.map(([key, labelKo, labelEn]) => {
+        body += `<details class="character-group ds-card" open><summary><h3><span class="ds-tile">${characterIcon(group)}</span>${t(ko, en)}</h3>${pending ? `<span class="character-pending">${t('미정', 'Pending')} ${pending}</span>` : ''}<span class="ds-chevron" aria-hidden="true"></span></summary><dl class="character-fields">` + fields.map(([key, labelKo, labelEn]) => {
           const f = characterIdentity[group][key];
           return `<div class="character-field" data-character-field="${group}.${key}"><dt>${t(labelKo, labelEn)}</dt><dd>${identityValue(f)}</dd></div>`;
         }).join('') + '</dl></details>';
       }
       body += '</section>';
-    } else {
-      body += `<section class="character-specification" id="identity"><h2>${t('기본 정보', 'Basic information')}</h2><dl class="character-fields">${field(t('설명 · 역할', 'Description / role'), role)}${field(t('외형', 'Appearance'), appearance)}</dl><details class="review-detail"><summary>${t('설정 보완 항목', 'Required corrections')}</summary><p>${esc(identityError)}</p></details></section>`;
     }
-    body += `<section class="character-voice" id="voice" aria-labelledby="voice-title"><h2 id="voice-title">${characterIcon('speech')}${t('캐릭터 목소리', 'Character voice')}</h2>${regular(dir, path.join(folder, 'voice.wav')) ? `<audio controls preload="metadata" aria-label="${esc(character.name)} · Voice sample" src="${rel(file, path.join(folder, 'voice.wav'))}"></audio>` : `<p class="character-notice">${t('음성 샘플 미등록', 'Voice sample not supplied')}</p>`}`;
-    const sample = read(dir, path.join(folder, 'sample.txt')).trim();
-    body += sample ? `<blockquote class="character-sample"><p>${esc(sample)}</p></blockquote>` : `<p class="character-notice">${t('샘플 대본 미등록', 'Sample transcript not supplied')}</p>`;
-    body += `<details class="review-detail"><summary>${t('음성 설정', 'Voice settings')}</summary>${voice ? `<dl class="character-fields">${field(t('엔진', 'Engine'), voice.engine)}${field(t('음성 ID', 'Voice ID'), voice.voiceId)}${field(t('언어', 'Language'), voice.language)}${field(t('속도', 'Speed'), String(voice.speed))}</dl>` : `<p>${esc(voiceError)}</p>`}</details></section>`;
-    body += `<details class="review-detail character-source"><summary>${t('캐릭터 설정 원문', 'Full character identity')}</summary><p>${t('원문에 적힌 검토 상태는 작성 당시 기록입니다. 현재 평가는 페이지 상단에서 확인하세요.', 'Review status in the source reflects when it was written. The current review appears at the top of this page.')}</p><pre class="review-source">${esc(source || '—')}</pre></details></article>`;
+    body += `<details class="character-source ds-card"><summary>${t('캐릭터 설정 원문', 'Full character identity')}<span class="ds-chevron" aria-hidden="true"></span></summary><p>${t('원문에 적힌 검토 상태는 작성 당시 기록입니다.', 'Review status in the source reflects when it was written.')}</p><pre class="review-source">${esc(source || '—')}</pre></details></article>`;
     render(file, character.name, 'characters', body);
     const preview = characterPreview(dir, folder, character, slots);
-    cards += `<article data-card data-search="${esc((character.name + ' ' + character.id + ' ' + role).toLocaleLowerCase())}" class="review-card review-character"><a class="review-card-art review-character-art${preview?.portrait ? ' review-character-portrait' : ''}" href="${rel(charIndex, file)}" aria-label="${esc(character.name)}">${preview ? image(charIndex, path.join(folder, preview.file), character.name) : empty('이미지 없음', 'No image yet')}</a><div class="review-card-body"><div class="review-card-heading"><h2><a href="${rel(charIndex, file)}">${esc(character.name)}</a></h2>${voicePreview(dir, charIndex, folder, character)}</div>${preview?.reference ? `<span class="review-reference">${t('참고 이미지', 'Reference image')}</span>` : ''}<p class="review-role">${esc(role)}</p>${review}${panelStatus(slots)}</div></article>`;
+    cards += `<article data-card data-search="${esc((character.name + ' ' + character.id + ' ' + role).toLocaleLowerCase())}" class="review-card review-character ds-card"><a class="review-card-art review-character-art${preview?.portrait ? ' review-character-portrait' : ''}" href="${rel(charIndex, file)}" aria-label="${esc(character.name)}">${preview ? image(charIndex, path.join(folder, preview.file), character.name) : empty('이미지 없음', 'No image yet')}</a><div class="review-card-body"><div class="review-card-heading"><h2><a href="${rel(charIndex, file)}">${esc(character.name)}</a></h2>${voicePreview(dir, charIndex, folder, character)}</div>${preview?.reference ? `<span class="review-reference">${t('참고 이미지', 'Reference image')}</span>` : ''}<p class="review-role">${esc(role)}</p></div></article>`;
   }
   render(charIndex, 'Characters', 'characters', heading(t('캐릭터 시트', 'Character sheets'), `${chars.length} ${t('명의 캐릭터', 'characters')}`) + searchBox() + `<div class="review-grid review-catalog review-character-catalog">${cards}</div><div data-no-results${chars.length ? ' hidden' : ''}>${empty(chars.length ? '검색 조건에 맞는 캐릭터가 없습니다.' : '등록된 캐릭터가 없습니다.', chars.length ? 'No characters match your search.' : 'No characters yet.')}</div>`);
   // Episode-owned sheets stay canonical in scenes.js; these are read-only catalogues.
+  const sheetCounts = {};
   for (const [kind, ko, en, anchor] of [
     ['props', '소품 시트', 'Prop sheets', 'props'],
     ['locations', '배경 시트', 'Background sheets', 'location-sheets'],
@@ -287,9 +276,10 @@ function exportChannel(channelDirectory, { check = false } = {}) {
             `<script defer src="${rel(detailFile,path.join(dir,'assets/review/location-review-runtime.js'))}"></script>`);
           detailLink = `<a class="review-primary-link" href="${rel(file,detailFile)}">${t('배경 상세 · 3D 공간','Background detail · 3D space')}</a>`;
         }
-        items += `<article class="review-card" data-card data-search="${esc((name + ' ' + (entry.id || '') + ' ' + board.title).toLocaleLowerCase())}">${preview}<div class="review-card-body"><h2>${esc(name)}</h2><p>${esc(board.title)} · ${esc(entry.id)}</p><p>${esc(entry.description || '')}</p><dl>${details}</dl>${detailLink}${link}</div></article>`;
+        items += `<article class="review-card ds-card" data-card data-search="${esc((name + ' ' + (entry.id || '') + ' ' + board.title).toLocaleLowerCase())}">${preview}<div class="review-card-body"><h2>${esc(name)}</h2><p>${esc(board.title)} · ${esc(entry.id)}</p><p>${esc(entry.description || '')}</p><dl>${details}</dl>${detailLink}${link}</div></article>`;
       }
     }
+    sheetCounts[kind] = count;
     render(file, en, kind, heading(t(ko, en), t('에피소드별 시트를 모아 봅니다.', 'Browse sheets by episode.')) + searchBox() + `<div class="review-grid review-catalog">${items}</div><div data-no-results${count ? ' hidden' : ''}>${empty(count ? '검색 조건에 맞는 시트가 없습니다.' : '등록된 시트가 없습니다.', count ? 'No sheets match your search.' : 'No sheets yet.')}</div>`);
   }
   const boardIndex = path.join(dir, 'storyboards', 'index.html');
@@ -310,7 +300,7 @@ function exportChannel(channelDirectory, { check = false } = {}) {
       warnings.push(message); structuralWarnings.push(message);
     }
     const cover = board.cover ? path.join(root, decodeURIComponent(board.cover.replace(/^\/files\//, ''))) : null;
-    cards += `<article class="review-card" data-card data-series="${esc(board.series || '')}" data-search="${esc((board.title + ' ' + board.topic + ' ' + (board.series || '')).toLocaleLowerCase())}">${available ? `<a href="${rel(boardIndex, file)}">` : '<div>'}${cover && regular(dir, cover) ? image(boardIndex, cover, board.title, true) : empty('커버 없음', 'No cover')}<div class="review-card-body"><h2>${esc(board.title)}</h2>${board.series ? `<p>${esc(board.series)}</p>` : ''}${boardMeta(board)}${available ? '' : `<p>${t('검토 HTML을 먼저 생성하세요.', 'Generate the review HTML first.')}</p>`}</div>${available ? '</a>' : '</div>'}</article>`;
+    cards += `<article class="review-card ds-card" data-card data-series="${esc(board.series || '')}" data-search="${esc((board.title + ' ' + board.topic + ' ' + (board.series || '')).toLocaleLowerCase())}">${available ? `<a href="${rel(boardIndex, file)}">` : '<div>'}${cover && regular(dir, cover) ? image(boardIndex, cover, board.title, true) : empty('커버 없음', 'No cover')}<div class="review-card-body"><h2>${esc(board.title)}</h2>${board.series ? `<p>${esc(board.series)}</p>` : ''}${boardMeta(board)}${available ? '' : `<p>${t('검토 HTML을 먼저 생성하세요.', 'Generate the review HTML first.')}</p>`}</div>${available ? '</a>' : '</div>'}</article>`;
   }
   const series = [...new Set(boards.map(b => b.series).filter(Boolean))];
   const filter = series.length ? `<label>${t('재생목록', 'Playlist')} <select data-series-filter><option value="" data-ko="전체" data-en="All">전체</option>${series.map(s => `<option>${esc(s)}</option>`).join('')}</select></label>` : '';
@@ -321,15 +311,19 @@ function exportChannel(channelDirectory, { check = false } = {}) {
   if (latest) {
     const file = path.join(dir, 'storyboards', latest.topic, 'index.html');
     const cover = latest.cover ? path.join(root, decodeURIComponent(latest.cover.replace(/^\/files\//, ''))) : null;
-    featured = `<section class="review-feature"><h2>${t('최근 에피소드', 'Latest episode')}</h2><a class="review-card" href="${rel(home, file)}">${cover && regular(dir, cover) ? image(home, cover, latest.title, true) : empty('커버 없음', 'No cover')}<div class="review-feature-copy"><h3>${esc(latest.title)}</h3>${latest.series ? `<p>${esc(latest.series)}</p>` : ''}${boardMeta(latest)}<span class="review-primary-link">${t('스토리보드 검토', 'Review storyboard')}</span></div></a></section>`;
+    featured = `<section class="review-feature"><h2>${t('최근 에피소드', 'Latest episode')}</h2><a class="review-card ds-card ds-card-hero" href="${rel(home, file)}">${cover && regular(dir, cover) ? image(home, cover, latest.title, true) : empty('커버 없음', 'No cover')}<div class="review-feature-copy"><h3>${esc(latest.title)}</h3>${latest.series ? `<p>${esc(latest.series)}</p>` : ''}${boardMeta(latest)}<span class="review-primary-link">${t('스토리보드 검토', 'Review storyboard')}</span></div></a></section>`;
   } else if (chars.length) {
     const character = chars[0];
     const folder = path.join(dir, 'assets', 'characters', character.id);
     const preview = characterPreview(dir, folder, character, characterSlots.get(character.id) || {});
     const front = preview?.file;
-    featured = `<section class="review-feature"><h2>${t('캐릭터 준비', 'Character preparation')}</h2><a class="review-card" href="${rel(home, path.join(folder, 'index.html'))}">${front && regular(dir, path.join(folder, front)) ? image(home, path.join(folder, front), character.name) : empty('캐릭터 이미지를 준비 중입니다.', 'Character images are not available yet.')}<div class="review-feature-copy"><h3>${esc(character.name)}</h3><p>${esc(character.summary || '')}</p><span class="review-primary-link">${t('캐릭터 시트 검토', 'Review character sheet')}</span></div></a></section>`;
+    featured = `<section class="review-feature"><h2>${t('캐릭터 준비', 'Character preparation')}</h2><a class="review-card ds-card ds-card-hero" href="${rel(home, path.join(folder, 'index.html'))}">${front && regular(dir, path.join(folder, front)) ? image(home, path.join(folder, front), character.name) : empty('캐릭터 이미지를 준비 중입니다.', 'Character images are not available yet.')}<div class="review-feature-copy"><h3>${esc(character.name)}</h3><p>${esc(character.summary || '')}</p><span class="review-primary-link">${t('캐릭터 시트 검토', 'Review character sheet')}</span></div></a></section>`;
   }
-  render(home, channel.name, '', heading(esc(channel.name), t('캐릭터와 에피소드를 한곳에서 검토합니다.', 'Review characters and episodes in one place.')) + featured + `<div class="review-shortcuts"><a class="review-card" href="${rel(home, charIndex)}"><h2>${t('캐릭터 시트', 'Character sheets')}</h2><span class="review-total">${chars.length}</span></a><a class="review-card" href="${rel(home, boardIndex)}"><h2>${t('스토리보드', 'Storyboards')}</h2><span class="review-total">${boards.length}</span></a></div>`);
+  const shortcuts = [['identity', '캐릭터 시트', 'Character sheets', charIndex, chars.length], ['story', '스토리보드', 'Storyboards', boardIndex, boards.length],
+    ['appearance', '소품 시트', 'Prop sheets', path.join(dir, 'assets', 'props', 'index.html'), sheetCounts.props || 0],
+    ['continuity', '배경 시트', 'Background sheets', path.join(dir, 'assets', 'locations', 'index.html'), sheetCounts.locations || 0]];
+  render(home, channel.name, '', heading(esc(channel.name), t('캐릭터와 에피소드를 한곳에서 검토합니다.', 'Review characters and episodes in one place.')) + featured +
+    `<div class="review-shortcuts">${shortcuts.map(([icon, ko, en, target, total]) => `<a class="review-card ds-card" href="${rel(home, target)}"><span class="ds-tile">${characterIcon(icon)}</span><h2>${t(ko, en)}</h2><span class="review-total">${total}</span></a>`).join('')}</div>`);
   const changed = [];
   // Preflight every target before any write. Preserve unowned files even on refresh.
   for (const [file, content] of outputs) {
@@ -359,6 +353,6 @@ if (require.main === module) {
 }
 function libraryHub(channels) {
   const style = channels.length ? `<link rel="stylesheet" href="/files/${encodeURIComponent(channels[0].slug)}/assets/review/review.css">` : '';
-  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>딸깍스토리 · 로컬 라이브러리</title>${style}</head><body class="review-page"><main class="review-main" style="margin-left:0"><header class="review-header"><h1>딸깍스토리</h1><p>로컬 라이브러리 / Local library</p></header><div class="review-grid">${channels.map(c => `<a class="review-card" href="/files/${encodeURIComponent(c.slug)}/index.html"><h2>${esc(c.name)}</h2><p>${c.characters} characters · ${c.storyboards} episodes</p></a>`).join('') || '<p>No channels / 채널 없음</p>'}</div></main></body></html>`;
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>딸깍스토리 · 로컬 라이브러리</title>${style}</head><body class="review-page"><main class="review-main review-main-full"><header class="review-header"><h1>딸깍스토리</h1><p>로컬 라이브러리 / Local library</p></header><div class="review-grid">${channels.map(c => `<a class="review-card" href="/files/${encodeURIComponent(c.slug)}/index.html"><h2>${esc(c.name)}</h2><p>${c.characters} characters · ${c.storyboards} episodes</p></a>`).join('') || '<p>No channels / 채널 없음</p>'}</div></main></body></html>`;
 }
 module.exports = { exportChannel, panels, libraryHub };
