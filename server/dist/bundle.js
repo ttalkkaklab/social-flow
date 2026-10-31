@@ -68664,25 +68664,40 @@ var require_compose_speech = __commonJS({
         const lines = (scene?.narration || []).filter((n) => (n.tts || "").trim());
         if (scene) checkSilentTiming(scene, board, win.SB_DOC?.performanceTimingVersion, path29.resolve(work, fields2[1]));
         if (!lines.length || lines.length === 1 && !lines.some((n) => n.acting != null) && !scene.performance?.some((event) => event.kind === "action")) continue;
-        const inputs = [], filters = [];
-        lines.forEach((line, i2) => {
+        const sources = [];
+        lines.forEach((line) => {
           const errors = actingErrors(line.acting), voice = cast.find((c) => c.id === line.speaker)?.tts;
           errors.push(...generationVoiceErrors(voice, line.audio?.generation, line));
           if (errors.length) throw new Error(line.id + ": " + errors.join("; "));
           if (!line.audio || line.audio.generation.text !== line.tts || line.audio.revision !== hash7(JSON.stringify(speechRevisionPayload(line, voice)))) throw new Error("Attach current audio for " + line.id);
           const source = path29.resolve(board, line.audio.path);
           if (hash7(fs24.readFileSync(source)) !== line.audio.sha256) throw new Error("Audio changed for " + line.id);
-          inputs.push("-i", source);
+          sources.push(source);
         });
         const timing = sceneTiming(scene, board, win.SB_DOC?.performanceTimingVersion), intervals = timing.intervals;
+        const total = Math.round(timing.durationSeconds * 48e3), mix = new Int32Array(total);
         lines.forEach((line, i2) => {
-          const interval = intervals.find((item) => item.lineId === line.id);
-          filters.push(`[${i2}:a]aresample=48000,aformat=sample_fmts=s16:channel_layouts=mono,adelay=${Math.round(interval.speechStartSeconds * 48e3)}S:all=1[a${i2}]`);
+          const pcm = execFileSync15("ffmpeg", ["-v", "error", "-i", sources[i2], "-ac", "1", "-ar", "48000", "-f", "s16le", "-"], { timeout: 12e4, maxBuffer: 1 << 30 });
+          const start = Math.round(intervals.find((item) => item.lineId === line.id).speechStartSeconds * 48e3);
+          for (let k = 0; k < pcm.length >> 1 && start + k < total; k++) mix[start + k] += pcm.readInt16LE(k * 2);
         });
-        filters.push(lines.map((_, i2) => `[a${i2}]`).join("") + `amix=inputs=${lines.length}:normalize=0,apad=whole_dur=${timing.durationSeconds},atrim=duration=${timing.durationSeconds}[out]`);
+        const wav = Buffer.alloc(44 + total * 2);
+        wav.write("RIFF");
+        wav.writeUInt32LE(36 + total * 2, 4);
+        wav.write("WAVEfmt ", 8);
+        wav.writeUInt32LE(16, 16);
+        wav.writeUInt16LE(1, 20);
+        wav.writeUInt16LE(1, 22);
+        wav.writeUInt32LE(48e3, 24);
+        wav.writeUInt32LE(96e3, 28);
+        wav.writeUInt16LE(2, 32);
+        wav.writeUInt16LE(16, 34);
+        wav.write("data", 36);
+        wav.writeUInt32LE(total * 2, 40);
+        mix.forEach((sample, k) => wav.writeInt16LE(Math.max(-32768, Math.min(32767, sample)), 44 + k * 2));
         const output2 = path29.join(work, `c${fields2[0]}-speech.wav`), tmp = output2 + ".tmp.wav";
         try {
-          execFileSync15("ffmpeg", ["-y", "-v", "error", ...inputs, "-filter_complex", filters.join(";"), "-map", "[out]", "-c:a", "pcm_s16le", tmp], { timeout: 12e4 });
+          fs24.writeFileSync(tmp, wav);
           fs24.renameSync(tmp, output2);
         } finally {
           if (fs24.existsSync(tmp)) fs24.unlinkSync(tmp);
