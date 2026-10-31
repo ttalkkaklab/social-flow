@@ -19,7 +19,8 @@ generation authorization and adapter input validation stay. Work in this order:
 6. Each shot's start image (`shot_image`), composed from its characters' sheet panels,
    its place and props; then the end image (`frame:"end"`) only for a `first_last` shot.
 7. Each `generated_video` shot's video prompt (`shot_prompt`), from its icon attributes,
-   lines and an English action.
+   lines and an English action. A later change to what it came from warns and marks the
+   prompt stale on the review page; rewrite it with `shot_prompt`.
 8. Each shot's video: `video_plan` → the user's approval (`video_approve`) → `video_execute`.
 9. Assembly and delivery (produce).
 
@@ -36,10 +37,12 @@ spending authorization is reported, never silently bypassed.
 existing spending authorization, then records `visual.frames.start` and `visual.bg` (or
 `frames.end`), `visual.references`, `locationId` and `props`. One character's references are
 its face, headless front and headless back panels; two characters take each face, then
-each front. The place is the edit's first input. The saved image model has to take several
-pictures (gpt-image, astra-genai-native, mlx); a one-picture model such as astra-genai
-`z-image-turbo` refuses with `image_references_unsupported`, so ask the user which model to
-use rather than switching silently. Every call writes a new versioned file.
+each front. The place is the edit's first input. The saved image model has to take every
+picture the frame composes (gpt-image up to 16; astra-genai-native or an MLX Qwen-Image-2.1
+pack up to 10; MLX FLUX.2 klein or Mage-Flow Edit up to 4); otherwise — a one-picture model
+such as astra-genai `z-image-turbo` included — it refuses with `image_references_unsupported`,
+so ask the user which model to use rather than switching silently. Every call writes a new versioned file; a new start
+image takes the end image made from the old one off the shot.
 
 ## Approval before each video (user directive, 2026-10-31)
 
@@ -47,7 +50,10 @@ Before a shot's video, show the user its `video_plan`: the prompt, the start (an
 image and the cost. On their yes, record it with `video_approve {planIds}` in their own
 words; when they approve every shot at once, `video_approve {auto:true}`. `video_execute`
 refuses a plan without one (`video_approval_required`). A changed prompt, image or model
-makes a new plan, which needs a new yes unless auto is on. Never call `video_approve`
+makes a new plan, which needs a new yes unless auto is on, and `video_approve` refuses a plan
+that went stale before the yes (`video_plan_stale`). The review page reads
+`storyboard/video-approvals.js` and marks a shot whose prompt, start/end image or lines changed
+after its yes; a changed model shows when `video_execute` refuses the old plan. Never call `video_approve`
 without the user's answer; it records their approval, not a step taken for them. On MSR
 the start image rides in the background slot, and the plain place picture stays out.
 

@@ -145,14 +145,17 @@ Use this as a thinking aid, not a demand to make characters explain themselves a
 **Story first, one layer at a time (user directive, 2026-10-31).** Once the scenario is
 settled, the first storyboard step writes only the story: `story_sequence` (each sequence's
 title and purpose) → `story_scene` (place, time, event and a one- or two-sentence summary,
-inside its sequence) → `story_shot` (each shot as one sentence of story in its scene). No
+inside its sequence) → `story_shot` (each shot as one sentence of story in its scene; a
+revised shot given another scene moves to the end of that scene). No
 image, speech, prompt, camera or dialogue work happens in this step. Each tool refuses a layer
 whose parent is missing (`story_order`). The next step starts once every sequence has scenes,
 every scene has shots and every shot has its story: `shot_characters` sets who is on screen in
 each shot — at most two principal characters, `[]` for nobody — and then `shot_dialogue` writes
 each shot's lines in spoken order, each attributed to a character from `cast.json`. An on-screen
 speaker is one of the shot's characters; a narrator is a character who speaks in `voiceover`
-without being seen. The third step, once every shot has its characters, sets what the review's
+without being seen. When a character leaves a shot later, `shot_characters` keeps their lines
+as `off_screen` and warns, and it warns when the start image shows the old cast; revise them
+with `shot_dialogue` and `shot_image`. The third step, once every shot has its characters, sets what the review's
 icon row shows with `shot_icons` (§4): render route, size, angle, camera move, focus, depth and
 frame plan. Camera endpoints and blocking then go through `storyboard_apply`. The fourth step,
 once every shot has its icon attributes and the props and backgrounds exist, makes each

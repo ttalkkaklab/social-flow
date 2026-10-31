@@ -17,6 +17,9 @@ prompt with `shot_prompt`. Give `action` (what moves from the opening picture), 
 closing picture) and `sound` in English; the tool builds the rest from the shot's icon
 attributes — camera move and speed, focus, and on an MSR shot its size, angle and depth —
 and quotes its on-screen lines. MSR's lines and image bindings are added by `video_plan`.
+The tool records what the prompt came from; when the shot's characters, on-screen lines,
+frame plan, camera, focus or MSR framing change later, the stage tools warn and the review
+page marks the prompt stale. Rewrite it with `shot_prompt` before planning that shot.
 
 **Approval.** Plan each shot with `video_plan` (it sends the stored prompt when args name
 none, and on MSR the start image rides in the background slot). Before `video_execute`,
@@ -25,8 +28,10 @@ shot, approve every shot from now on, or change something. Record a yes with
 `video_approve {planIds:[…]}` and an approve-all with `video_approve {auto:true}`, each
 with the user's own words. Never call `video_approve` without their answer; `video_execute`
 refuses a plan without one (`video_approval_required`). A changed prompt, image or model is
-a new plan and needs a new yes unless auto is on. `render-astra-shot.js` runs only after the
-same yes.
+a new plan and needs a new yes unless auto is on; `video_approve` refuses a plan that went
+stale before the yes (`video_plan_stale`), so plan it again and show the new one. It also
+writes `storyboard/video-approvals.js`, so the review page marks each shot approved, awaiting
+approval, or changed (prompt, start/end image or lines) after its yes. `render-astra-shot.js` runs only after the same yes.
 
 **Generate.** Run `video_execute` within the saved models and existing budgets; use
 `video_status` after an interruption. Import usable existing clips instead of regenerating.

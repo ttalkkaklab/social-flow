@@ -90,6 +90,17 @@ test('dialogue portrait honors the episode cast image before channel images', ()
   assert.match(render(), /src="channel-face.png"/);
   delete context.CAST[0].panels.face;
   assert.match(render(), /src="resolved-face.png"/);
+  // The icon row's faces read visual.character entries with a scope as well as bare ids
+  const chars = template.slice(template.indexOf('  function charEntries('), template.indexOf('  var castEntries'));
+  const faces = runInNewContext(chars + template.slice(start, end) + '\ncastFacesHtml({visual:{character:[{id:"mina",scope:"her face only"},"joon"]}})', context);
+  assert.deepEqual([...faces.matchAll(/aria-label="([^"]+)"/g)].map((m) => m[1]), ['mina', 'joon']);
+  const why = (...input) => runInNewContext(template.slice(start, end) + '\nmoveReason(...input)', { ...context, input });
+  assert.equal(why({ still: false, camera: {} }, { reason: 'approach the reaction' }, { target: 'mina' }), 'approach the reaction\n→ mina');
+  assert.equal(why({ still: true, camera: { reason: 'settle in', target: 'the window' } }, undefined, {}), 'settle in\n→ the window');
+  const call = (expr) => runInNewContext(template.slice(start, end) + '\n' + expr, { ...context, LANG: 'en', renderTitle: (mode) => 'Route ' + mode });
+  assert.equal(call('renderTip("generated_video", {purpose: "show the hand-off", reason: "continuous motion"})'), 'Route generated_video\n\nshow the hand-off\n\ncontinuous motion');
+  assert.equal(call('sceneOutHtml({out: "  Who opened it?  "})'), '<p class="scene-band-out">Last line Who opened it?</p>');
+  assert.equal(call('sceneOutHtml({})'), '');
 });
 
 test('review shows every production cut, timing and motion file without substituting the representative', () => {
@@ -208,17 +219,46 @@ test('shot body shows start and end frames and the video references its lane tak
  const start=template.indexOf('  var REF_LANES = {');
  const end=template.indexOf('  function portraitOf(',start);
  const routing=require('../../skills/storyboard/references/render-routing.js');
+ const win={RENDER_ROUTING:routing,STRUCTURE_CONTRACT:require('../../skills/storyboard/references/structure-contract.js'),FILM_TECHNIQUES:require('../../skills/storyboard/references/film-techniques.js')};
  const s={visual:{frames:{mode:'first_last',start:'start.png',end:'end.png'},references:[
   {id:'hero',path:'hero.png',role:'character',use:'both',purpose:'Keep <costume>'},
   {id:'still',path:'still-only.png',role:'composition',use:'image',purpose:'Still only'}]}};
  const render=()=>runInNewContext(template.slice(start,end)+'\nshotBodyHtml(s,[])',{
-  s,LANG:'en',WIDE:true,DOC:{},window:{RENDER_ROUTING:routing},castName:id=>id,speechHtml:()=>'',
+  s,LANG:'en',WIDE:true,DOC:{locations:[{id:'room',name:'Room'}],props:[{id:'key',name:'Brass key'}]},window:win,castName:id=>id,speechHtml:()=>'',
   T:{framePending:'Pending',speechSilent:'No lines'},
   esc:v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('"','&quot;')});
  const html=render();
  for(const name of ['start.png','end.png','hero.png'])assert.ok(html.includes('src="'+name+'"'));
  assert.ok(!html.includes('still-only.png'));assert.match(html,/Keep &lt;costume>/);
  s.visual.references[0].path='javascript:alert(1)';assert.doesNotMatch(render(),/(?:src|href)="javascript:/);
+ Object.assign(s.visual,{endPrompt:'Last frame, door open',locationId:'room',props:['key'],bg:'start.png',bgPrompt:'Mina by the door'});
+ Object.assign(s.visual.frames,{endState:'The door stands open',reason:'the door has to end open',endProps:[]});
+ const shown=render();
+ for(const text of ['End state','The door stands open','End image prompt','Last frame, door open','Place Room · Props Brass key · End props none','data-missing="Pending"',
+   'Runs from the start to the end image</b> · the door has to end open','Start image prompt'])assert.ok(shown.includes(text),text);
+ s.visual.bg='older.png';assert.ok(render().includes('Background prompt'));s.visual.bg='start.png';
+ const endFile=s.visual.frames.end;delete s.visual.frames.end;assert.ok(!render().includes('End props'));s.visual.frames.end=endFile;delete s.visual.frames.endProps;
+ // The approval badge reads video-approvals.js and notices a prompt changed after the yes
+ const approval=()=>runInNewContext(template.slice(start,end)+'\nvideoApprovalHtml(s)',{s,LANG:'en',window:win,esc:v=>String(v)});
+ s.id='s0001';s.shot={render:{mode:'generated_video'}};s.visual.video={prompt:'A heron lands.'};
+ assert.match(approval(),/awaiting approval/);
+ win.VIDEO_APPROVALS={auto:null,shots:{s0001:{planId:'p',at:'2026-10-31T00:00:00Z',shown:{prompt:'A heron lands.',start:'start.png',end:'end.png'}}}};
+ assert.match(approval(),/Video approved · 2026-10-31/);
+ s.visual.video.prompt='A heron takes off.';assert.match(approval(),/approve again/);
+ win.VIDEO_APPROVALS.shots.s0001.shown.callPrompt=true;assert.match(approval(),/prompt given in the call/);
+ win.VIDEO_APPROVALS.shots.s0001.shown.lines=[['mina','on_screen','Hi']];s.narration=[{speaker:'mina',delivery:'on_screen',tts:'Hi'}];
+ assert.match(approval(),/prompt given in the call/);s.narration[0].tts='Hello';assert.match(approval(),/approve again/);delete s.narration;
+ delete win.VIDEO_APPROVALS.shots.s0001.shown;assert.match(approval(),/Video approved/);
+ s.visual.reuse={clip:'old.mp4'};assert.equal(approval(),'');delete s.visual.reuse;
+ // A prompt written before the cast changed reads as stale, in the head and in the prompt tab
+ const drift=()=>runInNewContext(template.slice(start,end)+'\npromptDriftText(s)',{s,LANG:'en',window:win});
+ s.visual.video.promptBasis=win.STRUCTURE_CONTRACT.promptBasis(s,()=>false);assert.equal(drift(),'');
+ s.visual.character=['mina'];assert.match(drift(),/Changed since the video prompt: characters/);assert.ok(render().includes('class="prompt-drift"'));
+ // The MSR icon is for a video cut whose frame plan sends it to MSR
+ const lane=(mode)=>runInNewContext(template.slice(start,end)+'\nmsrLane(s,mode)',{s,mode,LANG:'en',window:win});
+ s.visual.frames={mode:'reference',start:'start.png'};assert.deepEqual([lane('generated_video'),lane('still_camera')],[true,false]);
+ win.VIDEO_APPROVALS={auto:'2026-10-31T00:00:00Z',shots:{}};assert.match(approval(),/Approved with every shot/);
+ delete win.VIDEO_APPROVALS;
  s.visual.frames={mode:'reference',start:'start.png'};s.visual.references[0].path='hero.png';
  const msr=render();assert.match(msr,/sent to MSR slot 5/);assert.match(msr,/ref-off-tile/);
 });

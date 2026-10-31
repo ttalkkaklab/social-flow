@@ -43,6 +43,7 @@ import { ROUTES } from '../dist/handlers.js';
 import editPlan from '../../skills/produce/references/edit-plan.js';
 import { setupProject, png } from './workflow-fixture.mjs';
 import { createRequire } from 'node:module';
+import { execFileSync } from 'node:child_process';
 const settings = createRequire(import.meta.url)('../../skills/_shared/model-settings.js');
 
 const dirs = [];
@@ -412,6 +413,18 @@ describe('story first, then characters and lines', () => {
     assert.equal(win.STORY.version, 'story-v2');
     assert.deepEqual(win.SCENES.map((s) => s.summary), ['a1', 'a2', 'b']);
     assert.deepEqual(win.STRUCTURE.sequences[0].scenes, [1, 2]);
+    const outside = writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남', question: '누가 오나', payoff: 9 }] });
+    assert.deepEqual(outside.findings.filter((f) => /payoff/.test(f.what)).map((f) => f.level), ['warn']);
+    writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남', question: '누가 오나', payoff: 2 }] });
+    assert.deepEqual([readBoard(dir).win.STRUCTURE.sequences[0].payoff, readBoard(dir).win.STRUCTURE.sequences[0].scenes], [2, [1, 2]]);
+    writeStoryShots({ path: dir, shots: [{ id: 's0001', scene: 2, summary: 'a1 moved' }] });
+    assert.deepEqual(readBoard(dir).win.SCENES.map((s) => [s.id, s.scene]), [['s0002', 1], ['s0003', 2], ['s0001', 2]]);
+    // s0001 looks at s0003 (position 2); a shot added to scene 1 pushes s0003 to position 3.
+    applyStoryboard({ path: dir, draft: true, shotsById: [{ id: 's0001', shot: { ...readBoard(dir).win.SCENES[2], shot: { eyeline: { matchShot: 2 } } } }] });
+    writeStoryShots({ path: dir, shots: [{ scene: 1, summary: 'a3' }] });
+    const moved = readBoard(dir).win.SCENES;
+    assert.equal(moved.find((s) => s.id === 's0001').shot.eyeline.matchShot, moved.findIndex((s) => s.id === 's0003') + 1);
+    assert.deepEqual(readStoryboard(storyboardReadSchema.parse({ path: dir })).playback.map((row) => row.summary), ['a2', 'a3', 'b', 'a1 moved']);
   });
   it('characters wait for a complete story; lines wait for the shot\'s characters', () => {
     const dir = tmp();
@@ -429,6 +442,12 @@ describe('story first, then characters and lines', () => {
     const shot = readBoard(dir).win.SCENES[0];
     assert.deepEqual(shot.visual.character, ['mina']);
     assert.deepEqual(shot.narration.map((l) => [l.id, l.speaker, l.delivery]), [['s0001-l1', 'mina', 'on_screen'], ['s0001-l2', 'narrator', 'voiceover']]);
+    const recast = writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['joon'] }] });
+    assert.equal(recast.written, true);
+    assert.deepEqual(recast.findings.filter((f) => f.where === 's0001').map((f) => f.level), ['warn']);
+    assert.deepEqual(readBoard(dir).win.SCENES[0].narration.map((l) => [l.speaker, l.delivery]), [['mina', 'off_screen'], ['narrator', 'voiceover']]);
+    const back = writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }] });
+    assert.ok(back.findings.some((f) => f.where === 's0001' && /off_screen lines/.test(f.what)));
     const bad = (patch) => applyStoryboard({ path: dir, draft: true, dryRun: true, ...patch }).findings.filter((f) => f.level === 'bad').map((f) => f.what);
     assert.match(bad({ shotsById: [{ id: 's0001', shot: { ...shot, visual: {} } }] }).join(), /story_order: lines before characters/);
     assert.match(bad({ insertShots: [{ after: 0, shots: [{ type: 'points', title: 'no story' }] }] }).join(), /story_order: no summary/);
@@ -463,6 +482,28 @@ describe('icon attributes come after every shot\'s characters', () => {
     assert.equal(video.visual.frames.mode, 'reference');
     assert.equal(still.shot.render.camera.effect, 'push');
     assert.equal(still.shot.techniques, undefined);
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', move: { id: 'camera.whip-pan', reason: 'snap to the door', target: 'the door' }, size: 'ms', why: 'her whole reaction' }] });
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', move: { id: 'camera.dolly-in', reason: 'approach the reaction' }, size: 'cu' }] });
+    assert.deepEqual([readBoard(dir).win.SCENES[0].visual.camera, readBoard(dir).win.SCENES[0].shot.why], [{ movement: 'dolly in' }, undefined]);
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', move: { id: 'camera.dolly-in', reason: 'closer', target: 'her eyes' } }] });
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', move: { id: 'camera.dolly-in', reason: 'closer still' } }] });
+    assert.equal(readBoard(dir).win.SCENES[0].visual.camera.target, 'her eyes');
+    writeShotIcons({ path: dir, shots: [
+      { id: 's0001', render: { mode: 'still_camera', reason: 'a held look' }, frames: { mode: 'first', reason: 'one picture' } },
+      { id: 's0002', render: { mode: 'generated_video', reason: 'the door opens' } },
+    ] });
+    const [held, opened] = readBoard(dir).win.SCENES;
+    assert.deepEqual([held.shot.techniques, held.visual.camera, opened.shot.render.camera], [[], undefined, undefined]);
+    // An authored camera move with no technique yet is the same move: its speed and target stay.
+    applyStoryboard({ path: dir, draft: true, shotsById: [{ id: 's0002', shot: { ...opened, visual: { ...opened.visual, camera: { movement: 'dolly in', speed: 'slow', target: 'her eyes' } } } }] });
+    writeShotIcons({ path: dir, shots: [{ id: 's0002', move: { id: 'camera.dolly-in', reason: 'approach her' } }] });
+    assert.deepEqual(readBoard(dir).win.SCENES[1].visual.camera, { movement: 'dolly in', speed: 'slow', target: 'her eyes' });
+    // A still effect keeps its target only while the effect stays the same.
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', move: { id: 'push', reason: 'settle in', target: 'the window' } }] });
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', move: { id: 'push', reason: 'settle in slowly' } }] });
+    assert.equal(readBoard(dir).win.SCENES[0].shot.render.camera.target, 'the window');
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', move: { id: 'pan', reason: 'scan the room' } }] });
+    assert.equal(readBoard(dir).win.SCENES[0].shot.render.camera.target, undefined);
   });
   it('only a board started with story_sequence holds every writer to the order', () => {
     const dir = storyBoard();
@@ -491,11 +532,13 @@ describe('images and the video prompt follow the icon attributes', () => {
     for (const name of ['face', 'body', 'back']) writeFileSync(join(sheet, name + '.png'), png);
     writeFileSync(join(sheet, 'panels.json'), JSON.stringify({ panels: { face: { file: 'face.png' }, front: { file: 'body.png' }, back: { file: 'back.png' } } }));
     writeFileSync(join(dir, 'places/room.png'), png);
+    writeFileSync(join(dir, 'places/key.png'), png);
     writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
     writeStoryScenes({ path: dir, scenes: [{ sequence: 'q1', no: 1, place: '방', time: '밤', event: 'e', summary: '씬' }] });
     writeStoryShots({ path: dir, shots: [{ scene: 1, summary: 'a' }, { scene: 1, summary: 'b' }] });
     writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: [{ id: 'mina' }] }));
-    applyStoryboard({ path: dir, draft: true, globals: { SB_DOC: { locations: [{ id: 'room', name: '방', imageUrl: 'places/room.png' }] } } });
+    applyStoryboard({ path: dir, draft: true, expectedSha256: readBoard(dir).sha256, globals: { SB_DOC: { locations: [{ id: 'room', name: '방', imageUrl: 'places/room.png' }],
+      props: [{ id: 'key', name: '열쇠', imageUrl: 'places/key.png' }] } } });
     writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: ['mina'] }] });
     writeShotDialogue({ path: dir, shots: [{ id: 's0002', lines: [{ speaker: 'mina', tts: '안녕' }] }] });
     return { root, dir };
@@ -527,6 +570,15 @@ describe('images and the video prompt follow the icon attributes', () => {
     settings.saveSettings(root, { image: { engine: 'astra-genai', model: 'z-image-turbo' }, video: { engine: 'seedance', model: 'dreamina-seedance-2-0-260128', resolution: '720p' }, speech: { engine: 'none' } },
       { expectedRevision: settings.readSettings(root).revision, request: 'Fixture: a one-picture image model' });
     assert.throws(() => shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'p', location: 'room' }), /image_references_unsupported/);
+    settings.saveSettings(root, { image: { engine: 'mlx', model: 'FLUX.2-klein-4B' }, video: { engine: 'seedance', model: 'dreamina-seedance-2-0-260128', resolution: '720p' }, speech: { engine: 'none' } },
+      { expectedRevision: settings.readSettings(root).revision, request: 'Fixture: an MLX edit pack with three references' });
+    assert.equal(shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'p', location: 'room' }).inputs.length, 4);
+    assert.throws(() => shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'p', location: 'room', props: ['key'] }), /image_references_unsupported.*takes 4/);
+    settings.saveSettings(root, { image: { engine: 'mlx', model: 'Qwen-Image-2.1' }, video: { engine: 'seedance', model: 'dreamina-seedance-2-0-260128', resolution: '720p' }, speech: { engine: 'none' } },
+      { expectedRevision: settings.readSettings(root).revision, request: 'Fixture: an MLX edit pack with nine references' });
+    assert.equal(shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'p', location: 'room', props: ['key'] }).inputs.length, 5);
+    writeShotIcons({ path: dir, shots: [{ id: 's0002', render: { mode: 'motion_html', reason: 'a diagram' } }] });
+    assert.throws(() => shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'p' }), /shot_image: s0002 is a motion_html cut/);
   });
   it('the video prompt reads the icon attributes after every picture exists', () => {
     const { dir } = pictureBoard();
@@ -535,7 +587,10 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.throws(() => writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns.' }), /story_order.*s0002 has no start image/);
     make(dir, 's0002', 'start', { location: 'room' });
     assert.throws(() => writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns.' }), /s0002 has no end image/);
-    assert.match(make(dir, 's0002', 'end').inputs[0], /images\/s0002-start-v1\.png$/);
+    assert.throws(() => shotImageRequest({ path: dir, id: 's0002', frame: 'end', prompt: 'p', location: 'room' }), /keeps its place/);
+    const ended = make(dir, 's0002', 'end', { props: ['key'] });
+    assert.match(ended.inputs[0], /images\/s0002-start-v1\.png$/);
+    assert.deepEqual([ended.inputs.length, readBoard(dir).win.SCENES[1].visual.frames.endProps], [5, ['key']]);
     const msr = writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns to the door.' }).prompt;
     assert.match(msr, /^Medium shot, waist up, at eye level\. Camera: dolly in.*Mina turns to the door\. Audio: no music\.$/);
     const framed = writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', end: 'she smiles' }).prompt;
@@ -544,7 +599,54 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', sound: 'a radio plays a song' }).prompt, /Audio: a radio plays a song\.$/);
     writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', end: 'she smiles' });
     assert.equal(readBoard(dir).win.SCENES[1].visual.video.prompt, framed);
+    const relined = writeShotDialogue({ path: dir, shots: [{ id: 's0002', lines: [{ speaker: 'mina', tts: '잠깐!' }] }] });
+    assert.ok(relined.findings.some((f) => f.where === 's0002' && /video prompt predates a change of on-screen lines/.test(f.what)));
+    assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.' }).prompt, /Mina says: "잠깐!" End on/);
+    assert.deepEqual(contract().promptDrift(readBoard(dir).win.SCENES[1], () => false), []);
     assert.throws(() => writeShotPrompt({ path: dir, id: 's0002', action: '미나가 웃는다' }), /video_prompt_language/);
+    // A new start image takes the end image edited from the old one off the shot.
+    const again = { path: dir, id: 's0002', frame: 'start', prompt: 'Mina waits by the door.' };
+    const remade = shotImageRequest(again);
+    writeFileSync(remade.file, png);
+    assert.deepEqual(recordShotImage(again, remade).findings.filter((f) => f.where === 's0002').map((f) => f.level), ['warn']);
+    assert.deepEqual([readBoard(dir).win.SCENES[1].visual.frames.end, readBoard(dir).win.SCENES[1].visual.frames.endProps, readBoard(dir).win.SCENES[1].visual.endPrompt], [undefined, undefined, undefined]);
+    assert.throws(() => writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.' }), /s0002 has no end image/);
+    make(dir, 's0002', 'end');
+    const replanned = writeShotIcons({ path: dir, shots: [{ id: 's0002', frames: { mode: 'reference', reason: 'MSR now' } }] });
+    const msrShot = readBoard(dir).win.SCENES[1];
+    assert.deepEqual(replanned.findings.filter((f) => f.where === 's0002').map((f) => /end image/.test(f.what) ? 'end' : /video prompt predates a change of frame plan/.test(f.what) ? 'prompt' : f.what), ['end', 'prompt']);
+    assert.deepEqual([msrShot.visual.frames.end, msrShot.visual.frames.endState, msrShot.visual.endPrompt], [undefined, undefined, undefined]);
+    assert.deepEqual([...new Set(msrShot.visual.references.filter((r) => r.role === 'character').map((r) => r.use))], ['both']);
+    // A new cast leaves the start image behind; the tool says so. A departed panel goes by its folder or its shot_image id.
+    const moved = readBoard(dir).win.SCENES[1];
+    applyStoryboard({ path: dir, draft: true, shotsById: [{ id: 's0002', shot: { ...moved, visual: { ...moved.visual,
+      references: moved.visual.references.map((r) => r.id === 's0002-mina-face' ? { ...r, path: 'references/mina-face.png' } : r) } } }] });
+    const recast = writeShotCharacters({ path: dir, shots: [{ id: 's0002', characters: [] }] });
+    assert.ok(recast.findings.some((f) => f.where === 's0002' && /start image/.test(f.what)));
+    assert.ok(recast.findings.some((f) => f.where === 's0002' && /video prompt predates a change of frame plan, characters/.test(f.what)));
+    assert.deepEqual(readBoard(dir).win.SCENES[1].visual.references.filter((r) => r.role === 'character'), []);
+    const hand = readBoard(dir).win.SCENES[1];
+    applyStoryboard({ path: dir, draft: true, shotsById: [{ id: 's0002', shot: { ...hand, visual: { ...hand.visual, video: { ...hand.visual.video, prompt: 'Start from the given first frame. Mina looks up slowly.' } } } }] });
+    assert.equal(readBoard(dir).win.SCENES[1].visual.video.promptBasis, undefined);
+    // A new size after the start image leaves that picture behind; the tool says so.
+    const resized = writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'ecu' }] });
+    assert.ok(resized.findings.some((f) => f.where === 's0001' && /start image was made for the previous size/.test(f.what)));
+  });
+  it('GPT Image gets a mixed PNG and JPEG set as PNG copies', () => {
+    const { root, dir } = pictureBoard();
+    icons(dir);
+    execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=gray:s=16x16', '-frames:v', '1', join(dir, 'places/yard.jpg')]);
+    const doc = readBoard(dir).win.SB_DOC;
+    applyStoryboard({ path: dir, draft: true, globals: { SB_DOC: { ...doc, locations: [...doc.locations, { id: 'yard', name: '마당', imageUrl: 'places/yard.jpg' }] } } });
+    settings.saveSettings(root, { image: { engine: 'gpt-image', model: 'gpt-image-2', quality: 'low' }, video: { engine: 'seedance', model: 'dreamina-seedance-2-0-260128', resolution: '720p' }, speech: { engine: 'none' } },
+      { expectedRevision: settings.readSettings(root).revision, request: 'Fixture: GPT Image' });
+    const ask = () => shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina in the yard.', location: 'yard' });
+    const path = process.env.PATH;
+    process.env.PATH = '';
+    try { assert.throws(ask, /image_inputs_mixed_format/); } finally { process.env.PATH = path; }
+    const request = ask();
+    assert.match(request.inputs[0], /images\/inputs\/[0-9a-f]{16}\.png$/);
+    assert.equal(request.args.sourceMimeType, 'image/png');
   });
 });
 

@@ -88904,6 +88904,16 @@ function applyPatch(win, patch, opts = {}) {
   });
   if (next.STRUCTURE) next.STRUCTURE = { ...next.STRUCTURE, nextShotId };
   next.SCENES = shots.map((shot) => shot.shot?.motionGraphic && (shot.shot.motionGraphic.style.theme || next.THEME?.motionGraphicTheme) ? motionThemeContract().applyTheme({ ...shot }, next.THEME?.motionGraphicTheme) : { ...shot });
+  if (!opts.outline) {
+    const earlier = new Map(originalShots.map((shot) => [shot.id, shot]));
+    next.SCENES = next.SCENES.map((shot) => {
+      const video2 = shot.visual?.video;
+      const old = earlier.get(shot.id)?.visual?.video;
+      if (!video2?.promptBasis || video2.prompt === old?.prompt) return shot;
+      const { promptBasis: _basis, ...rest } = video2;
+      return { ...shot, visual: { ...shot.visual, video: rest } };
+    });
+  }
   const findings = [];
   if (!shots.length && !opts.outline) findings.push({ level: "bad", where: "board", what: "the board has no shots" });
   if (win.STORY?.authoring === "story-first" && next.STORY?.authoring !== "story-first")
@@ -88976,7 +88986,8 @@ var storySequenceSchema = external_exports.object({
     id: nonEmpty.describe('Stable id, e.g. "q1"'),
     title: nonEmpty.describe("The heading the approval page draws"),
     purpose: nonEmpty.describe("The one purpose that binds its scenes"),
-    question: nonEmpty.optional().describe("The dramatic question this stretch opens")
+    question: nonEmpty.optional().describe("The dramatic question this stretch opens"),
+    payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question")
   }).strict()).min(1)
 }).strict();
 var storySceneSchema = external_exports.object({
@@ -89021,7 +89032,9 @@ function writeOutline(path29, win, structure, shots) {
 function writeStorySequences(args) {
   const { win, st } = readOutline(args.path);
   const sequences = upsertBy(st.sequences, args.sequences.map((q) => ({ ...st.sequences.find((old) => old.id === q.id), ...q, scenes: st.sequences.find((old) => old.id === q.id)?.scenes ?? [] })), "id");
-  return writeOutline(args.path, win, { ...st, sequences });
+  const notes = sequences.filter((q) => q.payoff !== void 0 && q.scenes.length && !q.scenes.includes(q.payoff)).map((q) => ({ level: "warn", where: `sequence ${q.id}`, what: `payoff names scene ${q.payoff}, which is outside this sequence \u2014 fix it with story_sequence or story_scene` }));
+  const result = writeOutline(args.path, win, { ...st, sequences });
+  return { ...result, findings: [...result.findings, ...notes] };
 }
 function writeStoryScenes(args) {
   const { win, st } = readOutline(args.path);
@@ -89039,22 +89052,35 @@ function writeStoryShots(args) {
   if (!st.scenes.length) throw new Error("story_order: write the scenes first with story_scene");
   const order = st.sequences.flatMap((q) => q.scenes);
   const shots = Array.isArray(win.SCENES) ? win.SCENES.slice() : [];
+  const endOf = (scene) => {
+    const rank = order.indexOf(scene);
+    let at = 0;
+    shots.forEach((shot, i2) => {
+      if (shot.scene !== void 0 && order.indexOf(shot.scene) <= rank) at = i2 + 1;
+    });
+    return at;
+  };
+  const origin = /* @__PURE__ */ new Map();
   for (const { id, ...story } of args.shots) {
     if (!order.includes(story.scene)) throw new Error(`story_order: scene ${story.scene} is not in a sequence \u2014 write it with story_scene`);
     if (id) {
       const index = shots.findIndex((shot) => shot.id === id);
       if (index < 0) throw new Error(`story_shot: no shot with id ${id} on this board`);
-      shots[index] = { ...shots[index], ...story };
+      const [old] = shots.splice(index, 1), revised = { ...old, ...story };
+      origin.set(revised, origin.get(old) ?? old);
+      shots.splice(old.scene === story.scene ? index : endOf(story.scene), 0, revised);
       continue;
     }
-    const rank = order.indexOf(story.scene);
-    let at = 0;
-    shots.forEach((shot, i2) => {
-      if (shot.scene !== void 0 && order.indexOf(shot.scene) <= rank) at = i2 + 1;
-    });
-    shots.splice(at, 0, { type: "points", ...story });
+    shots.splice(endOf(story.scene), 0, { type: "points", ...story });
   }
-  return writeOutline(args.path, win, st, shots);
+  const before = Array.isArray(win.SCENES) ? win.SCENES : [];
+  const position = new Map(shots.map((shot, i2) => [origin.get(shot) ?? shot, i2 + 1]));
+  const renumbered = shots.map((shot) => {
+    const eyeline = shot.shot?.eyeline, target = typeof eyeline?.matchShot === "number" ? before[eyeline.matchShot - 1] : void 0;
+    const at = target ? position.get(target) : void 0;
+    return eyeline && at && at !== eyeline.matchShot ? { ...shot, shot: { ...shot.shot, eyeline: { ...eyeline, matchShot: at } } } : shot;
+  });
+  return writeOutline(args.path, win, st, renumbered);
 }
 var shotCharactersSchema = external_exports.object({
   path: outlinePath,
@@ -89099,20 +89125,39 @@ function writeShotCharacters(args) {
   if (gaps.length) throw new Error("story_order: finish the story first (story_sequence \u2192 story_scene \u2192 story_shot) \u2014 " + gaps.join("; "));
   const known = castRegistry(args.path, win);
   const shots = (win.SCENES ?? []).slice();
+  const notes = [];
   for (const { id, characters } of args.shots) {
     const index = shotIndex(shots, id, "shot_characters");
     for (const character of characters) if (!known.has(character)) throw new Error(`cast_unknown: ${character} is not in the episode cast`);
     const visual = shots[index].visual ?? {};
+    const before = contract().castOf(shots[index]);
     const scoped = [].concat(visual.character ?? []).filter((e2) => !!e2 && typeof e2 === "object");
     const entries = characters.map((character) => scoped.find((e2) => e2.id === character) ?? character);
-    shots[index] = { ...shots[index], visual: { ...visual, character: entries.length ? entries : null } };
+    const lines = shots[index].narration ?? [];
+    const left = [...new Set(lines.filter((line) => line.delivery === "on_screen" && line.speaker && !characters.includes(line.speaker)).map((line) => line.speaker))];
+    const gone = (before ?? []).filter((character) => !characters.includes(character));
+    const theirs = (ref) => gone.some((character) => String(ref.path ?? "").match(/characters\/([^/]+)\//)?.[1] === character || ["face", "front", "back"].some((view) => ref.id === `${id}-${character}-${view}`));
+    const references = Array.isArray(visual.references) && gone.length ? visual.references.filter((ref) => ref?.role !== "character" || !theirs(ref)) : visual.references;
+    shots[index] = {
+      ...shots[index],
+      visual: { ...visual, character: entries.length ? entries : null, ...references !== visual.references ? { references } : {} },
+      ...left.length ? { narration: lines.map((line) => line.delivery === "on_screen" && left.includes(line.speaker) ? { ...line, delivery: "off_screen" } : line) } : {}
+    };
+    if (left.length) notes.push({ level: "warn", where: id, what: `${left.join(", ")} left the frame, so their on-screen lines are now off_screen \u2014 revise them with shot_dialogue if they should change` });
+    const back = [...new Set(lines.filter((line) => line.delivery === "off_screen" && line.speaker && characters.includes(line.speaker)).map((line) => line.speaker))];
+    if (back.length) notes.push({ level: "warn", where: id, what: `${back.join(", ")} ${back.length > 1 ? "are" : "is"} in the frame with off_screen lines \u2014 set their delivery with shot_dialogue if they speak on screen` });
+    if (before && visual.frames?.start && [...before].sort().join() !== [...characters].sort().join())
+      notes.push({ level: "warn", where: id, what: "the start image shows the previous characters \u2014 remake it with shot_image" });
+    notes.push(...promptNotes(shots[index]));
   }
-  return writeOutline(args.path, win, st, shots);
+  const result = writeOutline(args.path, win, st, shots);
+  return { ...result, findings: [...result.findings, ...notes] };
 }
 function writeShotDialogue(args) {
   const { win, st } = readOutline(args.path);
   const known = castRegistry(args.path, win);
   const shots = (win.SCENES ?? []).slice();
+  const notes = [];
   const used = new Set(shots.flatMap((shot) => (shot.narration ?? []).map((line) => line.id).filter(Boolean)));
   for (const { id, lines } of args.shots) {
     const index = shotIndex(shots, id, "shot_dialogue");
@@ -89132,8 +89177,16 @@ function writeShotDialogue(args) {
       return { ...line.id ? old.find((o) => o.id === line.id) : void 0, id: lineId, speaker: line.speaker, delivery: delivery2, tts: line.tts, sub: line.sub };
     });
     shots[index] = { ...shots[index], narration: next };
+    notes.push(...promptNotes(shots[index]));
   }
-  return writeOutline(args.path, win, st, shots);
+  const result = writeOutline(args.path, win, st, shots);
+  return { ...result, findings: [...result.findings, ...notes] };
+}
+var isFocus = (id) => !!techniqueContract().entries.find((entry2) => entry2.id === id)?.fields?.focus;
+var DRIFT_WORDS = { frames: "frame plan", cast: "characters", lines: "on-screen lines", camera: "camera move", focus: "focus", framing: "size, angle or depth" };
+function promptNotes(shot) {
+  const drift = contract().promptDrift(shot, isFocus);
+  return drift.length ? [{ level: "warn", where: String(shot.id), what: `the video prompt predates a change of ${drift.map((key) => DRIFT_WORDS[key] ?? key).join(", ")} \u2014 rewrite it with shot_prompt` }] : [];
 }
 var choice = external_exports.object({ id: nonEmpty, reason: nonEmpty }).strict();
 var shotIconsSchema = external_exports.object({
@@ -89157,12 +89210,27 @@ function writeShotIcons(args) {
   const catalog = Object.fromEntries(techniqueContract().entries.map((entry2) => [String(entry2.id), entry2]));
   const field = (id, name) => catalog[id]?.category === "camera" ? catalog[id].fields[name] : void 0;
   const shots = (win.SCENES ?? []).slice();
+  const notes = [];
   for (const { id, render, size, why, angle, move, focus, depth, frames } of args.shots) {
     const index = shotIndex(shots, id, "shot_icons");
     const plan2 = { ...shots[index].shot ?? {} };
     const visual = { ...shots[index].visual ?? {} };
+    const framing = () => JSON.stringify([plan2.size, plan2.angle, plan2.depth, (Array.isArray(plan2.techniques) ? plan2.techniques : []).filter((t2) => {
+      const entry2 = catalog[t2.id];
+      return !!entry2 && (entry2.category === "framing" || !!entry2.fields?.focus || !!entry2.fields?.viewpoint || !!entry2.fields?.angle);
+    }).map((t2) => t2.id)]);
+    const framedBefore = framing();
     const routed = { ...plan2.render, ...render };
+    const previous = plan2.render?.mode;
+    if (render && previous && previous !== render.mode) {
+      if (render.mode === "still_camera") {
+        if (Array.isArray(plan2.techniques)) plan2.techniques = plan2.techniques.filter((t2) => !field(t2.id, "movement") && !field(t2.id, "focus"));
+        const { movement: _movement, speed: _speed, target: _target, ...camera } = visual.camera ?? {};
+        if (visual.camera) visual.camera = Object.keys(camera).length ? camera : void 0;
+      } else if (previous === "still_camera") delete routed.camera;
+    }
     if (render) plan2.render = routed;
+    if (size && size !== plan2.size && !why) delete plan2.why;
     if (size) plan2.size = size;
     if (why) plan2.why = why;
     if (angle) plan2.angle = angle;
@@ -89174,17 +89242,22 @@ function writeShotIcons(args) {
     let techniques = Array.isArray(plan2.techniques) ? plan2.techniques : [];
     if (move && routed.mode === "still_camera") {
       if (!stillCameraEffectList().includes(move.id)) throw new Error(`shot_icons ${id}: a still_camera move is one of ${stillCameraEffectList().join(", ")}`);
-      plan2.render = { ...routed, camera: { ...routed.camera, effect: move.id, reason: move.reason, ...move.target ? { target: move.target } : {} } };
+      const { target: oldTarget, ...still } = routed.camera ?? {};
+      const target = move.target ?? (still.effect === move.id ? oldTarget : void 0);
+      plan2.render = { ...routed, camera: { ...still, effect: move.id, reason: move.reason, ...target !== void 0 ? { target } : {} } };
     } else if (move) {
       const movement = field(move.id, "movement");
       if (!movement) throw new Error(`shot_icons ${id}: ${move.id} is not a camera move in the technique catalog`);
+      const prior = String(visual.camera?.movement ?? "").toLowerCase();
+      const same = techniques.some((t2) => t2.id === move.id) || !techniques.some((t2) => field(t2.id, "movement")) && prior.startsWith(movement);
       techniques = [...techniques.filter((t2) => !field(t2.id, "movement")), { id: move.id, reason: move.reason }];
-      const camera = visual.camera ?? {};
+      const { speed: oldSpeed, target: oldTarget, ...camera } = visual.camera ?? {};
+      const speed = field(move.id, "speed") ?? (same ? oldSpeed : void 0), target = move.target ?? (same ? oldTarget : void 0);
       visual.camera = {
         ...camera,
         movement: String(camera.movement ?? "").toLowerCase().startsWith(movement) ? camera.movement : movement,
-        ...field(move.id, "speed") ? { speed: field(move.id, "speed") } : {},
-        ...move.target ? { target: move.target } : {}
+        ...speed !== void 0 ? { speed } : {},
+        ...target !== void 0 ? { target } : {}
       };
     }
     if (focus !== void 0) {
@@ -89192,17 +89265,33 @@ function writeShotIcons(args) {
       techniques = [...techniques.filter((t2) => !field(t2.id, "focus")), ...focus ? [focus] : []];
     }
     if (move && routed.mode !== "still_camera" || focus !== void 0) plan2.techniques = techniques;
-    if (frames) visual.frames = { ...visual.frames, ...frames };
+    if (frames) {
+      const old = visual.frames ?? {}, next = { ...old, ...frames };
+      if (frames.mode !== "first_last") {
+        if (typeof old.end === "string") notes.push({ level: "warn", where: id, what: `the end image ${old.end} is off the shot \u2014 a ${frames.mode} plan has no end image` });
+        delete next.end;
+        delete next.endState;
+        delete next.endProps;
+        delete visual.endPrompt;
+      }
+      if (old.mode === "reference" !== (frames.mode === "reference") && Array.isArray(visual.references))
+        visual.references = visual.references.map((ref) => ref?.role === "character" ? { ...ref, use: frames.mode === "reference" ? "both" : "image" } : ref);
+      visual.frames = next;
+    }
+    if (visual.frames?.start && framing() !== framedBefore)
+      notes.push({ level: "warn", where: id, what: "the start image was made for the previous size, angle, depth or focus \u2014 remake it with shot_image" });
     shots[index] = { ...shots[index], shot: plan2, visual };
+    notes.push(...promptNotes(shots[index]));
   }
-  return writeOutline(args.path, win, st, shots);
+  const result = writeOutline(args.path, win, st, shots);
+  return { ...result, findings: [...result.findings, ...notes] };
 }
 var shotImageSchema = external_exports.object({
   path: outlinePath,
   id: shotIdSchema,
   frame: external_exports.enum(["start", "end"]).default("start").describe("start: the first image; end: the last image of a first_last shot"),
   prompt: nonEmpty.describe("What the frame shows, in English: who is where, doing what, facing which way, expression and light"),
-  location: nonEmpty.optional().describe("SB_DOC.locations id of the place; an earlier call's choice stays when omitted"),
+  location: nonEmpty.optional().describe("SB_DOC.locations id of the place, for the start image; an earlier call's choice stays when omitted, and an end image keeps the start's place"),
   props: external_exports.array(nonEmpty).optional().describe("SB_DOC.props ids seen in the frame; an earlier call's choice stays when omitted"),
   size: external_exports.string().regex(/^\d{3,4}x\d{3,4}$/).optional().describe("Output WIDTHxHEIGHT; default 1536x1024 for a 16:9 board, 1024x1536 otherwise"),
   reserveUsd: external_exports.number().finite().nonnegative().optional()
@@ -89210,11 +89299,11 @@ var shotImageSchema = external_exports.object({
 var IMAGE_INPUTS = {
   "gpt-image": { tool: "gpt_image_img2img", max: 16 },
   "astra-genai-native": { tool: "astra_genai_image_edit", max: 10 },
-  mlx: { tool: "mlx_image_edit", max: 10 },
   "astra-genai": { tool: "astra_genai_edit", max: 1 },
   zimage: { max: 0 },
   host: { max: Infinity }
 };
+var MLX_INPUTS = { "qwen-2.1": 10, "flux-klein": 4, "mage-edit": 4 };
 var latin = (value) => typeof value === "string" && value.trim() && !nonEnglishOutsideQuotes(value) ? value.trim() : "";
 function castEntry(win, id) {
   const list = win.SB_DOC?.characters;
@@ -89256,9 +89345,14 @@ function shotImageRequest(args) {
     if (gaps.length) throw new Error("story_order: set every shot's icon attributes with shot_icons first \u2014 " + gaps.join("; "));
   } else if (frames.mode !== "first_last") throw new Error(`story_order: ${args.id} plans ${frames.mode ?? "no"} frames; an end image belongs to a first_last shot (shot_icons frames)`);
   else if (!frames.start) throw new Error(`story_order: make ${args.id}'s start image before its end image`);
+  else if (args.location) throw new Error(`shot_image: ${args.id}'s end image is edited from its start image and keeps its place \u2014 remake the start image to change the location`);
+  const route = plan2.render?.mode;
+  if (route !== "still_camera" && route !== "generated_video")
+    throw new Error(`shot_image: ${args.id} is a ${route ?? "unrouted"} cut; only still_camera and generated_video cuts take a start image`);
   const boardDir = dirname5(scenesPath(args.path)), episode = dirname5(boardDir);
   const location = args.location ?? (typeof visual.locationId === "string" ? visual.locationId : void 0);
-  const props = args.props ?? (Array.isArray(visual.props) ? visual.props.filter((id) => typeof id === "string") : []);
+  const recorded = args.frame === "end" && Array.isArray(frames.endProps) ? frames.endProps : visual.props;
+  const props = args.props ?? (Array.isArray(recorded) ? recorded.filter((id) => typeof id === "string") : []);
   const cast = contract().castOf(shot) ?? [];
   const place = location ? docEntry(win, "locations", location).imageUrl : void 0;
   const refs = [
@@ -89290,9 +89384,23 @@ function shotImageRequest(args) {
     body.charAt(0).toUpperCase() + body.slice(1)
   ].filter(Boolean).join(" ");
   const { selection } = imageContext(episode, args.id);
-  const adapter2 = IMAGE_INPUTS[selection.engine] ?? { max: 0 };
+  const adapter2 = selection.engine === "mlx" ? { tool: "mlx_image_edit", max: MLX_INPUTS[mlxImageFamily(selection.model)] ?? 0 } : IMAGE_INPUTS[selection.engine] ?? { max: 0 };
   if (inputs.length > adapter2.max)
-    throw new Error(`image_references_unsupported: the saved image model (${selection.engine}${selection.model ? " " + selection.model : ""}) takes ${adapter2.max} picture(s); this frame composes ${inputs.length}. Choose a model that takes several pictures (gpt-image, astra-genai-native, mlx) with the user.`);
+    throw new Error(`image_references_unsupported: the saved image model (${selection.engine}${selection.model ? " " + selection.model : ""}) takes ${adapter2.max} picture(s); this frame composes ${inputs.length}. Choose a model that takes that many with the user (gpt-image up to 16; astra-genai-native or an MLX Qwen-Image-2.1 pack up to 10; MLX FLUX.2 klein or Mage-Flow Edit up to 4).`);
+  const mimes = selection.engine === "gpt-image" ? inputs.map((f3) => readImageMetadata(f3).mimeType) : [];
+  const toPng = (f3) => {
+    const out = join9(boardDir, "images", "inputs", createHash10("sha256").update(readFileSync17(f3)).digest("hex").slice(0, 16) + ".png");
+    if (!existsSync17(out)) {
+      mkdirSync7(dirname5(out), { recursive: true });
+      try {
+        execFileSync8("ffmpeg", ["-v", "error", "-y", "-i", f3, out], { timeout: 6e4 });
+      } catch (error2) {
+        throw new Error(`image_inputs_mixed_format: GPT Image takes one format per request and ffmpeg could not convert ${f3} to PNG (${error2.message.split("\n")[0]}) \u2014 save it as PNG`);
+      }
+    }
+    return out;
+  };
+  const sent = new Set(mimes).size > 1 ? inputs.map((f3, i2) => mimes[i2] === "image/png" ? f3 : toPng(f3)) : inputs;
   const jobs = readImageState(episode)?.jobs ?? {};
   let k = 1;
   while (existsSync17(join9(boardDir, "images", `${args.id}-${args.frame}-v${k}.png`)) || Object.hasOwn(jobs, `${args.id}-${args.frame}-v${k}`)) k += 1;
@@ -89300,9 +89408,9 @@ function shotImageRequest(args) {
   mkdirSync7(dirname5(file), { recursive: true });
   const [width, height] = (args.size ?? (/16x9/.test(String(win.FORMAT ?? "")) ? "1536x1024" : "1024x1536")).split("x").map(Number);
   const base642 = (f3) => readFileSync17(f3).toString("base64");
-  const edit2 = inputs.length > 0, tool2 = edit2 ? adapter2.tool : void 0;
+  const edit2 = sent.length > 0, tool2 = edit2 ? adapter2.tool : void 0;
   const output2 = { outputPath: dirname5(file), filename: basename6(file) };
-  const adapterArgs = selection.engine === "host" ? { prompt, referenceImages: inputs, savePath: file, size: `${width}x${height}` } : selection.engine === "gpt-image" ? { prompt, savePath: file, size: `${width}x${height}`, ...edit2 ? { sourceImagesBase64: inputs.map(base642), sourceMimeType: /\.jpe?g$/i.test(inputs[0]) ? "image/jpeg" : "image/png" } : {} } : selection.engine === "astra-genai" ? { prompt, size: `${width}*${height}`, ...output2, ...edit2 ? { mode: "img2img", imagePath: inputs[0] } : {} } : ["mlx", "zimage"].includes(selection.engine) ? { prompt, width, height, ...output2, ...edit2 ? { imagePath: inputs[0], refImagePaths: inputs.slice(1) } : {} } : { prompt, size: `${width}x${height}`, ...output2, ...edit2 ? { imagePath: inputs[0], refImagePaths: inputs.slice(1), mode: "edit" } : {} };
+  const adapterArgs = selection.engine === "host" ? { prompt, referenceImages: sent, savePath: file, size: `${width}x${height}` } : selection.engine === "gpt-image" ? { prompt, savePath: file, size: `${width}x${height}`, ...edit2 ? { sourceImagesBase64: sent.map(base642), sourceMimeType: readImageMetadata(sent[0]).mimeType || "image/png" } : {} } : selection.engine === "astra-genai" ? { prompt, size: `${width}*${height}`, ...output2, ...edit2 ? { mode: "img2img", imagePath: sent[0] } : {} } : ["mlx", "zimage"].includes(selection.engine) ? { prompt, width, height, ...output2, ...edit2 ? { imagePath: sent[0], refImagePaths: sent.slice(1) } : {} } : { prompt, size: `${width}x${height}`, ...output2, ...edit2 ? { imagePath: sent[0], refImagePaths: sent.slice(1), mode: "edit" } : {} };
   return {
     episode,
     assetId: args.id,
@@ -89311,7 +89419,7 @@ function shotImageRequest(args) {
     operation: edit2 ? "edit" : "text",
     args: adapterArgs,
     file,
-    inputs,
+    inputs: sent,
     refs,
     ...location ? { location } : {},
     props,
@@ -89324,17 +89432,30 @@ function recordShotImage(args, request) {
   const index = shotIndex(shots, args.id, "shot_image");
   const visual = { ...shots[index].visual ?? {} };
   const rel = relative(dirname5(scenesPath(args.path)), request.file);
-  visual.frames = { ...visual.frames, [args.frame]: rel };
-  if (args.frame === "start") Object.assign(visual, {
-    bg: rel,
-    bgPrompt: request.prompt,
-    references: request.refs,
-    props: request.props,
-    ...request.location ? { locationId: request.location } : {}
-  });
-  else visual.endPrompt = request.prompt;
+  const frames = { ...visual.frames, [args.frame]: rel };
+  const notes = [];
+  if (args.frame === "start") {
+    Object.assign(visual, {
+      bg: rel,
+      bgPrompt: request.prompt,
+      references: request.refs,
+      props: request.props,
+      ...request.location ? { locationId: request.location } : {}
+    });
+    if (typeof frames.end === "string") {
+      notes.push({ level: "warn", where: args.id, what: `the end image ${frames.end} was made from the previous start image and is off the shot \u2014 remake it with shot_image frame:"end"` });
+      delete frames.end;
+      delete frames.endProps;
+      delete visual.endPrompt;
+    }
+  } else {
+    visual.endPrompt = request.prompt;
+    frames.endProps = request.props;
+  }
+  visual.frames = frames;
   shots[index] = { ...shots[index], visual };
-  return writeOutline(args.path, win, st, shots);
+  const result = writeOutline(args.path, win, st, shots);
+  return { ...result, findings: [...result.findings, ...notes] };
 }
 var MUSIC_WORD = /\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i;
 var shotPromptSchema = external_exports.object({
@@ -89359,7 +89480,10 @@ function writeShotPrompt(args) {
   const camera = visual.camera ?? {};
   const movement = String(camera.movement ?? "").trim(), speed = String(camera.speed ?? "").trim();
   const focus = (plan2.techniques ?? []).map((t2) => techniqueContract().entries.find((e2) => e2.id === t2.id)).find((e2) => e2?.fields?.focus);
-  const sentence = (value) => value ? value.charAt(0).toUpperCase() + value.slice(1).replace(/[.!?\s]*$/, "") + "." : "";
+  const sentence = (value) => {
+    const text3 = value.trim(), capped2 = text3.charAt(0).toUpperCase() + text3.slice(1);
+    return !text3 ? "" : /[.!?]["'”’)]+$/.test(capped2) ? capped2 : capped2.replace(/[.!?]*$/, "") + ".";
+  };
   const prompt = [
     msr ? sentence([words.SIZE_WORDS[String(plan2.size)], words.ANGLE_WORDS[String(plan2.angle)]].filter(Boolean).join(", ")) : "Start from the given first frame.",
     msr && plan2.depth ? sentence(contract().depthText(plan2.depth)) : "",
@@ -89373,7 +89497,7 @@ function writeShotPrompt(args) {
   ].filter(Boolean).join(" ");
   const foreign = nonEnglishOutsideQuotes(prompt);
   if (foreign) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action, end and sound in English`);
-  shots[index] = { ...shot, visual: { ...visual, video: { ...visual.video, prompt } } };
+  shots[index] = { ...shot, visual: { ...visual, video: { ...visual.video, prompt, promptBasis: contract().promptBasis(shot, isFocus) } } };
   return { ...writeOutline(args.path, win, st, shots), prompt };
 }
 var scenarioCheckResultSchema = external_exports.object({
@@ -97656,7 +97780,7 @@ Returns: JSON \u2014 { file, mediaBaseDirectory, sha256, version, format, shots,
     name: "story_sequence",
     title: "Write storyboard sequences (story step 1 of 3)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `The first storyboard step after the scenario is settled writes only the story, in three layers: story_sequence \u2192 story_scene \u2192 story_shot. Use it first: it upserts sequences by id (title \xB7 purpose \xB7 question) and creates scenes.js as a story-v2 board when it is missing. A sequence's scene list is filled by story_scene. Local file only; no image, speech or prompt.
+    description: `The first storyboard step after the scenario is settled writes only the story, in three layers: story_sequence \u2192 story_scene \u2192 story_shot. Use it first: it upserts sequences by id (title \xB7 purpose \xB7 question \xB7 payoff \u2014 a payoff outside the sequence's scenes warns) and creates scenes.js as a story-v2 board when it is missing. A sequence's scene list is filled by story_scene. Local file only; no image, speech or prompt.
 
 Do NOT write scenes, shots, dialogue or pictures here. Characters and lines come after the shot stories (shot_characters \u2192 shot_dialogue); camera and image plans after that, through storyboard_apply.
 
@@ -97670,7 +97794,8 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
           id: { type: "string", description: 'Stable id, e.g. "q1"' },
           title: { type: "string", description: "The heading the review page draws" },
           purpose: { type: "string", description: "The one purpose that binds its scenes; two purposes are two sequences" },
-          question: { type: "string", description: "The dramatic question this stretch opens" }
+          question: { type: "string", description: "The dramatic question this stretch opens" },
+          payoff: { type: "integer", minimum: 1, description: "The scene number that answers the question" }
         } } }
       },
       required: ["path", "sequences"]
@@ -97708,7 +97833,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "story_shot",
     title: "Write shot stories (story step 3 of 3)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: `Use it after story_scene to write each shot as one sentence of story in its scene. Without an id the shot is added at the end of its scene and gets a stable id (s0001\u2026); with an id that shot's scene, summary and title are revised and everything else on it is kept. Refused (story_order) before any scene exists or for a scene outside a sequence. Local file only; no image, speech or prompt.
+    description: `Use it after story_scene to write each shot as one sentence of story in its scene. Without an id the shot is added at the end of its scene and gets a stable id (s0001\u2026); with an id that shot's scene, summary and title are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. Local file only; no image, speech or prompt.
 
 Do NOT pass characters, dialogue, narration, camera or visual fields \u2014 the input refuses them. Once every shot has its story, shot_characters and shot_dialogue come next, then shot_icons; on a board these tools started (STORY.authoring "story-first") storyboard_apply refuses a shot without scene and summary.
 
@@ -97732,7 +97857,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "shot_characters",
     title: "Set each shot's characters (step 2: characters, then lines)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `Use it once every sequence, scene and shot story is written (story_sequence \u2192 story_scene \u2192 story_shot): set who from the episode cast is on screen in each shot, at most two principal characters with the subject first, or [] when nobody is. It writes visual.character and keeps a kept character's scope. Refused (story_order) while the story has a gap \u2014 a sequence without scenes, a scene without a shot or summary, a shot without its story \u2014 and for an id outside storyboard/cast.json or SB_DOC.characters (cast_unknown). Local file only; no image, speech or prompt.
+    description: `Use it once every sequence, scene and shot story is written (story_sequence \u2192 story_scene \u2192 story_shot): set who from the episode cast is on screen in each shot, at most two principal characters with the subject first, or [] when nobody is. It writes visual.character and keeps a kept character's scope. A character who leaves a shot keeps their lines, now off_screen, with a warning, and their sheet panels leave visual.references; a start image made for the old cast is flagged for shot_image. Refused (story_order) while the story has a gap \u2014 a sequence without scenes, a scene without a shot or summary, a shot without its story \u2014 and for an id outside storyboard/cast.json or SB_DOC.characters (cast_unknown). Local file only; no image, speech or prompt.
 
 Do NOT list extras, unnamed figures or a narrator who is never seen \u2014 extras are described in the action later, and an off-screen narrator speaks through shot_dialogue. Lines come next, through shot_dialogue.
 
@@ -97782,7 +97907,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "shot_icons",
     title: "Set each shot's icon attributes (step 3)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `Use it after every shot has its story and characters (story_shot \u2192 shot_characters), and normally after its lines (shot_dialogue): set the attributes the review's icon row shows, per shot \u2014 render route (shot.render), size and why, angle, camera move, focus, depth, and the frame plan, where reference means MSR. A move on a still_camera cut is the still effect (shot.render.camera.effect); on any other route it is a camera technique, written to shot.techniques with visual.camera.movement kept consistent. Only the attributes given change. Refused (story_order) while a sequence, scene or shot story or any shot's characters are missing. Local file only; no image, video, speech or prompt is generated.
+    description: `Use it after every shot has its story and characters (story_shot \u2192 shot_characters), and normally after its lines (shot_dialogue): set the attributes the review's icon row shows, per shot \u2014 render route (shot.render), size and why, angle, camera move, focus, depth, and the frame plan, where reference means MSR. A move on a still_camera cut is the still effect (shot.render.camera.effect); on any other route it is a camera technique, written to shot.techniques with visual.camera.movement kept consistent. Switching to still_camera drops the camera technique and visual.camera move; switching from it drops the still effect. A different move replaces the old one's speed and target (the same move \u2014 its technique, or an authored visual.camera move before any technique \u2014 keeps them unless given), and a new size without its own why drops the old why. Changing size, angle, depth or focus after the start image exists warns to remake it with shot_image. A frame plan other than first_last takes the end image off (with a warning), and switching to or from reference re-marks the character panels for the video call. A change to what a written video prompt came from (cast, on-screen lines, frame plan, camera, focus, MSR framing) warns to rewrite it with shot_prompt; the review page marks it too. Only the attributes given change. Refused (story_order) while a sequence, scene or shot story or any shot's characters are missing. Local file only; no image, video, speech or prompt is generated.
 
 Do NOT write camera endpoints, blocking, eyeline, composition or prompts here \u2014 storyboard_apply carries those after this step (action-direction.md camera-direction pass).
 
@@ -97826,9 +97951,9 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "shot_image",
     title: "Make a shot's start or end image (step 4)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    description: `Use it after every shot has its icon attributes (shot_icons): make one shot's start image from its characters' sheet panels (assets/characters/<id>/panels.json \u2014 face, headless front and back; two characters take each face, then each front), its place (SB_DOC.locations imageUrl) and its props, with a prompt assembled from the shot's size, angle, depth and techniques, the episode style and your English description. frame:"end" makes the last image of a first_last shot from its start image (optional; only when the frame plan needs it). Runs image_plan \u2192 image_execute with the saved image model and the existing spending authorization, then writes visual.frames.start and visual.bg (or frames.end), visual.references, locationId and props. Each call saves a new versioned file under storyboard/images/.
+    description: `Use it after every shot has its icon attributes (shot_icons): make one shot's start image from its characters' sheet panels (assets/characters/<id>/panels.json \u2014 face, headless front and back; two characters take each face, then each front), its place (SB_DOC.locations imageUrl) and its props, with a prompt assembled from the shot's size, angle, depth and techniques, the episode style and your English description. frame:"end" makes the last image of a first_last shot from its start image (optional; only when the frame plan needs it). Runs image_plan \u2192 image_execute with the saved image model and the existing spending authorization, then writes visual.frames.start and visual.bg (or frames.end), visual.references, locationId and props. Each call saves a new versioned file under storyboard/images/. A new start image takes the shot's end image off (it was edited from the old start; the file stays) and warns, so make the end image again. An end image keeps the start image's place (location is refused) and records its own props in frames.endProps. GPT Image gets a mixed PNG/JPEG set as PNG copies in storyboard/images/inputs/.
 
-Do NOT use it for a cut with no picture route \u2014 and the saved image model has to take several pictures (gpt-image, astra-genai-native, mlx); a single-picture model refuses with image_references_unsupported, so ask the user before changing models. Refused (story_order) while a shot lacks icon attributes, or for an end image before the start image or outside first_last.
+Do NOT use it for a cut with no picture route \u2014 only still_camera and generated_video cuts are accepted. The saved image model has to take every picture the frame composes (gpt-image up to 16; astra-genai-native or an MLX Qwen-Image-2.1 pack up to 10; MLX FLUX.2 klein or Mage-Flow Edit up to 4); otherwise it refuses with image_references_unsupported, so ask the user before changing models. Refused (story_order) while a shot lacks icon attributes, or for an end image before the start image or outside first_last.
 
 Returns: the file written, the image path, the inputs in order and the prompt; a host selection returns the handoff instead of generating.`,
     inputSchema: {
@@ -97839,7 +97964,7 @@ Returns: the file written, the image path, the inputs in order and the prompt; a
         id: { type: "string", pattern: "^s\\d{4,}$", description: "Stable shot id" },
         frame: { type: "string", enum: ["start", "end"], default: "start", description: "start: the first image \xB7 end: the last image of a first_last shot" },
         prompt: { type: "string", description: "What the frame shows, in English: who is where, doing what, facing which way, expression and light" },
-        location: { type: "string", description: "SB_DOC.locations id of the place; an earlier choice stays when omitted" },
+        location: { type: "string", description: "SB_DOC.locations id of the place, for the start image; an earlier choice stays when omitted, and an end image keeps the start's place (refused there)" },
         props: { type: "array", items: { type: "string" }, description: "SB_DOC.props ids seen in the frame; an earlier choice stays when omitted" },
         size: { type: "string", pattern: "^\\d{3,4}x\\d{3,4}$", description: "Output WIDTHxHEIGHT; default 1536x1024 on a 16:9 board, 1024x1536 otherwise" },
         reserveUsd: { type: "number", minimum: 0, description: "API reservation estimate, as in image_plan" }
@@ -97851,7 +97976,7 @@ Returns: the file written, the image path, the inputs in order and the prompt; a
     name: "shot_prompt",
     title: "Write a shot's video prompt (step 5)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `Use it after every picture-route shot has its images (shot_image): write one generated_video shot's English video prompt into visual.video.prompt from its icon attributes \u2014 camera move, speed and target, focus, and on an MSR (reference) shot its size, angle and depth, since MSR pins no frame; a first or first_last shot starts from its given frames \u2014 plus your English action, closing picture and sound, and the shot's on-screen lines in quotes (MSR adds its lines in video_plan with their image bindings). video_plan sends this prompt when its args name none. Local file only; no generation.
+    description: `Use it after every picture-route shot has its images (shot_image): write one generated_video shot's English video prompt into visual.video.prompt from its icon attributes \u2014 camera move, speed and target, focus, and on an MSR (reference) shot its size, angle and depth, since MSR pins no frame; a first or first_last shot starts from its given frames \u2014 plus your English action, closing picture and sound, and the shot's on-screen lines in quotes (MSR adds its lines in video_plan with their image bindings). video_plan sends this prompt when its args name none. It records what the prompt came from (visual.video.promptBasis), so a later change of cast, lines, frame plan, camera, focus or MSR framing shows as stale. Local file only; no generation.
 
 Do NOT write Korean outside quotes: action, end and sound are English (video_prompt_language). Refused (story_order) while a picture-route shot lacks its start image or a first_last shot its end image, and for a cut that is not generated_video.
 
@@ -98070,7 +98195,7 @@ TOOLS.push(
     title: "Record the user's approval of a shot's video",
     description: `Use it right after the user says yes to a shot's video \u2014 once you have shown them that shot's video_plan prompt, start (and end) image and cost \u2014 or when they approve every shot at once (auto:true). video_execute runs a plan only after this. Record the user's own words in request.
 
-Do NOT call it without the user's answer to that question: it is the record of their approval, not a step you take for them. auto:false asks before each shot again. Local file only; no generation.
+Do NOT call it without the user's answer to that question: it is the record of their approval, not a step you take for them. auto:false asks before each shot again. A plan whose shot frames, prompt, lines or settings changed after it was made is refused (video_plan_stale): plan again and show the user the new one. It also writes storyboard/video-approvals.js, from which the review page shows each shot's approval and whether its prompt, frames or lines changed since. Local file only; no generation.
 
 Returns: the approval record (auto and approved plans).`,
     inputSchema: { type: "object", additionalProperties: false, properties: {
@@ -99242,6 +99367,15 @@ var approvalsFile = (episode) => path24.join(episode, ".work/video-routing/appro
 function readApprovals(episode) {
   return fs21.existsSync(approvalsFile(episode)) ? JSON.parse(fs21.readFileSync(approvalsFile(episode), "utf8")) : { plans: {} };
 }
+function writeApprovalView(episode, approvals) {
+  const dir = path24.join(episode, "storyboard");
+  if (!fs21.existsSync(path24.join(dir, "scenes.js"))) return;
+  const shots = {};
+  for (const [planId, entry2] of Object.entries(approvals.plans))
+    if (!shots[entry2.shotId] || entry2.at >= shots[entry2.shotId].at) shots[entry2.shotId] = { planId, at: entry2.at, ...entry2.shown ? { shown: entry2.shown } : {} };
+  const view = { auto: approvals.auto?.at ?? null, shots };
+  fs21.writeFileSync(path24.join(dir, "video-approvals.js"), "window.VIDEO_APPROVALS = " + JSON.stringify(view).replace(/</g, "\\u003c") + ";\n");
+}
 function approveVideo(raw) {
   const input = videoApproveSchema.parse(raw), episode = fs21.realpathSync(input.episode);
   const approvals = readApprovals(episode), at = (/* @__PURE__ */ new Date()).toISOString();
@@ -99249,9 +99383,18 @@ function approveVideo(raw) {
   else if (input.auto === false) delete approvals.auto;
   for (const id of input.planIds ?? []) {
     const plan2 = JSON.parse(fs21.readFileSync(path24.join(episode, ".work/video-routing/plans", id + ".json"), "utf8"));
-    approvals.plans[id] = { shotId: plan2.shotId, requestId: plan2.requestId, request: input.request, at };
+    const context2 = routingContext(episode, plan2.shotId);
+    if (context2.revision !== plan2.contextRevision)
+      throw new Error(`video_plan_stale: shot ${plan2.shotId}'s frames, prompt, lines or settings changed after this plan \u2014 plan it again and show the user the new plan`);
+    const visual = context2.shot.visual ?? {};
+    const used = (plan2.sourceArgs ?? plan2.args).prompt, fromShot = used === void 0 || used === visual.video?.prompt;
+    const shown = Object.fromEntries(Object.entries({ prompt: fromShot ? visual.video?.prompt : void 0, start: visual.frames?.start, end: visual.frames?.end }).filter(([, value]) => typeof value === "string"));
+    if (!fromShot) shown.callPrompt = true;
+    shown.lines = context2.lines;
+    approvals.plans[id] = { shotId: plan2.shotId, requestId: plan2.requestId, request: input.request, at, shown };
   }
   atomicJson(approvalsFile(episode), approvals);
+  writeApprovalView(episode, approvals);
   return approvals;
 }
 async function executeVideo(raw, dispatch) {
@@ -99263,7 +99406,7 @@ async function executeVideo(raw, dispatch) {
   const approvals = readApprovals(episode);
   if (!approvals.auto && !approvals.plans[id]) throw new Error(`video_approval_required: show the user shot ${plan2.shotId}'s prompt, images and cost, then record their yes with video_approve {planIds:["${id}"]}, or auto:true once they approve every shot`);
   const context2 = routingContext(episode, plan2.shotId);
-  if (context2.revision !== plan2.contextRevision) throw new Error("video_plan_stale: selection or authorization changed");
+  if (context2.revision !== plan2.contextRevision) throw new Error("video_plan_stale: the shot's frames, prompt, lines, selection or authorization changed");
   if (plan2.tool === "astra_genai_msr") await refreshGenaiMsrVoice();
   const refreshed = planVideo({ episode, shotId: plan2.shotId, requestId: plan2.requestId, tool: plan2.tool, args: plan2.sourceArgs ?? plan2.args });
   if (refreshed.id !== id) throw new Error("video_plan_stale: inputs, price or adapter contract changed");
@@ -99475,7 +99618,7 @@ async function routeSpeech(input) {
 import { execFile as execFile7 } from "node:child_process";
 import { promisify as promisify3 } from "node:util";
 import { createHash as createHash16, randomUUID as randomUUID5 } from "node:crypto";
-import { createReadStream as createReadStream3, mkdirSync as mkdirSync14, realpathSync as realpathSync9, statSync as statSync13, writeFileSync as writeFileSync18 } from "node:fs";
+import { createReadStream as createReadStream3, mkdirSync as mkdirSync14, realpathSync as realpathSync9, statSync as statSync13, writeFileSync as writeFileSync19 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
 import path25 from "node:path";
 var exec2 = promisify3(execFile7);
@@ -99611,12 +99754,12 @@ async function hostReview(input) {
     createdAt: (/* @__PURE__ */ new Date()).toISOString(),
     receiptPath
   };
-  writeFileSync18(receiptPath, JSON.stringify(result, null, 2) + "\n", { flag: "wx", mode: 384 });
+  writeFileSync19(receiptPath, JSON.stringify(result, null, 2) + "\n", { flag: "wx", mode: 384 });
   return result;
 }
 
 // src/voice-design.ts
-import { existsSync as existsSync26, mkdirSync as mkdirSync15, writeFileSync as writeFileSync19 } from "node:fs";
+import { existsSync as existsSync26, mkdirSync as mkdirSync15, writeFileSync as writeFileSync20 } from "node:fs";
 import { resolve as resolve7 } from "node:path";
 import { createHash as createHash17 } from "node:crypto";
 var voiceDesignSchema = external_exports.object({
@@ -99647,7 +99790,7 @@ async function designGeminiVoice(input) {
   const apiKey = requireGeminiKey();
   mkdirSync15(output2, { recursive: true });
   if (existsSync26(samplePath)) throw new Error("Preview already exists; use a new outputPath.");
-  writeFileSync19(receiptPath, JSON.stringify({ status: "submitted", request: body, submittedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2), { flag: "wx" });
+  writeFileSync20(receiptPath, JSON.stringify({ status: "submitted", request: body, submittedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2), { flag: "wx" });
   const response = await requestRaw(
     "post",
     "https://generativelanguage.googleapis.com/v1beta/voices",
@@ -99657,27 +99800,27 @@ async function designGeminiVoice(input) {
   );
   if (!response.ok) {
     const error2 = describeGemini38Error(response.status, response.body);
-    writeFileSync19(receiptPath, JSON.stringify({ status: response.status >= 500 ? "uncertain" : "failed", request: body, error: error2 }, null, 2));
+    writeFileSync20(receiptPath, JSON.stringify({ status: response.status >= 500 ? "uncertain" : "failed", request: body, error: error2 }, null, 2));
     return { success: false, receiptPath, error: error2, instruction: "Do not blindly retry: inspect this receipt and list stored prompted voices first." };
   }
   let voice;
   try {
     voice = JSON.parse(response.body);
   } catch {
-    writeFileSync19(receiptPath, JSON.stringify({ status: "uncertain", request: body, error: "Invalid JSON response" }, null, 2));
+    writeFileSync20(receiptPath, JSON.stringify({ status: "uncertain", request: body, error: "Invalid JSON response" }, null, 2));
     return { success: false, receiptPath, error: "Invalid JSON response; reconcile stored voices before retrying." };
   }
   const { sample_audio: sample, ...metadata } = voice;
   const record2 = { status: "created", request: body, voice: metadata, reviewStatus: "not_reviewed", billingStatus: "provider_usage_not_invoice" };
-  writeFileSync19(receiptPath, JSON.stringify(record2, null, 2));
+  writeFileSync20(receiptPath, JSON.stringify(record2, null, 2));
   const audio = external_exports.object({ mime_type: external_exports.string(), data: external_exports.string().min(1) }).safeParse(sample);
   const bytes = audio.success ? Buffer.from(audio.data.data, "base64") : Buffer.alloc(0);
   if (typeof voice.id !== "string" || !voice.id.startsWith("voice_") || !audio.success || audio.data.mime_type !== "audio/wav" || bytes.length <= 44 || bytes.toString("ascii", 0, 4) !== "RIFF" || bytes.toString("ascii", 8, 12) !== "WAVE") {
     return { success: false, voiceId: voice.id, receiptPath, error: "Voice response or WAV preview invalid; the remote voice may exist. Inspect the receipt before another paid creation." };
   }
-  writeFileSync19(samplePath, bytes, { flag: "wx" });
+  writeFileSync20(samplePath, bytes, { flag: "wx" });
   const audioSha256 = createHash17("sha256").update(bytes).digest("hex");
-  writeFileSync19(receiptPath, JSON.stringify({ ...record2, samplePath, audioSha256 }, null, 2));
+  writeFileSync20(receiptPath, JSON.stringify({ ...record2, samplePath, audioSha256 }, null, 2));
   return {
     success: true,
     voiceId: voice.id,
@@ -99784,7 +99927,7 @@ async function reviewActing(input) {
 
 // src/voice-audition.ts
 import { createHash as createHash18, randomUUID as randomUUID6 } from "node:crypto";
-import { appendFileSync as appendFileSync3, existsSync as existsSync27, mkdirSync as mkdirSync16, readFileSync as readFileSync29, writeFileSync as writeFileSync20, renameSync as renameSync7 } from "node:fs";
+import { appendFileSync as appendFileSync3, existsSync as existsSync27, mkdirSync as mkdirSync16, readFileSync as readFileSync29, writeFileSync as writeFileSync21, renameSync as renameSync7 } from "node:fs";
 import { dirname as dirname7, join as join12, resolve as resolve8 } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { createRequire as createRequire12 } from "node:module";
@@ -99911,7 +100054,7 @@ function compileSample(text3, acting, voice, turns) {
 }
 function save(file, value) {
   const temporary = file + "." + randomUUID6() + ".tmp";
-  writeFileSync20(temporary, JSON.stringify(value, null, 2));
+  writeFileSync21(temporary, JSON.stringify(value, null, 2));
   renameSync7(temporary, file);
 }
 function preview(audition) {
@@ -99974,7 +100117,7 @@ async function manageVoiceAudition(args) {
         save(auditionPath2, audition2);
       }
       audition2.status = "ready";
-      writeFileSync20(audition2.previewPath, preview(audition2));
+      writeFileSync21(audition2.previewPath, preview(audition2));
       save(auditionPath2, audition2);
       return { auditionPath: auditionPath2, ...audition2, instruction: "Present all three audio players. Wait for the user to choose a candidate, then call select with their actual response." };
     } catch (error2) {
@@ -100014,9 +100157,9 @@ async function manageVoiceAudition(args) {
     return "```json\n" + JSON.stringify({ ...value, tts: ttsSchema.parse(chosen.tts), voiceSelection: selection }, null, 2) + "\n```";
   });
   if (!replaced) throw new Error("Missing identity JSON");
-  writeFileSync20(join12(dirname7(auditionPath), "identity-before-selection.md"), source, { flag: "wx" });
+  writeFileSync21(join12(dirname7(auditionPath), "identity-before-selection.md"), source, { flag: "wx" });
   const temporary = audition.identityPath + "." + randomUUID6() + ".tmp";
-  writeFileSync20(temporary, next);
+  writeFileSync21(temporary, next);
   renameSync7(temporary, audition.identityPath);
   audition.status = "selected";
   audition.selected = { ...selection, identitySha256: hash3(next) };
@@ -100078,7 +100221,7 @@ async function manageLocation(args) {
 
 // src/speech.ts
 import { createHash as createHash19, randomUUID as randomUUID7 } from "node:crypto";
-import { readFileSync as readFileSync30, writeFileSync as writeFileSync21, renameSync as renameSync8, mkdirSync as mkdirSync17, existsSync as existsSync28 } from "node:fs";
+import { readFileSync as readFileSync30, writeFileSync as writeFileSync22, renameSync as renameSync8, mkdirSync as mkdirSync17, existsSync as existsSync28 } from "node:fs";
 import { dirname as dirname8, resolve as resolve9, join as join14 } from "node:path";
 import * as nodeModule7 from "node:module";
 import { execFileSync as execFileSync13 } from "node:child_process";
@@ -100389,11 +100532,11 @@ function manageSpeech(args) {
     const work = resolve9(dirname8(file), "../.work/speech-history");
     mkdirSync17(work, { recursive: true });
     const backup = join14(work, revision + ".js");
-    if (!existsSync28(backup)) writeFileSync21(backup, before);
+    if (!existsSync28(backup)) writeFileSync22(backup, before);
     const nextSource = serializeBoard(win, header);
     if (hash4(readFileSync30(file)) !== revision) throw new Error("Storyboard changed during speech edit");
     const tmp = file + "." + randomUUID7() + ".tmp";
-    writeFileSync21(tmp, nextSource);
+    writeFileSync22(tmp, nextSource);
     renameSync8(tmp, file);
   }
   return { revision: hash4(readFileSync30(file)), changed, invalidated, plan: plan2, timing, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: object4(object4(object4(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
@@ -100402,7 +100545,7 @@ function manageSpeech(args) {
 // src/acting-review.ts
 import { execFile as execFile8 } from "node:child_process";
 import { createHash as createHash20, randomUUID as randomUUID8 } from "node:crypto";
-import { existsSync as existsSync29, mkdirSync as mkdirSync18, readFileSync as readFileSync31, realpathSync as realpathSync10, renameSync as renameSync9, rmSync as rmSync13, statSync as statSync14, writeFileSync as writeFileSync22 } from "node:fs";
+import { existsSync as existsSync29, mkdirSync as mkdirSync18, readFileSync as readFileSync31, realpathSync as realpathSync10, renameSync as renameSync9, rmSync as rmSync13, statSync as statSync14, writeFileSync as writeFileSync23 } from "node:fs";
 import path26 from "node:path";
 import { homedir as homedir5 } from "node:os";
 import { promisify as promisify4 } from "node:util";
@@ -100776,7 +100919,7 @@ async function reviewActing2(input, deps) {
   }
   const lock2 = `${receiptPath}.lock`;
   try {
-    writeFileSync22(lock2, JSON.stringify({ pid: process.pid, startedAt: (/* @__PURE__ */ new Date()).toISOString() }), { flag: "wx" });
+    writeFileSync23(lock2, JSON.stringify({ pid: process.pid, startedAt: (/* @__PURE__ */ new Date()).toISOString() }), { flag: "wx" });
   } catch {
     throw new Error("An identical review is running or was interrupted; inspect its lock instead of issuing another paid review");
   }
@@ -100835,8 +100978,8 @@ async function reviewActing2(input, deps) {
   };
   const temporary = `${receiptPath}.${randomUUID8()}.tmp`;
   try {
-    writeFileSync22(lock2, JSON.stringify({ phase: "evaluated", receipt }), { flag: "w" });
-    writeFileSync22(temporary, JSON.stringify(receipt, null, 2) + "\n", { flag: "wx" });
+    writeFileSync23(lock2, JSON.stringify({ phase: "evaluated", receipt }), { flag: "w" });
+    writeFileSync23(temporary, JSON.stringify(receipt, null, 2) + "\n", { flag: "wx" });
     renameSync9(temporary, receiptPath);
   } catch (error2) {
     try {
@@ -100855,7 +100998,7 @@ async function reviewActing2(input, deps) {
 
 // src/threads-gate.ts
 import { createHash as createHash21, randomUUID as randomUUID9 } from "node:crypto";
-import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync19, readFileSync as readFileSync32, realpathSync as realpathSync11, renameSync as renameSync10, statSync as statSync15, writeFileSync as writeFileSync23 } from "node:fs";
+import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync19, readFileSync as readFileSync32, realpathSync as realpathSync11, renameSync as renameSync10, statSync as statSync15, writeFileSync as writeFileSync24 } from "node:fs";
 import { dirname as dirname9, join as join15, resolve as resolve10 } from "node:path";
 import { fileURLToPath as fileURLToPath10 } from "node:url";
 import { spawnSync as spawnSync3 } from "node:child_process";
@@ -100910,7 +101053,7 @@ function save2(draft) {
   const { file } = draftLocation(draft.draftId);
   mkdirSync19(dirname9(file), { recursive: true });
   const temp = `${file}.${randomUUID9()}.tmp`;
-  writeFileSync23(temp, JSON.stringify(draft), { mode: 384 });
+  writeFileSync24(temp, JSON.stringify(draft), { mode: 384 });
   renameSync10(temp, file);
 }
 function load6(id) {
@@ -104172,7 +104315,7 @@ async function checkAccounts(channel) {
 
 // src/tts-final-quality.ts
 import { execFile as execFile9 } from "node:child_process";
-import { existsSync as existsSync32, mkdtempSync as mkdtempSync6, readFileSync as readFileSync33, rmSync as rmSync14, writeFileSync as writeFileSync24, renameSync as renameSync11, openSync as openSync7, closeSync as closeSync7 } from "node:fs";
+import { existsSync as existsSync32, mkdtempSync as mkdtempSync6, readFileSync as readFileSync33, rmSync as rmSync14, writeFileSync as writeFileSync25, renameSync as renameSync11, openSync as openSync7, closeSync as closeSync7 } from "node:fs";
 import { tmpdir as tmpdir7 } from "node:os";
 import path27 from "node:path";
 import { promisify as promisify5 } from "node:util";
@@ -104207,8 +104350,8 @@ async function reviewFinalSpeech(input, deps) {
   function save3(status, extra) {
     const result = { ...base, status, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
     const staging = path27.join(temp, "proof.json");
-    writeFileSync24(staging, JSON.stringify(result, null, 2) + "\n");
-    writeFileSync24(proofPath + ".tmp", readFileSync33(staging));
+    writeFileSync25(staging, JSON.stringify(result, null, 2) + "\n");
+    writeFileSync25(proofPath + ".tmp", readFileSync33(staging));
     renameSync11(proofPath + ".tmp", proofPath);
     return { success: status === "pass", status, proofPath, ...extra };
   }
@@ -104284,7 +104427,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
     for (const piece of planned) {
       const samples = pcm.subarray(piece.startSample * chapters.BYTES, piece.endSample * chapters.BYTES);
       const raw = path27.join(temp, "piece.pcm"), file = path27.join(temp, "piece.flac");
-      writeFileSync24(raw, samples);
+      writeFileSync25(raw, samples);
       await exec4("ffmpeg", ["-y", "-v", "error", "-f", "s32le", "-ar", String(chapters.RATE), "-ac", "1", "-i", raw, "-map_metadata", "-1", "-c:a", "flac", file], { timeout: 6e4 });
       const payload = readFileSync33(file);
       if (payload.length > chapters.LIMIT || !chapters.decode(file).equals(samples)) throw new Error("Chapter encoding exceeded the limit or changed PCM samples");
@@ -104328,7 +104471,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
 import { randomUUID as randomUUID11 } from "node:crypto";
 
 // src/content-feedback.ts
-import { mkdirSync as mkdirSync20, writeFileSync as writeFileSync25 } from "node:fs";
+import { mkdirSync as mkdirSync20, writeFileSync as writeFileSync26 } from "node:fs";
 import { dirname as dirname11, isAbsolute, join as join18, resolve as resolve11 } from "node:path";
 
 // src/content-feedback-html.ts
@@ -104961,7 +105104,7 @@ async function contentFeedback(input) {
   };
   if (htmlPath) {
     mkdirSync20(dirname11(htmlPath), { recursive: true });
-    writeFileSync25(htmlPath, renderFeedbackHtml(report), "utf8");
+    writeFileSync26(htmlPath, renderFeedbackHtml(report), "utf8");
   }
   return { ok: true, status: 200, body: JSON.stringify(report) };
 }

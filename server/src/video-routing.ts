@@ -31,7 +31,7 @@ interface Selection { engine: string; model?: string; resolution?: string; host?
 interface Context {
   episode: string; shotId: string; selection: Selection; source: string; revision: string;
   snapshotRevision: string | null;
-  production: Record<string, unknown>; board: Record<string, unknown>; shot: Record<string, unknown>;
+  lines: string[][]; production: Record<string, unknown>; board: Record<string, unknown>; shot: Record<string, unknown>;
 }
 export const routingContext = (episode: string, shotId: string): Context =>
   (load(shared) as { readVideoContext(episode: string, shotId: string): Context }).readVideoContext(episode, shotId);
@@ -206,10 +206,23 @@ export const videoApproveSchema = z.object({
   auto: z.boolean().optional().describe('true: the user approves every shot\'s video from now on; false: ask before each shot again'),
   request: z.string().trim().min(1).describe('The user\'s own words that gave this approval'),
 }).strict().refine(input => input.planIds !== undefined || input.auto !== undefined, 'name planIds or auto');
-interface Approvals { auto?: { request: string; at: string }; plans: Record<string, { shotId: string; requestId: string; request: string; at: string }> }
+// shown: the shot's prompt and frames the approved plan used, so the review page can tell a later edit.
+// callPrompt: the plan sent a prompt named in its call instead of the shot's stored one. lines: structure-contract.js videoLines.
+interface Shown { prompt?: string; callPrompt?: true; start?: string; end?: string; lines?: string[][] }
+interface Approvals { auto?: { request: string; at: string }; plans: Record<string, { shotId: string; requestId: string; request: string; at: string; shown?: Shown }> }
 const approvalsFile = (episode: string) => path.join(episode, '.work/video-routing/approvals.json');
 function readApprovals(episode: string): Approvals {
   return fs.existsSync(approvalsFile(episode)) ? JSON.parse(fs.readFileSync(approvalsFile(episode), 'utf8')) : { plans: {} };
+}
+// The review page cannot read .work, so storyboard/video-approvals.js carries each shot's latest yes (storyboard-html-template.html).
+function writeApprovalView(episode: string, approvals: Approvals) {
+  const dir = path.join(episode, 'storyboard');
+  if (!fs.existsSync(path.join(dir, 'scenes.js'))) return;
+  const shots: Record<string, { planId: string; at: string; shown?: Shown }> = {};
+  for (const [planId, entry] of Object.entries(approvals.plans))
+    if (!shots[entry.shotId] || entry.at >= shots[entry.shotId].at) shots[entry.shotId] = { planId, at: entry.at, ...(entry.shown ? { shown: entry.shown } : {}) };
+  const view = { auto: approvals.auto?.at ?? null, shots };
+  fs.writeFileSync(path.join(dir, 'video-approvals.js'), 'window.VIDEO_APPROVALS = ' + JSON.stringify(view).replace(/</g, '\\u003c') + ';\n');
 }
 export function approveVideo(raw: unknown): Approvals {
   const input = videoApproveSchema.parse(raw), episode = fs.realpathSync(input.episode);
@@ -218,9 +231,20 @@ export function approveVideo(raw: unknown): Approvals {
   else if (input.auto === false) delete approvals.auto;
   for (const id of input.planIds ?? []) {
     const plan: VideoPlan = JSON.parse(fs.readFileSync(path.join(episode, '.work/video-routing/plans', id + '.json'), 'utf8'));
-    approvals.plans[id] = { shotId: plan.shotId, requestId: plan.requestId, request: input.request, at };
+    // A yes covers the plan the user saw; a plan whose shot changed since cannot run (video_execute), so it takes none.
+    const context = routingContext(episode, plan.shotId);
+    if (context.revision !== plan.contextRevision)
+      throw new Error(`video_plan_stale: shot ${plan.shotId}'s frames, prompt, lines or settings changed after this plan — plan it again and show the user the new plan`);
+    const visual = (context.shot.visual ?? {}) as { video?: { prompt?: unknown }; frames?: { start?: unknown; end?: unknown } };
+    const used = (plan.sourceArgs ?? plan.args).prompt, fromShot = used === undefined || used === visual.video?.prompt;
+    const shown = Object.fromEntries(Object.entries({ prompt: fromShot ? visual.video?.prompt : undefined, start: visual.frames?.start, end: visual.frames?.end })
+      .filter(([, value]) => typeof value === 'string')) as Shown;
+    if (!fromShot) shown.callPrompt = true;
+    shown.lines = context.lines;
+    approvals.plans[id] = { shotId: plan.shotId, requestId: plan.requestId, request: input.request, at, shown };
   }
   atomicJson(approvalsFile(episode), approvals);
+  writeApprovalView(episode, approvals);
   return approvals;
 }
 export async function executeVideo(raw: unknown, dispatch: VideoDispatch): Promise<ToolResult> {
@@ -233,7 +257,7 @@ export async function executeVideo(raw: unknown, dispatch: VideoDispatch): Promi
   if (!approvals.auto && !approvals.plans[id]) throw new Error(`video_approval_required: show the user shot ${plan.shotId}'s prompt, images and cost, ` +
     `then record their yes with video_approve {planIds:["${id}"]}, or auto:true once they approve every shot`);
   const context = routingContext(episode, plan.shotId);
-  if (context.revision !== plan.contextRevision) throw new Error('video_plan_stale: selection or authorization changed');
+  if (context.revision !== plan.contextRevision) throw new Error('video_plan_stale: the shot\'s frames, prompt, lines, selection or authorization changed');
   if (plan.tool === 'astra_genai_msr') await refreshGenaiMsrVoice();
   const refreshed = planVideo({ episode, shotId: plan.shotId, requestId: plan.requestId, tool: plan.tool, args: plan.sourceArgs ?? plan.args });
   if (refreshed.id !== id) throw new Error('video_plan_stale: inputs, price or adapter contract changed');

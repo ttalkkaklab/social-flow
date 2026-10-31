@@ -158,6 +158,24 @@ test('composition, depth and eyeline MCP schemas are shared across every write r
   }
 });
 
+describe('video prompt basis and storyboard_read rows', () => {
+  test('promptDrift names what changed since shot_prompt; videoLines are the lines a video call voices', () => {
+    const shot = { visual: { character: ['mina'], frames: { mode: 'first' }, video: { prompt: 'p' } },
+      narration: [{ speaker: 'mina', delivery: 'on_screen', tts: 'Hi' }, { speaker: 'narrator', delivery: 'voiceover', tts: 'Night.' }] };
+    shot.visual.video.promptBasis = structure.promptBasis(shot, () => false);
+    assert.deepEqual(structure.promptDrift(shot, () => false), []);
+    shot.visual.frames.mode = 'reference';
+    assert.deepEqual(structure.promptDrift(shot, () => false), ['frames', 'lines', 'framing']);
+    assert.deepEqual(structure.videoLines(shot), [['mina', 'on_screen', 'Hi']]);
+  });
+  test('a shot row carries its story and the place shot_image recorded', () => {
+    const win = { STRUCTURE: { sequences: [{ id: 'q1', scenes: [1] }], scenes: [{ no: 1, place: 'room', time: 'night' }] },
+      SCENES: [{ id: 's0001', type: 'points', scene: 1, title: 'Waiting', summary: 'Mina waits.', visual: { locationId: 'room' } }] };
+    const row = structure.outline(win, 'shots').playback[0];
+    assert.deepEqual([row.title, row.summary, row.references.location], ['Waiting', 'Mina waits.', 'room']);
+  });
+});
+
 describe('story-v2 performance warnings', () => {
   function fixture(version = 'story-v2') {
     const events = ['아이가 열린 문 앞에 선다.', '아이가 문을 닫는다.'];

@@ -4453,7 +4453,7 @@ Returns: JSON — { file, mediaBaseDirectory, sha256, version, format, shots, se
         name: 'story_sequence',
         title: 'Write storyboard sequences (story step 1 of 3)',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-        description: `The first storyboard step after the scenario is settled writes only the story, in three layers: story_sequence → story_scene → story_shot. Use it first: it upserts sequences by id (title · purpose · question) and creates scenes.js as a story-v2 board when it is missing. A sequence's scene list is filled by story_scene. Local file only; no image, speech or prompt.
+        description: `The first storyboard step after the scenario is settled writes only the story, in three layers: story_sequence → story_scene → story_shot. Use it first: it upserts sequences by id (title · purpose · question · payoff — a payoff outside the sequence's scenes warns) and creates scenes.js as a story-v2 board when it is missing. A sequence's scene list is filled by story_scene. Local file only; no image, speech or prompt.
 
 Do NOT write scenes, shots, dialogue or pictures here. Characters and lines come after the shot stories (shot_characters → shot_dialogue); camera and image plans after that, through storyboard_apply.
 
@@ -4467,6 +4467,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
                             title: { type: 'string', description: 'The heading the review page draws' },
                             purpose: { type: 'string', description: 'The one purpose that binds its scenes; two purposes are two sequences' },
                             question: { type: 'string', description: 'The dramatic question this stretch opens' },
+                            payoff: { type: 'integer', minimum: 1, description: 'The scene number that answers the question' },
                         } } },
             },
             required: ['path', 'sequences'],
@@ -4503,7 +4504,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         name: 'story_shot',
         title: 'Write shot stories (story step 3 of 3)',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-        description: `Use it after story_scene to write each shot as one sentence of story in its scene. Without an id the shot is added at the end of its scene and gets a stable id (s0001…); with an id that shot's scene, summary and title are revised and everything else on it is kept. Refused (story_order) before any scene exists or for a scene outside a sequence. Local file only; no image, speech or prompt.
+        description: `Use it after story_scene to write each shot as one sentence of story in its scene. Without an id the shot is added at the end of its scene and gets a stable id (s0001…); with an id that shot's scene, summary and title are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. Local file only; no image, speech or prompt.
 
 Do NOT pass characters, dialogue, narration, camera or visual fields — the input refuses them. Once every shot has its story, shot_characters and shot_dialogue come next, then shot_icons; on a board these tools started (STORY.authoring "story-first") storyboard_apply refuses a shot without scene and summary.
 
@@ -4526,7 +4527,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         name: 'shot_characters',
         title: "Set each shot's characters (step 2: characters, then lines)",
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-        description: `Use it once every sequence, scene and shot story is written (story_sequence → story_scene → story_shot): set who from the episode cast is on screen in each shot, at most two principal characters with the subject first, or [] when nobody is. It writes visual.character and keeps a kept character's scope. Refused (story_order) while the story has a gap — a sequence without scenes, a scene without a shot or summary, a shot without its story — and for an id outside storyboard/cast.json or SB_DOC.characters (cast_unknown). Local file only; no image, speech or prompt.
+        description: `Use it once every sequence, scene and shot story is written (story_sequence → story_scene → story_shot): set who from the episode cast is on screen in each shot, at most two principal characters with the subject first, or [] when nobody is. It writes visual.character and keeps a kept character's scope. A character who leaves a shot keeps their lines, now off_screen, with a warning, and their sheet panels leave visual.references; a start image made for the old cast is flagged for shot_image. Refused (story_order) while the story has a gap — a sequence without scenes, a scene without a shot or summary, a shot without its story — and for an id outside storyboard/cast.json or SB_DOC.characters (cast_unknown). Local file only; no image, speech or prompt.
 
 Do NOT list extras, unnamed figures or a narrator who is never seen — extras are described in the action later, and an off-screen narrator speaks through shot_dialogue. Lines come next, through shot_dialogue.
 
@@ -4574,7 +4575,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         name: 'shot_icons',
         title: "Set each shot's icon attributes (step 3)",
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-        description: `Use it after every shot has its story and characters (story_shot → shot_characters), and normally after its lines (shot_dialogue): set the attributes the review's icon row shows, per shot — render route (shot.render), size and why, angle, camera move, focus, depth, and the frame plan, where reference means MSR. A move on a still_camera cut is the still effect (shot.render.camera.effect); on any other route it is a camera technique, written to shot.techniques with visual.camera.movement kept consistent. Only the attributes given change. Refused (story_order) while a sequence, scene or shot story or any shot's characters are missing. Local file only; no image, video, speech or prompt is generated.
+        description: `Use it after every shot has its story and characters (story_shot → shot_characters), and normally after its lines (shot_dialogue): set the attributes the review's icon row shows, per shot — render route (shot.render), size and why, angle, camera move, focus, depth, and the frame plan, where reference means MSR. A move on a still_camera cut is the still effect (shot.render.camera.effect); on any other route it is a camera technique, written to shot.techniques with visual.camera.movement kept consistent. Switching to still_camera drops the camera technique and visual.camera move; switching from it drops the still effect. A different move replaces the old one's speed and target (the same move — its technique, or an authored visual.camera move before any technique — keeps them unless given), and a new size without its own why drops the old why. Changing size, angle, depth or focus after the start image exists warns to remake it with shot_image. A frame plan other than first_last takes the end image off (with a warning), and switching to or from reference re-marks the character panels for the video call. A change to what a written video prompt came from (cast, on-screen lines, frame plan, camera, focus, MSR framing) warns to rewrite it with shot_prompt; the review page marks it too. Only the attributes given change. Refused (story_order) while a sequence, scene or shot story or any shot's characters are missing. Local file only; no image, video, speech or prompt is generated.
 
 Do NOT write camera endpoints, blocking, eyeline, composition or prompts here — storyboard_apply carries those after this step (action-direction.md camera-direction pass).
 
@@ -4616,9 +4617,9 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         name: 'shot_image',
         title: "Make a shot's start or end image (step 4)",
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-        description: `Use it after every shot has its icon attributes (shot_icons): make one shot's start image from its characters' sheet panels (assets/characters/<id>/panels.json — face, headless front and back; two characters take each face, then each front), its place (SB_DOC.locations imageUrl) and its props, with a prompt assembled from the shot's size, angle, depth and techniques, the episode style and your English description. frame:"end" makes the last image of a first_last shot from its start image (optional; only when the frame plan needs it). Runs image_plan → image_execute with the saved image model and the existing spending authorization, then writes visual.frames.start and visual.bg (or frames.end), visual.references, locationId and props. Each call saves a new versioned file under storyboard/images/.
+        description: `Use it after every shot has its icon attributes (shot_icons): make one shot's start image from its characters' sheet panels (assets/characters/<id>/panels.json — face, headless front and back; two characters take each face, then each front), its place (SB_DOC.locations imageUrl) and its props, with a prompt assembled from the shot's size, angle, depth and techniques, the episode style and your English description. frame:"end" makes the last image of a first_last shot from its start image (optional; only when the frame plan needs it). Runs image_plan → image_execute with the saved image model and the existing spending authorization, then writes visual.frames.start and visual.bg (or frames.end), visual.references, locationId and props. Each call saves a new versioned file under storyboard/images/. A new start image takes the shot's end image off (it was edited from the old start; the file stays) and warns, so make the end image again. An end image keeps the start image's place (location is refused) and records its own props in frames.endProps. GPT Image gets a mixed PNG/JPEG set as PNG copies in storyboard/images/inputs/.
 
-Do NOT use it for a cut with no picture route — and the saved image model has to take several pictures (gpt-image, astra-genai-native, mlx); a single-picture model refuses with image_references_unsupported, so ask the user before changing models. Refused (story_order) while a shot lacks icon attributes, or for an end image before the start image or outside first_last.
+Do NOT use it for a cut with no picture route — only still_camera and generated_video cuts are accepted. The saved image model has to take every picture the frame composes (gpt-image up to 16; astra-genai-native or an MLX Qwen-Image-2.1 pack up to 10; MLX FLUX.2 klein or Mage-Flow Edit up to 4); otherwise it refuses with image_references_unsupported, so ask the user before changing models. Refused (story_order) while a shot lacks icon attributes, or for an end image before the start image or outside first_last.
 
 Returns: the file written, the image path, the inputs in order and the prompt; a host selection returns the handoff instead of generating.`,
         inputSchema: {
@@ -4628,7 +4629,7 @@ Returns: the file written, the image path, the inputs in order and the prompt; a
                 id: { type: 'string', pattern: '^s\\d{4,}$', description: 'Stable shot id' },
                 frame: { type: 'string', enum: ['start', 'end'], default: 'start', description: 'start: the first image · end: the last image of a first_last shot' },
                 prompt: { type: 'string', description: 'What the frame shows, in English: who is where, doing what, facing which way, expression and light' },
-                location: { type: 'string', description: 'SB_DOC.locations id of the place; an earlier choice stays when omitted' },
+                location: { type: 'string', description: 'SB_DOC.locations id of the place, for the start image; an earlier choice stays when omitted, and an end image keeps the start\'s place (refused there)' },
                 props: { type: 'array', items: { type: 'string' }, description: 'SB_DOC.props ids seen in the frame; an earlier choice stays when omitted' },
                 size: { type: 'string', pattern: '^\\d{3,4}x\\d{3,4}$', description: 'Output WIDTHxHEIGHT; default 1536x1024 on a 16:9 board, 1024x1536 otherwise' },
                 reserveUsd: { type: 'number', minimum: 0, description: 'API reservation estimate, as in image_plan' },
@@ -4640,7 +4641,7 @@ Returns: the file written, the image path, the inputs in order and the prompt; a
         name: 'shot_prompt',
         title: "Write a shot's video prompt (step 5)",
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-        description: `Use it after every picture-route shot has its images (shot_image): write one generated_video shot's English video prompt into visual.video.prompt from its icon attributes — camera move, speed and target, focus, and on an MSR (reference) shot its size, angle and depth, since MSR pins no frame; a first or first_last shot starts from its given frames — plus your English action, closing picture and sound, and the shot's on-screen lines in quotes (MSR adds its lines in video_plan with their image bindings). video_plan sends this prompt when its args name none. Local file only; no generation.
+        description: `Use it after every picture-route shot has its images (shot_image): write one generated_video shot's English video prompt into visual.video.prompt from its icon attributes — camera move, speed and target, focus, and on an MSR (reference) shot its size, angle and depth, since MSR pins no frame; a first or first_last shot starts from its given frames — plus your English action, closing picture and sound, and the shot's on-screen lines in quotes (MSR adds its lines in video_plan with their image bindings). video_plan sends this prompt when its args name none. It records what the prompt came from (visual.video.promptBasis), so a later change of cast, lines, frame plan, camera, focus or MSR framing shows as stale. Local file only; no generation.
 
 Do NOT write Korean outside quotes: action, end and sound are English (video_prompt_language). Refused (story_order) while a picture-route shot lacks its start image or a first_last shot its end image, and for a cut that is not generated_video.
 
@@ -4828,7 +4829,7 @@ TOOLS.push({ name: 'video_catalog', title: 'Inspect installed video adapters', d
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true } }, { name: 'video_approve', title: "Record the user's approval of a shot's video",
     description: `Use it right after the user says yes to a shot's video — once you have shown them that shot's video_plan prompt, start (and end) image and cost — or when they approve every shot at once (auto:true). video_execute runs a plan only after this. Record the user's own words in request.
 
-Do NOT call it without the user's answer to that question: it is the record of their approval, not a step you take for them. auto:false asks before each shot again. Local file only; no generation.
+Do NOT call it without the user's answer to that question: it is the record of their approval, not a step you take for them. auto:false asks before each shot again. A plan whose shot frames, prompt, lines or settings changed after it was made is refused (video_plan_stale): plan again and show the user the new one. It also writes storyboard/video-approvals.js, from which the review page shows each shot's approval and whether its prompt, frames or lines changed since. Local file only; no generation.
 
 Returns: the approval record (auto and approved plans).`,
     inputSchema: { type: 'object', additionalProperties: false, properties: {
