@@ -73526,7 +73526,9 @@ async function generateAdvanced(request) {
           console.error("[Lyria] Session error:", error2);
           state.error = error2 instanceof Error ? error2 : new Error(String(error2));
         },
+        // An early server close ends the wait; the length check below decides the result.
         onclose: () => {
+          state.done = true;
         }
       }
     });
@@ -73540,20 +73542,15 @@ async function generateAdvanced(request) {
     await session.play();
     const startTime = Date.now();
     const timeoutMs = targetDuration * 1e3 + REALTIME_TIMEOUT_MARGIN_MS;
-    while (state.received < targetBytes && Date.now() - startTime < timeoutMs) {
+    while (!state.done && state.received < targetBytes && Date.now() - startTime < timeoutMs) {
       if (state.error) throw state.error;
       await new Promise((resolve12) => setTimeout(resolve12, REALTIME_POLL_INTERVAL_MS));
     }
     state.done = true;
+    if (state.error) throw state.error;
     closeQuietly(session);
     session = void 0;
-    if (audioChunks.length === 0) {
-      return { success: false, error: "No audio data received from Lyria RealTime" };
-    }
-    const rawPcm = Buffer.concat(audioChunks);
-    const frameBytes = REALTIME_CHANNELS * REALTIME_BYTES_PER_SAMPLE;
-    const trimTo = Math.floor(Math.min(rawPcm.length, targetBytes) / frameBytes) * frameBytes;
-    const pcmData = rawPcm.subarray(0, trimTo);
+    const pcmData = fitRealtimePcm(audioChunks, targetBytes);
     const audioPath = saveAudioFile(
       request.outputPath || process.cwd(),
       request.filename || `music_${Date.now()}.wav`,
@@ -73576,6 +73573,15 @@ async function generateAdvanced(request) {
     return { success: false, error: errorMessage };
   }
 }
+function fitRealtimePcm(chunks, targetBytes) {
+  const rawPcm = Buffer.concat(chunks);
+  if (rawPcm.length === 0) throw new Error("No audio data received from Lyria RealTime");
+  if (rawPcm.length < targetBytes * 0.9) {
+    throw new Error(`Lyria RealTime stream ended early: ${(rawPcm.length / REALTIME_BYTES_PER_SECOND).toFixed(1)}s of ${(targetBytes / REALTIME_BYTES_PER_SECOND).toFixed(1)}s requested`);
+  }
+  const frameBytes = REALTIME_CHANNELS * REALTIME_BYTES_PER_SAMPLE;
+  return rawPcm.subarray(0, Math.floor(Math.min(rawPcm.length, targetBytes) / frameBytes) * frameBytes);
+}
 function closeQuietly(session) {
   try {
     session.close();
@@ -73587,7 +73593,8 @@ function closeQuietly(session) {
 // src/suno-client.ts
 import { spawnSync } from "node:child_process";
 import * as path5 from "node:path";
-var SUNO_MODELS = ["V4", "V4_5", "V4_5PLUS", "V4_5ALL", "V5", "V5_5", "V6", "V6_MINI", "V6_WILD"];
+var SUNO_V6_MODELS = ["V6", "V6_MINI", "V6_WILD"];
+var SUNO_MODELS = ["V4", "V4_5", "V4_5PLUS", "V4_5ALL", "V5", "V5_5", ...SUNO_V6_MODELS];
 var DEFAULT_SUNO_MODEL = "V6";
 var SUNO_SOUND_MODEL = "V5";
 var SUNO_SOUND_KEYS = [
@@ -73625,6 +73632,10 @@ var LYRICS_POLL_INTERVAL_MS = 5e3;
 var LYRICS_MAX_POLLS = 36;
 var SOUND_POLL_INTERVAL_MS = 1e4;
 var SOUND_MAX_POLLS = 36;
+var POLL_ERROR_LIMIT = 3;
+var API_TIMEOUT_MS = 6e4;
+var DOWNLOAD_TIMEOUT_MS = 3e5;
+var REJECTION_CODES = /* @__PURE__ */ new Set([400, 401, 405, 413, 429, 430, 455]);
 var DUMMY_CALLBACK_URL = "https://httpbin.org/post";
 var FAILED_STATUSES = /* @__PURE__ */ new Set([
   "CREATE_TASK_FAILED",
@@ -73633,7 +73644,7 @@ var FAILED_STATUSES = /* @__PURE__ */ new Set([
   "SENSITIVE_WORD_ERROR",
   "FAILED"
 ]);
-var DONE_STATUSES = /* @__PURE__ */ new Set(["SUCCESS", "FIRST_SUCCESS"]);
+var DONE_STATUSES = /* @__PURE__ */ new Set(["SUCCESS"]);
 var sunoGenerateSchema = external_exports.object({
   prompt: external_exports.string().min(1).optional(),
   lyrics: external_exports.string().min(1).max(5e3).optional(),
@@ -73696,20 +73707,25 @@ async function sunoFetch(pathName, init = {}) {
     ...init.headers
   };
   if (init.body) headers["Content-Type"] = "application/json";
-  const response = await fetch(url, { ...init, headers });
+  const response = await fetch(url, { ...init, headers, signal: AbortSignal.timeout(API_TIMEOUT_MS) });
   const bodyText = await response.text();
   let parsed;
   try {
     parsed = JSON.parse(bodyText);
   } catch {
-    throw new Error(
+    throw Object.assign(new Error(
       response.ok ? `Suno API returned non-JSON: ${bodyText.slice(0, 400)}` : `HTTP ${response.status} \u2014 ${bodyText.slice(0, 400)}`
-    );
+    ), { httpStatus: response.status });
   }
   if (!response.ok || parsed.code !== void 0 && parsed.code !== 200) {
-    throw new Error(describeSunoError(parsed.code, parsed.msg, response.status));
+    throw Object.assign(new Error(describeSunoError(parsed.code, parsed.msg, response.status)), { httpStatus: response.status, code: parsed.code });
   }
   return parsed;
+}
+function isRejection(error2) {
+  const { httpStatus, code } = error2 ?? {};
+  if (typeof code === "number" && code !== 200) return REJECTION_CODES.has(code);
+  return typeof httpStatus === "number" && httpStatus >= 400 && httpStatus < 500 && ![408, 409, 425].includes(httpStatus);
 }
 function taskIdFrom(data) {
   if (typeof data === "string" && data.length > 0) return data;
@@ -73772,7 +73788,7 @@ function lyricsFromRecord(info) {
   return out;
 }
 async function downloadBuffer(url) {
-  const response = await fetch(url);
+  const response = await fetch(url, { signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS) });
   if (!response.ok) {
     throw new Error(`Failed to download audio: HTTP ${response.status} (URLs expire after 14 days)`);
   }
@@ -73801,13 +73817,14 @@ function transcodeToWav(src, dest) {
 }
 async function saveTracks(parsed, outputDir, filename, pickTrack) {
   if (parsed.length === 0) throw new Error("Task succeeded but no audio URL in response");
+  if (pickTrack >= parsed.length) throw new Error(`Track ${pickTrack} has no audio URL (${parsed.length} returned)`);
   const primaryName = filename || `suno_${Date.now()}.mp3`;
   const stem = stemFromFilename(primaryName);
   const wantWav = extOf(primaryName) === ".wav";
   const tracks = [];
   for (let i2 = 0; i2 < parsed.length; i2 += 1) {
     const item = parsed[i2];
-    const isPick = i2 === pickTrack || pickTrack >= parsed.length && i2 === 0;
+    const isPick = i2 === pickTrack;
     const mp3Name = isPick && !wantWav ? extOf(primaryName) === ".mp3" ? primaryName : `${stem}.mp3` : `${stem}_${i2 === 0 ? "a" : "b"}.mp3`;
     const buffer = await downloadBuffer(item.audioUrl);
     const mp3Path = saveAudioFile(outputDir, mp3Name, buffer);
@@ -73845,19 +73862,27 @@ function isDone(status, tracksReady) {
 }
 async function pollRecord(taskId, opts) {
   let last = {};
+  let failures = 0, settled = 0;
   for (let poll = 1; poll <= opts.maxPolls; poll += 1) {
     console.error(`[Suno] ${opts.label} in progress... (polling ${poll}/${opts.maxPolls}, task ${taskId})`);
     await sleep2(opts.intervalMs);
-    const envelope2 = await sunoFetch(`/api/v1/generate/record-info?taskId=${encodeURIComponent(taskId)}`);
+    let envelope2;
+    try {
+      envelope2 = await sunoFetch(`/api/v1/generate/record-info?taskId=${encodeURIComponent(taskId)}`);
+      failures = 0;
+    } catch (error2) {
+      if ((failures += 1) > POLL_ERROR_LIMIT) throw error2;
+      continue;
+    }
     last = asRecord(envelope2.data) ?? {};
     const status = last.status;
     const tracks = tracksFromRecord(last);
     if (isTerminalFailure(status)) {
       throw new Error(`Generation ${status}: ${last.errorMessage || last.errorCode || status}`);
     }
-    if (isDone(status, tracks.length > 0)) return last;
+    if (isDone(status, tracks.length >= (opts.minTracks ?? 1))) return last;
     if (status === "SUCCESS" || status === "CALLBACK_EXCEPTION") {
-      if (poll > 2) {
+      if ((settled += 1) > 2) {
         throw new Error(`Task ${status} but no audio URL yet (task ${taskId})`);
       }
     }
@@ -73886,32 +73911,16 @@ async function pollLyrics(taskId) {
   );
 }
 function assertGenerateArgs(request) {
-  if (["V6", "V6_MINI", "V6_WILD"].includes(request.model)) {
-    if (request.customMode) {
-      if (!request.style && !request.lyrics && !request.negativeTags) throw new Error("Custom mode requires style, lyrics or negativeTags");
-      if (request.title && request.title.length > 80) throw new Error("title exceeds 80 characters");
-    } else {
-      if (!request.style && !request.lyrics) throw new Error("Non-custom mode requires style or lyrics");
-      if (request.prompt && request.prompt.length > 3e3) throw new Error("prompt exceeds 3000 characters");
-      if (request.duration !== void 0 || request.title || request.negativeTags || request.vocalGender || request.personaId || request.personaModel) throw new Error("Custom-only fields require customMode:true");
-    }
-    if (request.negativeTags && request.negativeTags.length > 1e3) throw new Error("negativeTags exceeds 1000 characters");
-    return;
+  if (!SUNO_V6_MODELS.includes(request.model)) throw new Error("music_model_retired: select a V6 model explicitly");
+  if (request.customMode) {
+    if (!request.style && !request.lyrics && !request.negativeTags) throw new Error("Custom mode requires style, lyrics or negativeTags");
+    if (request.title && request.title.length > 80) throw new Error("title exceeds 80 characters");
+  } else {
+    if (!request.style && !request.lyrics) throw new Error("Non-custom mode requires style or lyrics");
+    if (request.prompt && request.prompt.length > 3e3) throw new Error("prompt exceeds 3000 characters");
+    if (request.duration !== void 0 || request.title || request.negativeTags || request.vocalGender || request.personaId || request.personaModel) throw new Error("Custom-only fields require customMode:true");
   }
-  const custom3 = request.customMode === true;
-  const instrumental = request.instrumental === true;
-  if (!custom3) {
-    if (!request.prompt) throw new Error("prompt is required when customMode is false");
-    return;
-  }
-  if (!request.style) throw new Error("style is required when customMode is true");
-  if (!request.title) throw new Error("title is required when customMode is true");
-  if (!instrumental && !request.prompt) {
-    throw new Error("prompt (lyrics) is required when customMode is true and instrumental is false");
-  }
-  if (request.duration !== void 0 && (request.model !== "V5_5" || !custom3)) {
-    throw new Error("duration is only supported when model is V5_5 and customMode is true");
-  }
+  if (request.negativeTags && request.negativeTags.length > 1e3) throw new Error("negativeTags exceeds 1000 characters");
 }
 async function generateMusic(request) {
   let taskId;
@@ -73939,24 +73948,37 @@ async function generateMusic(request) {
     console.error(`[Suno] Generating music... (model: ${model2}, customMode: ${customMode}, instrumental: ${body.instrumental})`);
     const created = await sunoFetch("/api/v1/generate", { method: "POST", body: JSON.stringify(body) });
     taskId = taskIdFrom(created.data);
-    const info = await pollRecord(taskId, {
-      intervalMs: POLL_INTERVAL_MS,
-      maxPolls: MAX_POLLS,
-      label: "Music generation"
-    });
-    const parsed = tracksFromRecord(info).filter((t2) => t2 !== void 0);
-    const tracks = await saveTracks(
-      parsed,
-      request.outputPath || process.cwd(),
-      request.filename,
-      request.pickTrack ?? 0
-    );
-    console.error(`[Suno] Saved ${tracks.length} track(s): ${tracks.map((t2) => t2.audioPath).join(", ")}`);
+    const tracks = await collectTracks(taskId, request);
     return { success: true, taskId, model: model2, tracks, audioPath: tracks[0]?.audioPath };
   } catch (error2) {
     const message = error2 instanceof Error ? error2.message : String(error2);
     console.error(`[Suno] Error: ${message}`);
-    return { success: false, taskId, error: message };
+    return { success: false, taskId, error: message, terminal: taskId === void 0 && isRejection(error2) };
+  }
+}
+async function collectTracks(taskId, request) {
+  const pickTrack = request.pickTrack ?? 0;
+  const info = await pollRecord(taskId, {
+    intervalMs: POLL_INTERVAL_MS,
+    maxPolls: MAX_POLLS,
+    label: "Music generation",
+    minTracks: pickTrack + 1
+  });
+  const tracks = await saveTracks(
+    tracksFromRecord(info).filter((t2) => t2 !== void 0),
+    request.outputPath || process.cwd(),
+    request.filename,
+    pickTrack
+  );
+  console.error(`[Suno] Saved ${tracks.length} track(s): ${tracks.map((t2) => t2.audioPath).join(", ")}`);
+  return tracks;
+}
+async function resumeMusic(taskId, request) {
+  try {
+    const tracks = await collectTracks(taskId, request);
+    return { success: true, taskId, tracks, audioPath: tracks[0]?.audioPath };
+  } catch (error2) {
+    return { success: false, taskId, error: error2 instanceof Error ? error2.message : String(error2) };
   }
 }
 async function generateSound(request) {
@@ -74997,7 +75019,7 @@ var MUSIC_MODELS = [
   { engine: "lyria", model: "lyria-3-clip-preview", tool: "music_generate_song", vocals: true, duration: "30 seconds; fixed", provider: "Google official" },
   { engine: "lyria", model: "lyria-3.5", tool: "music_generate_song", vocals: true, duration: "Prompt-directed; measure output", provider: "Google official" },
   { engine: "lyria", model: "models/lyria-realtime-exp", tool: "music_generate_advanced", vocals: false, duration: "5\u2013300 seconds; local stream collection limit", provider: "Google official" },
-  ...["V6", "V6_MINI", "V6_WILD"].map((model2) => ({ engine: "suno-api", model: model2, tool: "suno_generate", vocals: true, duration: "10\u2013360 seconds in custom mode", provider: "sunoapi.org third party, NOT Suno Platform" })),
+  ...SUNO_V6_MODELS.map((model2) => ({ engine: "suno-api", model: model2, tool: "suno_generate", vocals: true, duration: "10\u2013360 seconds in custom mode", provider: "sunoapi.org third party, NOT Suno Platform" })),
   ...["music_v2", "music_v2_5"].map((model2) => ({ engine: "elevenlabs", model: model2, tool: "music_elevenlabs_generate", vocals: true, duration: "3\u2013600 seconds", provider: "ElevenLabs official" }))
 ];
 var MUSIC_ADAPTERS = {
@@ -75019,10 +75041,7 @@ function parseMusicArgs(tool2, input) {
   if (!adapter2) throw new Error("music_adapter_unsupported");
   for (const key of Object.keys(input)) if (!Object.hasOwn(shape(adapter2.schema), key)) throw new Error("music_argument_unsupported: " + key);
   const args = adapter2.schema.parse(input);
-  if (tool2 === "suno_generate") {
-    if (!["V6", "V6_MINI", "V6_WILD"].includes(String(args.model))) throw new Error("music_model_retired: select a V6 model explicitly");
-    assertGenerateArgs(sunoGenerateSchema.parse(args));
-  }
+  if (tool2 === "suno_generate") assertGenerateArgs(sunoGenerateSchema.parse(args));
   if (tool2 === "suno_generate_sound") throw new Error("music_model_retired: V5 sound adapter is not verified on the current provider; use a selected V6 instrumental song");
   return args;
 }
@@ -83681,7 +83700,7 @@ var context = {
   directory: { type: "string", description: "Absolute episode or workspace directory, e.g. /work/data/demo/episodes/intro." },
   assetId: { type: "string", description: "Stable cue or asset ID, e.g. base or tense." },
   requestId: { type: "string", description: "Stable generation attempt ID, e.g. base-1; reuse after interruptions." },
-  reserveUsd: { type: "number", minimum: 0, description: "Positive total API estimate including all variants, e.g. 0.5; zero for local. Not an invoice cap." }
+  reserveUsd: { type: "number", minimum: 0, description: "Total provider estimate including all variants, e.g. 0.5. Required and positive for API engines; omit or 0 for local MLX. Not an invoice cap." }
 };
 var MUSIC_TOOLS = [
   {
@@ -83715,16 +83734,16 @@ var MUSIC_TOOLS = [
   {
     name: "music_status",
     title: "Inspect or reconcile a music request",
-    description: "Read a local music receipt, or update an ambiguous request after verified provider termination and billing evidence. Returns status, reservation, provider ID and output metadata. Does not call a provider or certify listening quality. Do NOT use to submit audio \u2014 use music_execute. Reconcile never resubmits; use a new attempt ID only after reconciliation.",
+    description: "Read a local music receipt, resume an interrupted Suno request from its recorded task ID, or update an ambiguous request after verified provider termination and billing evidence. Returns status, reservation, provider ID and output metadata. read and reconcile call no provider; resume only re-queries and downloads the existing task. Never certifies listening quality. Do NOT use to submit audio \u2014 use music_execute. Neither action resubmits; use a new attempt ID only after reconciliation.",
     inputSchema: { type: "object", additionalProperties: false, properties: {
       directory: context.directory,
       requestId: context.requestId,
-      action: { type: "string", enum: ["read", "reconcile"], default: "read", description: "Read status, or reconcile only after provider termination and verified billing." },
+      action: { type: "string", enum: ["read", "reconcile", "resume"], default: "read", description: "Read status; resume a submission_unknown suno_generate request that has a provider ID; or reconcile only after provider termination and verified billing." },
       executorStopped: { type: "boolean", description: "For interrupted submitting jobs: true only after confirming executor exit and provider termination." },
       evidence: { type: "string", description: "Verified terminal/billing evidence, e.g. provider task abc failed; invoice shows $0." },
       spentUsd: { type: "number", minimum: 0, description: "Verified charge for reconciliation, e.g. 0.05." }
     }, required: ["directory", "requestId"] },
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false }
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }
   },
   {
     name: "music_generate_song",
@@ -83761,7 +83780,7 @@ var MUSIC_TOOLS = [
             durationMs: { type: "integer", minimum: 3e3, maximum: 12e4, description: "Section length, e.g. 15000." },
             positiveStyles: { type: "array", maxItems: 50, items: { type: "string" }, description: 'English musical traits, e.g. ["warm piano", "Korean vocals"].' },
             negativeStyles: { type: "array", maxItems: 50, items: { type: "string" }, description: 'Traits to avoid, e.g. ["distortion"].' },
-            contextAdherence: { type: "string", enum: ["low", "medium", "high"], default: "high", description: "Consistency with surrounding chunks; high preserves surrounding musical context." }
+            contextAdherence: { type: "string", enum: ["low", "medium", "high"], description: "Optional consistency with surrounding chunks; high preserves surrounding musical context. Omit for the provider default." }
           }
         } }
       } }
@@ -88102,6 +88121,7 @@ function priceOf(tool2, args = {}) {
       note: typeof seconds === "number" ? void 0 : "billed per second of generated audio and no durationSeconds was requested \u2014 read the measured duration off the response"
     };
   }
+  if (tool2 === "music_generate_song" && args.model === "lyria-3-clip-preview") return { key: "music.lyria-clip", quantity: 1 };
   if (tool2 === "music_generate_song") return { key: "music." + String(args.model || "lyria-3.5"), quantity: 1, note: "Price unconfirmed; reconcile provider billing" };
   if (tool2 === "music_elevenlabs_generate") return { key: "music.elevenlabs." + String(args.modelId || "music_v2_5"), quantity: 1, note: "Price unconfirmed; reconcile provider billing" };
   if (tool2 === "music_generate_clip") return { key: "music.lyria-clip", quantity: 1 };
@@ -88112,7 +88132,7 @@ function priceOf(tool2, args = {}) {
       note: "unit price unconfirmed \u2014 the report excludes this item rather than counting it as 0"
     };
   }
-  if (tool2 === "suno_generate" && String(args.model).startsWith("V6")) return { key: "music.suno." + String(args.model), quantity: 1, note: "Current V6 price unconfirmed; do not reuse legacy V5 credit rates" };
+  if (tool2 === "suno_generate" && String(args.model ?? "V6").startsWith("V6")) return { key: "music.suno." + String(args.model ?? "V6"), quantity: 1, note: "Current V6 price unconfirmed; do not reuse legacy V5 credit rates" };
   if (tool2 === "suno_generate") return { key: "music.suno-generate", quantity: 1 };
   if (tool2 === "suno_generate_sound") return { key: "music.suno-sound", quantity: 1 };
   if (tool2 === "suno_generate_lyrics") return { key: "music.suno-lyrics", quantity: 1 };
@@ -96738,7 +96758,7 @@ Returns: a text block with the saved .wav file path, speaker/voice assignments, 
     description: `Generate one sound effect from a text description with ElevenLabs (${ELEVENLABS_SFX_MODEL}) \u2014 the lane that fills a channel's sfx catalog so a shot's \`sound.sfx\` has a file behind it.
 
 Use for the cut effects a storyboard names in window.SFX (scenes-schema \xA7sound effects): a whoosh on a whip transition, a low hit on the line before a drop, a tick or pop when a figure lands on a slide, a riser under a build, a 30-second room-tone loop for a bed. Write the prompt as a description in the vendor's own vocabulary (whoosh \xB7 impact \xB7 braam \xB7 riser \xB7 click \xB7 texture \xB7 ambience), one sound per call, with its shape spelled out ("short soft whoosh, fabric through air, no tail"); set durationSeconds for one-shots (a whoosh 0.6\u20131.0 s, a hit 1\u20132 s, a riser 2\u20134 s) and loop: true with 10\u201330 s for a bed. promptInfluence above the ${DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE} default reads the prompt more literally; below it, more freely. Save straight into the channel catalog \u2014 outputPath data/<channel>/assets/audio/sfx, filename <id>.wav \u2014 then register the row with resolve-asset.py --ensure and point its note at the .json sidecar this tool writes next to the file (tool, model, prompt, seconds, request id, date, rights). Generated once, an effect is a channel asset reused at $0 in every later episode.
-Do NOT use for music or a melodic bed \u2014 that is music_generate_clip / suno_generate_sound. Do NOT use for a clip's own soundtrack \u2014 that is the model's native audio through visual.audio. Do NOT request a loop under 5 s (it seams audibly under narration). The endpoint has no WAV format of its own: the server asks for PCM and writes the RIFF header itself, so the file is a mono 16-bit WAV the builder reads directly; a 403 output_format_not_allowed means the plan lacks that rate \u2014 retry with pcm_24000. API pricing is per minute of generated audio, $${ELEVENLABS_SFX_USD_PER_MINUTE.toFixed(2)} on every plan (pricing/api, read 2026-09-16), so a one-second effect is about $0.002; the ledger key is sfx.elevenlabs with the measured seconds as the quantity. Free-tier output is non-commercial and needs attribution \u2014 check the plan before publishing.
+Do NOT use for music or a melodic bed \u2014 that is music_plan \u2192 music_execute with the saved music model. Do NOT use for a clip's own soundtrack \u2014 that is the model's native audio through visual.audio. Do NOT request a loop under 5 s (it seams audibly under narration). The endpoint has no WAV format of its own: the server asks for PCM and writes the RIFF header itself, so the file is a mono 16-bit WAV the builder reads directly; a 403 output_format_not_allowed means the plan lacks that rate \u2014 retry with pcm_24000. API pricing is per minute of generated audio, $${ELEVENLABS_SFX_USD_PER_MINUTE.toFixed(2)} on every plan (pricing/api, read 2026-09-16), so a one-second effect is about $0.002; the ledger key is sfx.elevenlabs with the measured seconds as the quantity. Free-tier output is non-commercial and needs attribution \u2014 check the plan before publishing.
 
 Returns: a text block with the saved WAV path, the provenance sidecar path, the model, format, the measured duration, the USD estimate at the per-minute rate, and the request id.`,
     inputSchema: {
@@ -96842,7 +96862,7 @@ Returns: a text block with the saved .json path, detected language, segment coun
     annotations: HINT.generate,
     description: `Generate a fixed 30-second music clip from a text prompt using Google Lyria 3 (batch, single call).
 
-Use as the DEFAULT for short-form BGM, jingles, and post background music (\uBC30\uACBD\uC74C\uC545, BGM) \u2014 cheaper ($0.04/clip) and simpler than the streaming tools. Lyria 3 has no structured parameters: describe genre, instruments, BPM, key, mood, and structure in natural language inside the prompt, optionally with section tags ([Intro] [Verse] [Chorus] [Outro]) or timestamps ("[0:00 - 0:10] Intro: ..."). Can generate vocals and lyrics \u2014 add "instrumental only, no vocals" to the prompt if unwanted. Output carries a SynthID audio watermark.
+Use as a standalone 30-second Lyria clip for short-form BGM, jingles, and post background music (\uBC30\uACBD\uC74C\uC545, BGM) \u2014 cheaper ($0.04/clip) and simpler than the streaming tools. Not the configured default: music_plan sends a saved lyria-3-clip-preview selection to music_generate_song. Lyria 3 has no structured parameters: describe genre, instruments, BPM, key, mood, and structure in natural language inside the prompt, optionally with section tags ([Intro] [Verse] [Chorus] [Outro]) or timestamps ("[0:00 - 0:10] Intro: ..."). Can generate vocals and lyrics \u2014 add "instrumental only, no vocals" to the prompt if unwanted. Output carries a SynthID audio watermark.
 If the request is blocked for "an unspecified policy reason", that is prompt filtering, not a bug \u2014 reword the prompt more plainly and retry once rather than repeating the same text.
 Do NOT use when an exact non-30s duration is required, or when the same music must be reproducible \u2014 use music_generate / music_generate_advanced (seed) instead. Non-deterministic: the same prompt returns different music each call, so store signature BGM as a reusable asset.
 
@@ -96872,7 +96892,7 @@ Returns: a text block with the saved .mp3 file path (44.1kHz stereo, exactly 30 
     annotations: HINT.generate,
     description: `Generate instrumental music from a text prompt using Google Lyria RealTime (streaming).
 
-Use when the requested duration must be controlled (5-300s) \u2014 e.g. matching a narration length. For standard 30-second short-form BGM, prefer music_generate_clip (cheaper, single call). Optionally constrain genre, mood, instruments, BPM (60-200). Genre/mood/instrument values are free text \u2014 music_list_options shows suggestions, not a closed list.
+Use when the requested duration must be controlled (5-300s) \u2014 e.g. matching a narration length. For a fixed 30-second bed, music_generate_clip is cheaper (single call); configured production uses music_plan with the saved model. Optionally constrain genre, mood, instruments, BPM (60-200). Genre/mood/instrument values are free text \u2014 music_list_options shows suggestions, not a closed list.
 Do NOT use for vocals or lyrics \u2014 Lyria RealTime is instrumental-only. For a sung song use suno_generate. For blending multiple weighted musical ideas or tuning density/brightness/seed, use music_generate_advanced.
 For BGM under narration, say so in the prompt (e.g. "leaves space for a spoken voiceover, no melody in the vocal frequency range").
 
@@ -97043,7 +97063,7 @@ Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), d
     description: `Generate music on this machine via MLX Core / mlx-serve POST /v1/audio/music-generations. Returns raw WAV. No vendor bill. This plugin never launches the app.
 
 Use as an optional local bed when MLX Core is running with a music model. Default is instrumental:true and durationSeconds ${DEFAULT_MLX_MUSIC_SECONDS} (${MIN_MLX_MUSIC_SECONDS}\u2013${MAX_MLX_MUSIC_SECONDS}). instrumental:true cannot be sent beside lyrics \u2014 mlx-serve returns 400; set instrumental false to sing, or drop lyrics for a bed.
-Do NOT use as the default BGM path \u2014 that stays music_generate_clip (Lyria, GEMINI_API_KEY). Autoproduce unattended still takes the Lyria clip. Vocals fight voiceover; keep instrumental true under narration.
+Do NOT use in place of the saved music model \u2014 new music runs music_plan \u2192 music_execute with models.music; the legacy unattended bed still takes music_generate_clip. Vocals fight voiceover; keep instrumental true under narration.
 Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve (or MLX_SERVE_URL). brew install --cask mlx-core if :11234 is down.
 
 Returns: a text block with the saved .wav path, model, duration, and generation time.`,
@@ -97219,7 +97239,7 @@ Returns: a capability menu \u2014 video_generation, image_generation, tts, music
     description: `List suggested genres, moods, and instruments for music generation.
 
 Use when the user asks what music styles are available (\uC7A5\uB974 \uBAA9\uB85D) or wants inspiration. The lists are SUGGESTIONS, not a closed set \u2014 all music tools accept free-text descriptions beyond these. Read-only; makes no API call.
-Do NOT use to generate music \u2014 use music_generate_clip, music_generate, or music_generate_advanced. The list is static; one call per session is enough.
+Do NOT use to generate music \u2014 use music_plan \u2192 music_execute. The list is static; one call per session is enough.
 
 Returns: categorized text lists \u2014 32 genres, 25 moods, 22 instruments (non-exhaustive).`,
     inputSchema: {
@@ -97262,7 +97282,7 @@ Returns: categorized text lists \u2014 32 genres, 25 moods, 22 instruments (non-
         model: {
           type: "string",
           description: "sunoapi.org model ID; current generation supports the V6 family.",
-          enum: [...SUNO_MODELS],
+          enum: [...SUNO_V6_MODELS],
           default: DEFAULT_SUNO_MODEL
         },
         duration: {
@@ -98562,7 +98582,7 @@ var musicContextSchema = { type: "object", description: "Managed music context; 
   directory: { type: "string", description: "Absolute episode or workspace directory, e.g. /work/data/demo/episodes/intro." },
   assetId: { type: "string", description: "Stable cue/asset ID, e.g. base." },
   requestId: { type: "string", description: "Stable attempt ID, e.g. base-1. Reuse after interruption." },
-  reserveUsd: { type: "number", minimum: 0, description: "Total provider cost estimate for all tracks, e.g. 0.5; zero for local. Not an invoice cap." }
+  reserveUsd: { type: "number", minimum: 0, description: "Total provider cost estimate for all tracks, e.g. 0.5. Required and positive for API engines; omit or 0 for local MLX. Not an invoice cap." }
 }, required: ["directory", "assetId", "requestId"] };
 for (const tool2 of TOOLS) {
   if (!MUSIC_ADAPTERS[tool2.name]) continue;
@@ -98570,7 +98590,7 @@ for (const tool2 of TOOLS) {
   tool2.inputSchema.properties = { ...tool2.inputSchema.properties, musicContext: musicContextSchema };
   if (tool2.name === "suno_generate_sound") tool2.description = "Retired V5 sounds adapter; generation is rejected before submission. Use music_catalog and explicitly select a supported V6 instrumental song instead. Does not automatically substitute models.";
   if (tool2.name === "suno_generate") {
-    tool2.inputSchema.properties.model = { type: "string", enum: ["V6", "V6_MINI", "V6_WILD"], default: "V6", description: "sunoapi.org third-party model ID, not a Suno Platform identifier." };
+    tool2.inputSchema.properties.model = { type: "string", enum: [...SUNO_V6_MODELS], default: DEFAULT_SUNO_MODEL, description: "sunoapi.org third-party model ID, not a Suno Platform identifier." };
     tool2.inputSchema.properties.lyrics = { type: "string", maxLength: 5e3, description: "Lyrics, e.g. [Verse] followed by Korean lyrics. Preferred over prompt in custom mode." };
     tool2.description = "Generate songs using sunoapi.org, a third-party provider. Configured calls require musicContext. Use music_catalog to inspect choices; do NOT treat this as the Suno Platform official API. Returns local tracks and provider task ID. V6 custom mode requires style, lyrics or negativeTags; duration is 10\u2013360 seconds. Non-custom mode requires style or lyrics; prompt alone is insufficient. Old V4/V5 models are retired.";
   }
@@ -98622,16 +98642,30 @@ function hasHistory2(directory2) {
   const tally = path18.join(directory2, ".work/cost-tally.tsv");
   return fs17.existsSync(tally) && /^music\./m.test(fs17.readFileSync(tally, "utf8"));
 }
+var STALE_LOCK_MS = 3e4;
+function openLock(lock2) {
+  try {
+    return fs17.openSync(lock2, "wx", 384);
+  } catch (error2) {
+    if (error2.code !== "EEXIST") throw error2;
+  }
+  let stale = false;
+  try {
+    stale = Date.now() - fs17.statSync(lock2).mtimeMs > STALE_LOCK_MS;
+  } catch {
+  }
+  if (stale) fs17.rmSync(lock2, { force: true });
+  try {
+    return fs17.openSync(lock2, "wx", 384);
+  } catch {
+    throw new Error("music_state_busy: retry local operation; never steal another process lock");
+  }
+}
 function musicTransaction(directory2, openingSpendUsd, update) {
   const folder = path18.join(directory2, ".work/music-routing");
   fs17.mkdirSync(folder, { recursive: true });
   const lock2 = path18.join(folder, "state.lock");
-  let fd;
-  try {
-    fd = fs17.openSync(lock2, "wx", 384);
-  } catch {
-    throw new Error("music_state_busy: retry local operation; never steal another process lock");
-  }
+  const fd = openLock(lock2);
   try {
     let state = readMusicState(directory2);
     if (!state) {
@@ -98861,7 +98895,7 @@ async function executeMusic(raw, dispatch) {
     };
   });
   const started = Date.now();
-  let ok = false;
+  let ok = false, terminal = false;
   try {
     const result = await dispatch(plan2.tool, plan2.args);
     const receipt = result.musicReceipt;
@@ -98872,7 +98906,10 @@ async function executeMusic(raw, dispatch) {
         updatedAt: (/* @__PURE__ */ new Date()).toISOString()
       });
     });
-    if (result.isError) throw new Error("music_adapter_failed: " + JSON.stringify(result.content));
+    if (result.isError) {
+      terminal = result.terminal === true;
+      throw new Error("music_adapter_failed: " + JSON.stringify(result.content));
+    }
     if (!plan2.outputFile) throw new Error("music_output_missing");
     const sourceFile = receipt?.audioPath || path20.join(String(plan2.args.outputPath), String(plan2.args.filename));
     if (!withinDirectory(canonicalPath(String(plan2.args.outputPath)), canonicalPath(sourceFile))) throw new Error("music_source_outside_request");
@@ -98884,10 +98921,13 @@ async function executeMusic(raw, dispatch) {
     ok = true;
     return response;
   } catch (error2) {
-    musicTransaction(directory2, void 0, (state) => {
-      state.jobs[plan2.requestId].status = "submission_unknown";
-      state.jobs[plan2.requestId].evidence = String(error2).slice(0, 1500);
-    });
+    musicTransaction(directory2, void 0, (state) => Object.assign(state.jobs[plan2.requestId], {
+      status: terminal ? "failed" : "submission_unknown",
+      evidence: String(error2).slice(0, 1500),
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      // A rejected submission created no provider task, so it releases its reservation too.
+      ...terminal ? { spentUsd: 0 } : {}
+    }));
     throw error2;
   } finally {
     recordUsage(plan2.outputFile, {
@@ -98922,6 +98962,36 @@ async function routeLegacyMusic(tool2, raw, dispatch) {
   const parsed = parseMusicArgs(tool2, args);
   inputFiles2(parsed, process.cwd());
   return dispatch(tool2, parsed);
+}
+async function resumeMusic2(raw) {
+  gate2("music_status");
+  const input = external_exports.object({ directory: external_exports.string().min(1), requestId: idSchema2, action: external_exports.literal("resume") }).strict().parse(raw);
+  const directory2 = fs19.realpathSync(input.directory);
+  const jobs = readMusicState(directory2)?.jobs;
+  const job = jobs && Object.hasOwn(jobs, input.requestId) ? jobs[input.requestId] : void 0;
+  if (!job || job.status !== "submission_unknown" || job.tool !== "suno_generate" || !job.providerId)
+    throw new Error("music_resume_requires_unknown_suno_task: only a submission_unknown suno_generate request with a recorded task ID");
+  const plan2 = JSON.parse(fs19.readFileSync(path20.join(directory2, ".work/music-routing/plans", job.planId + ".json"), "utf8"));
+  const { id, ...body } = plan2;
+  if (id !== job.planId || routingHash(body) !== id || !plan2.outputFile) throw new Error("music_plan_invalid");
+  gate2(plan2.tool);
+  requireSunoKey();
+  const result = await resumeMusic(job.providerId, { outputPath: String(plan2.args.outputPath), filename: String(plan2.args.filename), pickTrack: Number(plan2.args.pickTrack ?? 0) });
+  if (!result.success || !result.audioPath) {
+    musicTransaction(directory2, void 0, (state) => Object.assign(state.jobs[input.requestId], { evidence: String(result.error).slice(0, 1500), updatedAt: (/* @__PURE__ */ new Date()).toISOString() }));
+    throw new Error("music_resume_failed: " + result.error);
+  }
+  if (!withinDirectory(canonicalPath(String(plan2.args.outputPath)), canonicalPath(result.audioPath))) throw new Error("music_source_outside_request");
+  const output2 = normalizeMusicFile(result.audioPath, plan2.outputFile);
+  const response = {
+    content: [{ type: "text", text: "Music output: " + JSON.stringify(output2) }],
+    musicReceipt: { requestId: job.providerId, audioPath: result.audioPath, output: output2, review: "not_reviewed" }
+  };
+  musicTransaction(directory2, void 0, (state) => {
+    if (state.jobs[input.requestId].status !== "submission_unknown") throw new Error("music_resume_conflict: request changed during resume");
+    Object.assign(state.jobs[input.requestId], { status: "completed", output: output2, result: response, updatedAt: (/* @__PURE__ */ new Date()).toISOString() });
+  });
+  return response;
 }
 function musicStatus(raw) {
   gate2("music_status");
@@ -99957,7 +100027,7 @@ async function routeSpeech(input) {
 import { execFile as execFile7 } from "node:child_process";
 import { promisify as promisify3 } from "node:util";
 import { createHash as createHash16, randomUUID as randomUUID5 } from "node:crypto";
-import { createReadStream as createReadStream3, mkdirSync as mkdirSync15, realpathSync as realpathSync9, statSync as statSync15, writeFileSync as writeFileSync20 } from "node:fs";
+import { createReadStream as createReadStream3, mkdirSync as mkdirSync15, realpathSync as realpathSync9, statSync as statSync16, writeFileSync as writeFileSync20 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
 import path25 from "node:path";
 var exec2 = promisify3(execFile7);
@@ -99988,7 +100058,7 @@ async function digest3(file) {
 }
 async function hostReview(input) {
   const r2 = hostReviewSchema.parse(input), file = realpathSync9(r2.mediaPath);
-  if (!statSync15(file).isFile() || !statSync15(file).size) throw new Error("Provide a nonempty local media file");
+  if (!statSync16(file).isFile() || !statSync16(file).size) throw new Error("Provide a nonempty local media file");
   const mediaSha256 = await digest3(file);
   const { stdout } = await exec2("ffprobe", ["-v", "error", "-show_format", "-show_streams", "-of", "json", file], { maxBuffer: 4 * 1024 * 1024 });
   const probe3 = JSON.parse(stdout), duration4 = Number(probe3.format.duration);
@@ -100048,7 +100118,7 @@ async function hostReview(input) {
           "2",
           output2
         ], { timeout: 3e4 });
-        if (!statSync15(output2).size) throw new Error("Frame extraction produced an empty image");
+        if (!statSync16(output2).size) throw new Error("Frame extraction produced an empty image");
         frames.push({ seconds, path: output2 });
       }
     }
@@ -100884,7 +100954,7 @@ function manageSpeech(args) {
 // src/acting-review.ts
 import { execFile as execFile8 } from "node:child_process";
 import { createHash as createHash20, randomUUID as randomUUID8 } from "node:crypto";
-import { existsSync as existsSync29, mkdirSync as mkdirSync19, readFileSync as readFileSync31, realpathSync as realpathSync10, renameSync as renameSync9, rmSync as rmSync14, statSync as statSync16, writeFileSync as writeFileSync24 } from "node:fs";
+import { existsSync as existsSync29, mkdirSync as mkdirSync19, readFileSync as readFileSync31, realpathSync as realpathSync10, renameSync as renameSync9, rmSync as rmSync15, statSync as statSync17, writeFileSync as writeFileSync24 } from "node:fs";
 import path26 from "node:path";
 import { homedir as homedir5 } from "node:os";
 import { promisify as promisify4 } from "node:util";
@@ -100952,7 +101022,7 @@ var actingObservationSchema = external_exports.object({
 var hash5 = (data) => createHash20("sha256").update(data).digest("hex");
 var currentHash = (file) => {
   try {
-    const stat4 = statSync16(file);
+    const stat4 = statSync17(file);
     return stat4.isFile() && stat4.size <= MAX_BYTES ? hash5(readFileSync31(file)) : null;
   } catch {
     return null;
@@ -101215,7 +101285,7 @@ async function reviewActing2(input, deps) {
   actingReviewTimeout(request.focus);
   const policy = request.focus === "cinematography" ? CINEMATOGRAPHY_POLICY : request.mode === "audio" ? AUDIO_POLICY : VISUAL_POLICY;
   const mediaPath = realpathSync10(request.mediaPath);
-  const stat4 = statSync16(mediaPath);
+  const stat4 = statSync17(mediaPath);
   if (!stat4.isFile() || stat4.size === 0 || stat4.size > MAX_BYTES) throw new Error("Review requires a nonempty media file no larger than 12 MiB");
   const bytes = readFileSync31(mediaPath);
   const probe3 = await deps.probe(mediaPath);
@@ -101322,13 +101392,13 @@ async function reviewActing2(input, deps) {
     renameSync9(temporary, receiptPath);
   } catch (error2) {
     try {
-      rmSync14(temporary, { force: true });
+      rmSync15(temporary, { force: true });
     } catch {
     }
     throw new Error(`Could not persist paid acting review; preserved lock at ${lock2}: ${error2 instanceof Error ? error2.message : String(error2)}`);
   }
   try {
-    rmSync14(lock2, { force: true });
+    rmSync15(lock2, { force: true });
   } catch {
     console.error(`[acting_review] Receipt saved; stale lock can be removed: ${lock2}`);
   }
@@ -101337,7 +101407,7 @@ async function reviewActing2(input, deps) {
 
 // src/threads-gate.ts
 import { createHash as createHash21, randomUUID as randomUUID9 } from "node:crypto";
-import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync20, readFileSync as readFileSync32, realpathSync as realpathSync11, renameSync as renameSync10, statSync as statSync17, writeFileSync as writeFileSync25 } from "node:fs";
+import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync20, readFileSync as readFileSync32, realpathSync as realpathSync11, renameSync as renameSync10, statSync as statSync18, writeFileSync as writeFileSync25 } from "node:fs";
 import { dirname as dirname9, join as join15, resolve as resolve10 } from "node:path";
 import { fileURLToPath as fileURLToPath10 } from "node:url";
 import { spawnSync as spawnSync3 } from "node:child_process";
@@ -101481,9 +101551,9 @@ function checkThreadsEpisode(input) {
     const topic = channelSchema.parse(input.episodeRef);
     const root = realpathSync11(join15(process.cwd(), "data", channel, "episodes"));
     const episode = realpathSync11(join15(root, topic));
-    if (dirname9(episode) !== root || !statSync17(episode).isDirectory()) throw new Error("Invalid episode directory");
+    if (dirname9(episode) !== root || !statSync18(episode).isDirectory()) throw new Error("Invalid episode directory");
     const board = realpathSync11(join15(episode, "storyboard", "scenes.js"));
-    if (!board.startsWith(episode + "/") || !statSync17(board).isFile()) throw new Error("Missing episode storyboard");
+    if (!board.startsWith(episode + "/") || !statSync18(board).isFile()) throw new Error("Missing episode storyboard");
     const approvalPath = realpathSync11(join15(episode, "threads-publish-approval.json"));
     if (dirname9(approvalPath) !== episode) throw new Error("Invalid episode approval path");
     const approval = JSON.parse(readFileSync32(approvalPath, "utf8"));
@@ -104654,7 +104724,7 @@ async function checkAccounts(channel) {
 
 // src/tts-final-quality.ts
 import { execFile as execFile9 } from "node:child_process";
-import { existsSync as existsSync32, mkdtempSync as mkdtempSync6, readFileSync as readFileSync33, rmSync as rmSync15, writeFileSync as writeFileSync26, renameSync as renameSync11, openSync as openSync7, closeSync as closeSync7 } from "node:fs";
+import { existsSync as existsSync32, mkdtempSync as mkdtempSync6, readFileSync as readFileSync33, rmSync as rmSync16, writeFileSync as writeFileSync26, renameSync as renameSync11, openSync as openSync7, closeSync as closeSync7 } from "node:fs";
 import { tmpdir as tmpdir7 } from "node:os";
 import path27 from "node:path";
 import { promisify as promisify5 } from "node:util";
@@ -104740,9 +104810,9 @@ async function reviewFinalSpeech(input, deps) {
     const failure2 = { error: error2 instanceof Error ? error2.message : String(error2) };
     return singleReviewStarted ? save3("unverified", failure2) : { success: false, status: "unverified", proofPath, ...failure2 };
   } finally {
-    rmSync15(temp, { recursive: true, force: true });
+    rmSync16(temp, { recursive: true, force: true });
     closeSync7(lock2);
-    rmSync15(lockPath, { force: true });
+    rmSync16(lockPath, { force: true });
   }
 }
 async function reviewChapters(request, media, wav, temp, base, proofPath, save3, deps) {
@@ -107926,7 +107996,7 @@ TIPS for better results:
 - Combine genre + mood for more specific output (e.g., "calm jazz", "energetic techno")
 - Specify instruments for desired sound palette
 - Use BPM to control tempo (60=slow, 120=moderate, 180=fast)
-- For 30s short-form BGM, prefer music_generate_clip (Lyria 3 \u2014 describe BPM/key/mood in the prompt)
+- New music follows music_plan \u2192 music_execute with the saved model; music_generate_clip is the standalone 30s Lyria clip (describe BPM/key/mood in the prompt)
 - For exact durations (5-300s), use music_generate (Lyria RealTime)
 - For BGM under narration, ask for space in the vocal frequency range
 
@@ -107946,7 +108016,7 @@ ADVANCED CONTROLS (music_generate_advanced):
   suno_generate: async (args) => {
     const request = parseArgs(sunoGenerateSchema, args);
     const result = await generateMusic(request);
-    if (!result.success) return { musicReceipt: { requestId: result.taskId }, ...text2(`Suno generation failed: ${result.error}`, true) };
+    if (!result.success) return { musicReceipt: { requestId: result.taskId }, ...text2(`Suno generation failed: ${result.error}`, true), terminal: result.terminal === true };
     const tracks = result.tracks ?? [];
     const lines = tracks.map(
       (track, index) => `  ${index + 1}. ${track.audioPath}` + (track.title ? `  "${track.title}"` : "") + (track.durationSeconds ? `  ${Math.round(track.durationSeconds)}s` : "") + (track.tags ? `  [${track.tags}]` : "")
@@ -108268,7 +108338,7 @@ for (const name of Object.keys(MUSIC_ADAPTERS)) ROUTES[name] = (args) => routeLe
 ROUTES.music_catalog = async () => text2(JSON.stringify(musicCatalog(), null, 2));
 ROUTES.music_plan = async (args) => text2(JSON.stringify(musicPlanSummary(planMusic(args)), null, 2));
 ROUTES.music_execute = (args) => executeMusic(args, dispatchMusic);
-ROUTES.music_status = async (args) => text2(JSON.stringify(musicStatus(args), null, 2));
+ROUTES.music_status = async (args) => args?.action === "resume" ? resumeMusic2(args) : text2(JSON.stringify(musicStatus(args), null, 2));
 
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";

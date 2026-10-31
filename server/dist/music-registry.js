@@ -1,13 +1,13 @@
 import { z } from 'zod';
 import { musicClipSchema, musicGenerateSchema, musicAdvancedSchema } from './music-client.js';
-import { sunoGenerateSchema, sunoSoundSchema, assertGenerateArgs } from './suno-client.js';
+import { sunoGenerateSchema, sunoSoundSchema, assertGenerateArgs, SUNO_V6_MODELS } from './suno-client.js';
 import { mlxMusicGenerateSchema } from './mlx-serve-client.js';
 import { lyriaSongSchema, elevenMusicSchema } from './music-song-client.js';
 export const MUSIC_MODELS = [
     { engine: 'lyria', model: 'lyria-3-clip-preview', tool: 'music_generate_song', vocals: true, duration: '30 seconds; fixed', provider: 'Google official' },
     { engine: 'lyria', model: 'lyria-3.5', tool: 'music_generate_song', vocals: true, duration: 'Prompt-directed; measure output', provider: 'Google official' },
     { engine: 'lyria', model: 'models/lyria-realtime-exp', tool: 'music_generate_advanced', vocals: false, duration: '5–300 seconds; local stream collection limit', provider: 'Google official' },
-    ...['V6', 'V6_MINI', 'V6_WILD'].map(model => ({ engine: 'suno-api', model, tool: 'suno_generate', vocals: true, duration: '10–360 seconds in custom mode', provider: 'sunoapi.org third party, NOT Suno Platform' })),
+    ...SUNO_V6_MODELS.map(model => ({ engine: 'suno-api', model, tool: 'suno_generate', vocals: true, duration: '10–360 seconds in custom mode', provider: 'sunoapi.org third party, NOT Suno Platform' })),
     ...['music_v2', 'music_v2_5'].map(model => ({ engine: 'elevenlabs', model, tool: 'music_elevenlabs_generate', vocals: true, duration: '3–600 seconds', provider: 'ElevenLabs official' })),
 ];
 export const MUSIC_ADAPTERS = {
@@ -33,11 +33,8 @@ export function parseMusicArgs(tool, input) {
         if (!Object.hasOwn(shape(adapter.schema), key))
             throw new Error('music_argument_unsupported: ' + key);
     const args = adapter.schema.parse(input);
-    if (tool === 'suno_generate') {
-        if (!['V6', 'V6_MINI', 'V6_WILD'].includes(String(args.model)))
-            throw new Error('music_model_retired: select a V6 model explicitly');
+    if (tool === 'suno_generate')
         assertGenerateArgs(sunoGenerateSchema.parse(args));
-    }
     if (tool === 'suno_generate_sound')
         throw new Error('music_model_retired: V5 sound adapter is not verified on the current provider; use a selected V6 instrumental song');
     return args;

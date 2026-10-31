@@ -303,9 +303,8 @@ export async function generateAdvanced(request: MusicAdvancedRequest): Promise<M
           console.error('[Lyria] Session error:', error);
           state.error = error instanceof Error ? error : new Error(String(error));
         },
-        onclose: () => {
-          // shutdown is handled by the receive-wait loop below.
-        },
+        // An early server close ends the wait; the length check below decides the result.
+        onclose: () => { state.done = true; },
       },
     });
 
@@ -323,27 +322,17 @@ export async function generateAdvanced(request: MusicAdvancedRequest): Promise<M
     // wait until the target bytes arrive (timeout: requested length + 30s)
     const startTime = Date.now();
     const timeoutMs = targetDuration * 1000 + REALTIME_TIMEOUT_MARGIN_MS;
-    while (state.received < targetBytes && Date.now() - startTime < timeoutMs) {
+    while (!state.done && state.received < targetBytes && Date.now() - startTime < timeoutMs) {
       if (state.error) throw state.error;
       await new Promise((resolve) => setTimeout(resolve, REALTIME_POLL_INTERVAL_MS));
     }
     state.done = true;
+    if (state.error) throw state.error;
 
     closeQuietly(session);
     session = undefined;
 
-    if (audioChunks.length === 0) {
-      return { success: false, error: 'No audio data received from Lyria RealTime' };
-    }
-
-    // The last chunk arrives past the target, so trim exactly to the requested
-    // length — this tool exists because "you can specify the length", and a 31s
-    // result breaks that contract. Trim on a sample boundary (channels × 2 bytes)
-    // or the stereo phase drifts apart.
-    const rawPcm = Buffer.concat(audioChunks);
-    const frameBytes = REALTIME_CHANNELS * REALTIME_BYTES_PER_SAMPLE;
-    const trimTo = Math.floor(Math.min(rawPcm.length, targetBytes) / frameBytes) * frameBytes;
-    const pcmData = rawPcm.subarray(0, trimTo);
+    const pcmData = fitRealtimePcm(audioChunks, targetBytes);
 
     const audioPath = saveAudioFile(
       request.outputPath || process.cwd(),
@@ -368,6 +357,24 @@ export async function generateAdvanced(request: MusicAdvancedRequest): Promise<M
     console.error(`[Lyria] Error: ${errorMessage}`);
     return { success: false, error: errorMessage };
   }
+}
+
+/**
+ * Trim the stream to the requested length, or fail when it fell short.
+ *
+ * The last chunk arrives past the target, so trim exactly to the requested length on a
+ * sample boundary (channels × 2 bytes) or the stereo phase drifts apart. A stream that
+ * closed or timed out below 90% of the target is a failure, not a shorter success: the
+ * caller asked for this length, and chunk boundaries make an exact match too strict.
+ */
+export function fitRealtimePcm(chunks: Buffer[], targetBytes: number): Buffer {
+  const rawPcm = Buffer.concat(chunks);
+  if (rawPcm.length === 0) throw new Error('No audio data received from Lyria RealTime');
+  if (rawPcm.length < targetBytes * 0.9) {
+    throw new Error(`Lyria RealTime stream ended early: ${(rawPcm.length / REALTIME_BYTES_PER_SECOND).toFixed(1)}s of ${(targetBytes / REALTIME_BYTES_PER_SECOND).toFixed(1)}s requested`);
+  }
+  const frameBytes = REALTIME_CHANNELS * REALTIME_BYTES_PER_SAMPLE;
+  return rawPcm.subarray(0, Math.floor(Math.min(rawPcm.length, targetBytes) / frameBytes) * frameBytes);
 }
 
 /** A failed session close doesn't overturn an already-decided result — swallow it and just log. */

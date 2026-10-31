@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { generateLocalVideo } from './local-video-models.js';
 import { manageWorkflow } from './production-workflow.js';
 import { MUSIC_ADAPTERS, musicCatalog } from './music-registry.js';
-import { planMusic, musicPlanSummary, executeMusic, musicStatus, routeLegacyMusic } from './music-routing.js';
+import { planMusic, musicPlanSummary, executeMusic, musicStatus, resumeMusic, routeLegacyMusic } from './music-routing.js';
 import { generateLyriaSong, generateElevenMusic } from './music-song-client.js';
 import { IMAGE_ADAPTERS, imageCatalog } from './image-registry.js';
 import { planImage, imagePlanSummary, executeImage, routeLegacyImage, imageStatus } from './image-routing.js';
@@ -1216,7 +1216,7 @@ export const ROUTES = {
             `- Combine genre + mood for more specific output (e.g., "calm jazz", "energetic techno")\n` +
             `- Specify instruments for desired sound palette\n` +
             `- Use BPM to control tempo (60=slow, 120=moderate, 180=fast)\n` +
-            `- For 30s short-form BGM, prefer music_generate_clip (Lyria 3 — describe BPM/key/mood in the prompt)\n` +
+            `- New music follows music_plan → music_execute with the saved model; music_generate_clip is the standalone 30s Lyria clip (describe BPM/key/mood in the prompt)\n` +
             `- For exact durations (5-300s), use music_generate (Lyria RealTime)\n` +
             `- For BGM under narration, ask for space in the vocal frequency range\n\n` +
             `ADVANCED CONTROLS (music_generate_advanced):\n` +
@@ -1235,7 +1235,7 @@ export const ROUTES = {
         const request = parseArgs(suno.sunoGenerateSchema, args);
         const result = await suno.generateMusic(request);
         if (!result.success)
-            return { musicReceipt: { requestId: result.taskId }, ...text(`Suno generation failed: ${result.error}`, true) };
+            return { musicReceipt: { requestId: result.taskId }, ...text(`Suno generation failed: ${result.error}`, true), terminal: result.terminal === true };
         const tracks = result.tracks ?? [];
         const lines = tracks.map((track, index) => `  ${index + 1}. ${track.audioPath}` +
             (track.title ? `  "${track.title}"` : '') +
@@ -1527,4 +1527,4 @@ for (const name of Object.keys(MUSIC_ADAPTERS))
 ROUTES.music_catalog = async () => text(JSON.stringify(musicCatalog(), null, 2));
 ROUTES.music_plan = async (args) => text(JSON.stringify(musicPlanSummary(planMusic(args)), null, 2));
 ROUTES.music_execute = args => executeMusic(args, dispatchMusic);
-ROUTES.music_status = async (args) => text(JSON.stringify(musicStatus(args), null, 2));
+ROUTES.music_status = async (args) => args?.action === 'resume' ? resumeMusic(args) : text(JSON.stringify(musicStatus(args), null, 2));
