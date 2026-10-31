@@ -327,30 +327,90 @@
   }
 
   /* ── Cast ─────────────────────────────────────────────── */
-  .cast { display: grid; gap: var(--s4); }
+  /* One card per character, after the aicon character sheet detail: a lit stage shows the
+     chosen panel large, the strip beside it picks another, and the facts read on the right. */
+  .cast { display: grid; gap: var(--s5); }
   .cast-card {
-    display: grid; grid-template-columns: auto 1fr; gap: var(--s4);
-    border: 1px solid var(--line); border-radius: 8px; background: var(--card);
+    --stage-w: 264px;
+    display: grid; grid-template-columns: var(--stage-w) 60px minmax(0, 1fr); gap: var(--s4) var(--s3);
+    border: 1px solid var(--line); border-radius: 16px; background: var(--card);
     padding: var(--s4); box-shadow: var(--shadow);
   }
-  .cast-panels { display: flex; gap: var(--s2); }
-  .cast-panel img {
-    width: 96px; height: 144px; object-fit: contain; display: block;
-    background: var(--sunk); border: 1px solid var(--hair); border-radius: 6px;
+  .cs-stage, .cs-thumb-img {
+    position: relative; overflow: hidden; border: 1px solid var(--hair);
+    background: radial-gradient(ellipse at 50% 38%, var(--card) 0%, var(--sunk) 78%);
   }
-  .cast-panel .lb {
-    font-size: var(--t-micro); font-weight: 700; letter-spacing: .08em;
-    color: var(--faint); text-align: center; padding-top: var(--s1);
+  /* 2:3 — the body and back panels' own ratio, so they fit edge to edge; other ratios letterbox on the lit backdrop. */
+  .cs-stage { aspect-ratio: 2 / 3; border-radius: 12px; align-self: start; }
+  .cs-stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  /* A face panel is a 1:1 photo with its own backdrop — it fills the frame instead of floating in it. */
+  .cs-stage[data-kind="face"] img, .cs-thumb[data-kind="face"] img { object-fit: cover; padding: 0; }
+  .cs-stage.empty { display: grid; place-items: center; grid-column: span 2; aspect-ratio: auto; min-height: 200px; border-style: dashed; }
+  .cs-empty { font-size: var(--t-aux); color: var(--muted); padding: var(--s4); text-align: center; }
+  .cs-pill {
+    position: absolute; top: var(--s3); left: var(--s3);
+    font-size: var(--t-cap); font-weight: 600; color: var(--text);
+    background: color-mix(in srgb, var(--card) 88%, transparent); backdrop-filter: blur(6px);
+    border: 1px solid var(--hair); border-radius: 999px; padding: 2px 10px;
   }
-  .cast-name { font-size: var(--t-scene); font-weight: 700; }
-  .cast-name code { font-weight: 500; color: var(--muted); font-size: var(--t-aux); }
-  .cast-role, .cast-note {
-    font-size: var(--t-aux); margin-top: var(--s2); word-break: keep-all; line-height: 1.7;
+  .cs-strip { display: flex; flex-direction: column; gap: var(--s2); }
+  .cs-thumb {
+    display: grid; gap: var(--s1); padding: 0; border: 0; background: none; cursor: pointer;
+    font: inherit; font-size: var(--t-micro); color: var(--muted); text-align: center;
   }
-  .cast-role { color: var(--text); }
-  .cast-note { color: var(--muted); }
-  .cast-shots { font-size: var(--t-micro); color: var(--faint); margin-top: var(--s3); }
-  .cast-shots b { color: var(--faint); letter-spacing: .08em; margin-right: var(--s2); }
+  .cs-thumb-img { display: block; aspect-ratio: 2 / 3; border-radius: 8px; transition: border-color .15s, box-shadow .15s; }
+  .cs-thumb-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  .cs-thumb:hover .cs-thumb-img { border-color: var(--line); box-shadow: 0 2px 8px -4px rgba(18,20,24,.3); }
+  .cs-thumb[aria-pressed="true"] { color: var(--text); font-weight: 700; }
+  .cs-thumb[aria-pressed="true"] .cs-thumb-img { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .cs-thumb:focus-visible { outline: none; }
+  .cs-thumb:focus-visible .cs-thumb-img { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .cs-info { min-width: 0; padding: var(--s1) var(--s2) 0 var(--s3); display: flex; flex-direction: column; }
+  .cs-head { display: flex; align-items: baseline; gap: var(--s2); flex-wrap: wrap; }
+  .cast-name { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -.02em; line-height: 1.3; }
+  .cs-head code { color: var(--muted); font-size: var(--t-aux); }
+  .cast-role { margin: var(--s1) 0 0; font-size: var(--t-body); color: var(--text); word-break: keep-all; line-height: 1.6; }
+  .cast-note { margin: var(--s2) 0 0; font-size: var(--t-aux); color: var(--muted); word-break: keep-all; line-height: 1.7; }
+  .cs-facts {
+    display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0 var(--s4);
+    margin: var(--s4) 0 0; font-size: var(--t-aux); line-height: 1.65;
+  }
+  .cs-facts dt, .cs-facts dd { padding: var(--s2) 0; border-top: 1px solid var(--hair); }
+  .cs-facts dt { color: var(--muted); font-weight: 600; }
+  .cs-facts dd { margin: 0; color: var(--text); word-break: keep-all; }
+  .cs-facts ul { margin: 0; padding-left: 1.1em; }
+  .cs-shots { margin-top: var(--s4); }
+  .cs-label { font-size: var(--t-cap); font-weight: 600; color: var(--muted); }
+  .cs-label b { color: var(--text); margin-left: var(--s1); }
+  .cs-chips { display: flex; flex-wrap: wrap; gap: var(--s1); margin-top: var(--s2); }
+  .cs-chips a {
+    min-width: 28px; padding: 1px 6px; text-align: center; border-radius: 6px;
+    font-size: var(--t-micro); color: var(--muted); background: var(--sunk); border: 1px solid var(--hair);
+  }
+  .cs-chips a:hover { color: var(--accent-ink); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+  .cs-findings {
+    margin-top: var(--s4); font-size: var(--t-cap); color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 7%, transparent);
+    border: 1px solid color-mix(in srgb, var(--warn) 22%, transparent); border-radius: 8px; padding: 0 var(--s3);
+  }
+  /* The review shell keeps summaries at a 44px tap target — centre the line inside it. */
+  .cs-findings summary { cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: var(--s2); }
+  .cs-findings summary::-webkit-details-marker { display: none; }
+  .cs-findings summary::before { content: "▸"; font-size: 9px; }
+  .cs-findings[open] summary::before { content: "▾"; }
+  .cs-findings ul { margin: 0 0 var(--s3); padding-left: 1.1em; line-height: 1.6; }
+  .cs-sheet {
+    align-self: flex-start; margin-top: auto; padding-top: var(--s4);
+    font-size: var(--t-aux); font-weight: 600;
+  }
+  @media (max-width: 760px) {
+    .cast-card { grid-template-columns: minmax(0, 1fr); }
+    .cs-stage { width: 100%; max-width: 320px; justify-self: center; }
+    .cs-stage.empty { grid-column: auto; }
+    .cs-strip { flex-direction: row; justify-content: center; }
+    .cs-thumb { width: 60px; }
+    .cs-info { padding: 0; }
+  }
 
   /* ── Camera slots ─────────────────────────────────────── */
   .cam { display: flex; flex-wrap: wrap; gap: var(--s1); margin-top: var(--s1); }
@@ -1582,8 +1642,9 @@ window.STORYBOARD_READY = (async function () {
       hookForm: { paradox: "paradox", gap: "leave a blank", payoff: "result first",
                   identify: "that is me", number: "number · frame", secret: "secret told" },
       cam: { movement: "movement", speed: "speed", framing: "framing", end: "end frame" },
-      panel: { face: "face", body: "headless front mannequin", back: "headless rear mannequin",
-               front: "FRONT · legacy", real: "LIVE ACTION" },
+      panel: { face: "Face close-up", body: "Headless front", back: "Headless back",
+               front: "Front (legacy)", real: "Live action" },
+      panelShort: { face: "Face", body: "Front", back: "Back", front: "Front", real: "Live" },
       deviceSteps: ["claim", "act", "result"],
 
       // ── check-strip categories (flag's second argument) ──
@@ -1776,6 +1837,10 @@ window.STORYBOARD_READY = (async function () {
       castHead: "Episode cast",
       castAside: "shared identity references; scene images belong to shots",
       castShots: "Shots", castScopes: "Scope",
+      castWant: "Wants", castVoice: "Voice", castTts: "TTS voice", castOutfit: "Outfit", castKeep: "Never changes",
+      castNoPanel: "No panel path written", castNoShot: "Appears in no shot — check visual.character",
+      castFindings: function (n) { return n + (n === 1 ? " note on the panels" : " notes on the panels"); },
+      castSheet: "Open the shared character sheet", castPick: "Pick a panel",
 
       // ── contract ──
       contractHead: "Contract caps", contractAside: "computed while drawing the screen",
@@ -1940,8 +2005,9 @@ window.STORYBOARD_READY = (async function () {
       hookForm: { paradox: "역설", gap: "빈칸 남기기", payoff: "결과 먼저", identify: "내 얘기네",
                   number: "숫자·틀", secret: "비밀 공개" },
       cam: { movement: "움직임", speed: "속도", framing: "프레임", end: "끝 프레임" },
-      panel: { face: "얼굴", body: "정면 전신 · 머리 포함", back: "뒷모습",
-               front: "FRONT · legacy", real: "LIVE ACTION" },
+      panel: { face: "얼굴 클로즈업", body: "머리 없는 앞면", back: "머리 없는 뒷면",
+               front: "앞면(이전 이름)", real: "실사" },
+      panelShort: { face: "얼굴", body: "앞면", back: "후면", front: "앞면", real: "실사" },
       deviceSteps: ["주장", "행동", "결과"],
 
       // ── check-strip categories ──
@@ -2132,6 +2198,10 @@ window.STORYBOARD_READY = (async function () {
       castHead: "이번 편 출연진",
       castAside: "공용 외형 참조 · 장면 이미지는 각 샷에서 확인",
       castShots: "샷", castScopes: "범위",
+      castWant: "바라는 것", castVoice: "목소리", castTts: "TTS 음성", castOutfit: "의상", castKeep: "바꾸지 않는 특징",
+      castNoPanel: "패널 경로가 없습니다", castNoShot: "어느 샷에도 나오지 않습니다 — visual.character를 확인하세요",
+      castFindings: function (n) { return "패널 점검 메모 " + n + "건"; },
+      castSheet: "공용 캐릭터 시트 열기", castPick: "패널 고르기",
 
       // ── contract ──
       contractHead: "계약 상한", contractAside: "화면을 그릴 때 계산한 값",
@@ -4844,38 +4914,77 @@ window.STORYBOARD_READY = (async function () {
     // face → body → back is the order the reference set goes into a generation call
     // (video-model-selection §The character panels); front and real are the older per-channel names.
     var PANEL_ORDER = ["face", "body", "back", "front", "real"];
+    // A confirmed identity field (character-identity.js), else "" — pending fields stay on the shared sheet.
+    var idField = function (c, group, key) {
+      var f = c.character && c.character[group] && c.character[group][key];
+      return f && f.status === "confirmed" && f.value != null && f.value !== "" ? f.value : "";
+    };
+    var factHtml = function (label, value) {
+      if (!value || (Array.isArray(value) && !value.length)) return "";
+      return "<dt>" + esc(label) + "</dt><dd>" + (Array.isArray(value)
+        ? "<ul>" + value.map(function (v) { return "<li>" + mark(v) + "</li>"; }).join("") + "</ul>"
+        : mark(String(value))) + "</dd>";
+    };
     CAST.forEach(function (c) {
       var panels = c.panels || {};
       var shots = [], scopes = [];
       SCENES.forEach(function (s, i) {
         charEntries(s).forEach(function (e) {
           if (e.id !== c.id) return;
-          shots.push("#" + (i + 1));
+          shots.push(i + 1);
           if (e.scope) scopes.push("#" + (i + 1) + " " + e.scope);
         });
       });
-      h += '<div class="cast-card"><div class="cast-panels">';
-      var drawn = 0;
-      PANEL_ORDER.forEach(function (key) {
-        var src = panels[key];
-        if (!src) return;
-        drawn++;
-        h += '<div class="cast-panel"><img src="' + esc(src) + '" alt="' + esc(c.id + " " + key) +
-             '" onerror="this.style.visibility=\'hidden\'"><div class="lb">' + esc(T.panel[key] || key) + "</div></div>";
-      });
-      if (!drawn) h += '<div class="cast-panel"><div class="lb">no panel path written</div></div>';
-      h += "</div><div>";
-      h += '<div class="cast-name">' + esc(c.name || c.id) + " <code>" + esc(c.id) + "</code></div>";
-      if (/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c.id || "")) h += '<p><a href="../../../assets/characters/' + encodeURIComponent(c.id) + '/index.html">' + esc(LANG === "ko" ? "공용 캐릭터 시트" : "Shared character sheet") + '</a></p>';
-      (window.REVIEW_PANEL_FINDINGS || []).filter(function (f) { return f.characterId === c.id; }).forEach(function (f) { h += '<p class="cast-note">' + esc(LANG === 'ko' ? f.messageKo || f.message : f.message) + '</p>'; });
-      if (c.role) h += '<div class="cast-role">' + mark(c.role) + "</div>";
-      if (c.note) h += '<div class="cast-note">' + mark(c.note) + "</div>";
-      h += '<div class="cast-shots"><b>' + esc(T.castShots) + "</b>" +
-           (shots.length ? shots.join(" · ")
-                         : "appears in no shot — check visual.character") + "</div>";
+      var keys = PANEL_ORDER.filter(function (key) { return panels[key]; });
+      var name = c.name || c.id;
+      // Stage + strip, after the character sheet detail in aicon: one panel large, the rest picked from the strip.
+      h += '<article class="cast-card"><div class="cs-stage' + (keys.length ? '" data-kind="' + keys[0] : " empty") + '">';
+      if (keys.length) {
+        h += '<img src="' + esc(panels[keys[0]]) + '" alt="' + esc(name + " " + (T.panel[keys[0]] || keys[0])) +
+             '" onerror="this.style.visibility=\'hidden\'"><span class="cs-pill">' + esc(T.panel[keys[0]] || keys[0]) + "</span>";
+      } else h += '<span class="cs-empty">' + esc(T.castNoPanel) + "</span>";
+      h += "</div>";
+      if (keys.length > 1) {
+        h += '<div class="cs-strip" role="group" aria-label="' + esc(T.castPick) + '">';
+        keys.forEach(function (key, k) {
+          h += '<button type="button" class="cs-thumb" data-kind="' + key + '" aria-pressed="' + (k ? "false" : "true") + '" data-src="' + esc(panels[key]) +
+               '" data-label="' + esc(T.panel[key] || key) + '" data-alt="' + esc(name + " " + (T.panel[key] || key)) + '">' +
+               '<span class="cs-thumb-img"><img src="' + esc(panels[key]) + '" alt="" onerror="this.style.visibility=\'hidden\'"></span>' +
+               "<span>" + esc((T.panelShort || {})[key] || key) + "</span></button>";
+        });
+        h += "</div>";
+      }
+      h += '<div class="cs-info"><header class="cs-head"><h3 class="cast-name">' + esc(name) + "</h3><code>" + esc(c.id) + "</code></header>";
+      var lead = c.role && c.role !== name ? c.role : idField(c, "identity", "summary");
+      if (lead) h += '<p class="cast-role">' + mark(lead) + "</p>";
+      var tts = c.tts && [c.tts.engine, c.tts.voiceId].filter(Boolean).join(" / ");
+      var facts = factHtml(T.castWant, c.want !== lead && c.want) +
+        factHtml(T.castVoice, c.voice || idField(c, "speech", "timbre")) +
+        factHtml(T.castTts, tts) +
+        factHtml(T.castOutfit, idField(c, "physical", "outfit")) +
+        factHtml(T.castKeep, idField(c, "continuity", "invariants"));
+      if (facts) h += '<dl class="cs-facts">' + facts + "</dl>";
+      if (c.note) h += '<p class="cast-note">' + mark(c.note) + "</p>";
+      h += '<div class="cs-shots"><div class="cs-label">' + esc(T.castShots) + (shots.length ? " <b>" + shots.length + "</b>" : "") + "</div>" +
+           (shots.length ? '<div class="cs-chips">' + shots.map(function (n) { return '<a href="#shot-' + n + '">' + n + "</a>"; }).join("") + "</div>"
+                         : '<p class="cast-note">' + esc(T.castNoShot) + "</p>") + "</div>";
       if (scopes.length)
-        h += '<div class="cast-shots"><b>' + esc(T.castScopes) + "</b>" + esc(scopes.join(" · ")) + "</div>";
-      h += "</div></div>";
+        h += '<div class="cs-shots"><div class="cs-label">' + esc(T.castScopes) + '</div><p class="cast-note">' + esc(scopes.join(" · ")) + "</p></div>";
+      var findings = (window.REVIEW_PANEL_FINDINGS || []).filter(function (f) { return f.characterId === c.id; });
+      if (findings.length)
+        h += '<details class="cs-findings"><summary>' + esc(T.castFindings(findings.length)) + "</summary><ul>" +
+             findings.map(function (f) { return "<li>" + esc(LANG === "ko" ? f.messageKo || f.message : f.message) + "</li>"; }).join("") + "</ul></details>";
+      if (/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c.id || "")) h += '<a class="cs-sheet" href="../../../assets/characters/' + encodeURIComponent(c.id) + '/index.html">' + esc(T.castSheet) + "</a>";
+      h += "</div></article>";
+    });
+    document.addEventListener("click", function (e) {
+      var btn = e.target.closest && e.target.closest(".cs-thumb");
+      if (!btn) return;
+      var card = btn.closest(".cast-card"), img = card.querySelector(".cs-stage img");
+      card.querySelector(".cs-stage").setAttribute("data-kind", btn.getAttribute("data-kind"));
+      img.style.visibility = ""; img.src = btn.getAttribute("data-src"); img.alt = btn.getAttribute("data-alt");
+      card.querySelector(".cs-pill").textContent = btn.getAttribute("data-label");
+      card.querySelectorAll(".cs-thumb").forEach(function (b) { b.setAttribute("aria-pressed", b === btn ? "true" : "false"); });
     });
     h += "</div>";
   }
