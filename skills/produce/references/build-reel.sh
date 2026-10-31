@@ -1348,7 +1348,7 @@ if [ -s work/sfx.list ]; then
     SMIX+="[x$SN2]"; SN2=$((SN2+1))
   done < work/sfx.list
   ffmpeg -y -v error "${SI[@]}" -filter_complex \
-    "${SFC}${SMIX}amix=inputs=$SN2:duration=first:normalize=0,apad,atrim=0:$NT[sx]" \
+    "${SFC}${SMIX}amix=inputs=$SN2:duration=first:normalize=0,apad=whole_dur=$NT,atrim=0:$NT[sx]" \
     -map "[sx]" -ac 1 -ar 48000 work/sfx.wav
   SFXIN="-i work/sfx.wav"
   read -r SXM _ <<< "$(sfx_measure work/sfx.wav)"

@@ -45,7 +45,7 @@ function prepare(work, board) {
     const sourceSha256 = hash(video);
     const audioDir = path.join(work, '.source-audio'); fs.mkdirSync(audioDir, { recursive: true });
     const audio = path.join(audioDir, sourceSha256 + '.wav');
-    execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', video, '-map', '0:a:0', '-af', 'apad', '-t', String(seconds), '-ar', '48000', '-ac', '2', '-c:a', 'pcm_s16le', audio]);
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', video, '-map', '0:a:0', '-af', 'apad=whole_dur=' + seconds, '-t', String(seconds), '-ar', '48000', '-ac', '2', '-c:a', 'pcm_s16le', audio]);
     const originalAudio = old && fields[1] === old.audio ? old.originalAudio : fields[1];
     const originalSync = old && fields[1] === old.audio ? old.originalSync : options.filter(option => option.startsWith('sync='));
     fields[1] = audio;

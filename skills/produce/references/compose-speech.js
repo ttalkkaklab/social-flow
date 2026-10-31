@@ -64,7 +64,8 @@ function compose(work,board) {
       const interval=intervals.find(item=>item.lineId===line.id);
       filters.push(`[${i}:a]aresample=48000,aformat=sample_fmts=s16:channel_layouts=mono,adelay=${Math.round(interval.speechStartSeconds*48000)}S:all=1[a${i}]`);
     });
-    filters.push(lines.map((_,i)=>`[a${i}]`).join('')+`amix=inputs=${lines.length}:normalize=0,apad,atrim=duration=${timing.durationSeconds}[out]`);
+    // A bounded apad ends on its own; an endless one cut only downstream can hang ffmpeg 7+ (trac #11061; CI 2026-10-31).
+    filters.push(lines.map((_,i)=>`[a${i}]`).join('')+`amix=inputs=${lines.length}:normalize=0,apad=whole_dur=${timing.durationSeconds},atrim=duration=${timing.durationSeconds}[out]`);
     const output=path.join(work,`c${fields[0]}-speech.wav`),tmp=output+'.tmp.wav';
     try {execFileSync('ffmpeg',['-y','-v','error',...inputs,'-filter_complex',filters.join(';'),'-map','[out]','-c:a','pcm_s16le',tmp],{timeout:120000});fs.renameSync(tmp,output);} finally {if(fs.existsSync(tmp))fs.unlinkSync(tmp);}
     const receipt={generator:'speech_compose',audioSha256:hash(fs.readFileSync(output)),lineIds:lines.map(n=>n.id),lineSources:lineSources(lines),expectedText:lines.map(n=>n.tts).join('. '),durationSeconds:duration(output),intervals,timing:timing.timing,warnings:timing.warnings,status:'not_reviewed'};

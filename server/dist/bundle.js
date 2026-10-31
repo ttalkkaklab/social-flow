@@ -68679,7 +68679,7 @@ var require_compose_speech = __commonJS({
           const interval = intervals.find((item) => item.lineId === line.id);
           filters.push(`[${i2}:a]aresample=48000,aformat=sample_fmts=s16:channel_layouts=mono,adelay=${Math.round(interval.speechStartSeconds * 48e3)}S:all=1[a${i2}]`);
         });
-        filters.push(lines.map((_, i2) => `[a${i2}]`).join("") + `amix=inputs=${lines.length}:normalize=0,apad,atrim=duration=${timing.durationSeconds}[out]`);
+        filters.push(lines.map((_, i2) => `[a${i2}]`).join("") + `amix=inputs=${lines.length}:normalize=0,apad=whole_dur=${timing.durationSeconds},atrim=duration=${timing.durationSeconds}[out]`);
         const output2 = path29.join(work, `c${fields2[0]}-speech.wav`), tmp = output2 + ".tmp.wav";
         try {
           execFileSync15("ffmpeg", ["-y", "-v", "error", ...inputs, "-filter_complex", filters.join(";"), "-map", "[out]", "-c:a", "pcm_s16le", tmp], { timeout: 12e4 });

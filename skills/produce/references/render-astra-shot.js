@@ -11,7 +11,7 @@ function conditioningAudio(source, output, seconds) {
   const measured = require('./compose-speech.js').duration(source);
   if (!Number.isFinite(seconds) || seconds < measured - 1 / 48000)
     throw new Error('Transport duration cannot truncate supplied speech');
-  execFileSync('ffmpeg', ['-v','error','-y','-i',source,'-af',`aresample=48000,apad,atrim=end_sample=${Math.ceil(seconds * 48000)}`,
+  execFileSync('ffmpeg', ['-v','error','-y','-i',source,'-af',`aresample=48000,apad=whole_len=${Math.ceil(seconds * 48000)},atrim=end_sample=${Math.ceil(seconds * 48000)}`,
     '-ar','48000','-ac','2','-c:a','pcm_s16le',output], { timeout:120000 });
   return {source,output,canonicalSeconds:measured,transportSeconds:seconds};
 }

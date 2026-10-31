@@ -69,11 +69,11 @@ VF+="[1:v]format=rgba,fade=t=in:st=${ST}:d=${LOCKUP_XF}:alpha=1[lk];
 AF=""; AMAP=""
 if [ "$AUDIO" = "native" ]; then
   AF+="[0:a]asetpts=PTS-STARTPTS,aformat=channel_layouts=stereo,aresample=48000,
-       apad,atrim=0:${D}[nat];"
+       apad=whole_dur=${D},atrim=0:${D}[nat];"
 fi
 if [ -n "$SN_IDX" ]; then
   AF+="[${SN_IDX}:a]aformat=channel_layouts=stereo,aresample=48000,volume=${SONIC_VOL},
-       adelay=${SONIC_MS}:all=1,apad,atrim=0:${D}[sn];"
+       adelay=${SONIC_MS}:all=1,apad=whole_dur=${D},atrim=0:${D}[sn];"
 fi
 if [ "$AUDIO" = "native" ] && [ -n "$SN_IDX" ]; then
   AF+="[sn]asplit=2[sn_key][sn_mix];
@@ -93,7 +93,7 @@ if [ "$ROOMTONE" = "1" ]; then
 fi
 AF+="${APRE}loudnorm=I=-14:TP=-1.0:LRA=11,aresample=48000,
      alimiter=limit=0.891:attack=5:release=50,
-     apad,atrim=0:${D},afade=t=out:st=${AFST}:d=${FADE_OUT}[a]"   # guarantees length and peak (-1dBFS)
+     apad=whole_dur=${D},atrim=0:${D},afade=t=out:st=${AFST}:d=${FADE_OUT}[a]"   # guarantees length and peak (-1dBFS)
 
 ffmpeg -y -v error "${IN[@]}" -filter_complex "${VF};${AF}" -map "[v]" -map "[a]" \
   -c:v libx264 -profile:v high -level 4.1 -preset slow -crf 18 -pix_fmt yuv420p \
