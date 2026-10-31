@@ -94,8 +94,7 @@ function installHint(detail: string): string {
     `  uv tool install --python 3.12 mflux\n` +
     `If it's installed elsewhere, point MFLUX_ZIMAGE_BIN at the executable ` +
     `(e.g. MFLUX_ZIMAGE_BIN=~/.venvs/mflux/bin/mflux-generate-z-image-turbo).\n` +
-    `The first call downloads the ~31GB Z-Image Turbo weight repository to ~/.cache/huggingface.\n` +
-    `Until it's installed, use gpt_image_text2img — that one only needs OPENAI_API_KEY.`
+    `The first call downloads the ~31GB Z-Image Turbo weight repository to ~/.cache/huggingface.`
   );
 }
 
@@ -143,6 +142,8 @@ export async function generateLocalImage(request: ZImageGenerateRequest): Promis
     request.filename || `zimage_${Date.now()}.png`,
     'image',
   );
+  // A pre-existing file would also pass the existence check below as a false success.
+  if (existsSync(outFile)) return { success: false, error: `Output already exists; choose a new filename: ${outFile}` };
 
   // Assemble exactly the flags used in the field test (--prompt/--width/--height/--steps/-q/--output[/--seed]).
   const cliArgs = [

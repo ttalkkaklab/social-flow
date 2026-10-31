@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
 import { atomicJson } from './routing-files.js';
+import { IMAGE_ADAPTERS } from './image-registry.js';
 const money = z.number().finite().nonnegative();
 export const imageJobSchema = z.object({
     outputFile: z.string(), planId: z.string(), requestId: z.string(), assetId: z.string(), tool: z.string(),
@@ -20,7 +21,9 @@ function hasHistory(directory) {
     const events = path.join(directory, '.work/events.jsonl');
     if (fs.existsSync(events))
         for (const line of fs.readFileSync(events, 'utf8').split('\n').filter(Boolean)) {
-            if (/^(gpt_image_|image_local_|mlx_image_|astra_genai_(text2img|edit|image_generate|image_edit)$)/.test(JSON.parse(line).tool || ''))
+            // Current adapters come from the registry; the prefixes keep older tool names counted.
+            const tool = String(JSON.parse(line).tool || '');
+            if (Object.hasOwn(IMAGE_ADAPTERS, tool) || /^(gpt_image_|image_local_|mlx_image_)/.test(tool))
                 return true;
         }
     const tally = path.join(directory, '.work/cost-tally.tsv');

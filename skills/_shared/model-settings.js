@@ -22,7 +22,17 @@ function retiredSpeech(choice) {
 function retiredVideo(choice) {
   return Boolean(choice) && (['veo', 'omni'].includes(choice.engine) || (choice.engine === 'seedance' && /^seedance-1-/.test(choice.model)));
 }
+// GPT Image models past the shutdown date in the generated image catalog (snapshots map to their family).
+function retiredImage(choice, today = new Date().toISOString().slice(0, 10)) {
+  if (!choice || choice.engine !== 'gpt-image' || typeof choice.model !== 'string') return false;
+  const contracts = require('./image-catalog.json').gptContracts;
+  const family = Object.keys(contracts).filter(key => choice.model === key || choice.model.startsWith(key + '-'))
+    .sort((a, b) => b.length - a.length)[0];
+  const shutdown = family && contracts[family].shutdown;
+  return Boolean(shutdown) && today >= shutdown;
+}
 function retiredChoice(kind, choice) {
+  if (kind === 'image') return retiredImage(choice);
   return kind === 'speech' ? retiredSpeech(choice) : kind === 'video' && retiredVideo(choice);
 }
 const FIELDS = {
@@ -67,6 +77,7 @@ function validateModels(models, partial = false, allowRetired = false) {
     const retired = allowRetired && retiredChoice(kind, choice);
     if (!object(choice) || (!engines.includes(choice.engine) && !retired)) throw new Error(`${kind}.engine must be one of ${engines.join(', ')}`);
     if (kind === 'video' && retiredVideo(choice) && !retired) throw new Error(`${choice.model} cannot keep a character's voice; choose Seedance 2.x or an LTX engine`);
+    if (kind === 'image' && retiredImage(choice) && !retired) throw new Error(`${choice.model} reached its shutdown date; choose a current image model from image_catalog`);
     for (const [key, value] of Object.entries(choice)) {
       if (!FIELDS[kind].includes(key) || !nonempty(value)) throw new Error(`Invalid ${kind}.${key}`);
     }
@@ -131,11 +142,12 @@ function readSettings(workspace) {
   const file = settingsPath(workspace);
   const config = readJson(file);
   if (config === undefined) return { status: 'setup_required', file };
-  const retired = ['speech', 'video'].filter(kind => retiredChoice(kind, config?.models?.[kind]));
+  const retired = ['speech', 'video', 'image'].filter(kind => retiredChoice(kind, config?.models?.[kind]));
   validateConfig(config, retired.length > 0);
   if (retired.length) return { status: 'migration_required', file, revision: revision(config), config, retired: retired.map(kind => `models.${kind}`), migration: [
     retired.includes('speech') && 'Speech model is retired. Explicitly update speech to Gemini or ElevenLabs eleven_v4 before new generation.',
     retired.includes('video') && 'Video model cannot keep a character\'s voice and is retired (Veo, Gemini Omni, Seedance 1.x). Explicitly choose Seedance 2.x or an LTX engine before new generation.',
+    retired.includes('image') && 'Image model reached its provider shutdown date. Explicitly choose a current image model before new generation.',
     'Saved media and episode snapshots are preserved.'].filter(Boolean).join(' ') };
   return { status: config.videoType ? 'configured' : 'video_type_required', file, revision: revision(config), config };
 }

@@ -20,6 +20,9 @@ test('OpenAI preserves returned usage/request identity and disables implicit ret
   assert.deepEqual(result.usage, usage); assert.equal(result.requestId, 'req-1');
   assert.equal(result.size, '1024x1024'); assert.equal(result.quality, 'low');
   globalThis.fetch = async () => { calls++; return new Response('{"error":{"message":"unavailable"}}', { status: 503, headers: { 'content-type': 'application/json' } }); };
-  assert.equal((await generateFromText(request)).success, false);
-  assert.equal(calls, 2);
+  const unavailable = await generateFromText(request);
+  assert.equal(unavailable.success, false); assert.equal(unavailable.terminal, false);
+  globalThis.fetch = async () => { calls++; return new Response('{"error":{"message":"rejected"}}', { status: 400, headers: { 'content-type': 'application/json' } }); };
+  assert.equal((await generateFromText(request)).terminal, true);
+  assert.equal(calls, 3);
 });

@@ -1,6 +1,5 @@
 /**
- * Generated-media file utilities — ported from fect-mcp-server shared/path-utils.ts
- * (images, video, audio).
+ * Generated-media file utilities (images, video, audio).
  *
  * Handles path validation (traversal blocking + extension whitelist) and saving base64
  * images and audio.
@@ -76,7 +75,8 @@ export async function saveBase64Image(
   await fs.promises.mkdir(path.dirname(resolved), { recursive: true });
 
   const buffer = Buffer.from(base64Data, 'base64');
-  await fs.promises.writeFile(resolved, buffer);
+  // Never replace an earlier asset: an existing file fails the save instead.
+  await fs.promises.writeFile(resolved, buffer, { flag: 'wx' });
 
   const stats = await fs.promises.stat(resolved);
   return { filePath: resolved, size: stats.size };

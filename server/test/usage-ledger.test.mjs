@@ -241,3 +241,9 @@ test('a reference video bills its own seconds next to the output on the with-vid
   assert.deepEqual(priceOf('seedance_reference', { model: 'dreamina-seedance-2-0-260128', resolution: '1080p', durationSeconds: 5,
     referenceImagePaths: ['/tmp/a.png'] }), { key: 'seedance.2-0.1080p', quantity: 5 });
 });
+
+test('a GPT Image call without a flat price row gets a null key, never a GPT Image 2 row', () => {
+  assert.equal(priceOf('gpt_image_text2img', { model: 'gpt-image-1.5', quality: 'high' }).key, null);
+  assert.equal(priceOf('gpt_image_text2img', {}).key, null); // schema default quality is auto
+  assert.equal(priceOf('gpt_image_text2img', { model: 'gpt-image-2-2026-04-21', quality: 'low' }).key, 'image.gpt-image-2.low');
+});

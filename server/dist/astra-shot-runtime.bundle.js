@@ -169,6 +169,15 @@ function gptImageFamily(model2) {
   if (model2 === "gpt-image-1.5-2025-12-16") return "gpt-image-1.5";
   return model2;
 }
+var GPT_IMAGE_CONTRACTS = {
+  "gpt-image-2": { shutdown: null, flexibleSize: true, transparency: "preview", fidelity: [], rates: { text: 5, image: 8, output: 30 } },
+  "gpt-image-1.5": { shutdown: "2026-12-01", flexibleSize: false, transparency: "supported", fidelity: ["low", "high"], rates: { text: 5, image: 8, output: 32 } },
+  "gpt-image-1": { shutdown: "2026-10-23", flexibleSize: false, transparency: "supported", fidelity: ["low", "high"], rates: { text: 5, image: 10, output: 40 } },
+  "gpt-image-1-mini": { shutdown: "2026-12-01", flexibleSize: false, transparency: "supported", fidelity: ["low"], rates: { text: 2, image: 2.5, output: 8 } }
+};
+function gptImageContract(model2) {
+  return GPT_IMAGE_CONTRACTS[gptImageFamily(model2)];
+}
 function mlxImageFamily(model2 = "") {
   if (/qwen.*image.*2[.-]1/i.test(model2)) return "qwen-2.1";
   if (/mage[-_]?flow/i.test(model2)) return /edit/i.test(model2) ? "mage-edit" : "mage";
@@ -4477,7 +4486,6 @@ var responseSchema = external_exports.object({
 // src/image-client.ts
 var VALID_GPT_IMAGE_MODELS = GPT_IMAGE_MODELS;
 var DEFAULT_MODEL = "gpt-image-2";
-var GPT_IMAGE_FLEXIBLE_SIZE_MODELS = ["gpt-image-2"];
 var GPT_IMAGE_SIZE_PRESETS = [
   "auto",
   "1024x1024",
@@ -4506,7 +4514,7 @@ function validateSizeAgainstModel(model2, size, ctx) {
   if (GPT_IMAGE_SIZE_PRESETS.includes(size)) return;
   const match = WH_SIZE_RE.exec(size);
   if (!match) return;
-  if (!GPT_IMAGE_FLEXIBLE_SIZE_MODELS.includes(gptImageFamily(model2))) {
+  if (!gptImageContract(model2)?.flexibleSize) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
       path: ["size"],
@@ -4541,7 +4549,7 @@ function validateSizeAgainstModel(model2, size, ctx) {
     });
   }
 }
-function validateBackground(model2, background, outputFormat, ctx) {
+function validateBackground(background, outputFormat, ctx) {
   if (background !== "transparent") return;
   if (outputFormat === "jpeg") {
     ctx.addIssue({
@@ -4561,7 +4569,7 @@ var text2ImageSchema = external_exports.object({
   savePath: external_exports.string().optional()
 }).superRefine((data, ctx) => {
   validateSizeAgainstModel(data.model, data.size, ctx);
-  validateBackground(data.model, data.background, data.outputFormat, ctx);
+  validateBackground(data.background, data.outputFormat, ctx);
 });
 var img2ImgSchema = external_exports.object({
   prompt: external_exports.string().min(1, "Prompt is required").max(32e3, "Prompt exceeds the 32,000-character limit for GPT Image models"),
@@ -4577,21 +4585,14 @@ var img2ImgSchema = external_exports.object({
   savePath: external_exports.string().optional()
 }).superRefine((data, ctx) => {
   validateSizeAgainstModel(data.model, data.size, ctx);
-  validateBackground(data.model, data.background, data.outputFormat, ctx);
-  if (data.inputFidelity) {
-    if (data.model === "gpt-image-1-mini" && data.inputFidelity !== "low") {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["inputFidelity"],
-        message: "gpt-image-1-mini supports only low inputFidelity. Use gpt-image-1 / gpt-image-1.5."
-      });
-    } else if (gptImageFamily(data.model) === "gpt-image-2") {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["inputFidelity"],
-        message: "gpt-image-2 always runs at high fidelity and does not accept the inputFidelity parameter. Omit the parameter."
-      });
-    }
+  validateBackground(data.background, data.outputFormat, ctx);
+  const allowed = gptImageContract(data.model)?.fidelity ?? [];
+  if (data.inputFidelity && !allowed.includes(data.inputFidelity)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["inputFidelity"],
+      message: allowed.length ? `${data.model} accepts inputFidelity ${allowed.join("/")} only.` : `${data.model} does not accept inputFidelity (fixed high fidelity). Omit the parameter.`
+    });
   }
 });
 
@@ -6450,7 +6451,10 @@ function priceOf(tool, args = {}) {
     };
   }
   if (tool.startsWith("gpt_image_")) {
-    const quality = str(args.quality, "medium");
+    const family = gptImageFamily(str(args.model, "gpt-image-2"));
+    const quality = str(args.quality, "auto");
+    if (family !== "gpt-image-2" || !["low", "medium", "high"].includes(quality))
+      return { key: null, quantity: null, note: `No flat price for ${family} quality ${quality}; the provider usage receipt is authoritative` };
     return { key: `image.gpt-image-2.${quality}`, quantity: num(args.n, 1) };
   }
   if (tool === "image_local_generate") {
