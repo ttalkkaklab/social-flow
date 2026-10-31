@@ -250,7 +250,7 @@ Shot 3: The man clears a low wall and disappears. The camera pulls back slowly a
   </table>
   </div>
   <div class="ok">
-    <strong>Turning audio on doesn't raise 2.0's token count.</strong> With the same prompt and length (1080p, 15s), silent and audio runs both came out at <strong>731,025 tokens</strong> (measured 2026-08-15). That differs from 1.5 pro, where audio exactly doubles the unit price — on 2.0 there's no reason to turn sound off. That verdict does treat the response's <code>completion_tokens</code> as the billing basis, so if the vendor bills audio as a separate line item it wouldn't show up here.
+    <strong>Turning audio on doesn't raise 2.0's token count.</strong> With the same prompt and length (1080p, 15s), silent and audio runs both came out at <strong>731,025 tokens</strong> (measured 2026-08-15). On 2.0 there's no reason to turn sound off. That verdict does treat the response's <code>completion_tokens</code> as the billing basis, so if the vendor bills audio as a separate line item it wouldn't show up here.
   </div>
   <p>For reference, dropping to 720p takes the same 15 seconds to <strong>324,900 tokens</strong>, 44% of 1080p. The token formula is proportional to width × height, so it falls exactly as predicted.</p>
 </section>
@@ -284,7 +284,7 @@ Shot 3: The man clears a low wall and disappears. The camera pulls back slowly a
   <span><a href="https://docs.byteplus.com/en/docs/ModelArk/2223965">digital character library</a></span>
   <span><a href="https://docs.byteplus.com/en/docs/ModelArk/2222480">2.0 prompt guide</a></span>
   <span><a href="https://docs.byteplus.com/en/docs/ModelArk/2291680">2.0 tutorial</a></span>
-  <span>Compare <a href="veo-portrait.en.html">Veo people and reference policy</a> — Veo lets the same face PNG through</span>
+  <span>Photoreal real-person sources go to the LTX lanes (<code>astra_genai_*</code>, <code>astra_*</code>, <code>ltx_video_generate</code>)</span>
 </footer>
 
 </div>

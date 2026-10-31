@@ -79,6 +79,8 @@ export function videoVoiceCapabilities(tool) {
     };
 }
 export function speechVideoCapabilities(provider, model, operation) {
+    if (['veo', 'omni'].includes(provider) || (provider === 'seedance' && !Object.hasOwn(seedance.SEEDANCE_MODEL_SPECS, model)))
+        throw new Error(`video_engine_unsupported: ${provider} ${model} cannot keep a character's voice; choose a video model again with project_manage`);
     // MSR voices the dialogue written in its prompt; no line audio goes in (2026-10-31).
     if (provider === 'astra-genai' && operation === 'reference')
         return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: 'MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio' };

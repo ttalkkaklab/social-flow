@@ -926,7 +926,7 @@ Full index: **[docs/index.html](docs/index.html)** (Korean) ·
 
 ### API reference (docs/api-reference/)
 
-Side-by-side notes on the official contracts of the 12 external APIs the internal MCP
+Side-by-side notes on the official contracts of the 11 external APIs the internal MCP
 server calls, and how this implementation honors (or deliberately narrows) each one.
 
 - **[API reference hub](docs/api-reference/index.html)** — inventory · credential matrix · tool↔API map

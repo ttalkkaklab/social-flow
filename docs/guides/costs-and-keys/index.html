@@ -92,7 +92,7 @@
 <section id="split">
   <h2>돈이 드는 자리와 안 드는 자리</h2>
 
-  <p class="lede">영상과 음악의 <strong>기본 경로는 과금</strong>이다. 이미지와 목소리는 애플 실리콘 맥에서 기기 안 엔진으로 공짜로 만들 수 있고, 받아쓰기는 아예 무료 경로뿐이다. MLX Core 가 떠 있으면 <code>mlx_video_generate</code> · <code>mlx_music_generate</code> 가 $0 대타다 — 기본값은 그대로 Veo/Seedance 와 Lyria 다.</p>
+  <p class="lede">영상과 음악의 <strong>기본 경로는 과금</strong>이다. 이미지와 목소리는 애플 실리콘 맥에서 기기 안 엔진으로 공짜로 만들 수 있고, 받아쓰기는 아예 무료 경로뿐이다. MLX Core 가 떠 있으면 <code>mlx_video_generate</code> · <code>mlx_music_generate</code> 가 $0 대타다 — 기본값은 그대로 저장된 영상 모델과 Lyria 다.</p>
 
   <p>다만 무료 경로에는 각각 못 하는 일이 있다. 그 한계가 곧 "이건 돈을 내야 한다"의 목록이다.</p>
 
@@ -109,8 +109,8 @@
       <tr>
         <td><strong>영상</strong></td>
         <td><code>mlx_video_generate</code><br>MLX Core · 선택 · 기본 아님</td>
-        <td>24fps, RAM 상한, ffmpeg mux. Veo/Seedance 얼굴 정책 표에 안 올린다</td>
-        <td><code>veo_*</code> <span class="badge key">GEMINI_API_KEY</span><br><code>seedance_*</code> <span class="badge key">ARK_API_KEY</span></td>
+        <td>24fps, RAM 상한, ffmpeg mux. Seedance 얼굴 정책 표에 안 올린다</td>
+        <td><code>seedance_*</code> <span class="badge key">ARK_API_KEY</span><br><code>astra_genai_*</code> <span class="badge key">ASTRA_GENAI_API_KEY</span></td>
       </tr>
       <tr>
         <td><strong>목소리</strong></td>
@@ -207,60 +207,22 @@
 <section id="video">
   <h2>영상</h2>
 
-  <p class="lede"><strong>생성 영상에는 무료 경로가 없다.</strong> 기기 안에서 도는 영상 엔진은 이 플러그인에 없고, 두 엔진 모두 초 단위로 과금한다.</p>
+  <p class="lede"><strong>돈이 드는 생성 영상은 Seedance 2.x 와 ASTRA GenAI(LTX)다.</strong> Seedance 는 초 단위로 과금한다. 기기 안에서 도는 <code>mlx_video_generate</code>·<code>ltx_video_generate</code> 와 자체 LTX 서버(<code>astra_*</code>)는 $0 이다. Veo·Gemini Omni·Seedance 1.x는 음성 참조를 받지 않아 2026-10-31에 플러그인에서 빠졌다 — 그 단가 행은 이전 원장을 계산하려고 <code>prices.tsv</code> 에 그대로 둔다.</p>
 
   <div class="ok">
-    <strong>그래도 기본값은 영상 호출 0 회다.</strong> 자동 저작의 경제 티어는 정지 이미지 + 켄번즈로 60초를 채운다. Veo 는 한 번에 최대 8초라 생성 영상만으로 한 편을 채우려면 여덟 컷을 뽑아 이어 붙여야 하고, 어차피 편집 레이어가 필요하다. 그래서 남는 질문은 하나다 — <strong>어느 한 칸에 생성 영상을 넣을 것인가.</strong>
+    <strong>그래도 기본값은 영상 호출 0 회다.</strong> 자동 저작의 경제 티어는 정지 이미지 + 켄번즈로 60초를 채운다. 생성 영상은 한 프롬프트에 순간 하나만 담는 편이 결과가 좋아 어차피 컷을 이어 붙이는 편집 레이어가 필요하다. 그래서 남는 질문은 하나다 — <strong>어느 한 칸에 생성 영상을 넣을 것인가.</strong>
   </div>
 
-  <h3>Veo 3.1 — 초당 과금, 소리 포함, 길이는 4·6·8초 격자</h3>
+  <h3>Seedance 2.x — 요청한 초만큼만, 소리는 선택</h3>
 
-  <p>Veo 는 <span class="badge key">GEMINI_API_KEY</span> 로 부르고 <strong>소리가 항상 포함</strong>된다. 끌 수 없고 무료 구간도 없다. 길이는 4·6·8초 격자에 고정돼 있으며 <strong>1080p 와 4K 는 8초짜리만</strong> 만들어진다.</p>
-
-  <div class="warn">
-    <strong>4초만 쓸 거라도 8초 값을 낸다.</strong> 1080p 를 4초만 생성하는 선택지가 API 에 없기 때문이다. 초당 단가만 비교하면 실제 지출을 과소평가한다 — 원장에는 <strong>생성 길이</strong>를 적는다.
-  </div>
+  <p>Seedance 는 BytePlus ModelArk 에서 <span class="badge key">ARK_API_KEY</span> 로 부른다. <strong>요청한 초 그대로 과금</strong>하고 4~30초를 1초 단위로 끊어 쓴다. 소리는 끌 수 있다.</p>
 
   <div class="table-scroll">
   <table>
     <thead><tr><th>키</th><th class="num">USD/초</th><th>등급</th><th>비고</th></tr></thead>
     <tbody>
-      <tr><td><code>veo.lite.720p</code></td><td class="num">0.05</td><td><span class="g off">official</span></td><td>veo-3.1-lite-generate-preview</td></tr>
-      <tr><td><code>veo.lite.1080p</code></td><td class="num">0.08</td><td><span class="g off">official</span></td><td>1080p 는 8초 전용 — 자동 승급이 쓰는 조합</td></tr>
-      <tr><td><code>veo.fast.720p</code></td><td class="num">0.10</td><td><span class="g off">official</span></td><td>veo-3.1-fast-generate-preview</td></tr>
-      <tr><td><code>veo.fast.1080p</code></td><td class="num">0.12</td><td><span class="g off">official</span></td><td>1080p 는 8초 전용</td></tr>
-      <tr><td><code>veo.fast.4k</code></td><td class="num">0.30</td><td><span class="g off">official</span></td><td>4K 는 8초 전용</td></tr>
-      <tr><td><code>veo.standard.720p</code></td><td class="num">0.40</td><td><span class="g off">official</span></td><td>자율 저작에서는 금지된 티어</td></tr>
-      <tr><td><code>veo.standard.1080p</code></td><td class="num">0.40</td><td><span class="g off">official</span></td><td>720p 와 같은 값 — 1080p 는 8초 전용</td></tr>
-      <tr><td><code>veo.standard.4k</code></td><td class="num">0.60</td><td><span class="g off">official</span></td><td>lite 는 4K 를 지원하지 않는다</td></tr>
-    </tbody>
-  </table>
-  </div>
-
-  <div class="calc">
-    <b>Veo lite · 1080p · 8초 한 컷</b><br>
-    8초 × $0.08 = <b>$0.64</b><br>
-    실제로 4초만 써도 값은 그대로 $0.64 — 원장에는 <code>veo.lite.1080p&#9;8</code> 로 적는다.
-  </div>
-
-  <p>표준(standard) 티어는 돈 때문만이 아니라 <strong>판단이 필요해서</strong> 자율 저작에서 빠져 있다. 8초에 $3.20 은 자율 루프가 혼자 내릴 결정이 아니고, 블라인드 비교에서 standard 가 lite·fast 와 통계적으로 구별되지 않았기 때문에 그 돈이 사는 품질도 측정되지 않는다.</p>
-
-  <h3>Seedance — 요청한 초만큼만, 소리는 선택</h3>
-
-  <p>Seedance 는 BytePlus ModelArk 에서 <span class="badge key">ARK_API_KEY</span> 로 부른다. Veo 와 달리 <strong>요청한 초 그대로 과금</strong>하고 2~30초를 1초 단위로 끊어 쓴다. 소리를 끌 수 있어서 <strong>무음 컷이 훨씬 싸다.</strong></p>
-
-  <div class="table-scroll">
-  <table>
-    <thead><tr><th>키</th><th class="num">USD/초</th><th>등급</th><th>비고</th></tr></thead>
-    <tbody>
-      <tr><td><code>seedance.1-0-pro-fast.720p</code></td><td class="num">0.020</td><td><span class="g der">derived</span></td><td>가장 싸다 — 무음 전용·첫 프레임만</td></tr>
-      <tr><td><code>seedance.1-5-pro-silent.720p</code></td><td class="num">0.026</td><td><span class="g der">derived</span></td><td>seedance-1-5-pro-251215 무음</td></tr>
-      <tr><td><code>seedance.1-0-pro-fast.1080p</code></td><td class="num">0.048</td><td><span class="g der">derived</span></td><td>무음 전용·첫 프레임만</td></tr>
-      <tr><td><code>seedance.1-5-pro-silent.1080p</code></td><td class="num">0.058</td><td><span class="g der">derived</span></td><td>기본 b-roll 후보 — 실사 얼굴 입력을 받는다</td></tr>
       <tr><td><code>seedance.2-0-mini.720p</code></td><td class="num">0.076</td><td><span class="g der">derived</span></td><td>실사 얼굴 입력 거부 · $30 잔액 관문</td></tr>
-      <tr><td><code>seedance.1-5-pro-audio.1080p</code></td><td class="num">0.116</td><td><span class="g der">derived</span></td><td>소리 포함 — 무음의 정확히 2배</td></tr>
       <tr><td><code>seedance.2-0-fast.720p</code></td><td class="num">0.120</td><td><span class="g der">derived</span></td><td>실사 얼굴 입력 거부 · $30 잔액 관문</td></tr>
-      <tr><td><code>seedance.1-0-pro.1080p</code></td><td class="num">0.122</td><td><span class="g der">derived</span></td><td>seedance-1-0-pro-250528 — 무음 전용</td></tr>
       <tr><td><code>seedance.2-5.720p</code></td><td class="num">0.231</td><td><span class="g der">derived</span></td><td>레퍼런스 30장 · 최장 30초</td></tr>
       <tr><td><code>seedance.2-0.1080p</code></td><td class="num">0.374</td><td><span class="g der">derived</span></td><td>레퍼런스 9장 · 4K 가능</td></tr>
     </tbody>
@@ -268,20 +230,20 @@
   </div>
 
   <div class="calc">
-    <b>Seedance 1.5 pro 무음 · 1080p · 4초 한 컷</b><br>
-    4초 × $0.058 = <b>$0.232</b><br>
-    같은 자리를 Veo lite 1080p 로 채우면 $0.64 — <b>2.8배</b> 차이다.
+    <b>Seedance 2.0 mini · 720p · 4초 한 컷</b><br>
+    4초 × $0.076 = <b>$0.304</b><br>
+    원장에는 <code>seedance.2-0-mini.720p&#9;4</code> 로 적는다.
   </div>
 
   <p>Seedance 줄이 전부 <span class="g der">derived</span> 인 이유는 벤더가 토큰으로 청구하기 때문이다. 공식 문서의 "5초·16:9" 예시 가격을 5 로 나눈 값이고, 9:16 은 가로세로만 바뀌어 토큰 수가 같아서 같은 값을 쓴다. <strong>실제 청구의 정본은 응답의 <code>completion_tokens</code></strong> 이므로 회차 원장의 메모 칸에 그 값을 적어 둔다. 한시 할인은 단가에 반영하지 않았다 — 반영해 두면 행사가 끝나는 날 조용히 틀린 값이 된다.</p>
 
   <div class="warn">
-    <strong>Seedance 2.x 는 키 하나로 열리지 않는다.</strong> Dreamina Seedance 2.5·2.0 계열은 <strong>계정 잔액 $30 이상이거나 리소스 팩을 구매</strong>해야 활성화된다. 1.5 pro 와 1.0 계열에는 이 관문이 없다. 그와 별개로 모든 모델은 콘솔의 Model activation 에서 한 번 켜 줘야 하고, 안 켜면 작업 생성이 <code>ModelNotOpen</code> 으로 실패한다.
+    <strong>Seedance 2.x 는 키 하나로 열리지 않는다.</strong> Dreamina Seedance 2.5·2.0 계열은 <strong>계정 잔액 $30 이상이거나 리소스 팩을 구매</strong>해야 활성화된다. 그와 별개로 모든 모델은 콘솔의 Model activation 에서 한 번 켜 줘야 하고, 안 켜면 작업 생성이 <code>ModelNotOpen</code> 으로 실패한다.
   </div>
 
   <h3>승급 한 칸 — 언제 영상에 돈을 쓰나</h3>
 
-  <p>자율 루프가 스스로 올릴 수 있는 자리는 <strong>커버 다음 세그먼트의 도입 b-roll 한 칸뿐</strong>이다. 스키마상 두 칸까지 가능하지만 두 칸째는 사람이 스토리보드를 승인하면서 결정한다. 커버 자체는 승급하지 않는다 — Veo 가 한글을 못 써서 훅 제목은 코드로 그리기 때문이다.</p>
+  <p>자율 루프가 스스로 올릴 수 있는 자리는 <strong>커버 다음 세그먼트의 도입 b-roll 한 칸뿐</strong>이다. 스키마상 두 칸까지 가능하지만 두 칸째는 사람이 스토리보드를 승인하면서 결정한다. 커버 자체는 승급하지 않는다 — 훅 제목은 코드로 그리기 때문이다.</p>
 
   <p>승급 판정은 절대 문턱이 아니라 <strong>추세</strong>다. 문턱으로 잡으면 측정값이 늘 그 위에 있는 채널은 매 편 승급 = 매 편 5배 지출이 되는데, 그 돈이 문제를 고치지도 못한다. b-roll 은 커버 <em>뒤</em>에 붙고 이탈은 커버 <em>안</em>에서 일어나기 때문이다.</p>
 
@@ -463,22 +425,22 @@
     <strong>글자 수는 1,000 으로 나눠 적는다.</strong> 400자는 <code>0.4</code> 다. <code>400</code> 이라고 적으면 그 줄이 1,000배로 부푼다 — 로컬 채널에서는 단가가 0 이라 안 보이지만 Gemini 채널에서는 그대로 청구서 크기로 나타난다.
   </div>
 
-  <h3>구성 C — 여기에 Veo 승급 한 칸</h3>
+  <h3>구성 C — 여기에 Seedance 승급 한 칸</h3>
 
-  <p>도입 b-roll 한 칸을 Veo lite 1080p 8초로 올린 경우다.</p>
+  <p>도입 b-roll 한 칸을 Seedance 2.0 mini 720p 4초로 올린 경우다.</p>
 
   <div class="calc">
     구성 A(로컬 나레이션) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= $0.260<br>
-    b-roll <code>veo.lite.1080p</code> 8초 = 8 × $0.08 = $0.640<br>
+    b-roll <code>seedance.2-0-mini.720p</code> 4초 = 4 × $0.076 = $0.304<br>
     ─────────────────────────────<br>
-    합계 <b>$0.90</b> &nbsp;(구성 B 위에 얹으면 $0.915)
+    합계 <b>$0.564</b> &nbsp;(구성 B 위에 얹으면 $0.579)
   </div>
 
-  <p>모델 사다리 문서는 이 조합을 <strong>한 편에 약 $0.91</strong> 로 적고 있다 — 경제 티어를 $0.27 로 잡은 반올림이다. 어느 쪽으로 세든 <strong>기본 상한 $1.00 안이다(2026-09-05 전 플랜의 $0.30 은 세 배 넘긴다).</strong></p>
+  <p>어느 쪽으로 세든 <strong>기본 상한 $1.00 안이다(2026-09-05 전 플랜의 $0.30 은 두 배 가까이 넘긴다).</strong></p>
 
   <h3>상한과의 관계</h3>
 
-  <p>성장 플랜의 <code>max_cost_per_video</code> 기본값은 <strong>$1.00</strong> 이다(2026-09-05 전에 쓴 플랜은 $0.30 을 그대로 갖고 있다). hook_video 가 꺼진 채널(기본)에서는 이 값이 <strong>경제 티어와 lite 승급 1회($0.91~0.93)까지 통과시킨다.</strong> 훅 영상을 켠 채널(0.73.0 부터 훅도 3D 프리비즈 컷이라 Seedance 2.x 참조 영상으로만 만든다 — 2.0 mini 720p 6초가 입력·출력 초 합산 약 $0.54)은 승급이 $1.45~1.47 라 상한을 <strong>$1.50 이상</strong>으로, 2.0 1080p(약 $2.74)면 <strong>$3.70</strong>으로 올려야 한다. 자율 루프는 상한을 스스로 올리지 않는다 — 승급 조건이 참인 동안에도 경제 티어로 만들고 완료 보고에 그 사실을 적는다.</p>
+  <p>성장 플랜의 <code>max_cost_per_video</code> 기본값은 <strong>$1.00</strong> 이다(2026-09-05 전에 쓴 플랜은 $0.30 을 그대로 갖고 있다). hook_video 가 꺼진 채널(기본)에서는 이 값이 <strong>경제 티어와 Seedance 승급 1회($0.56~0.58)까지 통과시킨다.</strong> 훅 영상을 켠 채널(0.73.0 부터 훅도 3D 프리비즈 컷이라 Seedance 2.x 참조 영상으로만 만든다 — 2.0 mini 720p 6초가 입력·출력 초 합산 약 $0.54)은 승급이 $1.10~1.13 이라 상한을 <strong>$1.20 이상</strong>으로, 2.0 1080p(약 $2.74)면 <strong>$3.40</strong>으로 올려야 한다. 자율 루프는 상한을 스스로 올리지 않는다 — 승급 조건이 참인 동안에도 경제 티어로 만들고 완료 보고에 그 사실을 적는다.</p>
 
   <h3>mflux 를 안 깐 기계</h3>
 
@@ -561,7 +523,7 @@ set -a &amp;&amp; . ./.env &amp;&amp; set +a</code></pre>
   <div class="keyblock">
     <h3><code>GEMINI_API_KEY</code> <span class="badge key">제작</span></h3>
     <div class="src">aistudio.google.com/apikey · <code>GOOGLE_API_KEY</code> 로 적어도 같다</div>
-    <p><strong>여는 것</strong> — <code>veo_*</code>(생성 영상) · <code>tts_generate</code>·<code>tts_multi_speaker</code>(연기 목소리) · <code>music_*</code>(배경음악). 셋이 이 키 하나를 같이 쓴다.</p>
+    <p><strong>여는 것</strong> — <code>tts_generate</code>·<code>tts_multi_speaker</code>(연기 목소리) · <code>music_*</code>(배경음악). 둘이 이 키 하나를 같이 쓴다. 생성 영상은 이 키로 열리지 않는다.</p>
 <pre><code>export GEMINI_API_KEY="..."</code></pre>
     <p><strong>확인</strong></p>
 <pre><code>curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API_KEY" | head -c 200</code></pre>
@@ -571,7 +533,7 @@ set -a &amp;&amp; . ./.env &amp;&amp; set +a</code></pre>
   <div class="keyblock">
     <h3><code>ARK_API_KEY</code> <span class="badge opt">선택</span></h3>
     <div class="src">ai.byteplus.com/ark — BytePlus ModelArk</div>
-    <p><strong>여는 것</strong> — <code>seedance_*</code>, 두 번째 영상 엔진. 이 키가 없어도 Veo 는 <code>GEMINI_API_KEY</code> 로 그대로 돈다.</p>
+    <p><strong>여는 것</strong> — <code>seedance_*</code>(Dreamina Seedance 2.x 영상). 이 키가 없어도 LTX 레인(<code>astra_genai_*</code>·<code>astra_*</code>·<code>ltx_video_generate</code>)은 그대로 돈다.</p>
 <pre><code>export ARK_API_KEY="ark-..."
 # 리전 엔드포인트는 건드리지 않는다 — 영상 모델은 ap-southeast-1 에만 있다
 # export ARK_BASE_URL=https://ark.ap-southeast.bytepluses.com/api/v3</code></pre>
@@ -701,11 +663,11 @@ ls ~/.cache/whisper-cpp/ggml-large-v3-turbo.bin</code></pre>
 
 <pre><code>image.gpt-image-2.high	1	storyboard: 커버 배경 scene-1
 image.local	3	storyboard: 포인트 배경 scene-2~4
-veo.lite.1080p	8	produce: b-roll a1 — 8초 생성, 4초 사용
+seedance.2-0-mini.720p	4	produce: b-roll a1 — 4초 생성
 tts.local	0.412	produce: 나레이션 412자
 music.lyria-clip	1	produce: BGM 30초</code></pre>
 
-  <p>수량은 <strong>개수가 아니라 그 단위의 양</strong>이다. TTS 는 글자 수 ÷ 1000, Veo 는 생성 길이(쓴 길이가 아니다), Seedance 는 요청한 초 그대로. <strong>버린 것도 적는다</strong> — 검토 뒤 다시 만든 이미지, 마음에 안 들어 다시 뽑은 컷, 길이 검사에 걸려 다시 돌린 TTS 는 결과물에 없어도 청구서에는 있다.</p>
+  <p>수량은 <strong>개수가 아니라 그 단위의 양</strong>이다. TTS 는 글자 수 ÷ 1000, Seedance 는 요청한 초 그대로(편집에서 쓴 길이가 아니다). <strong>버린 것도 적는다</strong> — 검토 뒤 다시 만든 이미지, 마음에 안 들어 다시 뽑은 컷, 길이 검사에 걸려 다시 돌린 TTS 는 결과물에 없어도 청구서에는 있다.</p>
 
   <h3>집계기 — 종료 코드를 곧이곧대로 읽는다</h3>
 
@@ -739,7 +701,7 @@ $REF/cost-report.sh .work/cost-estimate.tsv --cap 1.00; echo "cost_exit=$?"</cod
   <table>
     <thead><tr><th>설정</th><th>기본값</th><th>무엇을 막나</th></tr></thead>
     <tbody>
-      <tr><td><code>max_cost_per_video</code></td><td class="num">$1.00</td><td>회차 하나 — 경제 티어와 lite 승급 1회(훅 영상 off) 통과; 2026-09-05 전 플랜은 $0.30</td></tr>
+      <tr><td><code>max_cost_per_video</code></td><td class="num">$1.00</td><td>회차 하나 — 경제 티어와 Seedance 승급 1회(훅 영상 off) 통과; 2026-09-05 전 플랜은 $0.30</td></tr>
       <tr><td><code>daily_cost_cap</code></td><td class="num">$0.60</td><td>하루 채널 전체 누적</td></tr>
       <tr><td><code>weekly_cap</code></td><td class="num">$2.00</td><td>한 주 채널 전체 누적</td></tr>
     </tbody>

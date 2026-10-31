@@ -7,7 +7,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { spawn, execFileSync } from 'node:child_process';
 import { planVideo, executeVideo, routeLegacyVideo, routingContext } from '../dist/video-routing.js';
-import { VIDEO_ADAPTERS, videoCatalog } from '../dist/video-registry.js';
+import { VIDEO_ADAPTERS, videoCatalog, speechVideoCapabilities } from '../dist/video-registry.js';
 import { videoTransaction } from '../dist/video-state.js';
 import { recordVideoSubmission, recordVideoTokens } from '../dist/video-events.js';
 import { config } from '../dist/config.js';
@@ -371,4 +371,5 @@ test('a saved engine that cannot keep a voice is refused by name, not as a missi
   f.board.PRODUCTION.modelSettings={overrides:[{scope:'shot',shotId:'s1',request:'Old choice',video}]};f.save();
   assert.throws(()=>f.plan(),/video_engine_unsupported/);
  }
+ assert.throws(()=>speechVideoCapabilities('veo','veo-3.1-fast-generate-preview'),/video_engine_unsupported/);
 });
