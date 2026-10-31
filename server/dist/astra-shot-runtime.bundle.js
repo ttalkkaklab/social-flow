@@ -6423,7 +6423,11 @@ function priceOf(tool, args = {}) {
   }
   if (tool === "tts_astra_genai") return { key: "tts.astra-genai", quantity: null, note: "Gateway speech pricing unverified" };
   if (tool === "astra_genai_catalog" || tool === "astra_genai_desktop_status") return { key: null, quantity: null };
-  if (tool.startsWith("astra_genai_")) return { key: ["astra_genai_text2img", "astra_genai_edit", "astra_genai_image_generate", "astra_genai_image_edit"].includes(tool) ? "image.astra-genai" : "video.astra-genai", quantity: null, note: "Gateway pricing unverified; managed reservation is authoritative, not a measured bill" };
+  if (tool.startsWith("astra_genai_")) {
+    const image = ["astra_genai_text2img", "astra_genai_edit", "astra_genai_image_generate", "astra_genai_image_edit"].includes(tool);
+    const seconds = image ? null : typeof args.duration === "number" ? args.duration : tool === "astra_genai_msr" ? num(args.numFrames, 121) / num(args.frameRate, 24) : null;
+    return { key: image ? "image.astra-genai" : "video.astra-genai", quantity: seconds, note: "Gateway pricing unverified; managed reservation is authoritative, not a measured bill" };
+  }
   if (tool.startsWith("seedance_")) {
     const model2 = str(args.model, "dreamina-seedance-2-0-260128");
     const resolution2 = str(args.resolution, "720p");
@@ -7094,8 +7098,14 @@ var genaiTextToVideoSchema = external_exports.object({
   filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
 }).strict();
 var genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
-  imageUri: external_exports.string().min(1),
-  lastFrameUri: external_exports.string().min(1).nullable().optional()
+  imageUri: genaiImageUriSchema.optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  lastFrameUri: genaiImageUriSchema.nullable().optional(),
+  lastFramePath: external_exports.string().min(1).optional()
+}).strict().superRefine((args, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (Number(args.imageUri !== void 0) + Number(args.imagePath !== void 0) !== 1) issue("Supply exactly one imageUri or imagePath");
+  if (args.lastFrameUri != null && args.lastFramePath !== void 0) issue("Supply at most one lastFrameUri or lastFramePath");
 });
 var oneOf = (a, b) => Number(a !== void 0) + Number(b !== void 0);
 var genaiAudioToVideoSchema = external_exports.object({
@@ -7703,6 +7713,7 @@ ${inputPrompt}`;
   };
 }
 export {
+  VIDEO_ADAPTERS,
   astraAudio2VideoSchema,
   astraImg2VideoSchema,
   astraKeyframeVideoSchema,

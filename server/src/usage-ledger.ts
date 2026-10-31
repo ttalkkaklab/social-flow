@@ -212,7 +212,12 @@ export function priceOf(
   }
   if (tool === 'tts_astra_genai') return { key: 'tts.astra-genai', quantity: null, note: 'Gateway speech pricing unverified' };
   if (tool === 'astra_genai_catalog' || tool === 'astra_genai_desktop_status') return { key: null, quantity: null };
-  if (tool.startsWith('astra_genai_')) return { key: ['astra_genai_text2img', 'astra_genai_edit', 'astra_genai_image_generate', 'astra_genai_image_edit'].includes(tool) ? 'image.astra-genai' : 'video.astra-genai', quantity: null, note: 'Gateway pricing unverified; managed reservation is authoritative, not a measured bill' };
+  if (tool.startsWith('astra_genai_')) {
+    const image = ['astra_genai_text2img', 'astra_genai_edit', 'astra_genai_image_generate', 'astra_genai_image_edit'].includes(tool);
+    // Requested output seconds (MSR: frames at its rate); audio-to-video runs as long as its audio, unknown here.
+    const seconds = image ? null : typeof args.duration === 'number' ? args.duration : tool === 'astra_genai_msr' ? num(args.numFrames, 121) / num(args.frameRate, 24) : null;
+    return { key: image ? 'image.astra-genai' : 'video.astra-genai', quantity: seconds, note: 'Gateway pricing unverified; managed reservation is authoritative, not a measured bill' };
+  }
   if (tool.startsWith('seedance_')) {
     const model = str(args.model, 'dreamina-seedance-2-0-260128');
     const resolution = str(args.resolution, '720p');

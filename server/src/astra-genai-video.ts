@@ -4,9 +4,8 @@ import { createHash } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { setTimeout as sleep } from 'node:timers/promises';
 import { bareFilenameSchema, resolveOutputFile } from './media-utils.js';
-import { astraGenaiBaseUrl, downloadGenaiResult, requestGenai, requireAstraGenaiKey, genaiImageUriSchema, genaiSourceUri } from './astra-genai-client.js';
+import { GenaiRequestError, astraGenaiBaseUrl, downloadGenaiResult, pollGenaiJob, requestGenai, requireAstraGenaiKey, genaiImageUriSchema, genaiSourceUri } from './astra-genai-client.js';
 import { atomicJson } from './routing-files.js';
 import { recordVideoSubmission } from './video-events.js';
 
@@ -25,8 +24,12 @@ export const genaiTextToVideoSchema = z.object({
   filename: bareFilenameSchema('video').refine(name => name.endsWith('.mp4'), 'Use an .mp4 filename').optional(),
 }).strict();
 export const genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
-  imageUri: z.string().min(1),
-  lastFrameUri: z.string().min(1).nullable().optional(),
+  imageUri: genaiImageUriSchema.optional(), imagePath: z.string().min(1).optional(),
+  lastFrameUri: genaiImageUriSchema.nullable().optional(), lastFramePath: z.string().min(1).optional(),
+}).strict().superRefine((args, ctx) => {
+  const issue = (message: string) => ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+  if (Number(args.imageUri !== undefined) + Number(args.imagePath !== undefined) !== 1) issue('Supply exactly one imageUri or imagePath');
+  if (args.lastFrameUri != null && args.lastFramePath !== undefined) issue('Supply at most one lastFrameUri or lastFramePath');
 });
 // Gateway contract (genai-gateway#13): four data URI MIME types, 15,000,000 base64 characters.
 export const GENAI_AUDIO_TYPES: Readonly<Record<string, string>> = { '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.ogg': 'audio/ogg', '.opus': 'audio/ogg' };
@@ -140,7 +143,7 @@ export async function refreshGenaiMsrVoice(force = false): Promise<boolean> {
 export function genaiMsrVoiceReferences(): boolean { return msrVoiceCache?.value ?? false; }
 
 export type GenaiVideoRequest = z.infer<typeof genaiTextToVideoSchema> & {
-  imageUri?: string; lastFrameUri?: string | null;
+  imageUri?: string; imagePath?: string; lastFrameUri?: string | null; lastFramePath?: string;
 };
 
 /** Only provider fields cross the wire; local output/budget controls never do. */
@@ -149,8 +152,10 @@ export function buildGenaiVideoBody(args: GenaiVideoRequest): Record<string, unk
     prompt: args.prompt, model: args.model, duration: args.duration, resolution: args.resolution,
     fps: args.fps, generate_audio: args.generateAudio,
     ...(args.cameraMotion === undefined ? {} : { camera_motion: args.cameraMotion }),
-    ...(args.imageUri === undefined ? {} : { image_uri: args.imageUri }),
-    ...(args.lastFrameUri === undefined ? {} : { last_frame_uri: args.lastFrameUri }),
+    // Local frames travel as checked data URIs, like MSR and audio-to-video.
+    ...(args.imageUri === undefined && args.imagePath === undefined ? {} : { image_uri: genaiSourceUri(args.imageUri, args.imagePath) }),
+    ...(args.lastFramePath !== undefined ? { last_frame_uri: genaiSourceUri(undefined, args.lastFramePath) }
+      : args.lastFrameUri === undefined ? {} : { last_frame_uri: args.lastFrameUri === null ? null : genaiSourceUri(args.lastFrameUri) }),
   };
 }
 
@@ -179,7 +184,8 @@ export async function getGenaiVideoStatus(input: z.infer<typeof genaiVideoStatus
   const route = `${genaiVideoRoute(receipt.operation)}/${encodeURIComponent(receipt.jobId)}`;
   const job = statusSchema.parse(await requestGenai('GET', route));
   if (job.id !== receipt.jobId) throw new Error('GenAI status job ID mismatch');
-  if (job.status === 'failed') throw new Error(`GenAI video ${receipt.jobId} failed: ${JSON.stringify(job.error ?? 'No details').slice(0, 1000)}`);
+  // The gateway's own failed status is terminal job evidence (managed routing frees the slot).
+  if (job.status === 'failed') throw new GenaiRequestError(`GenAI video ${receipt.jobId} failed: ${JSON.stringify(job.error ?? 'No details').slice(0, 1000)}`, true, 200);
   if (job.status !== 'completed' || !input.download)
     return { jobId: receipt.jobId, status: job.status, downloaded: false, review: 'not_reviewed' };
   if (!job.result?.video_url) throw new Error('GenAI completed without result.video_url; retain the receipt, do not resubmit.');
@@ -227,15 +233,18 @@ export async function generateGenaiVideo(operation: Operation, input: unknown) {
       throw new Error('msr_voice_unsupported: the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)');
     const receipt = { version: 1 as const, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, status: 'submitting' as const };
     fs.writeFileSync(receiptPath, JSON.stringify(receipt), { flag: 'wx', mode: 0o600 });
-    const accepted = z.object({ id: z.string().min(1) }).passthrough().parse(await requestGenai('POST', genaiVideoRoute(operation), body, SUBMIT_TIMEOUT_MS));
+    let response: unknown;
+    try { response = await requestGenai('POST', genaiVideoRoute(operation), body, SUBMIT_TIMEOUT_MS); }
+    catch (error) {
+      // An explicit rejection created no job; free the output name so a corrected request can retry it.
+      if (error instanceof GenaiRequestError && error.terminal) fs.rmSync(receiptPath, { force: true });
+      throw error;
+    }
+    const accepted = z.object({ id: z.string().min(1) }).passthrough().parse(response);
     atomicJson(receiptPath, { ...receipt, jobId: accepted.id, status: 'submitted' });
     recordVideoSubmission(accepted.id);
   }
-  const deadline = Date.now() + 30 * 60_000;
-  do {
-    const result = await getGenaiVideoStatus({ receiptPath, download: true });
-    if (result.downloaded) return { ...result, receiptPath };
-    await sleep(5000);
-  } while (Date.now() < deadline);
-  throw new Error(`GenAI video is still pending; recover using receiptPath ${receiptPath}, never resubmit.`);
+  const result = await pollGenaiJob(() => getGenaiVideoStatus({ receiptPath, download: true }),
+    `GenAI video is still pending; recover using receiptPath ${receiptPath}, never resubmit.`);
+  return { ...result, receiptPath };
 }

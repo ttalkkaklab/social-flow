@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { spawn, execFileSync } from 'node:child_process';
+import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import { planVideo, executeVideo, routeLegacyVideo, routingContext, approveVideo } from '../dist/video-routing.js';
 import { VIDEO_ADAPTERS, videoCatalog, speechVideoCapabilities } from '../dist/video-registry.js';
 import { videoTransaction } from '../dist/video-state.js';
@@ -140,6 +140,32 @@ test('ambiguous failure retains budget and ID across process-like reentry',async
  await assert.rejects(f.execute(p,async()=>{calls++;recordVideoSubmission('accepted-1');throw new Error('connection lost');}),/connection/);
  assert.equal(f.state().jobs.a.status,'submission_unknown');assert.equal(f.state().jobs.a.providerId,'accepted-1');
  await assert.rejects(f.execute(p,async()=>{calls++;return result;}),/pending/);assert.equal(calls,1);
+});
+test('a terminal adapter failure closes as failed and frees the slot; reconcile settles an unknown request',async t=>{
+ const { videoStatus } = await import('../dist/video-routing.js');
+ const { GenaiRequestError } = await import('../dist/astra-genai-client.js');
+ const f=fixture(t,selection,{maxConcurrent:1});
+ const rejected={isError:true,terminal:true,content:[{type:'text',text:'HTTP 400 InvalidParameter'}]};
+ assert.equal((await f.execute(f.plan(),async()=>rejected)).isError,true);
+ assert.equal(f.state().jobs.a.status,'failed');assert.equal(f.state().jobs.a.settledUsd,0);
+ await assert.rejects(f.execute(f.plan(),async()=>result),/video_request_failed/);
+ await assert.rejects(f.execute(f.plan('b'),async()=>{throw new GenaiRequestError('ASTRA GenAI HTTP 422',true,422);}),/422/);
+ assert.equal(f.state().jobs.b.status,'failed');
+ await assert.rejects(f.execute(f.plan('c'),async()=>{recordVideoSubmission('task-9');throw new Error('connection lost');}),/connection/);
+ assert.equal(f.state().jobs.c.status,'submission_unknown');
+ await assert.rejects(f.execute(f.plan('d',{},'s2'),async()=>result),/concurrency/);
+ await assert.rejects(videoStatus({episode:f.episode,requestId:'c',action:'reconcile'}),/billing_evidence/);
+ const settled=await videoStatus({episode:f.episode,requestId:'c',action:'reconcile',evidence:'ModelArk task-9 failed, not billed',spentUsd:0});
+ assert.equal(settled.status,'failed');assert.equal(settled.settledUsd,0);
+ assert.deepEqual((await f.execute(f.plan('d',{},'s2'),async()=>result)).content,result.content);
+});
+test('a lock left by a dead process is recovered; a reconciled opening spend replaces unpriced history',async t=>{
+ const f=fixture(t,selection,{openingSpendUsd:1});
+ fs.writeFileSync(path.join(f.episode,'.work/events.jsonl'),JSON.stringify({tool:'astra_genai_text2video',key:'video.astra-genai',quantity:5})+'\n');
+ const lock=path.join(f.episode,'.work/video-routing/state.lock');fs.mkdirSync(path.dirname(lock),{recursive:true});
+ const dead=spawnSync(process.execPath,['-e','']).pid;fs.writeFileSync(lock,`${dead}@${os.hostname()}`);
+ await f.execute(f.plan(),async()=>result);
+ assert.equal(f.state().openingSpendUsd,1);assert.equal(f.state().jobs.a.status,'completed');assert.equal(fs.existsSync(lock),false);
 });
 test('disabled tool, missing key, changed input and changed authorization fail before execution',async t=>{
  const f=fixture(t);const p=f.plan();let calls=0;const dispatch=async()=>{calls++;return result;};

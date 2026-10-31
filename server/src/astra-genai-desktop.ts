@@ -4,8 +4,7 @@ import * as fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { setTimeout as sleep } from 'node:timers/promises';
-import { astraGenaiBaseUrl, requestGenai, requestGenaiMedia, requireAstraGenaiKey } from './astra-genai-client.js';
+import { GenaiRequestError, astraGenaiBaseUrl, pollGenaiJob, requestGenai, requestGenaiMedia, requireAstraGenaiKey } from './astra-genai-client.js';
 import { bareFilenameSchema, resolveOutputFile } from './media-utils.js';
 import { atomicJson } from './routing-files.js';
 import { recordVideoSubmission } from './video-events.js';
@@ -91,7 +90,7 @@ export async function desktopVideoStatus(receiptPath: string, download = false) 
   const job = z.object({ id: z.string(), status: z.string(), outputs: z.array(z.object({ url: z.string(), media_kind: z.string() })).default([]) })
     .passthrough().parse(await requestGenai('GET', `${ROOT}/generations/${encodeURIComponent(receipt.jobId)}`));
   if (job.id !== receipt.jobId) throw new Error('Job ID mismatch');
-  if (['failed','cancelled'].includes(job.status)) throw new Error(`Gateway video ${job.status}: ${job.id}`);
+  if (['failed','cancelled'].includes(job.status)) throw new GenaiRequestError(`Gateway video ${job.status}: ${job.id}`, true, 200);
   if (job.status !== 'succeeded' || !download) return { jobId: job.id, status: job.status, downloaded: false, review: 'not_reviewed' };
   const video = job.outputs.filter(o => o.media_kind === 'video');
   if (video.length !== 1) throw new Error('Expected exactly one video output; retain receipt');
@@ -145,16 +144,17 @@ export async function generateDesktopVideo(operation: DesktopOperation, input: u
     const body = buildDesktopBody(operation, args, assets);
     const receipt = { protocol: 'gateway-desktop-v1' as const, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, status: 'submitting' as const };
     fs.writeFileSync(receiptPath, JSON.stringify(receipt), { flag: 'wx', mode: 0o600 });
-    const accepted = z.object({ id: z.string().min(1) }).passthrough().parse(await requestGenai('POST',
-      operation === 'keyframes' ? ROOT + '/keyframes' : ROOT + '/generations/' + operation, body, 30 * 60_000));
+    let response: unknown;
+    try { response = await requestGenai('POST', operation === 'keyframes' ? ROOT + '/keyframes' : ROOT + '/generations/' + operation, body, 30 * 60_000); }
+    catch (error) {
+      // An explicit rejection created no job; free the output name so a corrected request can retry it.
+      if (error instanceof GenaiRequestError && error.terminal) fs.rmSync(receiptPath, { force: true });
+      throw error;
+    }
+    const accepted = z.object({ id: z.string().min(1) }).passthrough().parse(response);
     atomicJson(receiptPath, { ...receipt, jobId: accepted.id, status: 'submitted' });
     recordVideoSubmission(accepted.id);
   }
-  const deadline = Date.now() + 30 * 60_000;
-  do {
-    const result = await desktopVideoStatus(receiptPath, true);
-    if (result.downloaded) return { ...result, receiptPath };
-    await sleep(5000);
-  } while (Date.now() < deadline);
-  throw new Error(`Still pending; recover ${receiptPath} without resubmission`);
+  const result = await pollGenaiJob(() => desktopVideoStatus(receiptPath, true), `Still pending; recover ${receiptPath} without resubmission`);
+  return { ...result, receiptPath };
 }

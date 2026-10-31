@@ -122,10 +122,14 @@ test('MSR renders effects natively and its own soundtrack carries the dialogue',
   const { prepare: prepareSound } = require('../../skills/produce/references/prepare-video-sound.js');
   const dir = mkdtempSync(join(tmpdir(), 'msr-sound-'));
   try {
-    const scene = { id: 's1', narration: [{ id: 'l1', speaker: 'hero', tts: 'Hello.', delivery: 'on_screen' }], visual: { video: {} }, sound: { effects: intent.effects } };
+    const scene = { id: 's1', narration: [{ id: 'l1', speaker: 'hero', tts: 'Hello.', delivery: 'on_screen' }], visual: { video: { engine: 'astra-genai' } }, sound: { effects: intent.effects } };
     writeFileSync(join(dir, 'scenes.js'), `window.SCENES=${JSON.stringify([scene])};`);
     const sound = (await prepareSound(dir, 's1', 'astra_genai_msr', msrArgs)).sound;
     assert.equal(sound.audioSource, 'video');
     assert.equal(sound.effects[0].delivery, 'native');
+    // The registry's engine decides, not the tool-name prefix: 'astra' must not admit astra_genai_*.
+    scene.visual.video.engine = 'astra';
+    writeFileSync(join(dir, 'scenes.js'), `window.SCENES=${JSON.stringify([scene])};`);
+    await assert.rejects(prepareSound(dir, 's1', 'astra_genai_msr', msrArgs), /differs from the authored video engine/);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

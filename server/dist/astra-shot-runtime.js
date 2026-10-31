@@ -5,3 +5,4 @@ export { astraAudio2VideoSchema, astraImg2VideoSchema, astraKeyframeVideoSchema,
 export { resolveVideoDuration } from './video-duration.js';
 export { priceOf } from './usage-ledger.js';
 export { prepareVideoSound } from './video-sound.js';
+export { VIDEO_ADAPTERS } from './video-registry.js';

@@ -940,13 +940,13 @@ export const ROUTES = {
     seedance_text2video: async (args) => {
         const result = await seedance.generateFromText(parseArgs(seedance.seedanceText2VideoSchema, args));
         if (!result.success)
-            return text(`Seedance video generation failed: ${result.error}`, true);
+            return { ...text(`Seedance video generation failed: ${result.error}`, true), terminal: result.terminal === true };
         return text(`Video generated successfully!\n\nFile: ${result.videoPath}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`);
     },
     seedance_img2video: async (args) => {
         const result = await seedance.generateFromImage(parseArgs(seedance.seedanceImg2VideoSchema, args));
         if (!result.success)
-            return text(`Seedance video generation from image failed: ${result.error}`, true);
+            return { ...text(`Seedance video generation from image failed: ${result.error}`, true), terminal: result.terminal === true };
         const lastImageInfo = result.lastImage ? `\nLast Frame Image: ${result.lastImage}` : '';
         const modeInfo = result.lastImage ? ' (frame interpolation mode)' : '';
         return text(`Video generated from image${modeInfo} successfully!\n\nOutput: ${result.videoPath}\nFirst Frame Image: ${result.sourceImage}${lastImageInfo}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`);
@@ -954,7 +954,7 @@ export const ROUTES = {
     seedance_reference: async (args) => {
         const result = await seedance.generateWithReferences(parseArgs(seedance.seedanceReferenceSchema, args));
         if (!result.success)
-            return text(`Seedance video generation with references failed: ${result.error}`, true);
+            return { ...text(`Seedance video generation with references failed: ${result.error}`, true), terminal: result.terminal === true };
         const refImagesInfo = result.referenceImages?.length
             ? `\nReference Images (${result.referenceImages.length}):\n  - ${result.referenceImages.join('\n  - ')}`
             : '';

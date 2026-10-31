@@ -1,4 +1,5 @@
 import * as fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { atomicJson } from './routing-files.js';
 export { atomicJson } from './routing-files.js';
@@ -9,13 +10,14 @@ export interface VideoJob {
   requestId: string;
   shotId: string;
   tool: string;
-  status: 'reserved' | 'submitting' | 'submitted' | 'submission_unknown' | 'completed';
+  status: 'reserved' | 'submitting' | 'submitted' | 'submission_unknown' | 'completed' | 'failed';
   reserveUsd: number;
   settledUsd?: number;
   tokens?: number;
   providerId?: string;
   providerIds?: string[];
   result?: unknown;
+  evidence?: string;
   updatedAt: string;
 }
 export interface VideoState { version: 1; openingSpendUsd?: number; jobs: Record<string, VideoJob> }
@@ -58,23 +60,47 @@ function historicalSpend(episode: string): number {
   return total;
 }
 
-/** Short cross-process transaction. Never steal an existing lock or hold it during network I/O. */
-export function videoTransaction<T>(episode: string, update: (state: VideoState) => T): T {
+/**
+ * A lock left by a crashed process: its owner PID is gone on this host, or it outlived any local transaction.
+ * ponytail: two processes that judge the same lock stale at once can both take it; add an atomic rename handoff if that shows up.
+ */
+function staleLock(lock: string): boolean {
+  try {
+    if (Date.now() - fs.statSync(lock).mtimeMs > 60_000) return true;
+    const [pid, host] = fs.readFileSync(lock, 'utf8').split('@');
+    if (host !== os.hostname() || !/^\d+$/.test(pid)) return false;
+    try { process.kill(Number(pid), 0); return false; }
+    catch (error) { return (error as NodeJS.ErrnoException).code === 'ESRCH'; }
+  } catch { return false; }
+}
+
+/**
+ * Short cross-process transaction. Never steal a live lock or hold it during network I/O.
+ * openingSpendUsd, when the authorization records one, replaces the historical-event import
+ * on the call that creates the state (an explicit reconciliation of unknown past spend).
+ */
+export function videoTransaction<T>(episode: string, update: (state: VideoState) => T, openingSpendUsd?: number): T {
   const directory = path.join(episode, '.work/video-routing');
   fs.mkdirSync(directory, { recursive: true });
   const lock = path.join(directory, 'state.lock');
   let fd: number;
   try { fd = fs.openSync(lock, 'wx', 0o600); }
-  catch { throw new Error('video_state_busy: another transaction holds the lock; retry this local operation'); }
+  catch {
+    if (!staleLock(lock)) throw new Error('video_state_busy: another transaction holds the lock; retry this local operation');
+    fs.rmSync(lock, { force: true });
+    try { fd = fs.openSync(lock, 'wx', 0o600); }
+    catch { throw new Error('video_state_busy: another transaction holds the lock; retry this local operation'); }
+  }
+  fs.writeSync(fd, `${process.pid}@${os.hostname()}`);
   try {
     const file = path.join(directory, 'state.json');
-    const state: VideoState = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { version: 1, openingSpendUsd: historicalSpend(episode), jobs: {} };
+    const state: VideoState = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { version: 1, openingSpendUsd: openingSpendUsd ?? historicalSpend(episode), jobs: {} };
     if (state.version !== 1 || !state.jobs || typeof state.jobs !== 'object' || Array.isArray(state.jobs)) throw new Error('Invalid video state; repair explicitly');
     if (!Number.isFinite(state.openingSpendUsd ?? 0) || (state.openingSpendUsd ?? 0) < 0) throw new Error('Invalid opening spend');
     for (const job of Object.values(state.jobs)) {
       if (!job || !Number.isFinite(job.reserveUsd) || job.reserveUsd < 0 ||
           (job.settledUsd !== undefined && (!Number.isFinite(job.settledUsd) || job.settledUsd < 0)) ||
-          !['reserved','submitting','submitted','submission_unknown','completed'].includes(job.status)) throw new Error('Invalid video job; cannot calculate remaining budget');
+          !['reserved','submitting','submitted','submission_unknown','completed','failed'].includes(job.status)) throw new Error('Invalid video job; cannot calculate remaining budget');
     }
     const result = update(state);
     atomicJson(file, state);
