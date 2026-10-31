@@ -179,7 +179,7 @@ export const DEFAULT_VOICE: VoiceName = 'Kore';
 export const VALID_TTS_MODELS = [
   'gemini-2.5-flash-preview-tts', // has a free tier · cheapest (default)
   'gemini-2.5-pro-preview-tts',   // high quality · no free tier
-  'gemini-3.1-flash-tts-preview', // the only TTS model with streaming · 2x the price
+  'gemini-3.1-flash-tts-preview', // the only TTS model with streaming · price unconfirmed (prices.tsv)
 ] as const;
 export type TtsModel = (typeof VALID_TTS_MODELS)[number];
 

@@ -20,7 +20,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
-  episodePathArg, findEpisodeDir, isBillableTool, priceOf, recordUsage,
+  episodePathArg, findEpisodeDir, isBillableTool, meteredPrice, priceOf, recordUsage,
 } from '../dist/usage-ledger.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -65,6 +65,12 @@ test('every price key the mapping can emit exists in prices.tsv', () => {
     ['tts_generate', { text: 'x', model: 'gemini-2.5-pro-preview-tts' }],
     ['tts_elevenlabs_generate', { text: 'x', model: 'eleven_v4' }],
     ['tts_elevenlabs_dialogue', { text: 'x', model: 'eleven_v4' }],
+    ['tts_generate', { text: 'x', model: 'gemini-3.1-flash-tts-preview' }],
+    ['tts_gemini_38', { turns: [{ text: 'x' }] }],
+    ['tts_gemini_38', { turns: [{ text: 'x' }], model: 'gemini-3.8-flash-lite-tts' }],
+    ['tts_voice_design', {}],
+    ['sfx_elevenlabs_generate', {}],
+    ['sfx_elevenlabs_generate', { durationSeconds: 4 }],
     // Music
     ['music_generate_clip', {}],
     ['music_generate', { durationSeconds: 90 }],
@@ -171,6 +177,27 @@ test('an unmeasurable quantity is left null rather than guessed', () => {
   assert.match(lyria.note, /unconfirmed/);
 });
 
+test('unpriced Gemini lanes get their own unconfirmed rows, never the 2.5 flash price', () => {
+  const g31 = priceOf('tts_generate', { text: 'x'.repeat(500), model: 'gemini-3.1-flash-tts-preview' });
+  assert.equal(g31.key, 'tts.gemini-3.1-flash');
+  assert.match(g31.note, /unconfirmed/);
+  // tts_gemini_38 carries its text in turns[]; reading only `text` filed it as 0 characters.
+  assert.equal(priceOf('tts_gemini_38', { turns: [{ text: 'a'.repeat(300) }, { text: 'b'.repeat(200) }] }).quantity, 0.5);
+});
+
+test('the vendor-measured amount replaces the argument estimate', () => {
+  const el = meteredPrice(priceOf('tts_elevenlabs_generate', { text: 'x'.repeat(18) }), { characterCost: 10 });
+  assert.deepEqual(el, { key: 'tts.elevenlabs', quantity: 0.01 });
+  // A sound effect with no requested length bills the WAV's measured seconds.
+  assert.deepEqual(meteredPrice(priceOf('sfx_elevenlabs_generate', {}), { durationSeconds: 3.2 }), { key: 'sfx.elevenlabs', quantity: 3.2 });
+  // No measurement: the estimate and its note stand.
+  const sfx = meteredPrice(priceOf('sfx_elevenlabs_generate', {}), undefined);
+  assert.equal(sfx.quantity, null);
+  assert.match(sfx.note, /measured duration/);
+  // characterCost on a Gemini result is never read as an ElevenLabs bill.
+  assert.equal(meteredPrice(priceOf('tts_generate', { text: 'x'.repeat(1000) }), { characterCost: 5 }).quantity, 1);
+});
+
 test('the episode is found by walking up from outputPath', () => {
   const { ep } = makeEpisode();
   assert.equal(findEpisodeDir(path.join(ep, '.work', 'broll')), ep);
@@ -216,7 +243,7 @@ test('events append as whole JSON lines', () => {
 
 test('only generation tools are recorded', () => {
   for (const t of ['seedance_text2video', 'gpt_image_text2img',
-                   'image_local_generate', 'tts_generate', 'tts_elevenlabs_generate',
+                   'image_local_generate', 'tts_generate', 'tts_elevenlabs_generate', 'sfx_elevenlabs_generate',
                    'music_generate_clip', 'suno_generate',
                    'mlx_image_generate', 'mlx_image_edit',
                    'mlx_music_generate', 'mlx_video_generate', 'mlx_3d_generate']) {

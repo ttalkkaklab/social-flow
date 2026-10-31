@@ -160,6 +160,22 @@ export const PRICED_VIDEO_KEYS = new Set([
 ]);
 
 const ELEVENLABS_KEY: Record<string, string> = { eleven_v4: 'tts.elevenlabs' };
+const GEMINI_UNPRICED = 'unit price unconfirmed (? in prices.tsv) — cost-report.sh flags the line instead of counting it as $0';
+
+/**
+ * The ledger quantity, preferring what the vendor measured on this call over what the arguments
+ * predict: ElevenLabs speech bills its `character-cost` header (÷ 1000 for the per-1,000 unit),
+ * and a sound effect bills the WAV's measured seconds. With no measurement the argument-based
+ * price stands, note included.
+ */
+export function meteredPrice(
+  price: { key: string | null; quantity: number | null; note?: string },
+  metered: { characterCost?: unknown; durationSeconds?: unknown } | undefined,
+): { key: string | null; quantity: number | null; note?: string } {
+  const measured = price.key === 'sfx.elevenlabs' ? metered?.durationSeconds
+    : price.key?.startsWith('tts.elevenlabs') && typeof metered?.characterCost === 'number' ? metered.characterCost / 1000 : undefined;
+  return typeof measured === 'number' && Number.isFinite(measured) ? { key: price.key, quantity: measured } : price;
+}
 
 /** Whole seconds of a local media file via ffprobe — null when ffprobe or the file is missing. */
 function probeSeconds(file: string): number | null {
@@ -248,9 +264,15 @@ export function priceOf(
 
   if (tool === 'tts_generate' || tool === 'tts_multi_speaker') {
     const model = str(args.model, 'gemini-2.5-flash-preview-tts');
+    if (model === 'gemini-3.1-flash-tts-preview') return { key: 'tts.gemini-3.1-flash', quantity: charUnits(args), note: GEMINI_UNPRICED };
     const tier = model.includes('pro') ? 'pro' : 'flash';
     return { key: `tts.gemini-${tier}`, quantity: charUnits(args) };
   }
+  if (tool === 'tts_gemini_38') {
+    const lite = str(args.model, 'gemini-3.8-flash-tts') === 'gemini-3.8-flash-lite-tts';
+    return { key: lite ? 'tts.gemini-3.8-flash-lite' : 'tts.gemini-3.8-flash', quantity: charUnits(args), note: GEMINI_UNPRICED };
+  }
+  if (tool === 'tts_voice_design') return { key: 'tts.gemini-voice-design', quantity: 1, note: GEMINI_UNPRICED };
 
   if (tool.startsWith('tts_elevenlabs_')) {
     const key = ELEVENLABS_KEY[str(args.model, 'eleven_v4')] ?? null;
@@ -311,15 +333,16 @@ export function priceOf(
  *
  * The parameter name differs per tool and there is no shared shape: `text` on the single-voice
  * lanes, `script` on tts_multi_speaker, and an `inputs` array of `{text}` on the ElevenLabs
- * dialogue lane. Reading only `text` filed every multi-speaker call as 0 characters — a number
+ * dialogue lane (`turns` on tts_gemini_38). Reading only `text` filed every multi-speaker call as 0 characters — a number
  * in the ledger that looks measured and says the call was free.
  */
 function rawChars(args: Record<string, unknown>): number {
   if (typeof args.text === 'string') return args.text.length;
   if (typeof args.input === 'string') return args.input.length;
   if (typeof args.script === 'string') return args.script.length;
-  if (Array.isArray(args.inputs)) {
-    return args.inputs.reduce(
+  const turns = Array.isArray(args.inputs) ? args.inputs : Array.isArray(args.turns) ? args.turns : null;
+  if (turns) {
+    return turns.reduce(
       (sum: number, t: unknown) =>
         sum + (t && typeof t === 'object' && typeof (t as { text?: unknown }).text === 'string'
           ? ((t as { text: string }).text).length
@@ -338,7 +361,7 @@ function charUnits(args: Record<string, unknown>): number {
 /** True for the tools whose calls belong in an episode's cost ledger. */
 export function isBillableTool(tool: string): boolean {
   // This wrapper records each synthesis and review itself, including rejected takes.
-  if (['tts_astra_genai','tts_route','tts_generate_checked','character_voice_audition','tts_review_acting','tts_local_generate','mlx_tts_generate'].includes(tool)) return false;
+  if (['tts_astra_genai','tts_route','tts_generate_checked','character_voice_audition','tts_review_acting'].includes(tool)) return false;
   if (['music_catalog', 'music_plan', 'music_execute', 'music_status'].includes(tool)) return false;
   // Catalogue reads cost nothing and belong in no ledger.
   if (tool === 'tts_list_voices' || tool === 'tts_elevenlabs_voices' || tool === 'music_list_options') return false;
@@ -347,6 +370,7 @@ export function isBillableTool(tool: string): boolean {
     tool.startsWith('seedance_') ||
     tool.startsWith('gpt_image_') ||
     tool.startsWith('tts_') ||
+    tool.startsWith('sfx_') ||
     tool.startsWith('music_') ||
     tool.startsWith('suno_generate') ||
     tool.startsWith('mlx_') || Boolean(localVideoStrategy(tool)) ||

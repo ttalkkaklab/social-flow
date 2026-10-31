@@ -112,7 +112,7 @@ function elevenlabsMeta(result: {
   return (
     (result.warnings?.map(warning => `Warning: ${warning}\n`).join('') ?? '') +
     (result.durationSeconds !== undefined ? `Duration: ${result.durationSeconds}s\n` : '') +
-    (result.characterCost !== undefined ? `Character cost: ${result.characterCost} (vendor-metered characters — the billing quantity; log this ÷ 1000 in the cost ledger)\n` : '') +
+    (result.characterCost !== undefined ? `Character cost: ${result.characterCost} (vendor-metered characters — the billing quantity; the server writes it ÷ 1000 into .work/events.jsonl, and a hand-written cost-tally line uses the same ÷ 1000)\n` : '') +
     (result.latencyMs !== undefined ? `Vendor latency: ${result.latencyMs} ms\n` : '') +
     (result.requestId ? `Request ID: ${result.requestId}\n` : '') +
     (result.alignmentPath
@@ -1129,7 +1129,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     const request = parseArgs(elevenlabs.elevenLabsSfxSchema, args);
     const result = await elevenlabs.generateElevenLabsSoundEffect(request);
     if (!result.success) return text(`ElevenLabs sound effect generation failed: ${result.error}`, true);
-    return text(
+    return { metered: { durationSeconds: result.durationSeconds }, ...text(
       `Sound effect generated successfully!\n\nFile: ${result.audioPath}\nProvenance: ${result.sidecarPath}\n` +
         `Engine: ElevenLabs ${result.model}\nFormat: ${result.outputFormat}${elevenlabsFormatNote(result.outputFormat)}\n` +
         (result.durationSeconds !== undefined ? `Duration: ${result.durationSeconds}s (measured — the ledger quantity for sfx.elevenlabs)\n` : '') +
@@ -1140,18 +1140,18 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
         (request.durationSeconds !== undefined ? ` · ${request.durationSeconds}s requested` : ' · length chosen by the vendor') +
         (request.loop ? ' · loop' : '') +
         `\nNext: for a channel asset, register it — python3 skills/channel/references/resolve-asset.py --ensure data/<channel> sfx <id> audio/sfx/<id>.wav "elevenlabs ${result.model} · see <id>.json"`,
-    );
+    ) };
   },
   tts_elevenlabs_generate: async (args) => {
     const request = parseArgs(elevenlabs.elevenLabsGenerateSchema, args);
     const result = await elevenlabs.generateElevenLabsSpeech(request);
     if (!result.success) return text(`ElevenLabs TTS generation failed: ${result.error}`, true);
-    return text(
+    return { metered: { characterCost: result.characterCost }, ...text(
       `Audio generated successfully!\n\nFile: ${result.audioPath}\nEngine: ElevenLabs ${result.model}\n` +
         `Voice: ${request.voiceId}\nFormat: ${result.outputFormat}${elevenlabsFormatNote(result.outputFormat)}\n` +
         elevenlabsMeta(result) +
         `Text length: ${request.text.length} chars`,
-    );
+    ) };
   },
   tts_elevenlabs_dialogue: async (args) => {
     const request = parseArgs(elevenlabs.elevenLabsDialogueSchema, args);
@@ -1159,13 +1159,13 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     if (!result.success) return text(`ElevenLabs dialogue generation failed: ${result.error}`, true);
     const voices = new Set(request.inputs.map((line) => line.voiceId));
     const totalChars = request.inputs.reduce((sum, line) => sum + line.text.length, 0);
-    return text(
+    return { metered: { characterCost: result.characterCost }, ...text(
       `Dialogue audio generated successfully!\n\nFile: ${result.audioPath}\nEngine: ElevenLabs ${result.model}\n` +
         `Lines: ${request.inputs.length} (${voices.size} voices)\nFormat: ${result.outputFormat}${elevenlabsFormatNote(result.outputFormat)}\n` +
         elevenlabsMeta(result) +
         (result.voiceSegments !== undefined ? `Voice segments: ${result.voiceSegments}\n` : '') +
         `Script length: ${totalChars} chars`,
-    );
+    ) };
   },
   tts_elevenlabs_voices: async (args) => {
     const request = parseArgs(elevenlabs.elevenLabsVoicesSchema, args);

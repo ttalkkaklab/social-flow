@@ -6397,6 +6397,7 @@ var PRICED_VIDEO_KEYS = /* @__PURE__ */ new Set([
   "seedance.2-0-mini-video.720p"
 ]);
 var ELEVENLABS_KEY = { eleven_v4: "tts.elevenlabs" };
+var GEMINI_UNPRICED = "unit price unconfirmed (? in prices.tsv) \u2014 cost-report.sh flags the line instead of counting it as $0";
 function probeSeconds(file) {
   try {
     const out = execFileSync2("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], {
@@ -6465,9 +6466,15 @@ function priceOf(tool, args = {}) {
   }
   if (tool === "tts_generate" || tool === "tts_multi_speaker") {
     const model2 = str(args.model, "gemini-2.5-flash-preview-tts");
+    if (model2 === "gemini-3.1-flash-tts-preview") return { key: "tts.gemini-3.1-flash", quantity: charUnits(args), note: GEMINI_UNPRICED };
     const tier = model2.includes("pro") ? "pro" : "flash";
     return { key: `tts.gemini-${tier}`, quantity: charUnits(args) };
   }
+  if (tool === "tts_gemini_38") {
+    const lite = str(args.model, "gemini-3.8-flash-tts") === "gemini-3.8-flash-lite-tts";
+    return { key: lite ? "tts.gemini-3.8-flash-lite" : "tts.gemini-3.8-flash", quantity: charUnits(args), note: GEMINI_UNPRICED };
+  }
+  if (tool === "tts_voice_design") return { key: "tts.gemini-voice-design", quantity: 1, note: GEMINI_UNPRICED };
   if (tool.startsWith("tts_elevenlabs_")) {
     const key = ELEVENLABS_KEY[str(args.model, "eleven_v4")] ?? null;
     return {
@@ -6517,8 +6524,9 @@ function rawChars(args) {
   if (typeof args.text === "string") return args.text.length;
   if (typeof args.input === "string") return args.input.length;
   if (typeof args.script === "string") return args.script.length;
-  if (Array.isArray(args.inputs)) {
-    return args.inputs.reduce(
+  const turns = Array.isArray(args.inputs) ? args.inputs : Array.isArray(args.turns) ? args.turns : null;
+  if (turns) {
+    return turns.reduce(
       (sum, t) => sum + (t && typeof t === "object" && typeof t.text === "string" ? t.text.length : 0),
       0
     );

@@ -9,7 +9,7 @@ import { actingSchema, compileActing } from './speech-acting.js';
 import { prepareSpeech } from './tts-adapters.js';
 import { disabledToolPatterns, disabledToolsFile } from './config.js';
 import { resolveToolGate } from './tool-gate.js';
-import { priceOf, recordUsage } from './usage-ledger.js';
+import { meteredPrice, priceOf, recordUsage } from './usage-ledger.js';
 import { characterVoiceTarget, compareVoiceMetadata, voiceMetadataSchema, voiceProfileSchema } from './voice-target.js';
 const candidate = z.object({ label: z.string().trim().min(1).max(100), reason: z.string().trim().min(1).max(500), tts: ttsSchema.refine(v => !!v.model, 'Choose an explicit model for audition'), metadata: voiceMetadataSchema.optional() }).strict().superRefine((value, ctx) => {
     if (value.metadata && value.metadata.voiceId !== value.tts.voiceId)
@@ -114,9 +114,9 @@ export async function manageVoiceAudition(args) {
                     result = await prepareSpeech(compiled.generator, generation).run();
                 }
                 finally {
-                    const price = priceOf(compiled.generator, generation);
+                    const price = meteredPrice(priceOf(compiled.generator, generation), result);
                     const event = { ts: new Date().toISOString(), tool: compiled.generator, ok: result?.success === true, ms: Date.now() - started,
-                        key: price.key, quantity: result?.characterCost !== undefined ? result.characterCost / 1000 : price.quantity,
+                        key: price.key, quantity: price.quantity,
                         note: 'Character audition candidate ' + id, detail: { model: choice.tts.model || '', voiceId: choice.tts.voiceId, ...(result?.requestId ? { requestId: result.requestId } : {}) } };
                     // Character auditions normally live outside episodes; always keep a local spend ledger.
                     appendFileSync(join(outputPath, 'events.jsonl'), JSON.stringify(event) + '\n');

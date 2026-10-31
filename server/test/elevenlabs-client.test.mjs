@@ -33,6 +33,7 @@ import {
   ELEVENLABS_SFX_USD_PER_MINUTE,
   MAX_ELEVENLABS_SFX_TEXT_CHARS,
   elevenLabsSfxSchema,
+  generateElevenLabsSoundEffect,
   sfxExtensionForFormat,
   sfxSampleRateForFormat,
   soundEffectRequestBody,
@@ -519,6 +520,25 @@ describe('ElevenLabs provider boundary (mocked fetch)', () => {
       assert.equal(new RegExp(properties.languageCode.pattern).test('kor'), false);
       assert.match(tool.description, /paid/);
       assert.match(tool.description, /tts_elevenlabs_voices/);
+    }
+  });
+
+  it('a paid sound effect and a dictionary POST are submitted once, even on a 5xx', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'eleven-once-'));
+    const savedFetch = globalThis.fetch, savedKey = config.elevenLabsApiKey;
+    let calls = 0;
+    config.elevenLabsApiKey = 'test-key';
+    globalThis.fetch = async () => { calls++; return new Response('busy', { status: 503 }); };
+    try {
+      const sfx = await generateElevenLabsSoundEffect(elevenLabsSfxSchema.parse({ text: 'whoosh', outputPath: dir }));
+      assert.equal(sfx.success, false);
+      assert.equal(calls, 1);
+      await assert.rejects(createElevenLabsDictionary({ name: 'test', rules: [{ stringToReplace: 'a', alias: 'b' }] }));
+      assert.equal(calls, 2);
+    } finally {
+      globalThis.fetch = savedFetch;
+      config.elevenLabsApiKey = savedKey;
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 

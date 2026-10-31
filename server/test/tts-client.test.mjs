@@ -8,7 +8,9 @@ import { config } from '../dist/config.js';
 import { pcmToWav } from '../dist/media-utils.js';
 import {
   DEFAULT_GEMINI_38_TTS_MODEL,
+  GEMINI_38_TTS_MODELS,
   TTS_VOICES,
+  VALID_TTS_MODELS,
   buildGemini38InteractionBody,
   describeGemini38Error,
   extractGemini38Audio,
@@ -18,6 +20,8 @@ import {
   ttsVoicesSchema,
 } from '../dist/tts-client.js';
 import { prepareGeneration } from '../dist/tts-quality.js';
+import { ELEVENLABS_MODELS } from '../dist/elevenlabs-client.js';
+import { getTtsModels } from '../dist/tts-models.js';
 
 const originalFetch = globalThis.fetch;
 const originalKey = config.geminiApiKey;
@@ -25,6 +29,13 @@ const originalKey = config.geminiApiKey;
 afterEach(() => {
   globalThis.fetch = originalFetch;
   config.geminiApiKey = originalKey;
+});
+
+it('client model enums match the shared model contract (skills/_shared/tts-models.js)', () => {
+  const shared = (single) => getTtsModels().filter((m) => m.single === single).map((m) => m.model);
+  assert.deepEqual(shared('tts_generate'), [...VALID_TTS_MODELS]);
+  assert.deepEqual(shared('tts_gemini_38'), [...GEMINI_38_TTS_MODELS]);
+  assert.deepEqual(shared('tts_elevenlabs_generate'), [...ELEVENLABS_MODELS]);
 });
 
 describe('Gemini 3.8 TTS request contract', () => {
