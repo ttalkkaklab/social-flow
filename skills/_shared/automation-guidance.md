@@ -1,22 +1,18 @@
-# Fixed cut workflow exception
+# Production order
 
-The owner requires the seven [cut workflow stages](production-workflow.md). Their order,
-independent reviews and required Blender compositions are execution prerequisites, with
-one explicit exception: image review is a HITL choice when video generation is requested.
-Follow the shared workflow's image-review choice and record an explicit user skip; do not
-infer it from a generic video request or fabricate a pass. The guidance below cannot skip
-other stages.
-This does not authorize spending, publication or automatic speech scoring.
+Follow the [production order](production-workflow.md) (user directive, 2026-10-31): only
+the story order is enforced; reviews and Blender compositions run only when the user asks.
+Each shot's video waits for the user's yes to that shot (`video_approve`), or their
+approval of every shot. This does not authorize spending, publication or automatic speech scoring.
 
 # Automatic work: guidance, evidence and authorization
 
 Owner direction, 2026-10-16: keep creative principles in skills as guidance, not
 mandatory executable quality gates. This policy takes precedence over older
 score thresholds, review loops, creative checklists and intermediate approval
-requirements in skills and reviewer instructions. The explicit 2026-10-19
-[production order](production-workflow.md) is an execution contract: complete project
-setup, characters, text storyboard, props, backgrounds and image storyboard before video.
-Its fixed cut stages include independent reviews and required Blender compositions.
+requirements in skills and reviewer instructions. Work in the
+[production order](production-workflow.md): project setup, characters, the story and its
+shots, props, backgrounds and images before video.
 
 For every review follow [host evaluation](host-review.md). The executing host LLM
 judges actual evidence; no external evaluation API or model fallback is used.
@@ -58,12 +54,12 @@ a fixed plot formula, a prescribed camera move or a machine-verifiable score.
 - A CTA, its wording, position and share metadata are optional. No CTA check gates work.
 - Candidate count, engines, fixed headings, beat count, research/search quotas,
   scene length, shot count, camera variation and emotional curves are suggestions.
-- Outside the fixed cut stages, review scores, P0 labels, hash freshness, freeze stamps
+- Review scores, P0 labels, hash freshness, freeze stamps
   and review receipts are evidence about a review, not permission to continue. Missing review means
   `not_reviewed`; changed inputs mean `stale`, never a fabricated pass.
 - A reviewer describes findings and likely consequences. A score does not approve
   an artifact, reject a topic or change authorization. Preserve useful findings.
-- Outside the fixed cut stages, do not force checkers or reviewers into every automatic run. Use them for a real
+- Do not force checkers or reviewers into every automatic run. Use them for a real
   uncertainty, the user's explicit request, or an actual runtime dependency.
 - A low score, stylistic preference, unsupported checker language, missing creative
   metadata or exhausted review count does not discard a topic, hold a queue item,

@@ -139,10 +139,9 @@ items is `references/video-model-selection.md` §Camera**; only the summary is h
 - **Seedance cameras read better written as a span** — `opening composition + move + closing
   composition`. The vendor doesn't require the form (the camera field itself is `非必须`,
   optional) — it's **the form we use on motion-background shots that have to reproduce a
-  composition**. The prompt body takes only Chinese and English, so write the instructions
-  in English — Korean outside a dialogue quote is ignored rather than refused, which is why
-  the server rejects it before the call (`dreamina-seedance-2-5` is the one model that reads
-  it). **And a seedance prompt closes on a consistency lock** — "the subject stays exactly
+  composition**. Every video prompt is English; only dialogue, inside quotes, uses the
+  video's language, and `video_plan` and the Seedance adapter refuse anything else
+  (`video_prompt_language`). **And a seedance prompt closes on a consistency lock** — "the subject stays exactly
   consistent with the input frame; appearance, proportions and materials hold" — because that
   is where an exclusion goes on Seedance.
   One move per shot. A storyboard that still carries a second move keeps the first only;
@@ -164,7 +163,7 @@ The cover still is made in produce §1.5 (still-generation.md) when the episode 
 generated cover. These three are generated only when the episode has that kind of slot.
 
 - **b-roll (the `broll` scenes in scenes.js — the selected ratio band and the explicit budget are the ceiling, produce rule 12; a channel's `generated_video_max` is a ceiling only)**: animate each slot's
-  `visual.src` PNG through `video_plan` → `video_execute` on the saved video model with its
+  `visual.src` PNG through `video_plan` → `video_approve` → `video_execute` on the saved video model with its
   audio on and `requiredSeconds` from the planner. A b-roll whose characters speak takes a
   voice-lane adapter (①). This slot is where the clip's sound gets used (absolute rule 9),
   so if the b-roll **audio** is the problem, report it and ask for an explicit exception before remaking on another model.

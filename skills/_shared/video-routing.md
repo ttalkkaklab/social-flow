@@ -1,6 +1,7 @@
 # Video routing contract
 
-Use `video_catalog` → `video_plan` → `video_execute` for episode video. The registry
+Use `video_catalog` → `video_plan` → `video_approve` (the user's yes to that shot, or `auto:true`
+for every shot) → `video_execute` for episode video. The registry
 contains installed adapter contracts, not a vendor availability claim. MiniMax H3
 and the official LTX API remain unimplemented; ASTRA is a separate self-hosted
 LTX deployment. Do not substitute one for another.

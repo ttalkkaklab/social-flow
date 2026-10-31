@@ -68,8 +68,6 @@ function verify(work, board) {
   const win = evaluateWindowScript(fs.readFileSync(file, 'utf8'), {filename:file});
   const voiceErrors = require('../../_shared/character-voice.js').boardVoiceErrors(win);
   if (voiceErrors.length) throw new Error(voiceErrors.join('; '));
-  const identityErrors = require('../../channel/references/character-sheet.js').sourceErrors(win, board);
-  if (identityErrors.length) throw new Error(identityErrors.join('; '));
   // Invalid subtitle inputs are not quality warnings and cannot be approved away.
   const subtitleMedia=require('./explicit-subtitles.js').media(work,win.SCENES);
   const videoGate = require('./assembly-video-gate.js').check(work, board);

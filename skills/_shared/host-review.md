@@ -26,9 +26,10 @@ repair. Keep the same rubric between revisions: 95 means no required correction;
 defects and cannot be converted into a passing score. A composition score is not a
 whole-video score. Avoid exaggerated acting demands for deliberately restrained scenes.
 
-For the fixed cut workflow and explicitly requested improvement loops, use an independent host reviewer when
-the host supports subagents; inherit the active model, not a pinned external model.
-For a fixed cut stage, unavailable independent review leaves the stage incomplete.
+For a requested stage review (review-context, review-camera, review-cut-images, review-cut-videos)
+and explicitly requested improvement loops, use an independent host reviewer when the host
+supports subagents; inherit the active model, not a pinned external model. When independent
+review is unavailable, say so; reviews run only on request and gate no step (user directive 2026-10-31).
 For other optional reviews, review in the current session and disclose that it is not independent.
 Do not show the reviewer prior scores or the target before collecting observations.
 Normal production still generates speech without automatic scoring or retakes.

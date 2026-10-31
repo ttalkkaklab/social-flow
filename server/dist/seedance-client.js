@@ -28,6 +28,7 @@ import { z } from 'zod';
 import { arkBaseUrl, requireArkKey } from './config.js';
 import { publishFiles } from './media-publish.js';
 import { ALLOWED_EXTENSIONS, bareFilenameSchema, mimeFromExtension, resolveOutputFile, validateFilePath, } from './media-utils.js';
+import { nonEnglishOutsideQuotes } from './prompt-language.js';
 // ── Model capability table (source of truth) ────────────────────────
 //
 // A direct transcription of the per-model constraints in the official docs
@@ -115,20 +116,6 @@ const commonFields = {
     filename: bareFilenameSchema('video').optional(),
 };
 /**
- * Hangul outside quotation marks — the prompt language constraint.
- *
- * The prompt body reads Chinese or English on every model but
- * dreamina-seedance-2-5-260628. Korean **dialogue** inside quotes is spoken, so what a
- * quote encloses is exempt; a Korean direction outside quotes is not
- * understood and silently degrades the shot rather than failing the call.
- */
-const QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
-const HANGUL_RUN = /[가-힣]+(?:[ \t]+[가-힣]+)*/;
-function hangulOutsideQuotes(prompt) {
-    const match = prompt.replace(QUOTED_SEGMENT, ' ').match(HANGUL_RUN);
-    return match ? match[0] : null;
-}
-/**
  * Model × resolution × duration × feature cross-constraint validation (per official docs).
  *
  * We reject before calling because one generation takes
@@ -138,15 +125,14 @@ function hangulOutsideQuotes(prompt) {
  */
 function validateCommon(data, ctx) {
     const spec = SEEDANCE_MODEL_SPECS[data.model];
-    if (data.model !== 'dreamina-seedance-2-5-260628') {
-        const korean = hangulOutsideQuotes(data.prompt);
-        if (korean) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                path: ['prompt'],
-                message: `${data.model} reads Chinese or English prompts only — the Korean "${korean}" sits outside quotation marks and would be ignored rather than obeyed. Write the direction in English; Korean dialogue belongs inside quotes, or route the shot to dreamina-seedance-2-5-260628.`,
-            });
-        }
+    // Video prompts are English on every model; dialogue in the video's language goes inside quotes.
+    const foreign = nonEnglishOutsideQuotes(data.prompt);
+    if (foreign) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['prompt'],
+            message: `video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`,
+        });
     }
     if (!spec.resolutions.includes(data.resolution)) {
         ctx.addIssue({

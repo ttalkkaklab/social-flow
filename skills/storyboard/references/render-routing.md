@@ -102,8 +102,8 @@ per short and at most 20% of generated cut length in long-form, and a text-led c
 typography into subject motion. Other cuts take the time their action needs. `evidence_quote` records
 `evidence:{source,quote}`; to show the document itself, use a still-camera cut.
 
-Every generated cut needs `mode`, `purpose` and `reason`; recordings and the shared outro are
-exempt. Characters need `actors` and `action`; objects need `action`. Generated video also
+Every generated cut needs `mode`, `purpose` and `reason`, set with `shot_icons` as the
+storyboard's third step; recordings and the shared outro are exempt. Characters need `actors` and `action`; objects need `action`. Generated video also
 needs `motionEssential:true`, `action` and `whyNotStill`. A stock clip needs `action` (what
 the viewer sees happen), `visual.source: "stock"` and the `visual.license` record — provider,
 url, license, licenseUrl, `commercial` and `modify` both true, `attributionRequired` with the
@@ -194,7 +194,7 @@ in [blender-previz.md](blender-previz.md) §6.
 ## Start and end frame planning
 
 For every newly authored image-to-video shot, set `visual.frames.mode` to `first` or
-`first_last` and write `reason`. Use `first_last` when the final position, a camera destination,
+`first_last` and write `reason` (`shot_icons` `frames`; `reference` plans MSR and shows its icon). Use `first_last` when the final position, a camera destination,
 opening/closing, assembly, removal or another visible state change must be controlled. Write
 `endState` before generating images. Use `first` for a mood shot or subtle ambient motion with
 no required destination. The decision is per shot, independent of hybrid/full-video choice —

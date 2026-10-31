@@ -25,7 +25,9 @@ source images into one still. Never hide that limit by dropping references.
 
 Write each reference's role and prompt index in the shot's generation plan. Put
 non-background references first and the background last: the gateway moves the
-background to the final slot. Describe actions with those image numbers. Inspect
+background to the final slot. In an episode the background slot carries the shot's start
+image, which `shot_image` composed from its characters, place and props (user directive
+2026-10-31); `video_plan` sends it there and leaves the plain place picture out. Describe actions with those image numbers. Inspect
 results for identity, clothing, object ownership, background and unintended text;
 metadata or a completed response is not a visual review.
 
@@ -134,7 +136,7 @@ speakers sit on subjects 1 and 2, where a voice sample can ride. At most two cha
 references (user directive, 2026-10-31): describe anyone else on screen in the action and let
 the model draw them; `video_plan` refuses references for a third character
 (`msr_character_limit`), and the storyboard keeps two principal characters per shot
-(`[character-limit]`). The background goes last. A test on 2026-10-31
+(`[character-limit]`). The shot's start image goes last, in the background slot. A test on 2026-10-31
 (Kardum, same prompt and seed) kept one complete orc with the sheet's outfit front and back
 with all three panels; the face alone invented a different armour. The panels-only render
 dropped the topknot, which the face-panel hair instruction addresses.

@@ -1,4 +1,4 @@
-import { setupProject, completeWorkflow } from './workflow-fixture.mjs';
+import { setupProject, png } from './workflow-fixture.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { spawn, execFileSync } from 'node:child_process';
-import { planVideo, executeVideo, routeLegacyVideo, routingContext } from '../dist/video-routing.js';
+import { planVideo, executeVideo, routeLegacyVideo, routingContext, approveVideo } from '../dist/video-routing.js';
 import { VIDEO_ADAPTERS, videoCatalog, speechVideoCapabilities } from '../dist/video-registry.js';
 import { videoTransaction } from '../dist/video-state.js';
 import { recordVideoSubmission, recordVideoTokens } from '../dist/video-events.js';
@@ -24,7 +24,7 @@ function fixture(t, video = selection, auth = {}) {
  settings.saveSettings(root,{video,speech:{engine:'gemini',model:'gemini-2.5-flash-preview-tts'},image:{engine:'host',model:'host-managed',host:'codex'}},{expectedRevision:settings.readSettings(root).revision,videoType:{id:'drama'},request:'Fixture selection'});
  const episode = path.join(root,'data/c/episodes/e'); fs.mkdirSync(path.join(episode,'storyboard'),{recursive:true});
  settings.snapshotSettings(root,episode);
- completeWorkflow(episode);
+ approveVideo({episode,auto:true,request:'Fixture: approve every shot'});
  const board = {PRODUCTION:{videoAuthorization:{reference:'Explicit fixture spending instruction',maxUsd:10,maxConcurrent:3,maxAttempts:3,...auth}},SCENES:[{id:'s1',visual:{video:{...video}}},{id:'s2',visual:{video:{...video}}}]};
  const save = ()=>fs.writeFileSync(path.join(episode,'storyboard/scenes.js'),Object.entries(board).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));
  save();
@@ -88,12 +88,27 @@ test('plan validates selection, unsupported options, cross-field constraints and
  assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'a',operation:'audio',args:{prompt:'x'}}),/no adapter/);
  assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'a',operation:'image',args:{prompt:'x',sourceImagePath:'missing.png'}}),/ENOENT/);
  assert.throws(()=>f.plan('a',{outputPath:os.tmpdir()}),/inside/);
+ assert.throws(()=>f.plan('ko',{prompt:'A boat crosses a lake. 배가 호수를 건넌다.'}),/video_prompt_language/);
+ assert.ok(f.plan('ko-quote',{prompt:'The rower says "건너자" and pushes off.'}).id);
 });
 test('completed request is reused and altered request ID payload is rejected',async t=>{
  const f=fixture(t); let calls=0; const dispatch=async()=>{calls++;recordVideoSubmission('op-1');return result;}; const p=f.plan();
  await f.execute(p,dispatch); await f.execute(p,dispatch); assert.equal(calls,1);
  assert.equal(f.state().jobs.a.providerId,'op-1'); assert.equal(f.state().jobs.a.status,'completed');
  await assert.rejects(f.execute(f.plan('a',{prompt:'Different'}),dispatch),/request_id_conflict/);
+});
+test('a shot video runs only after the user approves its plan or every shot; the plan sends the shot prompt',async t=>{
+ const f=fixture(t); let calls=0; const dispatch=async()=>{calls++;return result;};
+ approveVideo({episode:f.episode,auto:false,request:'Ask me before each shot'});
+ f.board.SCENES[0].visual.video.prompt='A heron lands on the dock.';f.save();
+ const p=planVideo({episode:f.episode,shotId:'s1',requestId:'a',operation:'text',args:{durationSeconds:8}});
+ assert.equal(p.args.prompt,'A heron lands on the dock.');
+ await assert.rejects(f.execute(p,dispatch),/video_approval_required/);
+ approveVideo({episode:f.episode,planIds:[p.id],request:'Shot 1 looks right'});
+ await f.execute(p,dispatch); assert.equal(calls,1);
+ await assert.rejects(f.execute(f.plan('b'),dispatch),/video_approval_required/);
+ approveVideo({episode:f.episode,auto:true,request:'Make every shot without asking'});
+ await f.execute(f.plan('b'),dispatch); assert.equal(calls,2);
 });
 test('budget and attempts gate before dispatch and include prior successful reservations',async t=>{
  const f=fixture(t,selection,{maxUsd:1.5,maxAttempts:2});let calls=0;
@@ -326,9 +341,10 @@ test('a saved reference operation plans MSR with the speaker sample, dimensions 
   await assert.rejects(f.execute(p, async () => assert.fail('stale reference must not generate')), /stale/);
 });
 
-test('managed storyboard images reach dispatch and cannot change after planning or bypass review',async t=>{
+test('managed storyboard images reach dispatch and cannot change after planning',async t=>{
  const f=fixture(t);
- const first=path.join(f.episode,'workflow/image_storyboard.png'),last=path.join(f.episode,'workflow/image_storyboard-s2.png');
+ const first=path.join(f.episode,'start.png'),last=path.join(f.episode,'end.png');
+ fs.writeFileSync(first,png);execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=red:s=2x2','-frames:v','1',last]);
  f.board.SCENES[0].visual={frames:{mode:'first_last',start:first,end:last},references:[]};f.save();
  const p=planVideo({episode:f.episode,shotId:'s1',requestId:'authored',operation:'image',args:{prompt:'Move',durationSeconds:8}});
  assert.equal(p.imageBindings.length,2);let calls=0;
@@ -336,11 +352,6 @@ test('managed storyboard images reach dispatch and cannot change after planning 
  assert.equal(calls,1);
  const q=planVideo({episode:f.episode,shotId:'s1',requestId:'stale',operation:'image',args:{prompt:'Move',durationSeconds:8}});
  f.board.SCENES[0].visual.frames.end=first;f.save();await assert.rejects(f.execute(q,async()=>assert.fail()),/stale/);
- const unreviewed=path.join(f.episode,'unreviewed.png');fs.copyFileSync(last,unreviewed);
- f.board.SCENES[0].visual.frames.end=unreviewed;f.save();
- assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'unreviewed',operation:'image',args:{prompt:'Move'}}),/not_reviewed/);
- delete f.board.SCENES[0].visual.references;f.save();
- assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'no-refs',operation:'image',args:{prompt:'Move'}}),/not_reviewed/);
 });
 
 test('native gateway video settings select the Desktop adapter and preserve audio loss policy',t=>{

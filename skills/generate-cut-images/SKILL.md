@@ -1,35 +1,35 @@
 ---
 name: generate-cut-images
 description: >
-  Generates cut storyboard images; stops before image review or video. Use when this production stage is requested or the fixed episode workflow reaches it.
+  Makes each shot's start image, and the end image a first_last shot needs, from its characters' sheet panels, place and props; stops before the video prompt. Use when images are requested or the episode order reaches them.
 argument-hint: "[episode-or-storyboard-path]"
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__image_catalog", "mcp__plugin_social-flow_social-flow__image_catalog", "mcp__social-flow__image_plan", "mcp__plugin_social-flow_social-flow__image_plan", "mcp__social-flow__image_execute", "mcp__plugin_social-flow_social-flow__image_execute", "mcp__social-flow__image_status", "mcp__plugin_social-flow_social-flow__image_status", "mcp__social-flow__astra_genai_catalog", "mcp__plugin_social-flow_social-flow__astra_genai_catalog"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "mcp__social-flow__shot_image", "mcp__plugin_social-flow_social-flow__shot_image", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__image_catalog", "mcp__plugin_social-flow_social-flow__image_catalog", "mcp__social-flow__image_status", "mcp__plugin_social-flow_social-flow__image_status", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow"]
 ---
 
 # Generate Cut Images
 
-Own only `image_storyboard`. Follow [the fixed workflow](../_shared/production-workflow.md)
-for state, evidence, re-entry and stopping conditions. A completed board can re-enter here;
-existing artifacts are inputs, not automatic passing evidence. Never skip prerequisites.
+Step 6 of [the production order](../_shared/production-workflow.md) (user directive
+2026-10-31): after every shot has its icon attributes and the props and backgrounds exist,
+make each picture shot's start image with `shot_image`, then — only for a `first_last`
+shot — its end image with `frame:"end"`. Read [still generation](../produce/references/still-generation.md)
+and [image routing](../_shared/image-routing.md).
 
-Require blender_composition. Read [still generation](../produce/references/still-generation.md)
-and [image routing](../_shared/image-routing.md). This skill generates cut images only;
-character, prop and background sheets belong to preparation.
+For each shot, read its story, characters, lines and icon attributes with `storyboard_read`,
+then write `prompt` in English: who is where, doing what, facing which way, with which
+expression and light, at the moment the shot opens (for an end image, the closing moment
+and what changed). Name the place with `location` (an `SB_DOC.locations` id) and the props
+seen in the frame with `props`; later calls keep them. The tool adds the size, angle, depth
+and technique words, the episode style and an `Image N` line for every input, then runs
+`image_plan` → `image_execute` with the saved model and the existing spending authorization.
 
-Begin image_storyboard with the same cut IDs as blender_composition. Use each corresponding
-Blender image as an actual image input, alongside appearance sheets. A path in prompt prose
-is not an input. Use image_plan before server or host generation; the server rejects a
-missing composition reference. An adapter without image editing/reference support cannot
-satisfy this stage: report it without switching the saved model silently.
+One character's inputs are its face, headless front and headless back panels; two
+characters take each face, then each front. The place goes first as the picture to edit.
+A model that takes one picture refuses (`image_references_unsupported`): report it and
+ask which multi-picture model to use (gpt-image, astra-genai-native, mlx); never switch
+silently. A host selection returns the inputs and the save path for the host tool.
 
-Preserve the reviewed opening state, viewpoint and blocking. Generate only authorized
-outputs within actual attempt/budget limits. Register and complete real decodable files;
-a generation receipt is not a quality verdict. Stop here; review-cut-images runs only when
-the user asks for an image review.
-
-Read [shot image inputs](../storyboard/references/scenes-schema.md#shot-image-inputs).
-Register the primary cut image as `image` and its ending/intermediate/reference files
-as `images` under the same cut ID. Generate the planned endpoint images and pass every
-image/both reference as a real tool input for each relevant still. The spatial prompt
-assembler returns opening and ending reference arguments; preserve their order and roles.
-Do not complete the stage with only an opening image when the plan needs more files.
+Each call writes a new versioned file under `storyboard/images/` and records
+`visual.frames.start` and `visual.bg` (or `frames.end`), `visual.references`, `locationId`
+and `props`. Look at every image you make before moving on; regenerate a wrong one with a
+better prompt within the attempt and spending limits. Text in an image follows the GPT
+Image 2 rule. Stop before the video prompt; review-cut-images runs only when the user asks.

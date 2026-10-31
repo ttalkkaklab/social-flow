@@ -102,10 +102,6 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 var loadFromHere = nodeModule.createRequire(import.meta.url);
 var helper = resolve(dirname(fileURLToPath(import.meta.url)), "../../skills/_shared/project-settings.js");
-function manageProject(args) {
-  const project = loadFromHere(helper);
-  return project.manageProject(args);
-}
 
 // src/image-media.ts
 import { createHash } from "node:crypto";
@@ -158,12 +154,6 @@ function imageMetadata(bytes) {
 function readImageMetadata(file) {
   return imageMetadata(readFileSync(file));
 }
-
-// src/production-workflow.ts
-import * as fs2 from "node:fs";
-import path2 from "node:path";
-import { createRequire as createRequire2 } from "node:module";
-import { createHash as createHash2 } from "node:crypto";
 
 // node_modules/zod/v3/external.js
 var external_exports = {};
@@ -643,8 +633,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path7, errorMaps, issueData } = params;
-  const fullPath = [...path7, ...issueData.path || []];
+  const { data, path: path5, errorMaps, issueData } = params;
+  const fullPath = [...path5, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -760,11 +750,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path7, key) {
+  constructor(parent, value, path5, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path7;
+    this._path = path5;
     this._key = key;
   }
   get path() {
@@ -4206,16 +4196,6 @@ var coerce = {
 };
 var NEVER = INVALID;
 
-// src/routing-files.ts
-import * as fs from "node:fs";
-import path from "node:path";
-function canonicalPath(file) {
-  if (fs.existsSync(file)) return fs.realpathSync(file);
-  const parent = path.dirname(file);
-  if (parent === file) throw new Error("Cannot resolve path");
-  return path.join(canonicalPath(parent), path.basename(file));
-}
-
 // src/production-workflow.ts
 var STAGES = [
   "characters",
@@ -4230,12 +4210,10 @@ var STAGES = [
   "video",
   "video_review"
 ];
-var IMAGE_STAGES = ["characters", "props", "backgrounds", "blender_composition", "image_storyboard"];
 var stageSchema = external_exports.enum(STAGES);
 var entrySchema = external_exports.object({ images: external_exports.array(external_exports.string().min(1)).optional(), id: external_exports.string().min(1), text: external_exports.string().min(1), image: external_exports.string().min(1).optional(), blend: external_exports.string().min(1).optional(), video: external_exports.string().min(1).optional() }).strict();
-var skippedSchema = external_exports.object({ requestedBy: external_exports.string().min(1).optional(), request: external_exports.string().trim().min(1), at: external_exports.string().min(1) }).strict();
-var recordSchema = external_exports.object({ stage: stageSchema, entries: external_exports.array(entrySchema), notApplicable: external_exports.string().optional(), skipped: skippedSchema.optional(), criteriaHash: external_exports.string().optional(), hashes: external_exports.record(external_exports.string()).optional() }).strict();
-var stateSchema = external_exports.object({ version: external_exports.literal(2), completed: external_exports.array(recordSchema), active: recordSchema.optional(), rubrics: external_exports.record(external_exports.string()).default({}) }).strict();
+var recordSchema = external_exports.object({ stage: stageSchema, entries: external_exports.array(entrySchema), notApplicable: external_exports.string().optional(), hashes: external_exports.record(external_exports.string()).optional() }).passthrough();
+var stateSchema = external_exports.object({ version: external_exports.literal(2), completed: external_exports.array(recordSchema), active: recordSchema.optional() }).passthrough();
 var workflowSchema = external_exports.object({
   episode: external_exports.string().min(1),
   action: external_exports.enum(["status", "begin", "complete", "rewind"]),
@@ -4243,486 +4221,10 @@ var workflowSchema = external_exports.object({
   entries: external_exports.array(entrySchema).optional(),
   notApplicable: external_exports.string().optional()
 }).strict();
-var digest = (file) => createHash2("sha256").update(fs2.readFileSync(file)).digest("hex");
-var stateFile = (episode) => path2.join(episode, ".work/production-workflow.json");
-function workflowEpisode(directory) {
-  let dir = canonicalPath(path2.resolve(directory));
-  for (; ; ) {
-    if (fs2.existsSync(stateFile(dir)) || /[/\\]data[/\\][^/\\]+[/\\]episodes[/\\][^/\\]+$/.test(dir)) return dir;
-    const parent = path2.dirname(dir);
-    if (parent === dir) return void 0;
-    dir = parent;
-  }
-}
-function readyProject(episode) {
-  let root = episode;
-  while (!fs2.existsSync(path2.join(root, ".social-flow/models.json"))) {
-    const parent = path2.dirname(root);
-    if (parent === root) throw new Error("project_setup_required: run project_manage init before authoring");
-    root = parent;
-  }
-  const result = manageProject({ action: "status", workspace: root });
-  if (result.status !== "ready") throw new Error("project_setup_required: " + JSON.stringify(result.missing));
-}
-function read(episode) {
-  if (!fs2.existsSync(stateFile(episode))) return { version: 2, completed: [], rubrics: {} };
-  const raw = JSON.parse(fs2.readFileSync(stateFile(episode), "utf8"));
-  if (raw.version === 1) {
-    raw.completed = (raw.completed ?? []).slice(0, 2);
-    delete raw.active;
-    raw.version = 2;
-  }
-  const state = stateSchema.parse(raw);
-  for (const [i, record] of state.completed.entries()) {
-    if (record.stage !== STAGES[i] || !record.hashes) throw new Error("workflow_invalid_state");
-    validateRecord(record);
-    if (record.skipped) {
-      const source = state.completed[i - 1];
-      if (source?.stage !== "image_storyboard" || JSON.stringify(record.hashes) !== JSON.stringify(source.hashes)) throw new Error("workflow_invalid_skip");
-    }
-    for (const entry2 of record.entries) {
-      for (const file of [entry2.text, entry2.image, ...entry2.images ?? [], entry2.blend, entry2.video].filter(Boolean)) {
-        if (!/^[a-f0-9]{64}$/.test(record.hashes[file] ?? "")) throw new Error("workflow_invalid_state");
-      }
-    }
-  }
-  if (state.active && state.active.stage !== STAGES[state.completed.length]) throw new Error("workflow_invalid_state");
-  return state;
-}
-function verifyPrevious(state) {
-  for (const record of state.completed) {
-    for (const [file, hash2] of Object.entries(record.hashes)) {
-      if (!fs2.existsSync(file) || digest(file) !== hash2) throw new Error(`workflow_stale: rewind ${record.stage}; changed ${file}`);
-    }
-  }
-}
-function validateRecord(record) {
-  if (record.skipped) {
-    if (record.stage !== "image_review" || record.entries.length || record.notApplicable || record.criteriaHash) throw new Error("workflow_invalid_skip");
-    return;
-  }
-  if (record.notApplicable) {
-    if (!["characters", "props", "backgrounds"].includes(record.stage) || !record.notApplicable.trim() || record.entries.length) throw new Error("workflow_invalid_not_applicable");
-  } else if (!record.entries.length) throw new Error("workflow_empty_stage");
-  const ids = /* @__PURE__ */ new Set();
-  for (const entry2 of record.entries) {
-    if (ids.has(entry2.id)) throw new Error("workflow_duplicate_asset_id");
-    ids.add(entry2.id);
-    if (IMAGE_STAGES.includes(record.stage) ? !entry2.image : entry2.image !== void 0) throw new Error("workflow_artifacts_required: image required only for image stages");
-    if (entry2.images && record.stage !== "image_storyboard") throw new Error("workflow_images_only_for_storyboard");
-    if (record.stage === "blender_composition" ? !entry2.blend : entry2.blend !== void 0) throw new Error("workflow_blender_required");
-    if (record.stage === "video" ? !entry2.video : entry2.video !== void 0) throw new Error("workflow_video_required");
-  }
-}
-var reviewSchema = external_exports.object({
-  stage: external_exports.enum(["context_review", "camera_review", "image_review", "video_review"]),
-  author: external_exports.string().trim().min(1),
-  reviewer: external_exports.string().trim().min(1),
-  independent: external_exports.literal(true),
-  verdict: external_exports.literal("pass"),
-  coverage: external_exports.enum(["text", "images", "video_playback"]),
-  criteria: external_exports.object({ path: external_exports.string().min(1), sha256: external_exports.string().regex(/^[a-f0-9]{64}$/) }).strict(),
-  inputs: external_exports.record(external_exports.string().regex(/^[a-f0-9]{64}$/)),
-  cutIds: external_exports.array(external_exports.string().min(1)).min(1).optional(),
-  observations: external_exports.array(external_exports.string().trim().min(10)).min(1),
-  unresolved: external_exports.array(external_exports.string()).length(0),
-  audienceRead: external_exports.object({
-    blind: external_exports.literal(true),
-    reconstruction: external_exports.string().trim().min(20),
-    transitions: external_exports.array(external_exports.object({
-      from: external_exports.string().min(1),
-      to: external_exports.string().min(1),
-      viewerUnderstands: external_exports.string().trim().min(10),
-      evidence: external_exports.array(external_exports.object({ path: external_exports.string().min(1), quote: external_exports.string().trim().min(5), cutId: external_exports.string().min(1) }).strict()).min(1)
-    }).strict()).min(1),
-    missingContext: external_exports.array(external_exports.string()).length(0)
-  }).strict().optional()
-}).strict();
-function requireWorkflow(directory, kind, assetId, outputFile) {
-  const episode = workflowEpisode(directory);
-  if (!episode) {
-    if (/[/\\]data[/\\][^/\\]+[/\\]assets(?:[/\\]|$)/.test(path2.resolve(directory))) readyProject(directory);
-    return;
-  }
-  readyProject(episode);
-  const state = read(episode);
-  verifyPrevious(state);
-  if (kind === "composition") {
-    if (state.active?.stage !== "blender_composition" || assetId && !state.active.entries.some((entry2) => entry2.id === assetId)) throw new Error("workflow_out_of_order: complete camera_review and begin blender_composition");
-  } else if (kind === "delivery") {
-    if (state.completed.length !== STAGES.length) throw new Error("workflow_out_of_order: complete video_review before assembly or delivery");
-  } else if (kind === "video") {
-    if (state.active?.stage !== "video") throw new Error("workflow_out_of_order: begin video after image_storyboard");
-    if (assetId && !state.active.entries.some((entry2) => entry2.id === assetId)) throw new Error("workflow_unknown_cut");
-  } else if (kind === "text") {
-    if (!state.completed.length) throw new Error("workflow_out_of_order: complete characters before text_storyboard");
-  } else {
-    const active = state.active;
-    const entry2 = active?.entries.find((item) => item.id === assetId);
-    if (!active || !["characters", "props", "backgrounds", "image_storyboard"].includes(active.stage) || !entry2?.image) throw new Error("workflow_out_of_order: begin the current image stage and register assetId");
-    if (outputFile && ![entry2.image, ...entry2.images ?? []].includes(canonicalPath(outputFile))) throw new Error("workflow_output_mismatch: use the registered image path");
-  }
-}
-var loadImagePlan = createRequire2(import.meta.url);
-
-// src/storyboard.ts
-import { createHash as createHash3 } from "node:crypto";
-
-// src/scenes-vm.ts
-import vm from "node:vm";
-var SCENES_VM_POLICY = Object.freeze({
-  timeoutMs: 5e3,
-  codeGeneration: Object.freeze({ strings: false, wasm: false })
-});
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-function describeEvaluationError(error, filename) {
-  const detail = error && typeof error === "object" ? error : {};
-  const message = typeof detail.message === "string" ? detail.message : String(error);
-  const stack = typeof detail.stack === "string" ? detail.stack : "";
-  const locations = [...stack.matchAll(new RegExp(`${escapeRegExp(filename)}:([0-9]+)(?::([0-9]+))?`, "g"))];
-  const location = locations.find((match) => match[2]) ?? locations[0];
-  const line = location?.[1] ?? "1";
-  const column = location?.[2] ?? "1";
-  const wrapped = new Error(
-    `${filename}:${line}:${column}: ${message}. Allowed syntax: storyboard JavaScript that assigns JSON-serializable data to window.*; eval and Function are disabled.`
-  );
-  wrapped.name = typeof detail.name === "string" ? detail.name : "Error";
-  wrapped.cause = error;
-  return wrapped;
-}
-function evaluateWindowScript(source, options = {}) {
-  const timeout = options.timeoutMs ?? SCENES_VM_POLICY.timeoutMs;
-  const filename = options.filename ?? "scenes.js";
-  const context = vm.createContext(/* @__PURE__ */ Object.create(null), {
-    codeGeneration: SCENES_VM_POLICY.codeGeneration
-  });
-  try {
-    vm.runInContext(
-      "var window = {}; var console = { log() {}, warn() {}, error() {}, info() {}, debug() {} };",
-      context,
-      { timeout }
-    );
-    vm.runInContext(source, context, { filename, timeout });
-    const json = vm.runInContext("JSON.stringify(window)", context, { timeout });
-    if (typeof json !== "string") throw new Error("the script did not leave a window object");
-    const plain = JSON.parse(json);
-    if (!plain || typeof plain !== "object" || Array.isArray(plain)) {
-      throw new Error("the script replaced window with a non-object");
-    }
-    return plain;
-  } catch (error) {
-    throw describeEvaluationError(error, filename);
-  }
-}
-
-// src/storyboard.ts
-import { existsSync as existsSync3, mkdirSync as mkdirSync3, readFileSync as readFileSync3, renameSync as renameSync2, statSync as statSync2, unlinkSync as unlinkSync3, writeFileSync as writeFileSync2 } from "node:fs";
-import * as nodeModule2 from "node:module";
-import { basename, dirname as dirname2, join, resolve as resolve2 } from "node:path";
-import { fileURLToPath as fileURLToPath2 } from "node:url";
-var PLUGIN_ROOT = resolve2(dirname2(fileURLToPath2(import.meta.url)), "..", "..");
-var REFERENCES_DIR = join(PLUGIN_ROOT, "skills", "storyboard", "references");
-var CONTRACT_FILE = join(REFERENCES_DIR, "structure-contract.js");
-var CHECK_SCENES_FILE = join(REFERENCES_DIR, "check-scenes.js");
-var CHECK_SCENARIO_FILE = join(REFERENCES_DIR, "check-scenario.js");
-var loadFromHere2 = nodeModule2.createRequire(import.meta.url);
-var contractCache;
-function contract() {
-  if (!contractCache) contractCache = loadFromHere2(CONTRACT_FILE);
-  return contractCache;
-}
-function cameraContract() {
-  return loadFromHere2(join(REFERENCES_DIR, "production-mode.js"));
-}
-function techniqueContract() {
-  return loadFromHere2(join(REFERENCES_DIR, "film-techniques.js"));
-}
-var techniqueSelectionSchema = external_exports.array(external_exports.object({
-  id: nonEmptyTechniqueId(),
-  reason: external_exports.string().trim().min(1).describe("Why this technique serves this shot\u2019s information or action")
-}).strict()).superRefine((value, ctx) => {
-  for (const message of techniqueContract().validate(value))
-    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-});
-function nonEmptyTechniqueId() {
-  return external_exports.string().trim().min(1).describe("Stable id from storyboard_read techniqueCatalog");
-}
-function motionThemeContract() {
-  return loadFromHere2(join(REFERENCES_DIR, "motion-graphics.js"));
-}
-function motionGraphicTypes() {
-  const registry = loadFromHere2(join(REFERENCES_DIR, "motion-graphics.js"));
-  return Object.keys(registry.TYPES);
-}
-var tuple = (list) => external_exports.enum(list);
-var MISSING = ["__contract-missing__"];
-function vocabAtLoad() {
-  try {
-    return contract().VOCAB;
-  } catch {
-    return {
-      SIZES: MISSING,
-      ANGLES: MISSING,
-      BEATS: MISSING,
-      TYPES: MISSING,
-      INFO_TYPES: MISSING,
-      SHARE_TYPES: MISSING,
-      HOOK_TYPES: MISSING,
-      HOOK_FORMS: MISSING,
-      ARCS: MISSING,
-      RENDER_MODES: MISSING,
-      PRODUCTION_MODES: MISSING,
-      CHARGES_OPEN: MISSING,
-      CHARGES_CLOSE: MISSING,
-      TRANSITION_RE: /^$/
-    };
-  }
-}
-var V = vocabAtLoad();
-var nonEmpty = external_exports.string().trim().min(1);
-var STRUCTURE_VERSION = (() => {
-  try {
-    return contract().VERSION;
-  } catch {
-    return "structure-v1";
-  }
-})();
-var sceneSchema = external_exports.object({
-  no: external_exports.number().int().positive().describe("Scene number \u2014 the value shots point at with `scene`"),
-  place: external_exports.string().optional().describe("One place \u2014 the slugline location"),
-  time: external_exports.string().optional().describe("One continuous stretch of time \u2014 \uB0AE \xB7 \uBC24 \xB7 \uC0C8\uBCBD \xB7 10\uB144 \uB4A4"),
-  event: external_exports.string().optional().describe("The one thing that happens in this scene"),
-  charge: external_exports.record(external_exports.unknown()).optional(),
-  turn: external_exports.string().optional().describe("What flipped between the open and the close"),
-  out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene")
-}).strict();
-var sequenceSchema = external_exports.object({
-  id: nonEmpty.describe('Stable id, e.g. "q1"'),
-  title: external_exports.string().optional().describe("The heading the approval page draws"),
-  purpose: external_exports.string().optional().describe("The one purpose that binds these scenes \u2014 two purposes are two sequences"),
-  question: nonEmpty.optional().describe("The dramatic question this stretch opens"),
-  payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question"),
-  scenes: external_exports.array(external_exports.number().int().positive()).describe("Scene numbers in playback order")
-}).strict();
-var structureSchema = external_exports.object({
-  version: external_exports.literal(STRUCTURE_VERSION),
-  nextShotId: external_exports.number().int().positive().optional(),
-  sequences: external_exports.array(sequenceSchema),
-  scenes: external_exports.array(sceneSchema)
-}).strict();
-var coverageSchema = external_exports.object({
-  azimuth: external_exports.number().finite().optional().describe("Horizontal camera bearing, 0\u2013180\xB0 inside the selected side of the axis"),
-  action: external_exports.string().trim().min(1).optional().describe("Visible action that carries this cut when no 30\xB0 or two-step change is used")
-}).passthrough();
-var lineCrossingSchema = external_exports.object({
-  method: external_exports.enum(["camera_move", "subject_move", "neutral", "intentional"]),
-  from: nonEmpty.describe("The previous space.line value"),
-  to: nonEmpty.describe("The new space.line value"),
-  reason: nonEmpty.describe("What the viewer sees that makes the new side legible"),
-  bridgeShot: external_exports.number().int().positive().optional().describe('Earlier neutral shot number; required only for method "neutral"')
-}).strict();
-var compositionSchema = external_exports.record(external_exports.unknown());
-var eyelineSchema = external_exports.object({ matchShot: external_exports.number().int().positive().optional() }).passthrough();
-var depthSchema = external_exports.record(external_exports.unknown());
-var cameraSchema = external_exports.record(external_exports.unknown()).superRefine((value, ctx) => {
-  for (const message of cameraContract().cameraInputErrors(value))
-    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-});
-var visualSchema = external_exports.object({ camera: cameraSchema.optional() }).passthrough();
-var shotIdSchema = external_exports.string().regex(/^s\d{4,}$/);
-var shotSchema = external_exports.object({
-  id: shotIdSchema.optional(),
-  type: tuple(V.TYPES),
-  title: external_exports.string().optional(),
-  narration: external_exports.array(external_exports.object({ id: external_exports.string().trim().min(1).optional(), delivery: external_exports.enum(["voiceover", "on_screen", "off_screen"]).optional(), tts: external_exports.string(), sub: external_exports.string().optional(), speaker: external_exports.string().trim().min(1).optional() }).passthrough()).optional(),
-  visual: visualSchema.optional(),
-  duration: external_exports.number().positive().optional(),
-  scene: external_exports.number().int().positive().optional(),
-  sceneSlug: external_exports.string().optional(),
-  sequence: external_exports.string().optional(),
-  transition: external_exports.string().regex(V.TRANSITION_RE, "not a join from scenes-schema \xA7scene transition").optional(),
-  beat: external_exports.string().optional(),
-  arc: external_exports.string().optional(),
-  hookType: external_exports.string().optional(),
-  hookForm: external_exports.string().optional(),
-  chapter: external_exports.string().optional(),
-  after: external_exports.number().int().nonnegative().optional(),
-  shot: external_exports.object({
-    techniques: techniqueSelectionSchema.optional(),
-    feel: external_exports.string().optional(),
-    size: external_exports.string().optional(),
-    angle: external_exports.string().optional(),
-    why: external_exports.string().optional(),
-    info: external_exports.string().optional(),
-    infoType: external_exports.string().optional(),
-    share: external_exports.string().optional(),
-    shareType: external_exports.string().optional(),
-    space: external_exports.record(external_exports.unknown()).optional(),
-    eyeline: eyelineSchema.optional(),
-    composition: compositionSchema.optional(),
-    depth: depthSchema.optional(),
-    coverage: coverageSchema.optional(),
-    lineNeutral: external_exports.literal(true).optional(),
-    lineCrossing: external_exports.record(external_exports.unknown()).optional(),
-    motionGraphic: external_exports.object({
-      version: external_exports.literal(1),
-      type: external_exports.string().refine((value) => motionGraphicTypes().includes(value), "unknown motion graphic type"),
-      intent: external_exports.string().optional(),
-      reason: external_exports.string().optional(),
-      evidence: external_exports.enum(["data", "recording", "reenactment", "metaphor"]),
-      style: external_exports.object({
-        palette: external_exports.string().optional(),
-        reason: external_exports.string().optional(),
-        theme: external_exports.object({
-          id: external_exports.string().refine((value) => value === "auto" || Object.hasOwn(motionThemeContract().THEMES, value), "unknown motion theme"),
-          context: external_exports.enum(["research", "software", "education", "campaign", "storytelling", "friendly"]).optional(),
-          reason: external_exports.string().optional()
-        }).passthrough().optional()
-      }).passthrough(),
-      beats: external_exports.array(external_exports.object({ at: external_exports.number().min(0).max(1), action: external_exports.string() }).passthrough()).optional(),
-      content: external_exports.record(external_exports.unknown()).optional()
-    }).passthrough().optional(),
-    render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: external_exports.string().optional(), reason: external_exports.string().optional() }).passthrough().optional()
-  }).passthrough().optional(),
-  sound: external_exports.record(external_exports.unknown()).optional()
-}).passthrough();
-var readLevelSchema = external_exports.enum(["outline", "scenes", "shots", "full"]);
-var storyboardReadSchema = external_exports.object({
-  path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
-  level: readLevelSchema.default("shots").describe("outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots = every shot summarised under its scene \xB7 full = the raw shot objects too"),
-  shotId: external_exports.string().min(1).optional().describe("Stable shot ID to inspect, with its raw plan and neighboring shot IDs"),
-  includeTechniques: external_exports.boolean().default(true).describe("Return canonical technique ids, purposes, icons and provider instructions"),
-  includeContext: external_exports.boolean().default(true).describe("Include STORY, PRODUCTION and SB_DOC as unverified review context")
-});
-var storyboardCheckSchema = external_exports.object({
-  path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
-  draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 machine-layer absences are deferred, not violations")
-});
-var scenarioCheckSchema = external_exports.object({
-  path: external_exports.string().min(1).describe("The candidates directory, or its selected scenario.md")
-});
-var productionSchema = external_exports.object({ mode: tuple([...V.PRODUCTION_MODES, "hook_only", "stills_only", "hybrid"]).optional(), renderRatioVersion: external_exports.literal(1).optional() }).passthrough();
-var globalsSchema = external_exports.record(external_exports.string().regex(/^[A-Z][A-Z0-9_]*$/, "a window.* global is UPPER_CASE"), external_exports.unknown()).superRefine((value, ctx) => {
-  if (value.PRODUCTION === void 0) return;
-  const parsed = productionSchema.safeParse(value.PRODUCTION);
-  if (!parsed.success) for (const issue of parsed.error.issues) ctx.addIssue({ ...issue, path: ["PRODUCTION", ...issue.path] });
-});
-var transitionPatchSchema = external_exports.object({
-  no: external_exports.number().int().positive().describe("Incoming shot number, 1-based, after removals and inserts"),
-  transition: external_exports.enum([
-    "cut",
-    "dip",
-    "dip:white",
-    "jcut",
-    "dissolve",
-    "iris",
-    "blur",
-    "zoom",
-    "push:l2r",
-    "push:r2l",
-    "push:u2d",
-    "push:d2u",
-    "whip:l2r",
-    "whip:r2l",
-    "whip:u2d",
-    "whip:d2u"
-  ]),
-  transitionSeconds: external_exports.number().finite().min(0.08).max(0.8).optional(),
-  reason: nonEmpty,
-  continuity: nonEmpty.optional()
-}).strict().refine(
-  (v) => !["cut", "dip", "dip:white"].includes(v.transition) || v.transitionSeconds === void 0,
-  "cut and dip do not accept transitionSeconds; dip fades each side for up to 0.30 seconds"
-);
-var storyboardApplySchema = external_exports.object({
-  path: external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing), or its scenes.js"),
-  draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 camera-continuity records (lineCrossing, coverage) are deferred, not violations"),
-  set: external_exports.object({ structure: structureSchema.optional(), shots: external_exports.array(shotSchema).min(1) }).optional().describe("Replace the whole board \u2014 the structure and every shot. The way a new board is written"),
-  structure: structureSchema.optional().describe("Replace window.STRUCTURE only"),
-  sequences: external_exports.array(sequenceSchema).optional().describe("Upsert sequences by id"),
-  scenes: external_exports.array(sceneSchema).optional().describe("Upsert scenes by no"),
-  shots: external_exports.array(external_exports.object({ no: external_exports.number().int().positive(), shot: shotSchema })).optional().describe("Upsert shots by 1-based position; no = length + 1 appends"),
-  shotsById: external_exports.array(external_exports.object({ id: shotIdSchema, shot: shotSchema })).optional().describe("Replace shots by their stable id (R6); the shot keeps that id. An unknown id is an error, nothing is written"),
-  insertShots: external_exports.array(external_exports.object({
-    after: external_exports.number().int().min(0).optional(),
-    afterId: shotIdSchema.optional(),
-    shots: external_exports.array(shotSchema).min(1)
-  }).refine((e) => e.after === void 0 !== (e.afterId === void 0), { message: "give exactly one of after (position) or afterId (shot id)" })).optional().describe("Insert shots after a 1-based position (0 = at the start) or after the shot with afterId. Later positions shift"),
-  transitions: external_exports.array(transitionPatchSchema).min(1).optional().describe("Change only incoming transitions; dip fades through black. Keeps narration and visuals intact"),
-  removeShots: external_exports.array(external_exports.number().int().positive()).optional().describe("1-based positions to drop, resolved before the insert"),
-  removeShotIds: external_exports.array(shotIdSchema).min(1).optional().describe("Shot ids to drop, resolved before the insert"),
-  removeScenes: external_exports.array(external_exports.number().int().positive()).optional(),
-  removeSequences: external_exports.array(external_exports.string()).optional(),
-  globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY"),
-  expectedSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional().describe("Required for propSheet file edits; use the hash from storyboard_read"),
-  propSheet: external_exports.object({
-    props: external_exports.array(external_exports.record(external_exports.unknown())),
-    continuity: external_exports.record(external_exports.unknown()).optional()
-  }).strict().optional().describe("Replace the prop registry and optional version:1 continuity ledger together. SB_DOC.characters must register every owner and holder. See prop-continuity.md"),
-  dryRun: external_exports.boolean().default(false).describe("Validate and report, write nothing")
-});
-function scenesPath(target) {
-  const abs = resolve2(target);
-  if (basename(abs) === "scenes.js") return abs;
-  return join(abs, "scenes.js");
-}
-function readBoard(target) {
-  const file = scenesPath(target);
-  if (!existsSync3(file)) throw new Error(`no scenes.js at ${file}`);
-  if (!statSync2(file).isFile()) throw new Error(`${file} is not a file`);
-  const src = readFileSync3(file, "utf8");
-  const header = [];
-  for (const line of src.split("\n")) {
-    if (/^\s*\/\//.test(line)) header.push(line.trim());
-    else if (line.trim()) break;
-  }
-  let win;
-  try {
-    win = evaluateWindowScript(src, { filename: file });
-  } catch (e) {
-    throw new Error(`failed to evaluate ${file}: ${e.message}`);
-  }
-  if (!Array.isArray(win.SCENES)) throw new Error(`${file} has no window.SCENES array`);
-  return { file, header, win, sha256: createHash3("sha256").update(src).digest("hex") };
-}
-var GLOBAL_ORDER = ["FORMAT", "VOICE", "THEME", "COMPREHENSION", "STORY", "PRODUCTION", "MOTION_POLICY", "MUSIC", "SFX", "STRUCTURE", "SCENES"];
-function serializeBoard(win, header = []) {
-  const keys = Object.keys(win).filter((k) => win[k] !== void 0);
-  keys.sort((a, b) => {
-    const ia = GLOBAL_ORDER.indexOf(a), ib = GLOBAL_ORDER.indexOf(b);
-    if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
-    return a.localeCompare(b);
-  });
-  const lines = header.filter((h) => !/^\/\/\s*approved:/.test(h));
-  if (lines.length) lines.push("");
-  for (const k of keys) {
-    const value = k === "SCENES" && Array.isArray(win[k]) ? win[k].map((shot) => shot.id === void 0 ? shot : { id: shot.id, ...shot }) : win[k];
-    lines.push(`window.${k} = ${JSON.stringify(value, null, 2)};`);
-  }
-  return lines.join("\n") + "\n";
-}
-var scenarioCheckResultSchema = external_exports.object({
-  files: external_exports.array(external_exports.string()),
-  violations: external_exports.number().int().nonnegative(),
-  warnings: external_exports.number().int().nonnegative(),
-  findings: external_exports.array(external_exports.object({
-    level: external_exports.enum(["bad", "warn"]),
-    where: external_exports.string(),
-    what: external_exports.string()
-  }))
-});
-
-// src/fasth3-omni.ts
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync as readFileSync4, readdirSync, rmSync, statSync as statSync3 } from "node:fs";
-import { tmpdir } from "node:os";
-import { join as join3 } from "node:path";
 
 // src/media-utils.ts
-import * as fs3 from "node:fs";
-import * as path3 from "node:path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 var ALLOWED_EXTENSIONS = {
   image: [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"],
   video: [".mp4", ".webm", ".mov", ".avi"],
@@ -4731,12 +4233,12 @@ var ALLOWED_EXTENSIONS = {
   mesh: [".glb"]
 };
 function validateFilePath(filePath, options) {
-  const resolved = path3.resolve(filePath);
+  const resolved = path.resolve(filePath);
   if (filePath.includes("..")) {
     throw new Error(`Path traversal detected: ${filePath}`);
   }
   if (options?.allowedExtensions) {
-    const ext = path3.extname(resolved).toLowerCase();
+    const ext = path.extname(resolved).toLowerCase();
     if (!options.allowedExtensions.includes(ext)) {
       throw new Error(
         `File extension "${ext}" is not allowed. Allowed: ${options.allowedExtensions.join(", ")}`
@@ -4749,151 +4251,30 @@ function resolveOutputFile(outputDir, filename, kind) {
     throw new Error(`filename must be a bare file name without path separators: "${filename}"`);
   }
   validateFilePath(filename, { allowedExtensions: ALLOWED_EXTENSIONS[kind] });
-  const dir = path3.resolve(outputDir);
-  fs3.mkdirSync(dir, { recursive: true });
-  return path3.join(dir, filename);
+  const dir = path.resolve(outputDir);
+  fs.mkdirSync(dir, { recursive: true });
+  return path.join(dir, filename);
 }
 function bareFilenameSchema(kind) {
   const allowed = ALLOWED_EXTENSIONS[kind];
   return external_exports.string().min(1).refine((name) => !/[/\\]/.test(name) && !name.includes(".."), {
     message: "filename must be a bare file name without path separators (use outputPath for the directory)"
-  }).refine((name) => allowed.includes(path3.extname(name).toLowerCase()), {
+  }).refine((name) => allowed.includes(path.extname(name).toLowerCase()), {
     message: `filename extension must be one of: ${allowed.join(", ")}`
   });
 }
 
-// src/fasth3-omni.ts
-var FASTH3_OMNI_MODEL = "ddalcu/FastH3-Omni-MLX-Serve-8bit";
-var FASTH3_FRAME_LIMITS = { min: 124, max: 362, step: 17, frameRate: 24, frameOffset: 5 };
-var FASTH3_MAX_RGB_BYTES = 256 * 1024 * 1024;
-var MAX_REQUEST_BYTES = 60 * 1024 * 1024;
-var dimension = external_exports.number().int().min(256).max(1536).refine((n) => n % 32 === 0, "Dimensions must be multiples of 32");
-var paths = (max) => external_exports.array(external_exports.string().min(1)).max(max).default([]);
-var fasth3OmniSchema = external_exports.object({
-  prompt: external_exports.string().min(1).max(32e3).describe("Scene and sound, e.g. The person in <Picture 1> waves; birds chirp. References are numbered per type."),
-  model: external_exports.literal(FASTH3_OMNI_MODEL).default(FASTH3_OMNI_MODEL).describe("Installed FastH3 Omni MLX-Serve pack."),
-  width: dimension.default(768).describe("Output width in pixels, e.g. 768."),
-  height: dimension.default(448).describe("Output height in pixels, e.g. 448."),
-  numFrames: external_exports.number().int().min(124).max(362).default(124).describe("Exact 17k+5 frame count at 24 fps, e.g. 124, 243, 362; RGB output must fit 256 MiB."),
-  steps: external_exports.literal(8).default(8).describe("The trained eight-step schedule."),
-  seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional().describe("Reproducible seed, e.g. 2026."),
-  referenceImagePaths: paths(9).describe('Ordered PNG/JPEG paths, e.g. ["/tmp/character.png"]; <Picture 1> etc.'),
-  referenceVideoPaths: paths(3).describe('Ordered local video paths, e.g. ["/tmp/motion.mp4"]; 2\u201315 seconds each, 15 seconds total. Video sound is included.'),
-  referenceAudioPaths: paths(3).describe('Ordered voice/music paths, e.g. ["/tmp/voice.wav"]; 2\u201315 seconds each. Voice imitation does not preserve exact speech timing.'),
-  trimReferenceVideos: external_exports.boolean().default(false).describe("Allow trimming reference video tails to output length and the 17k+5 ladder; false refuses any trim."),
-  referenceSize: external_exports.enum(["match", "max"]).default("match").describe("match caps references to output area; max preserves more detail at higher memory/time cost."),
-  outputPath: external_exports.string().optional().describe("Output directory, e.g. /tmp/video-test."),
-  filename: bareFilenameSchema("video").optional().describe("MP4 filename, e.g. fasth3.mp4.")
-}).strict().superRefine((v, ctx) => {
-  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  if (!(v.referenceImagePaths.length + v.referenceVideoPaths.length)) issue("FastH3 Omni needs at least one image or video reference");
-  if (v.referenceImagePaths.length + v.referenceVideoPaths.length + v.referenceAudioPaths.length > 12) issue("At most twelve reference files are supported");
-  if ((v.numFrames - 5) % 17) issue("FastH3 frame counts must be 17k+5");
-  if (v.width * v.height * v.numFrames * 3 > FASTH3_MAX_RGB_BYTES) issue("Decoded RGB exceeds the adapter 256 MiB compatibility limit; reduce dimensions or frames");
-});
-function probe(file) {
-  const data = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration:stream=codec_type", "-of", "json", file], { encoding: "utf8", timeout: 15e3 }));
-  const duration2 = Number(data.format?.duration);
-  if (!Number.isFinite(duration2) || duration2 < 2 || duration2 > 15) throw new Error("Reference media must be 2\u201315 seconds: " + file);
-  return { duration: duration2, hasAudio: data.streams?.some((s) => s.codec_type === "audio") === true };
-}
-function ffmpeg(args) {
-  execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-nostdin", "-y", ...args], { timeout: 12e4, maxBuffer: 1024 * 1024 });
-}
-function buildFasth3Body(raw) {
-  const r = fasth3OmniSchema.parse(raw);
-  const temp = mkdtempSync(join3(tmpdir(), "fasth3-refs-"));
-  let encodedBytes = 0;
-  const encode = (file) => {
-    encodedBytes += 4 * Math.ceil(statSync3(file).size / 3);
-    if (encodedBytes > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference payload exceeds the 60 MiB upload limit");
-    return readFileSync4(file).toString("base64");
-  };
-  const audio = (file, name, seconds) => {
-    const target = join3(temp, name + ".wav");
-    ffmpeg(["-i", file, "-vn", "-ar", "32000", "-ac", "2", "-c:a", "pcm_s16le", ...seconds === void 0 ? [] : ["-t", String(seconds)], target]);
-    return encode(target);
-  };
-  try {
-    const images = r.referenceImagePaths.map((file) => {
-      if (statSync3(file).size * 4 / 3 > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference image exceeds upload limit");
-      const meta = readImageMetadata(file);
-      if (!["image/png", "image/jpeg"].includes(meta.mimeType)) throw new Error("FastH3 reference images must be PNG or JPEG");
-      return encode(file);
-    });
-    let videoSeconds = 0;
-    const videos = r.referenceVideoPaths.map((file, i) => {
-      const meta = probe(file);
-      videoSeconds += meta.duration;
-      if (videoSeconds > 15) throw new Error("Reference videos exceed fifteen seconds total");
-      const prefix = `video-${i}-`;
-      ffmpeg(["-i", file, "-an", "-vf", "fps=24,scale=768:768:force_original_aspect_ratio=decrease", "-frames:v", "362", join3(temp, prefix + "%04d.jpg")]);
-      const files = readdirSync(temp).filter((f) => f.startsWith(prefix)).sort();
-      const count = Math.min(files.length, r.numFrames);
-      const accepted = count - (count - 5) % 17;
-      if (accepted < 5) throw new Error("Reference video has too few decoded frames");
-      if (accepted < files.length && !r.trimReferenceVideos) throw new Error("Reference video must fit the requested output frame count and 17k+5 ladder; trim it explicitly before submitting");
-      return { frames: files.slice(0, accepted).map((f) => encode(join3(temp, f))), ...meta.hasAudio ? { audio: audio(file, `video-audio-${i}`, accepted / 24) } : {} };
-    });
-    const audios = r.referenceAudioPaths.map((file, i) => {
-      probe(file);
-      return audio(file, `audio-${i}`);
-    });
-    return {
-      stream: true,
-      model: r.model,
-      prompt: r.prompt,
-      width: r.width,
-      height: r.height,
-      num_frames: r.numFrames,
-      steps: r.steps,
-      ...r.seed === void 0 ? {} : { seed: r.seed },
-      ref_image_size: r.referenceSize,
-      ref_images: images,
-      ref_videos: videos,
-      ref_audios: audios
-    };
-  } finally {
-    rmSync(temp, { recursive: true, force: true });
-  }
-}
-
-// src/mlx-serve-client.ts
-import { existsSync as existsSync5, mkdtempSync as mkdtempSync2, readFileSync as readFileSync6, rmSync as rmSync2, writeFileSync as writeFileSync4 } from "node:fs";
-
-// src/image-models.ts
-function mlxImageFamily(model2 = "") {
-  if (/qwen.*image.*2[.-]1/i.test(model2)) return "qwen-2.1";
-  if (/mage[-_]?flow/i.test(model2)) return /edit/i.test(model2) ? "mage-edit" : "mage";
-  if (/krea[-_]?2/i.test(model2)) return "krea";
-  if (/flux[.-]?2[-_]?klein/i.test(model2)) return "flux-klein";
-  return "unknown";
-}
-function validateMlxImageOperation(model2, operation, args) {
-  const family = mlxImageFamily(model2);
-  if (operation === "edit" && !["flux-klein", "mage-edit", "qwen-2.1"].includes(family))
-    throw new Error("image_operation_unsupported: select an identified editing pack");
-  if (operation === "variation" && !["flux-klein", "krea"].includes(family))
-    throw new Error("image_operation_unsupported: this pack has no verified strength-based variation");
-  if (args.transparent === true && family !== "qwen-2.1")
-    throw new Error("image_transparency_unsupported: transparent requires Qwen-Image-2.1");
-  const refs = Array.isArray(args.refImagePaths) ? args.refImagePaths.length : 0;
-  if (refs > (family === "qwen-2.1" ? 9 : 3)) throw new Error("image_reference_limit");
-  if (family === "qwen-2.1" && /turbo/i.test(model2 || "") && args.steps !== void 0 && args.steps !== 8)
-    throw new Error("image_schedule_fixed: Qwen Turbo uses its saved 8-step schedule");
-}
-
 // src/config.ts
-import { accessSync, constants, existsSync as existsSync4, readFileSync as readFileSync5, readdirSync as readdirSync2, statSync as statSync4 } from "node:fs";
+import { accessSync, constants, existsSync, readFileSync as readFileSync2, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { delimiter, join as join4 } from "node:path";
-function loadEnvFile(file = join4(process.env.SNS_TOKEN_DIR || join4(homedir(), ".config", "social-flow"), ".env")) {
+import { delimiter, join as join2 } from "node:path";
+function loadEnvFile(file = join2(process.env.SNS_TOKEN_DIR || join2(homedir(), ".config", "social-flow"), ".env")) {
   for (const [key, value] of Object.entries(process.env)) {
     if (value && /^\$\{[A-Za-z_][A-Za-z0-9_]*(:-[^}]*)?\}$/.test(value)) delete process.env[key];
   }
   let text;
   try {
-    text = readFileSync5(file, "utf8");
+    text = readFileSync2(file, "utf8");
   } catch {
     return [];
   }
@@ -4967,14 +4348,14 @@ var config = {
   youtubeApiKey: process.env.YOUTUBE_API_KEY || "",
   requestTimeoutMs: 15e3
 };
-var snsTokenDir = process.env.SNS_TOKEN_DIR || join4(homedir(), ".config", "social-flow");
+var snsTokenDir = process.env.SNS_TOKEN_DIR || join2(homedir(), ".config", "social-flow");
 var defaultSnsCredentialFiles = {
-  THREADS: process.env.THREADS_TOKEN_FILE || join4(snsTokenDir, "threads_token"),
-  INSTAGRAM: process.env.INSTAGRAM_TOKEN_FILE || join4(snsTokenDir, "instagram_token"),
-  FACEBOOK: process.env.FACEBOOK_PAGE_TOKEN_FILE || join4(snsTokenDir, "facebook_page_token"),
-  YOUTUBE: process.env.YOUTUBE_OAUTH_FILE || join4(snsTokenDir, "youtube-oauth-client.json")
+  THREADS: process.env.THREADS_TOKEN_FILE || join2(snsTokenDir, "threads_token"),
+  INSTAGRAM: process.env.INSTAGRAM_TOKEN_FILE || join2(snsTokenDir, "instagram_token"),
+  FACEBOOK: process.env.FACEBOOK_PAGE_TOKEN_FILE || join2(snsTokenDir, "facebook_page_token"),
+  YOUTUBE: process.env.YOUTUBE_OAUTH_FILE || join2(snsTokenDir, "youtube-oauth-client.json")
 };
-var disabledToolsFile = join4(snsTokenDir, "disabled-tools.json");
+var disabledToolsFile = join2(snsTokenDir, "disabled-tools.json");
 function astraVideoBaseUrl() {
   return (process.env.ASTRA_VIDEO_URL || "https://video.astravision.co.kr").replace(/\/+$/, "");
 }
@@ -4986,6 +4367,236 @@ function requireAstraVideoKey() {
   }
   return config.astraVideoApiKey;
 }
+
+// src/astra-genai-client.ts
+var genaiImageUriSchema = external_exports.string().min(1).refine((value) => {
+  if (/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(value)) return true;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}, "Use a public HTTPS PNG/JPEG URL or PNG/JPEG data URI");
+
+// src/astra-genai-native-image.ts
+var nativeImageSchema = external_exports.object({
+  model: external_exports.string().trim().min(1).max(200),
+  prompt: external_exports.string().trim().min(1).max(16e3),
+  size: external_exports.string().regex(/^[0-9]{2,4}x[0-9]{2,4}$/).default("1024x1024"),
+  seed: external_exports.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional(),
+  steps: external_exports.number().int().min(0).max(100).optional(),
+  guidanceScale: external_exports.number().finite().min(0).max(20).optional(),
+  negativePrompt: external_exports.string().max(16e3).optional(),
+  transparent: external_exports.boolean().optional(),
+  loras: external_exports.array(external_exports.object({ id: external_exports.string().min(1), scale: external_exports.number().finite().min(0).max(2).default(1) }).strict()).min(1).max(8).refine((rows) => new Set(rows.map((r) => r.id)).size === rows.length, "Duplicate LoRA IDs").optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("image").refine((n) => n.endsWith(".png")).optional()
+}).strict();
+var nativeImageEditSchema = nativeImageSchema.extend({
+  imagePath: external_exports.string().min(1),
+  refImagePaths: external_exports.array(external_exports.string().min(1)).max(9).optional(),
+  mode: external_exports.enum(["edit", "variation"]).default("edit"),
+  strength: external_exports.number().finite().gt(0).max(1).optional(),
+  refResolution: external_exports.number().int().min(256).max(1024).optional()
+}).strict();
+var imageResponse = external_exports.object({ data: external_exports.array(external_exports.object({ b64_json: external_exports.string().min(1) })).length(1) }).passthrough();
+
+// src/image-routing.ts
+import { createRequire as createRequire2 } from "node:module";
+import { fileURLToPath as fileURLToPath2 } from "node:url";
+
+// src/astra-genai-image.ts
+var genaiImageSchema = external_exports.object({
+  model: external_exports.string().min(1),
+  prompt: external_exports.string().min(1).max(800),
+  size: external_exports.string().min(1).default("1024*1536"),
+  seed: external_exports.number().int().min(0).max(2147483647).nullable().optional(),
+  promptExtend: external_exports.boolean().default(false),
+  steps: external_exports.number().int().min(1).max(12).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("image").refine((name) => name.endsWith(".png"), "Use a .png filename").optional()
+}).strict();
+var genaiImageEditSchema = genaiImageSchema.extend({
+  mode: external_exports.enum(["img2img", "inpaint"]),
+  size: external_exports.string().min(1).optional(),
+  imageUri: genaiImageUriSchema.optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  maskUri: genaiImageUriSchema.optional(),
+  maskPath: external_exports.string().min(1).optional(),
+  strength: external_exports.number().finite().gt(0).max(1).optional()
+}).strict().superRefine((args, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (Number(!!args.imageUri) + Number(!!args.imagePath) !== 1) issue("Supply exactly one imageUri or imagePath");
+  const masks = Number(!!args.maskUri) + Number(!!args.maskPath);
+  if (args.mode === "inpaint" ? masks !== 1 : masks !== 0) issue("Only inpaint requires exactly one maskUri or maskPath");
+});
+var responseSchema = external_exports.object({
+  request_id: external_exports.string().min(1),
+  usage: external_exports.record(external_exports.unknown()).optional(),
+  output: external_exports.object({ choices: external_exports.array(external_exports.object({
+    message: external_exports.object({ content: external_exports.array(external_exports.object({ image: external_exports.string().optional(), text: external_exports.string().optional() }).passthrough()) }).passthrough()
+  }).passthrough()).length(1) }).passthrough()
+}).passthrough();
+
+// src/image-models.ts
+var GPT_IMAGE_MODELS = [
+  "gpt-image-2",
+  "gpt-image-1.5",
+  "gpt-image-1",
+  "gpt-image-1-mini",
+  "gpt-image-2-2026-04-21",
+  "gpt-image-1.5-2025-12-16"
+];
+function gptImageFamily(model2) {
+  if (model2 === "gpt-image-2-2026-04-21") return "gpt-image-2";
+  if (model2 === "gpt-image-1.5-2025-12-16") return "gpt-image-1.5";
+  return model2;
+}
+function mlxImageFamily(model2 = "") {
+  if (/qwen.*image.*2[.-]1/i.test(model2)) return "qwen-2.1";
+  if (/mage[-_]?flow/i.test(model2)) return /edit/i.test(model2) ? "mage-edit" : "mage";
+  if (/krea[-_]?2/i.test(model2)) return "krea";
+  if (/flux[.-]?2[-_]?klein/i.test(model2)) return "flux-klein";
+  return "unknown";
+}
+function validateMlxImageOperation(model2, operation, args) {
+  const family = mlxImageFamily(model2);
+  if (operation === "edit" && !["flux-klein", "mage-edit", "qwen-2.1"].includes(family))
+    throw new Error("image_operation_unsupported: select an identified editing pack");
+  if (operation === "variation" && !["flux-klein", "krea"].includes(family))
+    throw new Error("image_operation_unsupported: this pack has no verified strength-based variation");
+  if (args.transparent === true && family !== "qwen-2.1")
+    throw new Error("image_transparency_unsupported: transparent requires Qwen-Image-2.1");
+  const refs = Array.isArray(args.refImagePaths) ? args.refImagePaths.length : 0;
+  if (refs > (family === "qwen-2.1" ? 9 : 3)) throw new Error("image_reference_limit");
+  if (family === "qwen-2.1" && /turbo/i.test(model2 || "") && args.steps !== void 0 && args.steps !== 8)
+    throw new Error("image_schedule_fixed: Qwen Turbo uses its saved 8-step schedule");
+}
+
+// src/image-client.ts
+var VALID_GPT_IMAGE_MODELS = GPT_IMAGE_MODELS;
+var DEFAULT_MODEL = "gpt-image-2";
+var GPT_IMAGE_FLEXIBLE_SIZE_MODELS = ["gpt-image-2"];
+var GPT_IMAGE_SIZE_PRESETS = [
+  "auto",
+  "1024x1024",
+  "1536x1024",
+  // landscape
+  "1024x1536"
+  // portrait
+];
+var WH_SIZE_RE = /^(\d+)x(\d+)$/;
+var GPT_IMAGE_MAX_EDGE = 3840;
+var GPT_IMAGE_MIN_TOTAL_PIXELS = 655360;
+var GPT_IMAGE_MAX_TOTAL_PIXELS = 8294400;
+var GPT_IMAGE_MAX_ASPECT = 3;
+var GptImageSizeSchema = external_exports.string().refine(
+  (s) => GPT_IMAGE_SIZE_PRESETS.includes(s) || WH_SIZE_RE.test(s),
+  {
+    message: 'size must be one of auto/1024x1024/1536x1024/1024x1536, or a custom "WIDTHxHEIGHT" string (e.g. "1536x864").'
+  }
+);
+var VALID_GPT_IMAGE_QUALITIES = ["low", "medium", "high", "auto"];
+var VALID_GPT_IMAGE_BACKGROUNDS = ["opaque", "transparent", "auto"];
+var VALID_GPT_IMAGE_FORMATS = ["png", "jpeg", "webp"];
+var VALID_GPT_IMAGE_INPUT_FIDELITY = ["high", "low"];
+var VALID_GPT_IMAGE_INPUT_MIME = ["image/png", "image/jpeg", "image/webp"];
+function validateSizeAgainstModel(model2, size, ctx) {
+  if (GPT_IMAGE_SIZE_PRESETS.includes(size)) return;
+  const match = WH_SIZE_RE.exec(size);
+  if (!match) return;
+  if (!GPT_IMAGE_FLEXIBLE_SIZE_MODELS.includes(gptImageFamily(model2))) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["size"],
+      message: `Custom resolutions ("${size}") are only supported on gpt-image-2. On other models use ${GPT_IMAGE_SIZE_PRESETS.join(" / ")} only.`
+    });
+    return;
+  }
+  const width = Number(match[1]);
+  const height = Number(match[2]);
+  const violations = [];
+  if (width % 16 !== 0 || height % 16 !== 0) {
+    violations.push("width and height must be multiples of 16");
+  }
+  if (Math.max(width, height) > GPT_IMAGE_MAX_EDGE) {
+    violations.push(`the longest edge must be at most ${GPT_IMAGE_MAX_EDGE}px`);
+  }
+  const shortEdge = Math.min(width, height);
+  if (shortEdge === 0 || Math.max(width, height) / shortEdge > GPT_IMAGE_MAX_ASPECT) {
+    violations.push("the aspect ratio must be within 1:3 ~ 3:1");
+  }
+  const totalPixels = width * height;
+  if (totalPixels < GPT_IMAGE_MIN_TOTAL_PIXELS || totalPixels > GPT_IMAGE_MAX_TOTAL_PIXELS) {
+    violations.push(
+      `the total pixel count must be within ${GPT_IMAGE_MIN_TOTAL_PIXELS.toLocaleString()}~${GPT_IMAGE_MAX_TOTAL_PIXELS.toLocaleString()}`
+    );
+  }
+  if (violations.length > 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["size"],
+      message: `Custom resolution "${size}" violates constraints: ${violations.join(", ")}`
+    });
+  }
+}
+function validateBackground(model2, background, outputFormat, ctx) {
+  if (background !== "transparent") return;
+  if (outputFormat === "jpeg") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["outputFormat"],
+      message: "Transparent backgrounds are only possible with png or webp output (not jpeg)."
+    });
+  }
+}
+var text2ImageSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(32e3, "Prompt exceeds the 32,000-character limit for GPT Image models"),
+  model: external_exports.enum(VALID_GPT_IMAGE_MODELS).optional().default(DEFAULT_MODEL),
+  size: GptImageSizeSchema.optional().default("auto"),
+  quality: external_exports.enum(VALID_GPT_IMAGE_QUALITIES).optional().default("auto"),
+  background: external_exports.enum(VALID_GPT_IMAGE_BACKGROUNDS).optional().default("opaque"),
+  outputFormat: external_exports.enum(VALID_GPT_IMAGE_FORMATS).optional().default("png"),
+  savePath: external_exports.string().optional()
+}).superRefine((data, ctx) => {
+  validateSizeAgainstModel(data.model, data.size, ctx);
+  validateBackground(data.model, data.background, data.outputFormat, ctx);
+});
+var img2ImgSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(32e3, "Prompt exceeds the 32,000-character limit for GPT Image models"),
+  sourceImagesBase64: external_exports.array(external_exports.string().min(1)).min(1, "At least one source image is required").max(16, "At most 16 source images are supported"),
+  sourceMimeType: external_exports.enum(VALID_GPT_IMAGE_INPUT_MIME).optional().default("image/png"),
+  maskBase64: external_exports.string().optional(),
+  model: external_exports.enum(VALID_GPT_IMAGE_MODELS).optional().default(DEFAULT_MODEL),
+  size: GptImageSizeSchema.optional().default("auto"),
+  quality: external_exports.enum(VALID_GPT_IMAGE_QUALITIES).optional().default("auto"),
+  background: external_exports.enum(VALID_GPT_IMAGE_BACKGROUNDS).optional().default("opaque"),
+  outputFormat: external_exports.enum(VALID_GPT_IMAGE_FORMATS).optional().default("png"),
+  inputFidelity: external_exports.enum(VALID_GPT_IMAGE_INPUT_FIDELITY).optional(),
+  savePath: external_exports.string().optional()
+}).superRefine((data, ctx) => {
+  validateSizeAgainstModel(data.model, data.size, ctx);
+  validateBackground(data.model, data.background, data.outputFormat, ctx);
+  if (data.inputFidelity) {
+    if (data.model === "gpt-image-1-mini" && data.inputFidelity !== "low") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["inputFidelity"],
+        message: "gpt-image-1-mini supports only low inputFidelity. Use gpt-image-1 / gpt-image-1.5."
+      });
+    } else if (gptImageFamily(data.model) === "gpt-image-2") {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["inputFidelity"],
+        message: "gpt-image-2 always runs at high fidelity and does not accept the inputFidelity parameter. Omit the parameter."
+      });
+    }
+  }
+});
+
+// src/mlx-serve-client.ts
+import { existsSync as existsSync2, mkdtempSync, readFileSync as readFileSync3, rmSync, writeFileSync as writeFileSync2 } from "node:fs";
 
 // src/http.ts
 async function requestRaw(method, url, headers, body, timeoutMs) {
@@ -5165,9 +4776,9 @@ function videoMemoryMessage(width, height, frames) {
   return `Decoded RGB would be ~${mb}MB (${width}\xD7${height}\xD7${frames}\xD73), over the ${cap}MB cap. Drop frames or canvas \u2014 1088\xD71920 at 8s/24fps is ~1.2GB and is refused. The default 768\xD71280\xD7${DEFAULT_MLX_VIDEO_FRAMES} stays under the cap.`;
 }
 function fileToBase64(filePath) {
-  if (!existsSync5(filePath)) return { ok: false, error: `File not found: ${filePath}` };
+  if (!existsSync2(filePath)) return { ok: false, error: `File not found: ${filePath}` };
   try {
-    return { ok: true, b64: readFileSync6(filePath).toString("base64") };
+    return { ok: true, b64: readFileSync3(filePath).toString("base64") };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
@@ -5197,6 +4808,162 @@ function buildLtxVideoBody(request) {
   return body;
 }
 
+// src/zimage-client.ts
+var DEFAULT_ZIMAGE_STEPS = 9;
+var DEFAULT_ZIMAGE_QUANTIZE = 8;
+var ZIMAGE_DIMENSION_STEP = 16;
+var MIN_ZIMAGE_DIMENSION = 256;
+var MAX_ZIMAGE_DIMENSION = 2048;
+var dimensionSchema = external_exports.number().int().min(MIN_ZIMAGE_DIMENSION).max(MAX_ZIMAGE_DIMENSION).refine((v) => v % ZIMAGE_DIMENSION_STEP === 0, {
+  message: `width/height must be a multiple of ${ZIMAGE_DIMENSION_STEP} (for 9:16 that's 1088\xD71920, not 1080\xD71920)`
+});
+var WEIGHT_DOWNLOAD_ALLOWANCE_MS = 60 * 6e4;
+var zimageGenerateSchema = external_exports.object({
+  prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
+  width: dimensionSchema.optional().default(1024),
+  height: dimensionSchema.optional().default(1024),
+  steps: external_exports.number().int().min(1).max(50).optional().default(DEFAULT_ZIMAGE_STEPS),
+  seed: external_exports.number().int().min(0).optional(),
+  quantize: external_exports.union([external_exports.literal(4), external_exports.literal(6), external_exports.literal(8)]).optional().default(DEFAULT_ZIMAGE_QUANTIZE),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("image").optional()
+});
+
+// src/image-registry.ts
+var IMAGE_ADAPTERS = Object.freeze({
+  astra_genai_image_generate: { engine: "astra-genai-native", operation: "text", schema: nativeImageSchema },
+  astra_genai_image_edit: { engine: "astra-genai-native", operation: "edit", schema: nativeImageEditSchema },
+  astra_genai_text2img: { engine: "astra-genai", operation: "text", schema: genaiImageSchema },
+  astra_genai_edit: { engine: "astra-genai", operation: "edit", schema: genaiImageEditSchema },
+  gpt_image_text2img: { engine: "gpt-image", operation: "text", schema: text2ImageSchema },
+  gpt_image_img2img: { engine: "gpt-image", operation: "edit", schema: img2ImgSchema },
+  image_local_generate: { engine: "zimage", operation: "text", schema: zimageGenerateSchema },
+  mlx_image_generate: { engine: "mlx", operation: "text", schema: mlxImageGenerateSchema },
+  mlx_image_edit: { engine: "mlx", operation: "edit", schema: mlxImageEditSchema }
+});
+
+// src/image-state.ts
+var money = external_exports.number().finite().nonnegative();
+var imageJobSchema = external_exports.object({
+  outputFile: external_exports.string(),
+  planId: external_exports.string(),
+  requestId: external_exports.string(),
+  assetId: external_exports.string(),
+  tool: external_exports.string(),
+  status: external_exports.enum(["submitting", "submission_unknown", "completed", "failed"]),
+  ownerPid: external_exports.number().int().positive().optional(),
+  ownerHost: external_exports.string().optional(),
+  reserveUsd: money,
+  spentUsd: money.optional(),
+  usage: external_exports.unknown().optional(),
+  providerId: external_exports.string().optional(),
+  result: external_exports.record(external_exports.unknown()).optional(),
+  output: external_exports.record(external_exports.unknown()).optional(),
+  evidence: external_exports.string().optional(),
+  updatedAt: external_exports.string()
+}).strict();
+var stateSchema2 = external_exports.object({ version: external_exports.literal(1), openingSpendUsd: money, jobs: external_exports.record(imageJobSchema) }).strict();
+
+// src/fasth3-omni.ts
+import { execFileSync } from "node:child_process";
+import { mkdtempSync as mkdtempSync2, readFileSync as readFileSync4, readdirSync as readdirSync2, rmSync as rmSync2, statSync as statSync2 } from "node:fs";
+import { tmpdir } from "node:os";
+import { join as join3 } from "node:path";
+var FASTH3_OMNI_MODEL = "ddalcu/FastH3-Omni-MLX-Serve-8bit";
+var FASTH3_FRAME_LIMITS = { min: 124, max: 362, step: 17, frameRate: 24, frameOffset: 5 };
+var FASTH3_MAX_RGB_BYTES = 256 * 1024 * 1024;
+var MAX_REQUEST_BYTES = 60 * 1024 * 1024;
+var dimension = external_exports.number().int().min(256).max(1536).refine((n) => n % 32 === 0, "Dimensions must be multiples of 32");
+var paths = (max) => external_exports.array(external_exports.string().min(1)).max(max).default([]);
+var fasth3OmniSchema = external_exports.object({
+  prompt: external_exports.string().min(1).max(32e3).describe("Scene and sound, e.g. The person in <Picture 1> waves; birds chirp. References are numbered per type."),
+  model: external_exports.literal(FASTH3_OMNI_MODEL).default(FASTH3_OMNI_MODEL).describe("Installed FastH3 Omni MLX-Serve pack."),
+  width: dimension.default(768).describe("Output width in pixels, e.g. 768."),
+  height: dimension.default(448).describe("Output height in pixels, e.g. 448."),
+  numFrames: external_exports.number().int().min(124).max(362).default(124).describe("Exact 17k+5 frame count at 24 fps, e.g. 124, 243, 362; RGB output must fit 256 MiB."),
+  steps: external_exports.literal(8).default(8).describe("The trained eight-step schedule."),
+  seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional().describe("Reproducible seed, e.g. 2026."),
+  referenceImagePaths: paths(9).describe('Ordered PNG/JPEG paths, e.g. ["/tmp/character.png"]; <Picture 1> etc.'),
+  referenceVideoPaths: paths(3).describe('Ordered local video paths, e.g. ["/tmp/motion.mp4"]; 2\u201315 seconds each, 15 seconds total. Video sound is included.'),
+  referenceAudioPaths: paths(3).describe('Ordered voice/music paths, e.g. ["/tmp/voice.wav"]; 2\u201315 seconds each. Voice imitation does not preserve exact speech timing.'),
+  trimReferenceVideos: external_exports.boolean().default(false).describe("Allow trimming reference video tails to output length and the 17k+5 ladder; false refuses any trim."),
+  referenceSize: external_exports.enum(["match", "max"]).default("match").describe("match caps references to output area; max preserves more detail at higher memory/time cost."),
+  outputPath: external_exports.string().optional().describe("Output directory, e.g. /tmp/video-test."),
+  filename: bareFilenameSchema("video").optional().describe("MP4 filename, e.g. fasth3.mp4.")
+}).strict().superRefine((v, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (!(v.referenceImagePaths.length + v.referenceVideoPaths.length)) issue("FastH3 Omni needs at least one image or video reference");
+  if (v.referenceImagePaths.length + v.referenceVideoPaths.length + v.referenceAudioPaths.length > 12) issue("At most twelve reference files are supported");
+  if ((v.numFrames - 5) % 17) issue("FastH3 frame counts must be 17k+5");
+  if (v.width * v.height * v.numFrames * 3 > FASTH3_MAX_RGB_BYTES) issue("Decoded RGB exceeds the adapter 256 MiB compatibility limit; reduce dimensions or frames");
+});
+function probe(file) {
+  const data = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration:stream=codec_type", "-of", "json", file], { encoding: "utf8", timeout: 15e3 }));
+  const duration2 = Number(data.format?.duration);
+  if (!Number.isFinite(duration2) || duration2 < 2 || duration2 > 15) throw new Error("Reference media must be 2\u201315 seconds: " + file);
+  return { duration: duration2, hasAudio: data.streams?.some((s) => s.codec_type === "audio") === true };
+}
+function ffmpeg(args) {
+  execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-nostdin", "-y", ...args], { timeout: 12e4, maxBuffer: 1024 * 1024 });
+}
+function buildFasth3Body(raw) {
+  const r = fasth3OmniSchema.parse(raw);
+  const temp = mkdtempSync2(join3(tmpdir(), "fasth3-refs-"));
+  let encodedBytes = 0;
+  const encode = (file) => {
+    encodedBytes += 4 * Math.ceil(statSync2(file).size / 3);
+    if (encodedBytes > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference payload exceeds the 60 MiB upload limit");
+    return readFileSync4(file).toString("base64");
+  };
+  const audio = (file, name, seconds) => {
+    const target = join3(temp, name + ".wav");
+    ffmpeg(["-i", file, "-vn", "-ar", "32000", "-ac", "2", "-c:a", "pcm_s16le", ...seconds === void 0 ? [] : ["-t", String(seconds)], target]);
+    return encode(target);
+  };
+  try {
+    const images = r.referenceImagePaths.map((file) => {
+      if (statSync2(file).size * 4 / 3 > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference image exceeds upload limit");
+      const meta = readImageMetadata(file);
+      if (!["image/png", "image/jpeg"].includes(meta.mimeType)) throw new Error("FastH3 reference images must be PNG or JPEG");
+      return encode(file);
+    });
+    let videoSeconds = 0;
+    const videos = r.referenceVideoPaths.map((file, i) => {
+      const meta = probe(file);
+      videoSeconds += meta.duration;
+      if (videoSeconds > 15) throw new Error("Reference videos exceed fifteen seconds total");
+      const prefix = `video-${i}-`;
+      ffmpeg(["-i", file, "-an", "-vf", "fps=24,scale=768:768:force_original_aspect_ratio=decrease", "-frames:v", "362", join3(temp, prefix + "%04d.jpg")]);
+      const files = readdirSync2(temp).filter((f) => f.startsWith(prefix)).sort();
+      const count = Math.min(files.length, r.numFrames);
+      const accepted = count - (count - 5) % 17;
+      if (accepted < 5) throw new Error("Reference video has too few decoded frames");
+      if (accepted < files.length && !r.trimReferenceVideos) throw new Error("Reference video must fit the requested output frame count and 17k+5 ladder; trim it explicitly before submitting");
+      return { frames: files.slice(0, accepted).map((f) => encode(join3(temp, f))), ...meta.hasAudio ? { audio: audio(file, `video-audio-${i}`, accepted / 24) } : {} };
+    });
+    const audios = r.referenceAudioPaths.map((file, i) => {
+      probe(file);
+      return audio(file, `audio-${i}`);
+    });
+    return {
+      stream: true,
+      model: r.model,
+      prompt: r.prompt,
+      width: r.width,
+      height: r.height,
+      num_frames: r.numFrames,
+      steps: r.steps,
+      ...r.seed === void 0 ? {} : { seed: r.seed },
+      ref_image_size: r.referenceSize,
+      ref_images: images,
+      ref_videos: videos,
+      ref_audios: audios
+    };
+  } finally {
+    rmSync2(temp, { recursive: true, force: true });
+  }
+}
+
 // src/local-video-models.ts
 var LOCAL_VIDEO_MODELS = {
   ltx_video_generate: {
@@ -5221,16 +4988,12 @@ function localVideoStrategy(tool) {
   return Object.hasOwn(LOCAL_VIDEO_MODELS, name) ? LOCAL_VIDEO_MODELS[name] : void 0;
 }
 
-// src/astra-genai-client.ts
-var genaiImageUriSchema = external_exports.string().min(1).refine((value) => {
-  if (/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(value)) return true;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" && !url.username && !url.password;
-  } catch {
-    return false;
-  }
-}, "Use a public HTTPS PNG/JPEG URL or PNG/JPEG data URI");
+// src/usage-ledger.ts
+import { execFileSync as execFileSync2 } from "node:child_process";
+import path4 from "node:path";
+
+// src/video-duration.ts
+var import_video_duration = __toESM(require_video_duration(), 1);
 
 // src/video-events.ts
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -5239,90 +5002,18 @@ function recordVideoSubmission(id) {
   if (id) videoEvents.getStore()?.submitted(id);
 }
 
-// src/astra-genai-desktop.ts
-var model = external_exports.enum(["ltx-2.3-fast", "ltx-2.5-fast"]);
-var resolution = external_exports.enum(["270p", "360p", "540p", "720p", "1080p", "1440p", "2160p"]);
-var duration = external_exports.number().int().refine((n) => [2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 18, 20].includes(n));
-var aspect = external_exports.enum(["21:9", "16:9", "3:2", "4:3", "1:1", "4:5", "9:16"]);
-var loras = external_exports.array(external_exports.object({ ref: external_exports.string().min(1), scale: external_exports.number().finite().min(0).max(4).default(1) }).strict()).min(1).refine((rows) => new Set(rows.map((r) => r.ref)).size === rows.length, "Duplicate LoRA refs");
-var local = {
-  reserveUsd: external_exports.number().finite().nonnegative(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").refine((n) => n.endsWith(".mp4")).optional()
-};
-var common = external_exports.object({
-  model,
-  prompt: external_exports.string().trim().min(1),
-  resolution,
-  seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
-  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
-  cameraMotion: external_exports.enum(["none", "dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional(),
-  ...local
-}).strict();
-var desktopTextSchema = common.extend({ duration, aspectRatio: aspect.default("16:9"), loras: loras.optional() }).strict();
-var desktopImageSchema = common.extend({
-  duration,
-  aspectRatio: external_exports.union([aspect, external_exports.literal("auto")]).default("auto"),
-  imagePath: external_exports.string().min(1),
-  lastFramePath: external_exports.string().min(1).optional()
-}).strict();
-var desktopAudioSchema = common.extend({
-  audioPath: external_exports.string().min(1),
-  imagePath: external_exports.string().min(1).optional(),
-  aspectRatio: external_exports.union([aspect, external_exports.literal("auto")]).default("16:9"),
-  allowAudioTruncation: external_exports.boolean().default(false)
-}).strict();
-var edit = external_exports.object({
-  model,
-  prompt: external_exports.string().default(""),
-  sourceVideoPath: external_exports.string().min(1),
-  targetResolution: external_exports.object({ width: external_exports.number().int().positive(), height: external_exports.number().int().positive() }).strict().optional(),
-  seed: external_exports.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional(),
-  ...local
-}).strict();
-var desktopExtendSchema = edit.extend({ duration: external_exports.number().finite().min(2).max(20), mode: external_exports.enum(["start", "end"]).default("end") }).strict();
-var desktopRetakeSchema = edit.extend({
-  duration: external_exports.number().finite().min(2).max(10),
-  startTime: external_exports.number().finite().nonnegative(),
-  mode: external_exports.enum(["replace_audio_and_video", "replace_video", "replace_audio"]).default("replace_audio_and_video")
-}).strict();
-var desktopKeyframesSchema = desktopTextSchema.extend({
-  audio: external_exports.boolean().default(false),
-  keyframes: external_exports.array(external_exports.object({
-    imagePath: external_exports.string().min(1),
-    frameIndex: external_exports.number().int().nonnegative(),
-    strength: external_exports.number().finite().min(0).max(1).default(1)
-  }).strict()).min(1).max(10)
-}).strict().superRefine((args, ctx) => {
-  const indices = args.keyframes.map((f) => f.frameIndex);
-  if (new Set(indices).size !== indices.length || Math.max(...indices) >= Math.floor(args.duration * args.fps / 8) * 8 + 1)
-    ctx.addIssue({ code: "custom", message: "Keyframes require unique indices within the requested duration" });
-});
-var DESKTOP_SCHEMAS = {
-  "text-to-video": desktopTextSchema,
-  "image-to-video": desktopImageSchema,
-  "audio-to-video": desktopAudioSchema,
-  extend: desktopExtendSchema,
-  retake: desktopRetakeSchema,
-  keyframes: desktopKeyframesSchema
-};
-var receiptSchema = external_exports.object({
-  protocol: external_exports.literal("gateway-desktop-v1"),
-  baseUrl: external_exports.string(),
-  operation: external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "extend", "retake", "keyframes"]),
-  fingerprint: external_exports.string(),
-  videoPath: external_exports.string(),
-  status: external_exports.enum(["submitting", "submitted", "completed"]),
-  jobId: external_exports.string().optional(),
-  sha256: external_exports.string().optional()
-}).strict();
+// src/seedance-client.ts
+import * as path2 from "node:path";
 
-// src/video-routing.ts
-import { createRequire as createRequire6 } from "node:module";
-import { fileURLToPath as fileURLToPath4 } from "node:url";
+// src/prompt-language.ts
+var QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
+var NON_LATIN_RUN = /[^\P{L}\p{Script=Latin}]+(?:[ \t]+[^\P{L}\p{Script=Latin}]+)*/u;
+function nonEnglishOutsideQuotes(prompt) {
+  const match = prompt.replace(QUOTED_SEGMENT, " ").match(NON_LATIN_RUN);
+  return match ? match[0] : null;
+}
 
 // src/seedance-client.ts
-import * as path4 from "node:path";
 var VALID_SEEDANCE_RESOLUTIONS = ["480p", "720p", "1080p", "4k"];
 var VALID_SEEDANCE_RATIOS = ["16:9", "9:16", "4:3", "3:4", "1:1", "21:9", "adaptive"];
 var SEEDANCE_MODEL_SPECS = {
@@ -5393,23 +5084,15 @@ var commonFields = {
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("video").optional()
 };
-var QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
-var HANGUL_RUN = /[가-힣]+(?:[ \t]+[가-힣]+)*/;
-function hangulOutsideQuotes(prompt) {
-  const match = prompt.replace(QUOTED_SEGMENT, " ").match(HANGUL_RUN);
-  return match ? match[0] : null;
-}
 function validateCommon(data, ctx) {
   const spec = SEEDANCE_MODEL_SPECS[data.model];
-  if (data.model !== "dreamina-seedance-2-5-260628") {
-    const korean = hangulOutsideQuotes(data.prompt);
-    if (korean) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["prompt"],
-        message: `${data.model} reads Chinese or English prompts only \u2014 the Korean "${korean}" sits outside quotation marks and would be ignored rather than obeyed. Write the direction in English; Korean dialogue belongs inside quotes, or route the shot to dreamina-seedance-2-5-260628.`
-      });
-    }
+  const foreign = nonEnglishOutsideQuotes(data.prompt);
+  if (foreign) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["prompt"],
+      message: `video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`
+    });
   }
   if (!spec.resolutions.includes(data.resolution)) {
     ctx.addIssue({
@@ -5493,12 +5176,12 @@ var seedanceReferenceSchema = external_exports.object({
       });
     }
     for (const filePath of data.referenceVideoPaths) {
-      const ext = path4.extname(filePath).toLowerCase();
+      const ext = path2.extname(filePath).toLowerCase();
       if (!SEEDANCE_REFERENCE_VIDEO_EXTENSIONS.includes(ext)) {
         ctx.addIssue({
           code: external_exports.ZodIssueCode.custom,
           path: ["referenceVideoPaths"],
-          message: `Reference video must be mp4 or mov (got "${ext}" in ${path4.basename(filePath)}).`
+          message: `Reference video must be mp4 or mov (got "${ext}" in ${path2.basename(filePath)}).`
         });
       }
     }
@@ -5527,12 +5210,12 @@ var seedanceReferenceSchema = external_exports.object({
     });
   }
   for (const filePath of data.referenceAudioPaths) {
-    const ext = path4.extname(filePath).toLowerCase();
+    const ext = path2.extname(filePath).toLowerCase();
     if (!SEEDANCE_REFERENCE_AUDIO_EXTENSIONS.includes(ext)) {
       ctx.addIssue({
         code: external_exports.ZodIssueCode.custom,
         path: ["referenceAudioPaths"],
-        message: `Reference audio must be wav or mp3 (got "${ext}" in ${path4.basename(filePath)}).`
+        message: `Reference audio must be wav or mp3 (got "${ext}" in ${path2.basename(filePath)}).`
       });
     }
   }
@@ -5546,9 +5229,9 @@ var seedanceReferenceSchema = external_exports.object({
 }).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
 
 // src/astra-video-client.ts
-import { createHash as createHash4, randomInt } from "node:crypto";
-import * as fs4 from "node:fs";
-import * as path5 from "node:path";
+import { createHash as createHash2, randomInt } from "node:crypto";
+import * as fs2 from "node:fs";
+import * as path3 from "node:path";
 
 // package.json
 var package_default = {
@@ -6436,7 +6119,7 @@ var CONTENT_TYPE_BY_EXTENSION = {
   ".mp3": { contentType: "audio/mpeg", kind: "audio" }
 };
 function uploadContentType(filePath) {
-  const ext = path5.extname(filePath).toLowerCase();
+  const ext = path3.extname(filePath).toLowerCase();
   const found = CONTENT_TYPE_BY_EXTENSION[ext];
   if (!found) {
     throw new Error(
@@ -6446,13 +6129,13 @@ function uploadContentType(filePath) {
   return found;
 }
 async function uploadFile(filePath) {
-  const resolved = path5.resolve(filePath);
-  if (!fs4.existsSync(resolved)) throw new Error(`File not found: ${filePath}`);
+  const resolved = path3.resolve(filePath);
+  if (!fs2.existsSync(resolved)) throw new Error(`File not found: ${filePath}`);
   const { contentType, kind } = uploadContentType(resolved);
-  const bytes = fs4.statSync(resolved).size;
+  const bytes = fs2.statSync(resolved).size;
   const limit = ASTRA_VIDEO_UPLOAD_LIMITS[kind];
   if (bytes > limit) {
-    throw new Error(`${path5.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit} bytes.`);
+    throw new Error(`${path3.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit} bytes.`);
   }
   await waitForUploadSlot();
   const headers = authHeaders();
@@ -6461,7 +6144,7 @@ async function uploadFile(filePath) {
       const response = await fetch(`${astraVideoBaseUrl()}/v1/uploads`, {
         method: "POST",
         headers: { ...headers, "Content-Type": contentType },
-        body: fs4.readFileSync(resolved),
+        body: fs2.readFileSync(resolved),
         signal: AbortSignal.timeout(TRANSFER_TIMEOUT_MS)
       });
       return { ok: response.ok, status: response.status, body: await response.text() };
@@ -6470,7 +6153,7 @@ async function uploadFile(filePath) {
       return { ok: false, status: 502, body: `Upload unreachable: ${message}` };
     }
   });
-  if (!result.ok) throw redactedFailure(`upload of ${path5.basename(resolved)}`, result.status, result.body);
+  if (!result.ok) throw redactedFailure(`upload of ${path3.basename(resolved)}`, result.status, result.body);
   const parsed = JSON.parse(result.body);
   return {
     uploadId: parsed.upload_id,
@@ -6559,17 +6242,17 @@ async function runJob(mode, prompt, body, outputPath, filename) {
   const receiptPath = `${videoPath}.astra-job.json`;
   const writeReceipt = (value) => {
     const temp = `${receiptPath}.${process.pid}.tmp`;
-    fs4.writeFileSync(temp, JSON.stringify(value, null, 2) + "\n", { mode: 384 });
-    fs4.renameSync(temp, receiptPath);
+    fs2.writeFileSync(temp, JSON.stringify(value, null, 2) + "\n", { mode: 384 });
+    fs2.renameSync(temp, receiptPath);
   };
   const jobId = await submitJob(body);
   recordVideoSubmission(jobId);
   const submitted = { jobId, mode, prompt, videoPath, submittedAt: (/* @__PURE__ */ new Date()).toISOString(), submittedRequest: body };
   writeReceipt({ ...submitted, status: "submitted" });
   const { bytes, request, elapsedSeconds } = await awaitResult(jobId);
-  fs4.writeFileSync(videoPath, bytes);
+  fs2.writeFileSync(videoPath, bytes);
   const response = { videoPath, jobId, mode, prompt, bytes: bytes.length, elapsedSeconds, ...request ? { request } : {} };
-  writeReceipt({ ...submitted, ...response, sha256: createHash4("sha256").update(bytes).digest("hex"), status: "completed", completedAt: (/* @__PURE__ */ new Date()).toISOString() });
+  writeReceipt({ ...submitted, ...response, sha256: createHash2("sha256").update(bytes).digest("hex"), status: "completed", completedAt: (/* @__PURE__ */ new Date()).toISOString() });
   return response;
 }
 async function generateFromImage(args) {
@@ -6645,115 +6328,11 @@ async function generateFromAudio(args) {
 function annotateReceipt(videoPath, extra) {
   const receiptPath = `${videoPath}.astra-job.json`;
   const temp = `${receiptPath}.${process.pid}.tmp`;
-  fs4.writeFileSync(temp, JSON.stringify({ ...JSON.parse(fs4.readFileSync(receiptPath, "utf8")), ...extra }, null, 2) + "\n", { mode: 384 });
-  fs4.renameSync(temp, receiptPath);
+  fs2.writeFileSync(temp, JSON.stringify({ ...JSON.parse(fs2.readFileSync(receiptPath, "utf8")), ...extra }, null, 2) + "\n", { mode: 384 });
+  fs2.renameSync(temp, receiptPath);
 }
 
-// src/astra-genai-video.ts
-var GENAI_VIDEO_MODELS = ["ltx-2.5-22b-distilled", "ltx-2.5-22b-dev"];
-var GENAI_CAMERA_MOTIONS = ["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"];
-var genaiTextToVideoSchema = external_exports.object({
-  prompt: external_exports.string().min(1).max(5e3),
-  model: external_exports.enum(GENAI_VIDEO_MODELS),
-  duration: external_exports.number().int().nullable(),
-  resolution: external_exports.string().min(1),
-  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
-  generateAudio: external_exports.boolean().default(true),
-  cameraMotion: external_exports.enum(GENAI_CAMERA_MOTIONS).nullable().optional(),
-  reserveUsd: external_exports.number().finite().nonnegative(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
-}).strict();
-var genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
-  imageUri: external_exports.string().min(1),
-  lastFrameUri: external_exports.string().min(1).nullable().optional()
-});
-var oneOf = (a, b) => Number(a !== void 0) + Number(b !== void 0);
-var genaiAudioToVideoSchema = external_exports.object({
-  prompt: external_exports.string().trim().min(1).max(5e3),
-  model: external_exports.literal("ltx-2.5-22b-dev"),
-  resolution: external_exports.string().min(1),
-  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
-  audioPath: external_exports.string().min(1).optional(),
-  audioUri: external_exports.string().min(1).optional(),
-  imagePath: external_exports.string().min(1).optional(),
-  imageUri: genaiImageUriSchema.optional(),
-  lastFramePath: external_exports.string().min(1).optional(),
-  lastFrameUri: genaiImageUriSchema.optional(),
-  reserveUsd: external_exports.number().finite().nonnegative(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
-}).strict().superRefine((args, ctx) => {
-  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  if (oneOf(args.audioPath, args.audioUri) !== 1) issue("Supply exactly one audioPath or audioUri");
-  if (oneOf(args.imagePath, args.imageUri) > 1) issue("Supply at most one imagePath or imageUri");
-  if (oneOf(args.lastFramePath, args.lastFrameUri) > 1) issue("Supply at most one lastFramePath or lastFrameUri");
-  if (oneOf(args.lastFramePath, args.lastFrameUri) && !oneOf(args.imagePath, args.imageUri)) issue("A last frame requires a first image");
-});
-var genaiMsrSchema = external_exports.object({
-  prompt: external_exports.string().trim().min(1).max(2e3),
-  references: external_exports.array(external_exports.object({
-    imageUri: genaiImageUriSchema.optional(),
-    imagePath: external_exports.string().min(1).optional(),
-    background: external_exports.boolean().default(false),
-    // Voice sample for this subject; the gateway pairs it with the same picture slot.
-    audioUri: external_exports.string().min(1).optional(),
-    audioPath: external_exports.string().min(1).optional()
-  }).strict().refine(
-    (ref) => Number(!!ref.imageUri) + Number(!!ref.imagePath) === 1,
-    "Supply exactly one imageUri or imagePath"
-  ).refine((ref) => oneOf(ref.audioUri, ref.audioPath) <= 1, "Supply at most one audioUri or audioPath")).min(1).max(5),
-  referenceStrength: external_exports.number().finite().min(0).max(1).default(1),
-  referenceFrames: external_exports.union([external_exports.literal(25), external_exports.literal(33)]).default(33),
-  width: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1536),
-  height: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1024),
-  numFrames: external_exports.number().int().min(25).max(361).refine((n) => (n - 1) % 8 === 0).optional(),
-  duration: external_exports.number().finite().gt(0).max(360).optional(),
-  frameRate: external_exports.number().finite().min(1).max(60).default(24),
-  seed: external_exports.number().int().min(0).max(2147483647).default(42),
-  reserveUsd: external_exports.number().finite().nonnegative(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
-}).strict().superRefine((args, ctx) => {
-  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  const backgrounds = args.references.filter((ref) => ref.background).length;
-  if (backgrounds > 1 || args.references.length - backgrounds > 4) issue("MSR supports at most four subjects and one background");
-  let subject = 0;
-  for (const ref of args.references) {
-    subject += Number(!ref.background);
-    if (!oneOf(ref.audioUri, ref.audioPath)) continue;
-    if (ref.background) issue("MSR voice samples belong to subjects, not the background");
-    else if (subject > 2) issue("MSR voice samples fit the first two subjects only");
-  }
-  if (args.width * args.height > 2064384) issue("MSR maximum is 2,064,384 pixels");
-  if (args.duration !== void 0) {
-    if (args.numFrames !== void 0) issue("Omit numFrames when using duration");
-    const frames = 1 + 8 * Math.ceil((args.duration * args.frameRate - 1) / 8 - 0.5 - 1e-9);
-    if (frames < 25 || frames > 361) issue("MSR duration must round to 25..361 frames");
-  }
-});
-var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "msr"]);
-var receiptSchema2 = external_exports.object({
-  version: external_exports.literal(1),
-  baseUrl: external_exports.string(),
-  operation: operationSchema,
-  fingerprint: external_exports.string(),
-  videoPath: external_exports.string(),
-  jobId: external_exports.string().min(1).optional(),
-  status: external_exports.enum(["submitting", "submitted", "completed"]),
-  sha256: external_exports.string().optional()
-}).strict();
-var statusSchema = external_exports.object({
-  id: external_exports.string().min(1),
-  status: external_exports.enum(["pending", "processing", "completed", "failed"]),
-  result: external_exports.object({ video_url: external_exports.string().min(1) }).passthrough().nullish(),
-  error: external_exports.unknown().optional()
-}).passthrough();
-var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
-var SUBMIT_TIMEOUT_MS2 = 15 * 6e4;
-
 // src/video-duration.ts
-var import_video_duration = __toESM(require_video_duration(), 1);
 var DURATION_TOOLS = [
   "seedance_text2video",
   "seedance_img2video",
@@ -6794,53 +6373,8 @@ function resolveVideoDuration(tool, input) {
   return { args, timing };
 }
 
-// src/video-registry.ts
-var entry = (engine, deployment, operation, schema) => ({ engine, deployment, operation, schema, voice: operation === "audio" ? "supplied" : "none" });
-var reference = (engine, deployment, schema) => ({ ...entry(engine, deployment, "reference", schema), voice: "reference" });
-var VIDEO_ADAPTERS = Object.freeze({
-  seedance_text2video: entry("seedance", "byteplus", "text", seedanceText2VideoSchema),
-  seedance_img2video: entry("seedance", "byteplus", "image", seedanceImg2VideoSchema),
-  seedance_reference: reference("seedance", "byteplus", seedanceReferenceSchema),
-  ...Object.fromEntries(Object.entries(DESKTOP_SCHEMAS).map(([feature, schema]) => [
-    "astra_genai_desktop_" + ({ "text-to-video": "text2video", "image-to-video": "img2video", "audio-to-video": "audio2video" }[feature] || feature),
-    entry("astra-genai-desktop", "gateway-desktop-v1", { "text-to-video": "text", "image-to-video": "image", "audio-to-video": "audio", keyframes: "keyframe" }[feature] || feature, schema)
-  ])),
-  astra_genai_text2video: entry("astra-genai", "genai-ltx-v2", "text", genaiTextToVideoSchema),
-  astra_genai_img2video: entry("astra-genai", "genai-ltx-v2", "image", genaiImageToVideoSchema),
-  astra_genai_audio2video: entry("astra-genai", "genai-ltx-v2", "audio", genaiAudioToVideoSchema),
-  astra_genai_msr: reference("astra-genai", "genai-ltx-msr", genaiMsrSchema),
-  astra_text2video: entry("astra", "self-hosted-ltx", "text", astraText2VideoSchema),
-  astra_img2video: entry("astra", "self-hosted-ltx", "image", astraImg2VideoSchema),
-  astra_keyframe_video: entry("astra", "self-hosted-ltx", "keyframe", astraKeyframeVideoSchema),
-  astra_audio2video: entry("astra", "self-hosted-ltx", "audio", astraAudio2VideoSchema),
-  astra_ic_lora: entry("astra", "self-hosted-ltx", "control", astraIcLoraSchema),
-  astra_video_retake: entry("astra", "self-hosted-ltx", "retake", astraVideoRetakeSchema),
-  ...Object.fromEntries(Object.entries(LOCAL_VIDEO_MODELS).map(([tool, model2]) => [
-    tool,
-    model2.operation === "reference" ? reference("mlx", "local-mlx", model2.schema) : entry("mlx", "local-mlx", model2.operation, model2.schema)
-  ])),
-  mlx_video_generate: entry("mlx", "local-mlx", "text", mlxVideoGenerateSchema)
-});
-function speechVideoCapabilities(provider, model2, operation) {
-  if (["veo", "omni"].includes(provider) || provider === "seedance" && !Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
-    throw new Error(`video_engine_unsupported: ${provider} ${model2} cannot keep a character's voice; choose a video model again with project_manage`);
-  if (provider === "astra-genai" && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
-  if (provider === "astra-genai-desktop") return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "Gateway A2V reencodes supplied audio; timing/voice identity not guaranteed; installed model capabilities must be checked" };
-  if (provider === "astra") return { provider, model: model2, audioConditioning: true, lipSync: true, postLipSync: false, evidence: "astra_audio2video adapter contract" };
-  if (provider === "seedance" && Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
-    return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed" };
-  if (["host", "mlx", "astra-genai"].includes(provider))
-    return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "No verified external-speech synchronization adapter; voiceover remains available" };
-  throw new Error("No verified speech synchronization contract for selected deployment/model");
-}
-
-// src/video-pricing.ts
-import { fileURLToPath as fileURLToPath3 } from "node:url";
-
 // src/usage-ledger.ts
-import { execFileSync as execFileSync2 } from "node:child_process";
-import path6 from "node:path";
-var EPISODE_MARKER = path6.join("storyboard", "scenes.js");
+var EPISODE_MARKER = path4.join("storyboard", "scenes.js");
 var SEEDANCE_FAMILY = {
   "dreamina-seedance-2-5-260628": "2-5",
   "dreamina-seedance-2-0-260128": "2-0",
@@ -6991,36 +6525,724 @@ function charUnits(args) {
   return Math.round(rawChars(args) / 1e3 * 1e3) / 1e3;
 }
 
+// src/image-routing.ts
+var load = createRequire2(import.meta.url);
+var selectionHelper = fileURLToPath2(new URL("../../skills/_shared/image-selection.js", import.meta.url));
+var idSchema = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
+var imagePlanSchema = external_exports.object({
+  directory: external_exports.string().min(1),
+  assetId: idSchema,
+  requestId: idSchema,
+  operation: external_exports.enum(["text", "edit", "variation"]).optional(),
+  tool: external_exports.string().optional(),
+  reserveUsd: external_exports.number().finite().nonnegative().optional(),
+  args: external_exports.record(external_exports.unknown()).default({})
+}).strict();
+var imageExecuteSchema = external_exports.object({ directory: external_exports.string().min(1), planId: external_exports.string().regex(/^[a-f0-9]{64}$/) }).strict();
+var authorizationSchema = external_exports.object({
+  reference: external_exports.string().min(1),
+  maxUsd: external_exports.number().finite().nonnegative(),
+  maxConcurrent: external_exports.number().int().min(1).max(16).default(1),
+  maxAttempts: external_exports.number().int().min(1).max(20).default(3),
+  openingSpendUsd: external_exports.number().finite().nonnegative().optional()
+}).strict();
+
+// src/storyboard.ts
+import { createHash as createHash3 } from "node:crypto";
+
+// src/scenes-vm.ts
+import vm from "node:vm";
+var SCENES_VM_POLICY = Object.freeze({
+  timeoutMs: 5e3,
+  codeGeneration: Object.freeze({ strings: false, wasm: false })
+});
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function describeEvaluationError(error, filename) {
+  const detail = error && typeof error === "object" ? error : {};
+  const message = typeof detail.message === "string" ? detail.message : String(error);
+  const stack = typeof detail.stack === "string" ? detail.stack : "";
+  const locations = [...stack.matchAll(new RegExp(`${escapeRegExp(filename)}:([0-9]+)(?::([0-9]+))?`, "g"))];
+  const location = locations.find((match) => match[2]) ?? locations[0];
+  const line = location?.[1] ?? "1";
+  const column = location?.[2] ?? "1";
+  const wrapped = new Error(
+    `${filename}:${line}:${column}: ${message}. Allowed syntax: storyboard JavaScript that assigns JSON-serializable data to window.*; eval and Function are disabled.`
+  );
+  wrapped.name = typeof detail.name === "string" ? detail.name : "Error";
+  wrapped.cause = error;
+  return wrapped;
+}
+function evaluateWindowScript(source, options = {}) {
+  const timeout = options.timeoutMs ?? SCENES_VM_POLICY.timeoutMs;
+  const filename = options.filename ?? "scenes.js";
+  const context = vm.createContext(/* @__PURE__ */ Object.create(null), {
+    codeGeneration: SCENES_VM_POLICY.codeGeneration
+  });
+  try {
+    vm.runInContext(
+      "var window = {}; var console = { log() {}, warn() {}, error() {}, info() {}, debug() {} };",
+      context,
+      { timeout }
+    );
+    vm.runInContext(source, context, { filename, timeout });
+    const json = vm.runInContext("JSON.stringify(window)", context, { timeout });
+    if (typeof json !== "string") throw new Error("the script did not leave a window object");
+    const plain = JSON.parse(json);
+    if (!plain || typeof plain !== "object" || Array.isArray(plain)) {
+      throw new Error("the script replaced window with a non-object");
+    }
+    return plain;
+  } catch (error) {
+    throw describeEvaluationError(error, filename);
+  }
+}
+
+// src/storyboard.ts
+import { existsSync as existsSync4, mkdirSync as mkdirSync2, readFileSync as readFileSync6, renameSync as renameSync2, statSync as statSync4, unlinkSync, writeFileSync as writeFileSync4 } from "node:fs";
+import * as nodeModule2 from "node:module";
+import { basename as basename3, dirname as dirname4, join as join4, relative, resolve as resolve4 } from "node:path";
+import { fileURLToPath as fileURLToPath3 } from "node:url";
+var PLUGIN_ROOT = resolve4(dirname4(fileURLToPath3(import.meta.url)), "..", "..");
+var REFERENCES_DIR = join4(PLUGIN_ROOT, "skills", "storyboard", "references");
+var CONTRACT_FILE = join4(REFERENCES_DIR, "structure-contract.js");
+var CHECK_SCENES_FILE = join4(REFERENCES_DIR, "check-scenes.js");
+var CHECK_SCENARIO_FILE = join4(REFERENCES_DIR, "check-scenario.js");
+var loadFromHere2 = nodeModule2.createRequire(import.meta.url);
+var contractCache;
+function contract() {
+  if (!contractCache) contractCache = loadFromHere2(CONTRACT_FILE);
+  return contractCache;
+}
+function cameraContract() {
+  return loadFromHere2(join4(REFERENCES_DIR, "production-mode.js"));
+}
+function techniqueContract() {
+  return loadFromHere2(join4(REFERENCES_DIR, "film-techniques.js"));
+}
+var techniqueSelectionSchema = external_exports.array(external_exports.object({
+  id: nonEmptyTechniqueId(),
+  reason: external_exports.string().trim().min(1).describe("Why this technique serves this shot\u2019s information or action")
+}).strict()).superRefine((value, ctx) => {
+  for (const message of techniqueContract().validate(value))
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+});
+function nonEmptyTechniqueId() {
+  return external_exports.string().trim().min(1).describe("Stable id from storyboard_read techniqueCatalog");
+}
+function motionThemeContract() {
+  return loadFromHere2(join4(REFERENCES_DIR, "motion-graphics.js"));
+}
+function motionGraphicTypes() {
+  const registry = loadFromHere2(join4(REFERENCES_DIR, "motion-graphics.js"));
+  return Object.keys(registry.TYPES);
+}
+var tuple = (list) => external_exports.enum(list);
+var MISSING = ["__contract-missing__"];
+function vocabAtLoad() {
+  try {
+    return contract().VOCAB;
+  } catch {
+    return {
+      SIZES: MISSING,
+      ANGLES: MISSING,
+      BEATS: MISSING,
+      TYPES: MISSING,
+      INFO_TYPES: MISSING,
+      SHARE_TYPES: MISSING,
+      HOOK_TYPES: MISSING,
+      HOOK_FORMS: MISSING,
+      ARCS: MISSING,
+      RENDER_MODES: MISSING,
+      PRODUCTION_MODES: MISSING,
+      CHARGES_OPEN: MISSING,
+      CHARGES_CLOSE: MISSING,
+      TRANSITION_RE: /^$/
+    };
+  }
+}
+var V = vocabAtLoad();
+var nonEmpty = external_exports.string().trim().min(1);
+var STRUCTURE_VERSION = (() => {
+  try {
+    return contract().VERSION;
+  } catch {
+    return "structure-v1";
+  }
+})();
+var sceneSchema = external_exports.object({
+  no: external_exports.number().int().positive().describe("Scene number \u2014 the value shots point at with `scene`"),
+  place: external_exports.string().optional().describe("One place \u2014 the slugline location"),
+  time: external_exports.string().optional().describe("One continuous stretch of time \u2014 \uB0AE \xB7 \uBC24 \xB7 \uC0C8\uBCBD \xB7 10\uB144 \uB4A4"),
+  event: external_exports.string().optional().describe("The one thing that happens in this scene"),
+  charge: external_exports.record(external_exports.unknown()).optional(),
+  turn: external_exports.string().optional().describe("What flipped between the open and the close"),
+  summary: external_exports.string().optional().describe("The scene's story in one or two sentences; the storyboard scene header shows it"),
+  out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene")
+}).strict();
+var sequenceSchema = external_exports.object({
+  id: nonEmpty.describe('Stable id, e.g. "q1"'),
+  title: external_exports.string().optional().describe("The heading the approval page draws"),
+  purpose: external_exports.string().optional().describe("The one purpose that binds these scenes \u2014 two purposes are two sequences"),
+  question: nonEmpty.optional().describe("The dramatic question this stretch opens"),
+  payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question"),
+  scenes: external_exports.array(external_exports.number().int().positive()).describe("Scene numbers in playback order")
+}).strict();
+var structureSchema = external_exports.object({
+  version: external_exports.literal(STRUCTURE_VERSION),
+  nextShotId: external_exports.number().int().positive().optional(),
+  sequences: external_exports.array(sequenceSchema),
+  scenes: external_exports.array(sceneSchema)
+}).strict();
+var coverageSchema = external_exports.object({
+  azimuth: external_exports.number().finite().optional().describe("Horizontal camera bearing, 0\u2013180\xB0 inside the selected side of the axis"),
+  action: external_exports.string().trim().min(1).optional().describe("Visible action that carries this cut when no 30\xB0 or two-step change is used")
+}).passthrough();
+var lineCrossingSchema = external_exports.object({
+  method: external_exports.enum(["camera_move", "subject_move", "neutral", "intentional"]),
+  from: nonEmpty.describe("The previous space.line value"),
+  to: nonEmpty.describe("The new space.line value"),
+  reason: nonEmpty.describe("What the viewer sees that makes the new side legible"),
+  bridgeShot: external_exports.number().int().positive().optional().describe('Earlier neutral shot number; required only for method "neutral"')
+}).strict();
+var compositionSchema = external_exports.record(external_exports.unknown());
+var eyelineSchema = external_exports.object({ matchShot: external_exports.number().int().positive().optional() }).passthrough();
+var depthSchema = external_exports.record(external_exports.unknown());
+var cameraSchema = external_exports.record(external_exports.unknown()).superRefine((value, ctx) => {
+  for (const message of cameraContract().cameraInputErrors(value))
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+});
+var visualSchema = external_exports.object({ camera: cameraSchema.optional() }).passthrough();
+var shotIdSchema = external_exports.string().regex(/^s\d{4,}$/);
+var shotSchema = external_exports.object({
+  id: shotIdSchema.optional(),
+  type: tuple(V.TYPES),
+  title: external_exports.string().optional(),
+  narration: external_exports.array(external_exports.object({ id: external_exports.string().trim().min(1).optional(), delivery: external_exports.enum(["voiceover", "on_screen", "off_screen"]).optional(), tts: external_exports.string(), sub: external_exports.string().optional(), speaker: external_exports.string().trim().min(1).optional() }).passthrough()).optional(),
+  visual: visualSchema.optional(),
+  duration: external_exports.number().positive().optional(),
+  scene: external_exports.number().int().positive().optional(),
+  sceneSlug: external_exports.string().optional(),
+  sequence: external_exports.string().optional(),
+  transition: external_exports.string().regex(V.TRANSITION_RE, "not a join from scenes-schema \xA7scene transition").optional(),
+  beat: external_exports.string().optional(),
+  arc: external_exports.string().optional(),
+  hookType: external_exports.string().optional(),
+  hookForm: external_exports.string().optional(),
+  chapter: external_exports.string().optional(),
+  after: external_exports.number().int().nonnegative().optional(),
+  shot: external_exports.object({
+    techniques: techniqueSelectionSchema.optional(),
+    feel: external_exports.string().optional(),
+    size: external_exports.string().optional(),
+    angle: external_exports.string().optional(),
+    why: external_exports.string().optional(),
+    info: external_exports.string().optional(),
+    infoType: external_exports.string().optional(),
+    share: external_exports.string().optional(),
+    shareType: external_exports.string().optional(),
+    space: external_exports.record(external_exports.unknown()).optional(),
+    eyeline: eyelineSchema.optional(),
+    composition: compositionSchema.optional(),
+    depth: depthSchema.optional(),
+    coverage: coverageSchema.optional(),
+    lineNeutral: external_exports.literal(true).optional(),
+    lineCrossing: external_exports.record(external_exports.unknown()).optional(),
+    motionGraphic: external_exports.object({
+      version: external_exports.literal(1),
+      type: external_exports.string().refine((value) => motionGraphicTypes().includes(value), "unknown motion graphic type"),
+      intent: external_exports.string().optional(),
+      reason: external_exports.string().optional(),
+      evidence: external_exports.enum(["data", "recording", "reenactment", "metaphor"]),
+      style: external_exports.object({
+        palette: external_exports.string().optional(),
+        reason: external_exports.string().optional(),
+        theme: external_exports.object({
+          id: external_exports.string().refine((value) => value === "auto" || Object.hasOwn(motionThemeContract().THEMES, value), "unknown motion theme"),
+          context: external_exports.enum(["research", "software", "education", "campaign", "storytelling", "friendly"]).optional(),
+          reason: external_exports.string().optional()
+        }).passthrough().optional()
+      }).passthrough(),
+      beats: external_exports.array(external_exports.object({ at: external_exports.number().min(0).max(1), action: external_exports.string() }).passthrough()).optional(),
+      content: external_exports.record(external_exports.unknown()).optional()
+    }).passthrough().optional(),
+    render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: external_exports.string().optional(), reason: external_exports.string().optional() }).passthrough().optional()
+  }).passthrough().optional(),
+  sound: external_exports.record(external_exports.unknown()).optional()
+}).passthrough();
+var readLevelSchema = external_exports.enum(["outline", "scenes", "shots", "full"]);
+var storyboardReadSchema = external_exports.object({
+  path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
+  level: readLevelSchema.default("shots").describe("outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots = every shot summarised under its scene \xB7 full = the raw shot objects too"),
+  shotId: external_exports.string().min(1).optional().describe("Stable shot ID to inspect, with its raw plan and neighboring shot IDs"),
+  includeTechniques: external_exports.boolean().default(true).describe("Return canonical technique ids, purposes, icons and provider instructions"),
+  includeContext: external_exports.boolean().default(true).describe("Include STORY, PRODUCTION and SB_DOC as unverified review context")
+});
+var storyboardCheckSchema = external_exports.object({
+  path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
+  draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 machine-layer absences are deferred, not violations")
+});
+var scenarioCheckSchema = external_exports.object({
+  path: external_exports.string().min(1).describe("The candidates directory, or its selected scenario.md")
+});
+var productionSchema = external_exports.object({ mode: tuple([...V.PRODUCTION_MODES, "hook_only", "stills_only", "hybrid"]).optional(), renderRatioVersion: external_exports.literal(1).optional() }).passthrough();
+var globalsSchema = external_exports.record(external_exports.string().regex(/^[A-Z][A-Z0-9_]*$/, "a window.* global is UPPER_CASE"), external_exports.unknown()).superRefine((value, ctx) => {
+  if (value.PRODUCTION === void 0) return;
+  const parsed = productionSchema.safeParse(value.PRODUCTION);
+  if (!parsed.success) for (const issue of parsed.error.issues) ctx.addIssue({ ...issue, path: ["PRODUCTION", ...issue.path] });
+});
+var transitionPatchSchema = external_exports.object({
+  no: external_exports.number().int().positive().describe("Incoming shot number, 1-based, after removals and inserts"),
+  transition: external_exports.enum([
+    "cut",
+    "dip",
+    "dip:white",
+    "jcut",
+    "dissolve",
+    "iris",
+    "blur",
+    "zoom",
+    "push:l2r",
+    "push:r2l",
+    "push:u2d",
+    "push:d2u",
+    "whip:l2r",
+    "whip:r2l",
+    "whip:u2d",
+    "whip:d2u"
+  ]),
+  transitionSeconds: external_exports.number().finite().min(0.08).max(0.8).optional(),
+  reason: nonEmpty,
+  continuity: nonEmpty.optional()
+}).strict().refine(
+  (v) => !["cut", "dip", "dip:white"].includes(v.transition) || v.transitionSeconds === void 0,
+  "cut and dip do not accept transitionSeconds; dip fades each side for up to 0.30 seconds"
+);
+var storyboardApplySchema = external_exports.object({
+  path: external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing), or its scenes.js"),
+  draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 camera-continuity records (lineCrossing, coverage) are deferred, not violations"),
+  set: external_exports.object({ structure: structureSchema.optional(), shots: external_exports.array(shotSchema).min(1) }).optional().describe("Replace the whole board \u2014 the structure and every shot. The way a new board is written"),
+  structure: structureSchema.optional().describe("Replace window.STRUCTURE only"),
+  sequences: external_exports.array(sequenceSchema).optional().describe("Upsert sequences by id"),
+  scenes: external_exports.array(sceneSchema).optional().describe("Upsert scenes by no"),
+  shots: external_exports.array(external_exports.object({ no: external_exports.number().int().positive(), shot: shotSchema })).optional().describe("Upsert shots by 1-based position; no = length + 1 appends"),
+  shotsById: external_exports.array(external_exports.object({ id: shotIdSchema, shot: shotSchema })).optional().describe("Replace shots by their stable id (R6); the shot keeps that id. An unknown id is an error, nothing is written"),
+  insertShots: external_exports.array(external_exports.object({
+    after: external_exports.number().int().min(0).optional(),
+    afterId: shotIdSchema.optional(),
+    shots: external_exports.array(shotSchema).min(1)
+  }).refine((e) => e.after === void 0 !== (e.afterId === void 0), { message: "give exactly one of after (position) or afterId (shot id)" })).optional().describe("Insert shots after a 1-based position (0 = at the start) or after the shot with afterId. Later positions shift"),
+  transitions: external_exports.array(transitionPatchSchema).min(1).optional().describe("Change only incoming transitions; dip fades through black. Keeps narration and visuals intact"),
+  removeShots: external_exports.array(external_exports.number().int().positive()).optional().describe("1-based positions to drop, resolved before the insert"),
+  removeShotIds: external_exports.array(shotIdSchema).min(1).optional().describe("Shot ids to drop, resolved before the insert"),
+  removeScenes: external_exports.array(external_exports.number().int().positive()).optional(),
+  removeSequences: external_exports.array(external_exports.string()).optional(),
+  globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY"),
+  expectedSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional().describe("Required for propSheet file edits; use the hash from storyboard_read"),
+  propSheet: external_exports.object({
+    props: external_exports.array(external_exports.record(external_exports.unknown())),
+    continuity: external_exports.record(external_exports.unknown()).optional()
+  }).strict().optional().describe("Replace the prop registry and optional version:1 continuity ledger together. SB_DOC.characters must register every owner and holder. See prop-continuity.md"),
+  dryRun: external_exports.boolean().default(false).describe("Validate and report, write nothing")
+});
+function scenesPath(target) {
+  const abs = resolve4(target);
+  if (basename3(abs) === "scenes.js") return abs;
+  return join4(abs, "scenes.js");
+}
+function readBoard(target) {
+  const file = scenesPath(target);
+  if (!existsSync4(file)) throw new Error(`no scenes.js at ${file}`);
+  if (!statSync4(file).isFile()) throw new Error(`${file} is not a file`);
+  const src = readFileSync6(file, "utf8");
+  const header = [];
+  for (const line of src.split("\n")) {
+    if (/^\s*\/\//.test(line)) header.push(line.trim());
+    else if (line.trim()) break;
+  }
+  let win;
+  try {
+    win = evaluateWindowScript(src, { filename: file });
+  } catch (e) {
+    throw new Error(`failed to evaluate ${file}: ${e.message}`);
+  }
+  if (!Array.isArray(win.SCENES)) throw new Error(`${file} has no window.SCENES array`);
+  return { file, header, win, sha256: createHash3("sha256").update(src).digest("hex") };
+}
+var GLOBAL_ORDER = ["FORMAT", "VOICE", "THEME", "COMPREHENSION", "STORY", "PRODUCTION", "MOTION_POLICY", "MUSIC", "SFX", "STRUCTURE", "SCENES"];
+function serializeBoard(win, header = []) {
+  const keys = Object.keys(win).filter((k) => win[k] !== void 0);
+  keys.sort((a, b) => {
+    const ia = GLOBAL_ORDER.indexOf(a), ib = GLOBAL_ORDER.indexOf(b);
+    if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    return a.localeCompare(b);
+  });
+  const lines = header.filter((h) => !/^\/\/\s*approved:/.test(h));
+  if (lines.length) lines.push("");
+  for (const k of keys) {
+    const value = k === "SCENES" && Array.isArray(win[k]) ? win[k].map((shot) => shot.id === void 0 ? shot : { id: shot.id, ...shot }) : win[k];
+    lines.push(`window.${k} = ${JSON.stringify(value, null, 2)};`);
+  }
+  return lines.join("\n") + "\n";
+}
+var outlinePath = external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing) or its scenes.js");
+var storySequenceSchema = external_exports.object({
+  path: outlinePath,
+  sequences: external_exports.array(external_exports.object({
+    id: nonEmpty.describe('Stable id, e.g. "q1"'),
+    title: nonEmpty.describe("The heading the approval page draws"),
+    purpose: nonEmpty.describe("The one purpose that binds its scenes"),
+    question: nonEmpty.optional().describe("The dramatic question this stretch opens")
+  }).strict()).min(1)
+}).strict();
+var storySceneSchema = external_exports.object({
+  path: outlinePath,
+  scenes: external_exports.array(external_exports.object({
+    sequence: nonEmpty.describe("The id of the sequence this scene belongs to \u2014 written first with story_sequence"),
+    no: external_exports.number().int().positive(),
+    place: nonEmpty,
+    time: nonEmpty,
+    event: nonEmpty.describe("The one thing that happens in this scene"),
+    summary: nonEmpty.describe("The scene's story in one or two sentences"),
+    turn: nonEmpty.optional(),
+    out: nonEmpty.optional()
+  }).strict()).min(1)
+}).strict();
+var storyShotSchema = external_exports.object({
+  path: outlinePath,
+  shots: external_exports.array(external_exports.object({
+    id: shotIdSchema.optional().describe("Revise this shot; without it a new shot is added at the end of its scene"),
+    scene: external_exports.number().int().positive().describe("The scene number \u2014 written first with story_scene"),
+    summary: nonEmpty.describe("The story this shot tells, in one sentence"),
+    title: nonEmpty.optional()
+  }).strict()).min(1)
+}).strict();
+var shotCharactersSchema = external_exports.object({
+  path: outlinePath,
+  shots: external_exports.array(external_exports.object({
+    id: shotIdSchema,
+    characters: external_exports.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").describe("Principal characters on screen, subject first; [] when nobody from the cast is on screen")
+  }).strict()).min(1)
+}).strict();
+var shotDialogueSchema = external_exports.object({
+  path: outlinePath,
+  shots: external_exports.array(external_exports.object({
+    id: shotIdSchema,
+    lines: external_exports.array(external_exports.object({
+      id: nonEmpty.optional().describe("Stable line id to revise; omitted ids are assigned"),
+      speaker: nonEmpty.describe("The character who speaks \u2014 a narrator is a character too"),
+      tts: nonEmpty.describe("The spoken line, in the video's language"),
+      sub: external_exports.string().optional().describe("The written notation when it differs from tts"),
+      delivery: external_exports.enum(["voiceover", "on_screen", "off_screen"]).optional().describe("Default: on_screen for one of the shot's characters, voiceover for anyone else")
+    }).strict()).describe("Every line of the shot in spoken order; [] makes it silent")
+  }).strict()).min(1)
+}).strict();
+var choice = external_exports.object({ id: nonEmpty, reason: nonEmpty }).strict();
+var shotIconsSchema = external_exports.object({
+  path: outlinePath,
+  shots: external_exports.array(external_exports.object({
+    id: shotIdSchema,
+    render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: nonEmpty.optional(), reason: nonEmpty }).strict().optional().describe("Render route: shot.render"),
+    size: tuple(V.SIZES).optional(),
+    why: nonEmpty.optional().describe("Why this size"),
+    angle: tuple(V.ANGLES).optional(),
+    move: choice.extend({ target: nonEmpty.optional() }).strict().optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in \u2026)"),
+    focus: choice.nullable().optional().describe("A camera technique with a focus field (camera.rack-focus); null removes it"),
+    depth: depthSchema.optional(),
+    frames: external_exports.object({ mode: external_exports.enum(["first", "first_last", "reference"]), reason: nonEmpty, endState: nonEmpty.optional() }).strict().optional().describe("Frame plan: reference is MSR (subject images + start image)")
+  }).strict()).min(1)
+}).strict();
+var shotImageSchema = external_exports.object({
+  path: outlinePath,
+  id: shotIdSchema,
+  frame: external_exports.enum(["start", "end"]).default("start").describe("start: the first image; end: the last image of a first_last shot"),
+  prompt: nonEmpty.describe("What the frame shows, in English: who is where, doing what, facing which way, expression and light"),
+  location: nonEmpty.optional().describe("SB_DOC.locations id of the place; an earlier call's choice stays when omitted"),
+  props: external_exports.array(nonEmpty).optional().describe("SB_DOC.props ids seen in the frame; an earlier call's choice stays when omitted"),
+  size: external_exports.string().regex(/^\d{3,4}x\d{3,4}$/).optional().describe("Output WIDTHxHEIGHT; default 1536x1024 for a 16:9 board, 1024x1536 otherwise"),
+  reserveUsd: external_exports.number().finite().nonnegative().optional()
+}).strict();
+var shotPromptSchema = external_exports.object({
+  path: outlinePath,
+  id: shotIdSchema,
+  action: nonEmpty.describe("What happens in the shot, in English: the subjects' movement from the opening picture"),
+  end: nonEmpty.optional().describe("The closing picture, in English"),
+  sound: nonEmpty.optional().describe("Ambient sound and effects, in English; the shot's lines come from shot_dialogue")
+}).strict();
+var scenarioCheckResultSchema = external_exports.object({
+  files: external_exports.array(external_exports.string()),
+  violations: external_exports.number().int().nonnegative(),
+  warnings: external_exports.number().int().nonnegative(),
+  findings: external_exports.array(external_exports.object({
+    level: external_exports.enum(["bad", "warn"]),
+    where: external_exports.string(),
+    what: external_exports.string()
+  }))
+});
+
+// src/astra-genai-desktop.ts
+var model = external_exports.enum(["ltx-2.3-fast", "ltx-2.5-fast"]);
+var resolution = external_exports.enum(["270p", "360p", "540p", "720p", "1080p", "1440p", "2160p"]);
+var duration = external_exports.number().int().refine((n) => [2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 18, 20].includes(n));
+var aspect = external_exports.enum(["21:9", "16:9", "3:2", "4:3", "1:1", "4:5", "9:16"]);
+var loras = external_exports.array(external_exports.object({ ref: external_exports.string().min(1), scale: external_exports.number().finite().min(0).max(4).default(1) }).strict()).min(1).refine((rows) => new Set(rows.map((r) => r.ref)).size === rows.length, "Duplicate LoRA refs");
+var local = {
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((n) => n.endsWith(".mp4")).optional()
+};
+var common = external_exports.object({
+  model,
+  prompt: external_exports.string().trim().min(1),
+  resolution,
+  seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
+  cameraMotion: external_exports.enum(["none", "dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional(),
+  ...local
+}).strict();
+var desktopTextSchema = common.extend({ duration, aspectRatio: aspect.default("16:9"), loras: loras.optional() }).strict();
+var desktopImageSchema = common.extend({
+  duration,
+  aspectRatio: external_exports.union([aspect, external_exports.literal("auto")]).default("auto"),
+  imagePath: external_exports.string().min(1),
+  lastFramePath: external_exports.string().min(1).optional()
+}).strict();
+var desktopAudioSchema = common.extend({
+  audioPath: external_exports.string().min(1),
+  imagePath: external_exports.string().min(1).optional(),
+  aspectRatio: external_exports.union([aspect, external_exports.literal("auto")]).default("16:9"),
+  allowAudioTruncation: external_exports.boolean().default(false)
+}).strict();
+var edit = external_exports.object({
+  model,
+  prompt: external_exports.string().default(""),
+  sourceVideoPath: external_exports.string().min(1),
+  targetResolution: external_exports.object({ width: external_exports.number().int().positive(), height: external_exports.number().int().positive() }).strict().optional(),
+  seed: external_exports.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional(),
+  ...local
+}).strict();
+var desktopExtendSchema = edit.extend({ duration: external_exports.number().finite().min(2).max(20), mode: external_exports.enum(["start", "end"]).default("end") }).strict();
+var desktopRetakeSchema = edit.extend({
+  duration: external_exports.number().finite().min(2).max(10),
+  startTime: external_exports.number().finite().nonnegative(),
+  mode: external_exports.enum(["replace_audio_and_video", "replace_video", "replace_audio"]).default("replace_audio_and_video")
+}).strict();
+var desktopKeyframesSchema = desktopTextSchema.extend({
+  audio: external_exports.boolean().default(false),
+  keyframes: external_exports.array(external_exports.object({
+    imagePath: external_exports.string().min(1),
+    frameIndex: external_exports.number().int().nonnegative(),
+    strength: external_exports.number().finite().min(0).max(1).default(1)
+  }).strict()).min(1).max(10)
+}).strict().superRefine((args, ctx) => {
+  const indices = args.keyframes.map((f) => f.frameIndex);
+  if (new Set(indices).size !== indices.length || Math.max(...indices) >= Math.floor(args.duration * args.fps / 8) * 8 + 1)
+    ctx.addIssue({ code: "custom", message: "Keyframes require unique indices within the requested duration" });
+});
+var DESKTOP_SCHEMAS = {
+  "text-to-video": desktopTextSchema,
+  "image-to-video": desktopImageSchema,
+  "audio-to-video": desktopAudioSchema,
+  extend: desktopExtendSchema,
+  retake: desktopRetakeSchema,
+  keyframes: desktopKeyframesSchema
+};
+var receiptSchema = external_exports.object({
+  protocol: external_exports.literal("gateway-desktop-v1"),
+  baseUrl: external_exports.string(),
+  operation: external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "extend", "retake", "keyframes"]),
+  fingerprint: external_exports.string(),
+  videoPath: external_exports.string(),
+  status: external_exports.enum(["submitting", "submitted", "completed"]),
+  jobId: external_exports.string().optional(),
+  sha256: external_exports.string().optional()
+}).strict();
+
+// src/video-routing.ts
+import { createRequire as createRequire6 } from "node:module";
+import { fileURLToPath as fileURLToPath5 } from "node:url";
+
+// src/astra-genai-video.ts
+var GENAI_VIDEO_MODELS = ["ltx-2.5-22b-distilled", "ltx-2.5-22b-dev"];
+var GENAI_CAMERA_MOTIONS = ["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"];
+var genaiTextToVideoSchema = external_exports.object({
+  prompt: external_exports.string().min(1).max(5e3),
+  model: external_exports.enum(GENAI_VIDEO_MODELS),
+  duration: external_exports.number().int().nullable(),
+  resolution: external_exports.string().min(1),
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
+  generateAudio: external_exports.boolean().default(true),
+  cameraMotion: external_exports.enum(GENAI_CAMERA_MOTIONS).nullable().optional(),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
+}).strict();
+var genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
+  imageUri: external_exports.string().min(1),
+  lastFrameUri: external_exports.string().min(1).nullable().optional()
+});
+var oneOf = (a, b) => Number(a !== void 0) + Number(b !== void 0);
+var genaiAudioToVideoSchema = external_exports.object({
+  prompt: external_exports.string().trim().min(1).max(5e3),
+  model: external_exports.literal("ltx-2.5-22b-dev"),
+  resolution: external_exports.string().min(1),
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
+  audioPath: external_exports.string().min(1).optional(),
+  audioUri: external_exports.string().min(1).optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  imageUri: genaiImageUriSchema.optional(),
+  lastFramePath: external_exports.string().min(1).optional(),
+  lastFrameUri: genaiImageUriSchema.optional(),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
+}).strict().superRefine((args, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (oneOf(args.audioPath, args.audioUri) !== 1) issue("Supply exactly one audioPath or audioUri");
+  if (oneOf(args.imagePath, args.imageUri) > 1) issue("Supply at most one imagePath or imageUri");
+  if (oneOf(args.lastFramePath, args.lastFrameUri) > 1) issue("Supply at most one lastFramePath or lastFrameUri");
+  if (oneOf(args.lastFramePath, args.lastFrameUri) && !oneOf(args.imagePath, args.imageUri)) issue("A last frame requires a first image");
+});
+var genaiMsrSchema = external_exports.object({
+  prompt: external_exports.string().trim().min(1).max(2e3),
+  references: external_exports.array(external_exports.object({
+    imageUri: genaiImageUriSchema.optional(),
+    imagePath: external_exports.string().min(1).optional(),
+    background: external_exports.boolean().default(false),
+    // Voice sample for this subject; the gateway pairs it with the same picture slot.
+    audioUri: external_exports.string().min(1).optional(),
+    audioPath: external_exports.string().min(1).optional()
+  }).strict().refine(
+    (ref) => Number(!!ref.imageUri) + Number(!!ref.imagePath) === 1,
+    "Supply exactly one imageUri or imagePath"
+  ).refine((ref) => oneOf(ref.audioUri, ref.audioPath) <= 1, "Supply at most one audioUri or audioPath")).min(1).max(5),
+  referenceStrength: external_exports.number().finite().min(0).max(1).default(1),
+  referenceFrames: external_exports.union([external_exports.literal(25), external_exports.literal(33)]).default(33),
+  width: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1536),
+  height: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1024),
+  numFrames: external_exports.number().int().min(25).max(361).refine((n) => (n - 1) % 8 === 0).optional(),
+  duration: external_exports.number().finite().gt(0).max(360).optional(),
+  frameRate: external_exports.number().finite().min(1).max(60).default(24),
+  seed: external_exports.number().int().min(0).max(2147483647).default(42),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
+}).strict().superRefine((args, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  const backgrounds = args.references.filter((ref) => ref.background).length;
+  if (backgrounds > 1 || args.references.length - backgrounds > 4) issue("MSR supports at most four subjects and one background");
+  let subject = 0;
+  for (const ref of args.references) {
+    subject += Number(!ref.background);
+    if (!oneOf(ref.audioUri, ref.audioPath)) continue;
+    if (ref.background) issue("MSR voice samples belong to subjects, not the background");
+    else if (subject > 2) issue("MSR voice samples fit the first two subjects only");
+  }
+  if (args.width * args.height > 2064384) issue("MSR maximum is 2,064,384 pixels");
+  if (args.duration !== void 0) {
+    if (args.numFrames !== void 0) issue("Omit numFrames when using duration");
+    const frames = 1 + 8 * Math.ceil((args.duration * args.frameRate - 1) / 8 - 0.5 - 1e-9);
+    if (frames < 25 || frames > 361) issue("MSR duration must round to 25..361 frames");
+  }
+});
+var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "msr"]);
+var receiptSchema2 = external_exports.object({
+  version: external_exports.literal(1),
+  baseUrl: external_exports.string(),
+  operation: operationSchema,
+  fingerprint: external_exports.string(),
+  videoPath: external_exports.string(),
+  jobId: external_exports.string().min(1).optional(),
+  status: external_exports.enum(["submitting", "submitted", "completed"]),
+  sha256: external_exports.string().optional()
+}).strict();
+var statusSchema = external_exports.object({
+  id: external_exports.string().min(1),
+  status: external_exports.enum(["pending", "processing", "completed", "failed"]),
+  result: external_exports.object({ video_url: external_exports.string().min(1) }).passthrough().nullish(),
+  error: external_exports.unknown().optional()
+}).passthrough();
+var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
+var SUBMIT_TIMEOUT_MS2 = 15 * 6e4;
+
+// src/video-registry.ts
+var entry = (engine, deployment, operation, schema) => ({ engine, deployment, operation, schema, voice: operation === "audio" ? "supplied" : "none" });
+var reference = (engine, deployment, schema) => ({ ...entry(engine, deployment, "reference", schema), voice: "reference" });
+var VIDEO_ADAPTERS = Object.freeze({
+  seedance_text2video: entry("seedance", "byteplus", "text", seedanceText2VideoSchema),
+  seedance_img2video: entry("seedance", "byteplus", "image", seedanceImg2VideoSchema),
+  seedance_reference: reference("seedance", "byteplus", seedanceReferenceSchema),
+  ...Object.fromEntries(Object.entries(DESKTOP_SCHEMAS).map(([feature, schema]) => [
+    "astra_genai_desktop_" + ({ "text-to-video": "text2video", "image-to-video": "img2video", "audio-to-video": "audio2video" }[feature] || feature),
+    entry("astra-genai-desktop", "gateway-desktop-v1", { "text-to-video": "text", "image-to-video": "image", "audio-to-video": "audio", keyframes: "keyframe" }[feature] || feature, schema)
+  ])),
+  astra_genai_text2video: entry("astra-genai", "genai-ltx-v2", "text", genaiTextToVideoSchema),
+  astra_genai_img2video: entry("astra-genai", "genai-ltx-v2", "image", genaiImageToVideoSchema),
+  astra_genai_audio2video: entry("astra-genai", "genai-ltx-v2", "audio", genaiAudioToVideoSchema),
+  astra_genai_msr: reference("astra-genai", "genai-ltx-msr", genaiMsrSchema),
+  astra_text2video: entry("astra", "self-hosted-ltx", "text", astraText2VideoSchema),
+  astra_img2video: entry("astra", "self-hosted-ltx", "image", astraImg2VideoSchema),
+  astra_keyframe_video: entry("astra", "self-hosted-ltx", "keyframe", astraKeyframeVideoSchema),
+  astra_audio2video: entry("astra", "self-hosted-ltx", "audio", astraAudio2VideoSchema),
+  astra_ic_lora: entry("astra", "self-hosted-ltx", "control", astraIcLoraSchema),
+  astra_video_retake: entry("astra", "self-hosted-ltx", "retake", astraVideoRetakeSchema),
+  ...Object.fromEntries(Object.entries(LOCAL_VIDEO_MODELS).map(([tool, model2]) => [
+    tool,
+    model2.operation === "reference" ? reference("mlx", "local-mlx", model2.schema) : entry("mlx", "local-mlx", model2.operation, model2.schema)
+  ])),
+  mlx_video_generate: entry("mlx", "local-mlx", "text", mlxVideoGenerateSchema)
+});
+function speechVideoCapabilities(provider, model2, operation) {
+  if (["veo", "omni"].includes(provider) || provider === "seedance" && !Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
+    throw new Error(`video_engine_unsupported: ${provider} ${model2} cannot keep a character's voice; choose a video model again with project_manage`);
+  if (provider === "astra-genai" && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
+  if (provider === "astra-genai-desktop") return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "Gateway A2V reencodes supplied audio; timing/voice identity not guaranteed; installed model capabilities must be checked" };
+  if (provider === "astra") return { provider, model: model2, audioConditioning: true, lipSync: true, postLipSync: false, evidence: "astra_audio2video adapter contract" };
+  if (provider === "seedance" && Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
+    return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed" };
+  if (["host", "mlx", "astra-genai"].includes(provider))
+    return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "No verified external-speech synchronization adapter; voiceover remains available" };
+  throw new Error("No verified speech synchronization contract for selected deployment/model");
+}
+
 // src/video-pricing.ts
-var PRICE_FILE = fileURLToPath3(new URL("../../skills/autoproduce/references/prices.tsv", import.meta.url));
+import { fileURLToPath as fileURLToPath4 } from "node:url";
+var PRICE_FILE = fileURLToPath4(new URL("../../skills/autoproduce/references/prices.tsv", import.meta.url));
 
 // src/video-image-inputs.ts
 import { createRequire as createRequire4 } from "node:module";
-var load = createRequire4(import.meta.url);
+var load2 = createRequire4(import.meta.url);
 
 // src/video-voice.ts
 import { createRequire as createRequire5 } from "node:module";
-var load2 = createRequire5(import.meta.url);
+var load3 = createRequire5(import.meta.url);
 
 // src/video-routing.ts
-var load3 = createRequire6(import.meta.url);
-var shared = fileURLToPath4(new URL("../../skills/_shared/video-selection.js", import.meta.url));
-var modelSettings = fileURLToPath4(new URL("../../skills/_shared/model-settings.js", import.meta.url));
-var routingContext = (episode, shotId) => load3(shared).readVideoContext(episode, shotId);
-var idSchema = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
+var load4 = createRequire6(import.meta.url);
+var shared = fileURLToPath5(new URL("../../skills/_shared/video-selection.js", import.meta.url));
+var modelSettings = fileURLToPath5(new URL("../../skills/_shared/model-settings.js", import.meta.url));
+var routingContext = (episode, shotId) => load4(shared).readVideoContext(episode, shotId);
+var idSchema2 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var videoPlanSchema = external_exports.object({
   episode: external_exports.string().min(1),
   shotId: external_exports.string().min(1),
-  requestId: idSchema,
+  requestId: idSchema2,
   operation: external_exports.string().optional(),
   tool: external_exports.string().optional(),
   args: external_exports.record(external_exports.unknown()).default({})
 }).strict();
 var videoExecuteSchema = external_exports.object({ episode: external_exports.string().min(1), planId: external_exports.string().regex(/^[a-f0-9]{64}$/) }).strict();
+var videoApproveSchema = external_exports.object({
+  episode: external_exports.string().min(1),
+  planIds: external_exports.array(external_exports.string().regex(/^[a-f0-9]{64}$/)).min(1).optional().describe("Video plans the user approved after seeing each shot's prompt, images and cost"),
+  auto: external_exports.boolean().optional().describe("true: the user approves every shot's video from now on; false: ask before each shot again"),
+  request: external_exports.string().trim().min(1).describe("The user's own words that gave this approval")
+}).strict().refine((input) => input.planIds !== void 0 || input.auto !== void 0, "name planIds or auto");
 
 // src/speech.ts
-import { createHash as createHash5, randomUUID } from "node:crypto";
-import { readFileSync as readFileSync8, writeFileSync as writeFileSync6, renameSync as renameSync4, mkdirSync as mkdirSync5, existsSync as existsSync7 } from "node:fs";
+import { createHash as createHash4, randomUUID } from "node:crypto";
+import { readFileSync as readFileSync7, writeFileSync as writeFileSync5, renameSync as renameSync3, mkdirSync as mkdirSync3, existsSync as existsSync5 } from "node:fs";
 import { dirname as dirname5, resolve as resolve5, join as join5 } from "node:path";
 import * as nodeModule4 from "node:module";
 import { execFileSync as execFileSync3 } from "node:child_process";
@@ -7072,14 +7294,14 @@ var speechManageSchema = external_exports.object({
   generation: external_exports.object({ generator: external_exports.string().min(1), voiceSettings: external_exports.record(external_exports.unknown()), text: external_exports.string().min(1), language: external_exports.string().min(1).optional() }).strict().optional(),
   capabilities: external_exports.object({ provider: external_exports.string().min(1), model: external_exports.string().min(1), audioConditioning: external_exports.boolean(), lipSync: external_exports.boolean(), postLipSync: external_exports.boolean(), nativeSpeech: external_exports.boolean().optional(), evidence: external_exports.string().min(1) }).strict().optional()
 }).strict();
-var hash = (s) => createHash5("sha256").update(s).digest("hex");
+var hash = (s) => createHash4("sha256").update(s).digest("hex");
 var object = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
 function speechRevision(line, character) {
   return hash(JSON.stringify(actingContract().speechRevisionPayload(line, character?.tts)));
 }
 function currentAudio(line, character) {
   try {
-    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync7(line.audio.path) && hash(readFileSync8(line.audio.path)) === line.audio.sha256;
+    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync5(line.audio.path) && hash(readFileSync7(line.audio.path)) === line.audio.sha256;
   } catch {
     return false;
   }
@@ -7110,13 +7332,13 @@ function audioProvenanceStatus(line, character) {
   const voice = character?.tts;
   const historical = ["supertonic", "mlx"].includes(String(voice?.engine)) || voice?.engine === "elevenlabs" && ["eleven_v3", "eleven_v3_conversational", "eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_turbo_v2_5"].includes(String(voice?.model));
   try {
-    if (historical && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && hash(readFileSync8(line.audio.path)) === line.audio.sha256) return "preserved_historical_recording_unverified";
+    if (historical && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && hash(readFileSync7(line.audio.path)) === line.audio.sha256) return "preserved_historical_recording_unverified";
   } catch {
   }
   return "stale_or_missing";
 }
 function measuredDuration(line) {
-  if (!line.audio || !existsSync7(line.audio.path)) return null;
+  if (!line.audio || !existsSync5(line.audio.path)) return null;
   try {
     const value = Number(execFileSync3("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
     return Number.isFinite(value) && value > 0 ? value : null;
@@ -7136,6 +7358,8 @@ function speechVideoPlan(input, capabilities) {
   const videoPrompt = actingContract().sceneVideoPrompt(timeline.performance, mode, scene);
   const promptLength = capabilities.provider.trim().toLowerCase() === "astra" ? { characters: videoPrompt.length, maxCharacters: ASTRA_VIDEO_MAX_PROMPT_CHARS, exceeded: videoPrompt.length > ASTRA_VIDEO_MAX_PROMPT_CHARS } : void 0;
   const warnings = [...timeline.warnings];
+  const foreign = nonEnglishOutsideQuotes(videoPrompt);
+  if (foreign) warnings.push(`videoPrompt carries authored text in another language ("${foreign}"); write the video prompt in English before video_plan, which refuses it. Only quoted dialogue keeps the video's language.`);
   if (promptLength?.exceeded) warnings.push(`ASTRA video prompt has ${promptLength.characters} characters; the adapter limit is ${promptLength.maxCharacters}. Shorten repeated descriptions or split at a natural action boundary while preserving necessary actions. The plan is unchanged.`);
   const performancePayload = actingContract().scenePerformancePayload(scene);
   const { performance: _performance, narration: _narration, ...reuseContext } = performancePayload;
@@ -7144,7 +7368,7 @@ function speechVideoPlan(input, capabilities) {
 function manageSpeech(args) {
   args = speechManageSchema.parse(args);
   const { file, win, header } = readBoard(args.path);
-  const before = readFileSync8(file, "utf8");
+  const before = readFileSync7(file, "utf8");
   const revision = hash(before);
   const mutates = ["prepare", "update", "attach_audio", "attach_video", "retime"].includes(args.action);
   if (mutates && args.expectedRevision !== revision) throw new Error("Read speech first and supply its current expectedRevision; the storyboard may have changed");
@@ -7214,7 +7438,7 @@ function manageSpeech(args) {
       const voice = character(line.speaker)?.tts;
       const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation, line);
       if (voiceErrors.length) throw new Error("Generation arguments do not match the pinned character voice: " + voiceErrors.join("; "));
-      const bytes = readFileSync8(audioPath);
+      const bytes = readFileSync7(audioPath);
       if (!bytes.length) throw new Error("Audio file is empty");
       const priorAudio = line.audio;
       const audioHash = hash(bytes), lineRevision = speechRevision(line, character(line.speaker));
@@ -7270,7 +7494,7 @@ function manageSpeech(args) {
     if (args.lineId || args.speaker || args.query) throw new Error("Video planning uses all lines in the shot; remove line filters");
     for (const { line } of selected) actingSchema.nullable().optional().parse(line.acting);
     const episode = dirname5(dirname5(file));
-    if (existsSync7(join5(episode, ".work/model-settings.json"))) {
+    if (existsSync5(join5(episode, ".work/model-settings.json"))) {
       const { selection } = routingContext(episode, args.shotId);
       const adapter = args.tool ? VIDEO_ADAPTERS[args.tool] : void 0;
       if (args.tool && adapter?.engine !== selection.engine) throw new Error("model_selection_mismatch: tool does not match selected engine");
@@ -7285,14 +7509,14 @@ function manageSpeech(args) {
     if (args.action === "attach_video") {
       if (!args.videoPath) throw new Error("videoPath is required");
       const videoPath = resolve5(dirname5(file), args.videoPath);
-      const bytes = readFileSync8(videoPath);
+      const bytes = readFileSync7(videoPath);
       if (!bytes.length) throw new Error("Video file is empty");
       const native = plan.mode === "native";
       const sound = object(scene.sound);
       if (native && sound.audioSource === "speech") throw new Error("Native video speech lives in the clip soundtrack; sound.audioSource speech would drop it");
       const audio = selected.map(({ line }) => {
         if (native) return { lineId: line.id, revision: speechRevision(line, character(line.speaker)) };
-        if (!line.audio || line.audio.revision !== speechRevision(line, character(line.speaker)) || hash(readFileSync8(line.audio.path)) !== line.audio.sha256) throw new Error("Generate and attach current speech before binding video");
+        if (!line.audio || line.audio.revision !== speechRevision(line, character(line.speaker)) || hash(readFileSync7(line.audio.path)) !== line.audio.sha256) throw new Error("Generate and attach current speech before binding video");
         const errors = voiceContract().generationVoiceErrors(character(line.speaker)?.tts, line.audio.generation, line);
         if (line.audio.generation.text !== line.tts || errors.length) throw new Error("Speech generation evidence changed: " + errors.join("; "));
         return { lineId: line.id, sha256: line.audio.sha256, revision: line.audio.revision };
@@ -7309,7 +7533,7 @@ function manageSpeech(args) {
       if (args.reuse && !tailTrim) throw new Error("Tail trim requires identical bound audio, unchanged speech/action starts and semantics, and a shorter end. Regenerate changed speech or staging.");
       let quality = { review: "not_reviewed", camera: "not_reviewed", lipSync: "not_reviewed" };
       try {
-        const receipt = JSON.parse(readFileSync8(videoPath + ".astra-job.json", "utf8"));
+        const receipt = JSON.parse(readFileSync7(videoPath + ".astra-job.json", "utf8"));
         if (receipt.sha256 === videoSha256) quality = { ...quality, speechSync: receipt.speechSync || null, selection: receipt.selection || null };
         else if (!receipt.sha256 && receipt.videoPath === videoPath)
           quality = { ...quality, unverifiedSpeechSync: receipt.speechSync || null, receiptBinding: "unverified" };
@@ -7355,16 +7579,16 @@ function manageSpeech(args) {
       if (!character(line.speaker)?.tts) throw new Error(`Missing pinned voice for ${line.speaker}`);
     }
     const work = resolve5(dirname5(file), "../.work/speech-history");
-    mkdirSync5(work, { recursive: true });
+    mkdirSync3(work, { recursive: true });
     const backup = join5(work, revision + ".js");
-    if (!existsSync7(backup)) writeFileSync6(backup, before);
+    if (!existsSync5(backup)) writeFileSync5(backup, before);
     const nextSource = serializeBoard(win, header);
-    if (hash(readFileSync8(file)) !== revision) throw new Error("Storyboard changed during speech edit");
+    if (hash(readFileSync7(file)) !== revision) throw new Error("Storyboard changed during speech edit");
     const tmp = file + "." + randomUUID() + ".tmp";
-    writeFileSync6(tmp, nextSource);
-    renameSync4(tmp, file);
+    writeFileSync5(tmp, nextSource);
+    renameSync3(tmp, file);
   }
-  return { revision: hash(readFileSync8(file)), changed, invalidated, plan, timing, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: object(object(object(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  return { revision: hash(readFileSync7(file)), changed, invalidated, plan, timing, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: object(object(object(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/video-sound.ts
@@ -7474,7 +7698,6 @@ export {
   prepareVideoSound,
   priceOf,
   readBoard,
-  requireWorkflow,
   resolveVideoDuration,
   serializeBoard
 };

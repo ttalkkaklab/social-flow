@@ -1181,7 +1181,7 @@ describe('Seedance 2.x tool surface', () => {
     for (const name of ['seedance_text2video', 'seedance_img2video', 'seedance_reference']) {
       const desc = byName.get(name).inputSchema.properties.prompt.description;
       assert.match(desc, /timecode/i, `${name} does not state the timecode ban`);
-      assert.match(desc, /English or Chinese|English \(|Korean only/i, `${name} does not state the prompt-language constraint`);
+      assert.match(desc, /English on every model/, `${name} does not state the prompt-language constraint`);
     }
     // the multi-view ban applies only to the reference tool
     assert.match(byName.get('seedance_reference').description, /multi-view/i);
@@ -1202,7 +1202,7 @@ describe('Seedance 2.x tool surface', () => {
     assert.equal(seedanceText2VideoSchema.safeParse({ prompt: 'x', durationSeconds: 20 }).success, false);
   });
 
-  it('a Korean direction outside quotes is rejected on every model but 2.5', () => {
+  it('a Korean direction outside quotes is rejected on every model', () => {
     // The prompt body reads Chinese or English. Korean is not refused by the vendor — it is
     // ignored, so the shot comes back wrong after a paid wait. Reject it while it is free.
     const korean = 'the column across the middle third, very slow dolly in. 손이 미끄러진다.';
@@ -1215,10 +1215,10 @@ describe('Seedance 2.x tool surface', () => {
       seedanceReferenceSchema.safeParse({ prompt: korean, referenceImagePaths: ['/tmp/a.png'] }).success,
       false,
     );
-    // 2.5 is the one model that reads Korean
+    // video prompts are English on every model, 2.5 included
     assert.equal(
       seedanceText2VideoSchema.safeParse({ prompt: korean, model: 'dreamina-seedance-2-5-260628' }).success,
-      true,
+      false,
     );
     // dialogue inside quotes is spoken, so it stays
     assert.equal(
@@ -1228,7 +1228,7 @@ describe('Seedance 2.x tool surface', () => {
     // and the message says what to do instead
     const issue = seedanceText2VideoSchema.safeParse({ prompt: korean }).error.issues
       .find((i) => i.path[0] === 'prompt');
-    assert.match(issue.message, /Chinese or English/);
+    assert.match(issue.message, /video_prompt_language/);
   });
 
   it('the model capability table does not contradict itself', () => {

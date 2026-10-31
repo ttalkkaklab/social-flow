@@ -2907,9 +2907,11 @@ function selftest() {
      engineOf({ type: 'broll', visual: { engine: 'astra' } }) === 'astra');
   ok('an astra clip prompt is not held to the Seedance grammar',
      seedancePromptFindings('she turns to the window', 'astra').length === 0);
-  ok('stored Seedance 2.5 prompts preserve its Korean direction support',
-     seedancePromptFindings('소포를 내려놓는다. The subject stays consistent.', 'seedance', 'dreamina-seedance-2-5-260628').length === 0 &&
-     seedancePromptFindings('소포를 내려놓는다. The subject stays consistent.', 'seedance', 'dreamina-seedance-2-0-260128').some(f => f.includes('Korean')));
+  // Video prompts are English on every model (user directive 2026-10-31); quoted dialogue keeps its language.
+  ok('stored Seedance prompts are English on every model; quoted dialogue keeps its language',
+     ['dreamina-seedance-2-5-260628', 'dreamina-seedance-2-0-260128'].every(model =>
+       seedancePromptFindings('소포를 내려놓는다. The subject stays consistent.', 'seedance', model).some(f => f.includes('Korean')) &&
+       !seedancePromptFindings('She says "소포 왔어요". The subject stays consistent.', 'seedance', model).some(f => f.includes('Korean'))));
   ok('a board that names the model instead of the lane still falls back to the type default',
      engineOf({ type: 'points', visual: { video: { engine: 'ltx' } } }) === 'seedance');
 

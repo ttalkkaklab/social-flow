@@ -75,7 +75,7 @@ test('check is read-only and malformed existing metadata is preserved for repair
 
 test('dialogue portrait honors the episode cast image before channel images', () => {
   const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
-  const start = template.indexOf('  function speechHtml(');
+  const start = template.indexOf('  function portraitOf(');
   const end = template.indexOf('  /** One line of screen text', start);
   const context = {
     DOC: { speechPlanVersion: 1 },
@@ -97,7 +97,7 @@ test('review shows every production cut, timing and motion file without substitu
   const start = template.indexOf('  function productionCutsHtml(');
   const end = template.indexOf('  function camOf(', start);
   const context = {
-    LANG: 'en',
+    LANG: 'en', WIDE: true,
     esc: value => String(value ?? '').replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;'),
     scene: { visual: { src: 'unrelated-representative.png' }, productionPlan: { cuts: [
       { kind: 'still', path: '../media/first.png', seconds: 2 },
@@ -113,8 +113,7 @@ test('review shows every production cut, timing and motion file without substitu
   assert.match(html, /<video src="\.\.\/media\/second.mp4" controls/);
   assert.match(html, /src="\.\.\/media\/third.jpg"/);
   assert.match(html, /Cut 2 · motion · 3s · Start 1s/);
-  assert.match(html, /Missing path/);
-  assert.match(html, /Display does not mean review approval/);
+  assert.match(html, /No preview/);
   assert.doesNotMatch(html, /unrelated-representative/);
   context.scene = { visual: { src: 'legacy.png' } };
   assert.equal(render(), '');
@@ -128,7 +127,7 @@ test('motion review honors its source range and exposes missing or short media',
   const start = template.indexOf('  function productionCutsHtml(');
   const end = template.indexOf('  function camOf(', start);
   const html = runInNewContext(template.slice(start, end) + '\nproductionCutsHtml(scene)', {
-    LANG: 'en', esc: value => String(value ?? ''),
+    LANG: 'en', WIDE: true, esc: value => String(value ?? ''),
     scene: { productionPlan: { cuts: [{ kind: 'motion', path: 'source.mp4', start: 7, seconds: 3 }] } },
   });
   const handlers = Object.fromEntries([...html.matchAll(/(onloadedmetadata|onplay|ontimeupdate|onerror)="([^"]+)"/g)]
@@ -154,7 +153,6 @@ test('motion review honors its source range and exposes missing or short media',
   fire('onerror');
   assert.equal(player.nextElementSibling.hidden, false);
   assert.equal(player.nextElementSibling.textContent, 'missing media');
-  assert.match(html, /final edit effects are not included/);
 });
 
 test('location planning sheets render without Blender, link shots and distinguish missing from inapplicable', () => {
@@ -205,18 +203,22 @@ test('review HTML surfaces camera advice without promoting it to execution failu
   assert.ok(findings.every(f => f.level === 'warn'));
 });
 
-test('shot review displays additional references, usage, intermediate states and safe pending images',()=>{
+test('shot body shows start and end frames and the video references its lane takes',()=>{
  const template=readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html',import.meta.url),'utf8');
- const start=template.indexOf('        var previz = vis.video && vis.video.previz;');
- const end=template.indexOf('        return \'<div class="conti-row"><figure',start);
+ const start=template.indexOf('  var REF_LANES = {');
+ const end=template.indexOf('  function portraitOf(',start);
  const routing=require('../../skills/storyboard/references/render-routing.js');
- const s={visual:{frames:{mode:'first_last',start:'start.png',end:'end.png',keyframes:[{image:'mid.png',atSeconds:1,state:'Contact'}]},references:[{id:'hero',path:'hero.png',role:'character',use:'image',purpose:'Keep <costume>'}]}};
- const render=()=>runInNewContext('(function(){'+template.slice(start,end)+'})()',{
-  s,vis:s.visual,k:0,WIDE:false,cell:'cut',window:{RENDER_ROUTING:routing},
-  T:{frameStart:'Start',frameEnd:'End',framePending:'Pending',refImage:'Still only',refVideo:'Video',refBoth:'Both'},
+ const s={visual:{frames:{mode:'first_last',start:'start.png',end:'end.png'},references:[
+  {id:'hero',path:'hero.png',role:'character',use:'both',purpose:'Keep <costume>'},
+  {id:'still',path:'still-only.png',role:'composition',use:'image',purpose:'Still only'}]}};
+ const render=()=>runInNewContext(template.slice(start,end)+'\nshotBodyHtml(s,[])',{
+  s,LANG:'en',WIDE:true,DOC:{},window:{RENDER_ROUTING:routing},castName:id=>id,speechHtml:()=>'',
+  T:{framePending:'Pending',speechSilent:'No lines'},
   esc:v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('"','&quot;')});
- const html=render();for(const name of ['start.png','end.png','mid.png','hero.png'])assert.ok(html.includes('src="'+name+'"'));
- assert.match(html,/Still only/);assert.match(html,/Keep &lt;costume>/);assert.match(html,/1s · Contact/);
- s.visual.references[0].path='javascript:alert(1)';assert.doesNotMatch(render(),/href="javascript:/);assert.match(render(),/Pending/);
- s.visual.frames={mode:'reference'};assert.doesNotMatch(render(),/>Start</);
+ const html=render();
+ for(const name of ['start.png','end.png','hero.png'])assert.ok(html.includes('src="'+name+'"'));
+ assert.ok(!html.includes('still-only.png'));assert.match(html,/Keep &lt;costume>/);
+ s.visual.references[0].path='javascript:alert(1)';assert.doesNotMatch(render(),/(?:src|href)="javascript:/);
+ s.visual.frames={mode:'reference',start:'start.png'};s.visual.references[0].path='hero.png';
+ const msr=render();assert.match(msr,/sent to MSR slot 5/);assert.match(msr,/ref-off-tile/);
 });

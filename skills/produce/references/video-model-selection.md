@@ -594,7 +594,7 @@ and a 2026-08-25 delta check against the moved official docs.
 | Camera vocabulary | 11 moves (`推·拉·摇·移·跟·升·降·甩·环绕·旋转·变焦`) + 5 shot-size levels (景别). **Zero lens specs or camera-body vocabulary in the entire doc** |
 | Exclusion directives | No argument — re-describe the scene to avoid it, and put what must hold into a positive-locks tail (§positive locks) |
 | Dialogue | Quotes + emotion/pace as plain sentences (no parameter); speakers map to their `Audio N` samples ([voice-continuity.md](voice-continuity.md)) |
-| Prompt language | Chinese/English only (Korean on 2.5 only) — Korean only in dialogue lines |
+| Prompt language | English only on every model — the video's language only inside quoted dialogue |
 | Cutting shots | `Shot 1: … Shot 2: …` transitions within one call |
 | Timecodes | **Split by generation** — 2.0 *"does not respond to timestamps and only responds to shot numbers"*; **2.5 officially takes integer-second forms** ("0-3 seconds", "[1s-4s]", "at the 2-second mark" — leave no gaps in the timeline, and don't use it for high-frequency action) |
 
@@ -779,7 +779,7 @@ angles — eye level vs high is only a trend (p=.082). This is a default guide, 
   only, no base64. `seedance_reference` publishes a local reference video for the life of the
   task (`MEDIA_UPLOAD_URL` hosting, else a cloudflared quick tunnel — `media-publish.ts`), but
   2.5's edit and extend task types are not wired, so extension goes to `astra_genai_desktop_extend`.
-- **Korean prompts.** Official support is 2.5 only. Write English for the other models.
+- **Prompt language.** Write every video prompt in English, 2.5 included; dialogue alone keeps the video's language inside quotes.
 
 ---
 

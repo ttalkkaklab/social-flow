@@ -47,9 +47,8 @@ as is (CLAUDE.md 2026-09-12); this skill does not change that default.
    - prop colour and material (testing turned a silver hairpin jade blue);
    - new text, logos or shapes that were not in the source.
    Report what changed. A completed job is not a passing review; the result stays `not_reviewed`.
-6. **Swap it into an episode only when the user accepts it.** Register the new clip for the cut
-   through `production_workflow` like any changed video: the cut's video review rewinds and
-   `review-cut-videos` checks it again. Record the source clip path and hash, the tool, prompt,
-   seed and job id beside it. This is not one of the seven fixed cut stages and does not add one.
+6. **Swap it into an episode only when the user accepts it.** Record the source clip path and
+   hash, the tool, prompt, seed and job id beside it; `review-cut-videos` checks it again only
+   when the user asks for a video review.
 
 A rejected result is reported with the reason. Do not loop new seeds without the user asking.

@@ -34,9 +34,12 @@ test('reference-only inputs keep order and roles; installed adapters enforce the
  assert.deepEqual(p.args.referenceImagePaths,['hero','room'].map(n=>path.join(root,'storyboard',n+'.png')));
  assert.match(p.args.prompt,/Image 2 \(room, background\)/);assert.equal(p.args.lastImagePath,undefined);
  assert.doesNotThrow(()=>parseVideoArgs('seedance_reference',p.args));
+ // MSR's background slot carries the start image; the plain background only conditioned that image.
+ s.visual.frames.start='start.png';
  const msr=prepareVideoImages('astra_genai_msr',{prompt:'Walk',width:768,height:1280,duration:5,reserveUsd:0},s,root);
  msr.args.references[0].audioUri='https://example.com/voice.wav';
- assert.equal(msr.args.references[1].background,true);assert.doesNotThrow(()=>parseVideoArgs('astra_genai_msr',msr.args));
+ assert.deepEqual(msr.args.references.map(r=>[path.basename(r.imagePath),!!r.background]),[['hero.png',false],['start.png',true]]);
+ assert.doesNotThrow(()=>parseVideoArgs('astra_genai_msr',msr.args));
  s.visual.references=Array.from({length:10},(_,i)=>({...ref(),id:'hero'+i}));
  const tooMany=prepareVideoImages('seedance_reference',{prompt:'Walk',model:'dreamina-seedance-2-0-260128'},s,root);
  assert.throws(()=>parseVideoArgs('seedance_reference',tooMany.args),/at most 9/);
@@ -47,9 +50,10 @@ test('MSR names the character-sheet panels of one character as one subject',t=>{
  fs.writeFileSync(path.join(sheet,'panels.json'),JSON.stringify({panels:{front:{file:'body.png'},back:{file:'back.png'},face:{file:'face.png'}}}));
  const panel=(id,file)=>({id,path:'../assets/characters/kardum/'+file,role:'character',use:'video',purpose:'Kardum '+id});
  const s=shot('reference',[panel('face','face.png'),ref(),panel('front','body.png'),panel('back','back.png'),ref('room','video','background')]);
+ s.visual.frames.start='start.png';
  const msr=prepareVideoImages('astra_genai_msr',{prompt:'Walk',width:768,height:1280,duration:5,reserveUsd:0},s,root);
  assert.match(msr.args.prompt,/^Image 1: character, Kardum face\nImage 2: character, Preserve hero appearance\n/);
- assert.match(msr.args.prompt,/\nImage 5: background, Preserve room appearance\nImage 1 \(face\), Image 3 \(headless front body\), Image 4 \(headless back body\) show one character, kardum.*\n\nWalk$/);
+ assert.match(msr.args.prompt,/\nImage 5: the opening picture, the characters, place and props as the shot begins\nImage 1 \(face\), Image 3 \(headless front body\), Image 4 \(headless back body\) show one character, kardum.*\n\nWalk$/);
  assert.doesNotMatch(prepareVideoImages('seedance_reference',{prompt:'Walk',model:'dreamina-seedance-2-0-260128'},s,root).args.prompt,/show one character/);
  s.visual.references.splice(2,0,{...ref('mid','video','character'),id:'ally'},{...ref('end','video','character'),id:'rival'});
  assert.throws(()=>prepareVideoImages('astra_genai_msr',{prompt:'Walk',width:768,height:1280,duration:5,reserveUsd:0},s,root),/msr_character_limit: references show 4 characters/);
@@ -59,7 +63,6 @@ test('missing, corrupt, conflicting, extra and unsupported image constraints fai
  assert.throws(()=>prepareVideoImages('seedance_reference',{prompt:'x'},shot('first_last',[ref()]),root),/cannot combine/);
  assert.throws(()=>prepareVideoImages('astra_audio2video',{},shot(),root),/cannot carry/);
  assert.throws(()=>prepareVideoImages('seedance_img2video',{},shot('reference',[ref()]),root),/needs a reference adapter/);
- assert.throws(()=>prepareVideoImages('astra_genai_msr',{},shot('reference',[ref('room','video','background'),ref()]),root),/background must be last/);
  assert.throws(()=>prepareVideoImages('seedance_text2video',{},shot('first'),root),/cannot carry/);
  assert.throws(()=>prepareVideoImages('seedance_img2video',{sourceImagePath:'storyboard/hero.png'},shot(),root),/mismatch/);
  assert.throws(()=>prepareVideoImages('seedance_img2video',{lastImagePath:'storyboard/end.png'},shot('first'),root),/unplanned/);

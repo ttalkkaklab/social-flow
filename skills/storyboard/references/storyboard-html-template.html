@@ -153,7 +153,69 @@
   .style-card .st .kk { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; color: var(--faint); }
   .style-card img { width: 56px; height: 56px; object-fit: cover; border-radius: 12px; flex: none; }
   .style-card.unknown .st b { color: var(--warn-ink, var(--accent-ink)); }
-  .toolbar .style-chip { margin-left: var(--s2); }
+  /* View settings — the episode look, the preview switches and the shot legend, one card above the shots */
+  .view-setup {
+    margin: var(--s5) 0 0; padding: 0; overflow: hidden; border: 1px solid var(--review-glass-border, var(--line));
+    border-radius: var(--review-glass-radius, 20px); background: var(--review-reading-surface, var(--card));
+    box-shadow: 0 4px 20px rgb(33 54 85 / .045), inset 0 1px 0 #fff;
+  }
+  .view-setup-head {
+    display: flex; align-items: center; gap: var(--s3); min-height: 44px; padding: 16px 28px;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, var(--card)), color-mix(in srgb, var(--accent) 3%, var(--card)));
+    list-style: none; cursor: pointer; user-select: none;
+  }
+  .view-setup[open] > .view-setup-head { border-bottom: 1px solid color-mix(in srgb, var(--accent) 14%, var(--hair)); }
+  .view-setup-head::-webkit-details-marker { display: none; }
+  .view-setup-head:hover { background: color-mix(in srgb, var(--accent) 10%, var(--card)); }
+  .view-setup-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; border-radius: 20px; }
+  .view-setup-ico {
+    display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 10px;
+    background: linear-gradient(150deg, color-mix(in srgb, var(--accent) 80%, #fff), var(--accent));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 2px 5px color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  .view-setup-ico svg { width: 19px; height: 19px; fill: none; stroke: #fff; stroke-width: 1.8; stroke-linejoin: round; }
+  .view-setup-title { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 10px; min-width: 0; flex: 1; }
+  .view-setup-title h2 { margin: 0; font-size: 1.0625rem; font-weight: 700; letter-spacing: -.01em; color: var(--text); }
+  .view-setup-title small { font-size: var(--t-cap); color: var(--muted); }
+  .view-setup-head::after {
+    content: ""; flex: none; width: 9px; height: 9px; margin-right: 6px; border: solid var(--muted);
+    border-width: 0 2px 2px 0; transform: translateY(-3px) rotate(45deg); transition: transform .15s;
+  }
+  .view-setup:not([open]) .view-setup-head::after { transform: rotate(-45deg); }
+  .view-setup-body { padding: 20px 28px 24px; }
+  .view-setup .size-key { background: var(--sunk); }
+  .view-setup-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: var(--s3); }
+  .view-setup-cell { min-width: 0; padding: var(--s4); border-radius: 16px; background: var(--sunk); }
+  .view-setup-kt { display: block; margin-bottom: 6px; font-size: var(--t-micro); font-weight: 700; letter-spacing: .06em; color: var(--faint); }
+  .view-style { display: flex; align-items: center; gap: var(--s4); cursor: default; }
+  .view-style img, .view-style .size-ico { flex: none; width: 76px; height: 76px; border-radius: 14px; object-fit: cover; box-shadow: 0 1px 3px rgba(0, 0, 0, .18); }
+  .view-style b { display: block; font-size: 1.0625rem; font-weight: 700; color: var(--text); word-break: keep-all; }
+  .view-style.unknown b { color: var(--warn-ink, var(--accent-ink)); }
+  .view-style p { margin: 4px 0 0; font-size: var(--t-aux); line-height: 1.55; color: var(--muted); word-break: keep-all; }
+  .view-switches { display: flex; flex-wrap: wrap; gap: var(--s2); }
+  .switch {
+    display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 16px 0 10px;
+    border: 1px solid var(--line); border-radius: 999px; background: var(--card);
+    font-size: var(--t-aux); color: var(--text); cursor: pointer; user-select: none;
+  }
+  .switch input {
+    -webkit-appearance: none; appearance: none; position: relative; flex: none; width: 34px; height: 20px; margin: 0;
+    border-radius: 999px; background: #c4c8d0; cursor: pointer; transition: background .15s;
+  }
+  .switch input::after {
+    content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .25); transition: transform .15s;
+  }
+  .switch input:checked { background: var(--accent); }
+  .switch input:checked::after { transform: translateX(14px); }
+  .switch input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .view-setup-note { margin: var(--s3) 0 0; font-size: var(--t-cap); color: var(--muted); }
+  @media (max-width: 720px) {
+    .view-setup { border-radius: 20px; }
+    .view-setup-head { padding: 14px 16px; }
+    .view-setup-body { padding: 16px; }
+    .view-setup-grid { grid-template-columns: 1fr; }
+  }
 
   .meta-grid {
     display: grid; grid-template-columns: 92px 1fr; gap: var(--s2) var(--s4);
@@ -384,26 +446,97 @@
   .scenario-item .missing { color: var(--warn); font-weight: 700; }
 
   /* ── Sequence · scene band · shot card ────────────────── */
+  /* The sequence cards title the shot list. The heading stays for screen readers and for the
+     scripts that anchor on #shots (review-layout.js, location-review-runtime.js). */
+  #shots { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; margin: 0; padding: 0; border: 0; }
+  /* Sequence — a collapsible title card; its scene bands sit in the body below */
+  .seq { margin: var(--s5) 0 0; }
   .seq-head {
-    font-size: var(--t-aux); font-weight: 700; letter-spacing: .08em;
-    color: var(--accent-ink); margin: var(--s6) 0 var(--s3);
+    display: flex; align-items: flex-start; gap: var(--s4); padding: 22px 28px; list-style: none; cursor: pointer;
+    border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line)); border-radius: 24px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 13%, var(--card)), color-mix(in srgb, var(--accent) 4%, var(--card)) 60%);
+    box-shadow: 0 4px 20px rgb(33 54 85 / .05), inset 0 1px 0 #fff; transition: box-shadow .15s;
   }
-  .seq-head .seq-purpose { font-weight: 400; letter-spacing: 0; color: var(--faint); }
-  .scene-band-head .scene-turn { font-size: var(--t-aux); font-weight: 400; letter-spacing: 0; color: var(--faint); flex-basis: 100%; }
-  .scene-band {
-    margin: var(--s5) 0; padding: var(--s4);
-    border: 1px solid var(--line); border-radius: 14px;
-    background: color-mix(in srgb, var(--sunk) 62%, var(--card));
+  .seq-head::-webkit-details-marker { display: none; }
+  .seq-head:hover { box-shadow: 0 6px 24px rgb(33 54 85 / .09), inset 0 1px 0 #fff; }
+  .seq-head:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .seq-no {
+    display: grid; place-items: center; flex: none; width: 48px; height: 48px; border-radius: 14px;
+    background: linear-gradient(150deg, color-mix(in srgb, var(--accent) 80%, #fff), var(--accent)); color: #fff;
+    font-size: 1.125rem; font-weight: 750; font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 3px 8px color-mix(in srgb, var(--accent) 30%, transparent);
   }
+  .seq-main { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+  .seq-kicker { font-size: var(--t-micro); font-weight: 700; letter-spacing: .12em; color: var(--accent-ink); }
+  .seq-title { font-size: 1.375rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.35; color: var(--text); word-break: keep-all; }
+  .seq-purpose { margin-top: 2px; font-size: var(--t-aux); line-height: 1.6; color: var(--muted); word-break: keep-all; }
+  .seq-question {
+    align-self: flex-start; margin-top: 6px; padding: 6px 12px; border-radius: 10px;
+    background: rgb(255 255 255 / .7); font-size: var(--t-cap); line-height: 1.5; color: var(--text); word-break: keep-all;
+  }
+  .seq-question b { color: var(--accent-ink); font-weight: 700; white-space: nowrap; }
+  .seq-stats {
+    display: flex; align-items: center; gap: var(--s3); flex: none; padding-top: 4px;
+    font-size: var(--t-cap); font-weight: 600; color: var(--muted); white-space: nowrap;
+  }
+  .seq-stats::after {
+    content: ""; width: 9px; height: 9px; border: solid var(--muted); border-width: 0 2px 2px 0;
+    transform: translateY(-3px) rotate(45deg); transition: transform .15s;
+  }
+  .seq:not([open]) .seq-stats::after { transform: rotate(-45deg); }
+  .seq-body { padding: var(--s2) 0 0 var(--s5); margin-left: 23px; border-left: 2px solid color-mix(in srgb, var(--accent) 18%, transparent); }
+  @media (max-width: 720px) {
+    .seq-head { flex-wrap: wrap; padding: 18px 16px; border-radius: 20px; gap: var(--s3); }
+    .seq-no { width: 40px; height: 40px; border-radius: 12px; font-size: 1rem; }
+    .seq-main { flex-basis: calc(100% - 56px); }
+    .seq-stats { margin-left: 52px; padding-top: 0; }
+    .seq-body { padding-left: 0; margin-left: 0; border-left: 0; }
+  }
+  /* Scene — a subtitle card under its sequence: an outlined number tile (the sequence's is
+     filled), a tinted surface with an accent rail, and the story the scene carries (structure scene.summary) */
+  .scene-band { margin: var(--s4) 0 0; }
+  .scene-band + .scene-band { margin-top: var(--s5); }
   .scene-band-head {
-    display: flex; align-items: baseline; gap: var(--s3); flex-wrap: wrap;
-    font-size: var(--t-scene); font-weight: 700; letter-spacing: -.01em;
-    margin: 0 0 var(--s3);
+    position: relative; display: flex; align-items: flex-start; gap: var(--s4); padding: 16px 20px 16px 22px;
+    border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--line)); border-radius: 16px;
+    background: linear-gradient(100deg, color-mix(in srgb, var(--accent) 6%, var(--card)), var(--card) 65%);
+    box-shadow: 0 2px 10px rgb(33 54 85 / .04); list-style: none; cursor: pointer; transition: box-shadow .15s;
   }
+  .scene-band-head::before {
+    content: ""; position: absolute; left: -1px; top: 14px; bottom: 14px; width: 3px; border-radius: 0 3px 3px 0;
+    background: var(--accent);
+  }
+  .scene-band-head::-webkit-details-marker { display: none; }
+  .scene-band-head:hover { box-shadow: 0 4px 16px rgb(33 54 85 / .08); }
+  .scene-band-head:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   .scene-band-head .sn {
-    font-size: var(--t-micro); font-weight: 700; letter-spacing: .1em;
-    color: var(--faint); border: 1px solid var(--line); border-radius: 4px;
-    padding: 2px 7px;
+    display: grid; place-content: center; flex: none; width: 42px; height: 42px; border-radius: 12px;
+    border: 1.5px solid color-mix(in srgb, var(--accent) 45%, transparent); background: var(--card);
+    color: var(--accent-ink); text-align: center; line-height: 1; font-variant-numeric: tabular-nums;
+  }
+  .scene-band-head .sn small { font-size: 9px; font-weight: 700; letter-spacing: .08em; opacity: .7; }
+  .scene-band-head .sn b { margin-top: 2px; font-size: 1.0625rem; font-weight: 750; letter-spacing: -.02em; }
+  .scene-band-main { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+  .scene-band-kicker { display: flex; align-items: center; gap: 5px; font-size: var(--t-micro); font-weight: 600; color: var(--faint); }
+  .scene-band-kicker svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; }
+  .scene-band-title { font-size: var(--t-scene); font-weight: 700; letter-spacing: -.01em; line-height: 1.4; color: var(--text); word-break: keep-all; }
+  .scene-band-head .scene-turn { font-size: var(--t-cap); color: var(--muted); word-break: keep-all; }
+  .scene-band-synopsis { max-width: 68ch; margin: 4px 0 0; font-size: var(--t-aux); line-height: 1.65; color: var(--muted); word-break: keep-all; }
+  .scene-band-stats {
+    display: flex; align-items: center; gap: var(--s3); flex: none; padding-top: 2px;
+    font-size: var(--t-cap); font-weight: 600; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums;
+  }
+  .scene-band-stats::after {
+    content: ""; width: 8px; height: 8px; border: solid var(--muted); border-width: 0 2px 2px 0;
+    transform: translateY(-2px) rotate(45deg); transition: transform .15s;
+  }
+  .scene-band:not([open]) .scene-band-stats::after { transform: rotate(-45deg); }
+  .scene-band-body { padding-top: var(--s3); }
+  @media (max-width: 720px) {
+    .scene-band-head { flex-wrap: wrap; gap: var(--s3); padding: 14px 14px 14px 16px; }
+    .scene-band-head .sn { width: 36px; height: 36px; border-radius: 10px; }
+    .scene-band-main { flex-basis: calc(100% - 52px); }
+    .scene-band-stats { margin-left: 48px; }
   }
   .scene-band .scene { margin: var(--s3) 0; }
   .scene-band .scene:first-of-type { margin-top: 0; }
@@ -416,12 +549,19 @@
      content ≤560) — stretched to 1060px the right quarter shows as empty background
      (design review round 3) */
   .scene:has(.conti) { max-width: 760px; }
-  .scene-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--s2) var(--s3); }
+  .scene-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s2) 14px; padding-bottom: 14px; border-bottom: 1px solid var(--hair, #eceef2); }
   .scene-no {
-    font-size: var(--t-micro); font-weight: 700; letter-spacing: .1em; color: var(--faint);
-    border: 1px solid var(--line); border-radius: 4px; padding: 2px 7px;
+    display: grid; place-content: center; flex: none; width: 40px; height: 40px; border-radius: 11px;
+    background: #1d2330; color: #fff; text-align: center; line-height: 1; font-variant-numeric: tabular-nums;
   }
-  .scene-title { font-size: var(--t-scene); font-weight: 700; letter-spacing: -.01em; word-break: keep-all; }
+  .scene-no small { font-size: 8.5px; font-weight: 700; letter-spacing: .08em; color: rgb(255 255 255 / .62); }
+  .scene-no b { margin-top: 2px; color: #fff; font-size: 15px; font-weight: 750; letter-spacing: -.01em; }
+  .scene-title { font-size: 19px; font-weight: 700; letter-spacing: -.015em; word-break: keep-all; min-width: 0; }
+  .scene-dur {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px 5px 9px; border-radius: 999px;
+    background: var(--sunk); color: var(--muted); font-size: var(--t-cap); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .scene-dur svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
   .scene-beat { font-size: var(--t-micro); font-weight: 700; letter-spacing: .1em; color: var(--accent-ink); }
   .scene-beat.beat-result { color: var(--ok); }
   .scene-beat.beat-body { color: var(--faint); }
@@ -439,7 +579,6 @@
   .scene-checks { margin-left: auto; display: flex; gap: var(--s1); flex-wrap: wrap; }
   /* Three or more badges bunched together drop to the line below the title, so the badges
      do not push the title into a wrap (review round 3) */
-  .scene-checks:has(> :nth-child(3)) { flex-basis: 100%; margin-left: 0; }
 
   /* Scene-frame layout — one reveal = one row, the 9:16 frame on the left · that reveal's
      content on the right. Text is centered vertically with a width cap — short content
@@ -468,6 +607,75 @@
   .panel { margin: 0; width: var(--fw); }
 
   .cut { min-width: 0; max-width: 560px; }
+  /* Shot body — the video's inputs on the left, the lines on the right */
+  .shot-body { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: var(--s5); margin-top: var(--s4); align-items: start; }
+  .shot-media { display: flex; flex-direction: column; gap: var(--s4); min-width: 0; }
+  .shot-frames { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); }
+  .shot-frame { margin: 0; min-width: 0; }
+  .shot-frame figcaption { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: var(--t-cap); font-weight: 700; color: var(--text); }
+  .shot-frame-flag { padding: 1px 7px; border-radius: 6px; font-size: var(--t-micro); font-weight: 600; color: var(--muted); background: var(--sunk); cursor: default; }
+  .shot-frame img, .shot-frame-empty { display: block; width: 100%; aspect-ratio: 9 / 16; border-radius: 12px; object-fit: cover; background: var(--sunk); box-shadow: 0 1px 3px rgb(0 0 0 / .08); }
+  .shot-frames.wide .shot-frame img, .shot-frames.wide .shot-frame-empty { aspect-ratio: 16 / 9; }
+  .shot-frame-empty { display: grid; place-items: center; padding: 12px; box-sizing: border-box; border: 1.5px dashed var(--line); box-shadow: none; background: transparent; color: var(--faint); font-size: var(--t-cap); text-align: center; }
+  .shot-refs { padding: var(--s3); border-radius: 14px; background: var(--sunk); }
+  .shot-refs-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: var(--s2); font-size: var(--t-cap); color: var(--muted); }
+  .shot-refs-head b { color: var(--text); }
+  .shot-refs-count { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); }
+  .shot-refs.msr { padding: var(--s4, 16px); }
+  .ref-slots { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+  .ref-slot { position: relative; margin: 0; min-width: 0; cursor: default; }
+  .ref-slot img, .ref-slot .ref-missing, .ref-slot.empty { display: block; width: 100%; aspect-ratio: 1; border-radius: 10px; object-fit: cover; background: var(--card); }
+  .ref-slot figcaption { margin-top: 4px; font-size: 10.5px; line-height: 1.3; color: var(--muted); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ref-slot.empty { display: grid; place-items: center; box-sizing: border-box; border: 1.5px dashed var(--line); background: transparent; color: var(--faint); font-size: var(--t-cap); }
+  .ref-slot .ref-missing { display: grid; place-items: center; color: var(--faint); }
+  .ref-slot.over img { outline: 2px solid var(--warn, #d9480f); outline-offset: -2px; opacity: .75; }
+  .ref-off-tile { display: grid; place-items: center; width: 100%; aspect-ratio: 1; border-radius: 10px; border: 1.5px dashed var(--line, #d0d4da);
+    background: repeating-linear-gradient(135deg, transparent 0 6px, rgb(0 0 0 / .035) 6px 12px); color: var(--faint, #9aa0a8); }
+  .shot-frame .ref-off-tile { border: 1.5px dashed var(--line, #d0d4da); box-shadow: none; }
+  .shot-frame .ref-off-tile svg { width: 15%; }
+  .ref-off-tile svg { width: 34%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+  .ref-over { position: absolute; top: 4px; left: 4px; padding: 1px 6px; border-radius: 6px; font-size: 10px; font-weight: 700; color: #fff; background: var(--warn, #d9480f); }
+  .shot-refs-none { margin: 0; font-size: var(--t-cap); color: var(--muted); }
+  .shot-lines { min-width: 0; }
+  /* Production video — a dark stage under the shot body; the cut label is the tooltip */
+  .production-cut-review { margin: var(--s5) 0 0; }
+  .production-cut-review .production-cut-grid { display: grid; grid-template-columns: 1fr; gap: var(--s3); }
+  .production-cut-review.many .production-cut-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
+  .production-cut-review .production-cut {
+    margin: 0; overflow: hidden; border-radius: 18px; background: #0b0d12;
+    box-shadow: 0 10px 30px rgb(15 23 42 / .18), 0 0 0 1px rgb(15 23 42 / .08);
+  }
+  .production-cut-review .production-cut video, .production-cut-review .production-cut img {
+    display: block; width: 100%; max-height: 72vh; aspect-ratio: 9 / 16; object-fit: contain; background: #0b0d12; border-radius: 0;
+  }
+  .production-cut-review:not(.wide) .production-cut { max-width: 360px; }
+  .production-cut-review.wide .production-cut video, .production-cut-review.wide .production-cut img { aspect-ratio: 16 / 9; }
+  .production-cut-review .production-cut-error { margin: 0; padding: 10px 14px; font-size: var(--t-cap); color: #ffb4a8; }
+  .production-cut-none {
+    display: grid; place-items: center; margin-top: var(--s5); padding: 28px 16px; border: 1.5px dashed var(--line); border-radius: 18px;
+    font-size: var(--t-cap); color: var(--faint);
+  }
+  .shot-tabs > input { position: absolute; opacity: 0; pointer-events: none; }
+  .shot-tab-nav { display: flex; gap: 2px; margin-bottom: var(--s3); padding: 3px; border-radius: 10px; background: var(--sunk); width: max-content; }
+  .shot-tab-nav label { padding: 5px 14px; border-radius: 8px; font-size: var(--t-cap); font-weight: 600; color: var(--muted); cursor: pointer; }
+  .shot-tab-panel { display: none; }
+  .shot-tabs > input:nth-of-type(1):checked ~ .shot-tab-nav label:nth-child(1),
+  .shot-tabs > input:nth-of-type(2):checked ~ .shot-tab-nav label:nth-child(2),
+  .shot-tabs > input:nth-of-type(3):checked ~ .shot-tab-nav label:nth-child(3) { background: var(--card); color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0 / .12); }
+  .shot-tabs > input:nth-of-type(1):checked ~ .shot-tab-panels > :nth-child(1),
+  .shot-tabs > input:nth-of-type(2):checked ~ .shot-tab-panels > :nth-child(2),
+  .shot-tabs > input:nth-of-type(3):checked ~ .shot-tab-panels > :nth-child(3) { display: block; }
+  .shot-tabs > input:focus-visible ~ .shot-tab-nav { outline: 2px solid var(--accent, #3b6cf6); outline-offset: 2px; }
+  .shot-story { margin: 0; font-size: 15px; line-height: 1.7; color: var(--text); }
+  .shot-prompt + .shot-prompt { margin-top: var(--s3); }
+  .shot-prompt b { display: block; margin-bottom: 6px; font-size: var(--t-cap); color: var(--faint); }
+  .shot-prompt pre { margin: 0; max-height: 320px; overflow: auto; padding: 10px 12px; border-radius: 10px; background: var(--sunk); font: 12px/1.55 ui-monospace, Menlo, monospace; white-space: pre-wrap; word-break: break-word; }
+  .shot-lines-head { margin-bottom: var(--s2); font-size: var(--t-micro); font-weight: 700; letter-spacing: .06em; color: var(--faint); }
+  .review-shots { container-type: inline-size; }
+  /* location-review-runtime.js mounts its background / cast / composition images here; the shot
+     body above already shows what the video takes, so the mount stays (the runtime needs it) but hidden */
+  [id^="image-references-"] { display: none; }
+  @container (max-width: 760px) { .shot-body { grid-template-columns: 1fr; } }
   /* The reveal label sits one step above body text (15px vs 13px) so it does not read at
      the same level as the bold screen copy */
   .cut-head {
@@ -542,11 +750,22 @@
   /* Render-route tiles (render-routing.md) — three families the eye must tell apart at a glance:
      generated video, an HTML animation, a photo with a camera move. */
   .size-ico.r-video { background: linear-gradient(150deg, #ff7aa8, #d1286c); }
+  .size-ico.r-msr { background: linear-gradient(150deg, #ffb347, #e0661b); }
   .size-ico.r-html { background: linear-gradient(150deg, #3fd1a0, #128a6c); }
   .size-ico.r-photo { background: linear-gradient(150deg, #6d7ea3, #33405e); }
   .size-ico.r-asset { background: linear-gradient(150deg, #b0b0b8, #6e6e78); }
   .size-ico.a-cam { background: linear-gradient(150deg, #8e9dff, #4a50c9); }
   .size-ico.s-look { background: linear-gradient(150deg, #e2ad6b, #9a5a2c); }
+  .size-ico.d-depth { background: linear-gradient(150deg, #6fc8ef, #2b6fa3); }
+  .size-ico.d-unset { background: linear-gradient(150deg, #c4c4ca, #8a8a92); }
+  /* Camera-move families — one move per shot, so each family gets its own hue */
+  .size-ico.c-fix { background: linear-gradient(150deg, #a3afc2, #5b6678); }
+  .size-ico.c-travel { background: linear-gradient(150deg, #ffb066, #e8692a); }
+  .size-ico.c-lens { background: linear-gradient(150deg, #c38bff, #7d45d6); }
+  .size-ico.c-turn { background: linear-gradient(150deg, #5fd0e0, #1b8aa8); }
+  .size-ico.c-follow { background: linear-gradient(150deg, #6fd88a, #23995a); }
+  .size-ico.c-rise { background: linear-gradient(150deg, #ffd25e, #e0901a); }
+  .size-ico.c-body { background: linear-gradient(150deg, #ff8a8a, #d63c5a); }
   .size-key {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: var(--s3) var(--s1);
     margin: var(--s3) 0 0; padding: var(--s3) var(--s4); border-radius: 12px; background: var(--sunk);
@@ -562,6 +781,20 @@
   .size-key .k .kk { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; color: var(--faint); }
   .size-key .size-ico { width: 38px; height: 38px; border-radius: 22.5%; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 2px 4px rgba(0, 0, 0, .18); }
   /* Route keys are long snake_case words — wider cells, and the key may break mid-word */
+  .cam-keys { display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s3) 0 0; padding: var(--s3) var(--s4); border-radius: 12px; background: var(--sunk); }
+  .cam-keys > .kt { flex-basis: 100%; font-size: var(--t-micro); color: var(--faint); font-weight: 700; letter-spacing: .06em; }
+  /* The shot's plan row under its head — the legend tiles alone; each name is in the tooltip */
+  .shot-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: var(--s3) 0 var(--s2); }
+  .shot-chip { display: inline-flex; border-radius: 10px; cursor: default; font-size: var(--t-cap); color: var(--muted); }
+  .shot-chip .size-ico, .shot-chip svg { width: 36px; height: 36px; border-radius: 10px; flex: none; }
+  .shot-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .shot-cast { display: flex; margin-left: auto; padding-left: var(--s3); }
+  .shot-cast .shot-cast-face { flex: none; width: 36px; height: 36px; cursor: default; box-shadow: 0 0 0 2px var(--card); }
+  .shot-cast .shot-cast-face + .shot-cast-face { margin-left: 6px; }
+  .shot-cast .shot-cast-face:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .cam-group { display: flex; flex-wrap: wrap; gap: var(--s3) var(--s1); padding: var(--s2) var(--s3); border: 1px solid var(--hair); border-radius: 10px; background: var(--card); }
+  .cam-group .kt { flex-basis: 100%; }
+  .cam-group .k { width: 62px; }
   .size-key.routes { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
   .size-key.routes .k .kk { overflow-wrap: anywhere; }
   /* Instant tooltip for the icon tiles (data-tip) — the browser's own title tip waits a second
@@ -945,7 +1178,6 @@
     .wrap { max-width: 1240px; padding: 32px clamp(16px, 3vw, 40px) 80px; }
     .scene:has(.conti) { max-width: none; }
     .scene { padding: clamp(16px, 2.5vw, 28px); margin: 20px 0; }
-    .scene-band { padding: clamp(12px, 2vw, 24px); }
     .scene-title { font-size: 20px; line-height: 1.45; }
     .scene-head { gap: 10px 12px; }
     .scene-checks { gap: 6px; }
@@ -983,7 +1215,6 @@
   }
   @media screen and (max-width: 600px) {
     .wrap { padding: 20px 12px 56px; }
-    .scene-band { padding: 10px; }
     .scene { padding: 16px 12px; }
     .scene-title { font-size: 18px; }
     .conti-row { grid-template-columns: 1fr; gap: 20px; }
@@ -1000,8 +1231,6 @@
     .scenario-card.wide { grid-column: auto; }
   }
 
-  .shot-plan-details, .performance-details { font-size: var(--t-aux); margin-top: var(--s3); }
-  .shot-plan-details > summary, .performance-details > summary { cursor: pointer; min-height: 44px; align-content: center; color: var(--muted); }
   .representative-frame-label { font-size: var(--t-aux); color: var(--muted); }
   @media screen and (max-width: 600px) { .conti .panel { width: min(100%, 280px); margin-inline: auto; } }
   @media print {
@@ -1024,7 +1253,8 @@
     .scene:has(.conti) { max-width: none; }   /* on paper the print margin decides the width */
     .scene-head { break-after: avoid; }
     .conti-row, .cmeta, .clip { break-inside: avoid; }
-    .toolbar, .tl-cap { display: none; }
+    .toolbar, .tl-cap, .view-switches, .view-setup-note { display: none; }
+    .seq-stats::after, .scene-band-stats::after { display: none; }
     details.prompt, details.docnotes { display: none; }
     details.scenenotes > summary { display: none; }
     details.scenenotes[open] > *, details.scenenotes:not([open]) > *:not(summary) { display: block; }
@@ -1152,13 +1382,10 @@ window.SB_DOC = {
   // Scene number (from 1) → array of notes. The gist of the storyboard.md notes — what the
   // call was based on, and what is off-limits.
   sceneNotes: {
-    1: ["{{example note — why the three cover elements are placed this way}}"]
   },
   // Transition direction after scene i ends (same length as the scene count — the last one
   // tells the user to stop recording)
-  transitions: [
-    "{{stop talking for 1 second → next scene's screen}}"
-  ],
+  transitions: [],
   // Scene number → privacy-avoidance direction (that scene only)
   privacy: {},
   // Scene number → audio direction (BGM, sound effects, tone). Attached to the scene meta
@@ -1188,11 +1415,12 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
 window.STORYBOARD_READY = (async function () {
   "use strict";
   var app = document.getElementById("app");
-  if (!window.SCENES || !window.THEME) {
+  if (!window.SCENES) {
     app.innerHTML = '<div class="error-box">Could not load scenes.js — open this file inside the storyboard/ directory, next to scenes.js.</div>';
     return;
   }
-  var THEME = window.THEME, SCENES = window.SCENES, DOC = Object.assign({}, window.SB_DOC || {}, window.SB_SCENES_DOC || {});
+  // A board still in its story steps has no channel colors yet; the stylesheet defaults stand in.
+  var THEME = window.THEME || {}, SCENES = window.SCENES, DOC = Object.assign({}, window.SB_DOC || {}, window.SB_SCENES_DOC || {});
   var MUSIC = window.MUSIC || null;   // named music cues — absent means one bed all the way through
 
   /* ══ Format mirror ══
@@ -1260,7 +1488,7 @@ window.STORYBOARD_READY = (async function () {
       scenesN: function (n) { return n + (n === 1 ? " scene" : " scenes"); },
       castN: function (n) { return n + (n === 1 ? " character" : " characters"); },
       slotsN: function (n) { return String(n); },
-      sceneNamed: function (n) { return "scene " + n; },
+      sceneNamed: function (n) { return "scene " + n; }, sceneKicker: "SCENE",
 
       // ── vocabulary read off scenes.js keys ──
       fmt: { "shorts-9x16": "Short-form 9:16", "youtube-long-16x9": "YouTube long-form 16:9" },
@@ -1296,6 +1524,17 @@ window.STORYBOARD_READY = (async function () {
                    "arcade-2d": "large painted sprites with bold outlines in front of parallax layers; the camera is static or pans sideways, never orbits; the HUD is never in the picture",
                    "spatial-explainer": "the miniature pack with the spatial-explainer branch: cutaway sets, stable geography, deliberate camera moves and visible physical change" },
       angleKey: "camera angle",
+      depthKey: "depth of field",
+      camMoveKey: "camera move · one per shot", camFocusKey: "focus · adds to a move",
+      camGroup: { fix: "Locked", travel: "Travel", lens: "Lens", turn: "Rotate", follow: "Follow", rise: "Orbit · height", body: "Body-mounted" },
+      depth: { shallow: "shallow depth", deep: "deep focus", none: "no depth choice", unset: "depth not planned" },
+      depthHint: {
+        shallow: "One plane stays sharp and the rest falls softly out of focus. Use it when the viewer must read one thing in the frame; on a person, the eyes. Pairs with near sound: the voice forward, the room behind.",
+        deep: "Every named plane is sharp at once, two or three listed front to back. Use it when the viewer must read two or more things together. Pairs with full sound: every source audible.",
+        none: "Depth does not apply, as on an HTML explanation route. Record the reason.",
+        unset: "No depth plan is recorded for this shot."
+      },
+      depthRule: "Rule: one thing to read → shallow, two or more → deep. A departure needs a reason.",
       angleHint: { eye: "camera at the subject's eye height — neutral, how people meet",
                    high: "camera above, looking down — smaller, weaker, watched",
                    low: "camera below, looking up — bigger, stronger, threatening",
@@ -1465,9 +1704,11 @@ window.STORYBOARD_READY = (async function () {
       // ── shot cards ──
       shotsHead: "Shots", shotsAside: "one item = one shot · a reveal is the screen changing inside that shot",
       toggleSafe: "show the text zone", toggleSubs: "subtitles",
+      viewSetupHead: "Video settings", previewHead: "Preview",
       legend: "dotted = where the text sits · hatched = what the subtitles and app buttons cover · channel color = AI video · outline only = HTML staging",
       previewNote: "a scaled-down preview of the real screen",
       sequence: function (v) { return "Sequence · " + v; },
+      seqKicker: "Sequence", seqStats: function (sc, sh) { return sc + " scenes · " + sh + " shots"; },
       formIs: function (v) { return "form · " + v; },
       arcIs: function (v) { return "arc · " + v; },
       feelLabel: "What the viewer should feel",
@@ -1605,17 +1846,17 @@ window.STORYBOARD_READY = (async function () {
       scenesN: function (n) { return n + "씬"; },
       castN: function (n) { return "등장 " + n + "명"; },
       slotsN: function (n) { return n + "개"; },
-      sceneNamed: function (n) { return n + "번 씬"; },
+      sceneNamed: function (n) { return n + "번 씬"; }, sceneKicker: "씬",
 
       // ── vocabulary read off scenes.js keys ──
       fmt: { "shorts-9x16": "세로 쇼트폼 9:16", "youtube-long-16x9": "YouTube 롱폼 16:9" },
-      // Shot-size terms stay in English in the Korean UI too — the trade words are what the
-      // reader is meant to pick up; the Korean gloss lives in sizeHint (the tooltip).
-      size: { els: "extreme long shot", ls: "long shot", ws: "wide shot", fs: "full shot",
-              mfs: "medium full shot", ms: "medium shot", mcu: "medium close-up", cu: "close-up",
-              choker: "choker", ecu: "extreme close-up", insert: "insert",
-              two: "two shot", three: "three shot", ots: "over the shoulder",
-              pov: "POV", back: "back shot", cutaway: "cutaway", reaction: "reaction shot" },
+      // Shot-size terms are the trade words written in Hangul, matching the film-techniques
+      // catalogue labels; the Korean gloss lives in sizeHint (the tooltip).
+      size: { els: "익스트림 롱샷", ls: "롱샷", ws: "와이드 샷", fs: "풀샷",
+              mfs: "미디엄 풀샷", ms: "미디엄 샷", mcu: "미디엄 클로즈업", cu: "클로즈업",
+              choker: "빅 클로즈업", ecu: "익스트림 클로즈업", insert: "인서트",
+              two: "투샷", three: "쓰리샷", ots: "오버 더 숄더",
+              pov: "1인칭 시점", back: "뒷모습", cutaway: "컷어웨이", reaction: "리액션 샷" },
       sizeKey: "샷 사이즈",
       renderKey: "렌더 방식",
       styleHead: "화풍",
@@ -1643,6 +1884,17 @@ window.STORYBOARD_READY = (async function () {
                    "arcade-2d": "굵은 윤곽선의 큰 스프라이트가 시차 배경 앞에 서는 무대. 카메라는 고정이거나 옆으로만 팬, HUD 는 화면에 없습니다",
                    "spatial-explainer": "미니어처 팩에 공간 설명 갈래: 단면 세트, 고정된 지형, 의도한 카메라 이동과 눈에 보이는 물리 변화" },
       angleKey: "카메라 앵글",
+      depthKey: "심도",
+      camMoveKey: "카메라 이동 · 샷당 하나", camFocusKey: "초점 · 이동에 더함",
+      camGroup: { fix: "고정", travel: "앞뒤 이동", lens: "렌즈", turn: "회전", follow: "따라가기", rise: "궤도·높이", body: "몸에 붙은 카메라" },
+      depth: { shallow: "얕은 심도", deep: "딥포커스", none: "심도 선택 없음", unset: "심도 미설정" },
+      depthHint: {
+        shallow: "한 면만 선명하고 나머지는 부드럽게 흐립니다. 화면에서 읽을 정보가 하나일 때 씁니다. 인물이면 눈에 초점을 둡니다. 소리는 가까운 소리를 앞에 두고 공간은 뒤로 뺍니다.",
+        deep: "이름 붙인 면이 앞에서 뒤까지 2~3개 모두 선명합니다. 읽을 정보가 둘 이상일 때 씁니다. 소리도 공간 전체가 들립니다.",
+        none: "HTML 설명 컷처럼 심도가 적용되지 않는 컷입니다. 이유를 적습니다.",
+        unset: "이 샷에는 심도 계획이 기록되지 않았습니다."
+      },
+      depthRule: "규칙: 읽을 정보 1개 → 얕은 심도, 2개 이상 → 딥포커스. 다르게 고르면 이유를 적습니다.",
       angleHint: { eye: "카메라가 인물 눈높이 — 중립, 사람이 마주 보는 높이",
                    high: "위에서 내려다본다 — 작아 보이고 약해 보이고 감시당하는 느낌",
                    low: "아래에서 올려다본다 — 커 보이고 세 보이고 위협적",
@@ -1808,9 +2060,11 @@ window.STORYBOARD_READY = (async function () {
       // ── shot cards ──
       shotsHead: "샷 구성", shotsAside: "항목 하나 = 샷 하나 · 공개는 그 샷 안에서 화면이 바뀌는 것",
       toggleSafe: "글자 영역 보기", toggleSubs: "자막",
+      viewSetupHead: "영상 설정", previewHead: "미리보기",
       legend: "점선 = 글자가 놓이는 자리 · 빗금 = 자막과 앱 버튼이 덮는 아래쪽 · 채널색 = AI 영상 · 테두리만 = HTML 연출",
       previewNote: "실제 화면을 줄여서 그린 미리보기",
       sequence: function (v) { return "시퀀스 · " + v; },
+      seqKicker: "시퀀스", seqStats: function (sc, sh) { return sc + "씬 · " + sh + "샷"; },
       formIs: function (v) { return "형태 · " + v; },
       arcIs: function (v) { return "전개 · " + v; },
       feelLabel: "보는 사람이 느낄 것",
@@ -2025,8 +2279,7 @@ window.STORYBOARD_READY = (async function () {
         media = '<video src="' + esc(src) + '" controls playsinline preload="metadata" data-start="' + (validRange ? from : '') +
           '" data-end="' + (validRange ? end : '') + '" aria-label="' + esc(label) + '"' + handlers +
           ' onerror="this.nextElementSibling.textContent=this.dataset.error;this.nextElementSibling.hidden=false" data-error="' + esc(fail) + '"></video>' +
-          '<p class="production-cut-error"' + (validRange ? ' hidden' : '') + '>' + esc(rangeError) + '</p>' +
-          '<p>' + esc(ko ? '원본 구간 미리보기 · 최종 편집 효과는 포함하지 않습니다.' : 'Source range preview · final edit effects are not included.') + '</p>';
+          '<p class="production-cut-error"' + (validRange ? ' hidden' : '') + '>' + esc(rangeError) + '</p>';
       } else if (local && /\.(?:png|jpe?g|webp|gif|avif|svg)$/i.test(src)) {
         media = '<a href="' + esc(src) + '" target="_blank" rel="noopener"><img src="' + esc(src) + '" alt="' + esc(label) + '" loading="lazy" onerror="this.parentNode.nextElementSibling.hidden=false"></a>' +
           '<p class="production-cut-error" hidden>' + esc(fail) + '</p>';
@@ -2034,12 +2287,10 @@ window.STORYBOARD_READY = (async function () {
         media = '<p>' + esc(ko ? '미리보기 없음 · 실제 파일 검토 필요' : 'No preview · inspect the actual file') + '</p>';
       }
       var start = Number.isFinite(cut.start) ? ' · ' + (ko ? '시작 ' : 'Start ') + cut.start + 's' : '';
-      return '<figure class="production-cut" data-cut-index="' + index + '"><figcaption>' + esc(label + start) + '</figcaption>' + media +
-        '<p class="production-cut-path">' + esc(src || (ko ? '경로 없음' : 'Missing path')) + '</p></figure>';
+      return '<figure class="production-cut" data-cut-index="' + index + '" title="' + esc(label + start) + '">' + media + '</figure>';
     }).join('');
-    return '<section class="production-cut-review" aria-label="' + esc(heading) + '"><h4>' + esc(heading) + ' · ' + cuts.length +
-      '</h4><p>' + esc(ko ? '등록된 컷을 순서대로 표시합니다. 표시 여부와 검토 통과 여부는 별개입니다. 영상은 직접 재생해서 확인하세요.' :
-      'Every declared cut appears in order. Display does not mean review approval. Play each video to inspect it.') + '</p><div class="production-cut-grid">' + rows + '</div></section>';
+    return '<section class="production-cut-review' + (WIDE ? ' wide' : '') + (cuts.length > 1 ? ' many' : '') + '" aria-label="' + esc(heading) + '">' +
+      '<div class="production-cut-grid">' + rows + '</div></section>';
   }
 
   function camOf(s) { return (s.visual && s.visual.camera) || null; }
@@ -2097,15 +2348,102 @@ window.STORYBOARD_READY = (async function () {
     for (var i = 0; i < CAST.length; i++) if (CAST[i].id === id) return CAST[i].name || id;
     return id;
   }
+  /* Shot body — left: what the video call takes (start image, end image, and the reference
+     images its lane accepts, slot for slot); right: the shot's lines, speaker by speaker.
+     Image-only references conditioned the start still and stay out of this view. */
+  var REF_LANES = {
+    astra_genai_msr: { name: "MSR", slots: 5, note: { ko: "피사체 4 + 시작 이미지 1", en: "4 subjects + 1 start image" } },
+    seedance_reference: { name: "Seedance", slots: 9 },
+    fasth3_omni_reference: { name: "FastH3 Omni", slots: 9 }
+  };
+  function refLane(s, fp) {
+    var tool = s.visual && s.visual.video && s.visual.video.tool;
+    if (tool) return REF_LANES[tool] || { name: tool, slots: 0 };
+    // No call recorded yet: a reference-mode shot goes to MSR (the LTX project default), a
+    // first-frame shot to image-to-video, which takes only the start and end images.
+    return fp.mode === "reference" ? REF_LANES.astra_genai_msr : { name: LANG === "ko" ? "이미지→영상" : "Image to video", slots: 0 };
+  }
+  var REF_ROLE = { character: ["캐릭터", "Character"], prop: ["소품", "Prop"], background: ["배경", "Background"],
+                   style: ["화풍", "Style"], composition: ["구도", "Composition"], continuity: ["연속성", "Continuity"] };
+  var REF_PANEL = { face: ["얼굴", "face"], body: ["전신", "full body"], front: ["전신", "full body"], back: ["뒷모습", "back"] };
+  function refName(ref) {
+    var path = String(ref.path || ""), m = path.match(/characters\/([^/]+)\/([^/.]+)/), l = path.match(/locations\/([^/]+)\//);
+    var ko = LANG === "ko";
+    if (m) return castName(m[1]) + (REF_PANEL[m[2]] ? " · " + REF_PANEL[m[2]][ko ? 0 : 1] : "");
+    if (l) { var loc = ((DOC.locations) || []).filter(function (x) { return x && x.id === l[1]; })[0]; return loc && loc.name || l[1]; }
+    return (REF_ROLE[ref.role] || [ref.role, ref.role])[ko ? 0 : 1];
+  }
+  // The shared "off" tile: an input this lane does not take
+  var OFF_GLYPH = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M6.5 17.5l11-11"/></svg>';
+  function safeSrc(src) { return typeof src === "string" && src && !/^[a-z][a-z0-9+.-]*:|^[/\\]{2}|[\x00-\x1f]/i.test(src) ? src : ""; }
+  function shotBodyHtml(s, narr) {
+    var RR = window.RENDER_ROUTING, ko = LANG === "ko", fp = RR ? RR.framePlan(s) : { mode: "first" }, lane = refLane(s, fp);
+    var refs = (RR ? RR.imageReferences(s) : []).filter(function (r) { return r && r.use !== "image"; });
+    function frameBox(src, label, flag, emptyText) {
+      src = safeSrc(src);
+      return '<figure class="shot-frame' + (src ? "" : " empty") + '"><figcaption>' + esc(label) +
+        (flag ? '<span class="shot-frame-flag" tabindex="0" data-tip="' + esc(flag[1]) + '">' + esc(flag[0]) + "</span>" : "") + "</figcaption>" +
+        (src ? '<a href="' + esc(src) + '" target="_blank" rel="noopener"><img src="' + esc(src) + '" alt="' + esc(label) + '" loading="lazy"></a>'
+             : emptyText === null ? '<div class="shot-frame-empty ref-off-tile">' + OFF_GLYPH + "</div>"
+             : '<div class="shot-frame-empty">' + esc(emptyText) + "</div>") + "</figure>";
+    }
+    // MSR flow: four character subjects, and the background slot carries the start image
+    // (characters, background and props composed by the image tool); the plain background is off
+    var msr = lane === REF_LANES.astra_genai_msr;
+    var startFlag = msr ? [ko ? "MSR 5번 칸으로 전송" : "sent to MSR slot 5", ko ? "MSR의 배경 칸에 이 시작 이미지를 보냅니다. 첫 프레임으로 고정하지는 않습니다." : "MSR takes this start image in its background slot; it does not pin the first frame."] : null;
+    var left = '<div class="shot-frames' + (WIDE ? " wide" : "") + '">' +
+      frameBox(fp.start, ko ? "시작 이미지" : "Start image", startFlag, T.framePending) +
+      frameBox(fp.mode === "first_last" ? fp.end : "", ko ? "종료 이미지" : "End image", null,
+               fp.mode === "first_last" ? T.framePending : msr ? null : (ko ? "종료 이미지 없음" : "No end image")) + "</div>";
+    var n = Math.max(lane.slots, refs.length), slots = "";
+    for (var k = 0; k < n; k++) {
+      var ref = refs[k], over = k >= lane.slots, src = ref ? safeSrc(ref.path) : "", off = msr && ref && ref.role === "background";
+      if (!ref) { slots += '<div class="ref-slot empty"><span>' + (k + 1) + "</span></div>"; continue; }
+      var name = ref.path === fp.start ? (ko ? "시작 이미지" : "Start image") : refName(ref), role = (REF_ROLE[ref.role] || [ref.role, ref.role])[ko ? 0 : 1];
+      var tip = (k + 1) + ". " + name + " · " + role + (over ? (ko ? " · 지원 개수 초과" : " · over the limit") : "") +
+        (off ? (ko ? "\n비활성 — 이 칸에는 시작 이미지를 보냅니다." : "\nOff — this slot carries the start image.") : "") + (ref.purpose ? "\n" + ref.purpose : "");
+      slots += '<figure class="ref-slot' + (over ? " over" : "") + (off ? " off" : "") + '" tabindex="0" data-tip="' + esc(tip) + '">' +
+        (off ? '<div class="ref-off-tile">' + OFF_GLYPH + "</div>"
+             : src ? '<img src="' + esc(src) + '" alt="" loading="lazy">' : '<div class="ref-missing">?</div>') +
+        '<figcaption>' + (off ? (ko ? "비활성" : "Off") : esc(name)) + "</figcaption>" + (over ? '<span class="ref-over">' + (ko ? "초과" : "over") + "</span>" : "") + "</figure>";
+    }
+    left += '<div class="shot-refs' + (msr ? " msr" : "") + '"><div class="shot-refs-head"><b>' + (ko ? "참조 이미지" : "Reference images") + "</b><span>" +
+      esc(lane.name) + (lane.slots ? (ko ? " · 최대 " + lane.slots + "장" : " · up to " + lane.slots) + (lane.note ? " · " + lane.note[ko ? "ko" : "en"] : "") : "") +
+      "</span>" + (lane.slots ? '<span class="shot-refs-count">' + (msr ? Math.min(refs.filter(function (r) { return r.role !== "background"; }).length, 4) + (fp.start ? 1 : 0)
+      : Math.min(refs.length, lane.slots)) + " / " + lane.slots + "</span>" : "") + "</div>" +
+      (slots ? '<div class="ref-slots">' + slots + "</div>"
+             : '<p class="shot-refs-none">' + (ko ? "이 방식은 시작·종료 이미지만 받습니다. 참조 이미지는 보내지 않습니다." : "This lane takes only the start and end images; no reference images are sent.") + "</p>") + "</div>";
+    // Right: story (the shot's one-line summary), lines, prompt — CSS radio tabs
+    var story = s.summary ? '<p class="shot-story">' + esc(s.summary) + "</p>" : "";
+    var vis = s.visual || {}, video = vis.video || {}, prompts = [
+      [ko ? "영상 프롬프트" : "Video prompt", video.prompt || (video.speechBinding || {}).videoPrompt],
+      [ko ? "말하는 클립 프롬프트" : "Speech-clip prompt", (vis.clip || {}).prompt],
+      [ko ? "배경 프롬프트" : "Background prompt", vis.bgPrompt]
+    ].filter(function (x) { return typeof x[1] === "string" && x[1]; });
+    var lines = narr.length ? narr.map(function (line, j) { return speechHtml(line, j); }).join("") : '<div class="speech-silent">' + esc(T.speechSilent) + "</div>";
+    var none = function (t) { return '<div class="speech-silent">' + t + "</div>"; };
+    var tabs = [[ko ? "스토리" : "Story", story || none(ko ? "스토리 없음" : "No story")], [ko ? "대사" : "Lines", lines],
+      [ko ? "프롬프트" : "Prompt", prompts.length ? prompts.map(function (x) { return '<div class="shot-prompt"><b>' + esc(x[0]) + "</b><pre>" + esc(x[1]) + "</pre></div>"; }).join("")
+        : none(ko ? "기록된 프롬프트 없음" : "No prompt recorded")]];
+    var tabName = "shot-tab-" + esc(String(s.id));
+    var right = '<div class="shot-tabs">' + tabs.map(function (t, k) {
+      return '<input type="radio" name="' + tabName + '" id="' + tabName + "-" + k + '"' + (k ? "" : " checked") + ">";
+    }).join("") + '<div class="shot-tab-nav" role="tablist">' + tabs.map(function (t, k) {
+      return '<label for="' + tabName + "-" + k + '">' + t[0] + "</label>";
+    }).join("") + '</div><div class="shot-tab-panels">' + tabs.map(function (t) { return '<div class="shot-tab-panel">' + t[1] + "</div>"; }).join("") + "</div></div>";
+    return '<div class="shot-body"><div class="shot-media">' + left + '</div><div class="shot-lines">' + right + "</div></div>";
+  }
+  function portraitOf(id) {
+    var character = CAST.find(function (c) { return c.id === id; }) || {};
+    return ((window.PRODUCTION && window.PRODUCTION.cast || {})[id] || {}).image || (character.panels || {}).face ||
+      (window.REVIEW_CHARACTER_PORTRAITS || {})[id];
+  }
   function speechHtml(n, index) {
     var speakerId = n.speaker || (DOC.speechPlanVersion === 1 ? undefined : DOC.narratorCharacterId);
-    var character = CAST.find(function (c) { return c.id === speakerId; }) || {};
     var name = castName(speakerId) || T.speechUnassigned;
     var narrator = !!speakerId && speakerId === DOC.narratorCharacterId;
     var delivery = n.delivery || (narrator ? 'voiceover' : 'unspecified');
-    var productionCast = (window.PRODUCTION && window.PRODUCTION.cast || {})[speakerId] || {};
-    var portrait = productionCast.image || (character.panels || {}).face ||
-      (window.REVIEW_CHARACTER_PORTRAITS || {})[speakerId];
+    var portrait = portraitOf(speakerId);
     var avatar = '<span class="speech-avatar" aria-hidden="true"><span>' + esc(Array.from(name)[0]) + '</span>' +
       (portrait ? '<img src="' + esc(portrait) + '" alt="" loading="lazy" onerror="this.hidden=true">' : '') + '</span>';
     return '<div class="speech-turn" data-speaker="' + esc(speakerId || '') + '" data-delivery="' + esc(delivery) + '"' +
@@ -2226,12 +2564,98 @@ window.STORYBOARD_READY = (async function () {
     var d = SIZE_ICON[size];
     return d ? '<svg class="size-ico f-' + SIZE_FAMILY[size] + '" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>" : "";
   }
+  function sizeName(size) { var e = window.FILM_TECHNIQUES.byId["framing." + size]; return e ? e.label[LANG] : (T.size[size] || size); }
   function sizeTitle(size) { var e = window.FILM_TECHNIQUES.byId["framing." + size]; return e ? e.label[LANG] + " — " + e.instruction : (T.size[size] || size) + " — " + (T.sizeHint[size] || ""); }
   function angleIcon(a) {
     var d = ANGLE_ICON[a];
     return d ? '<svg class="size-ico a-cam" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>" : "";
   }
   function angleTitle(a) { return (T.angle[a] || a) + " — " + (T.angleHint[a] || ""); }
+  /* Depth-of-field pictograms (L11) — a near figure and a far one; the soft plane is drawn dim. */
+  var DEPTH_NEAR = '<circle cx="11.5" cy="15" r="3.6"/><path d="M4.5 27c1-4.6 3.6-6.6 7-6.6s6 2 7 6.6"/>';
+  var DEPTH_FAR = '<circle cx="22.5" cy="9" r="2.4"/><path d="M18.2 17.4c.6-3 2.3-4.3 4.3-4.3s3.7 1.3 4.3 4.3"/>';
+  var DEPTH_ICON = {
+    shallow: DEPTH_NEAR + '<g style="opacity:.32">' + DEPTH_FAR + "</g>",
+    deep: DEPTH_NEAR + DEPTH_FAR,
+    none: '<rect x="6" y="8" width="20" height="16" rx="3"/><path d="M8 26L24 6"/>',
+    unset: '<circle cx="16" cy="16" r="9" stroke-dasharray="3 3.2"/><circle cx="16" cy="16" r="1.6" class="ico-fill"/>'
+  };
+  function depthIcon(mode) {
+    var d = DEPTH_ICON[mode] || DEPTH_ICON.unset;
+    return '<svg class="size-ico d-depth' + (DEPTH_ICON[mode] ? "" : " d-unset") + '" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>";
+  }
+  /* Camera-move pictograms (film-techniques camera entries) — the filled dot is the camera, as on
+     the angle tiles, and the arrow is its path; a lens move redraws the frame instead. */
+  var CAM_GROUPS = [
+    ["fix", ["camera.static"]],
+    ["travel", ["camera.dolly-in", "camera.dolly-out", "camera.push-past", "camera.drone-pullback"]],
+    ["lens", ["camera.slow-zoom-in", "camera.dolly-zoom"]],
+    ["turn", ["camera.pan-left", "camera.pan-right", "camera.tilt-up", "camera.tilt-down", "camera.whip-pan"]],
+    ["follow", ["camera.follow", "camera.reverse-tracking", "camera.side-tracking"]],
+    ["rise", ["camera.arc", "camera.crane-up"]],
+    ["body", ["camera.handheld", "camera.snorricam"]]
+  ];
+  var CAM_FAMILY = { "camera.rack-focus": "d-depth" };
+  CAM_GROUPS.forEach(function (g) { g[1].forEach(function (id) { CAM_FAMILY[id] = "c-" + g[0]; }); });
+  var CAM_ICON = (function () {
+    var P = ICON_PERSON, O = ICON_DOT;
+    function f(n) { return Math.round(n * 100) / 100; }
+    function tip(x, y, ux, uy) {
+      var hx = x - ux * 2.8, hy = y - uy * 2.8, px = -uy * 2.2, py = ux * 2.2;
+      return "M" + f(hx + px) + " " + f(hy + py) + "L" + f(x) + " " + f(y) + "L" + f(hx - px) + " " + f(hy - py);
+    }
+    function line(x1, y1, x2, y2) {
+      var l = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+      return '<path d="M' + x1 + " " + y1 + "L" + x2 + " " + y2 + tip(x2, y2, (x2 - x1) / l, (y2 - y1) / l) + '"/>';
+    }
+    // An arc round (cx, cy) from a0° to a1°, screen axes (y down), arrowhead at a1
+    function turn(cx, cy, r, a0, a1) {
+      var R = Math.PI / 180, s = a1 > a0 ? 1 : -1;
+      var x1 = cx + r * Math.cos(a1 * R), y1 = cy + r * Math.sin(a1 * R);
+      return '<path d="M' + f(cx + r * Math.cos(a0 * R)) + " " + f(cy + r * Math.sin(a0 * R)) + "A" + r + " " + r + " 0 0 " + (s > 0 ? 1 : 0) + " " + f(x1) + " " + f(y1) +
+        tip(x1, y1, -s * Math.sin(a1 * R), s * Math.cos(a1 * R)) + '"/>';
+    }
+    var rails = '<path d="M3 27.5h17" class="ico-dim"/>', pan = O(16, 24, 2.6);
+    return {
+      "camera.static": O(16, 9, 3) + '<path d="M16 12.5l-6.5 14M16 12.5v14M16 12.5l6.5 14"/>',
+      "camera.dolly-in": O(5, 16) + line(8.5, 16, 15.5, 16) + P(24, 4, 24) + rails,
+      "camera.dolly-out": O(14, 16) + line(10.5, 16, 3.5, 16) + P(24, 4, 24) + rails,
+      "camera.push-past": '<path d="M15 4v8.5M15 19.5V28"/>' + O(4.5, 16) + line(8, 16, 28, 16),
+      "camera.drone-pullback": '<path d="M3 28h12" class="ico-dim"/>' + P(8, 15, 13) +
+        '<path d="M12.5 10.5h4.5M19 10.5h4.5M15 10.5v2.5M21 10.5v2.5M14.5 13h7"/>' + O(18, 15.2, 1.6) + line(22.5, 8, 28.5, 3),
+      "camera.slow-zoom-in": '<rect x="4" y="6" width="24" height="20" rx="3" class="ico-dim"/><rect x="11.5" y="11" width="9" height="10" rx="1.5"/>' +
+        line(5.5, 7.5, 9.8, 9.8) + line(26.5, 24.5, 22.2, 22.2),
+      "camera.dolly-zoom": '<rect x="10" y="9.5" width="12" height="13" rx="1.5" class="ico-dim"/>' + P(16, 11, 16) +
+        line(8.5, 8, 3.5, 3.5) + line(23.5, 8, 28.5, 3.5) + line(8.5, 24, 3.5, 28.5) + line(23.5, 24, 28.5, 28.5),
+      "camera.pan-left": pan + turn(16, 24, 12, -35, -145),
+      "camera.pan-right": pan + turn(16, 24, 12, -145, -35),
+      "camera.tilt-up": O(8, 16, 2.6) + turn(8, 16, 12, 40, -40),
+      "camera.tilt-down": O(8, 16, 2.6) + turn(8, 16, 12, -40, 40),
+      "camera.whip-pan": pan + turn(16, 24, 12, -150, -30) + '<path d="M3 5.5h8M6 9.5h5" class="ico-dim"/>',
+      "camera.follow": O(5, 14) + '<path d="M8 14h3" class="ico-dim"/>' + P(19, 3, 22) + line(3, 28.5, 28, 28.5),
+      "camera.reverse-tracking": P(10, 3, 22) + '<path d="M24 14h-3" class="ico-dim"/>' + O(27, 14) + line(3, 28.5, 28, 28.5),
+      "camera.side-tracking": P(7, 2, 17) + line(14, 10, 28, 10) + O(7, 25) + '<path d="M7 22v-2.5" class="ico-dim"/>' + line(14, 25, 28, 25),
+      "camera.arc": '<circle cx="16" cy="20" r="3.5"/>' + O(5.66, 18.18) + turn(16, 20, 10.5, -170, -10),
+      "camera.crane-up": '<path d="M4 28h10M9 28V18.5l11-6.5"/>' + O(21, 11.5, 2.6) + line(27, 23, 27, 5),
+      "camera.handheld": '<g transform="rotate(-8 16 14)"><rect x="6" y="6.5" width="20" height="14" rx="2.5"/></g>' +
+        '<path d="M5 27q2.75-3 5.5 0t5.5 0 5.5 0 5.5 0"/>',
+      "camera.snorricam": '<circle cx="12" cy="11" r="4.5"/><path d="M4 29q0-9.5 8-9.5t8 9.5"/><path d="M17 23.5h9.5V12.5"/>' +
+        O(26.5, 9, 2.6) + '<path d="M23.5 9.5h-5" class="ico-dim"/>',
+      "camera.rack-focus": '<g style="opacity:.32">' + DEPTH_NEAR + "</g>" + DEPTH_FAR + line(9.5, 8.5, 18.5, 5.5)
+    };
+  })();
+  function camIcon(id) {
+    var d = CAM_ICON[id];
+    return d ? '<svg class="size-ico ' + CAM_FAMILY[id] + '" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>" : "";
+  }
+  function camTitle(id) {
+    var e = window.FILM_TECHNIQUES.byId[id];
+    return e.label[LANG] + " — " + (LANG === "ko" ? e.use : e.instruction);
+  }
+  function camKeyTile(id) {
+    return '<span class="k" tabindex="0" data-tip="' + esc(camTitle(id)) + '">' + camIcon(id) + "<span>" + esc(window.FILM_TECHNIQUES.byId[id].label[LANG]) + "</span></span>";
+  }
+  function depthTitle(mode) { return (T.depth[mode] || mode) + " — " + (T.depthHint[mode] || "") + (mode === "shallow" || mode === "deep" ? "\n" + T.depthRule : ""); }
   /* Render-route pictograms — what makes the picture move: an AI clip, an HTML animation,
      or a camera over a photo. Same tile and the same 2px line as the size icons. */
   var RENDER_ICON = {
@@ -2311,12 +2735,13 @@ window.STORYBOARD_READY = (async function () {
       '<span class="kk">' + esc(st.preset) + (ref && !refImg ? " · " + esc(ref) : "") + "</span></div>" +
       (refImg ? '<img src="' + esc(ref) + '" alt="" onerror="this.remove()">' : "") + all + "</div>";
   }
-  function styleChip() {
+  function styleBlock() {
     var st = styleOf(); if (!st) return "";
     var sample = styleSample(st.preset);
-    return '<span class="shot-size style-chip' + (T.styleName[st.preset] ? "" : " unknown") + '" data-tip="' + esc(styleTitle(st.preset)) + '">' +
+    return '<div class="view-setup-cell view-style' + (T.styleName[st.preset] ? "" : " unknown") + '" data-tip="' + esc(styleTitle(st.preset)) + '">' +
       (sample ? '<img src="' + sample + '" alt="">' : styleIcon(st.preset)) +
-      '<span class="sz"><b>' + esc(T.styleName[st.preset] || (st.preset + " ?")) + "</b></span></span>";
+      '<div><span class="view-setup-kt">' + esc(T.styleHead) + "</span><b>" + esc(T.styleName[st.preset] || (st.preset + " ?")) + "</b>" +
+      (T.styleDesc[st.preset] ? "<p>" + esc(T.styleDesc[st.preset]) + "</p>" : "") + "</div></div>";
   }
   var RENDER_FAMILY = { generated_video: "video", stock_video: "video", recording: "video", still_camera: "photo",
                         character_html: "html", object_html: "html", motion_html: "html", data_graph: "html", editorial_html: "html", slide: "html",
@@ -2338,15 +2763,24 @@ window.STORYBOARD_READY = (async function () {
     var routes = ["generated_video", "stock_video", "still_camera", "character_html", "object_html", "data_graph", "motion_html", "editorial_html", "recording", "asset"];
     return '<div class="size-key"><span class="kt">' + esc(T.sizeKey) + "</span>" +
       order.map(function (k) {
-        return '<span class="k" data-tip="' + esc(sizeTitle(k)) + '">' + sizeIcon(k) + '<span>' + esc(T.size[k] || k) + "</span></span>";
+        return '<span class="k" data-tip="' + esc(sizeTitle(k)) + '">' + sizeIcon(k) + '<span>' + esc(sizeName(k)) + "</span></span>";
       }).join("") + "</div>" +
       '<div class="size-key"><span class="kt">' + esc(T.angleKey) + "</span>" +
       ["eye", "high", "low", "overhead", "dutch"].map(function (k) {
         return '<span class="k" data-tip="' + esc(angleTitle(k)) + '">' + angleIcon(k) + '<span>' + esc(T.angle[k] || k) + "</span></span>";
       }).join("") + "</div>" +
+      '<div class="size-key cam-keys"><span class="kt">' + esc(T.camMoveKey) + "</span>" +
+      CAM_GROUPS.map(function (g) {
+        return '<div class="cam-group"><span class="kt">' + esc(T.camGroup[g[0]]) + "</span>" + g[1].map(camKeyTile).join("") + "</div>";
+      }).join("") + "</div>" +
+      '<div class="size-key"><span class="kt">' + esc(T.camFocusKey) + "</span>" + camKeyTile("camera.rack-focus") + "</div>" +
+      '<div class="size-key"><span class="kt">' + esc(T.depthKey) + "</span>" +
+      ["shallow", "deep", "none"].map(function (k) {
+        return '<span class="k" tabindex="0" data-tip="' + esc(depthTitle(k)) + '">' + depthIcon(k) + '<span>' + esc(T.depth[k]) + "</span></span>";
+      }).join("") + "</div>" +
       '<div class="size-key routes"><span class="kt">' + esc(T.renderKey) + "</span>" +
       routes.map(function (k) {
-        return '<span class="k" data-tip="' + esc(renderTitle(k)) + '">' + renderIcon(k) + '<span>' + esc(T.render[k] || k) + '</span><span class="kk">' + esc(k) + "</span></span>";
+        return '<span class="k" data-tip="' + esc(renderTitle(k)) + '">' + renderIcon(k) + '<span>' + esc(T.render[k] || k) + "</span></span>";
       }).join("") + "</div>";
   }
   function grammarOf(s, i) {
@@ -2864,12 +3298,8 @@ window.STORYBOARD_READY = (async function () {
         // behavior as absolute rule 9). A still-background cover with empty narration drops to
         // the violation branch below.
         chips.push(badge("", T.clipAudio));
-      } else if (window.STORY && window.STORY.version === "story-v2" && (s.performance || []).some(function(e) { return e.kind === "action"; })) {
-        chips.push(badge("", "Visual action"));
-      } else {
-        chips.push(badge("bad", T.noNarration));
-        flag("bad", T.shotCap(no), "narration is empty — it holds " + (s.duration || "?") + " seconds with no sound");
       }
+      // A shot with no lines is simply silent: narration is a narrator character's off-screen line
       var sentBand = T.charBand(FMT.sentMin, FMT.sentMax);
       var shortSent = narr.some(function (n) { return netLen(n.tts) < FMT.sentMin; });
       if (maxSent > FMT.sentMax || shortSent) {
@@ -3981,32 +4411,6 @@ window.STORYBOARD_READY = (async function () {
     return out;
   }
 
-  h += '<div class="badges">' +
-       (CAST.length ? badge("", T.castN(CAST.length)) : "") +
-       (camGaps ? badge("warn", T.camGaps(camGaps)) : "") +
-       (feelGaps ? badge("warn", T.feelGaps(feelGaps)) : badge("ok", T.feelAll)) +
-       (sizeUnknown ? badge("warn", T.sizeUnknown(sizeUnknown)) : "") +
-       (MUSIC || cueCount || dropCount
-          ? badge("", T.musicBadge(MUSIC ? Object.keys(MUSIC).filter(function (key) { return key !== "$mix"; }).length : null, dropCount))
-          : "") +
-       (LOOPS.length
-          ? badge(unpaid ? "warn" : "ok", T.promiseBadge(LOOPS.length, plantCount, unpaid))
-          : badge("warn", T.promiseEmpty)) +
-       badge("mode", allRec ? T.modeRec : hasRec ? T.modeMixed(recCount)
-             : isLine ? T.modeGenLine : T.modeGen) +
-       (cover ? badge(hookWord ? "ok" : "warn", T.openingBadge(hookWord ||
-          (cover.hookType ? T.outsideFour(cover.hookType) : T.strategyNotWritten))) : "") +
-       badge((DOC.status || "draft") === "draft" ? "" : "ok", (DOC.status || "draft") === "draft" ? T.draft : DOC.status) +
-       (DOC.created ? badge("", DOC.created) : "") +
-       badge(totalUnknown ? "warn" : lenCls, totalUnknown ? partialLength : (STORY_V2 ? T.plannedLen + " " + durTxt(total) : T.mainLen(Math.round(total * 10) / 10))) +
-       (!totalUnknown && outroSec ? badge("", T.withOutro(total + outroSec)) : "") +
-       badge("", T.shotsN(main.length)) +
-       (hasSceneField ? badge("", (function () {
-         var seen = {};
-         SCENES.forEach(function (s, i) { seen[grammarOf(s, i).scene] = 1; });
-         return T.scenesN(Object.keys(seen).length);
-       })()) : "") +
-       badge(orderOk ? "ok" : (orderBad ? "bad" : "warn"), ORDER_TXT) + "</div>";
 
   h += styleCard();
   h += '<dl class="meta-grid">';
@@ -4160,7 +4564,6 @@ window.STORYBOARD_READY = (async function () {
   h += '<h2 class="sec" id="timeline">' + esc(T.timelineHead) +
        '<span class="aside">' + esc(T.timelineAside) + "</span></h2>";
   h += window.FILM_TECHNIQUES.legend(LANG);
-  h += window.SHOT_DIRECTION.timeline(SCENES, LANG, DOC);
   if (outroUnknown) flag("warn", T.where.outro, "there is an outro scene but no SB_DOC.outro length — it does not count toward the total");
 
   /* ══ Promise ledger ══ — drawn only when SB_DOC.craft has content (the checks ran in the header) */
@@ -4169,12 +4572,19 @@ window.STORYBOARD_READY = (async function () {
   /* ══ Shot cards ══ */
   h += '<h2 class="sec" id="shots">' + esc(T.shotsHead) +
        '<span class="aside">' + esc(T.shotsAside) + "</span></h2>";
-  h += '<div class="toolbar">' +
-       '<label><input type="checkbox" id="tg-safe"> ' + esc(T.toggleSafe) + "</label>" +
-       '<label><input type="checkbox" id="tg-subs" checked> ' + esc(T.toggleSubs) + "</label>" +
-       '<span class="legend">' + esc(T.legend) + "</span>" + styleChip() +
-       '<span style="margin-left:auto">' + esc(T.previewNote) + "</span></div>";
-  h += sizeKey();
+  h += '<details class="view-setup">' +
+       '<summary class="view-setup-head"><span class="view-setup-ico" aria-hidden="true">' +
+       '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10.5l5-3v9l-5-3z"/></svg></span>' +
+       '<span class="view-setup-title"><h2>' + esc(T.viewSetupHead) + "</h2>" +
+       (styleOf() ? "<small>" + esc(T.styleHead) + " · " + esc(T.styleName[styleOf().preset] || styleOf().preset) + "</small>" : "") +
+       "</span></summary>" +
+       '<div class="view-setup-body"><div class="view-setup-grid">' + styleBlock() +
+       '<div class="view-setup-cell"><span class="view-setup-kt">' + esc(T.previewHead) + "</span>" +
+       '<div class="view-switches">' +
+       '<label class="switch"><input type="checkbox" role="switch" id="tg-safe"><span>' + esc(T.toggleSafe) + "</span></label>" +
+       '<label class="switch"><input type="checkbox" role="switch" id="tg-subs" checked><span>' + esc(T.toggleSubs) + "</span></label></div>" +
+       '<p class="view-setup-note">' + esc(T.previewNote) + "</p></div></div>" +
+       sizeKey() + "</div></details>";
 
   var shotGroups = [];
   SCENES.forEach(function (s, i) {
@@ -4195,23 +4605,44 @@ window.STORYBOARD_READY = (async function () {
   var stScenes = Array.isArray(ST.scenes) ? ST.scenes.filter(function (x) { return x && typeof x === "object"; }) : [];
   var stSeqs = Array.isArray(ST.sequences) ? ST.sequences.filter(function (q) { return q && typeof q === "object"; }) : [];
   var stScene = function (no) { return stScenes.filter(function (x) { return x.no === no; })[0]; };
-  var seqHead = function (title, q) {
-    return '<div class="seq-head">' + esc(T.sequence(title)) +
-      (q && q.purpose ? '<span class="seq-purpose"> — ' + esc(q.purpose) +
-        (q.question ? ' · ' + esc(q.question) + (q.payoff ? ' → S#' + esc(String(q.payoff)) : '') : '') + "</span>" : '') + "</div>";
+  var seqNo = 0, seqOpen = false;
+  var seqHead = function (title, q, groups) {
+    var shotsIn = groups.reduce(function (n, g) { return n + g.items.length; }, 0);
+    seqNo++; seqOpen = true;
+    return '<details class="seq" open><summary class="seq-head">' +
+      '<span class="seq-no">' + (seqNo < 10 ? "0" : "") + seqNo + "</span>" +
+      '<span class="seq-main"><span class="seq-kicker">' + esc(T.seqKicker) + "</span>" +
+      '<span class="seq-title">' + esc(title) + "</span>" +
+      (q && q.purpose ? '<span class="seq-purpose">' + esc(q.purpose) + "</span>" : "") +
+      (q && q.question ? '<span class="seq-question">' + esc(q.question) + (q.payoff ? ' <b>→ S#' + esc(String(q.payoff)) + "</b>" : "") + "</span>" : "") +
+      "</span>" + '<span class="seq-stats">' + esc(T.seqStats(groups.length, shotsIn)) + "</span>" +
+      '</summary><div class="seq-body">';
   };
+  var seqClose = function () { if (!seqOpen) return ""; seqOpen = false; return "</div></details>"; };
   if (stSeqs.length === 1 && !shotGroups.some(function (g) { return g.sequence; }))
-    h += seqHead(stSeqs[0].title, stSeqs[0]);
+    h += seqHead(stSeqs[0].title, stSeqs[0], shotGroups);
   shotGroups.forEach(function (grp) {
     if (grp.sequence && grp.sequence !== prevSeq) {
-      h += seqHead(grp.sequence, stSeqs.filter(function (q) { return q.title === grp.sequence; })[0]);
+      h += seqClose() + seqHead(grp.sequence, stSeqs.filter(function (q) { return q.title === grp.sequence; })[0],
+                                shotGroups.filter(function (g) { return g.sequence === grp.sequence; }));
       prevSeq = grp.sequence;
     }
     if (hasSceneField) {
       var sc = stScene(grp.scene);
-      h += '<section class="scene-band"><div class="scene-band-head"><span class="sn">S#' +
-           esc(String(grp.scene)) + "</span><span>" + esc(grp.slug || T.sceneNamed(grp.scene)) + "</span>" +
-           (sc ? '<span class="scene-turn">' + esc(sc.event || "") + (sc.charge && sc.charge.open !== undefined && sc.charge.close !== undefined ? ' · ' + esc(String(sc.charge.open) + " → " + String(sc.charge.close)) : "") + ', ' + esc(sc.turn || "") + "</span>" : "") + "</div>";
+      var scLen = grp.items.reduce(function (n, it) { return n === null || typeof it.s.duration !== "number" ? null : n + it.s.duration; }, 0);
+      var scTitle = grp.slug || (sc && sc.title) || T.sceneNamed(grp.scene);
+      var scTurn = sc ? [ (sc.event && sc.event !== scTitle ? sc.event : "") + (sc.charge && sc.charge.open !== undefined && sc.charge.close !== undefined ? " · " + String(sc.charge.open) + " → " + String(sc.charge.close) : ""), sc.turn || "" ]
+        .filter(Boolean).join(", ") : "";
+      var scSummary = sc && typeof sc.summary === "string" ? sc.summary.trim() : "";
+      var scPlace = sc && sc.place ? ((window.SB_DOC && window.SB_DOC.locations) || []).filter(function (l) { return l && l.id === sc.place; })[0] : null;
+      h += '<details class="scene-band" open><summary class="scene-band-head"><span class="sn"><small>' + esc(T.sceneKicker) + "</small><b>" + esc(String(grp.scene)) + "</b></span>" +
+           '<span class="scene-band-main">' +
+           (scPlace || (sc && sc.place) ? '<span class="scene-band-kicker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>' + esc(scPlace && scPlace.name || sc.place) + "</span>" : "") +
+           '<span class="scene-band-title">' + esc(scTitle) + "</span>" +
+           (scTurn ? '<span class="scene-turn">' + esc(scTurn) + "</span>" : "") +
+           (scSummary ? '<p class="scene-band-synopsis">' + esc(scSummary) + "</p>" : "") + "</span>" +
+           '<span class="scene-band-stats">' + esc(T.shotsN(grp.items.length)) + (scLen !== null ? " · " + esc(durTxt(scLen)) : "") + "</span>" +
+           '</summary><div class="scene-band-body">';
     }
     grp.items.forEach(function (item) {
     var s = item.s, i = item.i, g = item.g, no = i + 1;
@@ -4220,7 +4651,7 @@ window.STORYBOARD_READY = (async function () {
     var sceneKey = g.scene, firstOfScene = item === grp.items[0];
     var narr = s.narration || [];
     h += '<article class="scene" id="shot-' + no + '"><div class="scene-head">';
-    h += '<span class="scene-no">' + esc(T.shotCap(no)) + " · " + esc(T.type[s.type] || s.type) + "</span>";
+    h += '<span class="scene-no" title="' + esc(T.shotCap(no) + " · " + (T.type[s.type] || s.type)) + '"><small>' + (LANG === "ko" ? "샷" : "SHOT") + "</small><b>" + (no < 10 ? "0" : "") + no + "</b></span>";
     if (s.visual && s.visual.video && s.visual.video.speechStatus === 'stale')
       h += '<span class="cut-carry">' + (LANG === 'ko' ? '이전 영상 참고용 · 대사 변경 후 재제작 필요' : 'Previous take only · dialogue changed, rebuild required') + '</span>';
     // Shot grammar — size tile, angle and render tile — sits on its own row under the head so
@@ -4231,12 +4662,7 @@ window.STORYBOARD_READY = (async function () {
       return '<span tabindex="0" role="img" aria-label="' + esc(tip) + '" class="shot-size' + (unknown ? " unknown" : "") + '" data-tip="' + esc(tip) + '">' +
              (icon || '<span class="sz"><b>' + esc(label) + "</b></span>") + "</span>";
     }
-    if (g.size) gram += tile(sizeIcon(g.size), T.size[g.size] || (g.size + " ?"),
-                             sizeTitle(g.size) + (g.why ? "\n\n" + g.why : ""), !T.size[g.size]);
-    if (g.angle) gram += tile(angleIcon(g.angle), T.angle[g.angle] || (g.angle + " ?"), angleTitle(g.angle), !T.angle[g.angle]);
     var rmode = renderModeOf(s, g);
-    if (rmode) gram += tile(renderIcon(rmode), T.render[rmode] || (rmode + " ?"),
-                            renderTitle(rmode) + (g.render && g.render.reason ? "\n\n" + g.render.reason : ""), !T.render[rmode]);
     var mg = s.shot && s.shot.motionGraphic;
     if (mg) {
       var mt = window.MOTION_GRAPHICS && window.MOTION_GRAPHICS.TYPES[mg.type];
@@ -4280,8 +4706,7 @@ window.STORYBOARD_READY = (async function () {
     }
     var depth = s.shot && s.shot.depth, dc = window.STRUCTURE_CONTRACT;
     if (depth || (dc && dc.depthNeeded(s))) {
-      var depthLabels = LANG === 'ko' ? { shallow: '얕은 심도', deep: '딥포커스', none: '심도 선택 없음' } : { shallow: 'Shallow depth of field', deep: 'Deep focus', none: 'No depth choice' };
-      var dmode = depth && depth.mode, dlabel = depthLabels[dmode] || (LANG === 'ko' ? '심도 미설정' : 'Depth not planned');
+      var dmode = depth && depth.mode, dlabel = T.depth[DEPTH_ICON[dmode] && dmode !== 'unset' ? dmode : 'unset'];
       var depthFindings = depthPlanFindings.filter(function (f) { return f.where === 'shot ' + no; });
       var dtip = (LANG === 'ko' ? '심도: ' : 'Depth: ') + dlabel;
       if (depth && typeof depth.reads === 'number') dtip += LANG === 'ko' ? ' · 읽을 정보 ' + depth.reads + '개' : ' · ' + depth.reads + ' thing(s) to read';
@@ -4292,8 +4717,6 @@ window.STORYBOARD_READY = (async function () {
       if (deff === 'focus-in' || deff === 'rack-focus') dtip += LANG === 'ko' ? '\n스틸 레인의 초점은 타원 마스크 흉내입니다. 같은 거리의 물체가 다르게 흐려지면 그 컷은 초점 효과 대상이 아닙니다.' : '\nThe still lane fakes focus with an elliptical mask. If objects at the same distance blur differently, this cut is not a focus-effect cut.';
       dtip += LANG === 'ko' ? '\n계획 검사입니다. 실제 초점은 이미지·영상에서 확인합니다.' : '\nPlan check. Confirm the actual focus in the image and video.';
       depthFindings.forEach(function (f) { dtip += '\n' + f.what; });
-      var farOpacity = dmode === 'shallow' ? '.25' : '1';
-      gram += '<span class="shot-size' + (depthFindings.length || !depth ? ' unknown' : '') + '" tabindex="0" role="img" aria-label="' + esc(dtip) + '" data-tip="' + esc(dtip) + '"><svg viewBox="0 0 48 32" width="48" height="32" aria-hidden="true"><circle cx="29" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="1.5" opacity="' + farOpacity + '"/><circle cx="16" cy="19" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/>' + (dmode === 'none' ? '<path d="M6 28L42 4" stroke="currentColor"/>' : '') + (depth && typeof depth.reads === 'number' ? '<text x="38" y="28" font-size="11" fill="currentColor">' + depth.reads + '</text>' : '') + '</svg></span>';
     }
     // A shot with no title (screen text only when needed — scenes-schema) builds its header from badges alone
     var headTitle = s.title || (s.type === "quote" ? s.text : "");
@@ -4314,35 +4737,47 @@ window.STORYBOARD_READY = (async function () {
     promiseTags[i].forEach(function (t) {
       h += '<span class="scene-beat beat-promise' + (t.cls ? " " + t.cls : "") + '">' + esc(t.text) + "</span>";
     });
-    h += '<span class="scene-checks">' + sceneChips[i] + "</span></div>";
+    var dur = Number.isFinite(s.duration) ? Math.round(s.duration * 10) / 10 : null;
+    h += '<span class="scene-dur"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.8V8l2.2 1.4"/></svg>' + esc(T.sec(dur === null ? "?" : dur)) + "</span></div>";
     var directionAt = directionOrder.findIndex(function (o) { return o.i === i; });
-    h += window.SHOT_DIRECTION.summary(s, i, directionAt > 0 ? directionOrder[directionAt - 1].s : null, LANG, DOC);
-    h += '<details class="shot-plan-details"><summary>' + (LANG === 'ko' ? '촬영 계획 보기' : 'Shot plan') + '</summary>';
-    h += window.FILM_TECHNIQUES.tiles(s, LANG);
-    if (gram) h += '<div class="shot-grammar">' + gram + "</div>";
-    // The picture and overlay badges are gone from here — the render tile above says what
-    // moves, and the overlay reads off the frame itself.
-    h += '<div class="shot-meta"><span class="craft">' +
-         charsOf(s).map(function (id) {
-           return '<span class="char-tag">' + esc(castName(id)) + "</span>"; }).join("") + "</span>" +
-         (s.type === "outro" ? "" :
-           '<span class="shot-info shot-feel' + (g.feel ? "" : " miss") + '"><b>' + esc(T.feelLabel) + "</b>" +
-           esc(g.feel || T.feelMissing) + "</span>") +
-         (g.info ? '<span class="shot-info"><b>' + esc(T.infoLabel) + "</b>" + esc(g.info) + "</span>" : "") +
-         (s.visual && s.visual.license ? '<span class="shot-info"><b>' + esc(T.licenseLabel) + "</b>" + esc(licenseText(s.visual.license)) + "</span>" : "") +
-         (g.infoType ? '<span class="shot-info"><b>' + esc(T.infoTypeLabel) + "</b>" + esc(g.infoType) + "</span>" : "") +
-         (g.share ? '<span class="shot-info"><b>' + esc(T.shareLabel) + "</b>" + esc(g.share) + "</span>" : "") +
-         (g.shareType ? '<span class="shot-info"><b>' + esc(T.shareTypeLabel) + "</b>" + esc(g.shareType) + "</span>" : "") +
-         (spaceTextOf(g.space) ? '<span class="shot-info"><b>' + esc(T.spaceLabel) + "</b>" + esc(spaceTextOf(g.space)) + "</span>"
-            : (genStill(s) && !FILL_FRAME[g.size] ? '<span class="shot-info shot-feel miss"><b>' + esc(T.spaceLabel) + "</b>" + esc(T.spaceMissing) + "</span>" : "")) +
-         "</div>";
-
-    h += '</details>';
-    h += '<p class="shot-generation-flow">' + esc(LANG === 'ko' ? '배경 + 캐릭터 → 샷 이미지 → 영상' : 'Background + characters → shot image → video') + '</p>';
-    h += '<h4 class="shot-output-title">' + esc(LANG === 'ko' ? '샷 이미지' : 'Shot image') + '</h4>';
-    h += '<p class="representative-frame-label">' + esc(LANG === 'ko'
-      ? '대표 프레임 미리보기 · 제작 컷은 아래에서 별도 검토합니다.'
-      : 'Below: representative frame and caption layout. This does not replace review of all production cuts.') + '</p>';
+    /* The shot's whole plan as legend icons, in reading order: render, size, angle, camera move
+       (plus focus, which adds to a move), depth. Each code value lives in the tooltip only. */
+    function chip(icon, label, tip) {
+      if (tip.indexOf(label) !== 0) tip = label + "\n" + tip;
+      return '<span class="shot-chip" tabindex="0" role="img" aria-label="' + esc(tip) + '" data-tip="' + esc(tip) + '">' + (icon || esc(label)) + "</span>";
+    }
+    var chips = "";
+    if (rmode) chips += chip(renderIcon(rmode), T.render[rmode] || rmode, renderTitle(rmode) + (g.render && g.render.reason ? "\n\n" + g.render.reason : ""));
+    if (g.size) chips += chip(sizeIcon(g.size), sizeName(g.size), sizeTitle(g.size) + (g.why ? "\n\n" + g.why : ""));
+    if (g.angle) chips += chip(angleIcon(g.angle), T.angle[g.angle] || g.angle, angleTitle(g.angle));
+    var camDir = window.SHOT_DIRECTION.cameraOf(s, LANG), camVis = (s.visual && s.visual.camera) || {};
+    var camSel = window.FILM_TECHNIQUES.selected(s).filter(function (t) { return t.entry && t.entry.category === "camera"; });
+    var moveSel = camSel.filter(function (t) { return t.entry.fields.movement && t.id !== "camera.static"; })[0] ||
+                  camSel.filter(function (t) { return t.entry.fields.movement; })[0];
+    var focusSel = camSel.filter(function (t) { return t.entry.fields.focus; })[0];
+    var moveId = moveSel ? moveSel.id : (CAM_ICON[camDir.key] && camDir.key !== "camera.rack-focus" ? camDir.key : "");
+    var camRaw = [camVis.movement, camVis.speed].filter(Boolean).join(" · ");
+    var summaryHtml = window.SHOT_DIRECTION.summary(s, i, directionAt > 0 ? directionOrder[directionAt - 1].s : null, LANG, DOC);
+    if (moveId) chips += chip(camIcon(moveId), window.FILM_TECHNIQUES.byId[moveId].label[LANG], camTitle(moveId) + (camRaw ? "\n" + camRaw : ""));
+    else if (!focusSel) chips += chip((summaryHtml.match(/<svg[\s\S]*?<\/svg>/) || [""])[0], camDir.label, camDir.medium + (camRaw ? "\n" + camRaw : ""));
+    if (focusSel) chips += chip(camIcon(focusSel.id), focusSel.entry.label[LANG], camTitle(focusSel.id));
+    chips += chip(depthIcon(dmode), dlabel || T.depth.unset, dtip || T.depth.unset);
+    if (window.RENDER_ROUTING && refLane(s, window.RENDER_ROUTING.framePlan(s)) === REF_LANES.astra_genai_msr)
+      chips += chip('<svg class="size-ico r-msr" viewBox="0 0 32 32" aria-hidden="true"><text x="16" y="19.5" text-anchor="middle" font-size="10" font-weight="800" letter-spacing="-.3" class="ico-fill">MSR</text></svg>',
+        "MSR", LANG === "ko" ? "MSR — 캐릭터 이미지 4장과 시작 이미지 1장(배경 칸)을 받아 영상을 그립니다. 첫 프레임은 고정하지 않습니다." : "MSR — renders from four character images and the start image in the background slot; no frame is pinned.");
+    // The direction-join line (시작 / 전환 미설정 …) under the row is dropped
+    h += summaryHtml.replace(/<div class="direction-join">[\s\S]*$/, "").replace(/<div class="direction-summary"[\s\S]*?<\/div>/, function () {
+      // The two principal characters MSR references (visual.character), else the first two on
+      // screen — face panels at the far end of the row, the name in the tooltip
+      var vis = s.visual || {};
+      var onScreen = Array.isArray(vis.character) && vis.character.length ? vis.character : Array.isArray(vis.characters) ? vis.characters : charsOf(s);
+      var cast = onScreen.filter(function (id) { return typeof id === "string" && id; }).slice(0, 2).map(function (id) {
+        var name = castName(id), pic = portraitOf(id);
+        return '<span class="speech-avatar shot-cast-face" tabindex="0" role="img" aria-label="' + esc(name) + '" data-tip="' + esc(name) + '"><span>' +
+          esc(Array.from(name)[0]) + "</span>" + (pic ? '<img src="' + esc(pic) + '" alt="" loading="lazy" onerror="this.hidden=true">' : "") + "</span>";
+      }).join("");
+      return '<div class="shot-chips">' + chips + (cast ? '<span class="shot-cast">' + cast + "</span>" : "") + "</div>";
+    });
 
     if (s.type === "broll") {
       var v = s.visual || {};
@@ -4372,155 +4807,11 @@ window.STORYBOARD_READY = (async function () {
         segRows[at].push(j);
       });
 
-      h += '<div class="conti">' + states.map(function (st, k) {
-        var f = fit[i + ":" + k] || {};
-        // Cut type — a still image, or a generated video made with an image as the parameter.
-        // visual.video in scenes.js (the explicit marker) is the source of truth; without it the
-        // structure decides.
-        var seg = st.seg >= 0 && narr[st.seg] ? narr[st.seg] : null;
-        var vt =
-          recOf(s) ? [T.vtRecording, ""] :
-          s.type === "outro" ? [T.vtOutro, "gen"] :
-          (s.type === "quote" && vis.clip) ? [T.vtSpeechClip(engineOf(s)), "gen"] :
-          (vis.source === "stock" && vis.clip) ? [T.vtStock, "gen"] :
-          vis.video ? [T.vtImgToVideo((vis.video && vis.video.engine) || engineOf(s)), "gen"] :
-          (seg && /^card:/.test(seg.imgPrompt || "")) ? [T.vtTyping, "gen"] :
-          (seg && seg.img) ? [T.vtArt, ""] :
-          [T.vtStill, ""];
-        var cell = '<div class="cut-head"><span class="no">' + esc(T.revealNo(k + 1)) + "</span>" + esc(st.label) +
-          '<span class="vtag' + (vt[1] ? " " + vt[1] : "") + '">' + esc(vt[0]) + "</span></div>";
-
-        // Screen — the text that appears on this cut. Letters inside the frame are tiny, so they are read here.
-        var sc = "";
-        if (recOf(s)) {
-          if (s.kicker) sc += capline(null, null, esc(s.kicker));
-          if (s.title) sc += capline(esc(strip(s.title)));
-          if (s.type === "cover" && s.stat) sc += capline(esc(s.stat), esc(s.statLabel || ""));
-          sc += (s.bullets || []).map(function (b, m) {
-            return capline(esc(b.t), b.d ? esc(b.d) : null, null, m + 1); }).join("");
-          // The portrait shooting overlay draws only kicker and title (screencast-overlay).
-          // In landscape the captions show up in the lower third too, so printing that note
-          // there would be a lie.
-          if ((s.bullets || []).length && !WIDE)
-            sc += capline(null, null, "captions are not rendered on screen — the dialogue and subtitles say them");
-          if (s.footnote) sc += capline(null, null, esc(s.footnote));
-        } else if (s.type === "cover") {
-          if (k === 0) {
-            if (s.kicker) sc += capline(null, null, esc(s.kicker));
-            if (s.title) sc += capline(esc(strip(s.title)));
-          } else if (s.stat) {
-            sc += capline(esc(s.stat), esc(s.statLabel || ""));
-          }
-        } else if (s.type === "points") {
-          if (k === 0) {
-            if (s.title) sc += capline(esc(strip(s.title)));
-            if (s.footnote) sc += capline(null, null, esc(s.footnote));
-            if (!s.title && !s.footnote) sc += capline(null, null, esc(T.noScreenText));
-          } else {
-            var b = (s.bullets || [])[st.cap];
-            if (b) sc += capline(esc(b.t), b.d ? esc(b.d) : null, null, st.cap + 1);
-          }
-        } else if (s.type === "quote") {
-          if (k === 0) {
-            sc += capline(esc(s.speaker || ""), esc(s.role || ""));
-            // On a clip quote the quote itself never appears on screen — it goes out as audio only, so that is what is written
-            if (vis.clip && s.text) sc += capline(null, null, "the quote does not appear on screen — audio only: " + esc(strip(s.text)));
-          } else if (s.text) {
-            sc += capline(null, esc(strip(s.text)));
-          }
-        } else if (s.type === "outro") {
-          if (THEME.brand) sc += capline(esc(THEME.brand));
-          if (s.title) sc += capline(esc(strip(s.title)), s.sub ? esc(s.sub) : null);
-        }
-        if (sc) cell += '<div class="cut-sec">' + esc(T.screenText) + "</div>" + sc;
-
-        // Audio — the lines that go out during this cut
-        var lines = "";
-        if (st.carry && st.seg >= 0)
-          lines += '<div class="cut-carry">line ' + (st.seg + 1) + " carries over — only the screen (the caption) changes</div>";
-        segRows[k].forEach(function (j) {
-          lines += speechHtml(narr[j], j);
-        });
-        if (!lines && s.type === "quote" && vis.clip)
-          lines = '<div class="cut-carry">speech clip — the actor speaks, so there is no TTS narration</div>';
-        if (!lines && !narr.length && k === 0 && !recOf(s))
-          lines = '<div class="speech-silent">' + esc(T.speechSilent) + '</div>';
-        if (lines) cell += '<div class="cut-sec">' + esc(T.audioSec) + "</div>" + lines;
-
-        if (k === 0 && window.STORY && window.STORY.version === "story-v2") {
-          cell += '<details class="performance-details"><summary>' + (LANG === 'ko' ? '연기·동선 상세' : 'Performance details') + '</summary>';
-          (s.performance || []).forEach(function(e) {
-            var speech = narr[e.group - 1] || {};
-            var words = e.kind === "action" ? e.text : (speech.sub || speech.tts || "");
-            cell += '<div class="cut-line"><div class="b"><b>' + esc(castName(e.character)) + ' · ' + esc(LANG === 'ko' ? (e.kind === 'action' ? '행동' : '대사') : e.kind) +
-              (e.to ? ' → ' + esc(castName(e.to)) : '') + '</b> ' + esc(words) + '</div></div>';
-          });
-          cell += '</details>';
-        }
-
-        // This path diagram belongs to the plan, never to the rendered footage.
-        if (k === 0 && window.PRODUCTION_MODE && window.PRODUCTION_MODE.isDrone(vis.camera)) {
-          var dc = vis.camera, de = window.PRODUCTION_MODE.droneErrors(dc);
-          cell += '<div class="cut-sec">' + esc('드론 경로 비행 · Drone fly-through') + '</div>';
-          if (de.length) cell += '<div class="frame-reason">' + esc(de.join('; ')) + '</div>';
-          else {
-            var dk = dc.trajectory.keys, samples = [];
-            for (var di=0;di<=80;di++) samples.push(window.PRODUCTION_MODE.droneSample(dc,dc.trajectory.seconds*di/80).position);
-            var xs=samples.map(function(p){return p[0];}), ys=samples.map(function(p){return p[1];});
-            var minX=Math.min.apply(null,xs), maxX=Math.max.apply(null,xs), minY=Math.min.apply(null,ys), maxY=Math.max.apply(null,ys);
-            var scale=200/Math.max(maxX-minX,maxY-minY,1);
-            var point=function(p){return [20+(p[0]-minX)*scale,220-(p[1]-minY)*scale];};
-            cell += '<svg viewBox="0 0 240 240" width="240" role="img" aria-label="Planned flight path, top view"><polyline fill="none" stroke="currentColor" stroke-width="2" points="' + samples.map(function(p){return point(p).join(',');}).join(' ') + '"/>' + dk.map(function(key,i){var p=point(key.position);return '<circle cx="'+p[0]+'" cy="'+p[1]+'" r="3" fill="currentColor"/><text x="'+(p[0]+5)+'" y="'+(p[1]-5)+'" fill="currentColor" font-size="10">'+(i+1)+'</text>';}).join('') + '</svg>';
-            cell += '<div class="frame-reason">' + esc(dc.variant + ' · ' + dc.trajectory.seconds + 's · ' + dc.trajectory.lensMm + ' mm') + '<br>' + dk.map(function(key,i){return esc((i+1)+'. '+key.at+'s · '+key.label+' · XYZ '+key.position.join(', ')+' · roll '+key.rollDeg+'°');}).join('<br>') + '<br>' + esc(dc.end) + '</div>';
-          }
-        }
-        var previz = vis.video && vis.video.previz;
-        var imageRefs = window.RENDER_ROUTING ? window.RENDER_ROUTING.imageReferences(s) : [];
-        var explicitFrames = imageRefs.length || vis.frames || vis.video && vis.video.lastImagePath || vis.imagePair || previz;
-        if (explicitFrames && k === 0) {
-          var fp = window.RENDER_ROUTING.framePlan(s);
-          var frameInput = function (src, label, reference) {
-            if (typeof src !== 'string' || /^[a-z][a-z0-9+.-]*:|^[/\\]{2}|[\x00-\x1f]/i.test(src)) src = '';
-            return '<figure' + (reference ? ' class="reference-input"' : '') + '><figcaption>' + esc(label) + '</figcaption>' + (src
-              ? '<a href="' + esc(src) + '" target="_blank" rel="noopener"><img src="' + esc(src) + '" alt="' + esc(label) + '" loading="lazy"></a>'
-              : '<div class="pending-frame">' + esc(T.framePending) + '</div>') + '</figure>';
-          };
-          var pair = fp.mode === 'first_last' || !!previz || imageRefs.length > 0 || !!vis.frames?.keyframes?.length;
-          var inputs = fp.mode === 'reference' ? '' : frameInput(fp.start, T.frameStart);
-          if (fp.mode === 'first_last') inputs += frameInput(fp.end, T.frameEnd);
-          (vis.frames && Array.isArray(vis.frames.keyframes) ? vis.frames.keyframes : []).forEach(function (key, i) {
-            inputs += frameInput(key.image, 'Keyframe ' + (i + 1) + ' · ' + key.atSeconds + 's · ' + key.state);
-          });
-          imageRefs.forEach(function (ref, i) {
-            var use = ref.use === 'image' ? T.refImage : ref.use === 'both' ? T.refBoth : T.refVideo;
-            inputs += frameInput(ref.path, (i + 1) + '. ' + ref.id + ' · ' + ref.role + ' · ' + use + ' · ' + ref.purpose, true);
-          });
-          // Only reference_video sends this clip to the vendor; LTX and host lanes use its frame and prompt.
-          var previzLabel = previz && previz.handoff === 'frame_and_prompt' ? T.framePreviz.replace(' · Video 1', '') : T.framePreviz;
-          if (previz) inputs += '<figure><figcaption>' + esc(previzLabel) + '</figcaption>' + (previz.clip
-            ? '<video src="' + esc(previz.clip) + '" muted loop controls playsinline preload="metadata"></video>'
-            : '<div class="pending-frame">' + esc(T.framePending) + '</div>') +
-            '<div class="frame-reason">' + esc((previz.renderer || '?') + ' · ' + (previz.seconds || '?') + 's · ' + (previz.fps || '?') + ' fps · ' +
-              (window.PRODUCTION_MODE && window.PRODUCTION_MODE.isDrone(vis.camera) ? 'drone-flythrough · ' + vis.camera.variant + ' · ' : (previz.camera && previz.camera.movement ? previz.camera.movement + ' · ' : '')) + 'sha256 ' + String(previz.sha256 || '').slice(0, 12)) + '</div></figure>';
-          // Frame 1 of the previz is the composition the source still was edited from (blender-previz.md §6.6).
-          if (previz) inputs += frameInput(previz.firstFrame || '', T.framePrevizFirst);
-          var motionPlan = s.shot && s.shot.videoDesign && s.shot.videoDesign.motion;
-          if (motionPlan) {
-            inputs += '<div class="frame-reason"><strong>' + esc(T.frameChange) + '</strong><br>' + esc(motionPlan.visibleChange || '') +
-              (motionPlan.beats || []).map(function (b) { return '<br>' + esc(b.at + 's · ' + b.state); }).join('') + '</div>';
-          }
-          inputs += '<div class="frame-reason">' + esc(fp.reason) + (fp.endState ? '<br>' + esc(T.frameEndState + fp.endState) : '') + '</div>';
-          return '<div class="conti-row' + (pair ? ' has-frame-pair' : '') + '"><div class="frame-inputs' + (pair ? '' : ' single') + (WIDE ? ' wide' : '') + '">' + inputs + '</div><div class="cut">' + cell + '</div></div>';
-        }
-        return '<div class="conti-row"><figure class="panel">' +
-          frame(s, st, k, f.tier || 0, f.statScale || 0) + "</figure>" +
-          '<div class="cut">' + cell + "</div></div>";
-      }).join("") + "</div>";
+      h += shotBodyHtml(s, narr);
 
       h += '<div id="image-references-' + esc(s.id || '') + '"></div>';
       var producedCuts = productionCutsHtml(s);
-      if (vis.video) h += '<h4 class="shot-output-title shot-video-title">' + esc(LANG === 'ko' ? '영상 생성' : 'Video generation') + '</h4>';
-      h += producedCuts || (vis.video ? '<p class="shot-references__note">' + esc(LANG === 'ko' ? '등록된 제작 영상이 없습니다. 샷 이미지로 영상을 생성하는 단계입니다.' : 'No production video registered. The shot image is the input for video generation.') + '</p>' : '');
+      h += producedCuts || (vis.video ? '<div class="production-cut-none">' + esc(LANG === 'ko' ? '아직 제작 영상이 없습니다' : 'No production video yet') + '</div>' : '');
 
       // The same note is not repeated on every scene — only the first time.
       if (!recOf(s) && s.type === "points" && narr.length && narr.length !== states.length && !carryNoted) {
@@ -4528,69 +4819,6 @@ window.STORYBOARD_READY = (async function () {
         h += '<div class="note">' + esc(T.carryNote(states.length, narr.length)) + "</div>";
       }
 
-      /* Outside the cut — background, motion, prompts, audio directions */
-      var meta = "";
-      if (recOf(s)) {
-        // The user films a shooting scene from this document — what is visible (shot), what to
-        // do (action) and which file to save it as (clip) all have to be here for the shoot to work.
-        meta += '<div class="shot">' + mark(vis.shot || "—") + "</div>";
-        if (vis.action) meta += '<div class="row"><b>' + esc(T.metaAction) + '</b><div class="v">' + mark(vis.action) + "</div></div>";
-        meta += '<div class="row"><b>' + esc(T.metaSaveAs) + '</b><div class="v"><code>' + esc(vis.clip || "— filename undecided") +
-                "</code>" + (narr.length ? " · narration over it (TTS)" : " · live voice (uses the clip audio)") + "</div></div>";
-      } else {
-        var lineImgs = narr.filter(function (n) { return n.img; });
-        if (lineImgs.length) {
-          meta += '<div class="row"><b>' + esc(T.metaArt) + '</b><div class="v">one per line · ' + lineImgs.length +
-               " total <span style='color:var(--faint)'>(light mode · white-background line art)</span></div></div>";
-          meta += '<div class="row"><b>' + esc(T.metaKeyArt) + '</b><div class="v"><code>' + esc(vis.bg || "—") + "</code> — the source for the cover still and the thumbnail</div></div>";
-          meta += lineImgs.map(function (n, j) {
-            return n.imgPrompt ? '<details class="prompt"><summary>illustration ' + (j + 1) + " prompt</summary><p>" +
-              esc(n.imgPrompt) + "</p></details>" : ""; }).join("");
-        } else if (vis.bg || s.type === "quote") {
-          meta += '<div class="row"><b>' + esc(T.metaBg) + '</b><div class="v">' +
-               (vis.bg ? "<code>" + esc(vis.bg) + "</code>" : "none — speech clip or quote card") + "</div></div>";
-        }
-        if (camOf(s))
-          meta += '<div class="row"><b>' + esc(T.metaCamera) + '</b><div class="v">' + camHtml(camOf(s)) + "</div></div>";
-        else if (vis.motion)
-          meta += '<div class="row"><b>' + esc(T.metaMotion) + '</b><div class="v">' + esc(vis.motion) + "</div></div>";
-        if (vis.video) {
-          // Motion-background scene — this image becomes the img2video source frame (scenes-schema §motion background)
-          meta += '<div class="row"><b>' + esc(T.metaVideo) + '</b><div class="v">' +
-               T.videoFromStill(esc((vis.video && vis.video.engine) || engineOf(s)), esc(vis.bg || "?")) +
-               (vis.video.clip ? " → <code>" + esc(vis.video.clip) + "</code>" : "") + "</div></div>";
-          if (vis.video.prompt)
-            meta += '<details class="prompt"><summary>' + esc(T.promptMotion) + "</summary><p>" + esc(vis.video.prompt) + "</p></details>";
-        }
-        if (vis.clip && vis.clip.prompt)
-          meta += '<details class="prompt"><summary>' + esc(T.promptSpeechClip) + "</summary><p>" + esc(vis.clip.prompt) + "</p></details>";
-        if (vis.bgPrompt)
-          meta += '<details class="prompt"><summary>' + esc(T.promptBg) + "</summary><p>" + esc(vis.bgPrompt) + "</p></details>";
-        if (vis.slide) {
-          meta += '<div class="row"><b>' + esc(T.metaSlide) + '</b><div class="v"><code>' + esc(vis.slide.file || "?") +
-               "</code> — authored in produce §3.6" +
-               (vis.slide.kind && vis.slide.kind !== "diagram" ? " · " + esc(vis.slide.kind) : "") +
-               (vis.slide.acts && vis.slide.acts.length ? " · " + esc(vis.slide.acts.join(" → ")) : "") +
-               "</div></div>";
-          if (vis.slide.plan)
-            meta += '<details class="prompt"><summary>' + esc(T.promptSlidePlan) + "</summary><p>" + esc(vis.slide.plan) +
-                 (vis.slide.labels && vis.slide.labels.length ? " · labels: " + esc(vis.slide.labels.join(", ")) : "") +
-                 "</p></details>";
-          if (vis.slide.subject && Array.isArray(vis.slide.subject.changes)) {
-            meta += '<div class="row"><b>Subject states</b><div class="v">' +
-              esc(vis.slide.subject.kind || "?") + " · " + esc(vis.slide.quality || "?") +
-              vis.slide.subject.changes.map(function (change) {
-                return '<p>g' + esc(change && change.group) + ": " + esc(change && change.before) +
-                  " → " + esc(change && change.after) + " (" + esc(change && change.driver) + ")</p>";
-              }).join("") + "</div></div>";
-          }
-        }
-      }
-      if (firstOfScene && DOC.privacy && DOC.privacy[sceneKey])
-        meta += '<div class="note pv">' + esc(T.privacyNote) + mark(DOC.privacy[sceneKey]) + "</div>";
-      if (firstOfScene && DOC.audioNotes && DOC.audioNotes[sceneKey])
-        meta += '<div class="note">' + mark(DOC.audioNotes[sceneKey]) + "</div>";
-      if (meta) h += '<div class="cmeta">' + meta + "</div>";
     }
 
     // Three or more scene notes fold away — what feeds the decision directly is privacy avoidance and the transition
@@ -4601,24 +4829,11 @@ window.STORYBOARD_READY = (async function () {
         ? '<details class="scenenotes"><summary>' + esc(T.designNotes(sn.length)) + "</summary>" + body + "</details>"
         : '<div class="scene-notes">' + body + "</div>";
     }
-    if (s.type !== "broll" && s.type !== "outro") {
-      var join = s.transition || (i === 0 ? "cut" : ""), joinKind = join.split(":")[0];
-      var joinEdit = s.edit || {}, joinDefaults = { jcut: .24, dissolve: .40, iris: .40, blur: .40, zoom: .32, push: .32, whip: .24 };
-      var joinName = T.transitionNames[join] || T.transitionNames[joinKind] || join || T.transitionMissing;
-      h += '<div class="transition" data-transition="' + esc(join) + '"><b>' + esc(T.transitionLabel) + '</b><strong>' + esc(joinName) + '</strong>';
-      if (joinKind === "dip") h += '<div>' + esc(i === 0 ? T.transitionDipOpening : T.transitionDip) + '</div>';
-      else if (joinDefaults[joinKind]) h += ' · ' + esc(String(joinEdit.transitionSeconds === undefined ? joinDefaults[joinKind] : joinEdit.transitionSeconds)) + 's';
-      else if (join === "cut") h += ' · 0s';
-      if (joinKind === "push" || joinKind === "whip") h += ' · ' + esc(join.split(":")[1] || "?");
-      if (joinEdit.reason) h += '<div><b>' + esc(T.transitionReason) + '</b>' + esc(joinEdit.reason) + '</div>';
-      if (joinEdit.continuity) h += '<div><b>' + esc(T.transitionContinuity) + '</b>' + esc(joinEdit.continuity) + '</div>';
-      if (DOC.transitions && DOC.transitions[i]) h += '<div>' + mark(DOC.transitions[i]) + '</div>';
-      h += '</div>';
-    }
     h += "</article>";
     });
-    if (hasSceneField) h += "</section>";
+    if (hasSceneField) h += "</div></details>";
   });
+  h += seqClose();
 
   /* ══ Cast ══ — the channel characters this episode uses, with the panels that will be
      handed to the generation call. Absent SB_DOC.characters, nothing is drawn. */
@@ -4883,13 +5098,27 @@ window.STORYBOARD_READY = window.STORYBOARD_READY.then(async function () {
   for (const src of ['./review-layout.js', './prop-sheet.js', './location-review-runtime.js']) {
     await new Promise(function (resolve, reject) {
       const script = document.createElement('script');
-      script.src = src; script.onload = resolve; script.onerror = reject;
+      script.src = src; script.onload = function () {
+        if (src === './review-layout.js') {
+          document.querySelector('.review-jump')?.remove();
+          const setup = document.querySelector('.view-setup'), shots = document.querySelector('.review-shots');
+          if (setup && shots) {
+            shots.before(setup);
+            // Show the shot legend open: unwrap the disclosure review-layout.js put around it.
+            // review-layout.js also moves the shot-list aside into it; drop that copy.
+            const guide = setup.querySelector('.review-detail');
+            if (guide) guide.replaceWith(...Array.from(guide.children).filter(c => c.tagName !== 'SUMMARY' && !c.matches('.review-guide-copy')));
+          }
+        }
+        resolve();
+      }; script.onerror = reject;
       document.body.appendChild(script);
     });
   }
   document.documentElement.dataset.reviewReady = 'true';
   if (/^#shot-\d+$/.test(location.hash)) {
     const target = document.getElementById(location.hash.slice(1));
+    for (let d = target?.closest('details'); d; d = d.parentElement?.closest('details')) d.open = true;
     if (target && typeof target.scrollIntoView === 'function') target.scrollIntoView({block:'start'});
   }
 }).catch(function (error) {

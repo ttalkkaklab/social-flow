@@ -28,10 +28,22 @@ import {
   storyboardApplySchema,
   storyboardReadSchema,
   structureSchema,
+  writeShotCharacters,
+  writeShotDialogue,
+  writeShotIcons,
+  writeShotPrompt,
+  shotImageRequest,
+  recordShotImage,
+  writeStoryScenes,
+  writeStorySequences,
+  writeStoryShots,
 } from '../dist/storyboard.js';
 import { TOOLS } from '../dist/tools.js';
 import { ROUTES } from '../dist/handlers.js';
 import editPlan from '../../skills/produce/references/edit-plan.js';
+import { setupProject, png } from './workflow-fixture.mjs';
+import { createRequire } from 'node:module';
+const settings = createRequire(import.meta.url)('../../skills/_shared/model-settings.js');
 
 const dirs = [];
 const tmp = () => { const d = mkdtempSync(join(tmpdir(), 'sb-')); dirs.push(d); return d; };
@@ -132,8 +144,9 @@ describe('applyPatch', () => {
   });
 
   it('a full set validates, syncs the shot labels and reports no violation', () => {
-    const r = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1), scene(2, { place: '부엌', time: '밤' })]), shots: board() } }));
+    const r = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1, { summary: '둘이 처음 만난다.' }), scene(2, { place: '부엌', time: '밤' })]), shots: board() } }));
     assert.deepEqual(r.findings.filter((f) => f.level === 'bad'), []);
+    assert.equal(r.win.STRUCTURE.scenes[0].summary, '둘이 처음 만난다.');
     assert.equal(r.synced, 4);
     assert.equal(r.win.SCENES[2].sceneSlug, '부엌 / 밤');
     assert.equal(r.win.SCENES[2].sequence, undefined, 'one sequence writes no shot label');
@@ -344,16 +357,14 @@ describe('checkStoryboard', () => {
     // The contract half still speaks: this fixture has no STORY / PRODUCTION / render modes.
     assert.ok(r.contract.length > 0);
   });
-  it('the story pass defers the camera-continuity records in apply and check alike', () => {
+  it('a write runs no creative rule; storyboard_check reports it and the story pass defers camera continuity', () => {
     // Two same-size adjacent picture shots with no coverage — the 30° rule applies in the full check only.
     const shots = board();
     shots[1].shot.size = 'mcu';
     const dir = tmp();
-    const full = applyStoryboard(storyboardApplySchema.parse({ path: dir, set: { structure: structure([scene(1), scene(2)]), shots }, globals: { FORMAT: 'shorts-9x16', COMPREHENSION: comprehension }, dryRun: true }));
-    assert.ok(full.findings.some((f) => f.level === 'warn' && /adjacent picture cut/.test(f.what)), JSON.stringify(full.findings));
     const draft = applyStoryboard(storyboardApplySchema.parse({ path: dir, draft: true, set: { structure: structure([scene(1), scene(2)]), shots }, globals: { FORMAT: 'shorts-9x16', COMPREHENSION: comprehension } }));
-    assert.ok(!draft.findings.some((f) => f.level === 'bad'), JSON.stringify(draft.findings));
-    assert.ok(draft.findings.some((f) => f.level === 'later' && /adjacent picture cut/.test(f.what)));
+    assert.ok(draft.written && !draft.findings.some((f) => /adjacent picture cut/.test(f.what)), JSON.stringify(draft.findings));
+    assert.ok(checkStoryboard({ path: dir }).structure.some((f) => f.level === 'warn' && /adjacent picture cut/.test(f.what)));
     const r = checkStoryboard({ path: dir, draft: true });
     assert.ok(!r.structure.some((f) => f.level === 'bad'), JSON.stringify(r.structure));
     assert.ok(r.structure.some((f) => f.level === 'later' && /adjacent picture cut/.test(f.what)));
@@ -389,13 +400,159 @@ describe('checkStoryboard', () => {
   });
 });
 
+describe('story first, then characters and lines', () => {
+  it('each layer needs the one before it, and a new shot plays at the end of its scene', () => {
+    const dir = tmp();
+    assert.throws(() => writeStoryScenes({ path: dir, scenes: [{ sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬' }] }), /story_order/);
+    writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    assert.throws(() => writeStoryShots({ path: dir, shots: [{ scene: 1, summary: '샷' }] }), /story_order/);
+    writeStoryScenes({ path: dir, scenes: [1, 2].map((no) => ({ sequence: 'q1', no, place: '숲', time: '낮', event: 'e', summary: '씬 ' + no })) });
+    writeStoryShots({ path: dir, shots: [{ scene: 2, summary: 'b' }, { scene: 1, summary: 'a1' }, { scene: 1, summary: 'a2' }] });
+    const { win } = readBoard(dir);
+    assert.equal(win.STORY.version, 'story-v2');
+    assert.deepEqual(win.SCENES.map((s) => s.summary), ['a1', 'a2', 'b']);
+    assert.deepEqual(win.STRUCTURE.sequences[0].scenes, [1, 2]);
+  });
+  it('characters wait for a complete story; lines wait for the shot\'s characters', () => {
+    const dir = tmp();
+    writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    writeStoryScenes({ path: dir, scenes: [1, 2].map((no) => ({ sequence: 'q1', no, place: '숲', time: '낮', event: 'e', summary: '씬 ' + no })) });
+    writeStoryShots({ path: dir, shots: [{ scene: 1, summary: 'a' }] });
+    writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: [{ id: 'mina' }, { id: 'joon' }, { id: 'narrator' }] }));
+    assert.throws(() => writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }] }), /story_order.*scene 2 has no shot/);
+    writeStoryShots({ path: dir, shots: [{ scene: 2, summary: 'b' }] });
+    assert.throws(() => writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'mina', tts: '안녕' }] }] }), /story_order/);
+    assert.throws(() => writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['ghost'] }] }), /cast_unknown/);
+    writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: [] }] });
+    assert.throws(() => writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'joon', tts: '야', delivery: 'on_screen' }] }] }), /story_order/);
+    writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'mina', tts: '안녕' }, { speaker: 'narrator', tts: '그날 밤.' }] }] });
+    const shot = readBoard(dir).win.SCENES[0];
+    assert.deepEqual(shot.visual.character, ['mina']);
+    assert.deepEqual(shot.narration.map((l) => [l.id, l.speaker, l.delivery]), [['s0001-l1', 'mina', 'on_screen'], ['s0001-l2', 'narrator', 'voiceover']]);
+    const bad = (patch) => applyStoryboard({ path: dir, draft: true, dryRun: true, ...patch }).findings.filter((f) => f.level === 'bad').map((f) => f.what);
+    assert.match(bad({ shotsById: [{ id: 's0001', shot: { ...shot, visual: {} } }] }).join(), /story_order: lines before characters/);
+    assert.match(bad({ insertShots: [{ after: 0, shots: [{ type: 'points', title: 'no story' }] }] }).join(), /story_order: no summary/);
+  });
+});
+
+describe('icon attributes come after every shot\'s characters', () => {
+  // A story-first board with two shots in one scene and mina in the cast.
+  const storyBoard = () => {
+    const dir = tmp();
+    writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    writeStoryScenes({ path: dir, scenes: [{ sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬' }] });
+    writeStoryShots({ path: dir, shots: [{ scene: 1, summary: 'a' }, { scene: 1, summary: 'b' }] });
+    writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: [{ id: 'mina' }] }));
+    return dir;
+  };
+  it('a move is a camera technique on a video cut and the still effect on a still cut', () => {
+    const dir = storyBoard();
+    writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }] });
+    assert.throws(() => writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'ms' }] }), /story_order.*s0002 has no characters/);
+    writeShotCharacters({ path: dir, shots: [{ id: 's0002', characters: [] }] });
+    assert.throws(() => writeShotIcons({ path: dir, shots: [{ id: 's0001', move: { id: 'camera.low', reason: 'x' } }] }), /not a camera move/);
+    writeShotIcons({ path: dir, shots: [
+      { id: 's0001', render: { mode: 'generated_video', reason: 'continuous action' }, size: 'ms', angle: 'eye',
+        move: { id: 'camera.dolly-in', reason: 'approach the reaction' }, depth: { mode: 'shallow', reads: 1, focus: 'eyes' },
+        frames: { mode: 'reference', reason: 'MSR keeps identity' } },
+      { id: 's0002', render: { mode: 'still_camera', reason: 'quiet place' }, move: { id: 'push', reason: 'settle in' } },
+    ] });
+    const [video, still] = readBoard(dir).win.SCENES;
+    assert.deepEqual(video.shot.techniques.map((t) => t.id), ['camera.dolly-in']);
+    assert.equal(video.visual.camera.movement, 'dolly in');
+    assert.equal(video.visual.frames.mode, 'reference');
+    assert.equal(still.shot.render.camera.effect, 'push');
+    assert.equal(still.shot.techniques, undefined);
+  });
+  it('only a board started with story_sequence holds every writer to the order', () => {
+    const dir = storyBoard();
+    const shot = readBoard(dir).win.SCENES[0];
+    const bad = (path, patch) => applyStoryboard({ path, draft: true, dryRun: true, ...patch }).findings.filter((f) => f.level === 'bad').map((f) => f.what).join();
+    assert.match(bad(dir, { shotsById: [{ id: 's0001', shot: { ...shot, shot: { size: 'ms' } } }] }), /story_order: icon attributes before characters/);
+    assert.match(bad(dir, { globals: { STORY: { version: 'story-v2' } } }), /story_order: STORY.authoring/);
+    const legacy = tmp();
+    applyStoryboard(storyboardApplySchema.parse({ path: legacy, set: { structure: structure([scene(1)]), shots: [{ type: 'points', scene: 1, shot: { size: 'ms' } }] }, globals: { STORY: { version: 'story-v2' } } }));
+    assert.doesNotMatch(bad(legacy, { transitions: [{ no: 1, transition: 'cut', reason: 'opening' }] }), /story_order/);
+  });
+  it('a new board inside an episode starts with story_sequence', () => {
+    const root = tmp(), episode = join(root, 'data/c/episodes/e'), dir = join(episode, 'storyboard');
+    mkdirSync(dir, { recursive: true });
+    assert.throws(() => applyStoryboard(storyboardApplySchema.parse({ path: dir, set: { structure: structure([scene(1)]), shots: [{ type: 'points', scene: 1 }] } })), /story_order: a new episode board/);
+    assert.equal(writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] }).written, true);
+  });
+});
+
+describe('images and the video prompt follow the icon attributes', () => {
+  // A project whose episode board has an MSR shot and a first_last shot with mina, her sheet panels and a room.
+  const pictureBoard = () => {
+    const root = tmp(), dir = join(root, 'data/c/episodes/e/storyboard'), sheet = join(root, 'data/c/assets/characters/mina');
+    mkdirSync(sheet, { recursive: true }); mkdirSync(join(dir, 'places'), { recursive: true });
+    setupProject(root);
+    for (const name of ['face', 'body', 'back']) writeFileSync(join(sheet, name + '.png'), png);
+    writeFileSync(join(sheet, 'panels.json'), JSON.stringify({ panels: { face: { file: 'face.png' }, front: { file: 'body.png' }, back: { file: 'back.png' } } }));
+    writeFileSync(join(dir, 'places/room.png'), png);
+    writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    writeStoryScenes({ path: dir, scenes: [{ sequence: 'q1', no: 1, place: '방', time: '밤', event: 'e', summary: '씬' }] });
+    writeStoryShots({ path: dir, shots: [{ scene: 1, summary: 'a' }, { scene: 1, summary: 'b' }] });
+    writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: [{ id: 'mina' }] }));
+    applyStoryboard({ path: dir, draft: true, globals: { SB_DOC: { locations: [{ id: 'room', name: '방', imageUrl: 'places/room.png' }] } } });
+    writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: ['mina'] }] });
+    writeShotDialogue({ path: dir, shots: [{ id: 's0002', lines: [{ speaker: 'mina', tts: '안녕' }] }] });
+    return { root, dir };
+  };
+  const icons = (dir) => writeShotIcons({ path: dir, shots: [
+    { id: 's0001', render: { mode: 'generated_video', reason: 'r' }, size: 'ms', angle: 'eye', move: { id: 'camera.dolly-in', reason: 'r' }, frames: { mode: 'reference', reason: 'MSR' } },
+    { id: 's0002', render: { mode: 'generated_video', reason: 'r' }, size: 'mcu', angle: 'eye', frames: { mode: 'first_last', reason: 'r', endState: 'e' } },
+  ] });
+  const make = (dir, id, frame = 'start', extra = {}) => {
+    const args = { path: dir, id, frame, prompt: 'Mina waits by the window.', ...extra };
+    const request = shotImageRequest(args);
+    writeFileSync(request.file, png);   // the picture the image model returns
+    recordShotImage(args, request);
+    return request;
+  };
+  it('a frame composes the place, then the sheet panels, after every shot has its icons', () => {
+    const { root, dir } = pictureBoard();
+    assert.throws(() => shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'p', location: 'room' }), /story_order.*no render route/);
+    icons(dir);
+    const start = make(dir, 's0001', 'start', { location: 'room' });
+    assert.deepEqual(start.inputs.map((f) => f.split('/').slice(-2).join('/')), ['places/room.png', 'mina/face.png', 'mina/body.png', 'mina/back.png']);
+    assert.match(start.prompt, /Image 1 shows the room location\. Image 2 shows mina's face and hair\..*Medium shot, waist up, at eye level/);
+    const shot = readBoard(dir).win.SCENES[0];
+    assert.equal(shot.visual.frames.start, 'images/s0001-start-v1.png');
+    assert.equal(shot.visual.bg, shot.visual.frames.start);
+    assert.deepEqual(shot.visual.references.map((r) => [r.role, r.use]), [['character', 'both'], ['character', 'both'], ['character', 'both'], ['background', 'image']]);
+    assert.throws(() => shotImageRequest({ path: dir, id: 's0001', frame: 'end', prompt: 'p' }), /story_order.*first_last/);
+    assert.equal(make(dir, 's0001').requestId, 's0001-start-v2');
+    settings.saveSettings(root, { image: { engine: 'astra-genai', model: 'z-image-turbo' }, video: { engine: 'seedance', model: 'dreamina-seedance-2-0-260128', resolution: '720p' }, speech: { engine: 'none' } },
+      { expectedRevision: settings.readSettings(root).revision, request: 'Fixture: a one-picture image model' });
+    assert.throws(() => shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'p', location: 'room' }), /image_references_unsupported/);
+  });
+  it('the video prompt reads the icon attributes after every picture exists', () => {
+    const { dir } = pictureBoard();
+    icons(dir);
+    make(dir, 's0001', 'start', { location: 'room' });
+    assert.throws(() => writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns.' }), /story_order.*s0002 has no start image/);
+    make(dir, 's0002', 'start', { location: 'room' });
+    assert.throws(() => writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns.' }), /s0002 has no end image/);
+    assert.match(make(dir, 's0002', 'end').inputs[0], /images\/s0002-start-v1\.png$/);
+    const msr = writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns to the door.' }).prompt;
+    assert.match(msr, /^Medium shot, waist up, at eye level\. Camera: dolly in.*Mina turns to the door\.$/);
+    const framed = writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', end: 'she smiles' }).prompt;
+    assert.equal(framed, 'Start from the given first frame. Mina looks up. Mina says: "안녕". End on the given last frame: she smiles.');
+    assert.equal(readBoard(dir).win.SCENES[1].visual.video.prompt, framed);
+    assert.throws(() => writeShotPrompt({ path: dir, id: 's0002', action: '미나가 웃는다' }), /video_prompt_language/);
+  });
+});
+
 describe('tool surface', () => {
   it('the four tools exist with handlers and local hints', () => {
-    for (const name of ['storyboard_read', 'storyboard_apply', 'storyboard_check', 'scenario_check']) {
+    for (const name of ['storyboard_read', 'storyboard_apply', 'storyboard_check', 'scenario_check',
+      'story_sequence', 'story_scene', 'story_shot', 'shot_characters', 'shot_dialogue', 'shot_icons', 'shot_image', 'shot_prompt']) {
       const tool = TOOLS.find((t) => t.name === name);
       assert.ok(tool, `missing tool ${name}`);
       assert.equal(typeof ROUTES[name], 'function');
-      assert.equal(tool.annotations.openWorldHint, false);
+      assert.equal(tool.annotations.openWorldHint, name === 'shot_image');
       assert.match(tool.description, /Use it/);
       assert.match(tool.description, /Do NOT/);
       assert.match(tool.description, /Returns:/);

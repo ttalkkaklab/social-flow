@@ -1,6 +1,6 @@
 import { buildNativeImageBody, recoverNativeImage } from './astra-genai-native-image.js';
 import { GenaiRequestError } from './astra-genai-client.js';
-import { requireCompositionReference, requireWorkflow, workflowRevision, workflowEpisode } from './production-workflow.js';
+import { workflowEpisode } from './production-workflow.js';
 import * as fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -33,7 +33,6 @@ const authorizationSchema = z.object({ reference: z.string().min(1), maxUsd: z.n
   maxConcurrent: z.number().int().min(1).max(16).default(1), maxAttempts: z.number().int().min(1).max(20).default(3),
   openingSpendUsd: z.number().finite().nonnegative().optional() }).strict();
 export interface ImagePlan {
-  workflowRevision?: string;
   version: 1; id: string; directory: string; assetId: string; requestId: string; tool: string;
   args: Record<string, unknown>; sourceArgs: Record<string, unknown>; selection: Selection; source: string;
   contextRevision: string; inputs: Record<string, string>; outputFile?: string;
@@ -82,7 +81,6 @@ function bindSelection(tool: string, input: Record<string, unknown>, selection: 
 export function planImage(raw: unknown): ImagePlan {
   gate('image_plan');
   const input = imagePlanSchema.parse(raw);
-  requireWorkflow(input.directory, 'image', input.assetId);
   const context = imageContext(input.directory, input.assetId);
   const { selection } = context;
   let tool = input.tool;
@@ -112,15 +110,13 @@ export function planImage(raw: unknown): ImagePlan {
     if (!(selection.engine === 'gpt-image' ? (ext === 'jpg' ? ['.jpg', '.jpeg'] : ['.' + ext]) : ['.png']).includes(extension)) throw new Error('image_output_extension_mismatch');
     if (!withinDirectory(context.directory, outputFile)) throw new Error('image_output_outside_directory');
   }
-  requireWorkflow(input.directory, 'image', input.assetId, outputFile);
-  requireCompositionReference(input.directory, input.assetId, args, outputFile);
   const inputs = selection.engine === 'host' ? {} : inputFiles(args, context.directory);
   if (selection.engine === 'astra-genai-native') buildNativeImageBody(args, tool === 'astra_genai_image_edit');
   if (selection.engine === 'astra-genai')
     buildGenaiImageBody((tool === 'astra_genai_edit' ? genaiImageEditSchema : genaiImageSchema).parse(args));
   if (outputFile && Object.hasOwn(inputs, outputFile)) throw new Error('image_output_overwrites_input');
   const quote = imageQuote(selection.engine, selection.model, input.reserveUsd);
-  const body = { workflowRevision: workflowRevision(input.directory), version: 1 as const, directory: context.directory, assetId: input.assetId, requestId: input.requestId,
+  const body = { version: 1 as const, directory: context.directory, assetId: input.assetId, requestId: input.requestId,
     tool: tool as string, args, sourceArgs: input.args, selection, source: context.source, contextRevision: context.revision,
     inputs, ...(outputFile ? { outputFile } : {}), quote, execution: selection.engine === 'host' ? 'host_handoff' as const : 'server' as const };
   const plan = { ...body, id: routingHash(body) };
@@ -145,9 +141,6 @@ export async function executeImage(raw: unknown, dispatch: ImageDispatch): Promi
   const plan: ImagePlan = JSON.parse(fs.readFileSync(path.join(directory, '.work/image-routing/plans', input.planId + '.json'), 'utf8'));
   const { id, ...body } = plan;
   if (id !== input.planId || routingHash(body) !== id || plan.directory !== directory) throw new Error('image_plan_invalid');
-  requireWorkflow(directory, 'image', plan.assetId, plan.outputFile);
-  requireCompositionReference(directory, plan.assetId, plan.args, plan.outputFile);
-  if (plan.workflowRevision !== workflowRevision(directory)) throw new Error('workflow_plan_stale: prepare a new image plan');
   if (plan.execution === 'host_handoff') throw new Error('host_handoff_required: call the selected host tool, never substitute an API');
   gate(plan.tool);
   const priorJobs = readImageState(directory)?.jobs;

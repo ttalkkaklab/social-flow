@@ -17,48 +17,32 @@ Channel-based short-form/long-form content pipeline Claude Code plugin.
 - Initial style, ratio and format are asked once at project setup, then reused.
 - The static-ground limit is guidance.
 
-## Production order (owner directive, 2026-10-19)
+## Production order (owner directive, 2026-10-19; checks removed 2026-10-31)
 
-Project setup must be ready before any episode authoring. Then complete characters
-(text + images), text storyboard (content, dialogue and narration), props (text + images),
-backgrounds (text + images), image storyboard, and finally video, in that order.
-Use `production_workflow` to register and complete each stage. Actual files and their
-hashes are required; pending images do not complete a visual stage. Changed upstream
-files require rewind and revalidation of downstream stages. Reuse inspected artifacts;
-never regenerate solely to migrate an existing episode. This ordering is an explicit
-execution contract and overrides the older guidance-only rule for production order.
-Explicit text-only requests stop at text; missing required images are reported, not
-silently skipped or generated without spending authorization. Empty character, prop or
-background categories need an explicit not-applicable reason. Present the scenario
-before detailed text authoring; presentation does not add an approval pause.
-Use the bundled storyboard HTML and verify its export. Delegated authors use the same
+Project setup must be ready before any episode authoring. Then characters (text + images),
+the story and its shots, props (text + images), backgrounds (text + images), the shots'
+images, and finally video, in that order. Explicit text-only requests stop at text; missing
+required images are reported, not silently skipped or generated without spending
+authorization. Present the scenario before detailed text authoring; presentation does not
+add an approval pause. Use the bundled storyboard HTML. Delegated authors use the same
 order and deliverables. See `skills/_shared/production-workflow.md`.
 
-## Fixed cut stages (owner directive, 2026-10-19, later clarification)
+## Checks removed for speed (user directive, 2026-10-31)
 
-Cut storyboard production uses seven separate skills in fixed order: review-context ->
-review-camera -> compose-blender -> generate-cut-images -> review-cut-images ->
-generate-cut-videos -> review-cut-videos. Autoproduce coordinates; the server enforces
-stage completion, current evidence and rewind. Character, prop and background sheets
-remain preparation assets. Context review follows text; props/backgrounds finish before
-camera review. Required Blender still compositions precede cut image generation. Animated
-video previz remains optional. No renderer fallback is permitted for these cut stages.
-review-cut-images runs only when the user asks for an image review (owner directive,
-2026-10-31); otherwise beginning video records image_review as skipped over the current
-image hashes. This overrides the earlier guidance-only review policy for this scope.
-
-Context review uses a fresh independent reviewer with audience-visible actions and words
-only, before synopsis, motives or author explanations. Test what an unbriefed viewer can
-understand and cite the planned beat/cut showing each consequential fact. Missing causes,
-knowledge acquisition or required shots need actual story repairs, not metadata excuses.
-Authors repair; independent reviewers recheck. Scores alone cannot complete a stage.
-Existing boards can re-enter a stage by command; reuse inspected media and rewind only
-affected dependencies. No review command implies new paid generation or publication.
-See skills/_shared/production-workflow.md for receipts, limits and command boundaries.
+Production is too slow, so every check except the story order goes until the quality is
+known; checks come back afterwards. `production_workflow` is an optional progress record:
+stages complete in any order and no other tool reads it. Image and video plans, storyboard
+writes, Blender renders and assembly no longer wait for workflow stages, independent
+reviews, Blender compositions or reviewed media. `storyboard_apply` refuses only an
+unreadable board and the story order; `storyboard_check` runs every other rule on request.
+review-context, review-camera, compose-blender, review-cut-images and review-cut-videos run
+only when the user asks. Spending limits, generation authorization, adapter input validation,
+`video_prompt_language`, `msr_character_limit` and the voice-lane rules stay. Existing
+episodes are regenerated in the new order rather than migrated.
 
 ## Guided automation (owner directive, 2026-10-16)
 
-CTA checks are removed. Outside the fixed cut workflow, creative structure, writing style,
+CTA checks are removed. Creative structure, writing style,
 camera direction, review scores, frozen stamps and subjective quality belong primarily
 in skills as guidance, not automatic execution gates. Continue authorized work with honest findings and
 `not_reviewed` or stale evidence instead of manufacturing a passing review. A user
@@ -97,7 +81,8 @@ so its lines get no per-line TTS: `speech_manage` plans and binds an MSR shot as
 (line revisions, no line audio) and an edited line marks the clip stale (2026-10-31).
 A cut without dialogue can use MSR or img2video. A character's default MSR references are
 its sheet panels — face close-up, headless front and headless back (2026-10-31): one
-character uses all three; two use each face, then each front; the background goes last.
+character uses all three; two use each face, then each front; the shot's start image (its characters,
+place and props composed by `shot_image`) takes the background slot, and the plain place picture stays out.
 At most two characters take references; anyone else on screen is described in the action
 and drawn by the model, and `video_plan` refuses references for a third character
 (`msr_character_limit`). `video_plan` names the panels that show one character and lays the
@@ -118,6 +103,53 @@ naming a retired engine reads `migration_required` in settings and fails `video_
 regenerate solely to migrate. MSR keeps the contract above. Seedance binds each speaker's
 image and sample in the prompt (`@Image N`/`@Audio N` on 2.5, `Image N`/`Audio N` on 2.0) and
 rejects real human faces, so photoreal people go to the LTX lanes.
+
+## One storyboard template (user directive, 2026-10-31)
+
+`skills/storyboard/references/storyboard-html-template.html` is the storyboard design for every
+episode. `storyboard-html.js` copies it with its helpers, keeping only `<title>` and the
+`SB_DOC` block. Design changes go into the bundled template, not into an episode or library copy. Each shot and
+`STRUCTURE` scene carries a one-sentence `summary` of its story for the review.
+
+## Story, characters and lines, icons, images, prompt, approved video (user directive, 2026-10-31)
+
+Once the scenario is settled, the storyboard's first step writes only the story, one layer at a
+time: `story_sequence` → `story_scene` → `story_shot` (one sentence per shot). No image, speech,
+prompt, camera or dialogue work happens in it. The second step sets each shot's characters with
+`shot_characters` (at most two, or none), then each character's lines with `shot_dialogue`. The
+third sets the attributes the review's icon row shows with `shot_icons`: render route, size,
+angle, camera move, focus, depth and frame plan (`reference` is MSR). Each tool refuses a layer
+whose parent is missing (`story_order`); `shot_characters` waits for a story with no gaps and
+`shot_icons` for every shot's characters. Inside an episode a new board starts with
+`story_sequence` — `storyboard_apply` does not create one — and carries
+`STORY.authoring:"story-first"`; on such a board every writer refuses a shot without its story,
+and lines or icon attributes before the shot's characters. Older boards keep their contract.
+`production_workflow` completes a story-v2 `text_storyboard` only with every shot story and
+every shot's characters written (`story_outline_required`).
+
+The fourth step makes each picture shot's start image with `shot_image`, from its characters'
+sheet panels (one character: face, headless front, headless back; two: each face, then each
+front), its place (`SB_DOC.locations` image) and props, with a prompt built from its size,
+angle, depth and techniques, the episode style and an English description; it runs
+`image_plan` → `image_execute` with the saved model. An end image follows only for a
+`first_last` shot (`frame:"end"`, edited from the start image). A model that takes one
+picture refuses (`image_references_unsupported`); the user chooses the replacement. The fifth
+writes each `generated_video` shot's English video prompt with `shot_prompt` from its icon
+attributes, on-screen lines and an English action; `video_plan` sends it when its args name no
+prompt. `shot_image` waits for every shot's icon attributes and `shot_prompt` for every
+picture shot's images. On MSR the start image rides in the background slot and the plain
+place picture stays out. Each shot's video then waits for the user's yes to its plan
+(`video_approve {planIds}`), or their approval of every shot (`video_approve {auto:true}`);
+`video_execute` refuses otherwise (`video_approval_required`). The session never records an
+approval the user did not give.
+
+## English video prompts (user directive, 2026-10-31)
+
+Every video prompt is English on every adapter, Seedance 2.5 included. Only dialogue uses the
+video's language, inside quotation marks. `video_plan` and the Seedance adapter refuse
+non-Latin letters outside quotes (`video_prompt_language`). Assembled prompts name a cast member
+with a non-Latin name by character id and report a non-English voice description for translation;
+`speech_manage` warns when its scene videoPrompt carries authored text in another language.
 
 ## Two principal characters per shot (user directive, 2026-10-31)
 
@@ -372,7 +404,7 @@ fights the clip drifts. Imported clips (`visual.reuse`), stock footage, recordin
 carry none, and neither do b-roll and speech clips. The renderer is the
 saved `production.previzRenderer` (`PRODUCTION.previz`); when none is saved, the author picks one
 and records it as an assistant decision — no renderer or model question is asked. Episode video
-runs through `video_catalog → video_plan → video_execute`; a direct adapter call on a configured
+runs through `video_catalog → video_plan → video_approve → video_execute`; a direct adapter call on a configured
 episode needs `videoContext`. Contract: `skills/storyboard/references/blender-previz.md` §6 and
 `production-mode.md`.
 
