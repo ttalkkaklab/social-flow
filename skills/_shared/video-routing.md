@@ -72,7 +72,8 @@ window.PRODUCTION.videoAuthorization = {
 Limits apply per episode across processes on a local filesystem. The cap includes
 completed estimated/settled costs, pending reservations and imported historical
 video events. Unknown historical spending stops migration; reconcile it against
-provider billing first. This is an application reservation limit, not a provider-side
+provider billing first, then record the total as `videoAuthorization.openingSpendUsd`,
+which replaces the event import when the episode's routing state is first created. This is an application reservation limit, not a provider-side
 guaranteed invoice cap. Self-hosted API cost is zero; infrastructure is excluded.
 Seedance reserves padded pixel costs and maximum reference duration, then settles
 reported completion tokens. Other providers retain the quoted estimate, explicitly
@@ -89,11 +90,15 @@ its reseed count is that script's own setting, and each reseed is a separately r
 If an adapter unexpectedly submits multiple jobs, every reported provider ID is
 retained and the request remains ambiguous even if the adapter returns an earlier clip. `video_status`
 reads the original provider ID, reserved cost, tokens and result without network I/O.
-After a timeout or crash, inspect that provider ID at the provider and reconcile the
-terminal state and billing. There is no automated provider polling/reconciliation
-command yet. Do not release reservations, invent a new request ID or delete state
-merely because the client timed out. A stale lock requires confirming its owning
-process has exited before manually removing only `state.lock`.
+A request the provider explicitly rejected (a 4xx on submission, an adapter error before
+submission, or a job the provider reports failed) closes as `failed` and frees its
+concurrency slot; one never submitted is settled at $0, a submitted one keeps its
+reservation until reconciled. After a timeout or crash, inspect that provider ID at the
+provider, then close the request with `video_status action:reconcile` with the terminal
+`evidence` and the verified `spentUsd` (`executorStopped:true` for a request still marked
+submitting). Do not release reservations, invent a new request ID or delete state
+merely because the client timed out. A `state.lock` whose owning process has exited on
+this host, or that is older than a minute, is recovered by the next transaction.
 
 Managed requests write the existing usage event stream once after dispatch, using
 normalized arguments. Legacy cost reports remain estimates. Routing state is the

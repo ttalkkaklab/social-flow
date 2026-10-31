@@ -395,6 +395,8 @@ export interface SeedanceGenerationResponse {
   /** Token count the vendor bills on — this, not an estimated price conversion, is the actual billing basis */
   completionTokens?: number;
   taskId?: string;
+  /** Nothing is running at the vendor: rejected before or at submission, or the task itself ended failed. */
+  terminal?: boolean;
   sourceImage?: string;
   lastImage?: string;
   referenceImages?: string[];
@@ -459,10 +461,13 @@ async function createTask(apiKey: string, body: CreateTaskBody): Promise<string>
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(5 * 60_000),
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to create video task: ${describeHttpError(response.status, await response.text())}`);
+    // Same rule as the GenAI transport: an explicit 4xx answer (except timeout/conflict) created no task.
+    const terminal = response.status >= 400 && response.status < 500 && ![408, 409, 425].includes(response.status);
+    throw Object.assign(new Error(`Failed to create video task: ${describeHttpError(response.status, await response.text())}`), { terminal });
   }
 
   const json = (await response.json()) as { id?: string };
@@ -473,6 +478,7 @@ async function createTask(apiKey: string, body: CreateTaskBody): Promise<string>
 async function getTask(apiKey: string, taskId: string): Promise<TaskStatus> {
   const response = await fetch(`${arkBaseUrl()}/contents/generations/tasks/${encodeURIComponent(taskId)}`, {
     headers: { Authorization: `Bearer ${apiKey}` },
+    signal: AbortSignal.timeout(60_000),
   });
 
   if (!response.ok) {
@@ -493,16 +499,21 @@ async function awaitVideoAndSave(
   taskId: string,
   outputPath: string,
   filename: string,
-): Promise<{ videoPath: string; task: TaskStatus } | { error: string }> {
+): Promise<{ videoPath: string; task: TaskStatus } | { error: string; terminal?: boolean }> {
+  let retried = false;
   for (let poll = 1; poll <= MAX_POLLS; poll += 1) {
     console.error(`[Seedance] Generation in progress... (polling ${poll}/${MAX_POLLS})`);
     await sleep(POLL_INTERVAL_MS);
 
-    const task = await getTask(apiKey, taskId);
+    // One failed status read in a row (a 5xx or a dropped connection) waits for the next poll;
+    // only the GET repeats, never the paid task creation.
+    let task: TaskStatus;
+    try { task = await getTask(apiKey, taskId); retried = false; }
+    catch (error) { if (retried) throw error; retried = true; continue; }
 
     if (task.status === 'failed' || task.status === 'expired' || task.status === 'cancelled') {
       const reason = task.error?.message || task.status;
-      return { error: `Generation ${task.status}: ${reason}` };
+      return { error: `Generation ${task.status}: ${reason}`, terminal: true };
     }
     if (task.status !== 'succeeded') continue;
 
@@ -513,7 +524,7 @@ async function awaitVideoAndSave(
     // rejecting after receiving tens of MB wastes bandwidth, and the result URL
     // disappears after 24 hours so there's no retry either.
     const fullPath = resolveOutputFile(outputPath, filename, 'video');
-    const download = await fetch(videoUrl);
+    const download = await fetch(videoUrl, { signal: AbortSignal.timeout(10 * 60_000) });
     if (!download.ok) {
       return { error: `Failed to download video: HTTP ${download.status} (URL is valid for 24 hours)` };
     }
@@ -751,10 +762,11 @@ function toResponse(
   };
 }
 
-function toFailure(error: unknown): SeedanceGenerationResponse {
+/** Before the POST nothing was sent; after it, only an explicit rejection proves no task exists. */
+function toFailure(error: unknown, posted: boolean): SeedanceGenerationResponse {
   const message = error instanceof Error ? error.message : String(error);
   console.error(`[Seedance] Error: ${message}`);
-  return { success: false, error: message };
+  return { success: false, error: message, terminal: !posted || (error as { terminal?: unknown })?.terminal === true };
 }
 
 // ── The 3 generation functions ──────────────────────────────────────
@@ -764,8 +776,10 @@ export async function generateFromText(
   request: SeedanceText2VideoRequest,
 ): Promise<SeedanceGenerationResponse> {
   const apiKey = requireArkKey();
+  let posted = false;
   try {
     console.error(`[Seedance] Starting text-to-video generation... (model: ${request.model})`);
+    posted = true;
     const taskId = await createTask(apiKey, buildBody(request, []));
     recordVideoSubmission(taskId);
 
@@ -775,11 +789,11 @@ export async function generateFromText(
       request.outputPath || process.cwd(),
       request.filename || `video_${Date.now()}.mp4`,
     );
-    if ('error' in saved) return { success: false, error: saved.error, taskId };
+    if ('error' in saved) return { success: false, error: saved.error, terminal: saved.terminal === true, taskId };
 
     return toResponse(request, saved.videoPath, saved.task, taskId);
   } catch (error) {
-    return toFailure(error);
+    return toFailure(error, posted);
   }
 }
 
@@ -788,6 +802,7 @@ export async function generateFromImage(
   request: SeedanceImg2VideoRequest,
 ): Promise<SeedanceGenerationResponse> {
   const apiKey = requireArkKey();
+  let posted = false;
   try {
     const paths = [request.sourceImagePath, ...(request.lastImagePath ? [request.lastImagePath] : [])];
     const uris = loadImages(paths);
@@ -801,6 +816,7 @@ export async function generateFromImage(
     console.error(`[Seedance] First frame: ${request.sourceImagePath}`);
     if (request.lastImagePath) console.error(`[Seedance] Last frame: ${request.lastImagePath}`);
 
+    posted = true;
     const taskId = await createTask(apiKey, buildBody(request, images));
     recordVideoSubmission(taskId);
 
@@ -810,7 +826,7 @@ export async function generateFromImage(
       request.outputPath || process.cwd(),
       request.filename || `video_${Date.now()}.mp4`,
     );
-    if ('error' in saved) return { success: false, error: saved.error, taskId };
+    if ('error' in saved) return { success: false, error: saved.error, terminal: saved.terminal === true, taskId };
 
     return {
       ...toResponse(request, saved.videoPath, saved.task, taskId),
@@ -818,7 +834,7 @@ export async function generateFromImage(
       lastImage: request.lastImagePath,
     };
   } catch (error) {
-    return toFailure(error);
+    return toFailure(error, posted);
   }
 }
 
@@ -827,6 +843,7 @@ export async function generateWithReferences(
   request: SeedanceReferenceRequest,
 ): Promise<SeedanceGenerationResponse> {
   const apiKey = requireArkKey();
+  let posted = false;
   try {
     const spec = SEEDANCE_MODEL_SPECS[request.model];
     const imageUris = loadImages(request.referenceImagePaths);
@@ -870,6 +887,7 @@ export async function generateWithReferences(
       if (videoUrls.length > 0) console.error(`[Seedance] Reference videos: ${[...request.referenceVideoPaths, ...request.referenceVideoUrls].join(', ')}`);
       if (audioUris.length > 0) console.error(`[Seedance] Reference audio: ${request.referenceAudioPaths.join(', ')}`);
 
+      posted = true;
       const taskId = await createTask(apiKey, buildBody(request, parts));
       recordVideoSubmission(taskId);
 
@@ -879,7 +897,7 @@ export async function generateWithReferences(
         request.outputPath || process.cwd(),
         request.filename || `video_ref_${Date.now()}.mp4`,
       );
-      if ('error' in saved) return { success: false, error: saved.error, taskId };
+      if ('error' in saved) return { success: false, error: saved.error, terminal: saved.terminal === true, taskId };
 
       return {
         ...toResponse(request, saved.videoPath, saved.task, taskId),
@@ -897,6 +915,6 @@ export async function generateWithReferences(
       await published.close();
     }
   } catch (error) {
-    return toFailure(error);
+    return toFailure(error, posted);
   }
 }

@@ -12044,7 +12044,7 @@ var require_util2 = __commonJS({
     exports.isValidFile = isValidFile;
     exports.getWellKnownCertificateConfigFileLocation = getWellKnownCertificateConfigFileLocation;
     var fs22 = __require("fs");
-    var os4 = __require("os");
+    var os5 = __require("os");
     var path29 = __require("path");
     var WELL_KNOWN_CERTIFICATE_CONFIG_FILE = "certificate_config.json";
     var CLOUDSDK_CONFIG_DIRECTORY = "gcloud";
@@ -12142,7 +12142,7 @@ var require_util2 = __commonJS({
       return path29.join(configDir, WELL_KNOWN_CERTIFICATE_CONFIG_FILE);
     }
     function _isWindows() {
-      return os4.platform().startsWith("win");
+      return os5.platform().startsWith("win");
     }
   }
 });
@@ -17525,7 +17525,7 @@ var require_googleauth = __commonJS({
     var fs22 = __require("fs");
     var gaxios_1 = require_src2();
     var gcpMetadata = require_src4();
-    var os4 = __require("os");
+    var os5 = __require("os");
     var path29 = __require("path");
     var crypto_1 = require_crypto3();
     var computeclient_1 = require_computeclient();
@@ -18034,7 +18034,7 @@ var require_googleauth = __commonJS({
        * @api private
        */
       _isWindows() {
-        const sys = os4.platform();
+        const sys = os5.platform();
         if (sys && sys.length >= 3) {
           if (sys.substring(0, 3).toLowerCase() === "win") {
             return true;
@@ -52084,10 +52084,10 @@ var init_values = __esm({
 });
 
 // node_modules/openai/internal/utils/sleep.mjs
-var sleep5;
+var sleep3;
 var init_sleep = __esm({
   "node_modules/openai/internal/utils/sleep.mjs"() {
-    sleep5 = (ms) => new Promise((resolve12) => setTimeout(resolve12, ms));
+    sleep3 = (ms) => new Promise((resolve12) => setTimeout(resolve12, ms));
   }
 });
 
@@ -60119,7 +60119,7 @@ var init_runs = __esm({
                   }
                 }
               }
-              await sleep5(sleepInterval);
+              await sleep3(sleepInterval);
               break;
             //We return the run in any terminal state.
             case "requires_action":
@@ -60858,7 +60858,7 @@ var init_files2 = __esm({
         const start = Date.now();
         let file = await this.retrieve(id);
         while (!file.status || !TERMINAL_STATES.has(file.status)) {
-          await sleep5(pollInterval);
+          await sleep3(pollInterval);
           file = await this.retrieve(id);
           if (Date.now() - start > maxWait) {
             throw new APIConnectionTimeoutError2({
@@ -62798,7 +62798,7 @@ var init_file_batches = __esm({
                   }
                 }
               }
-              await sleep5(sleepInterval);
+              await sleep3(sleepInterval);
               break;
             case "failed":
             case "cancelled":
@@ -62948,7 +62948,7 @@ var init_files3 = __esm({
                   }
                 }
               }
-              await sleep5(sleepInterval);
+              await sleep3(sleepInterval);
               break;
             case "failed":
             case "completed":
@@ -63866,7 +63866,7 @@ var init_client = __esm({
           const maxRetries = options.maxRetries ?? this.maxRetries;
           timeoutMillis = this.calculateDefaultRetryTimeoutMillis(retriesRemaining, maxRetries);
         }
-        await sleep5(timeoutMillis);
+        await sleep3(timeoutMillis);
         return this.makeRequest(options, retriesRemaining - 1, requestLogID);
       }
       calculateDefaultRetryTimeoutMillis(retriesRemaining, maxRetries) {
@@ -65179,7 +65179,9 @@ var require_video_catalog = __commonJS({
             "outputPath",
             "filename",
             "imageUri",
-            "lastFrameUri"
+            "imagePath",
+            "lastFrameUri",
+            "lastFramePath"
           ],
           modelConstraints: {
             models: [
@@ -83817,6 +83819,23 @@ async function requestGenai(method, route, body, timeoutMs = 6e4, onResponse) {
     throw new Error("ASTRA GenAI returned a non-JSON response; inspect the existing request before retrying.");
   }
 }
+async function pollGenaiJob(check2, pending) {
+  const deadline = Date.now() + 30 * 6e4;
+  let retried = false;
+  do {
+    try {
+      const result = await check2();
+      if (result.downloaded) return result;
+      retried = false;
+    } catch (error2) {
+      if (!(error2 instanceof GenaiRequestError) || error2.httpStatus === 200) throw error2;
+      if (error2.httpStatus < 500 || retried) throw new Error(error2.message);
+      retried = true;
+    }
+    await new Promise((resolve12) => setTimeout(resolve12, 5e3));
+  } while (Date.now() < deadline);
+  throw new Error(pending);
+}
 async function downloadGenaiResult(uri) {
   const url = new URL(uri, astraGenaiBaseUrl() + "/");
   if (!["https:", "http:"].includes(url.protocol) || url.username || url.password) throw new Error("Invalid GenAI result URL");
@@ -83974,7 +83993,6 @@ import * as fs7 from "node:fs";
 import path6 from "node:path";
 import { createHash as createHash5 } from "node:crypto";
 import { execFileSync as execFileSync3 } from "node:child_process";
-import { setTimeout as sleep3 } from "node:timers/promises";
 
 // src/video-events.ts
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -84111,7 +84129,7 @@ async function desktopVideoStatus(receiptPath, download = false) {
   }
   const job = external_exports.object({ id: external_exports.string(), status: external_exports.string(), outputs: external_exports.array(external_exports.object({ url: external_exports.string(), media_kind: external_exports.string() })).default([]) }).passthrough().parse(await requestGenai("GET", `${ROOT}/generations/${encodeURIComponent(receipt.jobId)}`));
   if (job.id !== receipt.jobId) throw new Error("Job ID mismatch");
-  if (["failed", "cancelled"].includes(job.status)) throw new Error(`Gateway video ${job.status}: ${job.id}`);
+  if (["failed", "cancelled"].includes(job.status)) throw new GenaiRequestError(`Gateway video ${job.status}: ${job.id}`, true, 200);
   if (job.status !== "succeeded" || !download) return { jobId: job.id, status: job.status, downloaded: false, review: "not_reviewed" };
   const video2 = job.outputs.filter((o) => o.media_kind === "video");
   if (video2.length !== 1) throw new Error("Expected exactly one video output; retain receipt");
@@ -84166,22 +84184,19 @@ async function generateDesktopVideo(operation, input) {
     const body = buildDesktopBody(operation, args, assets);
     const receipt = { protocol: "gateway-desktop-v1", baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, status: "submitting" };
     fs7.writeFileSync(receiptPath, JSON.stringify(receipt), { flag: "wx", mode: 384 });
-    const accepted = external_exports.object({ id: external_exports.string().min(1) }).passthrough().parse(await requestGenai(
-      "POST",
-      operation === "keyframes" ? ROOT + "/keyframes" : ROOT + "/generations/" + operation,
-      body,
-      30 * 6e4
-    ));
+    let response;
+    try {
+      response = await requestGenai("POST", operation === "keyframes" ? ROOT + "/keyframes" : ROOT + "/generations/" + operation, body, 30 * 6e4);
+    } catch (error2) {
+      if (error2 instanceof GenaiRequestError && error2.terminal) fs7.rmSync(receiptPath, { force: true });
+      throw error2;
+    }
+    const accepted = external_exports.object({ id: external_exports.string().min(1) }).passthrough().parse(response);
     atomicJson(receiptPath, { ...receipt, jobId: accepted.id, status: "submitted" });
     recordVideoSubmission(accepted.id);
   }
-  const deadline = Date.now() + 30 * 6e4;
-  do {
-    const result = await desktopVideoStatus(receiptPath, true);
-    if (result.downloaded) return { ...result, receiptPath };
-    await sleep3(5e3);
-  } while (Date.now() < deadline);
-  throw new Error(`Still pending; recover ${receiptPath} without resubmission`);
+  const result = await pollGenaiJob(() => desktopVideoStatus(receiptPath, true), `Still pending; recover ${receiptPath} without resubmission`);
+  return { ...result, receiptPath };
 }
 
 // src/astra-genai-speech.ts
@@ -84615,7 +84630,6 @@ import { createHash as createHash7 } from "node:crypto";
 import * as fs9 from "node:fs";
 import * as path8 from "node:path";
 import { execFileSync as execFileSync5 } from "node:child_process";
-import { setTimeout as sleep4 } from "node:timers/promises";
 var GENAI_VIDEO_MODELS = ["ltx-2.5-22b-distilled", "ltx-2.5-22b-dev"];
 var GENAI_CAMERA_MOTIONS = ["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"];
 var genaiTextToVideoSchema = external_exports.object({
@@ -84631,8 +84645,14 @@ var genaiTextToVideoSchema = external_exports.object({
   filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
 }).strict();
 var genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
-  imageUri: external_exports.string().min(1),
-  lastFrameUri: external_exports.string().min(1).nullable().optional()
+  imageUri: genaiImageUriSchema.optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  lastFrameUri: genaiImageUriSchema.nullable().optional(),
+  lastFramePath: external_exports.string().min(1).optional()
+}).strict().superRefine((args, ctx) => {
+  const issue2 = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (Number(args.imageUri !== void 0) + Number(args.imagePath !== void 0) !== 1) issue2("Supply exactly one imageUri or imagePath");
+  if (args.lastFrameUri != null && args.lastFramePath !== void 0) issue2("Supply at most one lastFrameUri or lastFramePath");
 });
 var GENAI_AUDIO_TYPES = { ".wav": "audio/wav", ".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".ogg": "audio/ogg", ".opus": "audio/ogg" };
 var GENAI_AUDIO_DATA_URI_MAX = 15e6;
@@ -84772,8 +84792,9 @@ function buildGenaiVideoBody(args) {
     fps: args.fps,
     generate_audio: args.generateAudio,
     ...args.cameraMotion === void 0 ? {} : { camera_motion: args.cameraMotion },
-    ...args.imageUri === void 0 ? {} : { image_uri: args.imageUri },
-    ...args.lastFrameUri === void 0 ? {} : { last_frame_uri: args.lastFrameUri }
+    // Local frames travel as checked data URIs, like MSR and audio-to-video.
+    ...args.imageUri === void 0 && args.imagePath === void 0 ? {} : { image_uri: genaiSourceUri(args.imageUri, args.imagePath) },
+    ...args.lastFramePath !== void 0 ? { last_frame_uri: genaiSourceUri(void 0, args.lastFramePath) } : args.lastFrameUri === void 0 ? {} : { last_frame_uri: args.lastFrameUri === null ? null : genaiSourceUri(args.lastFrameUri) }
   };
 }
 var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "msr"]);
@@ -84806,7 +84827,7 @@ async function getGenaiVideoStatus(input) {
   const route = `${genaiVideoRoute(receipt.operation)}/${encodeURIComponent(receipt.jobId)}`;
   const job = statusSchema.parse(await requestGenai("GET", route));
   if (job.id !== receipt.jobId) throw new Error("GenAI status job ID mismatch");
-  if (job.status === "failed") throw new Error(`GenAI video ${receipt.jobId} failed: ${JSON.stringify(job.error ?? "No details").slice(0, 1e3)}`);
+  if (job.status === "failed") throw new GenaiRequestError(`GenAI video ${receipt.jobId} failed: ${JSON.stringify(job.error ?? "No details").slice(0, 1e3)}`, true, 200);
   if (job.status !== "completed" || !input.download)
     return { jobId: receipt.jobId, status: job.status, downloaded: false, review: "not_reviewed" };
   if (!job.result?.video_url) throw new Error("GenAI completed without result.video_url; retain the receipt, do not resubmit.");
@@ -84850,17 +84871,22 @@ async function generateGenaiVideo(operation, input) {
       throw new Error("msr_voice_unsupported: the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)");
     const receipt = { version: 1, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, status: "submitting" };
     fs9.writeFileSync(receiptPath, JSON.stringify(receipt), { flag: "wx", mode: 384 });
-    const accepted = external_exports.object({ id: external_exports.string().min(1) }).passthrough().parse(await requestGenai("POST", genaiVideoRoute(operation), body, SUBMIT_TIMEOUT_MS));
+    let response;
+    try {
+      response = await requestGenai("POST", genaiVideoRoute(operation), body, SUBMIT_TIMEOUT_MS);
+    } catch (error2) {
+      if (error2 instanceof GenaiRequestError && error2.terminal) fs9.rmSync(receiptPath, { force: true });
+      throw error2;
+    }
+    const accepted = external_exports.object({ id: external_exports.string().min(1) }).passthrough().parse(response);
     atomicJson(receiptPath, { ...receipt, jobId: accepted.id, status: "submitted" });
     recordVideoSubmission(accepted.id);
   }
-  const deadline = Date.now() + 30 * 6e4;
-  do {
-    const result = await getGenaiVideoStatus({ receiptPath, download: true });
-    if (result.downloaded) return { ...result, receiptPath };
-    await sleep4(5e3);
-  } while (Date.now() < deadline);
-  throw new Error(`GenAI video is still pending; recover using receiptPath ${receiptPath}, never resubmit.`);
+  const result = await pollGenaiJob(
+    () => getGenaiVideoStatus({ receiptPath, download: true }),
+    `GenAI video is still pending; recover using receiptPath ${receiptPath}, never resubmit.`
+  );
+  return { ...result, receiptPath };
 }
 
 // src/astra-genai-tools.ts
@@ -84892,12 +84918,14 @@ var GENAI_TOOLS = [
   {
     name: "astra_genai_img2video",
     title: "Generate GenAI LTX video from an image URI",
-    description: "Animate an image URI through ASTRA GenAI LTX v2 and save an MP4. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Pass a server-supported image URI, never a local path or legacy upload ID; this adapter does not upload files. Supports optional last-frame URI, not intermediate keyframes or supplied speech. Unsupported provider options return errors without fallback.",
+    description: "Animate a start image through ASTRA GenAI LTX v2 and save an MP4. Use video_plan/video_execute for configured episodes. Requires ASTRA_GENAI_API_KEY. Give exactly one imageUri (public HTTPS or PNG/JPEG data URI) or imagePath (local PNG/JPEG sent as a data URI); never a legacy upload ID. Supports an optional last frame, not intermediate keyframes or supplied speech. Unsupported provider options return errors without fallback.",
     inputSchema: { type: "object", properties: {
       ...video,
-      imageUri: { type: "string", description: "Provider-supported source image URI; gateway validates URI schemes and access. No local file upload is performed." },
-      lastFrameUri: { type: ["string", "null"], description: "Optional final-frame URI; gateway validates model support." }
-    }, required: ["prompt", "model", "duration", "resolution", "reserveUsd", "imageUri"], additionalProperties: false },
+      imageUri: { type: "string", description: "Public HTTPS PNG/JPEG URL or PNG/JPEG data URI. Mutually exclusive with imagePath." },
+      imagePath: { type: "string", description: "Local PNG/JPEG start image (at most 32 MiB, 4096 px per side), sent as a data URI." },
+      lastFrameUri: { type: ["string", "null"], description: "Optional final-frame HTTPS URL or data URI; gateway validates model support." },
+      lastFramePath: { type: "string", description: "Optional local PNG/JPEG final frame, sent as a data URI." }
+    }, required: ["prompt", "model", "duration", "resolution", "reserveUsd"], additionalProperties: false },
     annotations: generation
   },
   {
@@ -86040,7 +86068,7 @@ var seedanceReferenceSchema = external_exports.object({
     });
   }
 }).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
-function sleep6(ms) {
+function sleep4(ms) {
   return new Promise((resolve12) => setTimeout(resolve12, ms));
 }
 function describeHttpError(status, body) {
@@ -86057,10 +86085,12 @@ async function createTask(apiKey, body) {
   const response = await fetch(`${arkBaseUrl()}/contents/generations/tasks`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(5 * 6e4)
   });
   if (!response.ok) {
-    throw new Error(`Failed to create video task: ${describeHttpError(response.status, await response.text())}`);
+    const terminal = response.status >= 400 && response.status < 500 && ![408, 409, 425].includes(response.status);
+    throw Object.assign(new Error(`Failed to create video task: ${describeHttpError(response.status, await response.text())}`), { terminal });
   }
   const json2 = await response.json();
   if (!json2.id) throw new Error("No task id returned from ModelArk");
@@ -86068,7 +86098,8 @@ async function createTask(apiKey, body) {
 }
 async function getTask(apiKey, taskId) {
   const response = await fetch(`${arkBaseUrl()}/contents/generations/tasks/${encodeURIComponent(taskId)}`, {
-    headers: { Authorization: `Bearer ${apiKey}` }
+    headers: { Authorization: `Bearer ${apiKey}` },
+    signal: AbortSignal.timeout(6e4)
   });
   if (!response.ok) {
     throw new Error(`Failed to get task status: ${describeHttpError(response.status, await response.text())}`);
@@ -86076,19 +86107,28 @@ async function getTask(apiKey, taskId) {
   return response.json();
 }
 async function awaitVideoAndSave(apiKey, taskId, outputPath, filename) {
+  let retried = false;
   for (let poll = 1; poll <= MAX_POLLS2; poll += 1) {
     console.error(`[Seedance] Generation in progress... (polling ${poll}/${MAX_POLLS2})`);
-    await sleep6(POLL_INTERVAL_MS2);
-    const task = await getTask(apiKey, taskId);
+    await sleep4(POLL_INTERVAL_MS2);
+    let task;
+    try {
+      task = await getTask(apiKey, taskId);
+      retried = false;
+    } catch (error2) {
+      if (retried) throw error2;
+      retried = true;
+      continue;
+    }
     if (task.status === "failed" || task.status === "expired" || task.status === "cancelled") {
       const reason = task.error?.message || task.status;
-      return { error: `Generation ${task.status}: ${reason}` };
+      return { error: `Generation ${task.status}: ${reason}`, terminal: true };
     }
     if (task.status !== "succeeded") continue;
     const videoUrl = task.content?.video_url;
     if (!videoUrl) return { error: "Task succeeded but no video_url in response" };
     const fullPath = resolveOutputFile(outputPath, filename, "video");
-    const download = await fetch(videoUrl);
+    const download = await fetch(videoUrl, { signal: AbortSignal.timeout(10 * 6e4) });
     if (!download.ok) {
       return { error: `Failed to download video: HTTP ${download.status} (URL is valid for 24 hours)` };
     }
@@ -86265,15 +86305,17 @@ function toResponse(request, videoPath, task, taskId) {
     taskId
   };
 }
-function toFailure(error2) {
+function toFailure(error2, posted) {
   const message = error2 instanceof Error ? error2.message : String(error2);
   console.error(`[Seedance] Error: ${message}`);
-  return { success: false, error: message };
+  return { success: false, error: message, terminal: !posted || error2?.terminal === true };
 }
 async function generateFromText2(request) {
   const apiKey = requireArkKey();
+  let posted = false;
   try {
     console.error(`[Seedance] Starting text-to-video generation... (model: ${request.model})`);
+    posted = true;
     const taskId = await createTask(apiKey, buildBody(request, []));
     recordVideoSubmission(taskId);
     const saved = await awaitVideoAndSave(
@@ -86282,14 +86324,15 @@ async function generateFromText2(request) {
       request.outputPath || process.cwd(),
       request.filename || `video_${Date.now()}.mp4`
     );
-    if ("error" in saved) return { success: false, error: saved.error, taskId };
+    if ("error" in saved) return { success: false, error: saved.error, terminal: saved.terminal === true, taskId };
     return toResponse(request, saved.videoPath, saved.task, taskId);
   } catch (error2) {
-    return toFailure(error2);
+    return toFailure(error2, posted);
   }
 }
 async function generateFromImage2(request) {
   const apiKey = requireArkKey();
+  let posted = false;
   try {
     const paths2 = [request.sourceImagePath, ...request.lastImagePath ? [request.lastImagePath] : []];
     const uris = loadImages(paths2);
@@ -86301,6 +86344,7 @@ async function generateFromImage2(request) {
     console.error(`[Seedance] Starting image-to-video generation... (model: ${request.model})`);
     console.error(`[Seedance] First frame: ${request.sourceImagePath}`);
     if (request.lastImagePath) console.error(`[Seedance] Last frame: ${request.lastImagePath}`);
+    posted = true;
     const taskId = await createTask(apiKey, buildBody(request, images));
     recordVideoSubmission(taskId);
     const saved = await awaitVideoAndSave(
@@ -86309,18 +86353,19 @@ async function generateFromImage2(request) {
       request.outputPath || process.cwd(),
       request.filename || `video_${Date.now()}.mp4`
     );
-    if ("error" in saved) return { success: false, error: saved.error, taskId };
+    if ("error" in saved) return { success: false, error: saved.error, terminal: saved.terminal === true, taskId };
     return {
       ...toResponse(request, saved.videoPath, saved.task, taskId),
       sourceImage: request.sourceImagePath,
       lastImage: request.lastImagePath
     };
   } catch (error2) {
-    return toFailure(error2);
+    return toFailure(error2, posted);
   }
 }
 async function generateWithReferences(request) {
   const apiKey = requireArkKey();
+  let posted = false;
   try {
     const spec = SEEDANCE_MODEL_SPECS[request.model];
     const imageUris = loadImages(request.referenceImagePaths);
@@ -86353,6 +86398,7 @@ async function generateWithReferences(request) {
       if (imageUris.length > 0) console.error(`[Seedance] Reference images: ${request.referenceImagePaths.join(", ")}`);
       if (videoUrls.length > 0) console.error(`[Seedance] Reference videos: ${[...request.referenceVideoPaths, ...request.referenceVideoUrls].join(", ")}`);
       if (audioUris.length > 0) console.error(`[Seedance] Reference audio: ${request.referenceAudioPaths.join(", ")}`);
+      posted = true;
       const taskId = await createTask(apiKey, buildBody(request, parts));
       recordVideoSubmission(taskId);
       const saved = await awaitVideoAndSave(
@@ -86361,7 +86407,7 @@ async function generateWithReferences(request) {
         request.outputPath || process.cwd(),
         request.filename || `video_ref_${Date.now()}.mp4`
       );
-      if ("error" in saved) return { success: false, error: saved.error, taskId };
+      if ("error" in saved) return { success: false, error: saved.error, terminal: saved.terminal === true, taskId };
       return {
         ...toResponse(request, saved.videoPath, saved.task, taskId),
         referenceImages: request.referenceImagePaths,
@@ -86376,7 +86422,7 @@ async function generateWithReferences(request) {
       await published.close();
     }
   } catch (error2) {
-    return toFailure(error2);
+    return toFailure(error2, posted);
   }
 }
 
@@ -87337,7 +87383,7 @@ function buildJobBody(mode, args) {
   }
   return body;
 }
-function sleep7(ms) {
+function sleep5(ms) {
   return new Promise((resolve12) => setTimeout(resolve12, ms));
 }
 var submitTimestamps = [];
@@ -87352,7 +87398,7 @@ async function waitForSubmitSlot() {
     }
     const minuteWait = recentMinute.length >= ASTRA_VIDEO_SUBMITS_PER_MINUTE ? 6e4 - (now - recentMinute[0]) : 0;
     const hourWait = submitTimestamps.length >= ASTRA_VIDEO_SUBMITS_PER_HOUR ? 36e5 - (now - submitTimestamps[0]) : 0;
-    await sleep7(Math.max(minuteWait, hourWait) + 250);
+    await sleep5(Math.max(minuteWait, hourWait) + 250);
   }
 }
 var uploadTimestamps = [];
@@ -87364,7 +87410,7 @@ async function waitForUploadSlot() {
       uploadTimestamps.push(now);
       return;
     }
-    await sleep7(6e4 - (now - uploadTimestamps[0]) + 250);
+    await sleep5(6e4 - (now - uploadTimestamps[0]) + 250);
   }
 }
 function redactedFailure(what, status, body) {
@@ -87393,7 +87439,7 @@ async function withBackoff(what, call, baseDelayMs = 2e3) {
     const result = await call();
     if (result.ok || result.status !== 429 && result.status !== 503) return result;
     last = result;
-    await sleep7(delay2);
+    await sleep5(delay2);
     delay2 *= 2;
   }
   return last;
@@ -87485,7 +87531,7 @@ async function awaitResult(jobId) {
     );
     if (!status.ok) {
       if (isTerminalStatus(status.status)) throw redactedFailure(`status of job ${jobId}`, status.status, status.body);
-      await sleep7(POLL_INTERVAL_MS3);
+      await sleep5(POLL_INTERVAL_MS3);
       continue;
     }
     const job = JSON.parse(status.body);
@@ -87510,7 +87556,7 @@ async function awaitResult(jobId) {
         }
       });
       if (download.status === 409) {
-        await sleep7(POLL_INTERVAL_MS3);
+        await sleep5(POLL_INTERVAL_MS3);
         continue;
       }
       if (!download.ok) {
@@ -87522,7 +87568,7 @@ async function awaitResult(jobId) {
         elapsedSeconds: Math.round((Date.now() - startedAt) / 1e3)
       };
     }
-    await sleep7(POLL_INTERVAL_MS3);
+    await sleep5(POLL_INTERVAL_MS3);
   }
 }
 async function runJob(mode, prompt, body, outputPath, filename) {
@@ -87984,7 +88030,11 @@ function priceOf(tool2, args = {}) {
   }
   if (tool2 === "tts_astra_genai") return { key: "tts.astra-genai", quantity: null, note: "Gateway speech pricing unverified" };
   if (tool2 === "astra_genai_catalog" || tool2 === "astra_genai_desktop_status") return { key: null, quantity: null };
-  if (tool2.startsWith("astra_genai_")) return { key: ["astra_genai_text2img", "astra_genai_edit", "astra_genai_image_generate", "astra_genai_image_edit"].includes(tool2) ? "image.astra-genai" : "video.astra-genai", quantity: null, note: "Gateway pricing unverified; managed reservation is authoritative, not a measured bill" };
+  if (tool2.startsWith("astra_genai_")) {
+    const image = ["astra_genai_text2img", "astra_genai_edit", "astra_genai_image_generate", "astra_genai_image_edit"].includes(tool2);
+    const seconds = image ? null : typeof args.duration === "number" ? args.duration : tool2 === "astra_genai_msr" ? num2(args.numFrames, 121) / num2(args.frameRate, 24) : null;
+    return { key: image ? "image.astra-genai" : "video.astra-genai", quantity: seconds, note: "Gateway pricing unverified; managed reservation is authoritative, not a measured bill" };
+  }
   if (tool2.startsWith("seedance_")) {
     const model2 = str3(args.model, "dreamina-seedance-2-0-260128");
     const resolution2 = str3(args.resolution, "720p");
@@ -90543,7 +90593,7 @@ function describeElevenLabsError(httpStatus, bodyText) {
 function isRetryable(httpStatus) {
   return httpStatus === 429 || httpStatus >= 500;
 }
-function sleep8(ms) {
+function sleep6(ms) {
   return new Promise((resolve12) => setTimeout(resolve12, ms));
 }
 function timeoutFor(textLength) {
@@ -90563,7 +90613,7 @@ async function elevenFetch(pathAndQuery, init, timeoutMs, attempts = MAX_ATTEMPT
     const bodyText = await response.text();
     lastError = new Error(describeElevenLabsError(response.status, bodyText));
     if (!isRetryable(response.status) || attempt === attempts - 1) break;
-    await sleep8(RETRY_BASE_DELAY_MS * (attempt + 1));
+    await sleep6(RETRY_BASE_DELAY_MS * (attempt + 1));
   }
   throw lastError ?? new Error("ElevenLabs request failed");
 }
@@ -98447,8 +98497,8 @@ Returns: the approval record (auto and approved plans).`,
 TOOLS.push({
   name: "video_status",
   title: "Read a saved video request receipt",
-  description: "Read a managed video receipt. Default action:read is local only. action:refresh queries an existing ASTRA GenAI job, downloads completed media and updates the receipt without generation. Other providers do not support refresh. Use after interruption; ambiguous requests keep their reservation until explicit provider and billing reconciliation.",
-  inputSchema: { type: "object", additionalProperties: false, properties: { episode: { type: "string", description: "Absolute episode directory." }, requestId: { type: "string", description: "Original logical request ID from video_plan." }, action: { type: "string", enum: ["read", "refresh"], default: "read", description: "read is local only; refresh recovers an existing GenAI job and can save completed video." } }, required: ["episode", "requestId"] },
+  description: "Read a managed video receipt. Default action:read is local only. action:refresh queries an existing ASTRA GenAI job, downloads completed media and updates the receipt without generation. Other providers do not support refresh. action:reconcile closes a submission_unknown, interrupted or failed request as failed with the verified charge, freeing its concurrency slot, only after the caller supplies terminal/billing evidence and spentUsd. A request the provider rejected outright is already failed. Use after interruption; ambiguous requests keep their reservation until reconciled. Do not reconcile a request still running at the provider.",
+  inputSchema: { type: "object", additionalProperties: false, properties: { episode: { type: "string", description: "Absolute episode directory." }, requestId: { type: "string", description: "Original logical request ID from video_plan." }, action: { type: "string", enum: ["read", "refresh", "reconcile"], default: "read", description: "read is local only; refresh recovers an existing GenAI job and can save completed video; reconcile settles an unknown request from billing evidence." }, executorStopped: { type: "boolean", description: "Required true to reconcile a submitting or submitted request: the executing process has exited and the provider job is terminal." }, evidence: { type: "string", description: "For reconcile: the provider's terminal status and billing evidence reference." }, spentUsd: { type: "number", minimum: 0, description: "For reconcile: verified total charge, including failed generation." } }, required: ["episode", "requestId"] },
   annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true }
 });
 var imageContextSchema = {
@@ -98971,6 +99021,7 @@ function quoteVideo(tool2, args) {
 
 // src/video-state.ts
 import * as fs20 from "node:fs";
+import os3 from "node:os";
 import path21 from "node:path";
 import { fileURLToPath as fileURLToPath7 } from "node:url";
 function historicalSpend(episode) {
@@ -99012,7 +99063,22 @@ function historicalSpend(episode) {
   }
   return total;
 }
-function videoTransaction(episode, update) {
+function staleLock(lock2) {
+  try {
+    if (Date.now() - fs20.statSync(lock2).mtimeMs > 6e4) return true;
+    const [pid, host] = fs20.readFileSync(lock2, "utf8").split("@");
+    if (host !== os3.hostname() || !/^\d+$/.test(pid)) return false;
+    try {
+      process.kill(Number(pid), 0);
+      return false;
+    } catch (error2) {
+      return error2.code === "ESRCH";
+    }
+  } catch {
+    return false;
+  }
+}
+function videoTransaction(episode, update, openingSpendUsd) {
   const directory2 = path21.join(episode, ".work/video-routing");
   fs20.mkdirSync(directory2, { recursive: true });
   const lock2 = path21.join(directory2, "state.lock");
@@ -99020,15 +99086,22 @@ function videoTransaction(episode, update) {
   try {
     fd = fs20.openSync(lock2, "wx", 384);
   } catch {
-    throw new Error("video_state_busy: another transaction holds the lock; retry this local operation");
+    if (!staleLock(lock2)) throw new Error("video_state_busy: another transaction holds the lock; retry this local operation");
+    fs20.rmSync(lock2, { force: true });
+    try {
+      fd = fs20.openSync(lock2, "wx", 384);
+    } catch {
+      throw new Error("video_state_busy: another transaction holds the lock; retry this local operation");
+    }
   }
+  fs20.writeSync(fd, `${process.pid}@${os3.hostname()}`);
   try {
     const file = path21.join(directory2, "state.json");
-    const state = fs20.existsSync(file) ? JSON.parse(fs20.readFileSync(file, "utf8")) : { version: 1, openingSpendUsd: historicalSpend(episode), jobs: {} };
+    const state = fs20.existsSync(file) ? JSON.parse(fs20.readFileSync(file, "utf8")) : { version: 1, openingSpendUsd: openingSpendUsd ?? historicalSpend(episode), jobs: {} };
     if (state.version !== 1 || !state.jobs || typeof state.jobs !== "object" || Array.isArray(state.jobs)) throw new Error("Invalid video state; repair explicitly");
     if (!Number.isFinite(state.openingSpendUsd ?? 0) || (state.openingSpendUsd ?? 0) < 0) throw new Error("Invalid opening spend");
     for (const job of Object.values(state.jobs)) {
-      if (!job || !Number.isFinite(job.reserveUsd) || job.reserveUsd < 0 || job.settledUsd !== void 0 && (!Number.isFinite(job.settledUsd) || job.settledUsd < 0) || !["reserved", "submitting", "submitted", "submission_unknown", "completed"].includes(job.status)) throw new Error("Invalid video job; cannot calculate remaining budget");
+      if (!job || !Number.isFinite(job.reserveUsd) || job.reserveUsd < 0 || job.settledUsd !== void 0 && (!Number.isFinite(job.settledUsd) || job.settledUsd < 0) || !["reserved", "submitting", "submitted", "submission_unknown", "completed", "failed"].includes(job.status)) throw new Error("Invalid video job; cannot calculate remaining budget");
     }
     const result = update(state);
     atomicJson(file, state);
@@ -99582,7 +99655,9 @@ function authorization(context2) {
       reference: external_exports.string().min(1),
       maxUsd: external_exports.number().finite().nonnegative(),
       maxConcurrent: external_exports.number().int().min(1).max(64).default(1),
-      maxAttempts: external_exports.number().int().min(1).max(20).default(3)
+      maxAttempts: external_exports.number().int().min(1).max(20).default(3),
+      // Reconciled spend before managed routing, for events whose cost the ledger cannot price.
+      openingSpendUsd: external_exports.number().finite().nonnegative().optional()
     }).strict().parse(p.videoAuthorization);
     return auth;
   }
@@ -99657,10 +99732,11 @@ async function executeVideo(raw, dispatch) {
     if (existing) {
       if (existing.planId !== id) throw new Error("request_id_conflict: same request ID has a different plan");
       if (existing.status === "completed") return existing.result;
+      if (existing.status === "failed") throw new Error(`video_request_failed: ${existing.evidence || "the provider rejected it"}; plan a new requestId to try again`);
       throw new Error(`video_request_pending: ${existing.status}; provider ID ${existing.providerId || "unknown"}; do not resubmit`);
     }
     const jobs = Object.values(state.jobs);
-    const occupied = jobs.filter((job) => job.status !== "completed");
+    const occupied = jobs.filter((job) => !["completed", "failed"].includes(job.status));
     if (occupied.length >= auth.maxConcurrent) throw new Error("video_concurrency_limit: pending jobs include ambiguous submissions");
     const used = jobs.reduce((sum, job) => sum + (job.settledUsd ?? job.reserveUsd), state.openingSpendUsd ?? 0);
     if (used + plan2.quote.reserveUsd > auth.maxUsd + 1e-9) throw new Error("video_budget_exceeded");
@@ -99675,10 +99751,15 @@ async function executeVideo(raw, dispatch) {
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
     };
     return void 0;
-  });
+  }, auth.openingSpendUsd);
   if (cached2) return cached2;
   const update = (patch) => videoTransaction(episode, (state) => {
     Object.assign(state.jobs[plan2.requestId], patch, { updatedAt: (/* @__PURE__ */ new Date()).toISOString() });
+  });
+  const settle = (terminal, evidence, result) => videoTransaction(episode, (state) => {
+    const job = state.jobs[plan2.requestId];
+    Object.assign(job, { status: terminal ? "failed" : "submission_unknown", evidence, updatedAt: (/* @__PURE__ */ new Date()).toISOString() }, result ? { result } : {});
+    if (terminal && !job.providerId) job.settledUsd = 0;
   });
   const startedAt = Date.now();
   let ok = false;
@@ -99697,7 +99778,7 @@ async function executeVideo(raw, dispatch) {
       }
     }, () => dispatch(plan2.tool, plan2.args));
     if (result.isError) {
-      update({ status: "submission_unknown", result });
+      settle(result.terminal === true, result.content.map((item) => item.type === "text" ? item.text : "").join("\n").slice(0, 1e3), result);
       return result;
     }
     videoTransaction(episode, (state) => {
@@ -99711,7 +99792,7 @@ async function executeVideo(raw, dispatch) {
     ok = true;
     return result;
   } catch (error2) {
-    update({ status: "submission_unknown" });
+    settle(error2 instanceof GenaiRequestError && error2.terminal, (error2 instanceof Error ? error2.message : String(error2)).slice(0, 1e3));
     throw error2;
   } finally {
     const price = priceOf(plan2.tool, plan2.args);
@@ -99784,13 +99865,31 @@ async function routeLegacyVideo(tool2, raw, dispatch) {
   return dispatch(tool2, args);
 }
 async function videoStatus(raw) {
-  const input = external_exports.object({ episode: external_exports.string().min(1), requestId: idSchema3, action: external_exports.enum(["read", "refresh"]).default("read") }).strict().parse(raw);
+  const input = external_exports.object({
+    episode: external_exports.string().min(1),
+    requestId: idSchema3,
+    action: external_exports.enum(["read", "refresh", "reconcile"]).default("read"),
+    executorStopped: external_exports.boolean().optional(),
+    evidence: external_exports.string().min(1).optional(),
+    spentUsd: external_exports.number().finite().nonnegative().optional()
+  }).strict().parse(raw);
   const episode = fs21.realpathSync(input.episode);
   const file = path24.join(episode, ".work/video-routing/state.json");
   if (!fs21.existsSync(file)) return { requestId: input.requestId, status: "not_started" };
+  if (input.action === "reconcile") {
+    if (!input.evidence || input.spentUsd === void 0) throw new Error("video_reconciliation_requires_billing_evidence");
+    videoTransaction(episode, (current) => {
+      const job2 = Object.hasOwn(current.jobs, input.requestId) ? current.jobs[input.requestId] : void 0;
+      if (!job2 || job2.status === "completed") throw new Error("video_reconciliation_requires_unknown_terminal_request");
+      if (["reserved", "submitting", "submitted"].includes(job2.status) && input.executorStopped !== true)
+        throw new Error("video_reconciliation_requires_executor_stopped: confirm the executing process has exited and the provider job is terminal");
+      Object.assign(job2, { status: "failed", settledUsd: input.spentUsd, evidence: input.evidence, updatedAt: (/* @__PURE__ */ new Date()).toISOString() });
+    });
+  }
   const state = JSON.parse(fs21.readFileSync(file, "utf8"));
   const job = state.jobs?.[input.requestId];
   if (input.action === "refresh" && job) {
+    if (job.status === "failed") throw new Error("video_request_failed: nothing to recover; plan a new requestId");
     if (!job.tool.startsWith("astra_genai_desktop_") && !["astra_genai_text2video", "astra_genai_img2video", "astra_genai_audio2video", "astra_genai_msr"].includes(job.tool)) throw new Error("video_refresh_unsupported: use provider-specific recovery");
     const plan2 = JSON.parse(fs21.readFileSync(path24.join(episode, ".work/video-routing/plans", job.planId + ".json"), "utf8"));
     const { id, ...body } = plan2;
@@ -99806,7 +99905,7 @@ async function videoStatus(raw) {
     }
     return { ...job, providerStatus: result.status, recovery: "Poll this same request with action:refresh; do not resubmit." };
   }
-  return job ? { ...job, recovery: job.status === "completed" ? "Reuse result; no new generation." : "Inspect providerId at the selected provider. Keep the reservation until billing and terminal status are reconciled. Do not change requestId or delete state to retry." } : { requestId: input.requestId, status: "not_started" };
+  return job ? { ...job, recovery: job.status === "completed" ? "Reuse result; no new generation." : job.status === "failed" ? "Closed as failed; its concurrency slot is free. Plan a new requestId to try again." : "Inspect providerId at the selected provider. Keep the reservation until billing and terminal status are reconciled with action:reconcile. Do not change requestId or delete state to retry." } : { requestId: input.requestId, status: "not_started" };
 }
 
 // src/tts-routing.ts
@@ -99858,7 +99957,7 @@ async function routeSpeech(input) {
 import { execFile as execFile7 } from "node:child_process";
 import { promisify as promisify3 } from "node:util";
 import { createHash as createHash16, randomUUID as randomUUID5 } from "node:crypto";
-import { createReadStream as createReadStream3, mkdirSync as mkdirSync15, realpathSync as realpathSync9, statSync as statSync14, writeFileSync as writeFileSync20 } from "node:fs";
+import { createReadStream as createReadStream3, mkdirSync as mkdirSync15, realpathSync as realpathSync9, statSync as statSync15, writeFileSync as writeFileSync20 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
 import path25 from "node:path";
 var exec2 = promisify3(execFile7);
@@ -99889,7 +99988,7 @@ async function digest3(file) {
 }
 async function hostReview(input) {
   const r2 = hostReviewSchema.parse(input), file = realpathSync9(r2.mediaPath);
-  if (!statSync14(file).isFile() || !statSync14(file).size) throw new Error("Provide a nonempty local media file");
+  if (!statSync15(file).isFile() || !statSync15(file).size) throw new Error("Provide a nonempty local media file");
   const mediaSha256 = await digest3(file);
   const { stdout } = await exec2("ffprobe", ["-v", "error", "-show_format", "-show_streams", "-of", "json", file], { maxBuffer: 4 * 1024 * 1024 });
   const probe3 = JSON.parse(stdout), duration4 = Number(probe3.format.duration);
@@ -99949,7 +100048,7 @@ async function hostReview(input) {
           "2",
           output2
         ], { timeout: 3e4 });
-        if (!statSync14(output2).size) throw new Error("Frame extraction produced an empty image");
+        if (!statSync15(output2).size) throw new Error("Frame extraction produced an empty image");
         frames.push({ seconds, path: output2 });
       }
     }
@@ -100785,7 +100884,7 @@ function manageSpeech(args) {
 // src/acting-review.ts
 import { execFile as execFile8 } from "node:child_process";
 import { createHash as createHash20, randomUUID as randomUUID8 } from "node:crypto";
-import { existsSync as existsSync29, mkdirSync as mkdirSync19, readFileSync as readFileSync31, realpathSync as realpathSync10, renameSync as renameSync9, rmSync as rmSync13, statSync as statSync15, writeFileSync as writeFileSync24 } from "node:fs";
+import { existsSync as existsSync29, mkdirSync as mkdirSync19, readFileSync as readFileSync31, realpathSync as realpathSync10, renameSync as renameSync9, rmSync as rmSync14, statSync as statSync16, writeFileSync as writeFileSync24 } from "node:fs";
 import path26 from "node:path";
 import { homedir as homedir5 } from "node:os";
 import { promisify as promisify4 } from "node:util";
@@ -100853,7 +100952,7 @@ var actingObservationSchema = external_exports.object({
 var hash5 = (data) => createHash20("sha256").update(data).digest("hex");
 var currentHash = (file) => {
   try {
-    const stat4 = statSync15(file);
+    const stat4 = statSync16(file);
     return stat4.isFile() && stat4.size <= MAX_BYTES ? hash5(readFileSync31(file)) : null;
   } catch {
     return null;
@@ -101116,7 +101215,7 @@ async function reviewActing2(input, deps) {
   actingReviewTimeout(request.focus);
   const policy = request.focus === "cinematography" ? CINEMATOGRAPHY_POLICY : request.mode === "audio" ? AUDIO_POLICY : VISUAL_POLICY;
   const mediaPath = realpathSync10(request.mediaPath);
-  const stat4 = statSync15(mediaPath);
+  const stat4 = statSync16(mediaPath);
   if (!stat4.isFile() || stat4.size === 0 || stat4.size > MAX_BYTES) throw new Error("Review requires a nonempty media file no larger than 12 MiB");
   const bytes = readFileSync31(mediaPath);
   const probe3 = await deps.probe(mediaPath);
@@ -101223,13 +101322,13 @@ async function reviewActing2(input, deps) {
     renameSync9(temporary, receiptPath);
   } catch (error2) {
     try {
-      rmSync13(temporary, { force: true });
+      rmSync14(temporary, { force: true });
     } catch {
     }
     throw new Error(`Could not persist paid acting review; preserved lock at ${lock2}: ${error2 instanceof Error ? error2.message : String(error2)}`);
   }
   try {
-    rmSync13(lock2, { force: true });
+    rmSync14(lock2, { force: true });
   } catch {
     console.error(`[acting_review] Receipt saved; stale lock can be removed: ${lock2}`);
   }
@@ -101238,7 +101337,7 @@ async function reviewActing2(input, deps) {
 
 // src/threads-gate.ts
 import { createHash as createHash21, randomUUID as randomUUID9 } from "node:crypto";
-import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync20, readFileSync as readFileSync32, realpathSync as realpathSync11, renameSync as renameSync10, statSync as statSync16, writeFileSync as writeFileSync25 } from "node:fs";
+import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync20, readFileSync as readFileSync32, realpathSync as realpathSync11, renameSync as renameSync10, statSync as statSync17, writeFileSync as writeFileSync25 } from "node:fs";
 import { dirname as dirname9, join as join15, resolve as resolve10 } from "node:path";
 import { fileURLToPath as fileURLToPath10 } from "node:url";
 import { spawnSync as spawnSync3 } from "node:child_process";
@@ -101382,9 +101481,9 @@ function checkThreadsEpisode(input) {
     const topic = channelSchema.parse(input.episodeRef);
     const root = realpathSync11(join15(process.cwd(), "data", channel, "episodes"));
     const episode = realpathSync11(join15(root, topic));
-    if (dirname9(episode) !== root || !statSync16(episode).isDirectory()) throw new Error("Invalid episode directory");
+    if (dirname9(episode) !== root || !statSync17(episode).isDirectory()) throw new Error("Invalid episode directory");
     const board = realpathSync11(join15(episode, "storyboard", "scenes.js"));
-    if (!board.startsWith(episode + "/") || !statSync16(board).isFile()) throw new Error("Missing episode storyboard");
+    if (!board.startsWith(episode + "/") || !statSync17(board).isFile()) throw new Error("Missing episode storyboard");
     const approvalPath = realpathSync11(join15(episode, "threads-publish-approval.json"));
     if (dirname9(approvalPath) !== episode) throw new Error("Invalid episode approval path");
     const approval = JSON.parse(readFileSync32(approvalPath, "utf8"));
@@ -102729,7 +102828,7 @@ var IG_BASE = `https://graph.instagram.com/${GRAPH_VERSION}`;
 var FB_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 var DEFAULT_POLL_INTERVAL_MS = 2e3;
 var DEFAULT_POLL_MAX_TRIES = 60;
-var sleep9 = (ms) => new Promise((resolve12) => setTimeout(resolve12, ms));
+var sleep7 = (ms) => new Promise((resolve12) => setTimeout(resolve12, ms));
 function fail2(status, message) {
   return { ok: false, status, body: message };
 }
@@ -102795,7 +102894,7 @@ async function pollContainer(baseUrl, containerId, accessToken, statusField, opt
     if (status === "ERROR" || status === "EXPIRED") {
       return fail2(502, `Media container ${containerId} failed: ${status}`);
     }
-    await sleep9(interval);
+    await sleep7(interval);
   }
   return fail2(504, `Media container ${containerId} not FINISHED after ${maxTries} tries`);
 }
@@ -104555,7 +104654,7 @@ async function checkAccounts(channel) {
 
 // src/tts-final-quality.ts
 import { execFile as execFile9 } from "node:child_process";
-import { existsSync as existsSync32, mkdtempSync as mkdtempSync6, readFileSync as readFileSync33, rmSync as rmSync14, writeFileSync as writeFileSync26, renameSync as renameSync11, openSync as openSync7, closeSync as closeSync7 } from "node:fs";
+import { existsSync as existsSync32, mkdtempSync as mkdtempSync6, readFileSync as readFileSync33, rmSync as rmSync15, writeFileSync as writeFileSync26, renameSync as renameSync11, openSync as openSync7, closeSync as closeSync7 } from "node:fs";
 import { tmpdir as tmpdir7 } from "node:os";
 import path27 from "node:path";
 import { promisify as promisify5 } from "node:util";
@@ -104641,9 +104740,9 @@ async function reviewFinalSpeech(input, deps) {
     const failure2 = { error: error2 instanceof Error ? error2.message : String(error2) };
     return singleReviewStarted ? save3("unverified", failure2) : { success: false, status: "unverified", proofPath, ...failure2 };
   } finally {
-    rmSync14(temp, { recursive: true, force: true });
+    rmSync15(temp, { recursive: true, force: true });
     closeSync7(lock2);
-    rmSync14(lockPath, { force: true });
+    rmSync15(lockPath, { force: true });
   }
 }
 async function reviewChapters(request, media, wav, temp, base, proofPath, save3, deps) {
@@ -106388,7 +106487,7 @@ ${errors.join("\n")}`);
 // src/capability-status.ts
 import { existsSync as existsSync33 } from "node:fs";
 import path28 from "node:path";
-import os3 from "node:os";
+import os4 from "node:os";
 var has2 = (v) => Boolean(v && v.length > 0);
 var binOk = (p) => {
   try {
@@ -106517,7 +106616,7 @@ function capabilityStatus() {
           provider: "blender (local, Cycles)",
           configured: Boolean(blenderBin()),
           needs: "Blender 4.2+ (brew install --cask blender) or BLENDER=<executable>",
-          note: `blender_scene_read \xB7 blender_scene_build \xB7 blender_camera_set \xB7 blender_object_animate \xB7 blender_pose_key \xB7 blender_motion_import \xB7 blender_render_previz \u2014 the previz bridge (blender-previz.md): camera, blocking and body timing as numbers \u2014 jointed person mannequins posed by channel or driven by BVH/FBX motion capture \u2014 rendered headless with no add-on or GUI. bake-blender.py \u2014 bakes a mesh recipe into a frame sheet with path-traced light and shadows (blender-objects.md). This machine has ${os3.cpus().length} cores and ${Math.round(os3.totalmem() / 1e9)} GB; run --capacity for the GPU backend and which object lane suits it, then --probe on the recipe for minutes per cut`
+          note: `blender_scene_read \xB7 blender_scene_build \xB7 blender_camera_set \xB7 blender_object_animate \xB7 blender_pose_key \xB7 blender_motion_import \xB7 blender_render_previz \u2014 the previz bridge (blender-previz.md): camera, blocking and body timing as numbers \u2014 jointed person mannequins posed by channel or driven by BVH/FBX motion capture \u2014 rendered headless with no add-on or GUI. bake-blender.py \u2014 bakes a mesh recipe into a frame sheet with path-traced light and shadows (blender-objects.md). This machine has ${os4.cpus().length} cores and ${Math.round(os4.totalmem() / 1e9)} GB; run --capacity for the GPU backend and which object lane suits it, then --probe on the recipe for minutes per cut`
         }
       ]
     },
@@ -107441,7 +107540,7 @@ Size and length are inherited from the source.`
   // record this number.
   seedance_text2video: async (args) => {
     const result = await generateFromText2(parseArgs(seedanceText2VideoSchema, args));
-    if (!result.success) return text2(`Seedance video generation failed: ${result.error}`, true);
+    if (!result.success) return { ...text2(`Seedance video generation failed: ${result.error}`, true), terminal: result.terminal === true };
     return text2(`Video generated successfully!
 
 File: ${result.videoPath}
@@ -107450,7 +107549,7 @@ Prompt: ${result.prompt}`);
   },
   seedance_img2video: async (args) => {
     const result = await generateFromImage2(parseArgs(seedanceImg2VideoSchema, args));
-    if (!result.success) return text2(`Seedance video generation from image failed: ${result.error}`, true);
+    if (!result.success) return { ...text2(`Seedance video generation from image failed: ${result.error}`, true), terminal: result.terminal === true };
     const lastImageInfo = result.lastImage ? `
 Last Frame Image: ${result.lastImage}` : "";
     const modeInfo = result.lastImage ? " (frame interpolation mode)" : "";
@@ -107465,7 +107564,7 @@ Prompt: ${result.prompt}`
   },
   seedance_reference: async (args) => {
     const result = await generateWithReferences(parseArgs(seedanceReferenceSchema, args));
-    if (!result.success) return text2(`Seedance video generation with references failed: ${result.error}`, true);
+    if (!result.success) return { ...text2(`Seedance video generation with references failed: ${result.error}`, true), terminal: result.terminal === true };
     const refImagesInfo = result.referenceImages?.length ? `
 Reference Images (${result.referenceImages.length}):
   - ${result.referenceImages.join("\n  - ")}` : "";

@@ -768,7 +768,9 @@
         "outputPath",
         "filename",
         "imageUri",
-        "lastFrameUri"
+        "imagePath",
+        "lastFrameUri",
+        "lastFramePath"
       ],
       "modelConstraints": {
         "models": [

@@ -41,6 +41,29 @@ export async function requestGenai(method: 'GET' | 'POST', route: string, body?:
   catch { throw new Error('ASTRA GenAI returned a non-JSON response; inspect the existing request before retrying.'); }
 }
 
+/**
+ * Poll a submitted job every 5 s for up to 30 minutes. One transient 5xx on the status GET is
+ * retried, and an HTTP error on the GET never counts as terminal job evidence; only a job the
+ * gateway reports failed (thrown as GenaiRequestError with HTTP 200) does. Never wraps a POST.
+ */
+export async function pollGenaiJob<T extends { downloaded: boolean }>(check: () => Promise<T>, pending: string): Promise<T> {
+  const deadline = Date.now() + 30 * 60_000;
+  let retried = false;
+  do {
+    try {
+      const result = await check();
+      if (result.downloaded) return result;
+      retried = false;
+    } catch (error) {
+      if (!(error instanceof GenaiRequestError) || error.httpStatus === 200) throw error;
+      if (error.httpStatus < 500 || retried) throw new Error(error.message);
+      retried = true;
+    }
+    await new Promise(resolve => setTimeout(resolve, 5000));
+  } while (Date.now() < deadline);
+  throw new Error(pending);
+}
+
 /** Signed result URLs carry their own authorization. Never send the gateway token. */
 export async function downloadGenaiResult(uri: string): Promise<Buffer> {
   const url = new URL(uri, astraGenaiBaseUrl() + '/');

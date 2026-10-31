@@ -17,6 +17,7 @@ import { atomicJson, videoTransaction } from './video-state.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
 import { videoEvents } from './video-events.js';
 import { getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema, genaiMsrVoiceReferences, refreshGenaiMsrVoice } from './astra-genai-video.js';
+import { GenaiRequestError } from './astra-genai-client.js';
 import { prepareVideoImages } from './video-image-inputs.js';
 import { prepareVideoVoice } from './video-voice.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
@@ -198,7 +199,9 @@ function authorization(context) {
     const p = context.production;
     if (p.videoAuthorization !== undefined) {
         const auth = z.object({ reference: z.string().min(1), maxUsd: z.number().finite().nonnegative(),
-            maxConcurrent: z.number().int().min(1).max(64).default(1), maxAttempts: z.number().int().min(1).max(20).default(3) }).strict().parse(p.videoAuthorization);
+            maxConcurrent: z.number().int().min(1).max(64).default(1), maxAttempts: z.number().int().min(1).max(20).default(3),
+            // Reconciled spend before managed routing, for events whose cost the ledger cannot price.
+            openingSpendUsd: z.number().finite().nonnegative().optional() }).strict().parse(p.videoAuthorization);
         return auth;
     }
     const approval = z.object({ kind: z.enum(['user', 'standing']), reference: z.string().min(1), at: z.string().min(1), quoteFingerprint: z.string().min(1) }).passthrough().parse(p.approval);
@@ -289,10 +292,12 @@ export async function executeVideo(raw, dispatch) {
                 throw new Error('request_id_conflict: same request ID has a different plan');
             if (existing.status === 'completed')
                 return existing.result;
+            if (existing.status === 'failed')
+                throw new Error(`video_request_failed: ${existing.evidence || 'the provider rejected it'}; plan a new requestId to try again`);
             throw new Error(`video_request_pending: ${existing.status}; provider ID ${existing.providerId || 'unknown'}; do not resubmit`);
         }
         const jobs = Object.values(state.jobs);
-        const occupied = jobs.filter(job => job.status !== 'completed');
+        const occupied = jobs.filter(job => !['completed', 'failed'].includes(job.status));
         if (occupied.length >= auth.maxConcurrent)
             throw new Error('video_concurrency_limit: pending jobs include ambiguous submissions');
         const used = jobs.reduce((sum, job) => sum + (job.settledUsd ?? job.reserveUsd), state.openingSpendUsd ?? 0);
@@ -303,11 +308,20 @@ export async function executeVideo(raw, dispatch) {
         state.jobs[plan.requestId] = { planId: id, requestId: plan.requestId, shotId: plan.shotId, tool: plan.tool,
             status: 'submitting', reserveUsd: plan.quote.reserveUsd, updatedAt: new Date().toISOString() };
         return undefined;
-    });
+    }, auth.openingSpendUsd);
     if (cached)
         return cached;
     const update = (patch) => videoTransaction(episode, state => {
         Object.assign(state.jobs[plan.requestId], patch, { updatedAt: new Date().toISOString() });
+    });
+    // An adapter that proves nothing is running (terminal) closes the request as failed and frees its
+    // concurrency slot; a request that never got a provider ID was never billed. Anything else stays
+    // submission_unknown until video_status reconciles it.
+    const settle = (terminal, evidence, result) => videoTransaction(episode, state => {
+        const job = state.jobs[plan.requestId];
+        Object.assign(job, { status: terminal ? 'failed' : 'submission_unknown', evidence, updatedAt: new Date().toISOString() }, result ? { result } : {});
+        if (terminal && !job.providerId)
+            job.settledUsd = 0;
     });
     const startedAt = Date.now();
     let ok = false;
@@ -324,7 +338,7 @@ export async function executeVideo(raw, dispatch) {
                 throw new Error('Invalid provider usage'); update({ tokens }); },
         }, () => dispatch(plan.tool, plan.args));
         if (result.isError) {
-            update({ status: 'submission_unknown', result });
+            settle(result.terminal === true, result.content.map(item => item.type === 'text' ? item.text : '').join('\n').slice(0, 1000), result);
             return result;
         }
         videoTransaction(episode, state => {
@@ -342,7 +356,7 @@ export async function executeVideo(raw, dispatch) {
         return result;
     }
     catch (error) {
-        update({ status: 'submission_unknown' });
+        settle(error instanceof GenaiRequestError && error.terminal, (error instanceof Error ? error.message : String(error)).slice(0, 1000));
         throw error;
     }
     finally {
@@ -416,16 +430,32 @@ export async function routeLegacyVideo(tool, raw, dispatch) {
         throw new Error('video_context_required');
     return dispatch(tool, args);
 }
-/** Read persisted receipts without polling or issuing a provider request. */
+/** Read persisted receipts; refresh polls an existing GenAI job; reconcile settles an unknown request from billing evidence. */
 export async function videoStatus(raw) {
-    const input = z.object({ episode: z.string().min(1), requestId: idSchema, action: z.enum(['read', 'refresh']).default('read') }).strict().parse(raw);
+    const input = z.object({ episode: z.string().min(1), requestId: idSchema, action: z.enum(['read', 'refresh', 'reconcile']).default('read'),
+        executorStopped: z.boolean().optional(), evidence: z.string().min(1).optional(), spentUsd: z.number().finite().nonnegative().optional() }).strict().parse(raw);
     const episode = fs.realpathSync(input.episode);
     const file = path.join(episode, '.work/video-routing/state.json');
     if (!fs.existsSync(file))
         return { requestId: input.requestId, status: 'not_started' };
+    if (input.action === 'reconcile') {
+        // Same contract as image_status: the caller brings the provider's terminal status and the actual charge.
+        if (!input.evidence || input.spentUsd === undefined)
+            throw new Error('video_reconciliation_requires_billing_evidence');
+        videoTransaction(episode, current => {
+            const job = Object.hasOwn(current.jobs, input.requestId) ? current.jobs[input.requestId] : undefined;
+            if (!job || job.status === 'completed')
+                throw new Error('video_reconciliation_requires_unknown_terminal_request');
+            if (['reserved', 'submitting', 'submitted'].includes(job.status) && input.executorStopped !== true)
+                throw new Error('video_reconciliation_requires_executor_stopped: confirm the executing process has exited and the provider job is terminal');
+            Object.assign(job, { status: 'failed', settledUsd: input.spentUsd, evidence: input.evidence, updatedAt: new Date().toISOString() });
+        });
+    }
     const state = JSON.parse(fs.readFileSync(file, 'utf8'));
     const job = state.jobs?.[input.requestId];
     if (input.action === 'refresh' && job) {
+        if (job.status === 'failed')
+            throw new Error('video_request_failed: nothing to recover; plan a new requestId');
         if (!job.tool.startsWith('astra_genai_desktop_') && !['astra_genai_text2video', 'astra_genai_img2video', 'astra_genai_audio2video', 'astra_genai_msr'].includes(job.tool))
             throw new Error('video_refresh_unsupported: use provider-specific recovery');
         const plan = JSON.parse(fs.readFileSync(path.join(episode, '.work/video-routing/plans', job.planId + '.json'), 'utf8'));
@@ -445,6 +475,7 @@ export async function videoStatus(raw) {
         return { ...job, providerStatus: result.status, recovery: 'Poll this same request with action:refresh; do not resubmit.' };
     }
     return job ? { ...job, recovery: job.status === 'completed' ? 'Reuse result; no new generation.' :
-            'Inspect providerId at the selected provider. Keep the reservation until billing and terminal status are reconciled. Do not change requestId or delete state to retry.' } :
+            job.status === 'failed' ? 'Closed as failed; its concurrency slot is free. Plan a new requestId to try again.' :
+                'Inspect providerId at the selected provider. Keep the reservation until billing and terminal status are reconciled with action:reconcile. Do not change requestId or delete state to retry.' } :
         { requestId: input.requestId, status: 'not_started' };
 }

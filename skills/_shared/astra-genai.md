@@ -13,7 +13,7 @@ of packaging, signs and lettered clothing; apply the scoped image-model override
 | Change an existing image's style or overall appearance | image `edit` / `astra_genai_edit`, `mode:"img2img"` | Reuse one inspected source. Start near strength 0.6 and specify what to preserve. |
 | Correct one region while keeping the surrounding image | image `edit` / `astra_genai_edit`, `mode:"inpaint"` | Source plus same-size mask: white (grayscale ≥128) changes, black stays. |
 | Preserve a character, outfit, prop and setting in a moving shot | video `reference` / `astra_genai_msr` | Reuse inspected character, clothing, prop and location sheets; up to four subject images plus one background. |
-| Animate a particular first frame or reach a final frame | video `image` / `astra_genai_img2video` | Source URI and optional last-frame URI. MSR references do not pin temporal frames. |
+| Animate a particular first frame or reach a final frame | video `image` / `astra_genai_img2video` | Source image (path or URI) and optional last frame. MSR references do not pin temporal frames. |
 | Motion without identity references | video `text` / `astra_genai_text2video` | Explicit action, timing and camera intent. |
 | A clip that follows a recorded speech or sound track | video `audio` / `astra_genai_audio2video` | One mono/stereo audio file; optional first/last image. The clip length equals the audio. |
 
@@ -199,7 +199,8 @@ Example `video_plan` args for operation `reference` (dimensions inherit selectio
 
 The v2 tools retain explicit `duration` (integer or null) and `resolution`, optional
 `fps` 24/25/48/50, `generateAudio` and provider `cameraMotion`. Image-to-video adds
-`imageUri` and optional `lastFrameUri`; it does not upload local files. The gateway
+exactly one `imagePath` or `imageUri` (HTTPS or PNG/JPEG data URI; a local file travels
+as a data URI) and an optional `lastFramePath` or `lastFrameUri`. The gateway
 validates deployment limits. Do not send MSR fields to v2 or reuse legacy upload IDs.
 
 Audio-to-video takes exactly one `audioPath` (local `.wav`/`.mp3`/`.m4a`/`.ogg`/`.opus`,

@@ -24,6 +24,13 @@ test('provider body follows the published gateway fields and preserves required 
   for (const input of [{ ...base, duration: undefined }, { ...base, fps: 30 }, { ...base, seed: 1 }, { ...base, model: 'ltx-2-5-pro' }]) assert.equal(genaiTextToVideoSchema.safeParse(input).success, false);
   assert.throws(() => parseVideoArgs('astra_genai_text2video', { ...base, requiredSeconds: 5 }), /not supported/);
   assert.equal(speechVideoCapabilities('astra-genai', base.model).audioConditioning, false);
+  // A local start frame travels as a checked data URI; a non-HTTPS URI or two sources are refused.
+  const png = path.join(os.tmpdir(), `genai-frame-${process.pid}.png`);
+  fs.writeFileSync(png, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=', 'base64'));
+  try { assert.match(buildGenaiVideoBody(genaiImageToVideoSchema.parse({ ...base, imagePath: png })).image_uri, /^data:image\/png;base64,/); }
+  finally { fs.rmSync(png, { force: true }); }
+  for (const frame of [{ imageUri: 'file:///tmp/a.png' }, { imageUri: 'https://example.com/a.png', imagePath: png }, {}])
+    assert.equal(genaiImageToVideoSchema.safeParse({ ...base, ...frame }).success, false, JSON.stringify(frame));
 });
 test('submission is persisted before status failure and the same receipt resumes without another POST', async t => {
   const dir = setup(t), args = { ...base, outputPath: dir, filename: 'clip.mp4' };
@@ -38,6 +45,20 @@ test('submission is persisted before status failure and the same receipt resumes
   await assert.rejects(generateGenaiVideo('text-to-video', args));
   assert.equal(posts, 1);
   await assert.rejects(generateGenaiVideo('text-to-video', { ...args, prompt: 'changed' }), /conflicts/);
+});
+test('a rejected submission frees its output name; one status 5xx is polled through and a failed job is terminal', async t => {
+  const dir = setup(t), args = { ...base, outputPath: dir, filename: 'clip.mp4' };
+  const realSetTimeout = globalThis.setTimeout;
+  globalThis.setTimeout = (fn, ms = 0, ...rest) => realSetTimeout(fn, ms >= 1000 ? 0 : ms, ...rest);
+  t.after(() => { globalThis.setTimeout = realSetTimeout; });
+  globalThis.fetch = async () => Response.json({ detail: 'unsupported resolution' }, { status: 422 });
+  await assert.rejects(generateGenaiVideo('text-to-video', args), error => error.terminal === true);
+  assert.equal(fs.existsSync(path.join(dir, 'clip.mp4.astra-genai.json')), false);
+  let gets = 0;
+  globalThis.fetch = async (url, options) => options.method === 'POST' ? Response.json({ id: 'job-3' })
+    : ++gets === 1 ? new Response('busy', { status: 503 }) : Response.json({ id: 'job-3', status: 'failed', error: 'oom' });
+  await assert.rejects(generateGenaiVideo('text-to-video', args), error => error.terminal === true && /oom/.test(error.message));
+  assert.equal(gets, 2);
 });
 test('completed LTX result downloads verified video and cached recovery needs no network', async t => {
   const dir = setup(t), source = path.join(dir, 'source.mp4');

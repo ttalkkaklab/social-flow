@@ -79,6 +79,7 @@ test('every price key the mapping can emit exists in prices.tsv', () => {
     ['suno_generate_lyrics', {}],
     ['mlx_music_generate', { durationSeconds: 30 }],
     ['mlx_video_generate', { numFrames: 49 }],
+    ['astra_genai_text2video', { duration: 5 }],
     ['mlx_3d_generate', {}],
   ];
   const missing = [];
@@ -88,6 +89,11 @@ test('every price key the mapping can emit exists in prices.tsv', () => {
     if (!known.has(key)) missing.push(`${tool} → ${key}`);
   }
   assert.deepEqual(missing, [], 'price keys absent from prices.tsv');
+});
+
+test('GenAI video records its requested seconds; audio-to-video length stays unknown', () => {
+  assert.deepEqual([priceOf('astra_genai_text2video', { duration: 5 }).quantity, priceOf('astra_genai_msr', { numFrames: 121, frameRate: 24 }).quantity,
+    priceOf('astra_genai_audio2video', {}).quantity, priceOf('astra_genai_msr', {}).key], [5, 121 / 24, null, 'video.astra-genai']);
 });
 
 test('Seedance bills exactly the seconds requested', () => {
