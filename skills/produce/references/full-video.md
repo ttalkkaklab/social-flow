@@ -161,8 +161,8 @@ move it performs in `previz.camera.movement`, helps camera and blocking when the
 takes a reference clip — on Seedance 2.x the shot can be a reference cut (`modelPurpose:"previz"`,
 the clip as `Video 1`; the vendor bills input plus output seconds, `cost-preview.js` prices it on
 the `…-video` rows). When one exists, the four `visual.camera` slots are written to match it and
-the still is edited from its first frame (§6.6). On a `frame_and_prompt` adapter (Seedance 1.x,
-Veo, a host tool, ASTRA) the previz is advice only. Each cut keeps its own saved model and
+the still is edited from its first frame (§6.6). On a `frame_and_prompt` adapter (a host tool,
+ASTRA, image-to-video) the previz is advice only. Each cut keeps its own saved model and
 resolution (per-cut, 2026-09-13). `check-scenes.js` reports a generated cut without a previz as
 advisory, never a refusal.
 
@@ -290,8 +290,6 @@ hold a spatial relationship.
 - **Choose size by what must be read.** Keep faces and gestures legible on a phone while
   retaining the doors, witnesses or objects that explain the action. No wide-shot ratio
   replaces checking the actual composition.
-- **No provider lock under a written move.** `visual.video.cameraFixed:true` is only legal with
-  `movement: static`; ep402 shot 12 asked for an optical push and locked the camera at once.
 - **Generate at the card length.** The beats end inside `scene.duration`; a 10-second clip for
   a 5-second card spreads the action past the cut. `check-production.js --ready` warns on a clip
   more than three seconds longer than its card unless `edit.in` skips into the action.
@@ -364,8 +362,8 @@ plan reaches the model; never replace it with a global "static or subtle drift" 
    1280); the server owns the acceptance gate, so a refusal there is a retry at another frame
    count on the grid, not a defect to report.
    On the API lane each cut records its selected model and resolution. A 2.x reference-video
-   cut uses `seedance_reference` with the previz clip as `referenceVideoPaths`; 1.5 Pro uses
-   `seedance_img2video` with a `frame_and_prompt` previz and no reference arrays. Either uses
+   cut uses `seedance_reference` with the previz clip as `referenceVideoPaths`; `seedance_img2video`
+   takes a `frame_and_prompt` previz and no reference arrays. Either uses
    `generateAudio:false` for separate narration; authored native effects use [model-aware effects](video-sound.md) to enable audio and retain the source soundtrack. `PRODUCTION.videoModel` records the default or `model:"mixed"`;
    `video-model-options.js` prints comparison costs before calls. Keep spoken narration
    on the channel voice. An upgrade requires a priced plan and approval; never silently escalate.

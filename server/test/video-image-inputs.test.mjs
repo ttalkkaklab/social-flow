@@ -18,7 +18,7 @@ const ref=(id='hero',use='video',role='character')=>({id,path:id+'.png',role,use
 const shot=(mode='first_last',references=[])=>({visual:{frames:{mode,...(mode==='reference'?{}:{start:'start.png'}),...(mode==='first_last'?{end:'end.png'}:{})},references}});
 test('frame mappings use board-relative files, decoded metadata and explicit use:image references',t=>{
  const root=fixture(t),s=shot('first_last',[ref('hero','image')]);
- for(const [tool,start,end] of [['veo_img2video','sourceImagePath','lastImagePath'],['seedance_img2video','sourceImagePath','lastImagePath'],['astra_img2video','firstFramePath','lastFramePath'],['astra_genai_audio2video','imagePath','lastFramePath'],['mlx_video_generate','firstFrameImagePath','lastFrameImagePath']]) {
+ for(const [tool,start,end] of [['seedance_img2video','sourceImagePath','lastImagePath'],['astra_img2video','firstFramePath','lastFramePath'],['astra_genai_audio2video','imagePath','lastFramePath'],['mlx_video_generate','firstFrameImagePath','lastFrameImagePath']]) {
   const p=prepareVideoImages(tool,{prompt:'Move'},s,root);
   assert.equal(p.args[start],path.join(root,'storyboard/start.png'));assert.equal(p.args[end],path.join(root,'storyboard/end.png'));
   assert.equal(p.imageBindings.length,3);assert.equal(p.imageBindings[2].submitted,false);
@@ -58,13 +58,13 @@ test('missing, corrupt, conflicting, extra and unsupported image constraints fai
  const root=fixture(t);
  assert.throws(()=>prepareVideoImages('seedance_reference',{prompt:'x'},shot('first_last',[ref()]),root),/cannot combine/);
  assert.throws(()=>prepareVideoImages('astra_audio2video',{},shot(),root),/cannot carry/);
- assert.throws(()=>prepareVideoImages('veo_reference',{},shot('reference',[ref('hero','video','style')]),root),/not style/);
+ assert.throws(()=>prepareVideoImages('seedance_img2video',{},shot('reference',[ref()]),root),/needs a reference adapter/);
  assert.throws(()=>prepareVideoImages('astra_genai_msr',{},shot('reference',[ref('room','video','background'),ref()]),root),/background must be last/);
- assert.throws(()=>prepareVideoImages('veo_text2video',{},shot('first'),root),/cannot carry/);
- assert.throws(()=>prepareVideoImages('veo_img2video',{sourceImagePath:'storyboard/hero.png'},shot(),root),/mismatch/);
- assert.throws(()=>prepareVideoImages('veo_img2video',{lastImagePath:'storyboard/end.png'},shot('first'),root),/unplanned/);
- const missing=shot('reference',[{...ref(),path:'absent.png'}]);assert.throws(()=>prepareVideoImages('veo_reference',{},missing,root),/ENOENT/);
- fs.writeFileSync(path.join(root,'storyboard/hero.png'),'corrupt');assert.throws(()=>prepareVideoImages('veo_reference',{},shot('reference',[ref()]),root),/image_invalid/);
+ assert.throws(()=>prepareVideoImages('seedance_text2video',{},shot('first'),root),/cannot carry/);
+ assert.throws(()=>prepareVideoImages('seedance_img2video',{sourceImagePath:'storyboard/hero.png'},shot(),root),/mismatch/);
+ assert.throws(()=>prepareVideoImages('seedance_img2video',{lastImagePath:'storyboard/end.png'},shot('first'),root),/unplanned/);
+ const missing=shot('reference',[{...ref(),path:'absent.png'}]);assert.throws(()=>prepareVideoImages('seedance_reference',{},missing,root),/ENOENT/);
+ fs.writeFileSync(path.join(root,'storyboard/hero.png'),'corrupt');assert.throws(()=>prepareVideoImages('seedance_reference',{},shot('reference',[ref()]),root),/image_invalid/);
 });
 test('timed intermediate frames bind exact indices; duplicates and unsupported adapters are refused',t=>{
  const root=fixture(t),s=shot();s.visual.frames.keyframes=[{image:'mid.png',atSeconds:1,state:'Contact established',strength:.8}];
@@ -78,7 +78,7 @@ test('host plans expose a hashed inventory without claiming provider submission;
  assert.equal(p.imageBindings.length,3);assert.ok(p.imageBindings.every(i=>!i.submitted));assert.match(p.imageHandoff,/unverified/);
  const legacy={visual:{bg:'old.png',frames:{mode:'first'},video:{referenceImagePaths:['old.png']}}};
  assert.deepEqual(prepareVideoImages('seedance_reference',{referenceImagePaths:['old.png']},legacy,root).args,{referenceImagePaths:['old.png']});
- const raw={prompt:'legacy',sourceImagePath:'external.png'};assert.equal(prepareVideoImages('veo_img2video',raw,{},root).args,raw);
+ const raw={prompt:'legacy',sourceImagePath:'external.png'};assert.equal(prepareVideoImages('seedance_img2video',raw,{},root).args,raw);
 });
 
 test('ASTRA ending frame uses the adapter duration conversion rather than a second rounding rule',t=>{

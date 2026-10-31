@@ -22,6 +22,8 @@ image.host	image	0.000	derived	Host-provided image generation uses the included 
 image.mlx	image	0.000	official	mlx_image_generate · mlx_image_edit — MLX Core / mlx-serve on-device. Electricity only
 
 # ── Video (Veo 3.1) ──────────────────────────────────────────────────────
+# Retired 2026-10-31 with Gemini Omni and Seedance 1.x below: none of them can keep a character's
+# voice, so the plugin no longer calls them. The rows stay so earlier episode ledgers still price.
 # Billed per second and **audio is always included** — it can't be turned off. No free tier.
 # Lengths are fixed to a 4·6·8s grid and 1080p·4K are 8s-only, so a 4-second 1080p cut
 # still pays the 8-second price — comparing per-second prices alone understates real spend.
@@ -61,6 +63,7 @@ omni.4k	call	1.0136	unverified	assumed identical — upscale may bill more, unte
 # The actual bill's source of truth is the response's completion_tokens. Episode tallies record that value.
 # Limited-time discounts are not baked into these prices (they'd silently go wrong when the promo ends):
 #   2.5 1080p 72% of list ~2026-09-17 · 2.0 mini 40% ~2026-09-07 · 2.0 fast 75% ~2026-09-07
+# Retired 2026-10-31 (no reference audio); rows kept for earlier ledgers.
 seedance.1-0-pro-fast.1080p	second	0.048	derived	seedance-1-0-pro-fast-251015 — silent-only, first frame only. Cheapest
 seedance.1-0-pro-fast.720p	second	0.020	derived	seedance-1-0-pro-fast-251015
 seedance.1-5-pro-silent.1080p	second	0.058	derived	seedance-1-5-pro-251215 silent — default b-roll candidate (accepts photoreal face input)

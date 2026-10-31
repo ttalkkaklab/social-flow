@@ -99,10 +99,10 @@
   const seedanceContract = catalogue.adapters.find(adapter => adapter.tool === 'seedance_img2video');
   const priced = typeof module === 'object' && module.exports ? require('../../produce/references/seedance-route.js').PRICED : new Set();
   const VIDEO_MODELS = Object.fromEntries(Object.entries(seedanceContract?.modelConstraints || {})
-    .filter(([model, spec]) => spec.referenceVideos || model === 'seedance-1-5-pro-251215')
+    .filter(([, spec]) => spec.referenceVideos)
     .map(([model, spec]) => [model, { label: model.replace(/^(dreamina-)?seedance-/, 'Seedance ').replace(/-\d{6}$/, '').replace(/(\d)-(\d)/, '$1.$2').replace(/-/g, ' ').replace(/ pro$/, ' Pro'), resolutions: spec.resolutions.filter(res => {
       const family = model.replace(/^(dreamina-)?seedance-/, '').replace(/-\d{6}$/, '');
-      return priced.has('seedance.' + family + (model === 'seedance-1-5-pro-251215' ? '-silent.' : '-video.') + res);
+      return priced.has('seedance.' + family + '-video.' + res);
     }) }]).filter(([, spec]) => spec.resolutions.length));
 
   // Our own LTX-2.5 box is not a tier in the table above: it has no price, so nothing to compare.
@@ -696,11 +696,11 @@
       // The API lane renders at the resolution the user chose with the model (PRODUCTION.videoModel); 1080p before that record exists.
       const astra = astraSize(win);
       const wantRes = hostVideo ? '720p' : astraVideo ? astra.source : (v.video?.resolution || p.videoModel?.resolution || '1080p');
-      if (!managedChoice && (v.video?.resolution !== wantRes || (!['veo', 'omni'].includes(selectedEngine) && v.video?.generateAudio !== false)))
+      if (!managedChoice && (v.video?.resolution !== wantRes || v.video?.generateAudio !== false))
         bad(hostVideo ? 'the host video tool tops out at 720p; write resolution:"720p" and generateAudio:false with separate narration'
           : astraVideo ? 'ASTRA renders on a 64-pixel grid; write resolution:"' + astra.source + '" (the edit scales it to ' + astra.edit + ') and generateAudio:false with separate narration'
                       : 'write the chosen model\'s resolution (' + wantRes + ') and generateAudio:false with separate narration');
-      if (!['host','astra','astra-genai','seedance','veo','mlx','omni'].includes(selectedEngine) || (!managedChoice && v.video?.engine !== selectedEngine))
+      if (!['host','astra','astra-genai','seedance','mlx'].includes(selectedEngine) || (!managedChoice && v.video?.engine !== selectedEngine))
         bad(hostVideo ? 'videoProvider:host routes every full_video cut to engine:"host" (the CLI\'s own image_to_video)'
           : astraVideo ? 'videoProvider:astra routes every full_video cut to engine:"astra" (our own LTX-2.5 box)'
                       : 'full_video must use its selected deployed video engine');

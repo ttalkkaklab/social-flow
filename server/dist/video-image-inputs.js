@@ -5,11 +5,11 @@ import { fileURLToPath } from 'node:url';
 import { verifyImageFile } from './image-media.js';
 import { framesForSeconds } from './astra-video-client.js';
 import { resolveVideoDuration } from './video-duration.js';
+import { VIDEO_ADAPTERS } from './video-registry.js';
 const load = createRequire(import.meta.url);
 const imageRouting = () => load(fileURLToPath(new URL('../../skills/storyboard/references/render-routing.js', import.meta.url)));
 const FRAME_FIELDS = {
-    veo_img2video: ['sourceImagePath', 'lastImagePath'], seedance_img2video: ['sourceImagePath', 'lastImagePath'],
-    omni_img2video: ['sourceImagePath', 'lastImagePath'], astra_img2video: ['firstFramePath', 'lastFramePath'],
+    seedance_img2video: ['sourceImagePath', 'lastImagePath'], astra_img2video: ['firstFramePath', 'lastFramePath'],
     astra_audio2video: ['imagePath'], astra_genai_img2video: ['imageUri', 'lastFrameUri'],
     astra_genai_audio2video: ['imagePath', 'lastFramePath'], mlx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'], ltx_video_generate: ['firstFrameImagePath', 'lastFrameImagePath'],
 };
@@ -118,10 +118,8 @@ export function prepareVideoImages(tool, input, shot, episode) {
         assigned.add(key);
     };
     if (frames.mode === 'reference') {
-        if (!['seedance_reference', 'veo_reference', 'astra_genai_msr', 'fasth3_omni_reference'].includes(tool))
+        if (VIDEO_ADAPTERS[tool]?.operation !== 'reference')
             throw new Error('image_plan_unsupported: reference mode needs a reference adapter');
-        if (tool === 'veo_reference' && videoRefs.some(ref => ['style', 'composition'].includes(ref.role)))
-            throw new Error('image_plan_unsupported: Veo references preserve assets, not style or composition');
         if (tool === 'astra_genai_msr' && videoRefs.some((ref, i) => ref.role === 'background' && i !== videoRefs.length - 1))
             throw new Error('image_plan_invalid: MSR background must be last so prompt image indices match the gateway');
         const paths = videoRefs.map(ref => bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, true));

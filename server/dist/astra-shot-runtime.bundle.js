@@ -4927,7 +4927,7 @@ var config = {
   pexelsApiKey: process.env.PEXELS_API_KEY || "",
   /** Pixabay API key (optional — stock_search skips Pixabay without it) — https://pixabay.com/api/docs/ */
   pixabayApiKey: process.env.PIXABAY_API_KEY || "",
-  /** Gemini API key (shared requirement of the veo_ and omni_ video, tts_* speech, and music_* music tools) — https://aistudio.google.com/apikey */
+  /** Gemini API key (shared requirement of the tts_* speech and music_* music tools) — https://aistudio.google.com/apikey */
   geminiApiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "",
   /** OpenAI API key (required by the gpt_image_* image generation tools) — https://platform.openai.com/api-keys */
   openaiApiKey: process.env.OPENAI_API_KEY || "",
@@ -4981,7 +4981,7 @@ function astraVideoBaseUrl() {
 function requireAstraVideoKey() {
   if (!config.astraVideoApiKey) {
     throw new Error(
-      "ASTRA_VIDEO is not set. astra_* video generation tools talk to the self-hosted ASTRA video API (https://video.astravision.co.kr) and it rejects every route but /healthz without a key. Ask the server operator for a key and export ASTRA_VIDEO; point ASTRA_VIDEO_URL at another host only if you run a second box of the same server. Without it, veo_* (GEMINI_API_KEY), seedance_* (ARK_API_KEY) and mlx_video_generate (on-device) still work."
+      "ASTRA_VIDEO is not set. astra_* video generation tools talk to the self-hosted ASTRA video API (https://video.astravision.co.kr) and it rejects every route but /healthz without a key. Ask the server operator for a key and export ASTRA_VIDEO; point ASTRA_VIDEO_URL at another host only if you run a second box of the same server. Without it, astra_genai_* (ASTRA_GENAI_API_KEY), seedance_* (ARK_API_KEY) and ltx_video_generate (on-device) still work."
     );
   }
   return config.astraVideoApiKey;
@@ -5321,108 +5321,6 @@ var receiptSchema = external_exports.object({
 import { createRequire as createRequire6 } from "node:module";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 
-// src/video-client.ts
-var VALID_VIDEO_MODELS = [
-  "veo-3.1-generate-preview",
-  // top quality (default) — 720p $0.40/s
-  "veo-3.1-fast-generate-preview",
-  // low latency, low cost — 720p $0.10/s (4x cheaper than default)
-  "veo-3.1-lite-generate-preview"
-  // cheapest — 720p $0.05/s (8x cheaper). No 4K/Extension/Reference
-];
-var DEFAULT_VIDEO_MODEL = "veo-3.1-fast-generate-preview";
-var VALID_VIDEO_ASPECT_RATIOS = ["16:9", "9:16"];
-var VALID_VIDEO_RESOLUTIONS = ["720p", "1080p", "4k"];
-var API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
-var FILES_URI_PREFIX = `${API_BASE_URL}/files/`;
-var HANDLE_LIFETIME_MS = 48 * 60 * 60 * 1e3;
-var DurationSchema = external_exports.union([external_exports.literal(4), external_exports.literal(6), external_exports.literal(8)]).optional().default(8);
-function validateResolutionConstraints(model2, resolution2, durationSeconds, ctx) {
-  if ((resolution2 === "1080p" || resolution2 === "4k") && durationSeconds !== 8) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["durationSeconds"],
-      message: `${resolution2} resolution is only supported at 8s duration (requested: ${durationSeconds}s).`
-    });
-  }
-  if (resolution2 === "4k" && model2 === "veo-3.1-lite-generate-preview") {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["resolution"],
-      message: "veo-3.1-lite-generate-preview does not support 4k (720p/1080p only)."
-    });
-  }
-}
-function rejectLiteNegativePrompt(negativePrompt, model2, ctx) {
-  if (negativePrompt && model2 === "veo-3.1-lite-generate-preview") {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["negativePrompt"],
-      message: "negativePrompt is not accepted on veo-3.1-lite-generate-preview (the API returns 400). Write the exclusion into the prompt as positive description, or use veo-3.1-fast-generate-preview."
-    });
-  }
-}
-function rejectLiteModel(feature, model2, ctx) {
-  if (model2 === "veo-3.1-lite-generate-preview") {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["model"],
-      message: `${feature} is not supported on veo-3.1-lite-generate-preview. Use veo-3.1-generate-preview or veo-3.1-fast-generate-preview.`
-    });
-  }
-}
-var negativePromptSchema = external_exports.string().max(500).optional().describe(
-  `Comma-separated noun or adjective phrases to exclude (e.g. "wall, frame, text overlay"). Never use instructive language such as "no" or "don't" \u2014 the API docs reject that form.`
-);
-var text2VideoSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required"),
-  negativePrompt: negativePromptSchema,
-  model: external_exports.enum(VALID_VIDEO_MODELS).optional().default(DEFAULT_VIDEO_MODEL),
-  aspectRatio: external_exports.enum(VALID_VIDEO_ASPECT_RATIOS).optional().default("16:9"),
-  resolution: external_exports.enum(VALID_VIDEO_RESOLUTIONS).optional().default("720p"),
-  durationSeconds: DurationSchema,
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").optional()
-}).superRefine((data, ctx) => {
-  validateResolutionConstraints(data.model, data.resolution, data.durationSeconds, ctx);
-  rejectLiteNegativePrompt(data.negativePrompt, data.model, ctx);
-});
-var img2VideoSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required"),
-  negativePrompt: negativePromptSchema,
-  sourceImagePath: external_exports.string().min(1, "Source image path is required"),
-  lastImagePath: external_exports.string().optional(),
-  model: external_exports.enum(VALID_VIDEO_MODELS).optional().default(DEFAULT_VIDEO_MODEL),
-  aspectRatio: external_exports.enum(VALID_VIDEO_ASPECT_RATIOS).optional().default("16:9"),
-  resolution: external_exports.enum(VALID_VIDEO_RESOLUTIONS).optional().default("720p"),
-  durationSeconds: DurationSchema,
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").optional()
-}).superRefine((data, ctx) => {
-  validateResolutionConstraints(data.model, data.resolution, data.durationSeconds, ctx);
-  rejectLiteNegativePrompt(data.negativePrompt, data.model, ctx);
-});
-var videoExtensionSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required"),
-  sourceVideoPath: external_exports.string().min(1, "Source video path is required"),
-  sourceVideoUri: external_exports.string().startsWith(FILES_URI_PREFIX, `Source video URI must start with ${FILES_URI_PREFIX}`).optional(),
-  model: external_exports.enum(VALID_VIDEO_MODELS).optional().default(DEFAULT_VIDEO_MODEL),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").optional()
-}).superRefine((data, ctx) => rejectLiteModel("video extension", data.model, ctx));
-var referenceVideoSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required"),
-  referenceImagePaths: external_exports.array(external_exports.string()).min(1, "At least one reference image is required").max(3, "Maximum 3 reference images allowed"),
-  model: external_exports.enum(VALID_VIDEO_MODELS).optional().default(DEFAULT_VIDEO_MODEL),
-  aspectRatio: external_exports.enum(VALID_VIDEO_ASPECT_RATIOS).optional().default("16:9"),
-  resolution: external_exports.enum(VALID_VIDEO_RESOLUTIONS).optional().default("720p"),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").optional()
-}).superRefine((data, ctx) => {
-  rejectLiteModel("reference images", data.model, ctx);
-  validateResolutionConstraints(data.model, data.resolution, 8, ctx);
-});
-
 // src/seedance-client.ts
 import * as path4 from "node:path";
 var VALID_SEEDANCE_RESOLUTIONS = ["480p", "720p", "1080p", "4k"];
@@ -5438,7 +5336,6 @@ var SEEDANCE_MODEL_SPECS = {
     referenceAudio: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30, audioOnly: true },
     referenceVideos: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30 },
     audio: true,
-    seed: false,
     realFaceInput: false,
     activationGate: true
   },
@@ -5450,7 +5347,6 @@ var SEEDANCE_MODEL_SPECS = {
     referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
     referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
     audio: true,
-    seed: false,
     realFaceInput: false,
     activationGate: true
   },
@@ -5462,7 +5358,6 @@ var SEEDANCE_MODEL_SPECS = {
     referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
     referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
     audio: true,
-    seed: false,
     realFaceInput: false,
     activationGate: true
   },
@@ -5474,63 +5369,14 @@ var SEEDANCE_MODEL_SPECS = {
     referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
     referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
     audio: true,
-    seed: false,
     realFaceInput: false,
     activationGate: true
-  },
-  "seedance-1-5-pro-251215": {
-    resolutions: ["480p", "720p", "1080p"],
-    duration: [4, 12],
-    lastFrame: true,
-    referenceImages: false,
-    referenceAudio: false,
-    referenceVideos: false,
-    audio: true,
-    seed: true,
-    realFaceInput: true,
-    activationGate: false
-  },
-  "seedance-1-0-pro-250528": {
-    resolutions: ["480p", "720p", "1080p"],
-    duration: [2, 12],
-    lastFrame: true,
-    referenceImages: false,
-    referenceAudio: false,
-    referenceVideos: false,
-    audio: false,
-    seed: true,
-    realFaceInput: true,
-    activationGate: false
-  },
-  "seedance-1-0-pro-fast-251015": {
-    resolutions: ["480p", "720p", "1080p"],
-    duration: [2, 12],
-    lastFrame: false,
-    referenceImages: false,
-    referenceAudio: false,
-    referenceVideos: false,
-    audio: false,
-    seed: true,
-    realFaceInput: true,
-    activationGate: false
   }
 };
 var VALID_SEEDANCE_MODELS = Object.keys(SEEDANCE_MODEL_SPECS);
-var DEFAULT_SEEDANCE_MODEL = "seedance-1-5-pro-251215";
-var SEEDANCE_REFERENCE_MODELS = VALID_SEEDANCE_MODELS.filter(
-  (model2) => SEEDANCE_MODEL_SPECS[model2].referenceImages !== false
-);
-var DEFAULT_SEEDANCE_REFERENCE_MODEL = "dreamina-seedance-2-0-260128";
-var SEEDANCE_REAL_FACE_MODELS = VALID_SEEDANCE_MODELS.filter(
-  (model2) => SEEDANCE_MODEL_SPECS[model2].realFaceInput
-);
+var DEFAULT_SEEDANCE_MODEL = "dreamina-seedance-2-0-260128";
 var DEFAULT_SEEDANCE_RESOLUTION = "720p";
 var DEFAULT_SEEDANCE_DURATION = 5;
-var SEEDANCE_FPS = 24;
-var SEEDANCE_FRAME_MODELS = ["seedance-1-0-pro-250528", "seedance-1-0-pro-fast-251015"];
-var SEEDANCE_MIN_FRAMES = 29;
-var SEEDANCE_MAX_FRAMES = 289;
-var SEEDANCE_FRAME_STEP = 4;
 var MAX_INPUT_IMAGE_BYTES = 30 * 1024 * 1024;
 var MAX_REQUEST_BYTES2 = 64 * 1024 * 1024;
 var MAX_INPUT_AUDIO_BYTES = 15 * 1024 * 1024;
@@ -5542,11 +5388,8 @@ var commonFields = {
   model: external_exports.enum(VALID_SEEDANCE_MODELS).optional().default(DEFAULT_SEEDANCE_MODEL),
   resolution: external_exports.enum(VALID_SEEDANCE_RESOLUTIONS).optional().default(DEFAULT_SEEDANCE_RESOLUTION),
   durationSeconds: external_exports.number().int().optional(),
-  frames: external_exports.number().int().min(SEEDANCE_MIN_FRAMES).max(SEEDANCE_MAX_FRAMES).optional(),
   generateAudio: external_exports.boolean().optional().default(false),
   watermark: external_exports.boolean().optional().default(false),
-  seed: external_exports.number().int().min(-1).max(2147483647).optional(),
-  cameraFixed: external_exports.boolean().optional(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("video").optional()
 };
@@ -5564,7 +5407,7 @@ function validateCommon(data, ctx) {
       ctx.addIssue({
         code: external_exports.ZodIssueCode.custom,
         path: ["prompt"],
-        message: `${data.model} reads Chinese or English prompts only \u2014 the Korean "${korean}" sits outside quotation marks and would be ignored rather than obeyed. Write the direction in English; Korean dialogue belongs inside quotes (1.5 pro lip-syncs it), or route the shot to dreamina-seedance-2-5-260628.`
+        message: `${data.model} reads Chinese or English prompts only \u2014 the Korean "${korean}" sits outside quotation marks and would be ignored rather than obeyed. Write the direction in English; Korean dialogue belongs inside quotes, or route the shot to dreamina-seedance-2-5-260628.`
       });
     }
   }
@@ -5576,12 +5419,7 @@ function validateCommon(data, ctx) {
     });
   }
   const [minDuration, maxDuration] = spec.duration;
-  if (data.frames !== void 0) {
-    if (!SEEDANCE_FRAME_MODELS.includes(data.model) || (data.frames - 1) % SEEDANCE_FRAME_STEP !== 0)
-      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["frames"], message: "frames requires Seedance 1.0 pro/pro-fast and 25+4n frames in 29..289" });
-    if (data.durationSeconds !== void 0)
-      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["durationSeconds"], message: "frames and durationSeconds are mutually exclusive" });
-  } else if ((data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) < minDuration || (data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) > maxDuration) {
+  if ((data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) < minDuration || (data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) > maxDuration) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
       path: ["durationSeconds"],
@@ -5592,24 +5430,8 @@ function validateCommon(data, ctx) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
       path: ["generateAudio"],
-      message: `${data.model} is silent-only and cannot generate audio. If you need audio, use seedance-1-5-pro-251215 or later.`
+      message: `${data.model} is silent-only and cannot generate audio.`
     });
-  }
-  if (!spec.seed) {
-    if (data.seed !== void 0) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["seed"],
-        message: `${data.model} does not support seed (Seedance 1.5 pro\xB71.0 pro\xB71.0 pro fast only).`
-      });
-    }
-    if (data.cameraFixed !== void 0) {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["cameraFixed"],
-        message: `${data.model} does not support cameraFixed (Seedance 1.5 pro\xB71.0 pro\xB71.0 pro fast only). Direct a fixed camera through the prompt instead.`
-      });
-    }
   }
 }
 var seedanceText2VideoSchema = external_exports.object({
@@ -5630,13 +5452,12 @@ var seedanceImg2VideoSchema = external_exports.object({
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
       path: ["lastImagePath"],
-      message: `${data.model} accepts a first frame only \u2014 for first+last frame interpolation use seedance-1-0-pro-250528 or later.`
+      message: `${data.model} accepts a first frame only.`
     });
   }
 }).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
 var seedanceReferenceSchema = external_exports.object({
   ...commonFields,
-  model: external_exports.enum(SEEDANCE_REFERENCE_MODELS).optional().default(DEFAULT_SEEDANCE_REFERENCE_MODEL),
   referenceImagePaths: external_exports.array(external_exports.string()).optional().default([]),
   referenceAudioPaths: external_exports.array(external_exports.string()).optional().default([]),
   referenceVideoPaths: external_exports.array(external_exports.string()).optional().default([]),
@@ -5645,14 +5466,6 @@ var seedanceReferenceSchema = external_exports.object({
 }).superRefine((data, ctx) => {
   validateCommon(data, ctx);
   const spec = SEEDANCE_MODEL_SPECS[data.model];
-  if (spec.referenceImages === false) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["model"],
-      message: `${data.model} does not support reference images. Use the Dreamina Seedance 2.5 or 2.0 family (${SEEDANCE_REFERENCE_MODELS.join(", ")}).`
-    });
-    return;
-  }
   const [, maxImages] = spec.referenceImages;
   if (data.referenceImagePaths.length > maxImages) {
     ctx.addIssue({
@@ -5672,10 +5485,6 @@ var seedanceReferenceSchema = external_exports.object({
   }
   if (videoCount > 0) {
     const video = spec.referenceVideos;
-    if (video === false) {
-      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["referenceVideoPaths"], message: `${data.model} does not take reference video.` });
-      return;
-    }
     if (videoCount > video.maxClips) {
       ctx.addIssue({
         code: external_exports.ZodIssueCode.custom,
@@ -5703,14 +5512,6 @@ var seedanceReferenceSchema = external_exports.object({
   }
   if (data.referenceAudioPaths.length === 0) return;
   const audio = spec.referenceAudio;
-  if (audio === false) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["referenceAudioPaths"],
-      message: `${data.model} does not take reference audio.`
-    });
-    return;
-  }
   if (data.referenceAudioPaths.length > audio.maxClips) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
@@ -6135,7 +5936,7 @@ var generateAudioSchema = external_exports.boolean().optional();
 var hdrSchema = external_exports.enum(["SRGB_LINEAR", "ACESCG", "ACESCCT"]).optional();
 var seedSchema = external_exports.number().int().min(0).max(ASTRA_VIDEO_MAX_SEED).optional();
 var frameRateSchema = external_exports.number().min(1).max(60).optional();
-var negativePromptSchema2 = external_exports.string().max(ASTRA_VIDEO_MAX_PROMPT_CHARS).optional();
+var negativePromptSchema = external_exports.string().max(ASTRA_VIDEO_MAX_PROMPT_CHARS).optional();
 var numInferenceStepsSchema = external_exports.number().int().min(1).max(50).optional();
 var numGeneratedKeyframesSchema = external_exports.number().int().min(0).max(16).optional();
 var widthSchema = external_exports.number().int().positive().optional();
@@ -6225,7 +6026,7 @@ var astraText2VideoSchema = external_exports.object({
   generateAudio: generateAudioSchema,
   hdr: hdrSchema,
   lora: loraSchema,
-  negativePrompt: negativePromptSchema2,
+  negativePrompt: negativePromptSchema,
   numInferenceSteps: numInferenceStepsSchema,
   numGeneratedKeyframes: numGeneratedKeyframesSchema,
   guidance: guidanceSchema,
@@ -6280,7 +6081,7 @@ var astraImg2VideoSchema = external_exports.object({
   duration: durationSchema,
   generateAudio: generateAudioSchema,
   lora: loraSchema,
-  negativePrompt: negativePromptSchema2,
+  negativePrompt: negativePromptSchema,
   numInferenceSteps: numInferenceStepsSchema,
   numGeneratedKeyframes: numGeneratedKeyframesSchema,
   guidance: guidanceSchema,
@@ -6340,7 +6141,7 @@ var astraKeyframeVideoSchema = external_exports.object({
   seed: seedSchema,
   duration: durationSchema,
   generateAudio: generateAudioSchema,
-  negativePrompt: negativePromptSchema2,
+  negativePrompt: negativePromptSchema,
   numInferenceSteps: numInferenceStepsSchema,
   guidance: guidanceSchema,
   ...outputFields
@@ -6373,7 +6174,7 @@ var astraAudio2VideoSchema = external_exports.object({
   duration: durationSchema,
   generateAudio: generateAudioSchema,
   hdr: hdrSchema,
-  negativePrompt: negativePromptSchema2,
+  negativePrompt: negativePromptSchema,
   numInferenceSteps: numInferenceStepsSchema,
   guidance: guidanceSchema,
   expectLipSync: external_exports.boolean().default(false),
@@ -6527,9 +6328,9 @@ function buildJobBody(mode, args) {
   }
   put(body, "adapter", args.adapter);
   if (args.references?.length) {
-    body.references = args.references.map((reference) => {
-      const entry2 = { upload_id: reference.uploadId };
-      put(entry2, "strength", reference.strength);
+    body.references = args.references.map((reference2) => {
+      const entry2 = { upload_id: reference2.uploadId };
+      put(entry2, "strength", reference2.strength);
       return entry2;
     });
   }
@@ -6951,62 +6752,9 @@ var statusSchema = external_exports.object({
 var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
 var SUBMIT_TIMEOUT_MS2 = 15 * 6e4;
 
-// src/omni-client.ts
-var VALID_OMNI_ASPECT_RATIOS = ["16:9", "9:16"];
-var VALID_OMNI_RESOLUTIONS = ["360p", "720p", "1080p", "4k"];
-var durationSchema2 = external_exports.number().int().min(3).max(10).optional().default(8);
-var resolutionSchema = external_exports.enum(VALID_OMNI_RESOLUTIONS).optional().default("720p");
-var aspectRatioSchema = external_exports.enum(VALID_OMNI_ASPECT_RATIOS).optional().default("16:9");
-var omniText2VideoSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required"),
-  aspectRatio: aspectRatioSchema,
-  resolution: resolutionSchema,
-  durationSeconds: durationSchema2,
-  seed: external_exports.number().int().optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").optional()
-});
-var omniImg2VideoSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required"),
-  sourceImagePath: external_exports.string().min(1, "Source image path is required"),
-  lastImagePath: external_exports.string().optional(),
-  aspectRatio: aspectRatioSchema,
-  resolution: resolutionSchema,
-  durationSeconds: durationSchema2,
-  seed: external_exports.number().int().optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").optional()
-});
-var continuationFields = {
-  prompt: external_exports.string().min(1, "Prompt is required"),
-  previousInteractionId: external_exports.string().optional(),
-  sourceVideoPath: external_exports.string().optional(),
-  resolution: resolutionSchema,
-  seed: external_exports.number().int().optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").optional()
-};
-function requireOneSource(data, ctx) {
-  const given = [data.previousInteractionId, data.sourceVideoPath].filter(Boolean).length;
-  if (given !== 1) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      path: ["previousInteractionId"],
-      message: "Give exactly one source: previousInteractionId (an interaction from an earlier omni_* call) or sourceVideoPath (a local mp4 of at most 10 seconds)."
-    });
-  }
-}
-var omniExtendSchema = external_exports.object({ ...continuationFields, durationSeconds: durationSchema2 }).superRefine(requireOneSource);
-var omniEditSchema = external_exports.object(continuationFields).superRefine(requireOneSource);
-
 // src/video-duration.ts
 var import_video_duration = __toESM(require_video_duration(), 1);
 var DURATION_TOOLS = [
-  "veo_text2video",
-  "veo_img2video",
-  "veo_reference",
-  "omni_text2video",
-  "omni_img2video",
   "seedance_text2video",
   "seedance_img2video",
   "seedance_reference",
@@ -7025,16 +6773,11 @@ function resolveVideoDuration(tool, input) {
     if (input[key] !== void 0) throw new Error("requiredSeconds is mutually exclusive with " + key + "; supply the shot need or an exact legacy request, not both");
   }
   let limits;
-  if (tool.startsWith("veo_")) {
-    const fixed = tool === "veo_reference" || ["1080p", "4k"].includes(String(input.resolution));
-    limits = { seconds: fixed ? [8] : [4, 6, 8] };
-  } else if (tool.startsWith("omni_")) {
-    limits = { min: 3, max: 10 };
-  } else if (tool.startsWith("seedance_")) {
-    const model2 = input.model ?? (tool === "seedance_reference" ? DEFAULT_SEEDANCE_REFERENCE_MODEL : DEFAULT_SEEDANCE_MODEL);
+  if (tool.startsWith("seedance_")) {
+    const model2 = input.model ?? DEFAULT_SEEDANCE_MODEL;
     const spec = SEEDANCE_MODEL_SPECS[model2];
     if (!spec) throw new Error("Unknown Seedance model: " + String(model2));
-    limits = SEEDANCE_FRAME_MODELS.includes(model2) ? { min: SEEDANCE_MIN_FRAMES, max: SEEDANCE_MAX_FRAMES, step: SEEDANCE_FRAME_STEP, frameRate: SEEDANCE_FPS } : { min: spec.duration[0], max: spec.duration[1] };
+    limits = { min: spec.duration[0], max: spec.duration[1] };
   } else if (tool.startsWith("astra_")) {
     const mode = tool === "astra_audio2video" ? "audio2video" : tool === "astra_keyframe_video" ? "keyframe" : input.tier === "guided" ? "guided" : input.tier === "fast" ? "guided_fast" : input.tier === "hq" ? "guided_hq" : "generate";
     const frameRate = input.frameRate ?? 24;
@@ -7046,21 +6789,18 @@ function resolveVideoDuration(tool, input) {
   }
   const timing = (0, import_video_duration.minimumDuration)(input.requiredSeconds, limits);
   const { requiredSeconds: _required, ...args } = input;
-  if (timing.numFrames !== void 0) args[tool.startsWith("seedance_") ? "frames" : "numFrames"] = timing.numFrames;
-  else if (tool !== "veo_reference") args.durationSeconds = timing.durationSeconds;
+  if (timing.numFrames !== void 0) args.numFrames = timing.numFrames;
+  else args.durationSeconds = timing.durationSeconds;
   return { args, timing };
 }
 
 // src/video-registry.ts
-var entry = (engine, deployment, operation, schema) => ({ engine, deployment, operation, schema });
+var entry = (engine, deployment, operation, schema) => ({ engine, deployment, operation, schema, voice: operation === "audio" ? "supplied" : "none" });
+var reference = (engine, deployment, schema) => ({ ...entry(engine, deployment, "reference", schema), voice: "reference" });
 var VIDEO_ADAPTERS = Object.freeze({
-  veo_text2video: entry("veo", "gemini-api", "text", text2VideoSchema),
-  veo_img2video: entry("veo", "gemini-api", "image", img2VideoSchema),
-  veo_reference: entry("veo", "gemini-api", "reference", referenceVideoSchema),
-  veo_extension: entry("veo", "gemini-api", "extend", videoExtensionSchema),
   seedance_text2video: entry("seedance", "byteplus", "text", seedanceText2VideoSchema),
   seedance_img2video: entry("seedance", "byteplus", "image", seedanceImg2VideoSchema),
-  seedance_reference: entry("seedance", "byteplus", "reference", seedanceReferenceSchema),
+  seedance_reference: reference("seedance", "byteplus", seedanceReferenceSchema),
   ...Object.fromEntries(Object.entries(DESKTOP_SCHEMAS).map(([feature, schema]) => [
     "astra_genai_desktop_" + ({ "text-to-video": "text2video", "image-to-video": "img2video", "audio-to-video": "audio2video" }[feature] || feature),
     entry("astra-genai-desktop", "gateway-desktop-v1", { "text-to-video": "text", "image-to-video": "image", "audio-to-video": "audio", keyframes: "keyframe" }[feature] || feature, schema)
@@ -7068,29 +6808,28 @@ var VIDEO_ADAPTERS = Object.freeze({
   astra_genai_text2video: entry("astra-genai", "genai-ltx-v2", "text", genaiTextToVideoSchema),
   astra_genai_img2video: entry("astra-genai", "genai-ltx-v2", "image", genaiImageToVideoSchema),
   astra_genai_audio2video: entry("astra-genai", "genai-ltx-v2", "audio", genaiAudioToVideoSchema),
-  astra_genai_msr: entry("astra-genai", "genai-ltx-msr", "reference", genaiMsrSchema),
+  astra_genai_msr: reference("astra-genai", "genai-ltx-msr", genaiMsrSchema),
   astra_text2video: entry("astra", "self-hosted-ltx", "text", astraText2VideoSchema),
   astra_img2video: entry("astra", "self-hosted-ltx", "image", astraImg2VideoSchema),
   astra_keyframe_video: entry("astra", "self-hosted-ltx", "keyframe", astraKeyframeVideoSchema),
   astra_audio2video: entry("astra", "self-hosted-ltx", "audio", astraAudio2VideoSchema),
   astra_ic_lora: entry("astra", "self-hosted-ltx", "control", astraIcLoraSchema),
   astra_video_retake: entry("astra", "self-hosted-ltx", "retake", astraVideoRetakeSchema),
-  omni_text2video: entry("omni", "gemini-interactions", "text", omniText2VideoSchema),
-  omni_img2video: entry("omni", "gemini-interactions", "image", omniImg2VideoSchema),
-  omni_extend: entry("omni", "gemini-interactions", "extend", omniExtendSchema),
-  omni_edit: entry("omni", "gemini-interactions", "edit", omniEditSchema),
-  ...Object.fromEntries(Object.entries(LOCAL_VIDEO_MODELS).map(([tool, model2]) => [tool, entry("mlx", "local-mlx", model2.operation, model2.schema)])),
+  ...Object.fromEntries(Object.entries(LOCAL_VIDEO_MODELS).map(([tool, model2]) => [
+    tool,
+    model2.operation === "reference" ? reference("mlx", "local-mlx", model2.schema) : entry("mlx", "local-mlx", model2.operation, model2.schema)
+  ])),
   mlx_video_generate: entry("mlx", "local-mlx", "text", mlxVideoGenerateSchema)
 });
 function speechVideoCapabilities(provider, model2, operation) {
+  if (["veo", "omni"].includes(provider) || provider === "seedance" && !Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
+    throw new Error(`video_engine_unsupported: ${provider} ${model2} cannot keep a character's voice; choose a video model again with project_manage`);
   if (provider === "astra-genai" && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
   if (provider === "astra-genai-desktop") return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "Gateway A2V reencodes supplied audio; timing/voice identity not guaranteed; installed model capabilities must be checked" };
   if (provider === "astra") return { provider, model: model2, audioConditioning: true, lipSync: true, postLipSync: false, evidence: "astra_audio2video adapter contract" };
-  if (provider === "veo" && VALID_VIDEO_MODELS.includes(model2))
-    return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "Gemini Veo has no external audio input" };
   if (provider === "seedance" && Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
     return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed" };
-  if (["host", "mlx", "omni", "astra-genai"].includes(provider))
+  if (["host", "mlx", "astra-genai"].includes(provider))
     return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "No verified external-speech synchronization adapter; voiceover remains available" };
   throw new Error("No verified speech synchronization contract for selected deployment/model");
 }
@@ -7102,38 +6841,13 @@ import { fileURLToPath as fileURLToPath3 } from "node:url";
 import { execFileSync as execFileSync2 } from "node:child_process";
 import path6 from "node:path";
 var EPISODE_MARKER = path6.join("storyboard", "scenes.js");
-var VEO_TIER = {
-  "veo-3.1-lite-generate-preview": "lite",
-  "veo-3.1-fast-generate-preview": "fast",
-  "veo-3.1-generate-preview": "standard"
-};
 var SEEDANCE_FAMILY = {
   "dreamina-seedance-2-5-260628": "2-5",
   "dreamina-seedance-2-0-260128": "2-0",
   "dreamina-seedance-2-0-fast-260128": "2-0-fast",
-  "dreamina-seedance-2-0-mini-260615": "2-0-mini",
-  "seedance-1-0-pro-250528": "1-0-pro",
-  "seedance-1-0-pro-fast-251015": "1-0-pro-fast"
+  "dreamina-seedance-2-0-mini-260615": "2-0-mini"
 };
 var PRICED_VIDEO_KEYS = /* @__PURE__ */ new Set([
-  "veo.lite.720p",
-  "veo.fast.720p",
-  "veo.standard.720p",
-  "veo.lite.1080p",
-  "veo.fast.1080p",
-  "veo.standard.1080p",
-  "veo.fast.4k",
-  "veo.standard.4k",
-  "omni.360p",
-  "omni.720p",
-  "omni.1080p",
-  "omni.4k",
-  "seedance.1-0-pro-fast.1080p",
-  "seedance.1-0-pro-fast.720p",
-  "seedance.1-5-pro-silent.1080p",
-  "seedance.1-5-pro-silent.720p",
-  "seedance.1-5-pro-audio.1080p",
-  "seedance.1-0-pro.1080p",
   "seedance.2-0-mini.720p",
   "seedance.2-0-fast.720p",
   "seedance.2-0.1080p",
@@ -7174,36 +6888,11 @@ function priceOf(tool, args = {}) {
   if (tool === "tts_astra_genai") return { key: "tts.astra-genai", quantity: null, note: "Gateway speech pricing unverified" };
   if (tool === "astra_genai_catalog" || tool === "astra_genai_desktop_status") return { key: null, quantity: null };
   if (tool.startsWith("astra_genai_")) return { key: ["astra_genai_text2img", "astra_genai_edit", "astra_genai_image_generate", "astra_genai_image_edit"].includes(tool) ? "image.astra-genai" : "video.astra-genai", quantity: null, note: "Gateway pricing unverified; managed reservation is authoritative, not a measured bill" };
-  if (tool.startsWith("veo_")) {
-    const tier = VEO_TIER[str(args.model, "veo-3.1-fast-generate-preview")];
-    const resolution2 = str(args.resolution, "720p");
-    if (!tier) return { key: null, quantity: null, note: `unmapped veo model: ${String(args.model)}` };
-    const forcedEight = resolution2 !== "720p" || tool === "veo_reference";
-    const seconds = tool === "veo_extension" ? 7 : forcedEight ? 8 : num(args.durationSeconds, 8);
-    const key = `veo.${tier}.${resolution2}`;
-    if (!PRICED_VIDEO_KEYS.has(key)) return { key: null, quantity: seconds, note: `no price row for ${key}` };
-    return {
-      key,
-      quantity: seconds,
-      ...tool === "veo_extension" ? { note: "extension adds 7s of new content per call \u2014 whether the vendor bills 7 or the 8s cut length is unconfirmed" } : {}
-    };
-  }
-  if (tool.startsWith("omni_")) {
-    const resolution2 = str(args.resolution, "720p");
-    const key = `omni.${resolution2}`;
-    if (!PRICED_VIDEO_KEYS.has(key)) return { key: null, quantity: null, note: `no price row for ${key}` };
-    const asked = tool === "omni_edit" ? null : num(args.durationSeconds, 8);
-    return {
-      key,
-      quantity: 1,
-      note: `flat per-call charge${asked === null ? "" : ` \u2014 ${asked}s requested, billed the same as 10s`}`
-    };
-  }
   if (tool.startsWith("seedance_")) {
-    const model2 = str(args.model, tool === "seedance_reference" ? "dreamina-seedance-2-0-260128" : "seedance-1-5-pro-251215");
+    const model2 = str(args.model, "dreamina-seedance-2-0-260128");
     const resolution2 = str(args.resolution, "720p");
-    const seconds = typeof args.frames === "number" ? args.frames / 24 : num(args.durationSeconds, 5);
-    const base = model2 === "seedance-1-5-pro-251215" ? `1-5-pro-${args.generateAudio === true ? "audio" : "silent"}` : SEEDANCE_FAMILY[model2];
+    const seconds = num(args.durationSeconds, 5);
+    const base = SEEDANCE_FAMILY[model2];
     if (!base) return { key: null, quantity: seconds, note: `unmapped seedance model: ${model2}` };
     const videos = [
       ...Array.isArray(args.referenceVideoPaths) ? args.referenceVideoPaths : [],
@@ -7692,10 +7381,6 @@ var effectSchema = external_exports.object({
 var schemas = {
   fasth3_omni_reference: fasth3OmniSchema,
   ...Object.fromEntries(Object.entries(DESKTOP_SCHEMAS).map(([feature, schema]) => ["astra_genai_desktop_" + ({ "text-to-video": "text2video", "image-to-video": "img2video", "audio-to-video": "audio2video" }[feature] || feature), schema])),
-  veo_text2video: text2VideoSchema,
-  veo_img2video: img2VideoSchema,
-  veo_reference: referenceVideoSchema,
-  veo_extension: videoExtensionSchema,
   seedance_text2video: seedanceText2VideoSchema,
   seedance_img2video: seedanceImg2VideoSchema,
   seedance_reference: seedanceReferenceSchema,
@@ -7706,11 +7391,7 @@ var schemas = {
   astra_text2video: astraText2VideoSchema,
   astra_img2video: astraImg2VideoSchema,
   astra_audio2video: astraAudio2VideoSchema,
-  astra_keyframe_video: astraKeyframeVideoSchema,
-  omni_text2video: omniText2VideoSchema,
-  omni_img2video: omniImg2VideoSchema,
-  omni_extend: omniExtendSchema,
-  omni_edit: omniEditSchema
+  astra_keyframe_video: astraKeyframeVideoSchema
 };
 function prepareVideoSound(tool, input, sound = {}) {
   const schema = schemas[tool];
@@ -7725,7 +7406,7 @@ function prepareVideoSound(tool, input, sound = {}) {
   if (tool === "astra_genai_msr" && sound.audioSource === "speech") throw new Error("MSR keeps its own soundtrack; sound.audioSource speech is not allowed");
   let nativeAudio = !fixedInput && (tool !== "astra_genai_desktop_keyframes" || input.audio === true);
   if (tool.startsWith("seedance_")) {
-    const model2 = input.model ?? (tool === "seedance_reference" ? DEFAULT_SEEDANCE_REFERENCE_MODEL : DEFAULT_SEEDANCE_MODEL);
+    const model2 = input.model ?? DEFAULT_SEEDANCE_MODEL;
     const spec = SEEDANCE_MODEL_SPECS[model2];
     if (!spec) throw new Error("Unknown Seedance model: " + String(model2));
     nativeAudio = spec.audio;

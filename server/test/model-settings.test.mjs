@@ -11,7 +11,7 @@ const settings = require('../../skills/_shared/model-settings.js');
 const cli = require.resolve('../../skills/_shared/model-settings.js');
 const videoType = { id: 'drama' };
 const models = {
-  video: { engine: 'seedance', model: 'seedance-1-5-pro-251215', resolution: '720p' },
+  video: { engine: 'seedance', model: 'dreamina-seedance-2-0-260128', resolution: '720p' },
   speech: { engine: 'gemini', model: 'gemini-2.5-flash-preview-tts' },
   image: { engine: 'host', model: 'host-managed', host: 'codex' },
 };
@@ -205,6 +205,21 @@ test('retired saved speech choices require explicit migration and keep historica
     assert.equal(next.status, 'configured');
     assert.deepEqual(settings.snapshotSettings(root, prior).config.models.speech, speech);
     assert.equal(settings.snapshotSettings(root, episode(root, 'after')).config.models.speech.model, 'eleven_v4');
+  }
+});
+
+test('a saved video engine that cannot keep a voice requires migration and cannot be saved again', t => {
+  for (const video of [{ engine: 'veo', model: 'veo-3.1-fast-generate-preview', resolution: '720p' }, { engine: 'seedance', model: 'seedance-1-5-pro-251215', resolution: '720p' }]) {
+    const root = workspace(t), file = path.join(root, settings.SETTINGS_FILE);
+    fs.mkdirSync(path.dirname(file));
+    fs.writeFileSync(file, JSON.stringify({ version: 1, models: { ...models, video }, videoType, request: 'Previous selection', updatedAt: '2026-10-16' }));
+    const current = settings.readSettings(root);
+    assert.equal(current.status, 'migration_required');
+    assert.deepEqual(current.retired, ['models.video']);
+    assert.throws(() => settings.snapshotSettings(root, episode(root, 'new')), /migration_required/);
+    assert.throws(() => settings.saveSettings(root, { video }, { expectedRevision: current.revision, request: 'Keep it' }));
+    const next = settings.saveSettings(root, { video: models.video }, { expectedRevision: current.revision, request: 'Use Seedance 2.0' });
+    assert.equal(next.status, 'configured');
   }
 });
 

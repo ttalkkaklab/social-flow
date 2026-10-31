@@ -133,39 +133,23 @@ export function recordUsage(outputPath: string | undefined, event: UsageEvent): 
    translation between them, and `server/test/usage-ledger.test.mjs` checks that every key it
    can emit is a real row in prices.tsv. */
 
-const VEO_TIER: Record<string, string> = {
-  'veo-3.1-lite-generate-preview': 'lite',
-  'veo-3.1-fast-generate-preview': 'fast',
-  'veo-3.1-generate-preview': 'standard',
-};
-
 const SEEDANCE_FAMILY: Record<string, string> = {
   'dreamina-seedance-2-5-260628': '2-5',
   'dreamina-seedance-2-0-260128': '2-0',
   'dreamina-seedance-2-0-fast-260128': '2-0-fast',
   'dreamina-seedance-2-0-mini-260615': '2-0-mini',
-  'seedance-1-0-pro-250528': '1-0-pro',
-  'seedance-1-0-pro-fast-251015': '1-0-pro-fast',
 };
 
 /**
  * The video keys prices.tsv actually carries. The key is composed from the call's arguments —
- * tier/family and resolution — and the two vocabularies do not line up: every Seedance model
- * accepts 480p and no 480p row exists, `1-5-pro-audio` is priced at 1080p only, and Veo lite
- * has no 4k row. A composed key nobody priced used to go into the ledger anyway, where
+ * family and resolution — and the two vocabularies do not line up: every Seedance model
+ * accepts 480p and no 480p row exists. Rows for retired engines (Veo, Omni, Seedance 1.x) stay
+ * in prices.tsv for earlier ledgers but are never composed here. A composed key nobody priced used to go into the ledger anyway, where
  * cost-report.sh answers it with `!! unknown key` and exit 1 — one unpriced call and the whole
  * episode loses its cost verdict. Membership is checked here instead, and an unpriced
  * combination comes back with a null key and a note saying which one, like an unmapped model.
  */
 export const PRICED_VIDEO_KEYS = new Set([
-  'veo.lite.720p', 'veo.fast.720p', 'veo.standard.720p',
-  'veo.lite.1080p', 'veo.fast.1080p', 'veo.standard.1080p',
-  'veo.fast.4k', 'veo.standard.4k',
-  'omni.360p', 'omni.720p', 'omni.1080p', 'omni.4k',
-  'seedance.1-0-pro-fast.1080p', 'seedance.1-0-pro-fast.720p',
-  'seedance.1-5-pro-silent.1080p', 'seedance.1-5-pro-silent.720p',
-  'seedance.1-5-pro-audio.1080p',
-  'seedance.1-0-pro.1080p',
   'seedance.2-0-mini.720p', 'seedance.2-0-fast.720p',
   'seedance.2-0.1080p', 'seedance.2-5.720p', 'seedance.2-5.1080p',
   // A request that carries a reference video (the previz lane) bills input + output seconds
@@ -212,49 +196,11 @@ export function priceOf(
   if (tool === 'tts_astra_genai') return { key: 'tts.astra-genai', quantity: null, note: 'Gateway speech pricing unverified' };
   if (tool === 'astra_genai_catalog' || tool === 'astra_genai_desktop_status') return { key: null, quantity: null };
   if (tool.startsWith('astra_genai_')) return { key: ['astra_genai_text2img', 'astra_genai_edit', 'astra_genai_image_generate', 'astra_genai_image_edit'].includes(tool) ? 'image.astra-genai' : 'video.astra-genai', quantity: null, note: 'Gateway pricing unverified; managed reservation is authoritative, not a measured bill' };
-  if (tool.startsWith('veo_')) {
-    const tier = VEO_TIER[str(args.model, 'veo-3.1-fast-generate-preview')];
-    const resolution = str(args.resolution, '720p');
-    if (!tier) return { key: null, quantity: null, note: `unmapped veo model: ${String(args.model)}` };
-    // 1080p and 4k generate 8 seconds whatever was asked for, and veo_reference is pinned to 8.
-    // An extension call adds 7 seconds of new content per call and has no durationSeconds at all.
-    const forcedEight = resolution !== '720p' || tool === 'veo_reference';
-    const seconds = tool === 'veo_extension' ? 7 : forcedEight ? 8 : num(args.durationSeconds, 8);
-    const key = `veo.${tier}.${resolution}`;
-    if (!PRICED_VIDEO_KEYS.has(key)) return { key: null, quantity: seconds, note: `no price row for ${key}` };
-    return {
-      key,
-      quantity: seconds,
-      ...(tool === 'veo_extension'
-        ? { note: 'extension adds 7s of new content per call — whether the vendor bills 7 or the 8s cut length is unconfirmed' }
-        : {}),
-    };
-  }
-
-  if (tool.startsWith('omni_')) {
-    // Priced per call, not per second. Every Omni call meters exactly 57,920 output video
-    // tokens whatever length or resolution was asked for, and the bill follows the meter:
-    // a 3s 360p call moved the project's spend counter by $1.01 (measured 2026-09-06).
-    // Asking for fewer seconds saves nothing, so the ledger records one unit per call.
-    const resolution = str(args.resolution, '720p');
-    const key = `omni.${resolution}`;
-    if (!PRICED_VIDEO_KEYS.has(key)) return { key: null, quantity: null, note: `no price row for ${key}` };
-    const asked = tool === 'omni_edit' ? null : num(args.durationSeconds, 8);
-    return {
-      key,
-      quantity: 1,
-      note: `flat per-call charge${asked === null ? '' : ` — ${asked}s requested, billed the same as 10s`}`,
-    };
-  }
-
   if (tool.startsWith('seedance_')) {
-    const model = str(args.model, tool === 'seedance_reference' ? 'dreamina-seedance-2-0-260128' : 'seedance-1-5-pro-251215');
+    const model = str(args.model, 'dreamina-seedance-2-0-260128');
     const resolution = str(args.resolution, '720p');
-    const seconds = typeof args.frames === 'number' ? args.frames / 24 : num(args.durationSeconds, 5);
-    // 1.5 pro is the only model whose price splits on audio — silent is exactly half.
-    const base = model === 'seedance-1-5-pro-251215'
-      ? `1-5-pro-${args.generateAudio === true ? 'audio' : 'silent'}`
-      : SEEDANCE_FAMILY[model];
+    const seconds = num(args.durationSeconds, 5);
+    const base = SEEDANCE_FAMILY[model];
     if (!base) return { key: null, quantity: seconds, note: `unmapped seedance model: ${model}` };
     const videos = [
       ...(Array.isArray(args.referenceVideoPaths) ? (args.referenceVideoPaths as unknown[]) : []),
@@ -392,8 +338,6 @@ export function isBillableTool(tool: string): boolean {
   if (tool === 'tts_list_voices' || tool === 'tts_elevenlabs_voices' || tool === 'music_list_options') return false;
   return (
     (tool.startsWith('astra_genai_') && !['astra_genai_video_status','astra_genai_catalog','astra_genai_desktop_status'].includes(tool)) ||
-    tool.startsWith('veo_') ||
-    tool.startsWith('omni_') ||
     tool.startsWith('seedance_') ||
     tool.startsWith('gpt_image_') ||
     tool.startsWith('tts_') ||

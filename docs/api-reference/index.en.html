@@ -16,11 +16,11 @@
 <header class="hero">
   <div class="kicker">API REFERENCE</div>
   <h1>Every API social-flow calls</h1>
-  <p class="sub">A reference for the official contracts of the 13 external APIs the internal MCP server (<code>server/src</code>) actually calls. Each page puts <strong>what the official docs say</strong> next to <strong>what this repo's implementation actually does</strong>, so you can see where the two diverge. For images, voice, and transcription the default path is three on-device engines that never touch the network, and those have no external contract to call.</p>
+  <p class="sub">A reference for the official contracts of the 12 external APIs the internal MCP server (<code>server/src</code>) actually calls. Each page puts <strong>what the official docs say</strong> next to <strong>what this repo's implementation actually does</strong>, so you can see where the two diverge. For images, voice, and transcription the default path is three on-device engines that never touch the network, and those have no external contract to call.</p>
   <div class="meta">
     <span>As of <strong>2026-08-30</strong></span>
     <span>Tools <strong>77</strong></span>
-    <span>External APIs <strong>13</strong> + local <strong>3</strong> + MLX Core</span>
+    <span>External APIs <strong>12</strong> + local <strong>3</strong> + MLX Core</span>
     <span>MCP SDK <strong>1.30.0</strong></span>
   </div>
 </header>
@@ -53,19 +53,9 @@
       <p>The third speech lane. Four models and their per-request caps, the 29 <code>output_format</code> values (a query parameter) and their tier gates, two per-character alignments (the normalized one romanizes Korean), 10-voice dialogue, permission-scoped keys and the error status list — with live-call measurements.</p>
       <div class="tools">tts_elevenlabs_generate · tts_elevenlabs_dialogue · tts_elevenlabs_voices</div>
     </a>
-    <a class="card" href="gemini-veo.en.html">
-      <h3>Google Veo 3.1</h3>
-      <p>How resolution, length and aspect ratio constrain each other across 3 models, extension (+7s, up to 20 times) and reference images (up to 3, fixed 8s), long-running operation polling.</p>
-      <div class="tools">veo_text2video · veo_img2video · veo_extension · veo_reference</div>
-    </a>
-    <a class="card" href="veo-portrait.en.html">
-      <h3>Veo people &amp; reference policy</h3>
-      <p>The <code>personGeneration</code> contract that lets adult faces through and blocks children's, why there is no asset registry, style reference closed off in 3.1, and first/last frames as the way to fix composition.</p>
-      <div class="tools">personGeneration · referenceType asset / style · lastFrame</div>
-    </a>
     <a class="card" href="seedance.en.html">
       <h3>ByteDance Seedance</h3>
-      <p>What 7 models can and can't do (resolution·length·reference images·audio·seed), task creation → polling → retrieving the 24-hour URL, the token billing formula, and rejection of real-face input.</p>
+      <p>What the 4 Dreamina Seedance 2.x models can and can't do (resolution·length·reference images·audio), task creation → polling → retrieving the 24-hour URL, the token billing formula, and rejection of real-face input.</p>
       <div class="tools">seedance_text2video · seedance_img2video · seedance_reference</div>
     </a>
     <a class="card" href="seedance-portrait.en.html">
@@ -90,7 +80,7 @@
     </a>
     <a class="card" href="../research/2026-08-12-local-image-generation/index.html">
       <h3>On-device engines — Z-Image · Supertonic · Qwen3-ASR (Korean)</h3>
-      <p>The three tools with no external contract, plus the six mlx_* tools that talk HTTP to MLX Core on loopback. Z-Image Turbo runs on mflux/MLX — 1024² takes 149–210s at 9 steps, 1088×1920 takes 462s (measured on an M4 Max). Supertonic uses CPU only and emits 44.1kHz wav. Qwen3-ASR is the default Korean STT path. mlx_* fail closed if :11234 is down; this plugin never launches the app. Defaults stay Z-Image · Supertonic · Lyria · Veo/Seedance.</p>
+      <p>The three tools with no external contract, plus the six mlx_* tools that talk HTTP to MLX Core on loopback. Z-Image Turbo runs on mflux/MLX — 1024² takes 149–210s at 9 steps, 1088×1920 takes 462s (measured on an M4 Max). Supertonic uses CPU only and emits 44.1kHz wav. Qwen3-ASR is the default Korean STT path. mlx_* fail closed if :11234 is down; this plugin never launches the app. Defaults stay Z-Image · Supertonic · Lyria · the saved video model (Seedance 2.x · LTX).</p>
       <div class="tools">image_local_generate · tts_local_generate · stt_local_transcribe · mlx_*</div>
     </a>
     <a class="card" href="serpapi.en.html">
@@ -129,15 +119,15 @@
 <section id="creds">
   <h2>Credential matrix</h2>
   <p><strong>The keys come in two independent groups, and you can stop after either one.</strong></p>
-  <p><strong>① Production keys</strong> — these make the video. <code>OPENAI_API_KEY</code> renders the cover and any frame with text on it (local image generation garbles Korean glyphs), and <code>GEMINI_API_KEY</code> covers generated video clips, acted narration, and BGM. Strictly speaking both are optional — scene backgrounds default to on-device <code>image_local_generate</code> and narration to on-device <code>tts_local_generate</code>, so a run with no keys at all still produces a video. The research keys (<code>SERPAPI_API_KEY</code> and the Naver pair) are optional too; without them the storyboard skill falls back to the built-in WebSearch.</p>
+  <p><strong>① Production keys</strong> — these make the video. <code>OPENAI_API_KEY</code> renders the cover and any frame with text on it (local image generation garbles Korean glyphs), and <code>GEMINI_API_KEY</code> covers acted narration and BGM. Generated video clips come from <code>ARK_API_KEY</code> (Seedance 2.x) or <code>ASTRA_GENAI_API_KEY</code> (LTX), depending on the saved video model. Strictly speaking all of them are optional — scene backgrounds default to on-device <code>image_local_generate</code> and narration to on-device <code>tts_local_generate</code>, so a run with no keys at all still produces a video. The research keys (<code>SERPAPI_API_KEY</code> and the Naver pair) are optional too; without them the storyboard skill falls back to the built-in WebSearch.</p>
   <p><strong>② Platform credentials (Threads · Instagram · YouTube · Facebook) — optional.</strong> Set them up and the pipeline runs end to end and keeps running on its own: <code>publish</code> posts straight to your accounts, and the growth skills (<code>grow-threads</code>·<code>grow-youtube</code>·<code>grow-instagram</code>) operate the channel on <code>/loop</code> — comment replies, insight watching, keyword conversations, queue refill, posting — inside the standing authorization you approved once at <code>init</code>. Skip them and everything up to and including production still works: <code>produce</code> writes the finished video plus per-platform text into <code>data/&lt;channel&gt;/episodes/&lt;topic&gt;/output/</code> and you upload those files by hand. Only the publishing and growth half is unavailable, and the nine credential-gated tools aren't even listed. It's per platform, not all-or-nothing — connect only YouTube and YouTube publishes and grows while the rest stays manual. Add a token later and nothing needs a server restart.</p>
   <p>Keys are validated <strong>when a tool is called, not at startup</strong>, because publish tools have to work without search keys and vice versa. Record only the variable names below; never commit a value anywhere.</p>
   <div class="table-scroll">
   <table>
     <thead><tr><th>Variable</th><th>Tools that need it</th><th>Without it</th><th>Where to get it</th></tr></thead>
     <tbody>
-      <tr><td><code>GEMINI_API_KEY</code><br>(or <code>GOOGLE_API_KEY</code>)</td><td><code>veo_*</code> · <code>tts_generate</code> · <code>tts_multi_speaker</code> · <code>music_generate*</code></td><td>No video, voice, or music generation. Everything else is fine</td><td><a href="https://aistudio.google.com/apikey">AI Studio</a></td></tr>
-      <tr><td><code>ARK_API_KEY</code></td><td><code>seedance_*</code></td><td>No Seedance video generation. <code>veo_*</code> is unaffected</td><td><a href="https://ai.byteplus.com/ark/region:ap-southeast-1/apikey">BytePlus ModelArk</a></td></tr>
+      <tr><td><code>GEMINI_API_KEY</code><br>(or <code>GOOGLE_API_KEY</code>)</td><td><code>tts_generate</code> · <code>tts_multi_speaker</code> · <code>music_generate*</code></td><td>No voice or music generation. Everything else is fine</td><td><a href="https://aistudio.google.com/apikey">AI Studio</a></td></tr>
+      <tr><td><code>ARK_API_KEY</code></td><td><code>seedance_*</code></td><td>No Seedance video generation. The LTX lanes (<code>astra_genai_*</code>, <code>astra_*</code>, <code>ltx_video_generate</code>) are unaffected</td><td><a href="https://ai.byteplus.com/ark/region:ap-southeast-1/apikey">BytePlus ModelArk</a></td></tr>
       <tr><td><code>SUNO_API_KEY</code></td><td><code>suno_*</code></td><td>No sung full songs or Suno loop beds. <code>music_*</code> (Lyria) is unaffected</td><td><a href="https://sunoapi.org/api-key">sunoapi.org</a></td></tr>
       <tr><td><code>ELEVENLABS_API_KEY</code></td><td><code>tts_elevenlabs_*</code></td><td>No third speech lane. <code>tts_generate</code> (Gemini) and <code>tts_local_generate</code> are unaffected. A restricted key needs <code>text_to_speech</code>; the listing needs <code>voices_read</code></td><td><a href="https://elevenlabs.io/app/settings/api-keys">ElevenLabs</a></td></tr>
       <tr><td><code>OPENAI_API_KEY</code></td><td><code>gpt_image_*</code></td><td>No GPT Image generation</td><td><a href="https://platform.openai.com/api-keys">OpenAI</a></td></tr>
@@ -185,10 +175,6 @@
       <tr><td><code>image_local_generate</code></td><td><span class="badge wr">write</span> <span class="badge free">no auth</span></td><td>none — local <code>mflux-generate-z-image-turbo</code> process</td><td><a href="../research/2026-08-12-local-image-generation/index.html">Local image research (Korean)</a></td></tr>
       <tr><td><code>mlx_image_generate</code></td><td><span class="badge wr">write</span> <span class="badge free">no auth</span></td><td>loopback <code>POST /v1/images/generations</code></td><td>MLX Core / mlx-serve</td></tr>
       <tr><td><code>mlx_image_edit</code></td><td><span class="badge wr">write</span> <span class="badge free">no auth</span></td><td>same endpoint (<code>mode:edit</code>)</td><td>MLX Core / mlx-serve</td></tr>
-      <tr><td><code>veo_text2video</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>models.generateVideos</code> + operation polling</td><td><a href="gemini-veo.en.html">Veo</a></td></tr>
-      <tr><td><code>veo_img2video</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>models.generateVideos</code> (<code>image</code>/<code>lastFrame</code>)</td><td><a href="gemini-veo.en.html">Veo</a></td></tr>
-      <tr><td><code>veo_extension</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>models.generateVideos</code> (<code>video</code>)</td><td><a href="gemini-veo.en.html">Veo</a></td></tr>
-      <tr><td><code>veo_reference</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>models.generateVideos</code> (<code>referenceImages</code>)</td><td><a href="gemini-veo.en.html">Veo</a></td></tr>
       <tr><td><code>seedance_text2video</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td><code>POST /contents/generations/tasks</code> + polling</td><td><a href="seedance.en.html">Seedance</a></td></tr>
       <tr><td><code>seedance_img2video</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td>same endpoint (<code>role: first_frame/last_frame</code>)</td><td><a href="seedance.en.html">Seedance</a></td></tr>
       <tr><td><code>seedance_reference</code></td><td><span class="badge wr">write</span> <span class="badge key">key</span></td><td>same endpoint (<code>role: reference_image</code>)</td><td><a href="seedance.en.html">Seedance</a></td></tr>

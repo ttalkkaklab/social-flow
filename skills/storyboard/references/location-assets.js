@@ -130,7 +130,7 @@ function previz(win,index,dir,{seconds,fps=24}){
   const record={renderer:'blender',clip:relative+'/previz.mp4',blend:relative+'/previz.blend',firstFrame:frames.start.path,sha256:fileHash(path.join(output,'previz.mp4')),fps,seconds,
     camera:{movement:ctx.s.visual.camera.movement},locationBinding:{fingerprint,frameSha256:frames.start.sha256},
     actors:(ctx.b.blocking?.actors||[]).map(actor=>({color:actor.color,is:win.PRODUCTION?.cast?.[actor.id]?.name||actor.id})),
-    handoff:engine==='seedance'&&!/^seedance-1-/.test(video.model||'')?'reference_video':'frame_and_prompt'};
+    handoff:engine==='seedance'?'reference_video':'frame_and_prompt'};
   ctx.s.visual.location={fingerprint,frames:{...(prior.fresh?prior.frames:{}),...frames},...(prior.spatialAsset?{spatial:prior.spatialAsset}:{}),renderer:'blender',renderedAt:new Date().toISOString()};
   ctx.s.visual.video.previz=record;
   return record;

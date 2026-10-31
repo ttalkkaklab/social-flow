@@ -16,12 +16,13 @@ the last explicit change wins. Workspace edits affect future snapshots only.
 `skills/_shared/video-catalog.json` is its committed build projection for CommonJS planners.
 `node skills/_shared/model-settings.js catalog` reads the same projection.
 
-An override replaces the whole video selection. Record the user's actual instruction:
+An override replaces the whole video selection; one naming Veo, Gemini Omni or Seedance 1.x
+fails with `video_engine_unsupported`. Record the user's actual instruction:
 
 ```js
 window.PRODUCTION.modelSettings = { overrides: [
-  { scope: 'shot', shotId: 's1', request: 'Use Veo Fast for this shot',
-    video: { engine: 'veo', model: 'veo-3.1-fast-generate-preview', resolution: '720p' } }
+  { scope: 'shot', shotId: 's1', request: 'Use Seedance 2.0 Fast for this shot',
+    video: { engine: 'seedance', model: 'dreamina-seedance-2-0-fast-260128', resolution: '720p' } }
 ] };
 ```
 
@@ -40,8 +41,10 @@ requests, pinned character samples with explicit speaker/image/audio mappings.
 It saves original `sourceArgs` separately from the compiled request and records
 `voiceContinuity` with hashes, warnings and four independent `not_reviewed` fields.
 Revalidation includes dialogue, acting, cast voice settings and sample bytes.
-The catalog's operation-specific `voice` fields distinguish sample imitation from
-supplied-speech animation. They never certify perceptual consistency or exact lip sync.
+The catalog's `voice.lane` is `reference` (sample imitation), `supplied` (animates supplied
+speech) or `none`, with `voice.dialogue: allowed|refused`. `video_plan` refuses a spoken cut
+on a `none` lane as `voice_lane_required`; narration over a non-speaking picture passes on any
+adapter. These fields never certify perceptual consistency or exact lip sync.
 
 `video_execute` takes `episode` and `planId`. It rechecks selection, inputs, prices,
 provider configuration and disabled-tool settings, then reserves budget under an

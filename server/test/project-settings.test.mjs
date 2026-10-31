@@ -13,7 +13,7 @@ const hook = require.resolve('../../hooks/project-context.js');
 const cli = require.resolve('../../skills/_shared/project-settings.js');
 const defaults = () => ({
   project: { name: 'History', channel: 'history' }, videoType: { id: 'documentary' },
-  models: { video: { engine: 'seedance', model: 'seedance-1-5-pro-251215', resolution: '720p' }, speech: { engine: 'elevenlabs', model: 'eleven_v4' }, image: { engine: 'host', model: 'host-managed', host: 'codex' } },
+  models: { video: { engine: 'seedance', model: 'dreamina-seedance-2-0-260128', resolution: '720p' }, speech: { engine: 'elevenlabs', model: 'eleven_v4' }, image: { engine: 'host', model: 'host-managed', host: 'codex' } },
   style: { preset: 'webtoon', palette: 'ochre and blue' },
   production: { mode: 'video_50', renderRatioVersion: 1, format: 'shorts-9x16', previzRenderer: 'blender', episodeBudgetUsd: 5 },
   sns: Object.fromEntries(['threads', 'instagram', 'facebook', 'youtube'].map(p => [p, { enabled: p === 'youtube', status: p === 'youtube' ? 'pending' : 'disabled' }])),

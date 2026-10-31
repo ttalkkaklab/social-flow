@@ -9,7 +9,7 @@ const SETTINGS_FILE = '.social-flow/models.json';
 const SNAPSHOT_FILE = '.work/model-settings.json';
 const VIDEO_TYPES = require('./video-types.json').types;
 const ENGINES = {
-  video: ['host', 'seedance', 'veo', 'astra', 'astra-genai', 'astra-genai-desktop', 'mlx', 'omni'],
+  video: ['host', 'seedance', 'astra', 'astra-genai', 'astra-genai-desktop', 'mlx'],
   speech: ['none', 'gemini', 'elevenlabs', 'astra-genai'],
   image: ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai', 'astra-genai-native'],
   music: ['lyria', 'suno-api', 'elevenlabs', 'mlx'],
@@ -17,6 +17,13 @@ const ENGINES = {
 const RETIRED_ELEVENLABS_MODELS = ['eleven_multilingual_v2', 'eleven_v3', 'eleven_v3_conversational', 'eleven_flash_v2_5', 'eleven_turbo_v2_5'];
 function retiredSpeech(choice) {
   return choice && (['supertonic', 'mlx'].includes(choice.engine) || (choice.engine === 'elevenlabs' && RETIRED_ELEVENLABS_MODELS.includes(choice.model)));
+}
+// Video engines that cannot keep a character's voice left on 2026-10-31 (owner directive).
+function retiredVideo(choice) {
+  return Boolean(choice) && (['veo', 'omni'].includes(choice.engine) || (choice.engine === 'seedance' && /^seedance-1-/.test(choice.model)));
+}
+function retiredChoice(kind, choice) {
+  return kind === 'speech' ? retiredSpeech(choice) : kind === 'video' && retiredVideo(choice);
 }
 const FIELDS = {
   video: ['engine', 'model', 'resolution', 'host', 'operation'],
@@ -46,7 +53,8 @@ function validateVideoType(choice) {
 
 // Model IDs and adapter-specific dimensions are checked by the actual generation tool.
 // Fixed-model tools omit model; host tools use "host-managed" if they expose no selector.
-function validateModels(models, partial = false, allowRetiredSpeech = false) {
+// allowRetired lets saved settings and episode snapshots load so callers can report migration_required.
+function validateModels(models, partial = false, allowRetired = false) {
   if (!object(models)) throw new Error('models must be an object');
   for (const key of Object.keys(models)) {
     if (!Object.hasOwn(ENGINES, key)) throw new Error(`Unknown model category: ${key}`);
@@ -56,8 +64,9 @@ function validateModels(models, partial = false, allowRetiredSpeech = false) {
     if (partial && !Object.hasOwn(models, kind)) continue;
     if (kind === 'music' && !Object.hasOwn(models, kind)) continue; // Existing projects retain their snapshots.
     const choice = models[kind];
-    const retired = allowRetiredSpeech && kind === 'speech' && retiredSpeech(choice);
+    const retired = allowRetired && retiredChoice(kind, choice);
     if (!object(choice) || (!engines.includes(choice.engine) && !retired)) throw new Error(`${kind}.engine must be one of ${engines.join(', ')}`);
+    if (kind === 'video' && retiredVideo(choice) && !retired) throw new Error(`${choice.model} cannot keep a character's voice; choose Seedance 2.x or an LTX engine`);
     for (const [key, value] of Object.entries(choice)) {
       if (!FIELDS[kind].includes(key) || !nonempty(value)) throw new Error(`Invalid ${kind}.${key}`);
     }
@@ -104,11 +113,11 @@ function readJson(file) {
   }
 }
 
-function validateConfig(config, allowRetiredSpeech = false) {
+function validateConfig(config, allowRetired = false) {
   if (!object(config) || config.version !== 1 || !nonempty(config.request) || !nonempty(config.updatedAt)) {
     throw new Error('Invalid model settings version or selection record; repair explicitly, do not reset');
   }
-  validateModels(config.models, false, allowRetiredSpeech);
+  validateModels(config.models, false, allowRetired);
   if (config.videoType !== undefined) validateVideoType(config.videoType);
   validateProjectFields(config);
   return config;
@@ -122,9 +131,12 @@ function readSettings(workspace) {
   const file = settingsPath(workspace);
   const config = readJson(file);
   if (config === undefined) return { status: 'setup_required', file };
-  const migrationRequired = retiredSpeech(config?.models?.speech);
-  validateConfig(config, migrationRequired);
-  if (migrationRequired) return { status: 'migration_required', file, revision: revision(config), config, migration: 'Speech model is retired. Explicitly update speech to Gemini or ElevenLabs eleven_v4 before new generation; saved media and episode snapshots are preserved.' };
+  const retired = ['speech', 'video'].filter(kind => retiredChoice(kind, config?.models?.[kind]));
+  validateConfig(config, retired.length > 0);
+  if (retired.length) return { status: 'migration_required', file, revision: revision(config), config, retired: retired.map(kind => `models.${kind}`), migration: [
+    retired.includes('speech') && 'Speech model is retired. Explicitly update speech to Gemini or ElevenLabs eleven_v4 before new generation.',
+    retired.includes('video') && 'Video model cannot keep a character\'s voice and is retired (Veo, Gemini Omni, Seedance 1.x). Explicitly choose Seedance 2.x or an LTX engine before new generation.',
+    'Saved media and episode snapshots are preserved.'].filter(Boolean).join(' ') };
   return { status: config.videoType ? 'configured' : 'video_type_required', file, revision: revision(config), config };
 }
 
@@ -194,7 +206,7 @@ function snapshotSettings(workspace, episode) {
     return { ...existing, file, resumed: true };
   }
   const current = readSettings(root);
-  if (current.status === 'migration_required') throw new Error('migration_required: explicitly update the retired speech model before creating a new episode');
+  if (current.status === 'migration_required') throw new Error(`migration_required: explicitly update the retired ${current.retired.join(' and ')} before creating a new episode`);
   if (current.status === 'video_type_required') throw new Error('video_type_required: select a video type before starting a new episode; keep saved models');
   if (current.status !== 'configured') throw new Error('Select video, speech and image models and a video type before creating an episode snapshot');
   const snapshot = { version: 1, source: current.file, revision: current.revision, config: current.config };

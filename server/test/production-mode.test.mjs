@@ -39,7 +39,7 @@ function fixture(n = 3) {
       // One static set-up in three: the camera moves on two of every three full-video shots.
       camera: { purpose: `Keep building ${i + 1} and its newly exposed stream section readable`, framing: ['Elevated three-quarter view', 'Low wide view of the valley', 'Close view of the stream bed'][i % 3],
         movement: ['static', 'dolly in', 'truck right'][i % 3], speed: i % 3 ? 'slow' : 'steady', end: i < 2 ? 'The open stream' : `The open stream. Section ${i + 1} is exposed.` },
-      video: { engine: 'seedance', model: 'seedance-1-5-pro-251215', resolution: '1080p', generateAudio: false } } }));
+      video: { engine: 'seedance', model: 'dreamina-seedance-2-0-mini-260615', resolution: '720p', generateAudio: false, realFaceInput: false } } }));
   for (let i = 0; i < n; i++) {
     const prompts = assemble(win, i); win.SCENES[i].visual.bgPrompt = prompts.sourcePrompt;
     win.SCENES[i].visual.video.prompt = prompts.motionPrompt;
@@ -175,9 +175,9 @@ test('quotes six choices with billed seconds, retry range and API rates, excludi
   assert.equal(q.options.video_30.clips, 5);
   assert.equal(q.options.video_80.clips, 12);
   assert.equal(q.options.no_video.firstPassUsd, 0);
-  assert.equal(q.options.full_video.firstPassUsd, 4.35);
-  assert.equal(q.options.full_video.retryHighUsd, 13.05);
-  assert.equal(q.options.full_video.retryHighKrw, 18270);
+  assert.equal(q.options.full_video.firstPassUsd, 5.7);
+  assert.equal(q.options.full_video.retryHighUsd, 17.1);
+  assert.equal(q.options.full_video.retryHighKrw, 23940);
   assert.equal(q.exchangeRateIsAssumption, true);
   win.SCENES[0].duration = 1.5;
   assert.equal(quote(win).options.full_video.rows[0].seconds, 4);
@@ -409,7 +409,7 @@ test('approval is bound to actual plan and prices but recording a generated outp
 test('retry-inclusive budget, per-shot attempt limit and actual spend block new calls', () => withBoard(({ board, work, save }) => {
   const win = fixture(); win.PRODUCTION.videoBudgetUsd = .5; approve(win); save(win);
   assert.match(check(board).errors.join(), /Retry-inclusive/);
-  win.PRODUCTION.videoBudgetUsd = 3; approve(win); save(win);
+  win.PRODUCTION.videoBudgetUsd = 4; approve(win); save(win);
   writeFileSync(path.join(work, 'cost-tally.tsv'), [1, 2, 3].map(n => `seedance.1-5-pro-silent.1080p\t5\tvideo:shot=1:attempt=${n}`).join('\n'));
   assert.match(check(board, { beforeCall: 1 }).errors.join(), /attempt limit/);
   assert.deepEqual(production.check(board, { beforeCall: 2 }).errors, []);
@@ -691,7 +691,7 @@ test('explicit imports pass scene and production gates at zero generation cost, 
  assert.ok(mixedResult.warnings.some(message=>message.includes('same source image reference')));
  assert.equal(quote(mixed).options.hybrid.reusedClips,1);assert.equal(quote(mixed).options.hybrid.firstPassUsd,0);
  mixed.SCENES[1]=fixture(1).SCENES[0];mixed.SCENES[1].shot.render={mode:'generated_video',purpose:'live_action',motionEssential:true,reason:'Watch the buildings rise.',action:'Buildings rise.',whyNotStill:'The removal is continuous.'};
- assert.equal(quote(mixed).options.hybrid.clips,1);assert.equal(quote(mixed).options.hybrid.firstPassUsd,.29);assert.equal(quote(mixed).options.hybrid.retryHighUsd,.58);
+ assert.equal(quote(mixed).options.hybrid.clips,1);assert.equal(quote(mixed).options.hybrid.firstPassUsd,.38);assert.equal(quote(mixed).options.hybrid.retryHighUsd,.76);
  assert.equal(quote(mixed).options.hybrid.rows[0].shot,2);
  save(w);
  const s=w.SCENES[0],original=structuredClone(s);
@@ -754,7 +754,7 @@ test('generation output existence never discounts a new generation or its retrie
  const w=fixture(1);w.PRODUCTION.mode='hybrid';const before=quote(w);
  const video=path.join(work,'existing.mp4');writeFileSync(video,'already exists');w.SCENES[0].visual.video.clip=video;
  assert.deepEqual(quote(w),before);
- assert.equal(before.options.hybrid.firstPassUsd,.29);assert.equal(before.options.hybrid.retryHighUsd,.87);
+ assert.equal(before.options.hybrid.firstPassUsd,.38);assert.equal(before.options.hybrid.retryHighUsd,1.14);
 }));
 test('a previz cut gets the clay-model preamble, the composition lock and the first frame as the first still reference', () => {
   const win = fixture(), prompts = withPreviz(win, 1), scene = win.SCENES[1];
@@ -767,18 +767,6 @@ test('a previz cut gets the clay-model preamble, the composition lock and the fi
   assert.deepEqual(checkScene(scene, { production: win.PRODUCTION }), []);
   const plan = scenePlan(scene);
   assert.equal(plan.tool, 'seedance_reference'); assert.equal(plan.priceKey, 'seedance.2-0-video.1080p'); assert.equal(plan.billedSeconds, 10);
-  scene.visual.video.model = 'seedance-1-5-pro-251215';
-  assert.throws(() => scenePlan(scene), /does not accept reference images/);
-  const savedRefs = scene.visual.video.referenceImagePaths;
-  scene.visual.video.referenceImagePaths = [];
-  const cheap = scenePlan(scene);
-  assert.equal(cheap.tool, 'seedance_img2video');
-  assert.equal(cheap.priceKey, 'seedance.1-5-pro-silent.1080p');
-  assert.equal(cheap.referenceVideoPaths, undefined);
-  assert.deepEqual(checkScene(scene, { production: win.PRODUCTION }), []);
-  assert.doesNotMatch(assemble(win, 2, '/board').motionPrompt, /Video 1/);
-  scene.visual.video.referenceImagePaths = savedRefs;
-  scene.visual.video.model = win.PRODUCTION.videoModel.model;
   scene.visual.video.previz.renderer = 'blender';
   assert.match(checkScene(scene, { production: win.PRODUCTION }).join(), /not the one the user chose for this episode \(PRODUCTION\.previz/);
   scene.visual.video.previz.renderer = 'threejs';
@@ -803,7 +791,7 @@ test('the previz renderer and the video model are HITL choices recorded before a
   const w = fixture(); delete w.PRODUCTION.previz.selection; assert.match(mode.check(w).join(), /Record where the previz renderer came from/);
   w.PRODUCTION.previz = { renderer: 'maya', selection: { kind: 'user', reference: 'x' } }; assert.match(mode.check(w).join(), /Unsupported PRODUCTION.previz.renderer/);
   const r = fixture(); r.PRODUCTION.videoModel.resolution = '480p'; assert.doesNotMatch(mode.check(r).join(), /resolution must be one of/);
-  r.PRODUCTION.videoModel = { model: 'seedance-1-5-pro-251215', resolution: '1080p', selection: { kind: 'user', reference: 'x' } };
+  r.PRODUCTION.videoModel = { model: 'dreamina-seedance-2-0-fast-260128', resolution: '720p', selection: { kind: 'user', reference: 'x' } };
   assert.doesNotMatch(mode.check(r).join(), /Copy the saved video selection/);
   // The draft pass has no generated cuts settled yet; a board with no generated cut never asks.
   assert.doesNotMatch(mode.check(without.call(null, 'previz') && fixture(), { draft: true }).join(), /Copy the saved video selection/);
@@ -828,14 +816,13 @@ test('the previz renderer and the video model are HITL choices recorded before a
   // Every model the table offers has a with-video price row on the route (drift guard).
   const { PRICED } = require('../../skills/produce/references/seedance-route.js');
   for (const [m, spec] of Object.entries(mode.VIDEO_MODELS)) for (const res of spec.resolutions)
-    assert.ok((m === 'seedance-1-5-pro-251215' && PRICED.has('seedance.1-5-pro-silent.' + res)) || PRICED.has('seedance.' + m.replace(/^dreamina-seedance-|-\d{6}$/g, '').replace(/^(\d)-(\d)/, '$1-$2') + '-video.' + res) ||
+    assert.ok(PRICED.has('seedance.' + m.replace(/^dreamina-seedance-|-\d{6}$/g, '').replace(/^(\d)-(\d)/, '$1-$2') + '-video.' + res) ||
       [...PRICED].some(k => k.endsWith('-video.' + res) && k.includes(m.includes('mini') ? 'mini' : m.includes('fast') ? 'fast' : m.includes('2-5') ? '2-5' : '2-0.') ), m + ' ' + res);
   // The options table quotes the same board once per model, with the numbers the approval will bind.
   const { options, text } = require('../../skills/produce/references/video-model-options.js');
   const table = options(fixture());
   assert.equal(table.cuts, 3);
   assert.ok(table.rows.every(row => !row.error), JSON.stringify(table.rows));
-  assert.ok(table.rows.some(row => row.model === 'seedance-1-5-pro-251215' && row.firstPassUsd > 0));
   const rows = Object.fromEntries(table.rows.map(x => [x.model + '@' + x.resolution, x]));
   assert.ok(rows['dreamina-seedance-2-0-260128@1080p'].firstPassUsd > rows['dreamina-seedance-2-0-mini-260615@720p'].firstPassUsd);
   assert.equal(rows['dreamina-seedance-2-0-260128@1080p'].firstPassUsd, +(3 * 10 * 0.228).toFixed(2));
@@ -844,7 +831,7 @@ test('the previz renderer and the video model are HITL choices recorded before a
   // No mode yet → a clear error, not a TypeError; a hybrid board with no cut yet is marked provisional (review M7).
   const noMode = fixture(); delete noMode.PRODUCTION.mode;
   assert.throws(() => options(noMode), /Choose full_video, video_50, video_30 or hook_only first/);
-  const hybrid = fixture(); hybrid.PRODUCTION.mode = 'hybrid'; hybrid.PRODUCTION.comparison = { model: 'seedance-1-5-pro-251215', resolution: '1080p', hybridShots: [1, 2] };
+  const hybrid = fixture(); hybrid.PRODUCTION.mode = 'hybrid'; hybrid.PRODUCTION.comparison = { model: 'dreamina-seedance-2-0-fast-260128', resolution: '720p', hybridShots: [1, 2] };
   for (const s of hybrid.SCENES) { s.shot.render.mode = 'still_camera'; delete s.visual.video; }
   const ht = options(hybrid); assert.equal(ht.cuts, 0);
   assert.ok(ht.rows.every(r => r.error || r.provisional === true), JSON.stringify(ht.rows[0]));
@@ -1078,26 +1065,25 @@ test('partial production choices can assemble generated-cut prompts and model qu
   }
  });
 
-test('three 2.5 hook cuts can mix with 1.5 body cuts and retain per-cut pricing', () => {
+test('three 2.5 hook cuts can mix with 2.0 mini body cuts and retain per-cut pricing', () => {
   const win = fixture(6);
-  win.PRODUCTION.videoModel = { model: 'mixed', selection: { kind: 'user', reference: 'First three cuts 2.5, remaining cuts 1.5.' } };
+  win.PRODUCTION.videoModel = { model: 'mixed', selection: { kind: 'user', reference: 'First three cuts 2.5, remaining cuts 2.0 mini.' } };
   for (let i = 0; i < 6; i++) {
     withPreviz(win, i);
     const v = win.SCENES[i].visual.video;
-    v.model = i < 3 ? 'dreamina-seedance-2-5-260628' : 'seedance-1-5-pro-251215';
+    v.model = i < 3 ? 'dreamina-seedance-2-5-260628' : 'dreamina-seedance-2-0-mini-260615';
     v.resolution = i < 3 ? '1080p' : '720p';
     delete v.modelReason;
-    if (i >= 3) { v.previz.handoff = 'frame_and_prompt'; delete v.referenceImagePaths; }
     v.prompt = assemble(win, i, '/board').motionPrompt;
     assert.deepEqual(checkScene(win.SCENES[i], { production: win.PRODUCTION }), []);
     const plan = scenePlan(win.SCENES[i]);
-    assert.equal(plan.tool, i < 3 ? 'seedance_reference' : 'seedance_img2video');
-    assert.equal(plan.priceKey, i < 3 ? 'seedance.2-5-video.1080p' : 'seedance.1-5-pro-silent.720p');
+    assert.equal(plan.tool, 'seedance_reference');
+    assert.equal(plan.priceKey, i < 3 ? 'seedance.2-5-video.1080p' : 'seedance.2-0-mini-video.720p');
   }
   approve(win);
   assert.deepEqual(mode.check(win, { requireApproval: true }), []);
   const fingerprint = quote(win).quoteFingerprint;
-  win.SCENES[5].visual.video.resolution = '1080p';
+  win.SCENES[5].visual.video.model = 'dreamina-seedance-2-0-fast-260128';
   assert.notEqual(quote(win).quoteFingerprint, fingerprint);
 });
 

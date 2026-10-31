@@ -25,14 +25,16 @@ test('planning model constraints match the server', () => {
   }
 });
 
-test('ordinary hook stays silent 1.5; action selects 2.0; invalid escalations fail', () => {
-  const ordinary = scenePlan(scene({}, 3));
-  assert.equal(ordinary.model, 'seedance-1-5-pro-251215');
+test('an ordinary motion slot plans silent 2.0 once faces are ruled out; invalid escalations fail', () => {
+  const plain = { realFaceInput: false };
+  const ordinary = scenePlan(scene(plain, 3));
+  assert.equal(ordinary.model, 'dreamina-seedance-2-0-260128');
   assert.equal(ordinary.durationSeconds, 4);
   assert.equal(ordinary.generateAudio, false);
+  assert.throws(() => scenePlan(scene({}, 3)), /realFaceInput:false/);
   assert.equal(scenePlan(scene(action)).model, 'dreamina-seedance-2-0-260128');
-  assert.equal(scenePlan(scene({}, 4.2)).durationSeconds, 5);
-  assert.throws(() => scenePlan(scene({}, 13)), /at most 12/);
+  assert.equal(scenePlan(scene(plain, 4.2)).durationSeconds, 5);
+  assert.throws(() => scenePlan(scene(plain, 16)), /at most 15/);
   assert.throws(() => scenePlan(scene({ ...action, realFaceInput: true })), /realFaceInput:false/);
   assert.equal(scenePlan(scene({ modelPurpose: 'complex-motion', realFaceInput: false })).model, 'dreamina-seedance-2-0-260128');
   assert.throws(() => scenePlan(scene({ ...action, model: 'dreamina-seedance-2-0-mini-260615' })), /1080p/);
@@ -43,7 +45,6 @@ test('reference and voice requirements select a compatible tool and model', () =
     referenceImagePaths: ['face.png', 'body.png'] };
   assert.equal(scenePlan(scene(refs)).tool, 'seedance_reference');
   assert.equal(scenePlan(scene({ ...refs, referenceImagePaths: Array(10).fill('panel.png') })).model, 'dreamina-seedance-2-5-260628');
-  assert.throws(() => scenePlan(scene({ ...refs, model: 'seedance-1-5-pro-251215' })), /does not accept/);
   const voice = { ...refs, engine: 'seedance', modelPurpose: 'fixed-voice', referenceAudioPaths: ['voice.wav'] };
   assert.throws(() => scenePlan(scene(voice)), /discard audio/);
   const speaking = scenePlan({ type: 'quote', duration: 6, visual: { clip: voice } });
@@ -55,7 +56,7 @@ test('reference and voice requirements select a compatible tool and model', () =
 test('forecast reflects model cost and snapshot changes; video budget excludes stills', () => {
   const dir = mkdtempSync(join(tmpdir(), 'sf-routing-'));
   try {
-    writeFileSync(join(dir, 'profile.md'), '---\nvideo_budget_usd: 0.30\n---\n');
+    writeFileSync(join(dir, 'profile.md'), '---\nvideo_budget_usd: 0.40\n---\n');
     const board = join(dir, 'episodes', 'test', 'storyboard');
     mkdirSync(board, { recursive: true });
     const input = join(board, 'scenes.js');
@@ -65,9 +66,9 @@ test('forecast reflects model cost and snapshot changes; video budget excludes s
       const r = spawnSync(process.execPath, [preview, input, '--json'], { encoding: 'utf8' });
       return { code: r.status, data: JSON.parse(r.stdout) };
     };
-    const base = run({});
+    const base = run({ realFaceInput: false, model: 'dreamina-seedance-2-0-mini-260615', resolution: '720p' });
     assert.equal(base.code, 0);
-    assert.equal(base.data.videoBudget.forecastUsd, 0.29);
+    assert.equal(base.data.videoBudget.forecastUsd, 0.38);
     const upgraded = run(action);
     assert.equal(upgraded.code, 1);
     assert.equal(upgraded.data.videoBudget.over, true);
@@ -91,8 +92,8 @@ test('every routable price key is priced, and an unpriced resolution is refused'
     for (const resolution of spec.resolutions) {
       for (const kind of ['motion', 'broll']) {
         const visual = kind === 'motion'
-          ? { video: { prompt: 'A masked adult turns.', engine: 'seedance', model, resolution, ...(spec.images ? { realFaceInput: false } : {}), ...(model === 'seedance-1-5-pro-251215' ? {} : { modelReason: 'fixture' }) } }
-          : { engine: 'seedance', model, resolution, ...(spec.images ? { realFaceInput: false } : {}), ...(model === 'seedance-1-5-pro-251215' ? {} : { modelReason: 'fixture' }) };
+          ? { video: { prompt: 'A masked adult turns.', engine: 'seedance', model, resolution, realFaceInput: false, modelReason: 'fixture' } }
+          : { engine: 'seedance', model, resolution, realFaceInput: false, modelReason: 'fixture' };
         const shot = { type: kind === 'broll' ? 'broll' : 'cover', after: 0, duration: 5, visual };
         let plan = null;
         try { plan = scenePlan(shot); } catch (e) {
@@ -113,9 +114,9 @@ test('a filmed shot is not a generated slot, but produce\'s output record does n
   // visual.video.clip is where produce writes the file it just made, so a rebuilt board is
   // still a generated slot — the checkers must not read the record as a supplied file.
   const rebuilt = scenePlan({ type: 'cover', duration: 6, visual: { video: {
-    prompt: 'A masked adult turns.', clip: '.work/motion/motion-i0.mp4' } } });
+    prompt: 'A masked adult turns.', realFaceInput: false, clip: '.work/motion/motion-i0.mp4' } } });
   assert.equal(rebuilt.kind, 'motion');
-  assert.equal(rebuilt.priceKey, 'seedance.1-5-pro-silent.1080p');
+  assert.equal(rebuilt.priceKey, 'seedance.2-0.1080p');
 });
 
 test('the planning price set does not drift from the ledger', () => {
@@ -125,8 +126,9 @@ test('the planning price set does not drift from the ledger', () => {
   assert.deepEqual(seedance(PRICED), seedance(PRICED_VIDEO_KEYS));
 });
 
-test('Seedance settings on a Veo slot are refused instead of silently skipped', () => {
-  assert.throws(() => scenePlan({ type: 'quote', duration: 6, visual: { clip: {
+test('a board that still names Veo is refused by name; Seedance settings on another lane are refused', () => {
+  assert.throws(() => scenePlan({ type: 'broll', duration: 4, visual: { engine: 'veo' } }), /video_engine_unsupported/);
+  assert.throws(() => scenePlan({ type: 'quote', duration: 6, visual: { clip: { engine: 'host',
     modelPurpose: 'fixed-voice', referenceAudioPaths: ['voice.wav'] } } }),
     /only applies to Seedance/);
 });
@@ -140,7 +142,7 @@ test('the astra lane routes to our LTX box, takes no Seedance field, and an unkn
   // the lane is `astra`, and `ltx` would silently plan nothing.
   assert.throws(() => scenePlan(scene({ engine: 'ltx' })), /unknown video engine: ltx/);
   // Seedance-only planning fields do not apply to this lane.
-  assert.throws(() => scenePlan(scene({ engine: 'astra', model: 'seedance-1-5-pro-251215' })),
+  assert.throws(() => scenePlan(scene({ engine: 'astra', model: 'dreamina-seedance-2-0-260128' })),
     /only applies to Seedance/);
   assert.throws(() => scenePlan(scene({ engine: 'astra', modelPurpose: 'reference' })),
     /only applies to Seedance/);
@@ -156,11 +158,10 @@ test('an engine the router accepts has its tools in produce\'s allow-list', () =
   // rather than by us, so it has no mcp entry to assert.
   const LANE_TOOLS = {
     seedance: ['seedance_img2video', 'seedance_reference'],
-    veo: ['veo_img2video', 'veo_reference'],
     astra: ['astra_img2video', 'astra_keyframe_video', 'astra_audio2video', 'astra_video_retake'],
   };
   for (const [engine, tools] of Object.entries(LANE_TOOLS)) {
-    assert.equal(scenePlan(scene({ engine })).engine, engine,
+    assert.equal(scenePlan(scene({ engine, realFaceInput: false })).engine, engine,
       engine + ' is no longer a route this test knows');
     for (const tool of tools) {
       assert.ok(allowed.includes('mcp__social-flow__' + tool),
@@ -216,20 +217,4 @@ test('a previz cut rides the reference route as Video 1 and bills input + output
   // A previz belongs to a motion background only — the checkers and the approval page read visual.video.previz.
   assert.throws(() => scenePlan({ type: 'quote', duration: 6, visual: { bg: 'images/scene-4.png', clip: { ...base, prompt: 'x',
     previz: { ...previz, seconds: 6 } } } }), /motion-background/);
-});
-
-test('Veo storyboard forecast respects selected resolution and rejects over-limit shots', () => {
-  const shot = { type: 'broll', duration: 3.2, visual: { engine: 'veo', resolution: '720p' } };
-  assert.equal(scenePlan(shot).durationSeconds, 4);
-  assert.equal(scenePlan({ ...shot, visual: { engine: 'veo' } }).durationSeconds, 8);
-  assert.throws(() => scenePlan({ ...shot, duration: 9 }), /split or replan/);
-});
-
-test('Veo forecasts cannot invent a priced lite 4k route', () => {
-  const shot = { type: 'broll', duration: 3, visual: { engine: 'veo', resolution: '4k' } };
-  assert.throws(() => scenePlan(shot), /Unsupported Veo/);
-  const model = 'veo-3.1-fast-generate-preview';
-  const plan = scenePlan({ ...shot, visual: { ...shot.visual, model } });
-  assert.equal(plan.model, model);
-  assert.equal(plan.priceKey, priceOf(plan.tool, plan).key);
 });

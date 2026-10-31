@@ -178,7 +178,7 @@ A `generated_video` cut with a `visual.video` slot may pre-render its camera and
 `previz-template.html` — rendered at the cut's billed length, 24 fps, and stored as
 `visual.video.previz` with `renderer`, `clip`, `firstFrame`, `sha256`, `fps`, `seconds` and
 `camera.movement`. The previz is optional (owner decision 2026-10-18): it helps when the model
-takes a reference clip (Seedance 2.x `reference_video`); on `frame_and_prompt` adapters it is
+takes a reference clip (Seedance 2.x `reference_video`); on a host video tool it is
 advice only. `checkScene` advises when a cut has none after the draft pass. When a record
 exists, `checkPreviz` flags a renderer other than `blender`/`threejs`, a clip that is not a
 local mp4 rendered at whole seconds and 24–60 fps, a first frame that is not a local png, a
@@ -244,10 +244,8 @@ Do not convert a continuity failure into a passing review because both stills lo
 ## Per-cut model choices (2026-09-13)
 
 The episode model and resolution are defaults, not equality constraints on cuts.
-Seedance 1.x uses `previz.handoff: "frame_and_prompt"` (inferred from the model when absent).
-Its source still is edited from the previz first frame and the prompt carries camera/blocking;
-it sends no reference video. Omit reference image/audio arrays on 1.x.
-Seedance 2.x can continue to use `reference_video`. Keep previz asset and camera checks.
+Seedance 2.x can send the previz as `reference_video`. A cut naming Veo, Gemini Omni or
+Seedance 1.x fails as `video_engine_unsupported`. Keep previz asset and camera checks.
 
 ## Drone spatial reveal
 

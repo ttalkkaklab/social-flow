@@ -438,14 +438,12 @@ function motionKind(scene) {
   return null;
 }
 
-/** The planned route (scenes-schema §clip prompt) — `engine` overrides the type default:
-    b-roll keeps its sound so it goes to veo, a motion background discards it so seedance,
-    a speech clip goes to veo_reference. The same routing as the check strip's engineOf. */
+/** The planned route (scenes-schema §clip prompt) — `engine` overrides the default, seedance
+    (Veo left on 2026-10-31: no voice reference). The same routing as the check strip's engineOf. */
 function engineOf(scene) {
   const v = (scene && scene.visual) || {};
   const named = (v.video && v.video.engine) || (v.clip && v.clip.engine) || v.engine;
-  if (named === 'veo' || named === 'seedance' || named === 'host' || named === 'astra' || named === 'astra-genai') return named;   // host: the CLI's own video tool; astra: our LTX-2.5 box
-  if (scene && (scene.type === 'broll' || scene.type === 'quote')) return 'veo';
+  if (named === 'seedance' || named === 'host' || named === 'astra' || named === 'astra-genai') return named;   // host: the CLI's own video tool; astra: our LTX-2.5 box
   return 'seedance';
 }
 
@@ -1966,7 +1964,7 @@ function selftest() {
   ok('the hook slot itself needs no visual.why',
      !has(bads(run([videoCover, goodShot, ctaShot], null, { policy: hookPolicy })), /no visual\.why/));
   const quoteClip = Object.assign({}, goodShot, { type: 'quote', speaker: 'the pilot',
-    visual: Object.assign({}, goodShot.visual, { clip: { prompt: SEEDANCE_PROMPT, engine: 'veo' } }) });
+    visual: Object.assign({}, goodShot.visual, { clip: { prompt: SEEDANCE_PROMPT, engine: 'seedance' } }) });
   ok('a speech clip is a generated cut, so the hook rule reads it too',
      has(bads(run([videoCover, quoteClip, ctaShot], null, { policy: hookPolicy })), /no visual\.why/));
   ok('speech clips count against the generated-slot cap',
@@ -2070,7 +2068,7 @@ function selftest() {
   // b-roll
   const broll = { type: 'broll', after: 0, duration: 4, narration: [],
                   shot: { feel: 'x', size: 'mcu', angle: 'eye' },
-                  visual: { src: 'images/scene-1.png', prompt: 'p', audio: 'a',
+                  visual: { src: 'images/scene-1.png', prompt: 'p. the subject stays consistent.', audio: 'a', realFaceInput: false,
                             camera: { movement: 'dolly in', speed: 'slow', framing: 'chest-up', end: 'centred' } } };
   ok('a slide without motion:true is a violation',
      has(bads(run([cover, Object.assign({}, goodShot, { visual: { slide: { file: 'slides/s2-x.html', plan: 'a list' } } }), goodShot, goodShot])), /no motion:true/));
@@ -2116,8 +2114,8 @@ function selftest() {
      !has(bads(run([cover, motionScene(SEEDANCE_PROMPT + ' avoid generating any text or subtitles.'), goodShot, goodShot])), /negative directive/));
   ok('a timecode in a seedance prompt is a violation',
      has(bads(run([cover, motionScene(SEEDANCE_PROMPT + ' at [00:04] the riders stop.'), goodShot, goodShot])), /clock timecode/));
-  ok('the same prompt on a veo route is not this check\'s business',
-     !has(bads(run([cover, motionScene(SEEDANCE_PROMPT + ' 말들이 계곡을 건넌다. at [00:04] they stop.', { engine: 'veo' }),
+  ok('the same prompt on an astra route is not this check\'s business',
+     !has(bads(run([cover, motionScene(SEEDANCE_PROMPT + ' 말들이 계곡을 건넌다. at [00:04] they stop.', { engine: 'astra' }),
                     goodShot, goodShot])), /carries Korean|clock timecode/));
   ok('the seedance prompt rules wait for the camera pass (--draft)',
      !has(bads(run([cover, motionScene('high wide, very slow dolly in. the riders cross.'), goodShot, goodShot], null, { draft: true })),
@@ -2911,7 +2909,7 @@ function selftest() {
      seedancePromptFindings('she turns to the window', 'astra').length === 0);
   ok('stored Seedance 2.5 prompts preserve its Korean direction support',
      seedancePromptFindings('소포를 내려놓는다. The subject stays consistent.', 'seedance', 'dreamina-seedance-2-5-260628').length === 0 &&
-     seedancePromptFindings('소포를 내려놓는다. The subject stays consistent.', 'seedance', 'seedance-1-5-pro-251215').some(f => f.includes('Korean')));
+     seedancePromptFindings('소포를 내려놓는다. The subject stays consistent.', 'seedance', 'dreamina-seedance-2-0-260128').some(f => f.includes('Korean')));
   ok('a board that names the model instead of the lane still falls back to the type default',
      engineOf({ type: 'points', visual: { video: { engine: 'ltx' } } }) === 'seedance');
 

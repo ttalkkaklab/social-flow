@@ -12,10 +12,10 @@ import { z } from 'zod';
 import { config, disabledToolPatterns, disabledToolsFile, mlxServeConfigured } from './config.js';
 import { resolveToolGate } from './tool-gate.js';
 import { VIDEO_ADAPTERS, parseVideoArgs } from './video-registry.js';
+import { SEEDANCE_MODEL_SPECS } from './seedance-client.js';
 import { quoteVideo } from './video-pricing.js';
 import { atomicJson, videoTransaction } from './video-state.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
-import { OMNI_MODEL } from './omni-client.js';
 import { videoEvents } from './video-events.js';
 import { getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema, genaiMsrVoiceReferences, refreshGenaiMsrVoice } from './astra-genai-video.js';
 import { hasStructuredImages, prepareVideoImages } from './video-image-inputs.js';
@@ -69,6 +69,14 @@ function inputFiles(args, episode) {
     Object.assign(args, visit(args, ''));
     return files;
 }
+/** A saved engine without a voice lane (Veo, Gemini Omni, Seedance 1.x) left the plugin on 2026-10-31. */
+function requireSupportedSelection(selection) {
+    const retired = selection.engine !== 'host' && !Object.values(VIDEO_ADAPTERS).some(a => a.engine === selection.engine) ||
+        selection.engine === 'seedance' && Boolean(selection.model) && !Object.hasOwn(SEEDANCE_MODEL_SPECS, selection.model);
+    if (retired)
+        throw new Error(`video_engine_unsupported: ${selection.engine}${selection.model ? ' ' + selection.model : ''} cannot keep a character's voice ` +
+            'and is no longer supported; choose a video model again with project_manage (existing clips stay reusable)');
+}
 function bindSelection(tool, input, selection) {
     const adapter = VIDEO_ADAPTERS[tool];
     if (!adapter || adapter.engine !== selection.engine)
@@ -82,13 +90,10 @@ function bindSelection(tool, input, selection) {
             throw new Error('Managed ASTRA audio permits one submission per request; reconcile it before creating another attempt');
         args.maxAttempts = 1;
     }
-    if (selection.engine === 'omni' && selection.model !== OMNI_MODEL)
-        throw new Error('model_selection_mismatch: fixed Omni deployment');
     if (selection.model && tool !== 'astra_genai_msr') {
         if (args.model !== undefined && args.model !== selection.model)
             throw new Error('model_selection_mismatch: model differs from saved selection');
-        if (selection.engine !== 'omni')
-            args.model = selection.model;
+        args.model = selection.model;
     }
     if (selection.resolution && selection.engine === 'astra-genai-desktop' && ['astra_genai_desktop_extend', 'astra_genai_desktop_retake'].includes(tool)) {
         const match = /^(\d+)x(\d+)$/.exec(selection.resolution);
@@ -113,12 +118,7 @@ function bindSelection(tool, input, selection) {
         else {
             if (args.resolution !== undefined && args.resolution !== selection.resolution)
                 throw new Error('model_selection_mismatch: resolution');
-            if (tool === 'veo_extension') {
-                if (selection.resolution !== '720p')
-                    throw new Error('Veo extension requires selected 720p resolution');
-            }
-            else
-                args.resolution = selection.resolution;
+            args.resolution = selection.resolution;
         }
     }
     return args;
@@ -129,7 +129,7 @@ export function checkVideoEnvironment(tool) {
         throw new Error('video_tool_disabled: ' + gate.reason);
     const engine = VIDEO_ADAPTERS[tool]?.engine;
     const ready = engine === 'seedance' ? Boolean(config.arkApiKey) : engine === 'astra' ? Boolean(config.astraVideoApiKey) :
-        ['astra-genai', 'astra-genai-desktop'].includes(engine) ? Boolean(config.astraGenaiApiKey) : engine === 'mlx' ? mlxServeConfigured() : Boolean(config.geminiApiKey);
+        ['astra-genai', 'astra-genai-desktop'].includes(engine) ? Boolean(config.astraGenaiApiKey) : engine === 'mlx' && mlxServeConfigured();
     if (!ready)
         throw new Error('video_provider_unconfigured: ' + engine);
 }
@@ -138,6 +138,7 @@ export function planVideo(raw) {
     requireWorkflow(input.episode, 'video', input.shotId);
     const context = routingContext(input.episode, input.shotId);
     const { selection } = context;
+    requireSupportedSelection(selection);
     // A saved default operation (an LTX project saves 'reference', i.e. MSR) applies when the call names neither.
     const operation = input.operation ?? (input.tool ? undefined : selection.operation);
     const tool = input.tool || Object.entries(VIDEO_ADAPTERS).find(([name, a]) => a.engine === selection.engine && a.operation === operation && (a.engine !== 'mlx' || !selection.model || localVideoStrategy(name)?.acceptsModel(selection.model)))?.[0];
@@ -311,6 +312,7 @@ async function dispatchChannelAsset(tool, args, root, output, dispatch) {
     const selection = read.config?.models?.video;
     if (!selection)
         throw new Error(`project_setup_required: ${read.status}; save .social-flow/models.json before generating channel assets`);
+    requireSupportedSelection(selection);
     const bound = { ...bindSelection(tool, args, selection), outputPath: output };
     const startedAt = Date.now();
     let ok = false;

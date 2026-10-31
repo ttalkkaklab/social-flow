@@ -64,7 +64,9 @@ selection. Existing choices may be offered as candidates.
 | `setup_required` | `model-settings.js show` | No `.social-flow/models.json`; run first setup. |
 | `video_type_required` | `model-settings.js show` | Models saved, type missing; ask only the type. |
 | `configured` | `model-settings.js show` | Type, video/image models and speech model or explicit none saved (model-only view). |
-| `migration_required` | both | Retired speech model; update speech explicitly before new generation. |
+| `migration_required` | both | Retired speech or video model; `retired[]` names `models.speech` / `models.video`. Update that choice explicitly before new generation. |
+| `video_engine_unsupported` | `video_plan` | A selection or override names Veo, Gemini Omni or Seedance 1.x; choose a supported video model again (saving one is refused). Existing clips stay reusable. |
+| `voice_lane_required` | `video_plan` | A spoken cut (`on_screen` line, or native audio on `visual.clip` / b-roll) on an adapter with voice lane `none`; use a `reference` or `supplied` lane, or keep narration as TTS with `generateAudio:false`. |
 | `project_setup_required` | `project_manage status` / `episode` | Project, style, production, SNS or channel layout missing; `missing[]` names them. An unattended caller reports it and defers authoring. |
 | `ready` | `project_manage status` | Complete settings; authoring starts without a preference question. |
 
@@ -98,8 +100,9 @@ not live availability. Show installed/configured options, capability limits and
 known pricing, labelled with its date. Do not invent credentials, exact latency or
 prices. A configured credential does not guarantee a successful generation.
 
-1. **Video model** (first-setup menu; a saved choice is never re-offered). Offer host video when exposed, Seedance/Veo API models and
-   ASTRA or MLX when available. Include resolution and reference/audio support.
+1. **Video model** (first-setup menu; a saved choice is never re-offered). Offer host video when exposed, Seedance 2.x API models and
+   ASTRA or MLX when available. Veo, Gemini Omni and Seedance 1.x left the plugin on
+   2026-10-31 because none takes a voice reference. Include resolution and reference/audio support.
    Use the installed video-model selection reference and cost tables. Explain the
    change each option makes. The host is the recommended initial choice when it
    supports the requested job; the user can explicitly choose an API instead.
@@ -158,7 +161,7 @@ node "${CLAUDE_PLUGIN_ROOT}/skills/_shared/model-settings.js" init "$WORKSPACE" 
 {
   "videoType": {"id":"drama"},
   "models": {
-    "video": {"engine":"seedance","model":"seedance-1-5-pro-251215","resolution":"720p"},
+    "video": {"engine":"seedance","model":"dreamina-seedance-2-0-fast-260128","resolution":"720p"},
     "speech": {"engine":"gemini","model":"gemini-2.5-flash-preview-tts"},
     "image": {"engine":"host","model":"host-managed","host":"codex"}
   },
@@ -190,8 +193,8 @@ for local engines, check the installation. Neither requires an invented API toke
 
 If the selected API provider is unconfigured, name its required variable and guide
 the user to configure it before the next model question. Use the provider's adapter
-reference and `capability_status.needs`: Seedance uses `ARK_API_KEY`, Veo/Omni and
-Gemini TTS use `GEMINI_API_KEY`, GPT Image uses `OPENAI_API_KEY`, ElevenLabs uses
+reference and `capability_status.needs`: Seedance uses `ARK_API_KEY`, Gemini TTS uses
+`GEMINI_API_KEY`, GPT Image uses `OPENAI_API_KEY`, ElevenLabs uses
 `ELEVENLABS_API_KEY`, ASTRA video uses `ASTRA_VIDEO`, and ASTRA GenAI uses
 `ASTRA_GENAI_API_KEY`. Do not interchange ASTRA credentials.
 

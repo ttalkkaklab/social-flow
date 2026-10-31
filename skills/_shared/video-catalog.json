@@ -2,158 +2,16 @@
   "version": 1,
   "adapters": [
     {
-      "tool": "veo_text2video",
-      "engine": "veo",
-      "deployment": "gemini-api",
-      "operation": "text",
-      "voice": {
-        "voiceReference": "unsupported",
-        "suppliedSpeech": "unsupported",
-        "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
-        "review": "not_reviewed"
-      },
-      "fields": [
-        "prompt",
-        "negativePrompt",
-        "model",
-        "aspectRatio",
-        "resolution",
-        "durationSeconds",
-        "outputPath",
-        "filename"
-      ],
-      "modelConstraints": {
-        "models": [
-          "veo-3.1-generate-preview",
-          "veo-3.1-fast-generate-preview",
-          "veo-3.1-lite-generate-preview"
-        ],
-        "resolutions": [
-          "720p",
-          "1080p",
-          "4k"
-        ],
-        "note": "Use video_plan for cross-field constraints"
-      }
-    },
-    {
-      "tool": "veo_img2video",
-      "engine": "veo",
-      "deployment": "gemini-api",
-      "operation": "image",
-      "voice": {
-        "voiceReference": "unsupported",
-        "suppliedSpeech": "unsupported",
-        "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
-        "review": "not_reviewed"
-      },
-      "fields": [
-        "prompt",
-        "negativePrompt",
-        "sourceImagePath",
-        "lastImagePath",
-        "model",
-        "aspectRatio",
-        "resolution",
-        "durationSeconds",
-        "outputPath",
-        "filename"
-      ],
-      "modelConstraints": {
-        "models": [
-          "veo-3.1-generate-preview",
-          "veo-3.1-fast-generate-preview",
-          "veo-3.1-lite-generate-preview"
-        ],
-        "resolutions": [
-          "720p",
-          "1080p",
-          "4k"
-        ],
-        "note": "Use video_plan for cross-field constraints"
-      }
-    },
-    {
-      "tool": "veo_reference",
-      "engine": "veo",
-      "deployment": "gemini-api",
-      "operation": "reference",
-      "voice": {
-        "voiceReference": "unsupported",
-        "suppliedSpeech": "unsupported",
-        "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
-        "review": "not_reviewed"
-      },
-      "fields": [
-        "prompt",
-        "referenceImagePaths",
-        "model",
-        "aspectRatio",
-        "resolution",
-        "outputPath",
-        "filename"
-      ],
-      "modelConstraints": {
-        "models": [
-          "veo-3.1-generate-preview",
-          "veo-3.1-fast-generate-preview",
-          "veo-3.1-lite-generate-preview"
-        ],
-        "resolutions": [
-          "720p",
-          "1080p",
-          "4k"
-        ],
-        "note": "Use video_plan for cross-field constraints"
-      }
-    },
-    {
-      "tool": "veo_extension",
-      "engine": "veo",
-      "deployment": "gemini-api",
-      "operation": "extend",
-      "voice": {
-        "voiceReference": "unsupported",
-        "suppliedSpeech": "unsupported",
-        "exactAudioPreservation": false,
-        "voiceContinuation": "source_final_second",
-        "review": "not_reviewed"
-      },
-      "fields": [
-        "prompt",
-        "sourceVideoPath",
-        "sourceVideoUri",
-        "model",
-        "outputPath",
-        "filename"
-      ],
-      "modelConstraints": {
-        "models": [
-          "veo-3.1-generate-preview",
-          "veo-3.1-fast-generate-preview",
-          "veo-3.1-lite-generate-preview"
-        ],
-        "resolutions": [
-          "720p",
-          "1080p",
-          "4k"
-        ],
-        "note": "Use video_plan for cross-field constraints"
-      }
-    },
-    {
       "tool": "seedance_text2video",
       "engine": "seedance",
       "deployment": "byteplus",
       "operation": "text",
       "voice": {
+        "lane": "none",
+        "dialogue": "refused",
         "voiceReference": "unsupported",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
         "review": "not_reviewed"
       },
       "fields": [
@@ -161,11 +19,8 @@
         "model",
         "resolution",
         "durationSeconds",
-        "frames",
         "generateAudio",
         "watermark",
-        "seed",
-        "cameraFixed",
         "outputPath",
         "filename",
         "ratio"
@@ -204,7 +59,6 @@
             "totalSeconds": 30
           },
           "audio": true,
-          "seed": false,
           "realFaceInput": false,
           "activationGate": true
         },
@@ -242,7 +96,6 @@
             "totalSeconds": 15
           },
           "audio": true,
-          "seed": false,
           "realFaceInput": false,
           "activationGate": true
         },
@@ -278,7 +131,6 @@
             "totalSeconds": 15
           },
           "audio": true,
-          "seed": false,
           "realFaceInput": false,
           "activationGate": true
         },
@@ -314,66 +166,8 @@
             "totalSeconds": 15
           },
           "audio": true,
-          "seed": false,
           "realFaceInput": false,
           "activationGate": true
-        },
-        "seedance-1-5-pro-251215": {
-          "resolutions": [
-            "480p",
-            "720p",
-            "1080p"
-          ],
-          "duration": [
-            4,
-            12
-          ],
-          "lastFrame": true,
-          "referenceImages": false,
-          "referenceAudio": false,
-          "referenceVideos": false,
-          "audio": true,
-          "seed": true,
-          "realFaceInput": true,
-          "activationGate": false
-        },
-        "seedance-1-0-pro-250528": {
-          "resolutions": [
-            "480p",
-            "720p",
-            "1080p"
-          ],
-          "duration": [
-            2,
-            12
-          ],
-          "lastFrame": true,
-          "referenceImages": false,
-          "referenceAudio": false,
-          "referenceVideos": false,
-          "audio": false,
-          "seed": true,
-          "realFaceInput": true,
-          "activationGate": false
-        },
-        "seedance-1-0-pro-fast-251015": {
-          "resolutions": [
-            "480p",
-            "720p",
-            "1080p"
-          ],
-          "duration": [
-            2,
-            12
-          ],
-          "lastFrame": false,
-          "referenceImages": false,
-          "referenceAudio": false,
-          "referenceVideos": false,
-          "audio": false,
-          "seed": true,
-          "realFaceInput": true,
-          "activationGate": false
         }
       }
     },
@@ -383,10 +177,11 @@
       "deployment": "byteplus",
       "operation": "image",
       "voice": {
+        "lane": "none",
+        "dialogue": "refused",
         "voiceReference": "unsupported",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
         "review": "not_reviewed"
       },
       "fields": [
@@ -394,11 +189,8 @@
         "model",
         "resolution",
         "durationSeconds",
-        "frames",
         "generateAudio",
         "watermark",
-        "seed",
-        "cameraFixed",
         "outputPath",
         "filename",
         "sourceImagePath",
@@ -439,7 +231,6 @@
             "totalSeconds": 30
           },
           "audio": true,
-          "seed": false,
           "realFaceInput": false,
           "activationGate": true
         },
@@ -477,7 +268,6 @@
             "totalSeconds": 15
           },
           "audio": true,
-          "seed": false,
           "realFaceInput": false,
           "activationGate": true
         },
@@ -513,7 +303,6 @@
             "totalSeconds": 15
           },
           "audio": true,
-          "seed": false,
           "realFaceInput": false,
           "activationGate": true
         },
@@ -549,66 +338,8 @@
             "totalSeconds": 15
           },
           "audio": true,
-          "seed": false,
           "realFaceInput": false,
           "activationGate": true
-        },
-        "seedance-1-5-pro-251215": {
-          "resolutions": [
-            "480p",
-            "720p",
-            "1080p"
-          ],
-          "duration": [
-            4,
-            12
-          ],
-          "lastFrame": true,
-          "referenceImages": false,
-          "referenceAudio": false,
-          "referenceVideos": false,
-          "audio": true,
-          "seed": true,
-          "realFaceInput": true,
-          "activationGate": false
-        },
-        "seedance-1-0-pro-250528": {
-          "resolutions": [
-            "480p",
-            "720p",
-            "1080p"
-          ],
-          "duration": [
-            2,
-            12
-          ],
-          "lastFrame": true,
-          "referenceImages": false,
-          "referenceAudio": false,
-          "referenceVideos": false,
-          "audio": false,
-          "seed": true,
-          "realFaceInput": true,
-          "activationGate": false
-        },
-        "seedance-1-0-pro-fast-251015": {
-          "resolutions": [
-            "480p",
-            "720p",
-            "1080p"
-          ],
-          "duration": [
-            2,
-            12
-          ],
-          "lastFrame": false,
-          "referenceImages": false,
-          "referenceAudio": false,
-          "referenceVideos": false,
-          "audio": false,
-          "seed": true,
-          "realFaceInput": true,
-          "activationGate": false
         }
       }
     },
@@ -618,10 +349,11 @@
       "deployment": "byteplus",
       "operation": "reference",
       "voice": {
-        "voiceReference": "model_dependent",
+        "lane": "reference",
+        "dialogue": "allowed",
+        "voiceReference": "supported",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
         "review": "not_reviewed"
       },
       "fields": [
@@ -629,11 +361,8 @@
         "model",
         "resolution",
         "durationSeconds",
-        "frames",
         "generateAudio",
         "watermark",
-        "seed",
-        "cameraFixed",
         "outputPath",
         "filename",
         "referenceImagePaths",
@@ -676,7 +405,6 @@
             "totalSeconds": 30
           },
           "audio": true,
-          "seed": false,
           "realFaceInput": false,
           "activationGate": true
         },
@@ -714,7 +442,6 @@
             "totalSeconds": 15
           },
           "audio": true,
-          "seed": false,
           "realFaceInput": false,
           "activationGate": true
         },
@@ -750,7 +477,6 @@
             "totalSeconds": 15
           },
           "audio": true,
-          "seed": false,
           "realFaceInput": false,
           "activationGate": true
         },
@@ -786,66 +512,8 @@
             "totalSeconds": 15
           },
           "audio": true,
-          "seed": false,
           "realFaceInput": false,
           "activationGate": true
-        },
-        "seedance-1-5-pro-251215": {
-          "resolutions": [
-            "480p",
-            "720p",
-            "1080p"
-          ],
-          "duration": [
-            4,
-            12
-          ],
-          "lastFrame": true,
-          "referenceImages": false,
-          "referenceAudio": false,
-          "referenceVideos": false,
-          "audio": true,
-          "seed": true,
-          "realFaceInput": true,
-          "activationGate": false
-        },
-        "seedance-1-0-pro-250528": {
-          "resolutions": [
-            "480p",
-            "720p",
-            "1080p"
-          ],
-          "duration": [
-            2,
-            12
-          ],
-          "lastFrame": true,
-          "referenceImages": false,
-          "referenceAudio": false,
-          "referenceVideos": false,
-          "audio": false,
-          "seed": true,
-          "realFaceInput": true,
-          "activationGate": false
-        },
-        "seedance-1-0-pro-fast-251015": {
-          "resolutions": [
-            "480p",
-            "720p",
-            "1080p"
-          ],
-          "duration": [
-            2,
-            12
-          ],
-          "lastFrame": false,
-          "referenceImages": false,
-          "referenceAudio": false,
-          "referenceVideos": false,
-          "audio": false,
-          "seed": true,
-          "realFaceInput": true,
-          "activationGate": false
         }
       }
     },
@@ -855,10 +523,11 @@
       "deployment": "gateway-desktop-v1",
       "operation": "text",
       "voice": {
+        "lane": "none",
+        "dialogue": "refused",
         "voiceReference": "unsupported",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
         "review": "not_reviewed"
       },
       "fields": [
@@ -886,10 +555,11 @@
       "deployment": "gateway-desktop-v1",
       "operation": "image",
       "voice": {
+        "lane": "none",
+        "dialogue": "refused",
         "voiceReference": "unsupported",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
         "review": "not_reviewed"
       },
       "fields": [
@@ -918,10 +588,11 @@
       "deployment": "gateway-desktop-v1",
       "operation": "audio",
       "voice": {
+        "lane": "supplied",
+        "dialogue": "allowed",
         "voiceReference": "unsupported",
         "suppliedSpeech": "audio_conditioned_reencoded",
         "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
         "review": "not_reviewed"
       },
       "fields": [
@@ -950,10 +621,11 @@
       "deployment": "gateway-desktop-v1",
       "operation": "extend",
       "voice": {
+        "lane": "none",
+        "dialogue": "refused",
         "voiceReference": "unsupported",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
         "review": "not_reviewed"
       },
       "fields": [
@@ -979,10 +651,11 @@
       "deployment": "gateway-desktop-v1",
       "operation": "retake",
       "voice": {
+        "lane": "none",
+        "dialogue": "refused",
         "voiceReference": "unsupported",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
         "review": "not_reviewed"
       },
       "fields": [
@@ -1009,10 +682,11 @@
       "deployment": "gateway-desktop-v1",
       "operation": "keyframe",
       "voice": {
+        "lane": "none",
+        "dialogue": "refused",
         "voiceReference": "unsupported",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
         "review": "not_reviewed"
       },
       "fields": [
@@ -1042,10 +716,11 @@
       "deployment": "genai-ltx-v2",
       "operation": "text",
       "voice": {
+        "lane": "none",
+        "dialogue": "refused",
         "voiceReference": "unsupported",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
         "review": "not_reviewed"
       },
       "fields": [
@@ -1074,10 +749,11 @@
       "deployment": "genai-ltx-v2",
       "operation": "image",
       "voice": {
+        "lane": "none",
+        "dialogue": "refused",
         "voiceReference": "unsupported",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
         "review": "not_reviewed"
       },
       "fields": [
@@ -1108,10 +784,11 @@
       "deployment": "genai-ltx-v2",
       "operation": "audio",
       "voice": {
+        "lane": "supplied",
+        "dialogue": "allowed",
         "voiceReference": "unsupported",
         "suppliedSpeech": "audio_conditioned_reencoded",
         "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
         "review": "not_reviewed"
       },
       "fields": [
@@ -1142,10 +819,11 @@
       "deployment": "genai-ltx-msr",
       "operation": "reference",
       "voice": {
+        "lane": "reference",
+        "dialogue": "allowed",
         "voiceReference": "backend_dependent",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
         "review": "not_reviewed"
       },
       "fields": [
@@ -1173,10 +851,11 @@
       "deployment": "self-hosted-ltx",
       "operation": "text",
       "voice": {
+        "lane": "none",
+        "dialogue": "refused",
         "voiceReference": "unsupported",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
         "review": "not_reviewed"
       },
       "fields": [
@@ -1209,10 +888,11 @@
       "deployment": "self-hosted-ltx",
       "operation": "image",
       "voice": {
+        "lane": "none",
+        "dialogue": "refused",
         "voiceReference": "unsupported",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
         "review": "not_reviewed"
       },
       "fields": [
@@ -1247,10 +927,11 @@
       "deployment": "self-hosted-ltx",
       "operation": "keyframe",
       "voice": {
+        "lane": "none",
+        "dialogue": "refused",
         "voiceReference": "unsupported",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
         "review": "not_reviewed"
       },
       "fields": [
@@ -1279,10 +960,11 @@
       "deployment": "self-hosted-ltx",
       "operation": "audio",
       "voice": {
+        "lane": "supplied",
+        "dialogue": "allowed",
         "voiceReference": "unsupported",
         "suppliedSpeech": "audio_conditioned_reencoded",
         "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
         "review": "not_reviewed"
       },
       "fields": [
@@ -1319,10 +1001,11 @@
       "deployment": "self-hosted-ltx",
       "operation": "control",
       "voice": {
+        "lane": "none",
+        "dialogue": "refused",
         "voiceReference": "unsupported",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
         "review": "not_reviewed"
       },
       "fields": [
@@ -1353,10 +1036,11 @@
       "deployment": "self-hosted-ltx",
       "operation": "retake",
       "voice": {
+        "lane": "none",
+        "dialogue": "refused",
         "voiceReference": "unsupported",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
         "review": "not_reviewed"
       },
       "fields": [
@@ -1374,118 +1058,16 @@
       }
     },
     {
-      "tool": "omni_text2video",
-      "engine": "omni",
-      "deployment": "gemini-interactions",
-      "operation": "text",
-      "voice": {
-        "voiceReference": "unsupported",
-        "suppliedSpeech": "unsupported",
-        "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
-        "review": "not_reviewed"
-      },
-      "fields": [
-        "prompt",
-        "aspectRatio",
-        "resolution",
-        "durationSeconds",
-        "seed",
-        "outputPath",
-        "filename"
-      ],
-      "modelConstraints": {
-        "note": "Use video_plan; deployment-specific schema is authoritative"
-      }
-    },
-    {
-      "tool": "omni_img2video",
-      "engine": "omni",
-      "deployment": "gemini-interactions",
-      "operation": "image",
-      "voice": {
-        "voiceReference": "unsupported",
-        "suppliedSpeech": "unsupported",
-        "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
-        "review": "not_reviewed"
-      },
-      "fields": [
-        "prompt",
-        "sourceImagePath",
-        "lastImagePath",
-        "aspectRatio",
-        "resolution",
-        "durationSeconds",
-        "seed",
-        "outputPath",
-        "filename"
-      ],
-      "modelConstraints": {
-        "note": "Use video_plan; deployment-specific schema is authoritative"
-      }
-    },
-    {
-      "tool": "omni_extend",
-      "engine": "omni",
-      "deployment": "gemini-interactions",
-      "operation": "extend",
-      "voice": {
-        "voiceReference": "unsupported",
-        "suppliedSpeech": "unsupported",
-        "exactAudioPreservation": false,
-        "voiceContinuation": "previous_interaction_id",
-        "review": "not_reviewed"
-      },
-      "fields": [
-        "prompt",
-        "previousInteractionId",
-        "sourceVideoPath",
-        "resolution",
-        "seed",
-        "outputPath",
-        "filename",
-        "durationSeconds"
-      ],
-      "modelConstraints": {
-        "note": "Use video_plan; deployment-specific schema is authoritative"
-      }
-    },
-    {
-      "tool": "omni_edit",
-      "engine": "omni",
-      "deployment": "gemini-interactions",
-      "operation": "edit",
-      "voice": {
-        "voiceReference": "unsupported",
-        "suppliedSpeech": "unsupported",
-        "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
-        "review": "not_reviewed"
-      },
-      "fields": [
-        "prompt",
-        "previousInteractionId",
-        "sourceVideoPath",
-        "resolution",
-        "seed",
-        "outputPath",
-        "filename"
-      ],
-      "modelConstraints": {
-        "note": "Use video_plan; deployment-specific schema is authoritative"
-      }
-    },
-    {
       "tool": "ltx_video_generate",
       "engine": "mlx",
       "deployment": "local-mlx",
       "operation": "text",
       "voice": {
+        "lane": "none",
+        "dialogue": "refused",
         "voiceReference": "unsupported",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
         "review": "not_reviewed"
       },
       "fields": [
@@ -1519,10 +1101,11 @@
       "deployment": "local-mlx",
       "operation": "reference",
       "voice": {
+        "lane": "reference",
+        "dialogue": "allowed",
         "voiceReference": "supported",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
         "review": "not_reviewed"
       },
       "fields": [
@@ -1558,10 +1141,11 @@
       "deployment": "local-mlx",
       "operation": "text",
       "voice": {
+        "lane": "none",
+        "dialogue": "refused",
         "voiceReference": "unsupported",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
-        "voiceContinuation": "unsupported",
         "review": "not_reviewed"
       },
       "deprecated": true,

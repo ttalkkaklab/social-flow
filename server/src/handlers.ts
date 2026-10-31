@@ -46,8 +46,6 @@ import { genaiSpeechSchema } from './astra-genai-speech.js';
 import { randomUUID } from 'node:crypto';
 import { genaiCatalog } from './astra-genai-client.js';
 import { generateGenaiImage } from './astra-genai-image.js';
-import * as omni from './omni-client.js';
-import * as video from './video-client.js';
 import { contentFeedback } from './content-feedback.js';
 import { youtubeTopicScout } from './youtube-topic-scout.js';
 import * as snsScout from './sns-issue-scout.js';
@@ -922,74 +920,6 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
       `Mesh generated via MLX Core.\n\nFile: ${result.path}\nModel: ${result.model}\n` +
         `Generation time: ${result.elapsedSeconds}s\n\n` +
         `GLB. Inspect the mesh and materials, then use it in an HTML mesh slide (mesh-objects.md); embed textures and buffers.`,
-    );
-  },
-
-  // ── video generation (Veo 3.1) — saves the mp4 locally, returns path + meta text ──
-  veo_text2video: async (args) => {
-    const result = await video.generateFromText(parseArgs(video.text2VideoSchema, args));
-    if (!result.success) return text(`Video generation failed: ${result.error}`, true);
-    return text(
-      `Video generated successfully!\n\nFile: ${result.videoPath}\nModel: ${result.model}\nAspect Ratio: ${result.aspectRatio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds\nPrompt: ${result.prompt}`,
-    );
-  },
-  veo_img2video: async (args) => {
-    const result = await video.generateFromImage(parseArgs(video.img2VideoSchema, args));
-    if (!result.success) return text(`Video generation from image failed: ${result.error}`, true);
-    const lastImageInfo = result.lastImage ? `\nLast Frame Image: ${result.lastImage}` : '';
-    const modeInfo = result.lastImage ? ' (frame interpolation mode)' : '';
-    return text(
-      `Video generated from image${modeInfo} successfully!\n\nOutput: ${result.videoPath}\nFirst Frame Image: ${result.sourceImage}${lastImageInfo}\nModel: ${result.model}\nAspect Ratio: ${result.aspectRatio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds\nPrompt: ${result.prompt}`,
-    );
-  },
-  veo_extension: async (args) => {
-    const result = await video.extendVideo(parseArgs(video.videoExtensionSchema, args));
-    if (!result.success) return text(`Video extension failed: ${result.error}`, true);
-    return text(
-      `Video extended successfully!\n\nOutput: ${result.videoPath}\nSource Video: ${result.sourceVideo}\nModel: ${result.model}\nResolution: ${result.resolution}\nAdded Duration: +${result.duration} seconds\nPrompt: ${result.prompt}`,
-    );
-  },
-  veo_reference: async (args) => {
-    const result = await video.generateWithReferences(parseArgs(video.referenceVideoSchema, args));
-    if (!result.success) return text(`Video generation with references failed: ${result.error}`, true);
-    const refImagesInfo = result.referenceImages?.join('\n  - ') || '';
-    return text(
-      `Video generated with reference images successfully!\n\nOutput: ${result.videoPath}\nReference Images (${result.referenceImages?.length || 0}):\n  - ${refImagesInfo}\nModel: ${result.model}\nAspect Ratio: ${result.aspectRatio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds\nPrompt: ${result.prompt}`,
-    );
-  },
-
-  // ── video generation (Gemini Omni 1.1 Flash) — same save-and-return-path shape as Veo,
-  //    plus the interaction id, which is the handle omni_extend / omni_edit continue from ──
-  omni_text2video: async (args) => {
-    const result = await omni.generateFromText(parseArgs(omni.omniText2VideoSchema, args));
-    if (!result.success) return text(`Omni video generation failed: ${result.error}`, true);
-    return text(
-      `Video generated with Gemini Omni.\n\nFile: ${result.videoPath}\nInteraction: ${result.interactionId}\nModel: ${result.model}\nAspect Ratio: ${result.aspectRatio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds\nPrompt: ${result.prompt}\n\nPass the interaction id as previousInteractionId to omni_extend or omni_edit to keep working on this clip.`,
-    );
-  },
-  omni_img2video: async (args) => {
-    const result = await omni.generateFromImage(parseArgs(omni.omniImg2VideoSchema, args));
-    if (!result.success) return text(`Omni video generation from image failed: ${result.error}`, true);
-    const lastImageInfo = result.lastImage ? `\nLast Frame Image: ${result.lastImage}` : '';
-    const modeInfo = result.lastImage ? ' (frame interpolation)' : '';
-    return text(
-      `Video generated from image with Gemini Omni${modeInfo}.\n\nFile: ${result.videoPath}\nInteraction: ${result.interactionId}\nFirst Frame Image: ${result.sourceImage}${lastImageInfo}\nModel: ${result.model}\nAspect Ratio: ${result.aspectRatio}\nResolution: ${result.resolution}\nDuration: ${result.duration} seconds\nPrompt: ${result.prompt}`,
-    );
-  },
-  omni_extend: async (args) => {
-    const result = await omni.extendVideo(parseArgs(omni.omniExtendSchema, args));
-    if (!result.success) return text(`Omni video extension failed: ${result.error}`, true);
-    const source = result.sourceVideo ? `\nSource Video: ${result.sourceVideo}` : '';
-    return text(
-      `Video extended with Gemini Omni.\n\nFile: ${result.videoPath}\nInteraction: ${result.interactionId}${source}\nModel: ${result.model}\nResolution: ${result.resolution}\nAdded: +${result.duration} seconds\nPrompt: ${result.prompt}\n\nThe saved file is the whole cut (source + the added seconds), not just the new tail.`,
-    );
-  },
-  omni_edit: async (args) => {
-    const result = await omni.editVideo(parseArgs(omni.omniEditSchema, args));
-    if (!result.success) return text(`Omni video edit failed: ${result.error}`, true);
-    const source = result.sourceVideo ? `\nSource Video: ${result.sourceVideo}` : '';
-    return text(
-      `Video edited with Gemini Omni.\n\nFile: ${result.videoPath}\nInteraction: ${result.interactionId}${source}\nModel: ${result.model}\nResolution: ${result.resolution}\nInstruction: ${result.prompt}\n\nLength is unchanged from the input.`,
     );
   },
 

@@ -34,9 +34,8 @@ command before assembly. Do not feed a previously augmented prompt back into pre
 
 | Mode | Auto policy |
 |---|---|
-| Veo / Omni | Native effects, with visual cause and sound in the prompt |
 | Seedance with audio support | Native effects and explicit generateAudio=true |
-| Silent Seedance version or explicit generateAudio=false | Post effects |
+| Explicit generateAudio=false | Post effects |
 | ASTRA ordinary generation | Native effects unless audio was explicitly disabled |
 | ASTRA audio2video | Post effects; its prompt cannot create an additional soundtrack |
 | ASTRA GenAI MSR | Native effects; audioSource=video always (speech is refused) |
@@ -86,8 +85,7 @@ sound first or replace the soundtrack explicitly. The compiler cannot hear dupli
 Keep semantic quality `not_reviewed` until actual playback/listening; signal tests only
 establish presence, timing and level, not a convincing performance.
 
-Sources: [Veo prompting](https://cloud.google.com/vertex-ai/generative-ai/docs/video/video-gen-prompt-guide),
-[Seedance API](https://docs.byteplus.com/en/docs/modelark/create-video-generation-task-api),
+Sources: [Seedance API](https://docs.byteplus.com/en/docs/modelark/create-video-generation-task-api),
 [LTX A2V](https://docs.ltx.io/open-source-model/usage-guides/audio-to-video).
 
 A silent retained soundtrack uses a -16 LUFS mixing reference for post effects and

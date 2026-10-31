@@ -40,8 +40,7 @@ function options(win, { krwPerUsd = 1400 } = {}) {
           referenceImagePaths: v.referenceImagePaths && v.referenceImagePaths.length ? v.referenceImagePaths : [clone.SCENES[i].visual.bg || 'images/scene-' + (i + 1) + '.png'] });
         if (!v.previz) v.previz = { renderer: clone.PRODUCTION.previz?.renderer || 'blender', clip: 'previz/s' + (i + 1) + '.mp4', firstFrame: 'previz/s' + (i + 1) + '-f0001.png',
           sha256: '0'.repeat(64), fps: 24, seconds: Math.max(4, Math.ceil(Number(clone.SCENES[i].duration) || 4)), camera: { movement: clone.SCENES[i].visual.camera?.movement || 'static' } };
-        v.previz.handoff = model.startsWith('seedance-1-') ? 'frame_and_prompt' : 'reference_video';
-        if (v.previz.handoff === 'frame_and_prompt') v.referenceImagePaths = [];
+        v.previz.handoff = 'reference_video';
       }
       let q;
       try { q = quote(clone, { krwPerUsd }).options[clone.PRODUCTION.mode]; }

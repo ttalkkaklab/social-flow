@@ -104,6 +104,21 @@ and drawn by the model, and `video_plan` refuses references for a third characte
 prompt out as the model card does: reference descriptions first, then the action, then
 `Audio N (Image M): "…"` lines.
 
+## Voice-consistent video models only (user directive, 2026-10-31)
+
+Video models that cannot keep a character's voice are not supported: Veo, Gemini Omni and
+Seedance 1.x left the plugin. Every adapter in `server/src/video-registry.ts` declares a voice
+lane — `reference` (a pinned per-character voice sample: `astra_genai_msr`, `seedance_reference`,
+`fasth3_omni_reference`), `supplied` (the pinned TTS track drives the clip: the three
+audio2video adapters) or `none`. `video_plan` refuses `voice_lane_required` when a `none`
+adapter would show a character speaking (an `on_screen` line) or voice lines natively;
+narration over a non-speaking picture runs on any adapter. A saved or override selection
+naming a retired engine reads `migration_required` in settings and fails `video_plan` with
+`video_engine_unsupported`. Their existing clips stay reusable through `visual.reuse`; never
+regenerate solely to migrate. MSR keeps the contract above. Seedance binds each speaker's
+image and sample in the prompt (`@Image N`/`@Audio N` on 2.5, `Image N`/`Audio N` on 2.0) and
+rejects real human faces, so photoreal people go to the LTX lanes.
+
 ## Two principal characters per shot (user directive, 2026-10-31)
 
 From the storyboard on, a shot's `visual.character` lists at most two principal characters;
@@ -354,7 +369,7 @@ blocking when the model takes a reference clip (Seedance 2.x `reference_video`: 
 still and the prompt and is advice. When a previz exists, the source still is edited from its
 first frame, and its move and the shot's `visual.camera.movement` must agree; a prompt that
 fights the clip drifts. Imported clips (`visual.reuse`), stock footage, recordings and the outro
-carry none, and neither do b-roll and speech clips on the Veo sound lane. The renderer is the
+carry none, and neither do b-roll and speech clips. The renderer is the
 saved `production.previzRenderer` (`PRODUCTION.previz`); when none is saved, the author picks one
 and records it as an assistant decision — no renderer or model question is asked. Episode video
 runs through `video_catalog → video_plan → video_execute`; a direct adapter call on a configured
@@ -366,8 +381,8 @@ episode needs `videoContext`. Contract: `skills/storyboard/references/blender-pr
 Cuts inherit the saved video model and resolution: `PRODUCTION.videoModel` comes from
 `.social-flow/models.json` through the episode handoff (`selection.kind:'standing'`). A per-cut
 change is an explicit user exception recorded in `PRODUCTION.modelSettings.overrides`;
-`model:'mixed'` describes such a plan. Seedance 1.5 Pro is allowed.
-A 1.x previz uses `frame_and_prompt`; 2.x may send `reference_video`. Keep real API input
+`model:'mixed'` describes such a plan. Seedance 2.x may send the previz as
+`reference_video`. Keep real API input
 constraints, cost quotes and approved budgets. `modelReason` is optional.
 
 ## Local storyboard storage

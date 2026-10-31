@@ -11,7 +11,7 @@ description: >
   mode, on request only since 0.50.0 (the flow checks the plan itself against
   produce absolute rule 13) — handed the storyboard's cover-background and
   b-roll plan before generation calls (image_local_generate, gpt_image,
-  veo), it hunts for P0s (still-life source, real person, target-person
+  the saved video adapter), it hunts for P0s (still-life source, real person, target-person
   violation, text expectation, missing negative prompt, unjustified duration,
   minor in frame, engine misassignment) and returns a PLAN_REVIEW tail. It
   never modifies files — verdicts only.
@@ -124,18 +124,17 @@ A share trigger is optional on the board, so don't score it in this mode.
    topic on screen (the cover frame becomes cover.jpg, the thumbnail — no
    off-topic scenes or generic still lifes)
 4. **Text expectation** — the prompt expects the image/video to render text
-   (especially Korean). Veo can't write Korean, and lettering in images produces
-   fake documents and misread signs
+   (especially Korean). Lettering in images produces fake documents and misread
+   signs
 5. **Missing/misplaced negative prompt** — profile §3's required negative
    prompt is absent from the prompt. **A letterbox / lower-third fade / top-bottom
    gradient instruction in the prompt is itself a P0** (owner 2026-08-25 — never
    bake a cinematic bar into the picture). **Present but in the wrong place is the same P0** —
-   for `veo_*` calls the exclusions go into the `negativePrompt` argument as
+   for calls with a `negativePrompt` argument (`astra_*` guided tiers) the exclusions go there as
    noun/adjective phrases (`text, subtitles, wall`), not into the prompt body
    (on the new schema that's the stored `negative` field beside the clip
    prompt). Writing "no ~" in the body makes the model draw that very noun
-   (measured: 4 out of 4 failed), and Veo's own prompt guide marks that form not
-   recommended. Seedance has no such argument, so check whether the scene
+   (measured: 4 out of 4 failed). Seedance has no such argument, so check whether the scene
    description was rewritten so the unwanted element never comes up — with one
    vendor carve-out: a directive negative naming only the **artifact classes**
    (subtitles, on-frame text, logos, watermarks, BGM) is templated by the 2.0
@@ -144,24 +143,16 @@ A share trigger is optional on the board, so don't score it in this mode.
    justification or exceeds 8 seconds / `narration` is not empty (produce hard rule 9)
 7. **Motion-prompt contamination** — not in English, or re-describes the
    **layout, facing or lighting** already visible in the source image (the
-   model redesigns the scene — who the subject *is* splits by route: a veo call
-   names the person with a general noun, a seedance call may reuse the
-   bgPrompt's identity words with a consistency lock, both per
-   video-model-selection §prompt grammar) / no audio-directive line / **digit
-   seconds written into the prompt** (length is set by the scene's `duration`
+   model redesigns the scene — a seedance call may reuse the bgPrompt's identity
+   words with a consistency lock, per video-model-selection §prompt grammar) /
+   no audio-directive line / **digit seconds written into the prompt** (length is set by the scene's `duration`
    and the edit cuts it — that's our pipeline contract; an in-clip state change
    in words — "in under half a second" — is a vendor-exemplified usage, not
-   this P0. `[mm:ss]` spans pass only on a Veo route, and integer-second forms
-   only on a 2.5 route) / **a shot that must
-   reproduce its framing** but the camera is written as a single verb with no
+   this P0. Integer-second forms pass only on a Seedance 2.5 route) / **a shot
+   that must reproduce its framing** but the camera is written as a single verb with no
    start/end framing (a motion background must preserve that scene's
    `visual.bg`, so we use segment descriptions — that's not a vendor
-   requirement, so **never FAIL for "missing move amplitude"**) / **a Veo call
-   not using vendor vocabulary** (`push in`/`orbit` → `dolly in`/`arc shot`.
-   The full Vertex prompt guide has zero hits for `push`/`orbit`. **This is a
-   convention gate enforcing vocabulary consistency, not output quality** — the
-   vendor list is open-ended and there's no measurement showing those words
-   produce bad results. The fix costs one word, so it stays a P0)
+   requirement, so **never FAIL for "missing move amplitude"**)
 8. **Source split** — the b-roll `visual.src` is a different file from
    `SCENES[after]`'s `visual.bg` (produce hard rule 12 — the transition contract
    where the previous scene's photo starts moving). For an opening b-roll
@@ -169,15 +160,14 @@ A share trigger is optional on the board, so don't score it in this mode.
 9. **Slot-contract violation** — 3 or more b-roll scenes, or two slots with the
    same `after` (cap: 2 per episode — scenes-schema §broll) / two slots using
    the same source PNG so the same shot appears twice / the scene a body b-roll
-   attaches to has a locally-generated background (veo input is a gpt_image high or host-tool still, never local Z-Image — produce rule 12)
+   attaches to has a locally-generated background (video input is a gpt_image high or host-tool still, never local Z-Image — produce rule 12)
 10. **Minor in frame** — the source/reference plan includes a person who looks
-   like a child or teenager. Photo or illustration alike, Veo's image lane
-   blocks it (Support code 17301594) and Seedance 1.x is unconfirmed — this is
-   not a place to hunt for a workaround but a place to redraw the shot
+   like a child or teenager. Photo or illustration alike, redraw the shot rather
+   than hunt for a workaround
 11. **Engine misassignment** — a plan that sends a source containing a
-   photoreal face to Dreamina Seedance 2.x (2.x rejects face inputs) / a plan
-   that calls veo while a mouthless character's face is on screen (a mouth that
-   wasn't there appears within 0.2 s — 5 out of 5 in our tests) / a plan that
+   photoreal face to Dreamina Seedance 2.x (2.x rejects face inputs) / a spoken
+   cut on an adapter with no voice lane (`video_plan` refuses it with
+   `voice_lane_required`) / a plan that
    uses a reference image instead of first/last frames for a shot whose framing
    must be reproduced exactly (references carry appearance and style, not
    framing). The decision table's source of truth is produce

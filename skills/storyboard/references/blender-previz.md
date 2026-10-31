@@ -11,13 +11,12 @@ with the bound location references. A standalone clip does not certify cross-sho
 **A `generated_video` cut may be pre-rendered in 3D first** — the previz is optional (owner
 decision 2026-10-18): a Blender previz through the bridge tools below, or a three.js previz
 through `previz-template.html` (§6.5) where Blender is not installed. It helps most when the
-video model takes a reference clip (Seedance 2.x `reference_video`); on a `frame_and_prompt`
-adapter or a host video tool that takes no clip it shapes the still and the numbers in the
+video model takes a reference clip (Seedance 2.x `reference_video`); on a host video tool that takes no clip
+(`frame_and_prompt`) it shapes the still and the numbers in the
 prompt as advice (§6.7). No checker refuses a generated cut without `visual.video.previz`.
 Imported clips (`visual.reuse`), stock
 footage, recordings and the outro carry none, and neither do b-roll (`type:"broll"`) and speech
-clips (`visual.clip`): those are Veo sound-lane slots with no clip input, and the reference
-route is a motion-background (`visual.video`) route. The renderer comes from
+clips (`visual.clip`): the reference route is a motion-background (`visual.video`) route. The renderer comes from
 `.social-flow/models.json` `production.previzRenderer` (`PRODUCTION.previz`,
 `selection.kind:'standing'`); when nothing is saved the author picks one and records it as an
 assistant decision. The video model is the saved directory selection (`PRODUCTION.videoModel`,
@@ -214,11 +213,8 @@ The previz clip goes to the video model as a reference video. Seedance 2.x takes
 (`role: reference_video`), and its 2.5 prompt guide documents exactly this use under the
 name **3D clay-model reference**: a coarse, textureless render supplies camera movement, shot
 rhythm, subject trajectory and blocking, and the model renders it in the target look. The
-plugin wires it as `seedance_reference` → `referenceVideoPaths`; Veo 3.1 takes no video
-input, and Seedance 1.x takes none either. For Seedance 1.x, use `frame_and_prompt`
-(inferred when handoff is omitted): the previz first frame supplies the source composition
-and its camera/blocking supplies the prompt. Do not attach reference image/audio arrays.
-The episode may mix 2.x reference-video cuts with 1.5 image-to-video cuts.
+plugin wires it as `seedance_reference` → `referenceVideoPaths`. A host video tool takes no
+clip (§6.7).
 
 What travels on which channel is still split, and nothing is asked of a channel that cannot
 carry it:

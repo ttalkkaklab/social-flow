@@ -489,7 +489,7 @@ move while the other dials stayed at their defaults.
 | approach | `dolly zoom in` / `dolly zoom out` | the moment the world turns over — the person's size holds, only the background moves. **in** (camera in, lens out): the background backs away and spreads — isolation, "I'm alone in this". **out** (camera out, lens in): the background closes in and stacks up — cornered, "nowhere to go" | two actions in one: the vendor table's exception. It happens to the *background*, so the shot needs depth cues (a corridor, columns, a row of cars — `shot.depth` deep with the planes) and a subject who stands still; in front of a plain wall nothing happens. 3–5 s is a starting example; repeat only when a new story beat earns it |
 | rotate | `pan left` / `pan right` | introducing a space (one pan leaves the room's map in the viewer's head — better than three cuts) · confirming a relation (A, then the pan finds B: the two are in one room and know it) | the camera turns in place. A pan is a sentence from A to B — `framing` is A, `end` is B, and a pan whose two ends are the same picture is a look-around the edit cuts. It buys spatial proof with speed: a cut is faster but cannot prove the two share a room |
 | rotate | `tilt up` / `tilt down` | scale by time — how big a thing is, told by how long it takes the eye to finish it; a reveal after a reaction (face → gaze up → camera follows → the thing enters from the top) | the camera nods in place. A tilt up makes the subject larger; a `pedestal up` (height, not angle) looks down on it instead — the two are never the same cue. Sound before picture on a reveal: the bed swells before the whole thing is in frame |
-| rotate · travel | `arc shot` | a first appearance · explaining the space around one person in a single move | not `orbit` (0 hits in the Veo text) |
+| rotate · travel | `arc shot` | a first appearance · explaining the space around one person in a single move | not `orbit` (no vendor row) |
 | rotate · travel | `tracking` (follow, from behind, shoulder height) | immersion — the audience stands behind the character; moving, chasing | the most immersive of the set |
 | rotate · travel | `tracking` (reverse — ahead of the subject, retreating) | walk-and-talk | keep the face framed in `framing` |
 | rotate · travel | `truck` (side tracking, parallel) | the rhythm of travel — profile held, fore and background at different speeds | |
@@ -503,7 +503,7 @@ move while the other dials stayed at their defaults.
 | viewpoint | rear / `back` (in `framing`: the back fills the frame, static) | withholding the face — the audience imagines the feeling | a held laugh, a quiet reaction |
 | distortion · focus | rack focus | hidden information revealed — the camera doesn't move, the focus crosses from front to back | 3–4 s, the insert length. No vendor row — `movement: static`, the focus shift goes in `framing`/`end` |
 | distortion · focus | `dutch` (in `shot.angle`, camera static) | something is wrong | see §3 — one per episode, reason written |
-| distortion · focus | push past (dolly through a doorway, a window) | a scene change done by camera instead of by cut | no vendor row (`push` is 0 hits in the Veo text) — `movement: dolly in`, the doorway in `framing`, the far room in `end` |
+| distortion · focus | push past (dolly through a doorway, a window) | a scene change done by camera instead of by cut | no vendor row (no `push`) — `movement: dolly in`, the doorway in `framing`, the far room in `end` |
 | — | `static` | the default body register; what every other move is measured against | "not moving" is a choice |
 
 - **One move per cut.** Two moves in one clip make the model hesitate and the frame dither. The
@@ -845,7 +845,7 @@ Warnings, not blocks — the reviewer and the person at the approval step weigh 
   0.47 s median, a re-hook every 15 s on the cut. Rule 15 here, the word-cue subtitle mode in
   produce, the scene-transition table in scenes-schema, and rule 16 here.
 - [AI video camera technique research](../../../docs/research/2026-08-15-ai-video-camera-technique/index.html)
-  (2026-08-15): vendor vocabulary (Veo 12 moves, no `push`/`orbit`); move → valence/arousal not
+  (2026-08-15): vendor camera vocabulary (no `push`/`orbit`); move → valence/arousal not
   supported (p=.84 / p=.21), immersion yes (p=.006) on unset cuts; angle → bigger/stronger
   (p<.001), eye level most trusted in talking heads (p=.007); close-up frequency inverted U.
 - Still-lane survey (2026-08-25, all `[blog]` practitioner grade — no perceptual measurements

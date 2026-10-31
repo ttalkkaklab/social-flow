@@ -92,7 +92,7 @@
 <section id="split">
   <h2>Where the money goes, and where it doesn't</h2>
 
-  <p class="lede">Video and music <strong>default to billed APIs</strong>. Images and speech can be generated on-device for free on Apple Silicon, and transcription has no paid path at all. When MLX Core is up, <code>mlx_video_generate</code> and <code>mlx_music_generate</code> are the $0 understudy — the defaults stay Veo/Seedance and Lyria.</p>
+  <p class="lede">Video and music <strong>default to billed APIs</strong>. Images and speech can be generated on-device for free on Apple Silicon, and transcription has no paid path at all. When MLX Core is up, <code>mlx_video_generate</code> and <code>mlx_music_generate</code> are the $0 understudy — the defaults stay the saved video model and Lyria.</p>
 
   <p>Each free lane has something it can't do, though. That list of limits is also the list of things worth paying for.</p>
 
@@ -109,8 +109,8 @@
       <tr>
         <td><strong>Video</strong></td>
         <td><code>mlx_video_generate</code><br>MLX Core · optional · not the default</td>
-        <td>24fps, RAM-capped, ffmpeg mux. Not on the Veo/Seedance face-policy table</td>
-        <td><code>veo_*</code> <span class="badge key">GEMINI_API_KEY</span><br><code>seedance_*</code> <span class="badge key">ARK_API_KEY</span></td>
+        <td>24fps, RAM-capped, ffmpeg mux. Not on the Seedance face-policy table</td>
+        <td><code>seedance_*</code> <span class="badge key">ARK_API_KEY</span><br><code>astra_genai_*</code> <span class="badge key">ASTRA_GENAI_API_KEY</span></td>
       </tr>
       <tr>
         <td><strong>Speech</strong></td>
@@ -207,60 +207,22 @@
 <section id="video">
   <h2>Video</h2>
 
-  <p class="lede"><strong>Generated video has no free lane.</strong> This plugin ships no on-device video engine, and both hosted engines bill by the second.</p>
+  <p class="lede"><strong>The paid generated-video lanes are Seedance 2.x and ASTRA GenAI (LTX).</strong> Seedance bills by the second. The on-device <code>mlx_video_generate</code> and <code>ltx_video_generate</code> and our own LTX box (<code>astra_*</code>) cost $0. Veo, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31 because none takes a voice reference — their price rows stay in <code>prices.tsv</code> only so earlier ledgers still price.</p>
 
   <div class="ok">
-    <strong>The default is still zero video calls.</strong> The economy tier fills 60 seconds with stills and Ken Burns. Veo makes at most 8 seconds per call, so covering a whole episode with generated footage means pulling eight clips and stitching them — and the stitching layer is needed anyway. That leaves exactly one question: <strong>which single slot gets generated video.</strong>
+    <strong>The default is still zero video calls.</strong> The economy tier fills 60 seconds with stills and Ken Burns. Generated video works best with one moment per prompt, so a stitching layer that joins cuts is needed anyway. That leaves exactly one question: <strong>which single slot gets generated video.</strong>
   </div>
 
-  <h3>Veo 3.1 — per second, audio always on, lengths on a 4/6/8s grid</h3>
+  <h3>Seedance 2.x — exactly the seconds you ask for, audio optional</h3>
 
-  <p>Veo runs on <span class="badge key">GEMINI_API_KEY</span> and <strong>always includes audio</strong> — it can't be turned off, and there's no free tier. Lengths are locked to a 4/6/8-second grid, and <strong>1080p and 4K are 8-second only</strong>.</p>
-
-  <div class="warn">
-    <strong>A 4-second cut still pays for 8 seconds.</strong> The API has no way to generate 4 seconds at 1080p. Comparing per-second prices alone understates real spend, which is why the ledger records <strong>generated length</strong>, not used length.
-  </div>
+  <p>Seedance runs on BytePlus ModelArk with <span class="badge key">ARK_API_KEY</span>. It bills <strong>the requested seconds as-is</strong>, in 1-second steps from 4 to 30. Audio can be turned off.</p>
 
   <div class="table-scroll">
   <table>
     <thead><tr><th>Key</th><th class="num">USD/sec</th><th>Grade</th><th>Notes</th></tr></thead>
     <tbody>
-      <tr><td><code>veo.lite.720p</code></td><td class="num">0.05</td><td><span class="g off">official</span></td><td>veo-3.1-lite-generate-preview</td></tr>
-      <tr><td><code>veo.lite.1080p</code></td><td class="num">0.08</td><td><span class="g off">official</span></td><td>1080p is 8s-only — the combination auto-escalation uses</td></tr>
-      <tr><td><code>veo.fast.720p</code></td><td class="num">0.10</td><td><span class="g off">official</span></td><td>veo-3.1-fast-generate-preview</td></tr>
-      <tr><td><code>veo.fast.1080p</code></td><td class="num">0.12</td><td><span class="g off">official</span></td><td>1080p is 8s-only</td></tr>
-      <tr><td><code>veo.fast.4k</code></td><td class="num">0.30</td><td><span class="g off">official</span></td><td>4K is 8s-only</td></tr>
-      <tr><td><code>veo.standard.720p</code></td><td class="num">0.40</td><td><span class="g off">official</span></td><td>Tier banned from autonomous authoring</td></tr>
-      <tr><td><code>veo.standard.1080p</code></td><td class="num">0.40</td><td><span class="g off">official</span></td><td>Same price as 720p — 1080p is 8s-only</td></tr>
-      <tr><td><code>veo.standard.4k</code></td><td class="num">0.60</td><td><span class="g off">official</span></td><td>4K is 8s-only. lite doesn't support 4K</td></tr>
-    </tbody>
-  </table>
-  </div>
-
-  <div class="calc">
-    <b>Veo lite · 1080p · one 8-second cut</b><br>
-    8s × $0.08 = <b>$0.64</b><br>
-    Trim it to 4 seconds and it's still $0.64 — the ledger line reads <code>veo.lite.1080p&#9;8</code>.
-  </div>
-
-  <p>The standard tier sits out of autonomous authoring for more than price. $3.20 for eight seconds isn't a call an unattended loop should make, and in blind-arena testing standard came out statistically indistinguishable from lite and fast, so the quality that money buys doesn't measure.</p>
-
-  <h3>Seedance — exactly the seconds you ask for, audio optional</h3>
-
-  <p>Seedance runs on BytePlus ModelArk with <span class="badge key">ARK_API_KEY</span>. Unlike Veo it bills <strong>the requested seconds as-is</strong>, in 1-second steps from 2 to 30. Audio can be turned off, which makes <strong>silent cuts much cheaper</strong>.</p>
-
-  <div class="table-scroll">
-  <table>
-    <thead><tr><th>Key</th><th class="num">USD/sec</th><th>Grade</th><th>Notes</th></tr></thead>
-    <tbody>
-      <tr><td><code>seedance.1-0-pro-fast.720p</code></td><td class="num">0.020</td><td><span class="g der">derived</span></td><td>Cheapest — silent-only, first frame only</td></tr>
-      <tr><td><code>seedance.1-5-pro-silent.720p</code></td><td class="num">0.026</td><td><span class="g der">derived</span></td><td>seedance-1-5-pro-251215 silent</td></tr>
-      <tr><td><code>seedance.1-0-pro-fast.1080p</code></td><td class="num">0.048</td><td><span class="g der">derived</span></td><td>Silent-only, first frame only</td></tr>
-      <tr><td><code>seedance.1-5-pro-silent.1080p</code></td><td class="num">0.058</td><td><span class="g der">derived</span></td><td>Default b-roll candidate — accepts photoreal face input</td></tr>
       <tr><td><code>seedance.2-0-mini.720p</code></td><td class="num">0.076</td><td><span class="g der">derived</span></td><td>Rejects photoreal face input · $30 balance gate</td></tr>
-      <tr><td><code>seedance.1-5-pro-audio.1080p</code></td><td class="num">0.116</td><td><span class="g der">derived</span></td><td>With audio — exactly 2× silent</td></tr>
       <tr><td><code>seedance.2-0-fast.720p</code></td><td class="num">0.120</td><td><span class="g der">derived</span></td><td>Rejects photoreal face input · $30 balance gate</td></tr>
-      <tr><td><code>seedance.1-0-pro.1080p</code></td><td class="num">0.122</td><td><span class="g der">derived</span></td><td>seedance-1-0-pro-250528 — silent-only</td></tr>
       <tr><td><code>seedance.2-5.720p</code></td><td class="num">0.231</td><td><span class="g der">derived</span></td><td>30 reference images · up to 30s</td></tr>
       <tr><td><code>seedance.2-0.1080p</code></td><td class="num">0.374</td><td><span class="g der">derived</span></td><td>9 reference images · 4K capable</td></tr>
     </tbody>
@@ -268,20 +230,20 @@
   </div>
 
   <div class="calc">
-    <b>Seedance 1.5 pro silent · 1080p · one 4-second cut</b><br>
-    4s × $0.058 = <b>$0.232</b><br>
-    The same slot on Veo lite 1080p is $0.64 — <b>2.8×</b> the price.
+    <b>Seedance 2.0 mini · 720p · one 4-second cut</b><br>
+    4s × $0.076 = <b>$0.304</b><br>
+    The ledger line reads <code>seedance.2-0-mini.720p&#9;4</code>.
   </div>
 
   <p>Every Seedance line is <span class="g der">derived</span> because the vendor bills in tokens. These are the official docs' "5s · 16:9" example price divided by 5; 9:16 only swaps width and height, so the token count and the price are the same. <strong>The bill's real source of truth is the response's <code>completion_tokens</code></strong>, so record that value in the ledger's memo column. Limited-time discounts are deliberately not baked in — they'd turn into silently wrong numbers the day the promo ends.</p>
 
   <div class="warn">
-    <strong>Seedance 2.x doesn't open on a key alone.</strong> The Dreamina Seedance 2.5 and 2.0 family needs <strong>an account balance over $30, or a resource pack</strong>, before it activates. The 1.5 pro and 1.0 families have no such gate. Separately, every model has to be switched on once under the console's Model activation, or task creation fails with <code>ModelNotOpen</code>.
+    <strong>Seedance 2.x doesn't open on a key alone.</strong> The Dreamina Seedance 2.5 and 2.0 family needs <strong>an account balance over $30, or a resource pack</strong>, before it activates. Separately, every model has to be switched on once under the console's Model activation, or task creation fails with <code>ModelNotOpen</code>.
   </div>
 
   <h3>The one escalation slot — when video is worth paying for</h3>
 
-  <p>The only slot the autonomous loop can promote on its own is <strong>the opening b-roll in the segment after the cover</strong>. The schema allows two slots, but the second one is a call a human makes while approving the storyboard. The cover itself never escalates — Veo can't write Korean, so the hook title is code-rendered.</p>
+  <p>The only slot the autonomous loop can promote on its own is <strong>the opening b-roll in the segment after the cover</strong>. The schema allows two slots, but the second one is a call a human makes while approving the storyboard. The cover itself never escalates — the hook title is code-rendered.</p>
 
   <p>The escalation verdict is <strong>a trend, not an absolute threshold</strong>. With a fixed threshold, a channel whose measured numbers sit permanently above it escalates every episode, which is 5× the cost every episode — and that money doesn't fix the problem, because the b-roll attaches <em>after</em> the cover while the skipping happens <em>inside</em> it.</p>
 
@@ -463,22 +425,22 @@
     <strong>Character counts are divided by 1,000.</strong> 400 characters is <code>0.4</code>. Write <code>400</code> and that line inflates 1,000×. On a local channel the price is 0 so nothing shows; on a Gemini channel it shows up at the size of the invoice.
   </div>
 
-  <h3>Configuration C — the same, plus one Veo escalation</h3>
+  <h3>Configuration C — the same, plus one Seedance escalation</h3>
 
-  <p>The opening b-roll slot promoted to Veo lite 1080p, 8 seconds.</p>
+  <p>The opening b-roll slot promoted to Seedance 2.0 mini 720p, 4 seconds.</p>
 
   <div class="calc">
     Configuration A (local narration) &nbsp;&nbsp;= $0.260<br>
-    b-roll <code>veo.lite.1080p</code>, 8s &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= 8 × $0.08 = $0.640<br>
+    b-roll <code>seedance.2-0-mini.720p</code>, 4s = 4 × $0.076 = $0.304<br>
     ─────────────────────────────<br>
-    total <b>$0.90</b> &nbsp;(on top of configuration B, $0.915)
+    total <b>$0.564</b> &nbsp;(on top of configuration B, $0.579)
   </div>
 
-  <p>The model-ladder doc quotes this combination at <strong>about $0.91 per episode</strong>, rounding the economy baseline to $0.27. Either way it sits <strong>inside the default $1.00 cap (a plan written before 2026-09-05 still carries $0.30, which it triples).</strong></p>
+  <p>Either way it sits <strong>inside the default $1.00 cap (a plan written before 2026-09-05 still carries $0.30, which it nearly doubles).</strong></p>
 
   <h3>How that meets the cap</h3>
 
-  <p>The growth plan's <code>max_cost_per_video</code> defaults to <strong>$1.00</strong> (plans written before 2026-09-05 still carry $0.30). With <code>hook_video</code> off (the default) that value <strong>passes the economy tier and one lite escalation ($0.91–0.93).</strong> A channel with the hook clip on (since 0.73.0 the hook is a 3D previz cut too, so it is made only as a Seedance 2.x reference-video call — 2.0 mini 720p at 6 s bills input plus output seconds, about $0.54) lands at $1.45–1.47 on escalation, so there you raise the cap to <strong>$1.50 or more</strong>, and to <strong>$3.70</strong> for a 2.0 1080p hook (about $2.74). The autonomous loop never raises it on its own — while the escalation condition holds, it keeps building at economy baseline and says so in the completion report.</p>
+  <p>The growth plan's <code>max_cost_per_video</code> defaults to <strong>$1.00</strong> (plans written before 2026-09-05 still carry $0.30). With <code>hook_video</code> off (the default) that value <strong>passes the economy tier and one Seedance escalation ($0.56–0.58).</strong> A channel with the hook clip on (since 0.73.0 the hook is a 3D previz cut too, so it is made only as a Seedance 2.x reference-video call — 2.0 mini 720p at 6 s bills input plus output seconds, about $0.54) lands at $1.10–1.13 on escalation, so there you raise the cap to <strong>$1.20 or more</strong>, and to <strong>$3.40</strong> for a 2.0 1080p hook (about $2.74). The autonomous loop never raises it on its own — while the escalation condition holds, it keeps building at economy baseline and says so in the completion report.</p>
 
   <h3>Machines without mflux</h3>
 
@@ -561,7 +523,7 @@ set -a &amp;&amp; . ./.env &amp;&amp; set +a</code></pre>
   <div class="keyblock">
     <h3><code>GEMINI_API_KEY</code> <span class="badge key">production</span></h3>
     <div class="src">aistudio.google.com/apikey · <code>GOOGLE_API_KEY</code> works as an alias</div>
-    <p><strong>Unlocks</strong> — <code>veo_*</code> (generated video) · <code>tts_generate</code> and <code>tts_multi_speaker</code> (acted speech) · <code>music_*</code> (BGM). All three share this one key.</p>
+    <p><strong>Unlocks</strong> — <code>tts_generate</code> and <code>tts_multi_speaker</code> (acted speech) · <code>music_*</code> (BGM). Both share this one key. It does not unlock generated video.</p>
 <pre><code>export GEMINI_API_KEY="..."</code></pre>
     <p><strong>Confirm it works</strong></p>
 <pre><code>curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API_KEY" | head -c 200</code></pre>
@@ -571,7 +533,7 @@ set -a &amp;&amp; . ./.env &amp;&amp; set +a</code></pre>
   <div class="keyblock">
     <h3><code>ARK_API_KEY</code> <span class="badge opt">optional</span></h3>
     <div class="src">ai.byteplus.com/ark — BytePlus ModelArk</div>
-    <p><strong>Unlocks</strong> — <code>seedance_*</code>, the second video engine. Without it, Veo still runs on <code>GEMINI_API_KEY</code>.</p>
+    <p><strong>Unlocks</strong> — <code>seedance_*</code> (Dreamina Seedance 2.x video). Without it, the LTX lanes (<code>astra_genai_*</code>, <code>astra_*</code>, <code>ltx_video_generate</code>) still run.</p>
 <pre><code>export ARK_API_KEY="ark-..."
 # Leave the region endpoint alone — the video models only exist in ap-southeast-1
 # export ARK_BASE_URL=https://ark.ap-southeast.bytepluses.com/api/v3</code></pre>
@@ -701,11 +663,11 @@ ls ~/.cache/whisper-cpp/ggml-large-v3-turbo.bin</code></pre>
 
 <pre><code>image.gpt-image-2.high	1	storyboard: cover background scene-1
 image.local	3	storyboard: points backgrounds scene-2~4
-veo.lite.1080p	8	produce: b-roll a1 — 8s generated, 4s used
+seedance.2-0-mini.720p	4	produce: b-roll a1 — 4s generated
 tts.local	0.412	produce: narration, 412 chars
 music.lyria-clip	1	produce: BGM 30s</code></pre>
 
-  <p>The quantity is <strong>an amount in the unit, not a count</strong>. TTS is characters ÷ 1,000; Veo is generated length, not used length; Seedance is the requested seconds as-is. <strong>Log discards too</strong> — images regenerated after a review, clips redrawn because you didn't like them, TTS rerun after failing a length check. They don't reach the deliverable, but they do get billed.</p>
+  <p>The quantity is <strong>an amount in the unit, not a count</strong>. TTS is characters ÷ 1,000; Seedance is the requested seconds as-is, not the length the edit used. <strong>Log discards too</strong> — images regenerated after a review, clips redrawn because you didn't like them, TTS rerun after failing a length check. They don't reach the deliverable, but they do get billed.</p>
 
   <h3>The calculator — read the exit code literally</h3>
 
@@ -739,7 +701,7 @@ $REF/cost-report.sh .work/cost-estimate.tsv --cap 1.00; echo "cost_exit=$?"</cod
   <table>
     <thead><tr><th>Setting</th><th>Default</th><th>What it stops</th></tr></thead>
     <tbody>
-      <tr><td><code>max_cost_per_video</code></td><td class="num">$1.00</td><td>One episode — passes the economy tier and one lite escalation (hook_video off); pre-2026-09-05 plans carry $0.30</td></tr>
+      <tr><td><code>max_cost_per_video</code></td><td class="num">$1.00</td><td>One episode — passes the economy tier and one Seedance escalation (hook_video off); pre-2026-09-05 plans carry $0.30</td></tr>
       <tr><td><code>daily_cost_cap</code></td><td class="num">$0.60</td><td>One day, channel-wide</td></tr>
       <tr><td><code>weekly_cap</code></td><td class="num">$2.00</td><td>One week, channel-wide</td></tr>
     </tbody>

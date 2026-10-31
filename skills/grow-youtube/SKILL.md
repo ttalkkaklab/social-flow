@@ -31,7 +31,10 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
   "mcp__social-flow__mlx_image_generate", "mcp__plugin_social-flow_social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__plugin_social-flow_social-flow__mlx_image_edit",
   "mcp__social-flow__tts_generate", "mcp__plugin_social-flow_social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_dialogue",
   "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices",
-  "mcp__social-flow__veo_img2video", "mcp__plugin_social-flow_social-flow__veo_img2video",
+  "mcp__social-flow__video_catalog", "mcp__plugin_social-flow_social-flow__video_catalog",
+  "mcp__social-flow__video_plan", "mcp__plugin_social-flow_social-flow__video_plan",
+  "mcp__social-flow__video_execute", "mcp__plugin_social-flow_social-flow__video_execute",
+  "mcp__social-flow__video_status", "mcp__plugin_social-flow_social-flow__video_status",
   "mcp__social-flow__music_generate_clip", "mcp__plugin_social-flow_social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate", "mcp__plugin_social-flow_social-flow__mlx_music_generate"]
 ---
 **Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
@@ -413,7 +416,7 @@ video on each platform. But stamp **approved platforms only** — only when that
 platform's `growth-plan.md` exists with `status: approved`. A missing standing
 authorization is not ours to write on its owner's behalf.
 
-Authoring takes minutes (longer with Veo). A long tick is normal, and once
+Authoring takes minutes (longer with generated video). A long tick is normal, and once
 authoring finishes it proceeds straight into §3 — **publishing can happen
 within the same tick**.
 

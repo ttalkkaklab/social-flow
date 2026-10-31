@@ -51,15 +51,11 @@ import {
   ELEVENLABS_SFX_OUTPUT_FORMATS,
 } from '../dist/elevenlabs-client.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from '../dist/music-client.js';
-import { DEFAULT_VIDEO_MODEL, img2VideoSchema } from '../dist/video-client.js';
 import {
   DEFAULT_SEEDANCE_DURATION,
   DEFAULT_SEEDANCE_MODEL,
-  DEFAULT_SEEDANCE_REFERENCE_MODEL,
   DEFAULT_SEEDANCE_RESOLUTION,
   SEEDANCE_MODEL_SPECS,
-  SEEDANCE_REAL_FACE_MODELS,
-  SEEDANCE_REFERENCE_MODELS,
   VALID_SEEDANCE_MODELS,
   VALID_SEEDANCE_RATIOS,
   VALID_SEEDANCE_RESOLUTIONS,
@@ -339,7 +335,7 @@ describe('tool on/off (disabled-tools.json)', () => {
   it('a pattern is an exact name or a trailing-* prefix family, nothing fancier', () => {
     assert.equal(isToolDisabled('seedance_text2video', ['seedance_*']), true);
     assert.equal(isToolDisabled('seedance_reference', ['seedance_reference']), true);
-    assert.equal(isToolDisabled('veo_text2video', ['seedance_*']), false);
+    assert.equal(isToolDisabled('astra_text2video', ['seedance_*']), false);
     assert.equal(isToolDisabled('seedance_text2video', []), false);
     // the "*" is a suffix wildcard only — it does not float mid-name
     assert.equal(isToolDisabled('tts_local_generate', ['tts_*generate']), false);
@@ -395,12 +391,12 @@ describe('mlx_* tools', () => {
     assert.match(music.description, /music_generate_clip/);
   });
 
-  it('video names 24fps, the RAM cap, and is not the Veo/Seedance default', () => {
+  it('video names 24fps, the RAM cap, and is not the default path', () => {
     const video = byName.get('mlx_video_generate');
     assert.match(video.description, /24 fps/);
     assert.match(video.description, /800MB/);
     assert.match(video.description, /video-model-selection/);
-    assert.match(video.description, /face-policy table/);
+    assert.match(video.description, /refuses spoken cuts/);
     assert.match(video.description, /ffmpeg/);
     assert.equal(video.inputSchema.properties.width.default, 768);
     assert.equal(video.inputSchema.properties.height.default, 1280);
@@ -542,7 +538,7 @@ describe('AI-generated content disclosure (YouTube)', () => {
     assert.ok(publish()?.inputSchema.properties.containsSyntheticMedia, 'no synthetic-media disclosure argument');
   });
 
-  // This pipeline uses Veo video and Lyria music. A false default makes
+  // This pipeline uses generated video and Lyria music. A false default makes
   // non-disclosure the default behavior, and habitual non-disclosure is
   // grounds for forced labels, removal, and YPP suspension.
   it('defaults to true (non-disclosure never becomes the default)', () => {
@@ -989,20 +985,14 @@ describe('image lane separation (local · OpenAI)', () => {
 });
 
 /**
- * Pins the division of the two video engines as contract (same structure as
- * the speech/image lane separations).
- *
- * Veo has native audio and local-file extension; Seedance has free lengths
- * and ratios plus far cheaper silent cuts. Lose this division from the
- * descriptions and callers grab whichever tool sits at the top of the list —
- * then a 4-second b-roll bills as 8 seconds, or a photoreal-person cover
- * routes to 2.x, which rejects face input, and the whole episode stalls.
+ * Pins the Seedance tool surface as contract. Seedance stays in the plugin only as
+ * 2.x, whose reference lane takes a voice sample per speaker (2026-10-31).
  *
  * Enums must match the values derived from the seedance-client.ts capability
  * table — copy the list into the schema and only one side gets fixed when a
  * model is added.
  */
-describe('video engine separation (Veo · Seedance)', () => {
+describe('Seedance 2.x tool surface', () => {
   const t2v = byName.get('seedance_text2video');
   const i2v = byName.get('seedance_img2video');
   const ref = byName.get('seedance_reference');
@@ -1025,14 +1015,9 @@ describe('video engine separation (Veo · Seedance)', () => {
     assert.equal(t2v.inputSchema.properties.durationSeconds.default, DEFAULT_SEEDANCE_DURATION);
   });
 
-  it('the reference tool model enum is narrowed to 2.x — 1.x cannot take reference images', () => {
-    assert.deepEqual(ref.inputSchema.properties.model.enum, SEEDANCE_REFERENCE_MODELS);
-    assert.ok(SEEDANCE_REFERENCE_MODELS.length > 0, 'no reference-capable model at all');
-    for (const model of SEEDANCE_REFERENCE_MODELS) {
-      assert.notEqual(SEEDANCE_MODEL_SPECS[model].referenceImages, false);
-    }
-    // the default model (1.5 pro) takes no references, so it cannot be this tool's default
-    assert.ok(!SEEDANCE_REFERENCE_MODELS.includes(DEFAULT_SEEDANCE_MODEL));
+  it('every model takes reference audio — a model without a voice lane has no place in the table', () => {
+    assert.deepEqual(ref.inputSchema.properties.model.enum, VALID_SEEDANCE_MODELS);
+    for (const model of VALID_SEEDANCE_MODELS) assert.ok(SEEDANCE_MODEL_SPECS[model].referenceAudio.maxClips > 0, model);
   });
 
   it('all three tools can output 9:16 — this pipeline\'s default format', () => {
@@ -1050,7 +1035,7 @@ describe('video engine separation (Veo · Seedance)', () => {
 
   it('the audio default is the opposite of the vendor (false) and the reason is in the description', () => {
     // this pipeline attaches narration separately via tts_*. Leave the vendor
-    // default (true) and 1.5 pro doubles in price with two voice layers stacked.
+    // default (true) and two voice layers stack.
     for (const tool of [t2v, i2v, ref]) {
       assert.equal(tool.inputSchema.properties.generateAudio.default, false);
     }
@@ -1060,30 +1045,13 @@ describe('video engine separation (Veo · Seedance)', () => {
   it('the real-face input constraint is in the image tool descriptions — the cover-background lane trap', () => {
     assert.match(i2v.description, /real human faces/i, 'no 2.x face-rejection warning');
     assert.match(ref.description, /real human faces/i);
-    // the default model must be the one accepting real faces so the cover → b-roll lane just runs
-    assert.equal(SEEDANCE_MODEL_SPECS[DEFAULT_SEEDANCE_MODEL].realFaceInput, true);
-    assert.ok(SEEDANCE_REAL_FACE_MODELS.includes(DEFAULT_SEEDANCE_MODEL));
-  });
-
-  it('the two engines point at each other — a list-only caller must be able to switch', () => {
-    assert.match(byName.get('veo_text2video').description, /seedance_text2video/);
-    assert.match(byName.get('veo_img2video').description, /seedance_img2video/);
-    assert.match(byName.get('veo_reference').description, /seedance_reference/);
-    assert.match(t2v.description, /veo_text2video/);
-    assert.match(i2v.description, /veo_img2video/);
-    assert.match(ref.description, /veo_reference/);
-  });
-
-  it('extension, which Seedance lacks, is routed to veo_extension', () => {
-    assert.ok(!byName.has('seedance_extension'), 'a seedance_extension appeared — its video input takes public URLs only');
-    assert.match(byName.get('veo_extension').description, /Seedance/, 'the description does not state extension is Veo-only');
   });
 
   /**
    * When the tool-surface default and the actually applied zod default split,
    * every normal call omitting the argument fails — the JSON-schema default is
-   * advisory and the server never reads it. `seedance_reference` really did
-   * inherit the shared default (1.5 pro) and trip its own validation. Eyeball
+   * advisory and the server never reads it. `seedance_reference` once
+   * inherited a shared default it could not take and tripped its own validation. Eyeball
    * schema checks miss this, so it is verified **by parsing**.
    */
   it('a minimal call omitting arguments passes all three schemas', () => {
@@ -1099,11 +1067,10 @@ describe('video engine separation (Veo · Seedance)', () => {
     }
   });
 
-  it('the reference schema\'s actual default model is 2.x — consistent with the tool-surface default', () => {
+  it('the reference schema\'s actual default model matches the tool-surface default', () => {
     const parsed = seedanceReferenceSchema.parse({ prompt: 'x', referenceImagePaths: ['/tmp/a.png'] });
-    assert.ok(SEEDANCE_REFERENCE_MODELS.includes(parsed.model));
     assert.equal(parsed.model, ref.inputSchema.properties.model.default, 'the surface default and the actual default differ');
-    assert.equal(parsed.model, DEFAULT_SEEDANCE_REFERENCE_MODEL);
+    assert.equal(parsed.model, DEFAULT_SEEDANCE_MODEL);
   });
 
   /**
@@ -1118,14 +1085,14 @@ describe('video engine separation (Veo · Seedance)', () => {
     const MODEL_20 = 'dreamina-seedance-2-0-260128';
 
     it('every reference-capable model has an audio spec, and the tool surface mirrors it', () => {
-      for (const model of SEEDANCE_REFERENCE_MODELS) {
+      for (const model of VALID_SEEDANCE_MODELS) {
         const audio = SEEDANCE_MODEL_SPECS[model].referenceAudio;
         assert.notEqual(audio, false, `${model} has no reference-audio spec`);
         assert.ok(audio.clipSeconds[0] >= 2 && audio.totalSeconds >= audio.clipSeconds[1], `${model} audio limits are inconsistent`);
       }
       const prop = ref.inputSchema.properties.referenceAudioPaths;
       assert.ok(prop, 'seedance_reference has no referenceAudioPaths');
-      const maxClips = Math.max(...SEEDANCE_REFERENCE_MODELS.map((m) => SEEDANCE_MODEL_SPECS[m].referenceAudio.maxClips));
+      const maxClips = Math.max(...VALID_SEEDANCE_MODELS.map((m) => SEEDANCE_MODEL_SPECS[m].referenceAudio.maxClips));
       assert.equal(prop.maxItems, maxClips);
       assert.match(prop.description, /@Audio/, 'the @Audio N binding grammar is missing');
       assert.match(prop.description, /generateAudio: true/);
@@ -1136,14 +1103,14 @@ describe('video engine separation (Veo · Seedance)', () => {
     });
 
     it('reference video mirrors the model table, needs a Video 1 binding, and rejects the wrong shape', () => {
-      for (const model of SEEDANCE_REFERENCE_MODELS) {
+      for (const model of VALID_SEEDANCE_MODELS) {
         const video = SEEDANCE_MODEL_SPECS[model].referenceVideos;
         assert.notEqual(video, false, `${model} has no reference-video spec`);
         assert.ok(video.clipSeconds[0] >= 2 && video.totalSeconds >= video.clipSeconds[1], `${model} video limits are inconsistent`);
       }
       const prop = ref.inputSchema.properties.referenceVideoPaths;
       assert.ok(prop, 'seedance_reference has no referenceVideoPaths');
-      assert.equal(prop.maxItems, Math.max(...SEEDANCE_REFERENCE_MODELS.map((m) => SEEDANCE_MODEL_SPECS[m].referenceVideos.maxClips)));
+      assert.equal(prop.maxItems, Math.max(...VALID_SEEDANCE_MODELS.map((m) => SEEDANCE_MODEL_SPECS[m].referenceVideos.maxClips)));
       assert.match(prop.description, /previz|clay/i);
       assert.match(prop.description, /MEDIA_UPLOAD_URL/);
       assert.match(ref.description, /Video 1/);
@@ -1194,75 +1161,16 @@ describe('video engine separation (Veo · Seedance)', () => {
   /**
    * The default must be a **model with quality evidence**.
    *
-   * Default to a model absent from the arena (2.5, 2.0 fast, 2.0 mini,
-   * 1.0 pro fast) and every argument-omitting call goes out with unverified
+   * Default to a model absent from the arena (2.5, 2.0 fast, 2.0 mini)
+   * and every argument-omitting call goes out with unverified
    * quality. To move the default there because it is cheaper or broader,
    * build the evidence first.
    */
   it('the default models are the publicly evaluated ones', () => {
-    const EVALUATED = ['dreamina-seedance-2-0-260128', 'seedance-1-5-pro-251215', 'seedance-1-0-pro-250528'];
-    assert.ok(EVALUATED.includes(DEFAULT_SEEDANCE_MODEL), `default model ${DEFAULT_SEEDANCE_MODEL} has no public evaluation`);
-    assert.ok(EVALUATED.includes(DEFAULT_SEEDANCE_REFERENCE_MODEL), `reference default model ${DEFAULT_SEEDANCE_REFERENCE_MODEL} has no public evaluation`);
-    // derive the reference default from list order and it silently changes the moment a model is inserted
-    assert.notEqual(DEFAULT_SEEDANCE_REFERENCE_MODEL, undefined);
+    assert.equal(DEFAULT_SEEDANCE_MODEL, 'dreamina-seedance-2-0-260128', `default model ${DEFAULT_SEEDANCE_MODEL} has no public evaluation`);
   });
 
   /**
-   * The three Veo tiers are statistically tied in the blind arena (gaps
-   * within 20 Elo, overlapping confidence intervals, order flips on the
-   * silent board). So defaulting to the standard tier pays 4x for output
-   * people do not even prefer.
-   */
-  it('the Veo default tier is not standard — no defaults that just cost 4x', () => {
-    assert.equal(DEFAULT_VIDEO_MODEL, 'veo-3.1-fast-generate-preview');
-    for (const name of ['veo_text2video', 'veo_img2video', 'veo_extension', 'veo_reference']) {
-      const tool = byName.get(name);
-      assert.equal(
-        tool.inputSchema.properties.model.default,
-        DEFAULT_VIDEO_MODEL,
-        `the default model of ${name} differs from the video-client source of truth`,
-      );
-    }
-  });
-
-  /**
-   * Write an exclusion into the prompt body and the very noun gets drawn
-   * (measured on local images: 4 out of 4 failed). Google's prompt guide also
-   * marks the instruction form as not recommended and advises noun-phrase
-   * lists. So the two tools whose API call takes the field need the dedicated
-   * exclusion inlet, and the description must teach the grammar — an inlet
-   * without the grammar and callers write "no walls" into the field. The
-   * reference and extension calls return 400 with the field set (measured
-   * 2026-08-15), and so does the lite model in any mode (2026-08-26), so those
-   * carry no inlet and lite rejects it at validation.
-   */
-  it('the two veo tools the API accepts it on expose the exclusion inlet — so "no ~" stays out of the body', () => {
-    for (const name of ['veo_text2video', 'veo_img2video']) {
-      const prop = byName.get(name).inputSchema.properties.negativePrompt;
-      assert.ok(prop, `${name} has no negativePrompt inlet`);
-      assert.match(prop.description, /comma-separated/i, `the ${name} description does not teach the noun-list grammar`);
-      assert.match(prop.description, /Do NOT write instructions/, `the ${name} description does not ban instruction forms`);
-    }
-    for (const name of ['veo_extension', 'veo_reference']) {
-      assert.equal(byName.get(name).inputSchema.properties.negativePrompt, undefined, `${name} exposes a field the API rejects`);
-    }
-    const lite = img2VideoSchema.safeParse({
-      prompt: 'very slow push-in', sourceImagePath: '/tmp/x.png',
-      model: 'veo-3.1-lite-generate-preview', negativePrompt: 'on-screen text',
-    });
-    assert.equal(lite.success, false, 'lite must reject negativePrompt before the API does');
-    // the schema must actually accept it too — a description whose value gets dropped is useless
-    const parsed = img2VideoSchema.safeParse({
-      prompt: 'very slow push-in',
-      sourceImagePath: '/tmp/x.png',
-      negativePrompt: 'on-screen text, subtitles',
-    });
-    assert.equal(parsed.success, true);
-    assert.equal(parsed.data.negativePrompt, 'on-screen text, subtitles');
-  });
-
-  /**
-   * Seedance grammar differs from Veo, and that difference produces failures.
    * The vendor pinned two things in its own docs — write seconds into the
    * prompt and the result degrades (their own notice that precise-timing
    * support is unstable), and feed a three-view character sheet as reference
@@ -1277,17 +1185,9 @@ describe('video engine separation (Veo · Seedance)', () => {
     }
     // the multi-view ban applies only to the reference tool
     assert.match(byName.get('seedance_reference').description, /multi-view/i);
-    // seed promises no reproducibility — the source docs give none
-    const seed = byName.get('seedance_text2video').inputSchema.properties.seed.description;
-    assert.match(seed, /does not promise/i, 'the seed description promises reproducibility that does not exist');
   });
 
   it('cross constraints are rejected before the call — before a paid call is created', () => {
-    // audio requested on a silent-only model
-    assert.equal(
-      seedanceText2VideoSchema.safeParse({ prompt: 'x', model: 'seedance-1-0-pro-250528', generateAudio: true }).success,
-      false,
-    );
     // 2.5 got 1080p on 2026-08-17 — the tier the discount campaign covers, so it must pass
     assert.equal(
       seedanceText2VideoSchema.safeParse({ prompt: 'x', model: 'dreamina-seedance-2-5-260628', resolution: '1080p' }).success,
@@ -1298,23 +1198,8 @@ describe('video engine separation (Veo · Seedance)', () => {
       seedanceText2VideoSchema.safeParse({ prompt: 'x', model: 'dreamina-seedance-2-5-260628', resolution: '4k' }).success,
       false,
     );
-    // 2.x has no seed
-    assert.equal(
-      seedanceText2VideoSchema.safeParse({ prompt: 'x', model: 'dreamina-seedance-2-0-260128', seed: 7 }).success,
-      false,
-    );
-    // the 1.5 pro duration cap is 12 seconds
+    // the 2.0 duration cap is 15 seconds
     assert.equal(seedanceText2VideoSchema.safeParse({ prompt: 'x', durationSeconds: 20 }).success, false);
-    // a model that cannot take first+last frames
-    assert.equal(
-      seedanceImg2VideoSchema.safeParse({
-        prompt: 'x',
-        sourceImagePath: '/tmp/a.png',
-        lastImagePath: '/tmp/b.png',
-        model: 'seedance-1-0-pro-fast-251015',
-      }).success,
-      false,
-    );
   });
 
   it('a Korean direction outside quotes is rejected on every model but 2.5', () => {
@@ -1335,7 +1220,7 @@ describe('video engine separation (Veo · Seedance)', () => {
       seedanceText2VideoSchema.safeParse({ prompt: korean, model: 'dreamina-seedance-2-5-260628' }).success,
       true,
     );
-    // dialogue inside quotes is what 1.5 pro lip-syncs — it stays
+    // dialogue inside quotes is spoken, so it stays
     assert.equal(
       seedanceText2VideoSchema.safeParse({ prompt: 'the man leans in and says "딸깍" once.' }).success,
       true,

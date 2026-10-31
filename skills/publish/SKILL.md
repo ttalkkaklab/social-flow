@@ -311,7 +311,7 @@ permalink, say).
    a per-language `captionWarning` ("en: …") means only that language failed — upload
    just it in YouTube Studio. No standalone existing-video caption-upload MCP tool
    is exposed here; never call youtube_publish again merely to add or repair a track.
-   **Don't set `containsSyntheticMedia`** (it defaults to true). This pipeline uses Veo
+   **Don't set `containsSyntheticMedia`** (it defaults to true). This pipeline uses generated
    video and Lyria music, so it falls under AI disclosure, and YouTube states that
    disclosure doesn't affect reach or monetization eligibility while warning that
    habitual non-disclosure brings forced labels, removal, and YPP suspension. Turning
