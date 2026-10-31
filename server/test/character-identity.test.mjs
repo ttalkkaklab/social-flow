@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 const require = createRequire(import.meta.url);
-const { GROUPS, identityErrors, identityCharacter, direction, boardIdentityErrors } = require('../../skills/_shared/character-identity.js');
+const { GROUPS, REQUIRED, identityErrors, identityCharacter, direction, boardIdentityErrors } = require('../../skills/_shared/character-identity.js');
 const { handoff } = require('../../skills/channel/references/character-sheet.js');
 const source = readFileSync(new URL('../../skills/channel/references/character-identity-example.md', import.meta.url), 'utf8');
 const doc = () => JSON.parse(source.match(/```json\s*\n([\s\S]*?)```/)[1]);
@@ -26,13 +26,25 @@ test('character handoff exports the chosen audition sample with pinned voice set
  rmSync(manifest);const missing=handoff(file);assert.equal(missing.voiceReference,undefined);assert.ok(missing.voiceReferenceWarning);
 });
 
-test('every catalog field is required, typed, status-aware and placeholder-resistant', () => {
+test('the basics are required; every other field and group is optional, typed, status-aware and placeholder-resistant', () => {
   assert.deepEqual(identityErrors(doc().character), []);
   for (const [group,,,fields] of GROUPS) for (const [key] of fields) {
     const c = doc().character;
     delete c[group][key];
-    assert.ok(identityErrors(c).some(e => e.includes(`${group}.${key}`)));
+    assert.equal(identityErrors(c).some(e => e.includes(`${group}.${key}`)), REQUIRED[group]?.includes(key) ?? false, `${group}.${key}`);
   }
+  assert.deepEqual(REQUIRED, { identity: ['gender', 'species', 'age', 'role', 'summary'], physical: ['heightCm'] });
+  const bare = doc().character;
+  for (const group of ['personality', 'speech', 'acting', 'story', 'continuity']) delete bare[group];
+  for (const key of Object.keys(bare.physical)) if (key !== 'heightCm') delete bare.physical[key];
+  assert.deepEqual(identityErrors(bare), []);
+  assert.equal(direction(bare).voice, '');
+  delete bare.physical; assert.ok(identityErrors(bare).some(e => e.includes('character.physical')));
+  const optional = doc().character;
+  optional.story.arc = {status:'pending',value:null,reason:'Not decided'};
+  optional.personality.fear = {status:'not_applicable',value:null,reason:'No fear defined'};
+  assert.deepEqual(identityErrors(optional), [], 'pending or inapplicable optional fields do not block generation');
+  optional.personality.fear = {status:'confirmed',value:'TBD'}; assert.ok(identityErrors(optional).length);
   for (const value of [0, -1, '90cm', null, Infinity]) {
     const c = doc().character; c.physical.heightCm.value = value;
     assert.ok(identityErrors(c).some(e => e.includes('heightCm')));
@@ -104,7 +116,7 @@ test('silent story-v2 cast can keep speech pending without bypassing identity or
     const d=doc();d.tts=null;
     for(const key of Object.keys(d.character.speech))d.character.speech[key]={status:'pending',value:null,reason:'Silent character; voice not selected'};
     const file=join(dir,'identity.md');writeFileSync(file,markdown(d));
-    assert.throws(()=>handoff(file),/pending/);
+    assert.throws(()=>handoff(file),/tts/,'a character with lines needs its selected voice');
     const cast=handoff(file,{requireSpeech:false});
     assert.equal(cast.tts,null);assert.equal(cast.direction.voice,'');
     const board={STORY:{version:'story-v2'},SB_DOC:{characterSchemaVersion:1,speechPlanVersion:1,characters:[cast]},SCENES:[{visual:{character:'mori'},narration:[]}]};
@@ -113,12 +125,12 @@ test('silent story-v2 cast can keep speech pending without bypassing identity or
     assert.deepEqual(boardVoiceErrors(board),[]);assert.deepEqual(sourceErrors(board,root),[]);
     board.SCENES[0].narration=[{id:'line-1',speaker:'mori',delivery:'on_screen',tts:'Hello'}];
     assert.match(boardVoiceErrors(board).join(),/pending|tts is required/);
-    assert.match(sourceErrors(board,root).join(),/pending/);
+    assert.match(sourceErrors(board,root).join(),/tts/);
     board.SCENES[0].narration=[];
     cast.tts={engine:'invalid'};assert.match(boardVoiceErrors(board).join(),/tts/);cast.tts=null;
-    d.character.physical.appearance={status:'pending',value:null,reason:'Appearance not chosen'};
-    writeFileSync(file,markdown(d));assert.throws(()=>handoff(file,{requireSpeech:false}),/physical.appearance/);
-    assert.match(sourceErrors(board,root).join(),/physical.appearance/);
+    d.character.identity.gender={status:'pending',value:null,reason:'Gender not chosen'};
+    writeFileSync(file,markdown(d));assert.throws(()=>handoff(file,{requireSpeech:false}),/identity.gender/);
+    assert.match(sourceErrors(board,root).join(),/identity.gender/);
   }finally{rmSync(root,{recursive:true,force:true});}
 });
 

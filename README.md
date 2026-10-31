@@ -642,10 +642,10 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 137 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 138 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions — 137 tools, including voice auditions and opt-in acting review
+│       ├── tools.ts             # tool definitions — 138 tools, including voice auditions and opt-in acting review
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -716,7 +716,7 @@ visual style, video ratio and format live in the workspace's `.social-flow/model
 each episode snapshots them in `.work/model-settings.json`, and `profile.md` keeps the
 channel's tone, theme and pinned character voice IDs (the speech model itself is the saved `models.speech`).
 
-## MCP tool surface (137 tools)
+## MCP tool surface (138 tools)
 
 `project_manage`: options · status · init · update · episode. Local project setup
 with genre, models, style, ratio, format and SNS records; no generation or publishing.
@@ -760,6 +760,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Host media review | `host_review`, `acting_review`, `tts_review_acting`, `tts_review_final` | On request: prepare local media and record the executing host LLM’s actual observations; findings are evidence, not a delivery gate. No external evaluation API. Sampled frames support composition only; unsupported playback or listening stays unverified. |
 | Pronunciation dictionary | `tts_elevenlabs_dictionary` | Creates Korean alias rules and returns pinned dictionary/version IDs for `pronunciationDictionaryLocators`. Keep the source name intact and test the actual pronunciation. |
 | Voice identity design | `tts_voice_design` | Create a stored Gemini voice from age, timbre and accent, or remix `baseVoice`. Saves a WAV preview, reusable `voice_` ID and provider usage receipt. See [voice design](skills/_shared/gemini-voice-design.md). |
+| Character identity | `character_manage` | Creates or updates a shared character's `identity.md`: name, gender, species, age, role, summary and height are required arguments, every other field is optional, and the tts block and prose stay. Refreshes the sheets and reports the pending basics, missing face/front/back panels and an unselected voice. No paid calls. |
 | Character voice auditions | `character_voice_audition` | On request: plan acoustic targets from character identity, compare real voice metadata, generate candidates with a stable Gemini voice baseline, and persist only the user-selected voice. |
 | Voice generation | `tts_generate` / `tts_multi_speaker` / `tts_gemini_38` / `tts_list_voices` | Gemini TTS (GEMINI_API_KEY — curated and live library voice lookup, automatic language detection, saves mono 24kHz wav). `tts_gemini_38` uses the Interactions API for turn-level style, inline vocal events, and two-speaker backchannels. |
 | Voice generation | `tts_elevenlabs_generate` / `tts_elevenlabs_dialogue` / `tts_elevenlabs_voices` | ElevenLabs (`ELEVENLABS_API_KEY`). Only `eleven_v4` is allowed for speech. Square-bracket acting tags, Stability/Similarity and timestamped output; no style/speed slider or SSML. Voice listing supports language/gender/accent filters, pagination and preview URLs. Supports /IPA/, documented 3-letter language codes, optional neighbor request IDs, PVC-as-IVC and Enterprise zero retention. Prefer ≤2,000 characters per Dialogue request; the 10,000 model ceiling is not a reliability promise. [v4 API contract](skills/_shared/elevenlabs-v4.md). Use current API pricing and save actual usage. |
@@ -1063,10 +1064,12 @@ Existing unversioned scenarios and story-v1 boards retain their checks.
 
 ### Structured character identity
 
-New and updated character sheets carry explicit personality, measurements, speech,
-acting, relationships and continuity fields, each confirmed, pending or not applicable.
-The local compiler generates lane-specific directions; review export refuses a pass
-for incomplete settings. Follow [the character contract](skills/channel/references/character-identity.md).
+A character's required items are its basics (name, gender, species, age, role, summary,
+height), the face/front/back sheet panels and a selected voice; personality, speech,
+acting, story, continuity and the other body fields are optional and may be omitted.
+`character_manage` writes the identity with the basics as required arguments. The sheet
+warns about missing panels or voice, `shot_image` refuses a missing panel and the
+compiler refuses a handoff without a voice for a character with lines. Follow [the character contract](skills/channel/references/character-identity.md).
 Existing sheets need explicit migration; legacy storyboards remain readable.
 
 ## Shot dialogue and later corrections

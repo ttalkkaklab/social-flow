@@ -6,6 +6,10 @@
     "schemaVersion": 1,
     "version": 1,
     "identity": {
+      "gender": {
+        "status": "confirmed",
+        "value": "남성"
+      },
       "species": {
         "status": "confirmed",
         "value": "의인화한 다람쥐"
@@ -63,14 +67,18 @@
       "traits": {
         "status": "confirmed",
         "value": [
-          "호기심: 낯선 물건 앞에서 멈추고 고개를 살짝 기울인다.",
-          "신중함: 결론을 말하기 전에 물건을 한 번 더 확인한다.",
-          "배려: 상대가 어려워하면 짧은 예시로 다시 설명한다."
+          "호기심이 많음",
+          "신중함",
+          "배려심이 깊음"
         ]
       },
       "goal": {
         "status": "confirmed",
-        "value": "숲에서 발견한 물건의 쓰임을 알아내 친구에게 알려주고 싶다."
+        "value": "숲에서 발견한 물건의 쓰임을 알아낸다."
+      },
+      "motivation": {
+        "status": "confirmed",
+        "value": "알아낸 것을 친구에게 알려주고 싶다."
       },
       "flaw": {
         "status": "confirmed",
@@ -114,7 +122,11 @@
       },
       "pace": {
         "status": "confirmed",
-        "value": "표준 한국어 억양. 일정한 보통 속도. 문장 사이에 짧게 쉰다."
+        "value": "일정한 보통 속도. 문장 사이에 짧게 쉰다."
+      },
+      "accent": {
+        "status": "confirmed",
+        "value": "표준 한국어 억양."
       },
       "emotion": {
         "status": "confirmed",
@@ -145,9 +157,14 @@
         "value": null,
         "reason": "단독 검증 캐릭터이며 연결된 상대 캐릭터가 없다."
       },
-      "backstory": {
+      "background": {
         "status": "confirmed",
         "value": "숲 가장자리의 작은 관찰소에서 물건을 분류한다."
+      },
+      "past": {
+        "status": "not_applicable",
+        "value": null,
+        "reason": "현재 행동에 영향을 주는 과거를 따로 정하지 않았다."
       },
       "arc": {
         "status": "confirmed",

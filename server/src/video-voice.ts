@@ -50,7 +50,8 @@ function voiceDescription(character: Record<string, unknown>): string {
   };
   return [text(tts.language) && `Language: ${text(tts.language)}`,
     confirmed('timbre') && `Timbre: ${confirmed('timbre')}`,
-    confirmed('pace') && `Baseline pace/accent: ${confirmed('pace')}`,
+    confirmed('pace') && `Baseline pace: ${confirmed('pace')}`,
+    confirmed('accent') && `Accent: ${confirmed('accent')}`,
     text(tts.voiceDirection) || text(tts.stylePrompt)].filter(Boolean).join('. ');
 }
 

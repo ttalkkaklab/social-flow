@@ -11,6 +11,7 @@ const MARKER = '<!-- social-flow:review-library:v1 -->';
 const ASSETS = path.join(__dirname, 'review-assets');
 const { FONT_ASSETS } = require('./review-fonts.js');
 const ASSET_NAMES = ['design-system.css', 'review.css', 'review.js', ...FONT_ASSETS];
+const digest = file => require('node:crypto').createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const t = (ko, en) => `<span data-ko="${esc(ko)}" data-en="${esc(en)}">${esc(ko)}</span>`;
 const rel = (from, to) => path.relative(path.dirname(from), to).split(path.sep).map(part => encodeURIComponent(part)).join('/') || './';
@@ -19,8 +20,10 @@ const { inspectPanels, boardPanelFindings } = require('./character-panels.js');
 const label = { front: ['머리 없는 앞면', 'Headless front'], back: ['머리 없는 뒷면', 'Headless back'], face: ['얼굴 클로즈업', 'Face close-up'] };
 const short = { front: ['앞면', 'Front'], back: ['후면', 'Back'], face: ['얼굴', 'Face'] };
 const BASIC_PHYSICAL = ['heightCm', 'weightKg'];
-// Groups the sheet shows in part; the rest of each group stays in the identity source.
-const SHEET_FIELDS = { speech: ['register', 'habits', 'pace'] };
+// The specification cards: these groups only, some in part; identity.md keeps the rest.
+const SHEET_GROUPS = ['personality', 'speech', 'story', 'continuity'];
+const SHEET_FIELDS = { speech: ['register', 'habits', 'pace', 'accent'], story: ['background', 'past'] };
+const SHEET_TITLES = { story: ['배경과 과거', 'Background and past'] };
 
 function regular(root, file) {
   return fs.existsSync(file) && insideReal(root, file) && fs.statSync(file).isFile();
@@ -171,7 +174,7 @@ function exportChannel(channelDirectory, { check = false } = {}) {
     let characterIdentity = null, identityError = '';
     try { characterIdentity = identityCharacter(source, { ready: false }); identityError = identityErrors(characterIdentity).join("; "); if (identityError) contentWarning(character.id, 'identity', identityError); }
     catch (error) { identityError = error.message; contentWarning(character.id, 'identity', identityError); }
-    if (characterIdentity) { role = characterIdentity.identity.role.value || role; appearance = characterIdentity.physical.appearance.value || appearance; }
+    if (characterIdentity) { role = characterIdentity.identity.role.value || role; appearance = characterIdentity.physical.appearance?.value || appearance; }
     let body = `<article class="character-sheet"><a class="review-crumb" href="../index.html">${t('캐릭터 시트 목록', 'Character sheets')}</a>`;
     // Photos on the left; the identity group ("기본 설정") reads on the right.
     const keys = ['face', 'front', 'back'].filter(key => slots[key]);
@@ -179,7 +182,7 @@ function exportChannel(channelDirectory, { check = false } = {}) {
     const [, groupKo, groupEn, identityFields] = GROUPS[0];
     const basicFields = [...identityFields.map(f => ['identity', ...f]), ...GROUPS.find(([g]) => g === 'physical')[3].filter(([key]) => BASIC_PHYSICAL.includes(key)).map(f => ['physical', ...f])];
     const basics = characterIdentity
-      ? basicFields.map(([group, key, labelKo, labelEn]) => `<div class="character-field" data-character-field="${group}.${key}"><dt>${t(labelKo, labelEn)}</dt><dd>${identityValue(characterIdentity[group][key])}</dd></div>`).join('')
+      ? basicFields.filter(([group, key]) => characterIdentity[group][key]).map(([group, key, labelKo, labelEn]) => `<div class="character-field" data-character-field="${group}.${key}"><dt>${t(labelKo, labelEn)}</dt><dd>${identityValue(characterIdentity[group][key])}</dd></div>`).join('')
       : field(t('설명 · 역할', 'Description / role'), role) + field(t('외형', 'Appearance'), appearance);
     // The voice sample plays right under the identity rows.
     const voiceFile = path.join(folder, 'voice.wav');
@@ -202,15 +205,29 @@ function exportChannel(channelDirectory, { check = false } = {}) {
       if (keys.length > 1) body += `<div class="character-strip" role="group" aria-label="${esc('패널 고르기 / Pick a panel')}">${keys.map((key, k) => `<a class="character-thumb" data-kind="${key}" href="${rel(file, path.join(folder, slots[key]))}" data-alt="${esc(character.name + ' ' + label[key][0])}" data-label-ko="${esc(label[key][0])}" data-label-en="${esc(label[key][1])}"${k ? '' : ' aria-current="true"'}><span class="character-thumb-art"><img src="${rel(file, path.join(folder, slots[key]))}" alt="" loading="lazy"></span>${t(...short[key])}</a>`).join('')}</div>`;
     } else body += `<div class="character-stage character-stage-empty">${empty('이미지 미등록', 'No image yet')}</div>`;
     body += `<div class="character-info"><header class="character-header" id="basics"><span class="ds-kicker">${t(groupKo, groupEn)}</span><h1 id="character-name">${esc(character.name)} <code>${esc(character.id)}</code></h1></header><dl class="character-fields character-basics">${basics}</dl>${voiceHtml}</div></section>`;
-    const sections = [['appearance', 'identity', groupKo, groupEn], ...(characterIdentity ? [['identity', 'personality', '상세 설정', 'Specification']] : [])];
-    body += `<nav class="character-nav" aria-label="${esc('시트 섹션 / Sheet sections')}">${sections.map(([id, icon, ko, en]) => `<a href="#${id}">${characterIcon(icon)}${t(ko, en)}</a>`).join('')}</nav>`;
-    const extras = character.images.filter(im => !Object.values(slots).includes(im.file) && regular(dir, path.join(folder, im.file)));
-    if (extras.length) body += `<details class="character-extra ds-card"><summary>${t('추가 이미지', 'Additional images')} <span class="character-count">${extras.length}</span><span class="ds-chevron" aria-hidden="true"></span></summary><div class="review-panels">${extras.map(im => `<figure>${zoomImage(file, path.join(folder, im.file), im.file)}<figcaption>${esc(im.file)}</figcaption></figure>`).join('')}</div></details>`;
+    // Extras skip the three sheet panels and any copy of them (the v2/v3 files are often hard links).
+    const seen = new Set(keys.map(key => digest(path.join(folder, slots[key]))));
+    const extras = character.images.filter(im => {
+      const target = path.join(folder, im.file);
+      if (!regular(dir, target)) return false;
+      const key = digest(target);
+      return !seen.has(key) && seen.add(key);
+    });
+    if (extras.length) {
+      // Native scroll-snap swipes without JS; review.js wires the buttons and the counter.
+      const arrow = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+      body += `<section class="character-gallery ds-card" id="gallery" aria-labelledby="gallery-title" data-gallery><div class="character-gallery-head"><h2 id="gallery-title"><span class="ds-tile">${characterIcon('appearance')}</span>${t('추가 이미지', 'Additional images')}<span class="character-count">${extras.length}</span></h2>`;
+      body += `<div class="character-gallery-controls" hidden><span class="character-gallery-index" data-gallery-index aria-live="polite">1 / ${extras.length}</span><button class="character-gallery-button" type="button" data-gallery-prev aria-label="이전 이미지 / Previous image">${arrow('m15 6-6 6 6 6')}</button><button class="character-gallery-button" type="button" data-gallery-next aria-label="다음 이미지 / Next image">${arrow('m9 6 6 6-6 6')}</button></div></div>`;
+      body += `<div class="character-gallery-track" data-gallery-track tabindex="0" role="region" aria-label="${esc('추가 이미지 / Additional images')}">${extras.map(im => `<figure class="character-gallery-slide">${zoomImage(file, path.join(folder, im.file), im.file)}</figure>`).join('')}</div></section>`;
+    }
     if (characterIdentity) {
-      body += `<section class="character-specification" id="identity" aria-labelledby="identity-title"><div class="character-section-heading"><h2 id="identity-title">${t('캐릭터 상세 설정', 'Character specification')}</h2><span>${t('항목을 눌러 접거나 펼칠 수 있습니다.', 'Select a group to collapse or expand it.')}</span></div>`;
+      body += `<section class="character-specification" id="identity" aria-label="${esc('캐릭터 상세 설정 / Character specification')}">`;
       // Height and weight read in the identity block; the other body fields are not shown.
-      for (const [group, ko, en, groupFields] of GROUPS.slice(1).filter(([group]) => group !== 'physical')) {
-        const fields = SHEET_FIELDS[group] ? groupFields.filter(([key]) => SHEET_FIELDS[group].includes(key)) : groupFields;
+      for (const [group, groupKo, groupEn, groupFields] of GROUPS.filter(([group]) => SHEET_GROUPS.includes(group))) {
+        const [ko, en] = SHEET_TITLES[group] || [groupKo, groupEn];
+        // Optional fields left out of identity.md are left off the card; an empty card is skipped.
+        const fields = (SHEET_FIELDS[group] ? groupFields.filter(([key]) => SHEET_FIELDS[group].includes(key)) : groupFields).filter(([key]) => characterIdentity[group]?.[key]);
+        if (!fields.length) continue;
         const pending = fields.filter(([key]) => characterIdentity[group][key].status === 'pending').length;
         body += `<details class="character-group ds-card" open><summary><h3><span class="ds-tile">${characterIcon(group)}</span>${t(ko, en)}</h3>${pending ? `<span class="character-pending">${t('미정', 'Pending')} ${pending}</span>` : ''}<span class="ds-chevron" aria-hidden="true"></span></summary><dl class="character-fields">` + fields.map(([key, labelKo, labelEn]) => {
           const f = characterIdentity[group][key];
@@ -219,7 +236,7 @@ function exportChannel(channelDirectory, { check = false } = {}) {
       }
       body += '</section>';
     }
-    body += `<details class="character-source ds-card"><summary>${t('캐릭터 설정 원문', 'Full character identity')}<span class="ds-chevron" aria-hidden="true"></span></summary><p>${t('원문에 적힌 검토 상태는 작성 당시 기록입니다.', 'Review status in the source reflects when it was written.')}</p><pre class="review-source">${esc(source || '—')}</pre></details></article>`;
+    body += '</article>';
     render(file, character.name, 'characters', body);
     const preview = characterPreview(dir, folder, character, slots);
     cards += `<article data-card data-search="${esc((character.name + ' ' + character.id + ' ' + role).toLocaleLowerCase())}" class="review-card review-character ds-card"><a class="review-card-art review-character-art${preview?.portrait ? ' review-character-portrait' : ''}" href="${rel(charIndex, file)}" aria-label="${esc(character.name)}">${preview ? image(charIndex, path.join(folder, preview.file), character.name) : empty('이미지 없음', 'No image yet')}</a><div class="review-card-body"><div class="review-card-heading"><h2><a href="${rel(charIndex, file)}">${esc(character.name)}</a></h2>${voicePreview(dir, charIndex, folder, character)}</div>${preview?.reference ? `<span class="review-reference">${t('참고 이미지', 'Reference image')}</span>` : ''}<p class="review-role">${esc(role)}</p></div></article>`;

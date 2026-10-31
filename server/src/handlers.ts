@@ -55,6 +55,7 @@ import type { ApiResult } from './http.js';
 import { renderCapabilityStatus } from './capability-status.js';
 import { CHANNEL_SLUG_RE } from './config.js';
 import { DURATION_TOOLS, resolveVideoDuration } from './video-duration.js';
+import { manageCharacter } from './character-manage.js';
 
 /** MCP content blocks — generated images are also returned as base64 image blocks. */
 export type ToolContent =
@@ -1540,6 +1541,10 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   // ── Storyboard ──
   location_manage: async (args) => {
     try { return text(JSON.stringify(await manageLocation(args), null, 2)); }
+    catch (error) { return text(error instanceof Error ? error.message : String(error), true); }
+  },
+  character_manage: async (args) => {
+    try { return text(JSON.stringify(manageCharacter(args), null, 2)); }
     catch (error) { return text(error instanceof Error ? error.message : String(error), true); }
   },
   character_voice_audition: async (args) => text(JSON.stringify(await manageVoiceAudition(voiceAuditionSchema.parse(args)), null, 2)),

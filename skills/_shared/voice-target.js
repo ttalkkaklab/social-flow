@@ -14,9 +14,12 @@ function characterVoiceTarget(source, override = {}) {
   const male = /남성|남자|\bmale\b|\bmasculine\b/i.test(genderText);
   const qualifiedGender = /\b(?:not|non|neither|without|no)[ -]+(?:a\s+)?(?:female|male|feminine|masculine)\b|(?:여성|남성|여자|남자)(?:적)?(?:이)?지\s*않|(?:여성|남성|여자|남자)[^.;。]{0,12}(?:아닌|아니다)|중성|성별\s*중립|androgynous|gender[ -]neutral/i.test(genderText);
   const derivedGender = female !== male && !qualifiedGender;
-  const vocalGender = profile.vocalGender || (derivedGender ? (female ? 'female' : 'male') : 'unspecified');
+  // The required identity.gender is an explicit statement, unlike a name or appearance; a voice-specific timbre, including an explicitly neutral one, still wins.
+  const stated = { 여성: 'female', 여자: 'female', female: 'female', 남성: 'male', 남자: 'male', male: 'male' }[String(value('identity', 'gender') || '').trim().toLowerCase()];
+  const vocalGender = profile.vocalGender || (derivedGender ? (female ? 'female' : 'male') : !qualifiedGender && stated || 'unspecified');
   const age = profile.perceivedAge || value('identity', 'age');
-  const pace = value('speech', 'pace'), register = value('speech', 'register');
+  const pace = [value('speech', 'pace'), value('speech', 'accent')].filter(Boolean).join(' ') || undefined;
+  const register = value('speech', 'register');
   const baselineDirection = profile.baselineDirection || [
     pace && `Phrasing: ${pace}`, register && `Register: ${register}`,
     value('speech', 'habits') && `Speech habit: ${value('speech', 'habits')}`,
@@ -26,9 +29,9 @@ function characterVoiceTarget(source, override = {}) {
     register: register || null, traits: value('personality', 'traits') || [],
     habits: value('speech', 'habits') || null, emotionalRange: value('speech', 'emotion') || null,
     baselineDirection,
-    sources: { vocalGender: profile.vocalGender ? 'voiceProfile.vocalGender' : derivedGender ? 'character.speech.timbre' : null,
+    sources: { vocalGender: profile.vocalGender ? 'voiceProfile.vocalGender' : derivedGender ? 'character.speech.timbre' : !qualifiedGender && stated ? 'character.identity.gender' : null,
       perceivedAge: profile.perceivedAge ? 'voiceProfile.perceivedAge' : age ? 'character.identity.age' : null,
-      baselineDirection: profile.baselineDirection ? 'voiceProfile.baselineDirection' : 'confirmed speech pace, register and habits' },
+      baselineDirection: profile.baselineDirection ? 'voiceProfile.baselineDirection' : 'confirmed speech pace, accent, register and habits' },
     warnings: [
       'Age, vocal gender and stable timbre are casting constraints. Match the base voice or use tts_voice_design to create/remix it; Gemini 3.8 turn style cannot change immutable speaker traits; Voice Design is a separate identity creation API.',
       ...(vocalGender === 'unspecified' ? ['Vocal gender is unspecified; do not infer it from a name, role or appearance.'] : []),

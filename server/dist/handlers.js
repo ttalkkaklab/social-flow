@@ -52,6 +52,7 @@ import * as snsScout from './sns-issue-scout.js';
 import { formatError, formatFileSize, saveBase64Image } from './media-utils.js';
 import { renderCapabilityStatus } from './capability-status.js';
 import { DURATION_TOOLS, resolveVideoDuration } from './video-duration.js';
+import { manageCharacter } from './character-manage.js';
 function text(message, isError = false) {
     return { content: [{ type: 'text', text: message }], isError };
 }
@@ -1394,6 +1395,14 @@ export const ROUTES = {
     location_manage: async (args) => {
         try {
             return text(JSON.stringify(await manageLocation(args), null, 2));
+        }
+        catch (error) {
+            return text(error instanceof Error ? error.message : String(error), true);
+        }
+    },
+    character_manage: async (args) => {
+        try {
+            return text(JSON.stringify(manageCharacter(args), null, 2));
         }
         catch (error) {
             return text(error instanceof Error ? error.message : String(error), true);

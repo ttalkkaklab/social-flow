@@ -18,7 +18,7 @@ authorize generation, synthesize samples or add a listening approval gate.
 
 `SB_DOC.characters[].tts` remains the synthesis authority. Keep engine, model,
 voice ID, language and supported synthesis settings stable. Use confirmed
-`character.speech.timbre`, `character.speech.pace` and `tts.voiceDirection` (legacy
+`character.speech.timbre`, `character.speech.pace`, `character.speech.accent` and `tts.voiceDirection` (legacy
 `stylePrompt` as fallback) for the video prompt's acoustic identity. Do not infer
 gender, pitch or accent from a face or a voice ID. Do not send TTS IDs as if they
 were a video model's voice selector. Per-line `acting` supplies the performance; room

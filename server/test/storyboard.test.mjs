@@ -604,6 +604,15 @@ describe('images and the video prompt follow the icon attributes', () => {
     recordShotImage(args, request);
     return request;
   };
+  it('a sheet panel missing from panels.json or disk stops the frame instead of being dropped', () => {
+    const { root, dir } = pictureBoard();
+    icons(dir);
+    const sheet = join(root, 'data/c/assets/characters/mina');
+    rmSync(join(sheet, 'back.png'));
+    assert.throws(() => shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'p', location: 'room' }), /character_panel_missing: mina has no back panel/);
+    writeFileSync(join(sheet, 'panels.json'), JSON.stringify({ panels: { face: { file: 'face.png' }, back: { file: 'back.png' } } }));
+    assert.throws(() => shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'p', location: 'room' }), /character_panel_missing: mina has no front panel/);
+  });
   it('a frame composes the place, then the sheet panels, after every shot has its icons', () => {
     const { root, dir } = pictureBoard();
     assert.throws(() => shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'p', location: 'room' }), /story_order.*no render route/);
