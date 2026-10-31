@@ -92,8 +92,10 @@ prompt, and MSR's own speech-and-effects soundtrack is the cut's audio. A speake
 voice sample is optional: when the speaker is subject 1 or 2 and the gateway accepts
 samples, the sample rides on that subject image; otherwise the prompt voices the speaker
 and the plan records a warning. A request that sends a sample to a gateway without sample
-support is a hard `msr_voice_unsupported` error. There is no external TTS lane for MSR;
-a cut without dialogue can use MSR or img2video. A character's default MSR references are
+support is a hard `msr_voice_unsupported` error. There is no external TTS lane for MSR,
+so its lines get no per-line TTS: `speech_manage` plans and binds an MSR shot as `native`
+(line revisions, no line audio) and an edited line marks the clip stale (2026-10-31).
+A cut without dialogue can use MSR or img2video. A character's default MSR references are
 its sheet panels — face close-up, headless front and headless back (2026-10-31): one
 character uses all three; two use each face, then each front; the background goes last.
 At most two characters take references; anyone else on screen is described in the action

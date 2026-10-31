@@ -290,7 +290,8 @@ stays unknown and receives a planning note; it does not become zero seconds.
 For the handoff call `speech_manage` with `{path, action: "plan_video", shotId,
 capabilities}`. The tool reads the whole stored shot including `performance`; do not select
 individual line IDs for this review or pass an invented shot-payload argument. Review its
-warnings and source/motion prompt against the scene.
+warnings and source/motion prompt against the scene. An MSR shot plans as `native`: the
+model voices its lines, so the storyboard plans no per-line TTS for it.
 A line-only plan cannot prove that the independent actions or listener reactions survived.
 
 Compare the resulting length with explicit user limits, verified publishing limits and

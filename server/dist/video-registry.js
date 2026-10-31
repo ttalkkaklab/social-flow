@@ -90,7 +90,10 @@ export function videoVoiceCapabilities(tool) {
         review: 'not_reviewed',
     };
 }
-export function speechVideoCapabilities(provider, model) {
+export function speechVideoCapabilities(provider, model, operation) {
+    // MSR voices the dialogue written in its prompt; no line audio goes in (2026-10-31).
+    if (provider === 'astra-genai' && operation === 'reference')
+        return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: 'MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio' };
     if (provider === 'astra-genai-desktop')
         return { provider, model, audioConditioning: true, lipSync: false, postLipSync: false, evidence: 'Gateway A2V reencodes supplied audio; timing/voice identity not guaranteed; installed model capabilities must be checked' };
     if (provider === 'astra')

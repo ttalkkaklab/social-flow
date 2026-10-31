@@ -92,7 +92,9 @@ export function videoVoiceCapabilities(tool: string) {
     review: 'not_reviewed',
   };
 }
-export function speechVideoCapabilities(provider: string, model: string) {
+export function speechVideoCapabilities(provider: string, model: string, operation?: string) {
+  // MSR voices the dialogue written in its prompt; no line audio goes in (2026-10-31).
+  if (provider === 'astra-genai' && operation === 'reference') return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: 'MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio' };
   if (provider === 'astra-genai-desktop') return { provider, model, audioConditioning: true, lipSync: false, postLipSync: false, evidence: 'Gateway A2V reencodes supplied audio; timing/voice identity not guaranteed; installed model capabilities must be checked' };
   if (provider === 'astra') return { provider, model, audioConditioning: true, lipSync: true, postLipSync: false, evidence: 'astra_audio2video adapter contract' };
   if (provider === 'veo' && (veo.VALID_VIDEO_MODELS as readonly string[]).includes(model))

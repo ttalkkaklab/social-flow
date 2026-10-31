@@ -138,6 +138,8 @@ const VIDEO_TEXT_POLICY = 'Keep the entire video image text-free: no subtitles, 
 function sceneVideoPrompt(performance, mode, scene = {}) {
   const route = !performance.some(event => event.kind !== 'action')
     ? 'This is a silent scene. Perform the ordered visible actions without invented speech or voiceover.'
+    : mode === 'native'
+    ? 'Speak each on_screen line aloud in its speaker\'s voice from the quoted words; no audio is supplied. Do not transcribe speech into the image.'
     : mode === 'audio_conditioned'
     ? 'Use the supplied audio as the sole source of spoken words. Synchronize visible mouths only during each on_screen speech interval; follow the delivery instruction for every beat. Do not transcribe speech into the image.'
     : mode === 'post_lipsync'
@@ -157,7 +159,9 @@ function sceneVideoPrompt(performance, mode, scene = {}) {
     }
     const acting = {...line.acting, ...(line.videoDirection ? {visual:line.videoDirection} : {})};
     const delivery = line.delivery || 'voiceover';
-    const mouth = delivery === 'on_screen'
+    const mouth = delivery === 'on_screen' && mode === 'native'
+      ? `Show this speaker physically saying "${line.text}"; every other visible mouth stays closed.`
+      : delivery === 'on_screen'
       ? 'Show this speaker physically speaking; synchronize only this speaker\'s mouth to their supplied audio during this interval using the selected synchronization route.'
       : delivery === 'off_screen'
         ? 'This speaker stays off screen. All visible mouths stay closed during this interval; show the planned listener reaction or action.'
@@ -166,7 +170,7 @@ function sceneVideoPrompt(performance, mode, scene = {}) {
       .map(key => `${key}: ${visualDirection(acting[key])}`);
     if (acting.tags?.length) fields.push(`vocal events: ${acting.tags.map(visualDirection).join(', ')}`);
     const timing = line.speechStartSeconds == null || line.speechEndSeconds == null
-      ? 'Use the measured speech interval once audio is attached.'
+      ? (mode === 'native' ? 'The model paces this line within the shot.' : 'Use the measured speech interval once audio is attached.')
       : `Speech interval ${line.speechStartSeconds}–${line.speechEndSeconds} seconds.`;
     return `Beat ${index + 1} (speaker: ${visualDirection(line.speaker || 'unspecified')}; delivery: ${delivery}): ${mouth} ${line.to ? 'Addressed to '+visualDirection(line.to)+'. Preserve this eyeline and the listener in the planned framing.' : ''} ${fields.join(' ')} ${timing} Anticipation ${line.leadInSeconds || 0} seconds; reaction ${line.tailOutSeconds || 0} seconds.`;
   });

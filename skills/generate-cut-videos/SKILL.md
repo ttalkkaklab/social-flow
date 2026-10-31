@@ -26,6 +26,8 @@ For an entirely still/HTML project, register its actual rendered motion output, 
 placeholder. Record files, durations and provenance; do not mark motion quality as passed.
 Complete video only after readable video streams exist. Stop before assembly and hand
 clips to review-cut-videos. Raw speech generation keeps its separate provenance policy.
+Bind a clip with on-screen dialogue through `speech_manage attach_video`; an MSR clip binds
+as `native`, with no line audio (shot-speech.md adapter layer).
 
 Read [shot image inputs](../storyboard/references/scenes-schema.md#shot-image-inputs).
 Use the args returned by video_plan: it maps authored start/end and video/both references,

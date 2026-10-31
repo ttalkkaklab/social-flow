@@ -90,6 +90,11 @@ with generator, voiceSettings (the actual arguments), generationSpeed, playbackS
 expectedText, lineIds and audioSha256. For a single line without reaction padding the bound
 line WAV can be used directly; a combined or padded scene WAV needs this receipt bound
 to its actual bytes. Attach generated line WAVs with `speech_manage`.
+A shot whose video model speaks its own dialogue (MSR, the `native` route in the
+[adapter table](#adapter-layer)) gets no line takes: the model voices the lines written in its
+prompt, and the speaker's pinned voice sample, made once per character, is its only speech
+input. Skip `plan_audio` and `attach_audio` for those lines and bind the generated clip with
+`attach_video`. Narration and the shots of other video routes keep their line takes.
 No scores, STT, paid reviewer request or human approval is needed. File existence, hash,
 voice-routing, duration and edit synchronization still matter. No pass score is invented.
 
@@ -171,7 +176,9 @@ action timeline; extra provider padding is allowed. Its measured length drives a
 so the checker does not require equality with the board's earlier duration estimate.
 
 Call `speech_manage` with `{path, action: "plan_video", shotId, capabilities}` to inspect
-the whole stored shot, including actions and addressees. Do not restrict that handoff to
+the whole stored shot, including actions and addressees. With a saved model snapshot the
+registry supplies the capabilities; pass `tool` when the shot's video tool differs from the
+saved default operation. Do not restrict that handoff to
 line IDs. A successful speech plan does not establish that the adapter can stage several
 visible speakers correctly; use its actual capabilities and inspect the resulting action.
 For `capabilities.provider: "astra"`, the plan reports `promptLength` with the actual and
@@ -298,16 +305,21 @@ trace as proof of natural acting. Normal production still has no automatic liste
 ## Adapter layer
 
 For the selected provider/model, resolve and record capabilities with evidence:
-`{provider, model, audioConditioning, lipSync, postLipSync, evidence}`.
+`{provider, model, audioConditioning, lipSync, postLipSync, nativeSpeech?, evidence}`.
 `plan_video` uses capabilities only:
 
 | Speech | Route | When speech changes |
 |---|---|---|
+| on_screen + nativeSpeech (MSR) | native | Regenerate the clip from the edited prompt; no line audio exists |
 | voiceover/off_screen | voiceover | Replace audio, retime subtitles/edit; keep suitable action footage |
 | on_screen + audioConditioning and lipSync | audio_conditioned | Regenerate affected animation from the final voice WAV |
 | on_screen + separate postLipSync | post_lipsync | Rerun the selected lip-sync adapter on affected footage |
 | on_screen + neither capability | unsupported | Select a suitable adapter; do not mute the character |
 
+A native-speech shot carries on-screen lines only; narration and off-screen speech go in a
+shot of their own. Its binding records each line's revision instead of an audio hash,
+`attach_video` sets `sound.audioSource:"video"` so the clip's soundtrack is the card audio,
+and a line edit marks the clip stale rather than asking for a take.
 Store the route in `visual.video.speechBinding` with line ids and audio hashes. Mark stale
 bindings after edits and clear `speechStatus:stale` only after the new media is generated and
 bound. A provider switch changes video generation, never the approved character voice or the

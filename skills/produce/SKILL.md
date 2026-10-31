@@ -763,6 +763,12 @@ or push a line into the next state.
 card's audio comes from the clips (§3.5) and `voice/` (§3.6). The style check already
 ran back in the storyboard.
 
+**An MSR shot's lines get no TTS take either** — MSR speaks the lines written in its prompt,
+and its soundtrack is the card audio. Bind its clip with `speech_manage attach_video` (the
+`native` route in [shot-speech.md](references/shot-speech.md#adapter-layer)). The speaker's
+voice sample is made once per character, not per shot. This section generates narration and
+the lines of shots on other video routes.
+
 **Run the style check before anything gets read aloud** — its findings are editing suggestions
 (rule 4). Narration passes by once with no rewind, and card text can't be fixed after publishing,
 so read the three surfaces before the TTS calls.

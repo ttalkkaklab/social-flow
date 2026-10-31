@@ -196,6 +196,18 @@ test('managed speech rejects forged adapter capability claims before media gener
  f.board.SB_DOC={characters:[{id:'hero',name:'Hero',tts:{engine:'gemini',voiceId:'Kore',language:'ko',speed:1}}]};f.save();
  assert.throws(()=>manageSpeech({path:path.join(f.episode,'storyboard'),action:'plan_video',shotId:'s1',capabilities:{provider:'veo',model:selection.model,audioConditioning:true,lipSync:true,postLipSync:false,evidence:'forged'}}),/disagree/);
 });
+test('managed speech plans an MSR shot as native speech; a named tool keeps its own route',async t=>{
+ const {manageSpeech}=await import('../dist/speech.js');
+ const f=fixture(t,{engine:'astra-genai',model:'ltx-2.5-22b-distilled',resolution:'1792x1024',operation:'reference'});
+ f.board.SCENES[0].narration=[{id:'line-1',speaker:'hero',delivery:'on_screen',tts:'Hello',sub:'Hello'}];
+ f.board.SB_DOC={characters:[{id:'hero',name:'Hero',tts:{engine:'gemini',voiceId:'Kore',language:'ko',speed:1}}]};f.save();
+ const plan=tool=>manageSpeech({path:path.join(f.episode,'storyboard'),action:'plan_video',shotId:'s1',tool}).plan;
+ assert.equal(plan().mode,'native');
+ assert.throws(()=>plan('astra_genai_audio2video'),/cannot synchronize/);
+ assert.throws(()=>plan('veo_text2video'),/model_selection_mismatch/);
+ const allFalse={provider:'astra-genai',model:'ltx-2.5-22b-distilled',audioConditioning:false,lipSync:false,postLipSync:false,evidence:'old caller'};
+ assert.throws(()=>manageSpeech({path:path.join(f.episode,'storyboard'),action:'plan_video',shotId:'s1',capabilities:allFalse}),/disagree/);
+});
 test('frame-based Seedance plans remain valid after schema normalization',async t=>{
  const f=fixture(t,{engine:'seedance',model:'seedance-1-0-pro-fast-251015',resolution:'720p'});
  const old=config.arkApiKey;config.arkApiKey='fixture';t.after(()=>config.arkApiKey=old);
