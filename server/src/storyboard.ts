@@ -1124,12 +1124,13 @@ export function recordShotImage(args: z.infer<typeof shotImageSchema>, request: 
 }
 
 // Step 5: the video prompt, written from the shot's icon attributes, lines and the author's English action.
+const MUSIC_WORD = /\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i;
 export const shotPromptSchema = z.object({
   path: outlinePath,
   id: shotIdSchema,
   action: nonEmpty.describe('What happens in the shot, in English: the subjects\' movement from the opening picture'),
   end: nonEmpty.optional().describe('The closing picture, in English'),
-  sound: nonEmpty.optional().describe('Ambient sound and effects, in English; the shot\'s lines come from shot_dialogue'),
+  sound: nonEmpty.optional().describe('Ambient sound and effects, in English; the shot\'s lines come from shot_dialogue. "no music" is added unless it names music'),
 }).strict();
 
 export function writeShotPrompt(args: z.infer<typeof shotPromptSchema>): ApplyResult & { prompt: string } {
@@ -1160,7 +1161,8 @@ export function writeShotPrompt(args: z.infer<typeof shotPromptSchema>): ApplyRe
     ...(msr ? [] : (shot.narration ?? []).filter((line) => line.delivery === 'on_screen' && line.tts).map((line) =>
       sentence(`${latin(String(castEntry(win, String(line.speaker))?.name ?? '')) || line.speaker} says: "${line.tts}"`))),
     frames.mode === 'first_last' ? sentence(`End on the given last frame${args.end ? ': ' + args.end : ''}`) : args.end ? sentence(`End on ${args.end}`) : '',
-    args.sound ? sentence(`Audio: ${args.sound}`) : '',
+    // The builder lays the episode bed under every cut; a clip that makes its own music doubles it.
+    sentence(`Audio: ${args.sound ? args.sound + (MUSIC_WORD.test(args.sound) ? '' : ', no music') : 'no music'}`),
   ].filter(Boolean).join(' ');
   const foreign = nonEnglishOutsideQuotes(prompt);
   if (foreign) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action, end and sound in English`);

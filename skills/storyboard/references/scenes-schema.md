@@ -2324,8 +2324,10 @@ window.MUSIC = {
     endingFadeSeconds: 2.2,
     silenceRampSeconds: 0.3
   },
-  base:  { prompt: "warm low strings under a calm explanation, leaves space for a spoken voiceover, no melody in the vocal frequency range", bpm: 88 },
-  tense: { prompt: "same strings with a low pulsing bass, tighter, still no melody in the vocal range", bpm: 120 },
+  base:  { prompt: "warm low strings under a calm explanation, leaves space for a spoken voiceover, no melody in the vocal frequency range", bpm: 88,
+           reason: "keeps the explanation calm until the price turns up" },
+  tense: { prompt: "same strings with a low pulsing bass, tighter, still no melody in the vocal range", bpm: 120,
+           reason: "the chase: one cue across scenes 4–6, building to the catch" },
   close: { asset: "reflect" }            // a channel asset instead of a generated cue
 };
 ```
@@ -2350,6 +2352,10 @@ with `prompts` to `music_generate_advanced`. Two cues that share their text and 
 weights and density move less at the crossfade than two written from scratch — that is how a body
 cue and its tenser variant come from one material. A cue carries `prompt` or `prompts`, not both;
 a cue with neither and no `asset` is an error (`check-scenes.js`).
+
+**`reason` is the spotting note** — one sentence on what the cue does for the story. It is
+optional, the review page shows it beside the cue name, and produce does not send it to the
+music model.
 
 **`base` is optional.** With only `{ tense: … }` the episode still opens on the channel's shared
 bed and switches at the first shot that asks for `tense`.
@@ -2459,6 +2465,30 @@ is refused on a 9:16 board** — that license is licensed for long-form only.
 - **A silence window mutes music only.** `scope:"music"` is the only value. Full digital silence
   would also erase narration and room tone, so it is not a storyboard field. Use `sound.drop:true`
   for the whole narrated shot and `sound.silence[]` for a shorter shot-relative window.
+
+**Placing cues on a story board (craft, 2026-10-31).** Film scoring gives each unit its own job:
+the episode and the sequence carry the theme and the arc, a beat inside a scene decides where a
+cue starts and stops, and the shot is where an accent lands. The sources are practitioner guides
+and glossaries ([research](../../../docs/research/2026-10-31-bgm-cue-units/index.html)), so read
+these as working practice, as in bgm-scoring §3. On a story-v2 board:
+
+- **One cue per `story_sequence` by default.** Write the `sound.cue` on the sequence's first
+  shot. A chase, montage or climax that runs across scenes stays on that one cue.
+- **Change or drop where the sequence's `question` turns.** That is the scene whose `turn` flips
+  it, on the shot where the turn becomes visible. A new place is not a new cue.
+- **Creep in on a beat inside a shot.** Change the cue on that shot and start `sound.musicGain`
+  low (−20 dB), reaching 0 dB at the beat's `atSeconds`.
+- **Pre-lap.** For the next scene's music to arrive early, put its cue on the last shot of the
+  outgoing scene.
+- **Leave unnoticed.** Start `sound.silence[]` where a loud effect (`sound.effects[].atSeconds`)
+  or a gap between lines covers the exit.
+- **Hit points.** A generated bed is not composed to picture, so there is no tempo map or click
+  track. An accent on a cut is an effect at the cut or a `musicGain` swell after the line.
+- **Keep model music out of clips.** `shot_prompt` closes the `Audio:` sentence with "no music"
+  unless the sound names music on purpose, such as a radio in the scene.
+
+The review page draws the cue lane under each sequence and scene heading and marks the shots
+that change, drop or empty the bed.
 
 ### Sound effects (`window.SFX` · `sound.sfx`)
 

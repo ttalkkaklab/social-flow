@@ -521,6 +521,7 @@
   .scene-band-kicker svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; }
   .scene-band-title { font-size: var(--t-scene); font-weight: 700; letter-spacing: -.01em; line-height: 1.4; color: var(--text); word-break: keep-all; }
   .scene-band-head .scene-turn { font-size: var(--t-cap); color: var(--muted); word-break: keep-all; }
+  .music-lane { font-size: var(--t-cap); font-weight: 600; color: var(--accent-ink); word-break: keep-all; }
   .scene-band-synopsis { max-width: 68ch; margin: 4px 0 0; font-size: var(--t-aux); line-height: 1.65; color: var(--muted); word-break: keep-all; }
   .scene-band-stats {
     display: flex; align-items: center; gap: var(--s3); flex: none; padding-top: 2px;
@@ -567,6 +568,7 @@
   .scene-beat.beat-body { color: var(--faint); }
   .scene-beat.beat-turn { color: var(--accent-ink); text-decoration: underline; }
   .scene-beat.beat-hooktype { color: var(--accent-ink); opacity: .8; }
+  .scene-beat.beat-music { letter-spacing: .02em; }
   /* Promise tags — a shot that opens or pays a loop, plants or collects, holds or bursts.
      Dashed so they read as editorial (SB_DOC.craft), not as a playback role. */
   .scene-beat.beat-promise {
@@ -1631,8 +1633,11 @@ window.STORYBOARD_READY = (async function () {
       feelAll: "feel · every shot",
       sizeUnknown: function (n) { return "size · " + n + " outside the list"; },
       musicBadge: function (tracks, drops) {
-        return "music · " + (tracks === null ? "one bed all the way" : tracks + (tracks === 1 ? " track" : " tracks")) +
+        return (tracks === null ? "one bed all the way" : tracks + (tracks === 1 ? " track" : " tracks")) +
                (drops ? " · drops out " + drops + "×" : ""); },
+      musicBed: "channel bed", musicDrop: "music out", musicSilence: "music gap",
+      musicCue: function (name) { return "music → " + name; },
+      musicLane: function (names, gaps) { return "♪ " + names.join(" → ") + (gaps ? " · " + gaps + (gaps === 1 ? " gap" : " gaps") : ""); },
       promiseBadge: function (n, plants, unpaid) {
         return "promises " + n + (plants ? " · plants " + plants : "") +
                (unpaid ? " · unpaid " + unpaid : " · all paid"); },
@@ -1809,7 +1814,7 @@ window.STORYBOARD_READY = (async function () {
       feelAllText: "every shot wrote what the viewer should feel",
       sizeUnknownText: function (n) { return " · " + n + " size values outside the list"; },
       shotGrammarNote: " — the feel first, then size · angle · camera (directing-grammar §5)",
-      cStatLabel: "Stat label", cRate: "Speech rate",
+      cStatLabel: "Stat label", cRate: "Speech rate", cMusic: "Music",
       rateAllRec: "filmed scenes 5~6 chars/s (4.5~6.5 allowed) · scenes 8~20s",
       rateMixed: "filmed scenes 5~6 chars/s · generated scenes against TTS 4.5 chars/s (measured per scene)",
       rateGen: function (cap) { return "against TTS 4.5 chars/s · scene cap " + cap + "s"; },
@@ -1987,8 +1992,11 @@ window.STORYBOARD_READY = (async function () {
       feelAll: "느낌 · 전 샷 적힘",
       sizeUnknown: function (n) { return "크기 · " + n + "개가 목록 밖"; },
       musicBadge: function (tracks, drops) {
-        return "음악 · " + (tracks === null ? "한 곡 깔기" : tracks + "곡") +
+        return (tracks === null ? "한 곡 깔기" : tracks + "곡") +
                (drops ? " · " + drops + "번 비움" : ""); },
+      musicBed: "채널 기본 곡", musicDrop: "음악 빠짐", musicSilence: "음악 비움",
+      musicCue: function (name) { return "음악 → " + name; },
+      musicLane: function (names, gaps) { return "♪ " + names.join(" → ") + (gaps ? " · 비움 " + gaps + "곳" : ""); },
       promiseBadge: function (n, plants, unpaid) {
         return "약속 " + n + (plants ? " · 떡밥 " + plants : "") +
                (unpaid ? " · 안 갚음 " + unpaid : " · 다 갚음"); },
@@ -2165,7 +2173,7 @@ window.STORYBOARD_READY = (async function () {
       feelAllText: "모든 샷이 보는 사람이 느낄 것을 적었다",
       sizeUnknownText: function (n) { return " · 크기 값 " + n + "개가 목록 밖"; },
       shotGrammarNote: " — 느낌이 먼저, 그다음 크기 · 각도 · 카메라 (directing-grammar §5)",
-      cStatLabel: "숫자 설명", cRate: "발화 속도",
+      cStatLabel: "숫자 설명", cRate: "발화 속도", cMusic: "음악",
       rateAllRec: "직접 말하는 씬 5~6자/초 (4.5~6.5 허용) · 씬 8~20초",
       rateMixed: "직접 말하는 씬 5~6자/초 · 생성 씬은 TTS 4.5자/초 기준 (씬마다 따로 잰다)",
       rateGen: function (cap) { return "TTS 4.5자/초 기준 · 씬 상한 " + cap + "초"; },
@@ -4605,6 +4613,23 @@ window.STORYBOARD_READY = (async function () {
   var stScenes = Array.isArray(ST.scenes) ? ST.scenes.filter(function (x) { return x && typeof x === "object"; }) : [];
   var stSeqs = Array.isArray(ST.sequences) ? ST.sequences.filter(function (q) { return q && typeof q === "object"; }) : [];
   var stScene = function (no) { return stScenes.filter(function (x) { return x.no === no; })[0]; };
+  /* Music lane — the cue each shot plays under (scenes-schema §music cues): a shot's sound.cue
+     changes the bed and later shots keep it. Display only; the check strip carries the warnings.
+     A board that names no cue, drop or silence is a one-bed episode and draws no lane. */
+  var cueAt = [], cueNow = MUSIC && MUSIC.base ? "base" : "";
+  var musicAuthored = SCENES.some(function (s) { var d = s.sound; return d && (d.cue || d.drop || (Array.isArray(d.silence) && d.silence.length)); });
+  SCENES.forEach(function (s, i) { if (s.sound && s.sound.cue) cueNow = s.sound.cue; cueAt[i] = cueNow; });
+  var musicLane = function (items) {
+    if (!musicAuthored) return "";
+    var names = [], gaps = 0;
+    items.forEach(function (it) {
+      var c = cueAt[it.i] || T.musicBed, d = it.s.sound;
+      if (names[names.length - 1] !== c) names.push(c);
+      if (d && (d.drop || (Array.isArray(d.silence) && d.silence.length))) gaps++;
+    });
+    var tip = names.map(function (n) { return MUSIC && MUSIC[n] && MUSIC[n].reason ? n + " — " + MUSIC[n].reason : ""; }).filter(Boolean).join("\n");
+    return '<span class="music-lane"' + (tip ? ' title="' + esc(tip) + '"' : "") + ">" + esc(T.musicLane(names, gaps)) + "</span>";
+  };
   var seqNo = 0, seqOpen = false;
   var seqHead = function (title, q, groups) {
     var shotsIn = groups.reduce(function (n, g) { return n + g.items.length; }, 0);
@@ -4615,6 +4640,7 @@ window.STORYBOARD_READY = (async function () {
       '<span class="seq-title">' + esc(title) + "</span>" +
       (q && q.purpose ? '<span class="seq-purpose">' + esc(q.purpose) + "</span>" : "") +
       (q && q.question ? '<span class="seq-question">' + esc(q.question) + (q.payoff ? ' <b>→ S#' + esc(String(q.payoff)) + "</b>" : "") + "</span>" : "") +
+      musicLane(groups.reduce(function (a, g) { return a.concat(g.items); }, [])) +
       "</span>" + '<span class="seq-stats">' + esc(T.seqStats(groups.length, shotsIn)) + "</span>" +
       '</summary><div class="seq-body">';
   };
@@ -4639,7 +4665,7 @@ window.STORYBOARD_READY = (async function () {
            '<span class="scene-band-main">' +
            (scPlace || (sc && sc.place) ? '<span class="scene-band-kicker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>' + esc(scPlace && scPlace.name || sc.place) + "</span>" : "") +
            '<span class="scene-band-title">' + esc(scTitle) + "</span>" +
-           (scTurn ? '<span class="scene-turn">' + esc(scTurn) + "</span>" : "") +
+           (scTurn ? '<span class="scene-turn">' + esc(scTurn) + "</span>" : "") + musicLane(grp.items) +
            (scSummary ? '<p class="scene-band-synopsis">' + esc(scSummary) + "</p>" : "") + "</span>" +
            '<span class="scene-band-stats">' + esc(T.shotsN(grp.items.length)) + (scLen !== null ? " · " + esc(durTxt(scLen)) : "") + "</span>" +
            '</summary><div class="scene-band-body">';
@@ -4737,6 +4763,11 @@ window.STORYBOARD_READY = (async function () {
     promiseTags[i].forEach(function (t) {
       h += '<span class="scene-beat beat-promise' + (t.cls ? " " + t.cls : "") + '">' + esc(t.text) + "</span>";
     });
+    // Music tag — this shot changes, drops or empties the bed (scenes-schema §music cues)
+    var mus = s.sound || {};
+    if (mus.cue) h += '<span class="scene-beat beat-music">' + esc(T.musicCue(mus.cue)) + "</span>";
+    if (mus.drop) h += '<span class="scene-beat beat-music">' + esc(T.musicDrop) + "</span>";
+    else if (Array.isArray(mus.silence) && mus.silence.length) h += '<span class="scene-beat beat-music">' + esc(T.musicSilence) + "</span>";
     var dur = Number.isFinite(s.duration) ? Math.round(s.duration * 10) / 10 : null;
     h += '<span class="scene-dur"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.8V8l2.2 1.4"/></svg>' + esc(T.sec(dur === null ? "?" : dur)) + "</span></div>";
     var directionAt = directionOrder.findIndex(function (o) { return o.i === i; });
@@ -4975,6 +5006,9 @@ window.STORYBOARD_READY = (async function () {
   }
   h += "<tr><th>" + esc(T.cRate) + "</th><td>" +
      esc(STORY_V2 ? T.contentTiming : allRec ? T.rateAllRec : hasRec ? T.rateMixed : T.rateGen(FMT.sceneMax)) + "</td></tr>";
+  var cueKeys = MUSIC ? Object.keys(MUSIC).filter(function (k) { return k !== "$mix"; }) : [];
+  h += "<tr><th>" + esc(T.cMusic) + "</th><td>" + esc(T.musicBadge(MUSIC ? cueKeys.length : null, dropCount)) +
+     cueKeys.map(function (k) { return MUSIC[k] && MUSIC[k].reason ? "<br><code>" + esc(k) + "</code> " + esc(MUSIC[k].reason) : ""; }).join("") + "</td></tr>";
   h += "<tr><th>" + esc(T.cTheme) + "</th><td>" + ["accent", "accent2", "ink"].map(function (k) {
     return '<span class="swatch" style="background:' + esc(THEME[k]) + '"></span><code>' + esc(THEME[k]) + "</code>"; }).join(" &nbsp; ") +
     " &nbsp; " + esc(T.cChannel) + "<code>" + esc(THEME.brand) + "</code></td></tr>";

@@ -168,6 +168,13 @@ shot's order: story, characters, then lines and icons. `production_workflow` com
 (`story_outline_required`). The guidance below shapes what those summaries
 and lines say.
 
+**Music spotting (guidance).** Once the lines are written and before `shot_prompt`, decide
+where the music changes. One bed under the whole episode is a complete answer. Otherwise write
+`window.MUSIC` cues, each with a one-sentence `reason`, and each changing shot's `sound` through
+`storyboard_apply`, following scenes-schema §Placing cues on a story board: one cue per sequence,
+a change or drop where the scene's `turn` flips the sequence's question. Nothing waits for this
+step and no tool refuses a board without it.
+
 For dialogue-led work and existing-story rewrites, read [causal dialogue and situational
 comedy](references/causal-dialogue.md). Check what triggers each consequential line, what
 the speaker can actually infer and what their response makes happen next. A rewrite

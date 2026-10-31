@@ -537,9 +537,12 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.throws(() => writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns.' }), /s0002 has no end image/);
     assert.match(make(dir, 's0002', 'end').inputs[0], /images\/s0002-start-v1\.png$/);
     const msr = writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns to the door.' }).prompt;
-    assert.match(msr, /^Medium shot, waist up, at eye level\. Camera: dolly in.*Mina turns to the door\.$/);
+    assert.match(msr, /^Medium shot, waist up, at eye level\. Camera: dolly in.*Mina turns to the door\. Audio: no music\.$/);
     const framed = writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', end: 'she smiles' }).prompt;
-    assert.equal(framed, 'Start from the given first frame. Mina looks up. Mina says: "안녕". End on the given last frame: she smiles.');
+    assert.equal(framed, 'Start from the given first frame. Mina looks up. Mina says: "안녕". End on the given last frame: she smiles. Audio: no music.');
+    assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', sound: 'rain on the window' }).prompt, /Audio: rain on the window, no music\.$/);
+    assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', sound: 'a radio plays a song' }).prompt, /Audio: a radio plays a song\.$/);
+    writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', end: 'she smiles' });
     assert.equal(readBoard(dir).win.SCENES[1].visual.video.prompt, framed);
     assert.throws(() => writeShotPrompt({ path: dir, id: 's0002', action: '미나가 웃는다' }), /video_prompt_language/);
   });
