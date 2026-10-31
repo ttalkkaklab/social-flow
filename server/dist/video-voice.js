@@ -5,6 +5,7 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { VIDEO_ADAPTERS } from './video-registry.js';
+import { nonEnglishOutsideQuotes } from './prompt-language.js';
 const load = createRequire(import.meta.url);
 const object = (value) => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const text = (value) => typeof value === 'string' ? value.trim() : '';
@@ -132,7 +133,6 @@ export function prepareVideoVoice(tool, input, context) {
     if (lane === 'none' && (native || onScreen))
         throw new Error(`voice_lane_required: ${tool} cannot keep a character's voice. Render this spoken cut with a reference adapter ` +
             `(astra_genai_msr, seedance_reference, fasth3_omni_reference) or an audio2video adapter${onScreen ? '' : ', or set generateAudio:false and keep the lines as TTS voiceover'}.`);
-    const limitedPromptLanguage = tool.startsWith('seedance_') && !String(args.model).includes('2-5');
     const reference = native && lane === 'reference';
     const strategy = supplied ? 'supplied_audio' : reference ? 'reference_voice' : 'external_tts';
     const warnings = [];
@@ -154,7 +154,8 @@ export function prepareVideoVoice(tool, input, context) {
         }
         const character = matches[0];
         const speaker = { speaker: id, name: text(character.name) || id, tts: object(character.tts), description: voiceDescription(character) };
-        const label = limitedPromptLanguage && /[가-힣]/.test(speaker.name) ? id : speaker.name;
+        // Video prompts are English: a non-Latin cast name falls back to the character id
+        const label = nonEnglishOutsideQuotes(speaker.name) ? id : speaker.name;
         if (reference && msr) {
             // A pinned sample rides on subject 1 or 2 when the gateway takes samples; otherwise the prompt voices the speaker.
             const { index, slot } = msrSubject(character, msrRefs, context);
@@ -205,8 +206,8 @@ export function prepareVideoVoice(tool, input, context) {
         }
         speakers.push(speaker);
         if (native && speaker.description && !(msr && speaker.audioIndex)) {
-            if (limitedPromptLanguage && /[가-힣]/.test(speaker.description))
-                warnings.push(`${id}: supply an English or Chinese translation of the pinned acoustic description in the authored prompt; this Seedance schema rejects Korean direction text. The original description stays in this plan.`);
+            if (nonEnglishOutsideQuotes(speaker.description))
+                warnings.push(`${id}: supply an English translation of the pinned acoustic description in the authored prompt; video prompts are English only. The original description stays in this plan.`);
             else
                 prompt.push(`Stable voice for ${label} (speaker ${id}): ${speaker.description}`);
         }

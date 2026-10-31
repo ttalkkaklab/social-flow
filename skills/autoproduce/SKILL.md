@@ -1,7 +1,7 @@
 ---
 name: autoproduce
 description: >
-  Builds or improves an episode through seven fixed production stages. Use when the
+  Builds or improves an episode in the story-first production order. Use when the
   user asks to "이 주제로 영상 하나 만들어", "자동으로 쇼츠 만들어", "make a short end to end",
   "기존 스토리보드 개선", or an authorized growth loop refills its queue. Develops complete causal scenes,
   plans shots and content-led timing, then produces the media within saved choices and
@@ -18,6 +18,7 @@ allowed-tools: ["mcp__social-flow__production_workflow", "mcp__plugin_social-flo
   "mcp__social-flow__mlx_image_generate", "mcp__plugin_social-flow_social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__plugin_social-flow_social-flow__mlx_image_edit",
   "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "mcp__social-flow__tts_generate", "mcp__plugin_social-flow_social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__plugin_social-flow_social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__sfx_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__sfx_elevenlabs_generate",
   "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices",
+  "mcp__social-flow__shot_image", "mcp__plugin_social-flow_social-flow__shot_image", "mcp__social-flow__shot_prompt", "mcp__plugin_social-flow_social-flow__shot_prompt", "mcp__social-flow__video_approve", "mcp__plugin_social-flow_social-flow__video_approve",
   "mcp__social-flow__video_catalog", "mcp__plugin_social-flow_social-flow__video_catalog", "mcp__social-flow__video_plan", "mcp__plugin_social-flow_social-flow__video_plan", "mcp__social-flow__video_execute", "mcp__plugin_social-flow_social-flow__video_execute", "mcp__social-flow__video_status", "mcp__plugin_social-flow_social-flow__video_status",
   "mcp__social-flow__music_generate_clip", "mcp__plugin_social-flow_social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate", "mcp__plugin_social-flow_social-flow__mlx_music_generate"]
 ---
@@ -56,54 +57,46 @@ authoring or spending ([setup report](references/unattended-lifecycle.md#setup-r
 it invents no choice. Pending SNS connections alone do not block local work.
 Use [model settings](../_shared/model-settings.md) and `capability_status` to check the saved
 adapters; do not silently switch provider or voice. Generated video goes through
-`video_catalog` → `video_plan` → `video_execute` under produce's routing contract, never a
-direct adapter call.
+`video_catalog` → `video_plan` → `video_approve` (the user's yes) → `video_execute` under
+produce's routing contract, never a direct adapter call.
 
 Prepare shared identities and export the [character sheets](../channel/references/character-identity.md#prepare-the-shared-sheet-before-episode-authoring)
 before text authoring. Follow [production order](../_shared/production-workflow.md):
-project setup and asset preparation, then the fixed context/camera/Blender/image/video
-stages and their independent reviews. Missing authorization blocks generation.
+project setup and asset preparation, the story, characters and lines, icon attributes,
+images, video prompts, then each shot's approved video. Missing authorization blocks generation.
 
 For growth-loop calls, read the calling platform's `growth-plan.md` and follow
 [unattended lifecycle](references/unattended-lifecycle.md) for channel locking, topic
 selection, duplicate checks, counters and queue scope. Human-invoked local drafting does
 not inherit a publishing schedule or automatic queue authorization.
 
-## Coordinate the fixed stage skills
+## Coordinate the steps
 
-Read [the fixed workflow](../_shared/production-workflow.md). Inspect production_workflow
-status and call the skill for the current stage; never reorder it based on confidence,
-cost, existing media, a good synopsis or a previous favorable score.
+Read [the production order](../_shared/production-workflow.md) (user directive 2026-10-31).
+Only the story order is enforced; checks come back once the quality is known.
 
-For new work, use storyboard for character preparation and observable text. For a supplied
-existing episode/storyboard path, import inspected preparation assets and preserve the
-existing story; do not start a replacement episode. Review-only scope stops at its requested
-stage and does not imply generation or publication authorization.
+1. Storyboard: the story (`story_sequence` → `story_scene` → `story_shot`), each shot's
+   characters and lines (`shot_characters` → `shot_dialogue`), then its icon attributes
+   (`shot_icons`). Prepare props and backgrounds with their images.
+2. Invoke [generate-cut-images](../generate-cut-images/SKILL.md): each shot's start image,
+   and the end image a `first_last` shot needs, with `shot_image`.
+3. Invoke [generate-cut-videos](../generate-cut-videos/SKILL.md): each video prompt with
+   `shot_prompt`, then each shot's video after the user's yes (`video_approve`), or after
+   they approve every shot.
 
-1. Invoke [review-context](../review-context/SKILL.md). The reviewer reconstructs the story
-   from audience-visible actions and speech without the author's explanation.
-2. Finish prop/background preparation from the reviewed text, then invoke
-   [review-camera](../review-camera/SKILL.md).
-3. Invoke [compose-blender](../compose-blender/SKILL.md).
-4. Invoke [generate-cut-images](../generate-cut-images/SKILL.md).
-5. Invoke [review-cut-images](../review-cut-images/SKILL.md) only when the user asked
-   for an image review; otherwise go straight to video (the server records the skip).
-6. Invoke [generate-cut-videos](../generate-cut-videos/SKILL.md).
-7. Invoke [review-cut-videos](../review-cut-videos/SKILL.md).
+[review-context](../review-context/SKILL.md), [review-camera](../review-camera/SKILL.md),
+[compose-blender](../compose-blender/SKILL.md), [review-cut-images](../review-cut-images/SKILL.md)
+and [review-cut-videos](../review-cut-videos/SKILL.md) run only when the user asks. For a
+supplied existing episode, regenerate it in this order; preserve its story when the user
+asks to. Enforce real spending/attempt limits. The coordinator never writes a reviewer's verdict.
 
-For failures, let the author repair the earliest affected stage and rerun invalidated
-stages with independent review. Preserve unchanged assets and the frozen rubric. Enforce
-real spending/attempt limits and the shared loop stopping condition. If required review,
-Blender or media input is unavailable, report the incomplete stage without substituting
-another workflow. The coordinator cannot write a passing verdict on a reviewer's behalf.
-
-After video_review, use produce for assembly, music, requested platform copy and final
+After the videos, use produce for assembly, music, requested platform copy and final
 delivery verification. Keep speech provenance without automatic speech-scoring/STT gates.
 Publishing remains a separate authorization. Preserve actual costs and failed reports.
 
 ## Reviews and explicit improvement loops
 
-Image review runs only when the user asks; other fixed cut reviews are required completion stages. Other optional reviews do not add approval gates. Do not manufacture
+Reviews run only when the user asks, and none of them gates a step. Do not manufacture
 scores, freeze stamps or media reviews. Do not invent a passing result to fill a growth queue. Readability, usable files, supported payloads, finite execution timing, concurrency,
 spending and publication authority remain real requirements.
 

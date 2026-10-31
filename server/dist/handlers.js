@@ -6,7 +6,7 @@ import { generateLyriaSong, generateElevenMusic } from './music-song-client.js';
 import { IMAGE_ADAPTERS, imageCatalog } from './image-registry.js';
 import { planImage, imagePlanSummary, executeImage, routeLegacyImage, imageStatus } from './image-routing.js';
 import { videoStatus } from './video-routing.js';
-import { planVideo, executeVideo, routeLegacyVideo } from './video-routing.js';
+import { planVideo, executeVideo, routeLegacyVideo, approveVideo } from './video-routing.js';
 import { VIDEO_ADAPTERS, videoCatalog } from './video-registry.js';
 import { routeSpeech, speechRouteSchema } from './tts-routing.js';
 import { hostReview } from './host-review.js';
@@ -1406,6 +1406,41 @@ export const ROUTES = {
         const r = storyboard.applyStoryboard(parseArgs(storyboard.storyboardApplySchema, args));
         return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
     },
+    story_sequence: async (args) => {
+        storyboard.contract();
+        const r = storyboard.writeStorySequences(parseArgs(storyboard.storySequenceSchema, args));
+        return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
+    },
+    story_scene: async (args) => {
+        storyboard.contract();
+        const r = storyboard.writeStoryScenes(parseArgs(storyboard.storySceneSchema, args));
+        return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
+    },
+    story_shot: async (args) => {
+        storyboard.contract();
+        const r = storyboard.writeStoryShots(parseArgs(storyboard.storyShotSchema, args));
+        return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
+    },
+    shot_characters: async (args) => {
+        storyboard.contract();
+        const r = storyboard.writeShotCharacters(parseArgs(storyboard.shotCharactersSchema, args));
+        return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
+    },
+    shot_dialogue: async (args) => {
+        storyboard.contract();
+        const r = storyboard.writeShotDialogue(parseArgs(storyboard.shotDialogueSchema, args));
+        return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
+    },
+    shot_icons: async (args) => {
+        storyboard.contract();
+        const r = storyboard.writeShotIcons(parseArgs(storyboard.shotIconsSchema, args));
+        return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
+    },
+    shot_prompt: async (args) => {
+        storyboard.contract();
+        const r = storyboard.writeShotPrompt(parseArgs(storyboard.shotPromptSchema, args));
+        return text(storyboard.renderApply(r) + '\n\nVideo prompt (visual.video.prompt):\n' + r.prompt, r.findings.some((f) => f.level === 'bad'));
+    },
     storyboard_check: async (args) => {
         storyboard.contract();
         const r = storyboard.checkStoryboard(parseArgs(storyboard.storyboardCheckSchema, args));
@@ -1446,6 +1481,7 @@ ROUTES.video_plan = async (args) => {
     return text(JSON.stringify(planVideo(args), null, 2));
 };
 ROUTES.video_execute = args => executeVideo(args, dispatchVideo);
+ROUTES.video_approve = async (args) => text(JSON.stringify(approveVideo(args), null, 2));
 ROUTES.video_status = async (args) => text(JSON.stringify(await videoStatus(args), null, 2));
 // Existing tools are compatibility entrypoints into the same image service.
 const imageDispatch = Object.fromEntries(Object.keys(IMAGE_ADAPTERS).map(name => [name, ROUTES[name]]));
@@ -1456,6 +1492,25 @@ ROUTES.image_catalog = async () => text(JSON.stringify(imageCatalog(), null, 2))
 ROUTES.image_plan = async (args) => text(JSON.stringify(imagePlanSummary(planImage(args)), null, 2));
 ROUTES.image_execute = args => executeImage(args, dispatchImage);
 ROUTES.image_status = async (args) => text(JSON.stringify(await imageStatus(args), null, 2));
+// shot_image plans and runs one frame through the image service, then records it on the board.
+ROUTES.shot_image = async (args) => {
+    storyboard.contract();
+    const input = parseArgs(storyboard.shotImageSchema, args);
+    const request = storyboard.shotImageRequest(input);
+    const plan = planImage({ directory: request.episode, assetId: request.assetId, requestId: request.requestId, operation: request.operation,
+        ...(request.tool ? { tool: request.tool } : {}), ...(input.reserveUsd !== undefined ? { reserveUsd: input.reserveUsd } : {}), args: request.args });
+    if (plan.execution === 'server') {
+        const result = await executeImage({ directory: plan.directory, planId: plan.id }, dispatchImage);
+        if (result.isError)
+            return result;
+    }
+    const r = storyboard.recordShotImage(input, request);
+    const lines = [storyboard.renderApply(r), '', `${input.frame} image: ${request.file}`, 'Inputs, in order:',
+        ...request.inputs.map((file, i) => `  Image ${i + 1}: ${file}`), '', 'Prompt:', request.prompt];
+    if (plan.execution === 'host_handoff')
+        lines.push('', 'host_handoff: generate this picture with the selected host image tool from the inputs above, in order, and save it to the image path.');
+    return text(lines.join('\n'), r.findings.some((f) => f.level === 'bad'));
+};
 // Music adapters cannot bypass saved selection or reservations in a configured workspace.
 const musicDispatch = Object.fromEntries(Object.keys(MUSIC_ADAPTERS).map(name => [name, ROUTES[name]]));
 const dispatchMusic = (name, args) => musicDispatch[name](args);

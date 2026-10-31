@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { manageWorkflow, requireWorkflow, requireReviewedVideos } from './production-workflow.js';
+import { manageWorkflow } from './production-workflow.js';
 import { isManagedMusicCall } from './music-registry.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -129,18 +129,6 @@ process.once('SIGTERM', gracefulShutdown);
 async function main() {
   if (process.argv[2] === '--workflow') {
     console.log(JSON.stringify(manageWorkflow(JSON.parse(readFinalRequest(process.argv[3], 'utf8'))), null, 2));
-    return;
-  }
-  if (process.argv[2] === '--workflow-check-delivery') {
-    requireWorkflow(process.argv[3], 'delivery');
-    if (process.argv[4]) {
-      const manifest = JSON.parse(readFinalRequest(process.argv[4], 'utf8'));
-      requireReviewedVideos(process.argv[3], manifest.videoSha256 ?? {});
-    }
-    return;
-  }
-  if (process.argv[2] === '--workflow-check-video') {
-    requireWorkflow(process.argv[3], 'video');
     return;
   }
   if (process.argv[2] === '--review-final') {

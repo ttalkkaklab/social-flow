@@ -33,9 +33,11 @@ observable scenes and before source-image prompts. Explicit content-only work de
 2. Choose shot size, angle, camera distance and depth/focus together. Compare a held
    frame with a motivated move: approach a withheld reaction, follow a travelling subject,
    pull back to reveal a relationship, or shift focus from evidence to its observer.
-3. Record the choice in `shot.techniques` with a scene-specific reason. Write the actual
-   starting picture, motion pace/path and ending picture in `visual.camera`; keep
-   `shot.size`, `shot.angle` and `shot.depth` consistent. For rack focus name both subjects
+3. Set the choice with `shot_icons` — size, angle, camera move or still effect, focus,
+   depth, render route and frame plan, each with a scene-specific reason; it writes
+   `shot.techniques` and keeps `visual.camera.movement` consistent. Then write the actual
+   starting picture, motion pace/path and ending picture in `visual.camera` through
+   `storyboard_apply`. For rack focus name both subjects
    and the focus order in `framing`/`end`, including the action cue or focus timing.
    `shot.techniques[].reason` and `camera.purpose` are review context; their prose is
    not copied into provider prompts. A static camera can still direct attention through focus/blocking.

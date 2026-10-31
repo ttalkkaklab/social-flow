@@ -12,6 +12,7 @@ import { readBoard, serializeBoard } from './storyboard.js';
 import { actingSchema, compileActing, type SpeechActing } from './speech-acting.js';
 import { resolveTtsModel } from './tts-models.js';
 import { ASTRA_VIDEO_MAX_PROMPT_CHARS } from './astra-video-client.js';
+import { nonEnglishOutsideQuotes } from './prompt-language.js';
 
 const actingContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/scene-acting.js') as { resolvedStyle(voice: unknown, acting: unknown): string | undefined; directionSupport(voice: unknown, acting: unknown): { stylePrompt?: string; supported: boolean; warnings: string[] }; speechRevisionPayload(line: unknown, voice: unknown): unknown; scenePerformancePayload(scene: unknown): unknown; VIDEO_TEXT_POLICY: string; sceneVideoPrompt(performance: unknown[], mode: string, scene?: unknown): string; planScenePerformance(scene: unknown, measureAudio: (line: Line) => number | null): {performance: Record<string, unknown>[]; durationSeconds: number | null; timing: string; warnings: string[]} };
 export { actingSchema } from './speech-acting.js';
@@ -93,6 +94,8 @@ export function speechVideoPlan(input: Line[] | {narration?: Line[]; [key: strin
     ? {characters:videoPrompt.length,maxCharacters:ASTRA_VIDEO_MAX_PROMPT_CHARS,exceeded:videoPrompt.length > ASTRA_VIDEO_MAX_PROMPT_CHARS}
     : undefined;
   const warnings = [...timeline.warnings];
+  const foreign = nonEnglishOutsideQuotes(videoPrompt);
+  if (foreign) warnings.push(`videoPrompt carries authored text in another language ("${foreign}"); write the video prompt in English before video_plan, which refuses it. Only quoted dialogue keeps the video's language.`);
   if (promptLength?.exceeded) warnings.push(`ASTRA video prompt has ${promptLength.characters} characters; the adapter limit is ${promptLength.maxCharacters}. Shorten repeated descriptions or split at a natural action boundary while preserving necessary actions. The plan is unchanged.`);
   const performancePayload = actingContract().scenePerformancePayload(scene) as Record<string, unknown>;
   const { performance: _performance, narration: _narration, ...reuseContext } = performancePayload;

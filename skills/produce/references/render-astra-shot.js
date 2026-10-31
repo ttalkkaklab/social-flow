@@ -44,9 +44,6 @@ async function render(target, options) {
   const record = out + '.render.json';
   // Reserve before preparing audio: concurrent invocations must not submit the same candidate.
   reserveCandidate(out);
-  const workflow = await import(pathToFileURL(path.resolve(__dirname,'../../../server/dist/astra-shot-runtime.bundle.js')).href);
-  workflow.requireWorkflow(target, 'video');
-
   const input = {...options};
   if (options.audioPath) {
     input.audioPath = out + '.stereo.wav';

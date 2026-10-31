@@ -120,21 +120,25 @@ export function prepareVideoImages(tool, input, shot, episode) {
     if (frames.mode === 'reference') {
         if (VIDEO_ADAPTERS[tool]?.operation !== 'reference')
             throw new Error('image_plan_unsupported: reference mode needs a reference adapter');
-        if (tool === 'astra_genai_msr' && videoRefs.some((ref, i) => ref.role === 'background' && i !== videoRefs.length - 1))
-            throw new Error('image_plan_invalid: MSR background must be last so prompt image indices match the gateway');
-        const paths = videoRefs.map(ref => bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, true));
-        if (tool === 'astra_genai_msr')
-            put('references', videoRefs.map((ref, i) => ({ imagePath: paths[i], ...(ref.role === 'background' ? { background: true } : {}) })));
+        // MSR's background slot carries the shot's start image — its characters, place and props composed by the
+        // image tool (user directive 2026-10-31); a plain background reference only conditioned that image.
+        const msr = tool === 'astra_genai_msr', sent = msr ? videoRefs.filter(ref => ref.role !== 'background') : videoRefs;
+        const paths = sent.map(ref => bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, true));
+        const start = msr && frames.start ? bind('start', frames.start, 'start', 'video', 'Opening picture', true) : undefined;
+        if (msr)
+            put('references', [...paths.map(imagePath => ({ imagePath })), ...(start ? [{ imagePath: start, background: true }] : [])]);
         else
             put('referenceImagePaths', paths);
-        if (tool === 'astra_genai_msr') {
+        if (msr) {
             // Two principal characters take references (user directive 2026-10-31); the model draws anyone else.
-            const characters = new Set(videoRefs.flatMap((ref, i) => ref.role === 'character' ? [characterKey(paths[i])] : []));
+            const characters = new Set(sent.flatMap((ref, i) => ref.role === 'character' ? [characterKey(paths[i])] : []));
             if (characters.size > 2)
                 throw new Error(`msr_character_limit: references show ${characters.size} characters; reference two principal characters and describe anyone else in the action`);
             // The model card describes each reference first ("Image 1: ..."), then the action.
-            const binding = msrPanelBinding(paths, videoRefs);
-            args.prompt = [...videoRefs.map((ref, i) => `Image ${i + 1}: ${ref.role}, ${ref.purpose}`), ...(binding ? [binding] : []), '', String(args.prompt ?? '')].join('\n');
+            const binding = msrPanelBinding(paths, sent);
+            args.prompt = [...sent.map((ref, i) => `Image ${i + 1}: ${ref.role}, ${ref.purpose}`),
+                ...(start ? [`Image ${sent.length + 1}: the opening picture, the characters, place and props as the shot begins`] : []),
+                ...(binding ? [binding] : []), '', String(args.prompt ?? '')].join('\n');
         }
         else {
             const guidance = videoRefs.map((ref, i) => `${tool === 'fasth3_omni_reference' ? '<Picture ' + (i + 1) + '>' : 'Image ' + (i + 1)} (${ref.id}, ${ref.role}): ${ref.purpose}`).join('\n');

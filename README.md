@@ -1,8 +1,8 @@
-Production follows an enforced order: **project setup → characters (text + images) →
-text storyboard (content, dialogue, narration) → props (text + images) → backgrounds
-(text + images) → image storyboard → video**. `production_workflow` verifies files and
-hashes at each boundary; missing or changed prerequisites block managed generation.
-See [scope, migration and host-tool limits](skills/_shared/production-workflow.md).
+Production follows this order: **project setup → characters (text + images) → story →
+each shot's characters and lines → icon attributes → props and backgrounds (text + images)
+→ each shot's start (and end) image → video prompt → each shot's video after the user's
+approval**. Only the story order is enforced (user directive, 2026-10-31); reviews and
+Blender compositions run on request. See [the production order](skills/_shared/production-workflow.md).
 
 # social-flow
 
@@ -645,7 +645,7 @@ social-flow/
 ├── server/                      # internal MCP server (TypeScript, stdio) — 128 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions — 128 tools, including voice auditions and opt-in acting review
+│       ├── tools.ts             # tool definitions — 137 tools, including voice auditions and opt-in acting review
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -747,7 +747,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Image generation | `image_local_generate` | Z-Image Turbo on-device via mflux (**no API key, no network, no billing — a $0 choice for the saved image model**; initial image setup recommends ASTRA GenAI; local mflux is an explicit alternative. Needs Apple Silicon + `uv tool install --python 3.12 mflux`; first call downloads 31GB of weights. No text inside images — Korean jamo break up) |
 | Image generation | `mlx_image_generate` / `mlx_image_edit` | MLX Core / mlx-serve on loopback (**no vendor bill**. Optional local lane — initial image setup recommends ASTRA GenAI. Inspect actual Hangul. Model-specific edit/variation/alpha contracts apply. Fail closed if :11234 is down; this plugin never launches the app. `brew install --cask mlx-core`) |
 | Image generation | `gpt_image_text2img` / `gpt_image_img2img` | OpenAI GPT Image (OPENAI_API_KEY — **saved selection takes precedence**: model-dependent sizes, up to 16 references, mask inpainting, usage receipts; GPT Image 2 transparent output is preview) |
-| Video routing | `video_catalog` / `video_plan` / `video_execute` / `video_status` | Saved model selection, adapter validation, atomic episode budget reservations and durable request receipts. [Routing contract](skills/_shared/video-routing.md). A spoken cut needs a voice lane — `reference` (`astra_genai_msr`, `seedance_reference`, `fasth3_omni_reference` take a per-character voice sample) or `supplied` (the audio2video tools animate a pinned TTS track); on any other adapter `video_plan` refuses it with `voice_lane_required`, while narration over a non-speaking picture runs anywhere. Veo, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31 because none takes a voice reference: a saved choice of one reports `migration_required`, and their existing clips stay reusable. |
+| Video routing | `video_catalog` / `video_plan` / `video_approve` / `video_execute` / `video_status` | Saved model selection, adapter validation, atomic episode budget reservations and durable request receipts. Each shot's plan runs only after the user's yes (`video_approve`), or their approval of every shot (`auto:true`). [Routing contract](skills/_shared/video-routing.md). A spoken cut needs a voice lane — `reference` (`astra_genai_msr`, `seedance_reference`, `fasth3_omni_reference` take a per-character voice sample) or `supplied` (the audio2video tools animate a pinned TTS track); on any other adapter `video_plan` refuses it with `voice_lane_required`, while narration over a non-speaking picture runs anywhere. Veo, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31 because none takes a voice reference: a saved choice of one reports `migration_required`, and their existing clips stay reusable. |
 | Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Dreamina Seedance 2.x (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images plus reference audio — a character's fixed voice (`referenceAudioPaths`) — plus reference video (`referenceVideoPaths`): an optional 3D previz as `Video 1`, the vendor's clay-model reference — a generated cut may pre-render in Blender or three.js first (user directive 2026-09-11, optional since 2026-10-18), so the camera path and timing land as planned; a local clip is served through `MEDIA_UPLOAD_URL` or a cloudflared quick tunnel for the life of the task. Audio can be turned off. Seedance 2.x rejects real human faces, so photoreal real-person sources go to an LTX lane. Every generated cut uses the saved video model and resolution (`PRODUCTION.videoModel`, from `.social-flow/models.json`); a per-cut change is an explicit user exception in `PRODUCTION.modelSettings.overrides`. The storyboard forecasts that model's cost. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | Video references | `fasth3_omni_reference` | FastH3 Omni via MLX-Serve: image/video/audio references, eight steps, video with sound. [Setup and adapter contract](docs/fasth3-omni.md) |
 | Video generation | `ltx_video_generate` | MLX Core / mlx-serve (24fps rgb8 muxed to mp4 with ffmpeg. Default 768×1280, RAM-capped at 800MB decoded RGB. Not the default path and not on the Seedance face-policy table. Pack install, request grid and measured render times: [LTX 2.5 runbook](docs/mlx-ltx-2.5.md)) |
@@ -775,7 +775,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Growth review | `threads_draft_create` / `threads_review_submit` | Persist drafts and quote-grounded voice/purpose/flow reviews; no model API calls |
 | Publish | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` / `youtube_update` | Direct platform API calls — **exposed only for platforms with a credential file**, except `youtube_update`, which is always listed and errors without a token; it edits title/description/tags/visibility of an already-uploaded video and is the only way an upload goes public (`youtube_publish` starts `private`) |
 | Comment inbox | `sns_comment_inbox` / `sns_comment_reply` / `sns_comment_moderate` | Cross-platform normalized inbox · replies · hiding (no deletes). Inbox and replies cover all 4 platforms; hiding excludes YouTube (its API only offers held-for-review, which means something else) |
-| Storyboard | `storyboard_read` / `storyboard_apply` / `storyboard_check` / `scenario_check` | The episode board as sequences → scenes → shots (`window.STRUCTURE` beside the flat `SCENES` produce reads), plus the scenario input contract. `read` returns the tree at four levels; `apply` writes or patches the board and refuses to write past a violation; `storyboard_check` runs the structure rules plus the full `check-scenes.js` contract; `scenario_check` runs S1–S12 on `candidates/` or `scenario.md` and returns the checker JSON. Local files only — the board rules live in [structure-contract.js](skills/storyboard/references/structure-contract.js), shared with the checker and approval page |
+| Storyboard | `story_sequence` / `story_scene` / `story_shot` / `shot_characters` / `shot_dialogue` / `shot_icons` / `shot_image` / `shot_prompt` / `storyboard_read` / `storyboard_apply` / `storyboard_check` / `scenario_check` | A new board is written in order: sequences → scenes → one-sentence shot stories, then each shot's characters → each character's lines, then the icon-row attributes, then each shot's start (and first_last end) image composed from its sheet panels, place and props, then its English video prompt (`story_order` refuses a layer before its parent). The episode board as sequences → scenes → shots (`window.STRUCTURE` beside the flat `SCENES` produce reads), plus the scenario input contract. `read` returns the tree at four levels; `apply` writes or patches the board and refuses only an unreadable board or a story-order violation; `storyboard_check` runs the structure rules plus the full `check-scenes.js` contract; `scenario_check` runs S1–S12 on `candidates/` or `scenario.md` and returns the checker JSON. Local files only — the board rules live in [structure-contract.js](skills/storyboard/references/structure-contract.js), shared with the checker and approval page |
 | Capability | `capability_status` | What this machine has configured, grouped by capability with an "N of M" count, plus the env var that would unlock each missing provider. Call it before planning anything that spends money — otherwise a missing key only surfaces when the call fails, after the plan was built around it. Reports configuration, not reachability |
 | Check | `sns_account_check` | Batch /me check across tokens (token values never shown) |
 | Growth insights | `threads_insights` / `threads_search` | Threads insights (account/post metrics) + public keyword search — for grow-threads (`threads_manage_insights` · `threads_keyword_search` scopes) |
@@ -1137,26 +1137,22 @@ exists but its cast member's storyboard reference is empty, naming the character
 slot, source file and field to fix. These are project-data diagnostics, not evidence
 that the plugin created the project's incorrect code or settings.
 
-## Fixed cut workflow and existing-board improvement
+## Production order and on-request reviews
 
-Cut production uses seven separate skills, coordinated by autoproduce and enforced by
-production_workflow: review-context -> review-camera -> compose-blender ->
-generate-cut-images -> review-cut-images -> generate-cut-videos -> review-cut-videos.
-review-cut-images runs only when the user asks; otherwise `begin video` records
-image_review as skipped over the current image hashes.
-Character/prop/background sheets remain preparation assets. Required Blender still
-compositions are separate from optional animated video previz. Reviews are independent,
-file-hash-bound and require no unresolved corrections; missing review cannot become pass.
-Other reviews, readable artifacts and generation budgets remain required.
+Checks were removed for speed (user directive, 2026-10-31): only the story order is
+enforced, and checks come back once the quality is known. An episode goes story
+(`story_sequence` → `story_scene` → `story_shot`) → each shot's characters and lines
+(`shot_characters` → `shot_dialogue`) → icon attributes (`shot_icons`) → props and
+backgrounds → each shot's start image, and the end image a first_last shot needs
+(`shot_image`, generate-cut-images) → video prompt (`shot_prompt`) → each shot's video
+after the user's yes (`video_plan` → `video_approve` → `video_execute`, generate-cut-videos).
+`video_approve {auto:true}` records the user's approval of every shot.
 
-Use `/social-flow:review-context <episode-or-storyboard-path>` to improve an existing
-story from an unbriefed viewer's perspective and stop before camera work. Use
-`/social-flow:review-camera <path>` for direction after context review, or
-`/social-flow:autoproduce <path>` with an explicit end-to-end improvement request.
-All seven stage skills accept an existing episode path. Unchanged media is reused;
-a review request never authorizes paid regeneration or publishing. See
-[the fixed workflow](skills/_shared/production-workflow.md) for all stage skills,
-receipt fields, migration, rewind and capability limits.
+review-context, review-camera, compose-blender, review-cut-images and review-cut-videos
+run only when the user asks, and accept an existing episode path; a review request never
+authorizes paid regeneration or publishing. `production_workflow` is an optional progress
+record. Spending limits, generation authorization and adapter input validation stay. See
+[the production order](skills/_shared/production-workflow.md).
 
 ### Shot image input planning
 

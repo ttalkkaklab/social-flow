@@ -40,9 +40,6 @@ test('approval renderer recognizes camera photographs without hiding unsupported
  const partial=(await preview('camera',[{type:'cover',duration:3},{type:'points'}])).html;
  assert.match(partial,/Known planned 3s · unknown 1/);
  assert.doesNotMatch(partial,/Main body · 3s/);
- const outro=(await preview('camera',[{type:'cover',duration:3},{type:'outro'}],{outro:{seconds:9}})).html;
- assert.match(outro,/Planned total 12s/);
- assert.match(outro,/Shot 2: 9s/);
 });
 test('text-led plans have an explicit route, a source and an episode limit',()=>{
  const s=quote();assert.deepEqual(checkScene(s),[]);

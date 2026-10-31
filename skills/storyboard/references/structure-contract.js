@@ -1189,7 +1189,79 @@
       q.scenes.forEach(no => { if (!sceneNos.has(no)) bad('structure', 'sequence references unknown scene ' + no); });
     });
     shots.forEach((s,i) => { if (s && s.scene !== undefined && !sceneNos.has(s.scene)) bad('shot ' + (i+1), 'scene reference does not exist'); });
+    // A board started with story_sequence is written sequence → scene → shot story, then each
+    // shot's characters, then its lines and icon attributes (user directive 2026-10-31). Older
+    // boards keep their contract; production_workflow checks the story when text_storyboard completes.
+    if (win.STORY?.authoring === 'story-first') {
+      const owned = new Set(st.sequences.flatMap(q => q && Array.isArray(q.scenes) ? q.scenes : []));
+      st.scenes.forEach(sc => {
+        if (!sc || !posInt(sc.no)) return;
+        if (!owned.has(sc.no)) bad('scene ' + sc.no, 'story_order: belongs to no sequence — write it with story_scene');
+        if (!text(sc.summary)) bad('scene ' + sc.no, 'story_order: no summary — write the scene story with story_scene');
+      });
+      shots.forEach((s,i) => {
+        if (!s || ['broll','outro'].includes(s.type)) return;
+        const where = 'shot ' + (i+1), cast = castOf(s), lines = Array.isArray(s.narration) ? s.narration : [];
+        if (s.scene === undefined) bad(where, 'story_order: no scene — write the shot story with story_shot');
+        if (!text(s.summary)) bad(where, 'story_order: no summary — write the shot story with story_shot');
+        if (!cast && (lines.length || hasIcons(s)))
+          bad(where, 'story_order: ' + (lines.length ? 'lines' : 'icon attributes') + ' before characters — set the shot\'s characters with shot_characters');
+        if (cast) lines.forEach(l => {
+          if (l && l.delivery === 'on_screen' && l.speaker && cast.indexOf(l.speaker) === -1)
+            bad(where, 'story_order: ' + l.speaker + ' speaks on screen but is not among the shot\'s characters');
+        });
+      });
+    }
     return out;
+  }
+  /** What the review's icon row shows: render route, size, angle, camera move and focus, depth, frame plan. */
+  function hasIcons(s) {
+    const p = s.shot || {};
+    return !!(p.render || p.size || p.angle || p.depth || (Array.isArray(p.techniques) && p.techniques.length) || (s.visual && s.visual.frames));
+  }
+  /** A shot's characters — visual.character, or a legacy visual.characters list; undefined until set. */
+  function castOf(s) {
+    const v = s && s.visual || {};
+    const list = 'character' in v ? (v.character == null ? [] : [].concat(v.character)) : Array.isArray(v.characters) ? v.characters : undefined;
+    return list && list.map(e => typeof e === 'string' ? e : e && e.id).filter(text);
+  }
+  /** What the story outline still lacks: a sequence without scenes, a scene without a sequence, summary or shot, a shot without its story. */
+  function outlineGaps(win) {
+    const st = win && win.STRUCTURE;
+    if (!st || !Array.isArray(st.sequences) || !st.sequences.length) return ['no sequence'];
+    const shots = (Array.isArray(win.SCENES) ? win.SCENES : []).filter(s => s && !['broll','outro'].includes(s.type));
+    const owned = new Set(st.sequences.flatMap(q => q && Array.isArray(q.scenes) ? q.scenes : []));
+    const gaps = st.sequences.filter(q => !q || !Array.isArray(q.scenes) || !q.scenes.length).map(q => 'sequence ' + (q && q.id) + ' has no scene');
+    (Array.isArray(st.scenes) ? st.scenes : []).forEach(sc => {
+      if (!sc) return;
+      if (!owned.has(sc.no)) gaps.push('scene ' + sc.no + ' belongs to no sequence');
+      if (!text(sc.summary)) gaps.push('scene ' + sc.no + ' has no summary');
+      if (!shots.some(s => s.scene === sc.no)) gaps.push('scene ' + sc.no + ' has no shot');
+    });
+    shots.forEach(s => { if (s.scene === undefined || !text(s.summary)) gaps.push('shot ' + (s.id || '?') + ' has no story'); });
+    return gaps;
+  }
+  function castGaps(win) {
+    return (Array.isArray(win && win.SCENES) ? win.SCENES : [])
+      .filter(s => s && !['broll','outro'].includes(s.type) && !castOf(s)).map(s => 'shot ' + (s.id || '?') + ' has no characters');
+  }
+  // A picture route draws its shot from a generated start image (and an end image when first_last).
+  const imageRoute = s => ['still_camera', 'generated_video'].includes(s.shot && s.shot.render && s.shot.render.mode);
+  /** Shots still waiting for icon attributes: a render route, and for a picture route its size, angle and frame plan. */
+  function iconGaps(win) {
+    return (Array.isArray(win && win.SCENES) ? win.SCENES : []).filter(s => s && !['broll','outro'].includes(s.type)).flatMap(s => {
+      const p = s.shot || {}, frames = s.visual && s.visual.frames;
+      if (!(p.render && p.render.mode)) return ['shot ' + (s.id || '?') + ' has no render route'];
+      return imageRoute(s) && !(p.size && p.angle && frames && frames.mode) ? ['shot ' + (s.id || '?') + ' has no size, angle or frame plan'] : [];
+    });
+  }
+  /** Picture-route shots still waiting for their start image, or the end image a first_last plan needs. */
+  function imageGaps(win) {
+    return (Array.isArray(win && win.SCENES) ? win.SCENES : []).filter(s => s && !['broll','outro'].includes(s.type) && imageRoute(s)).flatMap(s => {
+      const frames = s.visual && s.visual.frames || {};
+      return !text(frames.start) ? ['shot ' + (s.id || '?') + ' has no start image']
+        : frames.mode === 'first_last' && !text(frames.end) ? ['shot ' + (s.id || '?') + ' has no end image'] : [];
+    });
   }
   function guidedCheck(win, opts) {
     const blockers = executionCheck(win);
@@ -1199,7 +1271,7 @@
   const PRODUCTION_MODES = ['full_video','video_80','video_50','video_30','video_lt10','no_video'];
   const api = { VERSION, COMPOSITION_SCHEMA, validateComposition, compositionNeeded, checkCompositions, compositionText, DEPTH_SCHEMA, validateDepth, depthNeeded, checkDepths, depthText, EYELINE_SCHEMA, validateEyeline, checkEyelines, eyelineNeeded, eyelineText, VOCAB: { SIZES, ANGLES, TYPES, BEATS, INFO_TYPES, SHARE_TYPES, HOOK_TYPES, HOOK_FORMS, ARCS,
                                   RENDER_MODES, PRODUCTION_MODES, CHARGES_OPEN, CHARGES_CLOSE, TRANSITION_RE },
-                check, executionCheck, guidedCheck, sync, outline, slugOf, ownerOf };
+                check, executionCheck, guidedCheck, castOf, outlineGaps, castGaps, iconGaps, imageGaps, sync, outline, slugOf, ownerOf };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.STRUCTURE_CONTRACT = api;
 })(typeof window === 'object' ? window : globalThis);

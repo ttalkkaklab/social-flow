@@ -1,6 +1,6 @@
 import { buildNativeImageBody, recoverNativeImage } from './astra-genai-native-image.js';
 import { GenaiRequestError } from './astra-genai-client.js';
-import { requireCompositionReference, requireWorkflow, workflowRevision, workflowEpisode } from './production-workflow.js';
+import { workflowEpisode } from './production-workflow.js';
 import * as fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -82,7 +82,6 @@ function bindSelection(tool, input, selection) {
 export function planImage(raw) {
     gate('image_plan');
     const input = imagePlanSchema.parse(raw);
-    requireWorkflow(input.directory, 'image', input.assetId);
     const context = imageContext(input.directory, input.assetId);
     const { selection } = context;
     let tool = input.tool;
@@ -122,8 +121,6 @@ export function planImage(raw) {
         if (!withinDirectory(context.directory, outputFile))
             throw new Error('image_output_outside_directory');
     }
-    requireWorkflow(input.directory, 'image', input.assetId, outputFile);
-    requireCompositionReference(input.directory, input.assetId, args, outputFile);
     const inputs = selection.engine === 'host' ? {} : inputFiles(args, context.directory);
     if (selection.engine === 'astra-genai-native')
         buildNativeImageBody(args, tool === 'astra_genai_image_edit');
@@ -132,7 +129,7 @@ export function planImage(raw) {
     if (outputFile && Object.hasOwn(inputs, outputFile))
         throw new Error('image_output_overwrites_input');
     const quote = imageQuote(selection.engine, selection.model, input.reserveUsd);
-    const body = { workflowRevision: workflowRevision(input.directory), version: 1, directory: context.directory, assetId: input.assetId, requestId: input.requestId,
+    const body = { version: 1, directory: context.directory, assetId: input.assetId, requestId: input.requestId,
         tool: tool, args, sourceArgs: input.args, selection, source: context.source, contextRevision: context.revision,
         inputs, ...(outputFile ? { outputFile } : {}), quote, execution: selection.engine === 'host' ? 'host_handoff' : 'server' };
     const plan = { ...body, id: routingHash(body) };
@@ -157,10 +154,6 @@ export async function executeImage(raw, dispatch) {
     const { id, ...body } = plan;
     if (id !== input.planId || routingHash(body) !== id || plan.directory !== directory)
         throw new Error('image_plan_invalid');
-    requireWorkflow(directory, 'image', plan.assetId, plan.outputFile);
-    requireCompositionReference(directory, plan.assetId, plan.args, plan.outputFile);
-    if (plan.workflowRevision !== workflowRevision(directory))
-        throw new Error('workflow_plan_stale: prepare a new image plan');
     if (plan.execution === 'host_handoff')
         throw new Error('host_handoff_required: call the selected host tool, never substitute an API');
     gate(plan.tool);

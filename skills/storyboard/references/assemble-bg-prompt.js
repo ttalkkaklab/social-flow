@@ -46,8 +46,8 @@
  *       # speech" is the established wording) and, on seedance routes, the vendor's
  *       # artifact classes (subtitles·text·logo·watermark·bgm — 2.0 guide templates
  *       # them). A seedance route takes two more rules:
- *       # **the body carries no Korean** (Chinese or English only; Korean lives inside
- *       # the quotes of a dialogue line, or the shot routes to seedance-2.5) and
+ *       # **the body carries no Korean** (English only; Korean lives inside the
+ *       # quotes of a dialogue line) and
  *       # **--locks is required** — the image lane closes with a consistency lock, which
  *       # is also the only place an exclusion can go on an engine with no negativePrompt
  *       # argument. --with-space prepends the From-the-camera sentence
@@ -188,15 +188,15 @@ function timingHits(text, engine) {
   return hits;
 }
 
-// ── The two rules only the Seedance lane has ──
-// Language: the prompt body reads Chinese or English. dreamina-seedance-2-5 is the one model
-// that takes Korean; elsewhere Korean belongs **inside the quotes of a dialogue line**. So Hangul outside quotes fails a seedance route here, and
+// ── Prompt language (every engine) and the Seedance consistency lock ──
+// Language: every video prompt is English (2026-10-31); Korean belongs only **inside the quotes
+// of a dialogue line**. So Hangul outside quotes fails a seedance route here, and
 // seedance-client.ts refuses the same call at the boundary.
 const QUOTED_RE = /"[^"]*"|“[^”]*”|「[^」]*」/g;
 const HANGUL_RE = /[가-힣]+(?:[ \t]+[가-힣]+)*/;
 function isSeedance(engine) { return typeof engine === "string" && engine.indexOf("seedance") === 0; }
 function hangulHits(text, engine) {
-  if (!text || !isSeedance(engine) || engine === "seedance-2.5") return [];
+  if (!text) return [];   // every engine: video prompts are English
   const m = String(text).replace(QUOTED_RE, " ").match(HANGUL_RE);
   return m ? [m[0]] : [];
 }
@@ -574,9 +574,9 @@ function selftest() {
   eq("clip: Korean inside a dialogue quote passes",
     clipAssemble({ camera: camA, engine: "seedance", motion: "the man says \"딸깍\" once",
       locks: "the notepad stays identical" }).hanHits.length, 0);
-  eq("clip: seedance-2.5 reads Korean",
+  eq("clip: Korean in the body is caught on seedance-2.5 too",
     clipAssemble({ camera: camA, engine: "seedance-2.5", motion: "컵에서 김이 오른다",
-      locks: "the notepad stays identical" }).hanHits.length, 0);
+      locks: "the notepad stays identical" }).hanHits.length, 1);
   eq("clip: a seedance clip with no lock is caught",
     clipAssemble({ camera: camA, engine: "seedance", motion: "steam curling off the cup" }).lockMissing, true);
 
@@ -710,7 +710,7 @@ function main(argv) {
     r.hits.forEach(h => { console.error("banned: \"" + h.match + "\" — " + h.why); bad++; });
     r.negHits.forEach(h => { console.error("banned: \"" + h + "\" — negative directive in the body; re-describe the scene and close with positive locks"); bad++; });
     r.timeHits.forEach(h => { console.error("banned: " + h); bad++; });
-    r.hanHits.forEach(h => { console.error("banned: Korean in the body (\"" + h + "\") — a seedance prompt reads Chinese or English; Korean goes inside the quotes of a dialogue line, or the shot routes to seedance-2.5"); bad++; });
+    r.hanHits.forEach(h => { console.error("banned: Korean in the body (\"" + h + "\") — video prompts are English; Korean goes inside the quotes of a dialogue line"); bad++; });
     if (r.lockMissing) {
       console.error("no consistency lock — a seedance clip closes with the sentence that says what holds in every frame " +
         "(\"the subject stays exactly consistent with the input frame; appearance, proportions and materials hold\"), " +

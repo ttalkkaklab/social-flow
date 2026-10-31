@@ -312,6 +312,7 @@ window.STRUCTURE = {
     event: "리더가 셋을 소집한다",           // the one thing that happens — one subject, one verb
     charge: { open: "-", close: "+" },     // the value at the open and at the close
     turn: "혼자 감당하던 일이 셋으로 갈라진다",   // what flipped, in other words than the event
+    summary: "리더가 혼자 지던 일을 셋에게 나누고, 셋이 처음 한자리에 모인다",   // the scene's story in one or two sentences; the scene header shows it
     out: "그런데 셋이 같은 기억을 갖고 있을까요"  // the last sentence the scene's last shot says, verbatim
   }]
 };
@@ -850,8 +851,10 @@ means no extra conditioning). Keep the number of images tied to visible requirem
 not the model's maximum slot count. MSR (`astra_genai_msr`, `frames.mode:"reference"`) is
 the exception: each of at most two characters defaults to its sheet panels — face close-up,
 headless front, headless back for one; both faces, then both fronts for two — with
-`use:"video"` or `"both"` and the background last
-([GenAI MSR](../../_shared/astra-genai.md#msr-and-v2-video)). An MSR
+`use:"video"` or `"both"`, and the shot's start image rides in the background slot while
+the plain place picture stays `use:"image"` (user directive 2026-10-31;
+[GenAI MSR](../../_shared/astra-genai.md#msr-and-v2-video)). `shot_image` writes these
+references, `frames.start` and `bg`. An MSR
 reference's `purpose` becomes its `Image N:` description in the prompt, so write what the
 image shows (who, clothing, materials) rather than an instruction, and leave out framing
 words such as close-up: MSR turns them into shots.
@@ -902,10 +905,8 @@ roles, use, dimensions, byte count, MIME type, hashes and `submitted` (planned a
 inclusion). Host plans return an unverified mapping handoff and `submitted:false`;
 the caller must verify the real host schema and preserve every intended input.
 
-Register the primary image as workflow `entry.image` and every other frame/reference
-as `entry.images[]` under the same cut ID. Completion decodes and hashes the whole
-inventory; image review covers it. A structured video plan refuses unreviewed files.
-Changed images or image plans invalidate saved video plans before provider dispatch.
+Changed images or image plans invalidate saved video plans before provider dispatch, and
+a new plan needs the user's approval again (`video_approve`) unless they approved every shot.
 
 ### ASTRA intermediate contact frames
 
@@ -971,6 +972,7 @@ and `camera-slide-template.html`; its image and effect parameters come from scen
 | Field | Required | Description |
 |---|---|---|
 | `id` | assigned by `storyboard_apply` | Stable shot identity such as `s0007`. Preserve it; do not change it by hand. Address edits by it — `storyboard_apply` `shotsById` · `insertShots.afterId` · `removeShotIds` — rather than by position, which shifts with every insert |
+| `summary` | recommended | One sentence: the story this shot tells. The storyboard's 스토리 tab shows it; without it the tab reads "스토리 없음" |
 | `type` | ✅ | `cover` \| `points` \| `quote` \| `broll` \| `outro` — the role (`hooking` is also accepted as a type, but write `beat: "hooking"` on a `points`/`quote` shot instead, §hooking) |
 | `narration` | ✅ (except `broll`, `outro`) | Segment array `[{tts, sub}, ...]` — one sentence = one segment = one reveal |
 | `visual` | ✅ | The visual plan object (below) |
@@ -1071,7 +1073,8 @@ Optional `acting: {direction?: string, tags?: string[]}` records per-line perfor
 keep its bare tags separate from spoken words and subtitles. See
 [acting prompts](../../produce/references/acting-prompts.md).
 
-New boards set `SB_DOC.speechPlanVersion:1`. The array includes both narration and character
+`shot_dialogue` writes these lines once the shot's characters are set; an `on_screen` speaker
+must be one of them. New boards set `SB_DOC.speechPlanVersion:1`. The array includes both narration and character
 dialogue in spoken order. Each entry requires unique stable `id`, explicit character `speaker`
 and `delivery: "voiceover" | "on_screen" | "off_screen"`. Narrator is a character with pinned
 TTS settings. Omitted speakers are a legacy import convention only. Example:
@@ -2171,6 +2174,8 @@ character: [                         // an entry may carry its jurisdiction inst
   { id: "claude", scope: "appears only in the last second, and its face never transfers to anyone else" }
 ]
 ```
+
+`shot_characters` writes this field in the storyboard's second step, after every shot story.
 
 **Two principal characters per shot (user directive, 2026-10-31).** `visual.character` lists at
 most two ids; `check-scenes.js` rejects a third (`[character-limit]`) in draft and full checks.

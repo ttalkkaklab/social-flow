@@ -44,7 +44,7 @@ test('offline export and LLM read ship the same catalogue without rewriting lega
     assert.deepEqual(saved.entries,catalog.entries);
     const context={window:{}};runInNewContext(readFileSync(join(dir,'film-techniques.js'),'utf8'),context);
     assert.equal(context.window.FILM_TECHNIQUES.VERSION,catalog.VERSION);
-    assert.match(readFileSync(join(dir,'storyboard.html'),'utf8'),/FILM_TECHNIQUES.tiles/);
+    assert.match(readFileSync(join(dir,'storyboard.html'),'utf8'),/FILM_TECHNIQUES.selected/);
     const response=readStoryboard({path:dir,level:'full',includeContext:true,includeTechniques:true});
     assert.equal(response.techniqueCatalog.entries.length,catalog.entries.length);
     assert.deepEqual(response.techniqueCatalog.selections[0].techniques,[{id:'framing.ms',reason:'Show upper-body action'}]);

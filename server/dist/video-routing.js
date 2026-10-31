@@ -1,7 +1,6 @@
 import { buildFasth3Body, fasth3OmniSchema } from './fasth3-omni.js';
 import { localVideoStrategy } from './local-video-models.js';
 import { desktopVideoStatus } from './astra-genai-desktop.js';
-import { requireReviewedImages, requireWorkflow, workflowRevision } from './production-workflow.js';
 import * as fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
@@ -18,8 +17,9 @@ import { atomicJson, videoTransaction } from './video-state.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
 import { videoEvents } from './video-events.js';
 import { getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema, genaiMsrVoiceReferences, refreshGenaiMsrVoice } from './astra-genai-video.js';
-import { hasStructuredImages, prepareVideoImages } from './video-image-inputs.js';
+import { prepareVideoImages } from './video-image-inputs.js';
 import { prepareVideoVoice } from './video-voice.js';
+import { nonEnglishOutsideQuotes } from './prompt-language.js';
 const load = createRequire(import.meta.url);
 const shared = fileURLToPath(new URL('../../skills/_shared/video-selection.js', import.meta.url));
 const modelSettings = fileURLToPath(new URL('../../skills/_shared/model-settings.js', import.meta.url));
@@ -135,10 +135,12 @@ export function checkVideoEnvironment(tool) {
 }
 export function planVideo(raw) {
     const input = videoPlanSchema.parse(raw);
-    requireWorkflow(input.episode, 'video', input.shotId);
     const context = routingContext(input.episode, input.shotId);
     const { selection } = context;
     requireSupportedSelection(selection);
+    // shot_prompt writes the shot's video prompt; a call that names none sends it.
+    const authored = context.shot.visual?.video?.prompt;
+    const callArgs = input.args.prompt === undefined && typeof authored === 'string' ? { ...input.args, prompt: authored } : input.args;
     // A saved default operation (an LTX project saves 'reference', i.e. MSR) applies when the call names neither.
     const operation = input.operation ?? (input.tool ? undefined : selection.operation);
     const tool = input.tool || Object.entries(VIDEO_ADAPTERS).find(([name, a]) => a.engine === selection.engine && a.operation === operation && (a.engine !== 'mlx' || !selection.model || localVideoStrategy(name)?.acceptsModel(selection.model)))?.[0];
@@ -147,11 +149,9 @@ export function planVideo(raw) {
     if (selection.engine === 'host') {
         if (input.tool)
             throw new Error('model_selection_mismatch: host has no server adapter');
-        const images = prepareVideoImages('host_external', input.args, context.shot, context.episode);
-        if (hasStructuredImages(context.shot))
-            requireReviewedImages(context.episode, (images.imageBindings ?? []).map(binding => binding.path));
-        const body = { workflowRevision: workflowRevision(input.episode), version: 1, episode: context.episode, shotId: input.shotId, requestId: input.requestId,
-            tool: 'host_external', args: input.args, ...(images.imageBindings ? { imageBindings: images.imageBindings, imageHandoff: images.imageHandoff } : {}), selection, source: context.source, contextRevision: context.revision,
+        const images = prepareVideoImages('host_external', callArgs, context.shot, context.episode);
+        const body = { version: 1, episode: context.episode, shotId: input.shotId, requestId: input.requestId,
+            tool: 'host_external', args: callArgs, ...(images.imageBindings ? { imageBindings: images.imageBindings, imageHandoff: images.imageHandoff } : {}), selection, source: context.source, contextRevision: context.revision,
             inputs: Object.fromEntries((images.imageBindings ?? []).map(binding => [binding.path, binding.sha256])), quote: { reserveUsd: 0, estimatedUsd: 0, revision: 'host-allowance-v1', basis: 'External host allowance; limits and actual tool schema must be checked by host; not API enforcement' }, execution: 'host_handoff' };
         const plan = { ...body, id: hash(body) };
         atomicJson(path.join(context.episode, '.work/video-routing/plans', plan.id + '.json'), plan);
@@ -159,11 +159,12 @@ export function planVideo(raw) {
     }
     if (!tool)
         throw new Error('Selected deployment has no adapter for this operation');
-    const images = prepareVideoImages(tool, bindSelection(tool, input.args, selection), context.shot, context.episode);
-    if (hasStructuredImages(context.shot))
-        requireReviewedImages(context.episode, (images.imageBindings ?? []).map(binding => binding.path));
+    const images = prepareVideoImages(tool, bindSelection(tool, callArgs, selection), context.shot, context.episode);
     const voice = prepareVideoVoice(tool, images.args, { ...context, msrVoice: genaiMsrVoiceReferences() });
     const args = parseVideoArgs(tool, voice.args);
+    const foreign = typeof args.prompt === 'string' ? nonEnglishOutsideQuotes(args.prompt) : null;
+    if (foreign)
+        throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`);
     const output = canonical(path.resolve(context.episode, typeof args.outputPath === 'string' ? args.outputPath : '.work/video'));
     if (!within(context.episode, output))
         throw new Error('Video output must stay inside the selected episode');
@@ -185,7 +186,7 @@ export function planVideo(raw) {
             throw new Error('model_selection_mismatch: retake inherits source dimensions; select the source resolution');
     }
     const quote = quoteVideo(tool, args);
-    const body = { workflowRevision: workflowRevision(input.episode), version: 1, episode: context.episode, shotId: input.shotId, requestId: input.requestId, tool, args,
+    const body = { version: 1, episode: context.episode, shotId: input.shotId, requestId: input.requestId, tool, args,
         ...(images.imageBindings ? { imageBindings: images.imageBindings } : {}),
         sourceArgs: input.args, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
         selection, source: context.source, contextRevision: context.revision, inputs, quote, execution: 'server' };
@@ -210,6 +211,31 @@ function authorization(context) {
     return { maxUsd: z.number().finite().nonnegative().parse(p.videoBudgetUsd), maxConcurrent: 1,
         maxAttempts: z.number().int().min(1).max(5).parse(p.maxAttempts) };
 }
+// Each shot's video waits for the user's yes to its plan, unless they approved every shot (user directive 2026-10-31).
+export const videoApproveSchema = z.object({
+    episode: z.string().min(1),
+    planIds: z.array(z.string().regex(/^[a-f0-9]{64}$/)).min(1).optional().describe('Video plans the user approved after seeing each shot\'s prompt, images and cost'),
+    auto: z.boolean().optional().describe('true: the user approves every shot\'s video from now on; false: ask before each shot again'),
+    request: z.string().trim().min(1).describe('The user\'s own words that gave this approval'),
+}).strict().refine(input => input.planIds !== undefined || input.auto !== undefined, 'name planIds or auto');
+const approvalsFile = (episode) => path.join(episode, '.work/video-routing/approvals.json');
+function readApprovals(episode) {
+    return fs.existsSync(approvalsFile(episode)) ? JSON.parse(fs.readFileSync(approvalsFile(episode), 'utf8')) : { plans: {} };
+}
+export function approveVideo(raw) {
+    const input = videoApproveSchema.parse(raw), episode = fs.realpathSync(input.episode);
+    const approvals = readApprovals(episode), at = new Date().toISOString();
+    if (input.auto)
+        approvals.auto = { request: input.request, at };
+    else if (input.auto === false)
+        delete approvals.auto;
+    for (const id of input.planIds ?? []) {
+        const plan = JSON.parse(fs.readFileSync(path.join(episode, '.work/video-routing/plans', id + '.json'), 'utf8'));
+        approvals.plans[id] = { shotId: plan.shotId, requestId: plan.requestId, request: input.request, at };
+    }
+    atomicJson(approvalsFile(episode), approvals);
+    return approvals;
+}
 export async function executeVideo(raw, dispatch) {
     const request = videoExecuteSchema.parse(raw), episode = fs.realpathSync(request.episode);
     const plan = JSON.parse(fs.readFileSync(path.join(episode, '.work/video-routing/plans', request.planId + '.json'), 'utf8'));
@@ -218,9 +244,10 @@ export async function executeVideo(raw, dispatch) {
         throw new Error('Invalid video plan');
     if (plan.execution === 'host_handoff')
         throw new Error('host_handoff_required: use the selected host CLI; no API substitution');
-    requireWorkflow(episode, 'video', plan.shotId);
-    if (plan.workflowRevision !== workflowRevision(episode))
-        throw new Error('workflow_plan_stale: prepare a new video plan');
+    const approvals = readApprovals(episode);
+    if (!approvals.auto && !approvals.plans[id])
+        throw new Error(`video_approval_required: show the user shot ${plan.shotId}'s prompt, images and cost, ` +
+            `then record their yes with video_approve {planIds:["${id}"]}, or auto:true once they approve every shot`);
     const context = routingContext(episode, plan.shotId);
     if (context.revision !== plan.contextRevision)
         throw new Error('video_plan_stale: selection or authorization changed');
@@ -349,7 +376,6 @@ export async function routeLegacyVideo(tool, raw, dispatch) {
         return executeVideo({ episode: plan.episode, planId: plan.id }, dispatch);
     }
     const output = canonical(path.resolve(typeof args.outputPath === 'string' ? args.outputPath : process.cwd()));
-    requireWorkflow(output, 'video');
     let dir = output;
     for (;;) {
         if (fs.existsSync(path.join(dir, '.social-flow/models.json')) && CHANNEL_ASSET_RE.test(path.relative(dir, output).split(path.sep).join('/')))
