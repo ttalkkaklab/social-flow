@@ -1,5 +1,5 @@
 /**
- * OpenAI GPT Image generation client — ported from the fect-mcp-server gpt-image module.
+ * OpenAI GPT Image generation client.
  *
  * Uses the official `openai` SDK (v6).
  * - images.generate (text-to-image)
@@ -18,12 +18,10 @@
  */
 import { z } from 'zod';
 import { requireOpenAiKey } from './config.js';
-import { GPT_IMAGE_MODELS, gptImageFamily, assertImageModelAvailable } from './image-models.js';
+import { GPT_IMAGE_MODELS, gptImageContract, assertImageModelAvailable } from './image-models.js';
 // See image-models.ts for dated capabilities and retirement dates. No automatic replacement.
 export const VALID_GPT_IMAGE_MODELS = GPT_IMAGE_MODELS;
 const DEFAULT_MODEL = 'gpt-image-2';
-// Only gpt-image-2 supports arbitrary resolutions (WIDTHxHEIGHT).
-const GPT_IMAGE_FLEXIBLE_SIZE_MODELS = ['gpt-image-2'];
 // Standard size presets supported by every GPT Image model.
 export const GPT_IMAGE_SIZE_PRESETS = [
     'auto',
@@ -67,7 +65,7 @@ function validateSizeAgainstModel(model, size, ctx) {
     const match = WH_SIZE_RE.exec(size);
     if (!match)
         return; // already rejected by the field schema refine
-    if (!GPT_IMAGE_FLEXIBLE_SIZE_MODELS.includes(gptImageFamily(model))) {
+    if (!gptImageContract(model)?.flexibleSize) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ['size'],
@@ -105,7 +103,7 @@ function validateSizeAgainstModel(model, size, ctx) {
  * - gpt-image-2 transparency is available in preview; availability is provider-controlled.
  * - transparent is only possible with png/webp output, which support transparency (not jpeg).
  */
-function validateBackground(model, background, outputFormat, ctx) {
+function validateBackground(background, outputFormat, ctx) {
     if (background !== 'transparent')
         return;
     if (outputFormat === 'jpeg') {
@@ -129,7 +127,7 @@ export const text2ImageSchema = z
 })
     .superRefine((data, ctx) => {
     validateSizeAgainstModel(data.model, data.size, ctx);
-    validateBackground(data.model, data.background, data.outputFormat, ctx);
+    validateBackground(data.background, data.outputFormat, ctx);
 });
 // Image-to-Image (edit / reference composition) request schema (POST /v1/images/edits)
 // Note: from openai SDK v6, images.edit also supports output_format / input_fidelity.
@@ -152,24 +150,25 @@ export const img2ImgSchema = z
 })
     .superRefine((data, ctx) => {
     validateSizeAgainstModel(data.model, data.size, ctx);
-    validateBackground(data.model, data.background, data.outputFormat, ctx);
-    if (data.inputFidelity) {
-        if (data.model === 'gpt-image-1-mini' && data.inputFidelity !== 'low') {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                path: ['inputFidelity'],
-                message: 'gpt-image-1-mini supports only low inputFidelity. Use gpt-image-1 / gpt-image-1.5.',
-            });
-        }
-        else if (gptImageFamily(data.model) === 'gpt-image-2') {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                path: ['inputFidelity'],
-                message: 'gpt-image-2 always runs at high fidelity and does not accept the inputFidelity parameter. Omit the parameter.',
-            });
-        }
+    validateBackground(data.background, data.outputFormat, ctx);
+    // Allowed fidelity values come from the dated model contract (empty: the parameter is not accepted).
+    const allowed = gptImageContract(data.model)?.fidelity ?? [];
+    if (data.inputFidelity && !allowed.includes(data.inputFidelity)) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['inputFidelity'],
+            message: allowed.length
+                ? `${data.model} accepts inputFidelity ${allowed.join('/')} only.`
+                : `${data.model} does not accept inputFidelity (fixed high fidelity). Omit the parameter.`,
+        });
     }
 });
+/** Same rule as the GenAI transport: an explicit 4xx answer (except timeout/conflict) is final. */
+function failure(error, mimeType, prompt, model) {
+    const status = error?.status;
+    const terminal = typeof status === 'number' && status >= 400 && status < 500 && ![408, 409, 425].includes(status);
+    return { success: false, base64: '', mimeType, prompt, model, error: error instanceof Error ? error.message : String(error), terminal };
+}
 // outputFormat → MIME mapping
 function formatToMime(format) {
     switch (format) {
@@ -221,12 +220,7 @@ export async function generateFromText(request) {
         });
     }
     catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        return {
-            success: false, base64: '', mimeType: responseMime,
-            prompt: request.prompt, model,
-            error: errorMessage,
-        };
+        return failure(error, responseMime, request.prompt, model);
     }
 }
 /** Edit/compose from reference images + a prompt (POST /v1/images/edits) */
@@ -270,12 +264,7 @@ export async function generateFromImage(request) {
         });
     }
     catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        return {
-            success: false, base64: '', mimeType: responseMime,
-            prompt: request.prompt, model,
-            error: errorMessage,
-        };
+        return failure(error, responseMime, request.prompt, model);
     }
 }
 /** Extract the first image's base64 from an OpenAI response */

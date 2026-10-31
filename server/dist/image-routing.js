@@ -207,11 +207,20 @@ export async function executeImage(raw, dispatch) {
             Object.assign(state.jobs[plan.requestId], { usage: receipt?.usage, providerId: receipt?.requestId,
                 spentUsd: imageUsageUsd(plan.selection.model || '', receipt?.usage), updatedAt: new Date().toISOString() });
         });
-        if (result.isError)
+        if (result.isError) {
+            // An adapter that marks its failure terminal has nothing left running at the provider.
+            providerCompleted = result.terminal === true;
             throw new Error('image_adapter_failed: ' + JSON.stringify(result.content));
+        }
         providerCompleted = true;
         if (!plan.outputFile)
             throw new Error('image_output_missing');
+        // A billed response whose local save failed still carries its bytes; keep the paid image.
+        const returned = result.content.find(item => item.type === 'image');
+        if (returned?.type === 'image' && !fs.existsSync(plan.outputFile)) {
+            fs.mkdirSync(path.dirname(plan.outputFile), { recursive: true });
+            fs.writeFileSync(plan.outputFile, Buffer.from(returned.data, 'base64'), { flag: 'wx' });
+        }
         const output = verifyImageFile(plan.outputFile);
         const response = { ...result, structuredContent: imageExecutionResult(plan, 'completed', receipt, output), content: result.content.filter(item => item.type !== 'image'), imageReceipt: { ...receipt, output, review: 'not_reviewed' } };
         imageTransaction(directory, undefined, state => {

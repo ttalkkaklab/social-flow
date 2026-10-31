@@ -519,6 +519,7 @@ async function muxRgbToMp4(opts: {
 }
 
 async function postImage(body: Record<string, unknown>, outFile: string): Promise<MlxFileResult> {
+  if (existsSync(outFile)) return { success: false, error: `Output already exists; choose a new filename: ${outFile}` };
   const startedAt = Date.now();
   const res = await requestRaw('post', `${mlxServeUrl()}/v1/images/generations`, authHeaders(), body, MLX_IMAGE_TIMEOUT_MS);
   if (!res.ok) {
@@ -527,7 +528,7 @@ async function postImage(body: Record<string, unknown>, outFile: string): Promis
   }
   const parsed = parseImageResponse(res.body);
   if ('error' in parsed) return { success: false, error: parsed.error };
-  writeFileSync(outFile, Buffer.from(parsed.b64, 'base64'));
+  writeFileSync(outFile, Buffer.from(parsed.b64, 'base64'), { flag: 'wx' });
   return {
     success: true,
     path: outFile,

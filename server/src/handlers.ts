@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { generateLocalVideo } from './local-video-models.js';
 import { manageWorkflow } from './production-workflow.js';
 import { MUSIC_ADAPTERS, musicCatalog } from './music-registry.js';
@@ -72,7 +73,7 @@ function text(message: string, isError = false): ToolResult {
   return { content: [{ type: 'text', text: message }], isError };
 }
 
-/** Generated-image response — base64 image block + summary text block (contract inherited from fect-mcp). */
+/** Generated-image response — base64 image block + summary text block. */
 function imageResult(message: string, base64Data: string, mimeType: string): ToolResult {
   return {
     content: [
@@ -811,9 +812,11 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   // ── image generation (OpenAI GPT Image) — returns base64 image block + summary text ──
   gpt_image_text2img: async (args) => {
     const request = parseArgs(image.text2ImageSchema, args);
+    // Refuse before the paid call: the save never replaces an earlier file.
+    if (request.savePath && existsSync(request.savePath)) return { ...text(`Output already exists; choose a new savePath: ${request.savePath}`, true), terminal: true };
     const result = await image.generateFromText(request);
     if (!result.success || !result.base64) {
-      return text(`Image generation failed: ${result.error}`, true);
+      return { ...text(`Image generation failed: ${result.error}`, true), terminal: result.terminal === true };
     }
     let summary = `Image generated successfully\n\nModel: ${result.model}\nSize: ${result.size ?? 'auto'}\nQuality: ${result.quality ?? 'auto'}\nMIME Type: ${result.mimeType}\nPrompt: ${result.prompt}`;
     if (result.revisedPrompt) summary += `\nRevised Prompt: ${result.revisedPrompt}`;
@@ -829,9 +832,11 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   },
   gpt_image_img2img: async (args) => {
     const request = parseArgs(image.img2ImgSchema, args);
+    // Refuse before the paid call: the save never replaces an earlier file.
+    if (request.savePath && existsSync(request.savePath)) return { ...text(`Output already exists; choose a new savePath: ${request.savePath}`, true), terminal: true };
     const result = await image.generateFromImage(request);
     if (!result.success || !result.base64) {
-      return text(`Image editing failed: ${result.error}`, true);
+      return { ...text(`Image editing failed: ${result.error}`, true), terminal: result.terminal === true };
     }
     let summary = `Image edited successfully\n\nModel: ${result.model}\nSize: ${result.size ?? 'auto'}\nQuality: ${result.quality ?? 'auto'}\nReference Images: ${request.sourceImagesBase64.length}\nMask: ${request.maskBase64 ? 'yes' : 'no'}\nInput Fidelity: ${request.inputFidelity ?? 'default'}\nMIME Type: ${result.mimeType}\nPrompt: ${result.prompt}`;
     if (result.revisedPrompt) summary += `\nRevised Prompt: ${result.revisedPrompt}`;
@@ -851,7 +856,8 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   image_local_generate: async (args) => {
     const request = parseArgs(zimage.zimageGenerateSchema, args);
     const result = await zimage.generateLocalImage(request);
-    if (!result.success) return text(`Local image generation failed: ${result.error}`, true);
+    // Reported only after the child exited (or never started): nothing is still running.
+    if (!result.success) return { ...text(`Local image generation failed: ${result.error}`, true), terminal: true };
     return text(
       `Image generated locally!\n\nFile: ${result.imagePath}\nEngine: Z-Image Turbo via mflux (on-device)\n` +
         `Size: ${result.width}x${result.height}\nSteps: ${result.steps}\nSeed: ${result.seed ?? 'random'}\n` +
@@ -862,7 +868,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   mlx_image_generate: async (args) => {
     const request = parseArgs(mlx.mlxImageGenerateSchema, args);
     const result = await mlx.generateMlxImage(request);
-    if (!result.success) return text(`MLX Core image generation failed:\n${result.error}`, true);
+    if (!result.success) return { ...text(`MLX Core image generation failed:\n${result.error}`, true), terminal: true };
     return text(
       `Image generated via MLX Core.\n\nFile: ${result.path}\nModel: ${result.model}\n` +
         `Size: ${result.width}x${result.height}\nSteps: ${result.steps ?? 'model default'}\n` +
@@ -872,7 +878,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   mlx_image_edit: async (args) => {
     const request = parseArgs(mlx.mlxImageEditSchema, args);
     const result = await mlx.editMlxImage(request);
-    if (!result.success) return text(`MLX Core image edit failed:\n${result.error}`, true);
+    if (!result.success) return { ...text(`MLX Core image edit failed:\n${result.error}`, true), terminal: true };
     return text(
       `Image edited via MLX Core.\n\nFile: ${result.path}\nModel: ${result.model}\n` +
         (result.width && result.height ? `Size: ${result.width}x${result.height}\n` : '') +

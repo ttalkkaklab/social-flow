@@ -1,3 +1,4 @@
+import { gptImageFamily } from './image-models.js';
 import { localVideoStrategy } from './local-video-models.js';
 /**
  * Usage ledger — every generation call writes itself down, without anyone remembering to.
@@ -228,7 +229,12 @@ export function priceOf(
   }
 
   if (tool.startsWith('gpt_image_')) {
-    const quality = str(args.quality, 'medium');
+    // prices.tsv carries GPT Image 2 per-quality rows only. Another model or `auto` quality has
+    // no flat price: a null key with a note, never a row billed as a different model.
+    const family = gptImageFamily(str(args.model, 'gpt-image-2'));
+    const quality = str(args.quality, 'auto');
+    if (family !== 'gpt-image-2' || !['low', 'medium', 'high'].includes(quality))
+      return { key: null, quantity: null, note: `No flat price for ${family} quality ${quality}; the provider usage receipt is authoritative` };
     return { key: `image.gpt-image-2.${quality}`, quantity: num(args.n, 1) };
   }
 

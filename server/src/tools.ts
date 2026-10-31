@@ -3,7 +3,8 @@ import { fasth3OmniSchema } from './fasth3-omni.js';
 import { MUSIC_ADAPTERS } from './music-registry.js';
 import { MUSIC_TOOLS } from './music-tools.js';
 import { GENAI_TOOLS } from './astra-genai-tools.js';
-import { GPT_IMAGE_MODELS } from './image-models.js';
+import { GPT_IMAGE_MODELS, assertImageModelAvailable } from './image-models.js';
+
 import { IMAGE_ADAPTERS } from './image-registry.js';
 import { VIDEO_ADAPTERS } from './video-registry.js';
 import { DURATION_TOOLS } from './video-duration.js';
@@ -11,6 +12,9 @@ import { CHANNEL_SLUG_RE } from './config.js';
 import { techniqueContract, cameraContract, motionThemeContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
+
+/** Advertise only models that have not reached their shutdown date; the schema still rejects retired ones by name. */
+const AVAILABLE_GPT_IMAGE_MODELS = GPT_IMAGE_MODELS.filter(model => { try { assertImageModelAvailable(model); return true; } catch { return false; } });
 
 import {
   ASTRA_VIDEO_FAST_DIMENSION_STEP,
@@ -145,14 +149,11 @@ import {
  * review gate, so a call is an immediately public post, and the descriptions
  * say never to call without user approval.
  *
- * Generation tools are ported from fect-mcp-server — image (gpt_image_*,
- * OPENAI_API_KEY) comes from the gpt-image module; speech (tts_*) and music
- * (music_*) come from the tts/music modules, both on GEMINI_API_KEY. Sung full songs and loopable beds are suno_*
+ * Generation tools: image (gpt_image_*) on OPENAI_API_KEY; speech (tts_*) and
+ * music (music_*) on GEMINI_API_KEY. Sung full songs and loopable beds are suno_*
  * (sunoapi.org third-party REST, SUNO_API_KEY). Lyria stays the default
- * 30s instrumental BGM path. Descriptions inherit the originals, minus
- * cross-references to tools this server doesn't have, plus the short-form
- * pipeline context (channel profile voice, pinned seeds). Keys are validated
- * at call time.
+ * 30s instrumental BGM path. Descriptions carry the short-form pipeline context
+ * (channel profile voice, pinned seeds). Keys are validated at call time.
  *
  * Video engines are the ones that can keep a character's voice (owner directive
  * 2026-10-31): LTX through the ASTRA gateways and local runtimes, and Seedance 2.x
@@ -1572,7 +1573,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend — use bl
     },
   },
 
-  // ── Image generation (OpenAI GPT Image — ported from the fect-mcp gpt-image module) ──
+  // ── Image generation (OpenAI GPT Image) ──
   {
     name: 'gpt_image_text2img',
     title: 'Image generation (text → image)',
@@ -1589,7 +1590,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend — use bl
         model: {
           type: 'string',
           description: 'OpenAI GPT Image model (default: "gpt-image-2")',
-          enum: [...GPT_IMAGE_MODELS],
+          enum: AVAILABLE_GPT_IMAGE_MODELS,
           default: 'gpt-image-2',
         },
         size: {
@@ -1619,7 +1620,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend — use bl
         },
         savePath: {
           type: 'string',
-          description: 'Absolute file path to save the generated image. Supports .png/.jpg/.jpeg/.gif/.webp/.bmp. Parent directories are created automatically.',
+          description: 'Absolute file path to save the generated image; its extension matches outputFormat (.png, .jpg/.jpeg or .webp). An existing file is never replaced. Parent directories are created automatically.',
         },
       },
       required: ['prompt'],
@@ -1658,7 +1659,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend — use bl
         model: {
           type: 'string',
           description: 'OpenAI GPT Image model (default: "gpt-image-2")',
-          enum: [...GPT_IMAGE_MODELS],
+          enum: AVAILABLE_GPT_IMAGE_MODELS,
           default: 'gpt-image-2',
         },
         size: {
@@ -1693,7 +1694,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend — use bl
         },
         savePath: {
           type: 'string',
-          description: 'Absolute file path to save the edited image. Supports .png/.jpg/.jpeg/.gif/.webp/.bmp.',
+          description: 'Absolute file path to save the edited image; its extension matches outputFormat (.png, .jpg/.jpeg or .webp). An existing file is never replaced.',
         },
       },
       required: ['prompt', 'sourceImagesBase64'],
@@ -3063,7 +3064,7 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
     },
   },
 
-  // ── Speech synthesis (Google Gemini TTS — ported from the fect-mcp tts module) ─────────
+  // ── Speech synthesis (Google Gemini TTS) ─────────
   {
     name: 'tts_review_final', title: 'Review assembled speech', annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: "Legacy alias of host_review prepare for the assembled episode audio (mediaPath of the final media, the full expectedText, optional segments): returns local evidence for the host LLM to listen to end to end. Use only when the user asks for a final listening review and an existing plan already calls tts_review_final; new reviews use host_review. Returns status=not_reviewed, score=null, mediaPath, SHA256, duration in seconds, rubric, nextAction and the segments as sent. It does not judge, upload or call an external evaluator, and assembly never waits on it. Do NOT use for synthesis.",
@@ -3457,7 +3458,7 @@ Returns: a text block with the saved .json path, detected language, segment coun
     },
   },
 
-  // ── Music generation (Google Lyria — ported from the fect-mcp music module) ────────────
+  // ── Music generation (Google Lyria) ────────────
   {
     name: 'music_generate_clip',
     title: 'Music generation (30s clip)',

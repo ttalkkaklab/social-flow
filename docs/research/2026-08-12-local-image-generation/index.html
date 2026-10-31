@@ -150,7 +150,7 @@
   <h1>맥북에서 쓸 로컬 이미지 생성<br>모델·도구 조사와 M4 Max 실측</h1>
   <p class="sub">
     이 맥북(M4 Max·128GB)에서 로컬 이미지 생성이 실제로 되는지 mflux + Z-Image Turbo 로
-    직접 생성까지 돌려 확인한 조사. 상업 사용 가능한 후보 3계열과 파이프라인(gpt_image·nanobanana API) 대비 위치를 정리한다.
+    직접 생성까지 돌려 확인한 조사. 상업 사용 가능한 후보 3계열과 파이프라인(gpt_image API) 대비 위치를 정리한다.
   </p>
   <div class="hero .meta meta">
     <span>작성 <strong>2026-08-12</strong></span>
@@ -323,10 +323,10 @@ mflux-generate-z-image-turbo \
 <section id="pipeline">
   <h2 class="sec"><span class="no">06</span>파이프라인 관점 — 지금 쓰는 API 대비</h2>
   <p>
-    social-flow 는 지금 gpt_image(OpenAI)·nanobanana(Gemini) API 로 이미지를 만든다. 로컬 전환의 손익은 명확하다.
+    social-flow 는 지금 gpt_image(OpenAI) API 로 이미지를 만든다. 로컬 전환의 손익은 명확하다.
   </p>
   <div class="table-scroll"><table>
-    <tr><th></th><th>로컬 (Z-Image Turbo 등)</th><th>API (gpt_image·nanobanana)</th></tr>
+    <tr><th></th><th>로컬 (Z-Image Turbo 등)</th><th>API (gpt_image)</th></tr>
     <tr><td>비용</td><td>0원 · 무제한</td><td>장당 과금</td></tr>
     <tr><td>속도</td><td>1024² 2~3분대 (과부하 실측 기준)</td><td>수 초~수십 초</td></tr>
     <tr><td>품질(사진풍 배경)</td><td>커버 배경으로 충분 (실측 확인)</td><td>상급</td></tr>

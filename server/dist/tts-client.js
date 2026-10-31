@@ -1,5 +1,5 @@
 /**
- * Google Gemini TTS speech synthesis client — ported from the fect-mcp-server tts module.
+ * Google Gemini TTS speech synthesis client.
  *
  * Converts text to speech via the Google Gen AI SDK.
  * - Default model: gemini-2.5-flash-preview-tts (swappable per request via model)

@@ -1,5 +1,5 @@
 /**
- * Google Lyria music generation client — ported from the fect-mcp-server music module.
+ * Google Lyria music generation client.
  *
  * Wraps both branches of the Lyria API, which differ in character:
  * - Lyria 3 Clip (batch): single interactions call · fixed 30s · MP3 44.1kHz stereo.

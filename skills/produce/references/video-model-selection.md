@@ -542,7 +542,7 @@ real faces.
 its face close-up, headless front and headless back; at most two characters take references,
 `msr_character_limit`). A photorealistic human face goes to an LTX lane; Seedance 2.x rejects
 real faces outright. On the image lane, the same panels go to
-`gpt_image_img2img` / `nanobanana_img2img` as input images, same order, same reason.
+the saved image adapter's edit tool as input images, same order, same reason.
 
 ---
 

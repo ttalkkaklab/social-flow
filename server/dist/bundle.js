@@ -54379,7 +54379,7 @@ var init_EventStream = __esm({
         const pushQueue = [];
         const readQueue = [];
         let ended = this.ended;
-        let failure;
+        let failure2;
         let failureDelivered = false;
         const doneResult = () => ({ value: void 0, done: true });
         const finishReaders = () => {
@@ -54388,10 +54388,10 @@ var init_EventStream = __esm({
           }
         };
         const rejectReader = () => {
-          if (!failure || failureDelivered || !readQueue.length)
+          if (!failure2 || failureDelivered || !readQueue.length)
             return;
           failureDelivered = true;
-          readQueue.shift().reject(failure);
+          readQueue.shift().reject(failure2);
         };
         const cleanup = () => {
           this.off(event, onEvent);
@@ -54412,7 +54412,7 @@ var init_EventStream = __esm({
           }
         };
         const onFailure = (error2) => {
-          failure = error2;
+          failure2 = error2;
           if (!pushQueue.length)
             rejectReader();
         };
@@ -54437,9 +54437,9 @@ var init_EventStream = __esm({
             const value = pushQueue.shift();
             if (value)
               return Promise.resolve({ value, done: false });
-            if (failure && !failureDelivered) {
+            if (failure2 && !failureDelivered) {
               failureDelivered = true;
-              return Promise.reject(failure);
+              return Promise.reject(failure2);
             }
             if (ended)
               return Promise.resolve(doneResult());
@@ -73099,7 +73099,7 @@ async function saveBase64Image(base64Data, filePath) {
   const resolved = path3.resolve(filePath);
   await fs3.promises.mkdir(path3.dirname(resolved), { recursive: true });
   const buffer = Buffer.from(base64Data, "base64");
-  await fs3.promises.writeFile(resolved, buffer);
+  await fs3.promises.writeFile(resolved, buffer, { flag: "wx" });
   const stats = await fs3.promises.stat(resolved);
   return { filePath: resolved, size: stats.size };
 }
@@ -74489,6 +74489,7 @@ ${String(errOut).slice(-500)}` : ""}`));
   }
 }
 async function postImage(body, outFile) {
+  if (existsSync4(outFile)) return { success: false, error: `Output already exists; choose a new filename: ${outFile}` };
   const startedAt = Date.now();
   const res = await requestRaw("post", `${mlxServeUrl()}/v1/images/generations`, authHeaders(), body, MLX_IMAGE_TIMEOUT_MS);
   if (!res.ok) {
@@ -74497,7 +74498,7 @@ async function postImage(body, outFile) {
   }
   const parsed = parseImageResponse(res.body);
   if ("error" in parsed) return { success: false, error: parsed.error };
-  writeFileSync3(outFile, Buffer.from(parsed.b64, "base64"));
+  writeFileSync3(outFile, Buffer.from(parsed.b64, "base64"), { flag: "wx" });
   return {
     success: true,
     path: outFile,
@@ -85014,7 +85015,6 @@ async function recoverGenaiImage(receiptPath) {
 // src/image-client.ts
 var VALID_GPT_IMAGE_MODELS = GPT_IMAGE_MODELS;
 var DEFAULT_MODEL = "gpt-image-2";
-var GPT_IMAGE_FLEXIBLE_SIZE_MODELS = ["gpt-image-2"];
 var GPT_IMAGE_SIZE_PRESETS = [
   "auto",
   "1024x1024",
@@ -85043,7 +85043,7 @@ function validateSizeAgainstModel(model2, size, ctx) {
   if (GPT_IMAGE_SIZE_PRESETS.includes(size)) return;
   const match2 = WH_SIZE_RE.exec(size);
   if (!match2) return;
-  if (!GPT_IMAGE_FLEXIBLE_SIZE_MODELS.includes(gptImageFamily(model2))) {
+  if (!gptImageContract(model2)?.flexibleSize) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
       path: ["size"],
@@ -85078,7 +85078,7 @@ function validateSizeAgainstModel(model2, size, ctx) {
     });
   }
 }
-function validateBackground(model2, background, outputFormat, ctx) {
+function validateBackground(background, outputFormat, ctx) {
   if (background !== "transparent") return;
   if (outputFormat === "jpeg") {
     ctx.addIssue({
@@ -85098,7 +85098,7 @@ var text2ImageSchema = external_exports.object({
   savePath: external_exports.string().optional()
 }).superRefine((data, ctx) => {
   validateSizeAgainstModel(data.model, data.size, ctx);
-  validateBackground(data.model, data.background, data.outputFormat, ctx);
+  validateBackground(data.background, data.outputFormat, ctx);
 });
 var img2ImgSchema = external_exports.object({
   prompt: external_exports.string().min(1, "Prompt is required").max(32e3, "Prompt exceeds the 32,000-character limit for GPT Image models"),
@@ -85114,23 +85114,21 @@ var img2ImgSchema = external_exports.object({
   savePath: external_exports.string().optional()
 }).superRefine((data, ctx) => {
   validateSizeAgainstModel(data.model, data.size, ctx);
-  validateBackground(data.model, data.background, data.outputFormat, ctx);
-  if (data.inputFidelity) {
-    if (data.model === "gpt-image-1-mini" && data.inputFidelity !== "low") {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["inputFidelity"],
-        message: "gpt-image-1-mini supports only low inputFidelity. Use gpt-image-1 / gpt-image-1.5."
-      });
-    } else if (gptImageFamily(data.model) === "gpt-image-2") {
-      ctx.addIssue({
-        code: external_exports.ZodIssueCode.custom,
-        path: ["inputFidelity"],
-        message: "gpt-image-2 always runs at high fidelity and does not accept the inputFidelity parameter. Omit the parameter."
-      });
-    }
+  validateBackground(data.background, data.outputFormat, ctx);
+  const allowed = gptImageContract(data.model)?.fidelity ?? [];
+  if (data.inputFidelity && !allowed.includes(data.inputFidelity)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["inputFidelity"],
+      message: allowed.length ? `${data.model} accepts inputFidelity ${allowed.join("/")} only.` : `${data.model} does not accept inputFidelity (fixed high fidelity). Omit the parameter.`
+    });
   }
 });
+function failure(error2, mimeType, prompt, model2) {
+  const status = error2?.status;
+  const terminal = typeof status === "number" && status >= 400 && status < 500 && ![408, 409, 425].includes(status);
+  return { success: false, base64: "", mimeType, prompt, model: model2, error: error2 instanceof Error ? error2.message : String(error2), terminal };
+}
 function formatToMime(format) {
   switch (format) {
     case "png":
@@ -85178,15 +85176,7 @@ async function generateFromText(request) {
       mimeType: responseMime
     });
   } catch (error2) {
-    const errorMessage = error2 instanceof Error ? error2.message : String(error2);
-    return {
-      success: false,
-      base64: "",
-      mimeType: responseMime,
-      prompt: request.prompt,
-      model: model2,
-      error: errorMessage
-    };
+    return failure(error2, responseMime, request.prompt, model2);
   }
 }
 async function generateFromImage(request) {
@@ -85229,15 +85219,7 @@ async function generateFromImage(request) {
       mimeType: responseMime
     });
   } catch (error2) {
-    const errorMessage = error2 instanceof Error ? error2.message : String(error2);
-    return {
-      success: false,
-      base64: "",
-      mimeType: responseMime,
-      prompt: request.prompt,
-      model: model2,
-      error: errorMessage
-    };
+    return failure(error2, responseMime, request.prompt, model2);
   }
 }
 function extractImage(response, prompt, meta) {
@@ -85300,8 +85282,7 @@ function installHint(detail) {
 Local image generation requires mflux (Apple Silicon only, MLX):
   uv tool install --python 3.12 mflux
 If it's installed elsewhere, point MFLUX_ZIMAGE_BIN at the executable (e.g. MFLUX_ZIMAGE_BIN=~/.venvs/mflux/bin/mflux-generate-z-image-turbo).
-The first call downloads the ~31GB Z-Image Turbo weight repository to ~/.cache/huggingface.
-Until it's installed, use gpt_image_text2img \u2014 that one only needs OPENAI_API_KEY.`;
+The first call downloads the ~31GB Z-Image Turbo weight repository to ~/.cache/huggingface.`;
 }
 var zimageGenerateSchema = external_exports.object({
   prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
@@ -85323,6 +85304,7 @@ async function generateLocalImage(request) {
     request.filename || `zimage_${Date.now()}.png`,
     "image"
   );
+  if (existsSync10(outFile)) return { success: false, error: `Output already exists; choose a new filename: ${outFile}` };
   const cliArgs = [
     "--prompt",
     request.prompt,
@@ -87735,7 +87717,8 @@ function readImageState(directory2) {
 function hasHistory(directory2) {
   const events = path13.join(directory2, ".work/events.jsonl");
   if (fs14.existsSync(events)) for (const line of fs14.readFileSync(events, "utf8").split("\n").filter(Boolean)) {
-    if (/^(gpt_image_|image_local_|mlx_image_|astra_genai_(text2img|edit|image_generate|image_edit)$)/.test(JSON.parse(line).tool || "")) return true;
+    const tool2 = String(JSON.parse(line).tool || "");
+    if (Object.hasOwn(IMAGE_ADAPTERS, tool2) || /^(gpt_image_|image_local_|mlx_image_)/.test(tool2)) return true;
   }
   const tally = path13.join(directory2, ".work/cost-tally.tsv");
   return fs14.existsSync(tally) && /^image\./m.test(fs14.readFileSync(tally, "utf8"));
@@ -87889,7 +87872,10 @@ function priceOf(tool2, args = {}) {
     };
   }
   if (tool2.startsWith("gpt_image_")) {
-    const quality = str3(args.quality, "medium");
+    const family = gptImageFamily(str3(args.model, "gpt-image-2"));
+    const quality = str3(args.quality, "auto");
+    if (family !== "gpt-image-2" || !["low", "medium", "high"].includes(quality))
+      return { key: null, quantity: null, note: `No flat price for ${family} quality ${quality}; the provider usage receipt is authoritative` };
     return { key: `image.gpt-image-2.${quality}`, quantity: num2(args.n, 1) };
   }
   if (tool2 === "image_local_generate") {
@@ -88171,9 +88157,17 @@ async function executeImage(raw, dispatch) {
         updatedAt: (/* @__PURE__ */ new Date()).toISOString()
       });
     });
-    if (result.isError) throw new Error("image_adapter_failed: " + JSON.stringify(result.content));
+    if (result.isError) {
+      providerCompleted = result.terminal === true;
+      throw new Error("image_adapter_failed: " + JSON.stringify(result.content));
+    }
     providerCompleted = true;
     if (!plan2.outputFile) throw new Error("image_output_missing");
+    const returned = result.content.find((item) => item.type === "image");
+    if (returned?.type === "image" && !fs15.existsSync(plan2.outputFile)) {
+      fs15.mkdirSync(path15.dirname(plan2.outputFile), { recursive: true });
+      fs15.writeFileSync(plan2.outputFile, Buffer.from(returned.data, "base64"), { flag: "wx" });
+    }
     const output2 = verifyImageFile(plan2.outputFile);
     const response = { ...result, structuredContent: imageExecutionResult(plan2, "completed", receipt, output2), content: result.content.filter((item) => item.type !== "image"), imageReceipt: { ...receipt, output: output2, review: "not_reviewed" } };
     imageTransaction(directory2, void 0, (state) => {
@@ -88351,7 +88345,7 @@ function evaluateWindowScript(source, options = {}) {
 }
 
 // src/storyboard.ts
-import { existsSync as existsSync17, mkdirSync as mkdirSync7, readFileSync as readFileSync17, renameSync as renameSync4, statSync as statSync10, unlinkSync as unlinkSync4, writeFileSync as writeFileSync13 } from "node:fs";
+import { existsSync as existsSync17, mkdirSync as mkdirSync8, readFileSync as readFileSync17, renameSync as renameSync4, statSync as statSync10, unlinkSync as unlinkSync4, writeFileSync as writeFileSync14 } from "node:fs";
 import * as nodeModule3 from "node:module";
 import { basename as basename6, dirname as dirname5, join as join9, relative, resolve as resolve5 } from "node:path";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
@@ -88963,11 +88957,11 @@ function applyStoryboard(args, opts = {}) {
     if (changesProps && exists) {
       if (createHash10("sha256").update(readFileSync17(file)).digest("hex") !== originalHash) throw new Error("head_moved");
       const history = join9(dirname5(file), ".prop-history");
-      mkdirSync7(history, { recursive: true });
+      mkdirSync8(history, { recursive: true });
       const backup = join9(history, originalHash + ".js");
-      if (!existsSync17(backup)) writeFileSync13(backup, original, { flag: "wx" });
+      if (!existsSync17(backup)) writeFileSync14(backup, original, { flag: "wx" });
     }
-    writeFileSync13(tmp, serializeBoard(next, header), "utf8");
+    writeFileSync14(tmp, serializeBoard(next, header), "utf8");
     renameSync4(tmp, file);
   } catch (err4) {
     try {
@@ -89391,7 +89385,7 @@ function shotImageRequest(args) {
   const toPng = (f3) => {
     const out = join9(boardDir, "images", "inputs", createHash10("sha256").update(readFileSync17(f3)).digest("hex").slice(0, 16) + ".png");
     if (!existsSync17(out)) {
-      mkdirSync7(dirname5(out), { recursive: true });
+      mkdirSync8(dirname5(out), { recursive: true });
       try {
         execFileSync8("ffmpeg", ["-v", "error", "-y", "-i", f3, out], { timeout: 6e4 });
       } catch (error2) {
@@ -89405,7 +89399,7 @@ function shotImageRequest(args) {
   let k = 1;
   while (existsSync17(join9(boardDir, "images", `${args.id}-${args.frame}-v${k}.png`)) || Object.hasOwn(jobs, `${args.id}-${args.frame}-v${k}`)) k += 1;
   const requestId = `${args.id}-${args.frame}-v${k}`, file = join9(boardDir, "images", `${requestId}.png`);
-  mkdirSync7(dirname5(file), { recursive: true });
+  mkdirSync8(dirname5(file), { recursive: true });
   const [width, height] = (args.size ?? (/16x9/.test(String(win.FORMAT ?? "")) ? "1536x1024" : "1024x1536")).split("x").map(Number);
   const base642 = (f3) => readFileSync17(f3).toString("base64");
   const edit2 = sent.length > 0, tool2 = edit2 ? adapter2.tool : void 0;
@@ -89599,7 +89593,7 @@ function renderCheck(r2) {
 }
 
 // src/tts-client.ts
-import { writeFileSync as writeFileSync14 } from "node:fs";
+import { writeFileSync as writeFileSync15 } from "node:fs";
 var TTS_VOICES = {
   Zephyr: "Bright",
   Puck: "Upbeat",
@@ -90027,7 +90021,7 @@ async function generateGemini38SpeechImpl(request) {
     const audioPath = saveAudio(audio, request.outputPath, request.filename, "tts_gemini_38");
     const metadata = interaction;
     const usageReceiptPath = audioPath + ".provider-usage.json";
-    writeFileSync14(usageReceiptPath, JSON.stringify({
+    writeFileSync15(usageReceiptPath, JSON.stringify({
       provider: "gemini",
       model: request.model,
       interactionId: typeof metadata.id === "string" ? metadata.id : null,
@@ -90081,7 +90075,7 @@ async function generateGemini38Speech(request) {
 var import_tts_speed_policy = __toESM(require_tts_speed_policy(), 1);
 import { execFile as execFile4 } from "node:child_process";
 import { createHash as createHash11, randomUUID as randomUUID3 } from "node:crypto";
-import { closeSync as closeSync4, existsSync as existsSync18, mkdirSync as mkdirSync8, openSync as openSync4, readFileSync as readFileSync18, renameSync as renameSync5, rmSync as rmSync9, writeFileSync as writeFileSync16 } from "node:fs";
+import { closeSync as closeSync4, existsSync as existsSync18, mkdirSync as mkdirSync9, openSync as openSync4, readFileSync as readFileSync18, renameSync as renameSync5, rmSync as rmSync9, writeFileSync as writeFileSync17 } from "node:fs";
 import path17 from "node:path";
 import { promisify as promisify2 } from "node:util";
 
@@ -91031,17 +91025,17 @@ async function applySentenceSpacing(output2, request, align) {
       if (!align) return { skipped: "no alignment sidecar beside the take and no aligner" };
       const aligned = await align(output2, request.expectedText, request.language);
       if (aligned.matched < aligned.letters * 0.8) throw new Error(`aligner matched ${aligned.matched}/${aligned.letters} script letters; transcript "${aligned.transcript.slice(0, 60)}"`);
-      writeFileSync16(alignmentPath, JSON.stringify({ engine: "asr-aligner", generator: request.generator, text: request.expectedText, transcript: aligned.transcript, matched: aligned.matched, letters: aligned.letters, alignment: aligned.alignment }, null, 2));
+      writeFileSync17(alignmentPath, JSON.stringify({ engine: "asr-aligner", generator: request.generator, text: request.expectedText, transcript: aligned.transcript, matched: aligned.matched, letters: aligned.letters, alignment: aligned.alignment }, null, 2));
     }
     const sidecar = JSON.parse(readFileSync18(alignmentPath, "utf8"));
     const alignment = sidecar.alignment;
     if (!alignment?.characters?.length) return { skipped: "alignment sidecar carries no characters" };
     const segments = request.segments ?? splitSentences(alignment.characters.join(""));
     const result = respace(readFileSync18(output2), alignment, segments, { pause: request.sentencePause, playbackSpeed: request.playbackSpeed });
-    writeFileSync16(output2, result.wav);
+    writeFileSync17(output2, result.wav);
     const meta = { policy: SPACING_POLICY, source: sidecar.engine === "asr-aligner" ? "asr-aligner" : "vendor", pause: request.sentencePause, playbackSpeed: request.playbackSpeed, lead: result.lead, gaps: result.gaps, inserted: result.inserted, boundaries: result.boundaries, duration: result.duration, segmentsFrom: request.segments ? "request" : "sentence-final punctuation" };
-    writeFileSync16(alignmentPath, JSON.stringify({ ...sidecar, alignment: result.alignment, vendor_alignment: sidecar.vendor_alignment ?? sidecar.alignment, respaced: meta }, null, 2));
-    writeFileSync16(sentencesPathFor(output2), JSON.stringify({ version: 1, ...meta, audio: path17.basename(output2), audioSha256: sha256(result.wav), sentences: result.sentences }, null, 2) + "\n");
+    writeFileSync17(alignmentPath, JSON.stringify({ ...sidecar, alignment: result.alignment, vendor_alignment: sidecar.vendor_alignment ?? sidecar.alignment, respaced: meta }, null, 2));
+    writeFileSync17(sentencesPathFor(output2), JSON.stringify({ version: 1, ...meta, audio: path17.basename(output2), audioSha256: sha256(result.wav), sentences: result.sentences }, null, 2) + "\n");
     return meta;
   } catch (error2) {
     return { skipped: error2 instanceof Error ? error2.message : String(error2) };
@@ -91062,7 +91056,7 @@ async function generateCheckedSpeech(input, dependencies) {
     final: (0, import_tts_speed_policy.authorizeSpeed)(request.outputPath, "final", request.playbackSpeed)
   };
   const output2 = path17.resolve(request.outputPath, request.filename), proofFile = output2 + ".quality.json";
-  mkdirSync8(path17.dirname(output2), { recursive: true });
+  mkdirSync9(path17.dirname(output2), { recursive: true });
   const lockFile = proofFile + ".lock";
   let lock2;
   try {
@@ -91092,7 +91086,7 @@ async function generateCheckedSpeech(input, dependencies) {
   function save3(status, extra = {}) {
     const report = { ...base, status, attempts, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
     const temporary = proofFile + "." + randomUUID3() + ".tmp";
-    writeFileSync16(temporary, JSON.stringify(report, null, 2) + "\n");
+    writeFileSync17(temporary, JSON.stringify(report, null, 2) + "\n");
     renameSync5(temporary, proofFile);
     return { success: status === "pass", status, audioPath: output2, proofPath: proofFile, attempts: attempts.length, ...extra };
   }
@@ -91217,7 +91211,7 @@ async function generateCheckedSpeech(input, dependencies) {
 
 // src/qwen3-asr-client.ts
 import { execFile as execFile5 } from "node:child_process";
-import { existsSync as existsSync19, mkdirSync as mkdirSync9, mkdtempSync as mkdtempSync4, readFileSync as readFileSync19, renameSync as renameSync6, rmSync as rmSync10 } from "node:fs";
+import { existsSync as existsSync19, mkdirSync as mkdirSync10, mkdtempSync as mkdtempSync4, readFileSync as readFileSync19, renameSync as renameSync6, rmSync as rmSync10 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
 import { basename as basename8, extname as extname9, join as join10 } from "node:path";
 var QWEN3_ASR_MODELS = ["Qwen/Qwen3-ASR-1.7B", "Qwen/Qwen3-ASR-0.6B"];
@@ -91386,7 +91380,7 @@ async function transcribeLocal(request) {
     "json"
   );
   const outDir = request.outputPath || process.cwd();
-  mkdirSync9(outDir, { recursive: true });
+  mkdirSync10(outDir, { recursive: true });
   const scratchDir = mkdtempSync4(join10(outDir, ".qwen3-asr-"));
   const firstCall = !existsSync19(weightCacheDir2(request.model)) || request.timestamps && !existsSync19(alignerCacheDir());
   if (firstCall) {
@@ -91476,7 +91470,7 @@ ${tail}` : ""}`));
 
 // src/blender-bridge.ts
 import { execFile as execFile6 } from "node:child_process";
-import { existsSync as existsSync20, mkdtempSync as mkdtempSync5, readFileSync as readFileSync20, rmSync as rmSync11, writeFileSync as writeFileSync17 } from "node:fs";
+import { existsSync as existsSync20, mkdtempSync as mkdtempSync5, readFileSync as readFileSync20, rmSync as rmSync11, writeFileSync as writeFileSync18 } from "node:fs";
 import { tmpdir as tmpdir5 } from "node:os";
 import { dirname as dirname6, extname as extname10, join as join11, resolve as resolve6 } from "node:path";
 var BLENDER_PROXY_KINDS = ["person", "dog", "car", "box", "cylinder", "sphere"];
@@ -91782,8 +91776,8 @@ async function runBridgeUnlocked(job, timeoutMs) {
   const script = join11(dir, "bridge.py");
   const jobPath = join11(dir, "job.json");
   const resultPath = join11(dir, "result.json");
-  writeFileSync17(script, BRIDGE_PY, "utf-8");
-  writeFileSync17(jobPath, JSON.stringify({ ...job, resultPath }), "utf-8");
+  writeFileSync18(script, BRIDGE_PY, "utf-8");
+  writeFileSync18(jobPath, JSON.stringify({ ...job, resultPath }), "utf-8");
   try {
     const run = await new Promise((resolveRun) => {
       execFile6(
@@ -93311,6 +93305,14 @@ main()
 `;
 
 // src/tools.ts
+var AVAILABLE_GPT_IMAGE_MODELS = GPT_IMAGE_MODELS.filter((model2) => {
+  try {
+    assertImageModelAvailable(model2);
+    return true;
+  } catch {
+    return false;
+  }
+});
 var ASTRA_HDR_PROPERTY = {
   type: "string",
   enum: ["SRGB_LINEAR", "ACESCG", "ACESCCT"],
@@ -94651,7 +94653,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend \u2014 use
       required: ["path"]
     }
   },
-  // ── Image generation (OpenAI GPT Image — ported from the fect-mcp gpt-image module) ──
+  // ── Image generation (OpenAI GPT Image) ──
   {
     name: "gpt_image_text2img",
     title: "Image generation (text \u2192 image)",
@@ -94668,7 +94670,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend \u2014 use
         model: {
           type: "string",
           description: 'OpenAI GPT Image model (default: "gpt-image-2")',
-          enum: [...GPT_IMAGE_MODELS],
+          enum: AVAILABLE_GPT_IMAGE_MODELS,
           default: "gpt-image-2"
         },
         size: {
@@ -94696,7 +94698,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend \u2014 use
         },
         savePath: {
           type: "string",
-          description: "Absolute file path to save the generated image. Supports .png/.jpg/.jpeg/.gif/.webp/.bmp. Parent directories are created automatically."
+          description: "Absolute file path to save the generated image; its extension matches outputFormat (.png, .jpg/.jpeg or .webp). An existing file is never replaced. Parent directories are created automatically."
         }
       },
       required: ["prompt"]
@@ -94735,7 +94737,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend \u2014 use
         model: {
           type: "string",
           description: 'OpenAI GPT Image model (default: "gpt-image-2")',
-          enum: [...GPT_IMAGE_MODELS],
+          enum: AVAILABLE_GPT_IMAGE_MODELS,
           default: "gpt-image-2"
         },
         size: {
@@ -94768,7 +94770,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend \u2014 use
         },
         savePath: {
           type: "string",
-          description: "Absolute file path to save the edited image. Supports .png/.jpg/.jpeg/.gif/.webp/.bmp."
+          description: "Absolute file path to save the edited image; its extension matches outputFormat (.png, .jpg/.jpeg or .webp). An existing file is never replaced."
         }
       },
       required: ["prompt", "sourceImagesBase64"]
@@ -96143,7 +96145,7 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
       required: ["blendPath"]
     }
   },
-  // ── Speech synthesis (Google Gemini TTS — ported from the fect-mcp tts module) ─────────
+  // ── Speech synthesis (Google Gemini TTS) ─────────
   {
     name: "tts_review_final",
     title: "Review assembled speech",
@@ -96553,7 +96555,7 @@ Returns: a text block with the saved .json path, detected language, segment coun
       required: ["audioPath"]
     }
   },
-  // ── Music generation (Google Lyria — ported from the fect-mcp music module) ────────────
+  // ── Music generation (Google Lyria) ────────────
   {
     name: "music_generate_clip",
     title: "Music generation (30s clip)",
@@ -98289,6 +98291,9 @@ for (const tool2 of TOOLS) {
   }
 }
 
+// src/handlers.ts
+import { existsSync as existsSync34 } from "node:fs";
+
 // src/music-routing.ts
 import * as fs19 from "node:fs";
 import path20 from "node:path";
@@ -99618,7 +99623,7 @@ async function routeSpeech(input) {
 import { execFile as execFile7 } from "node:child_process";
 import { promisify as promisify3 } from "node:util";
 import { createHash as createHash16, randomUUID as randomUUID5 } from "node:crypto";
-import { createReadStream as createReadStream3, mkdirSync as mkdirSync14, realpathSync as realpathSync9, statSync as statSync13, writeFileSync as writeFileSync19 } from "node:fs";
+import { createReadStream as createReadStream3, mkdirSync as mkdirSync15, realpathSync as realpathSync9, statSync as statSync13, writeFileSync as writeFileSync20 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
 import path25 from "node:path";
 var exec2 = promisify3(execFile7);
@@ -99676,7 +99681,7 @@ async function hostReview(input) {
     const frames = [];
     if (r2.mode !== "audio") {
       const directory3 = path25.join(homedir4(), ".cache", "social-flow", "host-reviews", "evidence", mediaSha256, randomUUID5());
-      mkdirSync14(directory3, { recursive: true, mode: 448 });
+      mkdirSync15(directory3, { recursive: true, mode: 448 });
       const timing = await exec2("ffprobe", [
         "-v",
         "error",
@@ -99741,7 +99746,7 @@ async function hostReview(input) {
   }
   if (await digest3(file) !== mediaSha256) throw new Error("Media changed while recording observations");
   const directory2 = path25.join(homedir4(), ".cache", "social-flow", "host-reviews");
-  mkdirSync14(directory2, { recursive: true, mode: 448 });
+  mkdirSync15(directory2, { recursive: true, mode: 448 });
   const receiptPath = path25.join(directory2, `${mediaSha256}-${randomUUID5()}.json`);
   const result = {
     ...base,
@@ -99754,12 +99759,12 @@ async function hostReview(input) {
     createdAt: (/* @__PURE__ */ new Date()).toISOString(),
     receiptPath
   };
-  writeFileSync19(receiptPath, JSON.stringify(result, null, 2) + "\n", { flag: "wx", mode: 384 });
+  writeFileSync20(receiptPath, JSON.stringify(result, null, 2) + "\n", { flag: "wx", mode: 384 });
   return result;
 }
 
 // src/voice-design.ts
-import { existsSync as existsSync26, mkdirSync as mkdirSync15, writeFileSync as writeFileSync20 } from "node:fs";
+import { existsSync as existsSync26, mkdirSync as mkdirSync16, writeFileSync as writeFileSync21 } from "node:fs";
 import { resolve as resolve7 } from "node:path";
 import { createHash as createHash17 } from "node:crypto";
 var voiceDesignSchema = external_exports.object({
@@ -99788,9 +99793,9 @@ async function designGeminiVoice(input) {
   const samplePath = resolve7(output2, "voice-preview.wav");
   const body = buildVoiceDesignBody(args);
   const apiKey = requireGeminiKey();
-  mkdirSync15(output2, { recursive: true });
+  mkdirSync16(output2, { recursive: true });
   if (existsSync26(samplePath)) throw new Error("Preview already exists; use a new outputPath.");
-  writeFileSync20(receiptPath, JSON.stringify({ status: "submitted", request: body, submittedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2), { flag: "wx" });
+  writeFileSync21(receiptPath, JSON.stringify({ status: "submitted", request: body, submittedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2), { flag: "wx" });
   const response = await requestRaw(
     "post",
     "https://generativelanguage.googleapis.com/v1beta/voices",
@@ -99800,27 +99805,27 @@ async function designGeminiVoice(input) {
   );
   if (!response.ok) {
     const error2 = describeGemini38Error(response.status, response.body);
-    writeFileSync20(receiptPath, JSON.stringify({ status: response.status >= 500 ? "uncertain" : "failed", request: body, error: error2 }, null, 2));
+    writeFileSync21(receiptPath, JSON.stringify({ status: response.status >= 500 ? "uncertain" : "failed", request: body, error: error2 }, null, 2));
     return { success: false, receiptPath, error: error2, instruction: "Do not blindly retry: inspect this receipt and list stored prompted voices first." };
   }
   let voice;
   try {
     voice = JSON.parse(response.body);
   } catch {
-    writeFileSync20(receiptPath, JSON.stringify({ status: "uncertain", request: body, error: "Invalid JSON response" }, null, 2));
+    writeFileSync21(receiptPath, JSON.stringify({ status: "uncertain", request: body, error: "Invalid JSON response" }, null, 2));
     return { success: false, receiptPath, error: "Invalid JSON response; reconcile stored voices before retrying." };
   }
   const { sample_audio: sample, ...metadata } = voice;
   const record2 = { status: "created", request: body, voice: metadata, reviewStatus: "not_reviewed", billingStatus: "provider_usage_not_invoice" };
-  writeFileSync20(receiptPath, JSON.stringify(record2, null, 2));
+  writeFileSync21(receiptPath, JSON.stringify(record2, null, 2));
   const audio = external_exports.object({ mime_type: external_exports.string(), data: external_exports.string().min(1) }).safeParse(sample);
   const bytes = audio.success ? Buffer.from(audio.data.data, "base64") : Buffer.alloc(0);
   if (typeof voice.id !== "string" || !voice.id.startsWith("voice_") || !audio.success || audio.data.mime_type !== "audio/wav" || bytes.length <= 44 || bytes.toString("ascii", 0, 4) !== "RIFF" || bytes.toString("ascii", 8, 12) !== "WAVE") {
     return { success: false, voiceId: voice.id, receiptPath, error: "Voice response or WAV preview invalid; the remote voice may exist. Inspect the receipt before another paid creation." };
   }
-  writeFileSync20(samplePath, bytes, { flag: "wx" });
+  writeFileSync21(samplePath, bytes, { flag: "wx" });
   const audioSha256 = createHash17("sha256").update(bytes).digest("hex");
-  writeFileSync20(receiptPath, JSON.stringify({ ...record2, samplePath, audioSha256 }, null, 2));
+  writeFileSync21(receiptPath, JSON.stringify({ ...record2, samplePath, audioSha256 }, null, 2));
   return {
     success: true,
     voiceId: voice.id,
@@ -99927,7 +99932,7 @@ async function reviewActing(input) {
 
 // src/voice-audition.ts
 import { createHash as createHash18, randomUUID as randomUUID6 } from "node:crypto";
-import { appendFileSync as appendFileSync3, existsSync as existsSync27, mkdirSync as mkdirSync16, readFileSync as readFileSync29, writeFileSync as writeFileSync21, renameSync as renameSync7 } from "node:fs";
+import { appendFileSync as appendFileSync3, existsSync as existsSync27, mkdirSync as mkdirSync17, readFileSync as readFileSync29, writeFileSync as writeFileSync22, renameSync as renameSync7 } from "node:fs";
 import { dirname as dirname7, join as join12, resolve as resolve8 } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { createRequire as createRequire12 } from "node:module";
@@ -100054,7 +100059,7 @@ function compileSample(text3, acting, voice, turns) {
 }
 function save(file, value) {
   const temporary = file + "." + randomUUID6() + ".tmp";
-  writeFileSync21(temporary, JSON.stringify(value, null, 2));
+  writeFileSync22(temporary, JSON.stringify(value, null, 2));
   renameSync7(temporary, file);
 }
 function preview(audition) {
@@ -100079,7 +100084,7 @@ async function manageVoiceAudition(args) {
     });
     if (args.action === "plan") return { identityPath, identitySha256: hash3(source2), target, candidates: planned, review: "not_reviewed", instruction: "Use provider metadata to choose candidates; unknown attributes require auditioning. No audio generated and identity is unchanged." };
     const outputPath = join12(dirname7(identityPath), "voice-auditions", randomUUID6());
-    mkdirSync16(outputPath, { recursive: true });
+    mkdirSync17(outputPath, { recursive: true });
     const auditionPath2 = join12(outputPath, "audition.json");
     const audition2 = { version: 1, status: "generating", identityPath, identitySha256: hash3(source2), sampleText: args.sampleText, candidates: [], target, ...args.acting ? { acting: args.acting } : {}, ...args.sampleTurns ? { sampleTurns: args.sampleTurns } : {}, previewPath: join12(outputPath, "index.html") };
     save(auditionPath2, audition2);
@@ -100117,7 +100122,7 @@ async function manageVoiceAudition(args) {
         save(auditionPath2, audition2);
       }
       audition2.status = "ready";
-      writeFileSync21(audition2.previewPath, preview(audition2));
+      writeFileSync22(audition2.previewPath, preview(audition2));
       save(auditionPath2, audition2);
       return { auditionPath: auditionPath2, ...audition2, instruction: "Present all three audio players. Wait for the user to choose a candidate, then call select with their actual response." };
     } catch (error2) {
@@ -100157,9 +100162,9 @@ async function manageVoiceAudition(args) {
     return "```json\n" + JSON.stringify({ ...value, tts: ttsSchema.parse(chosen.tts), voiceSelection: selection }, null, 2) + "\n```";
   });
   if (!replaced) throw new Error("Missing identity JSON");
-  writeFileSync21(join12(dirname7(auditionPath), "identity-before-selection.md"), source, { flag: "wx" });
+  writeFileSync22(join12(dirname7(auditionPath), "identity-before-selection.md"), source, { flag: "wx" });
   const temporary = audition.identityPath + "." + randomUUID6() + ".tmp";
-  writeFileSync21(temporary, next);
+  writeFileSync22(temporary, next);
   renameSync7(temporary, audition.identityPath);
   audition.status = "selected";
   audition.selected = { ...selection, identitySha256: hash3(next) };
@@ -100221,7 +100226,7 @@ async function manageLocation(args) {
 
 // src/speech.ts
 import { createHash as createHash19, randomUUID as randomUUID7 } from "node:crypto";
-import { readFileSync as readFileSync30, writeFileSync as writeFileSync22, renameSync as renameSync8, mkdirSync as mkdirSync17, existsSync as existsSync28 } from "node:fs";
+import { readFileSync as readFileSync30, writeFileSync as writeFileSync23, renameSync as renameSync8, mkdirSync as mkdirSync18, existsSync as existsSync28 } from "node:fs";
 import { dirname as dirname8, resolve as resolve9, join as join14 } from "node:path";
 import * as nodeModule7 from "node:module";
 import { execFileSync as execFileSync13 } from "node:child_process";
@@ -100530,13 +100535,13 @@ function manageSpeech(args) {
       if (!character(line.speaker)?.tts) throw new Error(`Missing pinned voice for ${line.speaker}`);
     }
     const work = resolve9(dirname8(file), "../.work/speech-history");
-    mkdirSync17(work, { recursive: true });
+    mkdirSync18(work, { recursive: true });
     const backup = join14(work, revision + ".js");
-    if (!existsSync28(backup)) writeFileSync22(backup, before);
+    if (!existsSync28(backup)) writeFileSync23(backup, before);
     const nextSource = serializeBoard(win, header);
     if (hash4(readFileSync30(file)) !== revision) throw new Error("Storyboard changed during speech edit");
     const tmp = file + "." + randomUUID7() + ".tmp";
-    writeFileSync22(tmp, nextSource);
+    writeFileSync23(tmp, nextSource);
     renameSync8(tmp, file);
   }
   return { revision: hash4(readFileSync30(file)), changed, invalidated, plan: plan2, timing, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: object4(object4(object4(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
@@ -100545,7 +100550,7 @@ function manageSpeech(args) {
 // src/acting-review.ts
 import { execFile as execFile8 } from "node:child_process";
 import { createHash as createHash20, randomUUID as randomUUID8 } from "node:crypto";
-import { existsSync as existsSync29, mkdirSync as mkdirSync18, readFileSync as readFileSync31, realpathSync as realpathSync10, renameSync as renameSync9, rmSync as rmSync13, statSync as statSync14, writeFileSync as writeFileSync23 } from "node:fs";
+import { existsSync as existsSync29, mkdirSync as mkdirSync19, readFileSync as readFileSync31, realpathSync as realpathSync10, renameSync as renameSync9, rmSync as rmSync13, statSync as statSync14, writeFileSync as writeFileSync24 } from "node:fs";
 import path26 from "node:path";
 import { homedir as homedir5 } from "node:os";
 import { promisify as promisify4 } from "node:util";
@@ -100889,7 +100894,7 @@ async function reviewActing2(input, deps) {
   let requestSha256 = hash5(JSON.stringify({ mediaSha256, directionSha256, model: ACTING_REVIEW_MODEL, policy }));
   const directory2 = path26.resolve(deps.cacheDirectory || process.env.SOCIAL_FLOW_ACTING_REVIEW_CACHE_DIR?.trim() || path26.join(homedir5(), ".cache", "social-flow", "acting-reviews"));
   let receiptPath = path26.join(directory2, `${requestSha256}.json`);
-  mkdirSync18(directory2, { recursive: true, mode: 448 });
+  mkdirSync19(directory2, { recursive: true, mode: 448 });
   const readMatchingReceipt = (file, expectedHash, retryOf2) => {
     const cached2 = cachedReceiptSchema.parse(JSON.parse(readFileSync31(file, "utf8")));
     const cachedDirection = hash5(JSON.stringify({ direction: cached2.request.direction, expectedText: cached2.request.expectedText, mode: cached2.request.mode }));
@@ -100919,7 +100924,7 @@ async function reviewActing2(input, deps) {
   }
   const lock2 = `${receiptPath}.lock`;
   try {
-    writeFileSync23(lock2, JSON.stringify({ pid: process.pid, startedAt: (/* @__PURE__ */ new Date()).toISOString() }), { flag: "wx" });
+    writeFileSync24(lock2, JSON.stringify({ pid: process.pid, startedAt: (/* @__PURE__ */ new Date()).toISOString() }), { flag: "wx" });
   } catch {
     throw new Error("An identical review is running or was interrupted; inspect its lock instead of issuing another paid review");
   }
@@ -100978,8 +100983,8 @@ async function reviewActing2(input, deps) {
   };
   const temporary = `${receiptPath}.${randomUUID8()}.tmp`;
   try {
-    writeFileSync23(lock2, JSON.stringify({ phase: "evaluated", receipt }), { flag: "w" });
-    writeFileSync23(temporary, JSON.stringify(receipt, null, 2) + "\n", { flag: "wx" });
+    writeFileSync24(lock2, JSON.stringify({ phase: "evaluated", receipt }), { flag: "w" });
+    writeFileSync24(temporary, JSON.stringify(receipt, null, 2) + "\n", { flag: "wx" });
     renameSync9(temporary, receiptPath);
   } catch (error2) {
     try {
@@ -100998,7 +101003,7 @@ async function reviewActing2(input, deps) {
 
 // src/threads-gate.ts
 import { createHash as createHash21, randomUUID as randomUUID9 } from "node:crypto";
-import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync19, readFileSync as readFileSync32, realpathSync as realpathSync11, renameSync as renameSync10, statSync as statSync15, writeFileSync as writeFileSync24 } from "node:fs";
+import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync20, readFileSync as readFileSync32, realpathSync as realpathSync11, renameSync as renameSync10, statSync as statSync15, writeFileSync as writeFileSync25 } from "node:fs";
 import { dirname as dirname9, join as join15, resolve as resolve10 } from "node:path";
 import { fileURLToPath as fileURLToPath10 } from "node:url";
 import { spawnSync as spawnSync3 } from "node:child_process";
@@ -101046,14 +101051,14 @@ function draftLocation(id) {
 }
 function audit(channel, tool2, result, details = {}) {
   const dir = directory(channel);
-  mkdirSync19(dir, { recursive: true });
+  mkdirSync20(dir, { recursive: true });
   appendFileSync4(join15(dir, "gate-log.jsonl"), JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool: tool2, result, ...details }) + "\n", { mode: 384 });
 }
 function save2(draft) {
   const { file } = draftLocation(draft.draftId);
-  mkdirSync19(dirname9(file), { recursive: true });
+  mkdirSync20(dirname9(file), { recursive: true });
   const temp = `${file}.${randomUUID9()}.tmp`;
-  writeFileSync24(temp, JSON.stringify(draft), { mode: 384 });
+  writeFileSync25(temp, JSON.stringify(draft), { mode: 384 });
   renameSync10(temp, file);
 }
 function load6(id) {
@@ -104315,7 +104320,7 @@ async function checkAccounts(channel) {
 
 // src/tts-final-quality.ts
 import { execFile as execFile9 } from "node:child_process";
-import { existsSync as existsSync32, mkdtempSync as mkdtempSync6, readFileSync as readFileSync33, rmSync as rmSync14, writeFileSync as writeFileSync25, renameSync as renameSync11, openSync as openSync7, closeSync as closeSync7 } from "node:fs";
+import { existsSync as existsSync32, mkdtempSync as mkdtempSync6, readFileSync as readFileSync33, rmSync as rmSync14, writeFileSync as writeFileSync26, renameSync as renameSync11, openSync as openSync7, closeSync as closeSync7 } from "node:fs";
 import { tmpdir as tmpdir7 } from "node:os";
 import path27 from "node:path";
 import { promisify as promisify5 } from "node:util";
@@ -104350,8 +104355,8 @@ async function reviewFinalSpeech(input, deps) {
   function save3(status, extra) {
     const result = { ...base, status, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
     const staging = path27.join(temp, "proof.json");
-    writeFileSync25(staging, JSON.stringify(result, null, 2) + "\n");
-    writeFileSync25(proofPath + ".tmp", readFileSync33(staging));
+    writeFileSync26(staging, JSON.stringify(result, null, 2) + "\n");
+    writeFileSync26(proofPath + ".tmp", readFileSync33(staging));
     renameSync11(proofPath + ".tmp", proofPath);
     return { success: status === "pass", status, proofPath, ...extra };
   }
@@ -104398,8 +104403,8 @@ async function reviewFinalSpeech(input, deps) {
     if (sha256(readFileSync33(media)) !== base.mediaSha256) throw new Error("Final media changed during listening");
     return save3(failures.length ? "fail" : "pass", { signal, ...result, transcriptCheck: transcriptCheck ?? null, failures });
   } catch (error2) {
-    const failure = { error: error2 instanceof Error ? error2.message : String(error2) };
-    return singleReviewStarted ? save3("unverified", failure) : { success: false, status: "unverified", proofPath, ...failure };
+    const failure2 = { error: error2 instanceof Error ? error2.message : String(error2) };
+    return singleReviewStarted ? save3("unverified", failure2) : { success: false, status: "unverified", proofPath, ...failure2 };
   } finally {
     rmSync14(temp, { recursive: true, force: true });
     closeSync7(lock2);
@@ -104427,7 +104432,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
     for (const piece of planned) {
       const samples = pcm.subarray(piece.startSample * chapters.BYTES, piece.endSample * chapters.BYTES);
       const raw = path27.join(temp, "piece.pcm"), file = path27.join(temp, "piece.flac");
-      writeFileSync25(raw, samples);
+      writeFileSync26(raw, samples);
       await exec4("ffmpeg", ["-y", "-v", "error", "-f", "s32le", "-ar", String(chapters.RATE), "-ac", "1", "-i", raw, "-map_metadata", "-1", "-c:a", "flac", file], { timeout: 6e4 });
       const payload = readFileSync33(file);
       if (payload.length > chapters.LIMIT || !chapters.decode(file).equals(samples)) throw new Error("Chapter encoding exceeded the limit or changed PCM samples");
@@ -104471,7 +104476,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
 import { randomUUID as randomUUID11 } from "node:crypto";
 
 // src/content-feedback.ts
-import { mkdirSync as mkdirSync20, writeFileSync as writeFileSync26 } from "node:fs";
+import { mkdirSync as mkdirSync21, writeFileSync as writeFileSync27 } from "node:fs";
 import { dirname as dirname11, isAbsolute, join as join18, resolve as resolve11 } from "node:path";
 
 // src/content-feedback-html.ts
@@ -105103,8 +105108,8 @@ async function contentFeedback(input) {
     instagram
   };
   if (htmlPath) {
-    mkdirSync20(dirname11(htmlPath), { recursive: true });
-    writeFileSync26(htmlPath, renderFeedbackHtml(report), "utf8");
+    mkdirSync21(dirname11(htmlPath), { recursive: true });
+    writeFileSync27(htmlPath, renderFeedbackHtml(report), "utf8");
   }
   return { ok: true, status: 200, body: JSON.stringify(report) };
 }
@@ -106901,9 +106906,10 @@ var ROUTES = {
   // ── image generation (OpenAI GPT Image) — returns base64 image block + summary text ──
   gpt_image_text2img: async (args) => {
     const request = parseArgs(text2ImageSchema, args);
+    if (request.savePath && existsSync34(request.savePath)) return { ...text2(`Output already exists; choose a new savePath: ${request.savePath}`, true), terminal: true };
     const result = await generateFromText(request);
     if (!result.success || !result.base64) {
-      return text2(`Image generation failed: ${result.error}`, true);
+      return { ...text2(`Image generation failed: ${result.error}`, true), terminal: result.terminal === true };
     }
     let summary = `Image generated successfully
 
@@ -106928,9 +106934,10 @@ File save failed: ${formatError(saveError)}`;
   },
   gpt_image_img2img: async (args) => {
     const request = parseArgs(img2ImgSchema, args);
+    if (request.savePath && existsSync34(request.savePath)) return { ...text2(`Output already exists; choose a new savePath: ${request.savePath}`, true), terminal: true };
     const result = await generateFromImage(request);
     if (!result.success || !result.base64) {
-      return text2(`Image editing failed: ${result.error}`, true);
+      return { ...text2(`Image editing failed: ${result.error}`, true), terminal: result.terminal === true };
     }
     let summary = `Image edited successfully
 
@@ -106962,7 +106969,7 @@ File save failed: ${formatError(saveError)}`;
   image_local_generate: async (args) => {
     const request = parseArgs(zimageGenerateSchema, args);
     const result = await generateLocalImage(request);
-    if (!result.success) return text2(`Local image generation failed: ${result.error}`, true);
+    if (!result.success) return { ...text2(`Local image generation failed: ${result.error}`, true), terminal: true };
     return text2(
       `Image generated locally!
 
@@ -106978,8 +106985,8 @@ Generation time: ${result.elapsedSeconds}s`
   mlx_image_generate: async (args) => {
     const request = parseArgs(mlxImageGenerateSchema, args);
     const result = await generateMlxImage(request);
-    if (!result.success) return text2(`MLX Core image generation failed:
-${result.error}`, true);
+    if (!result.success) return { ...text2(`MLX Core image generation failed:
+${result.error}`, true), terminal: true };
     return text2(
       `Image generated via MLX Core.
 
@@ -106994,8 +107001,8 @@ Generation time: ${result.elapsedSeconds}s`
   mlx_image_edit: async (args) => {
     const request = parseArgs(mlxImageEditSchema, args);
     const result = await editMlxImage(request);
-    if (!result.success) return text2(`MLX Core image edit failed:
-${result.error}`, true);
+    if (!result.success) return { ...text2(`MLX Core image edit failed:
+${result.error}`, true), terminal: true };
     return text2(
       `Image edited via MLX Core.
 
