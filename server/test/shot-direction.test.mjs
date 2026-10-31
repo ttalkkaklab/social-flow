@@ -20,9 +20,16 @@ test('camera labels distinguish physical motion, lens changes, custom moves and 
   }
   const scene = { shot: { render: { mode: 'still_camera', camera: { effect: 'rack-focus' } } },
     visual: { camera: { movement: 'static' } } };
-  assert.equal(direction.cameraOf(scene, 'en').key, 'focus');
+  assert.equal(direction.cameraOf(scene, 'en').key, 'still-rack');
   assert.equal(direction.cameraOf(scene, 'en').medium, 'Still effect');
   assert.equal(direction.cameraOf({ visual: { camera: { movement: 'mystery' } } }, 'en').label, 'Custom move');
+});
+
+test('every still effect draws its own picture: push, pull and approach differ, and so do pan and reveal', () => {
+  const effects = require('../../skills/storyboard/references/render-routing.js').STILL_CAMERA_EFFECTS;
+  const picture = (effect) => direction.summary({ shot: { render: { mode: 'still_camera', camera: { effect } } } }, 0, null, 'ko', {}).match(/<svg[\s\S]*?<\/svg>/)[0];
+  assert.equal(new Set(effects.map(picture)).size, effects.length);
+  assert.equal(new Set(effects.map((effect) => direction.cameraOf({ shot: { render: { mode: 'still_camera', camera: { effect } } } }, 'ko').label)).size, effects.length);
 });
 
 test('unknown timing never creates an invented duration or cumulative clock', () => {

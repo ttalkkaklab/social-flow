@@ -47,6 +47,7 @@ test('offline export and LLM read ship the same catalogue without rewriting lega
     assert.match(readFileSync(join(dir,'storyboard.html'),'utf8'),/FILM_TECHNIQUES.selected/);
     const response=readStoryboard({path:dir,level:'full',includeContext:true,includeTechniques:true});
     assert.equal(response.techniqueCatalog.entries.length,catalog.entries.length);
+    assert.deepEqual(response.techniqueCatalog.guides,catalog.VALUES);
     assert.deepEqual(response.techniqueCatalog.selections[0].techniques,[{id:'framing.ms',reason:'Show upper-body action'}]);
     assert.equal(readFileSync(join(dir,'scenes.js'),'utf8'),source);
   }finally{rmSync(dir,{recursive:true,force:true});}
@@ -55,6 +56,27 @@ test('canonical size words reach the actual image prompt rather than a display-o
   assert.match(compiler.assemble({size:'ms',scene:'a person',tail:''}).prompt,/waist up/);
   assert.match(compiler.assemble({size:'mfs',scene:'a person',tail:''}).prompt,/mid-thigh/);
   assert.doesNotMatch(compiler.assemble({size:'ms',scene:'a person',tail:''}).prompt,/mid-thigh/);
+});
+test('every shot_icons value has a decision card and positive prompt words',()=>{
+  const {VOCAB}=require('../../skills/storyboard/references/structure-contract.js');
+  const {STILL_CAMERA_EFFECTS}=require('../../skills/storyboard/references/render-routing.js');
+  const clean=words=>compiler.negDirectiveHits(words).length===0&&compiler.bannedHits(words).length===0;
+  const cards=[...VOCAB.SIZES.map(v=>['size',v]),...VOCAB.ANGLES.map(v=>['angle',v]),...['shallow','deep','none'].map(v=>['depth',v]),...STILL_CAMERA_EFFECTS.map(v=>['still',v])];
+  for(const [attribute,value] of cards){
+    const card=catalog.guide(attribute,value);
+    assert.ok(card?.use&&card.avoid&&card.specify,attribute+' '+value);
+  }
+  // every move and focus entry is a card too, and every move has the verb phrase shot_prompt writes
+  for(const entry of catalog.entries.filter(e=>e.fields.movement||e.fields.focus))assert.ok(entry.use&&entry.avoid&&entry.specify,entry.id);
+  for(const entry of catalog.entries.filter(e=>e.fields.movement))
+    assert.ok(entry.prompt&&clean(entry.prompt)&&(entry.id==='camera.static'||entry.prompt.includes('{target}')),entry.id);
+  for(const size of VOCAB.SIZES)assert.ok(compiler.SIZE_WORDS[size]&&clean(compiler.SIZE_WORDS[size]),size);
+  for(const angle of VOCAB.ANGLES){
+    assert.ok(compiler.ANGLE_WORDS[angle]&&clean(compiler.ANGLE_WORDS[angle]),angle);
+    assert.deepEqual(compiler.assemble({size:'ms',angle,tail:''}).unknown,[],angle);
+  }
+  assert.equal(catalog.guide('size','__proto__'),null);
+  assert.match(catalog.legend('ko'),/피할 때/);
 });
 test('selected special technique reaches the generic video prompt',()=>{
   const result=compiler.clipAssemble({engine:'veo',camera:{movement:'handheld',speed:'steady',framing:'face centered',end:'face centered'},techniques:[{id:'camera.snorricam',reason:'Panic'}]});

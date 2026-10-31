@@ -262,3 +262,32 @@ test('shot body shows start and end frames and the video references its lane tak
  s.visual.frames={mode:'reference',start:'start.png'};s.visual.references[0].path='hero.png';
  const msr=render();assert.match(msr,/sent to MSR slot 5/);assert.match(msr,/ref-off-tile/);
 });
+
+test('Korean review tooltips read one card per size, angle and move, never the English instruction',()=>{
+ const template=readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html',import.meta.url),'utf8');
+ const slice=(from,to)=>template.slice(template.indexOf(from),template.indexOf(to,template.indexOf(from)));
+ const code=slice('  function sizeName(size)','  /* Depth-of-field pictograms')+slice('  function camTitle(id)','  function camKeyTile(id)')+slice('  function depthTitle(mode)','  /* Render-route pictograms');
+ const catalog=require('../../skills/storyboard/references/film-techniques.js');
+ const context={LANG:'ko',window:{FILM_TECHNIQUES:catalog},T:{avoidLabel:'피할 때',size:{},sizeHint:{},angle:{ground:'지면 높이'},angleHint:{ground:'camera at the floor'},depth:{deep:'딥포커스'},depthHint:{},depthRule:'rule'}};
+ const tip=call=>runInNewContext(code+'\n'+call,context);
+ const cu=catalog.guide('size','cu'),ots=catalog.guide('size','ots'),ground=catalog.guide('angle','ground'),dolly=catalog.byId['camera.dolly-in'];
+ assert.ok(tip('sizeTitle("cu")').includes(cu.use+'\n피할 때 — '+cu.avoid));
+ assert.ok(!tip('sizeTitle("cu")').includes(cu.instruction));
+ assert.ok(tip('sizeTitle("ots")').includes(ots.use));
+ assert.ok(tip('angleTitle("ground")').startsWith('지면 높이 — '+ground.use));
+ assert.ok(tip('camTitle("camera.dolly-in")').includes(dolly.use));
+ assert.ok(tip('depthTitle("deep")').startsWith('딥포커스 — '+catalog.guide('depth','deep').use));
+ context.LANG='en';
+ assert.ok(tip('sizeTitle("cu")').includes(cu.instruction));
+ assert.equal(tip('angleTitle("ground")'),'지면 높이 — camera at the floor');
+});
+
+test('every angle shot_icons takes has a review icon and a Korean name',()=>{
+ const template=readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html',import.meta.url),'utf8');
+ const start=template.indexOf('  var SIZE_ICON = (function () {');
+ const icons=runInNewContext(template.slice(start,template.indexOf('  Object.assign(SIZE_ICON.sizes',start))+'\nSIZE_ICON',{});
+ const {VOCAB}=require('../../skills/storyboard/references/structure-contract.js');
+ assert.deepEqual(Object.keys(icons.angles).sort(),[...VOCAB.ANGLES].sort());
+ const ko=template.match(/angle: \{ eye: "눈높이"[^}]*\}/)[0];
+ assert.deepEqual([...ko.matchAll(/(\w+): "/g)].map(m=>m[1]).sort(),[...VOCAB.ANGLES].sort());
+});

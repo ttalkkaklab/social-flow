@@ -72,7 +72,7 @@ neither judge the art nor block tool execution. Do not invent image or motion re
 | Purpose | Possible camera direction | What must be specified |
 | --- | --- | --- |
 | Show isolation or the surrounding space | crane / pedestal up | starting subject, revealed space, ending composition |
-| Sudden discovery | fast zoom in | the discovered detail and readable reaction |
+| Sudden discovery | fast zoom in — a crash zoom reads comic, so a straight dramatic beat takes a fast dolly in | the discovered detail and readable reaction |
 | Build pressure | dolly in | approach direction, subject action, stopping frame |
 | Stay with a chase | tracking / handheld | direction of travel and landmarks |
 | Reveal height around a climber | rising arc | subject, height change and path; a name alone does not define a helix |

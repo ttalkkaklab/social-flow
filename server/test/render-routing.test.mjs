@@ -202,12 +202,31 @@ test('a still pan or tilt travels between two regions of the actual image (L13)'
  const cam=require(path.join(ref,'still-camera.js'));
  const spec={template:'tilt',duration:5,focusFrom:[.5,.9,.4,.2],focusTo:[.5,.1,.4,.2]};
  const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-9,a+' ≠ '+b);
- near(cam.state(spec,0).fy,.9);near(cam.state(spec,5).fy,.1);near(cam.state(spec,2.5).fx,.5);
+ // named regions: the window centres A, then B, as far as the picture reaches (bottom edge → top edge here)
+ near(cam.state(spec,0).fy,1);near(cam.state(spec,5).fy,0);near(cam.state(spec,2.5).fx,.5);
  // the ease holds both ends: a tenth of the way in, the window has barely left A
- assert.ok(cam.state(spec,.5).fy>.88);
+ assert.ok(cam.state(spec,.5).fy>.98);
  const pan={template:'pan',duration:5,focusFrom:[.2,.5,.3,.3],focusTo:[.8,.5,.3,.3]};
- near(cam.state(pan,0).fx,.2);near(cam.state(pan,5).fx,.8);
- near(cam.state({template:'pan',duration:5},0).fx,.26);
+ near(cam.state(pan,0).fx,0);near(cam.state(pan,5).fx,1);near(cam.state(pan,0).zoom,1.2);
+ // on a source with the frame's own shape the window travels (zoom − 1) × Δfx of the frame: a fifth, not 5–8%
+ const travel=s=>(cam.state(s,0).zoom-1)*Math.abs(cam.state(s,5).fx-cam.state(s,0).fx);
+ assert.ok(travel(pan)>=.1,String(travel(pan)));
+ assert.ok(travel({template:'pan',duration:5,focusFrom:[.45,.5,.1,.1],focusTo:[.57,.5,.1,.1]})>=.1);
+ // the source's own cap (1.5× upscale at most) wins over the travel the regions ask for, down to the classic 1.13:
+ // a source already at the limit still pans (the render reports the upscale) instead of freezing
+ near(cam.state({...pan,maxZoom:1.15},0).zoom,1.15);near(cam.state({...pan,maxZoom:1.05},0).zoom,1.13);near(cam.state({...pan,maxZoom:.9},0).zoom,1.13);
+ assert.ok(cam.state({...pan,maxZoom:.9},5).fx-cam.state({...pan,maxZoom:.9},0).fx>.5);
+ // a pan without regions keeps the classic diagonal
+ assert.deepEqual([cam.state({template:'pan',duration:5},0).fx,cam.state({template:'pan',duration:5},0).zoom],[.26,1.13]);
+});
+test('a still hold keeps the frame put and records an intentional still',()=>{
+ const cam=require(path.join(ref,'still-camera.js'));
+ assert.ok(routing.STILL_CAMERA_EFFECTS.includes('hold'));
+ const hold={template:'hold',duration:4,focusTo:[.3,.6,.1,.1]};
+ const frame=t=>{const x=cam.state(hold,t);return [x.zoom,x.fx,x.fy]};
+ assert.deepEqual([frame(0),frame(2),frame(4)],[[1,.3,.6],[1,.3,.6],[1,.3,.6]]);
+ const s=still();s.shot.render.camera={effect:'hold',target:'the letter',reason:'The line lands; the letter stays on screen.'};
+ assert.deepEqual(checkScene(s),[]);
 });
 
 test('camera speed ladder validates vocabulary and fast shot lengths without rejecting window travel',()=>{

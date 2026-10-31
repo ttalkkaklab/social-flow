@@ -373,7 +373,9 @@
     if (!d || validateDepth(d).length || d.mode === 'none') return '';
     const intent = d.reason ? '; depth intent: ' + d.reason : '';
     if (d.mode === 'shallow') return 'Shallow depth of field: only ' + d.focus + ' is sharp, everything nearer and farther falls softly out of focus' + intent;
-    return 'Deep focus: ' + d.planes.join(', ') + ' all read sharp at the same time, front to back' + intent;
+    // "deep focus" is in neither the LTX nor the Vertex prompt guide; both read the planes spelled out front to back.
+    const p = d.planes, middle = p.length > 2 ? ' through ' + p.slice(1, -1).join(' and ') + ' in the middle ground' : '';
+    return 'Deep depth of field: sharp focus from ' + p[0] + ' in the foreground' + middle + ' to ' + p[p.length - 1] + ' in the background, all at once' + intent;
   }
 
   function check(win, opts) {
@@ -1273,8 +1275,10 @@
       frames: mode,
       cast: castOf(s) || [],
       lines: msr ? [] : (Array.isArray(s.narration) ? s.narration : []).filter(l => l && l.delivery === 'on_screen' && l.tts).map(l => l.speaker + ': ' + l.tts),
-      camera: [cam.movement, cam.speed, cam.target].map(x => x == null ? '' : String(x)).join(' | '),
-      focus: (Array.isArray(p.techniques) ? p.techniques : []).map(t => t && t.id).filter(id => id && isFocus(id)),
+      // shot_prompt also writes the closing composition and the rack focus subjects; each joins only when set,
+      // so a basis recorded before they existed still matches.
+      camera: [cam.movement, cam.speed, cam.target].concat(cam.end ? [cam.end] : []).map(x => x == null ? '' : String(x)).join(' | '),
+      focus: (Array.isArray(p.techniques) ? p.techniques : []).filter(t => t && t.id && isFocus(t.id)).map(t => t.from && t.to ? t.id + ': ' + t.from + ' → ' + t.to : t.id),
       framing: msr ? [p.size || '', p.angle || '', p.depth ? JSON.stringify(p.depth) : ''] : [],
     };
   }

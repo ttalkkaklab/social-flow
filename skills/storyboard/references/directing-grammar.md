@@ -319,8 +319,8 @@ same tripod height becomes a high angle.
 | `shot.angle` | On set | What it does | Grade |
 |---|---|---|---|
 | `eye` | 아이레벨 | the conversation seat; **the most trusted height for someone speaking to camera** | `[study]` eye level vs low p=.007 in 15 s talking-head clips; vs high only a trend (p=.082) |
-| `high` | 부감 · 하이 | the camera above the eyes looking down — the subject shrinks and the **surroundings come in** (the small room, the crowd, the alley with no exit). Powerless · isolated · watched | `[study]` high→eye→low: bigger, stronger, bolder on all five scales, p<.001 — likability does not move |
-| `low` | 앙각 · 로우 | the camera below the eyes looking up — the **comparators disappear** (sky, ceiling), the subject grows. Imposing · hero · dangerous. Pairs with a wide lens (phone 0.5×) | same study |
+| `high` | 부감 · 하이 | the camera above the eyes looking down — the subject shrinks and the **surroundings come in** (the small room, the crowd, the alley with no exit). Powerless · isolated · watched, when the cuts around it say so | `[study]` high→eye→low: bigger, stronger, bolder on all five scales, p<.001 — likability does not move; only when the pictures ran in story order (Sevenants & d'Ydewalle 2006, no effect in random order), and a higher camera raised a TV speaker's competence (McCain et al. 1977) |
+| `low` | 앙각 · 로우 | the camera below the eyes looking up — the **comparators disappear** (sky, ceiling), the subject grows. Imposing · hero · dangerous for a person the story already gives power. Pairs with a wide lens (phone 0.5×) | same study; a face talking to camera is trusted most at eye level (below it p=.007, above it p=.082 — Baranowski & Hecht 2018) |
 | `overhead` | 탑샷 · 버즈아이 | straight down, 90° — people become pieces on a map. Summary · fate · the whole situation in one frame | `[course]` |
 | `dutch` | 더치 · canted | the horizon itself tilted (5–20° by convention, no fixed value). Something is wrong · drugged · lied to | `[course]` |
 
@@ -605,7 +605,11 @@ holds: the two accelerating rows are spent once or twice per episode, like the c
 ## 5. Feel → technique — the lookup the storyboard reads first
 
 Write `shot.feel` in the author's own words, then find the closest row. The row is a default,
-not a cage — when you leave it, write why on the shot. Length is for generated clips; a filmed
+not a cage — when you leave it, write why on the shot. The rows are practitioners' conventions,
+not measured effects: no experiment shows a camera move's emotional effect, and the angle
+effects held only when the pictures ran as a story (§3), so the beat around the shot has to
+carry the feel the row names
+([2026-10-31 research](../../../docs/research/2026-10-31-directing-technique-conventions/index.html)). Length is for generated clips; a filmed
 shot takes only the wide ≥ 1.5× close ratio (§2) and has no cap; a narrated still keeps the
 speech math. Sound is what goes into `visual.audio` on a
 generated shot and into the mix note on a filmed one. The Still column is the same feel

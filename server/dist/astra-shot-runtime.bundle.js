@@ -6627,7 +6627,9 @@ function techniqueContract() {
 }
 var techniqueSelectionSchema = external_exports.array(external_exports.object({
   id: nonEmptyTechniqueId(),
-  reason: external_exports.string().trim().min(1).describe("Why this technique serves this shot\u2019s information or action")
+  reason: external_exports.string().trim().min(1).describe("Why this technique serves this shot\u2019s information or action"),
+  from: external_exports.string().trim().min(1).optional().describe("Rack focus: the subject sharp first, in English"),
+  to: external_exports.string().trim().min(1).optional().describe("Rack focus: the subject sharp last, in English")
 }).strict()).superRefine((value, ctx) => {
   for (const message of techniqueContract().validate(value))
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
@@ -6952,8 +6954,8 @@ var shotIconsSchema = external_exports.object({
     size: tuple(V.SIZES).optional(),
     why: nonEmpty.optional().describe("Why this size"),
     angle: tuple(V.ANGLES).optional(),
-    move: choice.extend({ target: nonEmpty.optional() }).strict().optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in \u2026)"),
-    focus: choice.nullable().optional().describe("A camera technique with a focus field (camera.rack-focus); null removes it"),
+    move: choice.extend({ target: nonEmpty.optional(), speed: external_exports.enum(["very slow", "slow", "steady", "fast", "very fast"]).optional() }).strict().optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold \u2026)"),
+    focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional() }).strict().nullable().optional().describe("A camera technique with a focus field (camera.rack-focus) and the subjects it hands focus between; null removes it"),
     depth: depthSchema.optional(),
     frames: external_exports.object({ mode: external_exports.enum(["first", "first_last", "reference"]), reason: nonEmpty, endState: nonEmpty.optional() }).strict().optional().describe("Frame plan: reference is MSR (subject images + start image)")
   }).strict()).min(1)

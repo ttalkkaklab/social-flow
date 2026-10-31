@@ -63,13 +63,18 @@ their source and stay outside this classification.
 | Real footage of the actual place, era or event | `archive` (this route only); `live_action`, `atmosphere` and `place` may take it instead of their default | `stock_video` | A 1950 newsreel of the street; a real launch from the NASA library; a real market at dawn from Pexels. The license record travels with the cut (scenes-schema §stock material). |
 | An abstract diagram or UI reenactment | `motion_explanation` (quantitative purposes may take it instead of `data_graph`) | `motion_html` | A flow between services, a queue filling, a before/after pair; `shot.motionGraphic` names the type ([motion-graphics.md](motion-graphics.md)). |
 
-Stills also record `camera.effect`, `target` and `reason` — nine effects: `focus-in` ·
+Stills also record `camera.effect`, `target` and `reason` — ten effects: `focus-in` ·
 `rack-focus` · `approach` · `pull` · `pan` · `tilt` · `push` (the plain slow zoom-in, still-camera.js's
-default) · `reveal` · `parallax`. Focus-in suits introducing a
+default) · `reveal` · `parallax` · `hold` (the frame stays put on `focusTo` or the centre; `shot_icons`
+records it as `motionIntent: intentional_still`, so a held still is a decision, not a frozen
+render). Focus-in suits introducing a
 person, approach suits stressing a clue, rack focus a shift of attention, pull a place, pan
 introducing a space or finding B after A, tilt the scale of a tall thing told by the time
 the eye needs (L13). A `pan` or `tilt` travels from `focusFrom` to `focusTo`, two different
-regions of the actual image; the runtime eases both ends, which is the hold in and hold out. Do
+regions of the actual image; the runtime eases both ends, which is the hold in and hold out, and
+centres each region as far as the picture reaches, zooming up to 1.2 (less when the source would
+pass a 1.5× upscale) so a pan between far regions travels about a fifth of the frame instead of
+5–8%. A pan without regions keeps its old diagonal. Do
 not repeat one effect on every cut. Foreground reveals and depth parallax need prepared
 layers. A `focus-in` or `rack-focus` cut declares `shot.depth` as `shallow`
 (scenes-schema §Depth of field); a `deep` record on one fails, because the mask blurs every

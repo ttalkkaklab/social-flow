@@ -14,8 +14,21 @@
   // pan · tilt — the window travels from focusFrom to focusTo (L13: a pan is a sentence from A
   // to B). The smoothstep ease is the hold in and hold out: zero velocity on both ends. Without
   // regions a pan keeps the classic diagonal and a tilt looks up the picture, bottom to top.
-  if(kind==='pan'){zoom=1.13;const a=spec.focusFrom||[.26,.65],b=spec.focusTo||[.61,.45];fx=mix(a[0],b[0],u);fy=mix(a[1],b[1],u)}
-  if(kind==='tilt'){zoom=1.22;const a=spec.focusFrom||[.5,.92],b=spec.focusTo||[.5,.08];fx=mix(a[0],b[0],u);fy=mix(a[1],b[1],u)}
+  // With both regions named, the zoom is the least that lets the window centre A and then B
+  // (1/(1 − distance)), at least 1.13 and at most 1.2 or spec.maxZoom, the most the source takes
+  // before a 1.5× upscale; the window then centres each region as far as the picture reaches,
+  // instead of sliding its alignment by the region coordinates. A source already at that limit
+  // keeps the classic 1.13 (the render reports the upscale) rather than a window that never moves.
+  if(['pan','tilt'].includes(kind)&&spec.focusFrom&&spec.focusTo){
+   const a=spec.focusFrom,b=spec.focusTo,axis=kind==='pan'?0:1,need=1/(1-Math.min(.9,Math.abs(b[axis]-a[axis])));
+   zoom=Math.min(Math.max(1.13,Math.min(1.2,spec.maxZoom??1.2)),Math.max(1.13,need));
+   const w=1/zoom,centre=c=>zoom>1?clamp((c-w/2)/(1-w)):.5;
+   fx=mix(centre(a[0]),centre(b[0]),u);fy=mix(centre(a[1]),centre(b[1]),u);
+  }
+  else if(kind==='pan'){zoom=1.13;const a=spec.focusFrom||[.26,.65],b=spec.focusTo||[.61,.45];fx=mix(a[0],b[0],u);fy=mix(a[1],b[1],u)}
+  else if(kind==='tilt'){zoom=1.22;const a=spec.focusFrom||[.5,.92],b=spec.focusTo||[.5,.08];fx=mix(a[0],b[0],u);fy=mix(a[1],b[1],u)}
+  // hold — the frame stays put on focusTo (or the centre): a deliberate still beat, no drift.
+  if(kind==='hold'){zoom=1;fx=spec.focusTo?.[0]??.5;fy=spec.focusTo?.[1]??.5}
   if(kind==='focus-in'){zoom=1.04+.055*u;fx=spec.focusTo[0];fy=spec.focusTo[1]}
   if(kind==='rack-focus'){zoom=1.08;fx=mix(spec.focusFrom[0],spec.focusTo[0],u);fy=mix(spec.focusFrom[1],spec.focusTo[1],u)}
   if(kind==='approach'){zoom=mix(1,1+span,u);fx=spec.focusTo[0];fy=spec.focusTo[1]}
@@ -25,6 +38,8 @@
  async function mount(canvas,spec,source,layerSources=[]){
   const decode=async src=>{const img=new Image();img.src=src;await img.decode();return img};
   const photo=await decode(source),layers=await Promise.all(layerSources.map(decode)),ctx=canvas.getContext('2d');
+  // Written onto the caller's spec so its own state() calls (the slide's __meta) see the same cap.
+  if(spec.maxZoom===undefined)spec.maxZoom=1.5/Math.max(canvas.width/photo.width,canvas.height/photo.height);
   const surface=()=>{const c=document.createElement('canvas');c.width=photo.width;c.height=photo.height;return c};
   const blur=surface(),bc=blur.getContext('2d');bc.drawImage(photo,0,0);bc.filter='blur(9px)';bc.drawImage(photo,0,0);bc.filter='none';
   function focused(r){

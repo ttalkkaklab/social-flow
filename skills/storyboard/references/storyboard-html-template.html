@@ -1600,17 +1600,20 @@ window.STORYBOARD_READY = (async function () {
       camGroup: { fix: "Locked", travel: "Travel", lens: "Lens", turn: "Rotate", follow: "Follow", rise: "Orbit · height", body: "Body-mounted" },
       depth: { shallow: "shallow depth", deep: "deep focus", none: "no depth choice", unset: "depth not planned" },
       depthHint: {
-        shallow: "One plane stays sharp and the rest falls softly out of focus. Use it when the viewer must read one thing in the frame; on a person, the eyes. Pairs with near sound: the voice forward, the room behind.",
-        deep: "Every named plane is sharp at once, two or three listed front to back. Use it when the viewer must read two or more things together. Pairs with full sound: every source audible.",
-        none: "Depth does not apply, as on an HTML explanation route. Record the reason.",
+        shallow: "One plane stays sharp and the rest falls soft. Name the sharp target: whose eye, which object. A blurred background is never the default.",
+        deep: "Every named plane is sharp, listed front to back. Stage the viewing order with movement, a line or light.",
+        none: "No depth to choose, as on a flat chart or a text plate.",
         unset: "No depth plan is recorded for this shot."
       },
-      depthRule: "Rule: one thing to read → shallow, two or more → deep. A departure needs a reason.",
-      angleHint: { eye: "camera at the subject's eye height — neutral, how people meet",
-                   high: "camera above, looking down — smaller, weaker, watched",
-                   low: "camera below, looking up — bigger, stronger, threatening",
-                   overhead: "straight down from above — a map of the scene, no face",
-                   dutch: "the horizon tilted — unease, something is off" },
+      depthRule: "Starting point: one thing to read → shallow, two or more → deep, or hand focus between them with a rack. A departure needs a reason.",
+      avoidLabel: "Avoid",
+      angleHint: { eye: "camera at the subject's eye height — neutral; the most trusted height for speaking to camera",
+                   high: "camera above, looking down — scale and the space around; smaller or more exposed, by context",
+                   low: "camera below, looking up — height and scale; dominance for a figure who already holds power",
+                   overhead: "straight down from above — a map of the layout; it hides the face",
+                   dutch: "the horizon tilted — something is off; strongest when rare",
+                   ground: "camera at the floor — feet, texture, a small creature's view; a level lens leaves standing faces out of frame",
+                   over: "over the near person's shoulder — reverse coverage; prefer size ots with a height angle" },
       render: { still_camera: "still + camera move", character_html: "3D character HTML", object_html: "3D object HTML",
                 motion_html: "motion graphic HTML", data_graph: "data graph HTML", editorial_html: "quote · verdict HTML", generated_video: "AI video", stock_video: "stock clip",
                 recording: "recording", asset: "shared asset", slide: "HTML slide" },
@@ -1624,26 +1627,17 @@ window.STORYBOARD_READY = (async function () {
                     recording: "a recording — screen capture or footage the channel already has",
                     asset: "shared asset — the channel's outro or intro clip",
                     slide: "HTML slide — route not declared in shot.render" },
-      sizeHint: { els: "very far · a person is a dot — the place is the subject; alone reads as lonely, a crowd reads as scale",
-                  ls: "far, wide · whole body with room — where this is, how many, how far apart (the establishing shot)",
-                  ws: "same as the long shot",
-                  fs: "full body · crown to toes — the whole body acting: dance, fight, walk",
-                  mfs: "cowboy · cut at mid-thigh — two people and the distance between them",
-                  ms: "waist-up · upper body, hands explaining, the conversation default",
-                  mcu: "bust shot · cut at mid-chest — talking to camera; hook, anchor, interview",
-                  cu: "the face fills the frame, crown cropped — the one line; one per scene",
-                  choker: "eyes and mouth only — the peak of tension; once or twice an episode",
-                  ecu: "eyes only, fingertips only — the detail at the peak",
-                  insert: "a thing, a hand, a screen, no face — one picture instead of three lines",
-                  two: "two people in one frame; specify their crop",
-                  three: "three in one frame — shows the group, not the place",
-                  ots: "over a shoulder — the near shoulder in front, the other face (mcu)",
-                  pov: "point of view · what that person sees — write the distance in shot.why",
-                  back: "from behind, no face — write the distance in shot.why",
-                  cutaway: "looking away · one cut of something outside the people",
-                  reaction: "the listener's face" },
+      sizeHint: { ws: "same as the long shot (ls); the legacy key",
+                  insert: "a thing, a hand, a screen in the same space — one picture instead of three lines",
+                  two: "two people in one frame — relationship, distance and both reactions; specify their crop",
+                  three: "three in one frame — the group's hierarchy; a wide three-shot shows the place too. Principal characters stop at two",
+                  ots: "over a shoulder — the near shoulder soft in front, the other face; match the reverse",
+                  pov: "point of view · what that person sees — placed between the look and the reaction",
+                  back: "from behind — the face withheld, the character's field of view shared",
+                  cutaway: "away from the action and back — pace, a covered seam, another time or place; a listener's face counts",
+                  reaction: "the face that responds to what was done or said — the cut before it sets its meaning" },
       angle: { eye: "eye level", high: "looking down", low: "looking up",
-               overhead: "overhead", dutch: "tilted" },
+               overhead: "overhead", dutch: "tilted", ground: "ground level", over: "over the shoulder" },
       type: { cover: "cover", points: "body", quote: "quote", broll: "b-roll", outro: "outro" },
       beat: { hook: "cover", hooking: "hooking", drip: "curiosity stage", result: "result", body: "body",
               turn: "turn", cta: "what next" },
@@ -1930,7 +1924,7 @@ window.STORYBOARD_READY = (async function () {
       // ── vocabulary read off scenes.js keys ──
       fmt: { "shorts-9x16": "세로 쇼트폼 9:16", "youtube-long-16x9": "YouTube 롱폼 16:9" },
       // Shot-size terms are the trade words written in Hangul, matching the film-techniques
-      // catalogue labels; the Korean gloss lives in sizeHint (the tooltip).
+      // catalogue labels; the Korean tooltip reads its card through FILM_TECHNIQUES.guide (use, avoid).
       size: { els: "익스트림 롱샷", ls: "롱샷", ws: "와이드 샷", fs: "풀샷",
               mfs: "미디엄 풀샷", ms: "미디엄 샷", mcu: "미디엄 클로즈업", cu: "클로즈업",
               choker: "빅 클로즈업", ecu: "익스트림 클로즈업", insert: "인서트",
@@ -1967,18 +1961,9 @@ window.STORYBOARD_READY = (async function () {
       camMoveKey: "카메라 이동 · 샷당 하나", camFocusKey: "초점 · 이동에 더함",
       camGroup: { fix: "고정", travel: "앞뒤 이동", lens: "렌즈", turn: "회전", follow: "따라가기", rise: "궤도·높이", body: "몸에 붙은 카메라" },
       depth: { shallow: "얕은 심도", deep: "딥포커스", none: "심도 선택 없음", unset: "심도 미설정" },
-      depthHint: {
-        shallow: "한 면만 선명하고 나머지는 부드럽게 흐립니다. 화면에서 읽을 정보가 하나일 때 씁니다. 인물이면 눈에 초점을 둡니다. 소리는 가까운 소리를 앞에 두고 공간은 뒤로 뺍니다.",
-        deep: "이름 붙인 면이 앞에서 뒤까지 2~3개 모두 선명합니다. 읽을 정보가 둘 이상일 때 씁니다. 소리도 공간 전체가 들립니다.",
-        none: "HTML 설명 컷처럼 심도가 적용되지 않는 컷입니다. 이유를 적습니다.",
-        unset: "이 샷에는 심도 계획이 기록되지 않았습니다."
-      },
-      depthRule: "규칙: 읽을 정보 1개 → 얕은 심도, 2개 이상 → 딥포커스. 다르게 고르면 이유를 적습니다.",
-      angleHint: { eye: "카메라가 인물 눈높이 — 중립, 사람이 마주 보는 높이",
-                   high: "위에서 내려다본다 — 작아 보이고 약해 보이고 감시당하는 느낌",
-                   low: "아래에서 올려다본다 — 커 보이고 세 보이고 위협적",
-                   overhead: "바로 위에서 수직으로 — 장면의 지도, 얼굴은 없다",
-                   dutch: "수평선을 기울인다 — 불안, 뭔가 어긋났다" },
+      depthHint: { unset: "이 샷에는 심도 계획이 기록되지 않았습니다." },
+      depthRule: "출발점: 읽을 정보 1개 → 얕은 심도, 2개 이상 → 딥포커스, 또는 랙 포커스로 초점을 넘깁니다. 다르게 고르면 이유를 적습니다.",
+      avoidLabel: "피할 때",
       render: { still_camera: "사진 카메라 무빙", character_html: "3D 캐릭터 HTML", object_html: "3D 사물 HTML",
                 motion_html: "모션그래픽 HTML", data_graph: "그래프 HTML", editorial_html: "인용·결론 HTML", generated_video: "AI 영상", stock_video: "외부 영상",
                 recording: "녹화분", asset: "공용 소재", slide: "HTML 슬라이드" },
@@ -1992,25 +1977,7 @@ window.STORYBOARD_READY = (async function () {
                     recording: "녹화분 — 화면 녹화나 채널이 이미 가진 영상",
                     asset: "공용 소재 — 채널 아웃트로·인트로 클립",
                     slide: "HTML 슬라이드 — shot.render 에 방식이 안 적혀 있다" },
-      sizeHint: { els: "완전 풀, 아주 먼 · 사람이 점 — 공간이 주인공, 혼자면 고독·여럿이면 규모",
-                  ls: "와이드, 먼 · 전신에 여유 — 어디인지·몇 명인지·얼마나 떨어졌는지 (설정샷)",
-                  ws: "롱숏과 같다",
-                  fs: "전신 · 머리끝부터 발끝까지 — 몸 전체 동작, 춤·격투·걸음",
-                  mfs: "니숏, 카우보이숏 · 허벅지 중간에서 자른다 — 두 사람과 그 사이 거리",
-                  ms: "허리에서 자른다 — 상반신과 손짓, 대화 기본값",
-                  mcu: "바스트숏 · 가슴 중간에서 자른다 — 카메라 보고 말하기, 훅·앵커·인터뷰",
-                  cu: "얼굴이 화면을 채운다, 정수리는 잘림 — 그 한 마디, 씬당 하나",
-                  choker: "눈과 입만 — 긴장의 정점, 회차에 한두 번",
-                  ecu: "눈만·손끝만 — 정점의 디테일",
-                  insert: "물건·손·화면만, 얼굴 없음 — 그림 하나가 대사 세 줄을 대신한다",
-                  two: "둘을 한 프레임에 (절단 위치는 별도로 지정)",
-                  three: "셋을 한 프레임에 — 무리는 보이지만 장소는 못 깐다",
-                  ots: "어깨 너머 — 앞사람 어깨가 앞에, 상대 얼굴은 미디엄 클로즈업",
-                  pov: "시점숏 · 그 사람이 본 것 — 거리는 shot.why 에 적는다",
-                  back: "뒤에서, 얼굴 없이 — 거리는 shot.why 에 적는다",
-                  cutaway: "딴 데 보기 · 인물 밖의 것을 한 컷",
-                  reaction: "듣는 쪽 얼굴" },
-      angle: { eye: "눈높이", high: "내려다봄", low: "올려다봄", overhead: "머리 위", dutch: "기울임" },
+      angle: { eye: "눈높이", high: "내려다봄", low: "올려다봄", overhead: "머리 위", dutch: "기울임", ground: "지면 높이", over: "어깨 너머" },
       type: { cover: "커버", points: "본문", quote: "인용", broll: "삽입 영상", outro: "아웃트로" },
       beat: { hook: "커버", hooking: "후킹", drip: "호기심 풀기", result: "결과", body: "본문", turn: "전환", cta: "다음 안내" },
       joinIs: function (v) { return "이음 · " + v; },
@@ -2713,7 +2680,9 @@ window.STORYBOARD_READY = (async function () {
       high: dot(6, 4.5) + arrow(9, 6.2, 17, 10.5) + person(23.5, 8, 30),
       low: dot(6, 27.5) + arrow(8.5, 25.5, 17.5, 12.5) + person(23.5, 2, 36),
       overhead: dot(16, 5) + arrow(16, 8.5, 16, 14.5) + '<ellipse cx="16" cy="24" rx="10" ry="5.5"/><circle cx="16" cy="24" r="3.4"/>',
-      dutch: '<g transform="rotate(-14 16 16)"><rect x="4.5" y="8" width="23" height="16" rx="2.5"/>' + person(16, 10, 18, { legs: false }) + "</g>"
+      dutch: '<g transform="rotate(-14 16 16)"><rect x="4.5" y="8" width="23" height="16" rx="2.5"/>' + person(16, 10, 18, { legs: false }) + "</g>",
+      ground: '<path d="M3 28.5h26" class="ico-dim"/>' + dot(5, 26.5) + arrow(8.5, 26.5, 15.5, 26.5) + person(23.5, 5, 22),
+      over: '<circle cx="7.5" cy="24.5" r="7" class="ico-dim"/>' + dot(4, 12) + arrow(7, 12.5, 15, 12.5) + person(23.5, 4, 34)
     };
     return { sizes: D, angles: A, person: person, dot: dot };
   })();
@@ -2729,12 +2698,16 @@ window.STORYBOARD_READY = (async function () {
     return d ? '<svg class="size-ico f-' + SIZE_FAMILY[size] + '" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>" : "";
   }
   function sizeName(size) { var e = window.FILM_TECHNIQUES.byId["framing." + size]; return e ? e.label[LANG] : (T.size[size] || size); }
-  function sizeTitle(size) { var e = window.FILM_TECHNIQUES.byId["framing." + size]; return e ? e.label[LANG] + " — " + e.instruction : (T.size[size] || size) + " — " + (T.sizeHint[size] || ""); }
+  function guideTip(card) { return card.use + (card.avoid ? "\n" + T.avoidLabel + " — " + card.avoid : ""); }
+  function sizeTitle(size) {
+    var g = window.FILM_TECHNIQUES.guide("size", size);
+    return sizeName(size) + " — " + (LANG === "ko" && g ? guideTip(g) : g && g.instruction ? g.instruction : (T.sizeHint[size] || ""));
+  }
   function angleIcon(a) {
     var d = ANGLE_ICON[a];
     return d ? '<svg class="size-ico a-cam" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>" : "";
   }
-  function angleTitle(a) { return (T.angle[a] || a) + " — " + (T.angleHint[a] || ""); }
+  function angleTitle(a) { var g = window.FILM_TECHNIQUES.guide("angle", a); return (T.angle[a] || a) + " — " + (LANG === "ko" && g ? guideTip(g) : (T.angleHint[a] || "")); }
   /* Depth-of-field pictograms (L11) — a near figure and a far one; the soft plane is drawn dim. */
   var DEPTH_NEAR = '<circle cx="11.5" cy="15" r="3.6"/><path d="M4.5 27c1-4.6 3.6-6.6 7-6.6s6 2 7 6.6"/>';
   var DEPTH_FAR = '<circle cx="22.5" cy="9" r="2.4"/><path d="M18.2 17.4c.6-3 2.3-4.3 4.3-4.3s3.7 1.3 4.3 4.3"/>';
@@ -2814,12 +2787,12 @@ window.STORYBOARD_READY = (async function () {
   }
   function camTitle(id) {
     var e = window.FILM_TECHNIQUES.byId[id];
-    return e.label[LANG] + " — " + (LANG === "ko" ? e.use : e.instruction);
+    return e.label[LANG] + " — " + (LANG === "ko" ? guideTip(e) : e.instruction);
   }
   function camKeyTile(id) {
     return '<span class="k" tabindex="0" data-tip="' + esc(camTitle(id)) + '">' + camIcon(id) + "<span>" + esc(window.FILM_TECHNIQUES.byId[id].label[LANG]) + "</span></span>";
   }
-  function depthTitle(mode) { return (T.depth[mode] || mode) + " — " + (T.depthHint[mode] || "") + (mode === "shallow" || mode === "deep" ? "\n" + T.depthRule : ""); }
+  function depthTitle(mode) { var g = window.FILM_TECHNIQUES.guide("depth", mode); return (T.depth[mode] || mode) + " — " + (LANG === "ko" && g ? guideTip(g) : (T.depthHint[mode] || "")) + (mode === "shallow" || mode === "deep" ? "\n" + T.depthRule : ""); }
   /* Render-route pictograms — what makes the picture move: an AI clip, an HTML animation,
      or a camera over a photo. Same tile and the same 2px line as the size icons. */
   var RENDER_ICON = {
@@ -2930,7 +2903,7 @@ window.STORYBOARD_READY = (async function () {
         return '<span class="k" data-tip="' + esc(sizeTitle(k)) + '">' + sizeIcon(k) + '<span>' + esc(sizeName(k)) + "</span></span>";
       }).join("") + "</div>" +
       '<div class="size-key"><span class="kt">' + esc(T.angleKey) + "</span>" +
-      ["eye", "high", "low", "overhead", "dutch"].map(function (k) {
+      ["eye", "high", "low", "overhead", "dutch", "ground", "over"].map(function (k) {
         return '<span class="k" data-tip="' + esc(angleTitle(k)) + '">' + angleIcon(k) + '<span>' + esc(T.angle[k] || k) + "</span></span>";
       }).join("") + "</div>" +
       '<div class="size-key cam-keys"><span class="kt">' + esc(T.camMoveKey) + "</span>" +
@@ -4951,8 +4924,14 @@ window.STORYBOARD_READY = (async function () {
     var moveWhy = moveReason(camDir, moveSel, camVis);
     var summaryHtml = window.SHOT_DIRECTION.summary(s, i, directionAt > 0 ? directionOrder[directionAt - 1].s : null, LANG, DOC);
     if (moveId) chips += chip(camIcon(moveId), window.FILM_TECHNIQUES.byId[moveId].label[LANG], camTitle(moveId) + (camRaw ? "\n" + camRaw : "") + (moveWhy ? "\n\n" + moveWhy : ""));
-    else if (!focusSel) chips += chip((summaryHtml.match(/<svg[\s\S]*?<\/svg>/) || [""])[0], camDir.label, camDir.medium + (camRaw ? "\n" + camRaw : "") + (moveWhy ? "\n\n" + moveWhy : ""));
-    if (focusSel) chips += chip(camIcon(focusSel.id), focusSel.entry.label[LANG], camTitle(focusSel.id) + (focusSel.reason ? "\n\n" + focusSel.reason : ""));
+    else if (!focusSel) {
+      // A still effect reads its card the way the size and angle chips do (film-techniques.js VALUES.still).
+      var stillCard = camDir.still ? window.FILM_TECHNIQUES.guide("still", camDir.camera.effect) : null;
+      chips += chip((summaryHtml.match(/<svg[\s\S]*?<\/svg>/) || [""])[0], camDir.label, camDir.label + " · " + camDir.medium +
+        (stillCard && LANG === "ko" ? "\n" + guideTip(stillCard) : "") + (camRaw ? "\n" + camRaw : "") + (moveWhy ? "\n\n" + moveWhy : ""));
+    }
+    if (focusSel) chips += chip(camIcon(focusSel.id), focusSel.entry.label[LANG], camTitle(focusSel.id) +
+      (focusSel.from && focusSel.to ? "\n" + focusSel.from + " → " + focusSel.to : "") + (focusSel.reason ? "\n\n" + focusSel.reason : ""));
     chips += chip(depthIcon(dmode), dlabel || T.depth.unset, dtip || T.depth.unset);
     if (msrLane(s, rmode))
       chips += chip('<svg class="size-ico r-msr" viewBox="0 0 32 32" aria-hidden="true"><text x="16" y="19.5" text-anchor="middle" font-size="10" font-weight="800" letter-spacing="-.3" class="ico-fill">MSR</text></svg>',
