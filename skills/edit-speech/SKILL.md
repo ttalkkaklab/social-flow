@@ -52,6 +52,8 @@ new character dialogue or voices. Do not silently turn a user's dialogue into na
    `.work/speech-history/`. Never overwrite an old take. A voice configuration change affects
    every line spoken by that character; list those lines and regenerate them as a set only
    when the user asked for that voice change.
+   A line in a shot bound as `native` (MSR) has no take: the edit marks the clip stale.
+   Regenerate the clip through `video_plan` and bind it again with `attach_video`; skip step 3.
 3. Call `speech_manage action:plan_audio` for the affected line. Generate a new take
    with its returned generator and provider-ready generation arguments, preserving
    the character’s pinned settings. Attach with clean `generation.text` from

@@ -172,7 +172,10 @@ direct request that carries a sample to a gateway without the route or a backend
 cannot take samples fails with `msr_voice_unsupported` before anything is submitted.
 `visual.video.voice` is retired and `sound.audioSource:"speech"` is refused on MSR.
 `prepare-video-sound.js` sets `sound.audioSource:"video"` and routes `auto` effects
-into the MSR soundtrack.
+into the MSR soundtrack. MSR lines get no per-line TTS: `speech_manage plan_video` plans
+the shot as `native`, `attach_video` binds the clip to the line revisions and sets
+`sound.audioSource:"video"`, and an edited line marks the clip stale instead of asking for
+audio.
 
 **LTX project default (2026-10-30, user directive).** Choosing LTX at project setup
 saves `{engine:"astra-genai", model:"ltx-2.5-22b-distilled", operation:"reference",

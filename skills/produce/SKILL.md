@@ -761,7 +761,7 @@ or push a line into the next state.
 
 **An all-live-voice episode (`window.VOICE === "user"`) skips this whole section** — every
 card's audio comes from the clips (§3.5) and `voice/` (§3.6). The style check already
-ran back in the storyboard.
+ran back in the storyboard. **An MSR shot's lines get no take either**: MSR speaks its prompt's lines and its soundtrack is the card audio, so bind its clip with `speech_manage attach_video` (the `native` route in [shot-speech.md](references/shot-speech.md#adapter-layer)); each speaker's voice sample is made once per character.
 
 **Run the style check before anything gets read aloud** — its findings are editing suggestions
 (rule 4). Narration passes by once with no rewind, and card text can't be fixed after publishing,

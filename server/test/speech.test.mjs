@@ -39,6 +39,35 @@ test('video adapters select by capabilities, never a provider name',()=>{
  assert.equal(speechVideoPlan(lines,{...caps,audioConditioning:false,postLipSync:true}).mode,'post_lipsync');
  assert.throws(()=>speechVideoPlan(lines,{...caps,audioConditioning:false}),/cannot synchronize/);
  assert.equal(speechVideoPlan([{...lines[0],delivery:'voiceover'}],caps).mode,'voiceover');
+ const native={...caps,audioConditioning:false,lipSync:false,nativeSpeech:true},msr=speechVideoPlan(lines,native);
+ assert.equal(msr.mode,'native');assert.equal(msr.audioFirst,false);assert.equal(msr.timing,'model_timed');
+ assert.match(msr.videoPrompt,/physically saying "Hello"/);
+ assert.throws(()=>speechVideoPlan([{...lines[0],delivery:'voiceover'}],native),/on-screen lines only/);
+});
+test('a native-speech clip binds line revisions and assembles from its soundtrack without line audio',t=>{
+ const {dir,target,r}=setup(t),line=r.lines[0],file=path.join(target,'scenes.js'),win={};
+ new Function('window',readFileSync(file,'utf8'))(win);win.SCENES=[win.SCENES[0]];
+ writeFileSync(file,Object.entries(win).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+ const native={...caps,audioConditioning:false,lipSync:false,nativeSpeech:true};
+ const work=path.join(dir,'.work'),audio=path.join(work,'c0.wav');writeFileSync(audio,'extracted soundtrack');
+ writeFileSync(path.join(work,'cards.tsv'),'0\tc0.wav\t1\n');
+ const hash=f=>require('node:crypto').createHash('sha256').update(readFileSync(f)).digest('hex');
+ const clip=(name,bytes)=>{const video=path.join(dir,name);writeFileSync(video,bytes);
+  writeFileSync(path.join(work,'source-audio.json'),JSON.stringify([{card:'0',video,sourceSha256:hash(video),audio,audioSha256:hash(audio)}]));return video;};
+ const attach=video=>manageSpeech({path:target,action:'attach_video',shotId:line.shotId,expectedRevision:manageSpeech({path:target,action:'list'}).revision,videoPath:video,capabilities:native});
+ const checker=require('../../skills/produce/references/check-tts-quality.js'),shot=()=>require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8')).SCENES[0];
+ const first=clip('msr-1.mp4','first clip');
+ assert.throws(()=>checker.check(work,target),/needs a video speech binding/);
+ attach(first);assert.equal(shot().visual.video.speechBinding.mode,'native');assert.equal(shot().sound.audioSource,'video');
+ assert.ok(checker.check(work,target)[audio]);
+ const edited=manageSpeech({path:target,action:'update',lineId:line.id,expectedRevision:manageSpeech({path:target,action:'list'}).revision,patch:{tts:'Changed',sub:'Changed'}});
+ assert.equal(edited.lines[0].mediaStatus,undefined);assert.throws(()=>checker.check(work,target),/video is stale/);
+ attach(first);assert.throws(()=>checker.check(work,target),/video is stale/); // these bytes spoke the old words
+ attach(clip('msr-2.mp4','regenerated clip'));assert.ok(checker.check(work,target)[audio]);
+ assert.equal(manageSpeech({path:target,action:'list'}).lines[0].audioProvenanceStatus,'native_speech');
+ const board={};new Function('window',readFileSync(file,'utf8'))(board);board.SCENES[0].sound.audioSource='speech';
+ writeFileSync(file,Object.entries(board).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+ assert.throws(()=>checker.check(work,target),/needs sound.audioSource video/);
 });
 test('generation binding rejects wrong voices and invalidates old audio after edits',t=>{
  const {dir,target,r}=setup(t),line=r.lines[0];const audio=path.join(dir,'voice.wav');writeFileSync(audio,'fixture audio bytes');

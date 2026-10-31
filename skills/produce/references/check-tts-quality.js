@@ -170,7 +170,12 @@ function check(work, board) {
     if(s.visual?.video?.speechStatus==='stale')throw new Error('Dialogue-dependent video is stale for card '+i);
     const characters=win.SB_DOC?.characters||[];
     const cast=Array.isArray(characters)?characters:Object.entries(characters).map(([id,c])=>({...c,id}));
-    for(const line of s.narration||[]) {
+    const binding=s.visual?.video?.speechBinding;
+    // A native-speech clip (MSR) spoke these lines from its prompt: they have no audio, and its soundtrack is the card audio.
+    const native=binding?.mode==='native';
+    if(native && s.sound?.audioSource!=='video')throw new Error('Native speech video needs sound.audioSource video for card '+i);
+    if(win.SB_DOC?.speechPlanVersion===1 && (s.narration||[]).some(n=>n.delivery==='on_screen') && s.visual?.video && !binding)throw new Error('On-screen dialogue needs a video speech binding for card '+i+'; bind the clip with speech_manage attach_video');
+    for(const line of native?[]:s.narration||[]) {
       if(line.mediaStatus==='needs_audio')throw new Error('Regenerate modified dialogue '+line.id);
       if(win.SB_DOC?.speechPlanVersion===1 && (line.tts||'').trim() && !line.audio)throw new Error('Attach generated dialogue audio: '+line.id);
       if(line.audio) {
@@ -184,18 +189,16 @@ function check(work, board) {
         characterVoice(win,{narration:[line]},line.audio.generation);
       }
     }
-    const binding=s.visual?.video?.speechBinding;
     if(binding) {
       if((s.visual.video.engine && binding.provider!==s.visual.video.engine)||(s.visual.video.model && binding.model!==s.visual.video.model))throw new Error('Video adapter changed for card '+i);
       if(path.resolve(board,s.visual.video.clip||'')!==path.resolve(binding.videoPath) || hash(fs.readFileSync(binding.videoPath))!==binding.videoSha256)throw new Error('Bound video changed for card '+i);
-      const audio=(s.narration||[]).map(n=>({lineId:n.id,sha256:n.audio?.sha256,revision:n.audio?.revision}));
+      const audio=(s.narration||[]).map(n=>native?{lineId:n.id,revision:speechRevision(n,{tts:cast.find(c=>c.id===n.speaker)?.tts})}:{lineId:n.id,sha256:n.audio?.sha256,revision:n.audio?.revision});
       if(JSON.stringify(binding.audio)!==JSON.stringify(audio))throw new Error('Video speech binding is stale for card '+i);
       const payload=require('../../_shared/scene-acting.js').scenePerformancePayload(s);
       if(binding.performanceRevision && binding.performanceRevision!==hash(JSON.stringify(payload)))warnings.push('card '+i+': performance plan changed since the clip was bound; inspect the clip against the current plan (stale)');
       if(!binding.performanceRevision)warnings.push('card '+i+': legacy video performance binding is unverified');
       media[binding.videoPath]=binding.videoSha256;
     }
-    if(win.SB_DOC?.speechPlanVersion===1 && (s.narration||[]).some(n=>n.delivery==='on_screen') && s.visual?.video && !binding)throw new Error('On-screen dialogue needs a video speech binding for card '+i);
     // The actual scene WAV must be tied to these lines, not merely accompanied by other WAVs.
     const lines=(s.narration||[]).filter(n=>(n.tts||'').trim());
     if (s.sound?.audioSource === 'video') {

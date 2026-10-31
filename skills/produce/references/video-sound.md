@@ -47,8 +47,10 @@ audio mode. Explicit unsupported native/input requests fail instead of pretendin
 Reference audio in Seedance is conditioning, not a promise of byte-identical preservation.
 When the shot has authored dialogue, the CLI defaults to audioSource=speech to preserve
 the existing voice. MSR is the exception (2026-10-30): its own speech-and-effects
-soundtrack is the cut's audio, voiced from the speaker's pinned sample
-([GenAI MSR](../../_shared/astra-genai.md#msr-and-v2-video)). Selecting audioSource=video is explicit and still requires the
+soundtrack is the cut's audio, voiced from the speaker's pinned sample when one rides on the
+subject image ([GenAI MSR](../../_shared/astra-genai.md#msr-and-v2-video)). Its lines get no
+TTS take: `speech_manage attach_video` binds the clip to their revisions (the `native` route)
+and sets audioSource=video. On other tools, selecting audioSource=video still requires the
 existing line/voice/video provenance for dialogue-bound shots; extraction is not a
 waiver of pinned speech contracts. On silent action shots, native audio is the default.
 
