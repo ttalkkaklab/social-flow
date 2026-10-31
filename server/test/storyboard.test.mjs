@@ -505,6 +505,56 @@ describe('icon attributes come after every shot\'s characters', () => {
     writeShotIcons({ path: dir, shots: [{ id: 's0001', move: { id: 'pan', reason: 'scan the room' } }] });
     assert.equal(readBoard(dir).win.SCENES[0].shot.render.camera.target, undefined);
   });
+  it('speed, rack focus subjects and a still hold land where the prompts and the renderer read them; a 9:16 board gets vertical notes', () => {
+    const dir = storyBoard();
+    writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: [] }] });
+    const tall = writeShotIcons({ path: dir, shots: [
+      { id: 's0001', render: { mode: 'generated_video', reason: 'r' }, size: 'ls', move: { id: 'camera.side-tracking', reason: 'r', speed: 'slow', target: 'Mina' },
+        focus: { id: 'camera.rack-focus', reason: 'r', from: 'the key', to: 'Mina' } },
+      { id: 's0002', render: { mode: 'still_camera', reason: 'r' }, move: { id: 'hold', reason: 'the line lands', speed: 'slow' } },
+    ] });
+    const [video, still] = readBoard(dir).win.SCENES;
+    assert.equal(video.visual.camera.speed, 'slow');
+    assert.deepEqual(video.shot.techniques.find((t) => t.id === 'camera.rack-focus'), { id: 'camera.rack-focus', reason: 'r', from: 'the key', to: 'Mina' });
+    assert.deepEqual([still.shot.render.camera.effect, still.visual.camera.speed], ['hold', 'slow']);
+    assert.deepEqual(still.shot.render.motionIntent, { type: 'intentional_still', reason: 'the line lands' });
+    // the vertical notes come back as warnings, one per chosen value that has one
+    const notes = (r) => r.findings.filter((f) => f.level === 'warn' && f.what.startsWith('9:16 note')).map((f) => [f.where, f.what.match(/^9:16 note, ([^:]+):/)[1]]);
+    assert.deepEqual(notes(tall), [['s0001', 'size ls'], ['s0001', 'move camera.side-tracking']]);
+    assert.ok(!tall.findings.some((f) => /names no subjects/.test(f.what)));
+    assert.throws(() => writeShotIcons({ path: dir, shots: [{ id: 's0001', move: { id: 'camera.dolly-in', reason: 'r', speed: 'very slow' } }] }), /speed is slow, steady, fast/);
+    assert.throws(() => writeShotIcons({ path: dir, shots: [{ id: 's0002', move: { id: 'push', reason: 'r', speed: 'steady' } }] }), /speed is very slow, slow, fast, very fast/);
+    // the prompts quote a video move's target and the focus subjects, so another language is refused up front
+    assert.throws(() => writeShotIcons({ path: dir, shots: [{ id: 's0001', move: { id: 'camera.dolly-in', reason: 'r', target: '문' } }] }), /video_prompt_language: shot_icons s0001 move.target/);
+    assert.throws(() => writeShotIcons({ path: dir, shots: [{ id: 's0001', focus: { id: 'camera.rack-focus', reason: 'r', from: '열쇠', to: 'Mina' } }] }), /focus.from/);
+    assert.equal(writeShotIcons({ path: dir, shots: [{ id: 's0002', move: { id: 'hold', reason: 'the line lands', target: '편지' } }] }).written, true);
+    // a still cut racks focus with its own effect, not a focus technique beside it
+    assert.throws(() => writeShotIcons({ path: dir, shots: [{ id: 's0002', focus: { id: 'camera.rack-focus', reason: 'r', from: 'the key', to: 'Mina' } }] }), /still_camera cut moves its focus with the still effect/);
+    // another effect drops the hold's intentional still
+    writeShotIcons({ path: dir, shots: [{ id: 's0002', move: { id: 'push', reason: 'settle in' } }] });
+    assert.equal(readBoard(dir).win.SCENES[1].shot.render.motionIntent, undefined);
+    // a 16:9 board gets no vertical notes; a rack focus without its subjects is reported, not refused
+    applyStoryboard({ path: dir, draft: true, globals: { FORMAT: 'youtube-long-16x9' } });
+    const wide = writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'ls', focus: { id: 'camera.rack-focus', reason: 'r' } }] });
+    assert.deepEqual([wide.written, notes(wide)], [true, []]);
+    assert.ok(wide.findings.some((f) => f.level === 'warn' && f.where === 's0001' && /camera.rack-focus names no subjects/.test(f.what)));
+  });
+  it('leaving the still route takes the hold\'s intentional still with it', () => {
+    const dir = storyBoard();
+    writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: [] }] });
+    writeShotIcons({ path: dir, shots: [{ id: 's0002', render: { mode: 'still_camera', reason: 'r' }, move: { id: 'hold', reason: 'the line lands' } }] });
+    assert.equal(readBoard(dir).win.SCENES[1].shot.render.motionIntent?.type, 'intentional_still');
+    writeShotIcons({ path: dir, shots: [{ id: 's0002', render: { mode: 'generated_video', reason: 'continuous action' } }] });
+    const render = readBoard(dir).win.SCENES[1].shot.render;
+    assert.deepEqual([render.motionIntent, render.camera], [undefined, undefined]);
+  });
+  it('the shot_icons tool shows the 9:16 notes to the author', async () => {
+    const dir = storyBoard();
+    writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: [] }] });
+    const out = await ROUTES.shot_icons({ path: dir, shots: [{ id: 's0001', render: { mode: 'generated_video', reason: 'r' }, size: 'ls' }] });
+    assert.ok(!out.isError);
+    assert.match(out.content[0].text, /s0001 +9:16 note, size ls: /);
+  });
   it('only a board started with story_sequence holds every writer to the order', () => {
     const dir = storyBoard();
     const shot = readBoard(dir).win.SCENES[0];
@@ -592,7 +642,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.match(ended.inputs[0], /images\/s0002-start-v1\.png$/);
     assert.deepEqual([ended.inputs.length, readBoard(dir).win.SCENES[1].visual.frames.endProps], [5, ['key']]);
     const msr = writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns to the door.' }).prompt;
-    assert.match(msr, /^Medium shot, waist up, at eye level\. Camera: dolly in.*Mina turns to the door\. Audio: no music\.$/);
+    assert.equal(msr, 'Medium shot, waist up, at eye level. The camera pushes in toward the subject, with a short pause on the opening and closing pictures. Mina turns to the door. Audio: no music.');
     const framed = writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', end: 'she smiles' }).prompt;
     assert.equal(framed, 'Start from the given first frame. Mina looks up. Mina says: "안녕". End on the given last frame: she smiles. Audio: no music.');
     assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', sound: 'rain on the window' }).prompt, /Audio: rain on the window, no music\.$/);
@@ -647,6 +697,44 @@ describe('images and the video prompt follow the icon attributes', () => {
     const request = ask();
     assert.match(request.inputs[0], /images\/inputs\/[0-9a-f]{16}\.png$/);
     assert.equal(request.args.sourceMimeType, 'image/png');
+  });
+  it('the prompts carry every icon attribute: size, angle with ground and over, depth, the move with its pace and arrival, the pause and both focus subjects', () => {
+    const { dir } = pictureBoard();
+    writeShotIcons({ path: dir, shots: [
+      { id: 's0001', render: { mode: 'generated_video', reason: 'r' }, size: 'mcu', angle: 'over',
+        move: { id: 'camera.dolly-in', reason: 'r', speed: 'slow', target: 'Mina' },
+        focus: { id: 'camera.rack-focus', reason: 'r', from: 'the key on the table', to: 'Mina' },
+        depth: { mode: 'shallow', reads: 1, focus: 'the key on the table' }, frames: { mode: 'reference', reason: 'MSR' } },
+      { id: 's0002', render: { mode: 'generated_video', reason: 'r' }, size: 'ms', angle: 'ground',
+        move: { id: 'camera.static', reason: 'r' }, frames: { mode: 'first', reason: 'r' } },
+    ] });
+    const ground = make(dir, 's0002', 'start', { location: 'room' }).prompt;
+    assert.match(ground, /Medium shot, waist up, from ground level, the lens just above the floor\./);   // P1 size · P2 angle · P3 ground
+    assert.match(make(dir, 's0001', 'start', { location: 'room' }).prompt,
+      /Stage the key on the table and Mina at clearly different distances from the camera, the key on the table in sharp focus\./);
+    const shot = readBoard(dir).win.SCENES[0];
+    applyStoryboard({ path: dir, draft: true, shotsById: [{ id: 's0001', shot: { ...shot, visual: { ...shot.visual, camera: { ...shot.visual.camera, end: 'a close-up of her eyes' } } } }] });
+    const msr = writeShotPrompt({ path: dir, id: 's0001', action: 'Mina looks up from the key.' });
+    assert.match(msr.prompt, /^Medium close-up, chest up[^.]*, over the shoulder of the near person\./);   // P1 · P4 over
+    assert.match(msr.prompt, /Shallow depth of field: only the key on the table is sharp/);              // P5 depth
+    assert.match(msr.prompt, /The camera slowly pushes in toward Mina, with a short pause on the opening and closing pictures\. Closing frame: a close-up of her eyes\./);  // P6 verb · P7 pace · P8 arrival · P9 pause
+    assert.match(msr.prompt, /Rack focus from the key on the table to Mina\./);                          // P10 both subjects
+    assert.ok(!msr.findings.some((f) => /rack focus names no subjects/.test(f.what)));
+    // a closing frame written as a whole sentence stays one sentence
+    const later = readBoard(dir).win.SCENES[0];
+    applyStoryboard({ path: dir, draft: true, shotsById: [{ id: 's0001', shot: { ...later, visual: { ...later.visual, camera: { ...later.visual.camera, end: 'A tight close-up of her eyes fills the frame.' } } } }] });
+    assert.match(writeShotPrompt({ path: dir, id: 's0001', action: 'Mina looks up.' }).prompt, /pictures\. Closing frame: A tight close-up of her eyes fills the frame\. Rack focus/);
+    // a hand-written closing frame in another language is named by its field
+    const korean = readBoard(dir).win.SCENES[0];
+    applyStoryboard({ path: dir, draft: true, shotsById: [{ id: 's0001', shot: { ...korean, visual: { ...korean.visual, camera: { ...korean.visual.camera, end: '그녀의 눈' } } } }] });
+    assert.throws(() => writeShotPrompt({ path: dir, id: 's0001', action: 'Mina looks up.' }), /video_prompt_language: visual.camera.end/);
+    applyStoryboard({ path: dir, draft: true, shotsById: [{ id: 's0001', shot: korean }] });
+    // a rack focus without its subjects still writes, and says what is missing
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', focus: { id: 'camera.rack-focus', reason: 'r' } }] });
+    const unnamed = writeShotPrompt({ path: dir, id: 's0001', action: 'Mina looks up.' });
+    assert.match(unnamed.prompt, /Rack focus from the near subject to the far subject\./);
+    assert.ok(unnamed.findings.some((f) => f.level === 'warn' && f.where === 's0001' && /rack focus names no subjects/.test(f.what)));
+    assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina waits.' }).prompt, /^Start from the given first frame\. The camera holds a static frame\. Mina waits\. Mina says: "안녕"\. Audio: no music\.$/);
   });
 });
 
@@ -824,7 +912,7 @@ describe('shot camera MCP input', () => {
       assert.ok(camera.properties.movement.description.includes('tilt up/down'));
       const stillCamera = schema.properties.shot.properties.render.properties.camera;
       assert.deepEqual(stillCamera.required, ['effect']);
-      assert.deepEqual(stillCamera.properties.effect.enum, ['focus-in', 'rack-focus', 'approach', 'pull', 'pan', 'tilt', 'push', 'reveal', 'parallax']);
+      assert.deepEqual(stillCamera.properties.effect.enum, ['focus-in', 'rack-focus', 'approach', 'pull', 'pan', 'tilt', 'push', 'reveal', 'parallax', 'hold']);
       assert.equal(schema.additionalProperties, true);
       assert.equal(schema.properties.visual.additionalProperties, true);
     }

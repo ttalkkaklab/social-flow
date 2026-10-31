@@ -6,7 +6,7 @@
  // A purpose's default route comes first; free real footage may stand in where the actual place, era or action carries the cut (render-routing.md §Routes).
  const ALTERNATIVES={comparison:['motion_html'],trend:['motion_html'],share:['motion_html'],timeline:['motion_html'],live_action:['stock_video'],atmosphere:['stock_video'],place:['stock_video']};
  // The still lane's nine window moves (still-camera.js state()); tilt is the vertical pan — the scale-by-time move of L13.
- const STILL_CAMERA_EFFECTS=['focus-in','rack-focus','approach','pull','pan','tilt','push','reveal','parallax'];
+ const STILL_CAMERA_EFFECTS=['focus-in','rack-focus','approach','pull','pan','tilt','push','reveal','parallax','hold'];
  const LABELS={motion_html:'모션그래픽 · HTML',still_camera:'정지 이미지 · 카메라 무빙',character_html:'3D 캐릭터 · HTML',object_html:'3D 사물 · HTML',data_graph:'수치·그래프 · HTML',generated_video:'영상 생성',editorial_html:'짧은 인용·결론 · HTML',stock_video:'외부 영상 · 무료 소재'};
  const CHARTS={comparison:['bar','dot'],trend:['line'],share:['stacked-bar','donut','pie'],distribution:['histogram'],geographic:['map'],timeline:['timeline']};
  const text=x=>typeof x==='string'&&!!x.trim();

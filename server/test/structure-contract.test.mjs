@@ -76,7 +76,7 @@ describe('depth', () => {
   });
   test('depth reaches image prompt and respects none', () => {
    assert.match(assemble({ scene: 'A waits', depth: shallow() }).prompt, /Shallow depth of field: only A's eyes is sharp/);
-   assert.match(assemble({ scene: 'A waits', depth: deep() }).prompt, /Deep focus: the cup, A at the table, the window/);
+   assert.match(assemble({ scene: 'A waits', depth: deep() }).prompt, /Deep depth of field: sharp focus from the cup in the foreground through A at the table in the middle ground to the window in the background, all at once/);
    assert.doesNotMatch(assemble({ scene: 'A waits', depth: { mode: 'none', reason: 'Flat' } }).prompt, /focus/);
   });
 });
@@ -166,6 +166,12 @@ describe('video prompt basis and storyboard_read rows', () => {
     assert.deepEqual(structure.promptDrift(shot, () => false), []);
     shot.visual.frames.mode = 'reference';
     assert.deepEqual(structure.promptDrift(shot, () => false), ['frames', 'lines', 'framing']);
+    // the closing composition and the rack focus subjects the prompt names count too
+    const racked = { shot: { techniques: [{ id: 'camera.rack-focus', reason: 'r', from: 'the key', to: 'Mina' }] }, visual: { camera: { movement: 'static' }, video: { prompt: 'p' } } };
+    racked.visual.video.promptBasis = structure.promptBasis(racked, (id) => id === 'camera.rack-focus');
+    racked.shot.techniques[0].to = 'the door';
+    racked.visual.camera.end = 'the door in sharp focus';
+    assert.deepEqual(structure.promptDrift(racked, (id) => id === 'camera.rack-focus'), ['camera', 'focus']);
     assert.deepEqual(structure.videoLines(shot), [['mina', 'on_screen', 'Hi']]);
   });
   test('a shot row carries its story and the place shot_image recorded', () => {

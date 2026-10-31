@@ -739,7 +739,7 @@ catch {
 // The still lane's window move (render-routing.js, still-camera.js) — the camera a photograph gets.
 const stillCameraInput = {
     type: 'object', additionalProperties: true, required: ['effect'],
-    description: 'Required on still_camera. The eased window move the builder drives over the photograph: push (slow zoom-in, the default) · pull · approach · focus-in · rack-focus · pan · tilt (L13: a pan or tilt travels from focusFrom to focusTo, the vertical tilt being the scale-by-time move) · reveal · parallax (prepared layers). The ease holds the opening and closing pictures on its own.',
+    description: 'Required on still_camera. The eased window move the builder drives over the photograph: push (slow zoom-in, the default) · pull · approach · focus-in · rack-focus · pan · tilt (L13: a pan or tilt travels from focusFrom to focusTo, the vertical tilt being the scale-by-time move; with both regions the window centres each, zooming up to 1.2 within a 1.5× upscale of the source) · reveal · parallax (prepared layers) · hold (the frame stays put on focusTo or the centre, a deliberate still beat). The ease holds the opening and closing pictures on its own.',
     properties: {
         effect: enumInput(stillCameraEffects, 'The window move. Choose from the cut\'s meaning (directing-grammar §5 Still column), never repeat one on every cut.'),
         target: { type: 'string', description: 'What the move arrives on or travels over, in the picture.' },
@@ -773,6 +773,8 @@ const storyboardShotInput = {
                 techniques: { type: 'array', description: 'Authored choices from storyboard_read techniqueCatalog. Persist each technique id and this shot’s reason. Match size/angle/camera fields to its fields; provider prompts consume its instructions. Icons do not verify actual footage.', items: { type: 'object', additionalProperties: false, required: ['id', 'reason'], properties: {
                             id: { type: 'string', ...(techniqueIds.length ? { enum: techniqueIds } : {}), description: 'Stable semantic technique id, including independent focus and viewpoint choices.' },
                             reason: { type: 'string', minLength: 1, description: 'The visible information or action that motivates this selection.' },
+                            from: { type: 'string', minLength: 1, description: 'camera.rack-focus: the subject sharp first, in English' },
+                            to: { type: 'string', minLength: 1, description: 'camera.rack-focus: the subject sharp last, in English' },
                         } } },
                 size: { type: 'string', description: 'Canonical framing size: mfs=mid-thigh, ms=waist-up. Keep two-shot/POV roles in separate technique or framing prose.' },
                 angle: { type: 'string', description: 'Camera angle. Recommended vocabulary is in the directing skill.' },
@@ -4448,7 +4450,7 @@ Returns: JSON — { file, mediaBaseDirectory, sha256, version, format, shots, se
                 path: { type: 'string', description: 'The storyboard directory (data/<channel>/episodes/<topic>/storyboard/) or its scenes.js' },
                 level: { type: 'string', enum: ['outline', 'scenes', 'shots', 'full'], description: 'outline = sequences with scene numbers · scenes = scene cards with shot numbers · shots (default) = every shot summarised under its scene · full = raw shot objects too' },
                 shotId: { type: 'string', description: 'Stable shot ID; adds raw selectedShot with scene and neighboring IDs without removing the overall flow. Unknown or duplicate IDs fail.' },
-                includeTechniques: { type: 'boolean', description: 'Default true: return canonical techniqueCatalog with ids, purposes, unique icons, provider instructions, current selections and conflicting-plan advice.' },
+                includeTechniques: { type: 'boolean', description: 'Default true: return canonical techniqueCatalog with ids, purposes, unique icons, provider instructions, decision notes (avoid, pair, specify, vertical), guides for the shot_icons values without an entry, current selections and conflicting-plan advice.' },
                 includeContext: { type: 'boolean', description: 'Default true: return STORY, PRODUCTION and SB_DOC for character, background, prop and scenario inspection. Recorded evidence is not verified by this read.' },
             },
             required: ['path'],
@@ -4582,6 +4584,8 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
         description: `Use it after every shot has its story and characters (story_shot → shot_characters), and normally after its lines (shot_dialogue): set the attributes the review's icon row shows, per shot — render route (shot.render), size and why, angle, camera move, focus, depth, and the frame plan, where reference means MSR. A move on a still_camera cut is the still effect (shot.render.camera.effect); on any other route it is a camera technique, written to shot.techniques with visual.camera.movement kept consistent. Switching to still_camera drops the camera technique and visual.camera move; switching from it drops the still effect. A different move replaces the old one's speed and target (the same move — its technique, or an authored visual.camera move before any technique — keeps them unless given), and a new size without its own why drops the old why. Changing size, angle, depth or focus after the start image exists warns to remake it with shot_image. A frame plan other than first_last takes the end image off (with a warning), and switching to or from reference re-marks the character panels for the video call. A change to what a written video prompt came from (cast, on-screen lines, frame plan, camera, focus, MSR framing) warns to rewrite it with shot_prompt; the review page marks it too. Only the attributes given change. Refused (story_order) while a sequence, scene or shot story or any shot's characters are missing. Local file only; no image, video, speech or prompt is generated.
 
+Choose each attribute from the beat it serves, never from a quota. A card's use is a practitioners' convention, not a measured effect — no experiment shows a camera move's emotional effect, and the angle effects (low strong, high weak) appeared only when pictures ran as a story — so the neighbouring shots carry the meaning. storyboard_read's techniqueCatalog carries a card per choice — entries for sizes, moves, angles, focus and timing, and guides for the values without an entry (composition sizes, ground and over, depth, still effects). Every card gives use, avoid and specify (what the start image and video prompt must name — crop line, endpoints, focus target); where one applies it also gives pair (what the neighbouring shots should be: establish → cut in → reestablish; look → POV → reaction; matched sizes in shot/reverse shot) and vertical (how a 9:16 frame changes it). Size is the distance: els … ecu, or insert for one object. two, three, ots, pov, back, cutaway and reaction name a composition with no crop of its own; on a new board pick the distance and carry the composition in the cast, camera.pov, camera.rear or the camera framing. Write why, move.reason and focus.reason as the beat the choice serves. Give a video move its speed and target, and a rack focus its from and to subjects: shot_image stages them and shot_prompt writes them. A still effect hold keeps the frame put as a deliberate beat. On a 9:16 board the result lists the vertical note of every chosen value — advice, never a refusal.
+
 Do NOT write camera endpoints, blocking, eyeline, composition or prompts here — storyboard_apply carries those after this step (action-direction.md camera-direction pass).
 
 Returns: the file written or not, counts, and findings (! violation · warning).`,
@@ -4596,16 +4600,19 @@ Returns: the file written or not, counts, and findings (! violation · warning).
                                     purpose: enumInput(purposes, 'What the viewer needs from the cut'),
                                     reason: { type: 'string', description: 'Why this route carries this cut' },
                                 } },
-                            size: enumInput(storyboardVocabulary?.SIZES, 'Shot size icon'),
-                            why: { type: 'string', description: 'Why this size' },
-                            angle: enumInput(storyboardVocabulary?.ANGLES, 'Camera angle icon'),
+                            size: enumInput(storyboardVocabulary?.SIZES, 'Shot size icon: the distance (els … ecu, insert); composition labels carry no crop — techniqueCatalog guides.size'),
+                            why: { type: 'string', description: 'The beat this size serves' },
+                            angle: enumInput(storyboardVocabulary?.ANGLES, 'Camera angle icon: the camera height and tilt; ground and over have cards in techniqueCatalog guides.angle'),
                             move: { type: 'object', additionalProperties: false, required: ['id', 'reason'], description: 'Camera move icon', properties: {
                                     id: { type: 'string', enum: [...cameraMoves, ...stillCameraEffects], description: 'A camera.* technique with a movement, or on a still_camera cut a still effect' },
                                     reason: { type: 'string', description: 'What the move or the hold does for this beat' },
-                                    target: { type: 'string', description: 'What the move arrives on' },
+                                    target: { type: 'string', description: 'What the move is aimed at, in English on a video cut: what it pushes toward or pans and tilts to, or the person it follows, circles or rises above — the prompt reads "pushes in toward <target>", "follows behind <target>"' },
+                                    speed: { type: 'string', enum: ['very slow', 'slow', 'steady', 'fast', 'very fast'], description: 'Pace: slow, steady or fast on a video cut; very slow (default), slow, fast or very fast on a still effect' },
                                 } },
                             focus: { type: ['object', 'null'], additionalProperties: false, required: ['id', 'reason'], description: 'Focus technique (camera.rack-focus); null removes it', properties: {
                                     id: { type: 'string', description: 'camera.rack-focus' }, reason: { type: 'string', description: 'Which subject hands focus to which, and why' },
+                                    from: { type: 'string', description: 'The subject sharp first, in English (the start image stages it in focus)' },
+                                    to: { type: 'string', description: 'The subject sharp last, in English' },
                                 } },
                             depth: depthInput,
                             frames: { type: 'object', additionalProperties: false, required: ['mode', 'reason'], description: 'Frame plan; reference = MSR (subject images + start image), which shows the MSR icon', properties: {
@@ -4646,7 +4653,7 @@ Returns: the file written, the image path, the inputs in order and the prompt; a
         name: 'shot_prompt',
         title: "Write a shot's video prompt (step 5)",
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-        description: `Use it after every picture-route shot has its images (shot_image): write one generated_video shot's English video prompt into visual.video.prompt from its icon attributes — camera move, speed and target, focus, and on an MSR (reference) shot its size, angle and depth, since MSR pins no frame; a first or first_last shot starts from its given frames — plus your English action, closing picture and sound, and the shot's on-screen lines in quotes (MSR adds its lines in video_plan with their image bindings). video_plan sends this prompt when its args name none. It records what the prompt came from (visual.video.promptBasis), so a later change of cast, lines, frame plan, camera, focus or MSR framing shows as stale. Local file only; no generation.
+        description: `Use it after every picture-route shot has its images (shot_image): write one generated_video shot's English video prompt into visual.video.prompt from its icon attributes — camera move in the video model's camera words (pushes in, pulls back, pans, tilts upward, static frame) with its speed, target and the closing composition, the rack focus subjects, and on an MSR (reference) shot its size, angle and depth, since MSR pins no frame; a first or first_last shot starts from its given frames — plus your English action, closing picture and sound, and the shot's on-screen lines in quotes (MSR adds its lines in video_plan with their image bindings). video_plan sends this prompt when its args name none. It records what the prompt came from (visual.video.promptBasis), so a later change of cast, lines, frame plan, camera, focus or MSR framing shows as stale. Local file only; no generation.
 
 Do NOT write Korean outside quotes: action, end and sound are English (video_prompt_language). Refused (story_order) while a picture-route shot lacks its start image or a first_last shot its end image, and for a cut that is not generated_video.
 

@@ -62,6 +62,8 @@ export function techniqueContract() {
 export const techniqueSelectionSchema = z.array(z.object({
     id: nonEmptyTechniqueId(),
     reason: z.string().trim().min(1).describe('Why this technique serves this shot’s information or action'),
+    from: z.string().trim().min(1).optional().describe('Rack focus: the subject sharp first, in English'),
+    to: z.string().trim().min(1).optional().describe('Rack focus: the subject sharp last, in English'),
 }).strict()).superRefine((value, ctx) => {
     for (const message of techniqueContract().validate(value))
         ctx.addIssue({ code: z.ZodIssueCode.custom, message });
@@ -275,7 +277,7 @@ export function readStoryboard(args) {
     result.readiness = boardReadiness(win, dirname(file));
     if (args.includeTechniques !== false)
         result.techniqueCatalog = {
-            version: techniqueContract().VERSION, entries: techniqueContract().entries,
+            version: techniqueContract().VERSION, entries: techniqueContract().entries, guides: techniqueContract().VALUES,
             selections: (win.SCENES || []).map((scene, i) => ({ id: scene.id, no: i + 1,
                 techniques: scene.shot?.techniques || [], findings: techniqueContract().findings(scene) })),
         };
@@ -956,6 +958,8 @@ function promptNotes(shot) {
 }
 // Step 3: the attributes the review's icon row shows (user directive 2026-10-31).
 const choice = z.object({ id: nonEmpty, reason: nonEmpty }).strict();
+// The two routes keep their own pace words (render-routing.md): a video move is seen, a still window crawls.
+const VIDEO_SPEEDS = ['slow', 'steady', 'fast'], STILL_SPEEDS = ['very slow', 'slow', 'fast', 'very fast'];
 export const shotIconsSchema = z.object({
     path: outlinePath,
     shots: z.array(z.object({
@@ -965,9 +969,10 @@ export const shotIconsSchema = z.object({
         size: tuple(V.SIZES).optional(),
         why: nonEmpty.optional().describe('Why this size'),
         angle: tuple(V.ANGLES).optional(),
-        move: choice.extend({ target: nonEmpty.optional() }).strict().optional()
-            .describe('A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in …)'),
-        focus: choice.nullable().optional().describe('A camera technique with a focus field (camera.rack-focus); null removes it'),
+        move: choice.extend({ target: nonEmpty.optional(), speed: z.enum(['very slow', 'slow', 'steady', 'fast', 'very fast']).optional() }).strict().optional()
+            .describe('A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold …)'),
+        focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional() }).strict().nullable().optional()
+            .describe('A camera technique with a focus field (camera.rack-focus) and the subjects it hands focus between; null removes it'),
         depth: depthSchema.optional(),
         frames: z.object({ mode: z.enum(['first', 'first_last', 'reference']), reason: nonEmpty, endState: nonEmpty.optional() }).strict().optional()
             .describe('Frame plan: reference is MSR (subject images + start image)'),
@@ -982,6 +987,8 @@ export function writeShotIcons(args) {
     const field = (id, name) => catalog[id]?.category === 'camera' ? catalog[id].fields[name] : undefined;
     const shots = (win.SCENES ?? []).slice();
     const notes = [];
+    // A 9:16 board gets each chosen value's vertical note back as a warning — advice for the choice, never a refusal.
+    const vertical = !/16x9/.test(String(win.FORMAT ?? ''));
     for (const { id, render, size, why, angle, move, focus, depth, frames } of args.shots) {
         const index = shotIndex(shots, id, 'shot_icons');
         const plan = { ...(shots[index].shot ?? {}) };
@@ -1004,8 +1011,11 @@ export function writeShotIcons(args) {
                 if (visual.camera)
                     visual.camera = Object.keys(camera).length ? camera : undefined;
             }
-            else if (previous === 'still_camera')
+            else if (previous === 'still_camera') {
                 delete routed.camera;
+                if (routed.motionIntent?.type === 'intentional_still')
+                    delete routed.motionIntent;
+            }
         }
         if (render)
             plan.render = routed;
@@ -1024,34 +1034,57 @@ export function writeShotIcons(args) {
                 throw new Error(`shot_icons ${id}: depth — ${errors.join('; ')}`);
             plan.depth = depth;
         }
+        // The prompts quote these words, so another language is refused here rather than later at shot_prompt.
+        for (const [name, value] of [['move.target', routed.mode === 'still_camera' ? undefined : move?.target], ['focus.from', focus?.from], ['focus.to', focus?.to]]) {
+            const foreign = value ? nonEnglishOutsideQuotes(value) : '';
+            if (foreign)
+                throw new Error(`video_prompt_language: shot_icons ${id} ${name} has "${foreign}"; write it in English, the image and video prompts quote it`);
+        }
         let techniques = (Array.isArray(plan.techniques) ? plan.techniques : []);
         if (move && routed.mode === 'still_camera') {
             // A still cut moves the window over the picture (render-routing.js STILL_CAMERA_EFFECTS).
             if (!stillCameraEffectList().includes(move.id))
                 throw new Error(`shot_icons ${id}: a still_camera move is one of ${stillCameraEffectList().join(', ')}`);
-            // A different effect brings its own target; the same effect keeps the one it had.
+            if (move.speed && !STILL_SPEEDS.includes(move.speed))
+                throw new Error(`shot_icons ${id}: a still effect's speed is ${STILL_SPEEDS.join(', ')}`);
+            // A different effect brings its own target and pace; the same effect keeps what it had unless given.
             const { target: oldTarget, ...still } = (routed.camera ?? {});
             const target = move.target ?? (still.effect === move.id ? oldTarget : undefined);
-            plan.render = { ...routed, camera: { ...still, effect: move.id, reason: move.reason, ...(target !== undefined ? { target } : {}) } };
+            const { motionIntent, ...kept } = routed;
+            plan.render = { ...kept, camera: { ...still, effect: move.id, reason: move.reason, ...(target !== undefined ? { target } : {}) },
+                // A hold is a deliberate still beat, not a missing move (motion-expectation.js intentional_still).
+                ...(move.id === 'hold' ? { motionIntent: { type: 'intentional_still', reason: move.reason } } : motionIntent && motionIntent.type !== 'intentional_still' ? { motionIntent } : {}) };
+            // The still lane reads its pace from visual.camera.speed (render-routing.md).
+            const { speed: oldSpeed, ...lens } = (visual.camera ?? {});
+            const speed = move.speed ?? (still.effect === move.id ? oldSpeed : undefined);
+            if (speed !== undefined || visual.camera)
+                visual.camera = speed !== undefined ? { ...lens, speed } : Object.keys(lens).length ? lens : undefined;
         }
         else if (move) {
             const movement = field(move.id, 'movement');
             if (!movement)
                 throw new Error(`shot_icons ${id}: ${move.id} is not a camera move in the technique catalog`);
+            if (move.speed && !VIDEO_SPEEDS.includes(move.speed))
+                throw new Error(`shot_icons ${id}: a camera move's speed is ${VIDEO_SPEEDS.join(', ')}`);
             // The same move: its technique, or — before any move technique was recorded — the authored visual.camera move.
             const prior = String(visual.camera?.movement ?? '').toLowerCase();
             const same = techniques.some((t) => t.id === move.id) || (!techniques.some((t) => field(t.id, 'movement')) && prior.startsWith(movement));
             techniques = [...techniques.filter((t) => !field(t.id, 'movement')), { id: move.id, reason: move.reason }];
             // A different move replaces the old one's speed and target; the same move keeps what it had unless given.
             const { speed: oldSpeed, target: oldTarget, ...camera } = (visual.camera ?? {});
-            const speed = field(move.id, 'speed') ?? (same ? oldSpeed : undefined), target = move.target ?? (same ? oldTarget : undefined);
+            const speed = move.speed ?? field(move.id, 'speed') ?? (same ? oldSpeed : undefined), target = move.target ?? (same ? oldTarget : undefined);
             // film-techniques.js findings: visual.camera.movement starts with the technique's movement.
             visual.camera = { ...camera, movement: String(camera.movement ?? '').toLowerCase().startsWith(movement) ? camera.movement : movement,
                 ...(speed !== undefined ? { speed } : {}), ...(target !== undefined ? { target } : {}) };
         }
         if (focus !== undefined) {
+            // A still cut moves its focus with the still effect itself; a focus technique there would reach no prompt.
+            if (focus && routed.mode === 'still_camera')
+                throw new Error(`shot_icons ${id}: a still_camera cut moves its focus with the still effect (move rack-focus or focus-in), not a focus technique`);
             if (focus && !field(focus.id, 'focus'))
                 throw new Error(`shot_icons ${id}: ${focus.id} is not a focus technique`);
+            if (focus && !(focus.from && focus.to))
+                notes.push({ level: 'warn', where: id, what: `${focus.id} names no subjects — give from and to, the subject sharp first and the one sharp last, so the video prompt can say what the focus moves between` });
             techniques = [...techniques.filter((t) => !field(t.id, 'focus')), ...(focus ? [focus] : [])];
         }
         if ((move && routed.mode !== 'still_camera') || focus !== undefined)
@@ -1076,6 +1109,18 @@ export function writeShotIcons(args) {
             notes.push({ level: 'warn', where: id, what: 'the start image was made for the previous size, angle, depth or focus — remake it with shot_image' });
         shots[index] = { ...shots[index], shot: plan, visual };
         notes.push(...promptNotes(shots[index]));
+        if (vertical) {
+            const t = techniqueContract(), still = plan.render?.mode === 'still_camera';
+            const mode = depth ? String(depth.mode ?? '') : undefined;
+            const picks = [
+                ['size', size, size ? t.guide('size', size) : null], ['angle', angle, angle ? t.guide('angle', angle) : null],
+                ['move', move?.id, move ? (still ? t.guide('still', move.id) : t.byId[move.id]) : null], ['focus', focus?.id, focus ? t.byId[focus.id] : null],
+                ['depth', mode, mode ? t.guide('depth', mode) : null]
+            ];
+            for (const [attribute, value, card] of picks)
+                if (value && typeof card?.vertical === 'string')
+                    notes.push({ level: 'warn', where: id, what: `9:16 note, ${attribute} ${value}: ${card.vertical}` });
+        }
     }
     const result = writeOutline(args.path, win, st, shots);
     return { ...result, findings: [...result.findings, ...notes] };
@@ -1278,20 +1323,37 @@ export function writeShotPrompt(args) {
     const travels = loadFromHere(join(REFERENCES_DIR, 'production-mode.js')).travels;
     const camera = (visual.camera ?? {});
     const movement = String(camera.movement ?? '').trim(), speed = String(camera.speed ?? '').trim();
-    const focus = (plan.techniques ?? []).map((t) => techniqueContract().entries.find((e) => e.id === t.id))
-        .find((e) => e?.fields?.focus);
+    const picked = (plan.techniques ?? []).map((t) => ({ ...t, entry: techniqueContract().byId[t.id] }));
+    // The move technique that matches visual.camera.movement; a movement rewritten by hand falls back to its own words.
+    const moveEntry = picked.find((t) => t.entry?.fields?.movement && movement.toLowerCase().startsWith(t.entry.fields.movement))?.entry;
+    const rack = picked.find((t) => t.entry?.fields?.focus);
     // A sentence closing on its own quoted line ("Wait.") takes no second period.
     const sentence = (value) => {
         const text = value.trim(), capped = text.charAt(0).toUpperCase() + text.slice(1);
         return !text ? '' : /[.!?]["'”’)]+$/.test(capped) ? capped : capped.replace(/[.!?]*$/, '') + '.';
     };
+    // The move in the words the video model was shown (film-techniques.js prompt: pushes in, pulls back, pans, tilts
+    // upward, static frame), its pace and what it is aimed at; the closing composition the camera pass wrote follows
+    // as its own sentence, since it may be a phrase or a whole sentence.
+    const target = String(camera.target ?? '').trim(), settle = String(camera.end ?? '').trim();
+    for (const [name, value] of [['action', args.action], ['end', args.end], ['sound', args.sound], ['visual.camera.target', target],
+        ['visual.camera.end', settle], ['focus.from', rack?.from], ['focus.to', rack?.to]]) {
+        const foreign = value ? nonEnglishOutsideQuotes(value) : '';
+        if (foreign)
+            throw new Error(`video_prompt_language: ${name} has "${foreign}" outside quotation marks; write it in English`);
+    }
+    const pace = { slow: 'slowly', steady: 'steadily', fast: 'quickly' }[speed];
+    const ends = travels(camera) ? ', with a short pause on the opening and closing pictures' : '';
+    const cameraSentence = !movement ? '' : /^(static|fixed|locked)/i.test(movement) ? 'The camera holds a static frame.'
+        : moveEntry?.prompt ? sentence(`The camera ${pace ? pace + ' ' : ''}${moveEntry.prompt.replace('{target}', target || 'the subject')}${speed && !pace ? ` at a ${speed} pace` : ''}${ends}`)
+            : sentence(`Camera: ${[speed, movement].filter(Boolean).join(' ')}` + (target ? ` toward ${target}` : '') + ends);
     // MSR pins no frame, so its prompt carries the framing; video_plan adds MSR's lines with their image bindings.
     const prompt = [
         msr ? sentence([words.SIZE_WORDS[String(plan.size)], words.ANGLE_WORDS[String(plan.angle)]].filter(Boolean).join(', ')) : 'Start from the given first frame.',
         msr && plan.depth ? sentence(contract().depthText(plan.depth)) : '',
-        !movement ? '' : sentence(/^(static|fixed|locked)/i.test(movement) ? 'Camera: static' : `Camera: ${[speed, movement].filter(Boolean).join(' ')}` +
-            (camera.target ? ` toward ${camera.target}` : '') + (travels(camera) ? ', with a short pause on the opening and closing pictures' : '')),
-        focus ? sentence(`${focus.label?.en ?? 'Rack focus'} from the near subject to the far subject`) : '',
+        cameraSentence,
+        settle ? sentence(`Closing frame: ${settle}`) : '',
+        !rack ? '' : sentence(rack.from && rack.to ? `Rack focus from ${rack.from} to ${rack.to}` : `${rack.entry?.label?.en ?? 'Rack focus'} from the near subject to the far subject`),
         sentence(args.action),
         ...(msr ? [] : (shot.narration ?? []).filter((line) => line.delivery === 'on_screen' && line.tts).map((line) => sentence(`${latin(String(castEntry(win, String(line.speaker))?.name ?? '')) || line.speaker} says: "${line.tts}"`))),
         frames.mode === 'first_last' ? sentence(`End on the given last frame${args.end ? ': ' + args.end : ''}`) : args.end ? sentence(`End on ${args.end}`) : '',
@@ -1302,7 +1364,9 @@ export function writeShotPrompt(args) {
     if (foreign)
         throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action, end and sound in English`);
     shots[index] = { ...shot, visual: { ...visual, video: { ...visual.video, prompt, promptBasis: contract().promptBasis(shot, isFocus) } } };
-    return { ...writeOutline(args.path, win, st, shots), prompt };
+    const result = writeOutline(args.path, win, st, shots);
+    return { ...result, findings: rack && !(rack.from && rack.to) ? [...result.findings, { level: 'warn', where: args.id,
+                what: 'the rack focus names no subjects — give focus.from and focus.to in shot_icons' }] : result.findings, prompt };
 }
 const scenarioCheckResultSchema = z.object({
     files: z.array(z.string()),

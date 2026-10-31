@@ -85,14 +85,16 @@ const sourceContext = require('./source-context.js');
 const SIZE_WORDS = {
   ...require('./film-techniques.js').SIZE_WORDS,
   ws: require('./film-techniques.js').SIZE_WORDS.ls,
+  // Composition labels carry no crop of their own (film-techniques.js VALUES.size); each phrase says
+  // what is in frame, in positive words, so the size icon still reaches the picture.
   insert: "insert, the object fills the frame",
-  two: "two-shot",
-  three: "three-shot",
-  ots: "over-the-shoulder",
-  pov: "point of view from the character eyes, no view of their face",
-  back: "from behind, the back fills the frame",
-  cutaway: "cutaway",
-  reaction: "reaction close-up"
+  two: "two-shot, both people in frame",
+  three: "three-shot, all three people in frame",
+  ots: "over-the-shoulder shot, the near shoulder and the back of the head soft in the foreground, the far face toward the camera",
+  pov: "point-of-view shot from the character eye height, showing what the character sees",
+  back: "seen from behind, the back of the head and shoulders toward the camera",
+  cutaway: "cutaway, a separate view away from the main action",
+  reaction: "reaction close-up, the face of the one who reacts"
 };
 
 // --no-person: the same ladder for a still with nobody in it (a vent box, a tunnel cutaway).
@@ -117,7 +119,9 @@ const ANGLE_WORDS = {
   high: "seen from above",
   low: "from a low angle, looking up",
   overhead: "from straight overhead",
-  dutch: "at a dutch angle, horizon tilted"
+  dutch: "at a dutch angle, horizon tilted",
+  ground: "from ground level, the lens just above the floor",
+  over: "over the shoulder of the near person"
 };
 
 // Camera-inference ("left view of X"), allocentric ("from the car's right", "to her
@@ -425,11 +429,12 @@ function selftest() {
     exclude: "no text, no logos"
   });
   ok("prefix starts with size+angle",
-    a.prompt.startsWith("medium close-up, chest up, at eye level. From the camera:"));
+    a.prompt.startsWith(SIZE_WORDS.mcu + ", at eye level. From the camera:"));
   // Every angle joins the size words as one readable sentence.
-  eq("high joins", assemble({ size: "ls", angle: "high", tail: "" }).prompt, "wide shot, full body with room above and below, seen from above.");
-  eq("overhead joins", assemble({ size: "ls", angle: "overhead", tail: "" }).prompt, "wide shot, full body with room above and below, from straight overhead.");
-  eq("low joins", assemble({ size: "fs", angle: "low", tail: "" }).prompt, "full shot, head to toe, from a low angle, looking up.");
+  eq("size words are the catalogue's", SIZE_WORDS.mcu, "medium close-up, chest up, frame bottom at mid-chest, eyes near the upper third");
+  eq("high joins", assemble({ size: "ls", angle: "high", tail: "" }).prompt, SIZE_WORDS.ls + ", seen from above.");
+  eq("overhead joins", assemble({ size: "ls", angle: "overhead", tail: "" }).prompt, SIZE_WORDS.ls + ", from straight overhead.");
+  eq("low joins", assemble({ size: "fs", angle: "low", tail: "" }).prompt, SIZE_WORDS.fs + ", from a low angle, looking up.");
   ok("layout is camera-framed", a.prompt.includes("person on the left third"));
   ok("facing is the visible result", a.prompt.includes("faces camera-right"));
   ok("scene follows space", /From the camera:.*a Korean woman/.test(a.prompt));
@@ -455,7 +460,7 @@ function selftest() {
     spaceSentence({ layout: "from the camera, the right-hand door is on the right of frame" }),
     "From the camera: the right-hand door is on the right of frame.");
   eq("sentence ends are normalised",
-    assemble({ size: "ms", scene: "is this it?", tail: "" }).prompt, "medium shot, waist up, at eye level. is this it.");
+    assemble({ size: "ms", scene: "is this it?", tail: "" }).prompt, SIZE_WORDS.ms + ", at eye level. is this it.");
   ok("out-of-vocabulary size is reported", assemble({ size: "xyz", scene: "x" }).unknown.length === 1);
 
   // No space written (an older scenes.js) — no dangling "From the camera." sentence.
@@ -465,7 +470,7 @@ function selftest() {
 
   // --tail "" turns the tail off; --space-only gives just the sentence.
   eq("empty tail is honoured",
-    assemble({ size: "ms", scene: "x", tail: "" }).prompt, "medium shot, waist up, at eye level. x.");
+    assemble({ size: "ms", scene: "x", tail: "" }).prompt, SIZE_WORDS.ms + ", at eye level. x.");
   eq("space sentence alone (quote clip)",
     assemble({ size: "mcu", layout: "speaker centred", facing: "faces the camera" }).space,
     "From the camera: speaker centred. faces the camera.");

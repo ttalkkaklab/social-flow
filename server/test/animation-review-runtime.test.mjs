@@ -7,6 +7,7 @@ const sample={id:'sample',lane:'object_explanation',template:'gears',title:'ê¸°ì
 test('review contract distinguishes the three lanes and refuses duplicate ids',()=>{
  const plan={version:1,mode:'animation-review',clips:[sample]};assert.deepEqual(contract.validate(plan),[]);
  assert.ok(contract.validate({...plan,clips:[{...sample,lane:'still_camera'}]}).some(e=>e.includes('template')));
+ assert.ok(!contract.validate({...plan,clips:[{...sample,lane:'still_camera',template:'hold'}]}).some(e=>e.includes('template')));
  assert.ok(contract.validate({...plan,clips:[sample,sample]}).some(e=>e.includes('unique')));
  assert.ok(contract.validate({...plan,mode:'episode'}).length);
 });
