@@ -300,6 +300,12 @@ test('prop and background catalogues preserve episode scope, local media and nav
     assert.ok(detail.includes('../../review/location-review-runtime.js'));
     assert.notEqual(detailName,L.detailFilename('two','room'));
     assert.ok(readFileSync(join(f.dir,'episodes/one/storyboard/review-files.js'),'utf8').includes(detailName));
+    const propName = L.detailFilename('one', 'cup');
+    assert.ok(props.includes('<a class="review-card-art" href="details/' + propName));
+    const propDetail = readFileSync(join(f.dir, 'assets/props/details', propName), 'utf8');
+    assert.ok(propDetail.includes('class="character-stage" data-kind="prop"'));
+    assert.ok(propDetail.includes('src="../../../episodes/one/storyboard/cup.png"'));
+    assert.ok(propDetail.includes('href="../index.html"') && propDetail.includes('Cup &lt;script&gt;'));
 
     assert.ok(backgrounds.includes('Reference image pending'));
     const layout = readFileSync(join(f.dir, 'episodes/one/storyboard/review-layout.js'), 'utf8');
