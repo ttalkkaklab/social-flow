@@ -38,7 +38,7 @@ export function buildNativeImageBody(input, edit = false) {
         const encode = (file) => genaiSourceUri(undefined, file).split(',')[1];
         body.image = encode(editArgs.imagePath);
         delete body.imagePath;
-        if (editArgs.refImagePaths)
+        if (editArgs.refImagePaths?.length)
             body.ref_images = editArgs.refImagePaths.map(encode);
         delete body.refImagePaths;
     }
