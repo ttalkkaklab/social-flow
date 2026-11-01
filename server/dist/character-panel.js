@@ -62,14 +62,12 @@ export function characterPanelRequest(raw) {
     const preset = shared('_shared/model-settings.js').readSettings(workspace).config?.style?.preset;
     const { STYLES } = shared('storyboard/references/production-mode.js');
     const style = preset && STYLES[preset] ? STYLES[preset].prompt : '';
-    const compose = (compact, withStyle) => {
-        const words = panelPrompt(character, args.view, { compact });
-        return { words, prompt: [references.length && args.view !== 'back' ? 'Keep this exact character from the reference images.' : '', FRAMING[args.view].text,
-                `Character: ${words.text}.`, withStyle ? style : '', 'Soft even studio lighting, plain neutral grey background. One view only. No text, watermark, collage or border.'].filter(Boolean).join(' ') };
-    };
-    // A prompt over the adapter's cap drops the height convention note first, then the style sentence.
+    const words = panelPrompt(character, args.view);
+    const compose = (withStyle) => [references.length && args.view !== 'back' ? 'Keep this exact character from the reference images.' : '', FRAMING[args.view].text,
+        `Character: ${words.text}.`, withStyle ? style : '', 'Soft even studio lighting, plain neutral grey background. One view only. No text, watermark, collage or border.'].filter(Boolean).join(' ');
+    // A prompt over the adapter's cap drops the style sentence.
     const limit = PROMPT_LIMIT[readImageContext(workspace, `${id}-${args.view}`).selection.engine] ?? Infinity;
-    const { words, prompt } = [compose(false, true), compose(true, true), compose(true, false)].find((p) => p.prompt.length <= limit) ?? compose(true, false);
+    const full = compose(true), prompt = full.length <= limit ? full : compose(false);
     const [width, height] = FRAMING[args.view].size;
     const negativePrompt = [NEGATIVE[args.view], args.negativePrompt].filter(Boolean).join(', ');
     const call = imageCall({ directory: workspace, assetId: `${id}-${args.view}`, inputs: references, prompt, negativePrompt, width, height, outDir: folder, stem: `${id}-${args.view}`, what: 'this panel' });
