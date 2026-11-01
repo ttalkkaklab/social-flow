@@ -162,31 +162,39 @@
       for (const id of Array.isArray(v.props) ? v.props : []) if (props.find(p => p?.id === id)?.tracking === 'continuity' && !used.has(id)) bad(where, 'Missing propUsage for ' + id);
     }
     const list = x => Array.isArray(x) ? x : [];
-    const shown = new Set((win.SCENES || []).flatMap(s => [...list(s?.visual?.props), ...list(s?.visual?.frames?.endProps)]));
+    const shown = new Set([...(win.SCENES || []).flatMap(s => [...list(s?.visual?.props), ...list(s?.visual?.frames?.endProps)]),
+      ...list(object(ledger) ? ledger.events : []).filter(e => object(e) && list(e.shotIds).length).map(e => e.propId)]);
     for (const p of props) if (object(p) && text(p.id) && !shown.has(p.id))
-      warn(p.id, 'No shot shows this prop (visual.props or frames.endProps); link it to the shots it appears in, or remove it from the sheet');
+      warn(p.id, 'No shot links this prop yet (visual.props, frames.endProps or an event shotIds); link it to the shots it appears in, or drop it if the story does not need it');
     return findings;
   }
   // ids defaults to the shot's visual.props; an end image passes its own frames.endProps.
-  function snapshot(win, index, ids) {
+  // lenient: instead of throwing on ledger errors, a prop the errors concern gets no state and lists them in errors.
+  function snapshot(win, index, ids, opts = {}) {
     const failures = check(win).filter(f => f.level === 'bad');
-    if (failures.length) throw new Error(failures.map(f => f.where + ': ' + f.what).join('; '));
+    if (failures.length && !opts.lenient) throw new Error(failures.map(f => f.where + ': ' + f.what).join('; '));
     const { props, ledger } = data(win);
-    const visual = win.SCENES?.[index]?.visual || {};
+    const shot = win.SCENES?.[index], visual = shot?.visual || {};
+    const eventProp = new Map((Array.isArray(ledger?.events) ? ledger.events : []).filter(object).map(e => [String(e.id), e.propId]));
+    // A finding concerns a prop when it names the prop, one of its events, this shot, or the whole ledger.
+    const concerns = (f, id) => { const w = String(f.where).replace(/^prop event /, '').replace(/ (from|to)$/, '');
+      return w === id || w === 'props' || f.where === 'shot ' + (shot?.id || index + 1) || eventProp.get(w) === id; };
+    const usage = Array.isArray(visual.propUsage) ? visual.propUsage.filter(object) : [];
     return (ids || visual.props || []).map(id => {
-      const prop = props.find(p => p.id === id);
+      const prop = props.find(p => p?.id === id);
       if (!prop) throw new Error('Unknown prop: ' + id);
-      const u = (visual.propUsage || []).find(item => item.propId === id);
-      const before = u ? stateAt(win, prop.id, u.start) : null;
-      const after = u ? stateAt(win, prop.id, u.end) : null;
+      const u = usage.find(item => item.propId === id);
+      const errors = failures.filter(f => concerns(f, id)).map(f => f.where + ': ' + f.what);
+      const at = point => { try { return u && !errors.length ? stateAt(win, prop.id, point) : null; } catch (e) { errors.push(e.message); return null; } };
+      const before = at(u?.start), after = at(u?.end);
       // Best first: a reference drawn in this condition, then one of the current appearance version.
       const rank = (r, state) => (r.condition && r.condition === state?.condition ? 2 : 0) + (prop.appearanceVersion && r.version === prop.appearanceVersion ? 1 : 0);
-      const refs = state => (prop.references || []).filter(r => !r.condition || r.condition === state?.condition)
+      const refs = state => (Array.isArray(prop.references) ? prop.references : []).filter(r => object(r)).filter(r => !r.condition || r.condition === state?.condition)
         .map((r, i) => ({ r, i })).sort((a, b) => rank(b.r, state) - rank(a.r, state) || a.i - b.i).map(({ r }) => ({ ...r }));
       return { propId: prop.id, name: prop.name || prop.id, description: prop.description || '',
         appearanceVersion: prop.appearanceVersion || 'unversioned', references: refs(before), endReferences: refs(after),
         timelineId: ledger?.timelineId || null, start: u ? { ...u.start } : null, end: u ? { ...u.end } : null,
-        before, after, visible: u?.visible !== false, position: u?.position || null };
+        before, after, visible: u?.visible !== false, position: u?.position || null, ...(opts.lenient ? { errors } : {}) };
     });
   }
   function prompt(win, index) {

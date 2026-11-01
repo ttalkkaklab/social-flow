@@ -1260,38 +1260,28 @@ function characterRefs(boardDir, win, shotId, ids, use, warnings) {
 const propContinuity = () => loadFromHere(join(REFERENCES_DIR, 'prop-continuity.js'));
 /**
  * The props a frame shows, through the shared prop ledger: each visible prop's reference drawn in its condition at the
- * opening (start image) or closing (end image) story point, and a sentence with its description and that state.
- * A ledger with errors is reported, not refused: the props then go in by their first picture without a state.
+ * opening (start image) or closing (end image) story point, and its description and that state on its Image line.
+ * Ledger errors are reported, never refused: a prop they concern goes in without a state; the other props keep theirs.
  */
 function propRefs(win, index, shotId, ids, frame, warnings) {
-    if (!ids.length)
-        return { refs: [], unseen: [] };
     const warn = (what) => warnings.push({ level: 'warn', where: shotId, what });
-    let snaps;
-    try {
-        snaps = propContinuity().snapshot(win, index, ids);
-    }
-    catch (error) {
-        warn(`the prop ledger has errors (${error.message}), so props go in by their first picture without their state — fix it with storyboard_apply propSheet (storyboard_check lists them)`);
-        snaps = ids.map((id) => {
-            const e = docEntry(win, 'props', id);
-            return { propId: id, description: typeof e.description === 'string' ? e.description : '', references: Array.isArray(e.references) ? e.references : [],
-                endReferences: Array.isArray(e.references) ? e.references : [], before: null, after: null, visible: true, position: null };
-        });
-    }
+    const entries = new Map(ids.map((id) => [id, docEntry(win, 'props', id)]));
     const refs = [], unseen = [];
-    for (const snap of snaps) {
-        const id = snap.propId, entry = docEntry(win, 'props', id);
-        if (!snap.visible) {
-            warn(`the ${id} prop is hidden in this shot (propUsage visible:false), so it stays out of the picture`);
-            continue;
-        }
+    for (const snap of ids.length ? propContinuity().snapshot(win, index, ids, { lenient: true }) : []) {
+        const id = snap.propId, entry = entries.get(id);
+        if (!snap.visible)
+            continue; // the author hid it in this shot (propUsage visible:false)
+        if (snap.errors.length)
+            warn(`the ${id} prop goes in without its state because the prop ledger has errors (${snap.errors.join('; ')}) — fix them with storyboard_apply propSheet`);
         const state = frame === 'end' ? snap.after : snap.before, matched = frame === 'end' ? snap.endReferences : snap.references;
-        const all = Array.isArray(entry.references) ? entry.references : [];
+        const all = (Array.isArray(entry.references) ? entry.references : []);
         const condition = typeof state?.condition === 'string' && state.condition !== 'unknown' ? state.condition : '';
-        let file = matched[0]?.path ?? (typeof entry.imageUrl === 'string' && entry.imageUrl ? entry.imageUrl : undefined);
-        if (!matched.length && all.length)
-            warn(`no ${id} reference is drawn ${condition ? `as ${condition}` : 'without a condition'}${file ? `, so its imageUrl stands in` : ', so it goes in without a picture'} — add a reference for that condition`);
+        // No reference drawn in this condition: the plain imageUrl, else the current version's reference, stands in.
+        const imageUrl = typeof entry.imageUrl === 'string' && entry.imageUrl ? entry.imageUrl : undefined;
+        const spare = all.find((ref) => typeof ref?.path === 'string' && ref.version === entry.appearanceVersion) ?? all.find((ref) => typeof ref?.path === 'string');
+        const file = typeof matched[0]?.path === 'string' ? matched[0].path : imageUrl ?? spare?.path;
+        if (file && !matched.length && condition && all.length)
+            warn(`no ${id} reference is drawn as ${condition}, so ${file === imageUrl ? 'its imageUrl' : `its ${typeof spare?.condition === 'string' ? spare.condition + ' ' : ''}reference`} stands in — add one for that condition`);
         const skipped = [];
         const english = (field, value) => {
             if (typeof value !== 'string' || !value.trim() || value === 'unknown')

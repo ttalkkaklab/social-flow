@@ -177,4 +177,9 @@ test('a prop no shot shows is flagged, and the best reference for the state come
   win.SB_DOC.props[0].references = [{ path: 'old.png', version: 'v0' }, { path: 'any.png', version: 'v1' }, { path: 'intact.png', version: 'v0', condition: 'intact' }, { path: 'cracked.png', version: 'v1', condition: 'cracked' }];
   assert.deepEqual(api.snapshot(win, 0)[0].references.map(r => r.path), ['intact.png', 'any.png', 'old.png']);
   assert.deepEqual(api.snapshot(win, 0, ['spare'])[0].propId, 'spare');
+  // lenient: an error on another prop keeps this prop's state; one on this prop drops it and says why.
+  win.SB_DOC.props[1].characterId = 'nobody';
+  assert.throws(() => api.snapshot(win, 0), /Unknown legacy owner/);
+  const [watch, spare] = api.snapshot(win, 0, ['watch', 'spare'], { lenient: true });
+  assert.deepEqual([watch.before.holderId, watch.errors, spare.before, spare.errors.length], ['a', [], null, 1]);
 });

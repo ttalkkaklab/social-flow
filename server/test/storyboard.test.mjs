@@ -688,20 +688,21 @@ describe('images and the video prompt follow the icon attributes', () => {
     const board = readBoard(dir), { win } = board;
     const watch = { id: 'watch', name: '시계', tracking: 'continuity', description: 'a silver pocket watch', appearanceVersion: 'v2', references: [
       { path: 'places/key.png', version: 'v1' }, { path: 'places/watch-cracked.png', version: 'v2', condition: 'cracked' }, { path: 'places/watch-intact.png', version: 'v2', condition: 'intact' }] };
-    const props = [watch, { id: 'key', imageUrl: 'places/key.png' }, { id: 'note', description: '접힌 쪽지' }];
+    const props = [watch, { id: 'key', imageUrl: 'places/key.png' }, { id: 'note', description: '접힌 쪽지' }, { id: 'cup', references: [{ path: 'places/key.png', version: 'v1', condition: 'full' }] }];
     const continuity = { version: 1, timelineId: 'main', initial: [{ propId: 'watch', at: { day: 1, order: 0 }, state: { ownerId: 'mina', holderId: 'mina', location: 'left hand', condition: 'intact' } }],
       events: [{ id: 'drop', propId: 'watch', kind: 'damage', at: { day: 1, order: 2 }, from: { condition: 'intact' }, to: { condition: 'cracked' }, shotIds: ['s0002'],
         reason: 'Mina drops it', recordedAt: '2026-11-02T00:00:00Z', recordedBy: 'author' }] };
     const visual = (id, extra) => ({ ...win.SCENES.find((s) => s.id === id).visual, ...extra });
     applyStoryboard({ path: dir, draft: true, expectedSha256: board.sha256, globals: { SB_DOC: { ...win.SB_DOC, characters: [{ id: 'mina' }] } }, propSheet: { props, continuity }, shotsById: [
-      { id: 's0001', shot: { ...win.SCENES[0], visual: visual('s0001', { props: ['key', 'note'], propUsage: [{ propId: 'key', start: { day: 1, order: 0 }, end: { day: 1, order: 0 }, visible: false }] }) } },
+      { id: 's0001', shot: { ...win.SCENES[0], visual: visual('s0001', { props: ['key', 'note', 'cup'], propUsage: [{ propId: 'key', start: { day: 1, order: 0 }, end: { day: 1, order: 0 }, visible: false }] }) } },
       { id: 's0002', shot: { ...win.SCENES[1], visual: visual('s0002', { props: ['watch'], propUsage: [{ propId: 'watch', start: { day: 1, order: 1 }, end: { day: 1, order: 2 } }] }) } }] });
     icons(dir);
-    // A hidden prop stays out; a prop without a picture is drawn from the prompt, and its Korean description stays out of it.
+    // A hidden prop stays out quietly; a prop without a picture is drawn from the prompt, its Korean description left out;
+    // a prop with no state still sends its one reference, though that reference names a condition.
     const first = shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'p', location: 'room' });
-    assert.ok(!first.refs.some((r) => r.role === 'prop'));
+    assert.deepEqual(first.refs.filter((r) => r.role === 'prop').map((r) => [r.id, r.path]), [['s0001-prop-cup', 'places/key.png']]);
     assert.match(first.prompt, /Also show the note prop\./);
-    assert.deepEqual(first.warnings.map((w) => w.what.split(' ').slice(0, 3).join(' ')).filter((w) => /prop/.test(w)), ['the key prop', "the note prop's", 'the note prop']);
+    assert.deepEqual(first.warnings.map((w) => w.what.split(' ').slice(0, 3).join(' ')).filter((w) => /prop/.test(w)), ["the note prop's", 'the note prop']);
     // The opening holds the intact watch of the current version; the closing, after the drop, the cracked one.
     const start = make(dir, 's0002', 'start', { location: 'room' });
     const prop = (request) => request.refs.find((r) => r.role === 'prop');
@@ -709,12 +710,19 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.match(start.prompt, /Image 5 shows the watch prop: a silver pocket watch; held by mina; at left hand; condition intact\./);
     const end = make(dir, 's0002', 'end', { props: ['watch'] });
     assert.deepEqual([prop(end).path, /condition cracked/.test(prop(end).purpose)], ['places/watch-cracked.png', true]);
-    // A broken ledger is reported and the props still go in, by their first picture.
+    // An error on another shot leaves this one's state alone.
+    const other = readBoard(dir);
+    applyStoryboard({ path: dir, draft: true, expectedSha256: other.sha256, shotsById: [{ id: 's0001', shot: { ...other.win.SCENES[0],
+      visual: { ...other.win.SCENES[0].visual, props: [...other.win.SCENES[0].visual.props, 'watch'] } } }] });
+    const unaffected = shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'p', location: 'room' });
+    assert.deepEqual([prop(unaffected).path, unaffected.warnings.some((w) => /ledger/.test(w.what))], ['places/watch-intact.png', false]);
+    // An error on this prop is reported and it still goes in, by its unconditioned picture and without a state.
     const broken = readBoard(dir);
     applyStoryboard({ path: dir, draft: true, expectedSha256: broken.sha256, propSheet: { props, continuity: { ...continuity, events: [{ ...continuity.events[0], from: { condition: 'cracked' } }] } } });
     const fallback = shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'p', location: 'room' });
     assert.equal(prop(fallback).path, 'places/key.png');
-    assert.ok(fallback.warnings.some((w) => /^the prop ledger has errors/.test(w.what)));
+    assert.ok(fallback.warnings.some((w) => /^the watch prop goes in without its state/.test(w.what)));
+    assert.doesNotMatch(prop(fallback).purpose, /held by/);
   });
   it('the sheet panels carry each character\'s body, and two characters keep their heights', () => {
     const { root, dir } = pictureBoard();

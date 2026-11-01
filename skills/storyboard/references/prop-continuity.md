@@ -97,20 +97,23 @@ in editorial metadata. Automatic cross-episode propagation is not enabled.
 
 The shared `prop-continuity.js` validates MCP writes, `check-scenes.js`
 and prompt generation. It computes snapshots without mutating input.
-`check` warns about a registered prop that no shot shows (`visual.props` or
-`frames.endProps`): link it to its shots or remove it from the sheet.
+`check` warns about a registered prop that no shot links (`visual.props`,
+`frames.endProps` or an event's `shotIds`): link it to its shots, or drop it if the
+story does not need it.
 
 `shot_image` reads the same snapshot for the props a frame shows. A prop hidden in
 the shot (`visible:false`) stays out of the picture. Each other prop sends one
 picture: the start image takes the reference drawn in the condition the prop has
 when the shot opens, the end image the one for its closing state. A reference whose
 `condition` matches comes before one without a condition, and one of the current
-`appearanceVersion` before an older one; `imageUrl` stands in only when no reference
-fits. The prop's `Image N` line carries its English description, holder, location,
-condition and screen position; fields in another script stay out with a warning.
-A prop without any picture is described in the prompt and warned about. A ledger
-with errors does not stop the frame: it is warned about and the props go in by
-their first picture without a state.
+`appearanceVersion` before an older one. When none fits, `imageUrl` stands in, else
+a reference of the current version; a known condition without its own reference is
+warned about. The prop's `Image N` line carries its English description, holder,
+location, condition and screen position; fields in another script stay out with a
+warning. A prop without any picture is described in the prompt and warned about.
+Ledger errors never stop the frame (`snapshot(..., {lenient:true})`): a prop the
+errors concern (its entry, its events, this shot or the whole ledger) goes in
+without a state, with a warning naming them; the other props keep their states.
 
 The ordinary still assembler and spatial assembler include per-shot prop states;
 source image arguments include prop reference images (`--json` on the ordinary

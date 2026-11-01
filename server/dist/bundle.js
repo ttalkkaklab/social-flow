@@ -115671,40 +115671,22 @@ function characterRefs(boardDir, win, shotId, ids, use, warnings) {
 }
 var propContinuity = () => loadFromHere2(join9(REFERENCES_DIR, "prop-continuity.js"));
 function propRefs(win, index, shotId, ids, frame, warnings) {
-  if (!ids.length) return { refs: [], unseen: [] };
   const warn = (what) => warnings.push({ level: "warn", where: shotId, what });
-  let snaps;
-  try {
-    snaps = propContinuity().snapshot(win, index, ids);
-  } catch (error2) {
-    warn(`the prop ledger has errors (${error2.message}), so props go in by their first picture without their state \u2014 fix it with storyboard_apply propSheet (storyboard_check lists them)`);
-    snaps = ids.map((id) => {
-      const e2 = docEntry(win, "props", id);
-      return {
-        propId: id,
-        description: typeof e2.description === "string" ? e2.description : "",
-        references: Array.isArray(e2.references) ? e2.references : [],
-        endReferences: Array.isArray(e2.references) ? e2.references : [],
-        before: null,
-        after: null,
-        visible: true,
-        position: null
-      };
-    });
-  }
+  const entries = new Map(ids.map((id) => [id, docEntry(win, "props", id)]));
   const refs = [], unseen = [];
-  for (const snap of snaps) {
-    const id = snap.propId, entry2 = docEntry(win, "props", id);
-    if (!snap.visible) {
-      warn(`the ${id} prop is hidden in this shot (propUsage visible:false), so it stays out of the picture`);
-      continue;
-    }
+  for (const snap of ids.length ? propContinuity().snapshot(win, index, ids, { lenient: true }) : []) {
+    const id = snap.propId, entry2 = entries.get(id);
+    if (!snap.visible) continue;
+    if (snap.errors.length)
+      warn(`the ${id} prop goes in without its state because the prop ledger has errors (${snap.errors.join("; ")}) \u2014 fix them with storyboard_apply propSheet`);
     const state = frame === "end" ? snap.after : snap.before, matched = frame === "end" ? snap.endReferences : snap.references;
     const all = Array.isArray(entry2.references) ? entry2.references : [];
     const condition = typeof state?.condition === "string" && state.condition !== "unknown" ? state.condition : "";
-    let file = matched[0]?.path ?? (typeof entry2.imageUrl === "string" && entry2.imageUrl ? entry2.imageUrl : void 0);
-    if (!matched.length && all.length)
-      warn(`no ${id} reference is drawn ${condition ? `as ${condition}` : "without a condition"}${file ? `, so its imageUrl stands in` : ", so it goes in without a picture"} \u2014 add a reference for that condition`);
+    const imageUrl = typeof entry2.imageUrl === "string" && entry2.imageUrl ? entry2.imageUrl : void 0;
+    const spare = all.find((ref) => typeof ref?.path === "string" && ref.version === entry2.appearanceVersion) ?? all.find((ref) => typeof ref?.path === "string");
+    const file = typeof matched[0]?.path === "string" ? matched[0].path : imageUrl ?? spare?.path;
+    if (file && !matched.length && condition && all.length)
+      warn(`no ${id} reference is drawn as ${condition}, so ${file === imageUrl ? "its imageUrl" : `its ${typeof spare?.condition === "string" ? spare.condition + " " : ""}reference`} stands in \u2014 add one for that condition`);
     const skipped = [];
     const english = (field2, value) => {
       if (typeof value !== "string" || !value.trim() || value === "unknown") return "";
@@ -124503,7 +124485,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "shot_image",
     title: "Make a shot's start or end image (step 4)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    description: `Use it after every shot has its icon attributes (shot_icons): make one shot's start image from its characters' sheet panels (assets/characters/<id>/panels.json \u2014 face, headless front and back; two characters take each face, then each front), its place and its props, with a prompt assembled from the shot's size, angle, depth and techniques, the episode style and your English description. When the place's sheet names a built set (SB_DOC.locations manifest), Image 1 is that set rendered locally in Blender from the camera the shot's size and angle ask for \u2014 aimed at its cast's blocking from location_manage bind, swung round the subject when someone or something blocks the view, kept inside the walls with a wider lens, at the picture's aspect \u2014 and the sheet image follows as a look reference when the model has room; the render is cached per input fingerprint under storyboard/locations/ and recorded in visual.locationFrame. Without a set the sheet image (imageUrl) leads and a warning says the angle is not the shot's. Each prop seen in the frame goes in through the prop ledger: a prop hidden in the shot (propUsage visible:false) stays out, the picture is its reference drawn in the condition it has when the frame opens (start) or closes (end), and its Image line carries its English description, holder, location and condition; a prop without a picture or a reference for that condition, or a ledger with errors, is a warning, never a refusal. Set names and labels in another script stay out of the prompt. frame:"end" makes the last image of a first_last shot from its start image, with the set's end pose from the same camera (optional; only when the frame plan needs it). Runs image_plan \u2192 image_execute with the saved image model and the existing spending authorization, then writes visual.frames.start and visual.bg (or frames.end), visual.references, locationId and props. Each call saves a new versioned file under storyboard/images/. A new start image takes the shot's end image off (it was edited from the old start; the file stays) and warns, so make the end image again. An end image keeps the start image's place (location is refused) and records its own props in frames.endProps. GPT Image gets a mixed PNG/JPEG set as PNG copies in storyboard/images/inputs/.
+    description: `Use it after every shot has its icon attributes (shot_icons): make one shot's start image from its characters' sheet panels (assets/characters/<id>/panels.json \u2014 face, headless front and back; two characters take each face, then each front), its place and its props, with a prompt assembled from the shot's size, angle, depth and techniques, the episode style and your English description. When the place's sheet names a built set (SB_DOC.locations manifest), Image 1 is that set rendered locally in Blender from the camera the shot's size and angle ask for \u2014 aimed at its cast's blocking from location_manage bind, swung round the subject when someone or something blocks the view, kept inside the walls with a wider lens, at the picture's aspect \u2014 and the sheet image follows as a look reference when the model has room; the render is cached per input fingerprint under storyboard/locations/ and recorded in visual.locationFrame. Without a set the sheet image (imageUrl) leads and a warning says the angle is not the shot's. Each prop seen in the frame goes in through the prop ledger: a prop hidden in the shot (propUsage visible:false) stays out, the picture is its reference drawn in the condition it has when the frame opens (start) or closes (end), and its Image line carries its English description, holder, location and condition; a prop without a picture or a reference for that condition is a warning, and ledger errors only drop the state of the props they concern, never refuse. Set names and labels in another script stay out of the prompt. frame:"end" makes the last image of a first_last shot from its start image, with the set's end pose from the same camera (optional; only when the frame plan needs it). Runs image_plan \u2192 image_execute with the saved image model and the existing spending authorization, then writes visual.frames.start and visual.bg (or frames.end), visual.references, locationId and props. Each call saves a new versioned file under storyboard/images/. A new start image takes the shot's end image off (it was edited from the old start; the file stays) and warns, so make the end image again. An end image keeps the start image's place (location is refused) and records its own props in frames.endProps. GPT Image gets a mixed PNG/JPEG set as PNG copies in storyboard/images/inputs/.
 
 Do NOT use it for a cut with no picture route \u2014 only still_camera and generated_video cuts are accepted. The saved image model has to take every picture the frame composes (gpt-image up to 16; astra-genai-native or an MLX Qwen-Image-2.1 pack up to 10; MLX FLUX.2 klein or Mage-Flow Edit up to 4); otherwise it refuses with image_references_unsupported, so ask the user before changing models. Refused (story_order) while a shot lacks icon attributes, or for an end image before the start image or outside first_last; location_render_failed when Blender cannot render the set (it never falls back to the sheet image).
 
