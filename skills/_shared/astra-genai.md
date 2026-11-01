@@ -240,7 +240,12 @@ Contract tests use synthetic media and mocked transport, not live GPU generation
 Existing `astra-genai` image/video selections keep the DashScope/LTX v2 contract.
 Choose these explicit engines for the newer gateway; never infer deployment from a
 model name, OS or localhost. All use the same `ASTRA_GENAI_URL` (root, without `/v1`)
-and `ASTRA_GENAI_API_KEY`. Production may run without MLX.
+and `ASTRA_GENAI_API_KEY`, except that `/v1/images/*` and `/v1/audio/*` go to
+`ASTRA_GENAI_IMAGE_URL` / `ASTRA_GENAI_SPEECH_URL` with `ASTRA_GENAI_IMAGE_API_KEY` /
+`ASTRA_GENAI_SPEECH_API_KEY` when those URLs are set — e.g. Qwen images and VoxCPM2 speech
+on the local Mac gateway (`http://127.0.0.1:18081`) while video stays remote. The
+DashScope `astra-genai` image route stays on `ASTRA_GENAI_URL`. Receipts record the
+origin they used. Production may run without MLX.
 
 ```json
 {

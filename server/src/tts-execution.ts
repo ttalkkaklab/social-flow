@@ -74,7 +74,7 @@ export async function executeSpeech<T extends SpeechResult>(
   if (![contract.single, contract.dialogue].includes(generator)) throw new Error('Generator does not implement selected TTS model');
   const gate = resolveToolGate(generator, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
   if (!gate.enabled) throw new Error(`Selected speech generator is disabled: ${gate.reason}`);
-  const key = provider === 'astra-genai' ? requireAstraGenaiKey() : provider === 'gemini' ? requireGeminiKey() : requireElevenLabsKey();
+  const key = provider === 'astra-genai' ? requireAstraGenaiKey('/v1/audio/') : provider === 'gemini' ? requireGeminiKey() : requireElevenLabsKey();
   const id = executionId.getStore() || randomUUID();
   const outputPath = resolve(String(args.outputPath || process.cwd()));
   const extension = String(args.outputFormat || 'wav').startsWith('mp3') ? 'mp3' : 'wav';
@@ -93,7 +93,7 @@ export async function executeSpeech<T extends SpeechResult>(
   const runs = join(directory, '.speech-runs');
   mkdirSync(runs, { recursive: true });
   const receiptPath = join(runs, id + '.json');
-  const fingerprint = digest(canonical({ generator, ...(provider === 'astra-genai' ? { baseUrl: astraGenaiBaseUrl() } : {}), args: { ...args, outputPath: directory } }));
+  const fingerprint = digest(canonical({ generator, ...(provider === 'astra-genai' ? { baseUrl: astraGenaiBaseUrl('/v1/audio/') } : {}), args: { ...args, outputPath: directory } }));
   const releaseRequest = lock(join(runs, id + '.lock'));
   let releaseOutput: (() => void) | undefined, releaseSlot: (() => void) | undefined;
   try {
