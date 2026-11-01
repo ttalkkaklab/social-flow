@@ -1245,6 +1245,7 @@ Do NOT use it for scene images (shot_image) or text-bearing art. Refused (charac
       identityPath: { type: 'string', description: 'Absolute <channel>/assets/characters/<id>/identity.md' },
       view: { type: 'string', enum: ['face', 'front', 'back'], description: 'face: 1:1 head close-up · front / back: 2:3 headless body' },
       references: { type: 'array', maxItems: 4, items: { type: 'string' }, description: 'Pictures to edit from, in order (absolute or relative to the character folder); [] draws from text. Default: none for face, the face panel for front, the front then face panels for back' },
+      negativePrompt: { type: 'string', minLength: 1, maxLength: 1000, description: 'Extra things to keep out, added to the default (front/back: head, face, hair, ears, tusks, helmet; every view: text, watermark, collage), e.g. beard. Sent only to models that take one (astra-genai-native).' },
       reserveUsd: { type: 'number', minimum: 0, description: 'API reservation estimate, as in image_plan' },
     } }
   },

@@ -46,3 +46,20 @@ test('on the GenAI 800-character cap the height note goes first, then the style 
   assert.doesNotMatch(front.prompt, /height measured/);
   assert.match(front.prompt, /225 cm tall; about 200 kg/);
 });
+
+test('body panels rule the head out with a negative prompt on models that take one', (t) => {
+  const { root, identityPath } = orc(t);
+  const current = settings.readSettings(root);
+  settings.saveSettings(root, { ...current.config.models, image: { engine: 'astra-genai-native', model: 'qwen-image-fast' } },
+    { expectedRevision: current.revision, request: 'Fixture: the model-bound gateway image model' });
+  const front = characterPanelRequest({ identityPath, view: 'front', references: [], negativePrompt: 'beard' });
+  assert.match(front.args.negativePrompt, /^head, face, hair.*, beard$/);
+  assert.equal(characterPanelRequest({ identityPath, view: 'face' }).args.negativePrompt.includes('head'), false);
+});
+
+test('a model without a negative prompt gets none and the panel says so', (t) => {
+  const { identityPath } = orc(t);
+  const front = characterPanelRequest({ identityPath, view: 'front', references: [] });
+  assert.equal(front.args.negativePrompt, undefined);
+  assert.ok(front.warnings.some((w) => /no negative prompt/.test(w)));
+});

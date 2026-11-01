@@ -1249,6 +1249,8 @@ export function shotImageRequest(args) {
  * The adapter call for one generated picture with the saved image model: the next free versioned
  * file <outDir>/<stem>-vN.png and the engine's own argument shape, editing from the inputs in order.
  */
+// Adapters whose request carries a negative prompt; the others ignore it and the caller says so.
+const NEGATIVE_PROMPT_ENGINES = new Set(['astra-genai-native']);
 export function imageCall(o) {
     const { directory, inputs, prompt, width, height } = o;
     const { selection } = imageContext(directory, o.assetId);
@@ -1285,7 +1287,10 @@ export function imageCall(o) {
             : selection.engine === 'astra-genai' ? { prompt, size: `${width}*${height}`, ...output, ...(edit ? { mode: 'img2img', imagePath: sent[0] } : {}) }
                 : ['mlx', 'zimage'].includes(selection.engine) ? { prompt, width, height, ...output, ...(edit ? { imagePath: sent[0], refImagePaths: sent.slice(1) } : {}) }
                     : { prompt, size: `${width}x${height}`, ...output, ...(edit ? { imagePath: sent[0], refImagePaths: sent.slice(1), mode: 'edit' } : {}) };
-    return { requestId, ...(tool ? { tool } : {}), operation: (edit ? 'edit' : 'text'), args, file, inputs: sent };
+    const negativeSent = !!o.negativePrompt && NEGATIVE_PROMPT_ENGINES.has(selection.engine);
+    if (negativeSent)
+        args.negativePrompt = o.negativePrompt;
+    return { requestId, ...(tool ? { tool } : {}), operation: (edit ? 'edit' : 'text'), args, file, inputs: sent, negativeSent };
 }
 /** Record a generated (or host-handed) frame on the board: frames.start/bg or frames.end, with its inputs. */
 export function recordShotImage(args, request) {

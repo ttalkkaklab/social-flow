@@ -18,6 +18,8 @@ export const characterPanelSchema = z.object({
   view: z.enum(['face', 'front', 'back']),
   references: z.array(z.string().min(1)).max(4).optional()
     .describe('Pictures to edit from, in order; default: none for face, the face panel for front, the front then face panel for back'),
+  negativePrompt: z.string().trim().min(1).max(1000).optional()
+    .describe('Extra things to keep out, added to the view\'s default negative prompt, e.g. beard'),
   reserveUsd: z.number().finite().nonnegative().optional(),
 }).strict();
 export type CharacterPanelInput = z.infer<typeof characterPanelSchema>;
@@ -28,6 +30,9 @@ const FRAMING = {
   front: { size: [1024, 1536], text: 'Headless front costume mannequin of this character: nothing above the neck, from the neck and shoulders down to the shoes, neutral stance, arms relaxed, the subject filling 85 percent of the image height.' },
   back: { size: [1024, 1536], text: 'Headless rear view of the same costume mannequin, turned 180 degrees away from the camera, from the neck and shoulders down to the heels, the subject filling 85 percent of the image height.' },
 } as const;
+// The body panels are edited from the face panel, which pulls a head back in unless the head is ruled out.
+const NEGATIVE = { face: 'text, watermark, collage, multiple views, border',
+  body: 'head, face, hair, ears, tusks, helmet, text, watermark, collage, multiple views, border' } as const;
 // ponytail: only the GenAI gateway's 800-character prompt cap is known here; add others when an adapter declares one.
 const PROMPT_LIMIT: Record<string, number> = { 'astra-genai': 800 };
 
@@ -68,10 +73,11 @@ export function characterPanelRequest(raw: unknown) {
   const limit = PROMPT_LIMIT[readImageContext(workspace, `${id}-${args.view}`).selection.engine] ?? Infinity;
   const { words, prompt } = [compose(false, true), compose(true, true), compose(true, false)].find((p) => p.prompt.length <= limit) ?? compose(true, false);
   const [width, height] = FRAMING[args.view].size;
-  const call = imageCall({ directory: workspace, assetId: `${id}-${args.view}`, inputs: references, prompt, width, height, outDir: folder, stem: `${id}-${args.view}`, what: 'this panel' });
-  const warnings = [...words.skipped.map((field) => `${field} is not English and stays out of the prompt — write it in English on the sheet`),
+  const negativePrompt = [NEGATIVE[args.view === 'face' ? 'face' : 'body'], args.negativePrompt].filter(Boolean).join(', ');
+  const call = imageCall({ directory: workspace, assetId: `${id}-${args.view}`, inputs: references, prompt, negativePrompt, width, height, outDir: folder, stem: `${id}-${args.view}`, what: 'this panel' });
+  const warnings = [...(call.negativeSent ? [] : ['the saved image model takes no negative prompt; only the prompt keeps the head out']),...words.skipped.map((field) => `${field} is not English and stays out of the prompt — write it in English on the sheet`),
     ...(prompt.length > limit ? [`the prompt is ${prompt.length} characters, over the image model's ${limit}; shorten the sheet's physical fields`] : [])];
-  return { workspace, folder, id, view: args.view, panelsFile, prompt, warnings, ...call };
+  return { workspace, folder, id, view: args.view, panelsFile, prompt, negativePrompt: call.negativeSent ? negativePrompt : undefined, warnings, ...call };
 }
 
 /** Record a generated panel in panels.json; the other slots stay. */
