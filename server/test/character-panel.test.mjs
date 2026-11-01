@@ -54,6 +54,7 @@ test('body panels rule the head out with a negative prompt on models that take o
     { expectedRevision: current.revision, request: 'Fixture: the model-bound gateway image model' });
   const front = characterPanelRequest({ identityPath, view: 'front', references: [], negativePrompt: 'beard' });
   assert.match(front.args.negativePrompt, /^head, face, hair.*, beard$/);
+  assert.equal(front.args.guidanceScale, 4, 'the gateway refuses a negative prompt without CFG');
   assert.equal(characterPanelRequest({ identityPath, view: 'face' }).args.negativePrompt.includes('head'), false);
 });
 
