@@ -15,7 +15,7 @@ export const characterPanelSchema = z.object({
     identityPath: z.string().min(1).describe('<channel>/assets/characters/<id>/identity.md'),
     view: z.enum(['face', 'front', 'back']),
     references: z.array(z.string().min(1)).max(4).optional()
-        .describe('Pictures to edit from, in order; default: none for face, the face panel for front, the front then face panel for back'),
+        .describe('Pictures to edit from, in order; default: none for face, the face panel for front, the front panel for back'),
     negativePrompt: z.string().trim().min(1).max(1000).optional()
         .describe('Extra things to keep out, added to the view\'s default negative prompt, e.g. beard'),
     reserveUsd: z.number().finite().nonnegative().optional(),
@@ -24,11 +24,14 @@ export const characterPanelSchema = z.object({
 const FRAMING = {
     face: { size: [1024, 1024], text: 'Close head portrait of one character, front facing, neutral expression, the complete head and hair visible, the head filling 70 percent of the image height.' },
     front: { size: [1024, 1536], text: 'Headless front costume mannequin of this character: nothing above the neck, from the neck and shoulders down to the shoes, neutral stance, arms relaxed, the subject filling 85 percent of the image height.' },
-    back: { size: [1024, 1536], text: 'Headless rear view of the same costume mannequin, turned 180 degrees away from the camera, from the neck and shoulders down to the heels, the subject filling 85 percent of the image height.' },
+    back: { size: [1024, 1536], text: 'Turn this headless costume mannequin around 180 degrees so its back faces the camera, keeping the same costume. Show it from directly behind, from the neck down to the heels: the back of the garments, straps and belt and the heels of the footwear; anything worn on one side now sits on the other side of the image. Nothing above the neck. The subject fills 85 percent of the image height.' },
 };
 // The body panels are edited from the face panel, which pulls a head back in unless the head is ruled out.
-const NEGATIVE = { face: 'text, watermark, collage, multiple views, border',
-    body: 'head, face, hair, ears, tusks, helmet, text, watermark, collage, multiple views, border' };
+// The back is edited from the front alone with a turn-around instruction: a face reference brings the head back,
+// and "keep this character" keeps the front's pose, so its negative also rules out what only the front shows.
+const BODY = 'head, face, hair, ears, tusks, helmet, text, watermark, collage, multiple views, border';
+const NEGATIVE = { face: 'text, watermark, collage, multiple views, border', front: BODY,
+    back: `front view, chest, belt buckle, palms facing camera, toes facing camera, ${BODY}` };
 // ponytail: only the GenAI gateway's 800-character prompt cap is known here; add others when an adapter declares one.
 const PROMPT_LIMIT = { 'astra-genai': 800 };
 /** Plan inputs for one panel: the assembled prompt, the edit sources and the adapter call. */
@@ -47,7 +50,7 @@ export function characterPanelRequest(raw) {
             throw new Error(`character_panel_missing: make ${id}'s ${view} panel first, or pass references`);
         return path.join(folder, file);
     };
-    const references = (args.references ?? (args.view === 'face' ? [] : args.view === 'front' ? ['face'] : ['front', 'face']).map(panelFile))
+    const references = (args.references ?? (args.view === 'face' ? [] : args.view === 'front' ? ['face'] : ['front']).map(panelFile))
         .map((file) => path.resolve(folder, file));
     for (const file of references)
         if (!existsSync(file))
@@ -61,14 +64,14 @@ export function characterPanelRequest(raw) {
     const style = preset && STYLES[preset] ? STYLES[preset].prompt : '';
     const compose = (compact, withStyle) => {
         const words = panelPrompt(character, args.view, { compact });
-        return { words, prompt: [references.length ? 'Keep this exact character from the reference images.' : '', FRAMING[args.view].text,
+        return { words, prompt: [references.length && args.view !== 'back' ? 'Keep this exact character from the reference images.' : '', FRAMING[args.view].text,
                 `Character: ${words.text}.`, withStyle ? style : '', 'Soft even studio lighting, plain neutral grey background. One view only. No text, watermark, collage or border.'].filter(Boolean).join(' ') };
     };
     // A prompt over the adapter's cap drops the height convention note first, then the style sentence.
     const limit = PROMPT_LIMIT[readImageContext(workspace, `${id}-${args.view}`).selection.engine] ?? Infinity;
     const { words, prompt } = [compose(false, true), compose(true, true), compose(true, false)].find((p) => p.prompt.length <= limit) ?? compose(true, false);
     const [width, height] = FRAMING[args.view].size;
-    const negativePrompt = [NEGATIVE[args.view === 'face' ? 'face' : 'body'], args.negativePrompt].filter(Boolean).join(', ');
+    const negativePrompt = [NEGATIVE[args.view], args.negativePrompt].filter(Boolean).join(', ');
     const call = imageCall({ directory: workspace, assetId: `${id}-${args.view}`, inputs: references, prompt, negativePrompt, width, height, outDir: folder, stem: `${id}-${args.view}`, what: 'this panel' });
     const warnings = [...(call.negativeSent ? [] : ['the saved image model takes no negative prompt; only the prompt keeps the head out']), ...words.skipped.map((field) => `${field} is not English and stays out of the prompt — write it in English on the sheet`),
         ...(prompt.length > limit ? [`the prompt is ${prompt.length} characters, over the image model's ${limit}; shorten the sheet's physical fields`] : [])];

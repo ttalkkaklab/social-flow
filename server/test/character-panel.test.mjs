@@ -34,6 +34,12 @@ test('each panel prompt comes from the sheet: the face from appearance, the body
   assert.deepEqual(front.inputs, [face.file]);
   assert.match(front.prompt, /Headless front.*Character: 225 cm tall; about 200 kg; height measured.*worn dark iron plate armor/);
   assert.equal(front.requestId, 'kardum-front-v1');
+  writeFileSync(front.file, png);
+  recordCharacterPanel(front);
+  // A face reference or "keep this character" left Qwen redrawing the front; the back turns the front alone around.
+  const back = characterPanelRequest({ identityPath, view: 'back' });
+  assert.deepEqual(back.inputs, [front.file]);
+  assert.match(back.prompt, /^Turn this headless costume mannequin around 180 degrees/);
 });
 
 test('on the GenAI 800-character cap the height note goes first, then the style sentence', (t) => {
@@ -56,6 +62,7 @@ test('body panels rule the head out with a negative prompt on models that take o
   assert.match(front.args.negativePrompt, /^head, face, hair.*, beard$/);
   assert.equal(front.args.guidanceScale, 4, 'the gateway refuses a negative prompt without CFG');
   assert.equal(characterPanelRequest({ identityPath, view: 'face' }).args.negativePrompt.includes('head'), false);
+  assert.match(characterPanelRequest({ identityPath, view: 'back', references: [] }).args.negativePrompt, /^front view, chest, .*, head, face/);
 });
 
 test('a model without a negative prompt gets none and the panel says so', (t) => {
