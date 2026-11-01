@@ -89,13 +89,15 @@ export async function manageVoiceAudition(args: Args) {
     const target = characterVoiceTarget(source, args.voiceProfile);
     // Gemini and the gateway both take a stable voice direction (style prompt or instructions).
     const directed = (engine: string) => engine === 'gemini' || engine === 'astra-genai';
+    // The gateway's default voice is shaped only by its instructions, so it also needs who speaks and how they come across.
+    const derived = (tts: { engine: string; voiceId: string }) => tts.engine === 'astra-genai' && tts.voiceId === 'default' ? target.designDirection : target.baselineDirection;
     const planned = (args.candidates || []).map(choice => {
-      if (directed(choice.tts.engine) && !choice.tts.voiceDirection && target.baselineDirection.length > 400) {
-        const generationError = 'Derived voice direction exceeds 400 characters; supply a compact voiceProfile.baselineDirection before synthesis';
+      if (directed(choice.tts.engine) && !choice.tts.voiceDirection && derived(choice.tts).length > 400) {
+        const generationError = 'Derived voice direction exceeds 400 characters; pass a compact voiceDirection or voiceProfile.baselineDirection before synthesis';
         if (args.action === 'create') throw new Error(generationError);
         return { ...choice, match: compareVoiceMetadata(target, choice.metadata), compiled: undefined, generationError };
       }
-      const tts = ttsSchema.parse({ ...choice.tts, ...(directed(choice.tts.engine) && target.baselineDirection && !choice.tts.voiceDirection ? { voiceDirection: target.baselineDirection } : {}) });
+      const tts = ttsSchema.parse({ ...choice.tts, ...(directed(choice.tts.engine) && derived(choice.tts) && !choice.tts.voiceDirection ? { voiceDirection: derived(choice.tts) } : {}) });
       const compiled = args.sampleText ? compileSample(args.sampleText, args.acting, tts, args.sampleTurns) : undefined;
       return { ...choice, tts, match: compareVoiceMetadata(target, choice.metadata), ...(compiled ? { compiled } : {}) };
     });

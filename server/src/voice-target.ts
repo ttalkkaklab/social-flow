@@ -24,6 +24,9 @@ export const characterTargetSchema = z.object({
 });
 export interface VoiceTarget extends z.infer<typeof characterTargetSchema> {
   baselineDirection: string;
+  impression: string | null;
+  /** For a voice-design engine: who speaks, the character's impression, then delivery. */
+  designDirection: string;
   sources: Record<string, string | null>;
   warnings: string[];
 }

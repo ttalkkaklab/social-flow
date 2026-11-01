@@ -28,21 +28,35 @@ function characterVoiceTarget(source, override = {}) {
   // voice (size and resonance), like age and gender; it never becomes a delivery control.
   const height = value('physical', 'heightCm'), weight = value('physical', 'weightKg');
   const body = [value('identity', 'species'), height && `${height} cm`, weight && `about ${weight} kg`, value('physical', 'build')].filter(Boolean).join(', ');
+  // A voice-design engine (one default voice shaped only by instructions) hears nothing it is not told,
+  // so its direction carries who speaks and the impression the character gives, then the delivery.
+  const traits = value('personality', 'traits') || [];
+  // Visual detail (eyes, hair, scars) says nothing about a voice and the build is already in the body.
+  const impression = [value('identity', 'role'), traits.join(', ')].filter(Boolean).join('; ');
+  const designDirection = profile.baselineDirection || [
+    `Voice: ${vocalGender === 'unspecified' ? 'a' : vocalGender} voice${age ? `, ${age}` : ''}.`,
+    body && `Body: ${body}.`, timbre && `Timbre: ${timbre}.`, impression && `Impression: ${impression}.`,
+    baselineDirection && `Delivery: ${baselineDirection.replace(/\n/g, ' ')}`,
+  ].filter(Boolean).join(' ');
   return {
     vocalGender, perceivedAge: age || null, timbre: timbre || null, body: body || null, pace: pace || null,
-    register: register || null, traits: value('personality', 'traits') || [],
+    register: register || null, traits, impression: impression || null,
     habits: value('speech', 'habits') || null, emotionalRange: value('speech', 'emotion') || null,
-    baselineDirection,
+    baselineDirection, designDirection,
     sources: { vocalGender: profile.vocalGender ? 'voiceProfile.vocalGender' : derivedGender ? 'character.speech.timbre' : !qualifiedGender && stated ? 'character.identity.gender' : null,
       perceivedAge: profile.perceivedAge ? 'voiceProfile.perceivedAge' : age ? 'character.identity.age' : null,
       body: body ? 'character.identity.species and physical height, weight and build' : null,
-      baselineDirection: profile.baselineDirection ? 'voiceProfile.baselineDirection' : 'confirmed speech pace, accent, register and habits' },
+      baselineDirection: profile.baselineDirection ? 'voiceProfile.baselineDirection' : 'confirmed speech pace, accent, register and habits',
+      impression: impression ? 'character.identity.role and personality.traits' : null,
+      designDirection: profile.baselineDirection ? 'voiceProfile.baselineDirection' : 'voice gender, age, body, timbre, impression and delivery' },
     warnings: [
       'Age, vocal gender and stable timbre are casting constraints. Match the base voice or use tts_voice_design to create/remix it; Gemini 3.8 turn style cannot change immutable speaker traits; Voice Design is a separate identity creation API.',
       ...(vocalGender === 'unspecified' ? ['Vocal gender is unspecified; do not infer it from a name, role or appearance.'] : []),
       ...(!age ? ['Perceived voice age is unspecified.'] : []),
       ...(!timbre ? ['Vocal timbre is unspecified.'] : []),
       ...(baselineDirection.length > 400 ? ['Derived voice direction exceeds 400 characters. Author a compact voiceProfile.baselineDirection; do not truncate identity evidence.'] : []),
+      ...(/[\uac00-\ud7a3]/.test(designDirection) ? ['designDirection contains Korean; voice-design engines follow English instructions better. Pass an English voiceDirection (at most 400 characters) written from it.'] : []),
+      ...(designDirection.length > 400 ? ['designDirection exceeds 400 characters; pass a compact English voiceDirection written from it.'] : []),
     ],
   };
 }

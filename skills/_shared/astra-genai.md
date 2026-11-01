@@ -274,6 +274,11 @@ No example grants spending permission. `capability_status` checks credentials on
   registered ID; `instructions` require voice-design support. No client reference
   audio upload or continuation. Character `tts.engine` is `astra-genai`, with an
   explicit model alias and registered `voiceId`; `voiceDirection` maps to instructions.
+  The `default` voice of a voice-design model (VoxCPM2) is shaped only by those
+  instructions, so its direction names who speaks — gender, age, body, timbre — and the
+  character's impression before the delivery (`target.designDirection`). Write it in
+  English and name the timbre ("very deep bass"); a local test kept Korean-only
+  instructions near 219 Hz while English ones landed at 122–153 Hz.
   `speech_manage plan_audio`, auditions and provenance use the same adapter.
 - Desktop video operations `text`, `image`, `audio`, `extend`, `retake`, `keyframe`
   select the corresponding `astra_genai_desktop_*` tool. Use `video_plan/execute`.

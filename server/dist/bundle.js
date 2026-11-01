@@ -94793,7 +94793,7 @@ Do NOT use it for scene images (shot_image) or text-bearing art. Refused (charac
     name: "character_voice_audition",
     title: "Audition three character voices and save the user choice",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    description: "Create a character's voice sample, a voice audition, or plan acoustic targets.\n\nUse for a character's sample voice, casting or character voice matching. By default cast one voice from the plan's target and create with that single candidate: it generates the sample and sets it at once (identity tts, voiceSelection, the sheet's voice.wav and sample.txt). Pass three candidates only when the user asks to compare voices; then they choose and select pins it. plan reads confirmed age, timbre, body (species, height, weight, build), speech and personality without synthesis; compare real provider metadata and expose unknowns. create generates the paid sample (or three previews), composes a compact Gemini voiceDirection with acting and saves target/metadata/request/hash evidence without changing identity. select requires the actual user choice and verifies hashes before saving its voice settings. Returns target, candidate comparisons, auditionPath, previewPath and selection state. Do NOT use for ordinary dialogue \u2014 use speech_manage plan_audio and its raw TTS tool. Never auto-select or score without a requested audio review; inspect partial failures before retrying, then continue a failed audition with create plus its auditionPath so only the missing candidates are generated.",
+    description: "Create a character's voice sample, a voice audition, or plan acoustic targets.\n\nUse for a character's sample voice, casting or character voice matching. By default cast one voice from the plan's target and create with that single candidate: it generates the sample and sets it at once (identity tts, voiceSelection, the sheet's voice.wav and sample.txt). Pass three candidates only when the user asks to compare voices; then they choose and select pins it. plan reads confirmed age, timbre, body (species, height, weight, build), speech, personality and the impression (role, personality traits) without synthesis; compare real provider metadata and expose unknowns. A voice-design voice (gateway voiceId default) hears only its direction: write an English voiceDirection from target.designDirection, naming timbre explicitly. create generates the paid sample (or three previews), composes a compact Gemini voiceDirection with acting and saves target/metadata/request/hash evidence without changing identity. select requires the actual user choice and verifies hashes before saving its voice settings. Returns target, candidate comparisons, auditionPath, previewPath and selection state. Do NOT use for ordinary dialogue \u2014 use speech_manage plan_audio and its raw TTS tool. Never auto-select or score without a requested audio review; inspect partial failures before retrying, then continue a failed audition with create plus its auditionPath so only the missing candidates are generated.",
     inputSchema: { type: "object", additionalProperties: false, properties: {
       action: { type: "string", enum: ["plan", "create", "read", "select"], description: "plan reads identity without generating; create generates one sample and sets it, or three choices; read inspects; select saves an explicit user choice from three." },
       identityPath: { type: "string", description: "Existing character identity.md with one structured character JSON block. Draft tts may be absent before selection." },
@@ -94823,7 +94823,7 @@ Do NOT use it for scene images (shot_image) or text-bearing art. Refused (charac
           stability: { type: "number", minimum: 0, maximum: 1, description: "Optional ElevenLabs v4 consistency." },
           similarity: { type: "number", minimum: 0, maximum: 1, description: "Optional ElevenLabs v4 voice similarity." },
           stylePrompt: { type: "string", description: "Only for pre-3.8 Gemini baseline style." },
-          voiceDirection: { type: "string", maxLength: 400, description: "Short habitual Gemini delivery; plan/create derives speech pace, register and habits when omitted. Base voice selection carries age, gender and timbre. Preserved alongside scene acting." }
+          voiceDirection: { type: "string", maxLength: 400, description: 'Stable voice direction, saved and reused for every later line. Gemini: short habitual delivery; base voice selection carries age, gender and timbre. Gateway voiceId default (voice design, e.g. voxcpm2): who speaks and how they come across, in English, e.g. "A very deep bass male voice of a huge orc warrior". Omitted: plan/create derives target.baselineDirection (Gemini) or target.designDirection (voice design). Preserved alongside scene acting.' }
         } }
       } } },
       candidateId: { type: "string", enum: ["1", "2", "3"], description: "Candidate selected by the user." },
@@ -100697,13 +100697,14 @@ async function manageVoiceAudition(args) {
     if (blocks.filter((b) => b.character !== void 0).length !== 1) throw new Error("Create the character identity JSON before auditioning; tts may be absent until selection");
     const target = characterVoiceTarget(source, args.voiceProfile);
     const directed = (engine) => engine === "gemini" || engine === "astra-genai";
+    const derived = (tts) => tts.engine === "astra-genai" && tts.voiceId === "default" ? target.designDirection : target.baselineDirection;
     const planned = (args.candidates || []).map((choice2) => {
-      if (directed(choice2.tts.engine) && !choice2.tts.voiceDirection && target.baselineDirection.length > 400) {
-        const generationError = "Derived voice direction exceeds 400 characters; supply a compact voiceProfile.baselineDirection before synthesis";
+      if (directed(choice2.tts.engine) && !choice2.tts.voiceDirection && derived(choice2.tts).length > 400) {
+        const generationError = "Derived voice direction exceeds 400 characters; pass a compact voiceDirection or voiceProfile.baselineDirection before synthesis";
         if (args.action === "create") throw new Error(generationError);
         return { ...choice2, match: compareVoiceMetadata(target, choice2.metadata), compiled: void 0, generationError };
       }
-      const tts = ttsSchema.parse({ ...choice2.tts, ...directed(choice2.tts.engine) && target.baselineDirection && !choice2.tts.voiceDirection ? { voiceDirection: target.baselineDirection } : {} });
+      const tts = ttsSchema.parse({ ...choice2.tts, ...directed(choice2.tts.engine) && derived(choice2.tts) && !choice2.tts.voiceDirection ? { voiceDirection: derived(choice2.tts) } : {} });
       const compiled = args.sampleText ? compileSample(args.sampleText, args.acting, tts, args.sampleTurns) : void 0;
       return { ...choice2, tts, match: compareVoiceMetadata(target, choice2.metadata), ...compiled ? { compiled } : {} };
     });

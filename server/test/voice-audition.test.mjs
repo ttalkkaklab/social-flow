@@ -147,6 +147,8 @@ test('audition planning is read-only and adds identity controls to the same gene
     const gateway=['a','b','c'].map(voiceId=>({label:voiceId,reason:'Gateway voices',tts:{engine:'astra-genai',model:'voxcpm2',voiceId,language:'ko',speed:1}}));
     const routed=await manageVoiceAudition(voiceAuditionSchema.parse({action:'plan',identityPath,candidates:gateway,sampleText:'괜찮아요. 제가 여기 있어요.'}));
     assert.equal(routed.candidates[0].compiled.generation.instructions,plan.target.baselineDirection);
+    const designed=await manageVoiceAudition(voiceAuditionSchema.parse({action:'plan',identityPath,candidates:[{label:'design',reason:'Voice design',tts:{engine:'astra-genai',model:'voxcpm2',voiceId:'default',language:'ko',speed:1}}],sampleText:'괜찮아요. 제가 여기 있어요.'}));
+    assert.equal(designed.candidates[0].compiled.generation.instructions,plan.target.designDirection,'the default voice hears who speaks, not only the delivery');
     assert.equal(readFileSync(identityPath,'utf8'),source);
     const lengthy=doc();lengthy.character.speech.pace.value='Measured concise phrasing. '.repeat(30);
     writeFileSync(identityPath,markdown(lengthy));
