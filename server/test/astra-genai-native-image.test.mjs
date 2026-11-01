@@ -31,3 +31,11 @@ test('inline response is recoverable without another POST, origin changes and am
   await assert.rejects(generateNativeImage({...args,filename:'b.png'}),/lost/);
   await assert.rejects(recoverNativeImage(path.join(dir,'b.png.astra-genai.json')),/unknown/);
 });
+
+test('a single-picture edit sends no empty ref_images (the gateway rejects [])', t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'native-image-'));
+  t.after(() => fs.rmSync(dir, {recursive:true,force:true}));
+  const imagePath = path.join(dir, 'face.png'); fs.writeFileSync(imagePath, png);
+  const body = buildNativeImageBody({ model:'qwen-image-fast', prompt:'front body', imagePath, refImagePaths:[] }, true);
+  assert.equal('ref_images' in body, false);
+});

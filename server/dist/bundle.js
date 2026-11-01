@@ -83983,7 +83983,7 @@ function buildNativeImageBody(input, edit2 = false) {
     const encode2 = (file) => genaiSourceUri(void 0, file).split(",")[1];
     body.image = encode2(editArgs.imagePath);
     delete body.imagePath;
-    if (editArgs.refImagePaths) body.ref_images = editArgs.refImagePaths.map(encode2);
+    if (editArgs.refImagePaths?.length) body.ref_images = editArgs.refImagePaths.map(encode2);
     delete body.refImagePaths;
   }
   return body;
