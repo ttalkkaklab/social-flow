@@ -83819,10 +83819,20 @@ import { createHash as createHash4 } from "node:crypto";
 
 // src/astra-genai-client.ts
 import { readFileSync as readFileSync6 } from "node:fs";
-function astraGenaiBaseUrl() {
-  return (process.env.ASTRA_GENAI_URL || "https://genai.astravision.co.kr").replace(/\/+$/, "");
+function override(route) {
+  if (route.startsWith("/v1/images/")) return { url: process.env.ASTRA_GENAI_IMAGE_URL, key: process.env.ASTRA_GENAI_IMAGE_API_KEY };
+  if (route.startsWith("/v1/audio/")) return { url: process.env.ASTRA_GENAI_SPEECH_URL, key: process.env.ASTRA_GENAI_SPEECH_API_KEY };
+  return {};
 }
-function requireAstraGenaiKey() {
+function astraGenaiBaseUrl(route = "") {
+  return (override(route).url || process.env.ASTRA_GENAI_URL || "https://genai.astravision.co.kr").replace(/\/+$/, "");
+}
+function requireAstraGenaiKey(route = "") {
+  const { url, key } = override(route);
+  if (url) {
+    if (!key) throw new Error(`${route.startsWith("/v1/images/") ? "ASTRA_GENAI_IMAGE_API_KEY" : "ASTRA_GENAI_SPEECH_API_KEY"} is required with its gateway URL override.`);
+    return key;
+  }
   if (!config.astraGenaiApiKey) throw new Error("ASTRA_GENAI_API_KEY is required: issue a gateway token in the GenAI console; ASTRA_VIDEO is a separate credential.");
   return config.astraGenaiApiKey;
 }
@@ -83836,8 +83846,8 @@ var GenaiRequestError = class extends Error {
   httpStatus;
 };
 async function requestGenai(method, route, body, timeoutMs = 6e4, onResponse) {
-  const key = requireAstraGenaiKey();
-  const response = await fetch(astraGenaiBaseUrl() + route, {
+  const key = requireAstraGenaiKey(route);
+  const response = await fetch(astraGenaiBaseUrl(route) + route, {
     method,
     redirect: "error",
     signal: AbortSignal.timeout(timeoutMs),
@@ -83910,9 +83920,9 @@ function genaiSourceUri(uri, file) {
 async function requestGenaiMedia(route, body) {
   if (!/^\/v1\/(audio\/speech|ltx\/desktop\/assets(?:\/[A-Za-z0-9_-]+\/bytes)?)$/.test(route))
     throw new Error("Unsupported private gateway media route");
-  const key = requireAstraGenaiKey();
+  const key = requireAstraGenaiKey(route);
   const form = body instanceof FormData;
-  const response = await fetch(astraGenaiBaseUrl() + route, {
+  const response = await fetch(astraGenaiBaseUrl(route) + route, {
     method: body === void 0 ? "GET" : "POST",
     redirect: "error",
     signal: AbortSignal.timeout(30 * 6e4),
@@ -83981,14 +83991,14 @@ function buildNativeImageBody(input, edit2 = false) {
 var imageResponse = external_exports.object({ data: external_exports.array(external_exports.object({ b64_json: external_exports.string().min(1) })).length(1) }).passthrough();
 async function generateNativeImage(input, edit2 = false) {
   const args = (edit2 ? nativeImageEditSchema : nativeImageSchema).parse(input);
-  requireAstraGenaiKey();
+  requireAstraGenaiKey("/v1/images/");
   const body = buildNativeImageBody(args, edit2);
   const imagePath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.png`, "image");
   const receiptPath = imagePath + ".astra-genai.json";
   if (fs6.existsSync(receiptPath) || fs6.existsSync(imagePath)) throw new Error("Output/receipt already exists; recover it before any new generation");
   const receipt = {
     protocol: "gateway-image-v1",
-    baseUrl: astraGenaiBaseUrl(),
+    baseUrl: astraGenaiBaseUrl("/v1/images/"),
     imagePath,
     fingerprint: createHash4("sha256").update(JSON.stringify(body)).digest("hex"),
     status: "submitting"
@@ -84007,7 +84017,7 @@ async function recoverNativeImage(receiptPath) {
     response: external_exports.unknown().optional(),
     sha256: external_exports.string().optional()
   }).passthrough().parse(JSON.parse(fs6.readFileSync(receiptPath, "utf8")));
-  if (receipt.baseUrl !== astraGenaiBaseUrl()) throw new Error("Gateway origin changed; restore configuration before recovery");
+  if (receipt.baseUrl !== astraGenaiBaseUrl("/v1/images/")) throw new Error("Gateway origin changed; restore configuration before recovery");
   if (receipt.status === "completed") {
     const output2 = verifyImageFile(receipt.imagePath);
     if (output2.sha256 !== receipt.sha256) throw new Error("Cached image changed");
@@ -84437,7 +84447,7 @@ async function executeSpeech(generator, args, run) {
   if (![contract2.single, contract2.dialogue].includes(generator)) throw new Error("Generator does not implement selected TTS model");
   const gate3 = resolveToolGate(generator, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
   if (!gate3.enabled) throw new Error(`Selected speech generator is disabled: ${gate3.reason}`);
-  const key = provider === "astra-genai" ? requireAstraGenaiKey() : provider === "gemini" ? requireGeminiKey() : requireElevenLabsKey();
+  const key = provider === "astra-genai" ? requireAstraGenaiKey("/v1/audio/") : provider === "gemini" ? requireGeminiKey() : requireElevenLabsKey();
   const id = executionId.getStore() || randomUUID2();
   const outputPath = resolve2(String(args.outputPath || process.cwd()));
   const extension2 = String(args.outputFormat || "wav").startsWith("mp3") ? "mp3" : "wav";
@@ -84458,7 +84468,7 @@ async function executeSpeech(generator, args, run) {
   const runs = join7(directory2, ".speech-runs");
   mkdirSync4(runs, { recursive: true });
   const receiptPath = join7(runs, id + ".json");
-  const fingerprint = digest2(canonical({ generator, ...provider === "astra-genai" ? { baseUrl: astraGenaiBaseUrl() } : {}, args: { ...args, outputPath: directory2 } }));
+  const fingerprint = digest2(canonical({ generator, ...provider === "astra-genai" ? { baseUrl: astraGenaiBaseUrl("/v1/audio/") } : {}, args: { ...args, outputPath: directory2 } }));
   const releaseRequest = lock(join7(runs, id + ".lock"));
   let releaseOutput, releaseSlot;
   try {
@@ -100470,10 +100480,10 @@ var characterTargetSchema = external_exports.object({
   emotionalRange: external_exports.string().max(2e3).nullable()
 });
 var shared3 = () => nodeModule4.createRequire(import.meta.url)("../../skills/_shared/voice-target.js");
-var characterVoiceTarget = (source, override = {}) => {
+var characterVoiceTarget = (source, override2 = {}) => {
   const blocks = [...source.matchAll(/```json\s*\n([\s\S]*?)```/g)].map((match2) => JSON.parse(match2[1]));
   const saved = blocks.find((block) => block?.character)?.voiceProfile;
-  const profile = { ...voiceProfileSchema.parse(saved || {}), ...voiceProfileSchema.parse(override) };
+  const profile = { ...voiceProfileSchema.parse(saved || {}), ...voiceProfileSchema.parse(override2) };
   return shared3().characterVoiceTarget(source, profile);
 };
 var compareVoiceMetadata = (target, metadata) => shared3().compareVoiceMetadata(target, metadata);
@@ -101502,9 +101512,9 @@ var CINEMATOGRAPHY_RESPONSE_JSON_SCHEMA = {
     } }
   }
 };
-function actingReviewTimeout(focus, override = process.env.SOCIAL_FLOW_ACTING_REVIEW_TIMEOUT_MS) {
-  if (override === void 0 || override.trim() === "") return focus === "cinematography" ? 6e5 : 18e4;
-  const timeout = Number(override);
+function actingReviewTimeout(focus, override2 = process.env.SOCIAL_FLOW_ACTING_REVIEW_TIMEOUT_MS) {
+  if (override2 === void 0 || override2.trim() === "") return focus === "cinematography" ? 6e5 : 18e4;
+  const timeout = Number(override2);
   if (!Number.isInteger(timeout) || timeout < 3e4 || timeout > 9e5)
     throw new Error("SOCIAL_FLOW_ACTING_REVIEW_TIMEOUT_MS must be an integer in 30000..900000");
   return timeout;

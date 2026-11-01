@@ -4,11 +4,23 @@ import { z } from 'zod';
 import { imageMetadata } from './image-media.js';
 import { config } from './config.js';
 
-export function astraGenaiBaseUrl(): string {
-  return (process.env.ASTRA_GENAI_URL || 'https://genai.astravision.co.kr').replace(/\/+$/, '');
+/** Model-bound images and speech may run on another gateway (e.g. a local Mac one); everything else uses ASTRA_GENAI_URL. */
+function override(route: string): { url?: string; key?: string } {
+  if (route.startsWith('/v1/images/')) return { url: process.env.ASTRA_GENAI_IMAGE_URL, key: process.env.ASTRA_GENAI_IMAGE_API_KEY };
+  if (route.startsWith('/v1/audio/')) return { url: process.env.ASTRA_GENAI_SPEECH_URL, key: process.env.ASTRA_GENAI_SPEECH_API_KEY };
+  return {};
 }
 
-export function requireAstraGenaiKey(): string {
+export function astraGenaiBaseUrl(route = ''): string {
+  return (override(route).url || process.env.ASTRA_GENAI_URL || 'https://genai.astravision.co.kr').replace(/\/+$/, '');
+}
+
+export function requireAstraGenaiKey(route = ''): string {
+  const { url, key } = override(route);
+  if (url) {
+    if (!key) throw new Error(`${route.startsWith('/v1/images/') ? 'ASTRA_GENAI_IMAGE_API_KEY' : 'ASTRA_GENAI_SPEECH_API_KEY'} is required with its gateway URL override.`);
+    return key;
+  }
   if (!config.astraGenaiApiKey) throw new Error('ASTRA_GENAI_API_KEY is required: issue a gateway token in the GenAI console; ASTRA_VIDEO is a separate credential.');
   return config.astraGenaiApiKey;
 }
@@ -20,8 +32,8 @@ export class GenaiRequestError extends Error {
 
 /** No automatic POST retries: a disconnected request may already be generating. */
 export async function requestGenai(method: 'GET' | 'POST', route: string, body?: unknown, timeoutMs = 60_000, onResponse?: (headers: Headers) => void): Promise<unknown> {
-  const key = requireAstraGenaiKey();
-  const response = await fetch(astraGenaiBaseUrl() + route, {
+  const key = requireAstraGenaiKey(route);
+  const response = await fetch(astraGenaiBaseUrl(route) + route, {
     method, redirect: 'error', signal: AbortSignal.timeout(timeoutMs),
     headers: { Authorization: `Bearer ${key}`, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -96,9 +108,9 @@ export function genaiSourceUri(uri?: string, file?: string): string {
 export async function requestGenaiMedia(route: string, body?: FormData | Record<string, unknown>): Promise<Buffer> {
   if (!/^\/v1\/(audio\/speech|ltx\/desktop\/assets(?:\/[A-Za-z0-9_-]+\/bytes)?)$/.test(route))
     throw new Error('Unsupported private gateway media route');
-  const key = requireAstraGenaiKey();
+  const key = requireAstraGenaiKey(route);
   const form = body instanceof FormData;
-  const response = await fetch(astraGenaiBaseUrl() + route, {
+  const response = await fetch(astraGenaiBaseUrl(route) + route, {
     method: body === undefined ? 'GET' : 'POST', redirect: 'error', signal: AbortSignal.timeout(30 * 60_000),
     headers: { Authorization: `Bearer ${key}`, ...(body && !form ? { 'Content-Type': 'application/json' } : {}) },
     ...(body === undefined ? {} : { body: form ? body : JSON.stringify(body) }),

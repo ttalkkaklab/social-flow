@@ -43,12 +43,12 @@ export function buildNativeImageBody(input: unknown, edit = false) {
 const imageResponse = z.object({ data: z.array(z.object({ b64_json: z.string().min(1) })).length(1) }).passthrough();
 export async function generateNativeImage(input: unknown, edit = false) {
   const args = (edit ? nativeImageEditSchema : nativeImageSchema).parse(input);
-  requireAstraGenaiKey();
+  requireAstraGenaiKey('/v1/images/');
   const body = buildNativeImageBody(args, edit);
   const imagePath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.png`, 'image');
   const receiptPath = imagePath + '.astra-genai.json';
   if (fs.existsSync(receiptPath) || fs.existsSync(imagePath)) throw new Error('Output/receipt already exists; recover it before any new generation');
-  const receipt = { protocol: 'gateway-image-v1', baseUrl: astraGenaiBaseUrl(), imagePath,
+  const receipt = { protocol: 'gateway-image-v1', baseUrl: astraGenaiBaseUrl('/v1/images/'), imagePath,
     fingerprint: createHash('sha256').update(JSON.stringify(body)).digest('hex'), status: 'submitting' };
   fs.writeFileSync(receiptPath, JSON.stringify(receipt), { flag: 'wx', mode: 0o600 });
   const response = await requestGenai('POST', '/v1/images/generations', body, 30 * 60_000);
@@ -59,7 +59,7 @@ export async function recoverNativeImage(receiptPath: string) {
   const receipt = z.object({ protocol: z.literal('gateway-image-v1'), baseUrl: z.string(), imagePath: z.string(),
     status: z.string(), response: z.unknown().optional(), sha256: z.string().optional() }).passthrough()
     .parse(JSON.parse(fs.readFileSync(receiptPath, 'utf8')));
-  if (receipt.baseUrl !== astraGenaiBaseUrl()) throw new Error('Gateway origin changed; restore configuration before recovery');
+  if (receipt.baseUrl !== astraGenaiBaseUrl('/v1/images/')) throw new Error('Gateway origin changed; restore configuration before recovery');
   if (receipt.status === 'completed') {
     const output = verifyImageFile(receipt.imagePath);
     if (output.sha256 !== receipt.sha256) throw new Error('Cached image changed');
