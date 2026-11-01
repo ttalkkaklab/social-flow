@@ -116,7 +116,8 @@ Project settings readiness does not mean character readiness. Before continuing 
 an episode, follow [shared character preparation](../channel/references/character-identity.md#prepare-the-shared-sheet-before-episode-authoring).
 Create/reuse the needed identity drafts with `character_manage` (it exports the bundled sheets) before
 candidate writing. Do not generate media during project setup or substitute an
-ad hoc page for the shared sheet. Report absent images as pending.
+ad hoc page for the shared sheet. Report absent images as pending: the episode story waits for
+each cast member's face, front and back panels (`story_sequence` refuses until they exist).
 
 ## Starting subsequent episodes
 

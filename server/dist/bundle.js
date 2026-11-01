@@ -115270,6 +115270,7 @@ function writeOutline(path31, win, structure, shots) {
 }
 function writeStorySequences(args) {
   const { win, st } = readOutline(args.path);
+  requireEpisodeCast(args.path, win);
   const sequences = upsertBy(st.sequences, args.sequences.map((q) => ({ ...st.sequences.find((old) => old.id === q.id), ...q, scenes: st.sequences.find((old) => old.id === q.id)?.scenes ?? [] })), "id");
   const notes = sequences.filter((q) => q.payoff !== void 0 && q.scenes.length && !q.scenes.includes(q.payoff)).map((q) => ({ level: "warn", where: `sequence ${q.id}`, what: `payoff names scene ${q.payoff}, which is outside this sequence \u2014 fix it with story_sequence or story_scene` }));
   const result = writeOutline(args.path, win, { ...st, sequences });
@@ -115277,6 +115278,7 @@ function writeStorySequences(args) {
 }
 function writeStoryScenes(args) {
   const { win, st } = readOutline(args.path);
+  requireEpisodeCast(args.path, win);
   if (!st.sequences.length) throw new Error("story_order: write the sequences first with story_sequence");
   let { sequences, scenes } = st;
   for (const { sequence, ...scene } of args.scenes) {
@@ -115288,6 +115290,7 @@ function writeStoryScenes(args) {
 }
 function writeStoryShots(args) {
   const { win, st } = readOutline(args.path);
+  requireEpisodeCast(args.path, win);
   if (!st.scenes.length) throw new Error("story_order: write the scenes first with story_scene");
   const order = st.sequences.flatMap((q) => q.scenes);
   const shots = Array.isArray(win.SCENES) ? win.SCENES.slice() : [];
@@ -115341,17 +115344,68 @@ var shotDialogueSchema = external_exports.object({
     }).strict()).describe("Every line of the shot in spoken order; [] makes it silent")
   }).strict()).min(1)
 }).strict();
+var SHEET_VIEWS = ["face", "front", "back"];
+function missingPanels(folder) {
+  let panels = {};
+  try {
+    panels = JSON.parse(readFileSync18(join9(folder, "panels.json"), "utf8")).panels ?? {};
+  } catch {
+    return SHEET_VIEWS;
+  }
+  return SHEET_VIEWS.filter((view) => {
+    const file = panels[view]?.file;
+    return typeof file !== "string" || !file || !existsSync18(join9(folder, file));
+  });
+}
+function readCast(storyboardDir) {
+  const file = join9(storyboardDir, "cast.json");
+  if (!existsSync18(file)) return [];
+  let list;
+  try {
+    list = JSON.parse(readFileSync18(file, "utf8")).characters;
+  } catch {
+    list = void 0;
+  }
+  if (list && typeof list === "object" && !Array.isArray(list)) list = Object.entries(list).map(([id, value]) => ({ ...value, id }));
+  if (!Array.isArray(list) || list.some((entry2) => typeof entry2?.id !== "string" || !entry2.id))
+    throw new Error('cast_unreadable: storyboard/cast.json needs {"characters":[{"id","source"}]}');
+  return list;
+}
+function checkCast(storyboardDir, cast) {
+  const problems = [];
+  for (const { id, source, voiceOnly } of cast) {
+    const identity = typeof source === "string" && source ? resolve5(storyboardDir, source) : "";
+    const folder = dirname5(identity);
+    if (!identity || basename6(identity) !== "identity.md" || basename6(folder) !== id || basename6(dirname5(folder)) !== "characters" || basename6(dirname5(dirname5(folder))) !== "assets" || !existsSync18(identity)) {
+      problems.push(`cast_source_missing: ${id} needs source pointing at an existing assets/characters/${id}/identity.md (character_manage)`);
+      continue;
+    }
+    const missing = voiceOnly === true ? [] : missingPanels(folder);
+    if (missing.length) problems.push(`character_panel_missing: ${id} has no ${missing.join(", ")} sheet panel (character_panel)`);
+  }
+  if (problems.length) throw new Error(`${problems.join("; ")} \u2014 finish the character sheets before the episode story; a narrator who is never seen takes "voiceOnly": true in cast.json`);
+}
+function requireEpisodeCast(path31, win) {
+  const dir = dirname5(scenesPath(path31));
+  const story = win.STORY;
+  if (!workflowEpisode(dir) || story && story.authoring !== "story-first") return;
+  const cast = readCast(dir);
+  if (!cast.length) throw new Error("cast_required: an episode story starts after storyboard/cast.json names its characters (storyboard \xA71)");
+  checkCast(dir, cast);
+}
 function castRegistry(path31, win) {
-  const ids = /* @__PURE__ */ new Set();
-  const add = (list) => {
+  const dir = dirname5(scenesPath(path31));
+  const cast = readCast(dir);
+  const storyFirst = win.STORY?.authoring === "story-first";
+  if (storyFirst) checkCast(dir, cast);
+  const ids = new Set(cast.map((entry2) => entry2.id));
+  if (!storyFirst) {
+    const list = win.SB_DOC?.characters;
     const entries = Array.isArray(list) ? list : Object.entries(list ?? {}).map(([id, value]) => ({ ...value, id }));
     for (const entry2 of entries) if (typeof entry2?.id === "string") ids.add(entry2.id);
-  };
-  add(win.SB_DOC?.characters);
-  const snapshot = join9(dirname5(scenesPath(path31)), "cast.json");
-  if (existsSync18(snapshot)) add(JSON.parse(readFileSync18(snapshot, "utf8")).characters);
+  }
   if (!ids.size) throw new Error("cast_required: snapshot the episode cast in storyboard/cast.json first (storyboard \xA71)");
-  return ids;
+  return { ids, voiceOnly: new Set(cast.filter((entry2) => entry2.voiceOnly === true).map((entry2) => entry2.id)) };
 }
 function shotIndex(shots, id, tool2) {
   const index = shots.findIndex((shot) => shot.id === id);
@@ -115367,7 +115421,10 @@ function writeShotCharacters(args) {
   const notes = [];
   for (const { id, characters } of args.shots) {
     const index = shotIndex(shots, id, "shot_characters");
-    for (const character of characters) if (!known.has(character)) throw new Error(`cast_unknown: ${character} is not in the episode cast`);
+    for (const character of characters) {
+      if (!known.ids.has(character)) throw new Error(`cast_unknown: ${character} is not in the episode cast`);
+      if (known.voiceOnly.has(character)) throw new Error(`cast_voice_only: ${character} is voiceOnly in cast.json and is never on screen \u2014 give them sheet panels and drop voiceOnly first`);
+    }
     const visual = shots[index].visual ?? {};
     const before = contract().castOf(shots[index]);
     const scoped = [].concat(visual.character ?? []).filter((e2) => !!e2 && typeof e2 === "object");
@@ -115405,7 +115462,7 @@ function writeShotDialogue(args) {
     const old = shots[index].narration ?? [];
     for (const line of old) if (line.id) used.delete(line.id);
     const next = lines.map((line, n) => {
-      if (!known.has(line.speaker)) throw new Error(`cast_unknown: speaker ${line.speaker} is not in the episode cast`);
+      if (!known.ids.has(line.speaker)) throw new Error(`cast_unknown: speaker ${line.speaker} is not in the episode cast`);
       const delivery2 = line.delivery ?? (cast.includes(line.speaker) ? "on_screen" : "voiceover");
       if (delivery2 === "on_screen" && !cast.includes(line.speaker))
         throw new Error(`story_order: ${line.speaker} speaks on screen in ${id} but is not among its characters \u2014 add them with shot_characters`);
@@ -115592,7 +115649,10 @@ function castEntry(win, id) {
 }
 function characterRefs(boardDir, win, shotId, ids, use, warnings) {
   const views = ids.length === 1 ? ["face", "front", "back"].map((view) => [ids[0], view]) : ["face", "front"].flatMap((view) => ids.map((id) => [id, view]));
+  const sources = new Map(readCast(boardDir).filter((entry2) => typeof entry2.source === "string" && entry2.source).map((entry2) => [entry2.id, dirname5(resolve5(boardDir, entry2.source))]));
   const folders = new Map(ids.map((id) => {
+    const own = sources.get(id);
+    if (own && existsSync18(join9(own, "panels.json"))) return [id, own];
     for (let dir = boardDir; ; dir = dirname5(dir)) {
       if (existsSync18(join9(dir, "assets/characters", id, "panels.json"))) return [id, join9(dir, "assets/characters", id)];
       if (dirname5(dir) === dir) throw new Error(`character_sheet_missing: ${id} has no assets/characters/${id}/panels.json`);
@@ -124155,7 +124215,7 @@ Returns: JSON \u2014 { file, mediaBaseDirectory, sha256, version, format, shots,
     name: "story_sequence",
     title: "Write storyboard sequences (story step 1 of 3)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `The first storyboard step after the scenario is settled writes only the story, in three layers: story_sequence \u2192 story_scene \u2192 story_shot. Use it first: it upserts sequences by id (title \xB7 purpose \xB7 question \xB7 payoff \u2014 a payoff outside the sequence's scenes warns) and creates scenes.js as a story-v2 board when it is missing. A sequence's scene list is filled by story_scene. Local file only; no image, speech or prompt.
+    description: `The first storyboard step after the scenario is settled writes only the story, in three layers: story_sequence \u2192 story_scene \u2192 story_shot. Use it first: it upserts sequences by id (title \xB7 purpose \xB7 question \xB7 payoff \u2014 a payoff outside the sequence's scenes warns) and creates scenes.js as a story-v2 board when it is missing. A sequence's scene list is filled by story_scene. Local file only; no image, speech or prompt. Inside an episode the board starts only after the cast is ready, and story_scene and story_shot repeat this check on a story-first board: refused (cast_required) until storyboard/cast.json names at least one character, (cast_source_missing) for an entry whose source is not an existing assets/characters/<id>/identity.md, and (character_panel_missing) for an entry without "voiceOnly": true that lacks its face, front or back sheet panel \u2014 make those with character_manage and character_panel first.
 
 Do NOT write scenes, shots, dialogue or pictures here. Characters and lines come after the shot stories (shot_characters \u2192 shot_dialogue); camera and image plans after that, through storyboard_apply.
 
@@ -124180,7 +124240,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "story_scene",
     title: "Write storyboard scenes (story step 2 of 3)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `Use it after story_sequence to upsert scenes by number into a sequence: place, time, the one event, and a one- or two-sentence summary of the scene's story. A scene moved to another sequence leaves its old one. Refused (story_order) before any sequence exists or for an unknown sequence id. Local file only; no image, speech or prompt.
+    description: `Use it after story_sequence to upsert scenes by number into a sequence: place, time, the one event, and a one- or two-sentence summary of the scene's story. A scene moved to another sequence leaves its old one. Refused (story_order) before any sequence exists or for an unknown sequence id, and on a story-first episode board by story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
 Do NOT write shots or dialogue here \u2014 story_shot comes next.
 
@@ -124208,7 +124268,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "story_shot",
     title: "Write shot stories (story step 3 of 3)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: `Use it after story_scene to write each shot as one sentence of story in its scene. Without an id the shot is added at the end of its scene and gets a stable id (s0001\u2026); with an id that shot's scene, summary and title are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. Local file only; no image, speech or prompt.
+    description: `Use it after story_scene to write each shot as one sentence of story in its scene. Without an id the shot is added at the end of its scene and gets a stable id (s0001\u2026); with an id that shot's scene, summary and title are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. A story-first episode board also repeats story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
 Do NOT pass characters, dialogue, narration, camera or visual fields \u2014 the input refuses them. Once every shot has its story, shot_characters and shot_dialogue come next, then shot_icons; on a board these tools started (STORY.authoring "story-first") storyboard_apply refuses a shot without scene and summary.
 
@@ -124232,7 +124292,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "shot_characters",
     title: "Set each shot's characters (step 2: characters, then lines)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `Use it once every sequence, scene and shot story is written (story_sequence \u2192 story_scene \u2192 story_shot): set who from the episode cast is on screen in each shot, at most two principal characters with the subject first, or [] when nobody is. It writes visual.character and keeps a kept character's scope. A character who leaves a shot keeps their lines, now off_screen, with a warning, and their sheet panels leave visual.references; a start image made for the old cast is flagged for shot_image. Refused (story_order) while the story has a gap \u2014 a sequence without scenes, a scene without a shot or summary, a shot without its story \u2014 and for an id outside storyboard/cast.json or SB_DOC.characters (cast_unknown). Local file only; no image, speech or prompt.
+    description: `Use it once every sequence, scene and shot story is written (story_sequence \u2192 story_scene \u2192 story_shot): set who from the episode cast is on screen in each shot, at most two principal characters with the subject first, or [] when nobody is. It writes visual.character and keeps a kept character's scope. A character who leaves a shot keeps their lines, now off_screen, with a warning, and their sheet panels leave visual.references; a start image made for the old cast is flagged for shot_image. Refused (story_order) while the story has a gap \u2014 a sequence without scenes, a scene without a shot or summary, a shot without its story \u2014 and for an id outside the episode cast (cast_unknown) \u2014 storyboard/cast.json alone on a story-first board, which repeats story_sequence's cast check (cast_source_missing, character_panel_missing), plus SB_DOC.characters on an older board \u2014 or one marked voiceOnly there (cast_voice_only). Local file only; no image, speech or prompt.
 
 Do NOT list extras, unnamed figures or a narrator who is never seen \u2014 extras are described in the action later, and an off-screen narrator speaks through shot_dialogue. Lines come next, through shot_dialogue.
 
@@ -124254,7 +124314,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "shot_dialogue",
     title: "Write each shot's lines by character",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: `Use it after shot_characters to write a shot's lines in spoken order, each attributed to a character from the episode cast. The given lines replace the shot's lines; [] makes it silent. Delivery defaults to on_screen for one of the shot's characters and voiceover for anyone else \u2014 a narrator is a character who speaks without being seen. A line with a known id keeps its acting and audio binding, and changed text makes that audio stale. Refused (story_order) before the shot's characters are set and for an on_screen speaker outside them; an unknown speaker is cast_unknown. Local file only; no audio, image or prompt is generated.
+    description: `Use it after shot_characters to write a shot's lines in spoken order, each attributed to a character from the episode cast. The given lines replace the shot's lines; [] makes it silent. Delivery defaults to on_screen for one of the shot's characters and voiceover for anyone else \u2014 a narrator is a character who speaks without being seen. A line with a known id keeps its acting and audio binding, and changed text makes that audio stale. Refused (story_order) before the shot's characters are set and for an on_screen speaker outside them; an unknown speaker is cast_unknown, and a story-first board repeats story_sequence's cast check (cast_source_missing, character_panel_missing). Local file only; no audio, image or prompt is generated.
 
 Do NOT generate speech here \u2014 speech_manage plans and binds audio later. Do NOT write icon attributes or visual plans; shot_icons comes next, then storyboard_apply.
 

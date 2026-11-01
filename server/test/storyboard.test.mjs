@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { after, describe, it } from 'node:test';
 
 import {
@@ -48,6 +48,21 @@ const settings = createRequire(import.meta.url)('../../skills/_shared/model-sett
 
 const dirs = [];
 const tmp = () => { const d = mkdtempSync(join(tmpdir(), 'sb-')); dirs.push(d); return d; };
+// storyboard/cast.json for these ids, each with identity.md and, unless voiceOnly, its face, front and back panels
+// under <root>/assets/characters/<id>/.
+const castFile = (dir, ids, { root = dir, voiceOnly = [] } = {}) => {
+  const characters = ids.map((id) => {
+    const sheet = join(root, 'assets/characters', id);
+    mkdirSync(sheet, { recursive: true });
+    writeFileSync(join(sheet, 'identity.md'), `# ${id}\n`);
+    if (!voiceOnly.includes(id)) {
+      for (const view of ['face', 'front', 'back']) writeFileSync(join(sheet, view + '.png'), png);
+      writeFileSync(join(sheet, 'panels.json'), JSON.stringify({ panels: { face: { file: 'face.png' }, front: { file: 'front.png' }, back: { file: 'back.png' } } }));
+    }
+    return { id, source: relative(dir, join(sheet, 'identity.md')), ...(voiceOnly.includes(id) ? { voiceOnly: true } : {}) };
+  });
+  writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters }));
+};
 after(() => dirs.forEach((d) => rmSync(d, { recursive: true, force: true })));
 
 const scene = (no, extra = {}) => ({ no, place: '작업실', time: '낮', event: '한 사건이 벌어진다', charge: { open: '-', close: '+' }, turn: '모르던 것을 알게 된다', ...extra });
@@ -431,11 +446,22 @@ describe('story first, then characters and lines', () => {
     writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
     writeStoryScenes({ path: dir, scenes: [1, 2].map((no) => ({ sequence: 'q1', no, place: '숲', time: '낮', event: 'e', summary: '씬 ' + no })) });
     writeStoryShots({ path: dir, shots: [{ scene: 1, summary: 'a' }] });
-    writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: [{ id: 'mina' }, { id: 'joon' }, { id: 'narrator' }] }));
+    castFile(dir, ['mina', 'joon', 'narrator'], { voiceOnly: ['narrator'] });
     assert.throws(() => writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }] }), /story_order.*scene 2 has no shot/);
     writeStoryShots({ path: dir, shots: [{ scene: 2, summary: 'b' }] });
     assert.throws(() => writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'mina', tts: '안녕' }] }] }), /story_order/);
     assert.throws(() => writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['ghost'] }] }), /cast_unknown/);
+    assert.throws(() => writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['narrator'] }] }), /cast_voice_only/);
+    // A story-first board takes its cast from cast.json alone, and every entry keeps its identity and panels.
+    applyStoryboard({ path: dir, draft: true, globals: { SB_DOC: { characters: [{ id: 'ghost' }] } } });
+    assert.throws(() => writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['ghost'] }] }), /cast_unknown/);
+    rmSync(join(dir, 'assets/characters/joon/identity.md'));
+    assert.throws(() => writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }] }), /cast_source_missing: joon/);
+    assert.throws(() => writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'mina', tts: '안녕' }] }] }), /cast_source_missing: joon/);
+    castFile(dir, ['mina', 'joon', 'narrator'], { voiceOnly: ['narrator'] });
+    // An older snapshot keyed by id reads the same.
+    const keyed = Object.fromEntries(JSON.parse(readFileSync(join(dir, 'cast.json'), 'utf8')).characters.map(({ id, ...rest }) => [id, rest]));
+    writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: keyed }));
     writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: [] }] });
     assert.throws(() => writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'joon', tts: '야', delivery: 'on_screen' }] }] }), /story_order/);
     writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'mina', tts: '안녕' }, { speaker: 'narrator', tts: '그날 밤.' }] }] });
@@ -461,7 +487,7 @@ describe('icon attributes come after every shot\'s characters', () => {
     writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
     writeStoryScenes({ path: dir, scenes: [{ sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬' }] });
     writeStoryShots({ path: dir, shots: [{ scene: 1, summary: 'a' }, { scene: 1, summary: 'b' }] });
-    writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: [{ id: 'mina' }] }));
+    castFile(dir, ['mina']);
     return dir;
   };
   it('a move is a camera technique on a video cut and the still effect on a still cut', () => {
@@ -569,7 +595,20 @@ describe('icon attributes come after every shot\'s characters', () => {
     const root = tmp(), episode = join(root, 'data/c/episodes/e'), dir = join(episode, 'storyboard');
     mkdirSync(dir, { recursive: true });
     assert.throws(() => applyStoryboard(storyboardApplySchema.parse({ path: dir, set: { structure: structure([scene(1)]), shots: [{ type: 'points', scene: 1 }] } })), /story_order: a new episode board/);
-    assert.equal(writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] }).written, true);
+    const start = () => writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    assert.throws(start, /cast_required/);
+    writeFileSync(join(dir, 'scenes.js'), 'window.SCENES = [];\n');   // a hand-made empty board waits for the cast too
+    assert.throws(start, /cast_required/);
+    rmSync(join(dir, 'scenes.js'));
+    castFile(dir, ['mina', 'narrator'], { root: join(root, 'data/c'), voiceOnly: ['narrator'] });
+    rmSync(join(root, 'data/c/assets/characters/mina/back.png'));
+    assert.throws(start, /character_panel_missing: mina has no back sheet panel/);
+    writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: [{ id: 'mina', source: '../../../assets/characters/narrator/identity.md' }] }));
+    assert.throws(start, /cast_source_missing: mina/);
+    castFile(dir, ['mina', 'narrator'], { root: join(root, 'data/c'), voiceOnly: ['narrator'] });
+    assert.equal(start().written, true);
+    rmSync(join(root, 'data/c/assets/characters/mina/face.png'));
+    assert.throws(() => writeStoryScenes({ path: dir, scenes: [{ sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬' }] }), /character_panel_missing: mina has no face/);
   });
 });
 
@@ -581,12 +620,13 @@ describe('images and the video prompt follow the icon attributes', () => {
     setupProject(root);
     for (const name of ['face', 'body', 'back']) writeFileSync(join(sheet, name + '.png'), png);
     writeFileSync(join(sheet, 'panels.json'), JSON.stringify({ panels: { face: { file: 'face.png' }, front: { file: 'body.png' }, back: { file: 'back.png' } } }));
+    writeFileSync(join(sheet, 'identity.md'), '# mina\n');
+    writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: [{ id: 'mina', source: '../../../assets/characters/mina/identity.md' }] }));
     writeFileSync(join(dir, 'places/room.png'), png);
     writeFileSync(join(dir, 'places/key.png'), png);
     writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
     writeStoryScenes({ path: dir, scenes: [{ sequence: 'q1', no: 1, place: '방', time: '밤', event: 'e', summary: '씬' }] });
     writeStoryShots({ path: dir, shots: [{ scene: 1, summary: 'a' }, { scene: 1, summary: 'b' }] });
-    writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: [{ id: 'mina' }] }));
     applyStoryboard({ path: dir, draft: true, expectedSha256: readBoard(dir).sha256, globals: { SB_DOC: { locations: [{ id: 'room', name: '방', imageUrl: 'places/room.png' }],
       props: [{ id: 'key', name: '열쇠', imageUrl: 'places/key.png' }] } } });
     writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: ['mina'] }] });
@@ -612,6 +652,9 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.throws(() => shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'p', location: 'room' }), /character_panel_missing: mina has no back panel/);
     writeFileSync(join(sheet, 'panels.json'), JSON.stringify({ panels: { face: { file: 'face.png' }, back: { file: 'back.png' } } }));
     assert.throws(() => shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'p', location: 'room' }), /character_panel_missing: mina has no front panel/);
+    // The sheet cast.json points at wins over the one found upward from the board.
+    castFile(dir, ['mina'], { root: join(root, 'library') });
+    assert.match(shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'p', location: 'room' }).inputs[1], /library\/assets\/characters\/mina\/face\.png$/);
   });
   it('a frame composes the place, then the sheet panels, after every shot has its icons', () => {
     const { root, dir } = pictureBoard();
@@ -645,7 +688,8 @@ describe('images and the video prompt follow the icon attributes', () => {
     mkdirSync(sheet, { recursive: true });
     for (const name of ['face', 'body', 'back']) writeFileSync(join(sheet, name + '.png'), png);
     writeFileSync(join(sheet, 'panels.json'), JSON.stringify({ panels: { face: { file: 'face.png' }, front: { file: 'body.png' }, back: { file: 'back.png' } } }));
-    writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: [{ id: 'mina' }, { id: 'jun' }] }));
+    writeFileSync(join(sheet, 'identity.md'), '# jun\n');
+    writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: ['mina', 'jun'].map((id) => ({ id, source: `../../../assets/characters/${id}/identity.md` })) }));
     const body = (heightCm, extra) => ({ physical: { heightCm: { status: 'confirmed', value: heightCm }, ...extra } });
     const board = readBoard(dir);
     applyStoryboard({ path: dir, draft: true, expectedSha256: board.sha256, globals: { SB_DOC: { ...board.win.SB_DOC, characters: [
