@@ -30,8 +30,11 @@ migrating it. Do not overwrite another active session's artifacts.
 Then compile the selected identities into the episode cast. New identities use
 `identity.md` as the single source; `cast.json` locates it rather than creating a
 parallel `identity.json`. Resolve only missing facts needed by the next operation.
-A draft sheet with pending fields or media is valid planning progress. A template
-match is not a complete character, and media generation still needs authorization.
+A draft sheet with pending fields is valid planning progress, but the episode story waits
+for media: `story_sequence` refuses to start until every `cast.json` entry has its identity
+and, unless it is a `voiceOnly` narrator who is never seen, its face, front and back panels
+(`character_panel`). A template match is not a complete character, and media generation
+still needs authorization.
 
 ## Author and validate
 

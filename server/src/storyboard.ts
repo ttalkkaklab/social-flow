@@ -813,6 +813,13 @@ function writeOutline(path: string, win: Board, structure: Structure, shots?: Sh
 }
 
 export function writeStorySequences(args: z.infer<typeof storySequenceSchema>): ApplyResult {
+  const file = scenesPath(args.path);
+  // An episode's story starts once its cast is ready (user directive 2026-11-01).
+  if (!existsSync(file) && workflowEpisode(dirname(file))) {
+    const cast = readCast(dirname(file));
+    if (!cast.length) throw new Error('cast_required: an episode story starts after storyboard/cast.json names its characters (storyboard §1)');
+    checkCast(dirname(file), cast);
+  }
   const { win, st } = readOutline(args.path);
   const sequences = upsertBy(st.sequences, args.sequences.map((q) =>
     ({ ...st.sequences.find((old) => old.id === q.id), ...q, scenes: st.sequences.find((old) => old.id === q.id)?.scenes ?? [] })), 'id');
@@ -897,18 +904,54 @@ export const shotDialogueSchema = z.object({
   }).strict()).min(1),
 }).strict();
 
-/** Character ids the episode can use: SB_DOC.characters on the board and the storyboard/cast.json snapshot. */
-function castRegistry(path: string, win: Board): Set<string> {
-  const ids = new Set<string>();
-  const add = (list: unknown) => {
+// The episode cast (user directive 2026-11-01): storyboard/cast.json names each character's identity.md, and
+// every character who can appear on screen has its three sheet panels before the story starts.
+const SHEET_VIEWS = ['face', 'front', 'back'];
+/** The sheet views a character folder's panels.json does not point at an existing file for. */
+function missingPanels(folder: string): string[] {
+  let panels: Record<string, { file?: unknown } | undefined> = {};
+  try { panels = (JSON.parse(readFileSync(join(folder, 'panels.json'), 'utf8')) as { panels?: typeof panels }).panels ?? {}; } catch { return SHEET_VIEWS; }
+  return SHEET_VIEWS.filter((view) => { const file = panels[view]?.file; return typeof file !== 'string' || !file || !existsSync(join(folder, file)); });
+}
+type CastEntry = { id: string; source?: unknown; voiceOnly?: unknown };
+function readCast(storyboardDir: string): CastEntry[] {
+  const file = join(storyboardDir, 'cast.json');
+  if (!existsSync(file)) return [];
+  let list: unknown;
+  try { list = (JSON.parse(readFileSync(file, 'utf8')) as { characters?: unknown }).characters; } catch { list = undefined; }
+  if (!Array.isArray(list)) throw new Error('cast_unreadable: storyboard/cast.json needs {"characters":[{"id","source"}]}');
+  return list.filter((entry): entry is CastEntry => typeof (entry as { id?: unknown })?.id === 'string');
+}
+/** Refuses a cast entry without its identity.md, or an on-screen character without its face, front and back panels. */
+function checkCast(storyboardDir: string, cast: CastEntry[]): void {
+  const problems: string[] = [];
+  for (const { id, source, voiceOnly } of cast) {
+    const identity = typeof source === 'string' && source ? resolve(storyboardDir, source) : '';
+    const folder = dirname(identity);
+    if (!identity || basename(identity) !== 'identity.md' || basename(folder) !== id || basename(dirname(folder)) !== 'characters'
+      || basename(dirname(dirname(folder))) !== 'assets' || !existsSync(identity)) {
+      problems.push(`cast_source_missing: ${id} needs source pointing at an existing assets/characters/${id}/identity.md (character_manage)`);
+      continue;
+    }
+    const missing = voiceOnly === true ? [] : missingPanels(folder);
+    if (missing.length) problems.push(`character_panel_missing: ${id} has no ${missing.join(', ')} sheet panel (character_panel)`);
+  }
+  if (problems.length) throw new Error(`${problems.join('; ')} — finish the character sheets before the episode story; a narrator who is never seen takes "voiceOnly": true in cast.json`);
+}
+/** The episode cast: storyboard/cast.json, checked on a story-first board; an older board also accepts SB_DOC.characters ids. */
+function castRegistry(path: string, win: Board): { ids: Set<string>; voiceOnly: Set<string> } {
+  const dir = dirname(scenesPath(path));
+  const cast = readCast(dir);
+  const storyFirst = (win.STORY as { authoring?: unknown } | undefined)?.authoring === 'story-first';
+  if (storyFirst) checkCast(dir, cast);
+  const ids = new Set(cast.map((entry) => entry.id));
+  if (!storyFirst) {
+    const list = (win.SB_DOC as { characters?: unknown } | undefined)?.characters;
     const entries = Array.isArray(list) ? list : Object.entries(list ?? {}).map(([id, value]) => ({ ...(value as object), id }));
     for (const entry of entries) if (typeof (entry as { id?: unknown })?.id === 'string') ids.add((entry as { id: string }).id);
-  };
-  add((win.SB_DOC as { characters?: unknown } | undefined)?.characters);
-  const snapshot = join(dirname(scenesPath(path)), 'cast.json');
-  if (existsSync(snapshot)) add((JSON.parse(readFileSync(snapshot, 'utf8')) as { characters?: unknown }).characters);
+  }
   if (!ids.size) throw new Error('cast_required: snapshot the episode cast in storyboard/cast.json first (storyboard §1)');
-  return ids;
+  return { ids, voiceOnly: new Set(cast.filter((entry) => entry.voiceOnly === true).map((entry) => entry.id)) };
 }
 function shotIndex(shots: Shot[], id: string, tool: string): number {
   const index = shots.findIndex((shot) => shot.id === id);
@@ -925,7 +968,10 @@ export function writeShotCharacters(args: z.infer<typeof shotCharactersSchema>):
   const notes: Finding[] = [];
   for (const { id, characters } of args.shots) {
     const index = shotIndex(shots, id, 'shot_characters');
-    for (const character of characters) if (!known.has(character)) throw new Error(`cast_unknown: ${character} is not in the episode cast`);
+    for (const character of characters) {
+      if (!known.ids.has(character)) throw new Error(`cast_unknown: ${character} is not in the episode cast`);
+      if (known.voiceOnly.has(character)) throw new Error(`cast_voice_only: ${character} is voiceOnly in cast.json and is never on screen — give them sheet panels and drop voiceOnly first`);
+    }
     const visual = (shots[index].visual ?? {}) as Record<string, unknown>;
     const before = contract().castOf(shots[index]);
     // A kept character keeps its { id, scope } entry.
@@ -969,7 +1015,7 @@ export function writeShotDialogue(args: z.infer<typeof shotDialogueSchema>): App
     const old: Line[] = shots[index].narration ?? [];
     for (const line of old) if (line.id) used.delete(line.id);
     const next = lines.map((line, n): Line => {
-      if (!known.has(line.speaker)) throw new Error(`cast_unknown: speaker ${line.speaker} is not in the episode cast`);
+      if (!known.ids.has(line.speaker)) throw new Error(`cast_unknown: speaker ${line.speaker} is not in the episode cast`);
       const delivery = line.delivery ?? (cast.includes(line.speaker) ? 'on_screen' : 'voiceover');
       if (delivery === 'on_screen' && !cast.includes(line.speaker))
         throw new Error(`story_order: ${line.speaker} speaks on screen in ${id} but is not among its characters — add them with shot_characters`);

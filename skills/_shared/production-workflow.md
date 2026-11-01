@@ -6,12 +6,16 @@ not block local work. Create/resume the episode with `project_manage episode`.
 
 ## The order (user directive, 2026-10-31)
 
-Checks were removed for speed: only the story order is enforced, and reviews, Blender
+Checks were removed for speed: only the story order and the episode cast (2026-11-01) are
+enforced, and reviews, Blender
 compositions and other checks come back once the quality is known. Spending limits,
 generation authorization and adapter input validation stay. Work in this order:
 
 1. Characters — identity text (`character_manage`) and sheet images (`character_panel`, which draws
-   each panel from the identity's body and face fields; `assets/characters/<id>/`, `panels.json`).
+   each panel from the identity's body and face fields; `assets/characters/<id>/`, `panels.json`),
+   then the episode cast in `storyboard/cast.json`:
+   `{"characters":[{"id":"mina","source":"../../../assets/characters/mina/identity.md"}]}`.
+   A narrator who is never seen takes `"voiceOnly": true` and needs no panels.
 2. Story, one layer at a time: `story_sequence` → `story_scene` → `story_shot`.
 3. Each shot's characters (`shot_characters`, at most two), then their lines (`shot_dialogue`).
 4. Each shot's icon attributes (`shot_icons`): render route, size, angle, camera move,
@@ -28,8 +32,16 @@ generation authorization and adapter input validation stay. Work in this order:
 The story tools refuse a layer whose parent is missing (`story_order`): `shot_characters`
 waits for a story with no gaps, `shot_icons` for every shot's characters, `shot_image` for
 every shot's icon attributes, and `shot_prompt` for every picture shot's start image (and
-the end image a `first_last` plan needs). Nothing else blocks a step. A text-only request
-stops after step 4; an image request stops after step 6. Missing character media or
+the end image a `first_last` plan needs).
+
+The cast gate (user directive, 2026-11-01): `story_sequence` refuses to start a board inside an
+episode until `cast.json` names at least one character (`cast_required`), each entry's `source`
+is an existing `assets/characters/<id>/identity.md` (`cast_source_missing`) and every entry
+without `voiceOnly` has its face, front and back panels (`character_panel_missing`). On a
+story-first board `shot_characters` and `shot_dialogue` repeat that check, take the cast from
+`cast.json` alone and refuse a `voiceOnly` character on screen (`cast_voice_only`). Nothing else
+blocks a step. A text-only request stops after step 4, with the cast's panels made first under
+spending authorization; an image request stops after step 6. Missing character media or
 spending authorization is reported, never silently bypassed.
 
 ## Images (step 6)

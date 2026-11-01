@@ -64,6 +64,9 @@ Prepare shared identities and export the [character sheets](../channel/reference
 before text authoring. Follow [production order](../_shared/production-workflow.md):
 project setup and asset preparation, the story, characters and lines, icon attributes,
 images, video prompts, then each shot's approved video. Missing authorization blocks generation.
+`story_sequence` waits for the episode cast in `storyboard/cast.json`, each character with its
+identity and, unless `voiceOnly`, its face, front and back panels; without authorization to make
+a missing panel, report it and stop before the story.
 
 For growth-loop calls, read the calling platform's `growth-plan.md` and follow
 [unattended lifecycle](references/unattended-lifecycle.md) for channel locking, topic

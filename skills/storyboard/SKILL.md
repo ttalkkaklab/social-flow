@@ -102,8 +102,12 @@ Keep canvas selection separate from length: `window.FORMAT` remains the renderer
 (`shorts-9x16` or `youtube-long-16x9`), not an instruction to write to its historical bands.
 
 Follow [character preparation](../channel/references/character-identity.md#prepare-the-shared-sheet-before-episode-authoring).
-Read actual identities, export shared sheets and snapshot the available pool in `cast.json`.
-Complete required character images before text authoring. Cast only needed people, with specific wants and distinct speech;
+Read actual identities, export shared sheets and snapshot the characters this episode may use in
+`cast.json` (`id` and `source`, the path to their `identity.md`; `"voiceOnly": true` for a narrator
+who is never seen). Complete their face, front and back panels before text authoring, text-only
+requests included: `story_sequence` refuses to start the episode board until every entry has its
+identity and, unless `voiceOnly`, its panels (`cast_required`, `cast_source_missing`,
+`character_panel_missing`). Cast only needed people, with specific wants and distinct speech;
 select a narrator only when the expression needs one. Do not invent existing IDs or voices.
 Before shot design, complete the three sheet categories using
 [asset sheet preparation](references/asset-sheets.md). This includes one-off characters,

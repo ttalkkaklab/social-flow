@@ -17,20 +17,24 @@ Channel-based short-form/long-form content pipeline Claude Code plugin.
 - Initial style, ratio and format are asked once at project setup, then reused.
 - The static-ground limit is guidance.
 
-## Production order (owner directive, 2026-10-19; checks removed 2026-10-31)
+## Production order (owner directive, 2026-10-19; checks removed 2026-10-31; cast gate 2026-11-01)
 
 Project setup must be ready before any episode authoring. Then characters (text + images),
 the story and its shots, props (text + images), backgrounds (text + images), the shots'
-images, and finally video, in that order. Explicit text-only requests stop at text; missing
-required images are reported, not silently skipped or generated without spending
-authorization. Present the scenario before detailed text authoring; presentation does not
+images, and finally video, in that order. Explicit text-only requests stop at text, but the
+episode cast comes first even then: `story_sequence` refuses to start a board inside an episode
+until `storyboard/cast.json` names its characters, each with `assets/characters/<id>/identity.md`
+and, unless the entry is `voiceOnly` (a narrator who is never seen), its face, front and back
+sheet panels (`cast_required`, `cast_source_missing`, `character_panel_missing`). Other missing
+images are reported, and missing panels are made with `character_panel` under spending
+authorization, never skipped or generated without it. Present the scenario before detailed text authoring; presentation does not
 add an approval pause. Use the bundled storyboard HTML. Delegated authors use the same
 order and deliverables. See `skills/_shared/production-workflow.md`.
 
 ## Checks removed for speed (user directive, 2026-10-31)
 
-Production is too slow, so every check except the story order goes until the quality is
-known; checks come back afterwards. `production_workflow` is an optional progress record:
+Production is too slow, so every check except the story order and the episode cast (2026-11-01,
+above) goes until the quality is known; checks come back afterwards. `production_workflow` is an optional progress record:
 stages complete in any order and no other tool reads it. Image and video plans, storyboard
 writes, Blender renders and assembly no longer wait for workflow stages, independent
 reviews, Blender compositions or reviewed media. `storyboard_apply` refuses only an
@@ -123,7 +127,10 @@ whose parent is missing (`story_order`); `shot_characters` waits for a story wit
 `shot_icons` for every shot's characters. Inside an episode a new board starts with
 `story_sequence` — `storyboard_apply` does not create one — and carries
 `STORY.authoring:"story-first"`; on such a board every writer refuses a shot without its story,
-and lines or icon attributes before the shot's characters. Older boards keep their contract.
+and lines or icon attributes before the shot's characters. Its cast comes from
+`storyboard/cast.json` alone (`SB_DOC.characters` adds detail, not members), and `shot_characters`
+and `shot_dialogue` repeat the cast check above; `shot_characters` refuses a `voiceOnly` character
+on screen (`cast_voice_only`). Older boards keep their contract.
 `production_workflow` completes a story-v2 `text_storyboard` only with every shot story and
 every shot's characters written (`story_outline_required`).
 
