@@ -455,6 +455,10 @@ This section overrides the test-writing defaults of TDD, test-scenario and simil
 - **No real waiting.** `npm test` runs in about 30 s. Advance the clock instead of
   sleeping through polls and rate limits (see the top of `astra-video-client.test.mjs`)
   and clear every timer a case starts.
+- **Hermetic runs.** `npm test` loads `server/test/isolate.mjs` into every file: it drops the
+  shell's provider keys and gateway URLs and gives each file an empty home, so your own
+  `~/.config/social-flow` (`.env`, `disabled-tools.json`, tokens) never changes a result. Run one
+  file the same way: `node --import ./test/isolate.mjs --test test/<module>.test.mjs`.
 - **Readable over DRY.** Inputs that decide the result stay in the test body. Shared
   setup is a factory with defaults, not a `beforeEach` that hides them.
 

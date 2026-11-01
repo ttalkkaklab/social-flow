@@ -4,7 +4,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, describe, it } from 'node:test';
@@ -80,4 +80,10 @@ describe('blenderBin', () => {
     process.env.BLENDER = '/nonexistent/blender-for-test';
     assert.notEqual(blenderBin(), '/nonexistent/blender-for-test');
   });
+});
+
+// npm test loads test/isolate.mjs first, so the developer's keys and ~/.config/social-flow stay out of every test.
+it('npm test runs every file on an empty home without the shell\'s provider keys', () => {
+  const { scripts } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.match(scripts.test, /node --import \.\/test\/isolate\.mjs --test /);
 });
