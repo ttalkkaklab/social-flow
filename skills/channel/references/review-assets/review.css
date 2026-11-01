@@ -982,7 +982,7 @@
 .character-thumb:hover .character-thumb-art { border-color: var(--review-input); }
 .review-page a.character-thumb[aria-current="true"] { color: var(--review-fg); font-weight: 700; }
 .character-thumb[aria-current="true"] .character-thumb-art { border-color: var(--review-primary); box-shadow: 0 0 0 var(--review-s1) var(--review-primary); }
-.character-info { min-width: 0; padding: var(--review-s4) var(--review-s8) 0 var(--review-s12); }
+.character-info { grid-column: -2 / -1; min-width: 0; padding: var(--review-s4) var(--review-s8) 0 var(--review-s12); }
 .character-info h1 { font-size: var(--review-s30); font-weight: 700; letter-spacing: var(--ds-tracking-snug); }
 /* The identity group sits beside the photos as hairline rows, like the spec cards below. */
 .character-basics { margin: var(--ds-s4) 0 0; }
