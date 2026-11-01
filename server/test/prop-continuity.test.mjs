@@ -169,3 +169,12 @@ test('globals prop edits and removals require a current hash and preserve a back
     assert.equal(applyStoryboard({path:dir,globals:{SB_DOC:unchanged},draft:true}).written,true);
   } finally {rmSync(dir,{recursive:true,force:true});}
 });
+test('a prop no shot shows is flagged, and the best reference for the state comes first', () => {
+  const win = fixture(); win.SB_DOC.props.push({ id: 'spare' });
+  assert.deepEqual(api.check(win).filter(f => f.where === 'spare').map(f => f.level), ['warn']);
+  win.SCENES[0].visual.frames = { endProps: ['spare'] };
+  assert.deepEqual(api.check(win).filter(f => f.where === 'spare'), []);
+  win.SB_DOC.props[0].references = [{ path: 'old.png', version: 'v0' }, { path: 'any.png', version: 'v1' }, { path: 'intact.png', version: 'v0', condition: 'intact' }, { path: 'cracked.png', version: 'v1', condition: 'cracked' }];
+  assert.deepEqual(api.snapshot(win, 0)[0].references.map(r => r.path), ['intact.png', 'any.png', 'old.png']);
+  assert.deepEqual(api.snapshot(win, 0, ['spare'])[0].propId, 'spare');
+});

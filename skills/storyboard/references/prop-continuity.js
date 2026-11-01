@@ -161,19 +161,28 @@
       }
       for (const id of Array.isArray(v.props) ? v.props : []) if (props.find(p => p?.id === id)?.tracking === 'continuity' && !used.has(id)) bad(where, 'Missing propUsage for ' + id);
     }
+    const list = x => Array.isArray(x) ? x : [];
+    const shown = new Set((win.SCENES || []).flatMap(s => [...list(s?.visual?.props), ...list(s?.visual?.frames?.endProps)]));
+    for (const p of props) if (object(p) && text(p.id) && !shown.has(p.id))
+      warn(p.id, 'No shot shows this prop (visual.props or frames.endProps); link it to the shots it appears in, or remove it from the sheet');
     return findings;
   }
-  function snapshot(win, index) {
+  // ids defaults to the shot's visual.props; an end image passes its own frames.endProps.
+  function snapshot(win, index, ids) {
     const failures = check(win).filter(f => f.level === 'bad');
     if (failures.length) throw new Error(failures.map(f => f.where + ': ' + f.what).join('; '));
     const { props, ledger } = data(win);
     const visual = win.SCENES?.[index]?.visual || {};
-    return (visual.props || []).map(id => {
+    return (ids || visual.props || []).map(id => {
       const prop = props.find(p => p.id === id);
+      if (!prop) throw new Error('Unknown prop: ' + id);
       const u = (visual.propUsage || []).find(item => item.propId === id);
       const before = u ? stateAt(win, prop.id, u.start) : null;
       const after = u ? stateAt(win, prop.id, u.end) : null;
-      const refs = state => (prop.references || []).filter(r => !r.condition || r.condition === state?.condition).map(r => ({ ...r }));
+      // Best first: a reference drawn in this condition, then one of the current appearance version.
+      const rank = (r, state) => (r.condition && r.condition === state?.condition ? 2 : 0) + (prop.appearanceVersion && r.version === prop.appearanceVersion ? 1 : 0);
+      const refs = state => (prop.references || []).filter(r => !r.condition || r.condition === state?.condition)
+        .map((r, i) => ({ r, i })).sort((a, b) => rank(b.r, state) - rank(a.r, state) || a.i - b.i).map(({ r }) => ({ ...r }));
       return { propId: prop.id, name: prop.name || prop.id, description: prop.description || '',
         appearanceVersion: prop.appearanceVersion || 'unversioned', references: refs(before), endReferences: refs(after),
         timelineId: ledger?.timelineId || null, start: u ? { ...u.start } : null, end: u ? { ...u.end } : null,
