@@ -79,6 +79,8 @@ test('timed intermediate frames bind exact indices; duplicates and unsupported a
 test('host plans expose a hashed inventory without claiming provider submission; old raw calls stay unchanged',t=>{
  const root=fixture(t),p=prepareVideoImages('host_external',{prompt:'Move'},shot('first_last',[ref()]),root);
  assert.equal(p.imageBindings.length,3);assert.ok(p.imageBindings.every(i=>!i.submitted));assert.match(p.imageHandoff,/unverified/);
+ // The set render the start image was composed from is not a video input.
+ assert.equal(prepareVideoImages('host_external',{prompt:'Move'},shot('first_last',[ref(),ref('room','image','composition')]),root).imageBindings.length,3);
  const legacy={visual:{bg:'old.png',frames:{mode:'first'},video:{referenceImagePaths:['old.png']}}};
  assert.deepEqual(prepareVideoImages('seedance_reference',{referenceImagePaths:['old.png']},legacy,root).args,{referenceImagePaths:['old.png']});
  const raw={prompt:'legacy',sourceImagePath:'external.png'};assert.equal(prepareVideoImages('seedance_img2video',raw,{},root).args,raw);

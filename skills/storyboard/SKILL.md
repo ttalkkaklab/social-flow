@@ -164,7 +164,9 @@ icon row shows with `shot_icons` (§4): render route, size, angle, camera move, 
 frame plan. Camera endpoints and blocking then go through `storyboard_apply`. The fourth step,
 once every shot has its icon attributes and the props and backgrounds exist, makes each
 picture shot's start image with `shot_image` from its characters' sheet panels, place and
-props — and its end image only for a `first_last` shot. The fifth writes each
+props — and its end image only for a `first_last` shot. A place whose sheet names a built set
+starts from that set rendered at the shot's size and angle, so block the cast with
+`location_manage bind` first when their places matter. The fifth writes each
 `generated_video` shot's English video prompt with `shot_prompt` from its icon attributes,
 lines and action. Each shot's video then waits for the user's yes (`video_approve`), or
 their approval of every shot.

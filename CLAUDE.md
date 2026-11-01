@@ -136,8 +136,11 @@ every shot's characters written (`story_outline_required`).
 
 The fourth step makes each picture shot's start image with `shot_image`, from its characters'
 sheet panels (one character: face, headless front, headless back; two: each face, then each
-front), its place (`SB_DOC.locations` image) and props, with a prompt built from its size,
-angle, depth and techniques, the episode style and an English description; it runs
+front), its place and props, with a prompt built from its size, angle, depth and techniques,
+the episode style and an English description. When the place's sheet names a built set
+(`SB_DOC.locations[].manifest`), Image 1 is that set rendered in Blender from a camera the shot's
+size and angle set, aimed at its cast's blocking, and the sheet image only gives the look
+(2026-11-01); without a set the sheet image leads, with a warning. It runs
 `image_plan` → `image_execute` with the saved model. An end image follows only for a
 `first_last` shot (`frame:"end"`, edited from the start image). A model that takes one
 picture refuses (`image_references_unsupported`); the user chooses the replacement. The fifth

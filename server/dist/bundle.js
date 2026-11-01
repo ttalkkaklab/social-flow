@@ -115628,6 +115628,7 @@ var shotImageSchema = external_exports.object({
   size: external_exports.string().regex(/^\d{3,4}x\d{3,4}$/).optional().describe("Output WIDTHxHEIGHT; default 1536x1024 for a 16:9 board, 1024x1536 otherwise"),
   reserveUsd: external_exports.number().finite().nonnegative().optional()
 }).strict();
+var locationContract = () => loadFromHere2(join9(REFERENCES_DIR, "location-assets.js"));
 var IMAGE_INPUTS = {
   "gpt-image": { tool: "gpt_image_img2img", max: 16 },
   "astra-genai-native": { tool: "astra_genai_image_edit", max: 10 },
@@ -115694,18 +115695,49 @@ function shotImageRequest(args) {
   const recorded = args.frame === "end" && Array.isArray(frames.endProps) ? frames.endProps : visual.props;
   const props = args.props ?? (Array.isArray(recorded) ? recorded.filter((id) => typeof id === "string") : []);
   const cast = contract().castOf(shot) ?? [];
-  const place = location ? docEntry(win, "locations", location).imageUrl : void 0;
+  const [width, height] = (args.size ?? (/16x9/.test(String(win.FORMAT ?? "")) ? "1536x1024" : "1024x1536")).split("x").map(Number);
+  const entry2 = location ? docEntry(win, "locations", location) : void 0, place = entry2?.imageUrl;
   const warnings = [];
+  const set = typeof entry2?.manifest === "string" ? locationContract().shotFrame(
+    win,
+    shots.indexOf(shot),
+    boardDir,
+    { manifest: entry2.manifest, cast, size: plan2.size, angle: plan2.angle, width, height }
+  ) : null;
+  if (set) warnings.push(...set.warnings.map((what) => ({ level: "warn", where: args.id, what })));
+  else if (location && args.frame === "start")
+    warnings.push({ level: "warn", where: args.id, what: `the ${location} sheet names no built set, so Image 1 is its picture at whatever angle that was made, not this shot's camera \u2014 build the set (location_manage build) and write its manifest on the sheet for a camera-matched start image` });
+  const lens = set ? `${set.camera.lensMm} mm lens` : "", dutch = plan2.angle === "dutch";
+  const composition = set ? [{
+    id: `${args.id}-set`,
+    path: set[args.frame].path,
+    role: "composition",
+    use: "image",
+    purpose: args.frame === "end" ? `the ${set.name} set from the same camera at the end of the shot, where every object${set.blocked ? " and figure" : ""} stands when it ends` : `the ${set.name} set seen from this shot's camera (${lens}): its viewpoint, framing${dutch ? "" : " and horizon"}, the architecture and where every object${set.blocked ? " and coloured figure" : ""} stands; its plain unpainted surfaces are placeholders`
+  }] : [];
   const refs = [
+    ...composition,
     ...characterRefs(boardDir, win, args.id, cast, frames.mode === "reference" ? "both" : "image", warnings),
     ...props.flatMap((id) => {
-      const entry2 = docEntry(win, "props", id), file = entry2.references?.[0]?.path ?? entry2.imageUrl;
+      const entry3 = docEntry(win, "props", id), file = entry3.references?.[0]?.path ?? entry3.imageUrl;
       return typeof file === "string" ? [{ id: `${args.id}-prop-${id}`, path: file, role: "prop", use: "image", purpose: `the ${id} prop` }] : [];
     }),
     // MSR takes the start image in its background slot, so the place only conditions the picture.
-    ...typeof place === "string" ? [{ id: `${args.id}-place`, path: place, role: "background", use: "image", purpose: `the ${location} location` }] : []
+    ...typeof place === "string" ? [{
+      id: `${args.id}-place`,
+      path: place,
+      role: "background",
+      use: "image",
+      purpose: set ? `how the ${location} location looks \u2014 materials, colours and light only, not its viewpoint or layout` : `the ${location} location`
+    }] : []
   ];
-  const ordered = args.frame === "end" ? [{ path: frames.start, purpose: "the opening picture of this shot" }, ...refs.filter((ref) => ref.role !== "background")] : [...refs.filter((ref) => ref.role === "background"), ...refs.filter((ref) => ref.role !== "background")];
+  const look = refs.filter((ref) => ref.role === "background"), others = refs.filter((ref) => ref.role !== "background" && ref.role !== "composition");
+  const head = args.frame === "end" ? [{ path: frames.start, purpose: "the opening picture of this shot" }, ...composition] : set ? composition : look;
+  let ordered = [...head, ...others, ...set && args.frame === "start" ? look : []];
+  if (set && look.length && ordered.length > imageInputLimit(episode, args.id)) {
+    ordered = ordered.filter((ref) => !look.includes(ref));
+    warnings.push({ level: "warn", where: args.id, what: `the saved image model has no room for the ${location} sheet picture beside the set render, so the look comes from the style and prompt alone` });
+  }
   const inputs = ordered.map((ref) => resolve5(boardDir, ref.path));
   for (const file of inputs) if (!existsSync18(file)) throw new Error(`image_input_missing: ${file}`);
   const assemble = loadFromHere2(join9(REFERENCES_DIR, "assemble-bg-prompt.js")).assemble;
@@ -115715,25 +115747,47 @@ function shotImageRequest(args) {
     angle: plan2.angle,
     style: style.preset ? style : null,
     scene: args.prompt,
-    noPerson: !cast.length
+    noPerson: !cast.length,
+    ...set ? { location: { prompt: args.frame === "end" ? set.endPrompt : set.prompt, paths: [] } } : {}
   }).prompt;
   const roles = ordered.map((ref, i2) => `Image ${i2 + 1} shows ${ref.purpose}.`).join(" ");
+  const at = (ref) => ordered.indexOf(ref) + 1;
+  const lock2 = !set ? "" : args.frame === "end" ? `Move the figures and objects to where Image ${at(composition[0])} shows them and keep Image 1's camera, look and every identity.` : `Keep Image 1's camera position, ${lens}${dutch ? "" : ", horizon"} and framing, and keep every object${set.blocked ? " and figure" : ""} where it stands in Image 1; paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.` + (dutch ? " Image 1 is level; tilt the whole picture to the dutch angle described below." : "") + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : "");
   const prompt = [
     ordered.length ? "Compose one picture from these images." : "",
     roles,
+    lock2,
     heightSentence(win, cast),
     args.frame === "end" ? "This is the last frame of the shot that opens on Image 1: keep its place, light and every identity, and change only what the action changed." : "",
     body.charAt(0).toUpperCase() + body.slice(1)
   ].filter(Boolean).join(" ");
-  const [width, height] = (args.size ?? (/16x9/.test(String(win.FORMAT ?? "")) ? "1536x1024" : "1024x1536")).split("x").map(Number);
   const call = imageCall({ directory: episode, assetId: args.id, inputs, prompt, width, height, outDir: join9(boardDir, "images"), stem: `${args.id}-${args.frame}`, what: "this frame" });
-  return { episode, assetId: args.id, ...call, refs, ...location ? { location } : {}, props, prompt, warnings };
+  const sent = refs.filter((ref) => ordered.includes(ref));
+  const locationFrame = set && args.frame === "start" ? {
+    set: set.id,
+    revision: set.revision,
+    manifest: set.manifest,
+    manifestSha256: set.manifestSha256,
+    stateId: set.stateId,
+    camera: set.camera,
+    blocked: set.blocked,
+    fingerprint: set.fingerprint,
+    start: set.start,
+    end: set.end
+  } : void 0;
+  return { episode, assetId: args.id, ...call, refs: sent, ...location ? { location } : {}, ...locationFrame ? { locationFrame } : {}, props, prompt, warnings };
 }
 var NEGATIVE_PROMPT_ENGINES = /* @__PURE__ */ new Set(["astra-genai-native"]);
+function imageAdapter(selection) {
+  return selection.engine === "mlx" ? { tool: "mlx_image_edit", max: MLX_INPUTS[mlxImageFamily(selection.model ?? "")] ?? 0 } : IMAGE_INPUTS[selection.engine] ?? { max: 0 };
+}
+function imageInputLimit(directory2, assetId) {
+  return imageAdapter(imageContext(directory2, assetId).selection).max;
+}
 function imageCall(o) {
   const { directory: directory2, inputs, prompt, width, height } = o;
   const { selection } = imageContext(directory2, o.assetId);
-  const adapter2 = selection.engine === "mlx" ? { tool: "mlx_image_edit", max: MLX_INPUTS[mlxImageFamily(selection.model)] ?? 0 } : IMAGE_INPUTS[selection.engine] ?? { max: 0 };
+  const adapter2 = imageAdapter(selection);
   if (inputs.length > adapter2.max)
     throw new Error(`image_references_unsupported: the saved image model (${selection.engine}${selection.model ? " " + selection.model : ""}) takes ${adapter2.max} picture(s); ${o.what} composes ${inputs.length}. Choose a model that takes that many with the user (gpt-image up to 16; astra-genai-native or an MLX Qwen-Image-2.1 pack up to 10; MLX FLUX.2 klein or Mage-Flow Edit up to 4).`);
   const mimes = selection.engine === "gpt-image" ? inputs.map((f3) => readImageMetadata(f3).mimeType) : [];
@@ -115779,6 +115833,8 @@ function recordShotImage(args, request) {
       props: request.props,
       ...request.location ? { locationId: request.location } : {}
     });
+    if (request.locationFrame) visual.locationFrame = request.locationFrame;
+    else delete visual.locationFrame;
     if (typeof frames.end === "string") {
       notes.push({ level: "warn", where: args.id, what: `the end image ${frames.end} was made from the previous start image and is off the shot \u2014 remake it with shot_image frame:"end"` });
       delete frames.end;
@@ -124392,9 +124448,9 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "shot_image",
     title: "Make a shot's start or end image (step 4)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    description: `Use it after every shot has its icon attributes (shot_icons): make one shot's start image from its characters' sheet panels (assets/characters/<id>/panels.json \u2014 face, headless front and back; two characters take each face, then each front), its place (SB_DOC.locations imageUrl) and its props, with a prompt assembled from the shot's size, angle, depth and techniques, the episode style and your English description. frame:"end" makes the last image of a first_last shot from its start image (optional; only when the frame plan needs it). Runs image_plan \u2192 image_execute with the saved image model and the existing spending authorization, then writes visual.frames.start and visual.bg (or frames.end), visual.references, locationId and props. Each call saves a new versioned file under storyboard/images/. A new start image takes the shot's end image off (it was edited from the old start; the file stays) and warns, so make the end image again. An end image keeps the start image's place (location is refused) and records its own props in frames.endProps. GPT Image gets a mixed PNG/JPEG set as PNG copies in storyboard/images/inputs/.
+    description: `Use it after every shot has its icon attributes (shot_icons): make one shot's start image from its characters' sheet panels (assets/characters/<id>/panels.json \u2014 face, headless front and back; two characters take each face, then each front), its place and its props, with a prompt assembled from the shot's size, angle, depth and techniques, the episode style and your English description. When the place's sheet names a built set (SB_DOC.locations manifest), Image 1 is that set rendered locally in Blender from the camera the shot's size and angle ask for \u2014 aimed at its cast's blocking from location_manage bind, swung round the subject when someone or something blocks the view, kept inside the walls with a wider lens, at the picture's aspect \u2014 and the sheet image follows as a look reference when the model has room; the render is cached per input fingerprint under storyboard/locations/ and recorded in visual.locationFrame. Without a set the sheet image (imageUrl) leads and a warning says the angle is not the shot's. Set names and labels in another script stay out of the prompt. frame:"end" makes the last image of a first_last shot from its start image, with the set's end pose from the same camera (optional; only when the frame plan needs it). Runs image_plan \u2192 image_execute with the saved image model and the existing spending authorization, then writes visual.frames.start and visual.bg (or frames.end), visual.references, locationId and props. Each call saves a new versioned file under storyboard/images/. A new start image takes the shot's end image off (it was edited from the old start; the file stays) and warns, so make the end image again. An end image keeps the start image's place (location is refused) and records its own props in frames.endProps. GPT Image gets a mixed PNG/JPEG set as PNG copies in storyboard/images/inputs/.
 
-Do NOT use it for a cut with no picture route \u2014 only still_camera and generated_video cuts are accepted. The saved image model has to take every picture the frame composes (gpt-image up to 16; astra-genai-native or an MLX Qwen-Image-2.1 pack up to 10; MLX FLUX.2 klein or Mage-Flow Edit up to 4); otherwise it refuses with image_references_unsupported, so ask the user before changing models. Refused (story_order) while a shot lacks icon attributes, or for an end image before the start image or outside first_last.
+Do NOT use it for a cut with no picture route \u2014 only still_camera and generated_video cuts are accepted. The saved image model has to take every picture the frame composes (gpt-image up to 16; astra-genai-native or an MLX Qwen-Image-2.1 pack up to 10; MLX FLUX.2 klein or Mage-Flow Edit up to 4); otherwise it refuses with image_references_unsupported, so ask the user before changing models. Refused (story_order) while a shot lacks icon attributes, or for an end image before the start image or outside first_last; location_render_failed when Blender cannot render the set (it never falls back to the sheet image).
 
 Returns: the file written, the image path, the inputs in order and the prompt; a host selection returns the handoff instead of generating.`,
     inputSchema: {
@@ -125393,7 +125449,7 @@ function prepareVideoImages(tool2, input, shot, episode) {
       if (frames.end) bind("end", frames.end, "end", "video", "Ending state", false);
     }
     for (const [i2, frame] of (keyframes ?? []).entries()) bind("keyframe-" + (i2 + 1), frame.image, "keyframe", "video", frame.state, false);
-    for (const ref of references) bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, false);
+    for (const ref of references) if (ref.role !== "composition") bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, false);
     return { args, imageBindings: bindings, imageHandoff: "unverified_host_mapping: bind every video/both input and temporal frame to the actual host schema; do not omit unsupported inputs or claim submission from this plan" };
   }
   const equal = (a, b) => {

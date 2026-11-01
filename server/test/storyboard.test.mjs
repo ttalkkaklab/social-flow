@@ -699,7 +699,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     const request = make(dir, 's0001', 'start', { location: 'room' });
     assert.equal(request.refs.find((r) => r.id === 's0001-mina-front').purpose, "mina's body and outfit, front: 162 cm tall; about 50 kg");
     assert.match(request.prompt, /Keep their real heights: mina is 162 cm tall and jun is 225 cm tall\./);
-    assert.deepEqual(request.warnings.map((w) => w.what.split(' ').slice(0, 2).join(' ')), ["jun's physical.proportions"]);
+    assert.deepEqual(request.warnings.map((w) => w.what.split(' ').slice(0, 2).join(' ')), ['the room', "jun's physical.proportions"]);   // the room sheet has no built set
   });
   it('the video prompt reads the icon attributes after every picture exists', () => {
     const { dir } = pictureBoard();
@@ -729,7 +729,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     const again = { path: dir, id: 's0002', frame: 'start', prompt: 'Mina waits by the door.' };
     const remade = shotImageRequest(again);
     writeFileSync(remade.file, png);
-    assert.deepEqual(recordShotImage(again, remade).findings.filter((f) => f.where === 's0002').map((f) => f.level), ['warn']);
+    assert.deepEqual(recordShotImage(again, remade).findings.filter((f) => f.where === 's0002' && /end image/.test(f.what)).map((f) => f.level), ['warn']);
     assert.deepEqual([readBoard(dir).win.SCENES[1].visual.frames.end, readBoard(dir).win.SCENES[1].visual.frames.endProps, readBoard(dir).win.SCENES[1].visual.endPrompt], [undefined, undefined, undefined]);
     assert.throws(() => writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.' }), /s0002 has no end image/);
     make(dir, 's0002', 'end');
@@ -752,6 +752,59 @@ describe('images and the video prompt follow the icon attributes', () => {
     // A new size after the start image leaves that picture behind; the tool says so.
     const resized = writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'ecu' }] });
     assert.ok(resized.findings.some((f) => f.where === 's0001' && /start image was made for the previous size/.test(f.what)));
+  });
+  it('a sheet with a built set sends that set seen from the shot\'s camera as Image 1', () => {
+    const { root, dir } = pictureBoard();
+    const L = createRequire(import.meta.url)('../../skills/storyboard/references/location-assets.js');
+    const { spec } = createRequire(import.meta.url)('../../skills/storyboard/references/location-example.js');
+    // The room's built set (hash-checked stand-in assets) and a stand-in Blender that writes one PNG per camera.
+    const set = join(root, 'data/c/assets/locations/room/v1'), fake = join(root, 'blender'), blender = process.env.BLENDER;
+    mkdirSync(set, { recursive: true });
+    const m = structuredClone(spec); m.assets = {};
+    for (const [k, n] of [['blend', 'source.blend'], ['glb', 'preview.glb']]) { writeFileSync(join(set, n), k); m.assets[k] = { path: n, sha256: L.fileHash(join(set, n)) }; }
+    writeFileSync(join(set, 'location.json'), JSON.stringify(m));
+    writeFileSync(fake, `#!/usr/bin/env node\nconst fs=require('fs'),path=require('path');const job=JSON.parse(fs.readFileSync(process.argv.at(-1),'utf8'));\nfor(const k of Object.keys(job.cameras))fs.writeFileSync(path.join(job.output,k+'.png'),Buffer.from(${JSON.stringify(png.toString('base64'))},'base64'));\n`, { mode: 0o755 });
+    process.env.BLENDER = fake;
+    try {
+      const doc = readBoard(dir).win.SB_DOC;
+      applyStoryboard({ path: dir, draft: true, globals: { FORMAT: 'youtube-long-16x9',
+        SB_DOC: { ...doc, locations: [{ ...doc.locations[0], manifest: '../../../assets/locations/room/v1/location.json' }] } } });
+      icons(dir);
+      // Mina is blocked by the window, facing the camera side; the shot is bound to the same set.
+      L.run({ action: 'bind', board: join(dir, 'scenes.js'), shotId: 's0002', manifest: join(set, 'location.json'), stateId: 'night', cameraId: 'wide',
+        blocking: { actors: [{ id: 'mina', height: 1.6, color: '#d0342c', start: { position: [-1, 1.8, 0], rotationZDeg: 0 }, end: { position: [0, 1.8, 0], rotationZDeg: 0 } }] } });
+      const start = make(dir, 's0002', 'start', { location: 'room' });
+      assert.deepEqual(start.inputs.map((f) => relative(dir, f).replace(/frame-[0-9a-f]{16}/, 'frame-*')),
+        ['locations/s0002-frame-*/start.png', ...['face', 'body', 'back'].map((n) => `../../../assets/characters/mina/${n}.png`), 'places/room.png']);
+      assert.match(start.prompt, /^Compose one picture from these images\. Image 1 shows the [^.]* set seen from this shot's camera \(50 mm lens\)/);
+      assert.match(start.prompt, /Keep Image 1's camera position, 50 mm lens, horizon and framing, and keep every object and figure where it stands in Image 1[^.]*\. Take only materials, colours and light from Image 5\./);
+      assert.match(start.prompt, /Medium close-up, chest up.*Exactly two windows on the north wall.*Proxy #d0342c is mina/);
+      // The set's Korean name and state label stay out of the prompt, where a model could letter them.
+      assert.doesNotMatch(start.prompt, /[가-힣]/);
+      assert.ok(start.warnings.some((w) => /name, state label, end state label are not in English/.test(w.what)));
+      const shot = readBoard(dir).win.SCENES[1];
+      assert.deepEqual([shot.visual.locationFrame.stateId, shot.visual.locationFrame.blocked, shot.visual.locationFrame.camera.lensMm], ['night', true, 50]);
+      assert.deepEqual(shot.visual.references.map((r) => r.role), ['composition', 'character', 'character', 'character', 'background']);
+      // The camera looks at her face from in front of her (she faces -Y).
+      const { position, target } = shot.visual.locationFrame.camera;
+      assert.ok(position[1] < target[1] && Math.abs(target[0] + 1) < .01);
+      // A dutch shot's render is level: the prompt stops fixing Image 1's horizon and asks for the tilt.
+      writeShotIcons({ path: dir, shots: [{ id: 's0002', angle: 'dutch' }] });
+      const tilted = shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'Mina waits.' }).prompt;
+      assert.match(tilted, /Keep Image 1's camera position, [\d.]+ mm lens and framing.*tilt the whole picture to the dutch angle/);
+      assert.doesNotMatch(tilted, /horizon and framing|grey/);
+      writeShotIcons({ path: dir, shots: [{ id: 's0002', angle: 'eye' }] });
+      // The end image of this first_last shot follows the end pose from the same camera.
+      const end = make(dir, 's0002', 'end');
+      assert.deepEqual(end.inputs.slice(0, 2).map((f) => relative(dir, f).replace(/frame-[0-9a-f]{16}/, 'frame-*')), ['images/s0002-start-v1.png', 'locations/s0002-frame-*/end.png']);
+      assert.match(end.prompt, /Move the figures and objects to where Image 2 shows them/);
+      // A four-picture model keeps the render and the panels and leaves the sheet picture out, with a warning.
+      settings.saveSettings(root, { image: { engine: 'mlx', model: 'FLUX.2-klein-4B' }, video: { engine: 'seedance', model: 'dreamina-seedance-2-0-260128', resolution: '720p' }, speech: { engine: 'none' } },
+        { expectedRevision: settings.readSettings(root).revision, request: 'Fixture: an MLX edit pack with three references' });
+      const tight = shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.', location: 'room' });
+      assert.deepEqual([tight.inputs.length, /set seen from this shot's camera/.test(tight.prompt), /Take only materials/.test(tight.prompt)], [4, true, false]);
+      assert.ok(tight.warnings.some((w) => /no room for the room sheet picture/.test(w.what)) && tight.warnings.some((w) => /mina is not blocked/.test(w.what)));
+    } finally { if (blender === undefined) delete process.env.BLENDER; else process.env.BLENDER = blender; }
   });
   it('GPT Image gets a mixed PNG and JPEG set as PNG copies', () => {
     const { root, dir } = pictureBoard();
