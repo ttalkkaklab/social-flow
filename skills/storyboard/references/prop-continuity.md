@@ -111,9 +111,11 @@ a reference of the current version; a known condition without its own reference 
 warned about. The prop's `Image N` line carries its English description, holder,
 location, condition and screen position; fields in another script stay out with a
 warning. A prop without any picture is described in the prompt and warned about.
-Ledger errors never stop the frame (`snapshot(..., {lenient:true})`): a prop the
-errors concern (its entry, its events, this shot or the whole ledger) goes in
-without a state, with a warning naming them; the other props keep their states.
+Ledger errors never stop the frame (`snapshot(..., {lenient:true})`): each prop is
+checked on its own slice — its sheet entry, its initial state and events, and its
+usage in this shot. A prop whose slice has errors, or whose ledger is malformed,
+goes in without a state and with a warning naming them; the other props keep
+their states whatever else on the board is broken.
 
 The ordinary still assembler and spatial assembler include per-shot prop states;
 source image arguments include prop reference images (`--json` on the ordinary

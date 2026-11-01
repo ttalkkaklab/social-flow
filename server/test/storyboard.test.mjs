@@ -721,7 +721,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     applyStoryboard({ path: dir, draft: true, expectedSha256: broken.sha256, propSheet: { props, continuity: { ...continuity, events: [{ ...continuity.events[0], from: { condition: 'cracked' } }] } } });
     const fallback = shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'p', location: 'room' });
     assert.equal(prop(fallback).path, 'places/key.png');
-    assert.ok(fallback.warnings.some((w) => /^the watch prop goes in without its state/.test(w.what)));
+    assert.ok(fallback.warnings.some((w) => /^the prop ledger has errors for the watch prop/.test(w.what)));
     assert.doesNotMatch(prop(fallback).purpose, /held by/);
   });
   it('the sheet panels carry each character\'s body, and two characters keep their heights', () => {

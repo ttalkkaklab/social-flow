@@ -1261,7 +1261,7 @@ const propContinuity = () => loadFromHere(join(REFERENCES_DIR, 'prop-continuity.
 /**
  * The props a frame shows, through the shared prop ledger: each visible prop's reference drawn in its condition at the
  * opening (start image) or closing (end image) story point, and its description and that state on its Image line.
- * Ledger errors are reported, never refused: a prop they concern goes in without a state; the other props keep theirs.
+ * Ledger errors are reported, never refused: a prop with errors in its own entry, history or usage here goes in without a state.
  */
 function propRefs(win, index, shotId, ids, frame, warnings) {
     const warn = (what) => warnings.push({ level: 'warn', where: shotId, what });
@@ -1272,7 +1272,7 @@ function propRefs(win, index, shotId, ids, frame, warnings) {
         if (!snap.visible)
             continue; // the author hid it in this shot (propUsage visible:false)
         if (snap.errors.length)
-            warn(`the ${id} prop goes in without its state because the prop ledger has errors (${snap.errors.join('; ')}) — fix them with storyboard_apply propSheet`);
+            warn(`the prop ledger has errors for the ${id} prop (${snap.errors.join('; ')}), so it goes in without a story state — fix them with storyboard_apply propSheet`);
         const state = frame === 'end' ? snap.after : snap.before, matched = frame === 'end' ? snap.endReferences : snap.references;
         const all = (Array.isArray(entry.references) ? entry.references : []);
         const condition = typeof state?.condition === 'string' && state.condition !== 'unknown' ? state.condition : '';
@@ -1291,7 +1291,8 @@ function propRefs(win, index, shotId, ids, frame, warnings) {
                 skipped.push(field);
             return kept;
         };
-        const holder = typeof state?.holderId === 'string' && state.holderId !== 'unknown' ? `held by ${state.holderId}` : state?.holderId === null ? 'not held' : '';
+        const holderId = english('holder', state?.holderId);
+        const holder = holderId ? `held by ${holderId}` : state?.holderId === null ? 'not held' : '';
         const place = english('location', state?.location), cond = english('condition', state?.condition), pos = english('position', snap.position);
         const detail = [english('description', snap.description), holder, place && `at ${place}`, cond && `condition ${cond}`, pos && `screen position ${pos}`].filter(Boolean).join('; ');
         if (skipped.length)

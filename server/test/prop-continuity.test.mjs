@@ -182,4 +182,14 @@ test('a prop no shot shows is flagged, and the best reference for the state come
   assert.throws(() => api.snapshot(win, 0), /Unknown legacy owner/);
   const [watch, spare] = api.snapshot(win, 0, ['watch', 'spare'], { lenient: true });
   assert.deepEqual([watch.before.holderId, watch.errors, spare.before, spare.errors.length], ['a', [], null, 1]);
+  // Another prop's error never hides this prop's own: a stale event still drops its state.
+  win.SB_DOC.propContinuity.events[0].from.holderId = 'b';
+  assert.match(api.snapshot(win, 0, ['watch'], { lenient: true })[0].errors.join(), /Stale from.holderId/);
+  // A stray initial for a removed prop, a broken character entry or another shot's error leaves the watch alone.
+  win.SB_DOC.propContinuity.events[0].from.holderId = 'a';
+  win.SB_DOC.propContinuity.initial.push({ propId: 'gone', at: { day: 1, order: 0 }, state: {} });
+  win.SB_DOC.characters.push({ name: 'no id' });
+  win.SCENES[1].visual.propUsage[0].expectedStart = { holderId: 'b' };
+  assert.deepEqual(api.snapshot(win, 0, ['watch'], { lenient: true })[0].errors, []);
+  assert.equal(api.snapshot(win, 1, ['watch'], { lenient: true })[0].errors.length, 1);
 });
