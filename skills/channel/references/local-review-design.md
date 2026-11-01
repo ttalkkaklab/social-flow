@@ -134,5 +134,6 @@ Research, screenshots and independent evaluation:
 
 Headers use the storyboard document title. Search sits in a glass bar. Catalogue,
 hub and character cards are glass cards with sunk media wells, hairline fact rows
-and arrow links; covers fill their well. Location detail pages keep
+and arrow links; covers fill their well. Prop detail pages reuse the `.character-sheet`
+hero with a 1:1 stage. Location detail pages keep
 `location-review.css` and the 3D runtime.

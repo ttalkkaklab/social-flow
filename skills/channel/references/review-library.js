@@ -108,6 +108,65 @@ function voicePreview(root, file, folder, character) {
   const id = 'voice-' + character.id;
   return `<div class="review-voice">${available ? `<audio id="${esc(id)}" preload="none" src="${rel(file, voice)}"></audio>` : ''}<button class="review-play" type="button" data-voice-name="${esc(character.name)}"${available ? ` data-audio-toggle="${esc(id)}"` : ' disabled'} aria-label="${esc(character.name)} · ${available ? '음성 재생' : '음성 샘플 없음'}" title="${available ? '음성 재생' : '음성 샘플 없음'}"><svg class="review-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><svg class="review-pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg></button></div>`;
 }
+const PROP_EVENTS = { transfer: ['소유 이전', 'Transfer'], lend: ['맡김', 'Lend'], return: ['돌려줌', 'Return'], pick_up: ['집어 듦', 'Pick up'], put_down: ['내려놓음', 'Put down'], lose: ['분실', 'Lose'], damage: ['파손', 'Damage'], repair: ['수선', 'Repair'], move: ['이동', 'Move'], correct: ['정정', 'Correct'] };
+const localRef = (folder, ref) => typeof ref === 'string' && ref && !/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(ref) ? path.resolve(folder, ref) : null;
+// One prop's sheet in the character sheet's layout: the reference stage with its condition
+// variants, the identifying facts beside it, then continuity notes and the custody ledger.
+function propSheet({ file, listFile, root, folder, entry, board, win, people, characterFile, storyLink }) {
+  const name = entry.name || entry.id || '—';
+  const who = id => {
+    if (id === null || id === undefined) return t('없음', 'None');
+    if (id === 'unknown') return t('모름', 'Unknown');
+    const page = characterFile(id);
+    return page ? `<a href="${rel(file, page)}">${esc(people.get(id) || id)}</a>` : esc(people.get(id) || id);
+  };
+  const row = (labelKo, labelEn, value, key) => value ? `<div class="character-field"${key ? ` data-prop-field="${esc(key)}"` : ''}><dt>${t(labelKo, labelEn)}</dt><dd>${value}</dd></div>` : '';
+  const seen = new Set();
+  // A registered reference keeps its condition label; imageUrl only fills in when it is not one of them.
+  const listed = Array.isArray(entry.references) ? entry.references : [];
+  const primary = localRef(folder, entry.imageUrl);
+  const refs = [...listed.filter(ref => localRef(folder, ref?.path) === primary), entry.imageUrl, ...listed].map(ref => {
+    const target = localRef(folder, typeof ref === 'string' ? ref : ref?.path);
+    if (!target || !regular(root, target) || seen.has(target)) return null;
+    seen.add(target);
+    const version = ref?.version || entry.appearanceVersion || '';
+    const [ko, en] = ref?.condition ? [ref.condition, ref.condition] : ['기본 참조', 'Base reference'];
+    return { target, ko: version ? `${ko} · ${version}` : ko, en: version ? `${en} · ${version}` : en };
+  }).filter(Boolean);
+  let body = `<article class="character-sheet prop-sheet"><a class="review-crumb" href="${rel(file, listFile)}">${t('소품 시트 목록', 'Prop sheets')}</a>`;
+  body += `<section class="character-hero ds-card ds-card-hero" id="appearance" aria-labelledby="prop-name">`;
+  if (refs.length) {
+    const [first] = refs;
+    body += `<div class="character-stage" data-kind="prop"><a data-image-preview href="${rel(file, first.target)}" aria-label="${esc(name + ' ' + first.ko)} · 원본 보기 / View original">${image(file, first.target, name + ' ' + first.ko)}<span class="review-image-action">${t('원본 보기', 'View original')}</span></a><span class="character-pill">${t(first.ko, first.en)}</span></div>`;
+    if (refs.length > 1) body += `<div class="character-strip" role="group" aria-label="${esc('참조 고르기 / Pick a reference')}">${refs.map((ref, k) => `<a class="character-thumb" data-kind="prop" href="${rel(file, ref.target)}" data-alt="${esc(name + ' ' + ref.ko)}" data-label-ko="${esc(ref.ko)}" data-label-en="${esc(ref.en)}"${k ? '' : ' aria-current="true"'}><span class="character-thumb-art"><img src="${rel(file, ref.target)}" alt="" loading="lazy"></span>${esc(ref.ko)}</a>`).join('')}</div>`;
+  } else body += `<div class="character-stage character-stage-empty">${empty('참조 이미지 대기', 'Reference image pending')}</div>`;
+  const tracking = entry.tracking === 'continuity' ? t('소유·상태 추적', 'Custody and condition') : entry.tracking ? t('외형만 유지', 'Appearance only') : '';
+  body += `<div class="character-info"><header class="character-header" id="basics"><span class="ds-kicker">${t('기본 설정', 'Identity')}</span><h1 id="prop-name">${esc(name)} <code>${esc(entry.id || '')}</code></h1></header><dl class="character-fields character-basics">`
+    + row('에피소드', 'Episode', esc(board.title), 'episode')
+    + row('생김새', 'Appearance', esc(entry.description), 'description')
+    + row('추적 방식', 'Tracking', tracking, 'tracking')
+    + row('외형 버전', 'Appearance version', esc(entry.appearanceVersion), 'appearanceVersion')
+    + row('처음 소유자', 'Initial owner', 'initialOwner' in entry ? who(entry.initialOwner) : '', 'initialOwner')
+    + row('처음 위치', 'Initial location', esc(entry.initialLocation), 'initialLocation')
+    + row('처음 상태', 'Initial condition', esc(entry.initialCondition), 'initialCondition')
+    + `</dl><p class="prop-links">${storyLink}</p></div></section>`;
+  const group = (icon, ko, en, rows) => rows ? `<details class="character-group ds-card" open><summary><h3><span class="ds-tile">${characterIcon(icon)}</span>${t(ko, en)}</h3><span class="ds-chevron" aria-hidden="true"></span></summary><dl class="character-fields">${rows}</dl></details>` : '';
+  body += `<section class="character-specification" id="identity" aria-label="${esc('소품 상세 설정 / Prop specification')}">`;
+  body += group('continuity', '설정 유지', 'Continuity', row('재사용 규칙', 'Reuse policy', esc(entry.reusePolicy)) + row('참조 메모', 'Reference note', esc(entry.referenceNote)) + row('검토 메모', 'Review note', esc(entry.visualReview)));
+  const ledger = win?.SB_DOC?.propContinuity || {};
+  const stamp = at => at ? `${t('극중', 'Day')} ${esc(at.day)} · ${esc(at.order)}` : '';
+  const state = s => [['소유', 'Owner', 'ownerId', who], ['소지', 'Holder', 'holderId', who], ['위치', 'Location', 'location', esc], ['상태', 'Condition', 'condition', esc]]
+    .filter(([, , key]) => s && key in s).map(([ko, en, key, show]) => `${t(ko, en)} ${show(s[key])}`).join(' · ');
+  const initial = (ledger.initial || []).find(s => s?.propId === entry.id);
+  const events = (ledger.events || []).filter(e => e?.propId === entry.id).sort((a, b) => (a.at?.day - b.at?.day) || (a.at?.order - b.at?.order));
+  const shots = (win?.SCENES || []).filter(s => Array.isArray(s.visual?.props) && s.visual.props.includes(entry.id)).map(s => s.id);
+  const history = (initial ? row('처음 상태', 'Initial state', `${stamp(initial.at)} · ${state(initial.state)}`) : '')
+    + events.map(e => row(...(PROP_EVENTS[e.kind] || [e.kind, e.kind]), `${stamp(e.at)} · ${state(e.to)}${e.reason ? `<br>${esc(e.reason)}` : ''}${e.shotIds?.length ? ` <code>${esc(e.shotIds.join(', '))}</code>` : ''}`)).join('')
+    + (shots.length ? row('등장 샷', 'Shots', `<code>${esc(shots.join(', '))}</code>`) : '');
+  body += group('story', '이력과 등장 샷', 'History and shots', history);
+  return body + '</section></article>';
+}
+
 function boardMeta(board) {
   const formats = { 'shorts-9x16': ['숏폼 · 9:16', 'Short form · 9:16'], 'youtube-long-16x9': ['롱폼 · 16:9', 'Long form · 16:9'] };
   const status = board.status === 'draft' || !board.status ? t('초안', 'Draft') : esc(board.status);
@@ -283,7 +342,7 @@ function exportChannel(channelDirectory, { check = false } = {}) {
         const details = fields.map(([key, labelKo, labelEn]) => field(t(labelKo, labelEn), Array.isArray(entry[key]) ? entry[key].join(' · ') : entry[key])).join('');
         const source = path.join(folder, 'storyboard.html');
         const link = regular(dir, source) ? `<a href="${rel(file, source)}#${anchor}">${t('스토리보드에서 보기', 'View in storyboard')}</a>` : t('검토 HTML 미등록', 'Review HTML not supplied');
-        let detailLink = '';
+        let detailLink = '', detailHref = '';
         if (kind === 'locations') {
           const detailFile = path.join(dir, 'assets', 'locations', 'details', locations.detailFilename(board.topic, entry.id));
           const win = boardWindows.get(board.topic);
@@ -311,9 +370,19 @@ function exportChannel(channelDirectory, { check = false } = {}) {
             // file:// pages cannot fetch a GLB; the page carries each set's bytes keyed by the path its entry names.
             `<script>window.LOCATION_REVIEW=${JSON.stringify(views).replace(/</g,'\\u003c')};</script><script>window.LOCATION_GLB=${JSON.stringify(Object.fromEntries(views.filter(v => v.glb).map(v => [v.glb, fs.readFileSync(path.resolve(path.dirname(detailFile), decodeURIComponent(v.glb))).toString('base64')])))};</script>`+
             `<script defer src="${rel(detailFile,path.join(dir,'assets/review/location-review-runtime.js'))}"></script>`);
+          detailHref = rel(file, detailFile);
           detailLink = `<a class="review-primary-link" href="${rel(file,detailFile)}">${t('배경 상세 · 3D 공간','Background detail · 3D space')}</a>`;
+        } else {
+          const detailFile = path.join(dir, 'assets', 'props', 'details', locations.detailFilename(board.topic, entry.id));
+          const win = boardWindows.get(board.topic);
+          const people = new Map([...chars.map(c => [c.id, c.name]), ...((win?.SB_DOC?.characters) || []).filter(c => c?.id && !chars.some(x => x.id === c.id)).map(c => [c.id, c.name || c.id])]);
+          const characterFile = id => chars.some(c => c.id === id) ? path.join(dir, 'assets', 'characters', id, 'index.html') : null;
+          const storyLink = regular(dir, source) ? `<a href="${rel(detailFile, source)}#${anchor}">${t('스토리보드에서 보기', 'View in storyboard')}</a>` : '';
+          render(detailFile, name, 'props', propSheet({ file: detailFile, listFile: file, root: dir, folder, entry, board, win, people, characterFile, storyLink }));
+          detailHref = rel(file, detailFile);
+          detailLink = `<a class="review-primary-link" href="${rel(file, detailFile)}">${t('소품 상세', 'Prop detail')}</a>`;
         }
-        items += `<article class="review-card ds-card" data-card data-search="${esc((name + ' ' + (entry.id || '') + ' ' + board.title).toLocaleLowerCase())}">${preview}<div class="review-card-body"><h2>${esc(name)}</h2><p>${esc(board.title)} · ${esc(entry.id)}</p><p>${esc(entry.description || '')}</p><dl>${details}</dl>${detailLink}${link}</div></article>`;
+        items += `<article class="review-card ds-card" data-card data-search="${esc((name + ' ' + (entry.id || '') + ' ' + board.title).toLocaleLowerCase())}">${detailHref ? `<a class="review-card-art" href="${detailHref}" aria-label="${esc(name)}">${preview}</a>` : preview}<div class="review-card-body"><h2>${detailHref ? `<a href="${detailHref}">${esc(name)}</a>` : esc(name)}</h2><p>${esc(board.title)} · ${esc(entry.id)}</p><p>${esc(entry.description || '')}</p><dl>${details}</dl>${detailLink}${link}</div></article>`;
       }
     }
     sheetCounts[kind] = count;
