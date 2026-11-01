@@ -2,7 +2,7 @@
   "name": "@zeans/social-flow-mcp-server",
   "version": "0.120.0",
   "license": "Apache-2.0",
-  "description": "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\u00b7Instagram\u00b7Facebook\u00b7YouTube) + research search (5 SerpApi tools\u00b7SNS issue scout\u00b78 Naver Open API types) + image\u00b7video\u00b7voice\u00b7music generation (OpenAI GPT Image\u00b7Veo 3.1\u00b7Seedance\u00b7Gemini TTS\u00b7ElevenLabs\u00b7Lyria\u00b7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
+  "description": "Built-in MCP server for the social-flow plugin — direct SNS publishing (Threads·Instagram·Facebook·YouTube) + research search (5 SerpApi tools·SNS issue scout·8 Naver Open API types) + image·video·voice·music generation (OpenAI GPT Image·Veo 3.1·Seedance·Gemini TTS·ElevenLabs·Lyria·Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   "type": "module",
   "main": "dist/index.js",
   "engines": {
@@ -22,6 +22,7 @@
     "@google/genai": "^2.21.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "openai": "^6.46.0",
+    "undici": "^7.29.1",
     "zod": "^3.23.8",
     "zod-to-json-schema": "^3.25.2"
   },
