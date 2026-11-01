@@ -1,5 +1,6 @@
 /** Transport shared by the GenAI provider adapters, separate from legacy ASTRA jobs. */
 import { readFileSync } from 'node:fs';
+import { Agent } from 'undici';
 import { z } from 'zod';
 import { imageMetadata } from './image-media.js';
 import { config } from './config.js';
@@ -25,6 +26,12 @@ export function requireAstraGenaiKey(route = '') {
         throw new Error('ASTRA_GENAI_API_KEY is required: issue a gateway token in the GenAI console; ASTRA_VIDEO is a separate credential.');
     return config.astraGenaiApiKey;
 }
+/**
+ * Synchronous image and speech calls answer only when the picture or audio is done, which can take
+ * longer than fetch's built-in 300 s wait for response headers; each request waits as long as its own timeout.
+ */
+const waiters = new Map();
+const waitFor = (ms) => waiters.get(ms) ?? waiters.set(ms, new Agent({ headersTimeout: ms, bodyTimeout: ms })).get(ms);
 /** Only explicit rejection or terminal provider evidence releases a generation slot. */
 export class GenaiRequestError extends Error {
     terminal;
@@ -39,7 +46,7 @@ export class GenaiRequestError extends Error {
 export async function requestGenai(method, route, body, timeoutMs = 60_000, onResponse) {
     const key = requireAstraGenaiKey(route);
     const response = await fetch(astraGenaiBaseUrl(route) + route, {
-        method, redirect: 'error', signal: AbortSignal.timeout(timeoutMs),
+        method, redirect: 'error', signal: AbortSignal.timeout(timeoutMs), ...{ dispatcher: waitFor(timeoutMs) },
         headers: { Authorization: `Bearer ${key}`, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
@@ -132,7 +139,7 @@ export async function requestGenaiMedia(route, body) {
     const key = requireAstraGenaiKey(route);
     const form = body instanceof FormData;
     const response = await fetch(astraGenaiBaseUrl(route) + route, {
-        method: body === undefined ? 'GET' : 'POST', redirect: 'error', signal: AbortSignal.timeout(30 * 60_000),
+        method: body === undefined ? 'GET' : 'POST', redirect: 'error', signal: AbortSignal.timeout(30 * 60_000), ...{ dispatcher: waitFor(30 * 60_000) },
         headers: { Authorization: `Bearer ${key}`, ...(body && !form ? { 'Content-Type': 'application/json' } : {}) },
         ...(body === undefined ? {} : { body: form ? body : JSON.stringify(body) }),
     });
