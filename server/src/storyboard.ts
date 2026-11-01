@@ -1259,6 +1259,53 @@ function characterRefs(boardDir: string, win: Board, shotId: string, ids: string
     return [{ id: `${shotId}-${id}-${view}`, path: relative(boardDir, join(folders.get(id)!, file)), role: 'character', use, purpose }];
   });
 }
+type PropSnap = { propId: string; description: string; references: Array<{ path?: string }>; endReferences: Array<{ path?: string }>;
+  before: Record<string, unknown> | null; after: Record<string, unknown> | null; visible: boolean; position: string | null; errors: string[] };
+const propContinuity = () => loadFromHere(join(REFERENCES_DIR, 'prop-continuity.js')) as {
+  snapshot(win: Board, index: number, ids: string[], opts: { lenient: true }): PropSnap[];
+};
+/**
+ * The props a frame shows, through the shared prop ledger: each visible prop's reference drawn in its condition at the
+ * opening (start image) or closing (end image) story point, and its description and that state on its Image line.
+ * Ledger errors are reported, never refused: a prop with errors in its own entry, history or usage here goes in without a state.
+ */
+function propRefs(win: Board, index: number, shotId: string, ids: string[], frame: 'start' | 'end', warnings: Finding[]): { refs: ImageRef[]; unseen: string[] } {
+  const warn = (what: string) => warnings.push({ level: 'warn', where: shotId, what });
+  const entries = new Map(ids.map((id) => [id, docEntry(win, 'props', id)]));
+  const refs: ImageRef[] = [], unseen: string[] = [];
+  for (const snap of ids.length ? propContinuity().snapshot(win, index, ids, { lenient: true }) : []) {
+    const id = snap.propId, entry = entries.get(id)!;
+    if (!snap.visible) continue;   // the author hid it in this shot (propUsage visible:false)
+    if (snap.errors.length)
+      warn(`the prop ledger has errors for the ${id} prop (${snap.errors.join('; ')}), so it goes in without a story state — fix them with storyboard_apply propSheet`);
+    const state = frame === 'end' ? snap.after : snap.before, matched = frame === 'end' ? snap.endReferences : snap.references;
+    const all = (Array.isArray(entry.references) ? entry.references : []) as Array<{ path?: unknown; version?: unknown; condition?: unknown }>;
+    const condition = typeof state?.condition === 'string' && state.condition !== 'unknown' ? state.condition : '';
+    // No reference drawn in this condition: the plain imageUrl, else the current version's reference, stands in.
+    const imageUrl = typeof entry.imageUrl === 'string' && entry.imageUrl ? entry.imageUrl : undefined;
+    const spare = all.find((ref) => typeof ref?.path === 'string' && ref.version === entry.appearanceVersion) ?? all.find((ref) => typeof ref?.path === 'string');
+    const file = typeof matched[0]?.path === 'string' ? matched[0].path : imageUrl ?? (spare?.path as string | undefined);
+    if (file && !matched.length && condition && all.length)
+      warn(`no ${id} reference is drawn as ${condition}, so ${file === imageUrl ? 'its imageUrl' : `its ${typeof spare?.condition === 'string' ? spare.condition + ' ' : ''}reference`} stands in — add one for that condition`);
+    const skipped: string[] = [];
+    const english = (field: string, value: unknown) => {
+      if (typeof value !== 'string' || !value.trim() || value === 'unknown') return '';
+      const kept = latin(value); if (!kept) skipped.push(field); return kept;
+    };
+    const holderId = english('holder', state?.holderId);
+    const holder = holderId ? `held by ${holderId}` : state?.holderId === null ? 'not held' : '';
+    const place = english('location', state?.location), cond = english('condition', state?.condition), pos = english('position', snap.position);
+    const detail = [english('description', snap.description), holder, place && `at ${place}`, cond && `condition ${cond}`, pos && `screen position ${pos}`].filter(Boolean).join('; ');
+    if (skipped.length) warn(`the ${id} prop's ${skipped.join(', ')} is not English and stays out of the image prompt — write it in English on the prop sheet`);
+    const purpose = `the ${id} prop` + (detail ? `: ${detail}` : '');
+    if (file) refs.push({ id: `${shotId}-prop-${id}`, path: file, role: 'prop', use: 'image', purpose });
+    else {
+      warn(`the ${id} prop has no picture (references or imageUrl), so the model draws it from the prompt alone — add its image to the prop sheet`);
+      unseen.push(`Also show ${purpose}.`);
+    }
+  }
+  return { refs, unseen };
+}
 function docEntry(win: Board, kind: 'locations' | 'props', id: string): Record<string, unknown> {
   const list = (win.SB_DOC as Record<string, unknown> | undefined)?.[kind];
   const entry = (Array.isArray(list) ? list : []).find((item) => (item as { id?: unknown })?.id === id);
@@ -1303,13 +1350,11 @@ export function shotImageRequest(args: z.infer<typeof shotImageSchema>): ShotIma
   const composition: ImageRef[] = set ? [{ id: `${args.id}-set`, path: set[args.frame].path, role: 'composition', use: 'image',
     purpose: args.frame === 'end' ? `the ${set.name} set from the same camera at the end of the shot, where every object${set.blocked ? ' and figure' : ''} stands when it ends`
       : `the ${set.name} set seen from this shot's camera (${lens}): its viewpoint, framing${dutch ? '' : ' and horizon'}, the architecture and where every object${set.blocked ? ' and coloured figure' : ''} stands; its plain unpainted surfaces are placeholders` }] : [];
+  const propPictures = propRefs(win, shots.indexOf(shot), args.id, props, args.frame, warnings);
   const refs: ImageRef[] = [
     ...composition,
     ...characterRefs(boardDir, win, args.id, cast, frames.mode === 'reference' ? 'both' : 'image', warnings),
-    ...props.flatMap((id) => {
-      const entry = docEntry(win, 'props', id), file = (entry.references as Array<{ path?: string }> | undefined)?.[0]?.path ?? entry.imageUrl;
-      return typeof file === 'string' ? [{ id: `${args.id}-prop-${id}`, path: file, role: 'prop', use: 'image', purpose: `the ${id} prop` }] : [];
-    }),
+    ...propPictures.refs,
     // MSR takes the start image in its background slot, so the place only conditions the picture.
     ...(typeof place === 'string' ? [{ id: `${args.id}-place`, path: place, role: 'background', use: 'image',
       purpose: set ? `how the ${location} location looks — materials, colours and light only, not its viewpoint or layout` : `the ${location} location` }] : []),
@@ -1339,7 +1384,7 @@ export function shotImageRequest(args: z.infer<typeof shotImageSchema>): ShotIma
       + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : '');
   const prompt = [ordered.length ? 'Compose one picture from these images.' : '', roles, lock, heightSentence(win, cast),
     args.frame === 'end' ? 'This is the last frame of the shot that opens on Image 1: keep its place, light and every identity, and change only what the action changed.' : '',
-    body.charAt(0).toUpperCase() + body.slice(1)].filter(Boolean).join(' ');
+    ...propPictures.unseen, body.charAt(0).toUpperCase() + body.slice(1)].filter(Boolean).join(' ');
 
   const call = imageCall({ directory: episode, assetId: args.id, inputs, prompt, width, height, outDir: join(boardDir, 'images'), stem: `${args.id}-${args.frame}`, what: 'this frame' });
   const sent = refs.filter((ref) => ordered.includes(ref));
