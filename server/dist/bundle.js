@@ -89807,6 +89807,7 @@ function shotImageRequest(args) {
   const call = imageCall({ directory: episode, assetId: args.id, inputs, prompt, width, height, outDir: join9(boardDir, "images"), stem: `${args.id}-${args.frame}`, what: "this frame" });
   return { episode, assetId: args.id, ...call, refs, ...location ? { location } : {}, props, prompt, warnings };
 }
+var NEGATIVE_PROMPT_ENGINES = /* @__PURE__ */ new Set(["astra-genai-native"]);
 function imageCall(o) {
   const { directory: directory2, inputs, prompt, width, height } = o;
   const { selection } = imageContext(directory2, o.assetId);
@@ -89836,7 +89837,9 @@ function imageCall(o) {
   const edit2 = sent.length > 0, tool2 = edit2 ? adapter2.tool : void 0;
   const output2 = { outputPath: dirname5(file), filename: basename6(file) };
   const args = selection.engine === "host" ? { prompt, referenceImages: sent, savePath: file, size: `${width}x${height}` } : selection.engine === "gpt-image" ? { prompt, savePath: file, size: `${width}x${height}`, ...edit2 ? { sourceImagesBase64: sent.map(base642), sourceMimeType: readImageMetadata(sent[0]).mimeType || "image/png" } : {} } : selection.engine === "astra-genai" ? { prompt, size: `${width}*${height}`, ...output2, ...edit2 ? { mode: "img2img", imagePath: sent[0] } : {} } : ["mlx", "zimage"].includes(selection.engine) ? { prompt, width, height, ...output2, ...edit2 ? { imagePath: sent[0], refImagePaths: sent.slice(1) } : {} } : { prompt, size: `${width}x${height}`, ...output2, ...edit2 ? { imagePath: sent[0], refImagePaths: sent.slice(1), mode: "edit" } : {} };
-  return { requestId, ...tool2 ? { tool: tool2 } : {}, operation: edit2 ? "edit" : "text", args, file, inputs: sent };
+  const negativeSent = !!o.negativePrompt && NEGATIVE_PROMPT_ENGINES.has(selection.engine);
+  if (negativeSent) args.negativePrompt = o.negativePrompt;
+  return { requestId, ...tool2 ? { tool: tool2 } : {}, operation: edit2 ? "edit" : "text", args, file, inputs: sent, negativeSent };
 }
 function recordShotImage(args, request) {
   const { win, st } = readOutline(args.path);
@@ -94786,6 +94789,7 @@ Do NOT use it for scene images (shot_image) or text-bearing art. Refused (charac
       identityPath: { type: "string", description: "Absolute <channel>/assets/characters/<id>/identity.md" },
       view: { type: "string", enum: ["face", "front", "back"], description: "face: 1:1 head close-up \xB7 front / back: 2:3 headless body" },
       references: { type: "array", maxItems: 4, items: { type: "string" }, description: "Pictures to edit from, in order (absolute or relative to the character folder); [] draws from text. Default: none for face, the face panel for front, the front then face panels for back" },
+      negativePrompt: { type: "string", minLength: 1, maxLength: 1e3, description: "Extra things to keep out, added to the default (front/back: head, face, hair, ears, tusks, helmet; every view: text, watermark, collage), e.g. beard. Sent only to models that take one (astra-genai-native)." },
       reserveUsd: { type: "number", minimum: 0, description: "API reservation estimate, as in image_plan" }
     } }
   },
@@ -107055,12 +107059,17 @@ var characterPanelSchema = external_exports.object({
   identityPath: external_exports.string().min(1).describe("<channel>/assets/characters/<id>/identity.md"),
   view: external_exports.enum(["face", "front", "back"]),
   references: external_exports.array(external_exports.string().min(1)).max(4).optional().describe("Pictures to edit from, in order; default: none for face, the face panel for front, the front then face panel for back"),
+  negativePrompt: external_exports.string().trim().min(1).max(1e3).optional().describe("Extra things to keep out, added to the view's default negative prompt, e.g. beard"),
   reserveUsd: external_exports.number().finite().nonnegative().optional()
 }).strict();
 var FRAMING = {
   face: { size: [1024, 1024], text: "Close head portrait of one character, front facing, neutral expression, the complete head and hair visible, the head filling 70 percent of the image height." },
   front: { size: [1024, 1536], text: "Headless front costume mannequin of this character: nothing above the neck, from the neck and shoulders down to the shoes, neutral stance, arms relaxed, the subject filling 85 percent of the image height." },
   back: { size: [1024, 1536], text: "Headless rear view of the same costume mannequin, turned 180 degrees away from the camera, from the neck and shoulders down to the heels, the subject filling 85 percent of the image height." }
+};
+var NEGATIVE = {
+  face: "text, watermark, collage, multiple views, border",
+  body: "head, face, hair, ears, tusks, helmet, text, watermark, collage, multiple views, border"
 };
 var PROMPT_LIMIT = { "astra-genai": 800 };
 function characterPanelRequest(raw) {
@@ -107098,12 +107107,14 @@ function characterPanelRequest(raw) {
   const limit2 = PROMPT_LIMIT[readImageContext(workspace, `${id}-${args.view}`).selection.engine] ?? Infinity;
   const { words, prompt } = [compose(false, true), compose(true, true), compose(true, false)].find((p) => p.prompt.length <= limit2) ?? compose(true, false);
   const [width, height] = FRAMING[args.view].size;
-  const call = imageCall({ directory: workspace, assetId: `${id}-${args.view}`, inputs: references, prompt, width, height, outDir: folder, stem: `${id}-${args.view}`, what: "this panel" });
+  const negativePrompt = [NEGATIVE[args.view === "face" ? "face" : "body"], args.negativePrompt].filter(Boolean).join(", ");
+  const call = imageCall({ directory: workspace, assetId: `${id}-${args.view}`, inputs: references, prompt, negativePrompt, width, height, outDir: folder, stem: `${id}-${args.view}`, what: "this panel" });
   const warnings = [
+    ...call.negativeSent ? [] : ["the saved image model takes no negative prompt; only the prompt keeps the head out"],
     ...words.skipped.map((field2) => `${field2} is not English and stays out of the prompt \u2014 write it in English on the sheet`),
     ...prompt.length > limit2 ? [`the prompt is ${prompt.length} characters, over the image model's ${limit2}; shorten the sheet's physical fields`] : []
   ];
-  return { workspace, folder, id, view: args.view, panelsFile, prompt, warnings, ...call };
+  return { workspace, folder, id, view: args.view, panelsFile, prompt, negativePrompt: call.negativeSent ? negativePrompt : void 0, warnings, ...call };
 }
 function recordCharacterPanel(request) {
   const doc = existsSync35(request.panelsFile) ? JSON.parse(readFileSync35(request.panelsFile, "utf8")) : { schemaVersion: 1, panels: {} };
@@ -108648,6 +108659,7 @@ ROUTES.character_panel = async (args) => {
     "",
     "Prompt:",
     request.prompt,
+    ...request.negativePrompt ? ["", "Negative prompt:", request.negativePrompt] : [],
     ...request.warnings.length ? ["", "Warnings:", ...request.warnings.map((w) => "  " + w)] : []
   ];
   if (plan2.execution === "host_handoff") lines.push("", "host_handoff: generate this picture with the selected host image tool from the inputs above, in order, save it to the panel path, then record it in panels.json.");

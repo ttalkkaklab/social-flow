@@ -1661,7 +1661,7 @@ ROUTES.character_panel = async args => {
     recordCharacterPanel(request);
   }
   const lines = [`${request.view} panel: ${request.file}`, 'Inputs, in order:', ...request.inputs.map((file, i) => `  Image ${i + 1}: ${file}`),
-    '', 'Prompt:', request.prompt, ...(request.warnings.length ? ['', 'Warnings:', ...request.warnings.map((w) => '  ' + w)] : [])];
+    '', 'Prompt:', request.prompt, ...(request.negativePrompt ? ['', 'Negative prompt:', request.negativePrompt] : []), ...(request.warnings.length ? ['', 'Warnings:', ...request.warnings.map((w) => '  ' + w)] : [])];
   if (plan.execution === 'host_handoff') lines.push('', 'host_handoff: generate this picture with the selected host image tool from the inputs above, in order, save it to the panel path, then record it in panels.json.');
   return text(lines.join('\n'));
 };

@@ -1258,7 +1258,9 @@ export function shotImageRequest(args: z.infer<typeof shotImageSchema>): ShotIma
  * The adapter call for one generated picture with the saved image model: the next free versioned
  * file <outDir>/<stem>-vN.png and the engine's own argument shape, editing from the inputs in order.
  */
-export function imageCall(o: { directory: string; assetId: string; inputs: string[]; prompt: string; width: number; height: number; outDir: string; stem: string; what: string }) {
+// Adapters whose request carries a negative prompt; the others ignore it and the caller says so.
+const NEGATIVE_PROMPT_ENGINES = new Set(['astra-genai-native']);
+export function imageCall(o: { directory: string; assetId: string; inputs: string[]; prompt: string; negativePrompt?: string; width: number; height: number; outDir: string; stem: string; what: string }) {
   const { directory, inputs, prompt, width, height } = o;
   const { selection } = imageContext(directory, o.assetId);
   const adapter = selection.engine === 'mlx' ? { tool: 'mlx_image_edit', max: MLX_INPUTS[mlxImageFamily(selection.model)] ?? 0 } : IMAGE_INPUTS[selection.engine] ?? { max: 0 };
@@ -1290,7 +1292,9 @@ export function imageCall(o: { directory: string; assetId: string; inputs: strin
     : selection.engine === 'astra-genai' ? { prompt, size: `${width}*${height}`, ...output, ...(edit ? { mode: 'img2img', imagePath: sent[0] } : {}) }
     : ['mlx', 'zimage'].includes(selection.engine) ? { prompt, width, height, ...output, ...(edit ? { imagePath: sent[0], refImagePaths: sent.slice(1) } : {}) }
     : { prompt, size: `${width}x${height}`, ...output, ...(edit ? { imagePath: sent[0], refImagePaths: sent.slice(1), mode: 'edit' } : {}) };
-  return { requestId, ...(tool ? { tool } : {}), operation: (edit ? 'edit' : 'text') as 'edit' | 'text', args, file, inputs: sent };
+  const negativeSent = !!o.negativePrompt && NEGATIVE_PROMPT_ENGINES.has(selection.engine);
+  if (negativeSent) args.negativePrompt = o.negativePrompt;
+  return { requestId, ...(tool ? { tool } : {}), operation: (edit ? 'edit' : 'text') as 'edit' | 'text', args, file, inputs: sent, negativeSent };
 }
 
 /** Record a generated (or host-handed) frame on the board: frames.start/bg or frames.end, with its inputs. */
