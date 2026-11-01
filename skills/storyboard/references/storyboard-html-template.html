@@ -412,6 +412,27 @@
     .cs-info { padding: 0; }
   }
 
+  /* Background card: a landscape stage with its strip below, facts on the right, the 3D slot across. */
+  .loc-card { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
+  .loc-media { min-width: 0; display: grid; gap: var(--s2); align-content: start; }
+  .loc-stage { aspect-ratio: 16 / 9; }
+  .loc-stage.empty { grid-column: auto; aspect-ratio: 16 / 9; }
+  .loc-strip { display: flex; gap: var(--s2); overflow-x: auto; padding-bottom: var(--s1); scroll-snap-type: x proximity; }
+  .loc-strip .cs-thumb { flex: 0 0 96px; scroll-snap-align: start; }
+  .loc-strip .cs-thumb-img { aspect-ratio: 16 / 9; }
+  .loc-strip .cs-thumb > span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .loc-links { margin: 0; }
+  .loc-viewer { grid-column: 1 / -1; margin: 0; }
+  .loc-viewer .location-review { margin: 0; }
+  .loc-viewer:has(.location-review) .loc-open { display: none; }
+  .loc-open {
+    font: inherit; font-size: var(--t-aux); font-weight: 600; color: var(--accent-ink); cursor: pointer;
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 8px; padding: var(--s2) var(--s4); min-height: 44px;
+  }
+  .loc-open:hover { border-color: var(--accent); }
+  @media (max-width: 760px) { .loc-card { grid-template-columns: minmax(0, 1fr); } .loc-stage { max-width: none; } }
+
   /* ── Camera slots ─────────────────────────────────────── */
   .cam { display: flex; flex-wrap: wrap; gap: var(--s1); margin-top: var(--s1); }
   .cam span {
@@ -1340,6 +1361,7 @@
 
 <script src="./review-typography.js"></script>
 <script src="./review-files.js"></script>
+<script src="./location-review-data.js"></script>
 <!-- video_approve writes it once the user approves a shot's video; absent until then -->
 <script src="./video-approvals.js"></script>
 <script src="./scenes.js"></script>
@@ -5071,61 +5093,106 @@ window.STORYBOARD_READY = (async function () {
       if (/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c.id || "")) h += '<a class="cs-sheet" href="../../../assets/characters/' + encodeURIComponent(c.id) + '/index.html">' + esc(T.castSheet) + "</a>";
       h += "</div></article>";
     });
-    document.addEventListener("click", function (e) {
-      var btn = e.target.closest && e.target.closest(".cs-thumb");
-      if (!btn) return;
-      var card = btn.closest(".cast-card"), img = card.querySelector(".cs-stage img");
-      card.querySelector(".cs-stage").setAttribute("data-kind", btn.getAttribute("data-kind"));
-      img.style.visibility = ""; img.src = btn.getAttribute("data-src"); img.alt = btn.getAttribute("data-alt");
-      card.querySelector(".cs-pill").textContent = btn.getAttribute("data-label");
-      card.querySelectorAll(".cs-thumb").forEach(function (b) { b.setAttribute("aria-pressed", b === btn ? "true" : "false"); });
-    });
     h += "</div>";
   }
+  // One strip handler for cast and background cards: the picked thumbnail takes the stage.
+  if (CAST.length || (Array.isArray(DOC.locations) && DOC.locations.length)) document.addEventListener("click", function (e) {
+    var btn = e.target.closest && e.target.closest(".cs-thumb");
+    if (!btn) return;
+    var card = btn.closest(".cast-card"), img = card.querySelector(".cs-stage img");
+    if (btn.hasAttribute("data-kind")) card.querySelector(".cs-stage").setAttribute("data-kind", btn.getAttribute("data-kind"));
+    img.style.visibility = ""; img.src = btn.getAttribute("data-src"); img.alt = btn.getAttribute("data-alt");
+    card.querySelector(".cs-pill").textContent = btn.getAttribute("data-label");
+    card.querySelectorAll(".cs-thumb").forEach(function (b) { b.setAttribute("aria-pressed", b === btn ? "true" : "false"); });
+  });
 
-  /* Background/location planning sheets work without a generated set or WebGL. */
+  /* Background/location sheets, after the cast card: the reference image and the set's angle sheet
+     on a stage with a strip, the facts beside them, and a slot the 3D viewer moves into
+     (location-review-runtime.js). Text and images still read without a built set or WebGL. */
   function locationSheetsHtml(doc, shots) {
     var ko = LANG === "ko";
     var word = function (a, b) { return ko ? a : b; };
     var entries = Array.isArray(doc.locations) ? doc.locations : [];
-    var html = '<section class="prop-sheet" id="location-sheets"><h2>' +
-      word("배경·장소 시트", "Background / location sheets") + '</h2>';
+    var html = '<section id="location-sheets"><h2 class="sec">' + esc(word("배경 시트", "Background sheets")) +
+      '<span class="aside">' + esc(word("참조 이미지 · 3D 세트 · 각도 시트", "Reference · 3D set · angle sheet")) + '</span></h2>';
     var safePath = function (value) {
       if (typeof value !== "string" || !value.trim() || /[\x00-\x20]/.test(value)) return false;
       return !/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(value) || /^https?:\/\//i.test(value);
     };
     if (!entries.length) {
-      return html + '<p>' + esc((doc.assetSheetNotes || {}).locations ||
-        word("배경·장소 시트를 아직 작성하지 않았습니다.", "Background/location sheets have not been written yet.")) + '</p></section>';
+      return html + '<p class="cast-note">' + esc((doc.assetSheetNotes || {}).locations ||
+        word("배경 시트를 아직 작성하지 않았습니다.", "Background sheets have not been written yet.")) + '</p></section>';
     }
+    // Angle ids name the side the camera stands on, +Y being north (location_manage sheet).
+    var ANGLE = { n: ["북쪽에서", "From north"], ne: ["북동쪽에서", "From north-east"], e: ["동쪽에서", "From east"], se: ["남동쪽에서", "From south-east"],
+      s: ["남쪽에서", "From south"], sw: ["남서쪽에서", "From south-west"], w: ["서쪽에서", "From west"], nw: ["북서쪽에서", "From north-west"] };
+    var angleLabel = function (f, set) {
+      var m = /^orbit-([a-z]+)$/.exec(f.camera);
+      if (m && ANGLE[m[1]]) return word(ANGLE[m[1]][0], ANGLE[m[1]][1]);
+      if (f.camera === "top") return word("평면", "Plan");
+      if (set.cameras && set.cameras[f.camera]) return word("샷 카메라 ", "Shot camera ") + f.camera;
+      return word("추가 각도 ", "Added angle ") + f.camera;
+    };
+    html += '<div class="cast">';
     entries.forEach(function (entry) {
-      html += '<article class="prop-card" id="location-sheet-' + esc(encodeURIComponent(entry.id || "")) + '"><h3>' +
-        esc(entry.name || entry.id) + '</h3><code>' + esc(entry.id) + '</code>';
-      if (safePath(entry.imageUrl)) {
-        html += '<img loading="lazy" src="' + esc(entry.imageUrl) + '" alt="' + esc(entry.name || entry.id) + '">';
-      } else html += '<p class="prop-muted">' + word("참조 이미지 대기", "Reference image pending") + '</p>';
-      [["description", word("공간 설명", "Description")], ["layout", word("배치·동선", "Layout / movement")],
-        ["lighting", word("시간·조명", "Time / lighting")], ["invariants", word("고정 요소", "Invariants")]].forEach(function (field) {
+      var name = entry.name || entry.id;
+      var set = (window.LOCATION_REVIEW || []).filter(function (v) { return v.sheet && v.id === entry.id; })[0];
+      var frames = set && !set.error ? Object.keys(set.frames || {}).map(function (k) { return set.frames[k]; }) : [];
+      var states = frames.reduce(function (a, f) { if (a.indexOf(f.stateId) < 0) a.push(f.stateId); return a; }, []);
+      var panels = [];
+      if (safePath(entry.imageUrl)) panels.push({ src: entry.imageUrl, label: word("참조 이미지", "Reference image") });
+      frames.forEach(function (f) {
+        panels.push({ src: f.path, label: angleLabel(f, set) + (states.length > 1 ? " · " + ((set.states[f.stateId] || {}).label || f.stateId) : "") });
+      });
+      html += '<article class="cast-card loc-card" id="location-sheet-' + esc(encodeURIComponent(entry.id || "")) + '"><div class="loc-media">';
+      if (panels.length) {
+        html += '<div class="cs-stage loc-stage"><img src="' + esc(panels[0].src) + '" alt="' + esc(name + " " + panels[0].label) +
+          '" onerror="this.style.visibility=\'hidden\'"><span class="cs-pill">' + esc(panels[0].label) + '</span></div>';
+      } else html += '<div class="cs-stage loc-stage empty"><span class="cs-empty">' + esc(word("참조 이미지 대기", "Reference image pending")) + '</span></div>';
+      if (panels.length > 1) {
+        html += '<div class="loc-strip" role="group" aria-label="' + esc(word("이미지 고르기", "Pick an image")) + '">';
+        panels.forEach(function (pn, k) {
+          html += '<button type="button" class="cs-thumb" aria-pressed="' + (k ? "false" : "true") + '" data-src="' + esc(pn.src) +
+            '" data-label="' + esc(pn.label) + '" data-alt="' + esc(name + " " + pn.label) + '"><span class="cs-thumb-img"><img src="' + esc(pn.src) +
+            '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'"></span><span>' + esc(pn.label) + '</span></button>';
+        });
+        html += '</div>';
+      }
+      html += '</div><div class="cs-info"><header class="cs-head"><h3 class="cast-name">' + esc(name) + '</h3><code>' + esc(entry.id) + '</code></header>';
+      if (entry.description) html += '<p class="cast-role">' + esc(entry.description) + '</p>';
+      var facts = "";
+      [["layout", word("배치·동선", "Layout / movement")], ["lighting", word("시간·조명", "Time / lighting")], ["invariants", word("고정 요소", "Invariants")]].forEach(function (field) {
         var value = entry[field[0]];
         if (Array.isArray(value)) value = value.join(" · ");
-        html += '<p><b>' + field[1] + '</b> · ' + esc(value || word("작성 대기", "Pending")) + '</p>';
+        facts += '<dt>' + esc(field[1]) + '</dt><dd>' + esc(value || word("작성 대기", "Pending")) + '</dd>';
       });
-      [["sheetPath", word("공용 장소 시트", "Shared location sheet")], ["manifest", word("세트 데이터", "Set manifest")]].forEach(function (field) {
-        if (safePath(entry[field[0]])) html += '<p><a href="' + esc(entry[field[0]]) + '">' + field[1] + '</a></p>';
-      });
-      var detailLink = (window.LOCATION_DETAIL_LINKS || {})[entry.id];
-      if (safePath(detailLink)) html += '<p><a href="' + esc(detailLink) + '">' + word('배경 상세 · 3D 공간', 'Background detail · 3D space') + '</a></p>';
-      var links = [];
+      if (set && !set.error) facts += '<dt>' + esc(word("3D 세트", "3D set")) + '</dt><dd>v' + esc(set.revision) + ' · ' +
+        esc(Object.keys(set.states || {}).map(function (k) { return set.states[k].label; }).join(" · ")) + '</dd>';
+      html += '<dl class="cs-facts">' + facts + '</dl>';
+      if (entry.referenceNote) html += '<p class="cast-note">' + esc(entry.referenceNote) + '</p>';
+      var used = [];
       shots.forEach(function (shot, index) {
-        if ((shot.visual || {}).locationId === entry.id || ((shot.shot || {}).location || {}).id === entry.id) links.push('<a href="#shot-' + (index + 1) + '">' +
-          esc(word("샷 ", "Shot ") + (index + 1) + " · " + (shot.title || shot.id || "")) + '</a>');
+        if ((shot.visual || {}).locationId === entry.id || ((shot.shot || {}).location || {}).id === entry.id) used.push(index + 1);
       });
-      (window.LOCATION_REVIEW || []).filter(function (v) { return v.id === entry.id; }).forEach(function (v) {
-        html += '<p><a href="#location-shot-' + esc(v.shotId) + '" data-location-shot="' + esc(v.shotId) + '">' + esc(word('샷 배경 구도 · ', 'Shot background composition · ') + v.shotId) + '</a></p>';
-      });
-      html += '<p>' + (links.length ? links.join(" · ") : word("연결된 샷 없음", "No linked shots")) + '</p></article>';
+      html += '<div class="cs-shots"><div class="cs-label">' + esc(word("등장 샷", "Shots")) + (used.length ? " <b>" + used.length + "</b>" : "") + '</div>' +
+        (used.length ? '<div class="cs-chips">' + used.map(function (n) { return '<a href="#shot-' + n + '">' + n + '</a>'; }).join("") + '</div>'
+                     : '<p class="cast-note">' + esc(word("연결된 샷 없음", "No linked shots")) + '</p>') + '</div>';
+      var links = [];
+      var detailLink = (window.LOCATION_DETAIL_LINKS || {})[entry.id];
+      if (safePath(detailLink)) links.push('<a href="' + esc(detailLink) + '">' + esc(word("라이브러리 배경 상세", "Library background detail")) + '</a>');
+      if (safePath(entry.sheetPath)) links.push('<a href="' + esc(entry.sheetPath) + '">' + esc(word("공용 장소 시트", "Shared location sheet")) + '</a>');
+      if (safePath(entry.manifest)) links.push('<a href="' + esc(entry.manifest) + '">' + esc(word("세트 데이터", "Set manifest")) + '</a>');
+      if (links.length) html += '<p class="cs-sheet loc-links">' + links.join(" · ") + '</p>';
+      html += '</div>';
+      if (set && set.error) html += '<p class="loc-viewer cast-note">' + esc(word("3D 세트를 열 수 없습니다: ", "Cannot open the 3D set: ") + set.error) + '</p>';
+      else if (set) html += '<div class="loc-viewer" data-location-slot="' + esc(set.shotId) + '"><button type="button" class="loc-open" data-location-shot="' +
+        esc(set.shotId) + '">' + esc(word("3D 공간 돌려보기", "Explore the 3D space")) + '</button></div>';
+      else html += '<p class="loc-viewer cast-note">' + esc(word("3D 세트가 없습니다. location_manage build 로 세트를 만들고 시트의 manifest 에 적으면 여기서 돌려볼 수 있습니다.",
+        "No 3D set yet. Build one with location_manage and write its manifest on the sheet to explore it here.")) + '</p>';
+      html += '</article>';
     });
-    return html + '</section>';
+    // The one shared 3D viewer mounts here and moves into the card whose set is chosen.
+    return html + '</div><div id="location-viewer-host"></div></section>';
   }
   h += locationSheetsHtml(DOC, SCENES);
 
@@ -5297,7 +5364,6 @@ window.STORYBOARD_READY = (async function () {
 })();
 </script>
 <link rel="stylesheet" href="./location-review.css">
-<script src="./location-review-data.js"></script>
 <script>
 // Mount dependent views only after font metrics and storyboard rendering settle.
 window.STORYBOARD_READY = window.STORYBOARD_READY.then(async function () {

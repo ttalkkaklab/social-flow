@@ -295,12 +295,26 @@ test('storyboard mounts captures by stable shot id and withholds stale frames',(
 
 test('sheet view opens a built set without a shot and reports a broken manifest instead of throwing',()=>fixture(f=>{
   const view=L.sheetView(f.manifest);
-  assert.equal(view.sheet,true);assert.equal(view.shotId,'sheet');assert.equal(view.stateId,Object.keys(f.m.states)[0]);
+  assert.equal(view.sheet,true);assert.equal(view.shotId,'sheet-'+f.m.id);assert.equal(view.stateId,Object.keys(f.m.states)[0]);
   assert.deepEqual(view.camera,{...f.m.cameras[Object.keys(f.m.cameras)[0]],end:undefined});
   assert.equal(view.glb,path.join(f.dir,'asset/preview.glb'));assert.equal(view.blocking,null);assert.deepEqual(view.frames,{});
   fs.appendFileSync(path.join(f.dir,'asset/preview.glb'),'tamper');
   const broken=L.sheetView(f.manifest);assert.equal(broken.sheet,true);assert.match(broken.error,/changed location glb/);
 }));
+
+test('sheet view lists the angle sheet rendered from this manifest and skips one from another revision',()=>fixture(f=>{
+  const angles=path.join(f.dir,'asset/angles');
+  for(const [state,sha] of [['day',L.fileHash(f.manifest)],['night','0'.repeat(64)]]){fs.mkdirSync(path.join(angles,state),{recursive:true});fs.writeFileSync(path.join(angles,state,'sheet.json'),JSON.stringify({manifestSha256:sha,stateId:state,frames:{'orbit-n':{path:'orbit-n.png',sha256:'x'}}}));}
+  assert.deepEqual(L.sheetView(f.manifest).frames,{['orbit-n · '+f.m.states.day.label]:{path:path.join(angles,'day/orbit-n.png'),sha256:'x',camera:'orbit-n',stateId:'day'}});
+}));
+
+test('angle cameras frame the standing objects, not the flat floor, from eight sides and above',()=>{
+  const m={cameras:{a:{width:640,height:360}},objects:[{position:[0,0,-.1],size:[40,40,.2]},{position:[1,1,1],size:[2,2,2]}]};
+  const c=L.angleCameras(m);
+  assert.deepEqual(Object.keys(c),['orbit-n','orbit-ne','orbit-e','orbit-se','orbit-s','orbit-sw','orbit-w','orbit-nw','top']);
+  assert.deepEqual(c.top.target,[1,1,1]);assert.ok(c['orbit-n'].position[1]>1&&c['orbit-s'].position[1]<1);
+  assert.ok(Math.hypot(...c['orbit-n'].position.map((v,i)=>v-1))<10);assert.equal(c.top.width,640);
+});
 
 test('walk step moves eye and look target together on the floor plane',()=>{
   const source=fs.readFileSync(new URL('../location-review-runtime.mjs',import.meta.url),'utf8');

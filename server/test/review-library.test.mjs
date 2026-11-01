@@ -327,6 +327,8 @@ test('background detail opens the sheet manifest set before any shot binds it', 
     assert.ok(detail.includes('id="location-viewer-host"'));
     const views = JSON.parse(detail.match(/window\.LOCATION_REVIEW=(\[.*?\]);<\/script>/)[1]);
     assert.equal(views.length, 1); assert.equal(views[0].sheet, true); assert.equal(views[0].glb, '../room/v1/preview.glb');
+    // file:// cannot fetch the GLB, so the page carries its bytes under the same path.
+    assert.equal(Buffer.from(JSON.parse(detail.match(/window\.LOCATION_GLB=(\{.*?\});<\/script>/)[1])['../room/v1/preview.glb'], 'base64').toString(), 'glb');
     assert.ok(readFileSync(join(f.dir, 'assets/locations/details', L.detailFilename('one', 'yard')), 'utf8').includes('No bound 3D set'));
     writeFileSync(join(f.dir, 'assets/locations/room/v1/preview.glb'), 'tampered');
     exportChannel(f.dir);

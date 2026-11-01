@@ -33,6 +33,17 @@ function refreshHtml(template, current) {
   return replaceEditable(titled, METADATA, 'template SB_DOC block', metadata);
 }
 
+// Each background sheet's own built set (SB_DOC.locations[].manifest), with its angle sheet, paths relative to the board.
+function locationSheets(win, dir) {
+  const L = require('./location-assets.js');
+  const relative = file => path.relative(dir, file).split(path.sep).join('/');
+  return (win.SB_DOC?.locations || []).filter(e => typeof e?.manifest === 'string' && /^[^/\\:]/.test(e.manifest) && fs.existsSync(path.resolve(dir, e.manifest)))
+    .map(e => {
+      const v = { ...L.sheetView(path.resolve(dir, e.manifest)), id: e.id, shotId: 'sheet-' + e.id };
+      return v.error ? v : { ...v, glb: relative(v.glb), frames: Object.fromEntries(Object.entries(v.frames).map(([k, f]) => [k, { ...f, path: relative(f.path) }])) };
+    });
+}
+
 function storyboardHtml(directory, check = false) {
   const dir = path.resolve(directory);
   const target = path.join(dir, 'storyboard.html');
@@ -41,7 +52,10 @@ function storyboardHtml(directory, check = false) {
   const html = current === null ? template : refreshHtml(template, current);
   const available = ['storyboard.md', 'script.md', 'research.md', 'scenes.js'].filter(name => fs.existsSync(path.join(dir, name)));
   const win = fs.existsSync(path.join(dir, 'scenes.js')) ? require('../../autoproduce/references/cost-preview.js').readScenes(path.join(dir, 'scenes.js')) : null;
-  const locationData = win ? require('./location-assets.js').preview(win, dir) : [];
+  const locationData = win ? [...locationSheets(win, dir), ...require('./location-assets.js').preview(win, dir)] : [];
+  // file:// pages cannot fetch a GLB, so the data file carries each set's bytes, keyed by the path an entry names.
+  const glbs = {};
+  for (const v of locationData) if (v.glb && !glbs[v.glb]) glbs[v.glb] = fs.readFileSync(path.resolve(dir, v.glb)).toString('base64');
   const locationLinks=Object.fromEntries((win?.SB_DOC?.locations||[]).map(e=>[e.id,'../../../assets/locations/details/'+require('./location-assets.js').detailFilename(path.basename(path.dirname(dir)),e.id)]));
   const portraits = {};
   const typeLabels = Object.fromEntries(require('../../_shared/video-types.json').types.map(type => [type.id, type.label]));
@@ -59,7 +73,7 @@ function storyboardHtml(directory, check = false) {
     'window.REVIEW_CHARACTER_PORTRAITS = ' + JSON.stringify(portraits).replace(/</g, '\\u003c') + ';\n' +
     'window.REVIEW_VIDEO_TYPES = ' + JSON.stringify(typeLabels).replace(/</g, '\\u003c') + ';\n';
   const catalogue = require('./film-techniques.js');
-  const files = [['film-techniques.json', JSON.stringify({version:catalogue.VERSION, entries:catalogue.entries}, null, 2) + '\n'], ['location-review-data.js', 'window.LOCATION_REVIEW = ' + JSON.stringify(locationData).replace(/</g, '\\u003c') + ';\n'], ['storyboard.html', html], ['review-files.js', reviewData], ...HELPERS.map(name => [name, fs.readFileSync(path.join(__dirname, name))]),
+  const files = [['film-techniques.json', JSON.stringify({version:catalogue.VERSION, entries:catalogue.entries}, null, 2) + '\n'], ['location-review-data.js', 'window.LOCATION_REVIEW = ' + JSON.stringify(locationData).replace(/</g, '\\u003c') + ';\nwindow.LOCATION_GLB = ' + JSON.stringify(glbs) + ';\n'], ['storyboard.html', html], ['review-files.js', reviewData], ...HELPERS.map(name => [name, fs.readFileSync(path.join(__dirname, name))]),
     ...ASSETS.map(name => [name, fs.readFileSync(path.join(REVIEW_ASSETS, name))])];
   const changed = files.filter(([name, content]) => {
     const file = path.join(dir, name);

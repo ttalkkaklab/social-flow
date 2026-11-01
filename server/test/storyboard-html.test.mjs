@@ -171,7 +171,9 @@ test('location planning sheets render without Blender, link shots and distinguis
   const start = template.indexOf('  function locationSheetsHtml(');
   const end = template.indexOf('  h += locationSheetsHtml', start);
   const context = {
-    window: {LOCATION_DETAIL_LINKS:{room:'../../../assets/locations/details/room.html'},LOCATION_REVIEW:[{id:'room',shotId:'s1'}]},
+    window: {LOCATION_DETAIL_LINKS:{room:'../../../assets/locations/details/room.html'},LOCATION_REVIEW:[{id:'room',shotId:'s1'},
+      {sheet:true,id:'room',shotId:'sheet-room',revision:2,states:{day:{label:'낮'}},cameras:{wide:{}},frames:{
+        'orbit-n · 낮':{path:'../../../assets/locations/room/v2/angles/day/orbit-n.png',camera:'orbit-n',stateId:'day'},'wide · 낮':{path:'w.png',camera:'wide',stateId:'day'}}}]},
     LANG: 'ko', esc: value => String(value ?? '').replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;'),
     doc: { locations: [{ id: 'room', name: '작업실 <동쪽>', description: '작은 방', layout: '서쪽 문, 중앙 탁자', lighting: '오후 창빛', invariants: ['문 위치', '탁자 위치'], sheetPath: '../../../assets/locations/room/index.html' }] },
     shots: [{ id: 's1', title: '컵 전달', visual: { locationId: 'room' } }, { id: 's2', visual: { locationId: 'street' } }],
@@ -179,11 +181,16 @@ test('location planning sheets render without Blender, link shots and distinguis
   const render = () => runInNewContext(template.slice(start, end) + '\nlocationSheetsHtml(doc, shots)', context);
   assert.match(render(), /작업실 &lt;동쪽>/);
   assert.match(render(), /서쪽 문, 중앙 탁자/);
-  assert.match(render(), /data-location-shot="s1"/);
+  // The set's angle sheet fills the strip and the 3D viewer gets a slot in the card.
+  assert.match(render(), /data-location-slot="sheet-room"/);
+  assert.match(render(), /data-src="\.\.\/\.\.\/\.\.\/assets\/locations\/room\/v2\/angles\/day\/orbit-n.png"/);
+  assert.match(render(), /북쪽에서/);
+  assert.match(render(), /샷 카메라 wide/);
   assert.match(render(), /details\/room.html/);
   assert.match(render(), /문 위치 · 탁자 위치/);
   assert.match(render(), /href="#shot-1"/);
   assert.doesNotMatch(render(), /href="#shot-2"/);
+  context.window.LOCATION_REVIEW[1].frames = {};
   assert.match(render(), /참조 이미지 대기/);
   context.doc.locations[0].imageUrl = 'javascript:alert(1)';
   context.doc.locations[0].sheetPath = 'data:text/html,unsafe';
@@ -196,7 +203,7 @@ test('location planning sheets render without Blender, link shots and distinguis
   assert.match(render(), /해당 없음: 추상 그래프/);
   assert.doesNotMatch(render(), /아직 작성하지 않았습니다/);
   context.LANG = 'en'; context.doc = {};
-  assert.match(render(), /Background\/location sheets have not been written yet/);
+  assert.match(render(), /Background sheets have not been written yet/);
 });
 
 
@@ -290,4 +297,25 @@ test('every angle shot_icons takes has a review icon and a Korean name',()=>{
  assert.deepEqual(Object.keys(icons.angles).sort(),[...VOCAB.ANGLES].sort());
  const ko=template.match(/angle: \{ eye: "눈높이"[^}]*\}/)[0];
  assert.deepEqual([...ko.matchAll(/(\w+): "/g)].map(m=>m[1]).sort(),[...VOCAB.ANGLES].sort());
+});
+
+test('each background sheet carries its built set and the GLB bytes a file URL cannot fetch', () => {
+  const root = mkdtempSync(join(tmpdir(), 'sf-board-location-'));
+  try {
+    const L = require('../../skills/storyboard/references/location-assets.js');
+    const { spec } = require('../../skills/storyboard/references/location-example.js');
+    const set = join(root, 'assets', 'locations', 'room', 'v1'), board = join(root, 'episodes', 'one', 'storyboard');
+    mkdirSync(set, { recursive: true }); mkdirSync(board, { recursive: true });
+    const m = structuredClone(spec); m.assets = {};
+    for (const [k, n] of [['blend', 'source.blend'], ['glb', 'preview.glb']]) { writeFileSync(join(set, n), k); m.assets[k] = { path: n, sha256: L.fileHash(join(set, n)) }; }
+    writeFileSync(join(set, 'location.json'), JSON.stringify(m));
+    writeFileSync(join(board, 'scenes.js'), 'window.SCENES=[]; window.SB_DOC=' + JSON.stringify({ locations: [{ id: 'room', manifest: '../../../assets/locations/room/v1/location.json' }] }));
+    storyboardHtml(board);
+    const context = { window: {} };
+    runInNewContext(readFileSync(join(board, 'location-review-data.js'), 'utf8'), context);
+    const [sheet] = context.window.LOCATION_REVIEW;
+    assert.equal(sheet.shotId, 'sheet-room'); assert.equal(sheet.glb, '../../../assets/locations/room/v1/preview.glb');
+    assert.equal(Buffer.from(context.window.LOCATION_GLB[sheet.glb], 'base64').toString(), 'glb');
+    assert.deepEqual(storyboardHtml(board, true), []);
+  } finally { rmSync(root, { recursive: true, force: true }); }
 });

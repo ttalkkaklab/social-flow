@@ -86,7 +86,7 @@ States map IDs to `{label,light:0..5,objects:{objectId:{position?,rotation?,visi
 
 Call `location_manage` with `{action:"build",spec:"/absolute/spec.json",root:"/absolute/data/channel/assets/locations"}`. It creates `id/vN/location.json`, `source.blend`, `preview.glb` and hashes. Existing versions are never overwritten. Change the spec and increment revision for edits. GLB is the browser preview; Blender renders are the appearance authority. Do not edit generated files in place. Write the returned manifest path on the background sheet (`SB_DOC.locations[].manifest`, relative to the storyboard directory, through `storyboard_apply` globals) so the sheet's detail page opens the set; bump that path when a new revision replaces it.
 
-`{action:"sheet",manifest:".../location.json",stateId:"day",output:"/new/sheet-directory"}` renders every registered camera from the same set/state. Inspect these real images before committing to a set. Regenerate into a new directory after changes.
+`{action:"sheet",manifest:".../location.json",stateId:"day"}` renders the set's angle sheet: every registered camera, eight compass angles (`orbit-n` … `orbit-nw`, named for the side the camera stands on, +Y being north) and a plan view (`top`), framed on the standing objects so a large ground plane does not push the cameras away. Without `output` it replaces `vN/angles/<stateId>/` with the PNGs and a `sheet.json` (manifest hash, camera of each frame, hashes); the storyboard's background card and the library detail page list those images. One state takes about 20–50 s locally. `cameras:{"view-1":{position,target,lensMm,width,height}}` adds an angle that later calls keep, and `null` removes one; the 3D viewer's "이 각도 내보내기" button downloads such a file from the angle being viewed. With `output` the call writes a one-off sheet into a new directory instead. Inspect these real images before committing to a set.
 
 ## Bind and render a shot
 
@@ -100,7 +100,7 @@ A generated video's grey motion previz and the location still share the same num
 
 ## Interactive review and camera changes
 
-Refresh with `storyboard-html.js`. Each storyboard shot presents the background + character references → shot image → video workflow. Separate background and character groups sit below the main shot image. The fresh Blender start composition is visible; an optional disclosure holds the end composition. Each linked character has one portrait, with details available on hover, keyboard activation or tap. Top/side review views stay in the background detail sheet. References are planned inputs, not proof of a provider call. Missing or stale captures show a render-needed message. The interactive GLB viewer lives in the background detail sheet, with orbit, shot camera, top view, wall visibility, object lookup, camera-path scrub, reference images, and a walk mode: the reviewer stands in the set at 1.6 m eye height, drags to look around and moves on the floor with WASD or arrow keys (Shift runs, Esc stops). Walking has no collision and never edits the shot. Serve the channel directory over local HTTP; file URL GLB loading is not guaranteed by browsers. All runtime assets are bundled; no CDN is required.
+Refresh with `storyboard-html.js`. Each storyboard shot presents the background + character references → shot image → video workflow. Separate background and character groups sit below the main shot image. The fresh Blender start composition is visible; an optional disclosure holds the end composition. Each linked character has one portrait, with details available on hover, keyboard activation or tap. Top/side review views stay in the background detail sheet. References are planned inputs, not proof of a provider call. Missing or stale captures show a render-needed message. The interactive GLB viewer lives in the background detail sheet, with orbit, shot camera, top view, wall visibility, object lookup, camera-path scrub, reference images, and a walk mode: the reviewer stands in the set at 1.6 m eye height, drags to look around and moves on the floor with WASD or arrow keys (Shift runs, Esc stops). Walking has no collision and never edits the shot. Review pages carry each set's GLB bytes (`LOCATION_GLB` in `location-review-data.js` and in each library detail page), so the viewer also opens from a file URL. All runtime assets are bundled; no CDN is required.
 Exploration and wall hiding never write the set or the shot. `Export camera proposal` downloads a versioned JSON patch; apply with `{action:"camera",board:".../scenes.js",patch:"/downloaded/proposal.json"}`. It refuses a stale base fingerprint. Render, inspect, record the inspection and refresh afterward. This is an explicit proposal workflow, not a pretend save button on a read-only page. The shared local review shell is preserved.
 
 ## Checks and compatibility
@@ -134,8 +134,10 @@ from missing evidence, or call a proposed camera view the saved shot.
 
 The offline viewer includes actors, body facing, target-oriented heads and optional gaze
 arrows, endpoint selection and camera/actor path scrubbing. Exploration does not edit the
-shot. `storyboard-html.js` adds links from each background sheet to its linked 3D shots and
-its background detail page. Refresh the channel with `review-library.js` after refreshing
+shot. On the storyboard each background sheet is a card like the cast card: the reference
+image and the angle sheet on a stage with a strip, the facts and linked shots beside them,
+and "3D 공간 돌려보기", which moves the page's one 3D viewer into that card (one WebGL
+context per page). The card links its library detail page. Refresh the channel with `review-library.js` after refreshing
 boards: background catalogue cards open individual detail pages with the same viewer,
 endpoint/top/side images, and downloadable spatial evidence. A sheet whose `manifest`
 points at a built set opens that whole Blender set first (first state, registered cameras,

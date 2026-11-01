@@ -120762,7 +120762,7 @@ Do NOT use it for scene images (shot_image) or text-bearing art. Refused (charac
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: `Create and update local Blender sets, shot blocking and spatial previz.
 
-Use for recurring locations, floor plans, actor facing/gaze and shot continuity before storyboard images. build writes root/id/vN; bind stores manifest/stateId/cameraId plus optional blocking/endStateId/continuityGroup on board/shotId; render writes clean start/end, top/side images and spatial.json (world coordinates, actor distances, five camera visibility samples and gaze blockers on authored meshes); previz uses the same set, camera and actors to write a silent H.264 clip, first/middle/last PNGs and a shot previz record (seconds required, fps defaults to 24). No paid calls.
+Use for recurring locations, floor plans, actor facing/gaze and shot continuity before storyboard images. build writes root/id/vN; bind stores manifest/stateId/cameraId plus optional blocking/endStateId/continuityGroup on board/shotId; render writes clean start/end, top/side images and spatial.json (world coordinates, actor distances, five camera visibility samples and gaze blockers on authored meshes); sheet renders the registered cameras plus eight compass angles and a plan view of one state into the set's angle sheet; previz uses the same set, camera and actors to write a silent H.264 clip, first/middle/last PNGs and a shot previz record (seconds required, fps defaults to 24). No paid calls.
 Returns: build {manifest,sha256}; render {fingerprint,frames}; previz {clip,blend,firstFrame,sha256,fps,seconds,locationBinding}; references absolute image paths/roles/hashes plus spatial report and spatialPaths for LLM inspection; check ordered findings with level/where/what. ready requires fresh files; actual reviews remain optional. Coordinates: metres, Z up, actors face -Y at zero rotation.
 Do NOT use for independent body posing or to read an arbitrary .blend \u2014 use blender_pose_key or blender_scene_read. Read an existing location with action read; see skills/storyboard/references/location-assets.md for camera proposals and generation receipts.`,
     inputSchema: { type: "object", required: ["action"], additionalProperties: false, properties: {
@@ -120774,7 +120774,8 @@ Do NOT use for independent body posing or to read an arbitrary .blend \u2014 use
       spec: { oneOf: [{ type: "string" }, { type: "object", additionalProperties: true }], description: "Location spec file or object for build" },
       root: { type: "string", description: "Channel assets/locations directory" },
       manifest: { type: "string", description: "location.json path" },
-      output: { type: "string", description: "New sheet output directory" },
+      output: { type: "string", description: "New sheet output directory; omit to replace the set's managed angle sheet at <revision>/angles/<stateId>/, which review pages show" },
+      cameras: { type: "object", description: `sheet: extra angles to keep on the managed angle sheet, keyed by a new id, e.g. {"view-1":{position:[3,-5,2],target:[0,1,1.4],lensMm:35,width:768,height:432}} from the 3D viewer's angle export; null removes one`, additionalProperties: { oneOf: [{ type: "null" }, { type: "object", required: ["position", "target", "lensMm", "width", "height"], properties: { position: { type: "array", items: { type: "number" }, minItems: 3, maxItems: 3 }, target: { type: "array", items: { type: "number" }, minItems: 3, maxItems: 3 }, lensMm: { type: "number" }, width: { type: "integer" }, height: { type: "integer" } } }] } },
       board: { type: "string", description: "scenes.js path" },
       shotId: { type: "string", description: "Stable shot id" },
       stateId: { description: "Registered location state id", type: "string" },
@@ -126791,7 +126792,14 @@ var locationSchema = external_exports.object({
   reviewer: external_exports.string().optional(),
   notes: external_exports.string().optional(),
   ready: external_exports.boolean().optional(),
-  patch: external_exports.union([external_exports.string(), external_exports.record(external_exports.unknown())]).optional()
+  patch: external_exports.union([external_exports.string(), external_exports.record(external_exports.unknown())]).optional(),
+  cameras: external_exports.record(external_exports.object({
+    position: external_exports.tuple([external_exports.number().finite(), external_exports.number().finite(), external_exports.number().finite()]),
+    target: external_exports.tuple([external_exports.number().finite(), external_exports.number().finite(), external_exports.number().finite()]),
+    lensMm: external_exports.number().min(10).max(300),
+    width: external_exports.number().int().min(64).max(4096),
+    height: external_exports.number().int().min(64).max(4096)
+  }).passthrough().nullable()).optional()
 }).strict();
 async function manageLocation(args) {
   const input = locationSchema.parse(args);
