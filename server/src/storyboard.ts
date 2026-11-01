@@ -915,6 +915,8 @@ function readCast(storyboardDir: string): CastEntry[] {
   if (!existsSync(file)) return [];
   let list: unknown;
   try { list = (JSON.parse(readFileSync(file, 'utf8')) as { characters?: unknown }).characters; } catch { list = undefined; }
+  // An older snapshot keys its characters by id.
+  if (list && typeof list === 'object' && !Array.isArray(list)) list = Object.entries(list).map(([id, value]) => ({ ...(value as object), id }));
   if (!Array.isArray(list) || list.some((entry) => typeof (entry as { id?: unknown })?.id !== 'string' || !(entry as { id: string }).id))
     throw new Error('cast_unreadable: storyboard/cast.json needs {"characters":[{"id","source"}]}');
   return list as CastEntry[];

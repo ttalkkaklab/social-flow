@@ -457,7 +457,11 @@ describe('story first, then characters and lines', () => {
     assert.throws(() => writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['ghost'] }] }), /cast_unknown/);
     rmSync(join(dir, 'assets/characters/joon/identity.md'));
     assert.throws(() => writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }] }), /cast_source_missing: joon/);
+    assert.throws(() => writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'mina', tts: '안녕' }] }] }), /cast_source_missing: joon/);
     castFile(dir, ['mina', 'joon', 'narrator'], { voiceOnly: ['narrator'] });
+    // An older snapshot keyed by id reads the same.
+    const keyed = Object.fromEntries(JSON.parse(readFileSync(join(dir, 'cast.json'), 'utf8')).characters.map(({ id, ...rest }) => [id, rest]));
+    writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: keyed }));
     writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: [] }] });
     assert.throws(() => writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'joon', tts: '야', delivery: 'on_screen' }] }] }), /story_order/);
     writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'mina', tts: '안녕' }, { speaker: 'narrator', tts: '그날 밤.' }] }] });

@@ -874,6 +874,9 @@ function readCast(storyboardDir) {
     catch {
         list = undefined;
     }
+    // An older snapshot keys its characters by id.
+    if (list && typeof list === 'object' && !Array.isArray(list))
+        list = Object.entries(list).map(([id, value]) => ({ ...value, id }));
     if (!Array.isArray(list) || list.some((entry) => typeof entry?.id !== 'string' || !entry.id))
         throw new Error('cast_unreadable: storyboard/cast.json needs {"characters":[{"id","source"}]}');
     return list;

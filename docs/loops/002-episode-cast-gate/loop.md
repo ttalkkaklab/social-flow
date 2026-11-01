@@ -18,3 +18,13 @@
 | 4 | Docs and tool descriptions agree with the code (CLAUDE.md, production-workflow.md, storyboard SKILL §1, character-scenarios.md, character-identity.md, tools.ts, README) and the §1 vs production-order contradiction is gone | 15 | 15 − 3 per contradiction or stale sentence (floor 0) | file:line | no |
 | 5 | Style and CI: CLAUDE.md D8 scan clean on changed prose; the check.yml steps that touch changed files pass | 5 | 5 − 1 per violation (floor 0) | command output | no |
 | 6 | Surgical changes: changed files ⊆ target scope | 5 | all-or-nothing | `git diff --name-only origin/dev` | no |
+
+## Result
+
+Achieved in iteration 1.
+
+| Iter | Score | P0 | Objective gate | Verdict |
+|------|-------|----|----------------|---------|
+| 1 | 96 | 0 | 2691/2691, dist in sync | PASS |
+
+After the pass, two P2 findings were fixed: `readCast` reads the older object-form `cast.json` again, and a case covers shot_dialogue's repeated cast check. A narrator-only cast stays allowed, since narrator-only explainers are a valid video type.

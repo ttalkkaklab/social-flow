@@ -115366,6 +115366,7 @@ function readCast(storyboardDir) {
   } catch {
     list = void 0;
   }
+  if (list && typeof list === "object" && !Array.isArray(list)) list = Object.entries(list).map(([id, value]) => ({ ...value, id }));
   if (!Array.isArray(list) || list.some((entry2) => typeof entry2?.id !== "string" || !entry2.id))
     throw new Error('cast_unreadable: storyboard/cast.json needs {"characters":[{"id","source"}]}');
   return list;
