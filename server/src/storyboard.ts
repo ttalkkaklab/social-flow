@@ -1293,7 +1293,9 @@ export function imageCall(o: { directory: string; assetId: string; inputs: strin
     : ['mlx', 'zimage'].includes(selection.engine) ? { prompt, width, height, ...output, ...(edit ? { imagePath: sent[0], refImagePaths: sent.slice(1) } : {}) }
     : { prompt, size: `${width}x${height}`, ...output, ...(edit ? { imagePath: sent[0], refImagePaths: sent.slice(1), mode: 'edit' } : {}) };
   const negativeSent = !!o.negativePrompt && NEGATIVE_PROMPT_ENGINES.has(selection.engine);
-  if (negativeSent) args.negativePrompt = o.negativePrompt;
+  // The gateway refuses a negative prompt at guidance 1 (no CFG). ponytail: one value measured on qwen-image-2.1-turbo
+  // for the kardum front panel (2.5 kept the head, 4 removed it, about 290 s); make it per model when another one lands.
+  if (negativeSent) Object.assign(args, { negativePrompt: o.negativePrompt, guidanceScale: 4 });
   return { requestId, ...(tool ? { tool } : {}), operation: (edit ? 'edit' : 'text') as 'edit' | 'text', args, file, inputs: sent, negativeSent };
 }
 
