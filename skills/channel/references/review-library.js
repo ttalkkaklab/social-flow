@@ -358,7 +358,8 @@ function exportChannel(channelDirectory, { check = false } = {}) {
           const manifest = typeof entry.manifest === 'string' && entry.manifest && !/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(entry.manifest) ? path.resolve(folder, entry.manifest) : null;
           if (manifest && regular(dir, manifest)) {
             const set = locations.sheetView(manifest);
-            views.unshift(set.error ? set : {...set, glb: rel(detailFile, set.glb)});
+            views.unshift(set.error ? set : {...set, glb: rel(detailFile, set.glb),
+              frames: Object.fromEntries(Object.entries(set.frames).map(([k, f]) => [k, {...f, path: rel(detailFile, f.path)}]))});
           }
           for (const name of ['location-review-runtime.js','location-review.css']) put(path.join(dir,'assets','review',name), fs.readFileSync(path.join(LOCATION_ASSETS,name)));
           const media = target && regular(dir,target) ? zoomImage(detailFile,target,name) : empty('참조 이미지 대기','Reference image pending');
@@ -366,7 +367,8 @@ function exportChannel(channelDirectory, { check = false } = {}) {
           render(detailFile, name, 'locations', heading(esc(name),esc(entry.description || '')) + media + viewer + '<dl>'+details+'</dl>'+
             `<p><a href="${rel(detailFile,file)}">${t('배경 시트 목록','Background sheets')}</a></p>`+
             `<link rel="stylesheet" href="${rel(detailFile,path.join(dir,'assets/review/location-review.css'))}">`+
-            `<script>window.LOCATION_REVIEW=${JSON.stringify(views).replace(/</g,'\\u003c')};</script>`+
+            // file:// pages cannot fetch a GLB; the page carries each set's bytes keyed by the path its entry names.
+            `<script>window.LOCATION_REVIEW=${JSON.stringify(views).replace(/</g,'\\u003c')};</script><script>window.LOCATION_GLB=${JSON.stringify(Object.fromEntries(views.filter(v => v.glb).map(v => [v.glb, fs.readFileSync(path.resolve(path.dirname(detailFile), decodeURIComponent(v.glb))).toString('base64')])))};</script>`+
             `<script defer src="${rel(detailFile,path.join(dir,'assets/review/location-review-runtime.js'))}"></script>`);
           detailHref = rel(file, detailFile);
           detailLink = `<a class="review-primary-link" href="${rel(file,detailFile)}">${t('배경 상세 · 3D 공간','Background detail · 3D space')}</a>`;

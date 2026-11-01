@@ -135,11 +135,38 @@ function previz(win,index,dir,{seconds,fps=24}){
   ctx.s.visual.video.previz=record;
   return record;
 }
-function sheet({manifest,stateId,output}){
+// Compass views from eight directions plus a plan view, aimed at the set's standing objects.
+function angleCameras(m){
+  const {width=768,height=432}=Object.values(m.cameras)[0]||{};
+  // ponytail: flat pieces (ground planes, rugs) stay out of the bounds so an 18x20 m ground does not push every camera 30 m out; add an explicit framing box if a set needs one.
+  const standing=m.objects.filter(o=>o.size[2]>=0.3),points=(standing.length?standing:m.objects).flatMap(o=>[o.position.map((v,i)=>v-o.size[i]/2),o.position.map((v,i)=>v+o.size[i]/2)]);
+  const lo=[0,1,2].map(i=>Math.min(...points.map(p=>p[i]))),hi=[0,1,2].map(i=>Math.max(...points.map(p=>p[i])));
+  const target=lo.map((v,i)=>(v+hi[i])/2),d=Math.hypot(...hi.map((v,i)=>v-lo[i]))*1.3+1;
+  const cameras={};
+  for(const [k,x,y] of [['n',0,1],['ne',1,1],['e',1,0],['se',1,-1],['s',0,-1],['sw',-1,-1],['w',-1,0],['nw',-1,1]]){
+    const n=Math.hypot(x,y);cameras['orbit-'+k]={position:[target[0]+x/n*d*.9,target[1]+y/n*d*.9,target[2]+d*.45],target,lensMm:24,width,height};
+  }
+  cameras.top={position:[target[0],target[1]-.001,target[2]+d*1.2],target,lensMm:24,width,height};
+  return cameras;
+}
+// Without output the renders are the set's managed angle sheet: <revision>/angles/<stateId>/, replaced on each call.
+// Added angles (e.g. exported from the 3D viewer) persist across calls; null removes one.
+function sheet({manifest,stateId,output,cameras={}}){
   const p=path.resolve(manifest),m=load(p);if(!Object.hasOwn(m.states,stateId))throw new Error('unknown state');
-  const out=path.resolve(output);if(fs.existsSync(out))throw new Error('sheet output exists; use a new output directory');
-  blender({action:'render',manifest:m,blend:safe(path.dirname(p),m.assets.blend.path),stateId,cameras:m.cameras,output:out});
-  const result={manifestSha256:fileHash(p),stateId,frames:Object.fromEntries(Object.keys(m.cameras).map(k=>[k,{path:k+'.png',sha256:fileHash(path.join(out,k+'.png'))}]))};write(path.join(out,'sheet.json'),result);return result;
+  const managed=output===undefined,out=managed?path.join(path.dirname(p),'angles',stateId):path.resolve(output);
+  if(!managed&&fs.existsSync(out))throw new Error('sheet output exists; use a new output directory');
+  const standard=angleCameras(m),added={...(managed&&fs.existsSync(path.join(out,'sheet.json'))?read(path.join(out,'sheet.json')).added:null)};
+  for(const [k,c] of Object.entries(cameras||{})){
+    if(!/^[a-z0-9][a-z0-9_-]{0,54}$/i.test(k)||Object.hasOwn(m.cameras,k)||Object.hasOwn(standard,k))throw new Error('camera id must be new and safe: '+k);
+    if(c===null){delete added[k];continue;}
+    assert(C.cameraErrors(c).map(e=>k+': '+e));added[k]={position:c.position,target:c.target,lensMm:c.lensMm,width:c.width,height:c.height};
+  }
+  const all={...m.cameras,...standard,...added},tmp=out+'.rendering-'+process.pid;
+  fs.rmSync(tmp,{recursive:true,force:true});
+  try{blender({action:'render',manifest:m,blend:safe(path.dirname(p),m.assets.blend.path),stateId,cameras:all,output:tmp});}catch(e){fs.rmSync(tmp,{recursive:true,force:true});throw e;}
+  const result={manifestSha256:fileHash(p),stateId,added,frames:Object.fromEntries(Object.keys(all).map(k=>[k,{path:k+'.png',sha256:fileHash(path.join(tmp,k+'.png')),camera:all[k]}]))};
+  write(path.join(tmp,'sheet.json'),result);fs.rmSync(out,{recursive:true,force:true});fs.renameSync(tmp,out);
+  return {output:out,...result};
 }
 function approve(win,index,dir,{reviewer,notes}){
   const p=plan(win,index,dir,{ready:true});if(!p||!reviewer?.trim()||!notes?.trim())throw new Error('actual reviewer and observed notes required');
@@ -194,12 +221,23 @@ function check(win,dir,{ready=false}={}){
 }
 // A sheet entry opens the whole Blender set without a shot binding: first state, registered cameras, no blocking.
 function sheetView(manifestPath){
-  try{const m=load(manifestPath),stateId=Object.keys(m.states)[0],cameraId=Object.keys(m.cameras)[0];
-    return {sheet:true,shotId:'sheet',title:m.name,id:m.id,name:m.name,revision:m.revision,stateId,endStateId:stateId,state:m.states[stateId],states:m.states,
+  const p=path.resolve(manifestPath);
+  try{const m=load(p),stateId=Object.keys(m.states)[0],cameraId=Object.keys(m.cameras)[0];
+    return {sheet:true,shotId:'sheet-'+m.id,title:m.name,id:m.id,name:m.name,revision:m.revision,stateId,endStateId:stateId,state:m.states[stateId],states:m.states,
       cameras:m.cameras,camera:{...m.cameras[cameraId],end:undefined},invariants:m.invariants,objects:C.resolvedObjects(m,stateId),baseObjects:m.objects,
-      blocking:null,startActors:[],endActors:[],frames:{},spatial:null,spatialAsset:null,resultImage:null,resultReview:null,fresh:false,approved:false,
-      glb:safe(path.dirname(path.resolve(manifestPath)),m.assets.glb.path)};}
-  catch(e){return {sheet:true,shotId:'sheet',title:path.basename(path.dirname(path.dirname(manifestPath))),error:e.message};}
+      blocking:null,startActors:[],endActors:[],frames:angleFrames(p,m),spatial:null,spatialAsset:null,resultImage:null,resultReview:null,fresh:false,approved:false,
+      glb:safe(path.dirname(p),m.assets.glb.path)};}
+  catch(e){const id=path.basename(path.dirname(path.dirname(p)));return {sheet:true,shotId:'sheet-'+id,id,title:id,error:e.message};}
+}
+// The managed angle renders of this revision, keyed "<camera> · <state label>"; paths are absolute like glb.
+function angleFrames(p,m){
+  const frames={},sha=fileHash(p);
+  for(const [stateId,state] of Object.entries(m.states)){
+    const dir=path.join(path.dirname(p),'angles',stateId),file=path.join(dir,'sheet.json');
+    if(!fs.existsSync(file))continue;const s=read(file);if(s.manifestSha256!==sha)continue;
+    for(const [k,f] of Object.entries(s.frames||{}))frames[k+' · '+state.label]={path:safe(dir,f.path),sha256:f.sha256,camera:k,stateId};
+  }
+  return frames;
 }
 function preview(win,dir){return (win.SCENES||[]).flatMap((s,i)=>{if(!s.shot?.location)return [];try{return [{shotId:s.id,title:s.title||s.id,...plan(win,i,dir)}];}catch(e){return [{shotId:s.id,title:s.title||s.id,error:e.message}];}});}
 function readBoard(p){const {readScenes}=require('../../autoproduce/references/cost-preview.js');return readScenes(p);}
@@ -225,5 +263,5 @@ async function run(args){
   saveBoard(p,win);return result;
 }
 function detailFilename(topic,id){return digest([topic,id]).slice(0,24)+'.html';}
-module.exports={detailFilename,digest,fileHash,load,build,sheet,sheetView,context,signature,plan,bind,render,previz,renderJob,approve,references,receipt,reviewResult,applyCamera,check,preview,run,saveBoard};
+module.exports={detailFilename,angleCameras,digest,fileHash,load,build,sheet,sheetView,context,signature,plan,bind,render,previz,renderJob,approve,references,receipt,reviewResult,applyCamera,check,preview,run,saveBoard};
 if(require.main===module)run(read(process.argv[2])).then(r=>console.log(JSON.stringify(r,null,2))).catch(e=>{console.error(e.message);process.exitCode=1;});

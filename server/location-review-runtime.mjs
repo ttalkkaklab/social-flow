@@ -9,7 +9,8 @@ function node(tag,text,parent,cls){const n=document.createElement(tag);if(text)n
 function button(text,parent,fn){const b=node('button',text,parent);b.type='button';b.onclick=fn;return b;}
 function url(p){const u=new URL(p,document.baseURI);if(!['file:','http:','https:'].includes(u.protocol))throw Error('Unsupported asset URL');return u.href;}
 function mount(){
-  if(document.getElementById('shots')&&!document.getElementById('location-viewer-host')){mountShotFrames();return;}
+  // A storyboard gets its shot frames, and the viewer only where it reserves a host.
+  if(document.getElementById('shots')){mountShotFrames();if(!document.getElementById('location-viewer-host'))return;}
   if(!entries.length)return;
   const section=node('section',null,null,'location-review');section.id='locations';
   const app=document.getElementById('location-viewer-host')||document.getElementById('app')||document.body;
@@ -19,7 +20,8 @@ function mount(){
   const select=node('select',null,section);select.setAttribute('aria-label',word('장소 샷 선택','Location shot'));
   entries.forEach((e,i)=>{const o=node('option',e.sheet?word('세트 전체 · ','Whole set · ')+e.title+(e.revision?' · v'+e.revision:''):e.shotId+' · '+e.title+' · '+(e.name||''),select);o.value=i;});
   const host=node('div',null,section);let dispose=()=>{};
-  function choose(){dispose();host.replaceChildren();dispose=view(entries[Number(select.value)],host);}
+  // One WebGL viewer per page: it moves into the sheet card that reserves a slot for the chosen set or shot's set.
+  function choose(){const e=entries[Number(select.value)],slot=document.querySelector('[data-location-slot="'+CSS.escape(e.shotId)+'"]')||document.querySelector('[data-location-slot="sheet-'+CSS.escape(e.id||'')+'"]');if(slot)slot.append(section);dispose();host.replaceChildren();dispose=view(e,host);}
   select.onchange=choose;choose();if(location.hash==='#locations')section.scrollIntoView();
   document.addEventListener('click',ev=>{const link=ev.target.closest('[data-location-shot]');if(!link)return;const i=entries.findIndex(e=>e.shotId===link.dataset.locationShot);if(i>=0){select.value=i;choose();section.scrollIntoView();}});
   const nav=document.querySelector('.review-sidebar nav');if(nav){const a=node('a',word('장소','Locations'),nav);a.href='#locations';}
@@ -168,6 +170,13 @@ function view(e,host){
     const patch={version:1,type:'location-camera',shotId:e.shotId,baseFingerprint:e.fingerprint,camera:{position:cam.position.toArray(),target:orbit.target.toArray(),lensMm:Number(lens.value),width:original.width,height:original.height,...(original.end?{end:original.end}:{})}};
     const blob=new Blob([JSON.stringify(patch,null,2)],{type:'application/json'}),href=URL.createObjectURL(blob),a=node('a');a.href=href;a.download=e.shotId+'-camera.json';a.click();setTimeout(()=>URL.revokeObjectURL(href),1000);info.textContent=word('변경안을 내려받았습니다. 적용 후 참조를 다시 렌더하세요.','Proposal downloaded. Apply it and render new references.');
   }));
+  // The viewed angle goes back as a camera for location_manage sheet, which renders it in Blender onto the angle sheet.
+  if(e.sheet)button(word('이 각도 내보내기','Export this angle'),controls,()=>{
+    const id='view-'+Date.now().toString(36),r=v=>Math.round(v*1000)/1000;
+    const angle={location:e.id,revision:e.revision,stateId:selectedState,cameras:{[id]:{position:cam.position.toArray().map(r),target:orbit.target.toArray().map(r),lensMm:Number(lens.value),width:original.width,height:original.height}}};
+    const href=URL.createObjectURL(new Blob([JSON.stringify(angle,null,2)],{type:'application/json'})),a=node('a');a.href=href;a.download=e.id+'-'+id+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(href),1000);
+    info.textContent=word('각도 파일을 내려받았습니다. 대화창에 이 파일을 주면 같은 각도의 Blender 이미지를 각도 시트에 더합니다.','Angle downloaded. Hand the file over in the conversation to add a Blender render of it to the angle sheet.');
+  });
   if(e.sheet)for(const el of shotOnly)el.hidden=true;
   orbit.addEventListener('start',()=>{if(walking)return;shotView=false;size();label();});
   setCamera(original);label();size();const observer=new ResizeObserver(size);observer.observe(stage);
@@ -183,12 +192,14 @@ function view(e,host){
     for(const lamp of scene.children.filter(o=>o.isLight))lamp.intensity=(lamp.isHemisphereLight?2:3)*e.states[stateId].light;
   }
   const loading=node('p',word('3D 세트를 여는 중','Loading 3D set'),controls);
-  new GLTFLoader().load(url(e.glb),g=>{
+  // file:// pages cannot fetch the GLB; review pages carry its bytes in LOCATION_GLB.
+  const inline=(window.LOCATION_GLB||{})[e.glb],loader=new GLTFLoader(),loaded=g=>{
     if(disposed){g.scene.traverse(o=>o.geometry?.dispose());return;}
     model=g.scene; // glTF is Y-up; return to the contract's Blender Z-up basis.
     model.rotation.x=Math.PI/2;scene.add(model);
     applyState(selectedState);refreshActors();loading.textContent=word('3D 세트 준비됨','3D set ready');stage.dataset.ready='true';
-  },undefined,err=>{loading.textContent=word('3D 파일을 열지 못했습니다. 로컬 HTTP 서버로 열어 주세요. ','Cannot load 3D file. Open via a local HTTP server. ')+err.message;stage.dataset.error='true';});
+  },failed=err=>{loading.textContent=word('3D 파일을 열지 못했습니다. 로컬 HTTP 서버로 열어 주세요. ','Cannot load 3D file. Open via a local HTTP server. ')+err.message;stage.dataset.error='true';};
+  if(inline)loader.parse(Uint8Array.from(atob(inline),c=>c.charCodeAt(0)).buffer,'',loaded,failed);else loader.load(url(e.glb),loaded,undefined,failed);
   const ray=new THREE.Raycaster();renderer.domElement.addEventListener('dblclick',ev=>{const r=renderer.domElement.getBoundingClientRect();const rw=shotView?Math.min(r.width,r.height*original.width/original.height):r.width,rh=shotView?rw*original.height/original.width:r.height;ray.setFromCamera(new THREE.Vector2((ev.clientX-r.left-(r.width-rw)/2)/rw*2-1,-(ev.clientY-r.top-(r.height-rh)/2)/rh*2+1),cam);const hit=ray.intersectObjects(model?[model]:[],true).find(h=>h.object.visible);if(hit){objectSelect.value=hit.object.userData.locationId||hit.object.name;objectSelect.onchange();}});
   function draw(){if(disposed)return;walk(Math.min(clock.getDelta(),.1));const w=stage.clientWidth,h=stage.clientHeight;renderer.setScissorTest(false);renderer.clear();if(shotView){const ratio=original.width/original.height;const rw=Math.min(w,h*ratio),rh=rw/ratio;renderer.setViewport((w-rw)/2,(h-rh)/2,rw,rh);}else renderer.setViewport(0,0,w,h);renderer.render(scene,cam);raf=requestAnimationFrame(draw);}draw();
   const spatial=node('details',null,host);spatial.hidden=!!e.sheet;node('summary',word('LLM 공간 정보 · 저장된 촬영 구도','LLM spatial evidence · saved shot'),spatial);

@@ -31,6 +31,11 @@ export const locationSchema = z.object({
   seconds: z.number().finite().positive().optional(), fps: z.number().int().min(24).max(60).optional(),
   reviewer: z.string().optional(), notes: z.string().optional(), ready: z.boolean().optional(),
   patch: z.union([z.string(), z.record(z.unknown())]).optional(),
+  cameras: z.record(z.object({
+    position: z.tuple([z.number().finite(), z.number().finite(), z.number().finite()]),
+    target: z.tuple([z.number().finite(), z.number().finite(), z.number().finite()]),
+    lensMm: z.number().min(10).max(300), width: z.number().int().min(64).max(4096), height: z.number().int().min(64).max(4096),
+  }).passthrough().nullable()).optional(),
 }).strict();
 export async function manageLocation(args: unknown): Promise<unknown> {
   const input = locationSchema.parse(args);
