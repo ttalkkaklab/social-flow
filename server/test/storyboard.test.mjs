@@ -593,6 +593,9 @@ describe('icon attributes come after every shot\'s characters', () => {
     assert.throws(() => applyStoryboard(storyboardApplySchema.parse({ path: dir, set: { structure: structure([scene(1)]), shots: [{ type: 'points', scene: 1 }] } })), /story_order: a new episode board/);
     const start = () => writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
     assert.throws(start, /cast_required/);
+    writeFileSync(join(dir, 'scenes.js'), 'window.SCENES = [];\n');   // a hand-made empty board waits for the cast too
+    assert.throws(start, /cast_required/);
+    rmSync(join(dir, 'scenes.js'));
     castFile(dir, ['mina', 'narrator'], { root: join(root, 'data/c'), voiceOnly: ['narrator'] });
     rmSync(join(root, 'data/c/assets/characters/mina/back.png'));
     assert.throws(start, /character_panel_missing: mina has no back sheet panel/);
@@ -600,6 +603,8 @@ describe('icon attributes come after every shot\'s characters', () => {
     assert.throws(start, /cast_source_missing: mina/);
     castFile(dir, ['mina', 'narrator'], { root: join(root, 'data/c'), voiceOnly: ['narrator'] });
     assert.equal(start().written, true);
+    rmSync(join(root, 'data/c/assets/characters/mina/face.png'));
+    assert.throws(() => writeStoryScenes({ path: dir, scenes: [{ sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬' }] }), /character_panel_missing: mina has no face/);
   });
 });
 
@@ -643,6 +648,9 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.throws(() => shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'p', location: 'room' }), /character_panel_missing: mina has no back panel/);
     writeFileSync(join(sheet, 'panels.json'), JSON.stringify({ panels: { face: { file: 'face.png' }, back: { file: 'back.png' } } }));
     assert.throws(() => shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'p', location: 'room' }), /character_panel_missing: mina has no front panel/);
+    // The sheet cast.json points at wins over the one found upward from the board.
+    castFile(dir, ['mina'], { root: join(root, 'library') });
+    assert.match(shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'p', location: 'room' }).inputs[1], /library\/assets\/characters\/mina\/face\.png$/);
   });
   it('a frame composes the place, then the sheet panels, after every shot has its icons', () => {
     const { root, dir } = pictureBoard();

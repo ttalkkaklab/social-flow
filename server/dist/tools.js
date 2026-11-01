@@ -4500,7 +4500,7 @@ Returns: JSON — { file, mediaBaseDirectory, sha256, version, format, shots, se
         name: 'story_sequence',
         title: 'Write storyboard sequences (story step 1 of 3)',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-        description: `The first storyboard step after the scenario is settled writes only the story, in three layers: story_sequence → story_scene → story_shot. Use it first: it upserts sequences by id (title · purpose · question · payoff — a payoff outside the sequence's scenes warns) and creates scenes.js as a story-v2 board when it is missing. A sequence's scene list is filled by story_scene. Local file only; no image, speech or prompt. Inside an episode the board starts only after the cast is ready: refused (cast_required) until storyboard/cast.json names at least one character, (cast_source_missing) for an entry whose source is not an existing assets/characters/<id>/identity.md, and (character_panel_missing) for an entry without "voiceOnly": true that lacks its face, front or back sheet panel — make those with character_manage and character_panel first.
+        description: `The first storyboard step after the scenario is settled writes only the story, in three layers: story_sequence → story_scene → story_shot. Use it first: it upserts sequences by id (title · purpose · question · payoff — a payoff outside the sequence's scenes warns) and creates scenes.js as a story-v2 board when it is missing. A sequence's scene list is filled by story_scene. Local file only; no image, speech or prompt. Inside an episode the board starts only after the cast is ready, and story_scene and story_shot repeat this check on a story-first board: refused (cast_required) until storyboard/cast.json names at least one character, (cast_source_missing) for an entry whose source is not an existing assets/characters/<id>/identity.md, and (character_panel_missing) for an entry without "voiceOnly": true that lacks its face, front or back sheet panel — make those with character_manage and character_panel first.
 
 Do NOT write scenes, shots, dialogue or pictures here. Characters and lines come after the shot stories (shot_characters → shot_dialogue); camera and image plans after that, through storyboard_apply.
 
@@ -4524,7 +4524,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         name: 'story_scene',
         title: 'Write storyboard scenes (story step 2 of 3)',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-        description: `Use it after story_sequence to upsert scenes by number into a sequence: place, time, the one event, and a one- or two-sentence summary of the scene's story. A scene moved to another sequence leaves its old one. Refused (story_order) before any sequence exists or for an unknown sequence id. Local file only; no image, speech or prompt.
+        description: `Use it after story_sequence to upsert scenes by number into a sequence: place, time, the one event, and a one- or two-sentence summary of the scene's story. A scene moved to another sequence leaves its old one. Refused (story_order) before any sequence exists or for an unknown sequence id, and on a story-first episode board by story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
 Do NOT write shots or dialogue here — story_shot comes next.
 
@@ -4551,7 +4551,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         name: 'story_shot',
         title: 'Write shot stories (story step 3 of 3)',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-        description: `Use it after story_scene to write each shot as one sentence of story in its scene. Without an id the shot is added at the end of its scene and gets a stable id (s0001…); with an id that shot's scene, summary and title are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. Local file only; no image, speech or prompt.
+        description: `Use it after story_scene to write each shot as one sentence of story in its scene. Without an id the shot is added at the end of its scene and gets a stable id (s0001…); with an id that shot's scene, summary and title are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. A story-first episode board also repeats story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
 Do NOT pass characters, dialogue, narration, camera or visual fields — the input refuses them. Once every shot has its story, shot_characters and shot_dialogue come next, then shot_icons; on a board these tools started (STORY.authoring "story-first") storyboard_apply refuses a shot without scene and summary.
 

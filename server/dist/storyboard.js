@@ -761,15 +761,8 @@ function writeOutline(path, win, structure, shots) {
     }, { outline: true });
 }
 export function writeStorySequences(args) {
-    const file = scenesPath(args.path);
-    // An episode's story starts once its cast is ready (user directive 2026-11-01).
-    if (!existsSync(file) && workflowEpisode(dirname(file))) {
-        const cast = readCast(dirname(file));
-        if (!cast.length)
-            throw new Error('cast_required: an episode story starts after storyboard/cast.json names its characters (storyboard §1)');
-        checkCast(dirname(file), cast);
-    }
     const { win, st } = readOutline(args.path);
+    requireEpisodeCast(args.path, win);
     const sequences = upsertBy(st.sequences, args.sequences.map((q) => ({ ...st.sequences.find((old) => old.id === q.id), ...q, scenes: st.sequences.find((old) => old.id === q.id)?.scenes ?? [] })), 'id');
     // The payoff is one of the sequence's own scenes (storyboard_check); before its scenes exist there is nothing to compare.
     const notes = sequences.filter((q) => q.payoff !== undefined && q.scenes.length && !q.scenes.includes(q.payoff))
@@ -779,6 +772,7 @@ export function writeStorySequences(args) {
 }
 export function writeStoryScenes(args) {
     const { win, st } = readOutline(args.path);
+    requireEpisodeCast(args.path, win);
     if (!st.sequences.length)
         throw new Error('story_order: write the sequences first with story_sequence');
     let { sequences, scenes } = st;
@@ -794,6 +788,7 @@ export function writeStoryScenes(args) {
 }
 export function writeStoryShots(args) {
     const { win, st } = readOutline(args.path);
+    requireEpisodeCast(args.path, win);
     if (!st.scenes.length)
         throw new Error('story_order: write the scenes first with story_scene');
     const order = st.sequences.flatMap((q) => q.scenes);
@@ -879,9 +874,9 @@ function readCast(storyboardDir) {
     catch {
         list = undefined;
     }
-    if (!Array.isArray(list))
+    if (!Array.isArray(list) || list.some((entry) => typeof entry?.id !== 'string' || !entry.id))
         throw new Error('cast_unreadable: storyboard/cast.json needs {"characters":[{"id","source"}]}');
-    return list.filter((entry) => typeof entry?.id === 'string');
+    return list;
 }
 /** Refuses a cast entry without its identity.md, or an on-screen character without its face, front and back panels. */
 function checkCast(storyboardDir, cast) {
@@ -900,6 +895,17 @@ function checkCast(storyboardDir, cast) {
     }
     if (problems.length)
         throw new Error(`${problems.join('; ')} — finish the character sheets before the episode story; a narrator who is never seen takes "voiceOnly": true in cast.json`);
+}
+/** Inside an episode the story tools wait for a ready cast on a board that is, or is about to become, story-first. */
+function requireEpisodeCast(path, win) {
+    const dir = dirname(scenesPath(path));
+    const story = win.STORY;
+    if (!workflowEpisode(dir) || (story && story.authoring !== 'story-first'))
+        return;
+    const cast = readCast(dir);
+    if (!cast.length)
+        throw new Error('cast_required: an episode story starts after storyboard/cast.json names its characters (storyboard §1)');
+    checkCast(dir, cast);
 }
 /** The episode cast: storyboard/cast.json, checked on a story-first board; an older board also accepts SB_DOC.characters ids. */
 function castRegistry(path, win) {
@@ -1220,7 +1226,13 @@ function castEntry(win, id) {
 /** The sheet panels assets/characters/<id>/panels.json names — face, headless front and back — in MSR order. */
 function characterRefs(boardDir, win, shotId, ids, use, warnings) {
     const views = ids.length === 1 ? ['face', 'front', 'back'].map((view) => [ids[0], view]) : ['face', 'front'].flatMap((view) => ids.map((id) => [id, view]));
+    // The sheet the cast check verified (cast.json source) comes first; an older board finds assets/characters/<id> upward.
+    const sources = new Map(readCast(boardDir).filter((entry) => typeof entry.source === 'string' && entry.source)
+        .map((entry) => [entry.id, dirname(resolve(boardDir, entry.source))]));
     const folders = new Map(ids.map((id) => {
+        const own = sources.get(id);
+        if (own && existsSync(join(own, 'panels.json')))
+            return [id, own];
         for (let dir = boardDir;; dir = dirname(dir)) {
             if (existsSync(join(dir, 'assets/characters', id, 'panels.json')))
                 return [id, join(dir, 'assets/characters', id)];

@@ -22,8 +22,8 @@ Channel-based short-form/long-form content pipeline Claude Code plugin.
 Project setup must be ready before any episode authoring. Then characters (text + images),
 the story and its shots, props (text + images), backgrounds (text + images), the shots'
 images, and finally video, in that order. Explicit text-only requests stop at text, but the
-episode cast comes first even then: `story_sequence` refuses to start a board inside an episode
-until `storyboard/cast.json` names its characters, each with `assets/characters/<id>/identity.md`
+episode cast comes first even then: `story_sequence` refuses to start a board inside an episode,
+and `story_scene`/`story_shot` refuse to continue a story-first one, until `storyboard/cast.json` names its characters, each with `assets/characters/<id>/identity.md`
 and, unless the entry is `voiceOnly` (a narrator who is never seen), its face, front and back
 sheet panels (`cast_required`, `cast_source_missing`, `character_panel_missing`). Other missing
 images are reported, and missing panels are made with `character_panel` under spending

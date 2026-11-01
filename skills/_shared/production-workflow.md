@@ -35,7 +35,7 @@ every shot's icon attributes, and `shot_prompt` for every picture shot's start i
 the end image a `first_last` plan needs).
 
 The cast gate (user directive, 2026-11-01): `story_sequence` refuses to start a board inside an
-episode until `cast.json` names at least one character (`cast_required`), each entry's `source`
+episode, and `story_scene`/`story_shot` refuse to continue a story-first one, until `cast.json` names at least one character (`cast_required`), each entry's `source`
 is an existing `assets/characters/<id>/identity.md` (`cast_source_missing`) and every entry
 without `voiceOnly` has its face, front and back panels (`character_panel_missing`). On a
 story-first board `shot_characters` and `shot_dialogue` repeat that check, take the cast from
