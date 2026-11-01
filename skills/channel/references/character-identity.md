@@ -95,8 +95,15 @@ for provider mappings and the distinction between sample imitation and exact spe
 
 ## Generate and use
 
-1. Author the identity before images. Use `direction.image` for the appearance prompt
-   plus the specific panel framing. Create separate front full-body, back full-body,
+1. Author the identity before images, then make each panel with `character_panel`
+   (`view` face, front, back). It builds the prompt from the sheet — the face takes
+   `appearance`; the headless front and back take height, weight, relative scale,
+   build, proportions and outfit — and adds the project style and the panel framing.
+   Do not write panel prompts by hand; `character-sheet.js <identity.md> --panel <view>`
+   prints the same words for inspection. Image prompts are
+   English, so write those physical text fields in English; a field in another script
+   is reported and left out. `shot_image` reads the same words for each sheet panel and
+   adds both heights when two characters share a frame. Create separate front full-body, back full-body,
    and face close-up images following [character-panels.md](character-panels.md).
    Front and back are headless mannequin-style references for build and wardrobe;
    only the face close-up shows the head and face. Match proportions, clothing,
@@ -107,17 +114,18 @@ for provider mappings and the distinction between sample imitation and exact spe
    wardrobe references to create the headless front and matching back.
    Keep each panel in a separate file;
    do not feed a multi-view composite to an image/video generator.
-3. When the user requests character voice work, audition before confirming the voice:
-   generate distinct voice candidates matched to the identity (three is the usual
-   audition), using the selected engine/model and the same natural Korean sample from
-   `speech.examples`. Present real audio with playback and wait for the user's candidate
-   selection. Only then persist that candidate's `tts` and reference audio in the
-   identity/sheet. Project-init and channel `add` leave `tts` null and bill no
-   sample. A draft without a selected voice must not claim a confirmed one.
-   Follow [acting prompts and auditions](../../produce/references/acting-prompts.md).
-   `direction.voice` guides performance; per-line `acting` does not replace voice identity.
+3. For a character's voice, cast one voice and generate its sample with
+   `character_voice_audition` `create` and a single candidate: it uses the selected
+   engine/model and a natural Korean line from `speech.examples`, then sets the voice
+   at once (identity `tts`, `voiceSelection`, the sheet's `voice.wav` and `sample.txt`).
+   Run a three-candidate audition only when the user asks to compare voices; present
+   the real audio (the sheet plays the candidates) and `select` their actual choice.
+   Project-init and channel `add` leave `tts` null and bill no sample. A draft without
+   a generated sample must not claim a confirmed voice.
    Use the audition tool's read-only `plan` to extract acoustic targets and compare
-   real voice-library metadata first. An optional `voiceProfile` beside `character`
+   real voice-library metadata first. Its `target.body` (species, height, weight,
+   build) sits with vocal gender, age and timbre as casting evidence: pick base voices
+   whose size and resonance fit that body; it is not sent as a style control. An optional `voiceProfile` beside `character`
    and `tts` stores explicit vocalGender, perceivedAge and a compact baselineDirection.
    Unknown voice traits stay unknown; do not infer them from names or appearance.
    Gemini audition candidates carry the derived stable `tts.voiceDirection` into

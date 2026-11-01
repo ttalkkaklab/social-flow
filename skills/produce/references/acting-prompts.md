@@ -151,6 +151,11 @@ After explicit selection,
 the chosen baseline travels with `tts` into production; ordinary speech uses the
 same compiler. Do not silently replace saved voices or existing recordings.
 
+For a character's voice, call `character_voice_audition action:create` with one
+candidate: the tool generates that sample and sets it at once (identity `tts`,
+`voiceSelection`, the sheet's `voice.wav` and `sample.txt`). The rest of this section
+covers the audition the user asks for when they want to compare voices.
+
 Call `character_voice_audition action:create` with an absolute `identityPath`,
 `sampleText` (up to 300 characters), exactly three `candidates` and optional `acting`.
 Each candidate carries `{label, reason, tts}`; `tts` includes the selected engine/model,

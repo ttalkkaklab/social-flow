@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
 import { z } from 'zod';
 import { isDeepStrictEqual } from 'node:util';
 import { createRequire } from 'node:module';
@@ -19,13 +19,13 @@ const sampleTurn = z.object({ text: z.string().trim().min(1).max(300), acting: a
 export const voiceAuditionSchema = z.object({
     action: z.enum(['plan', 'create', 'read', 'select']), identityPath: z.string().min(1).optional(),
     auditionPath: z.string().min(1).optional(), sampleText: z.string().trim().min(5).max(300).optional(),
-    candidates: z.array(candidate).length(3).optional(), acting: actingSchema.optional(),
+    candidates: z.array(candidate).min(1).max(3).optional(), acting: actingSchema.optional(),
     sampleTurns: z.array(sampleTurn).min(2).max(10).optional(),
     voiceProfile: voiceProfileSchema.optional(),
     candidateId: z.enum(['1', '2', '3']).optional(), userSelection: z.string().trim().min(1).max(1000).optional(),
 }).strict().superRefine((args, ctx) => {
     if (args.action === 'create' && (!args.identityPath || !args.sampleText || !args.candidates))
-        ctx.addIssue({ code: 'custom', message: 'create requires identityPath, sampleText and exactly three candidates' });
+        ctx.addIssue({ code: 'custom', message: 'create requires identityPath, sampleText and one candidate (a sample set at once) or three (an audition the user chooses from)' });
     if (args.action === 'plan' && !args.identityPath)
         ctx.addIssue({ code: 'custom', message: 'plan requires identityPath' });
     if (['read', 'select'].includes(args.action) && !args.auditionPath)
@@ -33,7 +33,9 @@ export const voiceAuditionSchema = z.object({
     if (args.action === 'select' && (!args.candidateId || !args.userSelection))
         ctx.addIssue({ code: 'custom', message: 'select requires candidateId and the actual user selection; never auto-select' });
     if (args.candidates) {
-        if (new Set(args.candidates.map(c => c.tts.voiceId)).size !== 3)
+        if (args.candidates.length === 2)
+            ctx.addIssue({ code: 'custom', message: 'Pass one candidate for a sample or three for an audition' });
+        if (args.candidates.length === 3 && new Set(args.candidates.map(c => c.tts.voiceId)).size !== 3)
             ctx.addIssue({ code: 'custom', message: 'Use three distinct voices' });
         if (new Set(args.candidates.map(c => `${c.tts.engine}/${c.tts.model}/${c.tts.language}`)).size !== 1)
             ctx.addIssue({ code: 'custom', message: 'Compare voices with the same engine, model and language' });
@@ -65,6 +67,19 @@ function compileSample(text, acting, voice, turns) {
     const compiled = turns.map(turn => compileActing(turn.text, turn.acting, voice));
     return { generator: 'tts_gemini_38', generation: { ...compiled[0].generation, turns: compiled.flatMap(turn => turn.generation.turns) } };
 }
+// A sheet under <channel>/assets/characters/<id>/ is re-exported so its page shows the candidates or the chosen voice.
+function refreshSheet(identityPath) {
+    const folder = dirname(identityPath);
+    if (basename(dirname(folder)) !== 'characters' || basename(dirname(dirname(folder))) !== 'assets')
+        return undefined;
+    try {
+        createRequire(import.meta.url)('../../skills/channel/references/review-library.js').exportChannel(resolve(folder, '../../..'));
+        return join(folder, 'index.html');
+    }
+    catch (error) {
+        return `sheet refresh failed: ${error instanceof Error ? error.message : String(error)}`;
+    }
+}
 function save(file, value) {
     const temporary = file + '.' + randomUUID() + '.tmp';
     writeFileSync(temporary, JSON.stringify(value, null, 2));
@@ -82,26 +97,37 @@ export async function manageVoiceAudition(args) {
         if (blocks.filter(b => b.character !== undefined).length !== 1)
             throw new Error('Create the character identity JSON before auditioning; tts may be absent until selection');
         const target = characterVoiceTarget(source, args.voiceProfile);
+        // Gemini and the gateway both take a stable voice direction (style prompt or instructions).
+        const directed = (engine) => engine === 'gemini' || engine === 'astra-genai';
         const planned = (args.candidates || []).map(choice => {
-            if (choice.tts.engine === 'gemini' && !choice.tts.voiceDirection && target.baselineDirection.length > 400) {
+            if (directed(choice.tts.engine) && !choice.tts.voiceDirection && target.baselineDirection.length > 400) {
                 const generationError = 'Derived voice direction exceeds 400 characters; supply a compact voiceProfile.baselineDirection before synthesis';
                 if (args.action === 'create')
                     throw new Error(generationError);
                 return { ...choice, match: compareVoiceMetadata(target, choice.metadata), compiled: undefined, generationError };
             }
-            const tts = ttsSchema.parse({ ...choice.tts, ...(choice.tts.engine === 'gemini' && target.baselineDirection && !choice.tts.voiceDirection ? { voiceDirection: target.baselineDirection } : {}) });
+            const tts = ttsSchema.parse({ ...choice.tts, ...(directed(choice.tts.engine) && target.baselineDirection && !choice.tts.voiceDirection ? { voiceDirection: target.baselineDirection } : {}) });
             const compiled = args.sampleText ? compileSample(args.sampleText, args.acting, tts, args.sampleTurns) : undefined;
             return { ...choice, tts, match: compareVoiceMetadata(target, choice.metadata), ...(compiled ? { compiled } : {}) };
         });
         if (args.action === 'plan')
             return { identityPath, identitySha256: hash(source), target, candidates: planned, review: 'not_reviewed', instruction: 'Use provider metadata to choose candidates; unknown attributes require auditioning. No audio generated and identity is unchanged.' };
-        const outputPath = join(dirname(identityPath), 'voice-auditions', randomUUID());
+        // create with the auditionPath of a failed audition continues it: the voices it already made are kept
+        // (bytes checked), and only the missing candidates are generated, with the same identity, sample and voices.
+        const resumed = args.auditionPath ? JSON.parse(readFileSync(resolve(args.auditionPath), 'utf8')) : undefined;
+        if (resumed && !(resumed.status === 'failed' && resumed.identityPath === identityPath && resumed.identitySha256 === hash(source)
+            && resumed.sampleText === args.sampleText && isDeepStrictEqual(resumed.acting, args.acting) && isDeepStrictEqual(resumed.sampleTurns, args.sampleTurns)
+            && resumed.candidates.every((c, i) => isDeepStrictEqual(c.tts, planned[i]?.tts) && existsSync(c.audioPath) && hash(readFileSync(c.audioPath)) === c.audioSha256)))
+            throw new Error('audition_resume_mismatch: continue only a failed audition with the same identity, sample, acting and candidate voices; create a new audition otherwise');
+        const outputPath = resumed ? dirname(resolve(args.auditionPath)) : join(dirname(identityPath), 'voice-auditions', randomUUID());
         mkdirSync(outputPath, { recursive: true });
         const auditionPath = join(outputPath, 'audition.json');
-        const audition = { version: 1, status: 'generating', identityPath, identitySha256: hash(source), sampleText: args.sampleText, candidates: [], target, ...(args.acting ? { acting: args.acting } : {}), ...(args.sampleTurns ? { sampleTurns: args.sampleTurns } : {}), previewPath: join(outputPath, 'index.html') };
+        const audition = resumed ? { ...resumed, status: 'generating' } : { version: 1, status: 'generating', identityPath, identitySha256: hash(source), sampleText: args.sampleText, candidates: [], target, ...(args.acting ? { acting: args.acting } : {}), ...(args.sampleTurns ? { sampleTurns: args.sampleTurns } : {}), previewPath: join(outputPath, 'index.html') };
         save(auditionPath, audition);
         try {
             for (const [index, choice] of planned.entries()) {
+                if (audition.candidates[index])
+                    continue;
                 const id = String(index + 1);
                 const compiled = choice.compiled;
                 const gate = resolveToolGate(compiled.generator, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
@@ -134,12 +160,15 @@ export async function manageVoiceAudition(args) {
             audition.status = 'ready';
             writeFileSync(audition.previewPath, preview(audition));
             save(auditionPath, audition);
-            return { auditionPath, ...audition, instruction: 'Present all three audio players. Wait for the user to choose a candidate, then call select with their actual response.' };
+            // One candidate is the character's sample: it is set at once, like a selection the request already made.
+            if (audition.candidates.length === 1)
+                return { ...selectCandidate(auditionPath, '1', 'single sample: set directly from the create request'), sample: audition.candidates[0] };
+            return { auditionPath, ...audition, sheet: refreshSheet(identityPath), instruction: 'Present all three audio players (the character sheet plays them too). Wait for the user to choose a candidate, then call select with their actual response.' };
         }
         catch (error) {
             audition.status = 'failed';
             save(auditionPath, audition);
-            throw new Error(`Audition incomplete; existing candidates are preserved at ${auditionPath}. ${error instanceof Error ? error.message : String(error)}`);
+            throw new Error(`Audition incomplete; existing candidates are preserved at ${auditionPath} — call create again with this auditionPath to generate only the missing ones. ${error instanceof Error ? error.message : String(error)}`);
         }
     }
     const auditionPath = resolve(args.auditionPath);
@@ -148,9 +177,16 @@ export async function manageVoiceAudition(args) {
         throw new Error('Unsupported audition manifest');
     if (args.action === 'read')
         return { auditionPath, ...audition };
-    if (audition.status !== 'ready' || audition.candidates.length !== 3)
+    if (audition.candidates.length !== 3)
         throw new Error('Select only from a complete, unselected three-voice audition');
-    const chosen = audition.candidates.find(c => c.id === args.candidateId);
+    return selectCandidate(auditionPath, args.candidateId, args.userSelection);
+}
+/** Pin one generated candidate: identity tts and voiceSelection, the sheet's voice.wav and sample.txt. */
+function selectCandidate(auditionPath, candidateId, userSelection) {
+    const audition = JSON.parse(readFileSync(auditionPath, 'utf8'));
+    if (audition.status !== 'ready' || ![1, 3].includes(audition.candidates.length))
+        throw new Error('Select only from a complete, unselected audition or sample');
+    const chosen = audition.candidates.find(c => c.id === candidateId);
     if (!chosen)
         throw new Error('Unknown candidate');
     const recorded = chosen.generation;
@@ -172,7 +208,7 @@ export async function manageVoiceAudition(args) {
     const source = readFileSync(audition.identityPath, 'utf8');
     if (hash(source) !== audition.identitySha256)
         throw new Error('Character identity changed after audition; create a new audition for the current character');
-    const selection = { candidateId: chosen.id, userSelection: args.userSelection, at: new Date().toISOString(), auditionPath, audioSha256: chosen.audioSha256 };
+    const selection = { candidateId: chosen.id, userSelection, at: new Date().toISOString(), auditionPath, audioSha256: chosen.audioSha256 };
     let replaced = false;
     const next = source.replace(/```json\s*\n([\s\S]*?)```/g, (block, json) => {
         const value = JSON.parse(json);
@@ -192,5 +228,13 @@ export async function manageVoiceAudition(args) {
     audition.status = 'selected';
     audition.selected = { ...selection, identitySha256: hash(next) };
     save(auditionPath, audition);
-    return { auditionPath, identityPath: audition.identityPath, tts: chosen.tts, selection, instruction: 'Recompile the character sheet and refresh the review library; existing episode snapshots are unchanged.' };
+    // The chosen take becomes the sheet's voice.wav and sample.txt; any previous pair is kept in this audition folder.
+    const folder = dirname(audition.identityPath);
+    for (const [name, saved] of [['voice.wav', 'voice-before-selection.wav'], ['sample.txt', 'sample-before-selection.txt']])
+        if (existsSync(join(folder, name)))
+            copyFileSync(join(folder, name), join(dirname(auditionPath), saved));
+    copyFileSync(chosen.audioPath, join(folder, 'voice.wav'));
+    writeFileSync(join(folder, 'sample.txt'), audition.sampleText + '\n');
+    return { auditionPath, identityPath: audition.identityPath, tts: chosen.tts, selection, voicePath: join(folder, 'voice.wav'), sheet: refreshSheet(audition.identityPath),
+        instruction: 'The sheet now plays the chosen voice; update the episode SB_DOC.characters tts snapshot where the board should use it.' };
 }

@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 const require = createRequire(import.meta.url);
-const { GROUPS, REQUIRED, identityErrors, identityCharacter, direction, boardIdentityErrors } = require('../../skills/_shared/character-identity.js');
+const { GROUPS, REQUIRED, identityErrors, identityCharacter, direction, panelPrompt, boardIdentityErrors } = require('../../skills/_shared/character-identity.js');
 const { handoff } = require('../../skills/channel/references/character-sheet.js');
 const source = readFileSync(new URL('../../skills/channel/references/character-identity-example.md', import.meta.url), 'utf8');
 const doc = () => JSON.parse(source.match(/```json\s*\n([\s\S]*?)```/)[1]);
@@ -169,4 +169,12 @@ test('episode speech overrides cannot hide missing authorization, a different mo
     cast.character=handoff(file).character;
     const changed=doc();changed.character.physical.heightCm.value+=1;writeFileSync(file,markdown(changed));rejected();
   } finally {rmSync(root,{recursive:true,force:true});}
+});
+
+test('body panels carry height, weight, build, proportions and outfit; a non-English text field is reported, not sent', () => {
+  const ok = v => ({ status: 'confirmed', value: v });
+  const character = { physical: { heightCm: ok(225), weightKg: ok(200), build: ok('broad muscular orc'), proportions: ok('실제 성인 비율'),
+    appearance: ok('olive green skin, amber eyes'), outfit: ok('iron plate armor'), relativeScale: { status: 'pending', value: null, reason: 'r' } } };
+  assert.deepEqual(panelPrompt(character, 'front'), { text: '225 cm tall; about 200 kg; broad muscular orc; iron plate armor', skipped: ['physical.proportions'] });
+  assert.deepEqual(panelPrompt(character, 'face'), { text: 'olive green skin, amber eyes', skipped: [] });
 });

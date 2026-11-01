@@ -17,7 +17,7 @@ export const voiceMetadataSchema = z.object({
 export const characterTargetSchema = z.object({
     vocalGender: z.enum(['female', 'male', 'neutral', 'unspecified']),
     perceivedAge: z.string().max(100).nullable(),
-    timbre: z.string().max(2000).nullable(), pace: z.string().max(2000).nullable(),
+    timbre: z.string().max(2000).nullable(), body: z.string().max(2000).nullable().optional(), pace: z.string().max(2000).nullable(),
     register: z.string().max(2000).nullable(), traits: z.array(z.string().max(2000)).max(20),
     habits: z.string().max(2000).nullable(), emotionalRange: z.string().max(2000).nullable(),
 });

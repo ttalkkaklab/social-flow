@@ -106,6 +106,25 @@ function direction(character, options) {
   };
 }
 
+// The English prompt words for one sheet panel. The face close-up carries the head (appearance);
+// the headless front and back carry the body: height, weight, scale, build, proportions, outfit.
+// Image prompts are English, so a text value in another script is named in `skipped`, not sent.
+const BODY_FIELDS = ['heightCm', 'weightKg', 'relativeScale', 'build', 'proportions', 'outfit'];
+// compact leaves out the height convention note (relativeScale) for prompt-capped image models.
+function panelPrompt(character, view, { compact = false } = {}) {
+  const physical = character?.physical || {}, skipped = [];
+  const words = (view === 'face' ? ['appearance'] : BODY_FIELDS.filter(key => !compact || key !== 'relativeScale')).flatMap(key => {
+    const field = physical[key];
+    if (field?.status !== 'confirmed') return [];
+    if (key === 'heightCm') return [`${field.value} cm tall`];
+    if (key === 'weightKg') return [`about ${field.value} kg`];
+    const value = (Array.isArray(field.value) ? field.value.join(', ') : String(field.value)).trim();
+    if (/[^\P{L}\p{Script=Latin}]/u.test(value)) { skipped.push(`physical.${key}`); return []; }
+    return [value];
+  });
+  return { text: words.join('; '), skipped };
+}
+
 function requiresSpeech(win, id) {
   if (win?.STORY?.version !== 'story-v2' || !Array.isArray(win.SCENES)) return true;
   return win.SCENES.some(s => Array.isArray(s?.narration) && s.narration.some(n =>
@@ -128,4 +147,4 @@ function boardIdentityErrors(win) {
   return errors;
 }
 
-module.exports = { GROUPS, REQUIRED, identityErrors, identityCharacter, direction, boardIdentityErrors, requiresSpeech };
+module.exports = { GROUPS, REQUIRED, identityErrors, identityCharacter, direction, panelPrompt, boardIdentityErrors, requiresSpeech };
