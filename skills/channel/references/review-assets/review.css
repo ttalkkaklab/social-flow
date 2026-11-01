@@ -967,6 +967,9 @@
 /* 2:3 is the front/back panels' own ratio; the 1:1 face fills the frame, and View original shows it whole. */
 .character-stage img, .character-thumb-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 0; border-radius: 0; background: none; }
 .character-stage[data-kind="face"] img, .character-thumb[data-kind="face"] .character-thumb-art img { object-fit: cover; }
+/* Prop references are square; the prop sheet reuses the character layout with a 1:1 stage. */
+.character-stage[data-kind="prop"], .character-thumb[data-kind="prop"] .character-thumb-art { aspect-ratio: 1 / 1; }
+.prop-links { margin-top: var(--review-s12); font-size: var(--review-s14); }
 .character-stage-empty { grid-column: span 2; display: grid; place-items: center; aspect-ratio: auto; min-height: var(--ds-empty-min); border-style: dashed; }
 .character-stage-empty .review-empty { border: 0; background: none; }
 .character-pill {
