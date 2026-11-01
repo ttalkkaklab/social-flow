@@ -23,6 +23,7 @@ generation authorization and adapter input validation stay. Work in this order:
 5. Props and backgrounds — `SB_DOC.props` and `SB_DOC.locations` with their images.
 6. Each shot's start image (`shot_image`), composed from its characters' sheet panels,
    its place and props; then the end image (`frame:"end"`) only for a `first_last` shot.
+   A place whose sheet names a built set is rendered from the shot's own camera first (below).
 7. Each `generated_video` shot's video prompt (`shot_prompt`), from its icon attributes,
    lines and an English action. A later change to what it came from warns and marks the
    prompt stale on the review page; rewrite it with `shot_prompt`.
@@ -50,7 +51,13 @@ spending authorization is reported, never silently bypassed.
 existing spending authorization, then records `visual.frames.start` and `visual.bg` (or
 `frames.end`), `visual.references`, `locationId` and `props`. One character's references are
 its face, headless front and headless back panels; two characters take each face, then
-each front. The place is the edit's first input. The saved image model has to take every
+each front. The place is the edit's first input: when its sheet names a built set
+(`SB_DOC.locations[].manifest`), that set rendered in Blender from the shot's own camera — its size
+and angle, aimed at its cast where `location_manage bind` gave them blocking — and the sheet picture
+follows the panels as a look reference, or stays out with a warning when the model has no room;
+without a set the sheet picture leads, with a warning (`location-assets.md`, Shot frames). The
+render rides as `role:"composition"`, `use:"image"`, never into a video call, and
+`visual.locationFrame` records its camera and fingerprint. The saved image model has to take every
 picture the frame composes (gpt-image up to 16; astra-genai-native or an MLX Qwen-Image-2.1
 pack up to 10; MLX FLUX.2 klein or Mage-Flow Edit up to 4); otherwise — a one-picture model
 such as astra-genai `z-image-turbo` included — it refuses with `image_references_unsupported`,

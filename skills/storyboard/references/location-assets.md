@@ -7,6 +7,7 @@ A location is an immutable Blender set plus semantic JSON, not a collection of i
 - [Spatial planning before storyboard images](#spatial-planning-before-storyboard-images)
 - [Author and build](#author-and-build)
 - [Bind and render a shot](#bind-and-render-a-shot)
+- [Shot frames for shot_image](#shot-frames-for-shot_image)
 - [Interactive review and camera changes](#interactive-review-and-camera-changes)
 - [Checks and compatibility](#checks-and-compatibility)
 
@@ -97,6 +98,58 @@ Call `location_manage` with `{action:"build",spec:"/absolute/spec.json",root:"/a
 `references` returns verified absolute image paths, scopes and hashes. The full-video/still spatial prompt assembler attaches the location image to `sourceImageArgs.referenced_image_paths`. Pass those arguments to the saved image model (`.social-flow/models.json`). Model input limits must be checked before a call; never silently omit location, character or style references. A reference image is not a depth-control input. No current adapter claims native depth/segmentation conditioning.
 
 A generated video's grey motion previz and the location still share the same numerical camera and blocking when built with action `previz`. Inspect the start image against the set before spending on video. Inspect start/middle/end and disocclusion moments in the clip; a metadata record is not visual quality proof. Assembly findings are warnings recorded with the build. Direct Blender location renders are available when exact architecture is required.
+
+## Shot frames for shot_image
+
+When a background sheet names its built set (`SB_DOC.locations[].manifest`), `shot_image` does
+not send the sheet picture as the start image's composition. `shotFrame` renders the set in
+Blender from the camera the shot's own `size` and `angle` ask for and makes that render Image 1,
+the edit source. It runs locally at $0 and caches each render under
+`storyboard/locations/<shot>-frame-<fingerprint>/` (start and end poses); the same set, state,
+blocking and camera reuse it. A Blender failure stops with `location_render_failed` and never
+falls back to the sheet picture.
+
+`shotCamera` builds the camera:
+
+- Subject: the shot's cast where the shot's `shot.location` binding (same set and revision)
+  blocks them; otherwise the required landmarks, or the standing set without its walls, and a
+  warning that the prompt places the cast. Bind blocking first when places matter.
+- Size: each size keeps the crop line `film-techniques.js` names — fs head to toe, mfs from
+  mid-thigh, ms waist up, mcu mid-chest, cu the face and shoulder tops, choker forehead to chin,
+  ecu the eyes — with a lens from 24 mm (els, ls) to 100 mm (ecu) on the 36 mm sensor; the
+  distance fits that span into the vertical field of view, and a group's width into the
+  horizontal one. Composition sizes borrow a distance: two mfs, three fs, ots mcu, back ms,
+  reaction cu, cutaway ls, insert a close frame on the first `mustShow` object.
+- Side: in front of one person (zero rotation faces -Y); square to two people's line on the
+  side their faces turn to, or, when they face each other, the bound or first registered
+  camera's side (180° rule); `back` stands behind.
+- Angle: eye at the subject's eye height; high 35° down; low 25° up (at least 0.3 m above the
+  floor); ground 0.15 m; overhead straight down. `over` stands past the second listed
+  person's shoulder onto the first; `pov` stands at the eyes of a blocked viewer whose gaze
+  names the seen person or object. `dutch` warns: the renderer has no roll, so the prompt
+  tilts the horizon.
+- Clear view: when someone off the shot or a standing object hides a framed person's face or
+  body, or an off-shot person nearer than the subject fills part of the frame, the camera
+  swings round the subject in 20° steps up to 80°, the reference camera's side first, and says
+  so; with no clear side it keeps the least blocked view and warns.
+- Walls: a wall between the camera and the subject brings the camera in, at the same height,
+  0.25 m short of the wall, and the lens widens to keep the framing.
+- Aspect: the render has the output picture's aspect, at most 1280 px on the long side.
+
+The prompt says what each image controls: Image 1 the camera, lens, horizon, framing and where
+every object and coloured figure stands; the sheet panels the characters' appearance; the sheet
+picture, placed after the panels when the model has room, only materials, colours and light.
+Any flat dark area past the set's edge is to be painted as the place continuing. On a `dutch`
+shot the prompt drops the horizon from what Image 1 fixes and asks for the tilt, since the
+render is level.
+It adds the set inventory, invariants, state and which proxy colour is whom. Set names, state
+labels, object labels and invariants in another script stay out of the prompt (a model could
+letter them into the picture) with a warning. An end image of a `first_last` shot adds the
+set's end pose from the same camera after the start image. The render rides as
+`role:"composition"`, `use:"image"`, so it never reaches a video call, and
+`visual.locationFrame` records the set, state, camera, fingerprint and render hashes.
+Without a manifest the sheet picture leads as before, with a warning that its angle is not the
+shot's.
 
 ## Interactive review and camera changes
 

@@ -90,7 +90,8 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
       if (frames.end) bind('end', frames.end, 'end', 'video', 'Ending state', false);
     }
     for (const [i, frame] of (keyframes ?? []).entries()) bind('keyframe-' + (i + 1), frame.image, 'keyframe', 'video', frame.state, false);
-    for (const ref of references) bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, false);
+    // The set render that composed the start image (role composition) is already in it; the video never takes it.
+    for (const ref of references) if (ref.role !== 'composition') bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, false);
     return { args, imageBindings: bindings, imageHandoff: 'unverified_host_mapping: bind every video/both input and temporal frame to the actual host schema; do not omit unsupported inputs or claim submission from this plan' };
   }
   const equal = (a: unknown, b: unknown): boolean => {

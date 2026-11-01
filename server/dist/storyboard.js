@@ -1206,6 +1206,7 @@ export const shotImageSchema = z.object({
     size: z.string().regex(/^\d{3,4}x\d{3,4}$/).optional().describe('Output WIDTHxHEIGHT; default 1536x1024 for a 16:9 board, 1024x1536 otherwise'),
     reserveUsd: z.number().finite().nonnegative().optional(),
 }).strict();
+const locationContract = () => loadFromHere(join(REFERENCES_DIR, 'location-assets.js'));
 // Image models that take several pictures in one request; astra-genai edits one picture, zimage none.
 const IMAGE_INPUTS = {
     'gpt-image': { tool: 'gpt_image_img2img', max: 16 }, 'astra-genai-native': { tool: 'astra_genai_image_edit', max: 10 },
@@ -1290,20 +1291,41 @@ export function shotImageRequest(args) {
     const recorded = args.frame === 'end' && Array.isArray(frames.endProps) ? frames.endProps : visual.props;
     const props = args.props ?? (Array.isArray(recorded) ? recorded.filter((id) => typeof id === 'string') : []);
     const cast = contract().castOf(shot) ?? [];
-    const place = location ? docEntry(win, 'locations', location).imageUrl : undefined;
+    const [width, height] = (args.size ?? (/16x9/.test(String(win.FORMAT ?? '')) ? '1536x1024' : '1024x1536')).split('x').map(Number);
+    const entry = location ? docEntry(win, 'locations', location) : undefined, place = entry?.imageUrl;
     const warnings = [];
+    // A sheet with a built set (SB_DOC.locations[].manifest) is rendered from this shot's own camera — its size and
+    // angle, aimed at its blocked cast — and that render is the picture's composition; the sheet image only gives the look.
+    const set = typeof entry?.manifest === 'string' ? locationContract().shotFrame(win, shots.indexOf(shot), boardDir, { manifest: entry.manifest, cast, size: plan.size, angle: plan.angle, width, height }) : null;
+    if (set)
+        warnings.push(...set.warnings.map((what) => ({ level: 'warn', where: args.id, what })));
+    else if (location && args.frame === 'start')
+        warnings.push({ level: 'warn', where: args.id, what: `the ${location} sheet names no built set, so Image 1 is its picture at whatever angle that was made, not this shot's camera — build the set (location_manage build) and write its manifest on the sheet for a camera-matched start image` });
+    // The renderer has no roll, so a dutch shot's render is level and the prompt alone tilts it.
+    const lens = set ? `${set.camera.lensMm} mm lens` : '', dutch = plan.angle === 'dutch';
+    const composition = set ? [{ id: `${args.id}-set`, path: set[args.frame].path, role: 'composition', use: 'image',
+            purpose: args.frame === 'end' ? `the ${set.name} set from the same camera at the end of the shot, where every object${set.blocked ? ' and figure' : ''} stands when it ends`
+                : `the ${set.name} set seen from this shot's camera (${lens}): its viewpoint, framing${dutch ? '' : ' and horizon'}, the architecture and where every object${set.blocked ? ' and coloured figure' : ''} stands; its plain unpainted surfaces are placeholders` }] : [];
     const refs = [
+        ...composition,
         ...characterRefs(boardDir, win, args.id, cast, frames.mode === 'reference' ? 'both' : 'image', warnings),
         ...props.flatMap((id) => {
             const entry = docEntry(win, 'props', id), file = entry.references?.[0]?.path ?? entry.imageUrl;
             return typeof file === 'string' ? [{ id: `${args.id}-prop-${id}`, path: file, role: 'prop', use: 'image', purpose: `the ${id} prop` }] : [];
         }),
         // MSR takes the start image in its background slot, so the place only conditions the picture.
-        ...(typeof place === 'string' ? [{ id: `${args.id}-place`, path: place, role: 'background', use: 'image', purpose: `the ${location} location` }] : []),
+        ...(typeof place === 'string' ? [{ id: `${args.id}-place`, path: place, role: 'background', use: 'image',
+                purpose: set ? `how the ${location} location looks — materials, colours and light only, not its viewpoint or layout` : `the ${location} location` }] : []),
     ];
-    // The edit starts from the place (or, for an end image, the start image); the rest are references.
-    const ordered = args.frame === 'end' ? [{ path: frames.start, purpose: 'the opening picture of this shot' }, ...refs.filter((ref) => ref.role !== 'background')]
-        : [...refs.filter((ref) => ref.role === 'background'), ...refs.filter((ref) => ref.role !== 'background')];
+    // The edit starts from the set render, else the place (or, for an end image, the start image); the rest are references.
+    // Beside a set render the place picture comes last and stays out when the saved model has no room for it.
+    const look = refs.filter((ref) => ref.role === 'background'), others = refs.filter((ref) => ref.role !== 'background' && ref.role !== 'composition');
+    const head = args.frame === 'end' ? [{ path: frames.start, purpose: 'the opening picture of this shot' }, ...composition] : set ? composition : look;
+    let ordered = [...head, ...others, ...(set && args.frame === 'start' ? look : [])];
+    if (set && look.length && ordered.length > imageInputLimit(episode, args.id)) {
+        ordered = ordered.filter((ref) => !look.includes(ref));
+        warnings.push({ level: 'warn', where: args.id, what: `the saved image model has no room for the ${location} sheet picture beside the set render, so the look comes from the style and prompt alone` });
+    }
     const inputs = ordered.map((ref) => resolve(boardDir, ref.path));
     for (const file of inputs)
         if (!existsSync(file))
@@ -1311,14 +1333,23 @@ export function shotImageRequest(args) {
     const assemble = loadFromHere(join(REFERENCES_DIR, 'assemble-bg-prompt.js')).assemble;
     const style = loadFromHere(join(REFERENCES_DIR, 'production-mode.js')).shotStyle(win, shots.indexOf(shot));
     const body = assemble({ ...(args.frame === 'start' ? { size: plan.size, depth: plan.depth, techniques: plan.techniques } : {}), angle: plan.angle,
-        style: style.preset ? style : null, scene: args.prompt, noPerson: !cast.length }).prompt;
+        style: style.preset ? style : null, scene: args.prompt, noPerson: !cast.length,
+        ...(set ? { location: { prompt: args.frame === 'end' ? set.endPrompt : set.prompt, paths: [] } } : {}) }).prompt;
     const roles = ordered.map((ref, i) => `Image ${i + 1} shows ${ref.purpose}.`).join(' ');
-    const prompt = [ordered.length ? 'Compose one picture from these images.' : '', roles, heightSentence(win, cast),
+    const at = (ref) => ordered.indexOf(ref) + 1;
+    const lock = !set ? '' : args.frame === 'end'
+        ? `Move the figures and objects to where Image ${at(composition[0])} shows them and keep Image 1's camera, look and every identity.`
+        : `Keep Image 1's camera position, ${lens}${dutch ? '' : ', horizon'} and framing, and keep every object${set.blocked ? ' and figure' : ''} where it stands in Image 1; paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.`
+            + (dutch ? ' Image 1 is level; tilt the whole picture to the dutch angle described below.' : '')
+            + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : '');
+    const prompt = [ordered.length ? 'Compose one picture from these images.' : '', roles, lock, heightSentence(win, cast),
         args.frame === 'end' ? 'This is the last frame of the shot that opens on Image 1: keep its place, light and every identity, and change only what the action changed.' : '',
         body.charAt(0).toUpperCase() + body.slice(1)].filter(Boolean).join(' ');
-    const [width, height] = (args.size ?? (/16x9/.test(String(win.FORMAT ?? '')) ? '1536x1024' : '1024x1536')).split('x').map(Number);
     const call = imageCall({ directory: episode, assetId: args.id, inputs, prompt, width, height, outDir: join(boardDir, 'images'), stem: `${args.id}-${args.frame}`, what: 'this frame' });
-    return { episode, assetId: args.id, ...call, refs, ...(location ? { location } : {}), props, prompt, warnings };
+    const sent = refs.filter((ref) => ordered.includes(ref));
+    const locationFrame = set && args.frame === 'start' ? { set: set.id, revision: set.revision, manifest: set.manifest, manifestSha256: set.manifestSha256, stateId: set.stateId,
+        camera: set.camera, blocked: set.blocked, fingerprint: set.fingerprint, start: set.start, end: set.end } : undefined;
+    return { episode, assetId: args.id, ...call, refs: sent, ...(location ? { location } : {}), ...(locationFrame ? { locationFrame } : {}), props, prompt, warnings };
 }
 /**
  * The adapter call for one generated picture with the saved image model: the next free versioned
@@ -1326,10 +1357,17 @@ export function shotImageRequest(args) {
  */
 // Adapters whose request carries a negative prompt; the others ignore it and the caller says so.
 const NEGATIVE_PROMPT_ENGINES = new Set(['astra-genai-native']);
+function imageAdapter(selection) {
+    return selection.engine === 'mlx' ? { tool: 'mlx_image_edit', max: MLX_INPUTS[mlxImageFamily(selection.model ?? '')] ?? 0 } : IMAGE_INPUTS[selection.engine] ?? { max: 0 };
+}
+/** How many pictures the saved image model takes in one request. */
+export function imageInputLimit(directory, assetId) {
+    return imageAdapter(imageContext(directory, assetId).selection).max;
+}
 export function imageCall(o) {
     const { directory, inputs, prompt, width, height } = o;
     const { selection } = imageContext(directory, o.assetId);
-    const adapter = selection.engine === 'mlx' ? { tool: 'mlx_image_edit', max: MLX_INPUTS[mlxImageFamily(selection.model)] ?? 0 } : IMAGE_INPUTS[selection.engine] ?? { max: 0 };
+    const adapter = imageAdapter(selection);
     if (inputs.length > adapter.max)
         throw new Error(`image_references_unsupported: the saved image model (${selection.engine}${selection.model ? ' ' + selection.model : ''}) takes ${adapter.max} picture(s); ${o.what} composes ${inputs.length}. Choose a model that takes that many with the user (gpt-image up to 16; astra-genai-native or an MLX Qwen-Image-2.1 pack up to 10; MLX FLUX.2 klein or Mage-Flow Edit up to 4).`);
     // GPT Image declares one MIME type for all its source pictures, so a mixed set goes up as PNG copies in <outDir>/inputs/.
@@ -1381,6 +1419,11 @@ export function recordShotImage(args, request) {
     if (args.frame === 'start') {
         Object.assign(visual, { bg: rel, bgPrompt: request.prompt, references: request.refs, props: request.props,
             ...(request.location ? { locationId: request.location } : {}) });
+        // The set render the start image was composed from: its camera, inputs and fingerprint.
+        if (request.locationFrame)
+            visual.locationFrame = request.locationFrame;
+        else
+            delete visual.locationFrame;
         // An end image is edited from its start image, so a new start takes the old end off the shot; the file stays in images/.
         if (typeof frames.end === 'string') {
             notes.push({ level: 'warn', where: args.id, what: `the end image ${frames.end} was made from the previous start image and is off the shot — remake it with shot_image frame:"end"` });
