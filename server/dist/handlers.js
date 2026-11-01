@@ -53,6 +53,7 @@ import { formatError, formatFileSize, saveBase64Image } from './media-utils.js';
 import { renderCapabilityStatus } from './capability-status.js';
 import { DURATION_TOOLS, resolveVideoDuration } from './video-duration.js';
 import { manageCharacter } from './character-manage.js';
+import { characterPanelRequest, characterPanelSchema, recordCharacterPanel } from './character-panel.js';
 function text(message, isError = false) {
     return { content: [{ type: 'text', text: message }], isError };
 }
@@ -1509,6 +1510,24 @@ ROUTES.image_catalog = async () => text(JSON.stringify(imageCatalog(), null, 2))
 ROUTES.image_plan = async (args) => text(JSON.stringify(imagePlanSummary(planImage(args)), null, 2));
 ROUTES.image_execute = args => executeImage(args, dispatchImage);
 ROUTES.image_status = async (args) => text(JSON.stringify(await imageStatus(args), null, 2));
+// character_panel plans and runs one sheet panel from the identity, then records it in panels.json.
+ROUTES.character_panel = async (args) => {
+    const input = parseArgs(characterPanelSchema, args);
+    const request = characterPanelRequest(input);
+    const plan = planImage({ directory: request.workspace, assetId: `${request.id}-${request.view}`, requestId: request.requestId, operation: request.operation,
+        ...(request.tool ? { tool: request.tool } : {}), ...(input.reserveUsd !== undefined ? { reserveUsd: input.reserveUsd } : {}), args: request.args });
+    if (plan.execution === 'server') {
+        const result = await executeImage({ directory: plan.directory, planId: plan.id }, dispatchImage);
+        if (result.isError)
+            return result;
+        recordCharacterPanel(request);
+    }
+    const lines = [`${request.view} panel: ${request.file}`, 'Inputs, in order:', ...request.inputs.map((file, i) => `  Image ${i + 1}: ${file}`),
+        '', 'Prompt:', request.prompt, ...(request.warnings.length ? ['', 'Warnings:', ...request.warnings.map((w) => '  ' + w)] : [])];
+    if (plan.execution === 'host_handoff')
+        lines.push('', 'host_handoff: generate this picture with the selected host image tool from the inputs above, in order, save it to the panel path, then record it in panels.json.');
+    return text(lines.join('\n'));
+};
 // shot_image plans and runs one frame through the image service, then records it on the board.
 ROUTES.shot_image = async (args) => {
     storyboard.contract();

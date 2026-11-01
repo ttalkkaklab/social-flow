@@ -680,6 +680,8 @@
 
 .character-sample p { white-space: pre-wrap; }
 .character-notice { color: var(--review-muted); }
+.character-auditions { margin-top: var(--ds-s4); }
+.character-auditions .character-notice { margin: 0; font-size: var(--ds-text-aux); }
 @media (max-width: 639px) {
   .character-header h1 { font-size: var(--review-s28); }
   .character-header { clear: both; }

@@ -1145,13 +1145,20 @@ const IMAGE_INPUTS = {
 // An MLX edit pack takes the source plus 9 references (Qwen-Image-2.1) or 3 (FLUX.2 klein, Mage-Flow Edit); others do not edit (image-models.ts).
 const MLX_INPUTS = { 'qwen-2.1': 10, 'flux-klein': 4, 'mage-edit': 4 };
 const latin = (value) => typeof value === 'string' && value.trim() && !nonEnglishOutsideQuotes(value) ? value.trim() : '';
+const identityCatalog = () => loadFromHere(join(PLUGIN_ROOT, 'skills', '_shared', 'character-identity.js'));
+// Two people in one frame: their sheet heights, so the picture keeps the difference the panels cannot show.
+function heightSentence(win, ids) {
+    const heights = ids.map((id) => [id, (castEntry(win, id)?.character?.physical?.heightCm)])
+        .filter(([, field]) => field?.status === 'confirmed' && typeof field.value === 'number').map(([id, field]) => `${id} is ${field.value} cm tall`);
+    return heights.length > 1 ? `Keep their real heights: ${heights.join(' and ')}.` : '';
+}
 function castEntry(win, id) {
     const list = win.SB_DOC?.characters;
     const entries = Array.isArray(list) ? list : Object.entries(list ?? {}).map(([key, value]) => ({ ...value, id: key }));
     return entries.find((entry) => entry?.id === id);
 }
 /** The sheet panels assets/characters/<id>/panels.json names — face, headless front and back — in MSR order. */
-function characterRefs(boardDir, win, shotId, ids, use) {
+function characterRefs(boardDir, win, shotId, ids, use, warnings) {
     const views = ids.length === 1 ? ['face', 'front', 'back'].map((view) => [ids[0], view]) : ['face', 'front'].flatMap((view) => ids.map((id) => [id, view]));
     const folders = new Map(ids.map((id) => {
         for (let dir = boardDir;; dir = dirname(dir)) {
@@ -1167,9 +1174,10 @@ function characterRefs(boardDir, win, shotId, ids, use) {
         const file = panels[view]?.file;
         if (!file || !existsSync(join(folders.get(id), file)))
             throw new Error(`character_panel_missing: ${id} has no ${view} panel; generate it on the character sheet first`);
-        const physical = (castEntry(win, id)?.character?.physical) ?? {};
-        const detail = latin(view === 'face' ? physical.appearance?.value : physical.outfit?.value);
-        const purpose = (view === 'face' ? `${id}'s face and hair` : `${id}'s outfit, ${view}`) + (detail ? `: ${detail}` : '');
+        const { text: detail, skipped } = identityCatalog().panelPrompt(castEntry(win, id)?.character, view);
+        for (const field of skipped)
+            warnings.push({ level: 'warn', where: shotId, what: `${id}'s ${field} is not English and stays out of the image prompt — write it in English on the character sheet` });
+        const purpose = (view === 'face' ? `${id}'s face and hair` : `${id}'s body and outfit, ${view}`) + (detail ? `: ${detail}` : '');
         return [{ id: `${shotId}-${id}-${view}`, path: relative(boardDir, join(folders.get(id), file)), role: 'character', use, purpose }];
     });
 }
@@ -1208,8 +1216,9 @@ export function shotImageRequest(args) {
     const props = args.props ?? (Array.isArray(recorded) ? recorded.filter((id) => typeof id === 'string') : []);
     const cast = contract().castOf(shot) ?? [];
     const place = location ? docEntry(win, 'locations', location).imageUrl : undefined;
+    const warnings = [];
     const refs = [
-        ...characterRefs(boardDir, win, args.id, cast, frames.mode === 'reference' ? 'both' : 'image'),
+        ...characterRefs(boardDir, win, args.id, cast, frames.mode === 'reference' ? 'both' : 'image', warnings),
         ...props.flatMap((id) => {
             const entry = docEntry(win, 'props', id), file = entry.references?.[0]?.path ?? entry.imageUrl;
             return typeof file === 'string' ? [{ id: `${args.id}-prop-${id}`, path: file, role: 'prop', use: 'image', purpose: `the ${id} prop` }] : [];
@@ -1229,17 +1238,27 @@ export function shotImageRequest(args) {
     const body = assemble({ ...(args.frame === 'start' ? { size: plan.size, depth: plan.depth, techniques: plan.techniques } : {}), angle: plan.angle,
         style: style.preset ? style : null, scene: args.prompt, noPerson: !cast.length }).prompt;
     const roles = ordered.map((ref, i) => `Image ${i + 1} shows ${ref.purpose}.`).join(' ');
-    const prompt = [ordered.length ? 'Compose one picture from these images.' : '', roles,
+    const prompt = [ordered.length ? 'Compose one picture from these images.' : '', roles, heightSentence(win, cast),
         args.frame === 'end' ? 'This is the last frame of the shot that opens on Image 1: keep its place, light and every identity, and change only what the action changed.' : '',
         body.charAt(0).toUpperCase() + body.slice(1)].filter(Boolean).join(' ');
-    const { selection } = imageContext(episode, args.id);
+    const [width, height] = (args.size ?? (/16x9/.test(String(win.FORMAT ?? '')) ? '1536x1024' : '1024x1536')).split('x').map(Number);
+    const call = imageCall({ directory: episode, assetId: args.id, inputs, prompt, width, height, outDir: join(boardDir, 'images'), stem: `${args.id}-${args.frame}`, what: 'this frame' });
+    return { episode, assetId: args.id, ...call, refs, ...(location ? { location } : {}), props, prompt, warnings };
+}
+/**
+ * The adapter call for one generated picture with the saved image model: the next free versioned
+ * file <outDir>/<stem>-vN.png and the engine's own argument shape, editing from the inputs in order.
+ */
+export function imageCall(o) {
+    const { directory, inputs, prompt, width, height } = o;
+    const { selection } = imageContext(directory, o.assetId);
     const adapter = selection.engine === 'mlx' ? { tool: 'mlx_image_edit', max: MLX_INPUTS[mlxImageFamily(selection.model)] ?? 0 } : IMAGE_INPUTS[selection.engine] ?? { max: 0 };
     if (inputs.length > adapter.max)
-        throw new Error(`image_references_unsupported: the saved image model (${selection.engine}${selection.model ? ' ' + selection.model : ''}) takes ${adapter.max} picture(s); this frame composes ${inputs.length}. Choose a model that takes that many with the user (gpt-image up to 16; astra-genai-native or an MLX Qwen-Image-2.1 pack up to 10; MLX FLUX.2 klein or Mage-Flow Edit up to 4).`);
-    // GPT Image declares one MIME type for all its source pictures, so a mixed set goes up as PNG copies in images/inputs/.
+        throw new Error(`image_references_unsupported: the saved image model (${selection.engine}${selection.model ? ' ' + selection.model : ''}) takes ${adapter.max} picture(s); ${o.what} composes ${inputs.length}. Choose a model that takes that many with the user (gpt-image up to 16; astra-genai-native or an MLX Qwen-Image-2.1 pack up to 10; MLX FLUX.2 klein or Mage-Flow Edit up to 4).`);
+    // GPT Image declares one MIME type for all its source pictures, so a mixed set goes up as PNG copies in <outDir>/inputs/.
     const mimes = selection.engine === 'gpt-image' ? inputs.map((f) => readImageMetadata(f).mimeType) : [];
     const toPng = (f) => {
-        const out = join(boardDir, 'images', 'inputs', createHash('sha256').update(readFileSync(f)).digest('hex').slice(0, 16) + '.png');
+        const out = join(o.outDir, 'inputs', createHash('sha256').update(readFileSync(f)).digest('hex').slice(0, 16) + '.png');
         if (!existsSync(out)) {
             mkdirSync(dirname(out), { recursive: true });
             try {
@@ -1252,23 +1271,21 @@ export function shotImageRequest(args) {
         return out;
     };
     const sent = new Set(mimes).size > 1 ? inputs.map((f, i) => mimes[i] === 'image/png' ? f : toPng(f)) : inputs;
-    const jobs = readImageState(episode)?.jobs ?? {};
+    const jobs = readImageState(directory)?.jobs ?? {};
     let k = 1;
-    while (existsSync(join(boardDir, 'images', `${args.id}-${args.frame}-v${k}.png`)) || Object.hasOwn(jobs, `${args.id}-${args.frame}-v${k}`))
+    while (existsSync(join(o.outDir, `${o.stem}-v${k}.png`)) || Object.hasOwn(jobs, `${o.stem}-v${k}`))
         k += 1;
-    const requestId = `${args.id}-${args.frame}-v${k}`, file = join(boardDir, 'images', `${requestId}.png`);
+    const requestId = `${o.stem}-v${k}`, file = join(o.outDir, `${requestId}.png`);
     mkdirSync(dirname(file), { recursive: true });
-    const [width, height] = (args.size ?? (/16x9/.test(String(win.FORMAT ?? '')) ? '1536x1024' : '1024x1536')).split('x').map(Number);
     const base64 = (f) => readFileSync(f).toString('base64');
     const edit = sent.length > 0, tool = edit ? adapter.tool : undefined;
     const output = { outputPath: dirname(file), filename: basename(file) };
-    const adapterArgs = selection.engine === 'host' ? { prompt, referenceImages: sent, savePath: file, size: `${width}x${height}` }
+    const args = selection.engine === 'host' ? { prompt, referenceImages: sent, savePath: file, size: `${width}x${height}` }
         : selection.engine === 'gpt-image' ? { prompt, savePath: file, size: `${width}x${height}`, ...(edit ? { sourceImagesBase64: sent.map(base64), sourceMimeType: readImageMetadata(sent[0]).mimeType || 'image/png' } : {}) }
             : selection.engine === 'astra-genai' ? { prompt, size: `${width}*${height}`, ...output, ...(edit ? { mode: 'img2img', imagePath: sent[0] } : {}) }
                 : ['mlx', 'zimage'].includes(selection.engine) ? { prompt, width, height, ...output, ...(edit ? { imagePath: sent[0], refImagePaths: sent.slice(1) } : {}) }
                     : { prompt, size: `${width}x${height}`, ...output, ...(edit ? { imagePath: sent[0], refImagePaths: sent.slice(1), mode: 'edit' } : {}) };
-    return { episode, assetId: args.id, requestId, ...(tool ? { tool } : {}), operation: edit ? 'edit' : 'text', args: adapterArgs, file, inputs: sent,
-        refs, ...(location ? { location } : {}), props, prompt };
+    return { requestId, ...(tool ? { tool } : {}), operation: (edit ? 'edit' : 'text'), args, file, inputs: sent };
 }
 /** Record a generated (or host-handed) frame on the board: frames.start/bg or frames.end, with its inputs. */
 export function recordShotImage(args, request) {
@@ -1278,7 +1295,7 @@ export function recordShotImage(args, request) {
     const visual = { ...(shots[index].visual ?? {}) };
     const rel = relative(dirname(scenesPath(args.path)), request.file);
     const frames = { ...visual.frames, [args.frame]: rel };
-    const notes = [];
+    const notes = [...request.warnings];
     if (args.frame === 'start') {
         Object.assign(visual, { bg: rel, bgPrompt: request.prompt, references: request.refs, props: request.props,
             ...(request.location ? { locationId: request.location } : {}) });

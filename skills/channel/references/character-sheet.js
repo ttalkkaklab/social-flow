@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { isDeepStrictEqual } = require('node:util');
-const { identityCharacter, direction, requiresSpeech } = require('../../_shared/character-identity.js');
+const { identityCharacter, direction, panelPrompt, requiresSpeech } = require('../../_shared/character-identity.js');
 const { identityVoice, voiceErrors } = require('../../_shared/character-voice.js');
 
 function episodeVoiceOverride(win, tts) {
@@ -49,8 +49,14 @@ function selectedVoiceReference(source, tts) {
 if (require.main === module) {
   try {
     const args = process.argv.slice(2);
-    if (args.length !== 1) throw new Error('Usage: character-sheet.js <identity.md>');
-    console.log(JSON.stringify(handoff(args[0]), null, 2));
+    // --panel face|front|back prints the identity words for that panel's image prompt.
+    const view = args[1] === '--panel' && ['face', 'front', 'back'].includes(args[2]) ? args[2] : undefined;
+    if (args.length !== 1 && !view) throw new Error('Usage: character-sheet.js <identity.md> [--panel face|front|back]');
+    if (view) {
+      const { text, skipped } = panelPrompt(identityCharacter(fs.readFileSync(args[0], 'utf8')), view);
+      if (skipped.length) console.error(`Not English, left out: ${skipped.join(', ')}`);
+      console.log(text);
+    } else console.log(JSON.stringify(handoff(args[0]), null, 2));
   } catch (e) { console.error(e.message); process.exitCode = 1; }
 }
 function sourceErrors(win, boardDir) {

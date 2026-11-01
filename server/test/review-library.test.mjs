@@ -77,6 +77,23 @@ function fixture() {
   return { root, dir, write, clean: () => rmSync(root, { recursive: true, force: true }) };
 }
 
+test('a ready audition awaiting the choice plays its three candidates on the character sheet', () => {
+  const f = fixture();
+  try {
+    const run = join(f.dir, 'assets/characters/hero/voice-auditions/a1');
+    const candidates = ['1', '2', '3'].map(id => ({ id, label: `Voice ${id}`, audioPath: join(run, `candidate-${id}.wav`) }));
+    for (const c of candidates) f.write(`assets/characters/hero/voice-auditions/a1/candidate-${c.id}.wav`, 'RIFF');
+    f.write('assets/characters/hero/voice-auditions/a1/audition.json', JSON.stringify({ status: 'ready', sampleText: '세 걸음 물러서.', candidates }));
+    exportChannel(f.dir);
+    const sheet = () => readFileSync(join(f.dir, 'assets/characters/hero/index.html'), 'utf8');
+    assert.deepEqual([...sheet().matchAll(/data-audio-toggle="(audition-hero-\d)"/g)].map(m => m[1]), ['audition-hero-1', 'audition-hero-2', 'audition-hero-3']);
+    assert.match(sheet(), /src="voice-auditions\/a1\/candidate-2.wav"/);
+    f.write('assets/characters/hero/voice-auditions/a1/audition.json', JSON.stringify({ status: 'selected', sampleText: '세 걸음 물러서.', candidates }));
+    exportChannel(f.dir);
+    assert.doesNotMatch(sheet(), /audition-hero-/);
+  } finally { f.clean(); }
+});
+
 test('exports offline characters, indexes and the SAME storyboard shell with relative dependencies', () => {
   const f = fixture();
   try {

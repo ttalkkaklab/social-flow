@@ -639,6 +639,24 @@ describe('images and the video prompt follow the icon attributes', () => {
     writeShotIcons({ path: dir, shots: [{ id: 's0002', render: { mode: 'motion_html', reason: 'a diagram' } }] });
     assert.throws(() => shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'p' }), /shot_image: s0002 is a motion_html cut/);
   });
+  it('the sheet panels carry each character\'s body, and two characters keep their heights', () => {
+    const { root, dir } = pictureBoard();
+    const sheet = join(root, 'data/c/assets/characters/jun');
+    mkdirSync(sheet, { recursive: true });
+    for (const name of ['face', 'body', 'back']) writeFileSync(join(sheet, name + '.png'), png);
+    writeFileSync(join(sheet, 'panels.json'), JSON.stringify({ panels: { face: { file: 'face.png' }, front: { file: 'body.png' }, back: { file: 'back.png' } } }));
+    writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: [{ id: 'mina' }, { id: 'jun' }] }));
+    const body = (heightCm, extra) => ({ physical: { heightCm: { status: 'confirmed', value: heightCm }, ...extra } });
+    const board = readBoard(dir);
+    applyStoryboard({ path: dir, draft: true, expectedSha256: board.sha256, globals: { SB_DOC: { ...board.win.SB_DOC, characters: [
+      { id: 'mina', character: body(162, { weightKg: { status: 'confirmed', value: 50 } }) }, { id: 'jun', character: body(225, { proportions: { status: 'confirmed', value: '실제 성인 비율' } }) }] } } });
+    writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina', 'jun'] }] });
+    icons(dir);
+    const request = make(dir, 's0001', 'start', { location: 'room' });
+    assert.equal(request.refs.find((r) => r.id === 's0001-mina-front').purpose, "mina's body and outfit, front: 162 cm tall; about 50 kg");
+    assert.match(request.prompt, /Keep their real heights: mina is 162 cm tall and jun is 225 cm tall\./);
+    assert.deepEqual(request.warnings.map((w) => w.what.split(' ').slice(0, 2).join(' ')), ["jun's physical.proportions"]);
+  });
   it('the video prompt reads the icon attributes after every picture exists', () => {
     const { dir } = pictureBoard();
     icons(dir);

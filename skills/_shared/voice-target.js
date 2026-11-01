@@ -19,18 +19,23 @@ function characterVoiceTarget(source, override = {}) {
   const vocalGender = profile.vocalGender || (derivedGender ? (female ? 'female' : 'male') : !qualifiedGender && stated || 'unspecified');
   const age = profile.perceivedAge || value('identity', 'age');
   const pace = [value('speech', 'pace'), value('speech', 'accent')].filter(Boolean).join(' ') || undefined;
-  const register = value('speech', 'register');
+  const register = value('speech', 'register'), habits = value('speech', 'habits');
   const baselineDirection = profile.baselineDirection || [
     pace && `Phrasing: ${pace}`, register && `Register: ${register}`,
-    value('speech', 'habits') && `Speech habit: ${value('speech', 'habits')}`,
+    habits && habits !== register && `Speech habit: ${habits}`,
   ].filter(Boolean).join('\n');
+  // The body behind the voice — species, height, weight, build — is casting evidence for the base
+  // voice (size and resonance), like age and gender; it never becomes a delivery control.
+  const height = value('physical', 'heightCm'), weight = value('physical', 'weightKg');
+  const body = [value('identity', 'species'), height && `${height} cm`, weight && `about ${weight} kg`, value('physical', 'build')].filter(Boolean).join(', ');
   return {
-    vocalGender, perceivedAge: age || null, timbre: timbre || null, pace: pace || null,
+    vocalGender, perceivedAge: age || null, timbre: timbre || null, body: body || null, pace: pace || null,
     register: register || null, traits: value('personality', 'traits') || [],
     habits: value('speech', 'habits') || null, emotionalRange: value('speech', 'emotion') || null,
     baselineDirection,
     sources: { vocalGender: profile.vocalGender ? 'voiceProfile.vocalGender' : derivedGender ? 'character.speech.timbre' : !qualifiedGender && stated ? 'character.identity.gender' : null,
       perceivedAge: profile.perceivedAge ? 'voiceProfile.perceivedAge' : age ? 'character.identity.age' : null,
+      body: body ? 'character.identity.species and physical height, weight and build' : null,
       baselineDirection: profile.baselineDirection ? 'voiceProfile.baselineDirection' : 'confirmed speech pace, accent, register and habits' },
     warnings: [
       'Age, vocal gender and stable timbre are casting constraints. Match the base voice or use tts_voice_design to create/remix it; Gemini 3.8 turn style cannot change immutable speaker traits; Voice Design is a separate identity creation API.',

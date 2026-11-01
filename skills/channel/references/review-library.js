@@ -29,6 +29,16 @@ function regular(root, file) {
   return fs.existsSync(file) && insideReal(root, file) && fs.statSync(file).isFile();
 }
 function read(root, file) { return regular(root, file) ? fs.readFileSync(file, 'utf8') : ''; }
+// The newest complete audition still awaiting the user's choice (made after any earlier selection).
+function pendingAudition(root, folder, identitySource) {
+  const dir = path.join(folder, 'voice-auditions');
+  if (!fs.existsSync(dir)) return null;
+  const selectedAt = Date.parse(/"voiceSelection"[\s\S]*?"at":\s*"([^"]+)"/.exec(identitySource || '')?.[1] || '') || 0;
+  return fs.readdirSync(dir).map(name => path.join(dir, name, 'audition.json')).filter(file => regular(root, file))
+    .map(file => { try { return { audition: JSON.parse(fs.readFileSync(file, 'utf8')), time: fs.statSync(file).mtimeMs }; } catch { return null; } })
+    .filter(x => x && x.audition.status === 'ready' && x.time > selectedAt && x.audition.candidates?.length === 3 && x.audition.candidates.every(c => regular(root, c.audioPath)))
+    .sort((a, b) => b.time - a.time)[0]?.audition || null;
+}
 function identityField(source, names) {
   const alternatives = names.join('|');
   const match = source.match(new RegExp('^\\s*(?:[-*]\\s+)?(?:\\*\\*)?(?:' + alternatives + ')(?:\\*\\*)?\\s*[:：]\\s*(.*)$', 'im'));
@@ -191,12 +201,20 @@ function exportChannel(channelDirectory, { check = false } = {}) {
     const voiceMeta = voice ? [voice.engine, voice.voiceId].filter(Boolean).join(' · ') : '';
     const sample = read(dir, path.join(folder, 'sample.txt')).trim();
     // One player: the sample plays in place; before it exists the button stays disabled.
+    const player = (audio, id, label, meta) => `<div class="character-player ds-panel"${audio ? '' : ' data-empty'}>${audio ? `<audio id="${esc(id)}" preload="metadata" src="${rel(file, audio)}"></audio>` : ''}`
+      + `<button class="review-play character-play" type="button" data-voice-name="${esc(character.name)}"${audio ? ` data-audio-toggle="${esc(id)}"` : ' disabled'} aria-label="${esc(character.name)} · ${audio ? '음성 재생' : '음성 샘플 없음'}" title="${audio ? '음성 재생' : '음성 샘플 없음'}"><svg class="review-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><svg class="review-pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg></button>`
+      + `<div class="character-player-body"><div class="character-player-head"><b>${label}</b>${meta ? `<span>${esc(meta)}</span>` : ''}</div><div class="character-player-track" aria-hidden="true"><span data-audio-progress></span></div></div>`
+      + `<span class="character-player-time" data-audio-time>${audio ? '0:00' : '–:––'}</span></div>`;
     let voiceHtml = `<section class="character-voice" id="voice" aria-labelledby="voice-title"><h2 id="voice-title"><span class="ds-tile">${characterIcon('speech')}</span>${t('캐릭터 목소리', 'Character voice')}</h2>`;
-    voiceHtml += `<div class="character-player ds-panel"${hasVoice ? '' : ' data-empty'}>${hasVoice ? `<audio id="${esc(voiceId)}" preload="metadata" src="${rel(file, voiceFile)}"></audio>` : ''}`;
-    voiceHtml += `<button class="review-play character-play" type="button" data-voice-name="${esc(character.name)}"${hasVoice ? ` data-audio-toggle="${esc(voiceId)}"` : ' disabled'} aria-label="${esc(character.name)} · ${hasVoice ? '음성 재생' : '음성 샘플 없음'}" title="${hasVoice ? '음성 재생' : '음성 샘플 없음'}"><svg class="review-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><svg class="review-pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg></button>`;
-    voiceHtml += `<div class="character-player-body"><div class="character-player-head"><b>${t('샘플 목소리', 'Voice sample')}</b>${voiceMeta ? `<span>${esc(voiceMeta)}</span>` : ''}</div><div class="character-player-track" aria-hidden="true"><span data-audio-progress></span></div></div>`;
-    voiceHtml += `<span class="character-player-time" data-audio-time>${hasVoice ? '0:00' : '–:––'}</span></div>`;
-    if (sample) voiceHtml += `<blockquote class="character-sample"><p>${esc(sample)}</p></blockquote>`;
+    voiceHtml += player(hasVoice && voiceFile, voiceId, t('샘플 목소리', 'Voice sample'), voiceMeta);
+    // A ready audition still waiting for the user's choice plays its three candidates here; the choice is made in the conversation.
+    const audition = pendingAudition(dir, folder, source);
+    if (audition) {
+      voiceHtml += `<div class="character-auditions"><p class="character-notice">${t('후보 음성 3개 — 대화창에서 번호를 알려 주면 그 목소리로 확정합니다.', 'Three candidate voices — name one in the conversation to confirm it.')}</p>`;
+      voiceHtml += audition.candidates.map(c => player(c.audioPath, `audition-${character.id}-${c.id}`, t(`후보 ${c.id}`, `Candidate ${c.id}`), c.label)).join('') + '</div>';
+    }
+    const spoken = sample || audition?.sampleText || '';
+    if (spoken) voiceHtml += `<blockquote class="character-sample"><p>${esc(spoken)}</p></blockquote>`;
     voiceHtml += '</section>';
     body += `<section class="character-hero ds-card ds-card-hero" id="appearance" aria-labelledby="character-name">`;
     if (keys.length) {

@@ -30,6 +30,31 @@ async function fixture(fn) {
   finally { globalThis.fetch = oldFetch; rmSync(dir, { recursive: true, force: true }); }
 }
 
+test('one candidate is the character sample: generated and set at once', async () => fixture(async ({ identityPath, calls }) => {
+  const sample = await call({ action: 'create', identityPath, sampleText: '괜찮아. 내가 옆에 있어.', candidates: [candidates[0]] });
+  assert.equal(calls.length, 1);
+  const body = JSON.parse(readFileSync(identityPath, 'utf8').match(/```json\s*\n([\s\S]*?)```/)[1]);
+  assert.equal(body.tts.voiceId, 'voice-one');
+  assert.equal(body.voiceSelection.candidateId, '1');
+  assert.deepEqual(readFileSync(sample.voicePath), readFileSync(sample.sample.audioPath));
+  assert.equal(readFileSync(path.join(path.dirname(identityPath), 'sample.txt'), 'utf8').trim(), '괜찮아. 내가 옆에 있어.');
+  await assert.rejects(call({ action: 'select', auditionPath: sample.auditionPath, candidateId: '1', userSelection: '1' }), /three-voice/);
+}));
+
+test('a failed audition continues from its finished candidates with the same voices', async () => fixture(async ({ identityPath, calls }) => {
+  const failing = globalThis.fetch;
+  globalThis.fetch = async (url, init) => calls.length === 2 ? (calls.push({ url: String(url) }), new Response('busy', { status: 500 })) : failing(url, init);
+  const args = { action: 'create', identityPath, sampleText: '괜찮아. 내가 옆에 있어.', candidates };
+  const error = await call(args).catch(e => e);
+  const auditionPath = /preserved at (\S+audition\.json)/.exec(error.message)[1];
+  globalThis.fetch = failing;
+  const resumed = await call({ ...args, auditionPath });
+  assert.equal(resumed.status, 'ready');
+  assert.deepEqual(resumed.candidates.map(c => c.tts.voiceId), ['voice-one', 'voice-two', 'voice-three']);
+  assert.equal(calls.length, 4, 'only the third candidate is generated again');
+  await assert.rejects(call({ ...args, auditionPath }), /audition_resume_mismatch/);
+}));
+
 test('three real WAV candidates preserve draft identity until explicit selection', async () => fixture(async ({ identityPath, original, calls, create }) => {
   const audition = await create();
   assert.equal(audition.status, 'ready');
@@ -57,6 +82,7 @@ test('three real WAV candidates preserve draft identity until explicit selection
   assert.equal(body.tts.voiceId, 'voice-two');
   assert.equal(body.voiceSelection.userSelection, '2번 목소리로 해줘');
   assert.equal(body.voiceSelection.audioSha256, audition.candidates[1].audioSha256);
+  assert.deepEqual(readFileSync(selection.voicePath), readFileSync(audition.candidates[1].audioPath), 'the chosen take becomes voice.wav');
   assert.equal((await call({ action: 'read', auditionPath: audition.auditionPath })).status, 'selected');
   await assert.rejects(call({ action: 'select', auditionPath: audition.auditionPath, candidateId: '1', userSelection: '1' }), /unselected|already/i);
   assert.equal(calls.length, 3, 'selection must not generate more audio');
@@ -74,7 +100,7 @@ test('selection rejects changed identity and changed audio without writing voice
   assert.equal(readFileSync(identityPath, 'utf8'), original);
 }));
 
-test('audition schema requires explicit choice and exactly three comparable distinct voices', () => {
+test('audition schema requires explicit choice and one sample or three comparable distinct voices', () => {
   assert.equal(voiceAuditionSchema.safeParse({ action: 'select', auditionPath: '/tmp/audition.json', candidateId: '1' }).success, false);
   assert.equal(voiceAuditionSchema.safeParse({ action: 'select', auditionPath: '/tmp/audition.json', userSelection: 'choose one' }).success, false);
   const base = { action: 'create', identityPath: '/tmp/identity.md', sampleText: '괜찮아. 내가 옆에 있어.', candidates };
@@ -118,6 +144,9 @@ test('audition planning is read-only and adds identity controls to the same gene
     assert.match(plan.target.perceivedAge,/24/);
     assert.ok(plan.target.warnings.some(text=>/immutable speaker traits/.test(text)));
     assert.equal(plan.candidates[0].tts.voiceDirection,plan.target.baselineDirection);
+    const gateway=['a','b','c'].map(voiceId=>({label:voiceId,reason:'Gateway voices',tts:{engine:'astra-genai',model:'voxcpm2',voiceId,language:'ko',speed:1}}));
+    const routed=await manageVoiceAudition(voiceAuditionSchema.parse({action:'plan',identityPath,candidates:gateway,sampleText:'괜찮아요. 제가 여기 있어요.'}));
+    assert.equal(routed.candidates[0].compiled.generation.instructions,plan.target.baselineDirection);
     assert.equal(readFileSync(identityPath,'utf8'),source);
     const lengthy=doc();lengthy.character.speech.pace.value='Measured concise phrasing. '.repeat(30);
     writeFileSync(identityPath,markdown(lengthy));

@@ -10,7 +10,8 @@ Checks were removed for speed: only the story order is enforced, and reviews, Bl
 compositions and other checks come back once the quality is known. Spending limits,
 generation authorization and adapter input validation stay. Work in this order:
 
-1. Characters — identity text and sheet images (`assets/characters/<id>/`, `panels.json`).
+1. Characters — identity text (`character_manage`) and sheet images (`character_panel`, which draws
+   each panel from the identity's body and face fields; `assets/characters/<id>/`, `panels.json`).
 2. Story, one layer at a time: `story_sequence` → `story_scene` → `story_shot`.
 3. Each shot's characters (`shot_characters`, at most two), then their lines (`shot_dialogue`).
 4. Each shot's icon attributes (`shot_icons`): render route, size, angle, camera move,
