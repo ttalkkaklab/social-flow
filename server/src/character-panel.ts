@@ -47,7 +47,7 @@ export function characterPanelRequest(raw: unknown) {
     throw new Error('character_path_invalid: identityPath must be <channel>/assets/characters/<id>/identity.md');
   const { identityCharacter, panelPrompt } = shared('_shared/character-identity.js') as {
     identityCharacter(source: string, o?: { ready?: boolean }): unknown;
-    panelPrompt(character: unknown, view: string, o?: { compact?: boolean }): { text: string; skipped: string[] } };
+    panelPrompt(character: unknown, view: string): { text: string; skipped: string[] } };
   const character = identityCharacter(readFileSync(identityPath, 'utf8'), { ready: false });
   const panelsFile = path.join(folder, 'panels.json');
   const panels = (existsSync(panelsFile) ? JSON.parse(readFileSync(panelsFile, 'utf8')).panels : undefined) ?? {} as Record<string, { file?: string }>;
@@ -67,14 +67,12 @@ export function characterPanelRequest(raw: unknown) {
   const preset = (shared('_shared/model-settings.js') as { readSettings(dir: string): { config?: { style?: { preset?: string } } } }).readSettings(workspace).config?.style?.preset;
   const { STYLES } = shared('storyboard/references/production-mode.js') as { STYLES: Record<string, { prompt: string }> };
   const style = preset && STYLES[preset] ? STYLES[preset].prompt : '';
-  const compose = (compact: boolean, withStyle: boolean) => {
-    const words = panelPrompt(character, args.view, { compact });
-    return { words, prompt: [references.length && args.view !== 'back' ? 'Keep this exact character from the reference images.' : '', FRAMING[args.view].text,
-      `Character: ${words.text}.`, withStyle ? style : '', 'Soft even studio lighting, plain neutral grey background. One view only. No text, watermark, collage or border.'].filter(Boolean).join(' ') };
-  };
-  // A prompt over the adapter's cap drops the height convention note first, then the style sentence.
+  const words = panelPrompt(character, args.view);
+  const compose = (withStyle: boolean) => [references.length && args.view !== 'back' ? 'Keep this exact character from the reference images.' : '', FRAMING[args.view].text,
+    `Character: ${words.text}.`, withStyle ? style : '', 'Soft even studio lighting, plain neutral grey background. One view only. No text, watermark, collage or border.'].filter(Boolean).join(' ');
+  // A prompt over the adapter's cap drops the style sentence.
   const limit = PROMPT_LIMIT[readImageContext(workspace, `${id}-${args.view}`).selection.engine] ?? Infinity;
-  const { words, prompt } = [compose(false, true), compose(true, true), compose(true, false)].find((p) => p.prompt.length <= limit) ?? compose(true, false);
+  const full = compose(true), prompt = full.length <= limit ? full : compose(false);
   const [width, height] = FRAMING[args.view].size;
   const negativePrompt = [NEGATIVE[args.view], args.negativePrompt].filter(Boolean).join(', ');
   const call = imageCall({ directory: workspace, assetId: `${id}-${args.view}`, inputs: references, prompt, negativePrompt, width, height, outDir: folder, stem: `${id}-${args.view}`, what: 'this panel' });

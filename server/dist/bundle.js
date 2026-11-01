@@ -93537,10 +93537,11 @@ var require_character_identity = __commonJS({
         voice: lines(["speech"])
       };
     }
-    var BODY_FIELDS = ["heightCm", "weightKg", "relativeScale", "build", "proportions", "outfit"];
-    function panelPrompt(character, view, { compact: compact5 = false } = {}) {
+    var BODY_FIELDS = ["heightCm", "weightKg", "build", "proportions", "outfit"];
+    var HEAD_WORDS = /\b(head|face|hair|ears?|eyes?|tusks?|helmet)\b/i;
+    function panelPrompt(character, view) {
       const physical = character?.physical || {}, skipped = [];
-      const words = (view === "face" ? ["appearance"] : BODY_FIELDS.filter((key) => !compact5 || key !== "relativeScale")).flatMap((key) => {
+      const words = (view === "face" ? ["appearance"] : BODY_FIELDS).flatMap((key) => {
         const field2 = physical[key];
         if (field2?.status !== "confirmed") return [];
         if (key === "heightCm") return [`${field2.value} cm tall`];
@@ -93550,7 +93551,9 @@ var require_character_identity = __commonJS({
           skipped.push(`physical.${key}`);
           return [];
         }
-        return [value];
+        if (view === "face") return [value];
+        const body = value.split(/\s*[,;]\s*/).filter((clause) => clause && !HEAD_WORDS.test(clause)).join(", ");
+        return body ? [body] : [];
       });
       return { text: words.join("; "), skipped };
     }
@@ -120641,7 +120644,7 @@ Do NOT use for voices, images or episode cast handoffs (character-sheet.js compi
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     description: `Make one panel of a shared character's sheet \u2014 the face close-up, the headless front or the headless back \u2014 from its identity.md, with no hand-written prompt.
 
-Use for a new character's panels, or a requested redo after its identity changed. The prompt is built from the sheet: the face takes physical.appearance; the front and back take height, weight, relative scale, build, proportions and outfit, so every channel and storyboard draws the same body. The project style preset and the character-panels framing (1:1 face; 2:3 body at 85 % height, neutral grey, even light) are added. By default the face is drawn from text, the front is edited from the face panel and the back from the front panel alone, turned 180 degrees with front-only details ruled out; pass references to edit from other pictures (e.g. an approved full-body design). Runs image_plan \u2192 image_execute with the saved image model and the existing spending authorization, saves <id>-<view>-vN.png next to identity.md, records the slot in panels.json (framing not_reviewed) and refreshes the sheets. On the GenAI gateway's 800-character cap it drops the height-convention note, then the style sentence.
+Use for a new character's panels, or a requested redo after its identity changed. The prompt is built from the sheet: the face takes physical.appearance; the front and back take height, weight, build, proportions and outfit with every clause naming the head left out, so every channel and storyboard draws the same body. The project style preset and the character-panels framing (1:1 face; 2:3 body at 85 % height, neutral grey, even light) are added. By default the face is drawn from text, the front is edited from the face panel and the back from the front panel alone, turned 180 degrees with front-only details ruled out; pass references to edit from other pictures (e.g. an approved full-body design). Runs image_plan \u2192 image_execute with the saved image model and the existing spending authorization, saves <id>-<view>-vN.png next to identity.md, records the slot in panels.json (framing not_reviewed) and refreshes the sheets. On the GenAI gateway's 800-character cap it drops the style sentence.
 Returns the file, the inputs in order, the prompt and warnings (a non-English physical field is left out and named); a host selection returns the handoff instead of generating.
 Do NOT use it for scene images (shot_image) or text-bearing art. Refused (character_panel_missing) when a default reference panel does not exist yet, and (image_references_unsupported) when the saved model cannot take that many pictures \u2014 ask the user before changing models. Update the episode's SB_DOC.characters panels separately when a board should use the new files.`,
     inputSchema: { type: "object", additionalProperties: false, required: ["identityPath", "view"], properties: {
@@ -132955,18 +132958,16 @@ function characterPanelRequest(raw) {
   const preset = shared4("_shared/model-settings.js").readSettings(workspace).config?.style?.preset;
   const { STYLES } = shared4("storyboard/references/production-mode.js");
   const style = preset && STYLES[preset] ? STYLES[preset].prompt : "";
-  const compose = (compact5, withStyle) => {
-    const words2 = panelPrompt(character, args.view, { compact: compact5 });
-    return { words: words2, prompt: [
-      references.length && args.view !== "back" ? "Keep this exact character from the reference images." : "",
-      FRAMING[args.view].text,
-      `Character: ${words2.text}.`,
-      withStyle ? style : "",
-      "Soft even studio lighting, plain neutral grey background. One view only. No text, watermark, collage or border."
-    ].filter(Boolean).join(" ") };
-  };
+  const words = panelPrompt(character, args.view);
+  const compose = (withStyle) => [
+    references.length && args.view !== "back" ? "Keep this exact character from the reference images." : "",
+    FRAMING[args.view].text,
+    `Character: ${words.text}.`,
+    withStyle ? style : "",
+    "Soft even studio lighting, plain neutral grey background. One view only. No text, watermark, collage or border."
+  ].filter(Boolean).join(" ");
   const limit2 = PROMPT_LIMIT[readImageContext(workspace, `${id}-${args.view}`).selection.engine] ?? Infinity;
-  const { words, prompt } = [compose(false, true), compose(true, true), compose(true, false)].find((p) => p.prompt.length <= limit2) ?? compose(true, false);
+  const full = compose(true), prompt = full.length <= limit2 ? full : compose(false);
   const [width, height] = FRAMING[args.view].size;
   const negativePrompt = [NEGATIVE[args.view], args.negativePrompt].filter(Boolean).join(", ");
   const call = imageCall({ directory: workspace, assetId: `${id}-${args.view}`, inputs: references, prompt, negativePrompt, width, height, outDir: folder, stem: `${id}-${args.view}`, what: "this panel" });

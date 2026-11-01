@@ -17,7 +17,7 @@ function orc(t) {
   const identityPath = join(root, 'data/c/assets/characters/kardum/identity.md');
   manageCharacter({ identityPath, name: '카르둠', gender: '남성', species: '오크', age: '장년', role: '전사', summary: '전사', heightCm: 225,
     fields: { physical: { weightKg: 200, relativeScale: 'height measured to the top of the head; ears and gear not included', build: 'broad extremely muscular orc ' + 'with heavy shoulders '.repeat(12),
-      appearance: 'olive green skin, amber eyes', outfit: 'worn dark iron plate armor, heavy leather boots' } } });
+      proportions: 'about 7.5 heads tall, head not oversized', appearance: 'olive green skin, amber eyes', outfit: 'worn dark iron plate armor, heavy leather boots' } } });
   return { root, identityPath };
 }
 
@@ -32,7 +32,7 @@ test('each panel prompt comes from the sheet: the face from appearance, the body
   assert.equal(JSON.parse(readFileSync(face.panelsFile, 'utf8')).panels.face.file, 'kardum-face-v1.png');
   const front = characterPanelRequest({ identityPath, view: 'front' });
   assert.deepEqual(front.inputs, [face.file]);
-  assert.match(front.prompt, /Headless front.*Character: 225 cm tall; about 200 kg; height measured.*worn dark iron plate armor/);
+  assert.match(front.prompt, /Headless front.*Character: 225 cm tall; about 200 kg; broad extremely muscular orc.*worn dark iron plate armor/);
   assert.equal(front.requestId, 'kardum-front-v1');
   writeFileSync(front.file, png);
   recordCharacterPanel(front);
@@ -40,16 +40,18 @@ test('each panel prompt comes from the sheet: the face from appearance, the body
   const back = characterPanelRequest({ identityPath, view: 'back' });
   assert.deepEqual(back.inputs, [front.file]);
   assert.match(back.prompt, /^Turn this headless costume mannequin around 180 degrees/);
+  // The sheet's head words (relativeScale, "head not oversized") drew a head back onto the body panels.
+  assert.doesNotMatch(back.prompt, /Character:[^.]*\b(head|ears)\b/);
+  assert.match(back.prompt, /about 7\.5 heads tall/);
 });
 
-test('on the GenAI 800-character cap the height note goes first, then the style sentence', (t) => {
+test('on the GenAI 800-character cap the style sentence goes', (t) => {
   const { root, identityPath } = orc(t);
   const current = settings.readSettings(root);
   settings.saveSettings(root, { ...current.config.models, image: { engine: 'astra-genai', model: 'z-image-turbo' } },
     { expectedRevision: current.revision, request: 'Fixture: the GenAI gateway image model' });
   const front = characterPanelRequest({ identityPath, view: 'front', references: [] });
   assert.ok(front.prompt.length <= 800, `${front.prompt.length} characters`);
-  assert.doesNotMatch(front.prompt, /height measured/);
   assert.match(front.prompt, /225 cm tall; about 200 kg/);
 });
 
