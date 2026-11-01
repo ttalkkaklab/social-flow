@@ -120641,13 +120641,13 @@ Do NOT use for voices, images or episode cast handoffs (character-sheet.js compi
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     description: `Make one panel of a shared character's sheet \u2014 the face close-up, the headless front or the headless back \u2014 from its identity.md, with no hand-written prompt.
 
-Use for a new character's panels, or a requested redo after its identity changed. The prompt is built from the sheet: the face takes physical.appearance; the front and back take height, weight, relative scale, build, proportions and outfit, so every channel and storyboard draws the same body. The project style preset and the character-panels framing (1:1 face; 2:3 body at 85 % height, neutral grey, even light) are added. By default the face is drawn from text, the front is edited from the face panel and the back from the front then face panels; pass references to edit from other pictures (e.g. an approved full-body design). Runs image_plan \u2192 image_execute with the saved image model and the existing spending authorization, saves <id>-<view>-vN.png next to identity.md, records the slot in panels.json (framing not_reviewed) and refreshes the sheets. On the GenAI gateway's 800-character cap it drops the height-convention note, then the style sentence.
+Use for a new character's panels, or a requested redo after its identity changed. The prompt is built from the sheet: the face takes physical.appearance; the front and back take height, weight, relative scale, build, proportions and outfit, so every channel and storyboard draws the same body. The project style preset and the character-panels framing (1:1 face; 2:3 body at 85 % height, neutral grey, even light) are added. By default the face is drawn from text, the front is edited from the face panel and the back from the front panel alone, turned 180 degrees with front-only details ruled out; pass references to edit from other pictures (e.g. an approved full-body design). Runs image_plan \u2192 image_execute with the saved image model and the existing spending authorization, saves <id>-<view>-vN.png next to identity.md, records the slot in panels.json (framing not_reviewed) and refreshes the sheets. On the GenAI gateway's 800-character cap it drops the height-convention note, then the style sentence.
 Returns the file, the inputs in order, the prompt and warnings (a non-English physical field is left out and named); a host selection returns the handoff instead of generating.
 Do NOT use it for scene images (shot_image) or text-bearing art. Refused (character_panel_missing) when a default reference panel does not exist yet, and (image_references_unsupported) when the saved model cannot take that many pictures \u2014 ask the user before changing models. Update the episode's SB_DOC.characters panels separately when a board should use the new files.`,
     inputSchema: { type: "object", additionalProperties: false, required: ["identityPath", "view"], properties: {
       identityPath: { type: "string", description: "Absolute <channel>/assets/characters/<id>/identity.md" },
       view: { type: "string", enum: ["face", "front", "back"], description: "face: 1:1 head close-up \xB7 front / back: 2:3 headless body" },
-      references: { type: "array", maxItems: 4, items: { type: "string" }, description: "Pictures to edit from, in order (absolute or relative to the character folder); [] draws from text. Default: none for face, the face panel for front, the front then face panels for back" },
+      references: { type: "array", maxItems: 4, items: { type: "string" }, description: "Pictures to edit from, in order (absolute or relative to the character folder); [] draws from text. Default: none for face, the face panel for front, the front panel for back" },
       negativePrompt: { type: "string", minLength: 1, maxLength: 1e3, description: "Extra things to keep out, added to the default (front/back: head, face, hair, ears, tusks, helmet; every view: text, watermark, collage), e.g. beard. Sent only to models that take one (astra-genai-native)." },
       reserveUsd: { type: "number", minimum: 0, description: "API reservation estimate, as in image_plan" }
     } }
@@ -132917,18 +132917,20 @@ var shared4 = (file) => load8(`../../skills/${file}`);
 var characterPanelSchema = external_exports.object({
   identityPath: external_exports.string().min(1).describe("<channel>/assets/characters/<id>/identity.md"),
   view: external_exports.enum(["face", "front", "back"]),
-  references: external_exports.array(external_exports.string().min(1)).max(4).optional().describe("Pictures to edit from, in order; default: none for face, the face panel for front, the front then face panel for back"),
+  references: external_exports.array(external_exports.string().min(1)).max(4).optional().describe("Pictures to edit from, in order; default: none for face, the face panel for front, the front panel for back"),
   negativePrompt: external_exports.string().trim().min(1).max(1e3).optional().describe("Extra things to keep out, added to the view's default negative prompt, e.g. beard"),
   reserveUsd: external_exports.number().finite().nonnegative().optional()
 }).strict();
 var FRAMING = {
   face: { size: [1024, 1024], text: "Close head portrait of one character, front facing, neutral expression, the complete head and hair visible, the head filling 70 percent of the image height." },
   front: { size: [1024, 1536], text: "Headless front costume mannequin of this character: nothing above the neck, from the neck and shoulders down to the shoes, neutral stance, arms relaxed, the subject filling 85 percent of the image height." },
-  back: { size: [1024, 1536], text: "Headless rear view of the same costume mannequin, turned 180 degrees away from the camera, from the neck and shoulders down to the heels, the subject filling 85 percent of the image height." }
+  back: { size: [1024, 1536], text: "Turn this headless costume mannequin around 180 degrees so its back faces the camera, keeping the same costume. Show it from directly behind, from the neck down to the heels: the back of the garments, straps and belt and the heels of the footwear; anything worn on one side now sits on the other side of the image. Nothing above the neck. The subject fills 85 percent of the image height." }
 };
+var BODY = "head, face, hair, ears, tusks, helmet, text, watermark, collage, multiple views, border";
 var NEGATIVE = {
   face: "text, watermark, collage, multiple views, border",
-  body: "head, face, hair, ears, tusks, helmet, text, watermark, collage, multiple views, border"
+  front: BODY,
+  back: `front view, chest, belt buckle, palms facing camera, toes facing camera, ${BODY}`
 };
 var PROMPT_LIMIT = { "astra-genai": 800 };
 function characterPanelRequest(raw) {
@@ -132945,7 +132947,7 @@ function characterPanelRequest(raw) {
     if (!file || !existsSync35(path30.join(folder, file))) throw new Error(`character_panel_missing: make ${id}'s ${view} panel first, or pass references`);
     return path30.join(folder, file);
   };
-  const references = (args.references ?? (args.view === "face" ? [] : args.view === "front" ? ["face"] : ["front", "face"]).map(panelFile)).map((file) => path30.resolve(folder, file));
+  const references = (args.references ?? (args.view === "face" ? [] : args.view === "front" ? ["face"] : ["front"]).map(panelFile)).map((file) => path30.resolve(folder, file));
   for (const file of references) if (!existsSync35(file)) throw new Error(`image_input_missing: ${file}`);
   const { findImageWorkspace, readImageContext } = shared4("_shared/image-selection.js");
   const workspace = findImageWorkspace(folder);
@@ -132956,7 +132958,7 @@ function characterPanelRequest(raw) {
   const compose = (compact5, withStyle) => {
     const words2 = panelPrompt(character, args.view, { compact: compact5 });
     return { words: words2, prompt: [
-      references.length ? "Keep this exact character from the reference images." : "",
+      references.length && args.view !== "back" ? "Keep this exact character from the reference images." : "",
       FRAMING[args.view].text,
       `Character: ${words2.text}.`,
       withStyle ? style : "",
@@ -132966,7 +132968,7 @@ function characterPanelRequest(raw) {
   const limit2 = PROMPT_LIMIT[readImageContext(workspace, `${id}-${args.view}`).selection.engine] ?? Infinity;
   const { words, prompt } = [compose(false, true), compose(true, true), compose(true, false)].find((p) => p.prompt.length <= limit2) ?? compose(true, false);
   const [width, height] = FRAMING[args.view].size;
-  const negativePrompt = [NEGATIVE[args.view === "face" ? "face" : "body"], args.negativePrompt].filter(Boolean).join(", ");
+  const negativePrompt = [NEGATIVE[args.view], args.negativePrompt].filter(Boolean).join(", ");
   const call = imageCall({ directory: workspace, assetId: `${id}-${args.view}`, inputs: references, prompt, negativePrompt, width, height, outDir: folder, stem: `${id}-${args.view}`, what: "this panel" });
   const warnings = [
     ...call.negativeSent ? [] : ["the saved image model takes no negative prompt; only the prompt keeps the head out"],
