@@ -125692,11 +125692,18 @@ function prepareVideoVoice(tool2, input, context2) {
   const args = { ...input };
   const lines = (Array.isArray(context2.shot.narration) ? context2.shot.narration : []).map(object3).filter((line) => text(line.tts));
   const msr = tool2 === "astra_genai_msr";
+  const finishArgs = () => {
+    if (msr && typeof args.prompt === "string") {
+      const policy = load5("../../skills/_shared/scene-acting.js").VIDEO_TEXT_POLICY;
+      if (!args.prompt.endsWith(policy)) args.prompt += "\n\n" + policy;
+    }
+    return args;
+  };
   if (msr) {
     if (object3(context2.shot.visual).video && object3(object3(context2.shot.visual).video).voice !== void 0)
       throw new Error("visual.video.voice is retired: MSR uses the speaker's voice sample when one is pinned");
   }
-  if (!lines.length) return { args };
+  if (!lines.length) return { args: finishArgs() };
   const doc = object3(context2.board.SB_DOC), raw = doc.characters;
   const characters = Array.isArray(raw) ? raw.map(object3) : Object.entries(object3(raw)).map(([id, value]) => ({ ...object3(value), id }));
   const visual = object3(context2.shot.visual);
@@ -125811,7 +125818,7 @@ function prepareVideoVoice(tool2, input, context2) {
   }
   if (strategy === "supplied_audio") warnings.push("Use the final composed pinned-voice WAV. ASTRA re-encodes supplied audio; mouth motion and speaker identity remain unreviewed.");
   if (prompt.length && typeof args.prompt === "string") args.prompt += (msr ? "\n\n" : "\n\nVoice continuity guidance:\n") + prompt.join("\n");
-  return { args, voiceContinuity: {
+  return { args: finishArgs(), voiceContinuity: {
     version: 1,
     strategy,
     speakers,

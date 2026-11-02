@@ -318,9 +318,13 @@ For the selected provider/model, resolve and record capabilities with evidence:
 
 A native-speech shot preserves each line's delivery: on-screen speech moves its speaker's
 mouth, off-screen dialogue keeps its speaker unseen, and voiceover leaves visible mouths
-closed. Its binding records each line's revision instead of an audio hash,
+closed. Its binding records each line's revision instead of an audio hash.
 `attach_video` sets `sound.audioSource:"video"` so the clip's soundtrack is the card audio,
 and a line edit marks the clip stale rather than asking for a take.
+
+`video_plan` keeps the text-free instruction after the compiled native dialogue, including
+silent MSR shots. This is prompt guidance; inspect the generated frames for unwanted captions.
+
 Store the route in `visual.video.speechBinding` with line ids and audio hashes. Mark stale
 bindings after edits and clear `speechStatus:stale` only after the new media is generated and
 bound. A provider switch changes video generation, never the approved character voice or the
