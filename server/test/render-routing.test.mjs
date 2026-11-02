@@ -12,7 +12,7 @@ const {signature}=require(path.join(ref,'production-mode.js'));
 // Most cases inspect all diagnostics; the cases that pass their own advice array check what blocks.
 const checkScene=(scene,options={})=>{const advice=[];return routing.checkScene(scene,{...options,advice}).concat(advice);};
 const still=()=>({type:'points',duration:8,narration:[{tts:'A portrait.',sub:'A portrait.'}],shot:{infoType:'other',render:{mode:'still_camera',purpose:'portrait',reason:'Introduce the inventor.',camera:{effect:'push',target:'face',reason:'Make the identity clear.'}}},visual:{bg:'images/portrait.png',camera:{movement:'dolly in'},slide:{kind:'camera',motion:true,file:'slides/s1-camera.html'}}});
-// Every generated_video cut carries its 3D previz (blender-previz.md §6, user directive 2026-09-11).
+// A generated_video cut may carry a 3D previz (optional since 2026-10-18; blender-previz.md §6).
 const previzRecord=()=>({renderer:'blender',clip:'previz/s1.mp4',firstFrame:'previz/s1-f0001.png',sha256:'b'.repeat(64),fps:24,seconds:5,camera:{movement:'arc shot'}});
 const PREVIZ_PROMPT='Image 1 is the first frame. Use Video 1, a 3D clay-model previz, as the only reference for camera movement, shot rhythm, subject trajectory and blocking; strictly keep its camera path and pacing. Do not reference its visual content. The red model in Video 1 is the porter from Image 2. A stone courtyard at dusk. The porter stays consistent with Image 2.';
 const video=()=>({type:'cover',duration:5,shot:{infoType:'other',render:{mode:'generated_video',purpose:'live_action',reason:'The flowing fabric carries the mood.',motionEssential:true,action:'Wind lifts the fabric while the actor turns.',whyNotStill:'The changing silhouette requires continuous natural motion.'}},

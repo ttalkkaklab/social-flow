@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { mkdtempSync, readFileSync, writeFileSync, rmSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { runInNewContext } from 'node:vm';
 import { tmpdir } from 'node:os';
 const require = createRequire(import.meta.url);
 const { FONT_ASSETS } = require('../../skills/channel/references/review-fonts.js');
@@ -49,4 +50,21 @@ test('check is read-only and malformed existing metadata is preserved for repair
     assert.throws(() => storyboardHtml(dir), /SB_DOC/);
     assert.equal(readFileSync(file, 'utf8'), broken);
   } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+// Board values come from model output and web research; the review page opens in the owner's browser.
+test('review HTML never turns javascript: or data: board values into links', () => {
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const safeSrc = runInNewContext('(' + template.match(/function safeSrc\(src\) \{[^\n]*\}/)[0] + ')');
+  for (const bad of ['javascript:alert(1)', 'JAVASCRIPT:x', 'data:text/html,x', '//evil.example/a.png', 'a\u0000.png'])
+    assert.equal(safeSrc(bad), '', bad);
+  assert.equal(safeSrc('../media/room.png'), '../media/room.png');
+  const start = template.indexOf('  function locationSheetsHtml(');
+  const sheets = template.slice(start, template.indexOf('  h += locationSheetsHtml', start));
+  const context = { window: {}, LANG: 'ko', esc: v => String(v ?? '').replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;'),
+    doc: { locations: [{ id: 'room', name: 'room', imageUrl: 'javascript:alert(1)', sheetPath: 'data:text/html,unsafe' }] }, shots: [] };
+  const render = () => runInNewContext(sheets + '\nlocationSheetsHtml(doc, shots)', context);
+  assert.doesNotMatch(render(), /(?:src|href)="(?:javascript|data):/);
+  context.doc.locations[0].imageUrl = '../media/room.png';
+  assert.match(render(), /src="\.\.\/media\/room\.png"/);
 });
