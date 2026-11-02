@@ -184,9 +184,13 @@ saves `{engine:"astra-genai", model:"ltx-2.5-22b-distilled", operation:"referenc
 resolution:"1792x1024"}` (16:9; `1024x1792` for 9:16). `video_plan` uses the saved
 `operation` when a call names none, so episode cuts plan MSR. A direct "LTX로 만들어줘"
 request means `astra_genai_msr` with the character image, the dialogue in the prompt
-and the character's voice sample when one is pinned. The v2 operations take a provider `resolution` string,
-and the gateway refused `1792x1024` there (`unknown provider resolution`, 2026-10-30):
-a v2 call in such a project needs its own supported resolution.
+and the character's voice sample when one is pinned. The v2 operations (text, image and audio to video) take
+only `1280x720`, `720x1280`, `720x720`, `1080x720` or `720x1080` (gateway `/v1/models`,
+2026-11-02; `1792x1024` there is `unknown provider resolution`), so `video_plan` sends a v2 call
+the size closest to the saved one in aspect ratio — `1280x720` for `1792x1024`, `720x1280` for
+`1024x1792` — while MSR keeps the saved size. A first-frame shot in an MSR project therefore plans
+image-to-video without changing the saved settings. Text and image to video take `duration`
+6–20 seconds in even steps.
 
 The gateway acknowledged an MSR submission after 480 seconds while busy (2026-10-30), so
 GenAI video submissions wait up to 15 minutes for the job ID.
