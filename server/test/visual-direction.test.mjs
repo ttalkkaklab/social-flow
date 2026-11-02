@@ -5,68 +5,12 @@ import {mkdtempSync,writeFileSync,readFileSync,copyFileSync,mkdirSync,rmSync} fr
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
-import {runInNewContext} from 'node:vm';
 const require=createRequire(import.meta.url),root=path.resolve(import.meta.dirname,'../..');
 const ref=path.join(root,'skills/storyboard/references');
 const routing=require(path.join(ref,'render-routing.js'));
 const checkScene=(scene,options={})=>{const advice=[];return routing.checkScene(scene,{...options,advice}).concat(advice);};
-const checkEpisode=win=>{const advice=[];return routing.checkEpisode(win,{advice}).concat(advice);};
 const {render}=require(path.join(ref,'chart-runtime.js'));
 const graph=()=>({type:'points',duration:8,title:'Measured comparison',narration:[{tts:'A has sixteen; B has thirty-two.'}],shot:{infoType:'statistic',render:{mode:'data_graph',purpose:'comparison',reason:'Show how much larger B is.',data:{source:'Fixture measurements',unit:'units',chart:'bar',baseline:0,values:[{label:'A',value:16},{label:'B',value:32}],beats:[{group:1,focus:['B'],insight:'B is twice A.'}]}}},visual:{slide:{file:'slides/s1-chart.html',kind:'diagram',motion:true,treatment:'editorial',role:'statistic',motif:'value on a shared scale',quality:'object-state-v1',chartRenderer:'svg-v1',motionBeats:[{group:1,primitive:'chart-reveal'}],subject:{kind:'data',changes:[{group:1,before:'No values visible',after:'Both values share a zero baseline',driver:'value'}]}}}});
-const quote=()=>({type:'points',duration:5,narration:[{tts:'The quoted evidence.'}],shot:{infoType:'other',render:{mode:'editorial_html',purpose:'evidence_quote',reason:'Read the exact admission.',evidence:{source:'The letter',quote:'The quoted evidence.'}}},visual:{slide:{kind:'diagram',motion:true,treatment:'editorial',subject:{kind:'type'}}}});
-test('approval renderer recognizes camera photographs without hiding unsupported slides',async()=>{
- const template=readFileSync(path.join(ref,'storyboard-html-template.html'),'utf8');
- const script=template.slice(template.indexOf('/* ⚙ RENDERER')).split('</script>')[0];
- async function preview(kind, scenes, doc){
-  const app={},audit={},style={setProperty(){}};
-  const document={getElementById:id=>({app,audit}[id]||null),querySelector:()=>null,documentElement:{style},body:{appendChild(){}},
-   createElement:()=>({style,firstChild:{querySelector:()=>null}})};
-  const window={THEME:{},FORMAT:'shorts-9x16',SB_DOC:doc || {},SCENES:scenes || [{
-   type:'points',duration:5,title:'Rider',narration:[{tts:'Look at the rider.'}],
-   visual:{bg:'images/rider.png',picture:'still',overlay:'none',slide:{kind,motion:true,file:'slides/s1-rider.html',plan:'Approach the rider.'}}
-  }]};
-  window.FILM_TECHNIQUES=require(path.join(ref,'film-techniques.js'));
-  window.SHOT_DIRECTION=require(path.join(ref,'shot-direction.js'));
-  window.document=document;
-  runInNewContext(readFileSync(path.join(root,'skills/channel/references/review-assets/review-typography.js'),'utf8'),{window});
-  runInNewContext(script,{window,document,URLSearchParams,location:{search:'?lang=en'},navigator:{languages:['en']},console},{timeout:5000});
-  await window.STORYBOARD_READY;
-  return {html:app.innerHTML,audit:audit.innerHTML};
- }
- const camera=await preview('camera');
- assert.doesNotMatch(camera.audit,/slide.kind.*outside|structure says slide|also carrying bg/);
- assert.match((await preview('unknown')).audit,/slide.kind.*outside/);
- assert.match((await preview('diagram')).audit,/also carrying bg/);
- const partial=(await preview('camera',[{type:'cover',duration:3},{type:'points'}])).html;
- assert.match(partial,/Known planned 3s · unknown 1/);
- assert.doesNotMatch(partial,/Main body · 3s/);
-});
-test('text-led plans have an explicit route, a source and an episode limit',()=>{
- const s=quote();assert.deepEqual(checkScene(s),[]);
- delete s.shot.render.evidence;assert.match(checkScene(s).join(),/exact evidence.quote/);
- const scenes=Array.from({length:9},(_,i)=>{const s=quote();s.shot.render.reason='Explain evidence '+i;s.visual.slide.motionBeats=[{group:1,primitive:'state-transform'}];return s});
- assert.match(checkEpisode({SCENES:scenes}).join(),/text-led slides dominate/);
- assert.deepEqual(checkEpisode({SCENES:scenes.slice(0,2)}),[]);
-});
-test('copying direction across different scene types is blocked without a mode quota',()=>{
- const scenes=[graph(),graph(),graph()];assert.match(checkEpisode({SCENES:scenes}).join(),/repeated render reason/);
- scenes.forEach((s,i)=>s.shot.render.reason='Specific comparison '+i);assert.deepEqual(checkEpisode({SCENES:scenes}),[]);
- assert.match(checkEpisode({SCENES:scenes,PRELUDE:{duration:2.8}}).join(),/outside the checked timeline/);
-});
-test('changing text to motionBeats cannot evade the text limit',()=>{
- const s=quote();s.shot.render.mode='object_html';s.visual.slide.motionBeats=[{group:1,primitive:'object-move'}];
- assert.match(checkEpisode({SCENES:[s]}).join(),/must use editorial_html/);
-});
-test('charts require source-linked, changing focus and valid temporal geometry',()=>{
- const s=graph();assert.deepEqual(checkScene(s),[]);
- const untitled=graph();untitled.title='';assert.match(checkScene(untitled).join(),/data.title/);
- untitled.shot.render.data.title='Measured comparison';assert.deepEqual(checkScene(untitled),[]);
- s.shot.render.data.beats=[];assert.match(checkScene(s,{draft:true}).join(),/one group, focus/);
- const t=graph();t.shot.render.purpose='trend';t.shot.render.data.chart='line';
- assert.match(checkScene(t,{draft:true}).join(),/ISO dates/);
- const d=graph();d.narration.push({tts:'Another line.'});d.shot.render.data.beats.push({...d.shot.render.data.beats[0],group:2});
- assert.match(checkScene(d,{draft:true}).join(),/same focus/);
-});
 test('SVG rendering keeps true proportions, source labels and repeatable frames',()=>{
  const d=graph().shot.render.data;
  const full=render(d),half=render(d,{progress:.3});

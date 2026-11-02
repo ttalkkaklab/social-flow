@@ -66,10 +66,3 @@ test('body panels rule the head out with a negative prompt on models that take o
   assert.equal(characterPanelRequest({ identityPath, view: 'face' }).args.negativePrompt.includes('head'), false);
   assert.match(characterPanelRequest({ identityPath, view: 'back', references: [] }).args.negativePrompt, /^front view, chest, .*, head, face/);
 });
-
-test('a model without a negative prompt gets none and the panel says so', (t) => {
-  const { identityPath } = orc(t);
-  const front = characterPanelRequest({ identityPath, view: 'front', references: [] });
-  assert.equal(front.args.negativePrompt, undefined);
-  assert.ok(front.warnings.some((w) => /no negative prompt/.test(w)));
-});

@@ -21,14 +21,6 @@ test('a static camera preserves framing without freezing the planned actor actio
   assert.doesNotMatch(prompt, /Camera speed:|walking speed/);
 });
 
-test('all supported static aliases suppress speed and keep the framing lock', () => {
-  for (const movement of ['static', 'fixed camera', 'locked camera', 'locked-off camera', 'locked off camera']) {
-    const prompt = sceneDirection({visual: {camera: {movement, speed: 'walking speed'}}});
-    assert.match(prompt, /Locked camera:/, movement);
-    assert.doesNotMatch(prompt, /Camera speed:|walking speed/, movement);
-  }
-});
-
 test('a travelling camera retains its authored speed and endpoint without a static lock', () => {
   const scene = {visual: {camera: {
     framing: 'Wide veranda with woman at right.',

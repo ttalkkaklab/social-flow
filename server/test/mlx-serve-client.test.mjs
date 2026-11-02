@@ -5,13 +5,11 @@
 
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, it } from 'node:test';
 
-import { mlxServeConfigured, mlxServeUrl } from '../dist/config.js';
-import { pcmToWav } from '../dist/media-utils.js';
 import {
   DEFAULT_MLX_IMAGE_SIZE,
   DEFAULT_MLX_MUSIC_SECONDS,
@@ -19,25 +17,16 @@ import {
   DEFAULT_MLX_VIDEO_HEIGHT,
   DEFAULT_MLX_VIDEO_WIDTH,
   MAX_MLX_VIDEO_FRAMES,
-  MAX_VIDEO_RGB_BYTES,
   MLX_VIDEO_FPS,
   editMlxImage,
-  generateMlx3d,
   generateMlxImage,
   generateMlxMusic,
   generateMlxVideo,
-  mlx3dGenerateSchema,
-  mlxDownHint,
-  mlxImageEditSchema,
   mlxImageGenerateSchema,
   mlxMusicGenerateSchema,
   mlxVideoGenerateSchema,
-  parseGlbResponse,
-  parseImageResponse,
   parseVideoResponse,
   pickModel,
-  videoExceedsMemory,
-  videoRgbBytes,
 } from '../dist/mlx-serve-client.js';
 
 const origFetch = globalThis.fetch;
@@ -68,24 +57,6 @@ function bytesResponse(status, buf, contentType) {
   };
 }
 
-function tinyWav() {
-  return pcmToWav(Buffer.alloc(32), 24_000, 1);
-}
-
-describe('mlx-serve config', () => {
-  it('strips trailing slashes from MLX_SERVE_URL', () => {
-    const prev = process.env.MLX_SERVE_URL;
-    process.env.MLX_SERVE_URL = 'http://127.0.0.1:19999///';
-    try {
-      assert.equal(mlxServeUrl(), 'http://127.0.0.1:19999');
-      assert.equal(mlxServeConfigured(), true, 'a non-default URL counts as configured');
-    } finally {
-      if (prev === undefined) delete process.env.MLX_SERVE_URL;
-      else process.env.MLX_SERVE_URL = prev;
-    }
-  });
-});
-
 describe('mlx schemas', () => {
   it('image generate fills 1024² and rejects 1080', () => {
     const parsed = mlxImageGenerateSchema.parse({ prompt: 'a chair' });
@@ -93,11 +64,6 @@ describe('mlx schemas', () => {
     assert.equal(parsed.height, DEFAULT_MLX_IMAGE_SIZE);
     assert.equal(mlxImageGenerateSchema.safeParse({ prompt: 'x', width: 1080, height: 1920 }).success, false);
     assert.equal(mlxImageGenerateSchema.safeParse({ prompt: 'x', width: 1088, height: 1920 }).success, true);
-  });
-
-  it('image edit requires imagePath', () => {
-    assert.equal(mlxImageEditSchema.safeParse({ prompt: 'make it night' }).success, false);
-    assert.equal(mlxImageEditSchema.safeParse({ prompt: 'make it night', imagePath: '/tmp/a.png' }).success, true);
   });
 
   it('music defaults instrumental true and rejects lyrics beside it', () => {
@@ -145,13 +111,6 @@ describe('mlx schemas', () => {
     assert.equal(mlxVideoGenerateSchema.safeParse({ prompt: 'x', numFrames: 57 }).success, true);
     assert.equal(mlxVideoGenerateSchema.safeParse({ prompt: 'x', numFrames: MAX_MLX_VIDEO_FRAMES }).success, true);
   });
-
-  it('3d requires imagePath and a .glb filename', () => {
-    assert.equal(mlx3dGenerateSchema.safeParse({}).success, false);
-    assert.equal(mlx3dGenerateSchema.safeParse({ imagePath: '/tmp/a.png' }).success, true);
-    assert.equal(mlx3dGenerateSchema.safeParse({ imagePath: '/tmp/a.png', filename: 'out.obj' }).success, false);
-    assert.equal(mlx3dGenerateSchema.safeParse({ imagePath: '/tmp/a.png', filename: 'out.glb' }).success, true);
-  });
 });
 
 describe('mlx parsers and pickModel', () => {
@@ -164,12 +123,6 @@ describe('mlx parsers and pickModel', () => {
     assert.equal(pickModel(models, 'image')?.id, 'krea');
     assert.equal(pickModel(models, 'video'), undefined);
     assert.equal(pickModel([{ id: 'ltx', capabilities: ['video'] }], 'video')?.id, 'ltx');
-  });
-
-  it('parseImageResponse reads data[0].b64_json', () => {
-    const ok = parseImageResponse(JSON.stringify({ data: [{ b64_json: 'YWJj' }] }));
-    assert.equal('b64' in ok && ok.b64, 'YWJj');
-    assert.equal('error' in parseImageResponse('{}'), true);
   });
 
   it('parseVideoResponse checks rgb8 length', () => {
@@ -187,33 +140,9 @@ describe('mlx parsers and pickModel', () => {
     );
     assert.match('error' in short ? short.error : '', /RGB length/);
   });
-
-  it('parseGlbResponse reads data', () => {
-    const ok = parseGlbResponse(JSON.stringify({ data: 'Z2xi' }));
-    assert.equal('b64' in ok && ok.b64, 'Z2xi');
-    assert.equal('error' in parseGlbResponse('{}'), true);
-  });
-
-  it('1088×1920×8s at 24fps exceeds the RGB cap; the default canvas does not', () => {
-    assert.equal(videoExceedsMemory(1088, 1920, 192), true);
-    assert.ok(videoRgbBytes(1088, 1920, 192) > MAX_VIDEO_RGB_BYTES);
-    assert.equal(videoExceedsMemory(DEFAULT_MLX_VIDEO_WIDTH, DEFAULT_MLX_VIDEO_HEIGHT, DEFAULT_MLX_VIDEO_FRAMES), false);
-    assert.equal(MLX_VIDEO_FPS, 24);
-  });
 });
 
 describe('mlx generate — mocked fetch', () => {
-  it('fails closed with the install hint when :11234 is down', async () => {
-    globalThis.fetch = async () => {
-      throw new Error('fetch failed');
-    };
-    const result = await generateMlxImage({ prompt: 'x', width: 1024, height: 1024 });
-    assert.equal(result.success, false);
-    assert.match(result.error, /brew install --cask mlx-core/);
-    assert.match(result.error, /does not launch the app/);
-    assert.match(mlxDownHint(), /MLX Core is not reachable/);
-  });
-
   it('never sends default:true on load-model, then writes the png', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'mlx-img-'));
     let modelsCalls = 0;
@@ -313,30 +242,6 @@ describe('mlx generate — mocked fetch', () => {
       });
       assert.equal(result.success, false);
       assert.match(result.error, /nope/);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  it('3d writes a glb from data', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'mlx-3d-'));
-    const src = join(dir, 'in.png');
-    writeFileSync(src, 'img');
-    globalThis.fetch = async (url) => {
-      const path = String(url);
-      if (path.endsWith('/health')) return jsonResponse(200, { ok: true });
-      if (path.endsWith('/v1/models')) {
-        return jsonResponse(200, { data: [{ id: 'hunyuan', state: 'ready', capabilities: ['3d'] }] });
-      }
-      if (path.endsWith('/v1/3d/generations')) {
-        return jsonResponse(200, { data: Buffer.from('glb-bytes').toString('base64') });
-      }
-      throw new Error(`unexpected ${path}`);
-    };
-    try {
-      const result = await generateMlx3d({ imagePath: src, outputPath: dir, filename: 'm.glb' });
-      assert.equal(result.success, true, result.error);
-      assert.equal(readFileSync(join(dir, 'm.glb')).toString(), 'glb-bytes');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

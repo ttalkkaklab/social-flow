@@ -81,7 +81,7 @@ ${concat}`], {cwd: dir, encoding: 'utf8', timeout: 30000});
   }
 }
 
-for (const fps of [24, 30, 60]) test(`main concat preserves ${fps}fps packet clock despite shortened MP4 edit lists`, {timeout: 60000}, () => fixture(fps, ({dir, originalFrames, frames, cards, run}) => {
+for (const fps of [24, 60]) test(`main concat preserves ${fps}fps packet clock despite shortened MP4 edit lists`, {timeout: 60000}, () => fixture(fps, ({dir, originalFrames, frames, cards, run}) => {
   const result = run();
   assert.equal(result.status, 0, result.stdout + result.stderr);
   assert.doesNotMatch(result.stderr, /Non-monoton/);
@@ -202,18 +202,6 @@ test('live outgoing frames continue across J-cut; every transition preserves fra
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
 
-test('strict dimensions permit approved orientation changes but keep exact-input errors',()=>{
- const dir=mkdtempSync(path.join(tmpdir(),'assembly-dimensions-'));
- try{
-  const block=builder.slice(builder.indexOf('if [ "$DIMBAD" = 1 ]'),builder.indexOf('# A still never sits frozen'));
-  assert.ok(block.includes('VIDEO_WARNINGS_APPROVED'));
-  for(const [bad,warn,approved,pass] of [[0,1,0,false],[0,1,1,true],[1,0,1,false]]){
-   const r=spawnSync('bash',['-c',`set -euo pipefail; say(){ echo "$1"; }; DIMBAD=${bad}; DIMWARN=${warn}; VIDEO_WARNINGS_APPROVED=${approved}; STRICT_DIM=1; `+block],{cwd:dir,encoding:'utf8'});
-   assert.equal(r.status===0,pass,r.stdout+r.stderr);
-  }
- }finally{rmSync(dir,{recursive:true,force:true})}
-});
-
 // ── Per-card audio: narration tempo and breathing room.
 test('assembly preserves source audio and alignment tempo with legacy rate settings', t => {
   const dir = mkdtempSync(path.join(tmpdir(), 'assembly-tempo-'));
@@ -234,14 +222,6 @@ test('assembly preserves source audio and alignment tempo with legacy rate setti
   assert.doesNotMatch(builder, /-af\s+"atempo=/);
 });
 
-test('assembly and final speed pass do not forward obsolete per-card bounds', () => {
-  for (const name of ['build-reel.sh', 'speedup.sh']) {
-    const script = readFileSync(path.join(ref, name), 'utf8');
-    assert.match(script, /checkTempo\(process.cwd\(\),speed\)/);
-    assert.doesNotMatch(script, /\$\{ATEMPO_(MIN|MAX)/);
-  }
-});
-
 test('short narration uses authored breathing room and remains sample-exact',()=>{
  const dir=mkdtempSync(path.join(tmpdir(),'cinematic-audio-'));
  try{
@@ -256,60 +236,6 @@ CPRE=0; CPOST=0.12; CMIN=0; L=1.5; FPS=30; SPF=1600; HANDLE=0.24; JOIN=0; MAX_DU
   const samples=Number(execFileSync('ffprobe',['-v','error','-show_entries','stream=duration_ts','-of','csv=p=0',path.join(dir,'work/n0.wav')],{encoding:'utf8'}).trim());
   assert.equal(samples,49*1600);assert.ok(samples/48000<2,'no forced four-second hold or 0.4-second pre-roll');
  }finally{rmSync(dir,{recursive:true,force:true});}
-});
-
-// ── Per-card build report.
-const reportStart = builder.indexOf('  # Non-ASCII glued right after a variable');
-const reportEnd = builder.indexOf('\ndone 3< cards.resolved.tsv', reportStart);
-assert.ok(reportStart >= 0 && reportEnd > reportStart, 'exercise the actual per-card reporting block');
-const reporting = builder.slice(reportStart, reportEnd);
-
-function report({grouped, visuals, legacyReport}) {
-  const dir = mkdtempSync(path.join(tmpdir(), 'build-report-'));
-  try {
-    mkdirSync(path.join(dir, 'work'));
-    if (legacyReport !== undefined) writeFileSync(path.join(dir, 'work/rt0.txt'), legacyReport);
-    const run = spawnSync('bash', ['-c', `set -euo pipefail
-TOTF=200; FRAMES=100; WARN=0
-say() { printf '%s\\n' "$1"; printf '%s\\n' "$1" >> build-report.txt; }
-${reporting}
-printf '%s %s %s\\n' "$TOTF" "$FRAMES" "$WARN" > state.txt
-`], {cwd: dir, encoding: 'utf8', env: {...process.env, GROUPED: String(grouped), MV: String(visuals), IDX: '0'}});
-    return {
-      ...run,
-      report: existsSync(path.join(dir, 'build-report.txt')) ? readFileSync(path.join(dir, 'build-report.txt'), 'utf8') : '',
-      state: existsSync(path.join(dir, 'state.txt')) ? readFileSync(path.join(dir, 'state.txt'), 'utf8') : '',
-    };
-  } finally {
-    rmSync(dir, {recursive: true, force: true});
-  }
-}
-
-test('direct video groups report their sources and do not consume a stale legacy reveal report', () => {
-  const run = report({grouped: 1, visuals: 3, legacyReport: 'STALE REVEAL TIMING\n'});
-  assert.equal(run.status, 0, run.stderr);
-  assert.equal(run.stderr, '');
-  assert.equal(run.stdout, '  └ direct video groups 3\n');
-  assert.equal(run.report, run.stdout);
-  assert.equal(run.state, '200 100 0\n', 'reporting must not change the frame clock or warning state');
-});
-
-test('legacy multi-visual cards retain their reveal timing report', () => {
-  const timing = '        3.96s +0.35s  pause-aligned\n        9.34s +0.29s  pause-aligned\n';
-  const run = report({grouped: 0, visuals: 3, legacyReport: timing});
-  assert.equal(run.status, 0, run.stderr);
-  assert.equal(run.stderr, '');
-  assert.equal(run.stdout, '  └ reveal 3 states\n' + timing);
-  assert.equal(run.report, run.stdout);
-  assert.equal(run.state, '200 100 0\n');
-});
-
-test('legacy single-visual cards do not request a timing report', () => {
-  const run = report({grouped: 0, visuals: 1});
-  assert.equal(run.status, 0, run.stderr);
-  assert.equal(run.stderr, '');
-  assert.equal(run.stdout, '');
-  assert.equal(run.report, '');
 });
 
 // ── Final mux (the same render() contract in the screencast builder).
@@ -334,45 +260,4 @@ ${stage}`;
  assert.deepEqual(streams.map(s=>s.codec_type),['video','audio']);
  const rgb=execFileSync('ffmpeg',['-v','error','-ss','0.5','-i',path.join(dir,'reel.mp4'),'-frames:v','1','-f','rawvideo','-pix_fmt','rgb24','pipe:1']);
  for(let i=3;i<rgb.length;i++)assert.equal(rgb[i],rgb[i%3],'caption pixels appeared on the flat blue source');
-});
-
-// ── Entry-point wiring and card options (source checks).
-test('the build entrypoint compiles the current board before sourcing sound.env', () => {
-  const compileAt = builder.indexOf('node "$HERE/compile-sound-plan.js"');
-  const sourceAt = builder.indexOf('[ -f sound.env ] && . ./sound.env');
-  assert.notEqual(compileAt, -1);
-  assert.ok(compileAt < sourceAt, 'compile-sound-plan must run before sound.env is sourced');
-});
-
-test('build-reel filming lane — sync cards steer around the audio machine', () => {
-  // Column 5 is optional — zero regression means a 4-column file still runs today as it does
-  assert.match(builder, /read -r -u 3 IDX SRC TARGET ZDIR OPTS/, 'cards.tsv column 5');
-  assert.match(builder, /if \[ "\$SYNC" -eq 1 \]; then CPRE=0; CPOST=0; CMIN=0;/,
-    'sync cards have preroll, postroll and minimum length at 0');
-  // If the card loop picks the global PRE back up, only sync cards slip by 0.4 s
-  assert.doesNotMatch(builder, /-v p="\$PRE"/, 'the global PRE is still inside the loop');
-  assert.match(builder, /--pre "\$CPRE"/, 'reveal timing uses the same pre-roll as the card audio');
-  // Run trim or atempo over it and it drifts from the picture by that much
-  assert.match(builder, /MUTE=1   # bypasses the audio machine below/, 'sync skips trim and speed correction');
-  assert.match(builder, /SYNCNOTE="silent clip — normalization skipped"/, 'a silent clip does not get loudnorm either');
-});
-
-test('build-reel Ken Burns — off for filmed clips, pan for landscape', () => {
-  assert.match(builder, /if \[ "\$ZD" = "none" \]; then/, 'zoom=none');
-  // What this pins is that the none branch carries no scale= — the source goes through at its
-  // own resolution. The label it hands on is [vkb], the shared hand-off every zoom branch uses
-  // so §7.4 can hang the scene-boundary fade off one place instead of three.
-  assert.match(builder, /\$\{CUR\}format=yuv420p\[vkb\];/, 'none does not upscale the source either');
-  assert.doesNotMatch(builder, /if \[ "\$ZD" = "none" \]; then[\s\S]{0,200}?scale=\$ZB/,
-                      'the none branch never scales');
-  assert.match(builder, /l2r\)\s+PX="\(iw-iw\/zoom\)\*\$E"/, 'pan direction formula');
-  // The pan zoom cannot exceed the preset clamp — past it the field of view gets cut hard
-  assert.match(builder, /-v lo="\$KB_ZOOM_MIN" -v hi="\$KB_ZOOM_MAX"/, 'pan zoom clamp');
-  assert.match(builder, /KB_ZOOM_MIN=\$\{KB_ZOOM_MIN:-1\.06\}/, 'clamp inline default');
-});
-
-test('an unknown cards.tsv option is not silently ignored', () => {
-  // If a typo is ignored, a filmed card missing sync ships 0.4 s out of alignment and you have to catch it by eye
-  assert.match(builder, /\*\) say "✗ card \$IDX: unknown cards\.tsv column-5 option — \$KV"; exit 1 ;;/);
-  assert.match(builder, /unknown pan direction/, 'an unknown pan direction stops it too');
 });

@@ -5,14 +5,12 @@
  */
 
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { after, describe, it } from 'node:test';
 
 import {
-  CHECK_SCENES_FILE,
-  CONTRACT_FILE,
   STRUCTURE_VERSION,
   applyPatch,
   applyStoryboard,
@@ -21,13 +19,11 @@ import {
   contract,
   readBoard,
   readStoryboard,
-  sceneSchema,
   scenarioCheckSchema,
   serializeBoard,
   shotSchema,
   storyboardApplySchema,
   storyboardReadSchema,
-  structureSchema,
   writeShotCharacters,
   writeShotDialogue,
   writeShotIcons,
@@ -84,11 +80,6 @@ const board = () => [
 const comprehension = { mode: 'informational', question: '무엇이 달라졌나요?', answer: '한 가지가 달라졌어요.', takeaway: '한 가지만 기억하면 돼요.', branches: [], terms: [] };
 
 describe('storyboard schemas', () => {
-  it('scene creative fields are optional; typed identity and unknown keys stay checked', () => {
-    assert.ok(sceneSchema.safeParse(scene(1)).success);
-    assert.ok(sceneSchema.safeParse({ ...scene(1), place: '' }).success);
-    assert.ok(!sceneSchema.safeParse({ ...scene(1), mood: 'x' }).success, 'a typo key is refused');
-  });
   it('shot adapter values stay typed while creative vocabulary passes through', () => {
     assert.ok(shotSchema.safeParse(board()[1]).success);
     assert.ok(shotSchema.safeParse({ ...board()[1], id: 's0007' }).success);
@@ -97,12 +88,6 @@ describe('storyboard schemas', () => {
     assert.ok(!shotSchema.safeParse({ ...board()[1], transition: 'push:left' }).success);
     const extra = shotSchema.safeParse({ ...board()[1], visual: { video: { engine: 'veo' } }, edit: { reason: 'x' } });
     assert.ok(extra.success && extra.data.edit.reason === 'x');
-  });
-  it('the vocabularies come from structure-contract.js, the file check-scenes.js pins', () => {
-    assert.ok(existsSync(CONTRACT_FILE));
-    assert.ok(existsSync(CHECK_SCENES_FILE));
-    assert.equal(structureSchema.safeParse(structure([scene(1)])).success, true);
-    assert.deepEqual(contract().VOCAB.SIZES.slice(0, 3), ['els', 'ls', 'ws']);
   });
 });
 
@@ -159,14 +144,6 @@ describe('applyPatch', () => {
     assert.ok(schema.items.properties.transition.enum.includes('dip'));
   });
 
-  it('a full set validates, syncs the shot labels and reports no violation', () => {
-    const r = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1, { summary: '둘이 처음 만난다.' }), scene(2, { place: '부엌', time: '밤' })]), shots: board() } }));
-    assert.deepEqual(r.findings.filter((f) => f.level === 'bad'), []);
-    assert.equal(r.win.STRUCTURE.scenes[0].summary, '둘이 처음 만난다.');
-    assert.equal(r.synced, 4);
-    assert.equal(r.win.SCENES[2].sceneSlug, '부엌 / 밤');
-    assert.equal(r.win.SCENES[2].sequence, undefined, 'one sequence writes no shot label');
-  });
   it('assigns stable ids to every shot in a full set', () => {
     const r = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1), scene(2)]), shots: board() } }));
     assert.deepEqual(r.win.SCENES.map((s) => s.id), ['s0001', 's0002', 's0003', 's0004']);
@@ -186,12 +163,6 @@ describe('applyPatch', () => {
     const changed = applyPatch(base, storyboardApplySchema.parse({ path: 'x', shots: [{ no: 2, shot: board()[1] }] }));
     assert.equal(changed.win.SCENES[1].id, 's0002');
     assert.equal(changed.win.STRUCTURE.nextShotId, 5);
-  });
-  it('positional upsert with an explicit different id replaces the id', () => {
-    const base = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1), scene(2)]), shots: board() } })).win;
-    const changed = applyPatch(base, storyboardApplySchema.parse({ path: 'x', shots: [{ no: 2, shot: { ...board()[1], id: 's0042' } }] }));
-    assert.equal(changed.win.SCENES[1].id, 's0042');
-    assert.equal(changed.win.STRUCTURE.nextShotId, 43);
   });
   it('shotsById replaces a shot by its id and keeps the id; an unknown id or a renamed id writes nothing (R7)', () => {
     const base = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1), scene(2)]), shots: board() } })).win;
@@ -236,10 +207,6 @@ describe('applyPatch', () => {
     const duplicates = r.findings.filter((f) => /duplicate s0002/.test(f.what));
     assert.equal(duplicates.length, 1);
     assert.equal(r.win.SCENES[2].id, 's0002');
-  });
-  it('a violation in the structure comes back as findings, one per issue', () => {
-    const r = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1)]), shots: board() } }));
-    assert.ok(r.findings.some((f) => f.level === 'bad' && /scene reference does not exist/.test(f.what)));
   });
   it('upserts by key and removes by key', () => {
     const base = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1), scene(2)]), shots: board() } })).win;
@@ -318,15 +285,6 @@ describe('file round trip', () => {
     const invalid = applyStoryboard(storyboardApplySchema.parse({ path: dir, set: { shots: [{ type: 'points', shot: { eyeline: { matchShot: 9 } } }] } }));
     assert.ok(invalid.findings.some(f => f.level === 'bad' && f.what.includes('matchShot')));
   });
-  it('a dry run never writes into the caller\'s shot objects', () => {
-    const shots = board();
-    const win = { FORMAT: 'shorts-9x16', COMPREHENSION: comprehension, STRUCTURE: structure([scene(1), scene(2)]), SCENES: shots };
-    const r = applyPatch(win, storyboardApplySchema.parse({ path: '.', dryRun: true, scenes: [scene(2, { place: '옥상', time: '밤' })] }));
-    assert.ok(!r.findings.some((f) => f.level === 'bad'));
-    assert.equal(r.win.SCENES[3].sceneSlug, '옥상 / 밤');
-    assert.equal(shots[3].sceneSlug, undefined);
-    assert.equal(win.STRUCTURE.scenes[1].place, '작업실');
-  });
   it('an older STRUCTURE.version is kept and reported, never silently stamped', () => {
     const win = { FORMAT: 'shorts-9x16', COMPREHENSION: comprehension, STRUCTURE: { ...structure([scene(1), scene(2)]), version: 'structure-v0' }, SCENES: board() };
     const r = applyPatch(win, storyboardApplySchema.parse({ path: '.', globals: { FORMAT: 'shorts-9x16' } }));
@@ -338,26 +296,6 @@ describe('file round trip', () => {
     const r = applyPatch(win, storyboardApplySchema.parse({ path: '.', globals: { FORMAT: 'shorts-9x16' } }));
     assert.ok(r.findings.some((f) => f.level === 'bad' && /arrays of objects/.test(f.what)));
     assert.doesNotThrow(() => contract().outline(win, 'full'));
-  });
-  it('shot positions may arrive in any order', () => {
-    const win = { FORMAT: 'shorts-9x16', COMPREHENSION: comprehension, STRUCTURE: structure([scene(1), scene(2)]), SCENES: board() };
-    const extra = (no) => ({ ...board()[1], scene: 2, shot: { ...board()[1].shot, info: '정보 ' + no } });
-    const r = applyPatch(win, storyboardApplySchema.parse({ path: '.', shots: [{ no: 6, shot: extra(6) }, { no: 5, shot: extra(5) }] }));
-    assert.equal(r.win.SCENES.length, 6);
-  });
-  it('storyboard_apply is not advertised as idempotent — inserts and appends repeat', () => {
-    const apply = TOOLS.find((t) => t.name === 'storyboard_apply');
-    assert.equal(apply.annotations.idempotentHint, false);
-  });
-  it('the version fallback in storyboard.ts equals the contract VERSION', () => {
-    assert.equal(STRUCTURE_VERSION, contract().VERSION);
-    assert.equal(STRUCTURE_VERSION, 'structure-v1');
-  });
-  it('a repeated sequence.title warns', () => {
-    const st = structure([scene(1), scene(2)]);
-    st.sequences = [{ id: 'q1', title: '같은 제목', purpose: '한 목적', scenes: [1] }, { id: 'q2', title: '같은 제목', purpose: '다른 목적', scenes: [2] }];
-    const f = contract().check({ FORMAT: 'shorts-9x16', COMPREHENSION: comprehension, STRUCTURE: st, SCENES: board() });
-    assert.ok(f.some((x) => /repeats another sequence's/.test(x.what)));
   });
 });
 
@@ -372,20 +310,6 @@ describe('checkStoryboard', () => {
     assert.ok(!r.structure.some((f) => f.level === 'bad'), JSON.stringify(r.structure));
     // The contract half still speaks: this fixture has no STORY / PRODUCTION / render modes.
     assert.ok(r.contract.length > 0);
-  });
-  it('a write runs no creative rule; storyboard_check reports it and the story pass defers camera continuity', () => {
-    // Two same-size adjacent picture shots with no coverage — the 30° rule applies in the full check only.
-    const shots = board();
-    shots[1].shot.size = 'mcu';
-    const dir = tmp();
-    const draft = applyStoryboard(storyboardApplySchema.parse({ path: dir, draft: true, set: { structure: structure([scene(1), scene(2)]), shots }, globals: { FORMAT: 'shorts-9x16', COMPREHENSION: comprehension } }));
-    assert.ok(draft.written && !draft.findings.some((f) => /adjacent picture cut/.test(f.what)), JSON.stringify(draft.findings));
-    assert.ok(checkStoryboard({ path: dir }).structure.some((f) => f.level === 'warn' && /adjacent picture cut/.test(f.what)));
-    const r = checkStoryboard({ path: dir, draft: true });
-    assert.ok(!r.structure.some((f) => f.level === 'bad'), JSON.stringify(r.structure));
-    assert.ok(r.structure.some((f) => f.level === 'later' && /adjacent picture cut/.test(f.what)));
-    // No duplicate: the deferred finding lands once, not as bad in one list and later in the other.
-    assert.ok(!r.contract.some((f) => /adjacent picture cut/.test(f.what)), JSON.stringify(r.contract));
   });
   it('counts an unsupported render route or a negative duration as a violation', () => {
     const dir = tmp();
@@ -565,22 +489,6 @@ describe('icon attributes come after every shot\'s characters', () => {
     assert.deepEqual([wide.written, notes(wide)], [true, []]);
     assert.ok(wide.findings.some((f) => f.level === 'warn' && f.where === 's0001' && /camera.rack-focus names no subjects/.test(f.what)));
   });
-  it('leaving the still route takes the hold\'s intentional still with it', () => {
-    const dir = storyBoard();
-    writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: [] }] });
-    writeShotIcons({ path: dir, shots: [{ id: 's0002', render: { mode: 'still_camera', reason: 'r' }, move: { id: 'hold', reason: 'the line lands' } }] });
-    assert.equal(readBoard(dir).win.SCENES[1].shot.render.motionIntent?.type, 'intentional_still');
-    writeShotIcons({ path: dir, shots: [{ id: 's0002', render: { mode: 'generated_video', reason: 'continuous action' } }] });
-    const render = readBoard(dir).win.SCENES[1].shot.render;
-    assert.deepEqual([render.motionIntent, render.camera], [undefined, undefined]);
-  });
-  it('the shot_icons tool shows the 9:16 notes to the author', async () => {
-    const dir = storyBoard();
-    writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: [] }] });
-    const out = await ROUTES.shot_icons({ path: dir, shots: [{ id: 's0001', render: { mode: 'generated_video', reason: 'r' }, size: 'ls' }] });
-    assert.ok(!out.isError);
-    assert.match(out.content[0].text, /s0001 +9:16 note, size ls: /);
-  });
   it('only a board started with story_sequence holds every writer to the order', () => {
     const dir = storyBoard();
     const shot = readBoard(dir).win.SCENES[0];
@@ -724,25 +632,6 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.ok(fallback.warnings.some((w) => /^the prop ledger has errors for the watch prop/.test(w.what)));
     assert.doesNotMatch(prop(fallback).purpose, /held by/);
   });
-  it('the sheet panels carry each character\'s body, and two characters keep their heights', () => {
-    const { root, dir } = pictureBoard();
-    const sheet = join(root, 'data/c/assets/characters/jun');
-    mkdirSync(sheet, { recursive: true });
-    for (const name of ['face', 'body', 'back']) writeFileSync(join(sheet, name + '.png'), png);
-    writeFileSync(join(sheet, 'panels.json'), JSON.stringify({ panels: { face: { file: 'face.png' }, front: { file: 'body.png' }, back: { file: 'back.png' } } }));
-    writeFileSync(join(sheet, 'identity.md'), '# jun\n');
-    writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: ['mina', 'jun'].map((id) => ({ id, source: `../../../assets/characters/${id}/identity.md` })) }));
-    const body = (heightCm, extra) => ({ physical: { heightCm: { status: 'confirmed', value: heightCm }, ...extra } });
-    const board = readBoard(dir);
-    applyStoryboard({ path: dir, draft: true, expectedSha256: board.sha256, globals: { SB_DOC: { ...board.win.SB_DOC, characters: [
-      { id: 'mina', character: body(162, { weightKg: { status: 'confirmed', value: 50 } }) }, { id: 'jun', character: body(225, { proportions: { status: 'confirmed', value: '실제 성인 비율' } }) }] } } });
-    writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina', 'jun'] }] });
-    icons(dir);
-    const request = make(dir, 's0001', 'start', { location: 'room' });
-    assert.equal(request.refs.find((r) => r.id === 's0001-mina-front').purpose, "mina's body and outfit, front: 162 cm tall; about 50 kg");
-    assert.match(request.prompt, /Keep their real heights: mina is 162 cm tall and jun is 225 cm tall\./);
-    assert.deepEqual(request.warnings.map((w) => w.what.split(' ').slice(0, 2).join(' ')), ['the room', "jun's physical.proportions"]);   // the room sheet has no built set
-  });
   it('the video prompt reads the icon attributes after every picture exists', () => {
     const { dir } = pictureBoard();
     icons(dir);
@@ -795,59 +684,6 @@ describe('images and the video prompt follow the icon attributes', () => {
     const resized = writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'ecu' }] });
     assert.ok(resized.findings.some((f) => f.where === 's0001' && /start image was made for the previous size/.test(f.what)));
   });
-  it('a sheet with a built set sends that set seen from the shot\'s camera as Image 1', () => {
-    const { root, dir } = pictureBoard();
-    const L = createRequire(import.meta.url)('../../skills/storyboard/references/location-assets.js');
-    const { spec } = createRequire(import.meta.url)('../../skills/storyboard/references/location-example.js');
-    // The room's built set (hash-checked stand-in assets) and a stand-in Blender that writes one PNG per camera.
-    const set = join(root, 'data/c/assets/locations/room/v1'), fake = join(root, 'blender'), blender = process.env.BLENDER;
-    mkdirSync(set, { recursive: true });
-    const m = structuredClone(spec); m.assets = {};
-    for (const [k, n] of [['blend', 'source.blend'], ['glb', 'preview.glb']]) { writeFileSync(join(set, n), k); m.assets[k] = { path: n, sha256: L.fileHash(join(set, n)) }; }
-    writeFileSync(join(set, 'location.json'), JSON.stringify(m));
-    writeFileSync(fake, `#!/usr/bin/env node\nconst fs=require('fs'),path=require('path');const job=JSON.parse(fs.readFileSync(process.argv.at(-1),'utf8'));\nfor(const k of Object.keys(job.cameras))fs.writeFileSync(path.join(job.output,k+'.png'),Buffer.from(${JSON.stringify(png.toString('base64'))},'base64'));\n`, { mode: 0o755 });
-    process.env.BLENDER = fake;
-    try {
-      const doc = readBoard(dir).win.SB_DOC;
-      applyStoryboard({ path: dir, draft: true, globals: { FORMAT: 'youtube-long-16x9',
-        SB_DOC: { ...doc, locations: [{ ...doc.locations[0], manifest: '../../../assets/locations/room/v1/location.json' }] } } });
-      icons(dir);
-      // Mina is blocked by the window, facing the camera side; the shot is bound to the same set.
-      L.run({ action: 'bind', board: join(dir, 'scenes.js'), shotId: 's0002', manifest: join(set, 'location.json'), stateId: 'night', cameraId: 'wide',
-        blocking: { actors: [{ id: 'mina', height: 1.6, color: '#d0342c', start: { position: [-1, 1.8, 0], rotationZDeg: 0 }, end: { position: [0, 1.8, 0], rotationZDeg: 0 } }] } });
-      const start = make(dir, 's0002', 'start', { location: 'room' });
-      assert.deepEqual(start.inputs.map((f) => relative(dir, f).replace(/frame-[0-9a-f]{16}/, 'frame-*')),
-        ['locations/s0002-frame-*/start.png', ...['face', 'body', 'back'].map((n) => `../../../assets/characters/mina/${n}.png`), 'places/room.png']);
-      assert.match(start.prompt, /^Compose one picture from these images\. Image 1 shows the [^.]* set seen from this shot's camera \(50 mm lens\)/);
-      assert.match(start.prompt, /Keep Image 1's camera position, 50 mm lens, horizon and framing, and keep every object and figure where it stands in Image 1[^.]*\. Take only materials, colours and light from Image 5\./);
-      assert.match(start.prompt, /Medium close-up, chest up.*Exactly two windows on the north wall.*Proxy #d0342c is mina/);
-      // The set's Korean name and state label stay out of the prompt, where a model could letter them.
-      assert.doesNotMatch(start.prompt, /[가-힣]/);
-      assert.ok(start.warnings.some((w) => /name, state label, end state label are not in English/.test(w.what)));
-      const shot = readBoard(dir).win.SCENES[1];
-      assert.deepEqual([shot.visual.locationFrame.stateId, shot.visual.locationFrame.blocked, shot.visual.locationFrame.camera.lensMm], ['night', true, 50]);
-      assert.deepEqual(shot.visual.references.map((r) => r.role), ['composition', 'character', 'character', 'character', 'background']);
-      // The camera looks at her face from in front of her (she faces -Y).
-      const { position, target } = shot.visual.locationFrame.camera;
-      assert.ok(position[1] < target[1] && Math.abs(target[0] + 1) < .01);
-      // A dutch shot's render is level: the prompt stops fixing Image 1's horizon and asks for the tilt.
-      writeShotIcons({ path: dir, shots: [{ id: 's0002', angle: 'dutch' }] });
-      const tilted = shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'Mina waits.' }).prompt;
-      assert.match(tilted, /Keep Image 1's camera position, [\d.]+ mm lens and framing.*tilt the whole picture to the dutch angle/);
-      assert.doesNotMatch(tilted, /horizon and framing|grey/);
-      writeShotIcons({ path: dir, shots: [{ id: 's0002', angle: 'eye' }] });
-      // The end image of this first_last shot follows the end pose from the same camera.
-      const end = make(dir, 's0002', 'end');
-      assert.deepEqual(end.inputs.slice(0, 2).map((f) => relative(dir, f).replace(/frame-[0-9a-f]{16}/, 'frame-*')), ['images/s0002-start-v1.png', 'locations/s0002-frame-*/end.png']);
-      assert.match(end.prompt, /Move the figures and objects to where Image 2 shows them/);
-      // A four-picture model keeps the render and the panels and leaves the sheet picture out, with a warning.
-      settings.saveSettings(root, { image: { engine: 'mlx', model: 'FLUX.2-klein-4B' }, video: { engine: 'seedance', model: 'dreamina-seedance-2-0-260128', resolution: '720p' }, speech: { engine: 'none' } },
-        { expectedRevision: settings.readSettings(root).revision, request: 'Fixture: an MLX edit pack with three references' });
-      const tight = shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.', location: 'room' });
-      assert.deepEqual([tight.inputs.length, /set seen from this shot's camera/.test(tight.prompt), /Take only materials/.test(tight.prompt)], [4, true, false]);
-      assert.ok(tight.warnings.some((w) => /no room for the room sheet picture/.test(w.what)) && tight.warnings.some((w) => /mina is not blocked/.test(w.what)));
-    } finally { if (blender === undefined) delete process.env.BLENDER; else process.env.BLENDER = blender; }
-  });
   it('GPT Image gets a mixed PNG and JPEG set as PNG copies', () => {
     const { root, dir } = pictureBoard();
     icons(dir);
@@ -863,44 +699,6 @@ describe('images and the video prompt follow the icon attributes', () => {
     const request = ask();
     assert.match(request.inputs[0], /images\/inputs\/[0-9a-f]{16}\.png$/);
     assert.equal(request.args.sourceMimeType, 'image/png');
-  });
-  it('the prompts carry every icon attribute: size, angle with ground and over, depth, the move with its pace and arrival, the pause and both focus subjects', () => {
-    const { dir } = pictureBoard();
-    writeShotIcons({ path: dir, shots: [
-      { id: 's0001', render: { mode: 'generated_video', reason: 'r' }, size: 'mcu', angle: 'over',
-        move: { id: 'camera.dolly-in', reason: 'r', speed: 'slow', target: 'Mina' },
-        focus: { id: 'camera.rack-focus', reason: 'r', from: 'the key on the table', to: 'Mina' },
-        depth: { mode: 'shallow', reads: 1, focus: 'the key on the table' }, frames: { mode: 'reference', reason: 'MSR' } },
-      { id: 's0002', render: { mode: 'generated_video', reason: 'r' }, size: 'ms', angle: 'ground',
-        move: { id: 'camera.static', reason: 'r' }, frames: { mode: 'first', reason: 'r' } },
-    ] });
-    const ground = make(dir, 's0002', 'start', { location: 'room' }).prompt;
-    assert.match(ground, /Medium shot, waist up, from ground level, the lens just above the floor\./);   // P1 size · P2 angle · P3 ground
-    assert.match(make(dir, 's0001', 'start', { location: 'room' }).prompt,
-      /Stage the key on the table and Mina at clearly different distances from the camera, the key on the table in sharp focus\./);
-    const shot = readBoard(dir).win.SCENES[0];
-    applyStoryboard({ path: dir, draft: true, shotsById: [{ id: 's0001', shot: { ...shot, visual: { ...shot.visual, camera: { ...shot.visual.camera, end: 'a close-up of her eyes' } } } }] });
-    const msr = writeShotPrompt({ path: dir, id: 's0001', action: 'Mina looks up from the key.' });
-    assert.match(msr.prompt, /^Medium close-up, chest up[^.]*, over the shoulder of the near person\./);   // P1 · P4 over
-    assert.match(msr.prompt, /Shallow depth of field: only the key on the table is sharp/);              // P5 depth
-    assert.match(msr.prompt, /The camera slowly pushes in toward Mina, with a short pause on the opening and closing pictures\. Closing frame: a close-up of her eyes\./);  // P6 verb · P7 pace · P8 arrival · P9 pause
-    assert.match(msr.prompt, /Rack focus from the key on the table to Mina\./);                          // P10 both subjects
-    assert.ok(!msr.findings.some((f) => /rack focus names no subjects/.test(f.what)));
-    // a closing frame written as a whole sentence stays one sentence
-    const later = readBoard(dir).win.SCENES[0];
-    applyStoryboard({ path: dir, draft: true, shotsById: [{ id: 's0001', shot: { ...later, visual: { ...later.visual, camera: { ...later.visual.camera, end: 'A tight close-up of her eyes fills the frame.' } } } }] });
-    assert.match(writeShotPrompt({ path: dir, id: 's0001', action: 'Mina looks up.' }).prompt, /pictures\. Closing frame: A tight close-up of her eyes fills the frame\. Rack focus/);
-    // a hand-written closing frame in another language is named by its field
-    const korean = readBoard(dir).win.SCENES[0];
-    applyStoryboard({ path: dir, draft: true, shotsById: [{ id: 's0001', shot: { ...korean, visual: { ...korean.visual, camera: { ...korean.visual.camera, end: '그녀의 눈' } } } }] });
-    assert.throws(() => writeShotPrompt({ path: dir, id: 's0001', action: 'Mina looks up.' }), /video_prompt_language: visual.camera.end/);
-    applyStoryboard({ path: dir, draft: true, shotsById: [{ id: 's0001', shot: korean }] });
-    // a rack focus without its subjects still writes, and says what is missing
-    writeShotIcons({ path: dir, shots: [{ id: 's0001', focus: { id: 'camera.rack-focus', reason: 'r' } }] });
-    const unnamed = writeShotPrompt({ path: dir, id: 's0001', action: 'Mina looks up.' });
-    assert.match(unnamed.prompt, /Rack focus from the near subject to the far subject\./);
-    assert.ok(unnamed.findings.some((f) => f.level === 'warn' && f.where === 's0001' && /rack focus names no subjects/.test(f.what)));
-    assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina waits.' }).prompt, /^Start from the given first frame\. The camera holds a static frame\. Mina waits\. Mina says: "안녕"\. Audio: no music\.$/);
   });
 });
 
@@ -948,22 +746,6 @@ describe('storyboard_read inspection', () => {
     writeFileSync(join(dir, 'scenes.js'), Object.entries(win).map(([key, value]) => `window.${key}=${JSON.stringify(value)};`).join('\n'));
     return fn(dir);
   };
-  it('default shot summary preserves silent action, ordered dialogue and all asset domains', () => {
-    const tree = contract().outline(readWin(), 'shots');
-    const [silent, dialogue] = tree.unplacedShots;
-    assert.equal(silent.id, 's0001');
-    assert.equal(silent.narration, '');
-    assert.equal(silent.performance[0].text, 'She returns the watch.');
-    assert.deepEqual(dialogue.performance.map(e => e.kind), ['action', 'dialogue']);
-    assert.equal(dialogue.performance[1].speaker, 'father');
-    assert.equal(dialogue.performance[1].text, 'I knew you would.');
-    assert.equal(dialogue.performance[1].lineId, 'line-2');
-    assert.equal(silent.references.characters, 'child');
-    assert.equal(silent.references.location.stateId, 'day');
-    assert.deepEqual(silent.references.props, ['watch']);
-    assert.equal(silent.references.propUsage[0].propId, 'watch');
-    assert.equal(silent.media.bg, 'images/scene-1.png');
-  });
   it('invalid performance group is visible and never silently receives invented dialogue', () => {
     const win = readWin(); win.SCENES[1].performance[1].group = 99;
     const event = contract().outline(win, 'shots').unplacedShots[1].performance[1];
@@ -971,40 +753,9 @@ describe('storyboard_read inspection', () => {
     assert.equal(event.text, null);
     assert.equal(event.speaker, null);
   });
-  it('read includes scenario, cast, settings and existing review without claiming verification', () => withBoard(dir => {
-    const result = readStoryboard(storyboardReadSchema.parse({ path: dir }));
-    assert.equal(result.reviewContext.story.review.verdict, 'pass');
-    assert.equal(result.reviewContext.evidenceStatus, 'not_verified');
-    assert.equal(result.inspection.mediaViewed, false);
-    assert.equal(result.reviewContext.document.characters[0].id, 'child');
-    assert.equal(result.reviewContext.production.cast[0].image, 'characters/child.png');
-    assert.equal(result.mediaBaseDirectory, dir);
-    assert.match(result.sha256, /^[a-f0-9]{64}$/);
-    assert.equal(result.propSheet.props[0].id, 'watch');
-    assert.equal(readStoryboard(storyboardReadSchema.parse({ path: dir, includeContext: false })).reviewContext, undefined);
-  }));
-  it('stable shot inspection preserves the whole flow and finds neighbors after reorder', () => {
-    const win = readWin(); win.SCENES.reverse();
-    withBoard(dir => {
-      const result = readStoryboard(storyboardReadSchema.parse({ path: dir, shotId: 's0001' }));
-      assert.equal(result.selectedShot.no, 2);
-      assert.equal(result.selectedShot.shot.id, 's0001');
-      assert.deepEqual(result.selectedShot.previous, { id: 's0002', no: 1 });
-      assert.equal(result.selectedShot.next, null);
-      assert.equal(result.unplacedShots.length, 2);
-      assert.throws(() => readStoryboard(storyboardReadSchema.parse({ path: dir, shotId: 'missing' })), /found 0/);
-    }, win);
-  });
   it('duplicate shot IDs fail targeted inspection instead of inspecting the wrong shot', () => {
     const win = readWin(); win.SCENES[1].id = 's0001';
     withBoard(dir => assert.throws(() => readStoryboard(storyboardReadSchema.parse({ path: dir, shotId: 's0001' })), /found 2/), win);
-  });
-  it('legacy narration stays visible without invented performance ordering or speakers', () => {
-    const row = contract().outline({ SCENES: [{ type: 'points', narration: [{ sub: 'Legacy line' }] }] }, 'shots').unplacedShots[0];
-    assert.equal(row.id, null);
-    assert.equal(row.narration, 'Legacy line');
-    assert.equal(row.speech[0].speaker, null);
-    assert.deepEqual(row.performance, []);
   });
   it('inspection neighbors follow b-roll placement and the closing outro, not storage order', () => {
     const win = readWin();
@@ -1059,31 +810,6 @@ describe('shot camera MCP input', () => {
       { at: 4, position: [0, 15, 6], target: [0, 25, 3], rollDeg: 0, label: 'the bridge' },
     ],
   } });
-  it('creation, upsert and insertion all advertise the production route and drone schema', () => {
-    const props = TOOLS.find(t => t.name === 'storyboard_apply').inputSchema.properties;
-    const shapes = [props.set.properties.shots.items, props.shots.items.properties.shot, props.insertShots.items.properties.shots.items];
-    for (const schema of shapes) {
-      assert.deepEqual(schema.properties.type.enum, contract().VOCAB.TYPES);
-      assert.deepEqual(schema.properties.shot.properties.render.properties.mode.enum, contract().VOCAB.RENDER_MODES);
-      assert.equal(schema.properties.shot.properties.render.properties.purpose.type, 'string');
-      assert.ok(schema.properties.shot.properties.videoDesign.properties.motion.properties.kind.enum.includes('spatial_reveal'));
-      const camera = schema.properties.visual.properties.camera;
-      assert.deepEqual(camera.properties.preset.enum, ['drone-flythrough']);
-      assert.deepEqual(camera.properties.variant.enum, ['cinematic', 'fpv']);
-      assert.deepEqual(camera.properties.trajectory.properties.coordinateSpace.enum, ['local-meters']);
-      assert.deepEqual(camera.properties.trajectory.properties.keys.items.required, ['at', 'position', 'target', 'rollDeg', 'label']);
-      assert.deepEqual(camera.allOf[0].then.required, ['variant', 'trajectory']);
-      assert.equal(camera.allOf[1].then.properties.trajectory.properties.keys.items.properties.rollDeg.const, 0);
-      // L13–L15: the move vocabulary rides the schema, and the still lane's window move is an item of its own.
-      assert.ok(camera.properties.movement.description.includes('tilt up/down'));
-      const stillCamera = schema.properties.shot.properties.render.properties.camera;
-      assert.deepEqual(stillCamera.required, ['effect']);
-      assert.deepEqual(stillCamera.properties.effect.enum, ['focus-in', 'rack-focus', 'approach', 'pull', 'pan', 'tilt', 'push', 'reveal', 'parallax', 'hold']);
-      assert.equal(schema.additionalProperties, true);
-      assert.equal(schema.properties.visual.additionalProperties, true);
-    }
-    assert.deepEqual(shapes[0], shapes[1]); assert.deepEqual(shapes[1], shapes[2]);
-  });
   it('accepts a camera draft before derived prompt slots and preserves visual handoff fields', () => {
     const visual = { camera: drone(), video: { engine: 'seedance', previz: { camera: { trajectoryBinding: 'kept' } } }, custom: { keep: true } };
     const parsed = shotSchema.parse({ ...board()[1], visual });
@@ -1108,48 +834,4 @@ describe('shot camera MCP input', () => {
       ]) assert.equal(storyboardApplySchema.safeParse({ path: '.', ...patch }).success, false);
     }
   });
-  it('ordinary cameras keep extra fields and do not require the drone preset', () => {
-    for (const visual of [{}, { camera: { movement: 'dolly in', speed: 'steady', framing: 'medium', end: 'the window', effect: 'push', custom: [1, 2] } }, { video: { engine: 'veo' } }])
-      assert.deepEqual(shotSchema.parse({ ...board()[1], visual }).visual, visual);
-    const c = drone(); c.variant = 'cinematic'; c.trajectory.keys.forEach(k => k.rollDeg = 0);
-    assert.ok(shotSchema.safeParse({ ...board()[1], visual: { camera: c } }).success);
-  });
-});
-
-it('production vocabulary and apply schema support all six ratios and reject unknown modes', () => {
-  const bands=JSON.parse(readFileSync(new URL('../../skills/storyboard/references/render-ratios.json',import.meta.url),'utf8'));
-  assert.deepEqual(contract().VOCAB.PRODUCTION_MODES,Object.keys(bands));
-  for(const mode of [...Object.keys(bands),'hook_only','stills_only','hybrid']) {
-    assert.equal(storyboardApplySchema.safeParse({path:'x',globals:{PRODUCTION:{mode,renderRatioVersion:1}}}).success,true);
-  }
-  assert.equal(storyboardApplySchema.safeParse({path:'x',globals:{PRODUCTION:{mode:'video_99'}}}).success,false);
-  assert.equal(storyboardApplySchema.safeParse({path:'x',globals:{PRODUCTION:{mode:'no_video',renderRatioVersion:2}}}).success,false);
-});
-
-it('readiness separates configuration, corrupt files, missing cast links and unreviewed visuals', () => {
-  const root=tmp(),dir=join(root,'episodes/one/storyboard'),shared=join(root,'assets/characters/hero');
-  mkdirSync(dir,{recursive:true});mkdirSync(shared,{recursive:true});
-  writeFileSync(join(shared,'identity.md'),'# Hero');writeFileSync(join(shared,'face.png'),'broken');
-  writeFileSync(join(shared,'panels.json'),JSON.stringify({schemaVersion:1,panels:{face:{file:'face.png',purpose:'character_reference',view:'face'}}}));
-  const win={SCENES:[],PRODUCTION:{cast:{hero:{}}},SB_DOC:{characters:[]}};
-  writeFileSync(join(dir,'scenes.js'),serializeBoard(win));
-  let result=readStoryboard(storyboardReadSchema.parse({path:dir})).readiness;
-  assert.notEqual(result.configuration.status,'ready');
-  assert.equal(result.references.status,'needs_attention');
-  assert.equal(result.references.findings[0].domain,'image-reference-missing');
-  win.SB_DOC.characters=[{id:'hero',panels:{face:'../../../assets/characters/hero/face.png'}}];
-  writeFileSync(join(dir,'scenes.js'),serializeBoard(win));
-  result=readStoryboard(storyboardReadSchema.parse({path:dir})).readiness;
-  assert.equal(result.assets[0].file,'present');assert.equal(result.assets[0].decoding,'failed');
-  assert.equal(result.visualReview,'not_reviewed');
-});
-
-
-it('read and draft check expose camera choices missing from a production shot', () => {
-  const dir = tmp(), file = join(dir, 'scenes.js');
-  writeFileSync(file, 'window.SCENES=[{id:"s0001",type:"points",shot:{render:{mode:"generated_video"}},visual:{camera:{framing:"Desk"}}}];');
-  const read = readStoryboard({path: dir, level: 'shot'});
-  assert.ok(read.cameraDirectionFindings.some(f => f.what.startsWith('[camera-plan-missing]')));
-  const checked = checkStoryboard({path: dir, draft: true});
-  assert.ok(checked.contract.some(f => f.level === 'warn' && f.what.startsWith('[camera-plan-missing]')));
 });

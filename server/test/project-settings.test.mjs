@@ -10,7 +10,6 @@ const require = createRequire(import.meta.url);
 const { manageProject } = require('../../skills/_shared/project-settings.js');
 const modelSettings = require('../../skills/_shared/model-settings.js');
 const hook = require.resolve('../../hooks/project-context.js');
-const cli = require.resolve('../../skills/_shared/project-settings.js');
 const defaults = () => ({
   project: { name: 'History', channel: 'history' }, videoType: { id: 'documentary' },
   models: { video: { engine: 'seedance', model: 'dreamina-seedance-2-0-260128', resolution: '720p' }, speech: { engine: 'elevenlabs', model: 'eleven_v4' }, image: { engine: 'host', model: 'host-managed', host: 'codex' } },
@@ -125,19 +124,6 @@ test('invalid choices and credential payloads fail without creating content or o
   assert.equal(fs.readFileSync(first.file, 'utf8'), bytes);
 });
 
-test('SNS connection updates preserve other platforms and episode history', t => {
-  const root = workspace(t);
-  const first = init(root);
-  const episode = call(root, 'episode', { topic: 'before-login' });
-  const sns = structuredClone(first.config.sns);
-  Object.assign(sns.youtube, { status: 'connected', accountId: 'UCverified', handle: '@history', checkedAt: '2026-10-16T03:00:00Z' });
-  const next = call(root, 'update', { expectedRevision: first.revision, request: 'Record the verified YouTube account', settings: { sns } });
-  assert.deepEqual(next.pendingConnections, []);
-  assert.equal(next.config.sns.threads.status, 'disabled');
-  assert.equal(call(root, 'episode', { topic: 'before-login' }).snapshot.config.sns.youtube.status, 'pending');
-  assert.equal(episode.handoff.sns.youtube.status, 'pending');
-});
-
 test('path traversal, linked destinations and concurrent locks do not write outside the project', t => {
   const root = workspace(t), outside = workspace(t);
   fs.symlinkSync(outside, path.join(root, 'data'), 'dir');
@@ -165,40 +151,6 @@ test('corrupt files fail explicitly and the read-only hook never echoes file con
   assert.equal(fs.readFileSync(path.join(root, '.social-flow/models.json'), 'utf8'), '{secret_token: DO_NOT_ECHO');
 });
 
-test('CLI with spaces and SessionStart use the same state without side effects', t => {
-  const root = workspace(t);
-  const before = spawnSync(process.execPath, [hook], { input: JSON.stringify({ hook_event_name: 'SessionStart', cwd: root }), encoding: 'utf8' });
-  assert.match(before.stdout, /incomplete/);
-  assert.deepEqual(fs.readdirSync(root), []);
-  const created = spawnSync(process.execPath, [cli, 'init', root], { input: JSON.stringify({ settings: defaults(), request: 'Use selected defaults', profileMarkdown }), encoding: 'utf8' });
-  assert.equal(created.status, 0, created.stderr);
-  const saved = call(root, 'status');
-  const bytes = fs.readFileSync(saved.file, 'utf8');
-  const after = spawnSync(process.execPath, [hook], { input: JSON.stringify({ hook_event_name: 'SessionStart', cwd: root }), encoding: 'utf8' });
-  assert.match(after.stdout, /webtoon/);
-  assert.equal(fs.readFileSync(saved.file, 'utf8'), bytes);
-  assert.equal(fs.existsSync(path.join(root, '.social-flow/project.lock')), false);
-});
-
-test('options share the production catalog, and no choices are silently inferred', t => {
-  const root = workspace(t);
-  const choices = manageProject({ action: 'options' });
-  assert.equal(choices.productionModes.length, 6);
-  assert.equal(choices.styles.length, 8);
-  assert.throws(() => call(root, 'init'), /Initial settings/);
-  assert.equal(fs.existsSync(path.join(root, '.social-flow/models.json')), false);
-});
-
-test('MCP route exposes the same project operations and catches errors', async t => {
-  const root = workspace(t);
-  const { ROUTES } = await import('../dist/handlers.js');
-  const result = await ROUTES.project_manage({ action: 'init', workspace: root, settings: defaults(), request: 'Use selected defaults', profileMarkdown });
-  assert.equal(result.isError, false);
-  assert.equal(JSON.parse(result.content[0].text).status, 'ready');
-  const invalid = await ROUTES.project_manage({ action: 'episode', workspace: root, topic: '../bad' });
-  assert.equal(invalid.isError, true);
-});
-
 test('project status exposes retired speech and explicit updates repair it without resetting other choices', t => {
   const root = workspace(t), initial = init(root);
   const old = initial.config;
@@ -213,21 +165,6 @@ test('project status exposes retired speech and explicit updates repair it witho
   assert.deepEqual(fixed.config.sns, pending.config.sns);
   assert.deepEqual(fixed.config.models.video, pending.config.models.video);
 });
-
-
-test('no-TTS projects are ready and snapshots retain the choice after TTS is enabled', t => {
-  const root = workspace(t);
-  const choices = defaults();
-  choices.models.speech = { engine: 'none' };
-  const ready = init(root, choices);
-  assert.equal(ready.status, 'ready');
-  const first = call(root, 'episode', { topic: 'silent' });
-  assert.deepEqual(first.snapshot.config.models.speech, { engine: 'none' });
-  call(root, 'update', { expectedRevision: ready.revision, request: 'Enable separate TTS', settings: { models: { speech: { engine: 'elevenlabs', model: 'eleven_v4' } } } });
-  assert.deepEqual(call(root, 'episode', { topic: 'silent' }).snapshot.config.models.speech, { engine: 'none' });
-  assert.equal(call(root, 'episode', { topic: 'spoken' }).snapshot.config.models.speech.model, 'eleven_v4');
-});
-
 test('resuming an existing episode still requires complete project setup', t => {
   const root = workspace(t); init(root);
   call(root, 'episode', { topic: 'resume' });

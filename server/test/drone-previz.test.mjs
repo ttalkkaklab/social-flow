@@ -1,17 +1,14 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
-import {readFileSync} from 'node:fs';
-import vm from 'node:vm';
 import * as THREE from 'three';
 import {blenderCameraSetSchema} from '../dist/blender-bridge.js';
 const require=createRequire(import.meta.url);
 const mode=require('../../skills/storyboard/references/production-mode.js');
-const {prepare,page}=require('../../skills/storyboard/references/drone-previz.js');
+const {prepare}=require('../../skills/storyboard/references/drone-previz.js');
 const contract=require('../../skills/storyboard/references/previz-contract.js');
 const {checkScene}=require('../../skills/storyboard/references/render-routing.js');
 const {scenePlan}=require('../../skills/produce/references/seedance-route.js');
-const {assemble}=require('../../skills/storyboard/references/spatial-prompts.js');
 function shot() {
   return {type:'cover',duration:4,narration:[{tts:'Follow the valley to the bridge.'}],
     shot:{infoType:'place',render:{mode:'generated_video',purpose:'place',reason:'Travel reveals the bridge behind the ridge.',motionEssential:true,whyNotStill:'Passing the ridge reveals a hidden connection.',action:'The bridge appears beyond the ridge.'},
@@ -43,19 +40,6 @@ test('malformed trajectories, mismatched slots, and stale previz bindings fail',
  assert.ok(checkScene(s).some(e=>/stale/.test(e)));
  s.visual.camera={...s.visual.camera,...mode.droneSlots(s.visual.camera)};
  assert.ok(checkScene(s).some(e=>/trajectoryBinding/.test(e)));
-});
-test('drone eligibility does not turn every place or every wide shot into an exception',()=>{
- const {s}=planned();s.shot.render.whyNotStill='';const advice=[];assert.deepEqual(checkScene(s,{draft:true,advice}),[]);assert.ok(advice.some(e=>/whyNotStill/.test(e)));
- const ordinary=shot();delete ordinary.visual.camera.preset;delete ordinary.visual.camera.trajectory;
- const ordinaryAdvice=[];checkScene(ordinary,{draft:true,advice:ordinaryAdvice});assert.ok(ordinaryAdvice.some(e=>/requires still_camera/.test(e)));
- const flat=planned().s;flat.shot.videoDesign.look='arcade';const flatAdvice=[];assert.deepEqual(checkScene(flat,{advice:flatAdvice}),[]);assert.ok(flatAdvice.some(e=>/volumetric/.test(e)));
-});
-test('browser contract and prompt assembly consume the same authored camera',()=>{
- const {s,p}=planned(), win={PRODUCTION:{mode:'video_30',style:{preset:'photoreal',world:'A forest valley.',materials:'Stone and trees.',palette:'Green and grey.',lighting:'Daylight.',camera:'Continuous aerial travel.'}},SCENES:[s]};
- const prompts=assemble(win,0);assert.match(prompts.motionPrompt,/drone fly-through/);assert.match(prompts.motionPrompt,/the ridge/);
- const sandbox={};vm.runInNewContext(readFileSync(new URL('../../skills/storyboard/references/production-mode.js',import.meta.url),'utf8'),sandbox);
- assert.equal(sandbox.PRODUCTION_MODE.droneBinding(s.visual.camera),mode.droneBinding(s.visual.camera));
- assert.match(page(p.spec),/rollDeg/);
 });
 test('banked camera seeks are deterministic and cinematic stays level',()=>{
  const {p}=planned(), camera=new THREE.PerspectiveCamera();

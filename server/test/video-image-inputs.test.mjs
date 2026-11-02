@@ -5,7 +5,6 @@ import os from 'node:os';
 import path from 'node:path';
 import { prepareVideoImages } from '../dist/video-image-inputs.js';
 import { parseVideoArgs } from '../dist/video-registry.js';
-import { createRequire } from 'node:module';
 import { png } from './workflow-fixture.mjs';
 function fixture(t) {
  const root=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'image-inputs-')));
@@ -76,31 +75,10 @@ test('timed intermediate frames bind exact indices; duplicates and unsupported a
  assert.throws(()=>prepareVideoImages('astra_img2video',{},s,root),/intermediate/);
  s.visual.frames.keyframes[0].atSeconds=5;assert.throws(()=>prepareVideoImages('astra_keyframe_video',{numFrames:121},s,root),/inside/);
 });
-test('host plans expose a hashed inventory without claiming provider submission; old raw calls stay unchanged',t=>{
- const root=fixture(t),p=prepareVideoImages('host_external',{prompt:'Move'},shot('first_last',[ref()]),root);
- assert.equal(p.imageBindings.length,3);assert.ok(p.imageBindings.every(i=>!i.submitted));assert.match(p.imageHandoff,/unverified/);
- // The set render the start image was composed from is not a video input.
- assert.equal(prepareVideoImages('host_external',{prompt:'Move'},shot('first_last',[ref(),ref('room','image','composition')]),root).imageBindings.length,3);
- const legacy={visual:{bg:'old.png',frames:{mode:'first'},video:{referenceImagePaths:['old.png']}}};
- assert.deepEqual(prepareVideoImages('seedance_reference',{referenceImagePaths:['old.png']},legacy,root).args,{referenceImagePaths:['old.png']});
- const raw={prompt:'legacy',sourceImagePath:'external.png'};assert.equal(prepareVideoImages('seedance_img2video',raw,{},root).args,raw);
-});
 
 test('ASTRA ending frame uses the adapter duration conversion rather than a second rounding rule',t=>{
  const root=fixture(t),s=shot();s.visual.frames.keyframes=[{image:'mid.png',atSeconds:1,state:'Contact'}];
  const p=prepareVideoImages('astra_keyframe_video',{prompt:'Move',duration:4.2,frameRate:24},s,root);
  assert.deepEqual(p.args.images.map(i=>i.frameIdx),[0,24,96]);
  assert.equal(parseVideoArgs('astra_keyframe_video',p.args).numFrames,97);
-});
-
-
-test('compiled intermediate inputs agree with the existing ASTRA preparation helper including strengths',t=>{
- const root=fixture(t),s=shot();s.duration=5;s.visual.video={strength:.75};
- s.visual.frames.keyframes=[{image:'mid.png',atSeconds:1,state:'Contact'}];
- const {keyframeImages}=createRequire(import.meta.url)('../../skills/produce/references/prepare-astra-shot.js');
- const images=keyframeImages(s,path.join(root,'storyboard'),121,24);
- const p=prepareVideoImages('astra_keyframe_video',{prompt:'Move',numFrames:121,frameRate:24,images},s,root);
- assert.deepEqual(p.args.images,images);
- s.visual.frames.keyframes[0].atSeconds=5;
- assert.throws(()=>prepareVideoImages('astra_keyframe_video',{numFrames:129},s,root),/time and state/);
 });

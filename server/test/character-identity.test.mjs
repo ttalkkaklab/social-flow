@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 const require = createRequire(import.meta.url);
-const { GROUPS, REQUIRED, identityErrors, identityCharacter, direction, panelPrompt, boardIdentityErrors } = require('../../skills/_shared/character-identity.js');
+const { GROUPS, REQUIRED, identityErrors, identityCharacter, direction, boardIdentityErrors } = require('../../skills/_shared/character-identity.js');
 const { handoff } = require('../../skills/channel/references/character-sheet.js');
 const source = readFileSync(new URL('../../skills/channel/references/character-identity-example.md', import.meta.url), 'utf8');
 const doc = () => JSON.parse(source.match(/```json\s*\n([\s\S]*?)```/)[1]);
@@ -134,22 +134,6 @@ test('silent story-v2 cast can keep speech pending without bypassing identity or
   }finally{rmSync(root,{recursive:true,force:true});}
 });
 
-test('an explicit episode speech override preserves the shared character identity', () => {
-  const {sourceErrors}=require('../../skills/channel/references/character-sheet.js');
-  const root=mkdtempSync(join(tmpdir(),'sf-episode-voice-'));
-  try {
-    const folder=join(root,'assets/characters/mori');mkdirSync(folder,{recursive:true});
-    const file=join(folder,'identity.md');writeFileSync(file,source);writeFileSync(join(root,'profile.md'),'# Channel');
-    const cast=handoff(file),originalCharacter=JSON.stringify(cast.character),originalHash=cast.identitySha256;
-    cast.tts={engine:'gemini',model:'gemini-3.8-flash-tts',voiceId:'Orus',language:'ko',speed:1};
-    const win={PRODUCTION:{modelSettings:{overrides:{speech:{engine:'gemini',model:'gemini-3.8-flash-tts',request:'User selected Gemini for this episode within USD 10.'}}}},SB_DOC:{characters:[cast]}};
-    assert.deepEqual(sourceErrors(win,root),[]);
-    assert.equal(JSON.stringify(cast.character),originalCharacter);
-    assert.equal(cast.identitySha256,originalHash);
-    assert.equal(readFileSync(file,'utf8'),source);
-  } finally {rmSync(root,{recursive:true,force:true});}
-});
-
 test('episode speech overrides cannot hide missing authorization, a different model or changed identity', () => {
   const {sourceErrors}=require('../../skills/channel/references/character-sheet.js');
   const root=mkdtempSync(join(tmpdir(),'sf-episode-voice-invalid-'));
@@ -169,12 +153,4 @@ test('episode speech overrides cannot hide missing authorization, a different mo
     cast.character=handoff(file).character;
     const changed=doc();changed.character.physical.heightCm.value+=1;writeFileSync(file,markdown(changed));rejected();
   } finally {rmSync(root,{recursive:true,force:true});}
-});
-
-test('body panels carry height, weight, build, proportions and outfit; a non-English text field is reported, not sent', () => {
-  const ok = v => ({ status: 'confirmed', value: v });
-  const character = { physical: { heightCm: ok(225), weightKg: ok(200), build: ok('broad muscular orc'), proportions: ok('실제 성인 비율'),
-    appearance: ok('olive green skin, amber eyes'), outfit: ok('iron plate armor'), relativeScale: { status: 'pending', value: null, reason: 'r' } } };
-  assert.deepEqual(panelPrompt(character, 'front'), { text: '225 cm tall; about 200 kg; broad muscular orc; iron plate armor', skipped: ['physical.proportions'] });
-  assert.deepEqual(panelPrompt(character, 'face'), { text: 'olive green skin, amber eyes', skipped: [] });
 });

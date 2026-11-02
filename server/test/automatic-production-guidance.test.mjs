@@ -13,16 +13,3 @@ test('style selection provenance is advisory while spending approval and unsuppo
  win.PRODUCTION.videoProvider='invented-provider';
  assert.ok(production.check(win,{draft:true}).some(x=>x.includes('videoProvider')));
 });
-test('production camera phrasing and renderer choice are advice; unsupported renderers and cameraFixed block',()=>{
- const shot={type:'points',duration:5,narration:[],shot:{render:{mode:'generated_video',purpose:'physical_state'}},visual:{camera:{movement:'gently drift around the room'},video:{clip:'existing.mp4'}}};
- const advice=[];
- assert.deepEqual(production.cameraErrors(shot,{advice}),[]);
- assert.ok(advice.some(x=>x.includes('cannot see')));
- const win={PRODUCTION:{mode:'hybrid',videoProvider:'host',maxAttempts:1,videoBudgetUsd:0},SCENES:[shot]};
- assert.deepEqual(production.check(win,{advice}),[]);
- assert.ok(advice.some(x=>x.includes('previzRenderer')));
- win.PRODUCTION.previz={renderer:'unimplemented'};
- assert.ok(production.check(win).some(x=>x.includes('Unsupported PRODUCTION.previz.renderer')));
- shot.visual.video.cameraFixed=true;
- assert.ok(production.cameraErrors(shot).some(x=>x.includes('cameraFixed')));
-});

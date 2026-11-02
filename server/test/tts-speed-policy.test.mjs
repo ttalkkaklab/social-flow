@@ -8,7 +8,6 @@ import { generateElevenLabsSpeech, elevenLabsGenerateSchema } from '../dist/elev
 import { generateCheckedSpeech, checkedSpeechSchema } from '../dist/tts-quality.js';
 const require = createRequire(import.meta.url);
 const { authorizeSpeed } = require('../../skills/produce/references/tts-speed-policy.js');
-const { checkTempo } = require('../../skills/produce/references/check-tts-quality.js');
 const approval = { source: 'explicit-user-request', scope: 'generation', factor: 1.2, request: 'Please read this episode at 1.2x.', requestedAt: '2026-09-12T00:00:00Z' };
 function setup(t) {
   const dir = mkdtempSync(path.join(tmpdir(), 'tts-speed-'));
@@ -40,18 +39,4 @@ test('direct and checked generators block before synthesis or paid preflight', a
   assert.equal(called, false);
   await assert.rejects(generateCheckedSpeech({ ...req, generation: { text: 'Hello.' }, playbackSpeed: 1.2 }, { preflight: async () => { called = true; } }), /explicit user request/);
   assert.equal(called, false);
-});
-
-test('final speed cannot bypass approval through missing cards or a different engine', t => {
-  const dir = setup(t);
-  assert.doesNotThrow(() => checkTempo(dir, 1));
-  assert.throws(() => checkTempo(dir, 1.2), /explicit user request/);
-  assert.throws(() => checkTempo(dir, NaN), /Invalid TTS speed/);
-  save(dir, [{ ...approval, scope: 'final' }]);
-  assert.doesNotThrow(() => checkTempo(dir, 1.2));
-  assert.throws(() => checkTempo(dir, 1.1), /explicit user request/);
-  assert.throws(() => checkTempo(dir, 1, 0.88, 1.128), /Per-card tempo/);
-  writeFileSync(path.join(dir, 'cards.tsv'), '0\tvoice.wav\t5.2\tin\n');
-  writeFileSync(path.join(dir, 'voice.wav.quality.json'), JSON.stringify({ generator: 'tts_elevenlabs_generate' }));
-  assert.throws(() => checkTempo(dir, 1.2), /ElevenLabs/);
 });

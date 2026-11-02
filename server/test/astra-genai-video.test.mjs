@@ -140,26 +140,6 @@ test('audio-to-video follows the gateway AudioVideo contract and its data URI li
   assert.throws(() => genaiAudioUri(undefined, path.join(dir, 'line.flac')), /\.wav/);
 });
 
-test('audio-to-video submits and recovers on its own route, keeping the soundtrack switchless', async t => {
-  const dir = setup(t), wav = path.join(dir, 'line.wav');
-  execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'sine=d=0.2', wav]);
-  const routes = [];
-  globalThis.fetch = async (url, options) => {
-    routes.push(`${options.method} ${new URL(url).pathname}`);
-    if (options.method === 'POST') return Response.json({ id: 'a2v-1' }, { status: 202 });
-    return Response.json({ id: 'a2v-1', status: 'failed', error: { message: 'stub' } });
-  };
-  const args = { prompt: 'A presenter speaks.', model: 'ltx-2.5-22b-dev', resolution: '1280x720', reserveUsd: 0, audioPath: wav, outputPath: dir, filename: 'a2v.mp4' };
-  await assert.rejects(generateGenaiVideo('audio-to-video', args), /a2v-1 failed/);
-  assert.deepEqual(routes, ['POST /v1/ltx/v2/audio-to-video', 'GET /v1/ltx/v2/audio-to-video/a2v-1']);
-  assert.equal(parseVideoArgs('astra_genai_audio2video', args).audioPath, wav);
-  const { videoVoiceCapabilities } = await import('../dist/video-registry.js');
-  assert.equal(videoVoiceCapabilities('astra_genai_audio2video').suppliedSpeech, 'audio_conditioned_reencoded');
-  const { prepareVideoSound } = await import('../dist/video-sound.js');
-  const prepared = prepareVideoSound('astra_genai_audio2video', args, { audioSource: 'video' });
-  assert.equal(prepared.arguments.generateAudio, undefined); assert.equal(prepared.capabilities.inputAudio, 'preserved');
-});
-
 test('MSR voice samples are optional, ride on subjects 1-2, and the capability check fails closed', async t => {
   const { genaiMsrSchema, buildGenaiMsrBody, refreshGenaiMsrVoice, genaiMsrVoiceReferences } = await import('../dist/astra-genai-video.js');
   const dir = setup(t), wav = path.join(dir, 'voice.wav');

@@ -8,34 +8,25 @@ import { describe, it } from 'node:test';
 
 import { config } from '../dist/config.js';
 import {
-  DEFAULT_ELEVENLABS_MODEL,
   DEFAULT_ELEVENLABS_OUTPUT_FORMAT,
   ELEVENLABS_DIALOGUE_MAX_INPUTS,
   ELEVENLABS_DIALOGUE_MAX_VOICES,
   ELEVENLABS_OUTPUT_FORMATS,
-  ELEVENLABS_PRO_ONLY_FORMATS,
   MAX_ELEVENLABS_DIALOGUE_CHARS,
   createElevenLabsDictionary,
   describeElevenLabsError,
   elevenLabsDialogueSchema,
   elevenLabsDialogueRequestBody,
   elevenLabsGenerateSchema,
-  elevenLabsVoicesSchema,
   extensionForFormat,
   generateElevenLabsDialogue,
   generateElevenLabsSpeech,
-  listElevenLabsVoices,
   sampleRateForFormat,
   wavDurationSeconds,
-  DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT,
   ELEVENLABS_SFX_MODEL,
-  ELEVENLABS_SFX_OUTPUT_FORMATS,
-  ELEVENLABS_SFX_USD_PER_MINUTE,
   MAX_ELEVENLABS_SFX_TEXT_CHARS,
   elevenLabsSfxSchema,
   generateElevenLabsSoundEffect,
-  sfxExtensionForFormat,
-  sfxSampleRateForFormat,
   soundEffectRequestBody,
 } from '../dist/elevenlabs-client.js';
 import { pcmToWav } from '../dist/media-utils.js';
@@ -45,12 +36,6 @@ config.elevenLabsApiKey = 'test-key-never-sent';
 const VOICE = '21m00Tcm4TlvDq8ikWAM';
 
 describe('ElevenLabs constants', () => {
-  it('the default output format is RIFF WAV at 24kHz — the builder sniffs RIFF and the Gemini lane is 24kHz', () => {
-    assert.equal(DEFAULT_ELEVENLABS_OUTPUT_FORMAT, 'wav_24000');
-    assert.equal(extensionForFormat(DEFAULT_ELEVENLABS_OUTPUT_FORMAT), '.wav');
-    assert.equal(sampleRateForFormat(DEFAULT_ELEVENLABS_OUTPUT_FORMAT), 24_000);
-  });
-
   it('every exposed format maps to .wav or .mp3 — the only audio containers the pipeline reads', () => {
     for (const format of ELEVENLABS_OUTPUT_FORMATS) {
       const ext = extensionForFormat(format);
@@ -61,23 +46,9 @@ describe('ElevenLabs constants', () => {
     // no pcm_* (container-less) and no opus/m4a in the exposed list
     assert.ok(ELEVENLABS_OUTPUT_FORMATS.every((f) => !f.startsWith('pcm_') && !f.startsWith('opus_') && !f.startsWith('m4a_')));
   });
-
-  it('the Pro-only gate list is a subset of the exposed formats (measured 403 on wav_44100)', () => {
-    for (const format of ELEVENLABS_PRO_ONLY_FORMATS) assert.ok(ELEVENLABS_OUTPUT_FORMATS.includes(format), format);
-    assert.ok(ELEVENLABS_PRO_ONLY_FORMATS.includes('wav_44100'));
-    assert.ok(!ELEVENLABS_PRO_ONLY_FORMATS.includes(DEFAULT_ELEVENLABS_OUTPUT_FORMAT), 'the default must work on every plan');
-  });
 });
 
 describe('ElevenLabs generate schema — guards that run before the paid call', () => {
-  it('accepts the minimal request and fills the defaults', () => {
-    const parsed = elevenLabsGenerateSchema.parse({ text: '안녕하세요.', voiceId: VOICE });
-    assert.equal(parsed.model, DEFAULT_ELEVENLABS_MODEL);
-    assert.equal(parsed.outputFormat, DEFAULT_ELEVENLABS_OUTPUT_FORMAT);
-    assert.equal(parsed.timestamps, false);
-    assert.equal(parsed.stability, undefined, 'vendor defaults apply when no voice setting is given');
-  });
-
   it('voiceId is required and must be a path-safe identifier', () => {
     assert.equal(elevenLabsGenerateSchema.safeParse({ text: 'x' }).success, false, 'no default voice');
     for (const bad of ['bad/../id', 'a b', 'id?x=1', '']) {
@@ -151,45 +122,9 @@ describe('ElevenLabs dialogue schema', () => {
     assert.equal(elevenLabsDialogueSchema.safeParse({ inputs: [line(VOICE)], model: 'eleven_v3' }).success, false);
     assert.equal(parsed.outputFormat, DEFAULT_ELEVENLABS_OUTPUT_FORMAT);
   });
-
-  it('filename/format mismatch is rejected here too', () => {
-    assert.equal(elevenLabsDialogueSchema.safeParse({ inputs: [line(VOICE)], filename: 'd.mp3' }).success, false);
-  });
-});
-
-describe('ElevenLabs voices schema', () => {
-  it('uses the server-wide `limit` name with the vendor page_size bounds', () => {
-    assert.equal(elevenLabsVoicesSchema.parse({}).limit, 30);
-    assert.equal(elevenLabsVoicesSchema.safeParse({ limit: 101 }).success, false);
-    assert.equal(elevenLabsVoicesSchema.safeParse({ category: 'library' }).success, false);
-    assert.ok(elevenLabsVoicesSchema.safeParse({ search: 'korean', category: 'professional', limit: 100 }).success);
-  });
 });
 
 describe('describeElevenLabsError — the three body shapes seen in the wild', () => {
-  const current = (status, message, http) =>
-    describeElevenLabsError(http, JSON.stringify({ detail: { type: 'x', code: status, message, status, request_id: 'r' } }));
-
-  it('current shape: status string decides the hint, not the HTTP code', () => {
-    assert.match(current('invalid_api_key', 'Invalid API key', 401), /ELEVENLABS_API_KEY/);
-    assert.match(current('needs_authorization', 'Neither authorization header…', 401), /ELEVENLABS_API_KEY/);
-    assert.match(current('missing_permissions', 'missing the permission voices_read', 401), /restricted key.*voices_read/);
-    assert.match(current('quota_exceeded', 'quota', 401), /character allowance/);
-    assert.match(current('payment_required', 'no credits', 402), /character allowance/);
-    assert.match(current('too_many_concurrent_requests', 'busy', 429), /concurrency\/rate limit/);
-    assert.match(current('concurrent_limit_exceeded', 'busy', 429), /concurrency allowance/);
-    assert.match(current('unauthorized', 'Invalid API key', 401), /ELEVENLABS_API_KEY/);
-    assert.match(current('output_format_not_allowed', "Output format 'wav_44100' is only available on the Pro tier and above.", 403), /wav_24000 or wav_48000/);
-    assert.match(current('voice_not_found', "A voice with voice_id 'NOPE' was not found.", 404), /tts_elevenlabs_voices/);
-    assert.match(current('model_does_not_support_dialogue', "Model 'eleven_v4' does not support dialogue.", 400), /eleven_v4 only/);
-  });
-
-  it('legacy shape ({detail:{status,message}}) still maps — model_not_found uses it', () => {
-    const message = describeElevenLabsError(400, JSON.stringify({ detail: { status: 'model_not_found', message: 'A model with model ID eleven_bogus does not exist' } }));
-    assert.match(message, /does not exist/);
-    assert.match(message, /eleven_v4/);
-  });
-
   it('422 list shape joins the field paths without the "body" prefix', () => {
     const message = describeElevenLabsError(422, JSON.stringify({ detail: [{ type: 'string_type', loc: ['body', 'text'], msg: 'Input should be a valid string', input: 123 }] }));
     assert.equal(message, 'Invalid request (HTTP 422): text: Input should be a valid string');
@@ -203,12 +138,6 @@ describe('describeElevenLabsError — the three body shapes seen in the wild', (
 });
 
 describe('wavDurationSeconds', () => {
-  it('reads a plain 44-byte-header WAV (mono 24kHz) exactly', () => {
-    const oneSecond = pcmToWav(Buffer.alloc(24_000 * 2), 24_000, 1);
-    assert.equal(wavDurationSeconds(oneSecond), 1);
-    assert.equal(wavDurationSeconds(pcmToWav(Buffer.alloc(12_000), 24_000, 1)), 0.25);
-  });
-
   it('walks past a LIST chunk before data — the vendor WAV carries one (measured)', () => {
     const plain = pcmToWav(Buffer.alloc(48_000), 24_000, 1); // 1s
     const list = Buffer.alloc(8 + 26);
@@ -236,25 +165,6 @@ describe('wavDurationSeconds', () => {
  * here is the request mapping and the pre-call guards.
  */
 describe('ElevenLabs sound effects (sfx_elevenlabs_generate)', () => {
-  it('defaults: PCM 48 kHz wrapped as WAV, no loop, the vendor picks the length', () => {
-    const r = elevenLabsSfxSchema.parse({ text: 'short soft whoosh, fabric through air, no tail' });
-    assert.equal(r.outputFormat, DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT);
-    assert.equal(r.outputFormat, 'pcm_48000');
-    assert.equal(r.loop, false);
-    assert.equal(r.durationSeconds, undefined);
-    assert.equal(sfxExtensionForFormat(r.outputFormat), '.wav');
-    assert.equal(sfxSampleRateForFormat(r.outputFormat), 48000);
-  });
-
-  it('no format in the enum is wav_* — the endpoint has none, the server writes the RIFF header', () => {
-    for (const format of ELEVENLABS_SFX_OUTPUT_FORMATS) {
-      assert.match(format, /^(pcm|mp3)_/);
-      assert.equal(sfxExtensionForFormat(format), format.startsWith('mp3_') ? '.mp3' : '.wav');
-    }
-    assert.equal(sfxSampleRateForFormat('pcm_24000'), 24000);
-    assert.equal(sfxSampleRateForFormat('mp3_44100_128'), 44100);
-  });
-
   it('the vendor body carries the model and only the fields that were asked for', () => {
     assert.deepEqual(soundEffectRequestBody(elevenLabsSfxSchema.parse({ text: 'x' })), {
       text: 'x',
@@ -290,10 +200,6 @@ describe('ElevenLabs sound effects (sfx_elevenlabs_generate)', () => {
     assert.equal(elevenLabsSfxSchema.safeParse({ text: 'x', filename: 'whoosh.wav' }).success, true);
     assert.equal(elevenLabsSfxSchema.safeParse({ text: 'x', filename: 'whoosh.mp3', outputFormat: 'mp3_44100_128' }).success, true);
     assert.equal(elevenLabsSfxSchema.safeParse({ text: 'x', filename: '../whoosh.wav' }).success, false);
-  });
-
-  it('the rate is the pricing/api figure — per minute of generated audio, every plan', () => {
-    assert.equal(ELEVENLABS_SFX_USD_PER_MINUTE, 0.12);
   });
 });
 
@@ -383,40 +289,6 @@ describe('ElevenLabs provider boundary (mocked fetch)', () => {
     } finally { globalThis.fetch = savedFetch; }
   });
 
-  it('voice discovery preserves filters, pagination and preview URL', async () => {
-    const savedFetch = globalThis.fetch;
-    const urls = [];
-    globalThis.fetch = async (url) => {
-      urls.push(new URL(url));
-      if (new URL(url).pathname === '/v1/user/subscription') return new Response('{}');
-      return new Response(JSON.stringify({ voices: [{ voice_id: VOICE, name: 'Korean actor', preview_url: 'https://example.test/preview.mp3', labels: { gender: 'male', language: 'ko', accent: 'standard' }, verified_languages: [{ language: 'ko' }] }], has_more: true, next_page_token: 'page+2=', total_count: 7 }));
-    };
-    try {
-      const result = await listElevenLabsVoices(elevenLabsVoicesSchema.parse({ languages: ['ko', 'en'], gender: 'male', accent: 'standard', nextPageToken: 'page+1=', limit: 2 }));
-      assert.equal(result.success, true);
-      assert.deepEqual(urls[0].searchParams.getAll('language'), ['ko', 'en']);
-      assert.equal(urls[0].searchParams.get('gender'), 'male');
-      assert.equal(urls[0].searchParams.get('accent'), 'standard');
-      assert.equal(urls[0].searchParams.get('next_page_token'), 'page+1=');
-      assert.equal(result.nextPageToken, 'page+2=');
-      assert.equal(result.hasMore, true);
-      assert.equal(result.voices[0].previewUrl, 'https://example.test/preview.mp3');
-    } finally { globalThis.fetch = savedFetch; }
-  });
-
-  it('v4 supports documented language exceptions and slash IPA without accepting SSML', () => {
-    for (const languageCode of ['ko', 'en', 'ast', 'yue', 'ceb', 'fil']) {
-      for (const [schema, input] of [
-        [elevenLabsGenerateSchema, { text: '/həˈloʊ/', voiceId: VOICE }],
-        [elevenLabsDialogueSchema, { inputs: [{ text: '/həˈloʊ/', voiceId: VOICE }] }],
-      ]) assert.ok(schema.safeParse({ ...input, languageCode }).success, languageCode);
-    }
-    for (const languageCode of ['kor', 'eng', 'ko-KR', 'Korean', '']) {
-      assert.equal(elevenLabsGenerateSchema.safeParse({ text: '안녕', voiceId: VOICE, languageCode }).success, false);
-    }
-    assert.equal(elevenLabsGenerateSchema.safeParse({ text: '<phoneme ph="həˈloʊ">hello</phoneme>', voiceId: VOICE }).success, false);
-  });
-
   it('both schemas bound request IDs and reject zero-retention stitching before fetch', async () => {
     const savedFetch = globalThis.fetch;
     let calls = 0;
@@ -481,26 +353,6 @@ describe('ElevenLabs provider boundary (mocked fetch)', () => {
       assert.equal(calls.at(-1).url.searchParams.has('enable_logging'), false);
       for (const key of ['previous_request_ids', 'next_request_ids', 'use_pvc_as_ivc']) assert.equal(Object.hasOwn(calls.at(-1).body, key), false);
       assert.equal(calls.length, 5, 'no hidden chunking, audition or fallback requests');
-    } finally {
-      globalThis.fetch = savedFetch;
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  it('Dialogue recommendation warns above 2000 without overriding the model cap', async () => {
-    const dir = mkdtempSync(path.join(tmpdir(), 'eleven-v4-size-'));
-    const savedFetch = globalThis.fetch;
-    let calls = 0;
-    globalThis.fetch = async () => { calls++; return audioResponse(); };
-    try {
-      const short = await generateElevenLabsSpeech(elevenLabsGenerateSchema.parse({ text: 'x'.repeat(2000), voiceId: VOICE, outputPath: dir, filename: 'short.wav' }));
-      assert.equal(short.success, true, short.error);
-      assert.deepEqual(short.warnings, []);
-      const long = await generateElevenLabsDialogue(elevenLabsDialogueSchema.parse({ inputs: [{ text: 'x'.repeat(1000), voiceId: VOICE }, { text: 'x'.repeat(1001), voiceId: 'other' }], outputPath: dir, filename: 'long.wav' }));
-      assert.equal(long.success, true, long.error);
-      assert.match(long.warnings[0], /2001.*2000/);
-      assert.equal(calls, 2);
-      assert.equal(elevenLabsDialogueSchema.safeParse({ inputs: [{ text: 'x'.repeat(10001), voiceId: VOICE }] }).success, false);
     } finally {
       globalThis.fetch = savedFetch;
       rmSync(dir, { recursive: true, force: true });

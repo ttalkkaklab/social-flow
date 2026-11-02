@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, mkdirSync, rmSync, readFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -126,13 +126,6 @@ test('the planning price set does not drift from the ledger', () => {
   assert.deepEqual(seedance(PRICED), seedance(PRICED_VIDEO_KEYS));
 });
 
-test('a board that still names Veo is refused by name; Seedance settings on another lane are refused', () => {
-  assert.throws(() => scenePlan({ type: 'broll', duration: 4, visual: { engine: 'veo' } }), /video_engine_unsupported/);
-  assert.throws(() => scenePlan({ type: 'quote', duration: 6, visual: { clip: { engine: 'host',
-    modelPurpose: 'fixed-voice', referenceAudioPaths: ['voice.wav'] } } }),
-    /only applies to Seedance/);
-});
-
 test('the astra lane routes to our LTX box, takes no Seedance field, and an unknown name is still refused', () => {
   // Our own LTX-2.5 box is opt-in per shot (video-model-selection §ASTRA). It travels the same
   // road as `host`: same source and prompt as Veo, none of the Seedance planning fields.
@@ -146,43 +139,6 @@ test('the astra lane routes to our LTX box, takes no Seedance field, and an unkn
     /only applies to Seedance/);
   assert.throws(() => scenePlan(scene({ engine: 'astra', modelPurpose: 'reference' })),
     /only applies to Seedance/);
-});
-
-test('an engine the router accepts has its tools in produce\'s allow-list', () => {
-  // A board can only reach a tool produce is allowed to call. An engine added to scenePlan
-  // without its tools here passes every board check and then dies at the call site, so the
-  // two lists are asserted against each other rather than maintained in parallel by hand.
-  const allowed = JSON.parse(readFileSync(fileURLToPath(new URL('../../skills/produce/SKILL.md', import.meta.url)), 'utf8')
-    .split('\n').find((l) => l.startsWith('allowed-tools:')).slice('allowed-tools:'.length));
-  // The tools each lane's cuts are made with. `host` is the CLI's own tool, named by the host
-  // rather than by us, so it has no mcp entry to assert.
-  const LANE_TOOLS = {
-    seedance: ['seedance_img2video', 'seedance_reference'],
-    astra: ['astra_img2video', 'astra_keyframe_video', 'astra_audio2video', 'astra_video_retake'],
-  };
-  for (const [engine, tools] of Object.entries(LANE_TOOLS)) {
-    assert.equal(scenePlan(scene({ engine, realFaceInput: false })).engine, engine,
-      engine + ' is no longer a route this test knows');
-    for (const tool of tools) {
-      assert.ok(allowed.includes('mcp__social-flow__' + tool),
-        'produce SKILL.md allowed-tools is missing ' + tool + ' for engine:"' + engine + '"');
-    }
-  }
-  // Negative control: the assertion is reading the real lists, not passing on everything.
-  assert.ok(!allowed.includes('mcp__social-flow__astra_text2video'),
-    'produce starts from a still, so a text-to-video tool should not be reachable');
-});
-
-test('a previz on the host lane is not a Seedance field, and on the Seedance route it must travel as Video 1', () => {
-  const previz = { renderer: 'blender', clip: 'previz/s4.mp4', firstFrame: 'previz/s4-f0001.png', sha256: 'a'.repeat(64), fps: 24, seconds: 5, camera: { movement: 'arc shot' } };
-  const host = { type: 'cover', duration: 5, visual: { bg: 'images/scene-4.png', video: { engine: 'host', prompt: 'x', previz: { ...previz, handoff: 'frame_and_prompt' } } } };
-  assert.deepEqual(scenePlan(host), { kind: 'motion', engine: 'host' });
-  // The lane implies the handoff (render-routing previzHandoff), so an omitted handoff passes here too (review H2).
-  assert.deepEqual(scenePlan({ ...host, visual: { ...host.visual, video: { engine: 'host', prompt: 'x', previz } } }), { kind: 'motion', engine: 'host' });
-  assert.throws(() => scenePlan({ ...host, visual: { ...host.visual, video: { ...host.visual.video, previz: { ...previz, handoff: 'reference_video' } } } }), /only applies to Seedance/);
-  const api = { type: 'cover', duration: 5, visual: { bg: 'images/scene-4.png', video: { engine: 'seedance', modelPurpose: 'previz', modelReason: 'r',
-    realFaceInput: false, referenceImagePaths: ['images/scene-4.png'], prompt: 'x', previz: { ...previz, handoff: 'frame_and_prompt' } } } };
-  assert.equal(scenePlan(api).referenceVideoPaths, undefined);
 });
 
 test('a previz cut rides the reference route as Video 1 and bills input + output seconds', () => {

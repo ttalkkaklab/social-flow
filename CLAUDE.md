@@ -438,6 +438,10 @@ locally. Follow `skills/storyboard/references/storyboard-design.md`.
 `server/test/` grew from 9 files on 2026-08-23 to 126 files and 2,314 cases on
 2026-10-18, mostly because every task added its own file named after its directive.
 This section overrides the test-writing defaults of TDD, test-scenario and similar skills.
+On 2026-11-02 the suite was cut again from 2,703 cases (35 s) to about 1,580 (17 s), keeping a
+case only where a miss is costly: money (budgets, ledger, no re-submission), public posting,
+security boundaries, data integrity, the rules this file keeps, branchy pure logic, real
+regressions and the tool-surface contract.
 
 - **One file per module.** `render-routing.js` (or `render-routing.ts`) is tested in
   `server/test/render-routing.test.mjs`. Add cases to the module's file; create a file

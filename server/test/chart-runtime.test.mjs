@@ -1,13 +1,12 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
-import {fileURLToPath} from 'node:url';
 const require=createRequire(import.meta.url);
 const routing=require('../../skills/storyboard/references/render-routing.js');
 const {checkMap}=routing;
 const checkScene=(scene,options={})=>{const advice=[];return routing.checkScene(scene,{...options,advice}).concat(advice);};
 const checkData=(data,segments,options={})=>{const advice=[];return routing.checkData(data,segments,{...options,advice}).concat(advice);};
-const {render,sectorPath,mapGeometry,project,wrapLabel}=require('../../skills/storyboard/references/chart-runtime.js');
+const {render,sectorPath,mapGeometry,project}=require('../../skills/storyboard/references/chart-runtime.js');
 const data=()=>({chart:'donut',unit:'%',baseline:0,total:100,title:'Composition',source:'Test fixture',values:[{label:'A',value:25},{label:'B',value:75}],beats:[{group:1,focus:['A'],insight:'A is one quarter.'},{group:2,focus:['B'],insight:'B is three quarters.'}]});
 const scene=d=>({type:'points',duration:6,narration:d.beats.map(b=>({tts:b.insight})),shot:{infoType:'statistic',render:{mode:'data_graph',purpose:d.chart==='map'?'geographic':'share',reason:'Explain the source relationship.',data:d}}});
 const feature=(id,coordinates)=>({type:'Feature',id,properties:{},geometry:{type:'Polygon',coordinates}});
@@ -28,15 +27,6 @@ test('slice paths keep exact tiny, zero and whole-circle areas and escape labels
  const d=data();d.values=[{label:'A',value:.01},{label:'B',value:99.99}];assert.match(render(d),/data-share="0.0001"/);
  d.values[0].value=0;d.values[1].value=100;assert.match(render(d),/data-share="0" d=""/);
  d.values[0].label='<script>';d.beats[0].focus=['<script>'];assert.doesNotMatch(render(d),/<script>/);
-});
-test('new charts animate deterministically and preserve geometry across spoken groups',()=>{
- for(const chart of ['donut','pie','map']){
-  const d=chart==='map'?map():{...data(),chart};
-  assert.equal(render(d,{progress:.3}),render(d,{progress:.3}));assert.notEqual(render(d,{progress:.2}),render(d,{progress:1}));
-  for(const width of [728,1158])assert.doesNotMatch(render(d,{width,height:650}),/NaN|Infinity|undefined/);
-  const paths=svg=>[...svg.matchAll(/ d="([^"]*)"/g)].map(m=>m[1]);
-  assert.deepEqual(paths(render(d,{group:1,progress:1})),paths(render(d,{group:2,progress:0})));
- }
 });
 test('maps accept missing measurements and enforce geometry, source and truthful joins',()=>{
  const d=map();assert.deepEqual(checkScene(scene(d),{draft:true}),[]);assert.match(render(d),/fill="url\(#map-missing\)"/);
@@ -86,74 +76,6 @@ test('derived percentages and map keys do not inherit integer source precision',
  assert.doesNotMatch(render(d),/>0%<\/text>|>100%<\/text>/);
  const m=map();m.unit='rate';m.decimals=0;m.values[0].value=.001;assert.match(render(m),/>0\.001<\/text>/);
 });
-test('slice separators require a minimum source share',()=>{
- const d=data();d.values[0].value=.1;d.values[1].value=99.9;
- const marks=[...render(d).matchAll(/<path data-mark="slice"[^>]*>/g)].map(m=>m[0]);
- assert.equal(marks.length,2);marks.forEach(mark=>assert.match(mark,/stroke-width="3"/));
- assert.match(checkData(d,2).join(),/share below/);
-});
-test('zero and missing map points have an animated focus indicator',()=>{
- const d=map();d.unit='items';d.map.mode='symbol';d.values=[{label:'A',value:0,longitude:1,latitude:1},{label:'B',value:null,longitude:3,latitude:1},{label:'C',value:100,longitude:2,latitude:1}];
- const a=render(d,{group:1,progress:1}),b=render(d,{group:2,progress:1});
- assert.match(a,/data-focus="A"[^>]*opacity="1"/);assert.match(b,/data-focus="B"[^>]*opacity="1"/);
- assert.match(b,/data-focus="A"[^>]*opacity="0"/);
-});
-test('circular legend wraps to the available phone width and rejects excessive rows',()=>{
- const d=data();d.values[0].label='가'.repeat(24);d.beats[0].focus=[d.values[0].label];
- assert.deepEqual(checkData(d,2),[]);const labels=[...render(d).matchAll(/>(가+)<\/text>/g)].map(m=>m[1]);assert.deepEqual(labels.map(x=>x.length),[6,6,6,6]);
- d.values=Array.from({length:6},(_,i)=>({label:'가'.repeat(11)+i,value:100/6}));assert.match(checkData(d,2).join(),/phone-height/);
-});
-
-test('portrait floors and row clearance reduce bar and donut capacity without shrinking type',()=>{
- for(const chart of ['bar','donut']){
-  const d=data();d.chart=chart;const cap=chart==='bar'?4:5;d.values=Array.from({length:cap},(_,i)=>({label:String.fromCharCode(65+i),value:20}));
-  assert.deepEqual(checkData(d,2),[]);
-  assert.match(render(d),/font-size="44"/);
-  d.values.push({label:'F',value:20});assert.match(checkData(d,2).join(),new RegExp('exceeds '+cap));
- }
-});
-test('labels break at spaces, shared domains hold and reject clipped values',()=>{
- assert.deepEqual(wrapLabel('서울특별시 강남구 역삼제일동',10),['서울특별시 강남구','역삼제일동']);
- const d=data();d.chart='bar';d.domain=[0,100];assert.deepEqual(checkData(d,2),[]);
- const chart=render(d);assert.match(chart,/>100<\/text>/);
- d.domain=[0,50];assert.match(checkData(d,2).join(),/data.domain/);
-});
-test('chart geometry ends at grow, focus at plate, independently of segment duration',()=>{
- const d=data();assert.equal(render(d,{elapsedMs:1000}),render(d,{elapsedMs:8000}));
- assert.equal(render(d,{group:2,elapsedMs:400}),render(d,{group:2,elapsedMs:8000}));
- assert.notEqual(render(d,{elapsedMs:200}),render(d,{elapsedMs:1000}));
-});
-
-test('the scenes CLI rejects changed or missing domains only inside a comparable run',async()=>{
- const {mkdtempSync,writeFileSync,rmSync}=await import('node:fs');
- const {tmpdir}=await import('node:os');const {join}=await import('node:path');
- const {spawnSync}=await import('node:child_process');
- const folder=mkdtempSync(join(tmpdir(),'chart-domain-'));
- try{
-  const a=scene({...data(),chart:'bar',domain:[0,100]}),b=structuredClone(a);
-  const run=()=>{writeFileSync(join(folder,'scenes.js'),'window.FORMAT="shorts-9x16";window.SCENES='+JSON.stringify([a,b])+';');const child=spawnSync(process.execPath,[fileURLToPath(new URL('../../skills/storyboard/references/check-scenes.js',import.meta.url)),folder,'--draft','--json'],{encoding:'utf8'});return parseSceneReport(child);};
-  assert.equal(run().findings.some(f=>f.what.includes('consecutive charts')),false);
-  b.shot.render.data.domain=[0,200];assert.ok(run().findings.some(f=>f.what.includes('consecutive charts')));
-  delete b.shot.render.data.domain;assert.ok(run().findings.some(f=>f.what.includes('consecutive charts')));
-  delete a.shot.render.data.domain;assert.ok(run().findings.some(f=>/consecutive charts.*explicit shared data.domain/.test(f.what)));
-  b.shot.render.data.unit='different';assert.equal(run().findings.some(f=>f.what.includes('consecutive charts')),false);
- }finally{rmSync(folder,{recursive:true,force:true});}
-});
-
-function parseSceneReport(child) {
- assert.ifError(child.error);
- assert.equal(child.signal,null,child.stderr);
- const report=JSON.parse(child.stdout);
- assert.equal(report.format,'shorts-9x16');
- assert.equal(report.shots,2);
- assert.equal(report.draft,true);
- assert.ok(Array.isArray(report.findings));
- for(const finding of report.findings){assert.equal(typeof finding.what,'string');assert.ok(['bad','warn','later'].includes(finding.level));}
- assert.equal(report.violations,report.findings.filter(f=>f.level==='bad').length);
- assert.equal(child.status,report.violations?1:0,child.stderr);
- return report;
-}
-
 const staged=()=>({chart:'stacked-bar',title:'Accounts',source:'Fixture',unit:'nyang',baseline:0,total:200,values:[{label:'Spent',value:70},{label:'Balance',value:130}],beats:[{group:1,focus:['Spent'],insight:'70 of 200 was spent.'}],reveal:{totalLabel:'Received',total:{startMs:0,endMs:1200},parts:[{label:'Spent',startMs:2600,endMs:4200},{label:'Balance',startMs:4400,endMs:4900}]}});
 const draw=(d,t)=>render(d,{width:1000,height:440,wide:true,elapsedMs:t});
 const parts=svg=>[...svg.matchAll(/data-mark="part" data-label="([^"]+)" x="([^"]+)" y="[^"]+" width="([^"]+)"/g)].map(m=>({label:m[1],x:+m[2],width:+m[3]}));
@@ -175,16 +97,6 @@ test('invalid and overlapping reveal windows are rejected',()=>{
   const d=staged();edit(d);assert.ok(checkData(d,1).length);
  }
 });
-test('liquid-glass preserves exact source widths and changes no unrelated chart',()=>{
- const d=staged();d.material='liquid-glass';assert.deepEqual(checkData(d,1),[]);
- const final=draw(d,5000);assert.match(final,/glass-specular/);
- assert.deepEqual(parts(final),[{label:'Spent',x:0,width:350},{label:'Balance',x:350,width:650}]);
- assert.doesNotMatch(draw(d,1500),/>70 nyang</);
- const ordinary=staged();assert.doesNotMatch(draw(ordinary,5000),/glass-specular/);
- for(let t=0;t<5540;t+=33){const p=parts(draw(d,t));assert.ok(p[0].width<=350&&p[1].width<=650);assert.equal(draw(d,t),draw(d,t));}
- const unsupported=staged();unsupported.material='unknown';assert.match(checkData(unsupported,1).join(),/material/);
- unsupported.material='liquid-glass';delete unsupported.reveal;assert.match(checkData(unsupported,1).join(),/staged/);
-});
 test('measured segment timing replaces estimates before reveal validation',async()=>{
  const {readFileSync}=await import('node:fs');const vm=await import('node:vm');
  const d=staged();d.reveal.parts[1].endMs=6000;d.beats.push({group:2,focus:['Balance'],insight:'Balance'});
@@ -198,34 +110,4 @@ test('measured segment timing replaces estimates before reveal validation',async
  assert.throws(()=>w.__validateTiming(),/exceeds/);
  w.__setSegs({1:7000,2:3000});assert.doesNotThrow(()=>w.__validateTiming());
  assert.throws(()=>w.__setSegs({1:5000,2:5000}),/exceeds/);
-});
-
-test('later staged groups transfer focus while preserving exact shares on random seeks',()=>{
- for(const material of [undefined,'liquid-glass']){
-  const d=staged();d.material=material;d.beats.push({group:2,focus:['Balance'],insight:'Balance'});
-  assert.deepEqual(checkData(d,2),[]);
-  const frame=t=>render(d,{width:1000,height:440,wide:true,group:2,elapsedMs:t});
-  const start=frame(0),middle=frame(200),end=frame(400);
-  assert.notEqual(start,middle);assert.notEqual(middle,end);
-  for(const svg of [start,middle,end])assert.deepEqual(parts(svg),[{label:'Spent',x:0,width:350},{label:'Balance',x:350,width:650}]);
-  const focus=svg=>[...svg.matchAll(/data-mark="focus"[^>]*opacity="([^"]+)"/g)].map(m=>+m[1]);
-  assert.deepEqual(focus(start),[.18,0]);assert.deepEqual(focus(end),[0,.18]);
-  assert.equal(frame(200),middle);assert.equal(frame(0),start);
- }
-});
-
-test('choropleth focus outlines use the structural hair floor in both formats',()=>{
- const data={chart:'map',values:[{label:'A',regionId:'a',value:25}],beats:[{focus:['A'],insight:'A'}],map:{mode:'choropleth',geojson:{type:'FeatureCollection',features:[{type:'Feature',id:'a',properties:{},geometry:{type:'Polygon',coordinates:[[[0,0],[2,0],[2,2],[0,2],[0,0]]]}}]}}};
- for(const wide of [false,true]){
-  const svg=render(data,{wide});
-  assert.match(svg,new RegExp('data-stroke-role="hair"[^>]*fill="none"[^>]*stroke-width="'+(wide?2:3)+'"'));
- }
-});
-
-for(const chart of ['bar','dot','line','histogram'])test(`${chart} has a rule baseline and hair grid in both formats`,()=>{
- const data={chart,values:[{label:'A',value:10,date:'2020-01-01'},{label:'B',value:30,date:'2021-01-01'}],beats:[{focus:['A'],insight:'A'}]};
- for(const wide of [false,true]){
-  const lines=[...render(data,{wide}).matchAll(/<line data-stroke-role="([^"]+)"[^>]*stroke-width="([^"]+)"/g)];
-  assert.deepEqual(lines.slice(0,5).map(m=>[m[1],Number(m[2])]),[['rule',wide?4:6],...Array.from({length:4},()=>['hair',wide?2:3])]);
- }
 });
