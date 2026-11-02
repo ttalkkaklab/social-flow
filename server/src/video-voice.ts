@@ -55,6 +55,42 @@ function voiceDescription(character: Record<string, unknown>): string {
     text(tts.voiceDirection) || text(tts.stylePrompt)].filter(Boolean).join('. ');
 }
 
+/** Story-first boards can carry only a cast id and name; resolve their selected voice at planning time. */
+function resolveCharacterVoice(character: Record<string, unknown>, context: VoiceContext,
+  warnings: string[]): Record<string, unknown> {
+  const id = text(character.id);
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) return character;
+  let channel = context.episode;
+  while (!existsSync(path.join(channel, 'profile.md')) && path.dirname(channel) !== channel) channel = path.dirname(channel);
+  const folder = path.join(channel, 'assets/characters', id), identity = path.join(folder, 'identity.md');
+  let resolved = character;
+  if (!Object.keys(object(character.tts)).length && existsSync(identity)) {
+    try {
+      const { handoff } = load('../../skills/channel/references/character-sheet.js') as {
+        handoff(file: string): Record<string, unknown>;
+      };
+      const current = handoff(identity);
+      resolved = { ...current, ...character, tts: current.tts };
+    } catch (error) {
+      warnings.push(`${id}: cannot read the selected character voice: ${error instanceof Error ? error.message : String(error)}`);
+      return character;
+    }
+  }
+  const reference = object(resolved.voiceReference);
+  // Existing ownership wins. Otherwise use only authored character images inside this character's folder.
+  if (!Array.isArray(reference.imagePaths) && existsSync(folder)) {
+    const root = realpathSync(folder) + path.sep;
+    const refs = object(context.shot.visual).references;
+    const imagePaths = (Array.isArray(refs) ? refs.map(object) : [])
+      .filter(ref => ref.role === 'character' && ['both', 'video'].includes(text(ref.use)))
+      .map(ref => text(ref.path)).filter(Boolean)
+      .map(file => path.resolve(context.episode, 'storyboard', file))
+      .filter(file => existsSync(file) && realpathSync(file).startsWith(root));
+    if (imagePaths.length) resolved = { ...resolved, voiceReference: { ...reference, imagePaths } };
+  }
+  return resolved;
+}
+
 function voiceReference(character: Record<string, unknown>, context: VoiceContext, warnings: string[]): SpeakerVoice['reference'] {
   const declared = object(character.voiceReference);
   if (character.voiceReferenceWarning && !declared.path) {
@@ -167,11 +203,15 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
   const msrAudio: string[] = [];
   for (const id of ids) {
     const matches = characters.filter(character => character.id === id);
-    if (!id || matches.length !== 1 || !Object.keys(object(matches[0].tts)).length) {
-      warnings.push(`Missing unique pinned voice for speaker ${id || '(unspecified)'}; no voice was invented.`);
+    if (!id || matches.length !== 1) {
+      warnings.push(`Missing unique storyboard character for speaker ${id || '(unspecified)'}; no voice was invented.`);
       continue;
     }
-    const character = matches[0];
+    const character = resolveCharacterVoice(matches[0], context, warnings);
+    if (!Object.keys(object(character.tts)).length) {
+      warnings.push(`${id}: no pinned TTS settings in the storyboard or character identity; voice samples were not resolved.`);
+      continue;
+    }
     const speaker: SpeakerVoice = { speaker: id, name: text(character.name) || id, tts: object(character.tts), description: voiceDescription(character) };
     // Video prompts are English: a non-Latin cast name falls back to the character id
     const label = nonEnglishOutsideQuotes(speaker.name) ? id : speaker.name;

@@ -125600,6 +125600,32 @@ function voiceDescription(character) {
     text(tts.voiceDirection) || text(tts.stylePrompt)
   ].filter(Boolean).join(". ");
 }
+function resolveCharacterVoice(character, context2, warnings) {
+  const id = text(character.id);
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) return character;
+  let channel = context2.episode;
+  while (!existsSync25(path24.join(channel, "profile.md")) && path24.dirname(channel) !== channel) channel = path24.dirname(channel);
+  const folder = path24.join(channel, "assets/characters", id), identity = path24.join(folder, "identity.md");
+  let resolved = character;
+  if (!Object.keys(object3(character.tts)).length && existsSync25(identity)) {
+    try {
+      const { handoff } = load5("../../skills/channel/references/character-sheet.js");
+      const current = handoff(identity);
+      resolved = { ...current, ...character, tts: current.tts };
+    } catch (error2) {
+      warnings.push(`${id}: cannot read the selected character voice: ${error2 instanceof Error ? error2.message : String(error2)}`);
+      return character;
+    }
+  }
+  const reference2 = object3(resolved.voiceReference);
+  if (!Array.isArray(reference2.imagePaths) && existsSync25(folder)) {
+    const root = realpathSync7(folder) + path24.sep;
+    const refs = object3(context2.shot.visual).references;
+    const imagePaths = (Array.isArray(refs) ? refs.map(object3) : []).filter((ref) => ref.role === "character" && ["both", "video"].includes(text(ref.use))).map((ref) => text(ref.path)).filter(Boolean).map((file) => path24.resolve(context2.episode, "storyboard", file)).filter((file) => existsSync25(file) && realpathSync7(file).startsWith(root));
+    if (imagePaths.length) resolved = { ...resolved, voiceReference: { ...reference2, imagePaths } };
+  }
+  return resolved;
+}
 function voiceReference(character, context2, warnings) {
   const declared = object3(character.voiceReference);
   if (character.voiceReferenceWarning && !declared.path) {
@@ -125697,11 +125723,15 @@ function prepareVideoVoice(tool2, input, context2) {
   const msrAudio = [];
   for (const id of ids) {
     const matches = characters.filter((character2) => character2.id === id);
-    if (!id || matches.length !== 1 || !Object.keys(object3(matches[0].tts)).length) {
-      warnings.push(`Missing unique pinned voice for speaker ${id || "(unspecified)"}; no voice was invented.`);
+    if (!id || matches.length !== 1) {
+      warnings.push(`Missing unique storyboard character for speaker ${id || "(unspecified)"}; no voice was invented.`);
       continue;
     }
-    const character = matches[0];
+    const character = resolveCharacterVoice(matches[0], context2, warnings);
+    if (!Object.keys(object3(character.tts)).length) {
+      warnings.push(`${id}: no pinned TTS settings in the storyboard or character identity; voice samples were not resolved.`);
+      continue;
+    }
     const speaker = { speaker: id, name: text(character.name) || id, tts: object3(character.tts), description: voiceDescription(character) };
     const label = nonEnglishOutsideQuotes(speaker.name) ? id : speaker.name;
     if (reference2 && msr) {

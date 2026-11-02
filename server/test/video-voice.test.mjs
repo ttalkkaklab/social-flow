@@ -123,6 +123,40 @@ test('MSR attaches each pinned sample to the subject that shows its speaker', t 
   assert.equal(result.voiceContinuity.strategy, 'reference_voice');
   assert.equal(videoVoiceCapabilities('astra_genai_msr').voiceReference, 'backend_dependent');
 });
+
+test('MSR resolves an id-only story-first cast from its selected audition and authored image ownership', t => {
+  const ctx = fixture(t), folder = path.join(ctx.episode, 'assets/characters/hero');
+  fs.mkdirSync(folder, { recursive: true }); fs.writeFileSync(path.join(ctx.episode, 'profile.md'), '# Channel');
+  const example = fs.readFileSync(new URL('../../skills/channel/references/character-identity-example.md', import.meta.url), 'utf8');
+  const doc = JSON.parse(example.match(/```json\s*\n([\s\S]*?)```/)[1]);
+  const audioPath = path.join(folder, 'selected.wav'), imagePath = path.join(folder, 'face.png');
+  fs.copyFileSync(ctx.board.SB_DOC.characters[0].voiceReference.path, audioPath);
+  fs.writeFileSync(imagePath, 'face'); fs.writeFileSync(path.join(folder, 'voice.wav'), 'old-unselected-voice');
+  const auditionPath = path.join(folder, 'audition.json'), sha256 = digest(fs.readFileSync(audioPath));
+  doc.tts = tts; doc.voiceSelection = { candidateId: '1', auditionPath, audioSha256: sha256 };
+  fs.writeFileSync(auditionPath, JSON.stringify({ candidates: [{ id: '1', tts, audioPath, audioSha256: sha256 }] }));
+  fs.writeFileSync(path.join(folder, 'identity.md'), '# Hero\n\n```json\n' + JSON.stringify(doc) + '\n```');
+  ctx.board.SB_DOC.characters = [{ id: 'hero', name: 'Hero' }]; ctx.shot.narration.length = 1;
+  ctx.shot.visual.references = [{ path: imagePath, role: 'character', use: 'both' }];
+  const input = { prompt: 'He speaks.', references: [{ imagePath }] };
+  const result = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true });
+  assert.equal(result.args.references[0].audioPath, audioPath);
+  assert.equal(result.voiceContinuity.speakers[0].reference.sha256, sha256);
+  assert.match(result.args.prompt, /Audio 1 \(Image 1\): "Hello hero"/);
+  assert.deepEqual(ctx.board.SB_DOC.characters, [{ id: 'hero', name: 'Hero' }], 'planning does not rewrite the board');
+
+  ctx.board.SB_DOC.characters[0].tts = { ...tts, voiceId: 'Orus' };
+  const override = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true });
+  assert.equal(override.voiceContinuity.speakers[0].tts.voiceId, 'Orus');
+  assert.equal(override.args.references[0].audioPath, undefined, 'never replace an episode voice with the shared voice');
+  delete ctx.board.SB_DOC.characters[0].tts;
+  fs.writeFileSync(audioPath, 'changed');
+  assert.throws(() => prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true }), /sample bytes changed/);
+  fs.rmSync(auditionPath);
+  const missing = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true });
+  assert.equal(missing.args.references[0].audioPath, undefined, 'missing selected evidence cannot fall back to old voice.wav');
+  assert.match(missing.voiceContinuity.warnings.join('\n'), /instead of substituting/);
+});
 test('MSR writes each authored line into the prompt once, with its speaker image', t => {
   const ctx = fixture(t), [hero, friend] = ctx.board.SB_DOC.characters;
   ctx.shot.narration[1].acting = { direction: 'whispering' };
