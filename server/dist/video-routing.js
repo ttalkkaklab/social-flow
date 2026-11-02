@@ -16,7 +16,7 @@ import { quoteVideo } from './video-pricing.js';
 import { atomicJson, videoTransaction } from './video-state.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
 import { videoEvents } from './video-events.js';
-import { getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema, genaiMsrVoiceReferences, refreshGenaiMsrVoice } from './astra-genai-video.js';
+import { getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema, genaiMsrVoiceReferences, refreshGenaiMsrVoice, genaiV2Resolution } from './astra-genai-video.js';
 import { GenaiRequestError } from './astra-genai-client.js';
 import { prepareVideoImages } from './video-image-inputs.js';
 import { prepareVideoVoice } from './video-voice.js';
@@ -117,9 +117,11 @@ function bindSelection(tool, input, selection) {
             }
         }
         else {
-            if (args.resolution !== undefined && args.resolution !== selection.resolution)
-                throw new Error('model_selection_mismatch: resolution');
-            args.resolution = selection.resolution;
+            // One saved LTX size serves MSR and v2: v2 gets its own closest size (2026-11-02).
+            const resolution = selection.engine === 'astra-genai' ? genaiV2Resolution(selection.resolution) : selection.resolution;
+            if (args.resolution !== undefined && args.resolution !== resolution)
+                throw new Error(`model_selection_mismatch: resolution (expected ${resolution})`);
+            args.resolution = resolution;
         }
     }
     return args;

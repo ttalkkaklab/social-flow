@@ -110545,6 +110545,17 @@ import * as fs9 from "node:fs";
 import * as path8 from "node:path";
 import { execFileSync as execFileSync5 } from "node:child_process";
 var GENAI_VIDEO_MODELS = ["ltx-2.5-22b-distilled", "ltx-2.5-22b-dev"];
+var GENAI_V2_SIZES = ["1280x720", "720x1280", "720x720", "1080x720", "720x1080"];
+function genaiV2Resolution(saved) {
+  const match2 = /^(\d+)x(\d+)$/.exec(saved);
+  if (!match2 || GENAI_V2_SIZES.includes(saved)) return saved;
+  const aspect2 = (w, h2) => Math.log(w / h2), want = aspect2(Number(match2[1]), Number(match2[2]));
+  const gap = (size) => {
+    const [w, h2] = size.split("x").map(Number);
+    return Math.abs(aspect2(w, h2) - want);
+  };
+  return GENAI_V2_SIZES.reduce((best, size) => gap(size) < gap(best) ? size : best);
+}
 var GENAI_CAMERA_MOTIONS = ["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"];
 var genaiTextToVideoSchema = external_exports.object({
   prompt: external_exports.string().min(1).max(5e3),
@@ -125859,8 +125870,9 @@ function bindSelection3(tool2, input, selection) {
         args[key] = n;
       }
     } else {
-      if (args.resolution !== void 0 && args.resolution !== selection.resolution) throw new Error("model_selection_mismatch: resolution");
-      args.resolution = selection.resolution;
+      const resolution2 = selection.engine === "astra-genai" ? genaiV2Resolution(selection.resolution) : selection.resolution;
+      if (args.resolution !== void 0 && args.resolution !== resolution2) throw new Error(`model_selection_mismatch: resolution (expected ${resolution2})`);
+      args.resolution = resolution2;
     }
   }
   return args;

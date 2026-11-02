@@ -9,6 +9,17 @@ import { GenaiRequestError, astraGenaiBaseUrl, downloadGenaiResult, pollGenaiJob
 import { atomicJson } from './routing-files.js';
 import { recordVideoSubmission } from './video-events.js';
 export const GENAI_VIDEO_MODELS = ['ltx-2.5-22b-distilled', 'ltx-2.5-22b-dev'];
+// Sizes the gateway's v2 text/image/audio-to-video calls take (GET /v1/models, 2026-11-02); MSR takes any multiple of 64.
+export const GENAI_V2_SIZES = ['1280x720', '720x1280', '720x720', '1080x720', '720x1080'];
+/** A saved size v2 does not take (an MSR 1792x1024) becomes the v2 size closest in aspect ratio. */
+export function genaiV2Resolution(saved) {
+    const match = /^(\d+)x(\d+)$/.exec(saved);
+    if (!match || GENAI_V2_SIZES.includes(saved))
+        return saved;
+    const aspect = (w, h) => Math.log(w / h), want = aspect(Number(match[1]), Number(match[2]));
+    const gap = (size) => { const [w, h] = size.split('x').map(Number); return Math.abs(aspect(w, h) - want); };
+    return GENAI_V2_SIZES.reduce((best, size) => gap(size) < gap(best) ? size : best);
+}
 export const GENAI_CAMERA_MOTIONS = ['dolly_in', 'dolly_out', 'dolly_left', 'dolly_right', 'jib_up', 'jib_down', 'static', 'focus_shift'];
 export const genaiTextToVideoSchema = z.object({
     prompt: z.string().min(1).max(5000),
