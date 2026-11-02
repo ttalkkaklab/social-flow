@@ -127049,7 +127049,8 @@ function manageSpeech(args) {
   if (mutates && args.expectedRevision !== revision) throw new Error("Read speech first and supply its current expectedRevision; the storyboard may have changed");
   const doc = object4(win.SB_DOC);
   const rawCharacters = doc.characters;
-  const characters = Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object4(rawCharacters)).map(([id, c]) => ({ ...object4(c), id }));
+  const voiceWarnings = [];
+  const characters = (Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object4(rawCharacters)).map(([id, c]) => ({ ...object4(c), id }))).map((c) => resolveCharacterVoice(object4(c), { episode: dirname8(dirname8(file)), board: win, shot: {} }, voiceWarnings));
   const character = (id) => characters.find((c) => c.id === id);
   const scenes = win.SCENES;
   let changed = false;
@@ -127263,7 +127264,7 @@ function manageSpeech(args) {
     writeFileSync24(tmp, nextSource);
     renameSync8(tmp, file);
   }
-  return { revision: hash4(readFileSync31(file)), changed, invalidated, plan: plan2, timing, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: object4(object4(object4(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  return { revision: hash4(readFileSync31(file)), changed, invalidated, plan: plan2, timing, ...voiceWarnings.length ? { voiceWarnings } : {}, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: object4(object4(object4(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/acting-review.ts

@@ -27,7 +27,7 @@ function voiceDescription(character) {
         text(tts.voiceDirection) || text(tts.stylePrompt)].filter(Boolean).join('. ');
 }
 /** Story-first boards can carry only a cast id and name; resolve their selected voice at planning time. */
-function resolveCharacterVoice(character, context, warnings) {
+export function resolveCharacterVoice(character, context, warnings) {
     const id = text(character.id);
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id))
         return character;

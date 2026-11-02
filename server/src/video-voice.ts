@@ -56,7 +56,7 @@ function voiceDescription(character: Record<string, unknown>): string {
 }
 
 /** Story-first boards can carry only a cast id and name; resolve their selected voice at planning time. */
-function resolveCharacterVoice(character: Record<string, unknown>, context: VoiceContext,
+export function resolveCharacterVoice(character: Record<string, unknown>, context: VoiceContext,
   warnings: string[]): Record<string, unknown> {
   const id = text(character.id);
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) return character;
