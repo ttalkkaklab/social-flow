@@ -4,7 +4,9 @@
  */
 
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, describe, it } from 'node:test';
@@ -80,4 +82,17 @@ describe('blenderBin', () => {
     process.env.BLENDER = '/nonexistent/blender-for-test';
     assert.notEqual(blenderBin(), '/nonexistent/blender-for-test');
   });
+});
+
+// npm test loads test/isolate.mjs into every file, so the developer's keys and ~/.config/social-flow stay out.
+it('npm test runs every file on an empty home without the shell\'s provider keys', () => {
+  const { scripts } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.match(scripts.test, /node --import \.\/test\/isolate\.mjs --test /);
+  const isolate = fileURLToPath(new URL('./isolate.mjs', import.meta.url));
+  const seen = JSON.parse(execFileSync(process.execPath, ['--import', isolate, '-e',
+    'console.log(JSON.stringify({ home: require("node:os").homedir(), keys: Object.keys(process.env).filter((k) => /^(ASTRA|GEMINI|SNS_TOKEN|SOCIAL_FLOW)_/.test(k)), blender: process.env.BLENDER ?? null }))'],
+  { encoding: 'utf8', env: { ...process.env, HOME: '/real-home', ASTRA_GENAI_URL: 'http://x', GEMINI_API_KEY: 'k', SNS_TOKEN_DIR: '/real-home/sns',
+    SOCIAL_FLOW_TOOLS: 'off', BLENDER: tmpdir() } }));
+  assert.deepEqual([seen.keys, seen.blender, seen.home.startsWith(join(tmpdir(), 'social-flow-test-home-'))], [[], null, true]);
+  assert.equal(existsSync(seen.home), false);   // removed when the process ends
 });
