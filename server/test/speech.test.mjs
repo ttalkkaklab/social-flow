@@ -42,7 +42,12 @@ test('video adapters select by capabilities, never a provider name',()=>{
  const native={...caps,audioConditioning:false,lipSync:false,nativeSpeech:true},msr=speechVideoPlan(lines,native);
  assert.equal(msr.mode,'native');assert.equal(msr.audioFirst,false);assert.equal(msr.timing,'model_timed');
  assert.match(msr.videoPrompt,/physically saying "Hello"/);
- assert.throws(()=>speechVideoPlan([{...lines[0],delivery:'voiceover'}],native),/on-screen lines only/);
+ for (const delivery of ['off_screen','voiceover']) {
+  const outside=speechVideoPlan([{...lines[0],delivery}],native);
+  assert.equal(outside.mode,'native');assert.equal(outside.audioFirst,false);
+  assert.match(outside.videoPrompt,/Speak "Hello"/);
+  assert.doesNotMatch(outside.videoPrompt,/Show this speaker physically saying/);
+ }
 });
 test('a native-speech clip binds line revisions and assembles from its soundtrack without line audio',t=>{
  const {dir,target,r}=setup(t),line=r.lines[0],file=path.join(target,'scenes.js'),win={};

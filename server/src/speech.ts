@@ -85,8 +85,7 @@ export function speechVideoPlan(input: Line[] | {narration?: Line[]; [key: strin
   const scene = Array.isArray(input) ? {narration:input} : input;
   const lines = scene.narration || [];
   const onScreen = lines.some(line => line.delivery === 'on_screen');
-  // A native-speech model (MSR) voices the lines written in its prompt: no line audio, and no narration lane.
-  if (capabilities.nativeSpeech && lines.some(line => line.delivery !== 'on_screen')) throw new Error('Native video speech voices on-screen lines only; give narration and off-screen lines their own shot');
+  // Native speech renders every authored delivery in the soundtrack; only on-screen speech moves a visible mouth.
   const mode = capabilities.nativeSpeech ? 'native' : !onScreen ? 'voiceover' : capabilities.audioConditioning && capabilities.lipSync ? 'audio_conditioned' : capabilities.postLipSync ? 'post_lipsync' : null;
   if (!mode) throw new Error('Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting');
   const timeline = actingContract().planScenePerformance(scene,measuredDuration);

@@ -33270,7 +33270,6 @@ function speechVideoPlan(input, capabilities) {
   const scene = Array.isArray(input) ? { narration: input } : input;
   const lines = scene.narration || [];
   const onScreen = lines.some((line) => line.delivery === "on_screen");
-  if (capabilities.nativeSpeech && lines.some((line) => line.delivery !== "on_screen")) throw new Error("Native video speech voices on-screen lines only; give narration and off-screen lines their own shot");
   const mode = capabilities.nativeSpeech ? "native" : !onScreen ? "voiceover" : capabilities.audioConditioning && capabilities.lipSync ? "audio_conditioned" : capabilities.postLipSync ? "post_lipsync" : null;
   if (!mode) throw new Error("Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting");
   const timeline = actingContract().planScenePerformance(scene, measuredDuration);

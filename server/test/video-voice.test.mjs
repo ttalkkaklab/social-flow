@@ -166,7 +166,7 @@ test('MSR writes each authored line into the prompt once, with its speaker image
   assert.equal(prompt.split('Hello hero').length, 2);
   assert.match(prompt, /Image 1 speaks \(whispering\) with visible lip movement synchronized with Audio 1 while the other characters listen silently with their lips closed\. Audio 1 \(Image 1\): "Hello friend"/);
 });
-test('MSR voices a speaker it cannot sample from the prompt; voiceover and the retired voice mode are refused', t => {
+test('MSR voices a speaker it cannot sample from the prompt and refuses the retired voice mode', t => {
   const ctx = fixture(t), [hero, friend] = ctx.board.SB_DOC.characters;
   const extra = path.join(ctx.episode, 'extra.png'); fs.writeFileSync(extra, 'image-extra');
   const input = { prompt: 'They talk.', reserveUsd: 0,
@@ -182,7 +182,24 @@ test('MSR voices a speaker it cannot sample from the prompt; voiceover and the r
   const silent = prepareVideoVoice('astra_genai_msr', input, { ...ctx, shot: { ...ctx.shot, narration: [] }, msrVoice: false });
   assert.equal(silent.args.prompt, 'They talk.');
   ctx.shot.narration[0].delivery = 'voiceover';
-  assert.throws(() => prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true }), /msr_dialogue_required/);
+  const voiceover = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true });
+  assert.match(voiceover.args.prompt, /hero speaks in voiceover/);
+  assert.doesNotMatch(voiceover.args.prompt, /Image 3 speaks with visible lip movement/);
   ctx.shot.visual.video = { voice: 'prompt' };
   assert.throws(() => prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true }), /retired/);
+});
+test('MSR keeps a phone caller off screen without borrowing the visible listener voice', t => {
+  const ctx = fixture(t), [hero, friend] = ctx.board.SB_DOC.characters;
+  ctx.shot.visual = { video: {} };
+  ctx.shot.narration[1].delivery = 'off_screen';
+  const result = prepareVideoVoice('astra_genai_msr', { prompt: 'Hero listens to the phone.',
+    references: [{ imagePath: hero.voiceReference.imagePaths[0] }] }, { ...ctx, msrVoice: true });
+  assert.equal(result.args.references[0].audioPath, hero.voiceReference.path);
+  assert.match(result.args.prompt, /friend speaks off screen\. Do not show this speaker or animate any visible mouth during this line\. friend: "Hello friend"/);
+  assert.equal(result.voiceContinuity.speakers.find(s => s.speaker === friend.id).reference, undefined);
+  assert.match(result.voiceContinuity.warnings.join(), /friend: no MSR subject image matches/);
+  ctx.shot.narration = [ctx.shot.narration[1]];
+  const only = prepareVideoVoice('astra_genai_msr', { prompt: 'Hero listens.', references: [] }, { ...ctx, msrVoice: true });
+  assert.equal(only.voiceContinuity.strategy, 'reference_voice');
+  assert.match(only.args.prompt, /friend speaks off screen/);
 });

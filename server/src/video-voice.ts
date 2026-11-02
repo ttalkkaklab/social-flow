@@ -165,12 +165,11 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
   const args = { ...input };
   const lines = (Array.isArray(context.shot.narration) ? context.shot.narration : []).map(object).filter(line => text(line.tts));
   const msr = tool === 'astra_genai_msr';
-  // MSR speaks on-screen dialogue into its own soundtrack; a speaker's pinned sample, when the
+  // MSR renders authored dialogue and voiceover into its own soundtrack; a pinned sample, when the
   // gateway takes one, sets the timbre (user directive 2026-10-31). A cut without dialogue is fine.
   if (msr) {
     if (object(context.shot.visual).video && object(object(context.shot.visual).video).voice !== undefined)
       throw new Error('visual.video.voice is retired: MSR uses the speaker\'s voice sample when one is pinned');
-    if (lines.some(line => line.delivery !== 'on_screen')) throw new Error('msr_dialogue_required: every MSR line is spoken on screen');
   }
   if (!lines.length) return { args };
   const doc = object(context.board.SB_DOC), raw = doc.characters;
@@ -182,7 +181,7 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
   const lane = VIDEO_ADAPTERS[tool]?.voice ?? 'none';
   const supplied = lane === 'supplied';
   const onScreen = lines.some(line => line.delivery === 'on_screen');
-  const native = !supplied && audible && (nativeSlot || onScreen);
+  const native = !supplied && audible && (msr || nativeSlot || onScreen);
   // Voice gate (owner directive 2026-10-31): a character the viewer hears or sees speak needs a voice
   // lane. An adapter without one renders only cuts whose lines are external TTS over a non-speaking picture.
   if (lane === 'none' && (native || onScreen))
@@ -192,7 +191,7 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
   const strategy = supplied ? 'supplied_audio' : reference ? 'reference_voice' : 'external_tts';
   const warnings: string[] = [];
   const speakers: SpeakerVoice[] = [];
-  const nativeLines = nativeSlot ? lines : lines.filter(line => line.delivery === 'on_screen');
+  const nativeLines = msr || nativeSlot ? lines : lines.filter(line => line.delivery === 'on_screen');
   const ids = [...new Set((native ? nativeLines : lines).map(line => text(line.speaker) || text(doc.narratorCharacterId)))];
   const prompt: string[] = [];
   const audioOffset = tool === 'fasth3_omni_reference' && Array.isArray(args.referenceVideoPaths)
@@ -269,6 +268,12 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
       const id = text(line.speaker) || text(doc.narratorCharacterId), speaker = bySpeaker.get(id);
       const image = speaker?.imageIndices?.[0], audio = speaker?.audioIndex, direction = text(object(line.acting).direction);
       const who = image ? `Image ${image}` : speaker?.name ?? id;
+      if (line.delivery !== 'on_screen') {
+        const label = nonEnglishOutsideQuotes(speaker?.name ?? '') ? id : speaker?.name ?? id;
+        const delivery = line.delivery === 'off_screen' ? 'off screen' : 'in voiceover';
+        return `${label} speaks ${delivery}${direction ? ` (${direction})` : ''}${audio ? ` using Audio ${audio}` : ''}. ` +
+          `Do not show this speaker or animate any visible mouth during this line. ${audio ? `Audio ${audio} (${label})` : label}: "${text(line.tts)}"`;
+      }
       return `${who} speaks${direction ? ` (${direction})` : ''} with visible lip movement${audio ? ` synchronized with Audio ${audio}` : ''}` +
         ` while the other characters listen silently with their lips closed. ${audio ? `Audio ${audio} (${who})` : who}: "${text(line.tts)}"`;
     });

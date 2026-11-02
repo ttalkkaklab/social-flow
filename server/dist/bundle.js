@@ -93323,7 +93323,7 @@ var require_scene_acting = __commonJS({
     }
     var VIDEO_TEXT_POLICY = "Keep the entire video image text-free: no subtitles, captions, dialogue text, typography, letters, logos or watermarks, including during speech.";
     function sceneVideoPrompt(performance2, mode, scene = {}) {
-      const route = !performance2.some((event) => event.kind !== "action") ? "This is a silent scene. Perform the ordered visible actions without invented speech or voiceover." : mode === "native" ? "Speak each on_screen line aloud in its speaker's voice from the quoted words; no audio is supplied. Do not transcribe speech into the image." : mode === "audio_conditioned" ? "Use the supplied audio as the sole source of spoken words. Synchronize visible mouths only during each on_screen speech interval; follow the delivery instruction for every beat. Do not transcribe speech into the image." : mode === "post_lipsync" ? "Animate the planned action; the selected post lip-sync adapter supplies mouth synchronization from the original audio." : "Perform the planned action while the separately supplied voiceover plays; do not turn narration into visible writing.";
+      const route = !performance2.some((event) => event.kind !== "action") ? "This is a silent scene. Perform the ordered visible actions without invented speech or voiceover." : mode === "native" ? "Speak each authored line in its speaker's voice from the quoted words; no audio is supplied. Only on_screen lines move a visible mouth. Keep off_screen speakers unseen and voiceover separate from physical speech. Do not transcribe speech into the image." : mode === "audio_conditioned" ? "Use the supplied audio as the sole source of spoken words. Synchronize visible mouths only during each on_screen speech interval; follow the delivery instruction for every beat. Do not transcribe speech into the image." : mode === "post_lipsync" ? "Animate the planned action; the selected post lip-sync adapter supplies mouth synchronization from the original audio." : "Perform the planned action while the separately supplied voiceover plays; do not turn narration into visible writing.";
       const dialogue = performance2.filter((line) => line.kind !== "action").map((line) => line.text).filter((text3) => typeof text3 === "string" && text3.length);
       const visualDirection = (value) => {
         let text3 = String(value);
@@ -93342,7 +93342,7 @@ var require_scene_acting = __commonJS({
         const fields2 = ["direction", "context", "intent", "emotion", "vocal", "visual"].filter((key) => acting[key]).map((key) => `${key}: ${visualDirection(acting[key])}`);
         if (acting.tags?.length) fields2.push(`vocal events: ${acting.tags.map(visualDirection).join(", ")}`);
         const timing = line.speechStartSeconds == null || line.speechEndSeconds == null ? mode === "native" ? "The model paces this line within the shot." : "Use the measured speech interval once audio is attached." : `Speech interval ${line.speechStartSeconds}\u2013${line.speechEndSeconds} seconds.`;
-        return `Beat ${index + 1} (speaker: ${visualDirection(line.speaker || "unspecified")}; delivery: ${delivery2}): ${mouth} ${line.to ? "Addressed to " + visualDirection(line.to) + ". Preserve this eyeline and the listener in the planned framing." : ""} ${fields2.join(" ")} ${timing} Anticipation ${line.leadInSeconds || 0} seconds; reaction ${line.tailOutSeconds || 0} seconds.`;
+        return `Beat ${index + 1} (speaker: ${visualDirection(line.speaker || "unspecified")}; delivery: ${delivery2}): ${mouth} ${mode === "native" && delivery2 !== "on_screen" ? 'Speak "' + line.text + '". ' : ""}${line.to ? "Addressed to " + visualDirection(line.to) + ". Preserve this eyeline and the listener in the planned framing." : ""} ${fields2.join(" ")} ${timing} Anticipation ${line.leadInSeconds || 0} seconds; reaction ${line.tailOutSeconds || 0} seconds.`;
       });
       return ["A clean cinematic image with an unobstructed scene and text-free surfaces.", route, visualDirection(sceneDirection(scene, performance2)), ...beats, VIDEO_TEXT_POLICY].join("\n");
     }
@@ -125695,7 +125695,6 @@ function prepareVideoVoice(tool2, input, context2) {
   if (msr) {
     if (object3(context2.shot.visual).video && object3(object3(context2.shot.visual).video).voice !== void 0)
       throw new Error("visual.video.voice is retired: MSR uses the speaker's voice sample when one is pinned");
-    if (lines.some((line) => line.delivery !== "on_screen")) throw new Error("msr_dialogue_required: every MSR line is spoken on screen");
   }
   if (!lines.length) return { args };
   const doc = object3(context2.board.SB_DOC), raw = doc.characters;
@@ -125706,14 +125705,14 @@ function prepareVideoVoice(tool2, input, context2) {
   const lane = VIDEO_ADAPTERS[tool2]?.voice ?? "none";
   const supplied = lane === "supplied";
   const onScreen = lines.some((line) => line.delivery === "on_screen");
-  const native = !supplied && audible && (nativeSlot || onScreen);
+  const native = !supplied && audible && (msr || nativeSlot || onScreen);
   if (lane === "none" && (native || onScreen))
     throw new Error(`voice_lane_required: ${tool2} cannot keep a character's voice. Render this spoken cut with a reference adapter (astra_genai_msr, seedance_reference, fasth3_omni_reference) or an audio2video adapter${onScreen ? "" : ", or set generateAudio:false and keep the lines as TTS voiceover"}.`);
   const reference2 = native && lane === "reference";
   const strategy = supplied ? "supplied_audio" : reference2 ? "reference_voice" : "external_tts";
   const warnings = [];
   const speakers = [];
-  const nativeLines = nativeSlot ? lines : lines.filter((line) => line.delivery === "on_screen");
+  const nativeLines = msr || nativeSlot ? lines : lines.filter((line) => line.delivery === "on_screen");
   const ids = [...new Set((native ? nativeLines : lines).map((line) => text(line.speaker) || text(doc.narratorCharacterId)))];
   const prompt = [];
   const audioOffset = tool2 === "fasth3_omni_reference" && Array.isArray(args.referenceVideoPaths) ? fasth3VideoAudioCount(args.referenceVideoPaths.map((file) => path24.resolve(context2.episode, String(file)))) : 0;
@@ -125784,6 +125783,11 @@ function prepareVideoVoice(tool2, input, context2) {
       const id = text(line.speaker) || text(doc.narratorCharacterId), speaker = bySpeaker.get(id);
       const image = speaker?.imageIndices?.[0], audio = speaker?.audioIndex, direction = text(object3(line.acting).direction);
       const who = image ? `Image ${image}` : speaker?.name ?? id;
+      if (line.delivery !== "on_screen") {
+        const label = nonEnglishOutsideQuotes(speaker?.name ?? "") ? id : speaker?.name ?? id;
+        const delivery2 = line.delivery === "off_screen" ? "off screen" : "in voiceover";
+        return `${label} speaks ${delivery2}${direction ? ` (${direction})` : ""}${audio ? ` using Audio ${audio}` : ""}. Do not show this speaker or animate any visible mouth during this line. ${audio ? `Audio ${audio} (${label})` : label}: "${text(line.tts)}"`;
+      }
       return `${who} speaks${direction ? ` (${direction})` : ""} with visible lip movement${audio ? ` synchronized with Audio ${audio}` : ""} while the other characters listen silently with their lips closed. ${audio ? `Audio ${audio} (${who})` : who}: "${text(line.tts)}"`;
     });
     prompt.push(...script);
@@ -127026,7 +127030,6 @@ function speechVideoPlan(input, capabilities) {
   const scene = Array.isArray(input) ? { narration: input } : input;
   const lines = scene.narration || [];
   const onScreen = lines.some((line) => line.delivery === "on_screen");
-  if (capabilities.nativeSpeech && lines.some((line) => line.delivery !== "on_screen")) throw new Error("Native video speech voices on-screen lines only; give narration and off-screen lines their own shot");
   const mode = capabilities.nativeSpeech ? "native" : !onScreen ? "voiceover" : capabilities.audioConditioning && capabilities.lipSync ? "audio_conditioned" : capabilities.postLipSync ? "post_lipsync" : null;
   if (!mode) throw new Error("Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting");
   const timeline = actingContract().planScenePerformance(scene, measuredDuration);

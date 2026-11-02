@@ -310,14 +310,15 @@ For the selected provider/model, resolve and record capabilities with evidence:
 
 | Speech | Route | When speech changes |
 |---|---|---|
-| on_screen + nativeSpeech (MSR) | native | Regenerate the clip from the edited prompt; no line audio exists |
+| any delivery + nativeSpeech (MSR) | native | Regenerate the clip from the edited prompt; no line audio exists |
 | voiceover/off_screen | voiceover | Replace audio, retime subtitles/edit; keep suitable action footage |
 | on_screen + audioConditioning and lipSync | audio_conditioned | Regenerate affected animation from the final voice WAV |
 | on_screen + separate postLipSync | post_lipsync | Rerun the selected lip-sync adapter on affected footage |
 | on_screen + neither capability | unsupported | Select a suitable adapter; do not mute the character |
 
-A native-speech shot carries on-screen lines only; narration and off-screen speech go in a
-shot of their own. Its binding records each line's revision instead of an audio hash,
+A native-speech shot preserves each line's delivery: on-screen speech moves its speaker's
+mouth, off-screen dialogue keeps its speaker unseen, and voiceover leaves visible mouths
+closed. Its binding records each line's revision instead of an audio hash,
 `attach_video` sets `sound.audioSource:"video"` so the clip's soundtrack is the card audio,
 and a line edit marks the clip stale rather than asking for a take.
 Store the route in `visual.video.speechBinding` with line ids and audio hashes. Mark stale
