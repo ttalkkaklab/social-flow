@@ -110,8 +110,10 @@ optional (2026-10-31, user directive).** `video_plan` lays the prompt out as the
 card does (2026-10-31): the reference block first (`Image N: <role>, <purpose>` per image,
 then the panel sentence, then `Audio N: <name>'s voice, belongs only to Image M.`), a blank
 line, the author's action text, then each authored line the prompt does not already quote,
-as `Image M speaks with visible lip movement synchronized with Audio N while the other
-characters listen silently with their lips closed. Audio N (Image M): "…"`. Write each MSR
+as `Image M speaks with visible lip movement synchronized with Audio N. Only this speaker
+articulates the line. Preserve authored silent actions without adding listeners.
+Audio N (Image M): "…"`. This preserves silent roles, including unconscious characters,
+without introducing a listening cast into a solo shot. Write each MSR
 reference's `purpose` as a visible description (who or what, clothing, materials), since
 it becomes that image's description. For on-screen dialogue `video_plan` attaches each
 speaker's pinned `voiceReference` sample to the subject image listed in that character's

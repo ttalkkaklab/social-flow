@@ -125795,7 +125795,7 @@ function prepareVideoVoice(tool2, input, context2) {
         const delivery2 = line.delivery === "off_screen" ? "off screen" : "in voiceover";
         return `${label} speaks ${delivery2}${direction ? ` (${direction})` : ""}${audio ? ` using Audio ${audio}` : ""}. Do not show this speaker or animate any visible mouth during this line. ${audio ? `Audio ${audio} (${label})` : label}: "${text(line.tts)}"`;
       }
-      return `${who} speaks${direction ? ` (${direction})` : ""} with visible lip movement${audio ? ` synchronized with Audio ${audio}` : ""} while the other characters listen silently with their lips closed. ${audio ? `Audio ${audio} (${who})` : who}: "${text(line.tts)}"`;
+      return `${who} speaks${direction ? ` (${direction})` : ""} with visible lip movement${audio ? ` synchronized with Audio ${audio}` : ""}. Only this speaker articulates the line. Preserve authored silent actions without adding listeners. ${audio ? `Audio ${audio} (${who})` : who}: "${text(line.tts)}"`;
     });
     prompt.push(...script);
     if (typeof args.prompt === "string" && msrAudio.length) args.prompt = afterImageBlock(args.prompt, msrAudio.sort());

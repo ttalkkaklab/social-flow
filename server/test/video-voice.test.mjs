@@ -143,6 +143,8 @@ test('MSR resolves an id-only story-first cast from its selected audition and au
   assert.equal(result.args.references[0].audioPath, audioPath);
   assert.equal(result.voiceContinuity.speakers[0].reference.sha256, sha256);
   assert.match(result.args.prompt, /Audio 1 \(Image 1\): "Hello hero"/);
+  assert.doesNotMatch(result.args.prompt, /other characters listen/);
+  assert.match(result.args.prompt, /without adding listeners/);
   assert.deepEqual(ctx.board.SB_DOC.characters, [{ id: 'hero', name: 'Hero' }], 'planning does not rewrite the board');
 
   ctx.board.SB_DOC.characters[0].tts = { ...tts, voiceId: 'Orus' };
@@ -164,7 +166,9 @@ test('MSR writes each authored line into the prompt once, with its speaker image
     references: [{ imagePath: friend.voiceReference.imagePaths[0] }, { imagePath: hero.voiceReference.imagePaths[0] }] };
   const { prompt } = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true }).args;
   assert.equal(prompt.split('Hello hero').length, 2);
-  assert.match(prompt, /Image 1 speaks \(whispering\) with visible lip movement synchronized with Audio 1 while the other characters listen silently with their lips closed\. Audio 1 \(Image 1\): "Hello friend"/);
+  assert.match(prompt, /Image 1 speaks \(whispering\) with visible lip movement synchronized with Audio 1\./);
+  assert.match(prompt, /Preserve authored silent actions without adding listeners/);
+  assert.match(prompt, /Audio 1 \(Image 1\): "Hello friend"/);
 });
 test('MSR voices a speaker it cannot sample from the prompt and refuses the retired voice mode', t => {
   const ctx = fixture(t), [hero, friend] = ctx.board.SB_DOC.characters;
@@ -174,7 +178,8 @@ test('MSR voices a speaker it cannot sample from the prompt and refuses the reti
   const third = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true });
   assert.deepEqual(third.args.references.map(ref => ref.audioPath), [friend.voiceReference.path, undefined, undefined]);
   assert.match(third.voiceContinuity.warnings.join('\n'), /hero: MSR subject 3 takes no sample/);
-  assert.match(third.args.prompt, /Image 3 speaks with visible lip movement while the other characters listen silently with their lips closed\. Image 3: "Hello hero"/);
+  assert.match(third.args.prompt, /Image 3 speaks with visible lip movement\./);
+  assert.match(third.args.prompt, /Image 3: "Hello hero"/);
   ctx.shot.narration[1].tts = '문 닫아';
   assert.match(prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true }).voiceContinuity.warnings.join('\n'), /captions were English/);
   const unsupported = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: false });
