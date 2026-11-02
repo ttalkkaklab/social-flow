@@ -120,7 +120,7 @@ function bindSelection(tool, input, selection) {
             // One saved LTX size serves MSR and v2: v2 gets its own closest size (2026-11-02).
             const resolution = selection.engine === 'astra-genai' ? genaiV2Resolution(selection.resolution) : selection.resolution;
             if (args.resolution !== undefined && args.resolution !== resolution)
-                throw new Error('model_selection_mismatch: resolution');
+                throw new Error(`model_selection_mismatch: resolution (expected ${resolution})`);
             args.resolution = resolution;
         }
     }

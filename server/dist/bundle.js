@@ -125871,7 +125871,7 @@ function bindSelection3(tool2, input, selection) {
       }
     } else {
       const resolution2 = selection.engine === "astra-genai" ? genaiV2Resolution(selection.resolution) : selection.resolution;
-      if (args.resolution !== void 0 && args.resolution !== resolution2) throw new Error("model_selection_mismatch: resolution");
+      if (args.resolution !== void 0 && args.resolution !== resolution2) throw new Error(`model_selection_mismatch: resolution (expected ${resolution2})`);
       args.resolution = resolution2;
     }
   }
