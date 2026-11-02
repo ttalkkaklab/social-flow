@@ -458,7 +458,8 @@ This section overrides the test-writing defaults of TDD, test-scenario and simil
 - **Hermetic runs.** `npm test` loads `server/test/isolate.mjs` into every file: it drops the
   shell's provider keys and gateway URLs and gives each file an empty home, so your own
   `~/.config/social-flow` (`.env`, `disabled-tools.json`, tokens) never changes a result.
-  Blender and Chrome stay found. Run one file the same way:
+  Blender and Chrome stay found. Every Chrome launch passes `--use-mock-keychain`: the empty home
+  has no login keychain, and without the flag macOS pops a "keychain cannot be found" dialog. Run one file the same way:
   `cd server && node --import ./test/isolate.mjs --test test/<module>.test.mjs`. A provider whose
   variables use a new prefix adds it to `PROVIDER` in `isolate.mjs`.
 - **Readable over DRY.** Inputs that decide the result stay in the test body. Shared

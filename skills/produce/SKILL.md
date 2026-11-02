@@ -740,7 +740,7 @@ and a headless `--dump-dom` run reads that title back after the page script has 
 ```bash
 . .work/format.env                       # URL_FMT is empty on the portrait preset
 FMT=${URL_FMT:+&format=$URL_FMT}
-"${CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}" --headless=new \
+"${CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}" --headless=new --use-mock-keychain \
   --disable-gpu --dump-dom "file://$PWD/.work/frame.html?i=<idx>&reveal=<last>$FMT" \
   2>/dev/null | grep -o 'ovf=[0-9]*'
 ```
