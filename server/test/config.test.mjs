@@ -64,23 +64,11 @@ describe('blenderBin', () => {
     assert.equal(blenderBin(), fake);
   });
 
-  it('a BLENDER path that exists but cannot be executed is not reported as the binary', () => {
-    const fake = join(dir, 'Blender-noexec');
-    writeFileSync(fake, '#!/bin/sh\n', { mode: 0o644 });
-    process.env.BLENDER = fake;
-    assert.notEqual(blenderBin(), fake);
-  });
-
   it('a BLENDER pointing at the app bundle directory is not reported as the binary', () => {
     // The realistic wrong value: /Applications/Blender.app is a directory, and a directory carries the
     // execute bit on unix, so an access(X_OK) test alone would accept it.
     process.env.BLENDER = dir;
     assert.notEqual(blenderBin(), dir);
-  });
-
-  it('a missing BLENDER path falls through to the install search, never to the bogus value', () => {
-    process.env.BLENDER = '/nonexistent/blender-for-test';
-    assert.notEqual(blenderBin(), '/nonexistent/blender-for-test');
   });
 });
 

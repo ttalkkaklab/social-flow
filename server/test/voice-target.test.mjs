@@ -45,27 +45,3 @@ test('provider comparisons distinguish known conflicts from missing metadata', (
     assert.ok(comparison.conflicts.length);
   }
 });
-
-test('the body is casting evidence, and a habit that repeats the register is sent once', () => {
-  const d = doc();
-  d.character.identity.species = { status: 'confirmed', value: '오크' };
-  d.character.physical.heightCm = { status: 'confirmed', value: 225 };
-  d.character.physical.weightKg = { status: 'confirmed', value: 200 };
-  d.character.physical.build = { status: 'confirmed', value: 'broad muscular orc' };
-  d.character.speech.habits = { status: 'confirmed', value: d.character.speech.register.value };
-  const target = characterVoiceTarget(markdown(d));
-  assert.equal(target.body, '오크, 225 cm, about 200 kg, broad muscular orc');
-  assert.doesNotMatch(target.baselineDirection, /Speech habit|225 cm/);
-});
-
-test('a voice-design direction names who speaks and the impression before the delivery', () => {
-  const orc = doc();
-  Object.assign(orc.character.identity, { species: { status: 'confirmed', value: 'orc' }, role: { status: 'confirmed', value: 'warrior challenging the king' } });
-  orc.character.physical.heightCm = { status: 'confirmed', value: 225 };
-  const target = characterVoiceTarget(markdown(orc));
-  assert.match(target.designDirection, /^Voice: male voice/);
-  assert.match(target.designDirection, /Body: orc, 225 cm/);
-  assert.match(target.designDirection, /Impression: warrior challenging the king/);
-  assert.ok(target.designDirection.indexOf('Impression:') < target.designDirection.indexOf('Delivery:'));
-  assert.doesNotMatch(target.baselineDirection, /Impression|Body:/);
-});

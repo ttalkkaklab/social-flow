@@ -10,7 +10,7 @@ import { spawnSync } from 'node:child_process';
 const require = createRequire(import.meta.url);
 const refs = fileURLToPath(new URL('../../skills/produce/references/', import.meta.url));
 const checker = fileURLToPath(new URL('../../skills/storyboard/references/check-scenes.js', import.meta.url));
-const { MIX_FIELDS, mixFindings, musicEnvelopeFilter } = require(join(refs, 'sound-mix-contract.js'));
+const { MIX_FIELDS, mixFindings } = require(join(refs, 'sound-mix-contract.js'));
 const build = readFileSync(join(refs, 'build-reel.sh'), 'utf8');
 const defaults = build.slice(build.indexOf('BGM_SEP=${'), build.indexOf('XFADE=${'));
 const mixStage = build.slice(build.indexOf('BGMGATE=""'), build.indexOf('# 10c)'));
@@ -57,22 +57,6 @@ test('$mix checker and compiler share every numeric boundary and reject malforme
     assert.equal(readFileSync(join(dir, 'work/sound.env'), 'utf8'), before);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
-
-test('declared filter bounds fit the installed FFmpeg consumer ranges', () => {
-  for (const [filter, options] of [
-    ['loudnorm', { targetLufs: 'I', truePeakDbtp: 'TP' }],
-    ['sidechaincompress', { 'ducking.ratio': 'ratio', 'ducking.attackMs': 'attack', 'ducking.releaseMs': 'release' }],
-  ]) {
-    const help = command('ffmpeg', ['-hide_banner', '-h', `filter=${filter}`]);
-    for (const [field, option] of Object.entries(options)) {
-      const range = new RegExp(`^\\s+${option}\\s+.*\\(from ([\\d.-]+) to ([\\d.-]+)\\)`, 'm').exec(help.stdout + help.stderr);
-      assert.ok(range, `${filter}.${option}`);
-      const [, , min, max] = MIX_FIELDS.find(row => row[0] === field);
-      assert.ok(min >= Number(range[1]) && max <= Number(range[2]), field);
-    }
-  }
-});
-
 test('every compiled minimum and maximum runs through the builder audio filter graph', () => {
   const dir = fixture();
   try {
@@ -110,60 +94,4 @@ test('every compiled minimum and maximum runs through the builder audio filter g
     assert.equal(energy(1.1, 1.4), 0, 'zero ramp still silences the requested music window');
     assert.ok(energy(2.7, 2.9) > 1, 'zero ending fade must keep the bed audible at the tail');
   } finally { rmSync(dir, { recursive: true, force: true }); }
-});
-
-test('cue crossfade and bed/ambience separation boundaries use the real bed compiler', () => {
-  const dir = fixture();
-  try {
-    command('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'sine=frequency=220:sample_rate=48000:duration=24', '-ac', '2', join(dir, 'cue.wav')]);
-    writeFileSync(join(dir, 'cues.tsv'), `0\t${join(dir, 'cue.wav')}\n12\t${join(dir, 'cue.wav')}\n`);
-    // Separation only sets the bed's target loudness, so each crossfade bound runs once.
-    for (const [crossfade, separation] of [[0, 0], [0.001, 30], [10, 30]]) {
-      command('bash', [join(refs, 'bgm-bed.sh'), join(dir, 'bed.wav'), '24', String(-16 - separation), join(dir, 'cues.tsv')], { env: { ...process.env, BGM_CUE_XF: String(crossfade) } });
-      const duration = Number(command('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', join(dir, 'bed.wav')]).stdout);
-      assert.ok(Math.abs(duration - 24) < 0.01, `crossfade=${crossfade}: ${duration}`);
-    }
-  } finally { rmSync(dir, { recursive: true, force: true }); }
-});
-
-
-test('authored music curve changes measured PCM gain and resets outside its shot', () => {
-  const dir = fixture();
-  try {
-    assert.doesNotThrow(() => musicEnvelopeFilter([[10, 13.2, [{atSeconds:0,gainDb:-6},{atSeconds:3.2,gainDb:0}]]]));
-    const filter = musicEnvelopeFilter([[1, 3, [{atSeconds:0,gainDb:-12},{atSeconds:1,gainDb:-6}]]]);
-    const pcm = command('ffmpeg', ['-v','error','-f','lavfi','-i','sine=frequency=220:sample_rate=48000:duration=4',
-      '-af', filter + 'anull', '-f','f32le','-'], {encoding:null}).stdout;
-    const rms = (start,end) => {
-      let sum=0, n=0;
-      for(let i=Math.ceil(start*48000);i<Math.floor(end*48000);i++){sum+=pcm.readFloatLE(i*4)**2;n++;}
-      return Math.sqrt(sum/n);
-    };
-    const base=rms(0.2,0.7);
-    assert.ok(Math.abs(20*Math.log10(rms(2.2,2.7)/base)+6)<0.2);
-    assert.ok(rms(1.1,1.3)<rms(1.7,1.9), 'ramp increases music level');
-    assert.ok(Math.abs(rms(3.2,3.7)/base-1)<0.01, 'next shot resets to base');
-  } finally {rmSync(dir,{recursive:true,force:true});}
-});
-
-
-test('builder applies authored music gain and detector lookahead without moving speech', () => {
-  const dir=fixture();
-  try {
-    command('ffmpeg',['-y','-v','error','-f','lavfi','-i','sine=frequency=440:sample_rate=48000:duration=3','-af',"volume=eval=frame:volume='if(between(t,1,1.5),4,0)'",'-ac','2',join(dir,'work/narration.wav')]);
-    command('ffmpeg',['-y','-v','error','-f','lavfi','-i','sine=frequency=220:sample_rate=48000:duration=3','-ac','2',join(dir,'work/bed.wav')]);
-    writeFileSync(join(dir,'work/cardstart.tsv'),'0\t0\n');
-    writeFileSync(join(dir,'work/music-gain.list'), '0\t3\t[{"atSeconds":0,"gainDb":-6}]\n');
-    const script=`set -e\nsay() { :; }\nHERE='${refs}'\n. work/sound.env\n${defaults}\nNT=3\nSFXIN=""\nAMBIN=""\n${fadeStart}\n${mixStage}`;
-    const render=lookahead=>{
-      assert.equal(compile(dir,{endingFadeSeconds:0,ducking:{lookaheadMs:lookahead,attackMs:1,releaseMs:250,ratio:8}}).status,0);
-      command('bash',['-c',script],{cwd:dir});
-      return command('ffmpeg',['-v','error','-i','work/bed-ducked.wav','-f','f32le','-'],{cwd:dir,encoding:null}).stdout;
-    };
-    const ordinary=render(0), early=render(200);
-    const rms=(pcm,start,end)=>{let sum=0,n=0;for(let i=Math.ceil(start*96000);i<Math.floor(end*96000);i++){sum+=pcm.readFloatLE(i*4)**2;n++;}return Math.sqrt(sum/n);};
-    assert.ok(rms(early,0.9,0.98)<rms(ordinary,0.9,0.98)*0.8,'detector ducks before voice starts');
-    const duration=Number(command('ffprobe',['-v','error','-show_entries','format=duration','-of','csv=p=0',join(dir,'work/mix.wav')]).stdout);
-    assert.ok(Math.abs(duration-3)<0.001,'lookahead preserves the audio clock');
-  }finally{rmSync(dir,{recursive:true,force:true});}
 });

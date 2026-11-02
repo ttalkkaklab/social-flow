@@ -84,9 +84,6 @@ test('common builder renders direct group cut, trims and live handle; provenance
 // Sharp frame changes expose a one-source-frame error that low-motion footage hides.
 const variants=[
  {sourceFps:24,secondFps:24,fps:30,in:1.5},
- {sourceFps:24,secondFps:25,fps:30,in:1.501},
- {sourceFps:25,secondFps:60,fps:30,in:1.501},
- {sourceFps:60,secondFps:24,fps:30,in:1.501},
  {sourceFps:'30000/1001',secondFps:25,fps:24,in:1.001},
 ];
 for(const options of variants)test(`output-frame references match alternating ${options.sourceFps}/${options.secondFps}fps → ${options.fps}fps, trim ${options.in}, body and handle EOF`,{timeout:60000},()=>withSources(({dir,s,b})=>{

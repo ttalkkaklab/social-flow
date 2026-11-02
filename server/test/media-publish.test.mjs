@@ -85,10 +85,6 @@ describe('media-publish — public URLs for the vendor\'s video input', () => {
       await new Promise((r) => server.close(r));
     }
   });
-
-  it('the tunnel route names both ways out when cloudflared is missing, and leaves no server behind', async () => {
-    await assert.rejects(publishViaTunnel([clip], join(tmp, 'no-such-cloudflared')), /could not start cloudflared.*MEDIA_UPLOAD_URL/);
-  });
 });
 
 process.on('exit', () => rmSync(tmp, { recursive: true, force: true }));

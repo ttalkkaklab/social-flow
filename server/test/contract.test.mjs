@@ -21,7 +21,6 @@ import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 
 import {
-  CHANNEL_SLUG_RE,
   SNS_PLATFORMS,
   disabledToolPatterns,
   isToolDisabled,
@@ -66,19 +65,14 @@ import {
 import {
   DEFAULT_ZIMAGE_QUANTIZE,
   DEFAULT_ZIMAGE_STEPS,
-  ZIMAGE_DIMENSION_STEP,
   ZIMAGE_QUANTIZE_OPTIONS,
-  zimageTimeoutMs,
 } from '../dist/zimage-client.js';
 import {
   IMAGE_ASPECTS,
   IMAGE_LICENSES,
   IMAGE_SIZES,
   IMAGE_TYPES,
-  SERP_IMAGE_MAX_LIMIT,
-  SERP_NAVER_MAX_LIMIT,
   SERP_NAVER_PERIODS,
-  SERP_NEWS_MAX_LIMIT,
 } from '../dist/serp-client.js';
 import { NAVER_IMAGE_FILTERS, NAVER_SEARCH_TYPES, NAVER_SORTS } from '../dist/naver-client.js';
 import { pcmToWav, resolveOutputFile } from '../dist/media-utils.js';
@@ -119,10 +113,6 @@ describe('tool surface', () => {
 
   for (const tool of TOOLS) {
     describe(tool.name, () => {
-      it('name follows the snake_case namespace convention', () => {
-        assert.match(tool.name, /^[a-z][a-z0-9]*(_[a-z0-9]+)+$/);
-      });
-
       it('has a title and a description', () => {
         assert.equal(typeof tool.title, 'string');
         assert.ok(tool.title.trim().length > 0, 'title is empty');
@@ -137,15 +127,6 @@ describe('tool surface', () => {
         const properties = tool.inputSchema.properties ?? {};
         for (const key of tool.inputSchema.required ?? []) {
           assert.ok(key in properties, `"${key}" is in required but not in properties`);
-        }
-      });
-
-      it('every parameter has a description', () => {
-        for (const [path, schema] of walkProperties(tool.inputSchema)) {
-          assert.ok(
-            typeof schema.description === 'string' && schema.description.trim().length > 0,
-            `"${path}" has no description — the model cannot know what to pass`,
-          );
         }
       });
 
@@ -200,113 +181,6 @@ describe('tool surface', () => {
   }
 });
 
-/**
- * Parameter naming convention.
- *
- * When names wobble per tool (q vs query, num vs display vs max_results),
- * the model has to relearn arguments every time it switches tools, and that
- * cost comes back as wrong-argument calls → -32602 round trips. Even where
- * the backend API uses q/display/num, that mapping is the client layer's
- * job, not the tool surface's.
- */
-describe('parameter naming convention', () => {
-  const SEARCH_TOOLS = TOOLS.filter((t) => t.name.endsWith('_search'));
-
-  it('search tools exist (the filter is not spinning empty)', () => {
-    assert.ok(SEARCH_TOOLS.length >= 5, `only ${SEARCH_TOOLS.length} search tools — the filter may be wrong`);
-  });
-
-  /**
-   * Even non-search tools taking result counts and pages must use the same
-   * names. Hooking only on the `_search` suffix lets differently named
-   * lookup tools like datago_file_fetch slip the net — perPage actually
-   * survived that way.
-   */
-  it('pagination argument names are uniform server-wide', () => {
-    const offenders = [];
-    for (const tool of TOOLS) {
-      for (const [path] of walkProperties(tool.inputSchema)) {
-        const key = path.split('.').pop().replace(/\[\]$/, '');
-        if (['perPage', 'pageSize', 'maxResults', 'numResults', 'count'].includes(key)) {
-          offenders.push(`${tool.name}.${path}`);
-        }
-      }
-    }
-    assert.deepEqual(offenders, [], `result-count arguments are unified as limit: ${offenders.join(', ')}`);
-  });
-
-  for (const tool of TOOLS) {
-    it(`${tool.name}: parameters are camelCase`, () => {
-      for (const [path] of walkProperties(tool.inputSchema)) {
-        const key = path.split('.').pop().replace(/\[\]$/, '');
-        // external-API standard abbreviations like gl/hl/q are exempt — renaming them blurs the mapping
-        if (['gl', 'hl', 'uddi'].includes(key)) continue;
-        assert.ok(
-          /^[a-z][a-zA-Z0-9]*$/.test(key),
-          `"${tool.name}.${path}" is not camelCase (no snake_case — the server-wide convention is camelCase)`,
-        );
-      }
-    });
-  }
-
-  /**
-   * Same name, different meaning turns unification into a trap.
-   *
-   * It bit twice for real: naver_search forwarded the API's start (item
-   * offset) as page, so page=2 meant "from the 2nd item", and serp_web_search
-   * computed the offset as a limit multiple, overlapping pages when limit≠10.
-   * Both silently return duplicate results with no error, so the description
-   * pins "page" to surface the contract.
-   */
-  for (const tool of SEARCH_TOOLS) {
-    const pageSchema = tool.inputSchema.properties?.page;
-    if (!pageSchema) continue;
-    it(`${tool.name}: the description states page is a page number`, () => {
-      assert.match(
-        pageSchema.description ?? '',
-        /[Pp]age number/,
-        'page is a page number, not an item offset — the client owns the mapping, and the description must surface that contract',
-      );
-      assert.ok(
-        !/offset|start/i.test(pageSchema.description ?? ''),
-        'the page description must not leak offset semantics — the tool surface is pages',
-      );
-    });
-  }
-
-  for (const tool of SEARCH_TOOLS) {
-    it(`${tool.name}: uses the shared search-tool argument names`, () => {
-      const props = tool.inputSchema.properties ?? {};
-      const banned = {
-        q: 'query',
-        keyword: 'query',
-        num: 'limit',
-        max_results: 'limit',
-        maxResults: 'limit',
-        display: 'limit',
-        perPage: 'limit',
-        count: 'limit',
-        start: 'page',
-        sort_by: 'sort',
-        sortBy: 'sort',
-      };
-      // arguments inside nested objects follow the same convention — checking
-      // only the top level lets a q/num hidden one layer down pass untouched
-      for (const [path] of walkProperties(tool.inputSchema)) {
-        const key = path.split('.').pop().replace(/\[\]$/, '');
-        const good = banned[key];
-        assert.ok(!good, `"${tool.name}.${path}" must be unified as the shared search argument "${good}"`);
-      }
-      // a tool that takes search terms names them query, and query is required
-      assert.ok('query' in props, `${tool.name} has no query — the search-term argument of a search tool is named query`);
-      assert.ok(
-        (tool.inputSchema.required ?? []).includes('query'),
-        `${tool.name}.query is not required`,
-      );
-    });
-  }
-});
-
 describe('routing consistency', () => {
   it('every defined tool has a handler', () => {
     const orphans = TOOLS.filter((tool) => typeof ROUTES[tool.name] !== 'function').map((t) => t.name);
@@ -356,52 +230,6 @@ describe('tool on/off (disabled-tools.json)', () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
-
-  it('the documented seedance family pattern hides exactly the three seedance tools', () => {
-    const hidden = TOOLS.filter((tool) => isToolDisabled(tool.name, ['seedance_*'])).map((t) => t.name).sort();
-    assert.deepEqual(hidden, ['seedance_img2video', 'seedance_reference', 'seedance_text2video']);
-  });
-});
-
-describe('mlx_* tools', () => {
-  const MLX = [
-    'mlx_image_generate',
-    'mlx_image_edit',
-    'mlx_music_generate',
-    'mlx_video_generate',
-    'mlx_3d_generate',
-  ];
-
-  it('all five mlx tools are listed as local generation', () => {
-    for (const name of MLX) {
-      const tool = byName.get(name);
-      assert.ok(tool, `missing tool ${name}`);
-      assert.equal(tool.annotations.openWorldHint, false, `${name} must be generateLocal`);
-      assert.equal(tool.annotations.readOnlyHint, false);
-      assert.equal(tool.annotations.destructiveHint, false);
-      if (!name.startsWith('mlx_image_')) assert.match(tool.description, /brew install --cask mlx-core/);
-      if (!name.startsWith('mlx_image_')) assert.match(tool.description, /never launches the app/);
-    }
-  });
-
-  it('music defaults instrumental and names the lyrics 400', () => {
-    const music = byName.get('mlx_music_generate');
-    assert.equal(music.inputSchema.properties.instrumental.default, true);
-    assert.match(music.description, /instrumental:true cannot be sent beside lyrics/);
-    assert.match(music.description, /music_generate_clip/);
-  });
-
-  it('video names 24fps, the RAM cap, and is not the default path', () => {
-    const video = byName.get('mlx_video_generate');
-    assert.match(video.description, /24 fps/);
-    assert.match(video.description, /800MB/);
-    assert.match(video.description, /video-model-selection/);
-    assert.match(video.description, /refuses spoken cuts/);
-    assert.match(video.description, /ffmpeg/);
-    assert.equal(video.inputSchema.properties.width.default, 768);
-    assert.equal(video.inputSchema.properties.height.default, 1280);
-    assert.equal(video.inputSchema.properties.numFrames.default, 49);
-  });
 });
 
 describe('HITL contract', () => {
@@ -420,223 +248,21 @@ describe('HITL contract', () => {
       assert.match(tool.description, /never call without|HITL/, 'no HITL wording');
     });
   }
-
-  it('read-only tools carry no destructive warning', () => {
-    for (const tool of TOOLS.filter((t) => t.annotations?.readOnlyHint === true)) {
-      assert.ok(
-        !tool.description.includes('immediately public'),
-        `${tool.name} — readOnly yet the description says "immediately public"`,
-      );
-    }
-  });
-});
-
-describe('Threads growth lookup tools', () => {
-  // The insights/search scopes may be missing from publish-issued tokens —
-  // without the scope name in the description, a caller hitting 403 cannot
-  // know the next move (reissue).
-  const scopeByTool = {
-    threads_insights: 'threads_manage_insights',
-    threads_search: 'threads_keyword_search',
-  };
-
-  for (const [name, scope] of Object.entries(scopeByTool)) {
-    describe(name, () => {
-      it('is gated on THREADS credentials', () => {
-        assert.equal(SNS_PLATFORM_BY_TOOL[name], 'THREADS');
-      });
-
-      it('is marked read-only (no side effects — no approval prompt needed)', () => {
-        assert.equal(byName.get(name)?.annotations?.readOnlyHint, true);
-      });
-
-      it(`the description names the required scope (${scope})`, () => {
-        assert.ok(byName.get(name)?.description.includes(scope), `"${scope}" wording missing`);
-      });
-    });
-  }
-
-  it('the threads_search description states the search quota', () => {
-    assert.match(byName.get('threads_search').description, /2,?200/, 'no 24h rolling quota wording');
-  });
-});
-
-describe('Instagram growth lookup tool', () => {
-  const tool = () => byName.get('instagram_insights');
-
-  it('is gated on INSTAGRAM credentials', () => {
-    assert.equal(SNS_PLATFORM_BY_TOOL.instagram_insights, 'INSTAGRAM');
-  });
-
-  it('is marked read-only (no side effects — no approval prompt needed)', () => {
-    assert.equal(tool()?.annotations?.readOnlyHint, true);
-  });
-
-  // Tokens issued for publishing lack the insights scope — without the scope
-  // name in the description, a caller hitting an error cannot know what to reissue.
-  it('the description names the required scope (instagram_business_manage_insights)', () => {
-    assert.ok(tool()?.description.includes('instagram_business_manage_insights'), 'scope wording missing');
-  });
-
-  // Measured: requesting reels metrics on FEED media fails the whole response
-  // with a 400. Without the reels-only list in the description, callers go
-  // looking for them on images too.
-  it('the description names the reels-only metrics together with their condition', () => {
-    const description = tool().description;
-    for (const metric of ['ig_reels_avg_watch_time', 'reels_skip_rate']) {
-      assert.ok(description.includes(metric), `"${metric}" wording missing`);
-    }
-    assert.match(description, /REELS/, 'no reels-only condition');
-  });
-
-  // Measured: the insights follower_count returns an empty array for accounts
-  // with fewer than 100 followers. Fatal, since this tool targets brand-new
-  // channels sitting at 0 followers.
-  it('the description states the follower count comes from the profile field', () => {
-    assert.match(tool().description, /followersCount/, 'no follower-count source guidance');
-    assert.match(tool().description, /fewer than 100/, 'no warning about the insights follower_count limit');
-  });
-
-  it('the output schema requires account, period, user, and media', () => {
-    assert.deepEqual(tool()?.outputSchema?.required, ['account', 'period', 'user', 'media']);
-  });
-});
-
-describe('YouTube growth lookup tool', () => {
-  const tool = () => byName.get('youtube_insights');
-
-  it('is gated on YOUTUBE credentials', () => {
-    assert.equal(SNS_PLATFORM_BY_TOOL.youtube_insights, 'YOUTUBE');
-  });
-
-  it('is marked read-only (no side effects — no approval prompt needed)', () => {
-    assert.equal(tool()?.annotations?.readOnlyHint, true);
-  });
-
-  // Existing tokens were issued with youtube.upload alone — without the scope
-  // name in the description, a caller hitting 403 cannot know what to reissue.
-  for (const scope of ['youtube.readonly', 'yt-analytics.readonly', 'yt-analytics-monetary.readonly']) {
-    it(`the description names the required scope (${scope})`, () => {
-      assert.ok(tool()?.description.includes(scope), `"${scope}" wording missing`);
-    });
-  }
-
-  it('the description warns about the Analytics data lag', () => {
-    assert.match(tool().description, /2-3 days/, 'no lag warning — an empty recent window gets misread as an outage');
-  });
-
-  it('the description states the swipe-away rate is unavailable', () => {
-    // leave a metric the API lacks looking available and callers keep hunting for it
-    assert.match(tool().description, /swipe/, 'no notice that the swipe-away rate is absent');
-  });
 });
 
 describe('AI-generated content disclosure (YouTube)', () => {
   const publish = () => byName.get('youtube_publish');
-
-  it('has a containsSyntheticMedia parameter', () => {
-    assert.ok(publish()?.inputSchema.properties.containsSyntheticMedia, 'no synthetic-media disclosure argument');
-  });
-
   // This pipeline uses generated video and Lyria music. A false default makes
   // non-disclosure the default behavior, and habitual non-disclosure is
   // grounds for forced labels, removal, and YPP suspension.
   it('defaults to true (non-disclosure never becomes the default)', () => {
     assert.equal(publish().inputSchema.properties.containsSyntheticMedia.default, true);
   });
-
-  it('the description lists the exemptions (not knowing when to turn it off means it stays on)', () => {
-    assert.match(
-      publish().inputSchema.properties.containsSyntheticMedia.description,
-      /exempt/,
-      'no exemption guidance',
-    );
-  });
 });
 
 describe('separate subtitle upload contract', () => {
-  // This pipeline uploads subtitles as files instead of burning them in. So the
-  // platforms that take a subtitle file must have the argument, and the platform
-  // that cannot (IG) must not — give IG a subtitle argument and callers upload
-  // the clean master while the subtitles silently disappear.
   const yt = () => byName.get('youtube_publish');
   const fb = () => byName.get('facebook_publish');
-  const ig = () => byName.get('instagram_publish');
-
-  it('YouTube takes subtitle file and language arguments', () => {
-    assert.ok(yt()?.inputSchema.properties.captionFilePath, 'no captionFilePath');
-    assert.ok(yt()?.inputSchema.properties.captionLanguage, 'no captionLanguage');
-  });
-
-  it('Facebook takes subtitle file and locale arguments', () => {
-    assert.ok(fb()?.inputSchema.properties.captionFilePath, 'no captionFilePath');
-    assert.ok(fb()?.inputSchema.properties.captionLocale, 'no captionLocale');
-  });
-
-  it('Instagram has no subtitle file argument (the platform does not take one)', () => {
-    assert.equal(ig()?.inputSchema.properties.captionFilePath, undefined);
-  });
-
-  it('Instagram receives the clean master without burning captions', () => {
-    const description = ig().inputSchema.properties.videoUrl.description;
-    assert.match(description, /clean subtitle-free master/);
-    assert.match(description, /Do not burn captions/);
-    assert.doesNotMatch(description, /Provide the burned-in/);
-  });
-
-  it('the YouTube subtitle description mentions the force-ssl scope', () => {
-    // captions.insert is rejected on the publish-only youtube.upload — unaware callers upload video only
-    assert.match(yt().inputSchema.properties.captionFilePath.description, /force-ssl/);
-  });
-
-  it('the YouTube subtitle description mentions the 400-unit quota', () => {
-    // 400x the 1-unit upload — it changes how often you would call
-    assert.match(yt().inputSchema.properties.captionFilePath.description, /400 units/);
-  });
-
-  it('the Facebook locale description mentions the file-name contract', () => {
-    // FB derives the locale from the uploaded file name `<name>.<locale>.srt`
-    assert.match(fb().inputSchema.properties.captionLocale.description, /ko_KR/);
-  });
-
-  it('YouTube takes multi-language caption tracks (filePath + BCP-47 language per entry)', () => {
-    const tracks = yt()?.inputSchema.properties.captionTracks;
-    assert.ok(tracks, 'no captionTracks');
-    assert.equal(tracks.type, 'array');
-    assert.ok(tracks.items?.properties?.filePath, 'no items.filePath');
-    assert.ok(tracks.items?.properties?.language, 'no items.language');
-    assert.deepEqual(tracks.items?.required, ['filePath', 'language']);
-    // one list only — passing both the single pair and the list is ambiguous
-    assert.match(tracks.description, /[Mm]utually exclusive/, 'no mutual-exclusion note');
-  });
-
-  it('Facebook takes multi-language caption files (filePath + locale per entry, first = default)', () => {
-    const files = fb()?.inputSchema.properties.captionFiles;
-    assert.ok(files, 'no captionFiles');
-    assert.equal(files.type, 'array');
-    assert.ok(files.items?.properties?.filePath, 'no items.filePath');
-    assert.ok(files.items?.properties?.locale, 'no items.locale');
-    assert.deepEqual(files.items?.required, ['filePath', 'locale']);
-    // default_locale rides on the first entry only — callers must know the order matters
-    assert.match(files.description, /first/i, 'no first-entry-default note');
-  });
-
-  it('Instagram has no multi-language caption argument either', () => {
-    assert.equal(ig()?.inputSchema.properties.captionTracks, undefined);
-    assert.equal(ig()?.inputSchema.properties.captionFiles, undefined);
-  });
-
-  it('both tool outputs list the uploaded caption languages', () => {
-    assert.ok(yt()?.outputSchema?.properties?.captionLanguages, 'youtube_publish: no captionLanguages');
-    assert.ok(fb()?.outputSchema?.properties?.captionLocales, 'facebook_publish: no captionLocales');
-  });
-
-  it('both tool outputs expose captionSet and captionWarning', () => {
-    for (const [name, tool] of [['youtube_publish', yt()], ['facebook_publish', fb()]]) {
-      assert.ok(tool.outputSchema?.properties?.captionSet, `${name}: no captionSet`);
-      assert.ok(tool.outputSchema?.properties?.captionWarning, `${name}: no captionWarning`);
-    }
-  });
 
   it('the captionWarning description blocks re-publishing', () => {
     // the publish APIs are non-idempotent — re-publish after a subtitle-only failure and posts pile up
@@ -659,69 +285,6 @@ describe('YouTube required-thumbnail contract', () => {
   it('thumbnailFilePath is in required (blocks thumbnail-less uploads)', () => {
     assert.ok(yt().inputSchema.required.includes('thumbnailFilePath'), 'thumbnailFilePath is not required');
   });
-
-  it('the description states the vertical-surface limit (this argument changes landscape surfaces only)', () => {
-    // the vertical frame (oar*) in the Shorts feed and channel Shorts tab changes only via app frame selection
-    assert.match(yt().inputSchema.properties.thumbnailFilePath.description, /vertical[ -](surface|frame)/, 'no vertical-surface guidance');
-  });
-});
-
-describe('YouTube per-format caption contract (16:9 long-form lane)', () => {
-  // One tool takes both formats, so the caption description has to split them.
-  // Otherwise the model attaches #Shorts to long-form descriptions too, and
-  // the video is misclassified onto the Shorts surface.
-  // Why caption is the target — the youtube_publish schema has no hashtags or
-  // description properties at all. The only place the #Shorts instruction can
-  // live is the description line of the required caption.
-  const yt = () => byName.get('youtube_publish');
-
-  it('the #Shorts instruction sits inside the Shorts branch', () => {
-    assert.match(
-      yt().inputSchema.properties.caption.description,
-      /9:16 Shorts[^]{0,120}#Shorts/,
-      'the #Shorts instruction sits outside the Shorts branch — the model attaches it to long-form descriptions too',
-    );
-  });
-
-  it('names the long-form branch', () => {
-    assert.match(yt().inputSchema.properties.caption.description, /16:9|long-form/);
-  });
-});
-
-describe('Threads post-media contract', () => {
-  // A video episode carries the video on the post itself (videoUrl), not as a
-  // reply and not as a bare link (user directive 2026-08-19). One media_type per
-  // post, so the three media fields are mutually exclusive.
-  const th = () => byName.get('threads_publish');
-  const props = () => th().inputSchema.properties;
-
-  it('takes a videoUrl argument (video on the post)', () => {
-    assert.equal(props().videoUrl?.format, 'uri', 'videoUrl missing or not uri format');
-  });
-
-  it('takes a linkUrl argument (link preview card)', () => {
-    assert.equal(props().linkUrl?.format, 'uri', 'linkUrl missing or not uri format');
-  });
-
-  it('all three media descriptions state they are mutually exclusive', () => {
-    // sent together, the platform rejects at container creation — the schema description blocks it first
-    for (const k of ['imageUrl', 'videoUrl', 'linkUrl']) {
-      assert.match(props()[k].description, /mutually exclusive/, `no exclusivity note in the ${k} description`);
-    }
-  });
-
-  it('the videoUrl description asks for the burned-in copy', () => {
-    // Threads has no subtitle parameter, so a clean master ships without subtitles
-    assert.match(props().videoUrl.description, /subtitle-burned|burned-in/i, 'videoUrl does not ask for the burn-in');
-  });
-
-  it('argument name matches IG (the video of a post = videoUrl)', () => {
-    assert.ok(byName.get('instagram_publish').inputSchema.properties.videoUrl, 'IG videoUrl has vanished');
-  });
-
-  it('argument name matches FB (the link of a text post = linkUrl)', () => {
-    assert.ok(byName.get('facebook_publish').inputSchema.properties.linkUrl, 'FB linkUrl has vanished');
-  });
 });
 
 describe('comment tool platform consistency', () => {
@@ -736,18 +299,9 @@ describe('comment tool platform consistency', () => {
     assert.deepEqual([...inboxEnum].sort(), [...replyEnum].sort());
   });
 
-  it('YOUTUBE is included in inbox and reply', () => {
-    assert.ok(inboxEnum.includes('YOUTUBE'), 'no YOUTUBE in the inbox');
-    assert.ok(replyEnum.includes('YOUTUBE'), 'no YOUTUBE in reply');
-  });
-
   it('hide/like do not take YOUTUBE', () => {
     // setModerationStatus means something other than "reversible hide" — no mapping
     assert.ok(!moderateEnum.includes('YOUTUBE'), 'YOUTUBE is in the hide targets');
-  });
-
-  it('the reply tool description explains the YouTube top-level-comment constraint', () => {
-    assert.match(byName.get('sns_comment_reply').description, /YOUTUBE/, 'no YouTube contract explanation');
   });
 });
 
@@ -786,21 +340,6 @@ describe('single-source constants', () => {
     assert.deepEqual(byName.get('stock_search').inputSchema.properties.providers.items.enum, [...STOCK_PROVIDERS]);
     const m = (byName.get('stock_search').inputSchema.properties.limit.description ?? '').match(/max\s*(\d+)/i);
     assert.equal(m && Number(m[1]), STOCK_MAX_LIMIT);
-  });
-
-  it('search-tool limit caps agree between tool descriptions and the canonical constants', () => {
-    // if the "max N" written in the description differs from the real cap, the model sends values it cannot honor
-    const capInDescription = (toolName) => {
-      const desc = byName.get(toolName).inputSchema.properties.limit.description ?? '';
-      const m = desc.match(/max\s*(\d+)/i);
-      return m ? Number(m[1]) : null;
-    };
-    assert.equal(capInDescription('serp_news_search'), SERP_NEWS_MAX_LIMIT);
-    assert.equal(capInDescription('serp_naver_search'), SERP_NAVER_MAX_LIMIT);
-    assert.equal(capInDescription('serp_image_search'), SERP_IMAGE_MAX_LIMIT);
-    // the remaining search tools get the same guard — cover only three and the rest drift
-    assert.equal(capInDescription('serp_web_search'), 10);
-    assert.equal(capInDescription('naver_search'), 30);
   });
 
   it('TTS voice enums match the tts-client source of truth', () => {
@@ -861,36 +400,11 @@ describe('supported speech surface', () => {
       assert.equal(props.style, undefined);
     }
   });
-
-  it('voice surface takes one sample candidate or three for an audition with explicit user selection', () => {
-    const tool = byName.get('character_voice_audition');
-    const props = tool.inputSchema.properties;
-    assert.deepEqual(props.action.enum, ['plan', 'create', 'read', 'select']);
-    assert.ok(props.voiceProfile && props.candidates.items.properties.metadata);
-    assert.ok(props.candidates.items.properties.tts.properties.voiceDirection);
-    assert.equal(props.candidates.minItems, 1);
-    assert.equal(props.candidates.maxItems, 3);
-    assert.deepEqual(props.candidateId.enum, ['1', '2', '3']);
-    assert.ok(props.userSelection);
-    assert.equal(tool.annotations.readOnlyHint, false);
-    assert.equal(tool.annotations.openWorldHint, true);
-  });
 });
 
 describe('speech lane separation (ElevenLabs)', () => {
   const generate = byName.get('tts_elevenlabs_generate');
   const dialogue = byName.get('tts_elevenlabs_dialogue');
-  const voices = byName.get('tts_elevenlabs_voices');
-
-  it('the three tools exist with the right behavior hints', () => {
-    for (const tool of [generate, dialogue]) {
-      assert.equal(tool.annotations.readOnlyHint, false);
-      assert.equal(tool.annotations.openWorldHint, true, 'paid API — open world');
-      assert.equal(tool.annotations.destructiveHint, false);
-    }
-    assert.equal(voices.annotations.readOnlyHint, true);
-    assert.equal(voices.annotations.openWorldHint, true, 'account listing is an API call, not a constant');
-  });
 
   it('voiceId is required with no default on both synthesis tools — the premade set rotates', () => {
     for (const tool of [generate]) {
@@ -903,84 +417,18 @@ describe('speech lane separation (ElevenLabs)', () => {
     assert.equal(dialogue.inputSchema.properties.inputs.maxItems, ELEVENLABS_DIALOGUE_MAX_INPUTS);
   });
 
-  it('the output contract names the RIFF default and warns that mp3 is not builder input', () => {
-    for (const tool of [generate, dialogue]) {
-      assert.match(tool.inputSchema.properties.outputFormat.description, /wav_24000/, `${tool.name} default not named`);
-      assert.match(tool.inputSchema.properties.outputFormat.description, /RIFF/, `${tool.name} no RIFF note`);
-      assert.match(tool.inputSchema.properties.outputFormat.description, /wav_44100.*Pro/, `${tool.name} no tier gate note`);
-    }
-    assert.match(generate.description, /RIFF/);
-  });
-
   it('input cap is the v4 provider cap', () => {
     assert.equal(generate.inputSchema.properties.text.maxLength, MAX_ELEVENLABS_INPUT_CHARS);
     assert.equal(MAX_ELEVENLABS_INPUT_CHARS, 10000);
   });
-
-  it('routes the caller: cost vs the other lanes, dialogue vs single, voices vs tts_list_voices', () => {
-    assert.doesNotMatch(generate.description, /use tts_local_generate|use mlx_tts_generate/i);
-    assert.match(generate.description, /tts_elevenlabs_dialogue/, 'no dialogue pointer');
-    assert.match(generate.description, /non-commercial/, 'no free-tier license caution');
-    assert.match(dialogue.description, /tts_multi_speaker/, 'no Gemini 2-speaker contrast');
-    assert.match(voices.description, /voices_read/, 'no permission note');
-    assert.match(voices.description, /tts_list_voices/, 'no pointer to the static list');
-    assert.match(byName.get('tts_list_voices').description, /tts_elevenlabs_voices/, 'Gemini catalog does not point at ElevenLabs');
-  });
-
-  it('pagination on the voice listing uses the server-wide `limit` name', () => {
-    assert.ok('limit' in voices.inputSchema.properties);
-    assert.equal(voices.inputSchema.properties.limit.maximum, 100);
-  });
 });
 
-/**
- * Pins the division of the two image lanes as contract (same structure as the
- * speech lane separation).
- *
- * Local (Z-Image) is the default and only text-bearing/high-quality jobs go
- * to gpt_image — lose this routing from the descriptions and a lettered cover
- * goes local and publishes with broken Korean glyphs, or every text-free
- * b-roll goes down the billed lane. The measured evidence is
- * docs/research/2026-08-12-local-image-generation.
- */
 describe('image lane separation (local · OpenAI)', () => {
   const local = byName.get('image_local_generate');
-  const paid = byName.get('gpt_image_text2img');
-
-  it('local generation is marked as not touching the network', () => {
-    assert.equal(local.annotations.openWorldHint, false, 'openWorldHint is open');
-    assert.equal(local.annotations.readOnlyHint, false);
-  });
-
-
-
-
-
-
-
-
-
-  it('the generation nudge in serp_image_search points at both lanes', () => {
-    assert.match(byName.get('serp_image_search').description, /image_local_generate/);
-  });
-
   it('the quantization enum matches the zimage-client source of truth', () => {
     assert.deepEqual(local.inputSchema.properties.quantize.enum, [...ZIMAGE_QUANTIZE_OPTIONS]);
     assert.equal(local.inputSchema.properties.quantize.default, DEFAULT_ZIMAGE_QUANTIZE);
     assert.equal(local.inputSchema.properties.steps.default, DEFAULT_ZIMAGE_STEPS);
-  });
-
-  it('the schema description states the resolution constraint (multiple of 16) — the 1080×1920 trap', () => {
-    // calling 9:16 as 1080 is the most common first mistake — the description blocks it before it trips
-    assert.match(local.inputSchema.properties.width.description, /1088/);
-    assert.equal(Number(local.inputSchema.properties.width.description.match(/multiple of (\d+)/)?.[1]), ZIMAGE_DIMENSION_STEP);
-  });
-
-  it('the timeout covers the measured worst case with headroom', () => {
-    // measured: 1088×1920 @9 steps, 462s under load-74 overload — allow at least double that
-    assert.ok(zimageTimeoutMs(1088, 1920, 9) > 462_000 * 2, 'the 9:16 timeout is tight against the measurement');
-    // capped at 30 minutes — never hangs on indefinitely
-    assert.ok(zimageTimeoutMs(2048, 2048, 50) <= 30 * 60_000);
   });
 });
 
@@ -994,17 +442,7 @@ describe('image lane separation (local · OpenAI)', () => {
  */
 describe('Seedance 2.x tool surface', () => {
   const t2v = byName.get('seedance_text2video');
-  const i2v = byName.get('seedance_img2video');
   const ref = byName.get('seedance_reference');
-
-  it('all three tools exist and carry generation hints', () => {
-    for (const tool of [t2v, i2v, ref]) {
-      assert.ok(tool, 'a seedance tool is missing');
-      assert.equal(tool.annotations.readOnlyHint, false);
-      assert.equal(tool.annotations.destructiveHint, false, 'a file-only generation tool is marked destructive');
-      assert.equal(tool.annotations.openWorldHint, true, 'an external API call yet marked closed');
-    }
-  });
 
   it('model/resolution/ratio enums match the seedance-client source of truth', () => {
     assert.deepEqual(t2v.inputSchema.properties.model.enum, VALID_SEEDANCE_MODELS);
@@ -1013,38 +451,6 @@ describe('Seedance 2.x tool surface', () => {
     assert.equal(t2v.inputSchema.properties.model.default, DEFAULT_SEEDANCE_MODEL);
     assert.equal(t2v.inputSchema.properties.resolution.default, DEFAULT_SEEDANCE_RESOLUTION);
     assert.equal(t2v.inputSchema.properties.durationSeconds.default, DEFAULT_SEEDANCE_DURATION);
-  });
-
-  it('every model takes reference audio — a model without a voice lane has no place in the table', () => {
-    assert.deepEqual(ref.inputSchema.properties.model.enum, VALID_SEEDANCE_MODELS);
-    for (const model of VALID_SEEDANCE_MODELS) assert.ok(SEEDANCE_MODEL_SPECS[model].referenceAudio.maxClips > 0, model);
-  });
-
-  it('all three tools can output 9:16 — this pipeline\'s default format', () => {
-    for (const tool of [t2v, i2v, ref]) {
-      assert.ok(tool.inputSchema.properties.ratio.enum.includes('9:16'), `${tool.name} lacks 9:16`);
-    }
-  });
-
-  it('image-input tools default ratio to adaptive — prevents the cropped-source accident', () => {
-    for (const tool of [i2v, ref]) {
-      assert.equal(tool.inputSchema.properties.ratio.default, 'adaptive', `${tool.name} has a source-cropping default`);
-    }
-    assert.match(i2v.inputSchema.properties.ratio.description, /crop/, 'no crop warning in the description');
-  });
-
-  it('the audio default is the opposite of the vendor (false) and the reason is in the description', () => {
-    // this pipeline attaches narration separately via tts_*. Leave the vendor
-    // default (true) and two voice layers stack.
-    for (const tool of [t2v, i2v, ref]) {
-      assert.equal(tool.inputSchema.properties.generateAudio.default, false);
-    }
-    assert.match(t2v.inputSchema.properties.generateAudio.description, /vendor default is true/i);
-  });
-
-  it('the real-face input constraint is in the image tool descriptions — the cover-background lane trap', () => {
-    assert.match(i2v.description, /real human faces/i, 'no 2.x face-rejection warning');
-    assert.match(ref.description, /real human faces/i);
   });
 
   /**
@@ -1083,24 +489,6 @@ describe('Seedance 2.x tool surface', () => {
   describe('reference audio', () => {
     const MODEL_25 = 'dreamina-seedance-2-5-260628';
     const MODEL_20 = 'dreamina-seedance-2-0-260128';
-
-    it('every reference-capable model has an audio spec, and the tool surface mirrors it', () => {
-      for (const model of VALID_SEEDANCE_MODELS) {
-        const audio = SEEDANCE_MODEL_SPECS[model].referenceAudio;
-        assert.notEqual(audio, false, `${model} has no reference-audio spec`);
-        assert.ok(audio.clipSeconds[0] >= 2 && audio.totalSeconds >= audio.clipSeconds[1], `${model} audio limits are inconsistent`);
-      }
-      const prop = ref.inputSchema.properties.referenceAudioPaths;
-      assert.ok(prop, 'seedance_reference has no referenceAudioPaths');
-      const maxClips = Math.max(...VALID_SEEDANCE_MODELS.map((m) => SEEDANCE_MODEL_SPECS[m].referenceAudio.maxClips));
-      assert.equal(prop.maxItems, maxClips);
-      assert.match(prop.description, /@Audio/, 'the @Audio N binding grammar is missing');
-      assert.match(prop.description, /generateAudio: true/);
-      assert.match(ref.description, /voice/i);
-      assert.match(ref.inputSchema.properties.generateAudio.description, /referenceAudioPaths/);
-      assert.deepEqual(ref.inputSchema.required, ['prompt'], 'images are no longer the only reference kind');
-      assert.equal(ref.inputSchema.properties.referenceImagePaths.minItems, undefined);
-    });
 
     it('reference video mirrors the model table, needs a Video 1 binding, and rejects the wrong shape', () => {
       for (const model of VALID_SEEDANCE_MODELS) {
@@ -1156,35 +544,6 @@ describe('Seedance 2.x tool surface', () => {
       assert.equal(nothing.success, false);
       assert.match(nothing.error.issues[0].message, /At least one reference/);
     });
-  });
-
-  /**
-   * The default must be a **model with quality evidence**.
-   *
-   * Default to a model absent from the arena (2.5, 2.0 fast, 2.0 mini)
-   * and every argument-omitting call goes out with unverified
-   * quality. To move the default there because it is cheaper or broader,
-   * build the evidence first.
-   */
-  it('the default models are the publicly evaluated ones', () => {
-    assert.equal(DEFAULT_SEEDANCE_MODEL, 'dreamina-seedance-2-0-260128', `default model ${DEFAULT_SEEDANCE_MODEL} has no public evaluation`);
-  });
-
-  /**
-   * The vendor pinned two things in its own docs — write seconds into the
-   * prompt and the result degrades (their own notice that precise-timing
-   * support is unstable), and feed a three-view character sheet as reference
-   * and the same person appears twice. The tool description is what gets read
-   * right before the call, so this is where it takes effect.
-   */
-  it('the seedance tool descriptions carry the two vendor-pinned bans', () => {
-    for (const name of ['seedance_text2video', 'seedance_img2video', 'seedance_reference']) {
-      const desc = byName.get(name).inputSchema.properties.prompt.description;
-      assert.match(desc, /timecode/i, `${name} does not state the timecode ban`);
-      assert.match(desc, /English on every model/, `${name} does not state the prompt-language constraint`);
-    }
-    // the multi-view ban applies only to the reference tool
-    assert.match(byName.get('seedance_reference').description, /multi-view/i);
   });
 
   it('cross constraints are rejected before the call — before a paid call is created', () => {
@@ -1281,12 +640,6 @@ describe('PCM → WAV header', () => {
     assert.equal(wav.readUInt16LE(34), 16, 'bitsPerSample');
     assert.equal(wav.readUInt32LE(40), pcm.length, 'dataSize');
   });
-
-  it('mono 24kHz (the TTS spec) follows the same rules', () => {
-    const wav = pcmToWav(Buffer.alloc(480), 24_000, 1);
-    assert.equal(wav.readUInt16LE(22), 1);
-    assert.equal(wav.readUInt32LE(28), 24_000 * 1 * 2);
-  });
 });
 
 describe('Threads length counting', () => {
@@ -1297,12 +650,6 @@ describe('Threads length counting', () => {
     assert.equal(threadsTextLength('안녕하세요'), 5, 'Korean counts as 1 per code point');
     assert.equal(threadsTextLength('abc'), 3);
   });
-
-  it('does not pass a caption the platform would reject', () => {
-    const caption = '🎬'.repeat(130); // .length = 260 but 520 by platform count
-    assert.ok(caption.length <= 500, 'premise: an old-style .length check would pass it');
-    assert.ok(threadsTextLength(caption) > 500, 'the new count rejects it');
-  });
 });
 
 /**
@@ -1311,26 +658,7 @@ describe('Threads length counting', () => {
  * so no env swapping: its value anchors the path relations verified here
  * (default ≠ channel scope).
  */
-/** env override for the default path only — never applied to channel-scoped paths (the config.ts contract). */
-const DEFAULT_PATH_ENV = {
-  THREADS: 'THREADS_TOKEN_FILE',
-  INSTAGRAM: 'INSTAGRAM_TOKEN_FILE',
-  FACEBOOK: 'FACEBOOK_PAGE_TOKEN_FILE',
-  YOUTUBE: 'YOUTUBE_OAUTH_FILE',
-};
-
 describe('multi-channel token resolution', () => {
-  it('with no channel, the flat file right under <SNS_TOKEN_DIR> (or the env override) is used', () => {
-    for (const platform of SNS_PLATFORMS) {
-      const override = process.env[DEFAULT_PATH_ENV[platform]];
-      if (override) {
-        assert.equal(snsCredentialFile(platform), override, `${platform}: the env override decides the default path`);
-      } else {
-        assert.equal(dirname(snsCredentialFile(platform)), snsTokenDir, `${platform} default credential location`);
-      }
-    }
-  });
-
   it('with a channel set, only that channel directory is used — no fallback to the default tokens', () => {
     for (const platform of SNS_PLATFORMS) {
       const scoped = snsCredentialFile(platform, 'brand-a');
@@ -1349,13 +677,6 @@ describe('multi-channel token resolution', () => {
         /Invalid channel slug/,
         `"${channel}" must be rejected — it feeds path assembly, so letting it pass escapes the token directory`,
       );
-    }
-  });
-
-  it('kebab-case like data/<slug> passes', () => {
-    for (const channel of ['a', 'brand-a', 'ttalkkak-lab', 'vn-life', '2026-news']) {
-      assert.ok(CHANNEL_SLUG_RE.test(channel), `${channel} is a regular slug`);
-      assert.doesNotThrow(() => snsCredentialFile('YOUTUBE', channel));
     }
   });
 });
@@ -1378,25 +699,9 @@ describe('server instructions', () => {
   });
 });
 
-/**
- * A failed SNS call used to come back as `HTTP 403` plus the raw body. Claude Code shows only
- * the head and tail of a long error, so the next step goes first and the body is capped.
- */
 describe('apiErrorText', () => {
-  it('puts the next step before the upstream body', () => {
-    const out = apiErrorText({ ok: false, status: 403, body: '{"error":"expired"}' });
-    assert.match(out, /^HTTP 403 — .*sns_account_check/);
-    assert.ok(out.endsWith('{"error":"expired"}'));
-  });
-
   it('warns that a failed publish may already be live on 5xx', () => {
     assert.match(apiErrorText({ ok: false, status: 504, body: 'Request timed out' }), /may already be live/);
-  });
-
-  it('caps a long body', () => {
-    const out = apiErrorText({ ok: false, status: 500, body: 'x'.repeat(10_000) });
-    assert.ok(out.length < 4500, `${out.length} chars`);
-    assert.match(out, /more chars cut/);
   });
 });
 

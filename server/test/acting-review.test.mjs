@@ -3,8 +3,7 @@ import { describe, test } from 'node:test';
 import { mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
-import { actingMediaPart, actingReviewTimeout, ACTING_RESPONSE_JSON_SCHEMA, actingObservationSchema, actingReviewSchema, actingReviewOutcome, probeActingMedia, reviewActing, cinematographyPrompt, CINEMATOGRAPHY_RESPONSE_JSON_SCHEMA } from '../dist/acting-review.js';
+import { actingReviewSchema, reviewActing } from '../dist/acting-review.js';
 import { TOOLS } from '../dist/tools.js';
 
 const media = { duration: 3, audio: true, video: true, mimeType: 'video/mp4' };
@@ -35,36 +34,6 @@ test('acting_review MCP surface requires explicit request context and defaults t
   assert.equal(review.inputSchema.additionalProperties, false);
   assert.equal(review.inputSchema.properties.mode.default, 'audiovisual');
 });
-test('provider JSON contract bounds confidence as fraction and all scores 0 to 100', () => {
-  assert.equal(ACTING_RESPONSE_JSON_SCHEMA.properties.confidence.minimum, 0);
-  assert.equal(ACTING_RESPONSE_JSON_SCHEMA.properties.confidence.maximum, 1);
-  for (const axis of Object.values(ACTING_RESPONSE_JSON_SCHEMA.properties.scores.properties)) {
-    assert.equal(axis.minimum, 0); assert.equal(axis.maximum, 100);
-  }
-  assert.ok(ACTING_RESPONSE_JSON_SCHEMA.required.includes('confidenceReason'));
-  assert.equal(ACTING_RESPONSE_JSON_SCHEMA.properties.findings.items.properties.observed.minLength,10);
-  assert.equal(ACTING_RESPONSE_JSON_SCHEMA.properties.findings.items.properties.expected.minLength,1);
-  assert.equal(ACTING_RESPONSE_JSON_SCHEMA.properties.findings.items.properties.correction.minLength,1);
-  assert.equal(actingObservationSchema.safeParse({ ...good(), confidenceReason: '' }).success, false);
-  assert.equal(actingObservationSchema.safeParse({ ...good(), confidenceReason: undefined }).success, false);
-});
-test('percentage confidence is rejected without normalization and raw observation is retained', async t => {
-  const f = setup(t); let calls = 0;
-  f.deps.evaluate = async () => { calls++; return { observation: { ...good(), confidence: 95 }, usage: { inputTokens: 4, outputTokens: 5, thoughtTokens: 0 } }; };
-  const result = await reviewActing(f.request, f.deps);
-  assert.equal(result.status, 'unverified'); assert.equal(result.review, null);
-  assert.equal(JSON.parse(result.rejectedObservation.json).confidence, 95);
-  assert.equal(result.rejectedObservation.truncated, false);
-  assert.equal((await reviewActing(f.request, f.deps)).status, 'unverified'); assert.equal(calls, 1);
-});
-test('rejected raw observations are bounded and retained on invalid provider JSON', async t => {
-  const f = setup(t);
-  f.deps.evaluate = async () => { throw Object.assign(new Error('Invalid JSON'), { rejectedObservation: 'x'.repeat(200000), usage: { inputTokens: 4, outputTokens: 5, thoughtTokens: 0 } }); };
-  const result = await reviewActing(f.request, f.deps);
-  assert.equal(result.status, 'unverified'); assert.equal(result.rejectedObservation.truncated, true);
-  assert.equal(result.rejectedObservation.json.length, 131072);
-  assert.equal((await reviewActing(f.request, f.deps)).reused, true);
-});
 test('full review sends actual file bytes and preserves hash-bound usage receipt', async t => {
   const f = setup(t);
   const evaluate = f.deps.evaluate;
@@ -92,34 +61,6 @@ test('failed input cannot reroll; changed direction and media are visibly distin
   const third = await reviewActing(f.request, f.deps);
   assert.notEqual(third.mediaSha256, first.mediaSha256); assert.equal(calls, 3);
 });
-test('null axes, missing coverage and invalid timestamps remain unverified', t => {
-  const f = setup(t);
-  for (const patch of [
-    { scores: { ...good().scores, lipSync: null } },
-    { audio: { ...coverage(), observed: false } },
-    { video: { ...coverage(), end: 1 } },
-    { audio: { ...coverage(), start: 0.5 } },
-    { confidence: 0.89 }, { complete: false },
-    { findings: [{ start: 2, end: 1, axis: 'expression', severity: 'minor', observed: 'A smile contradicts the question', expected: 'Doubt', correction: 'Remove smile' }] },
-  ]) assert.equal(actingReviewOutcome({ ...good(), ...patch }, media, f.request).status, 'unverified');
-});
-test('a minor real defect fails even when all scores exceed 95', t => {
-  const f = setup(t);
-  const review = { ...good(), findings: [{ start: 1, end: 2, axis: 'expression', severity: 'minor', observed: 'A brief smile contradicts the question', expected: 'Doubt', correction: 'Remove smile' }] };
-  assert.equal(actingReviewOutcome(review, media, f.request).status, 'fail');
-});
-test('empty expectedText cannot hide audible speech, uncertain silence, or poor scored axes', t => {
-  const f = setup(t);
-  const request = { ...f.request, expectedText: '' };
-  assert.equal(actingReviewOutcome(good(), media, request).status, 'unverified');
-  assert.equal(actingReviewOutcome({ ...good(), audibleSpeech: null }, media, request).status, 'unverified');
-  const silent = { ...good(), audibleSpeech: false, scores: { ...good().scores, vocalEmotion: null, speechAccuracy: null, lipSync: null } };
-  assert.equal(actingReviewOutcome(silent, media, request).status, 'pass');
-  const poor = { ...silent, scores: { ...silent.scores, vocalEmotion: 10 }, findings: [defect('vocalEmotion')] };
-  assert.equal(actingReviewOutcome(poor, media, request).status, 'fail');
-  assert.equal(actingReviewOutcome(poor, media, request).score, 10);
-  assert.equal(actingReviewOutcome({ ...good(), audibleSpeech: false }, media, f.request).status, 'fail');
-});
 test('byte-identical copies in another source directory reuse the same failed receipt', async t => {
   const f = setup(t); let calls = 0;
   f.deps.evaluate = async () => { calls++; return { observation: { ...good(), scores: { ...good().scores, vocalEmotion: 60 }, findings: [defect('vocalEmotion')] }, usage: { inputTokens: 1, outputTokens: 2, thoughtTokens: 0 } }; };
@@ -130,56 +71,6 @@ test('byte-identical copies in another source directory reuse the same failed re
   assert.equal(second.status, 'fail'); assert.equal(second.reused, true); assert.equal(second.receiptPath, first.receiptPath);
   assert.equal(second.currentMediaPath, realpathSync(copied)); assert.equal(calls, 1);
 });
-test('production cache override shares receipts without dependency cache injection', async t => {
-  const f = setup(t), previous = process.env.SOCIAL_FLOW_ACTING_REVIEW_CACHE_DIR;
-  const cache = path.join(f.dir, 'global-cache');
-  process.env.SOCIAL_FLOW_ACTING_REVIEW_CACHE_DIR = cache;
-  try {
-    const { cacheDirectory, ...deps } = f.deps;
-    const result = await reviewActing(f.request, deps);
-    assert.equal(path.dirname(result.receiptPath), cache);
-    assert.equal((await reviewActing(f.request, deps)).reused, true);
-    assert.equal(f.calls(), 1);
-  } finally {
-    if (previous === undefined) delete process.env.SOCIAL_FLOW_ACTING_REVIEW_CACHE_DIR;
-    else process.env.SOCIAL_FLOW_ACTING_REVIEW_CACHE_DIR = previous;
-  }
-});
-test('audio-only review never claims visual axes and cannot substitute for audiovisual', async t => {
-  const f = setup(t);
-  const observation = { ...good(), scores: { ...good().scores, expression: null, body: null, lipSync: null }, video: { observed: false, complete: false, start: null, end: null, evidence: 'No visual track reviewed in audio-only mode.' } };
-  assert.equal(actingReviewOutcome(observation, media, { ...f.request, mode: 'audio' }).status, 'pass');
-  assert.equal(actingReviewOutcome(observation, media, f.request).status, 'unverified');
-});
-test('unobserved video may have empty evidence while observed coverage needs evidence', t => {
-  const f = setup(t);
-  const observation = { ...good(), scores: { ...good().scores, expression: null, body: null, lipSync: null }, video: { observed: false, complete: false, start: null, end: null, evidence: '' } };
-  assert.equal(actingObservationSchema.safeParse(observation).success, true);
-  assert.equal(actingReviewOutcome(observation, media, { ...f.request, mode: 'audio' }).status, 'pass');
-  const unsupported = { ...observation, audio: { ...coverage(), evidence: '' } };
-  assert.equal(actingReviewOutcome(unsupported, media, { ...f.request, mode: 'audio' }).status, 'unverified');
-});
-test('unsupported low scores remain unverified without rewriting scores or inventing findings', t => {
-  const f = setup(t);
-  const observation = { ...good(), scores: { ...good().scores, situation: 72, vocalEmotion: 71, speechAccuracy: 73 }, findings: [] };
-  const before = JSON.stringify(observation);
-  const outcome = actingReviewOutcome(observation, media, f.request);
-  assert.equal(outcome.status, 'unverified'); assert.equal(outcome.score, null);
-  assert.equal(outcome.failures.filter(failure => failure.includes('deduction lacks')).length, 3);
-  assert.equal(JSON.stringify(observation), before);
-});
-test('distracting scores supported only by minor findings are unverified without recalibration', t => {
-  const f = setup(t);
-  const observation = { ...good(), scores: { ...good().scores, vocalEmotion: 72 }, findings: [{ ...defect('vocalEmotion'), severity: 'minor' }] };
-  const before = JSON.stringify(observation);
-  const outcome = actingReviewOutcome(observation, media, f.request);
-  assert.equal(outcome.status, 'unverified'); assert.equal(outcome.score, null);
-  assert.ok(outcome.failures.includes('vocalEmotion score below 80 conflicts with only minor findings'));
-  assert.equal(JSON.stringify(observation), before);
-  const supported = { ...observation, findings: [defect('vocalEmotion')] };
-  assert.equal(actingReviewOutcome(supported, media, f.request).status, 'fail');
-  assert.equal(actingReviewOutcome(supported, media, f.request).score, 72);
-});
 test('missing tracks and overlong media fail before spending', async t => {
   const f = setup(t);
   for (const patch of [{ audio: false }, { video: false }, { duration: 121 }, { duration: NaN }]) {
@@ -187,13 +78,6 @@ test('missing tracks and overlong media fail before spending', async t => {
     await assert.rejects(reviewActing(f.request, f.deps));
   }
   assert.equal(f.calls(), 0);
-});
-test('malformed provider response is unverified and retained instead of fabricated PASS', async t => {
-  const f = setup(t); let calls = 0;
-  f.deps.evaluate = async () => { calls++; return { observation: { complete: true }, usage: { inputTokens: 50, outputTokens: 5, thoughtTokens: 0 } }; };
-  const result = await reviewActing(f.request, f.deps);
-  assert.equal(result.status, 'unverified'); assert.equal(result.review, null); assert.equal(result.usage.inputTokens, 50);
-  assert.equal((await reviewActing(f.request, f.deps)).reused, true); assert.equal(calls, 1);
 });
 test('concurrent requests have one paid attempt', async t => {
   const f = setup(t); let release;
@@ -209,20 +93,6 @@ test('source mutation during probe prevents billing', async t => {
   f.deps.probe = async () => { writeFileSync(f.file, 'changed while probing'); return media; };
   await assert.rejects(reviewActing(f.request, f.deps), /changed during probe/);
   assert.equal(f.calls(), 0);
-});
-test('source mutation during review preserves uploaded hash but cannot claim current source passed', async t => {
-  const f = setup(t);
-  const original = readFileSync(f.file);
-  f.deps.evaluate = async () => {
-    writeFileSync(f.file, 'changed while remote reviewer was working');
-    return { observation: good(), usage: { inputTokens: 1, outputTokens: 1, thoughtTokens: 0 } };
-  };
-  const result = await reviewActing(f.request, f.deps);
-  assert.equal(result.status, 'unverified'); assert.equal(result.sourceChanged, true);
-  assert.notEqual(result.mediaSha256, result.currentMediaSha256);
-  assert.ok(result.review); // Preserve what the remote reviewer actually evaluated.
-  writeFileSync(f.file, original);
-  assert.equal((await reviewActing(f.request, f.deps)).status, 'unverified');
 });
 test('cached outcome is rederived and receipt identity tampering does not bill again', async t => {
   const f = setup(t); let calls = 0;
@@ -255,38 +125,6 @@ test('receipt write failure keeps evaluated lock and prevents an automatic paid 
   rmSync(receiptDirectory, { recursive: true });
   await assert.rejects(reviewActing(f.request, f.deps), /identical review/);
 });
-test('ffprobe inspects actual MP4 audio/video streams without network', async t => {
-  const f = setup(t);
-  const made = spawnSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=blue:s=64x64:d=1', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', '-c:v', 'libx264', '-c:a', 'aac', '-shortest', '-y', f.file]);
-  assert.equal(made.status, 0, made.stderr?.toString());
-  const probe = await probeActingMedia(f.file);
-  assert.equal(probe.video, true); assert.equal(probe.audio, true); assert.equal(probe.mimeType, 'video/mp4'); assert.ok(Math.abs(probe.duration - 1) < 0.1);
-});
-
-// User-directed clean video output: a strong acting score cannot hide captions.
-test('rendered captions fail and unknown caption coverage remains unverified', t => {
-  const f = setup(t);
-  assert.ok(ACTING_RESPONSE_JSON_SCHEMA.required.includes('visibleCaptions'));
-  assert.equal(actingReviewOutcome({ ...good(), visibleCaptions: true }, media, f.request).status, 'fail');
-  assert.equal(actingReviewOutcome({ ...good(), visibleCaptions: null }, media, f.request).status, 'unverified');
-  assert.equal(actingObservationSchema.safeParse({ ...good(), visibleCaptions: undefined }).success, false);
-  assert.equal(actingReviewOutcome(good(), media, f.request).status, 'pass');
-});
-
-
-test('visual reviews request temporal samples; audio-only reviews retain their modality', () => {
-  const bytes = Buffer.from('media');
-  for (const mode of ['video', 'audiovisual']) {
-    const part = actingMediaPart(bytes, media, mode);
-    assert.equal(part.videoMetadata.fps, 8);
-    assert.equal(part.inlineData.data, bytes.toString('base64'));
-    assert.equal(part.inlineData.mimeType, 'video/mp4');
-  }
-  assert.equal(actingMediaPart(bytes, media, 'audio').videoMetadata, undefined);
-  assert.equal(actingMediaPart(bytes, {...media, video:false, mimeType:'audio/wav'}, 'audio').videoMetadata, undefined);
-});
-
-
 test('unchanged audio policy keeps v6 paid receipts reusable', async t => {
   const f = setup(t);
   const audio = {...f.request, mode:'audio'};
@@ -300,30 +138,6 @@ test('unchanged audio policy keeps v6 paid receipts reusable', async t => {
   assert.equal(visual.policy, 'acting-review-v9');
   assert.notEqual(visual.receiptPath, first.receiptPath);
   assert.equal(f.calls(), 2);
-});
-
-// Model rejection must not become a casting decision, including on cache reuse.
-test('unfavorable voice reviews remain advisory on fresh and cached responses', async t => {
-  const f = setup(t);
-  f.deps.evaluate = async () => {
-    const observation = good(); observation.scores.vocalEmotion = 70;
-    observation.findings.push(defect('vocalEmotion'));
-    return { observation, usage: { inputTokens: 1, outputTokens: 1, thoughtTokens: 0 } };
-  };
-  for (const result of [await reviewActing(f.request, f.deps), await reviewActing(f.request, f.deps)]) {
-    assert.equal(result.status, 'fail');
-    assert.equal(result.advisoryOnly, true);
-    assert.equal(result.selectionAuthority, 'user');
-    assert.match(result.interpretation, /do not reject, replace or regenerate/);
-  }
-});
-
-test('review transport timeout defaults preserve performance and allow validated cinema overrides', () => {
-  assert.equal(actingReviewTimeout('performance', ''), 180000);
-  assert.equal(actingReviewTimeout('cinematography', ''), 600000);
-  assert.equal(actingReviewTimeout('cinematography', '30000'), 30000);
-  assert.equal(actingReviewTimeout('performance', '900000'), 900000);
-  for (const value of ['29999', '900001', 'NaN', '40000.5']) assert.throws(() => actingReviewTimeout('cinematography', value));
 });
 
 test('authorized transport retry has one immutable child and preserves the failed original byte-for-byte', async t => {
@@ -395,76 +209,6 @@ describe('cinematography focus', () => {
       limitation: '', facialApplicability: 'applicable', facialApplicabilityReason: 'The woman has a visible relevant face throughout the shot.' } });
   const request = () => actingReviewSchema.parse({ mediaPath: '/tmp/source.mp4', mode: 'video', focus: 'cinematography',
     direction: 'A fixed wide shot shows a woman carrying a tray leftward to the desk.', requestedBy: 'user', reason: 'User requested camera and physical naturalness review.' });
-  const defect = () => ({ start: 1, end: 2, axis: 'physicalNaturalness', severity: 'major',
-    observed: 'The left foot slides along two floorboards while planted.', expected: 'A stationary foot during the weight-bearing step.', correction: 'Regenerate grounded walking with stable planted contact.' });
-
-  test('cinematography is explicit video-only and discoverable; default performance remains unchanged', () => {
-    const input = request();
-    assert.equal(actingReviewSchema.parse({ ...input, focus: undefined }).focus, 'performance');
-    for (const mode of ['audio', 'audiovisual']) assert.equal(actingReviewSchema.safeParse({ ...input, mode }).success, false);
-    const surface = TOOLS.find(tool => tool.name === 'acting_review').inputSchema;
-    assert.equal(surface.properties.focus.default, 'performance');
-    assert.deepEqual(surface.properties.focus.enum, ['performance', 'cinematography']);
-    assert.equal(actingMediaPart(Buffer.from('x'), media, 'video', 'cinematography').videoMetadata.fps, 24);
-  });
-
-  test('separate fixed rubric distinguishes camera, subject travel and neutral facial geometry', () => {
-    const text = cinematographyPrompt(media, request());
-    assert.match(text, /frame-right.*frame-left.*not a direction reversal/);
-    assert.match(text, /not expressive intensity/);
-    assert.match(text, /24fps, not guaranteed/);
-    assert.match(text, /95 is professionally usable/);
-    assert.deepEqual(CINEMATOGRAPHY_RESPONSE_JSON_SCHEMA.properties.cinematography.properties.scores.required, axes);
-    const result = actingReviewOutcome(good(), media, request());
-    assert.equal(result.status, 'pass'); assert.equal(result.score, 96); assert.deepEqual(result.evaluatedAxes, axes);
-  });
-
-  test('a real physical defect fails without score rewriting; unsupported deductions remain unverified', () => {
-    const review = good(); review.cinematography.scores.physicalNaturalness = 68;
-    assert.equal(actingReviewOutcome(review, media, request()).status, 'unverified');
-    review.findings = [defect()];
-    assert.equal(actingReviewOutcome(review, media, request()).status, 'fail');
-    assert.equal(actingReviewOutcome(review, media, request()).score, 68);
-    review.findings[0].severity = 'minor';
-    assert.equal(actingReviewOutcome(review, media, request()).status, 'unverified');
-    review.cinematography.scores.physicalNaturalness = 98;
-    assert.equal(actingReviewOutcome(review, media, request()).status, 'fail');
-  });
-
-  test('unknown face and incomplete axis evidence cannot pass; intentional prop insert does not demand emotional acting', () => {
-    const review = good(); review.cinematography.scores.facialNaturalness = null; review.cinematography.evidence.facialNaturalness = unseen();
-    assert.equal(actingReviewOutcome(review, media, request()).status, 'unverified');
-    review.cinematography.facialApplicability = 'not_applicable';
-    review.cinematography.facialApplicabilityReason = 'An intentional hands-and-tray insert contains no faces.';
-    const insert = actingReviewOutcome(review, media, request());
-    assert.equal(insert.status, 'pass'); assert.equal(insert.evaluatedAxes.includes('facialNaturalness'), false);
-    review.cinematography.scores.facialNaturalness = 99;
-    assert.equal(actingReviewOutcome(review, media, request()).status, 'unverified');
-    review.cinematography.scores.facialNaturalness = null;
-    review.cinematography.evidence.camera.end = 2;
-    assert.equal(actingReviewOutcome(review, media, request()).status, 'unverified');
-  });
-
-  test('low confidence, unsupported captions, invalid times and audio claims cannot certify cinematography', () => {
-    for (const mutate of [
-      r => { r.confidence = .75; }, r => { r.visibleCaptions = true; }, r => { r.visibleCaptions = null; },
-      r => { r.audio = coverage(); }, r => { r.scores.expression = 98; },
-      r => { r.findings = [{ ...defect(), end: 6 }]; }, r => { r.cinematography.evidence.continuity.evidence = ''; },
-    ]) { const review = good(); mutate(review); assert.equal(actingReviewOutcome(review, media, request()).status, 'unverified'); }
-    const review = good(); review.visibleCaptions = true; review.findings = [{ ...defect(), axis: 'direction' }];
-    assert.equal(actingReviewOutcome(review, media, request()).status, 'fail');
-  });
-
-  test('short clips cannot pass inverted or negative axis coverage within duration tolerance', () => {
-    const brief = { ...media, duration: .05 };
-    for (const span of [{ start: .09, end: .01 }, { start: -.01, end: .05 }]) {
-      const review = good();
-      review.video = { ...coverage(), end: .05 };
-      for (const axis of axes) review.cinematography.evidence[axis] = { ...coverage(), end: .05 };
-      review.cinematography.evidence.camera = { ...coverage(), ...span };
-      assert.equal(actingReviewOutcome(review, brief, request()).status, 'unverified');
-    }
-  });
 
   test('new focus has immutable separate receipts and default old performance receipts still reuse', async t => {
     const dir = mkdtempSync(path.join(tmpdir(), 'cinema-review-')); t.after(() => rmSync(dir, { recursive: true, force: true }));

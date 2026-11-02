@@ -134,32 +134,6 @@ test('an active settings writer prevents a second writer from overwriting prefer
   assert.equal(fs.existsSync(current.file + '.lock'), true);
 });
 
-test('video type selection is explicit, validates custom details, and changes only future episodes', t => {
-  const root = workspace(t);
-  assert.throws(() => settings.saveSettings(root, models, { request: 'Models only' }), /Select a video type/);
-  for (const choice of [{ id: 'invented' }, { id: 'custom' }, { id: 'drama', apiKey: 'invalid' }]) {
-    assert.throws(() => settings.saveSettings(root, models, { videoType: choice, request: 'Invalid type' }));
-  }
-  const first = settings.saveSettings(root, models, { videoType, request: 'Drama' });
-  const original = episode(root, 'original');
-  settings.snapshotSettings(root, original);
-  const updated = settings.saveSettings(root, undefined, {
-    videoType: { id: 'explainer' }, request: 'Make future episodes narrator-led explainers', expectedRevision: first.revision,
-  });
-  assert.deepEqual(updated.config.models, models);
-  assert.deepEqual(settings.snapshotSettings(root, original).config.videoType, videoType);
-  assert.equal(settings.snapshotSettings(root, episode(root, 'new')).config.videoType.id, 'explainer');
-  const custom = settings.saveSettings(root, {}, {
-    videoType: { id: 'custom', detail: 'Documentary with acted conversations' }, request: 'Use this hybrid', expectedRevision: updated.revision,
-  });
-  assert.equal(custom.config.videoType.detail, 'Documentary with acted conversations');
-  const listed = spawnSync(process.execPath, [cli, 'types'], { encoding: 'utf8' });
-  assert.equal(listed.status, 0, listed.stderr);
-  const choices = JSON.parse(listed.stdout);
-  assert.ok(choices.some(choice => choice.id === 'drama' && choice.speechGuidance === 'character_dialogue'));
-  assert.ok(choices.some(choice => choice.id === 'explainer' && choice.speechGuidance === 'narrator_led'));
-});
-
 test('legacy settings request only the missing type and legacy episode snapshots remain resumable', t => {
   const root = workspace(t);
   const file = path.join(root, settings.SETTINGS_FILE);
@@ -179,14 +153,6 @@ test('legacy settings request only the missing type and legacy episode snapshots
   assert.deepEqual(fixed.config.models, models);
   assert.equal(settings.snapshotSettings(root, existing).config.videoType, undefined);
 });
-
-
-test('speech settings allow Gemini and ElevenLabs v4 while local non-speech models remain available', () => {
-  for (const speech of [{ engine: 'supertonic' }, { engine: 'mlx', model: 'local' }, { engine: 'elevenlabs', model: 'eleven_v3' }, { engine: 'elevenlabs', model: 'eleven_multilingual_v2' }]) assert.throws(() => settings.validateModels({ ...models, speech }));
-  assert.doesNotThrow(() => settings.validateModels({ video: { engine: 'mlx', model: 'video-local' }, image: { engine: 'mlx', model: 'image-local' }, speech: { engine: 'elevenlabs', model: 'eleven_v4' } }));
-});
-
-
 test('retired saved speech choices require explicit migration and keep historical episode snapshots', t => {
   for (const speech of [{ engine: 'supertonic' }, { engine: 'mlx', model: 'old-local' }, { engine: 'elevenlabs', model: 'eleven_v3' }]) {
     const root = workspace(t), file = path.join(root, settings.SETTINGS_FILE);
@@ -206,57 +172,4 @@ test('retired saved speech choices require explicit migration and keep historica
     assert.deepEqual(settings.snapshotSettings(root, prior).config.models.speech, speech);
     assert.equal(settings.snapshotSettings(root, episode(root, 'after')).config.models.speech.model, 'eleven_v4');
   }
-});
-
-test('a saved video engine that cannot keep a voice requires migration and cannot be saved again', t => {
-  for (const video of [{ engine: 'veo', model: 'veo-3.1-fast-generate-preview', resolution: '720p' }, { engine: 'seedance', model: 'seedance-1-5-pro-251215', resolution: '720p' }]) {
-    const root = workspace(t), file = path.join(root, settings.SETTINGS_FILE);
-    fs.mkdirSync(path.dirname(file));
-    fs.writeFileSync(file, JSON.stringify({ version: 1, models: { ...models, video }, videoType, request: 'Previous selection', updatedAt: '2026-10-16' }));
-    const current = settings.readSettings(root);
-    assert.equal(current.status, 'migration_required');
-    assert.deepEqual(current.retired, ['models.video']);
-    assert.throws(() => settings.snapshotSettings(root, episode(root, 'new')), /migration_required/);
-    assert.throws(() => settings.saveSettings(root, { video }, { expectedRevision: current.revision, request: 'Keep it' }));
-    const next = settings.saveSettings(root, { video: models.video }, { expectedRevision: current.revision, request: 'Use Seedance 2.0' });
-    assert.equal(next.status, 'configured');
-  }
-});
-
-test('optional music choices persist into snapshots and reject invented provider model pairs', t => {
-  const root = workspace(t);
-  settings.saveSettings(root, models, { videoType, request: 'Initial user selections' });
-  settings.saveSettings(root, { music: { engine: 'lyria', model: 'lyria-3.5' } }, { request: 'Use Lyria 3.5 for music', expectedRevision: settings.readSettings(root).revision });
-  const dir = episode(root, 'music');
-  assert.equal(settings.snapshotSettings(root, dir).config.models.music.model, 'lyria-3.5');
-  settings.saveSettings(root, { music: { engine: 'elevenlabs', model: 'music_v2_5' } }, { request: 'Change new episode music to ElevenLabs', expectedRevision: settings.readSettings(root).revision });
-  assert.equal(settings.snapshotSettings(root, dir).config.models.music.model, 'lyria-3.5');
-  assert.throws(() => settings.validateModels({ music: { engine: 'suno-api', model: 'V5' } }, true));
-  assert.throws(() => settings.validateModels({ music: { engine: 'lyria', model: 'music_v2_5' } }, true));
-});
-
-test('GenAI is a separate model-selecting engine; legacy Astra remains fixed-model', () => {
-  const video = { engine:'astra-genai', model:'ltx-2.5-22b-dev', resolution:'1280x704' };
-  const image = { engine:'astra-genai', model:'z-image-turbo' };
-  assert.doesNotThrow(()=>settings.validateModels({video,image,speech:models.speech}));
-  assert.throws(()=>settings.validateModels({video:{engine:'astra-genai'}},true),/model is required/);
-  assert.doesNotThrow(()=>settings.validateModels({video:{engine:'astra'}},true));
-  assert.throws(()=>settings.validateModels({video:{engine:'astra',model:video.model}},true),/fixed server model/);
-  assert.doesNotThrow(()=>settings.validateModels({video:{...video,resolution:'1792x1024',operation:'reference'}},true));
-  assert.throws(()=>settings.validateModels({video:{...video,operation:'msr'}},true),/video.operation/);
-});
-
-
-test('explicit no-TTS selection accepts no model and omission still requires setup', () => {
-  assert.doesNotThrow(() => settings.validateModels({ ...models, speech: { engine: 'none' } }));
-  assert.throws(() => settings.validateModels({ ...models, speech: { engine: 'none', model: 'unused' } }), /omit model/);
-  const { speech, ...missingSpeech } = models;
-  assert.throws(() => settings.validateModels(missingSpeech), /speech.engine/);
-});
-
-test('gateway engines persist exact deployment aliases independently of local runtime',t=>{
- const root=workspace(t);
- const selected={image:{engine:'astra-genai-native',model:'qwen-image-fast'},speech:{engine:'astra-genai',model:'voxcpm2'},video:{engine:'astra-genai-desktop',model:'ltx-2.5-fast',resolution:'270p'}};
- settings.saveSettings(root,selected,{request:'Use the configured gateway',videoType});
- assert.deepEqual(settings.readSettings(root).config.models,selected);
 });

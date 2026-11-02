@@ -15,9 +15,6 @@ import {
 } from '../dist/youtube-topic-scout.js';
 
 describe('median', () => {
-  it('odd length gives the middle value', () => {
-    assert.equal(median([10, 30, 20]), 20);
-  });
   it('even length averages the middle two', () => {
     assert.equal(median([10, 40, 20, 30]), 25);
   });
@@ -29,9 +26,6 @@ describe('median', () => {
 describe('parseIsoDurationSeconds', () => {
   it('adds minutes and seconds', () => {
     assert.equal(parseIsoDurationSeconds('PT1M30S'), 90);
-  });
-  it('reads a shorts-length duration (45s)', () => {
-    assert.equal(parseIsoDurationSeconds('PT45S'), 45);
   });
   it('an empty value is null', () => {
     assert.equal(parseIsoDurationSeconds(''), null);

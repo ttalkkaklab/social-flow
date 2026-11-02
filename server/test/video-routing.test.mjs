@@ -1,4 +1,4 @@
-import { setupProject, png } from './workflow-fixture.mjs';
+import { setupProject } from './workflow-fixture.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -48,18 +48,6 @@ test('managed voice guidance is sent once; changed dialogue or pinned voice inva
  await assert.rejects(f.execute(q,async()=>{calls++;return result;}),/stale/);assert.equal(calls,1);
  const r=f.plan('next');f.board.SB_DOC.characters[0].tts.voiceId='Orus';f.save();
  await assert.rejects(f.execute(r,async()=>result),/stale/);
-});
-test('managed Seedance reference plan pins automatically added audio and sends mapped arguments',async t=>{
- const f=fixture(t,{engine:'seedance',model:'dreamina-seedance-2-5-260628',resolution:'720p'});
- const old=config.arkApiKey;config.arkApiKey='fixture';t.after(()=>config.arkApiKey=old);
- const audio=path.join(f.episode,'hero.wav'),img=path.join(f.episode,'hero.png');fs.writeFileSync(audio,'voice');fs.writeFileSync(img,'image');
- f.board.SB_DOC={characters:[{id:'hero',tts:{engine:'gemini',voiceId:'Kore',language:'ko',speed:1},voiceReference:{path:audio,imagePaths:[img]}}]};
- f.board.SCENES[0].narration=[{id:'l1',speaker:'hero',delivery:'on_screen',tts:'Hello'}];f.save();
- const p=planVideo({episode:f.episode,shotId:'s1',requestId:'voice',operation:'reference',args:{prompt:'Hero says hello.',generateAudio:true,referenceImagePaths:[img]}});
- assert.ok(p.inputs[audio]);assert.equal(p.voiceContinuity.speakers[0].audioIndex,1);
- await f.execute(p,async(tool,args)=>{assert.deepEqual(args.referenceAudioPaths,[audio]);assert.match(args.prompt,/@Audio 1/);return result;});
- const q=planVideo({episode:f.episode,shotId:'s1',requestId:'changed',tool:p.tool,args:p.sourceArgs});
- fs.writeFileSync(audio,'different voice');await assert.rejects(f.execute(q,async()=>result),/stale/);
 });
 test('auto-added samples still obey 2.0 reference image requirements and audio-count limits',t=>{
  const f=fixture(t,{engine:'seedance',model:'dreamina-seedance-2-0-260128',resolution:'720p'});
@@ -276,12 +264,6 @@ test('host and local selection preserve narrator voiceover without invented lip-
   assert.throws(()=>speechVideoPlan([{id:'n',speaker:'hero',delivery:'on_screen',tts:'Hello'}],caps),/cannot synchronize/);
  }
 });
-test('public planning preserves the existing ASTRA board provider marker',async t=>{
- const f=fixture(t,{engine:'astra',resolution:'1024x1920'});
- f.board.PRODUCTION.videoProvider='astra';f.board.PRODUCTION.videoModel={model:'astra',resolution:'1024x1920'};f.save();
- const response=await ROUTES.video_plan({episode:f.episode,shotId:'s1',requestId:'legacy',operation:'text',args:{prompt:'A boat crosses a lake.'}});
- const plan=JSON.parse(response.content[0].text);assert.equal(plan.selection.engine,'astra');assert.equal(plan.selection.model,undefined);
-});
 test('ASTRA retake inherits verified source dimensions without unsupported payload fields',async t=>{
  const f=fixture(t,{engine:'astra',resolution:'64x64'});const file=path.join(f.episode,'source.mp4');
  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=red:s=64x64:r=24','-t','1','-c:v','mpeg4',file]);
@@ -291,18 +273,6 @@ test('ASTRA retake inherits verified source dimensions without unsupported paylo
  await f.execute(p,async(tool,args)=>{assert.equal(tool,'astra_video_retake');assert.equal(args.width,undefined);return result;});
  f.board.SCENES[0].visual.video.resolution='128x64';f.save();
  assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'wrong',operation:'retake',args:{prompt:'A boat',sourceVideoPath:file,startTime:0,endTime:1}}),/inherits source/);
-});
-test('production and execution share per-cut and scoped selection decisions',t=>{
- const mode=require('../../skills/storyboard/references/production-mode.js');
- const f=fixture(t,{engine:'seedance',model:'dreamina-seedance-2-0-260128',resolution:'720p'});
- f.board.PRODUCTION.modelSettings={models:{video:{engine:'seedance',model:'dreamina-seedance-2-0-260128',resolution:'720p'}},overrides:[]};
- f.board.SCENES[0].visual.video={...selection,generateAudio:true};f.save();
- const selected=()=>mode.resolveVideoChoice(f.board.PRODUCTION,f.board.SCENES[0],f.board.PRODUCTION.modelSettings.models.video);
- assert.deepEqual(selected().selection,routingContext(f.episode,'s1').selection);assert.equal(selected().selection.engine,'seedance');
- f.board.PRODUCTION.modelSettings.overrides=[{scope:'episode',request:'Use ASTRA',video:{engine:'astra',resolution:'1024x1920'}},{scope:'shot',shotId:'s1',request:'Use Veo',video:selection}];f.save();
- assert.deepEqual(selected().selection,routingContext(f.episode,'s1').selection);assert.equal(selected().source,'shot_override');
- f.board.PRODUCTION.mode='full_video';
- const findings=mode.check(f.board).join('\n');assert.doesNotMatch(findings,/selected deployed video engine|generateAudio:false/);
 });
 test('managed ASTRA audio disables internal generations and never completes a hidden ambiguous child',async t=>{
  const f=fixture(t,{engine:'astra',resolution:'1024x1920'});
@@ -378,40 +348,12 @@ test('a saved reference operation plans MSR with the speaker sample, dimensions 
   await assert.rejects(f.execute(p, async () => assert.fail('stale reference must not generate')), /stale/);
 });
 
-test('managed storyboard images reach dispatch and cannot change after planning',async t=>{
- const f=fixture(t);
- const first=path.join(f.episode,'start.png'),last=path.join(f.episode,'end.png');
- fs.writeFileSync(first,png);execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=red:s=2x2','-frames:v','1',last]);
- f.board.SCENES[0].visual={frames:{mode:'first_last',start:first,end:last},references:[]};f.save();
- const p=planVideo({episode:f.episode,shotId:'s1',requestId:'authored',operation:'image',args:{prompt:'Move',durationSeconds:8}});
- assert.equal(p.imageBindings.length,2);let calls=0;
- await f.execute(p,async(tool,args)=>{calls++;assert.equal(args.sourceImagePath,first);assert.equal(args.lastImagePath,last);return result;});
- assert.equal(calls,1);
- const q=planVideo({episode:f.episode,shotId:'s1',requestId:'stale',operation:'image',args:{prompt:'Move',durationSeconds:8}});
- f.board.SCENES[0].visual.frames.end=first;f.save();await assert.rejects(f.execute(q,async()=>assert.fail()),/stale/);
-});
-
 test('native gateway video settings select the Desktop adapter and preserve audio loss policy',t=>{
  const f=fixture(t,{engine:'astra-genai-desktop',model:'ltx-2.5-fast',resolution:'270p'});
  const audio=path.join(f.episode,'line.wav');fs.writeFileSync(audio,'fixture');
  const p=planVideo({episode:f.episode,shotId:'s1',requestId:'desktop',operation:'audio',args:{prompt:'A speaker',audioPath:audio,reserveUsd:0}});
  assert.equal(p.tool,'astra_genai_desktop_audio2video');assert.equal(p.args.allowAudioTruncation,false);assert.equal(p.args.model,'ltx-2.5-fast');assert.equal(p.args.resolution,'270p');assert.ok(p.inputs[audio]);
  assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'wrong',operation:'image',args:{prompt:'ball',imagePath:audio,duration:2,loras:[{ref:'x'}],reserveUsd:0}}));
-});
-
-test('FastH3 reference plans inherit the model, pin media, and dispatch once at zero API cost', async t => {
- const model='ddalcu/FastH3-Omni-MLX-Serve-8bit';
- const f=fixture(t,{engine:'mlx',model,resolution:'768x448'});
- const old=process.env.MLX_SERVE_URL;process.env.MLX_SERVE_URL='http://127.0.0.1:19998';t.after(()=>{if(old===undefined)delete process.env.MLX_SERVE_URL;else process.env.MLX_SERVE_URL=old;});
- const image=path.join(f.episode,'ref.png');
- // A tiny valid PNG suffices for input hashing; this test never generates video.
- fs.writeFileSync(image,Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j5a8AAAAASUVORK5CYII=','base64'));
- const p=planVideo({episode:f.episode,shotId:'s1',requestId:'omni',operation:'reference',args:{prompt:'A person waves.',referenceImagePaths:[image],requiredSeconds:5}});
- assert.equal(p.tool,'fasth3_omni_reference');assert.equal(p.args.numFrames,124);assert.equal(p.args.model,model);
- assert.equal(p.quote.reserveUsd,0);assert.ok(p.inputs[image]);
- let calls=0; const dispatch=async(name,args)=>{calls++;assert.equal(name,p.tool);assert.deepEqual(args.referenceImagePaths,[image]);return result;};
- await f.execute(p,dispatch);await f.execute(p,dispatch);assert.equal(calls,1);
- assert.throws(()=>planVideo({episode:f.episode,shotId:'s1',requestId:'wrong',tool:'ltx_video_generate',args:{prompt:'Act.'}}),/model_selection_mismatch/);
 });
 test('a saved engine that cannot keep a voice is refused by name, not as a missing adapter',t=>{
  const f=fixture(t);

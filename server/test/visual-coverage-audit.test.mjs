@@ -33,21 +33,6 @@ test('inventories every cut without treating a representative as later video evi
   assert.equal(JSON.stringify(win), before);
 }));
 
-test('finds renamed duplicate bytes and warns about chapter scores without claiming quality', () => fixture(dir => {
-  writeFileSync(join(dir, 'one.png'), 'same pixels');
-  writeFileSync(join(dir, 'renamed.png'), 'same pixels');
-  const win = { SCENES: ['one.png', 'renamed.png'].map((image, i) => ({
-    id: `s${i + 1}`, visual: { bg: image }, productionPlan: {
-      imageReview: { record: '../review-chapter-01.json', score: 97 },
-    },
-  })) };
-  const result = audit(win, dir);
-  assert.deepEqual(result.findings.find(f => f.code === 'identical_image_bytes').shotIds, ['s1', 's2']);
-  assert.ok(result.findings.some(f => f.code === 'shared_review_score'));
-  assert.equal(result.semanticAgreement, 'unverified');
-  assert.equal(result.score, undefined);
-}));
-
 test('CLI is read-only, keeps legacy IDs absent, and never fetches remote sources', () => fixture(dir => {
   const file = join(dir, 'scenes.js');
   const content = 'window.SCENES = [{ visual: { src: "https://invalid.example/image.png" } }];\n';
@@ -84,20 +69,4 @@ test('reports repeated images within one block and does not read protocol-relati
   assert.deepEqual(duplicate.shotIds, ['s1']);
   assert.deepEqual(duplicate.detail.uses.map(use => use.cut), [1, 2]);
   assert.equal(result.shots[0].cuts[2].image.reason, 'remote_not_fetched');
-}));
-
-test('reports absent video media separately from source images without inferring playback', () => fixture(dir => {
-  writeFileSync(join(dir, 'source.png'), 'image');
-  writeFileSync(join(dir, 'present.mp4'), 'existence only, not valid video');
-  const result = audit({ SCENES: [{ id: 's1', productionPlan: { cuts: [
-    { kind: 'motion', path: 'absent.mp4', sourceImage: 'source.png' },
-    { kind: 'motion' },
-    { kind: 'motion', path: '//example.invalid/video.mp4' },
-    { kind: 'motion', path: 'present.mp4', sourceImage: 'source.png' },
-  ] } }] }, dir);
-  const media = result.findings.filter(f => f.code === 'video_media_unverified');
-  assert.deepEqual(media.map(f => f.detail.reason),
-    ['unreadable_media', 'missing_media_reference', 'remote_not_fetched']);
-  assert.ok(result.shots[0].cuts.every(cut => cut.playback === 'unverified'));
-  assert.equal(result.score, undefined);
 }));

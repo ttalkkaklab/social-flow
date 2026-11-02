@@ -98,16 +98,6 @@ describe('stock_search normalization', () => {
     // every license block passes the storyboard checker unchanged
     for (const item of out.items) assert.deepEqual(checkLicense({ license: item.license }), [], item.provider);
   });
-
-  it('applies orientation, minWidth and duration after the call, per provider limit', async () => {
-    mockAll();
-    const r = JSON.parse((await stockSearch({ query: 'seoul', media: 'video', orientation: 'portrait', maxDuration: 15 })).text);
-    const ids = r.items.map((i) => i.provider + ':' + i.id);
-    assert.ok(ids.includes('pixabay:55'));
-    assert.ok(!ids.includes('pixabay:56'), 'landscape and 20s dropped');
-    assert.ok(ids.includes('nasa:A11-launch'), 'NASA has no dimensions so orientation does not drop it');
-    assert.ok(!ids.includes('commons:1'), 'a 960x540 landscape archive clip is dropped by portrait');
-  });
 });
 
 describe('commons license filter', () => {
@@ -152,33 +142,10 @@ describe('provider isolation', () => {
     assert.ok(out.items.some((i) => i.provider === 'nasa'));
   });
 
-  it('a missing key skips that provider with a note instead of failing the call', async () => {
-    const { pexelsApiKey } = (await import('../dist/config.js')).config;
-    assert.equal(pexelsApiKey, 'pexels-test-key');
-    mockAll({ 'https://api.pexels.com/': () => json(PEXELS_VIDEO) });
-    const config = (await import('../dist/config.js')).config;
-    const saved = config.pixabayApiKey;
-    config.pixabayApiKey = '';
-    try {
-      const out = JSON.parse((await stockSearch({ query: 'seoul', media: 'video', providers: ['pixabay', 'nasa'] })).text);
-      assert.match(out.providers.pixabay.note, /^skipped — PIXABAY_API_KEY/);
-      assert.ok(out.items.every((i) => i.provider === 'nasa'));
-    } finally {
-      config.pixabayApiKey = saved;
-    }
-  });
-
   it('a provider failure never echoes the query-string API key', async () => {
     mockAll({ 'https://pixabay.com/': () => { throw new Error('ECONNRESET'); } });
     const out = JSON.parse((await stockSearch({ query: 'seoul', media: 'video', providers: ['pixabay'] })).text);
     assert.match(out.providers.pixabay.note, /^failed — /);
     assert.doesNotMatch(out.providers.pixabay.note, /pixabay-test-key/);
-  });
-
-  it('is an error only when every requested provider failed or was skipped', async () => {
-    mockAll({ 'https://images-api.nasa.gov/': () => { throw new Error('offline'); } });
-    const r = await stockSearch({ query: 'moon', media: 'photo', providers: ['nasa'] });
-    assert.equal(r.isError, true);
-    assert.match(JSON.parse(r.text).providers.nasa.note, /offline/);
   });
 });

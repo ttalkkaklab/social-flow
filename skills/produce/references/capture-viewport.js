@@ -12,7 +12,7 @@ async function capture({ chrome, url, output, width, height, alpha = false }) {
   if (![width, height].every(n => Number.isInteger(n) && n > 0 && n <= 16384))
     throw new Error('Capture width and height must be integers from 1 to 16384');
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'sf-capture-'));
-  const child = spawn(chrome, ['--headless=new', '--disable-gpu', '--no-first-run',
+  const child = spawn(chrome, ['--headless=new', '--use-mock-keychain', '--disable-gpu', '--no-first-run',
     '--no-default-browser-check', '--remote-debugging-pipe', '--hide-scrollbars',
     '--user-data-dir=' + profile, 'about:blank'], { stdio: ['ignore', 'ignore', 'ignore', 'pipe', 'pipe'] });
   let serial = 0, pending = new Map(), buffer = '';

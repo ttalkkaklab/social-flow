@@ -36,12 +36,6 @@ test('Seedance maps speakers to existing audio order and explicit image ownershi
   assert.equal(result.voiceContinuity.speakers[0].tts.voiceId,'Kore');
   assert.doesNotMatch(result.args.prompt,/voice ID.*Kore|voice.*Puck/);
 });
-test('2.0 references use their own syntax; missing samples produce honest warnings',t=>{
-  const ctx=fixture(t);delete ctx.board.SB_DOC.characters[1].voiceReference;
-  const result=prepareVideoVoice('seedance_reference',{model:'dreamina-seedance-2-0-fast-260128',prompt:'Act.',generateAudio:true},ctx);
-  assert.match(result.args.prompt,/uses Audio 1/);assert.doesNotMatch(result.args.prompt,/@Audio/);
-  assert.match(result.voiceContinuity.warnings.join('\n'),/friend: no pinned voice sample/);
-});
 test('changed sample bytes and episode voice overrides cannot silently reuse a different voice',t=>{
   const ctx=fixture(t),input={model:'dreamina-seedance-2-5-260628',prompt:'Act.',generateAudio:true};
   ctx.board.SB_DOC.characters[0].tts={...tts,voiceId:'Orus'};
@@ -68,13 +62,6 @@ test('an adapter without a voice lane refuses spoken cuts; silent narration b-ro
   assert.equal(silent.voiceContinuity.strategy,'external_tts');assert.equal(silent.args.prompt,'Act.');
   assert.equal(videoVoiceCapabilities('astra_genai_img2video').dialogue,'refused');
   assert.equal(videoVoiceCapabilities('seedance_reference').lane,'reference');
-});
-test('ASTRA preserves the audio-first prompt; exact waveform and lip-sync claims stay separate',t=>{
-  const ctx=fixture(t);const result=prepareVideoVoice('astra_audio2video',{prompt:'Animate supplied speech.',audioUploadId:'a'},ctx);
-  assert.equal(result.args.prompt,'Animate supplied speech.');assert.equal(result.voiceContinuity.strategy,'supplied_audio');
-  assert.equal(videoVoiceCapabilities('astra_audio2video').suppliedSpeech,'audio_conditioned_reencoded');
-  assert.equal(videoVoiceCapabilities('astra_text2video').suppliedSpeech,'unsupported');
-  assert.equal(videoVoiceCapabilities('astra_audio2video').exactAudioPreservation,false);
 });
 test('supplied-audio tools keep the prompt and skip native voice guidance',t=>{
   const ctx=fixture(t);

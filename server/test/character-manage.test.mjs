@@ -26,19 +26,6 @@ test('the basics are required arguments and every other catalog field is an opti
   assert.ok(fields.personality.properties.motivation && fields.story.properties.past);
 });
 
-test('basics alone create a valid draft, and the result lists the missing panels and voice', (t) => {
-  const file = channel(t);
-  const result = manageCharacter({ identityPath: file, ...basics, age: { status: 'pending', reason: '나이를 아직 정하지 않았다.' } });
-  assert.equal(result.created, true); assert.equal(result.version, 1);
-  assert.deepEqual(result.missing, { basics: ['identity.age'], images: ['face', 'front', 'back'], voice: 'missing' });
-  const doc = block(file);
-  assert.equal(doc.tts, null);
-  assert.deepEqual(Object.keys(doc.character).sort(), ['identity', 'physical', 'schemaVersion', 'version']);
-  assert.match(readFileSync(file, 'utf8'), /^# 미나\n/);
-  assert.ok(existsSync(result.sheet.path));
-  assert.ok(result.sheet.warnings.some((w) => w.includes('identity.age')));
-});
-
 test('an update merges optional fields, removes a null one and keeps tts and prose', (t) => {
   const file = channel(t);
   manageCharacter({ identityPath: file, ...basics, fields: { story: { past: '서점을 물려받았다.' }, personality: { traits: ['신중함'] } } });

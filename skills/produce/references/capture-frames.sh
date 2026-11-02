@@ -40,7 +40,7 @@ mkdir -p "$(dirname "$OUT")"; rm -f "$OUT"
 if [ "$CAP_W" -lt 500 ] || [ "${CAPTURE_PIPE:-0}" = "1" ]; then
   node "$(dirname "$0")/capture-viewport.js" "$CHROME" "$URL" "$OUT" "$CAP_W" "$CAP_H" "$ALPHA" >/dev/null
 else
-"$CHROME" --headless=new --disable-gpu --window-size=$CAP_W,$CAP_H --hide-scrollbars \
+"$CHROME" --headless=new --use-mock-keychain --disable-gpu --window-size=$CAP_W,$CAP_H --hide-scrollbars \
   ${EXTRA[@]+"${EXTRA[@]}"} --screenshot="$OUT" "$URL" >/dev/null 2>&1 &
 PID=$!
 for _ in $(seq 1 60); do [ -s "$OUT" ] && sleep 0.4 && break; sleep 0.25; done

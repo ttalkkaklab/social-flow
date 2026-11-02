@@ -438,6 +438,10 @@ locally. Follow `skills/storyboard/references/storyboard-design.md`.
 `server/test/` grew from 9 files on 2026-08-23 to 126 files and 2,314 cases on
 2026-10-18, mostly because every task added its own file named after its directive.
 This section overrides the test-writing defaults of TDD, test-scenario and similar skills.
+On 2026-11-02 the suite was cut again from 2,703 cases (35 s) to about 1,580 (17 s), keeping a
+case only where a miss is costly: money (budgets, ledger, no re-submission), public posting,
+security boundaries, data integrity, the rules this file keeps, branchy pure logic, real
+regressions and the tool-surface contract.
 
 - **One file per module.** `render-routing.js` (or `render-routing.ts`) is tested in
   `server/test/render-routing.test.mjs`. Add cases to the module's file; create a file
@@ -458,7 +462,8 @@ This section overrides the test-writing defaults of TDD, test-scenario and simil
 - **Hermetic runs.** `npm test` loads `server/test/isolate.mjs` into every file: it drops the
   shell's provider keys and gateway URLs and gives each file an empty home, so your own
   `~/.config/social-flow` (`.env`, `disabled-tools.json`, tokens) never changes a result.
-  Blender and Chrome stay found. Run one file the same way:
+  Blender and Chrome stay found. Every Chrome launch passes `--use-mock-keychain`: the empty home
+  has no login keychain, and without the flag macOS pops a "keychain cannot be found" dialog. Run one file the same way:
   `cd server && node --import ./test/isolate.mjs --test test/<module>.test.mjs`. A provider whose
   variables use a new prefix adds it to `PROVIDER` in `isolate.mjs`.
 - **Readable over DRY.** Inputs that decide the result stay in the test body. Shared

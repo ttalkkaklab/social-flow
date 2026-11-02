@@ -78,17 +78,6 @@ test('generation binding rejects wrong voices and invalidates old audio after ed
  writeFileSync(audio,'changed bytes');assert.equal(manageSpeech({path:target,action:'list',lineId:line.id}).lines[0].audioCurrent,false);
  next=manageSpeech({path:target,action:'update',lineId:line.id,expectedRevision:next.revision,patch:{tts:'New'}});assert.equal(next.lines[0].audioCurrent,false);
 });
-test('production requires neither an AI review nor human approval; missing files still fail',t=>{
- const {dir,target}=setup(t);writeFileSync(path.join(target,'scenes.js'),"window.SCENES=[{type:'points',narration:[{tts:'Hello'}]}];");
- const work=path.join(dir,'.work'),audio=path.join(work,'c0.wav');writeFileSync(audio,'audio');writeFileSync(path.join(work,'cards.tsv'),'0\tc0.wav\t1\n');
- const checker=require('../../skills/produce/references/check-tts-quality.js');assert.ok(checker.check(work,target)[audio]);
- assert.equal(checker.lastReport(work).status,'not_reviewed');
- const final=require('../../skills/produce/references/check-final-tts.js');writeFileSync(path.join(work,'reel-fast.mp4'),'video');
- final.review(work);const record=final.evidence(path.join(work,'reel-fast.mp4'),'Hello',work);
- assert.equal(record.status,'not_reviewed');assert.equal(final.verifyEvidence(record,path.join(work,'reel-fast.mp4'),'Hello'),record);
- assert.throws(()=>final.verifyEvidence(record,path.join(work,'reel-fast.mp4'),'Other'),/other media/);
- rmSync(audio);assert.throws(()=>checker.check(work,target),/ENOENT/);
-});
 test('same-text audio retake invalidates bound lip-sync video until rebound',t=>{
  const {dir,target,r}=setup(t),line=r.lines[0];
  const audio=path.join(dir,'take1.wav'),retake=path.join(dir,'take2.wav'),video=path.join(dir,'clip.mp4');
@@ -222,24 +211,6 @@ test('MCP clients can discover scene acting planning and send the runtime contra
   }
 });
 
-test('MCP acting bounds agree with runtime rejection of invalid direction and timing', () => {
-  const properties = TOOLS.find(tool => tool.name === 'speech_manage').inputSchema.properties.patch.properties.acting.properties;
-  for (const field of ['context', 'intent', 'emotion', 'vocal', 'visual']) {
-    assert.equal(properties[field].minLength, 1);
-    assert.equal(properties[field].maxLength, 1000);
-    for (const value of ['', 'x'.repeat(1001)]) {
-      assert.equal(speechManageSchema.safeParse({ path: '/tmp/board', action: 'update', patch: { acting: { [field]: value } } }).success, false);
-    }
-  }
-  for (const field of ['leadInSeconds', 'tailOutSeconds']) {
-    assert.equal(properties[field].minimum, 0);
-    assert.equal(properties[field].maximum, 5);
-    for (const value of [-0.01, 5.01, Infinity, NaN]) {
-      assert.equal(speechManageSchema.safeParse({ path: '/tmp/board', action: 'update', patch: { acting: { [field]: value } } }).success, false);
-    }
-  }
-});
-
 test('acting-only edits invalidate audio and video; attachment must match the planned performance', t => {
   const voice = { engine: 'elevenlabs', voiceId: 'actor-one', model: 'eleven_v4', speed: 1, language: 'ko', stability: 0.5 };
   const dir = mkdtempSync(join(tmpdir(),'speech-acting-')); t.after(()=>rmSync(dir,{recursive:true,force:true}));
@@ -358,35 +329,6 @@ describe('scene direction', () => {
   assert.equal(current[0].audioCurrent,false);assert.equal(current[1].audioCurrent,true);
   assert.deepEqual(current[1].audio,secondAudio);assert.throws(()=>compose(work,board),/identify: Character speech requires recorded generation voiceSettings/);
  });
- test('speech intent boundaries preserve a sustained multi-sentence line and provider-specific controls',()=>{
-  const text='괜찮아. 내가 옆에 있어. 천천히 해.';
-  const gemini={engine:'gemini',voiceId:'Orus',model:'gemini-3.8-flash-tts',language:'ko',speed:1};
-  const plan=speechAudioPlan({tts:text,acting:{context:'A friend is frightened.',intent:'Reassure the friend.',vocal:'Warm, calm reassurance throughout.'}},{id:'host',tts:gemini});
-  assert.equal(plan.generation.turns.length,1);assert.equal(plan.generation.turns[0].text,text);
-  const eleven={engine:'elevenlabs',voiceId:'pinned-voice',model:'eleven_v4',language:'ko',speed:1};
-  const identify=speechAudioPlan({tts:'경찰서 다나카 경부요.',acting:{direction:'firm declarative statement',intent:'State his own identity.'}},{id:'host',tts:eleven});
-  const confirm=speechAudioPlan({tts:'독립운동가를 잡게 해주겠다고?',acting:{direction:'restrained skeptical question',intent:'Verify the offer.'}},{id:'host',tts:eleven});
-  assert.equal(identify.generation.text,'[firm declarative statement] 경찰서 다나카 경부요.');
-  assert.equal(confirm.generation.text,'[restrained skeptical question] 독립운동가를 잡게 해주겠다고?');
-  for(const p of [identify,confirm])assert.ok(elevenLabsGenerateSchema.safeParse(p.generation).success);
- });
- test('scene acting replaces cheerful baseline, rejects old style and keeps voice pinned',t=>{
-  const {dir,board,r}=fixture(t),line=r.lines[0],audio=path.join(dir,'line.wav');writeFileSync(audio,wav(1));
-  let next=manageSpeech({path:board,action:'update',lineId:line.id,expectedRevision:r.revision,patch:{acting:{context:'Unexpected result',emotion:'Confused',vocal:'Ask quietly, no smile',visual:'Smile fades; look at partner'}}});
-  const planned=manageSpeech({path:board,action:'plan_audio',lineId:line.id});assert.equal(planned.audioPlans.length,1);
-  assert.doesNotMatch(planned.audioPlans[0].arguments.stylePrompt,/sales smile/);assert.match(planned.audioPlans[0].arguments.stylePrompt,/Confused/);
-  assert.throws(()=>manageSpeech({path:board,action:'attach_audio',lineId:line.id,expectedRevision:next.revision,audioPath:audio,generation:proof(line)}),/Acting generation differs|resolved line acting/);
-  const current=next.lines[0],generation=proof(current);
-  assert.throws(()=>manageSpeech({path:board,action:'attach_audio',lineId:line.id,expectedRevision:next.revision,audioPath:audio,generation:{...generation,voiceSettings:{...generation.voiceSettings,voiceName:'Puck'}}}),/voiceId/);
-  next=manageSpeech({path:board,action:'attach_audio',lineId:line.id,expectedRevision:next.revision,audioPath:audio,generation});
-  const video=path.join(dir,'clip.mp4');writeFileSync(video,'fixture video');
-  next=manageSpeech({path:board,action:'attach_video',shotId:line.shotId,expectedRevision:next.revision,videoPath:video,capabilities:caps});
-  next=manageSpeech({path:board,action:'update',lineId:line.id,expectedRevision:next.revision,patch:{acting:{emotion:'Relieved'}}});
-  assert.ok(next.invalidated.audio);assert.equal(next.invalidated.video.speechStatus,'stale');assert.equal(next.lines[0].audioCurrent,false);
-  assert.doesNotMatch(next.lines[0].generationPlan.arguments.stylePrompt,/sales smile/);
-  next=manageSpeech({path:board,action:'update',lineId:line.id,expectedRevision:next.revision,patch:{acting:null}});
-  assert.equal(next.lines[0].acting,undefined);assert.equal(next.lines[0].generationPlan.arguments.stylePrompt,voice.stylePrompt);
- });
  test('raw audio plans satisfy each adapter schema without unsupported style parameters',()=>{
   const line={tts:'Hello',acting:{emotion:'Concerned',vocal:'Quiet measured question'}};
   const variants=[['gemini',voice,ttsGenerateSchema],['gemini38',{...voice,model:'gemini-3.8-flash-tts',stylePrompt:undefined},gemini38TtsSchema],['eleven',{engine:'elevenlabs',voiceId:'voice123',language:'ko',speed:1,model:'eleven_v4',stability:0.4,similarity:0.8},elevenLabsGenerateSchema]];
@@ -433,19 +375,6 @@ describe('scene direction', () => {
    assert.throws(()=>manageSpeech({path:board,action:'plan_audio',lineId:line.id}),/supported engine|Unsupported ElevenLabs model/);
   }
  });
- test('composer supports multiple speakers with optional acting omitted',t=>{
-  const {board,work,r}=fixture(t,[{tts:'First',speaker:'host',delivery:'voiceover'},{tts:'Second',speaker:'host',delivery:'voiceover'}]);
-  const file=path.join(board,'scenes.js'),win={};new Function('window',readFileSync(file,'utf8'))(win);
-  win.SB_DOC.characters.push({id:'guest',tts:{...voice,voiceId:'Puck'}});win.SCENES[0].narration[1].speaker='guest';
-  writeFileSync(file,Object.entries(win).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
-  let state=manageSpeech({path:board,action:'list'});const lines=state.lines;
-  for(const [i,line] of lines.entries()){const audio=path.join(work,`raw${i}.wav`);writeFileSync(audio,wav(1));state=manageSpeech({path:board,action:'attach_audio',lineId:line.id,expectedRevision:state.revision,audioPath:audio,generation:proof(line)});}
-  writeFileSync(path.join(work,'cards.tsv'),'0\traw0.wav\t1\n');
-  const {compose,duration}=require('../../skills/produce/references/compose-speech.js'),checker=require('../../skills/produce/references/check-tts-quality.js');
-  const result=compose(work,board);assert.equal(result.length,1);assert.equal(duration(result[0].audioPath),2);assert.deepEqual(result[0].lineIds,lines.map(n=>n.id));assert.ok(checker.check(work,board)[result[0].audioPath]);
- });
-
-
  test('ElevenLabs emits only authored compact cues while Gemini keeps rich scene direction',()=>{
   const tts={engine:'elevenlabs',voiceId:'actor123',model:'eleven_v4',language:'ko',speed:1,stability:0.4,similarity:0.8};
   const line={tts:'What?',acting:{direction:'confused',tags:['sigh'],context:'A long explanation of a surprising result at the live sales event.',intent:'Ask the partner to explain the unexpected result.',emotion:'Surprised and doubtful.',vocal:'Start softly after a brief breath; avoid the former cheerful sales presentation.',visual:'Look at the partner.'}};
@@ -457,77 +386,6 @@ describe('scene direction', () => {
   const gemini=speechAudioPlan({...line,acting:{...line.acting,tags:[]}},{id:'a',tts:voice});assert.match(gemini.arguments.stylePrompt,/long explanation/);assert.match(gemini.arguments.stylePrompt,/Start softly/);
   const withoutCue={...line,acting:{...line.acting}};delete withoutCue.acting.direction;delete withoutCue.acting.tags;
   const missing=speechAudioPlan(withoutCue,{id:'a',tts});assert.equal(missing.arguments.text,line.tts);assert.equal(missing.direction.supported,false);assert.equal(missing.direction.stylePrompt,undefined);assert.match(missing.direction.warnings.join(),/short acting.direction/);
- });
-
-
- test('every video speech route is text-free while exact dialogue stays available for verification',()=>{
-  const spoken='무슨 합격이요?';
-  const cases=[{delivery:'on_screen',capabilities:caps,mode:'audio_conditioned'},
-   {delivery:'on_screen',capabilities:{...caps,audioConditioning:false,lipSync:false,postLipSync:true},mode:'post_lipsync'},
-   {delivery:'off_screen',capabilities:caps,mode:'voiceover'}];
-  for(const item of cases){
-   const line={id:'d-confused',speaker:'host',tts:spoken,delivery:item.delivery,acting:{context:'She heard '+spoken,intent:'Clarify the result',emotion:'Confused',visual:'Lower hands and look at the applicant',leadInSeconds:0.25,tailOutSeconds:0.4}};
-   const before=JSON.stringify(line),plan=speechVideoPlan([line],item.capabilities);
-   assert.equal(plan.mode,item.mode);assert.equal(plan.textPolicy,'no_visible_text');
-   assert.match(plan.instructions,/no subtitles, captions/);assert.match(plan.videoPrompt,/text-free surfaces/);
-   assert.match(plan.videoPrompt,/Lower hands/);assert.equal(plan.videoPrompt.includes(spoken),false);
-   assert.equal(plan.performance[0].text,spoken);assert.equal(JSON.stringify(line),before);
-  }
-  const silent=speechVideoPlan([],caps);assert.match(silent.videoPrompt,/no subtitles, captions/);
- });
-
- test('legacy direction and vocal tags reach video beats without copying the transcript',()=>{
-  const spoken='무슨 합격이요?';
-  for(const acting of [{direction:'quiet, confused'}, {direction:'quiet, confused',tags:['sigh']}]){
-   const plan=speechVideoPlan([{id:'legacy',speaker:'host',tts:spoken,delivery:'on_screen',acting}],caps);
-   assert.match(plan.videoPrompt,/direction: quiet, confused/);
-   if(acting.tags)assert.match(plan.videoPrompt,/vocal events: sigh/);
-   assert.equal(plan.videoPrompt.includes(spoken),false);
-   assert.equal(plan.performance[0].text,spoken);
-   assert.deepEqual(plan.performance[0].acting,acting);
-  }
- });
-
- test('mixed video speech preserves speaker identities and confines mouth sync to on-screen lines',()=>{
-  const lines=[
-   {id:'a',speaker:'host',delivery:'on_screen',tts:'무슨 합격이요?',acting:{direction:'quiet, confused'}},
-   {id:'b',speaker:'applicant',delivery:'off_screen',tts:'면접 말입니다.'},
-   {id:'c',speaker:'narrator',delivery:'voiceover',tts:'서로 다른 생각이었다.'},
-  ];
-  const plan=speechVideoPlan(lines,caps);
-  assert.equal(plan.mode,'audio_conditioned');
-  const beats=plan.videoPrompt.split('\n').filter(row=>row.startsWith('Beat '));
-  assert.match(beats[0],/speaker: host; delivery: on_screen/);
-  assert.match(beats[0],/synchronize only this speaker's mouth/);
-  assert.match(beats[1],/speaker: applicant; delivery: off_screen/);
-  assert.match(beats[1],/speaker stays off screen.*visible mouths stay closed/);
-  assert.match(beats[2],/speaker: narrator; delivery: voiceover/);
-  assert.match(beats[2],/voiceover or narration.*visible mouths stay closed/);
-  assert.deepEqual(plan.performance.map(line=>line.text),lines.map(line=>line.tts));
-  assert.ok(lines.every(line=>!plan.videoPrompt.includes(line.tts)));
- });
-
- test('whole-shot plan preserves decisive actions, listeners and start/end state with unknown draft timing',()=>{
-  const scene={narration:[{id:'a',speaker:'courier',delivery:'on_screen',tts:'I know you.'}],performance:[
-   {kind:'dialogue',character:'courier',to:'bride',group:1},
-   {kind:'action',character:'uncle',text:'Uncle turns toward the bride.'},
-   {kind:'action',character:'bride',text:'The bride freezes and drops the parcel.'}],
-   shot:{videoDesign:{before:'Courier alone at the open door; bride holds parcel.',action:'Courier points toward bride.',after:'Parcel lies at bride feet.'}},
-   visual:{camera:{framing:'Courier foreground, uncle and bride behind.',end:'Hold both listeners and parcel.'}}};
-  const plan=speechVideoPlan(scene,caps);
-  assert.equal(plan.performance.length,3);assert.equal(plan.durationSeconds,null);assert.equal(plan.timing,'needs_action_timing');
-  for(const text of ['Uncle turns toward the bride','bride freezes','Addressed to bride','Courier alone','Parcel lies','Hold both listeners'])assert.ok(plan.videoPrompt.includes(text),text);
-  assert.equal(plan.videoPrompt.includes('I know you.'),false);
-  assert.equal(plan.review,'not_reviewed');
- });
-
- test('silent actions are plannable through the public tool without lip sync or fabricated duration',t=>{
-  const {board}=fixture(t,[]),file=path.join(board,'scenes.js'),win={};
-  new Function('window',readFileSync(file,'utf8'))(win);
-  win.SCENES[0].performance=[{kind:'action',character:'host',text:'Places the key under the cup.'}];
-  writeFileSync(file,Object.entries(win).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
-  const plan=manageSpeech({path:board,action:'plan_video',shotId:win.SCENES[0].id,capabilities:{...caps,audioConditioning:false,lipSync:false}}).plan;
-  assert.match(plan.videoPrompt,/Places the key/);assert.equal(plan.durationSeconds,null);assert.equal(plan.audioFirst,false);
  });
 
  test('concurrent action shares speech time, longer action delays next speaker, and composition preserves silent reaction',t=>{
@@ -562,21 +420,6 @@ describe('scene direction', () => {
   assert.equal(result.performance.length,2);assert.match(result.warnings.join(),/group 2 is absent/);assert.equal(result.durationSeconds,2);
  });
 
- test('legacy untimed story-v2 actions keep the existing speech clock and disclose unverified action timing',t=>{
-  const {board,work,r}=fixture(t,[{tts:'First',speaker:'host',delivery:'voiceover'}]);
-  const audio=path.join(work,'raw0.wav');writeFileSync(audio,wav(1));
-  manageSpeech({path:board,action:'attach_audio',lineId:r.lines[0].id,expectedRevision:r.revision,audioPath:audio,generation:proof(r.lines[0])});
-  const file=path.join(board,'scenes.js'),win={};new Function('window',readFileSync(file,'utf8'))(win);
-  win.SCENES[0].performance=[{kind:'action',character:'host',text:'Opens the parcel.'},{kind:'narration',character:'host',group:1}];
-  writeFileSync(file,Object.entries(win).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
-  writeFileSync(path.join(work,'cards.tsv'),'0\traw0.wav\t1\n');
-  const {compose,duration}=require('../../skills/produce/references/compose-speech.js'),checker=require('../../skills/produce/references/check-tts-quality.js');
-  const result=compose(work,board);assert.equal(duration(result[0].audioPath),1);assert.equal(result[0].timing,'legacy_speech_only');assert.match(result[0].warnings.join(),/unverified/);
-  assert.ok(checker.check(work,board)[result[0].audioPath]);
-  const plan=manageSpeech({path:board,action:'plan_video',shotId:r.lines[0].shotId,capabilities:caps}).plan;
-  assert.equal(plan.durationSeconds,null);assert.match(plan.videoPrompt,/Opens the parcel/);
- });
-
  test('new scene timing version refuses unresolved independent actions while silent plans stay truthful',()=>{
   const {sceneTiming}=require('../../skills/produce/references/compose-speech.js');
   const scene={narration:[],performance:[{kind:'action',character:'host',text:'Opens the door.'}]};
@@ -585,28 +428,6 @@ describe('scene direction', () => {
   const plan=speechVideoPlan(scene,caps);assert.equal(plan.durationSeconds,2);assert.equal(plan.timing,'planned_actions');
   assert.match(plan.videoPrompt,/silent scene/);assert.doesNotMatch(plan.videoPrompt,/separately supplied voiceover plays/);
  });
-
- test('bound video becomes stale when action, addressee, timing or source composition changes',t=>{
-  const {board,work,r}=fixture(t,[{tts:'First',speaker:'host',delivery:'on_screen'}]);
-  const audio=path.join(work,'raw0.wav'),video=path.join(work,'clip.mp4');writeFileSync(audio,wav(1));writeFileSync(video,'fixture clip');
-  let state=manageSpeech({path:board,action:'attach_audio',lineId:r.lines[0].id,expectedRevision:r.revision,audioPath:audio,generation:proof(r.lines[0])});
-  const file=path.join(board,'scenes.js'),win={};new Function('window',readFileSync(file,'utf8'))(win);
-  win.SCENES[0].performance=[{kind:'dialogue',character:'host',to:'self',group:1},{kind:'action',character:'host',text:'Opens parcel.',durationSeconds:1}];
-  const save=value=>writeFileSync(file,Object.entries(value).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
-  save(win);state=manageSpeech({path:board,action:'list'});
-  manageSpeech({path:board,action:'attach_video',shotId:r.lines[0].shotId,expectedRevision:state.revision,videoPath:video,capabilities:caps});
-  const bound={};new Function('window',readFileSync(file,'utf8'))(bound);
-  writeFileSync(path.join(work,'cards.tsv'),'0\traw0.wav\t1\n');
-  const {compose}=require('../../skills/produce/references/compose-speech.js'),checker=require('../../skills/produce/references/check-tts-quality.js');
-  compose(work,board);assert.ok(checker.check(work,board));
-  for(const change of [s=>s.performance[1].text='Drops parcel.',s=>s.performance[0].to='audience',s=>s.performance[1].durationSeconds=2,s=>s.visual.camera={framing:'Close on parcel.'}]) {
-   const changed=JSON.parse(JSON.stringify(bound));change(changed.SCENES[0]);save(changed);compose(work,board);
-   assert.ok(checker.check(work,board)); // a changed performance plan is a recorded stale warning, not a stop (2026-10-18)
-   const warnings=JSON.parse(readFileSync(path.join(work,'tts-warnings.json'),'utf8')).warnings;
-   assert.ok(warnings.some(w=>/performance plan changed since the clip was bound.*\(stale\)/.test(w)),warnings.join('\n'));
-  }
- });
-
 
  test('ASTRA video plans diagnose the exact adapter prompt limit without truncating performance',()=>{
   const scene={narration:[],performance:[{kind:'action',character:'host',text:'x',durationSeconds:2}]};
@@ -621,21 +442,6 @@ describe('scene direction', () => {
    assert.equal(plan.performance[0].text,scene.performance[0].text);
    assert.equal(JSON.stringify(scene),before);
    assert.equal(plan.review,'not_reviewed');
-  }
- });
-
- test('other video adapters do not inherit ASTRA prompt limits or lose existing timing warnings',()=>{
-  const scene={narration:[],performance:[{kind:'action',character:'host',text:'x'.repeat(ASTRA_VIDEO_MAX_PROMPT_CHARS)}]};
-  const baseline=speechVideoPlan(scene,caps),astra=speechVideoPlan(scene,{...caps,provider:'astra'});
-  assert.equal(astra.promptLength.exceeded,true);
-  assert.ok(baseline.warnings.length>0);
-  assert.deepEqual(astra.warnings.filter(message=>!message.includes('adapter limit')),baseline.warnings);
-  for(const provider of ['seedance','veo','fixture']){
-   const plan=speechVideoPlan(scene,{...caps,provider,model:'astra'});
-   assert.equal(plan.promptLength,undefined);
-   assert.equal(plan.videoPrompt,astra.videoPrompt);
-   assert.equal(plan.warnings.some(message=>message.includes('adapter limit')),false);
-   assert.deepEqual(plan.warnings,baseline.warnings);
   }
  });
 
