@@ -21,6 +21,7 @@ import { GenaiRequestError } from './astra-genai-client.js';
 import { prepareVideoImages } from './video-image-inputs.js';
 import { prepareVideoVoice } from './video-voice.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
+import { compileVideoPrompt } from './video-prompt.js';
 const load = createRequire(import.meta.url);
 const shared = fileURLToPath(new URL('../../skills/_shared/video-selection.js', import.meta.url));
 const modelSettings = fileURLToPath(new URL('../../skills/_shared/model-settings.js', import.meta.url));
@@ -141,9 +142,17 @@ export function planVideo(raw) {
     const context = routingContext(input.episode, input.shotId);
     const { selection } = context;
     requireSupportedSelection(selection);
-    // shot_prompt writes the shot's video prompt; a call that names none sends it.
-    const authored = context.shot.visual?.video?.prompt;
+    // New shot_prompt records retain action separately so icon edits cannot leave the submitted direction stale.
+    const video = context.shot.visual?.video;
+    const rawCast = context.board.SB_DOC?.characters;
+    const names = Object.fromEntries((Array.isArray(rawCast) ? rawCast : []).map(c => [c.id, String(c.name ?? '')]));
+    const compiled = input.args.prompt === undefined && video?.promptSource
+        ? compileVideoPrompt(context.shot, video.promptSource, names) : undefined;
+    const authored = compiled?.prompt ?? video?.prompt;
     const callArgs = input.args.prompt === undefined && typeof authored === 'string' ? { ...input.args, prompt: authored } : input.args;
+    const direction = compiled ? { directionBindings: compiled.directionBindings, directionWarnings: compiled.warnings } :
+        { directionWarnings: [input.args.prompt !== undefined ? 'Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons.' :
+                    'Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.'] };
     // A saved default operation (an LTX project saves 'reference', i.e. MSR) applies when the call names neither.
     const operation = input.operation ?? (input.tool ? undefined : selection.operation);
     const tool = input.tool || Object.entries(VIDEO_ADAPTERS).find(([name, a]) => a.engine === selection.engine && a.operation === operation && (a.engine !== 'mlx' || !selection.model || localVideoStrategy(name)?.acceptsModel(selection.model)))?.[0];
@@ -154,7 +163,7 @@ export function planVideo(raw) {
             throw new Error('model_selection_mismatch: host has no server adapter');
         const images = prepareVideoImages('host_external', callArgs, context.shot, context.episode);
         const body = { version: 1, episode: context.episode, shotId: input.shotId, requestId: input.requestId,
-            tool: 'host_external', args: callArgs, ...(images.imageBindings ? { imageBindings: images.imageBindings, imageHandoff: images.imageHandoff } : {}), selection, source: context.source, contextRevision: context.revision,
+            tool: 'host_external', args: callArgs, ...direction, ...(images.imageBindings ? { imageBindings: images.imageBindings, imageHandoff: images.imageHandoff } : {}), selection, source: context.source, contextRevision: context.revision,
             inputs: Object.fromEntries((images.imageBindings ?? []).map(binding => [binding.path, binding.sha256])), quote: { reserveUsd: 0, estimatedUsd: 0, revision: 'host-allowance-v1', basis: 'External host allowance; limits and actual tool schema must be checked by host; not API enforcement' }, execution: 'host_handoff' };
         const plan = { ...body, id: hash(body) };
         atomicJson(path.join(context.episode, '.work/video-routing/plans', plan.id + '.json'), plan);
@@ -191,7 +200,7 @@ export function planVideo(raw) {
     const quote = quoteVideo(tool, args);
     const body = { version: 1, episode: context.episode, shotId: input.shotId, requestId: input.requestId, tool, args,
         ...(images.imageBindings ? { imageBindings: images.imageBindings } : {}),
-        sourceArgs: input.args, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
+        sourceArgs: input.args, ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
         selection, source: context.source, contextRevision: context.revision, inputs, quote, execution: 'server' };
     const plan = { ...body, id: hash(body) };
     atomicJson(path.join(context.episode, '.work/video-routing/plans', plan.id + '.json'), plan);

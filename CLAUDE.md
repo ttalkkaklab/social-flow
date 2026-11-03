@@ -75,6 +75,16 @@ lines use explicit speakers; video models are replaceable adapters with declared
 
 ## MSR voice and LTX default (user directive, 2026-10-30; voice optional 2026-10-31)
 
+Two-speaker MSR dialogue stays supported (user directive, 2026-11-03). Both the
+human and orc left/right trials had correct speaker turns according to the user.
+Bind each visible speaker to the inspected start image's viewer-relative position
+and appearance with `shot_prompt.speakerBindings`; repeat that identity and its
+image/audio mapping on each compiled turn. Do not impose one speaker per shot.
+Keep dialogue in `shot_dialogue` and action in `shot_prompt`; never skip a turn
+because its words appear somewhere in a prompt. Recompile saved action with current
+icons at video planning time and report each setting's delivery route. Experimental
+success is not a guarantee of model adherence, voice identity or subtitle absence.
+
 MSR renders a cut from subject and background images; any dialogue is written in the
 prompt, and MSR's own speech-and-effects soundtrack is the cut's audio. A speaker's pinned
 voice sample is optional: when the speaker is subject 1 or 2 and the gateway accepts

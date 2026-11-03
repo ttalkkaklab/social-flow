@@ -19,7 +19,10 @@ function fixture(t) {
     return {id,name:id,tts:voice,voiceReference:{path:audioPath,sha256:digest(fs.readFileSync(audioPath)),tts:voice,imagePaths:[imagePath]}};
   });
   const lines=characters.map(c=>({id:'line-'+c.id,speaker:c.id,tts:'Hello '+c.id,delivery:'on_screen'}));
-  return {episode,board:{SB_DOC:{characters}},shot:{id:'s1',narration:lines,visual:{clip:{}}}};
+  return {episode,board:{SB_DOC:{characters}},shot:{id:'s1',narration:lines,visual:{clip:{},video:{speakerBindings:[
+    {speaker:'hero',screenPosition:'left',description:'the person in black armor'},
+    {speaker:'friend',screenPosition:'right',description:'the person in brown armor'}
+  ]}}}};
 }
 test('Seedance maps speakers to existing audio order and explicit image ownership without rewriting dialogue',t=>{
   const ctx=fixture(t),[hero,friend]=ctx.board.SB_DOC.characters;
@@ -137,6 +140,7 @@ test('MSR resolves an id-only story-first cast from its selected audition and au
   fs.writeFileSync(auditionPath, JSON.stringify({ candidates: [{ id: '1', tts, audioPath, audioSha256: sha256 }] }));
   fs.writeFileSync(path.join(folder, 'identity.md'), '# Hero\n\n```json\n' + JSON.stringify(doc) + '\n```');
   ctx.board.SB_DOC.characters = [{ id: 'hero', name: 'Hero' }]; ctx.shot.narration.length = 1;
+  ctx.shot.visual.video.speakerBindings.length = 1;
   ctx.shot.visual.references = [{ path: imagePath, role: 'character', use: 'both' }];
   const input = { prompt: 'He speaks.', references: [{ imagePath }] };
   const result = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true });
@@ -144,7 +148,7 @@ test('MSR resolves an id-only story-first cast from its selected audition and au
   assert.equal(result.voiceContinuity.speakers[0].reference.sha256, sha256);
   assert.match(result.args.prompt, /Audio 1 \(Image 1\): "Hello hero"/);
   assert.doesNotMatch(result.args.prompt, /other characters listen/);
-  assert.match(result.args.prompt, /without adding listeners/);
+  assert.match(result.args.prompt, /other visible mouths stay closed/);
   assert.deepEqual(ctx.board.SB_DOC.characters, [{ id: 'hero', name: 'Hero' }], 'planning does not rewrite the board');
 
   ctx.board.SB_DOC.characters[0].tts = { ...tts, voiceId: 'Orus' };
@@ -159,16 +163,28 @@ test('MSR resolves an id-only story-first cast from its selected audition and au
   assert.equal(missing.args.references[0].audioPath, undefined, 'missing selected evidence cannot fall back to old voice.wav');
   assert.match(missing.voiceContinuity.warnings.join('\n'), /instead of substituting/);
 });
-test('MSR writes each authored line into the prompt once, with its speaker image', t => {
+test('MSR compiles ordered speaker/image/voice/position bindings and refuses ambiguous embedded scripts', t => {
   const ctx = fixture(t), [hero, friend] = ctx.board.SB_DOC.characters;
   ctx.shot.narration[1].acting = { direction: 'whispering' };
-  const input = { prompt: 'They talk. Hero says "Hello hero".', reserveUsd: 0,
+  const input = { prompt: 'They talk.', reserveUsd: 0,
     references: [{ imagePath: friend.voiceReference.imagePaths[0] }, { imagePath: hero.voiceReference.imagePaths[0] }] };
   const { prompt } = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true }).args;
   assert.equal(prompt.split('Hello hero').length, 2);
-  assert.match(prompt, /Image 1 speaks \(whispering\) with visible lip movement synchronized with Audio 1\./);
-  assert.match(prompt, /Preserve authored silent actions without adding listeners/);
+  assert.match(prompt, /Turn 1: Image 2, hero at SCREEN LEFT \(the person in black armor\) speaks using Audio 2/);
+  assert.match(prompt, /Turn 2: Image 1, friend at SCREEN RIGHT .*speaks \(whispering\) using Audio 1/);
+  assert.match(prompt, /other visible mouths stay closed/);
   assert.match(prompt, /Audio 1 \(Image 1\): "Hello friend"/);
+  for (const words of ['Image 1 says "Hello hero".', 'Friend says "Hello friend" first.', 'A note reads “Hello hero”.'])
+    assert.throws(() => prepareVideoVoice('astra_genai_msr', { ...input, prompt: words }, { ...ctx, msrVoice: true }), /video_dialogue_embedded/);
+  const unquoted = prepareVideoVoice('astra_genai_msr', { ...input, prompt: 'A title must not contain Hello hero.' }, { ...ctx, msrVoice: true }).args.prompt;
+  assert.match(unquoted, /Audio 2 \(Image 2\): "Hello hero"/);
+  const before = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true });
+  ctx.shot.visual.video.speakerBindings[0].screenPosition = 'center';
+  assert.notEqual(before.voiceContinuity.revision, prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true }).voiceContinuity.revision);
+  ctx.shot.visual.video.speakerBindings[0].screenPosition = 'right';
+  assert.throws(() => prepareVideoVoice('astra_genai_msr', input, ctx), /video_speaker_binding_invalid/);
+  delete ctx.shot.visual.video.speakerBindings;
+  assert.throws(() => prepareVideoVoice('astra_genai_msr', input, ctx), /video_speaker_binding_required/);
 });
 test('MSR voices a speaker it cannot sample from the prompt and refuses the retired voice mode', t => {
   const ctx = fixture(t), [hero, friend] = ctx.board.SB_DOC.characters;
@@ -178,7 +194,7 @@ test('MSR voices a speaker it cannot sample from the prompt and refuses the reti
   const third = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true });
   assert.deepEqual(third.args.references.map(ref => ref.audioPath), [friend.voiceReference.path, undefined, undefined]);
   assert.match(third.voiceContinuity.warnings.join('\n'), /hero: MSR subject 3 takes no sample/);
-  assert.match(third.args.prompt, /Image 3 speaks with visible lip movement\./);
+  assert.match(third.args.prompt, /Image 3, hero at SCREEN LEFT .* speaks\./);
   assert.match(third.args.prompt, /Image 3: "Hello hero"/);
   ctx.shot.narration[1].tts = '문 닫아';
   assert.match(prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true }).voiceContinuity.warnings.join('\n'), /captions were English/);

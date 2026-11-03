@@ -645,6 +645,13 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.deepEqual([ended.inputs.length, readBoard(dir).win.SCENES[1].visual.frames.endProps], [5, ['key']]);
     const msr = writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns to the door.' }).prompt;
     assert.equal(msr, 'Medium shot, waist up, at eye level. The camera pushes in toward the subject, with a short pause on the opening and closing pictures. Mina turns to the door. Audio: no music.');
+    writeShotPrompt({ path: join(dir, 'scenes.js'), id: 's0001', action: 'Mina turns to the door.', speakerBindings: [
+      { speaker: 'mina', screenPosition: 'left', description: 'the woman in blue' }
+    ] });
+    const bound = readBoard(dir).win.SCENES[0].visual.video;
+    assert.deepEqual(bound.promptSource, { action: 'Mina turns to the door.' });
+    assert.equal(bound.speakerBindings[0].screenPosition, 'left');
+    assert.match(bound.speakerBindingImageSha256, /^[a-f0-9]{64}$/);
     const framed = writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', end: 'she smiles' }).prompt;
     assert.equal(framed, 'Start from the given first frame. Mina looks up. Mina says: "안녕". End on the given last frame: she smiles. Audio: no music.');
     assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', sound: 'rain on the window' }).prompt, /Audio: rain on the window, no music\.$/);

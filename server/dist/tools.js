@@ -4698,7 +4698,9 @@ Returns: the file written, the image path, the inputs in order and the prompt; a
 
 Do NOT write Korean outside quotes: action, end and sound are English (video_prompt_language). Refused (story_order) while a picture-route shot lacks its start image or a first_last shot its end image, and for a cut that is not generated_video.
 
-Returns: the file written and the prompt.`,
+For MSR with two on-screen speakers, inspect the start image and pass speakerBindings for each speaker: viewer-relative left/center/right and a short English appearance description. Image numbers are reference slots, not screen positions. Each generated turn repeats the binding and mapped voice. Keep dialogue in shot_dialogue; do NOT duplicate its quotes in action/end/sound (video_dialogue_embedded). Bindings are pinned to the start image; reauthor after it changes. Two speakers remain supported.
+
+Returns: the file written and the prompt. Stores promptSource so video_plan recompiles the current icon attributes at request time.`,
         inputSchema: {
             type: 'object', additionalProperties: false,
             properties: {
@@ -4707,6 +4709,13 @@ Returns: the file written and the prompt.`,
                 action: { type: 'string', description: "What happens in the shot, in English: the subjects' movement from the opening picture" },
                 end: { type: 'string', description: 'The closing picture, in English' },
                 sound: { type: 'string', description: "Ambient sound and effects, in English; the shot's lines come from shot_dialogue. \"no music\" is added unless it names music — the episode bed is laid in assembly" },
+                speakerBindings: { type: 'array', maxItems: 2, description: 'Visible speakers matched to the start image, e.g. hero at viewer-left in black armor. Required for two MSR on-screen speakers.', items: {
+                        type: 'object', additionalProperties: false, required: ['speaker', 'screenPosition', 'description'], properties: {
+                            speaker: { type: 'string', minLength: 1, description: 'Visible cast id, e.g. hero.' },
+                            screenPosition: { type: 'string', enum: ['left', 'center', 'right'], description: 'Position from the viewer perspective, e.g. left; never inferred from Image N.' },
+                            description: { type: 'string', minLength: 1, description: 'Short English appearance cue, e.g. the orc in black armor.' },
+                        },
+                    } },
             },
             required: ['path', 'id', 'action'],
         },

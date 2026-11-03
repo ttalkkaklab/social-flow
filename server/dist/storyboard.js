@@ -5,6 +5,8 @@ import { workflowEpisode } from './production-workflow.js';
 import { imageContext } from './image-routing.js';
 import { readImageState } from './image-state.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
+import { speakerBindingSchema } from './video-voice.js';
+import { compileVideoPrompt } from './video-prompt.js';
 /**
  * Storyboard module — the sequence → scene → shot data behind four tools
  * (storyboard_read · storyboard_apply · storyboard_check · scenario_check).
@@ -634,7 +636,7 @@ export function applyPatch(win, patch, opts = {}) {
             const old = earlier.get(shot.id)?.visual?.video;
             if (!video?.promptBasis || video.prompt === old?.prompt)
                 return shot;
-            const { promptBasis: _basis, ...rest } = video;
+            const { promptBasis: _basis, promptSource: _source, ...rest } = video;
             return { ...shot, visual: { ...shot.visual, video: rest } };
         });
     }
@@ -1490,13 +1492,14 @@ export function recordShotImage(args, request) {
     return { ...result, findings: [...result.findings, ...notes] };
 }
 // Step 5: the video prompt, written from the shot's icon attributes, lines and the author's English action.
-const MUSIC_WORD = /\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i;
 export const shotPromptSchema = z.object({
     path: outlinePath,
     id: shotIdSchema,
     action: nonEmpty.describe('What happens in the shot, in English: the subjects\' movement from the opening picture'),
     end: nonEmpty.optional().describe('The closing picture, in English'),
     sound: nonEmpty.optional().describe('Ambient sound and effects, in English; the shot\'s lines come from shot_dialogue. "no music" is added unless it names music'),
+    speakerBindings: z.array(speakerBindingSchema).max(2).optional()
+        .describe('MSR speakers as seen in the start image, e.g. [{speaker:"hero",screenPosition:"left",description:"the man in black armor"}]; viewer coordinates, never reference order'),
 }).strict();
 export function writeShotPrompt(args) {
     const { win, st } = readOutline(args.path);
@@ -1510,54 +1513,29 @@ export function writeShotPrompt(args) {
     if (mode !== 'generated_video')
         throw new Error(`shot_prompt: ${args.id} is a ${mode ?? 'unrouted'} cut; only a generated_video cut takes a video prompt`);
     const frames = (visual.frames ?? {}), msr = frames.mode === 'reference';
-    const words = loadFromHere(join(REFERENCES_DIR, 'assemble-bg-prompt.js'));
-    const travels = loadFromHere(join(REFERENCES_DIR, 'production-mode.js')).travels;
-    const camera = (visual.camera ?? {});
-    const movement = String(camera.movement ?? '').trim(), speed = String(camera.speed ?? '').trim();
-    const picked = (plan.techniques ?? []).map((t) => ({ ...t, entry: techniqueContract().byId[t.id] }));
-    // The move technique that matches visual.camera.movement; a movement rewritten by hand falls back to its own words.
-    const moveEntry = picked.find((t) => t.entry?.fields?.movement && movement.toLowerCase().startsWith(t.entry.fields.movement))?.entry;
-    const rack = picked.find((t) => t.entry?.fields?.focus);
-    // A sentence closing on its own quoted line ("Wait.") takes no second period.
-    const sentence = (value) => {
-        const text = value.trim(), capped = text.charAt(0).toUpperCase() + text.slice(1);
-        return !text ? '' : /[.!?]["'”’)]+$/.test(capped) ? capped : capped.replace(/[.!?]*$/, '') + '.';
-    };
-    // The move in the words the video model was shown (film-techniques.js prompt: pushes in, pulls back, pans, tilts
-    // upward, static frame), its pace and what it is aimed at; the closing composition the camera pass wrote follows
-    // as its own sentence, since it may be a phrase or a whole sentence.
-    const target = String(camera.target ?? '').trim(), settle = String(camera.end ?? '').trim();
-    for (const [name, value] of [['action', args.action], ['end', args.end], ['sound', args.sound], ['visual.camera.target', target],
-        ['visual.camera.end', settle], ['focus.from', rack?.from], ['focus.to', rack?.to]]) {
-        const foreign = value ? nonEnglishOutsideQuotes(value) : '';
-        if (foreign)
-            throw new Error(`video_prompt_language: ${name} has "${foreign}" outside quotation marks; write it in English`);
+    const speakerBindings = args.speakerBindings ?? [];
+    const visibleSpeakers = [...new Set((shot.narration ?? []).filter(line => line.delivery === 'on_screen' && line.tts).map(line => line.speaker))];
+    if (msr && visibleSpeakers.length > 1 && visibleSpeakers.some(id => !speakerBindings.some(binding => binding.speaker === id)))
+        throw new Error('video_speaker_binding_required: inspect the start image and pass speakerBindings for both on-screen speakers');
+    if (new Set(speakerBindings.map(binding => binding.speaker)).size !== speakerBindings.length ||
+        new Set(speakerBindings.map(binding => binding.screenPosition)).size !== speakerBindings.length)
+        throw new Error('video_speaker_binding_invalid: use one distinct screen position per speaker');
+    for (const binding of speakerBindings) {
+        if (!castRegistry(args.path, win).ids.has(binding.speaker) || !contract().castOf(shot)?.includes(binding.speaker) || nonEnglishOutsideQuotes(binding.description))
+            throw new Error('video_speaker_binding_invalid: bind visible cast members with English appearance descriptions');
     }
-    const pace = { slow: 'slowly', steady: 'steadily', fast: 'quickly' }[speed];
-    const ends = travels(camera) ? ', with a short pause on the opening and closing pictures' : '';
-    const cameraSentence = !movement ? '' : /^(static|fixed|locked)/i.test(movement) ? 'The camera holds a static frame.'
-        : moveEntry?.prompt ? sentence(`The camera ${pace ? pace + ' ' : ''}${moveEntry.prompt.replace('{target}', target || 'the subject')}${speed && !pace ? ` at a ${speed} pace` : ''}${ends}`)
-            : sentence(`Camera: ${[speed, movement].filter(Boolean).join(' ')}` + (target ? ` toward ${target}` : '') + ends);
-    // MSR pins no frame, so its prompt carries the framing; video_plan adds MSR's lines with their image bindings.
-    const prompt = [
-        msr ? sentence([words.SIZE_WORDS[String(plan.size)], words.ANGLE_WORDS[String(plan.angle)]].filter(Boolean).join(', ')) : 'Start from the given first frame.',
-        msr && plan.depth ? sentence(contract().depthText(plan.depth)) : '',
-        cameraSentence,
-        settle ? sentence(`Closing frame: ${settle}`) : '',
-        !rack ? '' : sentence(rack.from && rack.to ? `Rack focus from ${rack.from} to ${rack.to}` : `${rack.entry?.label?.en ?? 'Rack focus'} from the near subject to the far subject`),
-        sentence(args.action),
-        ...(msr ? [] : (shot.narration ?? []).filter((line) => line.delivery === 'on_screen' && line.tts).map((line) => sentence(`${latin(String(castEntry(win, String(line.speaker))?.name ?? '')) || line.speaker} says: "${line.tts}"`))),
-        frames.mode === 'first_last' ? sentence(`End on the given last frame${args.end ? ': ' + args.end : ''}`) : args.end ? sentence(`End on ${args.end}`) : '',
-        // The builder lays the episode bed under every cut; a clip that makes its own music doubles it.
-        sentence(`Audio: ${args.sound ? args.sound + (MUSIC_WORD.test(args.sound) ? '' : ', no music') : 'no music'}`),
-    ].filter(Boolean).join(' ');
-    const foreign = nonEnglishOutsideQuotes(prompt);
-    if (foreign)
-        throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action, end and sound in English`);
-    shots[index] = { ...shot, visual: { ...visual, video: { ...visual.video, prompt, promptBasis: contract().promptBasis(shot, isFocus) } } };
+    if (msr && [args.action, args.end, args.sound].some(value => value && (shot.narration ?? []).some(line => line.tts && value.includes(line.tts))))
+        throw new Error('video_dialogue_embedded: write only action and sound here; shot_dialogue owns the spoken words');
+    const source = { action: args.action, ...(args.end ? { end: args.end } : {}), ...(args.sound ? { sound: args.sound } : {}) };
+    const rawCast = win.SB_DOC?.characters;
+    const names = Object.fromEntries((Array.isArray(rawCast) ? rawCast : []).map(c => [c.id, String(c.name ?? '')]));
+    const compiled = compileVideoPrompt(shot, source, names), { prompt } = compiled;
+    const { speakerBindings: _oldBindings, speakerBindingImageSha256: _oldImage, ...priorVideo } = (visual.video ?? {});
+    const start = visual.frames?.start;
+    shots[index] = { ...shot, visual: { ...visual, video: { ...priorVideo, prompt, promptSource: source, promptBasis: contract().promptBasis(shot, isFocus),
+                ...(speakerBindings.length ? { speakerBindings, speakerBindingImageSha256: createHash('sha256').update(readFileSync(resolve(dirname(scenesPath(args.path)), start))).digest('hex') } : {}) } } };
     const result = writeOutline(args.path, win, st, shots);
-    return { ...result, findings: rack && !(rack.from && rack.to) ? [...result.findings, { level: 'warn', where: args.id,
-                what: 'the rack focus names no subjects — give focus.from and focus.to in shot_icons' }] : result.findings, prompt };
+    return { ...result, findings: [...result.findings, ...compiled.warnings.map(what => ({ level: 'warn', where: args.id, what }))], prompt };
 }
 const scenarioCheckResultSchema = z.object({
     files: z.array(z.string()),

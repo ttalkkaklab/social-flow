@@ -32427,6 +32427,278 @@ var authorizationSchema = external_exports.object({
   openingSpendUsd: external_exports.number().finite().nonnegative().optional()
 }).strict();
 
+// src/video-voice.ts
+import { existsSync as existsSync4, readFileSync as readFileSync6, realpathSync } from "node:fs";
+import path5 from "node:path";
+import { createRequire as createRequire3 } from "node:module";
+
+// src/astra-genai-desktop.ts
+var model = external_exports.enum(["ltx-2.3-fast", "ltx-2.5-fast"]);
+var resolution = external_exports.enum(["270p", "360p", "540p", "720p", "1080p", "1440p", "2160p"]);
+var duration = external_exports.number().int().refine((n) => [2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 18, 20].includes(n));
+var aspect = external_exports.enum(["21:9", "16:9", "3:2", "4:3", "1:1", "4:5", "9:16"]);
+var loras = external_exports.array(external_exports.object({ ref: external_exports.string().min(1), scale: external_exports.number().finite().min(0).max(4).default(1) }).strict()).min(1).refine((rows) => new Set(rows.map((r) => r.ref)).size === rows.length, "Duplicate LoRA refs");
+var local = {
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((n) => n.endsWith(".mp4")).optional()
+};
+var common = external_exports.object({
+  model,
+  prompt: external_exports.string().trim().min(1),
+  resolution,
+  seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
+  cameraMotion: external_exports.enum(["none", "dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional(),
+  ...local
+}).strict();
+var desktopTextSchema = common.extend({ duration, aspectRatio: aspect.default("16:9"), loras: loras.optional() }).strict();
+var desktopImageSchema = common.extend({
+  duration,
+  aspectRatio: external_exports.union([aspect, external_exports.literal("auto")]).default("auto"),
+  imagePath: external_exports.string().min(1),
+  lastFramePath: external_exports.string().min(1).optional()
+}).strict();
+var desktopAudioSchema = common.extend({
+  audioPath: external_exports.string().min(1),
+  imagePath: external_exports.string().min(1).optional(),
+  aspectRatio: external_exports.union([aspect, external_exports.literal("auto")]).default("16:9"),
+  allowAudioTruncation: external_exports.boolean().default(false)
+}).strict();
+var edit = external_exports.object({
+  model,
+  prompt: external_exports.string().default(""),
+  sourceVideoPath: external_exports.string().min(1),
+  targetResolution: external_exports.object({ width: external_exports.number().int().positive(), height: external_exports.number().int().positive() }).strict().optional(),
+  seed: external_exports.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional(),
+  ...local
+}).strict();
+var desktopExtendSchema = edit.extend({ duration: external_exports.number().finite().min(2).max(20), mode: external_exports.enum(["start", "end"]).default("end") }).strict();
+var desktopRetakeSchema = edit.extend({
+  duration: external_exports.number().finite().min(2).max(10),
+  startTime: external_exports.number().finite().nonnegative(),
+  mode: external_exports.enum(["replace_audio_and_video", "replace_video", "replace_audio"]).default("replace_audio_and_video")
+}).strict();
+var desktopKeyframesSchema = desktopTextSchema.extend({
+  audio: external_exports.boolean().default(false),
+  keyframes: external_exports.array(external_exports.object({
+    imagePath: external_exports.string().min(1),
+    frameIndex: external_exports.number().int().nonnegative(),
+    strength: external_exports.number().finite().min(0).max(1).default(1)
+  }).strict()).min(1).max(10)
+}).strict().superRefine((args, ctx) => {
+  const indices = args.keyframes.map((f) => f.frameIndex);
+  if (new Set(indices).size !== indices.length || Math.max(...indices) >= Math.floor(args.duration * args.fps / 8) * 8 + 1)
+    ctx.addIssue({ code: "custom", message: "Keyframes require unique indices within the requested duration" });
+});
+var DESKTOP_SCHEMAS = {
+  "text-to-video": desktopTextSchema,
+  "image-to-video": desktopImageSchema,
+  "audio-to-video": desktopAudioSchema,
+  extend: desktopExtendSchema,
+  retake: desktopRetakeSchema,
+  keyframes: desktopKeyframesSchema
+};
+var receiptSchema = external_exports.object({
+  protocol: external_exports.literal("gateway-desktop-v1"),
+  baseUrl: external_exports.string(),
+  operation: external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "extend", "retake", "keyframes"]),
+  fingerprint: external_exports.string(),
+  videoPath: external_exports.string(),
+  status: external_exports.enum(["submitting", "submitted", "completed"]),
+  jobId: external_exports.string().optional(),
+  sha256: external_exports.string().optional()
+}).strict();
+
+// src/astra-genai-video.ts
+var GENAI_VIDEO_MODELS = ["ltx-2.5-22b-distilled", "ltx-2.5-22b-dev"];
+var GENAI_CAMERA_MOTIONS = ["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"];
+var genaiTextToVideoSchema = external_exports.object({
+  prompt: external_exports.string().min(1).max(5e3),
+  model: external_exports.enum(GENAI_VIDEO_MODELS),
+  duration: external_exports.number().int().nullable(),
+  resolution: external_exports.string().min(1),
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
+  generateAudio: external_exports.boolean().default(true),
+  cameraMotion: external_exports.enum(GENAI_CAMERA_MOTIONS).nullable().optional(),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
+}).strict();
+var genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
+  imageUri: genaiImageUriSchema.optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  lastFrameUri: genaiImageUriSchema.nullable().optional(),
+  lastFramePath: external_exports.string().min(1).optional()
+}).strict().superRefine((args, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (Number(args.imageUri !== void 0) + Number(args.imagePath !== void 0) !== 1) issue("Supply exactly one imageUri or imagePath");
+  if (args.lastFrameUri != null && args.lastFramePath !== void 0) issue("Supply at most one lastFrameUri or lastFramePath");
+});
+var oneOf = (a, b) => Number(a !== void 0) + Number(b !== void 0);
+var genaiAudioToVideoSchema = external_exports.object({
+  prompt: external_exports.string().trim().min(1).max(5e3),
+  model: external_exports.literal("ltx-2.5-22b-dev"),
+  resolution: external_exports.string().min(1),
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
+  audioPath: external_exports.string().min(1).optional(),
+  audioUri: external_exports.string().min(1).optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  imageUri: genaiImageUriSchema.optional(),
+  lastFramePath: external_exports.string().min(1).optional(),
+  lastFrameUri: genaiImageUriSchema.optional(),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
+}).strict().superRefine((args, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (oneOf(args.audioPath, args.audioUri) !== 1) issue("Supply exactly one audioPath or audioUri");
+  if (oneOf(args.imagePath, args.imageUri) > 1) issue("Supply at most one imagePath or imageUri");
+  if (oneOf(args.lastFramePath, args.lastFrameUri) > 1) issue("Supply at most one lastFramePath or lastFrameUri");
+  if (oneOf(args.lastFramePath, args.lastFrameUri) && !oneOf(args.imagePath, args.imageUri)) issue("A last frame requires a first image");
+});
+var genaiMsrSchema = external_exports.object({
+  prompt: external_exports.string().trim().min(1).max(2e3),
+  references: external_exports.array(external_exports.object({
+    imageUri: genaiImageUriSchema.optional(),
+    imagePath: external_exports.string().min(1).optional(),
+    background: external_exports.boolean().default(false),
+    // Voice sample for this subject; the gateway pairs it with the same picture slot.
+    audioUri: external_exports.string().min(1).optional(),
+    audioPath: external_exports.string().min(1).optional()
+  }).strict().refine(
+    (ref) => Number(!!ref.imageUri) + Number(!!ref.imagePath) === 1,
+    "Supply exactly one imageUri or imagePath"
+  ).refine((ref) => oneOf(ref.audioUri, ref.audioPath) <= 1, "Supply at most one audioUri or audioPath")).min(1).max(5),
+  referenceStrength: external_exports.number().finite().min(0).max(1).default(1),
+  referenceFrames: external_exports.union([external_exports.literal(25), external_exports.literal(33)]).default(33),
+  width: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1536),
+  height: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1024),
+  numFrames: external_exports.number().int().min(25).max(361).refine((n) => (n - 1) % 8 === 0).optional(),
+  duration: external_exports.number().finite().gt(0).max(360).optional(),
+  frameRate: external_exports.number().finite().min(1).max(60).default(24),
+  seed: external_exports.number().int().min(0).max(2147483647).default(42),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
+}).strict().superRefine((args, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  const backgrounds = args.references.filter((ref) => ref.background).length;
+  if (backgrounds > 1 || args.references.length - backgrounds > 4) issue("MSR supports at most four subjects and one background");
+  let subject = 0;
+  for (const ref of args.references) {
+    subject += Number(!ref.background);
+    if (!oneOf(ref.audioUri, ref.audioPath)) continue;
+    if (ref.background) issue("MSR voice samples belong to subjects, not the background");
+    else if (subject > 2) issue("MSR voice samples fit the first two subjects only");
+  }
+  if (args.width * args.height > 2064384) issue("MSR maximum is 2,064,384 pixels");
+  if (args.duration !== void 0) {
+    if (args.numFrames !== void 0) issue("Omit numFrames when using duration");
+    const frames = 1 + 8 * Math.ceil((args.duration * args.frameRate - 1) / 8 - 0.5 - 1e-9);
+    if (frames < 25 || frames > 361) issue("MSR duration must round to 25..361 frames");
+  }
+});
+var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "msr"]);
+var receiptSchema2 = external_exports.object({
+  version: external_exports.literal(1),
+  baseUrl: external_exports.string(),
+  operation: operationSchema,
+  fingerprint: external_exports.string(),
+  videoPath: external_exports.string(),
+  jobId: external_exports.string().min(1).optional(),
+  status: external_exports.enum(["submitting", "submitted", "completed"]),
+  sha256: external_exports.string().optional()
+}).strict();
+var statusSchema = external_exports.object({
+  id: external_exports.string().min(1),
+  status: external_exports.enum(["pending", "processing", "completed", "failed"]),
+  result: external_exports.object({ video_url: external_exports.string().min(1) }).passthrough().nullish(),
+  error: external_exports.unknown().optional()
+}).passthrough();
+var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
+var SUBMIT_TIMEOUT_MS2 = 15 * 6e4;
+
+// src/video-registry.ts
+var entry = (engine, deployment, operation, schema) => ({ engine, deployment, operation, schema, voice: operation === "audio" ? "supplied" : "none" });
+var reference = (engine, deployment, schema) => ({ ...entry(engine, deployment, "reference", schema), voice: "reference" });
+var VIDEO_ADAPTERS = Object.freeze({
+  seedance_text2video: entry("seedance", "byteplus", "text", seedanceText2VideoSchema),
+  seedance_img2video: entry("seedance", "byteplus", "image", seedanceImg2VideoSchema),
+  seedance_reference: reference("seedance", "byteplus", seedanceReferenceSchema),
+  ...Object.fromEntries(Object.entries(DESKTOP_SCHEMAS).map(([feature, schema]) => [
+    "astra_genai_desktop_" + ({ "text-to-video": "text2video", "image-to-video": "img2video", "audio-to-video": "audio2video" }[feature] || feature),
+    entry("astra-genai-desktop", "gateway-desktop-v1", { "text-to-video": "text", "image-to-video": "image", "audio-to-video": "audio", keyframes: "keyframe" }[feature] || feature, schema)
+  ])),
+  astra_genai_text2video: entry("astra-genai", "genai-ltx-v2", "text", genaiTextToVideoSchema),
+  astra_genai_img2video: entry("astra-genai", "genai-ltx-v2", "image", genaiImageToVideoSchema),
+  astra_genai_audio2video: entry("astra-genai", "genai-ltx-v2", "audio", genaiAudioToVideoSchema),
+  astra_genai_msr: reference("astra-genai", "genai-ltx-msr", genaiMsrSchema),
+  astra_text2video: entry("astra", "self-hosted-ltx", "text", astraText2VideoSchema),
+  astra_img2video: entry("astra", "self-hosted-ltx", "image", astraImg2VideoSchema),
+  astra_keyframe_video: entry("astra", "self-hosted-ltx", "keyframe", astraKeyframeVideoSchema),
+  astra_audio2video: entry("astra", "self-hosted-ltx", "audio", astraAudio2VideoSchema),
+  astra_ic_lora: entry("astra", "self-hosted-ltx", "control", astraIcLoraSchema),
+  astra_video_retake: entry("astra", "self-hosted-ltx", "retake", astraVideoRetakeSchema),
+  ...Object.fromEntries(Object.entries(LOCAL_VIDEO_MODELS).map(([tool, model2]) => [
+    tool,
+    model2.operation === "reference" ? reference("mlx", "local-mlx", model2.schema) : entry("mlx", "local-mlx", model2.operation, model2.schema)
+  ])),
+  mlx_video_generate: entry("mlx", "local-mlx", "text", mlxVideoGenerateSchema)
+});
+function speechVideoCapabilities(provider, model2, operation) {
+  if (["veo", "omni"].includes(provider) || provider === "seedance" && !Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
+    throw new Error(`video_engine_unsupported: ${provider} ${model2} cannot keep a character's voice; choose a video model again with project_manage`);
+  if (provider === "astra-genai" && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
+  if (provider === "astra-genai-desktop") return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "Gateway A2V reencodes supplied audio; timing/voice identity not guaranteed; installed model capabilities must be checked" };
+  if (provider === "astra") return { provider, model: model2, audioConditioning: true, lipSync: true, postLipSync: false, evidence: "astra_audio2video adapter contract" };
+  if (provider === "seedance" && Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
+    return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed" };
+  if (["host", "mlx", "astra-genai"].includes(provider))
+    return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "No verified external-speech synchronization adapter; voiceover remains available" };
+  throw new Error("No verified speech synchronization contract for selected deployment/model");
+}
+
+// src/video-voice.ts
+var speakerBindingSchema = external_exports.object({
+  speaker: external_exports.string().trim().min(1),
+  screenPosition: external_exports.enum(["left", "center", "right"]),
+  description: external_exports.string().trim().min(1)
+}).strict();
+var load2 = createRequire3(import.meta.url);
+var object = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
+var text = (value) => typeof value === "string" ? value.trim() : "";
+function resolveCharacterVoice(character, context, warnings) {
+  const id = text(character.id);
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) return character;
+  let channel = context.episode;
+  while (!existsSync4(path5.join(channel, "profile.md")) && path5.dirname(channel) !== channel) channel = path5.dirname(channel);
+  const folder = path5.join(channel, "assets/characters", id), identity = path5.join(folder, "identity.md");
+  let resolved = character;
+  if (!Object.keys(object(character.tts)).length && existsSync4(identity)) {
+    try {
+      const { handoff } = load2("../../skills/channel/references/character-sheet.js");
+      const current = handoff(identity);
+      resolved = { ...current, ...character, tts: current.tts };
+    } catch (error) {
+      warnings.push(`${id}: cannot read the selected character voice: ${error instanceof Error ? error.message : String(error)}`);
+      return character;
+    }
+  }
+  const reference2 = object(resolved.voiceReference);
+  if (!Array.isArray(reference2.imagePaths) && existsSync4(folder)) {
+    const root = realpathSync(folder) + path5.sep;
+    const refs = object(context.shot.visual).references;
+    const imagePaths = (Array.isArray(refs) ? refs.map(object) : []).filter((ref) => ref.role === "character" && ["both", "video"].includes(text(ref.use))).map((ref) => text(ref.path)).filter(Boolean).map((file) => path5.resolve(context.episode, "storyboard", file)).filter((file) => existsSync4(file) && realpathSync(file).startsWith(root));
+    if (imagePaths.length) resolved = { ...resolved, voiceReference: { ...reference2, imagePaths } };
+  }
+  return resolved;
+}
+
+// src/video-prompt.ts
+import { createRequire as createRequire4 } from "node:module";
+var load3 = createRequire4(import.meta.url);
+
 // src/storyboard.ts
 import { createHash as createHash3 } from "node:crypto";
 
@@ -32480,7 +32752,7 @@ function evaluateWindowScript(source, options = {}) {
 }
 
 // src/storyboard.ts
-import { existsSync as existsSync4, mkdirSync as mkdirSync2, readFileSync as readFileSync6, renameSync as renameSync2, statSync as statSync4, unlinkSync, writeFileSync as writeFileSync4 } from "node:fs";
+import { existsSync as existsSync5, mkdirSync as mkdirSync2, readFileSync as readFileSync7, renameSync as renameSync2, statSync as statSync4, unlinkSync, writeFileSync as writeFileSync4 } from "node:fs";
 import * as nodeModule2 from "node:module";
 import { basename as basename3, dirname as dirname4, join as join4, relative, resolve as resolve4 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
@@ -32735,9 +33007,9 @@ function scenesPath(target) {
 }
 function readBoard(target) {
   const file = scenesPath(target);
-  if (!existsSync4(file)) throw new Error(`no scenes.js at ${file}`);
+  if (!existsSync5(file)) throw new Error(`no scenes.js at ${file}`);
   if (!statSync4(file).isFile()) throw new Error(`${file} is not a file`);
-  const src = readFileSync6(file, "utf8");
+  const src = readFileSync7(file, "utf8");
   const header = [];
   for (const line of src.split("\n")) {
     if (/^\s*\/\//.test(line)) header.push(line.trim());
@@ -32851,7 +33123,8 @@ var shotPromptSchema = external_exports.object({
   id: shotIdSchema,
   action: nonEmpty.describe("What happens in the shot, in English: the subjects' movement from the opening picture"),
   end: nonEmpty.optional().describe("The closing picture, in English"),
-  sound: nonEmpty.optional().describe(`Ambient sound and effects, in English; the shot's lines come from shot_dialogue. "no music" is added unless it names music`)
+  sound: nonEmpty.optional().describe(`Ambient sound and effects, in English; the shot's lines come from shot_dialogue. "no music" is added unless it names music`),
+  speakerBindings: external_exports.array(speakerBindingSchema).max(2).optional().describe('MSR speakers as seen in the start image, e.g. [{speaker:"hero",screenPosition:"left",description:"the man in black armor"}]; viewer coordinates, never reference order')
 }).strict();
 var scenarioCheckResultSchema = external_exports.object({
   files: external_exports.array(external_exports.string()),
@@ -32864,284 +33137,23 @@ var scenarioCheckResultSchema = external_exports.object({
   }))
 });
 
-// src/astra-genai-desktop.ts
-var model = external_exports.enum(["ltx-2.3-fast", "ltx-2.5-fast"]);
-var resolution = external_exports.enum(["270p", "360p", "540p", "720p", "1080p", "1440p", "2160p"]);
-var duration = external_exports.number().int().refine((n) => [2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 18, 20].includes(n));
-var aspect = external_exports.enum(["21:9", "16:9", "3:2", "4:3", "1:1", "4:5", "9:16"]);
-var loras = external_exports.array(external_exports.object({ ref: external_exports.string().min(1), scale: external_exports.number().finite().min(0).max(4).default(1) }).strict()).min(1).refine((rows) => new Set(rows.map((r) => r.ref)).size === rows.length, "Duplicate LoRA refs");
-var local = {
-  reserveUsd: external_exports.number().finite().nonnegative(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").refine((n) => n.endsWith(".mp4")).optional()
-};
-var common = external_exports.object({
-  model,
-  prompt: external_exports.string().trim().min(1),
-  resolution,
-  seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
-  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
-  cameraMotion: external_exports.enum(["none", "dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional(),
-  ...local
-}).strict();
-var desktopTextSchema = common.extend({ duration, aspectRatio: aspect.default("16:9"), loras: loras.optional() }).strict();
-var desktopImageSchema = common.extend({
-  duration,
-  aspectRatio: external_exports.union([aspect, external_exports.literal("auto")]).default("auto"),
-  imagePath: external_exports.string().min(1),
-  lastFramePath: external_exports.string().min(1).optional()
-}).strict();
-var desktopAudioSchema = common.extend({
-  audioPath: external_exports.string().min(1),
-  imagePath: external_exports.string().min(1).optional(),
-  aspectRatio: external_exports.union([aspect, external_exports.literal("auto")]).default("16:9"),
-  allowAudioTruncation: external_exports.boolean().default(false)
-}).strict();
-var edit = external_exports.object({
-  model,
-  prompt: external_exports.string().default(""),
-  sourceVideoPath: external_exports.string().min(1),
-  targetResolution: external_exports.object({ width: external_exports.number().int().positive(), height: external_exports.number().int().positive() }).strict().optional(),
-  seed: external_exports.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional(),
-  ...local
-}).strict();
-var desktopExtendSchema = edit.extend({ duration: external_exports.number().finite().min(2).max(20), mode: external_exports.enum(["start", "end"]).default("end") }).strict();
-var desktopRetakeSchema = edit.extend({
-  duration: external_exports.number().finite().min(2).max(10),
-  startTime: external_exports.number().finite().nonnegative(),
-  mode: external_exports.enum(["replace_audio_and_video", "replace_video", "replace_audio"]).default("replace_audio_and_video")
-}).strict();
-var desktopKeyframesSchema = desktopTextSchema.extend({
-  audio: external_exports.boolean().default(false),
-  keyframes: external_exports.array(external_exports.object({
-    imagePath: external_exports.string().min(1),
-    frameIndex: external_exports.number().int().nonnegative(),
-    strength: external_exports.number().finite().min(0).max(1).default(1)
-  }).strict()).min(1).max(10)
-}).strict().superRefine((args, ctx) => {
-  const indices = args.keyframes.map((f) => f.frameIndex);
-  if (new Set(indices).size !== indices.length || Math.max(...indices) >= Math.floor(args.duration * args.fps / 8) * 8 + 1)
-    ctx.addIssue({ code: "custom", message: "Keyframes require unique indices within the requested duration" });
-});
-var DESKTOP_SCHEMAS = {
-  "text-to-video": desktopTextSchema,
-  "image-to-video": desktopImageSchema,
-  "audio-to-video": desktopAudioSchema,
-  extend: desktopExtendSchema,
-  retake: desktopRetakeSchema,
-  keyframes: desktopKeyframesSchema
-};
-var receiptSchema = external_exports.object({
-  protocol: external_exports.literal("gateway-desktop-v1"),
-  baseUrl: external_exports.string(),
-  operation: external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "extend", "retake", "keyframes"]),
-  fingerprint: external_exports.string(),
-  videoPath: external_exports.string(),
-  status: external_exports.enum(["submitting", "submitted", "completed"]),
-  jobId: external_exports.string().optional(),
-  sha256: external_exports.string().optional()
-}).strict();
-
 // src/video-routing.ts
-import { createRequire as createRequire6 } from "node:module";
+import { createRequire as createRequire7 } from "node:module";
 import { fileURLToPath as fileURLToPath5 } from "node:url";
-
-// src/astra-genai-video.ts
-var GENAI_VIDEO_MODELS = ["ltx-2.5-22b-distilled", "ltx-2.5-22b-dev"];
-var GENAI_CAMERA_MOTIONS = ["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"];
-var genaiTextToVideoSchema = external_exports.object({
-  prompt: external_exports.string().min(1).max(5e3),
-  model: external_exports.enum(GENAI_VIDEO_MODELS),
-  duration: external_exports.number().int().nullable(),
-  resolution: external_exports.string().min(1),
-  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
-  generateAudio: external_exports.boolean().default(true),
-  cameraMotion: external_exports.enum(GENAI_CAMERA_MOTIONS).nullable().optional(),
-  reserveUsd: external_exports.number().finite().nonnegative(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
-}).strict();
-var genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
-  imageUri: genaiImageUriSchema.optional(),
-  imagePath: external_exports.string().min(1).optional(),
-  lastFrameUri: genaiImageUriSchema.nullable().optional(),
-  lastFramePath: external_exports.string().min(1).optional()
-}).strict().superRefine((args, ctx) => {
-  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  if (Number(args.imageUri !== void 0) + Number(args.imagePath !== void 0) !== 1) issue("Supply exactly one imageUri or imagePath");
-  if (args.lastFrameUri != null && args.lastFramePath !== void 0) issue("Supply at most one lastFrameUri or lastFramePath");
-});
-var oneOf = (a, b) => Number(a !== void 0) + Number(b !== void 0);
-var genaiAudioToVideoSchema = external_exports.object({
-  prompt: external_exports.string().trim().min(1).max(5e3),
-  model: external_exports.literal("ltx-2.5-22b-dev"),
-  resolution: external_exports.string().min(1),
-  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
-  audioPath: external_exports.string().min(1).optional(),
-  audioUri: external_exports.string().min(1).optional(),
-  imagePath: external_exports.string().min(1).optional(),
-  imageUri: genaiImageUriSchema.optional(),
-  lastFramePath: external_exports.string().min(1).optional(),
-  lastFrameUri: genaiImageUriSchema.optional(),
-  reserveUsd: external_exports.number().finite().nonnegative(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
-}).strict().superRefine((args, ctx) => {
-  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  if (oneOf(args.audioPath, args.audioUri) !== 1) issue("Supply exactly one audioPath or audioUri");
-  if (oneOf(args.imagePath, args.imageUri) > 1) issue("Supply at most one imagePath or imageUri");
-  if (oneOf(args.lastFramePath, args.lastFrameUri) > 1) issue("Supply at most one lastFramePath or lastFrameUri");
-  if (oneOf(args.lastFramePath, args.lastFrameUri) && !oneOf(args.imagePath, args.imageUri)) issue("A last frame requires a first image");
-});
-var genaiMsrSchema = external_exports.object({
-  prompt: external_exports.string().trim().min(1).max(2e3),
-  references: external_exports.array(external_exports.object({
-    imageUri: genaiImageUriSchema.optional(),
-    imagePath: external_exports.string().min(1).optional(),
-    background: external_exports.boolean().default(false),
-    // Voice sample for this subject; the gateway pairs it with the same picture slot.
-    audioUri: external_exports.string().min(1).optional(),
-    audioPath: external_exports.string().min(1).optional()
-  }).strict().refine(
-    (ref) => Number(!!ref.imageUri) + Number(!!ref.imagePath) === 1,
-    "Supply exactly one imageUri or imagePath"
-  ).refine((ref) => oneOf(ref.audioUri, ref.audioPath) <= 1, "Supply at most one audioUri or audioPath")).min(1).max(5),
-  referenceStrength: external_exports.number().finite().min(0).max(1).default(1),
-  referenceFrames: external_exports.union([external_exports.literal(25), external_exports.literal(33)]).default(33),
-  width: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1536),
-  height: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1024),
-  numFrames: external_exports.number().int().min(25).max(361).refine((n) => (n - 1) % 8 === 0).optional(),
-  duration: external_exports.number().finite().gt(0).max(360).optional(),
-  frameRate: external_exports.number().finite().min(1).max(60).default(24),
-  seed: external_exports.number().int().min(0).max(2147483647).default(42),
-  reserveUsd: external_exports.number().finite().nonnegative(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
-}).strict().superRefine((args, ctx) => {
-  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  const backgrounds = args.references.filter((ref) => ref.background).length;
-  if (backgrounds > 1 || args.references.length - backgrounds > 4) issue("MSR supports at most four subjects and one background");
-  let subject = 0;
-  for (const ref of args.references) {
-    subject += Number(!ref.background);
-    if (!oneOf(ref.audioUri, ref.audioPath)) continue;
-    if (ref.background) issue("MSR voice samples belong to subjects, not the background");
-    else if (subject > 2) issue("MSR voice samples fit the first two subjects only");
-  }
-  if (args.width * args.height > 2064384) issue("MSR maximum is 2,064,384 pixels");
-  if (args.duration !== void 0) {
-    if (args.numFrames !== void 0) issue("Omit numFrames when using duration");
-    const frames = 1 + 8 * Math.ceil((args.duration * args.frameRate - 1) / 8 - 0.5 - 1e-9);
-    if (frames < 25 || frames > 361) issue("MSR duration must round to 25..361 frames");
-  }
-});
-var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "msr"]);
-var receiptSchema2 = external_exports.object({
-  version: external_exports.literal(1),
-  baseUrl: external_exports.string(),
-  operation: operationSchema,
-  fingerprint: external_exports.string(),
-  videoPath: external_exports.string(),
-  jobId: external_exports.string().min(1).optional(),
-  status: external_exports.enum(["submitting", "submitted", "completed"]),
-  sha256: external_exports.string().optional()
-}).strict();
-var statusSchema = external_exports.object({
-  id: external_exports.string().min(1),
-  status: external_exports.enum(["pending", "processing", "completed", "failed"]),
-  result: external_exports.object({ video_url: external_exports.string().min(1) }).passthrough().nullish(),
-  error: external_exports.unknown().optional()
-}).passthrough();
-var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
-var SUBMIT_TIMEOUT_MS2 = 15 * 6e4;
-
-// src/video-registry.ts
-var entry = (engine, deployment, operation, schema) => ({ engine, deployment, operation, schema, voice: operation === "audio" ? "supplied" : "none" });
-var reference = (engine, deployment, schema) => ({ ...entry(engine, deployment, "reference", schema), voice: "reference" });
-var VIDEO_ADAPTERS = Object.freeze({
-  seedance_text2video: entry("seedance", "byteplus", "text", seedanceText2VideoSchema),
-  seedance_img2video: entry("seedance", "byteplus", "image", seedanceImg2VideoSchema),
-  seedance_reference: reference("seedance", "byteplus", seedanceReferenceSchema),
-  ...Object.fromEntries(Object.entries(DESKTOP_SCHEMAS).map(([feature, schema]) => [
-    "astra_genai_desktop_" + ({ "text-to-video": "text2video", "image-to-video": "img2video", "audio-to-video": "audio2video" }[feature] || feature),
-    entry("astra-genai-desktop", "gateway-desktop-v1", { "text-to-video": "text", "image-to-video": "image", "audio-to-video": "audio", keyframes: "keyframe" }[feature] || feature, schema)
-  ])),
-  astra_genai_text2video: entry("astra-genai", "genai-ltx-v2", "text", genaiTextToVideoSchema),
-  astra_genai_img2video: entry("astra-genai", "genai-ltx-v2", "image", genaiImageToVideoSchema),
-  astra_genai_audio2video: entry("astra-genai", "genai-ltx-v2", "audio", genaiAudioToVideoSchema),
-  astra_genai_msr: reference("astra-genai", "genai-ltx-msr", genaiMsrSchema),
-  astra_text2video: entry("astra", "self-hosted-ltx", "text", astraText2VideoSchema),
-  astra_img2video: entry("astra", "self-hosted-ltx", "image", astraImg2VideoSchema),
-  astra_keyframe_video: entry("astra", "self-hosted-ltx", "keyframe", astraKeyframeVideoSchema),
-  astra_audio2video: entry("astra", "self-hosted-ltx", "audio", astraAudio2VideoSchema),
-  astra_ic_lora: entry("astra", "self-hosted-ltx", "control", astraIcLoraSchema),
-  astra_video_retake: entry("astra", "self-hosted-ltx", "retake", astraVideoRetakeSchema),
-  ...Object.fromEntries(Object.entries(LOCAL_VIDEO_MODELS).map(([tool, model2]) => [
-    tool,
-    model2.operation === "reference" ? reference("mlx", "local-mlx", model2.schema) : entry("mlx", "local-mlx", model2.operation, model2.schema)
-  ])),
-  mlx_video_generate: entry("mlx", "local-mlx", "text", mlxVideoGenerateSchema)
-});
-function speechVideoCapabilities(provider, model2, operation) {
-  if (["veo", "omni"].includes(provider) || provider === "seedance" && !Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
-    throw new Error(`video_engine_unsupported: ${provider} ${model2} cannot keep a character's voice; choose a video model again with project_manage`);
-  if (provider === "astra-genai" && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
-  if (provider === "astra-genai-desktop") return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "Gateway A2V reencodes supplied audio; timing/voice identity not guaranteed; installed model capabilities must be checked" };
-  if (provider === "astra") return { provider, model: model2, audioConditioning: true, lipSync: true, postLipSync: false, evidence: "astra_audio2video adapter contract" };
-  if (provider === "seedance" && Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
-    return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed" };
-  if (["host", "mlx", "astra-genai"].includes(provider))
-    return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "No verified external-speech synchronization adapter; voiceover remains available" };
-  throw new Error("No verified speech synchronization contract for selected deployment/model");
-}
 
 // src/video-pricing.ts
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 var PRICE_FILE = fileURLToPath4(new URL("../../skills/autoproduce/references/prices.tsv", import.meta.url));
 
 // src/video-image-inputs.ts
-import { createRequire as createRequire4 } from "node:module";
-var load2 = createRequire4(import.meta.url);
-
-// src/video-voice.ts
-import { existsSync as existsSync5, readFileSync as readFileSync7, realpathSync } from "node:fs";
-import path5 from "node:path";
-import { createRequire as createRequire5 } from "node:module";
-var load3 = createRequire5(import.meta.url);
-var object = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
-var text = (value) => typeof value === "string" ? value.trim() : "";
-function resolveCharacterVoice(character, context, warnings) {
-  const id = text(character.id);
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) return character;
-  let channel = context.episode;
-  while (!existsSync5(path5.join(channel, "profile.md")) && path5.dirname(channel) !== channel) channel = path5.dirname(channel);
-  const folder = path5.join(channel, "assets/characters", id), identity = path5.join(folder, "identity.md");
-  let resolved = character;
-  if (!Object.keys(object(character.tts)).length && existsSync5(identity)) {
-    try {
-      const { handoff } = load3("../../skills/channel/references/character-sheet.js");
-      const current = handoff(identity);
-      resolved = { ...current, ...character, tts: current.tts };
-    } catch (error) {
-      warnings.push(`${id}: cannot read the selected character voice: ${error instanceof Error ? error.message : String(error)}`);
-      return character;
-    }
-  }
-  const reference2 = object(resolved.voiceReference);
-  if (!Array.isArray(reference2.imagePaths) && existsSync5(folder)) {
-    const root = realpathSync(folder) + path5.sep;
-    const refs = object(context.shot.visual).references;
-    const imagePaths = (Array.isArray(refs) ? refs.map(object) : []).filter((ref) => ref.role === "character" && ["both", "video"].includes(text(ref.use))).map((ref) => text(ref.path)).filter(Boolean).map((file) => path5.resolve(context.episode, "storyboard", file)).filter((file) => existsSync5(file) && realpathSync(file).startsWith(root));
-    if (imagePaths.length) resolved = { ...resolved, voiceReference: { ...reference2, imagePaths } };
-  }
-  return resolved;
-}
+import { createRequire as createRequire6 } from "node:module";
+var load4 = createRequire6(import.meta.url);
 
 // src/video-routing.ts
-var load4 = createRequire6(import.meta.url);
+var load5 = createRequire7(import.meta.url);
 var shared = fileURLToPath5(new URL("../../skills/_shared/video-selection.js", import.meta.url));
 var modelSettings = fileURLToPath5(new URL("../../skills/_shared/model-settings.js", import.meta.url));
-var routingContext = (episode, shotId) => load4(shared).readVideoContext(episode, shotId);
+var routingContext = (episode, shotId) => load5(shared).readVideoContext(episode, shotId);
 var idSchema2 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var videoPlanSchema = external_exports.object({
   episode: external_exports.string().min(1),
@@ -33186,8 +33198,8 @@ function compileActing(text2, acting, voice) {
 }
 
 // src/tts-models.ts
-import { createRequire as createRequire8 } from "node:module";
-var shared2 = () => createRequire8(import.meta.url)("../../skills/_shared/tts-models.js");
+import { createRequire as createRequire9 } from "node:module";
+var shared2 = () => createRequire9(import.meta.url)("../../skills/_shared/tts-models.js");
 function resolveTtsModel(provider, model2) {
   return shared2().resolveTtsModel(provider, model2);
 }

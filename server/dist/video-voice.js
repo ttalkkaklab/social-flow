@@ -6,6 +6,13 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { VIDEO_ADAPTERS } from './video-registry.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
+import { z } from 'zod';
+/** Authored screen coordinates describe the opening image, never reference-array order. */
+export const speakerBindingSchema = z.object({
+    speaker: z.string().trim().min(1),
+    screenPosition: z.enum(['left', 'center', 'right']),
+    description: z.string().trim().min(1),
+}).strict();
 const load = createRequire(import.meta.url);
 const object = (value) => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const text = (value) => typeof value === 'string' ? value.trim() : '';
@@ -189,6 +196,23 @@ export function prepareVideoVoice(tool, input, context) {
     const imagePaths = Array.isArray(args.referenceImagePaths) ? args.referenceImagePaths.map(value => realpathSync(path.resolve(context.episode, String(value)))) : [];
     const msrRefs = msr && Array.isArray(args.references) ? args.references.map(ref => ({ ...object(ref) })) : [];
     const msrAudio = [];
+    const screenBindings = msr ? z.array(speakerBindingSchema).max(2).parse(object(visual.video).speakerBindings ?? []) : [];
+    if (new Set(screenBindings.map(binding => binding.speaker)).size !== screenBindings.length)
+        throw new Error('video_speaker_binding_invalid: each speaker needs one screen binding');
+    for (const binding of screenBindings) {
+        if (!characters.some(character => character.id === binding.speaker) || nonEnglishOutsideQuotes(binding.description))
+            throw new Error('video_speaker_binding_invalid: use a cast id and an English appearance description');
+    }
+    const visibleSpeakers = [...new Set(nativeLines.filter(line => line.delivery === 'on_screen').map(line => text(line.speaker)))];
+    if (msr && visibleSpeakers.length > 1 && visibleSpeakers.some(id => !screenBindings.some(binding => binding.speaker === id)))
+        throw new Error('video_speaker_binding_required: set shot_prompt speakerBindings from the start image for every on-screen speaker; left/right mean the viewer\'s left/right, not Image 1/Image 2');
+    if (msr && visibleSpeakers.length > 1 && new Set(screenBindings.filter(binding => visibleSpeakers.includes(binding.speaker)).map(binding => binding.screenPosition)).size !== visibleSpeakers.length)
+        throw new Error('video_speaker_binding_invalid: on-screen speakers need distinct screen positions');
+    if (msr && screenBindings.length) {
+        const start = text(object(visual.frames).start), expected = text(object(visual.video).speakerBindingImageSha256);
+        if (expected && (!start || fileHash(path.resolve(context.episode, 'storyboard', start)) !== expected))
+            throw new Error('video_speaker_binding_stale: the start image changed; inspect its positions and rewrite shot_prompt speakerBindings');
+    }
     for (const id of ids) {
         const matches = characters.filter(character => character.id === id);
         if (!id || matches.length !== 1) {
@@ -201,6 +225,9 @@ export function prepareVideoVoice(tool, input, context) {
             continue;
         }
         const speaker = { speaker: id, name: text(character.name) || id, tts: object(character.tts), description: voiceDescription(character) };
+        const screenBinding = screenBindings.find(binding => binding.speaker === id);
+        if (screenBinding)
+            speaker.screenBinding = screenBinding;
         // Video prompts are English: a non-Latin cast name falls back to the character id
         const label = nonEnglishOutsideQuotes(speaker.name) ? id : speaker.name;
         if (reference && msr) {
@@ -263,9 +290,12 @@ export function prepareVideoVoice(tool, input, context) {
     }
     if (reference && msr) {
         args.references = msrRefs;
-        // The prompt is MSR's only script: add each authored line the prompt does not already quote, in order.
+        // Narration is the only script authority. A substring cannot establish speaker ownership or turn order.
+        const quoted = [...String(args.prompt).matchAll(/"([^"]*)"|“([^”]*)”|「([^」]*)」/g)].map(match => match[1] ?? match[2] ?? match[3]);
+        if (lines.some(line => quoted.some(words => words.includes(text(line.tts)))))
+            throw new Error('video_dialogue_embedded: keep authored dialogue in shot_dialogue, not args.prompt/action/sound; video_plan compiles every turn with its speaker binding in order');
         const bySpeaker = new Map(speakers.map(speaker => [speaker.speaker, speaker]));
-        const script = lines.filter(line => !String(args.prompt).includes(text(line.tts))).map(line => {
+        const script = lines.map((line, turn) => {
             const id = text(line.speaker) || text(doc.narratorCharacterId), speaker = bySpeaker.get(id);
             const image = speaker?.imageIndices?.[0], audio = speaker?.audioIndex, direction = text(object(line.acting).direction);
             const who = image ? `Image ${image}` : speaker?.name ?? id;
@@ -275,10 +305,17 @@ export function prepareVideoVoice(tool, input, context) {
                 return `${label} speaks ${delivery}${direction ? ` (${direction})` : ''}${audio ? ` using Audio ${audio}` : ''}. ` +
                     `Do not show this speaker or animate any visible mouth during this line. ${audio ? `Audio ${audio} (${label})` : label}: "${text(line.tts)}"`;
             }
-            return `${who} speaks${direction ? ` (${direction})` : ''} with visible lip movement${audio ? ` synchronized with Audio ${audio}` : ''}` +
-                `. Only this speaker articulates the line. Preserve authored silent actions without adding listeners. ` +
+            const binding = speaker?.screenBinding;
+            const label = nonEnglishOutsideQuotes(speaker?.name ?? '') ? id : speaker?.name ?? id;
+            const identity = binding ? `${who}, ${label} at SCREEN ${binding.screenPosition.toUpperCase()} (${binding.description})` : `${who} (${label})`;
+            return `Turn ${turn + 1}: ${identity} speaks${direction ? ` (${direction})` : ''}${audio ? ` using Audio ${audio}` : ''}` +
+                `. Only this speaker's mouth moves; other visible mouths stay closed. ` +
                 `${audio ? `Audio ${audio} (${who})` : who}: "${text(line.tts)}"`;
         });
+        if (screenBindings.length)
+            prompt.push('Screen positions use the viewer\'s left and right in the opening image. Preserve these positions and each character\'s appearance.');
+        if (speakers.length > 1)
+            prompt.push('Speak the following turns in order, with a brief pause between speakers and no overlapping speech.');
         prompt.push(...script);
         if (typeof args.prompt === 'string' && msrAudio.length)
             args.prompt = afterImageBlock(args.prompt, msrAudio.sort());
