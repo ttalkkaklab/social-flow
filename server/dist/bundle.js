@@ -93569,14 +93569,23 @@ var require_character_identity = __commonJS({
       if (win?.SB_DOC?.characterSchemaVersion !== void 0 && !required3) errors.push("Unsupported SB_DOC.characterSchemaVersion");
       for (const c of chars) {
         if (!required3 && c?.character === void 0) continue;
-        const issues = identityErrors(c?.character);
+        const options = { ready: !isVoiceOnly(win, c.id) };
+        const issues = identityErrors(c?.character, options);
         errors.push(...issues.map((e2) => `Character ${c?.id}: ${e2}`));
-        if (!issues.length && Object.entries(direction(c.character)).some(([key, value]) => c.direction?.[key] !== value)) errors.push(`Character ${c.id}: direction does not match structured identity; regenerate handoff`);
+        if (!issues.length && Object.entries(direction(c.character, options)).some(([key, value]) => c.direction?.[key] !== value)) errors.push(`Character ${c.id}: direction does not match structured identity; regenerate handoff`);
         if (!/^[a-f0-9]{64}$/.test(c?.identitySha256 || "")) errors.push(`Character ${c?.id}: identitySha256 is required`);
       }
       return errors;
     }
-    module.exports = { GROUPS, REQUIRED, identityErrors, identityCharacter, direction, panelPrompt, boardIdentityErrors, requiresSpeech };
+    function isVoiceOnly(win, id) {
+      const entries = win?.SB_DOC?.characters;
+      const character = Array.isArray(entries) ? entries.find((c) => c.id === id) : entries?.[id];
+      return character?.voiceOnly === true && !(win.SCENES || []).some((s2) => {
+        const cast = s2.visual?.character;
+        return (Array.isArray(cast) ? cast : cast ? [cast] : []).some((c) => (typeof c === "string" ? c : c?.id) === id);
+      });
+    }
+    module.exports = { GROUPS, REQUIRED, identityErrors, identityCharacter, direction, panelPrompt, boardIdentityErrors, requiresSpeech, isVoiceOnly };
   }
 });
 
