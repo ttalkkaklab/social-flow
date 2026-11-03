@@ -765,6 +765,14 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   # @ starts a reveal clip at its own in-point; a shared video advances with the timeline.
   # Every source must cover its visible interval, including the final outgoing handle.
   INS=(); FILT=""; NIN=0
+  # Several dialogue lines can share one continuous filmed source. Reopening that
+  # source at sentence boundaries adds needless fades and fractional seek drift.
+  if [ "${SYNC:-0}" = 1 ] && [ "${GROUPED:-0}" = 0 ] && [ "$MV" -gt 1 ]; then
+    SAME_SOURCE=1
+    for VIS in "${FVIS[@]}"; do [ "$VIS" = "${FVIS[0]}" ] || SAME_SOURCE=0; done
+    case "${FVIS[0]}" in @*|*::*) SAME_SOURCE=0 ;; esac
+    if [ "$SAME_SOURCE" = 1 ]; then FVIS=("${FVIS[0]}"); FOFF=(0); MV=1; fi
+  fi
   j=0
   for VIS in "${FVIS[@]}"; do
     if [ "$j" -eq 0 ]; then

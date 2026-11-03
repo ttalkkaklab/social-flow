@@ -152,7 +152,7 @@ test('mixed-rate source covers a rounded output clock only while its last sample
  const dir=mkdtempSync(path.join(tmpdir(),'mixed-rate-card-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));
  mkdirSync(path.join(dir,'work'));
  ff(['-f','lavfi','-i','testsrc2=size=160x90:rate=16','-frames:v','273','-c:v','libx264','-pix_fmt','yuv420p',path.join(dir,'a.mp4')]);
- const settings='IDX=0; FVIS=(a.mp4); FPS=24; HANDLE_FRAMES=0; FRAMES=410; RENDER_FRAMES=410; D=17.083333333; D1=$D; RENDER_D=$D';
+ const settings='IDX=0; SYNC=1; MV=3; FVIS=(a.mp4 a.mp4 a.mp4); FOFF=(0 9.35 12.69); FDUR=(0.35 0.35 0.35); FPS=24; HANDLE_FRAMES=0; FRAMES=410; RENDER_FRAMES=410; D=17.083333333; D1=$D; RENDER_D=$D';
  let r=runRender(dir,settings);assert.equal(r.status,0,r.stdout+r.stderr);
  assert.equal(Number(probeFrames(path.join(dir,'work/v0.mp4')).nb_read_frames),410);
  assert.ok(mae(gray(path.join(dir,'work/v0.mp4'),409/24,.04),gray(path.join(dir,'a.mp4'),17,.04))<3,'last output sample comes from the final real source frame');
