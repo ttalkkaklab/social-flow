@@ -251,6 +251,15 @@ change of attention, revealed information, an action boundary or a necessary rea
 One shot may carry a complete exchange. Use the ordered `performance` and speech-group
 references in character-scenarios so that every story event survives the translation.
 Do not add coverage merely to meet a size count or repeat a medium close-up for every line.
+Before committing the shot list, read each complete scene without cuts, then compare the
+proposed boundaries. Merge adjacent shots whose frame already carries the continuing
+exchange or action. Split when a reveal, reaction, action boundary, viewpoint or necessary
+geography changes what the audience follows. A close-up is one possible reason, not a rule.
+Describe the meaningful opening, change and consequence of each retained shot. Remove
+redundant pauses and repeated setup. Derive its estimated length from those events and
+speech; timing cards and provider minimums never allocate seconds to fill. Preserve
+intentional silence when something changes during it. Consult [pacing cases](references/evals.md)
+for continuous dialogue, rapid action and an earned reaction cut.
 
 Before image prompts, perform the required camera-direction pass in
 [action direction](references/action-direction.md#required-camera-direction-pass).

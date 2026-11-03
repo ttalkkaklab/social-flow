@@ -7,6 +7,7 @@ import { readImageState } from './image-state.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { speakerBindingSchema } from './video-voice.js';
 import { compileVideoPrompt } from './video-prompt.js';
+import { characterPanels } from './video-image-inputs.js';
 /**
  * Storyboard module — the sequence → scene → shot data behind four tools
  * (storyboard_read · storyboard_apply · storyboard_check · scenario_check).
@@ -680,6 +681,33 @@ export function applyStoryboard(args, opts = {}) {
     if (changesProps && exists && args.expectedSha256 !== originalHash)
         throw new Error('head_moved: propSheet requires the current expectedSha256 from storyboard_read');
     const { win: next, findings, synced } = applyPatch(win, args, opts);
+    // Keep the review's panel links and the executable MSR references on the same shared sheets.
+    const panelIds = [...new Set((next.SCENES ?? []).flatMap(shot => contract().castOf(shot) ?? []))];
+    if (panelIds.length && existsSync(join(dirname(file), 'cast.json'))) {
+        const sheets = new Map();
+        for (const id of panelIds) {
+            try {
+                sheets.set(id, characterPanels().sheetPanels(dirname(file), [id]).get(id));
+            }
+            catch (error) {
+                findings.push({ level: 'warn', where: id, what: String(error) });
+            }
+        }
+        const doc = (next.SB_DOC ?? {});
+        const entries = Array.isArray(doc.characters) ? doc.characters
+            : Object.entries(doc.characters ?? {}).map(([id, value]) => ({ ...value, id }));
+        next.SB_DOC = { ...doc, characters: [...entries.map(entry => sheets.has(String(entry.id))
+                    ? { ...entry, panels: { ...(entry.panels ?? {}), ...sheets.get(String(entry.id)) } } : entry),
+                ...panelIds.filter(id => sheets.has(id) && !entries.some(entry => entry.id === id)).map(id => ({ id, panels: sheets.get(id) }))] };
+        for (const shot of next.SCENES ?? []) {
+            const visual = shot.visual;
+            if (visual?.frames?.mode !== 'reference'
+                || !(contract().castOf(shot) ?? []).every(id => sheets.has(id)))
+                continue;
+            visual.references = [...characterPanels().canonicalReferences(dirname(file), String(shot.id), contract().castOf(shot) ?? [], 'both'),
+                ...(Array.isArray(visual.references) ? visual.references : []).filter(ref => ref.role !== 'character')];
+        }
+    }
     const bad = findings.some((f) => f.level === 'bad');
     const st = next.STRUCTURE;
     const result = {
@@ -1231,32 +1259,13 @@ function castEntry(win, id) {
 }
 /** The sheet panels assets/characters/<id>/panels.json names — face, headless front and back — in MSR order. */
 function characterRefs(boardDir, win, shotId, ids, use, warnings) {
-    const views = ids.length === 1 ? ['face', 'front', 'back'].map((view) => [ids[0], view]) : ['face', 'front'].flatMap((view) => ids.map((id) => [id, view]));
-    // The sheet the cast check verified (cast.json source) comes first; an older board finds assets/characters/<id> upward.
-    const sources = new Map(readCast(boardDir).filter((entry) => typeof entry.source === 'string' && entry.source)
-        .map((entry) => [entry.id, dirname(resolve(boardDir, entry.source))]));
-    const folders = new Map(ids.map((id) => {
-        const own = sources.get(id);
-        if (own && existsSync(join(own, 'panels.json')))
-            return [id, own];
-        for (let dir = boardDir;; dir = dirname(dir)) {
-            if (existsSync(join(dir, 'assets/characters', id, 'panels.json')))
-                return [id, join(dir, 'assets/characters', id)];
-            if (dirname(dir) === dir)
-                throw new Error(`character_sheet_missing: ${id} has no assets/characters/${id}/panels.json`);
-        }
-    }));
-    return views.flatMap(([id, view]) => {
-        const panels = JSON.parse(readFileSync(join(folders.get(id), 'panels.json'), 'utf8')).panels ?? {};
-        // The sheet panels are required references: a missing view stops the plan rather than dropping it.
-        const file = panels[view]?.file;
-        if (!file || !existsSync(join(folders.get(id), file)))
-            throw new Error(`character_panel_missing: ${id} has no ${view} panel; generate it on the character sheet first`);
+    return characterPanels().canonicalReferences(boardDir, shotId, ids, use).map(ref => {
+        const view = ref.id.split('-').at(-1);
+        const id = ids.find(id => ref.id === `${shotId}-${id}-${view}`);
         const { text: detail, skipped } = identityCatalog().panelPrompt(castEntry(win, id)?.character, view);
         for (const field of skipped)
             warnings.push({ level: 'warn', where: shotId, what: `${id}'s ${field} is not English and stays out of the image prompt — write it in English on the character sheet` });
-        const purpose = (view === 'face' ? `${id}'s face and hair` : `${id}'s body and outfit, ${view}`) + (detail ? `: ${detail}` : '');
-        return [{ id: `${shotId}-${id}-${view}`, path: relative(boardDir, join(folders.get(id), file)), role: 'character', use, purpose }];
+        return { ...ref, purpose: ref.purpose + (detail ? `: ${detail}` : '') };
     });
 }
 const propContinuity = () => loadFromHere(join(REFERENCES_DIR, 'prop-continuity.js'));

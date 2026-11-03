@@ -277,13 +277,12 @@ One short is a book, a sequence is a paragraph, a scene is a sentence, a shot is
 | Shot (a "cut" on set) | One unbroken chunk from recording ON to OFF | **one `SCENES[]` entry**. `type` is the role (cover/points/…), not a grammar unit |
 | Reveal | The moment on-screen text appears within the same shot | `narration` segments and bullets. Not a shot — the scene-frame row label is "reveal" |
 | Take | A retry of the same shot | Not an entry in this array. Generation rounds live in `PRODUCTION.maxAttempts` and `.work/cost-tally.tsv`; a filmed shot's retries are the last take in the file (shot-script-template) |
-| Coverage | Material from filming one scene at several sizes | Shots sharing a `scene` number — two sizes per scene (a wide — `els`·`ls`·`ws`·`fs`·`mfs` — and a close), no repeated `shot.info`, one `space.line`; a scene that opens close still owes an `ls`/`els` (`mfs`/`two` for two people) next, which `fs` does not pay. `structure-contract.js` warns past those |
+| Coverage | Alternative views available to the edit | Choose views for a reveal, action boundary, reaction, viewpoint or necessary spatial clarity. No minimum shot count or size quota. |
 
-A short is usually one sequence. A scene breaks when the place changes, the time breaks, or the
-value has turned and a second event begins — never for a slide, a chart or a new subject
-(§structure, the cut test). Shots go **one per new piece of information** — 4–6 shots in a
-dialogue scene is standard, and the floor everywhere, cover and CTA scenes included, is 2 shots
-at two sizes per scene (a wide + a close).
+A short is usually one sequence. A scene breaks when place or time changes, or a completed
+value turn gives way to a new event. Within it, keep a continuous exchange or action in one
+shot when its framing can show all relevant cues. Split when a new view changes what the
+viewer notices; a new sentence or a second speaker alone is not a cut reason.
 
 `type` (cover/points/quote/broll/outro) is the kind of screen. The **playback role** is `beat`.
 It's orthogonal to the grammar axis.
@@ -462,29 +461,12 @@ answer to each.
    `COMPREHENSION.answer` completes, and the scenes after it are aftermath. A short's one
    sequence usually shares its question with `COMPREHENSION.question` and pays it in the scene
    before the CTA or in the CTA's own scene.
-9. **Scenes and shots scale with the running time** (story-v1 guidance — a story-v2 board cuts
-   by what the audience needs to notice, storyboard SKILL §4, and `check-scenes.js` skips these
-   bands there). A 45–75 s short had 2–4 scenes; a 10-minute long-form 8–15. Each scene usually
-   wants two shots at two sizes — one wide
-   (`els·ls·fs·mfs`) that sets the place and one close (`mcu·cu·choker·ecu·insert`) that pays
-   the moment — and the cover's scene and the CTA's scene are not exempt: the cover is the
-   close of its scene, the next shot sets the place, and the CTA returns to the cover's frame
-   inside the last scene — returns to its framing, the size and composition, not its place;
-   a CTA that goes back to the cover's place is a new scene with its own number, place and
-   time. The wide and the close are picture shots of the scene: an explanation screen's `size`
-   frames the drawing and fills neither slot. A scene may open on a close and pay it back with
-   the wide in the next shot — that is not a breach of establish-then-close. A scene that is
-   one shot is a shot label, not a scene. When places outnumber the band, the band wins: room
-   moves inside one stretch of time are shot moves, and `place` is the room the stretch's first
-   picture shot shows (부엌) — never a name invented to cover the rooms (집 안, 자취방, 부엌 겸
-   거실); rule 1's umbrella ban outranks the band, and the other rooms are shot moves under
-   that slugline. That absorption is for when the band forces it: with a scene slot still
-   free, a room the action moves to is its own scene.
-   The CTA is a shot of the last scene when it only receives or shows the consequence of that
-   scene's event; when its subject performs a new action of their own (writing, leaving,
-   refusing — a citizen writes for the first time after the king promulgates), that is the
-   last scene and the promulgation is the scene before it. Write the scenes — place, time, event, turn, out —
-   before any shot exists, then group the shots.
+9. **Scenes and shots follow events.** A scene may be one shot or many. Merge adjacent shots
+   that repeat the same setup and carry one continuous action or exchange. Split for a
+   consequential reaction, hidden evidence, viewpoint change, spatial clarity or a supported
+   adapter limit. A close-up is one useful reason, not the only reason. Never pad a scene
+   with a wide/close pair or divide dialogue merely to distribute speakers.
+
 10. **A shot says one new thing.** The unit is the information, not the sentence: a shot may
     speak several segments, but if they do not rewrite as one `shot.info` line, it is two
     shots. When a line addresses two things (an answer to the other character and a question
@@ -2568,45 +2550,22 @@ only figures here with published listening tests behind them. Where a cue change
 
 ### Cut length (`duration`) — decided by what the cut is for
 
-> story-v1 only — guidance for resumed boards; story-v2 boards follow character-scenarios.md and
-> derive time from the performance (storyboard SKILL §5). The engine length ranges below apply
-> to every board.
+Time what the viewer must see and hear: ordered speech turns, independently timed actions,
+necessary reactions and intentional silence. Concurrent movement runs under speech instead
+of adding another full block. End after the consequence is readable. No purpose category,
+shot size, mood or long-take label supplies a minimum duration or wide-to-close ratio.
 
-A shot carrying narration took its length from the speech on story-v1 boards — narration
-characters / 4.5, capped at 13s — and that number is a legacy estimate, not the audio length
-(the `duration` row in §fields common to every shot). A story-v2 board times the shot from the
-measured speech and the independent actions (`performance`, `SB_DOC.performanceTimingVersion:1`);
-reveals are laid under the measured clock.
+Before requesting generation, walk through the complete scene and compare neighbouring
+shots. Merge redundant setup/continuation cuts; split when a new view earns the attention
+change. If the performance exceeds the selected adapter's limit, shorten redundant wording
+or split at an actual turn. Never accelerate all speech to fit an arbitrary clip length.
 
-**A generated video clip is a different question.** Its length is a design choice, and the model
-fills whatever time it is handed: ask 8 seconds for a 4-second idea and it invents the other 4 —
-the subject drifts, the middle goes dead. The vendor names this failure itself
-(2026-08-25 delta check): Seedance 2.5 — too little plot for the time and *"the model may
-improvise more freely"*, too much and it adds cuts or drops plot. Pick the length from what
-the cut is for:
-
-| What the cut is for | Length |
-|---|---|
-| Object close-up, insert | 3–4s |
-| A person moving, an action | 5–7s |
-| A face carrying emotion, a line of speech | 7–10s |
-| A shot establishing the space | 5–8s |
-| A deliberate long take | 10s+ — and `camera.movement` stays one move |
-
-The purpose row is the first pick; `shot.feel` refines it (directing-grammar §5 carries a length
-per feel), and across shots **a wide holds at least 1.5× a close** — a wide frame takes longer to
-read, a close-up carries one thing and can be short (directing-grammar §6).
-
-**Ask for the length you will use.** Seedance makes only the seconds you request and bills them,
-so `durationSeconds` is the used length.
-
-The existing caps stand: a motion background stays inside one clip's length — the routed
-engine's **server-validated** range, seedance **4–15s** on the 2.0 grades and
-**4–30s** on 2.5 — the previz route every motion background takes (`server/src/seedance-client.ts` holds the per-model
-table, and the check strip warns past the route's cap. The real risk is a clip shorter than
-its scene, which shows the loop's seam) — and a b-roll's used length is 4s by default. The
-4s floor cuts the other way too: a scene under 4s still requests 4 and the build cuts
-the tail at the scene boundary.
+`duration` is the authored edit length, not a measured performance. Label estimates until
+actual speech or media exist. Existing assembly preserves that edit length to avoid cutting
+independent action or intentional silence; revising an overlong plan requires updating
+`duration` itself. Ask the adapter for the shortest supported length that covers the revised
+performance and trim only unused source coverage. Provider minimums are transport limits,
+not a reason to lengthen the storyboard. Read current limits from `video_catalog`.
 
 ### Motion background (`visual.video`) — a scene background from image to video
 

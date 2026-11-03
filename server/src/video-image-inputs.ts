@@ -15,6 +15,10 @@ const imageRouting = () => load(fileURLToPath(new URL('../../skills/storyboard/r
   imageReferences(scene: unknown): ImageReference[];
 };
 interface ImageReference { id: string; path: string; role: string; use: string; purpose: string }
+export const characterPanels = () => load(fileURLToPath(new URL('../../skills/channel/references/character-panels.js', import.meta.url))) as {
+  canonicalReferences(boardDir: string, shotId: string, ids: string[], use: string): ImageReference[];
+  sheetPanels(boardDir: string, ids: string[]): Map<string, Record<string, string>>;
+};
 export interface ImageBinding extends ImageMetadata {
   id: string; path: string; role: string; use: string; purpose: string; submitted: boolean;
 }
@@ -35,7 +39,7 @@ const PANEL_VIEWS: Record<string, string> = { face: 'face', front: 'headless fro
  * (panels.json) that show one character: the face close-up carries the head, the headless panels
  * the body and outfit.
  */
-function msrPanelBinding(paths: string[], refs: ImageReference[]): string {
+function msrPanelBinding(paths: string[], refs: ImageReference[], compact = false): string {
   const groups = new Map<string, string[]>();
   paths.forEach((file, i) => {
     if (refs[i].role === 'background') return;
@@ -44,8 +48,9 @@ function msrPanelBinding(paths: string[], refs: ImageReference[]): string {
     const view = Object.entries(panels).find(([, panel]) => panel.file === path.basename(file))?.[0];
     if (view && PANEL_VIEWS[view]) groups.set(path.dirname(file), [...(groups.get(path.dirname(file)) ?? []), `Image ${i + 1} (${PANEL_VIEWS[view]})`]);
   });
-  return [...groups].filter(([, items]) => items.length > 1).map(([folder, items]) =>
-    `${items.join(', ')} show one character, ${path.basename(folder)}: render one complete character with the head and hair from the face and the body and outfit from the headless panels.`).join('\n');
+  return [...groups].filter(([, items]) => items.length > 1).map(([folder, items]) => compact
+    ? `Images ${items.map(item => item.replace(/Image (\d+) \(([^)]+)\)/, '$1($2)')).join(', ')}: ONE ${path.basename(folder)}; combine head and outfit.`
+    : `${items.join(', ')} show one character, ${path.basename(folder)}: render one complete character with the head and hair from the face and the body and outfit from the headless panels.`).join('\n');
 }
 /** A character-sheet panel counts once per sheet folder; any other character image counts alone. */
 function characterKey(file: string): string {
@@ -63,7 +68,15 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
   const errors = routing.checkFrames(shot);
   if (errors.length) throw new Error('image_plan_invalid: ' + errors.join('; '));
   const frames = routing.framePlan(shot);
-  const references = routing.imageReferences(shot);
+  let references = routing.imageReferences(shot);
+  const rawCast = (shot.visual as Record<string, unknown> | undefined)?.character;
+  const canonicalMsr = tool === 'astra_genai_msr' && frames.mode === 'reference' && rawCast !== undefined;
+  if (canonicalMsr) {
+    const ids = ([] as unknown[]).concat(rawCast ?? []).map(entry => typeof entry === 'string' ? entry : (entry as { id: string }).id);
+    // Old combined pictures and omitted faces cannot redefine a declared principal's identity.
+    references = [...characterPanels().canonicalReferences(path.join(episode, 'storyboard'), String(shot.id ?? 'shot'), ids, 'both'),
+      ...references.filter(ref => ref.role !== 'character')];
+  }
   const videoRefs = references.filter(ref => ['video', 'both'].includes(ref.use));
   const frameMode = frames.mode !== 'reference';
   const keyframes = visual.frames?.keyframes;
@@ -124,9 +137,9 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
       const characters = new Set(sent.flatMap((ref, i) => ref.role === 'character' ? [characterKey(paths[i])] : []));
       if (characters.size > 2) throw new Error(`msr_character_limit: references show ${characters.size} characters; reference two principal characters and describe anyone else in the action`);
       // The model card describes each reference first ("Image 1: ..."), then the action.
-      const binding = msrPanelBinding(paths, sent);
-      args.prompt = [...sent.map((ref, i) => `Image ${i + 1}: ${ref.role}, ${ref.purpose}`),
-        ...(start ? [`Image ${sent.length + 1}: the opening picture, the characters, place and props as the shot begins`] : []),
+      const binding = msrPanelBinding(paths, sent, canonicalMsr);
+      args.prompt = [...sent.map((ref, i) => `Image ${i + 1}: ${canonicalMsr && ref.role === 'character' ? '' : ref.role + ', '}${ref.purpose}`),
+        ...(start ? [`Image ${sent.length + 1}: ${canonicalMsr ? 'opening composition (people, place, props)' : 'the opening picture, the characters, place and props as the shot begins'}`] : []),
         ...(binding ? [binding] : []), '', String(args.prompt ?? '')].join('\n');
     } else {
       const guidance = videoRefs.map((ref, i) => `${tool === 'fasth3_omni_reference' ? '<Picture ' + (i + 1) + '>' : 'Image ' + (i + 1)} (${ref.id}, ${ref.role}): ${ref.purpose}`).join('\n');

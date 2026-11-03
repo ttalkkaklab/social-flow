@@ -730,9 +730,9 @@
       const sizes = new Set(pics.map(x => x.s.shot && x.s.shot.size).filter(Boolean));
       if (!performanceStory && xs.length === 1 && placed.length >= 5 && groups.size >= 2)
         warn(where, `one shot — coverage is two sizes per scene, a wide and a close; give it a second shot or fold it into a neighbour (scenes-schema §grammar units)`);
-      else if (xs.length >= 2 && pics.length === 1 && placed.length >= 5)
+      else if (!performanceStory && xs.length >= 2 && pics.length === 1 && placed.length >= 5)
         warn(where, `one picture shot and ${xs.length - 1} explanation screen(s) — an explanation screen's size frames the drawing and fills neither slot; coverage is two picture sizes, a wide and a close (rule 9)`);
-      else if (xs.length >= 2 && sizes.size) {
+      else if (!performanceStory && xs.length >= 2 && sizes.size) {
         if (!WIDE.some(z => sizes.has(z)) && !placeKnown)
           warn(where, `${pics.length} picture shots and no wide (${WIDE.join('·')}) — coverage is two sizes per scene, a wide that sets the place and a close; an explanation screen's ls is not the wide (directing-grammar §6.1–2)`);
         if (!CLOSE.some(z => sizes.has(z)))

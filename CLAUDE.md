@@ -98,7 +98,13 @@ its sheet panels — face close-up, headless front and headless back (2026-10-31
 character uses all three; two use each face, then each front; the shot's start image (its characters,
 place and props composed by `shot_image`) takes the background slot, and the plain place picture stays out.
 At most two characters take references; anyone else on screen is described in the action
-and drawn by the model, and `video_plan` refuses references for a third character
+and drawn by the model. For a declared MSR cast, storyboard writes and video planning rebuild
+the character references from the cast's shared panels.json in that same order. Missing
+faces cannot fall back to a body-only picture or an old transport alias; planning reports
+the missing panel. Storyboard writes also synchronize the displayed face/front/back links.
+Pinned samples follow the registered panel owner even when an old voiceReference names
+transport copies. On boards without a declared cast, legacy explicit image ownership stays.
+`video_plan` refuses references for a third character
 (`msr_character_limit`). `video_plan` names the panels that show one character and lays the
 prompt out as the model card does: reference descriptions first, then the action, then
 `Audio N (Image M): "…"` lines.

@@ -32699,6 +32699,10 @@ function resolveCharacterVoice(character, context, warnings) {
 import { createRequire as createRequire4 } from "node:module";
 var load3 = createRequire4(import.meta.url);
 
+// src/video-image-inputs.ts
+import { createRequire as createRequire5 } from "node:module";
+var load4 = createRequire5(import.meta.url);
+
 // src/storyboard.ts
 import { createHash as createHash3 } from "node:crypto";
 
@@ -33144,10 +33148,6 @@ import { fileURLToPath as fileURLToPath5 } from "node:url";
 // src/video-pricing.ts
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 var PRICE_FILE = fileURLToPath4(new URL("../../skills/autoproduce/references/prices.tsv", import.meta.url));
-
-// src/video-image-inputs.ts
-import { createRequire as createRequire6 } from "node:module";
-var load4 = createRequire6(import.meta.url);
 
 // src/video-routing.ts
 var load5 = createRequire7(import.meta.url);

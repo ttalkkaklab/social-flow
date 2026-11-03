@@ -141,7 +141,18 @@ function voiceReference(character: Record<string, unknown>, context: VoiceContex
  */
 function msrSubject(character: Record<string, unknown>, refs: Record<string, unknown>[], context: VoiceContext): { index: number; slot: number } {
   const owned = object(character.voiceReference).imagePaths;
-  const ownedPaths = Array.isArray(owned) ? owned.map(value => realpathSync(path.resolve(context.episode, 'storyboard', String(value)))) : [];
+  let ownedPaths: string[];
+  const declared = ([] as unknown[]).concat(object(context.shot.visual).character ?? [])
+    .map(entry => typeof entry === 'string' ? entry : text(object(entry).id));
+  if (declared.includes(text(character.id))) {
+    const { sheetPanels } = load('../../skills/channel/references/character-panels.js') as {
+      sheetPanels(dir: string, ids: string[]): Map<string, Record<string, string>>;
+    };
+    const dir = path.join(context.episode, 'storyboard');
+    // Planning rebuilt these references from this same registered owner; transport aliases no longer identify the slot.
+    const panels = sheetPanels(dir, [text(character.id)]).get(text(character.id))!;
+    ownedPaths = Object.values(panels).map(file => realpathSync(path.resolve(dir, file)));
+  } else ownedPaths = Array.isArray(owned) ? owned.map(value => realpathSync(path.resolve(context.episode, 'storyboard', String(value)))) : [];
   let subject = 0, index = -1, slot = 0;
   refs.forEach((ref, i) => {
     if (ref.background) return;

@@ -234,3 +234,20 @@ test('MSR keeps a phone caller off screen without borrowing the visible listener
   assert.equal(only.voiceContinuity.strategy, 'reference_voice');
   assert.match(only.args.prompt, /friend speaks off screen/);
 });
+
+test('declared MSR cast maps pinned voices to canonical faces instead of stale transport aliases',t=>{
+ const ctx=fixture(t),characters=ctx.board.SB_DOC.characters;
+ fs.mkdirSync(path.join(ctx.episode,'storyboard'));
+ const references=[];
+ for(const c of characters){
+  const folder=path.join(ctx.episode,'assets/characters',c.id);fs.mkdirSync(folder,{recursive:true});const panels={};
+  for(const view of ['face','front','back']){const file=view+'.png';fs.writeFileSync(path.join(folder,file),'panel');panels[view]={file,view,purpose:'character_reference'};}
+  fs.writeFileSync(path.join(folder,'panels.json'),JSON.stringify({schemaVersion:1,panels}));
+  c.voiceReference.imagePaths=[path.join(ctx.episode,'deleted-transport-'+c.id+'.jpg')];
+  references.push({imagePath:path.join(folder,'face.png')});
+ }
+ ctx.shot.visual.character=characters.map(c=>c.id);ctx.msrVoice=true;
+ const result=prepareVideoVoice('astra_genai_msr',{prompt:'Exchange.',references},ctx);
+ assert.deepEqual(result.voiceContinuity.speakers.map(s=>s.imageIndices),[[1],[2]]);
+ assert.deepEqual(result.args.references.map(r=>r.audioPath),characters.map(c=>c.voiceReference.path));
+});
