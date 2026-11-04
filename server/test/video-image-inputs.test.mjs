@@ -43,6 +43,13 @@ test('reference-only inputs keep order and roles; installed adapters enforce the
  const tooMany=prepareVideoImages('seedance_reference',{prompt:'Walk',model:'dreamina-seedance-2-0-260128'},s,root);
  assert.throws(()=>parseVideoArgs('seedance_reference',tooMany.args),/at most 9/);
 });
+test('MSR preserves explicit image references on a legacy board without a declared cast',t=>{
+ const root=fixture(t),s=shot('reference',[ref()]);
+ s.visual.character=['hero'];s.visual.frames.start='start.png';
+ const p=prepareVideoImages('astra_genai_msr',{prompt:'Walk'},s,root);
+ assert.deepEqual(p.args.references.map(r=>path.basename(r.imagePath)),['hero.png','start.png']);
+ assert.match(p.args.prompt,/Image 1: character, Preserve hero appearance/);
+});
 test('MSR names the character-sheet panels of one character as one subject',t=>{
  const root=fixture(t),sheet=path.join(root,'assets/characters/kardum');fs.mkdirSync(sheet,{recursive:true});
  for(const name of ['face','body','back'])fs.writeFileSync(path.join(sheet,name+'.png'),png);
@@ -81,4 +88,25 @@ test('ASTRA ending frame uses the adapter duration conversion rather than a seco
  const p=prepareVideoImages('astra_keyframe_video',{prompt:'Move',duration:4.2,frameRate:24},s,root);
  assert.deepEqual(p.args.images.map(i=>i.frameIdx),[0,24,96]);
  assert.equal(parseVideoArgs('astra_keyframe_video',p.args).numFrames,97);
+});
+
+test('declared MSR principals rebuild canonical faces and bodies despite stale transport references',t=>{
+ const root=fixture(t),board=path.join(root,'storyboard'),chars=['hero','ally'];
+ for(const id of chars){
+  const folder=path.join(root,'assets/characters',id);fs.mkdirSync(folder,{recursive:true});
+  const panels={};for(const view of ['face','front','back']){fs.writeFileSync(path.join(folder,view+'.png'),png);panels[view]={file:view+'.png',purpose:'character_reference',view};}
+  fs.writeFileSync(path.join(folder,'panels.json'),JSON.stringify({schemaVersion:1,panels}));
+ }
+ fs.writeFileSync(path.join(board,'cast.json'),JSON.stringify({characters:chars.map(id=>({id,source:'../assets/characters/'+id+'/identity.md'}))}));
+ const s={...shot('reference',[ref('hero','image'),ref('mid','both')]),id:'s0001'};
+ s.visual.character=chars;s.visual.frames.start='start.png';
+ const p=prepareVideoImages('astra_genai_msr',{prompt:'Exchange'},s,root);
+ assert.deepEqual(p.args.references.map(r=>path.relative(root,r.imagePath)),[
+  'assets/characters/hero/face.png','assets/characters/ally/face.png',
+  'assets/characters/hero/front.png','assets/characters/ally/front.png','storyboard/start.png']);
+ assert.match(p.args.prompt,/Images 1\(face\), 3\(headless front body\): ONE hero/);
+ assert.equal(p.imageBindings.filter(r=>r.submitted).length,5);
+ assert.throws(()=>prepareVideoImages('astra_genai_msr',{prompt:'Exchange',references:[{imagePath:path.join(board,'mid.png')}]},s,root),/image_plan_mismatch/);
+ fs.unlinkSync(path.join(root,'assets/characters/ally/face.png'));
+ assert.throws(()=>prepareVideoImages('astra_genai_msr',{prompt:'Exchange'},s,root),/character_panel_missing: ally.*face/);
 });

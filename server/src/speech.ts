@@ -1,4 +1,5 @@
 import { routingContext } from './video-routing.js';
+import { resolveCharacterVoice } from './video-voice.js';
 import { speechVideoCapabilities, VIDEO_ADAPTERS } from './video-registry.js';
 /** Model-independent dialogue addressing, revision tracking and media dependencies. */
 import { createHash, randomUUID } from 'node:crypto';
@@ -84,8 +85,7 @@ export function speechVideoPlan(input: Line[] | {narration?: Line[]; [key: strin
   const scene = Array.isArray(input) ? {narration:input} : input;
   const lines = scene.narration || [];
   const onScreen = lines.some(line => line.delivery === 'on_screen');
-  // A native-speech model (MSR) voices the lines written in its prompt: no line audio, and no narration lane.
-  if (capabilities.nativeSpeech && lines.some(line => line.delivery !== 'on_screen')) throw new Error('Native video speech voices on-screen lines only; give narration and off-screen lines their own shot');
+  // Native speech renders every authored delivery in the soundtrack; only on-screen speech moves a visible mouth.
   const mode = capabilities.nativeSpeech ? 'native' : !onScreen ? 'voiceover' : capabilities.audioConditioning && capabilities.lipSync ? 'audio_conditioned' : capabilities.postLipSync ? 'post_lipsync' : null;
   if (!mode) throw new Error('Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting');
   const timeline = actingContract().planScenePerformance(scene,measuredDuration);
@@ -111,7 +111,9 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
   if (mutates && args.expectedRevision !== revision) throw new Error('Read speech first and supply its current expectedRevision; the storyboard may have changed');
   const doc = object(win.SB_DOC);
   const rawCharacters = doc.characters;
-  const characters = (Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object(rawCharacters)).map(([id, c]) => ({ ...object(c), id }))) as Character[];
+  const voiceWarnings: string[] = [];
+  const characters = (Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object(rawCharacters)).map(([id, c]) => ({ ...object(c), id })))
+    .map(c => resolveCharacterVoice(object(c), { episode: dirname(dirname(file)), board: win, shot: {} }, voiceWarnings)) as Character[];
   const character = (id: string | undefined) => characters.find(c => c.id === id);
   const scenes = win.SCENES!;
   let changed = false;
@@ -311,5 +313,5 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
     const tmp = file + '.' + randomUUID() + '.tmp';
     writeFileSync(tmp, nextSource); renameSync(tmp, file);
   }
-  return { revision: hash(readFileSync(file)), changed, invalidated, plan, timing, ...(args.action === 'plan_audio' ? {audioPlans:selected.map(({scene,line})=>({shotId:scene.id,lineId:line.id,...speechAudioPlan(line,character(line.speaker))}))} : {}), lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line,character(line.speaker)), audioProvenanceStatus:object(object(object(scene.visual).video).speechBinding).mode==='native'?'native_speech':audioProvenanceStatus(line,character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line,character(line.speaker)) })) };
+  return { revision: hash(readFileSync(file)), changed, invalidated, plan, timing, ...(voiceWarnings.length ? {voiceWarnings} : {}), ...(args.action === 'plan_audio' ? {audioPlans:selected.map(({scene,line})=>({shotId:scene.id,lineId:line.id,...speechAudioPlan(line,character(line.speaker))}))} : {}), lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line,character(line.speaker)), audioProvenanceStatus:object(object(object(scene.visual).video).speechBinding).mode==='native'?'native_speech':audioProvenanceStatus(line,character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line,character(line.speaker)) })) };
 }

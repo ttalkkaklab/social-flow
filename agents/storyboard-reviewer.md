@@ -118,7 +118,13 @@ Reject invented historical evidence as a repair for an abstract or uncertain sta
 - Do simultaneous speech/actions overlap intentionally, with time for independent actions
   and necessary reactions? Are estimates distinguished from measured timing?
 
-Judge shot changes by what the audience needs to notice, not a coverage quota. Do not demand
+Judge shot changes by what the audience needs to notice, not a coverage quota.
+Compare adjacent setups: a continuing exchange or action may share one shot, while a reveal,
+reaction, viewpoint change or necessary spatial clarification can earn a cut. Identify the
+opening, change and consequence; flag idle tails and repeated setup rather than demanding
+shortness everywhere. Check estimated duration against the whole performance, including
+overlapping action and intentional silence, without fixed seconds per size or speaker.
+Do not demand
 one shot per line, mandatory second sizes or short dialogue solely because the canvas is
 vertical. Flag redundancy or rushed comprehension with the affected event; duration by itself
 is not a defect. Preserve explicit user constraints and actual adapter limits.

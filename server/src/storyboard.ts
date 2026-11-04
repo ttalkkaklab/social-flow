@@ -5,6 +5,9 @@ import { workflowEpisode } from './production-workflow.js';
 import { imageContext } from './image-routing.js';
 import { readImageState } from './image-state.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
+import { speakerBindingSchema } from './video-voice.js';
+import { compileVideoPrompt } from './video-prompt.js';
+import { characterPanels } from './video-image-inputs.js';
 /**
  * Storyboard module — the sequence → scene → shot data behind four tools
  * (storyboard_read · storyboard_apply · storyboard_check · scenario_check).
@@ -708,7 +711,7 @@ export function applyPatch(win: Board, patch: StoryboardApplyArgs, opts: { outli
       const video = (shot.visual as { video?: Record<string, unknown> } | undefined)?.video;
       const old = (earlier.get(shot.id)?.visual as { video?: Record<string, unknown> } | undefined)?.video;
       if (!video?.promptBasis || video.prompt === old?.prompt) return shot;
-      const { promptBasis: _basis, ...rest } = video;
+      const { promptBasis: _basis, promptSource: _source, ...rest } = video;
       return { ...shot, visual: { ...shot.visual, video: rest } } as Shot;
     });
   }
@@ -748,6 +751,28 @@ export function applyStoryboard(args: StoryboardApplyArgs, opts: { outline?: boo
   if (changesProps && exists && args.expectedSha256 !== originalHash)
     throw new Error('head_moved: propSheet requires the current expectedSha256 from storyboard_read');
   const { win: next, findings, synced } = applyPatch(win, args, opts);
+  // Keep the review's panel links and the executable MSR references on the same shared sheets.
+  const panelIds = [...new Set((next.SCENES ?? []).flatMap(shot => contract().castOf(shot) ?? []))];
+  if (panelIds.length && existsSync(join(dirname(file), 'cast.json'))) {
+    const sheets = new Map<string, Record<string, string>>();
+    for (const id of panelIds) {
+      try { sheets.set(id, characterPanels().sheetPanels(dirname(file), [id]).get(id)!); }
+      catch (error) { findings.push({ level: 'warn', where: id, what: String(error) }); }
+    }
+    const doc = (next.SB_DOC ?? {}) as Record<string, unknown>;
+    const entries = Array.isArray(doc.characters) ? doc.characters as Array<Record<string, unknown>>
+      : Object.entries(doc.characters ?? {}).map(([id, value]) => ({ ...(value as object), id })) as Array<Record<string, unknown>>;
+    next.SB_DOC = { ...doc, characters: [...entries.map(entry => sheets.has(String(entry.id))
+      ? { ...entry, panels: { ...(entry.panels as object ?? {}), ...sheets.get(String(entry.id)) } } : entry),
+      ...panelIds.filter(id => sheets.has(id) && !entries.some(entry => entry.id === id)).map(id => ({ id, panels: sheets.get(id) }))] };
+    for (const shot of next.SCENES ?? []) {
+      const visual = shot.visual as Record<string, unknown> | undefined;
+      if ((visual?.frames as { mode?: string } | undefined)?.mode !== 'reference'
+        || !(contract().castOf(shot) ?? []).every(id => sheets.has(id))) continue;
+      visual!.references = [...characterPanels().canonicalReferences(dirname(file), String(shot.id), contract().castOf(shot) ?? [], 'both'),
+        ...(Array.isArray(visual!.references) ? visual!.references as Array<Record<string, unknown>> : []).filter(ref => ref.role !== 'character')];
+    }
+  }
   const bad = findings.some((f) => f.level === 'bad');
   const st = next.STRUCTURE;
   const result: ApplyResult = {
@@ -1256,27 +1281,12 @@ function castEntry(win: Board, id: string): Record<string, unknown> | undefined 
 }
 /** The sheet panels assets/characters/<id>/panels.json names — face, headless front and back — in MSR order. */
 function characterRefs(boardDir: string, win: Board, shotId: string, ids: string[], use: string, warnings: Finding[]): ImageRef[] {
-  const views = ids.length === 1 ? ['face', 'front', 'back'].map((view) => [ids[0], view]) : ['face', 'front'].flatMap((view) => ids.map((id) => [id, view]));
-  // The sheet the cast check verified (cast.json source) comes first; an older board finds assets/characters/<id> upward.
-  const sources = new Map(readCast(boardDir).filter((entry) => typeof entry.source === 'string' && entry.source)
-    .map((entry) => [entry.id, dirname(resolve(boardDir, entry.source as string))]));
-  const folders = new Map(ids.map((id) => {
-    const own = sources.get(id);
-    if (own && existsSync(join(own, 'panels.json'))) return [id, own];
-    for (let dir = boardDir; ; dir = dirname(dir)) {
-      if (existsSync(join(dir, 'assets/characters', id, 'panels.json'))) return [id, join(dir, 'assets/characters', id)];
-      if (dirname(dir) === dir) throw new Error(`character_sheet_missing: ${id} has no assets/characters/${id}/panels.json`);
-    }
-  }));
-  return views.flatMap(([id, view]) => {
-    const panels = (JSON.parse(readFileSync(join(folders.get(id)!, 'panels.json'), 'utf8')) as { panels?: Record<string, { file?: string }> }).panels ?? {};
-    // The sheet panels are required references: a missing view stops the plan rather than dropping it.
-    const file = panels[view]?.file;
-    if (!file || !existsSync(join(folders.get(id)!, file))) throw new Error(`character_panel_missing: ${id} has no ${view} panel; generate it on the character sheet first`);
+  return characterPanels().canonicalReferences(boardDir, shotId, ids, use).map(ref => {
+    const view = ref.id.split('-').at(-1)!;
+    const id = ids.find(id => ref.id === `${shotId}-${id}-${view}`)!;
     const { text: detail, skipped } = identityCatalog().panelPrompt(castEntry(win, id)?.character, view);
     for (const field of skipped) warnings.push({ level: 'warn', where: shotId, what: `${id}'s ${field} is not English and stays out of the image prompt — write it in English on the character sheet` });
-    const purpose = (view === 'face' ? `${id}'s face and hair` : `${id}'s body and outfit, ${view}`) + (detail ? `: ${detail}` : '');
-    return [{ id: `${shotId}-${id}-${view}`, path: relative(boardDir, join(folders.get(id)!, file)), role: 'character', use, purpose }];
+    return { ...ref, purpose: ref.purpose + (detail ? `: ${detail}` : '') };
   });
 }
 type PropSnap = { propId: string; description: string; references: Array<{ path?: string }>; endReferences: Array<{ path?: string }>;
@@ -1497,13 +1507,14 @@ export function recordShotImage(args: z.infer<typeof shotImageSchema>, request: 
 }
 
 // Step 5: the video prompt, written from the shot's icon attributes, lines and the author's English action.
-const MUSIC_WORD = /\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i;
 export const shotPromptSchema = z.object({
   path: outlinePath,
   id: shotIdSchema,
   action: nonEmpty.describe('What happens in the shot, in English: the subjects\' movement from the opening picture'),
   end: nonEmpty.optional().describe('The closing picture, in English'),
   sound: nonEmpty.optional().describe('Ambient sound and effects, in English; the shot\'s lines come from shot_dialogue. "no music" is added unless it names music'),
+  speakerBindings: z.array(speakerBindingSchema).max(2).optional()
+    .describe('MSR speakers as seen in the start image, e.g. [{speaker:"hero",screenPosition:"left",description:"the man in black armor"}]; viewer coordinates, never reference order'),
 }).strict();
 
 export function writeShotPrompt(args: z.infer<typeof shotPromptSchema>): ApplyResult & { prompt: string } {
@@ -1516,54 +1527,29 @@ export function writeShotPrompt(args: z.infer<typeof shotPromptSchema>): ApplyRe
   const mode = (plan.render as { mode?: string } | undefined)?.mode;
   if (mode !== 'generated_video') throw new Error(`shot_prompt: ${args.id} is a ${mode ?? 'unrouted'} cut; only a generated_video cut takes a video prompt`);
   const frames = (visual.frames ?? {}) as { mode?: string }, msr = frames.mode === 'reference';
-  const words = loadFromHere(join(REFERENCES_DIR, 'assemble-bg-prompt.js')) as { SIZE_WORDS: Record<string, string>; ANGLE_WORDS: Record<string, string> };
-  const travels = (loadFromHere(join(REFERENCES_DIR, 'production-mode.js')) as { travels(camera: unknown): boolean }).travels;
-  const camera = (visual.camera ?? {}) as Record<string, unknown>;
-  const movement = String(camera.movement ?? '').trim(), speed = String(camera.speed ?? '').trim();
-  type Picked = { id: string; from?: string; to?: string; entry?: { fields?: Record<string, string>; prompt?: string; label?: { en?: string } } };
-  const picked = ((plan.techniques ?? []) as Picked[]).map((t) => ({ ...t, entry: techniqueContract().byId[t.id] as Picked['entry'] }));
-  // The move technique that matches visual.camera.movement; a movement rewritten by hand falls back to its own words.
-  const moveEntry = picked.find((t) => t.entry?.fields?.movement && movement.toLowerCase().startsWith(t.entry.fields.movement))?.entry;
-  const rack = picked.find((t) => t.entry?.fields?.focus);
-  // A sentence closing on its own quoted line ("Wait.") takes no second period.
-  const sentence = (value: string) => {
-    const text = value.trim(), capped = text.charAt(0).toUpperCase() + text.slice(1);
-    return !text ? '' : /[.!?]["'”’)]+$/.test(capped) ? capped : capped.replace(/[.!?]*$/, '') + '.';
-  };
-  // The move in the words the video model was shown (film-techniques.js prompt: pushes in, pulls back, pans, tilts
-  // upward, static frame), its pace and what it is aimed at; the closing composition the camera pass wrote follows
-  // as its own sentence, since it may be a phrase or a whole sentence.
-  const target = String(camera.target ?? '').trim(), settle = String(camera.end ?? '').trim();
-  for (const [name, value] of [['action', args.action], ['end', args.end], ['sound', args.sound], ['visual.camera.target', target],
-    ['visual.camera.end', settle], ['focus.from', rack?.from], ['focus.to', rack?.to]] as Array<[string, string | undefined]>) {
-    const foreign = value ? nonEnglishOutsideQuotes(value) : '';
-    if (foreign) throw new Error(`video_prompt_language: ${name} has "${foreign}" outside quotation marks; write it in English`);
+  const speakerBindings = args.speakerBindings ?? [];
+  const visibleSpeakers = [...new Set((shot.narration ?? []).filter(line => line.delivery === 'on_screen' && line.tts).map(line => line.speaker))];
+  if (msr && visibleSpeakers.length > 1 && visibleSpeakers.some(id => !speakerBindings.some(binding => binding.speaker === id)))
+    throw new Error('video_speaker_binding_required: inspect the start image and pass speakerBindings for both on-screen speakers');
+  if (new Set(speakerBindings.map(binding => binding.speaker)).size !== speakerBindings.length ||
+      new Set(speakerBindings.map(binding => binding.screenPosition)).size !== speakerBindings.length)
+    throw new Error('video_speaker_binding_invalid: use one distinct screen position per speaker');
+  for (const binding of speakerBindings) {
+    if (!castRegistry(args.path, win).ids.has(binding.speaker) || !contract().castOf(shot)?.includes(binding.speaker) || nonEnglishOutsideQuotes(binding.description))
+      throw new Error('video_speaker_binding_invalid: bind visible cast members with English appearance descriptions');
   }
-  const pace = ({ slow: 'slowly', steady: 'steadily', fast: 'quickly' } as Record<string, string>)[speed];
-  const ends = travels(camera) ? ', with a short pause on the opening and closing pictures' : '';
-  const cameraSentence = !movement ? '' : /^(static|fixed|locked)/i.test(movement) ? 'The camera holds a static frame.'
-    : moveEntry?.prompt ? sentence(`The camera ${pace ? pace + ' ' : ''}${moveEntry.prompt.replace('{target}', target || 'the subject')}${speed && !pace ? ` at a ${speed} pace` : ''}${ends}`)
-    : sentence(`Camera: ${[speed, movement].filter(Boolean).join(' ')}` + (target ? ` toward ${target}` : '') + ends);
-  // MSR pins no frame, so its prompt carries the framing; video_plan adds MSR's lines with their image bindings.
-  const prompt = [
-    msr ? sentence([words.SIZE_WORDS[String(plan.size)], words.ANGLE_WORDS[String(plan.angle)]].filter(Boolean).join(', ')) : 'Start from the given first frame.',
-    msr && plan.depth ? sentence(contract().depthText(plan.depth)) : '',
-    cameraSentence,
-    settle ? sentence(`Closing frame: ${settle}`) : '',
-    !rack ? '' : sentence(rack.from && rack.to ? `Rack focus from ${rack.from} to ${rack.to}` : `${rack.entry?.label?.en ?? 'Rack focus'} from the near subject to the far subject`),
-    sentence(args.action),
-    ...(msr ? [] : (shot.narration ?? []).filter((line) => line.delivery === 'on_screen' && line.tts).map((line) =>
-      sentence(`${latin(String(castEntry(win, String(line.speaker))?.name ?? '')) || line.speaker} says: "${line.tts}"`))),
-    frames.mode === 'first_last' ? sentence(`End on the given last frame${args.end ? ': ' + args.end : ''}`) : args.end ? sentence(`End on ${args.end}`) : '',
-    // The builder lays the episode bed under every cut; a clip that makes its own music doubles it.
-    sentence(`Audio: ${args.sound ? args.sound + (MUSIC_WORD.test(args.sound) ? '' : ', no music') : 'no music'}`),
-  ].filter(Boolean).join(' ');
-  const foreign = nonEnglishOutsideQuotes(prompt);
-  if (foreign) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action, end and sound in English`);
-  shots[index] = { ...shot, visual: { ...visual, video: { ...(visual.video as object | undefined), prompt, promptBasis: contract().promptBasis(shot, isFocus) } } } as Shot;
+  if (msr && [args.action, args.end, args.sound].some(value => value && (shot.narration ?? []).some(line => line.tts && value.includes(line.tts))))
+    throw new Error('video_dialogue_embedded: write only action and sound here; shot_dialogue owns the spoken words');
+  const source = { action: args.action, ...(args.end ? { end: args.end } : {}), ...(args.sound ? { sound: args.sound } : {}) };
+  const rawCast = (win.SB_DOC as { characters?: unknown } | undefined)?.characters;
+  const names = Object.fromEntries((Array.isArray(rawCast) ? rawCast : []).map(c => [c.id, String(c.name ?? '')]));
+  const compiled = compileVideoPrompt(shot, source, names), { prompt } = compiled;
+  const { speakerBindings: _oldBindings, speakerBindingImageSha256: _oldImage, ...priorVideo } = (visual.video ?? {}) as Record<string, unknown>;
+  const start = (visual.frames as { start?: string } | undefined)?.start;
+  shots[index] = { ...shot, visual: { ...visual, video: { ...priorVideo, prompt, promptSource: source, promptBasis: contract().promptBasis(shot, isFocus),
+    ...(speakerBindings.length ? { speakerBindings, speakerBindingImageSha256: createHash('sha256').update(readFileSync(resolve(dirname(scenesPath(args.path)), start!))).digest('hex') } : {}) } } } as Shot;
   const result = writeOutline(args.path, win, st, shots);
-  return { ...result, findings: rack && !(rack.from && rack.to) ? [...result.findings, { level: 'warn' as const, where: args.id,
-    what: 'the rack focus names no subjects — give focus.from and focus.to in shot_icons' }] : result.findings, prompt };
+  return { ...result, findings: [...result.findings, ...compiled.warnings.map(what => ({ level: 'warn' as const, where: args.id, what }))], prompt };
 }
 
 // ── Check ───────────────────────────────────────────────────────

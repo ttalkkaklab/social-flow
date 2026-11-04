@@ -69,6 +69,19 @@ test('duplicate, malformed, missing or future-schema identities cannot pass', ()
   c.physical.secret='unknown';assert.ok(identityErrors(c).length);
 });
 
+test('a voice-only speaker retains pending body details and a pinned voice, but visible cast still needs ready identity', t => {
+  const root=mkdtempSync(join(tmpdir(),'sf-voice-only-')),folder=join(root,'assets/characters/mori');mkdirSync(folder,{recursive:true});
+  t.after(()=>rmSync(root,{recursive:true,force:true}));writeFileSync(join(root,'profile.md'),'# Channel');
+  const d=doc();d.character.identity.age={status:'pending',value:null,reason:'Only the phone voice is cast'};
+  d.character.physical.heightCm={status:'pending',value:null,reason:'Never appears on screen'};
+  const file=join(folder,'identity.md');writeFileSync(file,markdown(d));
+  const cast=handoff(file,{voiceOnly:true}),board={STORY:{version:'story-v2'},SB_DOC:{characterSchemaVersion:1,characters:[cast]},SCENES:[{narration:[{speaker:'mori',tts:'Hello'}]}]};
+  const {sourceErrors}=require('../../skills/channel/references/character-sheet.js');
+  assert.deepEqual(boardIdentityErrors(board),[]);assert.deepEqual(sourceErrors(board,root),[]);
+  board.SCENES[0].visual={character:['mori']};assert.match(boardIdentityErrors(board).join(),/pending/);assert.match(sourceErrors(board,root).join(),/pending/);
+  assert.throws(()=>handoff(file),/pending/);
+});
+
 test('create and update compile correct lane directions, preserve other fields, and invalidate stale handoffs', () => {
   const root=mkdtempSync(join(tmpdir(),'sf-identity-'));const folder=join(root,'mori');mkdirSync(folder);
   const file=join(folder,'identity.md');

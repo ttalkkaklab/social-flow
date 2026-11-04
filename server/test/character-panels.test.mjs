@@ -44,3 +44,18 @@ test('wrong-purpose, missing, malformed, traversal and symlink references cannot
     assert.ok(legacy.findings.some(x=>x.domain==='image-slot'));
   }finally{f.clean();}
 });
+
+test('canonical panel selection keeps ownership and rejects wrong-purpose or missing faces',()=>{
+ const f=fixture();try {
+  const {canonicalReferences,sheetPanels}=require('../../skills/channel/references/character-panels.js');
+  assert.deepEqual(canonicalReferences(f.board,'s0001',['hero'],'both').map(r=>r.id),['s0001-hero-face','s0001-hero-front','s0001-hero-back']);
+  writeFileSync(join(f.board,'cast.json'),JSON.stringify({characters:[{id:'hero',source:'../../../missing/assets/characters/hero/identity.md'}]}));
+  assert.throws(()=>sheetPanels(f.board,['hero']),/character_sheet_missing/);
+  rmSync(join(f.board,'cast.json'));
+  writeFileSync(join(f.board,'cast.json'),JSON.stringify({characters:[{id:'other',source:'../../../assets/characters/hero/identity.md'}]}));
+  assert.throws(()=>sheetPanels(f.board,['other']),/cast_source_missing/);
+  rmSync(join(f.board,'cast.json'));
+  f.manifest.panels.face.purpose='episode_scene';f.save();
+  assert.throws(()=>canonicalReferences(f.board,'s0001',['hero'],'both'),/character_panel_missing: hero.*face/);
+ }finally{f.clean();}
+});

@@ -1083,16 +1083,16 @@ var require_util = __commonJS({
     function isStream(obj) {
       return obj && typeof obj === "object" && typeof obj.pipe === "function" && typeof obj.on === "function";
     }
-    function isBlobLike(object2) {
-      if (object2 === null) {
+    function isBlobLike(object3) {
+      if (object3 === null) {
         return false;
-      } else if (object2 instanceof Blob) {
+      } else if (object3 instanceof Blob) {
         return true;
-      } else if (typeof object2 !== "object") {
+      } else if (typeof object3 !== "object") {
         return false;
       } else {
-        const sTag = object2[Symbol.toStringTag];
-        return (sTag === "Blob" || sTag === "File") && ("stream" in object2 && typeof object2.stream === "function" || "arrayBuffer" in object2 && typeof object2.arrayBuffer === "function");
+        const sTag = object3[Symbol.toStringTag];
+        return (sTag === "Blob" || sTag === "File") && ("stream" in object3 && typeof object3.stream === "function" || "arrayBuffer" in object3 && typeof object3.arrayBuffer === "function");
       }
     }
     function pathHasQueryOrFragment(url) {
@@ -1147,14 +1147,14 @@ var require_util = __commonJS({
         }
         const port = url.port != null ? url.port : url.protocol === "https:" ? 443 : 80;
         let origin = url.origin != null ? url.origin : `${url.protocol || ""}//${url.hostname || ""}:${port}`;
-        let path5 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
+        let path6 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
         if (origin[origin.length - 1] === "/") {
           origin = origin.slice(0, origin.length - 1);
         }
-        if (path5 && path5[0] !== "/") {
-          path5 = `/${path5}`;
+        if (path6 && path6[0] !== "/") {
+          path6 = `/${path6}`;
         }
-        return new URL(`${origin}${path5}`);
+        return new URL(`${origin}${path6}`);
       }
       if (!isHttpOrHttpsPrefixed(url.origin || url.protocol)) {
         throw new InvalidArgumentError("Invalid URL protocol: the URL must start with `http:` or `https:`.");
@@ -1382,8 +1382,8 @@ var require_util = __commonJS({
         }
       );
     }
-    function isFormDataLike(object2) {
-      return object2 && typeof object2 === "object" && typeof object2.append === "function" && typeof object2.delete === "function" && typeof object2.get === "function" && typeof object2.getAll === "function" && typeof object2.has === "function" && typeof object2.set === "function" && object2[Symbol.toStringTag] === "FormData";
+    function isFormDataLike(object3) {
+      return object3 && typeof object3 === "object" && typeof object3.append === "function" && typeof object3.delete === "function" && typeof object3.get === "function" && typeof object3.getAll === "function" && typeof object3.has === "function" && typeof object3.set === "function" && object3[Symbol.toStringTag] === "FormData";
     }
     function addAbortListener(signal, listener) {
       if ("addEventListener" in signal) {
@@ -1975,9 +1975,9 @@ var require_diagnostics = __commonJS({
         "undici:client:sendHeaders",
         (evt) => {
           const {
-            request: { method, path: path5, origin }
+            request: { method, path: path6, origin }
           } = evt;
-          debugLog("sending request to %s %s%s", method, origin, path5);
+          debugLog("sending request to %s %s%s", method, origin, path6);
         }
       );
     }
@@ -1995,14 +1995,14 @@ var require_diagnostics = __commonJS({
         "undici:request:headers",
         (evt) => {
           const {
-            request: { method, path: path5, origin },
+            request: { method, path: path6, origin },
             response: { statusCode }
           } = evt;
           debugLog(
             "received response to %s %s%s - HTTP %d",
             method,
             origin,
-            path5,
+            path6,
             statusCode
           );
         }
@@ -2011,23 +2011,23 @@ var require_diagnostics = __commonJS({
         "undici:request:trailers",
         (evt) => {
           const {
-            request: { method, path: path5, origin }
+            request: { method, path: path6, origin }
           } = evt;
-          debugLog("trailers received from %s %s%s", method, origin, path5);
+          debugLog("trailers received from %s %s%s", method, origin, path6);
         }
       );
       diagnosticsChannel.subscribe(
         "undici:request:error",
         (evt) => {
           const {
-            request: { method, path: path5, origin },
+            request: { method, path: path6, origin },
             error
           } = evt;
           debugLog(
             "request to %s %s%s errored - %s",
             method,
             origin,
-            path5,
+            path6,
             error.message
           );
         }
@@ -2142,7 +2142,7 @@ var require_request = __commonJS({
     var kHandler = /* @__PURE__ */ Symbol("handler");
     var Request = class {
       constructor(origin, {
-        path: path5,
+        path: path6,
         method,
         body,
         headers,
@@ -2159,11 +2159,11 @@ var require_request = __commonJS({
         maxRedirections,
         typeOfService
       }, handler) {
-        if (typeof path5 !== "string") {
+        if (typeof path6 !== "string") {
           throw new InvalidArgumentError("path must be a string");
-        } else if (path5[0] !== "/" && !(path5.startsWith("http://") || path5.startsWith("https://")) && method !== "CONNECT") {
+        } else if (path6[0] !== "/" && !(path6.startsWith("http://") || path6.startsWith("https://")) && method !== "CONNECT") {
           throw new InvalidArgumentError("path must be an absolute URL or start with a slash");
-        } else if (invalidPathRegex.test(path5)) {
+        } else if (invalidPathRegex.test(path6)) {
           throw new InvalidArgumentError("invalid request path");
         }
         if (typeof method !== "string") {
@@ -2238,7 +2238,7 @@ var require_request = __commonJS({
         this.completed = false;
         this.aborted = false;
         this.upgrade = upgrade || null;
-        this.path = query ? serializePathWithQuery(path5, query) : path5;
+        this.path = query ? serializePathWithQuery(path6, query) : path6;
         this.origin = origin;
         this.protocol = getProtocolFromUrlString(origin);
         this.idempotent = idempotent == null ? method === "HEAD" || method === "GET" : idempotent;
@@ -5074,8 +5074,8 @@ var require_util2 = __commonJS({
       }
       return "allowed";
     }
-    function isErrorLike(object2) {
-      return object2 instanceof Error || (object2?.constructor?.name === "Error" || object2?.constructor?.name === "DOMException");
+    function isErrorLike(object3) {
+      return object3 instanceof Error || (object3?.constructor?.name === "Error" || object3?.constructor?.name === "DOMException");
     }
     function isValidReasonPhrase(statusText) {
       for (let i = 0; i < statusText.length; ++i) {
@@ -5418,7 +5418,7 @@ var require_util2 = __commonJS({
         return new FastIterableIterator(target, kind);
       };
     }
-    function iteratorMixin(name, object2, kInternalIterator, keyIndex = 0, valueIndex = 1) {
+    function iteratorMixin(name, object3, kInternalIterator, keyIndex = 0, valueIndex = 1) {
       const makeIterator = createIterator(name, kInternalIterator, keyIndex, valueIndex);
       const properties = {
         keys: {
@@ -5426,7 +5426,7 @@ var require_util2 = __commonJS({
           enumerable: true,
           configurable: true,
           value: function keys() {
-            webidl.brandCheck(this, object2);
+            webidl.brandCheck(this, object3);
             return makeIterator(this, "key");
           }
         },
@@ -5435,7 +5435,7 @@ var require_util2 = __commonJS({
           enumerable: true,
           configurable: true,
           value: function values() {
-            webidl.brandCheck(this, object2);
+            webidl.brandCheck(this, object3);
             return makeIterator(this, "value");
           }
         },
@@ -5444,7 +5444,7 @@ var require_util2 = __commonJS({
           enumerable: true,
           configurable: true,
           value: function entries() {
-            webidl.brandCheck(this, object2);
+            webidl.brandCheck(this, object3);
             return makeIterator(this, "key+value");
           }
         },
@@ -5453,7 +5453,7 @@ var require_util2 = __commonJS({
           enumerable: true,
           configurable: true,
           value: function forEach(callbackfn, thisArg = globalThis) {
-            webidl.brandCheck(this, object2);
+            webidl.brandCheck(this, object3);
             webidl.argumentLengthCheck(arguments, 1, `${name}.forEach`);
             if (typeof callbackfn !== "function") {
               throw new TypeError(
@@ -5466,7 +5466,7 @@ var require_util2 = __commonJS({
           }
         }
       };
-      return Object.defineProperties(object2.prototype, {
+      return Object.defineProperties(object3.prototype, {
         ...properties,
         [Symbol.iterator]: {
           writable: true,
@@ -6325,13 +6325,13 @@ var require_body = __commonJS({
         stream.cancel("Response object has been garbage collected").catch(noop);
       }
     });
-    function extractBody(object2, keepalive = false) {
+    function extractBody(object3, keepalive = false) {
       let stream = null;
       let controller = null;
-      if (webidl.is.ReadableStream(object2)) {
-        stream = object2;
-      } else if (webidl.is.Blob(object2)) {
-        stream = object2.stream();
+      if (webidl.is.ReadableStream(object3)) {
+        stream = object3;
+      } else if (webidl.is.Blob(object3)) {
+        stream = object3.stream();
       } else {
         stream = new ReadableStream({
           pull() {
@@ -6349,15 +6349,15 @@ var require_body = __commonJS({
       let source = null;
       let length = null;
       let type = null;
-      if (typeof object2 === "string") {
-        source = object2;
+      if (typeof object3 === "string") {
+        source = object3;
         type = "text/plain;charset=UTF-8";
-      } else if (webidl.is.URLSearchParams(object2)) {
-        source = object2.toString();
+      } else if (webidl.is.URLSearchParams(object3)) {
+        source = object3.toString();
         type = "application/x-www-form-urlencoded;charset=UTF-8";
-      } else if (webidl.is.BufferSource(object2)) {
-        source = webidl.util.getCopyOfBytesHeldByBufferSource(object2);
-      } else if (webidl.is.FormData(object2)) {
+      } else if (webidl.is.BufferSource(object3)) {
+        source = webidl.util.getCopyOfBytesHeldByBufferSource(object3);
+      } else if (webidl.is.FormData(object3)) {
         const boundary = `----formdata-undici-0${`${random(1e11)}`.padStart(11, "0")}`;
         const prefix = `--${boundary}\r
 Content-Disposition: form-data`;
@@ -6367,7 +6367,7 @@ Content-Disposition: form-data`;
         const rn = new Uint8Array([13, 10]);
         length = 0;
         let hasUnknownSizeValue = false;
-        for (const [name, value] of object2) {
+        for (const [name, value] of object3) {
           if (typeof value === "string") {
             const chunk2 = textEncoder.encode(prefix + `; name="${formdataEscape(normalizeLinefeeds(name))}"\r
 \r
@@ -6395,7 +6395,7 @@ Content-Type: ${value.type || "application/octet-stream"}\r
         if (hasUnknownSizeValue) {
           length = null;
         }
-        source = object2;
+        source = object3;
         action = async function* () {
           for (const part of blobParts) {
             if (part.stream) {
@@ -6406,22 +6406,22 @@ Content-Type: ${value.type || "application/octet-stream"}\r
           }
         };
         type = `multipart/form-data; boundary=${boundary}`;
-      } else if (webidl.is.Blob(object2)) {
-        source = object2;
-        length = object2.size;
-        if (object2.type) {
-          type = object2.type;
+      } else if (webidl.is.Blob(object3)) {
+        source = object3;
+        length = object3.size;
+        if (object3.type) {
+          type = object3.type;
         }
-      } else if (typeof object2[Symbol.asyncIterator] === "function") {
+      } else if (typeof object3[Symbol.asyncIterator] === "function") {
         if (keepalive) {
           throw new TypeError("keepalive");
         }
-        if (util2.isDisturbed(object2) || object2.locked) {
+        if (util2.isDisturbed(object3) || object3.locked) {
           throw new TypeError(
             "Response body object should not be disturbed or locked"
           );
         }
-        stream = webidl.is.ReadableStream(object2) ? object2 : ReadableStreamFrom(object2);
+        stream = webidl.is.ReadableStream(object3) ? object3 : ReadableStreamFrom(object3);
       }
       if (typeof source === "string" || isUint8Array(source)) {
         action = () => {
@@ -6450,12 +6450,12 @@ Content-Type: ${value.type || "application/octet-stream"}\r
       const body = { stream, source, length };
       return [body, type];
     }
-    function safelyExtractBody(object2, keepalive = false) {
-      if (webidl.is.ReadableStream(object2)) {
-        assert(!util2.isDisturbed(object2), "The body has already been consumed.");
-        assert(!object2.locked, "The stream is locked.");
+    function safelyExtractBody(object3, keepalive = false) {
+      if (webidl.is.ReadableStream(object3)) {
+        assert(!util2.isDisturbed(object3), "The body has already been consumed.");
+        assert(!object3.locked, "The stream is locked.");
       }
-      return extractBody(object2, keepalive);
+      return extractBody(object3, keepalive);
     }
     function cloneBody(body) {
       const { 0: out1, 1: out2 } = body.stream.tee();
@@ -6527,14 +6527,14 @@ Content-Type: ${value.type || "application/octet-stream"}\r
     function mixinBody(prototype, getInternalState) {
       Object.assign(prototype.prototype, bodyMixinMethods(prototype, getInternalState));
     }
-    function consumeBody(object2, convertBytesToJSValue, instance, getInternalState) {
+    function consumeBody(object3, convertBytesToJSValue, instance, getInternalState) {
       try {
-        webidl.brandCheck(object2, instance);
+        webidl.brandCheck(object3, instance);
       } catch (e) {
         return Promise.reject(e);
       }
-      object2 = getInternalState(object2);
-      if (bodyUnusable(object2)) {
+      object3 = getInternalState(object3);
+      if (bodyUnusable(object3)) {
         return Promise.reject(new TypeError("Body is unusable: Body has already been read"));
       }
       const promise = createDeferredPromise();
@@ -6546,15 +6546,15 @@ Content-Type: ${value.type || "application/octet-stream"}\r
           errorSteps(e);
         }
       };
-      if (object2.body == null) {
+      if (object3.body == null) {
         successSteps(Buffer.allocUnsafe(0));
         return promise.promise;
       }
-      fullyReadBody(object2.body, successSteps, errorSteps);
+      fullyReadBody(object3.body, successSteps, errorSteps);
       return promise.promise;
     }
-    function bodyUnusable(object2) {
-      const body = object2.body;
+    function bodyUnusable(object3) {
+      const body = object3.body;
       return body != null && (body.stream.locked || util2.isDisturbed(body.stream));
     }
     function bodyMimeType(requestOrResponse) {
@@ -7420,7 +7420,7 @@ var require_client_h1 = __commonJS({
       return method !== "GET" && method !== "HEAD" && method !== "OPTIONS" && method !== "TRACE" && method !== "CONNECT";
     }
     function writeH1(client, request) {
-      const { method, path: path5, host, upgrade, blocking, reset } = request;
+      const { method, path: path6, host, upgrade, blocking, reset } = request;
       let { body, headers, contentLength } = request;
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH" || method === "QUERY" || method === "PROPFIND" || method === "PROPPATCH";
       if (util2.isFormDataLike(body)) {
@@ -7498,7 +7498,7 @@ var require_client_h1 = __commonJS({
       if (socket.setTypeOfService) {
         socket.setTypeOfService(request.typeOfService);
       }
-      let header = `${method} ${path5} HTTP/1.1\r
+      let header = `${method} ${path6} HTTP/1.1\r
 `;
       if (typeof host === "string") {
         header += `host: ${host}\r
@@ -8177,7 +8177,7 @@ var require_client_h2 = __commonJS({
       const headersTimeout = request.headersTimeout ?? client[kHeadersTimeout];
       const bodyTimeout = request.bodyTimeout ?? client[kBodyTimeout];
       const session = client[kHTTP2Session];
-      const { method, path: path5, host, upgrade, expectContinue, signal, protocol, headers: reqHeaders } = request;
+      const { method, path: path6, host, upgrade, expectContinue, signal, protocol, headers: reqHeaders } = request;
       let { body } = request;
       if (upgrade != null && upgrade !== "websocket") {
         util2.errorRequest(client, request, new InvalidArgumentError(`Custom upgrade "${upgrade}" not supported over HTTP/2`));
@@ -8246,7 +8246,7 @@ var require_client_h2 = __commonJS({
           }
           headers[HTTP2_HEADER_METHOD] = "CONNECT";
           headers[HTTP2_HEADER_PROTOCOL] = "websocket";
-          headers[HTTP2_HEADER_PATH] = path5;
+          headers[HTTP2_HEADER_PATH] = path6;
           if (protocol === "ws:" || protocol === "wss:") {
             headers[HTTP2_HEADER_SCHEME] = protocol === "ws:" ? "http" : "https";
           } else {
@@ -8288,7 +8288,7 @@ var require_client_h2 = __commonJS({
         stream.setTimeout(headersTimeout);
         return true;
       }
-      headers[HTTP2_HEADER_PATH] = path5;
+      headers[HTTP2_HEADER_PATH] = path6;
       headers[HTTP2_HEADER_SCHEME] = protocol === "http:" ? "http" : "https";
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH";
       if (body && typeof body.read === "function") {
@@ -10640,10 +10640,10 @@ var require_proxy_agent = __commonJS({
         };
         const {
           origin,
-          path: path5 = "/",
+          path: path6 = "/",
           headers = {}
         } = opts;
-        opts.path = origin + path5;
+        opts.path = origin + path6;
         if (!("host" in headers) && !("Host" in headers)) {
           const { host } = new URL(origin);
           headers.host = host;
@@ -12752,20 +12752,20 @@ var require_mock_utils = __commonJS({
       }
       return normalizedQp;
     }
-    function safeUrl(path5) {
-      if (typeof path5 !== "string") {
-        return path5;
+    function safeUrl(path6) {
+      if (typeof path6 !== "string") {
+        return path6;
       }
-      const pathSegments = path5.split("?", 3);
+      const pathSegments = path6.split("?", 3);
       if (pathSegments.length !== 2) {
-        return path5;
+        return path6;
       }
       const qp = new URLSearchParams(pathSegments.pop());
       qp.sort();
       return [...pathSegments, qp.toString()].join("?");
     }
-    function matchKey(mockDispatch2, { path: path5, method, body, headers }) {
-      const pathMatch = matchValue(mockDispatch2.path, path5);
+    function matchKey(mockDispatch2, { path: path6, method, body, headers }) {
+      const pathMatch = matchValue(mockDispatch2.path, path6);
       const methodMatch = matchValue(mockDispatch2.method, method);
       const bodyMatch = typeof mockDispatch2.body !== "undefined" ? matchValue(mockDispatch2.body, body) : true;
       const headersMatch = matchHeaders(mockDispatch2, headers);
@@ -12790,8 +12790,8 @@ var require_mock_utils = __commonJS({
       const basePath = key.query ? serializePathWithQuery(key.path, key.query) : key.path;
       const resolvedPath = typeof basePath === "string" ? safeUrl(basePath) : basePath;
       const resolvedPathWithoutTrailingSlash = removeTrailingSlash(resolvedPath);
-      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path5, ignoreTrailingSlash }) => {
-        return ignoreTrailingSlash ? matchValue(removeTrailingSlash(safeUrl(path5)), resolvedPathWithoutTrailingSlash) : matchValue(safeUrl(path5), resolvedPath);
+      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path6, ignoreTrailingSlash }) => {
+        return ignoreTrailingSlash ? matchValue(removeTrailingSlash(safeUrl(path6)), resolvedPathWithoutTrailingSlash) : matchValue(safeUrl(path6), resolvedPath);
       });
       if (matchedMockDispatches.length === 0) {
         throw new MockNotMatchedError(`Mock dispatch not matched for path '${resolvedPath}'`);
@@ -12830,19 +12830,19 @@ var require_mock_utils = __commonJS({
         mockDispatches.splice(index, 1);
       }
     }
-    function removeTrailingSlash(path5) {
-      while (path5.endsWith("/")) {
-        path5 = path5.slice(0, -1);
+    function removeTrailingSlash(path6) {
+      while (path6.endsWith("/")) {
+        path6 = path6.slice(0, -1);
       }
-      if (path5.length === 0) {
-        path5 = "/";
+      if (path6.length === 0) {
+        path6 = "/";
       }
-      return path5;
+      return path6;
     }
     function buildKey(opts) {
-      const { path: path5, method, body, headers, query } = opts;
+      const { path: path6, method, body, headers, query } = opts;
       return {
-        path: path5,
+        path: path6,
         method,
         body,
         headers,
@@ -13532,10 +13532,10 @@ var require_pending_interceptors_formatter = __commonJS({
       }
       format(pendingInterceptors) {
         const withPrettyHeaders = pendingInterceptors.map(
-          ({ method, path: path5, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
+          ({ method, path: path6, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
             Method: method,
             Origin: origin,
-            Path: path5,
+            Path: path6,
             "Status code": statusCode,
             Persistent: persist ? PERSISTENT : NOT_PERSISTENT,
             Invocations: timesInvoked,
@@ -13617,9 +13617,9 @@ var require_mock_agent = __commonJS({
         const acceptNonStandardSearchParameters = this[kMockAgentAcceptsNonStandardSearchParameters];
         const dispatchOpts = { ...opts };
         if (acceptNonStandardSearchParameters && dispatchOpts.path) {
-          const [path5, searchParams] = dispatchOpts.path.split("?");
+          const [path6, searchParams] = dispatchOpts.path.split("?");
           const normalizedSearchParams = normalizeSearchParams(searchParams, acceptNonStandardSearchParameters);
-          dispatchOpts.path = `${path5}?${normalizedSearchParams}`;
+          dispatchOpts.path = `${path6}?${normalizedSearchParams}`;
         }
         return this[kAgent].dispatch(dispatchOpts, handler);
       }
@@ -14020,12 +14020,12 @@ var require_snapshot_recorder = __commonJS({
        * @return {Promise<void>} - Resolves when snapshots are loaded
        */
       async loadSnapshots(filePath) {
-        const path5 = filePath || this.#snapshotPath;
-        if (!path5) {
+        const path6 = filePath || this.#snapshotPath;
+        if (!path6) {
           throw new InvalidArgumentError("Snapshot path is required");
         }
         try {
-          const data = await readFile(resolve6(path5), "utf8");
+          const data = await readFile(resolve6(path6), "utf8");
           const parsed = JSON.parse(data);
           if (Array.isArray(parsed)) {
             this.#snapshots.clear();
@@ -14039,7 +14039,7 @@ var require_snapshot_recorder = __commonJS({
           if (error.code === "ENOENT") {
             this.#snapshots.clear();
           } else {
-            throw new UndiciError(`Failed to load snapshots from ${path5}`, { cause: error });
+            throw new UndiciError(`Failed to load snapshots from ${path6}`, { cause: error });
           }
         }
       }
@@ -14050,11 +14050,11 @@ var require_snapshot_recorder = __commonJS({
        * @returns {Promise<void>} - Resolves when snapshots are saved
        */
       async saveSnapshots(filePath) {
-        const path5 = filePath || this.#snapshotPath;
-        if (!path5) {
+        const path6 = filePath || this.#snapshotPath;
+        if (!path6) {
           throw new InvalidArgumentError("Snapshot path is required");
         }
-        const resolvedPath = resolve6(path5);
+        const resolvedPath = resolve6(path6);
         await mkdir(dirname6(resolvedPath), { recursive: true });
         const data = Array.from(this.#snapshots.entries()).map(([hash2, snapshot]) => ({
           hash: hash2,
@@ -14686,15 +14686,15 @@ var require_redirect_handler = __commonJS({
           return;
         }
         const { origin, pathname, search } = util2.parseURL(new URL(this.location, this.opts.origin && new URL(this.opts.path, this.opts.origin)));
-        const path5 = search ? `${pathname}${search}` : pathname;
-        const redirectUrlString = `${origin}${path5}`;
+        const path6 = search ? `${pathname}${search}` : pathname;
+        const redirectUrlString = `${origin}${path6}`;
         for (const historyUrl of this.history) {
           if (historyUrl.toString() === redirectUrlString) {
             throw new InvalidArgumentError(`Redirect loop detected. Cannot redirect to ${origin}. This typically happens when using a Client or Pool with cross-origin redirects. Use an Agent for cross-origin redirects.`);
           }
         }
         this.opts.headers = cleanRequestHeaders(this.opts.headers, statusCode === 303, this.opts.origin !== origin);
-        this.opts.path = path5;
+        this.opts.path = path6;
         this.opts.origin = origin;
         this.opts.query = null;
       }
@@ -16454,10 +16454,10 @@ var require_cache_handler = __commonJS({
       }
       return locationUrl.pathname + locationUrl.search;
     }
-    function deleteCachedUri(store, cacheKey, path5) {
+    function deleteCachedUri(store, cacheKey, path6) {
       deleteCachedValue(store, {
         ...cacheKey,
-        path: path5
+        path: path6
       });
       for (let i = 0; i < util2.safeHTTPMethods.length; i++) {
         const method = util2.safeHTTPMethods[i];
@@ -16465,7 +16465,7 @@ var require_cache_handler = __commonJS({
           deleteCachedValue(store, {
             ...cacheKey,
             method,
-            path: path5
+            path: path6
           });
         }
       }
@@ -16476,9 +16476,9 @@ var require_cache_handler = __commonJS({
       }
       const values = Array.isArray(headerValue) ? headerValue : [headerValue];
       for (let i = 0; i < values.length; i++) {
-        const path5 = getSameOriginPath(cacheKey, values[i]);
-        if (path5 !== void 0) {
-          deleteCachedUri(store, cacheKey, path5);
+        const path6 = getSameOriginPath(cacheKey, values[i]);
+        if (path6 !== void 0) {
+          deleteCachedUri(store, cacheKey, path6);
         }
       }
     }
@@ -18768,10 +18768,10 @@ var require_headers = __commonJS({
       while (j > i && isHTTPWhiteSpaceCharCode(potentialValue.charCodeAt(i))) ++i;
       return i === 0 && j === potentialValue.length ? potentialValue : potentialValue.substring(i, j);
     }
-    function fill(headers, object2) {
-      if (Array.isArray(object2)) {
-        for (let i = 0; i < object2.length; ++i) {
-          const header = object2[i];
+    function fill(headers, object3) {
+      if (Array.isArray(object3)) {
+        for (let i = 0; i < object3.length; ++i) {
+          const header = object3[i];
           if (header.length !== 2) {
             throw webidl.errors.exception({
               header: "Headers constructor",
@@ -18780,10 +18780,10 @@ var require_headers = __commonJS({
           }
           appendHeader(headers, header[0], header[1]);
         }
-      } else if (typeof object2 === "object" && object2 !== null) {
-        const keys = Object.keys(object2);
+      } else if (typeof object3 === "object" && object3 !== null) {
+        const keys = Object.keys(object3);
         for (let i = 0; i < keys.length; ++i) {
-          appendHeader(headers, keys[i], object2[keys[i]]);
+          appendHeader(headers, keys[i], object3[keys[i]]);
         }
       } else {
         throw webidl.errors.conversionFailed({
@@ -21478,11 +21478,11 @@ var require_fetch = __commonJS({
       function dispatch({ body }) {
         const url = requestCurrentURL(request);
         const agent = fetchParams.controller.dispatcher;
-        const path5 = url.pathname + url.search;
+        const path6 = url.pathname + url.search;
         const hasTrailingQuestionMark = url.search.length === 0 && url.href[url.href.length - url.hash.length - 1] === "?";
         return new Promise((resolve6, reject) => agent.dispatch(
           {
-            path: hasTrailingQuestionMark ? `${path5}?` : path5,
+            path: hasTrailingQuestionMark ? `${path6}?` : path6,
             origin: url.origin,
             method: request.method,
             body: agent.isMockActive ? request.body && (request.body.source || request.body.stream) : body,
@@ -22429,9 +22429,9 @@ var require_util4 = __commonJS({
         }
       }
     }
-    function validateCookiePath(path5) {
-      for (let i = 0; i < path5.length; ++i) {
-        const code = path5.charCodeAt(i);
+    function validateCookiePath(path6) {
+      for (let i = 0; i < path6.length; ++i) {
+        const code = path6.charCodeAt(i);
         if (code < 32 || // exclude CTLs (0-31)
         code > 126 || // exclude DEL and non-ascii
         code === 59) {
@@ -23557,15 +23557,15 @@ var require_connection = __commonJS({
       });
       return controller;
     }
-    function closeWebSocketConnection(object2, code, reason, validate = false) {
+    function closeWebSocketConnection(object3, code, reason, validate = false) {
       code ??= null;
       reason ??= "";
       if (validate) validateCloseCodeAndReason(code, reason);
-      if (isClosed(object2.readyState) || isClosing(object2.readyState)) {
-      } else if (!isEstablished(object2.readyState)) {
-        failWebsocketConnection(object2);
-        object2.readyState = states.CLOSING;
-      } else if (!object2.closeState.has(sentCloseFrameState.SENT) && !object2.closeState.has(sentCloseFrameState.RECEIVED)) {
+      if (isClosed(object3.readyState) || isClosing(object3.readyState)) {
+      } else if (!isEstablished(object3.readyState)) {
+        failWebsocketConnection(object3);
+        object3.readyState = states.CLOSING;
+      } else if (!object3.closeState.has(sentCloseFrameState.SENT) && !object3.closeState.has(sentCloseFrameState.RECEIVED)) {
         const frame = new WebsocketFrameSend();
         if (reason.length !== 0 && code === null) {
           code = 1e3;
@@ -23583,11 +23583,11 @@ var require_connection = __commonJS({
         } else {
           frame.frameData = emptyBuffer;
         }
-        object2.socket.write(frame.createFrame(opcodes.CLOSE));
-        object2.closeState.add(sentCloseFrameState.SENT);
-        object2.readyState = states.CLOSING;
+        object3.socket.write(frame.createFrame(opcodes.CLOSE));
+        object3.closeState.add(sentCloseFrameState.SENT);
+        object3.readyState = states.CLOSING;
       } else {
-        object2.readyState = states.CLOSING;
+        object3.readyState = states.CLOSING;
       }
     }
     function failWebsocketConnection(handler, code, reason, cause) {
@@ -25779,11 +25779,11 @@ var require_undici = __commonJS({
           if (typeof opts.path !== "string") {
             throw new InvalidArgumentError("invalid opts.path");
           }
-          let path5 = opts.path;
+          let path6 = opts.path;
           if (!opts.path.startsWith("/")) {
-            path5 = `/${path5}`;
+            path6 = `/${path6}`;
           }
-          url = new URL(util2.parseOrigin(url).origin + path5);
+          url = new URL(util2.parseOrigin(url).origin + path6);
         } else {
           if (!opts) {
             opts = typeof url === "object" ? url : {};
@@ -26202,10 +26202,10 @@ var util;
       return obj[e];
     });
   };
-  util2.objectKeys = typeof Object.keys === "function" ? (obj) => Object.keys(obj) : (object2) => {
+  util2.objectKeys = typeof Object.keys === "function" ? (obj) => Object.keys(obj) : (object3) => {
     const keys = [];
-    for (const key in object2) {
-      if (Object.prototype.hasOwnProperty.call(object2, key)) {
+    for (const key in object3) {
+      if (Object.prototype.hasOwnProperty.call(object3, key)) {
         keys.push(key);
       }
     }
@@ -26536,8 +26536,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path5, errorMaps, issueData } = params;
-  const fullPath = [...path5, ...issueData.path || []];
+  const { data, path: path6, errorMaps, issueData } = params;
+  const fullPath = [...path6, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -26653,11 +26653,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path5, key) {
+  constructor(parent, value, path6, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path5;
+    this._path = path6;
     this._key = key;
   }
   get path() {
@@ -30178,14 +30178,14 @@ function loadEnvFile(file = join2(process.env.SNS_TOKEN_DIR || join2(homedir(), 
   for (const [key, value] of Object.entries(process.env)) {
     if (value && /^\$\{[A-Za-z_][A-Za-z0-9_]*(:-[^}]*)?\}$/.test(value)) delete process.env[key];
   }
-  let text;
+  let text2;
   try {
-    text = readFileSync2(file, "utf8");
+    text2 = readFileSync2(file, "utf8");
   } catch {
     return [];
   }
   const filled = [];
-  for (const raw of text.split("\n")) {
+  for (const raw of text2.split("\n")) {
     const line = raw.trim();
     if (!line || line.startsWith("#")) continue;
     const eq = line.indexOf("=");
@@ -30474,8 +30474,8 @@ async function requestRaw(method, url, headers, body, timeoutMs) {
       body: body !== void 0 ? JSON.stringify(body) : void 0,
       signal: AbortSignal.timeout(effectiveTimeoutMs)
     });
-    const text = await res.text();
-    return { ok: res.ok, status: res.status, body: text };
+    const text2 = await res.text();
+    return { ok: res.ok, status: res.status, body: text2 };
   } catch (error) {
     if (error instanceof Error && error.name === "TimeoutError") {
       return { ok: false, status: 504, body: `Request timed out after ${effectiveTimeoutMs}ms: ${url}` };
@@ -32427,6 +32427,282 @@ var authorizationSchema = external_exports.object({
   openingSpendUsd: external_exports.number().finite().nonnegative().optional()
 }).strict();
 
+// src/video-voice.ts
+import { existsSync as existsSync4, readFileSync as readFileSync6, realpathSync } from "node:fs";
+import path5 from "node:path";
+import { createRequire as createRequire3 } from "node:module";
+
+// src/astra-genai-desktop.ts
+var model = external_exports.enum(["ltx-2.3-fast", "ltx-2.5-fast"]);
+var resolution = external_exports.enum(["270p", "360p", "540p", "720p", "1080p", "1440p", "2160p"]);
+var duration = external_exports.number().int().refine((n) => [2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 18, 20].includes(n));
+var aspect = external_exports.enum(["21:9", "16:9", "3:2", "4:3", "1:1", "4:5", "9:16"]);
+var loras = external_exports.array(external_exports.object({ ref: external_exports.string().min(1), scale: external_exports.number().finite().min(0).max(4).default(1) }).strict()).min(1).refine((rows) => new Set(rows.map((r) => r.ref)).size === rows.length, "Duplicate LoRA refs");
+var local = {
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((n) => n.endsWith(".mp4")).optional()
+};
+var common = external_exports.object({
+  model,
+  prompt: external_exports.string().trim().min(1),
+  resolution,
+  seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
+  cameraMotion: external_exports.enum(["none", "dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional(),
+  ...local
+}).strict();
+var desktopTextSchema = common.extend({ duration, aspectRatio: aspect.default("16:9"), loras: loras.optional() }).strict();
+var desktopImageSchema = common.extend({
+  duration,
+  aspectRatio: external_exports.union([aspect, external_exports.literal("auto")]).default("auto"),
+  imagePath: external_exports.string().min(1),
+  lastFramePath: external_exports.string().min(1).optional()
+}).strict();
+var desktopAudioSchema = common.extend({
+  audioPath: external_exports.string().min(1),
+  imagePath: external_exports.string().min(1).optional(),
+  aspectRatio: external_exports.union([aspect, external_exports.literal("auto")]).default("16:9"),
+  allowAudioTruncation: external_exports.boolean().default(false)
+}).strict();
+var edit = external_exports.object({
+  model,
+  prompt: external_exports.string().default(""),
+  sourceVideoPath: external_exports.string().min(1),
+  targetResolution: external_exports.object({ width: external_exports.number().int().positive(), height: external_exports.number().int().positive() }).strict().optional(),
+  seed: external_exports.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional(),
+  ...local
+}).strict();
+var desktopExtendSchema = edit.extend({ duration: external_exports.number().finite().min(2).max(20), mode: external_exports.enum(["start", "end"]).default("end") }).strict();
+var desktopRetakeSchema = edit.extend({
+  duration: external_exports.number().finite().min(2).max(10),
+  startTime: external_exports.number().finite().nonnegative(),
+  mode: external_exports.enum(["replace_audio_and_video", "replace_video", "replace_audio"]).default("replace_audio_and_video")
+}).strict();
+var desktopKeyframesSchema = desktopTextSchema.extend({
+  audio: external_exports.boolean().default(false),
+  keyframes: external_exports.array(external_exports.object({
+    imagePath: external_exports.string().min(1),
+    frameIndex: external_exports.number().int().nonnegative(),
+    strength: external_exports.number().finite().min(0).max(1).default(1)
+  }).strict()).min(1).max(10)
+}).strict().superRefine((args, ctx) => {
+  const indices = args.keyframes.map((f) => f.frameIndex);
+  if (new Set(indices).size !== indices.length || Math.max(...indices) >= Math.floor(args.duration * args.fps / 8) * 8 + 1)
+    ctx.addIssue({ code: "custom", message: "Keyframes require unique indices within the requested duration" });
+});
+var DESKTOP_SCHEMAS = {
+  "text-to-video": desktopTextSchema,
+  "image-to-video": desktopImageSchema,
+  "audio-to-video": desktopAudioSchema,
+  extend: desktopExtendSchema,
+  retake: desktopRetakeSchema,
+  keyframes: desktopKeyframesSchema
+};
+var receiptSchema = external_exports.object({
+  protocol: external_exports.literal("gateway-desktop-v1"),
+  baseUrl: external_exports.string(),
+  operation: external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "extend", "retake", "keyframes"]),
+  fingerprint: external_exports.string(),
+  videoPath: external_exports.string(),
+  status: external_exports.enum(["submitting", "submitted", "completed"]),
+  jobId: external_exports.string().optional(),
+  sha256: external_exports.string().optional()
+}).strict();
+
+// src/astra-genai-video.ts
+var GENAI_VIDEO_MODELS = ["ltx-2.5-22b-distilled", "ltx-2.5-22b-dev"];
+var GENAI_CAMERA_MOTIONS = ["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"];
+var genaiTextToVideoSchema = external_exports.object({
+  prompt: external_exports.string().min(1).max(5e3),
+  model: external_exports.enum(GENAI_VIDEO_MODELS),
+  duration: external_exports.number().int().nullable(),
+  resolution: external_exports.string().min(1),
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
+  generateAudio: external_exports.boolean().default(true),
+  cameraMotion: external_exports.enum(GENAI_CAMERA_MOTIONS).nullable().optional(),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
+}).strict();
+var genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
+  imageUri: genaiImageUriSchema.optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  lastFrameUri: genaiImageUriSchema.nullable().optional(),
+  lastFramePath: external_exports.string().min(1).optional()
+}).strict().superRefine((args, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (Number(args.imageUri !== void 0) + Number(args.imagePath !== void 0) !== 1) issue("Supply exactly one imageUri or imagePath");
+  if (args.lastFrameUri != null && args.lastFramePath !== void 0) issue("Supply at most one lastFrameUri or lastFramePath");
+});
+var oneOf = (a, b) => Number(a !== void 0) + Number(b !== void 0);
+var genaiAudioToVideoSchema = external_exports.object({
+  prompt: external_exports.string().trim().min(1).max(5e3),
+  model: external_exports.literal("ltx-2.5-22b-dev"),
+  resolution: external_exports.string().min(1),
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
+  audioPath: external_exports.string().min(1).optional(),
+  audioUri: external_exports.string().min(1).optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  imageUri: genaiImageUriSchema.optional(),
+  lastFramePath: external_exports.string().min(1).optional(),
+  lastFrameUri: genaiImageUriSchema.optional(),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
+}).strict().superRefine((args, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (oneOf(args.audioPath, args.audioUri) !== 1) issue("Supply exactly one audioPath or audioUri");
+  if (oneOf(args.imagePath, args.imageUri) > 1) issue("Supply at most one imagePath or imageUri");
+  if (oneOf(args.lastFramePath, args.lastFrameUri) > 1) issue("Supply at most one lastFramePath or lastFrameUri");
+  if (oneOf(args.lastFramePath, args.lastFrameUri) && !oneOf(args.imagePath, args.imageUri)) issue("A last frame requires a first image");
+});
+var genaiMsrSchema = external_exports.object({
+  prompt: external_exports.string().trim().min(1).max(2e3),
+  references: external_exports.array(external_exports.object({
+    imageUri: genaiImageUriSchema.optional(),
+    imagePath: external_exports.string().min(1).optional(),
+    background: external_exports.boolean().default(false),
+    // Voice sample for this subject; the gateway pairs it with the same picture slot.
+    audioUri: external_exports.string().min(1).optional(),
+    audioPath: external_exports.string().min(1).optional()
+  }).strict().refine(
+    (ref) => Number(!!ref.imageUri) + Number(!!ref.imagePath) === 1,
+    "Supply exactly one imageUri or imagePath"
+  ).refine((ref) => oneOf(ref.audioUri, ref.audioPath) <= 1, "Supply at most one audioUri or audioPath")).min(1).max(5),
+  referenceStrength: external_exports.number().finite().min(0).max(1).default(1),
+  referenceFrames: external_exports.union([external_exports.literal(25), external_exports.literal(33)]).default(33),
+  width: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1536),
+  height: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1024),
+  numFrames: external_exports.number().int().min(25).max(361).refine((n) => (n - 1) % 8 === 0).optional(),
+  duration: external_exports.number().finite().gt(0).max(360).optional(),
+  frameRate: external_exports.number().finite().min(1).max(60).default(24),
+  seed: external_exports.number().int().min(0).max(2147483647).default(42),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
+}).strict().superRefine((args, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  const backgrounds = args.references.filter((ref) => ref.background).length;
+  if (backgrounds > 1 || args.references.length - backgrounds > 4) issue("MSR supports at most four subjects and one background");
+  let subject = 0;
+  for (const ref of args.references) {
+    subject += Number(!ref.background);
+    if (!oneOf(ref.audioUri, ref.audioPath)) continue;
+    if (ref.background) issue("MSR voice samples belong to subjects, not the background");
+    else if (subject > 2) issue("MSR voice samples fit the first two subjects only");
+  }
+  if (args.width * args.height > 2064384) issue("MSR maximum is 2,064,384 pixels");
+  if (args.duration !== void 0) {
+    if (args.numFrames !== void 0) issue("Omit numFrames when using duration");
+    const frames = 1 + 8 * Math.ceil((args.duration * args.frameRate - 1) / 8 - 0.5 - 1e-9);
+    if (frames < 25 || frames > 361) issue("MSR duration must round to 25..361 frames");
+  }
+});
+var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "msr"]);
+var receiptSchema2 = external_exports.object({
+  version: external_exports.literal(1),
+  baseUrl: external_exports.string(),
+  operation: operationSchema,
+  fingerprint: external_exports.string(),
+  videoPath: external_exports.string(),
+  jobId: external_exports.string().min(1).optional(),
+  status: external_exports.enum(["submitting", "submitted", "completed"]),
+  sha256: external_exports.string().optional()
+}).strict();
+var statusSchema = external_exports.object({
+  id: external_exports.string().min(1),
+  status: external_exports.enum(["pending", "processing", "completed", "failed"]),
+  result: external_exports.object({ video_url: external_exports.string().min(1) }).passthrough().nullish(),
+  error: external_exports.unknown().optional()
+}).passthrough();
+var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
+var SUBMIT_TIMEOUT_MS2 = 15 * 6e4;
+
+// src/video-registry.ts
+var entry = (engine, deployment, operation, schema) => ({ engine, deployment, operation, schema, voice: operation === "audio" ? "supplied" : "none" });
+var reference = (engine, deployment, schema) => ({ ...entry(engine, deployment, "reference", schema), voice: "reference" });
+var VIDEO_ADAPTERS = Object.freeze({
+  seedance_text2video: entry("seedance", "byteplus", "text", seedanceText2VideoSchema),
+  seedance_img2video: entry("seedance", "byteplus", "image", seedanceImg2VideoSchema),
+  seedance_reference: reference("seedance", "byteplus", seedanceReferenceSchema),
+  ...Object.fromEntries(Object.entries(DESKTOP_SCHEMAS).map(([feature, schema]) => [
+    "astra_genai_desktop_" + ({ "text-to-video": "text2video", "image-to-video": "img2video", "audio-to-video": "audio2video" }[feature] || feature),
+    entry("astra-genai-desktop", "gateway-desktop-v1", { "text-to-video": "text", "image-to-video": "image", "audio-to-video": "audio", keyframes: "keyframe" }[feature] || feature, schema)
+  ])),
+  astra_genai_text2video: entry("astra-genai", "genai-ltx-v2", "text", genaiTextToVideoSchema),
+  astra_genai_img2video: entry("astra-genai", "genai-ltx-v2", "image", genaiImageToVideoSchema),
+  astra_genai_audio2video: entry("astra-genai", "genai-ltx-v2", "audio", genaiAudioToVideoSchema),
+  astra_genai_msr: reference("astra-genai", "genai-ltx-msr", genaiMsrSchema),
+  astra_text2video: entry("astra", "self-hosted-ltx", "text", astraText2VideoSchema),
+  astra_img2video: entry("astra", "self-hosted-ltx", "image", astraImg2VideoSchema),
+  astra_keyframe_video: entry("astra", "self-hosted-ltx", "keyframe", astraKeyframeVideoSchema),
+  astra_audio2video: entry("astra", "self-hosted-ltx", "audio", astraAudio2VideoSchema),
+  astra_ic_lora: entry("astra", "self-hosted-ltx", "control", astraIcLoraSchema),
+  astra_video_retake: entry("astra", "self-hosted-ltx", "retake", astraVideoRetakeSchema),
+  ...Object.fromEntries(Object.entries(LOCAL_VIDEO_MODELS).map(([tool, model2]) => [
+    tool,
+    model2.operation === "reference" ? reference("mlx", "local-mlx", model2.schema) : entry("mlx", "local-mlx", model2.operation, model2.schema)
+  ])),
+  mlx_video_generate: entry("mlx", "local-mlx", "text", mlxVideoGenerateSchema)
+});
+function speechVideoCapabilities(provider, model2, operation) {
+  if (["veo", "omni"].includes(provider) || provider === "seedance" && !Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
+    throw new Error(`video_engine_unsupported: ${provider} ${model2} cannot keep a character's voice; choose a video model again with project_manage`);
+  if (provider === "astra-genai" && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
+  if (provider === "astra-genai-desktop") return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "Gateway A2V reencodes supplied audio; timing/voice identity not guaranteed; installed model capabilities must be checked" };
+  if (provider === "astra") return { provider, model: model2, audioConditioning: true, lipSync: true, postLipSync: false, evidence: "astra_audio2video adapter contract" };
+  if (provider === "seedance" && Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
+    return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed" };
+  if (["host", "mlx", "astra-genai"].includes(provider))
+    return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "No verified external-speech synchronization adapter; voiceover remains available" };
+  throw new Error("No verified speech synchronization contract for selected deployment/model");
+}
+
+// src/video-voice.ts
+var speakerBindingSchema = external_exports.object({
+  speaker: external_exports.string().trim().min(1),
+  screenPosition: external_exports.enum(["left", "center", "right"]),
+  description: external_exports.string().trim().min(1)
+}).strict();
+var load2 = createRequire3(import.meta.url);
+var object = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
+var text = (value) => typeof value === "string" ? value.trim() : "";
+function resolveCharacterVoice(character, context, warnings) {
+  const id = text(character.id);
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) return character;
+  let channel = context.episode;
+  while (!existsSync4(path5.join(channel, "profile.md")) && path5.dirname(channel) !== channel) channel = path5.dirname(channel);
+  const folder = path5.join(channel, "assets/characters", id), identity = path5.join(folder, "identity.md");
+  let resolved = character;
+  if (!Object.keys(object(character.tts)).length && existsSync4(identity)) {
+    try {
+      const { handoff } = load2("../../skills/channel/references/character-sheet.js");
+      const current = handoff(identity, { voiceOnly: character.voiceOnly === true });
+      resolved = { ...current, ...character, tts: current.tts };
+    } catch (error) {
+      warnings.push(`${id}: cannot read the selected character voice: ${error instanceof Error ? error.message : String(error)}`);
+      return character;
+    }
+  }
+  const reference2 = object(resolved.voiceReference);
+  if (!Array.isArray(reference2.imagePaths) && existsSync4(folder)) {
+    const root = realpathSync(folder) + path5.sep;
+    const refs = object(context.shot.visual).references;
+    const imagePaths = (Array.isArray(refs) ? refs.map(object) : []).filter((ref) => ref.role === "character" && ["both", "video"].includes(text(ref.use))).map((ref) => text(ref.path)).filter(Boolean).map((file) => path5.resolve(context.episode, "storyboard", file)).filter((file) => existsSync4(file) && realpathSync(file).startsWith(root));
+    if (imagePaths.length) resolved = { ...resolved, voiceReference: { ...reference2, imagePaths } };
+  }
+  return resolved;
+}
+
+// src/video-prompt.ts
+import { createRequire as createRequire4 } from "node:module";
+var load3 = createRequire4(import.meta.url);
+
+// src/video-image-inputs.ts
+import { createRequire as createRequire5 } from "node:module";
+var load4 = createRequire5(import.meta.url);
+
 // src/storyboard.ts
 import { createHash as createHash3 } from "node:crypto";
 
@@ -32480,7 +32756,7 @@ function evaluateWindowScript(source, options = {}) {
 }
 
 // src/storyboard.ts
-import { existsSync as existsSync4, mkdirSync as mkdirSync2, readFileSync as readFileSync6, renameSync as renameSync2, statSync as statSync4, unlinkSync, writeFileSync as writeFileSync4 } from "node:fs";
+import { existsSync as existsSync5, mkdirSync as mkdirSync2, readFileSync as readFileSync7, renameSync as renameSync2, statSync as statSync4, unlinkSync, writeFileSync as writeFileSync4 } from "node:fs";
 import * as nodeModule2 from "node:module";
 import { basename as basename3, dirname as dirname4, join as join4, relative, resolve as resolve4 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
@@ -32741,9 +33017,9 @@ function scenesPath(target) {
 }
 function readBoard(target) {
   const file = scenesPath(target);
-  if (!existsSync4(file)) throw new Error(`no scenes.js at ${file}`);
+  if (!existsSync5(file)) throw new Error(`no scenes.js at ${file}`);
   if (!statSync4(file).isFile()) throw new Error(`${file} is not a file`);
-  const src = readFileSync6(file, "utf8");
+  const src = readFileSync7(file, "utf8");
   const header = [];
   for (const line of src.split("\n")) {
     if (/^\s*\/\//.test(line)) header.push(line.trim());
@@ -32858,7 +33134,8 @@ var shotPromptSchema = external_exports.object({
   id: shotIdSchema,
   action: nonEmpty.describe("What happens in the shot, in English: the subjects' movement from the opening picture"),
   end: nonEmpty.optional().describe("The closing picture, in English"),
-  sound: nonEmpty.optional().describe(`Ambient sound and effects, in English; the shot's lines come from shot_dialogue. "no music" is added unless it names music`)
+  sound: nonEmpty.optional().describe(`Ambient sound and effects, in English; the shot's lines come from shot_dialogue. "no music" is added unless it names music`),
+  speakerBindings: external_exports.array(speakerBindingSchema).max(2).optional().describe('MSR speakers as seen in the start image, e.g. [{speaker:"hero",screenPosition:"left",description:"the man in black armor"}]; viewer coordinates, never reference order')
 }).strict();
 var scenarioCheckResultSchema = external_exports.object({
   files: external_exports.array(external_exports.string()),
@@ -32871,254 +33148,19 @@ var scenarioCheckResultSchema = external_exports.object({
   }))
 });
 
-// src/astra-genai-desktop.ts
-var model = external_exports.enum(["ltx-2.3-fast", "ltx-2.5-fast"]);
-var resolution = external_exports.enum(["270p", "360p", "540p", "720p", "1080p", "1440p", "2160p"]);
-var duration = external_exports.number().int().refine((n) => [2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 18, 20].includes(n));
-var aspect = external_exports.enum(["21:9", "16:9", "3:2", "4:3", "1:1", "4:5", "9:16"]);
-var loras = external_exports.array(external_exports.object({ ref: external_exports.string().min(1), scale: external_exports.number().finite().min(0).max(4).default(1) }).strict()).min(1).refine((rows) => new Set(rows.map((r) => r.ref)).size === rows.length, "Duplicate LoRA refs");
-var local = {
-  reserveUsd: external_exports.number().finite().nonnegative(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").refine((n) => n.endsWith(".mp4")).optional()
-};
-var common = external_exports.object({
-  model,
-  prompt: external_exports.string().trim().min(1),
-  resolution,
-  seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
-  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
-  cameraMotion: external_exports.enum(["none", "dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional(),
-  ...local
-}).strict();
-var desktopTextSchema = common.extend({ duration, aspectRatio: aspect.default("16:9"), loras: loras.optional() }).strict();
-var desktopImageSchema = common.extend({
-  duration,
-  aspectRatio: external_exports.union([aspect, external_exports.literal("auto")]).default("auto"),
-  imagePath: external_exports.string().min(1),
-  lastFramePath: external_exports.string().min(1).optional()
-}).strict();
-var desktopAudioSchema = common.extend({
-  audioPath: external_exports.string().min(1),
-  imagePath: external_exports.string().min(1).optional(),
-  aspectRatio: external_exports.union([aspect, external_exports.literal("auto")]).default("16:9"),
-  allowAudioTruncation: external_exports.boolean().default(false)
-}).strict();
-var edit = external_exports.object({
-  model,
-  prompt: external_exports.string().default(""),
-  sourceVideoPath: external_exports.string().min(1),
-  targetResolution: external_exports.object({ width: external_exports.number().int().positive(), height: external_exports.number().int().positive() }).strict().optional(),
-  seed: external_exports.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional(),
-  ...local
-}).strict();
-var desktopExtendSchema = edit.extend({ duration: external_exports.number().finite().min(2).max(20), mode: external_exports.enum(["start", "end"]).default("end") }).strict();
-var desktopRetakeSchema = edit.extend({
-  duration: external_exports.number().finite().min(2).max(10),
-  startTime: external_exports.number().finite().nonnegative(),
-  mode: external_exports.enum(["replace_audio_and_video", "replace_video", "replace_audio"]).default("replace_audio_and_video")
-}).strict();
-var desktopKeyframesSchema = desktopTextSchema.extend({
-  audio: external_exports.boolean().default(false),
-  keyframes: external_exports.array(external_exports.object({
-    imagePath: external_exports.string().min(1),
-    frameIndex: external_exports.number().int().nonnegative(),
-    strength: external_exports.number().finite().min(0).max(1).default(1)
-  }).strict()).min(1).max(10)
-}).strict().superRefine((args, ctx) => {
-  const indices = args.keyframes.map((f) => f.frameIndex);
-  if (new Set(indices).size !== indices.length || Math.max(...indices) >= Math.floor(args.duration * args.fps / 8) * 8 + 1)
-    ctx.addIssue({ code: "custom", message: "Keyframes require unique indices within the requested duration" });
-});
-var DESKTOP_SCHEMAS = {
-  "text-to-video": desktopTextSchema,
-  "image-to-video": desktopImageSchema,
-  "audio-to-video": desktopAudioSchema,
-  extend: desktopExtendSchema,
-  retake: desktopRetakeSchema,
-  keyframes: desktopKeyframesSchema
-};
-var receiptSchema = external_exports.object({
-  protocol: external_exports.literal("gateway-desktop-v1"),
-  baseUrl: external_exports.string(),
-  operation: external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "extend", "retake", "keyframes"]),
-  fingerprint: external_exports.string(),
-  videoPath: external_exports.string(),
-  status: external_exports.enum(["submitting", "submitted", "completed"]),
-  jobId: external_exports.string().optional(),
-  sha256: external_exports.string().optional()
-}).strict();
-
 // src/video-routing.ts
-import { createRequire as createRequire6 } from "node:module";
+import { createRequire as createRequire7 } from "node:module";
 import { fileURLToPath as fileURLToPath5 } from "node:url";
-
-// src/astra-genai-video.ts
-var GENAI_VIDEO_MODELS = ["ltx-2.5-22b-distilled", "ltx-2.5-22b-dev"];
-var GENAI_CAMERA_MOTIONS = ["dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"];
-var genaiTextToVideoSchema = external_exports.object({
-  prompt: external_exports.string().min(1).max(5e3),
-  model: external_exports.enum(GENAI_VIDEO_MODELS),
-  duration: external_exports.number().int().nullable(),
-  resolution: external_exports.string().min(1),
-  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
-  generateAudio: external_exports.boolean().default(true),
-  cameraMotion: external_exports.enum(GENAI_CAMERA_MOTIONS).nullable().optional(),
-  reserveUsd: external_exports.number().finite().nonnegative(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
-}).strict();
-var genaiImageToVideoSchema = genaiTextToVideoSchema.extend({
-  imageUri: genaiImageUriSchema.optional(),
-  imagePath: external_exports.string().min(1).optional(),
-  lastFrameUri: genaiImageUriSchema.nullable().optional(),
-  lastFramePath: external_exports.string().min(1).optional()
-}).strict().superRefine((args, ctx) => {
-  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  if (Number(args.imageUri !== void 0) + Number(args.imagePath !== void 0) !== 1) issue("Supply exactly one imageUri or imagePath");
-  if (args.lastFrameUri != null && args.lastFramePath !== void 0) issue("Supply at most one lastFrameUri or lastFramePath");
-});
-var oneOf = (a, b) => Number(a !== void 0) + Number(b !== void 0);
-var genaiAudioToVideoSchema = external_exports.object({
-  prompt: external_exports.string().trim().min(1).max(5e3),
-  model: external_exports.literal("ltx-2.5-22b-dev"),
-  resolution: external_exports.string().min(1),
-  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
-  audioPath: external_exports.string().min(1).optional(),
-  audioUri: external_exports.string().min(1).optional(),
-  imagePath: external_exports.string().min(1).optional(),
-  imageUri: genaiImageUriSchema.optional(),
-  lastFramePath: external_exports.string().min(1).optional(),
-  lastFrameUri: genaiImageUriSchema.optional(),
-  reserveUsd: external_exports.number().finite().nonnegative(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
-}).strict().superRefine((args, ctx) => {
-  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  if (oneOf(args.audioPath, args.audioUri) !== 1) issue("Supply exactly one audioPath or audioUri");
-  if (oneOf(args.imagePath, args.imageUri) > 1) issue("Supply at most one imagePath or imageUri");
-  if (oneOf(args.lastFramePath, args.lastFrameUri) > 1) issue("Supply at most one lastFramePath or lastFrameUri");
-  if (oneOf(args.lastFramePath, args.lastFrameUri) && !oneOf(args.imagePath, args.imageUri)) issue("A last frame requires a first image");
-});
-var genaiMsrSchema = external_exports.object({
-  prompt: external_exports.string().trim().min(1).max(2e3),
-  references: external_exports.array(external_exports.object({
-    imageUri: genaiImageUriSchema.optional(),
-    imagePath: external_exports.string().min(1).optional(),
-    background: external_exports.boolean().default(false),
-    // Voice sample for this subject; the gateway pairs it with the same picture slot.
-    audioUri: external_exports.string().min(1).optional(),
-    audioPath: external_exports.string().min(1).optional()
-  }).strict().refine(
-    (ref) => Number(!!ref.imageUri) + Number(!!ref.imagePath) === 1,
-    "Supply exactly one imageUri or imagePath"
-  ).refine((ref) => oneOf(ref.audioUri, ref.audioPath) <= 1, "Supply at most one audioUri or audioPath")).min(1).max(5),
-  referenceStrength: external_exports.number().finite().min(0).max(1).default(1),
-  referenceFrames: external_exports.union([external_exports.literal(25), external_exports.literal(33)]).default(33),
-  width: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1536),
-  height: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1024),
-  numFrames: external_exports.number().int().min(25).max(361).refine((n) => (n - 1) % 8 === 0).optional(),
-  duration: external_exports.number().finite().gt(0).max(360).optional(),
-  frameRate: external_exports.number().finite().min(1).max(60).default(24),
-  seed: external_exports.number().int().min(0).max(2147483647).default(42),
-  reserveUsd: external_exports.number().finite().nonnegative(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
-}).strict().superRefine((args, ctx) => {
-  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  const backgrounds = args.references.filter((ref) => ref.background).length;
-  if (backgrounds > 1 || args.references.length - backgrounds > 4) issue("MSR supports at most four subjects and one background");
-  let subject = 0;
-  for (const ref of args.references) {
-    subject += Number(!ref.background);
-    if (!oneOf(ref.audioUri, ref.audioPath)) continue;
-    if (ref.background) issue("MSR voice samples belong to subjects, not the background");
-    else if (subject > 2) issue("MSR voice samples fit the first two subjects only");
-  }
-  if (args.width * args.height > 2064384) issue("MSR maximum is 2,064,384 pixels");
-  if (args.duration !== void 0) {
-    if (args.numFrames !== void 0) issue("Omit numFrames when using duration");
-    const frames = 1 + 8 * Math.ceil((args.duration * args.frameRate - 1) / 8 - 0.5 - 1e-9);
-    if (frames < 25 || frames > 361) issue("MSR duration must round to 25..361 frames");
-  }
-});
-var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "msr"]);
-var receiptSchema2 = external_exports.object({
-  version: external_exports.literal(1),
-  baseUrl: external_exports.string(),
-  operation: operationSchema,
-  fingerprint: external_exports.string(),
-  videoPath: external_exports.string(),
-  jobId: external_exports.string().min(1).optional(),
-  status: external_exports.enum(["submitting", "submitted", "completed"]),
-  sha256: external_exports.string().optional()
-}).strict();
-var statusSchema = external_exports.object({
-  id: external_exports.string().min(1),
-  status: external_exports.enum(["pending", "processing", "completed", "failed"]),
-  result: external_exports.object({ video_url: external_exports.string().min(1) }).passthrough().nullish(),
-  error: external_exports.unknown().optional()
-}).passthrough();
-var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
-var SUBMIT_TIMEOUT_MS2 = 15 * 6e4;
-
-// src/video-registry.ts
-var entry = (engine, deployment, operation, schema) => ({ engine, deployment, operation, schema, voice: operation === "audio" ? "supplied" : "none" });
-var reference = (engine, deployment, schema) => ({ ...entry(engine, deployment, "reference", schema), voice: "reference" });
-var VIDEO_ADAPTERS = Object.freeze({
-  seedance_text2video: entry("seedance", "byteplus", "text", seedanceText2VideoSchema),
-  seedance_img2video: entry("seedance", "byteplus", "image", seedanceImg2VideoSchema),
-  seedance_reference: reference("seedance", "byteplus", seedanceReferenceSchema),
-  ...Object.fromEntries(Object.entries(DESKTOP_SCHEMAS).map(([feature, schema]) => [
-    "astra_genai_desktop_" + ({ "text-to-video": "text2video", "image-to-video": "img2video", "audio-to-video": "audio2video" }[feature] || feature),
-    entry("astra-genai-desktop", "gateway-desktop-v1", { "text-to-video": "text", "image-to-video": "image", "audio-to-video": "audio", keyframes: "keyframe" }[feature] || feature, schema)
-  ])),
-  astra_genai_text2video: entry("astra-genai", "genai-ltx-v2", "text", genaiTextToVideoSchema),
-  astra_genai_img2video: entry("astra-genai", "genai-ltx-v2", "image", genaiImageToVideoSchema),
-  astra_genai_audio2video: entry("astra-genai", "genai-ltx-v2", "audio", genaiAudioToVideoSchema),
-  astra_genai_msr: reference("astra-genai", "genai-ltx-msr", genaiMsrSchema),
-  astra_text2video: entry("astra", "self-hosted-ltx", "text", astraText2VideoSchema),
-  astra_img2video: entry("astra", "self-hosted-ltx", "image", astraImg2VideoSchema),
-  astra_keyframe_video: entry("astra", "self-hosted-ltx", "keyframe", astraKeyframeVideoSchema),
-  astra_audio2video: entry("astra", "self-hosted-ltx", "audio", astraAudio2VideoSchema),
-  astra_ic_lora: entry("astra", "self-hosted-ltx", "control", astraIcLoraSchema),
-  astra_video_retake: entry("astra", "self-hosted-ltx", "retake", astraVideoRetakeSchema),
-  ...Object.fromEntries(Object.entries(LOCAL_VIDEO_MODELS).map(([tool, model2]) => [
-    tool,
-    model2.operation === "reference" ? reference("mlx", "local-mlx", model2.schema) : entry("mlx", "local-mlx", model2.operation, model2.schema)
-  ])),
-  mlx_video_generate: entry("mlx", "local-mlx", "text", mlxVideoGenerateSchema)
-});
-function speechVideoCapabilities(provider, model2, operation) {
-  if (["veo", "omni"].includes(provider) || provider === "seedance" && !Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
-    throw new Error(`video_engine_unsupported: ${provider} ${model2} cannot keep a character's voice; choose a video model again with project_manage`);
-  if (provider === "astra-genai" && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
-  if (provider === "astra-genai-desktop") return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "Gateway A2V reencodes supplied audio; timing/voice identity not guaranteed; installed model capabilities must be checked" };
-  if (provider === "astra") return { provider, model: model2, audioConditioning: true, lipSync: true, postLipSync: false, evidence: "astra_audio2video adapter contract" };
-  if (provider === "seedance" && Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
-    return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed" };
-  if (["host", "mlx", "astra-genai"].includes(provider))
-    return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, evidence: "No verified external-speech synchronization adapter; voiceover remains available" };
-  throw new Error("No verified speech synchronization contract for selected deployment/model");
-}
 
 // src/video-pricing.ts
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 var PRICE_FILE = fileURLToPath4(new URL("../../skills/autoproduce/references/prices.tsv", import.meta.url));
 
-// src/video-image-inputs.ts
-import { createRequire as createRequire4 } from "node:module";
-var load2 = createRequire4(import.meta.url);
-
-// src/video-voice.ts
-import { createRequire as createRequire5 } from "node:module";
-var load3 = createRequire5(import.meta.url);
-
 // src/video-routing.ts
-var load4 = createRequire6(import.meta.url);
+var load5 = createRequire7(import.meta.url);
 var shared = fileURLToPath5(new URL("../../skills/_shared/video-selection.js", import.meta.url));
 var modelSettings = fileURLToPath5(new URL("../../skills/_shared/model-settings.js", import.meta.url));
-var routingContext = (episode, shotId) => load4(shared).readVideoContext(episode, shotId);
+var routingContext = (episode, shotId) => load5(shared).readVideoContext(episode, shotId);
 var idSchema2 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var videoPlanSchema = external_exports.object({
   episode: external_exports.string().min(1),
@@ -33138,7 +33180,7 @@ var videoApproveSchema = external_exports.object({
 
 // src/speech.ts
 import { createHash as createHash4, randomUUID } from "node:crypto";
-import { readFileSync as readFileSync7, writeFileSync as writeFileSync5, renameSync as renameSync3, mkdirSync as mkdirSync3, existsSync as existsSync5 } from "node:fs";
+import { readFileSync as readFileSync8, writeFileSync as writeFileSync5, renameSync as renameSync3, mkdirSync as mkdirSync3, existsSync as existsSync6 } from "node:fs";
 import { dirname as dirname5, resolve as resolve5, join as join5 } from "node:path";
 import * as nodeModule4 from "node:module";
 import { execFileSync as execFileSync3 } from "node:child_process";
@@ -33157,14 +33199,14 @@ var actingSchema = external_exports.object({
   direction: external_exports.string().trim().min(1).max(500).regex(/^[^<>\[\]|\r\n]+$/, "Use plain delivery direction, without tag markup").optional(),
   tags: external_exports.array(external_exports.string().trim().min(1).max(60).regex(/^[A-Za-z][A-Za-z ,'-]*$/, "Use bare English vocal tag names")).max(6).optional()
 }).strict();
-function compileActing(text, acting, voice) {
+function compileActing(text2, acting, voice) {
   const shared3 = nodeModule3.createRequire(import.meta.url)("../../skills/_shared/speech-contract.js");
-  return shared3.compileActing(text, actingSchema.parse(acting || {}), voice);
+  return shared3.compileActing(text2, actingSchema.parse(acting || {}), voice);
 }
 
 // src/tts-models.ts
-import { createRequire as createRequire8 } from "node:module";
-var shared2 = () => createRequire8(import.meta.url)("../../skills/_shared/tts-models.js");
+import { createRequire as createRequire9 } from "node:module";
+var shared2 = () => createRequire9(import.meta.url)("../../skills/_shared/tts-models.js");
 function resolveTtsModel(provider, model2) {
   return shared2().resolveTtsModel(provider, model2);
 }
@@ -33191,13 +33233,13 @@ var speechManageSchema = external_exports.object({
   capabilities: external_exports.object({ provider: external_exports.string().min(1), model: external_exports.string().min(1), audioConditioning: external_exports.boolean(), lipSync: external_exports.boolean(), postLipSync: external_exports.boolean(), nativeSpeech: external_exports.boolean().optional(), evidence: external_exports.string().min(1) }).strict().optional()
 }).strict();
 var hash = (s) => createHash4("sha256").update(s).digest("hex");
-var object = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
+var object2 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
 function speechRevision(line, character) {
   return hash(JSON.stringify(actingContract().speechRevisionPayload(line, character?.tts)));
 }
 function currentAudio(line, character) {
   try {
-    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync5(line.audio.path) && hash(readFileSync7(line.audio.path)) === line.audio.sha256;
+    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync6(line.audio.path) && hash(readFileSync8(line.audio.path)) === line.audio.sha256;
   } catch {
     return false;
   }
@@ -33228,13 +33270,13 @@ function audioProvenanceStatus(line, character) {
   const voice = character?.tts;
   const historical = ["supertonic", "mlx"].includes(String(voice?.engine)) || voice?.engine === "elevenlabs" && ["eleven_v3", "eleven_v3_conversational", "eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_turbo_v2_5"].includes(String(voice?.model));
   try {
-    if (historical && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && hash(readFileSync7(line.audio.path)) === line.audio.sha256) return "preserved_historical_recording_unverified";
+    if (historical && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && hash(readFileSync8(line.audio.path)) === line.audio.sha256) return "preserved_historical_recording_unverified";
   } catch {
   }
   return "stale_or_missing";
 }
 function measuredDuration(line) {
-  if (!line.audio || !existsSync5(line.audio.path)) return null;
+  if (!line.audio || !existsSync6(line.audio.path)) return null;
   try {
     const value = Number(execFileSync3("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
     return Number.isFinite(value) && value > 0 ? value : null;
@@ -33247,7 +33289,6 @@ function speechVideoPlan(input, capabilities) {
   const scene = Array.isArray(input) ? { narration: input } : input;
   const lines = scene.narration || [];
   const onScreen = lines.some((line) => line.delivery === "on_screen");
-  if (capabilities.nativeSpeech && lines.some((line) => line.delivery !== "on_screen")) throw new Error("Native video speech voices on-screen lines only; give narration and off-screen lines their own shot");
   const mode = capabilities.nativeSpeech ? "native" : !onScreen ? "voiceover" : capabilities.audioConditioning && capabilities.lipSync ? "audio_conditioned" : capabilities.postLipSync ? "post_lipsync" : null;
   if (!mode) throw new Error("Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting");
   const timeline = actingContract().planScenePerformance(scene, measuredDuration);
@@ -33264,13 +33305,14 @@ function speechVideoPlan(input, capabilities) {
 function manageSpeech(args) {
   args = speechManageSchema.parse(args);
   const { file, win, header } = readBoard(args.path);
-  const before = readFileSync7(file, "utf8");
+  const before = readFileSync8(file, "utf8");
   const revision = hash(before);
   const mutates = ["prepare", "update", "attach_audio", "attach_video", "retime"].includes(args.action);
   if (mutates && args.expectedRevision !== revision) throw new Error("Read speech first and supply its current expectedRevision; the storyboard may have changed");
-  const doc = object(win.SB_DOC);
+  const doc = object2(win.SB_DOC);
   const rawCharacters = doc.characters;
-  const characters = Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object(rawCharacters)).map(([id, c]) => ({ ...object(c), id }));
+  const voiceWarnings = [];
+  const characters = (Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object2(rawCharacters)).map(([id, c]) => ({ ...object2(c), id }))).map((c) => resolveCharacterVoice(object2(c), { episode: dirname5(dirname5(file)), board: win, shot: {} }, voiceWarnings));
   const character = (id) => characters.find((c) => c.id === id);
   const scenes = win.SCENES;
   let changed = false;
@@ -33278,7 +33320,7 @@ function manageSpeech(args) {
   if (args.timingPatch && args.action !== "retime") throw new Error("timingPatch is only used by retime");
   if (args.reuse && args.action !== "attach_video") throw new Error("reuse is only used by attach_video");
   if (args.action === "prepare") {
-    const needsNarrator = object(win.STORY).version !== "story-v2" || scenes.some((scene) => (scene.narration || []).some((line) => !line.speaker));
+    const needsNarrator = object2(win.STORY).version !== "story-v2" || scenes.some((scene) => (scene.narration || []).some((line) => !line.speaker));
     if ((needsNarrator || doc.narratorCharacterId !== void 0) && (typeof doc.narratorCharacterId !== "string" || !character(doc.narratorCharacterId)))
       throw new Error("Set SB_DOC.characters and narratorCharacterId before preparing speech without explicit speakers; no voice is invented");
     let next = Math.max(0, ...scenes.map((s) => Number(String(s.id || "").replace(/^s/, "")) || 0));
@@ -33310,17 +33352,17 @@ function manageSpeech(args) {
       const oldDelivery = line.delivery;
       Object.assign(line, args.patch);
       if (args.patch.acting === null) delete line.acting;
-      if (args.patch.speaker && object(win.STORY).version === "story-v2") {
+      if (args.patch.speaker && object2(win.STORY).version === "story-v2") {
         const group = (scene.narration || []).indexOf(line) + 1;
         for (const event of Array.isArray(scene.performance) ? scene.performance : []) {
-          const performance2 = object(event);
+          const performance2 = object2(event);
           if (performance2.group === group && ["dialogue", "narration"].includes(String(performance2.kind)))
             performance2.character = line.speaker;
         }
       }
       if (speechRevision(line, character(line.speaker)) !== prior) {
-        const video = object(object(scene.visual).video);
-        const binding = object(video.speechBinding);
+        const video = object2(object2(scene.visual).video);
+        const binding = object2(video.speechBinding);
         invalidated = { audio: oldAudio || null, video: Object.keys(video).length && (line.delivery === "on_screen" || oldDelivery === "on_screen" || Object.hasOwn(args.patch, "acting")) || ["audio_conditioned", "post_lipsync"].includes(String(binding.mode)) ? video : null, edit: true };
         delete line.audio;
         if (binding.mode !== "native") line.mediaStatus = "needs_audio";
@@ -33334,12 +33376,12 @@ function manageSpeech(args) {
       const voice = character(line.speaker)?.tts;
       const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation, line);
       if (voiceErrors.length) throw new Error("Generation arguments do not match the pinned character voice: " + voiceErrors.join("; "));
-      const bytes = readFileSync7(audioPath);
+      const bytes = readFileSync8(audioPath);
       if (!bytes.length) throw new Error("Audio file is empty");
       const priorAudio = line.audio;
       const audioHash = hash(bytes), lineRevision = speechRevision(line, character(line.speaker));
-      const video = object(object(scene.visual).video), binding = object(video.speechBinding);
-      const boundAudio = Array.isArray(binding.audio) ? binding.audio.map(object).find((a) => a.lineId === line.id) : void 0;
+      const video = object2(object2(scene.visual).video), binding = object2(video.speechBinding);
+      const boundAudio = Array.isArray(binding.audio) ? binding.audio.map(object2).find((a) => a.lineId === line.id) : void 0;
       if (priorAudio?.sha256 !== audioHash || priorAudio?.revision !== lineRevision || boundAudio && (boundAudio.sha256 !== audioHash || boundAudio.revision !== lineRevision)) {
         const dependsOnSpeech = binding.mode !== "native" && (line.delivery === "on_screen" || ["audio_conditioned", "post_lipsync"].includes(String(binding.mode)));
         invalidated = { audio: priorAudio || null, video: dependsOnSpeech && Object.keys(video).length ? video : null, edit: true };
@@ -33369,7 +33411,7 @@ function manageSpeech(args) {
     const result = contract2.retime(scene, args.timingPatch || {}, measuredDuration);
     scene.performance = result.scene.performance;
     scene.duration = result.scene.duration;
-    const video = object(object(scene.visual).video);
+    const video = object2(object2(scene.visual).video);
     if (Object.keys(video).length) video.speechStatus = "stale";
     timing = {
       shotId: scene.id,
@@ -33390,7 +33432,7 @@ function manageSpeech(args) {
     if (args.lineId || args.speaker || args.query) throw new Error("Video planning uses all lines in the shot; remove line filters");
     for (const { line } of selected) actingSchema.nullable().optional().parse(line.acting);
     const episode = dirname5(dirname5(file));
-    if (existsSync5(join5(episode, ".work/model-settings.json"))) {
+    if (existsSync6(join5(episode, ".work/model-settings.json"))) {
       const { selection } = routingContext(episode, args.shotId);
       const adapter = args.tool ? VIDEO_ADAPTERS[args.tool] : void 0;
       if (args.tool && adapter?.engine !== selection.engine) throw new Error("model_selection_mismatch: tool does not match selected engine");
@@ -33405,22 +33447,22 @@ function manageSpeech(args) {
     if (args.action === "attach_video") {
       if (!args.videoPath) throw new Error("videoPath is required");
       const videoPath = resolve5(dirname5(file), args.videoPath);
-      const bytes = readFileSync7(videoPath);
+      const bytes = readFileSync8(videoPath);
       if (!bytes.length) throw new Error("Video file is empty");
       const native = plan.mode === "native";
-      const sound = object(scene.sound);
+      const sound = object2(scene.sound);
       if (native && sound.audioSource === "speech") throw new Error("Native video speech lives in the clip soundtrack; sound.audioSource speech would drop it");
       const audio = selected.map(({ line }) => {
         if (native) return { lineId: line.id, revision: speechRevision(line, character(line.speaker)) };
-        if (!line.audio || line.audio.revision !== speechRevision(line, character(line.speaker)) || hash(readFileSync7(line.audio.path)) !== line.audio.sha256) throw new Error("Generate and attach current speech before binding video");
+        if (!line.audio || line.audio.revision !== speechRevision(line, character(line.speaker)) || hash(readFileSync8(line.audio.path)) !== line.audio.sha256) throw new Error("Generate and attach current speech before binding video");
         const errors = voiceContract().generationVoiceErrors(character(line.speaker)?.tts, line.audio.generation, line);
         if (line.audio.generation.text !== line.tts || errors.length) throw new Error("Speech generation evidence changed: " + errors.join("; "));
         return { lineId: line.id, sha256: line.audio.sha256, revision: line.audio.revision };
       });
-      const visual = object(scene.visual);
-      const video = object(visual.video);
+      const visual = object2(scene.visual);
+      const video = object2(visual.video);
       if (video.engine && video.engine !== plan.provider || video.model && video.model !== plan.model) throw new Error("Adapter does not match the selected shot model");
-      const priorBinding = object(video.speechBinding);
+      const priorBinding = object2(video.speechBinding);
       const videoSha256 = hash(bytes);
       const performanceChanged = priorBinding.performanceRevision && priorBinding.performanceRevision !== plan.performanceRevision;
       const audioChanged = Array.isArray(priorBinding.audio) && JSON.stringify(priorBinding.audio) !== JSON.stringify(audio);
@@ -33429,7 +33471,7 @@ function manageSpeech(args) {
       if (args.reuse && !tailTrim) throw new Error("Tail trim requires identical bound audio, unchanged speech/action starts and semantics, and a shorter end. Regenerate changed speech or staging.");
       let quality = { review: "not_reviewed", camera: "not_reviewed", lipSync: "not_reviewed" };
       try {
-        const receipt = JSON.parse(readFileSync7(videoPath + ".astra-job.json", "utf8"));
+        const receipt = JSON.parse(readFileSync8(videoPath + ".astra-job.json", "utf8"));
         if (receipt.sha256 === videoSha256) quality = { ...quality, speechSync: receipt.speechSync || null, selection: receipt.selection || null };
         else if (!receipt.sha256 && receipt.videoPath === videoPath)
           quality = { ...quality, unverifiedSpeechSync: receipt.speechSync || null, receiptBinding: "unverified" };
@@ -33477,14 +33519,14 @@ function manageSpeech(args) {
     const work = resolve5(dirname5(file), "../.work/speech-history");
     mkdirSync3(work, { recursive: true });
     const backup = join5(work, revision + ".js");
-    if (!existsSync5(backup)) writeFileSync5(backup, before);
+    if (!existsSync6(backup)) writeFileSync5(backup, before);
     const nextSource = serializeBoard(win, header);
-    if (hash(readFileSync7(file)) !== revision) throw new Error("Storyboard changed during speech edit");
+    if (hash(readFileSync8(file)) !== revision) throw new Error("Storyboard changed during speech edit");
     const tmp = file + "." + randomUUID() + ".tmp";
     writeFileSync5(tmp, nextSource);
     renameSync3(tmp, file);
   }
-  return { revision: hash(readFileSync7(file)), changed, invalidated, plan, timing, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: object(object(object(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  return { revision: hash(readFileSync8(file)), changed, invalidated, plan, timing, ...voiceWarnings.length ? { voiceWarnings } : {}, ...args.action === "plan_audio" ? { audioPlans: selected.map(({ scene, line }) => ({ shotId: scene.id, lineId: line.id, ...speechAudioPlan(line, character(line.speaker)) })) } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker)), audioProvenanceStatus: object2(object2(object2(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/video-sound.ts

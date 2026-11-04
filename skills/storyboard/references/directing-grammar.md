@@ -618,30 +618,30 @@ scene that doesn't need a move written stays on the alternating default.
 
 | Feel (what the audience should get) | Size | Angle | Move (generated only) | Still (Ken Burns lane) | Length | Sound | Watch out |
 |---|---|---|---|---|---|---|---|
-| observe · understand the situation (관찰·설명) | `ls` → `ms` | `eye` | `static`, or one slow `truck` | `auto` drift, or a slow `pan` across the scene | 5–8 s | space forward, lines clear enough | the body's default register — don't decorate it |
-| introduce the space · confirm a relation (공간 소개·관계 확정) | `ls`/`ms` | `eye` | slow `pan` from A to B | slow `pan` from A to B (focusFrom → focusTo) | 5–8 s | the room, then B's sound as B arrives | `framing` A and `end` B differ; a pan with no B is cut in the edit |
-| scale by time · looking up (규모 — 올려다봄) | `fs`/`ls`, the thing filling the top | `low` → `eye` | `tilt up`, steady | `tilt` up the picture | 5–8 s | the bed swells before the top is in frame | after a reaction shot when there is a person; a `pedestal up` looks down on it instead |
-| scale · how big this is (규모) | `els`/`ls` with many subjects | `high` or `overhead` | `static`, or `dolly out` rising | `out`, or `pan` across the expanse | 5–8 s | space loud | the same tiny person alone means loneliness, not scale — the head count flips the meaning |
-| alone · powerless · the world is big (고독·무력) | `els` | `eye` or slight `high` | `static` or slow `dolly out` | slow `out` | 5–8 s | wind, room, distant machine — **no human voice** | Mad Max's cliff: the smallness says the sentence; don't narrate it on top |
-| intimate · I'm in it (친밀·당사자) | `mcu` → `cu` | `eye` | `static` or very slow `dolly in` | slow `in`, `focus` on the person | 7–10 s | voice and breath forward, space gone | choose close-ups for the expression or detail that carries the beat; no fixed quota |
-| quiet tension · pressure (조용한 긴장·압박) | `ms` → `mcu` | `eye` | slow `zoom in` or `static` | slow `in`, `focus` on the person | 7–10 s | room tone, no music swell | a `dolly in` opens the space instead — the wrong approach for pressure |
-| realisation · awakening (각성·깨달음) | `mcu`/`cu` | `eye` | `dolly in` | `in` + `focus` at the subject | 5–7 s | the bed drops (`sound.drop`), then the line | |
-| loss · letting go (상실) | `ms`/`ls` | `eye` | `dolly out` | `out` | 5–8 s | space rising, no speech | |
-| unease · something is wrong (불안·불길) | `ms`/`mcu` | `dutch` (with a scene-specific reason) or `eye` | `handheld` | `hold` + `drift` | 5–7 s | room tone, an off sound | use the tilt only where imbalance serves the scene |
-| imposing · hero · dangerous (위압·영웅) | `fs`/`ms` | `low` (+ wide lens) | `static` or slow `dolly in` | slow `in` — the low angle is drawn in the still | 5–7 s | low end forward | `[study]`: bigger and stronger, **not** better liked |
-| powerless · isolated · watched (무력·고립·감시) | `ls`/`ms` | `high` | `static` or slow `dolly out` | `out` | 5–8 s | the surroundings' sound | a subject filling a high-angle frame alone doesn't read weak |
-| fate · the whole picture in one frame (운명·요약) | `ls`/`els` | `overhead` | `static` | slow `out`, or `hold` + `drift` | 5–8 s | space | |
-| shock · alone in it · the world backs away (충격·고립) | `mcu` | `eye` | `dolly zoom in` | `punch` | 3–5 s | the surroundings drop out, one hit, then only the person's own sound (*Jaws*: the beach noise leaves, Brody stays) | either direction; needs depth cues behind the person (`shot.depth` deep) and a subject who stands still |
-| cornered · no way out (궁지·압박) | `mcu` | `eye` | `dolly zoom out` | slow `in`, `focus` on the person | 3–5 s | the room closes in — a low drone rises | the same once-per-episode budget as the row above |
-| hidden information revealed (숨은 정보 공개) | two planes, or `insert` | `eye` | `rack focus` / `static` | `in` + `focus` at the detail | 3–4 s | the object's sound | an insert replaces three lines |
-| the rhythm of travel (이동의 리듬) | `fs`/`ms` | `eye` | `truck` | `pan` in the travel's direction | 5–7 s | footsteps, passing space | |
-| inside the character · immersion (몰입·1인칭) | `pov` or `tracking` from behind | `eye` | `tracking` | `in` + `drift` | 5–7 s | breathing, footsteps | |
-| presence · this is real (현장감·실재) | `mcu`/`ms` | `eye` | `handheld` | `hold` + `drift` | 5–7 s | room tone | cuts the AI look |
-| trust · a person telling me (신뢰 — talking head, speech clip) | `mcu` | **`eye`** | `static` | `hold` + `drift` | 7–10 s | voice clean | `[study]` the default for hook cuts and quote clips |
-| withhold · let them imagine (감추기·상상) | `back` | `eye` | `static` | `hold` + `drift` | 5–7 s | no face — the sound does the face's job | |
-| transition · impact (전환·타격) | any | `eye` | `whip pan` / push past | `punch`, or a plain cut | 3–4 s | whoosh or a hard cut | |
-| closing · the end (닫힘·엔딩) | `els` | `eye` → rising | `pedestal up` / `dolly out` rising | `out` | 5–8 s | space | the person shrinks as the frame rises |
-| detail · the peak of tension (디테일·긴장의 정점) | `ecu` | — | `static` | `in` + `focus` | 3–4 s | the detail's sound | once or twice per episode |
+| observe · understand the situation (관찰·설명) | `ls` → `ms` | `eye` | `static`, or one slow `truck` | `auto` drift, or a slow `pan` across the scene | action-led | space forward, lines clear enough | the body's default register — don't decorate it |
+| introduce the space · confirm a relation (공간 소개·관계 확정) | `ls`/`ms` | `eye` | slow `pan` from A to B | slow `pan` from A to B (focusFrom → focusTo) | action-led | the room, then B's sound as B arrives | `framing` A and `end` B differ; a pan with no B is cut in the edit |
+| scale by time · looking up (규모 — 올려다봄) | `fs`/`ls`, the thing filling the top | `low` → `eye` | `tilt up`, steady | `tilt` up the picture | action-led | the bed swells before the top is in frame | after a reaction shot when there is a person; a `pedestal up` looks down on it instead |
+| scale · how big this is (규모) | `els`/`ls` with many subjects | `high` or `overhead` | `static`, or `dolly out` rising | `out`, or `pan` across the expanse | action-led | space loud | the same tiny person alone means loneliness, not scale — the head count flips the meaning |
+| alone · powerless · the world is big (고독·무력) | `els` | `eye` or slight `high` | `static` or slow `dolly out` | slow `out` | action-led | wind, room, distant machine — **no human voice** | Mad Max's cliff: the smallness says the sentence; don't narrate it on top |
+| intimate · I'm in it (친밀·당사자) | `mcu` → `cu` | `eye` | `static` or very slow `dolly in` | slow `in`, `focus` on the person | action-led | voice and breath forward, space gone | choose close-ups for the expression or detail that carries the beat; no fixed quota |
+| quiet tension · pressure (조용한 긴장·압박) | `ms` → `mcu` | `eye` | slow `zoom in` or `static` | slow `in`, `focus` on the person | action-led | room tone, no music swell | a `dolly in` opens the space instead — the wrong approach for pressure |
+| realisation · awakening (각성·깨달음) | `mcu`/`cu` | `eye` | `dolly in` | `in` + `focus` at the subject | action-led | the bed drops (`sound.drop`), then the line | |
+| loss · letting go (상실) | `ms`/`ls` | `eye` | `dolly out` | `out` | action-led | space rising, no speech | |
+| unease · something is wrong (불안·불길) | `ms`/`mcu` | `dutch` (with a scene-specific reason) or `eye` | `handheld` | `hold` + `drift` | action-led | room tone, an off sound | use the tilt only where imbalance serves the scene |
+| imposing · hero · dangerous (위압·영웅) | `fs`/`ms` | `low` (+ wide lens) | `static` or slow `dolly in` | slow `in` — the low angle is drawn in the still | action-led | low end forward | `[study]`: bigger and stronger, **not** better liked |
+| powerless · isolated · watched (무력·고립·감시) | `ls`/`ms` | `high` | `static` or slow `dolly out` | `out` | action-led | the surroundings' sound | a subject filling a high-angle frame alone doesn't read weak |
+| fate · the whole picture in one frame (운명·요약) | `ls`/`els` | `overhead` | `static` | slow `out`, or `hold` + `drift` | action-led | space | |
+| shock · alone in it · the world backs away (충격·고립) | `mcu` | `eye` | `dolly zoom in` | `punch` | action-led | the surroundings drop out, one hit, then only the person's own sound (*Jaws*: the beach noise leaves, Brody stays) | either direction; needs depth cues behind the person (`shot.depth` deep) and a subject who stands still |
+| cornered · no way out (궁지·압박) | `mcu` | `eye` | `dolly zoom out` | slow `in`, `focus` on the person | action-led | the room closes in — a low drone rises | the same once-per-episode budget as the row above |
+| hidden information revealed (숨은 정보 공개) | two planes, or `insert` | `eye` | `rack focus` / `static` | `in` + `focus` at the detail | action-led | the object's sound | an insert replaces three lines |
+| the rhythm of travel (이동의 리듬) | `fs`/`ms` | `eye` | `truck` | `pan` in the travel's direction | action-led | footsteps, passing space | |
+| inside the character · immersion (몰입·1인칭) | `pov` or `tracking` from behind | `eye` | `tracking` | `in` + `drift` | action-led | breathing, footsteps | |
+| presence · this is real (현장감·실재) | `mcu`/`ms` | `eye` | `handheld` | `hold` + `drift` | action-led | room tone | cuts the AI look |
+| trust · a person telling me (신뢰 — talking head, speech clip) | `mcu` | **`eye`** | `static` | `hold` + `drift` | action-led | voice clean | `[study]` the default for hook cuts and quote clips |
+| withhold · let them imagine (감추기·상상) | `back` | `eye` | `static` | `hold` + `drift` | action-led | no face — the sound does the face's job | |
+| transition · impact (전환·타격) | any | `eye` | `whip pan` / push past | `punch`, or a plain cut | action-led | whoosh or a hard cut | |
+| closing · the end (닫힘·엔딩) | `els` | `eye` → rising | `pedestal up` / `dolly out` rising | `out` | action-led | space | the person shrinks as the frame rises |
+| detail · the peak of tension (디테일·긴장의 정점) | `ecu` | — | `static` | `in` + `focus` | action-led | the detail's sound | once or twice per episode |
 
 Two feelings the table doesn't hold on purpose: "cinematic" and "dynamic" are not feelings —
 they are the author asking for a move without saying why. Send those back to the shot and ask
@@ -653,20 +653,13 @@ what the audience is supposed to get.
 
 `[course]` unless marked.
 
-1. **One shot, one new piece of information** (`shot.info`). Two shots in a scene saying the
-   same thing — one can go. 4–6 shots in a dialogue scene and two sizes per scene (wide + close)
-   were the story-v1 defaults; on a story-v2 board the shot count follows what the audience
-   needs to notice (storyboard SKILL §4), with no per-scene floor. The check that catches a fake: cover the `info`
-   lines and read only the sizes, angles and moves down the scene. If every setup shows the
-   same thing from the same distance, the scene is one viewpoint chopped into decorative cuts,
-   and no wording in `info` will fix it.
-2. **Establish, then close.** Long shot first, then in. A close opening — `cu`, the `mcu`
-   talking-head hook, an `insert` — pays its debt in the next picture shot with an `ls`/`els`
-   (`mfs`/`two` for two people and the room between them); `fs` and `ms` do not pay it, and an
-   HTML explanation screen is not a picture shot. A scene that returns to a place this episode
-   has already established carries no debt — the viewer still holds the room; only a new place,
-   or a break long enough to change it, owes a wide. A run of close shots with no wide keeps the
-   audience tense and lost at once.
+1. **Cut when attention changes.** Keep an exchange, movement or cause-and-effect action
+   together while its frame shows the relevant cues. Merge adjacent setups that merely
+   continue it. Cut for a reveal, reaction, viewpoint, spatial clarification or action
+   boundary; never for a new sentence alone. There is no dialogue-shot count or size quota.
+2. **Make necessary geography readable.** Establish it during meaningful action when
+   possible. A close opening does not incur a mandatory wide shot on the next cut. Show
+   wider context when the audience needs it to follow movement or relationships.
 3. **Close-up frequency follows the information and performance.** No numerical
    per-scene quota establishes quality. Inspect whether repeated close views earn their place.
 4. **Length follows readable action.** Wider views may need more orientation time;

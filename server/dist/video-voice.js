@@ -6,6 +6,13 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { VIDEO_ADAPTERS } from './video-registry.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
+import { z } from 'zod';
+/** Authored screen coordinates describe the opening image, never reference-array order. */
+export const speakerBindingSchema = z.object({
+    speaker: z.string().trim().min(1),
+    screenPosition: z.enum(['left', 'center', 'right']),
+    description: z.string().trim().min(1),
+}).strict();
 const load = createRequire(import.meta.url);
 const object = (value) => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const text = (value) => typeof value === 'string' ? value.trim() : '';
@@ -25,6 +32,42 @@ function voiceDescription(character) {
         confirmed('pace') && `Baseline pace: ${confirmed('pace')}`,
         confirmed('accent') && `Accent: ${confirmed('accent')}`,
         text(tts.voiceDirection) || text(tts.stylePrompt)].filter(Boolean).join('. ');
+}
+/** Story-first boards can carry only a cast id and name; resolve their selected voice at planning time. */
+export function resolveCharacterVoice(character, context, warnings) {
+    const id = text(character.id);
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id))
+        return character;
+    let channel = context.episode;
+    while (!existsSync(path.join(channel, 'profile.md')) && path.dirname(channel) !== channel)
+        channel = path.dirname(channel);
+    const folder = path.join(channel, 'assets/characters', id), identity = path.join(folder, 'identity.md');
+    let resolved = character;
+    if (!Object.keys(object(character.tts)).length && existsSync(identity)) {
+        try {
+            const { handoff } = load('../../skills/channel/references/character-sheet.js');
+            const current = handoff(identity, { voiceOnly: character.voiceOnly === true });
+            resolved = { ...current, ...character, tts: current.tts };
+        }
+        catch (error) {
+            warnings.push(`${id}: cannot read the selected character voice: ${error instanceof Error ? error.message : String(error)}`);
+            return character;
+        }
+    }
+    const reference = object(resolved.voiceReference);
+    // Existing ownership wins. Otherwise use only authored character images inside this character's folder.
+    if (!Array.isArray(reference.imagePaths) && existsSync(folder)) {
+        const root = realpathSync(folder) + path.sep;
+        const refs = object(context.shot.visual).references;
+        const imagePaths = (Array.isArray(refs) ? refs.map(object) : [])
+            .filter(ref => ref.role === 'character' && ['both', 'video'].includes(text(ref.use)))
+            .map(ref => text(ref.path)).filter(Boolean)
+            .map(file => path.resolve(context.episode, 'storyboard', file))
+            .filter(file => existsSync(file) && realpathSync(file).startsWith(root));
+        if (imagePaths.length)
+            resolved = { ...resolved, voiceReference: { ...reference, imagePaths } };
+    }
+    return resolved;
 }
 function voiceReference(character, context, warnings) {
     const declared = object(character.voiceReference);
@@ -71,7 +114,18 @@ function voiceReference(character, context, warnings) {
  */
 function msrSubject(character, refs, context) {
     const owned = object(character.voiceReference).imagePaths;
-    const ownedPaths = Array.isArray(owned) ? owned.map(value => realpathSync(path.resolve(context.episode, 'storyboard', String(value)))) : [];
+    let ownedPaths;
+    const declared = [].concat(object(context.shot.visual).character ?? [])
+        .map(entry => typeof entry === 'string' ? entry : text(object(entry).id));
+    if (declared.includes(text(character.id)) && existsSync(path.join(context.episode, 'storyboard', 'cast.json'))) {
+        const { sheetPanels } = load('../../skills/channel/references/character-panels.js');
+        const dir = path.join(context.episode, 'storyboard');
+        // Planning rebuilt these references from this same registered owner; transport aliases no longer identify the slot.
+        const panels = sheetPanels(dir, [text(character.id)]).get(text(character.id));
+        ownedPaths = Object.values(panels).map(file => realpathSync(path.resolve(dir, file)));
+    }
+    else
+        ownedPaths = Array.isArray(owned) ? owned.map(value => realpathSync(path.resolve(context.episode, 'storyboard', String(value)))) : [];
     let subject = 0, index = -1, slot = 0;
     refs.forEach((ref, i) => {
         if (ref.background)
@@ -109,16 +163,22 @@ export function prepareVideoVoice(tool, input, context) {
     const args = { ...input };
     const lines = (Array.isArray(context.shot.narration) ? context.shot.narration : []).map(object).filter(line => text(line.tts));
     const msr = tool === 'astra_genai_msr';
-    // MSR speaks on-screen dialogue into its own soundtrack; a speaker's pinned sample, when the
+    const finishArgs = () => {
+        if (msr && typeof args.prompt === 'string') {
+            const policy = load('../../skills/_shared/scene-acting.js').VIDEO_TEXT_POLICY;
+            if (!args.prompt.endsWith(policy))
+                args.prompt += '\n\n' + policy;
+        }
+        return args;
+    };
+    // MSR renders authored dialogue and voiceover into its own soundtrack; a pinned sample, when the
     // gateway takes one, sets the timbre (user directive 2026-10-31). A cut without dialogue is fine.
     if (msr) {
         if (object(context.shot.visual).video && object(object(context.shot.visual).video).voice !== undefined)
             throw new Error('visual.video.voice is retired: MSR uses the speaker\'s voice sample when one is pinned');
-        if (lines.some(line => line.delivery !== 'on_screen'))
-            throw new Error('msr_dialogue_required: every MSR line is spoken on screen');
     }
     if (!lines.length)
-        return { args };
+        return { args: finishArgs() };
     const doc = object(context.board.SB_DOC), raw = doc.characters;
     const characters = Array.isArray(raw) ? raw.map(object) : Object.entries(object(raw)).map(([id, value]) => ({ ...object(value), id }));
     const visual = object(context.shot.visual);
@@ -128,7 +188,7 @@ export function prepareVideoVoice(tool, input, context) {
     const lane = VIDEO_ADAPTERS[tool]?.voice ?? 'none';
     const supplied = lane === 'supplied';
     const onScreen = lines.some(line => line.delivery === 'on_screen');
-    const native = !supplied && audible && (nativeSlot || onScreen);
+    const native = !supplied && audible && (msr || nativeSlot || onScreen);
     // Voice gate (owner directive 2026-10-31): a character the viewer hears or sees speak needs a voice
     // lane. An adapter without one renders only cuts whose lines are external TTS over a non-speaking picture.
     if (lane === 'none' && (native || onScreen))
@@ -138,7 +198,7 @@ export function prepareVideoVoice(tool, input, context) {
     const strategy = supplied ? 'supplied_audio' : reference ? 'reference_voice' : 'external_tts';
     const warnings = [];
     const speakers = [];
-    const nativeLines = nativeSlot ? lines : lines.filter(line => line.delivery === 'on_screen');
+    const nativeLines = msr || nativeSlot ? lines : lines.filter(line => line.delivery === 'on_screen');
     const ids = [...new Set((native ? nativeLines : lines).map(line => text(line.speaker) || text(doc.narratorCharacterId)))];
     const prompt = [];
     const audioOffset = tool === 'fasth3_omni_reference' && Array.isArray(args.referenceVideoPaths)
@@ -147,14 +207,38 @@ export function prepareVideoVoice(tool, input, context) {
     const imagePaths = Array.isArray(args.referenceImagePaths) ? args.referenceImagePaths.map(value => realpathSync(path.resolve(context.episode, String(value)))) : [];
     const msrRefs = msr && Array.isArray(args.references) ? args.references.map(ref => ({ ...object(ref) })) : [];
     const msrAudio = [];
+    const screenBindings = msr ? z.array(speakerBindingSchema).max(2).parse(object(visual.video).speakerBindings ?? []) : [];
+    if (new Set(screenBindings.map(binding => binding.speaker)).size !== screenBindings.length)
+        throw new Error('video_speaker_binding_invalid: each speaker needs one screen binding');
+    for (const binding of screenBindings) {
+        if (!characters.some(character => character.id === binding.speaker) || nonEnglishOutsideQuotes(binding.description))
+            throw new Error('video_speaker_binding_invalid: use a cast id and an English appearance description');
+    }
+    const visibleSpeakers = [...new Set(nativeLines.filter(line => line.delivery === 'on_screen').map(line => text(line.speaker)))];
+    if (msr && visibleSpeakers.length > 1 && visibleSpeakers.some(id => !screenBindings.some(binding => binding.speaker === id)))
+        throw new Error('video_speaker_binding_required: set shot_prompt speakerBindings from the start image for every on-screen speaker; left/right mean the viewer\'s left/right, not Image 1/Image 2');
+    if (msr && visibleSpeakers.length > 1 && new Set(screenBindings.filter(binding => visibleSpeakers.includes(binding.speaker)).map(binding => binding.screenPosition)).size !== visibleSpeakers.length)
+        throw new Error('video_speaker_binding_invalid: on-screen speakers need distinct screen positions');
+    if (msr && screenBindings.length) {
+        const start = text(object(visual.frames).start), expected = text(object(visual.video).speakerBindingImageSha256);
+        if (expected && (!start || fileHash(path.resolve(context.episode, 'storyboard', start)) !== expected))
+            throw new Error('video_speaker_binding_stale: the start image changed; inspect its positions and rewrite shot_prompt speakerBindings');
+    }
     for (const id of ids) {
         const matches = characters.filter(character => character.id === id);
-        if (!id || matches.length !== 1 || !Object.keys(object(matches[0].tts)).length) {
-            warnings.push(`Missing unique pinned voice for speaker ${id || '(unspecified)'}; no voice was invented.`);
+        if (!id || matches.length !== 1) {
+            warnings.push(`Missing unique storyboard character for speaker ${id || '(unspecified)'}; no voice was invented.`);
             continue;
         }
-        const character = matches[0];
+        const character = resolveCharacterVoice(matches[0], context, warnings);
+        if (!Object.keys(object(character.tts)).length) {
+            warnings.push(`${id}: no pinned TTS settings in the storyboard or character identity; voice samples were not resolved.`);
+            continue;
+        }
         const speaker = { speaker: id, name: text(character.name) || id, tts: object(character.tts), description: voiceDescription(character) };
+        const screenBinding = screenBindings.find(binding => binding.speaker === id);
+        if (screenBinding)
+            speaker.screenBinding = screenBinding;
         // Video prompts are English: a non-Latin cast name falls back to the character id
         const label = nonEnglishOutsideQuotes(speaker.name) ? id : speaker.name;
         if (reference && msr) {
@@ -217,15 +301,32 @@ export function prepareVideoVoice(tool, input, context) {
     }
     if (reference && msr) {
         args.references = msrRefs;
-        // The prompt is MSR's only script: add each authored line the prompt does not already quote, in order.
+        // Narration is the only script authority. A substring cannot establish speaker ownership or turn order.
+        const quoted = [...String(args.prompt).matchAll(/"([^"]*)"|“([^”]*)”|「([^」]*)」/g)].map(match => match[1] ?? match[2] ?? match[3]);
+        if (lines.some(line => quoted.some(words => words.includes(text(line.tts)))))
+            throw new Error('video_dialogue_embedded: keep authored dialogue in shot_dialogue, not args.prompt/action/sound; video_plan compiles every turn with its speaker binding in order');
         const bySpeaker = new Map(speakers.map(speaker => [speaker.speaker, speaker]));
-        const script = lines.filter(line => !String(args.prompt).includes(text(line.tts))).map(line => {
+        const script = lines.map((line, turn) => {
             const id = text(line.speaker) || text(doc.narratorCharacterId), speaker = bySpeaker.get(id);
             const image = speaker?.imageIndices?.[0], audio = speaker?.audioIndex, direction = text(object(line.acting).direction);
             const who = image ? `Image ${image}` : speaker?.name ?? id;
-            return `${who} speaks${direction ? ` (${direction})` : ''} with visible lip movement${audio ? ` synchronized with Audio ${audio}` : ''}` +
-                ` while the other characters listen silently with their lips closed. ${audio ? `Audio ${audio} (${who})` : who}: "${text(line.tts)}"`;
+            if (line.delivery !== 'on_screen') {
+                const label = nonEnglishOutsideQuotes(speaker?.name ?? '') ? id : speaker?.name ?? id;
+                const delivery = line.delivery === 'off_screen' ? 'off screen' : 'in voiceover';
+                return `${label} speaks ${delivery}${direction ? ` (${direction})` : ''}${audio ? ` using Audio ${audio}` : ''}. ` +
+                    `Do not show this speaker or animate any visible mouth during this line. ${audio ? `Audio ${audio} (${label})` : label}: "${text(line.tts)}"`;
+            }
+            const binding = speaker?.screenBinding;
+            const label = nonEnglishOutsideQuotes(speaker?.name ?? '') ? id : speaker?.name ?? id;
+            const identity = binding ? `${who}, ${label} at SCREEN ${binding.screenPosition.toUpperCase()} (${binding.description})` : `${who} (${label})`;
+            return `Turn ${turn + 1}: ${identity} speaks${direction ? ` (${direction})` : ''}${audio ? ` using Audio ${audio}` : ''}` +
+                `. Only this speaker's mouth moves; other visible mouths stay closed. ` +
+                `${audio ? `Audio ${audio} (${who})` : who}: "${text(line.tts)}"`;
         });
+        if (screenBindings.length)
+            prompt.push('Screen positions use the viewer\'s left and right in the opening image. Preserve these positions and each character\'s appearance.');
+        if (speakers.length > 1)
+            prompt.push('Speak the following turns in order, with a brief pause between speakers and no overlapping speech.');
         prompt.push(...script);
         if (typeof args.prompt === 'string' && msrAudio.length)
             args.prompt = afterImageBlock(args.prompt, msrAudio.sort());
@@ -258,7 +359,7 @@ export function prepareVideoVoice(tool, input, context) {
         warnings.push('Use the final composed pinned-voice WAV. ASTRA re-encodes supplied audio; mouth motion and speaker identity remain unreviewed.');
     if (prompt.length && typeof args.prompt === 'string')
         args.prompt += (msr ? '\n\n' : '\n\nVoice continuity guidance:\n') + prompt.join('\n');
-    return { args, voiceContinuity: { version: 1, strategy, speakers, warnings,
+    return { args: finishArgs(), voiceContinuity: { version: 1, strategy, speakers, warnings,
             revision: hash({ lines, speakers, strategy, performance: context.shot.performance }),
             review: { voiceIdentity: 'not_reviewed', dialogue: 'not_reviewed', speakerAssignment: 'not_reviewed', lipSync: 'not_reviewed' } } };
 }

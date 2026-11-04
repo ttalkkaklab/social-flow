@@ -59,6 +59,20 @@ test('auto-added samples still obey 2.0 reference image requirements and audio-c
  const extras=[1,2,3].map(n=>{const p=path.join(f.episode,`extra-${n}.wav`);fs.writeFileSync(p,'audio');return p;});
  assert.throws(()=>plan({referenceImagePaths:[img],referenceAudioPaths:extras}),/at most 3/);
 });
+test('planning recompiles saved action from current icons and reports explicit prompt overrides', t => {
+ const f=fixture(t);
+ f.board.SCENES[0].visual={video:{prompt:'Old camera wording.',promptSource:{action:'A boat crosses the lake.'}},camera:{movement:'dolly in',speed:'slow',target:'the boat'}};
+ f.board.SCENES[0].shot={...f.board.SCENES[0].shot,techniques:[{id:'camera.dolly-in'}]};
+ f.save();
+ const before=planVideo({episode:f.episode,shotId:'s1',requestId:'direction-a',operation:'text',args:{generateAudio:false}});
+ assert.match(before.args.prompt,/slowly pushes in toward the boat/);
+ f.board.SCENES[0].visual.camera={movement:'static'}; f.save();
+ const after=planVideo({episode:f.episode,shotId:'s1',requestId:'direction-b',operation:'text',args:{generateAudio:false}});
+ assert.match(after.args.prompt,/holds a static frame/);
+ assert.doesNotMatch(after.args.prompt,/Old camera|pushes in/);
+ assert.equal(after.directionBindings.find(b=>b.attribute==='move').via,'prompt');
+ assert.match(f.plan('manual').directionWarnings.join(),/Explicit args.prompt/);
+});
 test('snapshot wins over current defaults; explicit shot replaces episode override', t=>{
  const f=fixture(t); const current=settings.readSettings(f.root);
  settings.saveSettings(f.root,{video:{...selection,model:'dreamina-seedance-2-0-260128'}},{expectedRevision:current.revision,request:'Change future defaults'});

@@ -139,7 +139,7 @@ function sceneVideoPrompt(performance, mode, scene = {}) {
   const route = !performance.some(event => event.kind !== 'action')
     ? 'This is a silent scene. Perform the ordered visible actions without invented speech or voiceover.'
     : mode === 'native'
-    ? 'Speak each on_screen line aloud in its speaker\'s voice from the quoted words; no audio is supplied. Do not transcribe speech into the image.'
+    ? 'Speak each authored line in its speaker\'s voice from the quoted words; no audio is supplied. Only on_screen lines move a visible mouth. Keep off_screen speakers unseen and voiceover separate from physical speech. Do not transcribe speech into the image.'
     : mode === 'audio_conditioned'
     ? 'Use the supplied audio as the sole source of spoken words. Synchronize visible mouths only during each on_screen speech interval; follow the delivery instruction for every beat. Do not transcribe speech into the image.'
     : mode === 'post_lipsync'
@@ -172,7 +172,7 @@ function sceneVideoPrompt(performance, mode, scene = {}) {
     const timing = line.speechStartSeconds == null || line.speechEndSeconds == null
       ? (mode === 'native' ? 'The model paces this line within the shot.' : 'Use the measured speech interval once audio is attached.')
       : `Speech interval ${line.speechStartSeconds}–${line.speechEndSeconds} seconds.`;
-    return `Beat ${index + 1} (speaker: ${visualDirection(line.speaker || 'unspecified')}; delivery: ${delivery}): ${mouth} ${line.to ? 'Addressed to '+visualDirection(line.to)+'. Preserve this eyeline and the listener in the planned framing.' : ''} ${fields.join(' ')} ${timing} Anticipation ${line.leadInSeconds || 0} seconds; reaction ${line.tailOutSeconds || 0} seconds.`;
+    return `Beat ${index + 1} (speaker: ${visualDirection(line.speaker || 'unspecified')}; delivery: ${delivery}): ${mouth} ${mode === 'native' && delivery !== 'on_screen' ? 'Speak "'+line.text+'". ' : ''}${line.to ? 'Addressed to '+visualDirection(line.to)+'. Preserve this eyeline and the listener in the planned framing.' : ''} ${fields.join(' ')} ${timing} Anticipation ${line.leadInSeconds || 0} seconds; reaction ${line.tailOutSeconds || 0} seconds.`;
   });
   return ['A clean cinematic image with an unobstructed scene and text-free surfaces.', route, visualDirection(sceneDirection(scene, performance)), ...beats, VIDEO_TEXT_POLICY].join('\n');
 }

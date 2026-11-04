@@ -21,6 +21,11 @@ unreviewed identity/dialogue/speaker/lip-sync findings. Saved plans become stale
 speech, voice settings or reference bytes change. Selected audition samples travel
 with the character handoff; no automatic listening gate or paid generation is added.
 
+MSR supports two-speaker turns with start-image `speakerBindings`: viewer-relative
+position and appearance are repeated with each line's image and voice mapping.
+`shot_prompt` stores action separately; `video_plan` recompiles current icons and
+reports `directionBindings` for prompt, image, adapter and assembly inputs.
+
 Motion-graphic shots now persist `shot.motionGraphic`: a semantic type, viewer intent,
 selection reason, evidence, visual direction and timing intent. The shared
 [21-type guide](skills/storyboard/references/motion-graphics.md) distinguishes

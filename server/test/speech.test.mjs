@@ -42,7 +42,12 @@ test('video adapters select by capabilities, never a provider name',()=>{
  const native={...caps,audioConditioning:false,lipSync:false,nativeSpeech:true},msr=speechVideoPlan(lines,native);
  assert.equal(msr.mode,'native');assert.equal(msr.audioFirst,false);assert.equal(msr.timing,'model_timed');
  assert.match(msr.videoPrompt,/physically saying "Hello"/);
- assert.throws(()=>speechVideoPlan([{...lines[0],delivery:'voiceover'}],native),/on-screen lines only/);
+ for (const delivery of ['off_screen','voiceover']) {
+  const outside=speechVideoPlan([{...lines[0],delivery}],native);
+  assert.equal(outside.mode,'native');assert.equal(outside.audioFirst,false);
+  assert.match(outside.videoPrompt,/Speak "Hello"/);
+  assert.doesNotMatch(outside.videoPrompt,/Show this speaker physically saying/);
+ }
 });
 test('a native-speech clip binds line revisions and assembles from its soundtrack without line audio',t=>{
  const {dir,target,r}=setup(t),line=r.lines[0],file=path.join(target,'scenes.js'),win={};
@@ -68,6 +73,22 @@ test('a native-speech clip binds line revisions and assembles from its soundtrac
  const board={};new Function('window',readFileSync(file,'utf8'))(board);board.SCENES[0].sound.audioSource='speech';
  writeFileSync(file,Object.entries(board).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
  assert.throws(()=>checker.check(work,target),/needs sound.audioSource video/);
+});
+test('id-only story-first speakers use their character voice when listing and binding native video',t=>{
+ const {dir,target,r}=setup(t),file=join(target,'scenes.js'),win={};
+ new Function('window',readFileSync(file,'utf8'))(win);win.SCENES=[win.SCENES[0]];
+ win.SB_DOC.characters=[{id:'hero',name:'Hero'}];delete win.SB_DOC.narratorCharacterId;
+ writeFileSync(file,Object.entries(win).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+ writeFileSync(join(dir,'profile.md'),'# Channel');const folder=join(dir,'assets/characters/hero');mkdirSync(folder,{recursive:true});
+ const example=readFileSync(new URL('../../skills/channel/references/character-identity-example.md',import.meta.url),'utf8');
+ const doc=JSON.parse(example.match(/```json\s*\n([\s\S]*?)```/)[1]);doc.tts=voice;
+ writeFileSync(join(folder,'identity.md'),'# Hero\n\n```json\n'+JSON.stringify(doc)+'\n```');
+ const listed=manageSpeech({path:target,action:'list'});assert.deepEqual(listed.lines[0].voice,voice);
+ const video=join(dir,'native.mp4');writeFileSync(video,'native clip');
+ const attached=manageSpeech({path:target,action:'attach_video',shotId:r.lines[0].shotId,expectedRevision:listed.revision,
+  videoPath:video,capabilities:{...caps,audioConditioning:false,lipSync:false,nativeSpeech:true}});
+ assert.equal(attached.plan.mode,'native');assert.equal(attached.lines[0].audioProvenanceStatus,'native_speech');
+ assert.equal(attached.lines[0].speechRevision,speechRevision(listed.lines[0],{id:'hero',tts:voice}));
 });
 test('generation binding rejects wrong voices and invalidates old audio after edits',t=>{
  const {dir,target,r}=setup(t),line=r.lines[0];const audio=path.join(dir,'voice.wav');writeFileSync(audio,'fixture audio bytes');
